@@ -1,0 +1,456 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+
+<meta name="copyright" content="(C) Copyright 2022" />
+<meta name="DC.rights.owner" content="(C) Copyright 2022" />
+<meta name="generator" content="DITA-OT" /><meta name="DC.type" content="topic" />
+<meta name="DC.title" content="CREATE INDEX" />
+<meta name="DC.relation" scheme="URI" content="../sql_commands/sql_ref.html" />
+<meta name="DC.format" content="XHTML" />
+<meta name="DC.identifier" content="topic1" />
+<link rel="stylesheet" type="text/css" href="../commonltr.css" />
+<title>CREATE INDEX</title>
+</head>
+<body id="topic1">
+
+        <h1 class="title topictitle1" id="topic1__bu20941">CREATE INDEX</h1>
+
+        <div class="body">
+                <p class="p" id="topic1__sql_command_desc">Defines a new index.</p>
+
+                <div class="section" id="topic1__section2"><h2 class="title sectiontitle">Synopsis</h2>
+                        
+                        <pre class="pre codeblock" id="topic1__sql_command_synopsis"><code>CREATE [UNIQUE] INDEX [&lt;name&gt;] ON &lt;table_name&gt; [USING &lt;method&gt;]
+       ( {&lt;column_name&gt; | (&lt;expression&gt;)} [COLLATE &lt;parameter&gt;] [&lt;opclass&gt;] [ ASC | DESC ] [ NULLS { FIRST | LAST } ] [, ...] )
+       [ WITH ( &lt;storage_parameter&gt; = &lt;value&gt; [, ... ] ) ]
+       [ TABLESPACE &lt;tablespace&gt; ]
+       [ WHERE &lt;predicate&gt; ]</code></pre>
+                </div>
+
+                <div class="section" id="topic1__section3"><h2 class="title sectiontitle">Description</h2>
+                        
+                        <p class="p"><code class="ph codeph">CREATE INDEX</code> constructs an index on the specified
+                                column(s) of the specified table or materialized view. Indexes are
+                                primarily used to enhance database performance (though inappropriate
+                                use can result in slower performance). </p>
+
+                        <p class="p">The key field(s) for the index are specified as column names, or
+                                alternatively as expressions written in parentheses. Multiple fields
+                                can be specified if the index method supports multicolumn
+                                indexes.</p>
+
+                        <p class="p">An index field can be an expression computed from the values of one or
+                                more columns of the table row. This feature can be used to obtain
+                                fast access to data based on some transformation of the basic data.
+                                For example, an index computed on <code class="ph codeph">upper(col)</code> would
+                                allow the clause <code class="ph codeph">WHERE upper(col) = 'JIM'</code> to use an
+                                index. </p>
+
+                        <p class="p">Greenplum Database provides the index methods B-tree, bitmap, GiST,
+                                SP-GiST, and GIN. Users can also define their own index methods, but
+                                that is fairly complicated. </p>
+
+                        <p class="p">When the <code class="ph codeph">WHERE</code> clause is present, a partial index is
+                                created. A partial index is an index that contains entries for only
+                                a portion of a table, usually a portion that is more useful for
+                                indexing than the rest of the table. For example, if you have a
+                                table that contains both billed and unbilled orders where the
+                                unbilled orders take up a small fraction of the total table and yet
+                                is most often selected, you can improve performance by creating an
+                                index on just that portion.</p>
+
+                        <p class="p">The expression used in the <code class="ph codeph">WHERE</code> clause may refer only
+                                to columns of the underlying table, but it can use all columns, not
+                                just the ones being indexed. Subqueries and aggregate expressions
+                                are also forbidden in <code class="ph codeph">WHERE</code>. The same restrictions
+                                apply to index fields that are expressions.</p>
+
+                        <p class="p">All functions and operators used in an index definition must be
+                                immutable. Their results must depend only on their arguments and
+                                never on any outside influence (such as the contents of another
+                                table or a parameter value). This restriction ensures that the
+                                behavior of the index is well-defined. To use a user-defined
+                                function in an index expression or <code class="ph codeph">WHERE</code> clause,
+                                remember to mark the function <code class="ph codeph">IMMUTABLE</code> when you
+                                create it.</p>
+
+                </div>
+
+                <div class="section" id="topic1__section4"><h2 class="title sectiontitle">Parameters</h2>
+                        
+                        <dl class="dl parml">
+                                
+                                        <dt class="dt pt dlterm">UNIQUE</dt>
+
+                                        <dd class="dd pd">Checks for duplicate values in the table when the index
+                                                is created and each time data is added. Duplicate
+                                                entries will generate an error. Unique indexes only
+                                                apply to B-tree indexes. In Greenplum Database,
+                                                unique indexes are allowed only if the columns of
+                                                the index key are the same as (or a superset of) the
+                                                Greenplum distribution key. On partitioned tables, a
+                                                unique index is only supported within an individual
+                                                partition - not across all partitions.</dd>
+
+                                
+                                
+                                        <dt class="dt pt dlterm">
+                                                <var class="keyword varname">name</var>
+                                        </dt>
+
+                                        <dd class="dd pd">The name of the index to be created. The index is always
+                                                created in the same schema as its parent table. If
+                                                the name is omitted, Greenplum Database chooses a
+                                                suitable name based on the parent table's name and
+                                                the indexed column name(s). </dd>
+
+                                
+                                
+                                        <dt class="dt pt dlterm">
+                                                <var class="keyword varname">table_name</var>
+                                        </dt>
+
+                                        <dd class="dd pd">The name (optionally schema-qualified) of the table to
+                                                be indexed. </dd>
+
+                                
+                                
+                                        <dt class="dt pt dlterm">
+                                                <var class="keyword varname">method</var>
+                                        </dt>
+
+                                        <dd class="dd pd">The name of the index method to be used. Choices are
+                                                  <code class="ph codeph">btree</code>, <code class="ph codeph">bitmap</code>,
+                                                  <code class="ph codeph">gist</code>, <code class="ph codeph">spgist</code>,
+                                                and <code class="ph codeph">gin</code>. The default method is
+                                                  <code class="ph codeph">btree</code>. </dd>
+
+                                        <dd class="dd pd ddexpand">Currently, only the B-tree, GiST, and GIN index methods
+                                                support multicolumn indexes. Up to 32 fields can be
+                                                specified by default. Only B-tree currently supports
+                                                unique indexes.</dd>
+
+                                        <dd class="dd pd ddexpand">GPORCA supports only B-tree, bitmap, GiST, and GIN indexes.
+                                                GPORCA ignores indexes created with unsupported
+                                                indexing methods.</dd>
+
+                                
+                                
+                                        <dt class="dt pt dlterm">
+                                                <var class="keyword varname">column_name</var>
+                                        </dt>
+
+                                        <dd class="dd pd">The name of a column of the table on which to create the
+                                                index. Only the B-tree, bitmap, GiST, and GIN index
+                                                methods support multicolumn indexes.</dd>
+
+                                
+                                
+                                        <dt class="dt pt dlterm">
+                                                <var class="keyword varname">expression</var>
+                                        </dt>
+
+                                        <dd class="dd pd">An expression based on one or more columns of the table.
+                                                The expression usually must be written with
+                                                surrounding parentheses, as shown in the syntax.
+                                                However, the parentheses may be omitted if the
+                                                expression has the form of a function call.</dd>
+
+                                
+                                
+                                        <dt class="dt pt dlterm"><var class="keyword varname">collation</var></dt>
+
+                                        <dd class="dd pd"> The name of the collation to use for the index. By
+                                                default, the index uses the collation declared for
+                                                the column to be indexed or the result collation of
+                                                the expression to be indexed. Indexes with
+                                                non-default collations can be useful for queries
+                                                that involve expressions using non-default
+                                                collations. </dd>
+
+                                
+                                
+                                        <dt class="dt pt dlterm">
+                                                <var class="keyword varname">opclass</var>
+                                        </dt>
+
+                                        <dd class="dd pd">The name of an operator class. The operator class
+                                                identifies the operators to be used by the index for
+                                                that column. For example, a B-tree index on
+                                                four-byte integers would use the
+                                                  <code class="ph codeph">int4_ops</code> class (this operator
+                                                class includes comparison functions for four-byte
+                                                integers). In practice the default operator class
+                                                for the column's data type is usually sufficient.
+                                                The main point of having operator classes is that
+                                                for some data types, there could be more than one
+                                                meaningful ordering. For example, a complex-number
+                                                data type could be sorted by either absolute value
+                                                or by real part. We could do this by defining two
+                                                operator classes for the data type and then
+                                                selecting the proper class when making an
+                                                index.</dd>
+
+                                
+                                
+                                        <dt class="dt pt dlterm">ASC</dt>
+
+                                        <dd class="dd pd">Specifies ascending sort order (which is the
+                                                default).</dd>
+
+                                
+                                
+                                        <dt class="dt pt dlterm">DESC</dt>
+
+                                        <dd class="dd pd">Specifies descending sort order.</dd>
+
+                                
+                                
+                                        <dt class="dt pt dlterm">NULLS FIRST</dt>
+
+                                        <dd class="dd pd">Specifies that nulls sort before non-nulls. This is the
+                                                default when <code class="ph codeph">DESC</code> is
+                                                specified.</dd>
+
+                                
+                                
+                                        <dt class="dt pt dlterm">NULLS LAST</dt>
+
+                                        <dd class="dd pd">Specifies that nulls sort after non-nulls. This is the
+                                                default when <code class="ph codeph">DESC</code> is not
+                                                specified.</dd>
+
+                                
+                                
+                                        <dt class="dt pt dlterm"><var class="keyword varname">storage_parameter</var></dt>
+
+                                        <dd class="dd pd">The name of an index-method-specific storage parameter.
+                                                Each index method has its own set of allowed storage
+                                                parameters.</dd>
+
+                                        <dd class="dd pd ddexpand"><code class="ph codeph">FILLFACTOR</code> - B-tree, bitmap, GiST, and
+                                                SP-GiST index methods all accept this parameter. The
+                                                  <code class="ph codeph">FILLFACTOR</code> for an index is a
+                                                percentage that determines how full the index method
+                                                will try to pack index pages. For B-trees, leaf
+                                                pages are filled to this percentage during initial
+                                                index build, and also when extending the index at
+                                                the right (adding new largest key values). If pages
+                                                subsequently become completely full, they will be
+                                                split, leading to gradual degradation in the index's
+                                                efficiency. B-trees use a default fillfactor of 90,
+                                                but any integer value from 10 to 100 can be
+                                                selected. If the table is static then fillfactor 100
+                                                is best to minimize the index's physical size, but
+                                                for heavily updated tables a smaller fillfactor is
+                                                better to minimize the need for page splits. The
+                                                other index methods use fillfactor in different but
+                                                roughly analogous ways; the default fillfactor
+                                                varies between methods.</dd>
+
+                                        <dd class="dd pd ddexpand"><code class="ph codeph">BUFFERING</code> - In addition to
+                                                  <code class="ph codeph">FILLFACTOR</code>, GiST indexes
+                                                additionally accept the <code class="ph codeph">BUFFERING</code>
+                                                parameter. <code class="ph codeph">BUFFERING</code> determines
+                                                whether Greenplum Database builds the index using
+                                                the buffering build technique described in <a class="xref" href="https://www.postgresql.org/docs/9.4/gist-implementation.html" target="_blank">GiST buffering
+                                                  build</a> in the PostgreSQL documentation. With
+                                                  <code class="ph codeph">OFF</code> it is disabled, with
+                                                  <code class="ph codeph">ON</code> it is enabled, and with
+                                                  <code class="ph codeph">AUTO</code> it is initially disabled,
+                                                but turned on on-the-fly once the index size reaches
+                                                  <a class="xref" href="../config_params/guc-list.html#effective_cache_size">effective-cache-size</a>. The default is
+                                                  <code class="ph codeph">AUTO</code>.</dd>
+
+                                        <dd class="dd pd ddexpand"><code class="ph codeph">FASTUPDATE</code> - The GIN index method
+                                                accepts the <code class="ph codeph">FASTUPDATE</code> storage
+                                                parameter. <code class="ph codeph">FASTUPDATE</code> is a Boolean
+                                                parameter that disables or enables the GIN index
+                                                fast update technique. A value of ON enables fast
+                                                update (the default), and OFF disables it. See <a class="xref" href="https://www.postgresql.org/docs/9.4/gin-implementation.html#GIN-FAST-UPDATE" target="_blank">GIN fast update
+                                                  technique</a> in the PostgreSQL documentation
+                                                for more information.<div class="note"><span class="notetitle">Note:</span> Turning
+                                                  <code class="ph codeph">FASTUPDATE</code> off via <code class="ph codeph">ALTER
+                                                  INDEX</code> prevents future insertions from
+                                                  going into the list of pending index entries, but
+                                                  does not in itself flush previous entries. You
+                                                  might want to VACUUM the table afterward to ensure
+                                                  the pending list is emptied.</div>
+</dd>
+
+                                
+                                
+                                        <dt class="dt pt dlterm">
+                                                <var class="keyword varname">tablespace_name</var>
+                                        </dt>
+
+                                        <dd class="dd pd">The tablespace in which to create the index. If not
+                                                specified, the default tablespace is used, or <a class="xref" href="../config_params/guc-list.html#topic_k52_fqm_f3b">temp_tablespaces</a> for indexes on temporary tables. </dd>
+
+                                
+                                
+                                        <dt class="dt pt dlterm">
+                                                <var class="keyword varname">predicate</var>
+                                        </dt>
+
+                                        <dd class="dd pd">The constraint expression for a partial index.</dd>
+
+                                
+                        </dl>
+
+                </div>
+
+                <div class="section" id="topic1__section5"><h2 class="title sectiontitle">Notes</h2>
+                        
+                        <p class="p">An <em class="ph i">operator class</em> can be specified for each column of an index.
+                                The operator class identifies the operators to be used by the index
+                                for that column. For example, a B-tree index on four-byte integers
+                                would use the int4_ops class; this operator class includes
+                                comparison functions for four-byte integers. In practice the default
+                                operator class for the column's data type is usually sufficient. The
+                                main point of having operator classes is that for some data types,
+                                there could be more than one meaningful ordering. For example, we
+                                might want to sort a complex-number data type either by absolute
+                                value or by real part. We could do this by defining two operator
+                                classes for the data type and then selecting the proper class when
+                                making an index. </p>
+
+                        <p class="p">For index methods that support ordered scans (currently, only B-tree),
+                                the optional clauses <code class="ph codeph">ASC</code>, <code class="ph codeph">DESC</code>,
+                                        <code class="ph codeph">NULLS FIRST</code>, and/or <code class="ph codeph">NULLS
+                                        LAST</code> can be specified to modify the sort ordering
+                                of the index. Since an ordered index can be scanned either forward
+                                or backward, it is not normally useful to create a single-column
+                                        <code class="ph codeph">DESC</code> index — that sort ordering is already
+                                available with a regular index. The value of these options is that
+                                multicolumn indexes can be created that match the sort ordering
+                                requested by a mixed-ordering query, such as <code class="ph codeph">SELECT ...
+                                        ORDER BY x ASC, y DESC</code>. The <code class="ph codeph">NULLS</code>
+                                options are useful if you need to support "nulls sort low" behavior,
+                                rather than the default "nulls sort high", in queries that depend on
+                                indexes to avoid sorting steps.</p>
+
+                        <p class="p">For most index methods, the speed of creating an index is dependent on
+                                the setting of <code class="ph codeph">maintenance_work_mem</code>. Larger values
+                                will reduce the time needed for index creation, so long as you don't
+                                make it larger than the amount of memory really available, which
+                                would drive the machine into swapping.</p>
+
+                        <p class="p">When an index is created on a partitioned table, the index is propagated
+                                to all the child tables created by Greenplum Database. Creating an
+                                index on a table that is created by Greenplum Database for use by a
+                                partitioned table is not supported.</p>
+
+                        <p class="p"><code class="ph codeph">UNIQUE</code> indexes are allowed only if the index columns are
+                                the same as (or a superset of) the Greenplum distribution key
+                                columns.</p>
+
+                        <p class="p"><code class="ph codeph">UNIQUE</code> indexes are not allowed on append-optimized
+                                tables.</p>
+
+                        <p class="p">A <code class="ph codeph">UNIQUE</code> index can be created on a partitioned table.
+                                However, uniqueness is enforced only within a partition; uniqueness
+                                is not enforced between partitions. For example, for a partitioned
+                                table with partitions that are based on year and a subpartitions
+                                that are based on quarter, uniqueness is enforced only on each
+                                individual quarter partition. Uniqueness is not enforced between
+                                quarter partitions</p>
+
+                        <p class="p">Indexes are not used for <code class="ph codeph">IS NULL</code> clauses by default. The
+                                best way to use indexes in such cases is to create a partial index
+                                using an <code class="ph codeph">IS NULL</code> predicate. </p>
+
+                        <p class="p"><code class="ph codeph">bitmap</code> indexes perform best for columns that have
+                                between 100 and 100,000 distinct values. For a column with more than
+                                100,000 distinct values, the performance and space efficiency of a
+                                bitmap index decline. The size of a bitmap index is proportional to
+                                the number of rows in the table times the number of distinct values
+                                in the indexed column. </p>
+
+                        <p class="p">Columns with fewer than 100 distinct values usually do not benefit much
+                                from any type of index. For example, a gender column with only two
+                                distinct values for male and female would not be a good candidate
+                                for an index. </p>
+
+                        <p class="p">Prior releases of Greenplum Database also had an R-tree index method.
+                                This method has been removed because it had no significant
+                                advantages over the GiST method. If <code class="ph codeph">USING rtree</code> is
+                                specified, <code class="ph codeph">CREATE INDEX</code> will interpret it as
+                                        <code class="ph codeph">USING gist</code>. </p>
+
+                        <p class="p">For more information on the GiST index type, refer to the <a class="xref" href="https://www.postgresql.org/docs/9.4/indexes-types.html" target="_blank">PostgreSQL
+                                        documentation</a>.</p>
+
+                        <p class="p">The use of hash indexes has been disabled in Greenplum Database.</p>
+
+                </div>
+
+                <div class="section" id="topic1__section6"><h2 class="title sectiontitle">Examples</h2>
+                        
+                        <p class="p">To create a B-tree index on the column <code class="ph codeph">title</code> in the
+                                table <code class="ph codeph">films</code>:</p>
+
+                        <pre class="pre codeblock"><code>CREATE UNIQUE INDEX title_idx ON films (title);</code></pre>
+                        <p class="p">To create a bitmap index on the column <code class="ph codeph">gender</code> in the
+                                table <code class="ph codeph">employee</code>:</p>
+
+                        <pre class="pre codeblock"><code>CREATE INDEX gender_bmp_idx ON employee USING bitmap 
+(gender);</code></pre>
+                        <p class="p">To create an index on the expression <code class="ph codeph">lower(title)</code>,
+                                allowing efficient case-insensitive searches:</p>
+
+                        <pre class="pre codeblock"><code>CREATE INDEX ON films ((lower(title)));</code></pre>
+                        <p class="p">(In this example we have chosen to omit the index name, so the system
+                                will choose a name, typically <code class="ph codeph">films_lower_idx</code>.)
+                        </p>
+
+                        <p class="p"> To create an index with non-default collation: </p>
+
+                        <pre class="pre codeblock"><code>CREATE INDEX title_idx_german ON films (title COLLATE "de_DE");</code></pre>
+                        <p class="p">To create an index with non-default fill factor:</p>
+
+                        <pre class="pre codeblock"><code>CREATE UNIQUE INDEX title_idx ON films (title) WITH 
+(fillfactor = 70);</code></pre>
+                        <p class="p">To create a GIN index with fast updates disabled:</p>
+
+                        <pre class="pre codeblock"><code>CREATE INDEX gin_idx ON documents_table USING gin (locations) WITH (fastupdate = off);</code></pre>
+                        <p class="p">To create an index on the column <code class="ph codeph">code</code> in the table
+                                        <code class="ph codeph">films</code> and have the index reside in the
+                                tablespace <code class="ph codeph">indexspace</code>:</p>
+
+                        <pre class="pre codeblock"><code>CREATE INDEX code_idx ON films(code) TABLESPACE indexspace;</code></pre>
+                        <p class="p">To create a GiST index on a point attribute so that we
+                                can efficiently use box operators on the result of the
+                                conversion function:</p>
+
+                        <pre class="pre codeblock"><code>CREATE INDEX pointloc ON points USING gist (box(location,location));
+SELECT * FROM points WHERE box(location,location) &amp;&amp; '(0,0),(1,1)'::box;</code></pre>
+                </div>
+
+                <div class="section" id="topic1__section7"><h2 class="title sectiontitle">Compatibility</h2>
+                        
+                        <p class="p"><code class="ph codeph">CREATE INDEX</code> is a Greenplum Database language extension.
+                                There are no provisions for indexes in the SQL standard. </p>
+
+                        <p class="p">Greenplum Database does not support the concurrent creation of indexes
+                                        (<code class="ph codeph">CONCURRENTLY</code> keyword not supported).</p>
+
+                </div>
+
+                <div class="section" id="topic1__section8"><h2 class="title sectiontitle">See Also</h2>
+                        
+                        <p class="p"><a class="xref" href="ALTER_INDEX.html#topic1">ALTER INDEX</a>, <a class="xref" href="DROP_INDEX.html#topic1">DROP INDEX</a>, <a class="xref" href="CREATE_TABLE.html#topic1">CREATE TABLE</a>, <a class="xref" href="CREATE_OPERATOR_CLASS.html#topic1">CREATE OPERATOR CLASS</a></p>
+
+                </div>
+
+        </div>
+
+<div class="related-links">
+<div class="familylinks">
+<div class="parentlink"><strong>Parent topic:</strong> <a class="link" href="../sql_commands/sql_ref.html">SQL Commands</a></div>
+</div>
+</div></body>
+</html>

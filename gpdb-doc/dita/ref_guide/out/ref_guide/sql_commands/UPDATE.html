@@ -1,0 +1,329 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+
+<meta name="copyright" content="(C) Copyright 2022" />
+<meta name="DC.rights.owner" content="(C) Copyright 2022" />
+<meta name="generator" content="DITA-OT" /><meta name="DC.type" content="topic" />
+<meta name="DC.title" content="UPDATE" />
+<meta name="DC.relation" scheme="URI" content="../sql_commands/sql_ref.html" />
+<meta name="DC.format" content="XHTML" />
+<meta name="DC.identifier" content="topic1" />
+<link rel="stylesheet" type="text/css" href="../commonltr.css" />
+<title>UPDATE</title>
+</head>
+<body id="topic1">
+
+  <h1 class="title topictitle1" id="topic1__eq20941">UPDATE</h1>
+
+  <div class="body">
+    <p class="p" id="topic1__sql_command_desc">Updates rows of a table.</p>
+
+    <div class="section" id="topic1__section2"><h2 class="title sectiontitle">Synopsis</h2>
+      
+      <pre class="pre codeblock" id="topic1__sql_command_synopsis"><code>[ WITH [ RECURSIVE ] &lt;with_query&gt; [, ...] ]
+UPDATE [ONLY] &lt;table&gt; [[AS] &lt;alias&gt;]
+   SET {&lt;column&gt; = {&lt;expression&gt; | DEFAULT} |
+   (&lt;column&gt; [, ...]) = ({&lt;expression&gt; | DEFAULT} [, ...])} [, ...]
+   [FROM &lt;fromlist&gt;]
+   [WHERE &lt;condition &gt;| WHERE CURRENT OF &lt;cursor_name&gt; ]</code></pre>
+    </div>
+
+    <div class="section" id="topic1__section3"><h2 class="title sectiontitle">Description</h2>
+      
+      <p class="p"><code class="ph codeph">UPDATE</code> changes the values of the specified columns in all rows that
+        satisfy the condition. Only the columns to be modified need be mentioned in the
+          <code class="ph codeph">SET</code> clause; columns not explicitly modified retain their previous
+        values.</p>
+
+      <p class="p">By default, <code class="ph codeph">UPDATE</code> will update rows in the specified table and all its
+        subtables. If you wish to only update the specific table mentioned, you must use the
+          <code class="ph codeph">ONLY</code> clause.</p>
+
+      <p class="p">There are two ways to modify a table using information contained in other tables in the
+        database: using sub-selects, or specifying additional tables in the <code class="ph codeph">FROM</code>
+        clause. Which technique is more appropriate depends on the specific circumstances. </p>
+
+      <p class="p">If the <code class="ph codeph">WHERE CURRENT OF</code> clause is specified, the row that is updated is
+        the one most recently fetched from the specified cursor. </p>
+
+      <p class="p">The <code class="ph codeph">WHERE CURRENT OF</code> clause is not supported with replicated tables.</p>
+
+      <p class="p">You must have the <code class="ph codeph">UPDATE</code> privilege on the table, or at least on the
+        column(s) that are listed to be updated. You must also have the <code class="ph codeph">SELECT</code>
+        privilege on any column whose values are read in the <var class="keyword varname">expression</var>s or
+          <var class="keyword varname">condition</var>.</p>
+
+      <div class="note"><span class="notetitle">Note:</span> As the default, Greenplum Database acquires an <code class="ph codeph">EXCLUSIVE</code> lock on tables
+        for <code class="ph codeph">UPDATE</code> operations on heap tables. When the Global Deadlock Detector is
+        enabled, the lock mode for <code class="ph codeph">UPDATE</code> operations on heap tables is <code class="ph codeph">ROW
+          EXCLUSIVE</code>. See <a class="xref" href="../../admin_guide/dml.html#topic_gdd" target="_blank">Global Deadlock Detector</a>.</div>
+
+      <div class="sectiondiv" id="topic1__section4">
+        <strong class="ph b">Outputs</strong>
+        <p class="p">On successful completion, an <code class="ph codeph">UPDATE</code> command returns a command tag of the
+          form:</p>
+
+        <pre class="pre codeblock"><code>UPDATE &lt;count&gt;</code></pre>
+        <p class="p">where <var class="keyword varname">count</var> is the number of rows updated. If <var class="keyword varname">count</var>
+          is 0, no rows matched the condition (this is not considered an error). </p>
+
+      </div>
+    </div>
+
+    <div class="section" id="topic1__section5"><h2 class="title sectiontitle">Parameters</h2>
+      
+      <dl class="dl parml">
+        
+          <dt class="dt pt dlterm"><var class="keyword varname">with_query</var></dt>
+
+          <dd class="dd pd">The <code class="ph codeph">WITH</code> clause allows you to specify one or more subqueries that can
+            be referenced by name in the <code class="ph codeph">UPDATE</code> query. </dd>
+
+          <dd class="dd pd ddexpand">For an <code class="ph codeph">UPDATE</code> command that includes a <code class="ph codeph">WITH</code> clause,
+            the clause can only contain <code class="ph codeph">SELECT</code> commands, the <code class="ph codeph">WITH</code>
+            clause cannot contain a data-modifying command (<code class="ph codeph">INSERT</code>,
+              <code class="ph codeph">UPDATE</code>, or <code class="ph codeph">DELETE</code>). </dd>
+
+          <dd class="dd pd ddexpand">It is possible for the query (<code class="ph codeph">SELECT</code> statement) to also contain a
+              <code class="ph codeph">WITH</code> clause. In such a case both sets of
+              <var class="keyword varname">with_query</var> can be referenced within the <code class="ph codeph">UPDATE</code>
+            query, but the second one takes precedence since it is more closely nested.</dd>
+
+          <dd class="dd pd ddexpand">See <a class="xref" href="../../admin_guide/query/topics/CTE-query.html#topic_zhs_r1s_w1b" target="_blank">WITH Queries (Common Table Expressions)</a> and
+                <a class="xref" href="SELECT.html#topic1">SELECT</a> for details. </dd>
+
+        
+        
+          <dt class="dt pt dlterm">ONLY</dt>
+
+          <dd class="dd pd">If specified, update rows from the named table only. When not specified, any tables
+            inheriting from the named table are also processed. </dd>
+
+        
+        
+          <dt class="dt pt dlterm">
+            <var class="keyword varname">table</var>
+          </dt>
+
+          <dd class="dd pd">The name (optionally schema-qualified) of an existing table. </dd>
+
+        
+        
+          <dt class="dt pt dlterm">
+            <var class="keyword varname">alias</var>
+          </dt>
+
+          <dd class="dd pd">A substitute name for the target table. When an alias is provided, it completely hides
+            the actual name of the table. For example, given <code class="ph codeph">UPDATE foo AS f</code>, the
+            remainder of the <code class="ph codeph">UPDATE</code> statement must refer to this table as
+              <code class="ph codeph">f</code> not <code class="ph codeph">foo</code>. </dd>
+
+        
+        
+          <dt class="dt pt dlterm">
+            <var class="keyword varname">column</var>
+          </dt>
+
+          <dd class="dd pd">The name of a column in table. The column name can be qualified with a subfield name
+            or array subscript, if needed. Do not include the table's name in the specification of a
+            target column.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">
+            <var class="keyword varname">expression</var>
+          </dt>
+
+          <dd class="dd pd">An expression to assign to the column. The expression may use the old values of this
+            and other columns in the table.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">DEFAULT</dt>
+
+          <dd class="dd pd">Set the column to its default value (which will be NULL if no specific default
+            expression has been assigned to it).</dd>
+
+        
+        
+          <dt class="dt pt dlterm">
+            <var class="keyword varname">fromlist</var>
+          </dt>
+
+          <dd class="dd pd">A list of table expressions, allowing columns from other tables to appear in the
+              <code class="ph codeph">WHERE</code> condition and the update expressions. This is similar to the
+            list of tables that can be specified in the <code class="ph codeph">FROM</code> clause of a
+              <code class="ph codeph">SELECT</code> statement. Note that the target table must not appear in the
+              <var class="keyword varname">fromlist</var>, unless you intend a self-join (in which case it must
+            appear with an <var class="keyword varname">alias</var> in the <var class="keyword varname">fromlist</var>).</dd>
+
+        
+        
+          <dt class="dt pt dlterm">
+            <var class="keyword varname">condition</var>
+          </dt>
+
+          <dd class="dd pd">An expression that returns a value of type boolean. Only rows for which this
+            expression returns true will be updated.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">
+            <var class="keyword varname">cursor_name</var>
+          </dt>
+
+          <dd class="dd pd">The name of the cursor to use in a <code class="ph codeph">WHERE CURRENT OF</code> condition. The
+            row to be updated is the one most recently fetched from the cursor. The cursor must be a
+            non-grouping query on the <code class="ph codeph">UPDATE</code> command target table. See
+                <a class="xref" href="DECLARE.html#topic1">DECLARE</a> for
+            more information about creating cursors. </dd>
+
+          <dd class="dd pd ddexpand"><code class="ph codeph">WHERE CURRENT OF</code> cannot be specified together with a Boolean
+            condition. </dd>
+
+          <dd class="dd pd ddexpand">Note that <code class="ph codeph">WHERE CURRENT OF</code> cannot be specified together with a
+            Boolean condition. The <code class="ph codeph">UPDATE...WHERE CURRENT OF</code> statement can only be
+            run on the server, for example in an interactive psql session or a script. Language
+            extensions such as PL/pgSQL do not have support for updatable cursors.</dd>
+
+          <dd class="dd pd ddexpand">See <a class="xref" href="DECLARE.html#topic1">DECLARE</a> for
+            more information about creating cursors.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">
+            <var class="keyword varname">output_expression</var>
+          </dt>
+
+          <dd class="dd pd">An expression to be computed and returned by the <code class="ph codeph">UPDATE</code> command after
+            each row is updated. The expression may use any column names of the table or table(s)
+            listed in <code class="ph codeph">FROM</code>. Write <code class="ph codeph">*</code> to return all columns. </dd>
+
+        
+        
+          <dt class="dt pt dlterm">
+            <var class="keyword varname">output_name</var>
+          </dt>
+
+          <dd class="dd pd">A name to use for a returned column.</dd>
+
+        
+      </dl>
+
+    </div>
+
+    <div class="section" id="topic1__section6"><h2 class="title sectiontitle">Notes</h2>
+      
+      <p class="p"><code class="ph codeph">SET</code> is not allowed on the Greenplum distribution key columns of a
+        table.</p>
+
+      <p class="p">When a <code class="ph codeph">FROM</code> clause is present, what essentially happens is that the target
+        table is joined to the tables mentioned in the from list, and each output row of the join
+        represents an update operation for the target table. When using <code class="ph codeph">FROM</code> you
+        should ensure that the join produces at most one output row for each row to be modified. In
+        other words, a target row should not join to more than one row from the other table(s). If
+        it does, then only one of the join rows will be used to update the target row, but which one
+        will be used is not readily predictable.</p>
+
+      <p class="p">Because of this indeterminacy, referencing other tables only within sub-selects is safer,
+        though often harder to read and slower than using a join.</p>
+
+      <p class="p">Running <code class="ph codeph">UPDATE</code> and <code class="ph codeph">DELETE</code> commands directly on a
+        specific partition (child table) of a partitioned table is not supported. Instead, run 
+        these commands on the root partitioned table, the table created with the <code class="ph codeph">CREATE
+          TABLE</code> command.</p>
+
+      <p class="p">For a partitioned table, all the child tables are locked during the <code class="ph codeph">UPDATE</code>
+        operation when the Global Deadlock Detector is not enabled (the default). Only some of the
+        leaf child tables are locked when the Global Deadlock Detector is enabled. For information
+        about the Global Deadlock Detector, see <a class="xref" href="../../admin_guide/dml.html#topic_gdd" target="_blank">Global Deadlock Detector</a>.</p>
+
+    </div>
+
+    <div class="section" id="topic1__section7"><h2 class="title sectiontitle">Examples</h2>
+      
+      <p class="p">Change the word <code class="ph codeph">Drama</code> to <code class="ph codeph">Dramatic</code> in the column
+          <code class="ph codeph">kind</code> of the table <code class="ph codeph">films</code>: </p>
+
+      <pre class="pre codeblock"><code>UPDATE films SET kind = 'Dramatic' WHERE kind = 'Drama';</code></pre>
+      <p class="p">Adjust temperature entries and reset precipitation to its default value in one row of the
+        table <code class="ph codeph">weather</code>: </p>
+
+      <pre class="pre codeblock"><code>UPDATE weather SET temp_lo = temp_lo+1, temp_hi = 
+temp_lo+15, prcp = DEFAULT
+WHERE city = 'San Francisco' AND date = '2016-07-03';</code></pre>
+      <p class="p">Use the alternative column-list syntax to do the same update:</p>
+
+      <pre class="pre codeblock"><code>UPDATE weather SET (temp_lo, temp_hi, prcp) = (temp_lo+1, 
+temp_lo+15, DEFAULT)
+WHERE city = 'San Francisco' AND date = '2016-07-03';</code></pre>
+      <p class="p">Increment the sales count of the salesperson who manages the account for Acme Corporation,
+        using the <code class="ph codeph">FROM</code> clause syntax (assuming both tables being joined are
+        distributed in Greenplum Database on the <code class="ph codeph">id</code> column):</p>
+
+      <pre class="pre codeblock"><code>UPDATE employees SET sales_count = sales_count + 1 FROM 
+accounts
+WHERE accounts.name = 'Acme Corporation'
+AND employees.id = accounts.id;</code></pre>
+      <p class="p">Perform the same operation, using a sub-select in the <code class="ph codeph">WHERE</code> clause:</p>
+
+      <pre class="pre codeblock"><code>UPDATE employees SET sales_count = sales_count + 1 WHERE id =
+  (SELECT id FROM accounts WHERE name = 'Acme Corporation');</code></pre>
+      <p class="p">Attempt to insert a new stock item along with the quantity of stock. If the item already
+        exists, instead update the stock count of the existing item. To do this without failing the
+        entire transaction, use savepoints.</p>
+
+      <pre class="pre codeblock"><code>BEGIN;
+-- other operations
+SAVEPOINT sp1;
+INSERT INTO wines VALUES('Chateau Lafite 2003', '24');
+-- Assume the above fails because of a unique key violation,
+-- so now we issue these commands:
+ROLLBACK TO sp1;
+UPDATE wines SET stock = stock + 24 WHERE winename = 'Chateau 
+Lafite 2003';
+-- continue with other operations, and eventually
+COMMIT;</code></pre>
+    </div>
+
+    <div class="section" id="topic1__section8"><h2 class="title sectiontitle">Compatibility</h2>
+      
+      <p class="p">This command conforms to the SQL standard, except that the <code class="ph codeph">FROM</code> clause is
+        a Greenplum Database extension. </p>
+
+      <p class="p">According to the standard, the column-list syntax should allow a list of columns to be
+        assigned from a single row-valued expression, such as a sub-select:</p>
+
+      <pre class="pre codeblock"><code>UPDATE accounts SET (contact_last_name, contact_first_name) =
+    (SELECT last_name, first_name FROM salesmen
+     WHERE salesmen.id = accounts.sales_id);</code></pre>
+      <p class="p">This is not currently implemented — the source must be a list of independent
+        expressions.</p>
+
+      <p class="p">Some other database systems offer a <code class="ph codeph">FROM</code> option in which the target table
+        is supposed to be listed again within <code class="ph codeph">FROM</code>. That is not how Greenplum
+        Database interprets <code class="ph codeph">FROM</code>. Be careful when porting applications that use
+        this extension.</p>
+
+    </div>
+
+    <div class="section" id="topic1__section9"><h2 class="title sectiontitle">See Also</h2>
+      
+      <p class="p"><a class="xref" href="DECLARE.html#topic1">DECLARE</a>,
+            <a class="xref" href="DELETE.html#topic1">DELETE</a>,
+            <a class="xref" href="SELECT.html#topic1">SELECT</a>,
+            <a class="xref" href="INSERT.html#topic1">INSERT</a></p>
+
+    </div>
+
+  </div>
+
+<div class="related-links">
+<div class="familylinks">
+<div class="parentlink"><strong>Parent topic:</strong> <a class="link" href="../sql_commands/sql_ref.html">SQL Commands</a></div>
+</div>
+</div></body>
+</html>

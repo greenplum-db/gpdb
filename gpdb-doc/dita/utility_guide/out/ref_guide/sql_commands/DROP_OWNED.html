@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+
+<meta name="copyright" content="(C) Copyright 2022" />
+<meta name="DC.rights.owner" content="(C) Copyright 2022" />
+<meta name="generator" content="DITA-OT" /><meta name="DC.type" content="topic" />
+<meta name="DC.title" content="DROP OWNED" />
+<meta name="DC.format" content="XHTML" />
+<meta name="DC.identifier" content="topic1" />
+<link rel="stylesheet" type="text/css" href="../../out/commonltr.css" />
+<title>DROP OWNED</title>
+</head>
+<body id="topic1">
+<h1 class="title topictitle1" id="topic1__db20941">DROP OWNED</h1>
+<div class="body"><p class="p" id="topic1__sql_command_desc">Removes database objects owned by a database role.</p>
+<div class="section" id="topic1__section2"><h2 class="title sectiontitle">Synopsis</h2><pre class="pre codeblock" id="topic1__sql_command_synopsis"><code>DROP OWNED BY &lt;name&gt; [, ...] [CASCADE | RESTRICT]</code></pre></div>
+<div class="section" id="topic1__section3"><h2 class="title sectiontitle">Description</h2><p class="p"><code class="ph codeph">DROP OWNED</code> drops all the objects in the current database
+that are owned by one of the specified roles. Any privileges granted
+to the given roles on objects in the current database or on shared objects (databases, tablespaces) will also be revoked.</p>
+</div>
+<div class="section" id="topic1__section4"><h2 class="title sectiontitle">Parameters</h2><dl class="dl parml"><dt class="dt pt dlterm"><var class="keyword varname">name</var></dt>
+<dd class="dd pd">The name of a role whose objects will be dropped, and whose privileges
+will be revoked.</dd>
+<dt class="dt pt dlterm">CASCADE</dt>
+<dd class="dd pd">Automatically drop objects that depend on the affected objects.</dd>
+<dt class="dt pt dlterm">RESTRICT</dt>
+<dd class="dd pd">Refuse to drop the objects owned by a role if any other database
+objects depend on one of the affected objects. This is the default.</dd>
+</dl>
+</div>
+<div class="section" id="topic1__section5"><h2 class="title sectiontitle">Notes</h2><p class="p"><code class="ph codeph">DROP OWNED</code> is often used to prepare for the removal
+of one or more roles. Because <code class="ph codeph">DROP OWNED</code> only affects
+the objects in the current database, it is usually necessary to run
+this command in each database that contains objects owned by a role that
+is to be removed.</p>
+<p class="p">Using the <code class="ph codeph">CASCADE</code> option may make the command recurse
+to objects owned by other users.</p>
+<p class="p">The <a class="xref" href="REASSIGN_OWNED.html#topic1"><code class="ph codeph">REASSIGN OWNED</code></a> command is an
+        alternative that reassigns the ownership of all the database objects owned by one or more
+        roles. However, <code class="ph codeph">REASSIGN OWNED</code> does not deal with
+          privileges for other objects.
+</p>
+</div>
+<div class="section" id="topic1__section6"><h2 class="title sectiontitle">Examples</h2><p class="p">Remove any database objects owned by the role named <code class="ph codeph">sally</code>:</p>
+<pre class="pre codeblock"><code>DROP OWNED BY sally;</code></pre></div>
+<div class="section" id="topic1__section7"><h2 class="title sectiontitle">Compatibility</h2><p class="p">The <code class="ph codeph">DROP OWNED</code> command is a Greenplum Database extension. </p>
+</div>
+<div class="section" id="topic1__section8"><h2 class="title sectiontitle">See Also</h2><p class="p"><a class="xref" href="REASSIGN_OWNED.html#topic1">REASSIGN OWNED</a>,
+            <a class="xref" href="DROP_ROLE.html#topic1">DROP ROLE</a></p>
+</div>
+</div>
+</body>
+</html>

@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+
+<meta name="copyright" content="(C) Copyright 2022" />
+<meta name="DC.rights.owner" content="(C) Copyright 2022" />
+<meta name="generator" content="DITA-OT" /><meta name="DC.type" content="topic" />
+<meta name="DC.title" content="DROP INDEX" />
+<meta name="DC.relation" scheme="URI" content="../sql_commands/sql_ref.html" />
+<meta name="DC.format" content="XHTML" />
+<meta name="DC.identifier" content="topic1" />
+<link rel="stylesheet" type="text/css" href="../commonltr.css" />
+<title>DROP INDEX</title>
+</head>
+<body id="topic1">
+<h1 class="title topictitle1" id="topic1__cx154761">DROP INDEX</h1>
+<div class="body"><p class="p" id="topic1__sql_command_desc">Removes an index.</p>
+<div class="section" id="topic1__section2"><h2 class="title sectiontitle">Synopsis</h2><pre class="pre codeblock" id="topic1__sql_command_synopsis"><code>DROP INDEX [ CONCURRENTLY ] [ IF EXISTS ] &lt;name&gt; [, ...] [ CASCADE | RESTRICT ]</code></pre></div>
+<div class="section" id="topic1__section3"><h2 class="title sectiontitle">Description</h2><p class="p"><code class="ph codeph">DROP INDEX</code> drops an existing index from the database
+system. To run this command you must be the owner of the index. </p>
+</div>
+<div class="section" id="topic1__section4"><h2 class="title sectiontitle">Parameters</h2>
+      <dl class="dl parml">
+        
+          <dt class="dt pt dlterm">CONCURRENTLY</dt>
+
+          <dd class="dd pd">Drop the index without locking out concurrent selects, inserts, updates, and deletes
+            on the index's table. A normal <code class="ph codeph">DROP INDEX</code> acquires an exclusive lock on
+            the table, blocking other accesses until the index drop can be completed. With this
+            option, the command instead waits until conflicting transactions have completed. </dd>
+
+          <dd class="dd pd ddexpand">There are several caveats to be aware of when using this option. Only one index name
+            can be specified, and the <code class="ph codeph">CASCADE</code> option is not supported. (Thus, an
+            index that supports a <code class="ph codeph">UNIQUE</code> or <code class="ph codeph">PRIMARY KEY</code> constraint
+            cannot be dropped this way.) Also, regular <code class="ph codeph">DROP INDEX</code> commands can be
+            performed within a transaction block, but <code class="ph codeph">DROP INDEX CONCURRENTLY</code>
+            cannot.</dd>
+
+        
+      </dl>
+<dl class="dl parml"><dt class="dt pt dlterm">IF EXISTS</dt>
+<dd class="dd pd">Do not throw an error if the index does not exist. A notice is issued
+in this case. </dd>
+<dt class="dt pt dlterm"><var class="keyword varname">name</var></dt>
+<dd class="dd pd">The name (optionally schema-qualified) of an existing index.</dd>
+<dt class="dt pt dlterm">CASCADE</dt>
+<dd class="dd pd">Automatically drop objects that depend on the index. </dd>
+<dt class="dt pt dlterm">RESTRICT</dt>
+<dd class="dd pd">Refuse to drop the index if any objects depend on it. This is the
+default. </dd>
+</dl>
+</div>
+<div class="section" id="topic1__section5"><h2 class="title sectiontitle">Examples</h2><p class="p">Remove the index <code class="ph codeph">title_idx</code>: </p>
+<pre class="pre codeblock"><code>DROP INDEX title_idx;</code></pre></div>
+<div class="section" id="topic1__section6"><h2 class="title sectiontitle">Compatibility</h2><p class="p"><code class="ph codeph">DROP INDEX</code> is a Greenplum Database language extension.
+There are no provisions for indexes in the SQL standard. </p>
+</div>
+<div class="section" id="topic1__section7"><h2 class="title sectiontitle">See Also</h2><p class="p"><a class="xref" href="ALTER_INDEX.html#topic1">ALTER INDEX</a>, <a class="xref" href="CREATE_INDEX.html#topic1">CREATE INDEX</a>, <a class="xref" href="REINDEX.html#topic1">REINDEX</a></p>
+</div>
+</div>
+<div class="related-links">
+<div class="familylinks">
+<div class="parentlink"><strong>Parent topic:</strong> <a class="link" href="../sql_commands/sql_ref.html">SQL Commands</a></div>
+</div>
+</div></body>
+</html>

@@ -1,0 +1,166 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+
+<meta name="copyright" content="(C) Copyright 2022" />
+<meta name="DC.rights.owner" content="(C) Copyright 2022" />
+<meta name="generator" content="DITA-OT" /><meta name="DC.type" content="topic" />
+<meta name="DC.title" content="CREATE FOREIGN DATA WRAPPER" />
+<meta name="DC.relation" scheme="URI" content="../sql_commands/sql_ref.html" />
+<meta name="DC.format" content="XHTML" />
+<meta name="DC.identifier" content="topic1" />
+<link rel="stylesheet" type="text/css" href="../commonltr.css" />
+<title>CREATE FOREIGN DATA WRAPPER</title>
+</head>
+<body id="topic1">
+
+    <h1 class="title topictitle1" id="topic1__bv20941">CREATE FOREIGN DATA WRAPPER</h1>
+
+    <div class="body">
+        <p class="p" id="topic1__sql_command_desc">Defines a new foreign-data wrapper.</p>
+
+        <div class="section" id="topic1__section2"><h2 class="title sectiontitle">Synopsis</h2>
+            
+            <pre class="pre codeblock" id="topic1__sql_command_synopsis"><code>CREATE FOREIGN DATA WRAPPER &lt;name&gt;
+    [ HANDLER &lt;handler_function&gt; | NO HANDLER ]
+    [ VALIDATOR &lt;validator_function&gt; | NO VALIDATOR ]
+    [ OPTIONS ( [ mpp_execute { 'master' | 'any' | 'all segments' } [, ] ] &lt;option&gt; '&lt;value&gt;' [, ... ] ) ]</code></pre>
+        </div>
+
+        <div class="section" id="topic1__section3"><h2 class="title sectiontitle">Description</h2>
+            
+            <p class="p"><code class="ph codeph">CREATE FOREIGN DATA WRAPPER</code> creates a new foreign-data wrapper
+                in the current database.  The user who defines the foreign-data wrapper becomes
+                 its owner.</p>
+
+            <p class="p">Only superusers can create foreign-data wrappers.</p>
+
+        </div>
+
+        <div class="section" id="topic1__section4"><h2 class="title sectiontitle">Parameters</h2>
+            
+            <dl class="dl parml">
+                
+                    <dt class="dt pt dlterm"><var class="keyword varname">name</var></dt>
+
+                    <dd class="dd pd">
+                        <p class="p">The name of the foreign-data wrapper to create. The <var class="keyword varname">name</var>
+                           must be unique within the database.</p>
+
+                    </dd>
+
+                
+                
+                    <dt class="dt pt dlterm">HANDLER <var class="keyword varname">handler_function</var></dt>
+
+                    <dd class="dd pd">
+                        <p class="p">The name of a previously registered function that Greenplum Database calls to retrieve the execution functions for foreign tables.  <var class="keyword varname">hander_function</var> must take no arguments, and its return type must be <code class="ph codeph">fdw_handler</code>.</p>
+<p class="p">It is possible to create a foreign-data wrapper with no handler function, but you can only declare, not access, foreign tables using such a wrapper.</p>
+
+                    </dd>
+
+                
+                
+                    <dt class="dt pt dlterm">VALIDATOR <var class="keyword varname">validator_function</var></dt>
+
+                    <dd class="dd pd">
+                        <p class="p">The name of a previously registered function that Greenplum Database calls to check the options provided to the foreign-data wrapper. This function also checks the options for foreign servers, user mappings, and foreign tables that use the foreign-data wrapper. If no validator function or <code class="ph codeph">NO VALIDATOR</code> is specified, Greenplum Database does not check options at creation time. (Depending upon the implementation, foreign-data wrappers may ignore or reject invalid options at runtime.)</p>
+<p class="p"><var class="keyword varname">validator_function</var> must take two arguments: one of type <code class="ph codeph">text[]</code>, which contains the array of options as stored in the system catalogs, and one of type <code class="ph codeph">oid</code>, which identifies the OID of the system catalog containing the options.</p>
+<p class="p">The return type is ignored; <var class="keyword varname">validator_function</var> should report invalid options using the <code class="ph codeph">ereport(ERROR)</code> function.</p>
+
+                    </dd>
+
+                
+                
+                    <dt class="dt pt dlterm">OPTIONS ( <var class="keyword varname">option</var> '<var class="keyword varname">value</var>' [, ... ] )</dt>
+
+                    <dd class="dd pd">
+                        <p class="p">The options for the new foreign-data wrapper. Option names must be unique. The option names and values are foreign-data wrapper-specific and are validated using the foreign-data wrappers' <var class="keyword varname">validator_function</var>.</p>
+
+                    </dd>
+
+                
+                
+                    <dt class="dt pt dlterm">mpp_execute { 'master' | 'any' | 'all segments' }</dt>
+
+                    <dd class="dd pd">
+                        <div class="p">An option that identifies the host from which the foreign-data wrapper
+                            reads or writes data: <ul class="ul" id="topic1__ul_zcg_2vd_mgb">
+                                <li class="li"><code class="ph codeph">master</code> (the default)—Read or write data from the
+                                    master host.</li>
+
+                                <li class="li"><code class="ph codeph">any</code>—Read data from either the master host or
+                                    any one segment, depending on which path costs less.</li>
+
+                                <li class="li"><code class="ph codeph">all segments</code>—Read or write data from all segments. To
+                                    support this option value, the foreign-data wrapper must have a
+                                    policy that matches the segments to data.
+                                  <div class="note"><span class="notetitle">Note:</span> Greenplum Database supports parallel writes to foreign tables
+                                   only when you set <code class="ph codeph">mpp_execute 'all segments'</code>.</div>
+</li>
+
+                            </ul>
+</div>
+
+                        <p class="p">Support for the foreign-data wrapper <code class="ph codeph">mpp_execute</code> option,
+                            and the specific modes, is foreign-data wrapper-specific.</p>
+
+                        <p class="p">The <code class="ph codeph">mpp_execute</code> option can be specified in multiple
+                            commands: <code class="ph codeph">CREATE FOREIGN TABLE</code>, <code class="ph codeph">CREATE
+                                SERVER</code>, and <code class="ph codeph">CREATE FOREIGN DATA WRAPPER</code>.
+                            The foreign table setting takes precedence over the foreign server
+                            setting, followed by the foreign-data wrapper setting.</p>
+
+                    </dd>
+
+                
+            </dl>
+
+        </div>
+
+        <div class="section" id="topic1__section5"><h2 class="title sectiontitle">Notes</h2>
+            
+            <p class="p">The foreign-data wrapper functionality is still under development. Optimization of queries is primitive (and mostly left to the wrapper).</p>
+
+        </div>
+
+        <div class="section" id="topic1__section6"><h2 class="title sectiontitle">Examples</h2>
+            
+            <p class="p">Create a useless foreign-data wrapper named <code class="ph codeph">dummy</code>:</p>
+<pre class="pre codeblock"><code>CREATE FOREIGN DATA WRAPPER dummy;</code></pre>
+            <p class="p">Create a foreign-data wrapper named <code class="ph codeph">file</code> with a handler function named <code class="ph codeph">file_fdw_handler</code>:</p>
+<pre class="pre codeblock"><code>CREATE FOREIGN DATA WRAPPER file HANDLER file_fdw_handler;</code></pre>
+            <p class="p">Create a foreign-data wrapper named <code class="ph codeph">mywrapper</code> that includes an option:</p>
+<pre class="pre codeblock"><code>CREATE FOREIGN DATA WRAPPER mywrapper OPTIONS (debug 'true');</code></pre>
+        </div>
+
+        <div class="section" id="topic1__section7"><h2 class="title sectiontitle">Compatibility</h2>
+            
+            <p class="p"><code class="ph codeph">CREATE FOREIGN DATA WRAPPER</code> conforms to ISO/IEC 9075-9 (SQL/MED), with the exception that the <code class="ph codeph">HANDLER</code> and <code class="ph codeph">VALIDATOR</code> clauses are extensions, and the standard clauses <code class="ph codeph">LIBRARY</code> and <code class="ph codeph">LANGUAGE</code> are not implemented in Greenplum Database.</p>
+
+            <p class="p">Note, however, that the SQL/MED functionality as a whole is not yet conforming.</p>
+
+        </div>
+
+        <div class="section" id="topic1__section8"><h2 class="title sectiontitle">See Also</h2>
+            
+            <p class="p"><a class="xref" href="ALTER_FOREIGN_DATA_WRAPPER.html#topic1">ALTER FOREIGN DATA WRAPPER</a>,
+                        <a class="xref" href="DROP_FOREIGN_DATA_WRAPPER.html#topic1">DROP
+                    FOREIGN DATA WRAPPER</a>,
+                        <a class="xref" href="CREATE_SERVER.html#topic1">CREATE
+                    SERVER</a>,
+                        <a class="xref" href="CREATE_USER_MAPPING.html#topic1">CREATE
+                    USER MAPPING</a></p>
+
+        </div>
+
+    </div>
+
+<div class="related-links">
+<div class="familylinks">
+<div class="parentlink"><strong>Parent topic:</strong> <a class="link" href="../sql_commands/sql_ref.html">SQL Commands</a></div>
+</div>
+</div></body>
+</html>

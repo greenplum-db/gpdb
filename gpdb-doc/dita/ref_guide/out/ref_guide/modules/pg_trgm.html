@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+
+<meta name="copyright" content="(C) Copyright 2022" />
+<meta name="DC.rights.owner" content="(C) Copyright 2022" />
+<meta name="generator" content="DITA-OT" /><meta name="DC.type" content="topic" />
+<meta name="DC.title" content="pg_trgm" />
+<meta name="DC.format" content="XHTML" />
+<meta name="DC.identifier" content="topic_fstrm" />
+<link rel="stylesheet" type="text/css" href="../commonltr.css" />
+<title>pg_trgm</title>
+</head>
+<body>
+
+  <div class="nested0" aria-labelledby="ariaid-title1" id="topic_fstrm">
+    <h1 class="title topictitle1" id="ariaid-title1">pg_trgm</h1>
+
+    <div class="body">
+      <p class="p">The <code class="ph codeph">pg_trgm</code> module provides functions and operators for
+        determining the similarity of alphanumeric text based on trigram matching.
+        The module also provides index operator classes that support fast searching
+        for similar strings.</p>
+
+      <p class="p">The Greenplum Database <code class="ph codeph">pg_trgm</code> module is equivalent
+        to the PostgreSQL <code class="ph codeph">pg_trgm</code> module. There are no
+        Greenplum Database or MPP-specific considerations for the module.</p>
+
+    </div>
+
+    <div class="topic nested1" aria-labelledby="ariaid-title2" id="topic_reg">
+      <h2 class="title topictitle2" id="ariaid-title2">Installing and Registering the Module</h2>
+
+      <div class="body">
+        <p class="p">The <code class="ph codeph">pg_trgm</code> module is installed when you install
+          Greenplum Database. Before you can use any of the functions defined in the
+          module, you must register the <code class="ph codeph">pg_trgm</code> extension in
+          each database in which you want to use the functions:</p>
+
+      <pre class="pre codeblock"><code>CREATE EXTENSION pg_trgm;</code></pre>
+      <p class="p">Refer to <a class="xref" href="../../install_guide/install_modules.html" target="_blank">Installing Additional Supplied Modules</a>
+          for more information.</p>
+
+      </div>
+
+    </div>
+
+    <div class="topic nested1" aria-labelledby="ariaid-title3" id="topic_info">
+      <h2 class="title topictitle2" id="ariaid-title3">Module Documentation</h2>
+
+      <div class="body">
+        <p class="p">See <a class="xref" href="https://www.postgresql.org/docs/9.4/pgtrgm.html" target="_blank">pg_trgm</a> in the PostgreSQL
+          documentation for detailed information about the individual functions in
+          this module.</p>
+
+      </div>
+
+    </div>
+
+  </div>
+
+</body>
+</html>

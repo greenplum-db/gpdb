@@ -1,0 +1,250 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+
+<meta name="copyright" content="(C) Copyright 2022" />
+<meta name="DC.rights.owner" content="(C) Copyright 2022" />
+<meta name="generator" content="DITA-OT" /><meta name="DC.type" content="topic" />
+<meta name="DC.title" content="pg_operator" />
+<meta name="DC.relation" scheme="URI" content="../system_catalogs/catalog_ref-html.html#topic1" />
+<meta name="DC.format" content="XHTML" />
+<meta name="DC.identifier" content="topic1" />
+<meta name="DC.language" content="en" />
+<link rel="stylesheet" type="text/css" href="../commonltr.css" />
+<title>pg_operator</title>
+</head>
+<body id="topic1">
+
+  <h1 class="title topictitle1" id="topic1__gy141670">pg_operator</h1>
+
+  <div class="body">
+    <p class="p">The <code class="ph codeph">pg_operator</code> system catalog table stores information about operators,
+      both built-in and those defined by <code class="ph codeph">CREATE OPERATOR</code>. Unused column contain
+      zeroes. For example, <code class="ph codeph">oprleft</code> is zero for a prefix operator.</p>
+
+    
+<div class="tablenoborder"><table cellpadding="4" cellspacing="0" summary="" id="topic1__gy150092" class="table" frame="border" border="1" rules="all"><caption><span class="tablecap"><span class="table--title-label">Table 1. </span>pg_catalog.pg_operator</span></caption><colgroup><col style="width:131pt" /><col style="width:72.75pt" /><col style="width:105pt" /><col style="width:147pt" /></colgroup><thead class="thead" style="text-align:left;">
+          <tr class="row">
+            <th class="entry nocellnorowborder" style="vertical-align:top;" id="d23708e46">column</th>
+
+            <th class="entry nocellnorowborder" style="vertical-align:top;" id="d23708e49">type</th>
+
+            <th class="entry nocellnorowborder" style="vertical-align:top;" id="d23708e52">references</th>
+
+            <th class="entry cell-norowborder" style="vertical-align:top;" id="d23708e55">description</th>
+
+          </tr>
+
+        </thead>
+<tbody class="tbody">
+          <tr class="row">
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d23708e46 ">
+              <code class="ph codeph">oid</code>
+            </td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d23708e49 ">oid</td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d23708e52 "> </td>
+
+            <td class="entry cell-norowborder" style="vertical-align:top;" headers="d23708e55 ">Row identifier (hidden attribute, must be explicityly selected)</td>
+
+          </tr>
+
+          <tr class="row">
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d23708e46 ">
+              <code class="ph codeph">oprname</code>
+            </td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d23708e49 ">name</td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d23708e52 "> </td>
+
+            <td class="entry cell-norowborder" style="vertical-align:top;" headers="d23708e55 ">Name of the operator</td>
+
+          </tr>
+
+          <tr class="row">
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d23708e46 ">
+              <code class="ph codeph">oprnamespace</code>
+            </td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d23708e49 ">oid</td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d23708e52 ">pg_namespace.oid</td>
+
+            <td class="entry cell-norowborder" style="vertical-align:top;" headers="d23708e55 ">The OID of the namespace that contains this operator</td>
+
+          </tr>
+
+          <tr class="row">
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d23708e46 ">
+              <code class="ph codeph">oprowner</code>
+            </td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d23708e49 ">oid</td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d23708e52 ">pg_authid.oid</td>
+
+            <td class="entry cell-norowborder" style="vertical-align:top;" headers="d23708e55 ">Owner of the operator</td>
+
+          </tr>
+
+          <tr class="row">
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d23708e46 ">
+              <code class="ph codeph">oprkind</code>
+            </td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d23708e49 ">char</td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d23708e52 "> </td>
+
+            <td class="entry cell-norowborder" style="vertical-align:top;" headers="d23708e55 "><code class="ph codeph">b</code> = infix (both), <code class="ph codeph">l</code> = prefix
+              (left), <code class="ph codeph">r</code> = postfix (right)</td>
+
+          </tr>
+
+          <tr class="row">
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d23708e46 ">
+              <code class="ph codeph">oprcanmerge</code>
+            </td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d23708e49 ">boolean</td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d23708e52 "> </td>
+
+            <td class="entry cell-norowborder" style="vertical-align:top;" headers="d23708e55 ">This operator supports merge joins</td>
+
+          </tr>
+
+          <tr class="row">
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d23708e46 ">
+              <code class="ph codeph">oprcanhash</code>
+            </td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d23708e49 ">boolean</td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d23708e52 "> </td>
+
+            <td class="entry cell-norowborder" style="vertical-align:top;" headers="d23708e55 ">This operator supports hash joins</td>
+
+          </tr>
+
+          <tr class="row">
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d23708e46 ">
+              <code class="ph codeph">oprleft</code>
+            </td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d23708e49 ">oid</td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d23708e52 ">pg_type.oid</td>
+
+            <td class="entry cell-norowborder" style="vertical-align:top;" headers="d23708e55 ">Type of the left operand</td>
+
+          </tr>
+
+          <tr class="row">
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d23708e46 ">
+              <code class="ph codeph">oprright</code>
+            </td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d23708e49 ">oid</td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d23708e52 ">pg_type.oid</td>
+
+            <td class="entry cell-norowborder" style="vertical-align:top;" headers="d23708e55 ">Type of the right operand</td>
+
+          </tr>
+
+          <tr class="row">
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d23708e46 ">
+              <code class="ph codeph">oprresult</code>
+            </td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d23708e49 ">oid</td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d23708e52 ">pg_type.oid</td>
+
+            <td class="entry cell-norowborder" style="vertical-align:top;" headers="d23708e55 ">Type of the result</td>
+
+          </tr>
+
+          <tr class="row">
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d23708e46 ">
+              <code class="ph codeph">oprcom</code>
+            </td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d23708e49 ">oid</td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d23708e52 ">pg_operator.oid</td>
+
+            <td class="entry cell-norowborder" style="vertical-align:top;" headers="d23708e55 ">Commutator of this operator, if any</td>
+
+          </tr>
+
+          <tr class="row">
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d23708e46 ">
+              <code class="ph codeph">oprnegate</code>
+            </td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d23708e49 ">oid</td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d23708e52 ">pg_operator.oid</td>
+
+            <td class="entry cell-norowborder" style="vertical-align:top;" headers="d23708e55 ">Negator of this operator, if any</td>
+
+          </tr>
+
+          <tr class="row">
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d23708e46 ">
+              <code class="ph codeph">oprcode</code>
+            </td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d23708e49 ">regproc</td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d23708e52 ">pg_proc.oid</td>
+
+            <td class="entry cell-norowborder" style="vertical-align:top;" headers="d23708e55 ">Function that implements this operator</td>
+
+          </tr>
+
+          <tr class="row">
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d23708e46 ">
+              <code class="ph codeph">oprrest </code>
+            </td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d23708e49 ">regproc</td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d23708e52 ">pg_proc.oid</td>
+
+            <td class="entry cell-norowborder" style="vertical-align:top;" headers="d23708e55 ">Restriction selectivity estimation function for this
+              operator</td>
+
+          </tr>
+
+          <tr class="row">
+            <td class="entry row-nocellborder" style="vertical-align:top;" headers="d23708e46 ">
+              <code class="ph codeph">oprjoin</code>
+            </td>
+
+            <td class="entry row-nocellborder" style="vertical-align:top;" headers="d23708e49 ">regproc</td>
+
+            <td class="entry row-nocellborder" style="vertical-align:top;" headers="d23708e52 ">pg_proc.oid</td>
+
+            <td class="entry cellrowborder" style="vertical-align:top;" headers="d23708e55 ">Join selectivity estimation function for this operator</td>
+
+          </tr>
+
+        </tbody>
+</table>
+</div>
+
+  </div>
+
+<div class="related-links">
+<div class="familylinks">
+<div class="parentlink"><strong>Parent topic:</strong> <a class="link" href="../system_catalogs/catalog_ref-html.html#topic1">System Catalogs Definitions</a></div>
+</div>
+</div></body>
+</html>

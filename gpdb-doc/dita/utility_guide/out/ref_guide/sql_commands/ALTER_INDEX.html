@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+
+<meta name="copyright" content="(C) Copyright 2022" />
+<meta name="DC.rights.owner" content="(C) Copyright 2022" />
+<meta name="generator" content="DITA-OT" /><meta name="DC.type" content="topic" />
+<meta name="DC.title" content="ALTER INDEX" />
+<meta name="DC.format" content="XHTML" />
+<meta name="DC.identifier" content="topic1" />
+<link rel="stylesheet" type="text/css" href="../../out/commonltr.css" />
+<title>ALTER INDEX</title>
+</head>
+<body id="topic1">
+<h1 class="title topictitle1" id="topic1__ap20941">ALTER INDEX</h1>
+<div class="body"><p class="p" id="topic1__sql_command_desc">Changes the definition of an index.</p>
+<div class="section" id="topic1__section2"><h2 class="title sectiontitle">Synopsis</h2><pre class="pre codeblock" id="topic1__sql_command_synopsis"><code>ALTER INDEX [ IF EXISTS ] &lt;name&gt; RENAME TO &lt;new_name&gt;
+
+ALTER INDEX [ IF EXISTS ] &lt;name&gt; SET TABLESPACE &lt;tablespace_name&gt;
+
+ALTER INDEX [ IF EXISTS ] &lt;name&gt; SET ( &lt;storage_parameter&gt; = &lt;value&gt; [, ...] )
+
+ALTER INDEX [ IF EXISTS ] &lt;name&gt; RESET ( &lt;storage_parameter&gt;  [, ...] )
+
+ALTER INDEX ALL IN TABLESPACE &lt;name&gt; [ OWNED BY &lt;role_name&gt; [, ... ] ]
+  SET TABLESPACE &lt;new_tablespace&gt; [ NOWAIT ]
+</code></pre></div>
+<div class="section" id="topic1__section3"><h2 class="title sectiontitle">Description</h2><p class="p"><code class="ph codeph">ALTER INDEX</code> changes the definition of an existing index.
+There are several subforms: </p>
+<ul class="ul">
+<li class="li" id="topic1__ap136518"><strong class="ph b">RENAME</strong> — Changes the name of the index. There is no effect
+on the stored data.</li>
+
+        <li class="li" id="topic1__ap136521"><strong class="ph b">SET TABLESPACE</strong> — Changes the index's tablespace to the specified
+          tablespace and moves the data file(s) associated with the index to the new tablespace. To
+          change the tablespace of an index, you must own the index and have <code class="ph codeph">CREATE</code>
+          privilege on the new tablespace. All indexes in the current database in a tablespace can
+          be moved by using the <code class="ph codeph">ALL IN TABLESPACE</code> form, which will lock all indexes
+          to be moved and then move each one. This form also supports <code class="ph codeph">OWNED BY</code>,
+          which will only move indexes owned by the roles specified. If the <code class="ph codeph">NOWAIT</code>
+          option is specified then the command will fail if it is unable to acquire all of the locks
+          required immediately. Note that system catalogs will not be moved by this command, use
+            <code class="ph codeph">ALTER DATABASE</code> or explicit <code class="ph codeph">ALTER INDEX</code> invocations
+          instead if desired. See also <code class="ph codeph">CREATE TABLESPACE</code>. </li>
+
+        <li class="li"><strong class="ph b">IF EXISTS</strong> — Do not throw an error if the index does not exist. A notice is issued
+          in this case.</li>
+
+  <li class="li" id="topic1__ap136524"><strong class="ph b">SET</strong> — Changes the index-method-specific storage parameters for the index.
+          The built-in index methods all accept a single parameter: <var class="keyword varname">fillfactor</var>.
+          The fillfactor for an index is a percentage that determines how full the index method will
+          try to pack index pages. Index contents will not be modified immediately by this command.
+          Use <code class="ph codeph">REINDEX</code> to rebuild the index to get the desired effects. </li>
+<li class="li" id="topic1__ap136527"><strong class="ph b">RESET</strong> — Resets storage parameters for the index to their defaults. The
+          built-in index methods all accept a single parameter: <var class="keyword varname">fillfactor</var>. As
+          with <code class="ph codeph">SET</code>, a <code class="ph codeph">REINDEX</code> may be needed to update the index
+          entirely.</li>
+</ul>
+</div>
+<div class="section" id="topic1__section4"><h2 class="title sectiontitle">Parameters</h2><dl class="dl parml"><dt class="dt pt dlterm"><var class="keyword varname">name</var></dt>
+<dd class="dd pd">The name (optionally schema-qualified) of an existing index to alter.
+</dd>
+<dt class="dt pt dlterm"><var class="keyword varname">new_name</var></dt>
+<dd class="dd pd">New name for the index. </dd>
+<dt class="dt pt dlterm"><var class="keyword varname">tablespace_name</var></dt>
+<dd class="dd pd">The tablespace to which the index will be moved. </dd>
+<dt class="dt pt dlterm"><var class="keyword varname">storage_parameter</var></dt>
+
+  <dd class="dd pd">The name of an index-method-specific storage parameter.</dd>
+
+        
+          <dt class="dt pt dlterm"><var class="keyword varname">value</var></dt>
+
+          <dd class="dd pd">The new value for an index-method-specific storage parameter. This might be a number or a word depending on the parameter.</dd>
+
+        </dl>
+</div>
+<div class="section" id="topic1__section5"><h2 class="title sectiontitle">Notes</h2><p class="p">These operations are also possible using <code class="ph codeph">ALTER TABLE</code>.</p>
+<p class="p">Changing any part of a system catalog index is not permitted.</p>
+</div>
+<div class="section" id="topic1__section6"><h2 class="title sectiontitle">Examples</h2><p class="p">To rename an existing index:</p>
+<pre class="pre codeblock"><code>ALTER INDEX distributors RENAME TO suppliers;</code></pre><p class="p">To move an index to a different tablespace:</p>
+<pre class="pre codeblock"><code>ALTER INDEX distributors SET TABLESPACE fasttablespace;</code></pre><p class="p">To change an index's fill factor (assuming that the index method supports
+it):</p>
+<pre class="pre codeblock"><code>ALTER INDEX distributors SET (fillfactor = 75);
+REINDEX INDEX distributors;</code></pre></div>
+<div class="section" id="topic1__section7"><h2 class="title sectiontitle">Compatibility</h2><p class="p"><code class="ph codeph">ALTER INDEX</code> is a Greenplum Database extension.</p>
+</div>
+<div class="section" id="topic1__section8"><h2 class="title sectiontitle">See Also</h2><p class="p"><a class="xref" href="CREATE_INDEX.html#topic1">CREATE INDEX</a>,
+            <a class="xref" href="REINDEX.html#topic1">REINDEX</a>,
+            <a class="xref" href="ALTER_TABLE.html#topic1">ALTER TABLE</a></p>
+</div>
+</div>
+</body>
+</html>

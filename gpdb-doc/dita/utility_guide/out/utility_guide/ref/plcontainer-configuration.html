@@ -1,0 +1,387 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+
+<meta name="copyright" content="(C) Copyright 2022" />
+<meta name="DC.rights.owner" content="(C) Copyright 2022" />
+<meta name="generator" content="DITA-OT" /><meta name="DC.type" content="topic" />
+<meta name="DC.title" content="plcontainer Configuration File" />
+<meta name="DC.format" content="XHTML" />
+<meta name="DC.identifier" content="topic1" />
+<link rel="stylesheet" type="text/css" href="../commonltr.css" />
+<title>plcontainer Configuration File</title>
+</head>
+<body id="topic1">
+
+      <h1 class="title topictitle1" id="ariaid-title1">plcontainer Configuration File</h1>
+
+      <div class="body">
+                <p class="p">The Greenplum Database utility <code class="ph codeph">plcontainer</code> manages the
+                    PL/Container configuration files in a Greenplum Database system. The utility
+                    ensures that the configuration files are consistent across the Greenplum
+                    Database coordinator and segment instances.</p>
+
+                <div class="note warning"><span class="warningtitle">Warning:</span>  Modifying the configuration files on the segment instances
+                    without using the utility might create different, incompatible configurations on
+                    different Greenplum Database segments that could cause unexpected behavior. </div>
+
+                <div class="section" id="topic1__topic_ojn_r2s_dw"><h2 class="title sectiontitle">PL/Container Configuration File</h2>
+                    <p class="p">PL/Container maintains a configuration file
+                            <code class="ph codeph">plcontainer_configuration.xml</code> in the data directory of
+                        all Greenplum Database segments. This query lists the Greenplum Database
+                        system data directories:
+                    </p>
+<pre class="pre codeblock"><code>SELECT hostname, datadir FROM gp_segment_configuration;</code></pre>
+                    A sample PL/Container configuration file is in
+                        <code class="ph codeph">$GPHOME/share/postgresql/plcontainer</code>. <p class="p">In an XML file,
+                        names, such as element and attribute names, and values are case
+                        sensitive.</p>
+In this XML file, the root element
+                        <code class="ph codeph">configuration</code> contains one or more <code class="ph codeph">runtime</code>
+                    elements. You specify the <code class="ph codeph">id</code> of the <code class="ph codeph">runtime</code>
+                    element in the <code class="ph codeph"># container:</code> line of a PL/Container function
+                    definition. <div class="p">This is an example file. Note that all XML elements, names, and
+                        attributes are case
+                        sensitive.<pre class="pre codeblock"><code>&lt;?xml version="1.0" ?&gt;
+&lt;configuration&gt;
+    &lt;runtime&gt;
+        &lt;id&gt;plc_python_example1&lt;/id&gt;
+        &lt;image&gt;pivotaldata/plcontainer_python_with_clients:0.1&lt;/image&gt;
+        &lt;command&gt;./pyclient&lt;/command&gt;
+    &lt;/runtime&gt;
+    &lt;runtime&gt;
+        &lt;id&gt;plc_python_example2&lt;/id&gt;
+        &lt;image&gt;pivotaldata/plcontainer_python_without_clients:0.1&lt;/image&gt;
+        &lt;command&gt;/clientdir/pyclient.sh&lt;/command&gt;
+        &lt;shared_directory access="ro" container="/clientdir" host="/usr/local/greenplum-db/bin/plcontainer_clients"/&gt;
+        &lt;setting memory_mb="512"/&gt;
+        &lt;setting use_container_logging="yes"/&gt;
+        &lt;setting cpu_share="1024"/&gt;
+        &lt;setting resource_group_id="16391"/&gt;
+    &lt;/runtime&gt;
+    &lt;runtime&gt;
+        &lt;id&gt;plc_r_example&lt;/id&gt;
+        &lt;image&gt;pivotaldata/plcontainer_r_without_clients:0.2&lt;/image&gt;
+        &lt;command&gt;/clientdir/rclient.sh&lt;/command&gt;
+        &lt;shared_directory access="ro" container="/clientdir" host="/usr/local/greenplum-db/bin/plcontainer_clients"/&gt;
+        &lt;setting use_container_logging="yes"/&gt;
+        &lt;setting roles="gpadmin,user1"/&gt;
+    &lt;/runtime&gt;
+    &lt;runtime&gt;
+&lt;/configuration&gt;</code></pre></div>
+<p class="p">These
+                        are the XML elements and attributes in a PL/Container configuration
+                        file.</p>
+<dl class="dl parml">
+                        
+                            <dt class="dt pt dlterm">configuration</dt>
+
+                            <dd class="dd pd">Root element for the XML file.</dd>
+
+                        
+                        
+                            <dt class="dt pt dlterm">runtime</dt>
+
+                            <dd class="dd pd">One element for each specific container available in the system.
+                                These are child elements of the <code class="ph codeph">configuration</code>
+                                element.</dd>
+
+                            <dd class="dd pd ddexpand">
+                                <dl class="dl parml">
+                                    
+                                        <dt class="dt pt dlterm">id</dt>
+
+                                        <dd class="dd pd">Required. The value is used to reference a Docker
+                                            container from a PL/Container user-defined function. The
+                                                <code class="ph codeph">id</code> value must be unique in the
+                                            configuration. The <code class="ph codeph">id</code> must start with a
+                                            character or digit (a-z, A-Z, or 0-9) and can contain
+                                            characters, digits, or the characters <code class="ph codeph">_</code>
+                                            (underscore), <code class="ph codeph">.</code> (period), or
+                                                <code class="ph codeph">-</code> (dash). Maximum length is 63
+                                                Bytes.<p class="p">The <code class="ph codeph">id</code> specifies which
+                                                Docker image to use when PL/Container creates a
+                                                Docker container to run a user-defined
+                                                function.</p>
+</dd>
+
+                                    
+                                    
+                                        <dt class="dt pt dlterm">image</dt>
+
+                                        <dd class="dd pd">
+                                            <p class="p">Required. The value is the full Docker image name,
+                                                including image tag. The same way you specify them
+                                                for starting this container in Docker. Configuration
+                                                allows to have many container objects referencing
+                                                the same image name, this way in Docker they would
+                                                be represented by identical containers. </p>
+
+                                            <p class="p">For example, you might have two
+                                                  <code class="ph codeph">runtime</code> elements, with different
+                                                  <code class="ph codeph">id</code> elements,
+                                                  <code class="ph codeph">plc_python_128</code> and
+                                                  <code class="ph codeph">plc_python_256</code>, both referencing
+                                                the Docker image
+                                                  <code class="ph codeph">pivotaldata/plcontainer_python:1.0.0</code>.
+                                                The first <code class="ph codeph">runtime</code> specifies a 128MB
+                                                RAM limit and the second one specifies a 256MB limit
+                                                that is specified by the <code class="ph codeph">memory_mb</code>
+                                                attribute of a <code class="ph codeph">setting</code> element.</p>
+
+                                        </dd>
+
+                                    
+                                    
+                                        <dt class="dt pt dlterm">command</dt>
+
+                                        <dd class="dd pd">Required. The value is the command to be run inside of
+                                            container to start the client process inside in the
+                                            container. When creating a <code class="ph codeph">runtime</code>
+                                            element, the <code class="ph codeph">plcontainer</code> utility adds a
+                                                <code class="ph codeph">command</code> element based on the
+                                            language (the <code class="ph codeph">-l</code> option).</dd>
+
+                                        <dd class="dd pd ddexpand"><code class="ph codeph">command</code> element for the Python 2
+                                            language.<pre class="pre codeblock"><code>&lt;command&gt;/clientdir/pyclient.sh&lt;/command&gt;</code></pre></dd>
+
+                                        <dd class="dd pd ddexpand"><code class="ph codeph">command</code> element for the Python 3
+                                            language.<pre class="pre codeblock"><code>&lt;command&gt;/clientdir/pyclient3.sh&lt;/command&gt;</code></pre></dd>
+
+                                        <dd class="dd pd ddexpand"><code class="ph codeph">command</code> element for the R
+                                            language.<pre class="pre codeblock"><code>&lt;command&gt;/clientdir/rclient.sh&lt;/command&gt;</code></pre></dd>
+
+                                        <dd class="dd pd ddexpand">You should modify the value only if you build a custom
+                                            container and want to implement some additional
+                                            initialization logic before the container starts.
+                                                <div class="note"><span class="notetitle">Note:</span> This element cannot be set with the
+                                                  <code class="ph codeph">plcontainer</code> utility. You can
+                                                update the configuration file with the
+                                                  <code class="ph codeph">plcontainer runtime-edit</code>
+                                                command.</div>
+</dd>
+
+                                    
+                                    
+                                        <dt class="dt pt dlterm">shared_directory</dt>
+
+                                        <dd class="dd pd">Optional. This element specifies a shared Docker shared
+                                            volume for a container with access information. Multiple
+                                                <code class="ph codeph">shared_directory</code> elements are
+                                            allowed. Each <code class="ph codeph">shared_directory</code> element
+                                            specifies a single shared volume. XML attributes for the
+                                                <code class="ph codeph">shared_directory</code> element:<ul class="ul" id="topic1__ul_x4d_lcs_dw">
+                                                <li class="li"><code class="ph codeph">host</code> - a directory location on
+                                                  the host system.</li>
+
+                                                <li class="li"><code class="ph codeph">container</code> - a directory
+                                                  location inside of container.</li>
+
+                                                <li class="li"><code class="ph codeph">access</code> - access level to the
+                                                  host directory, which can be either
+                                                  <code class="ph codeph">ro</code> (read-only) or
+                                                  <code class="ph codeph">rw</code> (read-write). </li>
+
+                                            </ul>
+</dd>
+
+                                        <dd class="dd pd ddexpand">When creating a <code class="ph codeph">runtime</code> element, the
+                                                <code class="ph codeph">plcontainer</code> utility adds a
+                                                <code class="ph codeph">shared_directory</code>
+                                            element.<pre class="pre codeblock"><code>&lt;shared_directory access="ro" container="/clientdir" host="/usr/local/greenplum-db/bin/plcontainer_clients"/&gt;</code></pre></dd>
+
+                                        <dd class="dd pd ddexpand">For each <code class="ph codeph">runtime</code> element, the
+                                                <code class="ph codeph">container</code> attribute of the
+                                                <code class="ph codeph">shared_directory</code> elements must be
+                                            unique. For example, a <code class="ph codeph">runtime</code> element
+                                            cannot have two <code class="ph codeph">shared_directory</code>
+                                            elements with attribute
+                                                <code class="ph codeph">container="/clientdir"</code>. <div class="note warning"><span class="warningtitle">Warning:</span> Allowing read-write access to a host
+                                                directory requires special consideration.<ul class="ul" id="topic1__ul_vzb_dvk_kcb">
+                                                  <li class="li">When specifying read-write access to host
+                                                  directory, ensure that the specified host
+                                                  directory has the correct permissions. </li>
+
+                                                  <li class="li">When running PL/Container user-defined
+                                                  functions, multiple concurrent Docker containers
+                                                  that are running on a host could change data in
+                                                  the host directory. Ensure that the functions
+                                                  support multiple concurrent access to the data in
+                                                  the host directory.</li>
+
+                                                </ul>
+</div>
+</dd>
+
+                                    
+                                    
+                                        <dt class="dt pt dlterm" id="topic1__plc_settings">settings</dt>
+
+                                        <dd class="dd pd">Optional. This element specifies Docker container
+                                            configuration information. Each <code class="ph codeph">setting</code>
+                                            element contains one attribute. The element attribute
+                                            specifies logging, memory, or networking information.
+                                            For example, this element enables
+                                            logging.<pre class="pre codeblock"><code>&lt;setting use_container_logging="yes"/&gt;</code></pre></dd>
+
+                                        <dd class="dd pd ddexpand">These are the valid attributes.<dl class="dl parml">
+                                                
+                                                  <dt class="dt pt dlterm">cpu_share</dt>
+
+                                                  <dd class="dd pd">Optional. Specify the CPU usage for each
+                                                  PL/Container container in the runtime. The value
+                                                  of the element is a positive integer. The default
+                                                  value is 1024. The value is a relative weighting
+                                                  of CPU usage compared to other containers. </dd>
+
+                                                  <dd class="dd pd ddexpand">For example, a container with a
+                                                  <code class="ph codeph">cpu_share</code> of 2048 is allocated
+                                                  double the CPU slice time compared with container
+                                                  with the default value of 1024.</dd>
+
+                                                
+                                                
+                                                  <dt class="dt pt dlterm">memory_mb="<var class="keyword varname">size</var>"</dt>
+
+                                                  <dd class="dd pd">Optional. The value specifies the amount of
+                                                  memory, in MB, that each container is allowed to
+                                                  use. Each container starts with this amount of RAM
+                                                  and twice the amount of swap space. The container
+                                                  memory consumption is limited by the host system
+                                                  <code class="ph codeph">cgroups</code> configuration, which
+                                                  means in case of memory overcommit, the container
+                                                  is terminated by the system.</dd>
+
+                                                
+                                                
+                                                  <dt class="dt pt dlterm">resource_group_id="<var class="keyword varname">rg_groupid</var>"</dt>
+
+                                                  <dd class="dd pd">Optional. The value specifies the
+                                                  <code class="ph codeph">groupid</code> of the resource group to
+                                                assign to the PL/Container runtime. The resource
+                                                group limits the total CPU and memory resource usage
+                                                for all running containers that share this runtime
+                                                configuration. You must specify the
+                                                  <code class="ph codeph">groupid</code> of the resource group. If
+                                                you do not assign a resource group to a PL/Container
+                                                runtime configuration, its container instances are
+                                                limited only by system resources. For information
+                                                about managing PL/Container resources, see <a class="xref" href="../../analytics/pl_container_using.html#topic_resmgmt" target="_blank">About PL/Container Resource
+                                                  Management</a>.</dd>
+
+                                                
+                                                
+                                                  <dt class="dt pt dlterm">roles="<var class="keyword varname">list_of_roles</var>"</dt>
+
+                                                  <dd class="dd pd">Optional. The value is a Greenplum Database
+                                                  role name or a comma-separated list of roles.
+                                                  PL/Container runs a container that uses the
+                                                  PL/Container runtime configuration only for the
+                                                  listed roles. If the attribute is not specified,
+                                                  any Greenplum Database role can run an instance of
+                                                  this container runtime configuration. For example,
+                                                  you create a UDF that specifies the
+                                                  <code class="ph codeph">plcontainer</code> language and
+                                                  identifies a <code class="ph codeph"># container:</code> runtime
+                                                  configuration that has the <code class="ph codeph">roles</code>
+                                                  attribute set. When a role (user) runs the UDF,
+                                                  PL/Container checks the list of roles and runs the
+                                                  container only if the role is on the list.</dd>
+
+                                                
+                                                
+                                                  <dt class="dt pt dlterm"> use_container_logging="{yes | no}"</dt>
+
+                                                  <dd class="dd pd">Optional. Enables or disables Docker logging
+                                                  for the container. The attribute value
+                                                  <code class="ph codeph">yes</code> enables logging. The
+                                                  attribute value <code class="ph codeph">no</code> disables
+                                                  logging (the default). </dd>
+
+                                                  <dd class="dd pd ddexpand">The Greenplum Database server configuration
+                                                parameter <a class="xref" href="../../ref_guide/config_params/guc-list.html#log_min_messages">log_min_messages</a> controls the
+                                                PL/Container log level. The default log level is
+                                                  <code class="ph codeph">warning</code>. For information about
+                                                PL/Container log information, see <a class="xref" href="../../analytics/pl_container_using.html#plc_notes" target="_blank">Notes</a>.</dd>
+
+                                                  <dd class="dd pd ddexpand">
+                                                  <p class="p">By default, the PL/Container log information is
+                                                  sent to a system service. On Red Hat 7 or CentOS 7
+                                                  systems, the log information is sent to the
+                                                  <code class="ph codeph">journald</code> service. On Red Hat 6 or
+                                                  CentOS 6 systems, the log is sent to the
+                                                  <code class="ph codeph">syslogd</code> service. </p>
+
+                                                  </dd>
+
+                                                
+                                            </dl>
+</dd>
+
+                                    
+                                </dl>
+
+                            </dd>
+
+                        
+                    </dl>
+
+                </div>
+
+                <div class="section" id="topic1__topic_v3s_qv3_kw"><h2 class="title sectiontitle">Update the PL/Container Configuration</h2>
+                    
+                    <p class="p">You can add a <code class="ph codeph">runtime</code> element to the PL/Container
+                        configuration file with the <code class="ph codeph">plcontainer runtime-add</code>
+                        command. The command options specify information such as the runtime ID,
+                        Docker image, and language. You can use the <code class="ph codeph">plcontainer
+                            runtime-replace</code> command to update an existing
+                            <code class="ph codeph">runtime</code> element. The utility updates the configuration
+                        file on the coordinator and all segment instances.</p>
+
+                    <p class="p">The PL/Container configuration file can contain multiple
+                            <code class="ph codeph">runtime</code> elements that reference the same Docker image
+                        specified by the XML element <code class="ph codeph">image</code>. In the example
+                        configuration file, the <code class="ph codeph">runtime</code> elements contain
+                            <code class="ph codeph">id</code> elements named <code class="ph codeph">plc_python_128</code> and
+                            <code class="ph codeph">plc_python_256</code>, both referencing the Docker container
+                            <code class="ph codeph">pivotaldata/plcontainer_python:1.0.0</code>. The first
+                            <code class="ph codeph">runtime</code> element is defined with a 128MB RAM limit and
+                        the second one with a 256MB RAM limit.</p>
+
+                    <pre class="pre codeblock"><code>&lt;configuration&gt;
+  &lt;runtime&gt;
+    &lt;id&gt;plc_python_128&lt;/id&gt;
+    &lt;image&gt;pivotaldata/plcontainer_python:1.0.0&lt;/image&gt;
+    &lt;command&gt;./client&lt;/command&gt;
+    &lt;shared_directory access="ro" container="/clientdir" host="/usr/local/gpdb/bin/plcontainer_clients"/&gt;
+    &lt;setting memory_mb="128"/&gt;
+  &lt;/runtime&gt;
+  &lt;runtime&gt;
+    &lt;id&gt;plc_python_256&lt;/id&gt;
+    &lt;image&gt;pivotaldata/plcontainer_python:1.0.0&lt;/image&gt;
+    &lt;command&gt;./client&lt;/command&gt;
+    &lt;shared_directory access="ro" container="/clientdir" host="/usr/local/gpdb/bin/plcontainer_clients"/&gt;
+    &lt;setting memory_mb="256"/&gt;
+    &lt;setting resource_group_id="16391"/&gt;
+  &lt;/runtime&gt;
+&lt;configuration&gt;</code></pre>
+                    <p class="p">Configuration changes that are made with the utility are applied to the XML
+                        files on all Greenplum Database segments. However, PL/Container
+                        configurations of currently running sessions use the configuration that
+                        existed during session start up. To update the PL/Container configuration in
+                        a running session, run this command in the session.</p>
+
+                    <pre class="pre codeblock"><code>SELECT * FROM plcontainer_refresh_config;</code></pre>
+                    <p class="p">The command runs a PL/Container function that updates the session
+                        configuration on the coordinator and segment instances.</p>
+
+                </div>
+
+        
+  
+      </div>
+
+    </body>
+</html>

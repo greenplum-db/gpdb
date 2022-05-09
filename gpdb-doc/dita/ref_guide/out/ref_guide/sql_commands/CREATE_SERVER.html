@@ -1,0 +1,191 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+
+<meta name="copyright" content="(C) Copyright 2022" />
+<meta name="DC.rights.owner" content="(C) Copyright 2022" />
+<meta name="generator" content="DITA-OT" /><meta name="DC.type" content="topic" />
+<meta name="DC.title" content="CREATE SERVER" />
+<meta name="DC.relation" scheme="URI" content="../sql_commands/sql_ref.html" />
+<meta name="DC.format" content="XHTML" />
+<meta name="DC.identifier" content="topic1" />
+<link rel="stylesheet" type="text/css" href="../commonltr.css" />
+<title>CREATE SERVER</title>
+</head>
+<body id="topic1">
+
+    <h1 class="title topictitle1" id="topic1__bv20941">CREATE SERVER</h1>
+
+    <div class="body">
+        <p class="p" id="topic1__sql_command_desc">Defines a new foreign server.</p>
+
+        <div class="section" id="topic1__section2"><h2 class="title sectiontitle">Synopsis</h2>
+            
+            <pre class="pre codeblock" id="topic1__sql_command_synopsis"><code>CREATE SERVER &lt;server_name&gt; [ TYPE '&lt;server_type&gt;' ] [ VERSION '&lt;server_version&gt;' ]
+    FOREIGN DATA WRAPPER &lt;fdw_name&gt;
+    [ OPTIONS ( [ mpp_execute { 'master' | 'any' | 'all segments' } [, ] ]
+                [ num_segments '&lt;num&gt;' [, ] ]
+                [ &lt;option&gt; '&lt;value&gt;' [, ... ]] ) ]</code></pre>
+        </div>
+
+        <div class="section" id="topic1__section3"><h2 class="title sectiontitle">Description</h2>
+            
+            <p class="p"><code class="ph codeph">CREATE SERVER</code> defines a new foreign server. The user who defines
+               the server becomes its owner.</p>
+
+            <p class="p">A foreign server typically encapsulates connection information that a foreign-data
+              wrapper uses to access an external data source. Additional user-specific connection
+              information may be specified by means of user mappings.</p>
+
+            <p class="p">Creating a server requires the <code class="ph codeph">USAGE</code> privilege on the foreign-data
+              wrapper specified.</p>
+
+        </div>
+
+        <div class="section" id="topic1__section4"><h2 class="title sectiontitle">Parameters</h2>
+            
+            <dl class="dl parml">
+                
+                    <dt class="dt pt dlterm"><var class="keyword varname">server_name</var></dt>
+
+                    <dd class="dd pd">
+                        <p class="p">The name of the foreign server to create. The server name must be unique within the database.</p>
+
+                    </dd>
+
+                
+                
+                    <dt class="dt pt dlterm"><var class="keyword varname">server_type</var></dt>
+
+                    <dd class="dd pd">
+                        <p class="p">Optional server type, potentially useful to foreign-data wrappers.</p>
+
+                    </dd>
+
+                
+                
+                    <dt class="dt pt dlterm"><var class="keyword varname">server_version</var></dt>
+
+                    <dd class="dd pd">
+                        <p class="p">Optional server version, potentially useful to foreign-data wrappers.</p>
+
+                    </dd>
+
+                
+                
+                    <dt class="dt pt dlterm"><var class="keyword varname">fdw_name</var></dt>
+
+                    <dd class="dd pd">
+                        <p class="p">Name of the foreign-data wrapper that manages the server.</p>
+
+                    </dd>
+
+                
+                
+                    <dt class="dt pt dlterm">OPTIONS ( <var class="keyword varname">option</var> '<var class="keyword varname">value</var>' [, ... ] )</dt>
+
+                    <dd class="dd pd">
+                        <p class="p">The options for the new foreign server. The options typically define the connection details of the server, but the actual names and values are dependent upon the server's foreign-data wrapper.</p>
+
+                    </dd>
+
+                
+                
+                    <dt class="dt pt dlterm">mpp_execute { 'master' | 'any' | 'all segments' }</dt>
+
+                    <dd class="dd pd">
+                        <div class="p">A Greenplum Database-specific option that identifies the host
+                            from which the foreign-data wrapper
+                            reads or writes data: <ul class="ul" id="topic1__ul_zcg_2vd_mgb">
+                                <li class="li"><code class="ph codeph">master</code> (the default)—Read or write data from
+                                    the master host.</li>
+
+                                <li class="li"><code class="ph codeph">any</code>—Read data from either the master host or
+                                    any one segment, depending on which path costs less.</li>
+
+                                <li class="li"><code class="ph codeph">all segments</code>—Read or write data from
+                                    all segments. To support this option value, the
+                                    foreign-data wrapper should have a policy that matches the segments
+                                     to data.
+                                 <div class="note"><span class="notetitle">Note:</span> Greenplum Database supports parallel writes to foreign tables
+                                   only when you set <code class="ph codeph">mpp_execute 'all segments'</code>.</div>
+</li>
+
+                            </ul>
+</div>
+
+                        <p class="p">Support for the foreign server <code class="ph codeph">mpp_execute</code> option,
+                            and the specific modes, is foreign-data wrapper-specific.</p>
+ 
+                        <p class="p">The <code class="ph codeph">mpp_execute</code> option can be specified in multiple
+                            commands: <code class="ph codeph">CREATE FOREIGN TABLE</code>, <code class="ph codeph">CREATE
+                                SERVER</code>, and <code class="ph codeph">CREATE FOREIGN DATA WRAPPER</code>.
+                            The foreign table setting takes precedence over the foreign server
+                            setting, followed by the foreign-data wrapper setting.</p>
+
+                    </dd>
+
+                
+                
+                    <dt class="dt pt dlterm">num_segments '<var class="keyword varname">num</var>'</dt>
+
+                    <dd class="dd pd">
+                        <p class="p">When <code class="ph codeph">mpp_execute</code> is set to
+                          <code class="ph codeph">'all segments'</code>, the Greenplum Database-specific
+                          <code class="ph codeph">num_segments</code> option identifies the
+                          number of query executors that Greenplum Database spawns on the
+                          source Greenplum Database cluster. If you do not provide a value,
+                          <var class="keyword varname">num</var> defaults to the number of segments in the
+                          source cluster.</p>
+
+                        <p class="p">Support for the foreign server <code class="ph codeph">num_segments</code> option
+                          is foreign-data wrapper-specific.</p>
+
+                    </dd>
+
+                
+            </dl>
+
+        </div>
+
+        <div class="section" id="topic1__section5"><h2 class="title sectiontitle">Notes</h2>
+            
+            <p class="p">When using the dblink module (see <a class="xref" href="../modules/dblink.html#topic1">dblink</a>), you can use the foreign server name as an argument of the <code class="ph codeph">dblink_connect()</code> function to provide the connection parameters. You must have the <code class="ph codeph">USAGE</code> privilege on the foreign server to use it in this manner.</p>
+
+        </div>
+
+        <div class="section" id="topic1__section6"><h2 class="title sectiontitle">Examples</h2>
+            
+            <p class="p">Create a foreign server named <code class="ph codeph">myserver</code> that uses the foreign-data wrapper named <code class="ph codeph">pgsql</code> and includes connection options:</p>
+<pre class="pre codeblock"><code>CREATE SERVER myserver FOREIGN DATA WRAPPER pgsql 
+    OPTIONS (host 'foo', dbname 'foodb', port '5432');</code></pre>
+        </div>
+
+        <div class="section" id="topic1__section7"><h2 class="title sectiontitle">Compatibility</h2>
+            
+            <p class="p"><code class="ph codeph">CREATE SERVER</code> conforms to ISO/IEC 9075-9 (SQL/MED).</p>
+
+        </div>
+
+        <div class="section" id="topic1__section8"><h2 class="title sectiontitle">See Also</h2>
+            
+            <p class="p"><a class="xref" href="ALTER_SERVER.html#topic1">ALTER SERVER</a>,
+                        <a class="xref" href="DROP_SERVER.html#topic1">DROP
+                    SERVER</a>,
+                        <a class="xref" href="CREATE_FOREIGN_DATA_WRAPPER.html#topic1">CREATE
+                    FOREIGN DATA WRAPPER</a>,
+                        <a class="xref" href="CREATE_USER_MAPPING.html#topic1">CREATE
+                    USER MAPPING</a></p>
+
+        </div>
+
+    </div>
+
+<div class="related-links">
+<div class="familylinks">
+<div class="parentlink"><strong>Parent topic:</strong> <a class="link" href="../sql_commands/sql_ref.html">SQL Commands</a></div>
+</div>
+</div></body>
+</html>

@@ -1,0 +1,252 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+
+<meta name="copyright" content="(C) Copyright 2022" />
+<meta name="DC.rights.owner" content="(C) Copyright 2022" />
+<meta name="generator" content="DITA-OT" /><meta name="DC.type" content="topic" />
+<meta name="DC.title" content="ALTER FUNCTION" />
+<meta name="DC.relation" scheme="URI" content="../sql_commands/sql_ref.html" />
+<meta name="DC.format" content="XHTML" />
+<meta name="DC.identifier" content="topic1" />
+<link rel="stylesheet" type="text/css" href="../commonltr.css" />
+<title>ALTER FUNCTION</title>
+</head>
+<body id="topic1">
+
+  <h1 class="title topictitle1" id="topic1__an20941">ALTER FUNCTION</h1>
+
+  <div class="body">
+    <p class="p" id="topic1__sql_command_desc">Changes the definition of a function.</p>
+
+    <div class="section" id="topic1__section2"><h2 class="title sectiontitle">Synopsis</h2><pre class="pre codeblock" id="topic1__sql_command_synopsis"><code>ALTER FUNCTION &lt;name&gt; ( [ [&lt;argmode&gt;] [&lt;argname&gt;] &lt;argtype&gt; [, ...] ] ) 
+   &lt;action&gt; [, ... ] [RESTRICT]
+
+ALTER FUNCTION &lt;name&gt; ( [ [&lt;argmode&gt;] [&lt;argname&gt;] &lt;argtype&gt; [, ...] ] )
+   RENAME TO &lt;new_name&gt;
+
+ALTER FUNCTION &lt;name&gt; ( [ [&lt;argmode&gt;] [&lt;argname&gt;] &lt;argtype&gt; [, ...] ] ) 
+   OWNER TO &lt;new_owner&gt;
+
+ALTER FUNCTION &lt;name&gt; ( [ [&lt;argmode&gt;] [&lt;argname&gt;] &lt;argtype&gt; [, ...] ] ) 
+   SET SCHEMA &lt;new_schema&gt;</code></pre><p class="p">where
+          <var class="keyword varname">action</var> is one
+      of:</p>
+<pre class="pre codeblock"><code>{CALLED ON NULL INPUT | RETURNS NULL ON NULL INPUT | STRICT}
+{IMMUTABLE | STABLE | VOLATILE | [ NOT ] LEAKPROOF}
+{[EXTERNAL] SECURITY INVOKER | [EXTERNAL] SECURITY DEFINER}
+EXECUTE ON { ANY | MASTER | ALL SEGMENTS | INITPLAN }
+COST &lt;execution_cost&gt;
+SET &lt;configuration_parameter&gt; { TO | = } { &lt;value&gt; | DEFAULT }
+SET &lt;configuration_parameter&gt; FROM CURRENT
+RESET &lt;configuration_parameter&gt;
+RESET ALL</code></pre></div>
+
+    <div class="section" id="topic1__section3"><h2 class="title sectiontitle">Description</h2><p class="p"><code class="ph codeph">ALTER FUNCTION</code> changes the
+        definition of a function. </p>
+<p class="p">You must own the function to use <code class="ph codeph">ALTER
+          FUNCTION</code>. To change a function's schema, you must also have
+          <code class="ph codeph">CREATE</code> privilege on the new schema. To alter the owner, you must also be
+        a direct or indirect member of the new owning role, and that role must have
+          <code class="ph codeph">CREATE</code> privilege on the function's schema. (These restrictions enforce
+        that altering the owner does not do anything you could not do by dropping and recreating the
+        function. However, a superuser can alter ownership of any function anyway.) </p>
+</div>
+
+    <div class="section" id="topic1__section4"><h2 class="title sectiontitle">Parameters</h2><dl class="dl parml">
+        
+          <dt class="dt pt dlterm"><var class="keyword varname">name</var></dt>
+
+          <dd class="dd pd">The name (optionally schema-qualified) of an existing function. </dd>
+
+        
+        
+          <dt class="dt pt dlterm"><var class="keyword varname">argmode</var></dt>
+
+          <dd class="dd pd">The mode of an argument: either <code class="ph codeph">IN</code>, <code class="ph codeph">OUT</code>,
+              <code class="ph codeph">INOUT</code>, or <code class="ph codeph">VARIADIC</code>. If omitted, the default is
+              <code class="ph codeph">IN</code>. Note that <code class="ph codeph">ALTER FUNCTION</code> does not actually pay
+            any attention to <code class="ph codeph">OUT</code> arguments, since only the input arguments are
+            needed to determine the function's identity. So it is sufficient to list the
+              <code class="ph codeph">IN</code>, <code class="ph codeph">INOUT</code>, and <code class="ph codeph">VARIADIC</code>
+            arguments.</dd>
+
+        
+        
+          <dt class="dt pt dlterm"><var class="keyword varname">argname</var></dt>
+
+          <dd class="dd pd">The name of an argument. Note that <code class="ph codeph">ALTER FUNCTION</code> does not actually
+            pay any attention to argument names, since only the argument data types are needed to
+            determine the function's identity. </dd>
+
+        
+        
+          <dt class="dt pt dlterm"><var class="keyword varname">argtype</var></dt>
+
+          <dd class="dd pd">The data type(s) of the function's arguments (optionally schema-qualified), if any.
+          </dd>
+
+        
+        
+          <dt class="dt pt dlterm"><var class="keyword varname">new_name</var></dt>
+
+          <dd class="dd pd">The new name of the function. </dd>
+
+        
+        
+          <dt class="dt pt dlterm"><var class="keyword varname">new_owner</var></dt>
+
+          <dd class="dd pd">The new owner of the function. Note that if the function is marked <code class="ph codeph">SECURITY
+              DEFINER</code>, it will subsequently run as the new owner. </dd>
+
+        
+        
+          <dt class="dt pt dlterm"><var class="keyword varname">new_schema</var></dt>
+
+          <dd class="dd pd">The new schema for the function. </dd>
+
+        
+        
+          <dt class="dt pt dlterm">CALLED ON NULL INPUT</dt>
+
+          <dt class="dt pt dlterm">RETURNS NULL ON NULL INPUT</dt>
+
+          <dt class="dt pt dlterm">STRICT</dt>
+
+          <dd class="dd pd"><code class="ph codeph">CALLED ON NULL INPUT</code> changes the function so that it will be invoked
+            when some or all of its arguments are null. <code class="ph codeph">RETURNS NULL ON NULL INPUT</code>
+            or <code class="ph codeph">STRICT</code> changes the function so that it is not invoked if any of its
+            arguments are null; instead, a null result is assumed automatically. See <a class="xref" href="CREATE_FUNCTION.html#topic1">CREATE FUNCTION</a> for more
+            information.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">IMMUTABLE</dt>
+
+          <dt class="dt pt dlterm">STABLE</dt>
+
+          <dt class="dt pt dlterm">VOLATILE</dt>
+
+          <dd class="dd pd">Change the volatility of the function to the specified setting. See <a class="xref" href="CREATE_FUNCTION.html#topic1">CREATE FUNCTION</a> for details. </dd>
+
+        
+        
+          <dt class="dt pt dlterm">[ EXTERNAL ] SECURITY INVOKER</dt>
+
+          <dt class="dt pt dlterm">[ EXTERNAL ] SECURITY DEFINER</dt>
+
+          <dd class="dd pd">Change whether the function is a security definer or not. The key word
+              <code class="ph codeph">EXTERNAL</code> is ignored for SQL conformance. See <code class="ph codeph">CREATE
+              FUNCTION</code> for more information about this capability.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">LEAKPROOF</dt>
+
+          <dd class="dd pd"> Change whether the function is considered leakproof or not. See <a class="xref" href="CREATE_FUNCTION.html#topic1">CREATE FUNCTION</a> for more information about this capability. </dd>
+
+        
+        
+          <dt class="dt pt dlterm">EXECUTE ON ANY</dt>
+
+          <dt class="dt pt dlterm">EXECUTE ON MASTER</dt>
+
+          <dt class="dt pt dlterm">EXECUTE ON ALL SEGMENTS</dt>
+
+          <dt class="dt pt dlterm">EXECUTE ON INITPLAN</dt>
+
+          <dd class="dd pd">The <code class="ph codeph">EXECUTE ON</code> attributes specify where (master or segment instance)
+            a function runs when it is invoked during the query execution process.</dd>
+
+          <dd class="dd pd ddexpand"><code class="ph codeph">EXECUTE ON ANY</code> (the default) indicates that the function can be
+            run on the master, or any segment instance, and it returns the same result
+            regardless of where it is run. Greenplum Database determines where the function
+            runs.</dd>
+
+          <dd class="dd pd ddexpand"><code class="ph codeph">EXECUTE ON MASTER</code> indicates that the function must run only on
+            the master instance. </dd>
+
+          <dd class="dd pd ddexpand"><code class="ph codeph">EXECUTE ON ALL SEGMENTS</code> indicates that the function must run on
+            all primary segment instances, but not the master, for each invocation. The overall
+            result of the function is the <code class="ph codeph">UNION ALL</code> of the results from all segment
+            instances. </dd>
+
+          <dd class="dd pd ddexpand"><code class="ph codeph">EXECUTE ON INITPLAN</code> indicates that the function contains an SQL
+            command that dispatches queries to the segment instances and requires special processing
+            on the master instance by Greenplum Database when possible. </dd>
+
+          <dd class="dd pd ddexpand">For more information about the <code class="ph codeph">EXECUTE ON</code> attributes, see
+                <a class="xref" href="CREATE_FUNCTION.html#topic1">CREATE
+            FUNCTION</a>.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">COST <var class="keyword varname">execution_cost</var></dt>
+
+          <dd class="dd pd">Change the estimated execution cost of the function. See <a class="xref" href="CREATE_FUNCTION.html#topic1">CREATE FUNCTION</a> for more
+            information.</dd>
+
+        
+        
+          <dt class="dt pt dlterm"><var class="keyword varname">configuration_parameter</var></dt>
+
+          <dt class="dt pt dlterm"><var class="keyword varname">value</var></dt>
+
+          <dd class="dd pd">Set or change the value of a configuration parameter when the function is called. If
+              <var class="keyword varname">value</var> is <code class="ph codeph">DEFAULT</code> or, equivalently,
+              <code class="ph codeph">RESET</code> is used, the function-local setting is removed, and the
+            function runs with the value present in its environment. Use <code class="ph codeph">RESET
+              ALL</code> to clear all function-local settings. <code class="ph codeph">SET FROM CURRENT</code>
+            saves the value of the parameter that is current when <code class="ph codeph">ALTER FUNCTION</code> is
+            run as the value to be applied when the function is entered.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">RESTRICT</dt>
+
+          <dd class="dd pd">Ignored for conformance with the SQL standard. </dd>
+
+        
+      </dl>
+</div>
+
+    <div class="section" id="topic1__section5"><h2 class="title sectiontitle">Notes</h2><p class="p">Greenplum Database has limitations on the use of
+        functions defined as <code class="ph codeph">STABLE</code> or <code class="ph codeph">VOLATILE</code>. See <a class="xref" href="CREATE_FUNCTION.html#topic1">CREATE FUNCTION</a> for more
+        information.</p>
+</div>
+
+    <div class="section" id="topic1__section6"><h2 class="title sectiontitle">Examples</h2><p class="p">To rename the function <code class="ph codeph">sqrt</code>
+        for type <code class="ph codeph">integer</code> to
+        <code class="ph codeph">square_root</code>:</p>
+<pre class="pre codeblock"><code>ALTER FUNCTION sqrt(integer) RENAME TO square_root;</code></pre><p class="p">To
+        change the owner of the function <code class="ph codeph">sqrt</code> for type <code class="ph codeph">integer</code> to
+          <code class="ph codeph">joe</code>:</p>
+<pre class="pre codeblock"><code>ALTER FUNCTION sqrt(integer) OWNER TO joe;</code></pre><p class="p">To
+        change the <var class="keyword varname">schema</var> of the function <code class="ph codeph">sqrt</code> for type
+          <code class="ph codeph">integer</code> to <code class="ph codeph">math</code>:</p>
+<pre class="pre codeblock"><code>ALTER FUNCTION sqrt(integer) SET SCHEMA math;</code></pre>
+      <p class="p">To adjust the search path that is automatically set for a function:</p>
+
+      <pre class="pre codeblock"><code>ALTER FUNCTION check_password(text) RESET search_path;</code></pre></div>
+
+    <div class="section" id="topic1__section7"><h2 class="title sectiontitle">Compatibility</h2><p class="p">This statement is partially compatible
+        with the <code class="ph codeph">ALTER FUNCTION</code> statement in the SQL standard. The standard allows
+        more properties of a function to be modified, but does not provide the ability to rename a
+        function, make a function a security definer, or change the owner, schema, or volatility of
+        a function. The standard also requires the <code class="ph codeph">RESTRICT</code> key word, which is
+        optional in Greenplum Database. </p>
+</div>
+
+    <div class="section" id="topic1__section8"><h2 class="title sectiontitle">See Also</h2><p class="p"><a class="xref" href="CREATE_FUNCTION.html#topic1">CREATE FUNCTION</a>, <a class="xref" href="DROP_FUNCTION.html#topic1">DROP FUNCTION</a></p>
+</div>
+
+  </div>
+
+<div class="related-links">
+<div class="familylinks">
+<div class="parentlink"><strong>Parent topic:</strong> <a class="link" href="../sql_commands/sql_ref.html">SQL Commands</a></div>
+</div>
+</div></body>
+</html>

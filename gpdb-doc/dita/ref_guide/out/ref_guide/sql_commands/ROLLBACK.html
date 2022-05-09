@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+
+<meta name="copyright" content="(C) Copyright 2022" />
+<meta name="DC.rights.owner" content="(C) Copyright 2022" />
+<meta name="generator" content="DITA-OT" /><meta name="DC.type" content="topic" />
+<meta name="DC.title" content="ROLLBACK" />
+<meta name="DC.relation" scheme="URI" content="../sql_commands/sql_ref.html" />
+<meta name="DC.format" content="XHTML" />
+<meta name="DC.identifier" content="topic1" />
+<link rel="stylesheet" type="text/css" href="../commonltr.css" />
+<title>ROLLBACK</title>
+</head>
+<body id="topic1">
+<h1 class="title topictitle1" id="topic1__ed20941">ROLLBACK</h1>
+<div class="body"><p class="p" id="topic1__sql_command_desc">Stops the current transaction.</p>
+<div class="section" id="topic1__section2"><h2 class="title sectiontitle">Synopsis</h2><pre class="pre codeblock" id="topic1__sql_command_synopsis"><code>ROLLBACK [WORK | TRANSACTION]</code></pre></div>
+<div class="section" id="topic1__section3"><h2 class="title sectiontitle">Description</h2><p class="p"><code class="ph codeph">ROLLBACK</code> rolls back the current transaction and causes
+all the updates made by the transaction to be discarded.</p>
+</div>
+<div class="section" id="topic1__section4"><h2 class="title sectiontitle">Parameters</h2><dl class="dl parml"><dt class="dt pt dlterm">WORK</dt>
+<dt class="dt pt dlterm">TRANSACTION</dt>
+<dd class="dd pd">Optional key words. They have no effect.</dd>
+</dl>
+</div>
+<div class="section" id="topic1__section5"><h2 class="title sectiontitle">Notes</h2><p class="p">Use <code class="ph codeph">COMMIT</code> to successfully end the current transaction.
+</p>
+<p class="p">Issuing <code class="ph codeph">ROLLBACK</code> when not inside a transaction does
+no harm, but it will provoke a warning message. </p>
+</div>
+<div class="section" id="topic1__section6"><h2 class="title sectiontitle">Examples</h2><p class="p">To discard all changes made in the current transaction:</p>
+<pre class="pre codeblock"><code>ROLLBACK;</code></pre></div>
+<div class="section" id="topic1__section7"><h2 class="title sectiontitle">Compatibility</h2><p class="p">The SQL standard only specifies the two forms <code class="ph codeph">ROLLBACK</code>
+and <code class="ph codeph">ROLLBACK WORK</code>. Otherwise, this command is fully
+conforming.</p>
+</div>
+<div class="section" id="topic1__section8"><h2 class="title sectiontitle">See Also</h2><p class="p"><a class="xref" href="BEGIN.html#topic1">BEGIN</a>, <a class="xref" href="COMMIT.html#topic1">COMMIT</a>, <a class="xref" href="SAVEPOINT.html#topic1">SAVEPOINT</a>, <a class="xref" href="ROLLBACK_TO_SAVEPOINT.html#topic1">ROLLBACK TO SAVEPOINT</a></p>
+</div>
+</div>
+<div class="related-links">
+<div class="familylinks">
+<div class="parentlink"><strong>Parent topic:</strong> <a class="link" href="../sql_commands/sql_ref.html">SQL Commands</a></div>
+</div>
+</div></body>
+</html>

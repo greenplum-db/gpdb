@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+
+<meta name="copyright" content="(C) Copyright 2022" />
+<meta name="DC.rights.owner" content="(C) Copyright 2022" />
+<meta name="generator" content="DITA-OT" /><meta name="DC.type" content="topic" />
+<meta name="DC.title" content="MOVE" />
+<meta name="DC.relation" scheme="URI" content="../sql_commands/sql_ref.html" />
+<meta name="DC.format" content="XHTML" />
+<meta name="DC.identifier" content="topic1" />
+<link rel="stylesheet" type="text/css" href="../commonltr.css" />
+<title>MOVE</title>
+</head>
+<body id="topic1">
+<h1 class="title topictitle1" id="topic1__dw20941">MOVE</h1>
+<div class="body"><p class="p" id="topic1__sql_command_desc">Positions a cursor.</p>
+<div class="section" id="topic1__section2"><h2 class="title sectiontitle">Synopsis</h2><pre class="pre codeblock" id="topic1__sql_command_synopsis"><code>MOVE [ &lt;forward_direction&gt; [ FROM | IN ] ] &lt;cursor_name&gt;</code></pre><p class="p">where <var class="keyword varname">forward_direction</var> can be empty or one of:</p>
+<pre class="pre codeblock"><code>    NEXT
+    FIRST
+    LAST
+    ABSOLUTE &lt;count&gt;
+    RELATIVE &lt;count&gt;
+    &lt;count&gt;
+    ALL
+    FORWARD
+    FORWARD &lt;count&gt;
+    FORWARD ALL</code></pre></div>
+<div class="section" id="topic1__section3"><h2 class="title sectiontitle">Description</h2><p class="p"><code class="ph codeph">MOVE</code> repositions a cursor
+        without retrieving any data. <code class="ph codeph">MOVE</code> works exactly like the <a class="xref" href="FETCH.html#topic1">FETCH</a> command, except it only
+        positions the cursor and does not return rows. </p>
+
+
+       <div class="note"><span class="notetitle">Note:</span> You cannot <code class="ph codeph">MOVE</code> a <code class="ph codeph">PARALLEL RETRIEVE CURSOR</code>.</div>
+
+       <p class="p">It is not possible to move a
+        cursor position backwards in Greenplum Database, since scrollable cursors are not supported.
+        You can only move a cursor forward in position using <code class="ph codeph">MOVE</code>.</p>
+<div class="sectiondiv" id="topic1__section4"><strong class="ph b">Outputs</strong><p class="p">On successful completion, a <code class="ph codeph">MOVE</code> command
+          returns a command tag of the form</p>
+<pre class="pre codeblock"><code>MOVE &lt;count&gt;</code></pre><p class="p">The count
+          is the number of rows that a <code class="ph codeph">FETCH</code> command with the same parameters would
+          have returned (possibly zero). </p>
+</div></div>
+<div class="section" id="topic1__section5"><h2 class="title sectiontitle">Parameters</h2><dl class="dl parml"><dt class="dt pt dlterm"><var class="keyword varname">forward_direction</var></dt>
+<dd class="dd pd">The parameters for the <code class="ph codeph">MOVE</code> command are identical to those of the
+              <code class="ph codeph">FETCH</code> command; refer to <a class="xref" href="FETCH.html#topic1">FETCH</a>  for details on syntax and usage.</dd>
+<dt class="dt pt dlterm"><var class="keyword varname">cursor_name</var></dt>
+<dd class="dd pd">The name of an open cursor.</dd>
+</dl>
+</div>
+<div class="section" id="topic1__section6"><h2 class="title sectiontitle">Examples</h2><p class="p">-- Start the transaction:</p>
+<pre class="pre codeblock"><code>BEGIN;</code></pre><p class="p">-- Set up a cursor:</p>
+<pre class="pre codeblock"><code>DECLARE mycursor CURSOR FOR SELECT * FROM films;</code></pre><p class="p">-- Move forward 5 rows in the cursor <code class="ph codeph">mycursor</code>:</p>
+<pre class="pre codeblock"><code>MOVE FORWARD 5 IN mycursor;
+MOVE 5</code></pre><p class="p">--Fetch the next row after that (row 6):</p>
+<pre class="pre codeblock"><code>FETCH 1 FROM mycursor;
+ code  | title  | did | date_prod  |  kind  |  len
+-------+--------+-----+------------+--------+-------
+ P_303 | 48 Hrs | 103 | 1982-10-22 | Action | 01:37
+(1 row)</code></pre><p class="p">-- Close the cursor and end the transaction:</p>
+<pre class="pre codeblock"><code>CLOSE mycursor;
+COMMIT;</code></pre></div>
+<div class="section" id="topic1__section7"><h2 class="title sectiontitle">Compatibility</h2><p class="p">There is no <code class="ph codeph">MOVE</code> statement in the SQL standard.</p>
+</div>
+<div class="section" id="topic1__section8"><h2 class="title sectiontitle">See Also</h2><p class="p"><a class="xref" href="DECLARE.html#topic1">DECLARE</a>, <a class="xref" href="FETCH.html#topic1">FETCH</a>, <a class="xref" href="CLOSE.html#topic1">CLOSE</a></p>
+</div>
+</div>
+<div class="related-links">
+<div class="familylinks">
+<div class="parentlink"><strong>Parent topic:</strong> <a class="link" href="../sql_commands/sql_ref.html">SQL Commands</a></div>
+</div>
+</div></body>
+</html>

@@ -1,0 +1,228 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+
+<meta name="copyright" content="(C) Copyright 2022" />
+<meta name="DC.rights.owner" content="(C) Copyright 2022" />
+<meta name="generator" content="DITA-OT" /><meta name="DC.type" content="topic" />
+<meta name="DC.title" content="vacuumdb" />
+<meta name="DC.format" content="XHTML" />
+<meta name="DC.identifier" content="topic1" />
+<link rel="stylesheet" type="text/css" href="../commonltr.css" />
+<title>vacuumdb</title>
+</head>
+<body id="topic1">
+
+  <h1 class="title topictitle1" id="topic1__ph137116">vacuumdb</h1>
+
+  <div class="body">
+    <p class="p" id="topic1__client_util_desc">Garbage-collects and analyzes a database.</p>
+
+    <div class="section" id="topic1__section2"><h2 class="title sectiontitle">Synopsis</h2>
+      
+      <pre class="pre codeblock" id="topic1__client_util_synopsis"><code>vacuumdb [&lt;connection-option&gt;...] [--full | -f] [--freeze | -F] [--verbose | -v]
+    [--analyze | -z] [--analyze-only | -Z] [--table | -t &lt;table&gt; [( &lt;column&gt; [,...] )] ] [&lt;dbname&gt;]
+
+vacuumdb [&lt;connection-option&gt;...] [--all | -a] [--full | -f] [-F] 
+    [--verbose | -v] [--analyze | -z]
+    [--analyze-only | -Z]
+
+vacuumdb -? | --help
+
+vacuumdb -V | --version</code></pre>
+    </div>
+
+    <div class="section" id="topic1__section3"><h2 class="title sectiontitle">Description</h2>
+      
+      <p class="p"><code class="ph codeph">vacuumdb</code> is a utility for cleaning a Greenplum Database database.
+        <code class="ph codeph">vacuumdb</code> will
+        also generate internal statistics used by the Greenplum Database query optimizer.</p>
+
+      <p class="p"><code class="ph codeph">vacuumdb</code> is a wrapper around the SQL command <code class="ph codeph">VACUUM</code>.
+        There is no effective difference between vacuuming databases via this utility and via other
+        methods for accessing the server. </p>
+
+    </div>
+
+    <div class="section" id="topic1__section4"><h2 class="title sectiontitle">Options</h2>
+      
+      <dl class="dl parml">
+        
+          <dt class="dt pt dlterm">-a | --all</dt>
+
+          <dd class="dd pd">Vacuums all databases.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">[-d] <var class="keyword varname">dbname</var> | [--dbname=]<var class="keyword varname">dbname</var></dt>
+
+          <dd class="dd pd">The name of the database to vacuum. If this is not specified and
+            <code class="ph codeph">-a</code> (or <code class="ph codeph">--all</code>)
+            is not used, the database name is read from the environment variable
+              <code class="ph codeph">PGDATABASE</code>. If that is not set, the user name specified for the
+            connection is used.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">-e | --echo</dt>
+
+          <dd class="dd pd">Echo the commands that <code class="ph codeph">reindexdb</code> generates and sends to the
+            server.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">-f | --full</dt>
+
+          <dd class="dd pd">Selects a full vacuum, which may reclaim more space, but takes much longer and
+            exclusively locks the table. <div class="note warning"><span class="warningtitle">Warning:</span> A <code class="ph codeph">VACUUM FULL</code> is not
+              recommended in Greenplum Database.</div>
+</dd>
+
+        
+        
+          <dt class="dt pt dlterm">-F | --freeze</dt>
+
+          <dd class="dd pd">Freeze row transaction information.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">-q | --quiet</dt>
+
+          <dd class="dd pd">Do not display a response.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">-t <var class="keyword varname">table</var> [(<var class="keyword varname">column</var>)] | --table=
+              <var class="keyword varname">table</var> [(<var class="keyword varname">column</var>)]</dt>
+
+          <dd class="dd pd">Clean or analyze this table only. Column names may be specified only in conjunction
+            with the <code class="ph codeph">--analyze</code> or <code class="ph codeph">--analyze-all</code> options.
+            Multiple tables can be vacuumed by writing multiple <code class="ph codeph">-t</code> switches.
+            If you specify columns, you probably have to escape the parentheses from the shell.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">-v | --verbose</dt>
+
+          <dd class="dd pd">Print detailed information during processing.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">-z | --analyze</dt>
+
+          <dd class="dd pd">Collect statistics for use by the query planner.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">-Z | --analyze-only</dt>
+
+          <dd class="dd pd">Only calculate statistics for use by the query planner (no vacuum).</dd>
+
+        
+        
+          <dt class="dt pt dlterm">-V | --version</dt>
+
+          <dd class="dd pd">Print the <code class="ph codeph">vacuumdb</code> version and exit.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">-? | --help</dt>
+
+          <dd class="dd pd">Show help about <code class="ph codeph">vacuumdb</code> command line arguments, and exit.</dd>
+
+        
+      </dl>
+
+      <div class="sectiondiv" id="topic1__section5">
+        <strong class="ph b">Connection Options</strong>
+        <dl class="dl parml">
+          
+            <dt class="dt pt dlterm">-h <var class="keyword varname">host</var> | --host=<var class="keyword varname">host</var></dt>
+
+            <dd class="dd pd">Specifies the host name of the machine on which the Greenplum coordinator database server is running. If not specified,
+              reads from the environment variable <code class="ph codeph">PGHOST</code> or defaults to
+              localhost.</dd>
+
+          
+          
+            <dt class="dt pt dlterm">-p <var class="keyword varname">port</var> | --port=<var class="keyword varname">port</var></dt>
+
+            <dd class="dd pd">Specifies the TCP port on which the Greenplum coordinator
+              database server is listening for connections. If not specified, reads from the
+              environment variable <code class="ph codeph">PGPORT</code> or defaults to 5432.</dd>
+
+          
+          
+            <dt class="dt pt dlterm">-U <var class="keyword varname">username</var> | --username=<var class="keyword varname">username</var></dt>
+
+            <dd class="dd pd">The database role name to connect as. If not specified, reads from the environment
+              variable <code class="ph codeph">PGUSER</code> or defaults to the current system user name.</dd>
+
+          
+          
+            <dt class="dt pt dlterm">-w | --no-password</dt>
+
+            <dd class="dd pd">Never issue a password prompt. If the server requires password authentication and a
+              password is not available by other means such as a <code class="ph codeph">.pgpass</code> file, the
+              connection attempt will fail. This option can be useful in batch jobs and scripts
+              where no user is present to enter a password.</dd>
+
+          
+          
+            <dt class="dt pt dlterm">-W | --password</dt>
+
+            <dd class="dd pd">Force a password prompt.</dd>
+
+          
+          
+            <dt class="dt pt dlterm">--maintenance-db=<var class="keyword varname">dbname</var></dt>
+
+            <dd class="dd pd">Specifies the name of the database to connect to discover what other databases
+              should be vacuumed. If not specified, the <code class="ph codeph">postgres</code> database will be
+              used, and if that does not exist, <code class="ph codeph">template1</code> will be used.</dd>
+
+          
+        </dl>
+
+      </div>
+    </div>
+
+    <div class="section" id="topic1__section6"><h2 class="title sectiontitle">Notes</h2>
+      
+      <p class="p"><code class="ph codeph">vacuumdb</code> might need to connect several times to the coordinator server, asking
+        for a password each time. It is convenient to have a <code class="ph codeph">~/.pgpass</code> file in such
+        cases. </p>
+
+    </div>
+
+    <div class="section" id="topic1__section7"><h2 class="title sectiontitle">Examples</h2>
+      
+      <p class="p">To clean the database <code class="ph codeph">test</code>:</p>
+
+      <pre class="pre codeblock"><code>vacuumdb test</code></pre>
+      <p class="p">To clean and analyze a database named <code class="ph codeph">bigdb</code>:</p>
+
+      <pre class="pre codeblock"><code>vacuumdb --analyze bigdb</code></pre>
+      <p class="p">To clean a single table <code class="ph codeph">foo</code> in a database named <code class="ph codeph">mydb</code>, and
+        analyze a single column <code class="ph codeph">bar</code> of the table. Note the quotes around the table
+        and column names to escape the parentheses from the shell:</p>
+
+      <pre class="pre codeblock"><code>vacuumdb --analyze --verbose --table 'foo(bar)' mydb</code></pre>
+    </div>
+
+    <div class="section" id="topic1__section8"><h2 class="title sectiontitle">See Also</h2>
+      
+      <p class="p">
+        <span class="ph"><code class="ph codeph">VACUUM</code> and <code class="ph codeph">ANALYZE</code> in the <em class="ph i">Greenplum Database
+            Reference Guide</em></span>
+        <span class="ph"><a class="xref" href="../../ref_guide/sql_commands/VACUUM.html#topic1">VACUUM</a>, <a class="xref" href="../../ref_guide/sql_commands/ANALYZE.html#topic1">ANALYZE</a></span>
+      </p>
+
+    </div>
+
+  </div>
+
+</body>
+</html>

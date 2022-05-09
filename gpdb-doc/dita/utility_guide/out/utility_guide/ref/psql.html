@@ -1,0 +1,2259 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+
+<meta name="copyright" content="(C) Copyright 2022" />
+<meta name="DC.rights.owner" content="(C) Copyright 2022" />
+<meta name="generator" content="DITA-OT" /><meta name="DC.type" content="topic" />
+<meta name="DC.title" content="psql" />
+<meta name="DC.format" content="XHTML" />
+<meta name="DC.identifier" content="topic1" />
+<link rel="stylesheet" type="text/css" href="../commonltr.css" />
+<title>psql</title>
+</head>
+<body id="topic1">
+
+  <h1 class="title topictitle1" id="topic1__kb137116">psql</h1>
+
+  <div class="body">
+    <p class="p" id="topic1__client_util_desc">Interactive command-line interface for Greenplum Database</p>
+
+    <div class="section" id="topic1__section2"><h2 class="title sectiontitle">Synopsis</h2>
+      
+      <pre class="pre codeblock" id="topic1__client_util_synopsis"><code>psql [&lt;option&gt; ...] [&lt;dbname&gt; [&lt;username&gt;]]</code></pre>
+    </div>
+
+    <div class="section" id="topic1__section3"><h2 class="title sectiontitle">Description</h2>
+      
+      <p class="p"><code class="ph codeph">psql</code> is a terminal-based front-end to Greenplum Database. It enables you
+        to type in queries interactively, issue them to Greenplum Database, and see the query
+        results. Alternatively, input can be from a file. In addition, it provides a number of
+        meta-commands and various shell-like features to facilitate writing scripts and automating a
+        wide variety of tasks.</p>
+
+    </div>
+
+    <div class="section" id="topic1__section4"><h2 class="title sectiontitle">Options</h2>
+      
+      <dl class="dl parml">
+        
+          <dt class="dt pt dlterm">-a | --echo-all</dt>
+
+          <dd class="dd pd">Print all nonempty input lines to standard output as they are read. (This does not
+            apply to lines read interactively.) This is equivalent to setting the variable
+              <var class="keyword varname">ECHO</var> to <code class="ph codeph">all</code>. </dd>
+
+        
+        
+          <dt class="dt pt dlterm">-A | --no-align</dt>
+
+          <dd class="dd pd">Switches to unaligned output mode. (The default output mode is aligned.) </dd>
+
+        
+        
+          <dt class="dt pt dlterm">-c '<var class="keyword varname">command</var>' | --command='<var class="keyword varname">command'</var></dt>
+
+          <dd class="dd pd">Specifies that <code class="ph codeph">psql</code> is to run the specified command string, and
+            then exit. This is useful in shell scripts. <var class="keyword varname">command</var> must be either a
+            command string that is completely parseable by the server, or a single backslash
+            command. Thus you cannot mix SQL and <code class="ph codeph">psql</code> meta-commands with this
+            option. To achieve that, you could pipe the string into <code class="ph codeph">psql</code>, like
+            this:<pre class="pre codeblock"><code>echo '\x \\ SELECT * FROM foo;' | psql</code></pre></dd>
+
+          <dd class="dd pd ddexpand">(<code class="ph codeph">\\</code> is the separator meta-command.) </dd>
+
+          <dd class="dd pd ddexpand">If the command string contains multiple SQL commands, they are processed in a single
+            transaction, unless there are explicit <code class="ph codeph">BEGIN/COMMIT</code> commands included
+            in the string to divide it into multiple transactions. This is different from the
+            behavior when the same string is fed to <code class="ph codeph">psql</code>'s standard input. Also,
+            only the result of the last SQL command is returned.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">-d <var class="keyword varname">dbname</var> | --dbname=<var class="keyword varname">dbname</var></dt>
+
+          <dd class="dd pd">Specifies the name of the database to connect to. This is equivalent to specifying
+            dbname as the first non-option argument on the command line.</dd>
+
+          <dd class="dd pd ddexpand">If this parameter contains an <code class="ph codeph">=</code> sign or starts with a valid URI
+            prefix (<code class="ph codeph">postgresql://</code> or <code class="ph codeph">postgres://</code>), it is treated
+            as a <code class="ph codeph">conninfo</code> string. See <a class="xref" href="https://www.postgresql.org/docs/9.4/libpq-connect.html#LIBPQ-CONNSTRING" target="_blank">Connection Strings</a> in the PostgreSQL
+            documentation for more information.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">-e | --echo-queries</dt>
+
+          <dd class="dd pd">Copy all SQL commands sent to the server to standard output as well.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">-E | --echo-hidden</dt>
+
+          <dd class="dd pd">Echo the actual queries generated by <code class="ph codeph">\d</code> and other backslash commands.
+            You can use this to study <code class="ph codeph">psql</code>'s internal operations. This is
+            equivalent to setting the variable <var class="keyword varname">ECHO_HIDDEN</var> to
+            <code class="ph codeph">on</code>.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">-f <var class="keyword varname">filename</var> | --file=<var class="keyword varname">filename</var></dt>
+
+          <dd class="dd pd">Use the file <var class="keyword varname">filename</var> as the source of commands instead of reading
+            commands interactively. After the file is processed, <code class="ph codeph">psql</code> terminates.
+            This is in many ways equivalent to the meta-command <code class="ph codeph">\i</code>.</dd>
+
+          <dd class="dd pd ddexpand">If filename is <code class="ph codeph">-</code> (hyphen), then standard input is read until an EOF
+            indication or <code class="ph codeph">\q</code> meta-command. Note however that Readline is not used
+            in this case (much as if <code class="ph codeph">-n</code> had been specified). </dd>
+
+          <dd class="dd pd ddexpand">Using this option is subtly different from writing <code class="ph codeph">psql &lt;
+              &lt;filename&gt;</code>. In general, both will do what you expect, but using
+              <code class="ph codeph">-f</code> enables some nice features such as error messages with line
+            numbers. There is also a slight chance that using this option will reduce the start-up
+            overhead. On the other hand, the variant using the shell's input redirection is (in
+            theory) guaranteed to yield exactly the same output you would have received had you
+            entered everything by hand.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">-F <var class="keyword varname">separator</var> | --field-separator=<var class="keyword varname">separator</var></dt>
+
+          <dd class="dd pd">Use the specified separator as the field separator for unaligned output. </dd>
+
+        
+        
+          <dt class="dt pt dlterm">-H | --html</dt>
+
+          <dd class="dd pd">Turn on HTML tabular output.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">-l | --list</dt>
+
+          <dd class="dd pd">List all available databases, then exit. Other non-connection options are
+            ignored.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">-L <var class="keyword varname">filename</var> | --log-file=<var class="keyword varname">filename</var></dt>
+
+          <dd class="dd pd">Write all query output into the specified log file, in addition to the normal output
+            destination.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">-n | --no-readline</dt>
+
+          <dd class="dd pd">Do not use Readline for line editing and do not use the command history. This can be
+            useful to turn off tab expansion when cutting and pasting. </dd>
+
+        
+        
+          <dt class="dt pt dlterm">-o <var class="keyword varname">filename</var> | --output=<var class="keyword varname">filename</var></dt>
+
+          <dd class="dd pd">Put all query output into the specified file.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">-P <var class="keyword varname">assignment</var> | --pset=<var class="keyword varname">assignment</var></dt>
+
+          <dd class="dd pd">Allows you to specify printing options in the style of <code class="ph codeph">\pset</code> on the
+            command line. Note that here you have to separate name and value with an equal sign
+            instead of a space. Thus to set the output format to <code class="ph codeph">LaTeX</code>, you could
+            write <code class="ph codeph">-P format=latex</code>. </dd>
+
+        
+        
+          <dt class="dt pt dlterm">-q | --quiet</dt>
+
+          <dd class="dd pd">Specifies that <code class="ph codeph">psql</code> should do its work quietly. By default, it prints
+            welcome messages and various informational output. If this option is used, none of this
+            happens. This is useful with the <code class="ph codeph">-c</code> option. This is equivalent to
+            setting the variable <var class="keyword varname">QUIET</var> to <code class="ph codeph">on</code>.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">-R <var class="keyword varname">separator</var> | --record-separator=<var class="keyword varname">separator</var></dt>
+
+          <dd class="dd pd">Use <var class="keyword varname">separator</var> as the record separator for unaligned output.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">-s | --single-step</dt>
+
+          <dd class="dd pd">Run in single-step mode. That means the user is prompted before each command is sent
+            to the server, with the option to cancel execution as well. Use this to debug scripts.
+          </dd>
+
+        
+        
+          <dt class="dt pt dlterm">-S | --single-line</dt>
+
+          <dd class="dd pd">Runs in single-line mode where a new line terminates an SQL command, as a semicolon
+            does.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">-t | --tuples-only</dt>
+
+          <dd class="dd pd">Turn off printing of column names and result row count footers, etc. This command is
+            equivalent to <code class="ph codeph">\pset tuples_only</code> and is provided for convenience. </dd>
+
+        
+        
+          <dt class="dt pt dlterm">-T <var class="keyword varname">table_options</var> | --table-attr=
+            <var class="keyword varname">table_options</var></dt>
+
+          <dd class="dd pd">Allows you to specify options to be placed within the HTML table tag. See
+              <code class="ph codeph">\pset</code> for details. </dd>
+
+        
+        
+          <dt class="dt pt dlterm">-v <var class="keyword varname">assignment</var> | --set=<var class="keyword varname">assignment</var> | --variable=
+              <var class="keyword varname">assignment</var></dt>
+
+          <dd class="dd pd">Perform a variable assignment, like the <code class="ph codeph">\set</code> meta command. Note that
+            you must separate name and value, if any, by an equal sign on the command line. To unset
+            a variable, leave off the equal sign. To set a variable with an empty value, use the
+            equal sign but leave off the value. These assignments are done during a very early stage
+            of start-up, so variables reserved for internal purposes might get overwritten
+            later.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">-V | --version</dt>
+
+          <dd class="dd pd">Print the <code class="ph codeph">psql</code> version and exit. </dd>
+
+        
+        
+          <dt class="dt pt dlterm">-x | --expanded</dt>
+
+          <dd class="dd pd">Turn on the expanded table formatting mode.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">-X | --no-psqlrc</dt>
+
+          <dd class="dd pd">Do not read the start-up file (neither the system-wide <code class="ph codeph">psqlrc</code> file
+            nor the user's <code class="ph codeph">~/.psqlrc</code> file). </dd>
+
+        
+        
+          <dt class="dt pt dlterm">-z | --field-separator-zero</dt>
+
+          <dd class="dd pd">Set the field separator for unaligned output to a zero byte.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">-0 | --record-separator-zero</dt>
+
+          <dd class="dd pd">Set the record separator for unaligned output to a zero byte. This is useful for
+            interfacing, for example, with <code class="ph codeph">xargs -0</code>.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">-1 | --single-transaction</dt>
+
+          <dd class="dd pd">When <code class="ph codeph">psql</code> runs a script, adding this option wraps
+              <code class="ph codeph">BEGIN</code>/<code class="ph codeph">COMMIT</code> around the script to run it as a
+            single transaction. This ensures that either all the commands complete successfully, or
+            no changes are applied.</dd>
+
+          <dd class="dd pd ddexpand">If the script itself uses <code class="ph codeph">BEGIN</code>, <code class="ph codeph">COMMIT</code>, or
+              <code class="ph codeph">ROLLBACK</code>, this option will not have the desired effects. Also, if the
+            script contains any command that cannot be run inside a transaction block,
+            specifying this option will cause that command (and hence the whole transaction) to
+            fail.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">-? | --help</dt>
+
+          <dd class="dd pd">Show help about <code class="ph codeph">psql</code> command line arguments, and exit. </dd>
+
+        
+      </dl>
+
+      <div class="sectiondiv" id="topic1__section5">
+        <strong class="ph b">Connection Options</strong>
+        <dl class="dl parml">
+          
+            <dt class="dt pt dlterm">-h <var class="keyword varname">host</var> | --host=<var class="keyword varname">host</var></dt>
+
+            <dd class="dd pd">The host name of the machine on which the Greenplum coordinator database server is
+              running. If not specified, reads from the environment variable <code class="ph codeph">PGHOST</code>
+              or defaults to localhost.</dd>
+
+            <dd class="dd pd ddexpand">When starting <code class="ph codeph">psql</code> on the coordinator host, if the
+                <var class="keyword varname">host</var> value begins with a slash, it is used as the directory for
+              the UNIX-domain socket.</dd>
+
+          
+          
+            <dt class="dt pt dlterm">-p <var class="keyword varname">port</var> | --port=<var class="keyword varname">port</var></dt>
+
+            <dd class="dd pd">The TCP port on which the Greenplum coordinator database server is listening for
+              connections. If not specified, reads from the environment variable
+                <code class="ph codeph">PGPORT</code> or defaults to 5432.</dd>
+
+          
+          
+            <dt class="dt pt dlterm">-U <var class="keyword varname">username</var> | --username=<var class="keyword varname">username</var></dt>
+
+            <dd class="dd pd">The database role name to connect as. If not specified, reads from the environment
+              variable <code class="ph codeph">PGUSER</code> or defaults to the current system role name.</dd>
+
+          
+          
+            <dt class="dt pt dlterm">-W | --password</dt>
+
+            <dd class="dd pd">Force a password prompt. <code class="ph codeph">psql</code> should automatically prompt for a
+              password whenever the server requests password authentication. However, currently
+              password request detection is not totally reliable, hence this option to force a
+              prompt. If no password prompt is issued and the server requires password
+              authentication, the connection attempt will fail.</dd>
+
+          
+          
+            <dt class="dt pt dlterm">-w --no-password</dt>
+
+            <dd class="dd pd">Never issue a password prompt. If the server requires password authentication and a
+              password is not available by other means such as a .pgpass file, the connection
+              attempt will fail. This option can be useful in batch jobs and scripts where no user
+              is present to enter a password. </dd>
+
+            <dd class="dd pd ddexpand"><strong class="ph b">Note:</strong> This option remains set for the entire session, and so it affects uses
+              of the meta-command <code class="ph codeph">\connect</code> as well as the initial connection
+              attempt. </dd>
+
+          
+        </dl>
+
+      </div>
+    </div>
+
+    <div class="section" id="topic1__section6"><h2 class="title sectiontitle">Exit Status</h2>
+      
+      <p class="p"><code class="ph codeph">psql</code> returns 0 to the shell if it finished normally, 1 if a fatal error of
+        its own (out of memory, file not found) occurs, 2 if the connection to the server went bad
+        and the session was not interactive, and 3 if an error occurred in a script and the variable
+          <code class="ph codeph">ON_ERROR_STOP</code> was set.</p>
+
+    </div>
+
+    <div class="section" id="topic1__section7"><h2 class="title sectiontitle">Usage</h2>
+      
+      <div class="sectiondiv" id="topic1__section8">
+        <strong class="ph b">Connecting to a Database</strong>
+        <p class="p"><code class="ph codeph">psql</code> is a client application for Greenplum Database. In order to connect
+          to a database you need to know the name of your target database, the host name and port
+          number of the Greenplum coordinator server and what database user name you want to connect
+          as. <code class="ph codeph">psql</code> can be told about those parameters via command line options,
+          namely <code class="ph codeph">-d</code>, <code class="ph codeph">-h</code>, <code class="ph codeph">-p</code>, and
+            <code class="ph codeph">-U</code> respectively. If an argument is found that does not belong to any
+          option it will be interpreted as the database name (or the user name, if the database name
+          is already given). Not all of these options are required; there are useful defaults. If
+          you omit the host name, <code class="ph codeph">psql</code> will connect via a UNIX-domain socket to a
+          coordinator server on the local host, or via TCP/IP to <code class="ph codeph">localhost</code> on
+          machines that do not have UNIX-domain sockets. The default coordinator port number is
+          5432. If you use a different port for the coordinator, you must specify the port. The
+          default database user name is your operating-system user name, as is the default database
+          name. Note that you cannot just connect to any database under any user name. Your database
+          administrator should have informed you about your access rights.</p>
+
+        <p class="p">When the defaults are not right, you can save yourself some typing by setting any or all
+          of the environment variables <code class="ph codeph">PGAPPNAME</code>, <code class="ph codeph">PGDATABASE</code>,
+            <code class="ph codeph">PGHOST</code>, <code class="ph codeph">PGPORT</code>, and <code class="ph codeph">PGUSER</code> to
+          appropriate values. </p>
+<p class="p">It is also convenient to have a <code class="ph codeph">~/.pgpass</code> file
+          to avoid regularly having to type in passwords. This file should reside in your home
+          directory and contain lines of the following format:</p>
+<pre class="pre codeblock"><code>&lt;hostname&gt;:&lt;port&gt;:&lt;database&gt;:&lt;username&gt;:&lt;password&gt;</code></pre>
+        <p class="p">The permissions on <code class="ph codeph">.pgpass</code> must disallow any access to world or group
+          (for example: <code class="ph codeph">chmod 0600 ~/.pgpass</code>). If the permissions are less strict
+          than this, the file will be ignored. (The file permissions are not currently checked on
+          Microsoft Windows clients, however.)</p>
+
+        <p class="p">An alternative way to specify connection parameters is in a <code class="ph codeph">conninfo</code>
+          string or a URI, which is used instead of a database name. This mechanism gives you very
+          wide control over the connection. For
+          example:</p>
+<pre class="pre codeblock"><code>$ psql "service=myservice sslmode=require"
+$ psql postgresql://gpmaster:5433/mydb?sslmode=require</code></pre><p class="p">This
+          way you can also use LDAP for connection parameter lookup as described in <a class="xref" href="https://www.postgresql.org/docs/9.4/libpq-ldap.html" target="_blank">LDAP Lookup of Connection Parameters</a> in the PostgreSQL
+          documentation. See <a class="xref" href="https://www.postgresql.org/docs/9.4/libpq-connect.html#LIBPQ-PARAMKEYWORDS" target="_blank">Parameter Keywords</a> in the PostgreSQL documentation
+          for more information on all the available connection options.</p>
+<p class="p">If the connection
+          could not be made for any reason (insufficient privileges, server is not running, etc.),
+            <code class="ph codeph">psql</code> will return an error and terminate.</p>
+
+        <p class="p">If at least one of standard input or standard output are a terminal, then
+            <code class="ph codeph">psql</code> sets the client encoding to <code class="ph codeph">auto</code>, which will
+          detect the appropriate client encoding from the locale settings (<code class="ph codeph">LC_CTYPE</code>
+          environment variable on Unix systems). If this doesn't work out as expected, the client
+          encoding can be overridden using the environment variable
+            <code class="ph codeph">PGCLIENTENCODING</code>.</p>
+
+      </div>
+      <div class="sectiondiv" id="topic1__section9">
+        <strong class="ph b">Entering SQL Commands</strong>
+        <p class="p">In normal operation, <code class="ph codeph">psql</code> provides a prompt with the name of the
+          database to which <code class="ph codeph">psql</code> is currently connected, followed by the string
+            <strong class="ph b">=&gt;</strong> for a regular user or <strong class="ph b">=#</strong> for a superuser. For example:</p>
+
+        <pre class="pre codeblock"><code>testdb=&gt;
+testdb=#</code></pre>
+        <p class="p">At the prompt, the user may type in SQL commands. Ordinarily, input lines are sent to the
+          server when a command-terminating semicolon is reached. An end of line does not terminate
+          a command. Thus commands can be spread over several lines for clarity. If the command was
+          sent and run without error, the results of the command are displayed on the
+          screen.</p>
+
+        <p class="p">If untrusted users have access to a database that has not adopted a <a class="xref" href="https://www.postgresql.org/docs/9.4/ddl-schemas.html#DDL-SCHEMAS-PATTERNS" target="_blank">secure schema usage pattern</a>, begin your session by
+          removing publicly-writable schemas from <var class="keyword varname">search_path</var>. You can add
+            <code class="ph codeph">options=-csearch_path=</code> to the connection string or issue
+            <code class="ph codeph">SELECT pg_catalog.set_config('search_path', '', false)</code> before other
+          SQL commands. This consideration is not specific to <code class="ph codeph">psql</code>; it
+          applies to every interface for running arbitrary SQL commands. </p>
+
+      </div>
+    </div>
+
+    <div class="section" id="topic1__section10"><h2 class="title sectiontitle">Meta-Commands</h2>
+      
+      <p class="p">Anything you enter in <code class="ph codeph">psql</code> that begins with an unquoted backslash is a
+          <code class="ph codeph">psql</code> meta-command that is processed by <code class="ph codeph">psql</code> itself.
+        These commands help make <code class="ph codeph">psql</code> more useful for administration or scripting.
+        Meta-commands are more commonly called slash or backslash commands. </p>
+
+      <p class="p">The format of a <code class="ph codeph">psql</code> command is the backslash, followed immediately by a
+        command verb, then any arguments. The arguments are separated from the command verb and each
+        other by any number of whitespace characters.</p>
+
+      <p class="p">To include whitespace into an argument you may quote it with single quotes. To include a
+        single quote into such an argument, write two single quotes within single-quoted text.
+        Anything contained in single quotes is furthermore subject to C-like substitutions for
+          <code class="ph codeph">\n</code> (new line), <code class="ph codeph">\t</code> (tab), <code class="ph codeph">\b</code>
+        (backspace), <code class="ph codeph">\r</code> (carriage return), <code class="ph codeph">\f</code> (form feed),
+          <code class="ph codeph">\digits</code> (octal), and <code class="ph codeph">\xdigits</code> (hexadecimal). A backslash
+        preceding any other character within single-quoted text quotes that single character,
+        whatever it is.</p>
+
+      <p class="p">Within an argument, text that is enclosed in backquotes (<code class="ph codeph">`</code>) is taken as a
+        command line that is passed to the shell. The output of the command (with any trailing
+        newline removed) replaces the backquoted text.</p>
+
+      <p class="p">If an unquoted colon (<code class="ph codeph">:</code>) followed by a <code class="ph codeph">psql</code> variable name
+        appears within an argument, it is replaced by the variable's value, as described in <a class="xref" href="#topic1__section14">SQL Interpolation</a>. </p>
+
+      <p class="p">Some commands take an SQL identifier (such as a table name) as argument. These arguments
+        follow the syntax rules of SQL: Unquoted letters are forced to lowercase, while double
+        quotes (<code class="ph codeph">"</code>) protect letters from case conversion and allow incorporation of
+        whitespace into the identifier. Within double quotes, paired double quotes reduce to a
+        single double quote in the resulting name. For example, <code class="ph codeph">FOO"BAR"BAZ</code> is
+        interpreted as <code class="ph codeph">fooBARbaz</code>, and <code class="ph codeph">"A weird"" name"</code> becomes
+          <code class="ph codeph">A weird" name</code>. </p>
+
+      <p class="p">Parsing for arguments stops when another unquoted backslash occurs. This is taken as the
+        beginning of a new meta-command. The special sequence <code class="ph codeph">\\</code> (two backslashes)
+        marks the end of arguments and continues parsing SQL commands, if any. That way SQL and
+          <code class="ph codeph">psql</code> commands can be freely mixed on a line. But in any case, the
+        arguments of a meta-command cannot continue beyond the end of the line.</p>
+
+      <p class="p">The following meta-commands are defined:</p>
+
+      <dl class="dl parml">
+        
+          <dt class="dt pt dlterm">\a</dt>
+
+          <dd class="dd pd">If the current table output format is unaligned, it is switched to aligned. If it is
+            not unaligned, it is set to unaligned. This command is kept for backwards compatibility.
+            See <code class="ph codeph">\pset</code> for a more general solution. </dd>
+
+        
+        
+          <dt class="dt pt dlterm">\c | \connect [<var class="keyword varname">dbname</var> [<var class="keyword varname">username</var>]
+              [<var class="keyword varname">host</var>] [<var class="keyword varname">port</var>]] |
+            <var class="keyword varname">conninfo</var></dt>
+
+          <dd class="dd pd">Establishes a new Greenplum Database connection. The connection parameters to use can
+            be specified either using a positional syntax, or using <code class="ph codeph">conninfo</code>
+            connection strings as detailed in <a class="xref" href="https://www.postgresql.org/docs/9.4/libpq-connect.html#LIBPQ-CONNSTRING" target="_blank">libpq Connection Strings</a>. </dd>
+
+          <dd class="dd pd ddexpand">Where the command omits database name, user, host, or port, the new connection can
+            reuse values from the previous connection. By default, values from the previous
+            connection are reused except when processing a <code class="ph codeph">conninfo</code> string. Passing
+            a first argument of <code class="ph codeph">-reuse-previous=on</code> or
+              <code class="ph codeph">-reuse-previous=off</code> overrides that default. When the command neither
+            specifies nor reuses a particular parameter, the <code class="ph codeph">libpq</code> default is used.
+            Specifying any of <var class="keyword varname">dbname</var>, <var class="keyword varname">username</var>,
+              <var class="keyword varname">host</var> or <var class="keyword varname">port</var> as <code class="ph codeph">-</code> is equivalent
+            to omitting that parameter. </dd>
+
+          <dd class="dd pd ddexpand"> If the new connection is successfully made, the previous connection is closed. 
+            If the connection attempt failed, the previous connection
+            will only be kept if <code class="ph codeph">psql</code> is in interactive mode. When running a
+            non-interactive script, processing will immediately stop with an error. This distinction
+            was chosen as a user convenience against typos, and a safety mechanism that scripts are
+            not accidentally acting on the wrong database.</dd>
+
+          <dd class="dd pd ddexpand">Examples:<pre class="pre codeblock"><code>=&gt; \c mydb myuser host.dom 6432
+=&gt; \c service=foo
+=&gt; \c "host=localhost port=5432 dbname=mydb connect_timeout=10 sslmode=disable"
+=&gt; \c postgresql://tom@localhost/mydb?application_name=myapp</code></pre></dd>
+
+        
+        
+          <dt class="dt pt dlterm">\C [<var class="keyword varname">title</var>]</dt>
+
+          <dd class="dd pd">Sets the title of any tables being printed as the result of a query or unset any such
+            title. This command is equivalent to <code class="ph codeph">\pset title</code>.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">\cd [<var class="keyword varname">directory</var>]</dt>
+
+          <dd class="dd pd">Changes the current working directory. Without argument, changes to the current user's
+            home directory. To print your current working directory, use <code class="ph codeph">\!pwd</code>.
+          </dd>
+
+        
+        
+          <dt class="dt pt dlterm">\conninfo</dt>
+
+          <dd class="dd pd">Displays information about the current connection including the database name, the
+            user name, the type of connection (UNIX domain socket, <code class="ph codeph">TCP/IP</code>, etc.),
+            the host, and the port.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">\copy {<var class="keyword varname">table</var> [(<var class="keyword varname">column_list</var>)] |
+              (<var class="keyword varname">query</var>)} {from | to} {'<var class="keyword varname">filename</var>' | program
+              '<var class="keyword varname">command</var>' | stdin | stdout | pstdin | pstdout} [with]
+              (<var class="keyword varname">option</var> [, ...]) ]</dt>
+
+          <dd class="dd pd">Performs a frontend (client) copy. This is an operation that runs an SQL <code class="ph codeph"><a class="xref" href="../../ref_guide/sql_commands/COPY.html#topic1">COPY</a></code> command, but instead
+            of the server reading or writing the specified file, <code class="ph codeph">psql</code> reads or
+            writes the file and routes the data between the server and the local file system. This
+            means that file accessibility and privileges are those of the local user, not the
+            server, and no SQL superuser privileges are required.</dd>
+
+          <dd class="dd pd ddexpand">When <code class="ph codeph">program</code> is specified, <var class="keyword varname">command</var> is run by
+              <code class="ph codeph">psql</code> and the data from or to <var class="keyword varname">command</var> is routed
+            between the server and the client. This means that the execution privileges are those of
+            the local user, not the server, and no SQL superuser privileges are required.</dd>
+
+          <dd class="dd pd ddexpand"><code class="ph codeph">\copy ... from stdin | to stdout</code> reads/writes based on the command
+            input and output respectively. All rows are read from the same source that issued the
+            command, continuing until <code class="ph codeph">\.</code> is read or the stream reaches
+              <code class="ph codeph">EOF</code>. Output is sent to the same place as command output. To
+            read/write from <code class="ph codeph">psql</code>'s standard input or output, use
+              <code class="ph codeph">pstdin</code> or <code class="ph codeph">pstdout</code>. This option is useful for
+            populating tables in-line within a SQL script file.</dd>
+
+          <dd class="dd pd ddexpand">The syntax of the command is similar to that of the SQL <a class="xref" href="../../ref_guide/sql_commands/COPY.html#topic1">COPY</a> command, and
+              <var class="keyword varname">option</var> must indicate one of the options of the SQL
+              <code class="ph codeph">COPY</code> command. Note that, because of this, special parsing rules apply
+            to the <code class="ph codeph">\copy</code> command. In particular, the variable substitution rules
+            and backslash escapes do not apply. </dd>
+
+          <dd class="dd pd ddexpand">This operation is not as efficient as the SQL <code class="ph codeph">COPY</code> command because
+            all data must pass through the client/server connection.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">\copyright</dt>
+
+          <dd class="dd pd">Shows the copyright and distribution terms of PostgreSQL on which Greenplum Database
+            is based. </dd>
+
+        
+        
+          <dt class="dt pt dlterm">\d [<var class="keyword varname">relation_pattern</var>]  | \d+ [<var class="keyword varname">relation_pattern</var>]
+            | \dS [<var class="keyword varname">relation_pattern</var>]</dt>
+
+          <dd class="dd pd">For each relation (table, external table, view, materialized view, index, sequence, or
+            foreign table) or composite type matching the relation pattern, show all columns, their
+            types, the tablespace (if not the default) and any special attributes such as
+              <code class="ph codeph">NOT NULL</code> or defaults. Associated indexes, constraints, rules, and
+            triggers are also shown. For foreign tables, the associated foreign server is shown as
+              well.<ul class="ul" id="topic1__ul_qda_zxh_no">
+              <li class="li">For some types of relation, <code class="ph codeph">\d</code> shows additional information for
+                each column: column values for sequences, indexed expressions for indexes, and
+                foreign data wrapper options for foreign tables.</li>
+
+              <li class="li" id="topic1__kb143931">The command form <code class="ph codeph">\d+</code> is identical, except that more
+                information is displayed: any comments associated with the columns of the table are
+                shown, as is the presence of OIDs in the table, the view definition if the relation
+                is a view.<p class="p">For partitioned tables, the command <code class="ph codeph">\d</code> or
+                    <code class="ph codeph">\d+</code> specified with the root partition table or child partition
+                  table displays information about the table including partition keys on the current
+                  level of the partition table. The command <code class="ph codeph">\d+</code> also displays the
+                  immediate child partitions of the table and whether the child partition is an
+                  external table or regular table. </p>
+<p class="p">For append-optimized tables and
+                  column-oriented tables, <code class="ph codeph">\d+</code> displays the storage options for a
+                  table. For append-optimized tables, the options are displayed for the table. For
+                  column-oriented tables, storage options are displayed for each column. </p>
+</li>
+
+              <li class="li" id="topic1__kb151095">By default, only user-created objects are shown; supply a pattern or
+                the <code class="ph codeph">S</code> modifier to include system objects. <div class="note"><span class="notetitle">Note:</span> If
+                    <code class="ph codeph">\d</code> is used without a pattern argument, it is equivalent to
+                    <code class="ph codeph">\dtvmsE</code> which will show a list of all visible tables, views,
+                  materialized views, sequences, and foreign tables.</div>
+</li>
+
+            </ul>
+</dd>
+
+        
+        
+          <dt class="dt pt dlterm">\da[S] [<var class="keyword varname">aggregate_pattern</var>]</dt>
+
+          <dd class="dd pd">Lists aggregate functions, together with the data types they operate on. If a pattern
+            is specified, only aggregates whose names match the pattern are shown. By default, only
+            user-created objects are shown; supply a pattern or the <code class="ph codeph">S</code> modifier to
+            include system objects. </dd>
+
+        
+        
+          <dt class="dt pt dlterm">\db[+] [<var class="keyword varname">tablespace_pattern</var>]</dt>
+
+          <dd class="dd pd">Lists all available tablespaces and their corresponding paths. If pattern is
+            specified, only tablespaces whose names match the pattern are shown. If + is appended to
+            the command name, each object is listed with its associated permissions. </dd>
+
+        
+        
+          <dt class="dt pt dlterm">\dc[S+] [<var class="keyword varname">conversion_pattern</var>]</dt>
+
+          <dd class="dd pd">Lists conversions between character-set encodings. If a pattern is specified, only
+            conversions whose names match the pattern are listed. By default, only user-created
+            objects are shown; supply a pattern or the <code class="ph codeph">S</code> modifier to include system
+            objects. If <code class="ph codeph">+</code> is appended to the command name, each object is listed
+            with its associated description.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">\dC[+] [<var class="keyword varname">pattern</var>]</dt>
+
+          <dd class="dd pd">Lists type casts. If a pattern is specified, only casts whose source or target types
+            match the pattern are listed. If <code class="ph codeph">+</code> is appended to the command name,
+            each object is listed with its associated description.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">\dd[S] [<var class="keyword varname">pattern</var>]</dt>
+
+          <dd class="dd pd">Shows the descriptions of objects of type <code class="ph codeph">constraint</code>,
+              <code class="ph codeph">operator class</code>, <code class="ph codeph">operator family</code>,
+              <code class="ph codeph">rule</code>, and <code class="ph codeph">trigger</code>. All other comments may be viewed
+            by the respective backslash commands for those object types. </dd>
+
+          <dd class="dd pd ddexpand"><code class="ph codeph">\dd</code> displays descriptions for objects matching the pattern, or of
+            visible objects of the appropriate type if no argument is given. But in either case,
+            only objects that have a description are listed. By default, only user-created objects
+            are shown; supply a pattern or the <code class="ph codeph">S</code> modifier to include system
+            objects. </dd>
+
+          <dd class="dd pd ddexpand">Descriptions for objects can be created with the <code class="ph codeph">COMMENT</code> SQL
+            command.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">\ddp [<var class="keyword varname">pattern</var>]</dt>
+
+          <dd class="dd pd"> Lists default access privilege settings. An entry is shown for each role (and schema,
+            if applicable) for which the default privilege settings have been changed from the
+            built-in defaults. If <var class="keyword varname">pattern</var> is specified, only entries whose role
+            name or schema name matches the pattern are listed. </dd>
+
+          <dd class="dd pd ddexpand">The <a class="xref" href="../../ref_guide/sql_commands/ALTER_DEFAULT_PRIVILEGES.html#topic1">ALTER DEFAULT PRIVILEGES</a> command is used to set default access privileges. The
+            meaning of the privilege display is explained under <a class="xref" href="../../ref_guide/sql_commands/GRANT.html#topic1">GRANT</a>. </dd>
+
+        
+        
+          <dt class="dt pt dlterm">\dD[S+] [<var class="keyword varname">domain_pattern</var>]</dt>
+
+          <dd class="dd pd">Lists domains. If a pattern is specified, only domains whose names match the pattern
+            are shown. By default, only user-created objects are shown; supply a pattern or the
+              <code class="ph codeph">S</code> modifier to include system objects. If <code class="ph codeph">+</code> is
+            appended to the command name, each object is listed with its associated permissions and
+            description.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">\dEimstPv[S+] [<var class="keyword varname">external_table | index | materialized_view | sequence | table
+              | parent table | view</var>] </dt>
+
+          <dd class="dd pd">This is not the actual command name: the letters <code class="ph codeph">E</code>,
+              <code class="ph codeph">i</code>, <code class="ph codeph">m</code>, <code class="ph codeph">s</code>, <code class="ph codeph">t</code>,
+              <code class="ph codeph">P</code>, and <code class="ph codeph">v</code> stand for external table, index,
+            materialized view, sequence, table, parent table, and view, respectively. You can
+            specify any or all of these letters, in any order, to obtain a listing of objects of
+            these types. For example, <code class="ph codeph">\dit</code> lists indexes and tables. If
+              <code class="ph codeph">+</code> is appended to the command name, each object is listed with its
+            physical size on disk and its associated description, if any. If a pattern is specified,
+            only objects whose names match the pattern are listed. By default, only user-created
+            objects are shown; supply a pattern or the <code class="ph codeph">S</code> modifier to include system
+            objects.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">\des[+] [<var class="keyword varname">foreign_server_pattern</var>] </dt>
+
+          <dd class="dd pd">Lists foreign servers. If a pattern is specified, only those servers whose name
+            matches the pattern are listed. If the form <code class="ph codeph">\des+</code> is used, a full
+            description of each server is shown, including the server's ACL, type, version, options,
+            and description.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">\det[+] [<var class="keyword varname">foreign_table_pattern</var>] </dt>
+
+          <dd class="dd pd">Lists all foreign tables. If a pattern is specified, only entries whose table name or
+            schema name matches the pattern are listed. If the form <code class="ph codeph">\det+</code> is used,
+            generic options and the foreign table description are also displayed.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">\deu[+] [<var class="keyword varname">user_mapping_pattern</var>] </dt>
+
+          <dd class="dd pd">Lists user mappings. If a pattern is specified, only those mappings whose user names
+            match the pattern are listed. If the form <code class="ph codeph">\deu+</code> is used, additional
+            information about each mapping is shown.<div class="note warning"><span class="warningtitle">Warning:</span> 
+              <code class="ph codeph">\deu+</code> might also display the user name and password of the remote
+              user, so care should be taken not to disclose them.</div>
+</dd>
+
+        
+        
+          <dt class="dt pt dlterm">\dew[+] [<var class="keyword varname">foreign_data_wrapper_pattern</var>] </dt>
+
+          <dd class="dd pd">Lists foreign-data wrappers. If a pattern is specified, only those foriegn-data
+            wrappers whose name matches the pattern are listed. If the form <code class="ph codeph">\dew+</code>
+            is used, the ACL, options, and description of the foreign-data wrapper are also
+            shown.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">\df[antwS+] [<var class="keyword varname">function_pattern</var>]</dt>
+
+          <dd class="dd pd">Lists functions, together with their arguments, return types, and function types,
+            which are classified as "agg" (aggregate), "normal", "trigger", or "window". To display
+            only functions of a specific type(s), add the corresponding letters <code class="ph codeph">a</code>,
+              <code class="ph codeph">n</code>, <code class="ph codeph">t</code>, or <code class="ph codeph">w</code>, to the command. If a
+            pattern is specified, only functions whose names match the pattern are shown. If the
+            form <code class="ph codeph">\df+</code> is used, additional information about each function,
+            including security, volatility, language, source code, and description, is shown. By
+            default, only user-created objects are shown; supply a pattern or the <code class="ph codeph">S</code>
+            modifier to include system objects.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">\dF[+] [<var class="keyword varname">pattern</var>] </dt>
+
+          <dd class="dd pd">Lists text search configurations. If a pattern is specified, only configurations whose
+            names match the pattern are shown. If the form <code class="ph codeph">\dF+</code> is used, a full
+            description of each configuration is shown, including the underlying text search parser
+            and the dictionary list for each parser token type.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">\dFd[+] [<var class="keyword varname">pattern</var>] </dt>
+
+          <dd class="dd pd">Lists text search dictionaries. If a pattern is specified, only dictionaries whose
+            names match the pattern are shown. If the form <code class="ph codeph">\dFd+</code> is used,
+            additional information is shown about each selected dictionary, including the underlying
+            text search template and the option values.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">\dFp[+] [<var class="keyword varname">pattern</var>] </dt>
+
+          <dd class="dd pd">Lists text search parsers. If a pattern is specified, only parsers whose names match
+            the pattern are shown. If the form <code class="ph codeph">\dFp+</code> is used, a full description of
+            each parser is shown, including the underlying functions and the list of recognized
+            token types.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">\dFt[+] [<var class="keyword varname">pattern</var>] </dt>
+
+          <dd class="dd pd">Lists text search templates. If a pattern is specified, only templates whose names
+            match the pattern are shown. If the form <code class="ph codeph">\dFt+</code> is used, additional
+            information is shown about each template, including the underlying function names.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">\dg[+] [<var class="keyword varname">role_pattern</var>]</dt>
+
+          <dd class="dd pd">Lists database roles. (Since the concepts of "users" and "groups" have been unified
+            into "roles", this command is now equivalent to <code class="ph codeph">\du</code>.) If a pattern is
+            specified, only those roles whose names match the pattern are listed. If the form
+              <code class="ph codeph">\dg+</code> is used, additional information is shown about each role;
+            currently this adds the comment for each role. </dd>
+
+        
+        
+          <dt class="dt pt dlterm">\dl</dt>
+
+          <dd class="dd pd">This is an alias for <code class="ph codeph">\lo_list</code>, which shows a list of large
+            objects.</dd>
+
+          <dd class="dd pd ddexpand">
+            <div class="note"><span class="notetitle">Note:</span> Greenplum Database does not support the PostgreSQL <a class="xref" href="https://www.postgresql.org/docs/9.4/largeobjects.html" target="_blank">large object facility</a> for streaming user data that is stored
+              in large-object structures.</div>
+
+          </dd>
+
+        
+        
+          <dt class="dt pt dlterm">\dL[S+] [<var class="keyword varname">pattern</var>]</dt>
+
+          <dd class="dd pd">Lists procedural languages. If a pattern is specified, only languages whose names
+            match the pattern are listed. By default, only user-created languages are shown; supply
+            the <code class="ph codeph">S</code> modifier to include system objects. If <code class="ph codeph">+</code> is
+            appended to the command name, each language is listed with its call handler, validator,
+            access privileges, and whether it is a system object.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">\dn[S+] [<var class="keyword varname">schema_pattern</var>]</dt>
+
+          <dd class="dd pd">Lists all available schemas (namespaces). If a pattern is specified, only schemas
+            whose names match the pattern are listed. By default, only user- create objects are
+            show; supply a pattern or the <code class="ph codeph">S</code> modifier to include system objects. If
+              <code class="ph codeph">+</code> is appended to the command name, each object is listed with its
+            associated permissions and description, if any.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">\do[S] [<var class="keyword varname">operator_pattern</var>]</dt>
+
+          <dd class="dd pd">Lists available operators with their operand and return types. If a pattern is
+            specified, only operators whose names match the pattern are listed. By default, only
+            user-created objects are shown; supply a pattern or the <code class="ph codeph">S</code> modifier to
+            include system objects.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">\dO[S+] [<var class="keyword varname">pattern</var>]</dt>
+
+          <dd class="dd pd">Lists collations. If a pattern is specified, only collations whose names match the
+            pattern are listed. By default, only user-created objects are shown; supply a pattern or
+            the <code class="ph codeph">S</code> modifier to include system objects. If <code class="ph codeph">+</code> is
+            appended to the command name, each collation is listed with its associated description,
+            if any. Note that only collations usable with the current database's encoding are shown,
+            so the results may vary in different databases of the same installation.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">\dp [<var class="keyword varname">relation_pattern_to_show_privileges</var>]</dt>
+
+          <dd class="dd pd">Lists tables, views, and sequences with their associated access privileges. If a
+            pattern is specified, only tables, views, and sequences whose names match the pattern
+            are listed. The <a class="xref" href="../../ref_guide/sql_commands/GRANT.html#topic1">GRANT</a> and <a class="xref" href="../../ref_guide/sql_commands/REVOKE.html#topic1">REVOKE</a> commands are used to set
+            access privileges. The meaning of the privilege display is explained under <a class="xref" href="../../ref_guide/sql_commands/GRANT.html#topic1">GRANT</a>.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">\drds [<var class="keyword varname">role-pattern</var> [database-pattern]]</dt>
+
+          <dd class="dd pd">Lists defined configuration settings. These settings can be role-specific,
+            database-specific, or both. <var class="keyword varname">role-pattern</var> and
+              <var class="keyword varname">database-pattern</var> are used to select specific roles and database to
+            list, respectively. If omitted, or if <code class="ph codeph">*</code> is specified, all settings are
+            listed, including those not role-specific or database-specific, respectively. </dd>
+
+          <dd class="dd pd ddexpand">The <a class="xref" href="../../ref_guide/sql_commands/ALTER_ROLE.html">ALTER
+              ROLE</a> and <a class="xref" href="../../ref_guide/sql_commands/ALTER_DATABASE.html">ALTER DATABASE</a> commands
+            are used to define per-role and per-database role configuration settings. </dd>
+
+        
+        
+          <dt class="dt pt dlterm">\dT[S+] [<var class="keyword varname">datatype_pattern</var>]</dt>
+
+          <dd class="dd pd">Lists data types. If a pattern is specified, only types whose names match the pattern
+            are listed. If <code class="ph codeph">+</code> is appended to the command name, each type is listed
+            with its internal name and size, its allowed values if it is an <code class="ph codeph">enum</code>
+            type, and its associated permissions. By default, only user-created objects are shown;
+            supply a pattern or the <code class="ph codeph">S</code> modifier to include system objects.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">\du[+] [<var class="keyword varname">role_pattern</var>]</dt>
+
+          <dd class="dd pd">Lists database roles. (Since the concepts of "users" and "groups" have been unified
+            into "roles", this command is now equivalent to <code class="ph codeph">\dg</code>.) If a pattern is
+            specified, only those roles whose names match the pattern are listed. If the form
+              <code class="ph codeph">\du+</code> is used, additional information is shown about each role;
+            currently this adds the comment for each role.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">\dx[+] [<var class="keyword varname">extension_pattern</var>]</dt>
+
+          <dd class="dd pd">Lists installed extensions. If a pattern is specified, only those extensions whose
+            names match the pattern are listed. If the form <code class="ph codeph">\dx+</code> is used, all of
+            the objects belonging to each matching extension are listed. </dd>
+
+        
+        
+          <dt class="dt pt dlterm">\dy[+] [<var class="keyword varname">pattern</var>]</dt>
+
+          <dd class="dd pd">Lists event triggers. If a pattern is specified, only those triggers whose names match
+            the pattern are listed. If <code class="ph codeph">+</code> is appended to the command name, each
+            object is listed with its associated description.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">\dy[+] [<var class="keyword varname">pattern</var>]</dt>
+
+          <dd class="dd pd">Lists event triggers. If a pattern is specified, only those triggers
+            whose names match the pattern are listed. If <code class="ph codeph">+</code> is appended
+            to the command name, each object is listed with its associated description.
+            <div class="note"><span class="notetitle">Note:</span> Greenplum Database does not support user-defined triggers.</div>
+</dd>
+
+        
+        
+          <dt class="dt pt dlterm">\e | \edit [<var class="keyword varname">filename</var>] [<var class="keyword varname">line_number</var>]</dt>
+
+          <dd class="dd pd">If <var class="keyword varname">filename</var> is specified, the file is edited; after the editor
+            exits, its content is copied back to the query buffer. If no <var class="keyword varname">filename</var>
+            is given, the current query buffer is copied to a temporary file which is then edited in
+            the same fashion. </dd>
+
+          <dd class="dd pd ddexpand">The new query buffer is then re-parsed according to the normal rules of
+              <code class="ph codeph">psql</code>, where the whole buffer is treated as a single line. (Thus you
+            cannot make scripts this way. Use <code class="ph codeph">\i</code> for that.) This means also that if
+            the query ends with (or rather contains) a semicolon, it is immediately run. In
+            other cases it will merely wait in the query buffer; type semicolon or
+              <code class="ph codeph">\g</code> to send it, or <code class="ph codeph">\r</code> to cancel. </dd>
+
+          <dd class="dd pd ddexpand">If a line number is specified, <code class="ph codeph">psql</code> will position the cursor on the
+            specified line of the file or query buffer. Note that if a single all-digits argument is
+            given, <code class="ph codeph">psql</code> assumes it is a line number, not a file name.</dd>
+
+          <dd class="dd pd ddexpand">See <a class="xref" href="#topic1__section17">Environment</a> for information about configuring
+            and customizing your editor.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">\echo <var class="keyword varname">text</var> [ ... ]</dt>
+
+          <dd class="dd pd">Prints the arguments to the standard output, separated by one space and followed by a
+            newline. This can be useful to intersperse information in the output of scripts. If the
+            first argument is an unquoted <code class="ph codeph">-n</code>, the trailing newline is not
+              written.<div class="note"><span class="notetitle">Note:</span> If you use the <code class="ph codeph">\o</code> command to redirect your query output
+              you might wish to use <code class="ph codeph">\qecho</code> instead of this command.</div>
+</dd>
+
+        
+        
+          <dt class="dt pt dlterm">\ef [<var class="keyword varname">function_description</var> [<var class="keyword varname">line_number</var>]]</dt>
+
+          <dd class="dd pd">This command fetches and edits the definition of the named function, in the form of a
+              <code class="ph codeph">CREATE OR REPLACE FUNCTION</code> command. Editing is done in the same way
+            as for <code class="ph codeph">\edit</code>. After the editor exits, the updated command waits in the
+            query buffer; type semicolon or <code class="ph codeph">\g</code> to send it, or <code class="ph codeph">\r</code>
+            to cancel.</dd>
+
+          <dd class="dd pd ddexpand">The target function can be specified by name alone, or by name and arguments, for
+            example <code class="ph codeph">foo(integer, text)</code>. The argument types must be given if there
+            is more than one function with the same name.</dd>
+
+          <dd class="dd pd ddexpand">If no function is specified, a blank <code class="ph codeph">CREATE FUNCTION</code> template is
+            presented for editing.</dd>
+
+          <dd class="dd pd ddexpand">If a line number is specified, <code class="ph codeph">psql</code> will position the cursor on the
+            specified line of the function body. (Note that the function body typically does not
+            begin on the first line of the file.)</dd>
+
+          <dd class="dd pd ddexpand">See <a class="xref" href="#topic1__section17">Environment</a> for information about configuring
+            and customizing your editor.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">\encoding [<var class="keyword varname">encoding</var>]</dt>
+
+          <dd class="dd pd">Sets the client character set encoding. Without an argument, this command shows the
+            current encoding. </dd>
+
+        
+        
+          <dt class="dt pt dlterm">\f [<var class="keyword varname">field_separator_string</var>]</dt>
+
+          <dd class="dd pd">Sets the field separator for unaligned query output. The default is the vertical bar
+              (<code class="ph codeph">|</code>). See also <code class="ph codeph">\pset</code> for a generic way of setting
+            output options. </dd>
+
+        
+        
+          <dt class="dt pt dlterm">\g [<var class="keyword varname">filename</var>] </dt>
+
+          <dt class="dt pt dlterm">\g [ <code class="ph codeph">|</code>
+            <var class="keyword varname">command</var> ]</dt>
+
+          <dd class="dd pd">Sends the current query input buffer to the server, and optionally stores the query's
+            output in <var class="keyword varname">filename</var> or pipes the output to the shell command
+              <var class="keyword varname">command</var>. The file or command is written to only if the query
+            successfully returns zero or more tuples, not if the query fails or is a
+            non-data-returning SQL command.</dd>
+
+          <dd class="dd pd ddexpand">A bare <code class="ph codeph">\g</code> is essentially equivalent to a semi-colon. A
+              <code class="ph codeph">\g</code> with argument is a one-shot alternative to the <code class="ph codeph">\o</code>
+            command.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">\gset [<var class="keyword varname">prefix</var>]</dt>
+
+          <dd class="dd pd">Sends the current query input buffer to the server and stores the query's output into
+              <code class="ph codeph">psql</code> variables. The query to be run must return exactly one row.
+            Each column of the row is stored into a separate variable, named the same as the column.
+            For
+            example:<pre class="pre codeblock"><code>=&gt; SELECT 'hello' AS var1, 10 AS var2;
+-&gt; \gset
+=&gt; \echo :var1 :var2
+hello 10
+</code></pre></dd>
+
+          <dd class="dd pd ddexpand">If you specify a <var class="keyword varname">prefix</var>, that string is prepended to the query's
+            column names to create the variable names to
+            use:<pre class="pre codeblock"><code>=&gt; SELECT 'hello' AS var1, 10 AS var2;
+-&gt; \gset result_
+=&gt; \echo :result_var1 :result_var2
+hello 10</code></pre></dd>
+
+          <dd class="dd pd ddexpand">If a column result is NULL, the corresponding variable is unset rather than being
+            set.</dd>
+
+          <dd class="dd pd ddexpand">If the query fails or does not return one row, no variables are changed.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">\h | \help [<var class="keyword varname">sql_command</var>]</dt>
+
+          <dd class="dd pd">Gives syntax help on the specified SQL command. If a command is not specified, then
+              <code class="ph codeph">psql</code> will list all the commands for which syntax help is available.
+            If <var class="keyword varname">command</var> is an asterisk (<code class="ph codeph">*</code>) then syntax help on
+            all SQL commands is shown. To simplify typing, commands that consist of several words do
+            not have to be quoted.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">\H | \html</dt>
+
+          <dd class="dd pd">Turns on HTML query output format. If the HTML format is already on, it is switched
+            back to the default aligned text format. This command is for compatibility and
+            convenience, but see <code class="ph codeph">\pset</code> about setting other output options.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">\i | \include <var class="keyword varname">filename</var></dt>
+
+          <dd class="dd pd">Reads input from the file <var class="keyword varname">filename</var> and runs it as though it had
+            been typed on the keyboard.</dd>
+
+          <dd class="dd pd ddexpand"> If <var class="keyword varname">filename</var> is <code class="ph codeph">-</code> (hyphen), then standard input is
+            read until an EOF indication or <code class="ph codeph">\q</code> meta-command. This can be used to
+            intersperse interactive input with input from files. Note that Readline behavior will be
+            used only if it is active at the outermost level.</dd>
+
+          <dd class="dd pd ddexpand">If you want to see the lines on the screen as they are read you must set the variable
+              <code class="ph codeph">ECHO</code> to <code class="ph codeph">all</code>. </dd>
+
+        
+        
+          <dt class="dt pt dlterm">\ir | \include_relative <var class="keyword varname">filename</var></dt>
+
+          <dd class="dd pd">The <code class="ph codeph">\ir</code> command is similar to <code class="ph codeph">\i</code>, but resolves
+            relative file names differently. When running in interactive mode, the two commands
+            behave identically. However, when invoked from a script, <code class="ph codeph">\ir</code> interprets
+            file names relative to the directory in which the script is located, rather than the
+            current working directory.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">\l[+] | \list[+] [<var class="keyword varname">pattern</var>]</dt>
+
+          <dd class="dd pd">List the databases in the server and show their names, owners, character set
+            encodings, and access privileges. If a pattern is specified, only databases whose names
+            match the pattern are listed. If <code class="ph codeph">+</code> is appended to the command name,
+            database sizes, default tablespaces, and descriptions are also displayed. (Size
+            information is only available for databases that the current user can connect to.)</dd>
+
+        
+        
+          <dt class="dt pt dlterm">\lo_export <var class="keyword varname">loid</var>
+            <var class="keyword varname">filename</var></dt>
+
+          <dd class="dd pd">Reads the large object with OID <var class="keyword varname">loid</var> from the database and writes
+            it to <var class="keyword varname">filename</var>. Note that this is subtly different from the server
+            function <code class="ph codeph">lo_export</code>, which acts with the permissions of the user that
+            the database server runs as and on the server's file system. Use
+              <code class="ph codeph">\lo_list</code> to find out the large object's OID. <div class="note"><span class="notetitle">Note:</span> Greenplum Database
+              does not support the PostgreSQL <a class="xref" href="https://www.postgresql.org/docs/9.4/largeobjects.html" target="_blank">large object facility</a> for streaming user data that is stored
+              in large-object structures.</div>
+</dd>
+
+        
+        
+          <dt class="dt pt dlterm">\lo_import <var class="keyword varname">large_object_filename</var> [<var class="keyword varname">comment</var>]</dt>
+
+          <dd class="dd pd">Stores the file into a large object. Optionally, it associates the given comment with
+            the object. Example:</dd>
+
+          <dd class="dd pd ddexpand">
+            <pre class="pre codeblock"><code>mydb=&gt; \lo_import '/home/gpadmin/pictures/photo.xcf' 'a 
+picture of me'
+lo_import 152801</code></pre>
+          </dd>
+
+          <dd class="dd pd ddexpand">The response indicates that the large object received object ID 152801 which one ought
+            to remember if one wants to access the object ever again. For that reason it is
+            recommended to always associate a human-readable comment with every object. Those can
+            then be seen with the <code class="ph codeph">\lo_list</code> command. Note that this command is
+            subtly different from the server-side <code class="ph codeph">lo_import</code> because it acts as the
+            local user on the local file system, rather than the server's user and file system.
+              <div class="note"><span class="notetitle">Note:</span> Greenplum Database does not support the PostgreSQL <a class="xref" href="https://www.postgresql.org/docs/9.4/largeobjects.html" target="_blank">large object facility</a> for streaming user data that is stored
+              in large-object structures.</div>
+</dd>
+
+        
+        
+          <dt class="dt pt dlterm">\lo_list</dt>
+
+          <dd class="dd pd">Shows a list of all large objects currently stored in the database, along with any
+            comments provided for them. <div class="note"><span class="notetitle">Note:</span> Greenplum Database does not support the PostgreSQL
+                <a class="xref" href="https://www.postgresql.org/docs/9.4/largeobjects.html" target="_blank">large object facility</a> for streaming user data that is stored
+              in large-object structures.</div>
+</dd>
+
+        
+        
+          <dt class="dt pt dlterm">\lo_unlink <var class="keyword varname">largeobject_oid</var></dt>
+
+          <dd class="dd pd">Deletes the large object of the specified OID from the database. Use
+              <code class="ph codeph">\lo_list</code> to find out the large object's OID. <div class="note"><span class="notetitle">Note:</span> Greenplum Database
+              does not support the PostgreSQL <a class="xref" href="https://www.postgresql.org/docs/9.4/largeobjects.html" target="_blank">large object facility</a> for streaming user data that is stored
+              in large-object structures.</div>
+</dd>
+
+        
+        
+          <dt class="dt pt dlterm">\o | \out [ <var class="keyword varname">filename</var>  ]</dt>
+
+          <dt class="dt pt dlterm">\o | \out [ <code class="ph codeph">|</code>
+            <var class="keyword varname">command</var> ]</dt>
+
+          <dd class="dd pd">Saves future query results to the file <var class="keyword varname">filename</var> or pipes future
+            results to the shell command <var class="keyword varname">command</var>. If no argument is specified,
+            the query output is reset to the standard output. Query results include all tables,
+            command responses, and notices obtained from the database server, as well as output of
+            various backslash commands that query the database (such as <code class="ph codeph">\d</code>), but
+            not error messages. To intersperse text output in between query results, use
+              <code class="ph codeph">\qecho</code>.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">\p</dt>
+
+          <dd class="dd pd">Print the current query buffer to the standard output.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">\password [<var class="keyword varname">username</var>]</dt>
+
+          <dd class="dd pd">Changes the password of the specified user (by default, the current user). This
+            command prompts for the new password, encrypts it, and sends it to the server as an
+              <code class="ph codeph">ALTER ROLE</code> command. This makes sure that the new password does not
+            appear in cleartext in the command history, the server log, or elsewhere.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">\prompt [ <var class="keyword varname">text</var> ] <var class="keyword varname">name</var></dt>
+
+          <dd class="dd pd">Prompts the user to supply text, which is assigned to the variable
+              <var class="keyword varname">name</var>. An optional prompt string, <var class="keyword varname">text</var>, can be
+            specified. (For multiword prompts, surround the text with single quotes.) </dd>
+
+          <dd class="dd pd ddexpand">By default, <code class="ph codeph">\prompt</code> uses the terminal for input and output. However,
+            if the <code class="ph codeph">-f</code> command line switch was used, <code class="ph codeph">\prompt</code> uses
+            standard input and standard output. </dd>
+
+        
+        
+          <dt class="dt pt dlterm">\pset [<var class="keyword varname">print_option</var> [<var class="keyword varname">value</var>]]</dt>
+
+          <dd class="dd pd">This command sets options affecting the output of query result tables.
+              <var class="keyword varname">print_option</var> describes which option is to be set. The semantics of
+              <var class="keyword varname">value</var> vary depending on the selected option. For some options,
+            omitting <var class="keyword varname">value</var> causes the option to be toggled or unset, as described
+            under the particular option. If no such behavior is mentioned, then omitting
+              <var class="keyword varname">value</var> just results in the current setting being displayed.</dd>
+
+          <dd class="dd pd ddexpand"><code class="ph codeph">\pset</code> without any arguments displays the current status
+            of all printing options.</dd>
+
+          <dd class="dd pd ddexpand">Adjustable printing options are: <ul class="ul" id="topic1__ul_f3k_1vl_44">
+              <li class="li" id="topic1__kb144087"><strong class="ph b"><code class="ph codeph">border</code></strong> – The <var class="keyword varname">value</var> must
+                be a number. In general, the higher the number the more borders and lines the tables
+                will have, but this depends on the particular format. In HTML format, this will
+                translate directly into the <code class="ph codeph">border=...</code> attribute; in the other
+                formats only values <code class="ph codeph">0</code> (no border), <code class="ph codeph">1</code> (internal
+                dividing lines), and <code class="ph codeph">2</code> (table frame) make sense.
+                  <code class="ph codeph">latex</code> and <code class="ph codeph">latex-longtable</code> also support a
+                  <code class="ph codeph">border</code> value of 3 which adds a dividing line between each
+                row.</li>
+
+              <li class="li" id="topic1__kb151382"><strong class="ph b"><code class="ph codeph">columns</code></strong> – Sets the target width for the
+                  <code class="ph codeph">wrapped</code> format, and also the width limit for determining whether
+                output is wide enough to require the pager or switch to the vertical display in
+                expanded auto mode. The default is <var class="keyword varname">zero</var>. Zero causes the target
+                width to be controlled by the environment variable <code class="ph codeph">COLUMNS</code>, or the
+                detected screen width if <code class="ph codeph">COLUMNS</code> is not set. In addition, if
+                  <code class="ph codeph">columns</code> is zero then the wrapped format affects screen output
+                only. If columns is nonzero then file and pipe output is wrapped to that width as
+                well. <p class="p">After setting the target width, use the command <code class="ph codeph">\pset format
+                    wrapped</code> to enable the wrapped format.</p>
+</li>
+
+              <li class="li" id="topic1__kb144090"><strong class="ph b"><code class="ph codeph">expanded</code></strong> | <strong class="ph b"><code class="ph codeph">x</code></strong> – If
+                  <var class="keyword varname">value</var> is specified it must be either <code class="ph codeph">on</code> or
+                  <code class="ph codeph">off</code>, which will enable or disable expanded mode, or
+                  <code class="ph codeph">auto</code>. If <var class="keyword varname">value</var> is omitted the command toggles
+                between the <code class="ph codeph">on</code> and <code class="ph codeph">off</code> settings. When expanded
+                mode is enabled, query results are displayed in two columns, with the column name on
+                the left and the data on the right. This mode is useful if the data wouldn't fit on
+                the screen in the normal "horizontal" mode. In the <code class="ph codeph">auto</code> setting,
+                the expanded mode is used whenever the query output is wider than the screen,
+                otherwise the regular mode is used. The <code class="ph codeph">auto</code> setting is only
+                effective in the aligned and wrapped formats. In other formats, it always behaves as
+                if the expanded mode is <code class="ph codeph">off</code>.</li>
+
+              <li class="li" id="topic1__kb147007"><strong class="ph b"><code class="ph codeph">fieldsep</code></strong> – Specifies the field separator to
+                be used in unaligned output mode. That way one can create, for example, tab- or
+                comma-separated output, which other programs might prefer. To set a tab as field
+                separator, type <code class="ph codeph">\pset fieldsep '\t'</code>. The default field separator is
+                  <code class="ph codeph">'|'</code> (a vertical bar). </li>
+
+              <li class="li"><strong class="ph b"><code class="ph codeph">fieldsep_zero</code></strong> - Sets the field separator to use in
+                unaligned output format to a zero byte.</li>
+
+              <li class="li" id="topic1__kb147023"><strong class="ph b"><code class="ph codeph">footer</code></strong> – If <var class="keyword varname">value</var> is
+                specified it must be either <code class="ph codeph">on</code> or <code class="ph codeph">off</code> which will
+                enable or disable display of the table footer (the (<var class="keyword varname">n</var> rows)
+                count). If <var class="keyword varname">value</var> is omitted the command toggles footer display on
+                or off. </li>
+
+              <li class="li" id="topic1__kb144082"><strong class="ph b"><code class="ph codeph">format</code></strong> – Sets the output format to one of
+                  <code class="ph codeph">unaligned</code>, <code class="ph codeph">aligned</code>, <code class="ph codeph">html</code>,
+                  <code class="ph codeph">latex</code> (uses <code class="ph codeph">tabular</code>),
+                  <code class="ph codeph">latex-longtable</code>, <code class="ph codeph">troff-ms</code>, or
+                  <code class="ph codeph">wrapped</code>. Unique abbreviations are allowed.
+                      <p class="p"><strong class="ph b"><code class="ph codeph">unaligned</code></strong> format writes all columns of a row on one
+                  line, separated by the currently active field separator. This is useful for
+                  creating output that might be intended to be read in by other programs (for
+                  example, tab-separated or comma-separated
+                      format).</p>
+<p class="p"><strong class="ph b"><code class="ph codeph">aligned</code></strong> format is the standard,
+                  human-readable, nicely formatted text output; this is the default.</p>
+<p class="p">The
+                      <strong class="ph b"><code class="ph codeph">html</code></strong>, <strong class="ph b"><code class="ph codeph">latex</code></strong>,
+                      <strong class="ph b"><code class="ph codeph">latex-longtable</code></strong>, and <strong class="ph b"><code class="ph codeph">troff-ms</code></strong>
+                  formats put out tables that are intended to be included in documents using the
+                  respective mark-up language. They are not complete documents! (This might not be
+                  so dramatic in HTML, but in LaTeX you must have a complete document wrapper.
+                    <code class="ph codeph">latex-longtable</code> also requires the LaTeX
+                    <code class="ph codeph">longtable</code> and <code class="ph codeph">booktabs</code> packages.)</p>
+<p class="p">The
+                      <strong class="ph b"><code class="ph codeph">wrapped</code></strong> format is like <code class="ph codeph">aligned</code>, but
+                  wraps wide data values across lines to make the output fit in the target column
+                  width. The target width is determined as described under the
+                    <code class="ph codeph">columns</code> option. Note that <code class="ph codeph">psql</code> does not
+                  attempt to wrap column header titles; the <code class="ph codeph">wrapped</code> format behaves
+                  the same as <code class="ph codeph">aligned</code> if the total width needed for column headers
+                  exceeds the target.</p>
+</li>
+
+              <li class="li" id="topic1__kb151434"><strong class="ph b"><code class="ph codeph">linestyle</code></strong> [<strong class="ph b"><code class="ph codeph">unicode</code></strong> |
+                    <strong class="ph b"><code class="ph codeph">ascii</code></strong> | <strong class="ph b"><code class="ph codeph">old-ascii</code></strong>] – Sets the
+                border line drawing style to one of unicode, ascii, or old-ascii. Unique
+                abbreviations, including one letter, are allowed for the three styles. The default
+                setting is <code class="ph codeph">ascii</code>. This option only affects the
+                  <code class="ph codeph">aligned</code> and <code class="ph codeph">wrapped</code> output formats.
+                      <p class="p"><strong class="ph b"><code class="ph codeph">ascii</code></strong> – uses plain ASCII characters. Newlines in
+                  data are shown using a <code class="ph codeph">+</code> symbol in the right-hand margin. When
+                  the wrapped format wraps data from one line to the next without a newline
+                  character, a dot (<code class="ph codeph">.</code>) is shown in the right-hand margin of the
+                  first line, and again in the left-hand margin of the following line.
+                      </p>
+<p class="p"><strong class="ph b"><code class="ph codeph">old-ascii</code></strong> – style uses plain ASCII characters,
+                  using the formatting style used in PostgreSQL 8.4 and earlier. Newlines in data
+                  are shown using a <code class="ph codeph">:</code> symbol in place of the left-hand column
+                  separator. When the data is wrapped from one line to the next without a newline
+                  character, a <code class="ph codeph">;</code> symbol is used in place of the left-hand column
+                  separator. </p>
+<p class="p"><strong class="ph b"><code class="ph codeph">unicode</code></strong> – style uses Unicode box-drawing
+                  characters. Newlines in data are shown using a carriage return symbol in the
+                  right-hand margin. When the data is wrapped from one line to the next without a
+                  newline character, an ellipsis symbol is shown in the right-hand margin of the
+                  first line, and again in the left-hand margin of the following line. </p>
+<p class="p">When
+                  the <code class="ph codeph">border</code> setting is greater than zero, this option also
+                  determines the characters with which the border lines are drawn. Plain ASCII
+                  characters work everywhere, but Unicode characters look nicer on displays that
+                  recognize them. </p>
+</li>
+
+              <li class="li" id="topic1__kb144095"><strong class="ph b"><code class="ph codeph">null 'string'</code></strong> – The second argument is a
+                string to print whenever a column is null. The default is to print nothing, which
+                can easily be mistaken for an empty string. For example, one might prefer
+                  <code class="ph codeph">\pset null '(null)'</code>.</li>
+
+              <li class="li" id="topic1__kb147036"><strong class="ph b"><code class="ph codeph">numericlocale</code></strong> – If <var class="keyword varname">value</var>
+                is specified it must be either <code class="ph codeph">on</code> or <code class="ph codeph">off</code> which
+                will enable or disable display of a locale-specific character to separate groups of
+                digits to the left of the decimal marker. If <var class="keyword varname">value</var> is omitted the
+                command toggles between regular and locale-specific numeric output. </li>
+
+              <li class="li" id="topic1__kb147128"><strong class="ph b"><code class="ph codeph">pager</code></strong> – Controls the use of a pager for
+                query and <code class="ph codeph">psql</code> help output. If the environment variable
+                  <code class="ph codeph">PAGER</code> is set, the output is piped to the specified program.
+                Otherwise a platform-dependent default (such as <code class="ph codeph">more</code>) is used. When
+                  <code class="ph codeph">off</code>, the pager program is not used. When <code class="ph codeph">on</code>, the
+                pager is used only when appropriate, i.e. when the output is to a terminal and will
+                not fit on the screen. Pager can also be set to <code class="ph codeph">always</code>, which
+                causes the pager to be used for all terminal output regardless of whether it fits on
+                the screen. <code class="ph codeph">\pset pager</code> without a <var class="keyword varname">value</var> toggles
+                pager use on and off.</li>
+
+              <li class="li" id="topic1__kb147046"><strong class="ph b"><code class="ph codeph">recordsep</code></strong> – Specifies the record (line)
+                separator to use in unaligned output mode. The default is a newline character. </li>
+
+              <li class="li"><strong class="ph b"><code class="ph codeph">recordsep_zero</code></strong> - Sets the record separator to use in
+                unaligned output format to a zero byte.</li>
+
+              <li class="li" id="topic1__kb147082"><strong class="ph b"><code class="ph codeph">tableattr</code></strong> | <strong class="ph b"><code class="ph codeph">T</code></strong>
+                  [<var class="keyword varname">text</var>] – In HTML format, this specifies attributes to be placed
+                inside the HTML <code class="ph codeph">table</code> tag. This could for example be
+                  <code class="ph codeph">cellpadding</code> or <code class="ph codeph">bgcolor</code>. Note that you probably
+                don't want to specify <code class="ph codeph">border</code> here, as that is already taken care of
+                by <code class="ph codeph">\pset border</code>. If no <var class="keyword varname">value</var> is given, the table
+                attributes are unset. <p class="p">In <code class="ph codeph">latex-longtable</code> format, this controls
+                  the proportional width of each column containing a left-aligned data type. It is
+                  specified as a whitespace-separated list of values, e.g. <code class="ph codeph">'0.2 0.2
+                    0.6'</code>. Unspecified output columns use the last specified value.</p>
+</li>
+
+              <li class="li" id="topic1__kb147069"><strong class="ph b"><code class="ph codeph">title</code></strong> [<var class="keyword varname">text</var>] – Sets the
+                table title for any subsequently printed tables. This can be used to give your
+                output descriptive tags. If no <var class="keyword varname">value</var> is given, the title is
+                unset.</li>
+
+              <li class="li" id="topic1__kb151808"><strong class="ph b"><code class="ph codeph">tuples_only</code></strong> | <strong class="ph b"><code class="ph codeph">t </code></strong>
+                  [<var class="keyword varname">novalue</var> | <var class="keyword varname">on</var> | <var class="keyword varname">off</var>] – If
+                  <var class="keyword varname">value</var> is specified, it must be either <code class="ph codeph">on</code> or
+                  <code class="ph codeph">off</code> which will enable or disable tuples-only mode. If
+                  <var class="keyword varname">value</var> is omitted the command toggles between regular and
+                tuples-only output. Regular output includes extra information such as column
+                headers, titles, and various footers. In tuples-only mode, only actual table data is
+                shown. The <code class="ph codeph">\t</code> command is equivalent to
+                  <code class="ph codeph">\pset</code><code class="ph codeph">tuples_only</code> and is provided for
+                convenience.</li>
+
+          </ul>
+<div class="note tip"><span class="tiptitle">Tip:</span> </div>
+There are various shortcut commands for <code class="ph codeph">\pset</code>. See
+            <code class="ph codeph">\a</code>, <code class="ph codeph">\C</code>, <code class="ph codeph">\f</code>,
+            <code class="ph codeph">\H</code>, <code class="ph codeph">\t</code>, <code class="ph codeph">\T</code>,
+            and <code class="ph codeph">\x</code>.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">\q | \quit</dt>
+
+          <dd class="dd pd">Quits the <code class="ph codeph">psql</code> program. In a script file, only execution of that
+            script is terminated.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">\qecho <var class="keyword varname">text</var> [ ... ] </dt>
+
+          <dd class="dd pd">This command is identical to <code class="ph codeph">\echo</code> except that the output will be
+            written to the query output channel, as set by <code class="ph codeph">\o</code>.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">\r | \reset</dt>
+
+          <dd class="dd pd">Resets (clears) the query buffer.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">\s [<var class="keyword varname">filename</var>]</dt>
+
+          <dd class="dd pd">Print <code class="ph codeph">psql</code>'s command line history
+            to <code class="ph codeph">filename</code>.
+            If <code class="ph codeph">filename</code> is omitted,
+            the history is written to the standard output (using the pager if
+            appropriate). This command is not available
+            if <code class="ph codeph">psql</code> was built
+            without <code class="ph codeph">Readline</code> support.
+          </dd>
+
+        
+        
+          <dt class="dt pt dlterm">\set [<var class="keyword varname">name</var> [<var class="keyword varname">value</var> [ ... ]]]</dt>
+
+          <dd class="dd pd">Sets the <code class="ph codeph">psql</code> variable <var class="keyword varname">name</var> to
+              <var class="keyword varname">value</var>, or if more than one value is given, to the concatenation of
+            all of them. If only one argument is given, the variable is just set with an empty
+            value. To unset a variable, use the <code class="ph codeph">\unset</code> command. </dd>
+
+          <dd class="dd pd ddexpand"><code class="ph codeph">\set</code> without any arguments displays the names and values of all
+            currently-set <code class="ph codeph">psql</code> variables. </dd>
+
+          <dd class="dd pd ddexpand">Valid variable names can contain characters, digits, and underscores. See "Variables"
+            in <a class="xref" href="#topic1__section12">Advanced Features</a>. Variable names are case-sensitive. </dd>
+
+          <dd class="dd pd ddexpand">Although you are welcome to set any variable to anything you want,
+              <code class="ph codeph">psql</code> treats several variables as special. They are documented in the
+            topic about variables.</dd>
+
+          <dd class="dd pd ddexpand">This command is unrelated to the SQL command <a class="xref" href="../../ref_guide/sql_commands/SET.html#topic1">SET</a>.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">\setenv <var class="keyword varname">name</var> [ <var class="keyword varname">value</var> ]</dt>
+
+          <dd class="dd pd">Sets the environment variable <var class="keyword varname">name</var> to <var class="keyword varname">value</var>, or
+            if the <var class="keyword varname">value</var> is not supplied, unsets the environment variable.
+            Example:
+            <pre class="pre codeblock"><code>testdb=&gt; \setenv PAGER less
+testdb=&gt; \setenv LESS -imx4F</code></pre></dd>
+
+        
+        
+          <dt class="dt pt dlterm">\sf[+] <var class="keyword varname">function_description</var></dt>
+
+          <dd class="dd pd">This command fetches and shows the definition of the named function, in the form of a
+              <code class="ph codeph">CREATE OR REPLACE FUNCTION</code> command. The definition is printed to the
+            current query output channel, as set by <code class="ph codeph">\o</code>.</dd>
+
+          <dd class="dd pd ddexpand">The target function can be specified by name alone, or by name and arguments, for
+            example <code class="ph codeph">foo(integer, text)</code>. The argument types must be given if there
+            is more than one function of the same name.</dd>
+
+          <dd class="dd pd ddexpand">If <code class="ph codeph">+</code> is appended to the command name, then the output lines are
+            numbered, with the first line of the function body being line 1.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">\t [novalue | on | off]</dt>
+
+          <dd class="dd pd">The <code class="ph codeph">\t</code> command by itself toggles a display of output column name
+            headings and row count footer. The values <code class="ph codeph">on</code> and <code class="ph codeph">off</code>
+            set the tuples display, regardless of the current setting. This command is equivalent to
+              <code class="ph codeph">\pset tuples_only</code> and is provided for convenience. </dd>
+
+        
+        
+          <dt class="dt pt dlterm">\T <var class="keyword varname">table_options</var></dt>
+
+          <dd class="dd pd">Specifies attributes to be placed within the <code class="ph codeph">table</code> tag in HTML output
+            format. This command is equivalent to <code class="ph codeph">\pset tableattr
+                <var class="keyword varname">table_options</var></code></dd>
+
+        
+        
+          <dt class="dt pt dlterm">\timing [novalue | on | off]</dt>
+
+          <dd class="dd pd">Without a parameter, toggles a display of how long each SQL statement takes, in
+            milliseconds. The values <code class="ph codeph">on</code> and <code class="ph codeph">off</code> set the time
+            display, regardless of the current setting. </dd>
+
+        
+        
+          <dt class="dt pt dlterm">\unset <var class="keyword varname">name</var></dt>
+
+          <dd class="dd pd">Unsets (deletes) the <code class="ph codeph">psql</code> variable <var class="keyword varname">name</var>. </dd>
+
+        
+        
+          <dt class="dt pt dlterm">\w | \write <var class="keyword varname">filename</var></dt>
+
+          <dt class="dt pt dlterm">\w | \write <code class="ph codeph">|</code> <var class="keyword varname">command</var></dt>
+
+          <dd class="dd pd">Outputs the current query buffer to the file <var class="keyword varname">filename</var> or pipes it
+            to the shell command <var class="keyword varname">command</var>.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">\watch [<var class="keyword varname">seconds</var>]</dt>
+
+          <dd class="dd pd">Repeatedly runs the current query buffer (like <code class="ph codeph">\g</code>) until
+            interrupted or the query fails. Wait the specified number of seconds (default 2) between
+            executions.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">\x [ on | off | auto ]</dt>
+
+          <dd class="dd pd">Sets or toggles expanded table formatting mode. As such it is equivalent to
+              <code class="ph codeph">\pset expanded</code>.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">\z [<var class="keyword varname">pattern</var>]</dt>
+
+          <dd class="dd pd">Lists tables, views, and sequences with their associated access privileges. If a
+            pattern is specified, only tables, views and sequences whose names match the pattern are
+            listed. This is an alias for <code class="ph codeph">\dp</code>.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">\! [<var class="keyword varname">command</var>]</dt>
+
+          <dd class="dd pd">Escapes to a separate shell or runs the shell command <var class="keyword varname">command</var>.
+            The arguments are not further interpreted; the shell will see them as-is. In particular,
+            the variable substitution rules and backslash escapes do not apply.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">\?</dt>
+
+          <dd class="dd pd">Shows help information about the <code class="ph codeph">psql</code> backslash commands.</dd>
+
+        
+      </dl>
+
+    </div>
+
+    <div class="section" id="topic1__section11"><h2 class="title sectiontitle">Patterns</h2>
+      
+      <p class="p">The various <code class="ph codeph">\d</code> commands accept a pattern parameter to specify the object
+        name(s) to be displayed. In the simplest case, a pattern is just the exact name of the
+        object. The characters within a pattern are normally folded to lower case, just as in SQL
+        names; for example, <code class="ph codeph">\dt FOO</code> will display the table named
+          <code class="ph codeph">foo</code>. As in SQL names, placing double quotes around a pattern stops
+        folding to lower case. Should you need to include an actual double quote character in a
+        pattern, write it as a pair of double quotes within a double-quote sequence; again this is
+        in accord with the rules for SQL quoted identifiers. For example, <code class="ph codeph">\dt
+          "FOO""BAR"</code> will display the table named <code class="ph codeph">FOO"BAR</code> (not
+          <code class="ph codeph">foo"bar</code>). Unlike the normal rules for SQL names, you can put double
+        quotes around just part of a pattern, for instance <code class="ph codeph">\dt FOO"FOO"BAR</code> will
+        display the table named <code class="ph codeph">fooFOObar</code>. </p>
+
+      <p class="p">Within a pattern, <code class="ph codeph">*</code> matches any sequence of characters (including no
+        characters) and <code class="ph codeph">?</code> matches any single character. (This notation is
+        comparable to UNIX shell file name patterns.) For example, <code class="ph codeph">\dt int*</code>
+        displays all tables whose names begin with <code class="ph codeph">int</code>. But within double quotes,
+          <code class="ph codeph">*</code> and <code class="ph codeph">?</code> lose these special meanings and are just matched
+        literally.</p>
+
+      <p class="p">A pattern that contains a dot (<code class="ph codeph">.</code>) is interpreted as a schema name pattern
+        followed by an object name pattern. For example, <code class="ph codeph">\dt foo*.bar*</code> displays all
+        tables whose table name starts with <code class="ph codeph">bar</code> that are in schemas whose schema
+        name starts with <code class="ph codeph">foo</code>. When no dot appears, then the pattern matches only
+        objects that are visible in the current schema search path. Again, a dot within double
+        quotes loses its special meaning and is matched literally.</p>
+
+      <p class="p">Advanced users can use regular-expression notations. All regular expression special
+        characters work as specified in the <a class="xref" href="https://www.postgresql.org/docs/9.4/functions-matching.html#FUNCTIONS-POSIX-REGEXP" target="_blank">PostgreSQL documentation on regular expressions</a>,
+        except for <code class="ph codeph">.</code> which is taken as a separator as mentioned above,
+          <code class="ph codeph">*</code> which is translated to the regular-expression notation
+          <code class="ph codeph">.*</code>, and <code class="ph codeph">?</code> which is translated to <code class="ph codeph">..</code> You
+        can emulate these pattern characters at need by writing <code class="ph codeph">?</code> for
+          <code class="ph codeph">.,</code><code class="ph codeph">(R+|)</code> for <code class="ph codeph">R*</code>, or
+          <code class="ph codeph">(R|)</code> for <code class="ph codeph">R?</code>. Remember that the pattern must match the
+        whole name, unlike the usual interpretation of regular expressions; write <code class="ph codeph">*</code>
+        at the beginning and/or end if you don't wish the pattern to be anchored. Note that within
+        double quotes, all regular expression special characters lose their special meanings and are
+        matched literally. Also, the regular expression special characters are matched literally in
+        operator name patterns (such as the argument of <code class="ph codeph">\do</code>).</p>
+
+      <p class="p">Whenever the pattern parameter is omitted completely, the <code class="ph codeph">\d</code> commands
+        display all objects that are visible in the current schema search path – this is equivalent
+        to using the pattern <code class="ph codeph">*.</code> To see all objects in the database, use the pattern
+          <code class="ph codeph">*.*.</code></p>
+
+    </div>
+
+    <div class="section" id="topic1__section12"><h2 class="title sectiontitle">Advanced Features</h2>
+      
+      <div class="sectiondiv" id="topic1__section13">
+        <strong class="ph b">Variables</strong>
+        <p class="p"><code class="ph codeph">psql</code> provides variable substitution features similar to common UNIX
+          command shells. Variables are simply name/value pairs, where the value can be any string
+          of any length. The name must consist of letters (including non-Latin letters), digits, and
+          underscores.</p>
+<p class="p">To set a variable, use the psql meta-command <code class="ph codeph">\set</code>. For
+          example,</p>
+
+        <pre class="pre codeblock"><code>testdb=&gt; \set foo bar</code></pre>
+        <p class="p">sets the variable <code class="ph codeph">foo</code> to the value <code class="ph codeph">bar</code>. To retrieve the
+          content of the variable, precede the name with a colon, for example:</p>
+
+        <pre class="pre codeblock"><code>testdb=&gt; \echo :foo
+bar</code></pre>
+        <p class="p">This works in both regular SQL commands and meta-commands; there is more detail in <a class="xref" href="#topic1__section14">SQL Interpolation</a>.</p>
+<p class="p">If you call
+            <code class="ph codeph">\set</code> without a second argument, the variable is set, with an empty
+          string as <var class="keyword varname">value</var>. To unset (i.e., delete) a variable, use the command
+            <code class="ph codeph">\unset</code>. To show the values of all variables, call <code class="ph codeph">\set</code>
+          without any argument.</p>
+<div class="note"><span class="notetitle">Note:</span> The arguments of <code class="ph codeph">\set</code> are subject to the
+          same substitution rules as with other commands. Thus you can construct interesting
+          references such as <code class="ph codeph">\set :foo 'something'</code> and get 'soft links' or
+          'variable variables' of Perl or PHP fame, respectively. Unfortunately, there is no way to
+          do anything useful with these constructs. On the other hand, <code class="ph codeph">\set bar
+            :foo</code> is a perfectly valid way to copy a variable.</div>
+
+        <p class="p">A number of these variables are treated specially by <code class="ph codeph">psql</code>. They
+          represent certain option settings that can be changed at run time by altering the value of
+          the variable, or in some cases represent changeable state of <code class="ph codeph">psql</code>.
+          Although you can use these variables for other purposes, this is not recommended, as the
+          program behavior might grow really strange really quickly. By convention, all specially
+          treated variables' names consist of all upper-case ASCII letters (and possibly digits and
+          underscores). To ensure maximum compatibility in the future, avoid using such variable
+          names for your own purposes. A list of all specially treated variables follows.</p>
+
+        <dl class="dl parml">
+          
+            <dt class="dt pt dlterm">AUTOCOMMIT</dt>
+
+            <dd class="dd pd">When on (the default), each SQL command is automatically committed upon successful
+              completion. To postpone commit in this mode, you must enter a <code class="ph codeph">BEGIN</code>
+              or <code class="ph codeph">START TRANSACTION</code> SQL command. When off or unset, SQL commands are
+              not committed until you explicitly issue <code class="ph codeph">COMMIT</code> or
+                <code class="ph codeph">END</code>. The autocommit-on mode works by issuing an implicit
+                <code class="ph codeph">BEGIN</code> for you, just before any command that is not already in a
+              transaction block and is not itself a <code class="ph codeph">BEGIN</code> or other
+              transaction-control command, nor a command that cannot be run inside a
+              transaction block (such as <code class="ph codeph">VACUUM</code>). </dd>
+
+            <dd class="dd pd ddexpand">In autocommit-off mode, you must explicitly abandon any failed transaction by
+              entering <code class="ph codeph">ABORT</code> or <code class="ph codeph">ROLLBACK</code>. Also keep in mind that
+              if you exit the session without committing, your work will be lost.</dd>
+
+            <dd class="dd pd ddexpand">The autocommit-on mode is PostgreSQL's traditional behavior, but autocommit-off is
+              closer to the SQL spec. If you prefer autocommit-off, you may wish to set it in your
+                <code class="ph codeph">~/.psqlrc</code> file.</dd>
+
+          
+          
+            <dt class="dt pt dlterm">COMP_KEYWORD_CASE</dt>
+
+            <dd class="dd pd">Determines which letter case to use when completing an SQL key word. If set to
+                <code class="ph codeph">lower</code> or <code class="ph codeph">upper</code>, the completed word will be in
+              lower or upper case, respectively. If set to <code class="ph codeph">preserve-lower</code> or
+                <code class="ph codeph">preserve-upper</code> (the default), the completed word will be in the
+              case of the word already entered, but words being completed without anything entered
+              will be in lower or upper case, respectively.</dd>
+
+          
+          
+            <dt class="dt pt dlterm">DBNAME</dt>
+
+            <dd class="dd pd">The name of the database you are currently connected to. This is set every time you
+              connect to a database (including program start-up), but can be unset.</dd>
+
+          
+          
+            <dt class="dt pt dlterm">ECHO</dt>
+
+            <dd class="dd pd">If set to <code class="ph codeph">all</code>, all nonempty input lines are printed to standard
+              output as they are read. (This does not apply to lines read interactively.) To select
+              this behavior on program start-up, use the switch <code class="ph codeph">-a</code>. If set to
+              queries, <code class="ph codeph">psql</code> prints each query to standard output as it is sent to
+              the server. The switch for this is <code class="ph codeph">-e</code>. </dd>
+
+          
+          
+            <dt class="dt pt dlterm">ECHO_HIDDEN</dt>
+
+            <dd class="dd pd">When this variable is set to <code class="ph codeph">on</code> and a backslash command
+              queries the database, the query is first shown.
+              This feature helps you to study
+              Greenplum Database internals and provide
+              similar functionality in your own programs. (To select this behavior on program
+              start-up, use the switch <code class="ph codeph">-E</code>.) If you set the variable to the value
+                <code class="ph codeph">noexec</code>, the queries are just shown but are not actually sent to the
+              server and run.</dd>
+
+          
+          
+            <dt class="dt pt dlterm">ENCODING</dt>
+
+            <dd class="dd pd">The current client character set encoding.</dd>
+
+          
+          
+            <dt class="dt pt dlterm">FETCH_COUNT</dt>
+
+            <dd class="dd pd">If this variable is set to an integer value &gt; 0, the results of
+                <code class="ph codeph">SELECT</code> queries are fetched and displayed in groups of that many
+              rows, rather than the default behavior of collecting the entire result set before
+              display. Therefore only a limited amount of memory is used, regardless of the size of
+              the result set. Settings of 100 to 1000 are commonly used when enabling this feature.
+              Keep in mind that when using this feature, a query may fail after having already
+              displayed some rows.</dd>
+
+            <dd class="dd pd ddexpand">Although you can use any output format with this feature, the default aligned format
+              tends to look bad because each group of <code class="ph codeph">FETCH_COUNT</code> rows will be
+              formatted separately, leading to varying column widths across the row groups. The
+              other output formats work better.</dd>
+
+          
+          
+            <dt class="dt pt dlterm">HISTCONTROL</dt>
+
+            <dd class="dd pd">If this variable is set to <code class="ph codeph">ignorespace</code>, lines which begin with a
+              space are not entered into the history list. If set to a value of
+                <code class="ph codeph">ignoredups</code>, lines matching the previous history line are not
+              entered. A value of <code class="ph codeph">ignoreboth</code> combines the two options. If unset, or
+              if set to any other value than those above, all lines read in interactive mode are
+              saved on the history list. </dd>
+
+          
+          
+            <dt class="dt pt dlterm">HISTFILE</dt>
+
+            <dd class="dd pd">The file name that will be used to store the history list. The default value is
+                <code class="ph codeph">~/.psql_history</code>. For example,
+              putting<pre class="pre codeblock"><code>\set HISTFILE ~/.psql_history- :DBNAME</code></pre></dd>
+
+            <dd class="dd pd ddexpand">in <code class="ph codeph">~/.psqlrc</code> will cause <code class="ph codeph">psql</code> to maintain a
+              separate history for each database.</dd>
+
+          
+          
+            <dt class="dt pt dlterm">HISTSIZE</dt>
+
+            <dd class="dd pd">The number of commands to store in the command history. The default value is 500.
+            </dd>
+
+          
+          
+            <dt class="dt pt dlterm">HOST</dt>
+
+            <dd class="dd pd">The database server host you are currently connected to. This is set every time you
+              connect to a database (including program start-up), but can be unset.</dd>
+
+          
+          
+            <dt class="dt pt dlterm">IGNOREEOF</dt>
+
+            <dd class="dd pd">If unset, sending an <code class="ph codeph">EOF</code> character (usually
+              <code class="ph codeph">CTRL+D</code>) to an interactive session of <code class="ph codeph">psql</code> will
+              terminate the application. If set to a numeric value, that many <code class="ph codeph">EOF</code>
+              characters are ignored before the application terminates. If the variable is set but
+              has no numeric value, the default is <code class="ph codeph">10</code>. </dd>
+
+          
+          
+            <dt class="dt pt dlterm">LASTOID</dt>
+
+            <dd class="dd pd">The value of the last affected OID, as returned from an <code class="ph codeph">INSERT</code> or
+                <code class="ph codeph">lo_import</code> command. This variable is only guaranteed to be valid
+              until after the result of the next SQL command has been displayed. </dd>
+
+          
+          
+            <dt class="dt pt dlterm">ON_ERROR_ROLLBACK</dt>
+
+            <dd class="dd pd">When set to <code class="ph codeph">on</code>, if a statement in a transaction block generates an
+              error, the error is ignored and the transaction continues. When set to
+                <code class="ph codeph">interactive</code>, such errors are only ignored in interactive sessions,
+              and not when reading script files. When unset or set to <code class="ph codeph">off</code>, a
+              statement in a transaction block that generates an error cancels the entire
+              transaction. The error rollback mode works by issuing an implicit
+                <code class="ph codeph">SAVEPOINT</code> for you, just before each command that is in a
+              transaction block, and rolls back to the savepoint on error.</dd>
+
+          
+          
+            <dt class="dt pt dlterm">ON_ERROR_STOP</dt>
+
+            <dd class="dd pd">By default, command processing continues after an error. When this variable is set
+              to <code class="ph codeph">on</code>, processing will instead stop immediately. In interactive mode,
+                <code class="ph codeph">psql</code> will return to the command prompt; otherwise,
+                <code class="ph codeph">psql</code> will exit, returning error code 3 to distinguish this case
+              from fatal error conditions, which are reported using error code 1. In either case,
+              any currently running scripts (the top-level script, if any, and any other scripts
+              which it may have in invoked) will be terminated immediately. If the top-level command
+              string contained multiple SQL commands, processing will stop with the current
+              command.</dd>
+
+          
+          
+            <dt class="dt pt dlterm">PORT</dt>
+
+            <dd class="dd pd">The database server port to which you are currently connected. This is set every
+              time you connect to a database (including program start-up), but can be unset.</dd>
+
+          
+          
+            <dt class="dt pt dlterm">PROMPT1</dt>
+
+            <dt class="dt pt dlterm">PROMPT2</dt>
+
+            <dt class="dt pt dlterm">PROMPT3</dt>
+
+            <dd class="dd pd">These specify what the prompts <code class="ph codeph">psql</code> issues should look like. See
+              "Prompting".</dd>
+
+          
+          
+            <dt class="dt pt dlterm">QUIET</dt>
+
+            <dd class="dd pd">Setting this variable to <code class="ph codeph">on</code> is equivalent to the command line
+              option <code class="ph codeph">-q</code>. It is not very useful in interactive mode.</dd>
+
+          
+          
+            <dt class="dt pt dlterm">SINGLELINE</dt>
+
+            <dd class="dd pd">This variable is equivalent to the command line option <code class="ph codeph">-S</code>.</dd>
+
+          
+          
+            <dt class="dt pt dlterm">SINGLESTEP</dt>
+
+            <dd class="dd pd">Setting this variable to <code class="ph codeph">on</code> is equivalent to the command line option <code class="ph codeph">-s</code>.</dd>
+
+          
+          
+            <dt class="dt pt dlterm">USER</dt>
+
+            <dd class="dd pd">The database user you are currently connected as. This is set every time you connect
+              to a database (including program start-up), but can be unset.</dd>
+
+          
+          
+            <dt class="dt pt dlterm">VERBOSITY</dt>
+
+            <dd class="dd pd">This variable can be set to the values <code class="ph codeph">default</code>,
+                <code class="ph codeph">verbose</code>, or <code class="ph codeph">terse</code> to control the verbosity of
+              error reports.</dd>
+
+          
+        </dl>
+
+      </div>
+      <div class="sectiondiv" id="topic1__section14"><strong class="ph b">SQL Interpolation</strong>
+        <p class="p">A key feature of <code class="ph codeph">psql</code> variables is that you can substitute
+          ("interpolate") them into regular SQL statements, as well as the arguments of
+          meta-commands. Furthermore, <code class="ph codeph">psql</code> provides facilities for ensuring that
+          variable values used as SQL literals and identifiers are properly quoted. The syntax for
+          interpolating a value without any quoting is to prepend the variable name with a colon
+            (<code class="ph codeph">:</code>). For example,</p>
+
+        <pre class="pre codeblock"><code>testdb=&gt; \set foo 'my_table'
+testdb=&gt; SELECT * FROM :foo;</code></pre>
+        <p class="p">would query the table <code class="ph codeph">my_table</code>. Note that this may be unsafe: the value
+          of the variable is copied literally, so it can contain unbalanced quotes, or even
+          backslash commands. You must make sure that it makes sense where you put it.</p>
+
+        <div class="p">When a value is to be used as an SQL literal or identifier, it is safest to arrange for
+          it to be quoted. To quote the value of a variable as an SQL literal, write a colon
+          followed by the variable name in single quotes. To quote the value as an SQL identifier,
+          write a colon followed by the variable name in double quotes. These constructs deal
+          correctly with quotes and other special characters embedded within the variable value. The
+          previous example would be more safely written this
+          way:<pre class="pre codeblock"><code>testdb=&gt; \set foo 'my_table'
+testdb=&gt; SELECT * FROM :"foo";</code></pre></div>
+
+        <p class="p">Variable interpolation will not be performed within quoted SQL literals and identifiers.
+          Therefore, a construction such as <code class="ph codeph">':foo'</code> doesn't work to produce a quoted
+          literal from a variable's value (and it would be unsafe if it did work, since it wouldn't
+          correctly handle quotes embedded in the value).</p>
+<p class="p">One example use of this mechanism is
+          to copy the contents of a file into a table column. First load the file into a variable
+          and then interpolate the variable's value as a quoted string:</p>
+<pre class="pre codeblock"><code>testdb=&gt; \set content `cat my_file.txt`
+testdb=&gt; INSERT INTO my_table VALUES (:'content');</code></pre>
+        <p class="p">(Note that this still won't work if <code class="ph codeph">my_file.txt</code> contains
+            <code class="ph codeph">NUL</code> bytes. <code class="ph codeph">psql</code> does not support embedded
+            <code class="ph codeph">NUL</code> bytes in variable values.)</p>
+<p class="p">Since colons can legally appear in
+          SQL commands, an apparent attempt at interpolation (that is, <code class="ph codeph">:name</code>,
+            <code class="ph codeph">:'name'</code>, or <code class="ph codeph">:"name"</code>) is not replaced unless the named
+          variable is currently set. In any case, you can escape a colon with a backslash to protect
+          it from substitution.</p>
+<p class="p">The colon syntax for variables is standard SQL for embedded
+          query languages, such as ECPG. The colon syntaxes for array slices and type casts are
+          Greenplum Database extensions, which can sometimes conflict with the standard usage. The
+          colon-quote syntax for escaping a variable's value as an SQL literal or identifier is a
+            <code class="ph codeph">psql</code> extension.</p>
+
+      </div>
+      <div class="sectiondiv" id="topic1__section15">
+        <strong class="ph b">Prompting</strong>
+        <p class="p">The prompts <code class="ph codeph">psql</code> issues can be customized to your preference. The three
+          variables <code class="ph codeph">PROMPT1</code>, <code class="ph codeph">PROMPT2</code>, and <code class="ph codeph">PROMPT3</code>
+          contain strings and special escape sequences that describe the appearance of the prompt.
+          Prompt 1 is the normal prompt that is issued when <code class="ph codeph">psql</code> requests a new
+          command. Prompt 2 is issued when more input is expected during command entry, for example
+          because the command was not terminated with a semicolon or a quote was not closed. Prompt
+          3 is issued when you are running an SQL <code class="ph codeph">COPY FROM STDIN</code> command and you
+          need to type in a row value on the terminal. </p>
+
+        <p class="p">The value of the selected prompt variable is printed literally, except where a percent
+          sign (<code class="ph codeph">%</code>) is encountered. Depending on the next character, certain other
+          text is substituted instead. Defined substitutions are:</p>
+
+        <dl class="dl parml">
+          
+            <dt class="dt pt dlterm">%M</dt>
+
+            <dd class="dd pd">The full host name (with domain name) of the database server, or
+                <code class="ph codeph">[local]</code> if the connection is over a UNIX domain socket, or
+                <code class="ph codeph">[local:/dir/name]</code>, if the UNIX domain socket is not at the compiled
+              in default location.</dd>
+
+          
+          
+            <dt class="dt pt dlterm">%m</dt>
+
+            <dd class="dd pd">The host name of the database server, truncated at the first dot, or
+                <code class="ph codeph">[local]</code> if the connection is over a UNIX domain socket. </dd>
+
+          
+          
+            <dt class="dt pt dlterm">%&gt;</dt>
+
+            <dd class="dd pd">The port number at which the database server is listening.</dd>
+
+          
+          
+            <dt class="dt pt dlterm">%n</dt>
+
+            <dd class="dd pd">The database session user name. (The expansion of this value might change during a
+              database session as the result of the command <code class="ph codeph">SET SESSION
+                AUTHORIZATION</code>.) </dd>
+
+          
+          
+            <dt class="dt pt dlterm">%/</dt>
+
+            <dd class="dd pd">The name of the current database.</dd>
+
+          
+          
+            <dt class="dt pt dlterm">%~</dt>
+
+            <dd class="dd pd">Like <code class="ph codeph">%/</code>, but the output is <code class="ph codeph">~</code> (tilde) if the
+              database is your default database.</dd>
+
+          
+          
+            <dt class="dt pt dlterm">%#</dt>
+
+            <dd class="dd pd">If the session user is a database superuser, then a <strong class="ph b">#</strong>, otherwise a
+                <strong class="ph b">&gt;</strong>. (The expansion of this value might change during a database session as
+              the result of the command <code class="ph codeph">SET SESSION AUTHORIZATION</code>.)</dd>
+
+          
+          
+            <dt class="dt pt dlterm">%R</dt>
+
+            <dd class="dd pd">In prompt 1 normally <code class="ph codeph">=</code>,
+              but <code class="ph codeph">^</code> if in single-line mode,
+              or <code class="ph codeph">!</code> if the session is disconnected from the
+              database (which can happen if <code class="ph codeph">\connect</code> fails).
+              In prompt 2 <code class="ph codeph">%R</code> is replaced by a character that
+              depends on why <code class="ph codeph">psql</code> expects more input:
+              <code class="ph codeph">-</code> if the command simply wasn't terminated yet,
+              but <code class="ph codeph">*</code> if there is an unfinished
+              <code class="ph codeph">/* ... */</code> comment,
+              a single quote if there is an unfinished quoted string,
+              a double quote if there is an unfinished quoted identifier,
+              a dollar sign if there is an unfinished dollar-quoted string,
+              or <code class="ph codeph">(</code> if there is an unmatched left parenthesis.
+              In prompt 3 <code class="ph codeph">%R</code> doesn't produce anything.</dd>
+
+          
+          
+            <dt class="dt pt dlterm">%x</dt>
+
+            <dd class="dd pd">Transaction status: an empty string when not in a transaction block, or <strong class="ph b">*</strong>
+              when in a transaction block, or <strong class="ph b">!</strong> when in a failed transaction block, or
+                <strong class="ph b">?</strong> when the transaction state is indeterminate (for example, because there is
+              no connection).</dd>
+
+          
+          
+            <dt class="dt pt dlterm">%digits</dt>
+
+            <dd class="dd pd">The character with the indicated octal code is substituted.</dd>
+
+          
+          
+            <dt class="dt pt dlterm">%:name:</dt>
+
+            <dd class="dd pd">The value of the <code class="ph codeph">psql</code> variable name. See "Variables" in <a class="xref" href="#topic1__section12">Advanced Features</a> for details.</dd>
+
+          
+          
+            <dt class="dt pt dlterm">%`command`</dt>
+
+            <dd class="dd pd">The output of command, similar to ordinary back-tick substitution.</dd>
+
+          
+          
+            <dt class="dt pt dlterm">%[ ... %]</dt>
+
+            <dd class="dd pd">Prompts may contain terminal control characters which, for example, change the
+              color, background, or style of the prompt text, or change the title of the terminal
+              window. In order for line editing to work properly, these non-printing control
+              characters must be designated as invisible by surrounding them with
+                <code class="ph codeph">%[</code> and <code class="ph codeph">%]</code>. Multiple pairs of these may occur
+              within the prompt. For
+              example,<pre class="pre codeblock"><code>testdb=&gt; \set PROMPT1 '%[%033[1;33;40m%]%n@%/%R%[%033[0m%]%#'</code></pre></dd>
+
+            <dd class="dd pd ddexpand">results in a boldfaced (<code class="ph codeph">1;</code>) yellow-on-black
+              (<code class="ph codeph">33;40</code>) prompt on VT100-compatible, color-capable terminals. To
+              insert a percent sign into your prompt, write <code class="ph codeph">%%</code>. The default prompts
+              are <code class="ph codeph">'%/%R%# '</code> for prompts 1 and 2, and <code class="ph codeph">'&gt;&gt; '</code>
+              for prompt 3.</dd>
+
+          
+        </dl>
+
+      </div>
+      <div class="sectiondiv" id="topic1__section16">
+        <strong class="ph b">Command-Line Editing</strong>
+        <p class="p"><code class="ph codeph">psql</code> uses the <code class="ph codeph">readline</code> library for convenient line editing and
+          retrieval. The command history is automatically saved when <code class="ph codeph">psql</code> exits and
+          is reloaded when <code class="ph codeph">psql</code> starts up. Tab-completion is also supported,
+          although the completion logic makes no claim to be an SQL parser. The queries generated by
+          tab-completion can also interfere with other SQL commands, e.g. <code class="ph codeph">SET TRANSACTION
+            ISOLATION LEVEL</code>. If for some reason you do not like the tab completion, you can
+          turn it off by putting this in a file named <code class="ph codeph">.inputrc</code> in your home
+          directory:</p>
+
+        <pre class="pre codeblock"><code>$if psql
+set disable-completion on
+$endif</code></pre>
+      </div>
+    </div>
+
+    <div class="section" id="topic1__section17"><h2 class="title sectiontitle">Environment</h2>
+      
+      <dl class="dl parml">
+        
+          <dt class="dt pt dlterm">COLUMNS</dt>
+
+          <dd class="dd pd">If <code class="ph codeph">\pset columns</code> is zero, controls the width for the wrapped format
+            and width for determining if wide output requires the pager or should be switched to the
+            vertical format in expanded auto mode.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">PAGER</dt>
+
+          <dd class="dd pd">If the query results do not fit on the screen, they are piped through this command.
+            Typical values are <code class="ph codeph">more</code> or <code class="ph codeph">less</code>. The default is
+            platform-dependent. The use of the pager can be disabled by setting
+              <var class="keyword varname">PAGER</var> to empty, or by using pager-related options of the
+              <code class="ph codeph">\pset</code> command. </dd>
+
+        
+        
+          <dt class="dt pt dlterm">PGDATABASE</dt>
+
+          <dt class="dt pt dlterm">PGHOST</dt>
+
+          <dt class="dt pt dlterm">PGPORT</dt>
+
+          <dt class="dt pt dlterm">PGUSER</dt>
+
+          <dd class="dd pd">Default connection parameters.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">PSQL_EDITOR</dt>
+
+          <dt class="dt pt dlterm">EDITOR</dt>
+
+          <dt class="dt pt dlterm">VISUAL</dt>
+
+          <dd class="dd pd">Editor used by the <code class="ph codeph">\e</code> and <code class="ph codeph">\ef</code> commands. The
+            variables are examined in the order listed; the first that is set is used.</dd>
+
+          <dd class="dd pd ddexpand">The built-in default editors are <code class="ph codeph">vi</code> on Unix systems and
+              <code class="ph codeph">notepad.exe</code> on Windows systems.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">PSQL_EDITOR_LINENUMBER_ARG</dt>
+
+          <dd class="dd pd">When <code class="ph codeph">\e</code> or <code class="ph codeph">\ef</code> is used with a line number argument,
+            this variable specifies the command-line argument used to pass the starting line number
+            to the user's editor. For editors such as Emacs or <code class="ph codeph">vi</code>, this is a plus
+            sign. Include a trailing space in the value of the variable if there needs to be space
+            between the option name and the line number.
+            Examples:<pre class="pre codeblock"><code>PSQL_EDITOR_LINENUMBER_ARG='+'
+PSQL_EDITOR_LINENUMBER_ARG='--line '</code></pre></dd>
+
+          <dd class="dd pd ddexpand">The default is <code class="ph codeph">+</code> on Unix systems (corresponding to the default editor
+              <code class="ph codeph">vi</code>, and useful for many other common editors); but there is no
+            default on Windows systems.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">PSQL_HISTORY</dt>
+
+          <dd class="dd pd">Alternative location for the command history file. Tilde (<code class="ph codeph">~</code>)
+            expansion is performed.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">PSQLRC</dt>
+
+          <dd class="dd pd">Alternative location of the user's <code class="ph codeph">.psqlrc</code> file. Tilde
+              (<code class="ph codeph">~</code>) expansion is performed.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">SHELL</dt>
+
+          <dd class="dd pd">Command run by the <code class="ph codeph">\!</code> command.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">TMPDIR</dt>
+
+          <dd class="dd pd">Directory for storing temporary files. The default is <code class="ph codeph">/tmp</code>.</dd>
+
+        
+      </dl>
+
+    </div>
+
+    <div class="section" id="topic1__section18"><h2 class="title sectiontitle">Files</h2>
+      
+      <dl class="dl parml">
+        
+          <dt class="dt pt dlterm">psqlrc and ~/.psqlrc</dt>
+
+          <dd class="dd pd">Unless it is passed an <code class="ph codeph">-X</code> or <code class="ph codeph">-c</code> option,
+              <code class="ph codeph">psql</code> attempts to read and run commands from the system-wide
+            startup file (<code class="ph codeph">psqlrc</code>) and then the user's personal startup file
+              (<code class="ph codeph">~/.psqlrc</code>), after connecting to the database but before accepting
+            normal commands. These files can be used to set up the client and/or the server to
+            taste, typically with <code class="ph codeph">\set</code> and <code class="ph codeph">SET</code> commands. </dd>
+
+          <dd class="dd pd ddexpand">The system-wide startup file is named <code class="ph codeph">psqlrc</code> and is sought in the
+            installation's "system configuration" directory, which is most reliably identified by
+            running <code class="ph codeph">pg_config --sysconfdir</code>. By default this directory will
+              be<code class="ph codeph"> ../etc/</code> relative to the directory containing the Greenplum
+            Database executables. The name of this directory can be set explicitly via the
+              <code class="ph codeph">PGSYSCONFDIR</code> environment variable. </dd>
+
+          <dd class="dd pd ddexpand">The user's personal startup file is named <code class="ph codeph">.psqlrc</code> and is sought in
+            the invoking user's home directory. On Windows, which lacks such a concept, the personal
+            startup file is named <code class="ph codeph">%APPDATA%\postgresql\psqlrc.conf</code>. The location of
+            the user's startup file can be set explicitly via the <code class="ph codeph">PSQLRC</code>
+            environment variable. </dd>
+
+          <dd class="dd pd ddexpand">Both the system-wide startup file and the user's personal startup file can be made
+            psql-version-specific by appending a dash and the underlying PostgreSQL major or minor
+            release number to the file name, for example <code class="ph codeph">~/.psqlrc-9.4</code>. The most
+            specific version-matching file will be read in preference to a non-version-specific
+            file.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">.psql_history</dt>
+
+          <dd class="dd pd">The command-line history is stored in the file <code class="ph codeph">~/.psql_history</code>,
+              or<code class="ph codeph"> %APPDATA%\postgresql\psql_history</code> on Windows. </dd>
+
+          <dd class="dd pd ddexpand">The location of the history file can be set explicitly via the
+              <code class="ph codeph">PSQL_HISTORY</code> environment variable.</dd>
+
+        
+      </dl>
+
+    </div>
+
+    <div class="section" id="topic1__section19"><h2 class="title sectiontitle">Notes</h2>
+      
+      <p class="p"><code class="ph codeph">psql</code> works best with servers of the same or an older major version.
+        Backslash commands are particularly likely to fail if the server is of a newer version than
+          <code class="ph codeph">psql</code> itself. However, backslash commands of the <code class="ph codeph">\d</code>
+        family should work with older server versions, though not necessarily with servers newer
+        than <code class="ph codeph">psql</code> itself. The general functionality of running SQL commands and
+        displaying query results should also work with servers of a newer major version, but this
+        cannot be guaranteed in all cases.</p>
+
+      <p class="p">If you want to use <code class="ph codeph">psql</code> to connect to several servers of different major
+        versions, it is recommended that you use the newest version of <code class="ph codeph">psql</code>.
+        Alternatively, you can keep a copy of <code class="ph codeph">psql</code> from each major version around
+        and be sure to use the version that matches the respective server. But in practice, this
+        additional complication should not be necessary.</p>
+
+    </div>
+
+    <div class="section" id="topic1__section20"><h2 class="title sectiontitle">Notes for Windows Users</h2>
+      
+      <p class="p"><code class="ph codeph">psql</code> is built as a console application. Since the Windows console windows
+        use a different encoding than the rest of the system, you must take special care when using
+        8-bit characters within <code class="ph codeph">psql</code>. If <code class="ph codeph">psql</code> detects a
+        problematic console code page, it will warn you at startup. To change the console code page,
+        two things are necessary: </p>
+
+      <div class="p">Set the code page by
+          entering:<pre class="pre codeblock"><code>cmd.exe /c chcp 1252</code></pre><code class="ph codeph">1252</code> is a character
+        encoding of the Latin alphabet, used by Microsoft Windows for English and some other Western
+        languages. If you are using Cygwin, you can put this command in
+          <code class="ph codeph">/etc/profile</code>. </div>
+
+      <p class="p">Set the console font to Lucida Console, because the raster font does not work with the ANSI
+        code page.</p>
+
+    </div>
+
+    <div class="section" id="topic1__section21"><h2 class="title sectiontitle">Examples</h2>
+      
+      <p class="p">Start <code class="ph codeph">psql</code> in interactive mode:</p>
+
+      <pre class="pre codeblock"><code>psql -p 54321 -U sally mydatabase</code></pre>
+      <p class="p">In <code class="ph codeph">psql</code> interactive mode, spread a command over several lines of input.
+        Notice the changing prompt:</p>
+
+      <pre class="pre codeblock"><code>testdb=&gt; CREATE TABLE my_table (
+testdb(&gt;  first integer not null default 0,
+testdb(&gt;  second text)
+testdb-&gt; ;
+CREATE TABLE</code></pre>
+      <p class="p">Look at the table definition:</p>
+
+      <pre class="pre codeblock"><code>testdb=&gt; \d my_table
+             Table "public.my_table"
+ Column    |  Type   |      Modifiers
+-----------+---------+--------------------
+ first     | integer | not null default 0
+ second    | text    |
+Distributed by: (first)</code></pre>
+      <p class="p">Run <code class="ph codeph">psql</code> in non-interactive mode by passing in a file containing SQL
+        commands:</p>
+
+      <pre class="pre codeblock"><code>psql -f /home/gpadmin/test/myscript.sql</code></pre>
+    </div>
+
+  </div>
+
+</body>
+</html>

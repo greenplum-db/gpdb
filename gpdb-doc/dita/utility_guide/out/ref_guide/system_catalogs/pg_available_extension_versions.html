@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+
+<meta name="copyright" content="(C) Copyright 2022" />
+<meta name="DC.rights.owner" content="(C) Copyright 2022" />
+<meta name="generator" content="DITA-OT" /><meta name="DC.type" content="topic" />
+<meta name="DC.title" content="pg_available_extension_versions" />
+<meta name="DC.format" content="XHTML" />
+<meta name="DC.identifier" content="topic_sln_wfx_tz" />
+<meta name="DC.language" content="en" />
+<link rel="stylesheet" type="text/css" href="../../out/commonltr.css" />
+<title>pg_available_extension_versions</title>
+</head>
+<body id="topic_sln_wfx_tz">
+
+  <h1 class="title topictitle1" id="ariaid-title1">pg_available_extension_versions</h1>
+
+  <div class="body">
+    <p class="p">The <code class="ph codeph">pg_available_extension_versions</code> view lists the specific extension
+      versions that are available for installation. The <a class="xref" href="pg_extension.html">pg_extension</a> system catalog table shows the extensions currently
+      installed.</p>
+
+    <p class="p">The view is read only.</p>
+
+    
+<div class="tablenoborder"><table cellpadding="4" cellspacing="0" summary="" id="topic_sln_wfx_tz__table_tln_wfx_tz" class="table" frame="border" border="1" rules="all"><caption><span class="tablecap"><span class="table--title-label">Table 1. </span>pg_catalog.pg_available_extension_versions</span></caption><colgroup><col style="width:131pt" /><col style="width:86pt" /><col style="width:147pt" /></colgroup><thead class="thead" style="text-align:left;">
+          <tr class="row">
+            <th class="entry nocellnorowborder" style="vertical-align:top;" id="d127492e45">column</th>
+
+            <th class="entry nocellnorowborder" style="vertical-align:top;" id="d127492e48">type</th>
+
+            <th class="entry cell-norowborder" style="vertical-align:top;" id="d127492e51">description</th>
+
+          </tr>
+
+        </thead>
+<tbody class="tbody">
+          <tr class="row">
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d127492e45 "><code class="ph codeph">name</code></td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d127492e48 ">name</td>
+
+            <td class="entry cell-norowborder" style="vertical-align:top;" headers="d127492e51 ">Extension name.</td>
+
+          </tr>
+
+          <tr class="row">
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d127492e45 "><code class="ph codeph">version</code></td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d127492e48 ">text</td>
+
+            <td class="entry cell-norowborder" style="vertical-align:top;" headers="d127492e51 ">Version name.</td>
+
+          </tr>
+
+          <tr class="row">
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d127492e45 "><code class="ph codeph">installed</code></td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d127492e48 ">boolean</td>
+
+            <td class="entry cell-norowborder" style="vertical-align:top;" headers="d127492e51 "><code class="ph codeph">True</code> if this version of this extension is
+              currently installed, <code class="ph codeph">False</code> otherwise.</td>
+
+          </tr>
+
+          <tr class="row">
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d127492e45 "><code class="ph codeph">superuser</code></td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d127492e48 ">boolean</td>
+
+            <td class="entry cell-norowborder" style="vertical-align:top;" headers="d127492e51 "><code class="ph codeph">True</code> if only superusers are allowed to install
+              the extension, <code class="ph codeph">False</code> otherwise.</td>
+
+          </tr>
+
+          <tr class="row">
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d127492e45 "><code class="ph codeph">relocatable</code></td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d127492e48 ">boolean</td>
+
+            <td class="entry cell-norowborder" style="vertical-align:top;" headers="d127492e51 "><code class="ph codeph">True</code> if extension can be relocated to another
+              schema, <code class="ph codeph">False</code> otherwise.</td>
+
+          </tr>
+
+          <tr class="row">
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d127492e45 "><code class="ph codeph">schema</code></td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d127492e48 ">name</td>
+
+            <td class="entry cell-norowborder" style="vertical-align:top;" headers="d127492e51 ">Name of the schema that the extension must be installed into, or
+                <code class="ph codeph">NULL</code> if partially or fully relocatable.</td>
+
+          </tr>
+
+          <tr class="row">
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d127492e45 "><code class="ph codeph">requires</code></td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d127492e48 ">name[]</td>
+
+            <td class="entry cell-norowborder" style="vertical-align:top;" headers="d127492e51 ">Names of prerequisite extensions, or <code class="ph codeph">NULL</code> if
+              none</td>
+
+          </tr>
+
+          <tr class="row">
+            <td class="entry row-nocellborder" style="vertical-align:top;" headers="d127492e45 "><code class="ph codeph">comment</code></td>
+
+            <td class="entry row-nocellborder" style="vertical-align:top;" headers="d127492e48 ">text</td>
+
+            <td class="entry cellrowborder" style="vertical-align:top;" headers="d127492e51 ">Comment string from the extension control file.</td>
+
+          </tr>
+
+        </tbody>
+</table>
+</div>
+
+  </div>
+
+</body>
+</html>

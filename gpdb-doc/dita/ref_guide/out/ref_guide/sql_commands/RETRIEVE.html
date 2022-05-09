@@ -1,0 +1,151 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+
+<meta name="copyright" content="(C) Copyright 2022" />
+<meta name="DC.rights.owner" content="(C) Copyright 2022" />
+<meta name="generator" content="DITA-OT" /><meta name="DC.type" content="topic" />
+<meta name="DC.title" content="RETRIEVE" />
+<meta name="DC.relation" scheme="URI" content="../sql_commands/sql_ref.html" />
+<meta name="DC.format" content="XHTML" />
+<meta name="DC.identifier" content="topic1" />
+<link rel="stylesheet" type="text/css" href="../commonltr.css" />
+<title>RETRIEVE</title>
+</head>
+<body id="topic1">
+
+  <h1 class="title topictitle1" id="topic1__dr20941">RETRIEVE</h1>
+
+  <div class="body">
+    <p class="p" id="topic1__sql_command_desc">Retrieves rows from a query using a parallel retrieve cursor.</p>
+
+    <div class="section" id="topic1__section2"><h2 class="title sectiontitle">Synopsis</h2>
+      
+      <pre class="pre codeblock" id="topic1__sql_command_synopsis"><code>RETRIEVE { &lt;count&gt; | ALL } FROM ENDPOINT &lt;endpoint_name&gt;</code></pre>
+    </div>
+
+    <div class="section" id="topic1__section3"><h2 class="title sectiontitle">Description</h2>
+      
+      <p class="p"><code class="ph codeph">RETRIEVE</code> retrieves rows using a previously-created parallel
+        retrieve cursor. You retrieve the rows in individual retrieve sessions, separate direct
+        connections to individual segment endpoints that will serve the results for each individual segment.
+         When you initiate a retrieve session, you must specify
+           <a class="xref" href="../config_params/guc-list.html#gp_retrieve_conn">gp_retrieve_conn=true</a>
+         on the connection request. Because a retrieve session is independent of the
+         parallel retrieve cursors or their corresponding endpoints, you can
+         <code class="ph codeph">RETRIEVE</code> from multiple endpoints in the same retrieve session.</p>
+
+      <p class="p">A parallel retrieve cursor has an associated position, which is used by
+        <code class="ph codeph">RETRIEVE</code>. The cursor position can be before the first row of the
+        query result, on any particular row of the result, or after the last row of the
+        result.</p>
+
+      <p class="p">When it is created, a parallel retrieve cursor is positioned before the
+        first row. After retrieving some rows, the cursor is positioned on the row most
+        recently retrieved.</p>
+
+      <p class="p">If <code class="ph codeph">RETRIEVE</code> runs off the end of the available rows then
+        the cursor is left positioned after the last row.</p>
+
+      <p class="p"><code class="ph codeph">RETRIEVE ALL</code> always leaves the parallel retrieve cursor positioned
+        after the last row.</p>
+
+      <div class="note"><span class="notetitle">Note:</span> Greenplum Database does not support scrollable cursors; you can only move a
+        cursor forward in position using the <code class="ph codeph">RETRIEVE</code> command.</div>
+
+      <div class="sectiondiv" id="topic1__section4">
+        <strong class="ph b">Outputs</strong>
+        <p class="p">On successful completion, a <code class="ph codeph">RETRIEVE</code> command returns the fetched
+          rows (possibly empty) and a count of the number of rows fetched (possibly
+          zero).</p>
+
+      </div>
+    </div>
+
+    <div class="section" id="topic1__section5"><h2 class="title sectiontitle">Parameters</h2>
+      
+        <dl class="dl parml">
+          
+            <dt class="dt pt dlterm"><var class="keyword varname">count</var></dt>
+
+            <dd class="dd pd">Retrieve the next <var class="keyword varname">count</var> number of rows.
+              <var class="keyword varname">count</var> must be a positive number.</dd>
+
+          
+          
+            <dt class="dt pt dlterm">ALL</dt>
+
+            <dd class="dd pd">Retrieve all remaining rows.</dd>
+
+          
+          
+            <dt class="dt pt dlterm"><var class="keyword varname">endpoint_name</var></dt>
+
+            <dd class="dd pd">The name of the endpoint from which to retrieve the rows.</dd>
+
+          
+        </dl>
+
+    </div>
+
+    <div class="section" id="topic1__section6"><h2 class="title sectiontitle">Notes</h2>
+      
+      <p class="p">Use <code class="ph codeph">DECLARE ... PARALLEL RETRIEVE CURSOR</code> to define a parallel
+        retrieve cursor.</p>
+
+      <p class="p">Parallel retrieve cursors do not support <code class="ph codeph">FETCH</code> or
+        <code class="ph codeph">MOVE</code> operations.</p>
+
+    </div>
+
+    <div class="section" id="topic1__section7"><h2 class="title sectiontitle">Examples</h2>
+      
+      <p class="p">-- Start the transaction:</p>
+
+      <pre class="pre codeblock"><code>BEGIN;</code></pre>
+      <p class="p">-- Create a parallel retrieve cursor:</p>
+
+      <pre class="pre codeblock"><code>DECLARE mycursor PARALLEL RETRIEVE CURSOR FOR SELECT * FROM films;</code></pre>
+      <p class="p">-- List the cursor endpoints:</p>
+
+      <pre class="pre codeblock"><code>SELECT * FROM gp_endpoints WHERE cursorname='mycursor';</code></pre>
+      <p class="p">-- Note the hostname, port, auth_token, and name associated with each endpoint.</p>
+
+      <p class="p">-- In another terminal window, initiate a retrieve session using a hostname, port, and auth_token returned from the previous query. For example:</p>
+
+      <pre class="pre codeblock"><code>PGPASSWORD=d3825fc07e56bee5fcd2b1d0b600c85e PGOPTIONS='-c gp_retrieve_conn=true' psql -d testdb -h sdw3 -p 6001;</code></pre>
+      <p class="p">-- Fetch all rows from an endpoint (for example, the endpoint named <code class="ph codeph">prc10000001100000005</code>):</p>
+
+      <pre class="pre codeblock"><code>RETRIEVE ALL FROM ENDPOINT prc10000001100000005;</code></pre>
+      <p class="p">-- Exit the retrieve session</p>
+
+      <p class="p">-- Back in the original session, close the cursor and end the transaction:</p>
+
+      <pre class="pre codeblock"><code>CLOSE mycursor;
+COMMIT;</code></pre>
+    </div>
+
+    <div class="section" id="topic1__section8"><h2 class="title sectiontitle">Compatibility</h2>
+      
+      <p class="p"><code class="ph codeph">RETRIEVE</code> is a Greenplum Database extension. The SQL standard makes
+        no provisions for parallel retrieve cursors.</p>
+
+    </div>
+
+    <div class="section" id="topic1__section9"><h2 class="title sectiontitle">See Also</h2>
+      
+        <p class="p"><a class="xref" href="DECLARE.html#topic1">DECLARE</a>,
+          <a class="xref" href="CLOSE.html#topic1">CLOSE</a></p>
+
+    </div>
+
+  </div>
+
+<div class="related-links">
+<div class="familylinks">
+<div class="parentlink"><strong>Parent topic:</strong> <a class="link" href="../sql_commands/sql_ref.html">SQL Commands</a></div>
+</div>
+</div></body>
+</html>

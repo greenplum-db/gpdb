@@ -1,0 +1,590 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+
+<meta name="copyright" content="(C) Copyright 2022" />
+<meta name="DC.rights.owner" content="(C) Copyright 2022" />
+<meta name="generator" content="DITA-OT" /><meta name="DC.type" content="topic" />
+<meta name="DC.title" content="gpbackup" />
+<meta name="DC.format" content="XHTML" />
+<meta name="DC.identifier" content="topic1" />
+<link rel="stylesheet" type="text/css" href="../../out/commonltr.css" />
+<title>gpbackup</title>
+</head>
+<body id="topic1">
+
+  <h1 class="title topictitle1" id="ariaid-title1">gpbackup</h1>
+
+  <div class="body">
+    <p class="p">Create a Greenplum Database backup for use with the <code class="ph codeph">gprestore</code> utility. </p>
+
+    <div class="section"><h2 class="title sectiontitle">Synopsis</h2>
+      
+      <pre class="pre codeblock"><code>gpbackup --dbname &lt;database_name&gt;
+   [--backup-dir &lt;directory&gt;]
+   [--compression-level &lt;level&gt;]
+   [--data-only]
+   [--debug]
+   [--exclude-schema &lt;schema_name&gt; [--exclude-schema &lt;schema_name&gt; ...]]
+   [--exclude-table &lt;schema.table&gt; [--exclude-table &lt;schema.table&gt; ...]]
+   [--exclude-schema-file &lt;file_name&gt;]
+   [--exclude-table-file &lt;file_name&gt;]
+   [--include-schema &lt;schema_name&gt; [--include-schema &lt;schema_name&gt; ...]]
+   [--include-table &lt;schema.table&gt; [--include-table &lt;schema.table&gt; ...]]
+   [--include-schema-file &lt;file_name&gt;]
+   [--include-table-file &lt;file_name&gt;]
+   [--incremental [--from-timestamp &lt;backup-timestamp&gt;]]
+   [--jobs &lt;int&gt;]
+   [--leaf-partition-data]
+   [--metadata-only]
+   [--no-compression]
+   [--plugin-config &lt;config_file_location&gt;]
+   [--quiet]
+   [--single-data-file]
+   [--verbose]
+   [--version]
+   [--with-stats]
+   [--without-globals]
+
+gpbackup --help </code></pre>
+    </div>
+
+    <div class="section"><h2 class="title sectiontitle">Description</h2>
+      
+      <p class="p">The <code class="ph codeph">gpbackup</code> utility backs up the contents of a database into a collection
+        of metadata files and data files that can be used to restore the database at a later time
+        using <code class="ph codeph">gprestore</code>. When you back up a database, you can specify table level
+        and schema level filter options to back up specific tables. For example, you can combine
+        schema level and table level options to back up all the tables in a schema except for a
+        single table. </p>
+
+      <p class="p">By default, <code class="ph codeph">gpbackup</code> backs up objects in the specified database as well as
+        global Greenplum Database system objects. Use <code class="ph codeph">--without-globals</code> to omit
+        global objects. <code class="ph codeph">gprestore</code> does not restore global objects by default; use
+          <code class="ph codeph">--with-globals</code> to restore them. See <a class="xref" href="../../admin_guide/managing/backup-gpbackup.html#topic_x3s_lqj_tbb" target="_blank">Objects Included in a Backup or Restore</a> for additional
+        information.</p>
+
+      <p class="p">For materialized views, data is not backed up, only the materialized view definition is
+        backed up.</p>
+
+      <p class="p"><code class="ph codeph">gpbackup</code> stores the object metadata files and DDL files for a backup in
+        the Greenplum Database master data directory by default. Greenplum Database segments use the
+          <code class="ph codeph">COPY ... ON SEGMENT</code> command to store their data for backed-up tables in
+        compressed CSV data files, located in each segment's data directory. See <a class="xref" href="../../admin_guide/managing/backup-gpbackup.html#topic_xnj_b4c_tbb" target="_blank">Understanding Backup Files</a> for additional
+        information.</p>
+
+      <p class="p">You can add the <code class="ph codeph">--backup-dir</code> option to copy all backup files from the
+        Greenplum Database master and segment hosts to an absolute path for later use. Additional
+        options are provided to filter the backup set in order to include or exclude specific
+        tables.</p>
+
+      <p class="p">You can create an incremental backup with the <a class="xref" href="#topic1__incremental">--incremental</a> option. Incremental backups are efficient when the
+        total amount of data in append-optimized tables or table partitions that changed is small
+        compared to the data has not changed. See <a class="xref" href="../../admin_guide/managing/backup-gpbackup-incremental.html" target="_blank">Creating and Using Incremental Backups with gpbackup and gprestore</a>
+        for information about incremental backups. </p>
+
+      <p class="p">With the default <code class="ph codeph">--jobs</code> option (1 job), each <code class="ph codeph">gpbackup</code>
+        operation uses a single transaction on the Greenplum Database master host. The <code class="ph codeph">COPY
+          ... ON SEGMENT</code> command performs the backup task in parallel on each segment host.
+        The backup process acquires an <code class="ph codeph">ACCESS SHARE</code> lock on each table that is
+        backed up. During the table locking process, the database should be in a quiescent
+        state.</p>
+
+      <p class="p">When a back up operation completes, <code class="ph codeph">gpbackup</code> returns a status code. See
+          <a class="xref" href="#topic1__return_codes">Return Codes</a>. </p>
+
+      <p class="p">The <code class="ph codeph">gpbackup</code> utility cannot be run while <code class="ph codeph">gpexpand</code> is
+        initializing new segments. Backups created before the expansion cannot be restored with
+          <code class="ph codeph">gprestore</code> after the cluster expansion is completed.</p>
+
+      <p class="p"><code class="ph codeph">gpbackup</code> can send status email notifications after a back up operation
+        completes. You specify when the utility sends the mail and the email recipients in a
+        configuration file. See <a class="xref" href="../../admin_guide/managing/backup-gpbackup.html#topic_qwd_d5d_tbb" target="_blank">Configuring Email Notifications</a>.</p>
+
+      <div class="note"><span class="notetitle">Note:</span> This utility uses secure shell (SSH) connections between systems to perform its tasks.
+        In large Greenplum Database deployments, cloud deployments, or deployments with a large
+        number of segments per host, this utility may exceed the host's maximum threshold for
+        unauthenticated connections. Consider updating the SSH <code class="ph codeph">MaxStartups</code> and
+          <code class="ph codeph">MaxSessions</code> configuration parameters to increase this threshold. For more
+        information about SSH configuration options, refer to the SSH documentation for your Linux
+        distribution.</div>
+
+    </div>
+
+    <div class="section"><h2 class="title sectiontitle">Options</h2>
+      
+      <dl class="dl parml">
+        
+          <dt class="dt pt dlterm"><strong class="ph b">--dbname</strong>
+            <var class="keyword varname">database_name</var></dt>
+
+          <dd class="dd pd">Required. Specifies the database to back up.</dd>
+
+        
+        
+          <dt class="dt pt dlterm"><strong class="ph b">--backup-dir</strong>
+            <var class="keyword varname">directory</var></dt>
+
+          <dd class="dd pd">Optional. Copies all required backup files (metadata files and data files) to the
+            specified directory. You must specify <strong class="ph b"><var class="keyword varname">directory</var></strong> as an absolute
+            path (not relative). If you do not supply this option, metadata files are created on the
+            Greenplum Database master host in the
+              <span class="ph filepath">$MASTER_DATA_DIRECTORY/backups/YYYYMMDD/YYYYMMDDhhmmss/</span>
+            directory. Segment hosts create CSV data files in the
+              <span class="ph filepath">&lt;seg_dir&gt;/backups/YYYYMMDD/YYYYMMDDhhmmss/</span> directory. When you
+            specify a custom backup directory, files are copied to these paths in subdirectories of
+            the backup directory.</dd>
+
+          <dd class="dd pd ddexpand">You cannot combine this option with the option <code class="ph codeph">--plugin-config</code>.</dd>
+
+        
+        
+          <dt class="dt pt dlterm"><strong class="ph b">--compression-level</strong>
+            <var class="keyword varname">level</var></dt>
+
+          <dd class="dd pd">Optional. Specifies the gzip compression level (from 1 to 9) used to compress data
+            files. The default is 1. Note that <code class="ph codeph">gpbackup</code> uses compression by
+            default.</dd>
+
+        
+        
+          <dt class="dt pt dlterm"><strong class="ph b">--data-only</strong></dt>
+
+          <dd class="dd pd">Optional. Backs up only the table data into CSV files, but does not backup metadata
+            files needed to recreate the tables and other database objects.</dd>
+
+        
+        
+          <dt class="dt pt dlterm"><strong class="ph b">--debug</strong></dt>
+
+          <dd class="dd pd">Optional. Displays verbose debug messages during operation.</dd>
+
+        
+        
+          <dt class="dt pt dlterm"><strong class="ph b">--exclude-schema</strong>
+            <var class="keyword varname">schema_name</var></dt>
+
+          <dd class="dd pd">Optional. Specifies a database schema to exclude from the backup. You can specify this
+            option multiple times to exclude multiple schemas. You cannot combine this option with
+            the option <code class="ph codeph">--include-schema</code>, <code class="ph codeph">--include-schema-file</code>, or
+            a table filtering option such as <code class="ph codeph">--include-table</code>. </dd>
+
+          <dd class="dd pd ddexpand">See <a class="xref" href="../../admin_guide/managing/backup-gpbackup.html#topic_et4_b5d_tbb" target="_blank">Filtering the Contents of a Backup or Restore</a>
+            for more information. </dd>
+
+          <dd class="dd pd ddexpand">See <a class="xref" href="../../admin_guide/managing/backup-gpbackup.html#topic_vh5_1hd_tbb" target="_blank">Requirements and Limitations</a>
+            for limitations when leaf partitions of a partitioned table are in different schemas
+            from the root partition.</dd>
+
+        
+        
+          <dt class="dt pt dlterm"><strong class="ph b">--exclude-schema-file</strong>
+            <var class="keyword varname">file_name</var></dt>
+
+          <dd class="dd pd">Optional. Specifies a text file containing a list of schemas to exclude from the
+            backup. Each line in the text file must define a single schema. The file must not
+            include trailing lines. If a schema name uses any character other than a lowercase
+            letter, number, or an underscore character, then you must include that name in double
+            quotes. You cannot combine this option with the option <code class="ph codeph">--include-schema</code>
+            or <code class="ph codeph">--include-schema-file</code>, or a table filtering option such as
+              <code class="ph codeph">--include-table</code>. </dd>
+
+          <dd class="dd pd ddexpand">See <a class="xref" href="../../admin_guide/managing/backup-gpbackup.html#topic_et4_b5d_tbb" target="_blank">Filtering the Contents of a Backup or Restore</a>
+            for more information. </dd>
+
+          <dd class="dd pd ddexpand">See <a class="xref" href="../../admin_guide/managing/backup-gpbackup.html#topic_vh5_1hd_tbb" target="_blank">Requirements and Limitations</a>
+            for limitations when leaf partitions of a partitioned table are in different schemas
+            from the root partition.</dd>
+
+        
+        
+          <dt class="dt pt dlterm"><strong class="ph b">--exclude-table</strong>
+            <var class="keyword varname">schema.table</var></dt>
+
+          <dd class="dd pd">Optional. Specifies a table to exclude from the backup. The table must be in the
+            format <code class="ph codeph">&lt;schema-name&gt;.&lt;table-name&gt;</code>. If a table or schema name uses
+            any character other than a lowercase letter, number, or an underscore character, then
+            you must include that name in double quotes. You can specify this option multiple times.
+            You cannot combine this option with the option <code class="ph codeph">--exclude-schema</code>,
+              <code class="ph codeph">--exclude-schema-file</code>, or another a table filtering option such as
+              <code class="ph codeph">--include-table</code>. </dd>
+
+          <dd class="dd pd ddexpand">If you specify a leaf partition name, <code class="ph codeph">gpbackup</code> ignores the partition
+            names. The leaf partition is not excluded.</dd>
+
+          <dd class="dd pd ddexpand">See <a class="xref" href="../../admin_guide/managing/backup-gpbackup.html#topic_et4_b5d_tbb" target="_blank">Filtering the Contents of a Backup or Restore</a>
+            for more information.</dd>
+
+        
+        
+          <dt class="dt pt dlterm"><strong class="ph b">--exclude-table-file</strong>
+            <var class="keyword varname">file_name</var></dt>
+
+          <dd class="dd pd">Optional. Specifies a text file containing a list of tables to exclude from the
+            backup. Each line in the text file must define a single table using the format
+              <code class="ph codeph">&lt;schema-name&gt;.&lt;table-name&gt;</code>. The file must not include trailing
+            lines. If a table or schema name uses any character other than a lowercase letter,
+            number, or an underscore character, then you must include that name in double quotes.
+            You cannot combine this option with the option <code class="ph codeph">--exclude-schema</code>,
+              <code class="ph codeph">--exclude-schema-file</code>, or another a table filtering option such as
+              <code class="ph codeph">--include-table</code>.  </dd>
+
+          <dd class="dd pd ddexpand">If you specify leaf partition names in a file that is used with
+              <code class="ph codeph">--exclude-table-file</code>, <code class="ph codeph">gpbackup</code> ignores the partition
+            names. The leaf partitions are not excluded.</dd>
+
+          <dd class="dd pd ddexpand">See <a class="xref" href="../../admin_guide/managing/backup-gpbackup.html#topic_et4_b5d_tbb" target="_blank">Filtering the Contents of a Backup or Restore</a>
+            for more information.</dd>
+
+        
+        
+          <dt class="dt pt dlterm"><strong class="ph b">--include-schema</strong>
+            <var class="keyword varname">schema_name</var></dt>
+
+          <dd class="dd pd">Optional. Specifies a database schema to include in the backup. You can specify this
+            option multiple times to include multiple schemas. If you specify this option, any
+            schemas that are not included in subsequent <code class="ph codeph">--include-schema</code> options
+            are omitted from the backup set. You cannot combine this option with the options
+              <code class="ph codeph">--exclude-schema</code>, <code class="ph codeph">--exclude-schema-file</code>,
+              <code class="ph codeph">--exclude-schema-file</code>, <code class="ph codeph">--include-table</code>, or
+              <code class="ph codeph">--include-table-file</code>. See <a class="xref" href="../../admin_guide/managing/backup-gpbackup.html#topic_et4_b5d_tbb" target="_blank">Filtering the Contents of a Backup or Restore</a> for more
+            information.</dd>
+
+        
+        
+          <dt class="dt pt dlterm"><strong class="ph b">--include-schema-file</strong> &lt;file_name&gt;</dt>
+
+          <dd class="dd pd">Optional. Specifies a text file containing a list of schemas to back up. Each line in
+            the text file must define a single schema. The file must not include trailing lines. If
+            a schema name uses any character other than a lowercase letter, number, or an underscore
+            character, then you must include that name in double quotes. See <a class="xref" href="../../admin_guide/managing/backup-gpbackup.html#topic_et4_b5d_tbb" target="_blank">Filtering the Contents of a Backup or Restore</a> for more
+            information.</dd>
+
+        
+        
+          <dt class="dt pt dlterm"><strong class="ph b">--include-table</strong> &lt;schema.table&gt;</dt>
+
+          <dd class="dd pd">Optional. Specifies a table to include in the backup. The table must be in the format
+              <code class="ph codeph">&lt;schema-name&gt;.&lt;table-name&gt;</code>. For information on specifying
+            special characters in schema and table names, see <a class="xref" href="http://docs-lena-gpbackup-globals.cfapps.io/backup-restore/1-18/utility_guide/ref/gpbackup.html#topic1__table_names" target="_blank">Schema and Table Names</a>.</dd>
+
+          <dd class="dd pd ddexpand">You can specify this option multiple times. You cannot combine this option with a
+            schema filtering option such as <code class="ph codeph">--include-schema</code>, or another table
+            filtering option such as <code class="ph codeph">--exclude-table-file</code>.</dd>
+
+          <dd class="dd pd ddexpand">You can also specify the qualified name of a sequence, a view, or a materialized view. </dd>
+
+          <dd class="dd pd ddexpand">If you specify this option, the utility does not automatically back up dependent
+            objects. You must also explicitly specify dependent objects that are required. For
+            example if you back up a view or a materialized view, you must also back up the tables
+            that the view or materialized view uses. If you back up a table that uses a sequence,
+            you must also back up the sequence.</dd>
+
+          <dd class="dd pd ddexpand">You can optionally specify a table leaf partition name in place of the table name, to
+            include only specific leaf partitions in a backup with the
+              <code class="ph codeph">--leaf-partition-data</code> option. When a leaf partition is backed up, the
+            leaf partition data is backed up along with the metadata for the partitioned table.</dd>
+
+          <dd class="dd pd ddexpand">See <a class="xref" href="../../admin_guide/managing/backup-gpbackup.html#topic_et4_b5d_tbb" target="_blank">Filtering the Contents of a Backup or Restore</a>
+            for more information.</dd>
+
+        
+        
+          <dt class="dt pt dlterm"><strong class="ph b">--include-table-file</strong>
+            <var class="keyword varname">file_name</var></dt>
+
+          <dd class="dd pd">Optional. Specifies a text file containing a list of tables to include in the backup.
+            Each line in the text file must define a single table using the format
+              <code class="ph codeph">&lt;schema-name&gt;.&lt;table-name&gt;</code>. The file must not include trailing
+            lines. For information on specifying special characters in schema and table names, see
+              <a class="xref" href="#topic1__table_names">Schema and Table Names</a>. </dd>
+
+          <dd class="dd pd ddexpand">Any tables not listed in this file are omitted from the backup set. You cannot combine
+            this option with a schema filtering option such as <code class="ph codeph">--include-schema</code>, or
+            another table filtering option such as <code class="ph codeph">--exclude-table-file</code>.</dd>
+
+          <dd class="dd pd ddexpand">You can also specify the qualified name of a sequence, a view, or a materialized view. </dd>
+
+          <dd class="dd pd ddexpand">If you specify this option, the utility does not automatically back up dependent
+            objects. You must also explicitly specify dependent objects that are required. For
+            example if you back up a view or a materialized view, you must also specify the tables
+            that the view or the materialized view uses. If you specify a table that uses a
+            sequence, you must also specify the sequence.</dd>
+
+          <dd class="dd pd ddexpand">You can optionally specify a table leaf partition name in place of the table name, to
+            include only specific leaf partitions in a backup with the
+              <code class="ph codeph">--leaf-partition-data</code> option. When a leaf partition is backed up, the
+            leaf partition data is backed up along with the metadata for the partitioned table.</dd>
+
+          <dd class="dd pd ddexpand">See <a class="xref" href="../../admin_guide/managing/backup-gpbackup.html#topic_et4_b5d_tbb" target="_blank">Filtering the Contents of a Backup or Restore</a>
+            for more information.</dd>
+
+        
+        
+          <dt class="dt pt dlterm" id="topic1__incremental"><strong class="ph b">--incremental</strong></dt>
+
+          <dd class="dd pd">Specify this option to add an incremental backup to an incremental backup set. A
+            backup set is a full backup and one or more incremental backups. The backups in the set
+            must be created with a consistent set of backup options to ensure that the backup set
+            can be used in a restore operation. </dd>
+
+          <dd class="dd pd ddexpand">By default, <code class="ph codeph">gpbackup</code> attempts to find the most recent existing backup
+            with a consistent set of options. If the backup is a full backup, the utility creates a
+            backup set. If the backup is an incremental backup, the utility adds the backup to the
+            existing backup set. The incremental backup is added as the latest backup in the backup
+            set. You can specify <code class="ph codeph">--from-timestamp</code> to override the default
+            behavior.</dd>
+
+          <dd class="dd pd ddexpand">
+            <dl class="dl parml">
+              
+                <dt class="dt pt dlterm"><strong class="ph b">--from-timestamp</strong>
+                  <var class="keyword varname">backup-timestamp</var></dt>
+
+                <dd class="dd pd">Optional. Specifies the timestamp of a backup. The specified backup must have
+                  backup options that are consistent with the incremental backup that is being
+                  created. If the specified backup is a full backup, the utility creates a backup
+                  set. If the specified backup is an incremental backup, the utility adds the
+                  incremental backup to the existing backup set.</dd>
+
+              
+            </dl>
+
+          </dd>
+
+          <dd class="dd pd ddexpand">You must specify <code class="ph codeph">--leaf-partition-data</code> with this option. You cannot
+            combine this option with <code class="ph codeph">--data-only</code> or
+              <code class="ph codeph">--metadata-only</code>.</dd>
+
+          <dd class="dd pd ddexpand">A backup is not created and the utility returns an error if the backup cannot add the
+            backup to an existing incremental backup set or cannot use the backup to create a backup
+            set.</dd>
+
+          <dd class="dd pd ddexpand">For information about creating and using incremental backups, see <a class="xref" href="../../admin_guide/managing/backup-gpbackup-incremental.html" target="_blank">backup-gpbackup-incremental.html</a>.</dd>
+
+        
+        
+          <dt class="dt pt dlterm"><strong class="ph b">--jobs</strong>
+            <var class="keyword varname">int</var></dt>
+
+          <dd class="dd pd">Optional. Specifies the number of jobs to run in parallel when backing up tables. By
+            default, <code class="ph codeph">gpbackup</code> uses 1 job (database connection). Increasing this
+            number can improve the speed of backing up data. When running multiple jobs, each job
+            backs up tables in a separate transaction. For example, if you specify <code class="ph codeph">--jobs
+              2</code>, the utility creates two processes, each process starts a single
+            transaction, and the utility backs up the tables in parallel using the two processes.
+              <div class="note important"><span class="importanttitle">Important:</span> 
+              <p class="p">If you specify a value higher than 1, the database must be in a quiescent state at
+                the very beginning while the utility creates the individual connections, initializes
+                their transaction snapshots, and acquires a lock on the tables that are being backed
+                up. If concurrent database operations are being performed on tables that are being
+                backed up during the transaction snapshot initialization and table locking step,
+                consistency between tables that are backed up in different parallel workers cannot be
+                guaranteed.</p>
+
+            </div>
+</dd>
+
+          <dd class="dd pd ddexpand">You cannot use this option in combination with the options
+              <code class="ph codeph">--metadata-only</code>, <code class="ph codeph">--single-data-file</code>, or
+              <code class="ph codeph">--plugin-config</code>.</dd>
+
+          <dd class="dd pd ddexpand"><strong class="ph b">Note: </strong> When using the <code class="ph codeph">--jobs</code> flag, there is a potential
+            deadlock scenario to generate a <code class="ph codeph">WARNING</code> message in the log files.
+            During the metadata portion of the backup, the main worker process gathers Access Share
+            locks on all the tables in the backup set.  During the data portion of the backup, based
+            on the value of the <code class="ph codeph">--jobs</code> flag, additional workers are created that
+            attempt to take additional Access Share locks on the tables they back up. Between the
+            metadata backup and the data backup, if a third party process (operations like
+              <code class="ph codeph">TRUNCATE</code>, <code class="ph codeph">DROP</code>, <code class="ph codeph">ALTER</code>) attempts to
+            access the same tables and obtain an Exclusive lock, the worker thread identifies the
+            potential deadlock, terminates its process, and hands off the table backup
+            responsibilities to the main worker (that already has an Access Share lock on that
+            particular table). A warning message is logged, similar to: <code class="ph codeph">[WARNING]:-Worker 5
+              could not acquire AccessShareLock for table public.foo. Terminating worker and
+              deferring table to main worker thread.</code></dd>
+
+        
+        
+          <dt class="dt pt dlterm" id="topic1__backup_leaf_part"><strong class="ph b">--leaf-partition-data</strong></dt>
+
+          <dd class="dd pd">Optional. For partitioned tables, creates one data file per leaf partition instead of
+            one data file for the entire table (the default). Using this option also enables you to
+            specify individual leaf partitions to include in or exclude from a backup, with the
+              <code class="ph codeph">--include-table</code>, <code class="ph codeph">--include-table-file</code>,
+              <code class="ph codeph">--exclude-table</code>, and <code class="ph codeph">--exclude-table-file</code>
+            options.</dd>
+
+        
+        
+          <dt class="dt pt dlterm"><strong class="ph b">--metadata-only</strong></dt>
+
+          <dd class="dd pd">Optional. Creates only the metadata files (DDL) needed to recreate the database
+            objects, but does not back up the actual table data.</dd>
+
+        
+        
+          <dt class="dt pt dlterm"><strong class="ph b">--no-compression</strong></dt>
+
+          <dd class="dd pd">Optional. Do not compress the table data CSV files.</dd>
+
+        
+        
+          <dt class="dt pt dlterm"><strong class="ph b">--plugin-config</strong>
+            <var class="keyword varname">config-file_location</var></dt>
+
+          <dd class="dd pd">Specify the location of the <code class="ph codeph">gpbackup</code> plugin configuration file, a
+            YAML-formatted text file. The file contains configuration information for the plugin
+            application that <code class="ph codeph">gpbackup</code> uses during the backup operation.</dd>
+
+          <dd class="dd pd ddexpand">If you specify the <code class="ph codeph">--plugin-config</code> option when you back up a
+            database, you must specify this option with configuration information for a
+            corresponding plugin application when you restore the database from the backup.</dd>
+
+          <dd class="dd pd ddexpand">You cannot combine this option with the option <code class="ph codeph">--backup-dir</code>.</dd>
+
+          <dd class="dd pd ddexpand">For information about using storage plugin applications, see <a class="xref" href="../../admin_guide/managing/backup-plugins.html" target="_blank">Using gpbackup Storage
+              Plugins</a>.</dd>
+
+        
+        
+          <dt class="dt pt dlterm"><strong class="ph b">--quiet</strong></dt>
+
+          <dd class="dd pd">Optional. Suppress all non-warning, non-error log messages.</dd>
+
+        
+        
+          <dt class="dt pt dlterm"><strong class="ph b">--single-data-file</strong></dt>
+
+          <dd class="dd pd">Optional. Create a single data file on each segment host for all tables backed up on
+            that segment. By default, each <code class="ph codeph">gpbackup</code> creates one compressed CSV file
+            for each table that is backed up on the segment.
+            <div class="note"><span class="notetitle">Note:</span> If you use the <code class="ph codeph">--single-data-file</code> option to combine table backups
+              into a single file per segment, you cannot set the <code class="ph codeph">gprestore</code> option
+                <code class="ph codeph">--jobs</code> to a value higher than 1 to perform a parallel restore
+              operation.</div>
+</dd>
+
+        
+        
+          <dt class="dt pt dlterm"><strong class="ph b">--verbose</strong></dt>
+
+          <dd class="dd pd">Optional. Print verbose log messages.</dd>
+
+        
+        
+          <dt class="dt pt dlterm"><strong class="ph b">--version</strong></dt>
+
+          <dd class="dd pd">Optional. Print the version number and exit.</dd>
+
+        
+        
+          <dt class="dt pt dlterm"><strong class="ph b">--with-stats</strong></dt>
+
+          <dd class="dd pd">Optional. Include query plan statistics in the backup set.</dd>
+
+        
+        
+          <dt class="dt pt dlterm"><strong class="ph b">--without-globals</strong></dt>
+
+          <dd class="dd pd">Optional. Omit the global Greenplum Database system objects during backup.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">--help</dt>
+
+          <dd class="dd pd">Displays the online help.</dd>
+
+        
+      </dl>
+
+    </div>
+
+    <div class="section" id="topic1__return_codes"><h2 class="title sectiontitle">Return Codes</h2>
+      
+      <div class="p">One of these codes is returned after <code class="ph codeph">gpbackup</code> completes.<ul class="ul" id="topic1__ul_hhb_sqp_n4">
+          <li class="li"><strong class="ph b">0</strong> – Backup completed with no problems.</li>
+
+          <li class="li"><strong class="ph b">1</strong> – Backup completed with non-fatal errors. See log file for more
+            information.</li>
+
+          <li class="li"><strong class="ph b">2</strong> – Backup failed with a fatal error. See log file for more information.</li>
+
+        </ul>
+</div>
+
+    </div>
+
+    <div class="section" id="topic1__table_names"><h2 class="title sectiontitle">Schema and Table Names</h2>
+      
+      <p class="p">When using the option <code class="ph codeph">--include-table</code> or
+          <code class="ph codeph">--include-table-file</code> to filter backups, the schema or table names may
+        contain upper-case characters, space ( ), newline (\n), (\t), or any of these special
+        characters: </p>
+
+      <p class="p"><code class="ph codeph"> ~ # $ % ^ &amp; * ( ) _ - + [ ] { } &gt; &lt; \ | ; : / ? ! , " ' </code>
+      </p>
+
+      <p class="p">For example:</p>
+
+      <pre class="pre codeblock"><code>public.foo"bar 
+public.foo bar
+public.foo\nbar</code></pre>
+      <div class="note"><span class="notetitle">Note:</span> The <code class="ph codeph">--include-table</code> and <code class="ph codeph">--include-table-file</code> options
+        do not support schema or table names that contain periods (<code class="ph codeph">.</code>) or evaluated
+        newlines. </div>
+
+      <div class="p">When the table name has special characters, the name must be enclosed in single
+        quotes:<pre class="pre codeblock"><code>gpbackup --dbname test --include-table 'my#1schema'.'my_$42_Table'</code></pre></div>
+
+      <p class="p">When the table name contains single quotes, use an escape character for each quote or
+        encapsulate the table name within double quotes. For example:</p>
+
+      <pre class="pre codeblock"><code>
+gpbackup --dbname test --include-table public.'foo\'bar'
+gpbackup --dbname test --include-table public."foo'bar"</code></pre>
+      <div class="p">When using the option <code class="ph codeph">--include-table-file</code>, the table names in the text
+        file do not require single quotes. For example, the contents of the text file could be
+        similar to:<pre class="pre codeblock"><code>my#1schema.my_$42_Table
+my#1schema.my_$590_Table</code></pre></div>
+
+    </div>
+
+    <div class="section"><h2 class="title sectiontitle">Examples</h2>
+      
+      <div class="p">Backup all schemas and tables in the "demo" database, including global Greenplum Database
+        system objects statistics:<pre class="pre codeblock"><code>$ gpbackup --dbname demo</code></pre></div>
+
+      <div class="p">Backup all schemas and tables in the "demo" database except for the "twitter"
+        schema:<pre class="pre codeblock"><code>$ gpbackup --dbname demo --exclude-schema twitter</code></pre></div>
+
+      <div class="p">Backup only the "twitter" schema in the "demo"
+        database:<pre class="pre codeblock"><code>$ gpbackup --dbname demo --include-schema twitter</code></pre></div>
+
+      <div class="p">Backup all schemas and tables in the "demo" database, including global Greenplum Database
+        system objects and query statistics, and copy all backup files to the
+          <span class="ph filepath">/home/gpadmin/backup</span>
+        directory:<pre class="pre codeblock"><code>$ gpbackup --dbname demo --with-stats --backup-dir /home/gpadmin/backup</code></pre></div>
+
+      <p class="p">This example uses <code class="ph codeph">--include-schema</code> with <code class="ph codeph">--exclude-table</code>
+        to back up a schema except for a single table. </p>
+
+      <pre class="pre codeblock"><code>$ gpbackup --dbname demo --include-schema mydata --exclude-table mydata.addresses</code></pre>
+      <p class="p">You cannot use the option <code class="ph codeph">--exclude-schema</code> with a table filtering option
+        such as <code class="ph codeph">--include-table</code>.</p>
+
+    </div>
+
+    <div class="section" id="topic1__section9"><h2 class="title sectiontitle">See Also</h2>
+      
+      <p class="p">
+        <a class="xref" href="gprestore.html">gprestore</a>, <a class="xref" href="../../admin_guide/managing/backup-gpbackup.html" target="_blank">Parallel Backup with gpbackup and gprestore</a> and <a class="xref" href="../../admin_guide/managing/backup-s3-plugin.html" target="_blank">Using the S3 Storage Plugin with gpbackup and gprestore</a></p>
+
+    </div>
+
+  </div>
+
+</body>
+</html>

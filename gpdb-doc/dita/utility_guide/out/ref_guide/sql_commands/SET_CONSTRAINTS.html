@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+
+<meta name="copyright" content="(C) Copyright 2022" />
+<meta name="DC.rights.owner" content="(C) Copyright 2022" />
+<meta name="generator" content="DITA-OT" /><meta name="DC.type" content="topic" />
+<meta name="DC.title" content="SET CONSTRAINTS" />
+<meta name="DC.format" content="XHTML" />
+<meta name="DC.identifier" content="topic1" />
+<link rel="stylesheet" type="text/css" href="../../out/commonltr.css" />
+<title>SET CONSTRAINTS</title>
+</head>
+<body id="topic1">
+
+<h1 class="title topictitle1" id="ariaid-title1">SET CONSTRAINTS</h1>
+
+   <div class="body">
+      <div class="section" id="topic1__section1">
+         <p class="p" id="topic1__sql_command_desc">Sets constraint check timing for the current transaction.</p>
+
+         <div class="note"><span class="notetitle">Note:</span> Referential integrity syntax (foreign key constraints) is accepted but not
+           enforced.</div>
+
+      </div>
+
+      <div class="section" id="topic1__section2"><h2 class="title sectiontitle">Synopsis</h2>
+         
+         <pre class="pre codeblock" id="topic1__sql_command_synopsis"><code>SET CONSTRAINTS { ALL | &lt;name&gt; [, ...] } { DEFERRED | IMMEDIATE }</code></pre>
+      </div>
+
+      <div class="section" id="topic1__section3"><h2 class="title sectiontitle">Description</h2>
+         
+         <p class="p"><code class="ph codeph">SET CONSTRAINTS</code> sets the behavior of constraint checking within the
+            current transaction. <code class="ph codeph">IMMEDIATE</code> constraints are checked at the end of
+            each statement. <code class="ph codeph">DEFERRED</code> constraints are not checked until transaction
+            commit. Each constraint has its own <code class="ph codeph">IMMEDIATE</code> or
+               <code class="ph codeph">DEFERRED</code> mode. </p>
+
+         <p class="p">Upon creation, a constraint is given one of three characteristics: <code class="ph codeph">DEFERRABLE
+               INITIALLY DEFERRED</code>, <code class="ph codeph">DEFERRABLE INITIALLY IMMEDIATE</code>, or
+               <code class="ph codeph">NOT DEFERRABLE</code>. The third class is always <code class="ph codeph">IMMEDIATE</code>
+            and is not affected by the <code class="ph codeph">SET CONSTRAINTS</code> command. The first two
+            classes start every transaction in the indicated mode, but their behavior can be changed
+            within a transaction by <code class="ph codeph">SET CONSTRAINTS</code>. </p>
+
+         <p class="p"><code class="ph codeph">SET CONSTRAINTS</code> with a list of constraint names changes the mode of
+            just those constraints (which must all be deferrable). Each constraint name can be
+            schema-qualified. The current schema search path is used to find the first matching name
+            if no schema name is specified. <code class="ph codeph">SET CONSTRAINTS ALL</code> changes the mode of
+            all deferrable constraints. </p>
+
+         <p class="p">When <code class="ph codeph">SET CONSTRAINTS</code> changes the mode of a constraint from
+               <code class="ph codeph">DEFERRED</code> to <code class="ph codeph">IMMEDIATE</code>, the new mode takes effect
+            retroactively: any outstanding data modifications that would have been checked at the
+            end of the transaction are instead checked during the execution of the <code class="ph codeph">SET
+               CONSTRAINTS</code> command. If any such constraint is violated, the <code class="ph codeph">SET
+               CONSTRAINTS</code> fails (and does not change the constraint mode). Thus,
+               <code class="ph codeph">SET CONSTRAINTS</code> can be used to force checking of constraints to
+            occur at a specific point in a transaction. </p>
+
+         <p class="p">Currently, only <code class="ph codeph">UNIQUE</code>, <code class="ph codeph">PRIMARY KEY</code>,
+               <code class="ph codeph">REFERENCES</code> (foreign key), and <code class="ph codeph">EXCLUDE</code> constraints
+            are affected by this setting. <code class="ph codeph">NOT NULL</code> and <code class="ph codeph">CHECK</code>
+            constraints are always checked immediately when a row is inserted or modified
+               (<em class="ph i">not</em> at the end of the statement). Uniqueness and exclusion constraints that
+            have not been declared <code class="ph codeph">DEFERRABLE</code> are also checked immediately. </p>
+
+         <p class="p">The firing of triggers that are declared as "constraint triggers" is also controlled by
+            this setting — they fire at the same time that the associated constraint should be
+            checked. </p>
+
+      </div>
+
+      <div class="section" id="topic1__section4"><h2 class="title sectiontitle">Notes</h2>
+         
+         <p class="p">Because Greenplum Database does not require constraint names to be unique within a
+            schema (but only per-table), it is possible that there is more than one match for a
+            specified constraint name. In this case <code class="ph codeph">SET CONSTRAINTS</code> will act on all
+            matches. For a non-schema-qualified name, once a match or matches have been found in
+            some schema in the search path, schemas appearing later in the path are not searched. </p>
+
+         <p class="p">This command only alters the behavior of constraints within the current transaction.
+            Issuing this outside of a transaction block emits a warning and otherwise has no effect.
+         </p>
+
+      </div>
+
+      <div class="section" id="topic1__section5"><h2 class="title sectiontitle">Compatibility</h2>
+         
+         <p class="p">This command complies with the behavior defined in the SQL standard, except for the
+            limitation that, in Greenplum Database, it does not apply to <code class="ph codeph">NOT NULL</code>
+            and <code class="ph codeph">CHECK</code> constraints. Also, Greenplum Database checks non-deferrable
+            uniqueness constraints immediately, not at end of statement as the standard would
+            suggest. </p>
+
+      </div>
+
+   </div>
+
+</body>
+</html>

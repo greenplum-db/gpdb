@@ -1,0 +1,575 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+
+<meta name="copyright" content="(C) Copyright 2022" />
+<meta name="DC.rights.owner" content="(C) Copyright 2022" />
+<meta name="generator" content="DITA-OT" /><meta name="DC.type" content="topic" />
+<meta name="DC.title" content="CREATE AGGREGATE" />
+<meta name="DC.relation" scheme="URI" content="../sql_commands/sql_ref.html" />
+<meta name="DC.format" content="XHTML" />
+<meta name="DC.identifier" content="topic1" />
+<link rel="stylesheet" type="text/css" href="../commonltr.css" />
+<title>CREATE AGGREGATE</title>
+</head>
+<body id="topic1">
+
+  <h1 class="title topictitle1" id="topic1__bm20941">CREATE AGGREGATE</h1>
+
+  <div class="body">
+    <p class="p" id="topic1__sql_command_desc">Defines a new aggregate function.</p>
+
+    <div class="section" id="topic1__section2"><h2 class="title sectiontitle">Synopsis</h2><pre class="pre codeblock" id="topic1__sql_command_synopsis"><code>CREATE AGGREGATE &lt;name&gt; ( [ &lt;argmode&gt; ] [ &lt;argname&gt; ] &lt;arg_data_type&gt; [ , ... ] ) (
+    SFUNC = &lt;statefunc&gt;,
+    STYPE = &lt;state_data_type&gt;
+    [ , SSPACE = &lt;state_data_size&gt; ]
+    [ , FINALFUNC = &lt;ffunc&gt; ]
+    [ , FINALFUNC_EXTRA ]
+    [ , COMBINEFUNC = &lt;combinefunc&gt; ]
+    [ , SERIALFUNC = &lt;serialfunc&gt; ]
+    [ , DESERIALFUNC = &lt;deserialfunc&gt; ]
+    [ , INITCOND = &lt;initial_condition&gt; ]
+    [ , MSFUNC = &lt;msfunc&gt; ]
+    [ , MINVFUNC = &lt;minvfunc&gt; ]
+    [ , MSTYPE = &lt;mstate_data_type&gt; ]
+    [ , MSSPACE = &lt;mstate_data_size&gt; ]
+    [ , MFINALFUNC = &lt;mffunc&gt; ]
+    [ , MFINALFUNC_EXTRA ]
+    [ , MINITCOND = &lt;minitial_condition&gt; ]
+    [ , SORTOP = &lt;sort_operator&gt; ]
+  )
+  
+  CREATE AGGREGATE &lt;name&gt; ( [ [ &lt;argmode&gt; ] [ &lt;argname&gt; ] &lt;arg_data_type&gt; [ , ... ] ]
+      ORDER BY [ &lt;argmode&gt; ] [ &lt;argname&gt; ] &lt;arg_data_type&gt; [ , ... ] ) (
+    SFUNC = &lt;statefunc&gt;,
+    STYPE = &lt;state_data_type&gt;
+    [ , SSPACE = &lt;state_data_size&gt; ]
+    [ , FINALFUNC = &lt;ffunc&gt; ]
+    [ , FINALFUNC_EXTRA ]
+    [ , COMBINEFUNC = &lt;combinefunc&gt; ]
+    [ , SERIALFUNC = &lt;serialfunc&gt; ]
+    [ , DESERIALFUNC = &lt;deserialfunc&gt; ]
+    [ , INITCOND = &lt;initial_condition&gt; ]
+    [ , HYPOTHETICAL ]
+  )
+  
+  or the old syntax
+  
+  CREATE AGGREGATE &lt;name&gt; (
+    BASETYPE = &lt;base_type&gt;,
+    SFUNC = &lt;statefunc&gt;,
+    STYPE = &lt;state_data_type&gt;
+    [ , SSPACE = &lt;state_data_size&gt; ]
+    [ , FINALFUNC = &lt;ffunc&gt; ]
+    [ , FINALFUNC_EXTRA ]
+    [ , COMBINEFUNC = &lt;combinefunc&gt; ]
+    [ , SERIALFUNC = &lt;serialfunc&gt; ]
+    [ , DESERIALFUNC = &lt;deserialfunc&gt; ]
+    [ , INITCOND = &lt;initial_condition&gt; ]
+    [ , MSFUNC = &lt;msfunc&gt; ]
+    [ , MINVFUNC = &lt;minvfunc&gt; ]
+    [ , MSTYPE = &lt;mstate_data_type&gt; ]
+    [ , MSSPACE = &lt;mstate_data_size&gt; ]
+    [ , MFINALFUNC = &lt;mffunc&gt; ]
+    [ , MFINALFUNC_EXTRA ]
+    [ , MINITCOND = &lt;minitial_condition&gt; ]
+    [ , SORTOP = &lt;sort_operator&gt; ]
+  )</code></pre></div>
+
+    <div class="section" id="topic1__section3"><h2 class="title sectiontitle">Description</h2>
+      
+      <p class="p"><code class="ph codeph">CREATE AGGREGATE</code> defines a new aggregate function. Some basic and
+        commonly-used aggregate functions such as <code class="ph codeph">count</code>, <code class="ph codeph">min</code>,
+          <code class="ph codeph">max</code>, <code class="ph codeph">sum</code>, <code class="ph codeph">avg</code> and so on are already
+        provided in Greenplum Database. If you define new types or need an aggregate function not
+        already provided, you can use <code class="ph codeph">CREATE AGGREGATE</code> to provide the desired
+        features.</p>
+
+      <p class="p">If a schema name is given (for example, <code class="ph codeph">CREATE AGGREGATE myschema.myagg
+          ...</code>) then the aggregate function is created in the specified schema. Otherwise it
+        is created in the current schema. </p>
+
+      <p class="p">An aggregate function is identified by its name and input data types. Two aggregate
+        functions in the same schema can have the same name if they operate on different input
+        types. The name and input data types of an aggregate function must also be distinct from the
+        name and input data types of every ordinary function in the same schema. This behavior is
+        identical to overloading of ordinary function names. See <a class="xref" href="CREATE_FUNCTION.html#topic1">CREATE FUNCTION</a>.</p>
+
+      <p class="p">A simple aggregate function is made from one, two, or three ordinary functions (which must
+        be <code class="ph codeph">IMMUTABLE</code> functions): </p>
+
+      <ul class="ul" id="topic1__ul_d5c_5yl_dhb">
+        <li class="li">a state transition function <var class="keyword varname">statefunc</var></li>
+
+        <li class="li">an optional final calculation function <var class="keyword varname">ffunc</var></li>
+
+        <li class="li">an optional combine function <var class="keyword varname">combinefunc</var></li>
+
+      </ul>
+
+      <p class="p">These functions are used as follows:</p>
+
+      <pre class="pre codeblock"><code>&lt;statefunc&gt;( internal-state, next-data-values ) ---&gt; next-internal-state
+&lt;ffunc&gt;( internal-state ) ---&gt; aggregate-value
+&lt;combinefunc&gt;( internal-state, internal-state ) ---&gt; next-internal-state</code></pre>
+      <p class="p">Greenplum Database creates a temporary variable of data type
+          <var class="keyword varname">state_data_type</var> to hold the current internal state of the aggregate
+        function. At each input row, the aggregate argument values are calculated and the state
+        transition function is invoked with the current state value and the new argument values to
+        calculate a new internal state value. After all the rows have been processed, the final
+        function is invoked once to calculate the aggregate return value. If there is no final
+        function then the ending state value is returned as-is.</p>
+
+      <div class="note"><span class="notetitle">Note:</span> If you write a user-defined aggregate in C, and you declare the state value
+          (<var class="keyword varname">state_data_type</var>) as type <code class="ph codeph">internal</code>, there is a risk of
+        an out-of-memory error occurring. If <code class="ph codeph">internal</code> state values are not properly
+        managed and a query acquires too much memory for state values, an out-of-memory error could
+        occur. To prevent this, use <code class="ph codeph">mpool_alloc(<var class="keyword varname">mpool</var>,
+            <var class="keyword varname">size</var>)</code> to have Greenplum manage and allocate memory for
+        non-temporary state values, that is, state values that have a lifespan for the entire
+        aggregation. The argument <code class="ph codeph"><var class="keyword varname">mpool</var></code> of the
+          <code class="ph codeph">mpool_alloc()</code> function is
+          <code class="ph codeph">aggstate-&gt;hhashtable-&gt;group_buf</code>. For an example, see the implementation
+        of the numeric data type aggregates in <code class="ph codeph">src/backend/utils/adt/numeric.c</code> in
+        the Greenplum Database open source code.</div>
+
+      <p class="p">You can specify <code class="ph codeph"><var class="keyword varname">combinefunc</var></code> as a method for optimizing
+        aggregate execution. By specifying <code class="ph codeph"><var class="keyword varname">combinefunc</var></code>, the
+        aggregate can be run in parallel on segments first and then on the master. When a
+        two-level execution is performed, the <code class="ph codeph"><var class="keyword varname">statefunc</var></code> is
+        run on the segments to generate partial aggregate results, and
+            <code class="ph codeph"><var class="keyword varname">combinefunc</var></code> is run on the master to aggregate
+        the partial results from segments. If single-level aggregation is performed, all the rows
+        are sent to the master and the <code class="ph codeph"><var class="keyword varname">statefunc</var></code> is applied to
+        the rows.</p>
+
+      <p class="p">Single-level aggregation and two-level aggregation are equivalent execution strategies.
+        Either type of aggregation can be implemented in a query plan. When you implement the
+        functions <code class="ph codeph">combinefunc</code> and <code class="ph codeph">statefunc</code>, you must ensure that
+        the invocation of the <code class="ph codeph"><var class="keyword varname">statefunc</var></code> on the segment instances
+        followed by <code class="ph codeph">combinefunc</code> on the master produce the same result as
+        single-level aggregation that sends all the rows to the master and then applies only the
+            <code class="ph codeph"><var class="keyword varname">statefunc</var></code>  to the rows.</p>
+
+      <p class="p">An aggregate function can provide an optional initial condition, an initial value for the
+        internal state value. This is specified and stored in the database as a value of type
+        <code class="ph codeph">text</code>,
+        but it must be a valid external representation of a constant of the state value data type.
+        If it is not supplied then the state value starts out <code class="ph codeph">NULL</code>. </p>
+
+      <p class="p">If  <code class="ph codeph"><var class="keyword varname">statefunc</var></code>  is declared <code class="ph codeph">STRICT</code>,
+        then it cannot be called with <code class="ph codeph">NULL</code> inputs. With such a transition function,
+        aggregate execution behaves as follows. Rows with any null input values are ignored (the
+        function is not called and the previous state value is retained). If the initial state value
+        is <code class="ph codeph">NULL</code>, then at the first row with all non-null input values, the first
+        argument value replaces the state value, and the transition function is invoked at
+        subsequent rows with all non-null input values. This is useful for implementing aggregates
+        like <code class="ph codeph">max</code>. Note that this behavior is only available when
+          <var class="keyword varname">state_data_type</var> is the same as the first
+          <var class="keyword varname">arg_data_type</var>. When these types are different, you must supply a
+        non-null initial condition or use a nonstrict transition function.</p>
+
+      <p class="p">If  <var class="keyword varname">statefunc</var> is not declared <code class="ph codeph">STRICT</code>, then it will be
+        called unconditionally at each input row, and must deal with <code class="ph codeph">NULL</code> inputs
+        and <code class="ph codeph">NULL</code> state values for itself. This allows the aggregate author to
+        have full control over the aggregate's handling of <code class="ph codeph">NULL</code> values.</p>
+
+      <p class="p">If the final function (<code class="ph codeph"><var class="keyword varname">ffunc</var></code>) is declared
+          <code class="ph codeph">STRICT</code>, then it will not be called when the ending state value is
+          <code class="ph codeph">NULL</code>; instead a <code class="ph codeph">NULL</code> result will be returned
+        automatically. (This is the normal behavior of <code class="ph codeph">STRICT</code> functions.) In any
+        case the final function has the option of returning a <code class="ph codeph">NULL</code> value. For
+        example, the final function for <code class="ph codeph">avg</code> returns <code class="ph codeph">NULL</code> when it
+        sees there were zero input rows.</p>
+
+      <p class="p"> Sometimes it is useful to declare the final function as taking not just the state value,
+        but extra parameters corresponding to the aggregate's input values. The main reason for
+        doing this is if the final function is polymorphic and the state value's data type would be
+        inadequate to pin down the result type. These extra parameters are always passed as
+          <code class="ph codeph">NULL</code> (and so the final function must not be strict when the
+          <code class="ph codeph">FINALFUNC_EXTRA</code> option is used), but nonetheless they are valid
+        parameters. The final function could for example make use of
+          <code class="ph codeph">get_fn_expr_argtype</code> to identify the actual argument type in the current
+        call. </p>
+
+      <p class="p"> An aggregate can optionally support <em class="ph i">moving-aggregate mode</em>, as described in <a class="xref" href="https://www.postgresql.org/docs/9.4/xaggr.html#XAGGR-MOVING-AGGREGATES" target="_blank">Moving-Aggregate Mode</a> in the PostgreSQL
+        documentation. This requires specifying the <code class="ph codeph"><var class="keyword varname">msfunc</var></code>,
+            <code class="ph codeph"><var class="keyword varname">minvfunc</var></code>, and
+          <code class="ph codeph"><var class="keyword varname">mstype</var></code> functions, and optionally the
+            <code class="ph codeph"><var class="keyword varname">mspace</var></code>,
+          <code class="ph codeph"><var class="keyword varname">mfinalfunc</var></code>,
+            <code class="ph codeph"><var class="keyword varname">mfinalfunc_extra</var></code>, and
+            <code class="ph codeph"><var class="keyword varname">minitcond</var></code> functions. Except for
+            <code class="ph codeph"><var class="keyword varname">minvfunc</var></code>, these functions work like the
+        corresponding simple-aggregate functions without <code class="ph codeph"><var class="keyword varname">m</var></code>; they
+        define a separate implementation of the aggregate that includes an inverse transition
+        function. </p>
+
+      <p class="p">The syntax with <code class="ph codeph">ORDER BY</code> in the parameter list creates a special type of
+        aggregate called an <em class="ph i">ordered-set aggregate</em>; or if <code class="ph codeph">HYPOTHETICAL</code> is
+        specified, then a <em class="ph i">hypothetical-set aggregate</em> is created. These aggregates operate
+        over groups of sorted values in order-dependent ways, so that specification of an input sort
+        order is an essential part of a call. Also, they can have <em class="ph i">direct</em> arguments, which are
+        arguments that are evaluated only once per aggregation rather than once per input row.
+        Hypothetical-set aggregates are a subclass of ordered-set aggregates in which some of the
+        direct arguments are required to match, in number and data types, the aggregated argument
+        columns. This allows the values of those direct arguments to be added to the collection of
+        aggregate-input rows as an additional "hypothetical" row. </p>
+
+      <p class="p">Single argument aggregate functions, such as <code class="ph codeph">min</code> or
+        <code class="ph codeph">max</code>, can sometimes be optimized by
+        looking into an index instead of scanning every input row. If this aggregate can be so
+        optimized, indicate it by specifying a <em class="ph i">sort operator</em>. The basic requirement is that the
+        aggregate must yield the first element in the sort ordering induced by the operator; in
+        other words:</p>
+
+      <pre class="pre codeblock"><code>SELECT &lt;agg&gt;(&lt;col&gt;) FROM &lt;tab&gt;; </code></pre>
+      <p class="p">must be equivalent to:</p>
+
+      <pre class="pre codeblock"><code>SELECT &lt;col&gt; FROM &lt;tab&gt; ORDER BY &lt;col&gt; USING &lt;sortop&gt; LIMIT 1;</code></pre>
+      <p class="p">Further assumptions are that the aggregate function ignores <code class="ph codeph">NULL</code> inputs,
+        and that it delivers a <code class="ph codeph">NULL</code> result if and only if there were no non-null
+        inputs. Ordinarily, a data type's <code class="ph codeph">&lt;</code> operator is the proper sort operator
+        for <code class="ph codeph">MIN</code>, and <code class="ph codeph">&gt;</code> is the proper sort operator for
+          <code class="ph codeph">MAX</code>. Note that the optimization will never actually take effect unless
+        the specified operator is the "less than" or "greater than" strategy member of a B-tree
+        index operator class.</p>
+
+      <p class="p"> To be able to create an aggregate function, you must have <code class="ph codeph">USAGE</code> privilege
+        on the argument types, the state type(s), and the return type, as well as
+          <code class="ph codeph">EXECUTE</code> privilege on the transition and final functions. </p>
+
+    </div>
+
+    <div class="section" id="topic1__section5"><h2 class="title sectiontitle">Parameters</h2>
+      
+      <dl class="dl parml">
+        
+          <dt class="dt pt dlterm"><var class="keyword varname">name</var></dt>
+
+          <dd class="dd pd">The name (optionally schema-qualified) of the aggregate function to create.</dd>
+
+        
+        
+          <dt class="dt pt dlterm"><var class="keyword varname">argmode</var></dt>
+
+          <dd class="dd pd">The mode of an argument: <code class="ph codeph">IN</code> or <code class="ph codeph">VARIADIC</code>. (Aggregate
+            functions do not support <code class="ph codeph">OUT</code> arguments.) If omitted, the default is
+              <code class="ph codeph">IN</code>. Only the last argument can be marked
+            <code class="ph codeph">VARIADIC</code>.</dd>
+
+        
+        
+          <dt class="dt pt dlterm"><var class="keyword varname">argname</var></dt>
+
+          <dd class="dd pd">The name of an argument. This is currently only useful for documentation purposes. If
+            omitted, the argument has no name.</dd>
+
+        
+        
+          <dt class="dt pt dlterm"><var class="keyword varname">arg_data_type</var></dt>
+
+          <dd class="dd pd">An input data type on which this aggregate function operates. To create a
+            zero-argument aggregate function, write <code class="ph codeph">*</code> in place of the list of
+            argument specifications. (An example of such an aggregate is <code class="ph codeph">count(*)</code>.)
+          </dd>
+
+        
+        
+          <dt class="dt pt dlterm"><var class="keyword varname">base_type</var></dt>
+
+          <dd class="dd pd">In the old syntax for <code class="ph codeph">CREATE AGGREGATE</code>, the input data type is
+            specified by a <code class="ph codeph">basetype</code> parameter rather than being written next to the
+            aggregate name. Note that this syntax allows only one input parameter. To define a
+            zero-argument aggregate function with this syntax, specify the <code class="ph codeph">basetype</code>
+            as <code class="ph codeph">"ANY"</code> (not <code class="ph codeph">*</code>). Ordered-set aggregates cannot be
+            defined with the old syntax. </dd>
+
+        
+        
+          <dt class="dt pt dlterm"><var class="keyword varname">statefunc</var></dt>
+
+          <dd class="dd pd">The name of the state transition function to be called for each input row. For a
+            normal N-argument aggregate function,  the state transition function
+                <code class="ph codeph"><var class="keyword varname">statefunc</var></code> must take N+1 arguments, the first
+            being of type <var class="keyword varname">state_data_type</var> and the rest matching the declared
+            input data types of the aggregate. The function must return a value of type
+              <var class="keyword varname">state_data_type</var>. This function takes the current state value and
+            the current input data values, and returns the next state value.</dd>
+
+          <dd class="dd pd ddexpand">For ordered-set (including hypothetical-set) aggregates, the state transition function
+              <var class="keyword varname">statefunc</var> receives only the current state value and the aggregated
+            arguments, not the direct arguments. Otherwise it is the same. </dd>
+
+        
+        
+          <dt class="dt pt dlterm"><var class="keyword varname">state_data_type</var></dt>
+
+          <dd class="dd pd">The data type for the aggregate's state value.</dd>
+
+        
+        
+          <dt class="dt pt dlterm"><var class="keyword varname">state_data_size</var></dt>
+
+          <dd class="dd pd">The approximate average size (in bytes) of the aggregate's state value. If this
+            parameter is omitted or is zero, a default estimate is used based on the
+              <var class="keyword varname">state_data_type</var>. The planner uses this value to estimate the memory
+            required for a grouped aggregate query. Large values of this parameter discourage use of
+            hash aggregation.</dd>
+
+        
+        
+          <dt class="dt pt dlterm"><var class="keyword varname">ffunc</var></dt>
+
+          <dd class="dd pd">The name of the final function called to compute the aggregate result after all input
+            rows have been traversed. The function must take a single argument of type
+              <var class="keyword varname">state_data_type</var>. The return data type of the aggregate is defined
+            as the return type of this function. If <code class="ph codeph"><var class="keyword varname">ffunc</var></code> is not
+            specified, then the ending state value is used as the aggregate result, and the return
+            type is <var class="keyword varname">state_data_type</var>. </dd>
+
+          <dd class="dd pd ddexpand">For ordered-set (including hypothetical-set) aggregates, the final function receives
+            not only the final state value, but also the values of all the direct arguments.</dd>
+
+          <dd class="dd pd ddexpand">If <code class="ph codeph">FINALFUNC_EXTRA</code> is specified, then in addition to the final state
+            value and any direct arguments, the final function receives extra NULL values
+            corresponding to the aggregate's regular (aggregated) arguments. This is mainly useful
+            to allow correct resolution of the aggregate result type when a polymorphic aggregate is
+            being defined. </dd>
+
+        
+        
+          <dt class="dt pt dlterm"><var class="keyword varname">combinefunc</var></dt>
+
+          <dd class="dd pd">The name of a combine function. This is a function of two arguments, both of type
+              <var class="keyword varname">state_data_type</var>. It must return a value of
+              <var class="keyword varname">state_data_type</var>. A combine function takes two transition state
+            values and returns a new transition state value representing the combined aggregation.
+            In Greenplum Database, if the result of the aggregate function is computed in a
+            segmented fashion, the combine function is invoked on the individual internal states in
+            order to combine them into an ending internal state.</dd>
+
+          <dd class="dd pd ddexpand">Note that this function is also called in hash aggregate mode within a segment.
+            Therefore, if you call this aggregate function without a combine function, hash
+            aggregate is never chosen. Since hash aggregate is efficient, consider defining a
+            combine function whenever possible.</dd>
+
+        
+        
+          <dt class="dt pt dlterm"><var class="keyword varname">serialfunc</var></dt>
+
+          <dd class="dd pd"> An aggregate function whose <var class="keyword varname">state_data_type</var> is
+              <code class="ph codeph">internal</code> can participate in parallel aggregation only if it has a
+              <var class="keyword varname">serialfunc</var> function, which must serialize the aggregate state into
+            a <code class="ph codeph">bytea</code> value for transmission to another process. This function must
+            take a single argument of type <code class="ph codeph">internal</code> and return type
+              <code class="ph codeph">bytea</code>. A corresponding <var class="keyword varname">deserialfunc</var> is also
+            required. </dd>
+
+        
+        
+          <dt class="dt pt dlterm"><var class="keyword varname">deserialfunc</var></dt>
+
+          <dd class="dd pd"> Deserialize a previously serialized aggregate state back into
+              <var class="keyword varname">state_data_type</var>. This function must take two arguments of types
+              <code class="ph codeph">bytea</code> and <code class="ph codeph">internal</code>, and produce a result of type
+              <code class="ph codeph">internal</code>. (Note: the second, <code class="ph codeph">internal</code> argument is
+            unused, but is required for type safety reasons.) </dd>
+
+        
+        
+          <dt class="dt pt dlterm"><var class="keyword varname">initial_condition</var></dt>
+
+          <dd class="dd pd"> The initial setting for the state value. This must be a string constant in the form
+            accepted for the data type <var class="keyword varname">state_data_type</var>. If not specified, the
+            state value starts out null. </dd>
+
+        
+        
+          <dt class="dt pt dlterm"><var class="keyword varname">msfunc</var></dt>
+
+          <dd class="dd pd"> The name of the forward state transition function to be called for each input row in
+            moving-aggregate mode. This is exactly like the regular transition function, except that
+            its first argument and result are of type <var class="keyword varname">mstate_data_type</var>, which
+            might be different from <var class="keyword varname">state_data_type</var>. </dd>
+
+        
+        
+          <dt class="dt pt dlterm"><var class="keyword varname">minvfunc</var></dt>
+
+          <dd class="dd pd"> The name of the inverse state transition function to be used in moving-aggregate
+            mode. This function has the same argument and result types as <var class="keyword varname">msfunc</var>,
+            but it is used to remove a value from the current aggregate state, rather than add a
+            value to it. The inverse transition function must have the same strictness attribute as
+            the forward state transition function. </dd>
+
+        
+        
+          <dt class="dt pt dlterm"><var class="keyword varname">mstate_data_type</var></dt>
+
+          <dd class="dd pd"> The data type for the aggregate's state value, when using moving-aggregate mode.
+          </dd>
+
+        
+        
+          <dt class="dt pt dlterm"><var class="keyword varname">mstate_data_size</var></dt>
+
+          <dd class="dd pd"> The approximate average size (in bytes) of the aggregate's state value, when using
+            moving-aggregate mode. This works the same as <var class="keyword varname">state_data_size</var>. </dd>
+
+        
+        
+          <dt class="dt pt dlterm"><var class="keyword varname">mffunc</var></dt>
+
+          <dd class="dd pd"> The name of the final function called to compute the aggregate's result after all
+            input rows have been traversed, when using moving-aggregate mode. This works the same as
+              <var class="keyword varname">ffunc</var>, except that its first argument's type is
+              <var class="keyword varname">mstate_data_type</var> and extra dummy arguments are specified by writing
+              <code class="ph codeph">MFINALFUNC_EXTRA</code>. The aggregate result type determined by
+              <var class="keyword varname">mffunc</var> or <var class="keyword varname">mstate_data_type</var> must match that
+            determined by the aggregate's regular implementation. </dd>
+
+        
+        
+          <dt class="dt pt dlterm"><var class="keyword varname">minitial_condition</var></dt>
+
+          <dd class="dd pd"> The initial setting for the state value, when using moving-aggregate mode. This works
+            the same as <var class="keyword varname">initial_condition</var>. </dd>
+
+        
+        
+          <dt class="dt pt dlterm"><var class="keyword varname">sort_operator</var></dt>
+
+          <dd class="dd pd"> The associated sort operator for a <code class="ph codeph">MIN</code>- or <code class="ph codeph">MAX</code>-like
+            aggregate. This is just an operator name (possibly schema-qualified). The operator is
+            assumed to have the same input data types as the aggregate (which must be a
+            single-argument normal aggregate). </dd>
+
+        
+        
+          <dt class="dt pt dlterm"><var class="keyword varname">HYPOTHETICAL</var></dt>
+
+          <dd class="dd pd"> For ordered-set aggregates only, this flag specifies that the aggregate arguments are
+            to be processed according to the requirements for hypothetical-set aggregates: that is,
+            the last few direct arguments must match the data types of the aggregated
+              (<code class="ph codeph">WITHIN GROUP</code>) arguments. The <code class="ph codeph">HYPOTHETICAL</code> flag has
+            no effect on run-time behavior, only on parse-time resolution of the data types and
+            collations of the aggregate's arguments. </dd>
+
+        
+      </dl>
+
+    </div>
+
+    <div class="section" id="topic1__section6"><h2 class="title sectiontitle">Notes</h2>
+      
+      <p class="p">The ordinary functions used to define a new aggregate function must be defined first. Note
+        that in this release of Greenplum Database, it is required that the
+          <var class="keyword varname">statefunc</var>, <var class="keyword varname">ffunc</var>, and <var class="keyword varname">combinefunc</var>
+        functions used to create the aggregate are defined as <code class="ph codeph">IMMUTABLE</code>.</p>
+
+      <p class="p">If the value of the Greenplum Database server configuration parameter
+          <code class="ph codeph">gp_enable_multiphase_agg</code> is <code class="ph codeph">off</code>, only single-level
+        aggregation is performed. </p>
+
+      <p class="p">Any compiled code (shared library files) for custom functions must be placed in the same
+        location on every host in your Greenplum Database array (master and all segments). This
+        location must also be in the <code class="ph codeph">LD_LIBRARY_PATH</code> so that the server can locate
+        the files.</p>
+
+      <div class="p">In previous versions of Greenplum Database, there was a concept of ordered aggregates.
+        Since version 6, any aggregate can be called as an ordered aggregate, using the syntax:
+        <pre class="pre codeblock"><code>name ( arg [ , ... ] [ORDER BY sortspec [ , ...]] )</code></pre></div>
+
+      <p class="p">The <code class="ph codeph">ORDERED</code> keyword is accepted for backwards compatibility, but is
+        ignored.</p>
+
+      <p class="p">In previous versions of Greenplum Database, the <code class="ph codeph">COMBINEFUNC</code> option was
+        called <code class="ph codeph">PREFUNC</code>. It is still accepted for backwards compatibility, as a
+        synonym for <code class="ph codeph">COMBINEFUNC</code>.</p>
+
+    </div>
+
+    <div class="section" id="topic1__section7"><h2 class="title sectiontitle">Example</h2>
+      
+      <p class="p">The following simple example creates an aggregate function that computes the sum of two
+        columns. </p>
+
+      <p class="p">Before creating the aggregate function, create two functions that are used as the
+            <code class="ph codeph"><var class="keyword varname">statefunc</var></code>  and
+            <code class="ph codeph"><var class="keyword varname">combinefunc</var></code> functions of the aggregate function. </p>
+
+      <p class="p">This function is specified as the <code class="ph codeph"><var class="keyword varname">statefunc</var></code> function in
+        the aggregate function.</p>
+
+      <pre class="pre codeblock"><code>CREATE FUNCTION mysfunc_accum(numeric, numeric, numeric) 
+  RETURNS numeric
+   AS 'select $1 + $2 + $3'
+   LANGUAGE SQL
+   IMMUTABLE
+   RETURNS NULL ON NULL INPUT;</code></pre>
+      <p class="p">This function is specified as the <code class="ph codeph"><code class="ph codeph">combinefunc</code></code> function in
+        the aggregate function.</p>
+
+      <pre class="pre codeblock"><code>CREATE FUNCTION mycombine_accum(numeric, numeric )
+  RETURNS numeric
+   AS 'select $1 + $2'
+   LANGUAGE SQL
+   IMMUTABLE
+   RETURNS NULL ON NULL INPUT;</code></pre>
+      <p class="p">This <code class="ph codeph">CREATE AGGREGATE</code> command creates the aggregate function that adds two
+        columns. </p>
+
+      <pre class="pre codeblock"><code>CREATE AGGREGATE agg_prefunc(numeric, numeric) (
+   SFUNC = mysfunc_accum,
+   STYPE = numeric,
+   COMBINEFUNC = mycombine_accum,
+   INITCOND = 0 );</code></pre>
+      <p class="p">The following commands create a table, adds some rows, and runs the aggregate function.</p>
+
+      <pre class="pre codeblock"><code>create table t1 (a int, b int) DISTRIBUTED BY (a);
+insert into t1 values
+   (10, 1),
+   (20, 2),
+   (30, 3);
+select agg_prefunc(a, b) from t1;</code></pre>
+      <p class="p">This <code class="ph codeph">EXPLAIN</code> command shows two phase aggregation. </p>
+
+      <pre class="pre codeblock"><code>explain select agg_prefunc(a, b) from t1;
+
+QUERY PLAN
+-------------------------------------------------------------------------- 
+Aggregate (cost=1.10..1.11 rows=1 width=32)  
+ -&gt; Gather Motion 2:1 (slice1; segments: 2) (cost=1.04..1.08 rows=1
+      width=32)
+     -&gt; Aggregate (cost=1.04..1.05 rows=1 width=32)
+       -&gt; Seq Scan on t1 (cost=0.00..1.03 rows=2 width=8)
+ Optimizer: Pivotal Optimizer (GPORCA)
+ (5 rows)</code></pre>
+    </div>
+
+    <div class="section" id="topic1__section8"><h2 class="title sectiontitle">Compatibility</h2>
+      
+      <p class="p"><code class="ph codeph">CREATE AGGREGATE</code> is a Greenplum Database language extension. The SQL
+        standard does not provide for user-defined aggregate functions.</p>
+
+    </div>
+
+    <div class="section" id="topic1__section9"><h2 class="title sectiontitle">See Also</h2>
+      
+      <p class="p"><a class="xref" href="ALTER_AGGREGATE.html#topic1">ALTER AGGREGATE</a>,
+            <a class="xref" href="DROP_AGGREGATE.html#topic1">DROP AGGREGATE</a>,
+            <a class="xref" href="CREATE_FUNCTION.html#topic1">CREATE FUNCTION</a></p>
+
+    </div>
+
+  </div>
+
+<div class="related-links">
+<div class="familylinks">
+<div class="parentlink"><strong>Parent topic:</strong> <a class="link" href="../sql_commands/sql_ref.html">SQL Commands</a></div>
+</div>
+</div></body>
+</html>

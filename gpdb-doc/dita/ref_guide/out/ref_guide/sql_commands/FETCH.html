@@ -1,0 +1,145 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+
+<meta name="copyright" content="(C) Copyright 2022" />
+<meta name="DC.rights.owner" content="(C) Copyright 2022" />
+<meta name="generator" content="DITA-OT" /><meta name="DC.type" content="topic" />
+<meta name="DC.title" content="FETCH" />
+<meta name="DC.relation" scheme="URI" content="../sql_commands/sql_ref.html" />
+<meta name="DC.format" content="XHTML" />
+<meta name="DC.identifier" content="topic1" />
+<link rel="stylesheet" type="text/css" href="../commonltr.css" />
+<title>FETCH</title>
+</head>
+<body id="topic1">
+<h1 class="title topictitle1" id="topic1__dr20941">FETCH</h1>
+<div class="body"><p class="p" id="topic1__sql_command_desc">Retrieves rows from a query using a cursor.</p>
+<div class="section" id="topic1__section2"><h2 class="title sectiontitle">Synopsis</h2><pre class="pre codeblock" id="topic1__sql_command_synopsis"><code>FETCH [ &lt;forward_direction&gt; { FROM | IN } ] &lt;cursor_name&gt;</code></pre><p class="p">where <var class="keyword varname">forward_direction</var> can be empty or one of:</p>
+<pre class="pre codeblock"><code>    NEXT
+    FIRST
+    ABSOLUTE &lt;count&gt;
+    RELATIVE &lt;count&gt;
+    &lt;count&gt;
+    ALL
+    FORWARD
+    FORWARD &lt;count&gt;
+    FORWARD ALL</code></pre></div>
+<div class="section" id="topic1__section3"><h2 class="title sectiontitle">Description</h2><p class="p"><code class="ph codeph">FETCH</code> retrieves rows using a previously-created cursor.
+</p>
+
+<div class="note"><span class="notetitle">Note:</span> You cannot <code class="ph codeph">FETCH</code> from a <code class="ph codeph">PARALLEL RETRIEVE CURSOR</code>,
+  you must <a class="xref" href="RETRIEVE.html#topic1">RETRIEVE</a>
+  the rows from it.</div>
+
+<div class="note"><span class="notetitle">Note:</span> This page describes usage of cursors at the SQL command level. If you are trying to use
+        cursors inside a PL/pgSQL function, the rules are different. See <a class="xref" href="../../analytics/pl_sql.html#topic1" target="_blank">PL/pgSQL function</a>.</div>
+<p class="p">A cursor has an associated position, which is used by <code class="ph codeph">FETCH</code>.
+The cursor position can be before the first row of the query result,
+on any particular row of the result, or after the last row of the result.
+When created, a cursor is positioned before the first row. After fetching
+some rows, the cursor is positioned on the row most recently retrieved.
+If <code class="ph codeph">FETCH</code> runs off the end of the available rows then
+the cursor is left positioned after the last row. <code class="ph codeph">FETCH ALL</code>
+will always leave the cursor positioned after the last row. </p>
+<p class="p">The forms <code class="ph codeph">NEXT</code>, <code class="ph codeph">FIRST</code>, <code class="ph codeph">ABSOLUTE</code>,
+          <code class="ph codeph">RELATIVE</code> fetch a single row after moving the cursor appropriately. If
+        there is no such row, an empty result is returned, and the cursor is left positioned before
+        the first row or after the last row as appropriate. </p>
+<p class="p">The forms using <code class="ph codeph">FORWARD</code> retrieve the indicated number
+of rows moving in the forward direction, leaving the cursor positioned
+on the last-returned row (or after all rows, if the count exceeds the
+number of rows available). Note that it is not possible to move a cursor
+position backwards in Greenplum Database, since scrollable cursors are
+not supported. You can only move a cursor forward in position using <code class="ph codeph">FETCH</code>.</p>
+<p class="p"><code class="ph codeph">RELATIVE 0</code> and <code class="ph codeph">FORWARD 0</code> request
+fetching the current row without moving the cursor, that is, re-fetching
+the most recently fetched row. This will succeed unless the cursor is
+positioned before the first row or after the last row, in which case
+no row is returned.</p>
+<div class="sectiondiv" id="topic1__section4"><strong class="ph b">Outputs</strong><p class="p">On successful completion, a <code class="ph codeph">FETCH</code> command returns a
+command tag of the form</p>
+<pre class="pre codeblock"><code>FETCH &lt;count&gt;</code></pre><p class="p">The count is the number of rows fetched (possibly zero). Note that in
+<code class="ph codeph">psql</code>, the command tag will not actually be displayed,
+since <code class="ph codeph">psql</code> displays the fetched rows instead.</p>
+</div></div>
+<div class="section" id="topic1__section5"><h2 class="title sectiontitle">Parameters</h2><dl class="dl parml"><dt class="dt pt dlterm"><var class="keyword varname">forward_direction</var></dt>
+<dd class="dd pd">Defines the fetch direction and number of rows to fetch. Only forward
+fetches are allowed in Greenplum Database. It can be one of the following:</dd>
+<dt class="dt pt dlterm">NEXT</dt>
+<dd class="dd pd">Fetch the next row. This is the default if direction is omitted.</dd>
+<dt class="dt pt dlterm">FIRST</dt>
+<dd class="dd pd">Fetch the first row of the query (same as <code class="ph codeph">ABSOLUTE 1</code>).
+Only allowed if it is the first <code class="ph codeph">FETCH</code> operation using
+this cursor.</dd>
+<dt class="dt pt dlterm">ABSOLUTE <var class="keyword varname">count</var></dt>
+<dd class="dd pd">Fetch the specified row of the query. Position after last row if
+count is out of range. Only allowed if the row specified by <var class="keyword varname">count</var>
+moves the cursor position forward.</dd>
+<dt class="dt pt dlterm">RELATIVE <var class="keyword varname">count</var></dt>
+<dd class="dd pd">Fetch the specified row of the query <var class="keyword varname">count</var> rows ahead of the
+current cursor position. <code class="ph codeph">RELATIVE 0</code> re-fetches the current
+row, if any. Only allowed if <var class="keyword varname">count</var> moves the cursor position forward.</dd>
+<dt class="dt pt dlterm"><var class="keyword varname">count</var></dt>
+<dd class="dd pd">Fetch the next <var class="keyword varname">count</var> number of rows (same as <code class="ph codeph">FORWARD <var class="keyword varname">count</var></code>). </dd>
+<dt class="dt pt dlterm">ALL</dt>
+<dd class="dd pd">Fetch all remaining rows (same as <code class="ph codeph">FORWARD ALL</code>).
+</dd>
+<dt class="dt pt dlterm">FORWARD</dt>
+<dd class="dd pd">Fetch the next row (same as <code class="ph codeph">NEXT</code>). </dd>
+<dt class="dt pt dlterm">FORWARD <var class="keyword varname">count</var></dt>
+<dd class="dd pd">Fetch the next <var class="keyword varname">count</var> number of rows. <code class="ph codeph">FORWARD 0</code>
+re-fetches the current row. </dd>
+<dt class="dt pt dlterm">FORWARD ALL</dt>
+<dd class="dd pd">Fetch all remaining rows. </dd>
+<dt class="dt pt dlterm"><var class="keyword varname">cursor_name</var></dt>
+<dd class="dd pd">The name of an open cursor. </dd>
+</dl>
+</div>
+<div class="section" id="topic1__section6"><h2 class="title sectiontitle">Notes</h2><p class="p">Greenplum Database does not support scrollable cursors, so you can only
+use <code class="ph codeph">FETCH</code> to move the cursor position forward.</p>
+<p class="p"><code class="ph codeph">ABSOLUTE</code> fetches are not any faster than navigating
+to the desired row with a relative move: the underlying implementation
+must traverse all the intermediate rows anyway.</p>
+<p class="p"><code class="ph codeph">DECLARE</code> is used to define a cursor. Use <code class="ph codeph">MOVE</code>
+to change cursor position without retrieving data.</p>
+</div>
+<div class="section" id="topic1__section7"><h2 class="title sectiontitle">Examples</h2><p class="p">-- Start the transaction:</p>
+<pre class="pre codeblock"><code>BEGIN;</code></pre><p class="p">-- Set up a cursor:</p>
+<pre class="pre codeblock"><code>DECLARE mycursor CURSOR FOR SELECT * FROM films;</code></pre><p class="p">-- Fetch the first 5 rows in the cursor <code class="ph codeph">mycursor</code>:</p>
+<pre class="pre codeblock"><code>FETCH FORWARD 5 FROM mycursor;
+ code  |          title          | did | date_prod  |   kind   |  len
+-------+-------------------------+-----+------------+----------+-------
+ BL101 | The Third Man           | 101 | 1949-12-23 | Drama    | 01:44
+ BL102 | The African Queen       | 101 | 1951-08-11 | Romantic | 01:43
+ JL201 | Une Femme est une Femme | 102 | 1961-03-12 | Romantic | 01:25
+ P_301 | Vertigo                 | 103 | 1958-11-14 | Action   | 02:08
+ P_302 | Becket                  | 103 | 1964-02-03 | Drama    | 02:28</code></pre><p class="p">-- Close the cursor and end the transaction:</p>
+<pre class="pre codeblock"><code>CLOSE mycursor;
+COMMIT;</code></pre><p class="p">Change the <code class="ph codeph">kind</code> column of the table <code class="ph codeph">films</code> in the row at the <code class="ph codeph">c_films</code> cursor's current position:</p>
+
+<pre class="pre codeblock"><code>UPDATE films SET kind = 'Dramatic' WHERE CURRENT OF c_films;</code></pre>
+</div>
+<div class="section" id="topic1__section8"><h2 class="title sectiontitle">Compatibility</h2><p class="p">SQL standard allows cursors only in embedded SQL and in modules. Greenplum
+Database permits cursors to be used interactively. </p>
+<p class="p">The variant of <code class="ph codeph">FETCH</code> described here returns the data
+as if it were a <code class="ph codeph">SELECT</code> result rather than placing it
+in host variables. Other than this point, <code class="ph codeph">FETCH</code> is fully
+upward-compatible with the SQL standard. </p>
+<p class="p">The <code class="ph codeph">FETCH</code> forms involving <code class="ph codeph">FORWARD</code>,
+as well as the forms <code class="ph codeph">FETCH</code> count and <code class="ph codeph">FETCH</code><code class="ph codeph">ALL</code>, in which <code class="ph codeph">FORWARD</code> is implicit,
+are Greenplum Database extensions. <code class="ph codeph">BACKWARD</code> is not supported.</p>
+<p class="p">The SQL standard allows only <code class="ph codeph">FROM</code> preceding the cursor name; the option to use
+          <code class="ph codeph">IN</code>, or to leave them out altogether, is an extension.</p>
+</div>
+<div class="section" id="topic1__section9"><h2 class="title sectiontitle">See Also</h2><p class="p"><a class="xref" href="DECLARE.html#topic1">DECLARE</a>, <a class="xref" href="CLOSE.html#topic1">CLOSE</a>, <a class="xref" href="MOVE.html#topic1">MOVE</a></p>
+</div>
+</div>
+<div class="related-links">
+<div class="familylinks">
+<div class="parentlink"><strong>Parent topic:</strong> <a class="link" href="../sql_commands/sql_ref.html">SQL Commands</a></div>
+</div>
+</div></body>
+</html>

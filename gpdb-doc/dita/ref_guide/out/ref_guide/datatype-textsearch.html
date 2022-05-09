@@ -1,0 +1,187 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+
+<meta name="copyright" content="(C) Copyright 2022" />
+<meta name="DC.rights.owner" content="(C) Copyright 2022" />
+<meta name="generator" content="DITA-OT" /><meta name="DC.type" content="topic" />
+<meta name="DC.title" content="Text Search Data Types" />
+<meta name="DC.relation" scheme="URI" content="data_types.html" />
+<meta name="DC.format" content="XHTML" />
+<meta name="DC.identifier" content="topic_xmh_44c_qfb" />
+<link rel="stylesheet" type="text/css" href="commonltr.css" />
+<title>Text Search Data Types</title>
+</head>
+<body>
+
+  <div class="nested0" aria-labelledby="ariaid-title1" id="topic_xmh_44c_qfb">
+    <h1 class="title topictitle1" id="ariaid-title1">Text Search Data Types</h1>
+
+    <div class="body">
+      <p class="p">Greenplum Database provides two data types that are designed to support full text search,
+        which is the activity of searching through a collection of natural-language <em class="ph i">documents</em>
+        to locate those that best match a <em class="ph i">query</em>. The <code class="ph codeph">tsvector</code> type
+        represents a document in a form optimized for text search; the <code class="ph codeph">tsquery</code> type
+        similarly represents a text query. <a class="xref" href="../admin_guide/textsearch/full-text-search.html" target="_blank">Using Full Text Search</a> provides a detailed explanation of
+        this facility, and <a class="xref" href="function-summary.html#topic_vpj_ss1_lfb">Text Search Functions and Operators</a> summarizes the
+        related functions and operators.</p>
+
+      <p class="p">The <code class="ph codeph">tsvector</code> and <code class="ph codeph">tsquery</code> types cannot be part of the
+        distribution key of a Greenplum Database table.</p>
+
+    </div>
+
+    <div class="related-links">
+<div class="familylinks">
+<div class="parentlink"><strong>Parent topic:</strong> <a class="link" href="data_types.html">Data Types</a></div>
+</div>
+</div><div class="topic nested1" aria-labelledby="ariaid-title2" id="topic_mzv_44c_qfb">
+      <h2 class="title topictitle2" id="ariaid-title2">tsvector</h2>
+
+      <div class="body">
+        <p class="p">A <code class="ph codeph">tsvector</code> value is a sorted list of distinct <em class="ph i">lexemes</em>, which are
+          words that have been <em class="ph i">normalized</em> to merge different variants of the same word (see
+            <a class="xref" href="../admin_guide/textsearch/full-text-search.html" target="_blank">Using Full Text Search</a> for details). Sorting and
+          duplicate-elimination are done automatically during input, as shown in this example:</p>
+
+        <pre class="pre codeblock"><code>SELECT 'a fat cat sat on a mat and ate a fat rat'::tsvector;
+                      tsvector
+----------------------------------------------------
+ 'a' 'and' 'ate' 'cat' 'fat' 'mat' 'on' 'rat' 'sat'</code></pre>
+        <p class="p">To represent lexemes containing whitespace or punctuation, surround them with quotes:</p>
+
+        <pre class="pre codeblock"><code>SELECT $$the lexeme '    ' contains spaces$$::tsvector;
+                 tsvector                  
+-------------------------------------------
+ '    ' 'contains' 'lexeme' 'spaces' 'the'</code></pre>
+        <p class="p">(We use dollar-quoted string literals in this example and the next one to avoid the
+          confusion of having to double quote marks within the literals.) Embedded quotes and
+          backslashes must be doubled:</p>
+
+        <pre class="pre codeblock"><code>SELECT $$the lexeme 'Joe''s' contains a quote$$::tsvector;
+                    tsvector                    
+------------------------------------------------
+ 'Joe''s' 'a' 'contains' 'lexeme' 'quote' 'the'</code></pre>
+        <p class="p">Optionally, integer <em class="ph i">positions</em> can be attached to lexemes:</p>
+
+        <pre class="pre codeblock"><code>SELECT 'a:1 fat:2 cat:3 sat:4 on:5 a:6 mat:7 and:8 ate:9 a:10 fat:11 rat:12'::tsvector;
+                                  tsvector
+-------------------------------------------------------------------------------
+ 'a':1,6,10 'and':8 'ate':9 'cat':3 'fat':2,11 'mat':7 'on':5 'rat':12 'sat':4</code></pre>
+        <p class="p">A position normally indicates the source word's location in the document. Positional
+          information can be used for <em class="ph i">proximity ranking</em>. Position values can range from 1 to
+          16383; larger numbers are silently set to 16383. Duplicate positions for the same lexeme
+          are discarded.</p>
+
+        <p class="p">Lexemes that have positions can further be labeled with a <em class="ph i">weight</em>, which can be
+            <code class="ph codeph">A</code>, <code class="ph codeph">B</code>, <code class="ph codeph">C</code>, or <code class="ph codeph">D</code>.
+            <code class="ph codeph">D</code> is the default and hence is not shown on output:</p>
+
+        <pre class="pre codeblock"><code>SELECT 'a:1A fat:2B,4C cat:5D'::tsvector;
+          tsvector          
+----------------------------
+ 'a':1A 'cat':5 'fat':2B,4C</code></pre>
+        <p class="p">Weights are typically used to reflect document structure, for example by marking title
+          words differently from body words. Text search ranking functions can assign different
+          priorities to the different weight markers.</p>
+
+        <p class="p">It is important to understand that the <code class="ph codeph">tsvector</code> type itself does not
+          perform any normalization; it assumes the words it is given are normalized appropriately
+          for the application. For example,</p>
+
+        <pre class="pre codeblock"><code>select 'The Fat Rats'::tsvector;
+      tsvector      
+--------------------
+ 'Fat' 'Rats' 'The'</code></pre>
+        <p class="p">For most English-text-searching applications the above words would be considered
+          non-normalized, but tsvector doesn't care. Raw document text should usually be passed
+          through <code class="ph codeph">to_tsvector</code> to normalize the words appropriately for
+          searching:</p>
+
+        <pre class="pre codeblock"><code>SELECT to_tsvector('english', 'The Fat Rats');
+   to_tsvector   
+-----------------
+ 'fat':2 'rat':3</code></pre>
+      </div>
+
+    </div>
+
+    <div class="topic nested1" aria-labelledby="ariaid-title3" id="topic_w2h_p4c_qfb">
+      <h2 class="title topictitle2" id="ariaid-title3">tsquery</h2>
+
+      <div class="body">
+        <p class="p">A <code class="ph codeph">tsquery</code> value stores lexemes that are to be searched for, and combines
+          them honoring the Boolean operators <code class="ph codeph">&amp;</code> (AND), <code class="ph codeph">|</code> (OR),
+          and <code class="ph codeph">!</code> (NOT). Parentheses can be used to enforce grouping of the
+          operators:</p>
+
+        <pre class="pre codeblock"><code>SELECT 'fat &amp; rat'::tsquery;
+    tsquery    
+---------------
+ 'fat' &amp; 'rat'
+
+SELECT 'fat &amp; (rat | cat)'::tsquery;
+          tsquery          
+---------------------------
+ 'fat' &amp; ( 'rat' | 'cat' )
+
+SELECT 'fat &amp; rat &amp; ! cat'::tsquery;
+        tsquery         
+------------------------
+ 'fat' &amp; 'rat' &amp; !'cat'</code></pre>
+        <p class="p">In the absence of parentheses, <code class="ph codeph">!</code> (NOT) binds most tightly, and
+            <code class="ph codeph">&amp;</code> (AND) binds more tightly than <code class="ph codeph">|</code> (OR).</p>
+
+        <p class="p">Optionally, lexemes in a <code class="ph codeph">tsquery</code> can be labeled with one or more weight
+          letters, which restricts them to match only <code class="ph codeph">tsvector</code> lexemes with
+          matching weights:</p>
+
+        <pre class="pre codeblock"><code>SELECT 'fat:ab &amp; cat'::tsquery;
+    tsquery
+------------------
+ 'fat':AB &amp; 'cat'</code></pre>
+        <p class="p">Also, lexemes in a <code class="ph codeph">tsquery</code> can be labeled with * to specify prefix
+          matching:</p>
+
+        <pre class="pre codeblock"><code>SELECT 'super:*'::tsquery;
+  tsquery  
+-----------
+ 'super':*</code></pre>
+        <p class="p">This query will match any word in a <code class="ph codeph">tsvector</code> that begins with "super".
+          Note that prefixes are first processed by text search configurations, which means this
+          comparison returns true:</p>
+
+        <pre class="pre codeblock"><code>SELECT to_tsvector( 'postgraduate' ) @@ to_tsquery( 'postgres:*' );
+ ?column? 
+----------
+ t
+(1 row)</code></pre>
+        <p class="p">because <code class="ph codeph">postgres</code> gets stemmed to <code class="ph codeph">postgr</code>:</p>
+
+        <pre class="pre codeblock"><code>SELECT to_tsquery('postgres:*');
+ to_tsquery 
+------------
+ 'postgr':*
+(1 row)</code></pre>
+        <p class="p">which then matches <code class="ph codeph">postgraduate</code>.</p>
+
+        <p class="p">Quoting rules for lexemes are the same as described previously for lexemes in
+            <code class="ph codeph">tsvector</code>; and, as with <code class="ph codeph">tsvector</code>, any required
+          normalization of words must be done before converting to the <code class="ph codeph">tsquery</code>
+          type. The <code class="ph codeph">to_tsquery</code> function is convenient for performing such
+          normalization:</p>
+
+        <pre class="pre codeblock"><code>SELECT to_tsquery('Fat:ab &amp; Cats');
+    to_tsquery    
+------------------
+ 'fat':AB &amp; 'cat'</code></pre>
+      </div>
+
+    </div>
+
+  </div>
+
+</body>
+</html>

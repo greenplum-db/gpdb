@@ -1,0 +1,286 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+
+<meta name="copyright" content="(C) Copyright 2022" />
+<meta name="DC.rights.owner" content="(C) Copyright 2022" />
+<meta name="generator" content="DITA-OT" /><meta name="DC.type" content="topic" />
+<meta name="DC.title" content="DECLARE" />
+<meta name="DC.relation" scheme="URI" content="../sql_commands/sql_ref.html" />
+<meta name="DC.format" content="XHTML" />
+<meta name="DC.identifier" content="topic1" />
+<link rel="stylesheet" type="text/css" href="../commonltr.css" />
+<title>DECLARE</title>
+</head>
+<body id="topic1">
+
+  <h1 class="title topictitle1" id="topic1__cm20941">DECLARE</h1>
+
+  <div class="body">
+    <p class="p" id="topic1__sql_command_desc">Defines a cursor.</p>
+
+    <div class="section" id="topic1__section2"><h2 class="title sectiontitle">Synopsis</h2>
+      
+      <pre class="pre codeblock" id="topic1__sql_command_synopsis"><code>DECLARE &lt;name&gt; [BINARY] [INSENSITIVE] [NO SCROLL] [PARALLEL RETRIEVE] CURSOR 
+     [{WITH | WITHOUT} HOLD] 
+     FOR &lt;query&gt; [FOR READ ONLY]</code></pre>
+    </div>
+
+    <div class="section" id="topic1__section3"><h2 class="title sectiontitle">Description</h2>
+      
+      <p class="p"><code class="ph codeph">DECLARE</code> allows a user to create a cursor, which can be used to retrieve a
+        small number of rows at a time out of a larger query.
+        Cursors can return data either in text or in binary format using
+        <a class="xref" href="FETCH.html#topic1">FETCH</a>.</p>
+
+      <div class="note"><span class="notetitle">Note:</span> This page describes usage of cursors at the SQL command level. If you are trying to use
+        cursors inside a PL/pgSQL function, the rules are different, see <a class="xref" href="../../analytics/pl_sql.html" target="_blank">PL/pgSQL</a>.</div>
+
+      <p class="p">Normal cursors return data in text format, the same as a <code class="ph codeph">SELECT</code> would
+        produce. Since data is stored natively in binary format, the system must do a conversion to
+        produce the text format. Once the information comes back in text form, the client
+        application may need to convert it to a binary format to manipulate it. In addition, data in
+        the text format is often larger in size than in the binary format. Binary cursors return the
+        data in a binary representation that may be more easily manipulated. Nevertheless, if you
+        intend to display the data as text anyway, retrieving it in text form will save you some
+        effort on the client side.</p>
+
+      <p class="p">As an example, if a query returns a value of one from an integer column, you would get a
+        string of 1 with a default cursor whereas with a binary cursor you would get a 4-byte field
+        containing the internal representation of the value (in big-endian byte order). </p>
+
+      <p class="p">Binary cursors should be used carefully. Many applications, including psql, are not
+        prepared to handle binary cursors and expect data to come back in the text format. </p>
+
+      <div class="note"><span class="notetitle">Note:</span> 
+        When the client application uses the 'extended query' protocol to issue a
+            <code class="ph codeph">FETCH</code> command, the Bind protocol message specifies whether data is to
+          be retrieved in text or binary format. This choice overrides the way that the cursor is
+          defined. The concept of a binary cursor as such is thus obsolete when using extended query
+          protocol — any cursor can be treated as either text or binary.
+      </div>
+
+      <p class="p">A cursor can be specified in the <code class="ph codeph">WHERE CURRENT OF</code> clause of the
+            <a class="xref" href="UPDATE.html#topic1">UPDATE</a> or
+            <a class="xref" href="DELETE.html#topic1">DELETE</a> statement
+        to update or delete table data. The <code class="ph codeph">UPDATE</code> or <code class="ph codeph">DELETE</code>
+        statement can only be run on the server, for example in an interactive psql session or
+        a script. Language extensions such as PL/pgSQL do not have support for updatable cursors.
+      </p>
+
+      <p class="p"><strong class="ph b">Parallel Retrieve Cursors</strong></p>
+
+      <p class="p">Greenplum Database supports a special type of cursor, a parallel retrieve cursor.
+        You can use a parallel retrieve cursor to retrieve query results, in parallel,
+        directly from the Greenplum Database segments, bypassing the Greenplum coordinator.</p>
+
+      <p class="p">Parallel retrieve cursors do not support the <code class="ph codeph">WITH HOLD</code> clause.
+        Greenplum Database ignores the <code class="ph codeph">BINARY</code> clause when you declare a
+        parallel retrieve cursor.</p>
+
+      <p class="p">You open a special retrieve session to each parallel retrieve cursor endpoint, and
+        use the <a class="xref" href="RETRIEVE.html#topic1">RETRIEVE</a>
+        command to retrieve the query results from a parallel retrieve cursor.</p>
+
+      <p class="p"></p>
+
+    </div>
+
+    <div class="section" id="topic1__section4"><h2 class="title sectiontitle">Parameters</h2>
+      
+      <dl class="dl parml">
+        
+          <dt class="dt pt dlterm">
+            <var class="keyword varname">name</var>
+          </dt>
+
+          <dd class="dd pd">The name of the cursor to be created. </dd>
+
+        
+        
+          <dt class="dt pt dlterm">BINARY</dt>
+
+          <dd class="dd pd">Causes the cursor to return data in binary rather than in text format.
+            <div class="note"><span class="notetitle">Note:</span> Greenplum Database ignores the <code class="ph codeph">BINARY</code> clause when you
+            declare a <code class="ph codeph">PARALLEL RETRIEVE</code> cursor.</div>
+</dd>
+
+        
+        
+          <dt class="dt pt dlterm">INSENSITIVE</dt>
+
+          <dd class="dd pd">Indicates that data retrieved from the cursor should be unaffected by updates to the
+            tables underlying the cursor while the cursor exists. In Greenplum Database, all cursors
+            are insensitive. This key word currently has no effect and is present for compatibility
+            with the SQL standard. </dd>
+
+        
+        
+          <dt class="dt pt dlterm">NO SCROLL</dt>
+
+          <dd class="dd pd">A cursor cannot be used to retrieve rows in a nonsequential fashion. This is the
+            default behavior in Greenplum Database, since scrollable cursors
+              (<code class="ph codeph">SCROLL</code>) are not supported.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">PARALLEL RETRIEVE</dt>
+
+          <dd class="dd pd">Declare a parallel retrieve cursor. A parallel retrieve cursor is a special
+            type of cursor that you can use to retrieve results directly from Greenplum
+            Database segments, in parallel.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">WITH HOLD</dt>
+
+          <dt class="dt pt dlterm">WITHOUT HOLD</dt>
+
+          <dd class="dd pd"><code class="ph codeph">WITH HOLD</code> specifies that the cursor may continue to be used after the
+            transaction that created it successfully commits. <code class="ph codeph">WITHOUT HOLD</code>
+            specifies that the cursor cannot be used outside of the transaction that created it.
+              <code class="ph codeph">WITHOUT HOLD</code> is the default.
+          <div class="note"><span class="notetitle">Note:</span> Greenplum Database does not support declaring a
+            <code class="ph codeph">PARALLEL RETRIEVE</code> cursor with the <code class="ph codeph">WITH HOLD</code>
+            clause. <code class="ph codeph">WITH HOLD</code> also
+            cannot not be specified when the <code class="ph codeph">query</code>
+            includes a <code class="ph codeph">FOR UPDATE</code> or <code class="ph codeph">FOR SHARE</code> clause.</div>
+ </dd>
+
+        
+        
+          <dt class="dt pt dlterm">
+            <var class="keyword varname">query</var>
+          </dt>
+
+          <dd class="dd pd">A <a class="xref" href="SELECT.html#topic1">SELECT</a> or
+                <a class="xref" href="VALUES.html#topic1">VALUES</a>
+            command which will provide the rows to be returned by the cursor.<p class="p">If the cursor is
+              used in the <code class="ph codeph">WHERE CURRENT OF</code> clause of the <a class="xref" href="UPDATE.html#topic1">UPDATE</a> or <a class="xref" href="DELETE.html#topic1">DELETE</a> command, the
+                <code class="ph codeph">SELECT</code> command must satisfy the following conditions:</p>
+<ul class="ul" id="topic1__ul_rq1_vr2_m4">
+              <li class="li" id="topic1__cm153794">Cannot reference a view or external table.</li>
+
+              <li class="li" id="topic1__cm153795">References only one table. <p class="p">The table must be updatable. For
+                  example, the following are not updatable: table functions, set-returning
+                  functions, append-only tables, columnar tables.</p>
+</li>
+
+              <li class="li" id="topic1__cm153797">Cannot contain any of the following:<ul class="ul" id="topic1__ul_phn_nvj_dp">
+                  <li class="li">A grouping clause</li>
+
+                  <li class="li">A set operation such as <code class="ph codeph">UNION ALL</code> or <code class="ph codeph">UNION
+                      DISTINCT</code></li>
+
+                  <li class="li">A sorting clause</li>
+
+                  <li class="li">A windowing clause</li>
+
+                  <li class="li">A join or a self-join</li>
+
+                </ul>
+<p class="p">Specifying the <code class="ph codeph">FOR UPDATE</code> clause in the
+                    <code class="ph codeph">SELECT</code> command prevents other sessions from changing the rows
+                  between the time they are fetched and the time they are updated. Without the
+                    <code class="ph codeph">FOR UPDATE</code> clause, a subsequent use of the
+                    <code class="ph codeph">UPDATE</code> or <code class="ph codeph">DELETE</code> command with the
+                    <code class="ph codeph">WHERE CURRENT OF</code> clause has no effect if the row was changed
+                  since the cursor was created. </p>
+<div class="note"><span class="notetitle">Note:</span> Specifying the <code class="ph codeph">FOR UPDATE</code>
+                  clause in the <code class="ph codeph">SELECT</code> command locks the entire table, not just the
+                  selected rows. </div>
+</li>
+
+            </ul>
+</dd>
+
+        
+      </dl>
+
+      <dl class="dl parml">
+        
+          <dt class="dt pt dlterm">FOR READ ONLY</dt>
+
+          <dd class="dd pd"><code class="ph codeph">FOR READ ONLY</code> indicates that the cursor is used in a read-only
+            mode.</dd>
+
+        
+      </dl>
+
+    </div>
+
+    <div class="section" id="topic1__section5"><h2 class="title sectiontitle">Notes</h2>
+      
+      <p class="p">Unless <code class="ph codeph">WITH HOLD</code> is specified, the cursor created by this command can only
+        be used within the current transaction. Thus, <code class="ph codeph">DECLARE</code> without <code class="ph codeph">WITH
+          HOLD</code> is useless outside a transaction block: the cursor would survive only to the
+        completion of the statement. Therefore Greenplum Database reports an error if this command
+        is used outside a transaction block. Use <code class="ph codeph">BEGIN</code> and <code class="ph codeph">COMMIT</code>
+        (or <code class="ph codeph">ROLLBACK</code>) to define a transaction block.</p>
+
+      <p class="p">If <code class="ph codeph">WITH HOLD</code> is specified and the transaction that created the cursor
+        successfully commits, the cursor can continue to be accessed by subsequent transactions in
+        the same session. (But if the creating transaction ends prematurely, the cursor is
+        removed.) A cursor created with <code class="ph codeph">WITH HOLD</code> is closed when an explicit
+          <code class="ph codeph">CLOSE</code> command is issued on it, or the session ends. In the current
+        implementation, the rows represented by a held cursor are copied into a temporary file or
+        memory area so that they remain available for subsequent transactions. </p>
+
+      <p class="p">If you create a cursor with the <code class="ph codeph">DECLARE</code> command in a transaction, you
+        cannot use the <code class="ph codeph">SET</code> command in the transaction until you close the cursor
+        with the <code class="ph codeph">CLOSE</code> command.</p>
+
+      <p class="p">Scrollable cursors are not currently supported in Greenplum Database. You can only use
+          <code class="ph codeph">FETCH</code> or <code class="ph codeph">RETRIEVE</code> to move the cursor position forward, not backwards.</p>
+
+      <p class="p"><code class="ph codeph">DECLARE...FOR UPDATE</code> is not supported with append-optimized tables.</p>
+
+      <p class="p">You can see all available cursors by querying the
+        <a class="xref" href="../system_catalogs/pg_cursors.html">pg_cursors</a>
+        system view.</p>
+
+    </div>
+
+    <div class="section" id="topic1__section6"><h2 class="title sectiontitle">Examples</h2>
+      
+      <p class="p">Declare a cursor: </p>
+
+      <pre class="pre codeblock"><code>DECLARE mycursor CURSOR FOR SELECT * FROM mytable;</code></pre>
+      <p class="p">Declare a parallel retrieve cursor for the same query: </p>
+
+      <pre class="pre codeblock"><code>DECLARE myprcursor PARALLEL RETRIEVE CURSOR FOR SELECT * FROM mytable;</code></pre>
+    </div>
+
+    <div class="section" id="topic1__section7"><h2 class="title sectiontitle">Compatibility</h2>
+      
+      <p class="p">SQL standard allows cursors only in embedded SQL and in modules. Greenplum Database permits
+        cursors to be used interactively. </p>
+
+      <p class="p">Greenplum Database does not implement an <code class="ph codeph">OPEN</code> statement for cursors. A
+        cursor is considered to be open when it is declared.</p>
+
+      <p class="p">The SQL standard allows cursors to move both forward and backward. All Greenplum Database
+        cursors are forward moving only (not scrollable).</p>
+
+      <p class="p">Binary cursors are a Greenplum Database extension. </p>
+
+      <p class="p">The SQL standard makes no provisions for parallel retrieve cursors.</p>
+
+    </div>
+
+    <div class="section" id="topic1__section8"><h2 class="title sectiontitle">See Also</h2>
+      
+      <p class="p"><a class="xref" href="CLOSE.html#topic1">CLOSE</a>, <a class="xref" href="DELETE.html#topic1">DELETE</a>, <a class="xref" href="FETCH.html#topic1">FETCH</a>, <a class="xref" href="MOVE.html#topic1">MOVE</a>, <a class="xref" href="RETRIEVE.html#topic1">RETRIEVE</a>, <a class="xref" href="SELECT.html#topic1">SELECT</a>, <a class="xref" href="UPDATE.html#topic1">UPDATE</a></p>
+
+    </div>
+
+  </div>
+
+<div class="related-links">
+<div class="familylinks">
+<div class="parentlink"><strong>Parent topic:</strong> <a class="link" href="../sql_commands/sql_ref.html">SQL Commands</a></div>
+</div>
+</div></body>
+</html>

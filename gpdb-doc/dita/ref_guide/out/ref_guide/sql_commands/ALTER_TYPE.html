@@ -1,0 +1,217 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+
+<meta name="copyright" content="(C) Copyright 2022" />
+<meta name="DC.rights.owner" content="(C) Copyright 2022" />
+<meta name="generator" content="DITA-OT" /><meta name="DC.type" content="topic" />
+<meta name="DC.title" content="ALTER TYPE" />
+<meta name="DC.relation" scheme="URI" content="../sql_commands/sql_ref.html" />
+<meta name="DC.format" content="XHTML" />
+<meta name="DC.identifier" content="topic1" />
+<link rel="stylesheet" type="text/css" href="../commonltr.css" />
+<title>ALTER TYPE</title>
+</head>
+<body id="topic1">
+<h1 class="title topictitle1" id="topic1__bb137420">ALTER TYPE</h1>
+<div class="body"><p class="p" id="topic1__sql_command_desc">Changes the definition of a data type.</p>
+<div class="section" id="topic1__section2"><h2 class="title sectiontitle">Synopsis</h2><pre class="pre codeblock" id="topic1__sql_command_synopsis"><code>
+ALTER TYPE &lt;name&gt; &lt;action&gt; [, ... ]
+ALTER TYPE &lt;name&gt; OWNER TO &lt;new_owner&gt;
+ALTER TYPE &lt;name&gt; RENAME ATTRIBUTE &lt;attribute_name&gt; TO &lt;new_attribute_name&gt; [ CASCADE | RESTRICT ]
+ALTER TYPE &lt;name&gt; RENAME TO &lt;new_name&gt;
+ALTER TYPE &lt;name&gt; SET SCHEMA &lt;new_schema&gt;
+ALTER TYPE &lt;name&gt; ADD VALUE [ IF NOT EXISTS ] &lt;new_enum_value&gt; [ { BEFORE | AFTER } &lt;existing_enum_value&gt; ]
+ALTER TYPE &lt;name&gt; SET DEFAULT ENCODING ( &lt;storage_directive&gt; )
+
+where &lt;action&gt; is one of:
+  
+  ADD ATTRIBUTE &lt;attribute_name&gt; &lt;data_type&gt; [ COLLATE &lt;collation&gt; ] [ CASCADE | RESTRICT ]
+  DROP ATTRIBUTE [ IF EXISTS ] &lt;attribute_name&gt; [ CASCADE | RESTRICT ]
+  ALTER ATTRIBUTE &lt;attribute_name&gt; [ SET DATA ] TYPE &lt;data_type&gt; [ COLLATE &lt;collation&gt; ] [ CASCADE | RESTRICT ]
+</code></pre>
+<p class="p">where <var class="keyword varname">storage_directive</var> is:</p>
+
+      <pre class="pre codeblock"><code>   COMPRESSTYPE={ZLIB | ZSTD | QUICKLZ | RLE_TYPE | NONE}
+   COMPRESSLEVEL={0-19}
+   BLOCKSIZE={8192-2097152}</code></pre></div>
+
+    <div class="section" id="topic1__section3"><h2 class="title sectiontitle">Description</h2><p class="p"><code class="ph codeph">ALTER TYPE</code> changes the
+        definition of an existing type. There are several subforms:</p>
+
+      <ul class="ul">
+        <li class="li">
+          <strong class="ph b"><code class="ph codeph">ADD ATTRIBUTE</code></strong> — Adds a new attribute to a composite
+          type, using the same syntax as <code class="ph codeph">CREATE TYPE</code>. </li>
+
+        <li class="li">
+          <strong class="ph b"><code class="ph codeph">DROP ATTRIBUTE [ IF EXISTS ]</code></strong> — Drops an attribute from a
+          composite type. If <code class="ph codeph">IF EXISTS</code> is specified and the attribute does not
+          exist, no error is thrown. In this case a notice is issued instead. </li>
+
+        <li class="li"><strong class="ph b"><code class="ph codeph">SET DATA TYPE</code></strong> — Changes the type of an attribute of a
+          composite type. </li>
+
+        <li class="li">
+          <strong class="ph b"><code class="ph codeph">OWNER</code></strong> — Changes the owner of the type. </li>
+
+        <li class="li">
+          <strong class="ph b"><code class="ph codeph">RENAME</code></strong> — Changes the name of the type or the name of an
+          individual attribute of a composite type. </li>
+
+        <li class="li">
+          <strong class="ph b"><code class="ph codeph">SET SCHEMA</code></strong> — Moves the type into another schema. </li>
+
+        <li class="li">
+          <strong class="ph b"><code class="ph codeph">ADD VALUE [ IF NOT EXISTS ] [ BEFORE | AFTER ]</code></strong> — Adds a new value
+          to an enum type. The new value's place in the enum's ordering can be specified as being
+            <code class="ph codeph">BEFORE</code> or <code class="ph codeph">AFTER</code> one of the existing values. Otherwise,
+          the new item is added at the end of the list of values. <p class="p">If <code class="ph codeph">IF NOT
+              EXISTS</code> is specified, it is not an error if the type already contains the new
+            value; a notice is issued but no other action is taken. Otherwise, an error will occur
+            if the new value is already present.</p>
+
+        </li>
+
+        <li class="li">
+          <strong class="ph b"><code class="ph codeph">CASCADE</code></strong> — Automatically propagate the operation to typed tables of
+          the type being altered, and their descendants. </li>
+
+        <li class="li">
+          <strong class="ph b"><code class="ph codeph">RESTRICT</code></strong> — Refuse the operation if the type being altered is the
+          type of a typed table. This is the default. </li>
+
+      </ul>
+
+      <p class="p"> The <code class="ph codeph">ADD ATTRIBUTE</code>, <code class="ph codeph">DROP ATTRIBUTE</code>, and <code class="ph codeph">ALTER
+          ATTRIBUTE</code> actions can be combined into a list of multiple alterations to apply in
+        parallel. For example, it is possible to add several attributes and/or alter the type of
+        several attributes in a single command. </p>
+
+      <div class="p">You can change the name, the owner, and the schema of a type. You can also add or update
+        storage options for a scalar type.<div class="note"><span class="notetitle">Note:</span> Greenplum Database does not support adding storage
+          options for row or composite types.</div>
+</div>
+<p class="p">You must own the type to use <code class="ph codeph">ALTER TYPE</code>. To change the schema of a type, you
+        must also have <code class="ph codeph">CREATE</code> privilege on the new schema. To alter the owner, you
+        must also be a direct or indirect member of the new owning role, and that role must have
+          <code class="ph codeph">CREATE</code> privilege on the type's schema. (These restrictions enforce that
+        altering the owner does not do anything that could be done by dropping and recreating the
+        type. However, a superuser can alter ownership of any type.) To add an attribute or alter an attribute type, you must also
+        have <code class="ph codeph">USAGE</code> privilege on the data type.</p>
+
+      <p class="p"><code class="ph codeph">ALTER TYPE ... ADD VALUE</code> (the form that adds a new value to an enum type)
+        cannot be run inside a transaction block.</p>
+
+      <p class="p"> Comparisons involving an added enum value will sometimes be slower than comparisons
+        involving only original members of the enum type. This will usually only occur if
+          <code class="ph codeph">BEFORE</code> or <code class="ph codeph">AFTER</code> is used to set the new value's sort
+        position somewhere other than at the end of the list. However, sometimes it will happen even
+        though the new value is added at the end (this occurs if the OID counter "wrapped around"
+        since the original creation of the enum type). The slowdown is usually insignificant; but if
+        it matters, optimal performance can be regained by dropping and recreating the enum type, or
+        by dumping and reloading the database. </p>
+
+    </div>
+<div class="section" id="topic1__section4"><h2 class="title sectiontitle">Parameters</h2><dl class="dl parml"><dt class="dt pt dlterm"><var class="keyword varname">name</var></dt>
+<dd class="dd pd">The name (optionally schema-qualified) of an existing type to alter.
+</dd>
+<dt class="dt pt dlterm"><var class="keyword varname">new_name</var></dt>
+<dd class="dd pd">The new name for the type.</dd>
+<dt class="dt pt dlterm"><var class="keyword varname">new_owner</var></dt>
+<dd class="dd pd">The user name of the new owner of the type. </dd>
+<dt class="dt pt dlterm"><var class="keyword varname">new_schema</var></dt>
+<dd class="dd pd">The new schema for the type. </dd>
+
+          
+            <dt class="dt pt dlterm"><var class="keyword varname">attribute_name</var></dt>
+
+            <dd class="dd pd">The name of the attribute to add, alter, or drop.            
+            </dd>
+
+                   
+          
+            <dt class="dt pt dlterm"><var class="keyword varname">new_attribute_name</var></dt>
+
+            <dd class="dd pd">The new name of the attribute to be renamed.             
+            </dd>
+
+                   
+          
+            <dt class="dt pt dlterm"><var class="keyword varname">data_type</var></dt>
+
+            <dd class="dd pd">The data type of the attribute to add, or the new type of the
+                attribute to alter.             
+            </dd>
+
+                   
+          
+            <dt class="dt pt dlterm"><var class="keyword varname">new_enum_value</var></dt>
+
+            <dd class="dd pd">The new value to be added to an enum type's list of values.
+                Like all enum literals, it needs to be quoted.             
+            </dd>
+
+                   
+        
+          <dt class="dt pt dlterm"><var class="keyword varname">existing_enum_value</var></dt>
+
+          <dd class="dd pd">The existing enum value that the new value should be added immediately before or after
+            in the enum type's sort ordering. Like all enum literals, it needs to be quoted. </dd>
+
+        
+         <dt class="dt pt dlterm"><var class="keyword varname">storage_directive</var></dt>
+<dd class="dd pd">Identifies default storage options for the type when specified in a table column definition. Options include <code class="ph codeph">COMPRESSTYPE</code>, <code class="ph codeph">COMPRESSLEVEL</code>, and <code class="ph codeph">BLOCKSIZE</code>.</dd>
+<dd class="dd pd ddexpand"><strong class="ph b">COMPRESSTYPE</strong> — Set to <code class="ph codeph">ZLIB</code> (the default), <code class="ph codeph">ZSTD</code>,
+              <code class="ph codeph">RLE_TYPE</code>, or <code class="ph codeph">QUICKLZ</code><sup class="ph sup">1</sup> to specify the type
+              of compression used.<div class="note"><span class="notetitle">Note:</span> <sup class="ph sup">1</sup>QuickLZ compression is available only in the commercial
+                release of Tanzu Greenplum.</div>
+</dd>
+<dd class="dd pd ddexpand"><strong class="ph b">COMPRESSLEVEL</strong> — For Zstd compression, set to an
+              integer value from 1 (fastest compression) to 19 (highest compression ratio).
+              For zlib compression, the valid range is from 1 to 9. The QuickLZ
+            compression level can only be set to 1. For
+              <code class="ph codeph">RLE_TYPE</code>, the compression level can be set to an integer value from 1
+            (fastest compression) to 4 (highest compression ratio). The default compression level is 1.</dd>
+
+          <dd class="dd pd ddexpand"><strong class="ph b">BLOCKSIZE</strong> — Set to the size, in bytes, for each block in the column. The
+              <code class="ph codeph">BLOCKSIZE</code> must be between 8192 and 2097152 bytes, and be a multiple
+            of 8192. The default block size is 32768.<div class="note"><span class="notetitle">Note:</span> <var class="keyword varname">storage_directives</var> defined at the table- or column-level override the default storage options defined for a type.</div>
+</dd>
+</dl>
+</div>
+
+    <div class="section" id="topic1__section5"><h2 class="title sectiontitle">Examples</h2><p class="p">To rename the data type named
+          <code class="ph codeph">electronic_mail</code>:
+        </p>
+<pre class="pre codeblock"><code>ALTER TYPE electronic_mail RENAME TO email;</code></pre><p class="p">To change the owner
+        of the user-defined type <code class="ph codeph">email</code> to <code class="ph codeph">joe</code>:
+        </p>
+<pre class="pre codeblock"><code>ALTER TYPE email OWNER TO joe;</code></pre><p class="p">To change the schema of the
+        user-defined type <code class="ph codeph">email</code> to <code class="ph codeph">customers</code>:
+        </p>
+<pre class="pre codeblock"><code>ALTER TYPE email SET SCHEMA customers;</code></pre><p class="p">To set or alter the
+        compression type and compression level of the user-defined type named
+        <code class="ph codeph">int33</code>: </p>
+<pre class="pre codeblock"><code>ALTER TYPE int33 SET DEFAULT ENCODING (compresstype=zlib, compresslevel=7);</code></pre>
+      <p class="p"> To add a new attribute to a type:</p>
+
+      <pre class="pre codeblock"><code>ALTER TYPE compfoo ADD ATTRIBUTE f3 int;</code></pre>
+      <p class="p"> To add a new value to an enum type in a particular sort position:</p>
+
+      <pre class="pre codeblock"><code>ALTER TYPE colors ADD VALUE 'orange' AFTER 'red';</code></pre>
+    </div>
+<div class="section" id="topic1__section6"><h2 class="title sectiontitle">Compatibility</h2><p class="p">The variants to add and drop attributes are part of the SQL standard; the other variants are Greenplum Database extensions.</p>
+</div>
+<div class="section" id="topic1__section7"><h2 class="title sectiontitle">See Also</h2><p class="p"><a class="xref" href="CREATE_TYPE.html#topic1">CREATE TYPE</a>,
+            <a class="xref" href="DROP_TYPE.html#topic1">DROP TYPE</a></p>
+</div>
+</div>
+<div class="related-links">
+<div class="familylinks">
+<div class="parentlink"><strong>Parent topic:</strong> <a class="link" href="../sql_commands/sql_ref.html">SQL Commands</a></div>
+</div>
+</div></body>
+</html>

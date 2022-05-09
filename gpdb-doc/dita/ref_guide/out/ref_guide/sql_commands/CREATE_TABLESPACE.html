@@ -1,0 +1,176 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+
+<meta name="copyright" content="(C) Copyright 2022" />
+<meta name="DC.rights.owner" content="(C) Copyright 2022" />
+<meta name="generator" content="DITA-OT" /><meta name="DC.type" content="topic" />
+<meta name="DC.title" content="CREATE TABLESPACE" />
+<meta name="DC.relation" scheme="URI" content="../sql_commands/sql_ref.html" />
+<meta name="DC.format" content="XHTML" />
+<meta name="DC.identifier" content="topic1" />
+<link rel="stylesheet" type="text/css" href="../commonltr.css" />
+<title>CREATE TABLESPACE</title>
+</head>
+<body id="topic1">
+
+  <h1 class="title topictitle1" id="topic1__cf20941">CREATE TABLESPACE</h1>
+
+  <div class="body">
+    <p class="p" id="topic1__sql_command_desc">Defines a new tablespace.</p>
+
+    <div class="section" id="topic1__section2"><h2 class="title sectiontitle">Synopsis</h2>
+      
+      <pre class="pre codeblock" id="topic1__sql_command_synopsis"><code>CREATE TABLESPACE &lt;tablespace_name&gt; [OWNER &lt;username&gt;]  LOCATION '&lt;/path/to/dir&gt;' 
+   [WITH (content&lt;ID_1&gt;='&lt;/path/to/dir1&gt;'[, content&lt;ID_2&gt;='&lt;/path/to/dir2&gt;' ... ])]</code></pre>
+    </div>
+
+    <div class="section" id="topic1__section3"><h2 class="title sectiontitle">Description</h2>
+      
+      <p class="p"><code class="ph codeph">CREATE TABLESPACE</code> registers and configures a new tablespace for your
+        Greenplum Database system. The tablespace name must be distinct from the name of any
+        existing tablespace in the system. A tablespace is a Greenplum Database system object (a
+        global object), you can use a tablespace from any database if you have appropriate
+        privileges.</p>
+
+      <p class="p">A tablespace allows superusers to define an alternative host file system location where the
+        data files containing database objects (such as tables and indexes) reside.</p>
+
+      <p class="p">A user with appropriate privileges can pass a tablespace name to <a class="xref" href="CREATE_DATABASE.html#topic1">CREATE DATABASE</a>, <a class="xref" href="CREATE_TABLE.html#topic1">CREATE TABLE</a>, or <a class="xref" href="CREATE_INDEX.html#topic1">CREATE INDEX</a> to have the data
+        files for these objects stored within the specified tablespace.</p>
+
+      <p class="p">In Greenplum Database, the file system location must exist on all hosts including the hosts
+        running the master, standby mirror, each primary segment, and each mirror segment. </p>
+
+    </div>
+
+    <div class="section" id="topic1__section4"><h2 class="title sectiontitle">Parameters</h2>
+      
+      <dl class="dl parml">
+        
+          <dt class="dt pt dlterm"><var class="keyword varname">tablespacename</var></dt>
+
+          <dd class="dd pd">The name of a tablespace to be created. The name cannot begin with
+              <code class="ph codeph">pg_</code> or <code class="ph codeph">gp_</code>, as such names are reserved for system
+            tablespaces. </dd>
+
+        
+        
+          <dt class="dt pt dlterm">OWNER <var class="keyword varname">username</var></dt>
+
+          <dd class="dd pd">The name of the user who will own the tablespace. If omitted, defaults to the user
+            running the command. Only superusers can create tablespaces, but they can assign
+            ownership of tablespaces to non-superusers. </dd>
+
+        
+        
+          <dt class="dt pt dlterm">LOCATION '<var class="keyword varname">/path/to/dir</var>'</dt>
+
+          <dd class="dd pd">The absolute path to the directory (host system file location) that will be the root
+            directory for the tablespace. When registering a tablepace, the directory should be
+            empty and must be owned by the Greenplum Database system user. The directory must be
+            specified by an absolute path name of no more than 100 characters. (The location is used
+            to create a symlink target in the <span class="ph filepath">pg_tblspc</span> directory, and symlink
+            targets are truncated to 100 characters when sending to <code class="ph codeph">tar</code> from
+            utilities such as <code class="ph codeph">pg_basebackup</code>.)</dd>
+
+          <dd class="dd pd ddexpand">For each segment instance, you can specify a different directory for the tablespace in
+            the <code class="ph codeph">WITH</code> clause.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">content<var class="keyword varname">ID_i</var>='<var class="keyword varname">/path/to/dir_i</var>'</dt>
+
+          <dd class="dd pd">The value <var class="keyword varname">ID_i</var> is the content ID for the segment instance.
+              <var class="keyword varname">/path/to/dir_i</var> is the absolute path to the host system file location
+            that the segment instance uses as the root directory for the tablespace. You cannot
+            specify the content ID of the master instance (<code class="ph codeph">-1</code>). You can specify the
+            same directory for multiple segments. </dd>
+
+          <dd class="dd pd ddexpand">If a segment instance is not listed in the <code class="ph codeph">WITH</code> clause, Greenplum
+            Database uses the directory specified in the <code class="ph codeph">LOCATION</code> clause.</dd>
+
+          <dd class="dd pd ddexpand">When registering a tablepace, the directories should be empty and must be owned by the
+            Greenplum Database system user. Each directory must be specified by an absolute path
+            name of no more than 100 characters.</dd>
+
+        
+      </dl>
+
+    </div>
+
+    <div class="section" id="topic1__section5"><h2 class="title sectiontitle">Notes</h2>
+      
+      <p class="p">Tablespaces are only supported on systems that support symbolic links. </p>
+
+      <p class="p"><code class="ph codeph">CREATE TABLESPACE</code> cannot be run inside a transaction block.</p>
+
+      <p class="p">When creating tablespaces, ensure that file system locations have sufficient I/O speed and
+        available disk space.</p>
+
+      <p class="p">
+        <code class="ph codeph">CREATE TABLESPACE</code> creates symbolic links from the
+          <code class="ph codeph">pg_tblspc</code> directory in the master and segment instance data directory to
+        the directories specified in the command. </p>
+
+      <div class="p">The system catalog table <code class="ph codeph">pg_tablespace</code> stores tablespace information. This
+        command displays the tablespace OID values, names, and
+        owner.<pre class="pre codeblock"><code>SELECT oid, spcname, spcowner FROM pg_tablespace ;</code></pre></div>
+
+      <div class="p">The Greenplum Database built-in function
+            <code class="ph codeph">gp_tablespace_location(<var class="keyword varname">tablespace_oid</var>)</code> displays the
+        tablespace host system file locations for all segment instances. This command lists the
+        segment database IDs and host system file locations for the tablespace with OID
+          <code class="ph codeph">16385</code>.<pre class="pre codeblock"><code>SELECT * FROM gp_tablespace_location(16385) </code></pre></div>
+
+    </div>
+
+    <div class="note"><span class="notetitle">Note:</span> Greenplum Database does not support different tablespace locations for a primary-mirror
+      pair with the same content ID. It is only possible to configure different locations for
+      different content IDs. Do not modify symbolic links under the <code class="ph codeph">pg_tblspc</code>
+      directory so that primary-mirror pairs point to different file locations; this will lead to
+      erroneous behavior.</div>
+
+    <div class="section" id="topic1__section6"><h2 class="title sectiontitle">Examples</h2>
+      
+      <p class="p">Create a new tablespace and specify the file system location for the master and all segment
+        instances: </p>
+
+      <pre class="pre codeblock"><code>CREATE TABLESPACE mytblspace LOCATION '/gpdbtspc/mytestspace' ;</code></pre>
+      <p class="p">Create a new tablespace and specify a location for segment instances with content ID 0 and
+        1. For the master and segment instances not listed in the <code class="ph codeph">WITH</code> clause, the
+        file system location for the tablespace is specified in the <code class="ph codeph">LOCATION</code>
+        clause. </p>
+
+      <pre class="pre codeblock"><code>CREATE TABLESPACE mytblspace LOCATION '/gpdbtspc/mytestspace' WITH (content0='/temp/mytest', content1='/temp/mytest');</code></pre>
+      <p class="p">The example specifies the same location for the two segment instances. You can a specify
+        different location for each segment.</p>
+
+    </div>
+
+    <div class="section" id="topic1__section7"><h2 class="title sectiontitle">Compatibility</h2>
+      
+      <p class="p"><code class="ph codeph">CREATE TABLESPACE</code> is a Greenplum Database extension. </p>
+
+    </div>
+
+    <div class="section" id="topic1__section8"><h2 class="title sectiontitle">See Also</h2>
+      
+      <p class="p"><a class="xref" href="CREATE_DATABASE.html#topic1">CREATE DATABASE</a>,
+            <a class="xref" href="CREATE_TABLE.html#topic1">CREATE TABLE</a>,
+            <a class="xref" href="CREATE_INDEX.html#topic1">CREATE INDEX</a>,
+            <a class="xref" href="DROP_TABLESPACE.html#topic1">DROP TABLESPACE</a>,
+            <a class="xref" href="ALTER_TABLESPACE.html#topic1">ALTER TABLESPACE</a></p>
+
+    </div>
+
+  </div>
+
+<div class="related-links">
+<div class="familylinks">
+<div class="parentlink"><strong>Parent topic:</strong> <a class="link" href="../sql_commands/sql_ref.html">SQL Commands</a></div>
+</div>
+</div></body>
+</html>

@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+
+<meta name="copyright" content="(C) Copyright 2022" />
+<meta name="DC.rights.owner" content="(C) Copyright 2022" />
+<meta name="generator" content="DITA-OT" /><meta name="DC.type" content="topic" />
+<meta name="DC.title" content="DROP ROLE" />
+<meta name="DC.relation" scheme="URI" content="../sql_commands/sql_ref.html" />
+<meta name="DC.format" content="XHTML" />
+<meta name="DC.identifier" content="topic1" />
+<link rel="stylesheet" type="text/css" href="../commonltr.css" />
+<title>DROP ROLE</title>
+</head>
+<body id="topic1">
+<h1 class="title topictitle1" id="topic1__dd20941">DROP ROLE</h1>
+<div class="body"><p class="p" id="topic1__sql_command_desc">Removes a database role.</p>
+<div class="section" id="topic1__section2"><h2 class="title sectiontitle">Synopsis</h2><pre class="pre codeblock" id="topic1__sql_command_synopsis"><code>DROP ROLE [IF EXISTS] &lt;name&gt; [, ...]</code></pre></div>
+<div class="section" id="topic1__section3"><h2 class="title sectiontitle">Description</h2><p class="p"><code class="ph codeph">DROP ROLE</code> removes the specified role(s). To drop a
+superuser role, you must be a superuser yourself. To drop non-superuser
+roles, you must have <code class="ph codeph">CREATEROLE</code> privilege.</p>
+<p class="p">A role cannot be removed if it is still referenced in any database; an error will be raised if
+        so. Before dropping the role, you must drop all the objects it owns (or reassign their
+        ownership) and revoke any privileges the role has been granted on other objects. The
+            <a class="xref" href="REASSIGN_OWNED.html#topic1">REASSIGN OWNED</a> and
+            <a class="xref" href="DROP_OWNED.html#topic1">DROP OWNED</a> commands can be
+        useful for this purpose. </p>
+<p class="p">However, it is not necessary to remove role memberships involving
+the role; <code class="ph codeph">DROP ROLE</code> automatically revokes any memberships
+of the target role in other roles, and of other roles in the target role.
+The other roles are not dropped nor otherwise affected.</p>
+</div>
+<div class="section" id="topic1__section4"><h2 class="title sectiontitle">Parameters</h2><dl class="dl parml"><dt class="dt pt dlterm">IF EXISTS</dt>
+<dd class="dd pd">Do not throw an error if the role does not exist. A notice is issued
+in this case.</dd>
+<dt class="dt pt dlterm"><var class="keyword varname">name</var></dt>
+<dd class="dd pd">The name of the role to remove.</dd>
+</dl>
+</div>
+<div class="section" id="topic1__section5"><h2 class="title sectiontitle">Examples</h2><p class="p">Remove the roles named <code class="ph codeph">sally</code> and <code class="ph codeph">bob</code>:</p>
+<pre class="pre codeblock"><code>DROP ROLE sally, bob;</code></pre></div>
+<div class="section" id="topic1__section6"><h2 class="title sectiontitle">Compatibility</h2><p class="p">The SQL standard defines <code class="ph codeph">DROP ROLE</code>, but it allows only
+one role to be dropped at a time, and it specifies different privilege
+requirements than Greenplum Database uses. </p>
+</div>
+<div class="section" id="topic1__section7"><h2 class="title sectiontitle">See Also</h2><p class="p"><a class="xref" href="REASSIGN_OWNED.html#topic1">REASSIGN OWNED</a>,
+            <a class="xref" href="DROP_OWNED.html#topic1">DROP OWNED</a>,
+            <a class="xref" href="CREATE_ROLE.html#topic1">CREATE ROLE</a>,
+            <a class="xref" href="ALTER_ROLE.html#topic1">ALTER ROLE</a>,
+            <a class="xref" href="SET_ROLE.html#topic1">SET ROLE</a></p>
+</div>
+</div>
+<div class="related-links">
+<div class="familylinks">
+<div class="parentlink"><strong>Parent topic:</strong> <a class="link" href="../sql_commands/sql_ref.html">SQL Commands</a></div>
+</div>
+</div></body>
+</html>

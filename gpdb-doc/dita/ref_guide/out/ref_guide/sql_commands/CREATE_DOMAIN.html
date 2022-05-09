@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+
+<meta name="copyright" content="(C) Copyright 2022" />
+<meta name="DC.rights.owner" content="(C) Copyright 2022" />
+<meta name="generator" content="DITA-OT" /><meta name="DC.type" content="topic" />
+<meta name="DC.title" content="CREATE DOMAIN" />
+<meta name="DC.relation" scheme="URI" content="../sql_commands/sql_ref.html" />
+<meta name="DC.format" content="XHTML" />
+<meta name="DC.identifier" content="topic1" />
+<link rel="stylesheet" type="text/css" href="../commonltr.css" />
+<title>CREATE DOMAIN</title>
+</head>
+<body id="topic1">
+<h1 class="title topictitle1" id="topic1__bq20941">CREATE DOMAIN</h1>
+<div class="body"><p class="p" id="topic1__sql_command_desc">Defines a new domain.</p>
+<div class="section" id="topic1__section2"><h2 class="title sectiontitle">Synopsis</h2><pre class="pre codeblock" id="topic1__sql_command_synopsis"><code>CREATE DOMAIN &lt;name&gt; [AS] &lt;data_type&gt; [DEFAULT &lt;expression&gt;]
+       [ COLLATE &lt;collation&gt; ] 
+       [ CONSTRAINT &lt;constraint_name&gt;
+       | NOT NULL | NULL 
+       | CHECK (&lt;expression&gt;) [...]]</code></pre></div>
+<div class="section" id="topic1__section3"><h2 class="title sectiontitle">Description</h2>
+      <p class="p"><code class="ph codeph">CREATE DOMAIN</code> creates a new domain. A domain is essentially a data type
+        with optional constraints (restrictions on the allowed set of values). The user who defines
+        a domain becomes its owner. The domain name must be unique among the data types and domains
+        existing in its schema. </p>
+
+      <p class="p">If a schema name is given (for example, <code class="ph codeph">CREATE DOMAIN myschema.mydomain
+          ...</code>) then the domain is created in the specified schema. Otherwise it is created
+        in the current schema. </p>
+
+  
+  <p class="p">Domains are useful for abstracting common constraints on fields into
+a single location for maintenance. For example, several tables might
+contain email address columns, all requiring the same <code class="ph codeph">CHECK</code>
+constraint to verify the address syntax. It is easier to define a domain
+rather than setting up a column constraint for each table that has an
+email column.</p>
+
+      <p class="p"> To be able to create a domain, you must have <code class="ph codeph">USAGE</code> privilege on the
+        underlying type.</p>
+</div>
+<div class="section" id="topic1__section4"><h2 class="title sectiontitle">Parameters</h2>
+      <dl class="dl parml">
+        
+          <dt class="dt pt dlterm"><var class="keyword varname">name</var></dt>
+
+          <dd class="dd pd">The name (optionally schema-qualified) of a domain to be created. </dd>
+
+        
+        
+          <dt class="dt pt dlterm"><var class="keyword varname">data_type</var></dt>
+
+          <dd class="dd pd">The underlying data type of the domain. This may include array specifiers. </dd>
+
+        
+        
+          <dt class="dt pt dlterm">DEFAULT <var class="keyword varname">expression</var></dt>
+
+          <dd class="dd pd">Specifies a default value for columns of the domain data type. The value is any
+            variable-free expression (but subqueries are not allowed). The data type of the default
+            expression must match the data type of the domain. If no default value is specified,
+            then the default value is the null value. The default expression will be used in any
+            insert operation that does not specify a value for the column. If a default value is
+            defined for a particular column, it overrides any default associated with the domain. In
+            turn, the domain default overrides any default value associated with the underlying data
+            type.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">COLLATE <var class="keyword varname">collation</var></dt>
+
+          <dd class="dd pd">An optional collation for the domain. If no collation is specified, the underlying
+            data type's default collation is used. The underlying type must be collatable if
+              <code class="ph codeph">COLLATE</code> is specified. </dd>
+
+        
+        
+          <dt class="dt pt dlterm">CONSTRAINT <var class="keyword varname">constraint_name</var></dt>
+
+          <dd class="dd pd">An optional name for a constraint. If not specified, the system generates a name.
+          </dd>
+
+        
+        
+          <dt class="dt pt dlterm">NOT NULL</dt>
+
+          <dd class="dd pd">Values of this domain are normally prevented from being null. However, it is still
+            possible for a domain with this constraint to take a null value if it is assigned a
+            matching domain type that has become null, e.g. via a left outer join, or a command such
+            as <code class="ph codeph">INSERT INTO tab (domcol) VALUES ((SELECT domcol FROM tab WHERE
+              false))</code>. </dd>
+
+        
+        
+          <dt class="dt pt dlterm">NULL</dt>
+
+          <dd class="dd pd">Values of this domain are allowed to be null. This is the default. This clause is only
+            intended for compatibility with nonstandard SQL databases. Its use is discouraged in new
+            applications.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">CHECK <var class="keyword varname">(expression)</var></dt>
+
+          <dd class="dd pd"><code class="ph codeph">CHECK</code> clauses specify integrity constraints or tests which values of
+            the domain must satisfy. Each constraint must be an expression producing a Boolean
+            result. It should use the key word <code class="ph codeph">VALUE</code> to refer to the value being
+            tested. Currently, <code class="ph codeph">CHECK</code> expressions cannot contain subqueries nor
+            refer to variables other than <code class="ph codeph">VALUE</code>. </dd>
+
+        
+      </dl>
+</div>
+<div class="section" id="topic1__section5"><h2 class="title sectiontitle">Examples</h2><p class="p">Create the <code class="ph codeph">us_zip_code</code> data type. A regular expression test is used to verify
+        that the value looks like a valid US zip code. </p>
+<pre class="pre codeblock"><code>CREATE DOMAIN us_zip_code AS TEXT CHECK 
+       ( VALUE ~ '^\d{5}$' OR VALUE ~ '^\d{5}-\d{4}$' );</code></pre></div>
+<div class="section" id="topic1__section6"><h2 class="title sectiontitle">Compatibility</h2><p class="p"><code class="ph codeph">CREATE DOMAIN</code> conforms to the SQL standard. </p>
+</div>
+<div class="section" id="topic1__section7"><h2 class="title sectiontitle">See Also</h2><p class="p"><a class="xref" href="ALTER_DOMAIN.html#topic1">ALTER DOMAIN</a>, <a class="xref" href="DROP_DOMAIN.html#topic1">DROP DOMAIN</a></p>
+</div>
+</div>
+<div class="related-links">
+<div class="familylinks">
+<div class="parentlink"><strong>Parent topic:</strong> <a class="link" href="../sql_commands/sql_ref.html">SQL Commands</a></div>
+</div>
+</div></body>
+</html>

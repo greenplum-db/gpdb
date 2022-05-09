@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+
+<meta name="copyright" content="(C) Copyright 2022" />
+<meta name="DC.rights.owner" content="(C) Copyright 2022" />
+<meta name="generator" content="DITA-OT" /><meta name="DC.type" content="topic" />
+<meta name="DC.title" content="ALTER PROTOCOL" />
+<meta name="DC.relation" scheme="URI" content="../sql_commands/sql_ref.html" />
+<meta name="DC.format" content="XHTML" />
+<meta name="DC.identifier" content="topic1" />
+<link rel="stylesheet" type="text/css" href="../commonltr.css" />
+<title>ALTER PROTOCOL</title>
+</head>
+<body id="topic1">
+
+  <h1 class="title topictitle1" id="topic1__at136704">ALTER PROTOCOL</h1>
+
+  <div class="body">
+    <p class="p" id="topic1__sql_command_desc">Changes the definition of a protocol.</p>
+
+    <div class="section" id="topic1__section2"><h2 class="title sectiontitle">Synopsis</h2>
+      
+      <pre class="pre codeblock" id="topic1__sql_command_synopsis"><code>ALTER PROTOCOL &lt;name&gt; RENAME TO &lt;newname&gt;
+
+ALTER PROTOCOL &lt;name&gt; OWNER TO &lt;newowner&gt;</code></pre>
+    </div>
+
+    <div class="section" id="topic1__section3"><h2 class="title sectiontitle">Description</h2>
+      
+      <p class="p"><code class="ph codeph">ALTER PROTOCOL</code> changes the definition of a protocol. Only the protocol
+        name or owner can be altered.</p>
+
+      <p class="p">You must own the protocol to use <code class="ph codeph">ALTER PROTOCOL</code>. To alter the owner, you
+        must also be a direct or indirect member of the new owning role, and that role must have
+          <code class="ph codeph">CREATE</code> privilege on schema of the conversion. </p>
+
+      <p class="p">These restrictions are in place to ensure that altering the owner only makes changes that
+        could by made by dropping and recreating the protocol. Note that a superuser can alter
+        ownership of any protocol. </p>
+
+    </div>
+
+    <div class="section" id="topic1__section4"><h2 class="title sectiontitle">Parameters</h2>
+      
+      <dl class="dl parml">
+        
+          <dt class="dt pt dlterm"><var class="keyword varname">name</var></dt>
+
+          <dd class="dd pd">The name (optionally schema-qualified) of an existing protocol.</dd>
+
+        
+        
+          <dt class="dt pt dlterm"><var class="keyword varname">newname</var></dt>
+
+          <dd class="dd pd">The new name of the protocol. </dd>
+
+        
+        
+          <dt class="dt pt dlterm"><var class="keyword varname">newowner</var></dt>
+
+          <dd class="dd pd">The new owner of the protocol. </dd>
+
+        
+      </dl>
+
+    </div>
+
+    <div class="section" id="topic1__section5"><h2 class="title sectiontitle">Examples</h2>
+      
+      <p class="p">To rename the conversion <code class="ph codeph">GPDBauth</code> to
+        <code class="ph codeph">GPDB_authentication</code>:</p>
+
+      <pre class="pre codeblock"><code>ALTER PROTOCOL GPDBauth RENAME TO GPDB_authentication;</code></pre>
+      <p class="p">To change the owner of the conversion <code class="ph codeph">GPDB_authentication</code> to
+          <code class="ph codeph">joe</code>:</p>
+
+      <pre class="pre codeblock"><code>ALTER PROTOCOL GPDB_authentication OWNER TO joe;</code></pre>
+    </div>
+
+    <div class="section" id="topic1__section6"><h2 class="title sectiontitle">Compatibility</h2>
+      
+      <p class="p">There is no <code class="ph codeph">ALTER PROTOCOL</code> statement in the SQL standard. </p>
+
+    </div>
+
+    <div class="section"><h2 class="title sectiontitle">See Also</h2>
+      
+      <p class="p"><a class="xref" href="CREATE_EXTERNAL_TABLE.html#topic1">CREATE EXTERNAL TABLE</a>, <a class="xref" href="CREATE_PROTOCOL.html#topic1">CREATE PROTOCOL</a>, <a class="xref" href="DROP_PROTOCOL.html#topic1">DROP PROTOCOL</a></p>
+
+    </div>
+
+  </div>
+
+<div class="related-links">
+<div class="familylinks">
+<div class="parentlink"><strong>Parent topic:</strong> <a class="link" href="../sql_commands/sql_ref.html">SQL Commands</a></div>
+</div>
+</div></body>
+</html>

@@ -1,0 +1,1199 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+
+<meta name="copyright" content="(C) Copyright 2022" />
+<meta name="DC.rights.owner" content="(C) Copyright 2022" />
+<meta name="generator" content="DITA-OT" /><meta name="DC.type" content="topic" />
+<meta name="DC.title" content="gpload" />
+<meta name="DC.format" content="XHTML" />
+<meta name="DC.identifier" content="topic1" />
+<link rel="stylesheet" type="text/css" href="../../out/commonltr.css" />
+<title>gpload</title>
+</head>
+<body id="topic1">
+
+    <h1 class="title topictitle1" id="topic1__ke20941">gpload</h1>
+
+    <div class="body">
+        <p class="p">Runs a load job as defined in a YAML formatted control file.</p>
+
+        <div class="section" id="topic1__section2"><h2 class="title sectiontitle">Synopsis</h2>
+            
+            <pre class="pre codeblock"><code>gpload -f &lt;control_file&gt; [-l &lt;log_file&gt;] [-h &lt;hostname&gt;] [-p &lt;port&gt;] 
+   [-U &lt;username&gt;] [-d &lt;database&gt;] [-W] [--gpfdist_timeout &lt;seconds&gt;] 
+   [--no_auto_trans] [--max_retries &lt;retry_times&gt;] [[-v | -V] [-q]] [-D]
+
+gpload -? 
+
+gpload --version</code></pre>
+        </div>
+
+        <div class="section" id="topic1__section3"><h2 class="title sectiontitle">Requirements</h2>
+            
+            <p class="p">The client machine where <code class="ph codeph">gpload</code> is run must have the
+                following:</p>
+
+            <ul class="ul">
+                <li class="li" id="topic1__ke147925">The <a class="xref" href="gpfdist.html#topic1">gpfdist</a>
+                    parallel file distribution program installed and in your <code class="ph codeph">$PATH</code>.
+                    This program is located in <code class="ph codeph">$GPHOME/bin</code> of your Greenplum
+                    Database server installation.</li>
+
+                <li class="li" id="topic1__ke144650">Network access to and from all hosts in your Greenplum Database
+                    array (coordinator and segments).</li>
+
+                <li class="li" id="topic1__ke145550">Network access to and from the hosts where the data to be loaded
+                    resides (ETL servers).</li>
+
+            </ul>
+
+        </div>
+
+        <div class="section" id="topic1__section4"><h2 class="title sectiontitle">Description</h2>
+            
+            <div class="p"><code class="ph codeph">gpload</code> is a data loading utility that acts as an interface to the
+                Greenplum Database external table parallel loading feature. Using a load
+                specification defined in a YAML formatted control file, <code class="ph codeph">gpload</code> runs
+                a load by invoking the Greenplum Database parallel file server (<a class="xref" href="gpfdist.html">gpfdist</a>), creating an external table
+                definition based on the source data defined, and running an <code class="ph codeph">INSERT</code>,
+                    <code class="ph codeph">UPDATE</code> or <code class="ph codeph">MERGE</code> operation to load the source
+                data into the target table in the database. <div class="note"><span class="notetitle">Note:</span> <code class="ph codeph">gpfdist</code> is
+                    compatible only with the Greenplum Database major version in which it is
+                    shipped. For example, a <code class="ph codeph">gpfdist</code> utility that is installed with
+                    Greenplum Database 4.x cannot be used with Greenplum Database 5.x or 6.x.</div>
+
+                <div class="note"><span class="notetitle">Note:</span> The Greenplum Database 5.22 and later <code class="ph codeph">gpload</code> for Linux is
+                    compatible with Greenplum Database 6.x. The Greenplum Database 6.x
+                        <code class="ph codeph">gpload</code> for both Linux and Windows is compatible with
+                    Greenplum 5.x.</div>
+
+                <div class="note" id="topic1__gpload-limitation"><span class="notetitle">Note:</span> <code class="ph codeph">MERGE</code> and <code class="ph codeph">UPDATE</code>
+                    operations are not supported if the target table column name is a reserved
+                    keyword, has capital letters, or includes any character that requires quotes ("
+                    ") to identify the column.</div>
+</div>
+
+            <p class="p">The operation, including any SQL commands specified in the <code class="ph codeph">SQL</code>
+                collection of the YAML control file (see <a class="xref" href="#topic1__section7">Control File Format</a>), are performed as a single transaction to
+                prevent inconsistent data when performing multiple, simultaneous load operations on
+                a target table. </p>
+
+        </div>
+
+        <div class="section" id="topic1__section5"><h2 class="title sectiontitle">Options</h2>
+            
+            <dl class="dl parml">
+                
+                    <dt class="dt pt dlterm">-f <var class="keyword varname">control_file</var></dt>
+
+                    <dd class="dd pd"><strong class="ph b">Required. </strong>A YAML file that contains the load specification details.
+                        See <a class="xref" href="#topic1__section7">Control File Format</a>.</dd>
+
+                
+                
+                    <dt class="dt pt dlterm">--gpfdist_timeout <var class="keyword varname">seconds</var></dt>
+
+                    <dd class="dd pd">Sets the timeout for the <code class="ph codeph">gpfdist</code> parallel file distribution
+                        program to send a response. Enter a value from <code class="ph codeph">0</code> to
+                            <code class="ph codeph">30</code> seconds (entering "<code class="ph codeph">0</code>" to disables
+                        timeouts). Note that you might need to increase this value when operating on
+                        high-traffic networks.</dd>
+
+                
+                
+                    <dt class="dt pt dlterm">-l <var class="keyword varname">log_file</var></dt>
+
+                    <dd class="dd pd">Specifies where to write the log file. Defaults to
+                                <code class="ph codeph">~/gpAdminLogs/gpload_<var class="keyword varname">YYYYMMDD</var></code>.
+                        For more information about the log file, see <a class="xref" href="#topic1__section9">Log File Format</a>.</dd>
+
+                
+                
+                    <dt class="dt pt dlterm">--no_auto_trans</dt>
+
+                    <dd class="dd pd">Specify <code class="ph codeph">--no_auto_trans</code> to disable processing the load
+                        operation as a single transaction if you are performing a single load
+                        operation on the target table.</dd>
+
+                    <dd class="dd pd ddexpand">By default, <code class="ph codeph">gpload</code> processes each load operation as a
+                        single transaction to prevent inconsistent data when performing multiple,
+                        simultaneous operations on a target table. </dd>
+
+                
+                
+                    <dt class="dt pt dlterm">-q (no screen output)</dt>
+
+                    <dd class="dd pd">Run in quiet mode. Command output is not displayed on the screen, but is
+                        still written to the log file.</dd>
+
+                
+                
+                    <dt class="dt pt dlterm">-D (debug mode)</dt>
+
+                    <dd class="dd pd">Check for error conditions, but do not run the load. </dd>
+
+                
+                
+                    <dt class="dt pt dlterm">-v (verbose mode)</dt>
+
+                    <dd class="dd pd">Show verbose output of the load steps as they are run.</dd>
+
+                
+                
+                    <dt class="dt pt dlterm">-V (very verbose mode)</dt>
+
+                    <dd class="dd pd">Shows very verbose output.</dd>
+
+                
+                
+                    <dt class="dt pt dlterm">-? (show help)</dt>
+
+                    <dd class="dd pd">Show help, then exit.</dd>
+
+                
+                
+                    <dt class="dt pt dlterm">--version</dt>
+
+                    <dd class="dd pd">Show the version of this utility, then exit.</dd>
+
+                
+            </dl>
+
+            <div class="sectiondiv" id="topic1__section6">
+                <strong class="ph b">Connection Options</strong>
+                <dl class="dl parml">
+                    
+                        <dt class="dt pt dlterm">-d <var class="keyword varname">database</var></dt>
+
+                        <dd class="dd pd">The database to load into. If not specified, reads from the load control
+                            file, the environment variable <code class="ph codeph">$PGDATABASE</code> or defaults
+                            to the current system user name.</dd>
+
+                    
+                    
+                        <dt class="dt pt dlterm">-h <var class="keyword varname">hostname</var></dt>
+
+                        <dd class="dd pd">Specifies the host name of the machine on which the Greenplum Database
+                            coordinator database server is running. If not specified, reads from the load
+                            control file, the environment variable <code class="ph codeph">$PGHOST</code> or
+                            defaults to <code class="ph codeph">localhost</code>.</dd>
+
+                    
+                    
+                        <dt class="dt pt dlterm">-p <var class="keyword varname">port</var></dt>
+
+                        <dd class="dd pd">Specifies the TCP port on which the Greenplum Database coordinator database
+                            server is listening for connections. If not specified, reads from the
+                            load control file, the environment variable <code class="ph codeph">$PGPORT</code> or
+                            defaults to 5432.</dd>
+
+                    
+                    
+                        <dt class="dt pt dlterm">--max_retries <var class="keyword varname">retry_times</var></dt>
+
+                        <dd class="dd pd">
+                            <p class="p">Specifies the maximum number of times <code class="ph codeph">gpload</code>
+                                attempts to connect to Greenplum Database after a connection
+                                timeout. The default value is <code class="ph codeph">0</code>, do not attempt to
+                                connect after a connection timeout. A negative integer, such as
+                                    <code class="ph codeph">-1</code>, specifies an unlimited number of
+                                attempts.</p>
+
+                        </dd>
+
+                    
+                    
+                        <dt class="dt pt dlterm">-U <var class="keyword varname">username</var></dt>
+
+                        <dd class="dd pd">The database role name to connect as. If not specified, reads from the
+                            load control file, the environment variable <code class="ph codeph">$PGUSER</code> or
+                            defaults to the current system user name.</dd>
+
+                    
+                    
+                        <dt class="dt pt dlterm">-W (force password prompt)</dt>
+
+                        <dd class="dd pd">Force a password prompt. If not specified, reads the password from the
+                            environment variable <code class="ph codeph">$PGPASSWORD</code> or from a password
+                            file specified by <code class="ph codeph">$PGPASSFILE</code> or in
+                                <code class="ph codeph">~/.pgpass</code>. If these are not set, then
+                                <code class="ph codeph">gpload</code> will prompt for a password even if
+                                <code class="ph codeph">-W</code> is not supplied.</dd>
+
+                    
+                </dl>
+
+            </div>
+        </div>
+
+        <div class="section" id="topic1__section7"><h2 class="title sectiontitle">Control File Format</h2>
+            
+            <p class="p">The <code class="ph codeph">gpload</code> control file uses the <a class="xref" href="http://yaml.org/spec/1.1/" target="_blank">YAML 1.1</a>
+                document format and then implements its own schema for defining the various steps of
+                a Greenplum Database load operation. The control file must be a valid YAML
+                document.</p>
+
+            <p class="p">The <code class="ph codeph">gpload</code> program processes the control file document in order and
+                uses indentation (spaces) to determine the document hierarchy and the relationships
+                of the sections to one another. The use of white space is significant. White space
+                should not be used simply for formatting purposes, and tabs should not be used at
+                all.</p>
+
+            <p class="p">The basic structure of a load control file is:</p>
+
+            <pre class="pre codeblock"><code>---
+<a class="xref" href="#topic1__cfversion">VERSION</a>: 1.0.0.1
+<a class="xref" href="#topic1__cfdatabase">DATABASE</a>: &lt;db_name&gt;
+<a class="xref" href="#topic1__cfuser">USER</a>: &lt;db_username&gt;
+<a class="xref" href="#topic1__cfhost">HOST</a>: &lt;coordinator_hostname&gt;
+<a class="xref" href="#topic1__cfport">PORT</a>: &lt;coordinator_port&gt;
+<a class="xref" href="#topic1__cfgpload">GPLOAD</a>:
+   <a class="xref" href="#topic1__cfinput">INPUT</a>:
+    - <a class="xref" href="#topic1__cfsource">SOURCE</a>:
+         <a class="xref" href="#topic1__cfsourcelocalname">LOCAL_HOSTNAME</a>:
+           - &lt;hostname_or_ip&gt;
+         <a class="xref" href="#topic1__cfsourceport">PORT</a>: &lt;http_port&gt;
+       | <a class="xref" href="#topic1__cfversion">PORT_RANGE</a>: [&lt;start_port_range&gt;, &lt;end_port_range&gt;]
+         <a class="xref" href="#topic1__cfsourcefile">FILE</a>: 
+           - &lt;/path/to/input_file&gt;
+         <a class="xref" href="#topic1__cfsourcessl">SSL</a>: true | false
+         <a class="xref" href="#topic1__cfsourcecertificatespath">CERTIFICATES_PATH</a>: &lt;/path/to/certificates&gt;
+    - <a class="xref" href="#topic1__fqdn">FULLY_QUALIFIED_DOMAIN_NAME</a>: true | false
+    - <a class="xref" href="#topic1__cfcolumns">COLUMNS</a>:
+           - &lt;field_name&gt;: &lt;data_type&gt;
+    - <a class="xref" href="#topic1__cftransform">TRANSFORM</a>: '&lt;transformation&gt;'
+    - <a class="xref" href="#topic1__cftransformconfig">TRANSFORM_CONFIG</a>: '&lt;configuration-file-path&gt;' 
+    - <a class="xref" href="#topic1__cfmaxlinelength">MAX_LINE_LENGTH</a>: &lt;integer&gt; 
+    - <a class="xref" href="#topic1__cfformat">FORMAT</a>: text | csv
+    - <a class="xref" href="#topic1__cfdelimiter">DELIMITER</a>: '&lt;delimiter_character&gt;'
+    - <a class="xref" href="#topic1__cfescape">ESCAPE</a>: '&lt;escape_character&gt;' | 'OFF'
+    - <a class="xref" href="#topic1__newline">NEWLINE</a>: 'LF' | 'CR' | 'CRLF'
+    - <a class="xref" href="#topic1__cfnullas">NULL_AS</a>: '&lt;null_string&gt;'
+    - <a class="xref" href="#topic1__cfillfields">FILL_MISSING_FIELDS</a>: true | false
+    - <a class="xref" href="#topic1__cfforcenotnull">FORCE_NOT_NULL</a>: true | false
+    - <a class="xref" href="#topic1__cfquote">QUOTE</a>: '&lt;csv_quote_character&gt;'
+    - <a class="xref" href="#topic1__cfheader">HEADER</a>: true | false
+    - <a class="xref" href="#topic1__cfencoding">ENCODING</a>: &lt;database_encoding&gt;
+    - <a class="xref" href="#topic1__cferrorlimit">ERROR_LIMIT</a>: &lt;integer&gt;
+    - <a class="xref" href="#topic1__cferrorlog">LOG_ERRORS</a>: true | false
+   <a class="xref" href="#topic1__cfexternal">EXTERNAL</a>:
+      - <a class="xref" href="#topic1__cfschema">SCHEMA</a>: &lt;schema&gt; | '%'
+   <a class="xref" href="#topic1__cfoutput">OUTPUT</a>:
+    - <a class="xref" href="#topic1__cftable">TABLE</a>: &lt;schema.table_name&gt;
+    - <a class="xref" href="#topic1__cfmode">MODE</a>: insert | update | merge
+    - <a class="xref" href="#topic1__cfmatchcolumns">MATCH_COLUMNS</a>:
+           - &lt;target_column_name&gt;
+    - <a class="xref" href="#topic1__cfupdatecolumns">UPDATE_COLUMNS</a>:
+           - &lt;target_column_name&gt;
+    - <a class="xref" href="#topic1__cfupdatecondition">UPDATE_CONDITION</a>: '&lt;boolean_condition&gt;'
+    - <a class="xref" href="#topic1__cfmapping">MAPPING</a>:
+              &lt;target_column_name&gt;: &lt;source_column_name&gt; | '&lt;expression&gt;'
+   <a class="xref" href="#topic1__cfpreload">PRELOAD</a>:
+    - <a class="xref" href="#topic1__cftruncate">TRUNCATE</a>: true | false
+    - <a class="xref" href="#topic1__cfreusetables">REUSE_TABLES</a>: true | false
+    - <a class="xref" href="#topic1__cfstagetbl">STAGING_TABLE</a>: &lt;external_table_name&gt;
+    - <a class="xref" href="#topic1__cffastmatch">FAST_MATCH</a>: true | false
+   <a class="xref" href="#topic1__cfsql">SQL</a>:
+    - <a class="xref" href="#topic1__cfbefore">BEFORE</a>: "&lt;sql_command&gt;"
+    - <a class="xref" href="#topic1__cfafter">AFTER</a>: "&lt;sql_command&gt;"</code></pre>
+            <dl class="dl parml">
+                
+                    <dt class="dt pt dlterm" id="topic1__cfversion">VERSION</dt>
+
+                    <dd class="dd pd">Optional. The version of the <code class="ph codeph">gpload</code> control file schema.
+                        The current version is 1.0.0.1. </dd>
+
+                
+                
+                    <dt class="dt pt dlterm" id="topic1__cfdatabase">DATABASE</dt>
+
+                    <dd class="dd pd">Optional. Specifies which database in the Greenplum Database system to
+                        connect to. If not specified, defaults to <code class="ph codeph">$PGDATABASE</code> if
+                        set or the current system user name. You can also specify the database on
+                        the command line using the <code class="ph codeph">-d</code> option. </dd>
+
+                
+                
+                    <dt class="dt pt dlterm" id="topic1__cfuser">USER</dt>
+
+                    <dd class="dd pd">Optional. Specifies which database role to use to connect. If not specified,
+                        defaults to the current user or <code class="ph codeph">$PGUSER</code> if set. You can
+                        also specify the database role on the command line using the
+                            <code class="ph codeph">-U</code> option. </dd>
+
+                    <dd class="dd pd ddexpand">If the user running <code class="ph codeph">gpload</code> is not a Greenplum Database
+                        superuser, then the appropriate rights must be granted to the user for the
+                        load to be processed. See the <cite class="cite">Greenplum Database Reference
+                            Guide</cite> for more information.</dd>
+
+                
+                
+                    <dt class="dt pt dlterm" id="topic1__cfhost">HOST</dt>
+
+                    <dd class="dd pd">Optional. Specifies Greenplum Database coordinator host name. If not specified,
+                        defaults to localhost or <code class="ph codeph">$PGHOST</code> if set. You can also
+                        specify the coordinator host name on the command line using the
+                            <code class="ph codeph">-h</code> option.</dd>
+
+                
+                
+                    <dt class="dt pt dlterm" id="topic1__cfport">PORT</dt>
+
+                    <dd class="dd pd">Optional. Specifies Greenplum Database coordinator port. If not specified,
+                        defaults to 5432 or <code class="ph codeph">$PGPORT</code> if set. You can also specify
+                        the coordinator port on the command line using the <code class="ph codeph">-p</code>
+                        option.</dd>
+
+                
+                
+                    <dt class="dt pt dlterm" id="topic1__cfgpload">GPLOAD</dt>
+
+                    <dd class="dd pd">Required. Begins the load specification section. A <code class="ph codeph">GPLOAD</code>
+                        specification must have an <code class="ph codeph">INPUT</code> and an
+                            <code class="ph codeph">OUTPUT</code> section defined. <dl class="dl parml">
+                            
+                                <dt class="dt pt dlterm" id="topic1__cfinput">INPUT</dt>
+
+                                <dd class="dd pd">Required. Defines the location and the format of the input data
+                                    to be loaded. <code class="ph codeph">gpload</code> will start one or more
+                                    instances of the <a class="xref" href="gpfdist.html#topic1">gpfdist</a> file distribution program on the current
+                                    host and create the required external table definition(s) in
+                                    Greenplum Database that point to the source data. Note that the
+                                    host from which you run <code class="ph codeph">gpload</code> must be
+                                    accessible over the network by all Greenplum Database hosts
+                                    (coordinator and segments).<dl class="dl parml">
+                                        
+                                            <dt class="dt pt dlterm" id="topic1__cfsource">SOURCE</dt>
+
+                                            <dd class="dd pd">Required. The <code class="ph codeph">SOURCE</code> block of an
+                                                  <code class="ph codeph">INPUT</code> specification defines the
+                                                location of a source file. An <code class="ph codeph">INPUT</code>
+                                                section can have more than one
+                                                  <code class="ph codeph">SOURCE</code> block defined. Each
+                                                  <code class="ph codeph">SOURCE</code> block defined corresponds
+                                                to one instance of the <a class="xref" href="gpfdist.html#topic1">gpfdist</a> file distribution program that
+                                                will be started on the local machine. Each
+                                                  <code class="ph codeph">SOURCE</code> block defined must have a
+                                                  <code class="ph codeph">FILE</code> specification. <p class="p">For more
+                                                  information about using the
+                                                  <code class="ph codeph">gpfdist</code> parallel file server and
+                                                  single and multiple <code class="ph codeph">gpfdist</code>
+                                                  instances, see <a class="xref" href="../../admin_guide/load/topics/g-loading-and-unloading-data.html" target="_blank">Loading and
+                                                  Unloading Data</a>.</p>
+<dl class="dl parml">
+                                                  
+                                                  <dt class="dt pt dlterm" id="topic1__cfsourcelocalname">LOCAL_HOSTNAME</dt>
+
+                                                  <dd class="dd pd">Optional. Specifies the host name or IP
+                                                  address of the local machine on which
+                                                  <code class="ph codeph">gpload</code> is running. If this
+                                                  machine is configured with multiple network
+                                                  interface cards (NICs), you can specify the host
+                                                  name or IP of each individual NIC to allow network
+                                                  traffic to use all NICs simultaneously. The
+                                                  default is to use the local machine's primary host
+                                                  name or IP only. </dd>
+
+                                                  
+                                                  
+                                                  <dt class="dt pt dlterm" id="topic1__cfsourceport">PORT</dt>
+
+                                                  <dd class="dd pd">Optional. Specifies the specific port number
+                                                  that the <a class="xref" href="gpfdist.html#topic1">gpfdist</a> file distribution
+                                                  program should use. You can also supply a
+                                                  <code class="ph codeph">PORT_RANGE</code> to select an available
+                                                  port from the specified range. If both
+                                                  <code class="ph codeph">PORT</code> and
+                                                  <code class="ph codeph">PORT_RANGE</code> are defined, then
+                                                  <code class="ph codeph">PORT</code> takes precedence. If neither
+                                                  <code class="ph codeph">PORT</code> or
+                                                  <code class="ph codeph">PORT_RANGE</code> are defined, the
+                                                  default is to select an available port between
+                                                  8000 and 9000. <p class="p">If multiple host names are
+                                                  declared in <code class="ph codeph">LOCAL_HOSTNAME</code>, this
+                                                  port number is used for all hosts. This
+                                                  configuration is desired if you want to use all
+                                                  NICs to load the same file or set of files in a
+                                                  given directory location.</p>
+</dd>
+
+                                                  
+                                                  
+                                                  <dt class="dt pt dlterm" id="topic1__cfsourceportrange">PORT_RANGE</dt>
+
+                                                  <dd class="dd pd">Optional. Can be used instead of
+                                                  <code class="ph codeph">PORT</code> to supply a range of port
+                                                  numbers from which <code class="ph codeph">gpload</code> can
+                                                  choose an available port for this instance of the
+                                                  <a class="xref" href="gpfdist.html#topic1">gpfdist</a> file distribution program.</dd>
+
+                                                  
+                                                  
+                                                  <dt class="dt pt dlterm" id="topic1__cfsourcefile">FILE</dt>
+
+                                                  <dd class="dd pd">Required. Specifies the location of a file,
+                                                  named pipe, or directory location on the local
+                                                  file system that contains data to be loaded. You
+                                                  can declare more than one file so long as the data
+                                                  is of the same format in all files specified.
+                                                  <p class="p">If the files are compressed using
+                                                  <code class="ph codeph">gzip</code> or <code class="ph codeph">bzip2</code>
+                                                  (have a <code class="ph codeph">.gz</code> or
+                                                  <code class="ph codeph">.bz2</code> file extension), the files
+                                                  will be uncompressed automatically (provided that
+                                                  <code class="ph codeph">gunzip</code> or
+                                                  <code class="ph codeph">bunzip2</code> is in your
+                                                  path).</p>
+<p class="p">When specifying which source files to
+                                                  load, you can use the wildcard character
+                                                  (<code class="ph codeph">*</code>) or other C-style pattern
+                                                  matching to denote multiple files. The files
+                                                  specified are assumed to be relative to the
+                                                  current directory from which
+                                                  <code class="ph codeph">gpload</code> is run (or you can declare
+                                                  an absolute path).</p>
+</dd>
+
+                                                  
+                                                  
+                                                  <dt class="dt pt dlterm" id="topic1__cfsourcessl">SSL</dt>
+
+                                                  <dd class="dd pd">Optional. Specifies usage of SSL encryption.
+                                                  If <code class="ph codeph">SSL</code> is set to true,
+                                                  <code class="ph codeph">gpload</code> starts the
+                                                  <code class="ph codeph">gpfdist</code> server with the
+                                                  <code class="ph codeph">--ssl</code> option and uses the
+                                                  <code class="ph codeph">gpfdists://</code> protocol.</dd>
+
+                                                  
+                                                  
+                                                  <dt class="dt pt dlterm" id="topic1__cfsourcecertificatespath">CERTIFICATES_PATH</dt>
+
+                                                  <dd class="dd pd">Required when SSL is <code class="ph codeph">true</code>;
+                                                  cannot be specified when SSL is
+                                                  <code class="ph codeph">false</code> or unspecified. The
+                                                  location specified in
+                                                  <code class="ph codeph">CERTIFICATES_PATH</code> must contain
+                                                  the following files: <ul class="ul" id="topic1__ul_azs_eau_mo">
+                                                  <li class="li" id="topic1__ke148142">The server certificate file,
+                                                  <code class="ph codeph">server.crt</code></li>
+
+                                                  <li class="li" id="topic1__ke148143">The server private key file,
+                                                  <code class="ph codeph">server.key</code></li>
+
+                                                  <li class="li" id="topic1__ke148144">The trusted certificate
+                                                  authorities, <code class="ph codeph">root.crt</code></li>
+
+                                                  </ul>
+<p class="p">The root directory (<code class="ph codeph">/</code>)
+                                                  cannot be specified as
+                                                  <code class="ph codeph">CERTIFICATES_PATH</code>.</p>
+</dd>
+
+                                                  
+                                                </dl>
+</dd>
+
+                                        
+                                        
+                                            <dt class="dt pt dlterm" id="topic1__fqdn">FULLY_QUALIFIED_DOMAIN_NAME</dt>
+
+                                            <dd class="dd pd">Optional. Specifies whether <code class="ph codeph">gpload</code>
+                                                resolve hostnames to the fully qualified domain name
+                                                (FQDN) or the local hostname. If the value is set to
+                                                  <code class="ph codeph">true</code>, names are resolved to the
+                                                FQDN. If the value is set to <code class="ph codeph">false</code>,
+                                                resolution is to the local hostname. The default is
+                                                  <code class="ph codeph">false</code>.<p class="p">A fully qualified domain
+                                                  name might be required in some situations. For
+                                                  example, if the Greenplum Database system is in a
+                                                  different domain than an ETL application that is
+                                                  being accessed by
+                                                <code class="ph codeph">gpload</code>.</p>
+</dd>
+
+                                        
+                                        
+                                            <dt class="dt pt dlterm" id="topic1__cfcolumns">COLUMNS</dt>
+
+                                            <dd class="dd pd">Optional. Specifies the schema of the source data
+                                                file(s) in the format of
+                                                  <code class="ph codeph"><var class="keyword varname">field_name</var>:<var class="keyword varname">data_type</var></code>.
+                                                The <code class="ph codeph">DELIMITER</code> character in the
+                                                source file is what separates two data value fields
+                                                (columns). A row is determined by a line feed
+                                                character (<code class="ph codeph">0x0a</code>). <p class="p">If the input
+                                                  <code class="ph codeph">COLUMNS</code> are not specified, then
+                                                  the schema of the output <code class="ph codeph">TABLE</code> is
+                                                  implied, meaning that the source data must have
+                                                  the same column order, number of columns, and data
+                                                  format as the target table.</p>
+<p class="p">The default
+                                                  source-to-target mapping is based on a match of
+                                                  column names as defined in this section and the
+                                                  column names in the target <code class="ph codeph">TABLE</code>.
+                                                  This default mapping can be overridden using the
+                                                  <code class="ph codeph">MAPPING</code> section.</p>
+</dd>
+
+                                        
+                                        
+                                            <dt class="dt pt dlterm" id="topic1__cftransform">TRANSFORM</dt>
+
+                                            <dd class="dd pd">Optional. Specifies the name of the input
+                                                transformation passed to <code class="ph codeph">gpload</code>.
+                                                For information about XML transformations, see
+                                                "Loading and Unloading Data" in the <cite class="cite">Greenplum
+                                                  Database Administrator Guide</cite>.</dd>
+
+                                        
+                                        
+                                            <dt class="dt pt dlterm" id="topic1__cftransformconfig">TRANSFORM_CONFIG</dt>
+
+                                            <dd class="dd pd">Required when <code class="ph codeph">TRANSFORM</code> is
+                                                specified. Specifies the location of the
+                                                transformation configuration file that is specified
+                                                in the <code class="ph codeph">TRANSFORM</code> parameter,
+                                                above.</dd>
+
+                                        
+                                        
+                                            <dt class="dt pt dlterm" id="topic1__cfmaxlinelength">MAX_LINE_LENGTH</dt>
+
+                                            <dd class="dd pd">Optional. An integer that specifies the maximum
+                                                length of a line in the XML transformation data
+                                                passed to <code class="ph codeph">gpload</code>.</dd>
+
+                                        
+                                        
+                                            <dt class="dt pt dlterm" id="topic1__cfformat">FORMAT</dt>
+
+                                            <dd class="dd pd">Optional. Specifies the format of the source data
+                                                file(s) - either plain text (<code class="ph codeph">TEXT</code>)
+                                                or comma separated values (<code class="ph codeph">CSV</code>)
+                                                format. Defaults to <code class="ph codeph">TEXT</code> if not
+                                                specified. For more information about the format of
+                                                the source data, see <a class="xref" href="../../admin_guide/load/topics/g-loading-and-unloading-data.html" target="_blank">Loading and
+                                                  Unloading Data</a>.</dd>
+
+                                        
+                                        
+                                            <dt class="dt pt dlterm" id="topic1__cfdelimiter">DELIMITER</dt>
+
+                                            <dd class="dd pd">Optional. Specifies a single ASCII character that
+                                                separates columns within each row (line) of data.
+                                                The default is a tab character in TEXT mode, a comma
+                                                in CSV mode. You can also specify a non- printable
+                                                ASCII character or a non-printable unicode
+                                                character, for example: <code class="ph codeph">"\x1B"</code> or
+                                                  <code class="ph codeph"> "\u001B"</code>. The escape string
+                                                syntax, <code class="ph codeph">E'&lt;character-code&gt;'</code>, is
+                                                also supported for non-printable characters. The
+                                                ASCII or unicode character must be enclosed in
+                                                single quotes. For example: <code class="ph codeph">E'\x1B'</code>
+                                                or <code class="ph codeph">E'\u001B'</code>. </dd>
+
+                                        
+                                        
+                                            <dt class="dt pt dlterm" id="topic1__cfescape">ESCAPE</dt>
+
+                                            <dd class="dd pd">Specifies the single character that is used for C
+                                                escape sequences (such as <code class="ph codeph">\n</code>,
+                                                  <code class="ph codeph">\t</code>, <code class="ph codeph">\100</code>, and so
+                                                on) and for escaping data characters that might
+                                                otherwise be taken as row or column delimiters. Make
+                                                sure to choose an escape character that is not used
+                                                anywhere in your actual column data. The default
+                                                escape character is a \ (backslash) for
+                                                text-formatted files and a <code class="ph codeph">"</code>
+                                                (double quote) for csv-formatted files, however it
+                                                is possible to specify another character to
+                                                represent an escape. It is also possible to disable
+                                                escaping in text-formatted files by specifying the
+                                                value <code class="ph codeph">'OFF'</code> as the escape value.
+                                                This is very useful for data such as text-formatted
+                                                web log data that has many embedded backslashes that
+                                                are not intended to be escapes.</dd>
+
+                                        
+                                        
+                                            <dt class="dt pt dlterm" id="topic1__newline">NEWLINE</dt>
+
+                                            <dd class="dd pd">Specifies the type of newline used in your data
+                                                files, one of: <ul class="ul">
+                                                  <li class="li">LF (Line feed, 0x0A)</li>
+
+                                                  <li class="li">CR (Carriage return, 0x0D)</li>
+
+                                                  <li class="li">CRLF (Carriage return plus line feed, 0x0D
+                                                  0x0A).</li>
+
+                                                </ul>
+
+                                                <p class="p">If not specified, Greenplum Database detects the
+                                                  newline type by examining the first row of data
+                                                  that it receives, and uses the first newline type
+                                                  that it encounters.</p>
+
+                                            </dd>
+
+                                        
+                                        
+                                            <dt class="dt pt dlterm" id="topic1__cfnullas">NULL_AS</dt>
+
+                                            <dd class="dd pd">Optional. Specifies the string that represents a
+                                                null value. The default is <code class="ph codeph">\N</code>
+                                                (backslash-N) in <code class="ph codeph">TEXT</code> mode, and an
+                                                empty value with no quotations in
+                                                  <code class="ph codeph">CSV</code> mode. You might prefer an
+                                                empty string even in <code class="ph codeph">TEXT</code> mode for
+                                                cases where you do not want to distinguish nulls
+                                                from empty strings. Any source data item that
+                                                matches this string will be considered a null
+                                                value.</dd>
+
+                                        
+                                        
+                                            <dt class="dt pt dlterm" id="topic1__cfillfields">FILL_MISSING_FIELDS</dt>
+
+                                            <dd class="dd pd">Optional. The default value is
+                                                  <code class="ph codeph">false</code>. When reading a row of data
+                                                that has missing trailing field values (the row of
+                                                data has missing data fields at the end of a line or
+                                                row), Greenplum Database returns an error.</dd>
+
+                                            <dd class="dd pd ddexpand">If the value is <code class="ph codeph">true</code>, when reading
+                                                a row of data that has missing trailing field
+                                                values, the values are set to <code class="ph codeph">NULL</code>.
+                                                Blank rows, fields with a <code class="ph codeph">NOT NULL</code>
+                                                constraint, and trailing delimiters on a line will
+                                                still report an error.</dd>
+
+                                            <dd class="dd pd ddexpand">See the <code class="ph codeph">FILL MISSING FIELDS</code> clause
+                                                of the <a class="xref" href="../../ref_guide/sql_commands/CREATE_EXTERNAL_TABLE.html">CREATE EXTERNAL TABLE</a> command.</dd>
+
+                                        
+                                        
+                                            <dt class="dt pt dlterm" id="topic1__cfforcenotnull">FORCE_NOT_NULL</dt>
+
+                                            <dd class="dd pd">Optional. In CSV mode, processes each specified
+                                                column as though it were quoted and hence not a NULL
+                                                value. For the default null string in CSV mode
+                                                (nothing between two delimiters), this causes
+                                                missing values to be evaluated as zero-length
+                                                strings.</dd>
+
+                                        
+                                        
+                                            <dt class="dt pt dlterm" id="topic1__cfquote">QUOTE</dt>
+
+                                            <dd class="dd pd">Required when <code class="ph codeph">FORMAT</code> is
+                                                  <code class="ph codeph">CSV</code>. Specifies the quotation
+                                                character for <code class="ph codeph">CSV</code> mode. The default
+                                                is double-quote (<code class="ph codeph">"</code>).</dd>
+
+                                        
+                                        
+                                            <dt class="dt pt dlterm" id="topic1__cfheader">HEADER</dt>
+
+                                            <dd class="dd pd">Optional. Specifies that the first line in the data
+                                                file(s) is a header row (contains the names of the
+                                                columns) and should not be included as data to be
+                                                loaded. If using multiple data source files, all
+                                                files must have a header row. The default is to
+                                                assume that the input files do not have a header
+                                                row.</dd>
+
+                                        
+                                        
+                                            <dt class="dt pt dlterm" id="topic1__cfencoding">ENCODING</dt>
+
+                                            <dd class="dd pd">Optional. Character set encoding of the source data.
+                                                Specify a string constant (such as
+                                                  <code class="ph codeph">'SQL_ASCII'</code>), an integer encoding
+                                                number, or <code class="ph codeph">'DEFAULT'</code> to use the
+                                                default client encoding. If not specified, the
+                                                default client encoding is used. For information
+                                                about supported character sets, see the
+                                                  <cite class="cite">Greenplum Database Reference Guide</cite>.
+                                                  <div class="note"><span class="notetitle">Note:</span> If you <em class="ph i">change</em> the
+                                                  <code class="ph codeph">ENCODING</code> value in an existing
+                                                  <code class="ph codeph">gpload</code> control file, you must
+                                                  manually drop any external tables that were
+                                                  creating using the previous
+                                                  <code class="ph codeph">ENCODING</code> configuration.
+                                                  <code class="ph codeph">gpload</code> does not drop and recreate
+                                                  external tables to use the new
+                                                  <code class="ph codeph">ENCODING</code> if
+                                                  <code class="ph codeph">REUSE_TABLES</code> is set to
+                                                  <code class="ph codeph">true</code>.</div>
+</dd>
+
+                                        
+                                        
+                                            <dt class="dt pt dlterm" id="topic1__cferrorlimit">ERROR_LIMIT</dt>
+
+                                            <dd class="dd pd">Optional. Enables single row error isolation mode
+                                                for this load operation. When enabled, input rows
+                                                that have format errors will be discarded provided
+                                                that the error limit count is not reached on any
+                                                Greenplum Database segment instance during input
+                                                processing. If the error limit is not reached, all
+                                                good rows will be loaded and any error rows will
+                                                either be discarded or captured as part of error log
+                                                information. The default is to cancel the load
+                                                operation on the first error encountered. Note that
+                                                single row error isolation only applies to data rows
+                                                with format errors; for example, extra or missing
+                                                attributes, attributes of a wrong data type, or
+                                                invalid client encoding sequences. Constraint
+                                                errors, such as primary key violations, will still
+                                                cause the load operation to be cancelled if
+                                                encountered. For information about handling load
+                                                errors, see <a class="xref" href="../../admin_guide/load/topics/g-loading-and-unloading-data.html" target="_blank">Loading and
+                                                  Unloading Data</a>.</dd>
+
+                                        
+                                        
+                                            <dt class="dt pt dlterm" id="topic1__cferrorlog">LOG_ERRORS</dt>
+
+                                            <dd class="dd pd">Optional when <code class="ph codeph">ERROR_LIMIT</code> is
+                                                declared. Value is either <code class="ph codeph">true</code> or
+                                                  <code class="ph codeph">false</code>. The default value is
+                                                  <code class="ph codeph">false</code>. If the value is
+                                                  <code class="ph codeph">true</code>, rows with formatting errors
+                                                are logged internally when running in single row
+                                                error isolation mode. You can examine formatting
+                                                errors with the Greenplum Database built-in SQL
+                                                function
+                                                  <code class="ph codeph">gp_read_error_log('&lt;table_name&gt;')</code>.
+                                                If formatting errors are detected when loading data,
+                                                  <code class="ph codeph">gpload</code> generates a warning
+                                                message with the name of the table that contains the
+                                                error information similar to this message.
+                                                <pre class="pre codeblock"><code>&lt;timestamp&gt;|WARN|1 bad row, please use GPDB built-in function gp_read_error_log('<span class="keyword parmname">table-name</span>') 
+   to access the detailed error row</code></pre></dd>
+
+                                            <dd class="dd pd ddexpand">If <code class="ph codeph">LOG_ERRORS: true</code> is specified,
+                                                  <code class="ph codeph">REUSE_TABLES: true</code> must be
+                                                specified to retain the formatting errors in
+                                                Greenplum Database error logs. If
+                                                  <code class="ph codeph">REUSE_TABLES: true</code> is not
+                                                specified, the error information is deleted after
+                                                the <code class="ph codeph">gpload</code> operation. Only summary
+                                                information about formatting errors is returned. You
+                                                can delete the formatting errors from the error logs
+                                                with the Greenplum Database function
+                                                  <code class="ph codeph">gp_truncate_error_log()</code>.
+                                                  <div class="note"><span class="notetitle">Note:</span> When <code class="ph codeph">gpfdist</code> reads data and
+                                                  encounters a data formatting error, the error
+                                                  message includes a row number indicating the
+                                                  location of the formatting error.
+                                                  <code class="ph codeph">gpfdist</code> attempts to capture the
+                                                  row that contains the error. However,
+                                                  <code class="ph codeph">gpfdist</code> might not capture the
+                                                  exact row for some formatting errors.</div>
+</dd>
+
+                                            <dd class="dd pd ddexpand">For more information about handling load errors, see
+                                                "Loading and Unloading Data" in the <cite class="cite">Greenplum
+                                                  Database Administrator Guide</cite>. For
+                                                information about the
+                                                  <code class="ph codeph">gp_read_error_log()</code> function, see
+                                                the <a class="xref" href="../../ref_guide/sql_commands/CREATE_EXTERNAL_TABLE.html">CREATE EXTERNAL TABLE</a> command.</dd>
+
+                                        
+                                        
+                                            <dt class="dt pt dlterm" id="topic1__cfexternal">EXTERNAL</dt>
+
+                                            <dd class="dd pd">Optional. Defines the schema of the external table
+                                                database objects created by <code class="ph codeph">gpload</code>. </dd>
+
+                                            <dd class="dd pd ddexpand">The default is to use the Greenplum Database
+                                                  <code class="ph codeph">search_path</code>. </dd>
+
+                                            <dd class="dd pd ddexpand">
+                                                <dl class="dl parml">
+                                                  
+                                                  <dt class="dt pt dlterm" id="topic1__cfschema">SCHEMA</dt>
+
+                                                  <dd class="dd pd">Required when <code class="ph codeph">EXTERNAL</code> is
+                                                  declared. The name of the schema of the external
+                                                  table. If the schema does not exist, an error is
+                                                  returned. </dd>
+
+                                                  <dd class="dd pd ddexpand">If <code class="ph codeph">%</code> (percent character) is
+                                                  specified, the schema of the table name specified
+                                                  by <code class="ph codeph">TABLE</code> in the
+                                                  <code class="ph codeph">OUTPUT</code> section is used. If the
+                                                  table name does not specify a schema, the default
+                                                  schema is used.</dd>
+
+                                                  
+                                                </dl>
+
+                                            </dd>
+
+                                        
+                                    </dl>
+</dd>
+
+                            
+                            
+                                <dt class="dt pt dlterm" id="topic1__cfoutput">OUTPUT</dt>
+
+                                <dd class="dd pd">Required. Defines the target table and final data column values
+                                    that are to be loaded into the database.<dl class="dl parml">
+                                        
+                                            <dt class="dt pt dlterm" id="topic1__cftable">TABLE</dt>
+
+                                            <dd class="dd pd">Required. The name of the target table to load
+                                                into.</dd>
+
+                                        
+                                        
+                                            <dt class="dt pt dlterm" id="topic1__cfmode">MODE</dt>
+
+                                            <dd class="dd pd">Optional. Defaults to <code class="ph codeph">INSERT</code> if not
+                                                specified. There are three available load
+                                                modes:</dd>
+
+                                            <dd class="dd pd ddexpand"><span class="keyword option">INSERT</span> - Loads data into the target
+                                                table using the following method:
+                                                <pre class="pre codeblock"><code>INSERT INTO &lt;target_table&gt; SELECT * FROM &lt;input_data&gt;;</code></pre></dd>
+
+                                            <dd class="dd pd ddexpand"><span class="keyword option">UPDATE</span> - Updates the
+                                                  <code class="ph codeph">UPDATE_COLUMNS</code> of the target
+                                                table where the rows have
+                                                  <code class="ph codeph">MATCH_COLUMNS</code> attribute values
+                                                equal to those of the input data, and the optional
+                                                  <code class="ph codeph">UPDATE_CONDITION</code> is true.
+                                                  <code class="ph codeph">UPDATE</code> is not supported if the
+                                                target table column name is a reserved keyword, has
+                                                capital letters, or includes any character that
+                                                requires quotes (" ") to identify the column.</dd>
+
+                                            <dd class="dd pd ddexpand"><span class="keyword option">MERGE</span> - Inserts new rows and
+                                                updates the <code class="ph codeph">UPDATE_COLUMNS</code> of
+                                                existing rows where <code class="ph codeph">FOOBAR</code>
+                                                attribute values are equal to those of the input
+                                                data, and the optional
+                                                  <code class="ph codeph">MATCH_COLUMNS</code> is true. New rows
+                                                are identified when the
+                                                  <code class="ph codeph">MATCH_COLUMNS</code> value in the source
+                                                data does not have a corresponding value in the
+                                                existing data of the target table. In those cases,
+                                                the <strong class="ph b">entire row</strong> from the source file is
+                                                inserted, not only the <code class="ph codeph">MATCH</code> and
+                                                  <code class="ph codeph">UPDATE</code> columns. If there are
+                                                multiple new <code class="ph codeph">MATCH_COLUMNS</code> values
+                                                that are the same, only one new row for that value
+                                                will be inserted. Use
+                                                  <code class="ph codeph">UPDATE_CONDITION</code> to filter out
+                                                the rows to discard. <code class="ph codeph">MERGE</code> is not
+                                                supported if the target table column name is a
+                                                reserved keyword, has capital letters, or includes
+                                                any character that requires quotes (" ") to identify
+                                                the column.</dd>
+
+                                        
+                                        
+                                            <dt class="dt pt dlterm" id="topic1__cfmatchcolumns">MATCH_COLUMNS</dt>
+
+                                            <dd class="dd pd">Required if <code class="ph codeph">MODE</code> is
+                                                  <code class="ph codeph">UPDATE</code> or <code class="ph codeph">MERGE</code>.
+                                                Specifies the column(s) to use as the join condition
+                                                for the update. The attribute value in the specified
+                                                target column(s) must be equal to that of the
+                                                corresponding source data column(s) in order for the
+                                                row to be updated in the target table.</dd>
+
+                                        
+                                        
+                                            <dt class="dt pt dlterm" id="topic1__cfupdatecolumns">UPDATE_COLUMNS</dt>
+
+                                            <dd class="dd pd">Required if <code class="ph codeph">MODE</code> is
+                                                  <code class="ph codeph">UPDATE</code> or <code class="ph codeph">MERGE</code>.
+                                                Specifies the column(s) to update for the rows that
+                                                meet the <code class="ph codeph">MATCH_COLUMNS</code> criteria and
+                                                the optional <code class="ph codeph">UPDATE_CONDITION</code>.
+                                            </dd>
+
+                                        
+                                        
+                                            <dt class="dt pt dlterm" id="topic1__cfupdatecondition">UPDATE_CONDITION</dt>
+
+                                            <dd class="dd pd">Optional. Specifies a Boolean condition (similar to
+                                                what you would declare in a <code class="ph codeph">WHERE</code>
+                                                clause) that must be met in order for a row in the
+                                                target table to be updated.</dd>
+
+                                        
+                                        
+                                            <dt class="dt pt dlterm" id="topic1__cfmapping">MAPPING</dt>
+
+                                            <dd class="dd pd">Optional. If a mapping is specified, it overrides
+                                                the default source-to-target column mapping. The
+                                                default source-to-target mapping is based on a match
+                                                of column names as defined in the source
+                                                  <code class="ph codeph">COLUMNS</code> section and the column
+                                                names of the target <code class="ph codeph">TABLE</code>. A
+                                                mapping is specified as either:</dd>
+
+                                            <dd class="dd pd ddexpand"><code class="ph codeph">&lt;target_column_name&gt;:
+                                                  &lt;source_column_name&gt;</code></dd>
+
+                                            <dd class="dd pd ddexpand">or</dd>
+
+                                            <dd class="dd pd ddexpand"><code class="ph codeph">&lt;target_column_name&gt;:
+                                                  '&lt;expression&gt;'</code></dd>
+
+                                            <dd class="dd pd ddexpand">Where &lt;expression&gt; is any expression that you
+                                                would specify in the <code class="ph codeph">SELECT</code> list of
+                                                a query, such as a constant value, a column
+                                                reference, an operator invocation, a function call,
+                                                and so on.</dd>
+
+                                        
+                                    </dl>
+</dd>
+
+                            
+                        </dl>
+</dd>
+
+                
+                
+                    <dt class="dt pt dlterm" id="topic1__cfpreload">PRELOAD</dt>
+
+                    <dd class="dd pd">Optional. Specifies operations to run prior to the load operation. Right now
+                        the only preload operation is <code class="ph codeph">TRUNCATE</code>.<dl class="dl parml">
+                            
+                                <dt class="dt pt dlterm" id="topic1__cftruncate">TRUNCATE</dt>
+
+                                <dd class="dd pd">Optional. If set to true, <code class="ph codeph">gpload</code> will remove
+                                    all rows in the target table prior to loading it. Default is
+                                    false.</dd>
+
+                            
+                            
+                                <dt class="dt pt dlterm" id="topic1__cfreusetables">REUSE_TABLES</dt>
+
+                                <dd class="dd pd">Optional. If set to true, <code class="ph codeph">gpload</code> will not drop
+                                    the external table objects and staging table objects it creates.
+                                    These objects will be reused for future load operations that use
+                                    the same load specifications. This improves performance of
+                                    trickle loads (ongoing small loads to the same target
+                                    table).</dd>
+
+                                <dd class="dd pd ddexpand">If <code class="ph codeph">LOG_ERRORS: true</code> is specified,
+                                        <code class="ph codeph">REUSE_TABLES: true</code> must be specified to
+                                    retain the formatting errors in Greenplum Database error logs.
+                                    If <code class="ph codeph">REUSE_TABLES: true</code> is not specified,
+                                    formatting error information is deleted after the
+                                        <code class="ph codeph">gpload</code> operation.</dd>
+
+                                <dd class="dd pd ddexpand">If the &lt;external_table_name&gt; exists, the utility uses the
+                                    existing table. The utility returns an error if the table schema
+                                    does not match the <code class="ph codeph">OUTPUT</code> table schema.</dd>
+
+                            
+                            
+                                <dt class="dt pt dlterm" id="topic1__cfstagetbl">STAGING_TABLE</dt>
+
+                                <dd class="dd pd">Optional. Specify the name of the temporary external table that
+                                    is created during a <code class="ph codeph">gpload</code> operation. The
+                                    external table is used by <code class="ph codeph">gpfdist</code>.
+                                        <code class="ph codeph">REUSE_TABLES: true</code> must also specified. If
+                                        <code class="ph codeph">REUSE_TABLES</code> is false or not specified,
+                                        <code class="ph codeph">STAGING_TABLE</code> is ignored. By default,
+                                        <code class="ph codeph">gpload</code> creates a temporary external table
+                                    with a randomly generated name.</dd>
+
+                                <dd class="dd pd ddexpand">If <var class="keyword varname">external_table_name</var> contains a period (.),
+                                        <code class="ph codeph">gpload</code> returns an error. If the table
+                                    exists, the utility uses the table. The utility returns an error
+                                    if the existing table schema does not match the
+                                        <code class="ph codeph">OUTPUT</code> table schema.</dd>
+
+                                <dd class="dd pd ddexpand">The utility uses the value of <a class="xref" href="#topic1__cfschema">SCHEMA</a> in the <code class="ph codeph">EXTERNAL</code>
+                                    section as the schema for &lt;external_table_name&gt;. If the
+                                        <code class="ph codeph">SCHEMA</code> value is <code class="ph codeph">%</code>, the
+                                    schema for &lt;external_table_name&gt; is the same as the schema of
+                                    the target table, the schema of <a class="xref" href="#topic1__cftable">TABLE</a> in the <code class="ph codeph">OUTPUT</code>
+                                    section. </dd>
+
+                                <dd class="dd pd ddexpand">If <code class="ph codeph">SCHEMA</code> is not set, the utility searches for
+                                    the table (using the schemas in the database
+                                        <code class="ph codeph">search_path</code>). If the table is not found,
+                                        <var class="keyword varname">external_table_name</var> is created in the
+                                    default <code class="ph codeph">PUBLIC</code> schema. </dd>
+
+                                <dd class="dd pd ddexpand"><code class="ph codeph">gpload</code> creates the staging table using the
+                                  distribution key(s) of the target table as the distribution key(s)
+                                  for the staging table. If the target table was created
+                                  <code class="ph codeph">DISTRIBUTED RANDOMLY</code>, <code class="ph codeph">gpload</code>
+                                  uses <code class="ph codeph">MATCH_COLUMNS</code> as the staging table's
+                                  distribution key(s).</dd>
+
+                            
+                            
+                                <dt class="dt pt dlterm" id="topic1__cffastmatch">FAST_MATCH</dt>
+
+                                <dd class="dd pd">Optional. If set to true, <code class="ph codeph">gpload</code> only searches
+                                    the database for matching external table objects when reusing
+                                    external tables. The utility does not check the external table
+                                    column names and column types in the catalog table
+                                        <code class="ph codeph">pg_attribute</code> to ensure that the table can
+                                    be used for a <code class="ph codeph">gpload</code> operation. Set the value
+                                    to true to improve <code class="ph codeph">gpload</code> performance when
+                                    reusing external table objects and the database catalog table
+                                        <code class="ph codeph">pg_attribute</code> contains a large number of
+                                    rows. The utility returns an error and quits if the column
+                                    definitions are not compatible.</dd>
+
+                                <dd class="dd pd ddexpand">The default value is false, the utility checks the external
+                                    table definition column names and column types. </dd>
+
+                                <dd class="dd pd ddexpand"><code class="ph codeph">REUSE_TABLES: true</code> must also specified. If
+                                        <code class="ph codeph">REUSE_TABLES</code> is false or not specified and
+                                        <code class="ph codeph">FAST_MATCH: true</code> is specified,
+                                        <code class="ph codeph">gpload</code> returns a warning message. </dd>
+
+                            
+                        </dl>
+</dd>
+
+                
+                
+                    <dt class="dt pt dlterm" id="topic1__cfsql">SQL</dt>
+
+                    <dd class="dd pd">Optional. Defines SQL commands to run before and/or after the load
+                        operation. You can specify multiple <code class="ph codeph">BEFORE</code> and/or
+                            <code class="ph codeph">AFTER</code> commands. List commands in the order of desired execution.<dl class="dl parml">
+                            
+                                <dt class="dt pt dlterm" id="topic1__cfbefore">BEFORE</dt>
+
+                                <dd class="dd pd">Optional. An SQL command to run before the load operation
+                                    starts. Enclose commands in quotes.</dd>
+
+                            
+                            
+                                <dt class="dt pt dlterm" id="topic1__cfafter">AFTER</dt>
+
+                                <dd class="dd pd">Optional. An SQL command to run after the load operation
+                                    completes. Enclose commands in quotes.</dd>
+
+                            
+                        </dl>
+</dd>
+
+                
+            </dl>
+
+        </div>
+
+        <div class="section" id="topic1__section9"><h2 class="title sectiontitle">Log File Format</h2>
+            
+            <p class="p">Log files output by <code class="ph codeph">gpload</code> have the following format:</p>
+
+            <pre class="pre codeblock"><code>&lt;timestamp&gt;|&lt;level&gt;|&lt;message&gt;</code></pre>
+            <p class="p">Where &lt;timestamp&gt; takes the form: <code class="ph codeph">YYYY-MM-DD HH:MM:SS</code>,
+                    <var class="keyword varname">level</var> is one of <code class="ph codeph">DEBUG</code>, <code class="ph codeph">LOG</code>,
+                    <code class="ph codeph">INFO</code>, <code class="ph codeph">ERROR</code>, and <var class="keyword varname">message</var> is
+                a normal text message.</p>
+
+            <p class="p">Some <code class="ph codeph">INFO</code> messages that may be of interest in the log files are
+                (where <var class="keyword varname">#</var> corresponds to the actual number of seconds, units of
+                data, or failed rows):</p>
+
+            <pre class="pre codeblock"><code>INFO|running time: &lt;#.##&gt; seconds
+INFO|transferred &lt;#.#&gt; kB of &lt;#.#&gt; kB.
+INFO|gpload succeeded
+INFO|gpload succeeded with warnings
+INFO|gpload failed
+INFO|1 bad row
+INFO|&lt;#&gt; bad rows</code></pre>
+        </div>
+
+        <div class="section" id="topic1__section8"><h2 class="title sectiontitle">Notes</h2>
+            
+            <p class="p">If your database object names were created using a double-quoted identifier
+                (delimited identifier), you must specify the delimited name within single quotes in
+                the <code class="ph codeph">gpload</code> control file. For example, if you create a table as
+                follows:</p>
+
+            <pre class="pre codeblock"><code>CREATE TABLE "MyTable" ("MyColumn" text);</code></pre>
+            <p class="p">Your YAML-formatted <code class="ph codeph">gpload</code> control file would refer to the above
+                table and column names as follows:</p>
+
+            <pre class="pre codeblock"><code>- COLUMNS:
+   - '"MyColumn"': text
+OUTPUT:
+   - TABLE: public.'"MyTable"'</code></pre>
+            <p class="p">If the YAML control file contains the <code class="ph codeph">ERROR_TABLE</code> element that was
+                available in Greenplum Database 4.3.x, <code class="ph codeph">gpload</code> logs a warning
+                stating that <code class="ph codeph">ERROR_TABLE</code> is not supported, and load errors are
+                handled as if the <code class="ph codeph">LOG_ERRORS</code> and <code class="ph codeph">REUSE_TABLE</code>
+                elements were set to <code class="ph codeph">true</code>. Rows with formatting errors are logged
+                internally when running in single row error isolation mode.</p>
+
+        </div>
+
+        <div class="section" id="topic1__section10"><h2 class="title sectiontitle">Examples</h2>
+            
+            <p class="p">Run a load job as defined in <code class="ph codeph">my_load.yml</code>:</p>
+
+            <pre class="pre codeblock"><code>gpload -f my_load.yml</code></pre>
+            <p class="p">Example load control file:</p>
+
+            <pre class="pre codeblock"><code>---
+VERSION: 1.0.0.1
+DATABASE: ops
+USER: gpadmin
+HOST: cdw-1
+PORT: 5432
+GPLOAD:
+   INPUT:
+    - SOURCE:
+         LOCAL_HOSTNAME:
+           - etl1-1
+           - etl1-2
+           - etl1-3
+           - etl1-4
+         PORT: 8081
+         FILE: 
+           - /var/load/data/*
+    - COLUMNS:
+           - name: text
+           - amount: float4
+           - category: text
+           - descr: text
+           - date: date
+    - FORMAT: text
+    - DELIMITER: '|'
+    - ERROR_LIMIT: 25
+    - LOG_ERRORS: true
+   OUTPUT:
+    - TABLE: payables.expenses
+    - MODE: INSERT
+   PRELOAD:
+    - REUSE_TABLES: true 
+   SQL:
+   - BEFORE: "INSERT INTO audit VALUES('start', current_timestamp)"
+   - AFTER: "INSERT INTO audit VALUES('end', current_timestamp)"</code></pre>
+        </div>
+
+        <div class="section" id="topic1__section11"><h2 class="title sectiontitle">See Also</h2>
+            
+            <p class="p"><a class="xref" href="gpfdist.html#topic1">gpfdist</a>, <a class="xref" href="../../ref_guide/sql_commands/CREATE_EXTERNAL_TABLE.html">CREATE EXTERNAL TABLE</a></p>
+
+        </div>
+
+    </div>
+
+</body>
+</html>

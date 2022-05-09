@@ -1,0 +1,172 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+
+<meta name="copyright" content="(C) Copyright 2022" />
+<meta name="DC.rights.owner" content="(C) Copyright 2022" />
+<meta name="generator" content="DITA-OT" /><meta name="DC.type" content="topic" />
+<meta name="DC.title" content="createuser" />
+<meta name="DC.format" content="XHTML" />
+<meta name="DC.identifier" content="topic1" />
+<link rel="stylesheet" type="text/css" href="../commonltr.css" />
+<title>createuser</title>
+</head>
+<body id="topic1">
+<h1 class="title topictitle1" id="topic1__pb141029">createuser</h1>
+<div class="body"><p class="p" id="topic1__client_util_desc">Creates a new database role.</p>
+<div class="section" id="topic1__section2"><h2 class="title sectiontitle">Synopsis</h2><pre class="pre codeblock" id="topic1__client_util_synopsis"><code>createuser [&lt;connection-option&gt; ...] [&lt;role_attribute&gt; ...] [-e] &lt;role_name&gt;
+
+createuser -? | --help 
+
+createuser -V | --version</code></pre></div>
+<div class="section" id="topic1__section3"><h2 class="title sectiontitle">Description</h2><p class="p"><code class="ph codeph">createuser</code> creates a new Greenplum Database role. You must be a
+                                superuser or have the <code class="ph codeph">CREATEROLE</code> privilege to
+                                create new roles. You must connect to the database as a superuser to
+                                create new superusers.</p>
+<p class="p">Superusers can bypass all access permission checks within the database,
+so superuser privileges should not be granted lightly. </p>
+<p class="p"><code class="ph codeph">createuser</code> is a wrapper around the SQL command <code class="ph codeph">CREATE
+ROLE</code>.</p>
+</div>
+<div class="section" id="topic1__section4"><h2 class="title sectiontitle">Options</h2><dl class="dl parml"><dt class="dt pt dlterm">role_name</dt>
+<dd class="dd pd">The name of the role to be created. This name must be different from all existing roles in this
+                                                  Greenplum Database installation. </dd>
+<dt class="dt pt dlterm">-c <var class="keyword varname">number</var> | --connection-limit=<var class="keyword varname">number</var></dt>
+<dd class="dd pd">Set a maximum number of connections for the new role. The default
+is to set no limit. </dd>
+
+<dt class="dt pt dlterm">-d | --createdb</dt>
+<dd class="dd pd">The new role will be allowed to create databases. </dd>
+
+  <dt class="dt pt dlterm">-D | --no-createdb</dt>
+<dd class="dd pd">The new role will not be allowed to create databases. This is the
+    default.</dd>
+
+<dt class="dt pt dlterm">-e | --echo</dt>
+<dd class="dd pd">Echo the commands that <code class="ph codeph">createuser</code> generates and
+sends to the server. </dd>
+<dt class="dt pt dlterm">-E | --encrypted</dt>
+<dd class="dd pd">Encrypts the role's password stored in the database. If not specified,
+the default password behavior is used. </dd>
+<dt class="dt pt dlterm">-i | --inherit</dt>
+<dd class="dd pd">The new role will automatically inherit privileges of roles it is
+a member of. This is the default.</dd>
+<dt class="dt pt dlterm">-I | --no-inherit</dt>
+<dd class="dd pd">The new role will not automatically inherit privileges of roles it
+is a member of. </dd>
+
+        
+          <dt class="dt pt dlterm">--interactive</dt>
+
+          <dd class="dd pd">Prompt for the user name if none is specified on the command line, and also prompt for
+            whichever of the options <code class="ph codeph">-d</code>/<code class="ph codeph">-D</code>,
+              <code class="ph codeph">-r</code>/<code class="ph codeph">-R</code>, <code class="ph codeph">-s</code>/<code class="ph codeph">-S</code> is
+            not specified on the command line.</dd>
+
+        <dt class="dt pt dlterm">-l | --login</dt>
+<dd class="dd pd">The new role will be allowed to log in to Greenplum Database. This is the default. </dd>
+<dt class="dt pt dlterm">-L | --no-login</dt>
+<dd class="dd pd">The new role will not be allowed to log in (a group-level role).</dd>
+<dt class="dt pt dlterm">-N | --unencrypted</dt>
+<dd class="dd pd">Does not encrypt the role's password stored in the database. If
+not specified, the default password behavior is used. </dd>
+<dt class="dt pt dlterm">-P | --pwprompt</dt>
+<dd class="dd pd">If given, <code class="ph codeph">createuser</code> will issue a prompt for the
+password of the new role. This is not necessary if you do not plan on
+using password authentication. </dd>
+<dt class="dt pt dlterm">-r | --createrole</dt>
+<dd class="dd pd">The new role will be allowed to create new roles (<code class="ph codeph">CREATEROLE</code>
+privilege). </dd>
+<dt class="dt pt dlterm">-R | --no-createrole</dt>
+<dd class="dd pd">The new role will not be allowed to create new roles. This is the default.</dd>
+<dt class="dt pt dlterm">-s | --superuser</dt>
+<dd class="dd pd">The new role will be a superuser. </dd>
+<dt class="dt pt dlterm">-S | --no-superuser</dt>
+<dd class="dd pd">The new role will not be a superuser. This is the default.</dd>
+
+        
+          <dt class="dt pt dlterm">-V | --version</dt>
+
+          <dd class="dd pd">Print the <code class="ph codeph">createuser</code> version and exit.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">--replication</dt>
+
+          <dd class="dd pd">The new user will have the <code class="ph codeph">REPLICATION</code> privilege, which is described
+            more fully in the documentation for <a class="xref" href="../../ref_guide/sql_commands/CREATE_ROLE.html#topic1">CREATE ROLE</a>.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">--no-replication</dt>
+
+          <dd class="dd pd">The new user will not have the <code class="ph codeph">REPLICATION</code> privilege, which is
+            described more fully in the documentation for <a class="xref" href="../../ref_guide/sql_commands/CREATE_ROLE.html#topic1">CREATE ROLE</a>.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">-? | --help</dt>
+
+          <dd class="dd pd">Show help about <code class="ph codeph">createuser</code> command line arguments, and exit.</dd>
+
+        
+      </dl>
+<div class="sectiondiv" id="topic1__section5"><strong class="ph b">Connection Options</strong><dl class="dl parml"><dt class="dt pt dlterm">-h <var class="keyword varname">host</var> | --host=<var class="keyword varname">host</var></dt>
+<dd class="dd pd">The host name of the machine on which the Greenplum coordinator database
+                                                  server is running. If not specified, reads from
+                                                  the environment variable <code class="ph codeph">PGHOST</code>
+                                                  or defaults to localhost.</dd>
+<dt class="dt pt dlterm">-p <var class="keyword varname">port</var> | --port=<var class="keyword varname">port</var></dt>
+<dd class="dd pd">The TCP port on which the Greenplum coordinator database server is
+                                                  listening for connections. If not specified, reads
+                                                  from the environment variable
+                                                  <code class="ph codeph">PGPORT</code> or defaults to 5432.</dd>
+<dt class="dt pt dlterm">-U <var class="keyword varname">username</var> | --username=<var class="keyword varname">username</var></dt>
+<dd class="dd pd">The database role name to connect as. If not specified, reads from
+the environment variable <code class="ph codeph">PGUSER</code> or defaults to the current
+system role name.</dd>
+<dt class="dt pt dlterm">-w | --no-password</dt>
+<dd class="dd pd">Never issue a password prompt. If the server requires password authentication
+and a password is not available by other means such as a <code class="ph codeph">.pgpass</code>
+file, the connection attempt will fail. This option can be useful in
+batch jobs and scripts where no user is present to enter a password.</dd>
+<dt class="dt pt dlterm">-W | --password</dt>
+<dd class="dd pd">Force a password prompt.</dd>
+</dl>
+</div></div>
+<div class="section" id="topic1__section6"><h2 class="title sectiontitle">Examples</h2>
+  <div class="p">To create a role <code class="ph codeph">joe</code> on the default database
+        server:<pre class="pre codeblock"><code>$ createuser joe</code></pre></div>
+<p class="p">To create a role <code class="ph codeph">joe</code> on the default database server with prompting for some
+        additional attributes: </p>
+<pre class="pre codeblock"><code>$ createuser --interactive joe
+Shall the new role be a superuser? (y/n) <strong class="ph b">n</strong>
+Shall the new role be allowed to create databases? (y/n) <strong class="ph b">n</strong>
+Shall the new role be allowed to create more new roles? (y/n) <strong class="ph b">n</strong>
+CREATE ROLE</code></pre><p class="p">To create the same role <code class="ph codeph">joe</code> using connection options, with attributes explicitly
+        specified, and taking a look at the underlying command:</p>
+<pre class="pre codeblock"><code>createuser -h coordinatorhost -p 54321 -S -D -R -e joe
+CREATE ROLE joe NOSUPERUSER NOCREATEDB NOCREATEROLE INHERIT 
+LOGIN;
+CREATE ROLE</code></pre><p class="p">To create the role <code class="ph codeph">joe</code> as a superuser, and assign password
+          <code class="ph codeph">admin123</code> immediately:</p>
+<pre class="pre codeblock"><code>createuser -P -s -e joe
+Enter password for new role: admin123
+Enter it again: admin123
+CREATE ROLE joe PASSWORD 'admin123' SUPERUSER CREATEDB 
+CREATEROLE INHERIT LOGIN;
+CREATE ROLE</code></pre><p class="p">In the above example, the new password is not actually echoed when typed, but we show what was
+        typed for clarity. However the password will appear in the echoed command, as illustrated if
+        the <code class="ph codeph">-e</code> option is used.</p>
+</div>
+<div class="section" id="topic1__section7"><h2 class="title sectiontitle">See Also</h2>
+                        
+                        <p class="p"><span class="ph"><code class="ph codeph">CREATE ROLE</code> in the
+            <em class="ph i">Greenplum Database Reference Guide</em></span><span class="ph"><a class="xref" href="../../ref_guide/sql_commands/CREATE_ROLE.html#topic1">CREATE ROLE</a>, <a class="xref" href="dropuser.html#topic1">dropuser</a></span></p>
+
+                </div>
+</div>
+</body>
+</html>

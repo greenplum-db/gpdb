@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+
+<meta name="copyright" content="(C) Copyright 2022" />
+<meta name="DC.rights.owner" content="(C) Copyright 2022" />
+<meta name="generator" content="DITA-OT" /><meta name="DC.type" content="topic" />
+<meta name="DC.title" content="SET SESSION AUTHORIZATION" />
+<meta name="DC.format" content="XHTML" />
+<meta name="DC.identifier" content="topic1" />
+<link rel="stylesheet" type="text/css" href="../../out/commonltr.css" />
+<title>SET SESSION AUTHORIZATION</title>
+</head>
+<body id="topic1">
+<h1 class="title topictitle1" id="topic1__ek156485">SET SESSION AUTHORIZATION</h1>
+<div class="body"><p class="p" id="topic1__sql_command_desc">Sets the session role identifier and the current role identifier of
+the current session.</p>
+<div class="section" id="topic1__section2"><h2 class="title sectiontitle">Synopsis</h2><pre class="pre codeblock" id="topic1__sql_command_synopsis"><code>SET [SESSION | LOCAL] SESSION AUTHORIZATION &lt;rolename&gt;
+
+SET [SESSION | LOCAL] SESSION AUTHORIZATION DEFAULT
+
+RESET SESSION AUTHORIZATION</code></pre></div>
+<div class="section" id="topic1__section3"><h2 class="title sectiontitle">Description</h2><p class="p">This command sets the session role identifier and the current role identifier
+of the current SQL-session context to be <var class="keyword varname">rolename</var>. The role name
+may be written as either an identifier or a string literal. Using this
+command, it is possible, for example, to temporarily become an unprivileged
+user and later switch back to being a superuser. </p>
+<p class="p">The session role identifier is initially set to be the (possibly authenticated) role name
+    provided by the client. The current role identifier is normally equal to the session user
+    identifier, but may change temporarily in the context of <code class="ph codeph">setuid</code> functions and
+    similar mechanisms; it can also be changed by <a class="xref" href="SET_ROLE.html#topic1">SET ROLE</a>. The current user identifier is relevant for permission
+    checking. </p>
+<p class="p">The session user identifier may be changed only if the initial session
+user (the authenticated user) had the superuser privilege. Otherwise,
+the command is accepted only if it specifies the authenticated user name.
+</p>
+<p class="p">The <code class="ph codeph">DEFAULT</code> and <code class="ph codeph">RESET</code> forms reset
+the session and current user identifiers to be the originally authenticated
+user name. These forms may be run by any user.</p>
+</div>
+<div class="section" id="topic1__section4"><h2 class="title sectiontitle">Parameters</h2><dl class="dl parml"><dt class="dt pt dlterm">SESSION</dt>
+<dd class="dd pd">Specifies that the command takes effect for the current session.
+This is the default.</dd>
+<dt class="dt pt dlterm">LOCAL</dt>
+<dd class="dd pd">Specifies that the command takes effect for only the current transaction.
+After <code class="ph codeph">COMMIT</code> or <code class="ph codeph">ROLLBACK</code>, the session-level
+setting takes effect again. Note that <code class="ph codeph">SET LOCAL</code> will
+appear to have no effect if it is run outside of a transaction.</dd>
+<dt class="dt pt dlterm"><var class="keyword varname">rolename</var></dt>
+<dd class="dd pd">The name of the role to assume.</dd>
+<dt class="dt pt dlterm">NONE</dt>
+<dt class="dt pt dlterm">RESET</dt>
+<dd class="dd pd">Reset the session and current role identifiers to be that of the
+role used to log in. </dd>
+</dl>
+</div>
+<div class="section" id="topic1__section5"><h2 class="title sectiontitle">Examples</h2><pre class="pre codeblock"><code>SELECT SESSION_USER, CURRENT_USER;
+ session_user | current_user 
+--------------+--------------
+ peter        | peter
+
+SET SESSION AUTHORIZATION 'paul';
+
+SELECT SESSION_USER, CURRENT_USER;
+ session_user | current_user 
+--------------+--------------
+ paul         | paul</code></pre></div>
+<div class="section" id="topic1__section6"><h2 class="title sectiontitle">Compatibility</h2><p class="p">The SQL standard allows some other expressions to appear in place of the literal <var class="keyword varname">rolename</var>,
+    but these options are not important in practice. Greenplum Database allows identifier syntax
+     (<var class="keyword varname">rolename</var>), which SQL does not. SQL does not allow this command during a transaction;
+    Greenplum Database does not make this restriction. The <code class="ph codeph">SESSION</code> and
+     <code class="ph codeph">LOCAL</code> modifiers are a Greenplum Database extension, as is the
+     <code class="ph codeph">RESET</code> syntax.</p>
+</div>
+<div class="section" id="topic1__section7"><h2 class="title sectiontitle">See Also</h2><p class="p"><a class="xref" href="SET_ROLE.html#topic1">SET ROLE</a></p>
+</div>
+</div>
+</body>
+</html>

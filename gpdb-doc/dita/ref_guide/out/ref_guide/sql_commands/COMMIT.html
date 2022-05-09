@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+
+<meta name="copyright" content="(C) Copyright 2022" />
+<meta name="DC.rights.owner" content="(C) Copyright 2022" />
+<meta name="generator" content="DITA-OT" /><meta name="DC.type" content="topic" />
+<meta name="DC.title" content="COMMIT" />
+<meta name="DC.relation" scheme="URI" content="../sql_commands/sql_ref.html" />
+<meta name="DC.format" content="XHTML" />
+<meta name="DC.identifier" content="topic1" />
+<link rel="stylesheet" type="text/css" href="../commonltr.css" />
+<title>COMMIT</title>
+</head>
+<body id="topic1">
+<h1 class="title topictitle1" id="topic1__bj20941">COMMIT</h1>
+<div class="body"><p class="p" id="topic1__sql_command_desc">Commits the current transaction.</p>
+<div class="section" id="topic1__section2"><h2 class="title sectiontitle">Synopsis</h2><pre class="pre codeblock" id="topic1__sql_command_synopsis"><code>COMMIT [WORK | TRANSACTION]</code></pre></div>
+<div class="section" id="topic1__section3"><h2 class="title sectiontitle">Description</h2><p class="p"><code class="ph codeph">COMMIT</code> commits the current transaction. All changes
+made by the transaction become visible to others and are guaranteed to
+be durable if a crash occurs. </p>
+</div>
+<div class="section" id="topic1__section4"><h2 class="title sectiontitle">Parameters</h2><dl class="dl parml"><dt class="dt pt dlterm">WORK</dt>
+<dt class="dt pt dlterm">TRANSACTION</dt>
+<dd class="dd pd">Optional key words. They have no effect.</dd>
+</dl>
+</div>
+<div class="section" id="topic1__section5"><h2 class="title sectiontitle">Notes</h2><p class="p">Use <a class="xref" href="ROLLBACK.html#topic1">ROLLBACK</a> to 
+        prematurely end a transaction. </p>
+<p class="p">Issuing <code class="ph codeph">COMMIT</code> when not inside a transaction does
+no harm, but it will provoke a warning message. </p>
+</div>
+<div class="section" id="topic1__section6"><h2 class="title sectiontitle">Examples</h2><p class="p">To commit the current transaction and make all changes permanent:</p>
+<pre class="pre codeblock"><code>COMMIT;</code></pre></div>
+<div class="section" id="topic1__section7"><h2 class="title sectiontitle">Compatibility</h2><p class="p">The SQL standard only specifies the two forms <code class="ph codeph">COMMIT</code>
+and <code class="ph codeph">COMMIT WORK</code>. Otherwise, this command is fully conforming.</p>
+</div>
+<div class="section" id="topic1__section8"><h2 class="title sectiontitle">See Also</h2><p class="p"><a class="xref" href="BEGIN.html#topic1">BEGIN</a>, <a class="xref" href="END.html#topic1">END</a>, <a class="xref" href="START_TRANSACTION.html#topic1">START TRANSACTION</a>,
+            <a class="xref" href="ROLLBACK.html#topic1">ROLLBACK</a></p>
+</div>
+</div>
+<div class="related-links">
+<div class="familylinks">
+<div class="parentlink"><strong>Parent topic:</strong> <a class="link" href="../sql_commands/sql_ref.html">SQL Commands</a></div>
+</div>
+</div></body>
+</html>

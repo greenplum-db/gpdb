@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+
+<meta name="copyright" content="(C) Copyright 2022" />
+<meta name="DC.rights.owner" content="(C) Copyright 2022" />
+<meta name="generator" content="DITA-OT" /><meta name="DC.type" content="topic" />
+<meta name="DC.title" content="REFRESH MATERIALIZED VIEW" />
+<meta name="DC.relation" scheme="URI" content="../sql_commands/sql_ref.html" />
+<meta name="DC.format" content="XHTML" />
+<meta name="DC.identifier" content="topic1" />
+<link rel="stylesheet" type="text/css" href="../commonltr.css" />
+<title>REFRESH MATERIALIZED VIEW</title>
+</head>
+<body id="topic1">
+
+  <h1 class="title topictitle1" id="topic1__cj20941">REFRESH MATERIALIZED VIEW</h1>
+
+  <div class="body">
+    <p class="p" id="topic1__sql_command_desc">Replaces the contents of a materialized view.</p>
+
+    <div class="section" id="topic1__section2"><h2 class="title sectiontitle">Synopsis</h2>
+      
+      <pre class="pre codeblock" id="topic1__sql_command_synopsis"><code>REFRESH MATERIALIZED VIEW [ CONCURRENTLY ] &lt;name&gt;
+    [ WITH [ NO ] DATA ]</code></pre>
+    </div>
+
+    <div class="section" id="topic1__section3"><h2 class="title sectiontitle">Description</h2>
+      
+      <p class="p"><code class="ph codeph">REFRESH MATERIALIZED VIEW</code> completely replaces the contents of a
+        materialized view. The old contents are discarded. To run this command you must be the
+        owner of the materialized view. With the default, <code class="ph codeph">WITH DATA</code>, the
+        materialized view query is run to provide the new data, and the materialized view is
+        left in a scannable state. If <code class="ph codeph">WITH NO DATA</code> is specified, no new data is
+        generated and the materialized view is left in an unscannable state. A query returns an
+        error if the query attempts to access the materialized view.</p>
+
+    </div>
+
+    <div class="section" id="topic1__section4"><h2 class="title sectiontitle">Parameters</h2>
+      
+      <dl class="dl parml">
+        
+          <dt class="dt pt dlterm">CONCURRENTLY</dt>
+
+          <dd class="dd pd">Refresh the materialized view without locking out concurrent selects on the
+            materialized view. Without this option, a refresh that affects a lot of rows tends to
+            use fewer resources and completes more quickly, but could block other connections which
+            are trying to read from the materialized view. This option might be faster in cases
+            where a small number of rows are affected.<p class="p">This option is only allowed if there is at
+              least one <code class="ph codeph">UNIQUE</code> index on the materialized view which uses only
+              column names and includes all rows; that is, it must not index on any expressions nor
+              include a <code class="ph codeph">WHERE</code> clause.</p>
+<p class="p">This option cannot be used when the
+              materialized view is not already populated, and it cannot be used with the
+                <code class="ph codeph">WITH NO DATA</code> clause.</p>
+<p class="p">Even with this option, only one
+                <code class="ph codeph">REFRESH</code> at a time may run against any one materialized
+            view.</p>
+</dd>
+
+        
+        
+          <dt class="dt pt dlterm"><var class="keyword varname">name</var></dt>
+
+          <dd class="dd pd">The name (optionally schema-qualified) of the materialized view to refresh. </dd>
+
+        
+        
+          <dt class="dt pt dlterm">WITH [ NO ] DATA</dt>
+
+          <dd class="dd pd"><code class="ph codeph">WITH DATA</code> is the default and specifies that the materialized view
+            query is run to provide new data, and the materialized view is left in a scannable
+            state. If <code class="ph codeph">WITH NO DATA</code> is specified, no new data is generated and the
+            materialized view is left in an unscannable state. An error is returned if a query
+            attempts to access an unscannable materialized view.</dd>
+
+          <dd class="dd pd ddexpand"><code class="ph codeph">WITH NO DATA</code> cannot be used with <code class="ph codeph">CONCURRENLY</code>. </dd>
+
+        
+      </dl>
+
+    </div>
+
+    <div class="section" id="topic1__section5"><h2 class="title sectiontitle">Notes</h2>
+      
+      <p class="p">While the default index for future <a class="xref" href="CLUSTER.html">CLUSTER</a> operations
+        is retained, <code class="ph codeph">REFRESH MATERIALIZED VIEW</code> does not order the generated rows
+        based on this property. If you want the data to be ordered upon generation, you must use an
+          <code class="ph codeph">ORDER BY</code> clause in the materialized view query. However, if a
+        materialized view query contains an <code class="ph codeph">ORDER BY</code> or <code class="ph codeph">SORT</code>
+        clause, the data is not guaranteed to be ordered or sorted if <code class="ph codeph">SELECT</code> is
+        performed on the materialized view.</p>
+
+    </div>
+
+    <div class="section" id="topic1__section6"><h2 class="title sectiontitle">Examples</h2>
+      
+      <p class="p">This command replaces the contents of the materialized view <code class="ph codeph">order_summary</code>
+        using the query from the materialized view's definition, and leaves it in a scannable
+        state.</p>
+
+      <pre class="pre codeblock"><code>REFRESH MATERIALIZED VIEW order_summary;</code></pre>
+      <p class="p">This command frees storage associated with the materialized view
+          <code class="ph codeph">annual_statistics_basis</code> and leaves it in an unscannable state.</p>
+
+      <pre class="pre codeblock"><code>REFRESH MATERIALIZED VIEW annual_statistics_basis WITH NO DATA;</code></pre>
+    </div>
+
+    <div class="section" id="topic1__section7"><h2 class="title sectiontitle">Compatibility</h2>
+      
+      <p class="p"><code class="ph codeph">REFRESH MATERIALIZED VIEW</code> is a Greenplum Database extension of the SQL
+        standard.</p>
+
+    </div>
+
+    <div class="section" id="topic1__section8"><h2 class="title sectiontitle">See Also</h2><a class="xref" href="ALTER_MATERIALIZED_VIEW.html">ALTER MATERIALIZED VIEW</a>, <a class="xref" href="CREATE_MATERIALIZED_VIEW.html">CREATE MATERIALIZED VIEW</a>, <a class="xref" href="DROP_MATERIALIZED_VIEW.html">DROP MATERIALIZED VIEW</a></div>
+
+  </div>
+
+<div class="related-links">
+<div class="familylinks">
+<div class="parentlink"><strong>Parent topic:</strong> <a class="link" href="../sql_commands/sql_ref.html">SQL Commands</a></div>
+</div>
+</div></body>
+</html>

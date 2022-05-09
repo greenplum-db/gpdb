@@ -1,0 +1,782 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+
+<meta name="copyright" content="(C) Copyright 2022" />
+<meta name="DC.rights.owner" content="(C) Copyright 2022" />
+<meta name="generator" content="DITA-OT" /><meta name="DC.type" content="topic" />
+<meta name="DC.title" content="CREATE EXTERNAL TABLE" />
+<meta name="DC.relation" scheme="URI" content="../sql_commands/sql_ref.html" />
+<meta name="DC.format" content="XHTML" />
+<meta name="DC.identifier" content="topic1" />
+<link rel="stylesheet" type="text/css" href="../commonltr.css" />
+<title>CREATE EXTERNAL TABLE</title>
+</head>
+<body id="topic1">
+
+  <h1 class="title topictitle1" id="topic1__br20941">CREATE EXTERNAL TABLE</h1>
+
+  <div class="body">
+    <p class="p" id="topic1__sql_command_desc">Defines a new external table.</p>
+
+    <div class="section" id="topic1__section2"><h2 class="title sectiontitle">Synopsis</h2>
+      
+      <pre class="pre codeblock" id="topic1__sql_command_synopsis"><code>CREATE [READABLE] EXTERNAL [TEMPORARY | TEMP] TABLE &lt;table_name&gt;     
+    ( &lt;column_name&gt; &lt;data_type&gt; [, ...] | LIKE &lt;other_table &gt;)
+     LOCATION ('file://&lt;seghost&gt;[:&lt;port&gt;]/&lt;path&gt;/&lt;file&gt;' [, ...])
+       | ('gpfdist://&lt;filehost&gt;[:&lt;port&gt;]/&lt;file_pattern&gt;[#transform=&lt;trans_name&gt;]'
+           [, ...]
+       | ('gpfdists://&lt;filehost&gt;[:&lt;port&gt;]/&lt;file_pattern&gt;[#transform=&lt;trans_name&gt;]'
+           [, ...])
+       | ('pxf://&lt;path-to-data&gt;?PROFILE=&lt;profile_name&gt;[&amp;SERVER=&lt;server_name&gt;][&amp;&lt;custom-option&gt;=&lt;value&gt;[...]]'))
+       | ('s3://&lt;S3_endpoint&gt;[:&lt;port&gt;]/&lt;bucket_name&gt;/[&lt;S3_prefix&gt;] [region=&lt;S3-region&gt;] [config=&lt;config_file&gt; | config_server=&lt;url&gt;]')
+     [ON MASTER]
+     FORMAT 'TEXT' 
+           [( [HEADER]
+              [DELIMITER [AS] '&lt;delimiter&gt;' | 'OFF']
+              [NULL [AS] '&lt;null string&gt;']
+              [ESCAPE [AS] '&lt;escape&gt;' | 'OFF']
+              [NEWLINE [ AS ] 'LF' | 'CR' | 'CRLF']
+              [FILL MISSING FIELDS] )]
+          | 'CSV'
+           [( [HEADER]
+              [QUOTE [AS] '&lt;quote&gt;'] 
+              [DELIMITER [AS] '&lt;delimiter&gt;']
+              [NULL [AS] '&lt;null string&gt;']
+              [FORCE NOT NULL &lt;column&gt; [, ...]]
+              [ESCAPE [AS] '&lt;escape&gt;']
+              [NEWLINE [ AS ] 'LF' | 'CR' | 'CRLF']
+              [FILL MISSING FIELDS] )]
+          | 'CUSTOM' (Formatter=&lt;&lt;formatter_specifications&gt;&gt;)
+    [ OPTIONS ( &lt;key&gt; '&lt;value&gt;' [, ...] ) ]
+    [ ENCODING '&lt;encoding&gt;' ]
+      [ [LOG ERRORS [PERSISTENTLY]] SEGMENT REJECT LIMIT &lt;count&gt;
+      [ROWS | PERCENT] ]
+
+CREATE [READABLE] EXTERNAL WEB [TEMPORARY | TEMP] TABLE &lt;table_name&gt;     
+   ( &lt;column_name&gt; &lt;data_type&gt; [, ...] | LIKE &lt;other_table &gt;)
+      LOCATION ('http://&lt;webhost&gt;[:&lt;port&gt;]/&lt;path&gt;/&lt;file&gt;' [, ...])
+    | EXECUTE '&lt;command&gt;' [ON ALL 
+                          | MASTER
+                          | &lt;number_of_segments&gt;
+                          | HOST ['&lt;segment_hostname&gt;'] 
+                          | SEGMENT &lt;segment_id&gt; ]
+      FORMAT 'TEXT' 
+            [( [HEADER]
+               [DELIMITER [AS] '&lt;delimiter&gt;' | 'OFF']
+               [NULL [AS] '&lt;null string&gt;']
+               [ESCAPE [AS] '&lt;escape&gt;' | 'OFF']
+               [NEWLINE [ AS ] 'LF' | 'CR' | 'CRLF']
+               [FILL MISSING FIELDS] )]
+           | 'CSV'
+            [( [HEADER]
+               [QUOTE [AS] '&lt;quote&gt;'] 
+               [DELIMITER [AS] '&lt;delimiter&gt;']
+               [NULL [AS] '&lt;null string&gt;']
+               [FORCE NOT NULL &lt;column&gt; [, ...]]
+               [ESCAPE [AS] '&lt;escape&gt;']
+               [NEWLINE [ AS ] 'LF' | 'CR' | 'CRLF']
+               [FILL MISSING FIELDS] )]
+           | 'CUSTOM' (Formatter=&lt;&lt;formatter specifications&gt;&gt;)
+     [ OPTIONS ( &lt;key&gt; '&lt;value&gt;' [, ...] ) ]
+     [ ENCODING '&lt;encoding&gt;' ]
+     [ [LOG ERRORS [PERSISTENTLY]] SEGMENT REJECT LIMIT &lt;count&gt;
+       [ROWS | PERCENT] ]
+
+CREATE WRITABLE EXTERNAL [TEMPORARY | TEMP] TABLE &lt;table_name&gt;
+    ( &lt;column_name&gt; &lt;data_type&gt; [, ...] | LIKE &lt;other_table &gt;)
+     LOCATION('gpfdist://&lt;outputhost&gt;[:&lt;port&gt;]/&lt;filename&gt;[#transform=&lt;trans_name&gt;]'
+          [, ...])
+      | ('gpfdists://&lt;outputhost&gt;[:&lt;port&gt;]/&lt;file_pattern&gt;[#transform=&lt;trans_name&gt;]'
+          [, ...])
+      FORMAT 'TEXT' 
+               [( [DELIMITER [AS] '&lt;delimiter&gt;']
+               [NULL [AS] '&lt;null string&gt;']
+               [ESCAPE [AS] '&lt;escape&gt;' | 'OFF'] )]
+          | 'CSV'
+               [([QUOTE [AS] '&lt;quote&gt;'] 
+               [DELIMITER [AS] '&lt;delimiter&gt;']
+               [NULL [AS] '&lt;null string&gt;']
+               [FORCE QUOTE &lt;column&gt; [, ...]] | * ]
+               [ESCAPE [AS] '&lt;escape&gt;'] )]
+
+           | 'CUSTOM' (Formatter=&lt;&lt;formatter specifications&gt;&gt;)
+    [ OPTIONS ( &lt;key&gt; '&lt;value&gt;' [, ...] ) ]
+    [ ENCODING '&lt;write_encoding&gt;' ]
+    [ DISTRIBUTED BY ({&lt;column&gt; [&lt;opclass&gt;]}, [ ... ] ) | DISTRIBUTED RANDOMLY ]
+
+CREATE WRITABLE EXTERNAL [TEMPORARY | TEMP] TABLE &lt;table_name&gt;
+    ( &lt;column_name&gt; &lt;data_type&gt; [, ...] | LIKE &lt;other_table &gt;)
+     LOCATION('s3://&lt;S3_endpoint&gt;[:&lt;port&gt;]/&lt;bucket_name&gt;/[&lt;S3_prefix&gt;] [region=&lt;S3-region&gt;] [config=&lt;config_file&gt; | config_server=&lt;url&gt;]')
+      [ON MASTER]
+      FORMAT 'TEXT' 
+               [( [DELIMITER [AS] '&lt;delimiter&gt;']
+               [NULL [AS] '&lt;null string&gt;']
+               [ESCAPE [AS] '&lt;escape&gt;' | 'OFF'] )]
+          | 'CSV'
+               [([QUOTE [AS] '&lt;quote&gt;'] 
+               [DELIMITER [AS] '&lt;delimiter&gt;']
+               [NULL [AS] '&lt;null string&gt;']
+               [FORCE QUOTE &lt;column&gt; [, ...]] | * ]
+               [ESCAPE [AS] '&lt;escape&gt;'] )]
+
+CREATE WRITABLE EXTERNAL WEB [TEMPORARY | TEMP] TABLE &lt;table_name&gt;
+    ( &lt;column_name&gt; &lt;data_type&gt; [, ...] | LIKE &lt;other_table&gt; )
+    EXECUTE '&lt;command&gt;' [ON ALL]
+    FORMAT 'TEXT' 
+               [( [DELIMITER [AS] '&lt;delimiter&gt;']
+               [NULL [AS] '&lt;null string&gt;']
+               [ESCAPE [AS] '&lt;escape&gt;' | 'OFF'] )]
+          | 'CSV'
+               [([QUOTE [AS] '&lt;quote&gt;'] 
+               [DELIMITER [AS] '&lt;delimiter&gt;']
+               [NULL [AS] '&lt;null string&gt;']
+               [FORCE QUOTE &lt;column&gt; [, ...]] | * ]
+               [ESCAPE [AS] '&lt;escape&gt;'] )]
+           | 'CUSTOM' (Formatter=&lt;&lt;formatter specifications&gt;&gt;)
+    [ OPTIONS ( &lt;key&gt; '&lt;value&gt;' [, ...] ) ]
+    [ ENCODING '&lt;write_encoding&gt;' ]
+    [ DISTRIBUTED BY ({&lt;column&gt; [&lt;opclass&gt;]}, [ ... ] ) | DISTRIBUTED RANDOMLY ]</code></pre>
+    </div>
+
+    <div class="section" id="topic1__section3"><h2 class="title sectiontitle">Description</h2>
+      
+      <p class="p"><code class="ph codeph">CREATE EXTERNAL TABLE</code> or <code class="ph codeph">CREATE EXTERNAL WEB TABLE</code>
+        creates a new readable external table definition in Greenplum Database. Readable external
+        tables are typically used for fast, parallel data loading. Once an external table is
+        defined, you can query its data directly (and in parallel) using SQL commands. For example,
+        you can select, join, or sort external table data. You can also create views for external
+        tables. DML operations (<code class="ph codeph">UPDATE</code>, <code class="ph codeph">INSERT</code>,
+          <code class="ph codeph">DELETE</code>, or <code class="ph codeph">TRUNCATE</code>) are not allowed on readable
+        external tables, and you cannot create indexes on readable external tables.</p>
+
+      <p class="p"><code class="ph codeph">CREATE WRITABLE EXTERNAL TABLE</code> or <code class="ph codeph">CREATE WRITABLE EXTERNAL WEB
+          TABLE</code> creates a new writable external table definition in Greenplum Database.
+        Writable external tables are typically used for unloading data from the database into a set
+        of files or named pipes. Writable external web tables can also be used to output data to an
+        executable program. Writable external tables can also be used as output targets for
+        Greenplum parallel MapReduce calculations. Once a writable external table is defined, data
+        can be selected from database tables and inserted into the writable external table. Writable
+        external tables only allow <code class="ph codeph">INSERT</code> operations – <code class="ph codeph">SELECT</code>,
+          <code class="ph codeph">UPDATE</code>, <code class="ph codeph">DELETE</code> or <code class="ph codeph">TRUNCATE</code> are not
+        allowed.</p>
+
+      <p class="p">The main difference between regular external tables and external web tables is their data
+        sources. Regular readable external tables access static flat files, whereas external web
+        tables access dynamic data sources – either on a web server or by running OS commands or
+        scripts. </p>
+
+      <p class="p">See <a class="xref" href="../../admin_guide/external/g-working-with-file-based-ext-tables.html" target="_blank">Working with External Data</a> for
+        detailed information about working with external tables.</p>
+
+    </div>
+
+    <div class="section" id="topic1__section4"><h2 class="title sectiontitle">Parameters</h2>
+      
+      <dl class="dl parml">
+        
+          <dt class="dt pt dlterm">READABLE | WRITABLE</dt>
+
+          <dd class="dd pd">Specifies the type of external table, readable being the default. Readable external
+            tables are used for loading data into Greenplum Database. Writable external tables are
+            used for unloading data. </dd>
+
+        
+        
+          <dt class="dt pt dlterm">WEB</dt>
+
+          <dd class="dd pd">Creates a readable or writable external web table definition in Greenplum Database.
+            There are two forms of readable external web tables – those that access files via the
+              <code class="ph codeph">http://</code> protocol or those that access data by running OS commands.
+            Writable external web tables output data to an executable program that can accept an
+            input stream of data. External web tables are not rescannable during query
+            execution.</dd>
+
+          <dd class="dd pd ddexpand">The <code class="ph codeph">s3</code> protocol does not support external web tables. You can,
+            however, create an external web table that runs a third-party tool to read data from
+            or write data to S3 directly.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">TEMPORARY | TEMP</dt>
+
+          <dd class="dd pd">If specified, creates a temporary readable or writable external table definition
+            in Greenplum Database. Temporary external tables exist in a special schema; you cannot
+            specify a schema name when you create the table. Temporary external tables are
+            automatically dropped at the end of a session.</dd>
+
+          <dd class="dd pd ddexpand">An existing permanent table with the same name is not visible to the current session
+            while the temporary table exists, unless you reference the permanent table with its
+            schema-qualified name.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">
+            <var class="keyword varname">table_name</var>
+          </dt>
+
+          <dd class="dd pd">The name of the new external table.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">
+            <var class="keyword varname">column_name</var>
+          </dt>
+
+          <dd class="dd pd">The name of a column to create in the external table definition. Unlike regular
+            tables, external tables do not have column constraints or default values, so do not
+            specify those.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">LIKE <var class="keyword varname">other_table</var></dt>
+
+          <dd class="dd pd">The <code class="ph codeph">LIKE</code> clause specifies a table from which the new external table
+            automatically copies all column names, data types and Greenplum distribution policy. If
+            the original table specifies any column constraints or default column values, those will
+            not be copied over to the new external table definition.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">
+            <var class="keyword varname">data_type</var>
+          </dt>
+
+          <dd class="dd pd">The data type of the column.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">LOCATION <var class="keyword varname">('protocol://[host[:port]]/path/file' [, ...])</var></dt>
+
+          <dd class="dd pd">If you use the <code class="ph codeph">pxf</code> protocol to access an external data source,
+          refer to <a class="xref" href="../../admin_guide/external/g-pxf-protocol.html" target="_blank">pxf:// Protocol</a> for
+          information about the <code class="ph codeph">pxf</code> protocol.</dd>
+
+          <dd class="dd pd ddexpand">If you use the <code class="ph codeph">s3</code> protocol to read or write to S3, refer to <a class="xref" href="../../admin_guide/external/g-s3-protocol.html#amazon-emr/section_stk_c2r_kx" target="_blank">s3:// Protocol</a>
+            for additional information about the <code class="ph codeph">s3</code> protocol
+              <code class="ph codeph">LOCATION</code> clause syntax.</dd>
+
+          <dd class="dd pd ddexpand">For readable external tables, specifies the URI of the external data source(s) to be
+            used to populate the external table or web table. Regular readable external tables allow
+            the <code class="ph codeph">gpfdist</code> or <code class="ph codeph">file</code> protocols. External web tables
+            allow the <code class="ph codeph">http</code> protocol. If <code class="ph codeph">port</code> is omitted, port
+              <code class="ph codeph">8080</code> is assumed for <code class="ph codeph">http</code> and
+              <code class="ph codeph">gpfdist</code> protocols.
+            If using the <code class="ph codeph">gpfdist</code> protocol, the <code class="ph codeph">path</code> is
+            relative to the directory from which <code class="ph codeph">gpfdist</code> is serving files (the
+            directory specified when you started the <code class="ph codeph">gpfdist</code> program). Also,
+              <code class="ph codeph">gpfdist</code> can use wildcards or other C-style pattern matching (for
+            example, a whitespace character is <code class="ph codeph">[[:space:]]</code>) to denote multiple
+            files in a directory. For example:</dd>
+
+          <dd class="dd pd ddexpand">
+            <pre class="pre codeblock"><code>'gpfdist://filehost:8081/*'
+'gpfdist://masterhost/my_load_file'
+'file://seghost1/dbfast1/external/myfile.txt'
+'http://intranet.example.com/finance/expenses.csv'</code></pre>
+          </dd>
+
+          <dd class="dd pd ddexpand">For writable external tables, specifies the URI location of the
+              <code class="ph codeph">gpfdist</code> process or S3 protocol that will collect data output from the
+            Greenplum segments and write it to one or more named files. For <code class="ph codeph">gpfdist</code>
+            the <code class="ph codeph">path</code> is relative to the directory from which
+              <code class="ph codeph">gpfdist</code> is serving files (the directory specified when you started
+            the <code class="ph codeph">gpfdist</code> program). If multiple <code class="ph codeph">gpfdist</code> locations
+            are listed, the segments sending data will be evenly divided across the available output
+            locations. For example:</dd>
+
+          <dd class="dd pd ddexpand">
+            <pre class="pre codeblock"><code>'gpfdist://outputhost:8081/data1.out',
+'gpfdist://outputhost:8081/data2.out'</code></pre>
+          </dd>
+
+          <dd class="dd pd ddexpand">With two <code class="ph codeph">gpfdist</code> locations listed as in the above example, half of
+            the segments would send their output data to the <code class="ph codeph">data1.out</code> file and the
+            other half to the <code class="ph codeph">data2.out</code> file.</dd>
+
+          <dd class="dd pd ddexpand">With the option <code class="ph codeph">#transform=<var class="keyword varname">trans_name</var></code>, you can
+            specify a transform to apply when loading or extracting data. The
+              <var class="keyword varname">trans_name</var> is the name of the transform in the YAML configuration
+            file you specify with the you run the <code class="ph codeph">gpfdist</code> utility. For information
+            about specifying a transform, see <a class="xref" href="../../utility_guide/ref/gpfdist.html#topic1"><code class="ph codeph">gpfdist</code></a> in the <cite class="cite">Greenplum Utility Guide</cite>. </dd>
+
+        
+        
+          <dt class="dt pt dlterm">ON MASTER</dt>
+
+          <dd class="dd pd">Restricts all table-related operations to the Greenplum master segment. Permitted only
+            on readable and writable external tables created with the <code class="ph codeph">s3</code> or custom
+            protocols. The <code class="ph codeph">gpfdist</code>, <code class="ph codeph">gpfdists</code>,
+              <code class="ph codeph">pxf</code>, and <code class="ph codeph">file</code> protocols do not support <code class="ph codeph">ON
+              MASTER</code>. <div class="note"><span class="notetitle">Note:</span> Be aware of potential resource impacts when reading from or
+              writing to external tables you create with the <code class="ph codeph">ON MASTER</code> clause. You
+              may encounter performance issues when you restrict table operations solely to the
+              Greenplum master segment.</div>
+</dd>
+
+        
+        
+          <dt class="dt pt dlterm">EXECUTE <var class="keyword varname">'command'</var> [ON ...]</dt>
+
+          <dd class="dd pd">Allowed for readable external web tables or writable external tables only. For
+            readable external web tables, specifies the OS command to be run by the segment
+            instances. The <var class="keyword varname">command</var> can be a single OS command or a script. The
+              <code class="ph codeph">ON</code> clause is used to specify which segment instances will run the
+            given command.<ul class="ul" id="topic1__ul_xd1_wq2_m4">
+              <li class="li" id="topic1__br150831">ON ALL is the default. The command will be run by every active
+                (primary) segment instance on all segment hosts in the Greenplum Database system. If
+                the command runs a script, that script must reside in the same location on all
+                of the segment hosts and be executable by the Greenplum superuser
+                  (<code class="ph codeph">gpadmin</code>).</li>
+
+              <li class="li" id="topic1__br153076">ON MASTER runs the command on the master host only. <div class="note"><span class="notetitle">Note:</span> Logging is
+                  not supported for external web tables when the <code class="ph codeph">ON MASTER</code> clause
+                  is specified.</div>
+</li>
+
+              <li class="li" id="topic1__br150832">ON <var class="keyword varname">number</var> means the command will be run by
+                the specified number of segments. The particular segments are chosen randomly at
+                runtime by the Greenplum Database system. If the command runs a script, that
+                script must reside in the same location on all of the segment hosts and be
+                executable by the Greenplum superuser (<code class="ph codeph">gpadmin</code>). </li>
+
+              <li class="li" id="topic1__br150833">HOST means the command will be run by one segment on each
+                segment host (once per segment host), regardless of the number of active segment
+                instances per host. </li>
+
+              <li class="li" id="topic1__br153082">HOST <var class="keyword varname">segment_hostname</var> means the command will be
+                run by all active (primary) segment instances on the specified segment host. </li>
+
+              <li class="li" id="topic1__br153092">SEGMENT <var class="keyword varname">segment_id</var> means the command will be
+                run only once by the specified segment. You can determine a segment instance's
+                ID by looking at the <var class="keyword varname">content</var> number in the system catalog table
+                  <a class="xref" href="../system_catalogs/gp_segment_configuration.html">gp_segment_configuration</a>. The <var class="keyword varname">content</var> ID of the Greenplum Database
+                master is always <code class="ph codeph">-1</code>.</li>
+
+            </ul>
+<p class="p">For writable external tables, the <var class="keyword varname">command</var> specified in the
+                <code class="ph codeph">EXECUTE</code> clause must be prepared to have data piped into it. Since
+              all segments that have data to send will write their output to the specified command
+              or program, the only available option for the <code class="ph codeph">ON</code> clause is <code class="ph codeph">ON
+                ALL</code>.</p>
+</dd>
+
+        
+      </dl>
+
+      <dl class="dl parml">
+        
+          <dt class="dt pt dlterm">FORMAT 'TEXT | CSV' <var class="keyword varname">(options)</var></dt>
+
+          <dd class="dd pd">When the <code class="ph codeph">FORMAT</code> clause identfies delimited text (<code class="ph codeph">TEXT</code>)
+            or comma separated values (<code class="ph codeph">CSV</code>) format, formatting options are similar
+        to those available with the
+        PostgreSQL <a class="xref" href="COPY.html#topic1">COPY</a>
+        command. If the data in the file does not use the default column delimiter, escape
+        character, null string and so on, you must specify the additional formatting options so that
+        the data in the external file is read correctly by Greenplum Database. For information about
+        using a custom format, see "Loading and Unloading Data" in the <cite class="cite">Greenplum Database
+          Administrator Guide</cite>.</dd>
+
+          <dd class="dd pd ddexpand">If you use the <code class="ph codeph">pxf</code> protocol to access an external data source,
+          refer to <a class="xref" href="../../admin_guide/external/pxf-overview.html" target="_blank">Accessing External Data with PXF</a>
+          for information about using PXF.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">FORMAT 'CUSTOM' (formatter=<var class="keyword varname">formatter_specification</var>)</dt>
+
+          <dd class="dd pd">Specifies a custom data format. The <var class="keyword varname">formatter_specification</var>
+            specifies the function to use to format the data, followed by comma-separated parameters
+            to the formatter function. The length of the formatter specification, the string
+            including <code class="ph codeph">Formatter=</code>, can be up to approximately 50K bytes.</dd>
+
+          <dd class="dd pd ddexpand">If you use the <code class="ph codeph">pxf</code> protocol to access an external data source,
+          refer to <a class="xref" href="../../admin_guide/external/pxf-overview.html" target="_blank">Accessing External Data with PXF</a>
+          for information about using PXF.</dd>
+
+          <dd class="dd pd ddexpand">For general information about using a custom format, see "Loading and Unloading Data" in the
+              <cite class="cite">Greenplum Database Administrator Guide</cite>.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">DELIMITER</dt>
+
+          <dd class="dd pd">Specifies a single ASCII character that separates columns within each row (line) of
+            data. The default is a tab character in <code class="ph codeph">TEXT</code> mode, a comma in
+              <code class="ph codeph">CSV</code> mode. In <code class="ph codeph">TEXT</code> mode for readable external tables,
+            the delimiter can be set to <code class="ph codeph">OFF</code> for special use cases in which
+            unstructured data is loaded into a single-column table. </dd>
+
+          <dd class="dd pd ddexpand">For the <code class="ph codeph">s3</code> protocol, the delimiter cannot be a newline character
+              (<code class="ph codeph">\n</code>) or a carriage return character (<code class="ph codeph">\r</code>).</dd>
+
+        
+        
+          <dt class="dt pt dlterm">NULL</dt>
+
+          <dd class="dd pd">Specifies the string that represents a <code class="ph codeph">NULL</code> value. The default is
+              <code class="ph codeph">\N</code> (backslash-N) in <code class="ph codeph">TEXT</code> mode, and an empty value
+            with no quotations in <code class="ph codeph">CSV</code> mode. You might prefer an empty string even
+            in <code class="ph codeph">TEXT</code> mode for cases where you do not want to distinguish
+              <code class="ph codeph">NULL</code> values from empty strings. When using external and web tables,
+            any data item that matches this string will be considered a <code class="ph codeph">NULL</code> value. </dd>
+
+          <dd class="dd pd ddexpand">As an example for the <code class="ph codeph">text</code> format, this <code class="ph codeph">FORMAT</code>
+            clause can be used to specify that the string of two single quotes (<code class="ph codeph">''</code>)
+            is a <code class="ph codeph">NULL</code> value. </dd>
+
+          <dd class="dd pd ddexpand">
+            <pre class="pre codeblock"><code>FORMAT 'text' (delimiter ',' null '\'\'\'\'' )</code></pre>
+          </dd>
+
+        
+        
+          <dt class="dt pt dlterm">ESCAPE</dt>
+
+          <dd class="dd pd">Specifies the single character that is used for C escape sequences (such as
+              <code class="ph codeph">\n</code>,<code class="ph codeph">\t</code>,<code class="ph codeph">\100</code>, and so on) and for
+            escaping data characters that might otherwise be taken as row or column delimiters. Make
+            sure to choose an escape character that is not used anywhere in your actual column data.
+            The default escape character is a \ (backslash) for text-formatted files and a
+              <code class="ph codeph">"</code> (double quote) for csv-formatted files, however it is possible to
+            specify another character to represent an escape. It is also possible to disable
+            escaping in text-formatted files by specifying the value <code class="ph codeph">'OFF'</code> as the
+            escape value. This is very useful for data such as text-formatted web log data that has
+            many embedded backslashes that are not intended to be escapes.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">NEWLINE</dt>
+
+          <dd class="dd pd">Specifies the newline used in your data files – <code class="ph codeph">LF</code> (Line feed, 0x0A),
+              <code class="ph codeph">CR</code> (Carriage return, 0x0D), or <code class="ph codeph">CRLF</code> (Carriage return
+            plus line feed, 0x0D 0x0A). If not specified, a Greenplum Database segment will detect
+            the newline type by looking at the first row of data it receives and using the first
+            newline type encountered.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">HEADER</dt>
+
+          <dd class="dd pd">For readable external tables, specifies that the first line in the data file(s) is a
+            header row (contains the names of the table columns) and should not be included as data
+            for the table. If using multiple data source files, all files must have a header
+            row.</dd>
+
+          <dd class="dd pd ddexpand">For the <code class="ph codeph">s3</code> protocol, the column names in the header row cannot
+            contain a newline character (<code class="ph codeph">\n</code>) or a carriage return
+              (<code class="ph codeph">\r</code>).</dd>
+
+          <dd class="dd pd ddexpand">The <code class="ph codeph">pxf</code> protocol does not support the <code class="ph codeph">HEADER</code> formatting option.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">QUOTE</dt>
+
+          <dd class="dd pd">Specifies the quotation character for <code class="ph codeph">CSV</code> mode. The default is
+            double-quote (<code class="ph codeph">"</code>).</dd>
+
+        
+        
+          <dt class="dt pt dlterm">FORCE NOT NULL</dt>
+
+          <dd class="dd pd">In <code class="ph codeph">CSV</code> mode, processes each specified column as though it were quoted
+            and hence not a <code class="ph codeph">NULL</code> value. For the default null string in
+              <code class="ph codeph">CSV</code> mode (nothing between two delimiters), this causes missing values
+            to be evaluated as zero-length strings.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">FORCE QUOTE</dt>
+
+          <dd class="dd pd">In <code class="ph codeph">CSV</code> mode for writable external tables, forces quoting to be used
+            for all non-<code class="ph codeph">NULL</code> values in each specified column. If <code class="ph codeph">*</code>
+            is specified then non-<code class="ph codeph">NULL</code> values will be quoted in all columns.
+            <code class="ph codeph">NULL</code> output is never quoted.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">FILL MISSING FIELDS</dt>
+
+          <dd class="dd pd">In both <code class="ph codeph">TEXT</code> and <code class="ph codeph">CSV</code> mode for readable external
+            tables, specifying <code class="ph codeph">FILL MISSING FIELDS</code> will set missing trailing field
+            values to <code class="ph codeph">NULL</code> (instead of reporting an error) when a row of data has
+            missing data fields at the end of a line or row. Blank rows, fields with a <code class="ph codeph">NOT
+              NULL</code> constraint, and trailing delimiters on a line will still report an
+            error.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">OPTIONS <var class="keyword varname">key</var> '<var class="keyword varname">value'</var>[, <var class="keyword varname">key</var>'
+              <var class="keyword varname">value</var>' ...]</dt>
+
+          <dd class="dd pd">Optional. Specifies parameters and values as key-value pairs that are set to a custom
+            data access protocol when the protocol is used as a external table protocol for an
+            external table. It is the responsibility of the custom data access protocol to process
+            and validate the key-value pairs.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">ENCODING <var class="keyword varname">'encoding'</var></dt>
+
+          <dd class="dd pd">Character set encoding to use for the external table. Specify a string constant (such
+            as <code class="ph codeph">'SQL_ASCII'</code>), an integer encoding number, or
+              <code class="ph codeph">DEFAULT</code> to use the default client encoding. See <a class="xref" href="../character_sets.html">Character Set Support</a>.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">LOG ERRORS [PERSISTENTLY]</dt>
+
+          <dd class="dd pd">This is an optional clause that can precede a <code class="ph codeph">SEGMENT REJECT LIMIT</code>
+            clause to log information about rows with formatting errors. The error log data is
+            stored internally. If error log data exists for a specified external table, new data is
+            appended to existing error log data. The error log data is not replicated to mirror
+            segments.</dd>
+
+          <dd class="dd pd ddexpand">The data is deleted when the external table is dropped unless you specify the keyword
+              <code class="ph codeph">PERSISTENTLY</code>. If the keyword is specified, the log data persists
+            after the external table is dropped.</dd>
+
+          <dd class="dd pd ddexpand">The error log data is accessed with the Greenplum Database built-in SQL function
+              <code class="ph codeph">gp_read_error_log()</code>, or with the SQL function
+              <code class="ph codeph">gp_read_persistent_error_log()</code> if the <code class="ph codeph">PERSISTENTLY</code>
+            keyword is specified.</dd>
+
+          <dd class="dd pd ddexpand">If you use the <code class="ph codeph">PERSISTENTLY</code> keyword, you must install the functions
+            that manage the persistent error log information.</dd>
+
+          <dd class="dd pd ddexpand">See <a class="xref" href="#topic1__section8">Notes</a> for information about the error log
+            information and built-in functions for viewing and managing error log information.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">SEGMENT REJECT LIMIT <var class="keyword varname">count</var> [ROWS | PERCENT]</dt>
+
+          <dd class="dd pd">Runs a <code class="ph codeph">COPY FROM</code> operation in single row error isolation mode. If the
+            input rows have format errors they will be discarded provided that the reject limit
+            count is not reached on any Greenplum segment instance during the load operation. The
+            reject limit count can be specified as number of rows (the default) or percentage of
+            total rows (1-100). If <code class="ph codeph">PERCENT</code> is used, each segment starts calculating
+            the bad row percentage only after the number of rows specified by the parameter
+              <code class="ph codeph">gp_reject_percent_threshold</code> has been processed. The default for
+              <code class="ph codeph">gp_reject_percent_threshold</code> is 300 rows. Constraint errors such as
+            violation of a <code class="ph codeph">NOT NULL</code>, <code class="ph codeph">CHECK</code>, or
+              <code class="ph codeph">UNIQUE</code> constraint will still be handled in "all-or-nothing" input
+            mode. If the limit is not reached, all good rows will be loaded and any error rows
+            discarded.</dd>
+
+          <dd class="dd pd ddexpand">
+            <div class="note"><span class="notetitle">Note:</span> When reading an external table, Greenplum Database limits the initial number of
+              rows that can contain formatting errors if the <code class="ph codeph">SEGMENT REJECT LIMIT</code>
+              is not triggered first or is not specified. If the first 1000 rows are rejected, the
+                <code class="ph codeph">COPY</code> operation is stopped and rolled back. <p class="p">The limit for the
+                number of initial rejected rows can be changed with the Greenplum Database server
+                configuration parameter <code class="ph codeph">gp_initial_bad_row_limit</code>. See <a class="xref" href="../config_params/guc_config.html#topic1">Server Configuration Parameters</a> for information about the
+                parameter. </p>
+</div>
+
+          </dd>
+
+        
+        
+          <dt class="dt pt dlterm">DISTRIBUTED BY ({<var class="keyword varname">column</var> [<var class="keyword varname">opclass</var>]}, [ ... ]
+            )</dt>
+
+          <dt class="dt pt dlterm">DISTRIBUTED RANDOMLY</dt>
+
+          <dd class="dd pd">Used to declare the Greenplum Database distribution policy for a writable external
+            table. By default, writable external tables are distributed randomly. If the source
+            table you are exporting data from has a hash distribution policy, defining the same
+            distribution key column(s) and operator class(es), <code class="ph codeph">oplcass</code>, for the
+            writable external table will improve unload performance by eliminating the need to move
+            rows over the interconnect. When you issue an unload command such as <code class="ph codeph">INSERT INTO
+                <var class="keyword varname">wex_table</var> SELECT * FROM <var class="keyword varname">source_table</var></code>,
+            the rows that are unloaded can be sent directly from the segments to the output location
+            if the two tables have the same hash distribution policy.</dd>
+
+        
+      </dl>
+
+    </div>
+
+    <div class="section" id="topic1__section5"><h2 class="title sectiontitle">Examples</h2>
+      
+      <p class="p">Start the <code class="ph codeph">gpfdist</code> file server program in the background on port
+          <code class="ph codeph">8081</code> serving files from directory <code class="ph codeph">/var/data/staging</code>: </p>
+
+      <pre class="pre codeblock"><code>gpfdist -p 8081 -d /var/data/staging -l /home/&lt;gpadmin&gt;/log &amp;</code></pre>
+      <p class="p">Create a readable external table named <code class="ph codeph">ext_customer</code> using the
+          <code class="ph codeph">gpfdist</code> protocol and any text formatted files (<code class="ph codeph">*.txt</code>)
+        found in the <code class="ph codeph">gpfdist</code> directory. The files are formatted with a pipe
+          (<code class="ph codeph">|</code>) as the column delimiter and an empty space as <code class="ph codeph">NULL</code>.
+        Also access the external table in single row error isolation mode:</p>
+
+      <pre class="pre codeblock"><code>CREATE EXTERNAL TABLE ext_customer
+   (id int, name text, sponsor text) 
+   LOCATION ( 'gpfdist://filehost:8081/*.txt' ) 
+   FORMAT 'TEXT' ( DELIMITER '|' NULL ' ')
+   LOG ERRORS SEGMENT REJECT LIMIT 5;</code></pre>
+      <p class="p">Create the same readable external table definition as above, but with CSV formatted
+        files:</p>
+
+      <pre class="pre codeblock"><code>CREATE EXTERNAL TABLE ext_customer 
+   (id int, name text, sponsor text) 
+   LOCATION ( 'gpfdist://filehost:8081/*.csv' ) 
+   FORMAT 'CSV' ( DELIMITER ',' );</code></pre>
+      <p class="p">Create a readable external table named <code class="ph codeph">ext_expenses</code> using the
+          <code class="ph codeph">file</code> protocol and several CSV formatted files that have a header row:</p>
+
+      <pre class="pre codeblock"><code>CREATE EXTERNAL TABLE ext_expenses (name text, date date, 
+amount float4, category text, description text) 
+LOCATION ( 
+'file://seghost1/dbfast/external/expenses1.csv',
+'file://seghost1/dbfast/external/expenses2.csv',
+'file://seghost2/dbfast/external/expenses3.csv',
+'file://seghost2/dbfast/external/expenses4.csv',
+'file://seghost3/dbfast/external/expenses5.csv',
+'file://seghost3/dbfast/external/expenses6.csv' 
+)
+FORMAT 'CSV' ( HEADER );</code></pre>
+      <p class="p">Create a readable external web table that runs a script once per segment host:</p>
+
+      <pre class="pre codeblock"><code>CREATE EXTERNAL WEB TABLE log_output (linenum int, message 
+text)  EXECUTE '/var/load_scripts/get_log_data.sh' ON HOST 
+ FORMAT 'TEXT' (DELIMITER '|');</code></pre>
+      <p class="p">Create a writable external table named <code class="ph codeph">sales_out</code> that uses
+          <code class="ph codeph">gpfdist</code> to write output data to a file named <code class="ph codeph">sales.out</code>.
+        The files are formatted with a pipe (<code class="ph codeph">|</code>) as the column delimiter and an
+        empty space as <code class="ph codeph">NULL</code>.</p>
+
+      <pre class="pre codeblock"><code>CREATE WRITABLE EXTERNAL TABLE sales_out (LIKE sales) 
+   LOCATION ('gpfdist://etl1:8081/sales.out')
+   FORMAT 'TEXT' ( DELIMITER '|' NULL ' ')
+   DISTRIBUTED BY (txn_id);</code></pre>
+      <p class="p">Create a writable external web table that pipes output data received by the segments to an
+        executable script named <code class="ph codeph">to_adreport_etl.sh</code>:</p>
+
+      <pre class="pre codeblock"><code>CREATE WRITABLE EXTERNAL WEB TABLE campaign_out 
+(LIKE campaign) 
+ EXECUTE '/var/unload_scripts/to_adreport_etl.sh'
+ FORMAT 'TEXT' (DELIMITER '|');</code></pre>
+      <p class="p">Use the writable external table defined above to unload selected data:</p>
+
+      <pre class="pre codeblock"><code>INSERT INTO campaign_out SELECT * FROM campaign WHERE 
+customer_id=123;</code></pre>
+    </div>
+
+    <div class="section" id="topic1__section8"><h2 class="title sectiontitle">Notes</h2>
+      
+      <p class="p">When you specify the <code class="ph codeph">LOG ERRORS</code> clause, Greenplum Database captures errors
+        that occur while reading the external table data. For information about the error log
+        format, see <a class="xref" href="../../admin_guide/load/topics/g-viewing-bad-rows-in-the-error-table-or-error-log.html#topic58" target="_blank">Viewing Bad Rows in the Error Log</a>.</p>
+
+      <p class="p">You can view and manage the captured error log data. The functions to manage log data
+        depend on whether the data is persistent (the <code class="ph codeph">PERSISTENTLY</code> keyword is used
+        with the <code class="ph codeph">LOG ERRORS</code> clause). </p>
+
+      <ul class="ul" id="topic1__ul_wk3_jdj_bp">
+        <li class="li">Functions that manage non-persistent error log data from external tables that were
+          defined without the <code class="ph codeph">PERSISTENTLY</code> keyword.<ul class="ul" id="topic1__ul_bft_yn5_dlb">
+            <li class="li">The built-in SQL function
+                <code class="ph codeph">gp_read_error_log('<var class="keyword varname">table_name</var>')</code> displays error
+              log information for an external table. This example displays the error log data from
+              the external table
+                <code class="ph codeph">ext_expenses</code>.<pre class="pre codeblock"><code>SELECT * from gp_read_error_log('ext_expenses');</code></pre><p class="p">The
+                function returns no data if you created the external table with the <code class="ph codeph">LOG
+                  ERRORS PERSISTENTLY</code> clause, or if the external table does not exist.
+              </p>
+</li>
+
+            <li class="li">The built-in SQL function
+                  <code class="ph codeph">gp_truncate_error_log('<var class="keyword varname">table_name</var>')</code> deletes
+              the error log data for <var class="keyword varname">table_name</var>. This example deletes the error
+              log data captured from the external table
+                <code class="ph codeph">ext_expenses</code>:<pre class="pre codeblock"><code>SELECT gp_truncate_error_log('ext_expenses'); </code></pre><p class="p">Dropping
+                the table also deletes the table's log data. The function does not truncate log data
+                if the external table is defined with the <code class="ph codeph">LOG ERRORS PERSISTENTLY</code>
+                clause. </p>
+<p class="p">The function returns <code class="ph codeph">FALSE</code> if the table does not
+                exist.</p>
+</li>
+
+          </ul>
+</li>
+
+        <li class="li">Functions that manage persistent error log data from external tables that were defined
+          with the <code class="ph codeph">PERSISTENTLY</code> keyword. <ul class="ul" id="topic1__ul_htb_m45_dlb">
+            <li class="li">The SQL function
+                <code class="ph codeph">gp_read_persistent_error_log('<var class="keyword varname">table_name</var>')</code>
+              displays persistent log data for an external table. <p class="p">The function returns no data if
+                you created the external table without the <code class="ph codeph">PERSISTENTLY</code> keyword.
+                The function returns persistent log data for an external table even after the table
+                has been dropped.</p>
+</li>
+
+            <li class="li">The SQL function
+                  <code class="ph codeph">gp_truncate_persistent_error_log('<var class="keyword varname">table_name</var>')</code>
+              truncates persistent log data for a table.<p class="p">For persistent log data, you must
+                manually delete the data. Dropping the external table does not delete persistent log
+                data. </p>
+</li>
+
+          </ul>
+</li>
+
+        <li class="li">These items apply to both non-persistent and persistent error log data and the related
+            functions.<ul class="ul" id="topic1__ul_bj5_tfd_2lb">
+            <li class="li">The <code class="ph codeph">gp_read_*</code> functions require <code class="ph codeph">SELECT</code> privilege
+              on the table.</li>
+
+            <li class="li">The <code class="ph codeph">gp_truncate_*</code> functions require owner privilege on the
+              table.</li>
+
+            <li class="li">You can use the <code class="ph codeph">*</code> wildcard character to delete error log
+            information for existing tables in the current database. Specify the string
+                <code class="ph codeph">*.*</code> to delete all database error log information, including error
+              log information that was not deleted due to previous database issues. If
+                <code class="ph codeph">*</code> is specified, database owner privilege is required. If
+                <code class="ph codeph">*.*</code> is specified, operating system super-user privilege is
+              required. Non-persistent and persistent error log data must be deleted with their
+              respective <code class="ph codeph">gp_truncate_*</code> functions.</li>
+
+          </ul>
+</li>
+
+      </ul>
+
+      <p class="p">When multiple Greenplum Database external tables are defined with the
+          <code class="ph codeph">gpfdist</code>, <code class="ph codeph">gpfdists</code>, or <code class="ph codeph">file</code> protocol and
+        access the same named pipe a Linux system, Greenplum Database restricts access to the named
+        pipe to a single reader. An error is returned if a second reader attempts to access the
+        named pipe. </p>
+
+    </div>
+
+    <div class="section" id="topic1__section6"><h2 class="title sectiontitle">Compatibility</h2>
+      
+      <p class="p"><code class="ph codeph">CREATE EXTERNAL TABLE</code> is a Greenplum Database extension. The SQL standard
+        makes no provisions for external tables.</p>
+
+    </div>
+
+    <div class="section" id="topic1__section7"><h2 class="title sectiontitle">See Also</h2>
+      
+      <p class="p"><a class="xref" href="CREATE_TABLE_AS.html#topic1">CREATE TABLE AS</a>,
+            <a class="xref" href="CREATE_TABLE.html#topic1">CREATE TABLE</a>,
+            <a class="xref" href="COPY.html#topic1">COPY</a>,
+            <a class="xref" href="SELECT_INTO.html#topic1">SELECT INTO</a>,
+            <a class="xref" href="INSERT.html#topic1">INSERT</a></p>
+
+    </div>
+
+  </div>
+
+<div class="related-links">
+<div class="familylinks">
+<div class="parentlink"><strong>Parent topic:</strong> <a class="link" href="../sql_commands/sql_ref.html">SQL Commands</a></div>
+</div>
+</div></body>
+</html>

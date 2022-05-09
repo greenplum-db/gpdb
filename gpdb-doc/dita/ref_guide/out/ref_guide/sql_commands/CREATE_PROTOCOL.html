@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+
+<meta name="copyright" content="(C) Copyright 2022" />
+<meta name="DC.rights.owner" content="(C) Copyright 2022" />
+<meta name="generator" content="DITA-OT" /><meta name="DC.type" content="topic" />
+<meta name="DC.title" content="CREATE PROTOCOL" />
+<meta name="DC.relation" scheme="URI" content="../sql_commands/sql_ref.html" />
+<meta name="DC.format" content="XHTML" />
+<meta name="DC.identifier" content="topic1" />
+<link rel="stylesheet" type="text/css" href="../commonltr.css" />
+<title>CREATE PROTOCOL</title>
+</head>
+<body id="topic1">
+
+    <h1 class="title topictitle1" id="topic1__bv20941">CREATE PROTOCOL</h1>
+
+    <div class="body">
+        <p class="p" id="topic1__sql_command_desc">Registers a custom data access protocol that can be specified when
+            defining a Greenplum Database external table.</p>
+
+        <div class="section" id="topic1__section2"><h2 class="title sectiontitle">Synopsis</h2>
+            
+            <pre class="pre codeblock" id="topic1__sql_command_synopsis"><code>CREATE [TRUSTED] PROTOCOL &lt;name&gt; (
+   [readfunc='&lt;read_call_handler&gt;'] [, writefunc='&lt;write_call_handler&gt;']
+   [, validatorfunc='&lt;validate_handler&gt;' ])</code></pre>
+        </div>
+
+        <div class="section" id="topic1__section3"><h2 class="title sectiontitle">Description</h2>
+            
+            <p class="p"><code class="ph codeph">CREATE PROTOCOL</code> associates a data access protocol name with call
+                handlers that are responsible for reading from and writing data to an external data
+                source. You must be a superuser to create a protocol.</p>
+
+            <p class="p">The <code class="ph codeph">CREATE PROTOCOL</code> command must specify either a read call handler
+                or a write call handler. The call handlers specified in the <code class="ph codeph">CREATE
+                    PROTOCOL</code> command must be defined in the database.</p>
+
+            <p class="p">The protocol name can be specified in a <code class="ph codeph">CREATE EXTERNAL TABLE</code>
+                command. </p>
+
+            <p class="p"> For information about creating and enabling a custom data access protocol, see
+                "Example Custom Data Access Protocol" in the <cite class="cite">Greenplum Database Administrator
+                    Guide</cite>.</p>
+
+        </div>
+
+        <div class="section" id="topic1__section4"><h2 class="title sectiontitle">Parameters</h2>
+            
+            <dl class="dl parml">
+                
+                    <dt class="dt pt dlterm">TRUSTED</dt>
+
+                    <dd class="dd pd">If not specified, only superusers and the protocol owner can create external
+                        tables using the protocol. If specified, superusers and the protocol owner
+                        can <code class="ph codeph">GRANT</code> permissions on the protocol to other database
+                        roles.</dd>
+
+                
+                
+                    <dt class="dt pt dlterm">
+                        <var class="keyword varname">name</var>
+                    </dt>
+
+                    <dd class="dd pd">The name of the data access protocol. The protocol name is case sensitive.
+                        The name must be unique among the protocols in the database. </dd>
+
+                
+                
+                    <dt class="dt pt dlterm">readfunc= '<var class="keyword varname">read_call_handler</var>'</dt>
+
+                    <dd class="dd pd">The name of a previously registered function that Greenplum Database calls
+                        to read data from an external data source. The command must specify either a
+                        read call handler or a write call handler.</dd>
+
+                
+                
+                    <dt class="dt pt dlterm">writefunc= '<var class="keyword varname">write_call_handler</var>'</dt>
+
+                    <dd class="dd pd">The name of a previously registered function that Greenplum Database calls
+                        to write data to an external data source. The command must specify either a
+                        read call handler or a write call handler.</dd>
+
+                
+                
+                    <dt class="dt pt dlterm">validatorfunc='<var class="keyword varname">validate_handler</var>'</dt>
+
+                    <dd class="dd pd">An optional validator function that validates the URL specified in the
+                            <code class="ph codeph">CREATE EXTERNAL TABLE</code> command.</dd>
+
+                
+            </dl>
+
+        </div>
+
+        <div class="section" id="topic1__section5"><h2 class="title sectiontitle">Notes</h2>
+            
+            <p class="p">Greenplum Database handles external tables of type <code class="ph codeph">file</code>,
+                    <code class="ph codeph">gpfdist</code>, and <code class="ph codeph">gpfdists</code> internally. 
+                See
+                    <a class="xref" href="../../admin_guide/external/g-s3-protocol.html#amazon-emr/s3_prereq" target="_blank">s3:// Protocol</a>
+                for information about enabling the <code class="ph codeph">S3</code> protocol. Refer to <a class="xref" href="../../admin_guide/external/g-pxf-protocol.html" target="_blank">pxf:// Protocol</a> for
+                information about using the <code class="ph codeph">pxf</code> protocol.</p>
+
+            <p class="p">Any shared library that implements a data access protocol must be located in the same
+                location on all Greenplum Database segment hosts. For example, the shared library
+                can be in a location specified by the operating system environment variable
+                    <code class="ph codeph">LD_LIBRARY_PATH</code> on all hosts. You can also specify the location
+                when you define the handler function. For example, when you define the
+                    <code class="ph codeph">s3</code> protocol in the <code class="ph codeph">CREATE PROTOCOL</code> command,
+                you specify <code class="ph codeph">$libdir/gps3ext.so</code> as the location of the shared
+                object, where <code class="ph codeph">$libdir</code> is located at
+                <code class="ph codeph">$GPHOME/lib</code>.</p>
+
+        </div>
+
+        <div class="section" id="topic1__section7"><h2 class="title sectiontitle">Compatibility</h2>
+            
+            <p class="p"><code class="ph codeph">CREATE PROTOCOL</code> is a Greenplum Database extension. </p>
+
+        </div>
+
+        <div class="section" id="topic1__section8"><h2 class="title sectiontitle">See Also</h2>
+            
+            <p class="p"><a class="xref" href="ALTER_PROTOCOL.html#topic1">ALTER PROTOCOL</a>, <a class="xref" href="CREATE_EXTERNAL_TABLE.html#topic1">CREATE EXTERNAL TABLE</a>, <a class="xref" href="DROP_PROTOCOL.html#topic1">DROP PROTOCOL</a>, <a class="xref" href="GRANT.html#topic1">GRANT</a></p>
+
+        </div>
+
+    </div>
+
+<div class="related-links">
+<div class="familylinks">
+<div class="parentlink"><strong>Parent topic:</strong> <a class="link" href="../sql_commands/sql_ref.html">SQL Commands</a></div>
+</div>
+</div></body>
+</html>

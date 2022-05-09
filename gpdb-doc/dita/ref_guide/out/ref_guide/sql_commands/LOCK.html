@@ -1,0 +1,281 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+
+<meta name="copyright" content="(C) Copyright 2022" />
+<meta name="DC.rights.owner" content="(C) Copyright 2022" />
+<meta name="generator" content="DITA-OT" /><meta name="DC.type" content="topic" />
+<meta name="DC.title" content="LOCK" />
+<meta name="DC.relation" scheme="URI" content="../sql_commands/sql_ref.html" />
+<meta name="DC.format" content="XHTML" />
+<meta name="DC.identifier" content="topic1" />
+<link rel="stylesheet" type="text/css" href="../commonltr.css" />
+<title>LOCK</title>
+</head>
+<body id="topic1">
+
+    <h1 class="title topictitle1" id="topic1__dv20941">LOCK</h1>
+
+    <div class="body">
+        <p class="p" id="topic1__sql_command_desc">Locks a table.</p>
+
+        <div class="section" id="topic1__section2"><h2 class="title sectiontitle">Synopsis</h2>
+            
+            <pre class="pre codeblock" id="topic1__sql_command_synopsis"><code>LOCK [TABLE] [ONLY] name [ * ] [, ...] [IN &lt;lockmode&gt; MODE] [NOWAIT]</code></pre>
+            <p class="p">where <var class="keyword varname">lockmode</var> is one of:</p>
+
+            <pre class="pre codeblock"><code>    ACCESS SHARE | ROW SHARE | ROW EXCLUSIVE | SHARE UPDATE EXCLUSIVE 
+  | SHARE | SHARE ROW EXCLUSIVE | EXCLUSIVE | ACCESS EXCLUSIVE</code></pre>
+        </div>
+
+        <div class="section" id="topic1__section3"><h2 class="title sectiontitle">Description</h2>
+            
+            <p class="p"><code class="ph codeph">LOCK TABLE</code> obtains a table-level lock, waiting if necessary for any
+                conflicting locks to be released. If <code class="ph codeph">NOWAIT</code> is specified,
+                    <code class="ph codeph">LOCK TABLE</code> does not wait to acquire the desired lock: if it
+                cannot be acquired immediately, the command is stopped and an error is emitted. Once
+                obtained, the lock is held for the remainder of the current transaction. There is no
+                    <code class="ph codeph">UNLOCK TABLE</code> command; locks are always released at transaction
+                end.</p>
+
+            <p class="p">When acquiring locks automatically for commands that reference tables, Greenplum
+                Database always uses the least restrictive lock mode possible. <code class="ph codeph">LOCK
+                    TABLE</code> provides for cases when you might need more restrictive locking.
+                For example, suppose an application runs a transaction at the <em class="ph i">Read Committed</em>
+                isolation level and needs to ensure that data in a table remains stable for the
+                duration of the transaction. To achieve this you could obtain <code class="ph codeph">SHARE</code>
+                lock mode over the table before querying. This will prevent concurrent data changes
+                and ensure subsequent reads of the table see a stable view of committed data,
+                because <code class="ph codeph">SHARE</code> lock mode conflicts with the <code class="ph codeph">ROW
+                    EXCLUSIVE</code> lock acquired by writers, and your <code class="ph codeph">LOCK TABLE
+                        <var class="keyword varname">name</var> IN SHARE MODE</code> statement will wait until any
+                concurrent holders of <code class="ph codeph">ROW EXCLUSIVE</code> mode locks commit or roll back.
+                Thus, once you obtain the lock, there are no uncommitted writes outstanding;
+                furthermore none can begin until you release the lock.</p>
+
+            <p class="p">To achieve a similar effect when running a transaction at the <code class="ph codeph">REPEATABLE
+                    READ</code> or <code class="ph codeph">SERIALIZABLE</code> isolation level, you have to
+                run the <code class="ph codeph">LOCK TABLE</code> statement before running any
+                    <code class="ph codeph">SELECT</code> or data modification statement. A <code class="ph codeph">REPEATABLE
+                    READ</code> or <code class="ph codeph">SERIALIZABLE</code> transaction's view of data will
+                be frozen when its first <code class="ph codeph">SELECT</code> or data modification statement
+                begins. A <code class="ph codeph">LOCK TABLE</code> later in the transaction will still prevent
+                concurrent writes — but it won't ensure that what the transaction reads corresponds
+                to the latest committed values.</p>
+
+            <p class="p">If a transaction of this sort is going to change the data in the table, then it
+                should use <code class="ph codeph">SHARE ROW EXCLUSIVE</code> lock mode instead of
+                    <code class="ph codeph">SHARE</code> mode. This ensures that only one transaction of this type
+                runs at a time. Without this, a deadlock is possible: two transactions might both
+                acquire <code class="ph codeph">SHARE</code> mode, and then be unable to also acquire <code class="ph codeph">ROW
+                    EXCLUSIVE</code> mode to actually perform their updates. Note that a
+                transaction's own locks never conflict, so a transaction can acquire <code class="ph codeph">ROW
+                    EXCLUSIVE</code> mode when it holds <code class="ph codeph">SHARE</code> mode — but not if
+                anyone else holds <code class="ph codeph">SHARE</code> mode. To avoid deadlocks, make sure all
+                transactions acquire locks on the same objects in the same order, and if multiple
+                lock modes are involved for a single object, then transactions should always acquire
+                the most restrictive mode first.</p>
+
+        </div>
+
+        <div class="section" id="topic1__section4"><h2 class="title sectiontitle">Parameters</h2>
+            
+            <dl class="dl parml">
+                
+                    <dt class="dt pt dlterm"><var class="keyword varname">name</var></dt>
+
+                    <dd class="dd pd">The name (optionally schema-qualified) of an existing table to lock. If
+                            <code class="ph codeph">ONLY</code> is specified, only that table is locked. If
+                            <code class="ph codeph">ONLY</code> is not specified, the table and all its descendant
+                        tables (if any) are locked. Optionally, <code class="ph codeph">*</code>
+                            can be specified after the table name to explicitly indicate that
+                            descendant tables are included.</dd>
+
+                    <dd class="dd pd ddexpand">If multiple tables are given, tables are locked one-by-one in the order
+                        specified in the <code class="ph codeph">LOCK TABLE</code> command.</dd>
+
+                
+                
+                    <dt class="dt pt dlterm"><var class="keyword varname">lockmode</var></dt>
+
+                    <dd class="dd pd">The lock mode specifies which locks this lock conflicts with. If no lock
+                        mode is specified, then <code class="ph codeph">ACCESS EXCLUSIVE</code>, the most
+                        restrictive mode, is used. Lock modes are as follows:<ul class="ul" id="topic1__ul_cnt_mll_m4">
+                            <li class="li" id="topic1__dv157736">ACCESS SHARE — Conflicts with the <code class="ph codeph">ACCESS
+                                    EXCLUSIVE</code> lock mode only. The <code class="ph codeph">SELECT</code>
+                                command acquires a lock of this mode on referenced tables. In
+                                general, any query that only reads a table and does not modify it
+                                will acquire this lock mode.</li>
+
+                            <li class="li" id="topic1__dv157739">ROW SHARE — Conflicts with the
+                                    <code class="ph codeph">EXCLUSIVE</code> and <code class="ph codeph">ACCESS EXCLUSIVE</code>
+                                lock modes. The <code class="ph codeph">SELECT FOR SHARE</code> command
+                                automatically acquires a lock of this mode on the target table(s)
+                                (in addition to <code class="ph codeph">ACCESS SHARE</code> locks on any other
+                                tables that are referenced but not selected <code class="ph codeph">FOR
+                                    SHARE</code>). </li>
+
+                            <li class="li" id="topic1__dv157742">ROW EXCLUSIVE — Conflicts with the
+                                    <code class="ph codeph">SHARE</code>, <code class="ph codeph">SHARE ROW EXCLUSIVE</code>,
+                                    <code class="ph codeph">EXCLUSIVE</code>, and <code class="ph codeph">ACCESS
+                                    EXCLUSIVE</code> lock modes. The commands
+                                    <code class="ph codeph">INSERT</code> and <code class="ph codeph">COPY</code> automatically
+                                acquire this lock mode on the target table (in addition to
+                                    <code class="ph codeph">ACCESS SHARE</code> locks on any other referenced
+                                tables) See <a class="xref" href="#topic1__lock_note">Note</a>. </li>
+
+                            <li class="li" id="topic1__dv157745">SHARE UPDATE EXCLUSIVE — Conflicts with the
+                                    <code class="ph codeph">SHARE UPDATE EXCLUSIVE</code>, <code class="ph codeph">SHARE</code>,
+                                    <code class="ph codeph">SHARE ROW EXCLUSIVE</code>,
+                                <code class="ph codeph">EXCLUSIVE</code>, and <code class="ph codeph">ACCESS EXCLUSIVE</code>
+                                lock modes. This mode protects a table against concurrent schema
+                                changes and <code class="ph codeph">VACUUM</code> runs. Acquired by
+                                    <code class="ph codeph">VACUUM</code> (without <code class="ph codeph">FULL</code>) on heap
+                                tables and <code class="ph codeph">ANALYZE</code>.</li>
+
+                            <li class="li" id="topic1__dv157748">SHARE — Conflicts with the <code class="ph codeph">ROW
+                                    EXCLUSIVE</code>, <code class="ph codeph">SHARE UPDATE EXCLUSIVE</code>,
+                                    <code class="ph codeph">SHARE ROW EXCLUSIVE, EXCLUSIVE</code>, and
+                                    <code class="ph codeph">ACCESS EXCLUSIVE</code> lock modes. This mode protects
+                                a table against concurrent data changes. Acquired automatically by
+                                    <code class="ph codeph">CREATE INDEX</code>.</li>
+
+                            <li class="li" id="topic1__dv157751">SHARE ROW EXCLUSIVE — Conflicts with the <code class="ph codeph">ROW
+                                    EXCLUSIVE</code>, <code class="ph codeph">SHARE UPDATE EXCLUSIVE</code>,
+                                    <code class="ph codeph">SHARE</code>, <code class="ph codeph">SHARE ROW EXCLUSIVE</code>,
+                                    <code class="ph codeph">EXCLUSIVE</code>, and <code class="ph codeph">ACCESS
+                                    EXCLUSIVE</code> lock modes. This lock mode is not
+                                automatically acquired by any Greenplum Database command. </li>
+
+                            <li class="li" id="topic1__dv157754">EXCLUSIVE — Conflicts with the <code class="ph codeph">ROW
+                                    SHARE</code>, <code class="ph codeph">ROW EXCLUSIVE</code>, <code class="ph codeph">SHARE
+                                    UPDATE EXCLUSIVE</code>, <code class="ph codeph">SHARE</code>, <code class="ph codeph">SHARE
+                                    ROW EXCLUSIVE</code>, <code class="ph codeph">EXCLUSIVE</code>, and
+                                    <code class="ph codeph">ACCESS EXCLUSIVE</code> lock modes. This mode allows
+                                only concurrent <code class="ph codeph">ACCESS SHARE</code> locks, i.e., only
+                                reads from the table can proceed in parallel with a transaction
+                                holding this lock mode. This lock mode is automatically acquired for
+                                    <code class="ph codeph">UPDATE</code>, <code class="ph codeph">SELECT FOR UPDATE</code>, and
+                                    <code class="ph codeph">DELETE</code> in Greenplum Database (which is more
+                                restrictive locking than in regular PostgreSQL). See <a class="xref" href="#topic1__lock_note">Note</a>.</li>
+
+                            <li class="li" id="topic1__dv157757">ACCESS EXCLUSIVE — Conflicts with locks of all modes
+                                    (<code class="ph codeph">ACCESS SHARE</code>, <code class="ph codeph">ROW SHARE</code>,
+                                    <code class="ph codeph">ROW EXCLUSIVE</code>, <code class="ph codeph">SHARE UPDATE
+                                    EXCLUSIVE</code>, <code class="ph codeph">SHARE</code>,
+                                    <code class="ph codeph">SHARE</code><code class="ph codeph">ROW EXCLUSIVE</code>,
+                                    <code class="ph codeph">EXCLUSIVE</code>, and <code class="ph codeph">ACCESS
+                                    EXCLUSIVE</code>). This mode guarantees that the holder is the
+                                only transaction accessing the table in any way. Acquired
+                                automatically by the <code class="ph codeph">ALTER TABLE</code>, <code class="ph codeph">DROP
+                                    TABLE</code>, <code class="ph codeph">TRUNCATE</code>,
+                                    <code class="ph codeph">REINDEX</code>, <code class="ph codeph">CLUSTER</code>, and
+                                    <code class="ph codeph">VACUUM FULL</code> commands. This is the default lock
+                                mode for <code class="ph codeph">LOCK TABLE</code> statements that do not specify
+                                a mode explicitly. This lock is also briefly acquired by
+                                    <code class="ph codeph">VACUUM</code> (without <code class="ph codeph">FULL</code>) on
+                                append-optimized tables during processing. </li>
+
+                        </ul>
+
+                        <div class="note" id="topic1__lock_note"><span class="notetitle">Note:</span> As the default, Greenplum Database acquires an
+                                <code class="ph codeph">EXCLUSIVE</code> lock on tables for
+                                <code class="ph codeph">DELETE</code>, <code class="ph codeph">UPDATE</code>, and <code class="ph codeph">SELECT
+                                FOR UPDATE</code> operations on heap tables. When the Global
+                            Deadlock Detector is enabled, the lock mode for the operations on heap
+                            tables is <code class="ph codeph">ROW EXCLUSIVE</code>. See <a class="xref" href="../../admin_guide/dml.html#topic_gdd" target="_blank">Global Deadlock Detector</a>.</div>
+</dd>
+
+                
+                
+                    <dt class="dt pt dlterm">NOWAIT</dt>
+
+                    <dd class="dd pd">Specifies that <code class="ph codeph">LOCK TABLE</code> should not wait for any
+                        conflicting locks to be released: if the specified lock(s) cannot be
+                        acquired immediately without waiting, the transaction is cancelled.
+                    </dd>
+
+                
+            </dl>
+
+        </div>
+
+        <div class="section" id="topic1__section5"><h2 class="title sectiontitle">Notes</h2>
+            
+            <p class="p"><code class="ph codeph">LOCK TABLE ... IN ACCESS SHARE MODE</code> requires <code class="ph codeph">SELECT</code>
+                privileges on the target table. All other forms of <code class="ph codeph">LOCK</code> require
+                table-level <code class="ph codeph">UPDATE</code>, <code class="ph codeph">DELETE</code>, or
+                    <code class="ph codeph">TRUNCATE</code> privileges.</p>
+
+            <p class="p"><code class="ph codeph">LOCK TABLE</code> is useless outside of a transaction block: the lock would
+                be held only to the completion of the <code class="ph codeph">LOCK</code> statement. Therefore,
+                Greenplum Database reports an error if <code class="ph codeph">LOCK</code> is used outside of a
+                transaction block. Use <code class="ph codeph">BEGIN</code> and <code class="ph codeph">END</code> to define a
+                transaction block. </p>
+
+            <p class="p"><code class="ph codeph">LOCK TABLE</code> only deals with table-level locks, and so the mode names
+                involving <code class="ph codeph">ROW</code> are all misnomers. These mode names should generally
+                be read as indicating the intention of the user to acquire row-level locks within
+                the locked table. Also, <code class="ph codeph">ROW EXCLUSIVE</code> mode is a shareable table
+                lock. Keep in mind that all the lock modes have identical semantics so far as
+                    <code class="ph codeph">LOCK TABLE</code> is concerned, differing only in the rules about
+                which modes conflict with which. For information on how to acquire an actual
+                row-level lock, see the <code class="ph codeph">FOR UPDATE/FOR SHARE</code> clause in the
+                        <a class="xref" href="SELECT.html#topic1">SELECT</a> reference documentation.</p>
+
+        </div>
+
+        <div class="section" id="topic1__section6"><h2 class="title sectiontitle">Examples</h2>
+            
+            <p class="p">Obtain a <code class="ph codeph">SHARE</code> lock on the <code class="ph codeph">films</code> table when going
+                to perform inserts into the <code class="ph codeph">films_user_comments</code> table:</p>
+
+            <pre class="pre codeblock"><code>BEGIN WORK;
+LOCK TABLE films IN SHARE MODE;
+SELECT id FROM films
+    WHERE name = 'Star Wars: Episode I - The Phantom Menace';
+-- Do ROLLBACK if record was not returned
+INSERT INTO films_user_comments VALUES
+    (_id_, 'GREAT! I was waiting for it for so long!');
+COMMIT WORK;</code></pre>
+            <p class="p">Take a <code class="ph codeph">SHARE ROW EXCLUSIVE</code> lock on a table when performing a delete
+                operation:</p>
+
+            <pre class="pre codeblock"><code>BEGIN WORK;
+LOCK TABLE films IN SHARE ROW EXCLUSIVE MODE;
+DELETE FROM films_user_comments WHERE id IN
+    (SELECT id FROM films WHERE rating &lt; 5);
+DELETE FROM films WHERE rating &lt; 5;
+COMMIT WORK;</code></pre>
+        </div>
+
+        <div class="section" id="topic1__section7"><h2 class="title sectiontitle">Compatibility</h2>
+            
+            <p class="p">There is no <code class="ph codeph">LOCK TABLE</code> in the SQL standard, which instead uses
+                    <code class="ph codeph">SET TRANSACTION</code> to specify concurrency levels on transactions.
+                Greenplum Database supports that too. </p>
+
+            <p class="p">Except for <code class="ph codeph">ACCESS SHARE</code>, <code class="ph codeph">ACCESS EXCLUSIVE</code>, and
+                    <code class="ph codeph">SHARE UPDATE EXCLUSIVE</code> lock modes, the Greenplum Database lock
+                modes and the <code class="ph codeph">LOCK TABLE</code> syntax are compatible with those present
+                in Oracle.</p>
+
+        </div>
+
+        <div class="section" id="topic1__section8"><h2 class="title sectiontitle">See Also</h2>
+            
+            <p class="p"><a class="xref" href="BEGIN.html#topic1">BEGIN</a>,
+                        <a class="xref" href="SET_TRANSACTION.html#topic1">SET TRANSACTION</a>, <a class="xref" href="SELECT.html#topic1">SELECT</a></p>
+
+        </div>
+
+    </div>
+
+<div class="related-links">
+<div class="familylinks">
+<div class="parentlink"><strong>Parent topic:</strong> <a class="link" href="../sql_commands/sql_ref.html">SQL Commands</a></div>
+</div>
+</div></body>
+</html>

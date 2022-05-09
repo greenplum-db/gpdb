@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+
+<meta name="copyright" content="(C) Copyright 2022" />
+<meta name="DC.rights.owner" content="(C) Copyright 2022" />
+<meta name="generator" content="DITA-OT" /><meta name="DC.type" content="topic" />
+<meta name="DC.title" content="SELECT INTO" />
+<meta name="DC.format" content="XHTML" />
+<meta name="DC.identifier" content="topic1" />
+<link rel="stylesheet" type="text/css" href="../../out/commonltr.css" />
+<title>SELECT INTO</title>
+</head>
+<body id="topic1">
+
+    <h1 class="title topictitle1" id="topic1__eh20941">SELECT INTO</h1>
+
+    <div class="body">
+        <p class="p" id="topic1__sql_command_desc">Defines a new table from the results of a query.</p>
+
+        <div class="section" id="topic1__section2"><h2 class="title sectiontitle">Synopsis</h2>
+            
+            <pre class="pre codeblock" id="topic1__sql_command_synopsis"><code>[ WITH [ RECURSIVE ] &lt;with_query&gt; [, ...] ]
+SELECT [ALL | DISTINCT [ON ( &lt;expression&gt; [, ...] )]]
+    * | &lt;expression&gt; [AS &lt;output_name&gt;] [, ...]
+    INTO [TEMPORARY | TEMP | UNLOGGED ] [TABLE] &lt;new_table&gt;
+    [FROM &lt;from_item&gt; [, ...]]
+    [WHERE &lt;condition&gt;]
+    [GROUP BY &lt;expression&gt; [, ...]]
+    [HAVING &lt;condition&gt; [, ...]]
+    [{UNION | INTERSECT | EXCEPT} [ALL | DISTINCT ] &lt;select&gt;]
+    [ORDER BY &lt;expression&gt; [ASC | DESC | USING &lt;operator&gt;] [NULLS {FIRST | LAST}] [, ...]]
+    [LIMIT {&lt;count&gt; | ALL}]
+    [OFFSET &lt;start&gt; [ ROW | ROWS ] ]
+    [FETCH { FIRST | NEXT } [ &lt;count&gt; ] { ROW | ROWS } ONLY ]
+    [FOR {UPDATE | SHARE} [OF &lt;table_name&gt; [, ...]] [NOWAIT] 
+    [...]]</code></pre>
+        </div>
+
+        <div class="section" id="topic1__section3"><h2 class="title sectiontitle">Description</h2>
+            
+            <p class="p"><code class="ph codeph">SELECT INTO</code> creates a new table and fills it with data computed by a
+                query. The data is not returned to the client, as it is with a normal
+                    <code class="ph codeph">SELECT</code>. The new table's columns have the names and data types
+                associated with the output columns of the <code class="ph codeph">SELECT</code>. </p>
+
+        </div>
+
+        <div class="section" id="topic1__section4"><h2 class="title sectiontitle">Parameters</h2>
+            
+            <p class="p">The majority of parameters for <code class="ph codeph">SELECT INTO</code> are the same as
+                        <a class="xref" href="SELECT.html#topic1">SELECT</a>. </p>
+
+            <dl class="dl parml">
+                
+                    <dt class="dt pt dlterm">TEMPORARY</dt>
+
+                    <dt class="dt pt dlterm">TEMP</dt>
+
+                    <dd class="dd pd">If specified, the table is created as a temporary table.</dd>
+
+                
+                
+                    <dt class="dt pt dlterm">UNLOGGED</dt>
+
+                    <dd class="dd pd">If specified, the table is created as an unlogged table. Data written to
+                        unlogged tables is not written to the write-ahead (WAL) log, which makes
+                        them considerably faster than ordinary tables. However, the contents of an
+                        unlogged table are not replicated to mirror segment instances. Also an
+                        unlogged table is not crash-safe. After a segment instance crash or unclean
+                        shutdown, the data for the unlogged table on that segment is truncated. Any
+                        indexes created on an unlogged table are automatically unlogged as
+                        well.</dd>
+
+                
+                
+                    <dt class="dt pt dlterm"><var class="keyword varname">new_table</var></dt>
+
+                    <dd class="dd pd">The name (optionally schema-qualified) of the table to be created.</dd>
+
+                
+            </dl>
+
+        </div>
+
+        <div class="section" id="topic1__section5"><h2 class="title sectiontitle">Examples</h2>
+            
+            <p class="p">Create a new table <code class="ph codeph">films_recent</code> consisting of only recent entries
+                from the table <code class="ph codeph">films</code>: </p>
+
+            <pre class="pre codeblock"><code>SELECT * INTO films_recent FROM films WHERE date_prod &gt;= 
+'2016-01-01';</code></pre>
+        </div>
+
+        <div class="section" id="topic1__section6"><h2 class="title sectiontitle">Compatibility</h2>
+            
+            <p class="p">The SQL standard uses <code class="ph codeph">SELECT INTO</code> to represent selecting values into
+                scalar variables of a host program, rather than creating a new table. The Greenplum
+                Database usage of <code class="ph codeph">SELECT INTO</code> to represent table creation is
+                historical. It is best to use <a class="xref" href="CREATE_TABLE_AS.html#topic1">CREATE TABLE AS</a> for this purpose in new
+                applications.</p>
+
+        </div>
+
+        <div class="section" id="topic1__section7"><h2 class="title sectiontitle">See Also</h2>
+            
+            <p class="p"><a class="xref" href="SELECT.html#topic1">SELECT</a>,
+                        <a class="xref" href="CREATE_TABLE_AS.html#topic1">CREATE TABLE AS</a></p>
+
+        </div>
+
+    </div>
+
+</body>
+</html>

@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+
+<meta name="copyright" content="(C) Copyright 2022" />
+<meta name="DC.rights.owner" content="(C) Copyright 2022" />
+<meta name="generator" content="DITA-OT" /><meta name="DC.type" content="topic" />
+<meta name="DC.title" content="REINDEX" />
+<meta name="DC.format" content="XHTML" />
+<meta name="DC.identifier" content="topic1" />
+<link rel="stylesheet" type="text/css" href="../../out/commonltr.css" />
+<title>REINDEX</title>
+</head>
+<body id="topic1">
+
+  <h1 class="title topictitle1" id="topic1__dz20941">REINDEX</h1>
+
+  <div class="body">
+    <p class="p" id="topic1__sql_command_desc">Rebuilds indexes.</p>
+
+    <div class="section" id="topic1__section2"><h2 class="title sectiontitle">Synopsis</h2><pre class="pre codeblock" id="topic1__sql_command_synopsis"><code>REINDEX {INDEX | TABLE | DATABASE | SYSTEM} &lt;name&gt;</code></pre></div>
+
+    <div class="section" id="topic1__section3"><h2 class="title sectiontitle">Description</h2><p class="p"><code class="ph codeph">REINDEX</code> rebuilds an index
+        using the data stored in the index's table, replacing the old copy of the index. There are
+        several scenarios in which to use <code class="ph codeph">REINDEX</code>: </p>
+<ul class="ul">
+        <li class="li" id="topic1__dz154728">An index has become bloated, that is, it contains many empty or
+          nearly-empty pages. This can occur with B-tree indexes in Greenplum Database under certain
+          uncommon access patterns. <code class="ph codeph">REINDEX</code> provides a way to reduce the space
+          consumption of the index by writing a new version of the index without the dead
+          pages.</li>
+
+        <li class="li" id="topic1__dz154739">You have altered the <code class="ph codeph">FILLFACTOR</code> storage parameter for an
+          index, and wish to ensure that the change has taken full effect. </li>
+
+      </ul>
+</div>
+
+    <div class="section" id="topic1__section4"><h2 class="title sectiontitle">Parameters</h2><dl class="dl parml">
+        
+          <dt class="dt pt dlterm">INDEX</dt>
+
+          <dd class="dd pd">Recreate the specified index.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">TABLE</dt>
+
+          <dd class="dd pd">Recreate all indexes of the specified table. If the table has a secondary TOAST table,
+            that is reindexed as well.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">DATABASE</dt>
+
+          <dd class="dd pd">Recreate all indexes within the current database. Indexes on shared system catalogs
+            are also processed. This form of <code class="ph codeph">REINDEX</code> cannot be run inside a
+            transaction block.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">SYSTEM</dt>
+
+          <dd class="dd pd">Recreate all indexes on system catalogs within the current database. Indexes on shared
+            system catalogs are included. Indexes on user tables are not processed. This form of
+              <code class="ph codeph">REINDEX</code> cannot be run inside a transaction block.</dd>
+
+        
+        
+          <dt class="dt pt dlterm"><var class="keyword varname">name</var></dt>
+
+          <dd class="dd pd">The name of the specific index, table, or database to be reindexed. Index and table
+            names may be schema-qualified. Presently, <code class="ph codeph">REINDEX DATABASE</code> and
+              <code class="ph codeph">REINDEX SYSTEM</code> can only reindex the current database, so their
+            parameter must match the current database's name.</dd>
+
+        
+      </dl>
+</div>
+
+    <div class="section" id="topic1__section5"><h2 class="title sectiontitle">Notes</h2>
+      
+      <p class="p"><code class="ph codeph">REINDEX</code> causes locking of system catalog tables, which could
+        affect currently running queries. To avoid disrupting ongoing business operations, schedule
+        the <code class="ph codeph">REINDEX</code> operation during a period of low activity.</p>
+
+      <p class="p"><code class="ph codeph">REINDEX</code> is similar to a drop and recreate of the index in that the index
+        contents are rebuilt from scratch. However, the locking considerations are rather different.
+          <code class="ph codeph">REINDEX</code> locks out writes but not reads of the index's parent table. It
+        also takes an exclusive lock on the specific index being processed, which will block reads
+        that attempt to use that index. In contrast, <code class="ph codeph">DROP INDEX</code> momentarily takes
+        an exclusive lock on the parent table, blocking both writes and reads. The subsequent
+          <code class="ph codeph">CREATE INDEX</code> locks out writes but not reads; since the index is not
+        there, no read will attempt to use it, meaning that there will be no blocking but reads may
+        be forced into expensive sequential scans. </p>
+
+      <p class="p">Reindexing a single index or table requires being the owner of that index or table.
+        Reindexing a database requires being the owner of the database (note that the owner can
+        therefore rebuild indexes of tables owned by other users). Of course, superusers can always
+        reindex anything.</p>
+
+      <p class="p"><code class="ph codeph">REINDEX</code> does not update the <code class="ph codeph">reltuples</code> and
+          <code class="ph codeph">relpages</code> statistics for the index. To update those statistics, run
+          <code class="ph codeph">ANALYZE</code> on the table after reindexing. </p>
+
+      <p class="p">If you suspect that shared global system catalog indexes are corrupted, they can only be
+        reindexed in Greenplum utility mode. The typical symptom of a corrupt shared index is "index
+        is not a btree" errors, or else the server crashes immediately at startup due to reliance on
+        the corrupted indexes. Contact Greenplum Customer Support for assistance in this
+        situation.</p>
+</div>
+
+    <div class="section" id="topic1__section6"><h2 class="title sectiontitle">Examples</h2><p class="p">Rebuild a single index:
+        </p>
+<pre class="pre codeblock"><code>REINDEX INDEX my_index;</code></pre><p class="p">Rebuild all the indexes on the table
+          <code class="ph codeph">my_table</code>: </p>
+<pre class="pre codeblock"><code>REINDEX TABLE my_table;</code></pre></div>
+
+    <div class="section" id="topic1__section7"><h2 class="title sectiontitle">Compatibility</h2><p class="p">There is no <code class="ph codeph">REINDEX</code>
+        command in the SQL standard.</p>
+</div>
+
+    <div class="section" id="topic1__section8"><h2 class="title sectiontitle">See Also</h2><p class="p"><a class="xref" href="CREATE_INDEX.html#topic1">CREATE INDEX</a>, <a class="xref" href="DROP_INDEX.html#topic1">DROP INDEX</a>, <a class="xref" href="VACUUM.html#topic1">VACUUM</a></p>
+</div>
+
+  </div>
+
+</body>
+</html>

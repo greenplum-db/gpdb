@@ -1,0 +1,305 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+
+<meta name="copyright" content="(C) Copyright 2022" />
+<meta name="DC.rights.owner" content="(C) Copyright 2022" />
+<meta name="generator" content="DITA-OT" /><meta name="DC.type" content="topic" />
+<meta name="DC.title" content="ALTER EXTENSION" />
+<meta name="DC.format" content="XHTML" />
+<meta name="DC.identifier" content="topic1" />
+<link rel="stylesheet" type="text/css" href="../../out/commonltr.css" />
+<title>ALTER EXTENSION</title>
+</head>
+<body id="topic1">
+
+  <h1 class="title topictitle1" id="topic1__cw20941">ALTER EXTENSION</h1>
+
+  <div class="body">
+    <p class="p" id="topic1__sql_command_desc">Change the definition of an extension that is registered in a Greenplum
+      database.</p>
+
+    <div class="section" id="topic1__section2"><h2 class="title sectiontitle">Synopsis</h2>
+      
+      <pre class="pre codeblock" id="topic1__sql_command_synopsis"><code>ALTER EXTENSION &lt;name&gt; UPDATE [ TO &lt;new_version&gt; ]
+ALTER EXTENSION &lt;name&gt; SET SCHEMA &lt;new_schema&gt;
+ALTER EXTENSION &lt;name&gt; ADD &lt;member_object&gt;
+ALTER EXTENSION &lt;name&gt; DROP &lt;member_object&gt;
+
+where &lt;member_object&gt; is:
+
+  ACCESS METHOD &lt;object_name&gt; |
+  AGGREGATE &lt;aggregate_name&gt; ( &lt;aggregate_signature&gt; ) |
+  CAST (&lt;source_type&gt; AS &lt;target_type&gt;) |
+  COLLATION &lt;object_name&gt; |
+  CONVERSION &lt;object_name&gt; |
+  DOMAIN &lt;object_name&gt; |
+  EVENT TRIGGER &lt;object_name&gt; |
+  FOREIGN DATA WRAPPER &lt;object_name&gt; |
+  FOREIGN TABLE &lt;object_name&gt; |
+  FUNCTION &lt;function_name&gt; ( [ [ &lt;argmode&gt; ] [ &lt;argname&gt; ] &lt;argtype&gt; [, ...] ] ) |
+  MATERIALIZED VIEW &lt;object_name&gt; |
+  OPERATOR &lt;operator_name&gt; (&lt;left_type&gt;, &lt;right_type&gt;) |
+  OPERATOR CLASS &lt;object_name&gt; USING &lt;index_method&gt; |
+  OPERATOR FAMILY &lt;object_name&gt; USING &lt;index_method&gt; |
+  [ PROCEDURAL ] LANGUAGE &lt;object_name&gt; |
+  SCHEMA &lt;object_name&gt; |
+  SEQUENCE &lt;object_name&gt; |
+  SERVER &lt;object_name&gt; |
+  TABLE &lt;object_name&gt; |
+  TEXT SEARCH CONFIGURATION &lt;object_name&gt; |
+  TEXT SEARCH DICTIONARY &lt;object_name&gt; |
+  TEXT SEARCH PARSER &lt;object_name&gt; |
+  TEXT SEARCH TEMPLATE &lt;object_name&gt; |
+  TRANSFORM FOR &lt;type_name&gt; LANGUAGE &lt;lang_name&gt; |
+  TYPE &lt;object_name&gt; |
+  VIEW &lt;object_name&gt;
+
+and &lt;aggregate_signature&gt; is:
+
+* |
+[ &lt;argmode&gt; ] [ &lt;argname&gt; ] &lt;argtype&gt; [ , ... ] |
+[ [ &lt;argmode&gt; ] [ &lt;argname&gt; ] &lt;argtype&gt; [ , ... ] ] ORDER BY [ &lt;argmode&gt; ] [ &lt;argname&gt; ] &lt;argtype&gt; [ , ... ]</code></pre>
+    </div>
+
+    <div class="section" id="topic1__section3"><h2 class="title sectiontitle">Description</h2>
+      
+      <p class="p"><code class="ph codeph">ALTER EXTENSION</code> changes the definition of an installed extension. These
+        are the subforms:</p>
+
+      <dl class="dl parml">
+        
+          <dt class="dt pt dlterm">UPDATE</dt>
+
+          <dd class="dd pd">
+            <p class="p">This form updates the extension to a newer version. The extension must supply a
+              suitable update script (or series of scripts) that can modify the currently-installed
+              version into the requested version.</p>
+
+          </dd>
+
+        
+        
+          <dt class="dt pt dlterm">SET SCHEMA</dt>
+
+          <dd class="dd pd">
+            <p class="p">This form moves the extension member objects into another schema. The extension must
+              be <em class="ph i">relocatable</em>.</p>
+
+          </dd>
+
+        
+        
+          <dt class="dt pt dlterm">ADD <var class="keyword varname">member_object</var></dt>
+
+          <dd class="dd pd">
+            <p class="p">This form adds an existing object to the extension. This is useful in extension
+              update scripts. The added object is treated as a member of the extension. The object
+              can only be dropped by dropping the extension.</p>
+
+          </dd>
+
+        
+        
+          <dt class="dt pt dlterm">DROP <var class="keyword varname">member_object</var></dt>
+
+          <dd class="dd pd">
+            <p class="p">This form removes a member object from the extension. This is mainly useful in
+              extension update scripts. The object is not dropped, only disassociated from the
+              extension.</p>
+
+          </dd>
+
+        
+      </dl>
+
+      <p class="p">See <a class="xref" href="https://www.postgresql.org/docs/9.6/extend-extensions.html" target="_blank">Packaging Related Objects into an Extension</a> for more
+        information about these operations. </p>
+
+      <p class="p">You must own the extension to use <code class="ph codeph">ALTER EXTENSION</code>. The
+          <code class="ph codeph">ADD</code> and <code class="ph codeph">DROP</code> forms also require ownership of the object
+        that is being added or dropped.</p>
+
+    </div>
+
+    <div class="section" id="topic1__section4"><h2 class="title sectiontitle">Parameters</h2>
+      
+      <dl class="dl parml">
+        
+          <dt class="dt pt dlterm"><var class="keyword varname">name</var></dt>
+
+          <dd class="dd pd">
+            <p class="p">The name of an installed extension.</p>
+
+          </dd>
+
+        
+        
+          <dt class="dt pt dlterm"><var class="keyword varname">new_version</var></dt>
+
+          <dd class="dd pd">
+            <p class="p">The new version of the extension. The <var class="keyword varname">new_version</var> can be either an
+              identifier or a string literal. If not specified, the command attempts to update to
+              the default version in the extension control file.</p>
+
+          </dd>
+
+        
+        
+          <dt class="dt pt dlterm"><var class="keyword varname">new_schema</var></dt>
+
+          <dd class="dd pd">
+            <p class="p">The new schema for the extension.</p>
+
+          </dd>
+
+        
+        
+          <dt class="dt pt dlterm"><var class="keyword varname">object_name</var></dt>
+
+          <dt class="dt pt dlterm"><var class="keyword varname">aggregate_name</var></dt>
+
+          <dt class="dt pt dlterm"><var class="keyword varname">function_name</var></dt>
+
+          <dt class="dt pt dlterm"><var class="keyword varname">operator_name</var></dt>
+
+          <dd class="dd pd">
+            <p class="p">The name of an object to be added to or removed from the extension. Names of tables,
+              aggregates, domains, foreign tables, functions, operators, operator classes, operator
+              families, sequences, text search objects, types, and views can be
+              schema-qualified.</p>
+
+          </dd>
+
+        
+        
+          <dt class="dt pt dlterm"><var class="keyword varname">source_type</var></dt>
+
+          <dd class="dd pd">
+            <p class="p">The name of the source data type of the cast.</p>
+
+          </dd>
+
+        
+        
+          <dt class="dt pt dlterm"><var class="keyword varname">target_type</var></dt>
+
+          <dd class="dd pd">
+            <p class="p">The name of the target data type of the cast.</p>
+
+          </dd>
+
+        
+        
+          <dt class="dt pt dlterm"><var class="keyword varname">argmode</var></dt>
+
+          <dd class="dd pd">
+            <p class="p">The mode of a function or aggregate argument: <code class="ph codeph">IN</code>,
+                <code class="ph codeph">OUT</code>, <code class="ph codeph">INOUT</code>, or <code class="ph codeph">VARIADIC</code>. The
+              default is <code class="ph codeph">IN</code>. </p>
+
+            <p class="p">The command ignores the <code class="ph codeph">OUT</code> arguments. Only the input arguments are
+              required to determine the function identity. It is sufficient to list the
+                <code class="ph codeph">IN</code>, <code class="ph codeph">INOUT</code>, and <code class="ph codeph">VARIADIC</code>
+              arguments.</p>
+
+          </dd>
+
+        
+        
+          <dt class="dt pt dlterm"><var class="keyword varname">argname</var></dt>
+
+          <dd class="dd pd">
+            <p class="p">The name of a function or aggregate argument. </p>
+
+            <p class="p">The command ignores argument names, since only the argument data types are required
+              to determine the function identity.</p>
+
+          </dd>
+
+        
+        
+          <dt class="dt pt dlterm"><var class="keyword varname">argtype</var></dt>
+
+          <dd class="dd pd">
+            <p class="p">The data type of a function or aggregate argument.</p>
+
+          </dd>
+
+        
+        
+          <dt class="dt pt dlterm"><var class="keyword varname">left_type</var></dt>
+
+          <dt class="dt pt dlterm"><var class="keyword varname">right_type</var></dt>
+
+          <dd class="dd pd">
+            <p class="p">The data types of the operator's arguments (optionally schema-qualified) . Specify
+                <code class="ph codeph">NONE</code> for the missing argument of a prefix or postfix operator.</p>
+
+          </dd>
+
+        
+        
+          <dt class="dt pt dlterm">PROCEDURAL</dt>
+
+          <dd class="dd pd">
+            <p class="p">This is a noise word.</p>
+
+          </dd>
+
+        
+        
+          <dt class="dt pt dlterm"><var class="keyword varname">type_name</var></dt>
+
+          <dd class="dd pd">
+            <p class="p">The name of the data type of the transform.</p>
+
+          </dd>
+
+        
+        
+          <dt class="dt pt dlterm"><var class="keyword varname">lang_name</var></dt>
+
+          <dd class="dd pd">
+            <p class="p">The name of the language of the transform.</p>
+
+          </dd>
+
+        
+      </dl>
+
+    </div>
+
+    <div class="section" id="topic1__section5"><h2 class="title sectiontitle">Examples</h2>
+      
+      <p class="p">To update the hstore extension to version 2.0:</p>
+
+      <pre class="pre codeblock"><code>ALTER EXTENSION hstore UPDATE TO '2.0';</code></pre>
+      <p class="p">To change the schema of the <code class="ph codeph">hstore</code> extension to
+        <code class="ph codeph">utils</code>:</p>
+
+      <pre class="pre codeblock"><code>ALTER EXTENSION hstore SET SCHEMA utils;</code></pre>
+      <p class="p">To add an existing function to the <code class="ph codeph">hstore</code> extension:</p>
+
+      <pre class="pre codeblock"><code>ALTER EXTENSION hstore ADD FUNCTION populate_record(anyelement, hstore);</code></pre>
+    </div>
+
+    <div class="section" id="topic1__section6"><h2 class="title sectiontitle">Compatibility</h2>
+      
+      <p class="p"><code class="ph codeph">ALTER EXTENSION</code> is a Greenplum Database extension. </p>
+
+    </div>
+
+    <div class="section" id="topic1__section7"><h2 class="title sectiontitle">See Also</h2>
+      
+      <p class="p"><a class="xref" href="CREATE_EXTENSION.html#topic1">CREATE EXTENSION</a>,
+           <a class="xref" href="DROP_EXTENSION.html#topic1">DROP EXTENSION</a></p>
+
+    </div>
+
+  </div>
+
+</body>
+</html>

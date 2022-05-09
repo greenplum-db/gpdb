@@ -1,0 +1,267 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+
+<meta name="copyright" content="(C) Copyright 2022" />
+<meta name="DC.rights.owner" content="(C) Copyright 2022" />
+<meta name="generator" content="DITA-OT" /><meta name="DC.type" content="topic" />
+<meta name="DC.title" content="CREATE RESOURCE QUEUE" />
+<meta name="DC.relation" scheme="URI" content="../sql_commands/sql_ref.html" />
+<meta name="DC.format" content="XHTML" />
+<meta name="DC.identifier" content="topic1" />
+<link rel="stylesheet" type="text/css" href="../commonltr.css" />
+<title>CREATE RESOURCE QUEUE</title>
+</head>
+<body id="topic1">
+
+  <h1 class="title topictitle1" id="topic1__by20941">CREATE RESOURCE QUEUE</h1>
+
+  <div class="body">
+    <p class="p" id="topic1__sql_command_desc">Defines a new resource queue.</p>
+
+    <div class="section" id="topic1__section2"><h2 class="title sectiontitle">Synopsis</h2>
+      
+      <pre class="pre codeblock" id="topic1__sql_command_synopsis"><code>CREATE RESOURCE QUEUE &lt;name&gt; WITH (&lt;queue_attribute&gt;=&lt;value&gt; [, ... ])</code></pre>
+      <p class="p">where <var class="keyword varname">queue_attribute</var> is:</p>
+
+      <pre class="pre codeblock"><code>    ACTIVE_STATEMENTS=&lt;integer&gt;
+        [ MAX_COST=&lt;float &gt;[COST_OVERCOMMIT={TRUE|FALSE}] ]
+        [ MIN_COST=&lt;float &gt;]
+        [ PRIORITY={MIN|LOW|MEDIUM|HIGH|MAX} ]
+        [ MEMORY_LIMIT='&lt;memory_units&gt;' ]
+
+ | MAX_COST=float [ COST_OVERCOMMIT={TRUE|FALSE} ]
+        [ ACTIVE_STATEMENTS=&lt;integer &gt;]
+        [ MIN_COST=&lt;float &gt;]
+        [ PRIORITY={MIN|LOW|MEDIUM|HIGH|MAX} ]
+        [ MEMORY_LIMIT='&lt;memory_units&gt;' ]</code></pre>
+    </div>
+
+    <div class="section" id="topic1__section3"><h2 class="title sectiontitle">Description</h2>
+      
+      <p class="p">Creates a new resource queue for Greenplum Database resource management. A resource queue
+        must have either an <code class="ph codeph">ACTIVE_STATEMENTS</code> or a <code class="ph codeph">MAX_COST</code> value
+        (or it can have both). Only a superuser can create a resource queue.</p>
+
+      <p class="p">Resource queues with an <code class="ph codeph">ACTIVE_STATEMENTS</code> threshold set a maximum limit on
+        the number of queries that can be run by roles assigned to that queue. It controls the
+        number of active queries that are allowed to run at the same time. The value for
+          <code class="ph codeph">ACTIVE_STATEMENTS</code> should be an integer greater than 0. </p>
+
+      <p class="p">Resource queues with a <code class="ph codeph">MAX_COST</code> threshold set a maximum limit on the total
+        cost of queries that can be run by roles assigned to that queue. Cost is measured in
+        the <em class="ph i">estimated total cost</em> for the query as determined by the query planner (as shown
+        in the <code class="ph codeph">EXPLAIN</code> output for a query). Therefore, an administrator must be
+        familiar with the queries typically run on the system in order to set an appropriate
+        cost threshold for a queue. Cost is measured in units of disk page fetches; 1.0 equals one
+        sequential disk page read. The value for <code class="ph codeph">MAX_COST</code> is specified as a
+        floating point number (for example 100.0) or can also be specified as an exponent (for
+        example 1e+2). If a resource queue is limited based on a cost threshold, then the
+        administrator can allow <code class="ph codeph">COST_OVERCOMMIT=TRUE</code> (the default). This means that
+        a query that exceeds the allowed cost threshold will be allowed to run but only when the
+        system is idle. If <code class="ph codeph">COST_OVERCOMMIT=FALSE</code> is specified, queries that exceed
+        the cost limit will always be rejected and never allowed to run. Specifying a value for
+          <code class="ph codeph">MIN_COST</code> allows the administrator to define a cost for small queries that
+        will be exempt from resource queueing.</p>
+
+      <div class="note"><span class="notetitle">Note:</span> GPORCA and the Postgres Planner utilize different
+              query costing models and may compute different costs for the same query.
+              The Greenplum Database resource queue resource management scheme neither
+              differentiates nor aligns costs between GPORCA and the Postgres Planner; it
+              uses the literal cost value returned from the optimizer to throttle
+              queries.<p class="p"> When resource queue-based resource management is active, use the
+              <code class="ph codeph">MEMORY_LIMIT</code> and <code class="ph codeph">ACTIVE_STATEMENTS</code> limits for
+              resource queues rather than configuring cost-based limits. Even when using GPORCA,
+              Greenplum Database may fall back to using the Postgres Planner for certain
+              queries, so using cost-based limits can lead to unexpected results.</p>
+</div>
+
+      <p class="p">If a value is not defined for <code class="ph codeph">ACTIVE_STATEMENTS</code> or
+          <code class="ph codeph">MAX_COST</code>, it is set to <code class="ph codeph">-1</code> by default (meaning no limit).
+        After defining a resource queue, you must assign roles to the queue using the <a class="xref" href="ALTER_ROLE.html#topic1">ALTER ROLE</a> or <a class="xref" href="CREATE_ROLE.html#topic1">CREATE ROLE</a> command.</p>
+
+      <p class="p">You can optionally assign a <code class="ph codeph">PRIORITY</code> to a resource queue to control the
+        relative share of available CPU resources used by queries associated with the queue in
+        relation to other resource queues. If a value is not defined for <code class="ph codeph">PRIORITY</code>,
+        queries associated with the queue have a default priority of <code class="ph codeph">MEDIUM</code>.</p>
+
+      <p class="p">Resource queues with an optional <code class="ph codeph">MEMORY_LIMIT</code> threshold set a maximum
+        limit on the amount of memory that all queries submitted through a resource queue can
+        consume on a segment host. This determines the total amount of memory that all worker
+        processes of a query can consume on a segment host during query execution. Greenplum
+        recommends that <code class="ph codeph">MEMORY_LIMIT</code> be used in conjunction with
+          <code class="ph codeph">ACTIVE_STATEMENTS</code> rather than with <code class="ph codeph">MAX_COST</code>. The default
+        amount of memory allotted per query on statement-based queues is: <code class="ph codeph">MEMORY_LIMIT /
+          ACTIVE_STATEMENTS</code>. The default amount of memory allotted per query on cost-based
+        queues is: <code class="ph codeph">MEMORY_LIMIT * (query_cost / MAX_COST)</code>.</p>
+
+      <p class="p">The default memory allotment can be overridden on a per-query basis using the
+          <code class="ph codeph">statement_mem</code> server configuration parameter, provided that
+          <code class="ph codeph">MEMORY_LIMIT</code> or <code class="ph codeph">max_statement_mem</code> is not exceeded. For
+        example, to allocate more memory to a particular query:</p>
+
+      <pre class="pre codeblock"><code>=&gt; SET statement_mem='2GB';
+=&gt; SELECT * FROM my_big_table WHERE column='value' ORDER BY id;
+=&gt; RESET statement_mem;</code></pre>
+      <p class="p">The <code class="ph codeph">MEMORY_LIMIT</code> value for all of your resource queues should not exceed
+        the amount of physical memory of a segment host. If workloads are staggered over multiple
+        queues, memory allocations can be oversubscribed. However, queries can be cancelled during
+        execution if the segment host memory limit specified in
+          <code class="ph codeph">gp_vmem_protect_limit</code> is exceeded.</p>
+
+      <p class="p">For information about <code class="ph codeph">statement_mem</code>, <code class="ph codeph">max_statement</code>, and
+          <code class="ph codeph">gp_vmem_protect_limit</code>, see <a class="xref" href="../config_params/guc_config.html">Server Configuration Parameters</a>.</p>
+
+    </div>
+
+    <div class="section" id="topic1__section4"><h2 class="title sectiontitle">Parameters</h2>
+      
+      <dl class="dl parml">
+        
+          <dt class="dt pt dlterm">
+            <var class="keyword varname">name</var>
+          </dt>
+
+          <dd class="dd pd">The name of the resource queue.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">ACTIVE_STATEMENTS <var class="keyword varname">integer</var></dt>
+
+          <dd class="dd pd">Resource queues with an <code class="ph codeph">ACTIVE_STATEMENTS</code> threshold limit the number
+            of queries that can be run by roles assigned to that queue. It controls the number
+            of active queries that are allowed to run at the same time. The value for
+              <code class="ph codeph">ACTIVE_STATEMENTS</code> should be an integer greater than 0.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">MEMORY_LIMIT <var class="keyword varname">'memory_units'</var></dt>
+
+          <dd class="dd pd">Sets the total memory quota for all statements submitted from users in this resource
+            queue. Memory units can be specified in kB, MB or GB. The minimum memory quota for a
+            resource queue is 10MB. There is no maximum, however the upper boundary at query
+            execution time is limited by the physical memory of a segment host. The default is no
+            limit (<code class="ph codeph">-1</code>).</dd>
+
+        
+        
+          <dt class="dt pt dlterm">MAX_COST <var class="keyword varname">float</var></dt>
+
+          <dd class="dd pd">Resource queues with a <code class="ph codeph">MAX_COST</code> threshold set a maximum limit on the
+            total cost of queries that can be run by roles assigned to that queue. Cost is
+            measured in the <em class="ph i">estimated total cost</em> for the query as determined by the Greenplum
+            Database query optimizer (as shown in the <code class="ph codeph">EXPLAIN</code> output for a query).
+            Therefore, an administrator must be familiar with the queries typically run on the
+            system in order to set an appropriate cost threshold for a queue. Cost is measured in
+            units of disk page fetches; 1.0 equals one sequential disk page read. The value for
+              <code class="ph codeph">MAX_COST</code> is specified as a floating point number (for example 100.0)
+            or can also be specified as an exponent (for example 1e+2).</dd>
+
+        
+        
+          <dt class="dt pt dlterm">COST_OVERCOMMIT <var class="keyword varname">boolean</var></dt>
+
+          <dd class="dd pd">If a resource queue is limited based on <code class="ph codeph">MAX_COST</code>, then the
+            administrator can allow <code class="ph codeph">COST_OVERCOMMIT</code> (the default). This means that
+            a query that exceeds the allowed cost threshold will be allowed to run but only when the
+            system is idle. If <code class="ph codeph">COST_OVERCOMMIT=FALSE </code>is specified, queries that
+            exceed the cost limit will always be rejected and never allowed to run.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">MIN_COST <var class="keyword varname">float</var></dt>
+
+          <dd class="dd pd">The minimum query cost limit of what is considered a small query. Queries with a cost
+            under this limit will not be queued and run immediately. Cost is measured in the
+              <em class="ph i">estimated total cost</em> for the query as determined by the query planner (as shown
+            in the <code class="ph codeph">EXPLAIN</code> output for a query). Therefore, an administrator must be
+            familiar with the queries typically run on the system in order to set an
+            appropriate cost for what is considered a small query. Cost is measured in units of disk
+            page fetches; 1.0 equals one sequential disk page read. The value for <code class="ph codeph">MIN_COST
+            </code>is specified as a floating point number (for example 100.0) or can also be
+            specified as an exponent (for example 1e+2).</dd>
+
+        
+        
+          <dt class="dt pt dlterm">PRIORITY={MIN|LOW|MEDIUM|HIGH|MAX}</dt>
+
+          <dd class="dd pd">Sets the priority of queries associated with a resource queue. Queries or statements
+            in queues with higher priority levels will receive a larger share of available CPU
+            resources in case of contention. Queries in low-priority queues may be delayed while
+            higher priority queries are run. If no priority is specified, queries associated
+            with the queue have a priority of <code class="ph codeph">MEDIUM</code>.</dd>
+
+        
+      </dl>
+
+    </div>
+
+    <div class="section" id="topic1__section5"><h2 class="title sectiontitle">Notes</h2><p class="p">Use the
+          <code class="ph codeph">gp_toolkit.gp_resqueue_status</code> system view to see the limit settings and
+        current status of a resource
+        queue:</p>
+<pre class="pre codeblock"><code>SELECT * from gp_toolkit.gp_resqueue_status WHERE 
+  rsqname='queue_name';</code></pre><p class="p">There
+        is also another system view named <code class="ph codeph">pg_stat_resqueues</code> which shows statistical
+        metrics for a resource queue over time. To use this view, however, you must enable the
+          <code class="ph codeph">stats_queue_level</code> server configuration parameter. See "Managing Workload
+        and Resources" in the <em class="ph i">Greenplum Database Administrator Guide</em> for more information
+        about using resource queues.</p>
+<p class="p"><code class="ph codeph">CREATE RESOURCE QUEUE</code> cannot be run
+        within a transaction.</p>
+Also, an SQL statement that is run during the execution time of an
+        <code class="ph codeph">EXPLAIN ANALYZE</code> command is excluded from resource queues.</div>
+
+    <div class="section" id="topic1__section6"><h2 class="title sectiontitle">Examples</h2>
+      
+      <p class="p">Create a resource queue with an active query limit of 20: </p>
+
+      <pre class="pre codeblock"><code>CREATE RESOURCE QUEUE myqueue WITH (ACTIVE_STATEMENTS=20);</code></pre>
+      <p class="p">Create a resource queue with an active query limit of 20 and a total memory limit of 2000MB
+        (each query will be allocated 100MB of segment host memory at execution time): </p>
+
+      <pre class="pre codeblock"><code>CREATE RESOURCE QUEUE myqueue WITH (ACTIVE_STATEMENTS=20, 
+  MEMORY_LIMIT='2000MB');</code></pre>
+      <p class="p">Create a resource queue with a query cost limit of 3000.0: </p>
+
+      <pre class="pre codeblock"><code>CREATE RESOURCE QUEUE myqueue WITH (MAX_COST=3000.0);</code></pre>
+      <p class="p">Create a resource queue with a query cost limit of 3<sup class="ph sup">10</sup> (or 30000000000.0) and do
+        not allow overcommit. Allow small queries with a cost under 500 to run immediately:</p>
+
+      <pre class="pre codeblock"><code>CREATE RESOURCE QUEUE myqueue WITH (MAX_COST=3e+10, 
+  COST_OVERCOMMIT=FALSE, MIN_COST=500.0);</code></pre>
+      <p class="p">Create a resource queue with both an active query limit and a query cost limit:</p>
+
+      <pre class="pre codeblock"><code>CREATE RESOURCE QUEUE myqueue WITH (ACTIVE_STATEMENTS=30, 
+  MAX_COST=5000.00);</code></pre>
+      <p class="p">Create a resource queue with an active query limit of 5 and a maximum priority setting: </p>
+
+      <pre class="pre codeblock"><code>CREATE RESOURCE QUEUE myqueue WITH (ACTIVE_STATEMENTS=5, 
+  PRIORITY=MAX);</code></pre>
+    </div>
+
+    <div class="section" id="topic1__section7"><h2 class="title sectiontitle">Compatibility</h2>
+      
+      <p class="p"><code class="ph codeph">CREATE RESOURCE QUEUE</code> is a Greenplum Database extension. There is no
+        provision for resource queues or resource management in the SQL standard.</p>
+
+    </div>
+
+    <div class="section" id="topic1__section8"><h2 class="title sectiontitle">See Also</h2>
+      
+      <p class="p"><a class="xref" href="ALTER_ROLE.html#topic1">ALTER ROLE</a>,
+            <a class="xref" href="CREATE_ROLE.html#topic1">CREATE ROLE</a>,
+            <a class="xref" href="ALTER_RESOURCE_QUEUE.html#topic1">ALTER RESOURCE QUEUE</a>, <a class="xref" href="DROP_RESOURCE_QUEUE.html#topic1">DROP RESOURCE QUEUE</a></p>
+
+    </div>
+
+  </div>
+
+<div class="related-links">
+<div class="familylinks">
+<div class="parentlink"><strong>Parent topic:</strong> <a class="link" href="../sql_commands/sql_ref.html">SQL Commands</a></div>
+</div>
+</div></body>
+</html>

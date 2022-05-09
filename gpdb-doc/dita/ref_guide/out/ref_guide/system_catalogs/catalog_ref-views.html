@@ -1,0 +1,147 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+
+<meta name="copyright" content="(C) Copyright 2022" />
+<meta name="DC.rights.owner" content="(C) Copyright 2022" />
+<meta name="generator" content="DITA-OT" /><meta name="DC.type" content="topic" />
+<meta name="DC.title" content="System Views" />
+<meta name="DC.relation" scheme="URI" content="../system_catalogs/catalog_ref.html" />
+<meta name="DC.format" content="XHTML" />
+<meta name="DC.identifier" content="topic1" />
+<link rel="stylesheet" type="text/css" href="../commonltr.css" />
+<title>System Views</title>
+</head>
+<body id="topic1">
+
+  <h1 class="title topictitle1" id="ariaid-title1">System Views</h1>
+
+  
+  <div class="body"><div class="abstract">Greenplum Database provides the following system views not available in
+    PostgreSQL.</div>
+
+    <ul class="ul" id="topic1__ul_hsv_3bd_xp">
+      <li class="li">
+        <a class="xref" href="gp_distributed_log.html#topic1">gp_distributed_log</a>
+      </li>
+
+      <li class="li">
+        <a class="xref" href="gp_distributed_xacts.html#topic1">gp_distributed_xacts</a>
+      </li>
+
+      <li class="li"><a class="xref" href="gp_endpoints.html#topic1">gp_endpoints</a></li>
+
+      <li class="li">
+        <a class="xref" href="gp_pgdatabase.html#topic1">gp_pgdatabase</a>
+      </li>
+
+      <li class="li">
+        <a class="xref" href="gp_resgroup_config.html#topic1">gp_resgroup_config</a>
+      </li>
+
+      <li class="li">
+        <a class="xref" href="gp_resgroup_status.html#topic1">gp_resgroup_status</a>
+      </li>
+
+      <li class="li">
+        <a class="xref" href="gp_resgroup_status_per_host.html#topic1">gp_resgroup_status_per_host</a>
+      </li>
+
+      <li class="li">
+        <a class="xref" href="gp_resgroup_status_per_segment.html#topic1">gp_resgroup_status_per_segment</a>
+      </li>
+
+      <li class="li">
+        <a class="xref" href="gp_resqueue_status.html#topic1">gp_resqueue_status</a>
+      </li>
+
+      <li class="li"><a class="xref" href="gp_segment_endpoints.html#topic1">gp_segment_endpoints</a></li>
+
+      <li class="li"><a class="xref" href="gp_session_endpoints.html#topic1">gp_session_endpoints</a></li>
+
+      <li class="li">
+        <a class="xref" href="gp_transaction_log.html#topic1">gp_transaction_log</a>
+      </li>
+
+      <li class="li">
+        <a class="xref" href="gpexpand_expansion_progress.html#topic1">gpexpand.expansion_progress</a>
+      </li>
+
+      <li class="li"><a class="xref" href="pg_cursors.html">pg_cursors</a></li>
+
+      <li class="li">
+        <a class="xref" href="pg_matviews.html">pg_matviews</a></li>
+
+      <li class="li">
+        <a class="xref" href="pg_max_external_files.html#topic1">pg_max_external_files</a></li>
+
+      <li class="li">
+        <a class="xref" href="pg_partition_columns.html#topic1">pg_partition_columns</a>
+      </li>
+
+      <li class="li">
+        <a class="xref" href="pg_partition_templates.html#topic1">pg_partition_templates</a>
+      </li>
+
+      <li class="li">
+        <a class="xref" href="pg_partitions.html#topic1">pg_partitions</a>
+      </li>
+
+      <li class="li">
+        <a class="xref" href="pg_resqueue_attributes.html#topic1">pg_resqueue_attributes</a>
+      </li>
+
+      <li class="li">pg_resqueue_status (Deprecated. Use <a class="xref" href="../gp_toolkit.html#topic31">gp_toolkit.gp_resqueue_status</a>.)</li>
+
+      <li class="li">
+        <a class="xref" href="pg_stat_activity.html#topic1">pg_stat_activity</a>
+      </li>
+
+      <li class="li">
+        <a class="xref" href="pg_stat_indexes.html">pg_stat_all_indexes</a>
+      </li>
+
+      <li class="li">
+        <a class="xref" href="pg_stat_tables.html">pg_stat_all_tables</a>
+      </li>
+
+      <li class="li">
+        <a class="xref" href="pg_stat_replication.html#topic1">pg_stat_replication</a>
+      </li>
+
+      <li class="li">
+        <a class="xref" href="pg_stats_resqueue.html#topic1">pg_stat_resqueues</a>
+      </li>
+
+      <li class="li">session_level_memory_consumption (See <a class="xref" href="../../admin_guide/managing/monitor.html#topic_slt_ddv_1q" target="_blank">Monitoring a Greenplum System</a>.)</li>
+
+    </ul>
+
+    <p class="p">For more information about the standard system views supported in PostgreSQL and Greenplum
+      Database, see the following sections of the PostgreSQL documentation:</p>
+
+    <ul class="ul" id="topic1__ul_c5v_3bd_xp">
+      <li class="li">
+        <a class="xref" href="https://www.postgresql.org/docs/9.4/views-overview.html" target="_blank">System Views</a>
+      </li>
+
+      <li class="li">
+        <a class="xref" href="https://www.postgresql.org/docs/9.4/monitoring-stats.html#MONITORING-STATS-VIEWS-TABLE" target="_blank">Statistics Collector Views</a>
+      </li>
+
+      <li class="li">
+        <a class="xref" href="https://www.postgresql.org/docs/9.4/information-schema.html" target="_blank">The Information Schema</a>
+      </li>
+
+    </ul>
+
+  </div>
+
+<div class="related-links">
+<div class="familylinks">
+<div class="parentlink"><strong>Parent topic:</strong> <a class="link" href="../system_catalogs/catalog_ref.html">System Catalogs</a></div>
+</div>
+</div></body>
+</html>

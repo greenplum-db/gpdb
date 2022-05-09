@@ -1,0 +1,195 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+
+<meta name="copyright" content="(C) Copyright 2022" />
+<meta name="DC.rights.owner" content="(C) Copyright 2022" />
+<meta name="generator" content="DITA-OT" /><meta name="DC.type" content="topic" />
+<meta name="DC.title" content="CREATE EXTENSION" />
+<meta name="DC.format" content="XHTML" />
+<meta name="DC.identifier" content="topic1" />
+<link rel="stylesheet" type="text/css" href="../../out/commonltr.css" />
+<title>CREATE EXTENSION</title>
+</head>
+<body id="topic1">
+
+    <h1 class="title topictitle1" id="topic1__bv20941">CREATE EXTENSION</h1>
+
+    <div class="body">
+        <p class="p" id="topic1__sql_command_desc">Registers an extension in a Greenplum database.</p>
+
+        <div class="section" id="topic1__section2"><h2 class="title sectiontitle">Synopsis</h2>
+            
+            <pre class="pre codeblock" id="topic1__sql_command_synopsis"><code>CREATE EXTENSION [ IF NOT EXISTS ] &lt;extension_name&gt;
+  [ WITH ] [ SCHEMA &lt;schema_name&gt; ]
+           [ VERSION &lt;version&gt; ]
+           [ FROM &lt;old_version&gt; ]
+           [ CASCADE ]</code></pre>
+        </div>
+
+        <div class="section" id="topic1__section3"><h2 class="title sectiontitle">Description</h2>
+            
+            <p class="p"><code class="ph codeph">CREATE EXTENSION</code> loads a new extension into the current database.
+                There must not be an extension of the same name already loaded.</p>
+
+            <p class="p">Loading an extension essentially amounts to running the extension script file. The
+                script typically creates new SQL objects such as functions, data types, operators
+                and index support methods. The <code class="ph codeph">CREATE EXTENSION</code> command also
+                records the identities of all the created objects, so that they can be dropped again
+                if <code class="ph codeph">DROP EXTENSION</code> is issued.</p>
+
+            <p class="p">Loading an extension requires the same privileges that would be required to create
+                the component extension objects. For most extensions this means superuser or
+                database owner privileges are required. The user who runs <code class="ph codeph">CREATE
+                    EXTENSION</code> becomes the owner of the extension for purposes of later
+                privilege checks, as well as the owner of any objects created by the extension
+                script.</p>
+
+        </div>
+
+        <div class="section" id="topic1__section4"><h2 class="title sectiontitle">Parameters</h2>
+            
+            <dl class="dl parml">
+                
+                    <dt class="dt pt dlterm">IF NOT EXISTS</dt>
+
+                    <dd class="dd pd">
+                        <p class="p">Do not throw an error if an extension with the same name already exists.
+                            A notice is issued in this case. There is no guarantee that the existing
+                            extension is similar to the extension that would have been installed.
+                        </p>
+
+                    </dd>
+
+                
+                
+                    <dt class="dt pt dlterm"><var class="keyword varname">extension_name</var></dt>
+
+                    <dd class="dd pd">
+                        <p class="p">The name of the extension to be installed. The name must be unique within
+                            the database. An extension is created from the details in the extension
+                            control file
+                                    <code class="ph codeph"><var class="keyword varname">SHAREDIR</var>/extension/<var class="keyword varname">extension_name</var>.control</code>. </p>
+
+                        <p class="p"><var class="keyword varname">SHAREDIR</var> is the installation shared-data directory,
+                            for example <code class="ph codeph">/usr/local/greenplum-db/share/postgresql</code>.
+                            The command <code class="ph codeph">pg_config --sharedir</code> displays the
+                            directory.</p>
+
+                    </dd>
+
+                
+                
+                    <dt class="dt pt dlterm">SCHEMA <var class="keyword varname">schema_name</var></dt>
+
+                    <dd class="dd pd">
+                        <p class="p">The name of the schema in which to install the extension objects. This
+                            assumes that the extension allows its contents to be relocated. The
+                            named schema must already exist. If not specified, and the extension
+                            control file does not specify a schema, the current default object
+                            creation schema is used.</p>
+
+                        <p class="p">If the extension specifies a schema parameter in its control file, then
+                            that schema cannot be overridden with a <code class="ph codeph">SCHEMA</code> clause.
+                            Normally, an error is raised if a <code class="ph codeph">SCHEMA</code> clause is
+                            given and it conflicts with the extension schema parameter. However, if
+                            the <code class="ph codeph">CASCADE</code> clause is also given, then
+                                <var class="keyword varname">schema_name</var> is ignored when it conflicts. The
+                            given <var class="keyword varname">schema_name</var> is used for the installation of any
+                            needed extensions that do not a specify schema in their control
+                            files.</p>
+
+                        <p class="p">The extension itself is not within any schema. Extensions have
+                            unqualified names that must be unique within the database. But objects
+                            belonging to the extension can be within a schema.</p>
+
+                    </dd>
+
+                
+                
+                    <dt class="dt pt dlterm">VERSION <var class="keyword varname">version</var></dt>
+
+                    <dd class="dd pd">
+                        <p class="p">The version of the extension to install. This can be written as either an
+                            identifier or a string literal. The default version is value that is
+                            specified in the extension control file.</p>
+
+                    </dd>
+
+                
+                
+                    <dt class="dt pt dlterm">FROM <var class="keyword varname">old_version</var></dt>
+
+                    <dd class="dd pd">
+                        <p class="p">Specify <code class="ph codeph">FROM <var class="keyword varname">old_version</var></code> only if you
+                            are attempting to install an extension that replaces an <em class="ph i">old-style</em>
+                            module that is a collection of objects that is not packaged into an
+                            extension. If specified, <code class="ph codeph">CREATE EXTENSION</code> runs an
+                            alternative installation script that absorbs the existing objects into
+                            the extension, instead of creating new objects. Ensure that
+                                <code class="ph codeph">SCHEMA</code> clause specifies the schema containing these
+                            pre-existing objects.</p>
+
+                        <p class="p">The value to use for <var class="keyword varname">old_version</var> is determined by the
+                            extension author, and might vary if there is more than one version of
+                            the old-style module that can be upgraded into an extension. For the
+                            standard additional modules supplied with pre-9.1 PostgreSQL, specify
+                                <code class="ph codeph">unpackaged</code> for the <var class="keyword varname">old_version</var>
+                            when updating a module to extension style.</p>
+
+                    </dd>
+
+                
+                
+                    <dt class="dt pt dlterm">CASCADE</dt>
+
+                    <dd class="dd pd">
+                        <p class="p">Automatically install dependent extensions are not already installed.
+                            Dependent extensions are checked recursively and those dependencies are
+                            also installed automatically. If the <var class="keyword varname">SCHEMA</var> clause is
+                            specified, the schema applies to the extension and all dependent
+                            extensions that are installed. Other options that are specified are not
+                            applied to the automatically-installed dependent extensions. In
+                            particular, default versions are always selected when installing
+                            dependent extensions.</p>
+
+                    </dd>
+
+                
+            </dl>
+
+        </div>
+
+        <div class="section" id="topic1__section5"><h2 class="title sectiontitle">Notes</h2>
+            
+            <p class="p">The extensions currently available for loading can be identified from the <em class="ph i"><a class="xref" href="../system_catalogs/pg_available_extensions.html#topic1">pg_available_extensions</a></em> or <em class="ph i"><a class="xref" href="../system_catalogs/pg_available_extension_versions.html#topic_sln_wfx_tz">pg_available_extension_versions</a></em> system views.</p>
+
+            <p class="p">Before you use <code class="ph codeph">CREATE EXTENSION</code> to load an extension into a
+                database, the supporting extension files must be installed including an extension
+                control file and at least one least one SQL script file. The support files must be
+                installed in the same location on all Greenplum Database hosts. For information
+                about creating new extensions, see PostgreSQL information about <a class="xref" href="https://www.postgresql.org/docs/9.6/extend-extensions.html" target="_blank">Packaging Related Objects into an
+                    Extension</a>.</p>
+
+        </div>
+
+        <div class="section" id="topic1__section7"><h2 class="title sectiontitle">Compatibility</h2>
+            
+            <p class="p"><code class="ph codeph">CREATE EXTENSION</code> is a Greenplum Database extension. </p>
+
+        </div>
+
+        <div class="section" id="topic1__section8"><h2 class="title sectiontitle">See Also</h2>
+            
+            <p class="p"><a class="xref" href="ALTER_EXTENSION.html#topic1">ALTER EXTENSION</a>,
+                        <a class="xref" href="DROP_EXTENSION.html#topic1">DROP
+                    EXTENSION</a></p>
+
+        </div>
+
+    </div>
+
+</body>
+</html>

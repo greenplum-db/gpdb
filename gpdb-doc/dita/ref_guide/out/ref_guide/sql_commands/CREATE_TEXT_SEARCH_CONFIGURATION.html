@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+
+<meta name="copyright" content="(C) Copyright 2022" />
+<meta name="DC.rights.owner" content="(C) Copyright 2022" />
+<meta name="generator" content="DITA-OT" /><meta name="DC.type" content="topic" />
+<meta name="DC.title" content="CREATE TEXT SEARCH CONFIGURATION" />
+<meta name="DC.relation" scheme="URI" content="../sql_commands/sql_ref.html" />
+<meta name="DC.format" content="XHTML" />
+<meta name="DC.identifier" content="topic1" />
+<link rel="stylesheet" type="text/css" href="../commonltr.css" />
+<title>CREATE TEXT SEARCH CONFIGURATION</title>
+</head>
+<body id="topic1">
+<h1 class="title topictitle1" id="topic1__az137232">CREATE TEXT SEARCH CONFIGURATION</h1>
+<div class="body"><p class="p" id="topic1__sql_command_desc">Defines a new text search configuration.</p>
+<div class="section" id="topic1__section2"><h2 class="title sectiontitle">Synopsis</h2>
+      <pre class="pre codeblock" id="topic1__sql_command_synopsis"><code>CREATE TEXT SEARCH CONFIGURATION &lt;name&gt; (
+    PARSER = &lt;parser_name&gt; |
+    COPY = &lt;source_config&gt;
+)</code></pre></div>
+<div class="section" id="topic1__section3"><h2 class="title sectiontitle">Description</h2>
+      <p class="p"><code class="ph codeph">CREATE TEXT SEARCH CONFIGURATION</code> creates a new text search configuration.
+        A text search configuration specifies a text search parser that can divide a string into
+        tokens, plus dictionaries that can be used to determine which tokens are of interest for
+        searching.</p>
+
+      <p class="p">If only the parser is specified, then the new text search configuration initially has no
+        mappings from token types to dictionaries, and therefore will ignore all words. Subsequent
+          <code class="ph codeph">ALTER TEXT SEARCH CONFIGURATION</code> commands must be used to create mappings
+        to make the configuration useful. Alternatively, an existing text search configuration can
+        be copied.</p>
+
+      <p class="p">If a schema name is given then the text search configuration is created in the specified
+        schema. Otherwise it is created in the current schema.</p>
+
+      <p class="p">The user who defines a text search configuration becomes its owner.</p>
+
+      <p class="p">Refer to  <a class="xref" href="../../admin_guide/textsearch/full-text-search.html#full-text-search" target="_blank">Using Full Text Search</a>
+        for further information.</p>
+</div>
+<div class="section" id="topic1__section4"><h2 class="title sectiontitle">Parameters</h2>
+      <dl class="dl parml">
+        
+          <dt class="dt pt dlterm"><var class="keyword varname">name</var></dt>
+
+          <dd class="dd pd">The name of the text search configuration to be created. The name can be
+            schema-qualified.</dd>
+
+        
+        
+          <dt class="dt pt dlterm"><var class="keyword varname">parser_name</var></dt>
+
+          <dd class="dd pd">The name of the text search parser to use for this configuration.</dd>
+
+        
+        
+          <dt class="dt pt dlterm"><var class="keyword varname">source_config</var></dt>
+
+          <dd class="dd pd">The name of an existing text search configuration to copy.</dd>
+
+        
+      </dl>
+
+   </div>
+
+  <div class="section" id="topic1__section9"><h2 class="title sectiontitle">Notes</h2>
+    
+    <p class="p">The <code class="ph codeph">PARSER</code> and <code class="ph codeph">COPY</code> options are mutually exclusive, because when an existing configuration is copied, its parser selection is copied too.</p>
+ 
+  </div>
+
+  <div class="section" id="topic1__section6"><h2 class="title sectiontitle">Compatibility</h2><p class="p">There is no <code class="ph codeph">CREATE TEXT SEARCH CONFIGURATION</code> statement in the SQL standard.</p>
+</div>
+<div class="section" id="topic1__section7"><h2 class="title sectiontitle">See Also</h2><p class="p"><a class="xref" href="ALTER_TEXT_SEARCH_CONFIGURATION.html#topic1">ALTER TEXT SEARCH CONFIGURATION</a>, <a class="xref" href="DROP_TEXT_SEARCH_CONFIGURATION.html#topic1">DROP TEXT SEARCH CONFIGURATION</a></p>
+</div>
+</div>
+<div class="related-links">
+<div class="familylinks">
+<div class="parentlink"><strong>Parent topic:</strong> <a class="link" href="../sql_commands/sql_ref.html">SQL Commands</a></div>
+</div>
+</div></body>
+</html>

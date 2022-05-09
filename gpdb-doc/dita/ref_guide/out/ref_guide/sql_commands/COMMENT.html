@@ -1,0 +1,262 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+
+<meta name="copyright" content="(C) Copyright 2022" />
+<meta name="DC.rights.owner" content="(C) Copyright 2022" />
+<meta name="generator" content="DITA-OT" /><meta name="DC.type" content="topic" />
+<meta name="DC.title" content="COMMENT" />
+<meta name="DC.relation" scheme="URI" content="../sql_commands/sql_ref.html" />
+<meta name="DC.format" content="XHTML" />
+<meta name="DC.identifier" content="topic1" />
+<link rel="stylesheet" type="text/css" href="../commonltr.css" />
+<title>COMMENT</title>
+</head>
+<body id="topic1">
+
+  <h1 class="title topictitle1" id="topic1__bi20941">COMMENT</h1>
+
+  <div class="body">
+    <p class="p" id="topic1__sql_command_desc">Defines or changes the comment of an object.</p>
+
+    <div class="section" id="topic1__section2"><h2 class="title sectiontitle">Synopsis</h2>
+      
+      <pre class="pre codeblock" id="topic1__sql_command_synopsis"><code>COMMENT ON
+{ TABLE &lt;object_name |
+  COLUMN &lt;relation_name.column_name |
+  AGGREGATE &lt;agg_name (&lt;agg_signature&gt;) |
+  CAST (&lt;source_type AS &lt;target_type&gt;) |
+  COLLATION &lt;object_name
+  CONSTRAINT &lt;constraint_name ON &lt;table_name&gt; |
+  CONVERSION &lt;object_name |
+  DATABASE &lt;object_name |
+  DOMAIN &lt;object_name |
+  EXTENSION &lt;object_name |
+  FOREIGN DATA WRAPPER &lt;object_name |
+  FOREIGN TABLE &lt;object_name |
+  FUNCTION &lt;func_name ([[&lt;argmode&gt;] [&lt;argname&gt;] &lt;argtype&gt; [, ...]]) |
+  INDEX &lt;object_name |
+  LARGE OBJECT &lt;large_object_oid |
+  MATERIALIZED VIEW &lt;object_name |
+  OPERATOR &lt;operator_name (&lt;left_type&gt;, &lt;right_type&gt;) |
+  OPERATOR CLASS &lt;object_name USING &lt;index_method&gt; |
+  [PROCEDURAL] LANGUAGE &lt;object_name |
+  RESOURCE GROUP &lt;object_name |
+  RESOURCE QUEUE &lt;object_name |
+  ROLE &lt;object_name |
+  RULE &lt;rule_name ON &lt;table_name&gt; |
+  SCHEMA &lt;object_name |
+  SEQUENCE &lt;object_name |
+  SERVER &lt;object_name |
+  TABLESPACE &lt;object_name |
+  TEXT SEARCH CONFIGURATION &lt;object_name |
+  TEXT SEARCH DICTIONARY &lt;object_name |
+  TEXT SEARCH PARSER &lt;object_name |
+  TEXT SEARCH TEMPLATE &lt;object_name |
+  TRIGGER &lt;trigger_name ON &lt;table_name&gt; |
+  TYPE &lt;object_name |
+  VIEW &lt;object_name } 
+IS 'text'</code></pre>
+<p class="p">where <var class="keyword varname">agg_signature</var> is:</p>
+
+<pre class="pre codeblock"><code>* |
+[ &lt;argmode&gt; ] [ &lt;argname&gt; ] &lt;argtype&gt; [ , ... ] |
+[ [ &lt;argmode&gt; ] [ &lt;argname&gt; ] &lt;argtype&gt; [ , ... ] ] ORDER BY [ &lt;argmode&gt; ] [ &lt;argname&gt; ] &lt;argtype&gt; [ , ... ]</code></pre>
+    </div>
+
+    <div class="section" id="topic1__section3"><h2 class="title sectiontitle">Description</h2>
+      
+      <p class="p"><code class="ph codeph">COMMENT</code> stores a comment about a database object. Only one comment string
+        is stored for each object. To remove a comment, write <code class="ph codeph">NULL</code> in place of the
+        text string. Comments are automatically dropped when the object is dropped.</p>
+
+      <p class="p">For most kinds of object, only the object's owner can set the comment. Roles don't have
+        owners, so the rule for <code class="ph codeph">COMMENT ON ROLE</code> is that you must be superuser to
+        comment on a superuser role, or have the <code class="ph codeph">CREATEROLE</code> privilege to comment on
+        non-superuser roles. Of course, a superuser can comment on anything. </p>
+
+      <p class="p">Comments can be easily retrieved with the psql meta-commands <code class="ph codeph">\dd</code>,
+          <code class="ph codeph">\d+</code>, and <code class="ph codeph">\l+</code>. Other user interfaces to retrieve comments
+        can be built atop the same built-in functions that psql uses, namely
+          <code class="ph codeph">obj_description</code>, <code class="ph codeph">col_description</code>, and
+          <code class="ph codeph">shobj_description</code>.</p>
+
+    </div>
+
+    <div class="section" id="topic1__section4"><h2 class="title sectiontitle">Parameters</h2>
+      
+      <dl class="dl parml">
+        
+          <dt class="dt pt dlterm"><var class="keyword varname">object_name</var></dt>
+
+          <dt class="dt pt dlterm"><var class="keyword varname">relation_name.column_name</var></dt>
+
+          <dt class="dt pt dlterm"><var class="keyword varname">agg_name</var></dt>
+
+          <dt class="dt pt dlterm"><var class="keyword varname">constraint_name</var></dt>
+
+          <dt class="dt pt dlterm"><var class="keyword varname">func_name</var></dt>
+
+          <dt class="dt pt dlterm"><var class="keyword varname">operator_name</var></dt>
+
+          <dt class="dt pt dlterm"><var class="keyword varname">rule_name</var></dt>
+
+          <dt class="dt pt dlterm"><var class="keyword varname">trigger_name</var></dt>
+
+          <dd class="dd pd">The name of the object to be commented. Names of tables, aggregates, collations,
+            conversions, domains, foreign tables, functions, indexes, operators, operator classes,
+            operator families, sequences, text search objects, types, views, and materialized views
+            can be schema-qualified. When commenting on a column, <var class="keyword varname">relation_name</var>
+            must refer to a table, view, materialized view, composite type, or foreign table.
+            <div class="note"><span class="notetitle">Note:</span> Greenplum Database does not support triggers.</div>
+</dd>
+
+        
+        
+          <dt class="dt pt dlterm"><var class="keyword varname">source_type</var></dt>
+
+          <dd class="dd pd">The name of the source data type of the cast. </dd>
+
+        
+        
+          <dt class="dt pt dlterm"><var class="keyword varname">target_type</var></dt>
+
+          <dd class="dd pd">The name of the target data type of the cast. </dd>
+
+        
+        
+          <dt class="dt pt dlterm"><var class="keyword varname">argmode</var></dt>
+
+          <dd class="dd pd">The mode of a function or aggregate argument: either <code class="ph codeph">IN</code>, <code class="ph codeph">OUT</code>,
+              <code class="ph codeph">INOUT</code>, or <code class="ph codeph">VARIADIC</code>. If omitted, the default is
+              <code class="ph codeph">IN</code>. Note that <code class="ph codeph">COMMENT</code> does not actually
+            pay any attention to <code class="ph codeph">OUT</code> arguments, since only the input arguments are
+            needed to determine the function's identity. So it is sufficient to list the
+              <code class="ph codeph">IN</code>, <code class="ph codeph">INOUT</code>, and <code class="ph codeph">VARIADIC</code> arguments.
+          </dd>
+
+        
+        
+          <dt class="dt pt dlterm"><var class="keyword varname">argname</var></dt>
+
+          <dd class="dd pd">The name of a function or aggregate argument. Note that <code class="ph codeph">COMMENT ON FUNCTION</code> does
+            not actually pay any attention to argument names, since only the argument data types are
+            needed to determine the function's identity. </dd>
+
+        
+        
+          <dt class="dt pt dlterm"><var class="keyword varname">argtype</var></dt>
+
+          <dd class="dd pd">The data type of a function or aggregate argument.
+          </dd>
+
+        
+        
+          <dt class="dt pt dlterm"><var class="keyword varname">large_object_oid</var></dt>
+
+          <dd class="dd pd">The OID of the large object. </dd>
+
+          <dd class="dd pd ddexpand">
+            <div class="note"><span class="notetitle">Note:</span> Greenplum Database does not support the PostgreSQL <a class="xref" href="https://www.postgresql.org/docs/9.4/largeobjects.html" target="_blank">large object facility</a> for streaming user data that is stored
+              in large-object structures.</div>
+
+          </dd>
+
+        
+        
+          <dt class="dt pt dlterm"><var class="keyword varname">left_type</var></dt>
+
+          <dt class="dt pt dlterm"><var class="keyword varname">right_type</var></dt>
+
+          <dd class="dd pd">The data type(s) of the operator's arguments (optionally schema-qualified). Write
+              <code class="ph codeph">NONE</code> for the missing argument of a prefix or postfix operator. </dd>
+
+        
+        
+          <dt class="dt pt dlterm">PROCEDURAL</dt>
+
+          <dd class="dd pd">This is a noise word. </dd>
+
+        
+        
+          <dt class="dt pt dlterm"><var class="keyword varname">text</var></dt>
+
+          <dd class="dd pd">The new comment, written as a string literal; or <code class="ph codeph">NULL</code> to drop the
+            comment.</dd>
+
+        
+      </dl>
+
+    </div>
+
+    <div class="section" id="topic1__section5"><h2 class="title sectiontitle">Notes</h2>
+      
+      <p class="p">There is presently no security mechanism for viewing comments: any user connected to a
+        database can see all the comments for objects in that database. For shared objects such as
+        databases, roles, and tablespaces, comments are stored globally so any user connected to any
+        database in the cluster can see all the comments for shared objects. Therefore, do not put
+        security-critical information in comments.</p>
+
+    </div>
+
+    <div class="section" id="topic1__section6"><h2 class="title sectiontitle">Examples</h2>
+      
+      <p class="p">Attach a comment to the table <code class="ph codeph">mytable</code>: </p>
+
+      <pre class="pre codeblock"><code>COMMENT ON TABLE mytable IS 'This is my table.';</code></pre>
+      <p class="p">Remove it again: </p>
+
+      <pre class="pre codeblock"><code>COMMENT ON TABLE mytable IS NULL;</code></pre>
+      <p class="p">Some more examples:</p>
+
+      <pre class="pre codeblock"><code>COMMENT ON AGGREGATE my_aggregate (double precision) IS 'Computes sample variance';
+COMMENT ON CAST (text AS int4) IS 'Allow casts from text to int4';
+COMMENT ON COLLATION "fr_CA" IS 'Canadian French';
+COMMENT ON COLUMN my_table.my_column IS 'Employee ID number';
+COMMENT ON CONVERSION my_conv IS 'Conversion to UTF8';
+COMMENT ON CONSTRAINT bar_col_cons ON bar IS 'Constrains column col';
+COMMENT ON DATABASE my_database IS 'Development Database';
+COMMENT ON DOMAIN my_domain IS 'Email Address Domain';
+COMMENT ON EXTENSION hstore IS 'implements the hstore data type';
+COMMENT ON FOREIGN DATA WRAPPER mywrapper IS 'my foreign data wrapper';
+COMMENT ON FOREIGN TABLE my_foreign_table IS 'Employee Information in other database';
+COMMENT ON FUNCTION my_function (timestamp) IS 'Returns Roman Numeral';
+COMMENT ON INDEX my_index IS 'Enforces uniqueness on employee ID';
+COMMENT ON LANGUAGE plpython IS 'Python support for stored procedures';
+COMMENT ON LARGE OBJECT 346344 IS 'Planning document';
+COMMENT ON OPERATOR ^ (text, text) IS 'Performs intersection of two texts';
+COMMENT ON OPERATOR - (NONE, integer) IS 'Unary minus';
+COMMENT ON OPERATOR CLASS int4ops USING btree IS '4 byte integer operators for btrees';
+COMMENT ON OPERATOR FAMILY integer_ops USING btree IS 'all integer operators for btrees';
+COMMENT ON ROLE my_role IS 'Administration group for finance tables';
+COMMENT ON RULE my_rule ON my_table IS 'Logs updates of employee records';
+COMMENT ON SCHEMA my_schema IS 'Departmental data';
+COMMENT ON SEQUENCE my_sequence IS 'Used to generate primary keys';
+COMMENT ON SERVER myserver IS 'my foreign server';
+COMMENT ON TABLE my_schema.my_table IS 'Employee Information';
+COMMENT ON TABLESPACE my_tablespace IS 'Tablespace for indexes';
+COMMENT ON TEXT SEARCH CONFIGURATION my_config IS 'Special word filtering';
+COMMENT ON TEXT SEARCH DICTIONARY swedish IS 'Snowball stemmer for Swedish language';
+COMMENT ON TEXT SEARCH PARSER my_parser IS 'Splits text into words';
+COMMENT ON TEXT SEARCH TEMPLATE snowball IS 'Snowball stemmer';
+COMMENT ON TRIGGER my_trigger ON my_table IS 'Used for RI';
+COMMENT ON TYPE complex IS 'Complex number data type';
+COMMENT ON VIEW my_view IS 'View of departmental costs';</code></pre>
+    </div>
+
+    <div class="section" id="topic1__section7"><h2 class="title sectiontitle">Compatibility</h2>
+      
+      <p class="p">There is no <code class="ph codeph">COMMENT</code> statement in the SQL standard.</p>
+
+    </div>
+
+  </div>
+
+<div class="related-links">
+<div class="familylinks">
+<div class="parentlink"><strong>Parent topic:</strong> <a class="link" href="../sql_commands/sql_ref.html">SQL Commands</a></div>
+</div>
+</div></body>
+</html>

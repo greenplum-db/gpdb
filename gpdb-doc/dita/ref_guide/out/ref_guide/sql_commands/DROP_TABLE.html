@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+
+<meta name="copyright" content="(C) Copyright 2022" />
+<meta name="DC.rights.owner" content="(C) Copyright 2022" />
+<meta name="generator" content="DITA-OT" /><meta name="DC.type" content="topic" />
+<meta name="DC.title" content="DROP TABLE" />
+<meta name="DC.relation" scheme="URI" content="../sql_commands/sql_ref.html" />
+<meta name="DC.format" content="XHTML" />
+<meta name="DC.identifier" content="topic1" />
+<link rel="stylesheet" type="text/css" href="../commonltr.css" />
+<title>DROP TABLE</title>
+</head>
+<body id="topic1">
+<h1 class="title topictitle1" id="topic1__di20941">DROP TABLE</h1>
+<div class="body"><p class="p" id="topic1__sql_command_desc">Removes a table.</p>
+<div class="section" id="topic1__section2"><h2 class="title sectiontitle">Synopsis</h2><pre class="pre codeblock" id="topic1__sql_command_synopsis"><code>DROP TABLE [IF EXISTS] &lt;name&gt; [, ...] [CASCADE | RESTRICT]</code></pre></div>
+<div class="section" id="topic1__section3"><h2 class="title sectiontitle">Description</h2><p class="p"><code class="ph codeph">DROP TABLE</code> removes tables from the database. Only the table owner, the schema
+        owner, and superuser can drop a table. To empty a table of rows without removing the table
+        definition, use <code class="ph codeph">DELETE</code> or <code class="ph codeph">TRUNCATE</code>. </p>
+<p class="p"><code class="ph codeph">DROP TABLE</code> always removes any indexes, rules, triggers,
+and constraints that exist for the target table. However, to drop a table
+that is referenced by a view, <code class="ph codeph">CASCADE</code> must be specified.
+<code class="ph codeph">CASCADE</code> will remove a dependent view entirely.</p>
+</div>
+<div class="section" id="topic1__section4"><h2 class="title sectiontitle">Parameters</h2><dl class="dl parml"><dt class="dt pt dlterm">IF EXISTS</dt>
+<dd class="dd pd">Do not throw an error if the table does not exist. A notice is issued
+in this case.</dd>
+<dt class="dt pt dlterm"><var class="keyword varname">name</var></dt>
+<dd class="dd pd">The name (optionally schema-qualified) of the table to remove.</dd>
+<dt class="dt pt dlterm">CASCADE</dt>
+<dd class="dd pd">Automatically drop objects that depend on the table (such as views).</dd>
+<dt class="dt pt dlterm">RESTRICT</dt>
+<dd class="dd pd">Refuse to drop the table if any objects depend on it. This is the
+default. </dd>
+</dl>
+</div>
+<div class="section" id="topic1__section5"><h2 class="title sectiontitle">Examples</h2><p class="p">Remove the table <code class="ph codeph">mytable</code>: </p>
+<pre class="pre codeblock"><code>DROP TABLE mytable;</code></pre></div>
+<div class="section" id="topic1__section6"><h2 class="title sectiontitle">Compatibility</h2><p class="p"><code class="ph codeph">DROP TABLE</code> is fully conforming with the SQL standard,
+except that the standard only allows one table to be dropped per command.
+Also, the <code class="ph codeph">IF EXISTS</code> option is a Greenplum Database extension.</p>
+</div>
+<div class="section" id="topic1__section7"><h2 class="title sectiontitle">See Also</h2><p class="p"><a class="xref" href="CREATE_TABLE.html#topic1">CREATE TABLE</a>, <a class="xref" href="ALTER_TABLE.html#topic1">ALTER TABLE</a>, <a class="xref" href="TRUNCATE.html#topic1">TRUNCATE</a></p>
+</div>
+</div>
+<div class="related-links">
+<div class="familylinks">
+<div class="parentlink"><strong>Parent topic:</strong> <a class="link" href="../sql_commands/sql_ref.html">SQL Commands</a></div>
+</div>
+</div></body>
+</html>

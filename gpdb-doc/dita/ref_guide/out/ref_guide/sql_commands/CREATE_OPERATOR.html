@@ -1,0 +1,280 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+
+<meta name="copyright" content="(C) Copyright 2022" />
+<meta name="DC.rights.owner" content="(C) Copyright 2022" />
+<meta name="generator" content="DITA-OT" /><meta name="DC.type" content="topic" />
+<meta name="DC.title" content="CREATE OPERATOR" />
+<meta name="DC.relation" scheme="URI" content="../sql_commands/sql_ref.html" />
+<meta name="DC.format" content="XHTML" />
+<meta name="DC.identifier" content="topic1" />
+<link rel="stylesheet" type="text/css" href="../commonltr.css" />
+<title>CREATE OPERATOR</title>
+</head>
+<body id="topic1">
+<h1 class="title topictitle1" id="topic1__bw20941">CREATE OPERATOR</h1>
+<div class="body"><p class="p" id="topic1__sql_command_desc">Defines a new operator.</p>
+<div class="section" id="topic1__section2"><h2 class="title sectiontitle">Synopsis</h2><pre class="pre codeblock" id="topic1__sql_command_synopsis"><code>CREATE OPERATOR &lt;name&gt; ( 
+       PROCEDURE = &lt;funcname&gt;
+       [, LEFTARG = &lt;lefttype&gt;] [, RIGHTARG = &lt;righttype&gt;]
+       [, COMMUTATOR = &lt;com_op&gt;] [, NEGATOR = &lt;neg_op&gt;]
+       [, RESTRICT = &lt;res_proc&gt;] [, JOIN = &lt;join_proc&gt;]
+       [, HASHES] [, MERGES] )</code></pre></div>
+<div class="section" id="topic1__section3"><h2 class="title sectiontitle">Description</h2><p class="p"><code class="ph codeph">CREATE OPERATOR</code> defines a new operator. The user who
+defines an operator becomes its owner. </p>
+<p class="p">The operator name is a sequence of up to <code class="ph codeph">NAMEDATALEN</code>-1
+(63 by default) characters from the following list: <code class="ph codeph">+ - * / &lt;
+&gt; = ~ ! @ # % ^ &amp; | ` ?</code></p>
+<p class="p">There are a few restrictions on your choice of name: </p>
+<ul class="ul"><li class="li" id="topic1__bw144996"><code class="ph codeph">--</code> and <code class="ph codeph">/*</code> cannot appear anywhere in
+an operator name, since they will be taken as the start of a comment.
+</li>
+<li class="li" id="topic1__bw144998">A multicharacter operator name cannot end in <code class="ph codeph">+</code> or <code class="ph codeph">-</code>,
+unless the name also contains at least one of these characters: <code class="ph codeph">~
+! @ # % ^ &amp; | ` ?</code></li>
+</ul>
+<p class="p">For example, <code class="ph codeph">@-</code> is an allowed operator name, but <code class="ph codeph">*-</code>
+is not. This restriction allows Greenplum Database to parse SQL-compliant
+commands without requiring spaces between tokens. </p>
+
+<p class="p">The use of <code class="ph codeph">=&gt;</code> as an operator name is deprecated.  
+It may be disallowed altogether in a future release.</p>
+
+<p class="p">The operator <code class="ph codeph">!=</code> is mapped to <code class="ph codeph">&lt;&gt;</code>
+on input, so these two names are always equivalent. </p>
+<p class="p">At least one of <code class="ph codeph">LEFTARG</code> and <code class="ph codeph">RIGHTARG</code>
+must be defined. For binary operators, both must be defined. For right
+unary operators, only <code class="ph codeph">LEFTARG</code> should be defined, while
+for left unary operators only <code class="ph codeph">RIGHTARG</code> should be defined.
+</p>
+<p class="p">The <var class="keyword varname">funcname</var> procedure must have been previously defined using
+<code class="ph codeph">CREATE FUNCTION</code>, must be <code class="ph codeph">IMMUTABLE</code>,
+and must be defined to accept the correct number of arguments (either
+one or two) of the indicated types. </p>
+<p class="p">The other clauses specify optional operator optimization clauses.
+These clauses should be provided whenever appropriate to speed up queries
+that use the operator. But if you provide them, you must be sure that
+they are correct. Incorrect use of an optimization clause can result
+in server process crashes, subtly wrong output, or other unexpected results.
+You can always leave out an optimization clause if you are not sure about
+it.</p>
+
+            <p class="p">To be able to create an operator, you must have <code class="ph codeph">USAGE</code> privilege on
+                the argument types and the return type, as well as <code class="ph codeph">EXECUTE</code>
+                privilege on the underlying function. If a commutator or negator operator is
+                specified, you must own these operators.</p>
+</div>
+<div class="section" id="topic1__section4"><h2 class="title sectiontitle">Parameters</h2><dl class="dl parml"><dt class="dt pt dlterm"><var class="keyword varname">name</var></dt>
+<dd class="dd pd">The (optionally schema-qualified) name of the operator to be defined.
+Two operators in the same schema can have the same name if they operate
+on different data types.</dd>
+<dt class="dt pt dlterm"><var class="keyword varname">funcname</var></dt>
+<dd class="dd pd">The function used to implement this operator (must be an <code class="ph codeph">IMMUTABLE</code>
+function).</dd>
+<dt class="dt pt dlterm"><var class="keyword varname">lefttype</var></dt>
+<dd class="dd pd">The data type of the operator's left operand, if any. This option
+would be omitted for a left-unary operator. </dd>
+<dt class="dt pt dlterm"><var class="keyword varname">righttype</var></dt>
+<dd class="dd pd">The data type of the operator's right operand, if any. This option
+would be omitted for a right-unary operator.</dd>
+<dt class="dt pt dlterm"><var class="keyword varname">com_op</var></dt>
+<dd class="dd pd">The optional <code class="ph codeph">COMMUTATOR</code> clause names an operator
+that is the commutator of the operator being defined. We say that operator
+A is the commutator of operator B if (x A y) equals (y B x) for all possible
+input values x, y. Notice that B is also the commutator of A. For example,
+operators <code class="ph codeph">&lt;</code> and <code class="ph codeph">&gt;</code> for a particular
+data type are usually each others commutators, and operator + is usually
+commutative with itself. But operator <code class="ph codeph">-</code> is usually not
+commutative with anything. The left operand type of a commutable operator
+is the same as the right operand type of its commutator, and vice versa.
+So the name of the commutator operator is all that needs to be provided
+in the <code class="ph codeph">COMMUTATOR</code> clause. </dd>
+<dt class="dt pt dlterm"><var class="keyword varname">neg_op</var></dt>
+<dd class="dd pd">The optional <code class="ph codeph">NEGATOR</code> clause names an operator that
+is the negator of the operator being defined. We say that operator A
+is the negator of operator B if both return Boolean results and (x A
+y) equals NOT (x B y) for all possible inputs x, y. Notice that B is
+also the negator of A. For example, <code class="ph codeph">&lt;</code> and <code class="ph codeph">&gt;=</code>
+are a negator pair for most data types. An operator's negator must
+have the same left and/or right operand types as the operator to be defined,
+so only the operator name need be given in the <code class="ph codeph">NEGATOR</code>
+clause.</dd>
+<dt class="dt pt dlterm"><var class="keyword varname">res_proc</var></dt>
+<dd class="dd pd">The optional <code class="ph codeph">RESTRICT</code> names a restriction selectivity
+estimation function for the operator. Note that this is a function name,
+not an operator name. <code class="ph codeph">RESTRICT</code> clauses only make sense
+for binary operators that return <code class="ph codeph">boolean</code>. The idea behind
+a restriction selectivity estimator is to guess what fraction of the
+rows in a table will satisfy a <code class="ph codeph">WHERE</code>-clause condition
+of the form:</dd>
+<dd class="dd pd ddexpand"><pre class="pre codeblock"><code>column OP constant</code></pre></dd>
+<dd class="dd pd ddexpand">for the current operator and a particular constant value. This assists
+the optimizer by giving it some idea of how many rows will be eliminated
+by <code class="ph codeph">WHERE</code> clauses that have this form. </dd>
+<dd class="dd pd ddexpand">You can usually just use one of the following system standard estimator functions for many of
+                        your own operators: <p class="p"><code class="ph codeph">eqsel</code> for =
+                                </p>
+<p class="p"><code class="ph codeph">neqsel</code> for &lt;&gt;
+                                </p>
+<p class="p"><code class="ph codeph">scalarltsel</code> for &lt; or &lt;=
+                                </p>
+<p class="p"><code class="ph codeph">scalargtsel</code> for &gt; or &gt;= </p>
+</dd>
+<dt class="dt pt dlterm"><var class="keyword varname">join_proc</var></dt>
+<dd class="dd pd">The optional <code class="ph codeph">JOIN</code> clause names a join selectivity
+estimation function for the operator. Note that this is a function name,
+not an operator name. <code class="ph codeph">JOIN</code> clauses only make sense for
+binary operators that return <code class="ph codeph">boolean</code>. The idea behind
+a join selectivity estimator is to guess what fraction of the rows in
+a pair of tables will satisfy a <code class="ph codeph">WHERE</code>-clause condition
+of the form</dd>
+<dd class="dd pd ddexpand"><pre class="pre codeblock"><code>table1.column1 OP table2.column2</code></pre></dd>
+<dd class="dd pd ddexpand">for the current operator. This helps the optimizer by letting it figure
+out which of several possible join sequences is likely to take the least
+work.</dd>
+<dd class="dd pd ddexpand">You can usually just use one of the following system standard join selectivity estimator
+                        functions for many of your own operators:<p class="p"><code class="ph codeph">eqjoinsel</code> for =
+                                </p>
+<p class="p"><code class="ph codeph">neqjoinsel</code> for &lt;&gt;
+                                </p>
+<p class="p"><code class="ph codeph">scalarltjoinsel</code> for &lt; or &lt;=
+                                </p>
+<p class="p"><code class="ph codeph">scalargtjoinsel</code> for &gt; or &gt;=
+                                </p>
+<p class="p"><code class="ph codeph">areajoinsel</code> for 2D area-based comparisons
+                                </p>
+<p class="p"><code class="ph codeph">positionjoinsel</code> for 2D position-based
+                            comparisons </p>
+<p class="p"><code class="ph codeph">contjoinsel</code> for 2D containment-based
+                            comparisons </p>
+</dd>
+<dt class="dt pt dlterm">HASHES</dt>
+<dd class="dd pd">The optional <code class="ph codeph">HASHES</code> clause tells the system that it is permissible to use the
+                        hash join method for a join based on this operator. <code class="ph codeph">HASHES</code>
+                        only makes sense for a binary operator that returns
+                        <code class="ph codeph">boolean</code>. The hash join operator can only return true for
+                        pairs of left and right values that hash to the same hash code. If two
+                        values are put in different hash buckets, the join will never compare them,
+                        implicitly assuming that the result of the join operator must be false.
+                        Because of this, it never makes sense to specify <code class="ph codeph">HASHES</code> for
+                        operators that do not represent equality. </dd>
+
+                    <dd class="dd pd ddexpand">In most cases, it is only practical to support hashing for operators that
+                        take the same data type on both sides. However, you can design compatible
+                        hash functions for two or more data types, which are functions that will
+                        generate the same hash codes for "equal" values, even if the values are
+                        differently represented. </dd>
+<dd class="dd pd ddexpand">To be marked <code class="ph codeph">HASHES</code>, the join operator must appear in a hash index operator
+                        class. Attempts to use the operator in hash joins will fail at run time if
+                        no such operator class exists. The system needs the operator class to find
+                        the data-type-specific hash function for the operator's input data type. You
+                        must also supply a suitable hash function before you can create the operator
+                        class. Exercise care when preparing a hash function, as there are
+                        machine-dependent ways in which it could fail to function correctly. For
+                        example, on machines that meet the IEEE floating-point standard, negative
+                        zero and positive zero are different values (different bit patterns) but are
+                        defined to compare as equal. If a float value could contain a negative zero,
+                        define it to generate the same hash value as positive zero.</dd>
+
+                    <dd class="dd pd ddexpand">
+                        <div class="p">A hash-joinable operator must have a commutator (itself, if the two
+                            operand data types are the same, or a related equality operator if they
+                            are different) that appears in the same operator family. Otherwise,
+                            planner errors can occur when the operator is used. For better
+                            optimization, a hash operator family that supports multiple data types
+                            should provide equality operators for every combination of the data
+                            types. <div class="note"><span class="notetitle">Note:</span> The function underlying a hash-joinable operator must be
+                                marked immutable or stable; an operator marked as volatile will not
+                                be used. If a hash-joinable operator has an underlying function that
+                                is marked strict, the function must also be complete, returning true
+                                or false, and not null, for any two non-null inputs.</div>
+</div>
+
+                    </dd>
+<dt class="dt pt dlterm">MERGES</dt>
+<dd class="dd pd">The <code class="ph codeph">MERGES</code> clause, if present, tells the system
+that it is permissible to use the merge-join method for a join based
+on this operator. <code class="ph codeph">MERGES</code> only makes sense for a binary
+operator that returns <code class="ph codeph">boolean</code>, and in practice the operator
+must represent equality for some data type or pair of data types. </dd>
+
+                    <dd class="dd pd ddexpand">Merge join is based on the idea of sorting the left- and right-hand tables
+                        into order and then scanning them in parallel. This means both data types
+                        must be capable of being fully ordered, and the join operator must be one
+                        that can only succeed for pairs of values that fall at equivalent places in
+                        the sort order. In practice, this means that the join operator must behave
+                        like an equality operator. However, you can merge-join two distinct data
+                        types so long as they are logically compatible. For example, the
+                            <code class="ph codeph">smallint-versus-integer</code> equality operator is
+                        merge-joinable. Only sorting operators that bring both data types into a
+                        logically compatible sequence are needed. </dd>
+
+                    <dd class="dd pd ddexpand">To be marked <code class="ph codeph">MERGES</code>, the join operator must appear as an
+                        equality member of a btree index operator family. This is not enforced when
+                        you create the operator, because the referencing operator family does not
+                        exist until later. However, the operator will not actually be used for merge
+                        joins unless a matching operator family can be found. The
+                            <code class="ph codeph">MERGE</code> flag thus acts as a suggestion to the planner to
+                        look for a matching operator family.</dd>
+
+                    <dd class="dd pd ddexpand">A merge-joinable operator must have a commutator that appears in the same
+                        operator family. This would be itself, if the two operand data types are the
+                        same, or a related equality operator if the data types are different.
+                        Without an appropriate commutator, planner errors can occur when the
+                        operator is used. Also, although not strictly required, a btree operator
+                        family that supports multiple data types should be able to provide equality
+                        operators for every combination of the data types; this allows better
+                        optimization. <div class="note"><span class="notetitle">Note:</span> <code class="ph codeph">SORT1</code>, <code class="ph codeph">SORT2</code>,
+                                <code class="ph codeph">LTCMP</code>, and <code class="ph codeph">GTCMP</code> were formerly
+                            used to specify the names of sort operators associated with a
+                            merge-joinable operator. Information about associated operators is now
+                            found by looking at B-tree operator families; specifying any of these
+                            operators will be ignored, except that it will implicitly set
+                                <code class="ph codeph">MERGES</code> to true. </div>
+</dd>
+</dl>
+</div>
+<div class="section" id="topic1__section5"><h2 class="title sectiontitle">Notes</h2><p class="p">Any functions used to implement the operator must be defined as <code class="ph codeph">IMMUTABLE</code>.</p>
+
+                     <p class="p">   It is not possible to specify an operator's lexical precedence in
+                           <code class="ph codeph">CREATE OPERATOR</code>, because the parser's precedence behavior
+                         is hard-wired. See <a class="xref" href="https://www.postgresql.org/docs/9.4/sql-syntax-lexical.html#SQL-PRECEDENCE" target="_blank">Operator Precedence</a> in the PostgreSQL 
+                         documentation for precedence details.</p>
+
+                      <p class="p">Use <a class="xref" href="DROP_OPERATOR.html#topic1">DROP
+                    OPERATOR</a> to delete user-defined operators from a database. Use
+                        <a class="xref" href="ALTER_OPERATOR.html#topic1">ALTER
+                    OPERATOR</a> to modify operators in a database.</p>
+</div>
+
+    <div class="section" id="topic1__section6"><h2 class="title sectiontitle">Examples</h2><p class="p">Here is an example of creating an operator for adding two complex numbers,
+assuming we have already created the definition of type <code class="ph codeph">complex</code>.
+First define the function that does the work, then define the operator:
+</p>
+<pre class="pre codeblock"><code>CREATE FUNCTION complex_add(complex, complex)
+    RETURNS complex
+    AS 'filename', 'complex_add'
+    LANGUAGE C IMMUTABLE STRICT;
+CREATE OPERATOR + (
+    leftarg = complex,
+    rightarg = complex,
+    procedure = complex_add,
+    commutator = +
+);</code></pre><p class="p">To use this operator in a query: </p>
+<pre class="pre codeblock"><code>SELECT (a + b) AS c FROM test_complex;</code></pre></div>
+<div class="section" id="topic1__section7"><h2 class="title sectiontitle">Compatibility</h2><p class="p"><code class="ph codeph">CREATE OPERATOR</code> is a Greenplum Database language extension.
+The SQL standard does not provide for user-defined operators.</p>
+</div>
+<div class="section" id="topic1__section8"><h2 class="title sectiontitle">See Also</h2><p class="p"><a class="xref" href="CREATE_FUNCTION.html#topic1">CREATE FUNCTION</a>,
+                        <a class="xref" href="CREATE_TYPE.html#topic1">CREATE TYPE</a>, <a class="xref" href="ALTER_OPERATOR.html#topic1">ALTER OPERATOR</a>, <a class="xref" href="DROP_OPERATOR.html#topic1">DROP OPERATOR</a></p>
+</div>
+</div>
+<div class="related-links">
+<div class="familylinks">
+<div class="parentlink"><strong>Parent topic:</strong> <a class="link" href="../sql_commands/sql_ref.html">SQL Commands</a></div>
+</div>
+</div></body>
+</html>

@@ -1,0 +1,740 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+
+<meta name="copyright" content="(C) Copyright 2022" />
+<meta name="DC.rights.owner" content="(C) Copyright 2022" />
+<meta name="generator" content="DITA-OT" /><meta name="DC.type" content="topic" />
+<meta name="DC.title" content="gpmapreduce.yaml" />
+<meta name="DC.format" content="XHTML" />
+<meta name="DC.identifier" content="topic1" />
+<meta name="DC.language" content="en" />
+<link rel="stylesheet" type="text/css" href="../commonltr.css" />
+<title>gpmapreduce.yaml</title>
+</head>
+<body id="topic1">
+
+  <h1 class="title topictitle1" id="topic1__ii20941">gpmapreduce.yaml</h1>
+
+  <div class="body">
+    <p class="p">gpmapreduce configuration file.</p>
+
+    <div class="section" id="topic1__section2"><h2 class="title sectiontitle">Synopsis</h2>
+      
+      <pre class="pre codeblock"><code>%YAML 1.1
+---
+<a class="xref" href="#topic1__VERSION">VERSION</a>: 1.0.0.2
+<a class="xref" href="#topic1__DATABASE">DATABASE</a>: dbname
+<a class="xref" href="#topic1__USER">USER</a>: db_username
+<a class="xref" href="#topic1__HOST">HOST</a>: coordinator_hostname
+<a class="xref" href="#topic1__PORT">PORT</a>: coordinator_port</code></pre>
+      <pre class="pre codeblock"><code>  - <a class="xref" href="#topic1__DEFINE">DEFINE</a>: 
+  - <a class="xref" href="#topic1__INPUT">INPUT</a>:
+     <a class="xref" href="#topic1__NAME">NAME</a>: input_name
+     <a class="xref" href="#topic1__FILE">FILE</a>: 
+       - <em class="ph i">hostname</em>: /path/to/file
+     <a class="xref" href="#topic1__GPFDIST">GPFDIST</a>:
+       - <em class="ph i">hostname</em>:port/file_pattern
+     <a class="xref" href="#topic1__TABLE">TABLE</a>: table_name
+     <a class="xref" href="#topic1__QUERY">QUERY</a>: SELECT_statement
+     <a class="xref" href="#topic1__EXEC">EXEC</a>: command_string
+     <a class="xref" href="#topic1__COLUMNS">COLUMNS</a>:
+       - field_name data_type
+     <a class="xref" href="#topic1__FORMAT">FORMAT</a>: TEXT | CSV
+     <a class="xref" href="#topic1__DELIMITER">DELIMITER</a>: delimiter_character
+     <a class="xref" href="#topic1__ESCAPE">ESCAPE</a>: escape_character
+     <a class="xref" href="#topic1__NULL">NULL</a>: null_string
+     <a class="xref" href="#topic1__QUOTE">QUOTE</a>: csv_quote_character
+     <a class="xref" href="#topic1__ERROR_LIMIT">ERROR_LIMIT</a>: integer
+     <a class="xref" href="#topic1__ENCODING">ENCODING</a>: database_encoding</code></pre>
+      <pre class="pre codeblock"><code>  - <a class="xref" href="#topic1__OUTPUT">OUTPUT</a>:
+     <a class="xref" href="#topic1__OUTPUTNAME">NAME</a>: output_name
+     <a class="xref" href="#topic1__OUTPUTFILE">FILE</a>: file_path_on_client
+     <a class="xref" href="#topic1__OUTPUTTABLE">TABLE</a>: table_name
+     <a class="xref" href="#topic1__KEYS">KEYS</a>:        - column_name
+     <a class="xref" href="#topic1__MODE">MODE</a>: REPLACE | APPEND</code></pre>
+      <pre class="pre codeblock"><code>  - <a class="xref" href="#topic1__MAP">MAP</a>:
+     <a class="xref" href="#topic1__NAME">NAME</a>: function_name
+     <a class="xref" href="#topic1__FUNCTION">FUNCTION</a>: function_definition
+     <a class="xref" href="#topic1__LANGUAGE">LANGUAGE</a>: perl | python | c
+     <a class="xref" href="#topic1__LIBRARY">LIBRARY</a>: /path/filename.so
+     <a class="xref" href="#topic1__PARAMETERS">PARAMETERS</a>: 
+       - nametype
+     <a class="xref" href="#topic1__RETURNS">RETURNS</a>: 
+       - nametype
+     <a class="xref" href="#topic1__OPTIMIZE">OPTIMIZE</a>: STRICT IMMUTABLE
+     <a class="xref" href="#topic1__MODE">MODE</a>: SINGLE | MULTI</code></pre>
+      <pre class="pre codeblock"><code>  - <a class="xref" href="#topic1__TCF">TRANSITION | CONSOLIDATE | FINALIZE</a>:
+     <a class="xref" href="#topic1__TCFNAME">NAME</a>: function_name
+     <a class="xref" href="#topic1__FUNCTION">FUNCTION</a>: function_definition
+     <a class="xref" href="#topic1__LANGUAGE">LANGUAGE</a>: perl | python | c
+     <a class="xref" href="#topic1__LIBRARY">LIBRARY</a>: /path/filename.so
+     <a class="xref" href="#topic1__PARAMETERS">PARAMETERS</a>: 
+       - nametype
+     <a class="xref" href="#topic1__RETURNS">RETURNS</a>: 
+       - nametype
+     <a class="xref" href="#topic1__OPTIMIZE">OPTIMIZE</a>: STRICT IMMUTABLE
+     <a class="xref" href="#topic1__TCFMODE">MODE</a>: SINGLE | MULTI</code></pre>
+      <pre class="pre codeblock"><code>  - <a class="xref" href="#topic1__REDUCE">REDUCE</a>:
+     <a class="xref" href="#topic1__REDUCENAME">NAME</a>: reduce_job_name
+     <a class="xref" href="#topic1__TRANSITION">TRANSITION</a>: transition_function_name
+     <a class="xref" href="#topic1__CONSOLIDATE">CONSOLIDATE</a>: consolidate_function_name
+     <a class="xref" href="#topic1__FINALIZE">FINALIZE</a>: finalize_function_name
+     <a class="xref" href="#topic1__INITIALIZE">INITIALIZE</a>: value
+     <a class="xref" href="#topic1__REDUCEKEYS">KEYS</a>:
+       - key_name</code></pre>
+      <pre class="pre codeblock"><code>  - <a class="xref" href="#topic1__TASK">TASK</a>:
+     <a class="xref" href="#topic1__TASKNAME">NAME</a>: task_name
+     <a class="xref" href="#topic1__SOURCE">SOURCE</a>: input_name
+     <a class="xref" href="#topic1__TASKMAP">MAP</a>: map_function_name
+     <a class="xref" href="#topic1__REDUCE">REDUCE</a>: reduce_function_name
+<a class="xref" href="#topic1__EXECUTE">EXECUTE</a>:</code></pre>
+      <pre class="pre codeblock"><code>  - <a class="xref" href="#topic1__RUN">RUN</a>:
+     <a class="xref" href="#topic1__EXECUTESOURCE">SOURCE</a>: input_or_task_name
+     <a class="xref" href="#topic1__TARGET">TARGET</a>: output_name
+     <a class="xref" href="#topic1__EXECUTEMAP">MAP</a>: map_function_name
+     <a class="xref" href="#topic1__EXECUTEREDUCE">REDUCE</a>: reduce_function_name...</code></pre>
+    </div>
+
+    <div class="section" id="topic1__section4"><h2 class="title sectiontitle">Description</h2>
+      
+      <p class="p">You specify the input, map and reduce tasks, and the output for the
+        Greenplum MapReduce <code class="ph codeph">gpmapreduce</code> program in a
+        YAML-formatted configuration file. (This reference page uses the name
+        <code class="ph codeph">gpmapreduce.yaml</code> when referring to this file; you may
+        choose your own name for the file.)</p>
+
+      <p class="p">The <code class="ph codeph">gpmapreduce</code> utility processes the YAML configuration
+        file in order, using indentation (spaces) to determine the document hierarchy
+        and the relationships between the sections. The use of white space in the
+        file is significant.</p>
+
+    </div>
+
+    <div class="section" id="topic1__section5"><h2 class="title sectiontitle">Keys and Values</h2>
+      
+      <dl class="dl parml">
+        
+          <dt class="dt pt dlterm" id="topic1__VERSION">VERSION</dt>
+
+          <dd class="dd pd">
+            <p class="p">Required. The version of the Greenplum MapReduce YAML specification. Current supported
+              versions are 1.0.0.1, 1.0.0.2, and 1.0.0.3.</p>
+
+          </dd>
+
+        
+        
+          <dt class="dt pt dlterm" id="topic1__DATABASE">DATABASE</dt>
+
+          <dd class="dd pd">Optional. Specifies which database in Greenplum to connect to. If not specified,
+            defaults to the default database or <code class="ph codeph">$PGDATABASE</code> if set.</dd>
+
+        
+        
+          <dt class="dt pt dlterm" id="topic1__USER">USER</dt>
+
+          <dd class="dd pd">Optional. Specifies which database role to use to connect. If not specified, defaults
+            to the current user or <code class="ph codeph">$PGUSER</code> if set. You must be a Greenplum
+            superuser to run functions written in untrusted Python and Perl. Regular database users
+            can run functions written in trusted Perl. You also must be a database superuser to run
+            MapReduce jobs that contain <a class="xref" href="#topic1__FILE">FILE</a>, <a class="xref" href="#topic1__GPFDIST">GPFDIST</a> and <a class="xref" href="#topic1__EXEC">EXEC</a> input types.</dd>
+
+        
+        
+          <dt class="dt pt dlterm" id="topic1__HOST">HOST</dt>
+
+          <dd class="dd pd">Optional. Specifies Greenplum coordinator host name. If not specified, defaults to
+            localhost or <code class="ph codeph">$PGHOST</code> if set.</dd>
+
+        
+        
+          <dt class="dt pt dlterm" id="topic1__PORT">PORT</dt>
+
+          <dd class="dd pd">Optional. Specifies Greenplum coordinator port. If not specified, defaults to 5432 or
+              <code class="ph codeph">$PGPORT</code> if set.</dd>
+
+        
+        
+          <dt class="dt pt dlterm" id="topic1__DEFINE">DEFINE</dt>
+
+          <dd class="dd pd">Required. A sequence of definitions for this MapReduce document. The
+              <code class="ph codeph">DEFINE</code> section must have at least one <code class="ph codeph">INPUT</code>
+            definition. <dl class="dl parml">
+              
+                <dt class="dt pt dlterm" id="topic1__INPUT">INPUT</dt>
+
+                <dd class="dd pd">Required. Defines the input data. Every MapReduce document must have at least
+                  one input defined. Multiple input definitions are allowed in a document, but each
+                  input definition can specify only one of these access types: a file, a
+                    <code class="ph codeph">gpfdist</code> file reference, a table in the database, an SQL
+                  command, or an operating system command. See <code class="ph codeph"></code> for information about this reference.<dl class="dl parml">
+                    
+                      <dt class="dt pt dlterm" id="topic1__NAME">NAME</dt>
+
+                      <dd class="dd pd">
+                        <p class="p">A name for this input. Names must be unique with regards to the names of
+                          other objects in this MapReduce job (such as map function, task, reduce
+                          function and output names). Also, names cannot conflict with existing
+                          objects in the database (such as tables, functions or views).</p>
+
+                      </dd>
+
+                    
+                    
+                      <dt class="dt pt dlterm" id="topic1__FILE">FILE</dt>
+
+                      <dd class="dd pd">A sequence of one or more input files in the format:
+                          <code class="ph codeph">seghostname:/path/to/filename</code>. You must be a Greenplum
+                        Database superuser to run MapReduce jobs with <code class="ph codeph">FILE</code> input.
+                        The file must reside on a Greenplum segment host.</dd>
+
+                    
+                  </dl>
+<dl class="dl parml">
+                    
+                      <dt class="dt pt dlterm" id="topic1__GPFDIST">GPFDIST</dt>
+
+                      <dd class="dd pd">A sequence identifying one or more running <code class="ph codeph">gpfdist</code> file
+                        servers in the format: <code class="ph codeph">hostname[:port]/file_pattern</code>. You
+                        must be a Greenplum Database superuser to run MapReduce jobs with
+                          <code class="ph codeph">GPFDIST</code> input.</dd>
+
+                    
+                    
+                      <dt class="dt pt dlterm" id="topic1__TABLE">TABLE</dt>
+
+                      <dd class="dd pd">The name of an existing table in the database.</dd>
+
+                    
+                    
+                      <dt class="dt pt dlterm" id="topic1__QUERY">QUERY</dt>
+
+                      <dd class="dd pd">A SQL <code class="ph codeph">SELECT</code> command to run within the database.</dd>
+
+                    
+                    
+                      <dt class="dt pt dlterm" id="topic1__EXEC">EXEC</dt>
+
+                      <dd class="dd pd">An operating system command to run on the Greenplum segment hosts. The
+                        command is run by all segment instances in the system by default. For
+                        example, if you have four segment instances per segment host, the command
+                        will be run four times on each host. You must be a Greenplum Database
+                        superuser to run MapReduce jobs with <code class="ph codeph">EXEC</code> input.</dd>
+
+                    
+                    
+                      <dt class="dt pt dlterm" id="topic1__COLUMNS">COLUMNS</dt>
+
+                      <dd class="dd pd">Optional. Columns are specified as: <code class="ph codeph">column_name
+                          </code><code class="ph codeph">[</code><code class="ph codeph">data_type</code><code class="ph codeph">]</code>.
+                        If not specified, the default is <code class="ph codeph">value text</code>. The <a class="xref" href="#topic1__DELIMITER">DELIMITER</a> character is what
+                        separates two data value fields (columns). A row is determined by a line
+                        feed character (<code class="ph codeph">0x0a</code>).</dd>
+
+                    
+                    
+                      <dt class="dt pt dlterm" id="topic1__FORMAT">FORMAT</dt>
+
+                      <dd class="dd pd">
+                        <p class="p">Optional. Specifies the format of the data - either delimited text
+                            (<code class="ph codeph">TEXT</code>) or comma separated values (<code class="ph codeph">CSV</code>)
+                          format. If the data format is not specified, defaults to
+                            <code class="ph codeph">TEXT</code>.</p>
+
+                      </dd>
+
+                    
+                    
+                      <dt class="dt pt dlterm" id="topic1__DELIMITER">DELIMITER</dt>
+
+                      <dd class="dd pd">
+                        <p class="p">Optional for <a class="xref" href="#topic1__FILE">FILE</a>, <a class="xref" href="#topic1__GPFDIST">GPFDIST</a> and <a class="xref" href="#topic1__EXEC">EXEC</a> inputs. Specifies a single
+                          character that separates data values. The default is a tab character in
+                            <code class="ph codeph">TEXT</code> mode, a comma in <code class="ph codeph">CSV</code> mode. The
+                          delimiter character must only appear between any two data value fields. Do
+                          not place a delimiter at the beginning or end of a row.</p>
+
+                      </dd>
+
+                    
+                    
+                      <dt class="dt pt dlterm" id="topic1__ESCAPE">ESCAPE</dt>
+
+                      <dd class="dd pd">Optional for <a class="xref" href="#topic1__FILE">FILE</a>, <a class="xref" href="#topic1__GPFDIST">GPFDIST</a> and <a class="xref" href="#topic1__EXEC">EXEC</a> inputs. Specifies the single
+                        character that is used for C escape sequences (such as
+                          <code class="ph codeph">\n</code>,<code class="ph codeph">\t</code>,<code class="ph codeph">\100</code>, and so on)
+                        and for escaping data characters that might otherwise be taken as row or
+                        column delimiters. Make sure to choose an escape character that is not used
+                        anywhere in your actual column data. The default escape character is a \
+                        (backslash) for text-formatted files and a <code class="ph codeph">"</code> (double quote)
+                        for csv-formatted files, however it is possible to specify another character
+                        to represent an escape. It is also possible to disable escaping by
+                        specifying the value <code class="ph codeph">'OFF'</code> as the escape value. This is
+                        very useful for data such as text-formatted web log data that has many
+                        embedded backslashes that are not intended to be escapes.</dd>
+
+                    
+                    
+                      <dt class="dt pt dlterm" id="topic1__NULL">NULL</dt>
+
+                      <dd class="dd pd">Optional for <a class="xref" href="#topic1__FILE">FILE</a>, <a class="xref" href="#topic1__GPFDIST">GPFDIST</a> and <a class="xref" href="#topic1__EXEC">EXEC</a> inputs. Specifies the string
+                        that represents a null value. The default is <code class="ph codeph">\N</code> in
+                          <code class="ph codeph">TEXT</code> format, and an empty value with no quotations in
+                          <code class="ph codeph">CSV</code> format. You might prefer an empty string even in
+                          <code class="ph codeph">TEXT</code> mode for cases where you do not want to distinguish
+                        nulls from empty strings. Any input data item that matches this string will
+                        be considered a null value.</dd>
+
+                    
+                    
+                      <dt class="dt pt dlterm" id="topic1__QUOTE">QUOTE</dt>
+
+                      <dd class="dd pd">Optional for <a class="xref" href="#topic1__FILE">FILE</a>, <a class="xref" href="#topic1__GPFDIST">GPFDIST</a> and <a class="xref" href="#topic1__EXEC">EXEC</a> inputs. Specifies the
+                        quotation character for <code class="ph codeph">CSV</code> formatted files. The default is
+                        a double quote (<code class="ph codeph">"</code>). In <code class="ph codeph">CSV</code> formatted
+                        files, data value fields must be enclosed in double quotes if they contain
+                        any commas or embedded new lines. Fields that contain double quote
+                        characters must be surrounded by double quotes, and the embedded double
+                        quotes must each be represented by a pair of consecutive double quotes. It
+                        is important to always open and close quotes correctly in order for data
+                        rows to be parsed correctly.</dd>
+
+                    
+                    
+                      <dt class="dt pt dlterm" id="topic1__ERROR_LIMIT">ERROR_LIMIT</dt>
+
+                      <dd class="dd pd">If the input rows have format errors they will be discarded provided that
+                        the error limit count is not reached on any Greenplum segment instance
+                        during input processing. If the error limit is not reached, all good rows
+                        will be processed and any error rows discarded.</dd>
+
+                    
+                  </dl>
+<dl class="dl parml">
+                    
+                      <dt class="dt pt dlterm" id="topic1__ENCODING">ENCODING</dt>
+
+                      <dd class="dd pd">Character set encoding to use for the data. Specify a string constant
+                        (such as <code class="ph codeph">'SQL_ASCII'</code>), an integer encoding number, or
+                          <code class="ph codeph">DEFAULT</code> to use the default client encoding. See <a class="xref" href="../../ref_guide/character_sets.html#topic1">Character Set Support</a> for more information.</dd>
+
+                    
+                  </dl>
+</dd>
+
+              
+              
+                <dt class="dt pt dlterm" id="topic1__OUTPUT">OUTPUT</dt>
+
+                <dd class="dd pd">Optional. Defines where to output the formatted data of this MapReduce job. If
+                  output is not defined, the default is <code class="ph codeph">STDOUT</code> (standard output of
+                  the client). You can send output to a file on the client host or to an existing
+                  table in the database.<dl class="dl parml">
+                    
+                      <dt class="dt pt dlterm" id="topic1__OUTPUTNAME">NAME</dt>
+
+                      <dd class="dd pd">A name for this output. The default output name is
+                        <code class="ph codeph">STDOUT</code>. Names must be unique with regards to the names of
+                        other objects in this MapReduce job (such as map function, task, reduce
+                        function and input names). Also, names cannot conflict with existing objects
+                        in the database (such as tables, functions or views).</dd>
+
+                    
+                    
+                      <dt class="dt pt dlterm" id="topic1__OUTPUTFILE">FILE</dt>
+
+                      <dd class="dd pd">Specifies a file location on the MapReduce client machine to output data
+                        in the format: <code class="ph codeph">/path/to/filename</code>.</dd>
+
+                    
+                    
+                      <dt class="dt pt dlterm" id="topic1__OUTPUTTABLE">TABLE</dt>
+
+                      <dd class="dd pd">Specifies the name of a table in the database to output data. If this
+                        table does not exist prior to running the MapReduce job, it will be created
+                        using the distribution policy specified with <a class="xref" href="#topic1__KEYS">KEYS</a>.</dd>
+
+                    
+                    
+                      <dt class="dt pt dlterm" id="topic1__KEYS">KEYS</dt>
+
+                      <dd class="dd pd">Optional for <a class="xref" href="#topic1__OUTPUTTABLE">TABLE</a>
+                        output. Specifies the column(s) to use as the Greenplum Database
+                        distribution key. If the <a class="xref" href="#topic1__EXECUTE">EXECUTE</a> task contains a <a class="xref" href="#topic1__REDUCE">REDUCE</a> definition, then the <code class="ph codeph">REDUCE</code>
+                        keys will be used as the table distribution key by default. Otherwise, the
+                        first column of the table will be used as the distribution key.</dd>
+
+                    
+                    
+                      <dt class="dt pt dlterm" id="topic1__MODE">MODE</dt>
+
+                      <dd class="dd pd">Optional for <a class="xref" href="#topic1__OUTPUTTABLE">TABLE</a>
+                        output. If not specified, the default is to create the table if it does not
+                        already exist, but error out if it does exist. Declaring
+                          <code class="ph codeph">APPEND</code> adds output data to an existing table (provided
+                        the table schema matches the output format) without removing any existing
+                        data. Declaring <code class="ph codeph">REPLACE</code> will drop the table if it exists
+                        and then recreate it. Both <code class="ph codeph">APPEND</code> and
+                          <code class="ph codeph">REPLACE</code> will create a new table if one does not
+                        exist.</dd>
+
+                    
+                  </dl>
+</dd>
+
+              
+              
+                <dt class="dt pt dlterm" id="topic1__MAP">MAP</dt>
+
+                <dd class="dd pd">Required. Each <code class="ph codeph">MAP</code> function takes data structured in
+                    (<code class="ph codeph">key</code>, <code class="ph codeph">value</code>) pairs, processes each pair, and
+                  generates zero or more output (<code class="ph codeph">key</code>, <code class="ph codeph">value</code>)
+                  pairs. The Greenplum MapReduce framework then collects all pairs with the same key
+                  from all output lists and groups them together. This output is then passed to the
+                    <a class="xref" href="#topic1__TASKREDUCE">REDUCE</a> task, which is
+                  comprised of <a class="xref" href="#topic1__TCF">TRANSITION | CONSOLIDATE |
+                    FINALIZE</a> functions. There is one predefined <code class="ph codeph">MAP</code> function
+                  named <code class="ph codeph">IDENTITY</code> that returns (<code class="ph codeph">key</code>,
+                    <code class="ph codeph">value</code>) pairs unchanged. Although (<code class="ph codeph">key</code>,
+                    <code class="ph codeph">value</code>) are the default parameters, you can specify other
+                  prototypes as needed.</dd>
+
+              
+              
+                <dt class="dt pt dlterm" id="topic1__TCF">TRANSITION | CONSOLIDATE | FINALIZE</dt>
+
+                <dd class="dd pd"><code class="ph codeph">TRANSITION</code>, <code class="ph codeph">CONSOLIDATE</code> and
+                    <code class="ph codeph">FINALIZE</code> are all component pieces of <a class="xref" href="#topic1__REDUCE">REDUCE</a>. A <code class="ph codeph">TRANSITION</code>
+                  function is required. <code class="ph codeph">CONSOLIDATE</code> and <code class="ph codeph">FINALIZE</code>
+                  functions are optional. By default, all take <code class="ph codeph">state</code> as the first
+                  of their input <a class="xref" href="#topic1__PARAMETERS">PARAMETERS</a>,
+                  but other prototypes can be defined as well.</dd>
+
+                <dd class="dd pd ddexpand">
+                  <p class="p">A <code class="ph codeph">TRANSITION</code> function iterates through each value of a given
+                    key and accumulates values in a <code class="ph codeph">state</code> variable. When the
+                    transition function is called on the first value of a key, the
+                      <code class="ph codeph">state</code> is set to the value specified by <a class="xref" href="#topic1__INITIALIZE">INITIALIZE</a> of a <a class="xref" href="#topic1__REDUCE">REDUCE</a> job (or the default state
+                    value for the data type). A transition takes two arguments as input; the current
+                    state of the key reduction, and the next value, which then produces a new
+                      <code class="ph codeph">state</code>.</p>
+
+                </dd>
+
+                <dd class="dd pd ddexpand">If a <code class="ph codeph">CONSOLIDATE</code> function is specified,
+                    <code class="ph codeph">TRANSITION</code> processing is performed at the segment-level before
+                  redistributing the keys across the Greenplum interconnect for final aggregation
+                  (two-phase aggregation). Only the resulting <code class="ph codeph">state</code> value for a
+                  given key is redistributed, resulting in lower interconnect traffic and greater
+                  parallelism. <code class="ph codeph">CONSOLIDATE</code> is handled like a
+                    <code class="ph codeph">TRANSITION</code>, except that instead of <code class="ph codeph">(state + value)
+                    =&gt; state</code>, it is <code class="ph codeph">(state + state) =&gt; state</code>.</dd>
+
+                <dd class="dd pd ddexpand">If a <code class="ph codeph">FINALIZE</code> function is specified, it takes the final
+                    <code class="ph codeph">state</code> produced by <code class="ph codeph">CONSOLIDATE</code> (if present) or
+                    <code class="ph codeph">TRANSITION</code> and does any final processing before emitting the
+                  final result. <code class="ph codeph">TRANSITION</code> and <code class="ph codeph">CONSOLIDATE
+                  </code>functions cannot return a set of values. If you need a
+                    <code class="ph codeph">REDUCE</code> job to return a set, then a <code class="ph codeph">FINALIZE</code> is
+                  necessary to transform the final state into a set of output values.<dl class="dl parml">
+                    
+                      <dt class="dt pt dlterm" id="topic1__TCFNAME">NAME</dt>
+
+                      <dd class="dd pd">Required. A name for the function. Names must be unique with regards to
+                        the names of other objects in this MapReduce job (such as function, task,
+                        input and output names). You can also specify the name of a function
+                        built-in to Greenplum Database. If using a built-in function, do not supply
+                          <a class="xref" href="#topic1__LANGUAGE">LANGUAGE</a> or a <a class="xref" href="#topic1__FUNCTION">FUNCTION</a> body.</dd>
+
+                    
+                    
+                      <dt class="dt pt dlterm" id="topic1__FUNCTION">FUNCTION</dt>
+
+                      <dd class="dd pd">Optional. Specifies the full body of the function using the specified
+                          <a class="xref" href="#topic1__LANGUAGE">LANGUAGE</a>. If
+                          <code class="ph codeph">FUNCTION</code> is not specified, then a built-in database
+                        function corresponding to <a class="xref" href="#topic1__TCFNAME">NAME</a> is used.</dd>
+
+                    
+                    
+                      <dt class="dt pt dlterm" id="topic1__LANGUAGE">LANGUAGE</dt>
+
+                      <dd class="dd pd">Required when <a class="xref" href="#topic1__FUNCTION">FUNCTION</a>
+                        is used. Specifies the implementation language used to interpret the
+                        function. This release has language support for <code class="ph codeph">perl</code>,
+                          <code class="ph codeph">python</code>, and <code class="ph codeph">C</code>. If calling a built-in
+                        database function, <code class="ph codeph">LANGUAGE</code> should not be specified.</dd>
+
+                    
+                    
+                      <dt class="dt pt dlterm" id="topic1__LIBRARY">LIBRARY</dt>
+
+                      <dd class="dd pd">Required when <a class="xref" href="#topic1__LANGUAGE">LANGUAGE</a>
+                        is C (not allowed for other language functions). To use this attribute,
+                          <a class="xref" href="#topic1__VERSION">VERSION</a> must be 1.0.0.2.
+                        The specified library file must be installed prior to running the MapReduce
+                        job, and it must exist in the same file system location on all Greenplum
+                        hosts (coordinator and segments).</dd>
+
+                    
+                    
+                      <dt class="dt pt dlterm" id="topic1__PARAMETERS">PARAMETERS</dt>
+
+                      <dd class="dd pd">Optional. Function input parameters. The default type is
+                          <code class="ph codeph">text</code>. <p class="p"><code class="ph codeph">MAP</code> default - <code class="ph codeph">key
+                            text</code>, <code class="ph codeph">value
+                            text</code></p>
+<p class="p"><code class="ph codeph">TRANSITION</code> default - <code class="ph codeph">state
+                            text</code>, <code class="ph codeph">value
+                            text</code></p>
+<p class="p"><code class="ph codeph">CONSOLIDATE</code> default -
+                            <code class="ph codeph">state1 text</code>, <code class="ph codeph">state2 text</code> (must have
+                          exactly two input parameters of the same data
+                            type)</p>
+<p class="p"><code class="ph codeph">FINALIZE</code> default - <code class="ph codeph">state
+                            text</code> (single parameter only)</p>
+</dd>
+
+                    
+                    
+                      <dt class="dt pt dlterm" id="topic1__RETURNS">RETURNS</dt>
+
+                      <dd class="dd pd">Optional. The default return type is
+                            <code class="ph codeph">text</code>.<p class="p"><code class="ph codeph">MAP</code> default - <code class="ph codeph">key
+                            text</code>, <code class="ph codeph">value
+                            text</code></p>
+<p class="p"><code class="ph codeph">TRANSITION</code> default - <code class="ph codeph">state
+                            text</code> (single return value
+                            only)</p>
+<p class="p"><code class="ph codeph">CONSOLIDATE</code> default - <code class="ph codeph">state
+                            text</code> (single return value only)</p>
+<p class="p"><code class="ph codeph">FINALIZE</code>
+                          default - <code class="ph codeph">value text</code></p>
+</dd>
+
+                    
+                    
+                      <dt class="dt pt dlterm" id="topic1__OPTIMIZE">OPTIMIZE</dt>
+
+                      <dd class="dd pd">Optional optimization parameters for the
+                            function:<p class="p"><code class="ph codeph">STRICT</code> - function is not affected by
+                            <code class="ph codeph">NULL</code> values </p>
+<p class="p"><code class="ph codeph">IMMUTABLE</code> -
+                          function will always return the same value for a given input</p>
+</dd>
+
+                    
+                    
+                      <dt class="dt pt dlterm" id="topic1__TCFMODE">MODE</dt>
+
+                      <dd class="dd pd">Optional. Specifies the number of rows returned by the function.
+                            <p class="p"><code class="ph codeph">MULTI</code> - returns 0 or more rows per input record. The
+                          return value of the function must be an array of rows to return, or the
+                          function must be written as an iterator using <code class="ph codeph">yield</code> in
+                          Python or <code class="ph codeph">return_next</code> in Perl. <code class="ph codeph">MULTI</code> is
+                          the default mode for <code class="ph codeph">MAP</code> and <code class="ph codeph">FINALIZE</code>
+                          functions.</p>
+<p class="p"><code class="ph codeph">SINGLE</code> - returns exactly one row per
+                          input record. <code class="ph codeph">SINGLE</code> is the only mode supported for
+                            <code class="ph codeph">TRANSITION</code> and <code class="ph codeph">CONSOLIDATE</code> functions.
+                          When used with <code class="ph codeph">MAP</code> and <code class="ph codeph">FINALIZE</code>
+                          functions, <code class="ph codeph">SINGLE</code> mode can provide modest performance
+                          improvement.</p>
+</dd>
+
+                    
+                  </dl>
+</dd>
+
+              
+              
+                <dt class="dt pt dlterm" id="topic1__REDUCE">REDUCE</dt>
+
+                <dd class="dd pd">Required. A <code class="ph codeph">REDUCE</code> definition names the <a class="xref" href="#topic1__TCF">TRANSITION | CONSOLIDATE | FINALIZE</a>
+                  functions that comprise the reduction of (<code class="ph codeph">key</code>,
+                    <code class="ph codeph">value</code>) pairs to the final result set. There are also several
+                  predefined <code class="ph codeph">REDUCE</code> jobs you can run, which all operate over a
+                  column named <code class="ph codeph">value</code>:<p class="p"><code class="ph codeph">IDENTITY</code> - returns (key,
+                    value) pairs unchanged</p>
+<p class="p"><code class="ph codeph">SUM</code> - calculates the sum of
+                    numeric data </p>
+<p class="p"><code class="ph codeph">AVG</code> - calculates the average of numeric
+                    data</p>
+<p class="p"><code class="ph codeph">COUNT</code> - calculates the count of input
+                      data</p>
+<p class="p"><code class="ph codeph">MIN</code> - calculates minimum value of numeric data
+                      </p>
+<p class="p"><code class="ph codeph">MAX</code> - calculates maximum value of numeric data</p>
+<dl class="dl parml">
+                    
+                      <dt class="dt pt dlterm" id="topic1__REDUCENAME">NAME</dt>
+
+                      <dd class="dd pd">Required. The name of this <code class="ph codeph">REDUCE</code> job. Names must be
+                        unique with regards to the names of other objects in this MapReduce job
+                        (function, task, input and output names). Also, names cannot conflict with
+                        existing objects in the database (such as tables, functions or views).</dd>
+
+                    
+                    
+                      <dt class="dt pt dlterm" id="topic1__TRANSITION">TRANSITION</dt>
+
+                      <dd class="dd pd">Required. The name of the <code class="ph codeph">TRANSITION</code> function.</dd>
+
+                    
+                    
+                      <dt class="dt pt dlterm" id="topic1__CONSOLIDATE">CONSOLIDATE</dt>
+
+                      <dd class="dd pd">Optional. The name of the <code class="ph codeph">CONSOLIDATE</code> function.</dd>
+
+                    
+                    
+                      <dt class="dt pt dlterm" id="topic1__FINALIZE">FINALIZE</dt>
+
+                      <dd class="dd pd">Optional. The name of the <code class="ph codeph">FINALIZE</code> function.</dd>
+
+                    
+                    
+                      <dt class="dt pt dlterm" id="topic1__INITIALIZE">INITIALIZE</dt>
+
+                      <dd class="dd pd">Optional for <code class="ph codeph">text</code> and <code class="ph codeph">float</code> data types.
+                        Required for all other data types. The default value for text is
+                          <code class="ph codeph">''</code> . The default value for float is <code class="ph codeph">0.0</code>
+                        . Sets the initial <code class="ph codeph">state</code> value of the
+                          <code class="ph codeph">TRANSITION</code> function.</dd>
+
+                    
+                    
+                      <dt class="dt pt dlterm" id="topic1__REDUCEKEYS">KEYS</dt>
+
+                      <dd class="dd pd">Optional. Defaults to <code class="ph codeph">[key, *]</code>. When using a multi-column
+                        reduce it may be necessary to specify which columns are key columns and
+                        which columns are value columns. By default, any input columns that are not
+                        passed to the <code class="ph codeph">TRANSITION</code> function are key columns, and a
+                        column named <code class="ph codeph">key</code> is always a key column even if it is
+                        passed to the <code class="ph codeph">TRANSITION</code> function. The special indicator
+                          <code class="ph codeph">*</code> indicates all columns not passed to the
+                          <code class="ph codeph">TRANSITION</code> function. If this indicator is not present in
+                        the list of keys then any unmatched columns are discarded.</dd>
+
+                    
+                  </dl>
+</dd>
+
+              
+              
+                <dt class="dt pt dlterm" id="topic1__TASK">TASK</dt>
+
+                <dd class="dd pd">Optional. A <code class="ph codeph">TASK</code> defines a complete end-to-end
+                    <code class="ph codeph">INPUT</code>/<code class="ph codeph">MAP</code>/<code class="ph codeph">REDUCE</code> stage within
+                  a Greenplum MapReduce job pipeline. It is similar to <a class="xref" href="#topic1__EXECUTE">EXECUTE</a> except it is not immediately run. A task
+                  object can be called as <a class="xref" href="#topic1__INPUT">INPUT</a> to
+                  further processing stages.<dl class="dl parml">
+                    
+                      <dt class="dt pt dlterm" id="topic1__TASKNAME">NAME</dt>
+
+                      <dd class="dd pd">Required. The name of this task. Names must be unique with regards to the
+                        names of other objects in this MapReduce job (such as map function, reduce
+                        function, input and output names). Also, names cannot conflict with existing
+                        objects in the database (such as tables, functions or views).</dd>
+
+                    
+                    
+                      <dt class="dt pt dlterm" id="topic1__SOURCE">SOURCE</dt>
+
+                      <dd class="dd pd">The name of an <a class="xref" href="#topic1__INPUT">INPUT</a> or
+                        another <code class="ph codeph">TASK</code>.</dd>
+
+                    
+                    
+                      <dt class="dt pt dlterm" id="topic1__TASKMAP">MAP</dt>
+
+                      <dd class="dd pd">
+                        <p class="p">Optional. The name of a <a class="xref" href="#topic1__MAP">MAP</a>
+                          function. If not specified, defaults to <code class="ph codeph">IDENTITY</code>.</p>
+
+                      </dd>
+
+                    
+                    
+                      <dt class="dt pt dlterm" id="topic1__TASKREDUCE">REDUCE</dt>
+
+                      <dd class="dd pd">
+                        <p class="p">Optional. The name of a <a class="xref" href="#topic1__REDUCE">REDUCE</a> function. If not specified, defaults to
+                            <code class="ph codeph">IDENTITY</code>.</p>
+
+                      </dd>
+
+                    
+                  </dl>
+</dd>
+
+              
+            </dl>
+</dd>
+
+        
+        
+          <dt class="dt pt dlterm" id="topic1__EXECUTE">EXECUTE</dt>
+
+          <dd class="dd pd">Required. <code class="ph codeph">EXECUTE</code> defines the final
+              <code class="ph codeph">INPUT</code>/<code class="ph codeph">MAP</code>/<code class="ph codeph">REDUCE</code> stage within a
+            Greenplum MapReduce job pipeline.<dl class="dl parml">
+              
+                <dt class="dt pt dlterm" id="topic1__RUN">RUN</dt>
+
+                <dd class="dd pd">
+                  <dl class="dl parml">
+                    
+                      <dt class="dt pt dlterm" id="topic1__EXECUTESOURCE">SOURCE</dt>
+
+                      <dd class="dd pd">Required. The name of an <a class="xref" href="#topic1__INPUT">INPUT</a> or <a class="xref" href="#topic1__TASK">TASK</a>.</dd>
+
+                    
+                    
+                      <dt class="dt pt dlterm" id="topic1__TARGET">TARGET</dt>
+
+                      <dd class="dd pd">
+                        <p class="p">Optional. The name of an <a class="xref" href="#topic1__OUTPUT">OUTPUT</a>. The default output is <code class="ph codeph">STDOUT</code>.</p>
+
+                      </dd>
+
+                    
+                    
+                      <dt class="dt pt dlterm" id="topic1__EXECUTEMAP">MAP</dt>
+
+                      <dd class="dd pd">Optional. The name of a <a class="xref" href="#topic1__MAP">MAP</a>
+                        function. If not specified, defaults to <code class="ph codeph">IDENTITY</code>.</dd>
+
+                    
+                    
+                      <dt class="dt pt dlterm" id="topic1__EXECUTEREDUCE">REDUCE</dt>
+
+                      <dd class="dd pd">Optional. The name of a <a class="xref" href="#topic1__REDUCE">REDUCE</a> function. Defaults to <code class="ph codeph">IDENTITY</code>.</dd>
+
+                    
+                  </dl>
+
+                </dd>
+
+              
+            </dl>
+</dd>
+
+        
+      </dl>
+
+    </div>
+
+    <div class="section" id="topic1__section11"><h2 class="title sectiontitle">See Also</h2>
+      
+      <p class="p"><a class="xref" href="gpmapreduce.html#topic1">gpmapreduce</a></p>
+
+    </div>
+
+  </div>
+
+</body>
+</html>

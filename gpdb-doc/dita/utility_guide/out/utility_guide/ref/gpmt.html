@@ -1,0 +1,172 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+
+<meta name="copyright" content="(C) Copyright 2022" />
+<meta name="DC.rights.owner" content="(C) Copyright 2022" />
+<meta name="generator" content="DITA-OT" /><meta name="DC.type" content="topic" />
+<meta name="DC.title" content="gpmt" />
+<meta name="DC.format" content="XHTML" />
+<meta name="DC.identifier" content="topic_vzy_mkx_bpb" />
+<link rel="stylesheet" type="text/css" href="../commonltr.css" />
+<title>gpmt</title>
+</head>
+<body id="topic_vzy_mkx_bpb">
+
+  <h1 class="title topictitle1" id="ariaid-title1">gpmt</h1>
+
+  <div class="body">
+    <p class="p"> GPMT (Greenplum Magic Tool) provides a set of diagnostic utilities to troubleshoot and
+      resolve common supportability issues, along with a consistent method for gathering information
+      required by VMware Support.</p>
+
+    <div class="section"><h2 class="title sectiontitle">Synopsis</h2>
+      
+      <pre class="pre codeblock"><code>gpmt &lt;tool&gt; [&lt;tool_options&gt; ...] 
+
+gpmt -hostfile &lt;FILE&gt;
+
+gpmt -help
+
+gpmt -verbose
+</code></pre>
+    </div>
+
+    <div class="section"><h2 class="title sectiontitle">Tools</h2>
+      
+      <div class="sectiondiv"><strong class="ph b">Greenplum</strong></div>
+      <dl class="dl parml">
+        
+          <dt class="dt pt dlterm"><a class="xref" href="gpmt-analyze_session.html">analyze_session</a></dt>
+
+          <dd class="dd pd">Collect information from a hung Greenplum Database session for remote analysis.</dd>
+
+        
+        
+          <dt class="dt pt dlterm"><var class="keyword varname">catalogbackup</var></dt>
+
+          <dd class="dd pd">For VMware Support use only. Back up catalog prior to performing catalog repairs.</dd>
+
+        
+        
+          <dt class="dt pt dlterm"><a class="xref" href="gpmt-gp_log_collector.html">gp_log_collector</a>
+          </dt>
+
+          <dd class="dd pd">Basic Greenplum Database log collection utility.</dd>
+
+        
+        
+          <dt class="dt pt dlterm"><var class="keyword varname">gpcheckcat</var></dt>
+
+          <dd class="dd pd">For VMware Support use only. Greenplum Database gpcheckcat log analysis.</dd>
+
+        
+        
+          <dt class="dt pt dlterm"><var class="keyword varname">gpcheckup</var></dt>
+
+          <dd class="dd pd">For VMware Support use only. Greenplum Database Health Check.</dd>
+
+        
+        
+          <dt class="dt pt dlterm"><a class="xref" href="gpmt-gpstatscheck.html">gpstatscheck</a></dt>
+
+          <dd class="dd pd">Check for missing stats on objects used in a query.</dd>
+
+        
+        
+          <dt class="dt pt dlterm"><a class="xref" href="gpmt-packcore.html">packcore</a></dt>
+
+          <dd class="dd pd">Package core files into single tarball for remote analysis.</dd>
+
+        
+        
+          <dt class="dt pt dlterm"><var class="keyword varname">primarymirror_lengths</var></dt>
+
+          <dd class="dd pd">For VMware Support use only. Check whether primary and mirror AO and AOCO relfiles are
+            the correct lengths.</dd>
+
+        
+        
+          <dt class="dt pt dlterm"><var class="keyword varname">tablecollect</var></dt>
+
+          <dd class="dd pd">For VMware Support use only. Collect data and index files for data corruption
+            RCA.</dd>
+
+        
+      </dl>
+
+      <div class="sectiondiv"><strong class="ph b">Miscellaneous</strong></div>
+      <dl class="dl parml">
+        
+          <dt class="dt pt dlterm"><var class="keyword varname">hostfile</var></dt>
+
+          <dd class="dd pd">Generate hostfiles for use with other tools.</dd>
+
+        
+        
+          <dt class="dt pt dlterm"><var class="keyword varname">replcheck</var></dt>
+
+          <dd class="dd pd">Check whether tool is replicated to all hosts.</dd>
+
+        
+        
+          <dt class="dt pt dlterm"><var class="keyword varname">replicate</var>
+          </dt>
+
+          <dd class="dd pd">Replicate tool to all hosts.</dd>
+
+        
+        
+          <dt class="dt pt dlterm"><var class="keyword varname">version</var></dt>
+
+          <dd class="dd pd">Display the GPMT version.</dd>
+
+        
+      </dl>
+
+    </div>
+
+    <div class="section"><h2 class="title sectiontitle">Global Options</h2>
+      
+      <dl class="dl parml">
+        
+          <dt class="dt pt dlterm"><var class="keyword varname">-hostfile</var></dt>
+
+          <dd class="dd pd">Limit the hosts where the tool will be run.</dd>
+
+        
+        
+          <dt class="dt pt dlterm"><var class="keyword varname"> -help</var></dt>
+
+          <dd class="dd pd">Display the online help.</dd>
+
+        
+        
+          <dt class="dt pt dlterm"><var class="keyword varname"> -verbose</var></dt>
+
+          <dd class="dd pd">Print verbose log messages.</dd>
+
+        
+      </dl>
+
+    </div>
+
+    <div class="section"><h2 class="title sectiontitle">Examples</h2>
+      
+      <p class="p"><strong class="ph b">Display gpmt version</strong></p>
+
+      <pre class="pre codeblock"><code>gpmt version</code></pre>
+      <p class="p"><strong class="ph b">Collect a core file</strong></p>
+
+      <pre class="pre codeblock"><code>gpmt packcore -cmd collect -core core.1234</code></pre>
+      <p class="p"><strong class="ph b">Show help for a specific tool</strong></p>
+
+      <pre class="pre codeblock"><code>gpmt gp_log_collector -help</code></pre>
+    </div>
+
+  </div>
+
+</body>
+</html>

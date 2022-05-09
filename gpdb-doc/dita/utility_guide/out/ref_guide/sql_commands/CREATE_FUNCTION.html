@@ -1,0 +1,784 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+
+<meta name="copyright" content="(C) Copyright 2022" />
+<meta name="DC.rights.owner" content="(C) Copyright 2022" />
+<meta name="generator" content="DITA-OT" /><meta name="DC.type" content="topic" />
+<meta name="DC.title" content="CREATE FUNCTION" />
+<meta name="DC.format" content="XHTML" />
+<meta name="DC.identifier" content="topic1" />
+<link rel="stylesheet" type="text/css" href="../../out/commonltr.css" />
+<title>CREATE FUNCTION</title>
+</head>
+<body id="topic1">
+
+    <h1 class="title topictitle1" id="topic1__bs20941">CREATE FUNCTION</h1>
+
+    <div class="body">
+        <p class="p" id="topic1__sql_command_desc">Defines a new function.</p>
+
+        <div class="section" id="topic1__section2"><h2 class="title sectiontitle">Synopsis</h2><pre class="pre codeblock" id="topic1__sql_command_synopsis"><code>CREATE [OR REPLACE] FUNCTION &lt;name&gt;    
+    ( [ [&lt;argmode&gt;] [&lt;argname&gt;] &lt;argtype&gt; [ { DEFAULT | = } &lt;default_expr&gt; ] [, ...] ] )
+      [ RETURNS &lt;rettype&gt; 
+        | RETURNS TABLE ( &lt;column_name&gt; &lt;column_type&gt; [, ...] ) ]
+    { LANGUAGE &lt;langname&gt;
+    | WINDOW
+    | IMMUTABLE | STABLE | VOLATILE | [NOT] LEAKPROOF
+    | CALLED ON NULL INPUT | RETURNS NULL ON NULL INPUT | STRICT
+    | NO SQL | CONTAINS SQL | READS SQL DATA | MODIFIES SQL
+    | [EXTERNAL] SECURITY INVOKER | [EXTERNAL] SECURITY DEFINER
+    | EXECUTE ON { ANY | MASTER | ALL SEGMENTS | INITPLAN }
+    | COST &lt;execution_cost&gt;
+    | SET &lt;configuration_parameter&gt; { TO &lt;value&gt; | = &lt;value&gt; | FROM CURRENT }
+    | AS '&lt;definition&gt;'
+    | AS '&lt;obj_file&gt;', '&lt;link_symbol&gt;' } ...
+    [ WITH ({ DESCRIBE = describe_function
+           } [, ...] ) ]</code></pre>
+        </div>
+
+        <div class="section" id="topic1__section3"><h2 class="title sectiontitle">Description</h2>
+            
+            <p class="p"><code class="ph codeph">CREATE FUNCTION</code> defines a new function. <code class="ph codeph">CREATE OR REPLACE
+                    FUNCTION</code> either creates a new function, or replaces an existing
+                definition.</p>
+
+            <p class="p">The name of the new function must not match any existing function with the same input
+                argument types in the same schema. However, functions of different argument types
+                may share a name (overloading). </p>
+
+            <p class="p">To update the definition of an existing function, use <code class="ph codeph">CREATE OR REPLACE
+                    FUNCTION</code>. It is not possible to change the name or argument types of a
+                function this way (this would actually create a new, distinct function). Also,
+                    <code class="ph codeph">CREATE OR REPLACE FUNCTION</code> will not let you change the return
+                type of an existing function. To do that, you must drop and recreate the function.
+                When using <code class="ph codeph">OUT</code> parameters, that means you cannot change the types
+                of any <code class="ph codeph">OUT</code> parameters except by dropping the function. If you drop
+                and then recreate a function, you will have to drop existing objects (rules, views,
+                triggers, and so on) that refer to the old function. Use <code class="ph codeph">CREATE OR REPLACE
+                    FUNCTION</code> to change a function definition without breaking objects that
+                refer to the function.</p>
+
+            <p class="p">The user that creates the function becomes the owner of the function.</p>
+
+            <p class="p">To be able to create a function, you must have <code class="ph codeph">USAGE</code> privilege on
+                the argument types and the return type.</p>
+
+            <p class="p">For more information about creating functions, see the <a class="xref" href="https://www.postgresql.org/docs/9.4/xfunc.html" target="_blank">User Defined Functions</a> section of the PostgreSQL
+                documentation.</p>
+
+            <div class="sectiondiv" id="topic1__section4"><strong class="ph b">Limited Use of VOLATILE and STABLE Functions</strong><p class="p">To
+                    prevent data from becoming out-of-sync across the segments in Greenplum
+                    Database, any function classified as <code class="ph codeph">STABLE</code> or
+                        <code class="ph codeph">VOLATILE</code> cannot be run at the segment level if it
+                    contains SQL or modifies the database in any way. For example, functions such as
+                        <code class="ph codeph">random()</code> or <code class="ph codeph">timeofday()</code> are not allowed to
+                    run on distributed data in Greenplum Database because they could potentially
+                    cause inconsistent data between the segment instances.</p>
+<p class="p">To ensure data
+                    consistency, <code class="ph codeph">VOLATILE</code> and <code class="ph codeph">STABLE</code> functions can
+                    safely be used in statements that are evaluated on and run from the master.
+                    For example, the following statements are always run on the master
+                    (statements without a <code class="ph codeph">FROM</code>
+                    clause):</p>
+<pre class="pre codeblock"><code>SELECT setval('myseq', 201);
+SELECT foo();</code></pre><p class="p">In
+                    cases where a statement has a <code class="ph codeph">FROM</code> clause containing a
+                    distributed table and the function used in the <code class="ph codeph">FROM</code> clause
+                    simply returns a set of rows, execution may be allowed on the
+                    segments:</p>
+<pre class="pre codeblock"><code>SELECT * FROM foo();</code></pre><p class="p">One exception to this
+                    rule are functions that return a table reference (<code class="ph codeph">rangeFuncs</code>)
+                    or functions that use the <code class="ph codeph">refCursor</code> data type. Note that you
+                    cannot return a <code class="ph codeph">refcursor</code> from any kind of function in
+                    Greenplum Database.</p>
+</div>
+            <div class="sectiondiv"><strong class="ph b">Function Volatility and EXECUTE ON Attributes</strong><p class="p">Volatility attributes
+                        (<code class="ph codeph">IMMUTABLE</code>, <code class="ph codeph">STABLE</code>,
+                        <code class="ph codeph">VOLATILE</code>) and <code class="ph codeph">EXECUTE ON</code> attributes
+                    specify two different aspects of function execution. In general, volatility
+                    indicates when the function is run, and <code class="ph codeph">EXECUTE ON</code>
+                    indicates where it is run. </p>
+<p class="p">For example, a function defined with the
+                        <code class="ph codeph">IMMUTABLE</code> attribute can be run at query planning time,
+                    while a function with the <code class="ph codeph">VOLATILE</code> attribute must be run 
+                    for every row in the query. A function with the <code class="ph codeph">EXECUTE ON
+                        MASTER</code> attribute is run only on the master segment and a
+                    function with the <code class="ph codeph">EXECUTE ON ALL SEGMENTS</code> attribute is run 
+                    on all primary segment instances (not the master).</p>
+<p class="p">See <a class="xref" href="../../admin_guide/query/topics/functions-operators.html#topic26/in151167" target="_blank">Using Functions and Operators</a> in the <cite class="cite">Greenplum Database
+                        Administrator Guide</cite>.</p>
+</div>
+            <div class="sectiondiv"><strong class="ph b">Functions And Replicated Tables</strong><p class="p">A user-defined function that
+                    runs only <code class="ph codeph">SELECT</code> commands on replicated tables can run on
+                    segments. Replicated tables, created with the <code class="ph codeph">DISTRIBUTED
+                        REPLICATED</code> clause, store all of their rows on every segment. It is
+                    safe for a function to read them on the segments, but updates to replicated
+                    tables must run on the master instance. </p>
+</div></div>
+
+        <div class="section" id="topic1__section5"><h2 class="title sectiontitle">Parameters</h2><dl class="dl parml">
+                
+                    <dt class="dt pt dlterm"><var class="keyword varname">name</var></dt>
+
+                    <dd class="dd pd">The name (optionally schema-qualified) of the function to create.</dd>
+
+                
+                
+                    <dt class="dt pt dlterm"><var class="keyword varname">argmode</var></dt>
+
+                    <dd class="dd pd">The mode of an argument: either <code class="ph codeph">IN</code>, <code class="ph codeph">OUT</code>,
+                            <code class="ph codeph">INOUT</code>, or <code class="ph codeph">VARIADIC</code>. If omitted, the
+                        default is <code class="ph codeph">IN</code>. Only <code class="ph codeph">OUT</code> arguments can
+                        follow an argument declared as <code class="ph codeph">VARIADIC</code>. Also,
+                            <code class="ph codeph">OUT</code> and <code class="ph codeph">INOUT</code> arguments cannot be used
+                        together with the <code class="ph codeph">RETURNS TABLE</code> notation. </dd>
+
+                
+                
+                    <dt class="dt pt dlterm"><var class="keyword varname">argname</var></dt>
+
+                    <dd class="dd pd">The name of an argument. Some languages (currently only SQL and PL/pgSQL)
+                        let you use the name in the function body. For other languages the name of
+                        an input argument is just extra documentation, so far as the function itself
+                        is concerned; but you can use input argument names when calling a function
+                        to improve readability. In any case, the name of an output argument is
+                        significant, since it defines the column name in the result row type. (If
+                        you omit the name for an output argument, the system will choose a default
+                        column name.) </dd>
+
+                
+                
+                    <dt class="dt pt dlterm"><var class="keyword varname">argtype</var></dt>
+
+                    <dd class="dd pd">The data type(s) of the function's arguments (optionally schema-qualified),
+                        if any. The argument types may be base, composite, or domain types, or may
+                        reference the type of a table column. </dd>
+
+                    <dd class="dd pd ddexpand">Depending on the implementation language it may also be allowed to specify
+                        pseudotypes such as <code class="ph codeph">cstring</code>. Pseudotypes indicate that the
+                        actual argument type is either incompletely specified, or outside the set of
+                        ordinary SQL data types. </dd>
+
+                    <dd class="dd pd ddexpand">The type of a column is referenced by writing
+                                <code class="ph codeph"><var class="keyword varname">tablename</var>.<var class="keyword varname">columnname</var>%TYPE</code>.
+                        Using this feature can sometimes help make a function independent of changes
+                        to the definition of a table. </dd>
+
+                
+                
+                    <dt class="dt pt dlterm"><var class="keyword varname">default_expr</var></dt>
+
+                    <dd class="dd pd">An expression to be used as the default value if the parameter is not
+                        specified. The expression must be coercible to the argument type of the
+                        parameter. Only <code class="ph codeph">IN</code> and <code class="ph codeph">INOUT</code> parameters
+                        can have a default value. Each input parameter in the argument list that
+                        follows a parameter with a default value must have a default value as
+                        well.</dd>
+
+                
+                
+                    <dt class="dt pt dlterm"><var class="keyword varname">rettype</var></dt>
+
+                    <dd class="dd pd">The return data type (optionally schema-qualified). The return type can be a
+                        base, composite, or domain type, or may reference the type of a table
+                        column. Depending on the implementation language it may also be allowed to
+                        specify pseudotypes such as <code class="ph codeph">cstring</code>. If the function is not
+                        supposed to return a value, specify <code class="ph codeph">void</code> as the return
+                        type. </dd>
+
+                    <dd class="dd pd ddexpand">When there are <code class="ph codeph">OUT</code> or <code class="ph codeph">INOUT</code> parameters,
+                        the <code class="ph codeph">RETURNS</code> clause may be omitted. If present, it must
+                        agree with the result type implied by the output parameters:
+                            <code class="ph codeph">RECORD</code> if there are multiple output parameters, or the
+                        same type as the single output parameter. </dd>
+
+                    <dd class="dd pd ddexpand">The <code class="ph codeph">SETOF</code> modifier indicates that the function will return
+                        a set of items, rather than a single item. </dd>
+
+                    <dd class="dd pd ddexpand">The type of a column is referenced by writing
+                                <code class="ph codeph"><var class="keyword varname">tablename</var>.<var class="keyword varname">columnname</var>%TYPE</code>.
+                    </dd>
+
+                
+                
+                    <dt class="dt pt dlterm"><var class="keyword varname">column_name</var></dt>
+
+                    <dd class="dd pd">The name of an output column in the <code class="ph codeph">RETURNS TABLE</code> syntax.
+                        This is effectively another way of declaring a named <code class="ph codeph">OUT</code>
+                        parameter, except that <code class="ph codeph">RETURNS TABLE</code> also implies
+                            <code class="ph codeph">RETURNS SETOF</code>.</dd>
+
+                
+                
+                    <dt class="dt pt dlterm"><var class="keyword varname">column_type</var></dt>
+
+                    <dd class="dd pd">The data type of an output column in the <code class="ph codeph">RETURNS TABLE</code>
+                        syntax.</dd>
+
+                
+                
+                    <dt class="dt pt dlterm"><var class="keyword varname">langname</var></dt>
+
+                    <dd class="dd pd">The name of the language that the function is implemented in. May be
+                            <code class="ph codeph">SQL</code>, <code class="ph codeph">C</code>, <code class="ph codeph">internal</code>, or
+                        the name of a user-defined procedural language. See <a class="xref" href="CREATE_LANGUAGE.html#topic1">CREATE LANGUAGE</a> for the procedural languages supported in Greenplum
+                        Database. For backward compatibility, the name may be enclosed by single
+                        quotes. </dd>
+
+                
+                
+                    <dt class="dt pt dlterm">WINDOW</dt>
+
+                    <dd class="dd pd"><code class="ph codeph">WINDOW</code> indicates that the function is a window function
+                        rather than a plain function. This is currently only useful for functions
+                        written in C. The <code class="ph codeph">WINDOW</code> attribute cannot be changed when
+                        replacing an existing function definition.</dd>
+
+                
+                
+                    <dt class="dt pt dlterm">IMMUTABLE</dt>
+
+                    <dt class="dt pt dlterm">STABLE</dt>
+
+                    <dt class="dt pt dlterm">VOLATILE</dt>
+
+                    <dt class="dt pt dlterm">LEAKPROOF</dt>
+
+                    <dd class="dd pd">These attributes inform the query optimizer about the behavior of the
+                        function. At most one choice may be specified. If none of these appear,
+                            <code class="ph codeph">VOLATILE</code> is the default assumption. Since Greenplum
+                        Database currently has limited use of <code class="ph codeph">VOLATILE</code> functions,
+                        if a function is truly <code class="ph codeph">IMMUTABLE</code>, you must declare it as so
+                        to be able to use it without restrictions.</dd>
+
+                    <dd class="dd pd ddexpand"><code class="ph codeph">IMMUTABLE</code> indicates that the function cannot modify the
+                        database and always returns the same result when given the same argument
+                        values. It does not do database lookups or otherwise use information not
+                        directly present in its argument list. If this option is given, any call of
+                        the function with all-constant arguments can be immediately replaced with
+                        the function value.</dd>
+
+                    <dd class="dd pd ddexpand"><code class="ph codeph">STABLE</code> indicates that the function cannot modify the
+                        database, and that within a single table scan it will consistently return
+                        the same result for the same argument values, but that its result could
+                        change across SQL statements. This is the appropriate selection for
+                        functions whose results depend on database lookups, parameter values (such
+                        as the current time zone), and so on. Also note that the
+                            <var class="keyword varname">current_timestamp</var> family of functions qualify as
+                        stable, since their values do not change within a transaction.</dd>
+
+                    <dd class="dd pd ddexpand"><code class="ph codeph">VOLATILE</code> indicates that the function value can change even
+                        within a single table scan, so no optimizations can be made. Relatively few
+                        database functions are volatile in this sense; some examples are
+                            <code class="ph codeph">random()</code>, <code class="ph codeph">timeofday()</code>. But note that
+                        any function that has side-effects must be classified volatile, even if its
+                        result is quite predictable, to prevent calls from being optimized away; an
+                        example is <code class="ph codeph">setval()</code>.</dd>
+
+                    <dd class="dd pd ddexpand"><code class="ph codeph">LEAKPROOF</code> indicates that the function has no side effects.
+                        It reveals no information about its arguments other than by its return
+                        value. For example, a function that throws an error message for some
+                        argument values but not others, or that includes the argument values in any
+                        error message, is not leakproof. The query planner may push leakproof
+                        functions (but not others) into views created with the
+                            <code class="ph codeph">security_barrier</code> option. See <a class="xref" href="CREATE_VIEW.html#topic1">CREATE VIEW</a> and <a class="xref" href="CREATE_RULE.html#topic1">CREATE RULE</a>. This option can only be set by the
+                        superuser.</dd>
+
+                
+                
+                    <dt class="dt pt dlterm">CALLED ON NULL INPUT</dt>
+
+                    <dt class="dt pt dlterm">RETURNS NULL ON NULL INPUT</dt>
+
+                    <dt class="dt pt dlterm">STRICT</dt>
+
+                    <dd class="dd pd"><code class="ph codeph">CALLED ON NULL INPUT</code> (the default) indicates that the
+                        function will be called normally when some of its arguments are null. It is
+                        then the function author's responsibility to check for null values if
+                        necessary and respond appropriately. <code class="ph codeph">RETURNS NULL ON NULL
+                            INPUT</code> or <code class="ph codeph">STRICT</code> indicates that the function
+                        always returns null whenever any of its arguments are null. If this
+                        parameter is specified, the function is not run when there are null
+                        arguments; instead a null result is assumed automatically.</dd>
+
+                
+                
+                     <dt class="dt pt dlterm">NO SQL</dt>
+
+                     <dt class="dt pt dlterm">CONTAINS SQL</dt>
+
+                     <dt class="dt pt dlterm">READS SQL DATA</dt>
+
+                     <dt class="dt pt dlterm">MODIFIES SQL</dt>
+
+                     <dd class="dd pd">These attributes inform the query optimizer about whether or not the function contains 
+                        SQL statements and whether, if it does, those statements read and/or write data.</dd>
+
+                     <dd class="dd pd ddexpand"><code class="ph codeph">NO SQL</code> indicates that the function does not contain SQL
+                        statements.</dd>
+
+                     <dd class="dd pd ddexpand"><code class="ph codeph">CONTAINS SQL</code> indicates that the function contains SQL
+                        statements, none of which either read or write data.</dd>
+
+                     <dd class="dd pd ddexpand"><code class="ph codeph">READS SQL DATA</code> indicates that the function contains SQL
+                        statements that read data but none that modify data.</dd>
+
+                     <dd class="dd pd ddexpand"><code class="ph codeph">MODIFIES SQL</code> indicates that the function contains
+                        statements that may write data.</dd>
+
+                
+                
+                    <dt class="dt pt dlterm">[EXTERNAL] SECURITY INVOKER</dt>
+
+                    <dt class="dt pt dlterm">[EXTERNAL] SECURITY DEFINER</dt>
+
+                    <dd class="dd pd"><code class="ph codeph">SECURITY INVOKER</code> (the default) indicates that the function
+                        is to be run with the privileges of the user that calls it.
+                            <code class="ph codeph">SECURITY DEFINER</code> specifies that the function is to be
+                        run with the privileges of the user that created it. The key word
+                            <code class="ph codeph">EXTERNAL</code> is allowed for SQL conformance, but it is
+                        optional since, unlike in SQL, this feature applies to all functions not
+                        just external ones.</dd>
+
+                
+                
+                    <dt class="dt pt dlterm">EXECUTE ON ANY</dt>
+
+                    <dt class="dt pt dlterm">EXECUTE ON MASTER</dt>
+
+                    <dt class="dt pt dlterm">EXECUTE ON ALL SEGMENTS</dt>
+
+                    <dt class="dt pt dlterm">EXECUTE ON INITPLAN</dt>
+
+                    <dd class="dd pd">The <code class="ph codeph">EXECUTE ON</code> attributes specify where (master or segment
+                        instance) a function runs when it is invoked during the query execution
+                        process.</dd>
+
+                    <dd class="dd pd ddexpand"><code class="ph codeph">EXECUTE ON ANY</code> (the default) indicates that the function
+                        can be run on the master, or any segment instance, and it returns the
+                        same result regardless of where it is run. Greenplum Database
+                        determines where the function runs.</dd>
+
+                    <dd class="dd pd ddexpand"><code class="ph codeph">EXECUTE ON MASTER</code> indicates that the function must run
+                        only on the master instance. </dd>
+
+                    <dd class="dd pd ddexpand"><code class="ph codeph">EXECUTE ON ALL SEGMENTS</code> indicates that the function must
+                        run on all primary segment instances, but not the master, for each
+                        invocation. The overall result of the function is the <code class="ph codeph">UNION
+                            ALL</code> of the results from all segment instances. </dd>
+
+                    <dd class="dd pd ddexpand"><code class="ph codeph">EXECUTE ON INITPLAN</code> indicates that the function contains an
+                        SQL command that dispatches queries to the segment instances and requires
+                        special processing on the master instance by Greenplum Database when
+                        possible.
+                        <div class="note"><span class="notetitle">Note:</span> <code class="ph codeph">EXECUTE ON INITPLAN</code> is only supported in functions
+                            that are used in the <code class="ph codeph">FROM</code> clause of a <code class="ph codeph">CREATE
+                                TABLE AS</code> or <code class="ph codeph">INSERT</code> command such as the
+                                <code class="ph codeph">get_data()</code> function in these
+                            commands.<pre class="pre codeblock"><code>CREATE TABLE t AS SELECT * FROM get_data();
+
+INSERT INTO t1 SELECT * FROM get_data();</code></pre><div class="p">Greenplum
+                                Database does not support the <code class="ph codeph">EXECUTE ON INITPLAN</code>
+                                attribute in a function that is used in the <code class="ph codeph">WITH</code>
+                                clause of a query, a CTE (common table expression). For example,
+                                specifying <code class="ph codeph">EXECUTE ON INITPLAN</code> in function
+                                    <code class="ph codeph">get_data()</code> in this CTE is not
+                                supported.<pre class="pre codeblock"><code>WITH tbl_a AS (SELECT * FROM get_data() )
+   SELECT * from tbl_a
+   UNION
+   SELECT * FROM tbl_b;</code></pre></div>
+</div>
+</dd>
+
+                    <dd class="dd pd ddexpand">For information about using <code class="ph codeph">EXECUTE ON</code> attributes, see
+                            <a class="xref" href="#topic1__section6">Notes</a>.</dd>
+
+                
+                
+                    <dt class="dt pt dlterm">COST <var class="keyword varname">execution_cost</var></dt>
+
+                    <dd class="dd pd">A positive number identifying the estimated execution cost for the function,
+                        in <a class="xref" href="https://www.postgresql.org/docs/9.4/runtime-config-query.html#GUC-CPU-OPERATOR-COST" target="_blank">cpu_operator_cost</a> units. If the
+                        function returns a set, <var class="keyword varname">execution_cost</var> identifies the
+                        cost per returned row. If the cost is not specified, C-language and internal
+                        functions default to 1 unit, while functions in other languages default to
+                        100 units. The planner tries to evaluate the function less often when you
+                        specify larger <var class="keyword varname">execution_cost</var> values.</dd>
+
+                
+                
+                    <dt class="dt pt dlterm"><var class="keyword varname">configuration_parameter</var></dt>
+
+                    <dt class="dt pt dlterm"><var class="keyword varname">value</var></dt>
+
+                    <dd class="dd pd">The <code class="ph codeph">SET</code> clause applies a value to a session configuration
+                        parameter when the function is entered. The configuration parameter is
+                        restored to its prior value when the function exits. <code class="ph codeph">SET FROM
+                            CURRENT</code> saves the value of the parameter that is current when
+                            <code class="ph codeph">CREATE FUNCTION</code> is run as the value to be applied
+                        when the function is entered. </dd>
+
+                
+                
+                    <dt class="dt pt dlterm"><var class="keyword varname">definition</var></dt>
+
+                    <dd class="dd pd">A string constant defining the function; the meaning depends on the
+                        language. It may be an internal function name, the path to an object file,
+                        an SQL command, or text in a procedural language.</dd>
+
+                
+                
+                    <dt class="dt pt dlterm"><var class="keyword varname">obj_file, link_symbol</var></dt>
+
+                    <dd class="dd pd">This form of the <code class="ph codeph">AS</code> clause is used for dynamically loadable
+                        C language functions when the function name in the C language source code is
+                        not the same as the name of the SQL function. The string
+                            <var class="keyword varname">obj_file</var> is the name of the file containing the
+                        dynamically loadable object, and <var class="keyword varname">link_symbol</var> is the name
+                        of the function in the C language source code. If the link symbol is
+                        omitted, it is assumed to be the same as the name of the SQL function being
+                        defined. The C names
+                        of all functions must be different, so you must give overloaded SQL
+                        functions different C names (for example, use the argument types as
+                        part of the C names).
+                        It is recommended to locate shared libraries either relative to
+                            <code class="ph codeph">$libdir</code> (which is located at
+                            <code class="ph codeph">$GPHOME/lib</code>) or through the dynamic library path (set
+                        by the <code class="ph codeph">dynamic_library_path</code> server configuration
+                        parameter). This simplifies version upgrades if the new installation is at a
+                        different location.</dd>
+
+                
+                
+                    <dt class="dt pt dlterm"><var class="keyword varname">describe_function</var></dt>
+
+                    <dd class="dd pd">The name of a callback function to run when a query that calls this
+                        function is parsed. The callback function returns a tuple descriptor that
+                        indicates the result type.</dd>
+
+                
+            </dl>
+</div>
+
+        <div class="section" id="topic1__section6"><h2 class="title sectiontitle">Notes</h2><p class="p">Any compiled code (shared library files) for
+                custom functions must be placed in the same location on every host in your Greenplum
+                Database array (master and all segments). This location must also be in the
+                    <code class="ph codeph">LD_LIBRARY_PATH</code> so that the server can locate the files. It is
+                recommended to locate shared libraries either relative to <code class="ph codeph">$libdir</code>
+                (which is located at <code class="ph codeph">$GPHOME/lib</code>) or through the dynamic library
+                path (set by the <code class="ph codeph">dynamic_library_path</code> server configuration
+                parameter) on all master segment instances in the Greenplum array.</p>
+<p class="p">The full
+                SQL type syntax is allowed for input arguments and return value. However, some
+                details of the type specification (such as the precision field for type
+                    <var class="keyword varname">numeric</var>) are the responsibility of the underlying function
+                implementation and are not recognized or enforced by the <code class="ph codeph">CREATE
+                    FUNCTION</code> command. </p>
+<p class="p">Greenplum Database allows function overloading. The same name can be used for several different
+                functions so long as they have distinct input argument types. However, the C names
+                of all functions must be different, so you must give overloaded C functions
+                different C names (for example, use the argument types as part of the C names). </p>
+<p class="p">Two functions are considered
+                the same if they have the same names and input argument types, ignoring any
+                    <code class="ph codeph">OUT</code> parameters. Thus for example these declarations
+                conflict:</p>
+<pre class="pre codeblock"><code>CREATE FUNCTION foo(int) ...
+CREATE FUNCTION foo(int, out text) ...</code></pre>
+            <p class="p">Functions that have different argument type lists are not considered to conflict at
+                creation time, but if argument defaults are provided, they might conflict in use.
+                For example, consider:</p>
+<pre class="pre codeblock"><code>CREATE FUNCTION foo(int) ...
+CREATE FUNCTION foo(int, int default 42) ...</code></pre>
+            <p class="p">The call <code class="ph codeph">foo(10)</code>, will fail due to the ambiguity about which
+                function should be called.</p>
+
+            <p class="p">When repeated <code class="ph codeph">CREATE FUNCTION</code> calls refer to the same object file,
+                the file is only loaded once. To unload and reload the file, use the
+                    <code class="ph codeph">LOAD</code> command. </p>
+<p class="p">You must have the <code class="ph codeph">USAGE</code>
+                privilege on a language to be able to define a function using that language.</p>
+
+            <p class="p">It is often helpful to use dollar quoting to write the function definition string,
+                rather than the normal single quote syntax. Without dollar quoting, any single
+                quotes or backslashes in the function definition must be escaped by doubling them. A
+                dollar-quoted string constant consists of a dollar sign (<code class="ph codeph">$</code>), an
+                optional tag of zero or more characters, another dollar sign, an arbitrary sequence
+                of characters that makes up the string content, a dollar sign, the same tag that
+                began this dollar quote, and a dollar sign. Inside the dollar-quoted string, single
+                quotes, backslashes, or any character can be used without escaping. The string
+                content is always written literally. For example, here are two different ways to
+                specify the string "Dianne's horse" using dollar quoting:</p>
+<pre class="pre codeblock"><code>$$Dianne's horse$$
+$SomeTag$Dianne's horse$SomeTag$</code></pre>
+            <p class="p">If a <code class="ph codeph">SET</code> clause is attached to a function, the effects of a
+                    <code class="ph codeph">SET LOCAL</code> command run inside the function for the same
+                variable are restricted to the function; the configuration parameter's prior value
+                is still restored when the function exits. However, an ordinary <code class="ph codeph">SET</code>
+                command (without <code class="ph codeph">LOCAL</code>) overrides the <code class="ph codeph">CREATE
+                    FUNCTION</code>
+                <code class="ph codeph">SET</code> clause, much as it would for a previous <code class="ph codeph">SET
+                    LOCAL</code> command. The effects of such a command will persist after the
+                function exits, unless the current transaction is rolled back.</p>
+
+            <p class="p">If a function with a <code class="ph codeph">VARIADIC</code> argument is declared as
+                    <code class="ph codeph">STRICT</code>, the strictness check tests that the variadic array as a
+                whole is non-null. PL/pgSQL will still call the function if the array has null
+                elements.</p>
+
+            <p class="p">When replacing an existing function with <code class="ph codeph">CREATE OR REPLACE
+                FUNCTION</code>, there are restrictions on changing parameter names.
+                You cannot change the name already assigned to any input parameter
+                (although you can add names to parameters that had none before).
+                If there is more than one output parameter, you cannot change the
+                names of the output parameters, because that would change the
+                column names of the anonymous composite type that describes the
+                function's result. These restrictions are made to ensure that
+                existing calls of the function do not stop working when it is replaced.
+            </p>
+
+            <div class="sectiondiv" id="topic1__section7"><strong class="ph b">Using Functions with Queries on Distributed Data</strong><p class="p">In
+                    some cases, Greenplum Database does not support using functions in a query where
+                    the data in a table specified in the <code class="ph codeph">FROM</code> clause is distributed
+                    over Greenplum Database segments. As an example, this SQL query contains the
+                    function
+                    <code class="ph codeph">func()</code>:</p>
+<pre class="pre codeblock"><code>SELECT func(a) FROM table1;</code></pre><p class="p">The
+                    function is not supported for use in the query if all of the following
+                    conditions are met:</p>
+<ul class="ul">
+                    <li class="li" id="topic1__bs144942">The data of table <code class="ph codeph">table1</code> is distributed over
+                        Greenplum Database segments.</li>
+
+                    <li class="li" id="topic1__bs144694">The function <code class="ph codeph">func()</code> reads or modifies data
+                        from distributed tables. </li>
+
+                    <li class="li" id="topic1__bs145327">The function <code class="ph codeph">func()</code> returns more than one row
+                        or takes an argument (<code class="ph codeph">a</code>) that comes from
+                            <code class="ph codeph">table1</code>.</li>
+
+                </ul>
+<p class="p">If any of the conditions are not met, the function is supported.
+                    Specifically, the function is supported if any of the following conditions
+                    apply:</p>
+<ul class="ul">
+                    <li class="li" id="topic1__bs144699">The function <code class="ph codeph">func()</code> does not access data from
+                        distributed tables, or accesses data that is only on the Greenplum Database
+                        master. </li>
+
+                    <li class="li" id="topic1__bs144700">The table <code class="ph codeph">table1</code> is a master only table.</li>
+
+                    <li class="li" id="topic1__bs144701">The function <code class="ph codeph">func()</code> returns only one row and
+                        only takes input arguments that are constant values. The function is
+                        supported if it can be changed to require no input arguments.</li>
+
+                </ul>
+</div>
+            <div class="sectiondiv"><strong class="ph b">Using EXECUTE ON attributes</strong><p class="p">Most functions that run queries to
+                    access tables can only run on the master. However, functions that run
+                    only <code class="ph codeph">SELECT</code> queries on replicated tables can run on segments.
+                    If the function accesses a hash-distributed table or a randomly distributed
+                    table, the function should be defined with the <code class="ph codeph">EXECUTE ON
+                        MASTER</code> attribute. Otherwise, the function might return incorrect
+                    results when the function is used in a complicated query. Without the attribute,
+                    planner optimization might determine it would be beneficial to push the function
+                    invocation to segment instances.</p>
+These are limitations for functions defined
+                with the <code class="ph codeph">EXECUTE ON MASTER</code> or <code class="ph codeph">EXECUTE ON ALL
+                    SEGMENTS</code> attribute:<ul class="ul" id="topic1__ul_nlg_jky_fcb">
+                    <li class="li">The function must be a set-returning function.</li>
+
+                    <li class="li">The function cannot be in the <code class="ph codeph">FROM</code> clause of a query.</li>
+
+                    <li class="li">The function cannot be in the <code class="ph codeph">SELECT</code> list of a query with a
+                            <code class="ph codeph">FROM</code> clause.</li>
+
+                    <li class="li">A query that includes the function falls back from GPORCA to the Postgres
+                        Planner.</li>
+
+                </ul>
+<div class="p">The attribute <code class="ph codeph">EXECUTE ON INITPLAN</code> indicates that the
+                    function contains an SQL command that dispatches queries to the segment
+                    instances and requires special processing on the master instance by Greenplum
+                    Database. When possible, Greenplum Database handles the function on the master
+                    instance in the following manner.<ol class="ol" id="topic1__ol_dnl_fqh_ykb">
+                        <li class="li">First, Greenplum Database runs the function as part of an InitPlan
+                            node on the master instance and holds the function output
+                            temporarily.</li>
+
+                        <li class="li">Then, in the MainPlan of the query plan, the function is called in an
+                            EntryDB (a special query executor (QE) that runs on the master instance)
+                            and Greenplum Database returns the data that was captured when the
+                            function was run as part of the InitPlan node. The function is not
+                            run in the MainPlan.</li>
+
+                    </ol>
+</div>
+<div class="p">This simple example uses the function <code class="ph codeph">get_data()</code> in
+                    a CTAS command to create a table using data from the table
+                        <code class="ph codeph">country</code>. The function contains a <code class="ph codeph">SELECT</code>
+                    command that retrieves data from the table <code class="ph codeph">country</code> and uses the
+                        <code class="ph codeph">EXECUTE ON INITPLAN</code>
+                    attribute.<pre class="pre codeblock"><code>CREATE TABLE country( 
+  c_id integer, c_name text, region int) 
+  DISTRIBUTED RANDOMLY;
+
+INSERT INTO country VALUES (11,'INDIA', 1 ), (22,'CANADA', 2), (33,'USA', 3);
+
+CREATE OR REPLACE FUNCTION get_data()
+  RETURNS TABLE (
+   c_id integer, c_name text
+   )
+AS $$
+  SELECT
+    c.c_id, c.c_name
+  FROM
+    country c;
+$$
+LANGUAGE SQL EXECUTE ON INITPLAN;
+
+CREATE TABLE t AS SELECT * FROM get_data() DISTRIBUTED RANDOMLY;</code></pre></div>
+<p class="p">If
+                    you view the query plan of the CTAS command with <code class="ph codeph">EXPLAIN ANALYZE
+                        VERBOSE</code>, the plan shows that the function is run as part of an
+                    InitPlan node, and one of the listed slices is labeled as <code class="ph codeph">entry
+                        db</code>. The query plan of a simple CTAS command without the function
+                    does not have an InitPlan node or an <code class="ph codeph">entry db</code> slice.</p>
+<p class="p">If
+                    the function did not contain the <code class="ph codeph">EXECUTE ON INITPLAN</code> attribute,
+                    the CTAS command returns the error <code class="ph codeph">function cannot execute on a QE
+                        slice</code>.</p>
+<div class="p">When a function uses the <code class="ph codeph">EXECUTE ON
+                        INITPLAN</code> attribute, a command that uses the function such as
+                        <code class="ph codeph">CREATE TABLE t AS SELECT * FROM get_data()</code> gathers the
+                    results of the function onto the master segment and then redistributes the
+                    results to segment instances when inserting the data. If the function returns a
+                    large amount of data, the master might become a bottleneck when gathering and
+                    redistributing data. Performance might improve if you rewrite the function to
+                    run the CTAS command in the user defined function and use the table name as an
+                    input parameter. In this example, the function runs a CTAS command and does
+                    not require the <code class="ph codeph">EXECUTE ON INITPLAN</code> attribute. Running the
+                        <code class="ph codeph">SELECT</code> command creates the table <code class="ph codeph">t1</code> using
+                    the function that runs the CTAS
+                    command.<pre class="pre codeblock"><code>CREATE OR REPLACE FUNCTION my_ctas(_tbl text) RETURNS VOID AS
+$$
+BEGIN
+  EXECUTE format('CREATE TABLE %s AS SELECT c.c_id, c.c_name FROM country c DISTRIBUTED RANDOMLY', _tbl);
+END
+$$
+LANGUAGE plpgsql;
+
+SELECT my_ctas('t1');</code></pre></div>
+</div>
+        </div>
+
+        <div class="section" id="topic1__section8"><h2 class="title sectiontitle">Examples</h2><p class="p">A very simple addition
+                function:</p>
+<pre class="pre codeblock"><code>CREATE FUNCTION add(integer, integer) RETURNS integer
+    AS 'select $1 + $2;'
+    LANGUAGE SQL
+    IMMUTABLE
+    RETURNS NULL ON NULL INPUT;</code></pre><p class="p">Increment
+                an integer, making use of an argument name, in
+                PL/pgSQL:</p>
+<pre class="pre codeblock"><code>CREATE OR REPLACE FUNCTION increment(i integer) RETURNS 
+integer AS $$
+        BEGIN
+                RETURN i + 1;
+        END;
+$$ LANGUAGE plpgsql;</code></pre><p class="p">Increase
+                the default segment host memory per query for a PL/pgSQL
+                function:</p>
+<pre class="pre codeblock"><code>CREATE OR REPLACE FUNCTION function_with_query() RETURNS 
+SETOF text AS $$
+        BEGIN
+                RETURN QUERY
+                EXPLAIN ANALYZE SELECT * FROM large_table;
+        END;
+$$ LANGUAGE plpgsql
+SET statement_mem='256MB';</code></pre><p class="p">Use
+                polymorphic types to return an <code class="ph codeph">ENUM</code>
+                array:</p>
+<pre class="pre codeblock"><code>CREATE TYPE rainbow AS ENUM('red','orange','yellow','green','blue','indigo','violet');
+CREATE FUNCTION return_enum_as_array( anyenum, anyelement, anyelement ) 
+    RETURNS TABLE (ae anyenum, aa anyarray) AS $$
+    SELECT $1, array[$2, $3] 
+$$ LANGUAGE SQL STABLE;
+
+SELECT * FROM return_enum_as_array('red'::rainbow, 'green'::rainbow, 'blue'::rainbow);</code></pre><p class="p">Return
+                a record containing multiple output
+                parameters:</p>
+<pre class="pre codeblock"><code>CREATE FUNCTION dup(in int, out f1 int, out f2 text)
+    AS $$ SELECT $1, CAST($1 AS text) || ' is text' $$
+    LANGUAGE SQL;
+
+SELECT * FROM dup(42);</code></pre><p class="p">You
+                can do the same thing more verbosely with an explicitly named composite
+                type:</p>
+<pre class="pre codeblock"><code>CREATE TYPE dup_result AS (f1 int, f2 text);
+CREATE FUNCTION dup(int) RETURNS dup_result
+    AS $$ SELECT $1, CAST($1 AS text) || ' is text' $$
+    LANGUAGE SQL;
+
+SELECT * FROM dup(42);</code></pre><p class="p">Another
+                way to return multiple columns is to use a <code class="ph codeph">TABLE</code>
+                function:</p>
+<pre class="pre codeblock"><code>CREATE FUNCTION dup(int) RETURNS TABLE(f1 int, f2 text)
+    AS $$ SELECT $1, CAST($1 AS text) || ' is text' $$
+    LANGUAGE SQL;
+
+SELECT * FROM dup(4);
+</code></pre><div class="p">This
+                function is defined with the <code class="ph codeph">EXECUTE ON ALL SEGMENTS</code> to run on all
+                primary segment instances. The <code class="ph codeph">SELECT</code> command runs the function
+                that returns the time it was run on each segment
+                instance.<pre class="pre codeblock"><code>CREATE FUNCTION run_on_segs (text) returns setof text as $$
+  begin 
+    return next ($1 || ' - ' || now()::text ); 
+  end;
+ $$ language plpgsql VOLATILE EXECUTE ON ALL SEGMENTS;
+
+SELECT run_on_segs('my test');</code></pre></div>
+<p class="p">This
+                function looks up a part name in the parts table. The parts table is replicated, so
+                the function can run on the master or on the primary segments.
+            </p>
+<pre class="pre codeblock"><code>CREATE OR REPLACE FUNCTION get_part_name(partno int) RETURNS text AS
+$$
+DECLARE
+   result text := ' ';
+BEGIN
+    SELECT part_name INTO result FROM parts WHERE part_id = partno;
+    RETURN result;
+END;
+$$ LANGUAGE plpgsql;</code></pre>If
+            you run <code class="ph codeph">SELECT get_part_name(100);</code> at the master the function
+            runs on the master. (The master instance directs the query to a single primary
+            segment.) If orders is a distributed table and you run the following query, the
+                <code class="ph codeph">get_part_name()</code> function runs on the primary
+            segments.<pre class="pre codeblock"><code><code class="ph codeph">SELECT order_id, get_part_name(orders.part_no) FROM orders;</code></code></pre></div>
+
+        <div class="section" id="topic1__section9"><h2 class="title sectiontitle">Compatibility</h2><p class="p"><code class="ph codeph">CREATE FUNCTION</code> is
+                defined in SQL:1999 and later. The Greenplum Database version is similar but not
+                fully compatible. The attributes are not portable, neither are the different
+                available languages. </p>
+<p class="p">For compatibility with some other database systems,
+                    <var class="keyword varname">argmode</var> can be written either before or after
+                    <var class="keyword varname">argname</var>. But only the first way is standard-compliant. </p>
+
+            <p class="p">For parameter defaults, the SQL standard specifies only the syntax with
+                the <code class="ph codeph">DEFAULT</code> key word. The syntax
+                with <code class="ph codeph">=</code> is used in T-SQL and Firebird.</p>
+
+        </div>
+
+        <div class="section" id="topic1__section10"><h2 class="title sectiontitle">See Also</h2><p class="p"><a class="xref" href="ALTER_FUNCTION.html#topic1">ALTER FUNCTION</a>,
+                        <a class="xref" href="DROP_FUNCTION.html#topic1">DROP FUNCTION</a>, <a class="xref" href="LOAD.html#topic1">LOAD</a></p>
+</div>
+
+    </div>
+
+</body>
+</html>

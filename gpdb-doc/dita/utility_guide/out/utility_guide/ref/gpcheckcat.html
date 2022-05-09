@@ -1,0 +1,295 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+
+<meta name="copyright" content="(C) Copyright 2022" />
+<meta name="DC.rights.owner" content="(C) Copyright 2022" />
+<meta name="generator" content="DITA-OT" /><meta name="DC.type" content="topic" />
+<meta name="DC.title" content="gpcheckcat" />
+<meta name="DC.format" content="XHTML" />
+<meta name="DC.identifier" content="topic1" />
+<link rel="stylesheet" type="text/css" href="../commonltr.css" />
+<title>gpcheckcat</title>
+</head>
+<body id="topic1">
+
+  <h1 class="title topictitle1" id="topic1__jr20941">gpcheckcat</h1>
+
+  <div class="body">
+    <p class="p">The <code class="ph codeph">gpcheckcat</code> utility tests Greenplum Database catalog tables for
+      inconsistencies. </p>
+
+    <p class="p">The utility is in <code class="ph codeph">$GPHOME/bin/lib</code>.</p>
+
+    <div class="section" id="topic1__section2"><h2 class="title sectiontitle">Synopsis</h2>
+      
+      <pre class="pre codeblock"><code>gpcheckcat [ &lt;options&lt;] [ &lt;dbname&gt;] 
+
+  Options:
+     -g &lt;dir&gt;
+     -p &lt;port&gt;
+     -s &lt;test_name | 'test_name1, test_name2 [, ...]'&gt;  
+     -P &lt;password&gt;
+     -U &lt;user_name&gt;
+     -S {none | only}
+     -O
+     -R &lt;test_name | 'test_name1, test_name2 [, ...]'&gt;
+     -C &lt;catalog_name&gt;
+     -B &lt;parallel_processes&gt;
+     -v
+     -A
+
+gpcheckcat  -l 
+
+gpcheckcat -? | --help 
+</code></pre>
+    </div>
+
+    <div class="section" id="topic1__section3"><h2 class="title sectiontitle">Description</h2>
+      
+      <p class="p">The <code class="ph codeph">gpcheckcat</code> utility runs multiple tests that check for database catalog
+        inconsistencies. Some of the tests cannot be run concurrently with other workload statements
+        or the results will not be usable. Restart the database in restricted mode when running
+          <code class="ph codeph">gpcheckcat</code>, otherwise <code class="ph codeph">gpcheckcat</code> might report
+        inconsistencies due to ongoing database operations rather than the actual number of
+        inconsistencies. If you run <code class="ph codeph">gpcheckcat</code> without stopping database activity,
+        run it with <code class="ph codeph">-O</code> option. </p>
+
+      <div class="note"><span class="notetitle">Note:</span> Any time you run the utility, it checks for and deletes orphaned, temporary database
+        schemas (temporary schemas without a session ID) in the specified databases. The utility
+        displays the results of the orphaned, temporary schema check on the command line and also
+        logs the results.</div>
+
+      <div class="p">Catalog inconsistencies are inconsistencies that occur between Greenplum Database system
+        tables. In general, there are three types of inconsistencies:<ul class="ul" id="topic1__ul_jry_gmh_mp">
+          <li class="li">Inconsistencies in system tables at the segment level. For example, an inconsistency
+            between a system table that contains table data and a system table that contains column
+            data. As another, a system table that contains duplicates in a column that should to be
+            unique.</li>
+
+        </ul>
+<ul class="ul" id="topic1__ul_smw_hmh_mp">
+          <li class="li">Inconsistencies between same system table across segments. For example, a system table
+            is missing row on one segment, but other segments have this row. As another example, the
+            values of specific row column data are different across segments, such as table owner or
+            table access privileges.</li>
+
+          <li class="li">Inconsistency between a catalog table and the filesystem. For example, a file exists
+            in database directory, but there is no entry for it in the pg_class table.</li>
+
+        </ul>
+</div>
+
+    </div>
+
+    <div class="section" id="topic1__section4"><h2 class="title sectiontitle">Options</h2>
+      
+      <dl class="dl parml">
+        
+          <dt class="dt pt dlterm">-A</dt>
+
+          <dd class="dd pd">Run <code class="ph codeph">gpcheckcat</code> on all databases in the Greenplum Database
+            installation.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">-B &lt;parallel_processes&gt;</dt>
+
+          <dd class="dd pd">The number of processes to run in parallel. </dd>
+
+          <dd class="dd pd ddexpand">
+            <div class="p">The <code class="ph codeph">gpcheckcat</code> utility attempts to determine the number of
+              simultaneous processes (the batch size) to use. The utility assumes it can use a
+              buffer with a minimum of 20MB for each process. The maximum number of parallel
+              processes is the number of Greenplum Database segment instances. The utility displays
+              the number of parallel processes that it uses when it starts checking the catalog.
+              <div class="note"><span class="notetitle">Note:</span> The utility might run out of memory if the number of errors returned exceeds the
+                buffer size. If an out of memory error occurs, you can lower the batch size with the
+                  <code class="ph codeph">-B</code> option. For example, if the utility displays a batch size of
+                936 and runs out of memory, you can specify <code class="ph codeph">-B 468</code> to run 468
+                processes in parallel. </div>
+</div>
+
+          </dd>
+
+        
+        
+          <dt class="dt pt dlterm">-C <var class="keyword varname">catalog_table</var></dt>
+
+          <dd class="dd pd">Run cross consistency, foreign key, and ACL tests for the specified catalog
+            table.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">-g <var class="keyword varname">data_directory</var></dt>
+
+          <dd class="dd pd">Generate SQL scripts to fix catalog inconsistencies. The scripts are placed in
+              <var class="keyword varname">data_directory</var>.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">-l</dt>
+
+          <dd class="dd pd">List the <code class="ph codeph">gpcheckcat</code> tests.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">-O</dt>
+
+          <dd class="dd pd">Run only the <code class="ph codeph">gpcheckcat</code> tests that can be run in online (not
+            restricted) mode. </dd>
+
+        
+        
+          <dt class="dt pt dlterm">-p <var class="keyword varname">port</var></dt>
+
+          <dd class="dd pd">This option specifies the port that is used by the Greenplum Database.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">-P <var class="keyword varname">password</var></dt>
+
+          <dd class="dd pd">The password of the user connecting to Greenplum Database.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">-R <var class="keyword varname">test_name | 'test_name1,test_name2 [, ...]'</var>
+          </dt>
+
+          <dd class="dd pd">Specify one or more tests to run. Specify multiple tests as a comma-delimited list of
+            test names enclosed in quotes. </dd>
+
+          <dd class="dd pd ddexpand">Some tests can be run only when Greenplum Database is in restricted mode.</dd>
+
+          <dd class="dd pd ddexpand">These are the tests that can be performed: <p class="p"><code class="ph codeph">acl</code> - Cross consistency
+              check for access control privileges</p>
+
+            <p class="p"><code class="ph codeph">aoseg_table</code> - Check that the vertical partition
+              information (vpinfo) on segment instances is consistent
+              with <code class="ph codeph">pg_attribute</code> (checks only append-optimized,
+              column storage tables in the database)</p>
+
+            <p class="p"><code class="ph codeph">duplicate</code> - Check for duplicate entries</p>
+
+            <p class="p"><code class="ph codeph">foreign_key</code> - Check foreign keys</p>
+
+            <p class="p"><code class="ph codeph">inconsistent</code> - Cross consistency check for coordinator segment
+              inconsistency</p>
+
+            <p class="p"><code class="ph codeph">missing_extraneous</code> - Cross consistency check for missing or
+              extraneous entries</p>
+
+            <p class="p"><code class="ph codeph">owner</code> - Check table ownership that is inconsistent with the coordinator
+              database</p>
+
+
+            <div class="p"><code class="ph codeph">orphaned_toast_tables</code> - Check for orphaned TOAST tables. 
+              <div class="note"><span class="notetitle">Note:</span> There are several ways a TOAST table can become orphaned where a repair script
+                cannot be generated and a manual catalog change is required. One way is if the
+                  <code class="ph codeph">reltoastrelid</code> entry in <em class="ph i">pg_class</em> points to an incorrect
+                TOAST table (a TOAST table mismatch). Another way is if both the
+                  <code class="ph codeph">reltoastrelid</code> in <em class="ph i">pg_class</em> is missing and the
+                  <code class="ph codeph">pg_depend</code> entry is missing (a double orphan TOAST table). If a
+                manual catalog change is needed, <code class="ph codeph">gpcheckcat</code> will display detailed
+                steps you can follow to update the catalog. <span class="ph">Contact VMware
+                  Support if you need help with the catalog change.</span></div>
+</div>
+
+            <p class="p"><code class="ph codeph">part_integrity</code> - Check <em class="ph i">pg_partition</em> branch integrity,
+              partition with OIDs, partition distribution policy</p>
+
+            <p class="p"><code class="ph codeph">part_constraint</code> - Check constraints on partitioned tables</p>
+
+            <p class="p"><code class="ph codeph">unique_index_violation</code> - Check tables that have columns with the
+              unique index constraint for duplicate entries</p>
+
+            <p class="p"><code class="ph codeph">dependency</code> - Check for dependency on non-existent objects
+              (restricted mode only)</p>
+
+            <p class="p"><code class="ph codeph">distribution_policy</code> - Check constraints on randomly distributed
+              tables (restricted mode only)</p>
+
+            <p class="p"><code class="ph codeph">namespace</code> - Check for schemas with a missing schema definition
+              (restricted mode only)</p>
+
+            <p class="p"><code class="ph codeph">pgclass</code> - Check <em class="ph i">pg_class</em> entry that does not have any
+              corresponding <em class="ph i">pg_attribute</em> entry (restricted mode only)</p>
+
+          </dd>
+
+        
+        
+          <dt class="dt pt dlterm">-s <code class="ph codeph">test_name | 'test_name1, test_name2 [, ...]'</code></dt>
+
+          <dd class="dd pd">Specify one ore more tests to skip. Specify multiple tests as a comma-delimited list
+            of test names enclosed in quotes.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">-S {none | only}</dt>
+
+          <dd class="dd pd">Specify this option to control the testing of catalog tables that are shared across
+            all databases in the Greenplum Database installation, such as <em class="ph i">pg_database</em>. </dd>
+
+          <dd class="dd pd ddexpand">The value <code class="ph codeph">none</code> disables testing of shared catalog tables. The value
+              <code class="ph codeph">only</code> tests only the shared catalog tables. </dd>
+
+        
+        
+          <dt class="dt pt dlterm">-U <var class="keyword varname">user_name</var></dt>
+
+          <dd class="dd pd">The user connecting to Greenplum Database.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">-? | --help</dt>
+
+          <dd class="dd pd">Displays the online help.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">-v (verbose)</dt>
+
+          <dd class="dd pd">Displays detailed information about the tests that are performed.</dd>
+
+        
+      </dl>
+
+    </div>
+
+    <div class="section"><h2 class="title sectiontitle">Notes</h2>The utility identifies tables with missing attributes and displays
+      them in various locations in the output and in a non-standardized format. The utility also
+      displays a summary list of tables with missing attributes in the format <code class="ph codeph">&lt;database&gt;.
+        &lt;schema&gt;. &lt;table&gt;. &lt;segment_id&gt;</code> after the output information is
+        displayed.<p class="p">If <code class="ph codeph">gpcheckcat</code> detects inconsistent OID (Object ID)
+        information, it generates one or more verification files that contain an SQL query. You can
+        run the SQL query to see details about the OID inconsistencies and investigate the
+        inconsistencies. The files are generated in the directory where <code class="ph codeph">gpcheckcat</code>
+        is invoked. </p>
+<p class="p">This is the format of the
+        file:</p>
+<pre class="pre">gpcheckcat.verify.<var class="keyword varname">dbname</var>.<var class="keyword varname">catalog_table_name</var>.<var class="keyword varname">test_name</var>.<var class="keyword varname">TIMESTAMP</var>.sql</pre>
+<div class="p">This
+        is an example verification filename created by <code class="ph codeph">gpcheckcat</code> when it detects
+        inconsistent OID (Object ID) information in the catalog table <em class="ph i">pg_type</em> in the database
+          <code class="ph codeph">mydb</code>:<pre class="pre codeblock"><code>gpcheckcat.verify.mydb.pg_type.missing_extraneous.20150420102715.sql</code></pre></div>
+<p class="p">This
+        is an example query from a verification
+      file:</p>
+<pre class="pre">SELECT *
+  FROM (
+       SELECT relname, oid FROM pg_class WHERE reltype 
+         IN (1305822,1301043,1301069,1301095)
+       UNION ALL
+       SELECT relname, oid FROM gp_dist_random('pg_class') WHERE reltype 
+         IN (1305822,1301043,1301069,1301095)
+       ) alltyprelids
+  GROUP BY relname, oid ORDER BY count(*) desc ;</pre>
+</div>
+
+  </div>
+
+</body>
+</html>

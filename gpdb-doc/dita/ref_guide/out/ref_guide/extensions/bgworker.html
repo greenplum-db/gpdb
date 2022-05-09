@@ -1,0 +1,185 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+
+<meta name="copyright" content="(C) Copyright 2022" />
+<meta name="DC.rights.owner" content="(C) Copyright 2022" />
+<meta name="generator" content="DITA-OT" /><meta name="DC.type" content="topic" />
+<meta name="DC.title" content="Developing a Background Worker Process" />
+<meta name="DC.format" content="XHTML" />
+<meta name="DC.identifier" content="topic1" />
+<link rel="stylesheet" type="text/css" href="../commonltr.css" />
+<title>Developing a Background Worker Process</title>
+</head>
+<body id="topic1">
+
+ <h1 class="title topictitle1" id="ariaid-title1">Developing a Background Worker Process</h1>
+
+ <div class="body">
+  <p class="p"> Greenplum Database can be extended to run user-supplied code in separate processes. Such
+   processes are started, stopped, and monitored by <code class="ph codeph">postgres</code>, which permits them to
+   have a lifetime closely linked to the server's status. These processes have the option to attach
+   to Greenplum Database's shared memory area and to connect to databases internally; they can also
+   run multiple transactions serially, just like a regular client-connected server process. Also, by
+   linking to <code class="ph codeph">libpq</code> they can connect to the server and behave like a regular client
+   application. </p>
+
+  <div class="note warning"><span class="warningtitle">Warning:</span>  There are considerable robustness and security risks in using background
+   worker processes because, being written in the <code class="ph codeph">C</code> language, they have
+   unrestricted access to data. Administrators wishing to enable modules that include background
+   worker processes should exercise extreme caution. Only carefully audited modules should be
+   permitted to run background worker processes.</div>
+
+  <p class="p"> Background workers can be initialized at the time that Greenplum Database is started by
+   including the module name in the <var class="keyword varname">shared_preload_libraries</var> server configuration
+   parameter. A module wishing to run a background worker can register it by calling
+    <code class="ph codeph">RegisterBackgroundWorker(BackgroundWorker *worker)</code> from its
+    <code class="ph codeph">_PG_init()</code>. Background workers can also be started after the system is up and
+   running by calling the function <code class="ph codeph">RegisterDynamicBackgroundWorker(BackgroundWorker *worker,
+    BackgroundWorkerHandle **handle)</code>. Unlike <code class="ph codeph">RegisterBackgroundWorker</code>,
+   which can only be called from within the <code class="ph codeph">postmaster</code>,
+    <code class="ph codeph">RegisterDynamicBackgroundWorker</code> must be called from a regular backend. </p>
+
+  <p class="p"> The structure <code class="ph codeph">BackgroundWorker</code> is defined thus:  </p>
+
+  <pre class="pre codeblock"><code>
+typedef void (*bgworker_main_type)(Datum main_arg);
+typedef struct BackgroundWorker
+{
+    char        bgw_name[BGW_MAXLEN];
+    int         bgw_flags;
+    BgWorkerStartTime bgw_start_time;
+    int         bgw_restart_time;       /* in seconds, or BGW_NEVER_RESTART */
+    bgworker_main_type bgw_main;
+    char        bgw_library_name[BGW_MAXLEN];   /* only if bgw_main is NULL */
+    char        bgw_function_name[BGW_MAXLEN];  /* only if bgw_main is NULL */
+    Datum       bgw_main_arg;
+    int         bgw_notify_pid;
+} BackgroundWorker;
+</code></pre>
+  <p class="p">
+   <code class="ph codeph">bgw_name</code> is a string to be used in log messages, process listings and similar
+   contexts. </p>
+
+  <p class="p">
+   <code class="ph codeph">bgw_flags</code> is a bitwise-or'd bit mask indicating the capabilities that the module
+   wants. Possible values are <code class="ph codeph">BGWORKER_SHMEM_ACCESS</code> (requesting shared memory
+   access) and <code class="ph codeph">BGWORKER_BACKEND_DATABASE_CONNECTION</code> (requesting the ability to
+   establish a database connection, through which it can later run transactions and queries). A
+   background worker using <code class="ph codeph">BGWORKER_BACKEND_DATABASE_CONNECTION</code> to connect to a
+   database must also attach shared memory using <code class="ph codeph">BGWORKER_SHMEM_ACCESS</code>, or worker
+   start-up will fail. </p>
+
+  <p class="p">
+   <code class="ph codeph">bgw_start_time</code> is the server state during which <code class="ph codeph">postgres</code> should
+   start the process; it can be one of <code class="ph codeph">BgWorkerStart_PostmasterStart</code> (start as soon
+   as <code class="ph codeph">postgres</code> itself has finished its own initialization; processes requesting
+   this are not eligible for database connections), <code class="ph codeph">BgWorkerStart_ConsistentState</code>
+   (start as soon as a consistent state has been reached in a hot standby, allowing processes to
+   connect to databases and run read-only queries), and
+    <code class="ph codeph">BgWorkerStart_RecoveryFinished</code> (start as soon as the system has entered normal
+   read-write state). Note the last two values are equivalent in a server that's not a hot standby.
+   Note that this setting only indicates when the processes are to be started; they do not stop when
+   a different state is reached. </p>
+
+  <p class="p">
+   <code class="ph codeph">bgw_restart_time</code> is the interval, in seconds, that <code class="ph codeph">postgres</code>
+   should wait before restarting the process, in case it crashes. It can be any positive value, or
+    <code class="ph codeph">BGW_NEVER_RESTART</code>, indicating not to restart the process in case of a crash. </p>
+
+  <p class="p">
+   <code class="ph codeph">bgw_main</code> is a pointer to the function to run when the process is started. This
+   function must take a single argument of type <code class="ph codeph">Datum</code> and return
+    <code class="ph codeph">void</code>. <code class="ph codeph">bgw_main_arg</code> will be passed to it as its only argument.
+   Note that the global variable <code class="ph codeph">MyBgworkerEntry</code> points to a copy of the
+    <code class="ph codeph">BackgroundWorker</code> structure passed at registration time.
+    <code class="ph codeph">bgw_main</code> may be NULL; in that case, <code class="ph codeph">bgw_library_name</code> and
+    <code class="ph codeph">bgw_function_name</code> will be used to determine the entry point. This is useful for
+   background workers launched after postmaster startup, where the postmaster does not have the
+   requisite library loaded. </p>
+
+  <p class="p">
+   <code class="ph codeph">bgw_library_name</code> is the name of a library in which the initial entry point for
+   the background worker should be sought. It is ignored unless <code class="ph codeph">bgw_main</code> is NULL.
+   But if <code class="ph codeph">bgw_main</code> is NULL, then the named library will be dynamically loaded by
+   the worker process and <code class="ph codeph">bgw_function_name</code> will be used to identify the function
+   to be called. </p>
+
+  <p class="p">
+   <code class="ph codeph">bgw_function_name</code> is the name of a function in a dynamically loaded library
+   which should be used as the initial entry point for a new background worker. It is ignored unless
+    <code class="ph codeph">bgw_main</code> is NULL. </p>
+
+  <p class="p">
+   <code class="ph codeph">bgw_notify_pid</code> is the PID of a Greenplum Database backend process to which the
+   postmaster should send <code class="ph codeph">SIGUSR1</code> when the process is started or exits. It should
+   be 0 for workers registered at postmaster startup time, or when the backend registering the
+   worker does not wish to wait for the worker to start up. Otherwise, it should be initialized to
+    <code class="ph codeph">MyProcPid</code>. </p>
+
+  <p class="p">Once running, the process can connect to a database by calling
+     <code class="ph codeph">BackgroundWorkerInitializeConnection(<code class="ph codeph">char *dbname</code>, <code class="ph codeph">char
+     *username</code>)</code>. This allows the process to run transactions and queries using the
+    <code class="ph codeph">SPI</code> interface. If <var class="keyword varname">dbname</var> is NULL, the session is not
+   connected to any particular database, but shared catalogs can be accessed. If
+    <var class="keyword varname">username</var> is NULL, the process will run as the superuser created during
+    <code class="ph codeph">initdb</code>. BackgroundWorkerInitializeConnection can only be called once per
+   background process, it is not possible to switch databases. </p>
+
+  <p class="p"> Signals are initially blocked when control reaches the <code class="ph codeph">bgw_main</code> function, and
+   must be unblocked by it; this is to allow the process to customize its signal handlers, if
+   necessary. Signals can be unblocked in the new process by calling
+    <code class="ph codeph">BackgroundWorkerUnblockSignals</code> and blocked by calling
+    <code class="ph codeph">BackgroundWorkerBlockSignals</code>. </p>
+
+  <p class="p"> If <code class="ph codeph">bgw_restart_time</code> for a background worker is configured as
+    <code class="ph codeph">BGW_NEVER_RESTART</code>, or if it exits with an exit code of 0 or is terminated by
+    <code class="ph codeph">TerminateBackgroundWorker</code>, it will be automatically unregistered by the
+   postmaster on exit. Otherwise, it will be restarted after the time period configured via
+    <code class="ph codeph">bgw_restart_time</code>, or immediately if the postmaster reinitializes the cluster
+   due to a backend failure. Backends which need to suspend execution only temporarily should use an
+   interruptible sleep rather than exiting; this can be achieved by calling
+    <code class="ph codeph">WaitLatch()</code>. Make sure the <code class="ph codeph">WL_POSTMASTER_DEATH</code> flag is set
+   when calling that function, and verify the return code for a prompt exit in the emergency case
+   that <code class="ph codeph">postgres</code> itself has terminated. </p>
+
+  <p class="p"> When a background worker is registered using the
+    <code class="ph codeph">RegisterDynamicBackgroundWorker</code> function, it is possible for the backend
+   performing the registration to obtain information regarding the status of the worker. Backends
+   wishing to do this should pass the address of a <code class="ph codeph">BackgroundWorkerHandle *</code> as the
+   second argument to <code class="ph codeph">RegisterDynamicBackgroundWorker</code>. If the worker is
+   successfully registered, this pointer will be initialized with an opaque handle that can
+   subsequently be passed to <code class="ph codeph">GetBackgroundWorkerPid(<code class="ph codeph">BackgroundWorkerHandle
+     *</code>, <code class="ph codeph">pid_t *</code>)</code> or
+     <code class="ph codeph">TerminateBackgroundWorker(<code class="ph codeph">BackgroundWorkerHandle *</code>)</code>.
+    <code class="ph codeph">GetBackgroundWorkerPid</code> can be used to poll the status of the worker: a return
+   value of <code class="ph codeph">BGWH_NOT_YET_STARTED</code> indicates that the worker has not yet been started
+   by the postmaster; <code class="ph codeph">BGWH_STOPPED</code> indicates that it has been started but is no
+   longer running; and <code class="ph codeph">BGWH_STARTED</code> indicates that it is currently running. In this
+   last case, the PID will also be returned via the second argument.
+    <code class="ph codeph">TerminateBackgroundWorker</code> causes the postmaster to send
+    <code class="ph codeph">SIGTERM</code> to the worker if it is running, and to unregister it as soon as it is
+   not. </p>
+
+  <p class="p"> In some cases, a process which registers a background worker may wish to wait for the worker
+   to start up. This can be accomplished by initializing <code class="ph codeph">bgw_notify_pid</code> to
+    <code class="ph codeph">MyProcPid</code> and then passing the <code class="ph codeph">BackgroundWorkerHandle *</code>
+   obtained at registration time to
+     <code class="ph codeph">WaitForBackgroundWorkerStartup(<code class="ph codeph">BackgroundWorkerHandle *handle</code>,
+     <code class="ph codeph">pid_t *</code>)</code> function. This function will block until the postmaster has
+   attempted to start the background worker, or until the postmaster dies. If the background runner
+   is running, the return value will <code class="ph codeph">BGWH_STARTED</code>, and the PID will be written to
+   the provided address. Otherwise, the return value will be <code class="ph codeph">BGWH_STOPPED</code> or
+    <code class="ph codeph">BGWH_POSTMASTER_DIED</code>. </p>
+
+  <p class="p"> The <code class="ph codeph">worker_spi</code> contrib module contains a working example, which demonstrates
+   some useful techniques. </p>
+
+  <p class="p"> The maximum number of registered background workers is limited by max-worker-processes. </p>
+
+ </div>
+
+</body>
+</html>

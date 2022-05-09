@@ -1,0 +1,382 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+
+<meta name="copyright" content="(C) Copyright 2022" />
+<meta name="DC.rights.owner" content="(C) Copyright 2022" />
+<meta name="generator" content="DITA-OT" /><meta name="DC.type" content="topic" />
+<meta name="DC.title" content="ALTER FOREIGN TABLE" />
+<meta name="DC.relation" scheme="URI" content="../sql_commands/sql_ref.html" />
+<meta name="DC.format" content="XHTML" />
+<meta name="DC.identifier" content="topic1" />
+<link rel="stylesheet" type="text/css" href="../commonltr.css" />
+<title>ALTER FOREIGN TABLE</title>
+</head>
+<body id="topic1">
+
+    <h1 class="title topictitle1" id="topic1__bv20941">ALTER FOREIGN TABLE</h1>
+
+    <div class="body">
+        <p class="p" id="topic1__sql_command_desc">Changes the definition of a foreign table.</p>
+
+        <div class="section" id="topic1__section2"><h2 class="title sectiontitle">Synopsis</h2>
+            
+            <pre class="pre codeblock" id="topic1__sql_command_synopsis"><code>ALTER FOREIGN TABLE [ IF EXISTS ] &lt;name&gt;
+    &lt;action&gt; [, ... ]
+ALTER FOREIGN TABLE [ IF EXISTS ] &lt;name&gt;
+    RENAME [ COLUMN ] &lt;column_name&gt; TO &lt;new_column_name&gt;
+ALTER FOREIGN TABLE [ IF EXISTS ] &lt;name&gt;
+    RENAME TO &lt;new_name&gt;
+ALTER FOREIGN TABLE [ IF EXISTS ] &lt;name&gt;
+    SET SCHEMA &lt;new_schema&gt;
+</code></pre>
+
+<p class="p">where <var class="keyword varname">action</var> is one of:</p>
+<pre class="pre codeblock"><code>
+    ADD [ COLUMN ] &lt;column_name&gt; &lt;column_type&gt; [ COLLATE &lt;collation&gt; ] [ &lt;column_constraint&gt; [ ... ] ]
+    DROP [ COLUMN ] [ IF EXISTS ] &lt;column_name&gt; [ RESTRICT | CASCADE ]
+    ALTER [ COLUMN ] &lt;column_name&gt; [ SET DATA ] TYPE &lt;data_type&gt;
+    ALTER [ COLUMN ] &lt;column_name&gt; SET DEFAULT &lt;expression&gt;
+    ALTER [ COLUMN ] &lt;column_name&gt; DROP DEFAULT
+    ALTER [ COLUMN ] &lt;column_name&gt; { SET | DROP } NOT NULL
+    ALTER [ COLUMN ] &lt;column_name&gt; SET STATISTICS &lt;integer&gt;
+    ALTER [ COLUMN ] &lt;column_name&gt; SET ( &lt;attribute_option&gt; = &lt;value&gt; [, ... ] )
+    ALTER [ COLUMN ] &lt;column_name&gt; RESET ( &lt;attribute_option&gt; [, ... ] )
+    ALTER [ COLUMN ] &lt;column_name&gt; OPTIONS ( [ ADD | SET | DROP ] &lt;option&gt; ['&lt;value&gt;'] [, ... ])
+    DISABLE TRIGGER [ &lt;trigger_name&gt; | ALL | USER ]
+    ENABLE TRIGGER [ &lt;trigger_name&gt; | ALL | USER ]
+    ENABLE REPLICA TRIGGER &lt;trigger_name&gt;
+    ENABLE ALWAYS TRIGGER &lt;trigger_name&gt;
+    OWNER TO &lt;new_owner&gt;
+    OPTIONS ( [ ADD | SET | DROP ] &lt;option&gt; ['&lt;value&gt;'] [, ... ] )</code></pre>
+        </div>
+
+        <div class="section" id="topic1__section3"><h2 class="title sectiontitle">Description</h2>
+            
+            <p class="p"><code class="ph codeph">ALTER FOREIGN TABLE</code> changes the definition of an existing foreign table. There are several subforms of the command:</p>
+
+            <dl class="dl parml">
+                
+                    <dt class="dt pt dlterm">ADD COLUMN</dt>
+
+                    <dd class="dd pd">
+                        <p class="p">This form adds a new column to the foreign table, using the same syntax
+                            as <a class="xref" href="CREATE_FOREIGN_TABLE.html#topic1">CREATE FOREIGN
+                                    TABLE</a>. Unlike the case when you add a column to
+                            a regular table, nothing happens to the underlying storage: this action
+                            simply declares that some new column is now accessible through the
+                            foreign table.</p>
+
+                    </dd>
+
+                
+                
+                    <dt class="dt pt dlterm">DROP COLUMN [ IF EXISTS ]</dt>
+
+                    <dd class="dd pd">
+                        <p class="p">This form drops a column from a foreign table. You must specify
+                                <code class="ph codeph">CASCADE</code> if any objects outside of the table depend
+                            on the column; for example, views. If you specify <code class="ph codeph">IF
+                                EXISTS</code> and the column does not exist, no error is thrown.
+                            Greenplum Database issues a notice instead.</p>
+
+                    </dd>
+
+                
+                
+                    <dt class="dt pt dlterm">IF EXISTS</dt>
+
+                    <dd class="dd pd">
+                        <p class="p">If you specify <code class="ph codeph">IF EXISTS</code> and the foreign table does not
+                            exist, no error is thrown. Greenplum Database issues a notice
+                            instead.</p>
+
+                    </dd>
+
+                
+                
+                    <dt class="dt pt dlterm">SET DATA TYPE</dt>
+
+                    <dd class="dd pd">
+                        <p class="p">This form changes the type of a column of a foreign table.</p>
+
+                    </dd>
+
+                
+                
+                    <dt class="dt pt dlterm">SET/DROP DEFAULT</dt>
+
+                    <dd class="dd pd">
+                        <p class="p">These forms set or remove the default value for a column. Default values
+                            apply only in subsequent <code class="ph codeph">INSERT</code> or
+                                <code class="ph codeph">UPDATE</code> commands; they do not cause rows already in
+                            the table to change.</p>
+
+                    </dd>
+
+                
+                
+                    <dt class="dt pt dlterm">SET/DROP NOT NULL</dt>
+
+                    <dd class="dd pd">
+                        <p class="p">Mark a column as allowing, or not allowing, null values.</p>
+
+                    </dd>
+
+                
+                
+                    <dt class="dt pt dlterm">SET STATISTICS</dt>
+
+                    <dd class="dd pd">
+                        <p class="p">This form sets the per-column statistics-gathering target for subsequent
+                                <code class="ph codeph">ANALYZE</code> operations. See the similar form of
+                                    <a class="xref" href="ALTER_TABLE.html#topic1">ALTER
+                                TABLE</a> for more details.</p>
+
+                    </dd>
+
+                
+                
+                    <dt class="dt pt dlterm">SET ( <var class="keyword varname">attribute_option</var> = <var class="keyword varname">value</var> [, ...]
+                        ] )</dt>
+
+                    <dt class="dt pt dlterm">RESET ( <var class="keyword varname">attribute_option</var> [, ... ] )</dt>
+
+                    <dd class="dd pd">
+                        <p class="p">This form sets or resets per-attribute options. See the similar form of
+                                    <a class="xref" href="ALTER_TABLE.html#topic1">ALTER
+                                TABLE</a> for more details.</p>
+
+                    </dd>
+
+                
+                
+                    <dt class="dt pt dlterm">DISABLE/ENABLE [ REPLICA | ALWAYS ] TRIGGER</dt>
+
+                    <dd class="dd pd">
+                        <p class="p">These forms configure the firing of trigger(s) belonging to the foreign
+                            table. See the similar form of <a class="xref" href="ALTER_TABLE.html#topic1">ALTER
+                                TABLE</a> for more details.</p>
+
+                    </dd>
+
+                
+                
+                    <dt class="dt pt dlterm">OWNER</dt>
+
+                    <dd class="dd pd">
+                        <p class="p">This form changes the owner of the foreign table to the specified
+                            user.</p>
+
+                    </dd>
+
+                
+                
+                    <dt class="dt pt dlterm">RENAME</dt>
+
+                    <dd class="dd pd">
+                        <p class="p">The <code class="ph codeph">RENAME</code> forms change the name of a foreign table or
+                            the name of an individual column in a foreign table.</p>
+
+                    </dd>
+
+                
+                
+                    <dt class="dt pt dlterm">SET SCHEMA</dt>
+
+                    <dd class="dd pd">
+                        <p class="p">This form moves the foreign table into another schema.</p>
+
+                    </dd>
+
+                
+                
+                    <dt class="dt pt dlterm">OPTIONS ( [ ADD | SET | DROP ] <var class="keyword varname">option</var>
+                            ['<var class="keyword varname">value</var>'] [, ... ] )</dt>
+
+                    <dd class="dd pd">
+                        <p class="p">Change options for the foreign table. <code class="ph codeph">ADD</code>,
+                                <code class="ph codeph">SET</code>, and <code class="ph codeph">DROP</code> specify the action
+                            to perform. If no operation is explicitly specified, the default
+                            operation is <code class="ph codeph">ADD</code>. Option names must be unique.
+                            Greenplum Database validates names and values using the server's
+                            foreign-data wrapper.</p>
+
+                    </dd>
+
+                
+            </dl>
+
+            <p class="p">You can combine all of the actions except <code class="ph codeph">RENAME</code> and <code class="ph codeph">SET SCHEMA</code> into a list of multiple alterations for Greenplum Database to apply in parallel. For example, it is possible to add several columns and/or alter the type of several columns in a single command.</p>
+
+            <p class="p">You must own the table to use <code class="ph codeph">ALTER FOREIGN TABLE</code>. To change the schema of a foreign table, you must also have <code class="ph codeph">CREATE</code> privilege on the new schema. To alter the owner, you must also be a direct or indirect member of the new owning role, and that role must have <code class="ph codeph">CREATE</code> privilege on the table's schema. (These restrictions enforce that altering the owner doesn't do anything you couldn't do by dropping and recreating the table. However, a superuser can alter ownership of any table anyway.) To add a column or to alter a column type, you must also have <code class="ph codeph">USAGE</code> privilege on the data type.</p>
+
+        </div>
+
+        <div class="section" id="topic1__section4"><h2 class="title sectiontitle">Parameters</h2>
+            
+            <dl class="dl parml">
+                
+                    <dt class="dt pt dlterm"><var class="keyword varname">name</var></dt>
+
+                    <dd class="dd pd">
+                        <p class="p">The name (possibly schema-qualified) of an existing foreign table to alter.</p>
+
+                    </dd>
+
+                
+                
+                    <dt class="dt pt dlterm"><var class="keyword varname">column_name</var></dt>
+
+                    <dd class="dd pd">
+                        <p class="p">The name of a new or existing column.</p>
+
+                    </dd>
+
+                
+                
+                    <dt class="dt pt dlterm"><var class="keyword varname">new_column_name</var></dt>
+
+                    <dd class="dd pd">
+                        <p class="p">The new name for an existing column.</p>
+
+                    </dd>
+
+                
+                
+                    <dt class="dt pt dlterm"><var class="keyword varname">new_name</var></dt>
+
+                    <dd class="dd pd">
+                        <p class="p">The new name for the foreign table.</p>
+
+                    </dd>
+
+                
+                
+                    <dt class="dt pt dlterm"><var class="keyword varname">data_type</var></dt>
+
+                    <dd class="dd pd">
+                        <p class="p">The data type of the new column, or new data type for an existing column.</p>
+
+                    </dd>
+
+                
+                
+                    <dt class="dt pt dlterm">CASCADE</dt>
+
+                    <dd class="dd pd">
+                        <p class="p">Automatically drop objects that depend on the dropped column (for example, views referencing the column).</p>
+
+                    </dd>
+
+                
+                
+                    <dt class="dt pt dlterm">RESTRICT</dt>
+
+                    <dd class="dd pd">
+                        <p class="p">Refuse to drop the column if there are any dependent objects. This is the default behavior.</p>
+
+                    </dd>
+
+                
+                
+                    <dt class="dt pt dlterm"><var class="keyword varname">trigger_name</var></dt>
+
+                    <dd class="dd pd">
+                        <p class="p">Name of a single trigger to disable or enable.</p>
+
+                    </dd>
+
+                
+                
+                
+                    <dt class="dt pt dlterm">ALL</dt>
+
+                    <dd class="dd pd">
+                        <p class="p">Disable or enable all triggers belonging to the foreign table. (This
+                            requires superuser privilege if any of the triggers are internally
+                            generated triggers. The core system does not add such triggers to
+                            foreign tables, but add-on code could do so.) </p>
+
+                    </dd>
+
+                
+                
+                
+                    <dt class="dt pt dlterm">USER</dt>
+
+                    <dd class="dd pd">
+                        <p class="p">Disable or enable all triggers belonging to the foreign table except for
+                            internally generated triggers. </p>
+
+                    </dd>
+
+                
+                
+                    <dt class="dt pt dlterm"><var class="keyword varname">new_owner</var></dt>
+
+                    <dd class="dd pd">
+                        <p class="p">The user name of the new owner of the foreign table.</p>
+
+                    </dd>
+
+                
+                
+                    <dt class="dt pt dlterm"><var class="keyword varname">new_schema</var></dt>
+
+                    <dd class="dd pd">
+                        <p class="p">The name of the schema to which the foreign table will be moved.</p>
+
+                    </dd>
+
+                
+            </dl>
+
+        </div>
+
+        <div class="section" id="topic1__section5"><h2 class="title sectiontitle">Notes</h2>
+            
+              <p class="p">The key word <code class="ph codeph">COLUMN</code> is noise and can be omitted.</p>
+
+              <p class="p">Consistency with the foreign server is not checked when a column is added or removed with <code class="ph codeph">ADD COLUMN</code> or <code class="ph codeph">DROP COLUMN</code>, a <code class="ph codeph">NOT NULL</code> constraint is added, or a column type is changed with <code class="ph codeph">SET DATA TYPE</code>. It is your responsibility to ensure that the table definition matches the remote side.</p>
+
+              <p class="p">Refer to <a class="xref" href="CREATE_FOREIGN_TABLE.html#topic1">CREATE FOREIGN TABLE</a> for a further description of valid parameters.</p>
+
+        </div>
+
+        <div class="section" id="topic1__section6"><h2 class="title sectiontitle">Examples</h2>
+            
+            <p class="p">To mark a column as not-null:</p>
+<pre class="pre codeblock"><code>ALTER FOREIGN TABLE distributors ALTER COLUMN street SET NOT NULL;</code></pre>
+            <p class="p">To change the options of a foreign table:</p>
+<pre class="pre codeblock"><code>ALTER FOREIGN TABLE myschema.distributors 
+    OPTIONS (ADD opt1 'value', SET opt2 'value2', DROP opt3 'value3');</code></pre>
+        </div>
+
+        <div class="section" id="topic1__section7"><h2 class="title sectiontitle">Compatibility</h2>
+            
+            <p class="p">The forms <code class="ph codeph">ADD</code>, <code class="ph codeph">DROP</code>, and <code class="ph codeph">SET DATA TYPE</code> conform with the SQL standard. The other forms are Greenplum Database extensions of the SQL standard. The ability to specify more than one manipulation in a single <code class="ph codeph">ALTER FOREIGN TABLE</code> command is also a Greenplum Database extension.</p>
+
+            <p class="p">You can use <code class="ph codeph">ALTER FOREIGN TABLE ... DROP COLUMN</code> to drop the only column of a foreign table, leaving a zero-column table. This is an extension of SQL, which disallows zero-column foreign tables.</p>
+
+        </div>
+
+        <div class="section" id="topic1__section8"><h2 class="title sectiontitle">See Also</h2>
+            
+            <p class="p"><a class="xref" href="ALTER_TABLE.html#topic1">ALTER TABLE</a>,
+                <a class="xref" href="CREATE_FOREIGN_TABLE.html#topic1">CREATE FOREIGN TABLE</a>,
+                        <a class="xref" href="DROP_FOREIGN_TABLE.html#topic1">DROP
+                    FOREIGN TABLE</a></p>
+
+        </div>
+
+    </div>
+
+<div class="related-links">
+<div class="familylinks">
+<div class="parentlink"><strong>Parent topic:</strong> <a class="link" href="../sql_commands/sql_ref.html">SQL Commands</a></div>
+</div>
+</div></body>
+</html>

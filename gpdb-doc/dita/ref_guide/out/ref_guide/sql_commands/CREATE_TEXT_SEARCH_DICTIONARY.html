@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+
+<meta name="copyright" content="(C) Copyright 2022" />
+<meta name="DC.rights.owner" content="(C) Copyright 2022" />
+<meta name="generator" content="DITA-OT" /><meta name="DC.type" content="topic" />
+<meta name="DC.title" content="CREATE TEXT SEARCH DICTIONARY" />
+<meta name="DC.relation" scheme="URI" content="../sql_commands/sql_ref.html" />
+<meta name="DC.format" content="XHTML" />
+<meta name="DC.identifier" content="topic1" />
+<link rel="stylesheet" type="text/css" href="../commonltr.css" />
+<title>CREATE TEXT SEARCH DICTIONARY</title>
+</head>
+<body id="topic1">
+<h1 class="title topictitle1" id="topic1__az137232">CREATE TEXT SEARCH DICTIONARY</h1>
+<div class="body"><p class="p" id="topic1__sql_command_desc">Defines a new text search dictionary.</p>
+<div class="section" id="topic1__section2"><h2 class="title sectiontitle">Synopsis</h2></div>
+
+    <pre class="pre codeblock" id="topic1__sql_command_synopsis"><code>CREATE TEXT SEARCH DICTIONARY &lt;name&gt; (
+    TEMPLATE = &lt;template&gt;
+    [, &lt;option&gt; = &lt;value&gt; [, ... ]]
+)</code></pre><div class="section" id="topic1__section3"><h2 class="title sectiontitle">Description</h2>
+      <p class="p"><var class="keyword varname">CREATE TEXT SEARCH DICTIONARY</var> creates a new text search dictionary. A
+        text search dictionary specifies a way of recognizing interesting or uninteresting words for
+        searching. A dictionary depends on a text search template, which specifies the functions
+        that actually perform the work. Typically the dictionary provides some options that control
+        the detailed behavior of the template's functions.</p>
+
+      <p class="p">If a schema name is given then the text search dictionary is created in the specified
+        schema. Otherwise it is created in the current schema.</p>
+
+      <p class="p">The user who defines a text search dictionary becomes its owner.</p>
+
+      <p class="p">Refer to <a class="xref" href="../../admin_guide/textsearch/full-text-search.html#full-text-search" target="_blank">Using Full Text Search</a>
+        for further information.</p>
+</div>
+<div class="section" id="topic1__section4"><h2 class="title sectiontitle">Parameters</h2>
+      <dl class="dl parml">
+        
+          <dt class="dt pt dlterm"><code class="ph codeph"><var class="keyword varname">name</var></code></dt>
+
+          <dd class="dd pd">The name of the text search dictionary to be created. The name can be
+            schema-qualified.</dd>
+
+        
+        
+          <dt class="dt pt dlterm"><code class="ph codeph"><var class="keyword varname">template</var></code></dt>
+
+          <dd class="dd pd">The name of the text search template that will define the basic behavior of this
+            dictionary.</dd>
+
+        
+        
+          <dt class="dt pt dlterm"><code class="ph codeph"><var class="keyword varname">option</var></code></dt>
+
+          <dd class="dd pd">The name of a template-specific option to be set for this dictionary.</dd>
+
+        
+        
+          <dt class="dt pt dlterm"><code class="ph codeph"><var class="keyword varname">value</var></code></dt>
+
+          <dd class="dd pd">The value to use for a template-specific option. If the value is not a simple
+            identifier or number, it must be quoted (but you can always quote it, if you wish).</dd>
+
+        
+      </dl>
+
+      <p class="p">The options can appear in any order.</p>
+
+            
+</div>
+<div class="section" id="topic1__section5"><h2 class="title sectiontitle">Examples</h2>
+      
+      <p class="p">The following example command creates a Snowball-based dictionary with a nonstandard list
+        of stop words.</p>
+
+      <pre class="pre">CREATE TEXT SEARCH DICTIONARY my_russian (
+    template = snowball,
+    language = russian,
+    stopwords = myrussian
+);</pre>
+
+    </div>
+<div class="section" id="topic1__section6"><h2 class="title sectiontitle">Compatibility</h2><p class="p">There is no <code class="ph codeph">CREATE TEXT SEARCH
+            DICTIONARY</code> statement in the SQL standard.</p>
+</div>
+<div class="section" id="topic1__section7"><h2 class="title sectiontitle">See Also</h2><p class="p"><a class="xref" href="ALTER_TEXT_SEARCH_DICTIONARY.html#topic1">ALTER TEXT SEARCH DICTIONARY</a>, <a class="xref" href="DROP_TEXT_SEARCH_DICTIONARY.html#topic1">DROP TEXT SEARCH DICTIONARY</a></p>
+</div>
+</div>
+<div class="related-links">
+<div class="familylinks">
+<div class="parentlink"><strong>Parent topic:</strong> <a class="link" href="../sql_commands/sql_ref.html">SQL Commands</a></div>
+</div>
+</div></body>
+</html>

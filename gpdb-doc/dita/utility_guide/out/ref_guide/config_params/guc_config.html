@@ -1,0 +1,178 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+
+<meta name="copyright" content="(C) Copyright 2022" />
+<meta name="DC.rights.owner" content="(C) Copyright 2022" />
+<meta name="generator" content="DITA-OT" /><meta name="DC.type" content="topic" />
+<meta name="DC.title" content="Server Configuration Parameters" />
+<meta name="DC.format" content="XHTML" />
+<meta name="DC.identifier" content="topic1" />
+<meta name="DC.language" content="en" />
+<link rel="stylesheet" type="text/css" href="../../out/commonltr.css" />
+<title>Server Configuration Parameters</title>
+</head>
+<body id="topic1">
+
+  <h1 class="title topictitle1" id="topic1__ih135496">Server Configuration Parameters</h1>
+
+  <div class="body">
+    <p class="p">There are many Greenplum server configuration parameters that affect the behavior of the
+      Greenplum Database system. Many of these configuration parameters have the same names,
+      settings, and behaviors as in a regular PostgreSQL database system. </p>
+
+    <ul class="ul" id="topic1__ul_nss_zzh_3p">
+      <li class="li"><a class="xref" href="#topic_vsn_22l_z4">Parameter Types and Values</a> describes the parameter data types and
+        values.</li>
+
+      <li class="li"><a class="xref" href="#topic_cyz_p2l_z4">Setting Parameters</a> describes limitations on who can change
+        them and where or when they can be set.</li>
+
+      <li class="li"><a class="xref" href="guc_category-list.html#guc-cat-list">Parameter Categories</a> organizes
+        parameters by functionality.</li>
+
+      <li class="li"><a class="xref" href="guc-list.html#topic3">Configuration Parameters</a> lists the parameter
+        descriptions in alphabetic order.</li>
+
+    </ul>
+
+  </div>
+
+  <div class="topic nested1" aria-labelledby="ariaid-title2" id="topic_vsn_22l_z4">
+    <h2 class="title topictitle2" id="ariaid-title2">Parameter Types and Values</h2>
+
+    <div class="body">
+      <p class="p">All parameter names are case-insensitive. Every parameter takes a value of one of the
+        following types: <code class="ph codeph">Boolean</code>, <code class="ph codeph">integer</code>, <code class="ph codeph">floating point</code>,
+        <code class="ph codeph">enum</code>, or <code class="ph codeph">string</code>.</p>
+
+      <p class="p">Boolean values may be specified as <code class="ph codeph">ON</code>,
+          <code class="ph codeph">OFF</code>, <code class="ph codeph">TRUE</code>, <code class="ph codeph">FALSE</code>, <code class="ph codeph">YES</code>,
+          <code class="ph codeph">NO</code>, <code class="ph codeph">1</code>, <code class="ph codeph">0</code> (all case-insensitive).</p>
+
+      <p class="p">Enum-type parameters are specified in the same manner as string parameters, but are
+        restricted to a limited set of values. Enum parameter values are case-insensitive.</p>
+ 
+      <p class="p">Some settings specify a memory size or time value. Each of these has an implicit unit,
+        which is either kilobytes, blocks (typically eight kilobytes), milliseconds, seconds, or
+        minutes. Valid memory size units are <code class="ph codeph">kB</code> (kilobytes), <code class="ph codeph">MB</code>
+        (megabytes), and <code class="ph codeph">GB</code> (gigabytes). Valid time units are <code class="ph codeph">ms</code>
+        (milliseconds), <code class="ph codeph">s</code> (seconds), <code class="ph codeph">min</code> (minutes),
+          <code class="ph codeph">h</code> (hours), and <code class="ph codeph">d</code> (days). Note that the multiplier for
+        memory units is 1024, not 1000. A valid time expression contains a number and a unit. When
+        specifying a memory or time unit using the <code class="ph codeph">SET</code> command, enclose the value
+        in quotes. For example:</p>
+
+      <pre class="pre codeblock"><code>SET statement_mem TO '200MB';</code></pre>
+      <div class="note"><span class="notetitle">Note:</span> There is no space between the value and the unit names.</div>
+
+    </div>
+
+  </div>
+
+  <div class="topic nested1" aria-labelledby="ariaid-title3" id="topic_cyz_p2l_z4">
+    <h2 class="title topictitle2" id="ariaid-title3">Setting Parameters</h2>
+
+    <div class="body">
+      <p class="p">Many of the configuration parameters have limitations on who can change them and where or
+        when they can be set. For example, to change certain parameters, you must be a Greenplum
+        Database superuser. Other parameters require a restart of the system for the changes to take
+        effect. A parameter that is classified as <em class="ph i">session</em> can be set at the system level (in
+        the <code class="ph codeph">postgresql.conf</code> file), at the database-level (using <code class="ph codeph">ALTER
+          DATABASE</code>), at the role-level (using <code class="ph codeph">ALTER ROLE</code>), at the
+           database- and role-level (<code class="ph codeph">ALTER ROLE...IN DATABASE...SET</code>, or at the
+        session-level (using <code class="ph codeph">SET</code>). System parameters can only be set in the
+          <code class="ph codeph">postgresql.conf</code> file.</p>
+
+      <p class="p">In Greenplum Database, the master and each segment instance has its own
+          <code class="ph codeph">postgresql.conf</code> file (located in their respective data directories). Some
+        parameters are considered <em class="ph i">local</em> parameters, meaning that each segment instance looks
+        to its own <code class="ph codeph">postgresql.conf</code> file to get the value of that parameter. You
+        must set local parameters on every instance in the system (master and segments). Others
+        parameters are considered <em class="ph i">master</em> parameters. Master parameters need only be set at
+        the master instance.</p>
+
+      <p class="p">This table describes the values in the Settable Classifications column of the table in the
+        description of a server configuration parameter.</p>
+
+      
+<div class="tablenoborder"><table cellpadding="4" cellspacing="0" summary="" id="topic_cyz_p2l_z4__ih389119" class="table" frame="border" border="1" rules="all"><caption><span class="tablecap"><span class="table--title-label">Table 1. </span>Settable Classifications</span></caption><colgroup><col style="width:110pt" /><col style="width:367pt" /></colgroup><thead class="thead" style="text-align:left;">
+            <tr class="row">
+              <th class="entry nocellnorowborder" style="vertical-align:top;" id="d107285e207">Set Classification</th>
+
+              <th class="entry cell-norowborder" style="vertical-align:top;" id="d107285e210">Description</th>
+
+            </tr>
+
+          </thead>
+<tbody class="tbody">
+            <tr class="row">
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d107285e207 ">master or local</td>
+
+              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d107285e210 ">A <em class="ph i">master</em> parameter only needs to be set in the
+                  <code class="ph codeph">postgresql.conf</code> file of the Greenplum master instance. The value
+                for this parameter is then either passed to (or ignored by) the segments at run
+                  time.<p class="p">A local parameter must be set in the <code class="ph codeph">postgresql.conf</code> file
+                  of the master AND each segment instance. Each segment instance looks to its own
+                  configuration to get the value for the parameter. Local parameters always requires
+                  a system restart for changes to take effect.</p>
+</td>
+
+            </tr>
+
+            <tr class="row">
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d107285e207 ">session or system</td>
+
+              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d107285e210 "><em class="ph i">Session</em> parameters can be changed on the fly within a
+                database session, and can have a hierarchy of settings: at the system level
+                  (<code class="ph codeph">postgresql.conf</code>), at the database level (<code class="ph codeph">ALTER
+                  DATABASE...SET</code>), at the role level (<code class="ph codeph">ALTER ROLE...SET</code>),
+                at the database and role level (<code class="ph codeph">ALTER ROLE...IN DATABASE...SET</code>),
+                or at the session level (<code class="ph codeph">SET</code>). If the parameter is set at multiple
+                levels, then the most granular setting takes precedence (for example, session
+                overrides database and role, database and role overrides role, role overrides database, and database overrides system).<p class="p">A
+                    <em class="ph i">system</em> parameter can only be changed via the <code class="ph codeph">postgresql.conf
+                  </code>file(s).</p>
+</td>
+
+            </tr>
+
+            <tr class="row">
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d107285e207 ">restart or reload</td>
+
+              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d107285e210 ">When changing parameter values in the postgresql.conf file(s),
+                some require a <em class="ph i">restart</em> of Greenplum Database for the change to take effect.
+                Other parameter values can be refreshed by just reloading the server configuration
+                file (using <code class="ph codeph">gpstop -u</code>), and do not require stopping the
+                system.</td>
+
+            </tr>
+
+            <tr class="row">
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d107285e207 ">superuser</td>
+
+              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d107285e210 ">These session parameters can only be set by a database
+                superuser. Regular database users cannot set this parameter.</td>
+
+            </tr>
+
+            <tr class="row">
+              <td class="entry row-nocellborder" style="vertical-align:top;" headers="d107285e207 ">read only</td>
+
+              <td class="entry cellrowborder" style="vertical-align:top;" headers="d107285e210 ">These parameters are not settable by database users or
+                superusers. The current value of the parameter can be shown but not altered.</td>
+
+            </tr>
+
+          </tbody>
+</table>
+</div>
+
+    </div>
+
+  </div>
+
+</body>
+</html>

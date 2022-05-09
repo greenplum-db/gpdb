@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+
+<meta name="copyright" content="(C) Copyright 2022" />
+<meta name="DC.rights.owner" content="(C) Copyright 2022" />
+<meta name="generator" content="DITA-OT" /><meta name="DC.type" content="topic" />
+<meta name="DC.title" content="CLUSTER" />
+<meta name="DC.relation" scheme="URI" content="../sql_commands/sql_ref.html" />
+<meta name="DC.format" content="XHTML" />
+<meta name="DC.identifier" content="topic1" />
+<link rel="stylesheet" type="text/css" href="../commonltr.css" />
+<title>CLUSTER</title>
+</head>
+<body id="topic1">
+<h1 class="title topictitle1" id="topic1__bh20941">CLUSTER</h1>
+<div class="body"><p class="p" id="topic1__sql_command_desc">Physically reorders a heap storage table on disk according to an index.
+Not a recommended operation in Greenplum Database.</p>
+<div class="section" id="topic1__section2"><h2 class="title sectiontitle">Synopsis</h2><pre class="pre codeblock" id="topic1__sql_command_synopsis"><code>CLUSTER &lt;indexname&gt; ON &lt;tablename&gt;
+
+CLUSTER [VERBOSE] &lt;tablename&gt; [ USING index_name ]
+
+CLUSTER [VERBOSE]</code></pre></div>
+<div class="section" id="topic1__section3"><h2 class="title sectiontitle">Description</h2><p class="p"><code class="ph codeph">CLUSTER</code> orders a heap storage table based on an index.
+<code class="ph codeph">CLUSTER</code> on non-B-tree indexes is not supported on append-optmized storage
+tables. Clustering an index means that the records are physically ordered
+on disk according to the index information. If the records you need are
+distributed randomly on disk, then the database has to seek across the
+disk to get the records requested. If those records are stored more closely
+together, then the fetching from disk is more sequential. A good example
+for a clustered index is on a date column where the data is ordered sequentially
+by date. A query against a specific date range will result in an ordered
+fetch from the disk, which leverages faster sequential access.</p>
+<p class="p">Clustering is a one-time operation: when the table is subsequently updated, the changes are not
+clustered. That is, no attempt is made to store new or updated rows
+according to their index order. If you wish, you can periodically
+recluster by issuing the command again. Setting the table's <code class="ph codeph">FILLFACTOR</code> storage parameter to less than
+        100% can aid in preserving cluster ordering during updates, because updated
+        rows are kept on the same page if enough space is available there.
+</p>
+<p class="p">When a table is clustered using this command, Greenplum Database remembers on which index it was
+                                clustered. The form <code class="ph codeph">CLUSTER</code>
+                                <var class="keyword varname">tablename</var> reclusters the table on the same index
+                                that it was clustered before. You can use the
+                                        <code class="ph codeph">CLUSTER</code> or <code class="ph codeph">SET WITHOUT
+                                        CLUSTER</code> forms of <a class="xref" href="ALTER_TABLE.html#topic1">ALTER TABLE</a> to set the
+                                index to use for future cluster operations, or to clear any previous
+                                setting. <code class="ph codeph">CLUSTER</code> without any parameter reclusters
+                                all previously clustered tables in the current database that the
+                                calling user owns, or all tables if called by a superuser. This form
+                                of <code class="ph codeph">CLUSTER</code> cannot be run inside a transaction
+                                block.</p>
+<p class="p">When a table is being clustered, an <code class="ph codeph">ACCESS EXCLUSIVE</code>
+lock is acquired on it. This prevents any other database operations (both
+reads and writes) from operating on the table until the <code class="ph codeph">CLUSTER</code>
+is finished.</p>
+</div>
+<div class="section" id="topic1__section4"><h2 class="title sectiontitle">Parameters</h2><dl class="dl parml"><dt class="dt pt dlterm"><var class="keyword varname">indexname</var></dt>
+<dd class="dd pd">The name of an index. </dd>
+
+                                
+                                        <dt class="dt pt dlterm"><code class="ph codeph">VERBOSE</code></dt>
+
+                                        <dd class="dd pd">Prints a progress report as each table is clustered.</dd>
+
+                                <dt class="dt pt dlterm"><var class="keyword varname">tablename</var></dt>
+<dd class="dd pd">The name (optionally schema-qualified) of a table. </dd>
+</dl>
+</div>
+<div class="section" id="topic1__section5"><h2 class="title sectiontitle">Notes</h2><p class="p">In cases where you are accessing single rows randomly within a table,
+the actual order of the data in the table is unimportant. However, if
+you tend to access some data more than others, and there is an index
+that groups them together, you will benefit from using <code class="ph codeph">CLUSTER</code>.
+If you are requesting a range of indexed values from a table, or a single
+indexed value that has multiple rows that match, <code class="ph codeph">CLUSTER</code>
+will help because once the index identifies the table page for the first
+row that matches, all other rows that match are probably already on the
+same table page, and so you save disk accesses and speed up the query.
+                                </p>
+
+                        <p class="p"><code class="ph codeph">CLUSTER</code> can re-sort the table using either an index scan
+                                on the specified index, or (if the index is a b-tree) a sequential
+                                scan followed by sorting. It will attempt to choose the method that
+                                will be faster, based on planner cost parameters and available
+                                statistical information. </p>
+
+                        <p class="p"> When an index scan is used, a temporary copy of the table is created
+                                that contains the table data in the index order. Temporary copies of
+                                each index on the table are created as well. Therefore, you need
+                                free space on disk at least equal to the sum of the table size and
+                                the index sizes. </p>
+
+                        <p class="p"> When a sequential scan and sort is used, a temporary sort file is also
+                                created, so that the peak temporary space requirement is as much as
+                                double the table size, plus the index sizes. This method is often
+                                faster than the index scan method, but if the disk space requirement
+                                is intolerable, you can disable this choice by temporarily setting
+                                the <a class="xref" href="../config_params/guc-list.html#enable_sort">enable_sort</a> configuration parameter to
+                                        <code class="ph codeph">off</code>. </p>
+
+                        <p class="p"> It is advisable to set <a class="xref" href="../config_params/guc-list.html#maintenance_work_mem">maintenance_work_mem</a>
+                                configuration parameter to a reasonably large value (but not more
+                                than the amount of RAM you can dedicate to the
+                                        <code class="ph codeph">CLUSTER</code> operation) before clustering. </p>
+
+                                        <p class="p">Because the query optimizer records statistics about the ordering of tables, it is advisable to
+        run <code class="ph codeph">ANALYZE</code> on the newly clustered table. Otherwise, the planner may make
+                                                poor choices of query plans. </p>
+
+                        <p class="p">Because <code class="ph codeph">CLUSTER</code> remembers which indexes are clustered,
+                                you can cluster the tables you want clustered manually the first
+                                time, then set up a periodic maintenance script that runs
+                                        <code class="ph codeph">CLUSTER</code> without any parameters, so that the
+                                desired tables are periodically reclustered.</p>
+<div class="note"><span class="notetitle">Note:</span> <code class="ph codeph">CLUSTER</code> on non-B-tree indexes is not supported with append-optimized tables.</div>
+</div>
+<div class="section" id="topic1__section6"><h2 class="title sectiontitle">Examples</h2><p class="p">Cluster the table <code class="ph codeph">employees</code> on the basis of its index
+        <code class="ph codeph">emp_ind</code>:</p>
+<pre class="pre codeblock"><code>CLUSTER emp_ind ON emp;</code></pre><p class="p">Cluster a large table by recreating it and loading it in the correct index
+order:</p>
+<pre class="pre codeblock"><code>CREATE TABLE newtable AS SELECT * FROM table ORDER BY column;
+DROP table;
+ALTER TABLE newtable RENAME TO table;
+CREATE INDEX column_ix ON table (column);
+VACUUM ANALYZE table;</code></pre></div>
+<div class="section" id="topic1__section7"><h2 class="title sectiontitle">Compatibility</h2><p class="p">There is no <code class="ph codeph">CLUSTER</code> statement in the SQL standard.</p>
+</div>
+<div class="section" id="topic1__section8"><h2 class="title sectiontitle">See Also</h2><p class="p"><a class="xref" href="CREATE_TABLE_AS.html#topic1">CREATE TABLE AS</a>,
+            <a class="xref" href="CREATE_INDEX.html#topic1">CREATE INDEX</a></p>
+</div>
+</div>
+<div class="related-links">
+<div class="familylinks">
+<div class="parentlink"><strong>Parent topic:</strong> <a class="link" href="../sql_commands/sql_ref.html">SQL Commands</a></div>
+</div>
+</div></body>
+</html>

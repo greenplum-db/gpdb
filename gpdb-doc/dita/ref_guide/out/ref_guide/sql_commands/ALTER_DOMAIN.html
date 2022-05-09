@@ -1,0 +1,156 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+
+<meta name="copyright" content="(C) Copyright 2022" />
+<meta name="DC.rights.owner" content="(C) Copyright 2022" />
+<meta name="generator" content="DITA-OT" /><meta name="DC.type" content="topic" />
+<meta name="DC.title" content="ALTER DOMAIN" />
+<meta name="DC.relation" scheme="URI" content="../sql_commands/sql_ref.html" />
+<meta name="DC.format" content="XHTML" />
+<meta name="DC.identifier" content="topic1" />
+<link rel="stylesheet" type="text/css" href="../commonltr.css" />
+<title>ALTER DOMAIN</title>
+</head>
+<body id="topic1">
+<h1 class="title topictitle1" id="topic1__aj20941">ALTER DOMAIN</h1>
+<div class="body"><p class="p" id="topic1__sql_command_desc">Changes the definition of a domain.</p>
+<div class="section" id="topic1__section2"><h2 class="title sectiontitle">Synopsis</h2><pre class="pre codeblock" id="topic1__sql_command_synopsis"><code>ALTER DOMAIN &lt;name&gt; { SET DEFAULT &lt;expression&gt; | DROP DEFAULT }
+
+ALTER DOMAIN &lt;name&gt; { SET | DROP } NOT NULL
+
+ALTER DOMAIN &lt;name&gt; ADD &lt;domain_constraint&gt; [ NOT VALID ]
+
+ALTER DOMAIN &lt;name&gt; DROP CONSTRAINT [ IF EXISTS ] &lt;constraint_name&gt; [RESTRICT | CASCADE]
+
+ALTER DOMAIN &lt;name&gt; RENAME CONSTRAINT &lt;constraint_name&gt; TO &lt;new_constraint_name&gt;
+
+ALTER DOMAIN &lt;name&gt; VALIDATE CONSTRAINT &lt;constraint_name&gt;
+  
+ALTER DOMAIN &lt;name&gt; OWNER TO &lt;new_owner&gt;
+  
+ALTER DOMAIN &lt;name&gt; RENAME TO &lt;new_name&gt;
+
+ALTER DOMAIN &lt;name&gt; SET SCHEMA &lt;new_schema&gt;</code></pre></div>
+<div class="section" id="topic1__section3"><h2 class="title sectiontitle">Description</h2><p class="p"><code class="ph codeph">ALTER DOMAIN</code> changes the definition of an existing
+domain. There are several sub-forms: </p>
+<ul class="ul"><li class="li" id="topic1__aj136679"><strong class="ph b">SET/DROP DEFAULT</strong> — These forms set or remove the default value
+for a domain. Note that defaults only apply to subsequent <code class="ph codeph">INSERT</code>
+commands. They do not affect rows already in a table using the domain.
+</li>
+<li class="li" id="topic1__aj136731"><strong class="ph b">SET/DROP NOT NULL</strong> — These forms change whether a domain is
+marked to allow <code class="ph codeph">NULL</code> values or to reject <code class="ph codeph">NULL</code>
+values. You may only <code class="ph codeph">SET NOT NULL</code> when the columns using
+the domain contain no null values.</li>
+
+        <li class="li" id="topic1__aj136747"><strong class="ph b">ADD <var class="keyword varname">domain_constraint</var> [ NOT VALID ]</strong> — This form
+          adds a new constraint to a domain using the same syntax as <code class="ph codeph">CREATE DOMAIN</code>.
+          When a new constraint is added to a domain, all columns using that domain will be checked
+          against the newly added constraint. These checks can be suppressed by adding the new
+          constraint using the <code class="ph codeph">NOT VALID</code> option; the constraint can later be made
+          valid using <code class="ph codeph">ALTER DOMAIN ... VALIDATE CONSTRAINT</code>. Newly inserted or
+          updated rows are always checked against all constraints, even those marked <code class="ph codeph">NOT
+            VALID</code>. <code class="ph codeph">NOT VALID</code> is only accepted for <code class="ph codeph">CHECK</code>
+          constraints. </li>
+
+        <li class="li" id="topic1__aj136757"><strong class="ph b">DROP CONSTRAINT [ IF EXISTS ]</strong> — This form drops constraints on a
+          domain. If <code class="ph codeph">IF EXISTS</code> is specified and the constraint does not exist, no
+          error is thrown. In this case a notice is issued instead. </li>
+
+        <li class="li"><strong class="ph b">RENAME CONSTRAINT</strong> — This form changes the name of a constraint on a domain.</li>
+
+        <li class="li"><strong class="ph b">VALIDATE CONSTRAINT</strong> — This form validates a constraint previously added as
+            <code class="ph codeph">NOT VALID</code>, that is, verify that all data in columns using the domain
+          satisfy the specified constraint.</li>
+
+  <li class="li" id="topic1__aj136764"><strong class="ph b">OWNER</strong> — This form changes the owner of the domain to the specified
+user. </li>
+
+        <li class="li"><strong class="ph b">RENAME</strong> — This form changes the name of the domain. </li>
+
+  <li class="li" id="topic1__aj136771"><strong class="ph b">SET SCHEMA</strong> — This form changes the schema of the domain. Any
+constraints associated with the domain are moved into the new schema
+as well. </li>
+</ul>
+<p class="p">You must own the domain to use <code class="ph codeph">ALTER DOMAIN</code>. To change
+the schema of a domain, you must also have <code class="ph codeph">CREATE</code> privilege
+on the new schema. To alter the owner, you must also be a direct or indirect
+member of the new owning role, and that role must have <code class="ph codeph">CREATE</code>
+privilege on the domain's schema. (These restrictions enforce that
+altering the owner does not do anything you could not do by dropping
+and recreating the domain. However, a superuser can alter ownership of
+any domain anyway.)</p>
+</div>
+<div class="section" id="topic1__section4"><h2 class="title sectiontitle">Parameters</h2><dl class="dl parml"><dt class="dt pt dlterm"><var class="keyword varname">name</var></dt>
+<dd class="dd pd">The name (optionally schema-qualified) of an existing domain to alter.
+</dd>
+<dt class="dt pt dlterm"><var class="keyword varname">domain_constraint</var></dt>
+<dd class="dd pd">New domain constraint for the domain. </dd>
+<dt class="dt pt dlterm"><var class="keyword varname">constraint_name</var></dt>
+<dd class="dd pd">Name of an existing constraint to drop or rename. </dd>
+
+        
+          <dt class="dt pt dlterm">NOT VALID</dt>
+
+          <dd class="dd pd">Do not verify existing column data for constraint validity.</dd>
+
+        <dt class="dt pt dlterm">CASCADE</dt>
+<dd class="dd pd">Automatically drop objects that depend on the constraint. </dd>
+<dt class="dt pt dlterm">RESTRICT</dt>
+<dd class="dd pd">Refuse to drop the constraint if there are any dependent objects.
+This is the default behavior. </dd>
+
+        
+          <dt class="dt pt dlterm"><var class="keyword varname">new_name</var></dt>
+
+          <dd class="dd pd">The new name for the domain.</dd>
+
+        
+        
+          <dt class="dt pt dlterm"><var class="keyword varname">new_constraint_name</var></dt>
+
+          <dd class="dd pd">The new name for the constraint.</dd>
+
+        <dt class="dt pt dlterm"><var class="keyword varname">new_owner</var></dt>
+<dd class="dd pd">The user name of the new owner of the domain. </dd>
+<dt class="dt pt dlterm"><var class="keyword varname">new_schema</var></dt>
+<dd class="dd pd">The new schema for the domain. </dd>
+</dl>
+</div>
+<div class="section" id="topic1__section5"><h2 class="title sectiontitle">Examples</h2><p class="p">To add a <code class="ph codeph">NOT NULL</code> constraint to a domain: </p>
+
+          <pre class="pre codeblock"><code>ALTER DOMAIN zipcode SET NOT NULL;</code></pre>
+          <p class="p">To remove a <code class="ph codeph">NOT NULL</code> constraint from a domain: </p>
+
+          <pre class="pre codeblock"><code>ALTER DOMAIN zipcode DROP NOT NULL;</code></pre>
+          <p class="p">To add a check constraint to a domain: </p>
+
+          <pre class="pre codeblock"><code>ALTER DOMAIN zipcode ADD CONSTRAINT zipchk CHECK (char_length(VALUE) = 5);</code></pre>
+          <p class="p">To remove a check constraint from a domain: </p>
+
+          <pre class="pre codeblock"><code>ALTER DOMAIN zipcode DROP CONSTRAINT zipchk;</code></pre>
+          <p class="p">To rename a check constraint on a domain: </p>
+
+          <pre class="pre codeblock"><code>ALTER DOMAIN zipcode RENAME CONSTRAINT zipchk TO zip_check;</code></pre>
+          <p class="p">To move the domain into a different schema:</p>
+
+          <pre class="pre codeblock"><code>ALTER DOMAIN zipcode SET SCHEMA customers;</code></pre></div>
+<div class="section" id="topic1__section6"><h2 class="title sectiontitle">Compatibility</h2>
+      <p class="p"><code class="ph codeph">ALTER DOMAIN</code> conforms to the SQL standard, except for the
+          <code class="ph codeph">OWNER</code>, <code class="ph codeph">RENAME</code>, <code class="ph codeph">SET SCHEMA</code>, and
+          <code class="ph codeph">VALIDATE CONSTRAINT</code> variants, which are Greenplum Database extensions.
+        The <code class="ph codeph">NOT VALID</code> clause of the <code class="ph codeph">ADD CONSTRAINT</code> variant is also
+        a Greenplum Database extension. </p>
+</div>
+<div class="section" id="topic1__section7"><h2 class="title sectiontitle">See Also</h2><p class="p"><a class="xref" href="CREATE_DOMAIN.html#topic1">CREATE DOMAIN</a>,
+            <a class="xref" href="DROP_DOMAIN.html#topic1">DROP DOMAIN</a></p>
+</div>
+</div>
+<div class="related-links">
+<div class="familylinks">
+<div class="parentlink"><strong>Parent topic:</strong> <a class="link" href="../sql_commands/sql_ref.html">SQL Commands</a></div>
+</div>
+</div></body>
+</html>

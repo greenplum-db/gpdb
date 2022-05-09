@@ -1,0 +1,183 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+
+<meta name="copyright" content="(C) Copyright 2022" />
+<meta name="DC.rights.owner" content="(C) Copyright 2022" />
+<meta name="generator" content="DITA-OT" /><meta name="DC.type" content="topic" />
+<meta name="DC.title" content="SET" />
+<meta name="DC.relation" scheme="URI" content="../sql_commands/sql_ref.html" />
+<meta name="DC.format" content="XHTML" />
+<meta name="DC.identifier" content="topic1" />
+<link rel="stylesheet" type="text/css" href="../commonltr.css" />
+<title>SET</title>
+</head>
+<body id="topic1">
+
+  <h1 class="title topictitle1" id="topic1__ei20941">SET</h1>
+
+  <div class="body">
+    <p class="p" id="topic1__sql_command_desc">Changes the value of a Greenplum Database configuration parameter.</p>
+
+    <div class="section" id="topic1__section2"><h2 class="title sectiontitle">Synopsis</h2>
+      
+      <pre class="pre codeblock" id="topic1__sql_command_synopsis"><code>SET [SESSION | LOCAL] &lt;configuration_parameter&gt; {TO | =} &lt;value&gt; | 
+    '&lt;value&gt;' | DEFAULT}
+
+SET [SESSION | LOCAL] TIME ZONE {&lt;timezone&gt; | LOCAL | DEFAULT}</code></pre>
+    </div>
+
+    <div class="section" id="topic1__section3"><h2 class="title sectiontitle">Description</h2>
+      
+      <p class="p">The <code class="ph codeph">SET</code> command changes server configuration parameters. Any configuration
+        parameter classified as a <var class="keyword varname">session</var> parameter can be changed on-the-fly
+        with <code class="ph codeph">SET</code>. <code class="ph codeph">SET</code> affects only the value used by the current
+        session. </p>
+
+      <p class="p">If <code class="ph codeph">SET</code> or <code class="ph codeph">SET SESSION</code> is issued within a transaction that
+        is later cancelled, the effects of the <code class="ph codeph">SET</code> command disappear when
+        the transaction is rolled back. Once the surrounding transaction is committed, the effects
+        will persist until the end of the session, unless overridden by another
+        <code class="ph codeph">SET</code>. </p>
+
+      <p class="p">The effects of <code class="ph codeph">SET LOCAL</code> last only till the end of the current
+        transaction, whether committed or not. A special case is <code class="ph codeph">SET</code> followed by
+          <code class="ph codeph">SET LOCAL</code> within a single transaction: the <code class="ph codeph">SET LOCAL</code>
+        value will be seen until the end of the transaction, but afterwards (if the transaction is
+        committed) the <code class="ph codeph">SET</code> value will take effect.</p>
+
+      <p class="p">If <code class="ph codeph">SET LOCAL</code> is used within a function that includes a
+          <code class="ph codeph">SET</code> option for the same configuration parameter (see <a class="xref" href="CREATE_FUNCTION.html#topic1">CREATE FUNCTION</a>), the effects
+        of the <code class="ph codeph">SET LOCAL</code> command disappear at function exit; the value in effect
+        when the function was called is restored anyway. This allows <code class="ph codeph">SET LOCAL</code> to
+        be used for dynamic or repeated changes of a parameter within a function, while retaining
+        the convenience of using the <code class="ph codeph">SET</code> option to save and restore the caller's
+        value. Note that a regular <code class="ph codeph">SET</code> command overrides any surrounding function's
+          <code class="ph codeph">SET</code> option; its effects persist unless rolled back.</p>
+
+      <p class="p">If you create a cursor with the <code class="ph codeph">DECLARE</code> command in a transaction, you
+        cannot use the <code class="ph codeph">SET</code> command in the transaction until you close the cursor
+        with the <code class="ph codeph">CLOSE</code> command.</p>
+
+      <p class="p">See <a class="xref" href="../config_params/guc_config.html">Server Configuration Parameters</a> for
+        information about server parameters.</p>
+
+    </div>
+
+    <div class="section" id="topic1__section4"><h2 class="title sectiontitle">Parameters</h2>
+      
+      <dl class="dl parml">
+        
+          <dt class="dt pt dlterm">SESSION</dt>
+
+          <dd class="dd pd">Specifies that the command takes effect for the current session. This is the
+            default.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">LOCAL</dt>
+
+          <dd class="dd pd">Specifies that the command takes effect for only the current transaction. After
+              <code class="ph codeph">COMMIT</code> or <code class="ph codeph">ROLLBACK</code>, the session-level setting takes
+            effect again. Note that <code class="ph codeph">SET LOCAL</code> will appear to have no effect if it
+            is run outside of a transaction.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">
+            <var class="keyword varname">configuration_parameter</var>
+          </dt>
+
+          <dd class="dd pd">The name of a Greenplum Database configuration parameter. Only parameters classified
+            as <em class="ph i">session</em> can be changed with <code class="ph codeph">SET</code>. See <a class="xref" href="../config_params/guc_config.html">Server Configuration Parameters</a> for details.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">
+            <var class="keyword varname">value</var>
+          </dt>
+
+          <dd class="dd pd">New value of parameter. Values can be specified as string constants, identifiers,
+            numbers, or comma-separated lists of these. <code class="ph codeph">DEFAULT</code> can be used to
+            specify resetting the parameter to its default value. If specifying memory sizing or
+            time units, enclose the value in single quotes.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">TIME ZONE</dt>
+
+          <dd class="dd pd"><code class="ph codeph">SET TIME ZONE</code> value is an alias for <code class="ph codeph">SET timezone TO
+                <var class="keyword varname">value</var></code>. The syntax <code class="ph codeph">SET TIME ZONE</code> allows
+            special syntax for the time zone specification. Here are examples of valid values: </dd>
+
+          <dd class="dd pd ddexpand">
+            <code class="ph codeph">'PST8PDT'</code>
+          </dd>
+
+          <dd class="dd pd ddexpand">
+            <code class="ph codeph">'Europe/Rome'</code>
+          </dd>
+
+          <dd class="dd pd ddexpand"><code class="ph codeph">-7</code> (time zone 7 hours west from UTC)</dd>
+
+          <dd class="dd pd ddexpand"><code class="ph codeph">INTERVAL '-08:00' HOUR TO MINUTE</code> (time zone 8 hours west from
+            UTC).</dd>
+
+        
+        
+          <dt class="dt pt dlterm">LOCAL</dt>
+
+          <dt class="dt pt dlterm">DEFAULT</dt>
+
+          <dd class="dd pd">Set the time zone to your local time zone (that is, server's default value of <var class="keyword varname">timezone</var>). See the <a class="xref" href="https://www.postgresql.org/docs/9.4/datatype-datetime.html#DATATYPE-TIMEZONES" target="_blank">Time zone section of the PostgreSQL
+              documentation</a> for more information about time zones in Greenplum Database.</dd>
+
+        
+      </dl>
+
+    </div>
+
+    <div class="section" id="topic1__section5"><h2 class="title sectiontitle">Examples</h2>
+      
+      <p class="p">Set the schema search path:</p>
+
+      <pre class="pre codeblock"><code>SET search_path TO my_schema, public;</code></pre>
+      <p class="p">Increase the segment host memory per query to 200 MB:</p>
+
+      <pre class="pre codeblock"><code>SET statement_mem TO '200MB';</code></pre>
+      <p class="p">Set the style of date to traditional POSTGRES with "day before month" input convention:</p>
+
+      <pre class="pre codeblock"><code>SET datestyle TO postgres, dmy;</code></pre>
+      <p class="p">Set the time zone for San Mateo, California (Pacific Time):</p>
+
+      <pre class="pre codeblock"><code>SET TIME ZONE 'PST8PDT';</code></pre>
+      <p class="p">Set the time zone for Italy:</p>
+
+      <pre class="pre codeblock"><code>SET TIME ZONE 'Europe/Rome'; </code></pre>
+    </div>
+
+    <div class="section" id="topic1__section6"><h2 class="title sectiontitle">Compatibility</h2>
+      
+      <p class="p"><code class="ph codeph">SET TIME ZONE</code> extends syntax defined in the SQL standard. The standard
+        allows only numeric time zone offsets while Greenplum Database allows more flexible
+        time-zone specifications. All other <code class="ph codeph">SET</code> features are Greenplum Database
+        extensions. </p>
+
+    </div>
+
+    <div class="section" id="topic1__section7"><h2 class="title sectiontitle">See Also</h2>
+      
+      <p class="p"><a class="xref" href="RESET.html#topic1">RESET</a>, <a class="xref" href="SHOW.html#topic1">SHOW</a></p>
+
+    </div>
+
+  </div>
+
+<div class="related-links">
+<div class="familylinks">
+<div class="parentlink"><strong>Parent topic:</strong> <a class="link" href="../sql_commands/sql_ref.html">SQL Commands</a></div>
+</div>
+</div></body>
+</html>

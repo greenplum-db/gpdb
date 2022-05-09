@@ -1,0 +1,3164 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+
+<meta name="copyright" content="(C) Copyright 2022" />
+<meta name="DC.rights.owner" content="(C) Copyright 2022" />
+<meta name="generator" content="DITA-OT" /><meta name="DC.type" content="topic" />
+<meta name="DC.title" content="Summary of Built-in Functions" />
+<meta name="DC.relation" scheme="URI" content="ref_guide.html" />
+<meta name="DC.format" content="XHTML" />
+<meta name="DC.identifier" content="topic1" />
+<meta name="DC.language" content="en" />
+<link rel="stylesheet" type="text/css" href="commonltr.css" />
+<title>Summary of Built-in Functions</title>
+</head>
+<body id="topic1">
+
+  <h1 class="title topictitle1" id="topic1__ih135496">Summary of Built-in Functions</h1>
+
+  
+  <div class="body"><div class="abstract">Greenplum Database supports built-in functions and operators including analytic
+    functions and window functions that can be used in window expressions. For information about
+    using built-in Greenplum Database functions see, "Using Functions and Operators" in the
+      <cite class="cite">Greenplum Database Administrator Guide</cite>.</div>
+
+    <div class="p">
+      <ul class="ul" id="topic1__ul_tpq_zwq_kr">
+        <li class="li">
+          <a class="xref" href="#topic27">Greenplum Database Function Types</a>
+        </li>
+
+        <li class="li">
+          <a class="xref" href="#topic29">Built-in Functions and Operators</a>
+        </li>
+
+        <li class="li">
+          <a class="xref" href="#topic_gn4_x3w_mq">JSON Functions and Operators</a></li>
+
+        <li class="li">
+          <a class="xref" href="#topic30">Window Functions</a>
+        </li>
+
+        <li class="li">
+          <a class="xref" href="#topic31">Advanced Aggregate Functions</a>
+        </li>
+
+        <li class="li"><a class="xref" href="#topic_vpj_ss1_lfb">Text Search Functions and Operators</a></li>
+
+        <li class="li"><a class="xref" href="#functions-range">Range Functions and Operators</a></li>
+
+      </ul>
+
+    </div>
+
+  </div>
+
+  <div class="related-links">
+<div class="familylinks">
+<div class="parentlink"><strong>Parent topic:</strong> <a class="link" href="ref_guide.html" title="Reference information for Greenplum Database systems including SQL commands, system catalogs, environment variables, server configuration parameters, character set support, datatypes, and Greenplum Database extensions.">Greenplum Database Reference Guide</a></div>
+</div>
+</div><div class="topic nested1" aria-labelledby="topic27__in201560" xml:lang="en" lang="en" id="topic27">
+    <h2 class="title topictitle2" id="topic27__in201560">Greenplum Database Function Types</h2>
+
+    <div class="body">
+      <p class="p">Greenplum Database evaluates functions and operators used in SQL expressions. Some
+        functions and operators are only allowed to run on the master since they could lead to
+        inconsistencies in Greenplum Database segment instances. This table describes the Greenplum
+        Database Function Types.</p>
+
+      
+<div class="tablenoborder"><table cellpadding="4" cellspacing="0" summary="" id="topic27__in201681" class="table" frame="border" border="1" rules="all"><caption><span class="tablecap"><span class="table--title-label">Table 1. </span>Functions in Greenplum Database</span></caption><colgroup><col style="width:17.073170731707318%" /><col style="width:19.06873614190687%" /><col style="width:31.9290465631929%" /><col style="width:31.9290465631929%" /></colgroup><thead class="thead" style="text-align:left;">
+            <tr class="row">
+              <th class="entry nocellnorowborder" style="vertical-align:top;" id="d233567e112">Function Type</th>
+
+              <th class="entry nocellnorowborder" style="vertical-align:top;" id="d233567e115">Greenplum Support</th>
+
+              <th class="entry nocellnorowborder" style="vertical-align:top;" id="d233567e118">Description</th>
+
+              <th class="entry cell-norowborder" style="vertical-align:top;" id="d233567e121">Comments</th>
+
+            </tr>
+
+          </thead>
+<tbody class="tbody">
+            <tr class="row">
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e112 ">IMMUTABLE</td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e115 ">Yes</td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e118 ">Relies only on information directly in its argument list. Given
+                the same argument values, always returns the same result.</td>
+
+              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e121 "> </td>
+
+            </tr>
+
+            <tr class="row">
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e112 ">STABLE</td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e115 ">Yes, in most cases</td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e118 ">Within a single table scan, returns the same result for same
+                argument values, but results change across SQL statements.</td>
+
+              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e121 ">Results depend on database lookups or parameter values.
+                  <code class="ph codeph">current_timestamp</code> family of functions is <code class="ph codeph">STABLE</code>;
+                values do not change within an execution.</td>
+
+            </tr>
+
+            <tr class="row">
+              <td class="entry row-nocellborder" style="vertical-align:top;" headers="d233567e112 ">VOLATILE</td>
+
+              <td class="entry row-nocellborder" style="vertical-align:top;" headers="d233567e115 ">Restricted</td>
+
+              <td class="entry row-nocellborder" style="vertical-align:top;" headers="d233567e118 ">Function values can change within a single table scan. For
+                example: <code class="ph codeph">random()</code>, <code class="ph codeph">timeofday()</code>.</td>
+
+              <td class="entry cellrowborder" style="vertical-align:top;" headers="d233567e121 ">Any function with side effects is volatile, even if its result
+                is predictable. For example: <code class="ph codeph">setval()</code>.</td>
+
+            </tr>
+
+          </tbody>
+</table>
+</div>
+
+      <p class="p">In Greenplum Database, data is divided up across segments — each segment is a distinct
+        PostgreSQL database. To prevent inconsistent or unexpected results, do not run functions
+        classified as <code class="ph codeph">VOLATILE</code> at the segment level if they contain SQL commands or
+        modify the database in any way. For example, functions such as <code class="ph codeph">setval()</code> are
+        not allowed to run on distributed data in Greenplum Database because they can cause
+        inconsistent data between segment instances.</p>
+
+      <p class="p">To ensure data consistency, you can safely use <code class="ph codeph">VOLATILE</code> and
+          <code class="ph codeph">STABLE</code> functions in statements that are evaluated on and run from the
+        master. For example, the following statements run on the master (statements without a
+          <code class="ph codeph">FROM</code> clause):</p>
+
+      <div class="p">
+        <pre class="pre codeblock"><code>SELECT setval('myseq', 201);
+SELECT foo();
+</code></pre>
+      </div>
+
+      <p class="p">If a statement has a <code class="ph codeph">FROM</code> clause containing a distributed table <em class="ph i">and</em>
+        the function in the <code class="ph codeph">FROM</code> clause returns a set of rows, the statement can
+        run on the segments:</p>
+
+      <div class="p">
+        <pre class="pre codeblock"><code>SELECT * from foo();
+</code></pre>
+      </div>
+
+      <p class="p">Greenplum Database does not support functions that return a table reference
+          (<code class="ph codeph">rangeFuncs</code>) or functions that use the <code class="ph codeph">refCursor</code>
+        datatype.</p>
+
+    </div>
+
+  </div>
+
+  <div class="topic nested1" aria-labelledby="topic29__in141007" xml:lang="en" lang="en" id="topic29">
+    <h2 class="title topictitle2" id="topic29__in141007">Built-in Functions and Operators</h2>
+
+    <div class="body">
+      <p class="p">The following table lists the categories of built-in functions and operators supported by
+        PostgreSQL. All functions and operators are supported in Greenplum Database as in PostgreSQL
+        with the exception of <code class="ph codeph">STABLE</code> and <code class="ph codeph">VOLATILE</code> functions, which
+        are subject to the restrictions noted in <a class="xref" href="#topic27">Greenplum Database Function Types</a>. See the
+          <a class="xref" href="https://www.postgresql.org/docs/9.4/functions.html" target="_blank">Functions and Operators</a> section of the PostgreSQL documentation
+        for more information about these built-in functions and operators.</p>
+
+      
+<div class="tablenoborder"><table cellpadding="4" cellspacing="0" summary="" id="topic29__in204913" class="table" frame="border" border="1" rules="all"><caption><span class="tablecap"><span class="table--title-label">Table 2. </span>Built-in functions and operators</span></caption><colgroup><col style="width:27.62622585756499%" /><col style="width:23.125347950837224%" /><col style="width:30.833797267782963%" /><col style="width:18.414628923814828%" /></colgroup><thead class="thead" style="text-align:left;">
+            <tr class="row">
+              <th class="entry nocellnorowborder" style="vertical-align:top;" id="d233567e291">Operator/Function Category</th>
+
+              <th class="entry nocellnorowborder" style="vertical-align:top;" id="d233567e294">VOLATILE Functions</th>
+
+              <th class="entry nocellnorowborder" style="vertical-align:top;" id="d233567e297">STABLE Functions</th>
+
+              <th class="entry cell-norowborder" style="vertical-align:top;" id="d233567e300">Restrictions</th>
+
+            </tr>
+
+          </thead>
+<tbody class="tbody">
+            <tr class="row">
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e291 ">
+                <a class="xref" href="https://www.postgresql.org/docs/9.4/functions-logical.html" target="_blank">Logical Operators</a>
+              </td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e294 "> </td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e297 "> </td>
+
+              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e300 "> </td>
+
+            </tr>
+
+            <tr class="row">
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e291 ">
+                <a class="xref" href="https://www.postgresql.org/docs/9.4/functions-comparison.html" target="_blank">Comparison Operators</a>
+              </td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e294 "> </td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e297 "> </td>
+
+              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e300 "> </td>
+
+            </tr>
+
+            <tr class="row">
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e291 ">
+                <a class="xref" href="https://www.postgresql.org/docs/9.4/functions-math.html" target="_blank">
+                  <span class="ph">Mathematical Functions and Operators</span>
+                </a>
+              </td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e294 ">random<p class="p">setseed</p>
+</td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e297 "> </td>
+
+              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e300 "> </td>
+
+            </tr>
+
+            <tr class="row">
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e291 ">
+                <a class="xref" href="https://www.postgresql.org/docs/9.4/functions-string.html" target="_blank">
+                  <span class="ph">String Functions and Operators</span>
+                </a>
+              </td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e294 ">
+                <em class="ph i">All built-in conversion functions</em>
+              </td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e297 ">convert<p class="p">pg_client_encoding</p>
+</td>
+
+              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e300 "> </td>
+
+            </tr>
+
+            <tr class="row">
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e291 ">
+                <a class="xref" href="https://www.postgresql.org/docs/9.4/functions-binarystring.html" target="_blank">
+                  <span class="ph">Binary String Functions and Operators</span>
+                </a>
+              </td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e294 "> </td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e297 "> </td>
+
+              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e300 "> </td>
+
+            </tr>
+
+            <tr class="row">
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e291 ">
+                <a class="xref" href="https://www.postgresql.org/docs/9.4/functions-bitstring.html" target="_blank">
+                  <span class="ph">Bit String Functions and Operators</span>
+                </a>
+              </td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e294 "> </td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e297 "> </td>
+
+              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e300 "> </td>
+
+            </tr>
+
+            <tr class="row">
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e291 ">
+                <a class="xref" href="https://www.postgresql.org/docs/9.4/functions-matching.html" target="_blank">
+                  <span class="ph">Pattern Matching</span>
+                </a>
+              </td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e294 "> </td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e297 "> </td>
+
+              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e300 "> </td>
+
+            </tr>
+
+            <tr class="row">
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e291 ">
+                <a class="xref" href="https://www.postgresql.org/docs/9.4/functions-formatting.html" target="_blank">
+                  <span class="ph">Data Type Formatting Functions</span>
+                </a>
+              </td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e294 "> </td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e297 ">to_char<p class="p">to_timestamp</p>
+</td>
+
+              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e300 "> </td>
+
+            </tr>
+
+            <tr class="row">
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e291 ">
+                <a class="xref" href="https://www.postgresql.org/docs/9.4/functions-datetime.html" target="_blank">
+                  <span class="ph">Date/Time Functions and Operators</span>
+                </a>
+              </td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e294 ">timeofday</td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e297 ">age<p class="p">current_date</p>
+<p class="p">current_time</p>
+<p class="p">current_timestamp</p>
+<p class="p">localtime</p>
+<p class="p">localtimestamp</p>
+<p class="p">now</p>
+</td>
+
+              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e300 "> </td>
+
+            </tr>
+
+            <tr class="row">
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e291 ">
+                <a class="xref" href="https://www.postgresql.org/docs/9.4/functions-enum.html" target="_blank"> Enum Support Functions </a>
+              </td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e294 "> </td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e297 "> </td>
+
+              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e300 "> </td>
+
+            </tr>
+
+            <tr class="row">
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e291 ">
+                <a class="xref" href="https://www.postgresql.org/docs/9.4/functions-geometry.html" target="_blank">
+                  <span class="ph">Geometric Functions and Operators</span>
+                </a>
+              </td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e294 "> </td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e297 "> </td>
+
+              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e300 "> </td>
+
+            </tr>
+
+            <tr class="row">
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e291 ">
+                <a class="xref" href="https://www.postgresql.org/docs/9.4/functions-net.html" target="_blank">
+                  <span class="ph">Network Address Functions and Operators</span>
+                </a>
+              </td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e294 "> </td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e297 "> </td>
+
+              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e300 "> </td>
+
+            </tr>
+
+            <tr class="row">
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e291 ">
+                <a class="xref" href="https://www.postgresql.org/docs/9.4/functions-sequence.html" target="_blank">
+                  <span class="ph">Sequence Manipulation Functions</span>
+                </a>
+              </td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e294 ">nextval()<p class="p">setval()</p>
+</td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e297 "> </td>
+
+              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e300 "> </td>
+
+            </tr>
+
+            <tr class="row">
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e291 ">
+                <a class="xref" href="https://www.postgresql.org/docs/9.4/functions-conditional.html" target="_blank">
+                  <span class="ph">Conditional Expressions</span>
+                </a>
+              </td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e294 "> </td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e297 "> </td>
+
+              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e300 "> </td>
+
+            </tr>
+
+            <tr class="row">
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e291 ">
+                <a class="xref" href="https://www.postgresql.org/docs/9.4/functions-array.html" target="_blank">
+                  <span class="ph">Array Functions and Operators</span>
+                </a>
+              </td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e294 "> </td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e297 ">
+                <em class="ph i">All array functions</em>
+              </td>
+
+              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e300 "> </td>
+
+            </tr>
+
+            <tr class="row">
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e291 ">
+                <a class="xref" href="https://www.postgresql.org/docs/9.4/functions-aggregate.html" target="_blank">
+                  <span class="ph">Aggregate Functions</span>
+                </a>
+              </td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e294 "> </td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e297 "> </td>
+
+              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e300 "> </td>
+
+            </tr>
+
+            <tr class="row">
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e291 ">
+                <a class="xref" href="https://www.postgresql.org/docs/9.4/functions-subquery.html" target="_blank">
+                  <span class="ph">Subquery Expressions</span>
+                </a>
+              </td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e294 "> </td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e297 "> </td>
+
+              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e300 "> </td>
+
+            </tr>
+
+            <tr class="row">
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e291 ">
+                <a class="xref" href="https://www.postgresql.org/docs/9.4/functions-comparisons.html" target="_blank">
+                  <span class="ph">Row and Array Comparisons</span>
+                </a>
+              </td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e294 "> </td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e297 "> </td>
+
+              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e300 "> </td>
+
+            </tr>
+
+            <tr class="row">
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e291 ">
+                <a class="xref" href="https://www.postgresql.org/docs/9.4/functions-srf.html" target="_blank">
+                  <span class="ph">Set Returning Functions</span>
+                </a>
+              </td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e294 ">generate_series</td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e297 "> </td>
+
+              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e300 "> </td>
+
+            </tr>
+
+            <tr class="row">
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e291 ">
+                <a class="xref" href="https://www.postgresql.org/docs/9.4/functions-info.html" target="_blank">
+                  <span class="ph">System Information Functions</span>
+                </a>
+              </td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e294 "> </td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e297 ">
+                <em class="ph i">All session information functions</em>
+                <p class="p">
+                  <em class="ph i">All access privilege inquiry functions</em>
+                </p>
+<p class="p">
+                  <em class="ph i">All schema visibility inquiry functions</em>
+                </p>
+<p class="p">
+                  <em class="ph i">All system catalog information functions</em>
+                </p>
+<p class="p">
+                  <em class="ph i">All comment information functions</em>
+                </p>
+<p class="p">
+                  <em class="ph i">All transaction ids and snapshots</em>
+                </p>
+</td>
+
+              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e300 "> </td>
+
+            </tr>
+
+            <tr class="row">
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e291 ">
+                <a class="xref" href="https://www.postgresql.org/docs/9.4/functions-admin.html" target="_blank">
+                  <span class="ph">System Administration Functions</span>
+                </a>
+              </td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e294 ">set_config<p class="p">pg_cancel_backend</p>
+<p class="p">pg_reload_conf</p>
+<p class="p">pg_rotate_logfile</p>
+<p class="p">pg_start_backup</p>
+<p class="p">pg_stop_backup</p>
+<p class="p">pg_size_pretty</p>
+<p class="p">pg_ls_dir</p>
+<p class="p">pg_read_file</p>
+<p class="p">pg_stat_file</p>
+</td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e297 ">current_setting<p class="p"><em class="ph i">All database object size
+                functions</em></p>
+</td>
+
+              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e300 "><strong class="ph b">Note:</strong> The function <code class="ph codeph">pg_column_size</code>
+                displays bytes required to store the value, possibly with TOAST compression.</td>
+
+            </tr>
+
+            <tr class="row">
+              <td class="entry row-nocellborder" style="vertical-align:top;" headers="d233567e291 ">
+                <a class="xref" href="https://www.postgresql.org/docs/9.4/functions-xml.html" target="_blank">XML Functions</a> and function-like expressions </td>
+
+              <td class="entry row-nocellborder" style="vertical-align:top;" headers="d233567e294 "> </td>
+
+              <td class="entry row-nocellborder" style="vertical-align:top;" headers="d233567e297 ">
+                <p class="p">cursor_to_xml(cursor refcursor, count int, nulls boolean, tableforest boolean,
+                  targetns text)</p>
+
+                <p class="p">cursor_to_xmlschema(cursor refcursor, nulls boolean, tableforest boolean,
+                  targetns text)</p>
+
+                <p class="p">database_to_xml(nulls boolean, tableforest boolean, targetns text)</p>
+
+                <p class="p">database_to_xmlschema(nulls boolean, tableforest boolean, targetns text)</p>
+
+                <p class="p">database_to_xml_and_xmlschema(nulls boolean, tableforest boolean, targetns
+                  text)</p>
+
+                <p class="p">query_to_xml(query text, nulls boolean, tableforest boolean, targetns text)</p>
+
+                <p class="p">query_to_xmlschema(query text, nulls boolean, tableforest boolean, targetns
+                  text)</p>
+
+                <p class="p">query_to_xml_and_xmlschema(query text, nulls boolean, tableforest boolean,
+                  targetns text)</p>
+
+                <p class="p">schema_to_xml(schema name, nulls boolean, tableforest boolean, targetns text)</p>
+
+                <p class="p">schema_to_xmlschema(schema name, nulls boolean, tableforest boolean, targetns
+                  text)</p>
+
+                <p class="p">schema_to_xml_and_xmlschema(schema name, nulls boolean, tableforest boolean,
+                  targetns text)</p>
+
+                <p class="p">table_to_xml(tbl regclass, nulls boolean, tableforest boolean, targetns text)</p>
+
+                <p class="p">table_to_xmlschema(tbl regclass, nulls boolean, tableforest boolean, targetns
+                  text)</p>
+
+                <p class="p">table_to_xml_and_xmlschema(tbl regclass, nulls boolean, tableforest boolean,
+                  targetns text)</p>
+
+                <p class="p">xmlagg(xml)</p>
+
+                <p class="p">xmlconcat(xml[, ...])</p>
+
+                <p class="p">xmlelement(name name [, xmlattributes(value [AS attname] [, ... ])] [, content,
+                  ...])</p>
+
+                <p class="p">xmlexists(text, xml)</p>
+
+                <p class="p">xmlforest(content [AS name] [, ...])</p>
+
+                <p class="p">xml_is_well_formed(text)</p>
+
+                <p class="p">xml_is_well_formed_document(text)</p>
+
+                <p class="p">xml_is_well_formed_content(text)</p>
+
+                <p class="p">xmlparse ( { DOCUMENT | CONTENT } value)</p>
+
+                <p class="p">xpath(text, xml)</p>
+
+                <p class="p">xpath(text, xml, text[])</p>
+
+                <p class="p">xpath_exists(text, xml)</p>
+
+                <p class="p">xpath_exists(text, xml, text[])</p>
+
+                <p class="p">xmlpi(name target [, content])</p>
+
+                <p class="p">xmlroot(xml, version text | no value [, standalone yes|no|no value])</p>
+
+                <p class="p">xmlserialize ( { DOCUMENT | CONTENT } value AS type )</p>
+
+                <p class="p">xml(text)</p>
+
+                <p class="p">text(xml)</p>
+
+                <p class="p">xmlcomment(xml)</p>
+
+                <p class="p">xmlconcat2(xml, xml)</p>
+
+              </td>
+
+              <td class="entry cellrowborder" style="vertical-align:top;" headers="d233567e300 "> </td>
+
+            </tr>
+
+          </tbody>
+</table>
+</div>
+
+    </div>
+
+  </div>
+
+  <div class="topic nested1" aria-labelledby="ariaid-title4" id="topic_gn4_x3w_mq">
+    <h2 class="title topictitle2" id="ariaid-title4">JSON Functions and Operators</h2>
+
+    <div class="body">
+      <div class="p">Greenplum Database includes built-in functions and operators that create and manipulate
+        JSON data.<ul class="ul" id="topic_gn4_x3w_mq__ul_ypx_f4w_2z">
+          <li class="li"><a class="xref" href="#topic_o5y_14w_2z">JSON Operators</a></li>
+
+          <li class="li"><a class="xref" href="#topic_u4s_wnw_2z">JSON Creation Functions</a></li>
+
+          <li class="li"><a class="xref" href="#topic_rvp_lk3_sfb">JSON Aggregate Functions</a></li>
+
+          <li class="li"><a class="xref" href="#topic_z5d_snw_2z">JSON Processing Functions</a></li>
+
+        </ul>
+</div>
+
+      <div class="note"><span class="notetitle">Note:</span> For <code class="ph codeph">json</code> data type values, all key/value pairs are kept even if a JSON
+        object contains duplicate keys. For duplicate keys, JSON processing functions consider the
+        last value as the operative one. For the <code class="ph codeph">jsonb</code> data type, duplicate object
+        keys are not kept. If the input includes duplicate keys, only the last value is kept. See
+          <a class="xref" href="../admin_guide/query/topics/json-data.html#topic_upc_tcs_fz" target="_blank">About JSON Data</a><span class="ph"> in the <cite class="cite">Greenplum Database Administrator
+        Guide</cite></span>.</div>
+
+    </div>
+
+    <div class="topic nested2" aria-labelledby="ariaid-title5" id="topic_o5y_14w_2z">
+      <h3 class="title topictitle3" id="ariaid-title5">JSON Operators</h3>
+
+      <div class="body">
+        <p class="p">This table describes the operators that are available for use with the
+            <code class="ph codeph">json</code> and <code class="ph codeph">jsonb</code> data types.</p>
+
+        
+<div class="tablenoborder"><table cellpadding="4" cellspacing="0" summary="" id="topic_o5y_14w_2z__table_e41_y3w_mq" class="table" frame="border" border="1" rules="all"><caption><span class="tablecap"><span class="table--title-label">Table 3. </span><var class="keyword varname">json</var> and <code class="ph codeph">jsonb</code> Operators</span></caption><colgroup><col style="width:10.351966873706003%" /><col style="width:12.111801242236025%" /><col style="width:28.88198757763975%" /><col style="width:28.778467908902687%" /><col style="width:19.875776397515526%" /></colgroup><thead class="thead" style="text-align:left;">
+              <tr class="row">
+                <th class="entry nocellnorowborder" style="vertical-align:top;" id="d233567e1017">Operator</th>
+
+                <th class="entry nocellnorowborder" style="vertical-align:top;" id="d233567e1020">Right Operand Type</th>
+
+                <th class="entry nocellnorowborder" style="vertical-align:top;" id="d233567e1023">Description</th>
+
+                <th class="entry nocellnorowborder" style="vertical-align:top;" id="d233567e1026">Example</th>
+
+                <th class="entry cell-norowborder" style="vertical-align:top;" id="d233567e1029">Example Result</th>
+
+              </tr>
+
+            </thead>
+<tbody class="tbody">
+              <tr class="row">
+                <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e1017 ">
+                  <code class="ph codeph">-&gt;</code>
+                </td>
+
+                <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e1020 ">
+                  <code class="ph codeph">int</code>
+                </td>
+
+                <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e1023 ">Get the JSON array element (indexed from zero).</td>
+
+                <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e1026 ">
+                  <code class="ph codeph">'[{"a":"foo"},{"b":"bar"},{"c":"baz"}]'::json-&gt;2</code>
+                </td>
+
+                <td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e1029 ">
+                  <code class="ph codeph">{"c":"baz"}</code>
+                </td>
+
+              </tr>
+
+              <tr class="row">
+                <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e1017 ">
+                  <code class="ph codeph">-&gt;</code>
+                </td>
+
+                <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e1020 ">
+                  <code class="ph codeph">text</code>
+                </td>
+
+                <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e1023 ">Get the JSON object field by key.</td>
+
+                <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e1026 ">
+                  <code class="ph codeph">'{"a": {"b":"foo"}}'::json-&gt;'a'</code>
+                </td>
+
+                <td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e1029 ">
+                  <code class="ph codeph">{"b":"foo"}</code>
+                </td>
+
+              </tr>
+
+              <tr class="row">
+                <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e1017 ">
+                  <code class="ph codeph">-&gt;&gt;</code>
+                </td>
+
+                <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e1020 ">
+                  <code class="ph codeph">int</code>
+                </td>
+
+                <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e1023 ">Get the JSON array element as <code class="ph codeph">text</code>.</td>
+
+                <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e1026 ">
+                  <code class="ph codeph">'[1,2,3]'::json-&gt;&gt;2</code>
+                </td>
+
+                <td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e1029 ">
+                  <code class="ph codeph">3</code>
+                </td>
+
+              </tr>
+
+              <tr class="row">
+                <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e1017 ">
+                  <code class="ph codeph">-&gt;&gt;</code>
+                </td>
+
+                <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e1020 ">
+                  <code class="ph codeph">text</code>
+                </td>
+
+                <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e1023 ">Get the JSON object field as <code class="ph codeph">text</code>.</td>
+
+                <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e1026 ">
+                  <code class="ph codeph">'{"a":1,"b":2}'::json-&gt;&gt;'b'</code>
+                </td>
+
+                <td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e1029 ">
+                  <code class="ph codeph">2</code>
+                </td>
+
+              </tr>
+
+              <tr class="row">
+                <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e1017 ">
+                  <code class="ph codeph">#&gt;</code>
+                </td>
+
+                <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e1020 ">
+                  <code class="ph codeph">text[]</code>
+                </td>
+
+                <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e1023 ">Get the JSON object at specified path.</td>
+
+                <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e1026 "><code class="ph codeph">'{"a": {"b":{"c": "foo"}}}'::json#&gt;'{a,b}</code>'</td>
+
+                <td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e1029 ">
+                  <code class="ph codeph">{"c": "foo"}</code>
+                </td>
+
+              </tr>
+
+              <tr class="row">
+                <td class="entry row-nocellborder" style="vertical-align:top;" headers="d233567e1017 ">
+                  <code class="ph codeph">#&gt;&gt;</code>
+                </td>
+
+                <td class="entry row-nocellborder" style="vertical-align:top;" headers="d233567e1020 ">
+                  <code class="ph codeph">text[]</code>
+                </td>
+
+                <td class="entry row-nocellborder" style="vertical-align:top;" headers="d233567e1023 ">Get the JSON object at specified path as <code class="ph codeph">text</code>.</td>
+
+                <td class="entry row-nocellborder" style="vertical-align:top;" headers="d233567e1026 ">
+                  <code class="ph codeph">'{"a":[1,2,3],"b":[4,5,6]}'::json#&gt;&gt;'{a,2}'</code>
+                </td>
+
+                <td class="entry cellrowborder" style="vertical-align:top;" headers="d233567e1029 ">
+                  <code class="ph codeph">3</code>
+                </td>
+
+              </tr>
+
+            </tbody>
+</table>
+</div>
+
+        <div class="note"><span class="notetitle">Note:</span> There are parallel variants of these operators for both the <code class="ph codeph">json</code> and
+            <code class="ph codeph">jsonb</code> data types. The field, element, and path extraction operators
+          return the same data type as their left-hand input (either <code class="ph codeph">json</code> or
+            <code class="ph codeph">jsonb</code>), except for those specified as returning <code class="ph codeph">text</code>,
+          which coerce the value to <code class="ph codeph">text</code>. The field, element, and path extraction
+          operators return <code class="ph codeph">NULL</code>, rather than failing, if the JSON input does not
+          have the right structure to match the request; for example if no such element
+          exists.</div>
+
+        <p class="p">Operators that require the <code class="ph codeph">jsonb</code> data type as the left operand are
+          described in the following table. Many of these operators can be indexed by
+            <code class="ph codeph">jsonb</code> operator classes. For a full description of
+            <code class="ph codeph">jsonb</code> containment and existence semantics, see <a class="xref" href="../admin_guide/query/topics/json-data.html#topic_isx_2tw_mq" target="_blank">jsonb Containment and Existence</a><span class="ph"> in the <cite class="cite">Greenplum Database Administrator Guide</cite></span>.
+          For information about how these operators can be used to effectively index
+            <code class="ph codeph">jsonb</code> data, see <a class="xref" href="../admin_guide/query/topics/json-data.html#topic_aqt_1tw_mq" target="_blank">jsonb Indexing</a><span class="ph"> in the <cite class="cite">Greenplum Database Administrator
+          Guide</cite></span>.</p>
+
+        
+<div class="tablenoborder"><table cellpadding="4" cellspacing="0" summary="" id="topic_o5y_14w_2z__table_dcb_y3w_mq" class="table" frame="border" border="1" rules="all"><caption><span class="tablecap"><span class="table--title-label">Table 4. </span><code class="ph codeph">jsonb</code> Operators</span></caption><colgroup><col style="width:9.970089730807578%" /><col style="width:19.3419740777667%" /><col style="width:45.76271186440678%" /><col style="width:24.925224327018945%" /></colgroup><thead class="thead" style="text-align:left;">
+              <tr class="row">
+                <th class="entry nocellnorowborder" style="vertical-align:top;" id="d233567e1306">Operator</th>
+
+                <th class="entry nocellnorowborder" style="vertical-align:top;" id="d233567e1309">Right Operand Type</th>
+
+                <th class="entry nocellnorowborder" style="vertical-align:top;" id="d233567e1312">Description</th>
+
+                <th class="entry cell-norowborder" style="vertical-align:top;" id="d233567e1315">Example</th>
+
+              </tr>
+
+            </thead>
+<tbody class="tbody">
+              <tr class="row">
+                <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e1306 ">
+                  <code class="ph codeph">@&gt;</code>
+                </td>
+
+                <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e1309 ">
+                  <code class="ph codeph">jsonb</code>
+                </td>
+
+                <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e1312 ">Does the left JSON value contain within it the right value?</td>
+
+                <td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e1315 ">
+                  <code class="ph codeph">'{"a":1, "b":2}'::jsonb @&gt; '{"b":2}'::jsonb</code>
+                </td>
+
+              </tr>
+
+              <tr class="row">
+                <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e1306 ">
+                  <code class="ph codeph">&lt;@</code>
+                </td>
+
+                <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e1309 ">
+                  <code class="ph codeph">jsonb</code>
+                </td>
+
+                <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e1312 ">Is the left JSON value contained within the right value?</td>
+
+                <td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e1315 ">
+                  <code class="ph codeph">'{"b":2}'::jsonb &lt;@ '{"a":1, "b":2}'::jsonb</code>
+                </td>
+
+              </tr>
+
+              <tr class="row">
+                <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e1306 ">
+                  <code class="ph codeph">?</code>
+                </td>
+
+                <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e1309 ">
+                  <code class="ph codeph">text</code>
+                </td>
+
+                <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e1312 ">Does the key/element string exist within the JSON value?</td>
+
+                <td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e1315 ">
+                  <code class="ph codeph">'{"a":1, "b":2}'::jsonb ? 'b'</code>
+                </td>
+
+              </tr>
+
+              <tr class="row">
+                <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e1306 ">
+                  <code class="ph codeph">?|</code>
+                </td>
+
+                <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e1309 ">
+                  <code class="ph codeph">text[]</code>
+                </td>
+
+                <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e1312 ">Do any of these key/element strings exist?</td>
+
+                <td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e1315 ">
+                  <code class="ph codeph">'{"a":1, "b":2, "c":3}'::jsonb ?| array['b', 'c']</code>
+                </td>
+
+              </tr>
+
+              <tr class="row">
+                <td class="entry row-nocellborder" style="vertical-align:top;" headers="d233567e1306 ">
+                  <code class="ph codeph">?&amp;</code>
+                </td>
+
+                <td class="entry row-nocellborder" style="vertical-align:top;" headers="d233567e1309 ">
+                  <code class="ph codeph">text[]</code>
+                </td>
+
+                <td class="entry row-nocellborder" style="vertical-align:top;" headers="d233567e1312 ">Do all of these key/element strings exist?</td>
+
+                <td class="entry cellrowborder" style="vertical-align:top;" headers="d233567e1315 ">
+                  <code class="ph codeph">'["a", "b"]'::jsonb ?&amp; array['a', 'b']</code>
+                </td>
+
+              </tr>
+
+            </tbody>
+</table>
+</div>
+
+        <p class="p">The standard comparison operators in the following table are available only for the
+            <code class="ph codeph">jsonb</code> data type, not for the <code class="ph codeph">json</code> data type. They
+          follow the ordering rules for B-tree operations described in <a class="xref" href="../admin_guide/query/topics/json-data.html#topic_aqt_1tw_mq" target="_blank">jsonb Indexing</a><span class="ph"> in the <cite class="cite">Greenplum Database Administrator
+          Guide</cite></span>.</p>
+
+        
+<div class="tablenoborder"><table cellpadding="4" cellspacing="0" summary="" id="topic_o5y_14w_2z__table_j4w_z5n_vq" class="table" frame="border" border="1" rules="all"><caption><span class="tablecap"><span class="table--title-label">Table 5. </span><code class="ph codeph">jsonb</code> Comparison Operators</span></caption><colgroup><col /><col /></colgroup><thead class="thead" style="text-align:left;">
+              <tr class="row">
+                <th class="entry nocellnorowborder" style="vertical-align:top;" id="d233567e1481">Operator</th>
+
+                <th class="entry cell-norowborder" style="vertical-align:top;" id="d233567e1484">Description</th>
+
+              </tr>
+
+            </thead>
+<tbody class="tbody">
+              <tr class="row">
+                <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e1481 ">
+                  <code class="ph codeph">&lt;</code>
+                </td>
+
+                <td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e1484 ">less than</td>
+
+              </tr>
+
+              <tr class="row">
+                <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e1481 ">
+                  <code class="ph codeph">&gt;</code>
+                </td>
+
+                <td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e1484 ">greater than</td>
+
+              </tr>
+
+              <tr class="row">
+                <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e1481 ">
+                  <code class="ph codeph">&lt;=</code>
+                </td>
+
+                <td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e1484 ">less than or equal to</td>
+
+              </tr>
+
+              <tr class="row">
+                <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e1481 ">
+                  <code class="ph codeph">&gt;=</code>
+                </td>
+
+                <td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e1484 ">greater than or equal to</td>
+
+              </tr>
+
+              <tr class="row">
+                <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e1481 ">
+                  <code class="ph codeph">=</code>
+                </td>
+
+                <td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e1484 ">equal</td>
+
+              </tr>
+
+              <tr class="row">
+                <td class="entry row-nocellborder" style="vertical-align:top;" headers="d233567e1481 "><code class="ph codeph">&lt;&gt;</code> or <code class="ph codeph">!=</code></td>
+
+                <td class="entry cellrowborder" style="vertical-align:top;" headers="d233567e1484 ">not equal</td>
+
+              </tr>
+
+            </tbody>
+</table>
+</div>
+
+        <div class="note"><span class="notetitle">Note:</span> The <code class="ph codeph">!=</code> operator is converted to <code class="ph codeph">&lt;&gt;</code> in the parser
+          stage. It is not possible to implement <code class="ph codeph">!=</code> and <code class="ph codeph">&lt;&gt;</code>
+          operators that do different things.</div>
+
+      </div>
+
+    </div>
+
+    <div class="topic nested2" aria-labelledby="ariaid-title6" id="topic_u4s_wnw_2z">
+      <h3 class="title topictitle3" id="ariaid-title6">JSON Creation Functions</h3>
+
+      <div class="body">
+        <p class="p">This table describes the functions that create <code class="ph codeph">json</code> data type values.
+          (Currently, there are no equivalent functions for <code class="ph codeph">jsonb</code>, but you can cast
+          the result of one of these functions to <code class="ph codeph">jsonb</code>.)</p>
+
+        
+<div class="tablenoborder"><table cellpadding="4" cellspacing="0" summary="" id="topic_u4s_wnw_2z__table_sqb_y3w_mb" class="table" frame="border" border="1" rules="all"><caption><span class="tablecap"><span class="table--title-label">Table 6. </span>JSON Creation Functions </span></caption><colgroup><col /><col /><col /><col /></colgroup><thead class="thead" style="text-align:left;">
+              <tr class="row">
+                <th class="entry nocellnorowborder" style="vertical-align:top;" id="d233567e1623">Function</th>
+
+                <th class="entry nocellnorowborder" style="vertical-align:top;" id="d233567e1626">Description</th>
+
+                <th class="entry nocellnorowborder" style="vertical-align:top;" id="d233567e1629">Example</th>
+
+                <th class="entry cell-norowborder" style="vertical-align:top;" id="d233567e1632">Example Result</th>
+
+              </tr>
+
+            </thead>
+<tbody class="tbody">
+              <tr class="row">
+                <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e1623 ">
+                  <code class="ph codeph">to_json(anyelement)</code>
+                </td>
+
+                <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e1626 ">Returns the value as a JSON object. Arrays and composites are processed
+                  recursively and are converted to arrays and objects. If the input contains a cast
+                  from the type to <code class="ph codeph">json</code>, the cast function is used to perform the
+                  conversion; otherwise, a JSON scalar value is produced. For any scalar type other
+                  than a number, a Boolean, or a null value, the text representation will be used,
+                  properly quoted and escaped so that it is a valid JSON string.</td>
+
+                <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e1629 ">
+                  <code class="ph codeph">to_json('Fred said "Hi."'::text)</code>
+                </td>
+
+                <td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e1632 ">
+                  <code class="ph codeph">"Fred said \"Hi.\""</code>
+                </td>
+
+              </tr>
+
+              <tr class="row">
+                <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e1623 ">
+                  <code class="ph codeph">array_to_json(anyarray [, pretty_bool])</code>
+                </td>
+
+                <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e1626 ">Returns the array as a JSON array. A multidimensional array becomes a JSON
+                  array of arrays. <p class="p">Line feeds will be added between dimension-1 elements if
+                      <code class="ph codeph">pretty_bool</code> is true.</p>
+</td>
+
+                <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e1629 ">
+                  <code class="ph codeph">array_to_json('{{1,5},{99,100}}'::int[])</code>
+                </td>
+
+                <td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e1632 ">
+                  <code class="ph codeph">[[1,5],[99,100]]</code>
+                </td>
+
+              </tr>
+
+              <tr class="row">
+                <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e1623 ">
+                  <code class="ph codeph">row_to_json(record [, pretty_bool])</code>
+                </td>
+
+                <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e1626 ">Returns the row as a JSON object. <p class="p">Line feeds will be added between level-1
+                    elements if <code class="ph codeph">pretty_bool</code> is true.</p>
+</td>
+
+                <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e1629 ">
+                  <code class="ph codeph">row_to_json(row(1,'foo'))</code>
+                </td>
+
+                <td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e1632 ">
+                  <code class="ph codeph">{"f1":1,"f2":"foo"}</code>
+                </td>
+
+              </tr>
+
+              <tr class="row">
+                <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e1623 "><code class="ph codeph">json_build_array(VARIADIC "any"</code>)</td>
+
+                <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e1626 ">Builds a possibly-heterogeneously-typed JSON array out of a
+                    <code class="ph codeph">VARIADIC</code> argument list.</td>
+
+                <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e1629 ">
+                  <code class="ph codeph">json_build_array(1,2,'3',4,5)</code>
+                </td>
+
+                <td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e1632 ">
+                  <code class="ph codeph">[1, 2, "3", 4, 5]</code>
+                </td>
+
+              </tr>
+
+              <tr class="row">
+                <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e1623 ">
+                  <code class="ph codeph">json_build_object(VARIADIC "any")</code>
+                </td>
+
+                <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e1626 ">Builds a JSON object out of a <code class="ph codeph">VARIADIC</code> argument list. The
+                  argument list is taken in order and converted to a set of key/value pairs.</td>
+
+                <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e1629 ">
+                  <code class="ph codeph">json_build_object('foo',1,'bar',2)</code>
+                </td>
+
+                <td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e1632 ">
+                  <code class="ph codeph">{"foo": 1, "bar": 2}</code>
+                </td>
+
+              </tr>
+
+              <tr class="row">
+                <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e1623 ">
+                  <code class="ph codeph">json_object(text[])</code>
+                </td>
+
+                <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e1626 ">Builds a JSON object out of a text array. The array must be either a one or a
+                  two dimensional array.<p class="p">The one dimensional array must have an even number of
+                    elements. The elements are taken as key/value pairs. </p>
+<p class="p">For a two
+                    dimensional array, each inner array must have exactly two elements, which are
+                    taken as a key/value pair.</p>
+</td>
+
+                <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e1629 ">
+                  <p class="p">
+                    <code class="ph codeph">json_object('{a, 1, b, "def", c, 3.5}')</code>
+                  </p>
+
+                  <p class="p">
+                    <code class="ph codeph">json_object('{{a, 1},{b, "def"},{c, 3.5}}')</code>
+                  </p>
+
+                </td>
+
+                <td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e1632 ">
+                  <code class="ph codeph">{"a": "1", "b": "def", "c": "3.5"}</code>
+                </td>
+
+              </tr>
+
+              <tr class="row">
+                <td class="entry row-nocellborder" style="vertical-align:top;" headers="d233567e1623 ">
+                  <code class="ph codeph">json_object(keys text[], values text[])</code>
+                </td>
+
+                <td class="entry row-nocellborder" style="vertical-align:top;" headers="d233567e1626 ">Builds a JSON object out of a text array. This form of
+                    <code class="ph codeph">json_object</code> takes keys and values pairwise from two separate
+                  arrays. In all other respects it is identical to the one-argument form.</td>
+
+                <td class="entry row-nocellborder" style="vertical-align:top;" headers="d233567e1629 ">
+                  <code class="ph codeph">json_object('{a, b}', '{1,2}')</code>
+                </td>
+
+                <td class="entry cellrowborder" style="vertical-align:top;" headers="d233567e1632 ">
+                  <code class="ph codeph">{"a": "1", "b": "2"}</code>
+                </td>
+
+              </tr>
+
+            </tbody>
+</table>
+</div>
+
+        <div class="note"><span class="notetitle">Note:</span> <code class="ph codeph">array_to_json</code> and <code class="ph codeph">row_to_json</code> have the same behavior
+          as <code class="ph codeph">to_json</code> except for offering a pretty-printing option. The behavior
+          described for <code class="ph codeph">to_json</code> likewise applies to each individual value converted
+          by the other JSON creation functions.</div>
+
+        <div class="note"><span class="notetitle">Note:</span> The <a class="xref" href="modules/hstore.html">hstore</a> extension has a cast from
+            <code class="ph codeph">hstore</code> to <code class="ph codeph">json</code>, so that <code class="ph codeph">hstore</code> values
+          converted via the JSON creation functions will be represented as JSON objects, not as
+          primitive string values.</div>
+
+      </div>
+
+    </div>
+
+    <div class="topic nested2" aria-labelledby="ariaid-title7" id="topic_rvp_lk3_sfb">
+      <h3 class="title topictitle3" id="ariaid-title7">JSON Aggregate Functions</h3>
+
+      <div class="body">
+        <p class="p">This table shows the functions aggregate records to an array of JSON objects and pairs of
+          values to a JSON object </p>
+
+        
+<div class="tablenoborder"><table cellpadding="4" cellspacing="0" summary="" id="topic_rvp_lk3_sfb__table_kkr_mk3_sfb" class="table" frame="border" border="1" rules="all"><caption><span class="tablecap"><span class="table--title-label">Table 7. </span>JSON Aggregate Functions</span></caption><colgroup><col /><col /><col /><col /></colgroup><thead class="thead" style="text-align:left;">
+              <tr class="row">
+                <th class="entry nocellnorowborder" style="vertical-align:top;" id="d233567e1907">Function</th>
+
+                <th class="entry nocellnorowborder" style="vertical-align:top;" id="d233567e1910">Argument Types</th>
+
+                <th class="entry nocellnorowborder" style="vertical-align:top;" id="d233567e1913">Return Type</th>
+
+                <th class="entry cell-norowborder" style="vertical-align:top;" id="d233567e1916">Description</th>
+
+              </tr>
+
+            </thead>
+<tbody class="tbody">
+              <tr class="row">
+                <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e1907 ">
+                  <code class="ph codeph">json_agg(record)</code>
+                </td>
+
+                <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e1910 ">
+                  <code class="ph codeph">record</code>
+                </td>
+
+                <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e1913 ">
+                  <code class="ph codeph">json</code>
+                </td>
+
+                <td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e1916 ">Aggregates records as a JSON array of objects.</td>
+
+              </tr>
+
+              <tr class="row">
+                <td class="entry row-nocellborder" style="vertical-align:top;" headers="d233567e1907 ">
+                  <code class="ph codeph">json_object_agg(name, value)</code>
+                </td>
+
+                <td class="entry row-nocellborder" style="vertical-align:top;" headers="d233567e1910 ">
+                  <code class="ph codeph">("any", "any")</code>
+                </td>
+
+                <td class="entry row-nocellborder" style="vertical-align:top;" headers="d233567e1913 ">
+                  <code class="ph codeph">json</code>
+                </td>
+
+                <td class="entry cellrowborder" style="vertical-align:top;" headers="d233567e1916 ">Aggregates name/value pairs as a JSON object.</td>
+
+              </tr>
+
+            </tbody>
+</table>
+</div>
+
+      </div>
+
+    </div>
+
+    <div class="topic nested2" aria-labelledby="ariaid-title8" id="topic_z5d_snw_2z">
+      <h3 class="title topictitle3" id="ariaid-title8">JSON Processing Functions</h3>
+
+      <div class="body">
+        <p class="p">This table shows the functions that are available for processing <code class="ph codeph">json</code>
+          and <code class="ph codeph">jsonb</code> values.</p>
+
+        <p class="p">Many of these processing functions and operators convert Unicode escapes in JSON strings
+          to the appropriate single character. This is a not an issue if the input data type is
+            <code class="ph codeph">jsonb</code>, because the conversion was already done. However, for
+            <code class="ph codeph">json</code> data type input, this might result in an error being thrown. See
+            <a class="xref" href="../admin_guide/query/topics/json-data.html#topic_upc_tcs_fz" target="_blank">About JSON Data</a><span class="ph"> in the <cite class="cite">Greenplum Database Administrator
+          Guide</cite></span>.</p>
+
+        
+<div class="tablenoborder"><table cellpadding="4" cellspacing="0" summary="" id="topic_z5d_snw_2z__table_wfc_y3w_mb" class="table" frame="border" border="1" rules="all"><caption><span class="tablecap"><span class="table--title-label">Table 8. </span>JSON Processing Functions</span></caption><colgroup><col style="width:20.224719101123597%" /><col style="width:18.726591760299627%" /><col style="width:18.913857677902623%" /><col style="width:23.220973782771537%" /><col style="width:18.913857677902623%" /></colgroup><thead class="thead" style="text-align:left;">
+              <tr class="row">
+                <th class="entry nocellnorowborder" style="vertical-align:top;" id="d233567e2033">Function</th>
+
+                <th class="entry nocellnorowborder" style="vertical-align:top;" id="d233567e2036">Return Type</th>
+
+                <th class="entry nocellnorowborder" style="vertical-align:top;" id="d233567e2039">Description</th>
+
+                <th class="entry nocellnorowborder" style="vertical-align:top;" id="d233567e2042">Example</th>
+
+                <th class="entry cell-norowborder" style="vertical-align:top;" id="d233567e2045">Example Result</th>
+
+              </tr>
+
+            </thead>
+<tbody class="tbody">
+              <tr class="row">
+                <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2033 ">
+                  <code class="ph codeph">json_array_length(json)</code>
+                  <p class="p">
+                    <code class="ph codeph">jsonb_array_length(jsonb)</code>
+                  </p>
+</td>
+
+                <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2036 "><code class="ph codeph">int</code>
+                </td>
+
+                <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2039 ">Returns the number of elements in the outermost JSON array.</td>
+
+                <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2042 "><code class="ph codeph">json_array_length('[1,2,3,{"f1":1,"f2":[5,6]},4]')</code>
+                </td>
+
+                <td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e2045 ">
+                  <code class="ph codeph">5</code>
+                </td>
+
+              </tr>
+
+              <tr class="row">
+                <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2033 "><code class="ph codeph">json_each(json)</code>
+                  <p class="p"><code class="ph codeph">jsonb_each(jsonb)</code>
+                  </p>
+</td>
+
+                <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2036 "><code class="ph codeph">setof key text, value json</code>
+                  <p class="p"><code class="ph codeph">setof key text, value jsonb</code>
+                  </p>
+
+                </td>
+
+                <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2039 ">Expands the outermost JSON object into a set of key/value pairs.</td>
+
+                <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2042 "><code class="ph codeph">select * from json_each('{"a":"foo", "b":"bar"}')</code>
+                </td>
+
+                <td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e2045 ">
+                  <pre class="pre"> key | value
+-----+-------
+ a   | "foo"
+ b   | "bar"
+</pre>
+
+                </td>
+
+              </tr>
+
+              <tr class="row">
+                <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2033 "><code class="ph codeph">json_each_text(json)</code>
+                  <p class="p"><code class="ph codeph">jsonb_each_text(jsonb)</code>
+                  </p>
+
+                </td>
+
+                <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2036 "><code class="ph codeph">setof key text, value text</code>
+                </td>
+
+                <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2039 ">Expands the outermost JSON object into a set of key/value pairs. The returned
+                  values will be of type <code class="ph codeph">text</code>.</td>
+
+                <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2042 "><code class="ph codeph">select * from json_each_text('{"a":"foo", "b":"bar"}')</code>
+                </td>
+
+                <td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e2045 ">
+                  <pre class="pre"> key | value
+-----+-------
+ a   | foo
+ b   | bar
+</pre>
+
+                </td>
+
+              </tr>
+
+              <tr class="row">
+                <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2033 "><code class="ph codeph">json_extract_path(from_json json, VARIADIC path_elems
+                    text[])</code>
+                  <p class="p"><code class="ph codeph">jsonb_extract_path(from_json jsonb, VARIADIC path_elems
+                      text[])</code>
+                  </p>
+</td>
+
+                <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2036 ">
+                  <p class="p"><code class="ph codeph">json</code>
+                  </p>
+
+                  <p class="p"><code class="ph codeph">jsonb</code>
+                  </p>
+
+                </td>
+
+                <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2039 ">Returns the JSON value pointed to by <code class="ph codeph">path_elems</code> (equivalent
+                  to <code class="ph codeph">#&gt;</code> operator).</td>
+
+                <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2042 "><code class="ph codeph">json_extract_path('{"f2":{"f3":1},"f4":{"f5":99,"f6":"foo"}}','f4')</code>
+                </td>
+
+                <td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e2045 ">
+                  <code class="ph codeph">{"f5":99,"f6":"foo"}</code>
+                </td>
+
+              </tr>
+
+              <tr class="row">
+                <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2033 "><code class="ph codeph">json_extract_path_text(from_json json, VARIADIC path_elems
+                    text[])</code>
+                  <p class="p"><code class="ph codeph">jsonb_extract_path_text(from_json jsonb, VARIADIC path_elems
+                      text[])</code>
+                  </p>
+</td>
+
+                <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2036 "><code class="ph codeph">text</code>
+                </td>
+
+                <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2039 ">Returns the JSON value pointed to by <code class="ph codeph">path_elems</code> as text.
+                  Equivalent to <code class="ph codeph">#&gt;&gt;</code> operator.</td>
+
+                <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2042 "><code class="ph codeph">json_extract_path_text('{"f2":{"f3":1},"f4":{"f5":99,"f6":"foo"}}','f4',
+                    'f6')</code>
+                </td>
+
+                <td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e2045 ">
+                  <code class="ph codeph">foo</code>
+                </td>
+
+              </tr>
+
+              <tr class="row">
+                <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2033 "><code class="ph codeph">json_object_keys(json)</code>
+                  <p class="p"><code class="ph codeph">jsonb_object_keys(jsonb)</code>
+                  </p>
+</td>
+
+                <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2036 "><code class="ph codeph">setof text</code>
+                </td>
+
+                <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2039 ">Returns set of keys in the outermost JSON object.</td>
+
+                <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2042 "><code class="ph codeph">json_object_keys('{"f1":"abc","f2":{"f3":"a", "f4":"b"}}')</code>
+                </td>
+
+                <td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e2045 ">
+                  <pre class="pre"> json_object_keys
+------------------
+ f1
+ f2
+</pre>
+
+                </td>
+
+              </tr>
+
+              <tr class="row">
+                <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2033 "><code class="ph codeph">json_populate_record(base anyelement, from_json
+                      json)</code><p class="p"><code class="ph codeph">jsonb_populate_record(base anyelement, from_json
+                      jsonb)</code>
+                  </p>
+</td>
+
+                <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2036 "><code class="ph codeph">anyelement</code>
+                </td>
+
+                <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2039 ">Expands the object in <code class="ph codeph">from_json</code> to a row whose columns match
+                  the record type defined by base. See <a class="xref" href="#topic_z5d_snw_2z__json_proc_1">Note 1</a>.</td>
+
+                <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2042 "><code class="ph codeph">select * from json_populate_record(null::myrowtype,
+                    '{"a":1,"b":2}')</code>
+                </td>
+
+                <td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e2045 ">
+                  <pre class="pre"> a | b
+---+---
+ 1 | 2
+</pre>
+
+                </td>
+
+              </tr>
+
+              <tr class="row">
+                <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2033 "><code class="ph codeph">json_populate_recordset(base anyelement, from_json json)</code>
+                  <p class="p"><code class="ph codeph">jsonb_populate_recordset(base anyelement, from_json jsonb)</code>
+                  </p>
+</td>
+
+                <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2036 "><code class="ph codeph">setof anyelement</code>
+                </td>
+
+                <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2039 ">Expands the outermost array of objects in <code class="ph codeph">from_json</code> to a set
+                  of rows whose columns match the record type defined by base. See <a class="xref" href="#topic_z5d_snw_2z__json_proc_1">Note 1</a>.</td>
+
+                <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2042 "><code class="ph codeph">select * from json_populate_recordset(null::myrowtype,
+                    '[{"a":1,"b":2},{"a":3,"b":4}]')</code>
+                </td>
+
+                <td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e2045 ">
+                  <pre class="pre"> a | b
+---+---
+ 1 | 2
+ 3 | 4
+</pre>
+
+                </td>
+
+              </tr>
+
+              <tr class="row">
+                <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2033 "><code class="ph codeph">json_array_elements(json)</code>
+                  <p class="p"><code class="ph codeph">jsonb_array_elements(jsonb</code>)</p>
+</td>
+
+                <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2036 ">
+                  <p class="p"><code class="ph codeph">setof json</code>
+                  </p>
+
+                  <p class="p"><code class="ph codeph">setof jsonb</code>
+                  </p>
+
+                </td>
+
+                <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2039 ">Expands a JSON array to a set of JSON values.</td>
+
+                <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2042 "><code class="ph codeph">select * from json_array_elements('[1,true, [2,false]]')</code>
+                </td>
+
+                <td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e2045 ">
+                  <pre class="pre">   value
+-----------
+ 1
+ true
+ [2,false]
+</pre>
+
+                </td>
+
+              </tr>
+
+              <tr class="row">
+                <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2033 "><code class="ph codeph">json_array_elements_text(json)</code>
+                  <p class="p"><code class="ph codeph">jsonb_array_elements_text(jsonb)</code>
+                  </p>
+</td>
+
+                <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2036 "><code class="ph codeph">setof text</code>
+                </td>
+
+                <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2039 ">Expands a JSON array to a set of <code class="ph codeph">text</code> values.</td>
+
+                <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2042 "><code class="ph codeph">select * from json_array_elements_text('["foo", "bar"]')</code>
+                </td>
+
+                <td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e2045 ">
+                  <pre class="pre">   value
+-----------
+ foo
+ bar
+</pre>
+
+                </td>
+
+              </tr>
+
+              <tr class="row">
+                <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2033 "><code class="ph codeph">json_typeof(json)</code><p class="p"><code class="ph codeph">jsonb_typeof(jsonb)</code>
+                  </p>
+</td>
+
+                <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2036 "><code class="ph codeph">text</code>
+                </td>
+
+                <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2039 ">Returns the type of the outermost JSON value as a text string. Possible types
+                  are <code class="ph codeph">object</code>, <code class="ph codeph">array</code>, <code class="ph codeph">string</code>,
+                    <code class="ph codeph">number</code>, <code class="ph codeph">boolean</code>, and <code class="ph codeph">null</code>.
+                  See <a class="xref" href="#topic_z5d_snw_2z__json_proc_2">Note 2</a></td>
+
+                <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2042 "><code class="ph codeph">json_typeof('-123.4')</code>
+                </td>
+
+                <td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e2045 ">
+                  <code class="ph codeph">number</code>
+                </td>
+
+              </tr>
+
+              <tr class="row">
+                <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2033 "><code class="ph codeph">json_to_record(json)</code><p class="p"><code class="ph codeph">jsonb_to_record(jsonb)</code>
+                  </p>
+</td>
+
+                <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2036 "><code class="ph codeph">record</code>
+                </td>
+
+                <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2039 ">Builds an arbitrary record from a JSON object. See <a class="xref" href="#topic_z5d_snw_2z__json_proc_1">Note 1</a>. <p class="p">As with all
+                    functions returning record, the caller must explicitly define the structure of
+                    the record with an <code class="ph codeph">AS</code> clause.</p>
+</td>
+
+                <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2042 "><code class="ph codeph">select * from json_to_record('{"a":1,"b":[1,2,3],"c":"bar"}') as x(a
+                    int, b text, d text)</code>
+                </td>
+
+                <td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e2045 ">
+                  <pre class="pre"> a |    b    | d
+---+---------+---
+ 1 | [1,2,3] |
+</pre>
+
+                </td>
+
+              </tr>
+
+              <tr class="row">
+                <td class="entry row-nocellborder" style="vertical-align:top;" headers="d233567e2033 "><code class="ph codeph">json_to_recordset(json)</code>
+                  <p class="p"><code class="ph codeph">jsonb_to_recordset(jsonb)</code>
+                  </p>
+</td>
+
+                <td class="entry row-nocellborder" style="vertical-align:top;" headers="d233567e2036 "><code class="ph codeph">setof record</code>
+                </td>
+
+                <td class="entry row-nocellborder" style="vertical-align:top;" headers="d233567e2039 ">Builds an arbitrary set of records from a JSON array of objects See <a class="xref" href="#topic_z5d_snw_2z__json_proc_1">Note 1</a>. <p class="p">As with all
+                    functions returning record, the caller must explicitly define the structure of
+                    the record with an <code class="ph codeph">AS</code> clause.</p>
+</td>
+
+                <td class="entry row-nocellborder" style="vertical-align:top;" headers="d233567e2042 "><code class="ph codeph">select * from
+                    json_to_recordset('[{"a":1,"b":"foo"},{"a":"2","c":"bar"}]') as x(a int, b
+                    text);</code>
+                </td>
+
+                <td class="entry cellrowborder" style="vertical-align:top;" headers="d233567e2045 ">
+                  <pre class="pre"> a |  b
+---+-----
+ 1 | foo
+ 2 |
+</pre>
+
+                </td>
+
+              </tr>
+
+            </tbody>
+</table>
+</div>
+
+        <div class="note" id="topic_z5d_snw_2z__json_record"><span class="notetitle">Note:</span> 
+          <ol class="ol" id="topic_z5d_snw_2z__ol_umc_2sg_pfb">
+            <li class="li" id="topic_z5d_snw_2z__json_proc_1">The examples for the functions
+                <code class="ph codeph">json_populate_record()</code>, <code class="ph codeph">json_populate_recordset()</code>,
+                <code class="ph codeph">json_to_record()</code> and <code class="ph codeph">json_to_recordset()</code> use
+              constants. However, the typical use would be to reference a table in the
+                <code class="ph codeph">FROM</code> clause and use one of its <code class="ph codeph">json</code> or
+                <code class="ph codeph">jsonb</code> columns as an argument to the function. The extracted key
+              values can then be referenced in other parts of the query. For example the value can
+              be referenced in <code class="ph codeph">WHERE</code> clauses and target lists. Extracting multiple
+              values in this way can improve performance over extracting them separately with
+              per-key operators.<p class="p">JSON keys are matched to identical column names in the target row
+                type. JSON type coercion for these functions might not result in desired values for
+                some types. JSON fields that do not appear in the target row type will be omitted
+                from the output, and target columns that do not match any JSON field will be
+                  <code class="ph codeph">NULL</code>.</p>
+</li>
+
+            <li class="li" id="topic_z5d_snw_2z__json_proc_2">The <code class="ph codeph">json_typeof</code> function null return value of
+                <code class="ph codeph">null</code> should not be confused with a SQL <code class="ph codeph">NULL</code>. While
+              calling <code class="ph codeph">json_typeof('null'::json)</code> will return <code class="ph codeph">null</code>,
+              calling <code class="ph codeph">json_typeof(NULL::json)</code> will return a SQL
+                <code class="ph codeph">NULL</code>.</li>
+
+          </ol>
+
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
+
+  <div class="topic nested1" aria-labelledby="topic30__in179666" xml:lang="en" lang="en" id="topic30">
+    <h2 class="title topictitle2" id="topic30__in179666">Window Functions</h2>
+
+    <div class="body">
+      <p class="p">The following are Greenplum Database built-in window functions. All window functions are
+          <em class="ph i">immutable</em>. For more information about window functions, see "Window Expressions" in
+        the <cite class="cite">Greenplum Database Administrator Guide</cite>.</p>
+
+      
+<div class="tablenoborder"><table cellpadding="4" cellspacing="0" summary="" id="topic30__in164369" class="table" frame="border" border="1" rules="all"><caption><span class="tablecap"><span class="table--title-label">Table 9. </span>Window functions</span></caption><colgroup><col style="width:19.512303951096534%" /><col style="width:13.162885125939807%" /><col style="width:40.15795462151128%" /><col style="width:27.16685630145238%" /></colgroup><thead class="thead" style="text-align:left;">
+            <tr class="row">
+              <th class="entry nocellnorowborder" style="vertical-align:top;" id="d233567e2655">Function</th>
+
+              <th class="entry nocellnorowborder" style="vertical-align:top;" id="d233567e2658">Return Type</th>
+
+              <th class="entry nocellnorowborder" style="vertical-align:top;" id="d233567e2661">Full Syntax</th>
+
+              <th class="entry cell-norowborder" style="vertical-align:top;" id="d233567e2664">Description</th>
+
+            </tr>
+
+          </thead>
+<tbody class="tbody">
+            <tr class="row">
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2655 ">
+                <code class="ph codeph">cume_dist()</code>
+              </td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2658 ">
+                <code class="ph codeph">double precision</code>
+              </td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2661 ">
+                <code class="ph codeph">CUME_DIST() OVER ( [PARTITION BY </code>
+                <span class="ph">expr</span>
+                <code class="ph codeph">] ORDER BY </code>
+                <span class="ph">expr</span>
+                <code class="ph codeph"> )</code>
+              </td>
+
+              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e2664 ">Calculates the cumulative distribution of a value in a group of
+                values. Rows with equal values always evaluate to the same cumulative distribution
+                value.</td>
+
+            </tr>
+
+            <tr class="row">
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2655 ">
+                <code class="ph codeph">dense_rank()</code>
+              </td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2658 ">
+                <code class="ph codeph">bigint</code>
+              </td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2661 ">
+                <code class="ph codeph">DENSE_RANK () OVER ( [PARTITION BY </code>
+                <span class="ph">expr</span>
+                <code class="ph codeph">] ORDER BY </code>
+                <span class="ph">expr</span>
+                <code class="ph codeph">)</code>
+              </td>
+
+              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e2664 ">Computes the rank of a row in an ordered group of rows without
+                skipping rank values. Rows with equal values are given the same rank value.</td>
+
+            </tr>
+
+            <tr class="row">
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2655 ">
+                <code class="ph codeph">first_value(<em class="ph i">expr</em>)</code>
+              </td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2658 ">same as input <span class="ph">expr</span> type</td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2661 ">
+                <code class="ph codeph">FIRST_VALUE(</code>
+                <span class="ph">expr</span>
+                <code class="ph codeph">) OVER ( [PARTITION BY </code>
+                <span class="ph">expr</span>
+                <code class="ph codeph">] ORDER BY </code>
+                <span class="ph">expr</span>
+                <code class="ph codeph"> [ROWS|RANGE </code>
+                <span class="ph">frame_expr</span>
+                <code class="ph codeph">] )</code>
+              </td>
+
+              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e2664 ">Returns the first value in an ordered set of values.</td>
+
+            </tr>
+
+            <tr class="row">
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2655 ">
+                <code class="ph codeph">lag(<em class="ph i">expr</em> [,<em class="ph i">offset</em>] [,<em class="ph i">default</em>])</code>
+              </td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2658 ">same as input <em class="ph i">expr</em> type</td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2661 ">
+                <code class="ph codeph">LAG(</code>
+                <em class="ph i">expr</em>
+                <code class="ph codeph"> [,</code>
+                <em class="ph i">offset</em>
+                <code class="ph codeph">] [,</code>
+                <em class="ph i">default</em>
+                <code class="ph codeph">]) OVER ( [PARTITION BY </code>
+                <em class="ph i">expr</em>
+                <code class="ph codeph">] ORDER BY </code>
+                <em class="ph i">expr</em>
+                <code class="ph codeph"> )</code>
+              </td>
+
+              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e2664 ">Provides access to more than one row of the same table without
+                doing a self join. Given a series of rows returned from a query and a position of
+                the cursor, <code class="ph codeph">LAG</code> provides access to a row at a given physical offset
+                prior to that position. The default <code class="ph codeph">offset</code> is 1. <em class="ph i">default</em>
+                sets the value that is returned if the offset goes beyond the scope of the window.
+                If <em class="ph i">default</em> is not specified, the default value is null.</td>
+
+            </tr>
+
+            <tr class="row">
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2655 ">
+                <code class="ph codeph">last_value(<em class="ph i">expr</em></code>) </td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2658 ">same as input <em class="ph i">expr</em> type</td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2661 ">
+                <code class="ph codeph">LAST_VALUE(<em class="ph i">expr</em>) OVER ( [PARTITION BY <em class="ph i">expr</em>] ORDER BY
+                    <em class="ph i">expr</em> [ROWS|RANGE <em class="ph i">frame_expr</em>] )</code>
+              </td>
+
+              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e2664 ">Returns the last value in an ordered set of values.</td>
+
+            </tr>
+
+            <tr class="row">
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2655 ">
+                <code class="ph codeph">
+                  <code class="ph codeph">lead(<em class="ph i">expr</em> [,<em class="ph i">offset</em>] [,<em class="ph i">default</em>])</code>
+                </code>
+              </td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2658 ">same as input <em class="ph i">expr</em> type</td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2661 ">
+                <code class="ph codeph">LEAD(<em class="ph i">expr </em>[,<em class="ph i">offset</em>] [,<em class="ph i">expr</em><em class="ph i">default</em>]) OVER (
+                  [PARTITION BY <em class="ph i">expr</em>] ORDER BY <em class="ph i">expr</em> )</code>
+              </td>
+
+              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e2664 ">Provides access to more than one row of the same table without
+                doing a self join. Given a series of rows returned from a query and a position of
+                the cursor, <code class="ph codeph">lead</code> provides access to a row at a given physical
+                offset after that position. If <em class="ph i">offset</em> is not specified, the default offset is
+                1. <em class="ph i">default</em> sets the value that is returned if the offset goes beyond the
+                scope of the window. If <em class="ph i">default</em> is not specified, the default value is
+                null.</td>
+
+            </tr>
+
+            <tr class="row">
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2655 ">
+                <code class="ph codeph">ntile(<em class="ph i">expr</em>)</code>
+              </td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2658 "><code class="ph codeph">bigint</code></td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2661 ">
+                <code class="ph codeph">NTILE(<em class="ph i">expr</em>) OVER ( [PARTITION BY <em class="ph i">expr</em>] ORDER BY <em class="ph i">expr</em>
+                  )</code>
+              </td>
+
+              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e2664 ">Divides an ordered data set into a number of buckets (as defined
+                by <em class="ph i">expr</em>) and assigns a bucket number to each row.</td>
+
+            </tr>
+
+            <tr class="row">
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2655 "><code class="ph codeph">percent_rank()</code></td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2658 ">
+                <code class="ph codeph">double precision</code>
+              </td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2661 ">
+                <code class="ph codeph">PERCENT_RANK () OVER ( [PARTITION BY <em class="ph i">expr</em>] ORDER BY <em class="ph i">expr
+                  </em>)</code>
+              </td>
+
+              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e2664 ">Calculates the rank of a hypothetical row <code class="ph codeph">R</code>
+                minus 1, divided by 1 less than the number of rows being evaluated (within a window
+                partition).</td>
+
+            </tr>
+
+            <tr class="row">
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2655 ">
+                <code class="ph codeph">rank()</code>
+              </td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2658 "><code class="ph codeph">bigint</code></td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2661 ">
+                <code class="ph codeph">RANK () OVER ( [PARTITION BY <em class="ph i">expr</em>] ORDER BY <em class="ph i">expr </em>)</code>
+              </td>
+
+              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e2664 ">Calculates the rank of a row in an ordered group of values. Rows
+                with equal values for the ranking criteria receive the same rank. The number of tied
+                rows are added to the rank number to calculate the next rank value. Ranks may not be
+                consecutive numbers in this case.</td>
+
+            </tr>
+
+            <tr class="row">
+              <td class="entry row-nocellborder" style="vertical-align:top;" headers="d233567e2655 "><code class="ph codeph">row_number()</code></td>
+
+              <td class="entry row-nocellborder" style="vertical-align:top;" headers="d233567e2658 ">
+                <code class="ph codeph">bigint</code>
+              </td>
+
+              <td class="entry row-nocellborder" style="vertical-align:top;" headers="d233567e2661 ">
+                <code class="ph codeph">ROW_NUMBER () OVER ( [PARTITION BY <em class="ph i">expr</em>] ORDER BY <em class="ph i">expr
+                  </em>)</code>
+              </td>
+
+              <td class="entry cellrowborder" style="vertical-align:top;" headers="d233567e2664 ">Assigns a unique number to each row to which it is applied
+                (either each row in a window partition or each row of the query).</td>
+
+            </tr>
+
+          </tbody>
+</table>
+</div>
+
+    </div>
+
+  </div>
+
+  <div class="topic nested1" aria-labelledby="topic31__in184703" xml:lang="en" lang="en" id="topic31">
+    <h2 class="title topictitle2" id="topic31__in184703">Advanced Aggregate Functions</h2>
+
+    <div class="body">
+      <p class="p">The following built-in advanced analytic functions are Greenplum extensions of the
+        PostgreSQL database. Analytic functions are <em class="ph i">immutable</em>.</p>
+
+      <div class="note"><span class="notetitle">Note:</span> The Greenplum MADlib Extension for Analytics provides additional advanced functions to
+        perform statistical analysis and machine learning with Greenplum Database data. See <a class="xref" href="../analytics/madlib.html#topic1" target="_blank">MADlib Extension for
+        Analytics</a>.</div>
+
+      
+<div class="tablenoborder"><table cellpadding="4" cellspacing="0" summary="" id="topic31__in2073121" class="table" frame="border" border="1" rules="all"><caption><span class="tablecap"><span class="table--title-label">Table 10. </span>Advanced Aggregate Functions</span></caption><colgroup><col style="width:20.845288240441164%" /><col style="width:12.005779052967869%" /><col style="width:41.10249679506745%" /><col style="width:26.046435911523513%" /></colgroup><thead class="thead" style="text-align:left;">
+            <tr class="row">
+              <th class="entry nocellnorowborder" style="vertical-align:top;" id="d233567e3144">Function</th>
+
+              <th class="entry nocellnorowborder" style="vertical-align:top;" id="d233567e3147">Return Type</th>
+
+              <th class="entry nocellnorowborder" style="vertical-align:top;" id="d233567e3150">Full Syntax</th>
+
+              <th class="entry cell-norowborder" style="vertical-align:top;" id="d233567e3153">Description</th>
+
+            </tr>
+
+          </thead>
+<tbody class="tbody">
+            <tr class="row">
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e3144 ">
+                <code class="ph codeph">MEDIAN (<em class="ph i">expr</em>)</code>
+              </td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e3147 ">
+                <code class="ph codeph">timestamp, timestamptz, interval, float</code>
+              </td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e3150 ">
+                <code class="ph codeph">MEDIAN (<em class="ph i">expression</em>)</code>
+                <p class="p">
+                  <em class="ph i">Example:</em>
+                </p>
+
+                <pre class="pre codeblock"><code>SELECT department_id, MEDIAN(salary) 
+FROM employees 
+GROUP BY department_id; </code></pre>
+              </td>
+
+              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e3153 ">Can take a two-dimensional array as input. Treats such arrays as
+                matrices.</td>
+
+            </tr>
+
+            <tr class="row">
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e3144 ">
+                <code class="ph codeph">PERCENTILE_CONT (<em class="ph i">expr</em>) WITHIN GROUP (ORDER BY <em class="ph i">expr</em>
+                  [DESC/ASC])</code>
+              </td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e3147 ">
+                <code class="ph codeph">timestamp, timestamptz, interval, float</code>
+              </td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e3150 ">
+                <code class="ph codeph">PERCENTILE_CONT(<em class="ph i">percentage</em>) WITHIN GROUP (ORDER BY
+                  <em class="ph i">expression</em>)</code>
+                <p class="p">
+                  <em class="ph i">Example:</em>
+                </p>
+
+                <pre class="pre codeblock"><code>SELECT department_id,
+PERCENTILE_CONT (0.5) WITHIN GROUP (ORDER BY salary DESC)
+"Median_cont"; 
+FROM employees GROUP BY department_id;</code></pre>
+              </td>
+
+              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e3153 ">Performs an inverse distribution function that assumes a
+                continuous distribution model. It takes a percentile value and a sort specification
+                and returns the same datatype as the numeric datatype of the argument. This returned
+                value is a computed result after performing linear interpolation. Null are ignored
+                in this calculation.</td>
+
+            </tr>
+
+            <tr class="row">
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e3144 "><code class="ph codeph">PERCENTILE_DISC (<em class="ph i">expr</em>) WITHIN GROUP (ORDER BY
+                    <em class="ph i">expr</em> [DESC/ASC])</code></td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e3147 ">
+                <code class="ph codeph">timestamp, timestamptz, interval, float</code>
+              </td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e3150 ">
+                <code class="ph codeph">PERCENTILE_DISC(<em class="ph i">percentage</em>) WITHIN GROUP (ORDER BY
+                  <em class="ph i">expression</em>)</code>
+                <p class="p">
+                  <em class="ph i">Example:</em>
+                </p>
+
+                <pre class="pre codeblock"><code>SELECT department_id, 
+PERCENTILE_DISC (0.5) WITHIN GROUP (ORDER BY salary DESC)
+"Median_desc"; 
+FROM employees GROUP BY department_id;</code></pre>
+              </td>
+
+              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e3153 ">Performs an inverse distribution function that assumes a
+                discrete distribution model. It takes a percentile value and a sort specification.
+                This returned value is an element from the set. Null are ignored in this
+                calculation.</td>
+
+            </tr>
+
+            <tr class="row">
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e3144 ">
+                <code class="ph codeph">sum(array[])</code>
+              </td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e3147 ">
+                <code class="ph codeph">smallint[]int[], bigint[], float[]</code>
+              </td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e3150 ">
+                <code class="ph codeph">sum(array[[1,2],[3,4]])</code>
+                <p class="p">
+                  <em class="ph i">Example:</em>
+                </p>
+
+                <pre class="pre codeblock"><code>CREATE TABLE mymatrix (myvalue int[]);
+INSERT INTO mymatrix VALUES (array[[1,2],[3,4]]);
+INSERT INTO mymatrix VALUES (array[[0,1],[1,0]]);
+SELECT sum(myvalue) FROM mymatrix;
+ sum 
+---------------
+ {{1,3},{4,4}}</code></pre>
+              </td>
+
+              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e3153 ">Performs matrix summation. Can take as input a two-dimensional
+                array that is treated as a matrix.</td>
+
+            </tr>
+
+            <tr class="row">
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e3144 ">
+                <code class="ph codeph">pivot_sum (label[], label, expr)</code>
+              </td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e3147 ">
+                <code class="ph codeph">int[], bigint[], float[]</code>
+              </td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e3150 ">
+                <code class="ph codeph">pivot_sum( array['A1','A2'], attr, value)</code>
+              </td>
+
+              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e3153 ">A pivot aggregation using sum to resolve duplicate
+                entries.</td>
+
+            </tr>
+
+            <tr class="row">
+              <td class="entry row-nocellborder" style="vertical-align:top;" headers="d233567e3144 ">
+                <code class="ph codeph">unnest (array[])</code>
+              </td>
+
+              <td class="entry row-nocellborder" style="vertical-align:top;" headers="d233567e3147 ">set of <code class="ph codeph">anyelement</code></td>
+
+              <td class="entry row-nocellborder" style="vertical-align:top;" headers="d233567e3150 ">
+                <code class="ph codeph">unnest( array['one', 'row', 'per', 'item'])</code>
+              </td>
+
+              <td class="entry cellrowborder" style="vertical-align:top;" headers="d233567e3153 ">Transforms a one dimensional array into rows. Returns a set of
+                  <code class="ph codeph">anyelement</code>, a polymorphic <a class="xref" href="https://www.postgresql.org/docs/9.4/datatype-pseudo.html" target="_blank"><span class="ph">pseudotype in PostgreSQL</span></a>.</td>
+
+            </tr>
+
+          </tbody>
+</table>
+</div>
+
+    </div>
+
+  </div>
+
+  <div class="topic nested1" aria-labelledby="ariaid-title11" id="topic_vpj_ss1_lfb">
+    <h2 class="title topictitle2" id="ariaid-title11">Text Search Functions and Operators</h2>
+
+    <div class="body">
+      <p class="p">The following tables summarize the functions and operators that are provided for full text
+        searching. See <a class="xref" href="../admin_guide/textsearch/full-text-search.html" target="_blank">Using Full Text Search</a> for a detailed
+        explanation of Greenplum Database's text search facility.</p>
+
+      
+<div class="tablenoborder"><table cellpadding="4" cellspacing="0" summary="" id="topic_vpj_ss1_lfb__table_t3f_vs1_lfb" class="table" frame="border" border="1" rules="all"><caption><span class="tablecap"><span class="table--title-label">Table 11. </span>Text Search Operators</span></caption><colgroup><col /><col /><col /><col /></colgroup><thead class="thead" style="text-align:left;">
+            <tr class="row">
+              <th class="entry nocellnorowborder" style="vertical-align:top;" id="d233567e3415">Operator</th>
+
+              <th class="entry nocellnorowborder" style="vertical-align:top;" id="d233567e3418">Description</th>
+
+              <th class="entry nocellnorowborder" style="vertical-align:top;" id="d233567e3421">Example</th>
+
+              <th class="entry cell-norowborder" style="vertical-align:top;" id="d233567e3424">Result</th>
+
+            </tr>
+
+          </thead>
+<tbody class="tbody">
+            <tr class="row">
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e3415 "><code class="ph codeph">@@</code></td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e3418 "><code class="ph codeph">tsvector</code> matches <code class="ph codeph">tsquery</code> ?</td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e3421 "><code class="ph codeph">to_tsvector('fat cats ate rats') @@ to_tsquery('cat &amp;
+                  rat')</code></td>
+
+              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e3424 "><code class="ph codeph">t</code></td>
+
+            </tr>
+
+            <tr class="row">
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e3415 "><code class="ph codeph">@@@</code></td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e3418 ">deprecated synonym for <code class="ph codeph">@@</code></td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e3421 "><code class="ph codeph">to_tsvector('fat cats ate rats') @@@ to_tsquery('cat &amp;
+                  rat')</code></td>
+
+              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e3424 "><code class="ph codeph">t</code></td>
+
+            </tr>
+
+            <tr class="row">
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e3415 "><code class="ph codeph">||</code></td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e3418 ">concatenate<code class="ph codeph"> tsvector</code>s</td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e3421 "><code class="ph codeph">'a:1 b:2'::tsvector || 'c:1 d:2 b:3'::tsvector</code></td>
+
+              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e3424 "><code class="ph codeph">'a':1 'b':2,5 'c':3 'd':4</code></td>
+
+            </tr>
+
+            <tr class="row">
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e3415 "><code class="ph codeph">&amp;&amp;</code></td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e3418 ">AND <code class="ph codeph">tsquery</code>s together</td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e3421 "><code class="ph codeph">'fat | rat'::tsquery &amp;&amp; 'cat'::tsquery</code></td>
+
+              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e3424 "><code class="ph codeph">( 'fat' | 'rat' ) &amp; 'cat'</code></td>
+
+            </tr>
+
+            <tr class="row">
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e3415 "><code class="ph codeph">||</code></td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e3418 ">OR <code class="ph codeph">tsquery</code>s together</td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e3421 "><code class="ph codeph">'fat | rat'::tsquery || 'cat'::tsquery</code></td>
+
+              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e3424 "><code class="ph codeph">( 'fat' | 'rat' ) | 'cat'</code></td>
+
+            </tr>
+
+            <tr class="row">
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e3415 "><code class="ph codeph">!!</code></td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e3418 ">negate a<code class="ph codeph"> tsquery</code></td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e3421 "><code class="ph codeph">!! 'cat'::tsquery</code></td>
+
+              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e3424 "><code class="ph codeph">!'cat'</code></td>
+
+            </tr>
+
+            <tr class="row">
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e3415 "><code class="ph codeph">@&gt;</code></td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e3418 "><code class="ph codeph">tsquery</code> contains another ?</td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e3421 "><code class="ph codeph">'cat'::tsquery @&gt; 'cat &amp; rat'::tsquery</code></td>
+
+              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e3424 "><code class="ph codeph">f</code></td>
+
+            </tr>
+
+            <tr class="row">
+              <td class="entry row-nocellborder" style="vertical-align:top;" headers="d233567e3415 "><code class="ph codeph">&lt;@</code></td>
+
+              <td class="entry row-nocellborder" style="vertical-align:top;" headers="d233567e3418 "><code class="ph codeph">tsquery</code> is contained in ?</td>
+
+              <td class="entry row-nocellborder" style="vertical-align:top;" headers="d233567e3421 "><code class="ph codeph">'cat'::tsquery &lt;@ 'cat &amp; rat'::tsquery</code></td>
+
+              <td class="entry cellrowborder" style="vertical-align:top;" headers="d233567e3424 "><code class="ph codeph">t</code></td>
+
+            </tr>
+
+          </tbody>
+</table>
+</div>
+
+      <div class="note"><span class="notetitle">Note:</span> The <code class="ph codeph">tsquery</code> containment operators consider only the lexemes listed in
+        the two queries, ignoring the combining operators.</div>
+
+      <p class="p">In addition to the operators shown in the table, the ordinary B-tree comparison operators
+        (=, &lt;, etc) are defined for types <code class="ph codeph">tsvector</code> and <code class="ph codeph">tsquery</code>.
+        These are not very useful for text searching but allow, for example, unique indexes to be
+        built on columns of these types.</p>
+
+      
+<div class="tablenoborder"><table cellpadding="4" cellspacing="0" summary="" id="topic_vpj_ss1_lfb__table_u3f_vs1_lfb" class="table" frame="border" border="1" rules="all"><caption><span class="tablecap"><span class="table--title-label">Table 12. </span>Text Search Functions</span></caption><colgroup><col /><col /><col /><col /><col /></colgroup><thead class="thead" style="text-align:left;">
+            <tr class="row">
+              <th class="entry nocellnorowborder" style="vertical-align:top;" id="d233567e3639">Function</th>
+
+              <th class="entry nocellnorowborder" style="vertical-align:top;" id="d233567e3642">Return Type</th>
+
+              <th class="entry nocellnorowborder" style="vertical-align:top;" id="d233567e3645">Description</th>
+
+              <th class="entry nocellnorowborder" style="vertical-align:top;" id="d233567e3648">Example</th>
+
+              <th class="entry cell-norowborder" style="vertical-align:top;" id="d233567e3651">Result</th>
+
+            </tr>
+
+          </thead>
+<tbody class="tbody">
+            <tr class="row">
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e3639 "><code class="ph codeph">get_current_ts_config()</code></td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e3642 ">regconfig</td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e3645 ">get default text search configuration</td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e3648 ">get_current_ts_config()</td>
+
+              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e3651 ">english</td>
+
+            </tr>
+
+            <tr class="row">
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e3639 "><code class="ph codeph">length(tsvector)</code></td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e3642 ">integer</td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e3645 ">number of lexemes in tsvector</td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e3648 ">length('fat:2,4 cat:3 rat:5A'::tsvector)</td>
+
+              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e3651 ">3</td>
+
+            </tr>
+
+            <tr class="row">
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e3639 "><code class="ph codeph">numnode(tsquery)</code></td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e3642 ">integer</td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e3645 ">number of lexemes plus operators in tsquery</td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e3648 ">numnode('(fat &amp; rat) | cat'::tsquery)</td>
+
+              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e3651 ">5</td>
+
+            </tr>
+
+            <tr class="row">
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e3639 "><code class="ph codeph">plainto_tsquery([ config regconfig , ] querytext)</code></td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e3642 ">tsquery</td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e3645 ">produce tsquery ignoring punctuation</td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e3648 ">plainto_tsquery('english', 'The Fat Rats')</td>
+
+              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e3651 ">'fat' &amp; 'rat'</td>
+
+            </tr>
+
+            <tr class="row">
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e3639 "><code class="ph codeph">querytree(query tsquery)</code></td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e3642 ">text</td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e3645 ">get indexable part of a tsquery</td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e3648 ">querytree('foo &amp; ! bar'::tsquery)</td>
+
+              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e3651 ">'foo'</td>
+
+            </tr>
+
+            <tr class="row">
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e3639 "><code class="ph codeph">setweight(tsvector, "char")</code></td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e3642 ">tsvector</td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e3645 ">assign weight to each element of tsvector</td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e3648 ">setweight('fat:2,4 cat:3 rat:5B'::tsvector, 'A')</td>
+
+              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e3651 ">'cat':3A 'fat':2A,4A 'rat':5A</td>
+
+            </tr>
+
+            <tr class="row">
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e3639 "><code class="ph codeph">strip(tsvector)</code></td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e3642 ">tsvector</td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e3645 ">remove positions and weights from tsvector</td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e3648 ">strip('fat:2,4 cat:3 rat:5A'::tsvector)</td>
+
+              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e3651 ">'cat' 'fat' 'rat'</td>
+
+            </tr>
+
+            <tr class="row">
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e3639 "><code class="ph codeph">to_tsquery([ config regconfig , ] query text)</code></td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e3642 ">tsquery</td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e3645 ">normalize words and convert to tsquery</td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e3648 ">to_tsquery('english', 'The &amp; Fat &amp; Rats')</td>
+
+              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e3651 ">'fat' &amp; 'rat'</td>
+
+            </tr>
+
+            <tr class="row">
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e3639 "><code class="ph codeph">to_tsvector([ config regconfig , ] documenttext)</code></td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e3642 ">tsvector</td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e3645 ">reduce document text to tsvector</td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e3648 ">to_tsvector('english', 'The Fat Rats')</td>
+
+              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e3651 ">'fat':2 'rat':3</td>
+
+            </tr>
+
+            <tr class="row">
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e3639 "><code class="ph codeph">ts_headline([ config regconfig, ] documenttext, query tsquery [,
+                  options text ])</code></td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e3642 ">text</td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e3645 ">display a query match</td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e3648 ">ts_headline('x y z', 'z'::tsquery)</td>
+
+              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e3651 ">x y &lt;b&gt;z&lt;/b&gt;</td>
+
+            </tr>
+
+            <tr class="row">
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e3639 "><code class="ph codeph">ts_rank([ weights float4[], ] vector tsvector,query tsquery [,
+                  normalization integer ])</code></td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e3642 ">float4</td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e3645 ">rank document for query</td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e3648 ">ts_rank(textsearch, query)</td>
+
+              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e3651 ">0.818</td>
+
+            </tr>
+
+            <tr class="row">
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e3639 "><code class="ph codeph">ts_rank_cd([ weights float4[], ] vectortsvector, query tsquery [,
+                  normalizationinteger ])</code></td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e3642 ">float4</td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e3645 ">rank document for query using cover density</td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e3648 ">ts_rank_cd('{0.1, 0.2, 0.4, 1.0}', textsearch, query)</td>
+
+              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e3651 ">2.01317</td>
+
+            </tr>
+
+            <tr class="row">
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e3639 "><code class="ph codeph">ts_rewrite(query tsquery, target tsquery,substitute
+                tsquery)</code></td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e3642 ">tsquery</td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e3645 ">replace target with substitute within query</td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e3648 ">ts_rewrite('a &amp; b'::tsquery, 'a'::tsquery, 'foo|bar'::tsquery)</td>
+
+              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e3651 ">'b' &amp; ( 'foo' | 'bar' )</td>
+
+            </tr>
+
+            <tr class="row">
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e3639 "><code class="ph codeph">ts_rewrite(query tsquery, select text)</code></td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e3642 ">tsquery</td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e3645 ">replace using targets and substitutes from a SELECTcommand</td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e3648 ">SELECT ts_rewrite('a &amp; b'::tsquery, 'SELECT t,s FROM aliases')</td>
+
+              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e3651 ">'b' &amp; ( 'foo' | 'bar' )</td>
+
+            </tr>
+
+            <tr class="row">
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e3639 "><code class="ph codeph">tsvector_update_trigger()</code></td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e3642 ">trigger</td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e3645 ">trigger function for automatic tsvector column update</td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e3648 ">CREATE TRIGGER ... tsvector_update_trigger(tsvcol, 'pg_catalog.swedish', title,
+                body)</td>
+
+              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e3651 "> </td>
+
+            </tr>
+
+            <tr class="row">
+              <td class="entry row-nocellborder" style="vertical-align:top;" headers="d233567e3639 "><code class="ph codeph">tsvector_update_trigger_column()</code></td>
+
+              <td class="entry row-nocellborder" style="vertical-align:top;" headers="d233567e3642 ">trigger</td>
+
+              <td class="entry row-nocellborder" style="vertical-align:top;" headers="d233567e3645 ">trigger function for automatic tsvector column update</td>
+
+              <td class="entry row-nocellborder" style="vertical-align:top;" headers="d233567e3648 ">CREATE TRIGGER ... tsvector_update_trigger_column(tsvcol, configcol, title,
+                body)</td>
+
+              <td class="entry cellrowborder" style="vertical-align:top;" headers="d233567e3651 "> </td>
+
+            </tr>
+
+          </tbody>
+</table>
+</div>
+
+      <div class="note"><span class="notetitle">Note:</span> All the text search functions that accept an optional <code class="ph codeph">regconfig</code>
+        argument will use the configuration specified by <a class="xref" href="config_params/guc-list.html#default_text_search_config">default_text_search_config</a> when that argument is
+        omitted.</div>
+
+      <p class="p">The functions in the following table are listed separately because they are not usually
+        used in everyday text searching operations. They are helpful for development and debugging
+        of new text search configurations.</p>
+
+      
+<div class="tablenoborder"><table cellpadding="4" cellspacing="0" summary="" id="topic_vpj_ss1_lfb__table_v3f_vs1_lfb" class="table" frame="border" border="1" rules="all"><caption><span class="tablecap"><span class="table--title-label">Table 13. </span>Text Search Debugging Functions</span></caption><colgroup><col /><col /><col /><col /><col /></colgroup><thead class="thead" style="text-align:left;">
+            <tr class="row">
+              <th class="entry nocellnorowborder" style="vertical-align:top;" id="d233567e4001">Function</th>
+
+              <th class="entry nocellnorowborder" style="vertical-align:top;" id="d233567e4004">Return Type</th>
+
+              <th class="entry nocellnorowborder" style="vertical-align:top;" id="d233567e4007">Description</th>
+
+              <th class="entry nocellnorowborder" style="vertical-align:top;" id="d233567e4010">Example</th>
+
+              <th class="entry cell-norowborder" style="vertical-align:top;" id="d233567e4013">Result</th>
+
+            </tr>
+
+          </thead>
+<tbody class="tbody">
+            <tr class="row">
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e4001 "><code class="ph codeph">ts_debug([ <em class="ph i">config</em> regconfig, ] <em class="ph i">document</em> text, OUT
+                    <em class="ph i">alias</em> text, OUT <em class="ph i">description</em> text, OUT <em class="ph i">token</em> text, OUT
+                    <em class="ph i">dictionaries</em> regdictionary[], OUT <em class="ph i">dictionary</em> regdictionary, OUT
+                    <em class="ph i">lexemes</em> text[])</code></td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e4004 "><code class="ph codeph">setof record</code></td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e4007 ">test a configuration</td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e4010 "><code class="ph codeph">ts_debug('english', 'The Brightest supernovaes')</code></td>
+
+              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e4013 "><code class="ph codeph">(asciiword,"Word, all ASCII",The,{english_stem},english_stem,{})
+                  ...</code></td>
+
+            </tr>
+
+            <tr class="row">
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e4001 "><code class="ph codeph">ts_lexize(<em class="ph i">dict</em> regdictionary, <em class="ph i">token</em>
+                text)</code></td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e4004 "><code class="ph codeph">text[]</code></td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e4007 ">test a dictionary</td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e4010 "><code class="ph codeph">ts_lexize('english_stem', 'stars')</code></td>
+
+              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e4013 "><code class="ph codeph">{star}</code></td>
+
+            </tr>
+
+            <tr class="row">
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e4001 "><code class="ph codeph">ts_parse(<em class="ph i">parser_name</em> text, <em class="ph i">document</em> text, OUT
+                    <em class="ph i">tokid</em> integer, OUT <em class="ph i">token</em> text)</code></td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e4004 "><code class="ph codeph">setof record</code></td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e4007 ">test a parser</td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e4010 "><code class="ph codeph">ts_parse('default', 'foo - bar')</code></td>
+
+              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e4013 ">(<code class="ph codeph"><code class="ph codeph">1,foo) ...</code></code></td>
+
+            </tr>
+
+            <tr class="row">
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e4001 "><code class="ph codeph">ts_parse(<em class="ph i">parser_oid</em> oid, <em class="ph i">document</em> text, OUT <em class="ph i">tokid</em>
+                  integer, OUT <em class="ph i">token</em> text)</code></td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e4004 "><code class="ph codeph">setof record</code></td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e4007 ">test a parser</td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e4010 "><code class="ph codeph">ts_parse(3722, 'foo - bar')</code></td>
+
+              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e4013 "><code class="ph codeph">(1,foo) ...</code></td>
+
+            </tr>
+
+            <tr class="row">
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e4001 "><code class="ph codeph">ts_token_type(<em class="ph i">parser_name</em> text, OUT <em class="ph i">tokid</em> integer, OUT
+                    <em class="ph i">alias</em> text, OUT description text)</code></td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e4004 "><code class="ph codeph">setof record</code></td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e4007 ">get token types defined by parser</td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e4010 "><code class="ph codeph">ts_token_type('default')</code></td>
+
+              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e4013 "><code class="ph codeph">(1,asciiword,"Word, all ASCII") ...</code></td>
+
+            </tr>
+
+            <tr class="row">
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e4001 "><code class="ph codeph">ts_token_type(<em class="ph i">parser_oid</em> oid, OUT <em class="ph i">tokid</em> integer, OUT
+                    <em class="ph i">alias</em> text, OUT <em class="ph i">description</em> text)</code></td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e4004 "><code class="ph codeph">setof record</code></td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e4007 ">get token types defined by parser</td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e4010 "><code class="ph codeph">ts_token_type(3722)</code></td>
+
+              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e4013 "><code class="ph codeph">(1,asciiword,"Word, all ASCII") ...</code></td>
+
+            </tr>
+
+            <tr class="row">
+              <td class="entry row-nocellborder" style="vertical-align:top;" headers="d233567e4001 "><code class="ph codeph">ts_stat(<em class="ph i">sqlquery</em> text, [ <em class="ph i">weights</em> text, ] OUT <em class="ph i">word</em>
+                  text, OUT <em class="ph i">ndocinteger</em>, OUT <em class="ph i">nentry</em> integer)</code></td>
+
+              <td class="entry row-nocellborder" style="vertical-align:top;" headers="d233567e4004 "><code class="ph codeph">setof record</code></td>
+
+              <td class="entry row-nocellborder" style="vertical-align:top;" headers="d233567e4007 ">get statistics of a tsvectorcolumn</td>
+
+              <td class="entry row-nocellborder" style="vertical-align:top;" headers="d233567e4010 "><code class="ph codeph">ts_stat('SELECT vector from apod')</code></td>
+
+              <td class="entry cellrowborder" style="vertical-align:top;" headers="d233567e4013 "><code class="ph codeph">(foo,10,15) ...</code></td>
+
+            </tr>
+
+          </tbody>
+</table>
+</div>
+
+    </div>
+
+  </div>
+
+  <div class="topic nested1" aria-labelledby="ariaid-title12" xml:lang="en-us" lang="en-us" id="functions-range">
+    <h2 class="title topictitle2" id="ariaid-title12">Range Functions and Operators</h2>
+
+    <div class="body">
+      <p class="p"> See <a class="xref" href="datatype-range.html#rangetypes">Range Types</a> for an overview of range types. </p>
+
+      <p class="p"> The following table shows the operators available for range types. </p>
+
+      
+<div class="tablenoborder"><table cellpadding="4" cellspacing="0" summary="" id="functions-range__range-operators-table" class="table" frame="border" border="1" rules="all"><caption><span class="tablecap"><span class="table--title-label">Table 14. </span>Range Operators</span></caption><colgroup><col /><col /><col /><col /></colgroup><thead class="thead" style="text-align:left;">
+            <tr class="row">
+              <th class="entry nocellnorowborder" style="vertical-align:top;" id="d233567e4305">Operator</th>
+
+              <th class="entry nocellnorowborder" style="vertical-align:top;" id="d233567e4308">Description</th>
+
+              <th class="entry nocellnorowborder" style="vertical-align:top;" id="d233567e4311">Example</th>
+
+              <th class="entry cell-norowborder" style="vertical-align:top;" id="d233567e4314">Result</th>
+
+            </tr>
+
+          </thead>
+<tbody class="tbody">
+            <tr class="row">
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e4305 ">
+                <code class="ph codeph">=</code>
+              </td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e4308 ">equal</td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e4311 ">
+                <code class="ph codeph">int4range(1,5) = '[1,4]'::int4range</code>
+              </td>
+
+              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e4314 ">
+                <code class="ph codeph">t</code>
+              </td>
+
+            </tr>
+
+            <tr class="row">
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e4305 ">
+                <code class="ph codeph">&lt;&gt;</code>
+              </td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e4308 ">not equal</td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e4311 ">
+                <code class="ph codeph">numrange(1.1,2.2) &lt;&gt; numrange(1.1,2.3)</code>
+              </td>
+
+              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e4314 ">
+                <code class="ph codeph">t</code>
+              </td>
+
+            </tr>
+
+            <tr class="row">
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e4305 ">
+                <code class="ph codeph">&lt;</code>
+              </td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e4308 ">less than</td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e4311 ">
+                <code class="ph codeph">int4range(1,10) &lt; int4range(2,3)</code>
+              </td>
+
+              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e4314 ">
+                <code class="ph codeph">t</code>
+              </td>
+
+            </tr>
+
+            <tr class="row">
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e4305 ">
+                <code class="ph codeph">&gt;</code>
+              </td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e4308 ">greater than</td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e4311 ">
+                <code class="ph codeph">int4range(1,10) &gt; int4range(1,5)</code>
+              </td>
+
+              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e4314 ">
+                <code class="ph codeph">t</code>
+              </td>
+
+            </tr>
+
+            <tr class="row">
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e4305 ">
+                <code class="ph codeph">&lt;=</code>
+              </td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e4308 ">less than or equal</td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e4311 ">
+                <code class="ph codeph">numrange(1.1,2.2) &lt;= numrange(1.1,2.2)</code>
+              </td>
+
+              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e4314 ">
+                <code class="ph codeph">t</code>
+              </td>
+
+            </tr>
+
+            <tr class="row">
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e4305 ">
+                <code class="ph codeph">&gt;=</code>
+              </td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e4308 ">greater than or equal</td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e4311 ">
+                <code class="ph codeph">numrange(1.1,2.2) &gt;= numrange(1.1,2.0)</code>
+              </td>
+
+              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e4314 ">
+                <code class="ph codeph">t</code>
+              </td>
+
+            </tr>
+
+            <tr class="row">
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e4305 ">
+                <code class="ph codeph">@&gt;</code>
+              </td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e4308 ">contains range</td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e4311 ">
+                <code class="ph codeph">int4range(2,4) @&gt; int4range(2,3)</code>
+              </td>
+
+              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e4314 ">
+                <code class="ph codeph">t</code>
+              </td>
+
+            </tr>
+
+            <tr class="row">
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e4305 ">
+                <code class="ph codeph">@&gt;</code>
+              </td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e4308 ">contains element</td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e4311 ">
+                <code class="ph codeph">'[2011-01-01,2011-03-01)'::tsrange @&gt; '2011-01-10'::timestamp</code>
+              </td>
+
+              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e4314 ">
+                <code class="ph codeph">t</code>
+              </td>
+
+            </tr>
+
+            <tr class="row">
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e4305 ">
+                <code class="ph codeph">&lt;@</code>
+              </td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e4308 ">range is contained by</td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e4311 ">
+                <code class="ph codeph">int4range(2,4) &lt;@ int4range(1,7)</code>
+              </td>
+
+              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e4314 ">
+                <code class="ph codeph">t</code>
+              </td>
+
+            </tr>
+
+            <tr class="row">
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e4305 ">
+                <code class="ph codeph">&lt;@</code>
+              </td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e4308 ">element is contained by</td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e4311 ">
+                <code class="ph codeph">42 &lt;@ int4range(1,7)</code>
+              </td>
+
+              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e4314 ">
+                <code class="ph codeph">f</code>
+              </td>
+
+            </tr>
+
+            <tr class="row">
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e4305 ">
+                <code class="ph codeph">&amp;&amp;</code>
+              </td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e4308 ">overlap (have points in common)</td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e4311 ">
+                <code class="ph codeph">int8range(3,7) &amp;&amp; int8range(4,12)</code>
+              </td>
+
+              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e4314 ">
+                <code class="ph codeph">t</code>
+              </td>
+
+            </tr>
+
+            <tr class="row">
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e4305 ">
+                <code class="ph codeph">&lt;&lt;</code>
+              </td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e4308 ">strictly left of</td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e4311 ">
+                <code class="ph codeph">int8range(1,10) &lt;&lt; int8range(100,110)</code>
+              </td>
+
+              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e4314 ">
+                <code class="ph codeph">t</code>
+              </td>
+
+            </tr>
+
+            <tr class="row">
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e4305 ">
+                <code class="ph codeph">&gt;&gt;</code>
+              </td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e4308 ">strictly right of</td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e4311 ">
+                <code class="ph codeph">int8range(50,60) &gt;&gt; int8range(20,30)</code>
+              </td>
+
+              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e4314 ">
+                <code class="ph codeph">t</code>
+              </td>
+
+            </tr>
+
+            <tr class="row">
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e4305 ">
+                <code class="ph codeph">&amp;&lt;</code>
+              </td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e4308 ">does not extend to the right of</td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e4311 ">
+                <code class="ph codeph">int8range(1,20) &amp;&lt; int8range(18,20)</code>
+              </td>
+
+              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e4314 ">
+                <code class="ph codeph">t</code>
+              </td>
+
+            </tr>
+
+            <tr class="row">
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e4305 ">
+                <code class="ph codeph">&amp;&gt;</code>
+              </td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e4308 ">does not extend to the left of</td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e4311 ">
+                <code class="ph codeph">int8range(7,20) &amp;&gt; int8range(5,10)</code>
+              </td>
+
+              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e4314 ">
+                <code class="ph codeph">t</code>
+              </td>
+
+            </tr>
+
+            <tr class="row">
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e4305 ">
+                <code class="ph codeph">-|-</code>
+              </td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e4308 ">is adjacent to</td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e4311 ">
+                <code class="ph codeph">numrange(1.1,2.2) -|- numrange(2.2,3.3)</code>
+              </td>
+
+              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e4314 ">
+                <code class="ph codeph">t</code>
+              </td>
+
+            </tr>
+
+            <tr class="row">
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e4305 ">
+                <code class="ph codeph">+</code>
+              </td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e4308 ">union</td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e4311 ">
+                <code class="ph codeph">numrange(5,15) + numrange(10,20)</code>
+              </td>
+
+              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e4314 ">
+                <code class="ph codeph">[5,20)</code>
+              </td>
+
+            </tr>
+
+            <tr class="row">
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e4305 ">
+                <code class="ph codeph">*</code>
+              </td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e4308 ">intersection</td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e4311 ">
+                <code class="ph codeph">int8range(5,15) * int8range(10,20)</code>
+              </td>
+
+              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e4314 ">
+                <code class="ph codeph">[10,15)</code>
+              </td>
+
+            </tr>
+
+            <tr class="row">
+              <td class="entry row-nocellborder" style="vertical-align:top;" headers="d233567e4305 ">
+                <code class="ph codeph">-</code>
+              </td>
+
+              <td class="entry row-nocellborder" style="vertical-align:top;" headers="d233567e4308 ">difference</td>
+
+              <td class="entry row-nocellborder" style="vertical-align:top;" headers="d233567e4311 ">
+                <code class="ph codeph">int8range(5,15) - int8range(10,20)</code>
+              </td>
+
+              <td class="entry cellrowborder" style="vertical-align:top;" headers="d233567e4314 ">
+                <code class="ph codeph">[5,10)</code>
+              </td>
+
+            </tr>
+
+          </tbody>
+</table>
+</div>
+
+      <p class="p"> The simple comparison operators <code class="ph codeph">&lt;</code>, <code class="ph codeph">&gt;</code>,
+          <code class="ph codeph">&lt;=</code>, and <code class="ph codeph">&gt;=</code> compare the lower bounds first, and
+        only if those are equal, compare the upper bounds. These comparisons are not usually very
+        useful for ranges, but are provided to allow B-tree indexes to be constructed on ranges. </p>
+
+      <p class="p"> The left-of/right-of/adjacent operators always return false when an empty range is
+        involved; that is, an empty range is not considered to be either before or after any other
+        range. </p>
+
+      <p class="p"> The union and difference operators will fail if the resulting range would need to contain
+        two disjoint sub-ranges, as such a range cannot be represented. </p>
+
+      <p class="p"> The following table shows the functions available for use with range types. </p>
+
+      
+<div class="tablenoborder"><table cellpadding="4" cellspacing="0" summary="" id="functions-range__range-functions-table" class="table" frame="border" border="1" rules="all"><caption><span class="tablecap"><span class="table--title-label">Table 15. </span>Range Functions</span></caption><colgroup><col /><col /><col /><col /><col /></colgroup><thead class="thead" style="text-align:left;">
+            <tr class="row">
+              <th class="entry nocellnorowborder" style="vertical-align:top;" id="d233567e4824">Function</th>
+
+              <th class="entry nocellnorowborder" style="vertical-align:top;" id="d233567e4827">Return Type</th>
+
+              <th class="entry nocellnorowborder" style="vertical-align:top;" id="d233567e4830">Description</th>
+
+              <th class="entry nocellnorowborder" style="vertical-align:top;" id="d233567e4833">Example</th>
+
+              <th class="entry cell-norowborder" style="vertical-align:top;" id="d233567e4836">Result</th>
+
+            </tr>
+
+          </thead>
+<tbody class="tbody">
+            <tr class="row">
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e4824 ">
+                <code class="ph codeph">
+                  <code class="ph codeph">lower</code>(<code class="ph codeph">anyrange</code>) </code>
+              </td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e4827 ">range's element type</td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e4830 ">lower bound of range</td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e4833 ">
+                <code class="ph codeph">lower(numrange(1.1,2.2))</code>
+              </td>
+
+              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e4836 ">
+                <code class="ph codeph">1.1</code>
+              </td>
+
+            </tr>
+
+            <tr class="row">
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e4824 ">
+                <code class="ph codeph">
+                  <code class="ph codeph">upper</code>(<code class="ph codeph">anyrange</code>) </code>
+              </td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e4827 ">range's element type</td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e4830 ">upper bound of range</td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e4833 ">
+                <code class="ph codeph">upper(numrange(1.1,2.2))</code>
+              </td>
+
+              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e4836 ">
+                <code class="ph codeph">2.2</code>
+              </td>
+
+            </tr>
+
+            <tr class="row">
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e4824 ">
+                <code class="ph codeph">
+                  <code class="ph codeph">isempty</code>(<code class="ph codeph">anyrange</code>) </code>
+              </td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e4827 ">
+                <code class="ph codeph">boolean</code>
+              </td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e4830 ">is the range empty?</td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e4833 ">
+                <code class="ph codeph">isempty(numrange(1.1,2.2))</code>
+              </td>
+
+              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e4836 ">
+                <code class="ph codeph">false</code>
+              </td>
+
+            </tr>
+
+            <tr class="row">
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e4824 ">
+                <code class="ph codeph">
+                  <code class="ph codeph">lower_inc</code>(<code class="ph codeph">anyrange</code>) </code>
+              </td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e4827 ">
+                <code class="ph codeph">boolean</code>
+              </td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e4830 ">is the lower bound inclusive?</td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e4833 ">
+                <code class="ph codeph">lower_inc(numrange(1.1,2.2))</code>
+              </td>
+
+              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e4836 ">
+                <code class="ph codeph">true</code>
+              </td>
+
+            </tr>
+
+            <tr class="row">
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e4824 ">
+                <code class="ph codeph">
+                  <code class="ph codeph">upper_inc</code>(<code class="ph codeph">anyrange</code>) </code>
+              </td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e4827 ">
+                <code class="ph codeph">boolean</code>
+              </td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e4830 ">is the upper bound inclusive?</td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e4833 ">
+                <code class="ph codeph">upper_inc(numrange(1.1,2.2))</code>
+              </td>
+
+              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e4836 ">
+                <code class="ph codeph">false</code>
+              </td>
+
+            </tr>
+
+            <tr class="row">
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e4824 ">
+                <code class="ph codeph">
+                  <code class="ph codeph">lower_inf</code>(<code class="ph codeph">anyrange</code>) </code>
+              </td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e4827 ">
+                <code class="ph codeph">boolean</code>
+              </td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e4830 ">is the lower bound infinite?</td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e4833 ">
+                <code class="ph codeph">lower_inf('(,)'::daterange)</code>
+              </td>
+
+              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e4836 ">
+                <code class="ph codeph">true</code>
+              </td>
+
+            </tr>
+
+            <tr class="row">
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e4824 ">
+                <code class="ph codeph">
+                  <code class="ph codeph">upper_inf</code>(<code class="ph codeph">anyrange</code>) </code>
+              </td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e4827 ">
+                <code class="ph codeph">boolean</code>
+              </td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e4830 ">is the upper bound infinite?</td>
+
+              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e4833 ">
+                <code class="ph codeph">upper_inf('(,)'::daterange)</code>
+              </td>
+
+              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d233567e4836 ">
+                <code class="ph codeph">true</code>
+              </td>
+
+            </tr>
+
+            <tr class="row">
+              <td class="entry row-nocellborder" style="vertical-align:top;" headers="d233567e4824 ">
+                <code class="ph codeph">
+                  <code class="ph codeph">range_merge</code>(<code class="ph codeph">anyrange</code>, <code class="ph codeph">anyrange</code>)
+                </code>
+              </td>
+
+              <td class="entry row-nocellborder" style="vertical-align:top;" headers="d233567e4827 ">
+                <code class="ph codeph">anyrange</code>
+              </td>
+
+              <td class="entry row-nocellborder" style="vertical-align:top;" headers="d233567e4830 ">the smallest range which includes both of the given ranges</td>
+
+              <td class="entry row-nocellborder" style="vertical-align:top;" headers="d233567e4833 ">
+                <code class="ph codeph">range_merge('[1,2)'::int4range, '[3,4)'::int4range)</code>
+              </td>
+
+              <td class="entry cellrowborder" style="vertical-align:top;" headers="d233567e4836 ">
+                <code class="ph codeph">[1,4)</code>
+              </td>
+
+            </tr>
+
+          </tbody>
+</table>
+</div>
+
+      <p class="p"> The <code class="ph codeph">lower</code> and <code class="ph codeph">upper</code> functions return null if the range
+        is empty or the requested bound is infinite. The <code class="ph codeph">lower_inc</code>,
+          <code class="ph codeph">upper_inc</code>, <code class="ph codeph">lower_inf</code>, and <code class="ph codeph">upper_inf</code>
+        functions all return false for an empty range. </p>
+
+    </div>
+
+  </div>
+
+</body>
+</html>

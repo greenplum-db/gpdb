@@ -1,0 +1,319 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+
+<meta name="copyright" content="(C) Copyright 2022" />
+<meta name="DC.rights.owner" content="(C) Copyright 2022" />
+<meta name="generator" content="DITA-OT" /><meta name="DC.type" content="topic" />
+<meta name="DC.title" content="diskquota" />
+<meta name="DC.format" content="XHTML" />
+<meta name="DC.identifier" content="topic_gzw_2wz_13b" />
+<link rel="stylesheet" type="text/css" href="../commonltr.css" />
+<title>diskquota</title>
+</head>
+<body id="topic_gzw_2wz_13b">
+
+  <h1 class="title topictitle1" id="ariaid-title1">diskquota</h1>
+
+  <div class="body">
+    <p class="p">The <code class="ph codeph">diskquota</code> module allows Greenplum Database administrators to limit the
+      amount of disk space used by schemas or roles in a database. </p>
+
+  </div>
+
+  <div class="topic nested1" aria-labelledby="ariaid-title2" id="topic_ofb_gb1_b3b">
+    <h2 class="title topictitle2" id="ariaid-title2">Installing and Registering the Module</h2>
+
+    <div class="body">
+      <p class="p">The <code class="ph codeph">diskquota</code> module is installed when you install Greenplum Database.</p>
+
+      <p class="p">Before you can use the module, you must perform these steps:</p>
+
+      <ol class="ol" id="topic_ofb_gb1_b3b__ol_pfb_gb1_b3b">
+        <li class="li">Create the <code class="ph codeph">diskquota</code> database. The <code class="ph codeph">diskquota</code> module
+          uses this database to store the list of databases where the module is enabled.
+          <pre class="pre codeblock"><code>$ createdb diskquota;</code></pre></li>
+
+        <li class="li"> Add the <code class="ph codeph">diskquota</code> shared library to the Greenplum Database
+            <code class="ph codeph">shared_preload_libraries</code> server configuration parameter and restart
+          Greenplum
+          Database. Be sure to retain the previous setting of the configuration parameter.
+          For example:<pre class="pre codeblock"><code>$ gpconfig -s shared_preload_libraries
+Values on all segments are consistent
+GUC              : shared_preload_libraries
+Coordinator value: auto_explain
+Segment     value: auto_explain
+$ gpconfig -c shared_preload_libraries -v 'auto_explain,diskquota'
+$ gpstop -ar</code></pre></li>
+
+        <li class="li"> Register the <code class="ph codeph">diskquota</code> extension in databases where you want to
+          enforce disk usage quotas. <code class="ph codeph">diskquota</code> can be registered in up to ten
+          databases. <pre class="pre codeblock"><code>$ psql -d testdb -c "CREATE EXTENSION diskquota"</code></pre></li>
+
+        <li class="li">If you register the <code class="ph codeph">diskquota</code> extension in a database that already
+          contains data, you must initialize the <code class="ph codeph">diskquota</code> table size data by
+          running the <code class="ph codeph">diskquota.init_table_size_table()</code> UDF in the database. In a
+          database with many files, this can take a long time. The <code class="ph codeph">diskquota</code> module
+          cannot be used until the initialization is
+          complete.<pre class="pre codeblock"><code>=# SELECT diskquota.init_table_size_table();</code></pre>
+        </li>
+
+      </ol>
+
+    </div>
+
+  </div>
+
+  <div class="topic nested1" aria-labelledby="ariaid-title3" id="topic_ndp_4wy_c3b">
+    <h2 class="title topictitle2" id="ariaid-title3">About the diskquota Module</h2>
+
+    <div class="body">
+      <p class="p">A Greenplum Database superuser can set disk usage quotas for schemas and roles. A schema
+        quota sets a limit on disk space used by all tables that belong to a schema. A role quota
+        sets a limit on disk space used by all tables that are owned by a role.</p>
+
+      <p class="p">Diskquota processes running on the master and segment hosts check disk usage periodically
+        and place schemas or roles on a denylist when they reach their quota. </p>
+
+      <p class="p">When a query plan has been generated for a query that would add data, and the schema or
+        role is on the denylist, the query is cancelled before it can start. An error message
+        reports the quota that has been exceeded. A query that does not add data, such as a simple
+          <code class="ph codeph">SELECT</code> query, is allowed to run even when the role or schema is on the
+        denylist.</p>
+
+      <p class="p">Diskquota enforces <em class="ph i">soft limits</em> for disk usage. Quotas are only checked before a
+        query runs. If the quota is not exceeded when the query is about to run, the query is
+        allowed to run, even if it causes the quota to be exceeded. </p>
+
+      <p class="p">There is some delay after a quota has been reached before the schema or role is added to
+        the denylist. Other queries could add more data during the delay. The delay occurs because
+          <code class="ph codeph">diskquota</code> processes that calculate the disk space used by each table
+        run periodically with a pause between executions (two seconds by default). The delay
+        also occurs when disk usage falls beneath a quota, due to operations such as
+          <code class="ph codeph">DROP</code>, <code class="ph codeph">TRUNCATE</code>, or <code class="ph codeph">VACUUM FULL</code> that
+        remove data. Administrators can change the amount of time between disk space checks by
+        setting the <code class="ph codeph">diskquota.naptime</code> server configuration parameter.</p>
+
+      <p class="p">If a query is unable to run because the schema or role has been denylisted, an
+        administrator can increase the exceeded quota to allow the query to run. The
+          <code class="ph codeph">show_fast_schema_quota_view</code> and
+          <code class="ph codeph">show_fast_role_quota_view</code> views can be used to find the schemas or roles
+        that have exceeded their limits.</p>
+
+    </div>
+
+  </div>
+
+  <div class="topic nested1" aria-labelledby="ariaid-title4" id="topic_qfb_gb1_b3b">
+    <h2 class="title topictitle2" id="ariaid-title4">Using the diskquota Module</h2>
+
+    <div class="body">
+      <div class="section"><h3 class="title sectiontitle">Setting Disk Quotas</h3>
+        
+        <p class="p">Use the <code class="ph codeph">diskquota.set_schema_quota()</code> and
+            <code class="ph codeph">diskquota.set_role_quota()</code> user-defined functions in a database to set,
+          update, or delete disk quota limits for schemas and roles in the database. The functions
+          take two arguments: the schema or role name, and the quota to set. The quota can be
+          specified in units of MB, GB, TB, or PB, for example '2TB'. </p>
+
+        <p class="p">The following example sets a 250GB quota for the <code class="ph codeph">acct</code> schema:</p>
+
+        <pre class="pre codeblock"><code>$ SELECT diskquota.set_schema_quota('acct', '250GB');</code></pre>
+        <p class="p">This example sets a 500MB quota for the <code class="ph codeph">nickd</code> role:</p>
+
+        <pre class="pre codeblock"><code>$ SELECT diskquota.set_role_quota('nickd', '500MB');</code></pre>
+        <p class="p">To change a quota, call the <code class="ph codeph">diskquota.set_schema_quota()</code> or
+            <code class="ph codeph">diskquota.set_role_quota()</code> function again with the new quota value.</p>
+
+        <p class="p">To remove a quota, set the quota value to <code class="ph codeph">'-1'</code>.</p>
+
+      </div>
+
+      <div class="section"><h3 class="title sectiontitle">Displaying Disk Quotas and Disk Usage</h3><p class="p">The <code class="ph codeph">diskquota</code>
+          module provides two views to display active quotas and the current computed disk space
+          used.</p>
+The <code class="ph codeph">diskquota.show_fast_schema_quota_view</code> view lists active
+        quotas for schemas in the current database. The <code class="ph codeph">nspsize_in_bytes</code> column
+        contains the calculated size for all tables that belong to the schema.
+          <pre class="pre codeblock"><code>=# SELECT * FROM diskquota.show_fast_schema_quota_view;
+ schema_name | schema_oid | quota_in_mb | nspsize_in_bytes
+-------------+------------+-------------+------------------
+ acct        |      16561 |      256000 |           131072
+ analytics   |      16519 |  1073741824 |        144670720
+ eng         |      16560 |     5242880 |        117833728
+ public      |       2200 |         250 |          3014656
+(4 rows)</code></pre><p class="p">The
+            <code class="ph codeph">diskquota.show_fast_role_quota_view</code> view lists the active quotas for
+          roles in the current database. The <code class="ph codeph">rolsize_in_bytes</code> column contains the
+          calculated size for all tables that are owned by the
+        role.</p>
+<pre class="pre codeblock"><code>=# SELECT * FROM diskquota.show_fast_role_quota_view;
+ role_name | role_oid | quota_in_mb | rolsize_in_bytes
+-----------+----------+-------------+------------------
+ mdach     |    16558 |         500 |           131072
+ adam      |    16557 |         300 |        117833728
+ nickd     |    16577 |         500 |        144670720
+(3 rows)</code></pre></div>
+
+      <div class="section"><h3 class="title sectiontitle">Setting the Delay Between Disk Usage Updates</h3>The
+          <code class="ph codeph">diskquota.naptime</code> server configuration parameter specifies how frequently
+        (in seconds) the table sizes are recalculated. The smaller the <code class="ph codeph">naptime</code>
+        value, the less delay in detecting changes in disk usage. This example sets the
+          <code class="ph codeph">naptime</code> to ten seconds.
+        <pre class="pre codeblock"><code>$ gpconfig -c diskquota.naptime -v 10
+$ gpstop -ar</code></pre></div>
+
+      <div class="section"><h3 class="title sectiontitle">About diskquota Shared Memory Usage</h3>
+        
+        <p class="p">The <code class="ph codeph">diskquota</code> module uses shared memory to save the denylist and to save
+          the active table list.</p>
+
+        <p class="p">The denylist shared memory can hold up to 1MiB of database objects that exceed the quota
+          limit. If the denylist shared memory fills, data may be loaded into some schemas or roles
+          after they have reached their quota limit. </p>
+
+        <p class="p">Active table shared memory holds up to 1MiB of active tables by default. Active tables
+          are tables that may have changed sizes since <code class="ph codeph">diskquota</code> last recalculated
+          the table sizes. <code class="ph codeph">diskquota</code> hook functions are called when the storage
+          manager on each Greenplum Database segment creates, extends, or truncates a table file.
+          The hook functions store the identity of the file in shared memory so that its file size
+          can be recalculated the next time the table size data is refreshed. </p>
+
+        <p class="p">If the shared memory for active tables fills, <code class="ph codeph">diskquota</code> may fail to
+          detect a change in disk usage.</p>
+
+      </div>
+
+    </div>
+
+  </div>
+
+  <div class="topic nested1" aria-labelledby="ariaid-title5" id="topic_sfb_gb1_b3b">
+    <h2 class="title topictitle2" id="ariaid-title5">Notes</h2>
+
+    <div class="body">
+      <p class="p">The <code class="ph codeph">diskquota.max_active_tables</code> server configuration parameter
+        identifies the maximum number of relations (including tables, indexes, etc.) that
+        the <code class="ph codeph">diskquota</code> module can monitor at the same time. The default
+        value is <code class="ph codeph">1 * 1024 * 1024</code>. This value should be sufficient for most
+        Greenplum Database installations. Should you change the value of this
+        configuration parameter, you must restart the Greenplum Database server.</p>
+
+      <p class="p">The <code class="ph codeph">diskquota</code> module can be enabled in up to ten databases. One diskquota
+        worker process is created on the Greenplum Database master host for each diskquota-enabled
+        database.</p>
+
+      <p class="p">The disk usage for a role is defined as the total of disk usage on all segments for all
+        tables the role owns. Although a role is a cluster-level database object, the disk usage for
+        roles is calculated separately for each database. </p>
+
+      <p class="p">The disk usage of a schema is defined as the total of disk usage on all segments for all
+        tables in the schema. </p>
+
+      <p class="p">The disk usage for a table includes the table data, indexes, toast tables, and free space
+        map. For append-optimized tables, the calculation includes the visibility map and index, and
+        the block directory table.</p>
+
+      <p class="p">The <code class="ph codeph">diskquota</code> module cannot detect a newly created table inside of an
+        uncommitted transaction. The size of the new table is not included in the disk usage
+        calculated for the corresponding schema or role until after the transaction has committed.
+        Similarly, a table created using the <code class="ph codeph">CREATE TABLE AS</code> command is not
+        included in disk usage statistics until the command has completed.</p>
+
+      <p class="p">Deleting rows or running <code class="ph codeph">VACUUM</code> on a table does not release disk space, so
+        these operations cannot alone remove a schema or role from the <code class="ph codeph">diskquota</code>
+        denylist. The disk space used by a table can be reduced by running <code class="ph codeph">VACUUM
+          FULL</code> or <code class="ph codeph">TRUNCATE TABLE</code>.</p>
+
+      <p class="p">The <code class="ph codeph">diskquota</code> module supports high availability features provided by the
+        background worker framework. The <code class="ph codeph">diskquota</code> launcher process only runs on
+        the active master node. The postmaster on the standby master does not start the
+          <code class="ph codeph">diskquota</code> launcher process when it is in standby mode. When the master is
+        down and the administrator runs the <a class="xref" href="../../utility_guide/ref/gpactivatestandby.html#topic1">gpactivatestandby</a>
+        command, the standby master changes its role to master and the <code class="ph codeph">diskquota</code>
+        launcher process is forked automatically. Using the <code class="ph codeph">diskquota</code>-enabled
+        database list in the <code class="ph codeph">diskquota</code> database, the <code class="ph codeph">diskquota</code>
+        launcher creates the <code class="ph codeph">diskquota</code> worker processes that manage disk quotas for
+        each database.</p>
+
+    </div>
+
+  </div>
+
+  <div class="topic nested1" aria-labelledby="ariaid-title6" id="topic_v2z_jrv_b3b">
+    <h2 class="title topictitle2" id="ariaid-title6">Examples</h2>
+
+    <div class="body">
+      <p class="p">This example demonstrates how to set up a schema quota and then observe diskquota behavior
+        as data is added to the schema.</p>
+
+      <ol class="ol" id="topic_v2z_jrv_b3b__ol_rfb_gb1_b3b">
+        <li class="li">Create a database named <code class="ph codeph">test</code> and log in to
+          it.<pre class="pre codeblock"><code>$ createdb test
+$ psql -d test</code></pre></li>
+
+        <li class="li">Create the diskquota extension in the
+          database.<pre class="pre codeblock"><code>=# CREATE EXTENSION diskquota;
+CREATE EXTENSION</code></pre></li>
+
+        <li class="li"> Create the <code class="ph codeph">s1</code>
+          schema.<pre class="pre codeblock"><code>=# CREATE SCHEMA s1;
+CREATE SCHEMA</code></pre></li>
+
+        <li class="li">Set a 1MB disk quota for the <code class="ph codeph">s1</code>
+          schema.<pre class="pre codeblock"><code>=# SELECT diskquota.set_schema_quota('s1', '1MB');
+ set_schema_quota
+------------------
+
+(1 row)</code></pre></li>
+
+        <li class="li">The following commands create a table in the <code class="ph codeph">s1</code> schema and insert a
+          small amount of data into it. The schema has no data yet, so it is not on the denylist.
+          <pre class="pre codeblock"><code>=# SET search_path TO s1;
+SET
+=# CREATE TABLE a(i int);
+CREATE TABLE
+=# INSERT INTO a SELECT generate_series(1,100);
+INSERT 0 100
+</code></pre></li>
+
+        <li class="li">This command inserts a large amount of data, enough to exceed the 1MB quota that was set
+          for the schema. Before the <code class="ph codeph">INSERT</code> command, the <code class="ph codeph">s1</code> schema
+          is still not on the denylist, so this command should be allowed to run, even though it
+          will exceed the limit set for the
+          schema.<pre class="pre codeblock"><code>=# INSERT INTO a SELECT generate_series(1,10000000);
+INSERT 0 10000000
+</code></pre></li>
+
+        <li class="li">This command attempts to insert a small amount of data. Because the previous command
+          exceeded the schema's disk quota limit, the schema should be denylisted and any data
+          loading command should be cancelled.
+          <pre class="pre codeblock"><code>=# INSERT INTO a SELECT generate_series(1,100);
+ERROR:  schema's disk space quota exceeded with name:s1
+</code></pre></li>
+
+        <li class="li">This command removes the quota from the <code class="ph codeph">s1</code> schema by setting it to
+            <code class="ph codeph">-1</code> and again inserts a small amount of data. A 5-second sleep before
+          the <code class="ph codeph">INSERT</code> command ensures that the <code class="ph codeph">diskquota</code> table size
+          data is updated before the command is
+          run.<pre class="pre codeblock"><code>=# SELECT diskquota.set_schema_quota('s1', '-1');
+ set_schema_quota
+------------------
+
+(1 row)
+# Wait for 5 seconds to ensure the denylist is updated
+#= SELECT pg_sleep(5);
+#= INSERT INTO a SELECT generate_series(1,100);
+INSERT 0 100
+</code></pre></li>
+
+      </ol>
+
+    </div>
+
+  </div>
+
+</body>
+</html>

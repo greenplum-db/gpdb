@@ -1,0 +1,360 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+
+<meta name="copyright" content="(C) Copyright 2022" />
+<meta name="DC.rights.owner" content="(C) Copyright 2022" />
+<meta name="generator" content="DITA-OT" /><meta name="DC.type" content="topic" />
+<meta name="DC.title" content="gpaddmirrors" />
+<meta name="DC.format" content="XHTML" />
+<meta name="DC.identifier" content="topic1" />
+<link rel="stylesheet" type="text/css" href="../commonltr.css" />
+<title>gpaddmirrors</title>
+</head>
+<body id="topic1">
+
+    
+    <h1 class="title topictitle1" id="topic1__jp20941">gpaddmirrors</h1>
+
+    <div class="body">
+        <p class="p">Adds mirror segments to a Greenplum Database system that was initially configured without
+            mirroring.</p>
+
+        <div class="section" id="topic1__section2"><h2 class="title sectiontitle">Synopsis</h2>
+            
+            <pre class="pre codeblock"><code>gpaddmirrors [-p &lt;port_offset&gt;] [-m &lt;datadir_config_file&gt; [-a]] [-s] 
+   [-d &lt;coordinator_data_directory&gt;] [-b &lt;segment_batch_size&gt;] [-B &lt;batch_size&gt;] [-l &lt;logfile_directory&gt;]
+   [-v] [--hba-hostnames &lt;boolean&gt;] 
+
+gpaddmirrors -i &lt;mirror_config_file&gt; [-a] [-d &lt;coordinator_data_directory&gt;]
+   [-b &lt;segment_batch_size&gt;] [-B &lt;batch_size&gt;] [-l &lt;logfile_directory&gt;] [-v]
+
+gpaddmirrors -o output_sample_mirror_config&gt; [-s] [-m &lt;datadir_config_file&gt;]
+
+gpaddmirrors -? 
+
+gpaddmirrors --version</code></pre>
+        </div>
+
+        <div class="section" id="topic1__section3"><h2 class="title sectiontitle">Description</h2>
+            
+            <p class="p">The <code class="ph codeph">gpaddmirrors</code> utility configures mirror segment instances for an
+                existing Greenplum Database system that was initially configured with primary
+                segment instances only. The utility will create the mirror instances and begin the
+                online replication process between the primary and mirror segment instances. Once
+                all mirrors are synchronized with their primaries, your Greenplum Database system is
+                fully data redundant.</p>
+
+            <div class="note important"><span class="importanttitle">Important:</span> During the online replication process, Greenplum Database should
+                be in a quiescent state, workloads and other queries should not be running.</div>
+
+            <p class="p">By default, the utility will prompt you for the file system location(s) where it will
+                create the mirror segment data directories. If you do not want to be prompted, you
+                can pass in a file containing the file system locations using the
+                    <code class="ph codeph">-m</code> option.</p>
+
+            <p class="p">The mirror locations and ports must be different than your primary segment data
+                locations and ports.</p>
+
+            <p class="p">The utility creates a unique data directory for each mirror segment instance in the
+                specified location using the predefined naming convention. There must be the same
+                number of file system locations declared for mirror segment instances as for primary
+                segment instances. It is OK to specify the same directory name multiple times if you
+                want your mirror data directories created in the same location, or you can enter a
+                different data location for each mirror. Enter the absolute path. For example:</p>
+
+            <pre class="pre codeblock"><code>Enter mirror segment data directory location 1 of 2 &gt; /gpdb/mirror
+Enter mirror segment data directory location 2 of 2 &gt; /gpdb/mirror</code></pre>
+            <p class="p">OR</p>
+
+            <pre class="pre codeblock"><code>Enter mirror segment data directory location 1 of 2 &gt; /gpdb/m1
+Enter mirror segment data directory location 2 of 2 &gt; /gpdb/m2</code></pre>
+            <p class="p">Alternatively, you can run the <code class="ph codeph">gpaddmirrors</code> utility and supply a
+                detailed configuration file using the <code class="ph codeph">-i</code> option. This is useful if
+                you want your mirror segments on a completely different set of hosts than your
+                primary segments. The format of the mirror configuration file is:</p>
+
+            <pre class="pre codeblock"><code>&lt;contentID&gt;|&lt;address&gt;|&lt;port&gt;|&lt;data_dir&gt;</code></pre>
+            <p class="p">Where <code class="ph codeph">&lt;contentID&gt;</code> is the segment instance content ID,
+                    <code class="ph codeph">&lt;address&gt;</code> is the host name or IP address of the segment
+                host, <code class="ph codeph">&lt;port&gt;</code> is the communication port, and
+                    <code class="ph codeph">&lt;data_dir&gt;</code> is the segment instance data directory.</p>
+
+            <div class="p">For
+                example:<pre class="pre codeblock"><code>0|sdw1-1|60000|/gpdata/m1/gp0
+1|sdw1-1|60001|/gpdata/m2/gp1</code></pre></div>
+
+            <p class="p">The <code class="ph codeph">gp_segment_configuration</code> system catalog table can help you
+                determine your current primary segment configuration so that you can plan your
+                mirror segment configuration. For example, run the following query:</p>
+
+            <pre class="pre codeblock"><code>=# SELECT dbid, content, address as host_address, port, datadir 
+   FROM gp_segment_configuration
+   ORDER BY dbid;</code></pre>
+            <p class="p">If you are creating mirrors on alternate mirror hosts, the new mirror segment hosts
+                must be pre-installed with the Greenplum Database software and configured exactly
+                the same as the existing primary segment hosts. </p>
+
+            <p class="p">You must make sure that the user who runs <code class="ph codeph">gpaddmirrors</code> (the
+                    <code class="ph codeph">gpadmin</code> user) has permissions to write to the data directory
+                locations specified. You may want to create these directories on the segment hosts
+                and <code class="ph codeph">chown</code> them to the appropriate user before running
+                    <code class="ph codeph">gpaddmirrors</code>.</p>
+
+            <div class="note"><span class="notetitle">Note:</span> This utility uses secure shell (SSH) connections between systems to perform its
+                tasks. In large Greenplum Database deployments, cloud deployments, or deployments
+                with a large number of segments per host, this utility may exceed the host's maximum
+                threshold for unauthenticated connections. Consider updating the SSH
+                    <code class="ph codeph">MaxStartups</code> configuration parameter to increase this threshold.
+                For more information about SSH configuration options, refer to the SSH documentation
+                for your Linux distribution.</div>
+
+        </div>
+
+        <div class="section" id="topic1__section4"><h2 class="title sectiontitle">Options</h2>
+            
+            <dl class="dl parml">
+                
+                    <dt class="dt pt dlterm">-a (do not prompt)</dt>
+
+                    <dd class="dd pd">Run in quiet mode - do not prompt for information. Must supply a
+                        configuration file with either <code class="ph codeph">-m</code> or <code class="ph codeph">-i</code> if
+                        this option is used.</dd>
+
+                
+                
+                    <dt class="dt pt dlterm">-b <var class="keyword varname">segment_batch_size</var></dt>
+
+                    <dd class="dd pd">The maximum number of segments per host to operate on in parallel. Valid
+                        values are <code class="ph codeph">1</code> to <code class="ph codeph">128</code>. If not specified, the
+                        utility will start recovering up to 64 segments in parallel on each
+                        host.</dd>
+
+                
+                
+                    <dt class="dt pt dlterm">-B <var class="keyword varname">batch_size</var></dt>
+
+                    <dd class="dd pd">The number of hosts to work on in parallel. If not specified, the utility
+                        will start working on up to 16 hosts in parallel. Valid values are
+                            <code class="ph codeph">1</code> to <code class="ph codeph">64</code>.</dd>
+
+                
+                
+                    <dt class="dt pt dlterm">-d <var class="keyword varname">coordinator_data_directory</var></dt>
+
+                    <dd class="dd pd">The coordinator data directory. If not specified, the value set for
+                            <code class="ph codeph">$COORDINATOR_DATA_DIRECTORY</code> will be used.</dd>
+
+                
+                
+                    <dt class="dt pt dlterm">--hba-hostnames <var class="keyword varname">boolean</var></dt>
+
+                    <dd class="dd pd">Optional. Controls whether this utility uses IP addresses or host names in
+                        the <code class="ph codeph">pg_hba.conf</code> file when updating this file with addresses
+                        that can connect to Greenplum Database. When set to 0 -- the default value
+                        -- this utility uses IP addresses when updating this file. When set to 1,
+                        this utility uses host names when updating this file. For consistency, use
+                        the same value that was specified for <code class="ph codeph">HBA_HOSTNAMES</code> when
+                        the Greenplum Database system was initialized. For information about how
+                        Greenplum Database resolves host names in the <code class="ph codeph">pg_hba.conf</code>
+                        file, see <a class="xref" href="../../admin_guide/client_auth.html" target="_blank">Configuring Client Authentication</a>.</dd>
+
+                
+                
+                    <dt class="dt pt dlterm">-i <var class="keyword varname">mirror_config_file</var></dt>
+
+                    <dd class="dd pd">A configuration file containing one line for each mirror segment you want to
+                        create. You must have one mirror segment instance listed for each primary
+                        segment in the system. The format of this file is as follows (as per
+                        attributes in the <a class="xref" href="../../ref_guide/system_catalogs/gp_segment_configuration.html">gp_segment_configuration</a> catalog table):</dd>
+
+                    <dd class="dd pd ddexpand">
+                        <pre class="pre codeblock"><code>&lt;contentID&gt;|&lt;address&gt;|&lt;port&gt;|&lt;data_dir&gt;</code></pre>
+                    </dd>
+
+                    <dd class="dd pd ddexpand">
+                        <p class="p">Where <code class="ph codeph">&lt;contentID&gt;</code> is the segment instance content ID,
+                                <code class="ph codeph">&lt;address&gt;</code> is the hostname or IP address of the
+                            segment host, <code class="ph codeph">&lt;port&gt;</code> is the communication port, and
+                                <code class="ph codeph">&lt;data_dir&gt;</code> is the segment instance data
+                            directory. For information about using a hostname or IP address, see
+                                <a class="xref" href="#topic1__host_ip">Specifying Hosts using Hostnames or IP Addresses</a>. Also, see <a class="xref" href="#topic1__multi_nic">Using Host Systems with Multiple NICs</a>.</p>
+
+                    </dd>
+
+                
+                
+                    <dt class="dt pt dlterm">-l <var class="keyword varname">logfile_directory</var></dt>
+
+                    <dd class="dd pd">The directory to write the log file. Defaults to
+                            <code class="ph codeph">~/gpAdminLogs</code>.</dd>
+
+                
+                
+                    <dt class="dt pt dlterm">-m <var class="keyword varname">datadir_config_file</var></dt>
+
+                    <dd class="dd pd">A configuration file containing a list of file system locations where the
+                        mirror data directories will be created. If not supplied, the utility
+                        prompts you for locations. Each line in the file specifies a mirror data
+                        directory location. For example:</dd>
+
+                    <dd class="dd pd ddexpand">
+                        <pre class="pre codeblock"><code>/gpdata/m1
+/gpdata/m2
+/gpdata/m3
+/gpdata/m4</code></pre>
+                    </dd>
+
+                
+                
+                    <dt class="dt pt dlterm">-o <var class="keyword varname">output_sample_mirror_config</var></dt>
+
+                    <dd class="dd pd">If you are not sure how to lay out the mirror configuration file used by the
+                            <code class="ph codeph">-i</code> option, you can run <code class="ph codeph">gpaddmirrors</code>
+                        with this option to generate a sample mirror configuration file based on
+                        your primary segment configuration. The utility will prompt you for your
+                        mirror segment data directory locations (unless you provide these in a file
+                        using <code class="ph codeph">-m</code>). You can then edit this file to change the host
+                        names to alternate mirror hosts if necessary.</dd>
+
+                
+                
+                    <dt class="dt pt dlterm">-p <var class="keyword varname">port_offset</var></dt>
+
+                    <dd class="dd pd">Optional. This number is used to calculate the database ports used for
+                        mirror segments. The default offset is 1000. Mirror port assignments are
+                        calculated as
+                        follows:<pre class="pre codeblock"><code>primary_port + offset = mirror_database_port</code></pre></dd>
+
+                    <dd class="dd pd ddexpand">For example, if a primary segment has port 50001, then its mirror will use a
+                        database port of 51001, by default.</dd>
+
+                
+                
+                    <dt class="dt pt dlterm">-s (spread mirrors)</dt>
+
+                    <dd class="dd pd">Spreads the mirror segments across the available hosts. The default is to
+                        group a set of mirror segments together on an alternate host from their
+                        primary segment set. Mirror spreading will place each mirror on a different
+                        host within the Greenplum Database array. Spreading is only allowed if there
+                        is a sufficient number of hosts in the array (number of hosts is greater
+                        than the number of segment instances per host).</dd>
+
+                
+                
+                    <dt class="dt pt dlterm">-v (verbose)</dt>
+
+                    <dd class="dd pd">Sets logging output to verbose.</dd>
+
+                
+                
+                    <dt class="dt pt dlterm">--version (show utility version)</dt>
+
+                    <dd class="dd pd">Displays the version of this utility.</dd>
+
+                
+                
+                    <dt class="dt pt dlterm">-? (help)</dt>
+
+                    <dd class="dd pd">Displays the online help.</dd>
+
+                
+            </dl>
+
+        </div>
+
+        <div class="section" id="topic1__host_ip"><h2 class="title sectiontitle">Specifying Hosts using Hostnames or IP Addresses</h2>
+            
+            <div class="p">When specifying a mirroring configuration using the <code class="ph codeph">gpaddmirrors</code>
+                option <code class="ph codeph">-i</code>, you can specify either a hostname or an IP address for
+                the &lt;address&gt; value. <ul class="ul" id="topic1__ul_zsd_cmh_dmb">
+                    <li class="li">If you specify a hostname, the resolution of the hostname to an IP address
+                        should be done locally for security. For example, you should use entries in
+                        a local <code class="ph codeph">/etc/hosts</code> file to map the hostname to an IP
+                        address. The resolution of a hostname to an IP address should not be
+                        performed by an external service such as a public DNS server. You must stop
+                        the Greenplum system before you change the mapping of a hostname to a
+                        different IP address.</li>
+
+                    <li class="li">If you specify an IP address, the address should not be changed after the
+                        initial configuration. When segment mirroring is enabled, replication from
+                        the primary to the mirror segment will fail if the IP address changes from
+                        the configured value. For this reason, you should use a hostname when
+                        enabling mirroring using the <code class="ph codeph">-i</code> option unless you have a
+                        specific requirement to use IP addresses.</li>
+
+                </ul>
+</div>
+
+            <p class="p">When enabling a mirroring configuration that adds hosts to the Greenplum system,
+                    <code class="ph codeph">gpaddmirrors</code> populates the <a class="xref" href="../../ref_guide/system_catalogs/gp_segment_configuration.html">gp_segment_configuration</a> catalog table with the mirror segment instance
+                information. Greenplum Database uses the <var class="keyword varname">address</var> value of the
+                    <code class="ph codeph">gp_segment_configuration</code> catalog table when looking up host
+                systems for Greenplum interconnect (internal) communication between the coordinator
+                and segment instances and between segment instances, and for other internal
+                communication.</p>
+
+        </div>
+
+        <div class="section" id="topic1__multi_nic"><h2 class="title sectiontitle">Using Host Systems with Multiple NICs</h2>
+            
+            <p class="p">If hosts systems are configured with multiple NICs, you can initialize a Greenplum
+                Database system to use each NIC as a Greenplum host system. You must ensure that the
+                host systems are configured with sufficient resources to support all the segment
+                instances being added to the host. Also, if you enable segment mirroring, you must
+                ensure that the Greenplum system configuration supports failover if a host system
+                fails. For information about Greenplum Database mirroring schemes, see <a class="xref" href="../../best_practices/ha.html#topic_ngz_qf4_tt" target="_blank">../../best_practices/ha.html#topic_ngz_qf4_tt</a>.</p>
+
+            <p class="p">For example, this is a segment instance configuration for a simple Greenplum system.
+                The segment host <code class="ph codeph">gp6m</code> is configured with two NICs,
+                    <code class="ph codeph">gp6m-1</code> and <code class="ph codeph">gp6m-2</code>, where the Greenplum
+                Database system uses <code class="ph codeph">gp6m-1</code> for the coordinator segment and
+                    <code class="ph codeph">gp6m-2</code> for segment instances. </p>
+
+            <pre class="pre codeblock"><code>select content, role, port, hostname, address from gp_segment_configuration ;
+
+ content | role | port  | hostname | address
+---------+------+-------+----------+----------
+      -1 | p    |  5432 | gp6m     | gp6m-1
+       0 | p    | 40000 | gp6m     | gp6m-2
+       0 | m    | 50000 | gp6s     | gp6s
+       1 | p    | 40000 | gp6s     | gp6s
+       1 | m    | 50000 | gp6m     | gp6m-2
+(5 rows) </code></pre>
+        </div>
+
+        <div class="section" id="topic1__section5"><h2 class="title sectiontitle">Examples</h2>
+            
+            <p class="p">Add mirroring to an existing Greenplum Database system using the same set of hosts as
+                your primary data. Calculate the mirror database ports by adding 100 to the current
+                primary segment port numbers:</p>
+
+            <pre class="pre codeblock"><code>$ gpaddmirrors -p 100</code></pre>
+            <p class="p">Generate a sample mirror configuration file with the <code class="ph codeph">-o</code> option to
+                use with <code class="ph codeph">gpaddmirrors -i</code>:</p>
+
+            <pre class="pre codeblock"><code>$ gpaddmirrors -o /home/gpadmin/sample_mirror_config</code></pre>
+            <p class="p">Add mirroring to an existing Greenplum Database system using a different set of hosts
+                from your primary data:</p>
+
+            <pre class="pre codeblock"><code>$ gpaddmirrors -i mirror_config_file</code></pre>
+            <p class="p">Where <code class="ph codeph">mirror_config_file</code> looks something like this:</p>
+
+            <pre class="pre codeblock"><code>0|sdw1-1|52001|/gpdata/m1/gp0
+1|sdw1-2|52002|/gpdata/m2/gp1
+2|sdw2-1|52001|/gpdata/m1/gp2
+3|sdw2-2|52002|/gpdata/m2/gp3</code></pre>
+        </div>
+
+        <div class="section" id="topic1__section6"><h2 class="title sectiontitle">See Also</h2>
+            
+            <p class="p"><a class="xref" href="gpinitsystem.html#topic1">gpinitsystem</a>, <a class="xref" href="gpinitstandby.html#topic1">gpinitstandby</a>, <a class="xref" href="gpactivatestandby.html#topic1">gpactivatestandby</a></p>
+
+        </div>
+
+    </div>
+
+</body>
+</html>

@@ -1,0 +1,648 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+
+<meta name="copyright" content="(C) Copyright 2022" />
+<meta name="DC.rights.owner" content="(C) Copyright 2022" />
+<meta name="generator" content="DITA-OT" /><meta name="DC.type" content="topic" />
+<meta name="DC.title" content="CREATE TYPE" />
+<meta name="DC.relation" scheme="URI" content="../sql_commands/sql_ref.html" />
+<meta name="DC.format" content="XHTML" />
+<meta name="DC.identifier" content="topic1" />
+<link rel="stylesheet" type="text/css" href="../commonltr.css" />
+<title>CREATE TYPE</title>
+</head>
+<body id="topic1">
+<h1 class="title topictitle1" id="topic1__ch20941">CREATE TYPE</h1>
+<div class="body"><p class="p" id="topic1__sql_command_desc">Defines a new data type.</p>
+<div class="section" id="topic1__section2"><h2 class="title sectiontitle">Synopsis</h2><pre class="pre codeblock" id="topic1__sql_command_synopsis"><code>CREATE TYPE &lt;name&gt; AS 
+    ( &lt;attribute_name&gt; &lt;data_type&gt; [ COLLATE &lt;collation&gt; ] [, ... ] ] )
+
+CREATE TYPE &lt;name&gt; AS ENUM 
+    ( [ '&lt;label&gt;' [, ... ] ] )
+
+CREATE TYPE &lt;name&gt; AS RANGE (
+    SUBTYPE = &lt;subtype&gt;
+    [ , SUBTYPE_OPCLASS = &lt;subtype_operator_class&gt; ]
+    [ , COLLATION = &lt;collation&gt; ]
+    [ , CANONICAL = &lt;canonical_function&gt; ]
+    [ , SUBTYPE_DIFF = &lt;subtype_diff_function&gt; ]
+)
+
+CREATE TYPE &lt;name&gt; (
+    INPUT = &lt;input_function&gt;,
+    OUTPUT = &lt;output_function&gt;
+    [, RECEIVE = &lt;receive_function&gt;]
+    [, SEND = &lt;send_function&gt;]
+    [, TYPMOD_IN = &lt;type_modifier_input_function&gt; ]
+    [, TYPMOD_OUT = &lt;type_modifier_output_function&gt; ]
+    [, INTERNALLENGTH = {&lt;internallength&gt; | VARIABLE}]
+    [, PASSEDBYVALUE]
+    [, ALIGNMENT = &lt;alignment&gt;]
+    [, STORAGE = &lt;storage&gt;]
+    [, LIKE = &lt;like_type&gt;
+    [, CATEGORY = &lt;category&gt;]
+    [, PREFERRED = &lt;preferred&gt;]
+    [, DEFAULT = &lt;default&gt;]
+    [, ELEMENT = &lt;element&gt;]
+    [, DELIMITER = &lt;delimiter&gt;]
+    [, COLLATABLE = &lt;collatable&gt;]
+    [, COMPRESSTYPE = &lt;compression_type&gt;]
+    [, COMPRESSLEVEL = &lt;compression_level&gt;]
+    [, BLOCKSIZE = &lt;blocksize&gt;] )
+
+CREATE TYPE &lt;name&gt;</code></pre></div>
+<div class="section" id="topic1__section3"><h2 class="title sectiontitle">Description</h2><p class="p"><code class="ph codeph">CREATE TYPE</code> registers a new data type for use in the
+current database. The user who defines a type becomes its owner. </p>
+<p class="p">If a schema name is given then the type is created in the specified
+schema. Otherwise it is created in the current schema. The type name
+must be distinct from the name of any existing type or domain in the
+same schema. The type name must also be distinct from the name of any
+existing table in the same schema.</p>
+
+            <p class="p">There are five forms of <code class="ph codeph">CREATE TYPE</code>, as shown in the syntax synopsis
+                above. They respectively create a <em class="ph i">composite type</em>, an <em class="ph i">enum type</em>, a <em class="ph i">range
+                    type</em>, a <em class="ph i">base type</em>, or a <em class="ph i">shell type</em>. The first four of these
+                are discussed in turn below. A shell type is simply a placeholder for a type to be
+                defined later; it is created by issuing <code class="ph codeph">CREATE TYPE</code> with no
+                parameters except for the type name. Shell types are needed as forward references
+                when creating range types and base types, as discussed in those sections.</p>
+<div class="sectiondiv" id="topic1__section4">
+                <strong class="ph b">Composite Types</strong>
+                <p class="p">The first form of <code class="ph codeph">CREATE TYPE</code> creates a composite type. The
+                    composite type is specified by a list of attribute names and data types. An
+                    attribute's collation can be specified too, if its data type is collatable. A
+                    composite type is essentially the same as the row type of a table, but using
+                        <code class="ph codeph">CREATE TYPE</code> avoids the need to create an actual table when
+                    all that is wanted is to define a type. A stand-alone composite type is useful,
+                    for example, as the argument or return type of a function.</p>
+<p class="p">To be able to
+                    create a composite type, you must have <code class="ph codeph">USAGE</code> privilege on all
+                    attribute types.</p>
+</div>
+            <div class="sectiondiv" id="topic1__enum"><strong class="ph b">Enumerated Types</strong>
+                <p class="p">The second form of <code class="ph codeph">CREATE TYPE</code> creates an enumerated
+                        (<code class="ph codeph">ENUM</code>) type, as described in <a class="xref" href="https://www.postgresql.org/docs/9.4/datatype-enum.html" target="_blank">Enumerated Types</a> in the PostgreSQL documentation.
+                        <code class="ph codeph">ENUM</code> types take a list of quoted labels, each of which must
+                    be less than <code class="ph codeph">NAMEDATALEN</code> bytes long (64 in a standard
+                    build).</p>
+<p class="p">It is possible to create an enumerated type with zero labels, but
+                    such a type cannot be used to hold values before at least one label is added
+                    using <a class="xref" href="ALTER_TYPE.html">ALTER TYPE</a>.</p>
+
+            </div>
+            <div class="sectiondiv"><strong class="ph b">Range Types</strong><p class="p">The third form of <code class="ph codeph">CREATE TYPE</code> creates a
+                    new range type, as described in <a class="xref" href="../datatype-range.html#rangetypes">Range Types</a>.</p>
+<p class="p">The range type's <var class="keyword varname">subtype</var> can be any type with an
+                    associated b-tree operator class (to determine the ordering of values for the
+                    range type). Normally the subtype's default b-tree operator class is used to
+                    determine ordering; to use a non-default operator class, specify its name with
+                        <var class="keyword varname">subtype_opclass</var>. If the subtype is collatable, and you
+                    want to use a non-default collation in the range's ordering, specify the desired
+                    collation with the <var class="keyword varname">collation</var> option.</p>
+<p class="p">The optional
+                        <var class="keyword varname">canonical</var> function must take one argument of the range
+                    type being defined, and return a value of the same type. This is used to convert
+                    range values to a canonical form, when applicable. See Section <a class="xref" href="../datatype-range.html#rangetypes-defining">Defining New Range Types</a> for more information.
+                    Creating a <var class="keyword varname">canonical</var> function is a bit tricky, since it must
+                    be defined before the range type can be declared. To do this, you must first
+                    create a shell type, which is a placeholder type that has no properties except a
+                    name and an owner. This is done by issuing the command <code class="ph codeph">CREATE TYPE
+                            <var class="keyword varname">name</var></code>, with no additional parameters. Then
+                    the function can be declared using the shell type as argument and result, and
+                    finally the range type can be declared using the same name. This automatically
+                    replaces the shell type entry with a valid range type.</p>
+<p class="p">The optional
+                        <var class="keyword varname">subtype_diff</var> function must take two values of the
+                        <var class="keyword varname">subtype</var> type as argument, and return a double precision
+                    value representing the difference between the two given values. While this is
+                    optional, providing it allows much greater efficiency of GiST indexes on columns
+                    of the range type. See <a class="xref" href="../datatype-range.html#rangetypes-defining">Defining New Range Types</a>
+                    for more information.</p>
+</div>
+<div class="sectiondiv" id="topic1__section5"><strong class="ph b">Base Types</strong><p class="p">The fourth form of <code class="ph codeph">CREATE TYPE</code>
+                    creates a new base type (scalar type). You must be a superuser to create a new
+                    base type. The parameters may appear in any order, not only that shown in the
+                    syntax, and most are optional. You must register two or more functions (using
+                        <code class="ph codeph">CREATE FUNCTION</code>) before defining the type. The support
+                    functions <var class="keyword varname">input_function</var> and
+                        <var class="keyword varname">output_function</var> are required, while the functions
+                        <var class="keyword varname">receive_function</var>, <var class="keyword varname">send_function</var>,
+                        <var class="keyword varname">type_modifier_input_function</var>,
+                        <var class="keyword varname">type_modifier_output_function</var>, and
+                        <var class="keyword varname">analyze_function</var> are optional. Generally these functions
+                    have to be coded in C or another low-level language. In Greenplum Database, any
+                    function used to implement a data type must be defined as
+                        <code class="ph codeph">IMMUTABLE</code>.</p>
+<p class="p">The <var class="keyword varname">input_function</var>
+                    converts the type's external textual representation to the internal
+                    representation used by the operators and functions defined for the type.
+                        <var class="keyword varname">output_function</var> performs the reverse transformation. The
+                    input function may be declared as taking one argument of type
+                        <code class="ph codeph">cstring</code>, or as taking three arguments of types
+                        <code class="ph codeph">cstring</code>, <code class="ph codeph">oid</code>, <code class="ph codeph">integer</code>.
+                    The first argument is the input text as a C string, the second argument is the
+                    type's own OID (except for array types, which instead receive their element
+                    type's OID), and the third is the <code class="ph codeph">typmod</code> of the destination
+                    column, if known (<code class="ph codeph">-1</code> will be passed if not). The input function
+                    must return a value of the data type itself. Usually, an input function should
+                    be declared <code class="ph codeph">STRICT</code>; if it is not, it will be called with a
+                        <code class="ph codeph">NULL</code> first parameter when reading a <code class="ph codeph">NULL</code>
+                    input value. The function must still return <code class="ph codeph">NULL</code> in this case,
+                    unless it raises an error. (This case is mainly meant to support domain input
+                    functions, which may need to reject <code class="ph codeph">NULL</code> inputs.) The output
+                    function must be declared as taking one argument of the new data type. The
+                    output function must return type <code class="ph codeph">cstring</code>. Output functions are
+                    not invoked for <code class="ph codeph">NULL</code> values. </p>
+<p class="p">The optional
+                        <var class="keyword varname">receive_function</var> converts the type's external binary
+                    representation to the internal representation. If this function is not supplied,
+                    the type cannot participate in binary input. The binary representation should be
+                    chosen to be cheap to convert to internal form, while being reasonably portable.
+                    (For example, the standard integer data types use network byte order as the
+                    external binary representation, while the internal representation is in the
+                    machine's native byte order.) The receive function should perform adequate
+                    checking to ensure that the value is valid. The receive function may be declared
+                    as taking one argument of type <code class="ph codeph">internal</code>, or as taking three
+                    arguments of types <code class="ph codeph">internal</code>, <code class="ph codeph">oid</code>,
+                        <code class="ph codeph">integer</code>. The first argument is a pointer to a
+                        <code class="ph codeph">StringInfo</code> buffer holding the received byte string; the
+                    optional arguments are the same as for the text input function. The receive
+                    function must return a value of the data type itself. Usually, a receive
+                    function should be declared <code class="ph codeph">STRICT</code>; if it is not, it will be
+                    called with a <code class="ph codeph">NULL</code> first parameter when reading a NULL input
+                    value. The function must still return <code class="ph codeph">NULL</code> in this case, unless
+                    it raises an error. (This case is mainly meant to support domain receive
+                    functions, which may need to reject <code class="ph codeph">NULL</code> inputs.) Similarly,
+                    the optional <var class="keyword varname">send_function</var> converts from the internal
+                    representation to the external binary representation. If this function is not
+                    supplied, the type cannot participate in binary output. The send function must
+                    be declared as taking one argument of the new data type. The send function must
+                    return type <code class="ph codeph">bytea</code>. Send functions are not invoked for
+                        <code class="ph codeph">NULL</code> values. </p>
+<p class="p">The optional
+                        <var class="keyword varname">type_modifier_input_function</var> and
+                        <var class="keyword varname">type_modifier_output_function</var> are required if the type
+                    supports modifiers. Modifiers are optional constraints attached to a type
+                    declaration, such as <code class="ph codeph">char(5)</code> or <code class="ph codeph">numeric(30,2)</code>.
+                    While Greenplum Database allows user-defined types to take one or more simple
+                    constants or identifiers as modifiers, this information must fit into a single
+                    non-negative integer value for storage in the system catalogs. Greenplum
+                    Database passes the declared modifier(s) to the
+                        <var class="keyword varname">type_modifier_input_function</var> in the form of a
+                        <code class="ph codeph">cstring</code> array. The modifier input function must check the
+                    values for validity, throwing an error if they are incorrect. If the values are
+                    correct, the modifier input function returns a single non-negative integer value
+                    that Greenplum Database stores as the column <code class="ph codeph">typmod</code>. Type
+                    modifiers are rejected if the type was not defined with a
+                        <var class="keyword varname">type_modifier_input_function</var>. The
+                        <var class="keyword varname">type_modifier_output_function</var> converts the internal
+                    integer <code class="ph codeph">typmod</code> value back to the correct form for user display.
+                    The modifier output function must return a <code class="ph codeph">cstring</code> value that
+                    is the exact string to append to the type name. For example,
+                        <code class="ph codeph">numeric</code>'s function might return <code class="ph codeph">(30,2)</code>.
+                    The <var class="keyword varname">type_modifier_output_function</var> is optional. When not
+                    specified, the default display format is the stored <code class="ph codeph">typmod</code>
+                    integer value enclosed in parentheses.</p>
+<p class="p">You should at this point be
+                    wondering how the input and output functions can be declared to have results or
+                    arguments of the new type, when they have to be created before the new type can
+                    be created. The answer is that the type should first be defined as a shell type,
+                    which is a placeholder type that has no properties except a name and an owner.
+                    This is done by issuing the command <code class="ph codeph">CREATE TYPE
+                        <var class="keyword varname">name</var></code>, with no additional parameters. Then the
+                    I/O functions can be defined referencing the shell type. Finally, <code class="ph codeph">CREATE
+                        TYPE</code> with a full definition replaces the shell entry with a
+                    complete, valid type definition, after which the new type can be used normally.
+                    </p>
+<p class="p">The <var class="keyword varname">like_type</var> parameter provides an alternative method
+                    for specifying the basic representation properties of a data type: copy them
+                    from some existing type. The values <code class="ph codeph">internallength</code>,
+                        <code class="ph codeph">passedbyvalue</code>, <code class="ph codeph">alignment</code>, and
+                        <code class="ph codeph">storage</code> are copied from the named type. (It is possible,
+                    though usually undesirable, to override some of these values by specifying them
+                    along with the <code class="ph codeph">LIKE</code> clause.) Specifying representation this way
+                    is especially useful when the low-level implementation of the new type
+                    "piggybacks" on an existing type in some fashion.</p>
+<p class="p">While the details of the
+                    new type's internal representation are only known to the I/O functions and other
+                    functions you create to work with the type, there are several properties of the
+                    internal representation that must be declared to Greenplum Database. Foremost of
+                    these is <var class="keyword varname">internallength</var>. Base data types can be fixed-length,
+                    in which case <var class="keyword varname">internallength</var> is a positive integer, or
+                    variable length, indicated by setting <var class="keyword varname">internallength</var> to
+                        <code class="ph codeph">VARIABLE</code>. (Internally, this is represented by setting
+                        <code class="ph codeph">typlen</code> to <code class="ph codeph">-1</code>.) The internal representation
+                    of all variable-length types must start with a 4-byte integer giving the total
+                    length of this value of the type.</p>
+<p class="p">The optional flag
+                        <code class="ph codeph">PASSEDBYVALUE</code> indicates that values of this data type are
+                    passed by value, rather than by reference. You may not pass by value types whose
+                    internal representation is larger than the size of the <code class="ph codeph">Datum</code>
+                    type (4 bytes on most machines, 8 bytes on a few). </p>
+<p class="p">The
+                        <var class="keyword varname">alignment</var> parameter specifies the storage alignment
+                    required for the data type. The allowed values equate to alignment on 1, 2, 4,
+                    or 8 byte boundaries. Note that variable-length types must have an alignment of
+                    at least 4, since they necessarily contain an <code class="ph codeph">int4</code> as their
+                    first component. </p>
+<p class="p">The <var class="keyword varname">storage</var> parameter allows
+                    selection of storage strategies for variable-length data types. (Only
+                        <code class="ph codeph">plain</code> is allowed for fixed-length types.)
+                        <code class="ph codeph">plain</code> specifies that data of the type will always be stored
+                    in-line and not compressed. <code class="ph codeph">extended</code> specifies that the system
+                    will first try to compress a long data value, and will move the value out of the
+                    main table row if it's still too long. <code class="ph codeph">external</code> allows the
+                    value to be moved out of the main table, but the system will not try to compress
+                    it. <code class="ph codeph">main</code> allows compression, but discourages moving the value
+                    out of the main table. (Data items with this storage strategy may still be moved
+                    out of the main table if there is no other way to make a row fit, but they will
+                    be kept in the main table preferentially over <code class="ph codeph">extended</code> and
+                        <code class="ph codeph">external</code> items.) </p>
+<p class="p">A default value may be specified,
+                    in case a user wants columns of the data type to default to something other than
+                    the null value. Specify the default with the <code class="ph codeph">DEFAULT</code> key word.
+                    (Such a default may be overridden by an explicit <code class="ph codeph">DEFAULT</code> clause
+                    attached to a particular column.) </p>
+<p class="p">To indicate that a type is an array,
+                    specify the type of the array elements using the <code class="ph codeph">ELEMENT</code> key
+                    word. For example, to define an array of 4-byte integers (int4), specify
+                        <code class="ph codeph">ELEMENT = int4</code>. More details about array types appear
+                    below. </p>
+<p class="p">The <em class="ph i">category</em> and <em class="ph i">preferred</em> parameters can be used to
+                    help control which implicit cast Greenplum Database applies in ambiguous
+                    situations. Each data type belongs to a category named by a single ASCII
+                    character, and each type is either "preferred" or not within its category. The
+                    parser will prefer casting to preferred types (but only from other types within
+                    the same category) when this rule helps resolve overloaded functions or
+                    operators. For types that have no implicit casts to or from any other types, it
+                    is sufficient to retain the default settings. However, for a group of related
+                    types that have implicit casts, it is often helpful to mark them all as
+                    belonging to a category and select one or two of the "most general" types as
+                    being preferred within the category. The <em class="ph i">category</em> parameter is especially
+                    useful when you add a user-defined type to an existing built-in category, such
+                    as the numeric or string types. It is also possible to create new
+                    entirely-user-defined type categories. Select any ASCII character other than an
+                    upper-case letter to name such a category.</p>
+<p class="p">To indicate the delimiter to be
+                    used between values in the external representation of arrays of this type,
+                        <code class="ph codeph">delimiter</code> can be set to a specific character. The default
+                    delimiter is the comma (,). Note that the delimiter is associated with the array
+                    element type, not the array type itself.</p>
+<p class="p"> If the optional Boolean
+                    parameter <var class="keyword varname">collatable</var> is true, column definitions and
+                    expressions of the type may carry collation information through use of the
+                        <code class="ph codeph">COLLATE</code> clause. It is up to the implementations of the
+                    functions operating on the type to actually make use of the collation
+                    information; this does not happen automatically merely by marking the type
+                    collatable. </p>
+</div><div class="sectiondiv" id="topic1__section6"><strong class="ph b">Array Types</strong><p class="p">Whenever a user-defined type is created, Greenplum
+                    Database automatically creates an associated array type, whose name consists of
+                    the element type's name prepended with an underscore, and truncated if necessary
+                    to keep it less than <code class="ph codeph">NAMEDATALEN</code> bytes long. (If the name so
+                    generated collides with an existing type name, the process is repeated until a
+                    non-colliding name is found.) This implicitly-created array type is variable
+                    length and uses the built-in input and output functions
+                        <code class="ph codeph">array_in</code> and <code class="ph codeph">array_out</code>. The array type
+                    tracks any changes in its element type's owner or schema, and is dropped if the
+                    element type is.</p>
+<p class="p">You might reasonably ask why there is an
+                        <code class="ph codeph">ELEMENT</code> option, if the system makes the correct array type
+                    automatically. The only case where it's useful to use <code class="ph codeph">ELEMENT</code>
+                    is when you are making a fixed-length type that happens to be internally an
+                    array of a number of identical things, and you want to allow these things to be
+                    accessed directly by subscripting, in addition to whatever operations you plan
+                    to provide for the type as a whole. For example, type <code class="ph codeph">point</code> is
+                    represented as just two floating-point numbers, each can be accessed using
+                        <code class="ph codeph">point[0]</code> and <code class="ph codeph">point[1]</code>. Note that this
+                    facility only works for fixed-length types whose internal form is exactly a
+                    sequence of identical fixed-length fields. A subscriptable variable-length type
+                    must have the generalized internal representation used by
+                        <code class="ph codeph">array_in</code> and <code class="ph codeph">array_out</code>. For historical
+                    reasons (i.e., this is clearly wrong but it's far too late to change it),
+                    subscripting of fixed-length array types starts from zero, rather than from one
+                    as for variable-length arrays.</p>
+</div></div>
+<div class="section" id="topic1__section7"><h2 class="title sectiontitle">Parameters</h2>
+            <dl class="dl parml">
+                
+                    <dt class="dt pt dlterm"><var class="keyword varname">name</var></dt>
+
+                    <dd class="dd pd">The name (optionally schema-qualified) of a type to be created. </dd>
+
+                
+                
+                    <dt class="dt pt dlterm"><var class="keyword varname">attribute_name</var></dt>
+
+                    <dd class="dd pd">The name of an attribute (column) for the composite type. </dd>
+
+                
+                
+                    <dt class="dt pt dlterm"><var class="keyword varname">data_type</var></dt>
+
+                    <dd class="dd pd">The name of an existing data type to become a column of the composite type.
+                    </dd>
+
+                
+                
+                    <dt class="dt pt dlterm"><var class="keyword varname">collation</var></dt>
+
+                    <dd class="dd pd">The name of an existing collation to be associated with a column of a
+                        composite type, or with a range type. </dd>
+
+                
+                
+                    <dt class="dt pt dlterm"><var class="keyword varname">label</var></dt>
+
+                    <dd class="dd pd">A string literal representing the textual label associated with one value of
+                        an enum type.</dd>
+
+                
+                
+                    <dt class="dt pt dlterm"><var class="keyword varname">subtype</var></dt>
+
+                    <dd class="dd pd">The name of the element type that the range type will represent ranges
+                        of.</dd>
+
+                
+                
+                    <dt class="dt pt dlterm"><var class="keyword varname">subtype_operator_class</var></dt>
+
+                    <dd class="dd pd">The name of a b-tree operator class for the subtype.</dd>
+
+                
+                
+                    <dt class="dt pt dlterm"><var class="keyword varname">canonical_function</var></dt>
+
+                    <dd class="dd pd">The name of the canonicalization function for the range type.</dd>
+
+                
+                
+                    <dt class="dt pt dlterm"><var class="keyword varname">subtype_diff_function</var></dt>
+
+                    <dd class="dd pd">The name of a difference function for the subtype.</dd>
+
+                
+                
+                    <dt class="dt pt dlterm"><var class="keyword varname">input_function</var></dt>
+
+                    <dd class="dd pd">The name of a function that converts data from the type's external textual
+                        form to its internal form. </dd>
+
+                
+                
+                    <dt class="dt pt dlterm"><var class="keyword varname">output_function</var></dt>
+
+                    <dd class="dd pd">The name of a function that converts data from the type's internal form to
+                        its external textual form. </dd>
+
+                
+                
+                    <dt class="dt pt dlterm"><var class="keyword varname">receive_function</var></dt>
+
+                    <dd class="dd pd">The name of a function that converts data from the type's external binary
+                        form to its internal form. </dd>
+
+                
+                
+                    <dt class="dt pt dlterm"><var class="keyword varname">send_function</var></dt>
+
+                    <dd class="dd pd">The name of a function that converts data from the type's internal form to
+                        its external binary form. </dd>
+
+                
+                
+                    <dt class="dt pt dlterm"><var class="keyword varname">type_modifier_input_function</var></dt>
+
+                    <dd class="dd pd">The name of a function that converts an array of modifier(s) for the type to
+                        internal form.</dd>
+
+                
+                
+                    <dt class="dt pt dlterm"><var class="keyword varname">type_modifier_output_function</var></dt>
+
+                    <dd class="dd pd">The name of a function that converts the internal form of the type's
+                        modifier(s) to external textual form.</dd>
+
+                
+                
+                    <dt class="dt pt dlterm"><var class="keyword varname">internallength</var></dt>
+
+                    <dd class="dd pd">A numeric constant that specifies the length in bytes of the new type's
+                        internal representation. The default assumption is that it is
+                        variable-length. </dd>
+
+                
+                
+                    <dt class="dt pt dlterm"><var class="keyword varname">alignment</var></dt>
+
+                    <dd class="dd pd">The storage alignment requirement of the data type. Must be one of
+                            <code class="ph codeph">char</code>, <code class="ph codeph">int2</code>, <code class="ph codeph">int4</code>, or
+                            <code class="ph codeph">double</code>. The default is <code class="ph codeph">int4</code>. </dd>
+
+                
+                
+                    <dt class="dt pt dlterm"><var class="keyword varname">storage</var></dt>
+
+                    <dd class="dd pd">The storage strategy for the data type. Must be one of
+                            <code class="ph codeph">plain</code>, <code class="ph codeph">external</code>,
+                            <code class="ph codeph">extended</code>, or <code class="ph codeph">main</code>. The default is
+                            <code class="ph codeph">plain</code>. </dd>
+
+                
+                
+                    <dt class="dt pt dlterm"><var class="keyword varname">like_type</var></dt>
+
+                    <dd class="dd pd">The name of an existing data type that the new type will have the same
+                        representation as. The values <var class="keyword varname">internallength</var>,
+                            <var class="keyword varname">passedbyvalue</var>, <var class="keyword varname">alignment</var>, and
+                            <var class="keyword varname">storage</var>, are copied from that type, unless overridden
+                        by explicit specification elsewhere in this <code class="ph codeph">CREATE TYPE</code>
+                        command.</dd>
+
+                
+                
+                    <dt class="dt pt dlterm"><var class="keyword varname">category</var></dt>
+
+                    <dd class="dd pd">The category code (a single ASCII character) for this type. The default is
+                            '<code class="ph codeph">U</code>', signifying a user-defined type. You can find the
+                        other standard category codes in <a class="xref" href="../system_catalogs/pg_type.html#topic1__typcategory"><code class="ph codeph">pg_type</code> Category Codes</a>. You may
+                        also assign unused ASCII characters to custom categories that you
+                        create.</dd>
+
+                
+                
+                    <dt class="dt pt dlterm"><var class="keyword varname">preferred</var></dt>
+
+                    <dd class="dd pd"><code class="ph codeph">true</code> if this type is a preferred type within its type
+                        category, else <code class="ph codeph">false</code>. The default value is
+                            <code class="ph codeph">false</code>. Be careful when you create a new preferred type
+                        within an existing type category; this could cause surprising behaviour
+                        changes.</dd>
+
+                
+                
+                    <dt class="dt pt dlterm"><var class="keyword varname">default</var></dt>
+
+                    <dd class="dd pd">The default value for the data type. If this is omitted, the default is
+                        null. </dd>
+
+                
+                
+                    <dt class="dt pt dlterm"><var class="keyword varname">element</var></dt>
+
+                    <dd class="dd pd">The type being created is an array; this specifies the type of the array
+                        elements. </dd>
+
+                
+                
+                    <dt class="dt pt dlterm"><var class="keyword varname">delimiter</var></dt>
+
+                    <dd class="dd pd">The delimiter character to be used between values in arrays made of this
+                        type.</dd>
+
+                
+                
+                    <dt class="dt pt dlterm"><var class="keyword varname">collatable</var></dt>
+
+                    <dd class="dd pd"> True if this type's operations can use collation information. The default
+                        is false. </dd>
+
+                
+                
+                    <dt class="dt pt dlterm"><var class="keyword varname">compression_type</var></dt>
+
+                    <dd class="dd pd">Set to <code class="ph codeph">ZLIB</code> (the default), <code class="ph codeph">ZSTD</code>,
+                            <code class="ph codeph">RLE_TYPE</code>, or <code class="ph codeph">QUICKLZ</code><sup class="ph sup">1</sup> to
+                        specify the type of compression used in columns of this type.<div class="note"><span class="notetitle">Note:</span> <sup class="ph sup">1</sup>QuickLZ compression is available only in the
+                            commercial release of Tanzu Greenplum.</div>
+
+                    </dd>
+
+                
+                
+                    <dt class="dt pt dlterm"><var class="keyword varname">compression_level</var></dt>
+
+                    <dd class="dd pd"> For Zstd compression, set to an integer value from 1 (fastest compression)
+                        to 19 (highest compression ratio). For zlib compression, the valid range is
+                        from 1 to 9. The QuickLZ compression level can only be set to 1. For
+                            <code class="ph codeph">RLE_TYPE</code>, the compression level can be set to an
+                        integer value from 1 (fastest compression) to 4 (highest compression ratio).
+                        The default compression level is 1.</dd>
+
+                
+                
+                    <dt class="dt pt dlterm"><var class="keyword varname">blocksize</var></dt>
+
+                    <dd class="dd pd"> Set to the size, in bytes, for each block in the column. The
+                            <code class="ph codeph">BLOCKSIZE</code> must be between 8192 and 2097152 bytes, and
+                        be a multiple of 8192. The default block size is 32768.</dd>
+
+                
+            </dl>
+</div>
+<div class="section" id="topic1__section8"><h2 class="title sectiontitle">Notes</h2><p class="p">User-defined type names cannot begin with the underscore character (_)
+and can only be 62 characters long (or in general <code class="ph codeph">NAMEDATALEN
+- 2</code>, rather than the <code class="ph codeph">NAMEDATALEN - 1</code> characters
+allowed for other names). Type names beginning with underscore are reserved
+for internally-created array type names.</p>
+
+<p class="p">Greenplum Database does not support adding storage options for row or composite types.</p>
+
+<p class="p">Storage options defined at the table- and column- level override the default storage options defined for a scalar type.</p>
+
+<p class="p">Because there are no restrictions on use of a data type once it's been created, creating a base
+                type or range type is tantamount to granting public execute permission on the
+                functions mentioned in the type definition. (The creator of the type is therefore
+                required to own these functions.) This is usually not an issue for the sorts of
+                functions that are useful in a type definition. But you might want to think twice
+                before designing a type in a way that would require 'secret' information to be used
+                while converting it to or from external form. </p>
+</div>
+<div class="section" id="topic1__section9"><h2 class="title sectiontitle">Examples</h2><p class="p">This example creates a composite type and uses it in a function definition:</p>
+<pre class="pre codeblock"><code>CREATE TYPE compfoo AS (f1 int, f2 text);
+
+CREATE FUNCTION getfoo() RETURNS SETOF compfoo AS $$
+    SELECT fooid, fooname FROM foo
+$$ LANGUAGE SQL;</code></pre>
+<p class="p">This example creates the enumerated type <code class="ph codeph">mood</code> and uses it in a table definition.</p>
+ 
+<pre class="pre codeblock"><code>CREATE TYPE mood AS ENUM ('sad', 'ok', 'happy');
+CREATE TABLE person (
+    name text,
+    current_mood mood
+);
+INSERT INTO person VALUES ('Moe', 'happy');
+SELECT * FROM person WHERE current_mood = 'happy';
+ name | current_mood 
+------+--------------
+ Moe  | happy
+(1 row)
+</code></pre>
+            <div class="p">This example creates a range
+                type:<pre class="pre codeblock"><code>CREATE TYPE float8_range AS RANGE (subtype = float8, subtype_diff = float8mi);</code></pre></div>
+
+<p class="p">This example creates the base data type <code class="ph codeph">box</code> and then uses the type in a table
+                definition:</p>
+<pre class="pre codeblock"><code>CREATE TYPE box;
+
+CREATE FUNCTION my_box_in_function(cstring) RETURNS box AS 
+... ;
+
+CREATE FUNCTION my_box_out_function(box) RETURNS cstring AS 
+... ;
+
+CREATE TYPE box (
+    INTERNALLENGTH = 16,
+    INPUT = my_box_in_function,
+    OUTPUT = my_box_out_function
+);
+
+CREATE TABLE myboxes (
+    id integer,
+    description box
+);</code></pre><p class="p">If the internal structure of <code class="ph codeph">box</code> were an array of four <code class="ph codeph">float4</code>
+                elements, we might instead use:</p>
+<pre class="pre codeblock"><code>CREATE TYPE box (
+    INTERNALLENGTH = 16,
+    INPUT = my_box_in_function,
+    OUTPUT = my_box_out_function,
+    ELEMENT = float4
+);</code></pre><p class="p">which would allow a box value's component numbers to be accessed by
+subscripting. Otherwise the type behaves the same as before.</p>
+<p class="p">This example creates a large object type and uses it in a table definition:</p>
+<pre class="pre codeblock"><code>CREATE TYPE bigobj (
+    INPUT = lo_filein, OUTPUT = lo_fileout,
+    INTERNALLENGTH = VARIABLE
+);
+
+CREATE TABLE big_objs (
+    id integer,
+    obj bigobj
+    );</code></pre></div>
+<div class="section" id="topic1__section10"><h2 class="title sectiontitle">Compatibility</h2>
+            
+            <p class="p"> The first form of the <code class="ph codeph">CREATE TYPE</code> command, which creates a
+                composite type, conforms to the SQL standard. The other forms are Greenplum Database
+                extensions. The <code class="ph codeph">CREATE TYPE</code> statement in the SQL standard also
+                defines other forms that are not implemented in Greenplum Database.</p>
+
+            <p class="p"> The ability to create a composite type with zero attributes is a Greenplum
+                Database-specific deviation from the standard (analogous to the same case in
+                    <code class="ph codeph">CREATE TABLE</code>). </p>
+
+    </div>
+<div class="section" id="topic1__section11"><h2 class="title sectiontitle">See Also</h2>
+            <p class="p">
+                <a class="xref" href="ALTER_TYPE.html#topic1">ALTER TYPE</a>,
+                        <a class="xref" href="CREATE_DOMAIN.html#topic1">CREATE DOMAIN</a>, <a class="xref" href="CREATE_FUNCTION.html#topic1">CREATE FUNCTION</a>, <a class="xref" href="DROP_TYPE.html#topic1">DROP TYPE</a></p>
+</div>
+</div>
+<div class="related-links">
+<div class="familylinks">
+<div class="parentlink"><strong>Parent topic:</strong> <a class="link" href="../sql_commands/sql_ref.html">SQL Commands</a></div>
+</div>
+</div></body>
+</html>

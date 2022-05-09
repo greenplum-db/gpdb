@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+
+<meta name="copyright" content="(C) Copyright 2022" />
+<meta name="DC.rights.owner" content="(C) Copyright 2022" />
+<meta name="generator" content="DITA-OT" /><meta name="DC.type" content="topic" />
+<meta name="DC.title" content="gp_legacy_string_agg" />
+<meta name="DC.format" content="XHTML" />
+<meta name="DC.identifier" content="topic_gpsv" />
+<link rel="stylesheet" type="text/css" href="../commonltr.css" />
+<title>gp_legacy_string_agg</title>
+</head>
+<body>
+
+  <div class="nested0" aria-labelledby="ariaid-title1" id="topic_gpsv">
+    <h1 class="title topictitle1" id="ariaid-title1">gp_legacy_string_agg</h1>
+
+    <div class="body">
+      <p class="p">The <code class="ph codeph">gp_legacy_string_agg</code> module re-introduces the single-argument
+        <code class="ph codeph">string_agg()</code> function that was present in Greenplum Database 5.</p>
+
+      <p class="p">The <code class="ph codeph">gp_legacy_string_agg</code> module is a Greenplum Database extension.</p>
+
+      <div class="note"><span class="notetitle">Note:</span> Use this module to aid migration from Greenplum Database 5 to the native,
+        two-argument <code class="ph codeph">string_agg()</code> function included in Greenplum 6.</div>
+
+    </div>
+
+    <div class="topic nested1" aria-labelledby="ariaid-title2" id="topic_reg">
+      <h2 class="title topictitle2" id="ariaid-title2">Installing and Registering the Module</h2>
+
+      <div class="body">
+        <p class="p">The <code class="ph codeph">gp_legacy_string_agg</code> module is installed when you install
+          Greenplum Database. Before you can use the function defined in the module, you
+          must register the <code class="ph codeph">gp_legacy_string_agg</code> extension in each database
+          where you want to use the function.
+          <span class="ph">Refer to <a class="xref" href="../../install_guide/install_modules.html" target="_blank">Installing Additional Supplied Modules</a>
+          for more information about registering the module.</span></p>
+
+      </div>
+
+    </div>
+
+    <div class="topic nested1" aria-labelledby="ariaid-title3" id="topic_use">
+      <h2 class="title topictitle2" id="ariaid-title3">Using the Module</h2>
+
+      <div class="body">
+        <p class="p">The single-argument <code class="ph codeph">string_agg()</code> function has the following
+          signature:</p>
+
+        <pre class="pre codeblock"><code>string_agg( text )</code></pre>
+        <p class="p">You can use the function to concatenate non-null input values into a string. For
+          example:</p>
+
+        <pre class="pre codeblock"><code>SELECT string_agg(a) FROM (VALUES('aaaa'),('bbbb'),('cccc'),(NULL)) g(a);
+WARNING:  Deprecated call to string_agg(text), use string_agg(text, text) instead
+  string_agg  
+--------------
+ aaaabbbbcccc
+(1 row)</code></pre>
+        <p class="p">The function concatenates each string value until it encounters a null value,
+          and then returns the string. The function returns a null value when no rows are
+          selected in the query.</p>
+
+        <p class="p"><code class="ph codeph">string_agg()</code> produces results that depend on the ordering of the
+          input rows. The ordering is unspecified by default; you can control the ordering by
+          specifying an <code class="ph codeph">ORDER BY</code> clause within the aggregate. For example:</p>
+
+        <pre class="pre codeblock"><code>CREATE TABLE table1(a int, b text);
+INSERT INTO table1 VALUES(4, 'aaaa'),(2, 'bbbb'),(1, 'cccc'), (3, NULL);
+SELECT string_agg(b ORDER BY a) FROM table1;
+WARNING:  Deprecated call to string_agg(text), use string_agg(text, text) instead
+  string_agg  
+--------------
+ ccccbbbb
+(1 row)</code></pre>
+      </div>
+
+    </div>
+
+    <div class="topic nested1" aria-labelledby="ariaid-title4" id="topic_migrate">
+      <h2 class="title topictitle2" id="ariaid-title4">Migrating to the Two-Argument string_agg() Function</h2>
+
+      <div class="body">
+        <p class="p">Greenplum Database 6 includes a native, two-argument, text input
+          <code class="ph codeph">string_agg()</code> function:</p>
+
+        <pre class="pre codeblock"><code>string_agg( text, text )</code></pre>
+        <p class="p">The following function invocation is equivalent to the single-argument
+          <code class="ph codeph">string_agg()</code> function that is provided in this module:</p>
+
+        <pre class="pre codeblock"><code>string_agg( text, '' )</code></pre>
+        <p class="p">You can use this conversion when you are ready to migrate from this contrib module.</p>
+
+      </div>
+
+    </div>
+
+  </div>
+
+</body>
+</html>

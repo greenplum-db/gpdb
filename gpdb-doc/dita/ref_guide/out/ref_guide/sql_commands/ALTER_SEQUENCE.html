@@ -1,0 +1,166 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+
+<meta name="copyright" content="(C) Copyright 2022" />
+<meta name="DC.rights.owner" content="(C) Copyright 2022" />
+<meta name="generator" content="DITA-OT" /><meta name="DC.type" content="topic" />
+<meta name="DC.title" content="ALTER SEQUENCE" />
+<meta name="DC.relation" scheme="URI" content="../sql_commands/sql_ref.html" />
+<meta name="DC.format" content="XHTML" />
+<meta name="DC.identifier" content="topic1" />
+<link rel="stylesheet" type="text/css" href="../commonltr.css" />
+<title>ALTER SEQUENCE</title>
+</head>
+<body id="topic1">
+<h1 class="title topictitle1" id="topic1__ax20941">ALTER SEQUENCE</h1>
+<div class="body"><p class="p" id="topic1__sql_command_desc">Changes the definition of a sequence generator.</p>
+<div class="section" id="topic1__section2"><h2 class="title sectiontitle">Synopsis</h2><pre class="pre codeblock" id="topic1__sql_command_synopsis"><code>ALTER SEQUENCE [ IF EXISTS ] &lt;name&gt; [INCREMENT [ BY ] &lt;increment&gt;] 
+     [MINVALUE &lt;minvalue&gt; | NO MINVALUE] 
+     [MAXVALUE &lt;maxvalue&gt; | NO MAXVALUE] 
+     [START [ WITH ] &lt;start&gt; ]
+     [RESTART [ [ WITH ] &lt;restart&gt;] ]
+     [CACHE &lt;cache&gt;] [[ NO ] CYCLE] 
+     [OWNED BY {&lt;table.column&gt; | NONE}]
+
+ALTER SEQUENCE [ IF EXISTS ] &lt;name&gt; OWNER TO &lt;new_owner&gt;
+
+ALTER SEQUENCE [ IF EXISTS ] &lt;name&gt; RENAME TO &lt;new_name&gt;
+
+ALTER SEQUENCE [ IF EXISTS ] &lt;name&gt; SET SCHEMA &lt;new_schema&gt;</code></pre></div>
+<div class="section" id="topic1__section3"><h2 class="title sectiontitle">Description</h2><p class="p"><code class="ph codeph">ALTER SEQUENCE</code> changes the parameters of an existing
+sequence generator. Any parameters not specifically set in the <code class="ph codeph">ALTER
+SEQUENCE</code> command retain their prior settings.</p>
+<p class="p">You must own the sequence to use <code class="ph codeph">ALTER SEQUENCE</code>.
+To change a sequence's schema, you must also have <code class="ph codeph">CREATE</code>
+privilege on the new schema. Note that superusers have all these privileges
+automatically.</p>
+
+      <p class="p">To alter the owner, you must be a direct or indirect member of the new owning role, and
+        that role must have <code class="ph codeph">CREATE</code> privilege on the sequence's schema. (These
+        restrictions enforce that altering the owner does not do anything you could not do by
+        dropping and recreating the sequence. However, a superuser can alter ownership of any
+        sequence anyway.)</p>
+</div>
+<div class="section" id="topic1__section4"><h2 class="title sectiontitle">Parameters</h2><dl class="dl parml"><dt class="dt pt dlterm"><var class="keyword varname">name</var></dt>
+<dd class="dd pd">The name (optionally schema-qualified) of a sequence to be altered.
+</dd>
+
+        
+          <dt class="dt pt dlterm">IF EXISTS</dt>
+
+          <dd class="dd pd">Do not throw an error if the sequence does not exist. A notice is issued in this
+            case.</dd>
+
+        <dt class="dt pt dlterm"><var class="keyword varname">increment</var></dt>
+<dd class="dd pd">The clause <code class="ph codeph">INCREMENT BY <var class="keyword varname">increment</var></code> is optional. A positive value will
+            make an ascending sequence, a negative one a descending sequence. If unspecified, the
+            old increment value will be maintained. </dd>
+<dt class="dt pt dlterm"><var class="keyword varname">minvalue</var></dt>
+<dt class="dt pt dlterm">NO MINVALUE</dt>
+<dd class="dd pd">The optional clause <code class="ph codeph">MINVALUE <var class="keyword varname">minvalue</var></code> determines the minimum value a
+            sequence can generate. If <code class="ph codeph">NO MINVALUE</code> is specified, the defaults of 1
+            and -263-1 for ascending and descending sequences, respectively, will be used. If
+            neither option is specified, the current minimum value will be maintained. </dd>
+<dt class="dt pt dlterm"><var class="keyword varname">maxvalue</var></dt>
+<dt class="dt pt dlterm">NO MAXVALUE</dt>
+<dd class="dd pd">The optional clause <code class="ph codeph">MAXVALUE <var class="keyword varname">maxvalue</var></code> determines the maximum value for
+            the sequence. If <code class="ph codeph">NO MAXVALUE</code> is specified, the defaults are 263-1 and
+            -1 for ascending and descending sequences, respectively, will be used. If neither option
+            is specified, the current maximum value will be maintained.</dd>
+
+        
+          <dt class="dt pt dlterm">start</dt>
+
+          <dd class="dd pd">The optional clause START WITH <var class="keyword varname">start</var> changes the recorded start
+            value of the sequence. This has no effect on the <em class="ph i">current</em> sequence value;  it
+            simply sets the value that future <code class="ph codeph">ALTER SEQUENCE RESTART</code> commands will
+            use.</dd>
+
+        <dt class="dt pt dlterm"><var class="keyword varname">restart</var></dt>
+<dd class="dd pd">The optional clause <code class="ph codeph">RESTART [ WITH <var class="keyword varname">restart</var> ]</code> changes the
+            current value of the sequence. This is equivalent to calling the
+                <code class="ph codeph">setval(<var class="keyword varname">sequence</var>, <var class="keyword varname">start_val</var>,
+                <var class="keyword varname">is_called</var>)</code> function with
+                <code class="ph codeph"><var class="keyword varname">is_called</var> = false</code>. The specified value will be
+            returned by the next call of the <code class="ph codeph">nextval(<var class="keyword varname">sequence</var>)</code>
+            function. Writing <code class="ph codeph">RESTART</code> with no <var class="keyword varname">restart</var> value is
+            equivalent to supplying the start value that was recorded by <code class="ph codeph">CREATE
+              SEQUENCE</code> or last set by <code class="ph codeph">ALTER SEQUENCE START WITH</code>.</dd>
+
+        
+          <dt class="dt pt dlterm"><var class="keyword varname">new_owner</var></dt>
+
+          <dd class="dd pd">The user name of the new owner of the sequence.</dd>
+
+        <dt class="dt pt dlterm"><var class="keyword varname">cache</var></dt>
+<dd class="dd pd">The clause <code class="ph codeph">CACHE <var class="keyword varname">cache</var></code> enables sequence numbers to be preallocated and
+            stored in memory for faster access. The minimum value is 1 (only one value can be
+            generated at a time, i.e., no cache). If unspecified, the old cache value will be
+            maintained.</dd>
+<dt class="dt pt dlterm">CYCLE</dt>
+<dd class="dd pd">The optional <code class="ph codeph">CYCLE</code> key word may be used to enable
+the sequence to wrap around when the <var class="keyword varname">maxvalue</var> or <var class="keyword varname">minvalue</var>
+has been reached by an ascending or descending sequence. If the limit
+is reached, the next number generated will be the respective <var class="keyword varname">minvalue</var>
+or <var class="keyword varname">maxvalue</var>. </dd>
+<dt class="dt pt dlterm">NO CYCLE</dt>
+<dd class="dd pd">If the optional <code class="ph codeph">NO CYCLE</code> key word is specified,
+any calls to <code class="ph codeph">nextval()</code> after the sequence has reached
+its maximum value will return an error. If neither <code class="ph codeph">CYCLE</code>
+or <code class="ph codeph">NO CYCLE</code> are specified, the old cycle behavior will
+be maintained.</dd>
+<dt class="dt pt dlterm">OWNED BY <var class="keyword varname">table.column</var></dt>
+<dt class="dt pt dlterm">OWNED BY NONE</dt>
+<dd class="dd pd">The <code class="ph codeph">OWNED BY</code> option causes the sequence to be associated
+with a specific table column, such that if that column (or its whole
+table) is dropped, the sequence will be automatically dropped as well.
+If specified, this association replaces any previously specified association
+for the sequence. The specified table must have the same owner and be
+in the same schema as the sequence. Specifying <code class="ph codeph">OWNED BY NONE</code>
+removes any existing table column association.</dd>
+
+        
+          <dt class="dt pt dlterm"><var class="keyword varname">new_name</var></dt>
+
+          <dd class="dd pd">The new name for the sequence.</dd>
+
+        <dt class="dt pt dlterm"><var class="keyword varname">new_schema</var></dt>
+<dd class="dd pd">The new schema for the sequence.</dd>
+</dl>
+</div>
+<div class="section" id="topic1__section5"><h2 class="title sectiontitle">Notes</h2><p class="p">To avoid blocking of concurrent transactions that obtain numbers from the same sequence,
+          <code class="ph codeph">ALTER SEQUENCE</code>'s effects on the sequence generation parameters are never
+        rolled back; those changes take effect immediately and are not reversible. However, the
+          <code class="ph codeph">OWNED BY</code>, <code class="ph codeph">OWNER TO</code>, <code class="ph codeph">RENAME TO</code>, and
+          <code class="ph codeph">SET SCHEMA</code> clauses are ordinary catalog updates and can be rolled
+        back.</p>
+<p class="p"><code class="ph codeph">ALTER SEQUENCE</code> will not immediately affect <code class="ph codeph">nextval()</code>
+results in sessions, other than the current one, that have preallocated
+(cached) sequence values. They will use up all cached values prior to
+noticing the changed sequence generation parameters. The current session
+will be affected immediately.</p>
+<p class="p">For historical reasons, <code class="ph codeph">ALTER TABLE</code> can be used with sequences too; but the only
+        variants of <code class="ph codeph">ALTER TABLE</code> that are allowed with sequences are equivalent to
+        the forms shown above.</p>
+</div>
+<div class="section" id="topic1__section6"><h2 class="title sectiontitle">Examples</h2><p class="p">Restart a sequence called <code class="ph codeph">serial</code> at <code class="ph codeph">105</code>:</p>
+<pre class="pre codeblock"><code>ALTER SEQUENCE serial RESTART WITH 105;</code></pre></div>
+<div class="section" id="topic1__section7"><h2 class="title sectiontitle">Compatibility</h2><p class="p"><code class="ph codeph">ALTER SEQUENCE</code> conforms to the SQL standard, except for the <code class="ph codeph">START
+          WITH</code>, <code class="ph codeph">OWNED BY</code>, <code class="ph codeph">OWNER TO</code>, <code class="ph codeph">RENAME
+          TO</code>, and <code class="ph codeph">SET SCHEMA</code> clauses, which are Greenplum Database
+        extensions.</p>
+</div>
+<div class="section" id="topic1__section8"><h2 class="title sectiontitle">See Also</h2><p class="p"><a class="xref" href="CREATE_SEQUENCE.html#topic1">CREATE SEQUENCE</a>,
+            <a class="xref" href="DROP_SEQUENCE.html#topic1">DROP SEQUENCE</a>,
+            <a class="xref" href="ALTER_TABLE.html#topic1">ALTER TABLE</a></p>
+</div>
+</div>
+<div class="related-links">
+<div class="familylinks">
+<div class="parentlink"><strong>Parent topic:</strong> <a class="link" href="../sql_commands/sql_ref.html">SQL Commands</a></div>
+</div>
+</div></body>
+</html>

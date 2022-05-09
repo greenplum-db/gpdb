@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+
+<meta name="copyright" content="(C) Copyright 2022" />
+<meta name="DC.rights.owner" content="(C) Copyright 2022" />
+<meta name="generator" content="DITA-OT" /><meta name="DC.type" content="topic" />
+<meta name="DC.title" content="SHOW" />
+<meta name="DC.format" content="XHTML" />
+<meta name="DC.identifier" content="topic1" />
+<link rel="stylesheet" type="text/css" href="../../out/commonltr.css" />
+<title>SHOW</title>
+</head>
+<body id="topic1">
+<h1 class="title topictitle1" id="topic1__en20941">SHOW</h1>
+<div class="body"><p class="p" id="topic1__sql_command_desc">Shows the value of a system configuration parameter.</p>
+<div class="section" id="topic1__section2"><h2 class="title sectiontitle">Synopsis</h2><pre class="pre codeblock" id="topic1__sql_command_synopsis"><code>SHOW &lt;configuration_parameter&gt;
+
+SHOW ALL</code></pre></div>
+<div class="section" id="topic1__section3"><h2 class="title sectiontitle">Description</h2><p class="p"><code class="ph codeph">SHOW</code> displays the current settings of Greenplum Database
+system configuration parameters. You can set these parameters with the
+<code class="ph codeph">SET</code> statement, or by editing the <code class="ph codeph">postgresql.conf</code>
+configuration file of the Greenplum Database master. Note that some parameters
+viewable by <code class="ph codeph">SHOW</code> are read-only — their values can
+be viewed but not set. See the Greenplum Database Reference Guide for
+details.</p>
+</div>
+<div class="section" id="topic1__section4"><h2 class="title sectiontitle">Parameters</h2><dl class="dl parml"><dt class="dt pt dlterm"><var class="keyword varname">configuration_parameter</var></dt>
+<dd class="dd pd">The name of a system configuration parameter.</dd>
+<dt class="dt pt dlterm">ALL</dt>
+<dd class="dd pd">Shows the current value of all configuration parameters. </dd>
+</dl>
+</div>
+<div class="section" id="topic1__section5"><h2 class="title sectiontitle">Examples</h2><p class="p">Show the current setting of the parameter <code class="ph codeph">DateStyle</code>:</p>
+<pre class="pre codeblock"><code>SHOW DateStyle;
+ DateStyle
+-----------
+ ISO, MDY
+(1 row)
+</code></pre>
+  <p class="p">Show the current setting of the parameter <var class="keyword varname">geqo</var>:</p>
+<pre class="pre codeblock"><code>SHOW geqo;
+ geqo
+------
+ off
+(1 row)</code></pre>
+<p class="p">Show the current setting of all parameters:</p>
+
+<pre class="pre codeblock"><code>SHOW ALL;
+       name       | setting |                  description
+------------------+---------+----------------------------------------------------
+ application_name | psql    | Sets the application name to be reported in sta...
+       .
+       .
+       .
+ xmlbinary        | base64  | Sets how binary values are to be encoded in XML.
+ xmloption        | content | Sets whether XML data in implicit parsing and s...
+(331 rows)</code></pre></div>
+<div class="section" id="topic1__section6"><h2 class="title sectiontitle">Compatibility</h2><p class="p"><code class="ph codeph">SHOW</code> is a Greenplum Database extension.</p>
+</div>
+<div class="section" id="topic1__section7"><h2 class="title sectiontitle">See Also</h2><p class="p"><a class="xref" href="SET.html#topic1">SET</a>, <a class="xref" href="RESET.html#topic1">RESET</a></p>
+</div>
+</div>
+</body>
+</html>

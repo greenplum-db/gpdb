@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+
+<meta name="copyright" content="(C) Copyright 2022" />
+<meta name="DC.rights.owner" content="(C) Copyright 2022" />
+<meta name="generator" content="DITA-OT" /><meta name="DC.type" content="topic" />
+<meta name="DC.title" content="CREATE CONVERSION" />
+<meta name="DC.relation" scheme="URI" content="../sql_commands/sql_ref.html" />
+<meta name="DC.format" content="XHTML" />
+<meta name="DC.identifier" content="topic1" />
+<link rel="stylesheet" type="text/css" href="../commonltr.css" />
+<title>CREATE CONVERSION</title>
+</head>
+<body id="topic1">
+<h1 class="title topictitle1" id="topic1__bo20941">CREATE CONVERSION</h1>
+<div class="body"><p class="p" id="topic1__sql_command_desc">Defines a new encoding conversion.</p>
+<div class="section" id="topic1__section2"><h2 class="title sectiontitle">Synopsis</h2><pre class="pre codeblock" id="topic1__sql_command_synopsis"><code>CREATE [DEFAULT] CONVERSION &lt;name&gt; FOR &lt;source_encoding&gt; TO 
+     &lt;dest_encoding&gt; FROM &lt;funcname&gt;</code></pre></div>
+<div class="section" id="topic1__section3"><h2 class="title sectiontitle">Description</h2><p class="p"><code class="ph codeph">CREATE CONVERSION</code> defines a new conversion between
+character set encodings. Conversion names may be used in the convert
+function to specify a particular encoding conversion. Also, conversions
+that are marked <code class="ph codeph">DEFAULT</code> can be used for automatic encoding
+conversion between client and server. For this purpose, two conversions,
+from encoding A to B and from encoding B to A, must be defined. </p>
+<p class="p">To create a conversion, you must have <code class="ph codeph">EXECUTE</code> privilege
+on the function and <code class="ph codeph">CREATE</code> privilege on the destination
+schema.</p>
+</div>
+<div class="section" id="topic1__section4"><h2 class="title sectiontitle">Parameters</h2><dl class="dl parml"><dt class="dt pt dlterm">DEFAULT</dt>
+<dd class="dd pd">Indicates that this conversion is the default for this particular
+source to destination encoding. There should be only one default encoding
+in a schema for the encoding pair. </dd>
+<dt class="dt pt dlterm"><var class="keyword varname">name</var></dt>
+<dd class="dd pd">The name of the conversion. The conversion name may be schema-qualified.
+If it is not, the conversion is defined in the current schema. The conversion
+name must be unique within a schema. </dd>
+<dt class="dt pt dlterm"><var class="keyword varname">source_encoding</var></dt>
+<dd class="dd pd">The source encoding name. </dd>
+<dt class="dt pt dlterm"><var class="keyword varname">dest_encoding</var></dt>
+<dd class="dd pd">The destination encoding name. </dd>
+<dt class="dt pt dlterm"><var class="keyword varname">funcname</var></dt>
+<dd class="dd pd">The function used to perform the conversion. The function name may
+be schema-qualified. If it is not, the function will be looked up in
+the path. The function must have the following signature: </dd>
+<dd class="dd pd ddexpand"><pre class="pre codeblock"><code>conv_proc(
+    integer,  -- source encoding ID
+    integer,  -- destination encoding ID
+    cstring,  -- source string (null terminated C string)
+    internal, -- destination (fill with a null terminated C string)
+    integer   -- source string length
+) RETURNS void;</code></pre></dd>
+</dl>
+</div>
+<div class="section" id="topic1__section5"><h2 class="title sectiontitle">Notes</h2><p class="p">Note that in this release of Greenplum Database, user-defined functions
+used in a user-defined conversion must be defined as <code class="ph codeph">IMMUTABLE</code>.
+Any compiled code (shared library files) for custom functions must be
+placed in the same location on every host in your Greenplum Database
+array (master and all segments). This location must also be in the <code class="ph codeph">LD_LIBRARY_PATH</code>
+so that the server can locate the files.</p>
+</div>
+<div class="section" id="topic1__section6"><h2 class="title sectiontitle">Examples</h2><p class="p">To create a conversion from encoding <code class="ph codeph">UTF8</code> to <code class="ph codeph">LATIN1</code> using
+          <code class="ph codeph">myfunc</code>:</p>
+<pre class="pre codeblock"><code>CREATE CONVERSION myconv FOR 'UTF8' TO 'LATIN1' FROM myfunc;</code></pre></div>
+<div class="section" id="topic1__section7"><h2 class="title sectiontitle">Compatibility</h2><p class="p">There is no <code class="ph codeph">CREATE CONVERSION</code> statement in the SQL
+            standard, but there is a <code class="ph codeph">CREATE TRANSLATION</code>
+            statement that is very similar in purpose and syntax.</p>
+</div>
+<div class="section" id="topic1__section8"><h2 class="title sectiontitle">See Also</h2><p class="p"><a class="xref" href="ALTER_CONVERSION.html#topic1">ALTER CONVERSION</a>,
+            <a class="xref" href="CREATE_FUNCTION.html#topic1">CREATE FUNCTION</a>,
+            <a class="xref" href="DROP_CONVERSION.html#topic1">DROP CONVERSION</a></p>
+</div>
+</div>
+<div class="related-links">
+<div class="familylinks">
+<div class="parentlink"><strong>Parent topic:</strong> <a class="link" href="../sql_commands/sql_ref.html">SQL Commands</a></div>
+</div>
+</div></body>
+</html>

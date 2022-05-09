@@ -1,0 +1,261 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+
+<meta name="copyright" content="(C) Copyright 2022" />
+<meta name="DC.rights.owner" content="(C) Copyright 2022" />
+<meta name="generator" content="DITA-OT" /><meta name="DC.type" content="topic" />
+<meta name="DC.title" content="DELETE" />
+<meta name="DC.format" content="XHTML" />
+<meta name="DC.identifier" content="topic1" />
+<link rel="stylesheet" type="text/css" href="../../out/commonltr.css" />
+<title>DELETE</title>
+</head>
+<body id="topic1">
+
+    <h1 class="title topictitle1" id="topic1__cn20941">DELETE</h1>
+
+    <div class="body">
+        <p class="p" id="topic1__sql_command_desc">Deletes rows from a table.</p>
+
+        <div class="section" id="topic1__section2"><h2 class="title sectiontitle">Synopsis</h2>
+            
+            <pre class="pre codeblock" id="topic1__sql_command_synopsis"><code>[ WITH [ RECURSIVE ] &lt;with_query&gt; [, ...] ]
+DELETE FROM [ONLY] &lt;table&gt; [[AS] &lt;alias&gt;]
+      [USING &lt;usinglist&gt;]
+      [WHERE &lt;condition&gt; | WHERE CURRENT OF &lt;cursor_name&gt;]
+      [RETURNING * | &lt;output_expression&gt; [[AS] &lt;output_name&gt;] [, …]]</code></pre>
+        </div>
+
+        <div class="section" id="topic1__section3"><h2 class="title sectiontitle">Description</h2>
+            
+            <p class="p"><code class="ph codeph">DELETE</code> deletes rows that satisfy the <code class="ph codeph">WHERE</code> clause
+                from the specified table. If the <code class="ph codeph">WHERE</code> clause is absent, the effect
+                is to delete all rows in the table. The result is a valid, but empty table. </p>
+
+            <p class="p">By default, <code class="ph codeph">DELETE</code> will delete rows in the specified table and all
+                its child tables. If you wish to delete only from the specific table mentioned, you
+                must use the <code class="ph codeph">ONLY</code> clause. </p>
+
+            <p class="p">There are two ways to delete rows in a table using information contained in other
+                tables in the database: using sub-selects, or specifying additional tables in the
+                    <code class="ph codeph">USING</code> clause. Which technique is more appropriate depends on
+                the specific circumstances. </p>
+
+            <p class="p">If the <code class="ph codeph">WHERE CURRENT OF</code> clause is specified, the row that is deleted
+                is the one most recently fetched from the specified cursor. </p>
+
+            <p class="p">The <code class="ph codeph">WHERE CURRENT OF</code> clause is not supported with replicated
+                tables.</p>
+
+            <div class="p">The optional <code class="ph codeph">RETURNING</code> clause causes <code class="ph codeph">DELETE</code> to
+                compute and return value(s) based on each row actually deleted. Any expression using
+                the table's columns, and/or columns of other tables mentioned in
+                    <code class="ph codeph">USING</code>, can be computed. The syntax of the
+                    <code class="ph codeph">RETURNING</code> list is identical to that of the output list of
+                    <code class="ph codeph">SELECT</code>.<div class="note"><span class="notetitle">Note:</span> The <code class="ph codeph">RETURNING</code> clause is not
+                    supported when deleting from append-optimized tables.</div>
+</div>
+
+            <p class="p">You must have the <code class="ph codeph">DELETE</code> privilege on the table to delete from it. </p>
+
+            <div class="note"><span class="notetitle">Note:</span> As the default, Greenplum Database acquires an <code class="ph codeph">EXCLUSIVE</code> lock on
+                tables for <code class="ph codeph">DELETE</code> operations on heap tables. When the Global
+                Deadlock Detector is enabled, the lock mode for <code class="ph codeph">DELETE</code> operations
+                on heap tables is <code class="ph codeph">ROW EXCLUSIVE</code>. See <a class="xref" href="../../admin_guide/dml.html#topic_gdd" target="_blank">Global Deadlock Detector</a>.</div>
+
+            <div class="sectiondiv" id="topic1__section4">
+                <strong class="ph b">Outputs</strong>
+                <p class="p">On successful completion, a <code class="ph codeph">DELETE</code> command returns a command tag
+                    of the form</p>
+
+                <pre class="pre codeblock"><code>DELETE &lt;count&gt;</code></pre>
+                <p class="p">The <var class="keyword varname">count</var> is the number of rows deleted. If <var class="keyword varname">count</var> is 0, no
+                    rows were deleted by the query (this is not considered an error).</p>
+<p class="p">If the
+                        <code class="ph codeph">DELETE</code> command contains a <code class="ph codeph">RETURNING</code>
+                    clause, the result will be similar to that of a <code class="ph codeph">SELECT</code>
+                    statement containing the columns and values defined in the
+                        <code class="ph codeph">RETURNING</code> list, computed over the row(s) deleted by the
+                    command.</p>
+
+            </div>
+        </div>
+
+        <div class="section" id="topic1__section5"><h2 class="title sectiontitle">Parameters</h2>
+            
+            <dl class="dl parml">
+                
+                    <dt class="dt pt dlterm"><var class="keyword varname">with_query</var></dt>
+
+                    <dd class="dd pd">The <code class="ph codeph">WITH</code> clause allows you to specify one or more
+                        subqueries that can be referenced by name in the <code class="ph codeph">DELETE</code>
+                        query. </dd>
+
+                    <dd class="dd pd ddexpand">For a <code class="ph codeph">DELETE</code> command that includes a <code class="ph codeph">WITH</code>
+                        clause, the clause can only contain <code class="ph codeph">SELECT</code> statements, the
+                            <code class="ph codeph">WITH</code> clause cannot contain a data-modifying command
+                            (<code class="ph codeph">INSERT</code>, <code class="ph codeph">UPDATE</code>, or
+                            <code class="ph codeph">DELETE</code>). </dd>
+
+                    <dd class="dd pd ddexpand">See <a class="xref" href="../../admin_guide/query/topics/CTE-query.html#topic_zhs_r1s_w1b" target="_blank">WITH Queries (Common Table Expressions)
+</a>
+                        and <a class="xref" href="SELECT.html#topic1">SELECT</a> for details. </dd>
+
+                
+                
+                    <dt class="dt pt dlterm">ONLY</dt>
+
+                    <dd class="dd pd">If specified, delete rows from the named table only. When not specified, any
+                        tables inheriting from the named table are also processed.</dd>
+
+                
+                
+                    <dt class="dt pt dlterm">
+                        <var class="keyword varname">table</var>
+                    </dt>
+
+                    <dd class="dd pd">The name (optionally schema-qualified) of an existing table. </dd>
+
+                
+                
+                    <dt class="dt pt dlterm">
+                        <var class="keyword varname">alias</var>
+                    </dt>
+
+                    <dd class="dd pd">A substitute name for the target table. When an alias is provided, it
+                        completely hides the actual name of the table. For example, given
+                            <code class="ph codeph">DELETE FROM foo AS f</code>, the remainder of the
+                            <code class="ph codeph">DELETE</code> statement must refer to this table as
+                            <code class="ph codeph">f</code> not <code class="ph codeph">foo</code>. </dd>
+
+                
+                
+                    <dt class="dt pt dlterm">
+                        <var class="keyword varname">usinglist</var>
+                    </dt>
+
+                    <dd class="dd pd">A list of table expressions, allowing columns from other tables to appear in
+                        the <code class="ph codeph">WHERE</code> condition. This is similar to the list of tables
+                        that can be specified in the <code class="ph codeph">FROM</code> Clause of a <a class="xref" href="SELECT.html#topic1">SELECT</a>
+                        statement; for example, an alias for the table name can be specified. Do not
+                        repeat the target table in the <code class="ph codeph">usinglist</code>, unless you wish
+                        to set up a self-join. </dd>
+
+                
+                
+                    <dt class="dt pt dlterm">
+                        <var class="keyword varname">condition</var>
+                    </dt>
+
+                    <dd class="dd pd">An expression returning a value of type <code class="ph codeph">boolean</code>, which
+                        determines the rows that are to be deleted.</dd>
+
+                
+                
+                    <dt class="dt pt dlterm">
+                        <var class="keyword varname">cursor_name</var>
+                    </dt>
+
+                    <dd class="dd pd">The name of the cursor to use in a <code class="ph codeph">WHERE CURRENT OF</code>
+                        condition. The row to be deleted is the one most recently fetched from this
+                        cursor. The cursor must be a simple non-grouping query on the
+                            <code class="ph codeph">DELETE</code> target table. </dd>
+
+                    <dd class="dd pd ddexpand"><code class="ph codeph">WHERE CURRENT OF</code> cannot be specified together with a
+                        Boolean condition.</dd>
+
+                    <dd class="dd pd ddexpand">The <code class="ph codeph">DELETE...WHERE CURRENT OF</code> cursor statement can only be
+                        run on the server, for example in an interactive psql session or a
+                        script. Language extensions such as PL/pgSQL do not have support for
+                        updatable cursors. </dd>
+
+                    <dd class="dd pd ddexpand">See <a class="xref" href="DECLARE.html#topic1">DECLARE</a> for more information about creating cursors.</dd>
+
+                
+                
+                    <dt class="dt pt dlterm"><var class="keyword varname">output_expression</var></dt>
+
+                    <dd class="dd pd">An expression to be computed and returned by the <code class="ph codeph">DELETE</code>
+                        command after each row is deleted. The expression can use any column names
+                        of the table or table(s) listed in <code class="ph codeph">USING</code>. Write * to return
+                        all columns.</dd>
+
+                
+                
+                    <dt class="dt pt dlterm"><var class="keyword varname">output_name</var></dt>
+
+                    <dd class="dd pd">A name to use for a returned column.</dd>
+
+                
+            </dl>
+
+        </div>
+
+        <div class="section" id="topic1__section6"><h2 class="title sectiontitle">Notes</h2>
+            
+            <p class="p">Greenplum Database lets you reference columns of other tables in the
+                    <code class="ph codeph">WHERE</code> condition by specifying the other tables in the
+                    <code class="ph codeph">USING</code> clause. For example, to the name <code class="ph codeph">Hannah</code>
+                from the <code class="ph codeph">rank</code> table, one might do:</p>
+
+            <pre class="pre codeblock"><code>DELETE FROM rank USING names WHERE names.id = rank.id AND 
+name = 'Hannah';</code></pre>
+            <p class="p">What is essentially happening here is a join between <code class="ph codeph">rank</code> and
+                    <code class="ph codeph">names</code>, with all successfully joined rows being marked for
+                deletion. This syntax is not standard. However, this join style is usually easier to
+                write and faster to run than a more standard sub-select style, such as:</p>
+
+            <pre class="pre codeblock"><code>DELETE FROM rank WHERE id IN (SELECT id FROM names WHERE name 
+= 'Hannah');</code></pre>
+            <p class="p">Execution of <code class="ph codeph">UPDATE</code> and <code class="ph codeph">DELETE</code> commands directly on
+                a specific partition (child table) of a partitioned table is not supported. Instead,
+                these commands must be run on the root partitioned table, the table created
+                with the <code class="ph codeph">CREATE TABLE</code> command.</p>
+
+            <p class="p">For a partitioned table, all the child tables are locked during the
+                    <code class="ph codeph">DELETE</code> operation when the Global Deadlock Detector is not
+                enabled (the default). Only some of the leaf child tables are locked when the Global
+                Deadlock Detector is enabled. For information about the Global Deadlock Detector,
+                see <a class="xref" href="../../admin_guide/dml.html#topic_gdd" target="_blank">Global Deadlock Detector</a>.</p>
+
+        </div>
+
+        <div class="section" id="topic1__section7"><h2 class="title sectiontitle">Examples</h2>
+            
+            <p class="p">Delete all films but musicals:</p>
+
+            <pre class="pre codeblock"><code>DELETE FROM films WHERE kind &lt;&gt; 'Musical';</code></pre>
+            <p class="p">Clear the table films:</p>
+
+            <pre class="pre codeblock"><code>DELETE FROM films;</code></pre>
+            <div class="p">Delete completed tasks, returning full details of the deleted
+                rows:<pre class="pre codeblock"><code>DELETE FROM tasks WHERE status = 'DONE' RETURNING *;</code></pre></div>
+
+            <p class="p">Delete using a join:</p>
+
+            <pre class="pre codeblock"><code>DELETE FROM rank USING names WHERE names.id = rank.id AND 
+name = 'Hannah';</code></pre>
+        </div>
+
+        <div class="section" id="topic1__section8"><h2 class="title sectiontitle">Compatibility</h2>
+            
+            <p class="p">This command conforms to the SQL standard, except that the <code class="ph codeph">USING</code> and
+                    <code class="ph codeph">RETURNING</code> clauses are Greenplum Database extensions, as is the
+                ability to use <code class="ph codeph">WITH</code> with <code class="ph codeph">DELETE</code>.</p>
+
+        </div>
+
+        <div class="section" id="topic1__section9"><h2 class="title sectiontitle">See Also</h2>
+            
+            <p class="p"><a class="xref" href="DECLARE.html#topic1">DECLARE</a>,
+                        <a class="xref" href="TRUNCATE.html#topic1">TRUNCATE</a></p>
+
+        </div>
+
+    </div>
+
+</body>
+</html>

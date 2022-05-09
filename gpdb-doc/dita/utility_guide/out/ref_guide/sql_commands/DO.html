@@ -1,0 +1,156 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+
+<meta name="copyright" content="(C) Copyright 2022" />
+<meta name="DC.rights.owner" content="(C) Copyright 2022" />
+<meta name="generator" content="DITA-OT" /><meta name="DC.type" content="topic" />
+<meta name="DC.title" content="DO" />
+<meta name="DC.format" content="XHTML" />
+<meta name="DC.identifier" content="topic1" />
+<link rel="stylesheet" type="text/css" href="../../out/commonltr.css" />
+<title>DO</title>
+</head>
+<body id="topic1">
+
+  <h1 class="title topictitle1" id="topic1__af20941">DO</h1>
+
+  <div class="body">
+    <p class="p" id="topic1__sql_command_desc">Runs anonymous code block as a transient anonymous function.</p>
+
+    <div class="section" id="topic1__section2"><h2 class="title sectiontitle">Synopsis</h2>
+      
+      <pre class="pre codeblock" id="topic1__sql_command_synopsis"><code>DO [ LANGUAGE &lt;lang_name&gt; ] &lt;code&gt;</code></pre>
+    </div>
+
+    <div class="section" id="topic1__section3"><h2 class="title sectiontitle">Description</h2>
+      
+      <p class="p"><code class="ph codeph">DO</code> Runs an anonymous code block, or in other words a transient
+        anonymous function in a procedural language.</p>
+
+      <p class="p">The code block is treated as though it were the body of a function with no parameters,
+        returning void. It is parsed and run a single time.</p>
+
+      <p class="p">The optional <code class="ph codeph">LANGUAGE</code> clause can appear either before or after the code
+        block.</p>
+
+      <p class="p">Anonymous blocks are procedural language structures that provide the capability to create
+        and run procedural code on the fly without persistently storing the code as database
+        objects in the system catalogs. The concept of anonymous blocks is similar to UNIX shell
+        scripts, which enable several manually entered commands to be grouped and run as one
+        step. As the name implies, anonymous blocks do not have a name, and for this reason they
+        cannot be referenced from other objects. Although built dynamically, anonymous blocks can be
+        easily stored as scripts in the operating system files for repetitive execution. </p>
+
+      <p class="p">Anonymous blocks are standard procedural language blocks. They carry the syntax and obey
+        the rules that apply to the procedural language, including declaration and scope of
+        variables, execution, exception handling, and language usage. </p>
+
+      <p class="p">The compilation and execution of anonymous blocks are combined in one step, while a
+        user-defined function needs to be re-defined before use each time its definition
+        changes.</p>
+
+    </div>
+
+    <div class="section" id="topic1__section4"><h2 class="title sectiontitle">Parameters</h2>
+      
+      <dl class="dl parml">
+        
+          <dt class="dt pt dlterm">
+            <var class="keyword varname">code</var>
+          </dt>
+
+          <dd class="dd pd">The procedural language code to be run. This must be specified as a string
+            literal, just as with the <code class="ph codeph">CREATE FUNCTION</code> command. Use of a
+            dollar-quoted literal is recommended. Optional keywords have no effect. These procedural
+            languages are supported: PL/pgSQL (<code class="ph codeph">plpgsql</code>), PL/Python
+              (<code class="ph codeph">plpythonu</code>), and PL/Perl (<code class="ph codeph">plperl</code> and
+              <code class="ph codeph">plperlu</code>).</dd>
+
+        
+        
+          <dt class="dt pt dlterm">
+            <var class="keyword varname">lang_name</var>
+          </dt>
+
+          <dd class="dd pd">The name of the procedural language that the code is written in. The default is
+              <code class="ph codeph">plpgsql</code>. The language must be installed on the Greenplum Database
+            system and registered in the database.</dd>
+
+        
+      </dl>
+
+    </div>
+
+    <div class="section" id="topic1__section5"><h2 class="title sectiontitle">Notes</h2>
+      
+      <p class="p">The PL/pgSQL language is installed on the Greenplum Database system and is registered in a
+        user created database. The PL/Python and PL/Perl languages are installed by default, but not
+        registered. Other languages are not installed or registered. The system catalog
+          <code class="ph codeph">pg_language</code> contains information about the registered languages in a
+        database.</p>
+
+      <p class="p">The user must have <code class="ph codeph">USAGE</code> privilege for the procedural language, or must be
+        a superuser if the language is untrusted. This is the same privilege requirement as for
+        creating a function in the language.</p>
+
+      <p class="p">Anonymous blocks do not support function volatility or <code class="ph codeph">EXECUTE ON</code>
+        attributes.</p>
+
+    </div>
+
+    <div class="section"><h2 class="title sectiontitle">Examples</h2>
+      
+      <p class="p">This PL/pgSQL example grants all privileges on all views in schema <em class="ph i">public</em> to role
+          <code class="ph codeph">webuser</code>:</p>
+
+      <pre class="pre codeblock"><code>DO $$DECLARE r record;
+BEGIN
+    FOR r IN SELECT table_schema, table_name FROM information_schema.tables
+             WHERE table_type = 'VIEW' AND table_schema = 'public'
+    LOOP
+        EXECUTE 'GRANT ALL ON ' || quote_ident(r.table_schema) || '.' || quote_ident(r.table_name) || ' TO webuser';
+    END LOOP;
+END$$;</code></pre>
+      <div class="p">This PL/pgSQL example determines if a Greenplum Database user is a superuser. In the
+        example, the anonymous block retrieves the input value from a temporary
+        table.<pre class="pre codeblock"><code>CREATE TEMP TABLE list AS VALUES ('gpadmin') DISTRIBUTED RANDOMLY;
+
+DO $$ 
+DECLARE
+  name TEXT := 'gpadmin' ;
+  superuser TEXT := '' ;
+  t1_row   pg_authid%ROWTYPE;
+BEGIN
+  SELECT * INTO t1_row FROM pg_authid, list 
+     WHERE pg_authid.rolname = name ;
+  IF t1_row.rolsuper = 'f' THEN
+    superuser := 'not ';
+  END IF ;
+  RAISE NOTICE 'user % is %a superuser', t1_row.rolname, superuser ;
+END $$ LANGUAGE plpgsql ;</code></pre></div>
+
+    </div>
+
+    <div class="note"><span class="notetitle">Note:</span> The example PL/pgSQL uses <code class="ph codeph">SELECT</code> with the
+        <code class="ph codeph">INTO</code> clause. It is different from the SQL command <code class="ph codeph">SELECT
+        INTO</code>.</div>
+
+    <div class="section" id="topic1__section6"><h2 class="title sectiontitle">Compatibility</h2>
+      
+      <p class="p">There is no <code class="ph codeph">DO</code> statement in the SQL standard.</p>
+
+    </div>
+
+    <div class="section" id="topic1__section7"><h2 class="title sectiontitle">See Also</h2>
+      
+      <p class="p"><a class="xref" href="CREATE_LANGUAGE.html">CREATE LANGUAGE</a></p>
+
+    </div>
+
+  </div>
+
+</body>
+</html>

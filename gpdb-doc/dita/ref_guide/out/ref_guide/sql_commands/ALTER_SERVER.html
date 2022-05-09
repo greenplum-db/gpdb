@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+
+<meta name="copyright" content="(C) Copyright 2022" />
+<meta name="DC.rights.owner" content="(C) Copyright 2022" />
+<meta name="generator" content="DITA-OT" /><meta name="DC.type" content="topic" />
+<meta name="DC.title" content="ALTER SERVER" />
+<meta name="DC.relation" scheme="URI" content="../sql_commands/sql_ref.html" />
+<meta name="DC.format" content="XHTML" />
+<meta name="DC.identifier" content="topic1" />
+<link rel="stylesheet" type="text/css" href="../commonltr.css" />
+<title>ALTER SERVER</title>
+</head>
+<body id="topic1">
+
+    <h1 class="title topictitle1" id="topic1__bv20941">ALTER SERVER</h1>
+
+    <div class="body">
+        <p class="p" id="topic1__sql_command_desc">Changes the definition of a foreign server.</p>
+
+        <div class="section" id="topic1__section2"><h2 class="title sectiontitle">Synopsis</h2>
+            
+            <pre class="pre codeblock" id="topic1__sql_command_synopsis"><code>ALTER SERVER &lt;server_name&gt; [ VERSION '&lt;new_version&gt;' ]
+    [ OPTIONS ( [ ADD | SET | DROP ] &lt;option&gt; ['&lt;value&gt;'] [, ... ] ) ]
+
+ALTER SERVER &lt;server_name&gt; OWNER TO &lt;new_owner&gt;
+                
+ALTER SERVER &lt;server_name&gt; RENAME TO &lt;new_name&gt;</code></pre>
+        </div>
+
+        <div class="section" id="topic1__section3"><h2 class="title sectiontitle">Description</h2>
+            
+            <p class="p"><code class="ph codeph">ALTER SERVER</code> changes the definition of a foreign server.
+                The first form of the command changes the version string or the generic options of 
+                the server. Greenplum Database requires at least one clause. The second and third forms of the command change the owner or the name of the server.</p>
+
+            <div class="p">To alter the server, you must be the owner of the server. To alter the owner you must:<ul class="ul">
+              <li class="li">Own the server.</li>
+
+              <li class="li">Be a direct or indirect member of the new owning role.</li>
+
+              <li class="li">Have <code class="ph codeph">USAGE</code> privilege on the server's foreign-data wrapper.</li>
+</ul>
+</div>
+
+            <p class="p">Superusers automatically satisfy all of these criteria.</p>
+
+        </div>
+
+        <div class="section" id="topic1__section4"><h2 class="title sectiontitle">Parameters</h2>
+            
+            <dl class="dl parml">
+                
+                    <dt class="dt pt dlterm"><var class="keyword varname">server_name</var></dt>
+
+                    <dd class="dd pd">
+                        <p class="p">The name of an existing server.</p>
+
+                    </dd>
+
+                
+                
+                    <dt class="dt pt dlterm"><var class="keyword varname">new_version</var></dt>
+
+                    <dd class="dd pd">
+                        <p class="p">The new server version.</p>
+
+                    </dd>
+
+                
+                
+                    <dt class="dt pt dlterm">OPTIONS ( [ ADD | SET | DROP ] <var class="keyword varname">option</var>  ['<var class="keyword varname">value</var>'] [, ... ] )</dt>
+
+                    <dd class="dd pd">
+                        <p class="p">Change the server's options. <code class="ph codeph">ADD</code>, <code class="ph codeph">SET</code>, and <code class="ph codeph">DROP</code> specify the action to perform. If no operation is explicitly specified, the default operation is <code class="ph codeph">ADD</code>. Option names must be unique. Greenplum Database validates names and values using the server's foreign-data wrapper library.</p>
+
+                    </dd>
+
+                
+                
+                    <dt class="dt pt dlterm">OWNER TO <var class="keyword varname">new_owner</var></dt>
+
+                    <dd class="dd pd">
+                        <p class="p">Specifies the new owner of the foreign server.</p>
+
+                    </dd>
+
+                
+                
+                    <dt class="dt pt dlterm">RENAME TO <var class="keyword varname">new_name</var></dt>
+
+                    <dd class="dd pd">
+                        <p class="p">Specifies the new name of the foreign server.</p>
+
+                    </dd>
+
+                
+            </dl>
+
+        </div>
+
+        <div class="section" id="topic1__section6"><h2 class="title sectiontitle">Examples</h2>
+            
+            <p class="p">Change the definition of a server named <code class="ph codeph">foo</code> by adding connection options:</p>
+<pre class="pre codeblock"><code>ALTER SERVER foo OPTIONS (host 'foo', dbname 'foodb');</code></pre>
+            <p class="p">Change the option named <code class="ph codeph">host</code> for a server named <code class="ph codeph">foo</code>, and set the server version:</p>
+<pre class="pre codeblock"><code>ALTER SERVER foo VERSION '9.1' OPTIONS (SET host 'baz');</code></pre>
+        </div>
+
+        <div class="section" id="topic1__section7"><h2 class="title sectiontitle">Compatibility</h2>
+            
+            <p class="p"><code class="ph codeph">ALTER SERVER</code> conforms to ISO/IEC 9075-9 (SQL/MED). The <code class="ph codeph">OWNER
+                    TO</code> and <code class="ph codeph">RENAME</code> forms are Greenplum Database extensions.
+            </p>
+
+        </div>
+
+        <div class="section" id="topic1__section8"><h2 class="title sectiontitle">See Also</h2>
+            
+            <p class="p"><a class="xref" href="CREATE_SERVER.html#topic1">CREATE SERVER</a>,
+                        <a class="xref" href="DROP_SERVER.html#topic1">DROP
+                    SERVER</a></p>
+
+        </div>
+
+    </div>
+
+<div class="related-links">
+<div class="familylinks">
+<div class="parentlink"><strong>Parent topic:</strong> <a class="link" href="../sql_commands/sql_ref.html">SQL Commands</a></div>
+</div>
+</div></body>
+</html>

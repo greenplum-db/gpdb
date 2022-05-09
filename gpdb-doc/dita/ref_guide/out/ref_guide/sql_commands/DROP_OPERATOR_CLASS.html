@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+
+<meta name="copyright" content="(C) Copyright 2022" />
+<meta name="DC.rights.owner" content="(C) Copyright 2022" />
+<meta name="generator" content="DITA-OT" /><meta name="DC.type" content="topic" />
+<meta name="DC.title" content="DROP OPERATOR CLASS" />
+<meta name="DC.relation" scheme="URI" content="../sql_commands/sql_ref.html" />
+<meta name="DC.format" content="XHTML" />
+<meta name="DC.identifier" content="topic1" />
+<link rel="stylesheet" type="text/css" href="../commonltr.css" />
+<title>DROP OPERATOR CLASS</title>
+</head>
+<body id="topic1">
+<h1 class="title topictitle1" id="topic1__da20941">DROP OPERATOR CLASS</h1>
+<div class="body"><p class="p" id="topic1__sql_command_desc">Removes an operator class.</p>
+<div class="section" id="topic1__section2"><h2 class="title sectiontitle">Synopsis</h2><pre class="pre codeblock" id="topic1__sql_command_synopsis"><code>DROP OPERATOR CLASS [IF EXISTS] &lt;name&gt; USING &lt;index_method&gt; [CASCADE | RESTRICT]</code></pre></div>
+<div class="section" id="topic1__section3"><h2 class="title sectiontitle">Description</h2><p class="p"><code class="ph codeph">DROP OPERATOR</code> drops an existing operator class. To
+run this command you must be the owner of the operator class.</p>
+</div>
+<div class="section" id="topic1__section4"><h2 class="title sectiontitle">Parameters</h2><dl class="dl parml"><dt class="dt pt dlterm">IF EXISTS</dt>
+<dd class="dd pd">Do not throw an error if the operator class does not exist. A notice
+is issued in this case. </dd>
+<dt class="dt pt dlterm"><var class="keyword varname">name</var></dt>
+<dd class="dd pd">The name (optionally schema-qualified) of an existing operator class.</dd>
+<dt class="dt pt dlterm"><var class="keyword varname">index_method</var></dt>
+<dd class="dd pd">The name of the index access method the operator class is for.</dd>
+<dt class="dt pt dlterm">CASCADE</dt>
+<dd class="dd pd">Automatically drop objects that depend on the operator class. </dd>
+<dt class="dt pt dlterm">RESTRICT</dt>
+<dd class="dd pd">Refuse to drop the operator class if any objects depend on it. This
+is the default. </dd>
+</dl>
+</div>
+<div class="section" id="topic1__section5"><h2 class="title sectiontitle">Examples</h2><p class="p">Remove the B-tree operator class <code class="ph codeph">widget_ops</code>: </p>
+<pre class="pre codeblock"><code>DROP OPERATOR CLASS widget_ops USING btree;</code></pre><p class="p">This command will not succeed if there are any existing indexes that use
+the operator class. Add <code class="ph codeph">CASCADE</code> to drop such indexes
+along with the operator class.</p>
+</div>
+<div class="section" id="topic1__section6"><h2 class="title sectiontitle">Compatibility</h2><p class="p">There is no <code class="ph codeph">DROP OPERATOR CLASS</code> statement in the SQL standard. </p>
+</div>
+<div class="section" id="topic1__section7"><h2 class="title sectiontitle">See Also</h2><p class="p"><a class="xref" href="ALTER_OPERATOR_CLASS.html#topic1">ALTER OPERATOR CLASS</a>,
+            <a class="xref" href="CREATE_OPERATOR_CLASS.html#topic1">CREATE OPERATOR CLASS</a></p>
+</div>
+</div>
+<div class="related-links">
+<div class="familylinks">
+<div class="parentlink"><strong>Parent topic:</strong> <a class="link" href="../sql_commands/sql_ref.html">SQL Commands</a></div>
+</div>
+</div></body>
+</html>

@@ -1,0 +1,333 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+
+<meta name="copyright" content="(C) Copyright 2022" />
+<meta name="DC.rights.owner" content="(C) Copyright 2022" />
+<meta name="generator" content="DITA-OT" /><meta name="DC.type" content="topic" />
+<meta name="DC.title" content="CREATE TABLE AS" />
+<meta name="DC.relation" scheme="URI" content="../sql_commands/sql_ref.html" />
+<meta name="DC.format" content="XHTML" />
+<meta name="DC.identifier" content="topic1" />
+<link rel="stylesheet" type="text/css" href="../commonltr.css" />
+<title>CREATE TABLE AS</title>
+</head>
+<body id="topic1">
+
+  <h1 class="title topictitle1" id="topic1__ce20941">CREATE TABLE AS</h1>
+
+  <div class="body">
+    <p class="p" id="topic1__sql_command_desc">Defines a new table from the results of a query.</p>
+
+    <div class="section" id="topic1__section2"><h2 class="title sectiontitle">Synopsis</h2>
+      
+      <pre class="pre codeblock" id="topic1__sql_command_synopsis"><code>CREATE [ [ GLOBAL | LOCAL ] { TEMPORARY | TEMP } | UNLOGGED ] TABLE &lt;table_name&gt;
+        [ (&lt;column_name&gt; [, ...] ) ]
+        [ WITH ( &lt;storage_parameter&gt; [= &lt;value&gt;] [, ... ] ) | WITHOUT OIDS ]
+        [ ON COMMIT { PRESERVE ROWS | DELETE ROWS | DROP } ]
+        [ TABLESPACE &lt;tablespace_name&gt; ]
+        AS &lt;query&gt;
+        [ WITH [ NO ] DATA ]
+        [ DISTRIBUTED BY (column [, ... ] ) | DISTRIBUTED RANDOMLY | DISTRIBUTED REPLICATED ]
+      </code></pre>
+      <p class="p">where <var class="keyword varname">storage_parameter</var> is:</p>
+
+      <pre class="pre codeblock"><code>   appendoptimized={TRUE|FALSE}
+   blocksize={8192-2097152}
+   orientation={COLUMN|ROW}
+   compresstype={ZLIB|ZSTD|QUICKLZ|RLE_TYPE|NONE}
+   compresslevel={1-19 | 1}
+   fillfactor={10-100}
+   [oids=FALSE]</code></pre>
+    </div>
+
+    <div class="section" id="topic1__section3"><h2 class="title sectiontitle">Description</h2>
+      
+      <p class="p"><code class="ph codeph">CREATE TABLE AS</code> creates a table and fills it with data computed by a
+            <a class="xref" href="SELECT.html#topic1">SELECT</a> command.
+        The table columns have the names and data types associated with the output columns of the
+          <code class="ph codeph">SELECT</code>, however you can override the column names by giving an explicit
+        list of new column names. </p>
+
+      <p class="p"><code class="ph codeph">CREATE TABLE AS</code> creates a new table and evaluates the query just once to
+        fill the new table initially. The new table will not track subsequent changes to the source
+        tables of the query.</p>
+
+    </div>
+
+    <div class="section" id="topic1__section4"><h2 class="title sectiontitle">Parameters</h2>
+      
+      <dl class="dl parml">
+        
+          <dt class="dt pt dlterm">GLOBAL | LOCAL</dt>
+
+          <dd class="dd pd">Ignored for compatibility. These keywords are deprecated; refer to <a class="xref" href="CREATE_TABLE.html#topic1">CREATE TABLE</a> for details.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">TEMPORARY | TEMP</dt>
+
+          <dd class="dd pd">If specified, the new table is created as a temporary table. Temporary tables are
+            automatically dropped at the end of a session, or optionally at the end of the current
+            transaction (see <code class="ph codeph">ON COMMIT</code>). Existing permanent tables with the same
+            name are not visible to the current session while the temporary table exists, unless
+            they are referenced with schema-qualified names. Any indexes created on a temporary
+            table are automatically temporary as well.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">UNLOGGED</dt>
+
+          <dd class="dd pd">If specified, the table is created as an unlogged table. Data written to unlogged
+            tables is not written to the write-ahead (WAL) log, which makes them considerably faster
+            than ordinary tables. However, the contents of an unlogged table are not replicated to
+            mirror segment instances. Also an unlogged table is not crash-safe. After a segment
+            instance crash or unclean shutdown, the data for the unlogged table on that segment is
+            truncated. Any indexes created on an unlogged table are automatically unlogged as
+            well.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">
+            <var class="keyword varname">table_name</var>
+          </dt>
+
+          <dd class="dd pd">The name (optionally schema-qualified) of the new table to be created. </dd>
+
+        
+        
+          <dt class="dt pt dlterm">
+            <var class="keyword varname">column_name</var>
+          </dt>
+
+          <dd class="dd pd">The name of a column in the new table. If column names are not provided, they are
+            taken from the output column names of the query. </dd>
+
+        
+        
+          <dt class="dt pt dlterm">WITH ( <var class="keyword varname">storage_parameter=value</var> )</dt>
+
+          <dd class="dd pd">The <code class="ph codeph">WITH</code> clause can be used to set storage options for the table or
+            its indexes. Note that you can also set different storage parameters on a particular
+            partition or subpartition by declaring the <code class="ph codeph">WITH</code> clause in the partition
+            specification. The following storage options are available:</dd>
+
+          <dd class="dd pd ddexpand"><strong class="ph b">appendoptimized</strong> — Set to <code class="ph codeph">TRUE</code> to create the table as an append-optimized
+            table. If <code class="ph codeph">FALSE</code> or not declared, the table will be created as a regular
+            heap-storage table.</dd>
+
+          <dd class="dd pd ddexpand"><strong class="ph b">blocksize</strong> — Set to the size, in bytes for each block in a table. The <code class="ph codeph">blocksize
+            </code> must be between 8192 and 2097152 bytes, and be a multiple of 8192. The default
+            is 32768.  The <code class="ph codeph">blocksize</code>
+            option is valid only if <code class="ph codeph">appendoptimized=TRUE</code>.</dd>
+
+          <dd class="dd pd ddexpand"><strong class="ph b">orientation</strong> — Set to <code class="ph codeph">column</code> for column-oriented storage, or
+              <code class="ph codeph">row</code> (the default) for row-oriented storage. This option is only valid
+            if <code class="ph codeph">appendoptimized=TRUE</code>. Heap-storage tables can only be row-oriented.</dd>
+
+          <dd class="dd pd ddexpand"><strong class="ph b">compresstype</strong> — Set to <code class="ph codeph">ZLIB</code> (the default), <code class="ph codeph">ZSTD</code>, 
+              <code class="ph codeph">RLE_TYPE</code>, or <code class="ph codeph">QUICKLZ</code><sup class="ph sup">1</sup> to specify
+            the type of compression used. The 
+            value <code class="ph codeph">NONE</code> disables compression. Zstd provides for both speed or a
+            good compression ratio, tunable with the <code class="ph codeph">compresslevel</code> option.
+            QuickLZ and zlib are provided for backwards-compatibility. Zstd outperforms these
+            compression types on usual workloads. The <code class="ph codeph">compresstype</code> option is
+            valid only if <code class="ph codeph">appendoptimized=TRUE</code>.<div class="note"><span class="notetitle">Note:</span> <sup class="ph sup">1</sup>QuickLZ compression is available only in the commercial
+              release of Tanzu Greenplum.</div>
+
+            <p class="p">The value <code class="ph codeph">RLE_TYPE</code>, which is supported only if
+                <code class="ph codeph">orientation</code>=<code class="ph codeph">column</code> is specified, enables the
+              run-length encoding (RLE) compression algorithm. RLE compresses data better than the
+              Zstd, zlib, or QuickLZ compression algorithms when the same data value occurs in many
+              consecutive rows.</p>
+<p class="p">For columns of type <code class="ph codeph">BIGINT</code>,
+                <code class="ph codeph">INTEGER</code>, <code class="ph codeph">DATE</code>, <code class="ph codeph">TIME</code>, or
+                <code class="ph codeph">TIMESTAMP</code>, delta compression is also applied if the
+                <code class="ph codeph">compresstype</code> option is set to <code class="ph codeph">RLE_TYPE</code>
+              compression. The delta compression algorithm is based on the delta between column
+              values in consecutive rows and is designed to improve compression when data is loaded
+              in sorted order or the compression is applied to column data that is in sorted
+              order.</p>
+<p class="p">For information about using table compression, see
+              <a class="xref" href="../../admin_guide/ddl/ddl-storage.html#topic1" target="_blank">Choosing the Table Storage Model</a>
+              in the <cite class="cite">Greenplum Database Administrator Guide</cite>.</p>
+</dd>
+
+          <dd class="dd pd ddexpand"><strong class="ph b">compresslevel</strong> — For Zstd compression of append-optimized tables, set to an
+            integer value from 1 (fastest compression) to 19 (highest compression ratio). For
+            zlib compression, the valid range is from 1 to 9. QuickLZ compression level can only
+            be set to 1. If not declared, the default is 1. The <code class="ph codeph">compresslevel</code>
+            option is valid only if <code class="ph codeph">appendoptimized=TRUE</code>.</dd>
+
+          <dd class="dd pd ddexpand"><strong class="ph b">fillfactor</strong> — See <a class="xref" href="CREATE_INDEX.html#topic1">CREATE INDEX</a> for more information about this index storage parameter. </dd>
+
+          <dd class="dd pd ddexpand"><strong class="ph b">oids=FALSE</strong> — This setting is the default, and it ensures that rows do not have
+            object identifiers assigned to them. <span class="ph">VMware does not support
+              using <code class="ph codeph">WITH OIDS</code> or <code class="ph codeph">oids=TRUE</code> to assign an OID system
+              column. </span>On large tables, such as those in a typical Greenplum Database system,
+            using OIDs for table rows can cause wrap-around of the 32-bit OID counter. Once the
+            counter wraps around, OIDs can no longer be assumed to be unique, which not only makes
+            them useless to user applications, but can also cause problems in the Greenplum Database
+            system catalog tables. In addition, excluding OIDs from a table reduces the space
+            required to store the table on disk by 4 bytes per row, slightly improving performance.
+            You cannot create OIDS on a partitioned or column-oriented table (an error is
+            displayed). This syntax is deprecated and will be removed in a future Greenplum
+            release.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">ON COMMIT</dt>
+
+          <dd class="dd pd">The behavior of temporary tables at the end of a transaction block can be controlled
+            using <code class="ph codeph">ON COMMIT</code>. The three options are: </dd>
+
+          <dd class="dd pd ddexpand">PRESERVE ROWS — No special action is taken at the ends of transactions for temporary
+            tables. This is the default behavior. </dd>
+
+          <dd class="dd pd ddexpand">DELETE ROWS — All rows in the temporary table will be deleted at the end of each
+            transaction block. Essentially, an automatic <code class="ph codeph">TRUNCATE</code> is done at each
+            commit. </dd>
+
+          <dd class="dd pd ddexpand">DROP — The temporary table will be dropped at the end of the current transaction
+            block. </dd>
+
+        
+        
+          <dt class="dt pt dlterm">TABLESPACE <var class="keyword varname">tablespace_name</var></dt>
+
+          <dd class="dd pd">The <var class="keyword varname">tablespace_name</var> parameter is the name of the tablespace in
+            which the new table is to be created. If not specified, the database's default
+            tablespace is used, or <a class="xref" href="../config_params/guc-list.html#topic_k52_fqm_f3b">temp_tablespaces</a> if
+            the table is temporary.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">AS <var class="keyword varname">query</var></dt>
+
+          <dd class="dd pd">A <a class="xref" href="SELECT.html#topic1">SELECT</a>,
+                <a class="xref" href="SELECT.html#topic1__table-command">TABLE</a>, or
+                <a class="xref" href="VALUES.html#topic1">VALUES</a>
+            command, or an <a class="xref" href="EXECUTE.html#topic1">EXECUTE</a> command that runs a prepared <code class="ph codeph">SELECT</code> or
+              <code class="ph codeph">VALUES</code> query.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">DISTRIBUTED BY ({<var class="keyword varname">column</var> [<var class="keyword varname">opclass</var>]}, [ ... ]
+            )</dt>
+
+          <dt class="dt pt dlterm">DISTRIBUTED RANDOMLY</dt>
+
+          <dt class="dt pt dlterm">DISTRIBUTED REPLICATED</dt>
+
+          <dd class="dd pd">Used to declare the Greenplum Database distribution policy for the table.
+              <code class="ph codeph">DISTRIBUTED BY</code> uses hash distribution with one or more columns
+            declared as the distribution key. For the most even data distribution, the distribution
+            key should be the primary key of the table or a unique column (or set of columns). If
+            that is not possible, then you may choose <code class="ph codeph">DISTRIBUTED RANDOMLY</code>, which
+            will send the data round-robin to the segment instances.</dd>
+
+          <dd class="dd pd ddexpand"><code class="ph codeph">DISTRIBUTED REPLICATED</code> replicates all rows in the table to all
+            Greenplum Database segments. It cannot be used with partitioned tables or with tables
+            that inhert from other tables.</dd>
+
+          <dd class="dd pd ddexpand">The Greenplum Database server configuration parameter
+              <code class="ph codeph">gp_create_table_random_default_distribution</code> controls the default
+            table distribution policy if the <span class="keyword cmdname">DISTRIBUTED BY</span> clause is not
+            specified when you create a table. Greenplum Database follows these rules to create a
+            table if a distribution policy is not specified.<ul class="ul" id="topic1__ul_ejv_m1b_kr">
+              <li class="li">If the Postgres Planner creates the table, and the value of the parameter is
+                  <code class="ph codeph">off</code>, the table distribution policy is determined based on the
+                command.</li>
+
+              <li class="li">If the Postgres Planner creates the table, and the value of the parameter is
+                  <code class="ph codeph">on</code>, the table distribution policy is random.</li>
+
+              <li class="li">If GPORCA creates the table, the table distribution policy is random. The
+                parameter value has no effect. </li>
+
+            </ul>
+</dd>
+
+          <dd class="dd pd ddexpand">For more information about setting the default table distribution policy, see <a class="xref" href="../config_params/guc-list.html#gp_create_table_random_default_distribution"><code class="ph codeph">gp_create_table_random_default_distribution</code></a>. For
+            information about the Postgres Planner and GPORCA, see <a class="xref" href="../../admin_guide/query/topics/query.html#topic1" target="_blank">Querying Data</a> in the
+              <cite class="cite">Greenplum Database Administrator Guide</cite>.</dd>
+
+        
+      </dl>
+
+    </div>
+
+    <div class="section" id="topic1__section5"><h2 class="title sectiontitle">Notes</h2>
+      
+      <p class="p">This command is functionally similar to <a class="xref" href="SELECT_INTO.html#topic1">SELECT INTO</a>, but it is preferred since it is less likely to be
+        confused with other uses of the <code class="ph codeph">SELECT INTO</code> syntax. Furthermore,
+          <code class="ph codeph">CREATE TABLE AS</code> offers a superset of the functionality offered by
+          <code class="ph codeph">SELECT INTO</code>. </p>
+
+      <p class="p"><code class="ph codeph">CREATE TABLE AS</code> can be used for fast data loading from external table data
+        sources. See <a class="xref" href="CREATE_EXTERNAL_TABLE.html#topic1">CREATE EXTERNAL TABLE</a>.</p>
+
+    </div>
+
+    <div class="section" id="topic1__section6"><h2 class="title sectiontitle">Examples</h2>
+      
+      <p class="p">Create a new table <code class="ph codeph">films_recent</code> consisting of only recent entries from the
+        table <code class="ph codeph">films</code>:</p>
+
+      <pre class="pre codeblock"><code>CREATE TABLE films_recent AS SELECT * FROM films WHERE 
+date_prod &gt;= '2007-01-01';</code></pre>
+      <p class="p">Create a new temporary table <code class="ph codeph">films_recent</code>, consisting of only recent
+        entries from the table films, using a prepared statement. The new table will be dropped at
+        commit: </p>
+
+      <pre class="pre codeblock"><code>PREPARE recentfilms(date) AS SELECT * FROM films WHERE 
+date_prod &gt; $1;
+CREATE TEMP TABLE films_recent ON COMMIT DROP AS 
+EXECUTE recentfilms('2007-01-01');</code></pre>
+    </div>
+
+    <div class="section" id="topic1__section7"><h2 class="title sectiontitle">Compatibility</h2>
+      
+      <p class="p"><code class="ph codeph">CREATE TABLE AS</code> conforms to the SQL standard, with the following
+        exceptions: </p>
+
+      <ul class="ul">
+        <li class="li" id="topic1__ce151719">The standard requires parentheses around the subquery clause; in Greenplum
+          Database, these parentheses are optional. </li>
+
+        <li class="li" id="topic1__ce151721">The standard defines a <code class="ph codeph">WITH [NO] DATA</code> clause; this is not
+          currently implemented by Greenplum Database. The behavior provided by Greenplum Database
+          is equivalent to the standard's <code class="ph codeph">WITH DATA</code> case. <code class="ph codeph">WITH NO
+            DATA</code> can be simulated by appending <code class="ph codeph">LIMIT 0</code> to the query. </li>
+
+        <li class="li" id="topic1__ce151723">Greenplum Database handles temporary tables differently from the standard;
+          see <code class="ph codeph">CREATE TABLE</code> for details.</li>
+
+        <li class="li" id="topic1__ce151725">The <code class="ph codeph">WITH</code> clause is a Greenplum Database extension;
+          neither storage parameters nor <code class="ph codeph">OIDs</code> are in the standard.  The syntax for
+          creating OID system columns is deprecated and will be removed in a future Greenplum
+          release.</li>
+
+        <li class="li" id="topic1__ce151727">The Greenplum Database concept of tablespaces is not part of the standard.
+          The <code class="ph codeph">TABLESPACE</code> clause is an extension.</li>
+
+      </ul>
+
+    </div>
+
+    <div class="section" id="topic1__section8"><h2 class="title sectiontitle">See Also</h2>
+      
+      <p class="p"><a class="xref" href="CREATE_EXTERNAL_TABLE.html#topic1">CREATE EXTERNAL TABLE</a>, <a class="xref" href="CREATE_EXTERNAL_TABLE.html#topic1">CREATE EXTERNAL TABLE</a>, <a class="xref" href="EXECUTE.html#topic1">EXECUTE</a>, <a class="xref" href="SELECT.html#topic1">SELECT</a>, <a class="xref" href="SELECT_INTO.html#topic1">SELECT INTO</a>, <a class="xref" href="VALUES.html#topic1">VALUES</a></p>
+
+    </div>
+
+  </div>
+
+<div class="related-links">
+<div class="familylinks">
+<div class="parentlink"><strong>Parent topic:</strong> <a class="link" href="../sql_commands/sql_ref.html">SQL Commands</a></div>
+</div>
+</div></body>
+</html>

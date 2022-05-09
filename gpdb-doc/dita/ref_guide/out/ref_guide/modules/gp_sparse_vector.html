@@ -1,0 +1,307 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+
+<meta name="copyright" content="(C) Copyright 2022" />
+<meta name="DC.rights.owner" content="(C) Copyright 2022" />
+<meta name="generator" content="DITA-OT" /><meta name="DC.type" content="topic" />
+<meta name="DC.title" content="gp_sparse_vector" />
+<meta name="DC.format" content="XHTML" />
+<meta name="DC.identifier" content="topic_gpsv" />
+<link rel="stylesheet" type="text/css" href="../commonltr.css" />
+<title>gp_sparse_vector</title>
+</head>
+<body>
+
+  <div class="nested0" aria-labelledby="ariaid-title1" id="topic_gpsv">
+    <h1 class="title topictitle1" id="ariaid-title1">gp_sparse_vector</h1>
+
+    <div class="body">
+      <p class="p">The <code class="ph codeph">gp_sparse_vector</code> module implements a Greenplum Database 
+        data type and associated functions that use compressed storage of zeros to
+        make vector computations on floating point numbers faster.</p>
+
+      <p class="p">The <code class="ph codeph">gp_sparse_vector</code> module is a Greenplum Database extension.</p>
+
+    </div>
+
+    <div class="topic nested1" aria-labelledby="ariaid-title2" id="topic_reg">
+      <h2 class="title topictitle2" id="ariaid-title2">Installing and Registering the Module</h2>
+
+      <div class="body">
+        <p class="p">The <code class="ph codeph">gp_sparse_vector</code> module is installed when you install
+          Greenplum Database. Before you can use any of the functions defined in the
+          module, you must register the <code class="ph codeph">gp_sparse_vector</code> extension in
+          each database where you want to use the functions.
+          <span class="ph">Refer to <a class="xref" href="../../install_guide/install_modules.html" target="_blank">Installing Additional Supplied Modules</a>
+          for more information.</span></p>
+
+      </div>
+
+    </div>
+
+    <div class="topic nested1" aria-labelledby="ariaid-title3" id="topic_doc">
+      <h2 class="title topictitle2" id="ariaid-title3">Using the gp_sparse_vector Module</h2>
+
+      <div class="body">
+        <p class="p">When you use arrays of floating point numbers for various calculations,
+          you will often have long runs of zeros. This is common in scientific,
+          retail optimization, and text processing applications. Each floating
+          point number takes 8 bytes of storage in memory and/or disk. Saving
+          those zeros is often impractical. There are also many computations
+          that benefit from skipping over the zeros.</p>
+
+        <p class="p">For example, suppose the following array of <code class="ph codeph">double</code>s is
+          stored as a <code class="ph codeph">float8[]</code> in Greenplum Database:</p>
+
+
+        <pre class="pre codeblock"><code>'{0, 33, &lt;40,000 zeros&gt;, 12, 22 }'::float8[]</code></pre>
+        <p class="p">This type of array arises often in text processing, where a dictionary may
+          have 40-100K terms and the number of words in a particular document is stored
+          in a vector. This array would occupy slightly more than 320KB of memory/disk,
+          most of it zeros. Any operation that you perform on this data
+          works on 40,001 fields that are not important.</p>
+
+        <p class="p">The Greenplum Database built-in <code class="ph codeph">array</code> datatype utilizes a
+          bitmap for null values, but it is a poor choice for this use case because
+          it is not optimized for <code class="ph codeph">float8[]</code> or for long runs of
+          zeros instead of nulls, and the bitmap is not run-length-encoding- (RLE)
+          compressed. Even if each zero were stored as a <code class="ph codeph">NULL</code> in the
+          array, the bitmap for nulls would use 5KB to mark the
+          nulls, which is not nearly as efficient as it could be.</p>
+
+        <p class="p">The Greenplum Database <code class="ph codeph">gp_sparse_vector</code> module defines a
+          data type and a simple RLE-based scheme that is biased toward being efficient
+          for zero value bitmaps. This scheme uses only 6 bytes for bitmap storage.</p>
+
+        <div class="note"><span class="notetitle">Note:</span> The sparse vector data type defined by the <code class="ph codeph">gp_sparse_vector</code>
+          module is named <code class="ph codeph">svec</code>. <code class="ph codeph">svec</code> supports only
+          <code class="ph codeph">float8</code> vector values.</div>
+
+        <p class="p">You can construct an <code class="ph codeph">svec</code> directly from a float array as 
+          follows:</p>
+
+        <pre class="pre codeblock"><code>SELECT ('{0, 13, 37, 53, 0, 71 }'::float8[])::svec;</code></pre>
+        <p class="p">The <code class="ph codeph">gp_sparse_vector</code> module supports the vector operators
+          <code class="ph codeph">&lt;</code>, <code class="ph codeph">&gt;</code>, <code class="ph codeph">*</code>,
+          <code class="ph codeph">**</code>, <code class="ph codeph">/</code>, <code class="ph codeph">=</code>,
+          <code class="ph codeph">+</code>, <code class="ph codeph">sum()</code>, <code class="ph codeph">vec_count_nonzero()</code>,
+          and so on. These operators take advantage of the efficient sparse storage format,
+          making computations on <code class="ph codeph">svec</code>s faster.</p>
+
+        <p class="p">The plus (<code class="ph codeph">+</code>) operator adds each of the terms of two
+          vectors of the same dimension together. For example, if vector
+          <code class="ph codeph">a = {0,1,5}</code> and vector <code class="ph codeph">b = {4,3,2}</code>,
+you
+          would compute the vector addition as follows:</p>
+
+        <pre class="pre codeblock"><code>SELECT ('{0,1,5}'::float8[]::svec + '{4,3,2}'::float8[]::svec)::float8[];
+ float8  
+---------
+ {4,4,7}</code></pre>
+        <p class="p">A vector dot product (<code class="ph codeph">%*%</code>) between vectors <code class="ph codeph">a</code>
+          and <code class="ph codeph">b</code> returns a scalar result of type <code class="ph codeph">float8</code>.
+          Compute the dot product (<code class="ph codeph">(0*4+1*3+5*2)=13</code>) as follows:</p>
+
+        <pre class="pre codeblock"><code>SELECT '{0,1,5}'::float8[]::svec %*% '{4,3,2}'::float8[]::svec;
+ ?column? 
+----------
+       13</code></pre>
+        <p class="p">Special vector aggregate functions are also useful. <code class="ph codeph">sum()</code>
+          is self explanatory. <code class="ph codeph">vec_count_nonzero()</code> evaluates the count
+          of non-zero terms found in a set of <code class="ph codeph">svec</code> and returns an
+          <code class="ph codeph">svec</code> with the counts. For instance, for the set of vectors
+          <code class="ph codeph">{0,1,5},{10,0,3},{0,0,3},{0,1,0}</code>, the count of non-zero terms
+          would be <code class="ph codeph">{1,2,3}</code>. Use <code class="ph codeph">vec_count_nonzero()</code> to compute
+          the count of these vectors:</p>
+
+        <pre class="pre codeblock"><code>CREATE TABLE listvecs( a svec );
+
+INSERT INTO listvecs VALUES ('{0,1,5}'::float8[]),
+    ('{10,0,3}'::float8[]),
+    ('{0,0,3}'::float8[]),
+    ('{0,1,0}'::float8[]);
+
+SELECT vec_count_nonzero( a )::float8[] FROM listvecs;
+ count_vec 
+-----------
+ {1,2,3}
+(1 row)</code></pre>
+      </div>
+
+    </div>
+
+    <div class="topic nested1" aria-labelledby="ariaid-title4" id="topic_info">
+      <h2 class="title topictitle2" id="ariaid-title4">Additional Module Documentation</h2>
+
+      <div class="body">
+        <p class="p">Refer to the <code class="ph codeph">gp_sparse_vector</code> READMEs in the
+          <a class="xref" href="https://github.com/greenplum-db/gpdb/tree/master/gpcontrib/gp_sparse_vector/README" target="_blank">Greenplum Database github repository</a>
+          for additional information about this module.</p>
+
+        <p class="p">Apache MADlib includes an extended implementation of sparse vectors. See the
+          <a class="xref" href="http://madlib.apache.org/docs/latest/group__grp__svec.html" target="_blank">MADlib Documentation</a> for a description
+            of this MADlib module.</p>
+
+      </div>
+
+    </div>
+
+    <div class="topic nested1" aria-labelledby="ariaid-title5" id="topic_examples">
+      <h2 class="title topictitle2" id="ariaid-title5">Example</h2>
+
+      <div class="body">
+        <p class="p">A text classification example that describes a dictionary and some documents
+          follows. You will create Greenplum Database tables representing a dictionary
+          and some documents. You then perform document classification using vector
+          arithmetic on word counts and proportions of dictionary words in each
+          document.</p>
+
+        <p class="p">Suppose that you have a dictionary composed of words in a text array. Create
+          a table to store the dictionary data and insert some data (words) into the table.
+          For example:</p>
+
+          <pre class="pre codeblock"><code>CREATE TABLE features (dictionary text[][]) DISTRIBUTED RANDOMLY;
+INSERT INTO features 
+    VALUES ('{am,before,being,bothered,corpus,document,i,in,is,me,never,now,'
+            'one,really,second,the,third,this,until}');</code></pre>
+        <p class="p">You have a set of documents, also defined as an array of words. Create a
+            table to represent the documents and insert some data into the table:</p>
+
+        <pre class="pre codeblock"><code>CREATE TABLE documents(docnum int, document text[]) DISTRIBUTED RANDOMLY;
+INSERT INTO documents VALUES 
+    (1,'{this,is,one,document,in,the,corpus}'),
+    (2,'{i,am,the,second,document,in,the,corpus}'),
+    (3,'{being,third,never,really,bothered,me,until,now}'),
+    (4,'{the,document,before,me,is,the,third,document}');</code></pre>
+        <p class="p">Using the dictionary and document tables, find the dictionary words
+          that are present in each document. To do this, you first prepare a <em class="ph i">Sparse
+          Feature Vector</em>, or SFV, for each document. An SFV is a vector of
+          dimension <em class="ph i">N</em>, where <em class="ph i">N</em> is the number of dictionary words, and
+          each SFV contains a count of each dictionary word in the document.</p>
+
+        <p class="p">You can use the <code class="ph codeph">gp_extract_feature_histogram()</code> function to
+          create an SFV from a document. <code class="ph codeph">gp_extract_feature_histogram()</code>
+          outputs an <code class="ph codeph">svec</code> for each document that contains the count of
+          each of the dictionary words in the ordinal positions of the dictionary.</p>
+
+        <pre class="pre codeblock"><code>SELECT gp_extract_feature_histogram(
+    (SELECT dictionary FROM features LIMIT 1), document)::float8[], document
+        FROM documents ORDER BY docnum;
+
+     gp_extract_feature_histogram        |                     document                         
+-----------------------------------------+--------------------------------------------------
+ {0,0,0,0,1,1,0,1,1,0,0,0,1,0,0,1,0,1,0} | {this,is,one,document,in,the,corpus}
+ {1,0,0,0,1,1,1,1,0,0,0,0,0,0,1,2,0,0,0} | {i,am,the,second,document,in,the,corpus}
+ {0,0,1,1,0,0,0,0,0,1,1,1,0,1,0,0,1,0,1} | {being,third,never,really,bothered,me,until,now}
+ {0,1,0,0,0,2,0,0,1,1,0,0,0,0,0,2,1,0,0} | {the,document,before,me,is,the,third,document}
+
+SELECT * FROM features;
+                                               dictionary
+--------------------------------------------------------------------------------------------------------
+ {am,before,being,bothered,corpus,document,i,in,is,me,never,now,one,really,second,the,third,this,until}</code></pre>
+        <p class="p">The SFV of the second document, "i am the second document in the corpus",
+          is <code class="ph codeph">{1,3*0,1,1,1,1,6*0,1,2}</code>. The word "am" is the first
+          ordinate in the dictionary, and there is <code class="ph codeph">1</code> instance of it
+          in the SFV. The word "before" has no instances in the document, so its value
+          is <code class="ph codeph">0</code>; and so on.</p>
+
+        <p class="p"><code class="ph codeph">gp_extract_feature_histogram()</code> is very speed optimized - it
+          is a single routine version of a hash join that processes large numbers of
+          documents into their SFVs in parallel at the highest possible speeds.</p>
+
+        <p class="p">For the next part of the processing, generate a sparse vector of the
+          dictionary dimension (19). The vectors that you generate for each
+          document are referred to as the <em class="ph i">corpus</em>.</p>
+
+        <pre class="pre codeblock"><code>CREATE table corpus (docnum int, feature_vector svec) DISTRIBUTED RANDOMLY;
+
+INSERT INTO corpus
+    (SELECT docnum, 
+        gp_extract_feature_histogram(
+            (select dictionary FROM features LIMIT 1), document) from documents);</code></pre>
+
+        <p class="p">Count the number of times each feature occurs at least once in all
+          documents:</p>
+
+        <pre class="pre codeblock"><code>SELECT (vec_count_nonzero(feature_vector))::float8[] AS count_in_document FROM corpus;
+
+            count_in_document
+-----------------------------------------
+ {1,1,1,1,2,3,1,2,2,2,1,1,1,1,1,3,2,1,1}</code></pre>
+        <p class="p">Count all occurrences of each term in all documents:</p>
+
+        <pre class="pre codeblock"><code>SELECT (sum(feature_vector))::float8[] AS sum_in_document FROM corpus;
+
+             sum_in_document
+-----------------------------------------
+ {1,1,1,1,2,4,1,2,2,2,1,1,1,1,1,5,2,1,1}</code></pre>
+
+        <p class="p">The remainder of the classification process is vector math. The count is
+          turned into a weight that reflects <em class="ph i">Term Frequency / Inverse Document Frequency</em>
+          (tf/idf). The calculation for a given term in a given document is:</p>
+
+        <pre class="pre codeblock"><code>#_times_term_appears_in_this_doc * log( #_docs / #_docs_the_term_appears_in )</code></pre>
+        <p class="p"><code class="ph codeph">#_docs</code> is the total number of
+          documents (4 in this case). Note that there is one divisor for each
+          dictionary word and its value is the number of times that word appears in the
+          document.</p>
+
+        <p class="p">For example, the term "document" in document 1 would have a weight of
+          <code class="ph codeph">1 * log( 4/3 )</code>. In document 4, the term would have a weight
+          of <code class="ph codeph">2 * log( 4/3 )</code>. Terms that appear in every document 
+          would have weight <code class="ph codeph">0</code>.</p>
+
+        <p class="p">This single vector for the whole corpus is then scalar product
+          multiplied by each document SFV to produce the tf/idf.</p>
+
+        <p class="p">Calculate the tf/idf:</p>
+
+        <pre class="pre codeblock"><code>SELECT docnum, (feature_vector*logidf)::float8[] AS tf_idf 
+    FROM (SELECT log(count(feature_vector)/vec_count_nonzero(feature_vector)) AS logidf FROM corpus)
+    AS foo, corpus ORDER BY docnum;
+ docnum |                                                                          tf_idf                                                                          
+--------+----------------------------------------------------------------------------------------------------------------------------------------------------------
+      1 | {0,0,0,0,0.693147180559945,0.287682072451781,0,0.693147180559945,0.693147180559945,0,0,0,1.38629436111989,0,0,0.287682072451781,0,1.38629436111989,0}
+      2 | {1.38629436111989,0,0,0,0.693147180559945,0.287682072451781,1.38629436111989,0.693147180559945,0,0,0,0,0,0,1.38629436111989,0.575364144903562,0,0,0}
+      3 | {0,0,1.38629436111989,1.38629436111989,0,0,0,0,0,0.693147180559945,1.38629436111989,1.38629436111989,0,1.38629436111989,0,0,0.693147180559945,0,1.38629436111989
+}
+      4 | {0,1.38629436111989,0,0,0,0.575364144903562,0,0,0.693147180559945,0.693147180559945,0,0,0,0,0,0.575364144903562,0.693147180559945,0,0}
+</code></pre>
+        <p class="p">You can determine the <em class="ph i">angular distance</em> between one document and the
+          rest of the documents using the ACOS of the dot product of the document
+          vectors:</p>
+
+        <pre class="pre codeblock"><code>CREATE TABLE weights AS 
+    (SELECT docnum, (feature_vector*logidf) tf_idf 
+        FROM (SELECT log(count(feature_vector)/vec_count_nonzero(feature_vector))
+       AS logidf FROM corpus) foo, corpus ORDER BY docnum)
+    DISTRIBUTED RANDOMLY;</code></pre>
+        <p class="p">Calculate the angular distance between the first document and every other
+	  document:</p>
+
+        <pre class="pre codeblock"><code>SELECT docnum, trunc((180.*(ACOS(dmin(1.,(tf_idf%*%testdoc)/(l2norm(tf_idf)*l2norm(testdoc))))/(4.*ATAN(1.))))::numeric,2)
+     AS angular_distance FROM weights,
+     (SELECT tf_idf testdoc FROM weights WHERE docnum = 1 LIMIT 1) foo
+ORDER BY 1;
+
+ docnum | angular_distance 
+--------+------------------
+      1 |             0.00
+      2 |            78.82
+      3 |            90.00
+      4 |            80.02</code></pre>
+        <p class="p">You can see that the angular distance between document 1 and itself is 0
+          degrees, and between document 1 and 3 is 90 degrees because they share no
+          features at all.</p>
+
+      </div>
+
+    </div>
+
+  </div>
+
+</body>
+</html>

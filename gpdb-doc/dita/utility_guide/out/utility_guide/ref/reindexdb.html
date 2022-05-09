@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+
+<meta name="copyright" content="(C) Copyright 2022" />
+<meta name="DC.rights.owner" content="(C) Copyright 2022" />
+<meta name="generator" content="DITA-OT" /><meta name="DC.type" content="topic" />
+<meta name="DC.title" content="reindexdb" />
+<meta name="DC.format" content="XHTML" />
+<meta name="DC.identifier" content="topic1" />
+<link rel="stylesheet" type="text/css" href="../commonltr.css" />
+<title>reindexdb</title>
+</head>
+<body id="topic1">
+<h1 class="title topictitle1" id="topic1__pg137116">reindexdb</h1>
+<div class="body"><p class="p" id="topic1__client_util_desc">Rebuilds indexes in a database.</p>
+<div class="section" id="topic1__section2"><h2 class="title sectiontitle">Synopsis</h2><pre class="pre codeblock" id="topic1__client_util_synopsis"><code>reindexdb [&lt;connection-option&gt; ...] [--table | -t &lt;table&gt; ] 
+        [--index | -i &lt;index&gt; ] [&lt;dbname&gt;]
+
+reindexdb [&lt;connection-option&gt; ...] --all | -a
+
+reindexdb [&lt;connection-option&gt; ...] --system | -s [&lt;dbname&gt;]
+
+reindexdb -? | --help
+
+reindexdb -V | --version</code></pre></div>
+<div class="section" id="topic1__section3"><h2 class="title sectiontitle">Description</h2><p class="p"><code class="ph codeph">reindexdb</code> is a utility for rebuilding indexes in Greenplum Database.</p>
+
+<p class="p"> <code class="ph codeph">reindexdb</code> is a wrapper around the SQL command <code class="ph codeph">REINDEX</code>. There is no effective difference between reindexing databases via this utility and via other methods for accessing the server. </p>
+</div>
+
+<div class="section" id="topic1__section4"><h2 class="title sectiontitle">Options</h2><dl class="dl parml"><dt class="dt pt dlterm">-a | --all</dt>
+<dd class="dd pd">Reindex all databases.</dd>
+<dt class="dt pt dlterm">[-d] <var class="keyword varname">dbname</var> | [--dbname=]<var class="keyword varname">dbname</var></dt>
+<dd class="dd pd">Specifies the name of the database to be reindexed. If this is not specified and
+              <code class="ph codeph">-all</code> is not used, the database name is read from the environment
+            variable <code class="ph codeph">PGDATABASE</code>. If that is not set, the user name specified for
+            the connection is used.</dd>
+<dt class="dt pt dlterm">-e | --echo</dt>
+<dd class="dd pd">Echo the commands that <code class="ph codeph">reindexdb</code> generates and sends
+to the server.</dd>
+<dt class="dt pt dlterm">-i <var class="keyword varname">index</var> | --index=<var class="keyword varname">index</var></dt>
+<dd class="dd pd">Recreate index only.</dd>
+<dt class="dt pt dlterm">-q | --quiet</dt>
+<dd class="dd pd">Do not display a response.</dd>
+<dt class="dt pt dlterm">-s | --system</dt>
+<dd class="dd pd">Reindex system catalogs.</dd>
+<dt class="dt pt dlterm">-t <var class="keyword varname">table</var> | --table=<var class="keyword varname">table</var></dt>
+<dd class="dd pd">Reindex table only. Multiple tables can be reindexed by writing multiple <code class="ph codeph">-t</code> switches.</dd>
+
+        
+          <dt class="dt pt dlterm">-V | --version</dt>
+
+          <dd class="dd pd">Print the <code class="ph codeph">reindexdb</code> version and exit.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">-? | --help</dt>
+
+          <dd class="dd pd">Show help about <code class="ph codeph">reindexdb</code> command line arguments, and exit.</dd>
+
+        </dl>
+<div class="sectiondiv" id="topic1__section5"><strong class="ph b">Connection Options</strong><dl class="dl parml"><dt class="dt pt dlterm">-h <var class="keyword varname">host</var> | --host=<var class="keyword varname">host</var></dt>
+<dd class="dd pd">Specifies the host name of the machine on which the Greenplum
+              coordinator database server is running. If not specified, reads from the environment
+              variable <code class="ph codeph">PGHOST</code> or defaults to localhost.</dd>
+<dt class="dt pt dlterm">-p <var class="keyword varname">port</var> | --port=<var class="keyword varname">port</var></dt>
+<dd class="dd pd">Specifies the TCP port on which the Greenplum coordinator database
+              server is listening for connections. If not specified, reads from the environment
+              variable <code class="ph codeph">PGPORT</code> or defaults to 5432.</dd>
+<dt class="dt pt dlterm">-U <var class="keyword varname">username</var> | --username=<var class="keyword varname">username</var></dt>
+<dd class="dd pd">The database role name to connect as. If not specified, reads from
+the environment variable <code class="ph codeph">PGUSER</code> or defaults to the current
+system user name.</dd>
+<dt class="dt pt dlterm">-w | --no-password</dt>
+<dd class="dd pd">Never issue a password prompt. If the server requires password authentication
+and a password is not available by other means such as a <code class="ph codeph">.pgpass</code>
+file, the connection attempt will fail. This option can be useful in
+batch jobs and scripts where no user is present to enter a password.</dd>
+<dt class="dt pt dlterm">-W | --password</dt>
+<dd class="dd pd">Force a password prompt.</dd>
+
+          
+            <dt class="dt pt dlterm">--maintenance-db=<var class="keyword varname">dbname</var></dt>
+
+            <dd class="dd pd">Specifies the name of the database to connect to discover what other databases
+              should be reindexed. If not specified, the <code class="ph codeph">postgres</code> database will be
+              used, and if that does not exist, <code class="ph codeph">template1</code> will be used.</dd>
+
+          </dl>
+</div></div>
+<div class="section" id="topic1__section6"><h2 class="title sectiontitle">Notes</h2>
+            <p class="p"><code class="ph codeph">reindexdb</code> causes locking of system catalog tables, which could
+              affect currently running queries. To avoid disrupting ongoing business operations, schedule
+              the <code class="ph codeph">reindexb</code> operation during a period of low activity.</p>
+
+            <p class="p"><code class="ph codeph">reindexdb</code> might need to 
+                connect several times to the coordinator server, asking for a password each time. It is convenient to have
+              a <code class="ph codeph">~/.pgpass</code> file in such cases.</p>
+
+          </div>
+<div class="section" id="topic1__section7"><h2 class="title sectiontitle">Examples</h2><p class="p">To reindex the database <code class="ph codeph">mydb</code>:</p>
+<pre class="pre codeblock"><code>reindexdb mydb</code></pre><p class="p">To reindex the table <code class="ph codeph">foo</code> and the index <code class="ph codeph">bar</code> in a database named
+          <code class="ph codeph">abcd</code>:</p>
+<pre class="pre codeblock"><code>reindexdb --table foo --index bar abcd</code></pre></div>
+<div class="section" id="topic1__section8"><h2 class="title sectiontitle">See Also</h2>
+      
+      <p class="p"><span class="ph"><code class="ph codeph">REINDEX</code> in the <em class="ph i">Greenplum Database Reference
+            Guide</em></span><span class="ph"><a class="xref" href="../../ref_guide/sql_commands/REINDEX.html#topic1">REINDEX</a></span></p>
+
+    </div>
+</div>
+</body>
+</html>

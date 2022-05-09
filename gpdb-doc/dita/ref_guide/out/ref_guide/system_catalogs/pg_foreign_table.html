@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+
+<meta name="copyright" content="(C) Copyright 2022" />
+<meta name="DC.rights.owner" content="(C) Copyright 2022" />
+<meta name="generator" content="DITA-OT" /><meta name="DC.type" content="topic" />
+<meta name="DC.title" content="pg_foreign_table" />
+<meta name="DC.relation" scheme="URI" content="../system_catalogs/catalog_ref-html.html#topic1" />
+<meta name="DC.format" content="XHTML" />
+<meta name="DC.identifier" content="topic1" />
+<meta name="DC.language" content="en" />
+<link rel="stylesheet" type="text/css" href="../commonltr.css" />
+<title>pg_foreign_table</title>
+</head>
+<body id="topic1">
+
+  <h1 class="title topictitle1" id="ariaid-title1">pg_foreign_table</h1>
+
+  <div class="body">
+    <p class="p">The system catalog table <code class="ph codeph">pg_foreign_table</code> contains auxiliary information about foreign tables. A foreign table is primarily represented by a <code class="ph codeph">pg_class</code> entry, just like a regular table. Its <code class="ph codeph">pg_foreign_table</code> entry contains the information that is pertinent only to foreign tables and not any other kind of relation.</p>
+
+    
+<div class="tablenoborder"><table cellpadding="4" cellspacing="0" summary="" id="topic1__table_zgy_xfx_tz" class="table" frame="border" border="1" rules="all"><caption><span class="tablecap"><span class="table--title-label">Table 1. </span>pg_catalog.pg_foreign_table</span></caption><colgroup><col style="width:131pt" /><col style="width:86pt" /><col style="width:85pt" /><col style="width:147pt" /></colgroup><thead class="thead" style="text-align:left;">
+          <tr class="row">
+            <th class="entry nocellnorowborder" style="vertical-align:top;" id="d224466e46">column</th>
+
+            <th class="entry nocellnorowborder" style="vertical-align:top;" id="d224466e49">type</th>
+
+            <th class="entry nocellnorowborder" style="vertical-align:top;" id="d224466e52">references</th>
+
+            <th class="entry cell-norowborder" style="vertical-align:top;" id="d224466e55">description</th>
+
+          </tr>
+
+        </thead>
+<tbody class="tbody">
+          <tr class="row">
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d224466e46 "><code class="ph codeph">ftrelid</code></td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d224466e49 ">oid</td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d224466e52 ">pg_class.oid</td>
+
+            <td class="entry cell-norowborder" style="vertical-align:top;" headers="d224466e55 ">OID of the <code class="ph codeph">pg_class</code> entry for this foreign table.</td>
+
+          </tr>
+
+          <tr class="row">
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d224466e46 "><code class="ph codeph">ftserver</code></td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d224466e49 ">oid</td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d224466e52 ">pg_foreign_server.oid</td>
+
+            <td class="entry cell-norowborder" style="vertical-align:top;" headers="d224466e55 ">OID of the foreign server for this foreign table.</td>
+
+          </tr>
+
+          <tr class="row">
+            <td class="entry row-nocellborder" style="vertical-align:top;" headers="d224466e46 "><code class="ph codeph">ftoptions</code></td>
+
+            <td class="entry row-nocellborder" style="vertical-align:top;" headers="d224466e49 ">text[]</td>
+
+            <td class="entry row-nocellborder" style="vertical-align:top;" headers="d224466e52 "> </td>
+
+            <td class="entry cellrowborder" style="vertical-align:top;" headers="d224466e55 ">Foreign table options, as "keyword=value" strings.</td>
+
+          </tr>
+
+        </tbody>
+</table>
+</div>
+
+  </div>
+
+<div class="related-links">
+<div class="familylinks">
+<div class="parentlink"><strong>Parent topic:</strong> <a class="link" href="../system_catalogs/catalog_ref-html.html#topic1">System Catalogs Definitions</a></div>
+</div>
+</div></body>
+</html>

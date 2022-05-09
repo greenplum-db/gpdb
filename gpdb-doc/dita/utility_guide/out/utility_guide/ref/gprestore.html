@@ -1,0 +1,644 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+
+<meta name="copyright" content="(C) Copyright 2022" />
+<meta name="DC.rights.owner" content="(C) Copyright 2022" />
+<meta name="generator" content="DITA-OT" /><meta name="DC.type" content="topic" />
+<meta name="DC.title" content="gprestore" />
+<meta name="DC.format" content="XHTML" />
+<meta name="DC.identifier" content="topic1" />
+<link rel="stylesheet" type="text/css" href="../commonltr.css" />
+<title>gprestore</title>
+</head>
+<body id="topic1">
+
+  <h1 class="title topictitle1" id="ariaid-title1">gprestore</h1>
+
+  <div class="body">
+    <p class="p">Restore a Greenplum Database backup that was created using the <code class="ph codeph">gpbackup</code>
+      utility. By default <code class="ph codeph">gprestore</code> uses backed up metadata files and DDL files
+      located in the Greenplum Database master host data directory, with table data stored locally
+      on segment hosts in CSV data files.</p>
+
+    <div class="section"><h2 class="title sectiontitle">Synopsis</h2>
+      
+      <pre class="pre codeblock"><code>gprestore --timestamp &lt;YYYMMDDHHMMSS&gt;
+   [--backup-dir &lt;directory&gt;]
+   [--create-db]
+   [--debug]
+   [--exclude-schema &lt;schema_name&gt; [--exclude-schema &lt;schema_name&gt; ...]]
+   [--exclude-table &lt;schema.table&gt; [--exclude-table &lt;schema.table&gt; ...]]
+   [--exclude-table-file &lt;file_name&gt;]
+   [--exclude-schema-file &lt;file_name&gt;]
+   [--include-schema &lt;schema_name&gt; [--include-schema &lt;schema_name&gt; ...]]
+   [--include-table &lt;schema.table&gt; [--include-table &lt;schema.table&gt; ...]]
+   [--include-schema-file &lt;file_name&gt;]
+   [--include-table-file &lt;file_name&gt;]
+   [--truncate-table]
+   [--redirect-schema &lt;schema_name&gt;]
+   [--data-only | --metadata-only]
+   [--incremental]
+   [--jobs &lt;int&gt;]
+   [--on-error-continue]
+   [--plugin-config &lt;config_file_location&gt;]
+   [--quiet]
+   [--redirect-db &lt;database_name&gt;]
+   [--verbose]
+   [--version]
+   [--with-globals]
+   [--with-stats]
+   [--run-analyze]
+
+gprestore --help</code></pre>
+    </div>
+
+    <div class="section"><h2 class="title sectiontitle">Description</h2>
+      
+      <p class="p">To use <code class="ph codeph">gprestore</code> to restore from a backup set, you must include the
+          <code class="ph codeph">--timestamp</code> option to specify the exact timestamp value
+          (<code class="ph codeph">YYYYMMDDHHMMSS</code>) of the backup set to restore. If you specified a custom
+          <code class="ph codeph">--backup-dir</code> to consolidate the backup files, include the same
+          <code class="ph codeph">--backup-dir</code> option with <code class="ph codeph">gprestore</code> to locate the backup
+        files.</p>
+
+      <div class="p">If the backup you specify is an incremental backup, you need a complete set of backup files
+        (a full backup and any required incremental backups). <code class="ph codeph">gprestore</code> ensures
+        that the complete backup set is available before attempting to restore a backup.
+        <div class="note important"><span class="importanttitle">Important:</span> For incremental backup sets, the backups must be on a single device.
+          For example, a backup set must all be on a Data Domain system. </div>
+</div>
+
+      <p class="p">For information about incremental backups, see <a class="xref" href="../../admin_guide/managing/backup-gpbackup-incremental.html" target="_blank">Creating and Using Incremental Backups with gpbackup and gprestore</a>.</p>
+
+      <p class="p">When restoring from a backup set, <code class="ph codeph">gprestore</code> restores to a database with
+        the same name as the name specified when creating the backup set. If the target database
+        exists and a table being restored exists in the database, the restore operation fails.
+        Include the <code class="ph codeph">--create-db</code> option if the target database does not exist in the
+        cluster. You can optionally restore a backup set to a different database by using the
+          <code class="ph codeph">--redirect-db</code> option.</p>
+
+      <p class="p">When restoring a backup set that contains data from some leaf partitions of a partitioned
+        tables, the partitioned table is restored along with the data for the leaf partitions. For
+        example, you create a backup with the <code class="ph codeph">gpbackup</code> option
+          <code class="ph codeph">--include-table-file</code> and the text file lists some leaf partitions of a
+        partitioned table. Restoring the backup creates the partitioned table and restores the data
+        only for the leaf partitions listed in the file. </p>
+
+      <p class="p">By default, only database objects in the backup set are restored. Greenplum Database system
+        objects are automatically included in a <code class="ph codeph">gpbackup</code> backup set, but these
+        objects are only restored if you include the <code class="ph codeph">--with-globals</code> option to
+          <code class="ph codeph">gprestore</code>. </p>
+
+      <p class="p">During a restore operation, automatic updating of table statistics is disabled for the
+        tables being restored. If you backed up query plan statistics using the
+          <code class="ph codeph">--with-stats</code> option, you can restore those statistics by providing
+          <code class="ph codeph">--with-stats</code> to <code class="ph codeph">gprestore</code>. If you did not use
+          <code class="ph codeph">--with-stats</code> during a backup, or you want to collect current statistics
+        during the restore operation, you can use the <code class="ph codeph">--run-analyze</code> option to run
+          <code class="ph codeph">ANALYZE</code> on the restored tables. </p>
+
+      <p class="p">When a materialized view is restored, the data is not restored. To populate the
+        materialized view with data, use <code class="ph codeph">REFRESH MATERIALIZED VIEW</code>. The tables that
+        are referenced by the materialized view definition must be available. The
+          <code class="ph codeph">gprestore</code> log file lists the materialized views that were restored and
+        the <code class="ph codeph">REFRESH MATERIALIZED VIEW</code> commands that are used to populate the
+        materialized views with data.</p>
+
+      <p class="p">Performance of restore operations can be improved by creating multiple parallel connections
+        to restore table data and metadata. By default <code class="ph codeph">gprestore</code> uses 1 connection,
+        but you can increase this number with the <code class="ph codeph">--jobs</code> option for large restore
+        operations.</p>
+
+      <p class="p">When a restore operation completes, <code class="ph codeph">gprestore</code> returns a status code. See
+          <a class="xref" href="#topic1__return_codes">Return Codes</a>.</p>
+
+      <p class="p"><code class="ph codeph">gprestore</code> can send status email notifications after a back up operation
+        completes. You specify when the utility sends the mail and the email recipients in a
+        configuration file. See <a class="xref" href="../../admin_guide/managing/backup-gpbackup.html#topic_qwd_d5d_tbb" target="_blank">Configuring Email Notifications</a>.</p>
+
+    </div>
+
+    <div class="note"><span class="notetitle">Note:</span> This utility uses secure shell (SSH) connections between systems to perform its tasks. In
+      large Greenplum Database deployments, cloud deployments, or deployments with a large number of
+      segments per host, this utility may exceed the host's maximum threshold for unauthenticated
+      connections. Consider updating the SSH <code class="ph codeph">MaxStartups</code> and
+        <code class="ph codeph">MaxSessions</code> configuration parameters to increase this threshold. For more
+      information about SSH configuration options, refer to the SSH documentation for your Linux
+      distribution.</div>
+
+    <div class="section"><h2 class="title sectiontitle">Options</h2>
+      
+      <dl class="dl parml">
+        
+          <dt class="dt pt dlterm"><strong class="ph b">--timestamp</strong>
+            <var class="keyword varname">YYYYMMDDHHMMSS</var></dt>
+
+          <dd class="dd pd">Required. Specifies the timestamp of the <code class="ph codeph">gpbackup</code> backup set to
+            restore. By default <code class="ph codeph">gprestore</code> tries to locate metadata files for the
+            timestamp on the Greenplum Database master host in the
+              <span class="ph filepath">$MASTER_DATA_DIRECTORY/backups/YYYYMMDD/YYYYMMDDhhmmss/</span>
+            directory, and CSV data files in the
+              <span class="ph filepath">&lt;seg_dir&gt;/backups/YYYYMMDD/YYYYMMDDhhmmss/</span> directory of each
+            segment host.</dd>
+
+        
+        
+          <dt class="dt pt dlterm"><strong class="ph b">--backup-dir</strong>
+            <var class="keyword varname">directory</var></dt>
+
+          <dd class="dd pd">Optional. Sources all backup files (metadata files and data files) from the specified
+            directory. You must specify <var class="keyword varname">directory</var> as an absolute path (not
+            relative). If you do not supply this option, <code class="ph codeph">gprestore</code> tries to locate
+            metadata files for the timestamp on the Greenplum Database master host in the
+              <span class="ph filepath">$MASTER_DATA_DIRECTORY/backups/YYYYMMDD/YYYYMMDDhhmmss/</span>
+            directory. CSV data files must be available on each segment in the
+              <span class="ph filepath">&lt;seg_dir&gt;/backups/YYYYMMDD/YYYYMMDDhhmmss/</span> directory. Include
+            this option when you specify a custom backup directory with
+            <code class="ph codeph">gpbackup</code>.</dd>
+
+          <dd class="dd pd ddexpand">You cannot combine this option with the option <code class="ph codeph">--plugin-config</code>.</dd>
+
+        
+        
+          <dt class="dt pt dlterm"><strong class="ph b">--create-db</strong></dt>
+
+          <dd class="dd pd">Optional. Creates the database before restoring the database object metadata.</dd>
+
+          <dd class="dd pd ddexpand">The database is created by cloning the empty standard system database
+              <code class="ph codeph">template0</code>.</dd>
+
+        
+        
+          <dt class="dt pt dlterm" id="topic1__data_only"><strong class="ph b">--data-only</strong></dt>
+
+          <dd class="dd pd">Optional. Restores table data from a backup created with the <code class="ph codeph">gpbackup</code>
+            utility, without creating the database tables. This option assumes the tables exist in
+            the target database. To restore data for a specific set of tables from a backup set, you
+            can specify an option to include tables or schemas or exclude tables or schemas. Specify
+            the <code class="ph codeph">--with-stats</code> option to restore table statistics from the
+            backup.</dd>
+
+          <dd class="dd pd ddexpand">The backup set must contain the table data to be restored. For example, a backup
+            created with the <code class="ph codeph">gpbackup</code> option <code class="ph codeph">--metadata-only</code> does
+            not contain table data.</dd>
+
+          <dd class="dd pd ddexpand"><code class="ph codeph">SEQUENCE</code> values are updated to match the values taken at the time of
+            the backup.</dd>
+
+          <dd class="dd pd ddexpand">To restore only database tables, without restoring the table data, see the option
+              <a class="xref" href="#topic1__metadata_only">--metadata-only</a>.</dd>
+
+        
+        
+          <dt class="dt pt dlterm"><strong class="ph b">--debug</strong></dt>
+
+          <dd class="dd pd">Optional. Displays verbose and debug log messages during a restore operation.</dd>
+
+        
+        
+          <dt class="dt pt dlterm"><strong class="ph b">--exclude-schema</strong>
+            <var class="keyword varname">schema_name</var></dt>
+
+          <dd class="dd pd">Optional. Specifies a database schema to exclude from the restore operation. You can
+            specify this option multiple times. You cannot combine this option with the option
+              <code class="ph codeph">--include-schema</code>, <code class="ph codeph">--include-schema-file</code>, or a table
+            filtering option such as <code class="ph codeph">--include-table</code>. </dd>
+
+        
+        
+          <dt class="dt pt dlterm"><strong class="ph b">--exclude-schema-file</strong>
+            <var class="keyword varname">file_name</var></dt>
+
+          <dd class="dd pd">Optional. Specifies a text file containing a list of schemas to exclude from the
+            backup. Each line in the text file must define a single schema. The file must not
+            include trailing lines. If a schema name uses any character other than a lowercase
+            letter, number, or an underscore character, then you must include that name in double
+            quotes. You cannot combine this option with the option <code class="ph codeph">--include-schema</code>
+            or <code class="ph codeph">--include-schema-file</code>, or a table filtering option such as
+              <code class="ph codeph">--include-table</code>.</dd>
+
+        
+        
+          <dt class="dt pt dlterm"><strong class="ph b">--exclude-table</strong> &lt;schema.table&gt;</dt>
+
+          <dd class="dd pd">Optional. Specifies a table to exclude from the restore operation. You can specify
+            this option multiple times. The table must be in the format
+              <code class="ph codeph">&lt;schema-name&gt;.&lt;table-name&gt;</code>. If a table or schema name uses any
+            character other than a lowercase letter, number, or an underscore character, then you
+            must include that name in double quotes. You can specify this option multiple times. If
+            the table is not in the backup set, the restore operation fails. You cannot specify a
+            leaf partition of a partitioned table.</dd>
+
+          <dd class="dd pd ddexpand">You cannot combine this option with the option <code class="ph codeph">--exclude-schema</code>,
+              <code class="ph codeph">--exclude-schema-file</code>, or another a table filtering option such as
+              <code class="ph codeph">--include-table</code>.</dd>
+
+        
+        
+          <dt class="dt pt dlterm"><strong class="ph b">--exclude-table-file</strong>
+            <var class="keyword varname">file_name</var></dt>
+
+          <dd class="dd pd">Optional. Specifies a text file containing a list of tables to exclude from the
+            restore operation. Each line in the text file must define a single table using the
+            format <code class="ph codeph">&lt;schema-name&gt;.&lt;table-name&gt;</code>. The file must not include
+            trailing lines. If a table or schema name uses any character other than a lowercase
+            letter, number, or an underscore character, then you must include that name in double
+            quotes. If a table is not in the backup set, the restore operation fails. You cannot
+            specify a leaf partition of a partitioned table.</dd>
+
+          <dd class="dd pd ddexpand">You cannot combine this option with the option <code class="ph codeph">--exclude-schema</code>,
+              <code class="ph codeph">--exclude-schema-file</code>, or another a table filtering option such as
+              <code class="ph codeph">--include-table</code>.</dd>
+
+        
+        
+          <dt class="dt pt dlterm"><strong class="ph b">--include-schema</strong>
+            <var class="keyword varname">schema_name</var></dt>
+
+          <dd class="dd pd">Optional. Specifies a database schema to restore. You can specify this option multiple
+            times. If you specify this option, any schemas that you specify must be available in the
+            backup set. Any schemas that are not included in subsequent
+              <code class="ph codeph">--include-schema</code> options are omitted from the restore operation. </dd>
+
+          <dd class="dd pd ddexpand">If a schema that you specify for inclusion exists in the database, the utility issues
+            an error and continues the operation. The utility fails if a table being restored exists
+            in the database. </dd>
+
+          <dd class="dd pd ddexpand">You cannot use this option if objects in the backup set have dependencies on multiple
+            schemas.</dd>
+
+          <dd class="dd pd ddexpand">See <a class="xref" href="../../admin_guide/managing/backup-gpbackup.html#topic_et4_b5d_tbb" target="_blank">Filtering the Contents of a Backup or Restore</a> for more information.</dd>
+
+        
+        
+          <dt class="dt pt dlterm"><strong class="ph b">--include-schema-file</strong>
+            <var class="keyword varname">file_name</var></dt>
+
+          <dd class="dd pd">Optional. Specifies a text file containing a list of schemas to restore. Each line in
+            the text file must define a single schema. The file must not include trailing lines. If
+            a schema name uses any character other than a lowercase letter, number, or an underscore
+            character, then you must include that name in double quotes. </dd>
+
+          <dd class="dd pd ddexpand">The schemas must exist in the backup set. Any schemas not listed in this file are
+            omitted from the restore operation. </dd>
+
+          <dd class="dd pd ddexpand">You cannot use this option if objects in the backup set have dependencies on multiple
+            schemas.</dd>
+
+        
+        
+          <dt class="dt pt dlterm"><strong class="ph b">--include-table</strong>
+            <var class="keyword varname">schema.table</var></dt>
+
+          <dd class="dd pd">Optional. Specifies a table to restore. The table must be in the format
+            &lt;schema-name&gt;.&lt;table-name&gt;. You can specify this option multiple times. You cannot
+            specify a leaf partition of a partitioned table. For information on specifying special
+            characters in schema and table names, see the <code class="ph codeph">gpbackup</code>
+            <a class="xref" href="gpbackup.html#topic1__table_names">Schema and Table
+              Names</a> section. </dd>
+
+          <dd class="dd pd ddexpand">You can also specify the qualified name of a sequence, a view, or a materialized view. </dd>
+
+          <dd class="dd pd ddexpand">If you specify this option, the utility does not automatically restore dependent
+            objects. You must also explicitly specify the dependent objects that are required. For
+            example if you restore a view or a materialized view, you must also restore the tables
+            that the view or the materialized view uses. If you restore a table that uses a
+            sequence, you must also restore the sequence. The dependent objects must exist in the
+            backup set.</dd>
+
+          <dd class="dd pd ddexpand">You cannot combine this option with a schema filtering option such as
+              <code class="ph codeph">--include-schema</code>, or another table filtering option such as
+              <code class="ph codeph">--exclude-table-file</code>.</dd>
+
+        
+        
+          <dt class="dt pt dlterm"><strong class="ph b">--include-table-file</strong>
+            <var class="keyword varname">file_name</var></dt>
+
+          <dd class="dd pd">Optional. Specifies a text file containing a list of tables to restore. Each line in
+            the text file must define a single table using the format
+              <code class="ph codeph">&lt;schema-name&gt;.&lt;table-name&gt;</code>. The file must not include trailing
+            lines. Any tables not listed in this file are omitted from the restore operation. You
+            cannot specify a leaf partition of a partitioned table. For information on specifying
+            special characters in schema and table names, see the <code class="ph codeph">gpbackup</code>
+            <a class="xref" href="gpbackup.html#topic1__table_names">Schema and Table
+              Names</a> section. </dd>
+
+          <dd class="dd pd ddexpand">You can also specify the qualified name of a sequence, a view, or a materialized view. </dd>
+
+          <dd class="dd pd ddexpand">If you specify this option, the utility does not automatically restore dependent
+            objects. You must also explicitly specify dependent objects that are required. For
+            example if you restore a view or a materialized view, you must also specify the tables
+            that the view or the materialized uses. If you specify a table that uses a sequence, you
+            must also specify the sequence. The dependent objects must exist in the backup set.</dd>
+
+          <dd class="dd pd ddexpand">For a materialized view, the data is not restored. To populate the materialized view
+            with data, you must use <code class="ph codeph">REFRESH MATERIALIZED VIEW</code> and the tables that
+            are referenced by the materialized view definition must be available.</dd>
+
+          <dd class="dd pd ddexpand">If you use the <code class="ph codeph">--include-table-file</code> option,
+              <code class="ph codeph">gprestore</code> does not create roles or set the owner of the tables. The
+            utility restores table indexes and rules. Triggers are also restored but are not
+            supported in Greenplum Database.</dd>
+
+          <dd class="dd pd ddexpand">See <a class="xref" href="../../admin_guide/managing/backup-gpbackup.html#topic_et4_b5d_tbb" target="_blank">Filtering the Contents of a Backup or Restore</a>
+            for more information.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">--incremental (Beta)</dt>
+
+          <dd class="dd pd">Optional. Requires the <code class="ph codeph">--data-only option</code>. Restores only the table
+            data in the incremental backup specified by the <code class="ph codeph">--timestamp</code> option.
+            Table data is not restored from previous incremental backups in the backup set. For
+            information about incremental backups, see <a class="xref" href="../../admin_guide/managing/backup-gpbackup-incremental.html" target="_blank">../../admin_guide/managing/backup-gpbackup-incremental.html</a>.
+            <div class="note warning"><span class="warningtitle">Warning:</span> This is a Beta feature<span class="ph"> and is not
+                supported in a production environment</span>.</div>
+</dd>
+
+          <dd class="dd pd ddexpand">An incremental backup contains the following table data that can be restored.</dd>
+
+          <dd class="dd pd ddexpand">
+            <ul class="ul" id="topic1__ul_idp_wrn_tkb">
+              <li class="li">Data from all heap tables.</li>
+
+              <li class="li">Data from append-optimized tables that have been modified since the previous
+                backup.</li>
+
+              <li class="li">Data from leaf partitions that have been modified from the previous backup.</li>
+
+            </ul>
+
+          </dd>
+
+          <dd class="dd pd ddexpand">When this option is specified, <code class="ph codeph">gprestore</code> restores table data by
+            truncating the table and reloading data into the table. <code class="ph codeph">SEQUENCE</code> values
+            are then updated to match the values taken at the time of the backup. </dd>
+
+          <dd class="dd pd ddexpand">Before performing the restore operation, <code class="ph codeph">gprestore</code> ensures that the
+            tables being restored exist. If a table does not exist, <code class="ph codeph">gprestore</code>
+            returns an error and exits. If the <code class="ph codeph">--on-error-continue</code> option is
+            specified, <code class="ph codeph">gprestore</code> logs missing tables and attempts to complete the
+            restore operation. </dd>
+
+          <dd class="dd pd ddexpand">
+            <div class="note warning"><span class="warningtitle">Warning:</span> When this option is specified, <code class="ph codeph">gpbackup</code> assumes
+              that no changes have been made to the table definitions of the tables being restored,
+              such as adding or removing columns. </div>
+
+          </dd>
+
+        
+        
+          <dt class="dt pt dlterm"><strong class="ph b">--truncate-table</strong></dt>
+
+          <dd class="dd pd">Optional. Truncate data from a set of tables before restoring the table data from a
+            backup. This option lets you replace table data with data from a backup. Otherwise,
+            table data might be duplicated.</dd>
+
+          <dd class="dd pd ddexpand">You must specify the set of tables with either the option
+              <code class="ph codeph">--include-table</code> or <code class="ph codeph">--include-table-file</code>. You must
+            also specify <code class="ph codeph">--data-only</code> to restore table data without creating the
+            tables.</dd>
+
+          <dd class="dd pd ddexpand">You can use this option with the <code class="ph codeph">--redirect-db</code> 
+              option. You cannot use this option with
+              <code class="ph codeph">--redirect-schema</code>.</dd>
+
+        
+        
+          <dt class="dt pt dlterm"><strong class="ph b">--redirect-schema</strong>
+            <var class="keyword varname">schema_name</var></dt>
+
+          <dd class="dd pd">Optional. Restore data in the specified schema instead of the original schemas. The
+            specified schema must already exist. If the data being restored is in multiple schemas,
+            all the data is redirected into the specified schema.</dd>
+
+          <dd class="dd pd ddexpand">This option must be used with an option that includes tables or schemas:
+              <code class="ph codeph">--include-table</code>, <code class="ph codeph">--include-table-file</code>,
+              <code class="ph codeph">--include-schema</code>, or <code class="ph codeph">--include-schema-file</code>. </dd>
+
+          <dd class="dd pd ddexpand">You cannot use this option with an option that excludes schemas or tables such as
+              <code class="ph codeph">--exclude-schema</code> or <code class="ph codeph">--exclude-table</code>.</dd>
+
+          <dd class="dd pd ddexpand">You can use this option with the <code class="ph codeph">--metadata-only</code> or
+              <code class="ph codeph">--data-only</code> options.</dd>
+
+        
+        
+          <dt class="dt pt dlterm"><strong class="ph b">--jobs</strong>
+            <var class="keyword varname">int</var></dt>
+
+          <dd class="dd pd">Optional. Specifies the number of parallel connections to use when restoring table
+            data and metadata. By default, <code class="ph codeph">gprestore</code> uses 1 connection. Increasing
+            this number can improve the speed of restoring data.
+            <div class="note"><span class="notetitle">Note:</span> If you used the <code class="ph codeph">gpbackup --single-data-file</code> option to combine
+              table backups into a single file per segment, you cannot set <code class="ph codeph">--jobs</code>
+              to a value higher than 1 to perform a parallel restore operation.</div>
+</dd>
+
+        
+        
+          <dt class="dt pt dlterm" id="topic1__metadata_only"><strong class="ph b">--metadata-only</strong></dt>
+
+          <dd class="dd pd">Optional. Creates database tables from a backup created with the
+              <code class="ph codeph">gpbackup</code> utility, but does not restore the table data. This option
+            assumes the tables do not exist in the target database. To create a specific set of
+            tables from a backup set, you can specify an option to include tables or schemas or
+            exclude tables or schemas. Specify the option <code class="ph codeph">--with-globals</code> to restore
+            the Greenplum Database system objects.</dd>
+
+          <dd class="dd pd ddexpand">The backup set must contain the DDL for tables to be restored. For example, a backup
+            created with the <code class="ph codeph">gpbackup</code> option <code class="ph codeph">--data-only</code> does not
+            contain the DDL for tables. </dd>
+
+          <dd class="dd pd ddexpand">To restore table data after you create the database tables, see the option <a class="xref" href="#topic1__data_only">--data-only</a>.</dd>
+
+        
+        
+          <dt class="dt pt dlterm"><strong class="ph b">--on-error-continue</strong></dt>
+
+          <dd class="dd pd">Optional. Specify this option to continue the restore operation if an SQL error occurs
+            when creating database metadata (such as tables, roles, or functions) or restoring data.
+            If another type of error occurs, the utility exits. The default is to exit on the first
+            error.</dd>
+
+          <dd class="dd pd ddexpand">When this option is included, the utility displays an error summary and writes error
+            information to the <code class="ph codeph">gprestore</code> log file and continues the restore
+            operation. The utility also creates text files in the backup directory that contain the
+            list of tables that generated SQL errors. <ul class="ul" id="topic1__ul_d5j_5zn_3kb">
+              <li class="li">Tables with metadata errors -
+                  <code class="ph codeph">gprestore_&lt;backup-timestamp&gt;_&lt;restore-time&gt;_error_tables_metadata</code></li>
+
+              <li class="li">Tables with data errors -
+                  <code class="ph codeph">gprestore_&lt;backup-timestamp&gt;_&lt;restore-time&gt;_error_tables_data</code></li>
+
+            </ul>
+</dd>
+
+        
+        
+          <dt class="dt pt dlterm"><strong class="ph b">--plugin-config</strong>
+            <var class="keyword varname">config-file_location</var></dt>
+
+          <dd class="dd pd">Specify the location of the <code class="ph codeph">gpbackup</code> plugin configuration file, a
+            YAML-formatted text file. The file contains configuration information for the plugin
+            application that <code class="ph codeph">gprestore</code> uses during the restore operation.</dd>
+
+          <dd class="dd pd ddexpand">If you specify the <code class="ph codeph">--plugin-config</code> option when you back up a
+            database, you must specify this option with configuration information for a
+            corresponding plugin application when you restore the database from the backup.</dd>
+
+          <dd class="dd pd ddexpand">You cannot combine this option with the option <code class="ph codeph">--backup-dir</code>.</dd>
+
+          <dd class="dd pd ddexpand">For information about using storage plugin applications, see <a class="xref" href="../../admin_guide/managing/backup-plugins.html" target="_blank">Using gpbackup Storage
+              Plugins</a>.</dd>
+
+        
+        
+          <dt class="dt pt dlterm"><strong class="ph b">--quiet</strong></dt>
+
+          <dd class="dd pd">Optional. Suppress all non-warning, non-error log messages.</dd>
+
+        
+        
+          <dt class="dt pt dlterm"><strong class="ph b">--redirect-db</strong>
+            <var class="keyword varname">database_name</var></dt>
+
+          <dd class="dd pd">Optional. Restore to the specified <var class="keyword varname">database_name</var> instead of to the
+            database that was backed up.</dd>
+
+        
+        
+          <dt class="dt pt dlterm"><strong class="ph b">--verbose</strong></dt>
+
+          <dd class="dd pd">Optional. Displays verbose log messages during a restore operation.</dd>
+
+        
+        
+          <dt class="dt pt dlterm"><strong class="ph b">--version</strong></dt>
+
+          <dd class="dd pd">Optional. Print the version number and exit.</dd>
+
+        
+        
+          <dt class="dt pt dlterm"><strong class="ph b">--with-globals</strong></dt>
+
+          <dd class="dd pd">Optional. Restores Greenplum Database system objects in the backup set, in addition to
+            database objects. See <a class="xref" href="../../admin_guide/managing/backup-gpbackup.html#topic_x3s_lqj_tbb" target="_blank">Objects Included in a Backup or Restore</a>.</dd>
+
+        
+        
+          <dt class="dt pt dlterm"><strong class="ph b">--with-stats</strong></dt>
+
+          <dd class="dd pd">Optional. Restore query plan statistics from the backup set. If the backup set was not
+            created with the <code class="ph codeph">--with-stats</code> option, an error is returned. Restored
+            tables will only have statistics from the backup. You cannot use this option with
+              <code class="ph codeph">--run-analyze</code>.</dd>
+
+          <dd class="dd pd ddexpand">To collect current statistics for the restored tables during the restore operation,
+            use the <code class="ph codeph">--run-analyze</code> option. As an alternative, you can run the
+              <code class="ph codeph">ANALYZE</code> command on the tables after the tables are restored. </dd>
+
+        
+        
+          <dt class="dt pt dlterm"><strong class="ph b">--run-analyze</strong></dt>
+
+          <dd class="dd pd">Optional. Run <code class="ph codeph">ANALYZE</code> on the tables that are restored. For a
+            partitioned table, <code class="ph codeph">ANALYZE</code> is run on the root partitioned table. If
+              <code class="ph codeph">--with-stats</code> was specified for the backup, those statistics are
+            ignored. You cannot use this option with <code class="ph codeph">--with-stats</code>. </dd>
+
+          <dd class="dd pd ddexpand">If the backup being restored used the <code class="ph codeph">gpbackup</code> option <a class="xref" href="gpbackup.html#topic1__backup_leaf_part">--leaf-partition-data</a>,
+              <code class="ph codeph">gprestore</code> runs <code class="ph codeph">ANALYZE</code> only on the individual leaf
+            partitions that are restored, not the root partitioned table. For Greenplum Database 5,
+              <code class="ph codeph">ANALYZE</code> updates the root partitioned table statistics when all leaf
+            partitions have statistics as the default. For Greenplum Database 4, you must run
+              <code class="ph codeph">ANALYZE</code> on the root partitioned table to update the root partition
+            statistics.</dd>
+
+          <dd class="dd pd ddexpand">Depending the tables being restored, running <code class="ph codeph">ANALYZE</code> on restored
+            tables might increase the duration of the restore operation.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">--help</dt>
+
+          <dd class="dd pd">Displays the online help.</dd>
+
+        
+      </dl>
+
+    </div>
+
+    <div class="section" id="topic1__return_codes"><h2 class="title sectiontitle">Return Codes</h2>
+      
+      <div class="p">One of these codes is returned after <code class="ph codeph">gprestore</code> completes.<ul class="ul" id="topic1__ul_hhb_sqp_n4">
+          <li class="li"><strong class="ph b">0</strong> – Restore completed with no problems.</li>
+
+          <li class="li"><strong class="ph b">1</strong> – Restore completed with non-fatal errors. See log file for more
+            information.</li>
+
+          <li class="li"><strong class="ph b">2</strong> – Restore failed with a fatal error. See log file for more information.</li>
+
+        </ul>
+</div>
+
+    </div>
+
+    <div class="section"><h2 class="title sectiontitle">Examples</h2>
+      
+      <div class="p">Create the demo database and restore all schemas and tables in the backup set for the
+        indicated
+        timestamp:<pre class="pre codeblock"><code>$ dropdb demo
+$ gprestore --timestamp 20171103152558 --create-db</code></pre></div>
+
+      <div class="p">Restore the backup set to the "demo2" database instead of the "demo" database that was
+        backed
+        up:<pre class="pre codeblock"><code>$ createdb demo2
+$ gprestore --timestamp 20171103152558 --redirect-db demo2</code></pre></div>
+
+      <div class="p">Restore global Greenplum Database metadata and query plan statistics in addition to the
+        database
+        objects:<pre class="pre codeblock"><code>$ gprestore --timestamp 20171103152558 --create-db --with-globals --with-stats</code></pre></div>
+
+      <div class="p">Restore, using backup files that were created in the
+          <span class="ph filepath">/home/gpadmin/backup</span> directory, creating 8 parallel
+        connections:<pre class="pre codeblock"><code>$ gprestore --backup-dir /home/gpadmin/backups/ --timestamp 20171103153156 --create-db --jobs 8</code></pre></div>
+
+      <div class="p">Restore only the "wikipedia" schema included in the backup
+        set:<pre class="pre codeblock"><code>$ dropdb demo
+$ gprestore --include-schema wikipedia --backup-dir /home/gpadmin/backups/ --timestamp 20171103153156 --create-db</code></pre></div>
+
+      <p class="p">If you restore from an incremental backup set, all the required files in the backup set
+        must be available to <code class="ph codeph">gprestore</code>. For example, the following timestamp keys
+        specify an incremental backup set. 20170514054532 is the full backup and the others are
+        incremental backups.</p>
+
+      <pre class="pre">20170514054532 (full backup)
+20170714095512 
+20170914081205 
+20171114064330 
+20180114051246</pre>
+
+      <p class="p">The following <code class="ph codeph">gprestore</code> command specifies the timestamp 20121114064330.
+        The incremental backup with the timestamps 20120714095512 and 20120914081205 and the full
+        backup must be available to perform a restore.</p>
+
+      <pre class="pre codeblock"><code>gprestore --timestamp 20121114064330 --redirect-db mystest --create-db</code></pre>
+    </div>
+
+    <div class="section" id="topic1__section9"><h2 class="title sectiontitle">See Also</h2>
+      
+      <p class="p">
+        <a class="xref" href="gpbackup.html">gpbackup</a>, <a class="xref" href="../../admin_guide/managing/backup-gpbackup.html" target="_blank">Parallel Backup with gpbackup and gprestore</a> and <a class="xref" href="../../admin_guide/managing/backup-s3-plugin.html" target="_blank">Using the S3 Storage Plugin with gpbackup and gprestore</a></p>
+
+    </div>
+
+  </div>
+
+</body>
+</html>

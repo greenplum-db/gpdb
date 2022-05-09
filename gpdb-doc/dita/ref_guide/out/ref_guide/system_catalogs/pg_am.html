@@ -1,0 +1,404 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+
+<meta name="copyright" content="(C) Copyright 2022" />
+<meta name="DC.rights.owner" content="(C) Copyright 2022" />
+<meta name="generator" content="DITA-OT" /><meta name="DC.type" content="topic" />
+<meta name="DC.title" content="pg_am" />
+<meta name="DC.relation" scheme="URI" content="../system_catalogs/catalog_ref-html.html#topic1" />
+<meta name="DC.format" content="XHTML" />
+<meta name="DC.identifier" content="topic1" />
+<meta name="DC.language" content="en" />
+<link rel="stylesheet" type="text/css" href="../commonltr.css" />
+<title>pg_am</title>
+</head>
+<body id="topic1">
+
+  <h1 class="title topictitle1" id="topic1__fv141670">pg_am</h1>
+
+  <div class="body">
+    <p class="p">The <code class="ph codeph">pg_am</code> table stores information about index access
+methods. There is one row for each index access method supported by the
+system.</p>
+
+    
+<div class="tablenoborder"><table cellpadding="4" cellspacing="0" summary="" id="topic1__fv141982" class="table" frame="border" border="1" rules="all"><caption><span class="tablecap"><span class="table--title-label">Table 1. </span>pg_catalog.pg_am</span></caption><colgroup><col style="width:131pt" /><col style="width:86pt" /><col style="width:85pt" /><col style="width:147pt" /></colgroup><thead class="thead" style="text-align:left;">
+          <tr class="row">
+            <th class="entry nocellnorowborder" style="vertical-align:top;" id="d141980e37">column</th>
+
+            <th class="entry nocellnorowborder" style="vertical-align:top;" id="d141980e40">type</th>
+
+            <th class="entry nocellnorowborder" style="vertical-align:top;" id="d141980e43">references</th>
+
+            <th class="entry cell-norowborder" style="vertical-align:top;" id="d141980e46">description</th>
+
+          </tr>
+
+        </thead>
+<tbody class="tbody">
+          <tr class="row">
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d141980e37 "><code class="ph codeph">oid</code></td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d141980e40 ">oid</td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d141980e43 "> </td>
+
+            <td class="entry cell-norowborder" style="vertical-align:top;" headers="d141980e46 ">Row identifier (hidden attribute; must be explicitly selected)</td>
+
+          </tr>
+
+          <tr class="row">
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d141980e37 "><code class="ph codeph">amname</code></td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d141980e40 ">name</td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d141980e43 "> </td>
+
+            <td class="entry cell-norowborder" style="vertical-align:top;" headers="d141980e46 ">Name of the access method</td>
+
+          </tr>
+
+          <tr class="row">
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d141980e37 "><code class="ph codeph">amstrategies</code></td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d141980e40 ">int2</td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d141980e43 "> </td>
+
+            <td class="entry cell-norowborder" style="vertical-align:top;" headers="d141980e46 ">Number of operator strategies for this access
+method,
+              or zero if the access method does not have a fixed set of operator strategies</td>
+
+          </tr>
+
+          <tr class="row">
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d141980e37 "><code class="ph codeph">amsupport</code></td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d141980e40 ">int2</td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d141980e43 "> </td>
+
+            <td class="entry cell-norowborder" style="vertical-align:top;" headers="d141980e46 ">Number of support routines for this access method</td>
+
+          </tr>
+
+          <tr class="row">
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d141980e37 "><code class="ph codeph">amcanorder</code></td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d141980e40 ">boolean</td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d141980e43 "> </td>
+
+            <td class="entry cell-norowborder" style="vertical-align:top;" headers="d141980e46 ">Does the access method support ordered scans sorted by the indexed
+              column's value?</td>
+
+          </tr>
+
+          <tr class="row">
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d141980e37 "><code class="ph codeph">amcanorderbyop</code></td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d141980e40 ">boolean</td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d141980e43 "> </td>
+
+            <td class="entry cell-norowborder" style="vertical-align:top;" headers="d141980e46 ">Does the access method support ordered scans sorted by the result
+              of an operator on the indexed column?</td>
+
+          </tr>
+
+          <tr class="row">
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d141980e37 "><code class="ph codeph">amcanbackward</code></td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d141980e40 ">boolean</td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d141980e43 "> </td>
+
+            <td class="entry cell-norowborder" style="vertical-align:top;" headers="d141980e46 ">Does the access method support backward scanning?</td>
+
+          </tr>
+
+          <tr class="row">
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d141980e37 "><code class="ph codeph">amcanunique</code></td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d141980e40 ">boolean</td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d141980e43 "> </td>
+
+            <td class="entry cell-norowborder" style="vertical-align:top;" headers="d141980e46 ">Does the access method support unique indexes?</td>
+
+          </tr>
+
+          <tr class="row">
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d141980e37 "><code class="ph codeph">amcanmulticol</code></td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d141980e40 ">boolean</td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d141980e43 "> </td>
+
+            <td class="entry cell-norowborder" style="vertical-align:top;" headers="d141980e46 ">Does the access method support multicolumn indexes?</td>
+
+          </tr>
+
+          <tr class="row">
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d141980e37 "><code class="ph codeph">amoptionalkey</code></td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d141980e40 ">boolean</td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d141980e43 "> </td>
+
+            <td class="entry cell-norowborder" style="vertical-align:top;" headers="d141980e46 ">Does the access method support a scan without
+              any constraint for the first index column?</td>
+
+          </tr>
+
+          <tr class="row">
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d141980e37 "><code class="ph codeph">amsearcharray</code></td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d141980e40 ">boolean</td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d141980e43 "> </td>
+
+            <td class="entry cell-norowborder" style="vertical-align:top;" headers="d141980e46 ">Does the access method support <code class="ph codeph">ScalarArrayOpExpr</code>
+              searches?</td>
+
+          </tr>
+
+          <tr class="row">
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d141980e37 "><code class="ph codeph">amsearchnulls</code></td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d141980e40 ">boolean</td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d141980e43 "> </td>
+
+            <td class="entry cell-norowborder" style="vertical-align:top;" headers="d141980e46 ">Does the access method support <code class="ph codeph">IS NULL/NOT NULL</code>
+              searches?</td>
+
+          </tr>
+
+          <tr class="row">
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d141980e37 "><code class="ph codeph">amstorage</code></td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d141980e40 ">boolean</td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d141980e43 "> </td>
+
+            <td class="entry cell-norowborder" style="vertical-align:top;" headers="d141980e46 ">Can index storage data type differ from column
+data type?</td>
+
+          </tr>
+
+          <tr class="row">
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d141980e37 "><code class="ph codeph">amclusterable</code></td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d141980e40 ">boolean</td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d141980e43 "> </td>
+
+            <td class="entry cell-norowborder" style="vertical-align:top;" headers="d141980e46 ">Can an index of this type be clustered on?</td>
+
+          </tr>
+
+          <tr class="row">
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d141980e37 "><code class="ph codeph">ampredlocks</code></td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d141980e40 ">boolean</td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d141980e43 "> </td>
+
+            <td class="entry cell-norowborder" style="vertical-align:top;" headers="d141980e46 ">Does an index of this type manage fine-grained predicae locks?</td>
+
+          </tr>
+
+          <tr class="row">
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d141980e37 "><code class="ph codeph">amkeytype</code></td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d141980e40 ">oid</td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d141980e43 ">pg_type.oid</td>
+
+            <td class="entry cell-norowborder" style="vertical-align:top;" headers="d141980e46 ">Type of data stored in index, or zero if not a fixed type</td>
+
+          </tr>
+
+          <tr class="row">
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d141980e37 "><code class="ph codeph">aminsert</code></td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d141980e40 ">regproc</td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d141980e43 ">pg_proc.oid</td>
+
+            <td class="entry cell-norowborder" style="vertical-align:top;" headers="d141980e46 ">"Insert this tuple" function</td>
+
+          </tr>
+
+          <tr class="row">
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d141980e37 "><code class="ph codeph">ambeginscan</code></td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d141980e40 ">regproc</td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d141980e43 ">pg_proc.oid</td>
+
+            <td class="entry cell-norowborder" style="vertical-align:top;" headers="d141980e46 ">"Prepare for index scan" function</td>
+
+          </tr>
+
+          <tr class="row">
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d141980e37 "><code class="ph codeph">amgettuple</code></td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d141980e40 ">regproc</td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d141980e43 ">pg_proc.oid</td>
+
+            <td class="entry cell-norowborder" style="vertical-align:top;" headers="d141980e46 ">"Next valid tuple" function, or zero if none</td>
+
+          </tr>
+
+          <tr class="row">
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d141980e37 "><code class="ph codeph">amgetbitmap</code></td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d141980e40 ">regproc</td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d141980e43 ">pg_proc.oid</td>
+
+            <td class="entry cell-norowborder" style="vertical-align:top;" headers="d141980e46 ">"Fetch all tuples" function, or zero if none</td>
+
+          </tr>
+
+          <tr class="row">
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d141980e37 "><code class="ph codeph">amrescan</code></td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d141980e40 ">regproc</td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d141980e43 ">pg_proc.oid</td>
+
+            <td class="entry cell-norowborder" style="vertical-align:top;" headers="d141980e46 ">"(Re)start index scan" function</td>
+
+          </tr>
+
+          <tr class="row">
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d141980e37 "><code class="ph codeph">amendscan</code></td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d141980e40 ">regproc</td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d141980e43 ">pg_proc.oid</td>
+
+            <td class="entry cell-norowborder" style="vertical-align:top;" headers="d141980e46 ">"Clean up after index scan" function</td>
+
+          </tr>
+
+          <tr class="row">
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d141980e37 "><code class="ph codeph">ammarkpos</code></td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d141980e40 ">regproc</td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d141980e43 ">pg_proc.oid</td>
+
+            <td class="entry cell-norowborder" style="vertical-align:top;" headers="d141980e46 ">"Mark current scan position" function</td>
+
+          </tr>
+
+          <tr class="row">
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d141980e37 "><code class="ph codeph">amrestrpos</code></td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d141980e40 ">regproc</td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d141980e43 ">pg_proc.oid</td>
+
+            <td class="entry cell-norowborder" style="vertical-align:top;" headers="d141980e46 ">"Restore marked scan position" function</td>
+
+          </tr>
+
+          <tr class="row">
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d141980e37 "><code class="ph codeph">ambuild</code></td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d141980e40 ">regproc</td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d141980e43 ">pg_proc.oid</td>
+
+            <td class="entry cell-norowborder" style="vertical-align:top;" headers="d141980e46 ">"Build new index" function</td>
+
+          </tr>
+
+          <tr class="row">
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d141980e37 "><code class="ph codeph">ambuildempty</code></td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d141980e40 ">regproc</td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d141980e43 ">pg_proc.oid</td>
+
+            <td class="entry cell-norowborder" style="vertical-align:top;" headers="d141980e46 ">"Build empty index" function</td>
+
+          </tr>
+
+          <tr class="row">
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d141980e37 "><code class="ph codeph">ambulkdelete</code></td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d141980e40 ">regproc</td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d141980e43 ">pg_proc.oid</td>
+
+            <td class="entry cell-norowborder" style="vertical-align:top;" headers="d141980e46 ">Bulk-delete function</td>
+
+          </tr>
+
+          <tr class="row">
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d141980e37 "><code class="ph codeph">amvacuumcleanup</code></td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d141980e40 ">regproc</td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d141980e43 ">pg_proc.oid</td>
+
+            <td class="entry cell-norowborder" style="vertical-align:top;" headers="d141980e46 ">Post-<code class="ph codeph">VACUUM</code> cleanup function</td>
+
+          </tr>
+
+          <tr class="row">
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d141980e37 "><code class="ph codeph">amcanreturn</code></td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d141980e40 ">regproc</td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d141980e43 ">pg_proc.oid</td>
+
+            <td class="entry cell-norowborder" style="vertical-align:top;" headers="d141980e46 ">Function to check whether index supports index-only scans, or
+              zero if none</td>
+
+          </tr>
+
+          <tr class="row">
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d141980e37 "><code class="ph codeph">amcostestimate</code></td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d141980e40 ">regproc</td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d141980e43 ">pg_proc.oid</td>
+
+            <td class="entry cell-norowborder" style="vertical-align:top;" headers="d141980e46 ">Function to estimate cost of an index scan</td>
+
+          </tr>
+
+          <tr class="row">
+            <td class="entry row-nocellborder" style="vertical-align:top;" headers="d141980e37 "><code class="ph codeph">amoptions</code></td>
+
+            <td class="entry row-nocellborder" style="vertical-align:top;" headers="d141980e40 ">regproc</td>
+
+            <td class="entry row-nocellborder" style="vertical-align:top;" headers="d141980e43 ">pg_proc.oid</td>
+
+            <td class="entry cellrowborder" style="vertical-align:top;" headers="d141980e46 ">Function to parse and validate <code class="ph codeph">reloptions</code> for
+              an index</td>
+
+          </tr>
+
+        </tbody>
+</table>
+</div>
+
+  </div>
+
+<div class="related-links">
+<div class="familylinks">
+<div class="parentlink"><strong>Parent topic:</strong> <a class="link" href="../system_catalogs/catalog_ref-html.html#topic1">System Catalogs Definitions</a></div>
+</div>
+</div></body>
+</html>

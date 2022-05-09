@@ -1,0 +1,207 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+
+<meta name="copyright" content="(C) Copyright 2022" />
+<meta name="DC.rights.owner" content="(C) Copyright 2022" />
+<meta name="generator" content="DITA-OT" /><meta name="DC.type" content="topic" />
+<meta name="DC.title" content="CREATE RESOURCE GROUP" />
+<meta name="DC.relation" scheme="URI" content="../sql_commands/sql_ref.html" />
+<meta name="DC.format" content="XHTML" />
+<meta name="DC.identifier" content="topic1" />
+<link rel="stylesheet" type="text/css" href="../commonltr.css" />
+<title>CREATE RESOURCE GROUP</title>
+</head>
+<body id="topic1">
+
+  <h1 class="title topictitle1" id="topic1__by20941">CREATE RESOURCE GROUP</h1>
+
+  <div class="body">
+    <p class="p" id="topic1__sql_command_desc">Defines a new resource group.</p>
+
+    <div class="section" id="topic1__section2"><h2 class="title sectiontitle">Synopsis</h2>
+      
+      <pre class="pre codeblock" id="topic1__sql_command_synopsis"><code>CREATE RESOURCE GROUP &lt;name&gt; WITH (&lt;group_attribute&gt;=&lt;value&gt; [, ... ])</code></pre>
+      <p class="p">where <var class="keyword varname">group_attribute</var> is:</p>
+
+      <pre class="pre codeblock"><code>CPU_RATE_LIMIT=&lt;integer&gt; | CPUSET=&lt;tuple&gt;
+[ MEMORY_LIMIT=&lt;integer&gt; ]
+[ CONCURRENCY=&lt;integer&gt; ]
+[ MEMORY_SHARED_QUOTA=&lt;integer&gt; ]
+[ MEMORY_SPILL_RATIO=&lt;integer&gt; ]
+[ MEMORY_AUDITOR= {vmtracker | cgroup} ]</code></pre>
+    </div>
+
+    <div class="section" id="topic1__section3"><h2 class="title sectiontitle">Description</h2>
+      
+      <p class="p">Creates a new resource group for Greenplum Database resource management. You can create resource groups to manage resources for roles or 
+        to manage the resources of a Greenplum Database external component such as PL/Container.</p>
+
+       <p class="p">A resource
+         group that you create to manage a user role identifies concurrent transaction, memory,
+         and CPU limits for the role when resource groups are enabled. You may assign such resource groups to one or more roles.</p>
+
+      <p class="p">A resource group that you create to manage the resources of a Greenplum Database external component such as PL/Container identifies the memory and CPU limits for the component when resource groups are enabled. These resource groups use cgroups for both CPU and memory management. Assignment of resource groups to external components is component-specific. For example, you assign a PL/Container resource group when you configure a PL/Container runtime. You cannot assign a resource group that you create for external components to a role, nor can you assign a resource group that you create for roles to an external component.</p>
+
+      <p class="p">You must have <code class="ph codeph">SUPERUSER</code> privileges to create a resource group. The maximum number of resource groups allowed in your Greenplum Database cluster is 100.</p>
+
+      <p class="p">Greenplum Database pre-defines two default resource groups: <code class="ph codeph">admin_group</code>
+         and <code class="ph codeph">default_group</code>. These group names, as well as the group name <code class="ph codeph">none</code>, are reserved.</p>
+
+      <p class="p">
+        To set appropriate limits for resource groups, the Greenplum Database administrator must
+        be familiar with the queries typically run on the system, as well as the users/roles running those queries and the external components they may be using, such as PL/Containers.</p>
+
+      <p class="p">
+        After creating a resource group for a role, assign the group to one or more roles using the <a class="xref" href="ALTER_ROLE.html#topic1">ALTER ROLE</a> or <a class="xref" href="CREATE_ROLE.html#topic1">CREATE ROLE</a> commands.</p>
+
+      <p class="p">
+        After you create a resource group to manage the CPU and memory resources of an external component, configure the external component to use the resource group. For example, configure the PL/Container runtime <code class="ph codeph">resource_group_id</code>.</p>
+
+    </div>
+
+    <div class="section" id="topic1__section4"><h2 class="title sectiontitle">Parameters</h2>
+      
+      <dl class="dl parml">
+        
+          <dt class="dt pt dlterm">
+            <var class="keyword varname">name</var>
+          </dt>
+
+          <dd class="dd pd">The name of the resource group.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">CONCURRENCY <var class="keyword varname">integer</var></dt>
+
+          <dd class="dd pd">The maximum number of concurrent transactions, including active and idle transactions, that are permitted for this resource group. The <code class="ph codeph">CONCURRENCY</code> value must be an integer in the range [0 .. <code class="ph codeph">max_connections</code>]. The default <code class="ph codeph">CONCURRENCY</code> value  for resource groups defined for roles is 20.</dd>
+
+          <dd class="dd pd ddexpand">You must set <code class="ph codeph">CONCURRENCY</code> to zero (0) for resource groups that you create for external components.</dd>
+
+          <dd class="dd pd ddexpand"><div class="note"><span class="notetitle">Note:</span> You cannot set the <code class="ph codeph">CONCURRENCY</code> value for the <code class="ph codeph">admin_group</code> to zero (0).</div>
+</dd>
+
+        
+        
+          <dt class="dt pt dlterm">CPU_RATE_LIMIT <var class="keyword varname">integer</var></dt>
+
+          <dt class="dt pt dlterm">CPUSET <var class="keyword varname">tuple</var></dt>
+
+          <dd class="dd pd">Required. You must specify only one of <code class="ph codeph">CPU_RATE_LIMIT</code> or <code class="ph codeph">CPUSET</code> when you create a resource group.</dd>
+
+          <dd class="dd pd ddexpand"><code class="ph codeph">CPU_RATE_LIMIT</code> is the percentage of CPU resources to allocate to this resource group. The minimum CPU percentage you can specify for a resource group is 1. The maximum is 100. The sum of the <code class="ph codeph">CPU_RATE_LIMIT</code> values specified for all resource groups defined in the Greenplum Database cluster must be less than or equal to 100.
+          </dd>
+
+          <dd class="dd pd ddexpand"><code class="ph codeph">CPUSET</code> identifies the CPU cores to reserve for this resource group. The CPU cores that you specify in <var class="keyword varname">tuple</var> must be available in the system and cannot overlap with any CPU cores that you specify for other resource groups.</dd>
+<dd class="dd pd ddexpand"><var class="keyword varname">tuple</var> is a comma-separated list of single core numbers or core number intervals. You must enclose <var class="keyword varname">tuple</var> in single quotes, for example, '1,3-4'.</dd>
+<dd class="dd pd ddexpand"><div class="note"><span class="notetitle">Note:</span> You can configure <code class="ph codeph">CPUSET</code> for a resource group only after you have enabled resource group-based resource management for your Greenplum Database cluster.</div>
+
+          </dd>
+
+        
+        
+          <dt class="dt pt dlterm">MEMORY_LIMIT <var class="keyword varname">integer</var></dt>
+
+          <dd class="dd pd">The total percentage of Greenplum Database memory resources to reserve for this
+            resource group. The minimum memory percentage you can specify for a resource
+            group is 0. The maximum is 100. The default value is 0.</dd>
+
+          <dd class="dd pd ddexpand">When you specify a <code class="ph codeph">MEMORY_LIMIT</code> of 0, Greenplum Database
+            reserves no memory for the resource group, but uses global shared memory to
+            fulfill all memory requests in the group. If <code class="ph codeph">MEMORY_LIMIT</code> is 0,
+           <code class="ph codeph">MEMORY_SPILL_RATIO</code> must also be 0.</dd>
+
+          <dd class="dd pd ddexpand">The sum of the <code class="ph codeph">MEMORY_LIMIT</code> values specified for all resource groups defined in the Greenplum Database cluster must be less than or equal to 100.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">MEMORY_SHARED_QUOTA <var class="keyword varname">integer</var></dt>
+
+          <dd class="dd pd">The quota of shared memory in the resource group. Resource groups with a <code class="ph codeph">MEMORY_SHARED_QUOTA</code> threshold set aside a percentage of memory allotted to the resource group to share across transactions. This shared memory is allocated on a first-come, first-served basis as available. A transaction may use none, some, or all of this memory. The minimum memory shared quota percentage you can specify for a resource group is 0. The maximum is 100. The default <code class="ph codeph">MEMORY_SHARED_QUOTA</code> value is 80.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">MEMORY_SPILL_RATIO <var class="keyword varname">integer</var></dt>
+
+          <dd class="dd pd">The memory usage threshold for memory-intensive operators in a transaction.
+            When this threshold is reached, a transaction spills to disk. You can specify
+            an integer percentage value  from 0 to 100 inclusive. The default
+            <code class="ph codeph">MEMORY_SPILL_RATIO</code> value is 0. When <code class="ph codeph">MEMORY_SPILL_RATIO</code>
+            is 0, Greenplum Database uses the
+            <a class="xref" href="../config_params/guc-list.html#statement_mem"><code class="ph codeph">statement_mem</code></a>
+            server configuration parameter value to control initial query operator memory.</dd>
+
+        
+        
+          <dt class="dt pt dlterm">MEMORY_AUDITOR {vmtracker | cgroup}</dt>
+
+          <dd class="dd pd">The memory auditor for the resource group. Greenplum Database employs virtual memory
+            tracking for role resources and cgroup memory tracking for resources used by external
+            components. The default <code class="ph codeph">MEMORY_AUDITOR</code> is <code class="ph codeph">vmtracker</code>.
+            When you create a resource group with <code class="ph codeph">vmtracker</code> memory auditing,
+            Greenplum Database tracks that resource group's memory internally.</dd>
+
+          <dd class="dd pd ddexpand">When you create a resource group specifying the <code class="ph codeph">cgroup</code>
+            <code class="ph codeph">MEMORY_AUDITOR</code>, Greenplum Database defers the accounting of memory used
+            by that resource group to cgroups. <code class="ph codeph">CONCURRENCY</code> must be zero (0) for a
+            resource group that you create for external components such as PL/Container. You cannot
+            assign a resource group that you create for external components to a Greenplum Database
+            role.</dd>
+
+        
+      </dl>
+
+    </div>
+
+    <div class="section" id="topic1__section5"><h2 class="title sectiontitle">Notes</h2>
+        <p class="p">You cannot submit a <code class="ph codeph">CREATE RESOURCE GROUP</code> command in an explicit transaction or sub-transaction.</p>
+
+        <p class="p">Use the
+          <code class="ph codeph">gp_toolkit.gp_resgroup_config</code> system view to display the limit 
+        settings of all resource groups:</p>
+<pre class="pre codeblock"><code>SELECT * FROM gp_toolkit.gp_resgroup_config;</code></pre>
+    </div>
+
+    <div class="section" id="topic1__section6"><h2 class="title sectiontitle">Examples</h2>
+      
+      <p class="p">Create a resource group with CPU and memory limit percentages of 35: </p>
+
+      <pre class="pre codeblock"><code>CREATE RESOURCE GROUP rgroup1 WITH (CPU_RATE_LIMIT=35, MEMORY_LIMIT=35);</code></pre>
+      <p class="p">Create a resource group with a concurrent transaction limit of 20, a memory limit of 15, and a CPU limit of 25:</p>
+
+      <pre class="pre codeblock"><code>CREATE RESOURCE GROUP rgroup2 WITH (CONCURRENCY=20, 
+  MEMORY_LIMIT=15, CPU_RATE_LIMIT=25);</code></pre>
+      <p class="p">Create a resource group to manage PL/Container resources specifying a memory limit of 10, and a CPU limit of 10:</p>
+
+      <pre class="pre codeblock"><code>CREATE RESOURCE GROUP plc_run1 WITH (MEMORY_LIMIT=10, CPU_RATE_LIMIT=10,
+  CONCURRENCY=0, MEMORY_AUDITOR=cgroup);</code></pre>
+      <p class="p">Create a resource group with a memory limit percentage of 11 to which you assign CPU cores 1 to 3:</p>
+
+      <pre class="pre codeblock"><code>CREATE RESOURCE GROUP rgroup3 WITH (CPUSET='1-3', MEMORY_LIMIT=11);</code></pre>
+    </div>
+
+    <div class="section" id="topic1__section7"><h2 class="title sectiontitle">Compatibility</h2>
+      
+      <p class="p"><code class="ph codeph">CREATE RESOURCE GROUP</code> is a Greenplum Database extension. There is no
+        provision for resource groups or resource management in the SQL standard.</p>
+
+    </div>
+
+    <div class="section" id="topic1__section8"><h2 class="title sectiontitle">See Also</h2>
+      
+      <p class="p"><a class="xref" href="ALTER_ROLE.html#topic1">ALTER ROLE</a>,
+            <a class="xref" href="CREATE_ROLE.html#topic1">CREATE ROLE</a>,
+            <a class="xref" href="ALTER_RESOURCE_GROUP.html#topic1">ALTER RESOURCE GROUP</a>, <a class="xref" href="DROP_RESOURCE_GROUP.html#topic1">DROP RESOURCE GROUP</a></p>
+
+    </div>
+
+  </div>
+
+<div class="related-links">
+<div class="familylinks">
+<div class="parentlink"><strong>Parent topic:</strong> <a class="link" href="../sql_commands/sql_ref.html">SQL Commands</a></div>
+</div>
+</div></body>
+</html>

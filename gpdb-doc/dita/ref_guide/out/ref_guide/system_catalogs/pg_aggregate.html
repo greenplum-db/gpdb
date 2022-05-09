@@ -1,0 +1,300 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+
+<meta name="copyright" content="(C) Copyright 2022" />
+<meta name="DC.rights.owner" content="(C) Copyright 2022" />
+<meta name="generator" content="DITA-OT" /><meta name="DC.type" content="topic" />
+<meta name="DC.title" content="pg_aggregate" />
+<meta name="DC.relation" scheme="URI" content="../system_catalogs/catalog_ref-html.html#topic1" />
+<meta name="DC.format" content="XHTML" />
+<meta name="DC.identifier" content="topic1" />
+<meta name="DC.language" content="en" />
+<link rel="stylesheet" type="text/css" href="../commonltr.css" />
+<title>pg_aggregate</title>
+</head>
+<body id="topic1">
+
+  <h1 class="title topictitle1" id="topic1__fu141670">pg_aggregate</h1>
+
+  <div class="body">
+    <p class="p">The <code class="ph codeph">pg_aggregate</code> table stores information about aggregate functions. An
+      aggregate function is a function that operates on a set of values (typically one column from
+      each row that matches a query condition) and returns a single value computed from all these
+      values. Typical aggregate functions are <code class="ph codeph">sum</code>, <code class="ph codeph">count</code>, and
+        <code class="ph codeph">max</code>. Each entry in <code class="ph codeph">pg_aggregate</code> is an extension of an
+      entry in <code class="ph codeph">pg_proc</code>. The <code class="ph codeph">pg_proc</code> entry carries the aggregate's
+      name, input and output data types, and other information that is similar to ordinary
+      functions.</p>
+
+    
+<div class="tablenoborder"><table cellpadding="4" cellspacing="0" summary="" id="topic1__fu141982" class="table" frame="border" border="1" rules="all"><caption><span class="tablecap"><span class="table--title-label">Table 1. </span>pg_catalog.pg_aggregate</span></caption><colgroup><col style="width:131pt" /><col style="width:86pt" /><col style="width:85pt" /><col style="width:147pt" /></colgroup><thead class="thead" style="text-align:left;">
+          <tr class="row">
+            <th class="entry nocellnorowborder" style="vertical-align:top;" id="d89751e59">column</th>
+
+            <th class="entry nocellnorowborder" style="vertical-align:top;" id="d89751e62">type</th>
+
+            <th class="entry nocellnorowborder" style="vertical-align:top;" id="d89751e65">references</th>
+
+            <th class="entry cell-norowborder" style="vertical-align:top;" id="d89751e68">description</th>
+
+          </tr>
+
+        </thead>
+<tbody class="tbody">
+          <tr class="row">
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d89751e59 "><code class="ph codeph">aggfnoid</code></td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d89751e62 ">regproc</td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d89751e65 ">pg_proc.oid</td>
+
+            <td class="entry cell-norowborder" style="vertical-align:top;" headers="d89751e68 ">OID of the aggregate function</td>
+
+          </tr>
+
+          <tr class="row">
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d89751e59 "><code class="ph codeph">aggkind</code></td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d89751e62 ">char</td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d89751e65 "> </td>
+
+            <td class="entry cell-norowborder" style="vertical-align:top;" headers="d89751e68 ">Aggregate kind: <code class="ph codeph">n</code> for <em class="ph i">normal</em>
+              aggregates, <code class="ph codeph">o</code> for <em class="ph i">ordered-set</em> aggregates, or
+              <code class="ph codeph">h</code> for <em class="ph i">hypothetical-set</em> aggregates</td>
+
+          </tr>
+
+          <tr class="row">
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d89751e59 "><code class="ph codeph">aggnumdirectargs</code></td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d89751e62 ">int2</td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d89751e65 "> </td>
+
+            <td class="entry cell-norowborder" style="vertical-align:top;" headers="d89751e68 ">Number of direct (non-aggregated) arguments of an
+              ordered-set or hypothetical-set aggregate, counting a variadic array as
+              one argument. If equal to <code class="ph codeph">pronargs</code>, the aggregate must be
+              variadic and the variadic array describes the aggregated arguments as well
+              as the final direct arguments. Always zero for normal aggregates.</td>
+
+          </tr>
+
+          <tr class="row">
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d89751e59 "><code class="ph codeph">aggtransfn</code></td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d89751e62 ">regproc</td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d89751e65 ">pg_proc.oid</td>
+
+            <td class="entry cell-norowborder" style="vertical-align:top;" headers="d89751e68 ">Transition function OID</td>
+
+          </tr>
+
+          <tr class="row">
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d89751e59 "><code class="ph codeph">aggfinalfn</code></td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d89751e62 ">regproc</td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d89751e65 ">pg_proc.oid</td>
+
+            <td class="entry cell-norowborder" style="vertical-align:top;" headers="d89751e68 ">Final function OID (zero if none)</td>
+
+          </tr>
+
+          <tr class="row">
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d89751e59 "><code class="ph codeph">aggcombinefn</code></td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d89751e62 ">regproc</td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d89751e65 ">pg_proc.oid</td>
+
+            <td class="entry cell-norowborder" style="vertical-align:top;" headers="d89751e68 ">Combine function OID (zero if none)</td>
+
+          </tr>
+
+          <tr class="row">
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d89751e59 "><code class="ph codeph">aggserialfn</code></td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d89751e62 ">regproc</td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d89751e65 ">pg_proc.oid</td>
+
+            <td class="entry cell-norowborder" style="vertical-align:top;" headers="d89751e68 ">OID of the serialization function to convert
+              transtype to <code class="ph codeph">bytea</code> (zero if none)</td>
+
+          </tr>
+
+          <tr class="row">
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d89751e59 "><code class="ph codeph">aggdeserialfn</code></td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d89751e62 ">regproc</td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d89751e65 ">pg_proc.oid</td>
+
+            <td class="entry cell-norowborder" style="vertical-align:top;" headers="d89751e68 ">OID of the deserialization function to convert
+              <code class="ph codeph">bytea</code> to transtype (zero if none)</td>
+
+          </tr>
+
+          <tr class="row">
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d89751e59 "><code class="ph codeph">aggmtransfn</code></td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d89751e62 ">regproc</td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d89751e65 ">pg_proc.oid</td>
+
+            <td class="entry cell-norowborder" style="vertical-align:top;" headers="d89751e68 ">Forward transition function OID for moving-aggregate mode
+              (zero if none)</td>
+
+          </tr>
+
+          <tr class="row">
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d89751e59 "><code class="ph codeph">aggminvtransfn</code></td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d89751e62 ">regproc</td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d89751e65 ">pg_proc.oid</td>
+
+            <td class="entry cell-norowborder" style="vertical-align:top;" headers="d89751e68 ">Inverse transition function OID for moving-aggregate mode
+              (zero if none)</td>
+
+          </tr>
+
+          <tr class="row">
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d89751e59 "><code class="ph codeph">aggmfinalfn</code></td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d89751e62 ">regproc</td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d89751e65 ">pg_proc.oid</td>
+
+            <td class="entry cell-norowborder" style="vertical-align:top;" headers="d89751e68 ">Final function OID for moving-aggregate mode (zero if
+              none)</td>
+
+          </tr>
+
+          <tr class="row">
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d89751e59 "><code class="ph codeph">aggfinalextra</code></td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d89751e62 ">bool</td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d89751e65 "> </td>
+
+            <td class="entry cell-norowborder" style="vertical-align:top;" headers="d89751e68 ">True to pass extra dummy arguments to
+              <code class="ph codeph">aggfinalfn</code></td>
+
+          </tr>
+
+          <tr class="row">
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d89751e59 "><code class="ph codeph">aggmfinalextra</code></td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d89751e62 ">bool</td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d89751e65 "> </td>
+
+            <td class="entry cell-norowborder" style="vertical-align:top;" headers="d89751e68 ">True to pass extra dummy arguments to
+              <code class="ph codeph">aggmfinalfn</code></td>
+
+          </tr>
+
+          <tr class="row">
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d89751e59 "><code class="ph codeph">aggsortop</code></td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d89751e62 ">oid</td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d89751e65 ">pg_operator.oid</td>
+
+            <td class="entry cell-norowborder" style="vertical-align:top;" headers="d89751e68 ">Associated sort operator OID (zero if none)</td>
+
+          </tr>
+
+          <tr class="row">
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d89751e59 "><code class="ph codeph">aggtranstype</code></td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d89751e62 ">oid</td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d89751e65 ">pg_type.oid</td>
+
+            <td class="entry cell-norowborder" style="vertical-align:top;" headers="d89751e68 ">Data type of the aggregate function's internal transition (state)
+              data</td>
+
+          </tr>
+
+          <tr class="row">
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d89751e59 "><code class="ph codeph">aggtransspace</code></td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d89751e62 ">int4</td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d89751e65 "> </td>
+
+            <td class="entry cell-norowborder" style="vertical-align:top;" headers="d89751e68 ">Approximate average size (in bytes) of the transition state
+              data, or zero to use a default estimate</td>
+
+          </tr>
+
+          <tr class="row">
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d89751e59 "><code class="ph codeph">aggmtranstype</code></td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d89751e62 ">oid</td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d89751e65 ">pg_type.oid</td>
+
+            <td class="entry cell-norowborder" style="vertical-align:top;" headers="d89751e68 ">Data type of the aggregate function's internal transition (state)
+              data for moving-aggregate mode (zero if none)</td>
+
+          </tr>
+
+          <tr class="row">
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d89751e59 "><code class="ph codeph">aggmtransspace</code></td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d89751e62 ">int4</td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d89751e65 "> </td>
+
+            <td class="entry cell-norowborder" style="vertical-align:top;" headers="d89751e68 ">Approximate average size (in bytes) of the transition state
+              data for moving-aggregate mode, or zero to use a default estimate</td>
+
+          </tr>
+
+          <tr class="row">
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d89751e59 "><code class="ph codeph">agginitval</code></td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d89751e62 ">text</td>
+
+            <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d89751e65 "> </td>
+
+            <td class="entry cell-norowborder" style="vertical-align:top;" headers="d89751e68 ">The initial value of the transition state. This is a text field
+              containing the initial value in its external string representation. If this field is
+              NULL, the transition state value starts out NULL.</td>
+
+          </tr>
+
+          <tr class="row">
+            <td class="entry row-nocellborder" style="vertical-align:top;" headers="d89751e59 "><code class="ph codeph">aggminitval</code></td>
+
+            <td class="entry row-nocellborder" style="vertical-align:top;" headers="d89751e62 ">text</td>
+
+            <td class="entry row-nocellborder" style="vertical-align:top;" headers="d89751e65 "> </td>
+
+            <td class="entry cellrowborder" style="vertical-align:top;" headers="d89751e68 ">The initial value of the transition state for moving-
+              aggregate mode. This is a text field containing the initial value in its
+              external string representation. If this field is NULL, the transition state
+              value starts out NULL.</td>
+
+          </tr>
+
+        </tbody>
+</table>
+</div>
+
+  </div>
+
+<div class="related-links">
+<div class="familylinks">
+<div class="parentlink"><strong>Parent topic:</strong> <a class="link" href="../system_catalogs/catalog_ref-html.html#topic1">System Catalogs Definitions</a></div>
+</div>
+</div></body>
+</html>

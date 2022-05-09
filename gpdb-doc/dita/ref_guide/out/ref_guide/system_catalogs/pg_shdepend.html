@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+
+<meta name="copyright" content="(C) Copyright 2022" />
+<meta name="DC.rights.owner" content="(C) Copyright 2022" />
+<meta name="generator" content="DITA-OT" /><meta name="DC.type" content="topic" />
+<meta name="DC.title" content="pg_shdepend" />
+<meta name="DC.relation" scheme="URI" content="../system_catalogs/catalog_ref-html.html#topic1" />
+<meta name="DC.format" content="XHTML" />
+<meta name="DC.identifier" content="topic1" />
+<meta name="DC.language" content="en" />
+<link rel="stylesheet" type="text/css" href="../commonltr.css" />
+<title>pg_shdepend</title>
+</head>
+<body id="topic1">
+<h1 class="title topictitle1" id="topic1__ho143896">pg_shdepend</h1>
+<div class="body"><p class="p">The <code class="ph codeph">pg_shdepend</code> system catalog table records the dependency relationships
+      between database objects and shared objects, such as roles. This information allows Greenplum Database to ensure that those objects are unreferenced before attempting to
+      delete them. See also <a class="xref" href="pg_depend.html#topic1">pg_depend</a>, which performs a
+      similar function for dependencies involving objects within a single database. Unlike most
+      system catalogs, <code class="ph codeph">pg_shdepend</code> is shared across all databases of Greenplum system: there is only one copy of <code class="ph codeph">pg_shdepend</code>
+      per system, not one per database.</p>
+<p class="p">In all cases, a <code class="ph codeph">pg_shdepend</code> entry indicates that
+the referenced object may not be dropped without also dropping the dependent
+object. However, there are several subflavors identified by <code class="ph codeph">deptype</code>:
+</p>
+<ul class="ul"><li class="li" id="topic1__ho156091"><strong class="ph b">SHARED_DEPENDENCY_OWNER (o)</strong> — The referenced object (which
+must be a role) is the owner of the dependent object.</li>
+<li class="li" id="topic1__ho156094"><strong class="ph b">SHARED_DEPENDENCY_ACL (a)</strong> — The referenced object (which must
+be a role) is mentioned in the ACL (access control list) of the dependent
+object.</li>
+<li class="li" id="topic1__ho156097"><strong class="ph b">SHARED_DEPENDENCY_PIN (p)</strong> — There is no dependent object; this
+type of entry is a signal that the system itself depends on the referenced
+object, and so that object must never be deleted. Entries of this type
+are created only by system initialization. The columns for the dependent
+object contain zeroes.
+<div class="tablenoborder"><table cellpadding="4" cellspacing="0" summary="" id="topic1__ho143898" class="table" frame="border" border="1" rules="all"><caption><span class="tablecap"><span class="table--title-label">Table 1. </span>pg_catalog.pg_shdepend</span></caption><colgroup><col style="width:131pt" /><col style="width:86pt" /><col style="width:85pt" /><col style="width:147pt" /></colgroup><thead class="thead" style="text-align:left;"><tr class="row"><th class="entry nocellnorowborder" style="vertical-align:top;" id="d51233e58">column</th>
+<th class="entry nocellnorowborder" style="vertical-align:top;" id="d51233e60">type</th>
+<th class="entry nocellnorowborder" style="vertical-align:top;" id="d51233e62">references</th>
+<th class="entry cell-norowborder" style="vertical-align:top;" id="d51233e64">description</th>
+</tr>
+</thead>
+<tbody class="tbody"><tr class="row"><td class="entry nocellnorowborder" style="vertical-align:top;" headers="d51233e58 "><code class="ph codeph">dbid</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d51233e60 ">oid</td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d51233e62 ">pg_database.oid</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d51233e64 ">The OID of the database the dependent object
+is in, or zero for a shared object.</td>
+</tr>
+<tr class="row"><td class="entry nocellnorowborder" style="vertical-align:top;" headers="d51233e58 "><code class="ph codeph">classid</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d51233e60 ">oid</td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d51233e62 ">pg_class.oid</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d51233e64 ">The OID of the system catalog the dependent
+object is in.</td>
+</tr>
+<tr class="row"><td class="entry nocellnorowborder" style="vertical-align:top;" headers="d51233e58 "><code class="ph codeph">objid</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d51233e60 ">oid</td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d51233e62 ">any OID column</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d51233e64 "> The OID of the specific dependent object.</td>
+</tr>
+<tr class="row"><td class="entry nocellnorowborder" style="vertical-align:top;" headers="d51233e58 "><code class="ph codeph">objsubid </code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d51233e60 ">int4</td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d51233e62 "> </td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d51233e64 ">For a table column, this is the column number.
+For all other object types, this column is zero.</td>
+</tr>
+<tr class="row"><td class="entry nocellnorowborder" style="vertical-align:top;" headers="d51233e58 "><code class="ph codeph">refclassid</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d51233e60 ">oid</td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d51233e62 ">pg_class.oid</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d51233e64 ">The OID of the system catalog the referenced
+object is in (must be a shared catalog).</td>
+</tr>
+<tr class="row"><td class="entry nocellnorowborder" style="vertical-align:top;" headers="d51233e58 "><code class="ph codeph">refobjid</code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d51233e60 ">oid</td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d51233e62 ">any OID column</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d51233e64 ">The OID of the specific referenced object.</td>
+</tr>
+<tr class="row"><td class="entry nocellnorowborder" style="vertical-align:top;" headers="d51233e58 "><code class="ph codeph">refobjsubid </code></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d51233e60 ">int4</td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d51233e62 "> </td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d51233e64 ">For a table column, this is the referenced column
+number. For all other object types, this column is zero.</td>
+</tr>
+<tr class="row"><td class="entry row-nocellborder" style="vertical-align:top;" headers="d51233e58 "><code class="ph codeph">deptype</code></td>
+<td class="entry row-nocellborder" style="vertical-align:top;" headers="d51233e60 ">char</td>
+<td class="entry row-nocellborder" style="vertical-align:top;" headers="d51233e62 "> </td>
+<td class="entry cellrowborder" style="vertical-align:top;" headers="d51233e64 ">A code defining the specific semantics of this
+dependency relationship.</td>
+</tr>
+</tbody>
+</table>
+</div>
+</li>
+</ul>
+</div>
+<div class="related-links">
+<div class="familylinks">
+<div class="parentlink"><strong>Parent topic:</strong> <a class="link" href="../system_catalogs/catalog_ref-html.html#topic1">System Catalogs Definitions</a></div>
+</div>
+</div></body>
+</html>

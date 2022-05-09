@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+
+<meta name="copyright" content="(C) Copyright 2022" />
+<meta name="DC.rights.owner" content="(C) Copyright 2022" />
+<meta name="generator" content="DITA-OT" /><meta name="DC.type" content="topic" />
+<meta name="DC.title" content="RESET" />
+<meta name="DC.format" content="XHTML" />
+<meta name="DC.identifier" content="topic1" />
+<link rel="stylesheet" type="text/css" href="../../out/commonltr.css" />
+<title>RESET</title>
+</head>
+<body id="topic1">
+
+  <h1 class="title topictitle1" id="topic1__eb20941">RESET</h1>
+
+  <div class="body">
+    <p class="p" id="topic1__sql_command_desc">Restores the value of a system configuration parameter to the default
+      value.</p>
+
+    <div class="section" id="topic1__section2"><h2 class="title sectiontitle">Synopsis</h2>
+      
+      <pre class="pre codeblock" id="topic1__sql_command_synopsis"><code>RESET &lt;configuration_parameter&gt;
+
+RESET ALL</code></pre>
+    </div>
+
+    <div class="section" id="topic1__section3"><h2 class="title sectiontitle">Description</h2>
+      
+      <p class="p"><code class="ph codeph">RESET</code> restores system configuration parameters to their default values.
+          <code class="ph codeph">RESET</code> is an alternative spelling for <code class="ph codeph">SET
+            <var class="keyword varname">configuration_parameter</var> TO DEFAULT</code>.</p>
+
+      <p class="p">The default value is defined as the value that the parameter would have had, had no
+          <code class="ph codeph">SET</code> ever been issued for it in the current session. The actual source of
+        this value might be a compiled-in default, the master <code class="ph codeph">postgresql.conf</code>
+        configuration file, command-line options, or per-database or per-user default settings. See
+          <a class="xref" href="../config_params/guc_config.html">Server Configuration Parameters</a> for more information. </p>
+
+    </div>
+
+    <div class="section" id="topic1__section4"><h2 class="title sectiontitle">Parameters</h2>
+      
+      <dl class="dl parml">
+        
+          <dt class="dt pt dlterm">
+            <var class="keyword varname">configuration_parameter</var>
+          </dt>
+
+          <dd class="dd pd">The name of a system configuration parameter. See <a class="xref" href="../config_params/guc_config.html">Server Configuration Parameters</a> for details. </dd>
+
+        
+        
+          <dt class="dt pt dlterm">ALL</dt>
+
+          <dd class="dd pd">Resets all settable configuration parameters to their default values. </dd>
+
+        
+      </dl>
+
+    </div>
+
+    <div class="section" id="topic1__section5"><h2 class="title sectiontitle">Examples</h2>
+      
+      <p class="p">Set the <code class="ph codeph">statement_mem</code> configuration parameter to its default value:</p>
+
+      <pre class="pre codeblock"><code>RESET statement_mem; </code></pre>
+    </div>
+
+    <div class="section" id="topic1__section6"><h2 class="title sectiontitle">Compatibility</h2>
+      
+      <p class="p"><code class="ph codeph">RESET</code> is a Greenplum Database extension.</p>
+
+    </div>
+
+    <div class="section" id="topic1__section7"><h2 class="title sectiontitle">See Also</h2>
+      
+      <p class="p">
+          <a class="xref" href="SET.html#topic1">SET</a>
+      </p>
+
+    </div>
+
+  </div>
+
+</body>
+</html>

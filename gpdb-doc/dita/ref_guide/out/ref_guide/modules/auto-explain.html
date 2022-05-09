@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+
+<meta name="copyright" content="(C) Copyright 2022" />
+<meta name="DC.rights.owner" content="(C) Copyright 2022" />
+<meta name="generator" content="DITA-OT" /><meta name="DC.type" content="topic" />
+<meta name="DC.title" content="auto_explain" />
+<meta name="DC.format" content="XHTML" />
+<meta name="DC.identifier" content="topic_fstrm" />
+<link rel="stylesheet" type="text/css" href="../commonltr.css" />
+<title>auto_explain</title>
+</head>
+<body>
+
+  <div class="nested0" aria-labelledby="ariaid-title1" id="topic_fstrm">
+    <h1 class="title topictitle1" id="ariaid-title1">auto_explain</h1>
+
+    <div class="body">
+      <p class="p">The <code class="ph codeph">auto_explain</code> module provides a means for logging execution plans of
+        slow statements automatically, without having to run <code class="ph codeph">EXPLAIN</code> by hand.</p>
+
+      <p class="p">The Greenplum Database <code class="ph codeph">auto_explain</code> module was runs only on the Greenplum
+        Database master segment host. It is otherwise equivalent in functionality to the PostgreSQL
+          <code class="ph codeph">auto_explain</code> module.</p>
+
+    </div>
+
+    <div class="topic nested1" aria-labelledby="ariaid-title2" id="topic_reg">
+      <h2 class="title topictitle2" id="ariaid-title2">Loading the Module</h2>
+
+      <div class="body">
+        <div class="p">The <code class="ph codeph">auto_explain</code> module provides no SQL-accessible functions. To use it,
+          simply load it into the server. You can load it into an individual session by entering
+          this command as a superuser:<pre class="pre codeblock"><code>LOAD 'auto_explain';</code></pre></div>
+
+        <p class="p">More typical usage is to preload it into some or all sessions by including
+            <code class="ph codeph">auto_explain</code> in <code class="ph codeph">session_preload_libraries</code> or
+            <code class="ph codeph">shared_preload_libraries</code> in <code class="ph codeph">postgresql.conf</code>. Then you
+          can track unexpectedly slow queries no matter when they happen. However, this does
+          introduce overhead for all queries.</p>
+
+      </div>
+
+    </div>
+
+    <div class="topic nested1" aria-labelledby="ariaid-title3" id="topic_info">
+      <h2 class="title topictitle2" id="ariaid-title3">Module Documentation</h2>
+
+      <div class="body">
+        <p class="p">See <a class="xref" href="https://www.postgresql.org/docs/9.4/auto-explain.html" target="_blank">auto_explain</a> in the PostgreSQL
+          documentation for detailed information about the configuration parameters that control
+          this module's behavior.</p>
+
+      </div>
+
+    </div>
+
+  </div>
+
+</body>
+</html>
