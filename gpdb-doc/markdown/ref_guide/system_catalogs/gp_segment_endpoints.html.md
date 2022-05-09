@@ -12,17 +12,7 @@ Endpoints exist only for the duration of the transaction that defines the parall
 |databaseid|oid| |The identifier of the database in which the parallel retrieve cursor was created.|
 |senderpid|integer| |The identifier of the process sending the query results.|
 |receiverpid|integer| |The process identifier of the retrieve session that is receiving the query results.|
-|state|text| |The state of the endpoint; the valid states are: READY: The endpoint is ready to be retrieved.
-
- ATTACHED: The endpoint is attached to a retrieve connection.
-
- RETRIEVING: A retrieve session is retrieving data from the endpoint at this moment.
-
- FINISHED: The endpoint has been fully retrieved.
-
- RELEASED: Due to an error, the endpoint has been released and the connection closed.
-
-|
+|state|text| |The state of the endpoint; the valid states are:<br/><br/>READY: The endpoint is ready to be retrieved.<br/><br/>ATTACHED: The endpoint is attached to a retrieve connection.<br/><br/>RETRIEVING: A retrieve session is retrieving data from the endpoint at this moment.<br/><br/>FINISHED: The endpoint has been fully retrieved.<br/><br/>RELEASED: Due to an error, the endpoint has been released and the connection closed.|
 |gp\_segment\_id|integer| |The QE's endpoint `gp_segment_id`.|
 |sessionid|integer| |The identifier of the session in which the parallel retrieve cursor was created.|
 |username|text| |The name of the session user \(not the current user\); *you must initiate the retrieve session as this user*.|

@@ -8,19 +8,13 @@ The `pg_trigger` system catalog table stores triggers on tables.
 
 |column|type|references|description|
 |------|----|----------|-----------|
-|`tgrelid`|oid|*pg\_class.oid*Note that Greenplum Database does not enforce referential integrity.
-
-|The table this trigger is on.|
+|`tgrelid`|oid|*pg\_class.oid*<br/><br/>Note that Greenplum Database does not enforce referential integrity.|The table this trigger is on.|
 |`tgname`|name| |Trigger name \(must be unique among triggers of same table\).|
-|`tgfoid`|oid|*pg\_proc.oid*Note that Greenplum Database does not enforce referential integrity.
-
-|The function to be called.|
+|`tgfoid`|oid|*pg\_proc.oid*<br/><br/>Note that Greenplum Database does not enforce referential integrity.|The function to be called.|
 |`tgtype`|int2| |Bit mask identifying trigger conditions.|
 |`tgenabled`|boolean| |True if trigger is enabled.|
 |`tgisinternal`|boolean| |True if trigger is internally generated \(usually, to enforce the constraint identified by tgconstraint\).|
-|`tgconstrrelid`|oid|*pg\_class.oid*Note that Greenplum Database does not enforce referential integrity.
-
-|The table referenced by an referential integrity constraint.|
+|`tgconstrrelid`|oid|*pg\_class.oid*<br/><br/>Note that Greenplum Database does not enforce referential integrity.|The table referenced by an referential integrity constraint.|
 |`tgconstrindid`|oid|*pg\_class.oid*|The index supporting a unique, primary key, or referential integrity constraint.|
 |`tgconstraint`|oid|*pg\_constraint.oid*|The `pg_constraint` entry associated with the trigger, if any.|
 |`tgdeferrable`|boolean| |True if deferrable.|

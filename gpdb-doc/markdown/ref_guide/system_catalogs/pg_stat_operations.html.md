@@ -6,11 +6,7 @@ The view `pg_stat_operations` shows details about the last operation performed o
 
 |column|type|references|description|
 |------|----|----------|-----------|
-|`classname`|text| |The name of the system table in the `pg_catalog` schema where the record about this object is stored \(`pg_class`=relations, `pg_database`=databases,`pg_namespace`=schemas,
-
-`pg_authid`=roles\)
-
-|
+|`classname`|text| |The name of the system table in the `pg_catalog` schema where the record about this object is stored \(`pg_class`=relations, `pg_database`=databases,`pg_namespace`=schemas, `pg_authid`=roles\)|
 |`objname`|name| |The name of the object.|
 |`objid`|oid| |The OID of the object.|
 |`schemaname`|name| |The name of the schema where the object resides.|

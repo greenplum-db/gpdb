@@ -27,26 +27,8 @@ The `pg_type` system catalog table stores information about data types. Base typ
 |`typmodin`|regproc|pg\_proc.oid|Type modifier input function, or 0 if the type does not support modifiers|
 |`typmodout`|regproc|pg\_proc.oid|Type modifier output function, or 0 to use the standard format|
 |`typanalyze`|regproc|pg\_proc.oid|Custom `ANALYZE` function, or 0 to use the standard function|
-|`typalign`|char| |The alignment required when storing a value of this type. It applies to storage on disk as well as most representations of the value inside Greenplum Database. When multiple values are stored consecutively, such as in the representation of a complete row on disk, padding is inserted before a datum of this type so that it begins on the specified boundary. The alignment reference is the beginning of the first datum in the sequence. Possible values are: `c` = char alignment \(no alignment needed\).
-
-`s` = short alignment \(2 bytes on most machines\).
-
-`i` = int alignment \(4 bytes on most machines\).
-
-`d` = double alignment \(8 bytes on many machines, but not all\).
-
-|
-|`typstorage`|char| |For varlena types \(those with `typlen` = -1\) tells if the type is prepared for toasting and what the default strategy for attributes of this type should be. Possible values are:`p`: Value must always be stored plain.
-
-`e`: Value can be stored in a secondary relation \(if relation has one, see `pg_class.reltoastrelid`\).
-
-`m`: Value can be stored compressed inline.
-
-`x`: Value can be stored compressed inline or stored in secondary storage.
-
-Note that `m` columns can also be moved out to secondary storage, but only as a last resort \(`e` and `x` columns are moved first\).
-
-|
+|`typalign`|char| |The alignment required when storing a value of this type. It applies to storage on disk as well as most representations of the value inside Greenplum Database. When multiple values are stored consecutively, such as in the representation of a complete row on disk, padding is inserted before a datum of this type so that it begins on the specified boundary. The alignment reference is the beginning of the first datum in the sequence. Possible values are: <br/><br/>`c` = char alignment \(no alignment needed\).<br/><br/>`s` = short alignment \(2 bytes on most machines\).<br/><br/>`i` = int alignment \(4 bytes on most machines\).<br/><br/>`d` = double alignment \(8 bytes on many machines, but not all\).|
+|`typstorage`|char| |For varlena types \(those with `typlen` = -1\) tells if the type is prepared for toasting and what the default strategy for attributes of this type should be. Possible values are:<br/><br/>`p`: Value must always be stored plain.<br/><br/>`e`: Value can be stored in a secondary relation \(if relation has one, see `pg_class.reltoastrelid`\).<br/><br/>`m`: Value can be stored compressed inline.<br/><br/>`x`: Value can be stored compressed inline or stored in secondary storage.<br/><br/>Note that `m` columns can also be moved out to secondary storage, but only as a last resort \(`e` and `x` columns are moved first\).|
 |`typnotnull`|boolean| |Represents a not-null constraint on a type. Used for domains only.|
 |`typbasetype`|oid|pg\_type.oid|Identifies the type that a domain is based on. Zero if this type is not a domain.|
 |`typtypmod`|int4| |Domains use `typtypmod` to record the `typmod` to be applied to their base type \(-1 if base type does not use a `typmod`\). -1 if this type is not a domain.|

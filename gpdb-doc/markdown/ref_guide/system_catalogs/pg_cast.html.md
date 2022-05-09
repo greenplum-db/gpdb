@@ -18,13 +18,7 @@ When a `pg_cast` entry has different source and target types and a function that
 |`casttarget`|oid|pg\_type.oid|OID of the target data type.|
 |`castfunc`|oid|pg\_proc.oid|The OID of the function to use to perform this cast. Zero is stored if the cast method does not require a function.|
 |`castcontext`|char| |Indicates what contexts the cast may be invoked in. `e` means only as an explicit cast \(using `CAST` or `::` syntax\). `a` means implicitly in assignment to a target column, as well as explicitly. `i` means implicitly in expressions, as well as the other cases*.*|
-|`castmethod`|char| |Indicates how the cast is performed:`f` - The function identified in the `castfunc` field is used.
-
- `i` - The input/output functions are used.
-
- `b` - The types are binary-coercible, and no conversion is required.
-
-|
+|`castmethod`|char| |Indicates how the cast is performed:<br/><br/>`f` - The function identified in the `castfunc` field is used.<br/><br/>`i` - The input/output functions are used.<br/><br/>`b` - The types are binary-coercible, and no conversion is required.|
 
 **Parent topic:** [System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
 

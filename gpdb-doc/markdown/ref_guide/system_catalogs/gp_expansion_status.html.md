@@ -8,17 +8,7 @@ In a normal expansion operation it is not necessary to modify the data stored in
 
 |column|type|references|description|
 |------|----|----------|-----------|
-|`status`|text| |Tracks the status of an expansion operation. Valid values are:`SETUP`
-
-`SETUP DONE`
-
-`EXPANSION STARTED`
-
-`EXPANSION STOPPED`
-
-`COMPLETED`
-
-|
+|`status`|text| |Tracks the status of an expansion operation. Valid values are:<br/><br/>`SETUP`<br/><br/>`SETUP DONE`<br/><br/>`EXPANSION STARTED`<br/><br/>`EXPANSION STOPPED`<br/><br/>`COMPLETED`|
 |`updated`|timestamp without time zone| |Timestamp of the last change in status.|
 
 **Parent topic:** [System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)

@@ -16,15 +16,7 @@ The `gp_stat_replication` view contains replication statistics of the `walsender
 |`client_port`|integer| |Client port number.|
 |`backend_start`|timestamp| |Operation start timestamp.|
 |`backend_xmin`|xid| |The current backend's `xmin` horizon.|
-|`state`|text| |`walsender` state. The value can be:`startup`
-
-`backup`
-
-`catchup`
-
-`streaming`
-
-|
+|`state`|text| |`walsender` state. The value can be:<br/><br/>`startup`<br/><br/>`backup`<br/><br/>`catchup`<br/><br/>`streaming`|
 |`sent_location`|text| |`walsender` xlog record sent location.|
 |`write_location`|text| |`walreceiver` xlog record write location.|
 |`flush_location`|text| |`walreceiver` xlog record flush location.|

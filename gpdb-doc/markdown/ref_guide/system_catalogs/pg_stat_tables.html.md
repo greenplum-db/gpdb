@@ -23,15 +23,15 @@ The `pg_stat_user_tables` and `pg_stat_sys_table`s views contain the same inform
 |`n_dead_tup`|bigint|Estimated number of dead rows|
 |`n_mod_since_analyze`|bigint|Estimated number of rows modified since this table was last analyzed|
 |`last_vacuum`|timestamp with time zone|Last time this table was manually vacuumed \(not counting `VACUUM FULL`\)|
-|`last_autovacuum`|timestamp with time zone|Last time this table was vacuumed by the autovacuum daemon1|
+|`last_autovacuum`|timestamp with time zone|Last time this table was vacuumed by the autovacuum daemon<sup>1</sup>|
 |`last_analyze`|timestamp with time zone|Last time this table was manually analyzed|
-|`last_autoanalyze`|timestamp with time zone|Last time this table was analyzed by the autovacuum daemon1|
+|`last_autoanalyze`|timestamp with time zone|Last time this table was analyzed by the autovacuum daemon<sup>1</sup>|
 |`vacuum_count`|bigint|Number of times this table has been manually vacuumed \(not counting `VACUUM FULL`\)|
-|`autovacuum_count`|bigint|Number of times this table has been vacuumed by the autovacuum daemon1|
+|`autovacuum_count`|bigint|Number of times this table has been vacuumed by the autovacuum daemon<sup>1</sup>|
 |`analyze_count`|bigint|Number of times this table has been manually analyzed|
-|`autoanalyze_count`|bigint|Number of times this table has been analyzed by the autovacuum daemon 1|
+|`autoanalyze_count`|bigint|Number of times this table has been analyzed by the autovacuum daemon <sup>1</sup>|
 
-**Note:** 1 In Greenplum Database, the autovacuum daemon is disabled and not supported for user defined databases.
+**Note:** <sup>1</sup>In Greenplum Database, the autovacuum daemon is disabled and not supported for user defined databases.
 
 **Parent topic:** [System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
 
