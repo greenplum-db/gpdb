@@ -1736,9 +1736,13 @@ GRANT pg_read_all_settings TO pg_monitor;
 GRANT pg_read_all_stats TO pg_monitor;
 GRANT pg_stat_scan_tables TO pg_monitor;
 
--- GPDB_12_MERGE_FIXME: This seems out of place..
--- GPDB_12_MERGE_FIXME: Shouldn't we have a wrapper like this for
--- brin_summarize_range(), too?
+create or replace function brin_summarize_range(t regclass, block_number int8) returns setof bigint as 
+$$
+  -- brin_summarize_range_internal is marked as EXECUTE ON ALL SEGMENTS.
+  select sum(n.brin_summarize_range_internal) from (select brin_summarize_range_internal(t, block_number)) as n;
+$$
+LANGUAGE SQL READS SQL DATA EXECUTE ON COORDINATOR;
+
 create or replace function brin_summarize_new_values(t regclass) returns bigint as
 $$
   -- brin_summarize_new_values_internal is marked as EXECUTE ON ALL SEGMENTS.
