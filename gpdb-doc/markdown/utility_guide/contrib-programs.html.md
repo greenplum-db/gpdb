@@ -11,5 +11,5 @@ The following PostgreSQL `contrib` server utility programs are installed:
 -   `pg_upgrade_support` - supporting library for `pg_upgrade`.
 -   [pg\_xlogdump](https://www.postgresql.org/docs/9.4/pgxlogdump.html) - Server utility program to display a human-readable rendering of the write-ahead log of a Greenplum Database cluster.
 
-**Parent topic:**[Greenplum Database Utility Guide](utility_guide.html)
+**Parent topic:** [Greenplum Database Utility Guide](utility_guide.html)
 

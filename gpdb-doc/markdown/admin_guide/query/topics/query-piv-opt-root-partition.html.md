@@ -6,7 +6,7 @@ For a partitioned table, GPORCA uses statistics of the table root partition to g
 
 If you run queries on partitioned tables, you should collect statistics on the root partition and periodically update those statistics to ensure that GPORCA can generate optimal query plans. If the root partition statistics are not up-to-date or do not exist, GPORCA still performs dynamic partition elimination for queries against the table. However, the query plan might not be optimal.
 
-**Parent topic:**[About GPORCA](../../query/topics/query-piv-optimizer.html)
+**Parent topic:** [About GPORCA](../../query/topics/query-piv-optimizer.html)
 
 ## <a id="topic_w1y_srn_wbb"></a>Running ANALYZE 
 

@@ -44,5 +44,5 @@ In addition to the fault checking performed by the FTS, a primary segment that i
 -   **[Checking for Failed Segments](../../highavail/topics/g-checking-for-failed-segments.html)**  
 
 
-**Parent topic:**[Enabling High Availability and Data Consistency Features](../../highavail/topics/g-enabling-high-availability-features.html)
+**Parent topic:** [Enabling High Availability and Data Consistency Features](../../highavail/topics/g-enabling-high-availability-features.html)
 

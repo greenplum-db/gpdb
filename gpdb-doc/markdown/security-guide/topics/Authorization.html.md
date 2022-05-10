@@ -2,7 +2,7 @@
 
 Describes how to restrict authorization access to database data at the user level by using roles and permissions.
 
-**Parent topic:**[Greenplum Database Security Configuration Guide](../topics/preface.html)
+**Parent topic:** [Greenplum Database Security Configuration Guide](../topics/preface.html)
 
 ## <a id="topic_k35_qtx_kr"></a>Access Permissions and Roles 
 

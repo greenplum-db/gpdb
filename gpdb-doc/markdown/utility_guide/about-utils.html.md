@@ -2,7 +2,7 @@
 
 General information about using the Greenplum Database utility programs.
 
-**Parent topic:**[Greenplum Database Utility Guide](utility_guide.html)
+**Parent topic:** [Greenplum Database Utility Guide](utility_guide.html)
 
 ## <a id="ipv6"></a>Referencing IP Addresses 
 

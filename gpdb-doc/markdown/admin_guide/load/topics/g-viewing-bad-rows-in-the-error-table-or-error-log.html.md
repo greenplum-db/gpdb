@@ -25,5 +25,5 @@ SELECT gp_read_error_log('ext_expenses');
 
 For information about managing formatting errors that are logged internally, see the command `COPY` or `CREATE EXTERNAL TABLE` in the *Greenplum Database Reference Guide*.
 
-**Parent topic:**[Handling Load Errors](../../load/topics/g-handling-load-errors.html)
+**Parent topic:** [Handling Load Errors](../../load/topics/g-handling-load-errors.html)
 

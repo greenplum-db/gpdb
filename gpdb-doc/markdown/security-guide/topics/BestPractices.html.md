@@ -212,5 +212,5 @@ chmod 400 shadow gshadow
 
 ```
 
-**Parent topic:**[Greenplum Database Security Configuration Guide](../topics/preface.html)
+**Parent topic:** [Greenplum Database Security Configuration Guide](../topics/preface.html)
 

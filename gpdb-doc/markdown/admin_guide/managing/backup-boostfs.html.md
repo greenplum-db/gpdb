@@ -15,7 +15,7 @@ To back up or restore with BoostFS, you include the option `--backup-dir` with t
 -   **[Backing Up and Restoring with BoostFS](../managing/backup-boostfs.html)**  
 
 
-**Parent topic:**[Parallel Backup with gpbackup and gprestore](../managing/backup-gpbackup.html)
+**Parent topic:** [Parallel Backup with gpbackup and gprestore](../managing/backup-gpbackup.html)
 
 ## <a id="topic_zp4_mvv_bdb"></a>Installing BoostFS 
 
@@ -68,7 +68,7 @@ Perform the steps on all Greenplum Database hosts. The mounted directory you cre
 
 You can now run `gpbackup` and `gprestore` with the `--backup-dir` option to back up a database to `<mounted\_directory>` on the Data Domain system and restore data from the Data Domain system.
 
-**Parent topic:**[Using gpbackup and gprestore with BoostFS](../managing/backup-boostfs.html)
+**Parent topic:** [Using gpbackup and gprestore with BoostFS](../managing/backup-boostfs.html)
 
 ## <a id="topic_t4z_tvv_bdb"></a>Backing Up and Restoring with BoostFS 
 
@@ -97,5 +97,5 @@ $ gprestore --backup-dir /boostfs-test/ --timestamp 20171103153156 --create-db
 
 The value `20171103153156` is the timestamp of the `gpbackup` backup set to restore. For information about how `gpbackup` uses timesamps when creating backups, see [Parallel Backup with gpbackup and gprestore](backup-gpbackup.html). For information about the `-timestamp` option, see [gprestore](../../utility_guide/ref/gprestore.html).
 
-**Parent topic:**[Using gpbackup and gprestore with BoostFS](../managing/backup-boostfs.html)
+**Parent topic:** [Using gpbackup and gprestore with BoostFS](../managing/backup-boostfs.html)
 

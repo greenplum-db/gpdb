@@ -6,7 +6,7 @@ Describes how to encrypt data at rest in the database or in transit over the net
 -   Greenplum Database allows SSL encryption of data in transit between the Greenplum parallel file distribution server, `gpfdist`, and segment hosts. See [Encrypting gpfdist Connections](#gpfdist_connections) for more information. 
 -   The `pgcrypto` module of encryption/decryption functions protects data at rest in the database. Encryption at the column level protects sensitive information, such as social security numbers or credit card numbers. See [Encrypting Data at Rest with pgcrypto](#pgcrypto) for more information.
 
-**Parent topic:**[Greenplum Database Security Configuration Guide](../topics/preface.html)
+**Parent topic:** [Greenplum Database Security Configuration Guide](../topics/preface.html)
 
 ## <a id="gpfdist_connections"></a>Encrypting gpfdist Connections 
 

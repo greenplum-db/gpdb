@@ -273,5 +273,5 @@ The following table describes the contents of the columns in the list that is ou
 
 [gprestore](gprestore.html), [Parallel Backup with gpbackup and gprestore](../../admin_guide/managing/backup-gpbackup.html) and [Using the S3 Storage Plugin with gpbackup and gprestore](../../admin_guide/managing/backup-s3-plugin.html)
 
-**Parent topic:**[Backup Utility Reference](../../backup-utilities.html)
+**Parent topic:** [Backup Utility Reference](../../backup-utilities.html)
 

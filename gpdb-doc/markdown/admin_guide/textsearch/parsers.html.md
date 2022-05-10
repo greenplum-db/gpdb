@@ -66,5 +66,5 @@ SELECT alias, description, token FROM ts_debug('http://example.com/stuff/index.h
  url_path | URL path      | /stuff/index.html
 ```
 
-**Parent topic:**[Using Full Text Search](../textsearch/full-text-search.html)
+**Parent topic:** [Using Full Text Search](../textsearch/full-text-search.html)
 

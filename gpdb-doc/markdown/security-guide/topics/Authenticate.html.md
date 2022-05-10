@@ -10,7 +10,7 @@ When a Greenplum Database system is first initialized, the system contains one p
 -   [Limiting Concurrent Connections](#topic_hwn_bk2_jr)
 -   [Encrypting Client/Server Connections](#topic_ibc_nl2_jr)
 
-**Parent topic:**[Greenplum Database Security Configuration Guide](../topics/preface.html)
+**Parent topic:** [Greenplum Database Security Configuration Guide](../topics/preface.html)
 
 ## <a id="topic_ln1_ptd_jr"></a>Allowing Connections to Greenplum Database 
 

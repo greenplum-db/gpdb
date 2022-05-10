@@ -20,5 +20,5 @@ For more information about configuring `gpfdist`, see [Using the Greenplum Paral
 
 See the `gpfdist` reference documentation for more information about using `gpfdist` with external tables.
 
-**Parent topic:**[Defining External Tables](../external/g-external-tables.html)
+**Parent topic:** [Defining External Tables](../external/g-external-tables.html)
 

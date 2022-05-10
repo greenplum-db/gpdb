@@ -29,7 +29,7 @@ Kubernetes enables quick recovery from both pod and host failures, and Kubernete
 
 **Note:** Automating the configuration steps described in this topic and [Installing the Greenplum Database Software](install_gpdb.html) with a system provisioning tool, such as Ansible, Chef, or Puppet, can save time and ensure a reliable and repeatable Greenplum Database installation.
 
-**Parent topic:**[Installing and Upgrading Greenplum](install_guide.html)
+**Parent topic:** [Installing and Upgrading Greenplum](install_guide.html)
 
 ## <a id="topic_sqj_lt1_nfb"></a>Disable or Configure SELinux 
 

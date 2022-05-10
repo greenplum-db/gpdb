@@ -16,5 +16,5 @@ The Minor release number for a given Major release increments when backwards com
 
 Greenplum Database increments the Patch release number for a given Minor release for backwards-compatible bug fixes.
 
-**Parent topic:**[Managing a Greenplum System](../managing/partII.html)
+**Parent topic:** [Managing a Greenplum System](../managing/partII.html)
 

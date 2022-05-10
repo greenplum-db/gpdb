@@ -78,5 +78,5 @@ The following are the Greenplum security-related audit \(or logging\) server con
 |log\_statement\_stats |Boolean |off |For each query, write total performance statistics of the query parser, planner, and executor to the server log. This is a crude profiling instrument. |
 |log\_truncate\_on\_rotation |Boolean |off |Truncates \(overwrites\), rather than appends to, any existing log file of the same name. Truncation will occur only when a new file is being opened due to time-based rotation. For example, using this setting in combination with a log\_filename such as gpseg\#-%H.log would result in generating twenty-four hourly log files and then cyclically overwriting them. When off, pre-existing files will be appended to in all cases. |
 
-**Parent topic:**[Greenplum Database Security Configuration Guide](../topics/preface.html)
+**Parent topic:** [Greenplum Database Security Configuration Guide](../topics/preface.html)
 
