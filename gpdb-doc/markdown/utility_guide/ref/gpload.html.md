@@ -19,7 +19,7 @@ gpload --version
 The client machine where `gpload` is run must have the following:
 
 -   The [gpfdist](gpfdist.html) parallel file distribution program installed and in your `$PATH`. This program is located in `$GPHOME/bin` of your Greenplum Database server installation.
--   Network access to and from all hosts in your Greenplum Database array \(coordinator and segments\).
+-   Network access to and from all hosts in your Greenplum Database array \(master and segments\).
 -   Network access to and from the hosts where the data to be loaded resides \(ETL servers\).
 
 ## <a id="section4"></a>Description 
@@ -74,10 +74,10 @@ The operation, including any SQL commands specified in the `SQL` collection of t
 :   The database to load into. If not specified, reads from the load control file, the environment variable `$PGDATABASE` or defaults to the current system user name.
 
 -h hostname
-:   Specifies the host name of the machine on which the Greenplum Database coordinator database server is running. If not specified, reads from the load control file, the environment variable `$PGHOST` or defaults to `localhost`.
+:   Specifies the host name of the machine on which the Greenplum Database master database server is running. If not specified, reads from the load control file, the environment variable `$PGHOST` or defaults to `localhost`.
 
 -p port
-:   Specifies the TCP port on which the Greenplum Database coordinator database server is listening for connections. If not specified, reads from the load control file, the environment variable `$PGPORT` or defaults to 5432.
+:   Specifies the TCP port on which the Greenplum Database master database server is listening for connections. If not specified, reads from the load control file, the environment variable `$PGPORT` or defaults to 5432.
 
 --max\_retries retry\_times
 :   Specifies the maximum number of times `gpload` attempts to connect to Greenplum Database after a connection timeout. The default value is `0`, do not attempt to connect after a connection timeout. A negative integer, such as `-1`, specifies an unlimited number of attempts.
@@ -101,8 +101,8 @@ The basic structure of a load control file is:
 [VERSION](#cfversion): 1.0.0.1
 [DATABASE](#cfdatabase): <db_name>
 [USER](#cfuser): <db_username>
-[HOST](#cfhost): <coordinator_hostname>
-[PORT](#cfport): <coordinator_port>
+[HOST](#cfhost): <master_hostname>
+[PORT](#cfport): <master_port>
 [GPLOAD](#cfgpload):
    [INPUT](#cfinput):
     - [SOURCE](#cfsource):
@@ -166,16 +166,16 @@ USER
 :   If the user running `gpload` is not a Greenplum Database superuser, then the appropriate rights must be granted to the user for the load to be processed. See the *Greenplum Database Reference Guide* for more information.
 
 HOST
-:   Optional. Specifies Greenplum Database coordinator host name. If not specified, defaults to localhost or `$PGHOST` if set. You can also specify the coordinator host name on the command line using the `-h` option.
+:   Optional. Specifies Greenplum Database master host name. If not specified, defaults to localhost or `$PGHOST` if set. You can also specify the master host name on the command line using the `-h` option.
 
 PORT
-:   Optional. Specifies Greenplum Database coordinator port. If not specified, defaults to 5432 or `$PGPORT` if set. You can also specify the coordinator port on the command line using the `-p` option.
+:   Optional. Specifies Greenplum Database master port. If not specified, defaults to 5432 or `$PGPORT` if set. You can also specify the master port on the command line using the `-p` option.
 
 GPLOAD
 :   Required. Begins the load specification section. A `GPLOAD` specification must have an `INPUT` and an `OUTPUT` section defined.
 
     INPUT
-    :   Required. Defines the location and the format of the input data to be loaded. `gpload` will start one or more instances of the [gpfdist](gpfdist.html) file distribution program on the current host and create the required external table definition\(s\) in Greenplum Database that point to the source data. Note that the host from which you run `gpload` must be accessible over the network by all Greenplum Database hosts \(coordinator and segments\).
+    :   Required. Defines the location and the format of the input data to be loaded. `gpload` will start one or more instances of the [gpfdist](gpfdist.html) file distribution program on the current host and create the required external table definition\(s\) in Greenplum Database that point to the source data. Note that the host from which you run `gpload` must be accessible over the network by all Greenplum Database hosts \(master and segments\).
 
         SOURCE
         :   Required. The `SOURCE` block of an `INPUT` specification defines the location of a source file. An `INPUT` section can have more than one `SOURCE` block defined. Each `SOURCE` block defined corresponds to one instance of the [gpfdist](gpfdist.html) file distribution program that will be started on the local machine. Each `SOURCE` block defined must have a `FILE` specification.
@@ -437,7 +437,7 @@ Example load control file:
 VERSION: 1.0.0.1
 DATABASE: ops
 USER: gpadmin
-HOST: cdw-1
+HOST: mdw-1
 PORT: 5432
 GPLOAD:
    INPUT:

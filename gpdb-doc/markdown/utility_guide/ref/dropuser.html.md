@@ -41,10 +41,10 @@ role\_name
 **Connection Options**
 
 -h host \| --host=host
-:   The host name of the machine on which the Greenplum coordinator database server is running. If not specified, reads from the environment variable `PGHOST` or defaults to localhost.
+:   The host name of the machine on which the Greenplum master database server is running. If not specified, reads from the environment variable `PGHOST` or defaults to localhost.
 
 -p port \| --port=port
-:   The TCP port on which the Greenplum coordinator database server is listening for connections. If not specified, reads from the environment variable `PGPORT` or defaults to 5432.
+:   The TCP port on which the Greenplum master database server is listening for connections. If not specified, reads from the environment variable `PGPORT` or defaults to 5432.
 
 -U username \| --username=username
 :   The database role name to connect as. If not specified, reads from the environment variable `PGUSER` or defaults to the current system role name.
@@ -67,7 +67,7 @@ DROP ROLE
 To remove the role joe using connection options, with verification, and a peek at the underlying command:
 
 ```
-dropuser -p 54321 -h coordinatorhost -i -e joe
+dropuser -p 54321 -h masterhost -i -e joe
 Role "joe" will be permanently removed.
 Are you sure? (y/n) y
 DROP ROLE "joe"

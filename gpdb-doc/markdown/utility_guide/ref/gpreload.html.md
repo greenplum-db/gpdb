@@ -46,7 +46,7 @@ For a partitioned table, you can reload the data of a leaf child partition. Howe
 :   The database that contains the tables to be reloaded. The `gpreload` utility connects to the database as the user running the utility.
 
 -p port
-:   The Greenplum Database coordinator port. If not specified, the value of the `PGPORT` environment variable is used. If the value is not available, an error is returned.
+:   The Greenplum Database master port. If not specified, the value of the `PGPORT` environment variable is used. If the value is not available, an error is returned.
 
 \{-t \| --table-file \} path\_to\_file
 :   The location and name of file containing list of schema qualified table names to reload and the column names to reorder from the Greenplum Database. Only user defined tables are supported. Views or system catalog tables are not supported.

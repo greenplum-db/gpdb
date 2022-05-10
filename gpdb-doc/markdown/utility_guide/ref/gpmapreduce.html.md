@@ -60,10 +60,10 @@ The following are required prior to running this program:
 **Connection Options**
 
 -h host \| --host host
-:   Specifies the host name of the machine on which the Greenplum coordinator database server is running. If not specified, reads from the environment variable `PGHOST` or defaults to localhost.
+:   Specifies the host name of the machine on which the Greenplum master database server is running. If not specified, reads from the environment variable `PGHOST` or defaults to localhost.
 
 -p port \| --port port
-:   Specifies the TCP port on which the Greenplum coordinator database server is listening for connections. If not specified, reads from the environment variable `PGPORT` or defaults to 5432.
+:   Specifies the TCP port on which the Greenplum master database server is listening for connections. If not specified, reads from the environment variable `PGPORT` or defaults to 5432.
 
 -U username \| --username username
 :   The database role name to connect as. If not specified, reads from the environment variable `PGUSER` or defaults to the current system user name.

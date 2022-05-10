@@ -30,7 +30,7 @@ gpexpand --version
     -   Creating the `gpadmin` user account
     -   Exchanging SSH keys.
 -   Enough disk space on your segment hosts to temporarily hold a copy of your largest table.
--   When redistributing data, Greenplum Database must be running in production mode. Greenplum Database cannot be running in restricted mode or in coordinator mode. The `gpstart` options `-R` or `-m` cannot be specified to start Greenplum Database.
+-   When redistributing data, Greenplum Database must be running in production mode. Greenplum Database cannot be running in restricted mode or in master mode. The `gpstart` options `-R` or `-m` cannot be specified to start Greenplum Database.
 
 **Note:** These utilities cannot be run while `gpexpand` is performing segment initialization.
 
@@ -134,7 +134,7 @@ When expanding a Greenplum Database system, you can specify either a hostname or
 -   If you specify a hostname, the resolution of the hostname to an IP address should be done locally for security. For example, you should use entries in a local `/etc/hosts` file to map a hostname to an IP address. The resolution of a hostname to an IP address should not be performed by an external service such as a public DNS server. You must stop the Greenplum system before you change the mapping of a hostname to a different IP address.
 -   If you specify an IP address, the address should not be changed after the initial configuration. When segment mirroring is enabled, replication from the primary to the mirror segment will fail if the IP address changes from the configured value. For this reason, you should use a hostname when expanding a Greenplum Database system unless you have a specific requirement to use IP addresses.
 
-When expanding a Greenplum system, `gpexpand` populates [gp\_segment\_configuration](../../ref_guide/system_catalogs/gp_segment_configuration.html) catalog table with the new segment instance information. Greenplum Database uses the `address` value of the `gp_segment_configuration` catalog table when looking up host systems for Greenplum interconnect \(internal\) communication between the coordinator and segment instances and between segment instances, and for other internal communication.
+When expanding a Greenplum system, `gpexpand` populates [gp\_segment\_configuration](../../ref_guide/system_catalogs/gp_segment_configuration.html) catalog table with the new segment instance information. Greenplum Database uses the `address` value of the `gp_segment_configuration` catalog table when looking up host systems for Greenplum interconnect \(internal\) communication between the master and segment instances and between segment instances, and for other internal communication.
 
 ## <a id="multi_nic"></a>Using Host Systems with Multiple NICs 
 

@@ -29,7 +29,7 @@ analyzedb { -? | -h | --help }
 
 The analyzedb utility updates statistics on table data for the specified tables in a Greenplum database incrementally and concurrently.
 
-While performing [ANALYZE](../../ref_guide/sql_commands/ANALYZE.html) operations, analyzedb creates a snapshot of the table metadata and stores it on disk on the coordinator host. An `ANALYZE` operation is performed only if the table has been modified. If a table or partition has not been modified since the last time it was analyzed, analyzedb automatically skips the table or partition because it already contains up-to-date statistics.
+While performing [ANALYZE](../../ref_guide/sql_commands/ANALYZE.html) operations, analyzedb creates a snapshot of the table metadata and stores it on disk on the master host. An `ANALYZE` operation is performed only if the table has been modified. If a table or partition has not been modified since the last time it was analyzed, analyzedb automatically skips the table or partition because it already contains up-to-date statistics.
 
 -   For append optimized tables, analyzedb updates statistics incrementally, if the statistics are not current. For example, if table data is changed after statistics were collected for the table. If there are no statistics for the table, statistics are collected.
 -   For heap tables, statistics are always updated.
@@ -41,6 +41,8 @@ By default, analyzedb creates a maximum of 5 concurrent sessions to analyze tabl
 **Partitioned Append-Optimized Tables**
 
 For a partitioned, append-optimized table, analyzedb checks the partitioned table root partition and leaf partitions. If needed, the utility updates statistics for non-current partitions and the root partition. For information about how statistics are collected for partitioned tables, see [ANALYZE](../../ref_guide/sql_commands/ANALYZE.html).
+
+The root partition statistics is required by GPORCA. The `analyzedb` utility collects statistics on the root partition of a partitioned table if the statistics do not exist. If any of the leaf partitions have stale statistics, `analyzedb` also refreshes the root partition statistics. The cost of refreshing the root level statistics is comparable to analyzing one leaf partition.
 
 ## <a id="notes"></a>Notes 
 

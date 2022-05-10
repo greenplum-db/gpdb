@@ -14,7 +14,7 @@ pg_config --version
 
 ## <a id="section3"></a>Description 
 
-The `pg_config` utility prints configuration parameters of the currently installed version of Greenplum Database. It is intended, for example, to be used by software packages that want to interface to Greenplum Database to facilitate finding the required header files and libraries. Note that information printed out by `pg_config` is for the Greenplum Database coordinator only.
+The `pg_config` utility prints configuration parameters of the currently installed version of Greenplum Database. It is intended, for example, to be used by software packages that want to interface to Greenplum Database to facilitate finding the required header files and libraries. Note that information printed out by `pg_config` is for the Greenplum Database master only.
 
 If more than one option is given, the information is printed in that order, one item per line. If no options are given, all available information is printed, with labels.
 

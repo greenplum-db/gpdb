@@ -55,6 +55,8 @@ Greenplum Database provides the following utility programs. Superscripts identif
 - [pg\_dump](ref/pg_dump.html)<sup>3</sup>
 - [pg\_dumpall](ref/pg_dumpall.html)<sup>3</sup>
 - [pg\_restore](ref/pg_restore.html)
+- [pgbouncer](ref/pgbouncer.html)
+- [pgbouncer.ini](ref/pgbouncer-ini.html)
 - [plcontainer](ref/plcontainer.html)
 - [plcontainer Configuration File](ref/plcontainer-configuration.html)
 - [psql](ref/psql.html)<sup>3</sup>

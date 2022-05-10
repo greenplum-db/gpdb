@@ -10,8 +10,8 @@ gpmapreduce configuration file.
 [VERSION](#VERSION): 1.0.0.2
 [DATABASE](#DATABASE): dbname
 [USER](#USER): db_username
-[HOST](#HOST): coordinator_hostname
-[PORT](#PORT): coordinator_port
+[HOST](#HOST): master_hostname
+[PORT](#PORT): master_port
 ```
 
 ```
@@ -119,10 +119,10 @@ USER
 :   Optional. Specifies which database role to use to connect. If not specified, defaults to the current user or `$PGUSER` if set. You must be a Greenplum superuser to run functions written in untrusted Python and Perl. Regular database users can run functions written in trusted Perl. You also must be a database superuser to run MapReduce jobs that contain [FILE](#FILE), [GPFDIST](#GPFDIST) and [EXEC](#EXEC) input types.
 
 HOST
-:   Optional. Specifies Greenplum coordinator host name. If not specified, defaults to localhost or `$PGHOST` if set.
+:   Optional. Specifies Greenplum master host name. If not specified, defaults to localhost or `$PGHOST` if set.
 
 PORT
-:   Optional. Specifies Greenplum coordinator port. If not specified, defaults to 5432 or `$PGPORT` if set.
+:   Optional. Specifies Greenplum master port. If not specified, defaults to 5432 or `$PGPORT` if set.
 
 DEFINE
 :   Required. A sequence of definitions for this MapReduce document. The `DEFINE` section must have at least one `INPUT` definition.
@@ -212,7 +212,7 @@ DEFINE
         :   Required when [FUNCTION](#FUNCTION) is used. Specifies the implementation language used to interpret the function. This release has language support for `perl`, `python`, and `C`. If calling a built-in database function, `LANGUAGE` should not be specified.
 
         LIBRARY
-        :   Required when [LANGUAGE](#LANGUAGE) is C \(not allowed for other language functions\). To use this attribute, [VERSION](#VERSION) must be 1.0.0.2. The specified library file must be installed prior to running the MapReduce job, and it must exist in the same file system location on all Greenplum hosts \(coordinator and segments\).
+        :   Required when [LANGUAGE](#LANGUAGE) is C \(not allowed for other language functions\). To use this attribute, [VERSION](#VERSION) must be 1.0.0.2. The specified library file must be installed prior to running the MapReduce job, and it must exist in the same file system location on all Greenplum hosts \(master and segments\).
 
         PARAMETERS
         :   Optional. Function input parameters. The default type is `text`.

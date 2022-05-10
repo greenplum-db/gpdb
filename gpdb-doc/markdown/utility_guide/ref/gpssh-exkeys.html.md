@@ -18,15 +18,15 @@ gpssh-exkeys --version
 
 The `gpssh-exkeys` utility exchanges SSH keys between the specified host names \(or host addresses\). This allows SSH connections between Greenplum hosts and network interfaces without a password prompt. The utility is used to initially prepare a Greenplum Database system for passwordless SSH access, and also to prepare additional hosts for passwordless SSH access when expanding a Greenplum Database system.
 
-Keys are exchanged as the currently logged in user. You run the utility on the coordinator host as the `gpadmin` user \(the user designated to own your Greenplum Database installation\). Greenplum Database management utilities require that the `gpadmin` user be created on all hosts in the Greenplum Database system, and the utilities must be able to connect as that user to all hosts without a password prompt.
+Keys are exchanged as the currently logged in user. You run the utility on the master host as the `gpadmin` user \(the user designated to own your Greenplum Database installation\). Greenplum Database management utilities require that the `gpadmin` user be created on all hosts in the Greenplum Database system, and the utilities must be able to connect as that user to all hosts without a password prompt.
 
 You can also use `gpssh-exkeys` to enable passwordless SSH for additional users, `root`, for example.
 
 The `gpssh-exkeys` utility has the following prerequisites:
 
--   The user must have an account on the coordinator, standby, and every segment host in the Greenplum Database cluster.
--   The user must have an `id_rsa` SSH key pair installed on the coordinator host.
--   The user must be able to connect with SSH from the coordinator host to every other host machine without entering a password. \(This is called "1-*n* passwordless SSH."\)
+-   The user must have an account on the master, standby, and every segment host in the Greenplum Database cluster.
+-   The user must have an `id_rsa` SSH key pair installed on the master host.
+-   The user must be able to connect with SSH from the master host to every other host machine without entering a password. \(This is called "1-*n* passwordless SSH."\)
 
 You can enable 1-*n* passwordless SSH using the `ssh-copy-id` command to add the user's public key to each host's `authorized_keys` file. The `gpssh-exkeys` utility enables "*n*-*n* passwordless SSH," which allows the user to connect with SSH from any host to any other host in the cluster without a password.
 
@@ -45,10 +45,10 @@ The `gpssh-exkeys` utility performs key exchange using the following steps:
 ## <a id="section4"></a>Options 
 
 -e hostfile\_exkeys
-:   When doing a system expansion, this is the name and location of a file containing all configured host names and host addresses \(interface names\) for each host in your current Greenplum system \(coordinator, standby coordinator, and segments\), one name per line without blank lines or extra spaces. Hosts specified in this file cannot be specified in the host file used with `-x`.
+:   When doing a system expansion, this is the name and location of a file containing all configured host names and host addresses \(interface names\) for each host in your current Greenplum system \(master, standby master, and segments\), one name per line without blank lines or extra spaces. Hosts specified in this file cannot be specified in the host file used with `-x`.
 
 -f hostfile\_exkeys
-:   Specifies the name and location of a file containing all configured host names and host addresses \(interface names\) for each host in your Greenplum system \(coordinator, standby coordinator and segments\), one name per line without blank lines or extra spaces.
+:   Specifies the name and location of a file containing all configured host names and host addresses \(interface names\) for each host in your Greenplum system \(master, standby master and segments\), one name per line without blank lines or extra spaces.
 
 -h hostname
 :   Specifies a single host name \(or host address\) that will participate in the SSH key exchange. You can use the `-h` option multiple times to specify multiple host names and host addresses.
@@ -80,12 +80,12 @@ Exchange SSH keys between existing hosts `sdw1`, `sdw2`, and `sdw3`, and new hos
 
 ```
 $ cat hostfile_exkeys
-cdw
-cdw-1
-cdw-2
-scdw
-scdw-1
-scdw-2
+mdw
+mdw-1
+mdw-2
+smdw
+smdw-1
+smdw-2
 sdw1
 sdw1-1
 sdw1-2

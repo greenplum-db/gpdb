@@ -22,7 +22,7 @@ Since `pg_dumpall` reads tables from all databases you will most likely have to 
 
 The SQL script will be written to the standard output. Use the `[-f | --file]` option or shell operators to redirect it into a file.
 
-`pg_dumpall` needs to connect several times to the Greenplum Database coordinator server \(once per database\). If you use password authentication it is likely to ask for a password each time. It is convenient to have a `~/.pgpass` file in such cases.
+`pg_dumpall` needs to connect several times to the Greenplum Database master server \(once per database\). If you use password authentication it is likely to ask for a password each time. It is convenient to have a `~/.pgpass` file in such cases.
 
 ## <a id="section4"></a>Options 
 
@@ -127,13 +127,13 @@ The SQL script will be written to the standard output. Use the `[-f | --file]` o
 :   The option is called `--dbname` for consistency with other client applications, but because `pg_dumpall` needs to connect to many databases, the database name in the connection string will be ignored. Use the `-l` option to specify the name of the database used to dump global objects and to discover what other databases should be dumped.
 
 -h host \| --host=host
-:   The host name of the machine on which the Greenplum coordinator database server is running. If not specified, reads from the environment variable `PGHOST` or defaults to `localhost`.
+:   The host name of the machine on which the Greenplum master database server is running. If not specified, reads from the environment variable `PGHOST` or defaults to `localhost`.
 
 -l dbname \| --database=dbname
 :   Specifies the name of the database in which to connect to dump global objects. If not specified, the `postgres` database is used. If the `postgres` database does not exist, the `template1` database is used.
 
 -p port \| --port=port
-:   The TCP port on which the Greenplum coordinator database server is listening for connections. If not specified, reads from the environment variable `PGPORT` or defaults to 5432.
+:   The TCP port on which the Greenplum master database server is listening for connections. If not specified, reads from the environment variable `PGPORT` or defaults to 5432.
 
 -U username \| --username= username
 :   The database role name to connect as. If not specified, reads from the environment variable `PGUSER` or defaults to the current system role name.

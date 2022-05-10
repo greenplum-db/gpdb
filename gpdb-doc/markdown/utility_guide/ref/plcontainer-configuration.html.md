@@ -1,6 +1,6 @@
 # plcontainer Configuration File 
 
-The Greenplum Database utility `plcontainer` manages the PL/Container configuration files in a Greenplum Database system. The utility ensures that the configuration files are consistent across the Greenplum Database coordinator and segment instances.
+The Greenplum Database utility `plcontainer` manages the PL/Container configuration files in a Greenplum Database system. The utility ensures that the configuration files are consistent across the Greenplum Database master and segment instances.
 
 **Warning:** Modifying the configuration files on the segment instances without using the utility might create different, incompatible configurations on different Greenplum Database segments that could cause unexpected behavior.
 
@@ -145,7 +145,7 @@ settings
 
 ## <a id="topic_v3s_qv3_kw"></a>Update the PL/Container Configuration 
 
-You can add a `runtime` element to the PL/Container configuration file with the `plcontainer runtime-add` command. The command options specify information such as the runtime ID, Docker image, and language. You can use the `plcontainer runtime-replace` command to update an existing `runtime` element. The utility updates the configuration file on the coordinator and all segment instances.
+You can add a `runtime` element to the PL/Container configuration file with the `plcontainer runtime-add` command. The command options specify information such as the runtime ID, Docker image, and language. You can use the `plcontainer runtime-replace` command to update an existing `runtime` element. The utility updates the configuration file on the master and all segment instances.
 
 The PL/Container configuration file can contain multiple `runtime` elements that reference the same Docker image specified by the XML element `image`. In the example configuration file, the `runtime` elements contain `id` elements named `plc_python_128` and `plc_python_256`, both referencing the Docker container `pivotaldata/plcontainer_python:1.0.0`. The first `runtime` element is defined with a 128MB RAM limit and the second one with a 256MB RAM limit.
 
@@ -175,5 +175,5 @@ Configuration changes that are made with the utility are applied to the XML file
 SELECT * FROM plcontainer_refresh_config;
 ```
 
-The command runs a PL/Container function that updates the session configuration on the coordinator and segment instances.
+The command runs a PL/Container function that updates the session configuration on the master and segment instances.
 

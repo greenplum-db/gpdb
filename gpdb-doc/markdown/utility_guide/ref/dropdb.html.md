@@ -41,10 +41,10 @@ dbname
 **Connection Options**
 
 -h host \| --host=host
-:   The host name of the machine on which the Greenplum coordinator database server is running. If not specified, reads from the environment variable `PGHOST` or defaults to localhost.
+:   The host name of the machine on which the Greenplum master database server is running. If not specified, reads from the environment variable `PGHOST` or defaults to localhost.
 
 -p port \| --port=port
-:   The TCP port on which the Greenplum coordinator database server is listening for connections. If not specified, reads from the environment variable `PGPORT` or defaults to 5432.
+:   The TCP port on which the Greenplum master database server is listening for connections. If not specified, reads from the environment variable `PGPORT` or defaults to 5432.
 
 -U username \| --username=username
 :   The database role name to connect as. If not specified, reads from the environment variable `PGUSER` or defaults to the current system role name.
@@ -69,7 +69,7 @@ dropdb demo
 To destroy the database named `demo` using connection options, with verification, and a peek at the underlying command:
 
 ```
-dropdb -p 54321 -h coordinatorhost -i -e demo
+dropdb -p 54321 -h masterhost -i -e demo
 Database "demo" will be permanently deleted.
 Are you sure? (y/n) y
 DROP DATABASE "demo"

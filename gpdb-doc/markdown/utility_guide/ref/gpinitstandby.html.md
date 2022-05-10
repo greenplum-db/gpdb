@@ -1,6 +1,6 @@
 # gpinitstandby 
 
-Adds and/or initializes a standby coordinator host for a Greenplum Database system.
+Adds and/or initializes a standby master host for a Greenplum Database system.
 
 ## <a id="section2"></a>Synopsis 
 
@@ -16,25 +16,25 @@ gpinitstandby -?
 
 ## <a id="section3"></a>Description 
 
-The `gpinitstandby` utility adds a backup, standby coordinator instance to your Greenplum Database system. If your system has an existing standby coordinator instance configured, use the `-r` option to remove it before adding the new standby coordinator instance.
+The `gpinitstandby` utility adds a backup, standby master instance to your Greenplum Database system. If your system has an existing standby master instance configured, use the `-r` option to remove it before adding the new standby master instance.
 
-Before running this utility, make sure that the Greenplum Database software is installed on the standby coordinator host and that you have exchanged SSH keys between the hosts. It is recommended that the coordinator port is set to the same port number on the coordinator host and the standby coordinator host.
+Before running this utility, make sure that the Greenplum Database software is installed on the standby master host and that you have exchanged SSH keys between the hosts. It is recommended that the master port is set to the same port number on the master host and the standby master host.
 
-This utility should be run on the currently active *primary* coordinator host.See the *Greenplum Database Installation Guide* for instructions.
+This utility should be run on the currently active *primary* master host.See the *Greenplum Database Installation Guide* for instructions.
 
 The utility performs the following steps:
 
--   Updates the Greenplum Database system catalog to remove the existing standby coordinator information \(if the `-r` option is supplied\)
--   Updates the Greenplum Database system catalog to add the new standby coordinator instance information
--   Edits the `pg_hba.conf` file of the Greenplum Database coordinator to allow access from the newly added standby coordinator
--   Sets up the standby coordinator instance on the alternate coordinator host
+-   Updates the Greenplum Database system catalog to remove the existing standby master information \(if the `-r` option is supplied\)
+-   Updates the Greenplum Database system catalog to add the new standby master instance information
+-   Edits the `pg_hba.conf` file of the Greenplum Database master to allow access from the newly added standby master
+-   Sets up the standby master instance on the alternate master host
 -   Starts the synchronization process
 
-A backup, standby coordinator instance serves as a 'warm standby' in the event of the primary coordinator becoming non-operational. The standby coordinator is kept up to date by transaction log replication processes \(the `walsender` and `walreceiver`\), which run on the primary coordinator and standby coordinator hosts and keep the data between the primary and standby coordinator instances synchronized. If the primary coordinator fails, the log replication process is shut down, and the standby coordinator can be activated in its place by using the `gpactivatestandby` utility. Upon activation of the standby coordinator, the replicated logs are used to reconstruct the state of the coordinator instance at the time of the last successfully committed transaction.
+A backup, standby master instance serves as a 'warm standby' in the event of the primary master becoming non-operational. The standby master is kept up to date by transaction log replication processes \(the `walsender` and `walreceiver`\), which run on the primary master and standby master hosts and keep the data between the primary and standby master instances synchronized. If the primary master fails, the log replication process is shut down, and the standby master can be activated in its place by using the `gpactivatestandby` utility. Upon activation of the standby master, the replicated logs are used to reconstruct the state of the master instance at the time of the last successfully committed transaction.
 
-The activated standby coordinator effectively becomes the Greenplum Database coordinator, accepting client connections on the coordinator port and performing normal coordinator operations such as SQL command processing and resource management.
+The activated standby master effectively becomes the Greenplum Database master, accepting client connections on the master port and performing normal master operations such as SQL command processing and resource management.
 
-**Important:** If the `gpinitstandby` utility previously failed to initialize the standby coordinator, you must delete the files in the standby coordinator data directory before running `gpinitstandby` again. The standby coordinator data directory is not cleaned up after an initialization failure because it contains log files that can help in determining the reason for the failure.
+**Important:** If the `gpinitstandby` utility previously failed to initialize the standby master, you must delete the files in the standby master data directory before running `gpinitstandby` again. The standby master data directory is not cleaned up after an initialization failure because it contains log files that can help in determining the reason for the failure.
 
 If an initialization failure occurs, a summary report file is generated in the standby host directory `/tmp`. The report file lists the directories on the standby host that require clean up.
 
@@ -52,27 +52,27 @@ If an initialization failure occurs, a summary report file is generated in the s
 -l logfile\_directory
 :   The directory to write the log file. Defaults to `~/gpAdminLogs`.
 
--n \(restart standby coordinator\)
-:   Specify this option to start a Greenplum Database standby coordinator that has been configured but has stopped for some reason.
+-n \(restart standby master\)
+:   Specify this option to start a Greenplum Database standby master that has been configured but has stopped for some reason.
 
 -P port
-:   This option specifies the port that is used by the Greenplum Database standby coordinator. The default is the same port used by the active Greenplum Database coordinator.
+:   This option specifies the port that is used by the Greenplum Database standby master. The default is the same port used by the active Greenplum Database master.
 
-:   If the Greenplum Database standby coordinator is on the same host as the active coordinator, the ports must be different. If the ports are the same for the active and standby coordinator and the host is the same, the utility returns an error.
+:   If the Greenplum Database standby master is on the same host as the active master, the ports must be different. If the ports are the same for the active and standby master and the host is the same, the utility returns an error.
 
 -q \(no screen output\)
 :   Run in quiet mode. Command output is not displayed on the screen, but is still written to the log file.
 
--r \(remove standby coordinator\)
-:   Removes the currently configured standby coordinator instance from your Greenplum Database system.
+-r \(remove standby master\)
+:   Removes the currently configured standby master instance from your Greenplum Database system.
 
 -s standby\_hostname
-:   The host name of the standby coordinator host.
+:   The host name of the standby master host.
 
 -S standby\_data\_directory
-:   The data directory to use for a new standby coordinator. The default is the same directory used by the active coordinator.
+:   The data directory to use for a new standby master. The default is the same directory used by the active master.
 
-:   If the standby coordinator is on the same host as the active coordinator, a different directory must be specified using this option.
+:   If the standby master is on the same host as the active master, a different directory must be specified using this option.
 
 -v \(show utility version\)
 :   Displays the version, status, last updated date, and checksum of this utility.
@@ -82,13 +82,13 @@ If an initialization failure occurs, a summary report file is generated in the s
 
 ## <a id="section5"></a>Examples 
 
-Add a standby coordinator instance to your Greenplum Database system and start the synchronization process:
+Add a standby master instance to your Greenplum Database system and start the synchronization process:
 
 ```
 gpinitstandby -s host09
 ```
 
-Start an existing standby coordinator instance and synchronize the data with the current primary coordinator instance:
+Start an existing standby master instance and synchronize the data with the current primary master instance:
 
 ```
 gpinitstandby -n
@@ -96,15 +96,15 @@ gpinitstandby -n
 
 **Note:** Do not specify the -n and -s options in the same command.
 
-Add a standby coordinator instance to your Greenplum Database system specifying a different port:
+Add a standby master instance to your Greenplum Database system specifying a different port:
 
 ```
 gpinitstandby -s myhost -P 2222
 ```
 
-If you specify the same host name as the active Greenplum Database coordinator, you must also specify a different port number with the `-P` option and a standby data directory with the `-S` option.
+If you specify the same host name as the active Greenplum Database master, you must also specify a different port number with the `-P` option and a standby data directory with the `-S` option.
 
-Remove the existing standby coordinator from your Greenplum system configuration:
+Remove the existing standby master from your Greenplum system configuration:
 
 ```
 gpinitstandby -r

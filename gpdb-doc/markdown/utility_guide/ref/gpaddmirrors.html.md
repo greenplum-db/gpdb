@@ -6,10 +6,10 @@ Adds mirror segments to a Greenplum Database system that was initially configure
 
 ```
 gpaddmirrors [-p <port_offset>] [-m <datadir_config_file> [-a]] [-s] 
-   [-d <coordinator_data_directory>] [-b <segment_batch_size>] [-B <batch_size>] [-l <logfile_directory>]
+   [-d <master_data_directory>] [-b <segment_batch_size>] [-B <batch_size>] [-l <logfile_directory>]
    [-v] [--hba-hostnames <boolean>] 
 
-gpaddmirrors -i <mirror_config_file> [-a] [-d <coordinator_data_directory>]
+gpaddmirrors -i <mirror_config_file> [-a] [-d <master_data_directory>]
    [-b <segment_batch_size>] [-B <batch_size>] [-l <logfile_directory>] [-v]
 
 gpaddmirrors -o output_sample_mirror_config> [-s] [-m <datadir_config_file>]
@@ -83,8 +83,8 @@ You must make sure that the user who runs `gpaddmirrors` \(the `gpadmin` user\) 
 -B batch\_size
 :   The number of hosts to work on in parallel. If not specified, the utility will start working on up to 16 hosts in parallel. Valid values are `1` to `64`.
 
--d coordinator\_data\_directory
-:   The coordinator data directory. If not specified, the value set for `$COORDINATOR_DATA_DIRECTORY` will be used.
+-d master\_data\_directory
+:   The master data directory. If not specified, the value set for `$MASTER_DATA_DIRECTORY` will be used.
 
 --hba-hostnames boolean
 :   Optional. Controls whether this utility uses IP addresses or host names in the `pg_hba.conf` file when updating this file with addresses that can connect to Greenplum Database. When set to 0 -- the default value -- this utility uses IP addresses when updating this file. When set to 1, this utility uses host names when updating this file. For consistency, use the same value that was specified for `HBA_HOSTNAMES` when the Greenplum Database system was initialized. For information about how Greenplum Database resolves host names in the `pg_hba.conf` file, see [Configuring Client Authentication](../../admin_guide/client_auth.html).
@@ -141,13 +141,13 @@ When specifying a mirroring configuration using the `gpaddmirrors` option `-i`, 
 -   If you specify a hostname, the resolution of the hostname to an IP address should be done locally for security. For example, you should use entries in a local `/etc/hosts` file to map the hostname to an IP address. The resolution of a hostname to an IP address should not be performed by an external service such as a public DNS server. You must stop the Greenplum system before you change the mapping of a hostname to a different IP address.
 -   If you specify an IP address, the address should not be changed after the initial configuration. When segment mirroring is enabled, replication from the primary to the mirror segment will fail if the IP address changes from the configured value. For this reason, you should use a hostname when enabling mirroring using the `-i` option unless you have a specific requirement to use IP addresses.
 
-When enabling a mirroring configuration that adds hosts to the Greenplum system, `gpaddmirrors` populates the [gp\_segment\_configuration](../../ref_guide/system_catalogs/gp_segment_configuration.html) catalog table with the mirror segment instance information. Greenplum Database uses the address value of the `gp_segment_configuration` catalog table when looking up host systems for Greenplum interconnect \(internal\) communication between the coordinator and segment instances and between segment instances, and for other internal communication.
+When enabling a mirroring configuration that adds hosts to the Greenplum system, `gpaddmirrors` populates the [gp\_segment\_configuration](../../ref_guide/system_catalogs/gp_segment_configuration.html) catalog table with the mirror segment instance information. Greenplum Database uses the address value of the `gp_segment_configuration` catalog table when looking up host systems for Greenplum interconnect \(internal\) communication between the master and segment instances and between segment instances, and for other internal communication.
 
 ## <a id="multi_nic"></a>Using Host Systems with Multiple NICs 
 
 If hosts systems are configured with multiple NICs, you can initialize a Greenplum Database system to use each NIC as a Greenplum host system. You must ensure that the host systems are configured with sufficient resources to support all the segment instances being added to the host. Also, if you enable segment mirroring, you must ensure that the Greenplum system configuration supports failover if a host system fails. For information about Greenplum Database mirroring schemes, see [Segment Mirroring Configurations](../../best_practices/ha.html#topic_ngz_qf4_tt).
 
-For example, this is a segment instance configuration for a simple Greenplum system. The segment host `gp6m` is configured with two NICs, `gp6m-1` and `gp6m-2`, where the Greenplum Database system uses `gp6m-1` for the coordinator segment and `gp6m-2` for segment instances.
+For example, this is a segment instance configuration for a simple Greenplum system. The segment host `gp6m` is configured with two NICs, `gp6m-1` and `gp6m-2`, where the Greenplum Database system uses `gp6m-1` for the master segment and `gp6m-2` for segment instances.
 
 ```
 select content, role, port, hostname, address from gp_segment_configuration ;

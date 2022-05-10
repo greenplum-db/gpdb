@@ -15,7 +15,7 @@ gplogfilter --version
 
 ## <a id="section3"></a>Description 
 
-The `gplogfilter` utility can be used to search through a Greenplum Database log file for entries matching the specified criteria. If an input file is not supplied, then `gplogfilter` will use the `$COORDINATOR_DATA_DIRECTORY` environment variable to locate the Greenplum coordinator log file in the standard logging location. To read from standard input, use a dash \(`-`\) as the input file name. Input files may be compressed using `gzip`. In an input file, a log entry is identified by its timestamp in `YYYY-MM-DD [hh:mm[:ss]]` format.
+The `gplogfilter` utility can be used to search through a Greenplum Database log file for entries matching the specified criteria. If an input file is not supplied, then `gplogfilter` will use the `$MASTER_DATA_DIRECTORY` environment variable to locate the Greenplum master log file in the standard logging location. To read from standard input, use a dash \(`-`\) as the input file name. Input files may be compressed using `gzip`. In an input file, a log entry is identified by its timestamp in `YYYY-MM-DD [hh:mm[:ss]]` format.
 
 You can also use `gplogfilter` to search through all segment log files at once by running it through the [gpssh](gpssh.html) utility. For example, to display the last three lines of each segment log file:
 
@@ -95,7 +95,7 @@ gplogfilter -e '2013-05-23 14:33'
 **Input Options**
 
 input\_file
-:   The name of the input log file\(s\) to search through. If an input file is not supplied, `gplogfilter` will use the `$COORDINATOR_DATA_DIRECTORY` environment variable to locate the Greenplum Database coordinator log file. To read from standard input, use a dash \(`-`\) as the input file name.
+:   The name of the input log file\(s\) to search through. If an input file is not supplied, `gplogfilter` will use the `$MASTER_DATA_DIRECTORY` environment variable to locate the Greenplum Database master log file. To read from standard input, use a dash \(`-`\) as the input file name.
 
 -u \| --unzip
 :   Uncompress the input file using `gunzip`. If the input file name ends in `.gz`, it will be uncompressed by default.
@@ -108,19 +108,19 @@ input\_file
 
 ## <a id="section9"></a>Examples 
 
-Display the last three error messages in the coordinator log file:
+Display the last three error messages in the master log file:
 
 ```
 gplogfilter -t -n 3
 ```
 
-Display all log messages in the coordinator log file timestamped in the last 10 minutes:
+Display all log messages in the master log file timestamped in the last 10 minutes:
 
 ```
 gplogfilter -d :10
 ```
 
-Display log messages in the coordinator log file containing the string `|con6 cmd11|`:
+Display log messages in the master log file containing the string `|con6 cmd11|`:
 
 ```
 gplogfilter -f '|con6 cmd11|'

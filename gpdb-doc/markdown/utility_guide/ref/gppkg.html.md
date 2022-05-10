@@ -6,7 +6,7 @@ Installs Greenplum Database extensions in `.gppkg` format, such as PL/Java, PL/R
 
 ```
 gppkg [-i <package> | -u <package> | -r  <name>-<version> | -c] 
-        [-d <coordinator_data_directory>] [-a] [-v]
+        [-d <master_data_directory>] [-a] [-v]
 
 gppkg --migrate <GPHOME_old> <GPHOME_new> [-a] [-v]
 
@@ -36,10 +36,10 @@ Examples of database extensions and packages software that are delivered using t
 :   Do not prompt the user for confirmation.
 
 -c \| --clean
-:   Reconciles the package state of the cluster to match the state of the coordinator host. Running this option after a failed or partial install/uninstall ensures that the package installation state is consistent across the cluster.
+:   Reconciles the package state of the cluster to match the state of the master host. Running this option after a failed or partial install/uninstall ensures that the package installation state is consistent across the cluster.
 
--d coordinator\_data\_directory
-:   The coordinator data directory. If not specified, the value set for `$COORDINATOR_DATA_DIRECTORY` will be used.
+-d master\_data\_directory
+:   The master data directory. If not specified, the value set for `$MASTER_DATA_DIRECTORY` will be used.
 
 -i package \| --install=package
 :   Installs the given package. This includes any pre/post installation steps and installation of any dependencies.
@@ -53,7 +53,7 @@ Examples of database extensions and packages software that are delivered using t
 
 :   When migrating packages, these requirements must be met.
 
-    -   At least the coordinator instance of the destination Greenplum Database must be started \(the instance installed in GPHOME\_new\). Before running the `gppkg` command start the Greenplum Database coordinator with the command `gpstart -m`.
+    -   At least the master instance of the destination Greenplum Database must be started \(the instance installed in GPHOME\_new\). Before running the `gppkg` command start the Greenplum Database master with the command `gpstart -m`.
     -   Run the `gppkg` utility from the GPHOME\_new installation. The migration destination installation directory.
 
 -q \| --query query\_option

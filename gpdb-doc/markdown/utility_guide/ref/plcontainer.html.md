@@ -46,7 +46,7 @@ image-add location
     -   \{**-f** \| **--file**\} image\_file Specify the file system location of the Docker image tar archive file on the local host. This example specifies an image file in the `gpadmin` user's home directory: `/home/gpadmin/test_image.tar.gz`
     -   \{**-u** \| **--URL**\} image\_URL Specify the URL of the Docker repository and image. This example URL points to a local Docker repository `192.168.0.1:5000/images/mytest_plc_r:devel`
 
-:   By default, the `image-add` command copies the image to each Greenplum Database segment and standby coordinator host, and installs the image. When you specify an image\_file and provide the \[**-ulc** \| **--use\_local\_copy**\] option, `plcontainer` installs the image only on the host on which you run the command.
+:   By default, the `image-add` command copies the image to each Greenplum Database segment and standby master host, and installs the image. When you specify an image\_file and provide the \[**-ulc** \| **--use\_local\_copy**\] option, `plcontainer` installs the image only on the host on which you run the command.
 
 :   After installing the Docker image, use the [runtime-add](#runtime_add) command to configure PL/Container to use the Docker image.
 
@@ -151,7 +151,7 @@ runtime-show \[\{**-r** \| **--runtime**\} runtime\_id\]
 :   Displays formatted PL/Container runtime configuration information. If a runtime\_id is not specified, the configuration for all runtime IDs are displayed.
 
 runtime-verify
-:   Checks the PL/Container configuration information on the Greenplum Database instances with the configuration information on the coordinator. If the utility finds inconsistencies, you are prompted to replace the remote copy with the local copy. The utility also performs XML validation.
+:   Checks the PL/Container configuration information on the Greenplum Database instances with the configuration information on the master. If the utility finds inconsistencies, you are prompted to replace the remote copy with the local copy. The utility also performs XML validation.
 
 **-h** \| **--help**
 :   Display help text. If specified without a command, displays help for all `plcontainer` commands. If specified with a command, displays help for the command.

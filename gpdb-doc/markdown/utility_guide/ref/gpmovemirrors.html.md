@@ -5,7 +5,7 @@ Moves mirror segment instances to new locations.
 ## <a id="section2"></a>Synopsis 
 
 ```
-gpmovemirrors -i <move_config_file> [-d <coordinator_data_directory>] 
+gpmovemirrors -i <move_config_file> [-d <master_data_directory>] 
           [-l <logfile_directory>] [-b <segment_batch_size>]
           [-B <batch_size>] [-v] [--hba-hostnames <boolean>] 
 
@@ -30,8 +30,8 @@ You must make sure that the user who runs `gpmovemirrors` \(the `gpadmin` user\)
 -B batch\_size
 :   The number of hosts to work on in parallel. If not specified, the utility will start working on up to 16 hosts in parallel. Valid values are `1` to `64`.
 
--d coordinator\_data\_directory
-:   The coordinator data directory. If not specified, the value set for `$COORDINATOR_DATA_DIRECTORY` will be used.
+-d master\_data\_directory
+:   The master data directory. If not specified, the value set for `$MASTER_DATA_DIRECTORY` will be used.
 
 --hba-hostnames boolean
 :   Optional. Controls whether this utility uses IP addresses or host names in the `pg_hba.conf` file when updating this file with addresses that can connect to Greenplum Database. When set to 0 -- the default value -- this utility uses IP addresses when updating this file. When set to 1, this utility uses host names when updating this file. For consistency, use the same value that was specified for `HBA_HOSTNAMES` when the Greenplum Database system was initialized. For information about how Greenplum Database resolves host names in the `pg_hba.conf` file, see [Configuring Client Authentication](../../admin_guide/client_auth.html).

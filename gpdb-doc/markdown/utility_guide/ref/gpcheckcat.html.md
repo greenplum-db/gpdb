@@ -86,11 +86,11 @@ Catalog inconsistencies are inconsistencies that occur between Greenplum Databas
 
     `foreign_key` - Check foreign keys
 
-    `inconsistent` - Cross consistency check for coordinator segment inconsistency
+    `inconsistent` - Cross consistency check for master segment inconsistency
 
     `missing_extraneous` - Cross consistency check for missing or extraneous entries
 
-    `owner` - Check table ownership that is inconsistent with the coordinator database
+    `owner` - Check table ownership that is inconsistent with the master database
 
     `orphaned_toast_tables` - Check for orphaned TOAST tables.
 
