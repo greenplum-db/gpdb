@@ -57,6 +57,7 @@ Some add-on products and services that work with Greenplum Database have additio
 |Standby master client listener|TCP 5432, libpq|SQL client connection port on the standby master host. Usually the same as the master client connection port. Configure with the `gpinitstandby` utility `-P` option.|
 |Standby master replicator|TCP 1025-65535, gpsyncmaster|The `gpsyncmaster` process on the master host establishes a connection to the secondary master host to replicate the master's log to the standby master.|
 |Greenplum Database file load and transfer utilities: gpfdist, gpload.|TCP 8080, HTTP<br/>TCP 9000, HTTPS|The gpfdist file serving utility can run on Greenplum hosts or external hosts. Specify the connection port with the `-p` option when starting the server.<br/><br/>The gpload utility runs one or more instances of gpfdist with ports or port ranges specified in a configuration file.|
+|Gpperfmon agents|TCP 8888|Connection port for gpperfmon agents \(`gpmmon` and `gpsmon`\) executing on Greenplum Database hosts. Configure by setting the `gpperfmon_port` configuration variable in postgresql.conf on master and segment hosts.|
 |Backup completion notification|TCP 25, TCP 587, SMTP|The `gpbackup` backup utility can optionally send email to a list of email addresses at completion of a backup. The SMTP service must be enabled on the Greenplum master host.|
 |Greenplum Database secure shell \(SSH\): gpssh, gpscp, gpssh-exkeys, gppkg|TCP 22, SSH|Many Greenplum utilities use scp and ssh to transfer files between hosts and manage the Greenplum system within the cluster.|
 |Greenplum Platform Extension Framework \(PXF\)|TCP 5888|The PXF Java service runs on port number 5888 on each Greenplum Database segment host.|
@@ -69,6 +70,7 @@ Some add-on products and services that work with Greenplum Database have additio
 |EMC Data Domain and DD Boost|TCP 2052|Main port used by NFS mountd. This port can be set on the Data Domain system using the `nfs set mountd-port` command .|
 |EMC Data Domain and DD Boost|TCP 2049, NFS|Main port used by NFS. This port can be configured using the `nfs set server-port` command on the Data Domain server.|
 |EMC Data Domain and DD Boost|TCP 2051, replication|Used when replication is configured on the Data Domain system. This port can be configured using the `replication modify` command on the Data Domain server.|
+|Pgbouncer connection pooler|TCP, libpq|The pgbouncer connection pooler runs between libpq clients and Greenplum \(or PostgreSQL\) databases. It can be run on the Greenplum master host, but running it on a host outside of the Greenplum cluster is recommended. When it runs on a separate host, pgbouncer can act as a warm standby mechanism for the Greenplum master host, switching to the Greenplum standby host without requiring clients to reconfigure. Set the client connection port and the Greenplum master host address and port in the pgbouncer.ini configuration file.|
 
 **Parent topic:** [Greenplum Database Security Configuration Guide](../topics/preface.html)
 

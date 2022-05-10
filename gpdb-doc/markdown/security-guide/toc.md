@@ -2,6 +2,7 @@
     - [Securing the Database](./topics/SecuringGPDB.md)
     - [Greenplum Database Ports and Protocols](./topics/ports_and_protocols.md)
     - [Configuring Client Authentication](./topics/Authenticate.md)
+    - [Greenplum Command Center Security](./topics/gpcc.md)
     - [Configuring Database Authorization](./topics/Authorization.md)
     - [Auditing](./topics/Auditing.md)
     - [Encrypting Data and Database Connections](./topics/Encryption.md)

@@ -50,6 +50,116 @@ You can also use the `DROP OWNED` and `REASSIGN OWNED` commands for managing obj
  =# DROP OWNED BY visitor; 
 ```
 
+## <a id="using-ssh-256"></a>Using SSH-256 Encryption 
+
+Greenplum Database access control corresponds roughly to the Orange Book 'C2' level of security, not the 'B1' level. Greenplum Database currently supports access privileges at the object level. Greenplum Database does not support row-level access or row-level, labeled security.
+
+You can simulate row-level access by using views to restrict the rows that are selected. You can simulate row-level labels by adding an extra column to the table to store sensitivity information, and then using views to control row-level access based on this column. You can then grant roles access to the views rather than the base table. While these workarounds do not provide the same as "B1" level security, they may still be a viable alternative for many organizations.
+
+To use SHA-256 encryption, you must set a parameter either at the system or the session level. This section outlines how to use a server parameter to implement SHA-256 encrypted password storage. Note that in order to use SHA-256 encryption for storage, the client authentication method must be set to password rather than the default, MD5. \(See [Configuring the SSL Client Connection](Authenticate.md#config_ssl_client_conn) for more details.\) This means that the password is transmitted in clear text over the network, so we highly recommend that you set up SSL to encrypt the client server communication channel.
+
+You can set your chosen encryption method system-wide or on a per-session basis. The available encryption methods are SHA-256 and MD5 \(for backward compatibility\).
+
+### <a id="system-wide"></a>Setting Encryption Method System-wide 
+
+To set the `password_hash_algorithm` server parameter on a complete Greenplum system \(master and its segments\):
+
+1.  Log in to your Greenplum Database instance as a superuser.
+2.  Execute `gpconfig` with the `password_hash_algorithm` set to SHA-256:
+
+    ```
+    $ gpconfig -c password_hash_algorithm -v 'SHA-256' 
+    ```
+
+3.  Verify the setting:
+
+    ```
+    $ gpconfig -s
+    ```
+
+    You will see:
+
+    ```
+    Master value: SHA-256
+    Segment value: SHA-256 
+    ```
+
+
+### <a id="individual_session"></a>Setting Encryption Method for an Individual Session 
+
+To set the `password_hash_algorithm` server parameter for an individual session:
+
+1.  Log in to your Greenplum Database instance as a superuser.
+2.  Set the `password_hash_algorithm` to SHA-256:
+
+    ```
+    # set password_hash_algorithm = 'SHA-256'
+      
+    ```
+
+3.  Verify the setting:
+
+    ```
+    # show password_hash_algorithm;
+    ```
+
+    You will see:
+
+    ```
+    SHA-256 
+    ```
+
+
+Following is an example of how the new setting works:
+
+1.  Log in as a super user and verify the password hash algorithm setting:
+
+    ```
+    # show password_hash_algorithm 
+     password_hash_algorithm 
+     ------------------------------- 
+     SHA-256
+    ```
+
+2.  Create a new role with password that has login privileges.
+
+    ```
+    create role testdb with password 'testdb12345#' LOGIN; 
+    ```
+
+3.  Change the client authentication method to allow for storage of SHA-256 encrypted passwords:
+
+    Open the `pg_hba.conf` file on the master and add the following line:
+
+    ```
+    host all testdb 0.0.0.0/0 password
+      
+    ```
+
+4.  Restart the cluster.
+5.  Log in to the database as the user just created, `testdb`.
+
+    ```
+    psql -U testdb
+    ```
+
+6.  Enter the correct password at the prompt.
+7.  Verify that the password is stored as a SHA-256 hash.
+
+    Password hashes are stored in `pg_authid.rolpasswod`.
+
+8.  Log in as the super user.
+9.  Execute the following query:
+
+    ```
+    
+        # SELECT rolpassword FROM pg_authid WHERE rolname = 'testdb';
+        Rolpassword
+        -----------
+        sha256<64 hexadecimal characters>
+      
+    ```
+
 ## <a id="time-based-restriction"></a>Restricting Access by Time 
 
 Greenplum Database enables the administrator to restrict access to certain times by role. Use the `CREATE ROLE` or `ALTER ROLE` commands to specify time-based constraints.

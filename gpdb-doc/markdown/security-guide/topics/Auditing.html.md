@@ -10,7 +10,7 @@ Greenplum provides an administrative schema called `gp_toolkit` that you can use
 
 ## <a id="viewing"></a>Viewing the Database Server Log Files 
 
-Every database instance in Greenplum Database \(master and segments\) is a running PostgreSQL database server with its own server log file. Daily log files are created in the `log` directory of the master and each segment data directory.
+Every database instance in Greenplum Database \(master and segments\) is a running PostgreSQL database server with its own server log file. Daily log files are created in the `pg_log` directory of the master and each segment data directory.
 
 The server log files are written in comma-separated values \(CSV\) format. Not all log entries will have values for all of the log fields. For example, only log entries associated with a query worker process will have the `slice_id` populated. Related log entries of a particular query can be identified by its session identifier \(`gp_session_id`\) and command identifier \(`gp_command_count`\).
 
