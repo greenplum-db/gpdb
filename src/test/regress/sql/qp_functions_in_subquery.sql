@@ -662,3 +662,8 @@ rollback;
 begin;
 SELECT * FROM foo, (SELECT func1_mod_setint_stb(func2_mod_int_stb(5))) r order by 1,2,3;
 rollback;
+
+-- Test for the target list of RTE_RESULT relation contains unevaluated functions.
+-- Functions that return record cannot eval to const during planning time.
+EXPLAIN (VERBOSE, COSTS OFF) SELECT func_nosql_record_imm(1) union all select func_nosql_record_imm(2);
+SELECT func_nosql_record_imm(1) union all select func_nosql_record_imm(2);
