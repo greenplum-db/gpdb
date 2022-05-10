@@ -8,19 +8,20 @@
 	Objective: In case of non-scalar DQA, 2 and 3 stage alternative are generated, chose
 	the one with best cost.
 
-			QUERY PLAN
-	------------------------------------------------------------------------
-		 Gather Motion 3:1  (slice2; segments: 3)
-		   ->  Result
-			 ->  HashAggregate
-			       Group Key: c
-			       ->  HashAggregate
-				     Group Key: c, b
-				     ->  Redistribute Motion 3:3  (slice1; segments: 3)
-					   Hash Key: c
-					   ->  HashAggregate
-						 Group Key: c, b
-						 ->  Table Scan on foo	   
+                                                           QUERY PLAN
+        ----------------------------------------------------------------------------------------------------------------
+         Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..449.31 rows=100000 width=8)
+           ->  HashAggregate  (cost=0.00..446.32 rows=33334 width=8)
+                 Group Key: c
+                 ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..442.14 rows=33334 width=8)
+                       Hash Key: c
+                       ->  Streaming HashAggregate  (cost=0.00..441.31 rows=33334 width=8)
+                             Group Key: c, b
+                             ->  Redistribute Motion 3:3  (slice3; segments: 3)  (cost=0.00..433.10 rows=33334 width=8)
+                                   Hash Key: c, b, b
+                                   ->  Seq Scan on foo  (cost=0.00..431.77 rows=33334 width=8)
+         Optimizer: Pivotal Optimizer (GPORCA)
+        (11 rows)
 	]]>
   </dxl:Comment>
   <dxl:Thread Id="0">

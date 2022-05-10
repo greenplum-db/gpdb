@@ -18,21 +18,21 @@ explain
 select b, count(distinct a)
 from tsk
 group by b;
-                                                         QUERY PLAN
------------------------------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice4; segments: 3)  (cost=0.00..1028.47 rows=2000000 width=12)
-   ->  HashAggregate  (cost=0.00..939.03 rows=666667 width=12)
-         Group Key: b
-         ->  Redistribute Motion 3:3  (slice3; segments: 3)  (cost=0.00..853.65 rows=666667 width=8)
-               Hash Key: b
-               ->  HashAggregate  (cost=0.00..836.95 rows=666667 width=8)
-                     Group Key: b, a
-                     ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..672.77 rows=666667 width=8)
-                           Hash Key: b, a
-                           ->  HashAggregate  (cost=0.00..656.07 rows=666667 width=8)
-                                 Group Key: b, a
-                                 ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..491.89 rows=666667 width=8)
-                                       ->  Table Scan on tsk  (cost=0.00..454.10 rows=666667 width=8)
+
+                                             QUERY PLAN
+  -----------------------------------------------------------------------------------------------------
+   Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..912.99 rows=2000000 width=12)
+     ->  HashAggregate  (cost=0.00..823.55 rows=666667 width=12)
+           Group Key: b
+           Planned Partitions: 4
+           ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..738.17 rows=666667 width=8)
+                 Hash Key: b
+                 ->  Streaming HashAggregate  (cost=0.00..715.26 rows=666667 width=8)
+                       Group Key: b, a
+                       Planned Partitions: 4
+                       ->  Seq Scan on tsk  (cost=0.00..454.10 rows=666667 width=8)
+   Optimizer: Pivotal Optimizer (GPORCA)
+  (11 rows)
 
   ]]>
   </dxl:Comment>
