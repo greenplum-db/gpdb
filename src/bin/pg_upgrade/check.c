@@ -251,6 +251,8 @@ report_clusters_compatible(void)
 
 		/* stops new cluster */
 		stop_postmaster(false);
+		if (get_check_fatal_occurred())
+			exit(1);
 		exit(0);
 	}
 
