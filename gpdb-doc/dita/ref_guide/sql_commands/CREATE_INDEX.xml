@@ -7,11 +7,11 @@
                 <p id="sql_command_desc">Defines a new index.</p>
                 <section id="section2">
                         <title>Synopsis</title>
-                        <codeblock id="sql_command_synopsis">CREATE [UNIQUE] INDEX [<varname>name</varname>] ON <varname>table_name</varname> [USING <varname>method</varname>]
-       ( {<varname>column_name</varname> | (<varname>expression</varname>)} [COLLATE <varname>parameter</varname>] [<varname>opclass</varname>] [ ASC | DESC ] [ NULLS { FIRST | LAST } ] [, ...] )
-       [ WITH ( <varname>storage_parameter</varname> = <varname>value</varname> [, ... ] ) ]
-       [ TABLESPACE <varname>tablespace</varname> ]
-       [ WHERE <varname>predicate</varname> ]</codeblock>
+                        <codeblock id="sql_command_synopsis">CREATE [UNIQUE] INDEX [&lt;name>] ON &lt;table_name> [USING &lt;method>]
+       ( {&lt;column_name> | (&lt;expression>)} [COLLATE &lt;parameter>] [&lt;opclass>] [ ASC | DESC ] [ NULLS { FIRST | LAST } ] [, ...] )
+       [ WITH ( &lt;storage_parameter> = &lt;value> [, ... ] ) ]
+       [ TABLESPACE &lt;tablespace> ]
+       [ WHERE &lt;predicate> ]</codeblock>
                 </section>
                 <section id="section3">
                         <title>Description</title>
@@ -362,13 +362,13 @@ SELECT * FROM points WHERE box(location,location) &amp;&amp; '(0,0),(1,1)'::box;
                 </section>
                 <section id="section8">
                         <title>See Also</title>
-                        <p><codeph><xref href="ALTER_INDEX.xml#topic1" type="topic" format="dita"
-                                        /></codeph>, <codeph><xref href="./DROP_INDEX.xml#topic1"
-                                                type="topic" format="dita"/></codeph>, <codeph><xref
+                        <p><xref href="ALTER_INDEX.xml#topic1" type="topic" format="dita"
+                                        />, <xref href="./DROP_INDEX.xml#topic1"
+                                                type="topic" format="dita"/>, <xref
                                                 href="./CREATE_TABLE.xml#topic1" type="topic"
-                                                format="dita"/></codeph>, <codeph><xref
+                                                format="dita"/>, <xref
                                                 href="./CREATE_OPERATOR_CLASS.xml#topic1"
-                                                type="topic" format="dita"/></codeph></p>
+                                                type="topic" format="dita"/></p>
                 </section>
         </body>
 </topic>

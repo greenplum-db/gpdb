@@ -27,6 +27,30 @@ create extension if not exists gp_inject_fault;
 select gp_inject_fault('make_dispatch_result_error', 'reset', dbid) from gp_segment_configuration where role = 'p' and content = -1;
 
 --
+-- Test case for the WaitEvent of ShareInputScan
+--
+
+create table test_waitevent(i int);
+insert into test_waitevent select generate_series(1,1000);
+
+1: set optimizer = off;
+1: set gp_cte_sharing to on;
+1: select gp_inject_fault_infinite('shareinput_writer_notifyready', 'suspend', 2);
+1&: WITH a1 as (select * from test_waitevent), a2 as (select * from test_waitevent) SELECT sum(a1.i)  FROM a1 INNER JOIN a2 ON a2.i = a1.i  UNION ALL SELECT count(a1.i)  FROM a1 INNER JOIN a2 ON a2.i = a1.i;
+-- start_ignore
+-- query pg_stat_get_activity on segment to watch the ShareInputScan event
+2: copy (select pg_stat_get_activity(NULL) from gp_dist_random('gp_id') where gp_segment_id=0) to '/tmp/_gpdb_test_output.txt';
+-- end_ignore
+2: select gp_wait_until_triggered_fault('shareinput_writer_notifyready', 1, 2);
+2: select gp_inject_fault_infinite('shareinput_writer_notifyready', 'resume', 2);
+2: select gp_inject_fault_infinite('shareinput_writer_notifyready', 'reset', 2);
+2q:
+1<:
+1q:
+
+!\retcode grep ShareInputScan /tmp/_gpdb_test_output.txt;
+
+--
 -- Test for issue https://github.com/greenplum-db/gpdb/issues/12703
 --
 
@@ -52,10 +76,11 @@ select gp_inject_fault('make_dispatch_result_error', 'reset', dbid) from gp_segm
 
 -- Case for cdbCopyEndInternal
 -- Provide some data to copy in
-insert into t_12703 select * from generate_series(1, 10)i;
-copy t_12703 to '/tmp/t_12703';
+4: insert into t_12703 select * from generate_series(1, 10)i;
+4: copy t_12703 to '/tmp/t_12703';
 -- make copy in statement hang at the entry point of cdbCopyEndInternal
-select gp_inject_fault('cdb_copy_end_internal_start', 'suspend', dbid) from gp_segment_configuration where role = 'p' and content = -1;
+4: select gp_inject_fault('cdb_copy_end_internal_start', 'suspend', dbid) from gp_segment_configuration where role = 'p' and content = -1;
+4q:
 1&: copy t_12703 from '/tmp/t_12703';
 select gp_wait_until_triggered_fault('cdb_copy_end_internal_start', 1, dbid) from gp_segment_configuration where role = 'p' and content = -1;
 -- make Gang connection is BAD

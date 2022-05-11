@@ -114,12 +114,12 @@ static void cdbdisp_dispatchToGang_async(struct CdbDispatcherState *ds,
 static void	cdbdisp_waitDispatchFinish_async(struct CdbDispatcherState *ds);
 
 static bool	cdbdisp_checkForCancel_async(struct CdbDispatcherState *ds);
-static int cdbdisp_getWaitSocketFd_async(struct CdbDispatcherState *ds);
+static int *cdbdisp_getWaitSocketFds_async(struct CdbDispatcherState *ds, int *nsocks);
 
 DispatcherInternalFuncs DispatcherAsyncFuncs =
 {
 	cdbdisp_checkForCancel_async,
-	cdbdisp_getWaitSocketFd_async,
+	cdbdisp_getWaitSocketFds_async,
 	cdbdisp_makeDispatchParams_async,
 	cdbdisp_checkAckMessage_async,
 	cdbdisp_checkDispatchResult_async,
@@ -167,18 +167,27 @@ cdbdisp_checkForCancel_async(struct CdbDispatcherState *ds)
 }
 
 /*
- * Return a FD to wait for, after dispatching.
+ * Return all FDs to wait for, after dispatching.
+ *
+ * nsocks is the returned socket fds number (as an output param):
+ *
+ * Return value is the array of waiting socket fds.
+ * It's be palloced in this function, so caller need to pfree it.
  */
-static int
-cdbdisp_getWaitSocketFd_async(struct CdbDispatcherState *ds)
+static int *
+cdbdisp_getWaitSocketFds_async(struct CdbDispatcherState *ds, int *nsocks)
 {
 	CdbDispatchCmdAsync *pParms = (CdbDispatchCmdAsync *) ds->dispatchParams;
 	int			i;
+	int			*fds = NULL;
 
 	Assert(ds);
 
+	*nsocks = 0;
 	if (proc_exit_inprogress)
-		return PGINVALID_SOCKET;
+		return NULL;
+
+	fds = palloc(pParms->dispatchCount * sizeof(int));
 
 	/*
 	 * This should match the logic in cdbdisp_checkForCancel_async(). In
@@ -194,18 +203,12 @@ cdbdisp_getWaitSocketFd_async(struct CdbDispatcherState *ds)
 		dispatchResult = pParms->dispatchResultPtrArray[i];
 		segdbDesc = dispatchResult->segdbDesc;
 
-		/*
-		 * Already finished with this QE?
-		 */
-		if (!dispatchResult->stillRunning)
-			continue;
-
 		Assert(!cdbconn_isBadConnection(segdbDesc));
 
-		return PQsocket(segdbDesc->conn);
+		(fds)[(*nsocks)++] = PQsocket(segdbDesc->conn);
 	}
 
-	return PGINVALID_SOCKET;
+	return fds;
 }
 
 /*

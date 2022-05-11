@@ -15799,6 +15799,19 @@ build_ctas_with_dist(Relation rel, DistributedBy *dist_clause,
 		into->options = storage_opts;
 		into->tableSpaceName = get_tablespace_name(tblspc);
 		into->distributedBy = (Node *)dist_clause;
+		if (RelationIsAoRows(rel))
+		{
+			/*
+			 * In order to avoid being affected by the GUC of gp_default_storage_options,
+			 * we should re-build storage options from original table.
+			 *
+			 * The reason is that when we use the default parameters to create a table,
+			 * the configuration will not be written to pg_class.reloptions, and then if
+			 * gp_default_storage_options is modified, the newly created table will be
+			 * inconsistent with the original table.
+			 */
+			into->options = build_ao_rel_storage_opts(into->options, rel);
+		}
 		s->intoClause = into;
 
 		RawStmt *rawstmt = makeNode(RawStmt);

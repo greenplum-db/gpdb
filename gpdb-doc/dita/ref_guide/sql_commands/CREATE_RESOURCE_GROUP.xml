@@ -7,13 +7,13 @@
     <p id="sql_command_desc">Defines a new resource group.</p>
     <section id="section2">
       <title>Synopsis</title>
-      <codeblock id="sql_command_synopsis">CREATE RESOURCE GROUP <varname>name</varname> WITH (<varname>group_attribute</varname>=<varname>value</varname> [, ... ])</codeblock>
+      <codeblock id="sql_command_synopsis">CREATE RESOURCE GROUP &lt;name> WITH (&lt;group_attribute>=&lt;value> [, ... ])</codeblock>
       <p>where <varname>group_attribute</varname> is:</p>
-      <codeblock>CPU_RATE_LIMIT=<varname>integer</varname> | CPUSET=<varname>tuple</varname>
-[ MEMORY_LIMIT=<varname>integer</varname> ]
-[ CONCURRENCY=<varname>integer</varname> ]
-[ MEMORY_SHARED_QUOTA=<varname>integer</varname> ]
-[ MEMORY_SPILL_RATIO=<varname>integer</varname> ]
+      <codeblock>CPU_RATE_LIMIT=&lt;integer> | CPUSET=&lt;tuple>
+[ MEMORY_LIMIT=&lt;integer> ]
+[ CONCURRENCY=&lt;integer> ]
+[ MEMORY_SHARED_QUOTA=&lt;integer> ]
+[ MEMORY_SPILL_RATIO=&lt;integer> ]
 [ MEMORY_AUDITOR= {vmtracker | cgroup} ]</codeblock>
     </section>
     <section id="section3">
@@ -31,9 +31,9 @@
         To set appropriate limits for resource groups, the Greenplum Database administrator must
         be familiar with the queries typically run on the system, as well as the users/roles running those queries and the external components they may be using, such as PL/Containers.</p>
       <p>
-        After creating a resource group for a role, assign the group to one or more roles using the <codeph><xref
-            href="ALTER_ROLE.xml#topic1" type="topic" format="dita"/></codeph> or <codeph><xref
-            href="./CREATE_ROLE.xml#topic1" type="topic" format="dita"/></codeph> commands.</p>
+        After creating a resource group for a role, assign the group to one or more roles using the <xref
+            href="ALTER_ROLE.xml#topic1" type="topic" format="dita"/> or <xref
+            href="./CREATE_ROLE.xml#topic1" type="topic" format="dita"/> commands.</p>
       <p>
         After you create a resource group to manage the CPU and memory resources of an external component, configure the external component to use the resource group. For example, configure the PL/Container runtime <codeph>resource_group_id</codeph>.</p>
     </section>
@@ -128,11 +128,11 @@
     </section>
     <section id="section8">
       <title>See Also</title>
-      <p><codeph><xref href="ALTER_ROLE.xml#topic1" type="topic" format="dita"/></codeph>,
-            <codeph><xref href="./CREATE_ROLE.xml#topic1" type="topic" format="dita"/></codeph>,
-            <codeph><xref href="ALTER_RESOURCE_GROUP.xml#topic1" type="topic" format="dita"
-          /></codeph>, <codeph><xref href="./DROP_RESOURCE_GROUP.xml#topic1" type="topic"
-            format="dita"/></codeph></p>
+      <p><xref href="ALTER_ROLE.xml#topic1" type="topic" format="dita"/>,
+            <xref href="./CREATE_ROLE.xml#topic1" type="topic" format="dita"/>,
+            <xref href="ALTER_RESOURCE_GROUP.xml#topic1" type="topic" format="dita"
+          />, <xref href="./DROP_RESOURCE_GROUP.xml#topic1" type="topic"
+            format="dita"/></p>
     </section>
   </body>
 </topic>

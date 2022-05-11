@@ -114,28 +114,6 @@ expand_inherited_rtentry(PlannerInfo *root, RelOptInfo *rel,
 	oldrelation = table_open(parentOID, NoLock);
 	lockmode = rte->rellockmode;
 
-#if 0
-	// GPDB_12_MERGE_FIXME: We used to have this code in GPDB. Where does it belong now?
-       else if (oldrc)
-       {
-               /*
-                * Greenplum specific behavior:
-                * The implementation of select statement with locking clause
-                * (for update | no key update | share | key share) in postgres
-                * is to hold RowShareLock on tables during parsing stage, and
-                * generate a LockRows plan node for executor to lock the tuples.
-                * It is not easy to lock tuples in Greenplum database, since
-                * tuples may be fetched through motion nodes.
-                *
-                * But when Global Deadlock Detector is enabled, and the select
-                * statement with locking clause contains only one table, we are
-                * sure that there are no motions. For such simple cases, we could
-                * make the behavior just the same as Postgres.
-                */
-               lockmode = oldrc->canOptSelectLockingClause ? RowShareLock : ExclusiveLock;
-       }
-#endif
-
 	/*
 	 * If parent relation is selected FOR UPDATE/SHARE, we need to mark its
 	 * PlanRowMark as isParent = true, and generate a new PlanRowMark for each

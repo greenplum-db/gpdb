@@ -7,7 +7,7 @@
         <p id="sql_command_desc">Locks a table.</p>
         <section id="section2">
             <title>Synopsis</title>
-            <codeblock id="sql_command_synopsis">LOCK [TABLE] [ONLY] name [ * ] [, ...] [IN <varname>lockmode</varname> MODE] [NOWAIT]</codeblock>
+            <codeblock id="sql_command_synopsis">LOCK [TABLE] [ONLY] name [ * ] [, ...] [IN &lt;lockmode> MODE] [NOWAIT]</codeblock>
             <p>where <varname>lockmode</varname> is one of:</p>
             <codeblock>    ACCESS SHARE | ROW SHARE | ROW EXCLUSIVE | SHARE UPDATE EXCLUSIVE 
   | SHARE | SHARE ROW EXCLUSIVE | EXCLUSIVE | ACCESS EXCLUSIVE</codeblock>
@@ -183,8 +183,8 @@
                     <codeph>LOCK TABLE</codeph> is concerned, differing only in the rules about
                 which modes conflict with which. For information on how to acquire an actual
                 row-level lock, see the <codeph>FOR UPDATE/FOR SHARE</codeph> clause in the
-                        <codeph><xref href="./SELECT.xml#topic1" type="topic" format="dita"
-                    /></codeph> reference documentation.</p>
+                        <xref href="./SELECT.xml#topic1" type="topic" format="dita"
+                    /> reference documentation.</p>
         </section>
         <section id="section6">
             <title>Examples</title>
@@ -219,10 +219,10 @@ COMMIT WORK;</codeblock>
         </section>
         <section id="section8">
             <title>See Also</title>
-            <p><codeph><xref href="BEGIN.xml#topic1" type="topic" format="dita"/></codeph>,
-                        <codeph><xref href="./SET_TRANSACTION.xml#topic1" type="topic" format="dita"
-                    /></codeph>, <codeph><xref href="./SELECT.xml#topic1" type="topic" format="dita"
-                    /></codeph></p>
+            <p><xref href="BEGIN.xml#topic1" type="topic" format="dita"/>,
+                        <xref href="./SET_TRANSACTION.xml#topic1" type="topic" format="dita"
+                    />, <xref href="./SELECT.xml#topic1" type="topic" format="dita"
+                    /></p>
         </section>
     </body>
 </topic>

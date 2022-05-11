@@ -6,7 +6,7 @@ all the updates made by the transaction to be discarded.</p></section><section i
 </p><p>Issuing <codeph>ROLLBACK</codeph> when not inside a transaction does
 no harm, but it will provoke a warning message. </p></section><section id="section6"><title>Examples</title><p>To discard all changes made in the current transaction:</p><codeblock>ROLLBACK;</codeblock></section><section id="section7"><title>Compatibility</title><p>The SQL standard only specifies the two forms <codeph>ROLLBACK</codeph>
 and <codeph>ROLLBACK WORK</codeph>. Otherwise, this command is fully
-conforming.</p></section><section id="section8"><title>See Also</title><p><codeph><xref href="BEGIN.xml#topic1" type="topic" format="dita"/></codeph>, <codeph><xref
-            href="COMMIT.xml#topic1" type="topic" format="dita"/></codeph>, <codeph><xref
-            href="./SAVEPOINT.xml#topic1" type="topic" format="dita"/></codeph>, <codeph><xref
-            href="./ROLLBACK_TO_SAVEPOINT.xml#topic1" type="topic" format="dita"/></codeph></p></section></body></topic>
+conforming.</p></section><section id="section8"><title>See Also</title><p><xref href="BEGIN.xml#topic1" type="topic" format="dita"/>, <xref
+            href="COMMIT.xml#topic1" type="topic" format="dita"/>, <xref
+            href="./SAVEPOINT.xml#topic1" type="topic" format="dita"/>, <xref
+            href="./ROLLBACK_TO_SAVEPOINT.xml#topic1" type="topic" format="dita"/></p></section></body></topic>

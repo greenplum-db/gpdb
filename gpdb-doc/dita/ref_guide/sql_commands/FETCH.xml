@@ -1,18 +1,18 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
-<topic id="topic1"><title id="dr20941">FETCH</title><body><p id="sql_command_desc">Retrieves rows from a query using a cursor.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">FETCH [ <varname>forward_direction</varname> { FROM | IN } ] <varname>cursor_name</varname></codeblock><p>where <varname>forward_direction</varname> can be empty or one of:</p><codeblock>    NEXT
+<topic id="topic1"><title id="dr20941">FETCH</title><body><p id="sql_command_desc">Retrieves rows from a query using a cursor.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">FETCH [ &lt;forward_direction> { FROM | IN } ] &lt;cursor_name></codeblock><p>where <varname>forward_direction</varname> can be empty or one of:</p><codeblock>    NEXT
     FIRST
-    ABSOLUTE <varname>count</varname>
-    RELATIVE <varname>count</varname>
-    <varname>count</varname>
+    ABSOLUTE &lt;count>
+    RELATIVE &lt;count>
+    &lt;count>
     ALL
     FORWARD
-    FORWARD <varname>count</varname>
+    FORWARD &lt;count>
     FORWARD ALL</codeblock></section><section id="section3"><title>Description</title><p><codeph>FETCH</codeph> retrieves rows using a previously-created cursor.
 </p>
 <note>You cannot <codeph>FETCH</codeph> from a <codeph>PARALLEL RETRIEVE CURSOR</codeph>,
-  you must <codeph><xref href="RETRIEVE.xml#topic1" type="topic" format="dita"/></codeph>
+  you must <xref href="RETRIEVE.xml#topic1" type="topic" format="dita"/>
   the rows from it.</note>
 <note>This page describes usage of cursors at the SQL command level. If you are trying to use
         cursors inside a PL/pgSQL function, the rules are different. See <xref
@@ -36,7 +36,7 @@ fetching the current row without moving the cursor, that is, re-fetching
 the most recently fetched row. This will succeed unless the cursor is
 positioned before the first row or after the last row, in which case
 no row is returned.</p><sectiondiv id="section4"><b>Outputs</b><p>On successful completion, a <codeph>FETCH</codeph> command returns a
-command tag of the form</p><codeblock>FETCH <varname>count</varname></codeblock><p>The count is the number of rows fetched (possibly zero). Note that in
+command tag of the form</p><codeblock>FETCH &lt;count></codeblock><p>The count is the number of rows fetched (possibly zero). Note that in
 <codeph>psql</codeph>, the command tag will not actually be displayed,
 since <codeph>psql</codeph> displays the fetched rows instead.</p></sectiondiv></section><section id="section5"><title>Parameters</title><parml><plentry><pt><varname>forward_direction</varname></pt><pd>Defines the fetch direction and number of rows to fetch. Only forward
 fetches are allowed in Greenplum Database. It can be one of the following:</pd></plentry><plentry><pt>NEXT</pt><pd>Fetch the next row. This is the default if direction is omitted.</pd></plentry><plentry><pt>FIRST</pt><pd>Fetch the first row of the query (same as <codeph>ABSOLUTE 1</codeph>).
@@ -68,6 +68,6 @@ in host variables. Other than this point, <codeph>FETCH</codeph> is fully
 upward-compatible with the SQL standard. </p><p>The <codeph>FETCH</codeph> forms involving <codeph>FORWARD</codeph>,
 as well as the forms <codeph>FETCH</codeph> count and <codeph>FETCH</codeph><codeph>ALL</codeph>, in which <codeph>FORWARD</codeph> is implicit,
 are Greenplum Database extensions. <codeph>BACKWARD</codeph> is not supported.</p><p>The SQL standard allows only <codeph>FROM</codeph> preceding the cursor name; the option to use
-          <codeph>IN</codeph>, or to leave them out altogether, is an extension.</p></section><section id="section9"><title>See Also</title><p><codeph><xref href="DECLARE.xml#topic1" type="topic" format="dita"/></codeph>, <codeph><xref
-            href="CLOSE.xml#topic1" type="topic" format="dita"/></codeph>, <codeph><xref
-            href="./MOVE.xml#topic1" type="topic" format="dita"/></codeph></p></section></body></topic>
+          <codeph>IN</codeph>, or to leave them out altogether, is an extension.</p></section><section id="section9"><title>See Also</title><p><xref href="DECLARE.xml#topic1" type="topic" format="dita"/>, <xref
+            href="CLOSE.xml#topic1" type="topic" format="dita"/>, <xref
+            href="./MOVE.xml#topic1" type="topic" format="dita"/></p></section></body></topic>

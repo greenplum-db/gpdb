@@ -7,13 +7,13 @@
         <p id="sql_command_desc">Changes the definition of a foreign-data wrapper.</p>
         <section id="section2">
             <title>Synopsis</title>
-            <codeblock id="sql_command_synopsis">ALTER FOREIGN DATA WRAPPER <varname>name</varname>
-    [ HANDLER <varname>handler_function</varname> | NO HANDLER ]
-    [ VALIDATOR <varname>validator_function</varname> | NO VALIDATOR ]
-    [ OPTIONS ( [ ADD | SET | DROP ] <varname>option</varname> ['<varname>value</varname>'] [, ... ] ) ]
+            <codeblock id="sql_command_synopsis">ALTER FOREIGN DATA WRAPPER &lt;name>
+    [ HANDLER &lt;handler_function> | NO HANDLER ]
+    [ VALIDATOR &lt;validator_function> | NO VALIDATOR ]
+    [ OPTIONS ( [ ADD | SET | DROP ] &lt;option> ['&lt;value>'] [, ... ] ) ]
 
-ALTER FOREIGN DATA WRAPPER <varname>name</varname> OWNER TO <varname>new_owner</varname>
-ALTER FOREIGN DATA WRAPPER <varname>name</varname> RENAME TO <varname>new_name</varname></codeblock>
+ALTER FOREIGN DATA WRAPPER &lt;name> OWNER TO &lt;new_owner>
+ALTER FOREIGN DATA WRAPPER &lt;name> RENAME TO &lt;new_name></codeblock>
         </section>
         <section id="section3">
             <title>Description</title>
@@ -86,9 +86,9 @@ ALTER FOREIGN DATA WRAPPER <varname>name</varname> RENAME TO <varname>new_name</
         </section>
         <section id="section8">
             <title>See Also</title>
-            <p><codeph><xref href="CREATE_FOREIGN_DATA_WRAPPER.xml#topic1">CREATE FOREIGN DATA WRAPPER</xref></codeph>,
-                        <codeph><xref href="DROP_FOREIGN_DATA_WRAPPER.xml#topic1">DROP
-                    FOREIGN DATA WRAPPER</xref></codeph></p>
+            <p><xref href="CREATE_FOREIGN_DATA_WRAPPER.xml#topic1">CREATE FOREIGN DATA WRAPPER</xref>,
+                        <xref href="DROP_FOREIGN_DATA_WRAPPER.xml#topic1">DROP
+                    FOREIGN DATA WRAPPER</xref></p>
         </section>
     </body>
 </topic>
