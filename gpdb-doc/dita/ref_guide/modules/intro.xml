@@ -38,7 +38,7 @@
          legacy, single-argument <codeph>string_agg()</codeph> aggregate function that was
          present in Greenplum Database 5.</li>
        <li><codeph><xref href="gp_parallel_retrieve_cursor.xml" scope="peer"
-             format="dita">gp_parallel_retrieve_cursor</xref></codeph> (Beta) - Provides
+             format="dita">gp_parallel_retrieve_cursor</xref></codeph> - Provides
          extended cursor functionality to retrieve data, in parallel, directly from
          Greenplum Database segments.</li>
        <li><codeph><xref href="gp_sparse_vector.xml" scope="peer"
@@ -46,7 +46,7 @@
          a Greenplum Database data type that uses compressed storage of zeros to make
          vector computations on floating point numbers faster.</li>
        <li><codeph><xref href="greenplum_fdw.xml" format="dita"
-             >greenplum_fdw</xref></codeph> (Beta) - Provides a foreign data wrapper (FDW)
+             >greenplum_fdw</xref></codeph> - Provides a foreign data wrapper (FDW)
          for accessing data stored in one or more external Greenplum Database clusters.</li>
        <li><codeph><xref href="hstore.xml" scope="peer" format="dita"
              >hstore</xref></codeph> - Provides a data type for storing sets of key/value pairs

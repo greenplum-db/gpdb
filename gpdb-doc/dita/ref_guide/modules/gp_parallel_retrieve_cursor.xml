@@ -2,7 +2,7 @@
 <!DOCTYPE dita PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
 <dita>
   <topic id="topic_gpprc">
-    <title>gp_parallel_retrieve_cursor (Beta)</title>
+    <title>gp_parallel_retrieve_cursor</title>
     <body>
       <p>The <codeph>gp_parallel_retrieve_cursor</codeph> module is an enhanced cursor
         implementation that you can use to create a special kind of cursor on the Greenplum 
