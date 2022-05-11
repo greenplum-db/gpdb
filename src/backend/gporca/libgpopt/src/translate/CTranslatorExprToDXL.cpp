@@ -5208,13 +5208,13 @@ CTranslatorExprToDXL::GetDXLDirectDispatchInfo(CExpression *pexprDML)
 	CTableDescriptor *ptabdesc = popDML->Ptabdesc();
 	const CColumnDescriptorArray *pdrgpcoldescDist =
 		ptabdesc->PdrgpcoldescDist();
-
-	if (CLogicalDML::EdmlInsert != popDML->Edmlop() ||
+	if ((CLogicalDML::EdmlUpdate == popDML->Edmlop()) ||
 		IMDRelation::EreldistrHash != ptabdesc->GetRelDistribution() ||
 		1 < pdrgpcoldescDist->Size())
 	{
-		// directed dispatch only supported for insert statements on hash-distributed tables
-		// with a single distribution column
+		// directed dispatch only supported for insert and delete statements
+		// on hash-distributed tables with a single distribution column
+
 		return nullptr;
 	}
 

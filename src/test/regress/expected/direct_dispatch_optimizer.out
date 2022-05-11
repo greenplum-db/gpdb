@@ -65,9 +65,8 @@ INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
 -- DO direct dispatch
 -- Known_opt_diff: MPP-21346
 delete from direct_test where key = 100;
-INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
-INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
+INFO:  (slice 0) Dispatch command to SINGLE content
+INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to SINGLE content
 -- verify
 select * from direct_test order by key, value;
 INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
@@ -91,9 +90,8 @@ INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
 -- DELETE with an IS NULL predicate
 -- DO direct dispatch
 delete from direct_test where key is null;
-INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
-INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
+INFO:  (slice 0) Dispatch command to SINGLE content
+INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to SINGLE content
 -- Same single-row insert as above, but with DEFAULT instead of an explicit values.
 -- DO direct dispatch
 insert into direct_test values (default, 'cow');
@@ -895,9 +893,9 @@ INFO:  Distributed transaction command 'Distributed Abort (No Prepared)' to SING
 begin;
 -- orca does not handle direct dispatch for DELETE or UPDATE now
 delete from t_hash_partition_1_prt_region1 where r_regionkey=1;
-INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
+INFO:  (slice 0) Dispatch command to SINGLE content
 abort;
-INFO:  Distributed transaction command 'Distributed Abort (No Prepared)' to ALL contents: 0 1 2
+INFO:  Distributed transaction command 'Distributed Abort (No Prepared)' to SINGLE content
 -- update: root & leaf are all the same hash dist, will direct dispatch
 begin;
 -- orca does not handle direct dispatch for DELETE or UPDATE now

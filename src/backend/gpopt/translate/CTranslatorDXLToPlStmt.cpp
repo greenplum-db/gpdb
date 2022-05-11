@@ -256,7 +256,8 @@ CTranslatorDXLToPlStmt::GetPlannedStmtFromDXL(const CDXLNode *dxlnode,
 		}
 	}
 
-	if (CMD_INSERT == m_cmd_type && planned_stmt->numSlices == 1 &&
+	if ((CMD_INSERT == m_cmd_type || CMD_DELETE == m_cmd_type) &&
+		planned_stmt->numSlices == 1 &&
 		dxlnode->GetOperator()->GetDXLOperator() == EdxlopPhysicalDML)
 	{
 		CDXLPhysicalDML *phy_dml_dxlop =
