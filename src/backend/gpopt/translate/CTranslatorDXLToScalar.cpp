@@ -150,6 +150,8 @@ CTranslatorDXLToScalar::TranslateDXLToScalar(const CDXLNode *dxlnode,
 		 &CTranslatorDXLToScalar::TranslateDXLScalarValuesListToScalar},
 		{EdxlopScalarSortGroupClause,
 		 &CTranslatorDXLToScalar::TranslateDXLScalarSortGroupClauseToScalar},
+        {EdxlopScalarOpList,
+                &CTranslatorDXLToScalar::TranslateDXLScalarOpListToScalar},
 	};
 
 	const ULONG num_translators = GPOS_ARRAY_SIZE(translators);
@@ -176,6 +178,20 @@ CTranslatorDXLToScalar::TranslateDXLToScalar(const CDXLNode *dxlnode,
 	}
 
 	return (this->*translate_func)(dxlnode, colid_var);
+}
+
+//	@function:
+//		CTranslatorDXLToScalar::TranslateDXLScalarOpListToScalar
+//
+//	@doc:
+//		Translate children of scalar op list node, and add them to list
+//---------------------------------------------------------------------------
+Expr *
+CTranslatorDXLToScalar::TranslateDXLScalarOpListToScalar(
+        const CDXLNode *scalar_op_list_node, CMappingColIdVar *colid_var) {
+    List *exprs = NIL;
+    exprs = TranslateScalarChildren(exprs,scalar_op_list_node, colid_var);
+    return (Expr *) exprs;
 }
 
 //---------------------------------------------------------------------------

@@ -216,7 +216,14 @@ partition_rules_for_equality_predicate(PartitionSelectorState *node, int level,
 	Assert(level < ps->nLevels);
 
 	/* evaluate equalityPredicate to get partition identifier value */
-	List  *exprStateList = (List *) lfirst(list_nth_cell(node->levelEqExprStates, level));
+    List  *exprStateList = NIL;
+    ExprState *exprState = lfirst(list_nth_cell(node->levelEqExprStates, level));
+
+    if (IsA(exprState, List)) {
+        exprStateList = (List *) exprState;
+    } else {
+        exprStateList = list_append_unique(exprStateList, exprState);
+    }
 
 	ExprContext *econtext = node->ps.ps_ExprContext;
 
@@ -284,7 +291,7 @@ processLevel(PartitionSelectorState *node, int level, TupleTableSlot *inputTuple
 	Assert(level < ps->nLevels);
 
 	/* get equality and general predicate for the current level */
-	List	   *equalityPredicate = (List *) lfirst(list_nth_cell(ps->levelEqExpressions, level));
+	Expr       *equalityPredicate = (Expr*) lfirst(list_nth_cell(ps->levelEqExpressions, level));
 	Expr	   *generalPredicate = (Expr *) lfirst(list_nth_cell(ps->levelExpressions, level));
 
 	/* get parent PartitionNode if in level 0, it's the root PartitionNode */

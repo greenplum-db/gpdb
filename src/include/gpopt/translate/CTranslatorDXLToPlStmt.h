@@ -449,8 +449,7 @@ private:
 		const CDXLNode *filter_list_dxlnode,
 		const CDXLTranslateContextBaseTable *base_table_context,
 		CDXLTranslationContextArray *child_contexts,
-		CDXLTranslateContext *output_context, bool is_eq_filters,
-		bool is_eq_filter_elems);
+		CDXLTranslateContext *output_context);
 
 	// create range table entry from a CDXLPhysicalTVF node
 	RangeTblEntry *TranslateDXLTvfToRangeTblEntry(
