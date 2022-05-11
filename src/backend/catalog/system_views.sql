@@ -1743,7 +1743,7 @@ $$
 $$
 LANGUAGE SQL READS SQL DATA EXECUTE ON COORDINATOR;
 
-create or replace function brin_summarize_new_values(t regclass) returns bigint as
+create or replace function brin_summarize_new_values(t regclass) returns setof bigint as
 $$
   -- brin_summarize_new_values_internal is marked as EXECUTE ON ALL SEGMENTS.
   select sum(n) from brin_summarize_new_values_internal(t) as n;
