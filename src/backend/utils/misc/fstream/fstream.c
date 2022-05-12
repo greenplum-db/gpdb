@@ -321,7 +321,7 @@ int fstream_get_stderr(fstream_t* fs)
 {
 	int ret = 0;
 #ifdef GPFXDIST
-	if (fs->fd.transform)
+	if (fs->fd.transform && fs->fd.transform->for_write)
 	{
 		ret = gfile_wait_subprocess(&fs->fd);
 		if (ret)
@@ -330,7 +330,6 @@ int fstream_get_stderr(fstream_t* fs)
 			memset(errmsg_buffer, 0, FILE_ERROR_SZ-1);
 			get_writable_transform_err(&fs->fd, errmsg_buffer, FILE_ERROR_SZ-2);
 			fs->ferror = format_error(errmsg_buffer, "");
-			gfile_printf_then_putc_newline("get err from stderr %s", fs->ferror);
 		}
 		return ret;
 	}

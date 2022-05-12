@@ -929,7 +929,7 @@ close_subprocess(gfile_t *fd)
 	} 
 	else 
 	{
-		gfile_printf_then_putc_newline("close_subprocess: notdone");
+		gfile_printf_then_putc_newline("close_subprocess: rv = %d", rv);
 		return 1;
 	}
 }
