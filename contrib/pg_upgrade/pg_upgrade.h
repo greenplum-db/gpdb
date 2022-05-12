@@ -579,7 +579,8 @@ void		check_ok(void);
 const char *getErrorText(void);
 unsigned int str2uint(const char *str);
 void		pg_putenv(const char *var, const char *val);
-void 		gp_fatal_log(const char *fmt,...);
+void 		gp_fatal_log(const char *fmt,...)
+__attribute__((format(PG_PRINTF_ATTRIBUTE, 1, 2)));
 
 
 /* version.c */

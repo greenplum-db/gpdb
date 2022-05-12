@@ -178,8 +178,8 @@ ExecShareInputScan(ShareInputScanState *node)
 	 * do not need to read tuple from tuplestore when discard_output is true, which means current
 	 * ShareInputScan is one but not the last one of Sequence's subplans.
 	 */
-    if (sisc->discard_output)
-        return NULL;
+	if (sisc->discard_output)
+		return NULL;
 
 	slot = node->ss.ps.ps_ResultTupleSlot;
 
