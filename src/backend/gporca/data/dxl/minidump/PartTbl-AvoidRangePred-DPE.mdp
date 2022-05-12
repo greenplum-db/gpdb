@@ -963,9 +963,7 @@ FROM abuela JOIN bar ON a = c AND b BETWEEN d - 1 AND d + 4
               </dxl:ProjElem>
             </dxl:ProjList>
             <dxl:PartEqFilters>
-              <dxl:PartEqFilterElems>
-                <dxl:Ident ColId="19" ColName="f" TypeMdid="0.23.1.0"/>
-              </dxl:PartEqFilterElems>
+              <dxl:Ident ColId="19" ColName="f" TypeMdid="0.23.1.0"/>
             </dxl:PartEqFilters>
             <dxl:PartFilters>
               <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>

@@ -509,9 +509,7 @@ explain select t1.a from t1, foo_prt t2, t3 where (t1.b = t2.a) and t2.a = t3.b;
                 </dxl:ProjElem>
               </dxl:ProjList>
               <dxl:PartEqFilters>
-                <dxl:PartEqFilterElems>
-                  <dxl:Ident ColId="14" ColName="b" TypeMdid="0.23.1.0"/>
-                </dxl:PartEqFilterElems>
+                <dxl:Ident ColId="14" ColName="b" TypeMdid="0.23.1.0"/>
               </dxl:PartEqFilters>
               <dxl:PartFilters>
                 <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>

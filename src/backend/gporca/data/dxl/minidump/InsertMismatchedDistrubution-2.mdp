@@ -331,9 +331,7 @@ explain insert into pt2 select * from r;
               </dxl:ProjElem>
             </dxl:ProjList>
             <dxl:PartEqFilters>
-              <dxl:PartEqFilterElems>
-                <dxl:Ident ColId="2" ColName="c" TypeMdid="0.23.1.0"/>
-              </dxl:PartEqFilterElems>
+              <dxl:Ident ColId="2" ColName="c" TypeMdid="0.23.1.0"/>
             </dxl:PartEqFilters>
             <dxl:PartFilters>
               <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>

@@ -1287,9 +1287,7 @@ SELECT * FROM pt_lt_tab WHERE col2 = 15 ORDER BY col2,col3 LIMIT 5;
                 </dxl:Properties>
                 <dxl:ProjList/>
                 <dxl:PartEqFilters>
-                  <dxl:PartEqFilterElems>
-                    <dxl:ConstValue TypeMdid="0.1700.1.0" Value="AAAACgAAAAAPAA==" DoubleValue="15.000000"/>
-                  </dxl:PartEqFilterElems>
+                  <dxl:ConstValue TypeMdid="0.1700.1.0" Value="AAAACgAAAAAPAA==" DoubleValue="15.000000"/>
                 </dxl:PartEqFilters>
                 <dxl:PartFilters>
                   <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>

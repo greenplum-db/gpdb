@@ -485,7 +485,7 @@
                   <dxl:ProjList/>
                   <dxl:PartEqFilters>
                     <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>
-                    <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>
+                    <dxl:ConstValue TypeMdid="0.25.1.0" Value="AAAAB3VzYQ==" LintValue="2607030223"/>
                   </dxl:PartEqFilters>
                   <dxl:PartFilters>
                     <dxl:Or>
@@ -498,13 +498,7 @@
                       </dxl:Or>
                       <dxl:DefaultPart Level="0"/>
                     </dxl:Or>
-                    <dxl:Or>
-                      <dxl:ArrayComp OperatorName="=" OperatorMdid="0.98.1.0" OperatorType="Any">
-                        <dxl:ConstValue TypeMdid="0.25.1.0" Value="AAAAB3VzYQ==" LintValue="2607030223"/>
-                        <dxl:PartListValues Level="1" ResultType="0.1009.1.0" ElementType="0.25.1.0"/>
-                      </dxl:ArrayComp>
-                      <dxl:DefaultPart Level="1"/>
-                    </dxl:Or>
+                    <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>
                   </dxl:PartFilters>
                   <dxl:ResidualFilter>
                     <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>

@@ -10536,9 +10536,7 @@
               </dxl:ProjElem>
             </dxl:ProjList>
             <dxl:PartEqFilters>
-              <dxl:PartEqFilterElems>
-                <dxl:Ident ColId="27" ColName="d_date_sk" TypeMdid="0.23.1.0"/>
-              </dxl:PartEqFilterElems>
+              <dxl:Ident ColId="27" ColName="d_date_sk" TypeMdid="0.23.1.0"/>
             </dxl:PartEqFilters>
             <dxl:PartFilters>
               <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>
@@ -10598,9 +10596,7 @@
                     </dxl:Properties>
                     <dxl:ProjList/>
                     <dxl:PartEqFilters>
-                      <dxl:PartEqFilterElems>
-                        <dxl:ConstValue TypeMdid="0.23.1.0" Value="2001"/>
-                      </dxl:PartEqFilterElems>
+                      <dxl:ConstValue TypeMdid="0.23.1.0" Value="2001"/>
                     </dxl:PartEqFilters>
                     <dxl:PartFilters>
                       <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>

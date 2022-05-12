@@ -2441,12 +2441,8 @@ EXPLAIN SELECT * FROM solo WHERE year_id=2017 AND month_id=6;
             </dxl:Properties>
             <dxl:ProjList/>
             <dxl:PartEqFilters>
-              <dxl:PartEqFilterElems>
-                <dxl:ConstValue TypeMdid="0.23.1.0" Value="2017"/>
-              </dxl:PartEqFilterElems>
-              <dxl:PartEqFilterElems>
-                <dxl:ConstValue TypeMdid="0.23.1.0" Value="6"/>
-              </dxl:PartEqFilterElems>
+              <dxl:ConstValue TypeMdid="0.23.1.0" Value="2017"/>
+              <dxl:ConstValue TypeMdid="0.23.1.0" Value="6"/>
             </dxl:PartEqFilters>
             <dxl:PartFilters>
               <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>

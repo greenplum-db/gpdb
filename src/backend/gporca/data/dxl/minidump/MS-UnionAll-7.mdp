@@ -1049,9 +1049,7 @@
                           </dxl:Properties>
                           <dxl:ProjList/>
                           <dxl:PartEqFilters>
-                            <dxl:PartEqFilterElems>
-                              <dxl:ConstValue TypeMdid="0.1082.1.0" Value="ZxQAAA==" LintValue="5223"/>
-                            </dxl:PartEqFilterElems>
+                            <dxl:ConstValue TypeMdid="0.1082.1.0" Value="ZxQAAA==" LintValue="5223"/>
                           </dxl:PartEqFilters>
                           <dxl:PartFilters>
                             <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>
@@ -1304,9 +1302,7 @@
                           </dxl:Properties>
                           <dxl:ProjList/>
                           <dxl:PartEqFilters>
-                            <dxl:PartEqFilterElems>
-                              <dxl:ConstValue TypeMdid="0.1082.1.0" Value="ZxQAAA==" LintValue="5223"/>
-                            </dxl:PartEqFilterElems>
+                            <dxl:ConstValue TypeMdid="0.1082.1.0" Value="ZxQAAA==" LintValue="5223"/>
                           </dxl:PartEqFilters>
                           <dxl:PartFilters>
                             <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>
@@ -1559,9 +1555,7 @@
                           </dxl:Properties>
                           <dxl:ProjList/>
                           <dxl:PartEqFilters>
-                            <dxl:PartEqFilterElems>
-                              <dxl:ConstValue TypeMdid="0.1082.1.0" Value="ZxQAAA==" LintValue="5223"/>
-                            </dxl:PartEqFilterElems>
+                            <dxl:ConstValue TypeMdid="0.1082.1.0" Value="ZxQAAA==" LintValue="5223"/>
                           </dxl:PartEqFilters>
                           <dxl:PartFilters>
                             <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>

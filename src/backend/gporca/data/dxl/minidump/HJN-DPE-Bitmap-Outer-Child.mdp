@@ -955,9 +955,7 @@ select * from dbs_target, dbs_helper where dbs_target.c1 = dbs_helper.c1 and dbs
               </dxl:ProjElem>
             </dxl:ProjList>
             <dxl:PartEqFilters>
-              <dxl:PartEqFilterElems>
-                <dxl:Ident ColId="12" ColName="c3" TypeMdid="0.23.1.0"/>
-              </dxl:PartEqFilterElems>
+              <dxl:Ident ColId="12" ColName="c3" TypeMdid="0.23.1.0"/>
             </dxl:PartEqFilters>
             <dxl:PartFilters>
               <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>

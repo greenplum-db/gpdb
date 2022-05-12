@@ -637,9 +637,7 @@ select z_p.j from z_p,tt_p where  z_p.i=6 and z_p.i<tt_p.i;
                 </dxl:Properties>
                 <dxl:ProjList/>
                 <dxl:PartEqFilters>
-                  <dxl:PartEqFilterElems>
-                    <dxl:ConstValue TypeMdid="0.23.1.0" Value="6"/>
-                  </dxl:PartEqFilterElems>
+                  <dxl:ConstValue TypeMdid="0.23.1.0" Value="6"/>
                 </dxl:PartEqFilters>
                 <dxl:PartFilters>
                   <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>

@@ -14953,9 +14953,7 @@ WHERE ((sale_type = 's'::text AND dyear = 2001 AND year_total &gt; 0::numeric) O
                         </dxl:ProjElem>
                       </dxl:ProjList>
                       <dxl:PartEqFilters>
-                        <dxl:PartEqFilterElems>
-                          <dxl:Ident ColId="55" ColName="d_date_sk" TypeMdid="0.23.1.0"/>
-                        </dxl:PartEqFilterElems>
+                        <dxl:Ident ColId="55" ColName="d_date_sk" TypeMdid="0.23.1.0"/>
                       </dxl:PartEqFilters>
                       <dxl:PartFilters>
                         <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>

@@ -399,9 +399,7 @@ select * from pt where gender is null;
               </dxl:Properties>
               <dxl:ProjList/>
               <dxl:PartEqFilters>
-                <dxl:PartEqFilterElems>
-                  <dxl:ConstValue TypeMdid="0.25.1.0" Value="AAAABUY=" LintValue="160743980"/>
-                </dxl:PartEqFilterElems>
+                <dxl:ConstValue TypeMdid="0.25.1.0" Value="AAAABUY=" LintValue="160743980"/>
               </dxl:PartEqFilters>
               <dxl:PartFilters>
                 <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>

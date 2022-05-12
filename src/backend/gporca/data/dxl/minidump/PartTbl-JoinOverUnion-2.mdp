@@ -1013,9 +1013,7 @@ select * from (select * from tt union all select * from p2) as p, tt where p.b=t
               </dxl:ProjElem>
             </dxl:ProjList>
             <dxl:PartEqFilters>
-              <dxl:PartEqFilterElems>
-                <dxl:Ident ColId="19" ColName="b" TypeMdid="0.23.1.0"/>
-              </dxl:PartEqFilterElems>
+              <dxl:Ident ColId="19" ColName="b" TypeMdid="0.23.1.0"/>
             </dxl:PartEqFilters>
             <dxl:PartFilters>
               <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>

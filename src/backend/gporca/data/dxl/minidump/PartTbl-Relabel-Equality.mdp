@@ -294,9 +294,7 @@
             </dxl:Properties>
             <dxl:ProjList/>
             <dxl:PartEqFilters>
-              <dxl:PartEqFilterElems>
-                <dxl:ConstValue TypeMdid="0.25.1.0" Value="AAAACjIwMDgwMA==" LintValue="249955124"/>
-              </dxl:PartEqFilterElems>
+              <dxl:ConstValue TypeMdid="0.25.1.0" Value="AAAACjIwMDgwMA==" LintValue="249955124"/>
             </dxl:PartEqFilters>
             <dxl:PartFilters>
               <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>

@@ -356,9 +356,7 @@ select * from foo where b is not null;
               </dxl:Properties>
               <dxl:ProjList/>
               <dxl:PartEqFilters>
-                <dxl:PartEqFilterElems>
-                  <dxl:ConstValue TypeMdid="0.23.1.0" Value="1"/>
-                </dxl:PartEqFilterElems>
+                <dxl:ConstValue TypeMdid="0.23.1.0" Value="1"/>
               </dxl:PartEqFilters>
               <dxl:PartFilters>
                 <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>

@@ -728,9 +728,7 @@ EXPLAIN SELECT * FROM table_with_two_indices_ao WHERE b = 15 AND c BETWEEN 10000
             </dxl:Properties>
             <dxl:ProjList/>
             <dxl:PartEqFilters>
-              <dxl:PartEqFilterElems>
-                <dxl:ConstValue TypeMdid="0.23.1.0" Value="15"/>
-              </dxl:PartEqFilterElems>
+              <dxl:ConstValue TypeMdid="0.23.1.0" Value="15"/>
             </dxl:PartEqFilters>
             <dxl:PartFilters>
               <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>
