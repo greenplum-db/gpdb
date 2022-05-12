@@ -511,9 +511,9 @@
     <dxl:Plan Id="0" SpaceSize="1180">
       <dxl:DMLInsert Columns="38,39,42,43,44" ActionCol="48" OidCol="0" CtidCol="0" SegmentIdCol="0" InputSorted="false">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="867.119333" Rows="96.000000" Width="36"/>
+          <dxl:Cost StartupCost="0" TotalCost="867.122533" Rows="96.000000" Width="36"/>
         </dxl:Properties>
-	<dxl:DirectDispatchInfo/>
+        <dxl:DirectDispatchInfo/>
         <dxl:ProjList>
           <dxl:ProjElem ColId="38" Alias="?column?">
             <dxl:Ident ColId="38" ColName="?column?" TypeMdid="0.25.1.0"/>
@@ -549,7 +549,7 @@
         </dxl:TableDescriptor>
         <dxl:Result>
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="862.119333" Rows="96.000000" Width="40"/>
+            <dxl:Cost StartupCost="0" TotalCost="862.122533" Rows="96.000000" Width="40"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="38" Alias="?column?">

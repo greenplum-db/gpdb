@@ -111,7 +111,7 @@
     <dxl:Plan Id="0" SpaceSize="840">
       <dxl:Aggregate AggregationStrategy="Sorted" StreamSafe="false">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="0.000074" Rows="1.000000" Width="4"/>
+          <dxl:Cost StartupCost="0" TotalCost="0.000174" Rows="1.000000" Width="4"/>
         </dxl:Properties>
         <dxl:GroupingColumns>
           <dxl:GroupingColumn ColId="1"/>
@@ -124,7 +124,7 @@
         <dxl:Filter/>
         <dxl:Sort SortDiscardDuplicates="false">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="0.000063" Rows="2.000000" Width="4"/>
+            <dxl:Cost StartupCost="0" TotalCost="0.000163" Rows="2.000000" Width="4"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="1" Alias="?column?">
@@ -139,7 +139,7 @@
           <dxl:LimitOffset/>
           <dxl:Append IsTarget="false" IsZapped="false">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="0.000018" Rows="2.000000" Width="4"/>
+              <dxl:Cost StartupCost="0" TotalCost="0.000118" Rows="2.000000" Width="4"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="1" Alias="?column?">
@@ -173,7 +173,7 @@
             </dxl:Result>
             <dxl:Result>
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="0.000005" Rows="1.000000" Width="4"/>
+                <dxl:Cost StartupCost="0" TotalCost="0.000105" Rows="1.000000" Width="4"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="3" Alias="generate_series">

@@ -223,7 +223,7 @@
     <dxl:Plan Id="0" SpaceSize="5">
       <dxl:DMLInsert Columns="1,2" ActionCol="3" OidCol="0" CtidCol="0" SegmentIdCol="0" InputSorted="false">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="0.046900" Rows="1.000000" Width="8"/>
+          <dxl:Cost StartupCost="0" TotalCost="0.047000" Rows="1.000000" Width="8"/>
         </dxl:Properties>
         <dxl:DirectDispatchInfo/>
         <dxl:ProjList>
@@ -249,7 +249,7 @@
         </dxl:TableDescriptor>
         <dxl:Assert ErrorCode="23502">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="0.000025" Rows="1.000000" Width="12"/>
+            <dxl:Cost StartupCost="0" TotalCost="0.000125" Rows="1.000000" Width="12"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="1" Alias="a">
@@ -273,7 +273,7 @@
           </dxl:AssertConstraintList>
           <dxl:Result>
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="0.000013" Rows="1.000000" Width="12"/>
+              <dxl:Cost StartupCost="0" TotalCost="0.000113" Rows="1.000000" Width="12"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="3" Alias="ColRef_0003">

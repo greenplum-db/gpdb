@@ -129,14 +129,14 @@ explain select count(*) from (select generate_series(1, 10) i) t1, (select 1 j) 
     <dxl:Plan Id="0" SpaceSize="3">
       <dxl:Aggregate AggregationStrategy="Plain" StreamSafe="false">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="431.000010" Rows="1.000000" Width="8"/>
+          <dxl:Cost StartupCost="0" TotalCost="431.000110" Rows="1.000000" Width="8"/>
         </dxl:Properties>
         <dxl:GroupingColumns/>
         <dxl:ProjList>
           <dxl:ProjElem ColId="4" Alias="count">
             <dxl:AggFunc AggMdid="0.2803.1.0" AggDistinct="false" AggStage="Final" AggKind="n" AggArgTypes="">
               <dxl:ValuesList ParamType="aggargs">
-              <dxl:Ident ColId="5" ColName="ColRef_0005" TypeMdid="0.20.1.0"/>
+                <dxl:Ident ColId="5" ColName="ColRef_0005" TypeMdid="0.20.1.0"/>
               </dxl:ValuesList>
               <dxl:ValuesList ParamType="aggdirectargs"/>
               <dxl:ValuesList ParamType="aggorder"/>
@@ -147,7 +147,7 @@ explain select count(*) from (select generate_series(1, 10) i) t1, (select 1 j) 
         <dxl:Filter/>
         <dxl:Aggregate AggregationStrategy="Plain" StreamSafe="false">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="431.000010" Rows="1.000000" Width="8"/>
+            <dxl:Cost StartupCost="0" TotalCost="431.000110" Rows="1.000000" Width="8"/>
           </dxl:Properties>
           <dxl:GroupingColumns/>
           <dxl:ProjList>
@@ -161,9 +161,9 @@ explain select count(*) from (select generate_series(1, 10) i) t1, (select 1 j) 
             </dxl:ProjElem>
           </dxl:ProjList>
           <dxl:Filter/>
-          <dxl:NestedLoopJoin JoinType="Inner" IndexNestedLoopJoin="false">
+          <dxl:NestedLoopJoin JoinType="Inner" IndexNestedLoopJoin="false" OuterRefAsParam="false">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="431.000010" Rows="1.000000" Width="1"/>
+              <dxl:Cost StartupCost="0" TotalCost="431.000110" Rows="1.000000" Width="1"/>
             </dxl:Properties>
             <dxl:ProjList/>
             <dxl:Filter/>
@@ -172,7 +172,7 @@ explain select count(*) from (select generate_series(1, 10) i) t1, (select 1 j) 
             </dxl:JoinFilter>
             <dxl:Result>
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="0.000002" Rows="1.000000" Width="4"/>
+                <dxl:Cost StartupCost="0" TotalCost="0.000102" Rows="1.000000" Width="4"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="1" Alias="i">

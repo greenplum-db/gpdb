@@ -128,7 +128,7 @@ EXPLAIN select generate_series(0,2) x, generate_series(0,3) y, arr cnt_div from 
     <dxl:Plan Id="0" SpaceSize="1">
       <dxl:Result>
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="0.000017" Rows="1.000000" Width="16"/>
+          <dxl:Cost StartupCost="0" TotalCost="0.000117" Rows="1.000000" Width="16"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="2" Alias="x">

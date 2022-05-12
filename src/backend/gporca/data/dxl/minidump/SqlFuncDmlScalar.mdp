@@ -297,7 +297,7 @@ LIMIT 999
     <dxl:Plan Id="0" SpaceSize="3">
       <dxl:DMLInsert Columns="8" ActionCol="9" OidCol="0" CtidCol="0" SegmentIdCol="0" InputSorted="false">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="431.010492" Rows="1.000000" Width="4"/>
+          <dxl:Cost StartupCost="0" TotalCost="431.010525" Rows="1.000000" Width="4"/>
         </dxl:Properties>
         <dxl:DirectDispatchInfo/>
         <dxl:ProjList>
@@ -319,7 +319,7 @@ LIMIT 999
         </dxl:TableDescriptor>
         <dxl:RedistributeMotion InputSegments="0" OutputSegments="0,1,2">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="431.000075" Rows="1.000000" Width="8"/>
+            <dxl:Cost StartupCost="0" TotalCost="431.000108" Rows="1.000000" Width="8"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="8" Alias="yolo">
@@ -338,7 +338,7 @@ LIMIT 999
           </dxl:HashExprList>
           <dxl:Result>
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="431.000054" Rows="1.000000" Width="8"/>
+              <dxl:Cost StartupCost="0" TotalCost="431.000088" Rows="1.000000" Width="8"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="8" Alias="yolo">
@@ -352,7 +352,7 @@ LIMIT 999
             <dxl:OneTimeFilter/>
             <dxl:Limit>
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="431.000046" Rows="1.000000" Width="4"/>
+                <dxl:Cost StartupCost="0" TotalCost="431.000080" Rows="1.000000" Width="4"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="8" Alias="yolo">
@@ -361,7 +361,7 @@ LIMIT 999
               </dxl:ProjList>
               <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="0">
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="431.000042" Rows="1.000000" Width="4"/>
+                  <dxl:Cost StartupCost="0" TotalCost="431.000076" Rows="1.000000" Width="4"/>
                 </dxl:Properties>
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="8" Alias="yolo">
@@ -372,7 +372,7 @@ LIMIT 999
                 <dxl:SortingColumnList/>
                 <dxl:Result>
                   <dxl:Properties>
-                    <dxl:Cost StartupCost="0" TotalCost="431.000027" Rows="1.000000" Width="4"/>
+                    <dxl:Cost StartupCost="0" TotalCost="431.000061" Rows="1.000000" Width="4"/>
                   </dxl:Properties>
                   <dxl:ProjList>
                     <dxl:ProjElem ColId="8" Alias="yolo">

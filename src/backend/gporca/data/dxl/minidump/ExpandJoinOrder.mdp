@@ -868,7 +868,7 @@
     <dxl:Plan Id="0" SpaceSize="2316">
       <dxl:Limit>
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="31120.116045" Rows="100.000000" Width="128"/>
+          <dxl:Cost StartupCost="0" TotalCost="31120.423435" Rows="100.000000" Width="128"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="73" Alias="char_length">
@@ -970,7 +970,7 @@
         </dxl:ProjList>
         <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="31120.103245" Rows="100.000000" Width="128"/>
+            <dxl:Cost StartupCost="0" TotalCost="31120.410635" Rows="100.000000" Width="128"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="73" Alias="char_length">
@@ -1107,7 +1107,7 @@
           </dxl:SortingColumnList>
           <dxl:Limit>
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="31120.045773" Rows="100.000000" Width="128"/>
+              <dxl:Cost StartupCost="0" TotalCost="31120.353163" Rows="100.000000" Width="128"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="73" Alias="char_length">
@@ -1209,7 +1209,7 @@
             </dxl:ProjList>
             <dxl:Sort SortDiscardDuplicates="false">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="31120.039373" Rows="6147.800000" Width="128"/>
+                <dxl:Cost StartupCost="0" TotalCost="31120.346763" Rows="6147.800000" Width="128"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="73" Alias="char_length">
@@ -1348,7 +1348,7 @@
               <dxl:LimitOffset/>
               <dxl:Result>
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="31094.192332" Rows="6147.800000" Width="128"/>
+                  <dxl:Cost StartupCost="0" TotalCost="31094.499722" Rows="6147.800000" Width="128"/>
                 </dxl:Properties>
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="73" Alias="char_length">
