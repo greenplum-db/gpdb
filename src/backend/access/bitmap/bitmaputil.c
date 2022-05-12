@@ -374,6 +374,15 @@ _bitmap_catchup_to_next_tid(BMBatchWords *words, BMIterateResult *result)
 		return;
 
 	/*
+	 * if result->lastScanWordNo is equal to words->startNo, a new batch words
+	 * will be geneerated from next_batch_words(), and at this time if words->firstTid
+	 * is less than result->nextTid, then we should adjust result->lastScanWordNo to
+	 * the correct position.
+	 */
+	if (result->lastScanWordNo != words->startNo)
+		return;
+
+	/*
 	 * Iterate each word until catch up to the next tid to search.
 	 */
 	for(; words->nwords > 0 && words->firstTid < result->nextTid;
