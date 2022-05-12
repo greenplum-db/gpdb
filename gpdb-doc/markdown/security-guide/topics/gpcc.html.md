@@ -75,5 +75,5 @@ gpmon-only
 
 See the [Greenplum Command Center documentation](http://gpcc.docs.pivotal.io) for instructions to enable Kerberos authentication with Greenplum Command Center
 
-**Parent topic:**[Greenplum Database Security Configuration Guide](../topics/preface.html)
+**Parent topic:** [Greenplum Database Security Configuration Guide](../topics/preface.html)
 
