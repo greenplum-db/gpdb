@@ -4,7 +4,7 @@ title: pgbouncer.ini
 
 PgBouncer configuration file.
 
-## <a id="fixme"></a>Synopsis 
+## <a id="syn"></a>Synopsis 
 
 ```
 [databases]
@@ -17,7 +17,7 @@ db = ...
 ...
 ```
 
-## <a id="fixme"></a>Description 
+## <a id="desc"></a>Description 
 
 You specify PgBouncer configuration parameters and identify user-specific configuration parameters in the `pgbouncer.ini` configuration file.
 
@@ -48,7 +48,7 @@ A database name can contain characters `[0-9A-Za-z_.-]` without quoting. Names t
 
 The database name `*` is the fallback database. PgBouncer uses the value for this key as a connect string for the requested database. Automatically-created database entries such as these are cleaned up if they remain idle longer than the time specified in `autodb_idle_timeout` parameter.
 
-### <a id="fixme"></a>Database Connection Parameters 
+### <a id="dbconn"></a>Database Connection Parameters 
 
 The following parameters may be included in the `value` to specify the location of the database.
 
@@ -84,7 +84,7 @@ datestyle
 timezone
 :   Ask for specific `timezone` from server.
 
-### <a id="fixme"></a>Pool Configuration 
+### <a id="poolconfig"></a>Pool Configuration 
 
 You can use the following parameters for database-specific pool configuration.
 
@@ -102,7 +102,7 @@ max\_db\_connections
 
 ## <a id="topic_orc_gkd_gs"></a>\[pgbouncer\] Section 
 
-### <a id="fixme"></a>Generic Settings 
+### <a id="genset"></a>Generic Settings 
 
 logfile
 :   The location of the log file. The log file is kept open. After log rotation, run `kill -HUP pgbouncer` or run the `RELOAD;` command in the PgBouncer Administration Console.
@@ -284,7 +284,7 @@ service\_name
 job\_name
 :   Alias for `service_name`.
 
-### <a id="fixme"></a>Log Settings 
+### <a id="logset"></a>Log Settings 
 
 syslog
 :   Toggles syslog on and off.
@@ -326,7 +326,7 @@ stats\_period
 
     Default: 60
 
-### <a id="fixme"></a>Console Access Control 
+### <a id="consaccess"></a>Console Access Control 
 
 admin\_users
 :   Comma-separated list of database users that are allowed to connect and run all commands on the PgBouncer Administration Console. Ignored when `auth_type=any`, in which case any username is allowed in as admin.
@@ -338,7 +338,7 @@ stats\_users
 
     Default: empty
 
-### <a id="fixme"></a>Connection Sanity Checks, Timeouts 
+### <a id="connsan"></a>Connection Sanity Checks, Timeouts 
 
 server\_reset\_query
 :   Query sent to server on connection release, before making it available to other clients. At that moment no transaction is in progress so it should not include `ABORT` or `ROLLBACK`.
@@ -428,7 +428,7 @@ dns\_zone\_check\_period
 
     Default: 0.0 \(disabled\)
 
-### <a id="fixme"></a>TLS settings 
+### <a id="tlsset"></a>TLS settings 
 
 client\_tls\_sslmode
 :   TLS mode to use for connections from clients. TLS connections are disabled by default. When enabled, `client_tls_key_file` and `client_tls_cert_file` must be also configured to set up the key and certificate PgBouncer uses to accept client connections.
@@ -518,7 +518,7 @@ server\_tls\_protocols
 server\_tls\_ciphers
 :   Default: `fast`
 
-### <a id="fixme"></a>Dangerous Timeouts 
+### <a id="dangtimeouts"></a>Dangerous Timeouts 
 
 Setting the following timeouts can cause unexpected errors.
 
@@ -542,7 +542,7 @@ idle\_transaction\_timeout
 
     Default: 0.0 \(disabled\)
 
-### <a id="fixme"></a>Low-level Network Settings 
+### <a id="llnet"></a>Low-level Network Settings 
 
 pkt\_buf
 :   Internal buffer size for packets. Affects the size of TCP packets sent and general memory usage. Actual `libpq` packets can be larger than this so there is no need to set it large.
