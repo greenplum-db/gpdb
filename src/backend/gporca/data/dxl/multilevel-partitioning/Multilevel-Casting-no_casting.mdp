@@ -363,9 +363,7 @@ explain select * from TestPartitionFilterCasting where p3 = 1.0;
             <dxl:PartEqFilters>
               <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>
               <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>
-              <dxl:PartEqFilterElems>
-                <dxl:ConstValue TypeMdid="0.1700.1.0" Value="AAAACgAAAQABAA==" DoubleValue="1.000000"/>
-              </dxl:PartEqFilterElems>
+              <dxl:ConstValue TypeMdid="0.1700.1.0" Value="AAAACgAAAQABAA==" DoubleValue="1.000000"/>
             </dxl:PartEqFilters>
             <dxl:PartFilters>
               <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>

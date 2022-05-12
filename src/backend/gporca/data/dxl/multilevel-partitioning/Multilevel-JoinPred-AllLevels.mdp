@@ -434,12 +434,8 @@ select * from pt, t where pt.j = t.t1 and pt.k = t.t2;
               </dxl:ProjElem>
             </dxl:ProjList>
             <dxl:PartEqFilters>
-              <dxl:PartEqFilterElems>
-                <dxl:Ident ColId="7" ColName="t2" TypeMdid="0.23.1.0"/>
-              </dxl:PartEqFilterElems>
-              <dxl:PartEqFilterElems>
-                <dxl:Ident ColId="6" ColName="t1" TypeMdid="0.23.1.0"/>
-              </dxl:PartEqFilterElems>
+              <dxl:Ident ColId="7" ColName="t2" TypeMdid="0.23.1.0"/>
+              <dxl:Ident ColId="6" ColName="t1" TypeMdid="0.23.1.0"/>
             </dxl:PartEqFilters>
             <dxl:PartFilters>
               <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>

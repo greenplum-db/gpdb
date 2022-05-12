@@ -449,9 +449,7 @@ select * from pt, t where pt.j = t.t1;
             </dxl:ProjList>
             <dxl:PartEqFilters>
               <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>
-              <dxl:PartEqFilterElems>
-                <dxl:Ident ColId="6" ColName="t1" TypeMdid="0.23.1.0"/>
-              </dxl:PartEqFilterElems>
+              <dxl:Ident ColId="6" ColName="t1" TypeMdid="0.23.1.0"/>
             </dxl:PartEqFilters>
             <dxl:PartFilters>
               <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>

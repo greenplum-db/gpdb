@@ -384,9 +384,7 @@ explain select * from TestPartitionFilterCasting where p2 = '2015-01-01';
             </dxl:Properties>
             <dxl:ProjList/>
             <dxl:PartEqFilters>
-              <dxl:PartEqFilterElems>
-                <dxl:ConstValue TypeMdid="0.25.1.0" Value="AAAABWE=" LintValue="160440876"/>
-              </dxl:PartEqFilterElems>
+              <dxl:ConstValue TypeMdid="0.25.1.0" Value="AAAABWE=" LintValue="160440876"/>
               <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>
               <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>
             </dxl:PartEqFilters>

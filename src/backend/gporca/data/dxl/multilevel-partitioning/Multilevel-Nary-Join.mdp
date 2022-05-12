@@ -1560,9 +1560,7 @@ select * from pt, foo, bar where pt.k=foo.a and pt.j = bar.a;
                 </dxl:ProjElem>
               </dxl:ProjList>
               <dxl:PartEqFilters>
-                <dxl:PartEqFilterElems>
-                  <dxl:Ident ColId="6" ColName="a" TypeMdid="0.23.1.0"/>
-                </dxl:PartEqFilterElems>
+                <dxl:Ident ColId="6" ColName="a" TypeMdid="0.23.1.0"/>
                 <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>
               </dxl:PartEqFilters>
               <dxl:PartFilters>
@@ -1635,9 +1633,7 @@ select * from pt, foo, bar where pt.k=foo.a and pt.j = bar.a;
             </dxl:ProjList>
             <dxl:PartEqFilters>
               <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>
-              <dxl:PartEqFilterElems>
-                <dxl:Ident ColId="11" ColName="a" TypeMdid="0.23.1.0"/>
-              </dxl:PartEqFilterElems>
+              <dxl:Ident ColId="11" ColName="a" TypeMdid="0.23.1.0"/>
             </dxl:PartEqFilters>
             <dxl:PartFilters>
               <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>

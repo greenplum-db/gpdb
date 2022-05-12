@@ -368,15 +368,9 @@ explain select * from TestPartitionFilterCasting where p1 = 'a' and p2 = '2015-0
             </dxl:Properties>
             <dxl:ProjList/>
             <dxl:PartEqFilters>
-              <dxl:PartEqFilterElems>
-                <dxl:ConstValue TypeMdid="0.25.1.0" Value="AAAABWE=" LintValue="160440876"/>
-              </dxl:PartEqFilterElems>
-              <dxl:PartEqFilterElems>
-                <dxl:ConstValue TypeMdid="0.1082.1.0" Value="ZxUAAA==" LintValue="5479"/>
-              </dxl:PartEqFilterElems>
-              <dxl:PartEqFilterElems>
-                <dxl:ConstValue TypeMdid="0.1700.1.0" Value="AAAACgAAAAABAA==" DoubleValue="1.000000"/>
-              </dxl:PartEqFilterElems>
+              <dxl:ConstValue TypeMdid="0.25.1.0" Value="AAAABWE=" LintValue="160440876"/>
+              <dxl:ConstValue TypeMdid="0.1082.1.0" Value="ZxUAAA==" LintValue="5479"/>
+              <dxl:ConstValue TypeMdid="0.1700.1.0" Value="AAAACgAAAAABAA==" DoubleValue="1.000000"/>
             </dxl:PartEqFilters>
             <dxl:PartFilters>
               <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>

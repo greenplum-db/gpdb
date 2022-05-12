@@ -297,50 +297,11 @@ explain select * from PT where j < 5 and k = 4;
             </dxl:Properties>
             <dxl:ProjList/>
             <dxl:PartEqFilters>
-              <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>
+              <dxl:ConstValue TypeMdid="0.23.1.0" Value="4"/>
               <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>
             </dxl:PartEqFilters>
             <dxl:PartFilters>
-              <dxl:And>
-                <dxl:Or>
-                  <dxl:And>
-                    <dxl:Or>
-                      <dxl:Comparison ComparisonOperator="&lt;=" OperatorMdid="0.523.1.0">
-                        <dxl:PartBound Level="0" Type="0.23.1.0" LowerBound="true"/>
-                        <dxl:ConstValue TypeMdid="0.23.1.0" Value="4"/>
-                      </dxl:Comparison>
-                      <dxl:PartBoundOpen Level="0" LowerBound="true"/>
-                    </dxl:Or>
-                    <dxl:PartBoundInclusion Level="0" LowerBound="true"/>
-                  </dxl:And>
-                  <dxl:Or>
-                    <dxl:Comparison ComparisonOperator="&lt;" OperatorMdid="0.97.1.0">
-                      <dxl:PartBound Level="0" Type="0.23.1.0" LowerBound="true"/>
-                      <dxl:ConstValue TypeMdid="0.23.1.0" Value="4"/>
-                    </dxl:Comparison>
-                    <dxl:PartBoundOpen Level="0" LowerBound="true"/>
-                  </dxl:Or>
-                </dxl:Or>
-                <dxl:Or>
-                  <dxl:And>
-                    <dxl:Or>
-                      <dxl:Comparison ComparisonOperator="&gt;=" OperatorMdid="0.525.1.0">
-                        <dxl:PartBound Level="0" Type="0.23.1.0" LowerBound="false"/>
-                        <dxl:ConstValue TypeMdid="0.23.1.0" Value="4"/>
-                      </dxl:Comparison>
-                      <dxl:PartBoundOpen Level="0" LowerBound="false"/>
-                    </dxl:Or>
-                    <dxl:PartBoundInclusion Level="0" LowerBound="false"/>
-                  </dxl:And>
-                  <dxl:Or>
-                    <dxl:Comparison ComparisonOperator="&gt;" OperatorMdid="0.521.1.0">
-                      <dxl:PartBound Level="0" Type="0.23.1.0" LowerBound="false"/>
-                      <dxl:ConstValue TypeMdid="0.23.1.0" Value="4"/>
-                    </dxl:Comparison>
-                    <dxl:PartBoundOpen Level="0" LowerBound="false"/>
-                  </dxl:Or>
-                </dxl:Or>
-              </dxl:And>
+              <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>
               <dxl:Or>
                 <dxl:Comparison ComparisonOperator="&lt;" OperatorMdid="0.97.1.0">
                   <dxl:PartBound Level="1" Type="0.23.1.0" LowerBound="true"/>
