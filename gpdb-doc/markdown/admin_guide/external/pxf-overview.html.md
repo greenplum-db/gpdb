@@ -12,7 +12,7 @@ The Greenplum Platform Extension Framework includes a C-language extension and a
 
 For detailed information about the architecture of and using PXF, refer to the [Greenplum Platform Extension Framework \(PXF\)](../../../pxf/latest/using/overview_pxf.html) documentation.
 
-**Parent topic:**[Working with External Data](../external/g-working-with-file-based-ext-tables.html)
+**Parent topic:** [Working with External Data](../external/g-working-with-file-based-ext-tables.html)
 
-**Parent topic:**[Loading and Unloading Data](../load/topics/g-loading-and-unloading-data.html)
+**Parent topic:** [Loading and Unloading Data](../load/topics/g-loading-and-unloading-data.html)
 

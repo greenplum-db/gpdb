@@ -16,7 +16,7 @@ Greenplum Database supports several storage models and a mix of storage models. 
 
 For information about the parameter, see "Server Configuration Parameters" in the *Greenplum Database Reference Guide*.
 
-**Parent topic:**[Defining Database Objects](../ddl/ddl.html)
+**Parent topic:** [Defining Database Objects](../ddl/ddl.html)
 
 ## <a id="topic37"></a>Heap Storage 
 

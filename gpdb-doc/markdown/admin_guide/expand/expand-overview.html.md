@@ -80,5 +80,5 @@ In a typical operation, you run the `gpexpand` utility four times with different
 
 For information about the [gpexpand](../../utility_guide/ref/gpexpand.html) utility and the other utilities that are used for system expansion, see the *Greenplum Database Utility Guide*.
 
-**Parent topic:**[Expanding a Greenplum System](../expand/expand-main.html)
+**Parent topic:** [Expanding a Greenplum System](../expand/expand-main.html)
 

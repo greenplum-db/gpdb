@@ -12,5 +12,5 @@ By using external tables in conjunction with Greenplum Database's parallel file 
 
 Another Greenplum utility, `gpload`, runs a load task that you specify in a YAML-formatted control file. You describe the source data locations, format, transformations required, participating hosts, database destinations, and other particulars in the control file and `gpload` runs the load. This allows you to describe a complex task and run it in a controlled, repeatable fashion.
 
-**Parent topic:**[Greenplum Database Concepts](../intro/partI.html)
+**Parent topic:** [Greenplum Database Concepts](../intro/partI.html)
 

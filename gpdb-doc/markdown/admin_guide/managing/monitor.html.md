@@ -8,7 +8,7 @@ Observing the Greenplum Database system day-to-day performance helps administrat
 
 Also, be sure to review [Recommended Monitoring and Maintenance Tasks](../monitoring/monitoring.html) for monitoring activities you can script to quickly detect problems in the system.
 
-**Parent topic:**[Managing a Greenplum System](../managing/partII.html)
+**Parent topic:** [Managing a Greenplum System](../managing/partII.html)
 
 ## <a id="topic2"></a>Monitoring Database Activity and Performance 
 

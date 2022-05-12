@@ -13,5 +13,5 @@ Creates a readable external table, *ext\_expenses,* using the gpfdist protocol f
 
 ```
 
-**Parent topic:**[Examples for Creating External Tables](../external/g-creating-external-tables---examples.html)
+**Parent topic:** [Examples for Creating External Tables](../external/g-creating-external-tables---examples.html)
 

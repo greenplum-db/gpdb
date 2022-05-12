@@ -33,5 +33,5 @@ The following table summarizes some of the differences between Resource Queues a
 -   **[Using Resource Queues](workload_mgmt.html)**  
 
 
-**Parent topic:**[Managing Performance](partV.html)
+**Parent topic:** [Managing Performance](partV.html)
 

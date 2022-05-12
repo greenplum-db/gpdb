@@ -32,5 +32,5 @@ The standby master status should be passive, and the WAL sender state should be 
 
 For information about the [gpstate](../../../utility_guide/ref/gpstate.html) utility, see the *Greenplum Database Utility Guide*.
 
-**Parent topic:**[Enabling Mirroring in Greenplum Database](../../highavail/topics/g-enabling-mirroring-in-greenplum-database.html)
+**Parent topic:** [Enabling Mirroring in Greenplum Database](../../highavail/topics/g-enabling-mirroring-in-greenplum-database.html)
 

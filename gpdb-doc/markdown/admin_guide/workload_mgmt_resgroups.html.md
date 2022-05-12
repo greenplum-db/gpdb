@@ -26,7 +26,7 @@ This topic includes the following subtopics:
 -   [Moving a Query to a Different Resource Group](#moverg)
 -   [Resource Group Frequently Asked Questions](#topic777999)
 
-**Parent topic:**[Managing Resources](wlmgmt.html)
+**Parent topic:** [Managing Resources](wlmgmt.html)
 
 ## <a id="topic8339intro"></a>Understanding Role and Component Resource Groups 
 

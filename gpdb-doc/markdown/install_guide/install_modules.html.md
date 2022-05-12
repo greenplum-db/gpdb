@@ -68,5 +68,5 @@ You can register the following modules in this manner:
 
 For additional information about the modules supplied with Greenplum Database, refer to [Additional Supplied Modules](../ref_guide/modules/intro.html) in the *Greenplum Database Reference Guide*.
 
-**Parent topic:**[Installing and Upgrading Greenplum](install_guide.html)
+**Parent topic:** [Installing and Upgrading Greenplum](install_guide.html)
 

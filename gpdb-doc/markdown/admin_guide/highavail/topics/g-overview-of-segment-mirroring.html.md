@@ -33,5 +33,5 @@ Mirror segment instances can be placed on hosts in the cluster in different conf
 
 
 
-**Parent topic:**[Overview of Greenplum Database High Availability](../../highavail/topics/g-overview-of-high-availability-in-greenplum-database.html)
+**Parent topic:** [Overview of Greenplum Database High Availability](../../highavail/topics/g-overview-of-high-availability-in-greenplum-database.html)
 

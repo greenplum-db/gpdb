@@ -6,7 +6,7 @@ This section provides guidelines for identifying and troubleshooting performance
 
 This topic lists steps you can take to help identify the cause of a performance problem. If the problem affects a particular workload or query, you can focus on tuning that particular workload. If the performance problem is system-wide, then hardware problems, system failures, or resource contention may be the cause.
 
-**Parent topic:**[Managing Performance](partV.html)
+**Parent topic:** [Managing Performance](partV.html)
 
 ## <a id="topic2"></a>Checking System State 
 

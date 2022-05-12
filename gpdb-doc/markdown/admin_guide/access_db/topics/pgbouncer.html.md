@@ -12,7 +12,7 @@ The following topics describe how to set up and use PgBouncer with Greenplum Dat
 -   [Starting PgBouncer](#pgb_start)
 -   [Managing PgBouncer](#topic_manage)
 
-**Parent topic:**[Accessing the Database](../../access_db/topics/g-accessing-the-database.html)
+**Parent topic:** [Accessing the Database](../../access_db/topics/g-accessing-the-database.html)
 
 ## <a id="topic_nzk_nqg_cs"></a>Overview 
 

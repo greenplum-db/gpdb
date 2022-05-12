@@ -13,5 +13,5 @@ Information about installing optional Tanzu Greenplum Database extensions and pa
 -   **[Greenplum Platform Extension Framework \(PXF\)](install_pxf.html)**  
 
 
-**Parent topic:**[Installing and Upgrading Greenplum](install_guide.html)
+**Parent topic:** [Installing and Upgrading Greenplum](install_guide.html)
 

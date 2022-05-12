@@ -14,5 +14,5 @@ $ psql -c 'SHOW ALL;'
 $ gpconfig --show max_connections
 ```
 
-**Parent topic:**[Configuring the Greenplum Database System](../topics/g-configuring-the-greenplum-system.html)
+**Parent topic:** [Configuring the Greenplum Database System](../topics/g-configuring-the-greenplum-system.html)
 

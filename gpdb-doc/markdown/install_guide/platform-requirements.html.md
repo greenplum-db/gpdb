@@ -17,7 +17,7 @@ This topic describes the Greenplum Database 6 platform and operating system soft
     -   [Greenplum Command Center](#topic_zkq_j5b_hbb)
 -   [Hadoop Distributions](#topic36)
 
-**Parent topic:**[Installing and Upgrading Greenplum](install_guide.html)
+**Parent topic:** [Installing and Upgrading Greenplum](install_guide.html)
 
 ## <a id="topic13"></a>Operating Systems 
 

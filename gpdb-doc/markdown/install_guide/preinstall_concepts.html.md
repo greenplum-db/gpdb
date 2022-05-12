@@ -23,7 +23,7 @@ This chapter describes the major components of a Greenplum Database system and t
 -   **[Tanzu Greenplum Performance Monitoring](preinstall_concepts.html)**  
 
 
-**Parent topic:**[Installing and Upgrading Greenplum](install_guide.html)
+**Parent topic:** [Installing and Upgrading Greenplum](install_guide.html)
 
 ## <a id="topic2"></a>The Greenplum Master 
 
@@ -33,7 +33,7 @@ The master maintains the *system catalog* \(a set of system tables that contain 
 
 Because the master does not contain any user data, it has very little disk load. The master needs a fast, dedicated CPU for data loading, connection handling, and query planning because extra space is often necessary for landing load files and backup files, especially in production environments. Customers may decide to also run ETL and reporting tools on the master, which requires more disk space and processing power.
 
-**Parent topic:**[Introduction to Greenplum](preinstall_concepts.html)
+**Parent topic:** [Introduction to Greenplum](preinstall_concepts.html)
 
 ### <a id="topic3"></a>Master Redundancy 
 
@@ -51,7 +51,7 @@ In Greenplum Database, the *segments* are where data is stored and where most qu
 
 In the reference Greenplum Database hardware configurations, the number of segment instances per segment host is determined by the number of effective CPUs or CPU core. For example, if your segment hosts have two dual-core processors, you may have two or four primary segments per host. If your segment hosts have three quad-core processors, you may have three, six or twelve segments per host. Performance testing will help decide the best number of segments for a chosen hardware platform.
 
-**Parent topic:**[Introduction to Greenplum](preinstall_concepts.html)
+**Parent topic:** [Introduction to Greenplum](preinstall_concepts.html)
 
 ### <a id="topic5"></a>Segment Redundancy 
 
@@ -95,7 +95,7 @@ The *interconnect* is the networking layer of Greenplum Database. When a user co
 
 By default, Greenplum Database interconnect uses UDP \(User Datagram Protocol\) with flow control for interconnect traffic to send messages over the network. The Greenplum software does the additional packet verification and checking not performed by UDP, so the reliability is equivalent to TCP \(Transmission Control Protocol\), and the performance and scalability exceeds that of TCP. For information about the types of interconnect supported by Greenplum Database, see server configuration parameter `gp_interconnect_type` in the *Greenplum Database Reference Guide*.
 
-**Parent topic:**[Introduction to Greenplum](preinstall_concepts.html)
+**Parent topic:** [Introduction to Greenplum](preinstall_concepts.html)
 
 ### <a id="topic10"></a>Interconnect Redundancy 
 
@@ -135,7 +135,7 @@ The `gpfdist` program can serve data to the segment instances at an average rate
 
 ![](graphics/ext_tables.jpg "External Tables Using Multiple gpfdist Instances with Multiple NICs")
 
-**Parent topic:**[Introduction to Greenplum](preinstall_concepts.html)
+**Parent topic:** [Introduction to Greenplum](preinstall_concepts.html)
 
 ## <a id="topic_e5t_whm_kbb"></a>Tanzu Greenplum Performance Monitoring 
 
@@ -143,5 +143,5 @@ Tanzu Greenplum Greenplum Command Center is an optional web-based performance mo
 
 ![](graphics/cc_arch_gpdb.png "Greenplum Performance Monitoring Architecture")
 
-**Parent topic:**[Introduction to Greenplum](preinstall_concepts.html)
+**Parent topic:** [Introduction to Greenplum](preinstall_concepts.html)
 

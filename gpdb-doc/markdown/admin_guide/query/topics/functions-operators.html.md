@@ -10,7 +10,7 @@ Description of user-defined and built-in functions and operators in Greenplum Da
 -   [Window Functions](#topic30)
 -   [Advanced Aggregate Functions](#topic31)
 
-**Parent topic:**[Querying Data](../../query/topics/query.html)
+**Parent topic:** [Querying Data](../../query/topics/query.html)
 
 ## <a id="topic27"></a>Using Functions in Greenplum Database 
 

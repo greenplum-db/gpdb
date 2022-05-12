@@ -31,5 +31,5 @@ To keep a Greenplum Database system running efficiently, the database must be re
 -   **[Recommended Monitoring and Maintenance Tasks](../monitoring/monitoring.html)**  
 This section lists monitoring and maintenance activities recommended to ensure high availability and consistent performance of your Greenplum Database cluster.
 
-**Parent topic:**[Greenplum Database Administrator Guide](../admin_guide.html)
+**Parent topic:** [Greenplum Database Administrator Guide](../admin_guide.html)
 

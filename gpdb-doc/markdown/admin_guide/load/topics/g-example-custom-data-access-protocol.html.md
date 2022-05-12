@@ -48,5 +48,5 @@ The example implementation [gpextprotocal.c](g-gpextprotocal.c.html) uses `fopen
 -   **[Installing the External Table Protocol](../../load/topics/g-installing-the-external-table-protocol.html)**  
 
 
-**Parent topic:**[Loading and Unloading Data](../../load/topics/g-loading-and-unloading-data.html)
+**Parent topic:** [Loading and Unloading Data](../../load/topics/g-loading-and-unloading-data.html)
 

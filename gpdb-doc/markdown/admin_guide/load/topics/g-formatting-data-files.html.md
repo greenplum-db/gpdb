@@ -15,5 +15,5 @@ When you use the Greenplum tools for loading and unloading data, you must specif
 -   **[Character Encoding](../../load/topics/g-character-encoding.html)**  
 
 
-**Parent topic:**[Loading and Unloading Data](../../load/topics/g-loading-and-unloading-data.html)
+**Parent topic:** [Loading and Unloading Data](../../load/topics/g-loading-and-unloading-data.html)
 

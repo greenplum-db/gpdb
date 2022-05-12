@@ -16,7 +16,7 @@ This topic describes the tasks to set up data transformations that work with `gp
 -   [Configuration File Format](#topic83)
 -   [XML Transformation Examples](#topic91)
 
-**Parent topic:**[Loading and Unloading Data](../../load/topics/g-loading-and-unloading-data.html)
+**Parent topic:** [Loading and Unloading Data](../../load/topics/g-loading-and-unloading-data.html)
 
 ## <a id="topic_mdl_thm_pbb"></a>About gpfdist Transformations 
 
