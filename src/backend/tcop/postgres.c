@@ -5523,6 +5523,7 @@ PostgresMain(int argc, char *argv[],
 
 					SetUserIdAndSecContext(GetOuterUserId(), 0);
 
+					SIMPLE_FAULT_INJECTOR("qe_exec_finished");
 					send_ready_for_query = true;
 				}
 				break;

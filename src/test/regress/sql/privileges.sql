@@ -1281,7 +1281,7 @@ INITIALLY DEFERRED FOR EACH ROW
 EXECUTE PROCEDURE executor_trig_sfunc();
 
 -- Check "regress_sro_user" superuser privileges on segments.
-CREATE OR REPLACE FUNCTION is_superuser_on_segments(username text) RETURNS boolean AS $$
+CREATE OR REPLACE FUNCTION is_superuser_on_segments(username text) RETURNS setof boolean AS $$
 SELECT rolsuper FROM pg_roles WHERE rolname = $1;
 $$ LANGUAGE sql EXECUTE ON ALL SEGMENTS;
 

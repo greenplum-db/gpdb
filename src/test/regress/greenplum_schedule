@@ -39,6 +39,7 @@ test: instr_in_shmem
 test: createdb
 test: gp_aggregates gp_aggregates_costs gp_metadata variadic_parameters default_parameters function_extensions spi gp_xml shared_scan update_gp triggers_gp returning_gp resource_queue_with_rule gp_types gp_index cluster_gp combocid_gp gp_sort gp_prepared_xacts gp_backend_info
 test: spi_processed64bit
+test: gp_lock
 test: gp_tablespace_with_faults
 # below test(s) inject faults so each of them need to be in a separate group
 test: gp_tablespace

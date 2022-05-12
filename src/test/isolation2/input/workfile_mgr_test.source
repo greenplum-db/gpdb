@@ -17,11 +17,11 @@ $$
 LANGUAGE SQL;
 
 CREATE OR REPLACE FUNCTION gp_workfile_mgr_create_workset(worksetname text, interXact bool, holdPin bool, closeFile bool)
-RETURNS void 
+RETURNS setof void 
 LANGUAGE C VOLATILE EXECUTE ON ALL SEGMENTS AS '@abs_builddir@/isolation2_regress@DLSUFFIX@', 'gp_workfile_mgr_create_workset';
 
 CREATE OR REPLACE FUNCTION gp_workfile_mgr_create_empty_workset(worksetname text)
-RETURNS void 
+RETURNS setof void 
 LANGUAGE C VOLATILE EXECUTE ON ALL SEGMENTS AS '@abs_builddir@/isolation2_regress@DLSUFFIX@', 'gp_workfile_mgr_create_workset';
 
 CREATE FUNCTION gp_workfile_mgr_cache_entries()

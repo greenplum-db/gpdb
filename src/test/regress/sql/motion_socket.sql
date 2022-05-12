@@ -60,5 +60,5 @@ for pid in pids_to_check:
         motion_socket_count, process.connections()))
 
 
-$$ LANGUAGE plpython3u EXECUTE ON MASTER;
+$$ LANGUAGE plpython3u;
 SELECT check_motion_sockets();
