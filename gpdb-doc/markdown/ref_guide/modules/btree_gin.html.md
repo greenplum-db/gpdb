@@ -1,4 +1,6 @@
-# btree\_gin 
+---
+title: btree\_gin 
+---
 
 The `btree_gin` module provides sample generalized inverted index \(GIN\) operator classes that implement B-tree equivalent behavior for certain data types.
 
@@ -13,6 +15,10 @@ CREATE EXTENSION btree_gin;
 ```
 
 Refer to [Installing Additional Supplied Modules](../../install_guide/install_modules.html) for more information.
+
+## <a id="topic_issues"></a>Greenplum Database Limitations 
+
+The Pivotal Query Optimizer \(GPORCA\) does not support queries that access an index with `op_class`, such queries will fall back to the Postgres Planner
 
 ## <a id="topic_info"></a>Module Documentation 
 

@@ -1,4 +1,6 @@
-# DROP TABLE 
+---
+title: DROP TABLE 
+---
 
 Removes a table.
 

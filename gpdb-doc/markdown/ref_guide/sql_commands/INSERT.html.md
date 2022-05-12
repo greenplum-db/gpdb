@@ -1,4 +1,6 @@
-# INSERT 
+---
+title: INSERT 
+---
 
 Creates new rows in a table.
 

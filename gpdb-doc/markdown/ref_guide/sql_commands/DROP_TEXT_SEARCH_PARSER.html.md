@@ -1,10 +1,12 @@
-# DROP TEXT SEARCH PARSER 
+---
+title: DROP TEXT SEARCH PARSER 
+---
 
-## <a id="Description"></a>Description 
+## <a id="desc"></a>Description 
 
 Remove a text search parser.
 
-## <a id="Synopsis"></a>Synopsis 
+## <a id="synops"></a>Synopsis 
 
 ``` {#sql_command_synopsis}
 DROP TEXT SEARCH PARSER [ IF EXISTS ] <name> [ CASCADE | RESTRICT ]
@@ -28,7 +30,7 @@ DROP TEXT SEARCH PARSER [ IF EXISTS ] <name> [ CASCADE | RESTRICT ]
 `RESTRICT`
 :   Refuse to drop the text search parser if any objects depend on it. This is the default.
 
-## <a id="Examples"></a>Examples 
+## <a id="examples"></a>Examples 
 
 Remove the text search parser `my_parser`:
 

@@ -1,4 +1,6 @@
-# DROP RESOURCE GROUP 
+---
+title: DROP RESOURCE GROUP 
+---
 
 Removes a resource group.
 

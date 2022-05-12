@@ -1,4 +1,6 @@
-# gp_fastsequence 
+---
+title: gp\_fastsequence 
+---
 
 The `gp_fastsequence` table contains information about append-optimized and column-oriented tables. The `last_sequence` value indicates maximum row number currently used by the table.
 

@@ -1,4 +1,6 @@
-# DROP SCHEMA 
+---
+title: DROP SCHEMA 
+---
 
 Removes a schema.
 

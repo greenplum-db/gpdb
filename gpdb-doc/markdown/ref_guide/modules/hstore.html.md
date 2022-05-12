@@ -1,4 +1,6 @@
-# hstore 
+---
+title: hstore 
+---
 
 The `hstore` module implements a data type for storing sets of \(key,value\) pairs within a single Greenplum Database data field. This can be useful in various scenarios, such as rows with many attributes that are rarely examined, or semi-structured data.
 

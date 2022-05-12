@@ -1,4 +1,6 @@
-# DROP OWNED 
+---
+title: DROP OWNED 
+---
 
 Removes database objects owned by a database role.
 

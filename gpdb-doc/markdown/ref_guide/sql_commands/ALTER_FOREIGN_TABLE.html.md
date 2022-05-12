@@ -1,4 +1,6 @@
-# ALTER FOREIGN TABLE 
+---
+title: ALTER FOREIGN TABLE 
+---
 
 Changes the definition of a foreign table.
 

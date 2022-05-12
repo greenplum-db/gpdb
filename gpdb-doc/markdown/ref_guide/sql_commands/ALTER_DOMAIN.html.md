@@ -1,4 +1,6 @@
-# ALTER DOMAIN 
+---
+title: ALTER DOMAIN 
+---
 
 Changes the definition of a domain.
 

@@ -1,4 +1,6 @@
-# Server Programmatic Interfaces 
+---
+title: Server Programmatic Interfaces 
+---
 
 This section describes programmatic interfaces to the Greenplum Database server.
 

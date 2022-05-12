@@ -1,4 +1,6 @@
-# ALTER TEXT SEARCH CONFIGURATION 
+---
+title: ALTER TEXT SEARCH CONFIGURATION 
+---
 
 Changes the definition of a text search configuration.
 

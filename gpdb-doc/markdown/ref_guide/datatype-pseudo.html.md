@@ -1,4 +1,6 @@
-# Pseudo-Types 
+---
+title: Pseudo-Types 
+---
 
 Greenplum Database supports special-purpose data type entries that are collectively called *pseudo-types*. A pseudo-type cannot be used as a column data type, but it can be used to declare a function's argument or result type. Each of the available pseudo-types is useful in situations where a function's behavior does not correspond to simply taking or returning a value of a specific SQL data type.
 

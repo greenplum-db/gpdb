@@ -1,4 +1,6 @@
-# SQL Features, Reserved and Key Words, and Compliance 
+---
+title: SQL Features, Reserved and Key Words, and Compliance 
+---
 
 This section includes topics that identify SQL features and compliance in Greenplum Database:
 

@@ -1,4 +1,6 @@
-# pg_conversion 
+---
+title: pg\_conversion 
+---
 
 The `pg_conversion` system catalog table describes the available encoding conversion procedures as defined by `CREATE CONVERSION`.
 

@@ -1,4 +1,6 @@
-# pg_max_external_files 
+---
+title: pg\_max\_external\_files 
+---
 
 The `pg_max_external_files` view shows the maximum number of external table files allowed per segment host when using the external table `file` protocol.
 

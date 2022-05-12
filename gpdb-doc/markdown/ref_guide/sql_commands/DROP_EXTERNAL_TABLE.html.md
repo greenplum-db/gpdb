@@ -1,4 +1,6 @@
-# DROP EXTERNAL TABLE 
+---
+title: DROP EXTERNAL TABLE 
+---
 
 Removes an external table definition.
 

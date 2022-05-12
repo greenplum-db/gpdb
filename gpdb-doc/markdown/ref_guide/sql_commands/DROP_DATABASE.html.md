@@ -1,4 +1,6 @@
-# DROP DATABASE 
+---
+title: DROP DATABASE 
+---
 
 Removes a database.
 

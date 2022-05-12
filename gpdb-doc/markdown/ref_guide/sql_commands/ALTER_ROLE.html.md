@@ -1,4 +1,6 @@
-# ALTER ROLE 
+---
+title: ALTER ROLE 
+---
 
 Changes a database role \(user or group\).
 
@@ -102,7 +104,7 @@ CONNECTION LIMIT connlimit
 PASSWORD password
 ENCRYPTED \| UNENCRYPTED
 VALID UNTIL 'timestamp'
-:   These clauses alter role attributes originally set by `[CREATE ROLE](CREATE_ROLE.html)`.
+:   These clauses alter role attributes originally set by [CREATE ROLE](CREATE_ROLE.html).
 
 DENY deny\_point
 DENY BETWEEN deny\_point AND deny\_point

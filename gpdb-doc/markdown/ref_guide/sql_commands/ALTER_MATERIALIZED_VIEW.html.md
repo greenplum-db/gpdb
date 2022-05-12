@@ -1,4 +1,6 @@
-# ALTER MATERIALIZED VIEW 
+---
+title: ALTER MATERIALIZED VIEW 
+---
 
 Changes the definition of a materialized view.
 

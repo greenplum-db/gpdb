@@ -1,4 +1,6 @@
-# ALTER RESOURCE QUEUE 
+---
+title: ALTER RESOURCE QUEUE 
+---
 
 Changes the limits of a resource queue.
 

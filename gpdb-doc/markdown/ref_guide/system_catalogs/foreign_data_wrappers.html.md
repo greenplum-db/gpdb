@@ -1,4 +1,6 @@
-# foreign_data_wrappers 
+---
+title: foreign\_data\_wrappers 
+---
 
 The `foreign_data_wrappers` view contains all foreign-data wrappers defined in the current database. Greenplum Database displays only those foreign-data wrappers to which the current user has access \(by way of being the owner or having some privilege\).
 

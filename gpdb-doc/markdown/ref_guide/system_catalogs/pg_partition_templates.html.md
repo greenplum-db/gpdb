@@ -1,4 +1,6 @@
-# pg_partition_templates 
+---
+title: pg\_partition\_templates 
+---
 
 The `pg_partition_templates` system view is used to show the subpartitions that were created using a subpartition template.
 

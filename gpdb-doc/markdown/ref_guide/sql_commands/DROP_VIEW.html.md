@@ -1,4 +1,6 @@
-# DROP VIEW 
+---
+title: DROP VIEW 
+---
 
 Removes a view.
 

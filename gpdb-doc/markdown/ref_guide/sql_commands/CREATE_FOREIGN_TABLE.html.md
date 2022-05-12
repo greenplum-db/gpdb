@@ -1,4 +1,6 @@
-# CREATE FOREIGN TABLE 
+---
+title: CREATE FOREIGN TABLE 
+---
 
 Defines a new foreign table.
 
@@ -72,8 +74,7 @@ mpp\_execute \{ 'master' \| 'any' \| 'all segments' \}
     -   `master` \(the default\)—Read or write data from the master host.
     -   `any`—Read data from either the master host or any one segment, depending on which path costs less.
     -   `all segments`—Read or write data from all segments. To support this option value, the foreign-data wrapper must have a policy that matches the segments to data.
-
-    **Note:** Greenplum Database supports parallel writes to foreign tables only when you set `mpp_execute 'all segments'`.
+    <br/><br/>**Note:** Greenplum Database supports parallel writes to foreign tables only when you set `mpp_execute 'all segments'`.
 
     Support for the foreign table `mpp_execute` option, and the specific modes, is foreign-data wrapper-specific.
 
@@ -81,7 +82,7 @@ mpp\_execute \{ 'master' \| 'any' \| 'all segments' \}
 
 ## <a id="section5"></a>Notes 
 
-GPORCA does not support foreign tables. A query on a foreign table always falls back to the Postgres Planner.
+The Pivotal Query Optimizer, GPORCA, does not support foreign tables. A query on a foreign table always falls back to the Postgres Planner.
 
 ## <a id="section6"></a>Examples 
 
@@ -105,7 +106,7 @@ SERVER film_server;
 
 ## <a id="section8"></a>See Also 
 
-[ALTER FOREIGN TABLE](ALTER_FOREIGN_TABLE.html), [DROP FOREIGN TABLE](DROP_FOREIGN_TABLE.html), [CREATE TABLE](CREATE_TABLE.html), [CREATE SERVER](CREATE_SERVER.html)
+[ALTER FOREIGN TABLE](ALTER_FOREIGN_TABLE.html), [DROP FOREIGN TABLE](DROP_FOREIGN_TABLE.html),[DROP FOREIGN TABLE](DROP_FOREIGN_TABLE.html)f="CREATE\_TABLE.xml\#topic1[DROP FOREIGN TABLE](DROP_FOREIGN_TABLE.html) [CREATE SERVER](CREATE_SERVER.html)
 
 **Parent topic:** [SQL Commands](../sql_commands/sql_ref.html)
 

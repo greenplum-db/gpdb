@@ -1,4 +1,6 @@
-# SET 
+---
+title: SET 
+---
 
 Changes the value of a Greenplum Database configuration parameter.
 

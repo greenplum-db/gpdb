@@ -1,4 +1,6 @@
-# ALTER SERVER 
+---
+title: ALTER SERVER 
+---
 
 Changes the definition of a foreign server.
 

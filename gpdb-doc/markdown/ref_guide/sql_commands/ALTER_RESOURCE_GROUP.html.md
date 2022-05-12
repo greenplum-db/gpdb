@@ -1,4 +1,6 @@
-# ALTER RESOURCE GROUP 
+---
+title: ALTER RESOURCE GROUP 
+---
 
 Changes the limits of a resource group.
 

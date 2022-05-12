@@ -1,4 +1,6 @@
-# pg_amop 
+---
+title: pg\_amop 
+---
 
 The `pg_amop` table stores information about operators associated with index access method operator classes. There is one row for each operator that is a member of an operator class.
 

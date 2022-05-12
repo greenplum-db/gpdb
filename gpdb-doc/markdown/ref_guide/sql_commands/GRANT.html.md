@@ -1,4 +1,6 @@
-# GRANT 
+---
+title: GRANT 
+---
 
 Defines access privileges.
 

@@ -1,4 +1,6 @@
-# CREATE DATABASE 
+---
+title: CREATE DATABASE 
+---
 
 Creates a new database.
 

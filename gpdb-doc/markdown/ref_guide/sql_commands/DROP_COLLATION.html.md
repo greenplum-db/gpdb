@@ -1,4 +1,6 @@
-# DROP COLLATION 
+---
+title: DROP COLLATION 
+---
 
 Removes a previously defined collation.
 

@@ -1,4 +1,6 @@
-# ALTER SEQUENCE 
+---
+title: ALTER SEQUENCE 
+---
 
 Changes the definition of a sequence generator.
 

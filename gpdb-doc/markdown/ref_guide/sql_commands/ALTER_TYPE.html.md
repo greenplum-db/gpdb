@@ -1,4 +1,6 @@
-# ALTER TYPE 
+---
+title: ALTER TYPE 
+---
 
 Changes the definition of a data type.
 

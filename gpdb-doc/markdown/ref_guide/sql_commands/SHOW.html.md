@@ -1,4 +1,6 @@
-# SHOW 
+---
+title: SHOW 
+---
 
 Shows the value of a system configuration parameter.
 

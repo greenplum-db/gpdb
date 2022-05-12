@@ -1,4 +1,6 @@
-# ALTER OPERATOR CLASS 
+---
+title: ALTER OPERATOR CLASS 
+---
 
 Changes the definition of an operator class.
 

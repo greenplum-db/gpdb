@@ -1,10 +1,12 @@
-# ALTER TEXT SEARCH PARSER 
+---
+title: ALTER TEXT SEARCH PARSER 
+---
 
-## <a id="Description"></a>Description 
+## <a id="desc"></a>Description 
 
 Changes the definition of a text search parser.
 
-## <a id="Synopsis"></a>Synopsis 
+## <a id="synops"></a>Synopsis 
 
 ``` {#sql_command_synopsis}
 ALTER TEXT SEARCH PARSER <name> RENAME TO <new_name>

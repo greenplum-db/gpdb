@@ -1,4 +1,6 @@
-# pg_am 
+---
+title: pg\_am 
+---
 
 The `pg_am` table stores information about index access methods. There is one row for each index access method supported by the system.
 

@@ -1,4 +1,6 @@
-# ALTER FUNCTION 
+---
+title: ALTER FUNCTION 
+---
 
 Changes the definition of a function.
 

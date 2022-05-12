@@ -1,4 +1,6 @@
-# DROP TRIGGER 
+---
+title: DROP TRIGGER 
+---
 
 Removes a trigger.
 

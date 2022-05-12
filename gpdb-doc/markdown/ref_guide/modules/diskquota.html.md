@@ -1,4 +1,6 @@
-# diskquota 
+---
+title: diskquota 
+---
 
 The `diskquota` module allows Greenplum Database administrators to limit the amount of disk space used by schemas or roles in a database.
 
@@ -19,9 +21,9 @@ Before you can use the module, you must perform these steps:
     ```
     $ gpconfig -s shared_preload_libraries
     Values on all segments are consistent
-    GUC              : shared_preload_libraries
-    Coordinator value: auto_explain
-    Segment     value: auto_explain
+    GUC          : shared_preload_libraries
+    Master  value: auto_explain
+    Segment value: auto_explain
     $ gpconfig -c shared_preload_libraries -v 'auto_explain,diskquota'
     $ gpstop -ar
     ```
@@ -55,7 +57,7 @@ If a query is unable to run because the schema or role has been denylisted, an a
 
 ## <a id="topic_qfb_gb1_b3b"></a>Using the diskquota Module 
 
-### <a id="settingq"></a>Setting Disk Quotas 
+### <a id="setq"></a>Setting Disk Quotas 
 
 Use the `diskquota.set_schema_quota()` and `diskquota.set_role_quota()` user-defined functions in a database to set, update, or delete disk quota limits for schemas and roles in the database. The functions take two arguments: the schema or role name, and the quota to set. The quota can be specified in units of MB, GB, TB, or PB, for example '2TB'.
 
@@ -75,7 +77,7 @@ To change a quota, call the `diskquota.set_schema_quota()` or `diskquota.set_rol
 
 To remove a quota, set the quota value to `'-1'`.
 
-### <a id="displayq"></a>Displaying Disk Quotas and Disk Usage 
+### <a id="dispquot"></a>Displaying Disk Quotas and Disk Usage 
 
 The `diskquota` module provides two views to display active quotas and the current computed disk space used.
 
@@ -104,7 +106,7 @@ The `diskquota.show_fast_role_quota_view` view lists the active quotas for roles
 (3 rows)
 ```
 
-### <a id="settingdelay"></a>Setting the Delay Between Disk Usage Updates 
+### <a id="setdel"></a>Setting the Delay Between Disk Usage Updates 
 
 The `diskquota.naptime` server configuration parameter specifies how frequently \(in seconds\) the table sizes are recalculated. The smaller the `naptime` value, the less delay in detecting changes in disk usage. This example sets the `naptime` to ten seconds.
 
@@ -113,7 +115,7 @@ $ gpconfig -c diskquota.naptime -v 10
 $ gpstop -ar
 ```
 
-### <a id="aboutshmem"></a>About diskquota Shared Memory Usage 
+### <a id="aboutquot"></a>About diskquota Shared Memory Usage 
 
 The `diskquota` module uses shared memory to save the denylist and to save the active table list.
 
@@ -135,7 +137,7 @@ The disk usage of a schema is defined as the total of disk usage on all segments
 
 The disk usage for a table includes the table data, indexes, toast tables, and free space map. For append-optimized tables, the calculation includes the visibility map and index, and the block directory table.
 
-The `diskquota` module cannot detect a newly created table inside of an uncommitted transaction. The size of the new table is not included in the disk usage calculated for the corresponding schema or role until after the transaction has committed. Similarly, a table created using the `CREATE TABLE AS` command is not included in disk usage statistics until the command has completed.
+The `diskquota` module cannot detect a newly created table inside of an uncommited transaction. The size of the new table is not included in the disk usage calculated for the corresponding schema or role until after the transaction has committed. Similarly, a table created using the `CREATE TABLE AS` command is not included in disk usage statistics until the command has completed.
 
 Deleting rows or running `VACUUM` on a table does not release disk space, so these operations cannot alone remove a schema or role from the `diskquota` denylist. The disk space used by a table can be reduced by running `VACUUM FULL` or `TRUNCATE TABLE`.
 
@@ -179,9 +181,9 @@ This example demonstrates how to set up a schema quota and then observe diskquot
 5.  The following commands create a table in the `s1` schema and insert a small amount of data into it. The schema has no data yet, so it is not on the denylist.
 
     ```
-    =# SET search_path TO s1;
+    =# **SET search\_path TO s1;
     SET
-    =# CREATE TABLE a(i int);
+    **=# CREATE TABLE a(i int);
     CREATE TABLE
     =# INSERT INTO a SELECT generate_series(1,100);
     INSERT 0 100

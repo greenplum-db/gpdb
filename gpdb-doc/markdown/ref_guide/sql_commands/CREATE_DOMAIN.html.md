@@ -1,4 +1,6 @@
-# CREATE DOMAIN 
+---
+title: CREATE DOMAIN 
+---
 
 Defines a new domain.
 

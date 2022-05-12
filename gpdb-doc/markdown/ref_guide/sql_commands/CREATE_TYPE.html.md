@@ -1,4 +1,6 @@
-# CREATE TYPE 
+---
+title: CREATE TYPE 
+---
 
 Defines a new data type.
 
@@ -172,7 +174,7 @@ like\_type
 :   The name of an existing data type that the new type will have the same representation as. The values internallength, passedbyvalue, alignment, and storage, are copied from that type, unless overridden by explicit specification elsewhere in this `CREATE TYPE` command.
 
 category
-:   The category code \(a single ASCII character\) for this type. The default is '`U`', signifying a user-defined type. You can find the other standard category codes in [`pg_type` Category Codes](../system_catalogs/pg_type.html#typcategory). You may also assign unused ASCII characters to custom categories that you create.
+:   The category code \(a single ASCII character\) for this type. The default is '`U`', signifying a user-defined type. You can find the other standard category codes in [`pg_type` Category Codes](../system_catalogs/pg_type.md#typcategory). You may also assign unused ASCII characters to custom categories that you create.
 
 preferred
 :   `true` if this type is a preferred type within its type category, else `false`. The default value is `false`. Be careful when you create a new preferred type within an existing type category; this could cause surprising behaviour changes.

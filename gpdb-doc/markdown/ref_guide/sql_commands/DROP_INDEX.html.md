@@ -1,4 +1,6 @@
-# DROP INDEX 
+---
+title: DROP INDEX 
+---
 
 Removes an index.
 

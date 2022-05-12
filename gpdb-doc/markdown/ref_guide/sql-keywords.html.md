@@ -1,8 +1,10 @@
-# Reserved Identifiers and SQL Key Words 
+---
+title: Reserved Identifiers and SQL Key Words 
+---
 
 This topic describes Greenplum Database reserved identifiers and object names, and SQL key words recognized by the Greenplum Database and PostgreSQL command parsers.
 
-## <a id="resident"></a>Reserved Identifiers 
+## <a id="resi"></a>Reserved Identifiers 
 
 In the Greenplum Database system, names beginning with `gp_` and `pg_` are reserved and should not be used as names for user-created objects, such as tables, views, and functions.
 
@@ -10,13 +12,13 @@ The resource group names `admin_group`, `default_group`, and `none` are reserved
 
 The tablespace names `pg_default` and `pg_global` are reserved.
 
-The role name `gpadmin` is reserved. `gpadmin` is the default Greenplum Database superuser role.
+The role names `gpadmin` and `gpmon` are reserved. `gpadmin` is the default Greenplum Database superuser role. The `gpmon` role owns the `gpperfmon` databaseand is also used by Greenplum Command Center.
 
 In data files, the characters that delimit fields \(columns\) and rows have a special meaning. If they appear within the data you must escape them so that Greenplum Database treats them as data and not as delimiters. The backslash character \(`\`\) is the default escape character. See [Escaping](../admin_guide/load/topics/g-escaping.html#topic99) for details.
 
 See [SQL Syntax](https://www.postgresql.org/docs/9.4/sql-syntax.html) in the PostgreSQL documentation for more information about SQL identifiers, constants, operators, and expressions.
 
-## <a id="keywords"></a>SQL Key Words 
+## <a id="keyw"></a>SQL Key Words 
 
 [Table 1](#table_yjz_3hb_jhb) lists all tokens that are key words in Greenplum Database 6 and PostgreSQL 9.4.
 

@@ -1,4 +1,6 @@
-# VACUUM 
+---
+title: VACUUM 
+---
 
 Garbage-collects and optionally analyzes a database.
 

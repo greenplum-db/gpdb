@@ -1,4 +1,6 @@
-# pg_listener 
+---
+title: pg\_listener 
+---
 
 The `pg_listener` system catalog table supports the `LISTEN` and `NOTIFY` commands. A listener creates an entry in `pg_listener` for each notification name it is listening for. A notifier scans and updates each matching entry to show that a notification has occurred. The notifier also sends a signal \(using the PID recorded in the table\) to awaken the listener from sleep.
 

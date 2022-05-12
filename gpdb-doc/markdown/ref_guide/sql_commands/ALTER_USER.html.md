@@ -1,4 +1,6 @@
-# ALTER USER 
+---
+title: ALTER USER 
+---
 
 Changes the definition of a database role \(user\).
 

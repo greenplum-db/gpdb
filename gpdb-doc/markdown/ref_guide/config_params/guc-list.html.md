@@ -1,4 +1,6 @@
-# Configuration Parameters 
+---
+title: Configuration Parameters 
+---
 
 Descriptions of the Greenplum Database server configuration parameters listed alphabetically.
 
@@ -32,7 +34,7 @@ This controls whether a quote mark can be represented by \\' in a string literal
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|on \(allow \\' always\), off \(reject always\), safe\_encoding \(allow only if client encoding does not allow ASCII \\ within a multibyte character\)|safe\_encoding|master, session, reload|
+|on \(allow \\' always\)<br/><br/>off \(reject always\)<br/><br/>safe\_encoding \(allow only if client encoding does not allow ASCII \\ within a multibyte character\)|safe\_encoding|master, session, reload|
 
 ## <a id="block_size"></a>block\_size 
 
@@ -80,7 +82,7 @@ Controls which message levels are sent to the client. Each level includes all th
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|DEBUG5, DEBUG4, DEBUG3, DEBUG2, DEBUG1, LOG, NOTICE, WARNING, ERROR, FATAL, PANIC|NOTICE|master, session, reload|
+|DEBUG5<br/><br/>DEBUG4<br/><br/>DEBUG3<br/><br/>DEBUG2<br/><br/>DEBUG1<br/><br/>LOG<br/><br/>NOTICE<br/><br/>WARNING<br/><br/>ERROR<br/><br/>FATAL<br/><br/>PANIC|NOTICE|master, session, reload|
 
 `INFO` level messages are always sent to the client.
 
@@ -252,7 +254,7 @@ Controls the default isolation level of each new transaction. Greenplum Database
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|read committed, read uncommitted, repeatable read, serializable|read committed|master, session, reload|
+|read committed<br/><br/>read uncommitted<br/><br/>repeatable read<br/><br/>serializable|read committed|master, session, reload|
 
 ## <a id="default_transaction_read_only"></a>default\_transaction\_read\_only 
 
@@ -261,6 +263,16 @@ Controls the default read-only status of each new transaction. A read-only SQL t
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
 |Boolean|off|master, session, reload|
+
+## <a id="dtx_phase2_retry_count"></a>dtx\_phase2\_retry\_count 
+
+The maximum number of retries attempted by Greenplum Database during the second phase of a two phase commit. When one or more segments cannot successfully complete the commit phase, the master retries the commit a maximum of `dtx_phase2_retry_count` times. If the commit continues to fail on the last retry attempt, the master generates a PANIC.
+
+When the network is unstable, the master may be unable to connect to one or more segments; increasing the number of two phase commit retries may improve high availability of Greenplum when the master encounters transient network issues.
+
+|Value Range|Default|Set Classifications|
+|-----------|-------|-------------------|
+|0 - `INT_MAX`|10|master, system, restart|
 
 ## <a id="dynamic_library_path"></a>dynamic\_library\_path 
 
@@ -311,6 +323,16 @@ Enables or disables the use of hash-join plan types by the Postgres Planner.
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
 |Boolean|on|master, session, reload|
+
+## <a id="enable_implicit_timeformat_YYYYMMDDHH24MISS"></a>enable\_implicit\_timeformat\_YYYYMMDDHH24MISS 
+
+Enables or disables the deprecated implicit conversion of a string with the *YYYYMMDDHH24MISS* timestamp format to a valid date/time type.
+
+The default value is `off`. When this parameter is set to `on`, Greenplum Database converts a string with the timestamp format *YYYYMMDDHH24MISS* into a valid date/time type. You may require this conversion when loading data from Greenplum Database 5.
+
+|Value Range|Default|Set Classifications|
+|-----------|-------|-------------------|
+|Boolean|off|master, session, reload|
 
 ## <a id="enable_indexscan"></a>enable\_indexscan 
 
@@ -392,6 +414,29 @@ The Postgres Planner will merge sub-queries into upper queries if the resulting 
 |-----------|-------|-------------------|
 |1-*n*|20|master, session, reload|
 
+## <a id="gp_add_column_inherits_table_setting"></a>gp\_add\_column\_inherits\_table\_setting 
+
+When adding a column to an append-optimized, column-oriented table with the [ALTER TABLE](../sql_commands/ALTER_TABLE.html) command, this parameter controls whether the table's data compression parameters for a column \(`compresstype`, `compresslevel`, and `blocksize`\) can be inherited from the table values. The default is `off`, the table's data compression settings are not considered when adding a column to the table. If the value is `on`, the table's settings are considered.
+
+When you create an append-optimized column-oriented table, you can set the table's data compression parameters `compresstype`, `compresslevel`, and `blocksize` for the table in the `WITH` clause. When you add a column, Greenplum Database sets each data compression parameter based on one of the following settings, in order of preference.
+
+1.  The data compression setting specified in the `ALTER TABLE` command `ENCODING` clause.
+2.  If this server configuration parameter is set to `on`, the table's data compression setting specified in the `WITH` clause when the table was created. Otherwise, the table's data compression setting is ignored.
+3.  The data compression setting specified in the server configuration parameter [gp\_default\_storage\_options](#gp_default_storage_options).
+4.  The default data compression setting.
+
+You must specify `--skipvalidation` when modifying this parameter as it is a restricted configuration parameter. Use extreme caution when setting configuration parameters with this option. For example:
+
+```
+gpconfig --skipvalidation -c gp_add_column_inherits_table_setting -v on
+```
+
+For information about the data storage compression parameters, see [CREATE TABLE](../sql_commands/CREATE_TABLE.html).
+
+|Value Range|Default|Set Classifications|
+|-----------|-------|-------------------|
+|Boolean|off|master, session, reload|
+
 ## <a id="gp_adjust_selectivity_for_outerjoins"></a>gp\_adjust\_selectivity\_for\_outerjoins 
 
 Enables the selectivity of NULL tests over outer joins.
@@ -457,7 +502,7 @@ Automatic statistics collection is triggered if data is inserted directly in a l
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|none, on\_change, on\_no\_stats, |on\_no\_ stats|master, session, reload|
+|none<br/><br/>on\_change<br/><br/>on\_no\_stats|on\_no\_ stats|master, session, reload|
 
 ## <a id="gp_autostats_mode_in_functions"></a>gp\_autostats\_mode\_in\_functions 
 
@@ -477,7 +522,7 @@ The `on_change` option triggers statistics collection only when the number of ro
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|none, on\_change, on\_no\_stats, |none|master, session, reload|
+|none<br/><br/>on\_change<br/><br/>on\_no\_stats|none|master, session, reload|
 
 ## <a id="gp_autostats_on_change_threshold"></a>gp\_autostats\_on\_change\_threshold 
 
@@ -615,13 +660,13 @@ This example `gpconfig` utility command shows the value of the parameter. The pa
 gpconfig -s 'gp_default_storage_options'
 ```
 
-|Value Range|Default|Set Classifications<sup>1</sup>|
+|Value Range|Default|Set Classifications 1|
 |-----------|-------|---------------------|
-|`appendoptimized`= `TRUE` or `FALSE`<br/><br/>`blocksize`= integer between 8192 and 2097152<br/><br/>`checksum`= `TRUE` or `FALSE`<br/><br/>`compresstype`= `ZLIB` or `ZSTD` or `QUICKLZ`<sup>2</sup> or `RLE`\_`TYPE` or `NONE`<br/><br/>`compresslevel`= integer between 0 and 19<br/><br/>`orientation`= `ROW` or `COLUMN`|`appendoptimized`=`FALSE` `blocksize`=`32768`<br/><br/>`checksum`=`TRUE`<br/><br/>`compresstype`=`none`<br/><br/>`compresslevel`=`0`<br/><br/>`orientation`=`ROW`<br/><br/>|master, session, reload|
+|`appendoptimized`= `TRUE` or `FALSE`<br/><br/>`blocksize`= integer between 8192 and 2097152<br/><br/>`checksum`= `TRUE` or `FALSE`<br/><br/>`compresstype`= `ZLIB` or `ZSTD` or `QUICKLZ`2 or `RLE`\_`TYPE` or `NONE`<br/><br/>`compresslevel`= integer between 0 and 19<br/><br/>`orientation`= `ROW` \| `COLUMN`|`appendoptimized`=`FALSE`<br/><br/>`blocksize`=`32768`<br/><br/>`checksum`=`TRUE`<br/><br/>`compresstype`=`none`<br/><br/>`compresslevel`=`0`<br/><br/>`orientation`=`ROW`|master, session, reload|
 
-**Note:** <sup>1</sup>The set classification when the parameter is set at the system level with the `gpconfig` utility.
+**Note:** 1The set classification when the parameter is set at the system level with the `gpconfig` utility.
 
-**Note:** <sup>2</sup>QuickLZ compression is available only in the commercial release of Tanzu Greenplum.
+**Note:** 2QuickLZ compression is available only in the commercial release of Tanzu Greenplum.
 
 ## <a id="gp_dispatch_keepalives_count"></a>gp\_dispatch\_keepalives\_count 
 
@@ -710,6 +755,14 @@ If the Global Deadlock Detector is enabled, concurrent updates are permitted and
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
 |Boolean|off|master, system, restart|
+
+## <a id="gp_enable_gpperfmon"></a>gp\_enable\_gpperfmon 
+
+Enables or disables the data collection agents that populate the `gpperfmon` database.
+
+|Value Range|Default|Set Classifications|
+|-----------|-------|-------------------|
+|Boolean|off|local, system, restart|
 
 ## <a id="gp_enable_groupext_distinct_gather"></a>gp\_enable\_groupext\_distinct\_gather 
 
@@ -873,7 +926,7 @@ Controls the amount of detail the fault detection process \(`ftsprobe`\) writes 
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|OFF, TERSE, VERBOSE, DEBUG|TERSE|master, system, restart|
+|OFF<br/><br/>TERSE<br/><br/>VERBOSE<br/><br/>DEBUG|TERSE|master, system, restart|
 
 ## <a id="gp_log_interconnect"></a>gp\_log\_interconnect 
 
@@ -883,7 +936,7 @@ Increasing the amount of logging could affect performance and increase disk spac
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|off,  terse,  verbose,  debug|terse|master, session, reload|
+|off<br/><br/>terse<br/><br/>verbose<br/><br/>debug|terse|master, session, reload|
 
 ## <a id="gp_log_gang"></a>gp\_log\_gang 
 
@@ -891,7 +944,48 @@ Controls the amount of information that is written to the log file about query w
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|OFF, TERSE, VERBOSE, DEBUG|OFF|master, session, restart|
+|OFF<br/><br/>TERSE<br/><br/>VERBOSE<br/><br/>DEBUG|OFF|master, session, restart|
+
+## <a id="gp_log_resqueue_priority_sleep_time"></a>gp\_log\_resqueue\_priority\_sleep\_time 
+
+Controls the logging of per-statement sleep time when resource queue-based resource management is active. You can use this information for analysis of sleep time for queries.
+
+The default value is `false`, do not log the statement sleep time. When set to `true`, Greenplum Database:
+
+-   Logs the current amount of sleep time for a running query every two minutes.
+-   Logs the total of sleep time duration for a query at the end of a query.
+
+The information is written to the server log.
+
+|Value Range|Default|Set Classifications|
+|-----------|-------|-------------------|
+|Boolean|false|master, session, reload|
+
+## <a id="gp_gpperfmon_send_interval"></a>gp\_gpperfmon\_send\_interval 
+
+Sets the frequency that the Greenplum Database server processes send query execution updates to the data collection agent processes used to populate the `gpperfmon` database. Query operations executed during this interval are sent through UDP to the segment monitor agents. If you find that an excessive number of UDP packets are dropped during long-running, complex queries, you may consider increasing this value.
+
+|Value Range|Default|Set Classifications|
+|-----------|-------|-------------------|
+|Any valid time expression \(number and unit\)|1sec|master, session, reload, superuser|
+
+## <a id="gpfdist_retry_timeout"></a>gpfdist\_retry\_timeout 
+
+Controls the time \(in seconds\) that Greenplum Database waits before returning an error when Greenplum Database is attempting to connect or write to a [gpfdist](../../utility_guide/ref/gpfdist.html) server and `gpfdist` does not respond. The default value is 300 \(5 minutes\). A value of 0 disables the timeout.
+
+|Value Range|Default|Set Classifications|
+|-----------|-------|-------------------|
+|0 - `INT_MAX` \(2147483647\)|300|local, session, reload|
+
+## <a id="gpperfmon_log_alert_level"></a>gpperfmon\_log\_alert\_level 
+
+Controls which message levels are written to the gpperfmon log. Each level includes all the levels that follow it. The later the level, the fewer messages are sent to the log.
+
+**Note:** If the `gpperfmon` database is installed and is monitoring the database, the default value is warning.
+
+|Value Range|Default|Set Classifications|
+|-----------|-------|-------------------|
+|none<br/><br/>warning<br/><br/>error<br/><br/>fatal<br/><br/>panic|none|local, session, reload|
 
 ## <a id="gp_hashjoin_tuples_per_bucket"></a>gp\_hashjoin\_tuples\_per\_bucket 
 
@@ -959,7 +1053,7 @@ Loss based flow control is based on capacity based flow control, and also tunes 
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|CAPACITY, LOSS|LOSS|master, session, reload|
+|CAPACITY<br/><br/>LOSS|LOSS|master, session, reload|
 
 ## <a id="gp_interconnect_proxy_addresses"></a>gp\_interconnect\_proxy\_addresses 
 
@@ -1036,7 +1130,7 @@ The `PROXY` value specifies using the TCP protocol, and when running queries, us
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|UDPIFC, TCP, PROXY|UDPIFC|local, system, restart|
+|UDPIFC<br/><br/>TCP<br/><br/>PROXY|UDPIFC|local, system, restart|
 
 ## <a id="gp_log_format"></a>gp\_log\_format 
 
@@ -1044,7 +1138,7 @@ Specifies the format of the server log files. If using *gp\_toolkit* administrat
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|csv, text|csv|local, system, restart|
+|csv<br/><br/>text|csv|local, system, restart|
 
 ## <a id="gp_max_local_distributed_cache"></a>gp\_max\_local\_distributed\_cache 
 
@@ -1212,7 +1306,7 @@ Identifies the resource management scheme currently enabled in the Greenplum Dat
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|group, queue|queue|local, system, restart|
+|group<br/><br/>queue|queue|local, system, restart|
 
 ## <a id="gp_resqueue_memory_policy"></a>gp\_resqueue\_memory\_policy 
 
@@ -1226,7 +1320,7 @@ When set to `auto`, query memory usage is controlled by [statement\_mem](#statem
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|none, auto, eager\_free|eager\_free|local, system, restart/reload|
+|none, auto, eager\_free|eager\_free|local, session, reload|
 
 ## <a id="gp_resqueue_priority"></a>gp\_resqueue\_priority 
 
@@ -1278,7 +1372,7 @@ The role of this server process is set to *dispatch* for the master and *execute
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|dispatchexecute, utility| |read only|
+|dispatch<br/><br/>execute<br/><br/>utility| |read only|
 
 ## <a id="gp_safefswritesize"></a>gp\_safefswritesize 
 
@@ -1488,13 +1582,13 @@ Sets the maximum total disk size that all running queries are allowed to use for
 |-----------|-------|-------------------|
 |kilobytes|0|local, system, restart|
 
-## <a id="gpfdist_retry_timeout"></a>gpfdist\_retry\_timeout 
+## <a id="gpperfmon_port"></a>gpperfmon\_port 
 
-Controls the time \(in seconds\) that Greenplum Database waits before returning an error when Greenplum Database is attempting to connect or write to a [gpfdist](../../utility_guide/ref/gpfdist.html) server and `gpfdist` does not respond. The default value is 300 \(5 minutes\). A value of 0 disables the timeout.
+Sets the port on which all data collection agents communicate with the master.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|0 - `INT_MAX` \(2147483647\)|300|local, session, reload|
+|integer|8888|master, system, restart|
 
 ## <a id="ignore_checksum_failure"></a>ignore\_checksum\_failure 
 
@@ -1530,7 +1624,7 @@ The value *iso\_8601* will produce output matching the time interval *format wit
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|postgres, postgres\_verbose, sql\_standard, iso\_8601|postgres|master, session, reload|
+|postgres<br/><br/>postgres\_verbose<br/><br/>sql\_standard<br/><br/>iso\_8601<br/><br/>|postgres|master, session, reload|
 
 ## <a id="join_collapse_limit"></a>join\_collapse\_limit 
 
@@ -1622,7 +1716,7 @@ Comma separated list of shared library files to preload at the start of a client
 
 ## <a id="lock_timeout"></a>lock\_timeout 
 
-Abort any statement that waits longer than the specified number of milliseconds while attempting to acquire a lock on a table, index, row, or other database object. The time limit applies separately to each lock acquisition attempt. The limit applies both to explicit locking requests \(such as `LOCK TABLE`, or `SELECT FOR UPDATE` without `NOWAIT`\) and to implicitly-acquired locks. If `log_min_error_statement` is set to `ERROR` or lower, Greenplum Database logs the statement that timed out. A value of zero \(the default\) turns off this lock wait monitoring.
+Abort any statement that waits longer than the specified number of milliseconds while attempting to acquire a lock on a table, index, row, or other database object. The time limit applies separately to each lock acquisition attempt. The limit applies both to explicit locking requests \(such as `LOCK TABLE` or `SELECT FOR UPDATE`\) and to implicitly-acquired locks. If `log_min_error_statement` is set to `ERROR` or lower, Greenplum Database logs the statement that timed out. A value of zero \(the default\) turns off this lock wait monitoring.
 
 Unlike [statement\_timeout](#statement_timeout), this timeout can only occur while waiting for locks. Note that if `statement_timeout` is nonzero, it is rather pointless to set `lock_timeout` to the same or larger value, since the statement timeout would always trigger first.
 
@@ -1680,7 +1774,7 @@ Controls the amount of detail written in the server log for each message that is
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|TERSE, DEFAULT, VERBOSE|DEFAULT|master, session, reload, superuser|
+|TERSE<br/><br/>DEFAULT<br/><br/>VERBOSE|DEFAULT|master, session, reload, superuser|
 
 ## <a id="log_executor_stats"></a>log\_executor\_stats 
 
@@ -1720,7 +1814,7 @@ Controls whether or not the SQL statement that causes an error condition will al
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|DEBUG5, DEBUG4, DEBUG3, DEBUG2, DEBUG1, INFO, NOTICE, WARNING, ERROR, FATAL, PANIC|ERROR|master, session, reload, superuser|
+|DEBUG5<br/><br/>DEBUG4<br/><br/>DEBUG3<br/><br/>DEBUG2<br/><br/>DEBUG1<br/><br/>INFO<br/><br/>NOTICE<br/><br/>WARNING<br/><br/>ERROR<br/><br/>FATAL<br/><br/>PANIC<br/><br/>|ERROR|master, session, reload, superuser|
 
 ## <a id="log_min_messages"></a>log\_min\_messages 
 
@@ -1730,7 +1824,7 @@ If the Greenplum Database PL/Container extension is installed. This parameter al
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|DEBUG5, DEBUG4, DEBUG3, DEBUG2, DEBUG1, INFO, NOTICE, WARNING, LOG, ERROR, FATAL, PANIC|WARNING|master, session, reload, superuser|
+|DEBUG5<br/><br/>DEBUG4<br/><br/>DEBUG3<br/><br/>DEBUG2<br/><br/>DEBUG1<br/><br/>INFO<br/><br/>NOTICE<br/><br/>WARNING<br/><br/>LOG<br/><br/>ERROR<br/><br/>FATAL<br/><br/>PANIC|WARNING|master, session, reload, superuser|
 
 ## <a id="log_parser_stats"></a>log\_parser\_stats 
 
@@ -1772,7 +1866,7 @@ Controls which SQL statements are logged. DDL logs all data definition commands 
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|NONE, DDL, MOD, ALL|ALL|master, session, reload, superuser|
+|NONE<br/><br/>DDL<br/><br/>MOD<br/><br/>ALL|ALL|master, session, reload, superuser|
 
 ## <a id="log_statement_stats"></a>log\_statement\_stats 
 
@@ -1784,7 +1878,7 @@ For each query, write total performance statistics of the query parser, planner,
 
 ## <a id="log_temp_files"></a>log\_temp\_files 
 
-Controls logging of temporary file names and sizes. Temporary files can be created for sorts, hashes, temporary query results and spill files. A log entry is made in `log` for each temporary file when it is deleted. Depending on the source of the temporary files, the log entry could be created on either the master and/or segments. A `log_temp_files` value of zero logs all temporary file information, while positive values log only files whose size is greater than or equal to the specified number of kilobytes. The default setting is `-1`, which disables logging. Only superusers can change this setting.
+Controls logging of temporary file names and sizes. Temporary files can be created for sorts, hashes, temporary query results and spill files. A log entry is made in `pg_log` for each temporary file when it is deleted. Depending on the source of the temporary files, the log entry could be created on either the master and/or segments. A `log_temp_files` value of zero logs all temporary file information, while positive values log only files whose size is greater than or equal to the specified number of kilobytes. The default setting is `-1`, which disables logging. Only superusers can change this setting.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
@@ -1838,9 +1932,7 @@ Increasing this parameter may cause Greenplum Database to request more shared me
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|10 - 262143|250 on master750 on segments
-
-|local, system, restart|
+|10 - 8388607|250 on master<br/><br/>750 on segments|local, system, restart|
 
 ## <a id="max_files_per_process"></a>max\_files\_per\_process 
 
@@ -1888,7 +1980,7 @@ Sets the maximum number of transactions that can be in the prepared state simult
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|integer|250 on master, 250 on segments|local, system, restart|
+|integer|250 on master<br/><br/>250 on segments|local, system, restart|
 
 ## <a id="max_resource_portals_per_transaction"></a>max\_resource\_portals\_per\_transaction 
 
@@ -1909,6 +2001,16 @@ Sets the maximum number of resource queues that can be created in a Greenplum Da
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
 |integer|9|master, system, restart|
+
+## <a id="max_slot_wal_keep_size"></a>max\_slot\_wal\_keep\_size 
+
+Sets the maximum size in megabytes of Write-Ahead Logging \(WAL\) files on disk per segment instance that can be reserved when Greenplum streams data to the mirror segment instance or standby master to keep it synchronized with the corresponding primary segment instance or master. The default is -1, Greenplum can retain an unlimited amount of WAL files on disk.
+
+If the file size exceeds the maximum size, the files are released and are available for deletion. A mirror or standby may no longer be able to continue replication due to removal of required WAL files.
+
+|Value Range|Default|Set Classifications|
+|-----------|-------|-------------------|
+|Integer|-1|local, system, reload|
 
 ## <a id="max_stack_depth"></a>max\_stack\_depth 
 
@@ -2010,7 +2112,7 @@ The default cost model, `calibrated`, is more likely to choose a faster bitmap i
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|legacy, calibrated, experimental|calibrated|master, session, reload|
+|legacy<br/><br/>calibrated<br/><br/>experimental<br/><br/>|calibrated|master, session, reload|
 
 ## <a id="optimizer_cte_inlining_bound"></a>optimizer\_cte\_inlining\_bound 
 
@@ -2100,6 +2202,18 @@ For information about GPORCA, see [About GPORCA](../../admin_guide/query/topics/
 |-----------|-------|-------------------|
 |Boolean|off|master, session, reload|
 
+## <a id="optimizer_enable_orderedagg"></a>optimizer\_enable\_orderedagg 
+
+When GPORCA is enabled \(the default\), this parameter determines whether or not GPORCA generates a query plan for ordered aggregates. This parameter is disabled by default; GPORCA does not generate a plan for a query that includes an ordered aggregate, and the query falls back to the Postgres Planner.
+
+You can set this parameter for a database system, an individual database, or a session or query.
+
+For information about GPORCA, see [About GPORCA](../../admin_guide/query/topics/query-piv-optimizer.html)in the *Greenplum Database Administrator Guide*.
+
+|Value Range|Default|Set Classifications|
+|-----------|-------|-------------------|
+|Boolean|off|master, session, reload|
+
 ## <a id="optimizer_force_agg_skew_avoidance"></a>optimizer\_force\_agg\_skew\_avoidance 
 
 When GPORCA is enabled \(the default\), this parameter affects the query plan alternatives that GPORCA considers when 3 stage aggregate plans are generated. When the value is `true`, the default, GPORCA considers only 3 stage aggregate plans where the intermediate aggregation uses the `GROUP BY` and `DISTINCT` columns for distribution to reduce the effects of processing skew.
@@ -2158,27 +2272,30 @@ This parameter can be set for a database system or a session.
 
 ## <a id="optimizer_join_order"></a>optimizer\_join\_order 
 
-When GPORCA is enabled, this parameter sets the optimization level for join ordering during query optimization by specifying which types of join ordering alternatives to evaluate.
+When GPORCA is enabled \(the default\), this parameter sets the join enumeration algorithm:
 
 -   `query` - Uses the join order specified in the query.
 -   `greedy` - Evaluates the join order specified in the query and alternatives based on minimum cardinalities of the relations in the joins.
--   `exhaustive` - Applies transformation rules to find and evaluate all join ordering alternatives.
+-   `exhaustive` - Applies transformation rules to find and evaluate up to a configurable threshold number \(`optimizer_join_order_threshold`, default 10\) of n-way inner joins, and then changes to and uses the `greedy` method beyond that. While planning time drops significantly at that point, plan quality and execution time may get worse.
+-   `exhaustive2` - Operates with an emphasis on generating join orders that are suitable for dynamic partition elimination. This algorithm applies transformation rules to find and evaluate n-way inner and outer joins. When evaluating very large joins with more than `optimizer_join_order_threshold` \(default 10\) tables, this algorithm employs a gradual transition to the `greedy` method; planning time goes up smoothly as the query gets more complicated, and plan quality and execution time only gradually degrade. `exhaustive2` provides a good trade-off between planning time and execution time for many queries.
 
-The default value is `exhaustive`. Setting this parameter to `query` or `greedy` can generate a suboptimal query plan. However, if the administrator is confident that a satisfactory plan is generated with the `query` or `greedy` setting, query optimization time can be improved by setting the parameter to the lower optimization level.
+Setting this parameter to `query` or `greedy` can generate a suboptimal query plan. However, if the administrator is confident that a satisfactory plan is generated with the `query` or `greedy` setting, query optimization time may be improved by setting the parameter to the lower optimization level.
 
-Setting this parameter to `query` or `greedy` overrides the `optimizer_join_order_threshold` and `optimizer_join_arity_for_associativity_commutativity` parameters.
+When you set this parameter to `query` or `greedy`, GPORCA ignores the `optimizer_join_order_threshold` parameter.
 
 This parameter can be set for an individual database, a session, or a query.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|query, greedy, exhaustive|exhaustive|master, session, reload|
+|query<br/><br/>greedy<br/><br/>exhaustive<br/><br/>exhaustive2<br/><br/>|exhaustive|master, session, reload|
 
 ## <a id="optimizer_join_order_threshold"></a>optimizer\_join\_order\_threshold 
 
-When GPORCA is enabled \(the default\), this parameter sets the maximum number of join children for which GPORCA will use the dynamic programming-based join ordering algorithm. You can set this value for a single query or for an entire session.
+When GPORCA is enabled \(the default\), this parameter sets the maximum number of join children for which GPORCA will use the dynamic programming-based join ordering algorithm. This threshold restricts the search effort for a join plan to reasonable limits.
 
-This parameter has no effect when the `optimizer_join_query` parameter is set to `query` or `greedy`.
+GPORCA examines the `optimizer_join_order_threshold` parameter when `optimizer_join_order` is set to `exhaustive` or `exhaustive2`. GPORCA ignores this parameter when `optimizer_join_order` is set to `query` or `greedy`.
+
+You can set this value for a single query or for an entire session.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
@@ -2232,7 +2349,7 @@ For information about GPORCA, see [About GPORCA](../../admin_guide/query/topics/
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|ONERROR, ALWAYS|ONERROR|master, session, reload|
+|ONERROR<br/><br/>ALWAYS|ONERROR|master, session, reload|
 
 ## <a id="optimizer_nestloop_factor"></a>optimizer\_nestloop\_factor 
 
@@ -2337,6 +2454,16 @@ When a password is specified in CREATE USER or ALTER USER without writing either
 |-----------|-------|-------------------|
 |Boolean|on|master, session, reload|
 
+## <a id="password_hash_algorithm"></a>password\_hash\_algorithm 
+
+Specifies the cryptographic hash algorithm that is used when storing an encrypted Greenplum Database user password. The default algorithm is MD5.
+
+For information about setting the password hash algorithm to protect user passwords, see "Protecting Passwords in Greenplum Database" in the *Greenplum Database Administrator Guide*.
+
+|Value Range|Default|Set Classifications|
+|-----------|-------|-------------------|
+|MD5<br/><br/>SHA-256|MD5|master, session, reload, superuser|
+
 ## <a id="plan_cache_mode"></a>plan\_cache\_mode 
 
 Prepared statements \(either explicitly prepared or implicitly generated, for example by PL/pgSQL\) can be run using *custom* or *generic* plans. Custom plans are created for each execution using its specific set of parameter values, while generic plans do not rely on the parameter values and can be re-used across executions. The use of a generic plan saves planning time, but if the ideal plan depends strongly on the parameter values, then a generic plan might be inefficient. The choice between these options is normally made automatically, but it can be overridden by setting the `plan_cache_mode` parameter. If the prepared statement has no parameters, a generic plan is always used.
@@ -2347,7 +2474,7 @@ The parameter can be set for a database system, an individual database, a sessio
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|auto, force\_custom\_plan, force\_generic\_plan|auto|master, session, reload|
+|auto<br/><br/>force\_custom\_plan<br/><br/>force\_generic\_plan|auto|master, session, reload|
 
 ## <a id="pljava_classpath"></a>pljava\_classpath 
 
@@ -2757,7 +2884,7 @@ To configure Greenplum Database to use a custom collection of timezones, copy th
 
 ## <a id="track_activities"></a>track\_activities 
 
-Enables the collection of information on the currently executing command of each session, along with the time when that command began execution. This parameter is `true` by default. Only superusers can change this setting. See the `pg_stat_activity` view.
+Enables the collection of information on the currently executing command of each session, along with the time when that command began execution. The default value is `true`. Only superusers can change this setting. See the [pg\_stat\_activity](../system_catalogs/pg_stat_activity.html) view.
 
 **Note:** Even when enabled, this information is not visible to all users, only to superusers and the user owning the session being reported on, so it should not represent a security risk.
 
@@ -2775,7 +2902,7 @@ Sets the maximum length limit for the query text stored in `query` column of the
 
 ## <a id="track_counts"></a>track\_counts 
 
-Collects information about executing commands. Enables the collection of information on the currently executing command of each session, along with the time at which that command began execution.
+Enables the collection of information on the currently executing command of each session, along with the time at which that command began execution.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
@@ -2787,7 +2914,7 @@ Sets the current transaction's isolation level.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|read committed, serializable|read committed|master, session, reload|
+|read committed<br/><br/>serializable|read committed|master, session, reload|
 
 ## <a id="transaction_read_only"></a>transaction\_read\_only 
 
@@ -2992,7 +3119,7 @@ The parameter can be set for a database system, an individual database, or a ses
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|base64, hex|base64|master, session, reload|
+|base64<br/><br/>hex|base64|master, session, reload|
 
 ## <a id="xmloption"></a>xmloption 
 
@@ -3012,5 +3139,5 @@ SET XML OPTION { DOCUMENT | CONTENT }
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|document, content|content|master, session, reload|
+|document<br/><br/>content|content|master, session, reload|
 

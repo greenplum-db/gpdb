@@ -1,6 +1,8 @@
-# Character Set Support 
+---
+title: Character Set Support 
+---
 
-The character set support in Greenplum Database allows you to store text in a variety of character sets, including single-byte character sets such as the ISO 8859 series and multiple-byte character sets such as EUC \(Extended Unix Code\), UTF-8, and Mule internal code. All supported character sets can be used transparently by clients, but a few are not supported for use within the server \(that is, as a server-side encoding\). The default character set is selected while initializing your Greenplum Database array using `gpinitsystem`. It can be overridden when you create a database, so you can have multiple databases each with a different character set.
+The character set support in Greenplum Database allows you to store text in a variety of character sets, including single-byte character sets such as the ISO 8859 series and multiple-byte character sets such as EUC \(Extended Unix Code\), UTF-8, and Mule internal code. All supported character sets can be used transparently by clients, but a few are not supported for use within the server \(that is, as a server-side encoding\)<sup>1</sup>. The default character set is selected while initializing your Greenplum Database array using `gpinitsystem`. It can be overridden when you create a database, so you can have multiple databases each with a different character set.
 
 |Name|Description|Language|Server?|Bytes/Char|Aliases|
 |----|-----------|--------|-------|----------|-------|
@@ -29,7 +31,7 @@ The character set support in Greenplum Database allows you to store text in a va
 |LATIN10|ISO 8859-16, ASRO SR 14111|Romanian|Yes|1|ISO885916|
 |MULE\_INTERNAL|Mule internal code|Multilingual Emacs|Yes|1-4| |
 |SJIS|Shift JIS|Japanese|No|1-2|Mskanji, ShiftJIS, WIN932, Windows932|
-|SQL\_ASCII|unspecified [2](#fntarg_2)|any|No|1| |
+|SQL\_ASCII|unspecified<sup>2</sup>|any|No|1| |
 |UHC|Unified Hangul Code|Korean|No|1-2|WIN949, Windows949|
 |UTF8|Unicode, 8-bit|all|Yes|1-4|Unicode|
 |WIN866|Windows CP866|Cyrillic|Yes|1|ALT|
@@ -117,7 +119,7 @@ To enable automatic character set conversion, you have to tell Greenplum Databas
     To set the client encoding, use the following SQL command:
 
     ```
-    => SET CLIENT_ENCODING TO '*value*';
+    => SET CLIENT_ENCODING TO '<value>';
     ```
 
     To query the current client encoding:
@@ -139,7 +141,7 @@ If the conversion of a particular character is not possible " suppose you chose 
 
 If the client character set is defined as `SQL_ASCII`, encoding conversion is disabled, regardless of the server's character set. The use of `SQL_ASCII` is unwise unless you are working with all-ASCII data. `SQL_ASCII` is not supported as a server encoding.
 
-<a id="fnsrc_1"></a><sup>1</sup> Not all APIs support all the listed character sets. For example, the JDBC driver does not support MULE\_INTERNAL, LATIN6, LATIN8, and LATIN10.
+<sup>1</sup>Not all APIs support all the listed character sets. For example, the JDBC driver does not support MULE\_INTERNAL, LATIN6, LATIN8, and LATIN10.
 
-<a id="fnsrc_2"></a><sup>2</sup> The SQL\_ASCII setting behaves considerably differently from the other settings. Byte values 0-127 are interpreted according to the ASCII standard, while byte values 128-255 are taken as uninterpreted characters. If you are working with any non-ASCII data, it is unwise to use the SQL\_ASCII setting as a client encoding. SQL\_ASCII is not supported as a server encoding.
+<sup>2</sup>The SQL\_ASCII setting behaves considerably differently from the other settings. Byte values 0-127 are interpreted according to the ASCII standard, while byte values 128-255 are taken as uninterpreted characters. If you are working with any non-ASCII data, it is unwise to use the SQL\_ASCII setting as a client encoding. SQL\_ASCII is not supported as a server encoding.
 

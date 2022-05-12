@@ -1,4 +1,6 @@
-# pg_user_mappings 
+---
+title: pg\_user\_mappings 
+---
 
 The `pg_user_mappings` view provides access to information about user mappings. This view is essentially a public-readble view of the `pg_user_mapping` system catalog table that omits the options field if the user does not have access rights to view it.
 

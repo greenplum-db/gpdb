@@ -1,10 +1,12 @@
-# CREATE TEXT SEARCH PARSER 
+---
+title: CREATE TEXT SEARCH PARSER 
+---
 
-## <a id="Description"></a>Description 
+## <a id="desc"></a>Description 
 
 Defines a new text search parser.
 
-## <a id="Synopsis"></a>Synopsis 
+## <a id="synops"></a>Synopsis 
 
 ``` {#sql_command_synopsis}
 CREATE TEXT SEARCH PARSER name (

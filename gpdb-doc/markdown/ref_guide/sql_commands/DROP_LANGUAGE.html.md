@@ -1,4 +1,6 @@
-# DROP LANGUAGE 
+---
+title: DROP LANGUAGE 
+---
 
 Removes a procedural language.
 

@@ -1,4 +1,6 @@
-# pageinspect 
+---
+title: pageinspect 
+---
 
 The `pageinspect` module provides functions for low level inspection of the contents of database pages. `pageinspect` is available only to Greenplum Database superusers.
 
@@ -24,7 +26,7 @@ ALTER EXTENSION pageinspect UPDATE;
 
 ## <a id="topic_info"></a>Module Documentation 
 
-See [pageinspect](https://www.postgresql.org/docs/12/pageinspect.html) in the PostgreSQL documentation for detailed information about the majority of functions in this module.
+See [pageinspect](https://www.postgresql.org/docs/9.4/pageinspect.html) in the PostgreSQL documentation for detailed information about the majority of functions in this module.
 
 The next topic includes documentation for Greenplum-added `pageinspect` functions.
 

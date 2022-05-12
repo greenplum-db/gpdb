@@ -1,4 +1,6 @@
-# dblink 
+---
+title: dblink 
+---
 
 The `dblink` module supports connections to other Greenplum Database databases from within a database session. These databases can reside in the same Greenplum Database system, or in a remote system.
 
@@ -97,7 +99,7 @@ testdb=# SELECT dblink_connect('host=remotehost port=5432 dbname=postgres user=g
 
 ### <a id="dblink_u"></a>Using dblink as a Non-Superuser 
 
-To make a connection to a database with `dblink_connect()`, non-superusers must include host, user, and password information in the connection string. The host, user, and password information must be included even when connecting to a local database. For example, the user `test_user` can create a `dblink` connection to the local system `mdw` with this command:
+To make a connection to a database with `dblink_connect()`, non-superusers must include host, user, and password information in the connection string. The host, user, and password information must be included even when connecting to a local database. You must also include an entry in `pg_hba.conf` for this non-superuser and the target database. For example, the user `test_user` can create a `dblink` connection to the local system `mdw` with this command:
 
 ```
 testdb=> SELECT dblink_connect('host=mdw port=5432 dbname=postgres user=test_user password=secret');
@@ -133,6 +135,34 @@ Also, even if the `dblink` connection requires a password, it is possible for th
     ```
 
 
+### <a id="usindbnsu"></a>Using dblink as a Non-Superuser without Authentication Checks 
+
+In rare cases you may need to allow non-superusers to acccess to `dblink` without making any authentication checks. The function `dblink_connect_no_auth()` provides this functionality as it bypasses the `pg_hba.conf` file.
+
+**Warning:** Using this function introduces a security risk; ensure that you grant unauthorized access only to trusted user accounts. Also note that `dblink_connect_no_auth()` functions limit connections to the local cluster, and do not permit connections to a remote database.
+
+These functions are not available by default; the `gpadmin` superuser must grant permission to the non-superuser beforehand:
+
+1.  As a superuser, grant the `EXECUTE` privilege on the `dblink_connect_no_auth()` functions in the user database. This example grants the privilege to the non-superuser `test_user` on the functions with the signatures for creating an implicit or a named `dblink` connection.
+
+    ```
+    testdb=# GRANT EXECUTE ON FUNCTION dblink_connect_no_auth(text) TO test_user;
+    testdb=# GRANT EXECUTE ON FUNCTION dblink_connect_no_auth(text, text) TO test_user;
+    ```
+
+2.  Now `test_user` can create a connection to another local database without providing a password, regardless of what is specified in `pg_hba.conf`. For example, `test_user` can log into the `testdb` database and execute this command to create a connection named `testconn` to the local `postgres` database.
+
+    ```
+    testdb=> SELECT dblink_connect_no_auth('testconn', 'dbname=postgres user=test_user');
+    ```
+
+3.  `test_user` can use the `dblink()` function to execute a query using a `dblink` connection. For example, this command uses the `dblink` connection named `testconn` created in the previous step. `test_user` must have appropriate access to the table.
+
+    ```
+    testdb=> SELECT * FROM dblink('testconn', 'SELECT * FROM testdblink') AS dbltab(id int, product text);
+    ```
+
+
 ### <a id="dblink_ssl"></a>Using dblink with SSL-Encrypted Connections to Greenplum 
 
 When you use `dblink` to connect to Greenplum Database over an encrypted connection, you must specify the `sslmode` property in the connection string. Set `sslmode` to at least `require` to disallow unencrypted transfers. For example:
@@ -141,7 +171,7 @@ When you use `dblink` to connect to Greenplum Database over an encrypted connect
 testdb=# SELECT dblink_connect('greenplum_con_sales', 'dbname=sales host=gpmaster user=gpadmin sslmode=require');
 ```
 
-Refer to [SSL Client Authentication](../../security-guide/topics/Authenticate.html#ssl_postgresql) for information about configuring Greenplum Database to use SSL.
+Refer to [SSL Client Authentication](../../security-guide/topics/Authenticate.md#ssl_postgresql) for information about configuring Greenplum Database to use SSL.
 
 ## <a id="topic_info"></a>Additional Module Documentation 
 

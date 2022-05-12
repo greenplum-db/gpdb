@@ -1,4 +1,6 @@
-# SQL Commands 
+---
+title: SQL Commands 
+---
 
 The following SQL commands are available in Greenplum Database:
 
@@ -18,7 +20,7 @@ The following SQL commands are available in Greenplum Database:
 -   [ALTER LANGUAGE](ALTER_LANGUAGE.html)
 -   [ALTER OPERATOR](ALTER_OPERATOR.html)
 -   [ALTER OPERATOR CLASS](ALTER_OPERATOR_CLASS.html)
--   [ALTER OPERATOR FAMILY](ALTER_OPERATOR_FAMILY.html#as20941)
+-   [ALTER OPERATOR FAMILY](ALTER_OPERATOR_FAMILY.md#as20941)
 -   [ALTER PROTOCOL](ALTER_PROTOCOL.html)
 -   [ALTER RESOURCE GROUP](ALTER_RESOURCE_GROUP.html)
 -   [ALTER RESOURCE QUEUE](ALTER_RESOURCE_QUEUE.html)
@@ -36,7 +38,7 @@ The following SQL commands are available in Greenplum Database:
 -   [ALTER TYPE](ALTER_TYPE.html)
 -   [ALTER USER](ALTER_USER.html)
 -   [ALTER USER MAPPING](ALTER_USER_MAPPING.html)
--   [ALTER VIEW](ALTER_VIEW.html#am137232)
+-   [ALTER VIEW](ALTER_VIEW.md#am137232)
 -   [ANALYZE](ANALYZE.html)
 -   [BEGIN](BEGIN.html)
 -   [CHECKPOINT](CHECKPOINT.html)
@@ -60,7 +62,7 @@ The following SQL commands are available in Greenplum Database:
 -   [CREATE LANGUAGE](CREATE_LANGUAGE.html)
 -   [CREATE OPERATOR](CREATE_OPERATOR.html)
 -   [CREATE OPERATOR CLASS](CREATE_OPERATOR_CLASS.html)
--   [CREATE OPERATOR FAMILY](CREATE_OPERATOR_FAMILY.html#bx20941)
+-   [CREATE OPERATOR FAMILY](CREATE_OPERATOR_FAMILY.md#bx20941)
 -   [CREATE PROTOCOL](CREATE_PROTOCOL.html)
 -   [CREATE RESOURCE GROUP](CREATE_RESOURCE_GROUP.html)
 -   [CREATE RESOURCE QUEUE](CREATE_RESOURCE_QUEUE.html)
@@ -83,7 +85,7 @@ The following SQL commands are available in Greenplum Database:
 -   [DEALLOCATE](DEALLOCATE.html)
 -   [DECLARE](DECLARE.html)
 -   [DELETE](DELETE.html)
--   [DISCARD](DISCARD.html#dn20941)
+-   [DISCARD](DISCARD.md#dn20941)
 -   [DO](DO.html)
 -   [DROP AGGREGATE](DROP_AGGREGATE.html)
 -   [DROP CAST](DROP_CAST.html)
@@ -100,7 +102,7 @@ The following SQL commands are available in Greenplum Database:
 -   [DROP LANGUAGE](DROP_LANGUAGE.html)
 -   [DROP OPERATOR](DROP_OPERATOR.html)
 -   [DROP OPERATOR CLASS](DROP_OPERATOR_CLASS.html)
--   [DROP OPERATOR FAMILY](DROP_OPERATOR_FAMILY.html#da20941)
+-   [DROP OPERATOR FAMILY](DROP_OPERATOR_FAMILY.md#da20941)
 -   [DROP OWNED](DROP_OWNED.html)
 -   [DROP PROTOCOL](DROP_PROTOCOL.html)
 -   [DROP RESOURCE GROUP](DROP_RESOURCE_GROUP.html)

@@ -1,4 +1,6 @@
-# LOAD 
+---
+title: LOAD 
+---
 
 Loads or reloads a shared library file.
 

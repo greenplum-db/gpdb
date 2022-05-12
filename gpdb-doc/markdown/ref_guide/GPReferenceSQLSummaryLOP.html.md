@@ -1,4 +1,6 @@
-# SQL Syntax Summary 
+---
+title: SQL Syntax Summary 
+---
 
 ## <a id="ae1903297"></a>ABORT 
 
@@ -24,7 +26,7 @@ ALTER AGGREGATE <name> ( <aggregate_signature> ) SET SCHEMA <new_schema>
 
 See [ALTER AGGREGATE](sql_commands/ALTER_AGGREGATE.html) for more information.
 
-## <a id="fixme"></a>ALTER COLLATION 
+## <a id="altc"></a>ALTER COLLATION 
 
 Changes the definition of a collation.
 
@@ -75,7 +77,7 @@ ALTER DATABASE <name> RESET ALL
 
 See [ALTER DATABASE](sql_commands/ALTER_DATABASE.html) for more information.
 
-## <a id="fixme"></a>ALTER DEFAULT PRIVILEGES 
+## <a id="altdefpr"></a>ALTER DEFAULT PRIVILEGES 
 
 Changes default access privileges.
 
@@ -162,7 +164,7 @@ ALTER DOMAIN <name> SET SCHEMA <new_schema>
 
 See [ALTER DOMAIN](sql_commands/ALTER_DOMAIN.html) for more information.
 
-## <a id="fixme"></a>ALTER EXTENSION 
+## <a id="altext"></a>ALTER EXTENSION 
 
 Change the definition of an extension that is registered in a Greenplum database.
 
@@ -214,7 +216,7 @@ See [ALTER EXTENSION](sql_commands/ALTER_EXTENSION.html) for more information.
 
 Changes the definition of an external table.
 
-``` {#d84e24}
+``` {#d95e24}
 ALTER EXTERNAL TABLE <name> <action> [, ... ]
 ```
 
@@ -328,7 +330,7 @@ ALTER LANGUAGE <name> OWNER TO <new_owner>
 
 See [ALTER LANGUAGE](sql_commands/ALTER_LANGUAGE.html) for more information.
 
-## <a id="fixme"></a>ALTER MATERIALIZED VIEW 
+## <a id="altmatv"></a>ALTER MATERIALIZED VIEW 
 
 Changes the definition of a materialized view.
 
@@ -387,7 +389,7 @@ ALTER OPERATOR CLASS <name> USING <index_method> SET SCHEMA <new_schema>
 
 See [ALTER OPERATOR CLASS](sql_commands/ALTER_OPERATOR_CLASS.html) for more information.
 
-## <a id="fixme"></a>ALTER OPERATOR FAMILY 
+## <a id="altopfam"></a>ALTER OPERATOR FAMILY 
 
 Changes the definition of an operator family.
 
@@ -624,7 +626,7 @@ ALTER TABLESPACE <name> RESET ( <tablespace_option> [, ... ] )
 
 See [ALTER TABLESPACE](sql_commands/ALTER_TABLESPACE.html) for more information.
 
-## <a id="fixme"></a>ALTER TEXT SEARCH CONFIGURATION 
+## <a id="atsconf"></a>ALTER TEXT SEARCH CONFIGURATION 
 
 Changes the definition of a text search configuration.
 
@@ -644,7 +646,7 @@ ALTER TEXT SEARCH CONFIGURATION <name> SET SCHEMA <new_schema>
 
 See [ALTER TEXT SEARCH CONFIGURATION](sql_commands/ALTER_TEXT_SEARCH_CONFIGURATION.html) for more information.
 
-## <a id="fixme"></a>ALTER TEXT SEARCH DICTIONARY 
+## <a id="atsdict"></a>ALTER TEXT SEARCH DICTIONARY 
 
 Changes the definition of a text search dictionary.
 
@@ -659,7 +661,7 @@ ALTER TEXT SEARCH DICTIONARY <name> SET SCHEMA <new_schema>
 
 See [ALTER TEXT SEARCH DICTIONARY](sql_commands/ALTER_TEXT_SEARCH_DICTIONARY.html) for more information.
 
-## <a id="fixme"></a>ALTER TEXT SEARCH PARSER 
+## <a id="atspars"></a>ALTER TEXT SEARCH PARSER 
 
 Changes the definition of a text search parser.
 
@@ -670,7 +672,7 @@ ALTER TEXT SEARCH PARSER <name> SET SCHEMA <new_schema>
 
 See [ALTER TEXT SEARCH PARSER](sql_commands/ALTER_TEXT_SEARCH_PARSER.html) for more information.
 
-## <a id="fixme"></a>ALTER TEXT SEARCH TEMPLATE 
+## <a id="atstemp"></a>ALTER TEXT SEARCH TEMPLATE 
 
 Changes the definition of a text search template.
 
@@ -737,7 +739,7 @@ ALTER USER MAPPING FOR { <username> | USER | CURRENT_USER | PUBLIC }
 
 See [ALTER USER MAPPING](sql_commands/ALTER_USER_MAPPING.html) for more information.
 
-## <a id="fixme"></a>ALTER VIEW 
+## <a id="aview"></a>ALTER VIEW 
 
 Changes properties of a view.
 
@@ -823,41 +825,41 @@ Defines or changes the comment of an object.
 
 ```
 COMMENT ON
-{ TABLE <object_name |
-  COLUMN <relation_name.column_name |
-  AGGREGATE <agg_name (<agg_signature>) |
-  CAST (<source_type AS <target_type>) |
-  COLLATION <object_name
-  CONSTRAINT <constraint_name ON <table_name> |
-  CONVERSION <object_name |
-  DATABASE <object_name |
-  DOMAIN <object_name |
-  EXTENSION <object_name |
-  FOREIGN DATA WRAPPER <object_name |
-  FOREIGN TABLE <object_name |
-  FUNCTION <func_name ([[<argmode>] [<argname>] <argtype> [, ...]]) |
-  INDEX <object_name |
-  LARGE OBJECT <large_object_oid |
-  MATERIALIZED VIEW <object_name |
-  OPERATOR <operator_name (<left_type>, <right_type>) |
-  OPERATOR CLASS <object_name USING <index_method> |
-  [PROCEDURAL] LANGUAGE <object_name |
-  RESOURCE GROUP <object_name |
-  RESOURCE QUEUE <object_name |
-  ROLE <object_name |
-  RULE <rule_name ON <table_name> |
-  SCHEMA <object_name |
-  SEQUENCE <object_name |
-  SERVER <object_name |
-  TABLESPACE <object_name |
-  TEXT SEARCH CONFIGURATION <object_name |
-  TEXT SEARCH DICTIONARY <object_name |
-  TEXT SEARCH PARSER <object_name |
-  TEXT SEARCH TEMPLATE <object_name |
-  TRIGGER <trigger_name ON <table_name> |
-  TYPE <object_name |
-  VIEW <object_name } 
-IS 'text'
+{ TABLE <object_name> |
+  COLUMN <relation_name.column_name> |
+  AGGREGATE <agg_name> (<agg_signature>) |
+  CAST (<source_type> AS <target_type>) |
+  COLLATION <object_name>
+  CONSTRAINT <constraint_name> ON <table_name> |
+  CONVERSION <object_name> |
+  DATABASE <object_name> |
+  DOMAIN <object_name> |
+  EXTENSION <object_name> |
+  FOREIGN DATA WRAPPER <object_name> |
+  FOREIGN TABLE <object_name> |
+  FUNCTION <func_name> ([[<argmode>] [<argname>] <argtype> [, ...]]) |
+  INDEX <object_name> |
+  LARGE OBJECT <large_object_oid> |
+  MATERIALIZED VIEW <object_name> |
+  OPERATOR <operator_name> (<left_type>, <right_type>) |
+  OPERATOR CLASS <object_name> USING <index_method> |
+  [PROCEDURAL] LANGUAGE <object_name> |
+  RESOURCE GROUP <object_name> |
+  RESOURCE QUEUE <object_name> |
+  ROLE <object_name> |
+  RULE <rule_name> ON <table_name> |
+  SCHEMA <object_name> |
+  SEQUENCE <object_name> |
+  SERVER <object_name> |
+  TABLESPACE <object_name> |
+  TEXT SEARCH CONFIGURATION <object_name> |
+  TEXT SEARCH DICTIONARY <object_name> |
+  TEXT SEARCH PARSER <object_name> |
+  TEXT SEARCH TEMPLATE <object_name> |
+  TRIGGER <trigger_name> ON <table_name> |
+  TYPE <object_name> |
+  VIEW <object_name> } 
+IS '<text>'
 ```
 
 See [COMMENT](sql_commands/COMMENT.html) for more information.
@@ -1031,7 +1033,7 @@ CREATE DOMAIN <name> [AS] <data_type> [DEFAULT <expression>]
 
 See [CREATE DOMAIN](sql_commands/CREATE_DOMAIN.html) for more information.
 
-## <a id="fixme"></a>CREATE EXTENSION 
+## <a id="cext"></a>CREATE EXTENSION 
 
 Registers an extension in a Greenplum database.
 
@@ -1077,7 +1079,6 @@ CREATE [READABLE] EXTERNAL [TEMPORARY | TEMP] TABLE <table_name>     
               [NEWLINE [ AS ] 'LF' | 'CR' | 'CRLF']
               [FILL MISSING FIELDS] )]
           | 'CUSTOM' (Formatter=<<formatter_specifications>>)
-    [ OPTIONS ( <key> '<value>' [, ...] ) ]
     [ ENCODING '<encoding>' ]
       [ [LOG ERRORS [PERSISTENTLY]] SEGMENT REJECT LIMIT <count>
       [ROWS | PERCENT] ]
@@ -1107,7 +1108,6 @@ CREATE [READABLE] EXTERNAL WEB [TEMPORARY | TEMP] TABLE <table_name>     
                [NEWLINE [ AS ] 'LF' | 'CR' | 'CRLF']
                [FILL MISSING FIELDS] )]
            | 'CUSTOM' (Formatter=<<formatter specifications>>)
-     [ OPTIONS ( <key> '<value>' [, ...] ) ]
      [ ENCODING '<encoding>' ]
      [ [LOG ERRORS [PERSISTENTLY]] SEGMENT REJECT LIMIT <count>
        [ROWS | PERCENT] ]
@@ -1130,7 +1130,6 @@ CREATE WRITABLE EXTERNAL [TEMPORARY | TEMP] TABLE <table_name>
                [ESCAPE [AS] '<escape>'] )]
 
            | 'CUSTOM' (Formatter=<<formatter specifications>>)
-    [ OPTIONS ( <key> '<value>' [, ...] ) ]
     [ ENCODING '<write_encoding>' ]
     [ DISTRIBUTED BY ({<column> [<opclass>]}, [ ... ] ) | DISTRIBUTED RANDOMLY ]
 
@@ -1163,7 +1162,6 @@ CREATE WRITABLE EXTERNAL WEB [TEMPORARY | TEMP] TABLE <table_name>
                [FORCE QUOTE <column> [, ...]] | * ]
                [ESCAPE [AS] '<escape>'] )]
            | 'CUSTOM' (Formatter=<<formatter specifications>>)
-    [ OPTIONS ( <key> '<value>' [, ...] ) ]
     [ ENCODING '<write_encoding>' ]
     [ DISTRIBUTED BY ({<column> [<opclass>]}, [ ... ] ) | DISTRIBUTED RANDOMLY ]
 ```
@@ -1263,7 +1261,7 @@ CREATE [ OR REPLACE ] [ TRUSTED ] [ PROCEDURAL ] LANGUAGE <name>
 
 See [CREATE LANGUAGE](sql_commands/CREATE_LANGUAGE.html) for more information.
 
-## <a id="fixme"></a>CREATE MATERIALIZED VIEW 
+## <a id="cmatview"></a>CREATE MATERIALIZED VIEW 
 
 Defines a new materialized view.
 
@@ -1309,7 +1307,7 @@ CREATE OPERATOR CLASS <name> [DEFAULT] FOR TYPE <data_type>  
 
 See [CREATE OPERATOR CLASS](sql_commands/CREATE_OPERATOR_CLASS.html) for more information.
 
-## <a id="fixme"></a>CREATE OPERATOR FAMILY 
+## <a id="copfam"></a>CREATE OPERATOR FAMILY 
 
 Defines a new operator family.
 
@@ -1319,7 +1317,7 @@ CREATE OPERATOR FAMILY <name>  USING <index_method>
 
 See [CREATE OPERATOR FAMILY](sql_commands/CREATE_OPERATOR_FAMILY.html) for more information.
 
-## <a id="fixme"></a>CREATE PROTOCOL 
+## <a id="cprot"></a>CREATE PROTOCOL 
 
 Registers a custom data access protocol that can be specified when defining a Greenplum Database external table.
 
@@ -1455,8 +1453,8 @@ CREATE [ [GLOBAL | LOCAL] {TEMPORARY | TEMP } | UNLOGGED] TABLE [IF NOT EXISTS]
   ( <partition_spec> ) ]
 } |
 
-{ -- partitioned table without SUBPARTITION TEMPLATE
-[ PARTITION BY <partition_type> (<column>)
+{ **-- partitioned table without SUBPARTITION TEMPLATE
+**[ PARTITION BY <partition_type> (<column>)
    [ SUBPARTITION BY <partition_type> (<column1>) ]
       [ SUBPARTITION BY <partition_type> (<column2>) ]
          [...]
@@ -1516,7 +1514,7 @@ CREATE TABLESPACE <tablespace_name> [OWNER <username>]  LOCATION '</path/to/dir>
 
 See [CREATE TABLESPACE](sql_commands/CREATE_TABLESPACE.html) for more information.
 
-## <a id="fixme"></a>CREATE TEXT SEARCH CONFIGURATION 
+## <a id="ctscon"></a>CREATE TEXT SEARCH CONFIGURATION 
 
 Defines a new text search configuration.
 
@@ -1529,7 +1527,7 @@ CREATE TEXT SEARCH CONFIGURATION <name> (
 
 See [CREATE TEXT SEARCH CONFIGURATION](sql_commands/CREATE_TEXT_SEARCH_CONFIGURATION.html) for more information.
 
-## <a id="fixme"></a>CREATE TEXT SEARCH DICTIONARY 
+## <a id="ctsdict"></a>CREATE TEXT SEARCH DICTIONARY 
 
 Defines a new text search dictionary.
 
@@ -1542,7 +1540,7 @@ CREATE TEXT SEARCH DICTIONARY <name> (
 
 See [CREATE TEXT SEARCH DICTIONARY](sql_commands/CREATE_TEXT_SEARCH_DICTIONARY.html) for more information.
 
-## <a id="fixme"></a>CREATE TEXT SEARCH PARSER 
+## <a id="ctspar"></a>CREATE TEXT SEARCH PARSER 
 
 Defines a new text search parser.
 
@@ -1558,7 +1556,7 @@ CREATE TEXT SEARCH PARSER name (
 
 See [CREATE TEXT SEARCH PARSER](sql_commands/CREATE_TEXT_SEARCH_PARSER.html) for more information.
 
-## <a id="fixme"></a>CREATE TEXT SEARCH TEMPLATE 
+## <a id="ctstemp"></a>CREATE TEXT SEARCH TEMPLATE 
 
 Defines a new text search template.
 
@@ -1688,7 +1686,7 @@ DELETE FROM [ONLY] <table> [[AS] <alias>]
 
 See [DELETE](sql_commands/DELETE.html) for more information.
 
-## <a id="fixme"></a>DISCARD 
+## <a id="disc"></a>DISCARD 
 
 Discards the session state.
 
@@ -1708,7 +1706,7 @@ DROP AGGREGATE [IF EXISTS] <name> ( <aggregate_signature> ) [CASCADE | RESTRICT]
 
 See [DROP AGGREGATE](sql_commands/DROP_AGGREGATE.html) for more information.
 
-## <a id="fixme"></a>DO 
+## <a id="sqldo"></a>DO 
 
 Runs anonymous code block as a transient anonymous function.
 
@@ -1728,7 +1726,7 @@ DROP CAST [IF EXISTS] (<sourcetype> AS <targettype>) [CASCADE | RESTRICT]
 
 See [DROP CAST](sql_commands/DROP_CAST.html) for more information.
 
-## <a id="fixme"></a>DROP COLLATION 
+## <a id="dcoll"></a>DROP COLLATION 
 
 Removes a previously defined collation.
 
@@ -1768,7 +1766,7 @@ DROP DOMAIN [IF EXISTS] <name> [, ...]  [CASCADE | RESTRICT]
 
 See [DROP DOMAIN](sql_commands/DROP_DOMAIN.html) for more information.
 
-## <a id="fixme"></a>DROP EXTENSION 
+## <a id="dext"></a>DROP EXTENSION 
 
 Removes an extension from a Greenplum database.
 
@@ -1849,7 +1847,7 @@ DROP [PROCEDURAL] LANGUAGE [IF EXISTS] <name> [CASCADE | RESTRICT]
 
 See [DROP LANGUAGE](sql_commands/DROP_LANGUAGE.html) for more information.
 
-## <a id="fixme"></a>DROP MATERIALIZED VIEW 
+## <a id="dmatview"></a>DROP MATERIALIZED VIEW 
 
 Removes a materialized view.
 
@@ -1880,7 +1878,7 @@ DROP OPERATOR CLASS [IF EXISTS] <name> USING <index_method> [CASCADE | RESTRICT]
 
 See [DROP OPERATOR CLASS](sql_commands/DROP_OPERATOR_CLASS.html) for more information.
 
-## <a id="fixme"></a>DROP OPERATOR FAMILY 
+## <a id="dopfam"></a>DROP OPERATOR FAMILY 
 
 Removes an operator family.
 
@@ -1900,7 +1898,7 @@ DROP OWNED BY <name> [, ...] [CASCADE | RESTRICT]
 
 See [DROP OWNED](sql_commands/DROP_OWNED.html) for more information.
 
-## <a id="fixme"></a>DROP PROTOCOL 
+## <a id="dprot"></a>DROP PROTOCOL 
 
 Removes a external table data access protocol from a database.
 
@@ -2000,7 +1998,7 @@ DROP TABLESPACE [IF EXISTS] <tablespacename>
 
 See [DROP TABLESPACE](sql_commands/DROP_TABLESPACE.html) for more information.
 
-## <a id="fixme"></a>DROP TEXT SEARCH CONFIGURATION 
+## <a id="dtscon"></a>DROP TEXT SEARCH CONFIGURATION 
 
 Removes a text search configuration.
 
@@ -2010,7 +2008,7 @@ DROP TEXT SEARCH CONFIGURATION [ IF EXISTS ] <name> [ CASCADE | RESTRICT ]
 
 See [DROP TEXT SEARCH CONFIGURATION](sql_commands/DROP_TEXT_SEARCH_CONFIGURATION.html) for more information.
 
-## <a id="fixme"></a>DROP TEXT SEARCH DICTIONARY 
+## <a id="dtsdict"></a>DROP TEXT SEARCH DICTIONARY 
 
 Removes a text search dictionary.
 
@@ -2020,7 +2018,7 @@ DROP TEXT SEARCH DICTIONARY [ IF EXISTS ] <name> [ CASCADE | RESTRICT ]
 
 See [DROP TEXT SEARCH DICTIONARY](sql_commands/DROP_TEXT_SEARCH_DICTIONARY.html) for more information.
 
-## <a id="fixme"></a>DROP TEXT SEARCH PARSER 
+## <a id="dtspar"></a>DROP TEXT SEARCH PARSER 
 
 Remove a text search parser.
 
@@ -2030,7 +2028,7 @@ DROP TEXT SEARCH PARSER [ IF EXISTS ] <name> [ CASCADE | RESTRICT ]
 
 See [DROP TEXT SEARCH PARSER](sql_commands/DROP_TEXT_SEARCH_PARSER.html) for more information.
 
-## <a id="fixme"></a>DROP TEXT SEARCH TEMPLATE 
+## <a id="dtstemp"></a>DROP TEXT SEARCH TEMPLATE 
 
 Removes a text search template.
 
@@ -2255,7 +2253,7 @@ REASSIGN OWNED BY <old_role> [, ...] TO <new_role>
 
 See [REASSIGN OWNED](sql_commands/REASSIGN_OWNED.html) for more information.
 
-## <a id="fixme"></a>REFRESH MATERIALIZED VIEW 
+## <a id="refmatview"></a>REFRESH MATERIALIZED VIEW 
 
 Replaces the contents of a materialized view.
 
@@ -2444,7 +2442,7 @@ SELECT [ALL | DISTINCT [ON (<expression> [, ...])]]
   [LIMIT {<count> | ALL}]
   [OFFSET <start> [ ROW | ROWS ] ]
   [FETCH { FIRST | NEXT } [ <count> ] { ROW | ROWS } ONLY]
-  [FOR2 {UPDATE | NO KEY UPDATE | SHARE | KEY SHARE} [OF <table_name> [, ...]] [NOWAIT] [...]]
+  [FOR {UPDATE | NO KEY UPDATE | SHARE | KEY SHARE} [OF <table_name> [, ...]] [NOWAIT] [...]]
 
 TABLE { [ ONLY ] <table_name> [ * ] | <with_query_name> }
 

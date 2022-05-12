@@ -1,4 +1,6 @@
-# DROP RULE 
+---
+title: DROP RULE 
+---
 
 Removes a rewrite rule.
 

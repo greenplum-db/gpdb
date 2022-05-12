@@ -1,4 +1,6 @@
-# System Views 
+---
+title: System Views 
+---
 
 Greenplum Database provides the following system views not available in PostgreSQL.
 

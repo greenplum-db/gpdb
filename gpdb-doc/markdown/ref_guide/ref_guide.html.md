@@ -1,4 +1,6 @@
-# Greenplum Database Reference Guide 
+---
+title: Greenplum Database Reference Guide 
+---
 
 Reference information for Greenplum Database systems including SQL commands, system catalogs, environment variables, server configuration parameters, character set support, datatypes, and Greenplum Database extensions.
 
@@ -18,8 +20,12 @@ Reference information for Greenplum Database systems including SQL commands, sys
 
 -   **[The gp\_toolkit Administrative Schema](gp_toolkit.html)**  
 
+-   **[The gpperfmon Database](gpperfmon/dbref.html)**  
+
 -   **[Server Programmatic Interfaces](extensions/srvapi_intro.html)**  
 
 -   **[SQL Features, Reserved and Key Words, and Compliance](misc.html)**  
+
+-   **[Objects Deprecated in Greenplum 6](deprecated-objects.html)**  
 
 

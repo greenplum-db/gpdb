@@ -1,4 +1,6 @@
-# CREATE EXTERNAL TABLE 
+---
+title: CREATE EXTERNAL TABLE 
+---
 
 Defines a new external table.
 
@@ -32,7 +34,6 @@ CREATE [READABLE] EXTERNAL [TEMPORARY | TEMP] TABLE <table_name>     
               [NEWLINE [ AS ] 'LF' | 'CR' | 'CRLF']
               [FILL MISSING FIELDS] )]
           | 'CUSTOM' (Formatter=<<formatter_specifications>>)
-    [ OPTIONS ( <key> '<value>' [, ...] ) ]
     [ ENCODING '<encoding>' ]
       [ [LOG ERRORS [PERSISTENTLY]] SEGMENT REJECT LIMIT <count>
       [ROWS | PERCENT] ]
@@ -62,7 +63,6 @@ CREATE [READABLE] EXTERNAL WEB [TEMPORARY | TEMP] TABLE <table_name>     
                [NEWLINE [ AS ] 'LF' | 'CR' | 'CRLF']
                [FILL MISSING FIELDS] )]
            | 'CUSTOM' (Formatter=<<formatter specifications>>)
-     [ OPTIONS ( <key> '<value>' [, ...] ) ]
      [ ENCODING '<encoding>' ]
      [ [LOG ERRORS [PERSISTENTLY]] SEGMENT REJECT LIMIT <count>
        [ROWS | PERCENT] ]
@@ -85,7 +85,6 @@ CREATE WRITABLE EXTERNAL [TEMPORARY | TEMP] TABLE <table_name>
                [ESCAPE [AS] '<escape>'] )]
 
            | 'CUSTOM' (Formatter=<<formatter specifications>>)
-    [ OPTIONS ( <key> '<value>' [, ...] ) ]
     [ ENCODING '<write_encoding>' ]
     [ DISTRIBUTED BY ({<column> [<opclass>]}, [ ... ] ) | DISTRIBUTED RANDOMLY ]
 
@@ -118,7 +117,6 @@ CREATE WRITABLE EXTERNAL WEB [TEMPORARY | TEMP] TABLE <table_name>
                [FORCE QUOTE <column> [, ...]] | * ]
                [ESCAPE [AS] '<escape>'] )]
            | 'CUSTOM' (Formatter=<<formatter specifications>>)
-    [ OPTIONS ( <key> '<value>' [, ...] ) ]
     [ ENCODING '<write_encoding>' ]
     [ DISTRIBUTED BY ({<column> [<opclass>]}, [ ... ] ) | DISTRIBUTED RANDOMLY ]
 ```
@@ -167,34 +165,35 @@ LOCATION \('protocol://\[host\[:port\]\]/path/file' \[, ...\]\)
 
 :   For readable external tables, specifies the URI of the external data source\(s\) to be used to populate the external table or web table. Regular readable external tables allow the `gpfdist` or `file` protocols. External web tables allow the `http` protocol. If `port` is omitted, port `8080` is assumed for `http` and `gpfdist` protocols. If using the `gpfdist` protocol, the `path` is relative to the directory from which `gpfdist` is serving files \(the directory specified when you started the `gpfdist` program\). Also, `gpfdist` can use wildcards or other C-style pattern matching \(for example, a whitespace character is `[[:space:]]`\) to denote multiple files in a directory. For example:
 
-```
+:   ```
 'gpfdist://filehost:8081/*'
 'gpfdist://masterhost/my_load_file'
 'file://seghost1/dbfast1/external/myfile.txt'
 'http://intranet.example.com/finance/expenses.csv'
 ```
 
-For writable external tables, specifies the URI location of the `gpfdist` process or S3 protocol that will collect data output from the Greenplum segments and write it to one or more named files. For `gpfdist` the `path` is relative to the directory from which `gpfdist` is serving files \(the directory specified when you started the `gpfdist` program\). If multiple `gpfdist` locations are listed, the segments sending data will be evenly divided across the available output locations. For example:
+:   For writable external tables, specifies the URI location of the `gpfdist` process or S3 protocol that will collect data output from the Greenplum segments and write it to one or more named files. For `gpfdist` the `path` is relative to the directory from which `gpfdist` is serving files \(the directory specified when you started the `gpfdist` program\). If multiple `gpfdist` locations are listed, the segments sending data will be evenly divided across the available output locations. For example:
 
-```
+:   ```
 'gpfdist://outputhost:8081/data1.out',
 'gpfdist://outputhost:8081/data2.out'
 ```
 
-With two `gpfdist` locations listed as in the above example, half of the segments would send their output data to the `data1.out` file and the other half to the `data2.out` file.
+:   With two `gpfdist` locations listed as in the above example, half of the segments would send their output data to the `data1.out` file and the other half to the `data2.out` file.
 
-With the option `#transform=trans_name`, you can specify a transform to apply when loading or extracting data. The trans\_name is the name of the transform in the YAML configuration file you specify with the you run the `gpfdist` utility. For information about specifying a transform, see [`gpfdist`](../../utility_guide/ref/gpfdist.html) in the *Greenplum Utility Guide*.
+:   With the option `#transform=trans\_name`, you can specify a transform to apply when loading or extracting data. The trans\_name is the name of the transform in the YAML configuration file you specify with the you run the `gpfdist` utility. For information about specifying a transform, see [`gpfdist`](../../utility_guide/ref/gpfdist.html) in the *Greenplum Utility Guide*.
 
 ON MASTER
 :   Restricts all table-related operations to the Greenplum master segment. Permitted only on readable and writable external tables created with the `s3` or custom protocols. The `gpfdist`, `gpfdists`, `pxf`, and `file` protocols do not support `ON MASTER`.
 
-:   **Note:** Be aware of potential resource impacts when reading from or writing to external tables you create with the `ON MASTER` clause. You may encounter performance issues when you restrict table operations solely to the Greenplum master segment.
+    **Note:** Be aware of potential resource impacts when reading from or writing to external tables you create with the `ON MASTER` clause. You may encounter performance issues when you restrict table operations solely to the Greenplum master segment.
 
 EXECUTE 'command' \[ON ...\]
 :   Allowed for readable external web tables or writable external tables only. For readable external web tables, specifies the OS command to be run by the segment instances. The command can be a single OS command or a script. The `ON` clause is used to specify which segment instances will run the given command.
 
     -   ON ALL is the default. The command will be run by every active \(primary\) segment instance on all segment hosts in the Greenplum Database system. If the command runs a script, that script must reside in the same location on all of the segment hosts and be executable by the Greenplum superuser \(`gpadmin`\).
     -   ON MASTER runs the command on the master host only.
+
         **Note:** Logging is not supported for external web tables when the `ON MASTER` clause is specified.
 
     -   ON number means the command will be run by the specified number of segments. The particular segments are chosen randomly at runtime by the Greenplum Database system. If the command runs a script, that script must reside in the same location on all of the segment hosts and be executable by the Greenplum superuser \(`gpadmin`\).
@@ -255,9 +254,6 @@ FORCE QUOTE
 FILL MISSING FIELDS
 :   In both `TEXT` and `CSV` mode for readable external tables, specifying `FILL MISSING FIELDS` will set missing trailing field values to `NULL` \(instead of reporting an error\) when a row of data has missing data fields at the end of a line or row. Blank rows, fields with a `NOT NULL` constraint, and trailing delimiters on a line will still report an error.
 
-OPTIONS key 'value'\[, key' value' ...\]
-:   Optional. Specifies parameters and values as key-value pairs that are set to a custom data access protocol when the protocol is used as a external table protocol for an external table. It is the responsibility of the custom data access protocol to process and validate the key-value pairs.
-
 ENCODING 'encoding'
 :   Character set encoding to use for the external table. Specify a string constant \(such as `'SQL_ASCII'`\), an integer encoding number, or `DEFAULT` to use the default client encoding. See [Character Set Support](../character_sets.html).
 
@@ -281,7 +277,7 @@ The limit for the number of initial rejected rows can be changed with the Greenp
 
 DISTRIBUTED BY \(\{column \[opclass\]\}, \[ ... \] \)
 DISTRIBUTED RANDOMLY
-:   Used to declare the Greenplum Database distribution policy for a writable external table. By default, writable external tables are distributed randomly. If the source table you are exporting data from has a hash distribution policy, defining the same distribution key column\(s\) and operator class\(es\), `oplcass`, for the writable external table will improve unload performance by eliminating the need to move rows over the interconnect. When you issue an unload command such as `INSERT INTO wex_table SELECT * FROM source_table`, the rows that are unloaded can be sent directly from the segments to the output location if the two tables have the same hash distribution policy.
+:   Used to declare the Greenplum Database distribution policy for a writable external table. By default, writable external tables are distributed randomly. If the source table you are exporting data from has a hash distribution policy, defining the same distribution key column\(s\) and operator class\(es\), `oplcass`, for the writable external table will improve unload performance by eliminating the need to move rows over the interconnect. When you issue an unload command such as `INSERT INTO wex\_table SELECT * FROM source\_table`, the rows that are unloaded can be sent directly from the segments to the output location if the two tables have the same hash distribution policy.
 
 ## <a id="section5"></a>Examples 
 
@@ -366,7 +362,7 @@ When you specify the `LOG ERRORS` clause, Greenplum Database captures errors tha
 You can view and manage the captured error log data. The functions to manage log data depend on whether the data is persistent \(the `PERSISTENTLY` keyword is used with the `LOG ERRORS` clause\).
 
 -   Functions that manage non-persistent error log data from external tables that were defined without the `PERSISTENTLY` keyword.
-    -   The built-in SQL function `gp_read_error_log('table_name')` displays error log information for an external table. This example displays the error log data from the external table `ext_expenses`.
+    -   The built-in SQL function `gp_read_error_log('table\_name')` displays error log information for an external table. This example displays the error log data from the external table `ext_expenses`.
 
         ```
         SELECT * from gp_read_error_log('ext_expenses');
@@ -374,7 +370,7 @@ You can view and manage the captured error log data. The functions to manage log
 
         The function returns no data if you created the external table with the `LOG ERRORS PERSISTENTLY` clause, or if the external table does not exist.
 
-    -   The built-in SQL function `gp_truncate_error_log('table_name')` deletes the error log data for table\_name. This example deletes the error log data captured from the external table `ext_expenses`:
+    -   The built-in SQL function `gp_truncate_error_log('table\_name')` deletes the error log data for table\_name. This example deletes the error log data captured from the external table `ext_expenses`:
 
         ```
         SELECT gp_truncate_error_log('ext_expenses'); 
@@ -385,11 +381,18 @@ You can view and manage the captured error log data. The functions to manage log
         The function returns `FALSE` if the table does not exist.
 
 -   Functions that manage persistent error log data from external tables that were defined with the `PERSISTENTLY` keyword.
-    -   The SQL function `gp_read_persistent_error_log('table_name')` displays persistent log data for an external table.
+
+    **Note:** The functions that manage persistent error log data from external tables are defined in the file `$GPHOME/share/postgresql/contrib/gpexterrorhandle.sql`. The functions must be installed in the databases that use persistent error log data from an external table. This `psql` command installs the functions into the database `testdb`.
+
+    ```
+    psql -d test -U gpadmin -f $GPHOME/share/postgresql/contrib/gpexterrorhandle.sql
+    ```
+
+    -   The SQL function `gp_read_persistent_error_log('table\_name')` displays persistent log data for an external table.
 
         The function returns no data if you created the external table without the `PERSISTENTLY` keyword. The function returns persistent log data for an external table even after the table has been dropped.
 
-    -   The SQL function `gp_truncate_persistent_error_log('table_name')` truncates persistent log data for a table.
+    -   The SQL function `gp_truncate_persistent_error_log('table\_name')` truncates persistent log data for a table.
 
         For persistent log data, you must manually delete the data. Dropping the external table does not delete persistent log data.
 
@@ -408,5 +411,5 @@ When multiple Greenplum Database external tables are defined with the `gpfdist`,
 
 [CREATE TABLE AS](CREATE_TABLE_AS.html), [CREATE TABLE](CREATE_TABLE.html), [COPY](COPY.html), [SELECT INTO](SELECT_INTO.html), [INSERT](INSERT.html)
 
-**Parent topic:** [SQL Commands](../sql_commands/sql_ref.html)
+**Parent topic:**[SQL Commands](../sql_commands/sql_ref.html)
 

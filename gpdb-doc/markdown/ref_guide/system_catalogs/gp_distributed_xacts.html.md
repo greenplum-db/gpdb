@@ -1,4 +1,6 @@
-# gp_distributed_xacts 
+---
+title: gp\_distributed\_xacts 
+---
 
 The `gp_distributed_xacts` view contains information about Greenplum Database distributed transactions. A distributed transaction is a transaction that involves modifying data on the segment instances. Greenplum's distributed transaction manager ensures that the segments stay in synch. This view allows you to see the currently active sessions and their associated distributed transactions.
 

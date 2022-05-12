@@ -1,4 +1,6 @@
-# pg_description 
+---
+title: pg\_description 
+---
 
 The `pg_description` system catalog table stores optional descriptions \(comments\) for each database object. Descriptions can be manipulated with the `COMMENT` command and viewed with `psql`'s `\d` meta-commands. Descriptions of many built-in system objects are provided in the initial contents of `pg_description`. See also [pg\_shdescription](pg_shdescription.html), which performs a similar function for descriptions involving objects that are shared across a Greenplum system.
 

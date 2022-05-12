@@ -1,4 +1,6 @@
-# CREATE PROTOCOL 
+---
+title: CREATE PROTOCOL 
+---
 
 Registers a custom data access protocol that can be specified when defining a Greenplum Database external table.
 

@@ -1,4 +1,6 @@
-# pg_shdepend 
+---
+title: pg\_shdepend 
+---
 
 The `pg_shdepend` system catalog table records the dependency relationships between database objects and shared objects, such as roles. This information allows Greenplum Database to ensure that those objects are unreferenced before attempting to delete them. See also [pg\_depend](pg_depend.html), which performs a similar function for dependencies involving objects within a single database. Unlike most system catalogs, `pg_shdepend` is shared across all databases of Greenplum system: there is only one copy of `pg_shdepend` per system, not one per database.
 

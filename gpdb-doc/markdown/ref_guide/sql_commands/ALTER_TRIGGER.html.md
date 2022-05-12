@@ -1,4 +1,6 @@
-# ALTER TRIGGER 
+---
+title: ALTER TRIGGER 
+---
 
 Changes the definition of a trigger.
 

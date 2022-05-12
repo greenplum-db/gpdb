@@ -1,4 +1,6 @@
-# ALTER SCHEMA 
+---
+title: ALTER SCHEMA 
+---
 
 Changes the definition of a schema.
 

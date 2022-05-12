@@ -1,4 +1,6 @@
-# DEALLOCATE 
+---
+title: DEALLOCATE 
+---
 
 Deallocates a prepared statement.
 

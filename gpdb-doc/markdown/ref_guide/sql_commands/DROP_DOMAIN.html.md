@@ -1,4 +1,6 @@
-# DROP DOMAIN 
+---
+title: DROP DOMAIN 
+---
 
 Removes a domain.
 

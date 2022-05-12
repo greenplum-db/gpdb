@@ -1,6 +1,8 @@
-# pg_available_extension_versions 
+---
+title: pg\_available\_extension\_versions 
+---
 
-The `pg_available_extension_versions` view lists the specific extension versions that are available for installation. The [pg\_extension](pg_extension.html) system catalog table shows the extensions currently installed.
+The `pg_available_extension_versions` view lists the specific extension versions that are available for installation. The [*pg\_extension*](pg_extension.html) system catalog table shows the extensions currently installed.
 
 The view is read only.
 

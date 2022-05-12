@@ -1,4 +1,6 @@
-# Text Search Data Types 
+---
+title: Text Search Data Types 
+---
 
 Greenplum Database provides two data types that are designed to support full text search, which is the activity of searching through a collection of natural-language *documents* to locate those that best match a *query*. The `tsvector` type represents a document in a form optimized for text search; the `tsquery` type similarly represents a text query. [Using Full Text Search](../admin_guide/textsearch/full-text-search.html) provides a detailed explanation of this facility, and [Text Search Functions and Operators](function-summary.html) summarizes the related functions and operators.
 

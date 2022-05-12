@@ -1,4 +1,6 @@
-# TRUNCATE 
+---
+title: TRUNCATE 
+---
 
 Empties a table of all rows.
 

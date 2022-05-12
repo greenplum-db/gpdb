@@ -1,4 +1,6 @@
-# CREATE MATERIALIZED VIEW 
+---
+title: CREATE MATERIALIZED VIEW 
+---
 
 Defines a new materialized view.
 

@@ -1,4 +1,6 @@
-# REVOKE 
+---
+title: REVOKE 
+---
 
 Removes access privileges.
 

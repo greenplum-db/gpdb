@@ -1,4 +1,6 @@
-# CREATE TABLE AS 
+---
+title: CREATE TABLE AS 
+---
 
 Defines a new table from the results of a query.
 
@@ -89,7 +91,7 @@ TABLESPACE tablespace\_name
 :   The tablespace\_name parameter is the name of the tablespace in which the new table is to be created. If not specified, the database's default tablespace is used, or [temp\_tablespaces](../config_params/guc-list.html) if the table is temporary.
 
 AS query
-:   A [SELECT](SELECT.html), [TABLE](SELECT.html#table-command), or [VALUES](VALUES.html) command, or an [EXECUTE](EXECUTE.html) command that runs a prepared `SELECT` or `VALUES` query.
+:   A [SELECT](SELECT.html), [TABLE](SELECT.md#table-command), or [VALUES](VALUES.html) command, or an [EXECUTE](EXECUTE.html) command that runs a prepared `SELECT` or `VALUES` query.
 
 DISTRIBUTED BY \(\{column \[opclass\]\}, \[ ... \] \)
 DISTRIBUTED RANDOMLY

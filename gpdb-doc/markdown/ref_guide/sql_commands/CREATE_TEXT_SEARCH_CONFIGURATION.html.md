@@ -1,4 +1,6 @@
-# CREATE TEXT SEARCH CONFIGURATION 
+---
+title: CREATE TEXT SEARCH CONFIGURATION 
+---
 
 Defines a new text search configuration.
 

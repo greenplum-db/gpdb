@@ -1,4 +1,6 @@
-# ALTER DEFAULT PRIVILEGES 
+---
+title: ALTER DEFAULT PRIVILEGES 
+---
 
 Changes default access privileges.
 
@@ -67,7 +69,7 @@ You can change default privileges only for objects that will be created by yours
 
 As explained under [GRANT](GRANT.html), the default privileges for any object type normally grant all grantable permissions to the object owner, and may grant some privileges to `PUBLIC` as well. However, this behavior can be changed by altering the global default privileges with `ALTER DEFAULT PRIVILEGES`.
 
-## <a id="parms"></a>Parameters 
+## <a id="parm"></a>Parameters 
 
 target\_role
 :   The name of an existing role of which the current role is a member. If `FOR ROLE` is omitted, the current role is assumed.

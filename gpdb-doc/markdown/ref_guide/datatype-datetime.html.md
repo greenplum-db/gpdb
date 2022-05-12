@@ -1,4 +1,6 @@
-# Date/Time Types 
+---
+title: Date/Time Types 
+---
 
 Greenplum supports the full set of SQL date and time types, shown in [Table 1](#datatype-datetime-table). The operations available on these data types are described in [Date/Time Functions and Operators](https://www.postgresql.org/docs/9.4/functions-datetime.html) in the PostgreSQL documentation. Dates are counted according to the Gregorian calendar, even in years before that calendar was introduced \(see [History of Units](https://www.postgresql.org/docs/9.4/datetime-units-history.html) in the PostgreSQL documentation for more information\).
 
@@ -134,7 +136,7 @@ Valid input for these types consists of a time of day followed by an optional ti
 
 Refer to [Time Zones](#datatype-timezones) for more information on how to specify time zones.
 
-## <a id="tstamps"></a>Time Stamps 
+## <a id="tstamp"></a>Time Stamps 
 
 Valid input for the time stamp types consists of the concatenation of a date and a time, followed by an optional time zone, followed by an optional `AD` or `BC`. \(Alternatively, `AD`/`BC` can appear before the time zone, but this is not the preferred ordering.\) Thus: `1999-01-08 04:05:06` and: `1999-01-08 04:05:06 -8:00` are valid values, which follow the ISO 8601 standard. In addition, the common format: `January 8 04:05:06 1999 PST` is supported.
 
@@ -146,7 +148,7 @@ When a `timestamp with time zone` value is output, it is always converted from U
 
 Conversions between `timestamp without time zone` and `timestamp with time zone` normally assume that the `timestamp without time zone` value should be taken or given as timezone local time. A different time zone can be specified for the conversion using `AT TIME ZONE`.
 
-## <a id="specialvals"></a>Special Values 
+## <a id="specval"></a>Special Values 
 
 Greenplum supports several special date/time input values for convenience, as shown in [Table 5](#datatype-datetime-special-table). The values `infinity` and `-infinity` are specially represented inside the system and will be displayed unchanged; but the others are simply notational shorthands that will be converted to ordinary date/time values when read. \(In particular, `now` and related strings are converted to a specific time value as soon as they are read.\) All of these values need to be enclosed in single quotes when used as constants in SQL commands.
 

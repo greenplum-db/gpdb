@@ -1,4 +1,6 @@
-# DROP FOREIGN DATA WRAPPER 
+---
+title: DROP FOREIGN DATA WRAPPER 
+---
 
 Removes a foreign-data wrapper.
 

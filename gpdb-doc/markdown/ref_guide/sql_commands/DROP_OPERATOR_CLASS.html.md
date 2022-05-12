@@ -1,4 +1,6 @@
-# DROP OPERATOR CLASS 
+---
+title: DROP OPERATOR CLASS 
+---
 
 Removes an operator class.
 

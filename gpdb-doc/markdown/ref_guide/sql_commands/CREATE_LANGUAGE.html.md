@@ -1,4 +1,6 @@
-# CREATE LANGUAGE 
+---
+title: CREATE LANGUAGE 
+---
 
 Defines a new procedural language.
 

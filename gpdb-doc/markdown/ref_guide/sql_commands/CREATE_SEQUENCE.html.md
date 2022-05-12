@@ -1,4 +1,6 @@
-# CREATE SEQUENCE 
+---
+title: CREATE SEQUENCE 
+---
 
 Defines a new sequence generator.
 

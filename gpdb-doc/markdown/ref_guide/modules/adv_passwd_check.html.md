@@ -1,4 +1,6 @@
-# advanced\_password\_check 
+---
+title: advanced\_password\_check 
+---
 
 The `advanced_password_check` module provides password quality checking for Greenplum Database.
 
@@ -15,7 +17,7 @@ The `advanced_password_check` module provides no SQL-accessible functions. To us
 More typical usage is to preload it into all sessions by including `advanced_password_check` in `shared_preload_libraries` in `postgresql.conf`:
 
 ```
-shared_preload_libraries = '*other\_libraries*,advanced_password_check'
+shared_preload_libraries = '<other_libraries>,advanced_password_check'
 
 ```
 

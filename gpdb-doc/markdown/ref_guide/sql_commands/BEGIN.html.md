@@ -1,4 +1,6 @@
-# BEGIN 
+---
+title: BEGIN 
+---
 
 Starts a transaction block.
 

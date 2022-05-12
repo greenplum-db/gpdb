@@ -1,4 +1,6 @@
-# CREATE OPERATOR FAMILY 
+---
+title: CREATE OPERATOR FAMILY 
+---
 
 Defines a new operator family.
 

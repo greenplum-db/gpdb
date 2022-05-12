@@ -1,4 +1,6 @@
-# DROP OPERATOR 
+---
+title: DROP OPERATOR 
+---
 
 Removes an operator.
 

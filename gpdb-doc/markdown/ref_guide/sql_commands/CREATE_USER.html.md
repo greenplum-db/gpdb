@@ -1,4 +1,6 @@
-# CREATE USER 
+---
+title: CREATE USER 
+---
 
 Defines a new database role with the `LOGIN` privilege by default.
 

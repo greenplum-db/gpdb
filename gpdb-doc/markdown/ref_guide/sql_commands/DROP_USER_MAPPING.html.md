@@ -1,4 +1,6 @@
-# DROP USER MAPPING 
+---
+title: DROP USER MAPPING 
+---
 
 Removes a user mapping for a foreign server.
 

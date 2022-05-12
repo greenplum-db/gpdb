@@ -1,4 +1,6 @@
-# CLOSE 
+---
+title: CLOSE 
+---
 
 Closes a cursor.
 
@@ -16,7 +18,7 @@ Every non-holdable open cursor is implicitly closed when a transaction is termin
 
 ## <a id="section4"></a>Parameters 
 
-<cursor\_name\>
+cursor\_name
 :   The name of an open cursor to close.
 
 ## <a id="section5"></a>Notes 

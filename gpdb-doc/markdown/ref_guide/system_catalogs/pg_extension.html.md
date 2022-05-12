@@ -1,4 +1,6 @@
-# pg_extension 
+---
+title: pg\_extension 
+---
 
 The system catalog table `pg_extension` stores information about installed extensions.
 

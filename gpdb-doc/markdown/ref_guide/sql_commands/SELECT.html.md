@@ -1,4 +1,6 @@
-# SELECT 
+---
+title: SELECT 
+---
 
 Retrieves rows from a table or view.
 
@@ -18,7 +20,7 @@ SELECT [ALL | DISTINCT [ON (<expression> [, ...])]]
   [LIMIT {<count> | ALL}]
   [OFFSET <start> [ ROW | ROWS ] ]
   [FETCH { FIRST | NEXT } [ <count> ] { ROW | ROWS } ONLY]
-  [FOR2 {UPDATE | NO KEY UPDATE | SHARE | KEY SHARE} [OF <table_name> [, ...]] [NOWAIT] [...]]
+  [FOR {UPDATE | NO KEY UPDATE | SHARE | KEY SHARE} [OF <table_name> [, ...]] [NOWAIT] [...]]
 
 TABLE { [ ONLY ] <table_name> [ * ] | <with_query_name> }
 
@@ -95,11 +97,8 @@ where frame\_start and frame\_end can be one of:
 8.  The actual output rows are computed using the `SELECT` output expressions for each selected row.
 9.  Using the operators `UNION`, `INTERSECT`, and `EXCEPT`, the output of more than one `SELECT` statement can be combined to form a single result set. The `UNION` operator returns all rows that are in one or both of the result sets. The `INTERSECT` operator returns all rows that are strictly in both result sets. The `EXCEPT` operator returns the rows that are in the first result set but not in the second. In all three cases, duplicate rows are eliminated unless `ALL` is specified. The noise word `DISTINCT` can be added to explicitly specify eliminating duplicate rows. Notice that `DISTINCT` is the default behavior here, even though `ALL` is the default for `SELECT` itself.
 10. If the `ORDER BY` clause is specified, the returned rows are sorted in the specified order. If `ORDER BY` is not given, the rows are returned in whatever order the system finds fastest to produce.
-11. If the `LIMIT` \(or `FETCH FIRST`\) or `OFFSET` clause is specified, the `SELECT` command only returns a subset of the result rows.
-12. If you specify a locking clause `FOR {UPDATE`\|`NO KEY UPDATE`\|`SHARE`\|`KEY SHARE}`, the `SELECT` command locks the entire table against concurrent updates when the Global Deadlock Detector is disabled \(the default\). When the Global Deadlock Detector is enabled, it affects some simple `SELECT` statements that contain a locking clause.
-
-    For information about using a `FOR` clause and the effect of the Global Deadlock Detector, see "The Locking Clause" later in this section.
-
+11. If the `LIMIT` \(or `FETCH FIRST`\) or `OFFSET` clause is specified, the `SELECT` statement only returns a subset of the result rows.
+12. If `FOR UPDATE`, `FOR NO KEY UPDATE`, `FOR SHARE`, or `FOR KEY SHARE` is specified, the `SELECT` statement locks the entire table against concurrent updates.
 
 You must have `SELECT` privilege on each column used in a `SELECT` command. The use of `FOR NO KEY UPDATE`, `FOR UPDATE`, `FOR SHARE`, or `FOR KEY SHARE` requires `UPDATE` privilege as well \(for at least one column of each table so selected\).
 
@@ -285,28 +284,28 @@ Greenplum Database has the following additional OLAP grouping extensions \(often
 ROLLUP
 :   A `ROLLUP` grouping is an extension to the `GROUP BY` clause that creates aggregate subtotals that roll up from the most detailed level to a grand total, following a list of grouping columns \(or expressions\). `ROLLUP` takes an ordered list of grouping columns, calculates the standard aggregate values specified in the `GROUP BY` clause, then creates progressively higher-level subtotals, moving from right to left through the list. Finally, it creates a grand total. A `ROLLUP` grouping can be thought of as a series of grouping sets. For example:
 
-```
+:   ```
 GROUP BY ROLLUP (a,b,c) 
 ```
 
 is equivalent to:
 
-```
+:   ```
 GROUP BY GROUPING SETS( (a,b,c), (a,b), (a), () ) 
 ```
 
-Notice that the n elements of a `ROLLUP` translate to n+1 grouping sets. Also, the order in which the grouping expressions are specified is significant in a `ROLLUP`.
+:   Notice that the n elements of a `ROLLUP` translate to n+1 grouping sets. Also, the order in which the grouping expressions are specified is significant in a `ROLLUP`.
 
 CUBE
 :   A `CUBE` grouping is an extension to the `GROUP BY` clause that creates subtotals for all of the possible combinations of the given list of grouping columns \(or expressions\). In terms of multidimensional analysis, `CUBE` generates all the subtotals that could be calculated for a data cube with the specified dimensions. For example:
 
-```
+:   ```
 GROUP BY CUBE (a,b,c) 
 ```
 
 is equivalent to:
 
-```
+:   ```
 GROUP BY GROUPING SETS( (a,b,c), (a,b), (a,c), (b,c), (a), 
 (b), (c), () ) 
 ```
@@ -523,7 +522,7 @@ The query optimizer takes `LIMIT` into account when generating a query plan, so 
 
 **The Locking Clause**
 
-`FOR UPDATE`, `FOR NO KEY UPDATE`, `FOR SHARE` and `FOR KEY SHARE` are *locking clauses*; they affect how `SELECT` locks rows as they are obtained from the table. The Global Deadlock Detector affects the locking used by `SELECT` queries that contain a locking clause \(`FOR lock\_strength`\). The Global Deadlock Detector is enabled by setting the [gp\_enable\_global\_deadlock\_detector](../config_params/guc-list.html) configuration parameter to `on`. See [Global Deadlock Detector](../../admin_guide/dml.html#topic_gdd) in the *Greenplum Database Administrator Guide* for information about the Global Deadlock Detector.
+`FOR UPDATE`, `FOR NO KEY UPDATE`, `FOR SHARE` and `FOR KEY SHARE` are *locking clauses*; they affect how `SELECT` locks rows as they are obtained from the table.
 
 The locking clause has the general form
 
@@ -531,29 +530,18 @@ The locking clause has the general form
 FOR <lock_strength> [OF <table_name> [ , ... ] ] [ NOWAIT ]
 ```
 
-The lock\_strength can be one of these values.
+where lock\_strength can be one of
 
--   `UPDATE` - Locks the table with an `EXCLUSIVE` lock.
--   `NO KEY UPDATE` - Locks the table with an `EXCLUSIVE` lock.
--   `SHARE` - Locks the table with a `ROW SHARE` lock.
--   `KEY SHARE` - Locks the table with a `ROW SHARE` lock.
+-   `FOR UPDATE` - Locks the table with an `EXCLUSIVE` lock.
+-   `FOR NO KEY UPDATE` - Locks the table with an `EXCLUSIVE` lock.
+-   `FOR SHARE` - Locks the table with a `ROW SHARE` lock.
+-   `FOR KEY SHARE` - Locks the table with a `ROW SHARE` lock.
 
-When the Global Deadlock Detector is disabled \(the default\), Greenplum Database uses the specified lock.
-
-When the Global Deadlock Detector is enabled, a `ROW SHARE` lock is used to lock the table for simple `SELECT` queries that contain a locking clause, and the query plans contain a `lockrows` node. Simple `SELECT` queries that contain a locking clause fulfill all the following conditions:
-
--   The locking clause is in the top level `SELECT` context.
--   The `FROM` clause contains a single table that is not a view or an append optimized table.
--   The `SELECT` command does not contain a set operation such as `UNION` or `INTERSECT`.
--   The `SELECT` command does not contain a sub-query.
-
-Otherwise, table locking for a `SELECT` query that contains a locking clause behaves as if the Global Deadlock Detector is disabled.
-
-**Note:** The Global Deadlock Detector also affects the locking used by `DELETE` and `UPDATE` operations. By default, Greenplum Database acquires an `EXCLUSIVE` lock on tables for `DELETE` and `UPDATE` operations on heap tables. When the Global Deadlock Detector is enabled, the lock mode for `DELETE` and `UPDATE` operations on heap tables is `ROW EXCLUSIVE`.
+**Note:** By default Greenplum Database acquires the more restrictive `EXCLUSIVE` lock \(rather than `ROW EXCLUSIVE` in PostgreSQL\) for `UPDATE`, `DELETE`, and `SELECT...FOR UPDATE` operations on heap tables. When the Global Deadlock Detector is enabled the lock mode for `UPDATE` and `DELETE` operations on heap tables is `ROW EXCLUSIVE`. See [Global Deadlock Detector](../../admin_guide/dml.html). Greenplum always holds a table-level lock with `SELECT...FOR UPDATE` statements.
 
 For more information on each row-level lock mode, refer to [Explicit Locking](https://www.postgresql.org/docs/9.4/explicit-locking.html) in the PostgreSQL documentation.
 
-To prevent the operation from waiting for other transactions to commit, use the `NOWAIT` option. With `NOWAIT`, the statement reports an error, rather than waiting, if a selected row cannot be locked immediately. Note that `NOWAIT` applies only to the row-level lock\(s\) — the required `ROW SHARE` table-level lock is still taken in the ordinary way. You can use LOCK with the `NOWAIT` option first, if you need to acquire the table-level lock without waiting.
+To prevent the operation from waiting for other transactions to commit, use the `NOWAIT` option. With `NOWAIT`, the statement reports an error, rather than waiting, if a selected row cannot be locked immediately. Note that `NOWAIT` only affects whether the `SELECT` statement waits to obtain row-level locks. A required table-level lock is always taken in the ordinary way. For example, a `SELECT FOR UPDATE NOWAIT` statement will always wait for the required table-level lock; it behaves as if `NOWAIT` was omitted. You can use `LOCK` with the `NOWAIT` option first, if you need to acquire the table-level lock without waiting.
 
 If specific tables are named in a locking clause, then only rows coming from those tables are locked; any other tables used in the `SELECT` are simply read as usual. A locking clause without a table list affects all tables used in the statement. If a locking clause is applied to a view or sub-query, it affects all tables used in the view or sub-query. However, these clauses do not apply to `WITH` queries referenced by the primary query. If you want row locking to occur within a `WITH` query, specify a locking clause within the `WITH` query.
 

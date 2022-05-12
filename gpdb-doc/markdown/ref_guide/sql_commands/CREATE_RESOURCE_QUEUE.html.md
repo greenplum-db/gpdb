@@ -1,4 +1,6 @@
-# CREATE RESOURCE QUEUE 
+---
+title: CREATE RESOURCE QUEUE 
+---
 
 Defines a new resource queue.
 

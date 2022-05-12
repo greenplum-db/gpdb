@@ -1,4 +1,6 @@
-# SET ROLE 
+---
+title: SET ROLE 
+---
 
 Sets the current role identifier of the current session.
 

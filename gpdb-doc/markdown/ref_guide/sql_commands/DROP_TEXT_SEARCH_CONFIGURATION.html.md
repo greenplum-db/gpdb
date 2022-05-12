@@ -1,4 +1,6 @@
-# DROP TEXT SEARCH CONFIGURATION 
+---
+title: DROP TEXT SEARCH CONFIGURATION 
+---
 
 Removes a text search configuration.
 

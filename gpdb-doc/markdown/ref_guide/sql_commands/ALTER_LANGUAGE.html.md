@@ -1,4 +1,6 @@
-# ALTER LANGUAGE 
+---
+title: ALTER LANGUAGE 
+---
 
 Changes the name of a procedural language.
 

@@ -1,4 +1,6 @@
-# COMMIT 
+---
+title: COMMIT 
+---
 
 Commits the current transaction.
 

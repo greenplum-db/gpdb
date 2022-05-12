@@ -1,4 +1,6 @@
-# DROP TABLESPACE 
+---
+title: DROP TABLESPACE 
+---
 
 Removes a tablespace.
 
@@ -22,7 +24,7 @@ IF EXISTS
 tablespacename
 :   The name of the tablespace to remove.
 
-## <a id="Notes"></a>Notes 
+## <a id="notes"></a>Notes 
 
 Run `DROP TABLESPACE` during a period of low activity to avoid issues due to concurrent creation of tables and temporary objects. When a tablespace is dropped, there is a small window in which a table could be created in the tablespace that is currently being dropped. If this occurs, Greenplum Database returns a warning. This is an example of the `DROP TABLESPACE` warning.
 

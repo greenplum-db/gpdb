@@ -1,4 +1,6 @@
-# ALTER OPERATOR FAMILY 
+---
+title: ALTER OPERATOR FAMILY 
+---
 
 Changes the definition of an operator family.
 

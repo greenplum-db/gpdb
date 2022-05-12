@@ -1,4 +1,6 @@
-# CHECKPOINT 
+---
+title: CHECKPOINT 
+---
 
 Forces a transaction log checkpoint.
 

@@ -1,4 +1,6 @@
-# DELETE 
+---
+title: DELETE 
+---
 
 Deletes rows from a table.
 

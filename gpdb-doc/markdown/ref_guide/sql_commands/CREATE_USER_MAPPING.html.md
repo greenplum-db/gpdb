@@ -1,4 +1,6 @@
-# CREATE USER MAPPING 
+---
+title: CREATE USER MAPPING 
+---
 
 Defines a new mapping of a user to a foreign server.
 
@@ -39,7 +41,7 @@ CREATE USER MAPPING FOR bob SERVER foo OPTIONS (user 'bob', password 'secret');
 
 ## <a id="section8"></a>See Also 
 
-[ALTER USER MAPPING](ALTER_USER_MAPPING.html), [DROP USER MAPPING](DROP_USER_MAPPING.html), [CREATE FOREIGN DATA WRAPPER](CREATE_FOREIGN_DATA_WRAPPER.html), [CREATE SERVER](CREATE_SERVER.html)
+[ALTER USER MAPPING](ALTER_USER_MAPPING.html), [DROP USER MAPPING](DROP_USER_MAPPING.html),[DROP USER MAPPING](DROP_USER_MAPPING.html)GN\_DATA\_WRAPPER.xml\#topic1[DROP USER MAPPING](DROP_USER_MAPPING.html), [CREATE SERVER](CREATE_SERVER.html)
 
 **Parent topic:** [SQL Commands](../sql_commands/sql_ref.html)
 

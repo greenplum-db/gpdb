@@ -1,4 +1,6 @@
-# ALTER PROTOCOL 
+---
+title: ALTER PROTOCOL 
+---
 
 Changes the definition of a protocol.
 
@@ -47,7 +49,7 @@ ALTER PROTOCOL GPDB_authentication OWNER TO joe;
 
 There is no `ALTER PROTOCOL` statement in the SQL standard.
 
-## <a id="seea"></a>See Also 
+## <a id="seealso"></a>See Also 
 
 [CREATE EXTERNAL TABLE](CREATE_EXTERNAL_TABLE.html), [CREATE PROTOCOL](CREATE_PROTOCOL.html), [DROP PROTOCOL](DROP_PROTOCOL.html)
 

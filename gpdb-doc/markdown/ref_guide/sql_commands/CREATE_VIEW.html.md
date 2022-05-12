@@ -1,4 +1,6 @@
-# CREATE VIEW 
+---
+title: CREATE VIEW 
+---
 
 Defines a new view.
 

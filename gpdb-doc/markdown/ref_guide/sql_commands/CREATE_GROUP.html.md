@@ -1,4 +1,6 @@
-# CREATE GROUP 
+---
+title: CREATE GROUP 
+---
 
 Defines a new database role.
 

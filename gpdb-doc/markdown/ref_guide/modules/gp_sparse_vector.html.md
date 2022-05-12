@@ -1,4 +1,6 @@
-# gp\_sparse\_vector 
+---
+title: gp\_sparse\_vector 
+---
 
 The `gp_sparse_vector` module implements a Greenplum Database data type and associated functions that use compressed storage of zeros to make vector computations on floating point numbers faster.
 
@@ -7,6 +9,31 @@ The `gp_sparse_vector` module is a Greenplum Database extension.
 ## <a id="topic_reg"></a>Installing and Registering the Module 
 
 The `gp_sparse_vector` module is installed when you install Greenplum Database. Before you can use any of the functions defined in the module, you must register the `gp_sparse_vector` extension in each database where you want to use the functions. Refer to [Installing Additional Supplied Modules](../../install_guide/install_modules.html) for more information.
+
+## <a id="topic_upgrade"></a>Upgrading the Module 
+
+You must upgrade the `gp_sparse_vector` module to obtain bug fixes.
+
+**Note:** Starting in Greenplum Database 6.16, `gp_sparse_vector` functions and objects are installed in the schema named `sparse_vector`. Upgrading the module requires that you update any scripts that reference the module's objects. You must also adjust how you reference these objects in a client session. **If you have not done this already, you will need to** either add the `sparse_vector` schema to a `search_path`, or alternatively you can choose to prepend `sparse_vector.` to all non-`CAST` `gp_sparse_vector` function or object name references.
+
+Update the `gp_sparse_vector` module in each database in which you are using the module:
+
+```
+DROP EXTENSION gp_sparse_vector;
+CREATE EXTENSION gp_sparse_vector;
+```
+
+## <a id="topic_about"></a>About the gp\_sparse\_vector Module 
+
+`gp_sparse_vector` functions and objects are installed in the schema named `sparse_vector` starting in Greenplum Database version 6.16. In earlier versions of Greenplum Database, the `gp_sparse_vector` objects are installed in the `public` schema.
+
+To access `gp_sparse_vector` objects, you must add `sparse_vector` to a `search_path`, or alternative you can prepend `sparse_vector.` to the function or object name. For example:
+
+```
+SELECT sparse_vector.array_agg( col1 ) FROM table1;
+```
+
+`CAST`s that are created by the `gp_sparse_vector` module remain in the `public` schema.
 
 ## <a id="topic_doc"></a>Using the gp\_sparse\_vector Module 
 

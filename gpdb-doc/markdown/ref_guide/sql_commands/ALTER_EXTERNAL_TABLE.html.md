@@ -1,4 +1,6 @@
-# ALTER EXTERNAL TABLE 
+---
+title: ALTER EXTERNAL TABLE 
+---
 
 Changes the definition of an external table.
 

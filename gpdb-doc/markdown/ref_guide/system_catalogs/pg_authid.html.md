@@ -1,4 +1,6 @@
-# pg_authid 
+---
+title: pg\_authid 
+---
 
 The `pg_authid` table contains information about database authorization identifiers \(roles\). A role subsumes the concepts of users and groups. A user is a role with the `rolcanlogin` flag set. Any role \(with or without `rolcanlogin`\) may have other roles as members. See [pg\_auth\_members](pg_auth_members.html).
 

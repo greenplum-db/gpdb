@@ -1,10 +1,12 @@
-# DROP TEXT SEARCH TEMPLATE 
+---
+title: DROP TEXT SEARCH TEMPLATE 
+---
 
-## <a id="Description"></a>Description 
+## <a id="desc"></a>Description 
 
 Removes a text search template.
 
-## <a id="Synopsis"></a>Synopsis 
+## <a id="synops"></a>Synopsis 
 
 ``` {#sql_command_synopsis}
 DROP TEXT SEARCH TEMPLATE [ IF EXISTS ] <name> [ CASCADE | RESTRICT ]

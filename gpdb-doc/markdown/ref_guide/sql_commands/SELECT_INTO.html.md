@@ -1,4 +1,6 @@
-# SELECT INTO 
+---
+title: SELECT INTO 
+---
 
 Defines a new table from the results of a query.
 

@@ -1,4 +1,6 @@
-# DROP EXTENSION 
+---
+title: DROP EXTENSION 
+---
 
 Removes an extension from a Greenplum database.
 

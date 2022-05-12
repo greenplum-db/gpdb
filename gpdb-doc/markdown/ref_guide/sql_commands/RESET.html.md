@@ -1,4 +1,6 @@
-# RESET 
+---
+title: RESET 
+---
 
 Restores the value of a system configuration parameter to the default value.
 

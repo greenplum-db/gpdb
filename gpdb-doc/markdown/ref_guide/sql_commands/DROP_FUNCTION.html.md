@@ -1,4 +1,6 @@
-# DROP FUNCTION 
+---
+title: DROP FUNCTION 
+---
 
 Removes a function.
 

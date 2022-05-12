@@ -1,4 +1,6 @@
-# pg_attribute_encoding 
+---
+title: pg\_attribute\_encoding 
+---
 
 The `pg_attribute_encoding` system catalog table contains column storage information.
 

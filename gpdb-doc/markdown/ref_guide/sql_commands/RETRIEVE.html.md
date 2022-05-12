@@ -1,4 +1,6 @@
-# RETRIEVE 
+---
+title: RETRIEVE 
+---
 
 Retrieves rows from a query using a parallel retrieve cursor.
 

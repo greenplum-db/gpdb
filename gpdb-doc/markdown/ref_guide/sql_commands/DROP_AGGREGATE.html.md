@@ -1,4 +1,6 @@
-# DROP AGGREGATE 
+---
+title: DROP AGGREGATE 
+---
 
 Removes an aggregate function.
 

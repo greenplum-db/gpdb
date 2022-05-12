@@ -1,4 +1,6 @@
-# pg_stat_partition_operations 
+---
+title: pg\_stat\_partition\_operations 
+---
 
 The `pg_stat_partition_operations` view shows details about the last operation performed on a partitioned table.
 

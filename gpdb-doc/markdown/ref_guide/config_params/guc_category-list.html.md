@@ -1,4 +1,6 @@
-# Parameter Categories 
+---
+title: Parameter Categories 
+---
 
 Configuration parameters affect categories of server behaviors, such as resource consumption, query tuning, and authentication. The following topics describe Greenplum configuration parameter categories.
 
@@ -7,6 +9,7 @@ Configuration parameters affect categories of server behaviors, such as resource
 -   [GPORCA Parameters](#topic57)
 -   [Query Tuning Parameters](#topic21)
 -   [Error Reporting and Logging Parameters](#topic29)
+-   [System Monitoring Parameters](#topic33)
 -   [Runtime Statistics Collection Parameters](#topic37)
 -   [Automatic Statistics Collection Parameters](#topic38)
 -   [Client Connection Default Parameters](#topic39)
@@ -50,6 +53,7 @@ These parameters control how clients connect and authenticate to Greenplum Datab
 - [krb\_caseins\_users](guc-list.html)
 - [krb\_server\_keyfile](guc-list.html)
 - [password\_encryption](guc-list.html)
+- [password\_hash\_algorithm](guc-list.html)
 - [ssl](guc-list.html)
 - [ssl\_ciphers](guc-list.html)
 
@@ -112,6 +116,7 @@ These parameters control the usage of GPORCA by Greenplum Database. For informat
 - [optimizer\_enable\_indexonlyscan](guc-list.html)
 - [optimizer\_enable\_master\_only\_queries](guc-list.html)
 - [optimizer\_enable\_multiple\_distinct\_aggs](guc-list.html)
+- [optimizer\_enable\_orderedagg](guc-list.html)
 - [optimizer\_force\_agg\_skew\_avoidance](guc-list.html)
 - [optimizer\_force\_comprehensive\_join\_implementation](guc-list.html)
 - [optimizer\_force\_multistage\_agg](guc-list.html)
@@ -200,6 +205,7 @@ These parameters adjust the amount of data sampled by an `ANALYZE` operation. Ad
 - [join\_collapse\_limit](guc-list.html)
 - [gp\_adjust\_selectivity\_for\_outerjoins](guc-list.html)
 - [gp\_hashjoin\_tuples\_per\_bucket](guc-list.html)
+- [gp\_statistics\_use\_fkeys](guc-list.html)
 - [gp\_workfile\_compression](guc-list.html)
 
 ### <a id="topic28"></a>Other Postgres Planner Configuration Parameters 
@@ -208,7 +214,6 @@ These parameters adjust the amount of data sampled by an `ANALYZE` operation. Ad
 - [gp\_enable\_predicate\_propagation](guc-list.html)
 - [gp\_max\_plan\_size](guc-list.html)
 - [gp\_statistics\_pullup\_from\_child\_partition](guc-list.html)
-- [gp\_statistics\_use\_fkeys](guc-list.html)
 
 ### <a id="topic_zd5_p32_mdb"></a>Query Plan Execution 
 
@@ -246,6 +251,9 @@ These configuration parameters control Greenplum Database logging.
 - [debug\_print\_prelim\_plan](guc-list.html)
 - [debug\_print\_rewritten](guc-list.html)
 - [debug\_print\_slice\_table](guc-list.html)
+- [gp\_log\_format](guc-list.html)
+- [gp\_log\_interconnect](guc-list.html)
+- [gp\_log\_resqueue\_priority\_sleep\_time](guc-list.html)
 - [log\_autostats](guc-list.html)
 - [log\_connections](guc-list.html)
 - [log\_disconnections](guc-list.html)
@@ -253,17 +261,28 @@ These configuration parameters control Greenplum Database logging.
 - [log\_duration](guc-list.html)
 - [log\_executor\_stats](guc-list.html)
 - [log\_hostname](guc-list.html)
-- [gp\_log\_interconnect](guc-list.html)
 - [log\_parser\_stats](guc-list.html)
 - [log\_planner\_stats](guc-list.html)
 - [log\_statement](guc-list.html)
 - [log\_statement\_stats](guc-list.html)
 - [log\_timezone](guc-list.html)
 - [gp\_debug\_linger](guc-list.html)
-- [gp\_log\_format](guc-list.html)
 - [gp\_reraise\_signal](guc-list.html)
 
-## <a id="query-metrics"></a>Query Metrics Collection Parameters 
+## <a id="topic33"></a>System Monitoring Parameters 
+
+These configuration parameters control Greenplum Database data collection and notifications related to database monitoring.
+
+### <a id="topic36"></a>Greenplum Performance Database 
+
+The following parameters configure the data collection agents that populate the `gpperfmon` database.
+
+- [gp\_enable\_gpperfmon](guc-list.html)
+- [gp\_gpperfmon\_send\_interval](guc-list.html)
+- [gpperfmon\_log\_alert\_level](guc-list.html)
+- [gpperfmon\_port](guc-list.html)
+
+### <a id="query-metrics"></a>Query Metrics Collection Parameters 
 
 These parameters enable and configure query metrics collection. When enabled, Greenplum Database saves metrics to shared memory during query execution. These metrics are used by Tanzu Greenplum Command Center, which is included with VMware's commercial version of Greenplum Database.
 
@@ -289,6 +308,7 @@ When automatic statistics collection is enabled, you can run `ANALYZE` automatic
 - [gp\_autostats\_on\_change\_threshold](guc-list.html)
 - [log\_autostats](guc-list.html)
 
+
 **Warning:** Depending on the specific nature of your database operations, automatic statistics collection can have a negative performance impact. Carefully evaluate whether the default setting of `on_no_stats` is appropriate for your system.
 
 ## <a id="topic39"></a>Client Connection Default Parameters 
@@ -301,7 +321,8 @@ These configuration parameters set defaults that are used for client connections
 - [default\_tablespace](guc-list.html)
 - [default\_transaction\_deferrable](guc-list.html)
 - [default\_transaction\_isolation](guc-list.html)
-- [default\_transaction\_read\_only](guc-list.html)[search\_path](guc-list.html)
+- [default\_transaction\_read\_only](guc-list.html)
+- [search\_path](guc-list.html)
 - [statement\_timeout](guc-list.html)
 - [temp\_tablespaces](guc-list.html)
 - [vacuum\_freeze\_min\_age](guc-list.html)
@@ -331,7 +352,8 @@ These configuration parameters set defaults that are used for client connections
 These configuration parameters set limits for locks and deadlocks.
 
 - [deadlock\_timeout](guc-list.html)
-- [gp\_enable global\_deadlock\_detector](guc-list.html)[gp\_global\_deadlock\_detector\_period](guc-list.html)
+- [gp\_enable global\_deadlock\_detector](guc-list.html)
+- [gp\_global\_deadlock\_detector\_period](guc-list.html)
 - [lock\_timeout](guc-list.html)
 - [max\_locks\_per\_transaction](guc-list.html)
 
@@ -339,6 +361,7 @@ These configuration parameters set limits for locks and deadlocks.
 
 The following configuration parameters configure the Greenplum Database resource management feature \(resource queues\), query prioritization, memory utilization and concurrency control.
 
+- [gp\_log\_resqueue\_priority\_sleep\_time](guc-list.html)
 - [gp\_resqueue\_memory\_policy](guc-list.html)
 - [gp\_resqueue\_priority](guc-list.html)
 - [gp\_resqueue\_priority\_cpucores\_per\_segment](guc-list.html)
@@ -361,7 +384,8 @@ The following configuration parameters configure the Greenplum Database resource
 The following parameters configure the Greenplum Database resource group workload management feature.
 
 - [gp\_resgroup\_memory\_policy](guc-list.html)
-- [gp\_resource\_group\_bypass](guc-list.html) [gp\_resource\_group\_cpu\_ceiling\_enforcement](guc-list.html)
+- [gp\_resource\_group\_bypass](guc-list.html)
+- [gp\_resource\_group\_cpu\_ceiling\_enforcement](guc-list.html)
 - [gp\_resource\_group\_cpu\_limit](guc-list.html)
 - [gp\_resource\_group\_memory\_limit](guc-list.html)
 - [gp\_resource\_group\_queuing\_timeout](guc-list.html)
@@ -403,7 +427,7 @@ The following parameter configures default option settings for Greenplum Databas
 The following parameters configure the append-optimized tables feature of Greenplum Database.
 
 - [max\_appendonly\_tables](guc-list.html)
-- [gp\_appendonly\_compaction](guc-list.html)
+- [gp\_add\_column\_inherits\_table\_setting](guc-list.html) [gp\_appendonly\_compaction](guc-list.html)
 - [gp\_appendonly\_compaction\_threshold](guc-list.html)
 - [validate\_previous\_free\_tid](guc-list.html)
 
@@ -423,6 +447,7 @@ The following parameters provide compatibility with older PostgreSQL and Greenpl
 
 ### <a id="topic_jq1_n1v_bdb"></a>Greenplum Database 
 
+- [enable\_implicit\_timeformat\_YYYYMMDDHH24MISS](guc-list.html)
 - [gp\_ignore\_error\_table](guc-list.html)
 
 ## <a id="topic49"></a>Greenplum Database Array Configuration Parameters 
@@ -439,6 +464,7 @@ The parameters in this topic control the configuration of the Greenplum Database
 - [gp\_interconnect\_transmit\_timeout](guc-list.html)
 - [gp\_interconnect\_type](guc-list.html)
 - [gp\_max\_packet\_size](guc-list.html)
+
 
 **Note:** Greenplum Database supports only the UDPIFC \(default\) and TCP interconnect types.
 
@@ -461,6 +487,7 @@ The parameters in this topic control the configuration of the Greenplum Database
 ### <a id="topic53"></a>Distributed Transaction Management Parameters 
 
 - [gp\_max\_local\_distributed\_cache](guc-list.html)
+- [dtx\_phase2\_retry\_count](guc-list.html)
 
 ### <a id="topic54"></a>Read-Only Parameters 
 
@@ -477,6 +504,7 @@ The parameters in this topic control the configuration of the Greenplum Database
 
 These parameters control the configuration of the replication between Greenplum Database primary master and standby master.
 
+- [max\_slot\_wal\_keep\_size](guc-list.html)
 - [repl\_catchup\_within\_range](guc-list.html)
 - [replication\_timeout](guc-list.html)
 - [wait\_for\_replication\_threshold](guc-list.html)
@@ -499,4 +527,5 @@ The parameters in this topic control the configuration of the Greenplum Database
 
 - [xmlbinary](guc-list.html)
 - [xmloption](guc-list.html)
+
 

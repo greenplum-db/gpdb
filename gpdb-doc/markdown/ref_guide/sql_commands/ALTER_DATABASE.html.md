@@ -1,4 +1,6 @@
-# ALTER DATABASE 
+---
+title: ALTER DATABASE 
+---
 
 Changes the attributes of a database.
 

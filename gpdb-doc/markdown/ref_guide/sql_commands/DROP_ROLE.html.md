@@ -1,4 +1,6 @@
-# DROP ROLE 
+---
+title: DROP ROLE 
+---
 
 Removes a database role.
 

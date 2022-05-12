@@ -1,4 +1,6 @@
-# pg_rewrite 
+---
+title: pg\_rewrite 
+---
 
 The `pg_rewrite` system catalog table stores rewrite rules for tables and views. `pg_class.relhasrules` must be true if a table has any rules in this catalog.
 

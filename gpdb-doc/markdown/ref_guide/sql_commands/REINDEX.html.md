@@ -1,4 +1,6 @@
-# REINDEX 
+---
+title: REINDEX 
+---
 
 Rebuilds indexes.
 

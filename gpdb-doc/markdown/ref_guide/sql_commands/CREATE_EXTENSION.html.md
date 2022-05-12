@@ -1,4 +1,6 @@
-# CREATE EXTENSION 
+---
+title: CREATE EXTENSION 
+---
 
 Registers an extension in a Greenplum database.
 

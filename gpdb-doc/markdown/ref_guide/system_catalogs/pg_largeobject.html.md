@@ -1,4 +1,6 @@
-# pg_largeobject 
+---
+title: pg\_largeobject 
+---
 
 **Note:** Greenplum Database does not support the PostgreSQL [large object facility](https://www.postgresql.org/docs/9.4/largeobjects.html) for streaming user data that is stored in large-object structures.
 

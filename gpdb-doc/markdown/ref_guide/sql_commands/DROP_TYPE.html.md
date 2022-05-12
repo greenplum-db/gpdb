@@ -1,4 +1,6 @@
-# DROP TYPE 
+---
+title: DROP TYPE 
+---
 
 Removes a data type.
 

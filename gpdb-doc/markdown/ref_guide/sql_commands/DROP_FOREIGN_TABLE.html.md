@@ -1,4 +1,6 @@
-# DROP FOREIGN TABLE 
+---
+title: DROP FOREIGN TABLE 
+---
 
 Removes a foreign table.
 

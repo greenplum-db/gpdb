@@ -1,4 +1,6 @@
-# pg_compression 
+---
+title: pg\_compression 
+---
 
 The `pg_compression` system catalog table describes the compression methods available.
 

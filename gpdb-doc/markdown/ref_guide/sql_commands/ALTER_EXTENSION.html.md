@@ -1,4 +1,6 @@
-# ALTER EXTENSION 
+---
+title: ALTER EXTENSION 
+---
 
 Change the definition of an extension that is registered in a Greenplum database.
 

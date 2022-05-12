@@ -1,4 +1,6 @@
-# ALTER TABLESPACE 
+---
+title: ALTER TABLESPACE 
+---
 
 Changes the definition of a tablespace.
 

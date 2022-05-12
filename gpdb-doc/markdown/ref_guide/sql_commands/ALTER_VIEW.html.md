@@ -1,4 +1,6 @@
-# ALTER VIEW 
+---
+title: ALTER VIEW 
+---
 
 Changes properties of a view.
 
@@ -56,7 +58,7 @@ new\_schema
     `security_barrier` \(boolean\)
     :   Changes the security-barrier property of the view. The value must be a Boolean value, such as `true` or `false`.
 
-## <a id="Notes"></a>Notes 
+## <a id="fixme"></a>Notes 
 
 For historical reasons, `ALTER TABLE` can be used with views, too; however, the only variants of `ALTER TABLE` that are allowed with views are equivalent to the statements shown above.
 
@@ -90,7 +92,7 @@ INSERT INTO a_view(id) VALUES(2);  -- ts will receive the current time
 
 ## <a id="section7"></a>See Also 
 
-[CREATE VIEW](CREATE_VIEW.html#cj20941), [DROP VIEW](DROP_VIEW.html#dn20941) in the *Greenplum Database Utility Guide*
+[CREATE VIEW](CREATE_VIEW.md#cj20941), [DROP VIEW](DROP_VIEW.md#dn20941) in the *Greenplum Database Utility Guide*
 
 **Parent topic:** [SQL Commands](../sql_commands/sql_ref.html)
 

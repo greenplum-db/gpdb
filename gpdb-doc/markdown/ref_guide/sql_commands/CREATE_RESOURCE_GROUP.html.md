@@ -1,4 +1,6 @@
-# CREATE RESOURCE GROUP 
+---
+title: CREATE RESOURCE GROUP 
+---
 
 Defines a new resource group.
 

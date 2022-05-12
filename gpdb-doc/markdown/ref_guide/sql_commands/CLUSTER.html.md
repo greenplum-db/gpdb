@@ -1,4 +1,6 @@
-# CLUSTER 
+---
+title: CLUSTER 
+---
 
 Physically reorders a heap storage table on disk according to an index. Not a recommended operation in Greenplum Database.
 
@@ -14,7 +16,7 @@ CLUSTER [VERBOSE]
 
 ## <a id="section3"></a>Description 
 
-`CLUSTER` orders a heap storage table based on an index. `CLUSTER` on non-B-tree indexes is not supported on append-optmized storage tables. Clustering an index means that the records are physically ordered on disk according to the index information. If the records you need are distributed randomly on disk, then the database has to seek across the disk to get the records requested. If those records are stored more closely together, then the fetching from disk is more sequential. A good example for a clustered index is on a date column where the data is ordered sequentially by date. A query against a specific date range will result in an ordered fetch from the disk, which leverages faster sequential access.
+`CLUSTER` orders a heap storage table based on an index. `CLUSTER` is not supported on append-optmized storage tables. Clustering an index means that the records are physically ordered on disk according to the index information. If the records you need are distributed randomly on disk, then the database has to seek across the disk to get the records requested. If those records are stored more closely together, then the fetching from disk is more sequential. A good example for a clustered index is on a date column where the data is ordered sequentially by date. A query against a specific date range will result in an ordered fetch from the disk, which leverages faster sequential access.
 
 Clustering is a one-time operation: when the table is subsequently updated, the changes are not clustered. That is, no attempt is made to store new or updated rows according to their index order. If you wish, you can periodically recluster by issuing the command again. Setting the table's `FILLFACTOR` storage parameter to less than 100% can aid in preserving cluster ordering during updates, because updated rows are kept on the same page if enough space is available there.
 
@@ -49,7 +51,7 @@ Because the query optimizer records statistics about the ordering of tables, it 
 
 Because `CLUSTER` remembers which indexes are clustered, you can cluster the tables you want clustered manually the first time, then set up a periodic maintenance script that runs `CLUSTER` without any parameters, so that the desired tables are periodically reclustered.
 
-**Note:** `CLUSTER` on non-B-tree indexes is not supported with append-optimized tables.
+**Note:** `CLUSTER` is not supported with append-optimized tables.
 
 ## <a id="section6"></a>Examples 
 

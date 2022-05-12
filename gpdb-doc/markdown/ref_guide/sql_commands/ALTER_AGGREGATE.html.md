@@ -1,4 +1,6 @@
-# ALTER AGGREGATE 
+---
+title: ALTER AGGREGATE 
+---
 
 Changes the definition of an aggregate function
 

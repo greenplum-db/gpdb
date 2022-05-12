@@ -1,4 +1,6 @@
-# ALTER RULE 
+---
+title: ALTER RULE 
+---
 
 Changes the definition of a rule.
 
@@ -29,7 +31,7 @@ new\_name
 
 `ALTER RULE` is a Greenplum Database language extension, as is the entire query rewrite system.
 
-## <a id="seea"></a>See Also 
+## <a id="seealso"></a>See Also 
 
 [CREATE RULE](CREATE_RULE.html), [DROP RULE](DROP_RULE.html)
 

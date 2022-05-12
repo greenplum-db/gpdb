@@ -1,4 +1,6 @@
-# SET SESSION AUTHORIZATION 
+---
+title: SET SESSION AUTHORIZATION 
+---
 
 Sets the session role identifier and the current role identifier of the current session.
 

@@ -1,4 +1,6 @@
-# DROP MATERIALIZED VIEW 
+---
+title: DROP MATERIALIZED VIEW 
+---
 
 Removes a materialized view.
 

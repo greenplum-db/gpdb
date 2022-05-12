@@ -1,4 +1,6 @@
-# fuzzystrmatch 
+---
+title: fuzzystrmatch 
+---
 
 The `fuzzystrmatch` module provides functions to determine similarities and distance between strings based on various algorithms.
 

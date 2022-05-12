@@ -1,4 +1,6 @@
-# DROP CAST 
+---
+title: DROP CAST 
+---
 
 Removes a cast.
 

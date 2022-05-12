@@ -1,4 +1,6 @@
-# orafce 
+---
+title: orafce 
+---
 
 The `orafce` module provides Oracle Compatibility SQL functions in Greenplum Database. These functions target PostgreSQL but can also be used in Greenplum.
 

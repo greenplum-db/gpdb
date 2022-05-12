@@ -1,4 +1,6 @@
-# CREATE TRIGGER 
+---
+title: CREATE TRIGGER 
+---
 
 Defines a new trigger. User-defined triggers are not supported in Greenplum Database.
 

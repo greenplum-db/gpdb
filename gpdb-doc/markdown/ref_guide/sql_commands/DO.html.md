@@ -1,4 +1,6 @@
-# DO 
+---
+title: DO 
+---
 
 Runs anonymous code block as a transient anonymous function.
 
@@ -38,7 +40,7 @@ The user must have `USAGE` privilege for the procedural language, or must be a s
 
 Anonymous blocks do not support function volatility or `EXECUTE ON` attributes.
 
-## <a id="Examples"></a>Examples 
+## <a id="examples"></a>Examples 
 
 This PL/pgSQL example grants all privileges on all views in schema *public* to role `webuser`:
 

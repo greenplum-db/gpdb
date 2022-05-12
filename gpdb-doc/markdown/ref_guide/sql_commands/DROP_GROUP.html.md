@@ -1,4 +1,6 @@
-# DROP GROUP 
+---
+title: DROP GROUP 
+---
 
 Removes a database role.
 

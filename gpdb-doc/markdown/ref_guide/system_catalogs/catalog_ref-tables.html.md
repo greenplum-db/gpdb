@@ -1,4 +1,6 @@
-# System Tables 
+---
+title: System Tables 
+---
 
 -   [gp\_configuration\_history](gp_configuration_history.html)
 -   [gp\_distribution\_policy](gp_distribution_policy.html)

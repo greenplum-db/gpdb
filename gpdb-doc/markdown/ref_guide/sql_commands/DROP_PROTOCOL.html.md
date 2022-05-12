@@ -1,4 +1,6 @@
-# DROP PROTOCOL 
+---
+title: DROP PROTOCOL 
+---
 
 Removes a external table data access protocol from a database.
 

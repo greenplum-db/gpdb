@@ -1,4 +1,6 @@
-# DROP SERVER 
+---
+title: DROP SERVER 
+---
 
 Removes a foreign server descriptor.
 

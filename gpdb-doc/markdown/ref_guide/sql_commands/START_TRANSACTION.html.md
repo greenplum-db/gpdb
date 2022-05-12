@@ -1,4 +1,6 @@
-# START TRANSACTION 
+---
+title: START TRANSACTION 
+---
 
 Starts a transaction block.
 
@@ -56,7 +58,7 @@ See also the compatibility section of [SET TRANSACTION](SET_TRANSACTION.html).
 
 ## <a id="section7"></a>See Also 
 
-[BEGIN](BEGIN.html),
+[BEGIN](BEGIN.html), [SET TRANSACTION](SET_TRANSACTION.html)
 
 **Parent topic:** [SQL Commands](../sql_commands/sql_ref.html)
 

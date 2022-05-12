@@ -1,4 +1,6 @@
-# The gp\_toolkit Administrative Schema 
+---
+title: The gp\_toolkit Administrative Schema 
+---
 
 Greenplum Database provides an administrative schema called `gp_toolkit` that you can use to query the system catalogs, log files, and operating environment for system status information. The `gp_toolkit` schema contains a number of views that you can access using SQL commands. The `gp_toolkit` schema is accessible to all database users, although some objects may require superuser permissions. For convenience, you may want to add the `gp_toolkit` schema to your schema search path. For example:
 
@@ -70,6 +72,8 @@ This view shows regular heap-storage tables that have bloat \(the actual number 
 ### <a id="topic4"></a>gp\_stats\_missing 
 
 This view shows tables that do not have statistics and therefore may require an `ANALYZE` be run on the table.
+
+**Note:** By default, `gp_stats_missing` does not display data for materialized views. Refer to [Including Data for Materialized Views](#topic_matview) for instructions on adding this data to the `gp_stats_missing*` view output.
 
 |Column|Description|
 |------|-----------|
@@ -729,6 +733,8 @@ This view shows all of the roles in the system, and their assigned members \(if 
 
 The `gp_size_*` family of views can be used to determine the disk space usage for a distributed Greenplum Database, schema, table, or index. The following views calculate the total size of an object across all primary segments \(mirrors are not included in the size calculations\).
 
+**Note:** By default, the `gp_size_*` views do not display data for materialized views. Refer to [Including Data for Materialized Views](#topic_matview) for instructions on adding this data to `gp_size_*` view output.
+
 -   [gp\_size\_of\_all\_table\_indexes](#topic39)
 -   [gp\_size\_of\_database](#topic40)
 -   [gp\_size\_of\_index](#topic41)
@@ -877,6 +883,8 @@ All tables in Greenplum Database are distributed, meaning their data is divided 
 -   [gp\_skew\_coefficients](#topic50)
 -   [gp\_skew\_idle\_fractions](#topic51)
 
+**Note:** By default, the `gp_skew_*` views do not display data for materialized views. Refer to [Including Data for Materialized Views](#topic_matview) for instructions on adding this data to `gp_skew_*` view output.
+
 **Parent topic:** [The gp\_toolkit Administrative Schema](gp_toolkit.html)
 
 ### <a id="topic50"></a>gp\_skew\_coefficients 
@@ -900,4 +908,38 @@ This view shows data distribution skew by calculating the percentage of the syst
 |sifnamespace|The namespace where the table is defined.|
 |sifrelname|The table name.|
 |siffraction|The percentage of the system that is idle during a table scan, which is an indicator of uneven data distribution or query processing skew. For example, a value of 0.1 indicates 10% skew, a value of 0.5 indicates 50% skew, and so on. Tables that have more than 10% skew should have their distribution policies evaluated.|
+
+## <a id="topic_matview"></a>Including Data for Materialized Views 
+
+You must update a `gp_toolkit` internal view if you want data about materialized views to be included in the output of relevant `gp_toolkit` views.
+
+Run the following SQL commands as the Greenplum Database administrator to update the internal view:
+
+```
+CREATE or REPLACE VIEW gp_toolkit.__gp_user_tables
+AS
+    SELECT
+        fn.fnnspname as autnspname,
+        fn.fnrelname as autrelname,
+        relkind as autrelkind,
+        reltuples as autreltuples,
+        relpages as autrelpages,
+        relacl as autrelacl,
+        pgc.oid as autoid,
+        pgc.reltoastrelid as auttoastoid,
+        pgc.relstorage as autrelstorage
+    FROM
+        pg_catalog.pg_class pgc,
+        gp_toolkit.__gp_fullname fn
+    WHERE pgc.relnamespace IN
+    (
+        SELECT aunoid
+        FROM gp_toolkit.__gp_user_namespaces
+    )
+    AND (pgc.relkind = 'r' OR pgc.relkind = 'm')
+    AND pgc.relispopulated = 't'
+    AND pgc.oid = fn.fnoid;
+
+GRANT SELECT ON TABLE gp_toolkit.__gp_user_tables TO public;
+```
 

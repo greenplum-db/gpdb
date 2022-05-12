@@ -1,4 +1,6 @@
-# pg_user_mapping 
+---
+title: pg\_user\_mapping 
+---
 
 The system catalog table `pg_user_mapping` stores the mappings from local user to remote user. You must have administrator privileges to view this catalog. Access to this catalog is restricted from normal users, use the `pg_user_mappings` view instead.
 

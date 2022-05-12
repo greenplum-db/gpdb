@@ -1,4 +1,6 @@
-# foreign_server_options 
+---
+title: foreign\_server\_options 
+---
 
 The `foreign_server_options` view contains all of the options defined for foreign servers in the current database. Greenplum Database displays only those foreign servers to which the current user has access \(by way of being the owner or having some privilege\).
 

@@ -1,4 +1,6 @@
-# CREATE SERVER 
+---
+title: CREATE SERVER 
+---
 
 Defines a new foreign server.
 
@@ -43,8 +45,7 @@ mpp\_execute \{ 'master' \| 'any' \| 'all segments' \}
     -   `master` \(the default\)—Read or write data from the master host.
     -   `any`—Read data from either the master host or any one segment, depending on which path costs less.
     -   `all segments`—Read or write data from all segments. To support this option value, the foreign-data wrapper should have a policy that matches the segments to data.
-
-    **Note:** Greenplum Database supports parallel writes to foreign tables only when you set `mpp_execute 'all segments'`.
+    <br/><br/>**Note:** Greenplum Database supports parallel writes to foreign tables only when you set `mpp_execute 'all segments'`.
 
     Support for the foreign server `mpp_execute` option, and the specific modes, is foreign-data wrapper-specific.
 
@@ -74,7 +75,7 @@ CREATE SERVER myserver FOREIGN DATA WRAPPER pgsql
 
 ## <a id="section8"></a>See Also 
 
-[ALTER SERVER](ALTER_SERVER.html), [DROP SERVER](DROP_SERVER.html), [CREATE FOREIGN DATA WRAPPER](CREATE_FOREIGN_DATA_WRAPPER.html), [CREATE USER MAPPING](CREATE_USER_MAPPING.html)
+[ALTER SERVER](ALTER_SERVER.html), [DROP SERVER](DROP_SERVER.html),[DROP SERVER](DROP_SERVER.html)GN\_DATA\_WRAPPER.xml\#topic1[DROP SERVER](DROP_SERVER.html)/codeph\>, [CREATE USER MAPPING](CREATE_USER_MAPPING.html)
 
 **Parent topic:** [SQL Commands](../sql_commands/sql_ref.html)
 

@@ -1,4 +1,6 @@
-# CREATE FUNCTION 
+---
+title: CREATE FUNCTION 
+---
 
 Defines a new function.
 

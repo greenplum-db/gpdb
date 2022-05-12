@@ -1,4 +1,6 @@
-# ALTER FOREIGN DATA WRAPPER 
+---
+title: ALTER FOREIGN DATA WRAPPER 
+---
 
 Changes the definition of a foreign-data wrapper.
 

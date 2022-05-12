@@ -1,4 +1,6 @@
-# DISCARD 
+---
+title: DISCARD 
+---
 
 Discards the session state.
 

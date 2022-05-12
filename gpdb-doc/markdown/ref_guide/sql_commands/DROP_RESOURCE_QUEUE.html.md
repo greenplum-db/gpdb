@@ -1,4 +1,6 @@
-# DROP RESOURCE QUEUE 
+---
+title: DROP RESOURCE QUEUE 
+---
 
 Removes a resource queue.
 

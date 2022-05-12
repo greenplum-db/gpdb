@@ -1,4 +1,6 @@
-# CREATE SCHEMA 
+---
+title: CREATE SCHEMA 
+---
 
 Defines a new schema.
 

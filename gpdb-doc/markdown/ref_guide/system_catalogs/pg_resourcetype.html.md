@@ -1,4 +1,6 @@
-# pg_resourcetype 
+---
+title: pg\_resourcetype 
+---
 
 The `pg_resourcetype` system catalog table contains information about the extended attributes that can be assigned to Greenplum Database resource queues. Each row details an attribute and inherent qualities such as its default setting, whether it is required, and the value to disable it \(when allowed\).
 

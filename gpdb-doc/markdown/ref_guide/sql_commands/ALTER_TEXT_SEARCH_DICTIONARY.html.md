@@ -1,4 +1,6 @@
-# ALTER TEXT SEARCH DICTIONARY 
+---
+title: ALTER TEXT SEARCH DICTIONARY 
+---
 
 Changes the definition of a text search dictionary.
 

@@ -1,4 +1,6 @@
-# pg_index 
+---
+title: pg\_index 
+---
 
 The `pg_index` system catalog table contains part of the information about indexes. The rest is mostly in [pg\_class](pg_class.html).
 

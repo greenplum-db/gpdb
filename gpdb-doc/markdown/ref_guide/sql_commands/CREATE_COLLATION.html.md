@@ -1,4 +1,6 @@
-# CREATE COLLATION 
+---
+title: CREATE COLLATION 
+---
 
 Defines a new collation using the specified operating system locale settings, or by copying an existing collation.
 

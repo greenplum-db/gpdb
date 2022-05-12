@@ -1,4 +1,6 @@
-# ABORT 
+---
+title: ABORT 
+---
 
 Terminates the current transaction.
 

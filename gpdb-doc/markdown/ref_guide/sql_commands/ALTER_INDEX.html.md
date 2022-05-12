@@ -1,4 +1,6 @@
-# ALTER INDEX 
+---
+title: ALTER INDEX 
+---
 
 Changes the definition of an index.
 

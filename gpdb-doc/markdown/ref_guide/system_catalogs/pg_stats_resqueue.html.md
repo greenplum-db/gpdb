@@ -1,4 +1,6 @@
-# pg_stat_resqueues 
+---
+title: pg\_stat\_resqueues 
+---
 
 **Note:** The `pg_stat_resqueues` view is valid only when resource queue-based resource management is active.
 

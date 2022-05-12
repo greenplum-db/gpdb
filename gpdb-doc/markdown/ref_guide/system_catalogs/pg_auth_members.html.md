@@ -1,4 +1,6 @@
-# pg_auth_members 
+---
+title: pg\_auth\_members 
+---
 
 The `pg_auth_members` system catalog table shows the membership relations between roles. Any non-circular set of relationships is allowed. Because roles are system-wide, `pg_auth_members` is shared across all databases of a Greenplum Database system.
 

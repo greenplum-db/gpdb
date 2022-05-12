@@ -1,4 +1,6 @@
-# pg_partition_rule 
+---
+title: pg\_partition\_rule 
+---
 
 The `pg_partition_rule` system catalog table is used to track partitioned tables, their check constraints, and data containment rules. Each row of `pg_partition_rule` represents either a leaf partition \(the bottom level partitions that contain data\), or a branch partition \(a top or mid-level partition that is used to define the partition hierarchy, but does not contain any data\).
 

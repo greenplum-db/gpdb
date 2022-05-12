@@ -1,4 +1,6 @@
-# DROP SEQUENCE 
+---
+title: DROP SEQUENCE 
+---
 
 Removes a sequence.
 

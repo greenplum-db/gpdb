@@ -1,4 +1,6 @@
-# ALTER USER MAPPING 
+---
+title: ALTER USER MAPPING 
+---
 
 Changes the definition of a user mapping for a foreign server.
 

@@ -1,4 +1,6 @@
-# ALTER OPERATOR 
+---
+title: ALTER OPERATOR 
+---
 
 Changes the definition of an operator.
 

@@ -1,4 +1,6 @@
-# COMMENT 
+---
+title: COMMENT 
+---
 
 Defines or changes the comment of an object.
 
@@ -6,41 +8,41 @@ Defines or changes the comment of an object.
 
 ``` {#sql_command_synopsis}
 COMMENT ON
-{ TABLE <object_name |
-  COLUMN <relation_name.column_name |
-  AGGREGATE <agg_name (<agg_signature>) |
-  CAST (<source_type AS <target_type>) |
-  COLLATION <object_name
-  CONSTRAINT <constraint_name ON <table_name> |
-  CONVERSION <object_name |
-  DATABASE <object_name |
-  DOMAIN <object_name |
-  EXTENSION <object_name |
-  FOREIGN DATA WRAPPER <object_name |
-  FOREIGN TABLE <object_name |
-  FUNCTION <func_name ([[<argmode>] [<argname>] <argtype> [, ...]]) |
-  INDEX <object_name |
-  LARGE OBJECT <large_object_oid |
-  MATERIALIZED VIEW <object_name |
-  OPERATOR <operator_name (<left_type>, <right_type>) |
-  OPERATOR CLASS <object_name USING <index_method> |
-  [PROCEDURAL] LANGUAGE <object_name |
-  RESOURCE GROUP <object_name |
-  RESOURCE QUEUE <object_name |
-  ROLE <object_name |
-  RULE <rule_name ON <table_name> |
-  SCHEMA <object_name |
-  SEQUENCE <object_name |
-  SERVER <object_name |
-  TABLESPACE <object_name |
-  TEXT SEARCH CONFIGURATION <object_name |
-  TEXT SEARCH DICTIONARY <object_name |
-  TEXT SEARCH PARSER <object_name |
-  TEXT SEARCH TEMPLATE <object_name |
-  TRIGGER <trigger_name ON <table_name> |
-  TYPE <object_name |
-  VIEW <object_name } 
-IS 'text'
+{ TABLE <object_name> |
+  COLUMN <relation_name.column_name> |
+  AGGREGATE <agg_name> (<agg_signature>) |
+  CAST (<source_type> AS <target_type>) |
+  COLLATION <object_name>
+  CONSTRAINT <constraint_name> ON <table_name> |
+  CONVERSION <object_name> |
+  DATABASE <object_name> |
+  DOMAIN <object_name> |
+  EXTENSION <object_name> |
+  FOREIGN DATA WRAPPER <object_name> |
+  FOREIGN TABLE <object_name> |
+  FUNCTION <func_name> ([[<argmode>] [<argname>] <argtype> [, ...]]) |
+  INDEX <object_name> |
+  LARGE OBJECT <large_object_oid> |
+  MATERIALIZED VIEW <object_name> |
+  OPERATOR <operator_name> (<left_type>, <right_type>) |
+  OPERATOR CLASS <object_name> USING <index_method> |
+  [PROCEDURAL] LANGUAGE <object_name> |
+  RESOURCE GROUP <object_name> |
+  RESOURCE QUEUE <object_name> |
+  ROLE <object_name> |
+  RULE <rule_name> ON <table_name> |
+  SCHEMA <object_name> |
+  SEQUENCE <object_name> |
+  SERVER <object_name> |
+  TABLESPACE <object_name> |
+  TEXT SEARCH CONFIGURATION <object_name> |
+  TEXT SEARCH DICTIONARY <object_name> |
+  TEXT SEARCH PARSER <object_name> |
+  TEXT SEARCH TEMPLATE <object_name> |
+  TRIGGER <trigger_name> ON <table_name> |
+  TYPE <object_name> |
+  VIEW <object_name> } 
+IS '<text>'
 ```
 
 where agg\_signature is:

@@ -1,4 +1,6 @@
-# CREATE INDEX 
+---
+title: CREATE INDEX 
+---
 
 Defines a new index.
 

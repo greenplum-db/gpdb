@@ -1,4 +1,6 @@
-# ALTER GROUP 
+---
+title: ALTER GROUP 
+---
 
 Changes a role name or membership.
 

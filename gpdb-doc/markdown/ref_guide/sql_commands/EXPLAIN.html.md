@@ -1,4 +1,6 @@
-# EXPLAIN 
+---
+title: EXPLAIN 
+---
 
 Shows the query plan of a statement.
 

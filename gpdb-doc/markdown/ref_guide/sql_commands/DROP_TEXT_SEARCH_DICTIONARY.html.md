@@ -1,4 +1,6 @@
-# DROP TEXT SEARCH DICTIONARY 
+---
+title: DROP TEXT SEARCH DICTIONARY 
+---
 
 Removes a text search dictionary.
 

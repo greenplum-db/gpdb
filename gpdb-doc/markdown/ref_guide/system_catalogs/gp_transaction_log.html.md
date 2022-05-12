@@ -1,4 +1,6 @@
-# gp_transaction_log 
+---
+title: gp\_transaction\_log 
+---
 
 The `gp_transaction_log` view contains status information about transactions local to a particular segment. This view allows you to see the status of local transactions.
 

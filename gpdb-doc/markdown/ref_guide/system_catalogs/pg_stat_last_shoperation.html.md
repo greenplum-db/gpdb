@@ -1,4 +1,6 @@
-# pg_stat_last_shoperation 
+---
+title: pg\_stat\_last\_shoperation 
+---
 
 The pg\_stat\_last\_shoperation table contains metadata tracking information about global objects \(roles, tablespaces, etc.\).
 

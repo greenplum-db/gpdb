@@ -1,4 +1,6 @@
-# pg_rules 
+---
+title: pg\_rules 
+---
 
 The view `pg_rules` provides access to useful information about query rewrite rules.
 

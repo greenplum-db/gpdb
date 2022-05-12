@@ -1,4 +1,6 @@
-# REFRESH MATERIALIZED VIEW 
+---
+title: REFRESH MATERIALIZED VIEW 
+---
 
 Replaces the contents of a materialized view.
 

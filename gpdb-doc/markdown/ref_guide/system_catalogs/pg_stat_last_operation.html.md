@@ -1,4 +1,6 @@
-# pg_stat_last_operation 
+---
+title: pg\_stat\_last\_operation 
+---
 
 The pg\_stat\_last\_operation table contains metadata tracking information about database objects \(tables, views, etc.\).
 

@@ -1,4 +1,6 @@
-# pg_operator 
+---
+title: pg\_operator 
+---
 
 The `pg_operator` system catalog table stores information about operators, both built-in and those defined by `CREATE OPERATOR`. Unused column contain zeroes. For example, `oprleft` is zero for a prefix operator.
 

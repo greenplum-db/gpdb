@@ -1,4 +1,6 @@
-# Range Types 
+---
+title: Range Types 
+---
 
 Range types are data types representing a range of values of some element type \(called the range's subtype\). For instance, ranges of `timestamp` might be used to represent the ranges of time that a meeting room is reserved. In this case the data type is `tsrange` \(short for “timestamp range”\), and `timestamp` is the subtype. The subtype must have a total order so that it is well-defined whether element values are within, before, or after a range of values.
 

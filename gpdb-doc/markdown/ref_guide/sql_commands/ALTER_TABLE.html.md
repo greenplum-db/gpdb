@@ -1,4 +1,6 @@
-# ALTER TABLE 
+---
+title: ALTER TABLE 
+---
 
 Changes the definition of a table.
 
@@ -161,7 +163,7 @@ where storage\_parameter is:
     When you add a column to an append-optimized, column-oriented table, Greenplum Database sets each data compression parameter for the column \(`compresstype`, `compresslevel`, and `blocksize`\) based on the following setting, in order of preference.
 
     1.  The compression parameter setting specified in the `ALTER TABLE` command `ENCODING` clause.
-    2.  The table's data compression setting specified in the `WITH` clause when the table was created.
+    2.  If the server configuration parameter [gp\_add\_column\_inherits\_table\_setting](../config_params/guc-list.html) is `on`, use the table's data compression parameters specified in the `WITH` clause when the table was created. The default server configuration parameter default is `off`, the `WITH` clause parameters are ignored.
     3.  The compression parameter setting specified in the server configuration parameter [gp\_default\_storage\_option](../config_params/guc-list.html).
     4.  The default compression parameter value.
     For append-optimized and hash tables, `ADD COLUMN` requires a table rewrite. For information about table rewrites performed by `ALTER TABLE`, see [Notes](#section5).

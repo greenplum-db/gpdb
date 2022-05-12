@@ -1,4 +1,6 @@
-# CREATE OPERATOR CLASS 
+---
+title: CREATE OPERATOR CLASS 
+---
 
 Defines a new operator class.
 

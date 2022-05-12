@@ -1,4 +1,6 @@
-# CREATE CAST 
+---
+title: CREATE CAST 
+---
 
 Defines a new cast.
 

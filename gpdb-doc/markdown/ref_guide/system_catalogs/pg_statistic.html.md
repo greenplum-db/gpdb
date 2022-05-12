@@ -1,4 +1,6 @@
-# pg_statistic 
+---
+title: pg\_statistic 
+---
 
 The `pg_statistic` system catalog table stores statistical data about the contents of the database. Entries are created by `ANALYZE` and subsequently used by the query optimizer. There is one entry for each table column that has been analyzed. Note that all the statistical data is inherently approximate, even assuming that it is up-to-date.
 

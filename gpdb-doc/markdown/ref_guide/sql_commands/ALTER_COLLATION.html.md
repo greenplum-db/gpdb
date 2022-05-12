@@ -1,4 +1,6 @@
-# ALTER COLLATION 
+---
+title: ALTER COLLATION 
+---
 
 Changes the definition of a collation.
 

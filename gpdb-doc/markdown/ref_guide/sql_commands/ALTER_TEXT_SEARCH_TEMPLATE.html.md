@@ -1,10 +1,12 @@
-# ALTER TEXT SEARCH TEMPLATE 
+---
+title: ALTER TEXT SEARCH TEMPLATE 
+---
 
-## <a id="Description"></a>Description 
+## <a id="desc"></a>Description 
 
 Changes the definition of a text search template.
 
-## <a id="Synopsis"></a>Synopsis 
+## <a id="synops"></a>Synopsis 
 
 ``` {#sql_command_synopsis}
 ALTER TEXT SEARCH TEMPLATE <name> RENAME TO <new_name>

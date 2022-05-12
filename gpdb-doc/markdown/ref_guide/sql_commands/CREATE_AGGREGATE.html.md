@@ -1,4 +1,6 @@
-# CREATE AGGREGATE 
+---
+title: CREATE AGGREGATE 
+---
 
 Defines a new aggregate function.
 
