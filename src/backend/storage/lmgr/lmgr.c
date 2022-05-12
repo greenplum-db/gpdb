@@ -35,7 +35,6 @@
 #include "cdb/cdbvars.h"
 #include "storage/proc.h"
 #include "utils/lsyscache.h"        /* CDB: get_rel_namespace() */
-#include "utils/guc.h"
 
 
 /*
@@ -1317,67 +1316,6 @@ LockTagIsTemp(const LOCKTAG *tag)
 			break;
 	}
 	return false;				/* default case */
-}
-
-/*
- * Upgrade the relation lock, and re-use the opened relation if necessary.
- * We might open table in this function because of the current disign of AO table's 
- * visibility map requires that we have to keep upgrading locks for AO table.
- * 
- * "relptr" will store an opened table if the caller passes a non-NULL relation
- * pointer in. And we'll only set it if we have opened the table AND we don't need to
- * upgrade because that's the only case we can avoid re-opening table. 
- */
-LOCKMODE
-UpgradeRelLockAndReuseRelIfNecessary(Oid relid, Relation *relptr, LOCKMODE lockmode)
-{
-	/*
-	 * Since we have introduced GDD(global deadlock detector), for heap table
-	 * we do not need to upgrade the requested lock. For ao table, because of
-	 * the design of ao table's visibilitymap, we have to upgrade the lock
-	 * (More details please refer https://groups.google.com/a/greenplum.org/forum/#!topic/gpdb-dev/iDj8WkLus4g)
-	 *
-	 * And we select for update statement's lock is upgraded at addRangeTableEntry.
-	 *
-	 * Note: This code could be improved substantially after we redesign ao table
-	 * and select for update.
-	 */
-	if (lockmode == RowExclusiveLock && Gp_role == GP_ROLE_DISPATCH)
-	{
-		bool upgrade = false;
-		Relation rel = NULL;
-
-		/* Check the conditions for upgrading. */
-		if (!gp_enable_global_deadlock_detector)
-			upgrade = true;
-		else
-		{
-			rel = try_table_open(relid, RowExclusiveLock, false);
-
-			/* the relation is invalid */
-			if (!RelationIsValid(rel))
-				return lockmode;
-
-			upgrade = RelationIsAppendOptimized(rel);
-		}
-
-		/* Update the lockmode to be returned. */
-		if (upgrade)
-			lockmode = ExclusiveLock;
-
-		/* 
-		 * Deal with the opened table if there's one.
-		 */
-		if (rel)
-		{
-			if (relptr && !upgrade)
-				*relptr = rel;
-			else
-				table_close(rel, RowExclusiveLock);
-		}
-	}
-
-	return lockmode;
 }
 
 /*

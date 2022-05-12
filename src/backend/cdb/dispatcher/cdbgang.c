@@ -44,6 +44,9 @@
 
 #include "utils/guc_tables.h"
 
+#include "funcapi.h"
+#include "utils/builtins.h"
+
 /*
  * All QEs are managed by cdb_component_dbs in QD, QD assigned
  * a unique identifier for each QE, when a QE is created, this
@@ -916,4 +919,188 @@ ResetAllGangs(void)
 {
 	DisconnectAndDestroyAllGangs(true);
 	GpDropTempTables();
+}
+
+/*
+ * Used by gp_backend_info() to find a single character that represents a
+ * backend type.
+ */
+static char
+backend_type(SegmentDatabaseDescriptor *segdb)
+{
+	if (segdb->identifier == -1)
+	{
+		/* QD backend */
+		return 'Q';
+	}
+	if (segdb->segindex == -1)
+	{
+		/* Entry singleton reader. */
+		return 'R';
+	}
+
+	return (segdb->isWriter ? 'w' : 'r');
+}
+
+/*
+ * qsort comparator for SegmentDatabaseDescriptors. Sorts by descriptor ID.
+ */
+static int
+compare_segdb_id(const void *v1, const void *v2)
+{
+	SegmentDatabaseDescriptor *d1 = (SegmentDatabaseDescriptor *) lfirst(*(ListCell **) v1);
+	SegmentDatabaseDescriptor *d2 = (SegmentDatabaseDescriptor *) lfirst(*(ListCell **) v2);
+
+	return d1->identifier - d2->identifier;
+}
+
+/*
+ * Returns a list of rows, each corresponding to a connected segment backend and
+ * containing information on the role and definition of that backend (e.g. host,
+ * port, PID).
+ *
+ * SELECT * from gp_backend_info();
+ */
+Datum
+gp_backend_info(PG_FUNCTION_ARGS)
+{
+	if (Gp_role != GP_ROLE_DISPATCH)
+		ereport(ERROR, (errcode(ERRCODE_GP_COMMAND_ERROR),
+			errmsg("gp_backend_info() could only be called on QD")));
+
+	/* Our struct for funcctx->user_fctx. */
+	struct func_ctx
+	{
+		List	   *segdbs;		/* the SegmentDatabaseDescriptor entries we will output */
+		ListCell   *curpos;		/* pointer to our current position in .segdbs */
+	};
+
+	FuncCallContext *funcctx;
+	struct func_ctx *user_fctx;
+
+	/* Number of attributes we'll return per row. Must match the catalog. */
+#define BACKENDINFO_NATTR    6
+
+	if (SRF_IS_FIRSTCALL())
+	{
+		/* Standard first-call setup. */
+		MemoryContext         oldcontext;
+		TupleDesc             tupdesc;
+		CdbComponentDatabases *cdbs;
+		int                   i;
+
+		funcctx    = SRF_FIRSTCALL_INIT();
+		oldcontext = MemoryContextSwitchTo(funcctx->multi_call_memory_ctx);
+		funcctx->user_fctx = user_fctx = palloc0(sizeof(*user_fctx));
+
+		/* Construct the list of all known segment DB descriptors. */
+		cdbs = cdbcomponent_getCdbComponents();
+
+		for (i = 0; i < cdbs->total_entry_dbs; ++i)
+		{
+			CdbComponentDatabaseInfo *cdbinfo = &cdbs->entry_db_info[i];
+
+			user_fctx->segdbs =
+				list_concat_unique_ptr(user_fctx->segdbs, cdbinfo->activelist);
+			user_fctx->segdbs =
+				list_concat_unique_ptr(user_fctx->segdbs, cdbinfo->freelist);
+		}
+
+		for (i = 0; i < cdbs->total_segment_dbs; ++i)
+		{
+			CdbComponentDatabaseInfo *cdbinfo = &cdbs->segment_db_info[i];
+
+			user_fctx->segdbs =
+				list_concat_unique_ptr(user_fctx->segdbs, cdbinfo->activelist);
+			user_fctx->segdbs =
+				list_concat_unique_ptr(user_fctx->segdbs, cdbinfo->freelist);
+		}
+		/* Fake a segment descriptor to represent the current QD backend */
+		SegmentDatabaseDescriptor *qddesc = palloc0(sizeof(SegmentDatabaseDescriptor));
+		qddesc->segment_database_info = cdbcomponent_getComponentInfo(MASTER_CONTENT_ID);
+		qddesc->segindex = -1;
+		qddesc->conn = NULL;
+		qddesc->motionListener = 0;
+		qddesc->backendPid = MyProcPid;
+		qddesc->whoami = NULL;
+		qddesc->isWriter = false;
+		qddesc->identifier = -1;
+
+		user_fctx->segdbs = lcons(qddesc, user_fctx->segdbs);
+		/*
+		 * For a slightly better default user experience, sort by descriptor ID.
+		 * Users may of course specify their own ORDER BY if they don't like it.
+		 */
+		user_fctx->segdbs = list_qsort(user_fctx->segdbs, compare_segdb_id);
+		user_fctx->curpos = list_head(user_fctx->segdbs);
+
+		/* Create a descriptor for the records we'll be returning. */
+		tupdesc = CreateTemplateTupleDesc(BACKENDINFO_NATTR);
+		TupleDescInitEntry(tupdesc, 1, "id", INT4OID, -1, 0);
+		TupleDescInitEntry(tupdesc, 2, "type", CHAROID, -1, 0);
+		TupleDescInitEntry(tupdesc, 3, "content", INT4OID, -1, 0);
+		TupleDescInitEntry(tupdesc, 4, "host", TEXTOID, -1, 0);
+		TupleDescInitEntry(tupdesc, 5, "port", INT4OID, -1, 0);
+		TupleDescInitEntry(tupdesc, 6, "pid", INT4OID, -1, 0);
+
+		funcctx->tuple_desc = BlessTupleDesc(tupdesc);
+
+		/* Tell the caller how many rows we'll return. */
+		funcctx->max_calls = list_length(user_fctx->segdbs);
+
+		MemoryContextSwitchTo(oldcontext);
+	}
+
+	funcctx = SRF_PERCALL_SETUP();
+
+	/* Construct and return a row for every entry. */
+	if (funcctx->call_cntr < funcctx->max_calls)
+	{
+		Datum                     values[BACKENDINFO_NATTR] = {0};
+		bool nulls[BACKENDINFO_NATTR]                       = {0};
+		HeapTuple                 tuple;
+		SegmentDatabaseDescriptor *dbdesc;
+		CdbComponentDatabaseInfo  *dbinfo;
+
+		user_fctx = funcctx->user_fctx;
+
+		/* Get the next descriptor. */
+		dbdesc = lfirst(user_fctx->curpos);
+		user_fctx->curpos = lnext(user_fctx->curpos);
+
+		/* Fill in the row attributes. */
+		dbinfo = dbdesc->segment_database_info;
+
+		values[0] = Int32GetDatum(dbdesc->identifier);			/* id */
+		values[1] = CharGetDatum(backend_type(dbdesc));	/* type */
+		values[2] = Int32GetDatum(dbdesc->segindex);			/* content */
+
+		if (dbinfo->config->hostname)								/* host */
+			values[3] = CStringGetTextDatum(dbinfo->config->hostname);
+		else
+			nulls[3] = true;
+
+		values[4] = Int32GetDatum(dbinfo->config->port);          /* port */
+		values[5] = Int32GetDatum(dbdesc->backendPid);            /* pid */
+
+		/* Form the new tuple using our attributes and return it. */
+		tuple = heap_form_tuple(funcctx->tuple_desc, values, nulls);
+
+		SRF_RETURN_NEXT(funcctx, HeapTupleGetDatum(tuple));
+	}
+	else
+	{
+		/* Clean up. */
+		user_fctx = funcctx->user_fctx;
+		if (user_fctx)
+		{
+			list_free(user_fctx->segdbs);
+			pfree(user_fctx);
+
+			funcctx->user_fctx = NULL;
+		}
+
+		SRF_RETURN_DONE(funcctx);
+	}
+#undef BACKENDINFO_NATTR
 }

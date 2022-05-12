@@ -405,6 +405,7 @@ Feature: gprecoverseg tests
     And user can start transactions
     And all files in gpAdminLogs directory are deleted on all hosts in the cluster
     And a sample recovery_progress.file is created from saved lines
+    Then a sample gprecoverseg.lock directory is created in coordinator_data_directory
     When the user runs "gpstate -e"
     Then gpstate should print "Segments in recovery" to stdout
 #    And gpstate output contains "incremental,incremental,incremental" entries for mirrors of content 0,1,2
@@ -414,6 +415,7 @@ Feature: gprecoverseg tests
 #      | \S+     | [0-9]+ | incremental    | [0-9]+                 | [0-9]+             | [0-9]+\%             |
 #      | \S+     | [0-9]+ | incremental    | [0-9]+                 | [0-9]+             | [0-9]+\%             |
     And all files in gpAdminLogs directory are deleted on all hosts in the cluster
+    Then the gprecoverseg lock directory is removed
 
     And user immediately stops all primary processes for content 0,1,2
     And user can start transactions
@@ -429,9 +431,11 @@ Feature: gprecoverseg tests
     And user can start transactions
 
     And a sample recovery_progress.file is created from saved lines
+    Then a sample gprecoverseg.lock directory is created in coordinator_data_directory
     When the user runs "gpstate -e"
     Then gpstate should print "Segments in recovery" to stdout
     And all files in gpAdminLogs directory are deleted on all hosts in the cluster
+    Then the gprecoverseg lock directory is removed
 
   @demo_cluster
   @concourse_cluster
@@ -512,13 +516,39 @@ Feature: gprecoverseg tests
     And the user suspend the walsender on the primary on content 0
     When the user asynchronously runs "gprecoverseg -aF" and the process is saved
     Then the user waits until recovery_progress.file is created in gpAdminLogs and verifies its format
+    Then verify if the gprecoverseg.lock directory is present in coordinator_data_directory
     When the user asynchronously sets up to end gprecoverseg process with SIGINT
     And the user waits until saved async process is completed
     Then recovery_progress.file should not exist in gpAdminLogs
     Then the user reset the walsender on the primary on content 0
-    And the gprecoverseg lock directory is removed
+    Then the gprecoverseg lock directory is removed
     And the user waits until mirror on content 0,1,2 is up
     And verify that lines from recovery_progress.file are present in segment progress files in gpAdminLogs
+    And the cluster is rebalanced
+
+  @demo_cluster
+  @concourse_cluster
+  Scenario:  SIGHUP on gprecoverseg should not display progress in gpstate -e
+    Given the database is running
+    And all the segments are running
+    And the segments are synchronized
+    And all files in gpAdminLogs directory are deleted on all hosts in the cluster
+    And user immediately stops all primary processes for content 0,1,2
+    And user can start transactions
+    And sql "DROP TABLE IF EXISTS test_recoverseg; CREATE TABLE test_recoverseg AS SELECT generate_series(1,100000000) AS a;" is executed in "postgres" db
+    And the user suspend the walsender on the primary on content 0
+    When the user asynchronously runs "gprecoverseg -aF" and the process is saved
+    Then the user waits until recovery_progress.file is created in gpAdminLogs and verifies its format
+    Then verify if the gprecoverseg.lock directory is present in coordinator_data_directory
+    When the user runs "gpstate -e"
+    Then gpstate should print "Segments in recovery" to stdout
+    When the user asynchronously sets up to end gprecoverseg process with SIGHUP
+    And the user waits until saved async process is completed
+    Then the gprecoverseg lock directory is removed
+    When the user runs "gpstate -e"
+    Then gpstate should not print "Segments in recovery" to stdout
+    Then the user reset the walsender on the primary on content 0
+    And the user waits until mirror on content 0,1,2 is up
     And the cluster is rebalanced
 
   @demo_cluster
@@ -850,7 +880,7 @@ Feature: gprecoverseg tests
           And the user asynchronously sets up to end gprecoverseg process when "Recovery type" is printed in the logs
           And the user runs "gprecoverseg -a"
          Then gprecoverseg should return a return code of -15
-          And the gprecoverseg lock directory is removed
+         Then the gprecoverseg lock directory is removed
 
          When the user runs "gprecoverseg -a"
          Then gprecoverseg should return a return code of 0

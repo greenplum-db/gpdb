@@ -2011,10 +2011,6 @@ ExecAddMatchingSubPlans(PartitionPruneState *prunestate, Bitmapset *result)
 {
 	Bitmapset *thisresult;
 
-	/* GPDB_12_MERGE_FIXME: Currently, this just calls
-	 * ExecFindMatchingSubPlans() and adds the new result to
-	 * the passed-in Bitmapset. That's a bit inefficient.
-	 */
 	thisresult = ExecFindMatchingSubPlans(prunestate, NULL, -1, NIL);
 
 	result = bms_add_members(result, thisresult);

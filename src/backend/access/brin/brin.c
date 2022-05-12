@@ -941,7 +941,7 @@ brin_summarize_new_values_internal(PG_FUNCTION_ARGS)
 {
 	Datum		relation = PG_GETARG_DATUM(0);
 
-	return DirectFunctionCall2(brin_summarize_range,
+	return DirectFunctionCall2(brin_summarize_range_internal,
 							   relation,
 							   Int64GetDatum((int64) BRIN_ALL_BLOCKRANGES));
 }
@@ -952,7 +952,7 @@ brin_summarize_new_values_internal(PG_FUNCTION_ARGS)
  * unsummarized ranges are summarized.
  */
 Datum
-brin_summarize_range(PG_FUNCTION_ARGS)
+brin_summarize_range_internal(PG_FUNCTION_ARGS)
 {
 	Oid			indexoid = PG_GETARG_OID(0);
 	int64		heapBlk64 = PG_GETARG_INT64(1);

@@ -115,6 +115,13 @@ CPhysicalAgg::CPhysicalAgg(
 		ulDistrReqs = 2;
 	}
 
+	// Split DQA generates a 2-stage aggregate to handle the case where
+	// hash aggregate has a distinct agg func. Here we need to be careful
+	// not to prohibit distribution property enforcement.
+	m_should_enforce_distribution &= !(
+		isAggFromSplitDQA && aggStage == CLogicalGbAgg::EasTwoStageScalarDQA &&
+		colref_array->Size() > 0);
+
 	SetDistrRequests(ulDistrReqs);
 }
 
@@ -502,6 +509,7 @@ CPhysicalAgg::HashValue() const
 	ULONG ulHash = COperator::HashValue();
 	const ULONG arity = m_pdrgpcr->Size();
 	ULONG ulGbaggtype = (ULONG) m_egbaggtype;
+	ULONG ulaggstage = (ULONG) m_aggStage;
 	for (ULONG ul = 0; ul < arity; ul++)
 	{
 		CColRef *colref = (*m_pdrgpcr)[ul];
@@ -509,6 +517,7 @@ CPhysicalAgg::HashValue() const
 	}
 
 	ulHash = gpos::CombineHashes(ulHash, gpos::HashValue<ULONG>(&ulGbaggtype));
+	ulHash = gpos::CombineHashes(ulHash, gpos::HashValue<ULONG>(&ulaggstage));
 
 	return gpos::CombineHashes(ulHash,
 							   gpos::HashValue<BOOL>(&m_fGeneratesDuplicates));

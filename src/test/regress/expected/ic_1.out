@@ -618,7 +618,7 @@ set statement_timeout to 150; -- 150ms < MAIN_THREAD_COND_TIMEOUT_MS(250ms)
 --  * udpifc, "ERROR:  fault triggered"
 --  * tcp,    "ERROR:  canceling statement due to statement timeout"
 begin; select count(*) from qe_errors_ic; rollback;
-ERROR:  fault triggered, fault name:'exec_mpp_query_start' fault type:'error'  (seg1 slice1 127.0.0.1:6001 pid=69822)
+ERROR:  canceling statement due to statement timeout
 reset statement_timeout;
 select gp_inject_fault('exec_mpp_query_start', 'reset', 2);
  gp_inject_fault 

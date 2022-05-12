@@ -373,7 +373,7 @@ ExecShareInputScan(PlanState *pstate)
 	 * ShareInputScan is one but not the last one of Sequence's subplans.
 	 */
 	if (sisc->discard_output)
-	  return NULL;
+		return NULL;
 
 	slot = node->ss.ps.ps_ResultTupleSlot;
 
