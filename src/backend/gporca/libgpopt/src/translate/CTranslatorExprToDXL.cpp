@@ -4912,15 +4912,15 @@ CTranslatorExprToDXL::PdxlnPartEqFilterElemList(
 {
 	GPOS_ASSERT(NULL != pexpr);
 
-    if (fEqFilter)
+	if (fEqFilter)
 		return PdxlnScalar(pexpr);
 
-    CDXLNode *filter_elems_dxlnode = GPOS_NEW(m_mp)
-            CDXLNode(m_mp, GPOS_NEW(m_mp) CDXLScalarOpList(
-            m_mp, CDXLScalarOpList::EdxloplistEqFilterElemList));
+	CDXLNode *filter_elems_dxlnode = GPOS_NEW(m_mp)
+		CDXLNode(m_mp, GPOS_NEW(m_mp) CDXLScalarOpList(
+						   m_mp, CDXLScalarOpList::EdxloplistEqFilterElemList));
 
-    // extract the eq filter elems from the disjunction(s) of general filters
-    GPOS_ASSERT(CPredicateUtils::FOr(pexpr));
+	// extract the eq filter elems from the disjunction(s) of general filters
+	GPOS_ASSERT(CPredicateUtils::FOr(pexpr));
 
 	CColRef *colref =
 		CUtils::PcrExtractPartKey(popSelector->Pdrgpdrgpcr(), level);
@@ -4946,7 +4946,7 @@ CTranslatorExprToDXL::PdxlnPartEqFilterElemList(
 										   &pexprOther, &cmp_type);
 		GPOS_ASSERT(NULL != pexprOther);
 		filter_elems_dxlnode->AddChild(PdxlnScalar(pexprOther));
-    }
+	}
 	pdrgpexprEqCmps->Release();
 
 	return filter_elems_dxlnode;
@@ -5312,9 +5312,9 @@ CTranslatorExprToDXL::ConstructLevelFilters4PartitionSelector(
 		CDXLNode(m_mp, GPOS_NEW(m_mp) CDXLScalarOpList(
 						   m_mp, CDXLScalarOpList::EdxloplistEqFilterList));
 
-    for (ULONG ulLevel = 0; ulLevel < ulPartLevels; ulLevel++)
+	for (ULONG ulLevel = 0; ulLevel < ulPartLevels; ulLevel++)
 	{
-        CColRef *pcrPartKey =
+		CColRef *pcrPartKey =
 			CUtils::PcrExtractPartKey(pdrgpdrgpcrPartKeys, ulLevel);
 		IMDId *pmdidTypePartKey = pcrPartKey->RetrieveType()->MDId();
 		CHAR szPartType = pmdrel->PartTypeAtLevel(ulLevel);
@@ -5328,14 +5328,14 @@ CTranslatorExprToDXL::ConstructLevelFilters4PartitionSelector(
 		CExpression *pexprEqFilter = popSelector->PexprEqFilter(ulLevel);
 		if (NULL != pexprEqFilter)
 		{
-            (*ppdxlnEqFilters)->AddChild(PdxlnScalar(pexprEqFilter));
-            (*ppdxlnFilters)
-                    ->AddChild(CTranslatorExprToDXLUtils::PdxlnBoolConst(
-                            m_mp, m_pmda, true /*value*/));
-            continue;
+			(*ppdxlnEqFilters)->AddChild(PdxlnScalar(pexprEqFilter));
+			(*ppdxlnFilters)
+				->AddChild(CTranslatorExprToDXLUtils::PdxlnBoolConst(
+					m_mp, m_pmda, true /*value*/));
+			continue;
 		}
 
-            // check general filters on current level
+		// check general filters on current level
 		CExpression *pexprFilter = popSelector->PexprFilter(ulLevel);
 		if (NULL != pexprFilter)
 		{
@@ -5372,10 +5372,10 @@ CTranslatorExprToDXL::ConstructLevelFilters4PartitionSelector(
 				m_mp, m_pmda, true /*value*/);
 		}
 
-        (*ppdxlnFilters)->AddChild(filter_dxlnode);
-        (*ppdxlnEqFilters)
-                    ->AddChild(CTranslatorExprToDXLUtils::PdxlnBoolConst(
-                            m_mp, m_pmda, true /*value*/));
+		(*ppdxlnFilters)->AddChild(filter_dxlnode);
+		(*ppdxlnEqFilters)
+			->AddChild(CTranslatorExprToDXLUtils::PdxlnBoolConst(
+				m_mp, m_pmda, true /*value*/));
 	}
 
 	if (NULL != pbsDefaultParts)

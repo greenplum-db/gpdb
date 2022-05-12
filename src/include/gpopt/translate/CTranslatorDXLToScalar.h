@@ -109,8 +109,8 @@ private:
 	ULONG m_num_of_segments;
 
 	// translate a CDXLScalarArrayComp into a GPDB ScalarArrayOpExpr
-    Expr *TranslateDXLScalarOpListToScalar(
-            const CDXLNode *scalar_op_list_node, CMappingColIdVar *colid_var);
+	Expr *TranslateDXLScalarOpListToScalar(const CDXLNode *scalar_op_list_node,
+										   CMappingColIdVar *colid_var);
 
 	Expr *TranslateDXLScalarArrayCompToScalar(
 		const CDXLNode *scalar_array_cmp_node, CMappingColIdVar *colid_var);
