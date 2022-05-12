@@ -832,9 +832,9 @@ subprocess_open(gfile_t* fd, const char* fpath, int for_write, int* rcode, const
 	{
 		/* writable external table, so child will be reading from standard input */
 
-		if ((rv = apr_procattr_io_set(pattr, APR_FULL_BLOCK, APR_NO_PIPE, APR_NO_PIPE)) != APR_SUCCESS) 
+		if ((rv = apr_procattr_io_set(pattr, APR_FULL_BLOCK, APR_NO_PIPE, APR_FULL_BLOCK)) != APR_SUCCESS)
 		{
-			return subprocess_open_failed(rcode, rstring, "subprocess_open: apr_procattr_io_set (full,no,no) failed");
+			return subprocess_open_failed(rcode, rstring, "subprocess_open: apr_procattr_io_set (full,no,full) failed");
 		}
 		fd->transform->for_write = 1;
 	} 
@@ -1280,8 +1280,8 @@ gfile_close(gfile_t*fd)
 	{
 #ifdef GPFXDIST
 		if (fd->transform)
-        {
-			fd->close(fd);
+        	{
+			ret = fd->close(fd);
 		} 
         else
 #endif

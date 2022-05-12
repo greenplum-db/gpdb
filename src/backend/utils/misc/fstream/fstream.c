@@ -278,6 +278,66 @@ scan_csv_records(char *p, char *q, int one, fstream_t *fs)
 		   return scan_csv_records_cr_or_lf(p, q, one, fs, '\n');
 	}
 }
+
+#ifdef GPFXDIST
+static void get_writable_transform_err(gfile_t* fd, char *buf, apr_size_t nbytes)
+{
+	apr_status_t rv;
+
+	if (fd->transform->proc.err)
+	{
+		if ((rv = apr_file_read(fd->transform->proc.err, buf, &nbytes)) == APR_SUCCESS)
+		{
+			if (nbytes > 0)
+			{
+				buf[nbytes] = '\0';
+			}
+		}
+		apr_file_close(fd->transform->proc.err);
+	}
+}
+
+static int gfile_wait_subprocess(gfile_t* fd)
+{
+	int             st;
+	apr_exit_why_e  why;
+	apr_status_t    rv;
+
+	rv = apr_proc_wait(&fd->transform->proc, &st, &why, APR_WAIT);
+	if (APR_STATUS_IS_CHILD_DONE(rv))
+	{
+		gfile_printf_then_putc_newline("gfile_wait_subprocess: done: why = %d, exit status = %d", why, st);
+		return st;
+	}
+	else
+	{
+		gfile_printf_then_putc_newline("gfile_wait_subprocess: notdone");
+		return 1;
+	}
+}
+#endif
+
+int fstream_get_stderr(fstream_t* fs)
+{
+	int ret = 0;
+#ifdef GPFXDIST
+	if (fs->fd.transform)
+	{
+		ret = gfile_wait_subprocess(&fs->fd);
+		if (ret)
+		{
+			char errmsg_buffer[FILE_ERROR_SZ-1];
+			memset(errmsg_buffer, 0, FILE_ERROR_SZ-1);
+			get_writable_transform_err(&fs->fd, errmsg_buffer, FILE_ERROR_SZ-2);
+			fs->ferror = format_error(errmsg_buffer, "");
+			gfile_printf_then_putc_newline("get err from stderr %s", fs->ferror);
+		}
+		return ret;
+	}
+#endif
+	return ret;
+}
+
 /* close the file stream */
 void fstream_close(fstream_t* fs)
 {

@@ -233,6 +233,7 @@ struct session_t
 	struct timeval 	tm;             /* timeout for struct event */
 	struct event   	ev;             /* event we are watching for this session*/
 	apr_hash_t		*requests;
+	const char*     ferror;
 };
 
 /*  An http request */
@@ -351,6 +352,7 @@ static int request_set_path(request_t *r, const char* d, char* p, char* pp, char
 static int request_path_validate(request_t *r, const char* path);
 static int request_parse_gp_headers(request_t *r, int opt_g);
 static void free_session_cb(int fd, short event, void* arg);
+static int session_error_detect(request_t* r);
 #ifdef GPFXDIST
 static int request_set_transform(request_t *r);
 #endif
@@ -1386,6 +1388,20 @@ static void session_free(session_t* session)
 
 	apr_hash_set(gcb.session.tab, session->key, APR_HASH_KEY_STRING, 0);
 	apr_pool_destroy(session->pool);
+}
+
+static int session_error_detect(request_t* r)
+{
+	gprintlnif(r, "detect error message in session");
+	session_t* session = r->session;
+
+	/* fetch fstream error in the last request */
+	if (session->nrequest == 1 && r->is_final)
+	{
+		return fstream_get_stderr(session->fstream);
+	}
+
+	return 0;
 }
 
 /* detach a request from a session */
@@ -3189,6 +3205,13 @@ static void handle_post_request(request_t *r, int header_end)
 
 done_processing_request:
 
+	if (r->session && session_error_detect(r))
+	{
+		fstream_t *fs = r->session->fstream;
+		const char *ferror = (fs == NULL ? "internal error" : fstream_get_error(fs));
+		http_error(r, FDIST_INTERNAL_ERROR, ferror);
+		request_end(r, 1, 0);
+	}
 	/* send our success response and end the request */
 	if (0 != http_ok(r))
 		request_end(r, 1, 0);
@@ -3566,7 +3589,7 @@ static int request_set_transform(request_t *r)
 	 * we prepare a temporary file to hold it.	when the request is
 	 * done we'll forward the output as error messages.
 	 */
-	if (transform_stderr_server(tr))
+	if (r->is_get && transform_stderr_server(tr))
 	{
 		apr_pool_t*	 mp = r->pool;
 		apr_file_t*	 f = NULL;
