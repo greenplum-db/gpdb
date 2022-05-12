@@ -276,7 +276,7 @@ standard_ExecutorStart(QueryDesc *queryDesc, int eflags)
 
 					/* Get total system memory on the QE in MB */
 					int 	total_memory_segment = ResGroupOps_GetTotalMemory();
-					int 	nsegments_segment = ResGroupGetSegmentNum();
+					int 	nsegments_segment = ResGroupGetHostPrimaryCount();
 					uint64	coordinator_query_mem = queryDesc->plannedstmt->query_mem;
 
 					/*

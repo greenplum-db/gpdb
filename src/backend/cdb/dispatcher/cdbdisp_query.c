@@ -279,7 +279,7 @@ CdbDispatchPlan(struct QueryDesc *queryDesc,
 		 * fall back mode (use statement_mem).
 		 */
 		stmt->total_memory_coordinator = ResGroupOps_GetTotalMemory();
-		stmt->nsegments_coordinator = ResGroupGetSegmentNum();
+		stmt->nsegments_coordinator = ResGroupGetHostPrimaryCount();
 	}
 
 	cdbdisp_dispatchX(queryDesc, planRequiresTxn, cancelOnError);

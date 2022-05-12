@@ -59,9 +59,11 @@
 int			qe_identifier = 0;
 
 /*
- * number of primary segments on this host
+ * Number of primary segments on this host.
+ * Note: This is only set on the segments and not on the coordinator. It is
+ * used primarily by resource groups.
  */
-int			host_segments = 0;
+int			host_primary_segment_count = 0;
 
 /*
  * size of hash table of interconnect connections
@@ -529,7 +531,7 @@ cdbgang_parse_gpqeid_params(struct Port *port pg_attribute_unused(),
 
 	if (gpqeid_next_param(&cp, &np))
 	{
-		host_segments = (int) strtol(cp, NULL, 10);
+		host_primary_segment_count = (int) strtol(cp, NULL, 10);
 	}
 
 	if (gpqeid_next_param(&cp, &np))
@@ -541,7 +543,8 @@ cdbgang_parse_gpqeid_params(struct Port *port pg_attribute_unused(),
 	if (!cp || np)
 		goto bad;
 
-	if (gp_session_id <= 0 || PgStartTime <= 0 || qe_identifier < 0 || host_segments <= 0 || ic_htab_size <= 0)
+	if (gp_session_id <= 0 || PgStartTime <= 0 || qe_identifier < 0 ||
+		host_primary_segment_count <= 0 || ic_htab_size <= 0)
 		goto bad;
 
 	pfree(gpqeid);

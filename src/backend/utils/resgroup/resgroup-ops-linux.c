@@ -1760,7 +1760,7 @@ ResGroupOps_SetMemoryLimit(Oid group, int memory_limit)
 	int32 memory_limit_in_chunks;
 
 	memory_limit_in_chunks = ResGroupGetVmemLimitChunks() * memory_limit / 100;
-	memory_limit_in_chunks *= ResGroupGetSegmentNum();
+	memory_limit_in_chunks *= ResGroupGetHostPrimaryCount();
 
 	fd = ResGroupOps_LockGroup(group, comp, true);
 	ResGroupOps_SetMemoryLimitByValue(group, memory_limit_in_chunks);
