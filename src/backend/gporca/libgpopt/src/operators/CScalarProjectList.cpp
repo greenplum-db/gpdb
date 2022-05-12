@@ -18,6 +18,7 @@
 #include "gpopt/base/CDrvdPropScalar.h"
 #include "gpopt/operators/CExpressionHandle.h"
 #include "gpopt/operators/CScalarWindowFunc.h"
+#include "gpopt/search/CGroupProxy.h"
 #include "gpopt/xforms/CXformUtils.h"
 
 
@@ -153,6 +154,37 @@ CScalarProjectList::FHasMultipleDistinctAggs(CExpressionHandle &exprhdl)
 	phmexprdrgpexpr->Release();
 
 	return (1 < ulDifferentDQAs);
+}
+
+
+//---------------------------------------------------------------------------
+//	@function:
+//		CScalarProjectList::FHasScalarFunc
+//
+//	@doc:
+//		Check if given project list has a scalar func, for example:
+//			select random() from T;
+//
+//---------------------------------------------------------------------------
+BOOL
+CScalarProjectList::FHasScalarFunc(CGroupExpression *pexprPrjList)
+{
+	GPOS_ASSERT(COperator::EopScalarProjectList ==
+				pexprPrjList->Pop()->Eopid());
+
+	const ULONG arity = pexprPrjList->Arity();
+	for (ULONG ul = 0; ul < arity; ul++)
+	{
+		CGroupExpression *pexprPrjEl =
+			CGroupProxy((*pexprPrjList)[ul]).PgexprFirst();
+		if (CGroupProxy((*pexprPrjEl)[0]).PgexprFirst()->Pop()->Eopid() ==
+			COperator::EopScalarFunc)
+		{
+			return true;
+		}
+	}
+
+	return false;
 }
 
 

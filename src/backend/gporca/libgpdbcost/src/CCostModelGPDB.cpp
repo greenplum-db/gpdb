@@ -33,7 +33,9 @@
 #include "gpopt/operators/CPhysicalUnionAll.h"
 #include "gpopt/operators/CPredicateUtils.h"
 #include "gpopt/operators/CScalarBitmapIndexProbe.h"
+#include "gpopt/operators/CScalarProjectList.h"
 #include "gpopt/optimizer/COptimizerConfig.h"
+#include "gpopt/search/CGroupProxy.h"
 #include "naucrates/statistics/CStatisticsUtils.h"
 
 using namespace gpos;
@@ -140,6 +142,56 @@ CCostModelGPDB::CostScanOutput(CMemoryPool *,  // mp
 	GPOS_ASSERT(0 < dOutputTupCostUnit);
 
 	return CCost(num_rebinds * (rows * width * dOutputTupCostUnit));
+}
+
+
+//---------------------------------------------------------------------------
+//	@function:
+//		CCostModelGPDB::CostComputeScalar
+//
+//	@doc:
+//		Helper function to return cost of a plan containing compute scalar
+//		operator
+//
+//---------------------------------------------------------------------------
+CCost
+CCostModelGPDB::CostComputeScalar(CMemoryPool *mp, CExpressionHandle &exprhdl,
+								  const SCostingInfo *pci,
+								  ICostModelParams *pcp,
+								  const CCostModelGPDB *pcmgpdb)
+{
+	GPOS_ASSERT(nullptr != pci);
+	GPOS_ASSERT(nullptr != pcp);
+	GPOS_ASSERT(nullptr != pcmgpdb);
+
+	DOUBLE rows = pci->Rows();
+	DOUBLE width = pci->Width();
+	DOUBLE num_rebinds = pci->NumRebinds();
+
+	CCost costLocal =
+		CCost(num_rebinds * CostTupleProcessing(rows, width, pcp).Get());
+	CCost costChild = CostChildren(mp, exprhdl, pci, pcp);
+
+	CCost costCompute(0);
+
+	if (exprhdl.Pgexpr())
+	{
+		CGroupProxy gp((*exprhdl.Pgexpr())[1]);
+		if (CScalarProjectList::FHasScalarFunc(gp.PgexprFirst()))
+		{
+			// If the compute scalar operator has a scalar func operator in the
+			// project list then aggregate that cost of the scalar func. The
+			// number of times the scalar func is run is proportional to the
+			// number of rows.
+			costCompute =
+				CCost(pcmgpdb->GetCostModelParams()
+						  ->PcpLookup(CCostModelParamsGPDB::EcpScalarFuncCost)
+						  ->Get() *
+					  rows);
+		}
+	}
+
+	return costLocal + costChild + costCompute;
 }
 
 
@@ -1941,6 +1993,10 @@ CCostModelGPDB::Cost(
 	GPOS_ASSERT(nullptr != pci);
 
 	COperator::EOperatorId op_id = exprhdl.Pop()->Eopid();
+	if (op_id == COperator::EopPhysicalComputeScalar)
+	{
+		return CostComputeScalar(m_mp, exprhdl, pci, m_cost_model_params, this);
+	}
 	if (FUnary(op_id))
 	{
 		return CostUnary(m_mp, exprhdl, pci, m_cost_model_params);
