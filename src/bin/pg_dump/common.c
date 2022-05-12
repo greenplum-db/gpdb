@@ -117,16 +117,16 @@ getSchemaData(Archive *fout, int *numTablesPtr, int binary_upgrade)
 	int			numEventTriggers;
 
 	/* GPDB specific variables */
+
 	int			numExtProtocols;
 
 	if (binary_upgrade)
 	{
-		BinaryUpgradeInfo *binfo;
-
+		BinaryUpgradeInfo *binaryUpgradeInfo;
 		if (g_verbose)
 			write_msg(NULL, "identifying required binary upgrade calls\n");
 
-		binfo = getBinaryUpgradeObjects();
+		binaryUpgradeInfo = newBinaryUpgradeInfo();
 	}
 
 	/*
@@ -143,7 +143,7 @@ getSchemaData(Archive *fout, int *numTablesPtr, int binary_upgrade)
 	getExtensionMembership(fout, extinfo, numExtensions);
 
 	if (g_verbose)
-		write_msg(NULL, "reading schemas");
+		write_msg(NULL, "reading schemas\n");
 	(void) getNamespaces(fout, &numNamespaces);
 
 	/*
@@ -264,6 +264,17 @@ getSchemaData(Archive *fout, int *numTablesPtr, int binary_upgrade)
 	if (g_verbose)
 		write_msg(NULL, "reading indexes\n");
 	getIndexes(fout, tblinfo, numTables);
+
+	if (binary_upgrade)
+	{
+		if (g_verbose)
+			write_msg(NULL, "reading append-optimized table info\n");
+		getAOTableInfo(fout);
+
+		if (g_verbose)
+			write_msg(NULL, "reading bitmap index info\n");
+		getBMIndxInfo(fout);
+	}
 
 	if (g_verbose)
 		write_msg(NULL, "reading constraints\n");
@@ -621,7 +632,6 @@ removeObjectDependency(DumpableObject *dobj, DumpId refId)
 	}
 	dobj->nDeps = j;
 }
-
 
 /*
  * findTableByOid

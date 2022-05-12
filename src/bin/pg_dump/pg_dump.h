@@ -135,9 +135,10 @@ typedef struct _dumpableObject
 	int			allocDeps;		/* allocated size of dependencies[] */
 } DumpableObject;
 
+
 typedef struct _binaryupgradeinfo
 {
-	DumpableObject dobj;
+	DumpableObject dobj; /* used to signal Archiver to dump binary upgrade entry */
 } BinaryUpgradeInfo;
 
 typedef struct _namespaceInfo
@@ -179,6 +180,9 @@ typedef struct _typeInfo
 	int			nDomChecks;
 	struct _constraintInfo *domChecks;
 	char		*typstorage; /* GPDB: store the type's encoding clause */
+	Oid			typarrayoid; /* OID for type's auto-generated array type, or 0 */
+	char		*typarrayname; /* name of type's auto-generated array type */
+	Oid			typarrayns; /* schema for type's auto-generated array type */
 } TypeInfo;
 
 typedef struct _typeCache
@@ -329,14 +333,33 @@ typedef struct _tableInfo
 	int			numParents;		/* number of (immediate) parent tables */
 	struct _tableInfo **parents;	/* TableInfos of immediate parents */
 	struct _tableDataInfo *dataObj;		/* TableDataInfo, if dumping its data */
-	Oid			parrelid;			/* external partition's parent oid */
+	Oid			parrelid;			/* partition's parent oid */
 	bool		parparent;		/* true if the table is partition parent */
+	int			parlevel;			/* partition level */
 	int			numTriggers;	/* number of triggers for table */
 	struct _triggerInfo *triggers;		/* array of TriggerInfo structs */
 
 	/* GPDB: true if need to ignore root partition's dropped columns */
 	bool		ignoreRootPartDroppedAttr;
+	Oid		toast_index; 				/* OID of toast table's index */
+	Oid		toast_type;					/* OID of toast table's composite type */
+	struct _aotableInfo	*aotbl; /* AO auxilliary table metadata */
+	Oid			reltype;		/* OID of table's composite type, if any */
 } TableInfo;
+
+/* AO auxilliary table metadata */
+typedef struct _aotableInfo
+{
+	bool 	columnstore;
+	Oid 	segrelid;
+	Oid 	segreltype;
+	Oid 	blkdirrelid;
+	Oid 	blkdirreltype;
+	Oid 	blkdiridxid;
+	Oid 	visimaprelid;
+	Oid 	visimapreltype;
+	Oid 	visimapidxid;
+} AOTableInfo;
 
 typedef struct _attrDefInfo
 {
@@ -369,7 +392,16 @@ typedef struct _indxInfo
 	/* if there is an associated constraint object, its dumpId: */
 	DumpId		indexconstraint;
 	int			relpages;		/* relpages of the underlying table */
+	struct _bmIndxInfo *bmidx; /* bitmap index auxiliary table metadata */
 } IndxInfo;
+
+/* bitmap index auxiliary table metadata */
+typedef struct _bmIndxInfo
+{
+	Oid		bmrelid;
+	Oid		bmreltype;
+	Oid		bmidxid;
+} BMIndxInfo;
 
 typedef struct _ruleInfo
 {
@@ -635,9 +667,13 @@ extern void processExtensionTables(Archive *fout, ExtensionInfo extinfo[],
 extern EventTriggerInfo *getEventTriggers(Archive *fout, int *numEventTriggers);
 /* START MPP ADDITION */
 extern ExtProtInfo *getExtProtocols(Archive *fout, int *numExtProtocols);
-extern BinaryUpgradeInfo *getBinaryUpgradeObjects(void);
-
+extern BinaryUpgradeInfo *newBinaryUpgradeInfo(void);
+extern void getBinaryUpgradeRelInfo(Archive *fout, BinaryUpgradeInfo *binfo, int *numBinaryUpgradeRelInfoObjects);
+extern void getBinaryUpgradeTypeInfo(Archive *fout, BinaryUpgradeInfo *binfo, int *numBinaryUpgradeTypeInfoObjects);
+extern void getBinaryUpgradeTypeArrInfo(Archive *fout, BinaryUpgradeInfo *binfo, int *numBinaryUpgradeTypeArrObjects);
 extern bool	testExtProtocolSupport(Archive *fout);
+extern void getAOTableInfo(Archive *fout);
+extern void getBMIndxInfo(Archive *fout);
 /* END MPP ADDITION */
 
 
