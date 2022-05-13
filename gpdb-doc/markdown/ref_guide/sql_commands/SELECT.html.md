@@ -284,31 +284,31 @@ Greenplum Database has the following additional OLAP grouping extensions \(often
 ROLLUP
 :   A `ROLLUP` grouping is an extension to the `GROUP BY` clause that creates aggregate subtotals that roll up from the most detailed level to a grand total, following a list of grouping columns \(or expressions\). `ROLLUP` takes an ordered list of grouping columns, calculates the standard aggregate values specified in the `GROUP BY` clause, then creates progressively higher-level subtotals, moving from right to left through the list. Finally, it creates a grand total. A `ROLLUP` grouping can be thought of as a series of grouping sets. For example:
 
-:   ```
-GROUP BY ROLLUP (a,b,c) 
-```
+    ```
+    GROUP BY ROLLUP (a,b,c) 
+    ```
 
-is equivalent to:
+    is equivalent to:
 
-:   ```
-GROUP BY GROUPING SETS( (a,b,c), (a,b), (a), () ) 
-```
+    ```
+    GROUP BY GROUPING SETS( (a,b,c), (a,b), (a), () ) 
+    ```
 
-:   Notice that the n elements of a `ROLLUP` translate to n+1 grouping sets. Also, the order in which the grouping expressions are specified is significant in a `ROLLUP`.
+    Notice that the n elements of a `ROLLUP` translate to n+1 grouping sets. Also, the order in which the grouping expressions are specified is significant in a `ROLLUP`.
 
 CUBE
 :   A `CUBE` grouping is an extension to the `GROUP BY` clause that creates subtotals for all of the possible combinations of the given list of grouping columns \(or expressions\). In terms of multidimensional analysis, `CUBE` generates all the subtotals that could be calculated for a data cube with the specified dimensions. For example:
 
-:   ```
-GROUP BY CUBE (a,b,c) 
-```
+    ```
+    GROUP BY CUBE (a,b,c) 
+    ```
 
-is equivalent to:
+    is equivalent to:
 
-:   ```
-GROUP BY GROUPING SETS( (a,b,c), (a,b), (a,c), (b,c), (a), 
-(b), (c), () ) 
-```
+    ```
+    GROUP BY GROUPING SETS( (a,b,c), (a,b), (a,c), (b,c), (a), 
+    (b), (c), () ) 
+    ```
 
 Notice that n elements of a `CUBE` translate to 2n grouping sets. Consider using `CUBE` in any situation requiring cross-tabular reports. `CUBE` is typically most suitable in queries that use columns from multiple dimensions rather than columns representing different levels of a single dimension. For instance, a commonly requested cross-tabulation might need subtotals for all the combinations of month, state, and product.
 
