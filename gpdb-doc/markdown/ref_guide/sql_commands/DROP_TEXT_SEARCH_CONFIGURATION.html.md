@@ -6,7 +6,7 @@ Removes a text search configuration.
 
 ## <a id="section2"></a>Synopsis 
 
-``` {#sql_command_synopsis}
+```
 DROP TEXT SEARCH CONFIGURATION [ IF EXISTS ] <name> [ CASCADE | RESTRICT ]
 ```
 
