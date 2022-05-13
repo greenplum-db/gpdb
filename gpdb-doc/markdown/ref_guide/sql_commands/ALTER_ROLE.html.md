@@ -125,23 +125,23 @@ DENY BETWEEN deny\_point AND deny\_point
 
     For `time:`
 
-:   ```
-{ 00-23 : 00-59 | 01-12 : 00-59 { AM | PM }}
-```
+    ```
+    { 00-23 : 00-59 | 01-12 : 00-59 { AM | PM }}
+    ```
 
-:   The `DENY BETWEEN` clause uses two deny\_point parameters which must indicate day and time.
+    The `DENY BETWEEN` clause uses two deny\_point parameters which must indicate day and time.
 
-:   ```
-DENY BETWEEN <deny_point> AND <deny_point>
-```
+    ```
+    DENY BETWEEN <deny_point> AND <deny_point>
+    ```
 
-:   For example:
+    For example:
 
-:   ```
-ALTER USER user1 DENY BETWEEN day 'Sunday' time '00:00' AND day 'Monday' time '00:00'; 
-```
+    ```
+    ALTER USER user1 DENY BETWEEN day 'Sunday' time '00:00' AND day 'Monday' time '00:00'; 
+    ```
 
-:   For more information about time-based constraints and examples, see "Managing Roles and Privileges" in the *Greenplum Database Administrator Guide*.
+    For more information about time-based constraints and examples, see "Managing Roles and Privileges" in the *Greenplum Database Administrator Guide*.
 
 DROP DENY FOR deny\_point
 :   The `DROP DENY FOR` clause removes a time-based constraint from the role. It uses the deny\_point parameter described above.
