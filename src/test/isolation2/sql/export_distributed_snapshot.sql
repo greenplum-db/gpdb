@@ -44,7 +44,7 @@ $$
       f.write(content)
       f.close()
   return 0
-$$ LANGUAGE plpython3u EXECUTE ON MASTER;
+$$ LANGUAGE plpython3u;
 
 -- Determine if field exists for given snapshot file
 CREATE OR REPLACE FUNCTION  snapshot_file_ds_fields_exist(token text) RETURNS boolean as
@@ -66,7 +66,7 @@ $$
         if "ds" in l:
           return True
   return False
-$$ LANGUAGE plpython3u EXECUTE ON MASTER;
+$$ LANGUAGE plpython3u;
 
 -- INSERT test
 CREATE TABLE export_distributed_snapshot_test1 (a int);
@@ -90,26 +90,77 @@ SELECT * FROM  export_distributed_snapshot_test1;
 
 1: COMMIT;
 
--- DROP test
+-- DELETE test
 CREATE TABLE export_distributed_snapshot_test2 (a int);
+INSERT INTO export_distributed_snapshot_test2 SELECT a FROM generate_series(1,3) a;
+
+1: BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ;
+1: @post_run ' TOKEN=`echo "${RAW_STR}" | awk \'NR==3\' | awk \'{print $1}\'` && echo "${RAW_STR}"': SELECT pg_export_snapshot();
+
+DELETE FROM export_distributed_snapshot_test2 WHERE a=1;
+
+-- Should return 3 rows
+1: SELECT * FROM export_distributed_snapshot_test2 ;
+
+-- Should return 2 rows
+2: SELECT * FROM  export_distributed_snapshot_test2;
+
+2: BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ;
+2: @pre_run 'echo "${RAW_STR}" | sed "s#@TOKEN#${TOKEN}#"': SET TRANSACTION SNAPSHOT '@TOKEN';
+
+-- Should return 3 rows
+2: SELECT * FROM  export_distributed_snapshot_test2;
+2: COMMIT;
+
+1: COMMIT;
+
+-- UPDATE test
+CREATE TABLE export_distributed_snapshot_test3 (a int);
+INSERT INTO export_distributed_snapshot_test3 SELECT a FROM generate_series(1,5) a;
+
+1: BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ;
+1: @post_run ' TOKEN=`echo "${RAW_STR}" | awk \'NR==3\' | awk \'{print $1}\'` && echo "${RAW_STR}"': SELECT pg_export_snapshot();
+
+UPDATE export_distributed_snapshot_test3 SET a=99 WHERE a=1;
+
+-- Should return 0 rows
+1: SELECT * FROM export_distributed_snapshot_test3 WHERE a=99;
+
+-- Should return 1 row
+2: SELECT * FROM export_distributed_snapshot_test3 WHERE a=99;
+
+2: BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ;
+2: @pre_run 'echo "${RAW_STR}" | sed "s#@TOKEN#${TOKEN}#"': SET TRANSACTION SNAPSHOT '@TOKEN';
+
+-- Should return 0 rows
+2: SELECT * FROM export_distributed_snapshot_test3 WHERE a=99;
+2: COMMIT;
+
+-- Should return 1 row
+2: SELECT * FROM export_distributed_snapshot_test3 WHERE a=99;
+
+1: COMMIT;
+
+-- DROP test
+CREATE TABLE export_distributed_snapshot_test4 (a int);
 
 1: BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ;
 2: BEGIN;
 
 1: @post_run ' TOKEN=`echo "${RAW_STR}" | awk \'NR==3\' | awk \'{print $1}\'` && echo "${RAW_STR}"': SELECT pg_export_snapshot();
-1: SELECT gp_segment_id, relname from gp_dist_random('pg_class') where relname = 'export_distributed_snapshot_test2';
+1: SELECT gp_segment_id, relname from gp_dist_random('pg_class') where relname = 'export_distributed_snapshot_test4';
 
 -- Drop table in transaction
-2: DROP TABLE export_distributed_snapshot_test2;
+2: DROP TABLE export_distributed_snapshot_test4;
 2: COMMIT;
 
 3: BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ;
 3: @pre_run 'echo "${RAW_STR}" | sed "s#@TOKEN#${TOKEN}#"': SET TRANSACTION SNAPSHOT '@TOKEN';
 -- The table should still be visible to transaction 3 using transaction 1's snapshot.
-3: SELECT gp_segment_id, relname from gp_dist_random('pg_class') where relname = 'export_distributed_snapshot_test2';
+3: SELECT gp_segment_id, relname from gp_dist_random('pg_class') where relname = 'export_distributed_snapshot_test4';
 3: COMMIT;
 -- The table should no longer be visible to transaction 3.
-3: SELECT gp_segment_id, relname from gp_dist_random('pg_class') where relname = 'export_distributed_snapshot_test2';
+3: SELECT gp_segment_id, relname from gp_dist_random('pg_class') where relname = 'export_distributed_snapshot_test4';
 
 1: COMMIT;
 
