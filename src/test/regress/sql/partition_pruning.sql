@@ -722,7 +722,7 @@ select get_selected_parts('explain analyze select * from DATE_PARTS where month 
 select get_selected_parts('explain analyze select * from DATE_PARTS where month between 1 and 4;');
 
 -- Expected total parts => 1 * 2 * 4 => 8: 
--- TODO #141973839: we selected extra parts because of disjunction: 24 parts: 2 * 3 * 4
+-- TODO #141973839: we selected extra parts because of disjunction: 12 parts: 1 * 3 * 4
 select get_selected_parts('explain analyze select * from DATE_PARTS where year = 2003 and month between 1 and 4;');
 
 -- 1 :: 5 :: 4 => 20 // Only default for year
