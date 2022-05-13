@@ -20,6 +20,8 @@ where transaction\_mode is one of:
    ISOLATION LEVEL {SERIALIZABLE | REPEATABLE READ | READ COMMITTED | READ UNCOMMITTED}
 ```
 
+and snapshot_id is the id of the existing transaction whose snapshot you want this transaction to run with.
+
 ## <a id="section3"></a>Description 
 
 The `SET TRANSACTION` command sets the characteristics of the current transaction. It has no effect on any subsequent transactions.
@@ -27,8 +29,6 @@ The `SET TRANSACTION` command sets the characteristics of the current transactio
 The available transaction characteristics are the transaction isolation level, the transaction access mode \(read/write or read-only\), and the deferrable mode.
 
 **Note:** Deferrable transactions require the transaction to be serializable. Greenplum Database does not support serializable transactions, so including the `DEFERRABLE` clause has no effect.
-
-Greenplum Database does not support the `SET TRANSACTION SNAPSHOT` command.
 
 The isolation level of a transaction determines what data the transaction can see when other transactions are running concurrently.
 
@@ -44,6 +44,9 @@ The transaction access mode determines whether the transaction is read/write or 
 The `DEFERRABLE` transaction property has no effect unless the transaction is also `SERIALIZABLE` and `READ ONLY`. When all of these properties are set on a transaction, the transaction may block when first acquiring its snapshot, after which it is able to run without the normal overhead of a `SERIALIZABLE` transaction and without any risk of contributing to or being cancelled by a serialization failure. Because Greenplum Database does not support serializable transactions, the `DEFERRABLE` transaction property has no effect in Greenplum Database.
 
 ## <a id="section4"></a>Parameters 
+
+SNAPSHOT
+:   Allows a new transaction to run with the same snapshot as an existing transaction. You pass the id of the existing transaction to the `SET TRANSACTION SNAPSHOT` command. You must first call the `pg_export_snapshot` function to obtain the existing transaction's id.  
 
 SESSION CHARACTERISTICS
 :   Sets the default transaction characteristics for subsequent transactions of a session.
