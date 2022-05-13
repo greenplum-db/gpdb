@@ -198,6 +198,7 @@ static Node *makeRecursiveViewSelect(char *relname, List *aliases, Node *query);
 
 static Node *makeIsNotDistinctFromNode(Node *expr, int position);
 
+static bool isSetWithReorganize(List **options);
 static char *greenplumLegacyAOoptions(const char *accessMethod, List **options);
 static void check_expressions_in_partition_key(PartitionSpec *spec, core_yyscan_t yyscanner);
 
@@ -3241,12 +3242,25 @@ alter_table_cmd:
 					n->def = (Node *) list_make2($3, $4);
 					$$ = (Node *)n;
 				}
-			/* storage only */
+			/* table storage type  or reorganize only */
 			| SET WITH definition
 				{
 					AlterTableCmd *n = makeNode(AlterTableCmd);
-					n->subtype = AT_SetDistributedBy;
-					n->def = (Node *) list_make2($3, NULL);
+					if (isSetWithReorganize(&$3))
+					{
+						n->subtype = AT_SetDistributedBy;
+						n->def = (Node *) list_make2($3, NULL);
+					}
+					else
+					{
+						n->subtype = AT_SetAccessMethod;
+						n->name = greenplumLegacyAOoptions(n->name, &$3);
+						if (!n->name)
+							ereport(ERROR,
+								(errcode(ERRCODE_SYNTAX_ERROR),
+								 errmsg("invalid storage type"),
+								 parser_errposition(@3)));
+					}
 					$$ = (Node *)n;
 				}
 			| alter_table_partition_cmd
@@ -19620,6 +19634,28 @@ makeRecursiveViewSelect(char *relname, List *aliases, Node *query)
 
 	return (Node *) s;
 }
+
+static bool
+isSetWithReorganize(List **options)
+{
+	ListCell *lc;
+	foreach (lc, *options)
+	{
+		DefElem *elem = lfirst(lc);
+
+		if (strcmp(elem->defname, "reorganize") == 0)
+		{
+			if (list_length(*options) == 1)
+				return true;
+			else
+				ereport(ERROR,
+					(errcode(ERRCODE_SYNTAX_ERROR),
+					errmsg("reorganize isn't supported with other options in SET WITH")));
+		}
+	}
+	return false;
+}
+
 
 /*
  * Greenplum: a thin wax off layer to keep compatibility with the legacy syntax
