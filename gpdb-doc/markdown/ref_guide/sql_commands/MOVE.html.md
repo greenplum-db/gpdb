@@ -72,7 +72,7 @@ MOVE FORWARD 5 IN mycursor;
 MOVE 5
 ```
 
---Fetch the next row after that \(row 6\):
+-- Fetch the next row after that \(row 6\):
 
 ```
 FETCH 1 FROM mycursor;
