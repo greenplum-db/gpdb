@@ -81,7 +81,7 @@ where frame\_start and frame\_end can be one of:
 
 ```
 
-2When a locking clause is specified \(the `FOR` clause\), the Global Deadlock Detector affects how table rows are locked. See item [12](#eg138885) in Description and see "The Locking Clause" later in this section.
+<sup>2</sup>When a locking clause is specified \(the `FOR` clause\), the Global Deadlock Detector affects how table rows are locked. See item [12](#eg138885) in Description and see "The Locking Clause" later in this section.
 
 ## <a id="section3"></a>Description 
 
