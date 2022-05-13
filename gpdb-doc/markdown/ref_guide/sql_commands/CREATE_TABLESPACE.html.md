@@ -54,7 +54,7 @@ When creating tablespaces, ensure that file system locations have sufficient I/O
 The system catalog table `pg_tablespace` stores tablespace information. This command displays the tablespace OID values, names, and owner.
 
 ```
-SELECT oid, spcname, spcowner FROM pg_tablespace ;
+SELECT oid, spcname, spcowner FROM pg_tablespace;
 ```
 
 The Greenplum Database built-in function `gp_tablespace_location(tablespace\_oid)` displays the tablespace host system file locations for all segment instances. This command lists the segment database IDs and host system file locations for the tablespace with OID `16385`.
@@ -70,7 +70,7 @@ SELECT * FROM gp_tablespace_location(16385)
 Create a new tablespace and specify the file system location for the master and all segment instances:
 
 ```
-CREATE TABLESPACE mytblspace LOCATION '/gpdbtspc/mytestspace' ;
+CREATE TABLESPACE mytblspace LOCATION '/gpdbtspc/mytestspace';
 ```
 
 Create a new tablespace and specify a location for segment instances with content ID 0 and 1. For the master and segment instances not listed in the `WITH` clause, the file system location for the tablespace is specified in the `LOCATION` clause.
