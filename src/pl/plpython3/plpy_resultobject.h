@@ -1,1 +1,0 @@
-../plpython/plpy_resultobject.h

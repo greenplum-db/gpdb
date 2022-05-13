@@ -188,7 +188,6 @@ pgxsdir = $(pkglibdir)/pgxs
 
 with_perl	= @with_perl@
 with_python	= @with_python@
-with_python_both	= @with_python_both@
 with_tcl	= @with_tcl@
 with_openssl	= @with_openssl@
 with_selinux	= @with_selinux@
@@ -230,14 +229,6 @@ python_libspec		= @python_libspec@
 python_additional_libs	= @python_additional_libs@
 python_majorversion	= @python_majorversion@
 python_version		= @python_version@
-
-python3_enable_shared	= @python3_enable_shared@
-python3_includespec	= @python3_includespec@
-python3_libdir		= @python3_libdir@
-python3_libspec		= @python3_libspec@
-python3_additional_libs	= @python3_additional_libs@
-python3_majorversion	= @python3_majorversion@
-python3_version		= @python3_version@
 
 krb_srvtab = @krb_srvtab@
 

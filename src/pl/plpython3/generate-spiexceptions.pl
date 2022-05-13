@@ -1,1 +1,0 @@
-../plpython/generate-spiexceptions.pl
