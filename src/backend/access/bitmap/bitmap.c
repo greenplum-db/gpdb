@@ -925,7 +925,7 @@ restart:
 	 * start tid exceeds block's start tid.
 	 */
 	if (words->firstTid < result->nextTid)
-		_bitmap_catchup_to_next_tid(words, result);
+		_bitmap_catchup_to_next_tid(words, result, true);
 	else if (words->firstTid > result->nextTid)
 		result->nextTid = words->firstTid;
 
@@ -935,7 +935,10 @@ restart:
 	 * the blockno that can not be matched.
 	 */
 	if (words->firstTid < result->nextTid)
+	{
+		Assert(words->nwords == 0);
 		return false;
+	}
 
 	/*
 	 * If the catch up processd all unmatch words that exceed current block's

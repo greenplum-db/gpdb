@@ -260,7 +260,7 @@ _bitmap_findnexttids(BMBatchWords *words, BMIterateResult *result,
 
 	result->nextTidLoc = result->numOfTids = 0;
 
-	_bitmap_catchup_to_next_tid(words, result);
+	_bitmap_catchup_to_next_tid(words, result, false);
 
 	while (words->nwords > 0 && result->numOfTids < maxTids && !done)
 	{
@@ -353,10 +353,8 @@ _bitmap_findnexttids(BMBatchWords *words, BMIterateResult *result,
 
 /*
  * _bitmap_catchup_to_next_tid - Catch up to the nextTid we need to check
- * from last iteration.
+ * from last iteration, in the following cases:
  *
- * Normally words->firstTid should equal to result->nextTid. But there
- * are exceptions:
  * 1: When the concurrent insert causes bitmap items from previous full page
  * to spill over to current page in the window when we (the read transaction)
  * had released the lock on the previous page and not locked the current page.
@@ -366,7 +364,7 @@ _bitmap_findnexttids(BMBatchWords *words, BMIterateResult *result,
  * try to read from a table block's start tid. See pull_stream.
  */
 void
-_bitmap_catchup_to_next_tid(BMBatchWords *words, BMIterateResult *result)
+_bitmap_catchup_to_next_tid(BMBatchWords *words, BMIterateResult *result, bool isStream)
 {
 	if (words->firstTid >= result->nextTid)
 		return;
@@ -377,7 +375,7 @@ _bitmap_catchup_to_next_tid(BMBatchWords *words, BMIterateResult *result)
 	 * is less than result->nextTid, then we should adjust result->lastScanWordNo to
 	 * the correct position.
 	 */
-	if (result->lastScanWordNo != words->startNo)
+	if (result->lastScanWordNo != words->startNo && !isStream)
 		return;
 
 	/*
