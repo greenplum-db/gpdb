@@ -703,13 +703,13 @@ end;
 $$ language plpgsql PARALLEL SAFE;
 explain (costs off, verbose)
     select ten, sp_simple_func(ten) from tenk1 where ten < 100 order by ten;
-                                                        QUERY PLAN                                                        
---------------------------------------------------------------------------------------------------------------------------
- Result
-   Output: ten, sp_simple_func(ten)
-   ->  Gather Motion 3:1  (slice1; segments: 3)
-         Output: ten
-         Merge Key: ten
+                                                 QUERY PLAN                                                 
+------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   Output: ten, (sp_simple_func(ten))
+   Merge Key: ten
+   ->  Result
+         Output: ten, sp_simple_func(ten)
          ->  Sort
                Output: ten
                Sort Key: tenk1.ten
@@ -717,7 +717,7 @@ explain (costs off, verbose)
                      Output: ten
                      Filter: (tenk1.ten < 100)
  Optimizer: Pivotal Optimizer (GPORCA)
- Settings: enable_hashagg=off, min_parallel_table_scan_size=0, optimizer=on, parallel_setup_cost=0, parallel_tuple_cost=0
+ Settings: enable_hashagg=off, min_parallel_table_scan_size=0, parallel_setup_cost=0, parallel_tuple_cost=0
 (13 rows)
 
 drop function sp_simple_func(integer);
