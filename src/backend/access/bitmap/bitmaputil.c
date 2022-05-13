@@ -262,8 +262,6 @@ _bitmap_findnexttids(BMBatchWords *words, BMIterateResult *result,
 
 	_bitmap_catchup_to_next_tid(words, result);
 
-	Assert(words->firstTid == result->nextTid);
-
 	while (words->nwords > 0 && result->numOfTids < maxTids && !done)
 	{
 		uint8 oldScanPos = result->lastScanPos;

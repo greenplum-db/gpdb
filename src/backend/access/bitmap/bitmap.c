@@ -935,10 +935,7 @@ restart:
 	 * the blockno that can not be matched.
 	 */
 	if (words->firstTid < result->nextTid)
-	{
-		Assert(words->nwords < 1);
 		return false;
-	}
 
 	/*
 	 * If the catch up processd all unmatch words that exceed current block's
