@@ -199,9 +199,11 @@ PLy_initialize(void)
 	 */
 	if (plpython3_path && *plpython3_path) 
 		setenv("PYTHONPATH", plpython3_path, 1);
-	else 
+	else
+	{ 
 		unsetenv("PYTHONPATH");
 		unsetenv("PYTHONHOME");
+	}
 #endif
 	/* The rest should only be done once per session */
 	if (inited)

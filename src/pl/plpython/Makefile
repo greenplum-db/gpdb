@@ -87,11 +87,10 @@ SHLIB_LINK = $(python_libspec) $(python_additional_libs) $(filter -lintl,$(LIBS)
 
 REGRESS_OPTS = --dbname=$(PL_TESTDB) --init-file=$(srcdir)/init_file
 # Only load plpythonu with Python 2.  The test files themselves load
-# the versioned language plpython(2|3)u.
+# for plpython3 extension name is the same as language name.
+# we do not need to load again.
 ifeq ($(python_majorversion),2)
 REGRESS_OPTS += --load-extension=plpythonu
-else
-REGRESS_OPTS += --load-extension=plpython3u
 endif
 
 REGRESS = \
