@@ -1392,12 +1392,12 @@ static void session_free(session_t* session)
 
 static int session_error_detect(request_t* r)
 {
-	gprintlnif(r, "detect error message in session");
 	session_t* session = r->session;
 
 	/* fetch fstream error in the last request */
 	if (session->nrequest == 1 && r->is_final)
 	{
+		gdebug(r, "detect error message in session");
 		return fstream_get_stderr(session->fstream);
 	}
 
@@ -3212,11 +3212,14 @@ done_processing_request:
 		http_error(r, FDIST_INTERNAL_ERROR, ferror);
 		request_end(r, 1, 0);
 	}
-	/* send our success response and end the request */
-	if (0 != http_ok(r))
-		request_end(r, 1, 0);
 	else
-		request_end(r, 0, 0); /* we're done! */
+	{
+		/* send our success response and end the request */
+		if (0 != http_ok(r))
+			request_end(r, 1, 0);
+		else
+			request_end(r, 0, 0); /* we're done! */
+	}
 
 }
 
