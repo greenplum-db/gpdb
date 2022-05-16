@@ -417,9 +417,16 @@ The XFS options can also be set in the `/etc/fstab` file. This example entry fro
 
 The maximum transmission unit (MTU) of a network specifies the size (in bytes) of the largest data packet/frame accepted by a network-connected device. A jumbo frame is a frame that contains more than the standard MTU of 1500 bytes.
 
-The Greenplum Database max packet size is specified by the [gp_max_packet_size](../ref_guide/config_params/guc-list.html#gp_max_packet_size) server configuration parameter. The default max packet size is 8192. This default assumes a jumbo frame MTU, and 9000 is the recommended OS network MTU setting for your Greenplum Database hosts.
+Greenplum Database utilizes 3 distinct MTU settings:
 
-The network switch should be configured to use the same jumbo frame size. The size should be at least 9000 MTU and depends on the switch characteristics; some switches support a slightly larger MTU setting.
+- The Greenplum Database [gp_max_packet_size](../ref_guide/config_params/guc-list.html#gp_max_packet_size) server configuration parameter. The default max packet size is 8192. This default assumes a jumbo frame MTU.
+- The operating system MTU setting.
+- The rack switch MTU setting.
+
+These settings are connected, in that they should always be either the same, or close to the same, value, or otherwise in the order of Greenplum < OS < switch for MTU size.
+
+9000 is a common supported setting for switches, and is the recommended OS and rack switch MTU setting for your Greenplum Database hosts.
+
 
 ### <a id="huge_pages"></a>Transparent Huge Pages \(THP\) 
 
