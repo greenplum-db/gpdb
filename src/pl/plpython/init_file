@@ -21,7 +21,7 @@ m/(seg\d+.*)/
 s/(seg\d+.*)//
 # for python3 different version have different SyntaxError so we ignore it.
 m/ERROR:  SyntaxError:.*/
-m/ERROR:  SyntaxError:.*//
+s/ERROR:  SyntaxError:.*/SyntaxError/
 
 -- end_matchsubs
 

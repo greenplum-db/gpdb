@@ -794,7 +794,7 @@ PLyObject_AsString(PyObject *plrv)
 #if PY_MAJOR_VERSION >= 3
 		PyObject   *s = PyObject_Repr(plrv);
 		if (!s)
-			PLy_elog(ERROR, err_msg);
+			PLy_elog(ERROR, "%s", err_msg);
 
 		plrv_bo = PLyUnicode_Bytes(s);
 		Py_XDECREF(s);
@@ -807,7 +807,7 @@ PLyObject_AsString(PyObject *plrv)
 #if PY_MAJOR_VERSION >= 3
 		PyObject   *s = PyObject_Str(plrv);
 		if (!s)
-			PLy_elog(ERROR, err_msg);
+			PLy_elog(ERROR, "%s", err_msg);
 
 		plrv_bo = PLyUnicode_Bytes(s);
 		Py_XDECREF(s);
@@ -816,7 +816,7 @@ PLyObject_AsString(PyObject *plrv)
 #endif
 	}
 	if (!plrv_bo)
-		PLy_elog(ERROR, err_msg);
+		PLy_elog(ERROR, "%s", err_msg);
 
 	plrv_sc = pstrdup(PyBytes_AsString(plrv_bo));
 	plen = PyBytes_Size(plrv_bo);

@@ -89,7 +89,7 @@ static bool inited = false;
 #if PY_MAJOR_VERSION >= 3
 static char *plpython3_path = NULL;
 
-static bool 
+static bool
 plpython3_check_python_path(char **newval, void **extra, GucSource source) {
 	if (inited)
 	{
@@ -162,10 +162,10 @@ _PG_init(void)
 							NULL,
 							&plpython3_path,
 							"", // default path need to set empty for init
-							PGC_USERSET, 
+							PGC_USERSET,
 							GUC_GPDB_NEED_SYNC,
 							plpython3_check_python_path,
-							NULL, 
+							NULL,
 							NULL);
 #endif
 	pg_bindtextdomain(TEXTDOMAIN);
@@ -197,13 +197,15 @@ PLy_initialize(void)
 	 * gpstart. So for plpython3u, we need to unset PYTHONPATH and PYTHONHOME.
 	 * if user set PYTHONPATH then we set it in the env
 	 */
-	if (plpython3_path && *plpython3_path) 
+	if (plpython3_path && *plpython3_path)
+	{
 		setenv("PYTHONPATH", plpython3_path, 1);
-	else
-	{ 
-		unsetenv("PYTHONPATH");
-		unsetenv("PYTHONHOME");
 	}
+	else
+	{
+		unsetenv("PYTHONPATH");
+	}
+	unsetenv("PYTHONHOME");
 #endif
 	/* The rest should only be done once per session */
 	if (inited)
