@@ -216,7 +216,7 @@ VMware releases a Clients tool package on various platforms that can be used to 
 -   Windows Server 2012 R2 \(32-bit and 64-bit\)
 -   Windows Server 2008 R2 \(32-bit and 64-bit\)
 
-The Greenplum 6 Clients package includes the client and loader programs provided in the Greenplum 5 packages plus the addition of database/role/language commands and the Greenplum Streaming Server command utilities. Refer to [Greenplum Client and Loader Tools Package](../client_tool_guides/intro.html) for installation and usage details of the Greenplum 6 Client tools.
+The Greenplum 6 Clients package includes the client and loader programs provided in the Greenplum 5 packages plus the addition of database/role/language commands and the Greenplum Streaming Server command utilities. Refer to [Greenplum Client and Loader Tools Package](//vmware/client_tool_guides/intro.html) for installation and usage details of the Greenplum 6 Client tools.
 
 ### <a id="topic_eyc_l2h_zz"></a>Extensions 
 
