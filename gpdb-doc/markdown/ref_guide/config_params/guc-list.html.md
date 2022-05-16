@@ -867,6 +867,17 @@ Specifies the executing interval \(in seconds\) of the global deadlock detector 
 |-----------|-------|-------------------|
 |5 - `INT_MAX` secs|120 secs|master, system, reload|
 
+## <a id="gp_log_endpoints"></a>gp\_log\_endpoints
+
+Controls the amount of parallel retrieve cursor endpoint detail that Greenplum Database writes to the server log file.
+
+The default value is `false`, Greenplum Database does not log endpoint details to the log file. When set to `true`, Greenplum writes endpoint detail information to the log file.
+
+|Value Range|Default|Set Classifications|
+|-----------|-------|-------------------|
+|Boolean|false|master, session, reload|
+
+
 ## <a id="gp_log_fts"></a>gp\_log\_fts 
 
 Controls the amount of detail the fault detection process \(`ftsprobe`\) writes to the log file.
