@@ -64,7 +64,7 @@
           collected. Consider it a best practice to run <codeph>analyzedb</codeph> on the
           root partition any time that you add a new partition(s) to a partitioned table.
           This operation both analyzes the child leaf partitions in parallel and merges
-          any updated statistices into the root partition.</p>
+          any updated statistics into the root partition.</p>
     </sectiondiv>
     </section>
     <section><title>Notes</title><p>The <cmdname>analyzedb</cmdname> utility updates append
