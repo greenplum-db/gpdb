@@ -587,6 +587,8 @@ extern bool gp_enable_global_deadlock_detector;
 
 extern bool gp_log_endpoints;
 
+extern bool gp_allow_date_field_width_5digits;
+
 typedef enum
 {
 	INDEX_CHECK_NONE,

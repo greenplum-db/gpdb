@@ -13,6 +13,7 @@
 		"execute_pruned_plan",
 		"explain_memory_verbosity",
 		"gin_fuzzy_search_limit",
+		"gp_allow_date_field_width_5digits",
 		"gp_blockdirectory_entry_min_range",
 		"gp_blockdirectory_minipage_size",
 		"gp_debug_linger",
