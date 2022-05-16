@@ -103,6 +103,10 @@ $ gpstop -ar</codeblock></li>
         <li>Update the <codeph>diskquota</codeph> extension in every database in which you
           registered the module:
           <codeblock>$ psql -d testdb -c "ALTER EXTENSION diskquota UPDATE TO '2.0'";</codeblock></li>
+        <li>Re-initialize <codeph>diskquota</codeph> table size data:
+          <codeblock>=# SELECT diskquota.init_table_size_table();</codeblock></li>
+        <li>Restart Greenplum Database:
+          <codeblock>$ gpstop -ar</codeblock></li>
       </ol>
       <p><codeph>diskquota</codeph> monitors and checks disk quota limits during the
         upgrade procedure. After upgrade, your existing disk quota rules continue to be
