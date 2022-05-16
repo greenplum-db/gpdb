@@ -482,6 +482,19 @@ check_response(URL_CURL_FILE *file, int *rc, char **response_string)
 							file->http_response ? file->http_response : "?")));
 		}
 	}
+	else
+	{
+		/* If there is no error, free http_response header message to avoid this condition:
+		 * 1- seg X gets HTTP OK, http_response is set.
+		 * 2- seg X gets a 500 error, http_response is not NULL, so it won't be updated.
+		 * 3- seg X report error but the http_response is HTTP 200 OK.
+		 */
+		if (file->http_response)
+		{
+			pfree(file->http_response);
+			file->http_response = NULL;
+		}
+	}
 
 	return 0;
 }
