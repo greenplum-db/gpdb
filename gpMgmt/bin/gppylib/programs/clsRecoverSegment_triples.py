@@ -132,13 +132,9 @@ class RecoveryTriplets(abc.ABC):
     @staticmethod
     def _get_unreachable_failover_hosts(requests, paralleldegree=1)-> List[str]:
         hostlist = set()
-        # for req in requests:
-        #    if(req.failover_host):
-        #      hostlist.add(req.failover_host)
         hostlist = {req.failover_host for req in requests if req.failover_host}
-        #hostlist = {req for req in requests if req.failover_host}
-        unreachable_hosts = get_unreachable_segment_hosts(hostlist, min(paralleldegree, len(hostlist)))
-        return unreachable_hosts
+        unreachable_failover_hosts = get_unreachable_segment_hosts(hostlist, min(paralleldegree, len(hostlist)))
+        return unreachable_failover_hosts
 
     def getInterfaceHostnameWarnings(self):
         return self.interfaceHostnameWarnings
@@ -152,7 +148,7 @@ class RecoveryTriplets(abc.ABC):
     def _convert_requests_to_triplets(self, requests: List[RecoveryTripletRequest]) -> List[RecoveryTriplet]:
         triplets = []
         # Get list of hosts unreachable from the request
-        unreachable_hosts = self._get_unreachable_failover_hosts(requests, self.paralleldegree)
+        unreachable_failover_hosts = self._get_unreachable_failover_hosts(requests, self.paralleldegree)
 
         dbIdToPeerMap = self.gpArray.getDbIdToPeerMap()
         for req in requests:
@@ -171,7 +167,7 @@ class RecoveryTriplets(abc.ABC):
                 failover.setSegmentHostName(req.failover_host)
                 failover.setSegmentPort(int(req.failover_port))
                 failover.setSegmentDataDirectory(req.failover_datadir)
-                failover.unreachable = failover.getSegmentHostName() in unreachable_hosts
+                failover.unreachable = failover.getSegmentHostName() in unreachable_failover_hosts
             else:
                 # recovery in place, check for host reachable
                 if(req.failed.unreachable):
