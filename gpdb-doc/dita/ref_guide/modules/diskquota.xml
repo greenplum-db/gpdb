@@ -12,8 +12,8 @@
       use the module to limit the amount of disk space used by schemas and roles on a
       per-tablespace basis, as well as to limit the disk space used per 
       Greenplum Database segment for a tablespace.</p>
-    <note>A role-based disk quota cannot be set for a Greenplum Database user assigned
-      <codeph>SUPERUSER</codeph> privileges.</note>
+    <note>A role-based disk quota cannot be set for the Greenplum Database system owner
+      (the user that creates the Greenplum cluster).</note>
     <p>You can set the following quotas with the <codeph>diskquota</codeph> module:</p>
     <ul>
       <li>A <i>schema disk quota</i> sets a limit on the disk space that can used by all tables in
@@ -183,15 +183,15 @@ $ gpstop -ar</codeblock></li>
             <row>
               <entry colname="col1">void set_role_quota( role_name text, quota text )</entry>
               <entry colname="col2">Sets a disk quota for a specific role in the current database.
-                <note>A role-based disk quota cannot be set for a
-                  Greenplum Database <codeph>SUPERUSER</codeph>.</note></entry>
+                <note>A role-based disk quota cannot be set for the Greenplum Database
+                  system owner.</note></entry>
             </row>
             <row>
               <entry colname="col1">void set_role_tablespace_quota( role_name text, tablespace_name text, quota text )</entry>
               <entry colname="col2">Sets a disk quota for a specific role and tablespace
                 combination in the current database.
-                <note>A role-based disk quota cannot be set for a
-                  Greenplum Database <codeph>SUPERUSER</codeph>.</note></entry>
+                <note>A role-based disk quota cannot be set for the Greenplum Database
+                  system owner.</note></entry>
             </row>
             <row>
               <entry colname="col1">void set_schema_quota( schema_name text, quota text )</entry>
