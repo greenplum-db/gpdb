@@ -75,6 +75,8 @@ $ gpstop -ar</codeblock></li>
           database with many files, this can take some time. The <codeph>diskquota</codeph> module
           cannot be used until the initialization is
           complete.<codeblock>=# SELECT diskquota.init_table_size_table();</codeblock>
+          <note>You must run the <codeph>diskquota.init_table_size_table()</codeph> UDF
+            for <codeph>diskquota</codeph> to work.</note>
         </li>
       </ol>
     </body>
@@ -303,7 +305,7 @@ $ gpstop -ar</codeblock>
         <title>About Shared Memory and the Maximum Number of Relations</title>
         <p>The <codeph>diskquota</codeph> module uses shared memory to save the denylist and to save
           the active table list.</p>
-        <p>The denylist shared memory can hold up to 1MiB of database objects that exceed the quota
+        <p>The denylist shared memory can hold up to one million database objects that exceed the quota
           limit. If the denylist shared memory fills, data may be loaded into some schemas or roles
           after they have reached their quota limit. </p>
         <p>Active table shared memory holds up to 1MiB of active tables by default. Active tables
@@ -427,17 +429,17 @@ SELECT diskquota.resume(); </codeblock>
           quota. The ratio must be greater than zero, and the default ratio is one.</p>
         <p>You can calculate the average segment quota as follows:</p>
         <codeblock>avg_seg_quota = tablespace_quota / number_of_segments</codeblock>
-        <p>For example, if your Greenplum Database cluster has 5 segments and you set the
+        <p>For example, if your Greenplum Database cluster has 8 segments and you set the
           following schema tablespace quota:</p>
         <codeblock>SELECT diskquota.set_schema_tablespace_quota( 'accts', 'tspaced1', '250GB' );</codeblock>
         <p>The average segment quota for the <codeph>tspaced1</codeph> tablespace is
-          <codeph>250GB / 5 = 50GB</codeph>.</p>
+          <codeph>250GB / 8 = 31.25</codeph>.</p>
         <p>If you set the following per-segment tablespace quota:</p>
         <codeblock>SELECT diskquota.set_per_segment_quota( 'tspaced1', '2.0' );</codeblock>
         <p>You can calculate the the maximum allowed disk usage per segment allowed as follows:</p>
         <codeblock>max_disk_usage_per_seg = average_segment_quota * ratio</codeblock>
         <p>In this example, the maximum disk usage allowed per segment is
-          <codeph>50GB * 2.0 = 100GB</codeph>.</p>
+          <codeph>31.25 * 2.0 = 62.5</codeph>.</p>
         <p><codeph>diskquota</codeph> will allow a query to run if the disk usage on all
           segments for all tables that are in tablespace <codeph>tblspc1</codeph> and that
           are goverend by a role or schema quota does not exceed <codeph>100GB</codeph>.</p>
@@ -667,7 +669,7 @@ $ gpstop -u</codeblock></li>
         assumes the following:</p>
       <ul>
         <li>Hard limit enforcement of disk usage is enabled (as in the previous example).</li>
-        <li>The Greenplum Database cluster has 4 primary segments.</li>
+        <li>The Greenplum Database cluster has 8 primary segments.</li>
         <li>A tablespace named <codeph>tbsp1</codeph> has been created in the cluster.</li>
       </ul>
       <p>Procedure:</p>
@@ -677,13 +679,13 @@ $ gpstop -u</codeblock></li>
          <codeblock>SELECT diskquota.set_schema_tablespace_quota('s1', 'tbsp1', '1MB');</codeblock></li>
         <li>Set a per-segment ratio of <codeph>2</codeph> for the <codeph>tbsp1</codeph> tablespace:
          <codeblock>SELECT diskquota.set_per_segment_quota('tbsp1', 2);</codeblock>
-         <p>With this ratio setting, the average segment quota is <codeph>1MB / 4 = 250KB</codeph>,
+         <p>With this ratio setting, the average segment quota is <codeph>1MB / 8 = 125KB</codeph>,
            and the max per-segment disk usage for the tablespace is
-           <codeph>250KB * 2 = 500KB</codeph>.</p></li>
+           <codeph>125KB * 2 = 250KB</codeph>.</p></li>
         <li>Create a new table named <codeph>b</codeph> and insert some data:
           <codeblock>CREATE TABLE b(i int);
 INSERT INTO b SELECT generate_series(1,100);</codeblock></li>
-        <li>Insert a large amount of data into the table, enough to exceed the 500KB
+        <li>Insert a large amount of data into the table, enough to exceed the 250KB
           per-segment quota that was set for the tablespace. When the operation exceeds the
           per-segment tablespace quota, <codeph>diskquota</codeph> will terminate the query.
           <codeblock>INSERT INTO b SELECT generate_series(1,10000000);
