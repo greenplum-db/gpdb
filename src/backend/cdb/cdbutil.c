@@ -106,7 +106,7 @@ typedef struct SegIpEntry
 
 typedef struct HostSegsEntry
 {
-	char		hostip[INET6_ADDRSTRLEN];
+	char		hostname[MAXHOSTNAMELEN];
 	int			segmentCount;
 } HostSegsEntry;
 
@@ -375,6 +375,19 @@ getCdbComponentInfo(void)
 		CdbComponentDatabaseInfo	*pRow;
 		GpSegConfigEntry	*config = &configs[i];
 
+		if (config->hostname == NULL || strlen(config->hostname) > MAXHOSTNAMELEN)
+		{
+			/*
+			 * We should never reach here, but add sanity check
+			 * The reason we check length is we find MAXHOSTNAMELEN might be
+			 * smaller than the ones defined in /etc/hosts. Those are rare cases.
+			 */
+			elog(ERROR,
+				 "Invalid length (%d) of hostname (%s)",
+				 config->hostname == NULL ? 0 : (int) strlen(config->hostname),
+				 config->hostname == NULL ? "" : config->hostname);
+		}
+
 		/* lookup hostip/hostaddrs cache */
 		config->hostip= NULL;
 		getAddressesForDBid(config, !am_ftsprobe? ERROR : LOG);
@@ -414,10 +427,10 @@ getCdbComponentInfo(void)
 		pRow->numIdleQEs = 0;
 		pRow->numActiveQEs = 0;
 
-		if (config->role != GP_SEGMENT_CONFIGURATION_ROLE_PRIMARY || config->hostip == NULL)
+		if (config->role != GP_SEGMENT_CONFIGURATION_ROLE_PRIMARY)
 			continue;
 
-		hsEntry = (HostSegsEntry *) hash_search(hostSegsHash, config->hostip, HASH_ENTER, &found);
+		hsEntry = (HostSegsEntry *) hash_search(hostSegsHash, config->hostname, HASH_ENTER, &found);
 		if (found)
 			hsEntry->segmentCount++;
 		else
@@ -528,10 +541,10 @@ getCdbComponentInfo(void)
 	{
 		cdbInfo = &component_databases->segment_db_info[i];
 
-		if (cdbInfo->config->role != GP_SEGMENT_CONFIGURATION_ROLE_PRIMARY || cdbInfo->config->hostip == NULL)
+		if (cdbInfo->config->role != GP_SEGMENT_CONFIGURATION_ROLE_PRIMARY)
 			continue;
 
-		hsEntry = (HostSegsEntry *) hash_search(hostSegsHash, cdbInfo->config->hostip, HASH_FIND, &found);
+		hsEntry = (HostSegsEntry *) hash_search(hostSegsHash, cdbInfo->config->hostname, HASH_FIND, &found);
 		Assert(found);
 		cdbInfo->hostSegs = hsEntry->segmentCount;
 	}
@@ -540,10 +553,10 @@ getCdbComponentInfo(void)
 	{
 		cdbInfo = &component_databases->entry_db_info[i];
 
-		if (cdbInfo->config->role != GP_SEGMENT_CONFIGURATION_ROLE_PRIMARY || cdbInfo->config->hostip == NULL)
+		if (cdbInfo->config->role != GP_SEGMENT_CONFIGURATION_ROLE_PRIMARY)
 			continue;
 
-		hsEntry = (HostSegsEntry *) hash_search(hostSegsHash, cdbInfo->config->hostip, HASH_FIND, &found);
+		hsEntry = (HostSegsEntry *) hash_search(hostSegsHash, cdbInfo->config->hostname, HASH_FIND, &found);
 		Assert(found);
 		cdbInfo->hostSegs = hsEntry->segmentCount;
 	}
@@ -1404,7 +1417,7 @@ hostSegsHashTableInit(void)
 
 	/* Set key and entry sizes. */
 	MemSet(&info, 0, sizeof(info));
-	info.keysize = INET6_ADDRSTRLEN;
+	info.keysize = MAXHOSTNAMELEN;
 	info.entrysize = sizeof(HostSegsEntry);
 
 	return hash_create("HostSegs", 32, &info, HASH_ELEM);
