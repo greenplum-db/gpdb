@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
-<topic id="topic1"><title id="as20941">ALTER OPERATOR CLASS</title><body><p id="sql_command_desc">Changes the definition of an operator class.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">ALTER OPERATOR CLASS <varname>name</varname> USING <varname>index_method</varname> RENAME TO <varname>new_name</varname>
+<topic id="topic1"><title id="as20941">ALTER OPERATOR CLASS</title><body><p id="sql_command_desc">Changes the definition of an operator class.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">ALTER OPERATOR CLASS &lt;name> USING &lt;index_method> RENAME TO &lt;new_name>
 
-ALTER OPERATOR CLASS <varname>name</varname> USING <varname>index_method</varname> OWNER TO <varname>new_owner</varname>
+ALTER OPERATOR CLASS &lt;name> USING &lt;index_method> OWNER TO &lt;new_owner>
 
-ALTER OPERATOR CLASS <varname>name</varname> USING <varname>index_method</varname> SET SCHEMA <varname>new_schema</varname></codeblock></section><section id="section3"><title>Description</title><p><codeph>ALTER OPERATOR CLASS</codeph> changes the definition of an operator
+ALTER OPERATOR CLASS &lt;name> USING &lt;index_method> SET SCHEMA &lt;new_schema></codeblock></section><section id="section3"><title>Description</title><p><codeph>ALTER OPERATOR CLASS</codeph> changes the definition of an operator
 class. </p><p>You must own the operator class to use <codeph>ALTER OPERATOR CLASS</codeph>.
 To alter the owner, you must also be a direct or indirect member of the
 new owning role, and that role must have <codeph>CREATE</codeph> privilege
@@ -18,6 +18,6 @@ class anyway.) </p></section><section id="section4"><title>Parameters</title><pa
   <pt><varname>new_schema</varname></pt>
   <pd>The new schema for the operator class.</pd>
 </plentry></parml></section><section id="section5"><title>Compatibility</title><p>There is no <codeph>ALTER OPERATOR CLASS</codeph> statement in the SQL
-standard. </p></section><section id="section6"><title>See Also</title><p><codeph><xref href="./CREATE_OPERATOR_CLASS.xml#topic1" type="topic" format="dita"/></codeph>,
-            <codeph><xref href="./DROP_OPERATOR_CLASS.xml#topic1" type="topic" format="dita"
-          /></codeph></p></section></body></topic>
+standard. </p></section><section id="section6"><title>See Also</title><p><xref href="./CREATE_OPERATOR_CLASS.xml#topic1" type="topic" format="dita"/>,
+            <xref href="./DROP_OPERATOR_CLASS.xml#topic1" type="topic" format="dita"
+          /></p></section></body></topic>

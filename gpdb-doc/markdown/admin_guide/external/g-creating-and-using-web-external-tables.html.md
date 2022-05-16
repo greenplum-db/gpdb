@@ -6,7 +6,7 @@ External web tables allow Greenplum Database to treat dynamic data sources like 
 
 `CREATE EXTERNAL WEB TABLE` creates a web table definition. You can define command-based or URL-based external web tables. The definition forms are distinct: you cannot mix command-based and URL-based definitions.
 
-**Parent topic:**[Defining External Tables](../external/g-external-tables.html)
+**Parent topic:** [Defining External Tables](../external/g-external-tables.html)
 
 ## <a id="topic32"></a>Command-based External Web Tables 
 

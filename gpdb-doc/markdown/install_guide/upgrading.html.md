@@ -31,7 +31,7 @@ Before starting the upgrade process, perform the following checks.
     If you do not plan to use GPSS, or you have not yet configured GPSS, no action is necessary.
 
 
-**Parent topic:**[Upgrading to Greenplum 6](upgrade_intro.html)
+**Parent topic:** [Upgrading to Greenplum 6](upgrade_intro.html)
 
 ## <a id="topic17"></a>Upgrading from 6.x to a Newer 6.x Release 
 

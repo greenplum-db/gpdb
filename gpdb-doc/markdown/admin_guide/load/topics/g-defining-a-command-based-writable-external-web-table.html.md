@@ -40,5 +40,5 @@ The following Greenplum Database variables are available for use in OS commands 
 -   **[Disabling EXECUTE for Web or Writable External Tables](../../load/topics/g-disabling-execute-for-web-or-writable-external-tables.html)**  
 
 
-**Parent topic:**[Unloading Data from Greenplum Database](../../load/topics/g-unloading-data-from-greenplum-database.html)
+**Parent topic:** [Unloading Data from Greenplum Database](../../load/topics/g-unloading-data-from-greenplum-database.html)
 

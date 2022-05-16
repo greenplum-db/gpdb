@@ -238,6 +238,16 @@ ExecInitSort(Sort *node, EState *estate, int eflags)
 			   "initializing sort node");
 
 	/*
+	 * GPDB
+	 */
+#ifdef FAULT_INJECTOR
+	if (SIMPLE_FAULT_INJECTOR("rg_qmem_qd_qe") == FaultInjectorTypeSkip)
+	{
+		elog(NOTICE, "op_mem=%d", (int) (((Plan *) node)->operatorMemKB));
+	}
+#endif
+
+	/*
 	 * create state structure
 	 */
 	sortstate = makeNode(SortState);

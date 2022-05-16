@@ -3906,8 +3906,6 @@ CTranslatorDXLToPlStmt::TranslateDXLDml(
 	RangeTblEntry *rte = TranslateDXLTblDescrToRangeTblEntry(
 		table_descr, index, &base_table_context);
 	GPOS_ASSERT(nullptr != rte);
-	// GPDB_12_MERGE_FIXME: Make this an parameter in TranslateDXLTblDescrToRangeTblEntry
-	rte->rellockmode = RowExclusiveLock;
 	rte->requiredPerms |= acl_mode;
 	m_dxl_to_plstmt_context->AddRTE(rte, true);
 
@@ -4328,8 +4326,7 @@ CTranslatorDXLToPlStmt::TranslateDXLTblDescrToRangeTblEntry(
 	rte->relid = oid;
 	rte->checkAsUser = table_descr->GetExecuteAsUserId();
 	rte->requiredPerms |= ACL_NO_RIGHTS;
-	// GPDB_12_MERGE_FIXME: Make this an parameter
-	rte->rellockmode = AccessShareLock;
+	rte->rellockmode = table_descr->LockMode();
 
 	// save oid and range index in translation context
 	base_table_context->SetOID(oid);

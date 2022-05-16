@@ -38,13 +38,13 @@
         up of a number of fields which are separated by spaces and/or tabs. Fields can contain white
         space if the field value is quoted. Records cannot be continued across lines. </p>
       <p>A record can have one of seven formats:
-        <codeblock>local      <varname>database</varname>  <varname>user</varname>  <varname>auth-method</varname>  [<varname>auth-options</varname>]
-host       <varname>database</varname>  <varname>user</varname>  <varname>address</varname>  <varname>auth-method</varname>  [<varname>auth-options</varname>]
-hostssl    <varname>database</varname>  <varname>user</varname>  <varname>address</varname>  <varname>auth-method</varname>  [<varname>auth-options</varname>]
-hostnossl  <varname>database</varname>  <varname>user</varname>  <varname>address</varname>  <varname>auth-method</varname>  [<varname>auth-options</varname>]
-host       <varname>database</varname>  <varname>user</varname>  <varname>IP-address</varname>  <varname>IP-mask</varname>  <varname>auth-method</varname>  [<varname>auth-options</varname>]
-hostssl    <varname>database</varname>  <varname>user</varname>  <varname>IP-address</varname>  <varname>IP-mask</varname>  <varname>auth-method</varname>  [<varname>auth-options</varname>]
-hostnossl  <varname>database</varname>  <varname>user</varname>  <varname>IP-address</varname>  <varname>IP-mask</varname>  <varname>auth-method</varname>  [<varname>auth-options</varname>]</codeblock></p>
+        <codeblock>local      &lt;database>  &lt;user>  &lt;auth-method>  [&lt;auth-options>]
+host       &lt;database>  &lt;user>  &lt;address>  &lt;auth-method>  [&lt;auth-options>]
+hostssl    &lt;database>  &lt;user>  &lt;address>  &lt;auth-method>  [&lt;auth-options>]
+hostnossl  &lt;database>  &lt;user>  &lt;address>  &lt;auth-method>  [&lt;auth-options>]
+host       &lt;database>  &lt;user>  &lt;IP-address>  &lt;IP-mas>k  &lt;auth-method>  [&lt;auth-options>]
+hostssl    &lt;database>  &lt;user>  &lt;IP-address>  &lt;IP-mask>  &lt;auth-method>  [&lt;auth-options>]
+hostnossl  &lt;database&lt;  &lt;user>  &lt;IP-address>  &lt;IP-mask>  &lt;auth-method>  [&lt;auth-options>]</codeblock></p>
       <p>The meaning of the <codeph>pg_hba.conf</codeph> fields is as follows: <parml>
           <plentry>
             <pt><codeph>local</codeph></pt>
@@ -71,14 +71,14 @@ hostnossl  <varname>database</varname>  <varname>user</varname>  <varname>IP-add
             <pd> Matches connection attempts made over TCP/IP that do not use SSL. </pd>
           </plentry>
           <plentry>
-            <pt><codeph><varname>database</varname></codeph></pt>
+            <pt><codeph>database</codeph></pt>
             <pd>Specifies which database names this record matches. The value <codeph>all</codeph>
               specifies that it matches all databases. Multiple database names can be supplied by
               separating them with commas. A separate file containing database names can be
               specified by preceding the file name with <codeph>@</codeph>. </pd>
           </plentry>
           <plentry>
-            <pt><codeph><varname>user</varname></codeph></pt>
+            <pt><codeph>user</codeph></pt>
             <pd>Specifies which database role names this record matches. The value
                 <codeph>all</codeph> specifies that it matches all roles. If the specified role is a
               group and you want all members of that group to be included, precede the role name
@@ -88,7 +88,7 @@ hostnossl  <varname>database</varname>  <varname>user</varname>  <varname>IP-add
           </plentry>
           <plentry>
             <pt>
-              <codeph><varname>address</varname></codeph>
+              <codeph>address</codeph>
             </pt>
             <pd>Specifies the client machine addresses that this record matches. This field can
               contain either a host name, an IP address range, or one of the special key words
@@ -139,8 +139,8 @@ hostnossl  <varname>database</varname>  <varname>user</varname>  <varname>IP-add
               instead of the IP address in the log. </pd>
           </plentry>
           <plentry>
-            <pt><codeph><varname>IP-address</varname></codeph></pt>
-            <pt><codeph><varname>IP-mask</varname></codeph>
+            <pt><codeph>IP-address</codeph></pt>
+            <pt><codeph>IP-mask</codeph>
             </pt>
             <pd>These two fields can be used as an alternative to the CIDR address notation. Instead
               of specifying the mask length, the actual mask is specified in a separate column. For
@@ -149,18 +149,17 @@ hostnossl  <varname>database</varname>  <varname>user</varname>  <varname>IP-add
           </plentry>
           <plentry>
             <pt>
-              <codeph><varname>auth-method</varname></codeph>
+              <codeph>auth-method</codeph>
             </pt>
             <pd> Specifies the authentication method to use when a connection matches this record.
               See <xref href="#topic_nyh_gwd_jr" format="dita"/> for options. </pd>
           </plentry>
           <plentry>
-            <pt><codeph><varname>auth-options</varname></codeph></pt>
-            <pd>After the <codeph><varname>auth-method</varname></codeph> field, there can be
-              field(s) of the form <codeph><varname>name=value</varname></codeph> that specify
-              options for the authentication method. Details about which options are available for
-              which authentication methods are described in <xref href="#topic_nyh_gwd_jr"
-                format="dita"/>.</pd>
+            <pt><codeph>auth-options</codeph></pt>
+            <pd>After the <codeph>auth-method</codeph> field, there can be field(s) of the form
+                <varname>name=value</varname> that specify options for the authentication method.
+              Details about which options are available for which authentication methods are
+              described in <xref href="#topic_nyh_gwd_jr" format="dita"/>.</pd>
           </plentry>
         </parml></p>
       <p>Files included by @ constructs are read as lists of names, which can be separated by either
@@ -332,19 +331,17 @@ host     all           all             0.0.0.0/0     md5</codeblock>
         <p>The <codeph>gss</codeph> authentication method is only available for TCP/IP
           connections.</p>
         <p>When GSSAPI uses Kerberos, it uses a standard principal in the format
-              <codeph><varname>servicename/hostname@realm</varname></codeph>. The Greenplum Database
-          server will accept any principal that is included in the keytab file used by the server,
-          but care needs to be taken to specify the correct principal details when making the
-          connection from the client using the <codeph>krbsrvname</codeph> connection parameter.
-          (See <xref
+            <varname>servicename/hostname@realm</varname>. The Greenplum Database server will accept
+          any principal that is included in the keytab file used by the server, but care needs to be
+          taken to specify the correct principal details when making the connection from the client
+          using the <codeph>krbsrvname</codeph> connection parameter. (See <xref
             href="https://www.postgresql.org/docs/9.4/libpq-connect.html#LIBPQ-PARAMKEYWORDS"
-            format="html" scope="external">Connection Parameter Key Words</xref> in the PostgreSQL documentation.) In most
-          environments, this parameter never needs to be changed. Some Kerberos implementations
-          might require a different service name, such as Microsoft Active Directory, which requires
-          the service name to be in upper case (POSTGRES).</p>
-        <p><codeph><varname>hostname</varname></codeph> is the fully qualified host name of the
-          server machine. The service principal's realm is the preferred realm of the server
-          machine.</p>
+            format="html" scope="external">Connection Parameter Key Words</xref> in the PostgreSQL
+          documentation.) In most environments, this parameter never needs to be changed. Some
+          Kerberos implementations might require a different service name, such as Microsoft Active
+          Directory, which requires the service name to be in upper case (POSTGRES).</p>
+        <p><varname>hostname</varname> is the fully qualified host name of the server machine. The
+          service principal's realm is the preferred realm of the server machine.</p>
         <p>Client principals must have their Greenplum Database user name as their first component,
           for example <codeph>gpusername@realm</codeph>. Alternatively, you can use a user name
           mapping to map from the first component of the principal name to the database user name.

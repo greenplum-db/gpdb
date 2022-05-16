@@ -67,5 +67,5 @@ The Greenplum `gpload` utility loads data using readable external tables and the
     ```
 
 
-**Parent topic:**[Loading and Unloading Data](../../load/topics/g-loading-and-unloading-data.html)
+**Parent topic:** [Loading and Unloading Data](../../load/topics/g-loading-and-unloading-data.html)
 

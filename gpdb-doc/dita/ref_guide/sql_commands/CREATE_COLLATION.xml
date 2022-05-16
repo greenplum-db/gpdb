@@ -7,12 +7,12 @@
       locale settings, or by copying an existing collation.</p>
     <section id="section2">
       <title>Synopsis</title>
-      <codeblock id="sql_command_synopsis">CREATE COLLATION <varname>name</varname> (    
-    [ LOCALE = <varname>locale</varname>, ]    
-    [ LC_COLLATE = <varname>lc_collate</varname>, ]    
-    [ LC_CTYPE = <varname>lc_ctype</varname> ])
+      <codeblock id="sql_command_synopsis">CREATE COLLATION &lt;name> (    
+    [ LOCALE = &lt;locale>, ]    
+    [ LC_COLLATE = &lt;lc_collate>, ]    
+    [ LC_CTYPE = &lt;lc_ctype> ])
 
-CREATE COLLATION <varname>name</varname> FROM <varname>existing_collation</varname></codeblock>
+CREATE COLLATION &lt;name> FROM &lt;existing_collation></codeblock>
     </section>
     <section id="section3">
       <title>Description</title>
@@ -95,8 +95,8 @@ CREATE COLLATION <varname>name</varname> FROM <varname>existing_collation</varna
     <section id="section8">
       <title>See Also</title>
       <p>
-        <codeph><xref href="./ALTER_COLLATION.xml#topic1" type="topic" format="dita"/></codeph>,
-            <codeph><xref href="DROP_COLLATION.xml#topic1"/></codeph>
+        <xref href="./ALTER_COLLATION.xml#topic1" type="topic" format="dita"/>,
+            <xref href="DROP_COLLATION.xml#topic1"/>
       </p>
     </section>
   </body>

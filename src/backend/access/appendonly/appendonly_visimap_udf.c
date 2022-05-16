@@ -218,13 +218,14 @@ gp_aovisimap_hidden_info(PG_FUNCTION_ARGS)
 		{
 			context->appendonlySegfileInfo = GetAllFileSegInfo(context->parentRelation,
 															   snapshot,
-															   &context->segfile_info_total);
+															   &context->segfile_info_total,
+															   NULL);
 		}
 		else
 		{
 			Assert(RelationIsAoCols(context->parentRelation));
 			context->aocsSegfileInfo = GetAllAOCSFileSegInfo(context->parentRelation,
-															 snapshot, &context->segfile_info_total);
+															 snapshot, &context->segfile_info_total, NULL);
 		}
 		context->i = 0;
 

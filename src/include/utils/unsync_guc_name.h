@@ -237,6 +237,7 @@
 		"gp_resource_group_cpu_ceiling_enforcement",
 		"gp_resource_group_memory_limit",
 		"gp_resource_group_queuing_timeout",
+		"gp_resource_group_enable_recalculate_query_mem",
 		"gp_resource_manager",
 		"gp_resqueue_memory_policy",
 		"gp_resqueue_priority",

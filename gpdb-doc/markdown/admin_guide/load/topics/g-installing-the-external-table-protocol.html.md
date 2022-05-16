@@ -21,5 +21,5 @@ The compiled code \(shared object file\) for the custom protocol must be placed 
 -   **[gpextprotocal.c](../../load/topics/g-gpextprotocal.c.html)**  
 
 
-**Parent topic:**[Example Custom Data Access Protocol](../../load/topics/g-example-custom-data-access-protocol.html)
+**Parent topic:** [Example Custom Data Access Protocol](../../load/topics/g-example-custom-data-access-protocol.html)
 

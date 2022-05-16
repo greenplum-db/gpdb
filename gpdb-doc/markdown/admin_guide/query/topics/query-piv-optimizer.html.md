@@ -23,5 +23,5 @@ There are limitations in Greenplum Database when using the default GPORCA optimi
 -   **[About Uniform Multi-level Partitioned Tables](../../query/topics/query-piv-uniform-part-tbl.html)**  
 
 
-**Parent topic:**[Querying Data](../../query/topics/query.html)
+**Parent topic:** [Querying Data](../../query/topics/query.html)
 

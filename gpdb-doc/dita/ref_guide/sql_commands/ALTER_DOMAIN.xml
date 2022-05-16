@@ -1,23 +1,23 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
-<topic id="topic1"><title id="aj20941">ALTER DOMAIN</title><body><p id="sql_command_desc">Changes the definition of a domain.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">ALTER DOMAIN <varname>name</varname> { SET DEFAULT <varname>expression</varname> | DROP DEFAULT }
+<topic id="topic1"><title id="aj20941">ALTER DOMAIN</title><body><p id="sql_command_desc">Changes the definition of a domain.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">ALTER DOMAIN &lt;name> { SET DEFAULT &lt;expression> | DROP DEFAULT }
 
-ALTER DOMAIN <varname>name</varname> { SET | DROP } NOT NULL
+ALTER DOMAIN &lt;name> { SET | DROP } NOT NULL
 
-ALTER DOMAIN <varname>name</varname> ADD <varname>domain_constraint</varname> [ NOT VALID ]
+ALTER DOMAIN &lt;name> ADD &lt;domain_constraint> [ NOT VALID ]
 
-ALTER DOMAIN <varname>name</varname> DROP CONSTRAINT [ IF EXISTS ] <varname>constraint_name</varname> [RESTRICT | CASCADE]
+ALTER DOMAIN &lt;name> DROP CONSTRAINT [ IF EXISTS ] &lt;constraint_name> [RESTRICT | CASCADE]
 
-ALTER DOMAIN <varname>name</varname> RENAME CONSTRAINT <varname>constraint_name</varname> TO <varname>new_constraint_name</varname>
+ALTER DOMAIN &lt;name> RENAME CONSTRAINT &lt;constraint_name> TO &lt;new_constraint_name>
 
-ALTER DOMAIN <varname>name</varname> VALIDATE CONSTRAINT <varname>constraint_name</varname>
+ALTER DOMAIN &lt;name> VALIDATE CONSTRAINT &lt;constraint_name>
   
-ALTER DOMAIN <varname>name</varname> OWNER TO <varname>new_owner</varname>
+ALTER DOMAIN &lt;name> OWNER TO &lt;new_owner>
   
-ALTER DOMAIN <varname>name</varname> RENAME TO <varname>new_name</varname>
+ALTER DOMAIN &lt;name> RENAME TO &lt;new_name>
 
-ALTER DOMAIN <varname>name</varname> SET SCHEMA <varname>new_schema</varname></codeblock></section><section id="section3"><title>Description</title><p><codeph>ALTER DOMAIN</codeph> changes the definition of an existing
+ALTER DOMAIN &lt;name> SET SCHEMA &lt;new_schema></codeblock></section><section id="section3"><title>Description</title><p><codeph>ALTER DOMAIN</codeph> changes the definition of an existing
 domain. There are several sub-forms: </p><ul><li id="aj136679"><b>SET/DROP DEFAULT</b> — These forms set or remove the default value
 for a domain. Note that defaults only apply to subsequent <codeph>INSERT</codeph>
 commands. They do not affect rows already in a table using the domain.
@@ -83,5 +83,5 @@ This is the default behavior. </pd></plentry>
           <codeph>OWNER</codeph>, <codeph>RENAME</codeph>, <codeph>SET SCHEMA</codeph>, and
           <codeph>VALIDATE CONSTRAINT</codeph> variants, which are Greenplum Database extensions.
         The <codeph>NOT VALID</codeph> clause of the <codeph>ADD CONSTRAINT</codeph> variant is also
-        a Greenplum Database extension. </p></section><section id="section7"><title>See Also</title><p><codeph><xref href="./CREATE_DOMAIN.xml#topic1" type="topic" format="dita"/></codeph>,
-            <codeph><xref href="./DROP_DOMAIN.xml#topic1" type="topic" format="dita"/></codeph></p></section></body></topic>
+        a Greenplum Database extension. </p></section><section id="section7"><title>See Also</title><p><xref href="./CREATE_DOMAIN.xml#topic1" type="topic" format="dita"/>,
+            <xref href="./DROP_DOMAIN.xml#topic1" type="topic" format="dita"/></p></section></body></topic>

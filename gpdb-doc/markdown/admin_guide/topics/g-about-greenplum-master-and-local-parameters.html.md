@@ -10,5 +10,5 @@ Other parameters are *master* parameters that you set on the master instance. Th
 
 See the *Greenplum Database Reference Guide* for information about *local* and *master* server configuration parameters.
 
-**Parent topic:**[Configuring the Greenplum Database System](../topics/g-configuring-the-greenplum-system.html)
+**Parent topic:** [Configuring the Greenplum Database System](../topics/g-configuring-the-greenplum-system.html)
 

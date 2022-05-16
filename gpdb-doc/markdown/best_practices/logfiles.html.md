@@ -36,5 +36,5 @@ To search log files on the segment hosts, use the Greenplum `gplogfilter` utilit
 
 Greenplum Database can be configured to rotate database logs based on the size and/or age of the current log file. The `log_rotation_size` configuration parameter sets the size of an individual log file that triggers rotation. When the current log file size is equal to or greater than this size, the file is closed and a new log file is created. The `log_rotation_age` configuration parameter specifies the age of the current log file that triggers rotation. When the specified time has elapsed since the current log file was created, a new log file is created. The default `log_rotation_age`, 1d, creates a new log file 24 hours after the current log file was created.
 
-**Parent topic:**[System Monitoring and Maintenance](maintenance.html)
+**Parent topic:** [System Monitoring and Maintenance](maintenance.html)
 

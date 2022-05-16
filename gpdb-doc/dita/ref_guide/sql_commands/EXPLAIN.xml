@@ -7,14 +7,14 @@
     <p id="sql_command_desc">Shows the query plan of a statement.</p>
     <section id="section2">
       <title>Synopsis</title>
-      <codeblock id="sql_command_synopsis">EXPLAIN [ ( <varname>option</varname> [, ...] ) ] <varname>statement</varname>
-EXPLAIN [ANALYZE] [VERBOSE] <varname>statement</varname></codeblock>
+      <codeblock id="sql_command_synopsis">EXPLAIN [ ( &lt;option> [, ...] ) ] &lt;statement>
+EXPLAIN [ANALYZE] [VERBOSE] &lt;statement></codeblock>
       <p>where <varname>option</varname> can be one
-        of:<codeblock>    ANALYZE [ <varname>boolean</varname> ]
-    VERBOSE [ <varname>boolean</varname> ]
-    COSTS [ <varname>boolean</varname> ]
-    BUFFERS [ <varname>boolean</varname> ]
-    TIMING [ <varname>boolean</varname> ]
+        of:<codeblock>    ANALYZE [ &lt;boolean> ]
+    VERBOSE [ &lt;boolean> ]
+    COSTS [ &lt;boolean> ]
+    BUFFERS [ &lt;boolean> ]
+    TIMING [ &lt;boolean> ]
     FORMAT { TEXT | XML | JSON | YAML }</codeblock></p>
     </section>
     <section id="section3">
@@ -300,7 +300,7 @@ ROLLBACK;</codeblock></note>
     </section>
     <section id="section8">
       <title>See Also</title>
-      <p><codeph><xref href="ANALYZE.xml#topic1" type="topic" format="dita"/></codeph></p>
+      <p><xref href="ANALYZE.xml#topic1" type="topic" format="dita"/></p>
     </section>
   </body>
 </topic>

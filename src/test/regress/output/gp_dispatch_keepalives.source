@@ -24,7 +24,7 @@ CREATE OR REPLACE FUNCTION save_keepalives_data(result_table text) RETURNS void 
                                                                    r["keepalives_interval"], r["keepalives_count"], \
                                                                    r["keepalives_idle"])
         plpy.execute(stmt)
-$$ LANGUAGE plpython3u VOLATILE EXECUTE ON MASTER;
+$$ LANGUAGE plpython3u VOLATILE;
 -- Before we change the keepalives parameters, create the result table to start
 -- the cdbgang and to store the function call results afterwards.
 CREATE TABLE keepalives_before (qe_id int2, is_writer bool,

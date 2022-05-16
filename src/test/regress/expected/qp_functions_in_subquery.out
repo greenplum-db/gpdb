@@ -3795,3 +3795,24 @@ ERROR:  UPDATE is not allowed in a non-volatile function
 CONTEXT:  SQL statement "UPDATE bar SET d = d+1 WHERE c = $1"
 PL/pgSQL function func2_mod_int_stb(integer) line 3 at SQL statement
 rollback;
+-- Test for the target list of RTE_RESULT relation contains unevaluated functions.
+-- Functions that return record cannot eval to const during planning time.
+EXPLAIN (VERBOSE, COSTS OFF) SELECT func_nosql_record_imm(1) union all select func_nosql_record_imm(2);
+                QUERY PLAN
+------------------------------------------
+ Append
+   ->  Result
+         Output: func_nosql_record_imm(1)
+   ->  Result
+         Output: func_nosql_record_imm(2)
+ Optimizer: Postgres query optimizer
+ Settings: optimizer=off
+(7 rows)
+
+SELECT func_nosql_record_imm(1) union all select func_nosql_record_imm(2);
+ func_nosql_record_imm 
+-----------------------
+ (1,2)
+ (2,3)
+(2 rows)
+

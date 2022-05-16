@@ -252,5 +252,5 @@ See [Encrypting Data and Database Connections](encryption.html)
 
 See [High Availability](ha.html).
 
-**Parent topic:**[Greenplum Database Best Practices](intro.html)
+**Parent topic:** [Greenplum Database Best Practices](intro.html)
 

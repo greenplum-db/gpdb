@@ -513,57 +513,6 @@ typedef struct ResultRelInfo
 	struct CopyMultiInsertBuffer *ri_CopyMultiInsertBuffer;
 } ResultRelInfo;
 
-/*
- * DynamicTableScanInfo
- *   Encapsulate the information that is needed to maintain the pid indexes
- * for all dynamic table scans in a plan.
- */
-/* GPDB_12_MERGE_FIXME: dead code now? */
-typedef struct DynamicTableScanInfo
-{
-	/*
-	 * The total number of unique dynamic table scans in the plan.
-	 */
-	int			numScans;
-
-	/*
-	 * List containing the number of partition selectors for every scan id.
-	 * Element #i in the list corresponds to scan id i
-	 */
-	List	   *numSelectorsPerScanId;
-
-	/*
-	 * An array of pid indexes, one for each unique dynamic table scans.
-	 * Each of these pid indexes maintains unique pids that are involved
-	 * in the scan.
-	 */
-	HTAB	  **pidIndexes;
-
-	/*
-	 * An array of Oids, for the current partition being scanned in each
-	 *  dynamic scan. (XXX: Currently only used to pass the oid from
-	 * DynamicBitmapHeapScan to DynamicBitmapIndexScans.
-	 */
-	Oid		   *curRelOids;
-
-	/*
-	 * Partitioning metadata for all relevant partition tables.
-	 */
-	List	   *partsMetadata;
-} DynamicTableScanInfo;
-
-/*
- * Number of pids used when initializing the pid-index hash table for each dynamic
- * table scan.
- */
-#define INITIAL_NUM_PIDS 1000
-
-/*
- * The initial estimate size for dynamic table scan pid-index array, and the
- * default incremental number when the array is out of space.
- */
-#define NUM_PID_INDEXES_ADDED 10
-
 /* ----------------
  *	  EState information
  *

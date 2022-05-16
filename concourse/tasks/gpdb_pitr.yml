@@ -1,0 +1,12 @@
+platform: linux
+image_resource:
+  type: registry-image
+inputs:
+  - name: gpdb_src
+  - name: bin_gpdb
+params:
+  TEST_OS: ""
+  CONFIGURE_FLAGS: ""
+  WITH_MIRRORS:
+run:
+  path: gpdb_src/concourse/scripts/gpdb_pitr.bash

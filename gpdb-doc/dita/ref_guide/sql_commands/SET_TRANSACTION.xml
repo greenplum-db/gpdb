@@ -7,11 +7,11 @@
     <p id="sql_command_desc">Sets the characteristics of the current transaction.</p>
     <section id="section2">
       <title>Synopsis</title>
-      <codeblock id="sql_command_synopsis">SET TRANSACTION [<varname>transaction_mode</varname>] [READ ONLY | READ WRITE]
+      <codeblock id="sql_command_synopsis">SET TRANSACTION [&lt;transaction_mode>] [READ ONLY | READ WRITE]
 
-SET TRANSACTION SNAPSHOT <varname>snapshot_id</varname>
+SET TRANSACTION SNAPSHOT &lt;snapshot_id>
 
-SET SESSION CHARACTERISTICS AS TRANSACTION <varname>transaction_mode</varname> 
+SET SESSION CHARACTERISTICS AS TRANSACTION &lt;transaction_mode> 
      [READ ONLY | READ WRITE]
      [NOT] DEFERRABLE</codeblock>
       <p>where <varname>transaction_mode</varname> is one of:</p>
@@ -172,8 +172,8 @@ SET TRANSACTION ISOLATION LEVEL REPEATABLE READ;</codeblock>
     </section>
     <section id="section8">
       <title>See Also</title>
-      <p><codeph><xref href="BEGIN.xml#topic1" type="topic" format="dita"/></codeph>, <codeph><xref
-            href="LOCK.xml#topic1" type="topic" format="dita"/></codeph></p>
+      <p><xref href="BEGIN.xml#topic1" type="topic" format="dita"/>, <xref
+            href="LOCK.xml#topic1" type="topic" format="dita"/></p>
     </section>
   </body>
 </topic>

@@ -1,14 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
-<topic id="topic1"><title id="cc20941">CREATE SEQUENCE</title><body><p id="sql_command_desc">Defines a new sequence generator.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">CREATE [TEMPORARY | TEMP] SEQUENCE <varname>name</varname>
-       [INCREMENT [BY] <varname>value</varname>] 
-       [MINVALUE <varname>minvalue</varname> | NO MINVALUE] 
-       [MAXVALUE <varname>maxvalue</varname> | NO MAXVALUE] 
-       [START [ WITH ] <varname>start</varname>] 
-       [CACHE <varname>cache</varname>] 
+<topic id="topic1"><title id="cc20941">CREATE SEQUENCE</title><body><p id="sql_command_desc">Defines a new sequence generator.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">CREATE [TEMPORARY | TEMP] SEQUENCE &lt;name>
+       [INCREMENT [BY] &lt;value>] 
+       [MINVALUE &lt;minvalue> | NO MINVALUE] 
+       [MAXVALUE &lt;maxvalue> | NO MAXVALUE] 
+       [START [ WITH ] &lt;start>] 
+       [CACHE &lt;cache>] 
        [[NO] CYCLE] 
-       [OWNED BY { <varname>table</varname>.<varname>column</varname> | NONE }]</codeblock></section><section id="section3"><title>Description</title><p><codeph>CREATE SEQUENCE</codeph> creates a new sequence number generator.
+       [OWNED BY { &lt;table>.&lt;column> | NONE }]</codeblock></section><section id="section3"><title>Description</title><p><codeph>CREATE SEQUENCE</codeph> creates a new sequence number generator.
 This involves creating and initializing a new special single-row table.
 The generator will be owned by the user issuing the command. </p><p>If a schema name is given, then the sequence is created in the specified
 schema. Otherwise it is created in the current schema. Temporary sequences
@@ -36,7 +36,7 @@ on distributed table data.</li><li id="cc149515"><codeph>nextval()</codeph> some
 master for a segment to use, depending on the query. So values may sometimes
 be skipped in the sequence if all of the block turns out not to be needed
 at the segment level. Note that a regular PostgreSQL database does this
-too, so this is not something unique to Greenplum Database.</li></ul><p>Although you cannot update a sequence directly, you can use a query like:</p><codeblock>SELECT * FROM <varname>sequence_name</varname>;</codeblock><p>to examine the parameters and current state of a sequence. In particular,
+too, so this is not something unique to Greenplum Database.</li></ul><p>Although you cannot update a sequence directly, you can use a query like:</p><codeblock>SELECT * FROM &lt;sequence_name>;</codeblock><p>to examine the parameters and current state of a sequence. In particular,
 the <varname>last_value</varname> field of the sequence shows the last value allocated
 by any session.</p></section><section id="section4"><title>Parameters</title><parml><plentry><pt>TEMPORARY | TEMP</pt><pd>If specified, the sequence object is created only for this session,
 and is automatically dropped on session exit. Existing permanent sequences
@@ -80,6 +80,6 @@ the following exceptions: </p><ul><li id="cc148458">The <codeph>AS <varname>data
           is not supported. </li><li id="cc148460">Obtaining the next value is done using the <codeph>nextval()</codeph>
 function instead of the <codeph>NEXT VALUE FOR</codeph> expression specified
 in the SQL standard. </li><li id="cc148462">The <codeph>OWNED BY</codeph> clause is a Greenplum Database extension.
-</li></ul></section><section id="section8"><title>See Also</title><p><codeph><xref href="ALTER_SEQUENCE.xml#topic1" type="topic" format="dita"/></codeph>,
-            <codeph><xref href="./DROP_SEQUENCE.xml#topic1" type="topic" format="dita"
-        /></codeph></p></section></body></topic>
+</li></ul></section><section id="section8"><title>See Also</title><p><xref href="ALTER_SEQUENCE.xml#topic1" type="topic" format="dita"/>,
+            <xref href="./DROP_SEQUENCE.xml#topic1" type="topic" format="dita"
+        /></p></section></body></topic>

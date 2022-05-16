@@ -13,5 +13,5 @@ The upgrade path supported for this release is Greenplum Database 6.x to a newer
 -   **[Migrating Data from Greenplum 4.3 or 5 to Greenplum 6](migrate.html)**  
 You can migrate data from Greenplum Database 4.3 or 5 to Greenplum 6 using the standard backup and restore procedures, `gpbackup` and `gprestore`, or by using `gpcopy` for Tanzu Greenplum.
 
-**Parent topic:**[Installing and Upgrading Greenplum](install_guide.html)
+**Parent topic:** [Installing and Upgrading Greenplum](install_guide.html)
 

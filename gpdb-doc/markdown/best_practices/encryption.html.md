@@ -396,7 +396,7 @@ The following example shows how to securely load data into an external table. Th
     ```
 
 
-**Parent topic:**[Greenplum Database Best Practices](intro.html)
+**Parent topic:** [Greenplum Database Best Practices](intro.html)
 
 [1](#fnsrc_1) SHA2 algorithms were added to OpenSSL in version 0.9.8. For older versions, pgcrypto will use built-in code[2](#fnsrc_2) Any digest algorithm OpenSSL supports is automatically picked up. This is not possible with ciphers, which need to be supported explicitly.[3](#fnsrc_3) AES is included in OpenSSL since version 0.9.7. For older versions, pgcrypto will use built-in code.
 

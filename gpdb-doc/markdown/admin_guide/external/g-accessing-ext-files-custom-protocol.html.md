@@ -8,5 +8,5 @@ Creating a custom protocol requires that you implement a set of C functions with
 
 See [Example Custom Data Access Protocol](../load/topics/g-example-custom-data-access-protocol.html) for an example.
 
-**Parent topic:**[Defining External Tables](../external/g-external-tables.html)
+**Parent topic:** [Defining External Tables](../external/g-external-tables.html)
 

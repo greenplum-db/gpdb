@@ -1480,6 +1480,104 @@ select * from t1_12930 where (a, b) not in (select a, b from t2_12930) and b is 
 ---+---
 (0 rows)
 
+-- outer plan's target list does not contain the columns in qual
+-- non-nullable: t1.a, t1.b, t2.a, t2.b
+truncate t1_12930;
+truncate t2_12930;
+alter table t1_12930 alter column b set not null;
+insert into t1_12930 values (1, 1);
+insert into t2_12930 values (1, 1);
+explain select 1 from t1_12930 where (a, b) not in (select a, b from t2_12930);
+                                     QUERY PLAN                                     
+------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=751.50..207138.77 rows=16 width=4)
+   ->  Hash Left Anti Semi (Not-In) Join  (cost=751.50..207138.55 rows=5 width=4)
+         Hash Cond: ((t1_12930.a = t2_12930.a) AND (t1_12930.b = t2_12930.b))
+         ->  Seq Scan on t1_12930  (cost=0.00..321.00 rows=28700 width=8)
+         ->  Hash  (cost=321.00..321.00 rows=28700 width=8)
+               ->  Seq Scan on t2_12930  (cost=0.00..321.00 rows=28700 width=8)
+ Optimizer: Postgres query optimizer
+(7 rows)
+
+select 1 from t1_12930 where (a, b) not in (select a, b from t2_12930);
+ ?column? 
+----------
+(0 rows)
+
+-- RTE contains view 
+-- non-nullable: t1.a, t1.b, t2.a, t2.b
+create view v_12930 as select a,b from t1_12930;
+explain select * from t2_12930 where (a,b) not in (select a,b from v_12930);
+                                     QUERY PLAN                                     
+------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=751.50..207138.77 rows=16 width=8)
+   ->  Hash Left Anti Semi (Not-In) Join  (cost=751.50..207138.55 rows=5 width=8)
+         Hash Cond: ((t2_12930.a = t1_12930.a) AND (t2_12930.b = t1_12930.b))
+         ->  Seq Scan on t2_12930  (cost=0.00..321.00 rows=28700 width=8)
+         ->  Hash  (cost=321.00..321.00 rows=28700 width=8)
+               ->  Seq Scan on t1_12930  (cost=0.00..321.00 rows=28700 width=8)
+ Optimizer: Postgres query optimizer
+(7 rows)
+
+select * from t2_12930 where (a,b) not in (select a,b from v_12930);
+ a | b 
+---+---
+(0 rows)
+
+explain select * from v_12930 where (a,b) not in (select a,b from t2_12930);
+                                     QUERY PLAN                                     
+------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=751.50..207138.77 rows=16 width=8)
+   ->  Hash Left Anti Semi (Not-In) Join  (cost=751.50..207138.55 rows=5 width=8)
+         Hash Cond: ((t1_12930.a = t2_12930.a) AND (t1_12930.b = t2_12930.b))
+         ->  Seq Scan on t1_12930  (cost=0.00..321.00 rows=28700 width=8)
+         ->  Hash  (cost=321.00..321.00 rows=28700 width=8)
+               ->  Seq Scan on t2_12930  (cost=0.00..321.00 rows=28700 width=8)
+ Optimizer: Postgres query optimizer
+(7 rows)
+
+select * from v_12930 where (a,b) not in (select a,b from t2_12930);
+ a | b 
+---+---
+(0 rows)
+
+-- var from RTE_JOIN
+-- non-nullable: t1.a, t1.b, t2.a, t2.b, r1.x, r1.y
+truncate t1_12930;
+truncate t2_12930;
+create table r1_12930(x int not null, y int not null);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'x' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into t1_12930 values (1, 2), (1, 3);
+insert into t2_12930 values (1, 3), (1, 4);
+insert into r1_12930 values (1, 2), (1, 5);
+explain select * from r1_12930
+inner join t1_12930 on a = x
+where (x, b) not in (select a,b from t2_12930);
+                                       QUERY PLAN                                       
+----------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=1431.25..17871778.93 rows=23 width=16)
+   ->  Hash Left Anti Semi (Not-In) Join  (cost=1431.25..17871778.63 rows=8 width=16)
+         Hash Cond: ((r1_12930.x = t2_12930.a) AND (t1_12930.b = t2_12930.b))
+         ->  Hash Join  (cost=679.75..128744.45 rows=2471070 width=16)
+               Hash Cond: (r1_12930.x = t1_12930.a)
+               ->  Seq Scan on r1_12930  (cost=0.00..321.00 rows=28700 width=8)
+               ->  Hash  (cost=321.00..321.00 rows=28700 width=8)
+                     ->  Seq Scan on t1_12930  (cost=0.00..321.00 rows=28700 width=8)
+         ->  Hash  (cost=321.00..321.00 rows=28700 width=8)
+               ->  Seq Scan on t2_12930  (cost=0.00..321.00 rows=28700 width=8)
+ Optimizer: Postgres query optimizer
+(11 rows)
+
+select * from r1_12930
+inner join t1_12930 on a = x
+where (x, b) not in (select a,b from t2_12930);
+ x | y | a | b 
+---+---+---+---
+ 1 | 2 | 1 | 2
+ 1 | 5 | 1 | 2
+(2 rows)
+
 -- test for issue https://github.com/greenplum-db/gpdb/issues/13212
 create table t1_13212(a int not null, b int not null);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
@@ -1521,7 +1619,7 @@ select 1 from t1_13212 where (NULL, b) not in (select a, b from t2_13212);
 
 reset search_path;
 drop schema notin cascade;
-NOTICE:  drop cascades to 20 other objects
+NOTICE:  drop cascades to 22 other objects
 DETAIL:  drop cascades to table notin.t1
 drop cascades to table notin.t2
 drop cascades to table notin.t3
@@ -1540,5 +1638,7 @@ drop cascades to table notin.table_source4
 drop cascades to table notin.table_config
 drop cascades to table notin.t1_12930
 drop cascades to table notin.t2_12930
+drop cascades to view notin.v_12930
+drop cascades to table notin.r1_12930
 drop cascades to table notin.t1_13212
 drop cascades to table notin.t2_13212

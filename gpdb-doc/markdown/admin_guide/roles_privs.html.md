@@ -14,7 +14,7 @@ Roles are defined at the system level, meaning they are valid for all databases 
 
 In order to bootstrap the Greenplum Database system, a freshly initialized system always contains one predefined *superuser* role \(also referred to as the system user\). This role will have the same name as the operating system user that initialized the Greenplum Database system. Customarily, this role is named `gpadmin`. In order to create more roles you first have to connect as this initial role.
 
-**Parent topic:**[Managing Greenplum Database Access](partIII.html)
+**Parent topic:** [Managing Greenplum Database Access](partIII.html)
 
 ## <a id="topic2"></a>Security Best Practices for Roles and Privileges 
 

@@ -7,7 +7,7 @@
 2018-01-17 21:43:21|INFO|gpload succeeded
 2018-01-17 21:43:21|INFO|gpload session started 2018-01-17 21:43:21
 2018-01-17 21:43:22|INFO|started gpfdist -p 8081 -P 8082 -f "/home/gpadmin/lhl/gpdb/gpMgmt/bin/gpload_test/gpload2/data_file.csv" -t 30
-2018-01-17 21:43:22|INFO|reusing external staging table test.staging_table
+2018-01-17 21:43:22|INFO|reusing external staging table "test".staging_table
 2018-01-17 21:43:22|INFO|running time: 0.08 seconds
 2018-01-17 21:43:22|INFO|rows Inserted          = 2
 2018-01-17 21:43:22|INFO|rows Updated           = 0

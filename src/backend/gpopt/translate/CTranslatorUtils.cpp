@@ -159,12 +159,9 @@ CTranslatorUtils::GetTableDescr(CMemoryPool *mp, CMDAccessor *md_accessor,
 		// the fact that catalog tables (master-only) are not analyzed often and will result in Orca producing
 		// inferior plans.
 
-		GPOS_THROW_EXCEPTION(
-			gpdxl::ExmaDXL,							 // major
-			gpdxl::ExmiQuery2DXLUnsupportedFeature,	 // minor
-			CException::
-				ExsevDebug1,  // ulSeverityLevel mapped to GPDB severity level
-			GPOS_WSZ_LIT("Queries on master-only tables"));
+		GPOS_THROW_EXCEPTION(gpdxl::ExmaDXL,						  // major
+							 gpdxl::ExmiQuery2DXLUnsupportedFeature,  // minor
+							 GPOS_WSZ_LIT("Queries on master-only tables"));
 	}
 
 	// add columns from md cache relation object to table descriptor

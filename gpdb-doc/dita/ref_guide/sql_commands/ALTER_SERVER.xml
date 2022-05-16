@@ -7,12 +7,12 @@
         <p id="sql_command_desc">Changes the definition of a foreign server.</p>
         <section id="section2">
             <title>Synopsis</title>
-            <codeblock id="sql_command_synopsis">ALTER SERVER <varname>server_name</varname> [ VERSION '<varname>new_version</varname>' ]
-    [ OPTIONS ( [ ADD | SET | DROP ] <varname>option</varname> ['<varname>value</varname>'] [, ... ] ) ]
+            <codeblock id="sql_command_synopsis">ALTER SERVER &lt;server_name> [ VERSION '&lt;new_version>' ]
+    [ OPTIONS ( [ ADD | SET | DROP ] &lt;option> ['&lt;value>'] [, ... ] ) ]
 
-ALTER SERVER <varname>server_name</varname> OWNER TO <varname>new_owner</varname>
+ALTER SERVER &lt;server_name> OWNER TO &lt;new_owner>
                 
-ALTER SERVER <varname>server_name</varname> RENAME TO <varname>new_name</varname></codeblock>
+ALTER SERVER &lt;server_name> RENAME TO &lt;new_name></codeblock>
         </section>
         <section id="section3">
             <title>Description</title>
@@ -73,9 +73,9 @@ ALTER SERVER <varname>server_name</varname> RENAME TO <varname>new_name</varname
         </section>
         <section id="section8">
             <title>See Also</title>
-            <p><codeph><xref href="CREATE_SERVER.xml#topic1">CREATE SERVER</xref></codeph>,
-                        <codeph><xref href="DROP_SERVER.xml#topic1">DROP
-                    SERVER</xref></codeph></p>
+            <p><xref href="CREATE_SERVER.xml#topic1">CREATE SERVER</xref>,
+                        <xref href="DROP_SERVER.xml#topic1">DROP
+                    SERVER</xref></p>
         </section>
     </body>
 </topic>

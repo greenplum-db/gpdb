@@ -10,5 +10,5 @@ You can use the `gpcopy` utility to transfer data between databases in different
 
 **Note:** The `gpcopy` utility is available as a separate download for the commercial release of Tanzu Greenplum. See the [Tanzu Greenplum Data Copy Utility Documentation](https://gpdb.docs.pivotal.io/gpcopy).
 
-**Parent topic:**[Managing a Greenplum System](../managing/partII.html)
+**Parent topic:** [Managing a Greenplum System](../managing/partII.html)
 

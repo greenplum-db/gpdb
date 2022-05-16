@@ -3,12 +3,12 @@
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
 <topic id="topic1"><title id="az137232">ALTER TEXT SEARCH DICTIONARY</title><body><p
   id="sql_command_desc">Changes the definition of a text search dictionary.</p><section id="section2"><title>Synopsis</title></section>
-    <codeblock id="sql_command_synopsis">ALTER TEXT SEARCH DICTIONARY <varname>name</varname> (
-    <varname>option</varname> [ = <varname>value</varname> ] [, ... ]
+    <codeblock id="sql_command_synopsis">ALTER TEXT SEARCH DICTIONARY &lt;name> (
+    &lt;option> [ = &lt;value> ] [, ... ]
 )
-ALTER TEXT SEARCH DICTIONARY <varname>name</varname> RENAME TO <varname>new_name</varname>
-ALTER TEXT SEARCH DICTIONARY <varname>name</varname> OWNER TO <varname>new_owner</varname>
-ALTER TEXT SEARCH DICTIONARY <varname>name</varname> SET SCHEMA <varname>new_schema</varname></codeblock><section id="section3"><title>Description</title>
+ALTER TEXT SEARCH DICTIONARY &lt;name> RENAME TO &lt;new_name>
+ALTER TEXT SEARCH DICTIONARY &lt;name> OWNER TO &lt;new_owner>
+ALTER TEXT SEARCH DICTIONARY &lt;name> SET SCHEMA &lt;new_schema></codeblock><section id="section3"><title>Description</title>
       <p><codeph>ALTER TEXT SEARCH DICTIONARY</codeph> changes the definition of a text search
         dictionary. You can change the dictionary's template-specific options, or change the
         dictionary's name or owner.</p>
@@ -62,7 +62,7 @@ ALTER TEXT SEARCH DICTIONARY <varname>name</varname> SET SCHEMA <varname>new_sch
     </section><section
           id="section6"><title>Compatibility</title><p>There is no <codeph>ALTER TEXT SEARCH
             DICTIONARY</codeph> statement in the SQL standard.</p></section><section
-              id="section7"><title>See Also</title><p><codeph><xref
+              id="section7"><title>See Also</title><p><xref
                 href="./CREATE_TEXT_SEARCH_DICTIONARY.xml#topic1" type="topic" format="dita"
-          /></codeph>, <codeph><xref href="./DROP_TEXT_SEARCH_DICTIONARY.xml#topic1" type="topic"
-            format="dita"/></codeph></p></section></body></topic>
+          />, <xref href="./DROP_TEXT_SEARCH_DICTIONARY.xml#topic1" type="topic"
+            format="dita"/></p></section></body></topic>

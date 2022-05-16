@@ -14,5 +14,5 @@ If your data contains either of these characters, you must escape the character 
 -   **[Escaping in CSV Formatted Files](../../load/topics/g-escaping-in-csv-formatted-files.html)**  
 
 
-**Parent topic:**[Formatting Data Files](../../load/topics/g-formatting-data-files.html)
+**Parent topic:** [Formatting Data Files](../../load/topics/g-formatting-data-files.html)
 

@@ -485,36 +485,32 @@ END;
 $$;
 -- summarize one range
 SELECT brin_summarize_range('brin_summarize_idx', 0);
-ERROR:  Greenplum could not summarize indicated page range
+ERROR:  Greenplum could not summarize indicated page range  (seg0 slice1 127.0.0.1:7002 pid=11998)
 -- nothing: already summarized
 SELECT brin_summarize_range('brin_summarize_idx', 1);
-ERROR:  Greenplum could not summarize indicated page range
+ERROR:  Greenplum could not summarize indicated page range  (seg0 slice1 127.0.0.1:7002 pid=11998)
 -- summarize one range
 SELECT brin_summarize_range('brin_summarize_idx', 2);
-ERROR:  Greenplum could not summarize indicated page range
+ERROR:  Greenplum could not summarize indicated page range  (seg0 slice1 127.0.0.1:7002 pid=11998)
 -- summarize all pages
 SELECT brin_summarize_range('brin_summarize_idx', 4294967295);
  brin_summarize_range 
 ----------------------
-                    0
-                    0
                     1
-(3 rows)
+(1 row)
 
 -- nothing: page doesn't exist in table
 SELECT brin_summarize_range('brin_summarize_idx', 4294967295);
  brin_summarize_range 
 ----------------------
                     0
-                    0
-                    0
-(3 rows)
+(1 row)
 
 -- invalid block number values
 SELECT brin_summarize_range('brin_summarize_idx', -1);
-ERROR:  block number out of range: -1
+ERROR:  block number out of range: -1  (seg0 slice1 127.0.0.1:7002 pid=11998)
 SELECT brin_summarize_range('brin_summarize_idx', 4294967296);
-ERROR:  block number out of range: 4294967296
+ERROR:  block number out of range: 4294967296  (seg0 slice1 127.0.0.1:7002 pid=11998)
 -- test brin cost estimates behave sanely based on correlation of values
 -- GPDB: use more rows, and a larger statistics sample, to get the same plan
 -- as in upstream.

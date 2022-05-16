@@ -8,7 +8,7 @@
       value.</p>
     <section id="section2">
       <title>Synopsis</title>
-      <codeblock id="sql_command_synopsis">RESET <varname>configuration_parameter</varname>
+      <codeblock id="sql_command_synopsis">RESET &lt;configuration_parameter>
 
 RESET ALL</codeblock>
     </section>
@@ -51,9 +51,7 @@ RESET ALL</codeblock>
     <section id="section7">
       <title>See Also</title>
       <p>
-        <codeph>
           <xref href="./SET.xml#topic1" type="topic" format="dita"/>
-        </codeph>
       </p>
     </section>
   </body>

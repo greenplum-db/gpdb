@@ -1,21 +1,21 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
-<topic id="topic1"><title id="as20941">ALTER OPERATOR FAMILY</title><body><p id="sql_command_desc">Changes the definition of an operator family.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">ALTER OPERATOR FAMILY <varname>name</varname> USING <varname>index_method</varname> ADD
-  {  OPERATOR <varname>strategy_number</varname> <varname>operator_name</varname> ( <varname>op_type</varname>, <varname>op_type</varname> ) [ FOR SEARCH | FOR ORDER BY <varname>sort_family_name</varname> ]
-    | FUNCTION <varname>support_number</varname> [ ( <varname>op_type</varname> [ , <varname>op_type</varname> ] ) ] <varname>funcname</varname> ( <varname>argument_type</varname> [, ...] )
+<topic id="topic1"><title id="as20941">ALTER OPERATOR FAMILY</title><body><p id="sql_command_desc">Changes the definition of an operator family.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">ALTER OPERATOR FAMILY &lt;name> USING &lt;index_method> ADD
+  {  OPERATOR &lt;strategy_number> &lt;operator_name> ( &lt;op_type>, &lt;op_type> ) [ FOR SEARCH | FOR ORDER BY &lt;sort_family_name> ]
+    | FUNCTION &lt;support_number> [ ( &lt;op_type> [ , &lt;op_type> ] ) ] &lt;funcname> ( &lt;argument_type> [, ...] )
   } [, ... ]
 
-ALTER OPERATOR FAMILY <varname>name</varname> USING <varname>index_method</varname> DROP
-  {  OPERATOR <varname>strategy_number</varname> ( <varname>op_type</varname>, <varname>op_type</varname> ) 
-    | FUNCTION <varname>support_number</varname> [ ( <varname>op_type</varname> [ , <varname>op_type</varname> ] ) 
+ALTER OPERATOR FAMILY &lt;name> USING &lt;index_method> DROP
+  {  OPERATOR &lt;strategy_number> ( &lt;op_type>, &lt;op_type> ) 
+    | FUNCTION &lt;support_number> [ ( &lt;op_type> [ , &lt;op_type> ] ) 
   } [, ... ]
 
-ALTER OPERATOR FAMILY <varname>name</varname> USING <varname>index_method</varname> RENAME TO <varname>new_name</varname>
+ALTER OPERATOR FAMILY &lt;name> USING &lt;index_method> RENAME TO &lt;new_name>
 
-ALTER OPERATOR FAMILY <varname>name</varname> USING <varname>index_method</varname> OWNER TO <varname>new_owner</varname>
+ALTER OPERATOR FAMILY &lt;name> USING &lt;index_method> OWNER TO &lt;new_owner>
 
-ALTER OPERATOR FAMILY <varname>name</varname> USING <varname>index_method</varname> SET SCHEMA <varname>new_schema</varname></codeblock></section><section id="section3"><title>Description</title><p><codeph>ALTER OPERATOR FAMILY</codeph> changes the definition of an operator family. You can add
+ALTER OPERATOR FAMILY &lt;name> USING &lt;index_method> SET SCHEMA &lt;new_schema></codeblock></section><section id="section3"><title>Description</title><p><codeph>ALTER OPERATOR FAMILY</codeph> changes the definition of an operator family. You can add
         operators and support functions to the family, remove them from the family, or change the
         family's name or owner.</p>
       <p>When operators and support functions are added to a family with <codeph>ALTER OPERATOR
@@ -146,9 +146,9 @@ ALTER OPERATOR FAMILY <varname>name</varname> USING <varname>index_method</varna
   OPERATOR 3 (int2, int4) ,
   OPERATOR 4 (int2, int4) ,
   OPERATOR 5 (int2, int4) ,
-  FUNCTION 1 (int2, int4) ;</codeblock></p><section id="section8"><title>See Also</title><p><codeph><xref href="./CREATE_OPERATOR_FAMILY.xml#topic1" type="topic" format="dita"/></codeph>,
-            <codeph><xref href="./DROP_OPERATOR_FAMILY.xml#topic1" type="topic" format="dita"
-          /></codeph>, <codeph><xref href="ALTER_OPERATOR_CLASS.xml#topic1" type="topic"
-            format="dita"/></codeph>, <codeph><xref href="CREATE_OPERATOR_CLASS.xml#topic1"
-            type="topic" format="dita"/></codeph>, <codeph><xref
-            href="./DROP_OPERATOR_CLASS.xml#topic1" type="topic" format="dita"/></codeph></p></section></body></topic>
+  FUNCTION 1 (int2, int4) ;</codeblock></p><section id="section8"><title>See Also</title><p><xref href="./CREATE_OPERATOR_FAMILY.xml#topic1" type="topic" format="dita"/>,
+            <xref href="./DROP_OPERATOR_FAMILY.xml#topic1" type="topic" format="dita"
+          />, <xref href="ALTER_OPERATOR_CLASS.xml#topic1" type="topic"
+            format="dita"/>, <xref href="CREATE_OPERATOR_CLASS.xml#topic1"
+            type="topic" format="dita"/>, <xref
+            href="./DROP_OPERATOR_CLASS.xml#topic1" type="topic" format="dita"/></p></section></body></topic>

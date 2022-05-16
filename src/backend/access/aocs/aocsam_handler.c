@@ -1040,13 +1040,12 @@ aoco_vacuum_rel(Relation onerel, VacuumParams *params,
                       BufferAccessStrategy bstrategy)
 {
 	/*
-	 * GPDB_12_MERGE_FIXME: This is a dummy function in order to proceed with
-	 * the implementation of the aocsam_handler.
-	 *
-	 * It's not invoked ever, we do the AO different phases vacuuming in
-	 * vacuum_rel() directly for now.
+	 * Implemented but not invoked, we do the AO_COLUMN different phases vacuuming by
+	 * calling ao_vacuum_rel() in vacuum_rel() directly for now.
 	 */
-	elog(ERROR, "not implemented yet");
+	ao_vacuum_rel(onerel, params, bstrategy);
+
+	return;
 }
 
 static void
@@ -1648,7 +1647,7 @@ aoco_relation_size(Relation rel, ForkNumber forkNumber)
 		return totalbytes;
 
 	snapshot = RegisterSnapshot(GetLatestSnapshot());
-	allseg = GetAllAOCSFileSegInfo(rel, snapshot, &totalseg);
+	allseg = GetAllAOCSFileSegInfo(rel, snapshot, &totalseg, NULL);
 	for (int seg = 0; seg < totalseg; seg++)
 	{
 		for (int attr = 0; attr < RelationGetNumberOfAttributes(rel); attr++)
@@ -1689,7 +1688,6 @@ aoco_relation_needs_toast_table(Relation rel)
 	 */
 	return false;
 }
-
 
 /* ------------------------------------------------------------------------
  * Planner related callbacks for the heap AM

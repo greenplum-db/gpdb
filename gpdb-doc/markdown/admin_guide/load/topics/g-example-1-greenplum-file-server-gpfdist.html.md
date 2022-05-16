@@ -12,5 +12,5 @@ title: Example 1—Greenplum file server (gpfdist)
 
 ```
 
-**Parent topic:**[Defining a File-Based Writable External Table](../../load/topics/g-defining-a-file-based-writable-external-table.html)
+**Parent topic:** [Defining a File-Based Writable External Table](../../load/topics/g-defining-a-file-based-writable-external-table.html)
 
