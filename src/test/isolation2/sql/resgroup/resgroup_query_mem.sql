@@ -17,8 +17,6 @@ create or replace language plpythonu;
 create table t_qmem(a int);
 select gp_inject_fault('rg_qmem_qd_qe', 'skip', dbid) from gp_segment_configuration where role = 'p' and content = 0;
 
-set gp_resource_group_enable_recalculate_query_mem = on;
-
 create function rg_qmem_test() returns boolean as $$
 from pygresql.pg import DB
 from copy import deepcopy
@@ -35,6 +33,8 @@ ratio1 = int(round(float(qd_mem) / qe_mem))
 # 2. use notice to get qe operator mem
 dbname = plpy.execute("select current_database() db")[0]["db"]
 db = DB(dbname=dbname)
+db.query("set gp_resource_group_enable_recalculate_query_mem = on;")
+
 sql = "select * from t_qmem order by 1"
 db.query(sql)
 qe_opmem_info = db.notices()
@@ -48,6 +48,8 @@ for (line, ) in r:
     if "->  Sort" not in line: continue
     qd_opmem = int(re.findall(r"operatorMem: (\d+)", line)[0])
     break
+
+db.query("set gp_resource_group_enable_recalculate_query_mem = off;")
 
 db.close()
 
