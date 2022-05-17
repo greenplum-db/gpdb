@@ -220,20 +220,6 @@ smgropen(RelFileNode rnode, BackendId backend, SMgrImpl which)
 		/* it has no owner yet */
 		dlist_push_tail(&unowned_relns, &reln->node);
 	}
-	else if (reln->smgr_which != which)
-	{
-		/*
-		 * GPDB_12_MERGE_FIXME: SMGR WAL record does not have a way to
-		 * identify a specific SMGR implementation.  If the SMGR
-		 * implementation that the caller expects does not match the
-		 * implementation we already have in the hash table, it is most likely
-		 * due to calling smgropen when replaying a SMGR WAL record.  Fix the
-		 * expectation as a workaround for now.  A proper fix should include
-		 * the implementation identifier (smgr_which) in the SMGR WAL record.
-		 */
-		Assert(reln->smgr_which == 0);
-		reln->smgr_which = which;
-	}
 
 	return reln;
 }

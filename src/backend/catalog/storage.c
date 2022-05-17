@@ -107,7 +107,7 @@ RelationCreateStorage(RelFileNode rnode, char relpersistence, SMgrImpl smgr_whic
 	smgrcreate(srel, MAIN_FORKNUM, false);
 
 	if (needs_wal)
-		log_smgrcreate(&srel->smgr_rnode.node, MAIN_FORKNUM);
+		log_smgrcreate(&srel->smgr_rnode.node, MAIN_FORKNUM, smgr_which);
 
 	/* Add the relation to the list of stuff to delete at abort */
 	pending = (PendingRelDelete *)
@@ -127,7 +127,7 @@ RelationCreateStorage(RelFileNode rnode, char relpersistence, SMgrImpl smgr_whic
  * Perform XLogInsert of an XLOG_SMGR_CREATE record to WAL.
  */
 void
-log_smgrcreate(const RelFileNode *rnode, ForkNumber forkNum)
+log_smgrcreate(const RelFileNode *rnode, ForkNumber forkNum, SMgrImpl impl)
 {
 	xl_smgr_create xlrec;
 
@@ -136,6 +136,7 @@ log_smgrcreate(const RelFileNode *rnode, ForkNumber forkNum)
 	 */
 	xlrec.rnode = *rnode;
 	xlrec.forkNum = forkNum;
+	xlrec.impl = impl;
 
 	XLogBeginInsert();
 	XLogRegisterData((char *) &xlrec, sizeof(xlrec));
@@ -603,14 +604,7 @@ smgr_redo(XLogReaderState *record)
 		xl_smgr_create *xlrec = (xl_smgr_create *) XLogRecGetData(record);
 		SMgrRelation reln;
 
-		/*
-		 * Creating initial file on disk for AO is same as that for heap
-		 * tables.  Therefore, using AO-specific SMGR implementation is not
-		 * required.  If AO-specific SMGR implementation must be used, the
-		 * SMGR WAL record type needs to be changed to remember the
-		 * implemetation identifier.
-		 */
-		reln = smgropen(xlrec->rnode, InvalidBackendId, SMGR_MD);
+		reln = smgropen(xlrec->rnode, InvalidBackendId, xlrec->impl);
 		smgrcreate(reln, xlrec->forkNum, true);
 	}
 	else if (info == XLOG_SMGR_TRUNCATE)

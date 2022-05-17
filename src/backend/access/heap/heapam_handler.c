@@ -635,7 +635,7 @@ heapam_relation_set_new_filenode(Relation rel,
 			   rel->rd_rel->relkind == RELKIND_AOVISIMAP ||
 			   rel->rd_rel->relkind == RELKIND_AOBLOCKDIR);
 		smgrcreate(srel, INIT_FORKNUM, false);
-		log_smgrcreate(newrnode, INIT_FORKNUM);
+		log_smgrcreate(newrnode, INIT_FORKNUM, SMGR_MD);
 		smgrimmedsync(srel, INIT_FORKNUM);
 	}
 
@@ -692,7 +692,7 @@ heapam_relation_copy_data(Relation rel, const RelFileNode *newrnode)
 			if (rel->rd_rel->relpersistence == RELPERSISTENCE_PERMANENT ||
 				(rel->rd_rel->relpersistence == RELPERSISTENCE_UNLOGGED &&
 				 forkNum == INIT_FORKNUM))
-				log_smgrcreate(newrnode, forkNum);
+				log_smgrcreate(newrnode, forkNum, SMGR_MD);
 			RelationCopyStorage(rel->rd_smgr, dstrel, forkNum,
 								rel->rd_rel->relpersistence);
 		}
