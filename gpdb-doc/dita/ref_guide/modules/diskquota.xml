@@ -435,18 +435,18 @@ SELECT diskquota.resume(); </codeblock>
         <codeblock>avg_seg_quota = tablespace_quota / number_of_segments</codeblock>
         <p>For example, if your Greenplum Database cluster has 8 segments and you set the
           following schema tablespace quota:</p>
-        <codeblock>SELECT diskquota.set_schema_tablespace_quota( 'accts', 'tspaced1', '250GB' );</codeblock>
+        <codeblock>SELECT diskquota.set_schema_tablespace_quota( 'accts', 'tspaced1', '800GB' );</codeblock>
         <p>The average segment quota for the <codeph>tspaced1</codeph> tablespace is
-          <codeph>250GB / 8 = 31.25</codeph>.</p>
+          <codeph>800GB / 8 = 100GB</codeph>.</p>
         <p>If you set the following per-segment tablespace quota:</p>
         <codeblock>SELECT diskquota.set_per_segment_quota( 'tspaced1', '2.0' );</codeblock>
         <p>You can calculate the the maximum allowed disk usage per segment allowed as follows:</p>
         <codeblock>max_disk_usage_per_seg = average_segment_quota * ratio</codeblock>
         <p>In this example, the maximum disk usage allowed per segment is
-          <codeph>31.25 * 2.0 = 62.5</codeph>.</p>
+          <codeph>100GB * 2.0 = 200GB</codeph>.</p>
         <p><codeph>diskquota</codeph> will allow a query to run if the disk usage on all
           segments for all tables that are in tablespace <codeph>tblspc1</codeph> and that
-          are goverend by a role or schema quota does not exceed <codeph>100GB</codeph>.</p>
+          are goverend by a role or schema quota does not exceed <codeph>200GB</codeph>.</p>
         <p>You can change the per-segment tablespace quota by invoking the
           <codeph>diskquota.set_per_segment_quota()</codeph>
           function again with the new quota value.</p>
