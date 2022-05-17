@@ -43,6 +43,7 @@
 #include "access/xact.h"
 #include "catalog/oid_dispatch.h"
 #include "catalog/pg_type.h"
+#include "catalog/namespace.h"
 #include "commands/async.h"
 #include "commands/prepare.h"
 #include "commands/extension.h"
@@ -5410,6 +5411,15 @@ PostgresMain(int argc, char *argv[],
 					resgroupInfoLen = pq_getmsgint(&input_message, 4);
 					if (resgroupInfoLen > 0)
 						resgroupInfoBuf = pq_getmsgbytes(&input_message, resgroupInfoLen);
+
+					/* process local variables for temporary namespace */
+					{
+						Oid			tempNamespaceId, tempToastNamespaceId;
+
+						tempNamespaceId = pq_getmsgint(&input_message, sizeof(tempNamespaceId));
+						tempToastNamespaceId = pq_getmsgint(&input_message, sizeof(tempToastNamespaceId));
+						SetTempNamespaceStateAfterBoot(tempNamespaceId, tempToastNamespaceId);
+					}
 
 					pq_getmsgend(&input_message);
 
