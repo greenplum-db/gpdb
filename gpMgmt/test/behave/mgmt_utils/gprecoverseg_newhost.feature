@@ -157,3 +157,20 @@ Feature: gprecoverseg tests involving migrating to a new host
          Then the original cluster state is recreated for "one_host_down-3"
          And the cluster configuration is saved for "after_recreation"
          And the "before" and "after_recreation" cluster configuration matches with the expected for gprecoverseg newhost
+
+    @concourse_cluster
+      Scenario: failover host is not in reach gprecoverseg in-place recovery skips recovery
+         Given  the database is running
+         And all the segments are running
+         And the segments are synchronized
+         And database "gptest" exists
+         And the cluster configuration is saved for "before"
+         And the 'primary' on content 0 is stopped with the immediate flag
+         And segment hosts "sdw1,sdw5" are disconnected from the cluster and from the spare segment hosts "sdw6"
+         And the user runs psql with "-c 'SELECT gp_request_fts_probe_scan()'" against database "postgres"
+         And the cluster configuration has no segments where "hostname='sdw1' and status='u'"
+         And edit the input file to recover with content id 0 to host sdw5
+         When the user runs gprecoverseg with input file and additional args "-av"
+         Then gprecoverseg should return a return code of 2
+         And output should contain both "Host sdw5 is unreachable" and "gprecoverseg error: Cannot recover. The following recovery target hosts are unreachable: ['sdw5']"
+
