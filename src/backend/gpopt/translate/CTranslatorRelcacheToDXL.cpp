@@ -2440,7 +2440,11 @@ CTranslatorRelcacheToDXL::RetrieveRelStorageType(Relation rel)
 			break;
 		case 0:
 
-			if (rel->rd_rel->relkind == RELKIND_PARTITIONED_TABLE)
+			if (rel->rd_rel->relkind == RELKIND_COMPOSITE_TYPE)
+			{
+				rel_storage_type = IMDRelation::ErelstorageCompositeType;
+			}
+			else if (rel->rd_rel->relkind == RELKIND_PARTITIONED_TABLE)
 				rel_storage_type = RetrieveStorageTypeForPartitionedTable(rel);
 			else if (gpdb::RelIsExternalTable(rel->rd_id))
 				rel_storage_type = IMDRelation::ErelstorageExternal;

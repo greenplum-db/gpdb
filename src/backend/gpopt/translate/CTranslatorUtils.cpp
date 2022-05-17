@@ -268,10 +268,33 @@ CTranslatorUtils::ConvertToCDXLLogicalTVF(CMemoryPool *mp,
 	 */
 
 	RangeTblFunction *rtfunc = (RangeTblFunction *) linitial(rte->functions);
-	FuncExpr *funcexpr = (FuncExpr *) rtfunc->funcexpr;
-	GPOS_ASSERT(funcexpr);
-	GPOS_ASSERT(IsA(funcexpr, FuncExpr));
 
+
+	// TVF evaluates to const, return const DXL node
+	if (IsA(rtfunc->funcexpr, Const))
+	{
+		Const *constExpr = (Const *) rtfunc->funcexpr;
+
+		CMDIdGPDB *mdid_return_type =
+			GPOS_NEW(mp) CMDIdGPDB(constExpr->consttype);
+
+		const IMDType *type = md_accessor->RetrieveType(mdid_return_type);
+		CDXLColDescrArray *column_descrs = GetColumnDescriptorsFromComposite(
+			mp, md_accessor, id_generator, type);
+
+		CMDName *func_name =
+			CDXLUtils::CreateMDNameFromCharArray(mp, rte->eref->aliasname);
+		mdid_return_type->AddRef();
+
+		// if TVF evaluates to const, pass invalid key as funcid
+		CDXLLogicalTVF *tvf_dxl = GPOS_NEW(mp)
+			CDXLLogicalTVF(mp, GPOS_NEW(mp) CMDIdGPDB(0), mdid_return_type,
+						   func_name, column_descrs);
+
+		return tvf_dxl;
+	}
+
+	FuncExpr *funcexpr = (FuncExpr *) rtfunc->funcexpr;
 	// In the planner, scalar functions that are volatile (SIRV) or read or modify SQL
 	// data get patched into an InitPlan. This is not supported in the optimizer
 	if (IsSirvFunc(mp, md_accessor, funcexpr->funcid))
@@ -279,7 +302,6 @@ CTranslatorUtils::ConvertToCDXLLogicalTVF(CMemoryPool *mp,
 		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature,
 				   GPOS_WSZ_LIT("SIRV functions"));
 	}
-
 	// get function id
 	CMDIdGPDB *mdid_func = GPOS_NEW(mp) CMDIdGPDB(funcexpr->funcid);
 	CMDIdGPDB *mdid_return_type =
@@ -2468,6 +2490,26 @@ CTranslatorUtils::GetAggKind(EdxlAggrefKind aggkind)
 					   GPOS_WSZ_LIT("Unknown aggkind value"));
 		}
 	}
+}
+
+//---------------------------------------------------------------------------
+// CTranslatorUtils::IsCompositeConst
+// Check if const func returns composite type
+//---------------------------------------------------------------------------
+BOOL
+CTranslatorUtils::IsCompositeConst(CMemoryPool *mp, CMDAccessor *md_accessor,
+								   const RangeTblFunction *rtfunc)
+{
+	if (!IsA(rtfunc->funcexpr, Const))
+		return false;
+
+	Const *constExpr = (Const *) rtfunc->funcexpr;
+
+	CMDIdGPDB *mdid_return_type = GPOS_NEW(mp) CMDIdGPDB(constExpr->consttype);
+
+	const IMDType *type = md_accessor->RetrieveType(mdid_return_type);
+
+	return type->IsComposite();
 }
 
 // EOF
