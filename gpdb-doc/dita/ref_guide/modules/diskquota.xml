@@ -575,11 +575,11 @@ SELECT diskquota.resume();</codeblock>
   <topic id="topic_sfb_gb1_b3b">
     <title>Notes</title>
     <body>
-      <p>The <codeph>diskquota</codeph> module cannot detect a newly created table inside of an
-        uncommitted transaction. The size of the new table is not included in the disk usage
-        calculated for the corresponding schema or role until after the transaction has committed.
-        Similarly, a table created using the <codeph>CREATE TABLE AS</codeph> command is not
-        included in disk usage statistics until the command has completed.</p>
+      <p>The <codeph>diskquota</codeph> module can detect a newly created table inside of an
+        uncommitted transaction. The size of the new table is included in the disk usage
+        calculated for the corresponding schema or role. Hard limit enforcement of disk
+        usage must enabled for a quota-exceeding operation to trigger a
+        <codeph>quota exceeded</codeph> error in this scenario.</p>
       <p>Deleting rows or running <codeph>VACUUM</codeph> on a table does not release disk space, so
         these operations cannot alone remove a schema or role from the <codeph>diskquota</codeph>
         denylist. The disk space used by a table can be reduced by running <codeph>VACUUM
