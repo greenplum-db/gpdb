@@ -120,8 +120,6 @@ The passwords or secrets stored in the authentication file serve two purposes. F
 
 SCRAM secrets can only be used for logging into a server if the client authentication also uses SCRAM, the PgBouncer database definition does not specify a user name, and the SCRAM secrets are identical in PgBouncer and the PostgreSQL server \(same salt and iterations, not merely the same password\). This is due to an inherent security property of SCRAM: The stored SCRAM secret cannot by itself be used for deriving login credentials.
 
-**Note:** While the `pgbouncer` installed with Greenplum 6.x supports the `SCRAM-SHA-256` authentication method, the Greenplum 6.x `psql` client is too old to support this type of client authentication. You can not use `SCRAM-SHA-256` authentication with the Greenplum 6.x `psql` client program.
-
 The authentication file can be written by hand, but it’s also useful to generate it from some other list of users and passwords. See `./etc/mkauth.py` for a sample script to generate the authentication file from the `pg_shadow` system table. Alternatively, use
 
 ```
