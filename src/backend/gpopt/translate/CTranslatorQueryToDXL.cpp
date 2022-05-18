@@ -3613,27 +3613,20 @@ CTranslatorQueryToDXL::TranslateTVFToDXL(const RangeTblEntry *rte,
 				   GPOS_WSZ_LIT("Multi-argument UNNEST() or TABLE()"));
 	}
 	RangeTblFunction *rtfunc = (RangeTblFunction *) linitial(rte->functions);
-	FuncExpr *funcexpr = (FuncExpr *) rtfunc->funcexpr;
-	GPOS_ASSERT(funcexpr);
+	BOOL is_composite_const =
+		CTranslatorUtils::IsCompositeConst(m_mp, m_md_accessor, rtfunc);
 
 	// if this is a folded function expression, generate a project over a CTG
-	if (!IsA(funcexpr, FuncExpr))
+	if (!IsA(rtfunc->funcexpr, FuncExpr) && !is_composite_const)
 	{
-		Oid funcTypeOid = gpdb::ExprType(rtfunc->funcexpr);
-		if (gpdb::IsCompositeType(funcTypeOid))
-		{
-			GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature,
-					   GPOS_WSZ_LIT("Row-type variable"));
-		}
-
 		CDXLNode *const_tbl_get_dxlnode = DXLDummyConstTableGet();
 
 		CDXLNode *project_list_dxlnode = GPOS_NEW(m_mp)
 			CDXLNode(m_mp, GPOS_NEW(m_mp) CDXLScalarProjList(m_mp));
 
-		CDXLNode *project_elem_dxlnode =
-			TranslateExprToDXLProject((Expr *) funcexpr, rte->eref->aliasname,
-									  true /* insist_new_colids */);
+		CDXLNode *project_elem_dxlnode = TranslateExprToDXLProject(
+			(Expr *) rtfunc->funcexpr, rte->eref->aliasname,
+			true /* insist_new_colids */);
 		project_list_dxlnode->AddChild(project_elem_dxlnode);
 
 		CDXLNode *project_dxlnode = GPOS_NEW(m_mp)
@@ -3656,6 +3649,19 @@ CTranslatorQueryToDXL::TranslateTVFToDXL(const RangeTblEntry *rte,
 									tvf_dxlop->GetDXLColumnDescrArray());
 
 	BOOL is_subquery_in_args = false;
+
+	// funcexpr evaluates to const and returns composite type
+	if (IsA(rtfunc->funcexpr, Const))
+	{
+		CDXLNode *constValue = m_scalar_translator->TranslateScalarToDXL(
+			(Expr *) (rtfunc->funcexpr), m_var_to_colid_map);
+		tvf_dxlnode->AddChild(constValue);
+		return tvf_dxlnode;
+	}
+
+	GPOS_ASSERT(IsA(rtfunc->funcexpr, FuncExpr));
+
+	FuncExpr *funcexpr = (FuncExpr *) rtfunc->funcexpr;
 
 	// check if arguments contain SIRV functions
 	if (NIL != funcexpr->args && HasSirvFunctions((Node *) funcexpr->args))

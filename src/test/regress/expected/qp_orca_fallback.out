@@ -247,12 +247,3 @@ explain select count(*) from foo group by a;
  Optimizer: Postgres query optimizer
 (5 rows)
 
--- Orca should fallback for functions returning composite types
-create type compType as (a int, b int);
-create function myfunc5() returns compType IMMUTABLE as $$ select 2,3 $$ language sql;
-select a from myfunc5();
- a 
----
- 2
-(1 row)
-
