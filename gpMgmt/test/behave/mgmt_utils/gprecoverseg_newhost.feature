@@ -174,5 +174,5 @@ Feature: gprecoverseg tests involving migrating to a new host
          And edit the input file to recover with content id 0 to host sdw5
          When the user runs gprecoverseg with input file and additional args "-av"
          Then gprecoverseg should return a return code of 2
-         And output should contain both "Host sdw5 is unreachable" and "gprecoverseg error: Cannot recover. The following recovery target hosts are unreachable: ['sdw5']"
+         And output should contain both "Host sdw5 is unreachable" and "gprecoverseg error: The recovery target segment sdw5 (content 0) is unreachable"
 
