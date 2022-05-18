@@ -172,20 +172,17 @@ CCostModelGPDB::CostComputeScalar(CMemoryPool *mp, CExpressionHandle &exprhdl,
 
 	CCost costCompute(0);
 
-	if (exprhdl.Pgexpr())
+	if (exprhdl.DeriveHasScalarFuncProject(1))
 	{
-		if (exprhdl.DeriveHasScalarFuncProject(1))
-		{
-			// If the compute scalar operator has a scalar func operator in the
-			// project list then aggregate that cost of the scalar func. The
-			// number of times the scalar func is run is proportional to the
-			// number of rows.
-			costCompute =
-				CCost(pcmgpdb->GetCostModelParams()
-						  ->PcpLookup(CCostModelParamsGPDB::EcpScalarFuncCost)
-						  ->Get() *
-					  rows);
-		}
+		// If the compute scalar operator has a scalar func operator in the
+		// project list then aggregate that cost of the scalar func. The number
+		// of times the scalar func is run is proportional to the number of
+		// rows.
+		costCompute =
+			CCost(pcmgpdb->GetCostModelParams()
+					  ->PcpLookup(CCostModelParamsGPDB::EcpScalarFuncCost)
+					  ->Get() *
+				  rows);
 	}
 
 	return costLocal + costChild + costCompute;
