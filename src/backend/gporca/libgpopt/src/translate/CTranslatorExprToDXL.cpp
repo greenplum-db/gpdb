@@ -4875,14 +4875,19 @@ CTranslatorExprToDXL::PdxlPartEqFilterList(CExpression *pexpr)
 		CDXLNode *eqfilter_dxlnode = NULL;
 
 		if (NULL == pexprEqFilter && NULL == pexprFilter)
+		{
 			eqfilter_dxlnode = CTranslatorExprToDXLUtils::PdxlnBoolConst(
 				m_mp, m_pmda, true /*value*/);
+		}
 		else if (NULL != pexprEqFilter)
+		{
 			eqfilter_dxlnode = PdxlnScalar(pexprEqFilter);
+		}
 		else
+		{
 			eqfilter_dxlnode =
 				PdxlnPartEqFilterElemList(pexprFilter, ul, popSelector);
-
+		}
 		pdxlnEqFilters->AddChild(eqfilter_dxlnode);
 	}
 	return pdxlnEqFilters;
@@ -5308,17 +5313,12 @@ CTranslatorExprToDXL::ConstructLevelFilters4PartitionSelector(
 	{
 		CColRef *pcrPartKey =
 			CUtils::PcrExtractPartKey(pdrgpdrgpcrPartKeys, ulLevel);
-		IMDId *pmdidTypePartKey = pcrPartKey->RetrieveType()->MDId();
 		CHAR szPartType = pmdrel->PartTypeAtLevel(ulLevel);
-		BOOL fRangePart = IMDRelation::ErelpartitionRange == szPartType;
-
-		CDXLNode *filter_dxlnode = NULL;
-		BOOL fDefaultPartition =
-			pbsDefaultParts ? pbsDefaultParts->Get(ulLevel) : false;
-
 		CExpression *pexprEqFilter = popSelector->PexprEqFilter(ulLevel);
 
-        // Add equality filter to the equality filter list
+		// Scenario 1: equality filter
+		// Add equality filter to equality filter list
+		// Add dummy filter to general filter list
 		if (NULL != pexprEqFilter)
 		{
 			(*ppdxlnEqFilters)->AddChild(PdxlnScalar(pexprEqFilter));
@@ -5328,10 +5328,14 @@ CTranslatorExprToDXL::ConstructLevelFilters4PartitionSelector(
 			continue;
 		}
 
+		// Scenario 2: general filter containing only disjunctions of equality comparisons
+		// Construct equality filter element list from the general filter
+		// Add equality filter element list to equality filter list
+		// Add dummy filter to general filter list
 		CExpression *pexprFilter = popSelector->PexprFilter(ulLevel);
-
-        // Add general filter containing only disjunctions of equality comparisons to the equality filter list
-        if (NULL != pexprFilter && CPredicateUtils::FOr(pexprFilter))
+		if (NULL != pexprFilter &&
+			CPredicateUtils::FDisjunctionOfIdentEqComparisons(m_mp, pexprFilter,
+															  pcrPartKey))
 		{
 			(*ppdxlnEqFilters)
 				->AddChild(PdxlnPartEqFilterElemList(pexprFilter, ulLevel,
@@ -5341,6 +5345,15 @@ CTranslatorExprToDXL::ConstructLevelFilters4PartitionSelector(
 					m_mp, m_pmda, true /*value*/));
 			continue;
 		}
+
+		// Scenario 3: general filter
+		// Add dummy filter to equality filter list
+		// Add general filter to general filter list
+		CDXLNode *filter_dxlnode = NULL;
+		IMDId *pmdidTypePartKey = pcrPartKey->RetrieveType()->MDId();
+		BOOL fRangePart = IMDRelation::ErelpartitionRange == szPartType;
+		BOOL fDefaultPartition =
+			pbsDefaultParts ? pbsDefaultParts->Get(ulLevel) : false;
 
 		if (NULL != pexprFilter)
 		{

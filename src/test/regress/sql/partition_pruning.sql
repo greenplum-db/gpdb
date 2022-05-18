@@ -973,4 +973,79 @@ where  trg.key1 = src.key1
 
 DROP TABLE t_part1;
 
+-- Test ORCA avoiding default partition scan for all levels with equality predicates
+-- Level 0: year 2 parts [2009, 2010), [2010, 2011)
+-- Level 1: quarter 5 parts
+-- Level 2: region 3 parts
+-- Level 3: sales 4 parts
+-- Total partitions: 2*5*3*4 = 120
+DROP TABLE sales;
+CREATE TABLE sales (id bigint, year int, quarter int, region text, sales int) DISTRIBUTED BY (id)
+PARTITION BY RANGE(year)
+ SUBPARTITION BY LIST (quarter)
+ SUBPARTITION TEMPLATE (DEFAULT subpartition other_quarter,
+				subpartition q1 VALUES (1),
+				subpartition q2 VALUES (2),
+				subpartition q3 VALUES (3),
+				subpartition q4 VALUES (4))
+ SUBPARTITION BY LIST (region)
+ SUBPARTITION TEMPLATE (DEFAULT subpartition other_region,
+                                subpartition eu VALUES ('eu'),
+                                subpartition usa VALUES ('usa'))
+ SUBPARTITION BY RANGE (sales)
+ SUBPARTITION TEMPLATE (DEFAULT SUBPARTITION other_sales,
+				SUBPARTITION below START (100) INCLUSIVE,
+       				SUBPARTITION meet START (5000) INCLUSIVE,
+       				SUBPARTITION beyond START (10000) INCLUSIVE END (50000) EXCLUSIVE)
+(START(2009) END(2011) EVERY(1));
+
+INSERT INTO sales
+SELECT generate_series(1,5), 2010, 0, 'asia', generate_series(50,36050,9000)
+UNION
+SELECT generate_series(6,15), 2009, 1, 'eu', generate_series(1000,4600,400)
+UNION
+SELECT generate_series(16,20), 2009, 2, 'usa', generate_series(8000,12000,1000)
+UNION
+SELECT generate_series(21,30), 2010, 3, 'usa', generate_series(4000,22000,2000)
+UNION
+SELECT generate_series(31,35), 2010, 4, 'usa', generate_series(7000,9000,500);
+
+SELECT * FROM sales ORDER BY id;
+
+-- year 1, quarter 2, region 1, sales 1
+-- Expect to scan partitions 1*2*1*1 = 2
+EXPLAIN (COSTS OFF) SELECT * FROM sales WHERE year = 2009 AND
+quarter IN (2, 4) AND
+region = 'usa' AND
+sales = 8000;
+
+-- year 2, quarter 2, region 1, sales 1
+-- Expect to scan partitions 2*2*1*1 = 4
+EXPLAIN (COSTS OFF) SELECT * FROM sales WHERE year > 2009 AND
+quarter IN (2, 4) AND
+region = 'usa' AND
+sales = 8000;
+
+-- year 2, quarter 3 (including default), region 1, sales 3 (including default)
+-- Expect to scan partitions 2*3*1*3 = 18
+EXPLAIN (COSTS OFF) SELECT * FROM sales WHERE year > 2009 AND
+quarter >= 3 AND
+region = 'usa' AND
+sales > 8000;
+
+SELECT * FROM sales WHERE year = 2009 AND
+quarter IN (2, 4) AND
+region = 'usa' AND
+sales = 8000;
+
+SELECT * FROM sales WHERE year > 2009 AND
+quarter IN (2, 4) AND
+region = 'usa' AND
+sales = 8000;
+
+SELECT * FROM sales WHERE year > 2009 AND
+quarter >= 3 AND
+region = 'usa' AND
+sales > 8000;
+
 RESET ALL;

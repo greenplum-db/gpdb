@@ -61,7 +61,7 @@ def processLogFile(logFileLines):
     for line in logFileLines:
         fileNameMatch = re.match(r'.*../data/dxl/minidump/*.', line)
         if not fileNameMatch:
-		fileNameMatch = re.match(r'.*../data/dxl/multilevel-partitioning/*.', line)
+	    fileNameMatch = re.match(r'.*../data/dxl/multilevel-partitioning/*.', line)
         actualPlanMatch = re.match(r'Actual:', line)
         planBegin = re.match(r'.*<dxl:Plan*.', line)
         planEnd = re.match(r'.*</dxl:Plan>*.', line)
