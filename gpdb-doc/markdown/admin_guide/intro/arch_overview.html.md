@@ -92,13 +92,13 @@ Segment hosts should also be dedicated to Greenplum Database operations only. To
 
 The following diagram shows an example Greenplum Database segment host hardware stack. The number of effective CPUs on a host is the basis for determining how many primary Greenplum Database segment instances to deploy per segment host. This example shows a host with two effective CPUs \(one dual-core CPU\). Note that there is one primary segment instance \(or primary/mirror pair if using mirroring\) per CPU core.
 
-![](../graphics/hardware_stack.jpg "Example Greenplum Database Segment Host Configuration")
+![](../../install_guide/graphics/hardware_stack.jpg "Example Greenplum Database Segment Host Configuration")
 
 ### <a id="topic8"></a>Example Segment Disk Layout 
 
 Each CPU is typically mapped to a logical disk. A logical disk consists of one primary file system \(and optionally a mirror file system\) accessing a pool of physical disks through an I/O channel or disk controller. The logical disk and file system are provided by the operating system. Most operating systems provide the ability for a logical disk drive to use groups of physical disks arranged in RAID arrays.
 
-![](../graphics/disk_raid.jpg "Logical Disk Layout in Greenplum Database")
+![](../../install_guide/graphics/disk_raid.jpg "Logical Disk Layout in Greenplum Database")
 
 Depending on the hardware platform you choose, different RAID configurations offer different performance and capacity levels. Greenplum supports and certifies a number of reference hardware platforms and operating systems. Check with your sales account representative for the recommended configuration on your chosen platform.
 
@@ -124,13 +124,13 @@ This is done by creating separate host address names for each network interface.
 
 With this configuration, the operating system automatically selects the best path to the destination. Greenplum Database automatically balances the network destinations to maximize parallelism.
 
-![](../graphics/multi_nic_arch.jpg "Example Network Interface Architecture")
+![](../../install_guide/graphics/multi_nic_arch.jpg "Example Network Interface Architecture")
 
 ### <a id="topic12"></a>Switch Configuration 
 
 When using multiple 10 Gigabit Ethernet switches within your Greenplum Database array, evenly divide the number of subnets between each switch. In this example configuration, if we had two switches, NICs 1 and 2 on each host would use switch 1 and NICs 3 and 4 on each host would use switch 2. For the master host, the host name bound to NIC 1 \(and therefore using switch 1\) is the effective master host name for the array. Therefore, if deploying a warm standby master for redundancy purposes, the standby master should map to a NIC that uses a different switch than the primary master.
 
-![](../graphics/multi_switch_arch.jpg "Example Switch Configuration")
+![](../../install_guide/graphics/multi_switch_arch.jpg "Example Switch Configuration")
 
 ## <a id="topic13"></a>About ETL Hosts for Data Loading 
 
