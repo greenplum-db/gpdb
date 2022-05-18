@@ -1,5 +1,5 @@
 ---
-title: Platform Requirements 
+title: Platform Requirements for On-Premise Hardware
 ---
 
 This topic describes the Greenplum Database 6 platform and operating system software requirements.
