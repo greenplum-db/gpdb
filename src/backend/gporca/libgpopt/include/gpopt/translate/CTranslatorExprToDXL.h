@@ -456,7 +456,7 @@ private:
 
 	// construct a part eq filter elem list for the given partition level
 	CDXLNode *PdxlnPartEqFilterElemList(
-		CExpression *pexpr, bool fEqFilter, ULONG level,
+		CExpression *pexpr, ULONG level,
 		CPhysicalPartitionSelector *popSelector);
 
 	// check whether the given partition selector only has equality filters

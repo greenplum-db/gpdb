@@ -4875,18 +4875,14 @@ CTranslatorExprToDXL::PdxlPartEqFilterList(CExpression *pexpr)
 		CDXLNode *eqfilter_dxlnode = NULL;
 
 		if (NULL == pexprEqFilter && NULL == pexprFilter)
-		{
 			eqfilter_dxlnode = CTranslatorExprToDXLUtils::PdxlnBoolConst(
 				m_mp, m_pmda, true /*value*/);
-		}
+		else if (NULL != pexprEqFilter)
+			eqfilter_dxlnode = PdxlnScalar(pexprEqFilter);
 		else
-		{
-			GPOS_ASSERT(((NULL == pexprEqFilter) ^ (NULL == pexprFilter)) == 1);
-			bool fEqFilter = (NULL == pexprFilter);
-			eqfilter_dxlnode = PdxlnPartEqFilterElemList(
-				fEqFilter ? pexprEqFilter : pexprFilter, fEqFilter, ul,
-				popSelector);
-		}
+			eqfilter_dxlnode =
+				PdxlnPartEqFilterElemList(pexprFilter, ul, popSelector);
+
 		pdxlnEqFilters->AddChild(eqfilter_dxlnode);
 	}
 	return pdxlnEqFilters;
@@ -4907,13 +4903,9 @@ CTranslatorExprToDXL::PdxlPartEqFilterList(CExpression *pexpr)
 //---------------------------------------------------------------------------
 CDXLNode *
 CTranslatorExprToDXL::PdxlnPartEqFilterElemList(
-	CExpression *pexpr, bool fEqFilter, ULONG level,
-	CPhysicalPartitionSelector *popSelector)
+	CExpression *pexpr, ULONG level, CPhysicalPartitionSelector *popSelector)
 {
 	GPOS_ASSERT(NULL != pexpr);
-
-	if (fEqFilter)
-		return PdxlnScalar(pexpr);
 
 	CDXLNode *filter_elems_dxlnode = GPOS_NEW(m_mp)
 		CDXLNode(m_mp, GPOS_NEW(m_mp) CDXLScalarOpList(
@@ -5324,8 +5316,9 @@ CTranslatorExprToDXL::ConstructLevelFilters4PartitionSelector(
 		BOOL fDefaultPartition =
 			pbsDefaultParts ? pbsDefaultParts->Get(ulLevel) : false;
 
-		// check if there is an equality filter on current level
 		CExpression *pexprEqFilter = popSelector->PexprEqFilter(ulLevel);
+
+        // Add equality filter to the equality filter list
 		if (NULL != pexprEqFilter)
 		{
 			(*ppdxlnEqFilters)->AddChild(PdxlnScalar(pexprEqFilter));
@@ -5335,8 +5328,20 @@ CTranslatorExprToDXL::ConstructLevelFilters4PartitionSelector(
 			continue;
 		}
 
-		// check general filters on current level
 		CExpression *pexprFilter = popSelector->PexprFilter(ulLevel);
+
+        // Add general filter containing only disjunctions of equality comparisons to the equality filter list
+        if (NULL != pexprFilter && CPredicateUtils::FOr(pexprFilter))
+		{
+			(*ppdxlnEqFilters)
+				->AddChild(PdxlnPartEqFilterElemList(pexprFilter, ulLevel,
+													 popSelector));
+			(*ppdxlnFilters)
+				->AddChild(CTranslatorExprToDXLUtils::PdxlnBoolConst(
+					m_mp, m_pmda, true /*value*/));
+			continue;
+		}
+
 		if (NULL != pexprFilter)
 		{
 			CExpressionArray *pdrgpexprConjuncts =
