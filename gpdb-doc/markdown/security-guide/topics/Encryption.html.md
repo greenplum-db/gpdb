@@ -1,6 +1,6 @@
 # Encrypting Data and Database Connections 
 
-Describes how to encrypt data at rest in the database or in transit over the network, to protect from eavesdroppers or man-in-the-middle attacks.
+This topic describes how to encrypt data at rest in the database or in transit over the network, to protect from eavesdroppers or man-in-the-middle attacks.
 
 -   Connections between clients and the master database can be encrypted with SSL. This is enabled with the `ssl` server configuration parameter, which is `off` by default. Setting the `ssl` parameter to `on` allows client communications with the master to be encrypted. The master database must be set up for SSL. See [OpenSSL Configuration](Authenticate.html#openssl_config) for more about encrypting client connections with SSL.
 -   Greenplum Database allows SSL encryption of data in transit between the Greenplum parallel file distribution server, `gpfdist`, and segment hosts. See [Encrypting gpfdist Connections](#gpfdist_connections) for more information. 
@@ -17,7 +17,7 @@ The `gpfdists` protocol implements client/server SSL security with the following
 -   Client certificates are required.
 -   Multilingual certificates are not supported.
 -   A Certificate Revocation List \(CRL\) is not supported.
--   The TLSv1 protocol is used with the `TLS_RSA_WITH_AES_128_CBC_SHA` encryption algorithm. These SSL parameters cannot be changed.
+-   A minimum TLS version of 1.2 is required.
 -   SSL renegotiation is supported.
 -   The SSL ignore host mismatch parameter is set to false.
 -   Private keys containing a passphrase are not supported for the `gpfdist` file server \(server.key\) or for the Greenplum Database \(client.key\).
