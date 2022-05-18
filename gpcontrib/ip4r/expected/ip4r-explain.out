@@ -1,0 +1,762 @@
+-- predicates and indexing
+\!gpconfig -c enable_seqscan -v "off" > /dev/null
+\!gpstop -u > /dev/null
+create table ipranges_exp (r iprange, r4 ip4r, r6 ip6r) distributed by (r);
+insert into ipranges_exp
+select r, null, r
+  from (select ip6r(regexp_replace(ls, E'(....(?!$))', E'\\1:', 'g')::ip6,
+                    regexp_replace(substring(ls for n+1) || substring(us from n+2),
+                                   E'(....(?!$))', E'\\1:', 'g')::ip6) as r
+          from (select md5(i || ' lower 1') as ls,
+                       md5(i || ' upper 1') as us,
+                       (i % 11) + (i/11 % 11) + (i/121 % 11) as n
+                  from generate_series(1,13310) i) s1) s2;
+insert into ipranges_exp
+select r, r, null
+  from (select ip4r(ip4 '0.0.0.0' + ((la & '::ffff:ffff') - ip6 '::'),
+                    ip4 '0.0.0.0' + ((( (la & ip6_netmask(127-n)) | (ua & ~ip6_netmask(127-n)) ) & '::ffff:ffff') - ip6 '::')) as r
+          from (select regexp_replace(md5(i || ' lower 2'), E'(....(?!$))', E'\\1:', 'g')::ip6 as la,
+                       regexp_replace(md5(i || ' upper 2'), E'(....(?!$))', E'\\1:', 'g')::ip6 as ua,
+                       (i % 11) + (i/11 % 11) + (i/121 % 11) as n
+                  from generate_series(1,1331) i) s1) s2;
+insert into ipranges_exp
+select r, null, r
+  from (select n::ip6 / 68 as r
+          from (select ((8192 + i/256)::numeric * (2::numeric ^ 112)
+                       + (131072 + (i % 256))::numeric * (2::numeric ^ 60)) as n
+                  from generate_series(0,4095) i) s1) s2;
+insert into ipranges_exp
+select r, r, null
+  from (select n / 28 as r
+          from (select ip4 '172.16.0.0' + (i * 256) as n
+                  from generate_series(0,4095) i) s1) s2;
+insert into ipranges_exp
+select r, null, r
+  from (select n::ip6 / 48 as r
+          from (select ((8192 + i/256)::numeric * (2::numeric ^ 112)
+                       + (i % 256)::numeric * (2::numeric ^ 84)) as n
+                  from generate_series(0,4095) i) s1) s2;
+insert into ipranges_exp
+select r, r, null
+  from (select n / 16 as r
+          from (select ip4 '128.0.0.0' + (i * 65536) as n
+                  from generate_series(0,4095) i) s1) s2;
+insert into ipranges_exp values ('-',null,null);
+create table ipaddrs_exp (a ipaddress, a4 ip4, a6 ip6) distributed by (a);
+insert into ipaddrs_exp
+select a, null, a
+  from (select regexp_replace(md5(i || ' address 1'), E'(....(?!$))', E'\\1:', 'g')::ip6 as a
+          from generate_series(1,256) i) s1;
+insert into ipaddrs_exp
+select a, a, null
+  from (select ip4 '0.0.0.0' + ((regexp_replace(md5(i || ' address 1'), E'(....(?!$))', E'\\1:', 'g')::ip6 & '::ffff:ffff') - '::') as a
+          from generate_series(1,16) i) s1;
+explain select * from ipranges_exp where r >>= '5555::' order by r;
+                                            QUERY PLAN                                            
+--------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=10000000167.93..10000000168.39 rows=32 width=72)
+   Merge Key: r
+   ->  Sort  (cost=10000000167.93..10000000167.96 rows=11 width=72)
+         Sort Key: r
+         ->  Seq Scan on ipranges_exp  (cost=10000000000.00..10000000167.75 rows=11 width=72)
+               Filter: (r >>= '5555::'::iprange)
+ Optimizer: Postgres query optimizer
+(7 rows)
+
+explain select * from ipranges_exp where r <<= '5555::/16' order by r;
+                                            QUERY PLAN                                            
+--------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=10000000167.93..10000000168.39 rows=32 width=72)
+   Merge Key: r
+   ->  Sort  (cost=10000000167.93..10000000167.96 rows=11 width=72)
+         Sort Key: r
+         ->  Seq Scan on ipranges_exp  (cost=10000000000.00..10000000167.75 rows=11 width=72)
+               Filter: (r <<= '5555::/16'::iprange)
+ Optimizer: Postgres query optimizer
+(7 rows)
+
+explain select * from ipranges_exp where r && '5555::/16' order by r;
+                                            QUERY PLAN                                             
+---------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=10000000169.29..10000000171.56 rows=160 width=72)
+   Merge Key: r
+   ->  Sort  (cost=10000000169.29..10000000169.42 rows=54 width=72)
+         Sort Key: r
+         ->  Seq Scan on ipranges_exp  (cost=10000000000.00..10000000167.75 rows=54 width=72)
+               Filter: (r && '5555::/16'::iprange)
+ Optimizer: Postgres query optimizer
+(7 rows)
+
+explain select * from ipranges_exp where r6 >>= '5555::' order by r6;
+                                            QUERY PLAN                                            
+--------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=10000000167.93..10000000168.39 rows=32 width=72)
+   Merge Key: r6
+   ->  Sort  (cost=10000000167.93..10000000167.96 rows=11 width=72)
+         Sort Key: r6
+         ->  Seq Scan on ipranges_exp  (cost=10000000000.00..10000000167.75 rows=11 width=72)
+               Filter: (r6 >>= '5555::'::ip6r)
+ Optimizer: Postgres query optimizer
+(7 rows)
+
+explain select * from ipranges_exp where r6 <<= '5555::/16' order by r6;
+                                            QUERY PLAN                                            
+--------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=10000000167.93..10000000168.39 rows=32 width=72)
+   Merge Key: r6
+   ->  Sort  (cost=10000000167.93..10000000167.96 rows=11 width=72)
+         Sort Key: r6
+         ->  Seq Scan on ipranges_exp  (cost=10000000000.00..10000000167.75 rows=11 width=72)
+               Filter: (r6 <<= '5555::/16'::ip6r)
+ Optimizer: Postgres query optimizer
+(7 rows)
+
+explain select * from ipranges_exp where r6 && '5555::/16' order by r6;
+                                            QUERY PLAN                                             
+---------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=10000000169.29..10000000171.56 rows=160 width=72)
+   Merge Key: r6
+   ->  Sort  (cost=10000000169.29..10000000169.42 rows=54 width=72)
+         Sort Key: r6
+         ->  Seq Scan on ipranges_exp  (cost=10000000000.00..10000000167.75 rows=54 width=72)
+               Filter: (r6 && '5555::/16'::ip6r)
+ Optimizer: Postgres query optimizer
+(7 rows)
+
+explain select * from ipranges_exp where r >>= '172.16.2.0' order by r;
+                                            QUERY PLAN                                            
+--------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=10000000167.93..10000000168.39 rows=32 width=72)
+   Merge Key: r
+   ->  Sort  (cost=10000000167.93..10000000167.96 rows=11 width=72)
+         Sort Key: r
+         ->  Seq Scan on ipranges_exp  (cost=10000000000.00..10000000167.75 rows=11 width=72)
+               Filter: (r >>= '172.16.2.0'::iprange)
+ Optimizer: Postgres query optimizer
+(7 rows)
+
+explain select * from ipranges_exp where r <<= '10.0.0.0/12' order by r;
+                                            QUERY PLAN                                            
+--------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=10000000167.93..10000000168.39 rows=32 width=72)
+   Merge Key: r
+   ->  Sort  (cost=10000000167.93..10000000167.96 rows=11 width=72)
+         Sort Key: r
+         ->  Seq Scan on ipranges_exp  (cost=10000000000.00..10000000167.75 rows=11 width=72)
+               Filter: (r <<= '10.0.0.0/12'::iprange)
+ Optimizer: Postgres query optimizer
+(7 rows)
+
+explain select * from ipranges_exp where r && '10.128.0.0/12' order by r;
+                                            QUERY PLAN                                             
+---------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=10000000169.29..10000000171.56 rows=160 width=72)
+   Merge Key: r
+   ->  Sort  (cost=10000000169.29..10000000169.42 rows=54 width=72)
+         Sort Key: r
+         ->  Seq Scan on ipranges_exp  (cost=10000000000.00..10000000167.75 rows=54 width=72)
+               Filter: (r && '10.128.0.0/12'::iprange)
+ Optimizer: Postgres query optimizer
+(7 rows)
+
+explain select * from ipranges_exp where r4 >>= '172.16.2.0' order by r4;
+                                            QUERY PLAN                                            
+--------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=10000000167.93..10000000168.39 rows=32 width=72)
+   Merge Key: r4
+   ->  Sort  (cost=10000000167.93..10000000167.96 rows=11 width=72)
+         Sort Key: r4
+         ->  Seq Scan on ipranges_exp  (cost=10000000000.00..10000000167.75 rows=11 width=72)
+               Filter: (r4 >>= '172.16.2.0'::ip4r)
+ Optimizer: Postgres query optimizer
+(7 rows)
+
+explain select * from ipranges_exp where r4 <<= '10.0.0.0/12' order by r4;
+                                            QUERY PLAN                                            
+--------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=10000000167.93..10000000168.39 rows=32 width=72)
+   Merge Key: r4
+   ->  Sort  (cost=10000000167.93..10000000167.96 rows=11 width=72)
+         Sort Key: r4
+         ->  Seq Scan on ipranges_exp  (cost=10000000000.00..10000000167.75 rows=11 width=72)
+               Filter: (r4 <<= '10.0.0.0/12'::ip4r)
+ Optimizer: Postgres query optimizer
+(7 rows)
+
+explain select * from ipranges_exp where r4 && '10.128.0.0/12' order by r4;
+                                            QUERY PLAN                                             
+---------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=10000000169.29..10000000171.56 rows=160 width=72)
+   Merge Key: r4
+   ->  Sort  (cost=10000000169.29..10000000169.42 rows=54 width=72)
+         Sort Key: r4
+         ->  Seq Scan on ipranges_exp  (cost=10000000000.00..10000000167.75 rows=54 width=72)
+               Filter: (r4 && '10.128.0.0/12'::ip4r)
+ Optimizer: Postgres query optimizer
+(7 rows)
+
+explain select * from ipranges_exp where r >>= '2001:0:0:2000:a123::' order by r;
+                                            QUERY PLAN                                            
+--------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=10000000167.93..10000000168.39 rows=32 width=72)
+   Merge Key: r
+   ->  Sort  (cost=10000000167.93..10000000167.96 rows=11 width=72)
+         Sort Key: r
+         ->  Seq Scan on ipranges_exp  (cost=10000000000.00..10000000167.75 rows=11 width=72)
+               Filter: (r >>= '2001:0:0:2000:a123::'::iprange)
+ Optimizer: Postgres query optimizer
+(7 rows)
+
+explain select * from ipranges_exp where r >>= '2001:0:0:2000::' order by r;
+                                            QUERY PLAN                                            
+--------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=10000000167.93..10000000168.39 rows=32 width=72)
+   Merge Key: r
+   ->  Sort  (cost=10000000167.93..10000000167.96 rows=11 width=72)
+         Sort Key: r
+         ->  Seq Scan on ipranges_exp  (cost=10000000000.00..10000000167.75 rows=11 width=72)
+               Filter: (r >>= '2001:0:0:2000::'::iprange)
+ Optimizer: Postgres query optimizer
+(7 rows)
+
+explain select * from ipranges_exp where r >>= '2001:0:0:2000::/68' order by r;
+                                            QUERY PLAN                                            
+--------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=10000000167.93..10000000168.39 rows=32 width=72)
+   Merge Key: r
+   ->  Sort  (cost=10000000167.93..10000000167.96 rows=11 width=72)
+         Sort Key: r
+         ->  Seq Scan on ipranges_exp  (cost=10000000000.00..10000000167.75 rows=11 width=72)
+               Filter: (r >>= '2001:0:0:2000::/68'::iprange)
+ Optimizer: Postgres query optimizer
+(7 rows)
+
+explain select * from ipranges_exp where r >> '2001:0:0:2000::/68' order by r;
+                                            QUERY PLAN                                            
+--------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=10000000167.93..10000000168.39 rows=32 width=72)
+   Merge Key: r
+   ->  Sort  (cost=10000000167.93..10000000167.96 rows=11 width=72)
+         Sort Key: r
+         ->  Seq Scan on ipranges_exp  (cost=10000000000.00..10000000167.75 rows=11 width=72)
+               Filter: (r >> '2001:0:0:2000::/68'::iprange)
+ Optimizer: Postgres query optimizer
+(7 rows)
+
+explain select * from ipranges_exp where r6 >>= '2001:0:0:2000:a123::' order by r6;
+                                            QUERY PLAN                                            
+--------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=10000000167.93..10000000168.39 rows=32 width=72)
+   Merge Key: r6
+   ->  Sort  (cost=10000000167.93..10000000167.96 rows=11 width=72)
+         Sort Key: r6
+         ->  Seq Scan on ipranges_exp  (cost=10000000000.00..10000000167.75 rows=11 width=72)
+               Filter: (r6 >>= '2001:0:0:2000:a123::'::ip6r)
+ Optimizer: Postgres query optimizer
+(7 rows)
+
+explain select * from ipranges_exp where r6 >>= '2001:0:0:2000::' order by r6;
+                                            QUERY PLAN                                            
+--------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=10000000167.93..10000000168.39 rows=32 width=72)
+   Merge Key: r6
+   ->  Sort  (cost=10000000167.93..10000000167.96 rows=11 width=72)
+         Sort Key: r6
+         ->  Seq Scan on ipranges_exp  (cost=10000000000.00..10000000167.75 rows=11 width=72)
+               Filter: (r6 >>= '2001:0:0:2000::'::ip6r)
+ Optimizer: Postgres query optimizer
+(7 rows)
+
+explain select * from ipranges_exp where r6 >>= '2001:0:0:2000::/68' order by r6;
+                                            QUERY PLAN                                            
+--------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=10000000167.93..10000000168.39 rows=32 width=72)
+   Merge Key: r6
+   ->  Sort  (cost=10000000167.93..10000000167.96 rows=11 width=72)
+         Sort Key: r6
+         ->  Seq Scan on ipranges_exp  (cost=10000000000.00..10000000167.75 rows=11 width=72)
+               Filter: (r6 >>= '2001:0:0:2000::/68'::ip6r)
+ Optimizer: Postgres query optimizer
+(7 rows)
+
+explain select * from ipranges_exp where r6 >> '2001:0:0:2000::/68' order by r6;
+                                            QUERY PLAN                                            
+--------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=10000000167.93..10000000168.39 rows=32 width=72)
+   Merge Key: r6
+   ->  Sort  (cost=10000000167.93..10000000167.96 rows=11 width=72)
+         Sort Key: r6
+         ->  Seq Scan on ipranges_exp  (cost=10000000000.00..10000000167.75 rows=11 width=72)
+               Filter: (r6 >> '2001:0:0:2000::/68'::ip6r)
+ Optimizer: Postgres query optimizer
+(7 rows)
+
+explain select * from ipranges_exp where r4 >>= '172.16.2.0/28' order by r4;
+                                            QUERY PLAN                                            
+--------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=10000000167.93..10000000168.39 rows=32 width=72)
+   Merge Key: r4
+   ->  Sort  (cost=10000000167.93..10000000167.96 rows=11 width=72)
+         Sort Key: r4
+         ->  Seq Scan on ipranges_exp  (cost=10000000000.00..10000000167.75 rows=11 width=72)
+               Filter: (r4 >>= '172.16.2.0/28'::ip4r)
+ Optimizer: Postgres query optimizer
+(7 rows)
+
+explain select * from ipranges_exp where r4 >> '172.16.2.0/28' order by r4;
+                                            QUERY PLAN                                            
+--------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=10000000167.93..10000000168.39 rows=32 width=72)
+   Merge Key: r4
+   ->  Sort  (cost=10000000167.93..10000000167.96 rows=11 width=72)
+         Sort Key: r4
+         ->  Seq Scan on ipranges_exp  (cost=10000000000.00..10000000167.75 rows=11 width=72)
+               Filter: (r4 >> '172.16.2.0/28'::ip4r)
+ Optimizer: Postgres query optimizer
+(7 rows)
+
+explain select * from ipaddrs_exp where a between '8.0.0.0' and '15.0.0.0' order by a;
+                                            QUERY PLAN                                             
+---------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=10000000238.19..10000000243.84 rows=399 width=52)
+   Merge Key: a
+   ->  Sort  (cost=10000000238.19..10000000238.52 rows=133 width=52)
+         Sort Key: a
+         ->  Seq Scan on ipaddrs_exp  (cost=10000000000.00..10000000233.50 rows=133 width=52)
+               Filter: ((a >= '8.0.0.0'::ipaddress) AND (a <= '15.0.0.0'::ipaddress))
+ Optimizer: Postgres query optimizer
+(7 rows)
+
+explain select * from ipaddrs_exp where a4 between '8.0.0.0' and '15.0.0.0' order by a4;
+                                            QUERY PLAN                                             
+---------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=10000000238.19..10000000243.84 rows=399 width=52)
+   Merge Key: a4
+   ->  Sort  (cost=10000000238.19..10000000238.52 rows=133 width=52)
+         Sort Key: a4
+         ->  Seq Scan on ipaddrs_exp  (cost=10000000000.00..10000000233.50 rows=133 width=52)
+               Filter: ((a4 >= '8.0.0.0'::ip4) AND (a4 <= '15.0.0.0'::ip4))
+ Optimizer: Postgres query optimizer
+(7 rows)
+
+create index ipranges_exp_r on ipranges_exp using gist (r);
+create index ipranges_exp_r4 on ipranges_exp using gist (r4);
+create index ipranges_exp_r6 on ipranges_exp using gist (r6);
+create index ipaddrs_exp_a on ipaddrs_exp (a);
+create index ipaddrs_exp_a4 on ipaddrs_exp (a4);
+create index ipaddrs_exp_a6 on ipaddrs_exp (a6);
+analyze ipranges_exp;
+analyze ipaddrs_exp;
+explain select * from ipranges_exp where r >>= '5555::' order by r;
+                                        QUERY PLAN                                        
+------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=24.93..25.37 rows=31 width=60)
+   Merge Key: r
+   ->  Sort  (cost=24.93..24.96 rows=10 width=60)
+         Sort Key: r
+         ->  Bitmap Heap Scan on ipranges_exp  (cost=4.51..24.76 rows=10 width=60)
+               Recheck Cond: (r >>= '5555::'::iprange)
+               ->  Bitmap Index Scan on ipranges_exp_r  (cost=0.00..4.51 rows=10 width=0)
+                     Index Cond: (r >>= '5555::'::iprange)
+ Optimizer: Postgres query optimizer
+(9 rows)
+
+explain select * from ipranges_exp where r <<= '5555::/16' order by r;
+                                        QUERY PLAN                                        
+------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=24.93..25.37 rows=31 width=60)
+   Merge Key: r
+   ->  Sort  (cost=24.93..24.96 rows=10 width=60)
+         Sort Key: r
+         ->  Bitmap Heap Scan on ipranges_exp  (cost=4.51..24.76 rows=10 width=60)
+               Recheck Cond: (r <<= '5555::/16'::iprange)
+               ->  Bitmap Index Scan on ipranges_exp_r  (cost=0.00..4.51 rows=10 width=0)
+                     Index Cond: (r <<= '5555::/16'::iprange)
+ Optimizer: Postgres query optimizer
+(9 rows)
+
+explain select * from ipranges_exp where r && '5555::/16' order by r;
+                                        QUERY PLAN                                        
+------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=33.57..35.77 rows=155 width=60)
+   Merge Key: r
+   ->  Sort  (cost=33.57..33.70 rows=52 width=60)
+         Sort Key: r
+         ->  Bitmap Heap Scan on ipranges_exp  (cost=5.45..32.10 rows=52 width=60)
+               Recheck Cond: (r && '5555::/16'::iprange)
+               ->  Bitmap Index Scan on ipranges_exp_r  (cost=0.00..5.44 rows=52 width=0)
+                     Index Cond: (r && '5555::/16'::iprange)
+ Optimizer: Postgres query optimizer
+(9 rows)
+
+explain select * from ipranges_exp where r6 >>= '5555::' order by r6;
+                                        QUERY PLAN                                         
+-------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=24.81..25.25 rows=31 width=60)
+   Merge Key: r6
+   ->  Sort  (cost=24.81..24.83 rows=10 width=60)
+         Sort Key: r6
+         ->  Bitmap Heap Scan on ipranges_exp  (cost=4.39..24.63 rows=10 width=60)
+               Recheck Cond: (r6 >>= '5555::'::ip6r)
+               ->  Bitmap Index Scan on ipranges_exp_r6  (cost=0.00..4.38 rows=10 width=0)
+                     Index Cond: (r6 >>= '5555::'::ip6r)
+ Optimizer: Postgres query optimizer
+(9 rows)
+
+explain select * from ipranges_exp where r6 <<= '5555::/16' order by r6;
+                                        QUERY PLAN                                         
+-------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=24.81..25.25 rows=31 width=60)
+   Merge Key: r6
+   ->  Sort  (cost=24.81..24.83 rows=10 width=60)
+         Sort Key: r6
+         ->  Bitmap Heap Scan on ipranges_exp  (cost=4.39..24.63 rows=10 width=60)
+               Recheck Cond: (r6 <<= '5555::/16'::ip6r)
+               ->  Bitmap Index Scan on ipranges_exp_r6  (cost=0.00..4.38 rows=10 width=0)
+                     Index Cond: (r6 <<= '5555::/16'::ip6r)
+ Optimizer: Postgres query optimizer
+(9 rows)
+
+explain select * from ipranges_exp where r6 && '5555::/16' order by r6;
+                                        QUERY PLAN                                         
+-------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=33.45..35.64 rows=155 width=60)
+   Merge Key: r6
+   ->  Sort  (cost=33.45..33.58 rows=52 width=60)
+         Sort Key: r6
+         ->  Bitmap Heap Scan on ipranges_exp  (cost=5.33..31.97 rows=52 width=60)
+               Recheck Cond: (r6 && '5555::/16'::ip6r)
+               ->  Bitmap Index Scan on ipranges_exp_r6  (cost=0.00..5.31 rows=52 width=0)
+                     Index Cond: (r6 && '5555::/16'::ip6r)
+ Optimizer: Postgres query optimizer
+(9 rows)
+
+explain select * from ipranges_exp where r >>= '172.16.2.0' order by r;
+                                        QUERY PLAN                                        
+------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=24.93..25.37 rows=31 width=60)
+   Merge Key: r
+   ->  Sort  (cost=24.93..24.96 rows=10 width=60)
+         Sort Key: r
+         ->  Bitmap Heap Scan on ipranges_exp  (cost=4.51..24.76 rows=10 width=60)
+               Recheck Cond: (r >>= '172.16.2.0'::iprange)
+               ->  Bitmap Index Scan on ipranges_exp_r  (cost=0.00..4.51 rows=10 width=0)
+                     Index Cond: (r >>= '172.16.2.0'::iprange)
+ Optimizer: Postgres query optimizer
+(9 rows)
+
+explain select * from ipranges_exp where r <<= '10.0.0.0/12' order by r;
+                                        QUERY PLAN                                        
+------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=24.93..25.37 rows=31 width=60)
+   Merge Key: r
+   ->  Sort  (cost=24.93..24.96 rows=10 width=60)
+         Sort Key: r
+         ->  Bitmap Heap Scan on ipranges_exp  (cost=4.51..24.76 rows=10 width=60)
+               Recheck Cond: (r <<= '10.0.0.0/12'::iprange)
+               ->  Bitmap Index Scan on ipranges_exp_r  (cost=0.00..4.51 rows=10 width=0)
+                     Index Cond: (r <<= '10.0.0.0/12'::iprange)
+ Optimizer: Postgres query optimizer
+(9 rows)
+
+explain select * from ipranges_exp where r && '10.128.0.0/12' order by r;
+                                        QUERY PLAN                                        
+------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=33.57..35.77 rows=155 width=60)
+   Merge Key: r
+   ->  Sort  (cost=33.57..33.70 rows=52 width=60)
+         Sort Key: r
+         ->  Bitmap Heap Scan on ipranges_exp  (cost=5.45..32.10 rows=52 width=60)
+               Recheck Cond: (r && '10.128.0.0/12'::iprange)
+               ->  Bitmap Index Scan on ipranges_exp_r  (cost=0.00..5.44 rows=52 width=0)
+                     Index Cond: (r && '10.128.0.0/12'::iprange)
+ Optimizer: Postgres query optimizer
+(9 rows)
+
+explain select * from ipranges_exp where r4 >>= '172.16.2.0' order by r4;
+                                        QUERY PLAN                                         
+-------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=24.81..25.25 rows=31 width=60)
+   Merge Key: r4
+   ->  Sort  (cost=24.81..24.83 rows=10 width=60)
+         Sort Key: r4
+         ->  Bitmap Heap Scan on ipranges_exp  (cost=4.39..24.63 rows=10 width=60)
+               Recheck Cond: (r4 >>= '172.16.2.0'::ip4r)
+               ->  Bitmap Index Scan on ipranges_exp_r4  (cost=0.00..4.38 rows=10 width=0)
+                     Index Cond: (r4 >>= '172.16.2.0'::ip4r)
+ Optimizer: Postgres query optimizer
+(9 rows)
+
+explain select * from ipranges_exp where r4 <<= '10.0.0.0/12' order by r4;
+                                        QUERY PLAN                                         
+-------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=24.81..25.25 rows=31 width=60)
+   Merge Key: r4
+   ->  Sort  (cost=24.81..24.83 rows=10 width=60)
+         Sort Key: r4
+         ->  Bitmap Heap Scan on ipranges_exp  (cost=4.39..24.63 rows=10 width=60)
+               Recheck Cond: (r4 <<= '10.0.0.0/12'::ip4r)
+               ->  Bitmap Index Scan on ipranges_exp_r4  (cost=0.00..4.38 rows=10 width=0)
+                     Index Cond: (r4 <<= '10.0.0.0/12'::ip4r)
+ Optimizer: Postgres query optimizer
+(9 rows)
+
+explain select * from ipranges_exp where r4 && '10.128.0.0/12' order by r4;
+                                        QUERY PLAN                                         
+-------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=33.45..35.64 rows=155 width=60)
+   Merge Key: r4
+   ->  Sort  (cost=33.45..33.58 rows=52 width=60)
+         Sort Key: r4
+         ->  Bitmap Heap Scan on ipranges_exp  (cost=5.33..31.97 rows=52 width=60)
+               Recheck Cond: (r4 && '10.128.0.0/12'::ip4r)
+               ->  Bitmap Index Scan on ipranges_exp_r4  (cost=0.00..5.31 rows=52 width=0)
+                     Index Cond: (r4 && '10.128.0.0/12'::ip4r)
+ Optimizer: Postgres query optimizer
+(9 rows)
+
+explain select * from ipranges_exp where r >>= '2001:0:0:2000:a123::' order by r;
+                                        QUERY PLAN                                        
+------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=24.93..25.37 rows=31 width=60)
+   Merge Key: r
+   ->  Sort  (cost=24.93..24.96 rows=10 width=60)
+         Sort Key: r
+         ->  Bitmap Heap Scan on ipranges_exp  (cost=4.51..24.76 rows=10 width=60)
+               Recheck Cond: (r >>= '2001:0:0:2000:a123::'::iprange)
+               ->  Bitmap Index Scan on ipranges_exp_r  (cost=0.00..4.51 rows=10 width=0)
+                     Index Cond: (r >>= '2001:0:0:2000:a123::'::iprange)
+ Optimizer: Postgres query optimizer
+(9 rows)
+
+explain select * from ipranges_exp where r >>= '2001:0:0:2000::' order by r;
+                                        QUERY PLAN                                        
+------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=24.93..25.37 rows=31 width=60)
+   Merge Key: r
+   ->  Sort  (cost=24.93..24.96 rows=10 width=60)
+         Sort Key: r
+         ->  Bitmap Heap Scan on ipranges_exp  (cost=4.51..24.76 rows=10 width=60)
+               Recheck Cond: (r >>= '2001:0:0:2000::'::iprange)
+               ->  Bitmap Index Scan on ipranges_exp_r  (cost=0.00..4.51 rows=10 width=0)
+                     Index Cond: (r >>= '2001:0:0:2000::'::iprange)
+ Optimizer: Postgres query optimizer
+(9 rows)
+
+explain select * from ipranges_exp where r >>= '2001:0:0:2000::/68' order by r;
+                                        QUERY PLAN                                        
+------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=24.93..25.37 rows=31 width=60)
+   Merge Key: r
+   ->  Sort  (cost=24.93..24.96 rows=10 width=60)
+         Sort Key: r
+         ->  Bitmap Heap Scan on ipranges_exp  (cost=4.51..24.76 rows=10 width=60)
+               Recheck Cond: (r >>= '2001:0:0:2000::/68'::iprange)
+               ->  Bitmap Index Scan on ipranges_exp_r  (cost=0.00..4.51 rows=10 width=0)
+                     Index Cond: (r >>= '2001:0:0:2000::/68'::iprange)
+ Optimizer: Postgres query optimizer
+(9 rows)
+
+explain select * from ipranges_exp where r >> '2001:0:0:2000::/68' order by r;
+                                        QUERY PLAN                                        
+------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=24.93..25.37 rows=31 width=60)
+   Merge Key: r
+   ->  Sort  (cost=24.93..24.96 rows=10 width=60)
+         Sort Key: r
+         ->  Bitmap Heap Scan on ipranges_exp  (cost=4.51..24.76 rows=10 width=60)
+               Recheck Cond: (r >> '2001:0:0:2000::/68'::iprange)
+               ->  Bitmap Index Scan on ipranges_exp_r  (cost=0.00..4.51 rows=10 width=0)
+                     Index Cond: (r >> '2001:0:0:2000::/68'::iprange)
+ Optimizer: Postgres query optimizer
+(9 rows)
+
+explain select * from ipranges_exp where r6 >>= '2001:0:0:2000:a123::' order by r6;
+                                        QUERY PLAN                                         
+-------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=24.81..25.25 rows=31 width=60)
+   Merge Key: r6
+   ->  Sort  (cost=24.81..24.83 rows=10 width=60)
+         Sort Key: r6
+         ->  Bitmap Heap Scan on ipranges_exp  (cost=4.39..24.63 rows=10 width=60)
+               Recheck Cond: (r6 >>= '2001:0:0:2000:a123::'::ip6r)
+               ->  Bitmap Index Scan on ipranges_exp_r6  (cost=0.00..4.38 rows=10 width=0)
+                     Index Cond: (r6 >>= '2001:0:0:2000:a123::'::ip6r)
+ Optimizer: Postgres query optimizer
+(9 rows)
+
+explain select * from ipranges_exp where r6 >>= '2001:0:0:2000::' order by r6;
+                                        QUERY PLAN                                         
+-------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=24.81..25.25 rows=31 width=60)
+   Merge Key: r6
+   ->  Sort  (cost=24.81..24.83 rows=10 width=60)
+         Sort Key: r6
+         ->  Bitmap Heap Scan on ipranges_exp  (cost=4.39..24.63 rows=10 width=60)
+               Recheck Cond: (r6 >>= '2001:0:0:2000::'::ip6r)
+               ->  Bitmap Index Scan on ipranges_exp_r6  (cost=0.00..4.38 rows=10 width=0)
+                     Index Cond: (r6 >>= '2001:0:0:2000::'::ip6r)
+ Optimizer: Postgres query optimizer
+(9 rows)
+
+explain select * from ipranges_exp where r6 >>= '2001:0:0:2000::/68' order by r6;
+                                        QUERY PLAN                                         
+-------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=24.81..25.25 rows=31 width=60)
+   Merge Key: r6
+   ->  Sort  (cost=24.81..24.83 rows=10 width=60)
+         Sort Key: r6
+         ->  Bitmap Heap Scan on ipranges_exp  (cost=4.39..24.63 rows=10 width=60)
+               Recheck Cond: (r6 >>= '2001:0:0:2000::/68'::ip6r)
+               ->  Bitmap Index Scan on ipranges_exp_r6  (cost=0.00..4.38 rows=10 width=0)
+                     Index Cond: (r6 >>= '2001:0:0:2000::/68'::ip6r)
+ Optimizer: Postgres query optimizer
+(9 rows)
+
+explain select * from ipranges_exp where r6 >> '2001:0:0:2000::/68' order by r6;
+                                        QUERY PLAN                                         
+-------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=24.81..25.25 rows=31 width=60)
+   Merge Key: r6
+   ->  Sort  (cost=24.81..24.83 rows=10 width=60)
+         Sort Key: r6
+         ->  Bitmap Heap Scan on ipranges_exp  (cost=4.39..24.63 rows=10 width=60)
+               Recheck Cond: (r6 >> '2001:0:0:2000::/68'::ip6r)
+               ->  Bitmap Index Scan on ipranges_exp_r6  (cost=0.00..4.38 rows=10 width=0)
+                     Index Cond: (r6 >> '2001:0:0:2000::/68'::ip6r)
+ Optimizer: Postgres query optimizer
+(9 rows)
+
+explain select * from ipranges_exp where r4 >>= '172.16.2.0/28' order by r4;
+                                        QUERY PLAN                                         
+-------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=24.81..25.25 rows=31 width=60)
+   Merge Key: r4
+   ->  Sort  (cost=24.81..24.83 rows=10 width=60)
+         Sort Key: r4
+         ->  Bitmap Heap Scan on ipranges_exp  (cost=4.39..24.63 rows=10 width=60)
+               Recheck Cond: (r4 >>= '172.16.2.0/28'::ip4r)
+               ->  Bitmap Index Scan on ipranges_exp_r4  (cost=0.00..4.38 rows=10 width=0)
+                     Index Cond: (r4 >>= '172.16.2.0/28'::ip4r)
+ Optimizer: Postgres query optimizer
+(9 rows)
+
+explain select * from ipranges_exp where r4 >> '172.16.2.0/28' order by r4;
+                                        QUERY PLAN                                         
+-------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=24.81..25.25 rows=31 width=60)
+   Merge Key: r4
+   ->  Sort  (cost=24.81..24.83 rows=10 width=60)
+         Sort Key: r4
+         ->  Bitmap Heap Scan on ipranges_exp  (cost=4.39..24.63 rows=10 width=60)
+               Recheck Cond: (r4 >> '172.16.2.0/28'::ip4r)
+               ->  Bitmap Index Scan on ipranges_exp_r4  (cost=0.00..4.38 rows=10 width=0)
+                     Index Cond: (r4 >> '172.16.2.0/28'::ip4r)
+ Optimizer: Postgres query optimizer
+(9 rows)
+
+explain select * from ipaddrs_exp where a between '8.0.0.0' and '15.0.0.0' order by a;
+                                       QUERY PLAN                                       
+----------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.15..8.19 rows=1 width=36)
+   Merge Key: a
+   ->  Index Scan using ipaddrs_exp_a on ipaddrs_exp  (cost=0.15..8.17 rows=1 width=36)
+         Index Cond: ((a >= '8.0.0.0'::ipaddress) AND (a <= '15.0.0.0'::ipaddress))
+ Optimizer: Postgres query optimizer
+(5 rows)
+
+explain select * from ipaddrs_exp where a4 between '8.0.0.0' and '15.0.0.0' order by a4;
+                                       QUERY PLAN                                        
+-----------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.15..8.19 rows=1 width=36)
+   Merge Key: a4
+   ->  Index Scan using ipaddrs_exp_a4 on ipaddrs_exp  (cost=0.15..8.17 rows=1 width=36)
+         Index Cond: ((a4 >= '8.0.0.0'::ip4) AND (a4 <= '15.0.0.0'::ip4))
+ Optimizer: Postgres query optimizer
+(5 rows)
+
+explain select * from ipaddrs_exp a join ipranges_exp r on (r.r >>= a.a) order by a,r;
+                                                       QUERY PLAN                                                       
+------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=20000000910.35..20000001029.90 rows=8439 width=96)
+   Merge Key: a.a, r.r
+   ->  Sort  (cost=20000000910.35..20000000917.38 rows=2813 width=96)
+         Sort Key: a.a, r.r
+         ->  Nested Loop  (cost=20000000000.28..20000000749.19 rows=2813 width=96)
+               ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=10000000000.00..10000000005.53 rows=272 width=36)
+                     ->  Seq Scan on ipaddrs_exp a  (cost=10000000000.00..10000000001.91 rows=91 width=36)
+               ->  Index Scan using ipranges_exp_r on ipranges_exp r  (cost=0.28..2.63 rows=10 width=60)
+                     Index Cond: (r >>= (a.a)::iprange)
+ Optimizer: Postgres query optimizer
+(10 rows)
+
+explain select * from ipaddrs_exp a join ipranges_exp r on (r.r4 >>= a.a4) order by a4,r4;
+                                                       QUERY PLAN                                                       
+------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=20000000588.35..20000000707.90 rows=8439 width=96)
+   Merge Key: a.a4, r.r4
+   ->  Sort  (cost=20000000588.35..20000000595.38 rows=2813 width=96)
+         Sort Key: a.a4, r.r4
+         ->  Nested Loop  (cost=20000000000.15..20000000427.19 rows=2813 width=96)
+               ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=10000000000.00..10000000005.53 rows=272 width=36)
+                     ->  Seq Scan on ipaddrs_exp a  (cost=10000000000.00..10000000001.91 rows=91 width=36)
+               ->  Index Scan using ipranges_exp_r4 on ipranges_exp r  (cost=0.15..1.45 rows=10 width=60)
+                     Index Cond: (r4 >>= (a.a4)::ip4r)
+ Optimizer: Postgres query optimizer
+(10 rows)
+
+explain select * from ipaddrs_exp a join ipranges_exp r on (r.r6 >>= a.a6) order by a6,r6;
+                                                       QUERY PLAN                                                       
+------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=20000000732.35..20000000851.90 rows=8439 width=96)
+   Merge Key: a.a6, r.r6
+   ->  Sort  (cost=20000000732.35..20000000739.38 rows=2813 width=96)
+         Sort Key: a.a6, r.r6
+         ->  Nested Loop  (cost=20000000000.15..20000000571.19 rows=2813 width=96)
+               ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=10000000000.00..10000000005.53 rows=272 width=36)
+                     ->  Seq Scan on ipaddrs_exp a  (cost=10000000000.00..10000000001.91 rows=91 width=36)
+               ->  Index Scan using ipranges_exp_r6 on ipranges_exp r  (cost=0.15..1.98 rows=10 width=60)
+                     Index Cond: (r6 >>= (a.a6)::ip6r)
+ Optimizer: Postgres query optimizer
+(10 rows)
+
+-- index-only, on versions that support it:
+vacuum ipranges_exp;
+explain select r from ipranges_exp where r >>= '5555::' order by r;
+                                              QUERY PLAN                                              
+------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=4.79..5.23 rows=31 width=20)
+   Merge Key: r
+   ->  Sort  (cost=4.79..4.81 rows=10 width=20)
+         Sort Key: r
+         ->  Index Only Scan using ipranges_exp_r on ipranges_exp  (cost=0.28..4.61 rows=10 width=20)
+               Index Cond: (r >>= '5555::'::iprange)
+ Optimizer: Postgres query optimizer
+(7 rows)
+
+explain select r6 from ipranges_exp where r6 >>= '5555::' order by r6;
+                                              QUERY PLAN                                               
+-------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=4.66..5.10 rows=31 width=32)
+   Merge Key: r6
+   ->  Sort  (cost=4.66..4.69 rows=10 width=32)
+         Sort Key: r6
+         ->  Index Only Scan using ipranges_exp_r6 on ipranges_exp  (cost=0.15..4.49 rows=10 width=32)
+               Index Cond: (r6 >>= '5555::'::ip6r)
+ Optimizer: Postgres query optimizer
+(7 rows)
+
+explain select r4 from ipranges_exp where r4 >>= '172.16.2.0' order by r4;
+                                              QUERY PLAN                                              
+------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=4.66..5.10 rows=31 width=8)
+   Merge Key: r4
+   ->  Sort  (cost=4.66..4.69 rows=10 width=8)
+         Sort Key: r4
+         ->  Index Only Scan using ipranges_exp_r4 on ipranges_exp  (cost=0.15..4.49 rows=10 width=8)
+               Index Cond: (r4 >>= '172.16.2.0'::ip4r)
+ Optimizer: Postgres query optimizer
+(7 rows)
+
+\!gpconfig -r enable_seqscan > /dev/null
+\!gpstop -u > /dev/null

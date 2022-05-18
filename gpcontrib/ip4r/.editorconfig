@@ -1,0 +1,6 @@
+
+[*]
+tab_width = 4
+
+[Makefile]
+tab_width = 8
