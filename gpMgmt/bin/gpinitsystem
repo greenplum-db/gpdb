@@ -598,7 +598,7 @@ CHK_MULTI_HOME () {
 			M_HOST_ARRAY=()
 			for S_HOST in ${T_SEG_ARRAY[@]}
 			do
-				M_HOST_ARRAY=(${M_HOST_ARRAY[@]} `$ECHO ${FAKE_M_HOST_ARRAY[@]}|$TR ' ' '\n'|$GREP "~${S_HOST}$"| $SORT | $TR '\n' ' '`)
+				M_HOST_ARRAY=(${M_HOST_ARRAY[@]} `$ECHO ${FAKE_M_HOST_ARRAY[@]}|$TR ' ' '\n'|$GREP "~${S_HOST}$"| $SORT -V | $TR '\n' ' '`)
 			done
 		fi
 	else
@@ -612,7 +612,7 @@ CHK_MULTI_HOME () {
 			FAKE_M_HOST_ARRAY=(${FAKE_M_HOST_ARRAY[@]} ${M_HOST_ARRAY[@]})
 			((HOME_COUNT=$HOME_COUNT+1))
 		done
-		M_HOST_ARRAY=(`$ECHO ${FAKE_M_HOST_ARRAY[@]}|$TR ' ' '\n'|$SORT |$TR '\n' ' '`)
+		M_HOST_ARRAY=(`$ECHO ${FAKE_M_HOST_ARRAY[@]}|$TR ' ' '\n'|$SORT -V |$TR '\n' ' '`)
 	fi
 	NUM_SEP_HOSTS=`$ECHO ${M_HOST_ARRAY[@]}|$TR ' ' '\n'|$AWK -F"~" '{print $2}'|$SORT -u|$WC -l`
 	if [ $MIRRORING -eq 1 ] && [ $MIRROR_TYPE -eq 1 ];then
