@@ -15,7 +15,6 @@
 
 #include "gpopt/base/CDrvdProp.h"
 #include "gpopt/operators/CScalar.h"
-#include "gpopt/search/CGroupExpression.h"
 
 namespace gpopt
 {
@@ -95,7 +94,7 @@ public:
 	static BOOL FHasMultipleDistinctAggs(CExpressionHandle &exprhdl);
 
 	// check if a project list has a scalar func
-	static BOOL FHasScalarFunc(CGroupExpression *pexprPrjList);
+	static BOOL FHasScalarFunc(CExpressionHandle &exprhdl);
 
 };	// class CScalarProjectList
 

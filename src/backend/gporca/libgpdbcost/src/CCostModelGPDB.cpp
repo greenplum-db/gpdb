@@ -33,9 +33,7 @@
 #include "gpopt/operators/CPhysicalUnionAll.h"
 #include "gpopt/operators/CPredicateUtils.h"
 #include "gpopt/operators/CScalarBitmapIndexProbe.h"
-#include "gpopt/operators/CScalarProjectList.h"
 #include "gpopt/optimizer/COptimizerConfig.h"
-#include "gpopt/search/CGroupProxy.h"
 #include "naucrates/statistics/CStatisticsUtils.h"
 
 using namespace gpos;
@@ -176,8 +174,7 @@ CCostModelGPDB::CostComputeScalar(CMemoryPool *mp, CExpressionHandle &exprhdl,
 
 	if (exprhdl.Pgexpr())
 	{
-		CGroupProxy gp((*exprhdl.Pgexpr())[1]);
-		if (CScalarProjectList::FHasScalarFunc(gp.PgexprFirst()))
+		if (exprhdl.DeriveHasScalarFuncProject(1))
 		{
 			// If the compute scalar operator has a scalar func operator in the
 			// project list then aggregate that cost of the scalar func. The

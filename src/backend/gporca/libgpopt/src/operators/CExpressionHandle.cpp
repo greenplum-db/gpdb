@@ -2092,4 +2092,15 @@ CExpressionHandle::DeriveHasScalarArrayCmp(ULONG child_index) const
 
 	return GetDrvdScalarProps(child_index)->HasScalarArrayCmp();
 }
+
+BOOL
+CExpressionHandle::DeriveHasScalarFuncProject(ULONG child_index) const
+{
+	if (nullptr != Pexpr())
+	{
+		return (*Pexpr())[child_index]->DeriveHasScalarFuncProject();
+	}
+
+	return GetDrvdScalarProps(child_index)->HasScalarFuncProject();
+}
 // EOF

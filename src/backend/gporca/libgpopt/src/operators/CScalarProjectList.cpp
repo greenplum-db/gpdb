@@ -18,7 +18,6 @@
 #include "gpopt/base/CDrvdPropScalar.h"
 #include "gpopt/operators/CExpressionHandle.h"
 #include "gpopt/operators/CScalarWindowFunc.h"
-#include "gpopt/search/CGroupProxy.h"
 #include "gpopt/xforms/CXformUtils.h"
 
 
@@ -167,18 +166,25 @@ CScalarProjectList::FHasMultipleDistinctAggs(CExpressionHandle &exprhdl)
 //
 //---------------------------------------------------------------------------
 BOOL
-CScalarProjectList::FHasScalarFunc(CGroupExpression *pexprPrjList)
+CScalarProjectList::FHasScalarFunc(CExpressionHandle &exprhdl)
 {
+	// We make do with an inexact representative expression returned by exprhdl.PexprScalarRep(),
+	// knowing that at this time, aggregate functions are accurately contained in it. What's not
+	// exact are subqueries. This is better than just returning 0 for project lists with subqueries.
+	CExpression *pexprPrjList = exprhdl.PexprScalarRep();
+
+	GPOS_ASSERT(nullptr != pexprPrjList);
 	GPOS_ASSERT(COperator::EopScalarProjectList ==
 				pexprPrjList->Pop()->Eopid());
 
 	const ULONG arity = pexprPrjList->Arity();
 	for (ULONG ul = 0; ul < arity; ul++)
 	{
-		CGroupExpression *pexprPrjEl =
-			CGroupProxy((*pexprPrjList)[ul]).PgexprFirst();
-		if (CGroupProxy((*pexprPrjEl)[0]).PgexprFirst()->Pop()->Eopid() ==
-			COperator::EopScalarFunc)
+		CExpression *pexprPrjEl = (*pexprPrjList)[ul];
+		CExpression *pexprChild = (*pexprPrjEl)[0];
+		COperator::EOperatorId eopidChild = pexprChild->Pop()->Eopid();
+
+		if (COperator::EopScalarFunc == eopidChild)
 		{
 			return true;
 		}
