@@ -159,7 +159,7 @@ Feature: gprecoverseg tests involving migrating to a new host
          And the "before" and "after_recreation" cluster configuration matches with the expected for gprecoverseg newhost
 
     @concourse_cluster
-      Scenario: failover host is not in reach gprecoverseg in-place recovery skips recovery
+      Scenario: failover host is not in reach gprecoverseg recovery to new host skips
          Given  the database is running
          And all the segments are running
          And the segments are synchronized
