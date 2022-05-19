@@ -48,6 +48,7 @@ Feature: gprecoverseg tests
         And gpsegrecovery should only spawn up to <segHost_workers> workers in WorkerPool
         And check if gprecoverseg ran "$GPHOME/sbin/gpsegstop.py" 1 times with args "-b <segHost_workers>"
         And the segments are synchronized
+        And check segment conf: postgresql.conf
 
       Examples:
         | args      | master_workers | segHost_workers |
@@ -71,6 +72,7 @@ Feature: gprecoverseg tests
       And check if gprecoverseg ran "$GPHOME/sbin/gpsegrecovery.py" 1 times with args "-b <segHost_workers>"
       And check if gprecoverseg ran "$GPHOME/sbin/gpsegstop.py" 1 times with args "-b <segHost_workers>"
       And the segments are synchronized
+      And check segment conf: postgresql.conf
 
     Examples:
       | args      | master_workers | segHost_workers |
@@ -109,6 +111,7 @@ Feature: gprecoverseg tests
         And gpAdminLogs directory has "gpsegsetuprecovery*" files
         And all the segments are running
         And the segments are synchronized
+        And check segment conf: postgresql.conf
 
   Scenario: gprecoverseg mixed recovery displays pg_basebackup and rewind progress to the user
       Given the database is running
@@ -156,6 +159,7 @@ Feature: gprecoverseg tests
         And gpAdminLogs directory has no "pg_rewind*" files
         And gpAdminLogs directory has "gpsegsetuprecovery*" files on all segment hosts
         And gpAdminLogs directory has "gpsegrecovery*" files on all segment hosts
+
         And all the segments are running
         And the segments are synchronized
         And the cluster is rebalanced
@@ -496,6 +500,7 @@ Feature: gprecoverseg tests
     And the user waits until mirror on content 0,1,2 is up
     And the old data directories are cleaned up for content 0
     And user can start transactions
+    And check segment conf: postgresql.conf
     And all files in gpAdminLogs directory are deleted on all hosts in the cluster
 
   @demo_cluster
@@ -601,6 +606,8 @@ Feature: gprecoverseg tests
     When the user runs gprecoverseg with input file and additional args "-a"
     Then gprecoverseg should return a return code of 1
     And user can start transactions
+    And check segment conf: postgresql.conf
+
 
     And check if incremental recovery failed for mirrors with content 0 for gprecoverseg
     And check if full recovery was successful for mirrors with content 1
@@ -611,9 +618,11 @@ Feature: gprecoverseg tests
 
     And gpAdminLogs directory has "gpsegsetuprecovery*" files on all segment hosts
     And gpAdminLogs directory has "gpsegrecovery*" files on all segment hosts
+    And check segment conf: postgresql.conf
 
     And the mode of all the created data directories is changed to 0700
     And the cluster is recovered in full and rebalanced
+    And check segment conf: postgresql.conf
     And the row count from table "test_recoverseg" in "postgres" is verified against the saved data
 
   @demo_cluster
@@ -660,6 +669,7 @@ Feature: gprecoverseg tests
     And user can start transactions
     And the segments are synchronized
     And the cluster is rebalanced
+    And check segment conf: postgresql.conf
     And the row count from table "test_recoverseg" in "postgres" is verified against the saved data
 
   @demo_cluster
@@ -704,6 +714,7 @@ Feature: gprecoverseg tests
     And user can start transactions
     And the segments are synchronized
     And the cluster is rebalanced
+    And check segment conf: postgresql.conf
     And the row count from table "test_recoverseg" in "postgres" is verified against the saved data
 
     @concourse_cluster
@@ -753,6 +764,7 @@ Feature: gprecoverseg tests
         And gprecoverseg should print "Segments successfully recovered" to stdout
         And all the segments are running
         And the segments are synchronized
+        And check segment conf: postgresql.conf
 
     @concourse_cluster
     Scenario: gprecoverseg with -i and -o option
@@ -835,6 +847,8 @@ Feature: gprecoverseg tests
          Then gprecoverseg should return a return code of 0
           And all the segments are running
           And the segments are synchronized
+          And check segment conf: postgresql.conf
+
 
 
 
@@ -860,6 +874,7 @@ Feature: gprecoverseg tests
          Then gprecoverseg should return a return code of 0
           And all the segments are running
           And the segments are synchronized
+          And check segment conf: postgresql.conf
 
 
     @concourse_cluster
@@ -895,6 +910,7 @@ Feature: gprecoverseg tests
       And all the segments are running
       And the segments are synchronized
       Then the cluster is rebalanced
+      And check segment conf: postgresql.conf
 
   @demo_cluster
   @concourse_cluster
@@ -939,6 +955,7 @@ Feature: gprecoverseg tests
     And all the segments are running
     And the segments are synchronized
     And the cluster is rebalanced
+    And check segment conf: postgresql.conf
 
   @demo_cluster
   @concourse_cluster
@@ -986,6 +1003,7 @@ Feature: gprecoverseg tests
     And all the segments are running
     And the segments are synchronized
     And the cluster is rebalanced
+    And check segment conf: postgresql.conf
 
     @concourse_cluster
     Scenario: gprecoverseg cleans up backout scripts upon successful segment recovery

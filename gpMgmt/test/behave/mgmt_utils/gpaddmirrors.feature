@@ -51,6 +51,7 @@ Feature: Tests for gpaddmirrors
         Then gpaddmirrors should return a return code of 0
         And verify the database has mirrors
         And the segments are synchronized
+        And check segment conf: postgresql.conf
         And user can start transactions
 
     Scenario: gpaddmirrors setup recovery part two
@@ -174,7 +175,7 @@ Feature: Tests for gpaddmirrors
 
         And all the segments are running
         And the segments are synchronized
-
+        And check segment conf: postgresql.conf
         And all files in gpAdminLogs directory are deleted
 
 
@@ -221,6 +222,7 @@ Feature: Tests for gpaddmirrors
         Then gprecoverseg should return a return code of 0
         And all the segments are running
         And the segments are synchronized
+        And check segment conf: postgresql.conf
         And the user runs "gpstop -aqM fast"
 
     @concourse_cluster
@@ -393,6 +395,7 @@ Feature: Tests for gpaddmirrors
         Then gpinitstandby should return a return code of 0
         And gpaddmirrors adds mirrors
         Then mirror hostlist matches the one saved in context
+        And check segment conf: postgresql.conf
         And the user runs "gpstop -aqM fast"
 
     @concourse_cluster
@@ -402,6 +405,7 @@ Feature: Tests for gpaddmirrors
         And a cluster is created with no mirrors on "mdw" and "sdw1, sdw2, sdw3"
         And gpaddmirrors adds mirrors in spread configuration
         Then verify that mirror segments are in "spread" configuration
+        And check segment conf: postgresql.conf
         And the user runs "gpstop -aqM fast"
 
     @concourse_cluster
@@ -411,6 +415,7 @@ Feature: Tests for gpaddmirrors
         And a cluster is created with no mirrors on "mdw" and "sdw1"
         And gpaddmirrors adds mirrors
         Then verify the database has mirrors
+        And check segment conf: postgresql.conf
         And the user runs "gpstop -aqM fast"
 
     @concourse_cluster
@@ -420,6 +425,7 @@ Feature: Tests for gpaddmirrors
         And a cluster is created with no mirrors on "mdw" and "sdw1"
         And gpaddmirrors adds mirrors with temporary data dir
         Then verify the database has mirrors
+        And check segment conf: postgresql.conf
         And the user runs "gpstop -aqM fast"
 
     @concourse_cluster
@@ -436,6 +442,17 @@ Feature: Tests for gpaddmirrors
         And wait until the process "gpstart" goes down
         Then all the segments are running
         And the segments are synchronized
+        And check segment conf: postgresql.conf
+        And the user runs "gpstop -aqM fast"
+
+    @concourse_cluster
+    Scenario: gpaddmirrors should create consistent port entry on mirrors postgresql.conf file
+        Given a working directory of the test as '/tmp/gpaddmirrors'
+        And the database is not running
+        And a cluster is created with no mirrors on "mdw" and "sdw1"
+        When gpaddmirrors adds mirrors
+        Then verify the database has mirrors
+        And check segment conf: postgresql.conf
         And the user runs "gpstop -aqM fast"
 
     @concourse_cluster

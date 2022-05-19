@@ -3343,6 +3343,7 @@ declare -a MIRROR_ARRAY=(
         fd.write(config)
 
 @when('check segment conf: postgresql.conf')
+@given('check segment conf: postgresql.conf')
 @then('check segment conf: postgresql.conf')
 def step_impl(context):
     query = "select dbid, port, hostname, datadir from gp_segment_configuration where content >= 0"
