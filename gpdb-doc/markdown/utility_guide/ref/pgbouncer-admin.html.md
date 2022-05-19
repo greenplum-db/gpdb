@@ -353,5 +353,5 @@ Display PgBouncer version information.
 
 ## <a id="seealso"></a>See Also 
 
-`[pgbouncer](pgbouncer.html)`, `[pgbouncer.ini](pgbouncer-ini.html)`
+[pgbouncer](pgbouncer.html), [pgbouncer.ini](pgbouncer-ini.html)
 

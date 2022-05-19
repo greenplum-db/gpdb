@@ -671,5 +671,5 @@ forcedb = host=127.0.0.1 port=300 user=baz password=foo client_encoding=UNICODE 
 
 ## <a id="seealso"></a>See Also 
 
-`[pgbouncer](pgbouncer.html)`, `[pgbouncer-admin](pgbouncer-admin.html)`, [PgBouncer Configuration Page](https://pgbouncer.github.io/config.html)
+[pgbouncer](pgbouncer.html), [pgbouncer-admin](pgbouncer-admin.html), [PgBouncer Configuration Page](https://pgbouncer.github.io/config.html)
 

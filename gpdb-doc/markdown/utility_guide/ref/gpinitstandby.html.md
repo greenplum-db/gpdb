@@ -20,7 +20,7 @@ The `gpinitstandby` utility adds a backup, standby master instance to your Green
 
 Before running this utility, make sure that the Greenplum Database software is installed on the standby master host and that you have exchanged SSH keys between the hosts. It is recommended that the master port is set to the same port number on the master host and the standby master host.
 
-This utility should be run on the currently active *primary* master host.See the *Greenplum Database Installation Guide* for instructions.
+This utility should be run on the currently active *primary* master host. See the *Greenplum Database Installation Guide* for instructions.
 
 The utility performs the following steps:
 
