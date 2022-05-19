@@ -866,6 +866,9 @@ copy_scan_desc(IndexScanDesc scan)
  *
  * If newentry is false, we're calling the function with a partially filled
  * page table entry. Otherwise, the entry is empty.
+ *
+ * This function is only used in stream bitmap scan, more specifically, it's
+ * BitmapIndexScan + BitmapHeapScan.
  */
 
 static bool
@@ -925,7 +928,7 @@ restart:
 	 * start tid exceeds block's start tid.
 	 */
 	if (words->firstTid < result->nextTid)
-		_bitmap_catchup_to_next_tid(words, result, true);
+		_bitmap_catchup_to_next_tid(words, result);
 	else if (words->firstTid > result->nextTid)
 		result->nextTid = words->firstTid;
 

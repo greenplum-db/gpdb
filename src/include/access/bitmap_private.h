@@ -307,7 +307,7 @@ extern uint64 _bitmap_findnexttid(BMBatchWords *words,
 								  BMIterateResult *result);
 extern void _bitmap_findnexttids(BMBatchWords *words,
 								 BMIterateResult *result, uint32 maxTids);
-extern void _bitmap_catchup_to_next_tid(BMBatchWords *words, BMIterateResult *result, bool isStream);
+extern void _bitmap_catchup_to_next_tid(BMBatchWords *words, BMIterateResult *result);
 #ifdef NOT_USED /* we might use this later */
 extern void _bitmap_intersect(BMBatchWords **batches, uint32 numBatches,
 						   BMBatchWords *result);

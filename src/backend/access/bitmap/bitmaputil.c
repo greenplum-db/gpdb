@@ -260,7 +260,23 @@ _bitmap_findnexttids(BMBatchWords *words, BMIterateResult *result,
 
 	result->nextTidLoc = result->numOfTids = 0;
 
-	_bitmap_catchup_to_next_tid(words, result, false);
+	/*
+	 * Only in the situation that there have concurrent read/write on two
+	 * adjacent bitmap index pages, and inserting a tid into PAGE_FULL cause expand
+	 * compressed words to new words, and rearrange those words into PAGE_NEXT,
+	 * and we ready to read a new page, we should adjust result-> lastScanWordNo
+	 * to the current position.
+	 *
+	 * The value of words->startNo will always be 0, this value will only used at
+	 * _bitmap_union to union a bunch of bitmaps, the union result will be stored
+	 * at words. result->lastScanWordNo indicates the location in words->cwords that
+	 * BMIterateResult will read the word next, it's start from 0, and will
+	 * self-incrementing during the scan. So if result->lastScanWordNo equals to
+	 * words->startNo, means we will scan a new bitmap index pages.
+	 */
+	if (result->lastScanWordNo == words->startNo &&
+			words->firstTid < result->nextTid)
+		_bitmap_catchup_to_next_tid(words, result);
 
 	while (words->nwords > 0 && result->numOfTids < maxTids && !done)
 	{
@@ -364,18 +380,9 @@ _bitmap_findnexttids(BMBatchWords *words, BMIterateResult *result,
  * try to read from a table block's start tid. See pull_stream.
  */
 void
-_bitmap_catchup_to_next_tid(BMBatchWords *words, BMIterateResult *result, bool isStream)
+_bitmap_catchup_to_next_tid(BMBatchWords *words, BMIterateResult *result)
 {
 	if (words->firstTid >= result->nextTid)
-		return;
-
-	/*
-	 * if result->lastScanWordNo is equal to words->startNo, a new batch words
-	 * will be geneerated from next_batch_words(), and at this time if words->firstTid
-	 * is less than result->nextTid, then we should adjust result->lastScanWordNo to
-	 * the correct position.
-	 */
-	if (result->lastScanWordNo != words->startNo && !isStream)
 		return;
 
 	/*
