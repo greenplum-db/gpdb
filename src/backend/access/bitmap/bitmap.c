@@ -835,6 +835,9 @@ copy_scan_desc(IndexScanDesc scan)
  *
  * If newentry is false, we're calling the function with a partially filled
  * page table entry. Otherwise, the entry is empty.
+ *
+ * This function is only used in stream bitmap scan, more specifically, it's
+ * BitmapIndexScan + BitmapHeapScan.
  */
 
 static bool
@@ -905,7 +908,7 @@ restart:
 	 */
 	if (words->firstTid < result->nextTid)
 	{
-		Assert(words->nwords < 1);
+		Assert(words->nwords == 0);
 		return false;
 	}
 
