@@ -898,7 +898,7 @@ ldelete:;
 					ereport(ERROR,
 							(errcode(ERRCODE_T_R_SERIALIZATION_FAILURE),
 							 errmsg("could not serialize access due to concurrent update")));
-				if (ItemPointerIndicatesMovedPartitions(&hufd.ctid))
+				if (!isAORowsTable && !isAOColsTable && ItemPointerIndicatesMovedPartitions(&hufd.ctid))
 					ereport(ERROR,
 							(errcode(ERRCODE_T_R_SERIALIZATION_FAILURE),
 							 errmsg("tuple to be %s was already moved to another segment due to concurrent update",
@@ -922,7 +922,7 @@ ldelete:;
 							 errmsg("concurrent updates distribution keys on the same row is not allowed")));
 				}
 
-				if (!ItemPointerEquals(tupleid, &hufd.ctid))
+				if (!isAORowsTable && !isAOColsTable && !ItemPointerEquals(tupleid, &hufd.ctid))
 				{
 					TupleTableSlot *epqslot;
 
@@ -1525,11 +1525,11 @@ lreplace:;
 					ereport(ERROR,
 							(errcode(ERRCODE_T_R_SERIALIZATION_FAILURE),
 							 errmsg("could not serialize access due to concurrent update")));
-				if (ItemPointerIndicatesMovedPartitions(&hufd.ctid))
+				if (!rel_is_aorows && !rel_is_aocols && ItemPointerIndicatesMovedPartitions(&hufd.ctid))
 					ereport(ERROR,
 							(errcode(ERRCODE_T_R_SERIALIZATION_FAILURE),
 							 errmsg("tuple to be updated was already moved to another segment due to concurrent update")));
-		if (!ItemPointerEquals(tupleid, &hufd.ctid))
+				if (!rel_is_aorows && !rel_is_aocols && !ItemPointerEquals(tupleid, &hufd.ctid))
 				{
 					TupleTableSlot *epqslot;
 
