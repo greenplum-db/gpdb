@@ -429,15 +429,16 @@ class RecoveryResultTestCase(GpTestCase):
                                '{"error_type": "default",  "error_msg":"some error for dbid 3", "dbid": 3, "datadir": "/datadir3", "port": 7003, "progress_file": "/tmp/progress3"}]',
                 "host2_error": '[{"error_type": "update", "error_msg":"some error for dbid 4", "dbid": 4, "datadir": "/datadir4", "port": 7005, "progress_file": "/tmp/progress4"}]',
                 "expected_info_msgs": [call(Contains('-----')),
-                                       call(Contains(
-                                           'Did not start the following segments due to failure while updating the port.')),
-                                       call(self._msg('host1', 7001, datadir='/datadir2')),
+                                       call(Contains('Failed to action_recover the following segments')),
+                                       call(self._msg('host1', 7001, logfile='/tmp/progress2', type='full')),
+                                       call(Contains('-----')),
+                                       call(Contains('Did not start the following segments due to failure while updating the port.')),
                                        call(self._msg('host2', 7005, datadir='/datadir4'))],
                 "expected_error_msgs": [],
                 "setup_successful": True,
                 "full_recovery_successful": False,
                 "recovery_successful": False,
-                "dbids_that_failed_bb_rewind": []
+                "dbids_that_failed_bb_rewind": [2]
             },
         ]
         self.run_tests(tests, run_recovery=True)
