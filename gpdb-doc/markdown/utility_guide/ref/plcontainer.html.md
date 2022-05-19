@@ -117,9 +117,7 @@ runtime-add options
 
 :   When adding configuration information for a new runtime, the utility adds this read-only shared volume information.
 
-:   ```
-<greenplum-home>/bin/plcontainer_clients:/clientdir:ro
-```
+:   `<greenplum-home>/bin/plcontainer_clients:/clientdir:ro`
 
 :   If needed, you can specify other shared directories. The utility returns an error if the specified container-dir is the same as the one that is added by the utility, or if you specify multiple shared volumes with the same container-dir.
 

@@ -252,8 +252,7 @@ The following meta-commands are defined:
         For append-optimized tables and column-oriented tables, `\d+` displays the storage options for a table. For append-optimized tables, the options are displayed for the table. For column-oriented tables, storage options are displayed for each column.
 
     -   By default, only user-created objects are shown; supply a pattern or the `S` modifier to include system objects.
-
-        **Note:** If `\d` is used without a pattern argument, it is equivalent to `\dtvmsE` which will show a list of all visible tables, views, materialized views, sequences, and foreign tables.
+        <br/><br/>**Note:** If `\d` is used without a pattern argument, it is equivalent to `\dtvmsE` which will show a list of all visible tables, views, materialized views, sequences, and foreign tables.
 
 
 \\da\[S\] \[aggregate\_pattern\]
@@ -320,8 +319,7 @@ The following meta-commands are defined:
 
 \\dl
 :   This is an alias for `\lo_list`, which shows a list of large objects.
-
-:   **Note:** Greenplum Database does not support the PostgreSQL [large object facility](https://www.postgresql.org/docs/9.4/largeobjects.html) for streaming user data that is stored in large-object structures.
+    <br/><br/>**Note:** Greenplum Database does not support the PostgreSQL [large object facility](https://www.postgresql.org/docs/9.4/largeobjects.html) for streaming user data that is stored in large-object structures.
 
 \\dL\[S+\] \[pattern\]
 :   Lists procedural languages. If a pattern is specified, only languages whose names match the pattern are listed. By default, only user-created languages are shown; supply the `S` modifier to include system objects. If `+` is appended to the command name, each language is listed with its call handler, validator, access privileges, and whether it is a system object.
@@ -448,15 +446,15 @@ The following meta-commands are defined:
 \\lo\_import large\_object\_filename \[comment\]
 :   Stores the file into a large object. Optionally, it associates the given comment with the object. Example:
 
-:   ```
+```
 mydb=> \lo_import '/home/gpadmin/pictures/photo.xcf' 'a 
 picture of me'
 lo_import 152801
 ```
 
-:   The response indicates that the large object received object ID 152801 which one ought to remember if one wants to access the object ever again. For that reason it is recommended to always associate a human-readable comment with every object. Those can then be seen with the `\lo_list` command. Note that this command is subtly different from the server-side `lo_import` because it acts as the local user on the local file system, rather than the server's user and file system.
+The response indicates that the large object received object ID 152801 which one ought to remember if one wants to access the object ever again. For that reason it is recommended to always associate a human-readable comment with every object. Those can then be seen with the `\lo_list` command. Note that this command is subtly different from the server-side `lo_import` because it acts as the local user on the local file system, rather than the server's user and file system.
 
-    **Note:** Greenplum Database does not support the PostgreSQL [large object facility](https://www.postgresql.org/docs/9.4/largeobjects.html) for streaming user data that is stored in large-object structures.
+**Note:** Greenplum Database does not support the PostgreSQL [large object facility](https://www.postgresql.org/docs/9.4/largeobjects.html) for streaming user data that is stored in large-object structures.
 
 \\lo\_list
 :   Shows a list of all large objects currently stored in the database, along with any comments provided for them.
@@ -500,7 +498,6 @@ lo_import 152801
     -   **`fieldsep_zero`** - Sets the field separator to use in unaligned output format to a zero byte.
     -   **`footer`** – If value is specified it must be either `on` or `off` which will enable or disable display of the table footer \(the \(n rows\) count\). If value is omitted the command toggles footer display on or off.
     -   **`format`** – Sets the output format to one of `unaligned`, `aligned`, `html`, `latex` \(uses `tabular`\), `latex-longtable`, `troff-ms`, or `wrapped`. Unique abbreviations are allowed.
-
         **`unaligned`** format writes all columns of a row on one line, separated by the currently active field separator. This is useful for creating output that might be intended to be read in by other programs \(for example, tab-separated or comma-separated format\).
 
         **`aligned`** format is the standard, human-readable, nicely formatted text output; this is the default.
@@ -510,7 +507,6 @@ lo_import 152801
         The **`wrapped`** format is like `aligned`, but wraps wide data values across lines to make the output fit in the target column width. The target width is determined as described under the `columns` option. Note that `psql` does not attempt to wrap column header titles; the `wrapped` format behaves the same as `aligned` if the total width needed for column headers exceeds the target.
 
     -   **`linestyle`** \[**`unicode`** \| **`ascii`** \| **`old-ascii`**\] – Sets the border line drawing style to one of unicode, ascii, or old-ascii. Unique abbreviations, including one letter, are allowed for the three styles. The default setting is `ascii`. This option only affects the `aligned` and `wrapped` output formats.
-
         **`ascii`** – uses plain ASCII characters. Newlines in data are shown using a `+` symbol in the right-hand margin. When the wrapped format wraps data from one line to the next without a newline character, a dot \(`.`\) is shown in the right-hand margin of the first line, and again in the left-hand margin of the following line.
 
         **`old-ascii`** – style uses plain ASCII characters, using the formatting style used in PostgreSQL 8.4 and earlier. Newlines in data are shown using a `:` symbol in place of the left-hand column separator. When the data is wrapped from one line to the next without a newline character, a `;` symbol is used in place of the left-hand column separator.

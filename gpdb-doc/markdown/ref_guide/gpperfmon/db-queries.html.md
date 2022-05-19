@@ -19,28 +19,16 @@ There are three queries tables, all having the same columns:
 |`ssid`|int|The session id as shown by `gp_session_id`. All records associated with the query will have the same `ssid`.|
 |`ccnt`|int|The command number within this session as shown by `gp_command_count`. All records associated with the query will have the same `ccnt`.|
 |`username`|varchar\(64\)|Greenplum role name that issued this query.|
-|`db`
-
-|varchar\(64\)|Name of the database queried.|
+|`db`|varchar\(64\)|Name of the database queried.|
 |`cost`|int|Not implemented in this release.|
 |`tsubmit`|timestamp|Time the query was submitted.|
 |`tstart`|timestamp|Time the query was started.|
 |`tfinish`|timestamp|Time the query finished.|
 |`status`|varchar\(64\)|Status of the query -- `start`, `done`, or `abort`.|
 |`rows_out`|bigint|Rows out for the query.|
-|`cpu_elapsed`|bigint|CPU usage by all processes across all segments executing this query \(in seconds\). It is the sum of the CPU usage values taken from all active primary segments in the database system.
-
- Note that the value is logged as 0 if the query runtime is shorter than the value for the quantum. This occurs even if the query runtime is greater than the value for `min_query_time`, and this value is lower than the value for the quantum.
-
-|
-|`cpu_currpct`|float|Current CPU percent average for all processes executing this query. The percentages for all processes running on each segment are averaged, and then the average of all those values is calculated to render this metric.
-
- Current CPU percent average is always zero in historical and tail data.
-
-|
-|`skew_cpu`|float|Displays the amount of processing skew in the system for this query. Processing/CPU skew occurs when one segment performs a disproportionate amount of processing for a query. This value is the coefficient of variation in the CPU% metric across all segments for this query, multiplied by 100. For example, a value of .95 is shown as 95.
-
-|
+|`cpu_elapsed`|bigint|CPU usage by all processes across all segments executing this query \(in seconds\). It is the sum of the CPU usage values taken from all active primary segments in the database system.<br/><br/> Note that the value is logged as 0 if the query runtime is shorter than the value for the quantum. This occurs even if the query runtime is greater than the value for `min_query_time`, and this value is lower than the value for the quantum.|
+|`cpu_currpct`|float|Current CPU percent average for all processes executing this query. The percentages for all processes running on each segment are averaged, and then the average of all those values is calculated to render this metric.<br/><br/>Current CPU percent average is always zero in historical and tail data.|
+|`skew_cpu`|float|Displays the amount of processing skew in the system for this query. Processing/CPU skew occurs when one segment performs a disproportionate amount of processing for a query. This value is the coefficient of variation in the CPU% metric across all segments for this query, multiplied by 100. For example, a value of .95 is shown as 95.|
 |`skew_rows`|float|Displays the amount of row skew in the system. Row skew occurs when one segment produces a disproportionate number of rows for a query. This value is the coefficient of variation for the `rows_in` metric across all segments for this query, multiplied by 100. For example, a value of .95 is shown as 95.|
 |`query_hash`|bigint|Not implemented in this release.|
 |`query_text`|text|The SQL text of this query.|

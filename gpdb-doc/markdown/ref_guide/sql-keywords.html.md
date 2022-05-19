@@ -12,7 +12,7 @@ The resource group names `admin_group`, `default_group`, and `none` are reserved
 
 The tablespace names `pg_default` and `pg_global` are reserved.
 
-The role names `gpadmin` and `gpmon` are reserved. `gpadmin` is the default Greenplum Database superuser role. The `gpmon` role owns the `gpperfmon` databaseand is also used by Greenplum Command Center.
+The role names `gpadmin` and `gpmon` are reserved. `gpadmin` is the default Greenplum Database superuser role. The `gpmon` role owns the `gpperfmon` database and is also used by Greenplum Command Center.
 
 In data files, the characters that delimit fields \(columns\) and rows have a special meaning. If they appear within the data you must escape them so that Greenplum Database treats them as data and not as delimiters. The backslash character \(`\`\) is the default escape character. See [Escaping](../admin_guide/load/topics/g-escaping.html#topic99) for details.
 
