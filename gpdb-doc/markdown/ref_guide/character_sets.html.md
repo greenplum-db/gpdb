@@ -114,7 +114,7 @@ Greenplum Database supports automatic character set conversion between server an
 To enable automatic character set conversion, you have to tell Greenplum Database the character set \(encoding\) you would like to use in the client. There are several ways to accomplish this:
 
 -   Using the `\encoding` command in `psql`, which allows you to change client encoding on the fly.
--   Using `SET``client_encoding TO`.
+-   Using `SET client_encoding TO`.
 
     To set the client encoding, use the following SQL command:
 
