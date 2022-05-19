@@ -181,7 +181,7 @@ The following parameters control the types of plan operations the Postgres Plann
 
 ### <a id="topic24"></a>Database Statistics Sampling Parameters 
 
-These parameters adjust the amount of data sampled by an `ANALYZE` operation. Adjusting these parameters affects statistics collection system-wide. You can configure statistics collection on particular tables and columns by using the `ALTER TABLE``SET STATISTICS` clause.
+These parameters adjust the amount of data sampled by an `ANALYZE` operation. Adjusting these parameters affects statistics collection system-wide. You can configure statistics collection on particular tables and columns by using the `ALTER TABLE SET STATISTICS` clause.
 
 - [default\_statistics\_target](guc-list.html)
 
