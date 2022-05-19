@@ -5456,7 +5456,7 @@ PostgresMain(int argc, char *argv[],
 					if (resgroupInfoLen > 0)
 						resgroupInfoBuf = pq_getmsgbytes(&input_message, resgroupInfoLen);
 
-					/* in-process variable for temporary namespace */
+					/* process local variables for temporary namespace */
 					{
 						Oid			tempNamespaceId, tempToastNamespaceId;
 

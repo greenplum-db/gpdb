@@ -99,3 +99,31 @@ drop table tn_b_b;
 drop table tn_b_temp;
 drop table tn_b_new;
 drop function fun(sql text, a oid);
+-- Chek if error out inside UDF, myTempNamespace will roll back
+\c
+create or replace function errored_udf() returns int[] as 'BEGIN RAISE EXCEPTION ''AAA''; END' language plpgsql;
+create table n as select from generate_series(1, 10);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named '' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+select count(*) from n n1, n n2; -- boot reader gang
+ count 
+-------
+   100
+(1 row)
+
+create temp table nn as select errored_udf() from n;
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'errored_udf' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+ERROR:  AAA  (seg0 slice1 127.0.0.1:7002 pid=123850)
+CONTEXT:  PL/pgSQL function errored_udf() line 1 at RAISE
+create temp table nnn as select * from generate_series(1, 10); -- check if reader do the rollback. should OK
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'generate_series' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+select count(*) from nnn n1, nnn n2; -- check if reader can read temp table. should OK
+ count 
+-------
+   100
+(1 row)
+
+drop table n;
+drop function errored_udf();
