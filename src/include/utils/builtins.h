@@ -142,4 +142,10 @@ extern Datum gp_instrument_shmem_summary(PG_FUNCTION_ARGS);
 /* utils/gp/segadmin.c */
 extern bool gp_activate_standby(void);
 
+/* utils/adt/genfile.c */
+extern Datum pg_file_write(PG_FUNCTION_ARGS);
+extern Datum pg_file_rename(PG_FUNCTION_ARGS);
+extern Datum pg_file_unlink(PG_FUNCTION_ARGS);
+extern Datum pg_logdir_ls(PG_FUNCTION_ARGS);
+
 #endif							/* BUILTINS_H */

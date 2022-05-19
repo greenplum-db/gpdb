@@ -7,18 +7,18 @@
     <p id="sql_command_desc">Changes a role name or membership.</p>
     <section id="section2">
       <title>Synopsis</title>
-      <codeblock id="sql_command_synopsis">ALTER GROUP <varname>groupname</varname> ADD USER <varname>username</varname> [, ... ]
+      <codeblock id="sql_command_synopsis">ALTER GROUP &lt;groupname> ADD USER &lt;username> [, ... ]
 
-ALTER GROUP <varname>groupname</varname> DROP USER <varname>username</varname> [, ... ]
+ALTER GROUP &lt;groupname> DROP USER &lt;username> [, ... ]
 
-ALTER GROUP <varname>groupname</varname> RENAME TO <varname>newname</varname></codeblock>
+ALTER GROUP &lt;groupname> RENAME TO &lt;newname></codeblock>
     </section>
     <section id="section3">
       <title>Description</title>
       <p><codeph>ALTER GROUP</codeph> changes the attributes of a user group. This is an obsolete
         command, though still accepted for backwards compatibility, because users and groups are
-        superseded by the more general concept of roles. See <codeph><xref
-            href="./ALTER_ROLE.xml#topic1" type="topic" format="dita"/></codeph> for more
+        superseded by the more general concept of roles. See <xref
+            href="./ALTER_ROLE.xml#topic1" type="topic" format="dita"/> for more
         information.</p>
       <p>The first two variants add users to a group or remove them from a group. Any role can play
         the part of <varname>groupname</varname> or <varname>username</varname>. The preferred
@@ -56,9 +56,9 @@ ALTER GROUP <varname>groupname</varname> RENAME TO <varname>newname</varname></c
     </section>
     <section id="section7">
       <title>See Also</title>
-      <p><codeph><xref href="./ALTER_ROLE.xml#topic1" type="topic" format="dita"/></codeph>,
-            <codeph><xref href="./GRANT.xml#topic1" type="topic" format="dita"/></codeph>,
-            <codeph><xref href="./REVOKE.xml#topic1" type="topic" format="dita"/></codeph></p>
+      <p><xref href="./ALTER_ROLE.xml#topic1" type="topic" format="dita"/>,
+            <xref href="./GRANT.xml#topic1" type="topic" format="dita"/>,
+            <xref href="./REVOKE.xml#topic1" type="topic" format="dita"/></p>
     </section>
   </body>
 </topic>

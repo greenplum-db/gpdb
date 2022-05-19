@@ -6,7 +6,7 @@
     <p id="sql_command_desc">Removes a previously defined collation. </p>
     <section id="section2">
       <title>Synopsis</title>
-      <codeblock id="sql_command_synopsis">DROP COLLATION [ IF EXISTS ] <varname>name</varname> [ CASCADE | RESTRICT ]</codeblock>
+      <codeblock id="sql_command_synopsis">DROP COLLATION [ IF EXISTS ] &lt;name> [ CASCADE | RESTRICT ]</codeblock>
     </section>
     <section id="section4">
       <title>Parameters</title>
@@ -50,10 +50,8 @@
     <section id="section8">
       <title>See Also</title>
       <p>
-        <codeph>
-          <xref href="./ALTER_COLLATION.xml#topic1" type="topic" format="dita"/></codeph>,
-            <codeph><xref href="./CREATE_COLLATION.xml#topic1" type="topic" format="dita"/>
-        </codeph>
+          <xref href="./ALTER_COLLATION.xml#topic1" type="topic" format="dita"/>,
+            <xref href="./CREATE_COLLATION.xml#topic1" type="topic" format="dita"/>        
       </p>
     </section>
   </body>

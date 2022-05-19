@@ -14,5 +14,5 @@ You can configure support for data compression with these features and utilities
 
 For some compression algorithms \(such as zlib\) Greenplum Database requires software packages installed on the host system. For information about required software packages, see the *Greenplum Database Installation Guide*.
 
-**Parent topic:**[Managing a Greenplum System](../managing/partII.html)
+**Parent topic:** [Managing a Greenplum System](../managing/partII.html)
 

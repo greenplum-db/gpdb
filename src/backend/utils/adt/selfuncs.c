@@ -4844,7 +4844,14 @@ examine_simple_variable(PlannerInfo *root, Var *var,
 
 		if (rte->inh && gp_statistics_pullup_from_child_partition)
 		{
-			const char *attname  = get_attname(rte->relid, var->varattno, false);
+			/*
+			 * GPDB: #13467
+			 * If var->varattno is 0 (e.g.,SELECT DISTINCT <Table_name> FROM <Table_name>),
+			 * we will get an ERROR when we invoke get_attname with missing_ok == false,
+			 * so the NULL string is all we need.
+			 */
+			bool missing_ok = var->varattno == 0 ? true : false;
+			const char *attname  = get_attname(rte->relid, var->varattno, missing_ok);
 
 			/*
 			 * The GUC gp_statistics_pullup_from_child_partition is
@@ -7311,7 +7318,11 @@ try_fetch_rel_stats(RangeTblEntry *rte, const char *attname, VariableStatData* v
 
 	Assert(rte != NULL);
 
-	attno = get_attnum(rte->relid, attname);
+	/* attname may be NULL when 'SELECT DISTINCT <table_name> from <table_name>', and attno is set zero directly */
+	if (attname == NULL)
+		attno = InvalidAttrNumber;
+	else
+		attno = get_attnum(rte->relid, attname);
 	vardata->statsTuple = SearchSysCache3(STATRELATTINH,
 										  ObjectIdGetDatum(rte->relid),
 										  Int16GetDatum(attno),

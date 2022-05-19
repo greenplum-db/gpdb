@@ -1142,6 +1142,8 @@ exec_mpp_query(const char *query_string,
 	ExecSlice  *slice = NULL;
 	ParamListInfo paramLI = NULL;
 
+	SIMPLE_FAULT_INJECTOR("exec_mpp_query_start");
+
 	Assert(Gp_role == GP_ROLE_EXECUTE);
 	/*
 	 * If we didn't get passed a query string, dummy something up for ps display and pg_stat_activity
@@ -5521,6 +5523,7 @@ PostgresMain(int argc, char *argv[],
 
 					SetUserIdAndSecContext(GetOuterUserId(), 0);
 
+					SIMPLE_FAULT_INJECTOR("qe_exec_finished");
 					send_ready_for_query = true;
 				}
 				break;

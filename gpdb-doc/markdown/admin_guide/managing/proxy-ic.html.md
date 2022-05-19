@@ -17,7 +17,7 @@ To enable interconnect proxies for the Greenplum system, set these system config
 
 **Note:** When expanding a Greenplum Database system, you must disable interconnect proxies before adding new hosts and segment instances to the system, and you must update the `gp_interconnect_proxy_addresses` parameter with the newly-added segment instances before you re-enable interconnect proxies.
 
-**Parent topic:**[Managing a Greenplum System](../managing/partII.html)
+**Parent topic:** [Managing a Greenplum System](../managing/partII.html)
 
 ## <a id="topic_z4l_lcg_4mb"></a>Example 
 

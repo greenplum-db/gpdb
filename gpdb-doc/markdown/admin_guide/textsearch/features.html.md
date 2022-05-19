@@ -168,5 +168,5 @@ ORDER BY nentry DESC, ndoc DESC, word
 LIMIT 10;
 ```
 
-**Parent topic:**[Using Full Text Search](../textsearch/full-text-search.html)
+**Parent topic:** [Using Full Text Search](../textsearch/full-text-search.html)
 

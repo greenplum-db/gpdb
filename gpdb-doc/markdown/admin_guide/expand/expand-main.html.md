@@ -23,5 +23,5 @@ Redistribute tables to balance existing data over the newly expanded cluster.
 -   **[Post Expansion Tasks](../expand/expand-post.html)**  
 After the expansion is completed, you must perform different tasks depending on your environment.
 
-**Parent topic:**[Managing a Greenplum System](../managing/partII.html)
+**Parent topic:** [Managing a Greenplum System](../managing/partII.html)
 

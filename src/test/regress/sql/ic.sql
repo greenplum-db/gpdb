@@ -271,4 +271,29 @@ FETCH ALL FROM qe_errors_cursor;
 select 1;
 ROLLBACK;
 
+-- Test whether QD detects a QE error in time
+-- In previous code, QD only watchs *one* QE event, if an error doesn't
+-- happen on this specific QE, QD may delay receiving this event.
+--
+-- After refactoring by WaitEventSet, QD watches all QEs's event, so it
+-- can detect event in time now.
+-- Note: this refactor is only performed under gp_interconnect_type=udpifc,
+-- and gp_interconnect_type=tcp is still previous behavior (watch one QE).
+
+-- block QE1 and QE3, generate an error on QE2
+select gp_inject_fault('exec_mpp_query_start', 'sleep', '', '', '', 1, 1, 10, 2);
+select gp_inject_fault('exec_mpp_query_start', 'error', 3);
+select gp_inject_fault('exec_mpp_query_start', 'sleep', '', '', '', 1, 1, 10, 4);
+
+set statement_timeout to 150; -- 150ms < MAIN_THREAD_COND_TIMEOUT_MS(250ms)
+-- result depends on gp_interconnect_type:
+--  * udpifc, "ERROR:  fault triggered"
+--  * tcp,    "ERROR:  canceling statement due to statement timeout"
+begin; select count(*) from qe_errors_ic; rollback;
+reset statement_timeout;
+
+select gp_inject_fault('exec_mpp_query_start', 'reset', 2);
+select gp_inject_fault('exec_mpp_query_start', 'reset', 3);
+select gp_inject_fault('exec_mpp_query_start', 'reset', 4);
+
 DROP TABLE qe_errors_ic;

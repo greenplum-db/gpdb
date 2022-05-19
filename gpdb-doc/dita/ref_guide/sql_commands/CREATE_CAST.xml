@@ -1,15 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
-<topic id="topic1"><title id="bn20941">CREATE CAST</title><body><p id="sql_command_desc">Defines a new cast.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">CREATE CAST (<varname>sourcetype</varname> AS <varname>targettype</varname>) 
-       WITH FUNCTION <varname>funcname</varname> (<varname>argtype</varname> [, ...]) 
+<topic id="topic1"><title id="bn20941">CREATE CAST</title><body><p id="sql_command_desc">Defines a new cast.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">CREATE CAST (&lt;sourcetype> AS &lt;targettype>) 
+       WITH FUNCTION &lt;funcname> (&lt;argtype> [, ...]) 
        [AS ASSIGNMENT | AS IMPLICIT]
 
-CREATE CAST (<varname>sourcetype</varname> AS <varname>targettype</varname>)
+CREATE CAST (&lt;sourcetype> AS &lt;targettype>)
        WITHOUT FUNCTION 
        [AS ASSIGNMENT | AS IMPLICIT]
 
-CREATE CAST (<varname>sourcetype</varname> AS <varname>targettype</varname>)
+CREATE CAST (&lt;sourcetype> AS &lt;targettype>)
        WITH INOUT 
        [AS ASSIGNMENT | AS IMPLICIT]</codeblock></section>
     <section id="section3"><title>Description</title><p><codeph>CREATE CAST</codeph> defines a new
@@ -75,8 +75,8 @@ CREATE CAST (<varname>sourcetype</varname> AS <varname>targettype</varname>)
       <note>Sometimes it is necessary for usability or standards-compliance reasons to provide
         multiple implicit casts among a set of types, resulting in ambiguity that cannot be avoided
         as described above. The parser uses a fallback heuristic based on type categories and
-        preferred types that helps to provide desired behavior in such cases. See <codeph><xref
-            href="./CREATE_TYPE.xml#topic1" type="topic" format="dita"/></codeph> for more
+        preferred types that helps to provide desired behavior in such cases. See <xref
+            href="./CREATE_TYPE.xml#topic1" type="topic" format="dita"/> for more
         information.</note>
       <p>To be able to create a cast, you must own the source or the target data type and have
           <codeph>USAGE</codeph> privilege on the other type. To create a binary-coercible cast, you
@@ -162,6 +162,6 @@ need to declare casts both ways explicitly. </p>
           <codeph>int4(bigint)</codeph> (This cast is already predefined in the system.):</p><codeblock>CREATE CAST (bigint AS int4) WITH FUNCTION int4(bigint) AS ASSIGNMENT;</codeblock></section><section id="section7"><title>Compatibility</title><p>The <codeph>CREATE CAST</codeph> command conforms to the SQL standard,
 except that SQL does not make provisions for binary-coercible types
 or extra arguments to implementation functions. <codeph>AS IMPLICIT</codeph>
-is a Greenplum Database extension, too.</p></section><section id="section8"><title>See Also</title><p><codeph><xref href="./CREATE_FUNCTION.xml#topic1" type="topic" format="dita"/></codeph>,
-            <codeph><xref href="./CREATE_TYPE.xml#topic1" type="topic" format="dita"/></codeph>,
-            <codeph><xref href="./DROP_CAST.xml#topic1" type="topic" format="dita"/></codeph></p></section></body></topic>
+is a Greenplum Database extension, too.</p></section><section id="section8"><title>See Also</title><p><xref href="./CREATE_FUNCTION.xml#topic1" type="topic" format="dita"/>,
+            <xref href="./CREATE_TYPE.xml#topic1" type="topic" format="dita"/>,
+            <xref href="./DROP_CAST.xml#topic1" type="topic" format="dita"/></p></section></body></topic>

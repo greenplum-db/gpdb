@@ -7,13 +7,13 @@
     <p id="sql_command_desc">Defines a new materialized view.</p>
     <section id="section1">
       <title>Synopsis</title>
-      <codeblock id="sql_command_synopsis">CREATE MATERIALIZED VIEW <varname>table_name</varname>
-    [ (<varname>column_name</varname> [, ...] ) ]
-    [ WITH ( <varname>storage_parameter</varname> [= <varname>value</varname>] [, ... ] ) ]
-    [ TABLESPACE <varname>tablespace_name</varname> ]
-    AS <varname>query</varname>
+      <codeblock id="sql_command_synopsis">CREATE MATERIALIZED VIEW &lt;table_name>
+    [ (&lt;column_name> [, ...] ) ]
+    [ WITH ( &lt;storage_parameter> [= &lt;value>] [, ... ] ) ]
+    [ TABLESPACE &lt;tablespace_name> ]
+    AS &lt;query>
     [ WITH [ NO ] DATA ]
-    [DISTRIBUTED {| BY <varname>column</varname> [<varname>opclass</varname>], [ ... ] | RANDOMLY | REPLICATED }]</codeblock>
+    [DISTRIBUTED {| BY &lt;column> [&lt;opclass>], [ ... ] | RANDOMLY | REPLICATED }]</codeblock>
     </section>
     <section id="section3">
       <title>Description</title>
@@ -48,19 +48,19 @@
           <pd>This clause specifies optional storage parameters for the materialized view. All
             parameters supported for <codeph>CREATE TABLE</codeph> are also supported for
               <codeph>CREATE MATERIALIZED VIEW</codeph> with the exception of OIDS. See
-                <codeph><xref href="CREATE_TABLE.xml"/></codeph> for more information.</pd>
+                <xref href="CREATE_TABLE.xml"/> for more information.</pd>
         </plentry>
         <plentry>
           <pt>TABLESPACE <varname>tablespace_name</varname></pt>
           <pd>The <varname>tablespace_name</varname> is the name of the tablespace in which the new
             materialized view is to be created. If not specified, server configuration parameter
-                <codeph><xref href="../config_params/guc-list.xml#default_tablespace"/></codeph> is
+                <xref href="../config_params/guc-list.xml#default_tablespace"/> is
             consulted.</pd>
         </plentry>
         <plentry>
           <pt>query</pt>
-          <pd>A <codeph><xref href="SELECT.xml"/></codeph> or <codeph><xref href="VALUES.xml"
-              /></codeph> command. This query will run within a security-restricted operation; in
+          <pd>A <xref href="SELECT.xml"/> or <xref href="VALUES.xml"
+              /> command. This query will run within a security-restricted operation; in
             particular, calls to functions that themselves create temporary tables will fail.</pd>
         </plentry>
         <plentry>
@@ -78,8 +78,8 @@
           <pt>DISTRIBUTED RANDOMLY</pt>
           <pt>DISTRIBUTED REPLICATED</pt>
           <pd>Used to declare the Greenplum Database distribution policy for the materialized view
-            data. For information about a table distribution policy, see <codeph><xref
-                href="CREATE_TABLE.xml"/></codeph>.</pd>
+            data. For information about a table distribution policy, see <xref
+                href="CREATE_TABLE.xml"/>.</pd>
         </plentry>
       </parml>
     </section>
@@ -113,11 +113,11 @@ names, rank WHERE rank &lt; '11' AND names.id=rank.id;</codeblock>
     </section>
     <section id="section8">
       <title>See Also</title>
-      <p><codeph><xref href="SELECT.xml" type="topic" format="dita"/></codeph>, <codeph><xref
-            href="VALUES.xml"/></codeph>, <codeph><xref href="CREATE_VIEW.xml"/></codeph>,
-            <codeph><xref href="ALTER_MATERIALIZED_VIEW.xml">ALTER MATERIALIZED
-        VIEW</xref></codeph>, <codeph><xref href="DROP_MATERIALIZED_VIEW.xml">DROP MATERIALIZED
-            VIEW</xref></codeph>, <codeph><xref href="REFRESH_MATERIALIZED_VIEW.xml"/></codeph></p>
+      <p><xref href="SELECT.xml" type="topic" format="dita"/>, <xref
+            href="VALUES.xml"/>, <xref href="CREATE_VIEW.xml"/>,
+            <xref href="ALTER_MATERIALIZED_VIEW.xml">ALTER MATERIALIZED
+        VIEW</xref>, <xref href="DROP_MATERIALIZED_VIEW.xml">DROP MATERIALIZED
+            VIEW</xref>, <xref href="REFRESH_MATERIALIZED_VIEW.xml"/></p>
     </section>
   </body>
 </topic>

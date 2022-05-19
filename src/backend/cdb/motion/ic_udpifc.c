@@ -3714,8 +3714,13 @@ receiveChunksUDPIFC(ChunkTransportState *pTransportStates, ChunkTransportStateEn
 {
 	int			retries = 0;
 	bool		directed = false;
-	MotionConn *rxconn = NULL;
-	TupleChunkListItem tcItem = NULL;
+	int 		nFds = 0;
+	int 		*waitFds = NULL;
+	int 		nevent = 0;
+	MotionConn 	*rxconn = NULL;
+	WaitEvent	*rEvents = NULL;
+	WaitEventSet		*waitset = NULL;
+	TupleChunkListItem	tcItem = NULL;
 
 #ifdef AMS_VERBOSE_LOGGING
 	elog(DEBUG5, "receivechunksUDP: motnodeid %d", motNodeID);
@@ -3736,6 +3741,28 @@ receiveChunksUDPIFC(ChunkTransportState *pTransportStates, ChunkTransportStateEn
 		/* non-directed receive */
 		setMainThreadWaiting(&rx_control_info.mainWaitingState, motNodeID, ANY_ROUTE,
 							 pTransportStates->sliceTable->ic_instance_id);
+	}
+
+	nFds = 0;
+	nevent = 2; /* nevent = waited fds number + 2 (latch and postmaster) */
+	if (Gp_role == GP_ROLE_DISPATCH)
+	{
+		/* get all wait sock fds */
+		waitFds = cdbdisp_getWaitSocketFds(pTransportStates->estate->dispatcherState, &nFds);
+		if (waitFds != NULL)
+			nevent += nFds;
+
+	}
+
+	/* init WaitEventSet */
+	waitset = CreateWaitEventSet(CurrentMemoryContext, nevent);
+	rEvents = palloc(nevent * sizeof(WaitEvent)); /* returned events */
+	AddWaitEventToSet(waitset, WL_LATCH_SET, PGINVALID_SOCKET, &ic_control_info.latch, NULL);
+	AddWaitEventToSet(waitset, WL_POSTMASTER_DEATH, PGINVALID_SOCKET, NULL, NULL);
+
+	for (int i = 0; i < nFds; i++)
+	{
+		AddWaitEventToSet(waitset, WL_SOCKET_READABLE, waitFds[i], NULL, NULL);
 	}
 
 	/* we didn't have any data, so we've got to read it from the network. */
@@ -3767,6 +3794,12 @@ receiveChunksUDPIFC(ChunkTransportState *pTransportStates, ChunkTransportStateEn
 			if (!directed)
 				*srcRoute = rxconn->route;
 
+			FreeWaitEventSet(waitset);
+			if (rEvents != NULL)
+				pfree(rEvents);
+			if (waitFds != NULL)
+				pfree(waitFds);
+
 			return tcItem;
 		}
 
@@ -3780,38 +3813,22 @@ receiveChunksUDPIFC(ChunkTransportState *pTransportStates, ChunkTransportStateEn
 		ResetLatch(&ic_control_info.latch);
 		pthread_mutex_unlock(&ic_control_info.lock);
 
-		/*
-		 * Wait for data to become ready.
-		 *
-		 * In the QD, also wake up immediately if one of the QEs report an
-		 * error through the main QD-QE libpq connection. For that, ask
-		 * the dispatcher for a file descriptor to wait on for that.
-		 *
-		 * GPDB_12_MERGE_FIXME:
-		 * XXX: We currently only get a single FD to wait on. That catches
-		 * the common case that *all* the QEs report the same error more or
-		 * less at the same time. WaitLatchOrSocket doesn't allow waiting for
-		 * more than one socket at a time. PostgreSQL 9.6 introduces a more
-		 * flexible "wait event" API for the latches, so once we merge with
-		 * that, we could improve this.
-		 */
-		int			wakeEvents = WL_LATCH_SET | WL_TIMEOUT | WL_POSTMASTER_DEATH;
-		int			waitFd = PGINVALID_SOCKET;
-
-		if (Gp_role == GP_ROLE_DISPATCH)
-			waitFd = cdbdisp_getWaitSocketFd(pTransportStates->estate->dispatcherState);
-		if (waitFd != PGINVALID_SOCKET)
-			wakeEvents |= WL_SOCKET_READABLE;
-
 		if (gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG)
 		{
 			elog(DEBUG5, "waiting (timed) on route %d %s", rx_control_info.mainWaitingState.waitingRoute,
 				 (rx_control_info.mainWaitingState.waitingRoute == ANY_ROUTE ? "(any route)" : ""));
 		}
-		(void) WaitLatchOrSocket(&ic_control_info.latch,
-								 wakeEvents, waitFd,
-								 MAIN_THREAD_COND_TIMEOUT_MS,
-								 WAIT_EVENT_INTERCONNECT);
+
+		/*
+		 * Wait for data to become ready.
+		 *
+		 * In the QD, also wake up immediately if any QE reports an
+		 * error through the main QD-QE libpq connection. For that, ask
+		 * the dispatcher for a file descriptor to wait on for that.
+		 */
+		int rc = WaitEventSetWait(waitset, MAIN_THREAD_COND_TIMEOUT_MS, rEvents, nevent, WAIT_EVENT_INTERCONNECT);
+		if (gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG && rc == 0)
+			elog(DEBUG2, "receiveChunksUDPIFC(): WaitEventSetWait timeout after %d ms", MAIN_THREAD_COND_TIMEOUT_MS);
 
 		/* check the potential errors in rx thread. */
 		checkRxThreadError();
@@ -3819,10 +3836,18 @@ receiveChunksUDPIFC(ChunkTransportState *pTransportStates, ChunkTransportStateEn
 		/* do not check interrupts when holding the lock */
 		ML_CHECK_FOR_INTERRUPTS(pTransportStates->teardownActive);
 
-		/* check to see if the dispatcher should cancel */
+		/*
+		 * check to see if the dispatcher should cancel
+		 */
 		if (Gp_role == GP_ROLE_DISPATCH)
 		{
-			checkForCancelFromQD(pTransportStates);
+			for (int i = 0; i < rc; i++)
+				if (rEvents[i].events & WL_SOCKET_READABLE)
+				{
+					/* event happened on wait fds, need to check cancel */
+					checkForCancelFromQD(pTransportStates);
+					break;
+				}
 		}
 
 		/*
@@ -3843,6 +3868,12 @@ receiveChunksUDPIFC(ChunkTransportState *pTransportStates, ChunkTransportStateEn
 		pthread_mutex_lock(&ic_control_info.lock);
 
 	}							/* for (;;) */
+
+	FreeWaitEventSet(waitset);
+	if (rEvents != NULL)
+		pfree(rEvents);
+	if (waitFds != NULL)
+		pfree(waitFds);
 
 	/* We either got data, or get cancelled. We never make it out to here. */
 	return NULL;				/* make GCC behave */

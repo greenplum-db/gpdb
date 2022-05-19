@@ -7,7 +7,7 @@ After the expansion is completed, you must perform different tasks depending on 
 -   [Removing the Expansion Schema](#topic_xvp_5p2_hpb)
 -   [Setting Up PXF on the New Host](#topic_pxl_1q2_hpb)
 
-**Parent topic:**[Expanding a Greenplum System](../expand/expand-main.html)
+**Parent topic:** [Expanding a Greenplum System](../expand/expand-main.html)
 
 ## <a id="topic_xvp_5p2_hpb"></a>Removing the Expansion Schema 
 

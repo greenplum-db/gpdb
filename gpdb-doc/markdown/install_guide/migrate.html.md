@@ -15,7 +15,7 @@ This topic identifies known issues you may encounter when moving data from Green
 -   [Backing Up and Restoring a Database](#backup-and-restore)
 -   [Completing the Migration](#after-migration)
 
-**Parent topic:**[Upgrading to Greenplum 6](upgrade_intro.html)
+**Parent topic:** [Upgrading to Greenplum 6](upgrade_intro.html)
 
 ## <a id="prep-gpdb6"></a>Preparing the Greenplum 6 Cluster 
 

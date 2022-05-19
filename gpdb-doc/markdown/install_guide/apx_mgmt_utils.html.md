@@ -63,5 +63,5 @@ The following Greenplum Database management utilities are located in `$GPHOME/bi
         </tr>
 </tbody></table>
 
-**Parent topic:**[Installing and Upgrading Greenplum](install_guide.html)
+**Parent topic:** [Installing and Upgrading Greenplum](install_guide.html)
 

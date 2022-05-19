@@ -23,6 +23,12 @@
 #include "utils/snapmgr.h"
 #include "storage/procarray.h"
 
+int
+GetMaxSnapshotDistributedXidCount()
+{
+	return GetMaxSnapshotXidCount();
+}
+
 /*
  * DistributedSnapshotWithLocalMapping_CommittedTest
  *		Is the given XID still-in-progress according to the
@@ -228,7 +234,7 @@ DistributedSnapshot_Reset(DistributedSnapshot *distributedSnapshot)
 	if (distributedSnapshot->inProgressXidArray == NULL)
 	{
 		distributedSnapshot->inProgressXidArray =
-			(DistributedTransactionId*) malloc(GetMaxSnapshotXidCount() * sizeof(DistributedTransactionId));
+			(DistributedTransactionId*) malloc(GetMaxSnapshotDistributedXidCount() * sizeof(DistributedTransactionId));
 		if (distributedSnapshot->inProgressXidArray == NULL)
 			ereport(ERROR,
 					(errcode(ERRCODE_OUT_OF_MEMORY),
@@ -270,14 +276,14 @@ DistributedSnapshot_Copy(DistributedSnapshot *target,
 	if (target->inProgressXidArray == NULL)
 	{
 		target->inProgressXidArray =
-			(DistributedTransactionId*) malloc(GetMaxSnapshotXidCount() * sizeof(DistributedTransactionId));
+			(DistributedTransactionId*) malloc(GetMaxSnapshotDistributedXidCount() * sizeof(DistributedTransactionId));
 		if (target->inProgressXidArray == NULL)
 			ereport(ERROR,
 					(errcode(ERRCODE_OUT_OF_MEMORY),
 					 errmsg("out of memory")));
 	}
 
-	Assert(source->count <= GetMaxSnapshotXidCount());
+	Assert(source->count <= GetMaxSnapshotDistributedXidCount());
 	memcpy(target->inProgressXidArray,
 			source->inProgressXidArray,
 			source->count * sizeof(DistributedTransactionId));

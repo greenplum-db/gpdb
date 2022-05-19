@@ -13,7 +13,7 @@ You can display information about partitioned tables in several ways, including 
 -   The `pg_constraint` system catalog table contains information on table constraints.
 -   The psql meta command \\d+ tablename displays the table constraints for child leaf tables of a partitioned table.
 
-**Parent topic:**[About GPORCA](../../query/topics/query-piv-optimizer.html)
+**Parent topic:** [About GPORCA](../../query/topics/query-piv-optimizer.html)
 
 ## <a id="topic_zn1_m3m_ss"></a>Example 
 

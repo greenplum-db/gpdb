@@ -104,5 +104,5 @@ Following are steps to use this Ansible playbook.
 
 When the playbook has run successfully, you can proceed with [Creating the Data Storage Areas](create_data_dirs.html) and [Initializing a Greenplum Database System](init_gpdb.html).
 
-**Parent topic:**[Installing and Upgrading Greenplum](install_guide.html)
+**Parent topic:** [Installing and Upgrading Greenplum](install_guide.html)
 

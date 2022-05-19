@@ -1647,7 +1647,7 @@ aoco_relation_size(Relation rel, ForkNumber forkNumber)
 		return totalbytes;
 
 	snapshot = RegisterSnapshot(GetLatestSnapshot());
-	allseg = GetAllAOCSFileSegInfo(rel, snapshot, &totalseg);
+	allseg = GetAllAOCSFileSegInfo(rel, snapshot, &totalseg, NULL);
 	for (int seg = 0; seg < totalseg; seg++)
 	{
 		for (int attr = 0; attr < RelationGetNumberOfAttributes(rel); attr++)
@@ -1688,7 +1688,6 @@ aoco_relation_needs_toast_table(Relation rel)
 	 */
 	return false;
 }
-
 
 /* ------------------------------------------------------------------------
  * Planner related callbacks for the heap AM

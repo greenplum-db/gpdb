@@ -243,8 +243,11 @@ extendBufFile(BufFile *file)
 	 * queries from destroying the entire system. Counting each segment file is
 	 * reasonable for this scenario.
 	 */
-	FileSetIsWorkfile(pfile);
-	RegisterFileWithSet(pfile, file->work_set);
+	if (file->work_set)
+	{
+		FileSetIsWorkfile(pfile);
+		RegisterFileWithSet(pfile, file->work_set);
+	}
 }
 
 /*
@@ -286,9 +289,12 @@ BufFileCreateTempInSet(char *operation_name, bool interXact, workfile_set *work_
 	 * Register the file as a "work file", so that the Greenplum workfile
 	 * limits apply to it.
 	 */
-	file->work_set = work_set;
-	FileSetIsWorkfile(pfile);
-	RegisterFileWithSet(pfile, work_set);
+	if (work_set)
+	{
+		file->work_set = work_set;
+		FileSetIsWorkfile(pfile);
+		RegisterFileWithSet(pfile, work_set);
+	}
 
 	SIMPLE_FAULT_INJECTOR("workfile_creation_failure");
 
@@ -1024,7 +1030,7 @@ BufFileTellBlock(BufFile *file)
 #endif
 
 /*
- * Return the current shared BufFile size.
+ * Return the current fileset based BufFile size.
  *
  * Counts any holes left behind by BufFileAppend as part of the size.
  * ereport()s on failure.
@@ -1049,6 +1055,45 @@ BufFileSize(BufFile *file)
 
 	return ((file->numFiles - 1) * (int64) MAX_PHYSICAL_FILESIZE) +
 		lastFileSize;
+}
+
+/*
+ * Returns the size of this file according to current accounting.
+ *
+ * Unlike BufFileSize(), which only returns the size of BufFile flushed to the
+ * disk, BufFileGetSize() returns the size of whole BufFile including buffer.
+ *
+ * For a compressed BufFile, this returns the uncompressed size!
+ */
+int64
+BufFileGetSize(BufFile *file)
+{
+	Assert(NULL != file);
+
+	switch (file->state)
+	{
+	case BFS_RANDOM_ACCESS:
+	case BFS_SEQUENTIAL_WRITING:
+	case BFS_SEQUENTIAL_READING:
+		break;
+	case BFS_COMPRESSED_WRITING:
+	case BFS_COMPRESSED_READING:
+#ifdef USE_ZSTD
+		return file->uncompressed_bytes;
+#else
+		Assert(false);
+		break;
+#endif
+	}
+
+	int64 fileSizeWithoutBuffer = BufFileSize(file);
+
+	/* Writing after seek back doesn't always change the size. */
+	if (fileSizeWithoutBuffer > (file->curOffset + file->pos))
+	{
+		return fileSizeWithoutBuffer;
+	}
+	return file->curOffset + file->pos;
 }
 
 /*
@@ -1420,7 +1465,7 @@ BufFileLoadCompressedBuffer(BufFile *file, void *buffer, size_t bufsize)
 
 	return output.pos;
 }
-#else		/* HAVE_ZSTD */
+#else		/* USE_ZSTD */
 
 /*
  * Dummy versions of the compression functions, when the server is built
@@ -1450,4 +1495,4 @@ BufFileLoadCompressedBuffer(BufFile *file, void *buffer, size_t bufsize)
 	elog(ERROR, "zstandard compression not supported by this build");
 }
 
-#endif		/* HAVE_ZSTD */
+#endif		/* USE_ZSTD */

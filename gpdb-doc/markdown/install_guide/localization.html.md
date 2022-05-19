@@ -4,7 +4,7 @@ title: Configuring Timezone and Localization Settings
 
 Describes the available timezone and localization features of Greenplum Database.
 
-**Parent topic:**[Installing and Upgrading Greenplum](install_guide.html)
+**Parent topic:** [Installing and Upgrading Greenplum](install_guide.html)
 
 ## <a id="topic_fvc_zh1_b2b"></a>Configuring the Timezone 
 

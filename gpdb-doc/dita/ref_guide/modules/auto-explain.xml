@@ -26,8 +26,8 @@
     <topic id="topic_info">
       <title>Module Documentation</title>
       <body>
-        <p>See <codeph><xref href="https://www.postgresql.org/docs/9.4/auto-explain.html"
-              scope="external" format="html">auto_explain</xref></codeph> in the PostgreSQL
+        <p>See <xref href="https://www.postgresql.org/docs/9.4/auto-explain.html"
+              scope="external" format="html">auto_explain</xref> in the PostgreSQL
           documentation for detailed information about the configuration parameters that control
           this module's behavior.</p>
       </body>

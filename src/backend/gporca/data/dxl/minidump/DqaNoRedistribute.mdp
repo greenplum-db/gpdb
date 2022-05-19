@@ -12,41 +12,34 @@
 
 
     Physical plan:
-    +--CPhysicalMotionGather(master)   rows:101   width:12  rebinds:1   cost:432.933042   origin: [Grp:5, GrpExpr:8]
-       +--CPhysicalHashAgg( Global, multi-stage ) Grp Cols: ["a" (0)], Minimal Grp Cols:["a" (0)], Generates Duplicates :[ 0 ]    rows:101   width:12  rebinds:1   cost:432.928526   origin: [Grp:5, GrpExpr:4]
-          |--CPhysicalMotionHashDistribute HASHED: [ +--CScalarIdent "a" (0)
-     , nulls colocated ]   rows:101   width:12  rebinds:1   cost:432.924214   origin: [Grp:15, GrpExpr:2]
-          |  +--CPhysicalStreamAgg( Local, multi-stage ) Grp Cols: ["a" (0)], Minimal Grp Cols:["a" (0)], Generates Duplicates :[ 1 ]    rows:101   width:12  rebinds:1   cost:432.922949   origin: [Grp:15, GrpExpr:1]
-          |     |--CPhysicalSort  ( (97,1.0), "a" (0), NULLsLast ) ( (97,1.0), "b" (1), NULLsLast )    rows:10000   width:42  rebinds:1   cost:432.896056   origin: [Grp:0, GrpExpr:3]
-          |     |  +--CPhysicalTableScan "foo" ("foo")   rows:10000   width:42  rebinds:1   cost:431.077000   origin: [Grp:0, GrpExpr:1]
-          |     +--CScalarProjectList   origin: [Grp:14, GrpExpr:0]
-          |        +--CScalarProjectElement "ColRef_0011" (11)   origin: [Grp:13, GrpExpr:0]
-          |           +--CScalarAggFunc (count , Distinct: true , Aggregate Stage: Local)   origin: [Grp:12, GrpExpr:0]
-          |              +--CScalarIdent "b" (1)   origin: [Grp:1, GrpExpr:0]
-          +--CScalarProjectList   origin: [Grp:19, GrpExpr:0]
-             +--CScalarProjectElement "count" (10)   origin: [Grp:18, GrpExpr:0]
-                +--CScalarAggFunc (count , Distinct: false , Aggregate Stage: Global)   origin: [Grp:17, GrpExpr:0]
-                   +--CScalarIdent "ColRef_0011" (11)   origin: [Grp:16, GrpExpr:0]
-    ",
+      +--CPhysicalMotionGather(master)   rows:101   width:12  rebinds:1   cost:431.975758   origin: [Grp:9, GrpExpr:11]
+         +--CPhysicalHashAgg( Global, multi-stage ) Grp Cols: ["a" (0)], Minimal Grp Cols:["a" (0)], Generates Duplicates :[ 0 ] , m_aggStage :[ Two Stage Scalar DQA ]    rows:101   width:12  rebinds:1   cost:431.971241   origin: [Grp:9, GrpExpr:7]
+            |--CPhysicalMotionHashDistribute HASHED: [ CScalarIdent "a" (0), nulls colocated ], opfamilies: (1977,1.0),   rows:624   width:8  rebinds:1   cost:431.945737   origin: [Grp:16, GrpExpr:3]
+            |  +--CPhysicalHashAgg( Local, multi-stage ) Grp Cols: ["a" (0), "b" (1)], Minimal Grp Cols:["a" (0), "b" (1)], Generates Duplicates :[ 1 ] , m_aggStage :[ Two Stage Scalar DQA ]    rows:624   width:8  rebinds:1   cost:431.940521   origin: [Grp:16, GrpExpr:2]
+            |     |--CPhysicalTableScan "foo" ("foo")   rows:10000   width:38  rebinds:1   cost:431.077000   origin: [Grp:0, GrpExpr:1]
+            |     +--CScalarProjectList   origin: [Grp:10, GrpExpr:0]
+            +--CScalarProjectList   origin: [Grp:15, GrpExpr:0]
+               +--CScalarProjectElement "count" (10)   origin: [Grp:14, GrpExpr:0]
+                  +--CScalarAggFunc (count , Distinct: false , Aggregate Stage: Global)   origin: [Grp:13, GrpExpr:0]
+                     |--CScalarValuesList   origin: [Grp:2, GrpExpr:0]
+                     |  +--CScalarIdent "b" (1)   origin: [Grp:1, GrpExpr:0]
+                     |--CScalarValuesList   origin: [Grp:3, GrpExpr:0]
+                     |--CScalarValuesList   origin: [Grp:3, GrpExpr:0]
+                     +--CScalarValuesList   origin: [Grp:5, GrpExpr:0]
+                        +--CScalarSortGroupClause(tleSortGroupRef:0,eqop:96,sortop:97,nulls_first:false,hashable:true)   origin: [Grp:4, GrpExpr:0]
+
                                                 QUERY PLAN
     --------------------------------------------------------------------------------------------------
-     Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..432.93 rows=101 width=12)
-       ->  HashAggregate  (cost=0.00..432.93 rows=34 width=12)
-             Group By: a
-             ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..432.92 rows=34 width=12)
+     Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.98 rows=101 width=12)
+       ->  HashAggregate  (cost=0.00..431.97 rows=34 width=12)
+             Group Key: a
+             ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.95 rows=209 width=8)
                    Hash Key: a
-                   ->  Result  (cost=0.00..432.92 rows=34 width=12)
-                         ->  GroupAggregate  (cost=0.00..432.92 rows=34 width=12)
-                               Group By: a
-                               ->  Sort  (cost=0.00..432.90 rows=3334 width=8)
-                                     Sort Key: a, b
-                                     ->  Table Scan on foo  (cost=0.00..431.08 rows=3334 width=8)
-     Optimizer status: PQO version 3.39.0
-    (12 rows)
-                                                        QUERY PLAN
-    -----------------------------------------------------------------------------------------------------------
-     Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..1324044.19 rows=1 width=4)
-	 ...
+                   ->  Streaming HashAggregate  (cost=0.00..431.94 rows=209 width=8)
+                         Group Key: a, b
+                         ->  Seq Scan on foo  (cost=0.00..431.08 rows=3334 width=8)
+     Optimizer: Pivotal Optimizer (GPORCA)
+    (9 rows)
   ]]>
   </dxl:Comment>
   <dxl:Thread Id="0">
@@ -712,10 +705,10 @@
         </dxl:LogicalGet>
       </dxl:LogicalGroupBy>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="8">
+    <dxl:Plan Id="0" SpaceSize="16">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="432.933042" Rows="101.000000" Width="12"/>
+          <dxl:Cost StartupCost="0" TotalCost="431.972943" Rows="101.000000" Width="12"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="a">
@@ -729,7 +722,7 @@
         <dxl:SortingColumnList/>
         <dxl:Aggregate AggregationStrategy="Hashed" StreamSafe="false">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="432.928526" Rows="101.000000" Width="12"/>
+            <dxl:Cost StartupCost="0" TotalCost="431.968426" Rows="101.000000" Width="12"/>
           </dxl:Properties>
           <dxl:GroupingColumns>
             <dxl:GroupingColumn ColId="0"/>
@@ -739,9 +732,9 @@
               <dxl:Ident ColId="0" ColName="a" TypeMdid="0.23.1.0"/>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="10" Alias="count">
-              <dxl:AggFunc AggMdid="0.2147.1.0" AggDistinct="false" AggStage="Final" AggKind="n" AggArgTypes="">
+              <dxl:AggFunc AggMdid="0.2147.1.0" AggDistinct="false" AggStage="Normal" AggKind="n" AggArgTypes="">
                 <dxl:ValuesList ParamType="aggargs">
-                <dxl:Ident ColId="11" ColName="ColRef_0011" TypeMdid="0.20.1.0"/>
+                  <dxl:Ident ColId="1" ColName="b" TypeMdid="0.23.1.0"/>
                 </dxl:ValuesList>
                 <dxl:ValuesList ParamType="aggdirectargs"/>
                 <dxl:ValuesList ParamType="aggorder"/>
@@ -752,14 +745,14 @@
           <dxl:Filter/>
           <dxl:RedistributeMotion InputSegments="0,1,2" OutputSegments="0,1,2">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="432.924214" Rows="101.000000" Width="12"/>
+              <dxl:Cost StartupCost="0" TotalCost="431.945220" Rows="568.125000" Width="8"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="0" Alias="a">
                 <dxl:Ident ColId="0" ColName="a" TypeMdid="0.23.1.0"/>
               </dxl:ProjElem>
-              <dxl:ProjElem ColId="11" Alias="ColRef_0011">
-                <dxl:Ident ColId="11" ColName="ColRef_0011" TypeMdid="0.20.1.0"/>
+              <dxl:ProjElem ColId="1" Alias="b">
+                <dxl:Ident ColId="1" ColName="b" TypeMdid="0.23.1.0"/>
               </dxl:ProjElem>
             </dxl:ProjList>
             <dxl:Filter/>
@@ -769,92 +762,51 @@
                 <dxl:Ident ColId="0" ColName="a" TypeMdid="0.23.1.0"/>
               </dxl:HashExpr>
             </dxl:HashExprList>
-            <dxl:Result>
+            <dxl:Aggregate AggregationStrategy="Hashed" StreamSafe="true">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="432.922949" Rows="101.000000" Width="12"/>
+                <dxl:Cost StartupCost="0" TotalCost="431.940478" Rows="568.125000" Width="8"/>
               </dxl:Properties>
+              <dxl:GroupingColumns>
+                <dxl:GroupingColumn ColId="0"/>
+                <dxl:GroupingColumn ColId="1"/>
+              </dxl:GroupingColumns>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="0" Alias="a">
                   <dxl:Ident ColId="0" ColName="a" TypeMdid="0.23.1.0"/>
                 </dxl:ProjElem>
-                <dxl:ProjElem ColId="11" Alias="ColRef_0011">
-                  <dxl:Ident ColId="11" ColName="ColRef_0011" TypeMdid="0.20.1.0"/>
+                <dxl:ProjElem ColId="1" Alias="b">
+                  <dxl:Ident ColId="1" ColName="b" TypeMdid="0.23.1.0"/>
                 </dxl:ProjElem>
               </dxl:ProjList>
               <dxl:Filter/>
-              <dxl:OneTimeFilter/>
-              <dxl:Aggregate AggregationStrategy="Sorted" StreamSafe="false">
+              <dxl:TableScan>
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="432.922949" Rows="101.000000" Width="12"/>
+                  <dxl:Cost StartupCost="0" TotalCost="431.077000" Rows="10000.000000" Width="8"/>
                 </dxl:Properties>
-                <dxl:GroupingColumns>
-                  <dxl:GroupingColumn ColId="0"/>
-                </dxl:GroupingColumns>
                 <dxl:ProjList>
-                  <dxl:ProjElem ColId="11" Alias="ColRef_0011">
-                    <dxl:AggFunc AggMdid="0.2147.1.0" AggDistinct="true" AggStage="Partial" AggKind="n" AggArgTypes="">
-                      <dxl:ValuesList ParamType="aggargs">
-                      <dxl:Ident ColId="1" ColName="b" TypeMdid="0.23.1.0"/>
-                      </dxl:ValuesList>
-                      <dxl:ValuesList ParamType="aggdirectargs"/>
-                      <dxl:ValuesList ParamType="aggorder"/>
-                      <dxl:ValuesList ParamType="aggdistinct"/>
-                    </dxl:AggFunc>
-                  </dxl:ProjElem>
                   <dxl:ProjElem ColId="0" Alias="a">
                     <dxl:Ident ColId="0" ColName="a" TypeMdid="0.23.1.0"/>
                   </dxl:ProjElem>
+                  <dxl:ProjElem ColId="1" Alias="b">
+                    <dxl:Ident ColId="1" ColName="b" TypeMdid="0.23.1.0"/>
+                  </dxl:ProjElem>
                 </dxl:ProjList>
                 <dxl:Filter/>
-                <dxl:Sort SortDiscardDuplicates="false">
-                  <dxl:Properties>
-                    <dxl:Cost StartupCost="0" TotalCost="432.896056" Rows="10000.000000" Width="8"/>
-                  </dxl:Properties>
-                  <dxl:ProjList>
-                    <dxl:ProjElem ColId="0" Alias="a">
-                      <dxl:Ident ColId="0" ColName="a" TypeMdid="0.23.1.0"/>
-                    </dxl:ProjElem>
-                    <dxl:ProjElem ColId="1" Alias="b">
-                      <dxl:Ident ColId="1" ColName="b" TypeMdid="0.23.1.0"/>
-                    </dxl:ProjElem>
-                  </dxl:ProjList>
-                  <dxl:Filter/>
-                  <dxl:SortingColumnList>
-                    <dxl:SortingColumn ColId="0" SortOperatorMdid="0.97.1.0" SortOperatorName="&lt;" SortNullsFirst="false"/>
-                    <dxl:SortingColumn ColId="1" SortOperatorMdid="0.97.1.0" SortOperatorName="&lt;" SortNullsFirst="false"/>
-                  </dxl:SortingColumnList>
-                  <dxl:LimitCount/>
-                  <dxl:LimitOffset/>
-                  <dxl:TableScan>
-                    <dxl:Properties>
-                      <dxl:Cost StartupCost="0" TotalCost="431.077000" Rows="10000.000000" Width="8"/>
-                    </dxl:Properties>
-                    <dxl:ProjList>
-                      <dxl:ProjElem ColId="0" Alias="a">
-                        <dxl:Ident ColId="0" ColName="a" TypeMdid="0.23.1.0"/>
-                      </dxl:ProjElem>
-                      <dxl:ProjElem ColId="1" Alias="b">
-                        <dxl:Ident ColId="1" ColName="b" TypeMdid="0.23.1.0"/>
-                      </dxl:ProjElem>
-                    </dxl:ProjList>
-                    <dxl:Filter/>
-                    <dxl:TableDescriptor Mdid="0.49155.1.0" TableName="foo">
-                      <dxl:Columns>
-                        <dxl:Column ColId="0" Attno="1" ColName="a" TypeMdid="0.23.1.0" ColWidth="4"/>
-                        <dxl:Column ColId="1" Attno="2" ColName="b" TypeMdid="0.23.1.0" ColWidth="4"/>
-                        <dxl:Column ColId="3" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
-                        <dxl:Column ColId="4" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0" ColWidth="4"/>
-                        <dxl:Column ColId="5" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0" ColWidth="4"/>
-                        <dxl:Column ColId="6" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0" ColWidth="4"/>
-                        <dxl:Column ColId="7" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0" ColWidth="4"/>
-                        <dxl:Column ColId="8" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0" ColWidth="4"/>
-                        <dxl:Column ColId="9" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0" ColWidth="4"/>
-                      </dxl:Columns>
-                    </dxl:TableDescriptor>
-                  </dxl:TableScan>
-                </dxl:Sort>
-              </dxl:Aggregate>
-            </dxl:Result>
+                <dxl:TableDescriptor Mdid="0.49155.1.0" TableName="foo">
+                  <dxl:Columns>
+                    <dxl:Column ColId="0" Attno="1" ColName="a" TypeMdid="0.23.1.0" ColWidth="4"/>
+                    <dxl:Column ColId="1" Attno="2" ColName="b" TypeMdid="0.23.1.0" ColWidth="4"/>
+                    <dxl:Column ColId="3" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
+                    <dxl:Column ColId="4" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0" ColWidth="4"/>
+                    <dxl:Column ColId="5" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0" ColWidth="4"/>
+                    <dxl:Column ColId="6" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0" ColWidth="4"/>
+                    <dxl:Column ColId="7" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0" ColWidth="4"/>
+                    <dxl:Column ColId="8" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0" ColWidth="4"/>
+                    <dxl:Column ColId="9" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0" ColWidth="4"/>
+                  </dxl:Columns>
+                </dxl:TableDescriptor>
+              </dxl:TableScan>
+            </dxl:Aggregate>
           </dxl:RedistributeMotion>
         </dxl:Aggregate>
       </dxl:GatherMotion>

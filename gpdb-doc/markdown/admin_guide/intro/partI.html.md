@@ -17,5 +17,5 @@ This topic provides a high-level overview of Greenplum Database high availabilit
 -   **[About Database Statistics in Greenplum Database](../intro/about_statistics.html)**  
 An overview of statistics gathered by the ANALYZE command in Greenplum Database.
 
-**Parent topic:**[Greenplum Database Administrator Guide](../admin_guide.html)
+**Parent topic:** [Greenplum Database Administrator Guide](../admin_guide.html)
 

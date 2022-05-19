@@ -10,8 +10,8 @@
     <section>
       <title>Synopsis</title>
     </section>
-    <codeblock id="sql_command_synopsis">ALTER TEXT SEARCH PARSER <varname>name</varname> RENAME TO <varname>new_name</varname>
-ALTER TEXT SEARCH PARSER <varname>name</varname> SET SCHEMA <varname>new_schema</varname></codeblock>
+    <codeblock id="sql_command_synopsis">ALTER TEXT SEARCH PARSER &lt;name> RENAME TO &lt;new_name>
+ALTER TEXT SEARCH PARSER &lt;name> SET SCHEMA &lt;new_schema></codeblock>
     <section id="section3">
       <title>Description</title>
       <p><codeph>ALTER TEXT SEARCH PARSER</codeph> changes the definition of a text search parser.
@@ -41,9 +41,9 @@ ALTER TEXT SEARCH PARSER <varname>name</varname> SET SCHEMA <varname>new_schema<
     </section>
     <section id="section8">
       <title>See Also</title>
-      <p><codeph><xref href="CREATE_TEXT_SEARCH_PARSER.xml#topic1" type="topic" format="dita"
-          /></codeph>, <codeph><xref href="DROP_TEXT_SEARCH_PARSER.xml#topic1" type="topic"
-            format="dita"/></codeph></p>
+      <p><xref href="CREATE_TEXT_SEARCH_PARSER.xml#topic1" type="topic" format="dita"
+          />, <xref href="DROP_TEXT_SEARCH_PARSER.xml#topic1" type="topic"
+            format="dita"/></p>
     </section>
   </body>
 </topic>

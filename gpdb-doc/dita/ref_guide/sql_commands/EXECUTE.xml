@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
-<topic id="topic1"><title id="dp20941">EXECUTE</title><body><p id="sql_command_desc">Runs a prepared SQL statement.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">EXECUTE <varname>name</varname> [ (<varname>parameter</varname> [, ...] ) ]</codeblock></section><section id="section3"><title>Description</title><p><codeph>EXECUTE</codeph> is used to run a previously prepared statement.
+<topic id="topic1"><title id="dp20941">EXECUTE</title><body><p id="sql_command_desc">Runs a prepared SQL statement.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">EXECUTE &lt;name> [ (&lt;parameter> [, ...] ) ]</codeblock></section><section id="section3"><title>Description</title><p><codeph>EXECUTE</codeph> is used to run a previously prepared statement.
 Since prepared statements only exist for the duration of a session, the
 prepared statement must have been created by a <codeph>PREPARE</codeph>
 statement run earlier in the current session. </p><p>If the <codeph>PREPARE</codeph> statement that created the statement
@@ -18,5 +18,5 @@ and then run it:</p><codeblock>PREPARE fooplan (int, text, bool, numeric) AS INS
 foo VALUES($1, $2, $3, $4);
 EXECUTE fooplan(1, 'Hunter Valley', 't', 200.00);</codeblock></section><section id="section6"><title>Compatibility</title><p>The SQL standard includes an <codeph>EXECUTE</codeph> statement, but
 it is only for use in embedded SQL. This version of the <codeph>EXECUTE</codeph>
-statement also uses a somewhat different syntax. </p></section><section id="section7"><title>See Also</title><p><codeph><xref href="DEALLOCATE.xml#topic1" type="topic" format="dita"/></codeph>, <codeph><xref
-            href="./PREPARE.xml#topic1" type="topic" format="dita"/></codeph></p></section></body></topic>
+statement also uses a somewhat different syntax. </p></section><section id="section7"><title>See Also</title><p><xref href="DEALLOCATE.xml#topic1" type="topic" format="dita"/>, <xref
+            href="./PREPARE.xml#topic1" type="topic" format="dita"/></p></section></body></topic>

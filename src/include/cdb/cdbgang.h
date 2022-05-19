@@ -46,7 +46,7 @@ typedef struct Gang
 
 extern int qe_identifier;
 
-extern int host_segments;
+extern int host_primary_segment_count;
 extern int ic_htab_size;
 
 extern MemoryContext GangContext;

@@ -52,6 +52,7 @@ public:
 		ErelstorageAppendOnlyRows,
 		ErelstorageExternal,
 		ErelstorageMixedPartitioned,
+		ErelstorageCompositeType,
 		ErelstorageSentinel
 	};
 

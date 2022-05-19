@@ -137,3 +137,37 @@ SELECT 1 IS NOT DISTINCT FROM 2 as "no";
 SELECT 2 IS NOT DISTINCT FROM 2 as "yes";
 SELECT 2 IS NOT DISTINCT FROM null as "no";
 SELECT null IS NOT DISTINCT FROM null as "yes";
+
+-- gpdb start: test inherit/partition table distinct when gp_statistics_pullup_from_child_partition is on
+set gp_statistics_pullup_from_child_partition to on;
+CREATE TABLE sales (id int, date date, amt decimal(10,2))
+DISTRIBUTED BY (id);
+insert into sales values (1,'20210202',20), (2,'20210602',9) ,(3,'20211002',100);
+select distinct * from sales order by 1;
+select distinct sales from sales order by 1;
+CREATE TABLE sales_partition (id int, date date, amt decimal(10,2))
+DISTRIBUTED BY (id)
+PARTITION BY RANGE (date)
+( START (date '2021-01-01') INCLUSIVE
+  END (date '2022-01-01') EXCLUSIVE
+  EVERY (INTERVAL '1 month') );
+insert into sales_partition values (1,'20210202',20), (2,'20210602',9) ,(3,'20211002',100);
+select distinct * from sales_partition order by 1;
+select distinct sales_partition from sales_partition order by 1;
+DROP TABLE sales;
+DROP TABLE sales_partition;
+
+CREATE TABLE cities (
+    name            text,
+    population      float,
+    altitude        int
+); 
+CREATE TABLE capitals (
+    state           char(2)
+) INHERITS (cities);
+select distinct * from cities;
+select distinct cities from cities;
+DROP TABLE capitals;
+DROP TABLE cities;
+set gp_statistics_pullup_from_child_partition to off;
+-- gpdb end: test inherit/partition table distinct when gp_statistics_pullup_from_child_partition is on

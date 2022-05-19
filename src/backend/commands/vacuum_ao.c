@@ -484,14 +484,16 @@ vacuum_appendonly_indexes(Relation aoRelation, int options,
 	{
 		segmentFileInfo = GetAllFileSegInfo(aoRelation,
 											appendOnlyMetaDataSnapshot,
-											&totalSegfiles);
+											&totalSegfiles,
+											NULL);
 	}
 	else
 	{
 		Assert(RelationIsAoCols(aoRelation));
 		segmentFileInfo = (FileSegInfo **) GetAllAOCSFileSegInfo(aoRelation,
 																appendOnlyMetaDataSnapshot,
-																&totalSegfiles);
+																&totalSegfiles,
+																NULL);
 	}
 
 	GetAppendOnlyEntryAuxOids(aoRelation->rd_id,
