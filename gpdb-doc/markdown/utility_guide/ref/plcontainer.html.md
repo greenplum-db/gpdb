@@ -102,8 +102,7 @@ runtime-add options
     -   `resource_group_id` - Assign the specified resource group to the runtime configuration. The resource group limits the total CPU and memory resource usage for all containers that share this runtime configuration. You must specify the `groupid` of the resource group. For information about managing PL/Container resources, see [About PL/Container Resource Management](#topic_resmgmt).
     -   `roles` - Specify the Greenplum Database roles that are allowed to run a container for the runtime configuration. You can specify a single role name or comma separated lists of role names. The default is no restriction.
     -   `use_container_logging` - Enable or disable Docker logging for the container. The value is either `yes` \(enable logging\) or `no` \(disable logging, the default\).
-
-        The Greenplum Database server configuration parameter [log\_min\_messages](../../ref_guide/config_params/guc-list.html) controls the log level. The default log level is `warning`. For information about PL/Container log information, see [Notes](#plc_notes).
+    <br/><br/>The Greenplum Database server configuration parameter [log\_min\_messages](../../ref_guide/config_params/guc-list.html) controls the log level. The default log level is `warning`. For information about PL/Container log information, see [Notes](#plc_notes).
 
 
 \{**-v** \| **--volume**\} shared-volume

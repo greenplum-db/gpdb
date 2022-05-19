@@ -246,8 +246,7 @@ The following meta-commands are defined:
 
     -   For some types of relation, `\d` shows additional information for each column: column values for sequences, indexed expressions for indexes, and foreign data wrapper options for foreign tables.
     -   The command form `\d+` is identical, except that more information is displayed: any comments associated with the columns of the table are shown, as is the presence of OIDs in the table, the view definition if the relation is a view.
-
-        For partitioned tables, the command `\d` or `\d+` specified with the root partition table or child partition table displays information about the table including partition keys on the current level of the partition table. The command `\d+` also displays the immediate child partitions of the table and whether the child partition is an external table or regular table.
+        <br/><br/>For partitioned tables, the command `\d` or `\d+` specified with the root partition table or child partition table displays information about the table including partition keys on the current level of the partition table. The command `\d+` also displays the immediate child partitions of the table and whether the child partition is an external table or regular table.
 
         For append-optimized tables and column-oriented tables, `\d+` displays the storage options for a table. For append-optimized tables, the options are displayed for the table. For column-oriented tables, storage options are displayed for each column.
 
@@ -490,8 +489,7 @@ The response indicates that the large object received object ID 152801 which one
 
     -   **`border`** – The value must be a number. In general, the higher the number the more borders and lines the tables will have, but this depends on the particular format. In HTML format, this will translate directly into the `border=...` attribute; in the other formats only values `0` \(no border\), `1` \(internal dividing lines\), and `2` \(table frame\) make sense. `latex` and `latex-longtable` also support a `border` value of 3 which adds a dividing line between each row.
     -   **`columns`** – Sets the target width for the `wrapped` format, and also the width limit for determining whether output is wide enough to require the pager or switch to the vertical display in expanded auto mode. The default is zero. Zero causes the target width to be controlled by the environment variable `COLUMNS`, or the detected screen width if `COLUMNS` is not set. In addition, if `columns` is zero then the wrapped format affects screen output only. If columns is nonzero then file and pipe output is wrapped to that width as well.
-
-        After setting the target width, use the command `\pset format wrapped` to enable the wrapped format.
+        <br/><br/>After setting the target width, use the command `\pset format wrapped` to enable the wrapped format.
 
     -   **`expanded`** \| **`x`** – If value is specified it must be either `on` or `off`, which will enable or disable expanded mode, or `auto`. If value is omitted the command toggles between the `on` and `off` settings. When expanded mode is enabled, query results are displayed in two columns, with the column name on the left and the data on the right. This mode is useful if the data wouldn't fit on the screen in the normal "horizontal" mode. In the `auto` setting, the expanded mode is used whenever the query output is wider than the screen, otherwise the regular mode is used. The `auto` setting is only effective in the aligned and wrapped formats. In other formats, it always behaves as if the expanded mode is `off`.
     -   **`fieldsep`** – Specifies the field separator to be used in unaligned output mode. That way one can create, for example, tab- or comma-separated output, which other programs might prefer. To set a tab as field separator, type `\pset fieldsep '\t'`. The default field separator is `'|'` \(a vertical bar\).
@@ -499,15 +497,14 @@ The response indicates that the large object received object ID 152801 which one
     -   **`footer`** – If value is specified it must be either `on` or `off` which will enable or disable display of the table footer \(the \(n rows\) count\). If value is omitted the command toggles footer display on or off.
     -   **`format`** – Sets the output format to one of `unaligned`, `aligned`, `html`, `latex` \(uses `tabular`\), `latex-longtable`, `troff-ms`, or `wrapped`. Unique abbreviations are allowed.
         **`unaligned`** format writes all columns of a row on one line, separated by the currently active field separator. This is useful for creating output that might be intended to be read in by other programs \(for example, tab-separated or comma-separated format\).
-
-        **`aligned`** format is the standard, human-readable, nicely formatted text output; this is the default.
+        <br/><br/>**`aligned`** format is the standard, human-readable, nicely formatted text output; this is the default.
 
         The **`html`**, **`latex`**, **`latex-longtable`**, and **`troff-ms`** formats put out tables that are intended to be included in documents using the respective mark-up language. They are not complete documents! \(This might not be so dramatic in HTML, but in LaTeX you must have a complete document wrapper. `latex-longtable` also requires the LaTeX `longtable` and `booktabs` packages.\)
 
         The **`wrapped`** format is like `aligned`, but wraps wide data values across lines to make the output fit in the target column width. The target width is determined as described under the `columns` option. Note that `psql` does not attempt to wrap column header titles; the `wrapped` format behaves the same as `aligned` if the total width needed for column headers exceeds the target.
 
     -   **`linestyle`** \[**`unicode`** \| **`ascii`** \| **`old-ascii`**\] – Sets the border line drawing style to one of unicode, ascii, or old-ascii. Unique abbreviations, including one letter, are allowed for the three styles. The default setting is `ascii`. This option only affects the `aligned` and `wrapped` output formats.
-        **`ascii`** – uses plain ASCII characters. Newlines in data are shown using a `+` symbol in the right-hand margin. When the wrapped format wraps data from one line to the next without a newline character, a dot \(`.`\) is shown in the right-hand margin of the first line, and again in the left-hand margin of the following line.
+        <br/><br/>**`ascii`** – uses plain ASCII characters. Newlines in data are shown using a `+` symbol in the right-hand margin. When the wrapped format wraps data from one line to the next without a newline character, a dot \(`.`\) is shown in the right-hand margin of the first line, and again in the left-hand margin of the following line.
 
         **`old-ascii`** – style uses plain ASCII characters, using the formatting style used in PostgreSQL 8.4 and earlier. Newlines in data are shown using a `:` symbol in place of the left-hand column separator. When the data is wrapped from one line to the next without a newline character, a `;` symbol is used in place of the left-hand column separator.
 
@@ -521,8 +518,7 @@ The response indicates that the large object received object ID 152801 which one
     -   **`recordsep`** – Specifies the record \(line\) separator to use in unaligned output mode. The default is a newline character.
     -   **`recordsep_zero`** - Sets the record separator to use in unaligned output format to a zero byte.
     -   **`tableattr`** \| **`T`** \[text\] – In HTML format, this specifies attributes to be placed inside the HTML `table` tag. This could for example be `cellpadding` or `bgcolor`. Note that you probably don't want to specify `border` here, as that is already taken care of by `\pset border`. If no value is given, the table attributes are unset.
-
-        In `latex-longtable` format, this controls the proportional width of each column containing a left-aligned data type. It is specified as a whitespace-separated list of values, e.g. `'0.2 0.2 0.6'`. Unspecified output columns use the last specified value.
+        <br/><br/>In `latex-longtable` format, this controls the proportional width of each column containing a left-aligned data type. It is specified as a whitespace-separated list of values, e.g. `'0.2 0.2 0.6'`. Unspecified output columns use the last specified value.
 
     -   **`title`** \[text\] – Sets the table title for any subsequently printed tables. This can be used to give your output descriptive tags. If no value is given, the title is unset.
     -   **`tuples_only`** \| **`t`** \[novalue \| on \| off\] – If value is specified, it must be either `on` or `off` which will enable or disable tuples-only mode. If value is omitted the command toggles between regular and tuples-only output. Regular output includes extra information such as column headers, titles, and various footers. In tuples-only mode, only actual table data is shown. The `\t` command is equivalent to `\pset``tuples_only` and is provided for convenience.
@@ -573,7 +569,7 @@ The response indicates that the large object received object ID 152801 which one
 :   The `\t` command by itself toggles a display of output column name headings and row count footer. The values `on` and `off` set the tuples display, regardless of the current setting. This command is equivalent to `\pset tuples_only` and is provided for convenience.
 
 \\T table\_options
-:   Specifies attributes to be placed within the `table` tag in HTML output format. This command is equivalent to `\pset tableattr table\_options`
+:   Specifies attributes to be placed within the `table` tag in HTML output format. This command is equivalent to `\pset tableattr table_options`
 
 \\timing \[novalue \| on \| off\]
 :   Without a parameter, toggles a display of how long each SQL statement takes, in milliseconds. The values `on` and `off` set the time display, regardless of the current setting.
