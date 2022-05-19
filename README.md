@@ -46,6 +46,9 @@ Follow [appropriate linux steps](README.Linux.md) for getting your system ready 
 ### Build the database
 
 ```
+# Initialize and update submodules in the repository
+git submodule update --init
+
 # Configure build environment to install at /usr/local/gpdb
 ./configure --with-perl --with-python --with-libxml --with-gssapi --prefix=/usr/local/gpdb
 
