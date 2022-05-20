@@ -1437,14 +1437,6 @@ DefineRelation(CreateStmt *stmt, char relkind, Oid ownerId,
 	}
 
 	/* MPP-6929: metadata tracking */
-	/* GPDB_12_MERGE_FIXME: We reported new partitions with "ALTER INHERIT"
-	 * in previous versions, but I think it was mostly an implementation
-	 * artifact when PostgreSQL didn't have native partitioning support and
-	 * GPDB partitioning was a special case of table inheritance. Take a
-	 * holistic look on how all the partition commands are reported in
-	 * pg_stat_last_operation. Including new upstream commands
-	 * CREATE TABLE PARTITITION OF, ATTACH PARTITION etc.
-	 */
 	if (stmt->partbound && Gp_role == GP_ROLE_DISPATCH)
 	{
 		MetaTrackUpdObject(RelationRelationId,

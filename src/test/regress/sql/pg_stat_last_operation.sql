@@ -94,6 +94,9 @@ ALTER TABLE mdt_test_part1 ATTACH PARTITION mdt_test_newpart2 FOR VALUES IN ('Y'
 CREATE TABLE mdt_test_detach PARTITION OF mdt_test_part1 FOR VALUES IN ('Z');
 ALTER TABLE mdt_test_part1 DETACH PARTITION mdt_test_detach;
 
+-- DROP PARTITION
+ALTER TABLE mdt_test_part1 DROP PARTITION FOR ('Y');
+
 -- GRANT
 GRANT ALL ON mdt_all_types TO public;
 SELECT * FROM pg_stat_last_operation_testview WHERE actionname = 'PRIVILEGE';

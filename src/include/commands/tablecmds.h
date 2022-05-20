@@ -115,6 +115,7 @@ extern bool PartConstraintImpliedByRelConstraint(Relation scanrel,
 
 /* GPDB specific functions */
 extern void ATExecGPPartCmds(Relation origrel, AlterTableCmd *cmd);
+extern void GpAlterPartMetaTrackUpdObject(Oid relid, AlterTableType subcmdtype);
 extern void GpRenameChildPartitions(Relation targetrelation,
 									const char *oldparentrelname,
 									const char *newparentrelname);
