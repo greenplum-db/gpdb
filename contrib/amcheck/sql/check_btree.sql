@@ -66,8 +66,9 @@ ALTER TABLE bttest_a OWNER TO regress_bttest_role;
 -- A dummy index function checking current_user
 CREATE FUNCTION ifun(int8) RETURNS int8 AS $$
 BEGIN
-	ASSERT current_user = 'regress_bttest_role',
-		format('ifun(%s) called by %s', $1, current_user);
+	IF current_user <> 'regress_bttest_role'
+	THEN RAISE EXCEPTION 'ifun(%s) called by %s', $1, current_user;
+  END IF;
 	RETURN $1;
 END;
 $$ LANGUAGE plpgsql IMMUTABLE;

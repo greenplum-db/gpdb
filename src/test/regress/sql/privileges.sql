@@ -742,8 +742,9 @@ CREATE ROLE regress_sro_user;
 CREATE FUNCTION sro_ifun(int) RETURNS int AS $$
 BEGIN
 	-- Below we set the table's owner to regress_sro_user
-	ASSERT current_user = 'regress_sro_user',
-		format('sro_ifun(%s) called by %s', $1, current_user);
+	IF current_user <> 'regress_sro_user'
+	THEN RAISE EXCEPTION 'sro_ifun(%s) called by %s', $1, current_user;
+      END IF;
 	RETURN $1;
 END;
 $$ LANGUAGE plpgsql IMMUTABLE;
@@ -767,11 +768,6 @@ DROP INDEX sro_idx;
 CREATE INDEX sro_cluster_idx ON sro_tab ((sro_ifun(a) + sro_ifun(0)));
 CLUSTER sro_tab USING sro_cluster_idx;
 DROP INDEX sro_cluster_idx;
--- BRIN index
-CREATE INDEX sro_brin ON sro_tab USING brin ((sro_ifun(a) + sro_ifun(0)));
-SELECT brin_desummarize_range('sro_brin', 0);
-SELECT brin_summarize_range('sro_brin', 0);
-DROP TABLE sro_tab;
 -- Check with a partitioned table
 CREATE TABLE sro_ptab (a int) PARTITION BY RANGE (a);
 ALTER TABLE sro_ptab OWNER TO regress_sro_user;
