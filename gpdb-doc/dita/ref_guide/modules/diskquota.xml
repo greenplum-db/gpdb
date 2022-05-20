@@ -3,46 +3,19 @@
 <topic id="topic_gzw_2wz_13b">
   <title>diskquota</title>
   <body>
-    <p>The disk usage for a table includes the table data, indexes, toast tables, and free space
-      map. For append-optimized tables, the calculation includes the visibility map and index, and
-      the block directory table.</p>
-    <p>The <codeph>diskquota</codeph> module allows a Greenplum Database administrator to limit the
-      amount of disk space used by tables in schemas or owned by roles in up to 10 databases.
-      The administrator can also
-      use the module to limit the amount of disk space used by schemas and roles on a
-      per-tablespace basis, as well as to limit the disk space used per 
-      Greenplum Database segment for a tablespace.</p>
-    <note>A role-based disk quota cannot be set for the Greenplum Database system owner
-      (the user that creates the Greenplum cluster).</note>
-    <p>You can set the following quotas with the <codeph>diskquota</codeph> module:</p>
-    <ul>
-      <li>A <i>schema disk quota</i> sets a limit on the disk space that can used by all tables in
-        a database that reside in a specific schema. The disk usage of a schema is defined as
-        the total of disk usage on all segments for all tables in the schema.</li>
-      <li>A <i>role disk quota</i> sets a limit on the disk space that can be used used by all
-        tables in a database that are owned by a specific role. The disk usage for a role is
-        defined as the total of disk usage on all segments for all tables the role owns.
-        Although a role is a cluster-level database object, the disk usage for
-        roles is calculated separately for each database.</li>
-      <li>A <i>schema tablespace disk quota</i> sets a limit on the disk space that can used by
-        all tables in a database that reside in a specific schema and tablespace.</li>
-      <li>A <i>role tablespace disk quota</i> sets a limit on the disk space that can used by all
-        tables in a database that are owned by a specific role and reside in a specific
-        tablespace.</li>
-      <li>A <i>per-segment tablespace disk quota</i> sets a limit on the disk space that can
-        be used by a Greeplum Database segment when a tablespace quota is set for a
-        schema or role.</li>
-    </ul>
+    <p>The diskquota module allows Greenplum Database administrators to limit the amount of
+      disk space used by schemas, roles, or tablespaces in a database.</p>
     <p>This topic includes the following sections:</p>
     <ul>
       <li><xref href="#topic_ofb_gb1_b3b" type="topic" format="dita"/></li>
-      <li><xref href="#upgrade" type="topic" format="dita"/></li>
+      <li><xref href="#intro" type="topic" format="dita"/></li>
       <li><xref href="#topic_ndp_4wy_c3b" type="topic" format="dita"/></li>
       <li><xref href="#functions" type="topic" format="dita"/></li>
       <li><xref href="#config" type="topic" format="dita"/></li>
       <li><xref href="#using" type="topic" format="dita"/></li>
       <li><xref href="#limits" type="topic" format="dita"/></li>
       <li><xref href="#topic_sfb_gb1_b3b" type="topic" format="dita"/></li>
+      <li><xref href="#upgrade" type="topic" format="dita"/></li>
       <li><xref href="#topic_v2z_jrv_b3b" type="topic" format="dita"/></li>
     </ul>
   </body>
@@ -81,37 +54,39 @@ $ gpstop -ar</codeblock></li>
       </ol>
     </body>
   </topic>
-  <topic id="upgrade">
-    <title>Upgrading the Module to Version 2.0</title>
+  <topic id="intro">
+    <title>About the diskquota Module</title>
     <body>
-      <p>The <codeph>diskquota</codeph> 2.0 module is installed when you install or upgrade
-        Greenplum Database. Version 1.x of the module will continue to work after you
-        upgrade Greenplum.</p>
-      <p>If you are using version 1.x of the module and you want to upgrade to
-        <codeph>diskquota</codeph> version 2.0, you must:</p>
-      <ol>
-        <li>Replace the <codeph>diskquota</codeph> shared library in the Greenplum Database
-          <codeph>shared_preload_libraries</codeph> server configuration parameter setting
-          and restart Greenplum Database. Be sure to retain the other libraries. For example:
-          <codeblock>$ gpconfig -s shared_preload_libraries
-Values on all segments are consistent
-GUC              : shared_preload_libraries
-Coordinator value: auto_explain,diskquota
-Segment     value: auto_explain,diskquota
-$ gpconfig -c shared_preload_libraries -v 'auto_explain,diskquota-2.0'
-$ gpstop -ar</codeblock></li>
-        <li>Update the <codeph>diskquota</codeph> extension in every database in which you
-          registered the module:
-          <codeblock>$ psql -d testdb -c "ALTER EXTENSION diskquota UPDATE TO '2.0'";</codeblock></li>
-        <li>Re-initialize <codeph>diskquota</codeph> table size data:
-          <codeblock>=# SELECT diskquota.init_table_size_table();</codeblock></li>
-        <li>Restart Greenplum Database:
-          <codeblock>$ gpstop -ar</codeblock></li>
-      </ol>
-      <p><codeph>diskquota</codeph> monitors and checks disk quota limits during the
-        upgrade procedure. After upgrade, your existing disk quota rules continue to be
-        enforced, and you can define new tablespace or per-segment rules. You can also
-        utilize the new pause/resume disk quota enforcement functions.</p>
+      <p>The disk usage for a table includes the table data, indexes, toast tables, and free space
+        map. For append-optimized tables, the calculation includes the visibility map and index, and
+        the block directory table.</p>
+      <p>The <codeph>diskquota</codeph> module allows a Greenplum Database administrator to limit the
+        amount of disk space used by tables in schemas or owned by roles in up to 10 databases.
+        The administrator can also
+        use the module to limit the amount of disk space used by schemas and roles on a
+        per-tablespace basis, as well as to limit the disk space used per 
+        Greenplum Database segment for a tablespace.</p>
+      <note>A role-based disk quota cannot be set for the Greenplum Database system owner
+        (the user that creates the Greenplum cluster).</note>
+      <p>You can set the following quotas with the <codeph>diskquota</codeph> module:</p>
+      <ul>
+        <li>A <i>schema disk quota</i> sets a limit on the disk space that can used by all tables in
+          a database that reside in a specific schema. The disk usage of a schema is defined as
+          the total of disk usage on all segments for all tables in the schema.</li>
+        <li>A <i>role disk quota</i> sets a limit on the disk space that can be used used by all
+          tables in a database that are owned by a specific role. The disk usage for a role is
+          defined as the total of disk usage on all segments for all tables the role owns.
+          Although a role is a cluster-level database object, the disk usage for
+          roles is calculated separately for each database.</li>
+        <li>A <i>schema tablespace disk quota</i> sets a limit on the disk space that can used by
+          all tables in a database that reside in a specific schema and tablespace.</li>
+        <li>A <i>role tablespace disk quota</i> sets a limit on the disk space that can used by all
+          tables in a database that are owned by a specific role and reside in a specific
+          tablespace.</li>
+        <li>A <i>per-segment tablespace disk quota</i> sets a limit on the disk space that can
+          be used by a Greeplum Database segment when a tablespace quota is set for a
+          schema or role.</li>
+      </ul>
     </body>
   </topic>
   <topic id="topic_ndp_4wy_c3b">
@@ -595,6 +570,39 @@ SELECT diskquota.resume();</codeblock>
         database list in the <codeph>diskquota</codeph> database, the <codeph>diskquota</codeph>
         launcher creates the <codeph>diskquota</codeph> worker processes that manage disk quotas for
         each database.</p>
+    </body>
+  </topic>
+  <topic id="upgrade">
+    <title>Upgrading the Module to Version 2.0</title>
+    <body>
+      <p>The <codeph>diskquota</codeph> 2.0 module is installed when you install or upgrade
+        Greenplum Database. Version 1.x of the module will continue to work after you
+        upgrade Greenplum.</p>
+      <p>If you are using version 1.x of the module and you want to upgrade to
+        <codeph>diskquota</codeph> version 2.0, you must:</p>
+      <ol>
+        <li>Replace the <codeph>diskquota</codeph> shared library in the Greenplum Database
+          <codeph>shared_preload_libraries</codeph> server configuration parameter setting
+          and restart Greenplum Database. Be sure to retain the other libraries. For example:
+          <codeblock>$ gpconfig -s shared_preload_libraries
+Values on all segments are consistent
+GUC              : shared_preload_libraries
+Coordinator value: auto_explain,diskquota
+Segment     value: auto_explain,diskquota
+$ gpconfig -c shared_preload_libraries -v 'auto_explain,diskquota-2.0'
+$ gpstop -ar</codeblock></li>
+        <li>Update the <codeph>diskquota</codeph> extension in every database in which you
+          registered the module:
+          <codeblock>$ psql -d testdb -c "ALTER EXTENSION diskquota UPDATE TO '2.0'";</codeblock></li>
+        <li>Re-initialize <codeph>diskquota</codeph> table size data:
+          <codeblock>=# SELECT diskquota.init_table_size_table();</codeblock></li>
+        <li>Restart Greenplum Database:
+          <codeblock>$ gpstop -ar</codeblock></li>
+      </ol>
+      <p><codeph>diskquota</codeph> monitors and checks disk quota limits during the
+        upgrade procedure. After upgrade, your existing disk quota rules continue to be
+        enforced, and you can define new tablespace or per-segment rules. You can also
+        utilize the new pause/resume disk quota enforcement functions.</p>
     </body>
   </topic>
   <topic id="topic_v2z_jrv_b3b">
