@@ -101,6 +101,7 @@ class RecoveryTripletsFactory:
         :param gpArray: The variable gpArray may get mutated when the getMirrorTriples function is called on this instance.
         :param config_file: user passed in config file, if any
         :param new_hosts: user passed in new hosts, if any
+        :param paralleldegree: number of max parallel threads to run, default is 1
         :return:
         """
         if config_file:
@@ -113,12 +114,13 @@ class RecoveryTripletsFactory:
 
 
 class RecoveryTriplets(abc.ABC):
-    def __init__(self, gpArray):
+    def __init__(self, gpArray, paralleldegree):
         """
         :param gpArray: Needs to be a shallow copy since we may return a mutated gpArray
         """
         self.gpArray = gpArray
         self.interfaceHostnameWarnings = []
+        self.paralleldegree = paralleldegree
 
     @abc.abstractmethod
     def getTriplets(self) -> List[RecoveryTriplet]:
@@ -130,7 +132,7 @@ class RecoveryTriplets(abc.ABC):
         pass
 
     @staticmethod
-    def _get_unreachable_failover_hosts(requests, paralleldegree=1)-> List[str]:
+    def _get_unreachable_failover_hosts(requests, paralleldegree) -> List[str]:
         hostlist = set()
         hostlist = {req.failover_host for req in requests if req.failover_host}
         unreachable_failover_hosts = get_unreachable_segment_hosts(hostlist, min(paralleldegree, len(hostlist)))
@@ -183,7 +185,7 @@ class RecoveryTriplets(abc.ABC):
 
 class RecoveryTripletsInplace(RecoveryTriplets):
     def __init__(self, gpArray, paralleldegree):
-        super().__init__(gpArray)
+        super().__init__(gpArray, paralleldegree)
         self.paralleldegree = paralleldegree
 
     def getTriplets(self):
@@ -200,7 +202,7 @@ class RecoveryTripletsInplace(RecoveryTriplets):
 
 
 class RecoveryTripletsNewHosts(RecoveryTriplets):
-    def __init__(self, gpArray, newHosts, paralleldegree):
+    def __init__(self, gpArray, newHosts, paralleldegree=1):
         super().__init__(gpArray)
         self.newHosts = [] if not newHosts else newHosts[:]
         self.portAssigner = self._PortAssigner(gpArray)
