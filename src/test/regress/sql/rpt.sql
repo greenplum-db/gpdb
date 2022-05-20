@@ -498,6 +498,14 @@ select c from rep_tab where c in (select distinct a from dist_tab);
 explain select c from rep_tab where c in (select distinct d from rand_tab);
 select c from rep_tab where c in (select distinct d from rand_tab);
 
+-- Github Issue 13532
+create table t1_13532(a int, b int) distributed replicated;
+create table t2_13532(a int, b int) distributed replicated;
+create index idx_t2_13532 on t2_13532(b);
+explain (costs off) select * from t1_13532 x, t2_13532 y where y.a < random() and x.b = y.b;
+set enable_bitmapscan = off;
+explain (costs off) select * from t1_13532 x, t2_13532 y where y.a < random() and x.b = y.b;
+
 -- start_ignore
 drop schema rpt cascade;
 -- end_ignore

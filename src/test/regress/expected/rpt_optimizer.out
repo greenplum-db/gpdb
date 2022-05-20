@@ -1169,6 +1169,37 @@ select c from rep_tab where c in (select distinct d from rand_tab);
  1
 (2 rows)
 
+-- Github Issue 13532
+create table t1_13532(a int, b int) distributed replicated;
+create table t2_13532(a int, b int) distributed replicated;
+create index idx_t2_13532 on t2_13532(b);
+explain (costs off) select * from t1_13532 x, t2_13532 y where y.a < random() and x.b = y.b;
+                        QUERY PLAN                        
+----------------------------------------------------------
+ Gather Motion 1:1  (slice1; segments: 1)
+   ->  Nested Loop
+         Join Filter: true
+         ->  Seq Scan on t1_13532
+         ->  Index Scan using idx_t2_13532 on t2_13532
+               Index Cond: (b = t1_13532.b)
+               Filter: ((a)::double precision < random())
+ Optimizer: Pivotal Optimizer (GPORCA)
+(8 rows)
+
+set enable_bitmapscan = off;
+explain (costs off) select * from t1_13532 x, t2_13532 y where y.a < random() and x.b = y.b;
+                        QUERY PLAN                        
+----------------------------------------------------------
+ Gather Motion 1:1  (slice1; segments: 1)
+   ->  Nested Loop
+         Join Filter: true
+         ->  Seq Scan on t1_13532
+         ->  Index Scan using idx_t2_13532 on t2_13532
+               Index Cond: (b = t1_13532.b)
+               Filter: ((a)::double precision < random())
+ Optimizer: Pivotal Optimizer (GPORCA)
+(8 rows)
+
 -- start_ignore
 drop schema rpt cascade;
 NOTICE:  drop cascades to 7 other objects
