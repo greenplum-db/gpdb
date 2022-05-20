@@ -10,77 +10,76 @@
       <codeblock>%YAML 1.1
 ---
 <xref href="#topic1/VERSION" format="dita">VERSION</xref>: 1.0.0.2
-<xref href="#topic1/DATABASE" format="dita">DATABASE</xref>: <i>dbname</i>
-<xref href="#topic1/USER" format="dita">USER</xref>: <i>db_username</i>
-<xref href="#topic1/HOST" format="dita">HOST</xref>: <i>coordinator_hostname</i>
-<xref href="#topic1/PORT" format="dita">PORT</xref>: <i>coordinator_port</i></codeblock>
-      <codeblock><xref href="#topic1/DEFINE" format="dita">DEFINE</xref>: 
+<xref href="#topic1/DATABASE" format="dita">DATABASE</xref>: dbname
+<xref href="#topic1/USER" format="dita">USER</xref>: db_username
+<xref href="#topic1/HOST" format="dita">HOST</xref>: coordinator_hostname
+<xref href="#topic1/PORT" format="dita">PORT</xref>: coordinator_port</codeblock>
+      <codeblock>  - <xref href="#topic1/DEFINE" format="dita">DEFINE</xref>: 
   - <xref href="#topic1/INPUT" format="dita">INPUT</xref>:
-     <xref href="#topic1/NAME" format="dita">NAME</xref>: <i>input_name</i>
+     <xref href="#topic1/NAME" format="dita">NAME</xref>: input_name
      <xref href="#topic1/FILE" format="dita">FILE</xref>: 
-       - <i>hostname</i>:<i>/path/to/file</i>
+       - <i>hostname</i>: /path/to/file
      <xref href="#topic1/GPFDIST" format="dita">GPFDIST</xref>:
-       - <i>hostname</i>:port<i>/file_pattern</i>
-     <xref href="#topic1/TABLE" format="dita">TABLE</xref>: <i>table_name</i>
-     <xref href="#topic1/QUERY" format="dita">QUERY</xref>: <i>SELECT_statement</i>
-     <xref href="#topic1/EXEC" format="dita">EXEC</xref>: <i>command_string</i>
+       - <i>hostname</i>:port/file_pattern
+     <xref href="#topic1/TABLE" format="dita">TABLE</xref>: table_name
+     <xref href="#topic1/QUERY" format="dita">QUERY</xref>: SELECT_statement
+     <xref href="#topic1/EXEC" format="dita">EXEC</xref>: command_string
      <xref href="#topic1/COLUMNS" format="dita">COLUMNS</xref>:
-       - <i>field_name data_type</i>
+       - field_name data_type
      <xref href="#topic1/FORMAT" format="dita">FORMAT</xref>: TEXT | CSV
-     <xref href="#topic1/DELIMITER" format="dita">DELIMITER</xref>: <i>delimiter_character</i>
-     <xref href="#topic1/ESCAPE" format="dita">ESCAPE</xref>: <i>escape_character</i>
-     <xref href="#topic1/NULL" format="dita">NULL</xref>: <i>null_string</i>
-     <xref href="#topic1/QUOTE" format="dita">QUOTE</xref>: <i>csv_quote_character</i>
-     <xref href="#topic1/ERROR_LIMIT" format="dita">ERROR_LIMIT</xref>: <i>integer</i>
-     <xref href="#topic1/ENCODING" format="dita">ENCODING</xref>: <i>database_encoding</i></codeblock>
+     <xref href="#topic1/DELIMITER" format="dita">DELIMITER</xref>: delimiter_character
+     <xref href="#topic1/ESCAPE" format="dita">ESCAPE</xref>: escape_character
+     <xref href="#topic1/NULL" format="dita">NULL</xref>: null_string
+     <xref href="#topic1/QUOTE" format="dita">QUOTE</xref>: csv_quote_character
+     <xref href="#topic1/ERROR_LIMIT" format="dita">ERROR_LIMIT</xref>: integer
+     <xref href="#topic1/ENCODING" format="dita">ENCODING</xref>: database_encoding</codeblock>
       <codeblock>  - <xref href="#topic1/OUTPUT" format="dita">OUTPUT</xref>:
-     <xref href="#topic1/OUTPUTNAME" format="dita">NAME</xref>: <i>output_name</i>
-     <xref href="#topic1/OUTPUTFILE" format="dita">FILE</xref>: <i>file_path_on_client</i>
-     <xref href="#topic1/OUTPUTTABLE" format="dita">TABLE</xref>: <i>table_name</i>
-     <xref href="#topic1/KEYS" format="dita">KEYS</xref>: 
-<i>       - column_name</i>
+     <xref href="#topic1/OUTPUTNAME" format="dita">NAME</xref>: output_name
+     <xref href="#topic1/OUTPUTFILE" format="dita">FILE</xref>: file_path_on_client
+     <xref href="#topic1/OUTPUTTABLE" format="dita">TABLE</xref>: table_name
+     <xref href="#topic1/KEYS" format="dita">KEYS</xref>:        - column_name
      <xref href="#topic1/MODE" format="dita">MODE</xref>: REPLACE | APPEND</codeblock>
       <codeblock>  - <xref href="#topic1/MAP" format="dita">MAP</xref>:
-     <xref href="#topic1/NAME" format="dita">NAME</xref>: <i>function_name</i>
-     <xref href="#topic1/FUNCTION" format="dita">FUNCTION</xref>: <i>function_definition</i>
+     <xref href="#topic1/NAME" format="dita">NAME</xref>: function_name
+     <xref href="#topic1/FUNCTION" format="dita">FUNCTION</xref>: function_definition
      <xref href="#topic1/LANGUAGE" format="dita">LANGUAGE</xref>: perl | python | c
-     <xref href="#topic1/LIBRARY" format="dita">LIBRARY</xref>: <i>/path/filename.so</i>
+     <xref href="#topic1/LIBRARY" format="dita">LIBRARY</xref>: /path/filename.so
      <xref href="#topic1/PARAMETERS" format="dita">PARAMETERS</xref>: 
-<i>       - name</i><i>type</i>
+       - nametype
      <xref href="#topic1/RETURNS" format="dita">RETURNS</xref>: 
-<i>       - name</i><i>type</i>
+       - nametype
      <xref href="#topic1/OPTIMIZE" format="dita">OPTIMIZE</xref>: STRICT IMMUTABLE
      <xref href="#topic1/MODE" format="dita">MODE</xref>: SINGLE | MULTI</codeblock>
       <codeblock>  - <xref href="#topic1/TCF" format="dita">TRANSITION | CONSOLIDATE | FINALIZE</xref>:
-     <xref href="#topic1/TCFNAME" format="dita">NAME</xref>: <i>function_name</i>
-     <xref href="#topic1/FUNCTION" format="dita">FUNCTION</xref>: <i>function_definition</i>
+     <xref href="#topic1/TCFNAME" format="dita">NAME</xref>: function_name
+     <xref href="#topic1/FUNCTION" format="dita">FUNCTION</xref>: function_definition
      <xref href="#topic1/LANGUAGE" format="dita">LANGUAGE</xref>: perl | python | c
-     <xref href="#topic1/LIBRARY" format="dita">LIBRARY</xref>: <i>/path/filename.so</i>
+     <xref href="#topic1/LIBRARY" format="dita">LIBRARY</xref>: /path/filename.so
      <xref href="#topic1/PARAMETERS" format="dita">PARAMETERS</xref>: 
-<i>       - name</i><i>type</i>
+       - nametype
      <xref href="#topic1/RETURNS" format="dita">RETURNS</xref>: 
-<i>       - name</i><i>type</i>
+       - nametype
      <xref href="#topic1/OPTIMIZE" format="dita">OPTIMIZE</xref>: STRICT IMMUTABLE
      <xref href="#topic1/TCFMODE" format="dita">MODE</xref>: SINGLE | MULTI</codeblock>
       <codeblock>  - <xref href="#topic1/REDUCE" format="dita">REDUCE</xref>:
-     <xref href="#topic1/REDUCENAME" format="dita">NAME</xref>: <i>reduce_job_name</i>
-     <xref href="#topic1/TRANSITION" format="dita">TRANSITION</xref>: <i>transition_function_name</i>
-     <xref href="#topic1/CONSOLIDATE" format="dita">CONSOLIDATE</xref>: <i>consolidate_function_name</i>
-     <xref href="#topic1/FINALIZE" format="dita">FINALIZE</xref>: <i>finalize_function_name</i>
-     <xref href="#topic1/INITIALIZE" format="dita">INITIALIZE</xref>: <i>value</i>
+     <xref href="#topic1/REDUCENAME" format="dita">NAME</xref>: reduce_job_name
+     <xref href="#topic1/TRANSITION" format="dita">TRANSITION</xref>: transition_function_name
+     <xref href="#topic1/CONSOLIDATE" format="dita">CONSOLIDATE</xref>: consolidate_function_name
+     <xref href="#topic1/FINALIZE" format="dita">FINALIZE</xref>: finalize_function_name
+     <xref href="#topic1/INITIALIZE" format="dita">INITIALIZE</xref>: value
      <xref href="#topic1/REDUCEKEYS" format="dita">KEYS</xref>:
-<i>       - key_name</i></codeblock>
+       - key_name</codeblock>
       <codeblock>  - <xref href="#topic1/TASK" format="dita">TASK</xref>:
-     <xref href="#topic1/TASKNAME" format="dita">NAME</xref>: <i>task_name</i>
-     <xref href="#topic1/SOURCE" format="dita">SOURCE</xref>: <i>input_name</i>
-     <xref href="#topic1/TASKMAP" format="dita">MAP</xref>: <i>map_function_name</i>
-     <xref href="#topic1/REDUCE" format="dita">REDUCE</xref>: <i>reduce_function_name</i>
+     <xref href="#topic1/TASKNAME" format="dita">NAME</xref>: task_name
+     <xref href="#topic1/SOURCE" format="dita">SOURCE</xref>: input_name
+     <xref href="#topic1/TASKMAP" format="dita">MAP</xref>: map_function_name
+     <xref href="#topic1/REDUCE" format="dita">REDUCE</xref>: reduce_function_name
 <xref href="#topic1/EXECUTE" format="dita">EXECUTE</xref>:</codeblock>
       <codeblock>  - <xref href="#topic1/RUN" format="dita">RUN</xref>:
-     <xref href="#topic1/EXECUTESOURCE" format="dita">SOURCE</xref>: <i>input_or_task_name</i>
-     <xref href="#topic1/TARGET" format="dita">TARGET</xref>: <i>output_name</i>
-     <xref href="#topic1/EXECUTEMAP" format="dita">MAP</xref>: <i>map_function_name</i>
-     <xref href="#topic1/EXECUTEREDUCE" format="dita">REDUCE</xref>: <i>reduce_function_name</i>...</codeblock>
+     <xref href="#topic1/EXECUTESOURCE" format="dita">SOURCE</xref>: input_or_task_name
+     <xref href="#topic1/TARGET" format="dita">TARGET</xref>: output_name
+     <xref href="#topic1/EXECUTEMAP" format="dita">MAP</xref>: map_function_name
+     <xref href="#topic1/EXECUTEREDUCE" format="dita">REDUCE</xref>: reduce_function_name...</codeblock>
     </section>
     <section id="section4">
       <title>Description</title>
@@ -139,9 +138,8 @@
                 <pd>Required. Defines the input data. Every MapReduce document must have at least
                   one input defined. Multiple input definitions are allowed in a document, but each
                   input definition can specify only one of these access types: a file, a
-                    <codeph>gpfdist</codeph> file reference, a table in the database, an
-                  SQL command, or an operating system command. See <codeph><xref href="gpfdist.xml#topic1" type="topic" format="dita"/></codeph>
-                   for information about this reference.<parml>
+                    <codeph>gpfdist</codeph> file reference, a table in the database, an SQL
+                  command, or an operating system command. See <codeph/> for information about this reference.<parml>
                     <plentry>
                       <pt id="NAME">NAME</pt>
                       <pd>
@@ -161,11 +159,10 @@
                   </parml><parml>
                     <plentry>
                       <pt id="GPFDIST">GPFDIST</pt>
-                      <pd>A sequence identifying one or more running <codeph>gpfdist</codeph>
-                        file servers in the format:
-                          <codeph>hostname[:port]/file_pattern</codeph>. You must be a Greenplum
-                        Database superuser to run MapReduce jobs with <codeph>GPFDIST</codeph>
-                        input.</pd>
+                      <pd>A sequence identifying one or more running <codeph>gpfdist</codeph> file
+                        servers in the format: <codeph>hostname[:port]/file_pattern</codeph>. You
+                        must be a Greenplum Database superuser to run MapReduce jobs with
+                          <codeph>GPFDIST</codeph> input.</pd>
                     </plentry>
                     <plentry>
                       <pt id="TABLE">TABLE</pt>
@@ -269,8 +266,8 @@
                       <pd>Character set encoding to use for the data. Specify a string constant
                         (such as <codeph>'SQL_ASCII'</codeph>), an integer encoding number, or
                           <codeph>DEFAULT</codeph> to use the default client encoding. See <xref
-                          href="../../ref_guide/character_sets.xml#topic1" type="topic" format="dita"/> for more
-                        information.</pd>
+                          href="../../ref_guide/character_sets.xml#topic1" type="topic"
+                          format="dita"/> for more information.</pd>
                     </plentry>
                   </parml></pd>
               </plentry>
@@ -589,7 +586,7 @@
     </section>
     <section id="section11">
       <title>See Also</title>
-      <p><codeph><xref href="gpmapreduce.xml#topic1" type="topic" format="dita"/></codeph></p>
+      <p><xref href="gpmapreduce.xml#topic1" type="topic" format="dita"/></p>
     </section>
   </body>
 </topic>

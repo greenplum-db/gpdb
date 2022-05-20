@@ -12,5 +12,5 @@ Creates a writable external table, *sales\_out,* that uses gpfdist to write outp
 
 ```
 
-**Parent topic:**[Examples for Creating External Tables](../external/g-creating-external-tables---examples.html)
+**Parent topic:** [Examples for Creating External Tables](../external/g-creating-external-tables---examples.html)
 

@@ -8,29 +8,26 @@
             to a single script file or other archive file.</p>
         <section id="section2">
             <title>Synopsis</title>
-            <codeblock id="client_util_synopsis"><b>pg_dumpall</b> [<varname>connection-option</varname> ...] [<varname>dump_option</varname> ...]
+            <codeblock id="client_util_synopsis">pg_dumpall [&lt;connection-option> ...] [&lt;dump_option> ...]
 
-<b>pg_dumpall</b> <b>-? | --help</b>
+pg_dumpall -? | --help
 
-<b>pg_dumpall</b> <b>-V | --version</b></codeblock>
+pg_dumpall -V | --version</codeblock>
         </section>
         <section id="section3">
             <title>Description</title>
             <p><codeph>pg_dumpall</codeph> is a standard PostgreSQL utility for backing up all
-                databases in a Greenplum Database (or PostgreSQL) instance, and is
-                also supported in Greenplum Database. It creates a single
-                (non-parallel) dump file. <ph>For routine backups of Greenplum
-                    Database it is better to use the Greenplum Database backup utility,
-                            <codeph><xref href="gpbackup.xml#topic1"
-                    /></codeph>, for the best performance.</ph></p>
+                databases in a Greenplum Database (or PostgreSQL) instance, and is also supported in
+                Greenplum Database. It creates a single (non-parallel) dump file. <ph>For routine
+                    backups of Greenplum Database it is better to use the Greenplum Database backup
+                    utility, <xref href="gpbackup.xml#topic1"/>, for the best performance.</ph></p>
             <p><codeph>pg_dumpall</codeph> creates a single script file that contains SQL commands
-                that can be used as input to <codeph><xref href="psql.xml#topic1" type="topic"
-                        format="dita"/></codeph> to restore the databases. It does this by calling
-                        <codeph><xref href="pg_dump.xml#topic1" type="topic" format="dita"
-                    /></codeph> for each database. <codeph>pg_dumpall</codeph> also dumps global
-                objects that are common to all databases. (<codeph>pg_dump</codeph> does not save
-                these objects.) This currently includes information about database users and groups,
-                and access permissions that apply to databases as a whole.</p>
+                that can be used as input to <xref href="psql.xml#topic1" type="topic" format="dita"
+                /> to restore the databases. It does this by calling <xref href="pg_dump.xml#topic1"
+                    type="topic" format="dita"/> for each database. <codeph>pg_dumpall</codeph> also
+                dumps global objects that are common to all databases. (<codeph>pg_dump</codeph>
+                does not save these objects.) This currently includes information about database
+                users and groups, and access permissions that apply to databases as a whole.</p>
             <p>Since <codeph>pg_dumpall</codeph> reads tables from all databases you will most
                 likely have to connect as a database superuser in order to produce a complete dump.
                 Also you will need superuser privileges to run the saved script in order to be
@@ -51,17 +48,15 @@
                         <pt>-a | --data-only</pt>
                         <pd>Dump only the data, not the schema (data definitions). This option is
                             only meaningful for the plain-text format. For the archive formats, you
-                            may specify the option when you call <codeph><xref
-                                    href="./pg_restore.xml#topic1" type="topic" format="dita"
-                                /></codeph>. </pd>
+                            may specify the option when you call <xref
+                                href="./pg_restore.xml#topic1" type="topic" format="dita"/>. </pd>
                     </plentry>
                     <plentry>
                         <pt>-c | --clean</pt>
                         <pd>Output commands to clean (drop) database objects prior to (the commands
                             for) creating them. This option is only meaningful for the plain-text
                             format. For the archive formats, you may specify the option when you
-                            call <codeph><xref href="./pg_restore.xml#topic1" type="topic"
-                                    format="dita"/></codeph>. </pd>
+                            call <xref href="./pg_restore.xml#topic1" type="topic" format="dita"/>. </pd>
                     </plentry>
                     <plentry>
                         <pt>-f <varname>filename</varname> | --file=<varname>filename</varname></pt>
@@ -80,18 +75,17 @@
                     <plentry>
                         <pt>-O | --no-owner</pt>
                         <pd>Do not output commands to set ownership of objects to match the original
-                            database. By default, <codeph><xref href="pg_dump.xml#topic1"
-                                    type="topic" format="dita"/></codeph> issues <codeph>ALTER
-                                OWNER</codeph> or <codeph>SET SESSION AUTHORIZATION</codeph>
-                            statements to set ownership of created database objects. These
-                            statements will fail when the script is run unless it is started by a
-                            superuser (or the same user that owns all of the objects in the script).
-                            To make a script that can be restored by any user, but will give that
-                            user ownership of all the objects, specify <codeph>-O</codeph>. This
-                            option is only meaningful for the plain-text format. For the archive
-                            formats, you may specify the option when you call <codeph><xref
-                                    href="./pg_restore.xml#topic1" type="topic" format="dita"
-                                /></codeph>.</pd>
+                            database. By default, <xref href="pg_dump.xml#topic1" type="topic"
+                                format="dita"/> issues <codeph>ALTER OWNER</codeph> or <codeph>SET
+                                SESSION AUTHORIZATION</codeph> statements to set ownership of
+                            created database objects. These statements will fail when the script is
+                            run unless it is started by a superuser (or the same user that owns all
+                            of the objects in the script). To make a script that can be restored by
+                            any user, but will give that user ownership of all the objects, specify
+                                <codeph>-O</codeph>. This option is only meaningful for the
+                            plain-text format. For the archive formats, you may specify the option
+                            when you call <xref href="./pg_restore.xml#topic1" type="topic"
+                                format="dita"/>.</pd>
                     </plentry>
                     <plentry>
                         <pt>-r | --roles-only</pt>
@@ -139,13 +133,12 @@
                     <plentry>
                         <pt>--column-inserts | --attribute-inserts</pt>
                         <pd>Dump data as <codeph>INSERT</codeph> commands with explicit column names
-                                (<codeph>INSERT INTO <varname>table</varname>
-                                    (<varname>column</varname>, ...) VALUES ...</codeph>). This will
-                            make restoration very slow; it is mainly useful for making dumps that
-                            can be loaded into non-PostgreSQL-based databases. Also, since this
-                            option generates a separate command for each row, an error in reloading
-                            a row causes only that row to be lost rather than the entire table
-                            contents.</pd>
+                                (<codeph>INSERT INTO &lt;table> (&lt;column>, ...) VALUES
+                                ...</codeph>). This will make restoration very slow; it is mainly
+                            useful for making dumps that can be loaded into non-PostgreSQL-based
+                            databases. Also, since this option generates a separate command for each
+                            row, an error in reloading a row causes only that row to be lost rather
+                            than the entire table contents.</pd>
                     </plentry>
                     <plentry>
                         <pt>--disable-dollar-quoting</pt>
@@ -311,22 +304,21 @@
                         <pt>--role=<varname>rolename</varname></pt>
                         <pd>Specifies a role name to be used to create the dump. This option causes
                                 <codeph>pg_dumpall</codeph> to issue a <codeph>SET ROLE
-                                    <varname>rolename</varname></codeph> command after connecting to
-                            the database. It is useful when the authenticated user (specified by
-                                <codeph>-U</codeph>) lacks privileges needed by
-                                <codeph>pg_dumpall</codeph>, but can switch to a role with the
-                            required rights. Some installations have a policy against logging in
-                            directly as a superuser, and use of this option allows dumps to be made
-                            without violating the policy.</pd>
+                                &lt;rolename></codeph> command after connecting to the database. It
+                            is useful when the authenticated user (specified by <codeph>-U</codeph>)
+                            lacks privileges needed by <codeph>pg_dumpall</codeph>, but can switch
+                            to a role with the required rights. Some installations have a policy
+                            against logging in directly as a superuser, and use of this option
+                            allows dumps to be made without violating the policy.</pd>
                     </plentry>
                 </parml>
             </sectiondiv>
         </section>
         <section id="section7">
             <title>Notes</title>
-            <p>Since <codeph>pg_dumpall</codeph> calls <codeph><xref href="pg_dump.xml#topic1"
-                        type="topic" format="dita"/></codeph> internally, some diagnostic messages
-                will refer to <codeph>pg_dump</codeph>. </p>
+            <p>Since <codeph>pg_dumpall</codeph> calls <xref href="pg_dump.xml#topic1" type="topic"
+                    format="dita"/> internally, some diagnostic messages will refer to
+                    <codeph>pg_dump</codeph>. </p>
             <p>Once restored, it is wise to run <codeph>ANALYZE</codeph> on each database so the
                 query planner has useful statistics. You can also run <codeph>vacuumdb -a
                     -z</codeph> to vacuum and analyze all databases. </p>
@@ -346,9 +338,7 @@
         <section id="section9">
             <title>See Also</title>
             <p>
-                <codeph>
-                    <xref href="pg_dump.xml#topic1" type="topic" format="dita"/>
-                </codeph>
+                <xref href="pg_dump.xml#topic1" type="topic" format="dita"/>
             </p>
         </section>
     </body>

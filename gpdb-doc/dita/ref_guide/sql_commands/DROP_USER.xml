@@ -7,13 +7,13 @@
     <p id="sql_command_desc">Removes a database role.</p>
     <section id="section2">
       <title>Synopsis</title>
-      <codeblock id="sql_command_synopsis">DROP USER [IF EXISTS] <varname>name</varname> [, ...]</codeblock>
+      <codeblock id="sql_command_synopsis">DROP USER [IF EXISTS] &lt;name> [, ...]</codeblock>
     </section>
     <section id="section3">
       <title>Description</title>
-      <p><codeph>DROP USER</codeph> is an alias for <codeph><xref href="DROP_ROLE.xml#topic1"
-            type="topic" format="dita"/></codeph>. See <codeph><xref href="DROP_ROLE.xml#topic1"
-            type="topic" format="dita"/></codeph> for more information.</p>
+      <p><codeph>DROP USER</codeph> is an alias for <xref href="DROP_ROLE.xml#topic1"
+            type="topic" format="dita"/>. See <xref href="DROP_ROLE.xml#topic1"
+            type="topic" format="dita"/> for more information.</p>
     </section>
     <section id="section5">
       <title>Compatibility</title>
@@ -22,8 +22,8 @@
     </section>
     <section id="section6">
       <title>See Also</title>
-      <p><codeph><xref href="DROP_ROLE.xml#topic1" type="topic" format="dita"/></codeph>,
-            <codeph><xref href="CREATE_USER.xml#topic1" type="topic" format="dita"/></codeph></p>
+      <p><xref href="DROP_ROLE.xml#topic1" type="topic" format="dita"/>,
+            <xref href="CREATE_USER.xml#topic1" type="topic" format="dita"/></p>
     </section>
   </body>
 </topic>

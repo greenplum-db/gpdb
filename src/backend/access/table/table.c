@@ -28,6 +28,7 @@
 #include "catalog/namespace.h"
 #include "cdb/cdbvars.h"
 #include "utils/faultinjector.h"
+#include "utils/guc.h"
 
 
 /* ----------------
@@ -176,35 +177,76 @@ table_close(Relation relation, LOCKMODE lockmode)
  *
  * CDB: Like try_table_open, except that it will upgrade the lock when needed
  * for distributed tables.
+ *
+ * Note1: Postgres will always hold RowExclusiveLock for DMLs
+ * Note2: INSERT statement will not call this function.
+ * Note3: This function may return NULL (e.g. when just before we open the table,
+ *        other transaction drop the table), caller should check it.
+ *
+ * Greenplum only upgrade lock level for UPDATE and DELETE statement under some
+ * condition:
+ *   1. always upgrade when gp_enable_global_deadlock_detector is not set
+ *   2. when gp_enable_global_deadlock_detector is set:
+ *     a. if target table is AO|AOCO table, upgrade the lock level
+ *     b. if target table is heap table, just like Postgres, do not upgrade
  */
 Relation
 CdbTryOpenTable(Oid relid, LOCKMODE reqmode, bool *lockUpgraded)
 {
-    LOCKMODE    lockmode = reqmode;
+	LOCKMODE    lockmode;
 	Relation    rel;
 
-	if (lockUpgraded != NULL)
-		*lockUpgraded = false;
-
-	lockmode = UpgradeRelLockIfNecessary(relid, lockmode, lockUpgraded);
-
-	rel = try_table_open(relid, lockmode, false);
-	if (!RelationIsValid(rel))
-		return NULL;
-
 	/*
-	 * There is a slim chance that ALTER TABLE SET DISTRIBUTED BY may
-	 * have altered the distribution policy between the time that we
-	 * decided to upgrade the lock and the time we opened the table
-	 * with the lock.  Double check that our chosen lock mode is still
-	 * okay.
+	 * This if-else statement will try to open the relation and
+	 * save the lockmode it uses to open the relation.
+	 *
+	 * If we are doing expclicit UPDATE|DELETE on catalogs (this can
+	 * only be possible when GUC allow_system_table_mods is set), the
+	 * update or delete does not hold locks on catalog on segments, so
+	 * we do not need to consider lock-upgrade for DML on catalogs.
 	 */
-	if (lockmode == RowExclusiveLock &&
-		Gp_role == GP_ROLE_DISPATCH && RelationIsAppendOptimized(rel))
+	if (reqmode == RowExclusiveLock &&
+		Gp_role == GP_ROLE_DISPATCH &&
+		relid >= FirstNormalObjectId)
 	{
-		elog(ERROR, "table \"%s\" concurrently updated", 
-			 RelationGetRelationName(rel));
+		if (!gp_enable_global_deadlock_detector)
+		{
+			/*
+			 * Without GDD, to avoid global deadlock, always
+			 * upgrade locklevel to ExclusiveLock
+			 */
+			lockmode = ExclusiveLock;
+			rel = try_table_open(relid, lockmode, false);
+		}
+		else
+		{
+			lockmode = RowExclusiveLock;
+			rel = try_table_open(relid, lockmode, false);
+			if (RelationIsAppendOptimized(rel))
+			{
+				/*
+				 * AO|AOCO table does not support concurrently
+				 * update or delete on segments, so we first close
+				 * the relation and reopen it using upgraded lockmode.
+				 * NOTE: during this time window, there is a race that
+				 * the table with relid is dropped, and will lead to
+				 * returning NULL. This will not cause any problem
+				 * because it is caller's duty to check NULL pointer.
+				 */
+				table_close(rel, RowExclusiveLock);
+				lockmode = ExclusiveLock;
+				rel = try_table_open(relid, lockmode, false);
+			}
+		}
 	}
+	else
+	{
+		lockmode = reqmode;
+		rel = try_table_open(relid, lockmode, false);
+	}
+
+	if (lockUpgraded != NULL && lockmode > reqmode)
+		*lockUpgraded = true;
 
 	/* inject fault after holding the lock */
 	SIMPLE_FAULT_INJECTOR("upgrade_row_lock");

@@ -1,0 +1,13 @@
+# Test relevant to gp_dispatch_keepalives_* GUCs 
+test: gp_dispatch_keepalives
+
+# A tiny set of smoke tests
+test: tablespace
+test: boolean char name varchar text int2 int4 int8 oid float4 float8 bit numeric txid uuid enum money rangetypes pg_lsn regproc
+
+test: create_function_1
+test: create_type
+test: create_table
+test: misc_sanity
+test: vacuum
+

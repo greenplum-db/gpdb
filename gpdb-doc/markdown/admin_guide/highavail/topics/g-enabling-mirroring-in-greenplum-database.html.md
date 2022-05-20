@@ -9,5 +9,5 @@ You can configure your Greenplum Database system with mirroring at setup time us
 -   **[Enabling Master Mirroring](../../highavail/topics/g-enabling-master-mirroring.html)**  
 
 
-**Parent topic:**[Enabling High Availability and Data Consistency Features](../../highavail/topics/g-enabling-high-availability-features.html)
+**Parent topic:** [Enabling High Availability and Data Consistency Features](../../highavail/topics/g-enabling-high-availability-features.html)
 

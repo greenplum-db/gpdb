@@ -502,7 +502,7 @@ aocs_beginscan(Relation relation,
 	else
 		aocsMetaDataSnapshot = SnapshotSelf;
 
-	seginfo = GetAllAOCSFileSegInfo(relation, aocsMetaDataSnapshot, &total_seg);
+	seginfo = GetAllAOCSFileSegInfo(relation, aocsMetaDataSnapshot, &total_seg, NULL);
 	return aocs_beginscan_internal(relation,
 								   seginfo,
 								   total_seg,
@@ -1352,13 +1352,20 @@ aocs_fetch_init(Relation relation,
                                  NULL);
 
 	aocsFetchDesc->segmentFileInfo =
-		GetAllAOCSFileSegInfo(relation, appendOnlyMetaDataSnapshot, &aocsFetchDesc->totalSegfiles);
+		GetAllAOCSFileSegInfo(relation, appendOnlyMetaDataSnapshot, &aocsFetchDesc->totalSegfiles, NULL);
 
-	/* Init the biggest row number of each aoseg */
-	for (segno = 0; segno < AOTupleId_MultiplierSegmentFileNum; ++segno)
+	/* 
+	 * Initialize lastSequence only for segments which we got above is sufficient,
+	 * rather than all AOTupleId_MultiplierSegmentFileNum ones that introducing
+	 * too many unnecessary calls in most cases.
+	 */
+	memset(aocsFetchDesc->lastSequence, -1, sizeof(aocsFetchDesc->lastSequence));
+	for (int i = -1; i < aocsFetchDesc->totalSegfiles; i++)
 	{
-		aocsFetchDesc->lastSequence[segno] =
-			ReadLastSequence(aocsFetchDesc->segrelid, segno);
+		/* always initailize segment 0 */
+		segno = (i < 0 ? 0 : aocsFetchDesc->segmentFileInfo[i]->segno);
+		/* set corresponding bit for target segment */
+		aocsFetchDesc->lastSequence[segno] = ReadLastSequence(aocsFetchDesc->segrelid, segno);
 	}
 
 	AppendOnlyBlockDirectory_Init_forSearch(
@@ -1455,6 +1462,14 @@ aocs_fetch(AOCSFetchDesc aocsFetchDesc,
 	bool		isSnapshotAny = (aocsFetchDesc->snapshot == SnapshotAny);
 
 	Assert(numCols > 0);
+
+	Assert(segmentFileNum >= 0);
+
+	if (aocsFetchDesc->lastSequence[segmentFileNum] == InvalidAORowNum)
+		ereport(ERROR,
+				(errcode(ERRCODE_INTERNAL_ERROR),
+				 errmsg("Row No. %ld in segment file No. %d is out of scanning scope for target relfilenode %u.",
+				 		rowNum, segmentFileNum, aocsFetchDesc->relation->rd_node.relNode)));
 
 	/*
 	 * if the rowNum is bigger than lastsequence, skip it.

@@ -35,7 +35,6 @@
 #include "cdb/cdbvars.h"
 #include "storage/proc.h"
 #include "utils/lsyscache.h"        /* CDB: get_rel_namespace() */
-#include "utils/guc.h"
 
 
 /*
@@ -1317,77 +1316,6 @@ LockTagIsTemp(const LOCKTAG *tag)
 			break;
 	}
 	return false;				/* default case */
-}
-
-/*
- * If gp_enable_global_deadlock_detector is set off, we always
- * have to upgrade lock level to avoid global deadlock, and then
- * because of the current disign of AO table's visibility map,
- * we have to keep upgrading locks for AO table.
- */
-bool
-CondUpgradeRelLock(Oid relid)
-{
-	Relation rel;
-	bool upgrade = false;
-
-	if (!gp_enable_global_deadlock_detector)
-		return true;
-
-	/*
-	 * try_relation_open will throw error if
-	 * the relation is invaliad
-	 *
-	 * GPDB_12_MERGE_FIXME: This used to open the relation with NoLock.
-	 * But that's not cool, and there's an assertion in try_table_open()
-	 * that forbids using NoLock if you're not holding some lock
-	 * already. I (Heikki) changed this to take a RowExclusiveLock here,
-	 * as that's what all the callers will acquire at a minimum anyway.
-	 * If we take a RowExclusiveLock here, we should keep it; it's silly
-	 * to acquire the lock, release it, and then re-acquire it in the
-	 * caller. Upgrading the lock if this returns true is problematic,
-	 * of course, so it would be nice to avoid that altogether, but
-	 * that's a harder task.
-	 */
-	rel = try_table_open(relid, RowExclusiveLock, false);
-
-	if (!rel)
-		return false;
-	else if (RelationIsAppendOptimized(rel))
-		upgrade = true;
-	else
-		upgrade = false;
-
-	table_close(rel, RowExclusiveLock);
-
-	return upgrade;
-}
-
-int UpgradeRelLockIfNecessary(Oid relid, int lockmode, bool *lockUpgraded)
-{
-	/*
-	 * Since we have introduced GDD(global deadlock detector), for heap table
-	 * we do not need to upgrade the requested lock. For ao table, because of
-	 * the design of ao table's visibilitymap, we have to upgrade the lock
-	 * (More details please refer https://groups.google.com/a/greenplum.org/forum/#!topic/gpdb-dev/iDj8WkLus4g)
-	 *
-	 * And we select for update statement's lock is upgraded at addRangeTableEntry.
-	 *
-	 * Note: This code could be improved substantially after we redesign ao table
-	 * and select for update.
-	 */
-	if (lockmode == RowExclusiveLock)
-	{
-		if (Gp_role == GP_ROLE_DISPATCH &&
-			CondUpgradeRelLock(relid))
-		{
-			lockmode = ExclusiveLock;
-			if (lockUpgraded != NULL)
-			*lockUpgraded = true;
-		}
-	}
-
-	return lockmode;
 }
 
 /*

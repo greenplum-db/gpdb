@@ -26,7 +26,7 @@ This topic is divided into the following sections:
 -   [Recovery Scenarios](#recovery_scenarios)
 -   [Post-Recovery Tasks](#post_recovery)
 
-**Parent topic:**[Enabling High Availability and Data Consistency Features](../../highavail/topics/g-enabling-high-availability-features.html)
+**Parent topic:** [Enabling High Availability and Data Consistency Features](../../highavail/topics/g-enabling-high-availability-features.html)
 
 ## <a id="prepare_for_recovery"></a>Prerequisites 
 

@@ -4,7 +4,7 @@ title: Common Causes of Performance Issues
 
 This section explains the troubleshooting processes for common performance issues and potential solutions to these issues.
 
-**Parent topic:**[Managing Performance](partV.html)
+**Parent topic:** [Managing Performance](partV.html)
 
 ## <a id="topic2"></a>Identifying Hardware and Segment Failures 
 

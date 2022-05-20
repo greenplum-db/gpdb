@@ -7,19 +7,19 @@
     <p id="sql_command_desc">Defines a new resource queue.</p>
     <section id="section2">
       <title>Synopsis</title>
-      <codeblock id="sql_command_synopsis">CREATE RESOURCE QUEUE <varname>name</varname> WITH (<varname>queue_attribute</varname>=<varname>value</varname> [, ... ])</codeblock>
+      <codeblock id="sql_command_synopsis">CREATE RESOURCE QUEUE &lt;name> WITH (&lt;queue_attribute>=&lt;value> [, ... ])</codeblock>
       <p>where <varname>queue_attribute</varname> is:</p>
-      <codeblock>    ACTIVE_STATEMENTS=<varname>integer</varname>
-        [ MAX_COST=<varname>float </varname>[COST_OVERCOMMIT={TRUE|FALSE}] ]
-        [ MIN_COST=<varname>float </varname>]
+      <codeblock>    ACTIVE_STATEMENTS=&lt;integer>
+        [ MAX_COST=&lt;float >[COST_OVERCOMMIT={TRUE|FALSE}] ]
+        [ MIN_COST=&lt;float >]
         [ PRIORITY={MIN|LOW|MEDIUM|HIGH|MAX} ]
-        [ MEMORY_LIMIT='<varname>memory_units</varname>' ]
+        [ MEMORY_LIMIT='&lt;memory_units>' ]
 
  | MAX_COST=float [ COST_OVERCOMMIT={TRUE|FALSE} ]
-        [ ACTIVE_STATEMENTS=<varname>integer </varname>]
-        [ MIN_COST=<varname>float </varname>]
+        [ ACTIVE_STATEMENTS=&lt;integer >]
+        [ MIN_COST=&lt;float >]
         [ PRIORITY={MIN|LOW|MEDIUM|HIGH|MAX} ]
-        [ MEMORY_LIMIT='<varname>memory_units</varname>' ]</codeblock>
+        [ MEMORY_LIMIT='&lt;memory_units>' ]</codeblock>
     </section>
     <section id="section3">
       <title>Description</title>
@@ -57,9 +57,9 @@
               queries, so using cost-based limits can lead to unexpected results.</p></note>
       <p>If a value is not defined for <codeph>ACTIVE_STATEMENTS</codeph> or
           <codeph>MAX_COST</codeph>, it is set to <codeph>-1</codeph> by default (meaning no limit).
-        After defining a resource queue, you must assign roles to the queue using the <codeph><xref
-            href="ALTER_ROLE.xml#topic1" type="topic" format="dita"/></codeph> or <codeph><xref
-            href="./CREATE_ROLE.xml#topic1" type="topic" format="dita"/></codeph> command.</p>
+        After defining a resource queue, you must assign roles to the queue using the <xref
+            href="ALTER_ROLE.xml#topic1" type="topic" format="dita"/> or <xref
+            href="./CREATE_ROLE.xml#topic1" type="topic" format="dita"/> command.</p>
       <p>You can optionally assign a <codeph>PRIORITY</codeph> to a resource queue to control the
         relative share of available CPU resources used by queries associated with the queue in
         relation to other resource queues. If a value is not defined for <codeph>PRIORITY</codeph>,
@@ -195,11 +195,11 @@
     </section>
     <section id="section8">
       <title>See Also</title>
-      <p><codeph><xref href="ALTER_ROLE.xml#topic1" type="topic" format="dita"/></codeph>,
-            <codeph><xref href="./CREATE_ROLE.xml#topic1" type="topic" format="dita"/></codeph>,
-            <codeph><xref href="ALTER_RESOURCE_QUEUE.xml#topic1" type="topic" format="dita"
-          /></codeph>, <codeph><xref href="./DROP_RESOURCE_QUEUE.xml#topic1" type="topic"
-            format="dita"/></codeph></p>
+      <p><xref href="ALTER_ROLE.xml#topic1" type="topic" format="dita"/>,
+            <xref href="./CREATE_ROLE.xml#topic1" type="topic" format="dita"/>,
+            <xref href="ALTER_RESOURCE_QUEUE.xml#topic1" type="topic" format="dita"
+          />, <xref href="./DROP_RESOURCE_QUEUE.xml#topic1" type="topic"
+            format="dita"/></p>
     </section>
   </body>
 </topic>

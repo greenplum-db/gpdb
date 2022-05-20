@@ -206,13 +206,15 @@ typedef struct AOCSFetchDescData
 	struct AOCSFileSegInfo **segmentFileInfo;
 
 	/*
-	 * The largest row number of this aoseg. Maximum row number is required in
-	 * function "aocs_fetch". If we have no updates and deletes, the
-	 * total_tupcount is equal to the maximum row number. But after some updates
-	 * and deletes, the maximum row number always much bigger than
-	 * total_tupcount. The appendonly_insert function will get fast sequence and
-	 * use it as the row number. So the last sequence will be the correct
-	 * maximum row number.
+	 * Array containing the maximum row number in each aoseg (to be consulted
+	 * during fetch). This is a sparse array as not all segments are involved
+	 * in a scan. Sparse entries are marked with InvalidAORowNum.
+	 *
+	 * Note:
+	 * If we have no updates and deletes, the total_tupcount is equal to the
+	 * maximum row number. But after some updates and deletes, the maximum row
+	 * number is always much bigger than total_tupcount, so this carries the
+	 * last sequence from gp_fastsequence.
 	 */
 	int64			lastSequence[AOTupleId_MultiplierSegmentFileNum];
 

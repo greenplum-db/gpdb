@@ -9,18 +9,18 @@
             mirroring.</p>
         <section id="section2">
             <title>Synopsis</title>
-            <codeblock><b>gpaddmirrors</b> [<b>-p</b> <varname>port_offset</varname>] [<b>-m</b> <varname>datadir_config_file </varname>[<b>-a</b>]] [<b>-s</b>] 
-   [<b>-d</b> <varname>coordinator_data_directory</varname>] [<b>-b</b> <varname>segment_batch_size</varname>] [<b>-B</b> <varname>batch_size</varname>] [<b>-l</b> <varname>logfile_directory</varname>]
-   [<b>-v</b>] [<b>--hba-hostnames</b> <varname>boolean</varname>] 
+            <codeblock>gpaddmirrors [-p &lt;port_offset>] [-m &lt;datadir_config_file> [-a]] [-s] 
+   [-d &lt;coordinator_data_directory>] [-b &lt;segment_batch_size>] [-B &lt;batch_size>] [-l &lt;logfile_directory>]
+   [-v] [--hba-hostnames &lt;boolean>] 
 
-<b>gpaddmirrors</b> <b>-i</b> <varname>mirror_config_file</varname> [<b>-a</b>] [<b>-d</b> <varname>coordinator_data_directory</varname>]
-   [<b>-b</b> <varname>segment_batch_size</varname>] [<b>-B</b> <varname>batch_size</varname>] [<b>-l</b> <varname>logfile_directory</varname>] [<b>-v</b>]
+gpaddmirrors -i &lt;mirror_config_file> [-a] [-d &lt;coordinator_data_directory>]
+   [-b &lt;segment_batch_size>] [-B &lt;batch_size>] [-l &lt;logfile_directory>] [-v]
 
-<b>gpaddmirrors</b> <b>-o</b> <varname>output_sample_mirror_config</varname> [<b>-s</b>] [<b>-m</b> <varname>datadir_config_file</varname>]
+gpaddmirrors -o output_sample_mirror_config> [-s] [-m &lt;datadir_config_file>]
 
-<b>gpaddmirrors</b> <b>-?</b> 
+gpaddmirrors -? 
 
-<b>gpaddmirrors</b> <b>--version</b></codeblock>
+gpaddmirrors --version</codeblock>
         </section>
         <section id="section3">
             <title>Description</title>
@@ -127,9 +127,9 @@ Enter mirror segment data directory location 2 of 2 &gt; /gpdb/m2</codeblock>
                     <pd>A configuration file containing one line for each mirror segment you want to
                         create. You must have one mirror segment instance listed for each primary
                         segment in the system. The format of this file is as follows (as per
-                        attributes in the <codeph><xref
-                                href="../../ref_guide/system_catalogs/gp_segment_configuration.xml"
-                                >gp_segment_configuration</xref></codeph> catalog table):</pd>
+                        attributes in the <xref
+                            href="../../ref_guide/system_catalogs/gp_segment_configuration.xml"
+                            >gp_segment_configuration</xref> catalog table):</pd>
                     <pd>
                         <codeblock>&lt;contentID>|&lt;address>|&lt;port>|&lt;data_dir></codeblock>
                     </pd>
@@ -223,12 +223,12 @@ Enter mirror segment data directory location 2 of 2 &gt; /gpdb/m2</codeblock>
                         specific requirement to use IP addresses.</li>
                 </ul></p>
             <p>When enabling a mirroring configuration that adds hosts to the Greenplum system,
-                    <codeph>gpaddmirrors</codeph> populates the <codeph><xref
-                        href="../../ref_guide/system_catalogs/gp_segment_configuration.xml"
-                        >gp_segment_configuration</xref></codeph> catalog table with the mirror
-                segment instance information. Greenplum Database uses the <varname>address</varname>
-                value of the <codeph>gp_segment_configuration</codeph> catalog table when looking up
-                host systems for Greenplum interconnect (internal) communication between the coordinator
+                    <codeph>gpaddmirrors</codeph> populates the <xref
+                    href="../../ref_guide/system_catalogs/gp_segment_configuration.xml"
+                    >gp_segment_configuration</xref> catalog table with the mirror segment instance
+                information. Greenplum Database uses the <varname>address</varname> value of the
+                    <codeph>gp_segment_configuration</codeph> catalog table when looking up host
+                systems for Greenplum interconnect (internal) communication between the coordinator
                 and segment instances and between segment instances, and for other internal
                 communication.</p>
         </section>
@@ -277,9 +277,9 @@ Enter mirror segment data directory location 2 of 2 &gt; /gpdb/m2</codeblock>
         </section>
         <section id="section6">
             <title>See Also</title>
-            <p><codeph><xref href="./gpinitsystem.xml#topic1" type="topic" format="dita"/></codeph>,
-                        <codeph><xref href="./gpinitstandby.xml#topic1" type="topic" format="dita"
-                    /></codeph>, <codeph><xref href="gpactivatestandby.xml#topic1"/></codeph></p>
+            <p><xref href="./gpinitsystem.xml#topic1" type="topic" format="dita"/>, <xref
+                    href="./gpinitstandby.xml#topic1" type="topic" format="dita"/>, <xref
+                    href="gpactivatestandby.xml#topic1"/></p>
         </section>
     </body>
 </topic>

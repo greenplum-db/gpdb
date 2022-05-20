@@ -2696,7 +2696,7 @@ ExecHashTableExplainBatchEnd(HashState *hashState, HashJoinTable hashtable)
 			if (hashtable->outerBatchFile &&
 					hashtable->outerBatchFile[curbatch] != NULL)
 			{
-				batchstats->ordbytes = BufFileSize(hashtable->outerBatchFile[curbatch]);
+				batchstats->ordbytes = BufFileGetSize(hashtable->outerBatchFile[curbatch]);
 			}
 
 			/* for curbatch=0, the tuple which is not belong to the batch 0 is put into the temp
@@ -2715,7 +2715,7 @@ ExecHashTableExplainBatchEnd(HashState *hashState, HashJoinTable hashtable)
 				if (hashtable->outerBatchFile &&
 						hashtable->outerBatchFile[i] != NULL)
 				{
-					filebytes = BufFileSize(hashtable->outerBatchFile[i]);
+					filebytes = BufFileGetSize(hashtable->outerBatchFile[i]);
 				}
 
 				Assert(filebytes >= bs->outerfilesize);
@@ -2727,7 +2727,7 @@ ExecHashTableExplainBatchEnd(HashState *hashState, HashJoinTable hashtable)
 				if (hashtable->innerBatchFile &&
 						hashtable->innerBatchFile[i])
 				{
-					filebytes = BufFileSize(hashtable->innerBatchFile[i]);
+					filebytes = BufFileGetSize(hashtable->innerBatchFile[i]);
 				}
 
 				Assert(filebytes >= bs->innerfilesize);

@@ -22,5 +22,5 @@ VMware provides an optional system monitoring and management tool, Greenplum Com
 
 ![](../graphics/cc_arch_gpdb.png "Greenplum Command Center Architecture")
 
-**Parent topic:**[Greenplum Database Concepts](../intro/partI.html)
+**Parent topic:** [Greenplum Database Concepts](../intro/partI.html)
 

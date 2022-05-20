@@ -54,6 +54,7 @@ extern "C" {
 #include "gpopt/translate/CPartPruneStepsBuilder.h"
 #include "gpopt/translate/CTranslatorDXLToPlStmt.h"
 #include "gpopt/translate/CTranslatorUtils.h"
+#include "naucrates/dxl/operators/CDXLDatumGeneric.h"
 #include "naucrates/dxl/operators/CDXLDirectDispatchInfo.h"
 #include "naucrates/dxl/operators/CDXLNode.h"
 #include "naucrates/dxl/operators/CDXLPhysicalAgg.h"
@@ -1509,19 +1510,9 @@ CTranslatorDXLToPlStmt::TranslateDXLTvfToRangeTblEntry(
 	RangeTblEntry *rte = MakeNode(RangeTblEntry);
 	rte->rtekind = RTE_FUNCTION;
 
-	FuncExpr *func_expr = MakeNode(FuncExpr);
-
-	func_expr->funcid = CMDIdGPDB::CastMdid(dxlop->FuncMdId())->Oid();
-	func_expr->funcretset = gpdb::GetFuncRetset(func_expr->funcid);
-	// this is a function call, as opposed to a cast
-	func_expr->funcformat = COERCE_EXPLICIT_CALL;
-	func_expr->funcresulttype =
-		CMDIdGPDB::CastMdid(dxlop->ReturnTypeMdId())->Oid();
-
+	// get function alias
 	Alias *alias = MakeNode(Alias);
 	alias->colnames = NIL;
-
-	// get function alias
 	alias->aliasname = CTranslatorUtils::CreateMultiByteCharStringFromWCString(
 		dxlop->Pstr()->GetBuffer());
 
@@ -1548,47 +1539,91 @@ CTranslatorDXLToPlStmt::TranslateDXLTvfToRangeTblEntry(
 												 ul + 1 /*attno*/);
 	}
 
-	// function arguments
-	const ULONG num_of_child = tvf_dxlnode->Arity();
-	for (ULONG ul = 1; ul < num_of_child; ++ul)
-	{
-		CDXLNode *func_arg_dxlnode = (*tvf_dxlnode)[ul];
-
-		CMappingColIdVarPlStmt colid_var_mapping(m_mp, base_table_context,
-												 nullptr, output_context,
-												 m_dxl_to_plstmt_context);
-
-		Expr *pexprFuncArg = m_translator_dxl_to_scalar->TranslateDXLToScalar(
-			func_arg_dxlnode, &colid_var_mapping);
-		func_expr->args = gpdb::LAppend(func_expr->args, pexprFuncArg);
-	}
-
-	// GPDB_91_MERGE_FIXME: collation
-	func_expr->inputcollid = gpdb::ExprCollation((Node *) func_expr->args);
-	func_expr->funccollid = gpdb::TypeCollation(func_expr->funcresulttype);
-
-	// Populate RangeTblFunction::funcparams, by walking down the entire
-	// func_expr to capture ids of all the PARAMs
-	ListCell *lc = nullptr;
-	List *param_exprs = gpdb::ExtractNodesExpression(
-		(Node *) func_expr, T_Param, false /*descend_into_subqueries */);
-	Bitmapset *funcparams = nullptr;
-	ForEach(lc, param_exprs)
-	{
-		Param *param = (Param *) lfirst(lc);
-		funcparams = gpdb::BmsAddMember(funcparams, param->paramid);
-	}
-
 	RangeTblFunction *rtfunc = MakeNode(RangeTblFunction);
-	rtfunc->funcexpr = (Node *) func_expr;
+	Bitmapset *funcparams = nullptr;
+
+	// invalid funcid indicates TVF evaluates to const
+	if (!dxlop->FuncMdId()->IsValid())
+	{
+		Const *const_expr = MakeNode(Const);
+
+		const_expr->consttype =
+			CMDIdGPDB::CastMdid(dxlop->ReturnTypeMdId())->Oid();
+		const_expr->consttypmod = -1;
+
+		CDXLNode *constVa = (*tvf_dxlnode)[1];
+		CDXLScalarConstValue *constValue =
+			CDXLScalarConstValue::Cast(constVa->GetOperator());
+		const CDXLDatum *datum_dxl = constValue->GetDatumVal();
+		CDXLDatumGeneric *datum_generic_dxl =
+			CDXLDatumGeneric::Cast(const_cast<gpdxl::CDXLDatum *>(datum_dxl));
+		const IMDType *type =
+			m_md_accessor->RetrieveType(datum_generic_dxl->MDId());
+		const_expr->constlen = type->Length();
+		Datum val = gpdb::DatumFromPointer(datum_generic_dxl->GetByteArray());
+		ULONG length =
+			(ULONG) gpdb::DatumSize(val, false, const_expr->constlen);
+		CHAR *str = (CHAR *) gpdb::GPDBAlloc(length + 1);
+		memcpy(str, datum_generic_dxl->GetByteArray(), length);
+		str[length] = '\0';
+		const_expr->constvalue = gpdb::DatumFromPointer(str);
+
+		rtfunc->funcexpr = (Node *) const_expr;
+		rtfunc->funccolcount = (int) num_of_cols;
+	}
+	else
+	{
+		FuncExpr *func_expr = MakeNode(FuncExpr);
+
+		func_expr->funcid = CMDIdGPDB::CastMdid(dxlop->FuncMdId())->Oid();
+		func_expr->funcretset = gpdb::GetFuncRetset(func_expr->funcid);
+		// this is a function call, as opposed to a cast
+		func_expr->funcformat = COERCE_EXPLICIT_CALL;
+		func_expr->funcresulttype =
+			CMDIdGPDB::CastMdid(dxlop->ReturnTypeMdId())->Oid();
+
+		// function arguments
+		const ULONG num_of_child = tvf_dxlnode->Arity();
+		for (ULONG ul = 1; ul < num_of_child; ++ul)
+		{
+			CDXLNode *func_arg_dxlnode = (*tvf_dxlnode)[ul];
+
+			CMappingColIdVarPlStmt colid_var_mapping(m_mp, base_table_context,
+													 nullptr, output_context,
+													 m_dxl_to_plstmt_context);
+
+			Expr *pexprFuncArg =
+				m_translator_dxl_to_scalar->TranslateDXLToScalar(
+					func_arg_dxlnode, &colid_var_mapping);
+			func_expr->args = gpdb::LAppend(func_expr->args, pexprFuncArg);
+		}
+
+		// GPDB_91_MERGE_FIXME: collation
+		func_expr->inputcollid = gpdb::ExprCollation((Node *) func_expr->args);
+		func_expr->funccollid = gpdb::TypeCollation(func_expr->funcresulttype);
+
+		// Populate RangeTblFunction::funcparams, by walking down the entire
+		// func_expr to capture ids of all the PARAMs
+		ListCell *lc = nullptr;
+		List *param_exprs = gpdb::ExtractNodesExpression(
+			(Node *) func_expr, T_Param, false /*descend_into_subqueries */);
+		ForEach(lc, param_exprs)
+		{
+			Param *param = (Param *) lfirst(lc);
+			funcparams = gpdb::BmsAddMember(funcparams, param->paramid);
+		}
+
+		rtfunc->funcexpr = (Node *) func_expr;
+	}
+
 	rtfunc->funcparams = funcparams;
 	// GPDB_91_MERGE_FIXME: collation
 	// set rtfunc->funccoltypemods & rtfunc->funccolcollations?
 	rte->functions = ListMake1(rtfunc);
 
 	rte->inFromCl = true;
-	rte->eref = alias;
 
+	rte->eref = alias;
 	return rte;
 }
 
@@ -3906,8 +3941,6 @@ CTranslatorDXLToPlStmt::TranslateDXLDml(
 	RangeTblEntry *rte = TranslateDXLTblDescrToRangeTblEntry(
 		table_descr, index, &base_table_context);
 	GPOS_ASSERT(nullptr != rte);
-	// GPDB_12_MERGE_FIXME: Make this an parameter in TranslateDXLTblDescrToRangeTblEntry
-	rte->rellockmode = RowExclusiveLock;
 	rte->requiredPerms |= acl_mode;
 	m_dxl_to_plstmt_context->AddRTE(rte, true);
 
@@ -4328,8 +4361,7 @@ CTranslatorDXLToPlStmt::TranslateDXLTblDescrToRangeTblEntry(
 	rte->relid = oid;
 	rte->checkAsUser = table_descr->GetExecuteAsUserId();
 	rte->requiredPerms |= ACL_NO_RIGHTS;
-	// GPDB_12_MERGE_FIXME: Make this an parameter
-	rte->rellockmode = AccessShareLock;
+	rte->rellockmode = table_descr->LockMode();
 
 	// save oid and range index in translation context
 	base_table_context->SetOID(oid);

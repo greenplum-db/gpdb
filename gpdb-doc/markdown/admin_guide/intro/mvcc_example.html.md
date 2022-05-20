@@ -16,7 +16,7 @@ For Greenplum Database, the transaction ID \(XID\) value an incrementing 32-bit 
 
 **Note:** Greenplum Database assigns XID values only to transactions that involve DDL or DML operations, which are typically the only transactions that require an XID.
 
-**Parent topic:**[About Concurrency Control in Greenplum Database](../intro/about_mvcc.html)
+**Parent topic:** [About Concurrency Control in Greenplum Database](../intro/about_mvcc.html)
 
 ## <a id="topic_zsw_yck_wv"></a>Simple MVCC Example 
 

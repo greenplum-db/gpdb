@@ -7,7 +7,7 @@
     <p id="sql_command_desc">Prepare a statement for execution.</p>
     <section id="section2">
       <title>Synopsis</title>
-      <codeblock id="sql_command_synopsis">PREPARE <varname>name</varname> [ (<varname>datatype</varname> [, ...] ) ] AS <varname>statement</varname></codeblock>
+      <codeblock id="sql_command_synopsis">PREPARE &lt;name> [ (&lt;datatype> [, ...] ) ] AS &lt;statement></codeblock>
     </section>
     <section id="section3">
       <title>Description</title>
@@ -29,8 +29,8 @@
         session ends, the prepared statement is forgotten, so it must be recreated before being used
         again. This also means that a single prepared statement cannot be used by multiple
         simultaneous database clients; however, each client can create their own prepared statement
-        to use. Prepared statements can be manually cleaned up using the <codeph><xref
-            href="DEALLOCATE.xml#topic1" type="topic" format="dita"/></codeph> command. </p>
+        to use. Prepared statements can be manually cleaned up using the <xref
+            href="DEALLOCATE.xml#topic1" type="topic" format="dita"/> command. </p>
       <p>Prepared statements have the largest performance advantage when a single session is being
         used to run a large number of similar statements. The performance difference will be
         particularly significant if the statements are complex to plan or rewrite, for example, if
@@ -70,8 +70,8 @@
         more efficient to run because the planner can make use of knowledge of the parameter
         values. If the prepared statement has no parameters, a generic plan is always used.</p>
       <p>By default (with the default value, <codeph>auto</codeph>, for the server configuration
-        parameter <codeph><xref href="../config_params/guc-list.xml#plan_cache_mode"
-            >plan_cache_mode</xref></codeph>), the server automatically chooses whether to use a
+        parameter <xref href="../config_params/guc-list.xml#plan_cache_mode"
+            >plan_cache_mode</xref>), the server automatically chooses whether to use a
         generic or custom plan for a prepared statement that has parameters. The current rule for
         this is that the first five executions are done with custom plans and the average estimated
         cost of those plans is calculated. Then a generic plan is created and its estimated cost is
@@ -84,7 +84,7 @@
         generic plan's cost estimate is badly off for some reason, allowing it to be chosen even
         though its actual cost is much more than that of a custom plan.</p>
       <p>To examine the query plan Greenplum Database is using for a prepared statement, use
-            <codeph><xref href="../sql_commands/EXPLAIN.xml">EXPLAIN</xref></codeph>, for
+            <xref href="../sql_commands/EXPLAIN.xml">EXPLAIN</xref>, for
         example</p>
       <codeblock>EXPLAIN EXECUTE &lt;name>(&lt;parameter_values>);</codeblock>
       <p>If a generic plan is in use, it will contain parameter symbols <codeph>$n</codeph>, while a
@@ -129,8 +129,8 @@ EXECUTE usrrptplan(1, current_date);</codeblock>
     </section>
     <section id="section8">
       <title>See Also</title>
-      <p><codeph><xref href="EXECUTE.xml#topic1" type="topic" format="dita"/></codeph>,
-            <codeph><xref href="DEALLOCATE.xml#topic1" type="topic" format="dita"/></codeph></p>
+      <p><xref href="EXECUTE.xml#topic1" type="topic" format="dita"/>,
+            <xref href="DEALLOCATE.xml#topic1" type="topic" format="dita"/></p>
     </section>
   </body>
 </topic>

@@ -468,6 +468,7 @@ enum Edxltoken
 	EdxltokenRelStorageAppendOnlyRows,
 	EdxltokenRelStorageMixedPartitioned,
 	EdxltokenRelStorageExternal,
+	EdxltokenRelStorageCompositeType,
 
 	EdxltokenPartKeys,
 	EdxltokenPartTypes,

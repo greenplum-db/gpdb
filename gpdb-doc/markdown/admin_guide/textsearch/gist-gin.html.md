@@ -33,5 +33,5 @@ Note that GIN index build time can often be improved by increasing [maintenance\
 
 Partitioning of big collections and the proper use of GiST and GIN indexes allows the implementation of very fast searches with online update. Partitioning can be done at the database level using table inheritance, or by distributing documents over servers and collecting search results using [dblink](../../ref_guide/modules/dblink.html). The latter is possible because ranking functions use only local information.
 
-**Parent topic:**[Using Full Text Search](../textsearch/full-text-search.html)
+**Parent topic:** [Using Full Text Search](../textsearch/full-text-search.html)
 

@@ -17,7 +17,12 @@
 alter system set dtx_phase2_retry_second to 5;
 select pg_reload_conf();
 
-1:SELECT role, preferred_role, content, mode, status FROM gp_segment_configuration;
+-- Verify that all primary segments are good.
+-- We don't print mode directly because mirrored/mirrorless cluster is different: mirrorless cluster 
+-- has mode='n' for all segments. But it should be easy to deduce the actual mode if the result unmatched.
+1:SELECT role, preferred_role, content, status, 
+mode = 's' or (mode = 'n' and (g1.content = -1 or (select count(*) from gp_segment_configuration g2 where g1.content = g2.content) = 1)) as is_mode_normal
+FROM gp_segment_configuration g1 where role = 'p';
 -- Scenario 1: Test to fail broadcasting of COMMIT PREPARED to one
 -- segment and hence trigger PANIC in master while after completing
 -- phase 2 of 2PC. Master's recovery cycle should correctly broadcast

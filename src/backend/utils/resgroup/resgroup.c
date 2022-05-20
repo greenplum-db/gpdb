@@ -567,7 +567,7 @@ InitResGroups(void)
 	{
 		Assert(IS_QUERY_DISPATCHER());
 		qdinfo = cdbcomponent_getComponentInfo(MASTER_CONTENT_ID); 
-		pResGroupControl->segmentsOnMaster = qdinfo->hostSegs;
+		pResGroupControl->segmentsOnMaster = qdinfo->hostPrimaryCount;
 		Assert(pResGroupControl->segmentsOnMaster > 0);
 	}
 
@@ -1072,9 +1072,9 @@ ResGroupGetStat(Oid groupId, ResGroupStatType type)
  * Get the number of primary segments on this host
  */
 int
-ResGroupGetSegmentNum()
+ResGroupGetHostPrimaryCount()
 {
-	return (Gp_role == GP_ROLE_EXECUTE ? host_segments : pResGroupControl->segmentsOnMaster);
+	return (Gp_role == GP_ROLE_EXECUTE ? host_primary_segment_count : pResGroupControl->segmentsOnMaster);
 }
 
 static char *
@@ -2111,7 +2111,7 @@ decideTotalChunks(int32 *totalChunks, int32 *chunkSizeInBits)
 	int32 tmptotalChunks;
 	int32 tmpchunkSizeInBits;
 
-	nsegments = Gp_role == GP_ROLE_EXECUTE ? host_segments : pResGroupControl->segmentsOnMaster;
+	nsegments = Gp_role == GP_ROLE_EXECUTE ? host_primary_segment_count : pResGroupControl->segmentsOnMaster;
 	Assert(nsegments > 0);
 
 	tmptotalChunks = ResGroupOps_GetTotalMemory() * gp_resource_group_memory_limit / nsegments;
@@ -2822,7 +2822,7 @@ SwitchResGroupOnSegment(const char *buf, int len)
 	Assert(group != NULL);
 
 	/* Init self */
-	Assert(host_segments > 0);
+	Assert(host_primary_segment_count > 0);
 	Assert(caps.concurrency > 0);
 	self->caps = caps;
 
@@ -4192,10 +4192,10 @@ groupMemOnDumpForCgroup(ResGroupData *group, StringInfo str)
 	appendStringInfo(str, "{");
 	appendStringInfo(str, "\"used\":%d, ",
 			VmemTracker_ConvertVmemChunksToMB(
-				ResGroupOps_GetMemoryUsage(group->groupId) / ResGroupGetSegmentNum()));
+				ResGroupOps_GetMemoryUsage(group->groupId) / ResGroupGetHostPrimaryCount()));
 	appendStringInfo(str, "\"limit_granted\":%d",
 			VmemTracker_ConvertVmemChunksToMB(
-				ResGroupOps_GetMemoryLimit(group->groupId) / ResGroupGetSegmentNum()));
+				ResGroupOps_GetMemoryLimit(group->groupId) / ResGroupGetHostPrimaryCount()));
 	appendStringInfo(str, "}");
 }
 

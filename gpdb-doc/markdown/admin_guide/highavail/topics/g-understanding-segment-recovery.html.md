@@ -11,7 +11,7 @@ This topic is divided into the following sections:
 -   [Simple Failover and Recovery Example](#simple_example)
 -   [Incremental versus Full Recovery](#incremental_vs_full)
 
-**Parent topic:**[Enabling High Availability and Data Consistency Features](../../highavail/topics/g-enabling-high-availability-features.html)
+**Parent topic:** [Enabling High Availability and Data Consistency Features](../../highavail/topics/g-enabling-high-availability-features.html)
 
 ## <a id="recovery_basics"></a>Segment Recovery Basics 
 

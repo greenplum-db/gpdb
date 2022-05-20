@@ -148,5 +148,5 @@ Tanzu Greenplum Text, with Solr, has many capabilities that are not available wi
 
 See the [Tanzu Greenplum Text Documentation web site](https://gptext.docs.pivotal.io) for more information.
 
-**Parent topic:**[Using Full Text Search](../textsearch/full-text-search.html)
+**Parent topic:** [Using Full Text Search](../textsearch/full-text-search.html)
 

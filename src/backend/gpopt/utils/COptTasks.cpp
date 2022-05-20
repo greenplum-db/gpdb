@@ -235,7 +235,7 @@ COptTasks::Execute(void *(*func)(void *), void *func_arg)
 	}
 	GPOS_CATCH_EX(ex)
 	{
-		LogExceptionMessageAndDelete(err_buf, ex.SeverityLevel());
+		LogExceptionMessageAndDelete(err_buf);
 		GPOS_RETHROW(ex);
 	}
 	GPOS_CATCH_END;
@@ -243,18 +243,11 @@ COptTasks::Execute(void *(*func)(void *), void *func_arg)
 }
 
 void
-COptTasks::LogExceptionMessageAndDelete(CHAR *err_buf, ULONG severity_level)
+COptTasks::LogExceptionMessageAndDelete(CHAR *err_buf)
 {
 	if ('\0' != err_buf[0])
 	{
-		int gpdb_severity_level;
-
-		if (severity_level == CException::ExsevDebug1)
-			gpdb_severity_level = DEBUG1;
-		else
-			gpdb_severity_level = LOG;
-
-		elog(gpdb_severity_level, "%s",
+		elog(LOG, "%s",
 			 CreateMultiByteCharStringFromWCString((WCHAR *) err_buf));
 	}
 

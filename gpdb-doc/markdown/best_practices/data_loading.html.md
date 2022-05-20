@@ -4,7 +4,7 @@ title: Loading Data
 
 Description of the different ways to add data to Greenplum Database.
 
-**Parent topic:**[Greenplum Database Best Practices](intro.html)
+**Parent topic:** [Greenplum Database Best Practices](intro.html)
 
 ## <a id="topic_tmf_t2t_bp"></a>INSERT Statement with Column Values 
 

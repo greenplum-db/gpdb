@@ -42,8 +42,8 @@
     </section>
     <section>
       <title>See Also</title>
-      <p><codeph><xref href="CREATE_RULE.xml#topic1"/></codeph>, <codeph><xref
-            href="DROP_RULE.xml#topic1"/></codeph>
+      <p><xref href="CREATE_RULE.xml#topic1"/>, <xref
+            href="DROP_RULE.xml#topic1"/>
       </p>
     </section>
   </body>

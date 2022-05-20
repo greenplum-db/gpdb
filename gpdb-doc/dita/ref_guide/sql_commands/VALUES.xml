@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
-<topic id="topic1"><title id="es20941">VALUES</title><body><p id="sql_command_desc">Computes a set of rows.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">VALUES ( <varname>expression</varname> [, ...] ) [, ...]
-   [ORDER BY <varname>sort_expression</varname> [ ASC | DESC | USING <varname>operator</varname> ] [, ...] ]
-   [LIMIT { <varname>count</varname> | ALL } ] 
-   [OFFSET <varname>start</varname> [ ROW | ROWS ] ]
-   [FETCH { FIRST | NEXT } [<varname>count</varname> ] { ROW | ROWS } ONLY ]</codeblock></section><section id="section3"><title>Description</title><p><codeph>VALUES</codeph> computes a row value or set of row values specified by value expressions.
+<topic id="topic1"><title id="es20941">VALUES</title><body><p id="sql_command_desc">Computes a set of rows.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">VALUES ( &lt;expression> [, ...] ) [, ...]
+   [ORDER BY &lt;sort_expression> [ ASC | DESC | USING &lt;operator> ] [, ...] ]
+   [LIMIT { &lt;count> | ALL } ] 
+   [OFFSET &lt;start> [ ROW | ROWS ] ]
+   [FETCH { FIRST | NEXT } [&lt;count> ] { ROW | ROWS } ONLY ]</codeblock></section><section id="section3"><title>Description</title><p><codeph>VALUES</codeph> computes a row value or set of row values specified by value expressions.
                 It is most commonly used to generate a "constant table" within a larger command, but
                 it can be used on its own.</p><p>When more than one row is specified, all the rows must have the same
 number of elements. The data types of the resulting table's columns
@@ -25,10 +25,10 @@ column's default value should be inserted. <codeph>DEFAULT</codeph>
 cannot be used when <codeph>VALUES</codeph> appears in other contexts.</pd></plentry><plentry><pt><varname>sort_expression</varname></pt><pd>An expression or integer constant indicating how to sort the result rows. This expression may
                         refer to the columns of the <codeph>VALUES</codeph> result as
                             <codeph>column1</codeph>, <codeph>column2</codeph>, etc. For more
-                        details, see "The ORDER BY Clause" in the parameters for <codeph><xref
-                                href="SELECT.xml#topic1"/></codeph>.</pd></plentry><plentry><pt><varname>operator</varname></pt><pd>A sorting operator. For more details, see "The ORDER BY Clause" in the parameters for
-                                <codeph><xref href="SELECT.xml#topic1"/></codeph>. </pd></plentry><plentry><pt>LIMIT count</pt><pt>OFFSET start</pt><pd>The maximum number of rows to return. For more details, see "The LIMIT Clause" in the parameters
-                        for <codeph><xref href="SELECT.xml#topic1"/></codeph>.</pd></plentry></parml></section><section id="section5"><title>Notes</title><p><codeph>VALUES</codeph> lists with very large numbers of rows should
+                        details, see "The ORDER BY Clause" in the parameters for <xref
+                                href="SELECT.xml#topic1"/>.</pd></plentry><plentry><pt><varname>operator</varname></pt><pd>A sorting operator. For more details, see "The ORDER BY Clause" in the parameters for
+                                <xref href="SELECT.xml#topic1"/>. </pd></plentry><plentry><pt>LIMIT count</pt><pt>OFFSET start</pt><pd>The maximum number of rows to return. For more details, see "The LIMIT Clause" in the parameters
+                        for <xref href="SELECT.xml#topic1"/>.</pd></plentry></parml></section><section id="section5"><title>Notes</title><p><codeph>VALUES</codeph> lists with very large numbers of rows should
 be avoided, as you may encounter out-of-memory failures or poor performance.
 <codeph>VALUES</codeph> appearing within <codeph>INSERT</codeph> is a
 special case (because the desired column types are known from the <codeph>INSERT</codeph>'s
@@ -71,5 +71,5 @@ type for all: </p><codeblock>SELECT * FROM machines WHERE ip_address IN
                 efficient.</note></section><section id="section7"><title>Compatibility</title><p><codeph>VALUES</codeph> conforms to the SQL standard. <codeph>LIMIT</codeph>
                 and <codeph>OFFSET</codeph> are Greenplum Database extensions;
                 see also under <xref href="SELECT.xml#topic1" type="topic"
-                    format="dita"/>.</p></section><section id="section8"><title>See Also</title><p><codeph><xref href="INSERT.xml#topic1" type="topic" format="dita"/></codeph>, <codeph><xref
-                        href="SELECT.xml#topic1" type="topic" format="dita"/></codeph></p></section></body></topic>
+                    format="dita"/>.</p></section><section id="section8"><title>See Also</title><p><xref href="INSERT.xml#topic1" type="topic" format="dita"/>, <xref
+                        href="SELECT.xml#topic1" type="topic" format="dita"/></p></section></body></topic>

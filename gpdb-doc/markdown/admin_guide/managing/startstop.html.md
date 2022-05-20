@@ -14,7 +14,7 @@ Issuing a `kill -9` or `kill -11` can introduce database corruption and prevent 
 
 For information about `gpstart` and `gpstop`, see the *Greenplum Database Utility Guide*.
 
-**Parent topic:**[Managing a Greenplum System](../managing/partII.html)
+**Parent topic:** [Managing a Greenplum System](../managing/partII.html)
 
 ## <a id="task_hkd_gzv_fp"></a>Starting Greenplum Database 
 

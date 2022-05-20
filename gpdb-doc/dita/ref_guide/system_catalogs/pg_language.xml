@@ -65,8 +65,8 @@
             <entry colname="col2">oid</entry>
             <entry colname="col3">pg_proc.oid</entry>
             <entry colname="col4">This references a function that is responsible for running
-              inline anonymous code blocks (see the <codeph><xref
-                  href="../sql_commands/DO.xml#topic1"/></codeph> command). Zero if anonymous blocks
+              inline anonymous code blocks (see the <xref
+                  href="../sql_commands/DO.xml#topic1"/> command). Zero if anonymous blocks
               are not supported.</entry>
           </row>
           <row>

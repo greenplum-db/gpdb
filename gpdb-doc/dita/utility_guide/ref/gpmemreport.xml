@@ -8,11 +8,11 @@
         format="dita"/> utility and generates output files in a readable format.</p>
     <section id="section2">
       <title>Synopsis</title>
-      <codeblock><b>gpmemreport</b> [<varname>GZIP_FILE</varname>] [[<b>-s</b> <varname>START</varname>] | [<b>--start=</b> <varname>START</varname>]] [[<b>-e</b> <varname>END</varname>] | [<b>--end=</b> <varname>END</varname>]] 
+      <codeblock>gpmemreport [&lt;GZIP_FILE>] [[-s &lt;START>] | [--start= &lt;START>]] [[-e &lt;END>] | [--end= &lt;END>]] 
         
-<b>gpmemreport</b> <b>--version</b>
+gpmemreport --version
 
-<b>gpmemreport</b> <b>-h</b> | <b>--help</b> </codeblock>
+gpmemreport -h | --help </codeblock>
     </section>
     <section id="section3">
       <title>Description</title>
@@ -83,7 +83,8 @@
     </section>
     <section id="section6">
       <title>See Also</title>
-      <p><codeph><xref href="./gpmemwatcher.xml#topic1" type="topic" format="dita"/></codeph></p>
+      <p>
+        <xref href="./gpmemwatcher.xml#topic1" type="topic" format="dita"/></p>
     </section>
   </body>
 </topic>

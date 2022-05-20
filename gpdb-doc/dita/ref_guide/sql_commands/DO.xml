@@ -7,7 +7,7 @@
     <p id="sql_command_desc">Runs anonymous code block as a transient anonymous function.</p>
     <section id="section2">
       <title>Synopsis</title>
-      <codeblock id="sql_command_synopsis">DO [ LANGUAGE <varname>lang_name</varname> ] <varname>code</varname></codeblock>
+      <codeblock id="sql_command_synopsis">DO [ LANGUAGE &lt;lang_name> ] &lt;code></codeblock>
     </section>
     <section id="section3">
       <title>Description</title>
@@ -107,7 +107,7 @@ END $$ LANGUAGE plpgsql ;</codeblock></p>
     </section>
     <section id="section7">
       <title>See Also</title>
-      <p><codeph><xref href="CREATE_LANGUAGE.xml" format="dita"/></codeph></p>
+      <p><xref href="CREATE_LANGUAGE.xml" format="dita"/></p>
     </section>
   </body>
 </topic>

@@ -5,11 +5,11 @@
     <note type="note">Greenplum Database does not enforce referential integrity syntax (foreign key
       constraints). As of version 6.12 <codeph>TRUNCATE</codeph> truncates a table that is
       referenced in a foreign key constraint even if the <codeph>CASCADE</codeph> option is
-      omitted.</note><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">TRUNCATE [TABLE] [ONLY] <varname>name</varname> [ * ] [, ...] 
+      omitted.</note><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">TRUNCATE [TABLE] [ONLY] &lt;name> [ * ] [, ...] 
     [ RESTART IDENTITY | CONTINUE IDENTITY ] [CASCADE | RESTRICT]</codeblock></section>
     <section id="section3"><title>Description</title><p><codeph>TRUNCATE</codeph> quickly removes
         all rows from a table or set of tables. It has the same effect as an unqualified
-            <codeph><xref href="DELETE.xml#topic1" type="topic" format="dita"/></codeph> on each
+            <xref href="DELETE.xml#topic1" type="topic" format="dita"/> on each
         table, but since it does not actually scan the tables it is faster. This is most useful on
         large tables.</p>
       <p>You must have the <codeph>TRUNCATE</codeph> privilege on the table to truncate table
@@ -64,5 +64,5 @@ table. If you specify a sub-table of a partitioned table, <codeph>TRUNCATE</code
           IDENTITY</codeph>/<codeph>RESTART IDENTITY</codeph> also appear in that standard, but have
         slightly different though related meanings. Some of the concurrency behavior of this command
         is left implementation-defined by the standard, so the above notes should be considered and
-        compared with other implementations if necessary. </p></section><section id="section8"><title>See Also</title><p><codeph><xref href="DELETE.xml#topic1" type="topic" format="dita"/></codeph>, <codeph><xref
-            href="DROP_TABLE.xml#topic1" type="topic" format="dita"/></codeph></p></section></body></topic>
+        compared with other implementations if necessary. </p></section><section id="section8"><title>See Also</title><p><xref href="DELETE.xml#topic1" type="topic" format="dita"/>, <xref
+            href="DROP_TABLE.xml#topic1" type="topic" format="dita"/></p></section></body></topic>

@@ -60,7 +60,7 @@ $$ language sql VOLATILE;
 -- do a SUM() over the return values, and it's always 0, regardless of the
 -- number of segments in the cluster.)
 CREATE FUNCTION corrupt_file(data_file text, corruption_offset int4)
-RETURNS integer as $$
+RETURNS setof integer as $$
   import os;
 
   if not os.path.isfile(data_file):
@@ -80,7 +80,7 @@ RETURNS integer as $$
       f.write(write_char)
       f.close()
 
-  return 0
+  return []
 $$ LANGUAGE plpython3u EXECUTE ON ALL SEGMENTS;
 CREATE OR REPLACE FUNCTION invalidate_buffers_for_rel(tablename text) RETURNS BOOL AS
 $$
@@ -136,14 +136,13 @@ select invalidate_buffers_for_rel('corrupt_table') from gp_dist_random('gp_id');
 (3 rows)
 
 -- Verify corruption on heap table
-select SUM(corrupt_file(get_relation_path('corrupt_table'), -50));
+select corrupt_file(get_relation_path('corrupt_table'), -50);
 INFO:  corrupting file base/81967/81931 at -50  (seg0 slice1 127.0.0.1:25432 pid=27287)
 INFO:  corrupting file base/81967/81931 at -50  (seg1 slice1 127.0.0.1:25433 pid=27288)
 INFO:  corrupting file base/81967/81931 at -50  (seg2 slice1 127.0.0.1:25434 pid=27289)
- sum 
------
-   0
-(1 row)
+ corrupt_file 
+--------------
+(0 rows)
 
 SELECT COUNT(*) FROM corrupt_table;
 WARNING:  page verification failed, calculated checksum 20457 but expected 60777  (seg0 slice1 127.0.0.1:25432 pid=27287)
@@ -164,14 +163,13 @@ select invalidate_buffers_for_rel(get_toast_name('corrupt_toast_table')) from gp
 (3 rows)
 
 -- Verify corruption on toast table
-select SUM(corrupt_file(get_toast_path('corrupt_toast_table'), -50));
+select corrupt_file(get_toast_path('corrupt_toast_table'), -50);
 INFO:  corrupting file base/81967/81933 at -50  (seg0 slice1 127.0.0.1:25432 pid=27287)
 INFO:  corrupting file base/81967/81933 at -50  (seg1 slice1 127.0.0.1:25433 pid=27288)
 INFO:  corrupting file base/81967/81933 at -50  (seg2 slice1 127.0.0.1:25434 pid=27289)
- sum 
------
-   0
-(1 row)
+ corrupt_file 
+--------------
+(0 rows)
 
 SELECT md5(comment::text) FROM corrupt_toast_table;
 WARNING:  page verification failed, calculated checksum 55109 but expected 33676  (seg0 slice1 127.0.0.1:25432 pid=27287)
@@ -193,14 +191,13 @@ select invalidate_buffers_for_rel('btree_index') from gp_dist_random('gp_id');
 (3 rows)
 
 -- Verify corruption on Btree index
-select SUM(corrupt_file(get_index_path('corrupt_btree_index'), -50));
+select corrupt_file(get_index_path('corrupt_btree_index'), -50);
 INFO:  corrupting file base/81967/81936 at -50  (seg0 slice1 127.0.0.1:25432 pid=27287)
 INFO:  corrupting file base/81967/81936 at -50  (seg1 slice1 127.0.0.1:25433 pid=27288)
 INFO:  corrupting file base/81967/81936 at -50  (seg2 slice1 127.0.0.1:25434 pid=27289)
- sum 
------
-   0
-(1 row)
+ corrupt_file 
+--------------
+(0 rows)
 
 insert into corrupt_btree_index select i, 'a' from generate_series(1, 10) i; -- insert will trigger scan of the index
 WARNING:  page verification failed, calculated checksum 32758 but expected 56694  (seg1 127.0.0.1:25433 pid=27288)
@@ -222,14 +219,13 @@ select invalidate_buffers_for_rel('bitmap_index') from gp_dist_random('gp_id');
 (3 rows)
 
 -- Verify corruption on Bitmap index 
-select SUM(corrupt_file(get_index_path('corrupt_bitmap_index'), -50));
+select corrupt_file(get_index_path('corrupt_bitmap_index'), -50);
 INFO:  corrupting file base/81967/81938 at -50  (seg0 slice1 127.0.0.1:25432 pid=27287)
 INFO:  corrupting file base/81967/81938 at -50  (seg1 slice1 127.0.0.1:25433 pid=27288)
 INFO:  corrupting file base/81967/81938 at -50  (seg2 slice1 127.0.0.1:25434 pid=27289)
- sum 
------
-   0
-(1 row)
+ corrupt_file 
+--------------
+(0 rows)
 
 insert into corrupt_bitmap_index select i, 'a' from generate_series(1, 10) i; -- insert will trigger scan of the index
 WARNING:  page verification failed, calculated checksum 43246 but expected 2670  (seg0 127.0.0.1:25432 pid=27287)
@@ -264,14 +260,13 @@ select count(*) from mark_buffer_dirty_hint;
 create table flush_xlog_page_to_disk (c int);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'c' as the Greenplum Database data distribution key for this table.
 -- corrupt the page on disk
-select SUM(corrupt_file(get_relation_path('mark_buffer_dirty_hint'), -50));
+select corrupt_file(get_relation_path('mark_buffer_dirty_hint'), -50);
 INFO:  corrupting file base/81967/81939 at -50  (seg0 slice1 127.0.0.1:25432 pid=27287)
 INFO:  corrupting file base/81967/81939 at -50  (seg1 slice1 127.0.0.1:25433 pid=27288)
 INFO:  corrupting file base/81967/81939 at -50  (seg2 slice1 127.0.0.1:25434 pid=27289)
- sum 
------
-   0
-(1 row)
+ corrupt_file 
+--------------
+(0 rows)
 
 -- invalidate buffer and confirm data is corrupted
 select invalidate_buffers_for_rel('mark_buffer_dirty_hint') from gp_dist_random('gp_id');

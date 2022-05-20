@@ -7,7 +7,7 @@
     <p id="sql_command_desc">Removes a tablespace.</p>
     <section id="section2">
       <title>Synopsis</title>
-      <codeblock id="sql_command_synopsis">DROP TABLESPACE [IF EXISTS] <varname>tablespacename</varname></codeblock>
+      <codeblock id="sql_command_synopsis">DROP TABLESPACE [IF EXISTS] &lt;tablespacename></codeblock>
     </section>
     <section id="section3">
       <title>Description</title>
@@ -46,8 +46,8 @@ WARNING:  tablespace with oid "16415" is not empty  (seg1 192.168.8.145:25433 pi
 WARNING:  tablespace with oid "16415" is not empty  (seg0 192.168.8.145:25432 pid=29022)
 WARNING:  tablespace with oid "16415" is not empty
 DROP TABLESPACE</codeblock>
-      <p>The table data in the tablespace directory is not dropped. You can use the <codeph><xref
-            href="ALTER_TABLE.xml" type="topic" format="dita"/></codeph> command to change the
+      <p>The table data in the tablespace directory is not dropped. You can use the <xref
+            href="ALTER_TABLE.xml" type="topic" format="dita"/> command to change the
         tablespace defined for the table and move the data to an existing tablespace.</p>
     </section>
     <section id="section5">
@@ -61,9 +61,9 @@ DROP TABLESPACE</codeblock>
     </section>
     <section id="section7">
       <title>See Also</title>
-      <p><codeph><xref href="CREATE_TABLESPACE.xml#topic1" type="topic" format="dita"/></codeph>,
-            <codeph><xref href="ALTER_TABLESPACE.xml#topic1" type="topic" format="dita"
-        /></codeph></p>
+      <p><xref href="CREATE_TABLESPACE.xml#topic1" type="topic" format="dita"/>,
+            <xref href="ALTER_TABLESPACE.xml#topic1" type="topic" format="dita"
+        /></p>
     </section>
   </body>
 </topic>
