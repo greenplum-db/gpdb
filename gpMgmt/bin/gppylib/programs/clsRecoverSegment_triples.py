@@ -96,7 +96,7 @@ class RecoveryTripletRequest:
 # TODO: Note that gparray is mutated for all triplets, even if we skip recovery for them(if they are unreachable)
 class RecoveryTripletsFactory:
     @staticmethod
-    def instance(gpArray, config_file=None, new_hosts=[], paralleldegree = 1):
+    def instance(gpArray, config_file=None, new_hosts=[], paralleldegree=1):
         """
         :param gpArray: The variable gpArray may get mutated when the getMirrorTriples function is called on this instance.
         :param config_file: user passed in config file, if any
@@ -114,7 +114,7 @@ class RecoveryTripletsFactory:
 
 
 class RecoveryTriplets(abc.ABC):
-    def __init__(self, gpArray, paralleldegree):
+    def __init__(self, gpArray, paralleldegree=1):
         """
         :param gpArray: Needs to be a shallow copy since we may return a mutated gpArray
         """
@@ -202,8 +202,8 @@ class RecoveryTripletsInplace(RecoveryTriplets):
 
 
 class RecoveryTripletsNewHosts(RecoveryTriplets):
-    def __init__(self, gpArray, newHosts, paralleldegree=1):
-        super().__init__(gpArray)
+    def __init__(self, gpArray, newHosts, paralleldegree):
+        super().__init__(gpArray, paralleldegree)
         self.newHosts = [] if not newHosts else newHosts[:]
         self.portAssigner = self._PortAssigner(gpArray)
         self.paralleldegree = paralleldegree
@@ -289,7 +289,7 @@ class RecoveryTripletsNewHosts(RecoveryTriplets):
 
 class RecoveryTripletsUserConfigFile(RecoveryTriplets):
     def __init__(self, gpArray, config_file, parallelgegree):
-        super().__init__(gpArray)
+        super().__init__(gpArray,parallelgegree)
         self.config_file = config_file
         self.rows = self._parseConfigFile(self.config_file)
         self.paralleldegree = parallelgegree
