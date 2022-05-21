@@ -2,7 +2,7 @@
 
 The `pg_stat_all_tables` view shows one row for each table in the current database \(including TOAST tables\) to display statistics about accesses to that specific table.
 
-The `pg_stat_user_tables` and `pg_stat_sys_table`s views contain the same information, but filtered to only show user and system tables respectively.
+The `pg_stat_user_tables` and `pg_stat_sys_table` views contain the same information, but filtered to only show user and system tables respectively.
 
 |Column|Type|Description|
 |------|----|-----------|

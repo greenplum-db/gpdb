@@ -58,10 +58,10 @@ configuration
 runtime
 :   One element for each specific container available in the system. These are child elements of the `configuration` element.
 
-:   id
+id
 :   Required. The value is used to reference a Docker container from a PL/Container user-defined function. The `id` value must be unique in the configuration. The `id` must start with a character or digit \(a-z, A-Z, or 0-9\) and can contain characters, digits, or the characters `_` \(underscore\), `.` \(period\), or `-` \(dash\). Maximum length is 63 Bytes.
 
-    The `id` specifies which Docker image to use when PL/Container creates a Docker container to run a user-defined function.
+:    The `id` specifies which Docker image to use when PL/Container creates a Docker container to run a user-defined function.
 
 image
 :   Required. The value is the full Docker image name, including image tag. The same way you specify them for starting this container in Docker. Configuration allows to have many container objects referencing the same image name, this way in Docker they would be represented by identical containers.
@@ -125,7 +125,7 @@ settings
     cpu\_share
     :   Optional. Specify the CPU usage for each PL/Container container in the runtime. The value of the element is a positive integer. The default value is 1024. The value is a relative weighting of CPU usage compared to other containers.
 
-    :   For example, a container with a `cpu_share` of 2048 is allocated double the CPU slice time compared with container with the default value of 1024.
+    For example, a container with a `cpu_share` of 2048 is allocated double the CPU slice time compared with container with the default value of 1024.
 
     memory\_mb="size"
     :   Optional. The value specifies the amount of memory, in MB, that each container is allowed to use. Each container starts with this amount of RAM and twice the amount of swap space. The container memory consumption is limited by the host system `cgroups` configuration, which means in case of memory overcommit, the container is terminated by the system.
@@ -139,9 +139,9 @@ settings
     use\_container\_logging="\{yes \| no\}"
     :   Optional. Enables or disables Docker logging for the container. The attribute value `yes` enables logging. The attribute value `no` disables logging \(the default\).
 
-    :   The Greenplum Database server configuration parameter [log\_min\_messages](../../ref_guide/config_params/guc-list.html) controls the PL/Container log level. The default log level is `warning`. For information about PL/Container log information, see [Notes](../../analytics/pl_container_using.html).
+    The Greenplum Database server configuration parameter [log\_min\_messages](../../ref_guide/config_params/guc-list.html) controls the PL/Container log level. The default log level is `warning`. For information about PL/Container log information, see [Notes](../../analytics/pl_container_using.html).
 
-    :   By default, the PL/Container log information is sent to a system service. On Red Hat 7 or CentOS 7 systems, the log information is sent to the `journald` service. On Red Hat 6 or CentOS 6 systems, the log is sent to the `syslogd` service.
+    By default, the PL/Container log information is sent to a system service. On Red Hat 7 or CentOS 7 systems, the log information is sent to the `journald` service. On Red Hat 6 or CentOS 6 systems, the log is sent to the `syslogd` service.
 
 ## <a id="topic_v3s_qv3_kw"></a>Update the PL/Container Configuration 
 

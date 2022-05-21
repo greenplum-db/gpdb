@@ -30,7 +30,7 @@ name
 WITH \[ NO \] DATA
 :   `WITH DATA` is the default and specifies that the materialized view query is run to provide new data, and the materialized view is left in a scannable state. If `WITH NO DATA` is specified, no new data is generated and the materialized view is left in an unscannable state. An error is returned if a query attempts to access an unscannable materialized view.
 
-:   `WITH NO DATA` cannot be used with `CONCURRENLY`.
+:   `WITH NO DATA` cannot be used with `CONCURRENTLY`.
 
 ## <a id="section5"></a>Notes 
 

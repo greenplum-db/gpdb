@@ -64,9 +64,7 @@ If the standby coordinator is not accessible, you can start the system and troub
 -m
 :   Optional. Starts the coordinator instance only, which may be useful for maintenance tasks. This mode only allows connections to the coordinator in utility mode. For example:
 
-:   ```
-PGOPTIONS='-c gp_role=utility' psql
-```
+:   `PGOPTIONS='-c gp_role=utility' psql`
 
 :   The consistency of the heap checksum setting on coordinator and segment instances is not checked.
 

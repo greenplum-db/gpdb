@@ -481,7 +481,7 @@ The `on_change` option triggers statistics collection only when the number of ro
 
 ## <a id="gp_autostats_on_change_threshold"></a>gp\_autostats\_on\_change\_threshold 
 
-Specifies the threshold for automatic statistics collection when `gp_autostats_mode` is set to `on_change`. When a triggering table operation affects a number of rows exceeding this threshold, `ANALYZE`is added and statistics are collected for the table.
+Specifies the threshold for automatic statistics collection when `gp_autostats_mode` is set to `on_change`. When a triggering table operation affects a number of rows exceeding this threshold, `ANALYZE` is added and statistics are collected for the table.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
@@ -617,7 +617,7 @@ gpconfig -s 'gp_default_storage_options'
 
 |Value Range|Default|Set Classifications<sup>1</sup>|
 |-----------|-------|---------------------|
-|`appendoptimized`= `TRUE` or `FALSE`<br/><br/>`blocksize`= integer between 8192 and 2097152<br/><br/>`checksum`= `TRUE` or `FALSE`<br/><br/>`compresstype`= `ZLIB` or `ZSTD` or `QUICKLZ`<sup>2</sup> or `RLE`\_`TYPE` or `NONE`<br/><br/>`compresslevel`= integer between 0 and 19<br/><br/>`orientation`= `ROW` or `COLUMN`|`appendoptimized`=`FALSE` `blocksize`=`32768`<br/><br/>`checksum`=`TRUE`<br/><br/>`compresstype`=`none`<br/><br/>`compresslevel`=`0`<br/><br/>`orientation`=`ROW`<br/><br/>|master, session, reload|
+|`appendoptimized`= `TRUE` or `FALSE`<br/><br/>`blocksize`= integer between 8192 and 2097152<br/><br/>`checksum`= `TRUE` or `FALSE`<br/><br/>`compresstype`= `ZLIB` or `ZSTD` or `QUICKLZ`<sup>2</sup> or `RLE`\_`TYPE` or `NONE`<br/><br/>`compresslevel`= integer between 0 and 19<br/><br/>`orientation`= `ROW` \| `COLUMN`|`appendoptimized`=`FALSE`<br/><br/>`blocksize`=`32768`<br/><br/>`checksum`=`TRUE`<br/><br/>`compresstype`=`none`<br/><br/>`compresslevel`=`0`<br/><br/>`orientation`=`ROW`|master, session, reload|
 
 **Note:** <sup>1</sup>The set classification when the parameter is set at the system level with the `gpconfig` utility.
 
@@ -757,9 +757,9 @@ Enables collection of query metrics. When query metrics collection is enabled, G
 
 After changing this configuration parameter, Greenplum Database must be restarted for the change to take effect.
 
-The Greenplum Database metrics collection extension, when enabled, sends the collected metrics over UDP to a Tanzu Greenplum Command Center agent1.
+The Greenplum Database metrics collection extension, when enabled, sends the collected metrics over UDP to a Tanzu Greenplum Command Center agent<sup>1</sup>.
 
-**Note:** 1 The metrics collection extension is included in VMware's commercial version of Greenplum Database. Tanzu Greenplum Command Center is supported only with Tanzu Greenplum.
+**Note:** <sup>1</sup>The metrics collection extension is included in VMware's commercial version of Greenplum Database. Tanzu Greenplum Command Center is supported only with Tanzu Greenplum.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
@@ -1395,11 +1395,11 @@ If a database session is idle for longer than the time specified, the session wi
 
 **Note:** The `gp_vmem_protect_limit` server configuration parameter is enforced only when resource queue-based resource management is active.
 
-Sets the amount of memory \(in number of MBs\) that all postgres processes of an active segment instance can consume. If a query causes this limit to be exceeded, memory will not be allocated and the query will fail. Note that this is a local parameter and must be set for every segment in the system \(primary and mirrors\). When setting the parameter value, specify only the numeric value. For example, to specify 4096MB, use the value `4096`. Do not add the units `MB` to the value.
+Sets the amount of memory \(in number of MBs\) that all `postgres` processes of an active segment instance can consume. If a query causes this limit to be exceeded, memory will not be allocated and the query will fail. Note that this is a local parameter and must be set for every segment in the system \(primary and mirrors\). When setting the parameter value, specify only the numeric value. For example, to specify 4096MB, use the value `4096`. Do not add the units `MB` to the value.
 
 To prevent over-allocation of memory, these calculations can estimate a safe `gp_vmem_protect_limit` value.
 
-First calculate the value of gp\_vmem. This is the Greenplum Database memory available on a host.
+First calculate the value of `gp_vmem`. This is the Greenplum Database memory available on a host.
 
 -   If the total system memory is less than 256 GB, use this formula:
 
@@ -1416,15 +1416,15 @@ First calculate the value of gp\_vmem. This is the Greenplum Database memory ava
 
 where SWAP is the host swap space and RAM is the RAM on the host in GB.
 
-Next, calculate the max\_acting\_primary\_segments. This is the maximum number of primary segments that can be running on a host when mirror segments are activated due to a failure. With mirrors arranged in a 4-host block with 8 primary segments per host, for example, a single segment host failure would activate two or three mirror segments on each remaining host in the failed host's block. The max\_acting\_primary\_segments value for this configuration is 11 \(8 primary segments plus 3 mirrors activated on failure\).
+Next, calculate the `max_acting_primary_segments`. This is the maximum number of primary segments that can be running on a host when mirror segments are activated due to a failure. With mirrors arranged in a 4-host block with 8 primary segments per host, for example, a single segment host failure would activate two or three mirror segments on each remaining host in the failed host's block. The `max_acting_primary_segments` value for this configuration is 11 \(8 primary segments plus 3 mirrors activated on failure\).
 
 This is the calculation for `gp_vmem_protect_limit`. The value should be converted to MB.
 
 ```
-`gp_vmem_protect_limit` = <gp_vmem> / <acting_primary_segments>
+gp_vmem_protect_limit = <gp_vmem> / <acting_primary_segments>
 ```
 
-For scenarios where a large number of workfiles are generated, this is the calculation for gp\_vmem that accounts for the workfiles.
+For scenarios where a large number of workfiles are generated, this is the calculation for `gp_vmem` that accounts for the workfiles.
 
 -   If the total system memory is less than 256 GB:
 
@@ -1441,7 +1441,7 @@ For scenarios where a large number of workfiles are generated, this is the calcu
 
 For information about monitoring and managing workfile usage, see the *Greenplum Database Administrator Guide*.
 
-Based on the gp\_vmem value you can calculate the value for the `vm.overcommit_ratio` operating system kernel parameter. This parameter is set when you configure each Greenplum Database host.
+Based on the `gp_vmem` value you can calculate the value for the `vm.overcommit_ratio` operating system kernel parameter. This parameter is set when you configure each Greenplum Database host.
 
 ```
 vm.overcommit_ratio = (<RAM> - (0.026 * <gp_vmem>)) / <RAM>
@@ -1965,7 +1965,7 @@ GPORCA co-exists with the Postgres Planner. With GPORCA enabled, Greenplum Datab
 
 The optimizer parameter can be set for a database system, an individual database, or a session or query.
 
-For information about the Postgres Planner and GPORCA, see [Querying Data](../../admin_guide/query/topics/query.html)in the *Greenplum Database Administrator Guide*.
+For information about the Postgres Planner and GPORCA, see [Querying Data](../../admin_guide/query/topics/query.html) in the *Greenplum Database Administrator Guide*.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
@@ -1973,13 +1973,13 @@ For information about the Postgres Planner and GPORCA, see [Querying Data](../..
 
 ## <a id="optimizer_analyze_root_partition"></a>optimizer\_analyze\_root\_partition 
 
-For a partitioned table, controls whether the `ROOTPARTITION` keyword is required to collect root partition statistics when the ANALYZE command is run on the table. GPORCA uses the root partition statistics when generating a query plan. The Postgres Planner does not use these statistics.
+For a partitioned table, controls whether the `ROOTPARTITION` keyword is required to collect root partition statistics when the `ANALYZE` command is run on the table. GPORCA uses the root partition statistics when generating a query plan. The Postgres Planner does not use these statistics.
 
 The default setting for the parameter is `on`, the `ANALYZE` command can collect root partition statistics without the `ROOTPARTITION` keyword. Root partition statistics are collected when you run `ANALYZE` on the root partition, or when you run `ANALYZE` on a child leaf partition of the partitioned table and the other child leaf partitions have statistics. When the value is `off`, you must run `ANALZYE ROOTPARTITION` to collect root partition statistics.
 
 When the value of the server configuration parameter [optimizer](#optimizer) is `on` \(the default\), the value of this parameter should also be `on`. For information about collecting table statistics on partitioned tables, see [ANALYZE](../sql_commands/ANALYZE.html).
 
-For information about the Postgres Planner and GPORCA, see [Querying Data](../../admin_guide/query/topics/query.html)in the *Greenplum Database Administrator Guide*.
+For information about the Postgres Planner and GPORCA, see [Querying Data](../../admin_guide/query/topics/query.html) in the *Greenplum Database Administrator Guide*.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
@@ -2003,7 +2003,7 @@ The parameter can be set for a database system, an individual database, or a ses
 
 ## <a id="optimizer_control"></a>optimizer\_control 
 
-Controls whether the server configuration parameter optimizer can be changed with SET, the RESET command, or the Greenplum Database utility gpconfig. If the optimizer\_control parameter value is `on`, users can set the optimizer parameter. If the optimizer\_control parameter value is `off`, the optimizer parameter cannot be changed.
+Controls whether the server configuration parameter optimizer can be changed with SET, the RESET command, or the Greenplum Database utility gpconfig. If the `optimizer_control` parameter value is `on`, users can set the optimizer parameter. If the `optimizer_control` parameter value is `off`, the optimizer parameter cannot be changed.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
@@ -2051,7 +2051,7 @@ If the value is `on`, GPORCA can use the associativity transform during query op
 
 The parameter can be set for a database system, an individual database, or a session or query.
 
-For information about GPORCA, see [About GPORCA](../../admin_guide/query/topics/query-piv-optimizer.html)in the *Greenplum Database Administrator Guide*.
+For information about GPORCA, see [About GPORCA](../../admin_guide/query/topics/query-piv-optimizer.html) in the *Greenplum Database Administrator Guide*.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
@@ -2065,7 +2065,7 @@ When set to `false`, Greenplum Database always falls back to the Postgres Planne
 
 The parameter can be set for a database system, an individual database, or a session or query.
 
-For information about GPORCA, see [About GPORCA](../../admin_guide/query/topics/query-piv-optimizer.html)in the *Greenplum Database Administrator Guide*.
+For information about GPORCA, see [About GPORCA](../../admin_guide/query/topics/query-piv-optimizer.html) in the *Greenplum Database Administrator Guide*.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
@@ -2079,7 +2079,7 @@ When disabled \(`false`\), GPORCA does not generate index-only scan plan types.
 
 The parameter can be set for a database system, an individual database, or a session or query.
 
-For information about GPORCA, see [About GPORCA](../../admin_guide/query/topics/query-piv-optimizer.html)in the *Greenplum Database Administrator Guide*.
+For information about GPORCA, see [About GPORCA](../../admin_guide/query/topics/query-piv-optimizer.html) in the *Greenplum Database Administrator Guide*.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
@@ -2093,7 +2093,7 @@ The parameter can be set for a database system, an individual database, or a ses
 
 **Note:** Enabling this parameter decreases performance of short running catalog queries. To avoid this issue, set this parameter only for a session or a query.
 
-For information about GPORCA, see [About GPORCA](../../admin_guide/query/topics/query-piv-optimizer.html)in the *Greenplum Database Administrator Guide*.
+For information about GPORCA, see [About GPORCA](../../admin_guide/query/topics/query-piv-optimizer.html) in the *Greenplum Database Administrator Guide*.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
@@ -2105,7 +2105,7 @@ When GPORCA is enabled \(the default\), this parameter allows GPORCA to support 
 
 The parameter can be set for a database system, an individual database, or a session or query.
 
-For information about GPORCA, see [About GPORCA](../../admin_guide/query/topics/query-piv-optimizer.html)in the *Greenplum Database Administrator Guide*.
+For information about GPORCA, see [About GPORCA](../../admin_guide/query/topics/query-piv-optimizer.html) in the *Greenplum Database Administrator Guide*.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
@@ -2117,7 +2117,7 @@ When GPORCA is enabled \(the default\), this parameter affects the query plan al
 
 If the value is `false`, GPORCA can also consider a plan that uses `GROUP BY` columns for distribution. These plans might perform poorly when processing skew is present.
 
-For information about GPORCA, see [About GPORCA](../../admin_guide/query/topics/query-piv-optimizer.html)in the *Greenplum Database Administrator Guide*.
+For information about GPORCA, see [About GPORCA](../../admin_guide/query/topics/query-piv-optimizer.html) in the *Greenplum Database Administrator Guide*.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
@@ -2239,7 +2239,7 @@ The minidump file contains this query related information:
 
 Setting this parameter to `ALWAYS` generates a minidump for all queries. Set this parameter to `ONERROR` to minimize total optimization time.
 
-For information about GPORCA, see [About GPORCA](../../admin_guide/query/topics/query-piv-optimizer.html)in the *Greenplum Database Administrator Guide*.
+For information about GPORCA, see [About GPORCA](../../admin_guide/query/topics/query-piv-optimizer.html) in the *Greenplum Database Administrator Guide*.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
@@ -2277,7 +2277,7 @@ GPORCA determines there is skew for a Redistribute Motion when the NDV \(number 
 
 The parameter can be set for a database system, an individual database, or a session or query.
 
-For information about GPORCA, see [About GPORCA](../../admin_guide/query/topics/query-piv-optimizer.html)in the *Greenplum Database Administrator Guide*.
+For information about GPORCA, see [About GPORCA](../../admin_guide/query/topics/query-piv-optimizer.html) in the *Greenplum Database Administrator Guide*.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
@@ -2324,7 +2324,7 @@ The parameter can be set for a database system, an individual database, or a ses
 
 When GPORCA is enabled \(the default\) and this parameter is `true` \(the default\), GPORCA uses Greenplum Database memory management when running queries. When set to `false`, GPORCA uses GPORCA-specific memory management. Greenplum Database memory management allows for faster optimization, reduced memory usage during optimization, and improves GPORCA support of vmem limits when compared to GPORCA-specific memory management.
 
-For information about GPORCA, see [About GPORCA](../../admin_guide/query/topics/query-piv-optimizer.html)in the *Greenplum Database Administrator Guide*.
+For information about GPORCA, see [About GPORCA](../../admin_guide/query/topics/query-piv-optimizer.html) in the *Greenplum Database Administrator Guide*.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
@@ -2440,7 +2440,7 @@ When an SQL query reads from an external table, the parameter value specifies th
 
 The default value of 0, specifies no time out. Greenplum Database does not cancel the query.
 
-If queries that use gpfdist run a long time and then return the error "intermittent network connectivity issues", you can specify a value for readable\_external\_table\_timeout. If no data is returned by gpfdist for the specified length of time, Greenplum Database cancels the query.
+If queries that use gpfdist run a long time and then return the error "intermittent network connectivity issues", you can specify a value for `readable_external_table_timeout`. If no data is returned by gpfdist for the specified length of time, Greenplum Database cancels the query.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
@@ -2566,9 +2566,9 @@ The operating system parameter `SHMMAX` specifies maximum size of a single share
  `shared_buffers` + <other_seg_shmem>
 ```
 
-The value of other\_seg\_shmem is the portion the Greenplum Database shared memory calculation that is not accounted for by the `shared_buffers` value. The other\_seg\_shmem value will vary based on the segment configuration.
+The value of `other_seg_shmem` is the portion the Greenplum Database shared memory calculation that is not accounted for by the `shared_buffers` value. The `other_seg_shmem` value will vary based on the segment configuration.
 
-With the default Greenplum Database parameter values, the value for other\_seg\_shmem is approximately 111MB for Greenplum Database segments and approximately 79MB for the Greenplum Database master.
+With the default Greenplum Database parameter values, the value for `other_seg_shmem` is approximately 111MB for Greenplum Database segments and approximately 79MB for the Greenplum Database master.
 
 The operating system parameter `SHMALL` specifies the maximum amount of shared memory on the host. The value of `SHMALL` must be greater than this value:
 
@@ -2576,7 +2576,7 @@ The operating system parameter `SHMALL` specifies the maximum amount of shared m
  (<num_instances_per_host> * ( `shared_buffers` + <other_seg_shmem> )) + <other_app_shared_mem> 
 ```
 
-The value of other\_app\_shared\_mem is the amount of shared memory that is used by other applications and processes on the host.
+The value of `other_app_shared_mem` is the amount of shared memory that is used by other applications and processes on the host.
 
 When shared memory allocation errors occur, possible ways to resolve shared memory allocation issues are to increase `SHMMAX` or `SHMALL`, or decrease `shared_buffers` or `max_connections`.
 
@@ -2648,7 +2648,7 @@ Allocates segment host memory per query. The amount of memory allocated with thi
     ( <gp_vmem_protect_limit>GB * .9 ) / <max_expected_concurrent_queries>
     ```
 
-    For example, with a gp\_vmem\_protect\_limit set to 8192MB \(8GB\) and assuming a maximum of 40 concurrent queries with a 10% buffer, you would use the following calculation to determine the `statement_mem` value:
+    For example, with a `gp_vmem_protect_limit` set to 8192MB \(8GB\) and assuming a maximum of 40 concurrent queries with a 10% buffer, you would use the following calculation to determine the `statement_mem` value:
 
     ```
     (8GB * .9) / 40 = .18GB = 184MB

@@ -100,7 +100,7 @@ This utility performs the following tasks:
 :   Sets the maximum number of client connections allowed to the coordinator. The default is 250.
 
 -O output\_configuration\_file
-:   Optional, used during new cluster initialization. This option writes the cluster\_configuration\_file information \(used with -c\) to the specified output\_configuration\_file. This file defines the Greenplum Database members using the `QD_PRIMARY_ARRAY`, `PRIMARY_ARRAY`, and `MIRROR_ARRAY` parameters. Use this file as a template for the `-I`input\_configuration\_file option. See [Examples](#section6) for more information.
+:   Optional, used during new cluster initialization. This option writes the `cluster_configuration_file` information \(used with -c\) to the specified `output_configuration_file`. This file defines the Greenplum Database members using the `QD_PRIMARY_ARRAY`, `PRIMARY_ARRAY`, and `MIRROR_ARRAY` parameters. Use this file as a template for the `-I` `input_configuration_file` option. See [Examples](#section6) for more information.
 
 -p postgresql\_conf\_param\_file
 :   Optional. The name of a file that contains `postgresql.conf` parameter settings that you want to set for Greenplum Database. These settings will be used when the individual coordinator and segment instances are initialized. You can also set parameters after initialization using the `gpconfig` utility.

@@ -48,7 +48,7 @@ The character set support in Greenplum Database allows you to store text in a va
 
 ## <a id="topic2"></a>Setting the Character Set 
 
-gpinitsystem defines the default character set for a Greenplum Database system by reading the setting of the `ENCODING` parameter in the `gp_init_config` file at initialization time. The default character set is `UNICODE` or `UTF8`.
+`gpinitsystem` defines the default character set for a Greenplum Database system by reading the setting of the `ENCODING` parameter in the `gp_init_config` file at initialization time. The default character set is `UNICODE` or `UTF8`.
 
 You can create a database with a different character set besides what is used as the system-wide default. For example:
 
@@ -58,7 +58,7 @@ You can create a database with a different character set besides what is used as
 
 **Important:** Although you can specify any encoding you want for a database, it is unwise to choose an encoding that is not what is expected by the locale you have selected. The `LC_COLLATE` and `LC_CTYPE` settings imply a particular encoding, and locale-dependent operations \(such as sorting\) are likely to misinterpret data that is in an incompatible encoding.
 
-Since these locale settings are frozen by gpinitsystem, the apparent flexibility to use different encodings in different databases is more theoretical than real.
+Since these locale settings are frozen by `gpinitsystem`, the apparent flexibility to use different encodings in different databases is more theoretical than real.
 
 One way to use multiple encodings safely is to set the locale to `C` or `POSIX` during initialization time, thus disabling any real locale awareness.
 
@@ -112,7 +112,7 @@ Greenplum Database supports automatic character set conversion between server an
 To enable automatic character set conversion, you have to tell Greenplum Database the character set \(encoding\) you would like to use in the client. There are several ways to accomplish this:
 
 -   Using the `\encoding` command in `psql`, which allows you to change client encoding on the fly.
--   Using `SET``client_encoding TO`.
+-   Using `SET client_encoding TO`.
 
     To set the client encoding, use the following SQL command:
 
@@ -135,7 +135,7 @@ To enable automatic character set conversion, you have to tell Greenplum Databas
 -   Using the `PGCLIENTENCODING` environment variable. When `PGCLIENTENCODING` is defined in the client's environment, that client encoding is automatically selected when a connection to the server is made. \(This can subsequently be overridden using any of the other methods mentioned above.\)
 -   Setting the configuration parameter `client_encoding`. If `client_encoding` is set in the master `postgresql.conf`file, that client encoding is automatically selected when a connection to Greenplum Database is made. \(This can subsequently be overridden using any of the other methods mentioned above.\)
 
-If the conversion of a particular character is not possible " suppose you chose `EUC_JP` for the server and `LATIN1` for the client, then some Japanese characters do not have a representation in `LATIN1` " then an error is reported.
+If the conversion of a particular character is not possible (suppose you chose `EUC_JP` for the server and `LATIN1` for the client, then some Japanese characters do not have a representation in `LATIN1`) then an error is reported.
 
 If the client character set is defined as `SQL_ASCII`, encoding conversion is disabled, regardless of the server's character set. The use of `SQL_ASCII` is unwise unless you are working with all-ASCII data. `SQL_ASCII` is not supported as a server encoding.
 

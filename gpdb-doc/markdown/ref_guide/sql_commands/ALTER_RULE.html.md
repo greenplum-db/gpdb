@@ -33,3 +33,4 @@ new\_name
 
 [CREATE RULE](CREATE_RULE.html), [DROP RULE](DROP_RULE.html)
 
+**Parent topic:** [SQL Commands](../sql_commands/sql_ref.html)

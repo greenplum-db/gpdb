@@ -5,7 +5,7 @@ The `gp_distributed_log` view contains status information about distributed tran
 |column|type|references|description|
 |------|----|----------|-----------|
 |`segment_id`|smallint|gp\_segment\_configuration.content|The content id of the segment. The master is always -1 \(no content\).|
-|`dbid`|small\_int|gp\_segment\_configuration.dbid|The unique id of the segment instance.|
+|`dbid`|smallint|gp\_segment\_configuration.dbid|The unique id of the segment instance.|
 |`distributed_xid`|xid| |The global transaction id.|
 |`distributed_id`|text| |A system assigned ID for a distributed transaction.|
 |`status`|text| |The status of the distributed transaction \(Committed or Aborted\).|

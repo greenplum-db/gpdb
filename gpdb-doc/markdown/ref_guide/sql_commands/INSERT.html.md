@@ -33,7 +33,7 @@ On successful completion, an `INSERT` command returns a command tag of the form:
 INSERT <oid> <count>
 ```
 
-The count is the number of rows inserted. If count is exactly one, and the target table has OIDs, then oid is the OID assigned to the inserted row. Otherwise oid is zero.
+The count is the number of rows inserted. If count is exactly one, and the target table has OIDs, then oid is the OID assigned to the inserted row. Otherwise OID is zero.
 
 ## <a id="section5"></a>Parameters 
 

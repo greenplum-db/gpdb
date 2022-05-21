@@ -577,7 +577,7 @@ PARTITION BY LIST (code)
 
 ( PARTITION sales VALUES ('S'),
   PARTITION  returns VALUES ('R')
-) ;
+);
 ```
 
 Create a three level partitioned table using subpartition templates and default partitions at each level:
