@@ -2692,7 +2692,7 @@ The operating system parameter `SHMALL` specifies the maximum amount of shared m
  (<num_instances_per_host> * ( `shared_buffers` + <other_seg_shmem> )) + <other_app_shared_mem> 
 ```
 
-The value of other\_app\_shared\_mem is the amount of shared memory that is used by other applications and processes on the host.
+The value of `other_app_shared_mem` is the amount of shared memory that is used by other applications and processes on the host.
 
 When shared memory allocation errors occur, possible ways to resolve shared memory allocation issues are to increase `SHMMAX` or `SHMALL`, or decrease `shared_buffers` or `max_connections`.
 
