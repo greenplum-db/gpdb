@@ -819,7 +819,7 @@ cdbexplain_collectStatsFromNode(PlanState *planstate, CdbExplain_SendStatCtx *ct
 	/* If instrument has execmemused, use it; else try to query memory context */
 	if (instr->execmemused)
 	{
-		si->execmemused=instr->execmemused;
+		si->execmemused = instr->execmemused;
 	}
 	else if (planstate->node_context)
 	{
