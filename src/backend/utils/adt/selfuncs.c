@@ -4690,12 +4690,22 @@ examine_simple_variable(PlannerInfo *root, Var *var,
 			if (childrel)
 			{
 				RangeTblEntry *child_rte = NULL;
+				AttrNumber child_attno = InvalidAttrNumber;
 
 				child_rte = root->simple_rte_array[childrel->relid];
 
 				Assert(child_rte != NULL);
-				const char *attname = get_relid_attribute_name(rte->relid, var->varattno);
-				AttrNumber child_attno = get_attnum(child_rte->relid, attname);
+				/*
+				 * GPDB: #13467
+				 * If var->varattno is 0 (e.g.,SELECT DISTINCT <Table_name> FROM <Table_name>),
+				 * we will get an ERROR when we invoke get_relid_attribute_name, so just set
+				 * child_attno to zero directly.
+				 */
+				if (var->varattno != 0)
+				{
+					const char *attname = get_relid_attribute_name(rte->relid, var->varattno);
+					child_attno = get_attnum(child_rte->relid, attname);
+				}
 
 				/*
 				 * Get statistics from the child partition.

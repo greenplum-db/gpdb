@@ -22,7 +22,7 @@ This topic includes the following sections:
 -   [Building a Foreign Data Wrapper Extension with PGXS](#pkg)
 -   [Deployment Considerations](#deployconsider)
 
-**Parent topic:**[Accessing External Data with Foreign Tables](../external/g-foreign.html)
+**Parent topic:** [Accessing External Data with Foreign Tables](../external/g-foreign.html)
 
 ## <a id="reqs"></a>Requirements 
 

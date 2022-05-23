@@ -146,7 +146,7 @@ Tanzu Greenplum Text, with Solr, has many capabilities that are not available wi
 -   In addition to the large number of languages, tokenizers, and filters available from the Apache project, Tanzu Greenplum Text provides a social media tokenizer, an international text tokenizer, and a universal query parser that understands several common text search syntaxes.
 -   The Tanzu Greenplum Text API supports advanced text analysis tools, such as facetting, named entity recognition \(NER\), and parts of speech \(POS\) recognition.
 
-See the [Tanzu Greenplum Text Documentation web site](https://gptext.docs.pivotal.io) for more information.
+See the [Tanzu Greenplum Text Documentation web site](https://docs.vmware.com/en/VMware-Tanzu-Greenplum-Text/index.html) for more information.
 
-**Parent topic:**[Using Full Text Search](../textsearch/full-text-search.html)
+**Parent topic:** [Using Full Text Search](../textsearch/full-text-search.html)
 

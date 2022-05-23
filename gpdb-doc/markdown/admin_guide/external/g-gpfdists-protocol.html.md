@@ -43,5 +43,5 @@ The server configuration parameter [verify\_gpfdists\_cert](../../ref_guide/conf
 
 **Warning:** Disabling SSL certificate authentication exposes a security risk by not validating the `gpfdists` SSL certificate.
 
-**Parent topic:**[Defining External Tables](../external/g-external-tables.html)
+**Parent topic:** [Defining External Tables](../external/g-external-tables.html)
 

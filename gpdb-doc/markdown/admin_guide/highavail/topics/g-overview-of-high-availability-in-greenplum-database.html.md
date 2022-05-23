@@ -95,5 +95,5 @@ For information about using `gpbackup` and `gprestore`, see [Parallel Backup wit
 -   **[Overview of Master Mirroring](../../highavail/topics/g-overview-of-master-mirroring.html)**  
 
 
-**Parent topic:**[Enabling High Availability and Data Consistency Features](../../highavail/topics/g-enabling-high-availability-features.html)
+**Parent topic:** [Enabling High Availability and Data Consistency Features](../../highavail/topics/g-enabling-high-availability-features.html)
 

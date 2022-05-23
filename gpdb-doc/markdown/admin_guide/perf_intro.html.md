@@ -6,7 +6,7 @@ Managing system performance includes measuring performance, identifying the caus
 
 Greenplum measures database performance based on the rate at which the database management system \(DBMS\) supplies information to requesters.
 
-**Parent topic:**[Managing Performance](partV.html)
+**Parent topic:** [Managing Performance](partV.html)
 
 ## <a id="topic2"></a>Understanding the Performance Factors 
 

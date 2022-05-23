@@ -315,3 +315,14 @@ Feature: gpinitsystem tests
         And the user runs "gpinitsystem -a -c ../gpAux/gpdemo/clusterConfigFile -l /tmp/gpinitsystemtest -P 21100 -h ../gpAux/gpdemo/hostfile"
         And gpinitsystem should return a return code of 0
         Then gpstate should return a return code of 0
+
+    Scenario: gpinitsystem should create consistent port entry on segments postgresql.conf file
+        Given the database is not running
+        And the user runs command "rm -rf ../gpAux/gpdemo/datadirs/*"
+        And the user runs command "mkdir ../gpAux/gpdemo/datadirs/qddir; mkdir ../gpAux/gpdemo/datadirs/dbfast1; mkdir ../gpAux/gpdemo/datadirs/dbfast2; mkdir ../gpAux/gpdemo/datadirs/dbfast3"
+        And the user runs command "mkdir ../gpAux/gpdemo/datadirs/dbfast_mirror1; mkdir ../gpAux/gpdemo/datadirs/dbfast_mirror2; mkdir ../gpAux/gpdemo/datadirs/dbfast_mirror3"
+        And the user runs command "rm -rf /tmp/gpinitsystemtest && mkdir /tmp/gpinitsystemtest"
+        And the user runs "gpinitsystem -a -c ../gpAux/gpdemo/clusterConfigFile -l /tmp/gpinitsystemtest -P 21100 -h ../gpAux/gpdemo/hostfile"
+        And gpinitsystem should return a return code of 0
+        Then gpstate should return a return code of 0
+        And check segment conf: postgresql.conf

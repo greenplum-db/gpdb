@@ -15,7 +15,7 @@ This section contains the following topics:
 -   [jsonb Indexing](#topic_aqt_1tw_mq)
 -   [JSON Functions and Operators](#topic_gn4_x3w_mq)
 
-**Parent topic:**[Querying Data](../../query/topics/query.html)
+**Parent topic:** [Querying Data](../../query/topics/query.html)
 
 ## <a id="topic_upc_tcs_fz"></a>About JSON Data 
 

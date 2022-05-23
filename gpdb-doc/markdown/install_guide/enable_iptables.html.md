@@ -52,7 +52,7 @@ To ensure that the Greenplum Database workload does not overflow the `iptables` 
 
 The value might need to be adjusted for your hosts. To maintain the value after reboot, you can update the `/etc/sysctl.conf` file as discussed in [Setting the Greenplum Recommended OS Parameters](prep_os.html).
 
-**Parent topic:**[Installing and Upgrading Greenplum](install_guide.html)
+**Parent topic:** [Installing and Upgrading Greenplum](install_guide.html)
 
 ## <a id="topic16"></a>Example iptables Rules 
 

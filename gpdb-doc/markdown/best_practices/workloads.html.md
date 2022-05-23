@@ -129,5 +129,5 @@ Greenplum Database resource queues provide a powerful mechanism for managing the
 -   Use gptoolkit to view resource queue usage and to understand how the queues are working.
 
 
-**Parent topic:**[Greenplum Database Best Practices](intro.html)
+**Parent topic:** [Greenplum Database Best Practices](intro.html)
 

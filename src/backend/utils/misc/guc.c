@@ -2161,7 +2161,7 @@ static struct config_int ConfigureNamesInt[] =
 		{"checkpoint_timeout", PGC_SIGHUP, WAL_CHECKPOINTS,
 			gettext_noop("Sets the maximum time between automatic WAL checkpoints."),
 			NULL,
-			GUC_UNIT_S | GUC_NOT_IN_SAMPLE | GUC_NO_SHOW_ALL | GUC_DISALLOW_USER_SET
+			GUC_UNIT_S | GUC_NOT_IN_SAMPLE | GUC_DISALLOW_USER_SET
 		},
 		&CheckPointTimeout,
 		300, 30, 3600,
@@ -2810,7 +2810,7 @@ static struct config_string ConfigureNamesString[] =
 		{"archive_command", PGC_SIGHUP, WAL_ARCHIVING,
 			gettext_noop("Sets the shell command that will be called to archive a WAL file."),
 			NULL,
-			GUC_NOT_IN_SAMPLE | GUC_NO_SHOW_ALL
+			GUC_NOT_IN_SAMPLE
 		},
 		&XLogArchiveCommand,
 		"",
@@ -3207,7 +3207,7 @@ static struct config_string ConfigureNamesString[] =
 		{"data_directory", PGC_POSTMASTER, FILE_LOCATIONS,
 			gettext_noop("Sets the server's data directory."),
 			NULL,
-			GUC_SUPERUSER_ONLY | GUC_DISALLOW_IN_AUTO_FILE | GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+			GUC_SUPERUSER_ONLY | GUC_DISALLOW_IN_AUTO_FILE | GUC_NOT_IN_SAMPLE
 		},
 		&data_directory,
 		NULL,

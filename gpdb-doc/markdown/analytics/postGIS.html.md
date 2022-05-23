@@ -48,77 +48,59 @@ For a comprehensive list of PostGIS changes in PostGIS 2.5.4 and earlier, see Po
 This table lists the PostGIS extensions support by Greenplum PostGIS.
 
 <div class="tablenoborder"><table cellpadding="4" cellspacing="0" summary="" id="topic3__table_owt_4ml_xlb" class="table" frame="border" border="1" rules="all"><caption><span class="tablecap"><span class="table--title-label">Table 1. </span>Greenplum PostGIS Extensions</span></caption><colgroup><col style="width:32.786885245901644%" /><col style="width:67.21311475409836%" /></colgroup><thead class="thead" style="text-align:left;">
-            <tr class="row">
-              <th class="entry cellrowborder" style="vertical-align:top;" id="d47208e208">PostGIS Extension</th>
-
-              <th class="entry cellrowborder" style="vertical-align:top;" id="d47208e211">Greenplum PostGIS Notes</th>
-
-            </tr>
-
-          </thead>
+<tr class="row">
+<th class="entry cellrowborder" style="vertical-align:top;" id="d47208e208">PostGIS Extension</th>
+<th class="entry cellrowborder" style="vertical-align:top;" id="d47208e211">Greenplum PostGIS Notes</th>
+</tr>
+</thead>
 <tbody class="tbody">
-            <tr class="row">
-              <td class="entry cellrowborder" style="vertical-align:top;" headers="d47208e208 "><code class="ph codeph">postgis</code><p dir="ltr" class="p">PostGIS and PostGIS Raster
+<tr class="row">
+<td class="entry cellrowborder" style="vertical-align:top;" headers="d47208e208 "><code class="ph codeph">postgis</code><p dir="ltr" class="p">PostGIS and PostGIS Raster
                 support</p>
 </td>
-
-              <td class="entry cellrowborder" style="vertical-align:top;" headers="d47208e211 ">Supported. Both PostGIS and PostGIS Raster are enabled when the Greenplum
+<td class="entry cellrowborder" style="vertical-align:top;" headers="d47208e211 ">Supported. Both PostGIS and PostGIS Raster are enabled when the Greenplum
                   <code class="ph codeph">postgis</code> extension is enabled.</td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry cellrowborder" style="vertical-align:top;" headers="d47208e208 "><code class="ph codeph">postgis_tiger_geocoder</code><p class="p">The US TIGER geocoder</p>
+</tr>
+<tr class="row">
+<td class="entry cellrowborder" style="vertical-align:top;" headers="d47208e208 "><code class="ph codeph">postgis_tiger_geocoder</code><p class="p">The US TIGER geocoder</p>
 </td>
-
-              <td class="entry cellrowborder" style="vertical-align:top;" headers="d47208e211 ">Supported. Installed with Greenplum PostGIS. <p class="p">Requires the
+<td class="entry cellrowborder" style="vertical-align:top;" headers="d47208e211 ">Supported. Installed with Greenplum PostGIS. <p class="p">Requires the
                     <code class="ph codeph">postgis</code> and <code class="ph codeph">fuzzystrmatch</code>
                   extensions.</p>
 <p class="p">The US TIGER geocoder converts addresses (like a street address)
                   to geographic coordinates.</p>
 </td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry cellrowborder" style="vertical-align:top;" headers="d47208e208 "><code class="ph codeph">address_standardizer</code><p class="p">Rule-based address
+</tr>
+<tr class="row">
+<td class="entry cellrowborder" style="vertical-align:top;" headers="d47208e208 "><code class="ph codeph">address_standardizer</code><p class="p">Rule-based address
                 standardizer</p>
 </td>
-
-              <td class="entry cellrowborder" style="vertical-align:top;" headers="d47208e211 ">Supported. Installed but not enabled with Greenplum PostGIS. <p class="p">Can be used
+<td class="entry cellrowborder" style="vertical-align:top;" headers="d47208e211 ">Supported. Installed but not enabled with Greenplum PostGIS. <p class="p">Can be used
                   with TIGER geocoder.</p>
 <p class="p">A single line address parser that takes an input
                   address and normalizes it based on a set of rules stored in a table and helper
                     <code class="ph codeph">lex</code> and <code class="ph codeph">gaz</code> tables.</p>
 </td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry cellrowborder" style="vertical-align:top;" headers="d47208e208 "><code class="ph codeph">address_standardizer_data_us</code><p class="p">Sample rules tables for US
+</tr>
+<tr class="row">
+<td class="entry cellrowborder" style="vertical-align:top;" headers="d47208e208 "><code class="ph codeph">address_standardizer_data_us</code><p class="p">Sample rules tables for US
                   address data</p>
 </td>
-
-              <td class="entry cellrowborder" style="vertical-align:top;" headers="d47208e211 ">Supported. Installed but not enabled with Greenplum PostGIS.<p class="p">Can be used with
+<td class="entry cellrowborder" style="vertical-align:top;" headers="d47208e211 ">Supported. Installed but not enabled with Greenplum PostGIS.<p class="p">Can be used with
                   the address standardizer.</p>
 <p class="p">The extension contains <code class="ph codeph">gaz</code>,
                     <code class="ph codeph">lex</code>, and <code class="ph codeph">rules</code> tables for US address data. If
                   you are using other types of tables, see <a class="xref" href="#topic_wy2_rkb_3p">PostGIS Extension Limitations</a>.</p>
 </td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry cellrowborder" style="vertical-align:top;" headers="d47208e208 "><code class="ph codeph">fuzzystrmatch</code><p class="p">Fuzzy string matching</p>
+</tr>
+<tr class="row">
+<td class="entry cellrowborder" style="vertical-align:top;" headers="d47208e208 "><code class="ph codeph">fuzzystrmatch</code><p class="p">Fuzzy string matching</p>
 </td>
-
-              <td class="entry cellrowborder" style="vertical-align:top;" headers="d47208e211 ">Supported. This extension is bundled but not enabled with Greenplum
+<td class="entry cellrowborder" style="vertical-align:top;" headers="d47208e211 ">Supported. This extension is bundled but not enabled with Greenplum
                   Database.<p class="p">Required for the PostGIS TIGER geocoder.</p>
 </td>
-
-            </tr>
-
-          </tbody>
+</tr>
+</tbody>
 </table>
 </div>
 

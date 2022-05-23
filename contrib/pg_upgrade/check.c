@@ -234,10 +234,22 @@ report_clusters_compatible(void)
 {
 	if (user_opts.check)
 	{
-		pg_log(PG_REPORT, (get_check_fatal_occurred() ?
-			"\n*Some cluster objects are not compatible*\n" : "\n*Clusters are compatible*\n"));
+		if (get_check_fatal_occurred())
+		{
+			char		cwd[MAXPGPATH];
+			if (!getcwd(cwd, MAXPGPATH))
+				pg_fatal("could not determine current directory: %m\n");
+			canonicalize_path(cwd);
+
+			pg_log(PG_REPORT, "\n*Some cluster objects are not compatible*\n\npg_upgrade check output files are located:\n%s\n\n", cwd);
+		} else
+			pg_log(PG_REPORT, "\n*Clusters are compatible*\n");
+
+
 		/* stops new cluster */
 		stop_postmaster(false);
+		if (get_check_fatal_occurred())
+			exit(1);
 		exit(0);
 	}
 

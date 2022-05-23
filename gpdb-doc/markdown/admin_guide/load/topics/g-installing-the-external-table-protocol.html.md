@@ -18,8 +18,8 @@ The manual pages for the C compiler `cc` and the link editor `ld` for your opera
 
 The compiled code \(shared object file\) for the custom protocol must be placed in the same location on every host in your Greenplum Database array \(master and all segments\). This location must also be in the `LD_LIBRARY_PATH` so that the server can locate the files. It is recommended to locate shared libraries either relative to `$libdir` \(which is located at `$GPHOME/lib`\) or through the dynamic library path \(set by the `dynamic_library_path` server configuration parameter\) on all master segment instances in the Greenplum Database array. You can use the Greenplum Database utilities gpssh and `gpscp` to update segments.
 
--   **[gpextprotocal.c](../../load/topics/g-gpextprotocal.c.html)**  
+-   **[gpextprotocal.c](../../load/topics/g-gpextprotocalc.html)**  
 
 
-**Parent topic:**[Example Custom Data Access Protocol](../../load/topics/g-example-custom-data-access-protocol.html)
+**Parent topic:** [Example Custom Data Access Protocol](../../load/topics/g-example-custom-data-access-protocol.html)
 

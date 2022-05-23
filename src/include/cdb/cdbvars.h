@@ -815,6 +815,9 @@ extern int gp_workfile_bytes_to_checksum;
 
 extern bool coredump_on_memerror;
 
+/* Greenplum resource group query_mem re-calculate on QE */
+extern bool gp_resource_group_enable_recalculate_query_mem;
+
 /*
  * Autostats feature, whether or not to to automatically run ANALYZE after 
  * insert/delete/update/ctas or after ctas/copy/insert in case the target

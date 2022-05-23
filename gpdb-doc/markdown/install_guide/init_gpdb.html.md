@@ -13,7 +13,7 @@ This chapter contains the following topics:
 -   [Setting Greenplum Environment Variables](#topic8)
 -   [Next Steps](#topic9)
 
-**Parent topic:**[Installing and Upgrading Greenplum](install_guide.html)
+**Parent topic:** [Installing and Upgrading Greenplum](install_guide.html)
 
 ## <a id="topic2"></a>Overview 
 

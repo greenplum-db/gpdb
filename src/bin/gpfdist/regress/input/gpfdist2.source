@@ -925,7 +925,7 @@ LOCATION
 FORMAT 'text'
 (
         DELIMITER AS ','
-)
+) LOG ERRORS SEGMENT REJECT LIMIT 2
 ;
 SELECT count(*) FROM ext_test;
 DROP EXTERNAL TABLE ext_test;

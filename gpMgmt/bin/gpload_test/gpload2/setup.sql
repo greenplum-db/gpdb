@@ -45,5 +45,6 @@ CREATE TABLE testtruncate (
             n1 smallint, n2 integer, n3 bigint, n4 decimal,
             n5 numeric, n6 real, n7 double precision) DISTRIBUTED BY (n1);
 INSERT INTO testtruncate VALUES('ttt','ttgt','shpits', '2011-06-01 12:30:30',16,732,834567,45.67,789.123,7.12345,156.456178);
-CREATE TABLE prices (itemnumber integer, price decimal ) DISTRIBUTED BY (itemnumber)
-
+CREATE TABLE prices (itemnumber integer, price decimal ) DISTRIBUTED BY (itemnumber);
+CREATE TABLE testdk1 (c1 int, "C#2" text, "C#3" text) DISTRIBUTED BY ("C#2");
+CREATE TABLE testdk2 (c1 int, "C#2" text, "C#3" text) DISTRIBUTED REPLICATED;

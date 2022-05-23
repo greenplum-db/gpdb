@@ -22,5 +22,5 @@ Master parameter settings in the master `postgresql.conf`file are the system-wid
 
 For details about the server configuration parameters, see the *Greenplum Database Reference Guide*.
 
-**Parent topic:**[Setting a Master Configuration Parameter](../topics/g-setting-a-master-configuration-parameter.html)
+**Parent topic:** [Setting a Master Configuration Parameter](../topics/g-setting-a-master-configuration-parameter.html)
 

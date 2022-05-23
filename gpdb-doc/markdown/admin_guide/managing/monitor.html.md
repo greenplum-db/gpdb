@@ -8,13 +8,13 @@ Observing the Greenplum Database system day-to-day performance helps administrat
 
 Also, be sure to review [Recommended Monitoring and Maintenance Tasks](../monitoring/monitoring.html) for monitoring activities you can script to quickly detect problems in the system.
 
-**Parent topic:**[Managing a Greenplum System](../managing/partII.html)
+**Parent topic:** [Managing a Greenplum System](../managing/partII.html)
 
 ## <a id="topic2"></a>Monitoring Database Activity and Performance 
 
 Greenplum Database includes an optional system monitoring and management database, `gpperfmon`, that administrators can enable. The `gpperfmon_install` command-line utility creates the `gpperfmon` database and enables data collection agents that collect and store query and system metrics in the database. Administrators can query metrics in the `gpperfmon` database. See the documentation for the `gpperfmon` database in the _Greenplum Database Reference Guide_.
 
-VMware Tanzu Greenplum Command Center, an optional web-based interface, provides cluster status information, graphical administrative tools, real-time query monitoring, and historical cluster and query data. Download the Greenplum Command Center package from [VMware Tanzu Network](https://network.pivotal.io/products/pivotal-gpdb) and view the documentation at the [Greenplum Command Center Documentation](http://gpcc.docs.pivotal.io) web site.
+VMware Tanzu Greenplum Command Center, an optional web-based interface, provides cluster status information, graphical administrative tools, real-time query monitoring, and historical cluster and query data. Download the Greenplum Command Center package from [VMware Tanzu Network](https://network.pivotal.io/products/pivotal-gpdb) and view the documentation at the [Greenplum Command Center Documentation](http://docs.vmware.com/en/VMware-Tanzu-Greenplum-Command-Center/index.html) web site.
 
 ## <a id="topic3"></a>Monitoring System State 
 

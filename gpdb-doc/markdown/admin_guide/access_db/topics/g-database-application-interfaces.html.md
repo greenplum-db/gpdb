@@ -21,5 +21,5 @@ General instructions for accessing a Greenplum Database with an API are:
 
 Download the appropriate driver and configure connectivity to your Greenplum Database master instance.
 
-**Parent topic:**[Accessing the Database](../../access_db/topics/g-accessing-the-database.html)
+**Parent topic:** [Accessing the Database](../../access_db/topics/g-accessing-the-database.html)
 

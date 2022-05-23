@@ -15,5 +15,5 @@ Greenplum Database provides features to help you prioritize and allocate resourc
 -   **[Investigating a Performance Problem](perf_troubleshoot.html)**  
 This section provides guidelines for identifying and troubleshooting performance problems in a Greenplum Database system.
 
-**Parent topic:**[Greenplum Database Administrator Guide](admin_guide.html)
+**Parent topic:** [Greenplum Database Administrator Guide](admin_guide.html)
 

@@ -16,5 +16,5 @@ You can optionally declare a distribution policy for your writable external tabl
 -   **[Example 2—Hadoop file server \(pxf\)](../../load/topics/g-example-2-hadoop-file-server.html)**  
 
 
-**Parent topic:**[Unloading Data from Greenplum Database](../../load/topics/g-unloading-data-from-greenplum-database.html)
+**Parent topic:** [Unloading Data from Greenplum Database](../../load/topics/g-unloading-data-from-greenplum-database.html)
 

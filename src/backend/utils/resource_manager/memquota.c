@@ -961,7 +961,7 @@ int64
 ResourceManagerGetQueryMemoryLimit(PlannedStmt* stmt)
 {
 	if (Gp_role != GP_ROLE_DISPATCH)
-		return 0;
+		return stmt->query_mem;
 
 	/* no limits in single user mode. */
 	if (!IsUnderPostmaster)

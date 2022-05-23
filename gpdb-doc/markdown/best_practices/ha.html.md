@@ -4,7 +4,7 @@ title: High Availability
 
 Greenplum Database supports highly available, fault-tolerant database services when you enable and properly configure Greenplum high availability features. To guarantee a required level of service, each component must have a standby ready to take its place if it should fail.
 
-**Parent topic:**[Greenplum Database Best Practices](intro.html)
+**Parent topic:** [Greenplum Database Best Practices](intro.html)
 
 ## <a id="topic_vrb_sxc_54"></a>Disk Storage 
 
@@ -99,7 +99,7 @@ Finally, through native API integration, Greenplum Database can stream backups d
 
 -   Back up Greenplum databases regularly unless the data is easily restored from sources.
 
--   Use the `gpbackup` command to specify only the schema and tables that you want backed up. See the [gpbackup](https://gpdb.docs.pivotal.io/latest/utility_guide/ref/gpbackup.html) reference for more information.
+-   Use the `gpbackup` command to specify only the schema and tables that you want backed up. See the [gpbackup](../utility_guide/ref/gpbackup.html) reference for more information.
 
 -   `gpbackup` places `SHARED ACCESS` locks on the set of tables to back up. Backups with fewer tables are more efficient for selectively restoring schemas and tables, since `gprestore` does not have to search through the entire database.
 
@@ -135,7 +135,7 @@ The Greenplum Database server `ftsprobe` subprocess handles fault detection. `ft
 
 ## <a id="topic_ngz_qf4_tt"></a>Segment Mirroring Configurations 
 
-Segment mirroring allows database queries to fail over to a backup segment if the primary segment fails or becomes unavailable. Pivotal requires mirroring for supported production Greenplum Database systems.
+Segment mirroring allows database queries to fail over to a backup segment if the primary segment fails or becomes unavailable. VMware requires mirroring for supported production Greenplum Database systems.
 
 A primary segment and its mirror must be on different hosts to ensure high availability. Each host in a Greenplum Database system has the same number of primary segments and mirror segments. Multi-homed hosts should have the same numbers of primary and mirror segments on each interface. This ensures that segment hosts and network resources are equally loaded when all primary segments are operational and brings the most resources to bear on query processing.
 

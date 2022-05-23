@@ -443,3 +443,39 @@ def test_261_gpload_custom_format():
     runfile(file)
     copy_data('external_file_261.txt','data_file.txt')
     write_config_file(reuse_tables=True,log_errors=True,error_limit=2,sql=True,before='set dataflow.prefer_custom_text = false;',file='data_file.txt',table='texttable2')
+
+
+@pytest.mark.order(262)
+@prepare_before_test(num=262)
+def test_262_gpload_tabel_distributed_key():
+    "262 test gpload create staging table distributed by the target table columns"
+    copy_data('external_file_262.txt','data_file.txt')
+    match_col = ["c1"]
+    update_col = ["'\"C#3\"'"]
+    write_config_file(mode='merge', 
+                      match_columns=match_col, 
+                      update_columns=update_col, 
+                      file='data_file.txt', 
+                      table='testdk1')
+    f = open(mkpath('query262.sql'),'a')
+    f.write("""\\! psql -d reuse_gptest -c '\d staging_gpload_*'""")
+    f.close()
+
+
+@pytest.mark.order(263)
+@prepare_before_test(num=263)
+def test_263_gpload_tabel_distributed_key():
+    "263 test gpload create staging table distributed by the match columns"
+    file = mkpath('setup.sql')
+    runfile(file)
+    copy_data('external_file_262.txt','data_file.txt')
+    match_col = ["c1"]
+    update_col = ["'\"C#3\"'"]
+    write_config_file(mode='merge', 
+                      match_columns=match_col, 
+                      update_columns=update_col, 
+                      file='data_file.txt', 
+                      table='testdk2')
+    f = open(mkpath('query263.sql'),'a')
+    f.write("""\\! psql -d reuse_gptest -c '\d staging_gpload_*'""")
+    f.close()

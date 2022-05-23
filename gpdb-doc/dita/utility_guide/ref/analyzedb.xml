@@ -55,14 +55,17 @@ analyzedb { -? | -h | --help }</codeblock>
         <b>Partitioned Append-Optimized Tables</b>
         <p>For a partitioned, append-optimized table, <cmdname>analyzedb</cmdname> checks the
           partitioned table root partition and leaf partitions. If needed, the utility updates
-          statistics for non-current partitions and the root partition. </p>
-        <p dir="ltr">The root partition statistics is required by GPORCA. The
-            <cmdname>analyzedb</cmdname> utility collects statistics on the root partition of a
-          partitioned table if the statistics do not exist. If any of the leaf partitions have stale
-          statistics, <cmdname>analyzedb</cmdname> also refreshes the root partition statistics. The
-          cost of refreshing the root level statistics is comparable to analyzing one leaf
-          partition.</p>
-      </sectiondiv>
+          statistics for non-current partitions and the root partition. For information about how
+          statistics are collected for partitioned tables, see <codeph><xref
+              href="../../ref_guide/sql_commands/ANALYZE.xml"
+        >ANALYZE</xref></codeph>.</p>
+        <p><codeph>analyzedb</codeph> must sample additional partitions within a partitioned
+          table when it encounters a stale partition, even when statistics are already
+          collected. Consider it a best practice to run <codeph>analyzedb</codeph> on the
+          root partition any time that you add a new partition(s) to a partitioned table.
+          This operation both analyzes the child leaf partitions in parallel and merges
+          any updated statistics into the root partition.</p>
+    </sectiondiv>
     </section>
     <section><title>Notes</title><p>The <cmdname>analyzedb</cmdname> utility updates append
         optimized table statistics if the table has been modified by DML or DDL commands, including
