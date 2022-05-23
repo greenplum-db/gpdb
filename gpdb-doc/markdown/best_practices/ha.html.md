@@ -135,7 +135,7 @@ The Greenplum Database server `ftsprobe` subprocess handles fault detection. `ft
 
 ## <a id="topic_ngz_qf4_tt"></a>Segment Mirroring Configurations 
 
-Segment mirroring allows database queries to fail over to a backup segment if the primary segment fails or becomes unavailable. Pivotal requires mirroring for supported production Greenplum Database systems.
+Segment mirroring allows database queries to fail over to a backup segment if the primary segment fails or becomes unavailable. VMware requires mirroring for supported production Greenplum Database systems.
 
 A primary segment and its mirror must be on different hosts to ensure high availability. Each host in a Greenplum Database system has the same number of primary segments and mirror segments. Multi-homed hosts should have the same numbers of primary and mirror segments on each interface. This ensures that segment hosts and network resources are equally loaded when all primary segments are operational and brings the most resources to bear on query processing.
 
