@@ -1269,6 +1269,8 @@ jobs:
         - gp_dispatch_keepalives_idle=30
         - gp_dispatch_keepalives_interval=10
         - gp_dispatch_keepalives_count=4
+        - max_replication_slots=0
+        - wal_keep_segments=0
 
 - name: unit_tests_gporca_centos7
   plan:
@@ -1445,6 +1447,8 @@ jobs:
         - gp_dispatch_keepalives_idle=30
         - gp_dispatch_keepalives_interval=10
         - gp_dispatch_keepalives_count=4
+        - max_replication_slots=0
+        - wal_keep_segments=0
 
 - name: unit_tests_gporca_rhel8
   plan:
@@ -1577,6 +1581,8 @@ jobs:
         - gp_dispatch_keepalives_idle=30
         - gp_dispatch_keepalives_interval=10
         - gp_dispatch_keepalives_count=4
+        - max_replication_slots=0
+        - wal_keep_segments=0
 
 {% endif %}
 - name: gate_icw_end
@@ -1973,6 +1979,8 @@ jobs:
                 - gp_dispatch_keepalives_idle=30
                 - gp_dispatch_keepalives_interval=10
                 - gp_dispatch_keepalives_count=4
+                - max_replication_slots=0
+                - wal_keep_segments=0
               BEHAVE_FLAGS: --tags=[[ test.name ]] --tags=concourse_cluster --tags=cli_mirrorless
               TEST_NAME: [[ test.name ]]_mirrorless
               {% endif %}
@@ -2022,6 +2030,8 @@ jobs:
                   - gp_dispatch_keepalives_idle=30
                   - gp_dispatch_keepalives_interval=10
                   - gp_dispatch_keepalives_count=4
+                  - max_replication_slots=0
+                  - wal_keep_segments=0
 
               BEHAVE_FLAGS: --tags=[[ test.name ]] --tags=~concourse_cluster,demo_cluster --tags=cli_mirrorless
               TEST_NAME: [[ test.name ]]_mirrorless
@@ -2131,6 +2141,8 @@ jobs:
                 - gp_dispatch_keepalives_idle=30
                 - gp_dispatch_keepalives_interval=10
                 - gp_dispatch_keepalives_count=4
+                - max_replication_slots=0
+                - wal_keep_segments=0
               BEHAVE_FLAGS: --tags=[[ test.name ]] --tags=concourse_cluster --tags=cli_mirrorless
               {% endif %}
               {% if test.set_max_connections %}
@@ -2164,6 +2176,8 @@ jobs:
                 - gp_dispatch_keepalives_idle=30
                 - gp_dispatch_keepalives_interval=10
                 - gp_dispatch_keepalives_count=4
+                - max_replication_slots=0
+                - wal_keep_segments=0
               BEHAVE_FLAGS: --tags=[[ test.name ]] --tags=~concourse_cluster,demo_cluster --tags=cli_mirrorless
               {% endif %}
               [[ test.env ]]
@@ -2254,6 +2268,8 @@ jobs:
               - gp_dispatch_keepalives_idle=30
               - gp_dispatch_keepalives_interval=10
               - gp_dispatch_keepalives_count=4
+              - max_replication_slots=0
+              - wal_keep_segments=0
             BEHAVE_FLAGS: --tags=[[ test.name ]] --tags=concourse_cluster --tags=cli_mirrorless
             {% endif %}
             [[ test.env ]]
@@ -2283,6 +2299,8 @@ jobs:
                 - gp_dispatch_keepalives_idle=30
                 - gp_dispatch_keepalives_interval=10
                 - gp_dispatch_keepalives_count=4
+                - max_replication_slots=0
+                - wal_keep_segments=0
             BEHAVE_FLAGS: --tags=[[ test.name ]] --tags=~concourse_cluster,demo_cluster --tags=cli_mirrorless
             {% endif %}
             [[ test.env ]]
