@@ -46,7 +46,7 @@ Efficient processing of very large graphs can be challenging. Greenplum offers a
 
 **Installing Graph Modules**
 
-To use the MADlib graph modules, install the version of MADlib corresponding to your Greenplum Database version. To download the software, access the VMware Tanzu Network. For Greenplum 6.x, see [Installing MADlib](http://greenplum.docs.pivotal.io/6latest/analytics/madlib.html#topic3).
+To use the MADlib graph modules, install the version of MADlib corresponding to your Greenplum Database version. To download the software, access the VMware Tanzu Network. For Greenplum 6.x, see [Installing MADlib](./madlib.html#topic3).
 
 Graph modules on MADlib support many algorithms.
 

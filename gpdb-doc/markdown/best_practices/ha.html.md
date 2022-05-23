@@ -99,7 +99,7 @@ Finally, through native API integration, Greenplum Database can stream backups d
 
 -   Back up Greenplum databases regularly unless the data is easily restored from sources.
 
--   Use the `gpbackup` command to specify only the schema and tables that you want backed up. See the [gpbackup](https://gpdb.docs.pivotal.io/latest/utility_guide/ref/gpbackup.html) reference for more information.
+-   Use the `gpbackup` command to specify only the schema and tables that you want backed up. See the [gpbackup](../utility_guide/ref/gpbackup.html) reference for more information.
 
 -   `gpbackup` places `SHARED ACCESS` locks on the set of tables to back up. Backups with fewer tables are more efficient for selectively restoring schemas and tables, since `gprestore` does not have to search through the entire database.
 

@@ -362,9 +362,9 @@ These Greenplum Database extensions are installed with Greenplum Database
 
 -   Greenplum Platform Extension Framework \(PXF\) - PXF provides access to Hadoop, object store, and SQL external data stores. Refer to [Accessing External Data with PXF](../admin_guide/external/pxf-overview.html) in the *Greenplum Database Administrator Guide* for PXF configuration and usage information.
 
-    **Note:** VMware Tanzu Greenplum Database versions starting with 6.19.0 no longer bundle a version of PXF. You can install PXF in your Greenplum cluster by installing [the independent distribution of PXF](https://greenplum.docs.pivotal.io/pxf/latest/release/release-notes.html) as described in the PXF documentation.
--   Greenplum Streaming Server v1.5.3 - The Tanzu Greenplum Streaming Server is an ETL tool that provides high speed, parallel data transfer from Informatica, Kafka, Apache NiFi and custom client data sources to a Tanzu Greenplum cluster. Refer to the [Tanzu Greenplum Streaming Server](https://greenplum.docs.pivotal.io/streaming-server/1-5/intro.html) Documentation for more information about this feature.
--   Greenplum Streaming Server Kafka integration - The Kafka integration provides high speed, parallel data transfer from a Kafka cluster to a Greenplum Database cluster for batch and streaming ETL operations. It requires Kafka version 0.11 or newer for exactly-once delivery assurance. Refer to the [Tanzu Greenplum Streaming Server](https://greenplum.docs.pivotal.io/streaming-server/1-5/kafka/intro.html) Documentation for more information about this feature.
+    **Note:** VMware Tanzu Greenplum Database versions starting with 6.19.0 no longer bundle a version of PXF. You can install PXF in your Greenplum cluster by installing [the independent distribution of PXF](https://docs.vmware.com/en/VMware-Tanzu-Greenplum-Platform-Extension-Framework/index.html) as described in the PXF documentation.
+-   Greenplum Streaming Server v1.5.3 - The Tanzu Greenplum Streaming Server is an ETL tool that provides high speed, parallel data transfer from Informatica, Kafka, Apache NiFi and custom client data sources to a Tanzu Greenplum cluster. Refer to the [Tanzu Greenplum Streaming Server](https://docs.vmware.com/en/VMware-Tanzu-Greenplum-Streaming-Server/index.html) Documentation for more information about this feature.
+-   Greenplum Streaming Server Kafka integration - The Kafka integration provides high speed, parallel data transfer from a Kafka cluster to a Greenplum Database cluster for batch and streaming ETL operations. It requires Kafka version 0.11 or newer for exactly-once delivery assurance. Refer to the [Tanzu Greenplum Streaming Server](https://docs.vmware.com/en/VMware-Tanzu-Greenplum-Streaming-Server/index.html) Documentation for more information about this feature.
 -   Greenplum Connector for Apache Spark v1.6.2 - The Tanzu Greenplum Connector for Apache Spark supports high speed, parallel data transfer between Greenplum and an Apache Spark cluster using Spark’s Scala API.
 -   Greenplum Connector for Apache NiFi v1.0.0 - The Tanzu Greenplum Connector for Apache NiFi enables you to set up a NiFi dataflow to load record-oriented data from any source into Greenplum Database.
 -   Greenplum Informatica Connector v1.0.5 - The Tanzu Greenplum Connector for Informatica supports high speed data transfer from an Informatica PowerCenter cluster to a Tanzu Greenplum cluster for batch and streaming ETL operations.
@@ -378,15 +378,15 @@ Connecting to IBM Cognos software with an ODBC driver is not supported. Greenplu
 
 ### <a id="topic_ncl_w1d_r1b"></a>Tanzu Greenplum Text 
 
-Tanzu Greenplum 6.0 through 6.4 are compatible with Tanzu Greenplum Text 3.3.1 through 3.4.1. Tanzu Greenplum 6.5 and later are compatible with Tanzu Greenplum Text 3.4.2 and later. See the [Greenplum Text documentation](http://gptext.docs.pivotal.io) for additional compatibility information.
+Tanzu Greenplum 6.0 through 6.4 are compatible with Tanzu Greenplum Text 3.3.1 through 3.4.1. Tanzu Greenplum 6.5 and later are compatible with Tanzu Greenplum Text 3.4.2 and later. See the [Greenplum Text documentation](http://docs.vmware.com/en/VMware-Tanzu-Greenplum-Text/index.html) for additional compatibility information.
 
 ### <a id="topic_zkq_j5b_hbb"></a>Greenplum Command Center 
 
-Tanzu Greenplum 6.15 is compatible only with Tanzu Greenplum Command Center 6.4.0 and later. See the [Greenplum Command Center documentation](http://gpcc.docs.pivotal.io) for additional compatibility information.
+Tanzu Greenplum 6.15 is compatible only with Tanzu Greenplum Command Center 6.4.0 and later. See the [Greenplum Command Center documentation](http://docs.vmware.com/en/VMware-Tanzu-Greenplum-Command-Center/index.html) for additional compatibility information.
 
 ## <a id="topic36"></a>Hadoop Distributions 
 
-Greenplum Database provides access to HDFS with the [Greenplum Platform Extension Framework \(PXF\)](https://greenplum.docs.pivotal.io/pxf/using/overview_pxf.html).
+Greenplum Database provides access to HDFS with the [Greenplum Platform Extension Framework \(PXF\)](https://docs.vmware.com/en/VMware-Tanzu-Greenplum-Platform-Extension-Framework/index.html).
 
 PXF can use Cloudera, Hortonworks Data Platform, MapR, and generic Apache Hadoop distributions. PXF bundles all of the JAR files on which it depends, including the following Hadoop libraries:
 
