@@ -189,6 +189,13 @@ cdbpath_create_motion_path(PlannerInfo *root,
 		if (CdbPathLocus_IsSegmentGeneral(subpath->locus))
 		{
 			/*
+			 * If the subpath requires parameters, we cannot generate Motion atop of it.
+			 * See Github Issue 13532 for details.
+			 */
+			if (!bms_is_empty(PATH_REQ_OUTER(subpath)))
+				return NULL;
+
+			/*
 			 * Data is only available on segments, to distingush it with
 			 * CdbLocusType_General, adding a motion to indicated this
 			 * slice must be executed on a singleton gang.
@@ -2091,7 +2098,13 @@ turn_volatile_seggen_to_singleqe(PlannerInfo *root, Path *path, Node *node)
 		CdbPathLocus_MakeSingleQE(&singleQE,
 								  CdbPathLocus_NumSegments(path->locus));
 		mpath = cdbpath_create_motion_path(root, path, NIL, false, singleQE);
-		Assert(mpath);
+		/*
+		 * mpath might be NULL, like path contain outer Params
+		 * See Github Issue 13532 for details.
+		 */
+		if (mpath == NULL)
+			return path;
+
 		ppath =  create_projection_path_with_quals(root, mpath->parent, mpath, NIL);
 		ppath->force = true;
 		return (Path *) ppath;

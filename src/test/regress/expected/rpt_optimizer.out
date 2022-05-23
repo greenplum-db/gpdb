@@ -123,10 +123,10 @@ insert into foo values (1,'aaa');
 insert into foo values (2,'bbb');
 -- fail
 insert into foo values (1,'ccc');
-ERROR:  duplicate key value violates unique constraint "foo_pkey"  (seg0 192.168.99.102:25432 pid=22681)
+ERROR:  duplicate key value violates unique constraint "foo_pkey"  (seg0 127.0.1.1:6002 pid=287620)
 DETAIL:  Key (id)=(1) already exists.
 insert into foo values (3,'aaa');
-ERROR:  duplicate key value violates unique constraint "foo_name_key"  (seg2 192.168.99.102:25434 pid=22683)
+ERROR:  duplicate key value violates unique constraint "foo_name_key"  (seg0 127.0.1.1:6002 pid=287620)
 DETAIL:  Key (name)=(aaa) already exists.
 drop table if exists foo;
 --
@@ -226,15 +226,14 @@ drop table if exists bar;
 -- CTAS from partition table table
 create table foo as select i as c1, i as c2
 from generate_series(1,3) i;
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'c1' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause. Creating a NULL policy entry.
 create table bar as select * from foo distributed replicated;
 select * from bar;
  c1 | c2 
 ----+----
   1 |  1
-  2 |  2
   3 |  3
+  2 |  2
 (3 rows)
 
 drop table if exists foo;
@@ -242,8 +241,7 @@ drop table if exists bar;
 -- CTAS from singleQE 
 create table foo as select i as c1, i as c2
 from generate_series(1,3) i;
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'c1' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause. Creating a NULL policy entry.
 select * from foo;
  c1 | c2 
 ----+----
@@ -344,14 +342,14 @@ Distributed Replicated
 select * from foo;
  x  | y  
 ----+----
-  1 |  1
   2 |  2
   3 |  3
   4 |  4
-  5 |  5
-  6 |  6
   7 |  7
   8 |  8
+  1 |  1
+  5 |  5
+  6 |  6
   9 |  9
  10 | 10
 (10 rows)
@@ -359,46 +357,46 @@ select * from foo;
 select * from foo1;
  x  | y  
 ----+----
-  1 |  1
-  2 |  2
-  3 |  3
-  4 |  4
-  5 |  5
   6 |  6
-  7 |  7
   8 |  8
   9 |  9
  10 | 10
+  1 |  1
+  3 |  3
+  4 |  4
+  5 |  5
+  2 |  2
+  7 |  7
 (10 rows)
 
 select * from bar;
  x  | y  
 ----+----
-  1 |  1
   2 |  2
   3 |  3
   4 |  4
-  5 |  5
-  6 |  6
   7 |  7
   8 |  8
+  5 |  5
+  6 |  6
   9 |  9
  10 | 10
+  1 |  1
 (10 rows)
 
 select * from bar1;
  x  | y  
 ----+----
-  1 |  1
-  2 |  2
-  3 |  3
-  4 |  4
-  5 |  5
   6 |  6
+  1 |  1
+  4 |  4
   7 |  7
   8 |  8
   9 |  9
  10 | 10
+  2 |  2
+  3 |  3
+  5 |  5
 (10 rows)
 
 -- alter back
@@ -444,60 +442,60 @@ select * from foo;
  x  | y  
 ----+----
   1 |  1
+  5 |  5
+  6 |  6
+  9 |  9
+ 10 | 10
   2 |  2
   3 |  3
   4 |  4
-  5 |  5
-  6 |  6
   7 |  7
   8 |  8
-  9 |  9
- 10 | 10
 (10 rows)
 
 select * from foo1;
  x  | y  
 ----+----
-  1 |  1
   2 |  2
-  3 |  3
-  4 |  4
-  5 |  5
-  6 |  6
   7 |  7
+  6 |  6
   8 |  8
   9 |  9
  10 | 10
+  1 |  1
+  3 |  3
+  4 |  4
+  5 |  5
 (10 rows)
 
 select * from bar;
  x  | y  
 ----+----
   1 |  1
+  5 |  5
+  6 |  6
+  9 |  9
+ 10 | 10
   2 |  2
   3 |  3
   4 |  4
-  5 |  5
-  6 |  6
   7 |  7
   8 |  8
-  9 |  9
- 10 | 10
 (10 rows)
 
 select * from bar1;
  x  | y  
 ----+----
-  1 |  1
-  2 |  2
-  3 |  3
-  4 |  4
-  5 |  5
   6 |  6
-  7 |  7
   8 |  8
+  3 |  3
+  1 |  1
   9 |  9
+  4 |  4
+  7 |  7
  10 | 10
+  2 |  2
+  5 |  5
 (10 rows)
 
 drop table if exists foo;
@@ -525,8 +523,8 @@ update foo set y = 1 from bar where bar.y = foo.y;
 select * from foo;
  x | y 
 ---+---
- 1 | 1
  2 | 1
+ 1 | 1
 (2 rows)
 
 delete from foo where y = 1;
@@ -692,7 +690,7 @@ ALTER TABLE foopart SET DISTRIBUTED REPLICATED;
 ERROR:  can't set the distribution policy of a partition table to REPLICATED
 ALTER TABLE foopart_1_prt_1 SET DISTRIBUTED REPLICATED;
 ERROR:  can't set the distribution policy of "foopart_1_prt_1"
-HINT:  Distribution policy can be set for an entire partitioned table, not for one of its leaf parts or an interior branch.
+HINT:  Distribution policy of a partition can only be the same as its parent's.
 DROP TABLE foopart;
 -- volatile replicated
 -- General and segmentGeneral locus imply that if the corresponding
@@ -793,7 +791,7 @@ explain (costs off, verbose) select * from t_hashdist left join t_replicate_vola
                        ->  Seq Scan on rpt.t_replicate_volatile t_replicate_volatile_1
                              Output: random()
  Optimizer: Postgres query optimizer
- Settings: enable_seqscan=off, optimizer=off
+ Settings: enable_bitmapscan=off, enable_seqscan=off, optimizer=off
 (20 rows)
 
 -- targetlist
@@ -899,17 +897,17 @@ explain (costs off) select a from t_replicate_volatile union all select * from n
 
 -- update & delete
 explain (costs off) update t_replicate_volatile set a = 1 where b > random();
-ERROR:  could not devise a plan (cdbpath.c:2074)
+ERROR:  could not devise a plan (cdbpath.c:2089)
 explain (costs off) update t_replicate_volatile set a = 1 from t_replicate_volatile x where x.a + random() = t_replicate_volatile.b;
-ERROR:  could not devise a plan (cdbpath.c:2074)
+ERROR:  could not devise a plan (cdbpath.c:2089)
 explain (costs off) update t_replicate_volatile set a = 1 from t_hashdist x where x.a + random() = t_replicate_volatile.b;
-ERROR:  could not devise a plan (cdbpath.c:2074)
+ERROR:  could not devise a plan (cdbpath.c:2089)
 explain (costs off) delete from t_replicate_volatile where a < random();
-ERROR:  could not devise a plan (cdbpath.c:2074)
+ERROR:  could not devise a plan (cdbpath.c:2089)
 explain (costs off) delete from t_replicate_volatile using t_replicate_volatile x where t_replicate_volatile.a + x.b < random();
-ERROR:  could not devise a plan (cdbpath.c:2074)
+ERROR:  could not devise a plan (cdbpath.c:2089)
 explain (costs off) update t_replicate_volatile set a = random();
-ERROR:  could not devise a plan (createplan.c:6488)
+ERROR:  could not devise a plan (createplan.c:6507)
 -- limit
 explain (costs off) insert into t_replicate_volatile select * from t_replicate_volatile limit 1;
                                 QUERY PLAN                                 
@@ -1017,36 +1015,31 @@ create table t1_13532(a int, b int) distributed replicated;
 create table t2_13532(a int, b int) distributed replicated;
 create index idx_t2_13532 on t2_13532(b);
 explain (costs off) select * from t1_13532 x, t2_13532 y where y.a < random() and x.b = y.b;
-                              QUERY PLAN                              
-----------------------------------------------------------------------
- Hash Join
-   Hash Cond: (x.b = y.b)
-   ->  Gather Motion 1:1  (slice1; segments: 1)
-         ->  Seq Scan on t1_13532 x
-   ->  Hash
-         ->  Result
-               ->  Gather Motion 1:1  (slice2; segments: 1)
-                     ->  Bitmap Heap Scan on t2_13532 y
-                           Filter: ((a)::double precision < random())
-                           ->  Bitmap Index Scan on idx_t2_13532
- Optimizer: Postgres query optimizer
-(11 rows)
+                        QUERY PLAN                        
+----------------------------------------------------------
+ Gather Motion 1:1  (slice1; segments: 1)
+   ->  Nested Loop
+         Join Filter: true
+         ->  Seq Scan on t1_13532
+         ->  Index Scan using idx_t2_13532 on t2_13532
+               Index Cond: (b = t1_13532.b)
+               Filter: ((a)::double precision < random())
+ Optimizer: Pivotal Optimizer (GPORCA)
+(8 rows)
 
 set enable_bitmapscan = off;
 explain (costs off) select * from t1_13532 x, t2_13532 y where y.a < random() and x.b = y.b;
-                              QUERY PLAN                              
-----------------------------------------------------------------------
- Hash Join
-   Hash Cond: (x.b = y.b)
-   ->  Gather Motion 1:1  (slice1; segments: 1)
-         ->  Seq Scan on t1_13532 x
-   ->  Hash
-         ->  Result
-               ->  Gather Motion 1:1  (slice2; segments: 1)
-                     ->  Index Scan using idx_t2_13532 on t2_13532 y
-                           Filter: ((a)::double precision < random())
- Optimizer: Postgres query optimizer
-(10 rows)
+                        QUERY PLAN                        
+----------------------------------------------------------
+ Gather Motion 1:1  (slice1; segments: 1)
+   ->  Nested Loop
+         Join Filter: true
+         ->  Seq Scan on t1_13532
+         ->  Index Scan using idx_t2_13532 on t2_13532
+               Index Cond: (b = t1_13532.b)
+               Filter: ((a)::double precision < random())
+ Optimizer: Pivotal Optimizer (GPORCA)
+(8 rows)
 
 -- start_ignore
 drop schema rpt cascade;
