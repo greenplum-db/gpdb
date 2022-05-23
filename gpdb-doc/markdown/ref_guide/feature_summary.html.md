@@ -60,7 +60,7 @@ The following features of SQL 1999 are not supported in Greenplum Database:
 7.  Prepared transactions \(`PREPARE TRANSACTION`, `COMMIT PREPARED`, `ROLLBACK PREPARED`\). This also means Greenplum does not support `XA` Transactions \(2 phase commit coordination of database transactions with external transactions\).
 8.  `CHARACTER SET` option on the definition of `CHAR()` or `VARCHAR()` columns.
 9.  Specification of `CHARACTERS` or `OCTETS` \(`BYTES`\) on the length of a `CHAR()` or `VARCHAR()` column. For example, `VARCHAR(15 CHARACTERS)` or `VARCHAR(15 OCTETS)` or `VARCHAR(15 BYTES)`.
-10. `CREATE DISTINCT TYPE`statement. `CREATE DOMAIN` can be used as a work-around in Greenplum.
+10. `CREATE DISTINCT TYPE`statement. `CREATE DOMAIN` can be used as a workaround in Greenplum.
 11. The *explicit table* construct.
 
 ### <a id="topic6"></a>SQL 2003 Conformance 
@@ -72,8 +72,8 @@ The following features of SQL 2003 are not supported in Greenplum Database:
 3.  `MULTISET` modifiers on data types.
 4.  `ROW` data type.
 5.  Greenplum Database syntax for using sequences is non-standard. For example, `nextval('``seq``')` is used in Greenplum instead of the standard `NEXT VALUE FOR``seq`.
-6.  `GENERATED ALWAYS AS`columns. Views can be used as a work-around.
-7.  The sample clause \(`TABLESAMPLE`\) on `SELECT` statements. The `random()` function can be used as a work-around to get random samples from tables.
+6.  `GENERATED ALWAYS AS`columns. Views can be used as a workaround.
+7.  The sample clause \(`TABLESAMPLE`\) on `SELECT` statements. The `random()` function can be used as a workaround to get random samples from tables.
 8.  The *partitioned join tables* construct \(`PARTITION BY` in a join\).
 9.  Greenplum array data types are almost SQL standard compliant with some exceptions. Generally customers should not encounter any problems using them.
 
