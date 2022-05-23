@@ -31,7 +31,7 @@ Feature: gprecoverseg tests involving migrating to a new host
       | one_host_down  |  "sdw1"      | "sdw5" | "sdw6"   | sdw5 | sdw2           | "gprecoverseg -a -p sdw5 --hba-hostnames"   | "hostname='sdw1' and status='u'"                      |
       | two_hosts_down |  "sdw1,sdw3" | "sdw5,sdw6" | none   | sdw5 | sdw2           | "gprecoverseg -a -p sdw5,sdw6 --hba-hostnames" | "(hostname='sdw1' or hostname='sdw3') and status='u'" |
 
- @concourse_cluster
+  @concourse_cluster
   Scenario: "gprecoverseg -p newhost" failure correctly for start failures
     Given the database is running
     And all the segments are running
