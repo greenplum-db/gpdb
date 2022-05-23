@@ -299,7 +299,7 @@ struct Tuplesortstate
 	int			memtupcount;	/* number of tuples currently present */
 	int			memtupsize;		/* allocated length of memtuples array */
 	bool		growmemtuples;	/* memtuples' growth still underway? */
-	int64       totalNumTuples;    /* count of all input tuples */ /*CDB*/
+	int64		totalNumTuples; /* count of all input tuples */ /*CDB*/
 
 	/*
 	 * Memory for tuples is sometimes allocated using a simple slab allocator,
@@ -462,12 +462,12 @@ struct Tuplesortstate
 	/* we need typelen in order to know how to copy the Datums. */
 	int			datumTypeLen;
 
-    /*   
-     * CDB: EXPLAIN ANALYZE reporting interface and statistics.
-     */
-    struct Instrumentation *instrument;
-    struct StringInfoData  *explainbuf;
-    uint64 spilledBytes;
+	/*
+	 * CDB: EXPLAIN ANALYZE reporting interface and statistics.
+	 */
+	struct Instrumentation *instrument;
+	struct StringInfoData  *explainbuf;
+	uint64 spilledBytes;
 
 	/*
 	 * Resource snapshot for time of sort start.
@@ -1718,7 +1718,6 @@ puttuple_common(Tuplesortstate *state, SortTuple *tuple)
 			 * Dump all tuples.
 			 */
 			dumptuples(state, false);
-
 			break;
 
 		case TSS_BOUNDED:
@@ -1885,22 +1884,22 @@ tuplesort_performsort(Tuplesortstate *state)
 			 */
 			dumptuples(state, true);
 
-            /* CDB: How much work_mem would be enough for in-memory sort? */
-            if (state->instrument && state->instrument->need_cdb)
-            {    
-                /*   
-                 * The workmemwanted is summed up of the following:
-                 * (1) metadata: Tuplesortstate, tuple array
-                 * (2) the total bytes for all tuples.
-                 */
-                int64   workmemwanted = 
-                    sizeof(Tuplesortstate) +
-                    ((uint64)(1 << my_log2(state->totalNumTuples))) * sizeof(SortTuple) +
-                    state->spilledBytes;
+			/* CDB: How much work_mem would be enough for in-memory sort? */
+			if (state->instrument && state->instrument->need_cdb)
+			{
+				/*
+				 * The workmemwanted is summed up of the following:
+				 * (1) metadata: Tuplesortstate, tuple array
+				 * (2) the total bytes for all tuples.
+				 */
+				int64   workmemwanted =
+					sizeof(Tuplesortstate) +
+					((uint64)(1 << my_log2(state->totalNumTuples))) * sizeof(SortTuple) +
+					state->spilledBytes;
 
-                state->instrument->workmemwanted =
-                    Max(state->instrument->workmemwanted, workmemwanted);
-            }    
+				state->instrument->workmemwanted =
+					Max(state->instrument->workmemwanted, workmemwanted);
+			}
 
 			mergeruns(state);
 			state->eof_reached = false;
@@ -3118,11 +3117,11 @@ dumptuples(Tuplesortstate *state, bool alltuples)
 			 pg_rusage_show(&state->ru_start));
 #endif
 
-    /* CDB: Accumulate total size of spilled tuples. */
-    spilledBytes = state->availMem - spilledBytes;
-    if (spilledBytes > 0) 
+	/* CDB: Accumulate total size of spilled tuples. */
+	spilledBytes = state->availMem - spilledBytes;
+	if (spilledBytes > 0)
 	{
-        state->spilledBytes += spilledBytes;
+		state->spilledBytes += spilledBytes;
 	}
 
 	if (!alltuples)
@@ -4738,9 +4737,9 @@ free_sort_tuple(Tuplesortstate *state, SortTuple *stup)
  */
 void
 tuplesort_set_instrument(Tuplesortstate            *state,
-                         struct Instrumentation    *instrument,
-                         struct StringInfoData     *explainbuf)
+						 struct Instrumentation    *instrument,
+						 struct StringInfoData     *explainbuf)
 {
-    state->instrument = instrument;
-    state->explainbuf = explainbuf;
+	state->instrument = instrument;
+	state->explainbuf = explainbuf;
 }
