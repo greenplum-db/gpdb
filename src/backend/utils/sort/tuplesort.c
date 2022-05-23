@@ -468,7 +468,6 @@ struct Tuplesortstate
     struct Instrumentation *instrument;
     struct StringInfoData  *explainbuf;
     uint64 spilledBytes;
-    uint64 memUsedBeforeSpill; /* memory that is used at the time of spilling */
 
 	/*
 	 * Resource snapshot for time of sort start.
@@ -1709,8 +1708,6 @@ puttuple_common(Tuplesortstate *state, SortTuple *tuple)
 			 */
 			if (state->memtupcount < state->memtupsize && !LACKMEM(state))
 				return;
-
-			state->memUsedBeforeSpill = MemoryContextGetPeakSpace(state->sortcontext);
 
 			/*
 			 * Nope; time to switch to tape-based operation.
