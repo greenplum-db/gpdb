@@ -173,15 +173,12 @@ select * from locktest_master where coalesce not like 'gp_%' and coalesce not li
 -------------------+---------------------+--------------------------+--------
  partlockt         | RowExclusiveLock    | relation                 | master
  partlockt_1_prt_1 | AccessExclusiveLock | append-only segment file | master
- partlockt_1_prt_1 | AccessShareLock     | relation                 | master
  partlockt_1_prt_1 | RowExclusiveLock    | relation                 | master
  partlockt_1_prt_2 | AccessExclusiveLock | append-only segment file | master
- partlockt_1_prt_2 | AccessShareLock     | relation                 | master
  partlockt_1_prt_2 | RowExclusiveLock    | relation                 | master
  partlockt_1_prt_3 | AccessExclusiveLock | append-only segment file | master
- partlockt_1_prt_3 | AccessShareLock     | relation                 | master
  partlockt_1_prt_3 | RowExclusiveLock    | relation                 | master
-(10 rows)
+(7 rows)
 
 select * from locktest_segments where coalesce not like 'gp_%' and coalesce not like 'pg_%';
      coalesce      |        mode         |         locktype         |    node    

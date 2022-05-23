@@ -34,7 +34,9 @@ test: packcore
 
 # Tests on global deadlock detector
 test: select_for_update
+test: insert_root_partition_truncate_deadlock_without_gdd
 test: gdd/prepare
+test: gdd/insert_root_partition_truncate_deadlock
 test: gdd/concurrent_update
 test: gdd/dist-deadlock-01 gdd/dist-deadlock-04 gdd/dist-deadlock-05 gdd/dist-deadlock-06 gdd/dist-deadlock-07 gdd/dist-deadlock-102 gdd/dist-deadlock-103 gdd/dist-deadlock-104 gdd/dist-deadlock-106 gdd/non-lock-105
 # until we can improve below flaky case please keep it disabled
@@ -42,7 +44,6 @@ ignore: gdd/non-lock-107
 # keep this in a separate group
 test: gdd/avoid-qd-deadlock
 test: gdd/delete-deadlock-root-leaf-concurrent-op
-test: gdd/planner_insert_while_vacuum_drop
 test: gdd/update-deadlock-root-leaf-concurrent-op
 test: gdd/dml_locks_only_targeted_table_in_query
 

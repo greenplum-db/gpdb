@@ -210,6 +210,95 @@ ABORT
 1q: ... <quitting>
 2q: ... <quitting>
 
+-- 1.3.1 AO partition table insert to root
+-- without or with GDD, both will lock all leafs during parse-analyze even only
+-- insert into a single row of data, this is because AO table maintain segment
+-- file information on master node in Greenplum 6, during the end of executor
+-- it might update rows of the updated leaf partition. Locking firstly time happen
+-- during executor end is not a good pattern, some other transactions may
+-- destroy the AppendOnlyHash table (like Alter Set with(reorg=true)).
+create table t_lockmods_ao_part (id int, year int) with (appendonly=true) distributed by (id) partition by range (year) ( start (2006) end (2010) every (1));
+CREATE
+
+1: begin;
+BEGIN
+1: insert into t_lockmods_ao_part values (1, 2007);
+INSERT 1
+2: select * from show_locks_lockmodes;
+ locktype | mode             | granted | relation                   
+----------+------------------+---------+----------------------------
+ relation | RowExclusiveLock | t       | t_lockmods_ao_part_1_prt_4 
+ relation | RowExclusiveLock | t       | t_lockmods_ao_part_1_prt_3 
+ relation | RowExclusiveLock | t       | t_lockmods_ao_part_1_prt_2 
+ relation | RowExclusiveLock | t       | t_lockmods_ao_part_1_prt_1 
+ relation | RowExclusiveLock | t       | t_lockmods_ao_part         
+(5 rows)
+1: abort;
+ABORT
+
+1: prepare insert_ao_part as insert into t_lockmods_ao_part values (1, 2007);
+PREPARE
+1: begin;
+BEGIN
+1: execute insert_ao_part;
+EXECUTE 1
+2: select * from show_locks_lockmodes;
+ locktype | mode             | granted | relation                   
+----------+------------------+---------+----------------------------
+ relation | RowExclusiveLock | t       | t_lockmods_ao_part_1_prt_4 
+ relation | RowExclusiveLock | t       | t_lockmods_ao_part_1_prt_3 
+ relation | RowExclusiveLock | t       | t_lockmods_ao_part_1_prt_2 
+ relation | RowExclusiveLock | t       | t_lockmods_ao_part_1_prt_1 
+ relation | RowExclusiveLock | t       | t_lockmods_ao_part         
+(5 rows)
+1: abort;
+ABORT
+
+1q: ... <quitting>
+2q: ... <quitting>
+
+-- 1.3.2 heap partition table insert to root
+-- without it will lock all leafs during parse-analyze to avoid global deadlock.
+create table t_lockmods_heap_part (id int, year int) distributed by (id) partition by range (year) ( start (2006) end (2010) every (1));
+CREATE
+
+1: begin;
+BEGIN
+1: insert into t_lockmods_heap_part values (1, 2007);
+INSERT 1
+2: select * from show_locks_lockmodes;
+ locktype | mode             | granted | relation                     
+----------+------------------+---------+------------------------------
+ relation | RowExclusiveLock | t       | t_lockmods_heap_part_1_prt_4 
+ relation | RowExclusiveLock | t       | t_lockmods_heap_part_1_prt_3 
+ relation | RowExclusiveLock | t       | t_lockmods_heap_part_1_prt_2 
+ relation | RowExclusiveLock | t       | t_lockmods_heap_part_1_prt_1 
+ relation | RowExclusiveLock | t       | t_lockmods_heap_part         
+(5 rows)
+1: abort;
+ABORT
+
+1: prepare insert_heap_part as insert into t_lockmods_heap_part values (1, 2007);
+PREPARE
+1: begin;
+BEGIN
+1: execute insert_heap_part;
+EXECUTE 1
+2: select * from show_locks_lockmodes;
+ locktype | mode             | granted | relation                     
+----------+------------------+---------+------------------------------
+ relation | RowExclusiveLock | t       | t_lockmods_heap_part_1_prt_4 
+ relation | RowExclusiveLock | t       | t_lockmods_heap_part_1_prt_3 
+ relation | RowExclusiveLock | t       | t_lockmods_heap_part_1_prt_2 
+ relation | RowExclusiveLock | t       | t_lockmods_heap_part_1_prt_1 
+ relation | RowExclusiveLock | t       | t_lockmods_heap_part         
+(5 rows)
+1: abort;
+ABORT
+
+1q: ... <quitting>
+2q: ... <quitting>
+
 -- enable gdd
 7: ALTER SYSTEM SET gp_enable_global_deadlock_detector TO on;
 ALTER
@@ -401,6 +490,74 @@ ABORT
 1q: ... <quitting>
 2q: ... <quitting>
 
+-- 2.3.1 see comments in 1.3.1
+1: begin;
+BEGIN
+1: insert into t_lockmods_ao_part values (1, 2007);
+INSERT 1
+2: select * from show_locks_lockmodes;
+ locktype | mode             | granted | relation                   
+----------+------------------+---------+----------------------------
+ relation | RowExclusiveLock | t       | t_lockmods_ao_part_1_prt_4 
+ relation | RowExclusiveLock | t       | t_lockmods_ao_part_1_prt_3 
+ relation | RowExclusiveLock | t       | t_lockmods_ao_part_1_prt_2 
+ relation | RowExclusiveLock | t       | t_lockmods_ao_part_1_prt_1 
+ relation | RowExclusiveLock | t       | t_lockmods_ao_part         
+(5 rows)
+1: abort;
+ABORT
+
+1: prepare insert_ao_part as insert into t_lockmods_ao_part values (1, 2007);
+PREPARE
+1: begin;
+BEGIN
+1: execute insert_ao_part;
+EXECUTE 1
+2: select * from show_locks_lockmodes;
+ locktype | mode             | granted | relation                   
+----------+------------------+---------+----------------------------
+ relation | RowExclusiveLock | t       | t_lockmods_ao_part_1_prt_4 
+ relation | RowExclusiveLock | t       | t_lockmods_ao_part_1_prt_3 
+ relation | RowExclusiveLock | t       | t_lockmods_ao_part_1_prt_2 
+ relation | RowExclusiveLock | t       | t_lockmods_ao_part_1_prt_1 
+ relation | RowExclusiveLock | t       | t_lockmods_ao_part         
+(5 rows)
+1: abort;
+ABORT
+
+1q: ... <quitting>
+2q: ... <quitting>
+
+-- 2.3.2 see comments in 2.3.2
+1: begin;
+BEGIN
+1: insert into t_lockmods_heap_part values (1, 2007);
+INSERT 1
+2: select * from show_locks_lockmodes;
+ locktype | mode             | granted | relation             
+----------+------------------+---------+----------------------
+ relation | RowExclusiveLock | t       | t_lockmods_heap_part 
+(1 row)
+1: abort;
+ABORT
+
+1: prepare insert_heap_part as insert into t_lockmods_heap_part values (1, 2007);
+PREPARE
+1: begin;
+BEGIN
+1: execute insert_heap_part;
+EXECUTE 1
+2: select * from show_locks_lockmodes;
+ locktype | mode             | granted | relation             
+----------+------------------+---------+----------------------
+ relation | RowExclusiveLock | t       | t_lockmods_heap_part 
+(1 row)
+1: abort;
+ABORT
+
+1q: ... <quitting>
+2q: ... <quitting>
+
 11: ALTER SYSTEM RESET gp_enable_global_deadlock_detector;
 ALTER
 1U:SELECT pg_ctl(dir, 'restart') from lockmodes_datadir;
@@ -416,5 +573,19 @@ ALTER
 (1 row)
 
 1: drop table lockmodes_datadir;
+DROP
+1: drop table t_lockmods;
+DROP
+1: drop table t_lockmods1;
+DROP
+1: drop table t_lockmods_rep;
+DROP
+1: drop table t_lockmods_ao;
+DROP
+1: drop table t_lockmods_ao1;
+DROP
+1: drop table t_lockmods_ao_part;
+DROP
+1: drop table t_lockmods_heap_part;
 DROP
 1q: ... <quitting>
