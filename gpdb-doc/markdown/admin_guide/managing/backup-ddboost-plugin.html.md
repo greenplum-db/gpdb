@@ -1,5 +1,5 @@
 ---
-title: Using the DD Boost Storage Plugin with gpbackup, gprestore, and gpbackup\_manager 
+title: Using the DD Boost Storage Plugin with gpbackup, gprestore, and gpbackup_manager 
 ---
 
 **Note:** The DD Boost storage plugin is available only with the commercial release of Tanzu Greenplum Backup and Restore.
