@@ -405,7 +405,7 @@ SELECT diskquota.resume(); </codeblock>
           set, update, or delete a per-segment tablespace disk quota limit. The function
           takes two arguments: the tablespace name and a ratio. The ratio identifies
           how much more of the disk quota a single segment can use than the average segment
-          quota. The ratio must be greater than zero, and the default ratio is one.</p>
+          quota. A ratio that you specify must be greater than zero.</p>
         <p>You can calculate the average segment quota as follows:</p>
         <codeblock>avg_seg_quota = tablespace_quota / number_of_segments</codeblock>
         <p>For example, if your Greenplum Database cluster has 8 segments and you set the
