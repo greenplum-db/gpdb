@@ -44,12 +44,14 @@
 #include "cdb/cdbvars.h"
 #include "cdb/cdbgang.h"
 #include "cdb/cdbdisp_query.h"
+#include "cdb/cdbdispatchresult.h"
 #include "cdb/ml_ipc.h"			/* listener_setup */
 #include "cdb/cdbtm.h"
 #include "libpq-fe.h"
 #include "libpq-int.h"
 #include "cdb/cdbconn.h"
 #include "cdb/cdbfts.h"
+#include "funcapi.h"
 #include "storage/ipc.h"
 #include "storage/proc.h"
 #include "postmaster/fts.h"
@@ -76,6 +78,21 @@
 
 MemoryContext CdbComponentsContext = NULL;
 static CdbComponentDatabases *cdb_component_dbs = NULL;
+
+typedef struct
+{
+	int 	segid;
+	char	*pids;
+}	SubTrxRec;
+
+typedef struct
+{
+	SubTrxRec	*record;
+	CdbPgResults cdb_pgresults;
+	int	index;
+}	SubTrxContext;
+
+static SubTrxRec* gp_subtx_internal_helper(void);
 
 /*
  * Helper Functions
@@ -1799,4 +1816,125 @@ AvoidCorefileGeneration()
 			 save_errno);
 	}
 #endif
+}
+
+Datum
+gp_subtrx_overflow_pids(PG_FUNCTION_ARGS)
+{
+	FuncCallContext *funcctx = NULL;
+	SubTrxContext 	*fctx = NULL;	/* User function context. */
+
+	if (SRF_IS_FIRSTCALL())
+	{
+		TupleDesc	tupdesc;
+		MemoryContext oldcontext;
+
+		funcctx = SRF_FIRSTCALL_INIT();
+
+		/* Switch context when allocating stuff to be used in later calls */
+		oldcontext = MemoryContextSwitchTo(funcctx->multi_call_memory_ctx);
+
+		/* build tuple descriptor */
+		tupdesc = CreateTemplateTupleDesc(2);
+
+		TupleDescInitEntry(tupdesc, (AttrNumber) 1, "segid", INT4OID, -1, 0);
+		TupleDescInitEntry(tupdesc, (AttrNumber) 2, "pids", TEXTOID, -1, 0);
+
+		funcctx->tuple_desc = BlessTupleDesc(tupdesc);
+
+		fctx = (SubTrxContext *) palloc(sizeof(SubTrxContext));
+		fctx->cdb_pgresults.pg_results = NULL;
+		fctx->cdb_pgresults.numResults = 0;
+		fctx->index = 0;
+
+		funcctx->user_fctx = (void *) fctx;
+		if(Gp_role == GP_ROLE_DISPATCH)
+			CdbDispatchCommand("SELECT * FROM pg_catalog.gp_subtrx_overflow_pids()",
+									DF_NONE, &fctx->cdb_pgresults);
+
+		fctx->record = gp_subtx_internal_helper();
+		funcctx->user_fctx = (void *)fctx;
+		MemoryContextSwitchTo(oldcontext);
+	}
+
+	/*
+	 * Using SRF to return all the segment information of the form
+	 * {segid, pids}
+	 */
+	funcctx = SRF_PERCALL_SETUP();
+
+	/* Get the saved state. */
+	fctx = funcctx->user_fctx;
+
+	while (fctx->index <= fctx->cdb_pgresults.numResults)
+	{
+		Datum		values[2];
+		bool		nulls[2];
+		HeapTuple	tuple;
+		Datum		result;
+		char		*pids = NULL;
+		int			seg_index;
+		if (fctx->index == 0)
+		{
+			/* Setting fields representing QD's result */
+			seg_index = GpIdentity.segindex;
+			pids = fctx->record->pids;
+		}
+		else
+		{
+			/* Setting fields representing QE's result */
+			seg_index = fctx->index - 1;
+			struct pg_result *pgresult = fctx->cdb_pgresults.pg_results[seg_index];
+			for (int j = 0; j < PQntuples(pgresult); j++)
+			{
+				pids = PQgetvalue(pgresult, j, 1);
+			}
+		}
+
+		/*
+		 * Form tuple with appropriate data.
+		 */
+		MemSet(values, 0, sizeof(values));
+		MemSet(nulls, false, sizeof(nulls));
+
+		values[0] = Int32GetDatum(seg_index);
+		values[1] = CStringGetTextDatum(pids);
+		tuple = heap_form_tuple(funcctx->tuple_desc, values, nulls);
+		result = HeapTupleGetDatum(tuple);
+
+		fctx->index++;
+		SRF_RETURN_NEXT(funcctx, result);
+	}
+
+	SRF_RETURN_DONE(funcctx);
+}
+
+static SubTrxRec*
+gp_subtx_internal_helper()
+{
+	int				i;
+	StringInfoData 	buf;
+	bool			traverse = false;
+	SubTrxRec		*result;
+
+	result = (SubTrxRec*) palloc(sizeof(SubTrxRec));
+
+	initStringInfo(&buf);
+
+	LWLockAcquire(ProcArrayLock, LW_SHARED);
+
+	for (i = 0; i < ProcGlobal->allProcCount; i++)
+	{
+		if (ProcGlobal->allPgXact[i].overflowed)
+		{
+			if (traverse)
+				appendStringInfoString(&buf, ",");
+			appendStringInfo(&buf, "%d", ProcGlobal->allProcs[i].pid);
+			traverse = true;
+		}
+	}
+	LWLockRelease(ProcArrayLock);
+	result->segid = GpIdentity.segindex;
+	result->pids = buf.data;
+	return result;
 }
