@@ -1666,66 +1666,60 @@ ScanQueryForLocks(Query *parsetree, bool acquire)
 					lockmode = AccessShareLock;
 				if (acquire)
 				{
-					LockRelationOid(rte->relid, lockmode);
+					Relation  rel   = relation_open(rte->relid, lockmode);
+					bool      is_ao = RelationIsAppendOptimized(rel);
 
-					/* If the relation is partitioned, we should acquire corresponding locks on
-					 * each leaf partition before entering InitPlan. The snapshot will acquire before
-					 * the InitPlan, so if we wait the locks for a while in the InitPlan. When we
-					 * get all locks, the snapshot maybe become invalid. So we must acquire lock
-					 * before entering InitPlan to keep the snapshot valid.
-					 * 
-					 * We need to maintain the consistency of the locks of the parent table and the child table.
-					 * Only one situation is special, when the command is to insert, and gdd don't open, the dead 
-					 * lock will happen.
-					 * for example:
-					 * Without locking the partition relations on QD when INSERT with Planner the 
-					 * following dead lock scenario may happen between INSERT and AppendOnly VACUUM 
-					 * drop phase on the partition table:
-					 * 
-					 * 1. AO VACUUM drop on QD: acquired AccessExclusiveLock
-					 * 2. INSERT on QE: acquired RowExclusiveLock
-					 * 3. AO VACUUM drop on QE: waiting for AccessExclusiveLock
-					 * 4. INSERT on QD: waiting for AccessShareLock at ExecutorEnd()
-					 * 
-					 * 2 blocks 3, 1 blocks 4, 1 and 2 will not release their locks until 3 and 4 proceed. 
-					 * Hence INSERT needs to Lock the partition tables on QD here (before 2) to prevent 
-					 * this dead lock.
-					 * 
-					 * This will cause a deadlock. But if gdd have already opened, gdd will solve the 
-					 * dead lock. So it is safe to not get locks for partitions.
-					 * 
-					 * But for the update and delete, we must acquire locks whether the gdd opens or not.
-					 */
+					relation_close(rel, NoLock);
+
 					SIMPLE_FAULT_INJECTOR("cache_wait_lock");
-					if (rel_is_partitioned(rte->relid) && ((parsetree->commandType == CMD_INSERT
-					&& !gp_enable_global_deadlock_detector) || parsetree->commandType == CMD_UPDATE
-					|| parsetree->commandType == CMD_DELETE))
-						find_all_inheritors(rte->relid, lockmode, NULL);
+
+					/*
+					 * Keep the same lock behavior as setTargetTable, see detailed comments there.
+					 */
+					if (rel_is_partitioned(rte->relid))
+					{
+						if (parsetree->commandType == CMD_INSERT && gp_enable_global_deadlock_detector && !is_ao)
+						{
+							/* Do nothing */
+						}
+						else if (parsetree->commandType == CMD_UPDATE ||
+								 parsetree->commandType == CMD_DELETE ||
+								 parsetree->commandType == CMD_INSERT)
+						{
+							/* DML on partition table's root */
+							(void) find_all_inheritors(rte->relid, lockmode, NULL);
+						}
+					}
 				}
 				else
 				{
-					UnlockRelationOid(rte->relid, lockmode);
-
-					/*
-					 * If we need to release lock, we also need release leaf patition lock.
-					 */
-					if (rel_is_partitioned(rte->relid) && ((parsetree->commandType == CMD_INSERT 
-					&& !gp_enable_global_deadlock_detector) || parsetree->commandType == CMD_UPDATE 
-					|| parsetree->commandType == CMD_DELETE))
+					if (rel_is_partitioned(rte->relid) &&
+						(parsetree->commandType == CMD_UPDATE ||
+						 parsetree->commandType == CMD_DELETE ||
+						 parsetree->commandType == CMD_INSERT))
 					{
-						ListCell   *lc;
-						List       *children = NIL;
-						children = find_all_inheritors(rte->relid, NoLock, NULL);
+						/* DML on partition table's root */
+						Relation  rel   = relation_open(rte->relid, NoLock);
+						bool      is_ao = RelationIsAppendOptimized(rel);
 
-						foreach(lc, children)
+						relation_close(rel, NoLock);
+
+						if (parsetree->commandType == CMD_INSERT && gp_enable_global_deadlock_detector && !is_ao)
+							UnlockRelationOid(rte->relid, lockmode);
+						else
 						{
-							Oid child_oid = lfirst_oid(lc);
+							ListCell  *lc;
+							List      *children = find_all_inheritors(rte->relid, NoLock, NULL);
+
 							/* find_all_inheritors will also contain the root table's Oid */
-							if (child_oid == rte->relid)
-								continue;
-							UnlockRelationOid(child_oid, lockmode);
+							foreach(lc, children)
+							{
+								UnlockRelationOid((Oid) lfirst_oid(lc), lockmode);
+							}
 						}
 					}
+					else
+						UnlockRelationOid(rte->relid, lockmode);
 				}
 				break;
 

@@ -110,6 +110,54 @@ create table t_lockmods_ao1 (c int) with (appendonly=true) distributed randomly;
 1q:
 2q:
 
+-- 1.3.1 AO partition table insert to root
+-- without or with GDD, both will lock all leafs during parse-analyze even only
+-- insert into a single row of data, this is because AO table maintain segment
+-- file information on master node in Greenplum 6, during the end of executor
+-- it might update rows of the updated leaf partition. Locking firstly time happen
+-- during executor end is not a good pattern, some other transactions may
+-- destroy the AppendOnlyHash table (like Alter Set with(reorg=true)).
+create table t_lockmods_ao_part (id int, year int)
+with (appendonly=true)
+distributed by (id)
+partition by range (year)
+( start (2006) end (2010) every (1));
+
+1: begin;
+1: insert into t_lockmods_ao_part values (1, 2007);
+2: select * from show_locks_lockmodes;
+1: abort;
+
+1: prepare insert_ao_part as insert into t_lockmods_ao_part values (1, 2007);
+1: begin;
+1: execute insert_ao_part;
+2: select * from show_locks_lockmodes;
+1: abort;
+
+1q:
+2q:
+
+-- 1.3.2 heap partition table insert to root
+-- without it will lock all leafs during parse-analyze to avoid global deadlock.
+create table t_lockmods_heap_part (id int, year int)
+distributed by (id)
+partition by range (year)
+( start (2006) end (2010) every (1));
+
+1: begin;
+1: insert into t_lockmods_heap_part values (1, 2007);
+2: select * from show_locks_lockmodes;
+1: abort;
+
+1: prepare insert_heap_part as insert into t_lockmods_heap_part values (1, 2007);
+1: begin;
+1: execute insert_heap_part;
+2: select * from show_locks_lockmodes;
+1: abort;
+
+1q:
+2q:
+
 -- enable gdd
 7: ALTER SYSTEM SET gp_enable_global_deadlock_detector TO on;
 -- Use utility session on seg 0 to restart master. This way avoids the
@@ -201,10 +249,47 @@ create table t_lockmods_ao1 (c int) with (appendonly=true) distributed randomly;
 1q:
 2q:
 
+-- 2.3.1 see comments in 1.3.1
+1: begin;
+1: insert into t_lockmods_ao_part values (1, 2007);
+2: select * from show_locks_lockmodes;
+1: abort;
+
+1: prepare insert_ao_part as insert into t_lockmods_ao_part values (1, 2007);
+1: begin;
+1: execute insert_ao_part;
+2: select * from show_locks_lockmodes;
+1: abort;
+
+1q:
+2q:
+
+-- 2.3.2 see comments in 2.3.2
+1: begin;
+1: insert into t_lockmods_heap_part values (1, 2007);
+2: select * from show_locks_lockmodes;
+1: abort;
+
+1: prepare insert_heap_part as insert into t_lockmods_heap_part values (1, 2007);
+1: begin;
+1: execute insert_heap_part;
+2: select * from show_locks_lockmodes;
+1: abort;
+
+1q:
+2q:
+
 11: ALTER SYSTEM RESET gp_enable_global_deadlock_detector;
 1U:SELECT pg_ctl(dir, 'restart') from lockmodes_datadir;
 
 1: show gp_enable_global_deadlock_detector;
 
 1: drop table lockmodes_datadir;
+1: drop table t_lockmods;
+1: drop table t_lockmods1;
+1: drop table t_lockmods_rep;
+1: drop table t_lockmods_ao;
+1: drop table t_lockmods_ao1;
+1: drop table t_lockmods_ao_part;
+1: drop table t_lockmods_heap_part;
 1q:

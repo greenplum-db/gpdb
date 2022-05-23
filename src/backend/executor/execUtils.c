@@ -2290,7 +2290,8 @@ void mppExecutorFinishup(QueryDesc *queryDesc)
 				{
 					bool was_delete = estate->es_plannedstmt && (estate->es_plannedstmt->commandType == CMD_DELETE);
 
-					Relation r = heap_open(map->relid, AccessShareLock);
+					/* DML on AO table should already lock all leaf partitions. */
+					Relation r = heap_open(map->relid, NoLock);
 					if (was_delete)
 					{
 						UpdateMasterAosegTotals(r, map->segno, 0, 1);

@@ -42,7 +42,6 @@ ignore: gdd/non-lock-107
 # keep this in a separate group
 test: gdd/avoid-qd-deadlock
 test: gdd/delete-deadlock-root-leaf-concurrent-op
-test: gdd/planner_insert_while_vacuum_drop
 test: gdd/update-deadlock-root-leaf-concurrent-op
 test: gdd/dml_locks_only_targeted_table_in_query
 

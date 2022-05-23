@@ -308,9 +308,12 @@ int
 setTargetTable(ParseState *pstate, RangeVar *relation,
 			   bool inh, bool alsoSource, AclMode requiredPerms)
 {
-	RangeTblEntry *rte;
-	int			rtindex;
+	RangeTblEntry     *rte;
+	int			       rtindex;
 	ParseCallbackState pcbstate;
+	bool               is_ao;
+	Oid                relid        = InvalidOid;
+	bool               lockUpgraded = false;
 
 	/* Close old target; this could only happen for multi-action rules */
 	if (pstate->p_target_relation != NULL)
@@ -330,8 +333,7 @@ setTargetTable(ParseState *pstate, RangeVar *relation,
 	 * parserOpenTable upgrades the lock to Exclusive mode for distributed
 	 * tables.
 	 */
-	bool lockUpgraded = false;
-	if (pstate->p_is_insert && !pstate->p_is_update)
+	if (pstate->p_is_insert)
 	{
 		setup_parser_errposition_callback(&pcbstate, pstate, relation->location);
 		pstate->p_target_relation = heap_openrv(relation, RowExclusiveLock);
@@ -342,51 +344,62 @@ setTargetTable(ParseState *pstate, RangeVar *relation,
 		pstate->p_target_relation = parserOpenTable(pstate, relation, RowExclusiveLock, &lockUpgraded);
 	}
 
+	is_ao = RelationIsAppendOptimized(pstate->p_target_relation);
+	relid = RelationGetRelid(pstate->p_target_relation);
 
-	/* If the relation is partitioned, we should acquire corresponding locks on
-	 * each leaf partition before entering InitPlan. The snapshot will acquire before
-	 * the InitPlan, so if we wait the locks for a while in the InitPlan. When we
-	 * get all locks, the snapshot maybe become invalid. So we must acquire lock
-	 * before entering InitPlan to keep the snapshot valid.
-	 * 
-	 * If lockUpgraded is true, we need to get ExclusiveLock. When lockUpgreded is 
-	 * true, meaning that the parent table has got the ExclusiveLock, so we need 
-	 * to keep the lock consistent. If lockUpgraded is false, we just need to get
-	 * RowExclusiveLock. Only one situation is special, when the command is to insert,
-	 * and gdd don't open, the dead lock will happen.
-	 * for example:
-	 * Without locking the partition relations on QD when INSERT with Planner the 
-	 * following dead lock scenario may happen between INSERT and AppendOnly VACUUM 
-	 * drop phase on the partition table:
-	 * 
-	 * 1. AO VACUUM drop on QD: acquired AccessExclusiveLock
-	 * 2. INSERT on QE: acquired RowExclusiveLock
-	 * 3. AO VACUUM drop on QE: waiting for AccessExclusiveLock
-	 * 4. INSERT on QD: waiting for AccessShareLock at ExecutorEnd()
-	 * 
-	 * 2 blocks 3, 1 blocks 4, 1 and 2 will not release their locks until 3 and 4 proceed. 
-	 * Hence INSERT needs to Lock the partition tables on QD here (before 2) to prevent 
-	 * this dead lock.
-	 * 
-	 * This will cause a deadlock. But if gdd have already opened, gdd will solve the 
-	 * dead lock. So it is safe to not get locks for partitions.
-	 * 
-	 * But for the update and delete, we must acquire locks whether the gdd opens or not.
-	 */
-
-	Oid relid = pstate->p_target_relation->rd_id;
 	SIMPLE_FAULT_INJECTOR("parse_wait_lock");
+
 	if (rel_is_partitioned(relid))
 	{
-		LOCKMODE lockmode;
-		if (lockUpgraded)
-			lockmode = ExclusiveLock;
-		else if (pstate->p_is_insert && gp_enable_global_deadlock_detector)
-			lockmode = NoLock;
+		if(pstate->p_is_insert && gp_enable_global_deadlock_detector && !is_ao)
+		{
+			/*
+			 * Do nothing in this block.
+			 *
+			 * We skip locking leaf partitions for DML on root partition when
+			 * the following 3 conditions are all satisfied:
+			 *
+			 *   1. insert statement directly on the root partitition
+			 *   2. GDD is enabled
+			 *   3. the target relation is heap
+			 *
+			 * Why condition 3 in the above? Greenplum 6X will update information
+			 * of AO|AOCS tables' segment files on QD, and this can only be done
+			 * at the end of the executor (mppExecutorFinishup) and needs to lock
+			 * the leaf partition at that time. Locking a relation first time at
+			 * the end of executition is not good, this might lead to global
+			 * deadlock. Consider the following example:
+			 *
+			 *   1. transaction A: insert on the root partition and just begin to
+			 *                     update information of segfile on QD (not yet)
+			 *   2. transaction B: truncation a leaf partition, this will hang on
+			 *                     QEs (blocked by txn A) but lock the leaf on QD,
+			 *                     the whole transaction hangs
+			 *   3. transaction A: begin to update information of segfile on QD,
+			 *                     try to lock the leaf and is blocked by txn B.
+			 *
+			 * Heap table does not have segfile concept and since Greenplum 7, this
+			 * information is maintained on QEs.
+			 */
+		}
 		else
-			lockmode = RowExclusiveLock;
-
-		(void) find_all_inheritors(relid, lockmode, NULL);
+		{
+			/*
+			 * More words on the storage type of root partition in Greenplum:
+			 * Greenplum supports polymorphic storage means a partition table
+			 * can have different types of storage for leaf partitions. This
+			 * feature is important in practical env, however it will make
+			 * the locking behavior a little complex since Greenplum has
+			 * different locking policy for different storage type on DMLs.
+			 * By a conservative strategy, we'd like to hold stricter level
+			 * of locks to guarantee correctness. So in Greenplum, if a
+			 * partition table contains ao-storage leaf, the root's storage
+			 * type should be ao. That is why we inherit root's lockmode here.
+			 */
+			(void) find_all_inheritors(relid,
+									   lockUpgraded ? ExclusiveLock : RowExclusiveLock,
+									   NULL);
+		}
 	}
 
 	/*
