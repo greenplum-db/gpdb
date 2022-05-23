@@ -35,11 +35,9 @@ class CXMLSerializer;
 class CDXLPhysicalDynamicBitmapTableScan : public CDXLPhysicalAbstractBitmapScan
 {
 private:
-	// id of partition index structure
-	ULONG m_part_index_id;
+	IMdIdArray *m_part_mdids;
 
-	// printable partition index id
-	ULONG m_part_index_id_printable;
+	ULongPtrArray *m_selector_ids = nullptr;
 
 public:
 	CDXLPhysicalDynamicBitmapTableScan(
@@ -48,17 +46,17 @@ public:
 	// ctor
 	CDXLPhysicalDynamicBitmapTableScan(CMemoryPool *mp,
 									   CDXLTableDescr *table_descr,
-									   ULONG part_idx_id,
-									   ULONG part_idx_id_printable)
+									   IMdIdArray *part_mdids,
+									   ULongPtrArray *selector_ids)
 		: CDXLPhysicalAbstractBitmapScan(mp, table_descr),
-		  m_part_index_id(part_idx_id),
-		  m_part_index_id_printable(part_idx_id_printable)
+		  m_part_mdids(part_mdids),
+		  m_selector_ids(selector_ids)
 	{
 		GPOS_ASSERT(nullptr != table_descr);
 	}
 
 	// dtor
-	~CDXLPhysicalDynamicBitmapTableScan() override = default;
+	~CDXLPhysicalDynamicBitmapTableScan() override;
 
 	// operator type
 	Edxlopid
@@ -70,18 +68,12 @@ public:
 	// operator name
 	const CWStringConst *GetOpNameStr() const override;
 
-	// partition index id
-	ULONG
-	GetPartIndexId() const
-	{
-		return m_part_index_id;
-	}
+	IMdIdArray *GetParts() const;
 
-	// printable partition index id
-	ULONG
-	GetPartIndexIdPrintable() const
+	const ULongPtrArray *
+	GetSelectorIds() const
 	{
-		return m_part_index_id_printable;
+		return m_selector_ids;
 	}
 
 	// serialize operator in DXL format

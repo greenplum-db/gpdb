@@ -29,18 +29,17 @@
 
 #include "postgres.h"
 
-#include "cdb/cdbvars.h"
-#include "cdb/partitionselection.h"
+#include "catalog/partition.h"
 #include "executor/executor.h"
 #include "executor/instrument.h"
 #include "nodes/execnodes.h"
 #include "executor/nodeBitmapIndexscan.h"
-#include "executor/execDynamicScan.h"
 #include "executor/nodeDynamicIndexscan.h"
 #include "executor/nodeDynamicBitmapIndexscan.h"
-#include "access/genam.h"
-#include "nodes/nodeFuncs.h"
+#include "access/table.h"
+#include "access/tableam.h"
 #include "utils/memutils.h"
+#include "utils/rel.h"
 
 /*
  * Initialize ScanState in DynamicBitmapIndexScan.
@@ -56,7 +55,32 @@ ExecInitDynamicBitmapIndexScan(DynamicBitmapIndexScan *node, EState *estate, int
 	dynamicBitmapIndexScanState = makeNode(DynamicBitmapIndexScanState);
 	dynamicBitmapIndexScanState->ss.ps.plan = (Plan *) node;
 	dynamicBitmapIndexScanState->ss.ps.state = estate;
+	dynamicBitmapIndexScanState->ss.ps.ExecProcNode = ExecDynamicIndexScan;
 	dynamicBitmapIndexScanState->eflags = eflags;
+
+	dynamicBitmapIndexScanState->scan_state = SCAN_INIT;
+
+	/*
+	 * Initialize child expressions
+	 *
+	 * These are not used for anything, we rely on the child IndexScan node
+	 * to do all evaluation for us. But I think this is still needed to
+	 * find and process any SubPlans. See comment in ExecInitIndexScan.
+	 */
+	dynamicBitmapIndexScanState->ss.ps.qual =
+			ExecInitQual(node->biscan.scan.plan.qual,
+						 (PlanState *) dynamicBitmapIndexScanState);
+
+	/*
+	 * tuple table initialization
+	 */
+	Relation scanRel = ExecOpenScanRelation(estate, node->biscan.scan.scanrelid, eflags);
+	ExecInitScanTupleSlot(estate, &dynamicBitmapIndexScanState->ss, RelationGetDescr(scanRel), table_slot_callbacks(scanRel));
+
+	/*
+	 * Initialize result tuple type and projection info.
+	 */
+	ExecInitResultTypeTL(&dynamicBitmapIndexScanState->ss.ps);
 
 	/*
 	 * This context will be reset per-partition to free up per-partition
@@ -91,11 +115,8 @@ BitmapIndexScan_ReMapColumns(DynamicBitmapIndexScan *dbiScan, Oid oldOid, Oid ne
 
 	if (attMap)
 	{
-		IndexScan_MapLogicalIndexInfo(dbiScan->logicalIndexInfo,
-									  attMap,
-									  dbiScan->biscan.scan.scanrelid);
-
 		/* A bitmap index scan has no target list or quals */
+		// FIXME: no quals remapping?
 
 		pfree(attMap);
 	}
@@ -114,7 +135,18 @@ beginCurrentBitmapIndexScan(DynamicBitmapIndexScanState *node, EState *estate,
 	Relation	currentRelation;
 	Oid			indexOid;
 	MemoryContext oldCxt;
+	List	   *save_tupletable;
 
+
+	/*
+	 * open the base relation and acquire appropriate lock on it.
+	 */
+	currentRelation = table_open(tableOid, AccessShareLock);
+	node->ss.ss_currentRelation = currentRelation;
+
+	save_tupletable = estate->es_tupleTable;
+
+	estate->es_tupleTable = NIL;
 	oldCxt = MemoryContextSwitchTo(node->partitionMemoryContext);
 
 	/*
@@ -124,7 +156,7 @@ beginCurrentBitmapIndexScan(DynamicBitmapIndexScanState *node, EState *estate,
 	if (!OidIsValid(node->columnLayoutOid))
 	{
 		/* Very first partition */
-		node->columnLayoutOid = rel_partition_get_root(tableOid);
+		node->columnLayoutOid = get_partition_parent(tableOid);
 	}
 	BitmapIndexScan_ReMapColumns(dbiScan, node->columnLayoutOid, tableOid);
 	node->columnLayoutOid = tableOid;
@@ -136,13 +168,13 @@ beginCurrentBitmapIndexScan(DynamicBitmapIndexScanState *node, EState *estate,
 	 * We started at table level, and now we are fetching the oid of an index
 	 * partition.
 	 */
-	currentRelation = heap_open(tableOid, AccessShareLock);
-	indexOid = getPhysicalIndexRelid(currentRelation, dbiScan->logicalIndexInfo);
+	Oid indexOidOld = dbiScan->biscan.indexid;
+	indexOid = index_get_partition(currentRelation, dbiScan->biscan.indexid);
 	if (!OidIsValid(indexOid))
-		elog(ERROR, "failed to find index for partition \"%s\" in dynamic index scan",
-			 RelationGetRelationName(currentRelation));
-	ExecCloseScanRelation(currentRelation);
+		elog(ERROR, "failed to find index for partition \"%s\" for \"%d\"in dynamic index scan",
+			 RelationGetRelationName(currentRelation), dbiScan->biscan.indexid);
 
+	table_close(currentRelation, NoLock);
 	/* Modify the plan node with the index ID */
 	dbiScan->biscan.indexid = indexOid;
 
@@ -150,12 +182,15 @@ beginCurrentBitmapIndexScan(DynamicBitmapIndexScanState *node, EState *estate,
 														 estate,
 														 node->eflags);
 
+	dbiScan->biscan.indexid = indexOidOld;
 	if (node->ss.ps.instrument)
 	{
 		/* Let the BitmapIndexScan share our Instrument node */
 		node->bitmapIndexScanState->ss.ps.instrument = node->ss.ps.instrument;
 	}
 
+	node->tuptable = estate->es_tupleTable;
+	estate->es_tupleTable = save_tupletable;
 	MemoryContextSwitchTo(oldCxt);
 
 	if (node->outer_exprContext)
@@ -173,6 +208,9 @@ endCurrentBitmapIndexScan(DynamicBitmapIndexScanState *node)
 		ExecEndBitmapIndexScan(node->bitmapIndexScanState);
 		node->bitmapIndexScanState = NULL;
 	}
+	ExecResetTupleTable(node->tuptable, true);
+	node->tuptable = NIL;
+	MemoryContextReset(node->partitionMemoryContext);
 }
 
 /*
@@ -191,7 +229,11 @@ MultiExecDynamicBitmapIndexScan(DynamicBitmapIndexScanState *node)
 	 * Fetch the OID of the current partition, and of the index on
 	 * that partition to scan.
 	 */
-	tableOid = DynamicScan_GetTableOid(&node->ss);
+	if (estate->partitionOid > 0) {
+		tableOid = estate->partitionOid;
+	} else {
+		return NULL;
+	}
 
 	/*
 	 * Create the underlying regular BitmapIndexScan executor node,
@@ -214,7 +256,7 @@ void
 ExecEndDynamicBitmapIndexScan(DynamicBitmapIndexScanState *node)
 {
 	endCurrentBitmapIndexScan(node);
-
+	node->scan_state = SCAN_END;
 	MemoryContextDelete(node->partitionMemoryContext);
 }
 
@@ -231,4 +273,5 @@ ExecReScanDynamicBitmapIndex(DynamicBitmapIndexScanState *node)
 		ExecEndBitmapIndexScan(node->bitmapIndexScanState);
 		node->bitmapIndexScanState = NULL;
 	}
+	node->scan_state = SCAN_INIT;
 }

@@ -5624,8 +5624,6 @@ CTranslatorDXLToPlStmt::TranslateDXLBitmapTblScan(
 	const CDXLNode *bitmapscan_dxlnode, CDXLTranslateContext *output_context,
 	CDXLTranslationContextArray *ctxt_translation_prev_siblings)
 {
-	ULONG part_index_id = 0;
-	ULONG part_idx_printable_id = 0;
 	BOOL is_dynamic = false;
 	const CDXLTableDescr *table_descr = nullptr;
 
@@ -5643,9 +5641,6 @@ CTranslatorDXLToPlStmt::TranslateDXLBitmapTblScan(
 			CDXLPhysicalDynamicBitmapTableScan::Cast(dxl_operator);
 		table_descr = phy_dyn_bitmap_tblscan_dxlop->GetDXLTableDescr();
 
-		part_index_id = phy_dyn_bitmap_tblscan_dxlop->GetPartIndexId();
-		part_idx_printable_id =
-			phy_dyn_bitmap_tblscan_dxlop->GetPartIndexIdPrintable();
 		is_dynamic = true;
 	}
 
@@ -5671,19 +5666,46 @@ CTranslatorDXLToPlStmt::TranslateDXLBitmapTblScan(
 
 	m_dxl_to_plstmt_context->AddRTE(rte);
 
+	DynamicBitmapHeapScan *dscan;
 	BitmapHeapScan *bitmap_tbl_scan;
 
 	if (is_dynamic)
 	{
-		DynamicBitmapHeapScan *dscan = MakeNode(DynamicBitmapHeapScan);
-
-		// GPDB_12_MERGE_FIXME: broken with the Partition Selector refactoring
-#if 0
-		dscan->partIndex = part_index_id;
-		dscan->partIndexPrintable = part_idx_printable_id;
-#endif
-
+		dscan = MakeNode(DynamicBitmapHeapScan);
 		bitmap_tbl_scan = &dscan->bitmapheapscan;
+
+		CDXLPhysicalDynamicBitmapTableScan *phy_dyn_bitmap_tblscan_dxlop =
+			CDXLPhysicalDynamicBitmapTableScan::Cast(dxl_operator);
+
+		IMdIdArray *parts = phy_dyn_bitmap_tblscan_dxlop->GetParts();
+
+		List *oids_list = NIL;
+
+		for (ULONG ul = 0; ul < parts->Size(); ul++)
+		{
+			Oid part = CMDIdGPDB::CastMdid((*parts)[ul])->Oid();
+			oids_list = gpdb::LAppendOid(oids_list, part);
+		}
+
+		dscan->partOids = oids_list;
+
+		dscan->join_prune_paramids = NIL;
+
+		OID oid_type =
+			CMDIdGPDB::CastMdid(m_md_accessor->PtMDType<IMDTypeInt4>()->MDId())
+				->Oid();
+
+		const ULongPtrArray *selector_ids =
+			phy_dyn_bitmap_tblscan_dxlop->GetSelectorIds();
+
+		for (ULONG ul = 0; ul < selector_ids->Size(); ++ul)
+		{
+			ULONG selector_id = *(*selector_ids)[ul];
+			ULONG param_id = m_dxl_to_plstmt_context->GetParamIdForSelector(
+				oid_type, selector_id);
+			dscan->join_prune_paramids =
+				gpdb::LAppendInt(dscan->join_prune_paramids, param_id);
+		}
 	}
 	else
 	{
@@ -5722,6 +5744,10 @@ CTranslatorDXLToPlStmt::TranslateDXLBitmapTblScan(
 		&base_table_context, ctxt_translation_prev_siblings, bitmap_tbl_scan);
 	SetParamIds(plan);
 
+	if (is_dynamic)
+	{
+		return (Plan *) dscan;
+	}
 	return (Plan *) bitmap_tbl_scan;
 }
 
@@ -5846,16 +5872,9 @@ CTranslatorDXLToPlStmt::TranslateDXLBitmapIndexProbe(
 
 	if (IsA(bitmap_tbl_scan, DynamicBitmapHeapScan))
 	{
-		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiDXL2PlStmtConversion,
-				   GPOS_WSZ_LIT("FIXME: dynamic bitmap index scan"));
-#if 0
 		/* It's a Dynamic Bitmap Index Scan */
 		dyn_bitmap_idx_scan = MakeNode(DynamicBitmapIndexScan);
-		dyn_bitmap_idx_scan->partIndex = ((DynamicBitmapHeapScan *) bitmap_tbl_scan)->partIndex;
-		dyn_bitmap_idx_scan->partIndexPrintable = ((DynamicBitmapHeapScan *) bitmap_tbl_scan)->partIndexPrintable;
-
 		bitmap_idx_scan = &(dyn_bitmap_idx_scan->biscan);
-#endif
 	}
 	else
 	{
@@ -5897,17 +5916,6 @@ CTranslatorDXLToPlStmt::TranslateDXLBitmapIndexProbe(
 	 * available or needed in IndexScan. Ignore them.
 	 */
 	SetParamIds(plan);
-
-#if 0
-	/*
-	 * If it's a Dynamic Bitmap Index Scan, also fill in the information
-	 * about the indexes on the partitions.
-	 */
-	if (dyn_bitmap_idx_scan)
-	{
-		dyn_bitmap_idx_scan->logicalIndexInfo = gpdb::GetLogicalIndexInfo(oidRel, index_oid);
-	}
-#endif
 
 	return plan;
 }

@@ -1450,119 +1450,81 @@ CTranslatorExprToDXL::PdxlnDynamicBitmapTableScan(
 	CDistributionSpecArray *pdrgpdsBaseTables, CExpression *pexprScalar,
 	CDXLPhysicalProperties *dxl_properties)
 {
-	GPOS_ASSERT(nullptr != pexprScan);
+	GPOS_ASSERT(NULL != pexprScan);
+
 	CPhysicalDynamicBitmapTableScan *pop =
 		CPhysicalDynamicBitmapTableScan::PopConvert(pexprScan->Pop());
+	CColRefArray *pdrgpcrOutput = pop->PdrgpcrOutput();
 
-	// construct projection list
-	CColRefSet *pcrsOutput = pexprScan->Prpp()->PcrsRequired();
-	CDXLNode *pdxlnPrLAppend = PdxlnProjList(pcrsOutput, colref_array);
+	CDXLTableDescr *table_descr =
+		MakeDXLTableDescr(pop->Ptabdesc(), pdrgpcrOutput, pexprScan->Prpp());
 
-	CDXLNode *pdxlnResult = GPOS_NEW(m_mp)
-		CDXLNode(m_mp, GPOS_NEW(m_mp) CDXLPhysicalAppend(m_mp, false, false));
-	// GPDB_12_MERGE_FIXME: set plan costs
-	pdxlnResult->SetProperties(dxl_properties);
-	pdxlnResult->AddChild(pdxlnPrLAppend);
-	pdxlnResult->AddChild(PdxlnFilter(nullptr));
-
+	// construct dynamic table scan operator
 	IMdIdArray *part_mdids = pop->GetPartitionMdids();
+	part_mdids->AddRef();
 
-	COptCtxt::PoctxtFromTLS()->AddDirectDispatchableFilterCandidate(pexprScan);
-
-	for (ULONG ul = 0; ul < part_mdids->Size(); ++ul)
+	ULongPtrArray *selector_ids = GPOS_NEW(m_mp) ULongPtrArray(m_mp);
+	CPartitionPropagationSpec *pps_reqd =
+		pexprScan->Prpp()->Pepp()->PppsRequired();
+	if (pps_reqd->Contains(pop->ScanId()))
 	{
-		IMDId *part_mdid = (*part_mdids)[ul];
-		const IMDRelation *part = m_pmda->RetrieveRel(part_mdid);
-
-		// translate table descriptor
-		CTableDescriptor *part_tabdesc =
-			MakeTableDescForPart(part, pexprScan->DeriveTableDescriptor());
-
-		// Create new colrefs for the child partition. The ColRefs from root
-		// DTS, which may be used in any parent node, can no longer be exported
-		// by a child of the Append node. Thus it is exported by the Append
-		// node itself, and new colrefs are created here.
-		CColRefArray *part_colrefs = GPOS_NEW(m_mp) CColRefArray(m_mp);
-		for (ULONG ul = 0; ul < part_tabdesc->ColumnCount(); ++ul)
+		const CBitSet *bs = pps_reqd->SelectorIds(pop->ScanId());
+		CBitSetIter bsi(*bs);
+		for (ULONG ul = 0; bsi.Advance(); ul++)
 		{
-			const CColumnDescriptor *cd = part_tabdesc->Pcoldesc(ul);
-			CColRef *cr = m_pcf->PcrCreate(cd->RetrieveType(),
-										   cd->TypeModifier(), cd->Name());
-			part_colrefs->Append(cr);
+			selector_ids->Append(GPOS_NEW(m_mp) ULONG(bsi.Bit()));
 		}
-
-		CDXLTableDescr *dxl_table_descr =
-			MakeDXLTableDescr(part_tabdesc, part_colrefs, pexprScan->Prpp());
-		part_tabdesc->Release();
-
-		CDXLNode *pdxlnBitmapTableScan = GPOS_NEW(m_mp) CDXLNode(
-			m_mp,
-			GPOS_NEW(m_mp) CDXLPhysicalBitmapTableScan(m_mp, dxl_table_descr));
-
-		// set properties
-		// construct plan costs, if there are not passed as a parameter
-		if (nullptr == dxl_properties)
-		{
-			dxl_properties = GetProperties(pexprScan);
-		}
-		dxl_properties->AddRef();
-		pdxlnBitmapTableScan->SetProperties(dxl_properties);
-
-		// build projection list
-		auto *root_col_mapping = (*pop->GetRootColMappingPerPart())[ul];
-
-		// translate scalar predicate into DXL filter only if it is not redundant
-		CExpression *pexprRecheckCond = (*pexprScan)[0];
-		CDXLNode *pdxlnCond = nullptr;
-		if (nullptr != pexprScalar && !CUtils::FScalarConstTrue(pexprScalar) &&
-			!pexprScalar->Matches(pexprRecheckCond))
-		{
-			pdxlnCond =
-				PdxlnCondForChildPart(root_col_mapping, part_colrefs,
-									  pop->PdrgpcrOutput(), pexprScalar);
-		}
-
-		CDXLNode *filter_dxlnode = PdxlnFilter(pdxlnCond);
-
-		CDXLNode *pdxlnRecheckCond =
-			PdxlnCondForChildPart(root_col_mapping, part_colrefs,
-								  pop->PdrgpcrOutput(), pexprRecheckCond);
-		CDXLNode *pdxlnRecheckCondFilter = GPOS_NEW(m_mp)
-			CDXLNode(m_mp, GPOS_NEW(m_mp) CDXLScalarRecheckCondFilter(m_mp),
-					 pdxlnRecheckCond);
-
-		AddBitmapFilterColumns(m_mp, pop, pexprRecheckCond, pexprScalar,
-							   pcrsOutput);
-
-		CDXLNode *proj_list_dxlnode = PdxlnProjListForChildPart(
-			root_col_mapping, part_colrefs, pcrsOutput, colref_array);
-
-		// translate bitmap access path
-		CExpression *pexprBitmapIndexPath = (*pexprScan)[1];
-
-		CDXLNode *pdxlnBitmapIndexPath = PdxlnBitmapIndexPathForChildPart(
-			root_col_mapping, part_colrefs, pop->PdrgpcrOutput(), part,
-			pexprBitmapIndexPath);
-
-		pdxlnBitmapTableScan->AddChild(proj_list_dxlnode);
-		pdxlnBitmapTableScan->AddChild(filter_dxlnode);
-		pdxlnBitmapTableScan->AddChild(pdxlnRecheckCondFilter);
-		pdxlnBitmapTableScan->AddChild(pdxlnBitmapIndexPath);
-#ifdef GPOS_DEBUG
-		pdxlnBitmapTableScan->GetOperator()->AssertValid(
-			pdxlnBitmapTableScan, false /*validate_children*/);
-#endif
-
-		pdxlnResult->AddChild(pdxlnBitmapTableScan);
-
-		// cleanup
-		part_colrefs->Release();
 	}
+
+	CDXLPhysicalDynamicBitmapTableScan *pdxlopScan =
+		GPOS_NEW(m_mp) CDXLPhysicalDynamicBitmapTableScan(
+			m_mp, table_descr, part_mdids, selector_ids);
+
+	CDXLNode *pdxlnScan = GPOS_NEW(m_mp) CDXLNode(m_mp, pdxlopScan);
+
+	// construct plan costs
+	if (NULL == dxl_properties)
+	{
+		dxl_properties = GetProperties(pexprScan);
+	}
+	pdxlnScan->SetProperties(dxl_properties);
+
+	// translate predicates into DXL filter
+	CDXLNode *pdxlnCond = NULL;
+	if (NULL != pexprScalar)
+	{
+		pdxlnCond = PdxlnScalar(pexprScalar);
+	}
+	CDXLNode *filter_dxlnode = PdxlnFilter(pdxlnCond);
+
+	CExpression *pexprRecheckCond = (*pexprScan)[0];
+	CDXLNode *pdxlnRecheckCond = PdxlnScalar(pexprRecheckCond);
+	CDXLNode *pdxlnRecheckCondFilter = GPOS_NEW(m_mp)
+		CDXLNode(m_mp, GPOS_NEW(m_mp) CDXLScalarRecheckCondFilter(m_mp));
+	pdxlnRecheckCondFilter->AddChild(pdxlnRecheckCond);
+
+	// translate bitmap access path
+	CDXLNode *pdxlnBitmapAccessPath = PdxlnScalar((*pexprScan)[1]);
+
+	// build projection list
+	CColRefSet *pcrsOutput = pexprScan->Prpp()->PcrsRequired();
+	CDXLNode *proj_list_dxlnode = PdxlnProjList(pcrsOutput, colref_array);
+
+	pdxlnScan->AddChild(proj_list_dxlnode);
+	pdxlnScan->AddChild(filter_dxlnode);
+	pdxlnScan->AddChild(pdxlnRecheckCondFilter);
+	pdxlnScan->AddChild(pdxlnBitmapAccessPath);
+
+#ifdef GPOS_DEBUG
+	pdxlnScan->GetOperator()->AssertValid(pdxlnScan,
+										  false /* validate_children */);
+#endif
 
 	CDistributionSpec *pds = pexprScan->GetDrvdPropPlan()->Pds();
 	pds->AddRef();
 	pdrgpdsBaseTables->Append(pds);
-	return pdxlnResult;
+
+	return pdxlnScan;
 }
 
 //---------------------------------------------------------------------------

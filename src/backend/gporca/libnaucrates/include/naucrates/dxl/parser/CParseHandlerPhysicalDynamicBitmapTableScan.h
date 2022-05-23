@@ -35,11 +35,7 @@ class CParseHandlerPhysicalDynamicBitmapTableScan
 	: public CParseHandlerPhysicalAbstractBitmapScan
 {
 private:
-	// part index id
-	ULONG m_part_index_id;
-
-	// printable partition index id
-	ULONG m_part_index_id_printable;
+	ULongPtrArray *m_selector_ids;
 
 	// process the start of an element
 	void StartElement(
@@ -65,9 +61,7 @@ public:
 		CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
 		CParseHandlerBase *parse_handler_root)
 		: CParseHandlerPhysicalAbstractBitmapScan(mp, parse_handler_mgr,
-												  parse_handler_root),
-		  m_part_index_id(0),
-		  m_part_index_id_printable(0)
+												  parse_handler_root)
 	{
 	}
 };

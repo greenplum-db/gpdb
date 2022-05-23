@@ -26,15 +26,15 @@
 
 #include "executor/executor.h"
 #include "executor/instrument.h"
-#include "executor/execDynamicScan.h"
 #include "executor/nodeBitmapHeapscan.h"
+#include "executor/nodeDynamicIndexscan.h"
 #include "executor/nodeDynamicBitmapHeapscan.h"
+#include "executor/execPartition.h"
 #include "nodes/execnodes.h"
-#include "utils/hsearch.h"
-#include "parser/parsetree.h"
+#include "utils/rel.h"
 #include "utils/memutils.h"
-#include "cdb/cdbvars.h"
-#include "cdb/partitionselection.h"
+#include "access/table.h"
+#include "access/tableam.h"
 
 static void CleanupOnePartition(DynamicBitmapHeapScanState *node);
 
@@ -43,6 +43,8 @@ ExecInitDynamicBitmapHeapScan(DynamicBitmapHeapScan *node, EState *estate, int e
 {
 	DynamicBitmapHeapScanState *state;
 	Oid			reloid;
+	int			i;
+	ListCell *lc;
 
 	Assert((eflags & (EXEC_FLAG_BACKWARD | EXEC_FLAG_MARK)) == 0);
 
@@ -50,14 +52,28 @@ ExecInitDynamicBitmapHeapScan(DynamicBitmapHeapScan *node, EState *estate, int e
 	state->eflags = eflags;
 	state->ss.ps.plan = (Plan *) node;
 	state->ss.ps.state = estate;
-
+	state->ss.ps.ExecProcNode = ExecDynamicBitmapHeapScan;
+	state->did_pruning = false;
 	state->scan_state = SCAN_INIT;
 
-	/* Initialize result tuple type. */
-	ExecInitResultTupleSlot(estate, &state->ss.ps);
-	ExecAssignResultTypeFromTL(&state->ss.ps);
+	state->whichPart = -1;
+	state->nOids = list_length(node->partOids);
+	state->partOids = palloc(sizeof(Oid) * state->nOids);
+	foreach_with_count(lc, node->partOids, i)
+		state->partOids[i] = lfirst_oid(lc);
 
-	reloid = getrelid(node->bitmapheapscan.scan.scanrelid, estate->es_range_table);
+	/*
+	 * tuple table initialization
+	 */
+	Relation scanRel = ExecOpenScanRelation(estate, node->bitmapheapscan.scan.scanrelid, eflags);
+	ExecInitScanTupleSlot(estate, &state->ss, RelationGetDescr(scanRel), table_slot_callbacks(scanRel));
+
+	/*
+	 * Initialize result tuple type and projection info.
+	 */
+	ExecInitResultTypeTL(&state->ss.ps);
+
+	reloid = exec_rt_fetch(node->bitmapheapscan.scan.scanrelid, estate)->relid;
 	Assert(OidIsValid(reloid));
 
 	state->firstPartition = true;
@@ -76,6 +92,8 @@ ExecInitDynamicBitmapHeapScan(DynamicBitmapHeapScan *node, EState *estate, int e
 									 ALLOCSET_DEFAULT_MINSIZE,
 									 ALLOCSET_DEFAULT_INITSIZE,
 									 ALLOCSET_DEFAULT_MAXSIZE);
+
+	state->as_prune_state = NULL;
 
 	/*
 	 * initialize child nodes.
@@ -108,17 +126,15 @@ initNextTableToScan(DynamicBitmapHeapScanState *node)
 	TupleDesc	partTupDesc;
 	TupleDesc	lastTupDesc;
 	AttrNumber *attMap;
-	Oid			currentPartitionOid;
-	Oid		   *pid;
+	Oid		   pid;
 	Relation	currentRelation;
 
-	pid = hash_seq_search(&node->pidStatus);
-	if (pid == NULL)
-	{
-		node->shouldCallHashSeqTerm = false;
+	if (++node->whichPart < node->nOids)
+		pid = node->partOids[node->whichPart];
+	else
 		return false;
-	}
-	currentPartitionOid = *pid;
+
+	estate->partitionOid = pid;
 
 	/* Collect number of partitions scanned in EXPLAIN ANALYZE */
 	if (NULL != scanState->ps.instrument)
@@ -127,14 +143,23 @@ initNextTableToScan(DynamicBitmapHeapScanState *node)
 		instr->numPartScanned++;
 	}
 
-	CleanupOnePartition(node);
+	currentRelation = scanState->ss_currentRelation =
+			table_open(node->partOids[node->whichPart], AccessShareLock);
 
-	currentRelation = scanState->ss_currentRelation = heap_open(currentPartitionOid, AccessShareLock);
-	lastScannedRel = heap_open(node->lastRelOid, AccessShareLock);
+	if (currentRelation->rd_rel->relkind != RELKIND_RELATION)
+	{
+		/* shouldn't happen */
+		elog(ERROR, "unexpected relkind in Dynamic Scan: %c", currentRelation->rd_rel->relkind);
+	}
+	lastScannedRel = table_open(node->lastRelOid, AccessShareLock);
 	lastTupDesc = RelationGetDescr(lastScannedRel);
 	partTupDesc = RelationGetDescr(scanState->ss_currentRelation);
-	attMap = varattnos_map(lastTupDesc, partTupDesc);
-	heap_close(lastScannedRel, AccessShareLock);
+	/*
+	 * FIXME: should we use execute_attr_map_tuple instead? Seems like a
+	 * higher level abstraction that fits the bill
+	 */
+	attMap = convert_tuples_by_name_map_if_req(partTupDesc, lastTupDesc, "unused msg");
+	table_close(lastScannedRel, AccessShareLock);
 
 	/* If attribute remapping is not necessary, then do not change the varattno */
 	if (attMap)
@@ -146,13 +171,13 @@ initNextTableToScan(DynamicBitmapHeapScanState *node)
 		 * Now that the varattno mapping has been changed, change the relation that
 		 * the new varnos correspond to
 		 */
-		node->lastRelOid = currentPartitionOid;
+		node->lastRelOid = pid;
 	}
 
 	/*
-	 * For the very first partition, the targetlist of planstate is set to null. So, we must
-	 * initialize quals and targetlist, regardless of remapping requirements. For later
-	 * partitions, we only initialize quals and targetlist if a column re-mapping is necessary.
+	 * For the very first partition, the qual of planstate is set to null. So, we must
+	 * initialize quals, regardless of remapping requirements. For later
+	 * partitions, we only initialize quals if a column re-mapping is necessary.
 	 */
 	if (attMap || node->firstPartition)
 	{
@@ -161,10 +186,8 @@ initNextTableToScan(DynamicBitmapHeapScanState *node)
 		MemoryContext oldCxt = MemoryContextSwitchTo(node->partitionMemoryContext);
 
 		/* Initialize child expressions */
-		scanState->ps.qual = (List *) ExecInitExpr((Expr *) scanState->ps.plan->qual,
-												   (PlanState *) scanState);
-		scanState->ps.targetlist = (List *) ExecInitExpr((Expr *) scanState->ps.plan->targetlist,
-														 (PlanState *) scanState);
+		scanState->ps.qual =
+				ExecInitQual(scanState->ps.plan->qual, (PlanState *) scanState);
 
 		MemoryContextSwitchTo(oldCxt);
 	}
@@ -172,7 +195,6 @@ initNextTableToScan(DynamicBitmapHeapScanState *node)
 	if (attMap)
 		pfree(attMap);
 
-	DynamicScan_SetTableOid(&node->ss, currentPartitionOid);
 	node->bhsState = ExecInitBitmapHeapScanForPartition(&plan->bitmapheapscan, estate, node->eflags,
 													 currentRelation);
 
@@ -185,50 +207,37 @@ initNextTableToScan(DynamicBitmapHeapScanState *node)
 	return true;
 }
 
-/*
- * setPidIndex
- *   Set the pid index for the given dynamic table.
- */
-static void
-setPidIndex(DynamicBitmapHeapScanState *node)
-{
-	Assert(node->pidIndex == NULL);
-
-	ScanState *scanState = (ScanState *)node;
-	EState *estate = scanState->ps.state;
-	DynamicBitmapHeapScan *plan = (DynamicBitmapHeapScan *) scanState->ps.plan;
-
-	Assert(estate->dynamicTableScanInfo != NULL);
-
-	/*
-	 * Ensure that the dynahash exists even if the partition selector
-	 * didn't choose any partition for current scan node [MPP-24169].
-	 */
-	InsertPidIntoDynamicTableScanInfo(estate, plan->partIndex,
-									  InvalidOid, InvalidPartitionSelectorId);
-
-	Assert(NULL != estate->dynamicTableScanInfo->pidIndexes);
-	Assert(estate->dynamicTableScanInfo->numScans >= plan->partIndex);
-	node->pidIndex = estate->dynamicTableScanInfo->pidIndexes[plan->partIndex - 1];
-	Assert(node->pidIndex != NULL);
-}
-
 TupleTableSlot *
-ExecDynamicBitmapHeapScan(DynamicBitmapHeapScanState *node)
+ExecDynamicBitmapHeapScan(PlanState *pstate)
 {
+	DynamicBitmapHeapScanState *node = castNode(DynamicBitmapHeapScanState, pstate);
 	TupleTableSlot *slot = NULL;
 
-	/*
-	 * If this is called the first time, find the pid index that contains all unique
-	 * partition pids for this node to scan.
-	 */
-	if (node->pidIndex == NULL)
+	DynamicBitmapHeapScan 	   *plan = (DynamicBitmapHeapScan *) node->ss.ps.plan;
+	node->as_valid_subplans = NULL;
+	if (NULL != plan->join_prune_paramids && !node->did_pruning)
 	{
-		setPidIndex(node);
-		Assert(node->pidIndex != NULL);
+		node->did_pruning = true;
+		node->as_valid_subplans =
+				ExecFindMatchingSubPlans(node->as_prune_state,
+										 node->ss.ps.state,
+										 list_length(plan->partOids),
+										 plan->join_prune_paramids);
 
-		hash_seq_init(&node->pidStatus, node->pidIndex);
-		node->shouldCallHashSeqTerm = true;
+		int i = 0;
+		int partOidIdx = -1;
+		List *newPartOids = NIL;
+		ListCell *lc;
+		for(i = 0; i < bms_num_members(node->as_valid_subplans); i++)
+		{
+			partOidIdx = bms_next_member(node->as_valid_subplans, partOidIdx);
+			newPartOids = lappend_oid(newPartOids, node->partOids[partOidIdx]);
+		}
+
+		node->partOids = palloc(sizeof(Oid) * list_length(newPartOids));
+		foreach_with_count(lc, newPartOids, i)
+			node->partOids[i] = lfirst_oid(lc);
+		node->nOids = list_length(newPartOids);
 	}
 
 	/*
@@ -244,7 +253,7 @@ ExecDynamicBitmapHeapScan(DynamicBitmapHeapScanState *node)
 				break;
 		}
 
-		slot = ExecBitmapHeapScan(node->bhsState);
+		slot = ExecProcNode(&node->bhsState->ss.ps);
 
 		if (!TupIsNull(slot))
 			break;
@@ -274,11 +283,8 @@ CleanupOnePartition(DynamicBitmapHeapScanState *scanState)
 		outerPlanState(scanState->bhsState) = NULL;
 		ExecEndBitmapHeapScan(scanState->bhsState);
 		scanState->bhsState = NULL;
-	}
-	if ((scanState->scan_state & SCAN_SCAN) != 0)
-	{
 		Assert(scanState->ss.ss_currentRelation != NULL);
-		ExecCloseScanRelation(scanState->ss.ss_currentRelation);
+		table_close(scanState->ss.ss_currentRelation, NoLock);
 		scanState->ss.ss_currentRelation = NULL;
 	}
 }
@@ -291,12 +297,6 @@ static void
 DynamicBitmapHeapScanEndCurrentScan(DynamicBitmapHeapScanState *node)
 {
 	CleanupOnePartition(node);
-
-	if (node->shouldCallHashSeqTerm)
-	{
-		hash_seq_term(&node->pidStatus);
-		node->shouldCallHashSeqTerm = false;
-	}
 }
 
 /*
@@ -309,7 +309,8 @@ ExecEndDynamicBitmapHeapScan(DynamicBitmapHeapScanState *node)
 {
 	DynamicBitmapHeapScanEndCurrentScan(node);
 
-	ExecClearTuple(node->ss.ps.ps_ResultTupleSlot);
+	if (node->ss.ps.ps_ResultTupleSlot)
+		ExecClearTuple(node->ss.ps.ps_ResultTupleSlot);
 
 	/*
 	 * close down subplans
@@ -326,6 +327,18 @@ ExecReScanDynamicBitmapHeapScan(DynamicBitmapHeapScanState *node)
 {
 	DynamicBitmapHeapScanEndCurrentScan(node);
 
-	/* Force reloading the partition hash table */
-	node->pidIndex = NULL;
+	// reset partition internal state
+	/*
+	 * If any PARAM_EXEC Params used in pruning expressions have changed, then
+	 * we'd better unset the valid subplans so that they are reselected for
+	 * the new parameter values.
+	 */
+	if (node->as_prune_state &&
+		bms_overlap(node->ss.ps.chgParam,
+					node->as_prune_state->execparamids))
+	{
+		bms_free(node->as_valid_subplans);
+		node->as_valid_subplans = NULL;
+	}
+	node->whichPart = -1;
 }
