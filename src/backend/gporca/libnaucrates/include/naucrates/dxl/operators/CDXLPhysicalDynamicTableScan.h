@@ -44,19 +44,17 @@ private:
 	// table descriptor for the scanned table
 	CDXLTableDescr *m_dxl_table_descr;
 
-	// id of partition index structure
-	ULONG m_part_index_id;
+	IMdIdArray *m_part_mdids;
 
-	// printable partition index id
-	ULONG m_part_index_id_printable;
+	ULongPtrArray *m_selector_ids = nullptr;
 
 public:
 	CDXLPhysicalDynamicTableScan(CDXLPhysicalDynamicTableScan &) = delete;
 
 	// ctor
 	CDXLPhysicalDynamicTableScan(CMemoryPool *mp, CDXLTableDescr *table_descr,
-								 ULONG part_idx_id,
-								 ULONG part_idx_id_printable);
+								 IMdIdArray *part_mdids,
+								 ULongPtrArray *selector_ids);
 
 	// dtor
 	~CDXLPhysicalDynamicTableScan() override;
@@ -70,12 +68,13 @@ public:
 	// table descriptor
 	const CDXLTableDescr *GetDXLTableDescr() const;
 
-	// partition index id
-	ULONG GetPartIndexId() const;
+	IMdIdArray *GetParts() const;
 
-	// printable partition index id
-	ULONG GetPartIndexIdPrintable() const;
-
+	const ULongPtrArray *
+	GetSelectorIds() const
+	{
+		return m_selector_ids;
+	}
 	// serialize operator in DXL format
 	void SerializeToDXL(CXMLSerializer *xml_serializer,
 						const CDXLNode *node) const override;

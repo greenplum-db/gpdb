@@ -3955,9 +3955,36 @@ CTranslatorDXLToPlStmt::TranslateDXLDynTblScan(
 	DynamicSeqScan *dyn_seq_scan = MakeNode(DynamicSeqScan);
 
 	dyn_seq_scan->seqscan.scanrelid = index;
-	dyn_seq_scan->partIndex = dyn_tbl_scan_dxlop->GetPartIndexId();
-	dyn_seq_scan->partIndexPrintable =
-		dyn_tbl_scan_dxlop->GetPartIndexIdPrintable();
+
+	IMdIdArray *parts = dyn_tbl_scan_dxlop->GetParts();
+
+	List *oids_list = NIL;
+
+	for (ULONG ul = 0; ul < parts->Size(); ul++)
+	{
+		Oid part = CMDIdGPDB::CastMdid((*parts)[ul])->Oid();
+		oids_list = gpdb::LAppendOid(oids_list, part);
+	}
+
+	dyn_seq_scan->partOids = oids_list;
+
+	dyn_seq_scan->join_prune_paramids = NIL;
+
+	OID oid_type =
+		CMDIdGPDB::CastMdid(m_md_accessor->PtMDType<IMDTypeInt4>()->MDId())
+			->Oid();
+
+	const ULongPtrArray *selector_ids = dyn_tbl_scan_dxlop->GetSelectorIds();
+
+	for (ULONG ul = 0; ul < selector_ids->Size(); ++ul)
+	{
+		ULONG selector_id = *(*selector_ids)[ul];
+		ULONG param_id = m_dxl_to_plstmt_context->GetParamIdForSelector(
+			oid_type, selector_id);
+		dyn_seq_scan->join_prune_paramids =
+			gpdb::LAppendInt(dyn_seq_scan->join_prune_paramids, param_id);
+	}
+
 
 	Plan *plan = &(dyn_seq_scan->seqscan.plan);
 	plan->plan_node_id = m_dxl_to_plstmt_context->GetNextPlanId();

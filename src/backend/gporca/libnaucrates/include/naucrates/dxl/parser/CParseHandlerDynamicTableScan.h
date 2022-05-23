@@ -36,11 +36,7 @@ class CDXLPhysicalDynamicTableScan;
 class CParseHandlerDynamicTableScan : public CParseHandlerPhysicalOp
 {
 private:
-	// the id of the partition index structure
-	ULONG m_part_index_id;
-
-	// printable partition index id
-	ULONG m_part_index_id_printable;
+	ULongPtrArray *m_selector_ids;
 
 	// process the start of an element
 	void StartElement(

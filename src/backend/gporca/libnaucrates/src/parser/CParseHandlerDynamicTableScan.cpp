@@ -16,6 +16,7 @@
 #include "naucrates/dxl/operators/CDXLPhysicalDynamicTableScan.h"
 #include "naucrates/dxl/parser/CParseHandlerFactory.h"
 #include "naucrates/dxl/parser/CParseHandlerFilter.h"
+#include "naucrates/dxl/parser/CParseHandlerMetadataIdList.h"
 #include "naucrates/dxl/parser/CParseHandlerProjList.h"
 #include "naucrates/dxl/parser/CParseHandlerProperties.h"
 #include "naucrates/dxl/parser/CParseHandlerTableDescr.h"
@@ -67,16 +68,9 @@ CParseHandlerDynamicTableScan::StartElement(
 				   str->GetBuffer());
 	}
 
-	m_part_index_id = CDXLOperatorFactory::ExtractConvertAttrValueToUlong(
-		m_parse_handler_mgr->GetDXLMemoryManager(), attrs, EdxltokenPartIndexId,
+	m_selector_ids = CDXLOperatorFactory::ExtractConvertValuesToArray(
+		m_parse_handler_mgr->GetDXLMemoryManager(), attrs, EdxltokenSelectorIds,
 		EdxltokenPhysicalDynamicTableScan);
-
-	m_part_index_id_printable =
-		CDXLOperatorFactory::ExtractConvertAttrValueToUlong(
-			m_parse_handler_mgr->GetDXLMemoryManager(), attrs,
-			EdxltokenPartIndexIdPrintable, EdxltokenPhysicalDynamicTableScan,
-			true,  //is_optional
-			m_part_index_id);
 
 	// create child node parsers in reverse order of their expected occurrence
 
@@ -86,6 +80,13 @@ CParseHandlerDynamicTableScan::StartElement(
 			m_mp, CDXLTokens::XmlstrToken(EdxltokenTableDescr),
 			m_parse_handler_mgr, this);
 	m_parse_handler_mgr->ActivateParseHandler(table_descr_parse_handler);
+
+	CParseHandlerBase *partition_mdids_parse_handler =
+		CParseHandlerFactory::GetParseHandler(
+			m_mp, CDXLTokens::XmlstrToken(EdxltokenMetadataIdList),
+			m_parse_handler_mgr, this);
+	m_parse_handler_mgr->ActivateParseHandler(partition_mdids_parse_handler);
+
 
 	// parse handler for the filter
 	CParseHandlerBase *filter_parse_handler =
@@ -112,6 +113,7 @@ CParseHandlerDynamicTableScan::StartElement(
 	this->Append(prop_parse_handler);
 	this->Append(proj_list_parse_handler);
 	this->Append(filter_parse_handler);
+	this->Append(partition_mdids_parse_handler);
 	this->Append(table_descr_parse_handler);
 }
 
@@ -146,16 +148,22 @@ CParseHandlerDynamicTableScan::EndElement(const XMLCh *const,  // element_uri,
 		dynamic_cast<CParseHandlerProjList *>((*this)[1]);
 	CParseHandlerFilter *filter_parse_handler =
 		dynamic_cast<CParseHandlerFilter *>((*this)[2]);
+	CParseHandlerMetadataIdList *partition_mdids_parse_handler =
+		dynamic_cast<CParseHandlerMetadataIdList *>((*this)[3]);
 	CParseHandlerTableDescr *table_descr_parse_handler =
-		dynamic_cast<CParseHandlerTableDescr *>((*this)[3]);
+		dynamic_cast<CParseHandlerTableDescr *>((*this)[4]);
 
 
 	// set table descriptor
 	CDXLTableDescr *table_descr = table_descr_parse_handler->GetDXLTableDescr();
 	table_descr->AddRef();
+
+	IMdIdArray *mdid_partitions_array =
+		partition_mdids_parse_handler->GetMdIdArray();
+	mdid_partitions_array->AddRef();
 	CDXLPhysicalDynamicTableScan *dxl_op =
 		GPOS_NEW(m_mp) CDXLPhysicalDynamicTableScan(
-			m_mp, table_descr, m_part_index_id, m_part_index_id_printable);
+			m_mp, table_descr, mdid_partitions_array, m_selector_ids);
 
 	m_dxl_node = GPOS_NEW(m_mp) CDXLNode(m_mp, dxl_op);
 	// set statictics and physical properties

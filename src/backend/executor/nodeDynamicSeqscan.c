@@ -8,13 +8,11 @@
  * DynamicSeqScan node scans each relation one after the other. For each
  * relation, it opens the table, scans the tuple, and returns relevant tuples.
  *
- * GPDB_12_MERGE_FIXME: This is currently disabled altogether. If it is
- * resurrected, some changes are needed to GPORCA. The way Partition
- * Selectors work has been heavily rewritten, there's no global hash table
- * of selected partitions anymore. For "static selection", there's a
- * partOids field in the DynamicSeqScan plan node that holds the selected
- * partitions; but none of the code in this file has been fixed to
- * actually work that way. Same with all the other Dynamic*Scan nodes.
+ * This has a smaller plan size than using an append with many partitions.
+ * Instead of determining the column mapping for each partition during planning,
+ * this mapping is determined during execution. When there are many partitions
+ * with many columns, the plan size improvement becomes very large, on the order of
+ * 100+ MB in some cases.
  *
  * Portions Copyright (c) 2012 - present, EMC/Greenplum
  * Portions Copyright (c) 2012-Present VMware, Inc. or its affiliates.
@@ -30,80 +28,15 @@
 #include "executor/executor.h"
 #include "executor/instrument.h"
 #include "nodes/execnodes.h"
-#include "nodes/nodeFuncs.h"
-#include "executor/execDynamicScan.h"
+#include "executor/execPartition.h"
 #include "executor/nodeDynamicSeqscan.h"
 #include "executor/nodeSeqscan.h"
-#include "utils/hsearch.h"
-#include "parser/parsetree.h"
 #include "utils/memutils.h"
 #include "utils/rel.h"
-#include "cdb/cdbvars.h"
 #include "access/table.h"
 #include "access/tableam.h"
 
 static void CleanupOnePartition(DynamicSeqScanState *node);
-
-/*
- * During attribute re-mapping for heterogeneous partitions, we use
- * this struct to identify which varno's attributes will be re-mapped.
- * Using this struct as a *context* during expression tree walking, we
- * can skip varattnos that do not belong to a given varno.
- */
-typedef struct AttrMapContext
-{
-	const AttrNumber *newattno; /* The mapping table to remap the varattno */
-	Index		varno;			/* Which rte's varattno to re-map */
-} AttrMapContext;
-
-/*
- * Remaps the varattno of a varattno in a Var node using an attribute map.
- */
-static bool
-change_varattnos_varno_walker(Node *node, const AttrMapContext *attrMapCxt)
-{
-	if (node == NULL)
-		return false;
-	if (IsA(node, Var))
-	{
-		Var		   *var = (Var *) node;
-
-		if (var->varlevelsup == 0 && (var->varno == attrMapCxt->varno) &&
-			var->varattno > 0)
-		{
-			/*
-			 * ??? the following may be a problem when the node is multiply
-			 * referenced though stringToNode() doesn't create such a node
-			 * currently.
-			 */
-			Assert(attrMapCxt->newattno[var->varattno - 1] > 0);
-			var->varattno = var->varoattno = attrMapCxt->newattno[var->varattno - 1];
-		}
-		return false;
-	}
-	return expression_tree_walker(node, change_varattnos_varno_walker,
-	                              (void *) attrMapCxt);
-}
-
-/*
- * Replace varattno values for a given varno RTE index in an expression
- * tree according to the given map array, that is, varattno N is replaced
- * by newattno[N-1].  It is caller's responsibility to ensure that the array
- * is long enough to define values for all user varattnos present in the tree.
- * System column attnos remain unchanged.
- *
- * Note that the passed node tree is modified in-place!
- */
-static void
-change_varattnos_of_a_varno(Node *node, const AttrNumber *newattno, Index varno)
-{
-	AttrMapContext attrMapCxt;
-
-	attrMapCxt.newattno = newattno;
-	attrMapCxt.varno = varno;
-
-	(void) change_varattnos_varno_walker(node, &attrMapCxt);
-}
 
 DynamicSeqScanState *
 ExecInitDynamicSeqScan(DynamicSeqScan *node, EState *estate, int eflags)
@@ -120,7 +53,7 @@ ExecInitDynamicSeqScan(DynamicSeqScan *node, EState *estate, int eflags)
 	state->ss.ps.plan = (Plan *) node;
 	state->ss.ps.state = estate;
 	state->ss.ps.ExecProcNode = ExecDynamicSeqScan;
-
+	state->did_pruning = false;
 	state->scan_state = SCAN_INIT;
 
 	/* Initialize child expressions. This is needed to find subplans. */
@@ -150,6 +83,8 @@ ExecInitDynamicSeqScan(DynamicSeqScan *node, EState *estate, int eflags)
 
 	state->scanrelid = node->seqscan.scanrelid;
 
+	state->as_prune_state = NULL;
+
 	/*
 	 * This context will be reset per-partition to free up per-partition
 	 * qual and targetlist allocations
@@ -159,7 +94,6 @@ ExecInitDynamicSeqScan(DynamicSeqScan *node, EState *estate, int eflags)
 									 ALLOCSET_DEFAULT_MINSIZE,
 									 ALLOCSET_DEFAULT_INITSIZE,
 									 ALLOCSET_DEFAULT_MAXSIZE);
-
 	return state;
 }
 
@@ -190,6 +124,13 @@ initNextTableToScan(DynamicSeqScanState *node)
 	else
 		return false;
 
+	/* Collect number of partitions scanned in EXPLAIN ANALYZE */
+	if (NULL != scanState->ps.instrument)
+	{
+		Instrumentation *instr = scanState->ps.instrument;
+		instr->numPartScanned++;
+	}
+
 	currentRelation = scanState->ss_currentRelation =
 		table_open(node->partOids[node->whichPart], AccessShareLock);
 
@@ -211,11 +152,6 @@ initNextTableToScan(DynamicSeqScanState *node)
 	/* If attribute remapping is not necessary, then do not change the varattno */
 	if (attMap)
 	{
-		/*
-		 * FIXME: Ewww, this doesn't really belong in the executor. The optimizer
-		 * really should explicitly pass a qual and a tlist to us, for each
-		 * partition
-		 */
 		change_varattnos_of_a_varno((Node*)scanState->ps.plan->qual, attMap, node->scanrelid);
 		change_varattnos_of_a_varno((Node*)scanState->ps.plan->targetlist, attMap, node->scanrelid);
 
@@ -227,9 +163,9 @@ initNextTableToScan(DynamicSeqScanState *node)
 	}
 
 	/*
-	 * For the very first partition, the targetlist of planstate is set to null. So, we must
-	 * initialize quals and targetlist, regardless of remapping requirements. For later
-	 * partitions, we only initialize quals and targetlist if a column re-mapping is necessary.
+	 * For the very first partition, the qual of planstate is set to null. So, we must
+	 * initialize quals, regardless of remapping requirements. For later
+	 * partitions, we only initialize quals if a column re-mapping is necessary.
 	 */
 	if (attMap || node->firstPartition)
 	{
@@ -247,7 +183,6 @@ initNextTableToScan(DynamicSeqScanState *node)
 	if (attMap)
 		pfree(attMap);
 
-//	DynamicScan_SetTableOid(&node->ss, *pid);
 	node->seqScanState = ExecInitSeqScanForPartition(&plan->seqscan, estate,
 													 currentRelation);
 	return true;
@@ -259,6 +194,33 @@ ExecDynamicSeqScan(PlanState *pstate)
 {
 	DynamicSeqScanState *node = castNode(DynamicSeqScanState, pstate);
 	TupleTableSlot *slot = NULL;
+
+	DynamicSeqScan	   *plan = (DynamicSeqScan *) node->ss.ps.plan;
+	node->as_valid_subplans = NULL;
+	if (NULL != plan->join_prune_paramids && !node->did_pruning)
+	{
+		node->did_pruning = true;
+		node->as_valid_subplans =
+			ExecFindMatchingSubPlans(node->as_prune_state,
+									 node->ss.ps.state,
+									 list_length(plan->partOids),
+									 plan->join_prune_paramids);
+
+		int i = 0;
+		int partOidIdx = -1;
+		List *newPartOids = NIL;
+		ListCell *lc;
+		for(i = 0; i < bms_num_members(node->as_valid_subplans); i++)
+		{
+			partOidIdx = bms_next_member(node->as_valid_subplans, partOidIdx);
+			newPartOids = lappend_oid(newPartOids, node->partOids[partOidIdx]);
+		}
+
+		node->partOids = palloc(sizeof(Oid) * list_length(newPartOids));
+		foreach_with_count(lc, newPartOids, i)
+			node->partOids[i] = lfirst_oid(lc);
+		node->nOids = list_length(newPartOids);
+	}
 
 	/*
 	 * Scan the table to find next tuple to return. If the current table
@@ -337,5 +299,21 @@ ExecReScanDynamicSeqScan(DynamicSeqScanState *node)
 {
 	DynamicSeqScanEndCurrentScan(node);
 
-	/* Force reloading the partition hash table */
+	// reset partition internal state
+
+	/*
+	 * If any PARAM_EXEC Params used in pruning expressions have changed, then
+	 * we'd better unset the valid subplans so that they are reselected for
+	 * the new parameter values.
+	 */
+	if (node->as_prune_state &&
+		bms_overlap(node->ss.ps.chgParam,
+					node->as_prune_state->execparamids))
+	{
+		bms_free(node->as_valid_subplans);
+		node->as_valid_subplans = NULL;
+	}
+
+	node->whichPart = -1;
+
 }

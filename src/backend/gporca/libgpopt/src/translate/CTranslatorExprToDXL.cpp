@@ -1358,9 +1358,26 @@ CTranslatorExprToDXL::PdxlnDynamicTableScan(
 	}
 
 	// construct dynamic table scan operator
+	IMdIdArray *part_mdids = popDTS->GetPartitionMdids();
+	part_mdids->AddRef();
+
+	ULongPtrArray *selector_ids = GPOS_NEW(m_mp) ULongPtrArray(m_mp);
+	CPartitionPropagationSpec *pps_reqd =
+		pexprDTS->Prpp()->Pepp()->PppsRequired();
+	if (pps_reqd->Contains(popDTS->ScanId()))
+	{
+		const CBitSet *bs = pps_reqd->SelectorIds(popDTS->ScanId());
+		CBitSetIter bsi(*bs);
+		for (ULONG ul = 0; bsi.Advance(); ul++)
+		{
+			selector_ids->Append(GPOS_NEW(m_mp) ULONG(bsi.Bit()));
+		}
+	}
+
+
 	CDXLPhysicalDynamicTableScan *pdxlopDTS =
-		GPOS_NEW(m_mp) CDXLPhysicalDynamicTableScan(
-			m_mp, table_descr, 0 /* CHRIS */, popDTS->ScanId());
+		GPOS_NEW(m_mp) CDXLPhysicalDynamicTableScan(m_mp, table_descr,
+													part_mdids, selector_ids);
 
 	CDXLNode *pdxlnDTS = GPOS_NEW(m_mp) CDXLNode(m_mp, pdxlopDTS);
 	pdxlnDTS->SetProperties(pdxlpropDTS);
@@ -1390,139 +1407,6 @@ CTranslatorExprToDXL::PdxlnDynamicTableScan(
 	pdrgpdsBaseTables->Append(pds);
 
 	return pdxlnDTS;
-
-	/*
-	GPOS_ASSERT(nullptr != pexprDTS);
-	GPOS_ASSERT_IFF(nullptr != pexprScalarCond, nullptr != dxl_properties);
-
-	CPhysicalDynamicTableScan *popDTS =
-		CPhysicalDynamicTableScan::PopConvert(pexprDTS->Pop());
-
-	ULongPtrArray *selector_ids = GPOS_NEW(m_mp) ULongPtrArray(m_mp);
-	CPartitionPropagationSpec *pps_reqd =
-		pexprDTS->Prpp()->Pepp()->PppsRequired();
-	if (pps_reqd->Contains(popDTS->ScanId()))
-	{
-		const CBitSet *bs = pps_reqd->SelectorIds(popDTS->ScanId());
-		CBitSetIter bsi(*bs);
-		for (ULONG ul = 0; bsi.Advance(); ul++)
-		{
-			selector_ids->Append(GPOS_NEW(m_mp) ULONG(bsi.Bit()));
-		}
-	}
-
-	// construct plan costs
-	CDXLPhysicalProperties *pdxlpropDTS = GetProperties(pexprDTS);
-
-	if (nullptr != dxl_properties)
-	{
-		CWStringDynamic *rows_out_str = GPOS_NEW(m_mp) CWStringDynamic(
-			m_mp,
-			dxl_properties->GetDXLOperatorCost()->GetRowsOutStr()->GetBuffer());
-		CWStringDynamic *pstrCost = GPOS_NEW(m_mp)
-			CWStringDynamic(m_mp, dxl_properties->GetDXLOperatorCost()
-									  ->GetTotalCostStr()
-									  ->GetBuffer());
-
-		pdxlpropDTS->GetDXLOperatorCost()->SetRows(rows_out_str);
-		pdxlpropDTS->GetDXLOperatorCost()->SetCost(pstrCost);
-		dxl_properties->Release();
-	}
-	GPOS_ASSERT(nullptr != pexprDTS->Prpp());
-
-	// construct projection list for top-level Append node
-	CColRefSet *pcrsOutput = pexprDTS->Prpp()->PcrsRequired();
-	CDXLNode *pdxlnPrLAppend = PdxlnProjList(pcrsOutput, colref_array);
-	CDXLTableDescr *root_dxl_table_descr = MakeDXLTableDescr(
-		popDTS->Ptabdesc(), popDTS->PdrgpcrOutput(), pexprDTS->Prpp());
-
-	// Construct the Append node - even when there is only one child partition.
-	// This is done for two reasons:
-	// * Dynamic partition pruning
-	//   Even if one partition is present in the statically pruned plan, we could
-	//   still dynamically prune it away. This needs an Append node.
-	// * Col mappings issues
-	//   When the first selected child partition's cols have different types/order
-	//   than the root partition, we can no longer re-use the colrefs of the root
-	//   partition, since colrefs are immutable. Thus, we create new colrefs for
-	//   this partition. But, if there is no Append (in case of just one selected
-	//   partition), then we also go through update all references above the DTS
-	//   with the new colrefs. For simplicity, we decided to keep the Append
-	//   around to maintain this projection (mapping) from the old root colrefs
-	//   to the first selected partition colrefs.
-	//
-	// GPDB_12_MERGE_FIXME: An Append on a single TableScan can be removed in
-	// CTranslatorDXLToPlstmt since these points do not apply there.
-	CDXLNode *pdxlnAppend = GPOS_NEW(m_mp) CDXLNode(
-		m_mp,
-		GPOS_NEW(m_mp) CDXLPhysicalAppend(m_mp, false, false, popDTS->ScanId(),
-										  root_dxl_table_descr, selector_ids));
-	pdxlnAppend->SetProperties(pdxlpropDTS);
-	pdxlnAppend->AddChild(pdxlnPrLAppend);
-	pdxlnAppend->AddChild(PdxlnFilter(nullptr));
-
-	IMdIdArray *part_mdids = popDTS->GetPartitionMdids();
-	for (ULONG ul = 0; ul < part_mdids->Size(); ++ul)
-	{
-		IMDId *part_mdid = (*part_mdids)[ul];
-		const IMDRelation *part = m_pmda->RetrieveRel(part_mdid);
-
-		CTableDescriptor *part_tabdesc =
-			MakeTableDescForPart(part, popDTS->Ptabdesc());
-
-		// Create new colrefs for the child partition. The ColRefs from root
-		// DTS, which may be used in any parent node, can no longer be exported
-		// by a child of the Append node. Thus it is exported by the Append
-		// node itself, and new colrefs are created here.
-		CColRefArray *part_colrefs = GPOS_NEW(m_mp) CColRefArray(m_mp);
-		for (ULONG ul_col = 0; ul_col < part_tabdesc->ColumnCount(); ++ul_col)
-		{
-			const CColumnDescriptor *cd = part_tabdesc->Pcoldesc(ul_col);
-			CColRef *cr = m_pcf->PcrCreate(cd->RetrieveType(),
-										   cd->TypeModifier(), cd->Name());
-			part_colrefs->Append(cr);
-		}
-
-		CDXLTableDescr *dxl_table_descr =
-			MakeDXLTableDescr(part_tabdesc, part_colrefs, pexprDTS->Prpp());
-		part_tabdesc->Release();
-
-		CDXLNode *dxlnode = GPOS_NEW(m_mp) CDXLNode(
-			m_mp, GPOS_NEW(m_mp) CDXLPhysicalTableScan(m_mp, dxl_table_descr));
-
-		// GPDB_12_MERGE_FIXME: Compute stats & properties per scan
-		pdxlpropDTS->AddRef();
-		dxlnode->SetProperties(pdxlpropDTS);
-
-		// ColRef -> index in child table desc (per partition)
-		auto root_col_mapping = (*popDTS->GetRootColMappingPerPart())[ul];
-
-		// construct projection list, re-ordered to match root DTS
-		CDXLNode *pdxlnPrL = PdxlnProjListForChildPart(
-			root_col_mapping, part_colrefs, pcrsOutput, colref_array);
-		dxlnode->AddChild(pdxlnPrL);  // project list
-
-		// construct the filter
-		CDXLNode *filter_dxlnode = PdxlnFilter(
-			PdxlnCondForChildPart(root_col_mapping, part_colrefs,
-								  popDTS->PdrgpcrOutput(), pexprScalarCond));
-		dxlnode->AddChild(filter_dxlnode);	// filter
-
-		// add to the other scans under the created Append node
-		pdxlnAppend->AddChild(dxlnode);
-
-		// cleanup
-		part_colrefs->Release();
-	}
-
-	CDistributionSpec *pds = pexprDTS->GetDrvdPropPlan()->Pds();
-	pds->AddRef();
-	pdrgpdsBaseTables->Append(pds);
-
-	GPOS_ASSERT(pdxlnAppend);
-	return pdxlnAppend;
-
- */
 }
 
 //---------------------------------------------------------------------------
