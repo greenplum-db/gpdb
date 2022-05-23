@@ -82,28 +82,19 @@ analyze t1;
 -- Simple positive cases
 --
 explain (costs off, timing off, summary off, analyze) select * from t, pt where tid = ptid;
-                                              QUERY PLAN                                               
--------------------------------------------------------------------------------------------------------
+                                       QUERY PLAN                                        
+-----------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3) (actual rows=18 loops=1)
    ->  Nested Loop (actual rows=8 loops=1)
          Join Filter: true
          ->  Broadcast Motion 3:3  (slice2; segments: 3) (actual rows=2 loops=1)
                ->  Seq Scan on t (actual rows=2 loops=1)
-         ->  Append (actual rows=4 loops=2)
-               ->  Index Scan using pt_1_prt_2_ptid_idx on pt_1_prt_2 (actual rows=2 loops=2)
-                     Index Cond: (ptid = t.tid)
-               ->  Index Scan using pt_1_prt_3_ptid_idx on pt_1_prt_3 (actual rows=2 loops=2)
-                     Index Cond: (ptid = t.tid)
-               ->  Index Scan using pt_1_prt_4_ptid_idx on pt_1_prt_4 (never executed)
-                     Index Cond: (ptid = t.tid)
-               ->  Index Scan using pt_1_prt_5_ptid_idx on pt_1_prt_5 (never executed)
-                     Index Cond: (ptid = t.tid)
-               ->  Index Scan using pt_1_prt_6_ptid_idx on pt_1_prt_6 (never executed)
-                     Index Cond: (ptid = t.tid)
-               ->  Index Scan using pt_1_prt_junk_data_ptid_idx on pt_1_prt_junk_data (never executed)
-                     Index Cond: (ptid = t.tid)
+         ->  Dynamic Index Scan on ptid_idx on pt (actual rows=4 loops=2)
+               Index Cond: (ptid = t.tid)
+               Number of partitions to scan: 6 
+               Partitions scanned:  Avg 6.0 x 3 workers of 2 scans.  Max 6 parts (seg0).
  Optimizer: Pivotal Optimizer (GPORCA)
-(19 rows)
+(10 rows)
 
 select * from t, pt where tid = ptid;
  dist | tid |   t1   | t2  | dist |   pt1   |  pt2  |    pt3    | ptid 
@@ -129,28 +120,19 @@ select * from t, pt where tid = ptid;
 (18 rows)
 
 explain (costs off, timing off, summary off, analyze) select * from t, pt where tid + 1 = ptid;
-                                              QUERY PLAN                                               
--------------------------------------------------------------------------------------------------------
+                                       QUERY PLAN                                        
+-----------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3) (actual rows=18 loops=1)
    ->  Nested Loop (actual rows=8 loops=1)
          Join Filter: true
          ->  Broadcast Motion 3:3  (slice2; segments: 3) (actual rows=2 loops=1)
                ->  Seq Scan on t (actual rows=2 loops=1)
-         ->  Append (actual rows=4 loops=2)
-               ->  Index Scan using pt_1_prt_2_ptid_idx on pt_1_prt_2 (never executed)
-                     Index Cond: (ptid = (t.tid + 1))
-               ->  Index Scan using pt_1_prt_3_ptid_idx on pt_1_prt_3 (actual rows=2 loops=2)
-                     Index Cond: (ptid = (t.tid + 1))
-               ->  Index Scan using pt_1_prt_4_ptid_idx on pt_1_prt_4 (actual rows=2 loops=2)
-                     Index Cond: (ptid = (t.tid + 1))
-               ->  Index Scan using pt_1_prt_5_ptid_idx on pt_1_prt_5 (never executed)
-                     Index Cond: (ptid = (t.tid + 1))
-               ->  Index Scan using pt_1_prt_6_ptid_idx on pt_1_prt_6 (never executed)
-                     Index Cond: (ptid = (t.tid + 1))
-               ->  Index Scan using pt_1_prt_junk_data_ptid_idx on pt_1_prt_junk_data (never executed)
-                     Index Cond: (ptid = (t.tid + 1))
+         ->  Dynamic Index Scan on ptid_idx on pt (actual rows=4 loops=2)
+               Index Cond: (ptid = (t.tid + 1))
+               Number of partitions to scan: 6 
+               Partitions scanned:  Avg 6.0 x 3 workers of 2 scans.  Max 6 parts (seg0).
  Optimizer: Pivotal Optimizer (GPORCA)
-(19 rows)
+(10 rows)
 
 select * from t, pt where tid + 1 = ptid;
  dist | tid |   t1   | t2  | dist |   pt1   |  pt2  |    pt3    | ptid 
@@ -176,29 +158,20 @@ select * from t, pt where tid + 1 = ptid;
 (18 rows)
 
 explain (costs off, timing off, summary off, analyze) select * from t, pt where tid = ptid and t1 = 'hello' || tid;
-                                              QUERY PLAN                                               
--------------------------------------------------------------------------------------------------------
+                                       QUERY PLAN                                        
+-----------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3) (actual rows=18 loops=1)
    ->  Nested Loop (actual rows=8 loops=1)
          Join Filter: true
          ->  Broadcast Motion 3:3  (slice2; segments: 3) (actual rows=2 loops=1)
                ->  Seq Scan on t (actual rows=2 loops=1)
                      Filter: (t1 = ('hello'::text || (tid)::text))
-         ->  Append (actual rows=4 loops=2)
-               ->  Index Scan using pt_1_prt_2_ptid_idx on pt_1_prt_2 (actual rows=2 loops=2)
-                     Index Cond: (ptid = t.tid)
-               ->  Index Scan using pt_1_prt_3_ptid_idx on pt_1_prt_3 (actual rows=2 loops=2)
-                     Index Cond: (ptid = t.tid)
-               ->  Index Scan using pt_1_prt_4_ptid_idx on pt_1_prt_4 (never executed)
-                     Index Cond: (ptid = t.tid)
-               ->  Index Scan using pt_1_prt_5_ptid_idx on pt_1_prt_5 (never executed)
-                     Index Cond: (ptid = t.tid)
-               ->  Index Scan using pt_1_prt_6_ptid_idx on pt_1_prt_6 (never executed)
-                     Index Cond: (ptid = t.tid)
-               ->  Index Scan using pt_1_prt_junk_data_ptid_idx on pt_1_prt_junk_data (never executed)
-                     Index Cond: (ptid = t.tid)
+         ->  Dynamic Index Scan on ptid_idx on pt (actual rows=4 loops=2)
+               Index Cond: (ptid = t.tid)
+               Number of partitions to scan: 6 
+               Partitions scanned:  Avg 6.0 x 3 workers of 2 scans.  Max 6 parts (seg0).
  Optimizer: Pivotal Optimizer (GPORCA)
-(20 rows)
+(11 rows)
 
 select * from t, pt where tid = ptid and t1 = 'hello' || tid;
  dist | tid |   t1   | t2  | dist |   pt1   |  pt2  |    pt3    | ptid 
@@ -224,34 +197,20 @@ select * from t, pt where tid = ptid and t1 = 'hello' || tid;
 (18 rows)
 
 explain (costs off, timing off, summary off, analyze) select * from t, pt where t1 = pt1 and ptid = tid;
-                                              QUERY PLAN                                              
-------------------------------------------------------------------------------------------------------
+                                       QUERY PLAN                                        
+-----------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3) (actual rows=2 loops=1)
    ->  Nested Loop (actual rows=2 loops=1)
          Join Filter: true
          ->  Broadcast Motion 3:3  (slice2; segments: 3) (actual rows=2 loops=1)
                ->  Seq Scan on t (actual rows=2 loops=1)
-         ->  Append (actual rows=1 loops=2)
-               ->  Index Scan using pt_1_prt_2_pt1_idx on pt_1_prt_2 (actual rows=0 loops=2)
-                     Index Cond: (pt1 = t.t1)
-                     Filter: ((pt1 = t.t1) AND (ptid = t.tid))
-               ->  Index Scan using pt_1_prt_3_pt1_idx on pt_1_prt_3 (actual rows=0 loops=2)
-                     Index Cond: (pt1 = t.t1)
-                     Filter: ((pt1 = t.t1) AND (ptid = t.tid))
-               ->  Index Scan using pt_1_prt_4_pt1_idx on pt_1_prt_4 (never executed)
-                     Index Cond: (pt1 = t.t1)
-                     Filter: ((pt1 = t.t1) AND (ptid = t.tid))
-               ->  Index Scan using pt_1_prt_5_pt1_idx on pt_1_prt_5 (never executed)
-                     Index Cond: (pt1 = t.t1)
-                     Filter: ((pt1 = t.t1) AND (ptid = t.tid))
-               ->  Index Scan using pt_1_prt_6_pt1_idx on pt_1_prt_6 (never executed)
-                     Index Cond: (pt1 = t.t1)
-                     Filter: ((pt1 = t.t1) AND (ptid = t.tid))
-               ->  Index Scan using pt_1_prt_junk_data_pt1_idx on pt_1_prt_junk_data (never executed)
-                     Index Cond: (pt1 = t.t1)
-                     Filter: ((pt1 = t.t1) AND (ptid = t.tid))
+         ->  Dynamic Index Scan on pt1_idx on pt (actual rows=1 loops=2)
+               Index Cond: (pt1 = t.t1)
+               Filter: ((pt1 = t.t1) AND (ptid = t.tid))
+               Number of partitions to scan: 6 
+               Partitions scanned:  Avg 6.0 x 3 workers of 2 scans.  Max 6 parts (seg0).
  Optimizer: Pivotal Optimizer (GPORCA)
-(25 rows)
+(11 rows)
 
 select * from t, pt where t1 = pt1 and ptid = tid;
  dist | tid |   t1   | t2  | dist |  pt1   |  pt2  |    pt3    | ptid 
@@ -268,16 +227,11 @@ explain (costs off, timing off, summary off, analyze) select * from pt where pti
 ------------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3) (actual rows=18 loops=1)
    ->  Hash Join (actual rows=8 loops=1)
-         Hash Cond: (pt_1_prt_2.ptid = t.tid)
+         Hash Cond: (pt.ptid = t.tid)
          Extra Text: (seg1)   Hash chain length 1.0 avg, 1 max, using 2 of 262144 buckets.
-         ->  Append (actual rows=8 loops=1)
-               Partition Selectors: $0
-               ->  Seq Scan on pt_1_prt_2 (actual rows=5 loops=1)
-               ->  Seq Scan on pt_1_prt_3 (actual rows=3 loops=1)
-               ->  Seq Scan on pt_1_prt_4 (never executed)
-               ->  Seq Scan on pt_1_prt_5 (never executed)
-               ->  Seq Scan on pt_1_prt_6 (never executed)
-               ->  Seq Scan on pt_1_prt_junk_data (never executed)
+         ->  Dynamic Seq Scan on pt (actual rows=8 loops=1)
+               Number of partitions to scan: 6 
+               Partitions scanned:  Avg 2.0 x 3 workers.  Max 2 parts (seg0).
          ->  Hash (actual rows=2 loops=1)
                Buckets: 262144  Batches: 1  Memory Usage: 2049kB
                ->  Partition Selector (selector id: $0) (actual rows=2 loops=1)
@@ -293,7 +247,7 @@ explain (costs off, timing off, summary off, analyze) select * from pt where pti
                                              ->  Seq Scan on t (actual rows=2 loops=1)
                                                    Filter: (t1 = ('hello'::text || (tid)::text))
  Optimizer: Pivotal Optimizer (GPORCA)
-(25 rows)
+(20 rows)
 
 select * from pt where ptid in (select tid from t where t1 = 'hello' || tid);
  dist |   pt1   |  pt2  |    pt3    | ptid 
@@ -326,16 +280,11 @@ explain (costs off, timing off, summary off, analyze) select * from pt where exi
 ------------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3) (actual rows=18 loops=1)
    ->  Hash Join (actual rows=8 loops=1)
-         Hash Cond: (pt_1_prt_2.ptid = t.tid)
+         Hash Cond: (pt.ptid = t.tid)
          Extra Text: (seg1)   Hash chain length 1.0 avg, 1 max, using 2 of 262144 buckets.
-         ->  Append (actual rows=8 loops=1)
-               Partition Selectors: $0
-               ->  Seq Scan on pt_1_prt_2 (actual rows=5 loops=1)
-               ->  Seq Scan on pt_1_prt_3 (actual rows=3 loops=1)
-               ->  Seq Scan on pt_1_prt_4 (never executed)
-               ->  Seq Scan on pt_1_prt_5 (never executed)
-               ->  Seq Scan on pt_1_prt_6 (never executed)
-               ->  Seq Scan on pt_1_prt_junk_data (never executed)
+         ->  Dynamic Seq Scan on pt (actual rows=8 loops=1)
+               Number of partitions to scan: 6 
+               Partitions scanned:  Avg 2.0 x 3 workers.  Max 2 parts (seg0).
          ->  Hash (actual rows=2 loops=1)
                Buckets: 262144  Batches: 1  Memory Usage: 2049kB
                ->  Partition Selector (selector id: $0) (actual rows=2 loops=1)
@@ -351,7 +300,7 @@ explain (costs off, timing off, summary off, analyze) select * from pt where exi
                                              ->  Seq Scan on t (actual rows=2 loops=1)
                                                    Filter: (t1 = ('hello'::text || (tid)::text))
  Optimizer: Pivotal Optimizer (GPORCA)
-(25 rows)
+(20 rows)
 
 select * from pt where exists (select 1 from t where tid = ptid and t1 = 'hello' || tid);
  dist |   pt1   |  pt2  |    pt3    | ptid 
@@ -380,8 +329,8 @@ select * from pt where exists (select 1 from t where tid = ptid and t1 = 'hello'
 -- group-by on top
 --
 explain (costs off, timing off, summary off, analyze) select count(*) from t, pt where tid = ptid;
-                                                    QUERY PLAN                                                     
--------------------------------------------------------------------------------------------------------------------
+                                             QUERY PLAN                                              
+-----------------------------------------------------------------------------------------------------
  Finalize Aggregate (actual rows=1 loops=1)
    ->  Gather Motion 3:1  (slice1; segments: 3) (actual rows=3 loops=1)
          ->  Partial Aggregate (actual rows=1 loops=1)
@@ -389,21 +338,12 @@ explain (costs off, timing off, summary off, analyze) select count(*) from t, pt
                      Join Filter: true
                      ->  Broadcast Motion 3:3  (slice2; segments: 3) (actual rows=2 loops=1)
                            ->  Seq Scan on t (actual rows=2 loops=1)
-                     ->  Append (actual rows=4 loops=2)
-                           ->  Index Scan using pt_1_prt_2_ptid_idx on pt_1_prt_2 (actual rows=2 loops=2)
-                                 Index Cond: (ptid = t.tid)
-                           ->  Index Scan using pt_1_prt_3_ptid_idx on pt_1_prt_3 (actual rows=2 loops=2)
-                                 Index Cond: (ptid = t.tid)
-                           ->  Index Scan using pt_1_prt_4_ptid_idx on pt_1_prt_4 (never executed)
-                                 Index Cond: (ptid = t.tid)
-                           ->  Index Scan using pt_1_prt_5_ptid_idx on pt_1_prt_5 (never executed)
-                                 Index Cond: (ptid = t.tid)
-                           ->  Index Scan using pt_1_prt_6_ptid_idx on pt_1_prt_6 (never executed)
-                                 Index Cond: (ptid = t.tid)
-                           ->  Index Scan using pt_1_prt_junk_data_ptid_idx on pt_1_prt_junk_data (never executed)
-                                 Index Cond: (ptid = t.tid)
+                     ->  Dynamic Index Scan on ptid_idx on pt (actual rows=4 loops=2)
+                           Index Cond: (ptid = t.tid)
+                           Number of partitions to scan: 6 
+                           Partitions scanned:  Avg 6.0 x 3 workers of 2 scans.  Max 6 parts (seg0).
  Optimizer: Pivotal Optimizer (GPORCA)
-(21 rows)
+(12 rows)
 
 select count(*) from t, pt where tid = ptid;
  count 
@@ -415,35 +355,26 @@ select count(*) from t, pt where tid = ptid;
 -- window function on top
 --
 explain (costs off, timing off, summary off, analyze) select *, rank() over (order by ptid,pt1) from t, pt where tid = ptid;
-                                                    QUERY PLAN                                                     
--------------------------------------------------------------------------------------------------------------------
+                                             QUERY PLAN                                              
+-----------------------------------------------------------------------------------------------------
  WindowAgg (actual rows=18 loops=1)
-   Order By: pt_1_prt_2.ptid, pt_1_prt_2.pt1
+   Order By: pt.ptid, pt.pt1
    ->  Gather Motion 3:1  (slice1; segments: 3) (actual rows=18 loops=1)
-         Merge Key: pt_1_prt_2.ptid, pt_1_prt_2.pt1
+         Merge Key: pt.ptid, pt.pt1
          ->  Sort (actual rows=8 loops=1)
-               Sort Key: pt_1_prt_2.ptid, pt_1_prt_2.pt1
+               Sort Key: pt.ptid, pt.pt1
                Sort Method:  quicksort  Memory: 76kB
                Executor Memory: 85kB  Segments: 3  Max: 29kB (segment 1)
                ->  Nested Loop (actual rows=8 loops=1)
                      Join Filter: true
                      ->  Broadcast Motion 3:3  (slice2; segments: 3) (actual rows=2 loops=1)
                            ->  Seq Scan on t (actual rows=2 loops=1)
-                     ->  Append (actual rows=4 loops=2)
-                           ->  Index Scan using pt_1_prt_2_ptid_idx on pt_1_prt_2 (actual rows=2 loops=2)
-                                 Index Cond: (ptid = t.tid)
-                           ->  Index Scan using pt_1_prt_3_ptid_idx on pt_1_prt_3 (actual rows=2 loops=2)
-                                 Index Cond: (ptid = t.tid)
-                           ->  Index Scan using pt_1_prt_4_ptid_idx on pt_1_prt_4 (never executed)
-                                 Index Cond: (ptid = t.tid)
-                           ->  Index Scan using pt_1_prt_5_ptid_idx on pt_1_prt_5 (never executed)
-                                 Index Cond: (ptid = t.tid)
-                           ->  Index Scan using pt_1_prt_6_ptid_idx on pt_1_prt_6 (never executed)
-                                 Index Cond: (ptid = t.tid)
-                           ->  Index Scan using pt_1_prt_junk_data_ptid_idx on pt_1_prt_junk_data (never executed)
-                                 Index Cond: (ptid = t.tid)
+                     ->  Dynamic Index Scan on ptid_idx on pt (actual rows=4 loops=2)
+                           Index Cond: (ptid = t.tid)
+                           Number of partitions to scan: 6 
+                           Partitions scanned:  Avg 6.0 x 3 workers of 2 scans.  Max 6 parts (seg0).
  Optimizer: Pivotal Optimizer (GPORCA)
-(25 rows)
+(16 rows)
 
 select *, rank() over (order by ptid,pt1) from t, pt where tid = ptid;
  dist | tid |   t1   | t2  | dist |   pt1   |  pt2  |    pt3    | ptid | rank 
@@ -474,46 +405,28 @@ select *, rank() over (order by ptid,pt1) from t, pt where tid = ptid;
 explain (costs off, timing off, summary off, analyze) select * from t, pt where tid = ptid
 	  union all
 	  select * from t, pt where tid + 2 = ptid;
-                                                            QUERY PLAN                                                            
-----------------------------------------------------------------------------------------------------------------------------------
+                                          QUERY PLAN                                           
+-----------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3) (actual rows=36 loops=1)
    ->  Append (actual rows=14 loops=1)
          ->  Nested Loop (actual rows=8 loops=1)
                Join Filter: true
                ->  Broadcast Motion 3:3  (slice2; segments: 3) (actual rows=2 loops=1)
                      ->  Seq Scan on t (actual rows=2 loops=1)
-               ->  Append (actual rows=4 loops=2)
-                     ->  Index Scan using pt_1_prt_2_ptid_idx on pt_1_prt_2 (actual rows=2 loops=2)
-                           Index Cond: (ptid = t.tid)
-                     ->  Index Scan using pt_1_prt_3_ptid_idx on pt_1_prt_3 (actual rows=2 loops=2)
-                           Index Cond: (ptid = t.tid)
-                     ->  Index Scan using pt_1_prt_4_ptid_idx on pt_1_prt_4 (never executed)
-                           Index Cond: (ptid = t.tid)
-                     ->  Index Scan using pt_1_prt_5_ptid_idx on pt_1_prt_5 (never executed)
-                           Index Cond: (ptid = t.tid)
-                     ->  Index Scan using pt_1_prt_6_ptid_idx on pt_1_prt_6 (never executed)
-                           Index Cond: (ptid = t.tid)
-                     ->  Index Scan using pt_1_prt_junk_data_ptid_idx on pt_1_prt_junk_data (never executed)
-                           Index Cond: (ptid = t.tid)
+               ->  Dynamic Index Scan on ptid_idx on pt (actual rows=4 loops=2)
+                     Index Cond: (ptid = t.tid)
+                     Number of partitions to scan: 6 
+                     Partitions scanned:  Avg 6.0 x 3 workers of 2 scans.  Max 6 parts (seg0).
          ->  Nested Loop (actual rows=7 loops=1)
                Join Filter: true
                ->  Broadcast Motion 3:3  (slice3; segments: 3) (actual rows=2 loops=1)
                      ->  Seq Scan on t t_1 (actual rows=2 loops=1)
-               ->  Append (actual rows=4 loops=2)
-                     ->  Index Scan using pt_1_prt_2_ptid_idx on pt_1_prt_2 pt_1_prt_2_1 (never executed)
-                           Index Cond: (ptid = (t_1.tid + 2))
-                     ->  Index Scan using pt_1_prt_3_ptid_idx on pt_1_prt_3 pt_1_prt_3_1 (never executed)
-                           Index Cond: (ptid = (t_1.tid + 2))
-                     ->  Index Scan using pt_1_prt_4_ptid_idx on pt_1_prt_4 pt_1_prt_4_1 (actual rows=2 loops=2)
-                           Index Cond: (ptid = (t_1.tid + 2))
-                     ->  Index Scan using pt_1_prt_5_ptid_idx on pt_1_prt_5 pt_1_prt_5_1 (actual rows=2 loops=2)
-                           Index Cond: (ptid = (t_1.tid + 2))
-                     ->  Index Scan using pt_1_prt_6_ptid_idx on pt_1_prt_6 pt_1_prt_6_1 (never executed)
-                           Index Cond: (ptid = (t_1.tid + 2))
-                     ->  Index Scan using pt_1_prt_junk_data_ptid_idx on pt_1_prt_junk_data pt_1_prt_junk_data_1 (never executed)
-                           Index Cond: (ptid = (t_1.tid + 2))
+               ->  Dynamic Index Scan on ptid_idx on pt pt_1 (actual rows=4 loops=2)
+                     Index Cond: (ptid = (t_1.tid + 2))
+                     Number of partitions to scan: 6 
+                     Partitions scanned:  Avg 6.0 x 3 workers of 2 scans.  Max 6 parts (seg0).
  Optimizer: Pivotal Optimizer (GPORCA)
-(37 rows)
+(19 rows)
 
 select * from t, pt where tid = ptid
 	  union all
@@ -566,8 +479,8 @@ explain (costs off, timing off, summary off, analyze) select count(*) from
 	  union all
 	  select * from t, pt where tid + 2 = ptid
 	  ) foo;
-                                                                  QUERY PLAN                                                                  
-----------------------------------------------------------------------------------------------------------------------------------------------
+                                                QUERY PLAN                                                 
+-----------------------------------------------------------------------------------------------------------
  Finalize Aggregate (actual rows=1 loops=1)
    ->  Gather Motion 3:1  (slice1; segments: 3) (actual rows=3 loops=1)
          ->  Partial Aggregate (actual rows=1 loops=1)
@@ -576,38 +489,20 @@ explain (costs off, timing off, summary off, analyze) select count(*) from
                            Join Filter: true
                            ->  Broadcast Motion 3:3  (slice2; segments: 3) (actual rows=2 loops=1)
                                  ->  Seq Scan on t (actual rows=2 loops=1)
-                           ->  Append (actual rows=4 loops=2)
-                                 ->  Index Scan using pt_1_prt_2_ptid_idx on pt_1_prt_2 (actual rows=2 loops=2)
-                                       Index Cond: (ptid = t.tid)
-                                 ->  Index Scan using pt_1_prt_3_ptid_idx on pt_1_prt_3 (actual rows=2 loops=2)
-                                       Index Cond: (ptid = t.tid)
-                                 ->  Index Scan using pt_1_prt_4_ptid_idx on pt_1_prt_4 (never executed)
-                                       Index Cond: (ptid = t.tid)
-                                 ->  Index Scan using pt_1_prt_5_ptid_idx on pt_1_prt_5 (never executed)
-                                       Index Cond: (ptid = t.tid)
-                                 ->  Index Scan using pt_1_prt_6_ptid_idx on pt_1_prt_6 (never executed)
-                                       Index Cond: (ptid = t.tid)
-                                 ->  Index Scan using pt_1_prt_junk_data_ptid_idx on pt_1_prt_junk_data (never executed)
-                                       Index Cond: (ptid = t.tid)
+                           ->  Dynamic Index Scan on ptid_idx on pt (actual rows=4 loops=2)
+                                 Index Cond: (ptid = t.tid)
+                                 Number of partitions to scan: 6 
+                                 Partitions scanned:  Avg 6.0 x 3 workers of 2 scans.  Max 6 parts (seg0).
                      ->  Nested Loop (actual rows=7 loops=1)
                            Join Filter: true
                            ->  Broadcast Motion 3:3  (slice3; segments: 3) (actual rows=2 loops=1)
                                  ->  Seq Scan on t t_1 (actual rows=2 loops=1)
-                           ->  Append (actual rows=4 loops=2)
-                                 ->  Index Scan using pt_1_prt_2_ptid_idx on pt_1_prt_2 pt_1_prt_2_1 (never executed)
-                                       Index Cond: (ptid = (t_1.tid + 2))
-                                 ->  Index Scan using pt_1_prt_3_ptid_idx on pt_1_prt_3 pt_1_prt_3_1 (never executed)
-                                       Index Cond: (ptid = (t_1.tid + 2))
-                                 ->  Index Scan using pt_1_prt_4_ptid_idx on pt_1_prt_4 pt_1_prt_4_1 (actual rows=2 loops=2)
-                                       Index Cond: (ptid = (t_1.tid + 2))
-                                 ->  Index Scan using pt_1_prt_5_ptid_idx on pt_1_prt_5 pt_1_prt_5_1 (actual rows=2 loops=2)
-                                       Index Cond: (ptid = (t_1.tid + 2))
-                                 ->  Index Scan using pt_1_prt_6_ptid_idx on pt_1_prt_6 pt_1_prt_6_1 (never executed)
-                                       Index Cond: (ptid = (t_1.tid + 2))
-                                 ->  Index Scan using pt_1_prt_junk_data_ptid_idx on pt_1_prt_junk_data pt_1_prt_junk_data_1 (never executed)
-                                       Index Cond: (ptid = (t_1.tid + 2))
+                           ->  Dynamic Index Scan on ptid_idx on pt pt_1 (actual rows=4 loops=2)
+                                 Index Cond: (ptid = (t_1.tid + 2))
+                                 Number of partitions to scan: 6 
+                                 Partitions scanned:  Avg 6.0 x 3 workers of 2 scans.  Max 6 parts (seg0).
  Optimizer: Pivotal Optimizer (GPORCA)
-(39 rows)
+(21 rows)
 
 select count(*) from
 	( select * from t, pt where tid = ptid
@@ -626,28 +521,19 @@ set enable_hashjoin=off;
 set enable_nestloop=on;
 set enable_mergejoin=off;
 explain (costs off, timing off, summary off, analyze) select * from t, pt where tid = ptid;
-                                              QUERY PLAN
--------------------------------------------------------------------------------------------------------
+                                       QUERY PLAN                                        
+-----------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3) (actual rows=18 loops=1)
    ->  Nested Loop (actual rows=8 loops=1)
          Join Filter: true
          ->  Broadcast Motion 3:3  (slice2; segments: 3) (actual rows=2 loops=1)
                ->  Seq Scan on t (actual rows=2 loops=1)
-         ->  Append (actual rows=4 loops=2)
-               ->  Index Scan using pt_1_prt_2_ptid_idx on pt_1_prt_2 (actual rows=2 loops=2)
-                     Index Cond: (ptid = t.tid)
-               ->  Index Scan using pt_1_prt_3_ptid_idx on pt_1_prt_3 (actual rows=2 loops=2)
-                     Index Cond: (ptid = t.tid)
-               ->  Index Scan using pt_1_prt_4_ptid_idx on pt_1_prt_4 (never executed)
-                     Index Cond: (ptid = t.tid)
-               ->  Index Scan using pt_1_prt_5_ptid_idx on pt_1_prt_5 (never executed)
-                     Index Cond: (ptid = t.tid)
-               ->  Index Scan using pt_1_prt_6_ptid_idx on pt_1_prt_6 (never executed)
-                     Index Cond: (ptid = t.tid)
-               ->  Index Scan using pt_1_prt_junk_data_ptid_idx on pt_1_prt_junk_data (never executed)
-                     Index Cond: (ptid = t.tid)
+         ->  Dynamic Index Scan on ptid_idx on pt (actual rows=4 loops=2)
+               Index Cond: (ptid = t.tid)
+               Number of partitions to scan: 6 
+               Partitions scanned:  Avg 6.0 x 3 workers of 2 scans.  Max 6 parts (seg0).
  Optimizer: Pivotal Optimizer (GPORCA)
-(19 rows)
+(10 rows)
 
 select * from t, pt where tid = ptid;
  dist | tid |   t1   | t2  | dist |   pt1   |  pt2  |    pt3    | ptid 
@@ -684,31 +570,22 @@ set enable_hashjoin=off;
 -- Known_opt_diff: MPP-21322
 -- end_ignore
 explain (costs off, timing off, summary off, analyze) select * from t, pt where tid = ptid and pt1 = 'hello0';
-                                                 QUERY PLAN                                                 
-------------------------------------------------------------------------------------------------------------
+                                     QUERY PLAN                                     
+------------------------------------------------------------------------------------
  Hash Join (actual rows=1 loops=1)
-   Hash Cond: (t.tid = pt_1_prt_2.ptid)
+   Hash Cond: (t.tid = pt.ptid)
    Extra Text: Hash chain length 1.0 avg, 1 max, using 1 of 262144 buckets.
    ->  Gather Motion 3:1  (slice1; segments: 3) (actual rows=2 loops=1)
          ->  Seq Scan on t (actual rows=2 loops=1)
    ->  Hash (actual rows=1 loops=1)
          Buckets: 262144  Batches: 1  Memory Usage: 2049kB
          ->  Gather Motion 3:1  (slice2; segments: 3) (actual rows=1 loops=1)
-               ->  Append (actual rows=1 loops=1)
-                     ->  Index Scan using pt_1_prt_2_pt1_idx on pt_1_prt_2 (actual rows=1 loops=1)
-                           Index Cond: (pt1 = 'hello0'::text)
-                     ->  Index Scan using pt_1_prt_3_pt1_idx on pt_1_prt_3 (never executed)
-                           Index Cond: (pt1 = 'hello0'::text)
-                     ->  Index Scan using pt_1_prt_4_pt1_idx on pt_1_prt_4 (never executed)
-                           Index Cond: (pt1 = 'hello0'::text)
-                     ->  Index Scan using pt_1_prt_5_pt1_idx on pt_1_prt_5 (never executed)
-                           Index Cond: (pt1 = 'hello0'::text)
-                     ->  Index Scan using pt_1_prt_6_pt1_idx on pt_1_prt_6 (never executed)
-                           Index Cond: (pt1 = 'hello0'::text)
-                     ->  Index Scan using pt_1_prt_junk_data_pt1_idx on pt_1_prt_junk_data (never executed)
-                           Index Cond: (pt1 = 'hello0'::text)
+               ->  Dynamic Index Scan on pt1_idx on pt (actual rows=1 loops=1)
+                     Index Cond: (pt1 = 'hello0'::text)
+                     Number of partitions to scan: 6 
+                     Partitions scanned:  Avg 6.0 x 3 workers.  Max 6 parts (seg0).
  Optimizer: Pivotal Optimizer (GPORCA)
-(21 rows)
+(12 rows)
 
 select * from t, pt where tid = ptid and pt1 = 'hello0';
  dist | tid |   t1   | t2  | dist |  pt1   |  pt2  |    pt3    | ptid 
@@ -724,28 +601,19 @@ set enable_indexscan=on;
 set enable_seqscan=off;
 set enable_hashjoin=off;
 explain (costs off, timing off, summary off, analyze) select * from t, pt where tid = ptid;
-                                              QUERY PLAN                                               
--------------------------------------------------------------------------------------------------------
+                                       QUERY PLAN                                        
+-----------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3) (actual rows=18 loops=1)
    ->  Nested Loop (actual rows=8 loops=1)
          Join Filter: true
          ->  Broadcast Motion 3:3  (slice2; segments: 3) (actual rows=2 loops=1)
                ->  Seq Scan on t (actual rows=2 loops=1)
-         ->  Append (actual rows=4 loops=2)
-               ->  Index Scan using pt_1_prt_2_ptid_idx on pt_1_prt_2 (actual rows=2 loops=2)
-                     Index Cond: (ptid = t.tid)
-               ->  Index Scan using pt_1_prt_3_ptid_idx on pt_1_prt_3 (actual rows=2 loops=2)
-                     Index Cond: (ptid = t.tid)
-               ->  Index Scan using pt_1_prt_4_ptid_idx on pt_1_prt_4 (never executed)
-                     Index Cond: (ptid = t.tid)
-               ->  Index Scan using pt_1_prt_5_ptid_idx on pt_1_prt_5 (never executed)
-                     Index Cond: (ptid = t.tid)
-               ->  Index Scan using pt_1_prt_6_ptid_idx on pt_1_prt_6 (never executed)
-                     Index Cond: (ptid = t.tid)
-               ->  Index Scan using pt_1_prt_junk_data_ptid_idx on pt_1_prt_junk_data (never executed)
-                     Index Cond: (ptid = t.tid)
+         ->  Dynamic Index Scan on ptid_idx on pt (actual rows=4 loops=2)
+               Index Cond: (ptid = t.tid)
+               Number of partitions to scan: 6 
+               Partitions scanned:  Avg 6.0 x 3 workers of 2 scans.  Max 6 parts (seg0).
  Optimizer: Pivotal Optimizer (GPORCA)
-(19 rows)
+(10 rows)
 
 select * from t, pt where tid = ptid;
  dist | tid |   t1   | t2  | dist |   pt1   |  pt2  |    pt3    | ptid 
@@ -778,28 +646,19 @@ set enable_seqscan=on;
 set enable_hashjoin=on;
 set enable_nestloop=off;
 explain (costs off, timing off, summary off, analyze) select * from t, pt where t1 = pt1;
-                                              QUERY PLAN                                              
-------------------------------------------------------------------------------------------------------
+                                       QUERY PLAN                                        
+-----------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3) (actual rows=2 loops=1)
    ->  Nested Loop (actual rows=2 loops=1)
          Join Filter: true
          ->  Broadcast Motion 3:3  (slice2; segments: 3) (actual rows=2 loops=1)
                ->  Seq Scan on t (actual rows=2 loops=1)
-         ->  Append (actual rows=1 loops=2)
-               ->  Index Scan using pt_1_prt_2_pt1_idx on pt_1_prt_2 (actual rows=0 loops=2)
-                     Index Cond: (pt1 = t.t1)
-               ->  Index Scan using pt_1_prt_3_pt1_idx on pt_1_prt_3 (actual rows=0 loops=2)
-                     Index Cond: (pt1 = t.t1)
-               ->  Index Scan using pt_1_prt_4_pt1_idx on pt_1_prt_4 (never executed)
-                     Index Cond: (pt1 = t.t1)
-               ->  Index Scan using pt_1_prt_5_pt1_idx on pt_1_prt_5 (never executed)
-                     Index Cond: (pt1 = t.t1)
-               ->  Index Scan using pt_1_prt_6_pt1_idx on pt_1_prt_6 (never executed)
-                     Index Cond: (pt1 = t.t1)
-               ->  Index Scan using pt_1_prt_junk_data_pt1_idx on pt_1_prt_junk_data (never executed)
-                     Index Cond: (pt1 = t.t1)
+         ->  Dynamic Index Scan on pt1_idx on pt (actual rows=1 loops=2)
+               Index Cond: (pt1 = t.t1)
+               Number of partitions to scan: 6 
+               Partitions scanned:  Avg 6.0 x 3 workers of 2 scans.  Max 6 parts (seg0).
  Optimizer: Pivotal Optimizer (GPORCA)
-(19 rows)
+(10 rows)
 
 select * from t, pt where t1 = pt1;
  dist | tid |   t1   | t2  | dist |  pt1   |  pt2  |    pt3    | ptid 
@@ -809,28 +668,19 @@ select * from t, pt where t1 = pt1;
 (2 rows)
 
 explain (costs off, timing off, summary off, analyze) select * from t, pt where tid < ptid;
-                                                  QUERY PLAN                                                  
---------------------------------------------------------------------------------------------------------------
+                                       QUERY PLAN                                        
+-----------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3) (actual rows=81 loops=1)
    ->  Nested Loop (actual rows=31 loops=1)
          Join Filter: true
          ->  Broadcast Motion 3:3  (slice2; segments: 3) (actual rows=2 loops=1)
                ->  Seq Scan on t (actual rows=2 loops=1)
-         ->  Append (actual rows=16 loops=2)
-               ->  Index Scan using pt_1_prt_2_ptid_idx on pt_1_prt_2 (never executed)
-                     Index Cond: (ptid > t.tid)
-               ->  Index Scan using pt_1_prt_3_ptid_idx on pt_1_prt_3 (actual rows=2 loops=2)
-                     Index Cond: (ptid > t.tid)
-               ->  Index Scan using pt_1_prt_4_ptid_idx on pt_1_prt_4 (actual rows=5 loops=2)
-                     Index Cond: (ptid > t.tid)
-               ->  Index Scan using pt_1_prt_5_ptid_idx on pt_1_prt_5 (actual rows=5 loops=2)
-                     Index Cond: (ptid > t.tid)
-               ->  Index Scan using pt_1_prt_6_ptid_idx on pt_1_prt_6 (actual rows=4 loops=2)
-                     Index Cond: (ptid > t.tid)
-               ->  Index Scan using pt_1_prt_junk_data_ptid_idx on pt_1_prt_junk_data (actual rows=3 loops=2)
-                     Index Cond: (ptid > t.tid)
+         ->  Dynamic Index Scan on ptid_idx on pt (actual rows=16 loops=2)
+               Index Cond: (ptid > t.tid)
+               Number of partitions to scan: 6 
+               Partitions scanned:  Avg 6.0 x 3 workers of 2 scans.  Max 6 parts (seg0).
  Optimizer: Pivotal Optimizer (GPORCA)
-(19 rows)
+(10 rows)
 
 select * from t, pt where tid < ptid;
  dist | tid |   t1   | t2  | dist |   pt1   |  pt2  |    pt3    | ptid 
@@ -927,8 +777,8 @@ reset enable_nestloop;
 --
 -- one of the joined tables can be used for partition elimination, the other can not
 explain (costs off, timing off, summary off, analyze) select * from t, t1, pt where t1.t2 = t.t2 and t1.tid = ptid;
-                                                 QUERY PLAN                                                  
--------------------------------------------------------------------------------------------------------------
+                                          QUERY PLAN                                           
+-----------------------------------------------------------------------------------------------
  Hash Join (actual rows=36 loops=1)
    Hash Cond: (t1.t2 = t.t2)
    Extra Text: Hash chain length 2.0 avg, 2 max, using 1 of 262144 buckets.
@@ -937,25 +787,16 @@ explain (costs off, timing off, summary off, analyze) select * from t, t1, pt wh
                Join Filter: true
                ->  Broadcast Motion 3:3  (slice2; segments: 3) (actual rows=2 loops=1)
                      ->  Seq Scan on t1 (actual rows=1 loops=1)
-               ->  Append (actual rows=4 loops=2)
-                     ->  Index Scan using pt_1_prt_2_ptid_idx on pt_1_prt_2 (never executed)
-                           Index Cond: (ptid = t1.tid)
-                     ->  Index Scan using pt_1_prt_3_ptid_idx on pt_1_prt_3 (actual rows=2 loops=2)
-                           Index Cond: (ptid = t1.tid)
-                     ->  Index Scan using pt_1_prt_4_ptid_idx on pt_1_prt_4 (actual rows=2 loops=2)
-                           Index Cond: (ptid = t1.tid)
-                     ->  Index Scan using pt_1_prt_5_ptid_idx on pt_1_prt_5 (never executed)
-                           Index Cond: (ptid = t1.tid)
-                     ->  Index Scan using pt_1_prt_6_ptid_idx on pt_1_prt_6 (never executed)
-                           Index Cond: (ptid = t1.tid)
-                     ->  Index Scan using pt_1_prt_junk_data_ptid_idx on pt_1_prt_junk_data (never executed)
-                           Index Cond: (ptid = t1.tid)
+               ->  Dynamic Index Scan on ptid_idx on pt (actual rows=4 loops=2)
+                     Index Cond: (ptid = t1.tid)
+                     Number of partitions to scan: 6 
+                     Partitions scanned:  Avg 6.0 x 3 workers of 2 scans.  Max 6 parts (seg0).
    ->  Hash (actual rows=2 loops=1)
          Buckets: 262144  Batches: 1  Memory Usage: 2049kB
          ->  Gather Motion 3:1  (slice3; segments: 3) (actual rows=2 loops=1)
                ->  Seq Scan on t (actual rows=2 loops=1)
  Optimizer: Pivotal Optimizer (GPORCA)
-(25 rows)
+(16 rows)
 
 select * from t, t1, pt where t1.t2 = t.t2 and t1.tid = ptid;
  dist | tid |   t1   | t2  | dist | tid |   t1   | t2  | dist |   pt1   |  pt2  |    pt3    | ptid 
@@ -1007,11 +848,11 @@ insert into t1 select i, -100, 'dummy' from generate_series(1,10) i;
 analyze t;
 analyze t1;
 explain (costs off, timing off, summary off, analyze) select * from t, t1, pt where t1.tid = ptid and t.tid = ptid;
-                                                       QUERY PLAN                                                        
--------------------------------------------------------------------------------------------------------------------------
+                                                 QUERY PLAN                                                 
+------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3) (actual rows=9 loops=1)
    ->  Hash Join (actual rows=9 loops=1)
-         Hash Cond: (t.tid = pt_1_prt_2.ptid)
+         Hash Cond: (t.tid = pt.ptid)
          Extra Text: (seg1)   Hash chain length 9.0 avg, 9 max, using 1 of 262144 buckets.
          ->  Redistribute Motion 3:3  (slice2; segments: 3) (actual rows=2 loops=1)
                Hash Key: t.tid
@@ -1019,26 +860,17 @@ explain (costs off, timing off, summary off, analyze) select * from t, t1, pt wh
          ->  Hash (actual rows=9 loops=1)
                Buckets: 262144  Batches: 1  Memory Usage: 2049kB
                ->  Redistribute Motion 3:3  (slice3; segments: 3) (actual rows=9 loops=1)
-                     Hash Key: pt_1_prt_2.ptid
+                     Hash Key: pt.ptid
                      ->  Nested Loop (actual rows=8 loops=1)
                            Join Filter: true
                            ->  Broadcast Motion 3:3  (slice4; segments: 3) (actual rows=12 loops=1)
                                  ->  Seq Scan on t1 (actual rows=6 loops=1)
-                           ->  Append (actual rows=1 loops=12)
-                                 ->  Index Scan using pt_1_prt_2_ptid_idx on pt_1_prt_2 (never executed)
-                                       Index Cond: (ptid = t1.tid)
-                                 ->  Index Scan using pt_1_prt_3_ptid_idx on pt_1_prt_3 (actual rows=0 loops=12)
-                                       Index Cond: (ptid = t1.tid)
-                                 ->  Index Scan using pt_1_prt_4_ptid_idx on pt_1_prt_4 (actual rows=0 loops=12)
-                                       Index Cond: (ptid = t1.tid)
-                                 ->  Index Scan using pt_1_prt_5_ptid_idx on pt_1_prt_5 (never executed)
-                                       Index Cond: (ptid = t1.tid)
-                                 ->  Index Scan using pt_1_prt_6_ptid_idx on pt_1_prt_6 (never executed)
-                                       Index Cond: (ptid = t1.tid)
-                                 ->  Index Scan using pt_1_prt_junk_data_ptid_idx on pt_1_prt_junk_data (never executed)
-                                       Index Cond: (ptid = t1.tid)
+                           ->  Dynamic Index Scan on ptid_idx on pt (actual rows=1 loops=12)
+                                 Index Cond: (ptid = t1.tid)
+                                 Number of partitions to scan: 6 
+                                 Partitions scanned:  Avg 6.0 x 3 workers of 12 scans.  Max 6 parts (seg0).
  Optimizer: Pivotal Optimizer (GPORCA)
-(28 rows)
+(19 rows)
 
 select * from t, t1, pt where t1.tid = ptid and t.tid = ptid;
  dist | tid |   t1   | t2  | dist | tid |   t1   | t2  | dist |   pt1   |  pt2  |    pt3    | ptid 
@@ -1063,58 +895,26 @@ begin;
 set local from_collapse_limit = 1;
 set local join_collapse_limit = 1;
 explain (costs off, timing off, summary off, analyze) select * from t1 inner join (select pt1.*, pt2.ptid as ptid2 from pt as pt1, pt as pt2 WHERE pt1.ptid <= pt2.ptid and pt1.dist = pt2.dist ) as ptx ON t1.dist = ptx.dist and t1.tid = ptx.ptid and t1.tid = ptx.ptid2;
-                                                         QUERY PLAN                                                         
-----------------------------------------------------------------------------------------------------------------------------
+                                     QUERY PLAN                                      
+-------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3) (actual rows=2 loops=1)
    ->  Nested Loop (actual rows=1 loops=1)
          Join Filter: true
          ->  Nested Loop (actual rows=1 loops=1)
                Join Filter: true
                ->  Seq Scan on t1 (actual rows=1 loops=1)
-               ->  Append (actual rows=1 loops=1)
-                     ->  Index Scan using pt_1_prt_2_ptid_idx on pt_1_prt_2 (never executed)
-                           Index Cond: (ptid = t1.tid)
-                           Filter: ((ptid = t1.tid) AND (t1.dist = dist))
-                     ->  Index Scan using pt_1_prt_3_ptid_idx on pt_1_prt_3 (actual rows=1 loops=1)
-                           Index Cond: (ptid = t1.tid)
-                           Filter: ((ptid = t1.tid) AND (t1.dist = dist))
-                           Rows Removed by Filter: 2
-                     ->  Index Scan using pt_1_prt_4_ptid_idx on pt_1_prt_4 (actual rows=1 loops=1)
-                           Index Cond: (ptid = t1.tid)
-                           Filter: ((ptid = t1.tid) AND (t1.dist = dist))
-                           Rows Removed by Filter: 1
-                     ->  Index Scan using pt_1_prt_5_ptid_idx on pt_1_prt_5 (never executed)
-                           Index Cond: (ptid = t1.tid)
-                           Filter: ((ptid = t1.tid) AND (t1.dist = dist))
-                     ->  Index Scan using pt_1_prt_6_ptid_idx on pt_1_prt_6 (never executed)
-                           Index Cond: (ptid = t1.tid)
-                           Filter: ((ptid = t1.tid) AND (t1.dist = dist))
-                     ->  Index Scan using pt_1_prt_junk_data_ptid_idx on pt_1_prt_junk_data (never executed)
-                           Index Cond: (ptid = t1.tid)
-                           Filter: ((ptid = t1.tid) AND (t1.dist = dist))
-         ->  Append (actual rows=1 loops=1)
-               ->  Index Scan using pt_1_prt_2_ptid_idx on pt_1_prt_2 pt_1_prt_2_1 (never executed)
-                     Index Cond: ((ptid <= pt_1_prt_2.ptid) AND (ptid = pt_1_prt_2.ptid))
-                     Filter: ((ptid <= pt_1_prt_2.ptid) AND (ptid = pt_1_prt_2.ptid) AND (dist = pt_1_prt_2.dist))
-               ->  Index Scan using pt_1_prt_3_ptid_idx on pt_1_prt_3 pt_1_prt_3_1 (actual rows=1 loops=1)
-                     Index Cond: ((ptid <= pt_1_prt_2.ptid) AND (ptid = pt_1_prt_2.ptid))
-                     Filter: ((ptid <= pt_1_prt_2.ptid) AND (ptid = pt_1_prt_2.ptid) AND (dist = pt_1_prt_2.dist))
-                     Rows Removed by Filter: 2
-               ->  Index Scan using pt_1_prt_4_ptid_idx on pt_1_prt_4 pt_1_prt_4_1 (actual rows=1 loops=1)
-                     Index Cond: ((ptid <= pt_1_prt_2.ptid) AND (ptid = pt_1_prt_2.ptid))
-                     Filter: ((ptid <= pt_1_prt_2.ptid) AND (ptid = pt_1_prt_2.ptid) AND (dist = pt_1_prt_2.dist))
-                     Rows Removed by Filter: 1
-               ->  Index Scan using pt_1_prt_5_ptid_idx on pt_1_prt_5 pt_1_prt_5_1 (never executed)
-                     Index Cond: ((ptid <= pt_1_prt_2.ptid) AND (ptid = pt_1_prt_2.ptid))
-                     Filter: ((ptid <= pt_1_prt_2.ptid) AND (ptid = pt_1_prt_2.ptid) AND (dist = pt_1_prt_2.dist))
-               ->  Index Scan using pt_1_prt_6_ptid_idx on pt_1_prt_6 pt_1_prt_6_1 (never executed)
-                     Index Cond: ((ptid <= pt_1_prt_2.ptid) AND (ptid = pt_1_prt_2.ptid))
-                     Filter: ((ptid <= pt_1_prt_2.ptid) AND (ptid = pt_1_prt_2.ptid) AND (dist = pt_1_prt_2.dist))
-               ->  Index Scan using pt_1_prt_junk_data_ptid_idx on pt_1_prt_junk_data pt_1_prt_junk_data_1 (never executed)
-                     Index Cond: ((ptid <= pt_1_prt_2.ptid) AND (ptid = pt_1_prt_2.ptid))
-                     Filter: ((ptid <= pt_1_prt_2.ptid) AND (ptid = pt_1_prt_2.ptid) AND (dist = pt_1_prt_2.dist))
+               ->  Dynamic Index Scan on ptid_idx on pt (actual rows=1 loops=1)
+                     Index Cond: (ptid = t1.tid)
+                     Filter: ((ptid = t1.tid) AND (t1.dist = dist))
+                     Number of partitions to scan: 6 
+                     Partitions scanned:  Avg 6.0 x 2 workers.  Max 6 parts (seg0).
+         ->  Dynamic Index Scan on ptid_idx on pt pt_1 (actual rows=1 loops=1)
+               Index Cond: ((ptid <= pt.ptid) AND (ptid = pt.ptid))
+               Filter: ((ptid <= pt.ptid) AND (ptid = pt.ptid) AND (dist = pt.dist))
+               Number of partitions to scan: 6 
+               Partitions scanned:  Avg 6.0 x 2 workers.  Max 6 parts (seg0).
  Optimizer: Pivotal Optimizer (GPORCA)
-(49 rows)
+(17 rows)
 
 rollback;
 --
@@ -1122,44 +922,30 @@ rollback;
 -- not projection capable.
 --
 explain (costs off, timing off, summary off, analyze) select * from pt, pt1 where pt.ptid = pt1.ptid and pt.pt1 = 'hello0' order by pt1.dist;
-                                                          QUERY PLAN                                                          
-------------------------------------------------------------------------------------------------------------------------------
+                                              QUERY PLAN                                              
+------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3) (actual rows=9 loops=1)
-   Merge Key: pt1_1_prt_2.dist
+   Merge Key: pt1.dist
    ->  Sort (actual rows=5 loops=1)
-         Sort Key: pt1_1_prt_2.dist
+         Sort Key: pt1.dist
          Sort Method:  quicksort  Memory: 75kB
          Executor Memory: 77kB  Segments: 3  Max: 26kB (segment 1)
          ->  Hash Join (actual rows=5 loops=1)
-               Hash Cond: (pt1_1_prt_2.ptid = pt_1_prt_2.ptid)
+               Hash Cond: (pt1.ptid = pt.ptid)
                Extra Text: (seg1)   Hash chain length 1.0 avg, 1 max, using 1 of 131072 buckets.
-               ->  Append (actual rows=5 loops=1)
-                     Partition Selectors: $0
-                     ->  Seq Scan on pt1_1_prt_2 (actual rows=5 loops=1)
-                     ->  Seq Scan on pt1_1_prt_3 (never executed)
-                     ->  Seq Scan on pt1_1_prt_4 (never executed)
-                     ->  Seq Scan on pt1_1_prt_5 (never executed)
-                     ->  Seq Scan on pt1_1_prt_6 (never executed)
-                     ->  Seq Scan on pt1_1_prt_junk_data (never executed)
+               ->  Dynamic Seq Scan on pt1 (actual rows=5 loops=1)
+                     Number of partitions to scan: 6 
+                     Partitions scanned:  Avg 1.0 x 3 workers.  Max 1 parts (seg0).
                ->  Hash (actual rows=1 loops=1)
                      Buckets: 131072  Batches: 1  Memory Usage: 1025kB
                      ->  Partition Selector (selector id: $0) (actual rows=1 loops=1)
                            ->  Broadcast Motion 3:3  (slice2; segments: 3) (actual rows=1 loops=1)
-                                 ->  Append (actual rows=1 loops=1)
-                                       ->  Index Scan using pt_1_prt_2_pt1_idx on pt_1_prt_2 (actual rows=1 loops=1)
-                                             Index Cond: (pt1 = 'hello0'::text)
-                                       ->  Index Scan using pt_1_prt_3_pt1_idx on pt_1_prt_3 (never executed)
-                                             Index Cond: (pt1 = 'hello0'::text)
-                                       ->  Index Scan using pt_1_prt_4_pt1_idx on pt_1_prt_4 (never executed)
-                                             Index Cond: (pt1 = 'hello0'::text)
-                                       ->  Index Scan using pt_1_prt_5_pt1_idx on pt_1_prt_5 (never executed)
-                                             Index Cond: (pt1 = 'hello0'::text)
-                                       ->  Index Scan using pt_1_prt_6_pt1_idx on pt_1_prt_6 (never executed)
-                                             Index Cond: (pt1 = 'hello0'::text)
-                                       ->  Index Scan using pt_1_prt_junk_data_pt1_idx on pt_1_prt_junk_data (never executed)
-                                             Index Cond: (pt1 = 'hello0'::text)
+                                 ->  Dynamic Index Scan on pt1_idx on pt (actual rows=1 loops=1)
+                                       Index Cond: (pt1 = 'hello0'::text)
+                                       Number of partitions to scan: 6 
+                                       Partitions scanned:  Avg 6.0 x 3 workers.  Max 6 parts (seg0).
  Optimizer: Pivotal Optimizer (GPORCA)
-(33 rows)
+(19 rows)
 
 select * from pt, pt1 where pt.ptid = pt1.ptid and pt.pt1 = 'hello0' order by pt1.dist;
  dist |  pt1   |  pt2  |    pt3    | ptid | dist |   pt1   |  pt2  |    pt3    | ptid 
@@ -1176,42 +962,27 @@ select * from pt, pt1 where pt.ptid = pt1.ptid and pt.pt1 = 'hello0' order by pt
 (9 rows)
 
 explain (costs off, timing off, summary off, analyze) select count(*) from pt, pt1 where pt.ptid = pt1.ptid and pt.pt1 = 'hello0';
-                                                                QUERY PLAN                                                                
-------------------------------------------------------------------------------------------------------------------------------------------
+                                                 QUERY PLAN                                                 
+------------------------------------------------------------------------------------------------------------
  Finalize Aggregate (actual rows=1 loops=1)
    ->  Gather Motion 3:1  (slice1; segments: 3) (actual rows=3 loops=1)
          ->  Partial Aggregate (actual rows=1 loops=1)
                ->  Hash Join (actual rows=5 loops=1)
-                     Hash Cond: (pt1_1_prt_2.ptid = pt_1_prt_2.ptid)
+                     Hash Cond: (pt1.ptid = pt.ptid)
                      Extra Text: (seg1)   Hash chain length 1.0 avg, 1 max, using 1 of 524288 buckets.
-                     ->  Append (actual rows=5 loops=1)
-                           Partition Selectors: $0
-                           ->  Seq Scan on pt1_1_prt_2 (actual rows=5 loops=1)
-                           ->  Seq Scan on pt1_1_prt_3 (never executed)
-                           ->  Seq Scan on pt1_1_prt_4 (never executed)
-                           ->  Seq Scan on pt1_1_prt_5 (never executed)
-                           ->  Seq Scan on pt1_1_prt_6 (never executed)
-                           ->  Seq Scan on pt1_1_prt_junk_data (never executed)
+                     ->  Dynamic Seq Scan on pt1 (actual rows=5 loops=1)
+                           Number of partitions to scan: 6 
+                           Partitions scanned:  Avg 1.0 x 3 workers.  Max 1 parts (seg0).
                      ->  Hash (actual rows=1 loops=1)
                            Buckets: 524288  Batches: 1  Memory Usage: 4097kB
                            ->  Partition Selector (selector id: $0) (actual rows=1 loops=1)
                                  ->  Broadcast Motion 3:3  (slice2; segments: 3) (actual rows=1 loops=1)
-                                       ->  Result (actual rows=1 loops=1)
-                                             ->  Append (actual rows=1 loops=1)
-                                                   ->  Index Scan using pt_1_prt_2_pt1_idx on pt_1_prt_2 (actual rows=1 loops=1)
-                                                         Index Cond: (pt1 = 'hello0'::text)
-                                                   ->  Index Scan using pt_1_prt_3_pt1_idx on pt_1_prt_3 (never executed)
-                                                         Index Cond: (pt1 = 'hello0'::text)
-                                                   ->  Index Scan using pt_1_prt_4_pt1_idx on pt_1_prt_4 (never executed)
-                                                         Index Cond: (pt1 = 'hello0'::text)
-                                                   ->  Index Scan using pt_1_prt_5_pt1_idx on pt_1_prt_5 (never executed)
-                                                         Index Cond: (pt1 = 'hello0'::text)
-                                                   ->  Index Scan using pt_1_prt_6_pt1_idx on pt_1_prt_6 (never executed)
-                                                         Index Cond: (pt1 = 'hello0'::text)
-                                                   ->  Index Scan using pt_1_prt_junk_data_pt1_idx on pt_1_prt_junk_data (never executed)
-                                                         Index Cond: (pt1 = 'hello0'::text)
+                                       ->  Dynamic Index Scan on pt1_idx on pt (actual rows=1 loops=1)
+                                             Index Cond: (pt1 = 'hello0'::text)
+                                             Number of partitions to scan: 6 
+                                             Partitions scanned:  Avg 6.0 x 3 workers.  Max 6 parts (seg0).
  Optimizer: Pivotal Optimizer (GPORCA)
-(32 rows)
+(17 rows)
 
 select count(*) from pt, pt1 where pt.ptid = pt1.ptid and pt.pt1 = 'hello0';
  count 
@@ -1241,7 +1012,7 @@ explain (costs off, timing off, summary off, analyze) select * from t, pt where 
 ------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3) (actual rows=5 loops=1)
    ->  Hash Join (actual rows=3 loops=1)
-         Hash Cond: (t.a = pt_1_prt_1.b)
+         Hash Cond: (t.a = pt.b)
          Extra Text: (seg0)   Hash chain length 1.0 avg, 1 max, using 3 of 524288 buckets.
          ->  Redistribute Motion 3:3  (slice2; segments: 3) (actual rows=3 loops=1)
                Hash Key: t.a
@@ -1249,15 +1020,12 @@ explain (costs off, timing off, summary off, analyze) select * from t, pt where 
          ->  Hash (actual rows=3 loops=1)
                Buckets: 524288  Batches: 1  Memory Usage: 4097kB
                ->  Redistribute Motion 3:3  (slice3; segments: 3) (actual rows=3 loops=1)
-                     Hash Key: pt_1_prt_1.b
-                     ->  Append (actual rows=3 loops=1)
-                           ->  Seq Scan on pt_1_prt_1 (actual rows=1 loops=1)
-                           ->  Seq Scan on pt_1_prt_2 (actual rows=1 loops=1)
-                           ->  Seq Scan on pt_1_prt_3 (actual rows=1 loops=1)
-                           ->  Seq Scan on pt_1_prt_4 (actual rows=1 loops=1)
-                           ->  Seq Scan on pt_1_prt_5 (actual rows=1 loops=1)
+                     Hash Key: pt.b
+                     ->  Dynamic Seq Scan on pt (actual rows=3 loops=1)
+                           Number of partitions to scan: 5 
+                           Partitions scanned:  Avg 5.0 x 3 workers.  Max 5 parts (seg0).
  Optimizer: Pivotal Optimizer (GPORCA)
-(17 rows)
+(14 rows)
 
 select * from t, pt where a = b;
  id | a | id | b 
@@ -1299,20 +1067,15 @@ explain (costs off, timing off, summary off, analyze) select * from t, pt where 
 --------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3) (actual rows=0 loops=1)
    ->  Hash Join (never executed)
-         Hash Cond: (pt_1_prt_1.b = t.a)
-         ->  Append (never executed)
-               Partition Selectors: $0
-               ->  Seq Scan on pt_1_prt_1 (never executed)
-               ->  Seq Scan on pt_1_prt_2 (never executed)
-               ->  Seq Scan on pt_1_prt_3 (never executed)
-               ->  Seq Scan on pt_1_prt_4 (never executed)
-               ->  Seq Scan on pt_1_prt_5 (never executed)
+         Hash Cond: (pt.b = t.a)
+         ->  Dynamic Seq Scan on pt (never executed)
+               Number of partitions to scan: 5 
          ->  Hash (actual rows=4 loops=1)
                Buckets: 524288  Batches: 1  Memory Usage: 4097kB
                ->  Partition Selector (selector id: $0) (actual rows=4 loops=1)
                      ->  Seq Scan on t (actual rows=4 loops=1)
  Optimizer: Pivotal Optimizer (GPORCA)
-(15 rows)
+(10 rows)
 
 select * from t, pt where a = b;
  a | b 
@@ -2663,18 +2426,14 @@ explain (costs off, timing off, summary off, analyze) select * from apart as a, 
 ---------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3) (actual rows=5 loops=1)
    ->  Hash Join (actual rows=3 loops=1)
-         Hash Cond: (apart_1_prt_1.id = c.id)
+         Hash Cond: (apart.id = c.id)
          Extra Text: (seg0)   Hash chain length 1.0 avg, 1 max, using 8 of 262144 buckets.
          ->  Hash Join (actual rows=3 loops=1)
-               Hash Cond: (apart_1_prt_1.t = b.t)
+               Hash Cond: (apart.t = b.t)
                Extra Text: (seg0)   Hash chain length 1.0 avg, 1 max, using 5 of 262144 buckets.
-               ->  Append (actual rows=70 loops=1)
-                     Partition Selectors: $0
-                     ->  Seq Scan on apart_1_prt_1 (actual rows=70 loops=1)
-                     ->  Seq Scan on apart_1_prt_2 (never executed)
-                     ->  Seq Scan on apart_1_prt_3 (never executed)
-                     ->  Seq Scan on apart_1_prt_4 (never executed)
-                     ->  Seq Scan on apart_1_prt_5 (never executed)
+               ->  Dynamic Seq Scan on apart (actual rows=70 loops=1)
+                     Number of partitions to scan: 5 
+                     Partitions scanned:  Avg 1.0 x 3 workers.  Max 1 parts (seg0).
                ->  Hash (actual rows=5 loops=1)
                      Buckets: 262144  Batches: 1  Memory Usage: 2049kB
                      ->  Broadcast Motion 3:3  (slice2; segments: 3) (actual rows=5 loops=1)
@@ -2684,7 +2443,7 @@ explain (costs off, timing off, summary off, analyze) select * from apart as a, 
                ->  Partition Selector (selector id: $0) (actual rows=8 loops=1)
                      ->  Seq Scan on c (actual rows=8 loops=1)
  Optimizer: Pivotal Optimizer (GPORCA)
-(21 rows)
+(17 rows)
 
 select * from apart as a, b, c where a.t = b.t and a.id = c.id;
  id | t | id | t | id | t 
@@ -2702,18 +2461,14 @@ explain (costs off, timing off, summary off, analyze) select * from apart as a, 
 ---------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3) (actual rows=5 loops=1)
    ->  Hash Join (actual rows=3 loops=1)
-         Hash Cond: (apart_1_prt_1.id = c.id)
+         Hash Cond: (apart.id = c.id)
          Extra Text: (seg0)   Hash chain length 1.0 avg, 1 max, using 8 of 262144 buckets.
          ->  Hash Join (actual rows=3 loops=1)
-               Hash Cond: (apart_1_prt_1.t = b.t)
+               Hash Cond: (apart.t = b.t)
                Extra Text: (seg0)   Hash chain length 1.0 avg, 1 max, using 5 of 262144 buckets.
-               ->  Append (actual rows=70 loops=1)
-                     Partition Selectors: $0
-                     ->  Seq Scan on apart_1_prt_1 (actual rows=70 loops=1)
-                     ->  Seq Scan on apart_1_prt_2 (never executed)
-                     ->  Seq Scan on apart_1_prt_3 (never executed)
-                     ->  Seq Scan on apart_1_prt_4 (never executed)
-                     ->  Seq Scan on apart_1_prt_5 (never executed)
+               ->  Dynamic Seq Scan on apart (actual rows=70 loops=1)
+                     Number of partitions to scan: 5 
+                     Partitions scanned:  Avg 1.0 x 3 workers.  Max 1 parts (seg0).
                ->  Hash (actual rows=5 loops=1)
                      Buckets: 262144  Batches: 1  Memory Usage: 2049kB
                      ->  Broadcast Motion 3:3  (slice2; segments: 3) (actual rows=5 loops=1)
@@ -2723,7 +2478,7 @@ explain (costs off, timing off, summary off, analyze) select * from apart as a, 
                ->  Partition Selector (selector id: $0) (actual rows=8 loops=1)
                      ->  Seq Scan on c (actual rows=8 loops=1)
  Optimizer: Pivotal Optimizer (GPORCA)
-(21 rows)
+(17 rows)
 
 select * from apart as a, b, c where a.t = b.t and a.id = c.id;
  id | t | id | t | id | t 
@@ -2757,10 +2512,10 @@ analyze jpat;
 -- Known_opt_diff: MPP-21323
 -- end_ignore
 explain (costs off, timing off, summary off, analyze) select * from (select count(*) over (order by a rows between 1 preceding and 1 following), a, b from jpat)jpat inner join pat using(b);
-                                  QUERY PLAN                                   
--------------------------------------------------------------------------------
+                                     QUERY PLAN                                     
+------------------------------------------------------------------------------------
  Hash Join (actual rows=1 loops=1)
-   Hash Cond: (jpat.b = pat_1_prt_2.b)
+   Hash Cond: (jpat.b = pat.b)
    Extra Text: Hash chain length 1.0 avg, 1 max, using 10 of 131072 buckets.
    ->  WindowAgg (actual rows=1 loops=1)
          Order By: jpat.a
@@ -2774,14 +2529,11 @@ explain (costs off, timing off, summary off, analyze) select * from (select coun
    ->  Hash (actual rows=10 loops=1)
          Buckets: 131072  Batches: 1  Memory Usage: 1025kB
          ->  Gather Motion 3:1  (slice2; segments: 3) (actual rows=10 loops=1)
-               ->  Append (actual rows=5 loops=1)
-                     ->  Seq Scan on pat_1_prt_2 (never executed)
-                     ->  Seq Scan on pat_1_prt_3 (actual rows=1 loops=1)
-                     ->  Seq Scan on pat_1_prt_4 (actual rows=1 loops=1)
-                     ->  Seq Scan on pat_1_prt_5 (actual rows=1 loops=1)
-                     ->  Seq Scan on pat_1_prt_other (actual rows=4 loops=1)
+               ->  Dynamic Seq Scan on pat (actual rows=5 loops=1)
+                     Number of partitions to scan: 5 
+                     Partitions scanned:  Avg 5.0 x 3 workers.  Max 5 parts (seg0).
  Optimizer: Pivotal Optimizer (GPORCA)
-(20 rows)
+(17 rows)
 
 select * from (select count(*) over (order by a rows between 1 preceding and 1 following), a, b from jpat)jpat inner join pat using(b);
      b      | count | a | a 
@@ -2946,24 +2698,19 @@ select * from pt, t where t.dist = pt.dist and t.tid < pt.ptid;
 --------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3) (actual rows=11 loops=1)
    ->  Hash Join (actual rows=11 loops=1)
-         Hash Cond: (pt1.dist = t.dist)
-         Join Filter: (t.tid < pt1.ptid)
+         Hash Cond: (pt.dist = t.dist)
+         Join Filter: (t.tid < pt.ptid)
          Rows Removed by Join Filter: 3
          Extra Text: (seg1)   Hash chain length 2.0 avg, 2 max, using 1 of 524288 buckets.
-         ->  Append (actual rows=7 loops=1)
-               Partition Selectors: $0
-               ->  Seq Scan on pt1 (never executed)
-               ->  Seq Scan on pt2 (never executed)
-               ->  Seq Scan on pt3 (actual rows=1 loops=1)
-               ->  Seq Scan on pt4 (actual rows=1 loops=1)
-               ->  Seq Scan on pt5 (actual rows=1 loops=1)
-               ->  Seq Scan on ptdefault (actual rows=4 loops=1)
+         ->  Dynamic Seq Scan on pt (actual rows=7 loops=1)
+               Number of partitions to scan: 6 
+               Partitions scanned:  4  (seg1).
          ->  Hash (actual rows=2 loops=1)
                Buckets: 524288  Batches: 1  Memory Usage: 4097kB
                ->  Partition Selector (selector id: $0) (actual rows=2 loops=1)
                      ->  Seq Scan on t (actual rows=2 loops=1)
  Optimizer: Pivotal Optimizer (GPORCA)
-(18 rows)
+(13 rows)
 
 --
 -- Test join pruning with a MergeAppend
@@ -3006,20 +2753,15 @@ select * from pt, t where t.dist = pt.dist and t.tid = pt.ptid order by t.tid, t
          Sort Method:  quicksort  Memory: 75kB
          Executor Memory: 76kB  Segments: 3  Max: 26kB (segment 0)
          ->  Hash Join  (cost=0.00..862.05 rows=33 width=24) (actual rows=2 loops=1)
-               Hash Cond: ((pt1.dist = t.dist) AND (pt1.ptid = t.tid))
+               Hash Cond: ((pt.dist = t.dist) AND (pt.ptid = t.tid))
                Extra Text: (seg0)   Hash chain length 1.0 avg, 1 max, using 36 of 262144 buckets.
-               ->  Append  (cost=0.00..431.00 rows=33 width=12) (actual rows=36 loops=1)
-                     Partition Selectors: $0
-                     ->  Seq Scan on pt1  (cost=0.00..431.00 rows=33 width=12) (actual rows=1 loops=1)
-                     ->  Seq Scan on pt2  (cost=0.00..431.00 rows=33 width=12) (actual rows=1 loops=1)
-                     ->  Seq Scan on pt3  (cost=0.00..431.00 rows=33 width=12) (never executed)
-                     ->  Seq Scan on pt4  (cost=0.00..431.00 rows=33 width=12) (never executed)
-                     ->  Seq Scan on pt5  (cost=0.00..431.00 rows=33 width=12) (actual rows=1 loops=1)
-                     ->  Seq Scan on ptdefault  (cost=0.00..431.00 rows=33 width=12) (actual rows=35 loops=1)
+               ->  Dynamic Seq Scan on pt  (cost=0.00..431.00 rows=33 width=12) (actual rows=36 loops=1)
+                     Number of partitions to scan: 6 
+                     Partitions scanned:  Avg 2.0 x 3 workers.  Max 2 parts (seg0).
                ->  Hash  (cost=431.00..431.00 rows=33 width=12) (actual rows=37 loops=1)
                      Buckets: 262144  Batches: 1  Memory Usage: 2050kB
                      ->  Partition Selector (selector id: $0)  (cost=0.00..431.00 rows=33 width=12) (actual rows=37 loops=1)
                            ->  Seq Scan on t  (cost=0.00..431.00 rows=33 width=12) (actual rows=37 loops=1)
  Optimizer: Pivotal Optimizer (GPORCA)
-(20 rows)
+(15 rows)
 

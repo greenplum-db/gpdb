@@ -752,18 +752,15 @@ SELECT * FROM geometricTypesPartition
 
 EXPLAIN SELECT * FROM geometricTypesPartition 
  WHERE c ~= SeedToCircle(101);
-                                                                QUERY PLAN                                                                
-------------------------------------------------------------------------------------------------------------------------------------------
+                                                QUERY PLAN                                                 
+-----------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..6.00 rows=1 width=68)
-   ->  Append  (cost=0.00..6.00 rows=1 width=68)
-         ->  Index Scan using geometrictypespartition_1_prt_1_c_idx on geometrictypespartition_1_prt_1  (cost=0.00..6.00 rows=1 width=68)
-               Index Cond: (c ~= '<(8479,-3121),8441>'::circle)
-               Filter: (c ~= '<(8479,-3121),8441>'::circle)
-         ->  Index Scan using geometrictypespartition_1_prt_2_c_idx on geometrictypespartition_1_prt_2  (cost=0.00..6.00 rows=1 width=68)
-               Index Cond: (c ~= '<(8479,-3121),8441>'::circle)
-               Filter: (c ~= '<(8479,-3121),8441>'::circle)
+   ->  Dynamic Index Scan on gt_index_c_part on geometrictypespartition  (cost=0.00..6.00 rows=1 width=68)
+         Index Cond: (c ~= '<(8479,-3121),8441>'::circle)
+         Filter: (c ~= '<(8479,-3121),8441>'::circle)
+         Number of partitions to scan: 2 
  Optimizer: Pivotal Optimizer (GPORCA)
-(9 rows)
+(6 rows)
 
 DROP TABLE IF EXISTS geometricTypesPartition;
 -- ----------------------------------------------------------------------

@@ -8305,21 +8305,16 @@ select * from orca.t order by 1,2;
 
 -- test EXPLAIN support of partition selection nodes, while we're at it.
 explain select * from orca.t order by 1,2;
-                                      QUERY PLAN                                       
----------------------------------------------------------------------------------------
+                                  QUERY PLAN                                   
+-------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=24)
-   Merge Key: t_1_prt_part201203.timest, t_1_prt_part201203.user_id
+   Merge Key: timest, user_id
    ->  Sort  (cost=0.00..431.00 rows=1 width=24)
-         Sort Key: t_1_prt_part201203.timest, t_1_prt_part201203.user_id
-         ->  Append  (cost=0.00..431.00 rows=1 width=24)
-               ->  Seq Scan on t_1_prt_part201203  (cost=0.00..431.00 rows=1 width=24)
-               ->  Seq Scan on t_1_prt_part201204  (cost=0.00..431.00 rows=1 width=24)
-               ->  Seq Scan on t_1_prt_part201205  (cost=0.00..431.00 rows=1 width=24)
-               ->  Seq Scan on t_1_prt_part201206  (cost=0.00..431.00 rows=1 width=24)
-               ->  Seq Scan on t_1_prt_part201207  (cost=0.00..431.00 rows=1 width=24)
-               ->  Seq Scan on t_1_prt_part201208  (cost=0.00..431.00 rows=1 width=24)
+         Sort Key: timest, user_id
+         ->  Dynamic Seq Scan on t  (cost=0.00..431.00 rows=1 width=24)
+               Number of partitions to scan: 6 
  Optimizer: Pivotal Optimizer (GPORCA)
-(12 rows)
+(7 rows)
 
 select tag2, tag1 from orca.t order by 1, 2;;
  tag2  | tag1  
@@ -8388,24 +8383,14 @@ set optimizer_enable_partial_index=on;
 set optimizer_enable_space_pruning=off;
 set optimizer_enable_constant_expression_evaluation=on;
 explain select * from orca.t_date where user_id=9;
-                                      QUERY PLAN                                      
---------------------------------------------------------------------------------------
+                                  QUERY PLAN                                   
+-------------------------------------------------------------------------------
  Gather Motion 1:1  (slice1; segments: 1)  (cost=0.00..431.00 rows=2 width=20)
-   ->  Append  (cost=0.00..431.00 rows=1 width=20)
-         ->  Seq Scan on t_date_1_prt_part201203  (cost=0.00..431.00 rows=1 width=20)
-               Filter: (user_id = '9'::numeric)
-         ->  Seq Scan on t_date_1_prt_part201204  (cost=0.00..431.00 rows=1 width=20)
-               Filter: (user_id = '9'::numeric)
-         ->  Seq Scan on t_date_1_prt_part201205  (cost=0.00..431.00 rows=1 width=20)
-               Filter: (user_id = '9'::numeric)
-         ->  Seq Scan on t_date_1_prt_part201206  (cost=0.00..431.00 rows=1 width=20)
-               Filter: (user_id = '9'::numeric)
-         ->  Seq Scan on t_date_1_prt_part201207  (cost=0.00..431.00 rows=1 width=20)
-               Filter: (user_id = '9'::numeric)
-         ->  Seq Scan on t_date_1_prt_part201208  (cost=0.00..431.00 rows=1 width=20)
-               Filter: (user_id = '9'::numeric)
+   ->  Dynamic Seq Scan on t_date  (cost=0.00..431.00 rows=1 width=20)
+         Number of partitions to scan: 6 
+         Filter: (user_id = '9'::numeric)
  Optimizer: Pivotal Optimizer (GPORCA)
-(15 rows)
+(5 rows)
 
 select * from orca.t_date where user_id=9;
    timest   | user_id | tag1  | tag2  
@@ -8441,18 +8426,14 @@ insert into orca.t_text values('01-03-2012'::date,9,'ugly','tag2');
 set optimizer_enable_space_pruning=off;
 set optimizer_enable_constant_expression_evaluation=on;
 explain select * from orca.t_text where user_id=9;
-                                     QUERY PLAN                                     
-------------------------------------------------------------------------------------
+                                  QUERY PLAN                                   
+-------------------------------------------------------------------------------
  Gather Motion 1:1  (slice1; segments: 1)  (cost=0.00..431.00 rows=2 width=20)
-   ->  Append  (cost=0.00..431.00 rows=1 width=20)
-         ->  Seq Scan on t_text_1_prt_partbad  (cost=0.00..431.00 rows=1 width=20)
-               Filter: (user_id = '9'::numeric)
-         ->  Seq Scan on t_text_1_prt_partgood  (cost=0.00..431.00 rows=1 width=20)
-               Filter: (user_id = '9'::numeric)
-         ->  Seq Scan on t_text_1_prt_partugly  (cost=0.00..431.00 rows=1 width=20)
-               Filter: (user_id = '9'::numeric)
+   ->  Dynamic Seq Scan on t_text  (cost=0.00..431.00 rows=1 width=20)
+         Number of partitions to scan: 3 
+         Filter: (user_id = '9'::numeric)
  Optimizer: Pivotal Optimizer (GPORCA)
-(9 rows)
+(5 rows)
 
 select * from orca.t_text where user_id=9;
    timest   | user_id | tag1  | tag2  
@@ -8482,18 +8463,14 @@ set optimizer_enable_space_pruning=off;
 set optimizer_enable_constant_expression_evaluation=on;
 set optimizer_use_external_constant_expression_evaluation_for_ints = on;
 explain select * from orca.t_ceeval_ints where user_id=4;
-                                        QUERY PLAN                                        
-------------------------------------------------------------------------------------------
+                                  QUERY PLAN                                   
+-------------------------------------------------------------------------------
  Gather Motion 1:1  (slice1; segments: 1)  (cost=0.00..431.00 rows=1 width=21)
-   ->  Append  (cost=0.00..431.00 rows=1 width=21)
-         ->  Seq Scan on t_ceeval_ints_1_prt_part100  (cost=0.00..431.00 rows=1 width=21)
-               Filter: (user_id = '4'::numeric)
-         ->  Seq Scan on t_ceeval_ints_1_prt_part101  (cost=0.00..431.00 rows=1 width=21)
-               Filter: (user_id = '4'::numeric)
-         ->  Seq Scan on t_ceeval_ints_1_prt_part103  (cost=0.00..431.00 rows=1 width=21)
-               Filter: (user_id = '4'::numeric)
+   ->  Dynamic Seq Scan on t_ceeval_ints  (cost=0.00..431.00 rows=1 width=21)
+         Number of partitions to scan: 3 
+         Filter: (user_id = '4'::numeric)
  Optimizer: Pivotal Optimizer (GPORCA)
-(9 rows)
+(5 rows)
 
 select * from orca.t_ceeval_ints where user_id=4;
  user_id | category_id | tag1  | tag2  
@@ -10031,42 +10008,17 @@ insert into orca.bm_dyn_test values(2, 5, '2');
 set optimizer_enable_bitmapscan=on;
 -- gather on 1 segment because of direct dispatch
 explain select * from orca.bm_dyn_test where i=2 and t='2';
-                                               QUERY PLAN                                               
---------------------------------------------------------------------------------------------------------
+                                         QUERY PLAN                                         
+--------------------------------------------------------------------------------------------
  Gather Motion 1:1  (slice1; segments: 1)  (cost=0.00..398.03 rows=2 width=10)
-   ->  Append  (cost=0.00..398.03 rows=1 width=10)
-         ->  Bitmap Heap Scan on bm_dyn_test_1_prt_part0  (cost=0.00..398.03 rows=1 width=10)
-               Recheck Cond: (i = 2)
-               Filter: ((i = 2) AND (t = '2'::text))
-               ->  Bitmap Index Scan on bm_dyn_test_1_prt_part0_i_idx  (cost=0.00..0.00 rows=0 width=0)
-                     Index Cond: (i = 2)
-         ->  Bitmap Heap Scan on bm_dyn_test_1_prt_part1  (cost=0.00..398.03 rows=1 width=10)
-               Recheck Cond: (i = 2)
-               Filter: ((i = 2) AND (t = '2'::text))
-               ->  Bitmap Index Scan on bm_dyn_test_1_prt_part1_i_idx  (cost=0.00..0.00 rows=0 width=0)
-                     Index Cond: (i = 2)
-         ->  Bitmap Heap Scan on bm_dyn_test_1_prt_part2  (cost=0.00..398.03 rows=1 width=10)
-               Recheck Cond: (i = 2)
-               Filter: ((i = 2) AND (t = '2'::text))
-               ->  Bitmap Index Scan on bm_dyn_test_1_prt_part2_i_idx  (cost=0.00..0.00 rows=0 width=0)
-                     Index Cond: (i = 2)
-         ->  Bitmap Heap Scan on bm_dyn_test_1_prt_part3  (cost=0.00..398.03 rows=1 width=10)
-               Recheck Cond: (i = 2)
-               Filter: ((i = 2) AND (t = '2'::text))
-               ->  Bitmap Index Scan on bm_dyn_test_1_prt_part3_i_idx  (cost=0.00..0.00 rows=0 width=0)
-                     Index Cond: (i = 2)
-         ->  Bitmap Heap Scan on bm_dyn_test_1_prt_part4  (cost=0.00..398.03 rows=1 width=10)
-               Recheck Cond: (i = 2)
-               Filter: ((i = 2) AND (t = '2'::text))
-               ->  Bitmap Index Scan on bm_dyn_test_1_prt_part4_i_idx  (cost=0.00..0.00 rows=0 width=0)
-                     Index Cond: (i = 2)
-         ->  Bitmap Heap Scan on bm_dyn_test_1_prt_part5  (cost=0.00..398.03 rows=1 width=10)
-               Recheck Cond: (i = 2)
-               Filter: ((i = 2) AND (t = '2'::text))
-               ->  Bitmap Index Scan on bm_dyn_test_1_prt_part5_i_idx  (cost=0.00..0.00 rows=0 width=0)
-                     Index Cond: (i = 2)
+   ->  Dynamic Bitmap Heap Scan on bm_dyn_test  (cost=0.00..398.03 rows=1 width=10)
+         Number of partitions to scan: 6 
+         Recheck Cond: (i = 2)
+         Filter: ((i = 2) AND (t = '2'::text))
+         ->  Dynamic Bitmap Index Scan on bm_dyn_test_idx  (cost=0.00..0.00 rows=0 width=0)
+               Index Cond: (i = 2)
  Optimizer: Pivotal Optimizer (GPORCA)
-(33 rows)
+(8 rows)
 
 select * from orca.bm_dyn_test where i=2 and t='2';
  i | j | t 
@@ -10397,9 +10349,9 @@ END;
 $$ LANGUAGE plpgsql volatile;
 -- start_ignore
 select disable_xform('CXformInnerJoin2DynamicIndexGetApply');
-                  disable_xform
---------------------------------------------------
- CXformInnerJoin2DynamicIndexGetApply is disabled
+                     disable_xform                      
+--------------------------------------------------------
+ CXformInnerJoin2DynamicIndexGetApply is not recognized
 (1 row)
 
 select disable_xform('CXformInnerJoin2HashJoin');
@@ -10409,9 +10361,9 @@ select disable_xform('CXformInnerJoin2HashJoin');
 (1 row)
 
 select disable_xform('CXformInnerJoin2IndexGetApply');
-               disable_xform
--------------------------------------------
- CXformInnerJoin2IndexGetApply is disabled
+                  disable_xform                  
+-------------------------------------------------
+ CXformInnerJoin2IndexGetApply is not recognized
 (1 row)
 
 select disable_xform('CXformInnerJoin2NLJoin');
@@ -10467,9 +10419,9 @@ reset optimizer_enable_indexjoin;
 reset optimizer_enable_partial_index;
 -- start_ignore
 select enable_xform('CXformInnerJoin2DynamicIndexGetApply');
-                  enable_xform
--------------------------------------------------
- CXformInnerJoin2DynamicIndexGetApply is enabled
+                      enable_xform                      
+--------------------------------------------------------
+ CXformInnerJoin2DynamicIndexGetApply is not recognized
 (1 row)
 
 select enable_xform('CXformInnerJoin2HashJoin');
@@ -10479,9 +10431,9 @@ select enable_xform('CXformInnerJoin2HashJoin');
 (1 row)
 
 select enable_xform('CXformInnerJoin2IndexGetApply');
-               enable_xform
-------------------------------------------
- CXformInnerJoin2IndexGetApply is enabled
+                  enable_xform                   
+-------------------------------------------------
+ CXformInnerJoin2IndexGetApply is not recognized
 (1 row)
 
 select enable_xform('CXformInnerJoin2NLJoin');
@@ -11609,25 +11561,12 @@ SELECT * FROM ds_part, non_part2 WHERE ds_part.c = non_part2.e AND non_part2.f =
 explain SELECT * FROM ds_part, non_part2 WHERE ds_part.c = non_part2.e AND non_part2.f = 10 AND a IN ( SELECT b + 1 FROM non_part1);
                                                      QUERY PLAN                                                     
 --------------------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1324515.77 rows=1 width=20)
-   ->  Hash Join  (cost=0.00..1324515.77 rows=1 width=20)
-         Hash Cond: (ds_part_1_prt_2.c = non_part2.e)
-         ->  Result  (cost=0.00..1324084.70 rows=334 width=12)
-               Filter: (SubPlan 1)
-               ->  Append  (cost=0.00..1324084.70 rows=334 width=12)
-                     Partition Selectors: $0
-                     ->  Seq Scan on ds_part_1_prt_2  (cost=0.00..1324084.70 rows=334 width=12)
-                           Filter: (a = (b + 1))
-                     ->  Seq Scan on ds_part_1_prt_3  (cost=0.00..1324084.70 rows=334 width=12)
-                           Filter: (a = (b + 1))
-                     ->  Seq Scan on ds_part_1_prt_4  (cost=0.00..1324084.70 rows=334 width=12)
-                           Filter: (a = (b + 1))
-                     ->  Seq Scan on ds_part_1_prt_5  (cost=0.00..1324084.70 rows=334 width=12)
-                           Filter: (a = (b + 1))
-                     ->  Seq Scan on ds_part_1_prt_6  (cost=0.00..1324084.70 rows=334 width=12)
-                           Filter: (a = (b + 1))
-                     ->  Seq Scan on ds_part_1_prt_deflt  (cost=0.00..1324084.70 rows=334 width=12)
-                           Filter: (a = (b + 1))
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1324481.18 rows=1 width=20)
+   ->  Hash Join  (cost=0.00..1324481.18 rows=1 width=20)
+         Hash Cond: (ds_part.c = non_part2.e)
+         ->  Dynamic Seq Scan on ds_part  (cost=0.00..1324050.11 rows=334 width=12)
+               Number of partitions to scan: 6 
+               Filter: ((a = (b + 1)) AND (SubPlan 1))
                SubPlan 1
                  ->  Materialize  (cost=0.00..431.00 rows=1 width=4)
                        ->  Broadcast Motion 1:3  (slice2)  (cost=0.00..431.00 rows=1 width=4)
@@ -11641,7 +11580,7 @@ explain SELECT * FROM ds_part, non_part2 WHERE ds_part.c = non_part2.e AND non_p
                            ->  Seq Scan on non_part2  (cost=0.00..431.00 rows=1 width=8)
                                  Filter: (f = 10)
  Optimizer: Pivotal Optimizer (GPORCA)
-(32 rows)
+(19 rows)
 
 SELECT *, a IN ( SELECT b + 1 FROM non_part1) FROM ds_part, non_part2 WHERE ds_part.c = non_part2.e AND non_part2.f = 10 AND a IN ( SELECT b FROM non_part1);
  a  | b  | c  | e  | f  | ?column? 
@@ -12051,23 +11990,16 @@ explain select * from part1, part2 where part1.b = part2.b limit 5;
    ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..862.13 rows=5 width=16)
          ->  Limit  (cost=0.00..862.13 rows=2 width=16)
                ->  Hash Join  (cost=0.00..862.13 rows=334 width=16)
-                     Hash Cond: (part1_1_prt_1.b = part2_1_prt_1.b)
-                     ->  Append  (cost=0.00..431.01 rows=334 width=8)
-                           Partition Selectors: $0
-                           ->  Seq Scan on part1_1_prt_1  (cost=0.00..431.01 rows=334 width=8)
-                           ->  Seq Scan on part1_1_prt_2  (cost=0.00..431.01 rows=334 width=8)
-                           ->  Seq Scan on part1_1_prt_3  (cost=0.00..431.01 rows=334 width=8)
-                           ->  Seq Scan on part1_1_prt_4  (cost=0.00..431.01 rows=334 width=8)
+                     Hash Cond: (part1.b = part2.b)
+                     ->  Dynamic Seq Scan on part1  (cost=0.00..431.01 rows=334 width=8)
+                           Number of partitions to scan: 4 
                      ->  Hash  (cost=431.02..431.02 rows=100 width=8)
                            ->  Partition Selector (selector id: $0)  (cost=0.00..431.02 rows=100 width=8)
                                  ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.02 rows=100 width=8)
-                                       ->  Append  (cost=0.00..431.00 rows=34 width=8)
-                                             ->  Seq Scan on part2_1_prt_1  (cost=0.00..431.00 rows=34 width=8)
-                                             ->  Seq Scan on part2_1_prt_2  (cost=0.00..431.00 rows=34 width=8)
-                                             ->  Seq Scan on part2_1_prt_3  (cost=0.00..431.00 rows=34 width=8)
-                                             ->  Seq Scan on part2_1_prt_4  (cost=0.00..431.00 rows=34 width=8)
+                                       ->  Dynamic Seq Scan on part2  (cost=0.00..431.00 rows=34 width=8)
+                                             Number of partitions to scan: 4 
  Optimizer: Pivotal Optimizer (GPORCA)
-(20 rows)
+(13 rows)
 
 -- test opfamily handling in ORCA
 CREATE FUNCTION abseq(int, int) RETURNS BOOL AS
@@ -12394,20 +12326,14 @@ NOTICE:  CREATE TABLE will create partition "lossycastrangepart_1_prt_3" for tab
 NOTICE:  CREATE TABLE will create partition "lossycastrangepart_1_prt_4" for table "lossycastrangepart"
 insert into lossycastrangepart (values (5.1,5.1), (9.9,9.9), (10.1,10.1), (9.1,9.1), (10.9,10.9), (11.1,11.1), (21.0,21.0)); 
 explain select * from lossycastrangepart where b::int = 10;
-                                       QUERY PLAN                                        
------------------------------------------------------------------------------------------
+                                    QUERY PLAN                                     
+-----------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=16)
-   ->  Append  (cost=0.00..431.00 rows=1 width=16)
-         ->  Seq Scan on lossycastrangepart_1_prt_1  (cost=0.00..431.00 rows=1 width=16)
-               Filter: (int4(b) = 10)
-         ->  Seq Scan on lossycastrangepart_1_prt_2  (cost=0.00..431.00 rows=1 width=16)
-               Filter: (int4(b) = 10)
-         ->  Seq Scan on lossycastrangepart_1_prt_3  (cost=0.00..431.00 rows=1 width=16)
-               Filter: (int4(b) = 10)
-         ->  Seq Scan on lossycastrangepart_1_prt_4  (cost=0.00..431.00 rows=1 width=16)
-               Filter: (int4(b) = 10)
+   ->  Dynamic Seq Scan on lossycastrangepart  (cost=0.00..431.00 rows=1 width=16)
+         Number of partitions to scan: 4 
+         Filter: (int4(b) = 10)
  Optimizer: Pivotal Optimizer (GPORCA)
-(11 rows)
+(5 rows)
 
 select * from lossycastrangepart where b::int = 10;
   a   |  b   
@@ -12417,20 +12343,14 @@ select * from lossycastrangepart where b::int = 10;
 (2 rows)
 
 explain select * from lossycastrangepart where b::int = 11;
-                                       QUERY PLAN                                        
------------------------------------------------------------------------------------------
+                                    QUERY PLAN                                     
+-----------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=16)
-   ->  Append  (cost=0.00..431.00 rows=1 width=16)
-         ->  Seq Scan on lossycastrangepart_1_prt_1  (cost=0.00..431.00 rows=1 width=16)
-               Filter: (int4(b) = 11)
-         ->  Seq Scan on lossycastrangepart_1_prt_2  (cost=0.00..431.00 rows=1 width=16)
-               Filter: (int4(b) = 11)
-         ->  Seq Scan on lossycastrangepart_1_prt_3  (cost=0.00..431.00 rows=1 width=16)
-               Filter: (int4(b) = 11)
-         ->  Seq Scan on lossycastrangepart_1_prt_4  (cost=0.00..431.00 rows=1 width=16)
-               Filter: (int4(b) = 11)
+   ->  Dynamic Seq Scan on lossycastrangepart  (cost=0.00..431.00 rows=1 width=16)
+         Number of partitions to scan: 4 
+         Filter: (int4(b) = 11)
  Optimizer: Pivotal Optimizer (GPORCA)
-(11 rows)
+(5 rows)
 
 select * from lossycastrangepart where b::int = 11;
   a   |  b   
@@ -12440,20 +12360,14 @@ select * from lossycastrangepart where b::int = 11;
 (2 rows)
 
 explain select * from lossycastrangepart where b::int < 10;
-                                       QUERY PLAN                                        
------------------------------------------------------------------------------------------
+                                    QUERY PLAN                                     
+-----------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=16)
-   ->  Append  (cost=0.00..431.00 rows=1 width=16)
-         ->  Seq Scan on lossycastrangepart_1_prt_1  (cost=0.00..431.00 rows=1 width=16)
-               Filter: (int4(b) < 10)
-         ->  Seq Scan on lossycastrangepart_1_prt_2  (cost=0.00..431.00 rows=1 width=16)
-               Filter: (int4(b) < 10)
-         ->  Seq Scan on lossycastrangepart_1_prt_3  (cost=0.00..431.00 rows=1 width=16)
-               Filter: (int4(b) < 10)
-         ->  Seq Scan on lossycastrangepart_1_prt_4  (cost=0.00..431.00 rows=1 width=16)
-               Filter: (int4(b) < 10)
+   ->  Dynamic Seq Scan on lossycastrangepart  (cost=0.00..431.00 rows=1 width=16)
+         Number of partitions to scan: 4 
+         Filter: (int4(b) < 10)
  Optimizer: Pivotal Optimizer (GPORCA)
-(11 rows)
+(5 rows)
 
 select * from lossycastrangepart where b::int < 10;
   a  |  b  
@@ -12463,20 +12377,14 @@ select * from lossycastrangepart where b::int < 10;
 (2 rows)
 
 explain select * from lossycastrangepart where b::int < 11;
-                                       QUERY PLAN                                        
------------------------------------------------------------------------------------------
+                                    QUERY PLAN                                     
+-----------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=16)
-   ->  Append  (cost=0.00..431.00 rows=1 width=16)
-         ->  Seq Scan on lossycastrangepart_1_prt_1  (cost=0.00..431.00 rows=1 width=16)
-               Filter: (int4(b) < 11)
-         ->  Seq Scan on lossycastrangepart_1_prt_2  (cost=0.00..431.00 rows=1 width=16)
-               Filter: (int4(b) < 11)
-         ->  Seq Scan on lossycastrangepart_1_prt_3  (cost=0.00..431.00 rows=1 width=16)
-               Filter: (int4(b) < 11)
-         ->  Seq Scan on lossycastrangepart_1_prt_4  (cost=0.00..431.00 rows=1 width=16)
-               Filter: (int4(b) < 11)
+   ->  Dynamic Seq Scan on lossycastrangepart  (cost=0.00..431.00 rows=1 width=16)
+         Number of partitions to scan: 4 
+         Filter: (int4(b) < 11)
  Optimizer: Pivotal Optimizer (GPORCA)
-(11 rows)
+(5 rows)
 
 select * from lossycastrangepart where b::int < 11;
   a   |  b   
@@ -12495,18 +12403,14 @@ NOTICE:  CREATE TABLE will create partition "lossycastlistpart_1_prt_l2" for tab
 NOTICE:  CREATE TABLE will create partition "lossycastlistpart_1_prt_l3" for table "lossycastlistpart"
 insert into lossycastlistpart (values (1.0,2.1), (1.0,1.3), (10.1,2.1), (9.1,2.7), (10.9,1.8), (11.1,2.8), (21.0,1.7));
 explain select * from lossycastlistpart where b::int < 2;
-                                       QUERY PLAN                                        
------------------------------------------------------------------------------------------
+                                    QUERY PLAN                                    
+----------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=12)
-   ->  Append  (cost=0.00..431.00 rows=1 width=12)
-         ->  Seq Scan on lossycastlistpart_1_prt_l2  (cost=0.00..431.00 rows=1 width=12)
-               Filter: (int4(b) < 2)
-         ->  Seq Scan on lossycastlistpart_1_prt_l1  (cost=0.00..431.00 rows=1 width=12)
-               Filter: (int4(b) < 2)
-         ->  Seq Scan on lossycastlistpart_1_prt_l3  (cost=0.00..431.00 rows=1 width=12)
-               Filter: (int4(b) < 2)
+   ->  Dynamic Seq Scan on lossycastlistpart  (cost=0.00..431.00 rows=1 width=12)
+         Number of partitions to scan: 3 
+         Filter: (int4(b) < 2)
  Optimizer: Pivotal Optimizer (GPORCA)
-(9 rows)
+(5 rows)
 
 select * from lossycastlistpart where b::int < 2;
  a |  b  
@@ -12515,18 +12419,14 @@ select * from lossycastlistpart where b::int < 2;
 (1 row)
 
 explain select * from lossycastlistpart where b::int = 2;
-                                       QUERY PLAN                                        
------------------------------------------------------------------------------------------
+                                    QUERY PLAN                                    
+----------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=12)
-   ->  Append  (cost=0.00..431.00 rows=1 width=12)
-         ->  Seq Scan on lossycastlistpart_1_prt_l2  (cost=0.00..431.00 rows=1 width=12)
-               Filter: (int4(b) = 2)
-         ->  Seq Scan on lossycastlistpart_1_prt_l1  (cost=0.00..431.00 rows=1 width=12)
-               Filter: (int4(b) = 2)
-         ->  Seq Scan on lossycastlistpart_1_prt_l3  (cost=0.00..431.00 rows=1 width=12)
-               Filter: (int4(b) = 2)
+   ->  Dynamic Seq Scan on lossycastlistpart  (cost=0.00..431.00 rows=1 width=12)
+         Number of partitions to scan: 3 
+         Filter: (int4(b) = 2)
  Optimizer: Pivotal Optimizer (GPORCA)
-(9 rows)
+(5 rows)
 
 select * from lossycastlistpart where b::int = 2;
  a  |  b  
@@ -13493,24 +13393,21 @@ explain (costs off) select * from tpart_dim d join t_ao_btree f on d.a=f.a where
 (10 rows)
 
 explain (costs off) select * from tpart_dim d join tpart_ao_btree f on d.a=f.a where d.b=1;
-                                 QUERY PLAN                                  
------------------------------------------------------------------------------
+                            QUERY PLAN                            
+------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Nested Loop
          Join Filter: true
          ->  Seq Scan on tpart_dim
                Filter: (b = 1)
-         ->  Append
-               ->  Bitmap Heap Scan on tpart_ao_btree_1_prt_1
-                     Recheck Cond: (a = tpart_dim.a)
-                     ->  Bitmap Index Scan on tpart_ao_btree_1_prt_1_a_b_idx
-                           Index Cond: (a = tpart_dim.a)
-               ->  Bitmap Heap Scan on tpart_ao_btree_1_prt_2
-                     Recheck Cond: (a = tpart_dim.a)
-                     ->  Bitmap Index Scan on tpart_ao_btree_1_prt_2_a_b_idx
-                           Index Cond: (a = tpart_dim.a)
+         ->  Dynamic Bitmap Heap Scan on tpart_ao_btree
+               Number of partitions to scan: 2 
+               Recheck Cond: (a = tpart_dim.a)
+               Filter: (a = tpart_dim.a)
+               ->  Dynamic Bitmap Index Scan on tpart_ao_btree_ix
+                     Index Cond: (a = tpart_dim.a)
  Optimizer: Pivotal Optimizer (GPORCA)
-(15 rows)
+(12 rows)
 
 -- negative test, make sure we don't use a btree scan on an AO table
 -- start_ignore
@@ -13552,12 +13449,12 @@ explain (costs off) select * from t_ao_btree where a = 3 and b = 3;
 (4 rows)
 
 explain (costs off) select * from tpart_ao_btree where a = 3 and b = 3;
-                   QUERY PLAN                   
-------------------------------------------------
+                QUERY PLAN                
+------------------------------------------
  Gather Motion 1:1  (slice1; segments: 1)
-   ->  Append
-         ->  Seq Scan on tpart_ao_btree_1_prt_1
-               Filter: ((a = 3) AND (b = 3))
+   ->  Dynamic Seq Scan on tpart_ao_btree
+         Number of partitions to scan: 1 
+         Filter: ((a = 3) AND (b = 3))
  Optimizer: Pivotal Optimizer (GPORCA)
 (5 rows)
 
@@ -13643,35 +13540,26 @@ from asset_records left join coverage
         and asset_records.active
 where  upper(coalesce(vendor, 'none')::text) <> 'some_vendor' and vendor_sla is not null
 group by asset_records.uid, asset_records.hostname, asset_records.asset_type, asset_records.os, asset_records.create_ts;
-                                                                                                         QUERY PLAN                                                                                                          
------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+                                                                                                      QUERY PLAN                                                                                                       
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
  Result
    ->  Gather Motion 3:1  (slice1; segments: 3)
          ->  GroupAggregate
-               Group Key: asset_records_1_prt_1.uid, asset_records_1_prt_1.hostname, asset_records_1_prt_1.asset_type, asset_records_1_prt_1.os, asset_records_1_prt_1.create_ts
+               Group Key: asset_records.uid, asset_records.hostname, asset_records.asset_type, asset_records.os, asset_records.create_ts
                ->  Sort
-                     Sort Key: asset_records_1_prt_1.uid, asset_records_1_prt_1.hostname, asset_records_1_prt_1.asset_type, asset_records_1_prt_1.os, asset_records_1_prt_1.create_ts
+                     Sort Key: asset_records.uid, asset_records.hostname, asset_records.asset_type, asset_records.os, asset_records.create_ts
                      ->  Hash Join
-                           Hash Cond: ((upper((asset_records_1_prt_1.hostname)::text) = upper((coverage.hostname)::text)) AND (asset_records_1_prt_1.create_ts = coverage.date))
-                           ->  Append
-                                 Partition Selectors: $0
-                                 ->  Seq Scan on asset_records_1_prt_1
-                                       Filter: ((upper((COALESCE(vendor, 'none'::character varying))::text) <> 'some_vendor'::text) AND (((asset_type)::text = 'xx'::text) OR ((asset_type)::text = 'yy'::text)) AND active)
-                                 ->  Seq Scan on asset_records_1_prt_2
-                                       Filter: ((upper((COALESCE(vendor, 'none'::character varying))::text) <> 'some_vendor'::text) AND (((asset_type)::text = 'xx'::text) OR ((asset_type)::text = 'yy'::text)) AND active)
-                                 ->  Seq Scan on asset_records_1_prt_3
-                                       Filter: ((upper((COALESCE(vendor, 'none'::character varying))::text) <> 'some_vendor'::text) AND (((asset_type)::text = 'xx'::text) OR ((asset_type)::text = 'yy'::text)) AND active)
-                                 ->  Seq Scan on asset_records_1_prt_4
-                                       Filter: ((upper((COALESCE(vendor, 'none'::character varying))::text) <> 'some_vendor'::text) AND (((asset_type)::text = 'xx'::text) OR ((asset_type)::text = 'yy'::text)) AND active)
-                                 ->  Seq Scan on asset_records_1_prt_5
-                                       Filter: ((upper((COALESCE(vendor, 'none'::character varying))::text) <> 'some_vendor'::text) AND (((asset_type)::text = 'xx'::text) OR ((asset_type)::text = 'yy'::text)) AND active)
+                           Hash Cond: ((upper((asset_records.hostname)::text) = upper((coverage.hostname)::text)) AND (asset_records.create_ts = coverage.date))
+                           ->  Dynamic Seq Scan on asset_records
+                                 Number of partitions to scan: 5 
+                                 Filter: ((upper((COALESCE(vendor, 'none'::character varying))::text) <> 'some_vendor'::text) AND (((asset_type)::text = 'xx'::text) OR ((asset_type)::text = 'yy'::text)) AND active)
                            ->  Hash
                                  ->  Partition Selector (selector id: $0)
                                        ->  Broadcast Motion 3:3  (slice2; segments: 3)
                                              ->  Seq Scan on coverage
                                                    Filter: (NOT (vendor_sla IS NULL))
  Optimizer: Pivotal Optimizer (GPORCA)
-(26 rows)
+(17 rows)
 
 -- IndexApply-PartResolverExpand.mdp
 -- from comment
@@ -13686,32 +13574,20 @@ default partition def);
 create INDEX y_idx on y (j);
 set optimizer_enable_indexjoin=on;
 explain (costs off) select count(*) from x, y where (x.i > y.j AND x.j <= y.i);
-                                QUERY PLAN                                 
----------------------------------------------------------------------------
+                          QUERY PLAN                           
+---------------------------------------------------------------
  Aggregate
    ->  Gather Motion 3:1  (slice1; segments: 3)
          ->  Nested Loop
                Join Filter: true
                ->  Broadcast Motion 3:3  (slice2; segments: 3)
                      ->  Seq Scan on x
-               ->  Append
-                     ->  Index Scan using y_1_prt_p0_j_idx on y_1_prt_p0
-                           Index Cond: (j < x.i)
-                           Filter: ((j < x.i) AND (x.j <= i))
-                     ->  Index Scan using y_1_prt_p1_j_idx on y_1_prt_p1
-                           Index Cond: (j < x.i)
-                           Filter: ((j < x.i) AND (x.j <= i))
-                     ->  Index Scan using y_1_prt_p2_j_idx on y_1_prt_p2
-                           Index Cond: (j < x.i)
-                           Filter: ((j < x.i) AND (x.j <= i))
-                     ->  Index Scan using y_1_prt_p3_j_idx on y_1_prt_p3
-                           Index Cond: (j < x.i)
-                           Filter: ((j < x.i) AND (x.j <= i))
-                     ->  Index Scan using y_1_prt_def_j_idx on y_1_prt_def
-                           Index Cond: (j < x.i)
-                           Filter: ((j < x.i) AND (x.j <= i))
+               ->  Dynamic Index Scan on y_idx on y
+                     Index Cond: (j < x.i)
+                     Filter: ((j < x.i) AND (x.j <= i))
+                     Number of partitions to scan: 5 
  Optimizer: Pivotal Optimizer (GPORCA)
-(23 rows)
+(11 rows)
 
 reset optimizer_enable_indexjoin;
 -- InferPredicatesBCC-vcpart-txt.mdp
@@ -13730,22 +13606,21 @@ CREATE TABLE infer_part_vc (id int, gender varchar(1))
 insert into infer_part_vc select i, substring(i::varchar, 1, 1) from generate_series(1, 1000) i;
 analyze infer_part_vc;
 explain (costs off) select * from infer_part_vc inner join infer_txt on (infer_part_vc.gender = infer_txt.a) and infer_txt.a = 'M';
-                                 QUERY PLAN                                 
-----------------------------------------------------------------------------
+                             QUERY PLAN                              
+---------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Hash Join
-         Hash Cond: ((infer_part_vc_1_prt_boys.gender)::text = infer_txt.a)
-         ->  Append
-               Partition Selectors: $0
-               ->  Seq Scan on infer_part_vc_1_prt_boys
-                     Filter: ((gender)::text = 'M'::text)
+         Hash Cond: ((infer_part_vc.gender)::text = infer_txt.a)
+         ->  Dynamic Seq Scan on infer_part_vc
+               Number of partitions to scan: 1 
+               Filter: ((gender)::text = 'M'::text)
          ->  Hash
                ->  Partition Selector (selector id: $0)
                      ->  Broadcast Motion 3:3  (slice2; segments: 3)
                            ->  Seq Scan on infer_txt
                                  Filter: (a = 'M'::text)
  Optimizer: Pivotal Optimizer (GPORCA)
-(13 rows)
+(12 rows)
 
 -- NewBtreeIndexScanCost.mdp
 -- from comment
@@ -13802,16 +13677,14 @@ PARTITION BY LIST (gender)
   PARTITION boys VALUES ('M'),
   DEFAULT PARTITION other );
 explain (costs off) select * from pt where gender in ( 'F', 'FM');
-                           QUERY PLAN                            
------------------------------------------------------------------
+                        QUERY PLAN                         
+-----------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  Append
-         ->  Seq Scan on pt_1_prt_girls
-               Filter: ((gender)::text = ANY ('{F,FM}'::text[]))
-         ->  Seq Scan on pt_1_prt_other
-               Filter: ((gender)::text = ANY ('{F,FM}'::text[]))
+   ->  Dynamic Seq Scan on pt
+         Number of partitions to scan: 2 
+         Filter: ((gender)::text = ANY ('{F,FM}'::text[]))
  Optimizer: Pivotal Optimizer (GPORCA)
-(7 rows)
+(5 rows)
 
 -- PartTbl-List-DPE-Varchar-Predicates.mdp
 -- from comment
@@ -13821,30 +13694,24 @@ select * from pt where gender = 'F' union all
 select * from pt where gender <= 'M' union all
 select * from pt where gender in ('F', 'FM') union all
 select * from pt where gender is null;
-                              QUERY PLAN                               
------------------------------------------------------------------------
+                           QUERY PLAN                            
+-----------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Append
-         ->  Append
-               ->  Seq Scan on pt_1_prt_girls
-                     Filter: ((gender)::text = 'F'::text)
-         ->  Append
-               ->  Seq Scan on pt_1_prt_girls pt_1_prt_girls_1
-                     Filter: ((gender)::text <= 'M'::text)
-               ->  Seq Scan on pt_1_prt_boys
-                     Filter: ((gender)::text <= 'M'::text)
-               ->  Seq Scan on pt_1_prt_other
-                     Filter: ((gender)::text <= 'M'::text)
-         ->  Append
-               ->  Seq Scan on pt_1_prt_girls pt_1_prt_girls_2
-                     Filter: ((gender)::text = ANY ('{F,FM}'::text[]))
-               ->  Seq Scan on pt_1_prt_other pt_1_prt_other_1
-                     Filter: ((gender)::text = ANY ('{F,FM}'::text[]))
-         ->  Append
-               ->  Seq Scan on pt_1_prt_girls pt_1_prt_girls_3
-                     Filter: (gender IS NULL)
+         ->  Dynamic Seq Scan on pt
+               Number of partitions to scan: 1 
+               Filter: ((gender)::text = 'F'::text)
+         ->  Dynamic Seq Scan on pt pt_1
+               Number of partitions to scan: 3 
+               Filter: ((gender)::text <= 'M'::text)
+         ->  Dynamic Seq Scan on pt pt_2
+               Number of partitions to scan: 2 
+               Filter: ((gender)::text = ANY ('{F,FM}'::text[]))
+         ->  Dynamic Seq Scan on pt pt_3
+               Number of partitions to scan: 1 
+               Filter: (gender IS NULL)
  Optimizer: Pivotal Optimizer (GPORCA)
-(21 rows)
+(15 rows)
 
 -- PartTbl-RangeJoinPred.mdp
 -- from comment (query) and dxl (ddl)
@@ -13874,21 +13741,20 @@ where d.msisdn=f.subscriberaddress and
       f.sessioncreationtimestamp >= d.start_dtm and
       f.sessioncreationtimestamp <d.end_dtm and
       (mkt_model like '%IPHONE%');
-                                                                                            QUERY PLAN                                                                                             
----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+                                                                                    QUERY PLAN                                                                                     
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Hash Join
-         Hash Cond: ((dim_customer_device.msisdn)::text = (stg_xdr_crce_cdr_1_prt_1.subscriberaddress)::text)
-         Join Filter: ((stg_xdr_crce_cdr_1_prt_1.sessioncreationtimestamp >= dim_customer_device.start_dtm) AND (stg_xdr_crce_cdr_1_prt_1.sessioncreationtimestamp < dim_customer_device.end_dtm))
+         Hash Cond: ((dim_customer_device.msisdn)::text = (stg_xdr_crce_cdr.subscriberaddress)::text)
+         Join Filter: ((stg_xdr_crce_cdr.sessioncreationtimestamp >= dim_customer_device.start_dtm) AND (stg_xdr_crce_cdr.sessioncreationtimestamp < dim_customer_device.end_dtm))
          ->  Seq Scan on dim_customer_device
                Filter: ((mkt_model)::text ~~ '%IPHONE%'::text)
          ->  Hash
                ->  Broadcast Motion 3:3  (slice2; segments: 3)
-                     ->  Append
-                           ->  Seq Scan on stg_xdr_crce_cdr_1_prt_1
-                           ->  Seq Scan on stg_xdr_crce_cdr_1_prt_2
+                     ->  Dynamic Seq Scan on stg_xdr_crce_cdr
+                           Number of partitions to scan: 2 
  Optimizer: Pivotal Optimizer (GPORCA)
-(12 rows)
+(11 rows)
 
 -- PartTbl-Relabel-Equality.mdp
 -- from dxl
@@ -13903,12 +13769,12 @@ explain (costs off)
 select month_id, cust_group_acc, mobile_no
 from ds_4
 where month_id::text = 'Apr';
-                       QUERY PLAN                       
---------------------------------------------------------
+                    QUERY PLAN                    
+--------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  Append
-         ->  Seq Scan on ds_4_1_prt_2
-               Filter: ((month_id)::text = 'Apr'::text)
+   ->  Dynamic Seq Scan on ds_4
+         Number of partitions to scan: 1 
+         Filter: ((month_id)::text = 'Apr'::text)
  Optimizer: Pivotal Optimizer (GPORCA)
 (5 rows)
 
@@ -13920,16 +13786,14 @@ explain (costs off)
 select month_id, cust_group_acc, mobile_no
 from ds_4
 where month_id::text >= 'Feb' and month_id::text < 'Mar';
-                                           QUERY PLAN                                           
-------------------------------------------------------------------------------------------------
+                                        QUERY PLAN                                        
+------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  Append
-         ->  Seq Scan on ds_4_1_prt_2
-               Filter: (((month_id)::text >= 'Feb'::text) AND ((month_id)::text < 'Mar'::text))
-         ->  Seq Scan on ds_4_1_prt_1
-               Filter: (((month_id)::text >= 'Feb'::text) AND ((month_id)::text < 'Mar'::text))
+   ->  Dynamic Seq Scan on ds_4
+         Number of partitions to scan: 2 
+         Filter: (((month_id)::text >= 'Feb'::text) AND ((month_id)::text < 'Mar'::text))
  Optimizer: Pivotal Optimizer (GPORCA)
-(7 rows)
+(5 rows)
 
 -- retail_28.mdp
 -- from comment (query) and dxl (ddl)
@@ -13953,32 +13817,27 @@ GROUP BY to_char(order_datetime,'YYYY-Q')
 ORDER BY to_char(order_datetime,'YYYY-Q')
 ,      item_shipment_status_code
 ;
-                                                                                               QUERY PLAN                                                                                               
---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+                                                                                  QUERY PLAN                                                                                  
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   Merge Key: (to_char(order_lineitems_1_prt_4.order_datetime, 'YYYY-Q'::text)), order_lineitems_1_prt_4.item_shipment_status_code
+   Merge Key: (to_char(order_datetime, 'YYYY-Q'::text)), item_shipment_status_code
    ->  Sort
-         Sort Key: (to_char(order_lineitems_1_prt_4.order_datetime, 'YYYY-Q'::text)), order_lineitems_1_prt_4.item_shipment_status_code
+         Sort Key: (to_char(order_datetime, 'YYYY-Q'::text)), item_shipment_status_code
          ->  Finalize GroupAggregate
-               Group Key: (to_char(order_lineitems_1_prt_4.order_datetime, 'YYYY-Q'::text)), order_lineitems_1_prt_4.item_shipment_status_code
+               Group Key: (to_char(order_datetime, 'YYYY-Q'::text)), item_shipment_status_code
                ->  Sort
-                     Sort Key: (to_char(order_lineitems_1_prt_4.order_datetime, 'YYYY-Q'::text)), order_lineitems_1_prt_4.item_shipment_status_code
+                     Sort Key: (to_char(order_datetime, 'YYYY-Q'::text)), item_shipment_status_code
                      ->  Redistribute Motion 3:3  (slice2; segments: 3)
-                           Hash Key: (to_char(order_lineitems_1_prt_4.order_datetime, 'YYYY-Q'::text)), order_lineitems_1_prt_4.item_shipment_status_code
+                           Hash Key: (to_char(order_datetime, 'YYYY-Q'::text)), item_shipment_status_code
                            ->  Partial GroupAggregate
-                                 Group Key: (to_char(order_lineitems_1_prt_4.order_datetime, 'YYYY-Q'::text)), order_lineitems_1_prt_4.item_shipment_status_code
+                                 Group Key: (to_char(order_datetime, 'YYYY-Q'::text)), item_shipment_status_code
                                  ->  Sort
-                                       Sort Key: (to_char(order_lineitems_1_prt_4.order_datetime, 'YYYY-Q'::text)), order_lineitems_1_prt_4.item_shipment_status_code, order_lineitems_1_prt_4.order_id
-                                       ->  Result
-                                             ->  Append
-                                                   ->  Seq Scan on order_lineitems_1_prt_4
-                                                         Filter: ((order_datetime >= 'Thu Apr 01 00:00:00 2010'::timestamp without time zone) AND (order_datetime <= '06-30-2010'::date))
-                                                   ->  Seq Scan on order_lineitems_1_prt_5
-                                                         Filter: ((order_datetime >= 'Thu Apr 01 00:00:00 2010'::timestamp without time zone) AND (order_datetime <= '06-30-2010'::date))
-                                                   ->  Seq Scan on order_lineitems_1_prt_6
-                                                         Filter: ((order_datetime >= 'Thu Apr 01 00:00:00 2010'::timestamp without time zone) AND (order_datetime <= '06-30-2010'::date))
+                                       Sort Key: (to_char(order_datetime, 'YYYY-Q'::text)), item_shipment_status_code, order_id
+                                       ->  Dynamic Seq Scan on order_lineitems
+                                             Number of partitions to scan: 3 
+                                             Filter: ((order_datetime >= 'Thu Apr 01 00:00:00 2010'::timestamp without time zone) AND (order_datetime <= '06-30-2010'::date))
  Optimizer: Pivotal Optimizer (GPORCA)
-(23 rows)
+(18 rows)
 
 -- test partioned table with no partitions
 create table no_part (a int, b int) partition by list (a) distributed by (b);

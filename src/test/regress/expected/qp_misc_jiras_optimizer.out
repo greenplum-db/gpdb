@@ -2950,14 +2950,13 @@ drop table qp_misc_jiras.tbl6448;
 create table qp_misc_jiras.tbl6833_anl(a int, b int, c int) distributed by (a) partition by range (b) (partition bb start (0) end (2) every (1));
 analyze qp_misc_jiras.tbl6833_anl;
 explain select * from qp_misc_jiras.tbl6833_anl; -- should not hit cdbRelSize();
-                                              QUERY PLAN                                               
--------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=10000000000.00..20000000002.05 rows=2 width=12)
-   ->  Append  (cost=10000000000.00..20000000002.01 rows=1 width=12)
-         ->  Seq Scan on tbl6833_anl_1_prt_bb_1  (cost=10000000000.00..10000000001.00 rows=1 width=12)
-         ->  Seq Scan on tbl6833_anl_1_prt_bb_2  (cost=10000000000.00..10000000001.00 rows=1 width=12)
- Optimizer: Postgres query optimizer
-(5 rows)
+                                  QUERY PLAN                                   
+-------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=12)
+   ->  Dynamic Seq Scan on tbl6833_anl  (cost=0.00..431.00 rows=1 width=12)
+         Number of partitions to scan: 2 
+ Optimizer: Pivotal Optimizer (GPORCA)
+(4 rows)
 
 select relname, reltuples, relpages from pg_class where relname like 'tbl6833_anl%'; -- should show relpages = 1.0
         relname         | reltuples | relpages 
@@ -2970,14 +2969,13 @@ select relname, reltuples, relpages from pg_class where relname like 'tbl6833_an
 create table qp_misc_jiras.tbl6833_vac(a int, b int, c int) distributed by (a) partition by range (b) (partition bb start (0) end (2) every (1));
 vacuum qp_misc_jiras.tbl6833_vac;
 explain select * from qp_misc_jiras.tbl6833_vac; -- should not hit cdbRelSize();
-                                              QUERY PLAN                                               
--------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=10000000000.00..20000000002.05 rows=2 width=12)
-   ->  Append  (cost=10000000000.00..20000000002.01 rows=1 width=12)
-         ->  Seq Scan on tbl6833_vac_1_prt_bb_1  (cost=10000000000.00..10000000001.00 rows=1 width=12)
-         ->  Seq Scan on tbl6833_vac_1_prt_bb_2  (cost=10000000000.00..10000000001.00 rows=1 width=12)
- Optimizer: Postgres query optimizer
-(5 rows)
+                                  QUERY PLAN                                   
+-------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=12)
+   ->  Dynamic Seq Scan on tbl6833_vac  (cost=0.00..431.00 rows=1 width=12)
+         Number of partitions to scan: 2 
+ Optimizer: Pivotal Optimizer (GPORCA)
+(4 rows)
 
 select relname, reltuples, relpages from pg_class where relname like 'tbl6833_vac%'; -- should show relpages = 1.0
         relname         | reltuples | relpages 
