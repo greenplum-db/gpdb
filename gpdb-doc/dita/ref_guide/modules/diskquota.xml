@@ -287,7 +287,7 @@ $ gpstop -ar</codeblock>
         <p>The denylist shared memory can hold up to one million database objects that exceed the quota
           limit. If the denylist shared memory fills, data may be loaded into some schemas or roles
           after they have reached their quota limit. </p>
-        <p>Active table shared memory holds up to 1MiB of active tables by default. Active tables
+        <p>Active table shared memory holds up to one million of active tables by default. Active tables
           are tables that may have changed sizes since <codeph>diskquota</codeph> last recalculated
           the table sizes. <codeph>diskquota</codeph> hook functions are called when the storage
           manager on each Greenplum Database segment creates, extends, or truncates a table file.
