@@ -631,6 +631,7 @@
                       <dxl:Ident ColId="0" ColName="a" TypeMdid="0.23.1.0"/>
                     </dxl:Comparison>
                   </dxl:IndexCondList>
+	<dxl:Partitions/>
                   <dxl:IndexDescriptor Mdid="0.32772.1.0" IndexName="t2_d"/>
                   <dxl:TableDescriptor Mdid="0.24579.1.0" TableName="t2">
                     <dxl:Columns>

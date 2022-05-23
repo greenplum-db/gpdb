@@ -475,10 +475,27 @@ select (select h.i from t2) from h where h.j = 1;
           </dxl:ProjList>
           <dxl:Filter/>
           <dxl:OneTimeFilter/>
-          <dxl:Append IsTarget="false" IsZapped="false" PartIndexId="1" SelectorIds="">
+          <dxl:DynamicTableScan PartIndexId="1" SelectorIds="">
             <dxl:Properties>
               <dxl:Cost StartupCost="0" TotalCost="1324039.424481" Rows="1000.000000" Width="8"/>
             </dxl:Properties>
+            <dxl:ProjList>
+              <dxl:ProjElem ColId="0" Alias="j">
+                <dxl:Ident ColId="0" ColName="j" TypeMdid="0.23.1.0"/>
+              </dxl:ProjElem>
+              <dxl:ProjElem ColId="1" Alias="i">
+                <dxl:Ident ColId="1" ColName="i" TypeMdid="0.23.1.0"/>
+              </dxl:ProjElem>
+            </dxl:ProjList>
+            <dxl:Filter>
+              <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
+                <dxl:Ident ColId="0" ColName="j" TypeMdid="0.23.1.0"/>
+                <dxl:ConstValue TypeMdid="0.23.1.0" Value="1"/>
+              </dxl:Comparison>
+            </dxl:Filter>
+            <dxl:Partitions>
+              <dxl:Partition Mdid="0.242747001.1.0"/>
+            </dxl:Partitions>
             <dxl:TableDescriptor Mdid="0.242747.1.0" TableName="h">
               <dxl:Columns>
                 <dxl:Column ColId="0" Attno="1" ColName="j" TypeMdid="0.23.1.0" ColWidth="4"/>
@@ -492,48 +509,7 @@ select (select h.i from t2) from h where h.j = 1;
                 <dxl:Column ColId="8" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0" ColWidth="4"/>
               </dxl:Columns>
             </dxl:TableDescriptor>
-            <dxl:ProjList>
-              <dxl:ProjElem ColId="0" Alias="j">
-                <dxl:Ident ColId="0" ColName="j" TypeMdid="0.23.1.0"/>
-              </dxl:ProjElem>
-              <dxl:ProjElem ColId="1" Alias="i">
-                <dxl:Ident ColId="1" ColName="i" TypeMdid="0.23.1.0"/>
-              </dxl:ProjElem>
-            </dxl:ProjList>
-            <dxl:Filter/>
-            <dxl:TableScan>
-              <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="1324039.424481" Rows="1000.000000" Width="8"/>
-              </dxl:Properties>
-              <dxl:ProjList>
-                <dxl:ProjElem ColId="20" Alias="j">
-                  <dxl:Ident ColId="20" ColName="j" TypeMdid="0.23.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="21" Alias="i">
-                  <dxl:Ident ColId="21" ColName="i" TypeMdid="0.23.1.0"/>
-                </dxl:ProjElem>
-              </dxl:ProjList>
-              <dxl:Filter>
-                <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
-                  <dxl:Ident ColId="20" ColName="j" TypeMdid="0.23.1.0"/>
-                  <dxl:ConstValue TypeMdid="0.23.1.0" Value="1"/>
-                </dxl:Comparison>
-              </dxl:Filter>
-              <dxl:TableDescriptor Mdid="0.242747001.1.0" TableName="h_prt_1">
-                <dxl:Columns>
-                  <dxl:Column ColId="20" Attno="1" ColName="j" TypeMdid="0.23.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="21" Attno="2" ColName="i" TypeMdid="0.23.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="22" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
-                  <dxl:Column ColId="23" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="24" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="25" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="26" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="27" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="28" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0" ColWidth="4"/>
-                </dxl:Columns>
-              </dxl:TableDescriptor>
-            </dxl:TableScan>
-          </dxl:Append>
+          </dxl:DynamicTableScan>
         </dxl:Result>
       </dxl:GatherMotion>
     </dxl:Plan>

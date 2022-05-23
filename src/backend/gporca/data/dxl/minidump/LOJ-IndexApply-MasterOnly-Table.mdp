@@ -899,6 +899,7 @@ union all
                 </dxl:CoerceViaIO>
               </dxl:Comparison>
             </dxl:IndexCondList>
+	<dxl:Partitions/>
             <dxl:IndexDescriptor Mdid="0.2662.1.0" IndexName="pg_class_oid_index"/>
             <dxl:TableDescriptor Mdid="0.1259.1.0" TableName="pg_class">
               <dxl:Columns>
@@ -994,6 +995,7 @@ union all
                 </dxl:CoerceViaIO>
               </dxl:Comparison>
             </dxl:IndexCondList>
+	<dxl:Partitions/>
             <dxl:IndexDescriptor Mdid="0.2703.1.0" IndexName="pg_type_oid_index"/>
             <dxl:TableDescriptor Mdid="0.1247.1.0" TableName="pg_type">
               <dxl:Columns>

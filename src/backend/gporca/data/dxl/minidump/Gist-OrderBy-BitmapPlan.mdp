@@ -424,6 +424,7 @@ Result  (cost=0.00..0.00 rows=1 width=36)
                     <dxl:ConstValue TypeMdid="0.604.1.0" Value="AAAAWAMAAAAAAAAAAMBVQAAAAAAAwFVAAAAAAABAVUAAAAAAAEBVQAAAAAAA&#10;gFVAAAAAAACAVUAAAAAAAEBVQAAAAAAAwFVAAAAAAADAVUAAAAAAAEBVQA=="/>
                   </dxl:Comparison>
                 </dxl:IndexCondList>
+		<dxl:Partitions/>
                 <dxl:IndexDescriptor Mdid="0.573475.1.0" IndexName="poly"/>
                 <dxl:TableDescriptor Mdid="0.573456.1.0" TableName="gist_tbl2">
                   <dxl:Columns>

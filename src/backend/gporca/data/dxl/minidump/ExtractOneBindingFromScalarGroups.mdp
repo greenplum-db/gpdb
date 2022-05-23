@@ -558,6 +558,7 @@
                     <dxl:Ident ColId="1" ColName="b" TypeMdid="0.23.1.0"/>
                   </dxl:Comparison>
                 </dxl:IndexCondList>
+	<dxl:Partitions/>
                 <dxl:IndexDescriptor Mdid="0.32783.1.0" IndexName="t3idx"/>
                 <dxl:TableDescriptor Mdid="0.32774.1.0" TableName="t3">
                   <dxl:Columns>

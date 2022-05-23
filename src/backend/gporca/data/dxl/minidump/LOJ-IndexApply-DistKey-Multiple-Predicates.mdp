@@ -681,6 +681,7 @@ explain select * from foo left join bar on bar.a=foo.a and bar.a<foo.b left oute
                 </dxl:Cast>
               </dxl:Comparison>
             </dxl:IndexCondList>
+	<dxl:Partitions/>
             <dxl:IndexDescriptor Mdid="0.49175.1.0" IndexName="bar_idx_a"/>
             <dxl:TableDescriptor Mdid="0.49159.1.0" TableName="bar" LockMode="1">
               <dxl:Columns>

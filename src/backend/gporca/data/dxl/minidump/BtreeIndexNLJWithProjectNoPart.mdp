@@ -1428,6 +1428,7 @@
                   <dxl:ConstValue TypeMdid="0.23.1.0" Value="2"/>
                 </dxl:Comparison>
               </dxl:IndexCondList>
+	<dxl:Partitions/>
               <dxl:IndexDescriptor Mdid="0.33097.1.0" IndexName="t1_idx_ac"/>
               <dxl:TableDescriptor Mdid="0.33087.1.0" TableName="t1" ExecuteAsUser="10">
                 <dxl:Columns>

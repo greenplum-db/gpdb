@@ -484,6 +484,7 @@ EXPLAIN SELECT * FROM foo_1_prt_p3 WHERE c > 10;
               <dxl:ConstValue TypeMdid="0.23.1.0" Value="10"/>
             </dxl:Comparison>
           </dxl:IndexCondList>
+	<dxl:Partitions/>
           <dxl:IndexDescriptor Mdid="0.829540.1.0" IndexName="foo_1_prt_p3_c_key"/>
           <dxl:TableDescriptor Mdid="0.829513.1.0" TableName="foo_1_prt_p3">
             <dxl:Columns>

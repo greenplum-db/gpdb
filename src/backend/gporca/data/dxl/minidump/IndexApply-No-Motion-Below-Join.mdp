@@ -482,6 +482,7 @@ Table X (int i, int j) is distributed by i, column j has index
                 <dxl:Ident ColId="11" ColName="?column?" TypeMdid="0.23.1.0"/>
               </dxl:Comparison>
             </dxl:IndexCondList>
+	<dxl:Partitions/>
             <dxl:IndexDescriptor Mdid="0.17159874.1.0" IndexName="idx_x_j"/>
             <dxl:TableDescriptor Mdid="0.16422594.1.1" TableName="x">
               <dxl:Columns>

@@ -4549,6 +4549,7 @@ explain select *  from oip oip  join ria a on ip=cidr and oip.oid=194073;
                   <dxl:Ident ColId="2" ColName="cidr" TypeMdid="0.869.1.0"/>
                 </dxl:Comparison>
               </dxl:IndexCondList>
+	<dxl:Partitions/>
               <dxl:IndexDescriptor Mdid="0.48950.1.0" IndexName="ssm_ria_ip_1_prt_1"/>
               <dxl:TableDescriptor Mdid="0.36722.1.0" TableName="ria">
                 <dxl:Columns>

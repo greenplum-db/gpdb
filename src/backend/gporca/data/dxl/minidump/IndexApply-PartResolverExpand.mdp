@@ -788,6 +788,7 @@ select count(*) from x10, y10 where (x10.i > y10.j AND x10.j <= y10.i);
                   <dxl:Ident ColId="0" ColName="i" TypeMdid="0.25.1.0"/>
                 </dxl:Comparison>
               </dxl:IndexCondList>
+	<dxl:Partitions/>
               <dxl:IndexDescriptor Mdid="0.26855161.1.0" IndexName="y_idx_1_prt_def"/>
               <dxl:TableDescriptor Mdid="0.26854909.1.1" TableName="y10">
                 <dxl:Columns>

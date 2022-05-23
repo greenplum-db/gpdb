@@ -399,6 +399,7 @@
                 <dxl:Ident ColId="11" ColName="p" TypeMdid="0.604.1.0"/>
               </dxl:Comparison>
             </dxl:IndexCondList>
+	<dxl:Partitions/>
             <dxl:IndexDescriptor Mdid="0.16406.1.0" IndexName="poly_index"/>
             <dxl:TableDescriptor Mdid="0.16400.1.0" TableName="gist_tbl">
               <dxl:Columns>

@@ -444,6 +444,7 @@
               <dxl:ConstValue TypeMdid="0.23.1.0" Value="10"/>
             </dxl:Comparison>
           </dxl:IndexCondList>
+	<dxl:Partitions/>
           <dxl:IndexDescriptor Mdid="0.1237378.1.0" IndexName="complete_idx_1_prt_p2"/>
           <dxl:TableDescriptor Mdid="0.1237323.1.0" TableName="foo_1_prt_p2">
             <dxl:Columns>

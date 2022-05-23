@@ -709,6 +709,7 @@ explain select * from t0 left join t1 on t0.a=t1.a left join t2 on (t2.a=t0.a an
                       <dxl:Ident ColId="0" ColName="a" TypeMdid="0.23.1.0"/>
                     </dxl:Comparison>
                   </dxl:IndexCondList>
+		  <dxl:Partitions/>
                   <dxl:IndexDescriptor Mdid="0.195590.1.0" IndexName="t1_pkey"/>
                   <dxl:TableDescriptor Mdid="0.195576.1.0" TableName="t1">
                     <dxl:Columns>
@@ -749,6 +750,7 @@ explain select * from t0 left join t1 on t0.a=t1.a left join t2 on (t2.a=t0.a an
                     <dxl:Ident ColId="0" ColName="a" TypeMdid="0.23.1.0"/>
                   </dxl:Comparison>
                 </dxl:IndexCondList>
+		<dxl:Partitions/>
                 <dxl:IndexDescriptor Mdid="0.195606.1.0" IndexName="t2_pkey"/>
                 <dxl:TableDescriptor Mdid="0.195592.1.0" TableName="t2">
                   <dxl:Columns>

@@ -378,6 +378,7 @@ SELECT * FROM btree_test WHERE a in (select 1);
                 <dxl:Ident ColId="9" ColName="?column?" TypeMdid="0.23.1.0"/>
               </dxl:Comparison>
             </dxl:IndexCondList>
+	<dxl:Partitions/>
             <dxl:IndexDescriptor Mdid="0.4524693.1.0" IndexName="test_index"/>
             <dxl:TableDescriptor Mdid="0.4524666.1.1" TableName="btree_test">
               <dxl:Columns>

@@ -249,6 +249,7 @@
               <dxl:ConstValue TypeMdid="0.23.1.0" Value="5"/>
             </dxl:Comparison>
           </dxl:IndexCondList>
+	<dxl:Partitions/>
           <dxl:IndexDescriptor Mdid="0.73764.1.0" IndexName="table_with_index_not_covering_distribution_column_b_idx"/>
           <dxl:TableDescriptor Mdid="0.73750.1.0" TableName="table_with_index_not_covering_distribution_column">
             <dxl:Columns>

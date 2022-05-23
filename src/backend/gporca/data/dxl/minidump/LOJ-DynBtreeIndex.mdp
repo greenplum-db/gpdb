@@ -519,7 +519,7 @@
               </dxl:Columns>
             </dxl:TableDescriptor>
           </dxl:TableScan>
-          <dxl:Append IsTarget="false" IsZapped="false">
+          <dxl:DynamicIndexScan IndexScanDirection="Forward" PartIndexId="0" PrintablePartIndexId="1" SelectorIds="">
             <dxl:Properties>
               <dxl:Cost StartupCost="0" TotalCost="60.003041" Rows="0.100000" Width="8"/>
             </dxl:Properties>
@@ -532,75 +532,31 @@
               </dxl:ProjElem>
             </dxl:ProjList>
             <dxl:Filter/>
-            <dxl:IndexScan IndexScanDirection="Forward">
-              <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="60.003041" Rows="0.100000" Width="8"/>
-              </dxl:Properties>
-              <dxl:ProjList>
-                <dxl:ProjElem ColId="18" Alias="a">
-                  <dxl:Ident ColId="18" ColName="a" TypeMdid="0.23.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="19" Alias="b">
-                  <dxl:Ident ColId="19" ColName="b" TypeMdid="0.23.1.0"/>
-                </dxl:ProjElem>
-              </dxl:ProjList>
-              <dxl:Filter/>
-              <dxl:IndexCondList>
-                <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
-                  <dxl:Ident ColId="18" ColName="a" TypeMdid="0.23.1.0"/>
-                  <dxl:Ident ColId="0" ColName="a" TypeMdid="0.23.1.0"/>
-                </dxl:Comparison>
-              </dxl:IndexCondList>
-              <dxl:IndexDescriptor Mdid="0.27540001.1.0" IndexName="tinner_ix_1_prt_1"/>
-              <dxl:TableDescriptor Mdid="0.27527001.1.0" TableName="tinner_prt_1">
-                <dxl:Columns>
-                  <dxl:Column ColId="18" Attno="1" ColName="a" TypeMdid="0.23.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="19" Attno="2" ColName="b" TypeMdid="0.23.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="20" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
-                  <dxl:Column ColId="21" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="22" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="23" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="24" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="25" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="26" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0" ColWidth="4"/>
-                </dxl:Columns>
-              </dxl:TableDescriptor>
-            </dxl:IndexScan>
-            <dxl:IndexScan IndexScanDirection="Forward">
-              <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="60.003041" Rows="0.100000" Width="8"/>
-              </dxl:Properties>
-              <dxl:ProjList>
-                <dxl:ProjElem ColId="27" Alias="a">
-                  <dxl:Ident ColId="27" ColName="a" TypeMdid="0.23.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="28" Alias="b">
-                  <dxl:Ident ColId="28" ColName="b" TypeMdid="0.23.1.0"/>
-                </dxl:ProjElem>
-              </dxl:ProjList>
-              <dxl:Filter/>
-              <dxl:IndexCondList>
-                <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
-                  <dxl:Ident ColId="27" ColName="a" TypeMdid="0.23.1.0"/>
-                  <dxl:Ident ColId="0" ColName="a" TypeMdid="0.23.1.0"/>
-                </dxl:Comparison>
-              </dxl:IndexCondList>
-              <dxl:IndexDescriptor Mdid="0.27540002.1.0" IndexName="tinner_ix_1_prt_1"/>
-              <dxl:TableDescriptor Mdid="0.27527002.1.0" TableName="tinner_prt_2">
-                <dxl:Columns>
-                  <dxl:Column ColId="27" Attno="1" ColName="a" TypeMdid="0.23.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="28" Attno="2" ColName="b" TypeMdid="0.23.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="29" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
-                  <dxl:Column ColId="30" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="31" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="32" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="33" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="34" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="35" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0" ColWidth="4"/>
-                </dxl:Columns>
-              </dxl:TableDescriptor>
-            </dxl:IndexScan>
-          </dxl:Append>
+            <dxl:IndexCondList>
+              <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
+                <dxl:Ident ColId="9" ColName="a" TypeMdid="0.23.1.0"/>
+                <dxl:Ident ColId="0" ColName="a" TypeMdid="0.23.1.0"/>
+              </dxl:Comparison>
+            </dxl:IndexCondList>
+            <dxl:Partitions>
+              <dxl:Partition Mdid="0.27527001.1.0"/>
+              <dxl:Partition Mdid="0.27527002.1.0"/>
+            </dxl:Partitions>
+            <dxl:IndexDescriptor Mdid="0.27540.1.0" IndexName="tinner_ix_1_prt_1"/>
+            <dxl:TableDescriptor Mdid="0.27527.1.0" TableName="tinner">
+              <dxl:Columns>
+                <dxl:Column ColId="9" Attno="1" ColName="a" TypeMdid="0.23.1.0" ColWidth="4"/>
+                <dxl:Column ColId="10" Attno="2" ColName="b" TypeMdid="0.23.1.0" ColWidth="4"/>
+                <dxl:Column ColId="11" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
+                <dxl:Column ColId="12" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0" ColWidth="4"/>
+                <dxl:Column ColId="13" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0" ColWidth="4"/>
+                <dxl:Column ColId="14" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0" ColWidth="4"/>
+                <dxl:Column ColId="15" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0" ColWidth="4"/>
+                <dxl:Column ColId="16" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0" ColWidth="4"/>
+                <dxl:Column ColId="17" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0" ColWidth="4"/>
+              </dxl:Columns>
+            </dxl:TableDescriptor>
+          </dxl:DynamicIndexScan>
         </dxl:NestedLoopJoin>
       </dxl:GatherMotion>
     </dxl:Plan>

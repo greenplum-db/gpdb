@@ -410,6 +410,7 @@
                 </dxl:OpExpr>
               </dxl:Comparison>
             </dxl:IndexCondList>
+	<dxl:Partitions/>
             <dxl:IndexDescriptor Mdid="0.32790.1.0" IndexName="idx_bar_d"/>
             <dxl:TableDescriptor Mdid="0.32787.1.0" TableName="bar">
               <dxl:Columns>

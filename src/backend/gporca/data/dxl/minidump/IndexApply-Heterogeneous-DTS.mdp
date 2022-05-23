@@ -964,6 +964,7 @@ WHERE tt.event_ts &gt;= tq.ets AND
                   <dxl:Ident ColId="1" ColName="event_ts" TypeMdid="0.23.1.0"/>
                 </dxl:Comparison>
               </dxl:IndexCondList>
+	<dxl:Partitions/>
               <dxl:IndexDescriptor Mdid="0.-1146131183.1.0" IndexName="my_tq_agg_small_part_ets_end_ts_ix_2"/>
               <dxl:TableDescriptor Mdid="0.-1146294183.1.1" TableName="my_tq_agg_small_part_prt_1">
                 <dxl:Columns>
@@ -1012,6 +1013,7 @@ WHERE tt.event_ts &gt;= tq.ets AND
                   <dxl:Ident ColId="1" ColName="event_ts" TypeMdid="0.23.1.0"/>
                 </dxl:Comparison>
               </dxl:IndexCondList>
+	<dxl:Partitions/>
               <dxl:IndexDescriptor Mdid="0.-1146131182.1.0" IndexName="my_tq_agg_small_part_ets_end_ts_ix_2"/>
               <dxl:TableDescriptor Mdid="0.-1146294182.1.1" TableName="my_tq_agg_small_part_prt_2">
                 <dxl:Columns>
@@ -1060,6 +1062,7 @@ WHERE tt.event_ts &gt;= tq.ets AND
                   <dxl:Ident ColId="1" ColName="event_ts" TypeMdid="0.23.1.0"/>
                 </dxl:Comparison>
               </dxl:IndexCondList>
+	<dxl:Partitions/>
               <dxl:IndexDescriptor Mdid="0.-1146131181.1.0" IndexName="my_tq_agg_small_part_ets_end_ts_ix_2"/>
               <dxl:TableDescriptor Mdid="0.-1146294181.1.1" TableName="my_tq_agg_small_part_prt_3">
                 <dxl:Columns>

@@ -1227,6 +1227,7 @@
                           <dxl:ConstValue TypeMdid="0.19.1.0" Value="dGVtcGxhdGUwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA&#xA;AAAAAAAAAAAAAAAAAAAAAAAAAA=="/>
                         </dxl:Comparison>
                       </dxl:IndexCondList>
+	<dxl:Partitions/>
                       <dxl:IndexDescriptor Mdid="0.2671.1.0" IndexName="pg_database_datname_index"/>
                       <dxl:TableDescriptor Mdid="0.1262.1.1" TableName="pg_database">
                         <dxl:Columns>

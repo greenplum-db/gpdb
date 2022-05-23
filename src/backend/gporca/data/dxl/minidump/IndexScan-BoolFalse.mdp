@@ -256,6 +256,7 @@
               <dxl:ConstValue TypeMdid="0.16.1.0" Value="false"/>
             </dxl:Comparison>
           </dxl:IndexCondList>
+	<dxl:Partitions/>
           <dxl:IndexDescriptor Mdid="0.296558.1.0" IndexName="s_b"/>
           <dxl:TableDescriptor Mdid="0.296532.1.1" TableName="s">
             <dxl:Columns>

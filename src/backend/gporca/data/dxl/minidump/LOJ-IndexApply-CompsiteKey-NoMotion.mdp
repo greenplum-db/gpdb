@@ -637,6 +637,7 @@ explain select * from foo left join bar on foo.a = bar.a and foo.b = bar.b left 
                   <dxl:Ident ColId="1" ColName="b" TypeMdid="0.23.1.0"/>
                 </dxl:Comparison>
               </dxl:IndexCondList>
+	<dxl:Partitions/>
               <dxl:IndexDescriptor Mdid="0.49205.1.0" IndexName="bar_idx_ab"/>
               <dxl:TableDescriptor Mdid="0.49189.1.0" TableName="bar" LockMode="1">
                 <dxl:Columns>

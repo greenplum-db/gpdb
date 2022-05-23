@@ -681,6 +681,7 @@
                 <dxl:Ident ColId="1" ColName="l_partkey" TypeMdid="0.20.1.0"/>
               </dxl:Comparison>
             </dxl:IndexCondList>
+	<dxl:Partitions/>
             <dxl:IndexDescriptor Mdid="0.98326.1.0" IndexName="part_pkey"/>
             <dxl:TableDescriptor Mdid="0.98306.1.0" TableName="part">
               <dxl:Columns>

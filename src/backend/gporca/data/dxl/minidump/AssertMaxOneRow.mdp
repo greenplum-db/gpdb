@@ -1666,6 +1666,7 @@ where oid= (select reltoastrelid from pg_class where relname='fsts_alter_set_sto
                         <dxl:ConstValue TypeMdid="0.19.1.0" Value="ZnN0c19hbHRlcl9zZXRfc3RvcmFnZV90YWJsZQAAAAAAAAAAAAAAAAAAAAAA&#xA;AAAAAAAAAAAAAAAAAAAAAAAAAA=="/>
                       </dxl:Comparison>
                     </dxl:IndexCondList>
+	<dxl:Partitions/>
                     <dxl:IndexDescriptor Mdid="0.2663.1.0" IndexName="pg_class_relname_nsp_index"/>
                     <dxl:TableDescriptor Mdid="0.1259.1.1" TableName="pg_class">
                       <dxl:Columns>
@@ -1705,6 +1706,7 @@ where oid= (select reltoastrelid from pg_class where relname='fsts_alter_set_sto
                     <dxl:Ident ColId="85" ColName="reltoastrelid" TypeMdid="0.26.1.0"/>
                   </dxl:Comparison>
                 </dxl:IndexCondList>
+	<dxl:Partitions/>
                 <dxl:IndexDescriptor Mdid="0.2662.1.0" IndexName="pg_class_oid_index"/>
                 <dxl:TableDescriptor Mdid="0.1259.1.1" TableName="pg_class">
                   <dxl:Columns>
@@ -1744,6 +1746,7 @@ where oid= (select reltoastrelid from pg_class where relname='fsts_alter_set_sto
               <dxl:Ident ColId="48" ColName="reltoastidxid" TypeMdid="0.26.1.0"/>
             </dxl:Comparison>
           </dxl:IndexCondList>
+	<dxl:Partitions/>
           <dxl:IndexDescriptor Mdid="0.2662.1.0" IndexName="pg_class_oid_index"/>
           <dxl:TableDescriptor Mdid="0.1259.1.1" TableName="pg_class">
             <dxl:Columns>

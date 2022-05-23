@@ -507,6 +507,7 @@ EXPLAIN SELECT * FROM foo_1_prt_p1 WHERE c < 10 AND d > 20;
               <dxl:ConstValue TypeMdid="0.23.1.0" Value="10"/>
             </dxl:Comparison>
           </dxl:IndexCondList>
+	<dxl:Partitions/>
           <dxl:IndexDescriptor Mdid="0.828057.1.0" IndexName="idx_p1_cd"/>
           <dxl:TableDescriptor Mdid="0.827971.1.0" TableName="foo_1_prt_p1">
             <dxl:Columns>

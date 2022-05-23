@@ -271,6 +271,7 @@
               <dxl:ConstValue TypeMdid="0.1184.1.0" Value="AEABKP7mgAM=" DoubleValue="252455558400000000.000000"/>
             </dxl:Comparison>
           </dxl:IndexCondList>
+	<dxl:Partitions/>
           <dxl:IndexDescriptor Mdid="0.16955.1.0" IndexName="foo_idx"/>
           <dxl:TableDescriptor Mdid="0.16952.1.0" TableName="foo">
             <dxl:Columns>

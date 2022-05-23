@@ -372,6 +372,7 @@ select * from z,tt where tt.i=5 and z.i=6 ;
                   <dxl:ConstValue TypeMdid="0.23.1.0" Value="5"/>
                 </dxl:Comparison>
               </dxl:IndexCondList>
+	<dxl:Partitions/>
               <dxl:IndexDescriptor Mdid="0.16387.1.0" IndexName="idx_tt_i"/>
               <dxl:TableDescriptor Mdid="0.16384.1.0" TableName="tt" LockMode="1">
                 <dxl:Columns>
@@ -410,6 +411,7 @@ select * from z,tt where tt.i=5 and z.i=6 ;
                 <dxl:ConstValue TypeMdid="0.23.1.0" Value="6"/>
               </dxl:Comparison>
             </dxl:IndexCondList>
+	<dxl:Partitions/>
             <dxl:IndexDescriptor Mdid="0.16391.1.0" IndexName="idx_z_i"/>
             <dxl:TableDescriptor Mdid="0.16388.1.0" TableName="z" LockMode="1">
               <dxl:Columns>

@@ -803,6 +803,7 @@
                 </dxl:OpExpr>
               </dxl:Comparison>
             </dxl:IndexCondList>
+	<dxl:Partitions/>
             <dxl:IndexDescriptor Mdid="0.1369110.1.0" IndexName="index_yj"/>
             <dxl:TableDescriptor Mdid="0.40972.1.1" TableName="y">
               <dxl:Columns>

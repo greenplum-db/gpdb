@@ -413,6 +413,7 @@ Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..433.00 rows=1 width=24)
                 <dxl:Ident ColId="1" ColName="geo" TypeMdid="0.566477.1.0" TypeModifier="4"/>
               </dxl:Comparison>
             </dxl:IndexCondList>
+	<dxl:Partitions/>
             <dxl:IndexDescriptor Mdid="0.581647.1.0" IndexName="multi"/>
             <dxl:TableDescriptor Mdid="0.577571.1.0" TableName="postgis2">
               <dxl:Columns>

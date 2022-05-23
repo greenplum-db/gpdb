@@ -1720,6 +1720,7 @@ AND
                         </dxl:Cast>
                       </dxl:Comparison>
                     </dxl:IndexCondList>
+	<dxl:Partitions/>
                     <dxl:IndexDescriptor Mdid="0.2676.1.0" IndexName="pg_authid_rolname_index"/>
                     <dxl:TableDescriptor Mdid="0.1260.1.1" TableName="pg_authid">
                       <dxl:Columns>
@@ -1822,6 +1823,7 @@ AND
                       <dxl:Ident ColId="18" ColName="oid" TypeMdid="0.26.1.0"/>
                     </dxl:Comparison>
                   </dxl:IndexCondList>
+	<dxl:Partitions/>
                   <dxl:IndexDescriptor Mdid="0.2677.1.0" IndexName="pg_authid_oid_index"/>
                   <dxl:TableDescriptor Mdid="0.1260.1.1" TableName="pg_authid">
                     <dxl:Columns>

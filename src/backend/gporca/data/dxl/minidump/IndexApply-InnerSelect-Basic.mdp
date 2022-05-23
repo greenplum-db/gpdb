@@ -669,6 +669,7 @@ explain SELECT * FROM s i1, t t2 where t2.c2 = i1.c2 and t2.c1 > 10;
                 <dxl:Ident ColId="1" ColName="c2" TypeMdid="0.25.1.0"/>
               </dxl:Comparison>
             </dxl:IndexCondList>
+	<dxl:Partitions/>
             <dxl:IndexDescriptor Mdid="0.32518895.1.0" IndexName="idx_t_2"/>
             <dxl:TableDescriptor Mdid="0.32518867.1.1" TableName="t">
               <dxl:Columns>

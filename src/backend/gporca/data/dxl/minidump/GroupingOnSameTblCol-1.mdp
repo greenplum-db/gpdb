@@ -11245,6 +11245,7 @@ group  by item.i_item_id, item.i_item_desc, item.i_current_price;
                       <dxl:Ident ColId="0" ColName="i_item_sk" TypeMdid="0.23.1.0"/>
                     </dxl:Comparison>
                   </dxl:IndexCondList>
+	<dxl:Partitions/>
                   <dxl:IndexDescriptor Mdid="0.673571.1.0" IndexName="store_sales_pkey"/>
                   <dxl:TableDescriptor Mdid="0.673545.1.1" TableName="store_sales">
                     <dxl:Columns>

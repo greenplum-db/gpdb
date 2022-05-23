@@ -569,6 +569,7 @@ set optimizer_enable_hashjoin = off;
                   </dxl:Cast>
                 </dxl:Comparison>
               </dxl:IndexCondList>
+	      <dxl:Partitions/>
               <dxl:IndexDescriptor Mdid="0.32784.1.0" IndexName="bar_idx_a"/>
               <dxl:TableDescriptor Mdid="0.32768.1.0" TableName="bar">
                 <dxl:Columns>

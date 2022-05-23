@@ -493,6 +493,7 @@
                 <dxl:Ident ColId="2" ColName="c" TypeMdid="0.23.1.0"/>
               </dxl:Comparison>
             </dxl:IndexCondList>
+	<dxl:Partitions/>
             <dxl:IndexDescriptor Mdid="0.93456.1.0" IndexName="idx_bar_de"/>
             <dxl:TableDescriptor Mdid="0.90070.1.0" TableName="bar">
               <dxl:Columns>

@@ -566,6 +566,7 @@ explain select * from R1 inner join S1 on a = b union all select * from R2 inner
                   </dxl:Cast>
                 </dxl:Comparison>
               </dxl:IndexCondList>
+	      <dxl:Partitions/>
               <dxl:IndexDescriptor Mdid="0.130113.1.0" IndexName="s2_pkey"/>
               <dxl:TableDescriptor Mdid="0.130094.1.0" TableName="s2">
                 <dxl:Columns>

@@ -487,6 +487,7 @@ Optimizer: Pivotal Optimizer (GPORCA)
                         <dxl:ConstValue TypeMdid="0.23.1.0" Value="4"/>
                       </dxl:Comparison>
                     </dxl:IndexCondList>
+	<dxl:Partitions/>
                     <dxl:IndexDescriptor Mdid="0.6639069.1.0" IndexName="myidx"/>
                     <dxl:TableDescriptor Mdid="0.6639063.1.0" TableName="bar">
                       <dxl:Columns>
