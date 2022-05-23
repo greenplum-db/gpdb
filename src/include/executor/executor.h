@@ -659,4 +659,6 @@ extern void mppExecutorCleanup(QueryDesc *queryDesc);
 extern ResultRelInfo *targetid_get_partition(Oid targetid, EState *estate, bool openIndices);
 extern ResultRelInfo *slot_get_partition(TupleTableSlot *slot, EState *estate, bool openIndices);
 
+extern void
+change_varattnos_of_a_varno(Node *node, const AttrNumber *newattno, Index varno);
 #endif							/* EXECUTOR_H  */

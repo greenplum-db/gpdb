@@ -4043,7 +4043,7 @@ CTranslatorDXLToPlStmt::TranslateDXLDynIdxScan(
 		dyn_index_scan_dxlop->GetDXLTableDescr()->MDId());
 	RangeTblEntry *rte = TranslateDXLTblDescrToRangeTblEntry(
 		dyn_index_scan_dxlop->GetDXLTableDescr(), index, &base_table_context);
-	GPOS_ASSERT(NULL != rte);
+	GPOS_ASSERT(nullptr != rte);
 	rte->requiredPerms |= ACL_SELECT;
 	m_dxl_to_plstmt_context->AddRTE(rte);
 
@@ -4107,7 +4107,7 @@ CTranslatorDXLToPlStmt::TranslateDXLDynIdxScan(
 	// translate proj list
 	plan->targetlist =
 		TranslateDXLProjList(project_list_dxlnode, &base_table_context,
-							 NULL /*child_contexts*/, output_context);
+							 nullptr /*child_contexts*/, output_context);
 
 	// translate index filter
 	plan->qual = TranslateDXLIndexFilter(filter_dxlnode, output_context,

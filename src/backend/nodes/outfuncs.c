@@ -327,8 +327,6 @@ outDatum(StringInfo str, Datum value, int typlen, bool typbyval)
 }
 #endif /* COMPILING_BINARY_FUNCS */
 
-static void outLogicalIndexInfo(StringInfo str, const LogicalIndexInfo *node);
-
 /*
  *	Stuff from plannodes.h
  */
@@ -721,6 +719,8 @@ _outDynamicSeqScan(StringInfo str, const DynamicSeqScan *node)
 
 	_outScanInfo(str, (Scan *)node);
 	WRITE_NODE_FIELD(partOids);
+	WRITE_NODE_FIELD(part_prune_info);
+	WRITE_NODE_FIELD(join_prune_paramids);
 }
 
 static void
@@ -764,20 +764,6 @@ outIndexScanFields(StringInfo str, const IndexScan *node)
 }
 
 static void
-outLogicalIndexInfo(StringInfo str, const LogicalIndexInfo *node)
-{
-	WRITE_OID_FIELD(logicalIndexOid);
-	WRITE_INT_FIELD(nColumns);
-	WRITE_ATTRNUMBER_ARRAY(indexKeys, node->nColumns);
-	WRITE_NODE_FIELD(indPred);
-	WRITE_NODE_FIELD(indExprs);
-	WRITE_BOOL_FIELD(indIsUnique);
-	WRITE_ENUM_FIELD(indType, LogicalIndexType);
-	WRITE_NODE_FIELD(partCons);
-	WRITE_NODE_FIELD(defaultLevels);
-}
-
-static void
 _outIndexScan(StringInfo str, const IndexScan *node)
 {
 	WRITE_NODE_TYPE("INDEXSCAN");
@@ -806,7 +792,8 @@ _outDynamicIndexScan(StringInfo str, const DynamicIndexScan *node)
 
 	outIndexScanFields(str, &node->indexscan);
 	WRITE_NODE_FIELD(partOids);
-	outLogicalIndexInfo(str, node->logicalIndexInfo);
+	WRITE_NODE_FIELD(part_prune_info);
+	WRITE_NODE_FIELD(join_prune_paramids);
 }
 
 static void
@@ -834,8 +821,6 @@ _outDynamicBitmapIndexScan(StringInfo str, const DynamicBitmapIndexScan *node)
 	WRITE_NODE_TYPE("DYNAMICBITMAPINDEXSCAN");
 
 	_outBitmapIndexScanFields(str, &node->biscan);
-	WRITE_NODE_FIELD(partOids);
-	outLogicalIndexInfo(str, node->logicalIndexInfo);
 }
 
 static void
@@ -861,6 +846,8 @@ _outDynamicBitmapHeapScan(StringInfo str, const DynamicBitmapHeapScan *node)
 
 	outBitmapHeapScanFields(str, &node->bitmapheapscan);
 	WRITE_NODE_FIELD(partOids);
+	WRITE_NODE_FIELD(part_prune_info);
+	WRITE_NODE_FIELD(join_prune_paramids);
 }
 
 static void

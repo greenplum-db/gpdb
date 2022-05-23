@@ -666,16 +666,12 @@ typedef struct EState
 	 */
 	int			currentSliceId;
 
-	/*
-	 * Information relevant to dynamic table scans.
-	 */
-	/* GPDB_12_MERGE_FIXME: This is no longer used by PartitionSelectors.
-	 * But it's still referenced by DynamicHeapScan etc. nodes.
-	 */
-	DynamicTableScanInfo *dynamicTableScanInfo;
-
 	/* Should the executor skip past the alien plan nodes */
 	bool eliminateAliens;
+
+	/* partition oid that is being scanned, used by DynamicBitmapHeapScan/IndexScan */
+	int			partitionOid;
+
 } EState;
 
 struct PlanState;
@@ -1557,30 +1553,20 @@ typedef struct DynamicIndexScanState
 	ExprContext *outer_exprContext;
 
 	/*
-	* Partition id index that mantains all unique partition ids for the
-	* DynamicIndexScan.
-	*/
-	HTAB *pidxIndex;
-
-	/*
-	* Status of the part to retrieve (result of the sequential search in a hash table).
-	*/
-	HASH_SEQ_STATUS pidxStatus;
-
-	/* Like DynamicTableScanState, this flag is required to handle error condition.
-	 * This flag prevent ExecEndDynamicIndexScan from calling hash_seq_term() or
-	 * a NULL hash table. */
-	bool shouldCallHashSeqTerm;
-
-	/*
-	 * We will create a new copy of logicalIndexInfo in this memory context for
-	 * each partition. This memory context will be reset per-partition to free
-	 * up previous partition's logicalIndexInfo memory
+	 * This memory context will be reset per-partition to free
+	 * up previous partition's memory
 	 */
 	MemoryContext partitionMemoryContext;
 
+	int			nOids; /* number of oids to scan in partitioned table */
+	Oid		   *partOids; /* list of oids to scan in partitioned table */
+	int			whichPart; /* index of current partition in partOids */
 	/* The partition oid for which the current varnos are mapped */
 	Oid columnLayoutOid;
+
+	struct PartitionPruneState *as_prune_state; /* partition dynamic pruning state */
+	Bitmapset  *as_valid_subplans; /* used to determine partitions during dynamic pruning*/
+	bool 		did_pruning; /* flag that is set when */
 } DynamicIndexScanState;
 
 /* ----------------
@@ -1660,19 +1646,22 @@ typedef struct DynamicBitmapIndexScanState
 {
 	ScanState	ss;
 
+	int			scan_state; /* the stage of scanning */
+
 	int			eflags;
 	BitmapIndexScanState *bitmapIndexScanState;
 	ExprContext *outer_exprContext;
 
 	/*
-	 * We will create a new copy of logicalIndexInfo in this memory context for
-	 * each partition. This memory context will be reset per-partition to free
-	 * up previous partition's logicalIndexInfo memory
+	 * This memory context will be reset per-partition to free
+	 * up previous partition's memory
 	 */
 	MemoryContext partitionMemoryContext;
 
 	/* The partition oid for which the current varnos are mapped */
-	Oid			columnLayoutOid;
+	Oid columnLayoutOid;
+
+	List	   *tuptable;
 } DynamicBitmapIndexScanState;
 
 /* ----------------
@@ -1777,30 +1766,9 @@ typedef struct DynamicBitmapHeapScanState
 	int			eflags;
 	BitmapHeapScanState *bhsState;
 
-
-	/*
-	 * Pid index that maintains all unique partition pids for this dynamic
-	 * table scan to scan.
-	 */
-	HTAB	   *pidIndex;
-
-	/*
-	 * The status of sequentially scan the pid index.
-	 */
-	HASH_SEQ_STATUS pidStatus;
-
-	/*
-	 * Should we call hash_seq_term()? This is required
-	 * to handle error condition, where we are required to explicitly
-	 * call hash_seq_term(). Also, if we don't have any partition, this
-	 * flag should prevent ExecEndDynamicSeqScan from calling
-	 * hash_seq_term() on a NULL hash table.
-	 */
-	bool		shouldCallHashSeqTerm;
-
 	/*
 	 * The first partition requires initialization of expression states,
-	 * such as qual and targetlist, regardless of whether we need to re-map varattno
+	 * such as qual, regardless of whether we need to re-map varattno
 	 */
 	bool		firstPartition;
 	/*
@@ -1822,7 +1790,15 @@ typedef struct DynamicBitmapHeapScanState
 	 * up previous partition's memory
 	 */
 	MemoryContext partitionMemoryContext;
-	
+
+
+	int			nOids; /* number of oids to scan in partitioned table */
+	Oid		   *partOids; /* list of oids to scan in partitioned table */
+	int			whichPart; /* index of current partition in partOids */
+
+	struct PartitionPruneState *as_prune_state; /* partition dynamic pruning state */
+	Bitmapset  *as_valid_subplans; /* used to determine partitions during dynamic pruning*/
+	bool 		did_pruning; /* flag that is set when */
 } DynamicBitmapHeapScanState;
 
 /* ----------------
@@ -2084,9 +2060,13 @@ typedef struct DynamicSeqScanState
 	 */
 	MemoryContext partitionMemoryContext;
 
-	int			nOids;
-	Oid		   *partOids;
-	int			whichPart;
+	int			nOids; /* number of oids to scan in partitioned table */
+	Oid		   *partOids; /* list of oids to scan in partitioned table */
+	int			whichPart; /* index of current partition in partOids */
+
+	struct PartitionPruneState *as_prune_state; /* partition dynamic pruning state */
+	Bitmapset  *as_valid_subplans; /* used to determine partitions during dynamic pruning*/
+	bool 		did_pruning; /* flag that is set when */
 } DynamicSeqScanState;
 
 /* ----------------

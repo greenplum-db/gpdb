@@ -1330,8 +1330,8 @@ CTranslatorExprToDXL::PdxlnDynamicTableScan(
 	CDistributionSpecArray *pdrgpdsBaseTables, CExpression *pexprScalarCond,
 	CDXLPhysicalProperties *dxl_properties)
 {
-	GPOS_ASSERT(NULL != pexprDTS);
-	GPOS_ASSERT_IFF(NULL != pexprScalarCond, NULL != dxl_properties);
+	GPOS_ASSERT(nullptr != pexprDTS);
+	GPOS_ASSERT_IFF(nullptr != pexprScalarCond, nullptr != dxl_properties);
 
 	CPhysicalDynamicTableScan *popDTS =
 		CPhysicalDynamicTableScan::PopConvert(pexprDTS->Pop());
@@ -1344,7 +1344,7 @@ CTranslatorExprToDXL::PdxlnDynamicTableScan(
 	// construct plan costs
 	CDXLPhysicalProperties *pdxlpropDTS = GetProperties(pexprDTS);
 
-	if (NULL != dxl_properties)
+	if (nullptr != dxl_properties)
 	{
 		CWStringDynamic *rows_out_str = GPOS_NEW(m_mp) CWStringDynamic(
 			m_mp,
@@ -1384,9 +1384,9 @@ CTranslatorExprToDXL::PdxlnDynamicTableScan(
 	CDXLNode *pdxlnDTS = GPOS_NEW(m_mp) CDXLNode(m_mp, pdxlopDTS);
 	pdxlnDTS->SetProperties(pdxlpropDTS);
 
-	CDXLNode *pdxlnCond = NULL;
+	CDXLNode *pdxlnCond = nullptr;
 
-	if (NULL != pexprScalarCond)
+	if (nullptr != pexprScalarCond)
 	{
 		pdxlnCond = PdxlnScalar(pexprScalarCond);
 	}
@@ -1394,7 +1394,7 @@ CTranslatorExprToDXL::PdxlnDynamicTableScan(
 	CDXLNode *filter_dxlnode = PdxlnFilter(pdxlnCond);
 
 	// construct projection list
-	GPOS_ASSERT(NULL != pexprDTS->Prpp());
+	GPOS_ASSERT(nullptr != pexprDTS->Prpp());
 
 	CColRefSet *pcrsOutput = pexprDTS->Prpp()->PcrsRequired();
 	pdxlnDTS->AddChild(PdxlnProjList(pcrsOutput, colref_array));
@@ -1450,7 +1450,7 @@ CTranslatorExprToDXL::PdxlnDynamicBitmapTableScan(
 	CDistributionSpecArray *pdrgpdsBaseTables, CExpression *pexprScalar,
 	CDXLPhysicalProperties *dxl_properties)
 {
-	GPOS_ASSERT(NULL != pexprScan);
+	GPOS_ASSERT(nullptr != pexprScan);
 
 	CPhysicalDynamicBitmapTableScan *pop =
 		CPhysicalDynamicBitmapTableScan::PopConvert(pexprScan->Pop());
@@ -1483,15 +1483,15 @@ CTranslatorExprToDXL::PdxlnDynamicBitmapTableScan(
 	CDXLNode *pdxlnScan = GPOS_NEW(m_mp) CDXLNode(m_mp, pdxlopScan);
 
 	// construct plan costs
-	if (NULL == dxl_properties)
+	if (nullptr == dxl_properties)
 	{
 		dxl_properties = GetProperties(pexprScan);
 	}
 	pdxlnScan->SetProperties(dxl_properties);
 
 	// translate predicates into DXL filter
-	CDXLNode *pdxlnCond = NULL;
-	if (NULL != pexprScalar)
+	CDXLNode *pdxlnCond = nullptr;
+	if (nullptr != pexprScalar)
 	{
 		pdxlnCond = PdxlnScalar(pexprScalar);
 	}
@@ -1541,9 +1541,9 @@ CTranslatorExprToDXL::PdxlnDynamicIndexScan(
 	CExpression *pexprDIS, CColRefArray *colref_array,
 	CDXLPhysicalProperties *dxl_properties, CReqdPropPlan *prpp)
 {
-	GPOS_ASSERT(NULL != pexprDIS);
-	GPOS_ASSERT(NULL != dxl_properties);
-	GPOS_ASSERT(NULL != prpp);
+	GPOS_ASSERT(nullptr != pexprDIS);
+	GPOS_ASSERT(nullptr != dxl_properties);
+	GPOS_ASSERT(nullptr != prpp);
 
 	CPhysicalDynamicIndexScan *popDIS =
 		CPhysicalDynamicIndexScan::PopConvert(pexprDIS->Pop());
@@ -1609,7 +1609,7 @@ CTranslatorExprToDXL::PdxlnDynamicIndexScan(
 	}
 	pdrgpexprConds->Release();
 
-	CDXLNode *pdxlnResidualCond = NULL;
+	CDXLNode *pdxlnResidualCond = nullptr;
 	if (2 == pexprDIS->Arity())
 	{
 		// translate residual predicates into the filter node

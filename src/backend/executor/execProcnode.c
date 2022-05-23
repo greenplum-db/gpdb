@@ -292,14 +292,11 @@ ExecInitNode(Plan *node, EState *estate, int eflags)
 													 estate, eflags);
 			break;
 
-/* GPDB_12_MERGE_FIXME */
-#if 0
 		case T_DynamicIndexScan:
 			result = (PlanState *) ExecInitDynamicIndexScan((DynamicIndexScan *) node,
 													estate, eflags);
 			break;
-#endif
-			
+
 		case T_IndexOnlyScan:
 			result = (PlanState *) ExecInitIndexOnlyScan((IndexOnlyScan *) node,
 														 estate, eflags);
@@ -310,26 +307,20 @@ ExecInitNode(Plan *node, EState *estate, int eflags)
 														   estate, eflags);
 			break;
 
-/* GPDB_12_MERGE_FIXME */
-#if 0
 		case T_DynamicBitmapIndexScan:
 			result = (PlanState *) ExecInitDynamicBitmapIndexScan((DynamicBitmapIndexScan *) node,
 																  estate, eflags);
 			break;
-#endif
 
 		case T_BitmapHeapScan:
 			result = (PlanState *) ExecInitBitmapHeapScan((BitmapHeapScan *) node,
 														  estate, eflags);
 			break;
 
-/* GPDB_12_MERGE_FIXME */
-#if 0
 		case T_DynamicBitmapHeapScan:
 			result = (PlanState *) ExecInitDynamicBitmapHeapScan((DynamicBitmapHeapScan *) node,
 																 estate, eflags);
 			break;
-#endif
 
 		case T_TidScan:
 			result = (PlanState *) ExecInitTidScan((TidScan *) node,
@@ -718,12 +709,9 @@ MultiExecProcNode(PlanState *node)
 			result = MultiExecBitmapIndexScan((BitmapIndexScanState *) node);
 			break;
 
-/* GPDB_12_MERGE_FIXME */
-#if 0
 		case T_DynamicBitmapIndexScanState:
 			result = MultiExecDynamicBitmapIndexScan((DynamicBitmapIndexScanState *) node);
 			break;
-#endif
 
 		case T_BitmapAndState:
 			result = MultiExecBitmapAnd((BitmapAndState *) node);
@@ -854,12 +842,9 @@ ExecEndNode(PlanState *node)
 			ExecEndIndexScan((IndexScanState *) node);
 			break;
 
-/* GPDB_12_MERGE_FIXME */
-#if 0
 		case T_DynamicIndexScanState:
 			ExecEndDynamicIndexScan((DynamicIndexScanState *) node);
 			break;
-#endif
 
 		case T_IndexOnlyScanState:
 			ExecEndIndexOnlyScan((IndexOnlyScanState *) node);
@@ -869,23 +854,17 @@ ExecEndNode(PlanState *node)
 			ExecEndBitmapIndexScan((BitmapIndexScanState *) node);
 			break;
 
-/* GPDB_12_MERGE_FIXME */
-#if 0
 		case T_DynamicBitmapIndexScanState:
 			ExecEndDynamicBitmapIndexScan((DynamicBitmapIndexScanState *) node);
 			break;
-#endif
 
 		case T_BitmapHeapScanState:
 			ExecEndBitmapHeapScan((BitmapHeapScanState *) node);
 			break;
 
-/* GPDB_12_MERGE_FIXME */
-#if 0
 		case T_DynamicBitmapHeapScanState:
 			ExecEndDynamicBitmapHeapScan((DynamicBitmapHeapScanState *) node);
 			break;
-#endif
 
 		case T_TidScanState:
 			ExecEndTidScan((TidScanState *) node);

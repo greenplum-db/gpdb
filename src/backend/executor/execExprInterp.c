@@ -2001,6 +2001,15 @@ CheckOpSlotCompatibility(ExprEvalStep *op, TupleTableSlot *slot)
 	if (slot->tts_ops == &TTSOpsVirtual)
 		return;
 
+	/*
+	 * We think it is OK if op's fetch kind is virtual.
+	 */
+	if (op->d.fetch.kind == &TTSOpsVirtual)
+		return;
+
+	// FIXME: A simple  explain  select * from foo join bar on foo.a=bar.b; where
+	// bar is a PT on the outer side of a HJ triggers this assert without the above
+	// if statement
 	Assert(op->d.fetch.kind == slot->tts_ops);
 #endif
 }

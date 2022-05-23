@@ -279,7 +279,6 @@ static void cdbexplain_depositStatsToNode(PlanState *planstate,
 										  CdbExplain_RecvStatCtx *ctx);
 static int cdbexplain_collectExtraText(PlanState *planstate,
 									   StringInfo notebuf);
-static int cdbexplain_countLeafPartTables(PlanState *planstate);
 
 static void show_motion_keys(PlanState *planstate, List *hashExpr, int nkeys,
 							 AttrNumber *keycols, const char *qlabel,
@@ -1533,7 +1532,8 @@ cdbexplain_showExecStats(struct PlanState *planstate, ExplainState *es)
 	 * Print number of partitioned tables scanned for dynamic scans.
 	 */
 	if (0 <= ns->totalPartTableScanned.vcnt && (T_DynamicSeqScanState == planstate->type
-												|| T_DynamicIndexScanState == planstate->type))
+												|| T_DynamicIndexScanState == planstate->type
+												|| T_DynamicBitmapHeapScanState == planstate->type))
 	{
 		/*
 		 * FIXME: Only displayed in TEXT format
@@ -1547,18 +1547,14 @@ cdbexplain_showExecStats(struct PlanState *planstate, ExplainState *es)
 			{
 				if (T_DynamicBitmapHeapScanState == planstate->type)
 				{
-					int			numTotalLeafParts = cdbexplain_countLeafPartTables(planstate);
-
 					appendStringInfoSpaces(es->str, es->indent * 2);
 					appendStringInfo(es->str,
-									 "Partitions scanned:  0 (out of %d).\n",
-									 numTotalLeafParts);
+									 "Partitions scanned:  0 .\n");
 				}
 			}
 			else
 			{
 				cdbexplain_formatSeg(segbuf, sizeof(segbuf), ns->totalPartTableScanned.imax, ns->ninst);
-				int			numTotalLeafParts = cdbexplain_countLeafPartTables(planstate);
 
 				appendStringInfoSpaces(es->str, es->indent * 2);
 
@@ -1571,18 +1567,16 @@ cdbexplain_showExecStats(struct PlanState *planstate, ExplainState *es)
 						double		totalPartTableScannedPerRescan = ns->totalPartTableScanned.vmax / instr->nloops;
 
 						appendStringInfo(es->str,
-										 "Partitions scanned:  %.0f (out of %d) %s of %ld scans.\n",
+										 "Partitions scanned:  %.0f %s of %ld scans.\n",
 										 totalPartTableScannedPerRescan,
-										 numTotalLeafParts,
 										 segbuf,
 										 instr->nloops);
 					}
 					else
 					{
 						appendStringInfo(es->str,
-										 "Partitions scanned:  %.0f (out of %d) %s.\n",
+										 "Partitions scanned:  %.0f %s.\n",
 										 ns->totalPartTableScanned.vmax,
-										 numTotalLeafParts,
 										 segbuf);
 					}
 				}
@@ -1595,10 +1589,9 @@ cdbexplain_showExecStats(struct PlanState *planstate, ExplainState *es)
 						double		maxPartTableScannedPerRescan = ns->totalPartTableScanned.vmax / instr->nloops;
 
 						appendStringInfo(es->str,
-										 "Partitions scanned:  Avg %.1f (out of %d) x %d workers of %ld scans."
+										 "Partitions scanned:  Avg %.1f x %d workers of %ld scans."
 										 "  Max %.0f parts%s.\n",
 										 totalPartTableScannedPerRescan,
-										 numTotalLeafParts,
 										 ns->totalPartTableScanned.vcnt,
 										 instr->nloops,
 										 maxPartTableScannedPerRescan,
@@ -1608,10 +1601,9 @@ cdbexplain_showExecStats(struct PlanState *planstate, ExplainState *es)
 					else
 					{
 						appendStringInfo(es->str,
-										 "Partitions scanned:  Avg %.1f (out of %d) x %d workers."
+										 "Partitions scanned:  Avg %.1f x %d workers."
 										 "  Max %.0f parts%s.\n",
 										 nPartTableScanned_avg,
-										 numTotalLeafParts,
 										 ns->totalPartTableScanned.vcnt,
 										 ns->totalPartTableScanned.vmax,
 										 segbuf);
@@ -2096,23 +2088,6 @@ gpexplain_formatSlicesOutput(struct CdbExplain_ShowStatCtx *showstatctx,
             ExplainPropertyInteger("Total memory used across slices", "bytes", total_memory_across_slices, es);
         }
     }
-}
-
-static int
-cdbexplain_countLeafPartTables(PlanState *planstate)
-{
-	Assert(IsA(planstate, DynamicSeqScanState) ||
-		   IsA(planstate, DynamicIndexScanState));
-
-	return -1;
-	/* GPDB_12_MERGE_FIXME */
-#if 0
-	Scan	   *scan = (Scan *) planstate->plan;
-
-	Oid			root_oid = getrelid(scan->scanrelid, planstate->state->es_range_table);
-
-	return countLeafPartTables(root_oid);
-#endif
 }
 
 /*

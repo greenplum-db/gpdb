@@ -255,30 +255,6 @@ CopyPlanFields(const Plan *from, Plan *newnode)
 }
 
 /*
- * CopyLogicalIndexInfo
- *
- *		This function copies the LogicalIndexInfo, which is part of
- *		DynamicIndexScan node.
- */
-static LogicalIndexInfo *
-CopyLogicalIndexInfo(const LogicalIndexInfo *from)
-{
-	LogicalIndexInfo *newnode = palloc(sizeof(LogicalIndexInfo));
-
-	COPY_SCALAR_FIELD(logicalIndexOid);
-	COPY_SCALAR_FIELD(nColumns);
-	COPY_POINTER_FIELD(indexKeys, from->nColumns * sizeof(AttrNumber));
-	COPY_NODE_FIELD(indPred);
-	COPY_NODE_FIELD(indExprs);
-	COPY_SCALAR_FIELD(indIsUnique);
-	COPY_SCALAR_FIELD(indType);
-	COPY_NODE_FIELD(partCons);
-	COPY_NODE_FIELD(defaultLevels);
-
-	return newnode;
-}
-
-/*
  * _copyPlan
  */
 static Plan *
@@ -621,6 +597,8 @@ _copyDynamicSeqScan(const DynamicSeqScan *from)
 
 	CopyScanFields((Scan *) from, (Scan *) newnode);
 	COPY_NODE_FIELD(partOids);
+	COPY_NODE_FIELD(part_prune_info);
+	COPY_NODE_FIELD(join_prune_paramids);
 
 	return newnode;
 }
@@ -708,7 +686,8 @@ _copyDynamicIndexScan(const DynamicIndexScan *from)
 	/* DynamicIndexScan has some content from IndexScan */
 	CopyIndexScanFields(&from->indexscan, &newnode->indexscan);
 	COPY_NODE_FIELD(partOids);
-	newnode->logicalIndexInfo = CopyLogicalIndexInfo(from->logicalIndexInfo);
+	COPY_NODE_FIELD(part_prune_info);
+	COPY_NODE_FIELD(join_prune_paramids);
 
 	return newnode;
 }
@@ -772,8 +751,6 @@ _copyDynamicBitmapIndexScan(const DynamicBitmapIndexScan *from)
 	DynamicBitmapIndexScan *newnode = makeNode(DynamicBitmapIndexScan);
 
 	CopyBitmapIndexScanFields(&from->biscan, &newnode->biscan);
-	COPY_NODE_FIELD(partOids);
-	newnode->logicalIndexInfo = CopyLogicalIndexInfo(from->logicalIndexInfo);
 
 	return newnode;
 }
@@ -815,6 +792,8 @@ _copyDynamicBitmapHeapScan(const DynamicBitmapHeapScan *from)
 
 	CopyBitmapHeapScanFields(&from->bitmapheapscan, &newnode->bitmapheapscan);
 	COPY_NODE_FIELD(partOids);
+	COPY_NODE_FIELD(part_prune_info);
+	COPY_NODE_FIELD(join_prune_paramids);
 
 	return newnode;
 }

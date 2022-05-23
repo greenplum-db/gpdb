@@ -48,7 +48,6 @@ struct CdbComponentDatabases;
 struct StringInfoData;
 using StringInfo = StringInfoData *;
 struct LogicalIndexes;
-struct LogicalIndexInfo;
 struct ParseState;
 struct DefElem;
 struct GpPolicy;
@@ -581,14 +580,6 @@ double CdbEstimatePartitionedNumTuples(Relation rel);
 
 // close the given relation
 void CloseRelation(Relation rel);
-
-#if 0
-	// return the logical indexes for a partitioned table
-	LogicalIndexes *GetLogicalPartIndexes(Oid oid);
-	
-	// return the logical info structure for a given logical index oid
-	LogicalIndexInfo *GetLogicalIndexInfo(Oid root_oid, Oid index_oid);
-#endif
 
 // return a list of index oids for a given relation
 List *GetRelationIndexes(Relation relation);
