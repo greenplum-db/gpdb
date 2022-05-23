@@ -1722,11 +1722,6 @@ puttuple_common(Tuplesortstate *state, SortTuple *tuple)
 			 */
 			dumptuples(state, false);
 
-            if (state->instrument)
-            {    
-                state->instrument->workfileCreated = true;
-            }  
-
 			break;
 
 		case TSS_BOUNDED:
