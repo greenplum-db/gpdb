@@ -514,7 +514,7 @@ get_actual_line_size(FormatConfig *format_in_config, char *line_start, int cur_s
 		 * this is the case where the last line in the buffer is incomplete, that's why the end of line was not found.
 		 * the rest of the line is in the next buffer
 		 */  
-		if ( (tot_size - cur_size) < format_in_config->fields_tot_size )
+		if ( (tot_size - cur_size) <= format_in_config->fields_tot_size )
 		{
 			return tot_size - cur_size;
 		}
@@ -687,7 +687,7 @@ fixedwidth_in(PG_FUNCTION_ARGS)
 	 * instead inside forboth loop we will fall inside "if (remaining < field_size)", so there is NO need to
 	 * set the BAD_ROW_DATA error string ---> there will be no formatting errors that throw exceptions
 	 */
-	if (data_cur < data_len)
+	if (data_cur + format_in_config.fields_tot_size < data_len)
 	{
 		/* setting the line number for "line size" exceptions that might be thrown in get_actual_line_size */
 		FORMATTER_SET_BAD_ROW_NUM(fcinfo, myData->lineno); 

@@ -1,0 +1,40 @@
+set datestyle = 'ISO, DMY';
+DROP EXTERNAL TABLE IF EXISTS tbl_ext_fixedwidth;
+NOTICE:  table "tbl_ext_fixedwidth" does not exist, skipping
+CREATE READABLE EXTERNAL TABLE tbl_ext_fixedwidth (
+  s1 char(10), s2 real, s3 double precision, s4 integer)
+LOCATION (
+  'file://@hostname@@abs_srcdir@/data/fixedwidth_multi_fields_large_file.tbl'
+)
+FORMAT 'CUSTOM' (formatter='fixedwidth_in', s1='10', s2='5', s3='9', s4='1');
+\d tbl_ext_fixedwidth;
+External table "public.tbl_ext_fixedwidth"
+ Column |       Type       | Modifiers 
+--------+------------------+-----------
+ s1     | character(10)    | 
+ s2     | real             | 
+ s3     | double precision | 
+ s4     | integer          | 
+Type: readable
+Encoding: UTF8
+Format type: custom
+Format options: formatter 'fixedwidth_in' s1 '10' s2 '5' s3 '9' s4 '1' 
+External options: {}
+External location: file://@hostname@@abs_srcdir@/data/fixedwidth_multi_fields_large_file.tbl
+Execute on: all segments
+
+SELECT * FROM tbl_ext_fixedwidth ORDER BY s1 desc limit 10;
+     s1     |  s2   |    s3     | s4 
+------------+-------+-----------+----
+ 0000049999 | 2.718 | 2.7182818 |  1
+ 0000049998 | 3.141 | 3.1415926 |  0
+ 0000049997 | 0.618 | 0.6180339 |  2
+ 0000049996 | 2.718 | 2.7182818 |  1
+ 0000049995 | 3.141 | 3.1415926 |  0
+ 0000049994 | 0.618 | 0.6180339 |  2
+ 0000049993 | 2.718 | 2.7182818 |  1
+ 0000049992 | 3.141 | 3.1415926 |  0
+ 0000049991 | 0.618 | 0.6180339 |  2
+ 0000049990 | 2.718 | 2.7182818 |  1
+(10 rows)
+

@@ -1,0 +1,13 @@
+set datestyle = 'ISO, DMY';
+
+DROP EXTERNAL TABLE IF EXISTS tbl_ext_fixedwidth;
+CREATE READABLE EXTERNAL TABLE tbl_ext_fixedwidth (
+  s1 char(10), s2 real, s3 double precision, s4 integer)
+LOCATION (
+  'file://@hostname@@abs_srcdir@/data/fixedwidth_multi_fields_large_file.tbl'
+)
+FORMAT 'CUSTOM' (formatter='fixedwidth_in', s1='10', s2='5', s3='9', s4='1');
+
+\d tbl_ext_fixedwidth;
+
+SELECT * FROM tbl_ext_fixedwidth ORDER BY s1 desc limit 10;
