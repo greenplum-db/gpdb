@@ -33,6 +33,7 @@
             <topicref href="guc-list.xml#block_size"/>
             <topicref href="guc-list.xml#bonjour_name"/>
             <topicref href="guc-list.xml#check_function_bodies"/>
+            <topicref href="guc-list.xml#client_connection_check_interval"/>
             <topicref href="guc-list.xml#client_encoding"/>
             <topicref href="guc-list.xml#client_min_messages"/>
             <topicref href="guc-list.xml#cpu_index_tuple_cost"/>

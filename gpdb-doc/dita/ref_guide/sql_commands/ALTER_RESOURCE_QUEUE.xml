@@ -7,16 +7,16 @@
     <p id="sql_command_desc">Changes the limits of a resource queue.</p>
     <section id="section2">
       <title>Synopsis</title>
-      <codeblock id="sql_command_synopsis">ALTER RESOURCE QUEUE <varname>name</varname> WITH ( <varname>queue_attribute</varname>=<varname>value</varname> [, ... ] ) </codeblock>
+      <codeblock id="sql_command_synopsis">ALTER RESOURCE QUEUE &lt;name> WITH ( &lt;queue_attribute>=&lt;value> [, ... ] ) </codeblock>
       <p>where <varname>queue_attribute</varname> is:</p>
-      <codeblock>   ACTIVE_STATEMENTS=<varname>integer</varname>
-   MEMORY_LIMIT='<varname>memory_units</varname>'
-   MAX_COST=<varname>float</varname>
+      <codeblock>   ACTIVE_STATEMENTS=&lt;integer>
+   MEMORY_LIMIT='&lt;memory_units>'
+   MAX_COST=&lt;float>
    COST_OVERCOMMIT={TRUE|FALSE}
-   MIN_COST=<varname>float</varname>
+   MIN_COST=&lt;float>
    PRIORITY={MIN|LOW|MEDIUM|HIGH|MAX}</codeblock>
       <p/>
-      <codeblock>ALTER RESOURCE QUEUE <varname>name</varname> WITHOUT ( <varname>queue_attribute</varname> [, ... ] )</codeblock>
+      <codeblock>ALTER RESOURCE QUEUE &lt;name> WITHOUT ( &lt;queue_attribute> [, ... ] )</codeblock>
       <p>where <varname>queue_attribute</varname> is:</p>
       <codeblock>   ACTIVE_STATEMENTS
    MEMORY_LIMIT
@@ -137,11 +137,11 @@
     </section>
     <section id="section8">
       <title>See Also</title>
-      <p><codeph><xref href="./CREATE_RESOURCE_QUEUE.xml#topic1" type="topic" format="dita"
-          /></codeph>, <codeph><xref href="./DROP_RESOURCE_QUEUE.xml#topic1" type="topic"
-            format="dita"/></codeph>, <codeph><xref href="./CREATE_ROLE.xml#topic1" type="topic"
-            format="dita"/></codeph>, <codeph><xref href="./ALTER_ROLE.xml#topic1" type="topic"
-            format="dita"/></codeph></p>
+      <p><xref href="./CREATE_RESOURCE_QUEUE.xml#topic1" type="topic" format="dita"
+          />, <xref href="./DROP_RESOURCE_QUEUE.xml#topic1" type="topic"
+            format="dita"/>, <xref href="./CREATE_ROLE.xml#topic1" type="topic"
+            format="dita"/>, <xref href="./ALTER_ROLE.xml#topic1" type="topic"
+            format="dita"/></p>
     </section>
   </body>
 </topic>

@@ -29,6 +29,7 @@ extern CommandDest whereToSendOutput;
 extern PGDLLIMPORT const char *debug_query_string;
 extern int	max_stack_depth;
 extern int	PostAuthDelay;
+extern int  client_connection_check_interval;
 
 /* GUC-configurable parameters */
 
@@ -82,8 +83,5 @@ extern void set_debug_options(int debug_flag,
 extern bool set_plan_disabling_options(const char *arg,
 									   GucContext context, GucSource source);
 extern const char *get_stats_option_name(const char *arg);
-
-extern void enable_client_wait_timeout_interrupt(void);
-extern void disable_client_wait_timeout_interrupt(void);
 
 #endif							/* TCOPPROT_H */

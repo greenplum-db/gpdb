@@ -14,5 +14,5 @@ Creates a readable external table, *ext\_expenses,* using the `pxf` protocol. Th
 
 Refer to [Accessing External Data with PXF](pxf-overview.html) for information about using the Greenplum Platform Extension Framework \(PXF\) to access data on a Hadoop Distributed File System.
 
-**Parent topic:**[Examples for Creating External Tables](../external/g-creating-external-tables---examples.html)
+**Parent topic:** [Examples for Creating External Tables](../external/g-creating-external-tables---examples.html)
 

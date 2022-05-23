@@ -7,32 +7,32 @@
         <p id="sql_command_desc">Defines a new database role (user or group).</p>
         <section id="section2">
             <title>Synopsis</title>
-            <codeblock id="sql_command_synopsis">CREATE ROLE <varname>name</varname> [[WITH] <varname>option</varname> [ ... ]]</codeblock>
+            <codeblock id="sql_command_synopsis">CREATE ROLE &lt;name> [[WITH] &lt;option> [ ... ]]</codeblock>
             <p>where <varname>option</varname> can be:</p>
             <codeblock>      SUPERUSER | NOSUPERUSER
     | CREATEDB | NOCREATEDB
     | CREATEROLE | NOCREATEROLE
     | CREATEUSER | NOCREATEUSER
     | CREATEEXTTABLE | NOCREATEEXTTABLE 
-      [ ( <varname>attribute</varname>='<varname>value</varname>'[, ...] ) ]
-           where <varname>attributes</varname> and <varname>value</varname> are:
+      [ ( &lt;attribute>='&lt;value>'[, ...] ) ]
+           where &lt;attributes> and &lt;value> are:
            type='readable'|'writable'
            protocol='gpfdist'|'http'
     | INHERIT | NOINHERIT
     | LOGIN | NOLOGIN
     | REPLICATION | NOREPLICATION
-    | CONNECTION LIMIT <varname>connlimit</varname>
-    | [ ENCRYPTED | UNENCRYPTED ] PASSWORD '<varname>password</varname>'
-    | VALID UNTIL '<varname>timestamp</varname>' 
-    | IN ROLE <varname>rolename</varname> [, ...]
-    | ROLE <varname>rolename</varname> [, ...]
-    | ADMIN <varname>rolename</varname> [, ...]
-    | USER <varname>rolename</varname> [, ...]
-    | SYSID <varname>uid</varname> [, ...]
-    | RESOURCE QUEUE <varname>queue_name</varname>
-    | RESOURCE GROUP <varname>group_name</varname>
-    | [ DENY <varname>deny_point</varname> ]
-    | [ DENY BETWEEN <varname>deny_point</varname> AND <varname>deny_point</varname>]</codeblock>
+    | CONNECTION LIMIT &lt;connlimit>
+    | [ ENCRYPTED | UNENCRYPTED ] PASSWORD '&lt;password>'
+    | VALID UNTIL '&lt;timestamp>' 
+    | IN ROLE &lt;rolename> [, ...]
+    | ROLE &lt;rolename> [, ...]
+    | ADMIN &lt;rolename> [, ...]
+    | USER &lt;rolename> [, ...]
+    | SYSID &lt;uid> [, ...]
+    | RESOURCE QUEUE &lt;queue_name>
+    | RESOURCE GROUP &lt;group_name>
+    | [ DENY &lt;deny_point> ]
+    | [ DENY BETWEEN &lt;deny_point> AND &lt;deny_point>]</codeblock>
         </section>
         <section id="section3">
             <title>Description</title>
@@ -120,8 +120,8 @@
                         user. Roles with <codeph>NOLOGIN</codeph> are useful for managing database
                         privileges, and can be thought of as groups. If not specified,
                             <codeph>NOLOGIN</codeph> is the default, except when <codeph>CREATE
-                            ROLE</codeph> is invoked through its alternative spelling <codeph><xref
-                                href="CREATE_USER.xml#topic1">CREATE USER</xref></codeph>.</pd>
+                            ROLE</codeph> is invoked through its alternative spelling <xref
+                                href="CREATE_USER.xml#topic1">CREATE USER</xref>.</pd>
                 </plentry>
                 <plentry>
                     <pt>REPLICATION</pt>
@@ -232,7 +232,7 @@
                     </pd>
                     <pd>The <codeph>DENY BETWEEN</codeph> clause uses two
                             <varname>deny_point</varname>
-                        parameters:<codeblock>DENY BETWEEN <varname>deny_point</varname> AND <varname>deny_point</varname></codeblock></pd>
+                        parameters:<codeblock>DENY BETWEEN &lt;deny_point> AND &lt;deny_point></codeblock></pd>
                     <pd>For more information and examples about time-based constraints, see
                         "Managing Roles and Privileges" in the <i>Greenplum Database Administrator
                             Guide</i>.</pd>
@@ -242,9 +242,9 @@
         <section id="section5">
             <title>Notes</title>
             <p>The preferred way to add and remove role members (manage groups) is to use
-                        <codeph><xref href="./GRANT.xml#topic1" type="topic" format="dita"
-                    /></codeph> and <codeph><xref href="./REVOKE.xml#topic1" type="topic"
-                        format="dita"/></codeph>. </p>
+                        <xref href="./GRANT.xml#topic1" type="topic" format="dita"
+                    /> and <xref href="./REVOKE.xml#topic1" type="topic"
+                        format="dita"/>. </p>
             <p>The <codeph>VALID UNTIL</codeph> clause defines an expiration time for a password
                 only, not for the role. The expiration time is not enforced when logging in using a
                 non-password-based authentication method. </p>
@@ -310,7 +310,7 @@
                 do in the standard. </p>
             <p><codeph>CREATE ROLE</codeph> is in the SQL standard, but the standard only requires
                 the syntax:</p>
-            <codeblock>CREATE ROLE <varname>name</varname> [WITH ADMIN <varname>rolename</varname>]</codeblock>
+            <codeblock>CREATE ROLE &lt;name> [WITH ADMIN &lt;rolename>]</codeblock>
             <p>Allowing multiple initial administrators, and all the other options of <codeph>CREATE
                     ROLE</codeph>, are Greenplum Database extensions.</p>
             <p>The behavior specified by the SQL standard is most closely approximated by giving
@@ -319,16 +319,16 @@
         </section>
         <section id="section8">
             <title>See Also</title>
-            <p><codeph><xref href="./SET_ROLE.xml#topic1" type="topic" format="dita"/></codeph>,
-                        <codeph><xref href="ALTER_ROLE.xml#topic1" type="topic" format="dita"
-                    /></codeph>, <codeph><xref href="./DROP_ROLE.xml#topic1" type="topic"
-                        format="dita"/></codeph>, <codeph><xref href="./GRANT.xml#topic1"
-                        type="topic" format="dita"/></codeph>, <codeph><xref
-                        href="./REVOKE.xml#topic1" type="topic" format="dita"/></codeph>,
-                        <codeph><xref href="CREATE_RESOURCE_QUEUE.xml#topic1" type="topic"
-                        format="dita"/></codeph>
-                <codeph><xref href="CREATE_RESOURCE_GROUP.xml#topic1" type="topic" format="dita"
-                    /></codeph></p>
+            <p><xref href="./SET_ROLE.xml#topic1" type="topic" format="dita"/>,
+                        <xref href="ALTER_ROLE.xml#topic1" type="topic" format="dita"
+                    />, <xref href="./DROP_ROLE.xml#topic1" type="topic"
+                        format="dita"/>, <xref href="./GRANT.xml#topic1"
+                        type="topic" format="dita"/>, <xref
+                        href="./REVOKE.xml#topic1" type="topic" format="dita"/>,
+                        <xref href="CREATE_RESOURCE_QUEUE.xml#topic1" type="topic"
+                        format="dita"/>
+                <xref href="CREATE_RESOURCE_GROUP.xml#topic1" type="topic" format="dita"
+                    /></p>
         </section>
     </body>
 </topic>

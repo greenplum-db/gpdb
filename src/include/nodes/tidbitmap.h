@@ -67,11 +67,6 @@ struct Instrumentation;                 /* #include "executor/instrument.h" */
 #define BITMAP_IS_LOSSY -1
 
 /* The bitmap unit size can be adjusted by changing these declarations: */
-/*
- * GPDB_12_MERGE_FIXME The bitmapword type in bitmapset.h can now be 64-bit
- * wide.  Does it make sense to remove this Greenplum specific type to better
- * align with upstream?
- */
 #define TBM_BITS_PER_BITMAPWORD 64
 typedef uint64 tbm_bitmapword;		/* must be an unsigned type */
 

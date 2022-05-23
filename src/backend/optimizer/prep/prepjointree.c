@@ -576,14 +576,14 @@ pull_up_sublinks_qual_recurse(PlannerInfo *root, Node *node,
 			SubLink    *sublink = (SubLink *) arg;
 			if (sublink->subLinkType == EXISTS_SUBLINK)
 			{
-                Node	   *boolConst;
+				Node	   *boolConst;
 
-                /*
-                 * Check if the EXISTS sublink doesn't actually need to be executed at all,
-                 * and return TRUE/FALSE directly for it in that case.
-                 */
-                if ((boolConst = remove_useless_EXISTS_sublink(root, (Query *)sublink->subselect, true)) != NULL)
-                    return boolConst;
+				/*
+				 * Check if the EXISTS sublink doesn't actually need to be executed at all,
+				 * and return TRUE/FALSE directly for it in that case.
+				 */
+				if ((boolConst = remove_useless_EXISTS_sublink(root, (Query *)sublink->subselect, true)) != NULL)
+					return boolConst;
 
 				if ((j = convert_EXISTS_sublink_to_join(root, sublink, true,
 														available_rels1)) != NULL)
@@ -648,14 +648,17 @@ pull_up_sublinks_qual_recurse(PlannerInfo *root, Node *node,
 			 *		 val NOT IN (subq)		 =>  val <> ALL (subq)
 			 *		 NOT val op ANY (subq)	 =>  val op' ALL (subq)
 			 *		 NOT val op ALL (subq)	 =>  val op' ANY (subq)
+			 *
+			 *   postgresql do not process ANY_SUBLINK or ALL_SUBLINK expr in not clause,
+			 *   this is an enhanced optimization by GPDB.
+			 *   we can use negate_clause instead of make_notclause to simplify the expr.
+			 *   the is_check param for canonicalize_qual is false,
+			 *   because expr is a qual not check constraint here.
 			 */
 			else if (sublink->subLinkType == ANY_SUBLINK || sublink->subLinkType == ALL_SUBLINK)
 			{
 				sublink->subLinkType = (sublink->subLinkType == ANY_SUBLINK) ? ALL_SUBLINK : ANY_SUBLINK;
-				/* GPDB_12_MERGE_FIXME: Is 'is_check=false' correct here? And in fact,
-				 * is this transformation correct at all? If it is, why doesn't upstream do it?
-				 */
-				sublink->testexpr = (Node *) canonicalize_qual(make_notclause((Expr *) sublink->testexpr), false);
+				sublink->testexpr = (Node *) canonicalize_qual((Expr *) negate_clause(sublink->testexpr), false);
 				return pull_up_sublinks_qual_recurse(root, (Node *) sublink,
 														jtlink1, available_rels1,
 														jtlink2, available_rels2);

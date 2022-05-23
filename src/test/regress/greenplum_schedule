@@ -37,8 +37,9 @@ test: instr_in_shmem_setup
 test: instr_in_shmem
 
 test: createdb
-test: gp_aggregates gp_aggregates_costs gp_metadata variadic_parameters default_parameters function_extensions spi gp_xml shared_scan update_gp triggers_gp returning_gp resource_queue_with_rule gp_types gp_index cluster_gp combocid_gp gp_sort gp_prepared_xacts
+test: gp_aggregates gp_aggregates_costs gp_metadata variadic_parameters default_parameters function_extensions spi gp_xml shared_scan update_gp triggers_gp returning_gp resource_queue_with_rule gp_types gp_index cluster_gp combocid_gp gp_sort gp_prepared_xacts gp_backend_info
 test: spi_processed64bit
+test: gp_lock
 test: gp_tablespace_with_faults
 # below test(s) inject faults so each of them need to be in a separate group
 test: gp_tablespace
@@ -96,7 +97,7 @@ test: cursor
 # so it needs to be in a group by itself
 test: query_finish_pending
 
-test: gpdiffcheck gptokencheck gp_hashagg sequence_gp tidscan_gp co_nestloop_idxscan dml_in_udf gpdtm_plpgsql
+test: gpdiffcheck gptokencheck gp_hashagg sequence_gp tidscan_gp co_nestloop_idxscan dml_in_udf gpdtm_plpgsql gp_array_agg
 
 # The test must be run by itself as it injects a fault on QE to fail
 # at the 2nd phase of 2PC.
@@ -292,5 +293,8 @@ test: run_utility_gpexpand_phase1
 
 # check correct error message when create extension error on segment
 test: create_extension_fail
+
+# test if motion sockets are created with the gp_segment_configuration.address
+test: motion_socket
 
 # end of tests

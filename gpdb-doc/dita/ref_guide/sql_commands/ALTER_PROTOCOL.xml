@@ -7,9 +7,9 @@
     <p id="sql_command_desc">Changes the definition of a protocol.</p>
     <section id="section2">
       <title>Synopsis</title>
-      <codeblock id="sql_command_synopsis">ALTER PROTOCOL <varname>name</varname> RENAME TO <varname>newname</varname>
+      <codeblock id="sql_command_synopsis">ALTER PROTOCOL &lt;name> RENAME TO &lt;newname>
 
-ALTER PROTOCOL <varname>name</varname> OWNER TO <varname>newowner</varname></codeblock>
+ALTER PROTOCOL &lt;name> OWNER TO &lt;newowner></codeblock>
     </section>
     <section id="section3">
       <title>Description</title>
@@ -54,9 +54,9 @@ ALTER PROTOCOL <varname>name</varname> OWNER TO <varname>newowner</varname></cod
     </section>
     <section>
       <title>See Also</title>
-      <p><codeph><xref href="CREATE_EXTERNAL_TABLE.xml#topic1"/></codeph>, <codeph><xref
-            href="CREATE_PROTOCOL.xml#topic1"/></codeph>, <codeph><xref
-            href="DROP_PROTOCOL.xml#topic1"/></codeph></p>
+      <p><xref href="CREATE_EXTERNAL_TABLE.xml#topic1"/>, <xref
+            href="CREATE_PROTOCOL.xml#topic1"/>, <xref
+            href="DROP_PROTOCOL.xml#topic1"/></p>
     </section>
   </body>
 </topic>

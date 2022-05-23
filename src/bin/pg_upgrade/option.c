@@ -217,7 +217,7 @@ parseCommandLine(int argc, char *argv[])
 				break;
 
 			default:
-				if (!process_greenplum_option(option, pg_strdup(optarg)))
+				if (!process_greenplum_option(option))
 				{
 					fprintf(stderr, _("Try \"%s --help\" for more information.\n"),
 							os_info.progname);
@@ -263,12 +263,18 @@ parseCommandLine(int argc, char *argv[])
 	/* Get values from env if not already set */
 	check_required_directory(&old_cluster.bindir, "PGBINOLD", false,
 							 "-b", _("old cluster binaries reside"));
-	check_required_directory(&new_cluster.bindir, "PGBINNEW", false,
-							 "-B", _("new cluster binaries reside"));
+
+	if(!is_skip_target_check())
+		check_required_directory(&new_cluster.bindir, "PGBINNEW", false,
+					 "-B", "new cluster binaries reside");
+
 	check_required_directory(&old_cluster.pgdata, "PGDATAOLD", false,
 							 "-d", _("old cluster data resides"));
-	check_required_directory(&new_cluster.pgdata, "PGDATANEW", false,
-							 "-D", _("new cluster data resides"));
+
+	if(!is_skip_target_check())
+		check_required_directory(&new_cluster.pgdata, "PGDATANEW", false,
+					 "-D", "new cluster data resides");
+
 	check_required_directory(&user_opts.socketdir, "PGSOCKETDIR", true,
 							 "-s", _("sockets will be created"));
 
@@ -324,6 +330,8 @@ usage(void)
 	printf(_("  -v, --verbose                 enable verbose internal logging\n"));
 	printf(_("  -V, --version                 display version information, then exit\n"));
 	printf(_("  --clone                       clone instead of copying files to new cluster\n"));
+	printf(_("  --continue-check-on-fatal     goes through all pg_upgrade checks; should be used with -c\n"));
+	printf(_("  --skip-target-check           skip all checks and comparisons of new cluster; should be used with -c\n"));
 	printf(_("  -?, --help                    show this help, then exit\n"));
 	printf(_("\n"
 			 "Before running pg_upgrade you must:\n"

@@ -7,20 +7,20 @@
         <p>Stops or restarts a Greenplum Database system.</p>
         <section id="section2">
             <title>Synopsis</title>
-            <codeblock><b>gpstop</b> [<b>-d</b> <varname>coordinator_data_directory</varname>] [<b>-B</b> <varname>parallel_processes</varname>] 
-       [<b>-M</b> smart | fast | immediate] [<b>-t</b> <varname>timeout_seconds</varname>] [<b>-r</b>] [<b>-y</b>] [<b>-a</b>] 
-       [<b>-l</b> <varname>logfile_directory</varname>] [<b>-v</b> | <b>-q</b>]
+            <codeblock>gpstop [-d &lt;coordinator_data_directory>] [-B parallel_processes>] 
+       [-M smart | fast | immediate] [-t &lt;timeout_seconds>] [-r] [-y] [-a] 
+       [-l &lt;logfile_directory>] [-v | -q]
 
-<b>gpstop</b> <b>-m</b> [<b>-d</b> <varname>coordinator_data_directory</varname>] [<b>-y</b>] [<b>-l</b> <varname>logfile_directory</varname>] [<b>-v</b> | <b>-q</b>]
+gpstop -m [-d &lt;coordinator_data_directory>] [-y] [-l &lt;logfile_directory>] [-v | -q]
 
-<b>gpstop</b> <b>-u</b> [<b>-d</b> <varname>coordinator_data_directory</varname>] [<b>-l</b> <varname>logfile_directory</varname>] [<b>-v</b> | <b>-q</b>]
+gpstop -u [-d &lt;coordinator_data_directory>] [-l &lt;logfile_directory>] [-v | -q]
  
-<b>gpstop</b> <b>--host</b> <varname>host_name</varname> [<b>-d</b> <varname>coordinator_data_directory</varname>] [<b>-l</b> <varname>logfile_directory</varname>]
-       [<b>-t</b> <varname>timeout_seconds</varname>] [<b>-a</b>] [<b>-v</b> | <b>-q</b>]
+gpstop --host &lt;host_namea> [-d &lt;coordinator_data_directory>] [-l &lt;logfile_directory>]
+       [-t &lt;timeout_seconds>] [-a] [-v | -q]
 
-<b>gpstop</b> <b>--version</b> 
+gpstop --version 
 
-<b>gpstop</b> <b>-?</b> | <b>-h</b> | <b>--help</b></codeblock>
+gpstop -? | -h | --help</codeblock>
         </section>
         <section id="section3">
             <title>Description</title>
@@ -183,9 +183,7 @@
         <section id="section6">
             <title>See Also</title>
             <p>
-                <codeph>
-                    <xref href="gpstart.xml#topic1">gpstart</xref>
-                </codeph>
+                <xref href="gpstart.xml#topic1">gpstart</xref>
             </p>
         </section>
     </body>

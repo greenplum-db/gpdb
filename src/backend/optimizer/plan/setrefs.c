@@ -2114,6 +2114,7 @@ set_join_references(PlannerInfo *root, Join *join, int rtoffset)
 		case JOIN_LEFT:
 		case JOIN_SEMI:
 		case JOIN_ANTI:
+		case JOIN_LASJ_NOTIN:
 			inner_itlist->has_non_vars = false;
 			break;
 		case JOIN_RIGHT:
@@ -2980,8 +2981,6 @@ fix_join_expr_mutator(Node *node, fix_join_expr_context *context)
 	}
 	if (context->inner_itlist && context->inner_itlist->has_non_vars &&
 	        context->use_inner_tlist_for_matching_nonvars)
-
-	if (context->inner_itlist && context->inner_itlist->has_non_vars)
 	{
 		newvar = search_indexed_tlist_for_non_var((Expr *) node,
 												  context->inner_itlist,

@@ -48,7 +48,7 @@
 -1U: VACUUM;
 -1Uq:
 
--- Validate wal records
+-- Validate wal records (mirrorless setting has alternative answer file for this since wal_level is already minimal)
 ! last_wal_file=$(psql -At -c "SELECT pg_walfile_name(pg_current_wal_lsn())" postgres) && pg_waldump ${last_wal_file} -p ${COORDINATOR_DATA_DIRECTORY}/pg_wal -r appendonly;
 
 -- *********** Set wal_level=minimal **************

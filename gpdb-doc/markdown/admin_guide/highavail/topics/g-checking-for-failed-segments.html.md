@@ -58,5 +58,5 @@ Use the [gplogfilter](../../../utility_guide/ref/gplogfilter.html) utility to ch
     ```
 
 
-**Parent topic:**[How Greenplum Database Detects a Failed Segment](../../highavail/topics/g-detecting-a-failed-segment.html)
+**Parent topic:** [How Greenplum Database Detects a Failed Segment](../../highavail/topics/g-detecting-a-failed-segment.html)
 

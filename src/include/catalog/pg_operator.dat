@@ -3328,8 +3328,7 @@
 { oid => '6474', descr => 'subtract',
   oprname => '-', oprkind => 'b', oprcanmerge => 'f', oprcanhash => 'f', oprleft => 'complex',
   oprright => 'complex', oprresult => 'complex', oprcode => 'complex_mi' },
-# GPDB_12_MERGE_FIXME: the description 'subtract' doesn't seem right for the unary -
-{ oid => '6475', descr => 'subtract',
+{ oid => '6475', descr => 'minus',
   oprname => '-', oprkind => 'l', oprcanmerge => 'f', oprcanhash => 'f', oprleft => '0',
   oprright => 'complex', oprresult => 'complex', oprcode => 'complex_um' },
 { oid => '6476', descr => 'multiply',

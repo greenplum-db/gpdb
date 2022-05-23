@@ -15,6 +15,27 @@ select DISTINCT S from (select row_number() over(partition by i1 order by i2) AS
 
 select gp_inject_fault('execsort_sort_mergeruns', 'status', 2);
 
+select gp_inject_fault('execsort_dumptuples', 'reset', 2);
+-- set QueryFinishPending=true in sort dumptuples. This will stop sort.
+select gp_inject_fault('execsort_dumptuples', 'finish_pending', 2);
+
+-- return results although sort will be interrupted in one of the segments 
+select DISTINCT S from (select row_number() over(partition by i1 order by i2) AS T, count(*) over (partition by i1) AS S from _tmp_table) AS TMP;
+
+select gp_inject_fault('execsort_dumptuples', 'status', 2);
+
+-- ORCA does not trigger sort_bounded_heap() in following queries
+set optimizer=off;
+
+select gp_inject_fault('execsort_sort_bounded_heap', 'reset', 2);
+-- set QueryFinishPending=true in sort_bounded_heap. This will stop sort.
+select gp_inject_fault('execsort_sort_bounded_heap', 'finish_pending', 2);
+
+-- return results although sort will be interrupted in one of the segments 
+select i1 from _tmp_table order by i2 limit 3;
+
+select gp_inject_fault('execsort_sort_bounded_heap', 'status', 2);
+
 -- test if shared input scan deletes memory correctly when QueryFinishPending and its child has been eagerly freed,
 -- where the child is a Sort node
 drop table if exists testsisc;
@@ -55,6 +76,8 @@ select gp_inject_fault('execshare_input_next', 'status', 2);
 
 -- Disable faultinjectors
 select gp_inject_fault('execsort_sort_mergeruns', 'reset', 2);
+select gp_inject_fault('execsort_dumptuples', 'reset', 2);
+select gp_inject_fault('execsort_sort_bounded_heap', 'reset', 2);
 select gp_inject_fault('execshare_input_next', 'reset', 2);
 
 -- test if a query can be canceled when cancel signal arrives fast than the query dispatched.

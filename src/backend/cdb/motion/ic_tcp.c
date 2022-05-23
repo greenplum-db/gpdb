@@ -155,28 +155,18 @@ setupTCPListeningSocket(int backlog, int *listenerSocketFd, uint16 *listenerPort
 	memset(&hints, 0, sizeof(struct addrinfo));
 	hints.ai_family = AF_UNSPEC;	/* Allow IPv4 or IPv6 */
 	hints.ai_socktype = SOCK_STREAM;	/* Two-way, out of band connection */
-	hints.ai_flags = AI_PASSIVE;	/* For wildcard IP address */
 	hints.ai_protocol = 0;		/* Any protocol - TCP implied for network use due to SOCK_STREAM */
 
 	/*
-	 * We set interconnect_address on the primary to the local address of the connection from QD
-	 * to the primary, which is the primary's ADDRESS from gp_segment_configuration,
-	 * used for interconnection.
-	 * However it's wrong on the master. Because the connection from the client to the master may
-	 * have different IP addresses as its destination, which is very likely not the master's
-	 * ADDRESS in gp_segment_configuration.
+	 * Restrict what IP address we will listen on to just the one that was
+	 * used to create this QE session.
 	 */
-	if (interconnect_address)
-	{
-		/*
-		 * Restrict what IP address we will listen on to just the one that was
-		 * used to create this QE session.
-		 */
-		hints.ai_flags |= AI_NUMERICHOST;
-		ereport(DEBUG1, (errmsg("binding to %s only", interconnect_address)));
-		if (gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG)
-			ereport(DEBUG4, (errmsg("binding listener %s", interconnect_address)));
-	}
+	Assert(interconnect_address && strlen(interconnect_address) > 0);
+	hints.ai_flags |= AI_NUMERICHOST;
+	if (gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG)
+		ereport(DEBUG1,
+				(errmsg("getaddrinfo called with interconnect_address %s",
+						interconnect_address)));
 
 	s = getaddrinfo(interconnect_address, service, &hints, &addrs);
 	if (s != 0)
@@ -2524,14 +2514,15 @@ RecvTupleChunkFromAnyTCP(ChunkTransportState *transportStates,
 						 int16 *srcRoute)
 {
 	ChunkTransportStateEntry *pEntry = NULL;
-	MotionConn *conn;
 	TupleChunkListItem tcItem;
+	MotionConn 	*conn;
 	mpp_fd_set	rset;
 	int			n,
 				i,
 				index;
 	bool		skipSelect = false;
-	int			waitFd = PGINVALID_SOCKET;
+	int 		nwaitfds = 0;
+	int 		*waitFds = NULL;
 
 #ifdef AMS_VERBOSE_LOGGING
 	elog(DEBUG5, "RecvTupleChunkFromAny(motNodeId=%d)", motNodeID);
@@ -2582,21 +2573,27 @@ RecvTupleChunkFromAnyTCP(ChunkTransportState *transportStates,
 		if (skipSelect)
 			break;
 
-		/* 
+		/*
 		 * Also monitor the events on dispatch fds, eg, errors or sequence
 		 * request from QEs.
 		 */
+		nwaitfds = 0;
 		if (Gp_role == GP_ROLE_DISPATCH)
 		{
-			waitFd = cdbdisp_getWaitSocketFd(transportStates->estate->dispatcherState);
-			if (waitFd != PGINVALID_SOCKET)
-			{
-				MPP_FD_SET(waitFd, &rset);
-				if (waitFd > nfds)
-					nfds = waitFd;
-			}
+			waitFds = cdbdisp_getWaitSocketFds(transportStates->estate->dispatcherState, &nwaitfds);
+			if (waitFds != NULL)
+				for (i = 0; i < nwaitfds; i++)
+				{
+					MPP_FD_SET(waitFds[i], &rset);
+					/* record the max fd number for select() later */
+					if (waitFds[i] > nfds)
+						nfds = waitFds[i];
+				}
+
 		}
 
+		// GPDB_12_MERGE_FIXME: should use WaitEventSetWait() instead of select()
+		// follow the routine in ic_udpifc.c
 		n = select(nfds + 1, (fd_set *) &rset, NULL, NULL, &timeout);
 		if (n < 0)
 		{
@@ -2607,12 +2604,23 @@ RecvTupleChunkFromAnyTCP(ChunkTransportState *transportStates,
 					 errmsg("interconnect error receiving an incoming packet"),
 					 errdetail("%s: %m", "select")));
 		}
-		else if (n > 0 && waitFd != PGINVALID_SOCKET && MPP_FD_ISSET(waitFd, &rset))
+		else if (n > 0 && nwaitfds > 0)
 		{
+			bool need_check = false;
+			for (i = 0; i < nwaitfds; i++)
+				if (MPP_FD_ISSET(waitFds[i], &rset))
+				{
+					need_check = true;
+					n--;
+				}
+
 			/* handle events on dispatch connection */
-			checkForCancelFromQD(transportStates);
-			n--;
+			if (need_check)
+				checkForCancelFromQD(transportStates);
 		}
+
+		if (waitFds)
+			pfree(waitFds);
 
 #ifdef AMS_VERBOSE_LOGGING
 		elog(DEBUG5, "RecvTupleChunkFromAny() select() returned %d ready sockets", n);

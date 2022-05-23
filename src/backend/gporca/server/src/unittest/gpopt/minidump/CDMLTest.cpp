@@ -96,6 +96,7 @@ const CHAR *rgszDMLFileNames[] = {
 	"../data/dxl/minidump/DML-With-Join-With-Universal-Child.mdp",
 	"../data/dxl/minidump/DML-With-CorrelatedNLJ-With-Universal-Child.mdp",
 	"../data/dxl/minidump/DML-Volatile-Function.mdp",
+	"../data/dxl/minidump/UpdateWindowGatherMerge.mdp",
 };
 
 //---------------------------------------------------------------------------

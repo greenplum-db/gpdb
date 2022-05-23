@@ -7,8 +7,8 @@
     <p id="sql_command_desc">Defines a new tablespace.</p>
     <section id="section2">
       <title>Synopsis</title>
-      <codeblock id="sql_command_synopsis">CREATE TABLESPACE <varname>tablespace_name</varname> [OWNER <varname>username</varname>]  LOCATION '<varname>/path/to/dir</varname>' 
-   [WITH (content<varname>ID_1</varname>='<varname>/path/to/dir1</varname>'[, content<varname>ID_2</varname>='<varname>/path/to/dir2</varname>' ... ])]</codeblock>
+      <codeblock id="sql_command_synopsis">CREATE TABLESPACE &lt;tablespace_name> [OWNER &lt;username>]  LOCATION '&lt;/path/to/dir>' 
+   [WITH (content&lt;ID_1>='&lt;/path/to/dir1>'[, content&lt;ID_2>='&lt;/path/to/dir2>' ... ])]</codeblock>
     </section>
     <section id="section3">
       <title>Description</title>
@@ -19,10 +19,10 @@
         privileges.</p>
       <p>A tablespace allows superusers to define an alternative host file system location where the
         data files containing database objects (such as tables and indexes) reside.</p>
-      <p>A user with appropriate privileges can pass a tablespace name to <codeph><xref
-            href="CREATE_DATABASE.xml#topic1" type="topic" format="dita"/></codeph>, <codeph><xref
-            href="CREATE_TABLE.xml#topic1" type="topic" format="dita"/></codeph>, or <codeph><xref
-            href="CREATE_INDEX.xml#topic1" type="topic" format="dita"/></codeph> to have the data
+      <p>A user with appropriate privileges can pass a tablespace name to <xref
+            href="CREATE_DATABASE.xml#topic1" type="topic" format="dita"/>, <xref
+            href="CREATE_TABLE.xml#topic1" type="topic" format="dita"/>, or <xref
+            href="CREATE_INDEX.xml#topic1" type="topic" format="dita"/> to have the data
         files for these objects stored within the specified tablespace.</p>
       <p>In Greenplum Database, the file system location must exist on all hosts including the hosts
         running the master, standby mirror, each primary segment, and each mirror segment. </p>
@@ -112,12 +112,12 @@
     </section>
     <section id="section8">
       <title>See Also</title>
-      <p><codeph><xref href="CREATE_DATABASE.xml#topic1" type="topic" format="dita"/></codeph>,
-            <codeph><xref href="CREATE_TABLE.xml#topic1" type="topic" format="dita"/></codeph>,
-            <codeph><xref href="CREATE_INDEX.xml#topic1" type="topic" format="dita"/></codeph>,
-            <codeph><xref href="./DROP_TABLESPACE.xml#topic1" type="topic" format="dita"/></codeph>,
-            <codeph><xref href="ALTER_TABLESPACE.xml#topic1" type="topic" format="dita"
-        /></codeph></p>
+      <p><xref href="CREATE_DATABASE.xml#topic1" type="topic" format="dita"/>,
+            <xref href="CREATE_TABLE.xml#topic1" type="topic" format="dita"/>,
+            <xref href="CREATE_INDEX.xml#topic1" type="topic" format="dita"/>,
+            <xref href="./DROP_TABLESPACE.xml#topic1" type="topic" format="dita"/>,
+            <xref href="ALTER_TABLESPACE.xml#topic1" type="topic" format="dita"
+        /></p>
     </section>
   </body>
 </topic>

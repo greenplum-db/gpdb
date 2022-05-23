@@ -271,6 +271,7 @@ setTargetTable(ParseState *pstate, RangeVar *relation,
 	RangeTblEntry *rte;
 	int			rtindex;
 	ParseCallbackState pcbstate;
+	bool lockUpgraded = false;
 
 	/*
 	 * ENRs hide tables of the same name, so we need to check for them first.
@@ -314,14 +315,14 @@ setTargetTable(ParseState *pstate, RangeVar *relation,
 	}
 	else
 	{
-		pstate->p_target_relation = parserOpenTable(pstate, relation, RowExclusiveLock, NULL);
+		pstate->p_target_relation = parserOpenTable(pstate, relation, RowExclusiveLock, &lockUpgraded);
 	}
 
 	/*
 	 * Now build an RTE.
 	 */
 	rte = addRangeTableEntryForRelation(pstate, pstate->p_target_relation,
-										RowExclusiveLock,
+										lockUpgraded ? ExclusiveLock : RowExclusiveLock, /* CDB */
 										relation->alias, inh, false);
 	pstate->p_target_rangetblentry = rte;
 

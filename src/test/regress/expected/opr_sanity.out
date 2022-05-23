@@ -1595,10 +1595,9 @@ WHERE a.aggcombinefn = p.oid AND
      p.prorettype != p.proargtypes[0] OR
      p.prorettype != p.proargtypes[1] OR
      NOT binary_coercible(a.aggtranstype, p.proargtypes[0]));
-       aggfnoid       |      proname      
-----------------------+-------------------
- pg_catalog.pivot_sum | int8_matrix_accum
-(1 row)
+ aggfnoid | proname 
+----------+---------
+(0 rows)
 
 -- Check that no combine function for an INTERNAL transtype is strict.
 SELECT a.aggfnoid, p.proname

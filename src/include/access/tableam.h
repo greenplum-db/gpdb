@@ -602,7 +602,6 @@ typedef struct TableAmRoutine
 	 */
 	bool		(*relation_needs_toast_table) (Relation rel);
 
-
 	/* ------------------------------------------------------------------------
 	 * Planner related functions.
 	 * ------------------------------------------------------------------------
@@ -1669,7 +1668,6 @@ table_relation_needs_toast_table(Relation rel)
 {
 	return rel->rd_tableam->relation_needs_toast_table(rel);
 }
-
 
 /* ----------------------------------------------------------------------------
  * Planner related functionality

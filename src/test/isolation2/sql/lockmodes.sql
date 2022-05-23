@@ -318,8 +318,6 @@ create table t_lockmods_ao1 (c int) with (appendonly=true) distributed randomly;
 --   * DML on one specific leaf
 -- For detailed behavior and notes, please refer below
 -- cases's comments.
--- GPDB_12_MERGE_FIXME: DML lockmodes on partition table
--- is a bit in disorder, we shoule correct them.
 -- Details: https://groups.google.com/a/greenplum.org/g/gpdb-dev/c/wAPKpJzhbpM
 -- start_ignore
 1:DROP TABLE IF EXISTS t_lockmods_part_tbl_upd_del;

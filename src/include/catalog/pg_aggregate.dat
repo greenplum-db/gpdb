@@ -516,11 +516,17 @@
 { aggfnoid => 'xmlagg', aggtransfn => 'xmlconcat2', aggtranstype => 'xml' },
 
 # array
-{ aggfnoid => 'array_agg(anynonarray)', aggtransfn => 'array_agg_transfn',
-  aggfinalfn => 'array_agg_finalfn', aggfinalextra => 't',
+{ aggfnoid => 'array_agg(anynonarray)', aggtransfn => 'array_agg_transfn', aggcombinefn => 'array_agg_combine',
+  aggserialfn => 'array_agg_serialize', aggdeserialfn => 'array_agg_deserialize', aggfinalfn => 'array_agg_finalfn', aggfinalextra => 't',
   aggtranstype => 'internal' },
-{ aggfnoid => 'array_agg(anyarray)', aggtransfn => 'array_agg_array_transfn',
-  aggfinalfn => 'array_agg_array_finalfn', aggfinalextra => 't',
+{ aggfnoid => 'array_agg(anyarray)', aggtransfn => 'array_agg_array_transfn', aggcombinefn => 'array_agg_array_combine',
+  aggserialfn => 'array_agg_array_serialize', aggdeserialfn => 'array_agg_array_deserialize', aggfinalfn => 'array_agg_array_finalfn', aggfinalextra => 't',
+  aggtranstype => 'internal' },
+{ aggfnoid => 'gp_array_agg(anynonarray)', aggtransfn => 'array_agg_transfn', aggcombinefn => 'array_agg_combine',
+  aggserialfn => 'array_agg_serialize', aggdeserialfn => 'array_agg_deserialize', aggfinalfn => 'array_agg_finalfn', aggfinalextra => 't',
+  aggtranstype => 'internal' },
+{ aggfnoid => 'gp_array_agg(anyarray)', aggtransfn => 'array_agg_array_transfn', aggcombinefn => 'array_agg_array_combine',
+  aggserialfn => 'array_agg_array_serialize', aggdeserialfn => 'array_agg_array_deserialize', aggfinalfn => 'array_agg_array_finalfn', aggfinalextra => 't',
   aggtranstype => 'internal' },
 
 # text
@@ -607,10 +613,9 @@
   aggcombinefn => 'float8_matrix_accum(_float8,_float8)',
   aggtranstype => '_float8' },
 
-# GPDB_12_MERGE_FIXME: is transtype really _int4? does that work with int8_matrix_accum?
-{ aggfnoid => 'pivot_sum(_text,text,int4)', aggtransfn => 'int4_pivot_accum(_int4,_text,text,int4)', aggkind => 'n',
+{ aggfnoid => 'pivot_sum(_text,text,int4)', aggtransfn => 'int4_pivot_accum(_int8,_text,text,int4)', aggkind => 'n',
   aggcombinefn => 'int8_matrix_accum(_int8,_int8)',
-  aggtranstype => '_int4' },
+  aggtranstype => '_int8' },
 
 { aggfnoid => 'pivot_sum(_text,text,int8)', aggtransfn => 'int8_pivot_accum(_int8,_text,text,int8)', aggkind => 'n',
   aggcombinefn => 'int8_matrix_accum(_int8,_int8)',

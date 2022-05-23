@@ -11,7 +11,7 @@ Best practices for regular maintenance that will ensure Greenplum Database high 
 -   **[Monitoring Greenplum Database Log Files](logfiles.html)**  
 
 
-**Parent topic:**[Greenplum Database Best Practices](intro.html)
+**Parent topic:** [Greenplum Database Best Practices](intro.html)
 
 ## <a id="topic_izw_bwb_s4"></a>Monitoring 
 

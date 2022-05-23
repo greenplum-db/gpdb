@@ -132,7 +132,7 @@ class GlobalShellExecutor(object):
         output = ""
         while self.sh_proc.poll() is None:
             # If not returns in 10 seconds, consider it as an fatal error.
-            r, w, e = select.select([self.master_fd], [], [self.master_fd], 10)
+            r, w, e = select.select([self.master_fd], [], [self.master_fd], 30)
             if e:
                 # Terminate the shell when we get any output from stderr
                 o = os.read(self.master_fd, 10240)
@@ -414,6 +414,7 @@ class SQLIsolationExecutor(object):
                         self.create_exception = e
                         break
                     elif (("the database system is starting up" in str(e) or
+                         "the database system is resetting" in str(e) or
                          "the database system is in recovery mode" in str(e)) and
                         retry > 1):
                         retry -= 1

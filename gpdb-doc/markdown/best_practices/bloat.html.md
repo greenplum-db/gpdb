@@ -124,5 +124,5 @@ These are steps for intensive system catalog maintenance.
 -   The `pg_attribute` table contains a large number of records.
 -   The diagnostic message for `pg_attribute` is `significant amount of bloat` in the `gp_toolkit.gp_bloat_diag` view.
 
-**Parent topic:**[System Monitoring and Maintenance](maintenance.html)
+**Parent topic:** [System Monitoring and Maintenance](maintenance.html)
 

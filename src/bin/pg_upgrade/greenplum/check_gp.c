@@ -109,7 +109,7 @@ check_online_expansion(void)
 	if (expansion)
 	{
 		pg_log(PG_REPORT, "fatal\n");
-		pg_log(PG_FATAL,
+		gp_fatal_log(
 			   "| Your installation is in progress of online expansion,\n"
 			   "| must complete that job before the upgrade.\n\n");
 	}
@@ -200,7 +200,7 @@ check_external_partition(void)
 	{
 		fclose(script);
 		pg_log(PG_REPORT, "fatal\n");
-		pg_log(PG_FATAL,
+		gp_fatal_log(
 			   "| Your installation contains partitioned tables with external\n"
 			   "| tables as partitions.  These partitions need to be removed\n"
 			   "| from the partition hierarchy before the upgrade.  A list of\n"
@@ -308,7 +308,7 @@ check_covering_aoindex(void)
 	{
 		fclose(script);
 		pg_log(PG_REPORT, "fatal\n");
-		pg_log(PG_FATAL,
+		gp_fatal_log(
 			   "| Your installation contains partitioned append-only tables\n"
 			   "| with an index defined on the partition parent which isn't\n"
 			   "| present on all partition members.  These indexes must be\n"
@@ -372,7 +372,7 @@ check_orphaned_toastrels(void)
 	{
 		fclose(script);
 		pg_log(PG_REPORT, "fatal\n");
-		pg_log(PG_FATAL,
+		gp_fatal_log(
 			   "| Your installation contains orphaned toast tables which\n"
 			   "| must be dropped before upgrade.\n"
 			   "| A list of the problem databases is in the file:\n"
@@ -479,7 +479,7 @@ check_partition_indexes(void)
 	{
 		fclose(script);
 		pg_log(PG_REPORT, "fatal\n");
-		pg_log(PG_FATAL,
+		gp_fatal_log(
 			   "| Your installation contains partitioned tables with\n"
 			   "| indexes defined on them.  Indexes on partition parents,\n"
 			   "| as well as children, must be dropped before upgrade.\n"
@@ -557,7 +557,7 @@ check_gphdfs_external_tables(void)
 	{
 		fclose(script);
 		pg_log(PG_REPORT, "fatal\n");
-		pg_log(PG_FATAL,
+		gp_fatal_log(
 			   "| Your installation contains gphdfs external tables.  These \n"
 			   "| tables need to be dropped before upgrade.  A list of\n"
 			   "| external gphdfs tables to remove is provided in the file:\n"
@@ -634,7 +634,7 @@ check_gphdfs_user_roles(void)
 	{
 		fclose(script);
 		pg_log(PG_REPORT, "fatal\n");
-		pg_log(PG_FATAL,
+		gp_fatal_log(
 			   "| Your installation contains roles that have gphdfs privileges.\n"
 			   "| These privileges need to be revoked before upgrade.  A list\n"
 			   "| of roles and their corresponding gphdfs privileges that\n"
@@ -713,11 +713,9 @@ check_for_array_of_partition_table_types(ClusterInfo *cluster)
 	if (strlen(dependee_partition_report))
 	{
 		pg_log(PG_REPORT, "fatal\n");
-		pg_fatal(
-			"Array types derived from partitions of a partitioned table must not have dependants.\n"
-			"OIDs of such types found and their original partitions:\n%s",
-			dependee_partition_report
-		);
+		gp_fatal_log(
+			"| Array types derived from partitions of a partitioned table must not have dependants.\n"
+			"| OIDs of such types found and their original partitions:\n%s", dependee_partition_report);
 	}
 	pfree(dependee_partition_report);
 

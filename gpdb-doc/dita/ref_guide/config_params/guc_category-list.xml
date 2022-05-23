@@ -73,6 +73,10 @@
           <strow>
             <stentry>
               <p>
+                <xref href="guc-list.xml#client_connection_check_interval" type="section"
+                  >client_connection_check_interval</xref>
+              </p>
+              <p>
                 <xref href="guc-list.xml#gp_connection_send_timeout" type="section"
                   >gp_connection_send_timeout</xref>
               </p>

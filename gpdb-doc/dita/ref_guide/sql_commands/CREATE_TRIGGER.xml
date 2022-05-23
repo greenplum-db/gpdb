@@ -2,9 +2,9 @@
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
 <topic id="topic1"><title id="cg20941">CREATE TRIGGER</title><body><p id="sql_command_desc">Defines a new trigger. User-defined triggers are not supported in Greenplum
-Database.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">CREATE TRIGGER <varname>name</varname> {BEFORE | AFTER} {<varname>event</varname> [OR ...]}
-       ON <varname>table</varname> [ FOR [EACH] {ROW | STATEMENT} ]
-       EXECUTE PROCEDURE <varname>funcname</varname> ( <varname>arguments</varname> )</codeblock></section><section id="section3"><title>Description</title><p><codeph>CREATE TRIGGER</codeph> creates a new trigger. The trigger will
+Database.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">CREATE TRIGGER &lt;name> {BEFORE | AFTER} {&lt;event> [OR ...]}
+       ON &lt;table> [ FOR [EACH] {ROW | STATEMENT} ]
+       EXECUTE PROCEDURE &lt;funcname> ( &lt;arguments> )</codeblock></section><section id="section3"><title>Description</title><p><codeph>CREATE TRIGGER</codeph> creates a new trigger. The trigger will
 be associated with the specified table and will run the specified
 function when certain events occur. </p><p>Due to the distributed nature of a Greenplum Database system, the
 use of triggers is very limited in Greenplum Database. The function used
@@ -17,7 +17,7 @@ updated), these limitations offer very little practical use of triggers
 in Greenplum Database. For that reason, Greenplum does not support the
 use of user-defined triggers in Greenplum Database. Triggers cannot be
 used on append-optimized tables.</p><p>If multiple triggers of the same kind are defined for the same event,
-they will be fired in alphabetical order by name. </p><p><codeph><xref href="SELECT.xml#topic1" type="topic" format="dita"/></codeph> does not modify any
+they will be fired in alphabetical order by name. </p><p><xref href="SELECT.xml#topic1" type="topic" format="dita"/> does not modify any
         rows so you can not create <codeph>SELECT</codeph> triggers. Rules and views are more
         appropriate in such cases.</p></section><section id="section4"><title>Parameters</title><parml><plentry><pt><varname>name</varname></pt><pd>The name to give the new trigger. This must be distinct from the
 name of any other trigger for the same table.</pd></plentry><plentry><pt>BEFORE  AFTER</pt><pd>Determines whether the function is called before or after the event.
@@ -70,7 +70,7 @@ deletes fire after the cascaded <codeph>DELETE</codeph> completes. The
 Greenplum Database behavior is for <codeph>BEFORE DELETE</codeph> to
 always fire before the delete action, even a cascading one. This is considered
 more consistent.</li><li id="cg152893">The ability to specify multiple actions for a single trigger using <codeph>OR</codeph>
-is a Greenplum Database extension of the SQL standard.</li></ul></section><section id="section8"><title>See Also</title><p><codeph><xref href="CREATE_FUNCTION.xml#topic1" type="topic" format="dita"/></codeph>,
-            <codeph><xref href="ALTER_TRIGGER.xml#topic1" type="topic" format="dita"/></codeph>,
-            <codeph><xref href="DROP_TRIGGER.xml#topic1" type="topic" format="dita"/></codeph>,
-            <codeph><xref href="CREATE_RULE.xml#topic1" type="topic" format="dita"/></codeph></p></section></body></topic>
+is a Greenplum Database extension of the SQL standard.</li></ul></section><section id="section8"><title>See Also</title><p><xref href="CREATE_FUNCTION.xml#topic1" type="topic" format="dita"/>,
+            <xref href="ALTER_TRIGGER.xml#topic1" type="topic" format="dita"/>,
+            <xref href="DROP_TRIGGER.xml#topic1" type="topic" format="dita"/>,
+            <xref href="CREATE_RULE.xml#topic1" type="topic" format="dita"/></p></section></body></topic>

@@ -43,7 +43,6 @@
 #include "postmaster/fts.h"
 #include "replication/walsender.h"
 #include "storage/proc.h"
-#include "tcop/idle_resource_cleaner.h"
 #include "utils/builtins.h"
 #include "utils/gdd.h"
 #include "utils/guc_tables.h"
@@ -221,6 +220,7 @@ double		gp_resource_group_cpu_limit;
 double		gp_resource_group_memory_limit;
 bool		gp_resource_group_bypass;
 bool		gp_resource_group_cpu_ceiling_enforcement;
+bool		gp_resource_group_enable_recalculate_query_mem;
 
 /* Metrics collector debug GUC */
 bool		vmem_process_interrupt = false;
@@ -421,6 +421,8 @@ bool		gp_external_enable_filter_pushdown = true;
 
 /* Enable GDD */
 bool		gp_enable_global_deadlock_detector = false;
+
+bool		gp_log_endpoints = false;
 
 static const struct config_enum_entry gp_log_format_options[] = {
 	{"text", 0},
@@ -2764,6 +2766,16 @@ struct config_bool ConfigureNamesBool_gp[] =
 	},
 
 	{
+		{"gp_resource_group_enable_recalculate_query_mem", PGC_USERSET, RESOURCES,
+		 	gettext_noop("Enable resource group re-calculate the query_mem on QE"),
+		 	NULL
+		},
+		&gp_resource_group_enable_recalculate_query_mem,
+		true,
+		NULL, NULL, NULL
+	},
+
+	{
 		{"stats_queue_level", PGC_SUSET, STATS_COLLECTOR,
 			gettext_noop("Collects resource queue-level statistics on database activity."),
 			NULL
@@ -2789,6 +2801,17 @@ struct config_bool ConfigureNamesBool_gp[] =
 		&gp_enable_global_deadlock_detector,
 		false, NULL, NULL
     },
+
+	{
+		{"gp_log_endpoints", PGC_SUSET, LOGGING_WHAT,
+			gettext_noop("Prints endpoints information to server log."),
+			NULL,
+			GUC_SUPERUSER_ONLY | GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+		},
+		&gp_log_endpoints,
+		false,
+		NULL, NULL, NULL
+	},
 
 	{
 		{"optimizer_enable_eageragg", PGC_USERSET, DEVELOPER_OPTIONS,

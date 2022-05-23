@@ -1,0 +1,3 @@
+1,"row 1 - OK",file1
+2,"row 2 - OK",newText
+3,"row 3 - new",file1

@@ -87,7 +87,7 @@ LockTableCommand(LockStmt *lockstmt)
 			LockTableRecurse(reloid, lockstmt->mode, lockstmt->nowait, GetUserId());
 	}
 
-	if (Gp_role == GP_ROLE_DISPATCH)
+	if (Gp_role == GP_ROLE_DISPATCH && !lockstmt->coordinatoronly)
 	{
 		CdbDispatchUtilityStatement((Node *) lockstmt,
 									DF_CANCEL_ON_ERROR|

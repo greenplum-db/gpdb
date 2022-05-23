@@ -176,13 +176,8 @@ class PgCtlBackendOptions(CmdArgs):
 
     """
 
-    def __init__(self, port):
-        """
-        @param port: backend port
-        """
-        CmdArgs.__init__(self, [
-            "-p", str(port),
-        ])
+    def __init__(self):
+        CmdArgs.__init__(self, [])
 
     #
     # coordinator/segment-specific options
@@ -305,7 +300,7 @@ class CoordinatorStart(Command):
         self.wrapper_args=wrapper_args
 
         # build backend options
-        b = PgCtlBackendOptions(port)
+        b = PgCtlBackendOptions()
         if utilityMode:
             b.set_utility()
         else:
@@ -363,7 +358,7 @@ class SegmentStart(Command):
         datadir = gpdb.getSegmentDataDirectory()
 
         # build backend options
-        b = PgCtlBackendOptions(port)
+        b = PgCtlBackendOptions()
         if utilityMode:
             b.set_utility()
         else:

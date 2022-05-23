@@ -130,5 +130,5 @@ Another useful tool is the `gp_bloat_diag` view in the `gp_toolkit` schema, whic
 -   **[Example of Managing Transaction IDs](../intro/mvcc_example.html)**  
 
 
-**Parent topic:**[Greenplum Database Concepts](../intro/partI.html)
+**Parent topic:** [Greenplum Database Concepts](../intro/partI.html)
 

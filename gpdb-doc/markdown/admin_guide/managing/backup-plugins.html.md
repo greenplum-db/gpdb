@@ -9,5 +9,5 @@ You can also develop a custom storage plugin with the Greenplum Database Backup/
 -   **[Using the S3 Storage Plugin with gpbackup and gprestore](../managing/backup-s3-plugin.html)**  
 
 
-**Parent topic:**[Parallel Backup with gpbackup and gprestore](../managing/backup-gpbackup.html)
+**Parent topic:** [Parallel Backup with gpbackup and gprestore](../managing/backup-gpbackup.html)
 

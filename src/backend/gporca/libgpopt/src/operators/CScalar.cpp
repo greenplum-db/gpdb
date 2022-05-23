@@ -305,15 +305,11 @@ CScalar::EberEvaluate(CMemoryPool *mp, CExpression *pexprScalar)
 	GPOS_ASSERT(pop->FScalar());
 
 	const ULONG arity = pexprScalar->Arity();
-	ULongPtrArray *pdrgpulChildren = nullptr;
+	ULongPtrArray *pdrgpulChildren = GPOS_NEW(mp) ULongPtrArray(mp);
 
 	if (!CUtils::FSubquery(pop))
 	{
 		// do not recurse into subqueries
-		if (0 < arity)
-		{
-			pdrgpulChildren = GPOS_NEW(mp) ULongPtrArray(mp);
-		}
 		for (ULONG ul = 0; ul < arity; ul++)
 		{
 			CExpression *pexprChild = (*pexprScalar)[ul];

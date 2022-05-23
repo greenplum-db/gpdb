@@ -282,13 +282,6 @@ struct ReceiveControlInfo
 
 	/* Cursor history table. */
 	CursorICHistoryTable cursorHistoryTable;
-
-	/*
-	 * Last distributed transaction id when SetupUDPInterconnect is called.
-	 * Coupled with cursorHistoryTable, it is used to handle multiple
-	 * concurrent cursor cases.
-	 */
-	DistributedTransactionId lastDXatId;
 };
 
 /*
@@ -775,6 +768,8 @@ static void aggregateStatistics(ChunkTransportStateEntry *pEntry);
 
 static inline bool pollAcks(ChunkTransportState *transportStates, int fd, int timeout);
 
+static ssize_t sendtoWithRetry(int socket, const void *message, size_t length, int flags, const struct sockaddr *dest_addr, socklen_t dest_len, int retry, const char *errDetail);
+
 /* #define TRANSFER_PROTOCOL_STATS */
 
 #ifdef TRANSFER_PROTOCOL_STATS
@@ -1187,7 +1182,6 @@ setupUDPListeningSocket(int *listenerSocketFd, uint16 *listenerPort, int *txFami
 	memset(&hints, 0, sizeof(struct addrinfo));
 	hints.ai_family = AF_UNSPEC;	/* Allow IPv4 or IPv6 */
 	hints.ai_socktype = SOCK_DGRAM; /* Datagram socket */
-	hints.ai_flags = AI_PASSIVE;	/* For wildcard IP address */
 	hints.ai_protocol = 0;		/* Any protocol - UDP implied for network use due to SOCK_DGRAM */
 
 #ifdef USE_ASSERT_CHECKING
@@ -1197,24 +1191,16 @@ setupUDPListeningSocket(int *listenerSocketFd, uint16 *listenerPort, int *txFami
 
 	fun = "getaddrinfo";
 	/*
-	 * We set interconnect_address on the primary to the local address of the connection from QD
-	 * to the primary, which is the primary's ADDRESS from gp_segment_configuration,
-	 * used for interconnection.
-	 * However it's wrong on the master. Because the connection from the client to the master may
-	 * have different IP addresses as its destination, which is very likely not the master's
-	 * ADDRESS in gp_segment_configuration.
+	 * Restrict what IP address we will listen on to just the one that was
+	 * used to create this QE session.
 	 */
-	if (interconnect_address)
-	{
-		/*
-		 * Restrict what IP address we will listen on to just the one that was
-		 * used to create this QE session.
-		 */
-		hints.ai_flags |= AI_NUMERICHOST;
-		ereport(DEBUG1, (errmsg("binding to %s only", interconnect_address)));
-		if (gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG)
-			ereport(DEBUG4, (errmsg("binding address %s", interconnect_address)));
-	}
+	Assert(interconnect_address && strlen(interconnect_address) > 0);
+	hints.ai_flags |= AI_NUMERICHOST;
+	if (gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG)
+		ereport(DEBUG1,
+				(errmsg("getaddrinfo called with interconnect_address %s",
+								interconnect_address)));
+
 	s = getaddrinfo(interconnect_address, service, &hints, &addrs);
 	if (s != 0)
 		elog(ERROR, "getaddrinfo says %s", gai_strerror(s));
@@ -1452,7 +1438,6 @@ InitMotionUDPIFC(int *listenerSocketFd, uint16 *listenerPort)
 
 	/* allocate a buffer for sending disorder messages */
 	rx_control_info.disorderBuffer = palloc0(MIN_PACKET_SIZE);
-	rx_control_info.lastDXatId = InvalidTransactionId;
 	rx_control_info.lastTornIcId = 0;
 	initCursorICHistoryTable(&rx_control_info.cursorHistoryTable);
 
@@ -1783,9 +1768,6 @@ destroyConnHashTable(ConnHashTable *ht)
 /*
  * sendControlMessage
  * 		Helper function to send a control message.
- *
- * It is different from sendOnce which retries on interrupts...
- * Here, we leave it to retransmit logic to handle these cases.
  */
 static inline void
 sendControlMessage(icpkthdr *pkt, int fd, struct sockaddr *addr, socklen_t peerLen)
@@ -1806,13 +1788,10 @@ sendControlMessage(icpkthdr *pkt, int fd, struct sockaddr *addr, socklen_t peerL
 	if (gp_interconnect_full_crc)
 		addCRC(pkt);
 
-	n = sendto(fd, (const char *) pkt, pkt->len, 0, addr, peerLen);
-
-	/*
-	 * No need to handle EAGAIN here: no-space just means that we dropped the
-	 * packet: our ordinary retransmit mechanism will handle that case
-	 */
-
+	char errDetail[100];
+	snprintf(errDetail, sizeof(errDetail), "Send control message: got error with seq %u", pkt->seq);
+	/* Retry for infinite times since we have no retransmit mechanism for control message */
+	n = sendtoWithRetry(fd, (const char *) pkt, pkt->len, 0, addr, peerLen, -1, errDetail);
 	if (n < pkt->len)
 		write_log("sendcontrolmessage: got error %d errno %d seq %d", n, errno, pkt->seq);
 }
@@ -3084,29 +3063,32 @@ SetupUDPIFCInterconnect_Internal(SliceTable *sliceTable)
 
 	if (Gp_role == GP_ROLE_DISPATCH)
 	{
-		DistributedTransactionId distTransId = 0;
-		TransactionId localTransId = 0;
-		TransactionId subtransId = 0;
-
-		GetAllTransactionXids(&(distTransId),
-							  &(localTransId),
-							  &(subtransId));
-
-		/*
-		 * Prune only when we are not in the save transaction and there is a
-		 * large number of entries in the table
+		/* 
+		 * Prune the history table if it is too large
+		 * 
+		 * We only keep history of constant length so that
+		 * - The history table takes only constant amount of memory.
+		 * - It is long enough so that it is almost impossible to receive 
+		 *   packets from an IC instance that is older than the first one 
+		 *   in the history.
 		 */
-		if (distTransId != rx_control_info.lastDXatId && rx_control_info.cursorHistoryTable.count > (2 * CURSOR_IC_TABLE_SIZE))
+		if (rx_control_info.cursorHistoryTable.count > (2 * CURSOR_IC_TABLE_SIZE))
 		{
-			if (gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG)
-				elog(DEBUG1, "prune cursor history table (count %d), icid %d", rx_control_info.cursorHistoryTable.count, sliceTable->ic_instance_id);
-			pruneCursorIcEntry(&rx_control_info.cursorHistoryTable, sliceTable->ic_instance_id);
+			uint32 prune_id = sliceTable->ic_instance_id - CURSOR_IC_TABLE_SIZE;
+
+			/* 
+			 * Only prune if we didn't underflow -- also we want the prune id
+			 * to be newer than the limit (hysteresis)
+			 */
+			if (prune_id < sliceTable->ic_instance_id)
+			{
+				if (gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG)
+					elog(DEBUG1, "prune cursor history table (count %d), icid %d", rx_control_info.cursorHistoryTable.count, sliceTable->ic_instance_id);
+				pruneCursorIcEntry(&rx_control_info.cursorHistoryTable, prune_id);
+			}
 		}
 
 		addCursorIcEntry(&rx_control_info.cursorHistoryTable, sliceTable->ic_instance_id, gp_command_count);
-
-		/* save the latest transaction id. */
-		rx_control_info.lastDXatId = distTransId;
 	}
 
 	/* now we'll do some setup for each of our Receiving Motion Nodes. */
@@ -3732,8 +3714,13 @@ receiveChunksUDPIFC(ChunkTransportState *pTransportStates, ChunkTransportStateEn
 {
 	int			retries = 0;
 	bool		directed = false;
-	MotionConn *rxconn = NULL;
-	TupleChunkListItem tcItem = NULL;
+	int 		nFds = 0;
+	int 		*waitFds = NULL;
+	int 		nevent = 0;
+	MotionConn 	*rxconn = NULL;
+	WaitEvent	*rEvents = NULL;
+	WaitEventSet		*waitset = NULL;
+	TupleChunkListItem	tcItem = NULL;
 
 #ifdef AMS_VERBOSE_LOGGING
 	elog(DEBUG5, "receivechunksUDP: motnodeid %d", motNodeID);
@@ -3754,6 +3741,28 @@ receiveChunksUDPIFC(ChunkTransportState *pTransportStates, ChunkTransportStateEn
 		/* non-directed receive */
 		setMainThreadWaiting(&rx_control_info.mainWaitingState, motNodeID, ANY_ROUTE,
 							 pTransportStates->sliceTable->ic_instance_id);
+	}
+
+	nFds = 0;
+	nevent = 2; /* nevent = waited fds number + 2 (latch and postmaster) */
+	if (Gp_role == GP_ROLE_DISPATCH)
+	{
+		/* get all wait sock fds */
+		waitFds = cdbdisp_getWaitSocketFds(pTransportStates->estate->dispatcherState, &nFds);
+		if (waitFds != NULL)
+			nevent += nFds;
+
+	}
+
+	/* init WaitEventSet */
+	waitset = CreateWaitEventSet(CurrentMemoryContext, nevent);
+	rEvents = palloc(nevent * sizeof(WaitEvent)); /* returned events */
+	AddWaitEventToSet(waitset, WL_LATCH_SET, PGINVALID_SOCKET, &ic_control_info.latch, NULL);
+	AddWaitEventToSet(waitset, WL_POSTMASTER_DEATH, PGINVALID_SOCKET, NULL, NULL);
+
+	for (int i = 0; i < nFds; i++)
+	{
+		AddWaitEventToSet(waitset, WL_SOCKET_READABLE, waitFds[i], NULL, NULL);
 	}
 
 	/* we didn't have any data, so we've got to read it from the network. */
@@ -3785,6 +3794,12 @@ receiveChunksUDPIFC(ChunkTransportState *pTransportStates, ChunkTransportStateEn
 			if (!directed)
 				*srcRoute = rxconn->route;
 
+			FreeWaitEventSet(waitset);
+			if (rEvents != NULL)
+				pfree(rEvents);
+			if (waitFds != NULL)
+				pfree(waitFds);
+
 			return tcItem;
 		}
 
@@ -3798,38 +3813,22 @@ receiveChunksUDPIFC(ChunkTransportState *pTransportStates, ChunkTransportStateEn
 		ResetLatch(&ic_control_info.latch);
 		pthread_mutex_unlock(&ic_control_info.lock);
 
-		/*
-		 * Wait for data to become ready.
-		 *
-		 * In the QD, also wake up immediately if one of the QEs report an
-		 * error through the main QD-QE libpq connection. For that, ask
-		 * the dispatcher for a file descriptor to wait on for that.
-		 *
-		 * GPDB_12_MERGE_FIXME:
-		 * XXX: We currently only get a single FD to wait on. That catches
-		 * the common case that *all* the QEs report the same error more or
-		 * less at the same time. WaitLatchOrSocket doesn't allow waiting for
-		 * more than one socket at a time. PostgreSQL 9.6 introduces a more
-		 * flexible "wait event" API for the latches, so once we merge with
-		 * that, we could improve this.
-		 */
-		int			wakeEvents = WL_LATCH_SET | WL_TIMEOUT | WL_POSTMASTER_DEATH;
-		int			waitFd = PGINVALID_SOCKET;
-
-		if (Gp_role == GP_ROLE_DISPATCH)
-			waitFd = cdbdisp_getWaitSocketFd(pTransportStates->estate->dispatcherState);
-		if (waitFd != PGINVALID_SOCKET)
-			wakeEvents |= WL_SOCKET_READABLE;
-
 		if (gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG)
 		{
 			elog(DEBUG5, "waiting (timed) on route %d %s", rx_control_info.mainWaitingState.waitingRoute,
 				 (rx_control_info.mainWaitingState.waitingRoute == ANY_ROUTE ? "(any route)" : ""));
 		}
-		(void) WaitLatchOrSocket(&ic_control_info.latch,
-								 wakeEvents, waitFd,
-								 MAIN_THREAD_COND_TIMEOUT_MS,
-								 WAIT_EVENT_INTERCONNECT);
+
+		/*
+		 * Wait for data to become ready.
+		 *
+		 * In the QD, also wake up immediately if any QE reports an
+		 * error through the main QD-QE libpq connection. For that, ask
+		 * the dispatcher for a file descriptor to wait on for that.
+		 */
+		int rc = WaitEventSetWait(waitset, MAIN_THREAD_COND_TIMEOUT_MS, rEvents, nevent, WAIT_EVENT_INTERCONNECT);
+		if (gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG && rc == 0)
+			elog(DEBUG2, "receiveChunksUDPIFC(): WaitEventSetWait timeout after %d ms", MAIN_THREAD_COND_TIMEOUT_MS);
 
 		/* check the potential errors in rx thread. */
 		checkRxThreadError();
@@ -3837,10 +3836,18 @@ receiveChunksUDPIFC(ChunkTransportState *pTransportStates, ChunkTransportStateEn
 		/* do not check interrupts when holding the lock */
 		ML_CHECK_FOR_INTERRUPTS(pTransportStates->teardownActive);
 
-		/* check to see if the dispatcher should cancel */
+		/*
+		 * check to see if the dispatcher should cancel
+		 */
 		if (Gp_role == GP_ROLE_DISPATCH)
 		{
-			checkForCancelFromQD(pTransportStates);
+			for (int i = 0; i < rc; i++)
+				if (rEvents[i].events & WL_SOCKET_READABLE)
+				{
+					/* event happened on wait fds, need to check cancel */
+					checkForCancelFromQD(pTransportStates);
+					break;
+				}
 		}
 
 		/*
@@ -3861,6 +3868,12 @@ receiveChunksUDPIFC(ChunkTransportState *pTransportStates, ChunkTransportStateEn
 		pthread_mutex_lock(&ic_control_info.lock);
 
 	}							/* for (;;) */
+
+	FreeWaitEventSet(waitset);
+	if (rEvents != NULL)
+		pfree(rEvents);
+	if (waitFds != NULL)
+		pfree(waitFds);
 
 	/* We either got data, or get cancelled. We never make it out to here. */
 	return NULL;				/* make GCC behave */
@@ -4547,27 +4560,25 @@ prepareXmit(MotionConn *conn)
 }
 
 /*
- * sendOnce
- * 		Send a packet.
+ * sendtoWithRetry
+ * 		Retry sendto logic and send the packets.
  */
-static void
-sendOnce(ChunkTransportState *transportStates, ChunkTransportStateEntry *pEntry, ICBuffer *buf, MotionConn *conn)
+static ssize_t
+sendtoWithRetry(int socket, const void *message, size_t length,
+           int flags, const struct sockaddr *dest_addr,
+           socklen_t dest_len, int retry, const char *errDetail)
 {
 	int32		n;
-
-#ifdef USE_ASSERT_CHECKING
-	if (testmode_inject_fault(gp_udpic_dropxmit_percent))
-	{
-#ifdef AMS_VERBOSE_LOGGING
-		write_log("THROW PKT with seq %d srcpid %d despid %d", buf->pkt->seq, buf->pkt->srcPid, buf->pkt->dstPid);
-#endif
-		return;
-	}
-#endif
+	int count = 0;
 
 xmit_retry:
-	n = sendto(pEntry->txfd, buf->pkt, buf->pkt->len, 0,
-			   (struct sockaddr *) &conn->peer, conn->peer_len);
+	/*
+	 * If given retry count is positive, retry up to the limited times.
+	 * Otherwise, retry for unlimited times until succeed. 
+	 */
+	if (retry > 0 && ++count > retry)
+		return n;
+	n = sendto(socket, message, length, flags, dest_addr, dest_len);
 	if (n < 0)
 	{
 		int			save_errno = errno;
@@ -4575,8 +4586,15 @@ xmit_retry:
 		if (errno == EINTR)
 			goto xmit_retry;
 
-		if (errno == EAGAIN)	/* no space ? not an error. */
-			return;
+		/* 
+		 * EAGAIN: no space ? not an error.
+		 * 
+		 * EFAULT: In Linux system call, it only happens when copying a socket 
+		 * address into kernel space failed, which is less likely to happen, 
+		 * but mocked heavily by our fault injection in regression tests. 
+		 */
+		if (errno == EAGAIN || errno == EFAULT)
+			return n;
 
 		/*
 		 * If Linux iptables (nf_conntrack?) drops an outgoing packet, it may
@@ -4588,20 +4606,45 @@ xmit_retry:
 			ereport(LOG,
 					(errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
 					 errmsg("Interconnect error writing an outgoing packet: %m"),
-					 errdetail("error during sendto() for Remote Connection: contentId=%d at %s",
-							   conn->remoteContentId, conn->remoteHostAndPort)));
-			return;
+					 errdetail("error during sendto() %s", errDetail)));
+			return n;
 		}
 
 		ereport(ERROR, (errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
 						errmsg("Interconnect error writing an outgoing packet: %m"),
 						errdetail("error during sendto() call (error:%d).\n"
-								  "For Remote Connection: contentId=%d at %s",
-								  save_errno, conn->remoteContentId,
-								  conn->remoteHostAndPort)));
+								  "%s", save_errno, errDetail)));
 		/* not reached */
 	}
 
+	return n;
+}
+
+/*
+ * sendOnce
+ * 		Send a packet.
+ */
+static void
+sendOnce(ChunkTransportState *transportStates, ChunkTransportStateEntry *pEntry, ICBuffer *buf, MotionConn *conn)
+{
+	int32 n;
+
+#ifdef USE_ASSERT_CHECKING
+	if (testmode_inject_fault(gp_udpic_dropxmit_percent))
+	{
+#ifdef AMS_VERBOSE_LOGGING
+		write_log("THROW PKT with seq %d srcpid %d despid %d", buf->pkt->seq, buf->pkt->srcPid, buf->pkt->dstPid);
+#endif
+		return;
+	}
+#endif
+
+	char errDetail[100];
+	snprintf(errDetail, sizeof(errDetail), "For Remote Connection: contentId=%d at %s",
+					  conn->remoteContentId,
+					  conn->remoteHostAndPort);
+	n = sendtoWithRetry(pEntry->txfd, buf->pkt, buf->pkt->len, 0,
+                          (struct sockaddr *) &conn->peer, conn->peer_len, -1, errDetail);
 	if (n != buf->pkt->len)
 	{
 		if (DEBUG1 >= log_min_messages)
@@ -4613,7 +4656,6 @@ xmit_retry:
 		logPkt("PKT DETAILS ", buf->pkt);
 #endif
 	}
-
 	return;
 }
 
@@ -5075,7 +5117,7 @@ checkNetworkTimeout(ICBuffer *buf, uint64 now, bool *networkTimeoutIsLogged)
 		ereport(ERROR,
 				(errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
 				 errmsg("interconnect encountered a network error, please check your network"),
-				 errdetail("Failed to send packet (seq %d) to %s (pid %d cid %d) after %d retries in %d seconds.",
+				 errdetail("Failed to send packet (seq %u) to %s (pid %d cid %d) after %u retries in %d seconds.",
 						   buf->pkt->seq, buf->conn->remoteHostAndPort,
 						   buf->pkt->dstPid, buf->pkt->dstContentId,
 						   buf->nRetry, Gp_interconnect_transmit_timeout)));
@@ -5096,7 +5138,7 @@ checkNetworkTimeout(ICBuffer *buf, uint64 now, bool *networkTimeoutIsLogged)
 	{
 		ereport(WARNING,
 				(errmsg("interconnect may encountered a network error, please check your network"),
-				 errdetail("Failed to send packet (seq %d) to %s (pid %d cid %d) after %d retries.",
+				 errdetail("Failing to send packet (seq %u) to %s (pid %d cid %d) after %u retries.",
 						   buf->pkt->seq, buf->conn->remoteHostAndPort,
 						   buf->pkt->dstPid, buf->pkt->dstContentId,
 						   buf->nRetry)));
@@ -5802,16 +5844,12 @@ dispatcherAYT(void)
 static void
 checkQDConnectionAlive(void)
 {
-	if (!dispatcherAYT())
+	if (Gp_role == GP_ROLE_EXECUTE)
 	{
-		if (Gp_role == GP_ROLE_EXECUTE)
+		if (!dispatcherAYT())
 			ereport(ERROR,
 					(errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
 					 errmsg("interconnect error segment lost contact with master (recv)")));
-		else
-			ereport(ERROR,
-					(errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
-					 errmsg("interconnect error master lost contact with client (recv)")));
 	}
 }
 
@@ -6955,7 +6993,7 @@ SendDummyPacket(void)
 
 	if (counter >= 10)
 	{
-		elog(LOG, "send dummy packet failed, sendto failed: %m");
+		elog(LOG, "send dummy packet failed, sendto failed with 10 times: %m");
 		goto send_error;
 	}
 

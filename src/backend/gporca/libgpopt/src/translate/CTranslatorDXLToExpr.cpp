@@ -544,6 +544,9 @@ CTranslatorDXLToExpr::PexprLogicalTVF(const CDXLNode *dxlnode)
 	ConstructDXLColId2ColRefMapping(dxl_op->GetDXLColumnDescrArray(),
 									popTVF->PdrgpcrOutput());
 
+	if (!popTVF->FuncMdId()->IsValid())
+		return pexpr;
+
 	const IMDFunction *pmdfunc = m_pmda->RetrieveFunc(mdid_func);
 
 	if (IMDFunction::EfsVolatile == pmdfunc->GetFuncStability())

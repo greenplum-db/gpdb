@@ -613,7 +613,7 @@ insert into aocs_index_cols values (1, 'foo', 'bar');
 
 -- Create an index on the table. This is the first index on the table, so it
 -- creates the ao block directory, and scans all columns.
-create index on aocs_index_cols (id);
+create index aocs_index_cols_id_idx on aocs_index_cols (id);
 
 -- Create a partial index. This index needs to scan two columns; one is used
 -- as the index column, and the other in the WHERE clause.
@@ -629,6 +629,34 @@ select * from aocs_index_cols where a like 'f%';
 select * from aocs_index_cols where length(b) = 3;
 reset enable_seqscan;
 
+-- Recreate aocs_index_cols_id_idx. This index needs to scan only one columns.
+drop index aocs_index_cols_id_idx;
+create index aocs_index_cols_id_idx on aocs_index_cols (id);
+-- Check that the row is found using the new index.
+set enable_seqscan=off;
+select * from aocs_index_cols where id = 1;
+
+-- Test for corner cases
+drop table aocs_index_cols;
+create table aocs_index_cols (id int4, a text, b text) with (appendonly=true, orientation=column);
+insert into aocs_index_cols values (1, 'foo', 'bar');
+-- Create index in a txn first, then rollback, then create index again.
+-- No blockdir will be created when rollback.
+begin;
+create index aocs_index_cols_id_idx on aocs_index_cols (id);
+abort;
+select blkdirrelid=0 as blk_dir_not_exist from pg_appendonly where relid = 'aocs_index_cols'::regclass;
+
+-- Create the first index and then drop it, blockdir existed.
+create index aocs_index_cols_id_idx on aocs_index_cols (id);
+drop index aocs_index_cols_id_idx;
+select blkdirrelid=0 as blk_dir_not_exist from pg_appendonly where relid = 'aocs_index_cols'::regclass;
+
+-- Create again. This index needs to scan only one columns.
+create index aocs_index_cols_id_idx on aocs_index_cols (id);
+select * from aocs_index_cols where id = 1;
+
+reset enable_seqscan;
 
 -- Small content as well as bulk dense content headers need to be used
 -- appropriately if compression is found to be not useful.  This test

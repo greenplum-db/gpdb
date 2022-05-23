@@ -6,61 +6,61 @@
   <body>
     <p id="sql_command_desc">Defines a new aggregate function.</p>
     <section id="section2"
-      ><title>Synopsis</title><codeblock id="sql_command_synopsis">CREATE AGGREGATE <varname>name</varname> ( [ <varname>argmode</varname> ] [ <varname>argname</varname> ] <varname>arg_data_type</varname> [ , ... ] ) (
-    SFUNC = <varname>statefunc</varname>,
-    STYPE = <varname>state_data_type</varname>
-    [ , SSPACE = <varname>state_data_size</varname> ]
-    [ , FINALFUNC = <varname>ffunc</varname> ]
+      ><title>Synopsis</title><codeblock id="sql_command_synopsis">CREATE AGGREGATE &lt;name> ( [ &lt;argmode> ] [ &lt;argname> ] &lt;arg_data_type> [ , ... ] ) (
+    SFUNC = &lt;statefunc>,
+    STYPE = &lt;state_data_type>
+    [ , SSPACE = &lt;state_data_size> ]
+    [ , FINALFUNC = &lt;ffunc> ]
     [ , FINALFUNC_EXTRA ]
-    [ , COMBINEFUNC = <varname>combinefunc</varname> ]
-    [ , SERIALFUNC = <varname>serialfunc</varname> ]
-    [ , DESERIALFUNC = <varname>deserialfunc</varname> ]
-    [ , INITCOND = <varname>initial_condition</varname> ]
-    [ , MSFUNC = <varname>msfunc</varname> ]
-    [ , MINVFUNC = <varname>minvfunc</varname> ]
-    [ , MSTYPE = <varname>mstate_data_type</varname> ]
-    [ , MSSPACE = <varname>mstate_data_size</varname> ]
-    [ , MFINALFUNC = <varname>mffunc</varname> ]
+    [ , COMBINEFUNC = &lt;combinefunc> ]
+    [ , SERIALFUNC = &lt;serialfunc> ]
+    [ , DESERIALFUNC = &lt;deserialfunc> ]
+    [ , INITCOND = &lt;initial_condition> ]
+    [ , MSFUNC = &lt;msfunc> ]
+    [ , MINVFUNC = &lt;minvfunc> ]
+    [ , MSTYPE = &lt;mstate_data_type> ]
+    [ , MSSPACE = &lt;mstate_data_size> ]
+    [ , MFINALFUNC = &lt;mffunc> ]
     [ , MFINALFUNC_EXTRA ]
-    [ , MINITCOND = <varname>minitial_condition</varname> ]
-    [ , SORTOP = <varname>sort_operator</varname> ]
+    [ , MINITCOND = &lt;minitial_condition> ]
+    [ , SORTOP = &lt;sort_operator> ]
   )
   
-  CREATE AGGREGATE <varname>name</varname> ( [ [ <varname>argmode</varname> ] [ <varname>argname</varname> ] <varname>arg_data_type</varname> [ , ... ] ]
-      ORDER BY [ <varname>argmode</varname> ] [ <varname>argname</varname> ] <varname>arg_data_type</varname> [ , ... ] ) (
-    SFUNC = <varname>statefunc</varname>,
-    STYPE = <varname>state_data_type</varname>
-    [ , SSPACE = <varname>state_data_size</varname> ]
-    [ , FINALFUNC = <varname>ffunc</varname> ]
+  CREATE AGGREGATE &lt;name> ( [ [ &lt;argmode> ] [ &lt;argname> ] &lt;arg_data_type> [ , ... ] ]
+      ORDER BY [ &lt;argmode> ] [ &lt;argname> ] &lt;arg_data_type> [ , ... ] ) (
+    SFUNC = &lt;statefunc>,
+    STYPE = &lt;state_data_type>
+    [ , SSPACE = &lt;state_data_size> ]
+    [ , FINALFUNC = &lt;ffunc> ]
     [ , FINALFUNC_EXTRA ]
-    [ , COMBINEFUNC = <varname>combinefunc</varname> ]
-    [ , SERIALFUNC = <varname>serialfunc</varname> ]
-    [ , DESERIALFUNC = <varname>deserialfunc</varname> ]
-    [ , INITCOND = <varname>initial_condition</varname> ]
+    [ , COMBINEFUNC = &lt;combinefunc> ]
+    [ , SERIALFUNC = &lt;serialfunc> ]
+    [ , DESERIALFUNC = &lt;deserialfunc> ]
+    [ , INITCOND = &lt;initial_condition> ]
     [ , HYPOTHETICAL ]
   )
   
   or the old syntax
   
-  CREATE AGGREGATE <varname>name</varname> (
-    BASETYPE = <varname>base_type</varname>,
-    SFUNC = <varname>statefunc</varname>,
-    STYPE = <varname>state_data_type</varname>
-    [ , SSPACE = <varname>state_data_size</varname> ]
-    [ , FINALFUNC = <varname>ffunc</varname> ]
+  CREATE AGGREGATE &lt;name> (
+    BASETYPE = &lt;base_type>,
+    SFUNC = &lt;statefunc>,
+    STYPE = &lt;state_data_type>
+    [ , SSPACE = &lt;state_data_size> ]
+    [ , FINALFUNC = &lt;ffunc> ]
     [ , FINALFUNC_EXTRA ]
-    [ , COMBINEFUNC = <varname>combinefunc</varname> ]
-    [ , SERIALFUNC = <varname>serialfunc</varname> ]
-    [ , DESERIALFUNC = <varname>deserialfunc</varname> ]
-    [ , INITCOND = <varname>initial_condition</varname> ]
-    [ , MSFUNC = <varname>msfunc</varname> ]
-    [ , MINVFUNC = <varname>minvfunc</varname> ]
-    [ , MSTYPE = <varname>mstate_data_type</varname> ]
-    [ , MSSPACE = <varname>mstate_data_size</varname> ]
-    [ , MFINALFUNC = <varname>mffunc</varname> ]
+    [ , COMBINEFUNC = &lt;combinefunc> ]
+    [ , SERIALFUNC = &lt;serialfunc> ]
+    [ , DESERIALFUNC = &lt;deserialfunc> ]
+    [ , INITCOND = &lt;initial_condition> ]
+    [ , MSFUNC = &lt;msfunc> ]
+    [ , MINVFUNC = &lt;minvfunc> ]
+    [ , MSTYPE = &lt;mstate_data_type> ]
+    [ , MSSPACE = &lt;mstate_data_size> ]
+    [ , MFINALFUNC = &lt;mffunc> ]
     [ , MFINALFUNC_EXTRA ]
-    [ , MINITCOND = <varname>minitial_condition</varname> ]
-    [ , SORTOP = <varname>sort_operator</varname> ]
+    [ , MINITCOND = &lt;minitial_condition> ]
+    [ , SORTOP = &lt;sort_operator> ]
   )</codeblock></section>
     <section id="section3">
       <title>Description</title>
@@ -77,8 +77,8 @@
         functions in the same schema can have the same name if they operate on different input
         types. The name and input data types of an aggregate function must also be distinct from the
         name and input data types of every ordinary function in the same schema. This behavior is
-        identical to overloading of ordinary function names. See <codeph><xref
-            href="CREATE_FUNCTION.xml#topic1"/></codeph>.</p>
+        identical to overloading of ordinary function names. See <xref
+            href="CREATE_FUNCTION.xml#topic1"/>.</p>
       <p>A simple aggregate function is made from one, two, or three ordinary functions (which must
         be <codeph>IMMUTABLE</codeph> functions): </p>
       <ul id="ul_d5c_5yl_dhb">
@@ -87,9 +87,9 @@
         <li>an optional combine function <varname>combinefunc</varname></li>
       </ul>
       <p>These functions are used as follows:</p>
-      <codeblock><varname>statefunc</varname>( internal-state, next-data-values ) ---&gt; next-internal-state
-<varname>ffunc</varname>( internal-state ) ---&gt; aggregate-value
-<varname>combinefunc</varname>( internal-state, internal-state ) ---&gt; next-internal-state</codeblock>
+      <codeblock>&lt;statefunc>( internal-state, next-data-values ) ---&gt; next-internal-state
+&lt;ffunc>( internal-state ) ---&gt; aggregate-value
+&lt;combinefunc>( internal-state, internal-state ) ---&gt; next-internal-state</codeblock>
       <p>Greenplum Database creates a temporary variable of data type
           <varname>state_data_type</varname> to hold the current internal state of the aggregate
         function. At each input row, the aggregate argument values are calculated and the state
@@ -191,9 +191,9 @@
         optimized, indicate it by specifying a <i>sort operator</i>. The basic requirement is that the
         aggregate must yield the first element in the sort ordering induced by the operator; in
         other words:</p>
-      <codeblock>SELECT <varname>agg</varname>(<varname>col</varname>) FROM <varname>tab</varname>; </codeblock>
+      <codeblock>SELECT &lt;agg>(&lt;col>) FROM &lt;tab>; </codeblock>
       <p>must be equivalent to:</p>
-      <codeblock>SELECT <varname>col</varname> FROM <varname>tab</varname> ORDER BY <varname>col</varname> USING <varname>sortop</varname> LIMIT 1;</codeblock>
+      <codeblock>SELECT &lt;col> FROM &lt;tab> ORDER BY &lt;col> USING &lt;sortop> LIMIT 1;</codeblock>
       <p>Further assumptions are that the aggregate function ignores <codeph>NULL</codeph> inputs,
         and that it delivers a <codeph>NULL</codeph> result if and only if there were no non-null
         inputs. Ordinarily, a data type's <codeph>&lt;</codeph> operator is the proper sort operator
@@ -456,10 +456,10 @@ Aggregate (cost=1.10..1.11 rows=1 width=32)  
     </section>
     <section id="section9">
       <title>See Also</title>
-      <p><codeph><xref href="ALTER_AGGREGATE.xml#topic1" type="topic" format="dita"/></codeph>,
-            <codeph><xref href="./DROP_AGGREGATE.xml#topic1" type="topic" format="dita"/></codeph>,
-            <codeph><xref href="./CREATE_FUNCTION.xml#topic1" type="topic" format="dita"
-        /></codeph></p>
+      <p><xref href="ALTER_AGGREGATE.xml#topic1" type="topic" format="dita"/>,
+            <xref href="./DROP_AGGREGATE.xml#topic1" type="topic" format="dita"/>,
+            <xref href="./CREATE_FUNCTION.xml#topic1" type="topic" format="dita"
+        /></p>
     </section>
   </body>
 </topic>

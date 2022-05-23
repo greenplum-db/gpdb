@@ -1986,7 +1986,7 @@ union all
 select null, null, array_dims(array_agg(x)) from mergeappend_test r
 order by 1,2;
                          QUERY PLAN                         
-------------------------------------------------------------
+----------------------------------------------------------------
  Merge Append
    Sort Key: r.a, r.b
    ->  Gather Motion 3:1  (slice1; segments: 3)
@@ -1998,11 +1998,12 @@ order by 1,2;
                      ->  Seq Scan on mergeappend_test r
    ->  Sort
          Sort Key: (NULL::integer), (NULL::integer)
-         ->  Aggregate
+         ->  Finalize Aggregate
                ->  Gather Motion 3:1  (slice2; segments: 3)
-                     ->  Seq Scan on mergeappend_test r_1
+                     ->  Partial Aggregate
+                           ->  Seq Scan on mergeappend_test r_1
  Optimizer: Postgres query optimizer
-(15 rows)
+(16 rows)
 
 -- This used to trip an assertion in MotionStateFinderWalker(), when we were
 -- missing support for MergeAppend in planstate_walk_kids().
@@ -2027,32 +2028,33 @@ explain analyze select a, b, array_dims(array_agg(x)) from mergeappend_test r gr
 union all
 select null, null, array_dims(array_agg(x)) FROM mergeappend_test r
 order by 1,2;
-                                                                 QUERY PLAN                                                                  
----------------------------------------------------------------------------------------------------------------------------------------------
- Merge Append  (cost=59.71..66.08 rows=37 width=40) (actual time=0.958..0.965 rows=4 loops=2)
+                                                                   QUERY PLAN                                                                   
+------------------------------------------------------------------------------------------------------------------------------------------------
+ Merge Append  (cost=12.01..14.11 rows=13 width=40) (actual time=1.885..1.893 rows=7 loops=1)
    Sort Key: r.a, r.b
-   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=30.41..37.03 rows=36 width=40) (actual time=0.550..0.554 rows=3 loops=2)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=8.82..11.26 rows=36 width=40) (actual time=0.742..0.744 rows=6 loops=1)
          Merge Key: r.a, r.b
-         ->  GroupAggregate  (cost=30.41..35.95 rows=12 width=40) (actual time=0.234..0.317 rows=2 loops=2)
+         ->  GroupAggregate  (cost=8.82..10.66 rows=12 width=40) (actual time=0.286..0.402 rows=4 loops=1)
                Group Key: r.a, r.b
-               ->  Sort  (cost=30.41..31.66 rows=167 width=12) (actual time=0.181..0.205 rows=150 loops=2)
+               ->  Sort  (cost=8.82..9.23 rows=167 width=12) (actual time=0.221..0.265 rows=301 loops=1)
                      Sort Key: r.a, r.b
-                     Sort Method:  quicksort  Memory: 115kB
-                     ->  Seq Scan on mergeappend_test r  (cost=0.00..8.00 rows=167 width=12) (actual time=0.005..0.032 rows=150 loops=2)
-   ->  Sort  (cost=29.29..29.29 rows=1 width=40) (actual time=0.407..0.409 rows=0 loops=2)
+                     Sort Method:  quicksort  Memory: 202kB
+                     ->  Seq Scan on mergeappend_test r  (cost=0.00..2.67 rows=167 width=12) (actual time=0.102..0.147 rows=301 loops=1)
+   ->  Sort  (cost=3.19..3.19 rows=1 width=40) (actual time=1.142..1.145 rows=1 loops=1)
          Sort Key: (NULL::integer), (NULL::integer)
-         Sort Method:  quicksort  Memory: 33kB
-         ->  Aggregate  (cost=29.25..29.27 rows=1 width=40) (actual time=0.395..0.395 rows=0 loops=2)
-               ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..28.00 rows=500 width=4) (actual time=0.034..0.319 rows=250 loops=2)
-                     ->  Seq Scan on mergeappend_test r_1  (cost=0.00..8.00 rows=167 width=4) (actual time=0.008..0.041 rows=150 loops=2)
- Planning time: 0.793 ms
-   (slice0)    Executor memory: 380K bytes.  Work_mem: 33K bytes max.
-   (slice1)    Executor memory: 121K bytes avg x 3 workers, 140K bytes max (seg0).  Work_mem: 49K bytes max.
-   (slice2)    Executor memory: 42K bytes avg x 3 workers, 42K bytes max (seg0).
+         Sort Method:  quicksort  Memory: 50kB
+         ->  Finalize Aggregate  (cost=3.15..3.17 rows=1 width=40) (actual time=1.135..1.135 rows=1 loops=1)
+               ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=3.09..3.14 rows=3 width=32) (actual time=0.014..1.105 rows=3 loops=1)
+                     ->  Partial Aggregate  (cost=3.09..3.10 rows=1 width=32) (actual time=0.261..0.261 rows=1 loops=1)
+                           ->  Seq Scan on mergeappend_test r_1  (cost=0.00..2.67 rows=167 width=4) (actual time=0.095..0.155 rows=301 loops=1)
+ Planning Time: 0.602 ms
+   (slice0)    Executor memory: 75K bytes.  Work_mem: 26K bytes max.
+   (slice1)    Executor memory: 39K bytes avg x 3 workers, 39K bytes max (seg0).  Work_mem: 35K bytes max.
+   (slice2)    Executor memory: 38K bytes avg x 3 workers, 38K bytes max (seg0).
  Memory used:  128000kB
  Optimizer: Postgres query optimizer
- Execution time: 2.496 ms
-(23 rows)
+ Execution Time: 2.406 ms
+(24 rows)
 
 CREATE TABLE t1(c1 int, c2 int, c3 int);
 CREATE TABLE t2(c1 int, c2 int, c3 int);

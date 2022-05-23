@@ -33,17 +33,17 @@ def test_603_with_reuse_tables_true_and_staging():
     file = mkpath('setup.sql')
     runfile(file)
     f = open(mkpath('query603.sql'),'a')
-    f.write("\\! psql -d reuse_gptest -c \"SELECT count(*) from pg_class WHERE relname like 'staging_test';\"")
+    f.write("\\! psql -d reuse_gptest -c \"SELECT count(*) from pg_class WHERE relname = 'STAGING_test';\"")
     f.close()
     copy_data('external_file_04.txt','data_file.txt')
-    write_config_file(mode='insert',reuse_tables=True,fast_match=False,file='data_file.txt',table='texttable', staging_table='staging_test', error_limit=1002, truncate=False)
+    write_config_file(mode='insert',reuse_tables=True,fast_match=False,file='data_file.txt',table='texttable', staging_table='\'"STAGING_test"\'', error_limit=1002, truncate=False)
 
 @prepare_before_test(num=604, times=1)
 def test_604_with_reuse_tables_true_table_changed():
     "604 gpload with reuse_tables is true and specifying a staging_table, but table's schema is changed. so staging table dosen't match the destination table, load failed"
     psql_run(cmd="ALTER TABLE texttable ADD column n8 text",dbname='reuse_gptest')
     copy_data('external_file_08.txt','data_file.txt')
-    write_config_file(mode='insert',reuse_tables=True,fast_match=False,file='data_file.txt',table='texttable', staging_table='staging_test', error_limit=1002, truncate=False)
+    write_config_file(mode='insert',reuse_tables=True,fast_match=False,file='data_file.txt',table='texttable', staging_table='\'"STAGING_test"\'', error_limit=1002, truncate=False)
 
 @prepare_before_test(num=605, times=1)
 def test_605_with_reuse_tables_true_table_changed():
@@ -67,4 +67,4 @@ def test_608_gpload_ext_staging_table():
     file = mkpath('setup.sql')
     runfile(file)
     copy_data('external_file_13.csv','data_file.csv')
-    write_config_file(reuse_tables=False, format='csv', file='data_file.csv', table='csvtable', delimiter="','", log_errors=True,error_limit=10,staging_table='staging_table')
+    write_config_file(reuse_tables=False, format='csv', file='data_file.csv', table='csvtable', delimiter="','", log_errors=True,error_limit=10,staging_table='"Staging_table"')

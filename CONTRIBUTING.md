@@ -12,7 +12,7 @@ Anybody contributing to Greenplum has to be covered by either the Corporate or t
 
 ## Licensing of Greenplum contributions
 
-If the contribution you're submitting is original work, you can assume that Pivotal will release it as part of an overall Greenplum release available to the downstream consumers under the Apache License, Version 2.0. However, in addition to that, Pivotal may also decide to release it under a different license (such as PostgreSQL License to the upstream consumers that require it. A typical example here would be Pivotal upstreaming your contribution back to PostgreSQL community (which can be done either verbatim or your contribution being upstreamed as part of the larger changeset).
+If the contribution you're submitting is original work, you can assume that VMware will release it as part of an overall Greenplum release available to the downstream consumers under the Apache License, Version 2.0. However, in addition to that, VMware may also decide to release it under a different license (such as PostgreSQL License to the upstream consumers that require it. A typical example here would be VMware upstreaming your contribution back to PostgreSQL community (which can be done either verbatim or your contribution being upstreamed as part of the larger changeset).
 
 If the contribution you're submitting is NOT original work you have to indicate the name of the license and also make sure that it is similar in terms to the Apache License 2.0. Apache Software Foundation maintains a list of these licenses under Category A. In addition to that, you may be required to make proper attribution in the NOTICE file file similar to these examples.
 
@@ -29,7 +29,7 @@ All Python code must pass Pylint.
 All Go code must be formatted according to gofmt.
 We recommend using `git diff --color` when reviewing your changes so that you don't have any spurious whitespace issues in the code that you submit.
 
-All new functionality that is contributed to Greenplum should be covered by regression tests that are contributed alongside it. If you are uncertain on how to test or document your work, please raise the question on the gpdb-dev mailing list and the developer community will do its best to help you.
+All new functionality and bug fix that is contributed to Greenplum should be covered by regression tests that are contributed alongside it. If you are uncertain on how to test or document your work, please raise the question on the gpdb-dev mailing list and the developer community will do its best to help you.
 
 At the very minimum you should always be running make installcheck-world to make sure that you're not breaking anything.
 
@@ -45,7 +45,15 @@ To improve the odds of the right discussion of your patch or idea happening, pay
 
 Once you are ready to share your work with the Greenplum core team and the rest of the Greenplum community, you should push all the commits to a branch in your own repository forked from the official Greenplum and send us a pull request.
 
-For now, we require all pull requests to be submitted against the main master branch, but over time, once there are many supported open source releases of Greenplum in the wild, you may decide to submit your pull requests against an active release branch if the change is only applicable to a given release.
+We require all pull requests to be submitted against the main master branch (clearly stating if the change needs to be back-ported to STABLE branches). If the change is ONLY applicable to given STABLE branch, you may decide to submit your pull requests against an active STABLE release branch.
+
+Things which slow down patch approval
+ - missing to accompany tests (or reproducible steps at minimum)
+ - submitting the patch against STABLE branch where the fix also applies to main master branch
+
+## Submissions against 5X_STABLE
+
+Need strong justification of impact for the issue being solved by submission. Given this code line has been released and running in production from long time, community is very conservative at making changes to this release branch. Only very critical bugs like data loss/unavailability, affecting upgrades to higher versions and such are considered for acceptance for this release line.
 
 ## Validation checks and CI
 
@@ -65,7 +73,7 @@ A peer review converges when it receives at least one +1 and no -1s votes from t
 
 Greenplum prides itself on being a collaborative, consensus-driven environment. We do not believe in vetoes and any -1 vote casted as part of the peer review has to have a detailed technical explanation of what's wrong with the change. Should a strong disagreement arise it may be advisable to take the matter onto the mailing list since it allows for a more natural flow of the conversation.
 
-At any time during the patch review, you may experience delays based on the availability of reviewers and core team members. Please be patient. That being said, don't get discouraged either. If you're not getting expected feedback for a few days add a comment asking for updates on the pull request itself or send an email to the mailing list.
+At any time during the patch review, you may experience delays based on the availability of reviewers and core team members. Please be patient. That being said, don't get discouraged either. If you're not getting expected feedback for a few days add a comment asking for updates on the pull request itself or send an email to the mailing list. For STABLE branch contribution, Core team meets once every week to approve PRs for merging. Due to this there can be small delay for approved PRs against STABLE branch to be merged.
 
 ## Direct commits to the repository
 

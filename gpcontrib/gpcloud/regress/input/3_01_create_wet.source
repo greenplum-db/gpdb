@@ -1,4 +1,10 @@
 CREATE WRITABLE EXTERNAL TABLE s3regress_create_wet (date text, time text, open float, high float,
         low float, volume int) LOCATION('s3://s3-us-west-2.amazonaws.com/@write_prefix@/create/ config=@config_file@') FORMAT 'csv';
 
+CREATE WRITABLE EXTERNAL TABLE s3regress_create_wet_on_master (date text) LOCATION('s3://s3-us-west-2.amazonaws.com/@write_prefix@/create/ config=@config_file@') ON MASTER FORMAT 'csv';
+
+-- should no motion for on master external table
+EXPLAIN (verbose, costs off) INSERT INTO s3regress_create_wet_on_master VALUES ('aaa');
+
 DROP EXTERNAL TABLE s3regress_create_wet;
+DROP EXTERNAL TABLE s3regress_create_wet_on_master;

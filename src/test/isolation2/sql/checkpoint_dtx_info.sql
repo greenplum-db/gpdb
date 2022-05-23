@@ -30,6 +30,8 @@
 1: begin;
 1: create table twopcbug(i int, j int);
 1&: commit;
+-- wait to make sure the commit is taking place and blocked at start_insertedDistributedCommitted
+2: select gp_wait_until_triggered_fault('start_insertedDistributedCommitted', 1, 1);
 2: select gp_inject_fault_infinite('before_wait_VirtualXIDsDelayingChkpt', 'skip', 1);
 33&: checkpoint;
 2: select gp_inject_fault_infinite('keep_log_seg', 'panic', 1);

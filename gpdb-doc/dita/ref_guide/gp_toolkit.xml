@@ -156,7 +156,8 @@
               </row>
               <row class="- topic/row ">
                 <entry colname="col1" class="- topic/entry ">smirecs </entry>
-                <entry colname="col2" class="- topic/entry ">Number of rows in the table.</entry>
+                <entry colname="col2" class="- topic/entry ">The total number of columns in
+                  the table that have statistics recorded.</entry>
               </row>
             </tbody>
           </tgroup>
@@ -365,9 +366,9 @@
           by a <codeph>VACUUM</codeph> operation on an append-optimized table.</p>
         <note>Until a <cmdname>VACUUM</cmdname> operation deletes the row from the data file,
           deleted or updated data rows occupy physical space on disk even though they are hidden to
-          new transactions. The configuration parameter <codeph><xref
+          new transactions. The configuration parameter <xref
               href="config_params/guc-list.xml#gp_appendonly_compaction"
-              >gp_appendonly_compaction</xref></codeph> controls the functionality of the
+              >gp_appendonly_compaction</xref> controls the functionality of the
             <codeph>VACUUM</codeph> command.</note>
         <p>This table describes the <cmdname>__gp_aovisimap_compaction_info</cmdname> function
           output table.</p>
@@ -1723,11 +1724,10 @@
     <topic id="perhost">
       <title id="ie193152x">gp_resgroup_status_per_host</title>
       <body>
-        <p>The <codeph><xref href="system_catalogs/gp_resgroup_status_per_host.xml"
-          type="topic" format="dita">gp_resgroup_status_per_host</xref></codeph>
-          view displays the real-time CPU and memory usage (MBs) for each resource
-          group on a per-host basis. The view also displays available and granted
-          group fixed and shared memory for each resource group on a host.</p>
+        <p>The <xref href="system_catalogs/gp_resgroup_status_per_host.xml" type="topic"
+            format="dita">gp_resgroup_status_per_host</xref> view displays the real-time CPU and
+          memory usage (MBs) for each resource group on a per-host basis. The view also displays
+          available and granted group fixed and shared memory for each resource group on a host.</p>
         
         <table id="fp141982">
           <title class="- topic/title ">gp_resgroup_status_per_host view</title>
@@ -1807,8 +1807,8 @@
     <topic id="perseg">
       <title id="ie193152x">gp_resgroup_status_per_segment</title>
       <body>
-        <p>The <codeph><xref href="system_catalogs/gp_resgroup_status_per_segment.xml"
-          type="topic" format="dita">gp_resgroup_status_per_segment</xref></codeph>
+        <p>The <xref href="system_catalogs/gp_resgroup_status_per_segment.xml"
+          type="topic" format="dita">gp_resgroup_status_per_segment</xref>
           view displays the real-time CPU and memory usage (MBs) for each resource
           group on a per-segment-instance and per-host basis. The view also
           displays available and granted group fixed and shared memory for each

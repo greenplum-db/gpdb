@@ -913,10 +913,10 @@
   proparallel => 'u', prorettype => 'int4', proargtypes => 'regclass',
   prosrc => 'brin_summarize_new_values_internal' },
 { oid => '3999', descr => 'brin: standalone scan new table pages',
-  proexeclocation => 's',
-  proname => 'brin_summarize_range', provolatile => 'v', proparallel => 'u',
+  proexeclocation => 's', prorows => '1000', proretset => 't',
+  proname => 'brin_summarize_range_internal', provolatile => 'v', proparallel => 'u',
   prorettype => 'int4', proargtypes => 'regclass int8',
-  prosrc => 'brin_summarize_range' },
+  prosrc => 'brin_summarize_range_internal' },
 { oid => '4014', descr => 'brin: desummarize page range',
   proname => 'brin_desummarize_range', provolatile => 'v', proparallel => 'u',
   prorettype => 'void', proargtypes => 'regclass int8',
@@ -1576,8 +1576,21 @@
 { oid => '2334', descr => 'aggregate final function',
   proname => 'array_agg_finalfn', proisstrict => 'f', prorettype => 'anyarray',
   proargtypes => 'internal anynonarray', prosrc => 'array_agg_finalfn' },
+{ oid => '13359', descr => 'aggregate combine function',
+  proname => 'array_agg_combine', proisstrict => 'f', prorettype => 'internal',
+  proargtypes => 'internal internal', prosrc => 'array_agg_combine' },
+{ oid => '13360', descr => 'aggregate serialize function',
+  proname => 'array_agg_serialize', proisstrict => 't', prorettype => 'bytea',
+  proargtypes => 'internal', prosrc => 'array_agg_serialize' },
+{ oid => '13361', descr => 'aggregate deserialize function',
+  proname => 'array_agg_deserialize', proisstrict => 't', prorettype => 'internal',
+  proargtypes => 'bytea internal', prosrc => 'array_agg_deserialize' },
 { oid => '2335', descr => 'concatenate aggregate input into an array',
   proname => 'array_agg', prokind => 'a', proisstrict => 'f',
+  prorettype => 'anyarray', proargtypes => 'anynonarray',
+  prosrc => 'aggregate_dummy' },
+{ oid => '13365', descr => 'concatenate aggregate input into an array',
+  proname => 'gp_array_agg', prokind => 'a', proisstrict => 'f',
   prorettype => 'anyarray', proargtypes => 'anynonarray',
   prosrc => 'aggregate_dummy' },
 { oid => '4051', descr => 'aggregate transition function',
@@ -1588,8 +1601,24 @@
   proname => 'array_agg_array_finalfn', proisstrict => 'f',
   prorettype => 'anyarray', proargtypes => 'internal anyarray',
   prosrc => 'array_agg_array_finalfn' },
+{ oid => '13362', descr => 'aggregate combine function',
+  proname => 'array_agg_array_combine', proisstrict => 'f',
+  prorettype => 'internal', proargtypes => 'internal internal',
+  prosrc => 'array_agg_array_combine' },
+{ oid => '13363', descr => 'aggregate serialize function',
+  proname => 'array_agg_array_serialize', proisstrict => 't',
+  prorettype => 'bytea', proargtypes => 'internal',
+  prosrc => 'array_agg_array_serialize' },
+{ oid => '13364', descr => 'aggregate deserialize function',
+  proname => 'array_agg_array_deserialize', proisstrict => 't',
+  prorettype => 'internal', proargtypes => 'bytea internal',
+  prosrc => 'array_agg_array_deserialize' },
 { oid => '4053', descr => 'concatenate aggregate input into an array',
   proname => 'array_agg', prokind => 'a', proisstrict => 'f',
+  prorettype => 'anyarray', proargtypes => 'anyarray',
+  prosrc => 'aggregate_dummy' },
+{ oid => '13366', descr => 'concatenate aggregate input into an array',
+  proname => 'gp_array_agg', prokind => 'a', proisstrict => 'f',
   prorettype => 'anyarray', proargtypes => 'anyarray',
   prosrc => 'aggregate_dummy' },
 { oid => '3218',
@@ -8702,7 +8731,7 @@
   prosrc => 'gin_tsquery_consistent_oldsig' },
 
 { oid => '3789', descr => 'clean up GIN pending list',
-  proexeclocation => 's',
+  proexeclocation => 's', prorows => '1000', proretset => 't',
   proname => 'gin_clean_pending_list', provolatile => 'v', proparallel => 'u',
   prorettype => 'int8', proargtypes => 'regclass',
   prosrc => 'gin_clean_pending_list' },
@@ -10861,7 +10890,7 @@
 
 
 # contrib/adminpack functions, brought to core in GPDB.
-# GPDB_12_MERGE_FIXME: Why?
+# the new version functions which using the GRANT system to control access instead of having hard-coded superuser checks
 { oid => 6045, descr => 'Read text from a file',
    proname => 'pg_file_read', provolatile => 'v', prorettype => 'text', proargtypes => 'text int8 int8', prosrc => 'pg_read_file' },
 
@@ -10869,16 +10898,16 @@
    proname => 'pg_logfile_rotate', provolatile => 'v', prorettype => 'bool', proargtypes => '', prosrc => 'pg_rotate_logfile' },
 
 { oid => 6047, descr => 'Write text to a file',
-   proname => 'pg_file_write', provolatile => 'v', prorettype => 'int8', proargtypes => 'text text bool', prosrc => 'pg_file_write' },
+   proname => 'pg_file_write', provolatile => 'v', prorettype => 'int8', proargtypes => 'text text bool', prosrc => 'pg_file_write_v1_1' },
 
 { oid => 6048, descr => 'Rename a file',
-   proname => 'pg_file_rename', proisstrict => 'f', provolatile => 'v', prorettype => 'bool', proargtypes => 'text text text', prosrc => 'pg_file_rename' },
+   proname => 'pg_file_rename', proisstrict => 'f', provolatile => 'v', prorettype => 'bool', proargtypes => 'text text text', prosrc => 'pg_file_rename_v1_1' },
 
 { oid => 6049, descr => 'Delete (unlink) a file',
-   proname => 'pg_file_unlink', provolatile => 'v', prorettype => 'bool', proargtypes => 'text', prosrc => 'pg_file_unlink' },
+   proname => 'pg_file_unlink', provolatile => 'v', prorettype => 'bool', proargtypes => 'text', prosrc => 'pg_file_unlink_v1_1' },
 
 { oid => 6050, descr => 'ls the log dir',
-   proname => 'pg_logdir_ls', prorows => '1000', proretset => 't', provolatile => 'v', prorettype => 'record', proargtypes => '', prosrc => 'pg_logdir_ls' },
+   proname => 'pg_logdir_ls', prorows => '1000', proretset => 't', provolatile => 'v', prorettype => 'record', proargtypes => '', prosrc => 'pg_logdir_ls_v1_1' },
 
 { oid => 6051, descr => 'Get the length of a file (via stat)',
    proname => 'pg_file_length', provolatile => 'v', prorettype => 'int8', proargtypes => 'text', prosrc => 'pg_file_length' },
@@ -10925,11 +10954,11 @@
 
 # 3220 - reserved for sum(numeric[]) 
 { oid => 6225, descr => 'aggregate transition function',
-   proname => 'int4_pivot_accum', proisstrict => 'f', prorettype => '_int4', proargtypes => '_int4 _text text int4', prosrc => 'int4_pivot_accum' },
+   proname => 'int4_pivot_accum', proisstrict => 'f', prorettype => '_int8', proargtypes => '_int8 _text text int4', prosrc => 'int4_pivot_accum' },
 
 { oid => 6226, descr => 'pivot sum aggregate',
    proname => 'pivot_sum', prokind => 'a', proisstrict => 'f',
-   prorettype => '_int4', proargtypes => '_text text int4',
+   prorettype => '_int8', proargtypes => '_text text int4',
    prosrc => 'aggregate_dummy' },
 
 { oid => 6227, descr => 'aggregate transition function',
@@ -10991,7 +11020,12 @@
    proname => 'gp_get_segment_endpoints', prorows => '1000', proretset => 't', provolatile => 'v', proparallel => 'u', prorettype => 'record', proargtypes => '', proallargtypes => '{text,oid,int4,int4,text,int4,int4,text,text,text}', proargmodes => '{o,o,o,o,o,o,o,o,o,o}', proargnames => '{auth_token,databaseid,senderpid,receiverpid,state,gp_segment_id,sessionid,username,endpointname,cursorname}', prosrc => 'gp_get_segment_endpoints' },
 
 { oid => 7182, descr => 'wait until all endpoint of this parallel retrieve cursor has been retrieved finished',
-   proname => 'gp_wait_parallel_retrieve_cursor', provolatile => 'v', proparallel => 'u', prorettype => 'bool', proargtypes => 'text int4', proallargtypes => '{text,int4,bool}', proargmodes => '{i,i,o}', proargnames => '{cursorname,timeout_sec,finished}', prosrc => 'gp_wait_parallel_retrieve_cursor', proexeclocation => 'c' },
+   proname => 'gp_wait_parallel_retrieve_cursor', prorows => '1000', proretset => 't', 
+   provolatile => 'v', proparallel => 'u', prorettype => 'bool', proargtypes => 'text int4', proallargtypes => '{text,int4,bool}', proargmodes => '{i,i,o}', proargnames => '{cursorname,timeout_sec,finished}', prosrc => 'gp_wait_parallel_retrieve_cursor', proexeclocation => 'c' },
+
+{ oid => 7183, descr => 'debugging information for segment backends',
+   proname => 'gp_backend_info', prorettype => 'record', prorows => '1', proretset => 't', proargtypes => '', proallargtypes => '{int4,char,int4,text,int4,int4}', prosrc => 'gp_backend_info', pronargs => 6,
+   proargnames => '{id,type,content,host,port,pid}', proargmodes => '{o,o,o,o,o,o}', proexeclocation => 'c'}
 
 { oid => 7050, oid_symbol => 'BITMAP_INDEXAM_HANDLER_OID', descr => 'bitmap(internal)',
    proname => 'bmhandler', provolatile => 'v', prorettype => 'index_am_handler', proargtypes => 'internal', prosrc => 'bmhandler' },
@@ -11072,7 +11106,8 @@
    proname => 'gp_remove_segment', proisstrict => 'f', provolatile => 'v', proparallel => 'r', prorettype => 'bool', proargtypes => 'int2', prosrc => 'gp_remove_segment' },
 
 { oid => 5035, descr => 'Request a FTS probe scan and wait for response',
-   proname => 'gp_request_fts_probe_scan', proisstrict => 'f', provolatile => 'v', prorettype => 'bool', proargtypes => '', prosrc => 'gp_request_fts_probe_scan', proexeclocation => 'c' },
+   proname => 'gp_request_fts_probe_scan', prorows => '1000', proretset => 't', 
+   proisstrict => 'f', provolatile => 'v', prorettype => 'bool', proargtypes => '', prosrc => 'gp_request_fts_probe_scan', proexeclocation => 'c' },
 
 
 { oid => 7054, descr => 'anytable type serialization input function',
@@ -11312,9 +11347,8 @@
 { oid => 5064, descr => 'cube root',
    proname => 'cbrt', prorettype => 'complex', proargtypes => 'complex', prosrc => 'complex_cbrt' },
 
-# GPDB_12_MERGE_FIXME: Why is this function called "numeric2point" ?
 { oid => 7597, descr => '(internal) type cast from numeric to complex',
-   proname => 'numeric2point', prorettype => 'complex', proargtypes => 'numeric', prosrc => 'numeric2complex' },
+   proname => 'numeric2complex', prorettype => 'complex', proargtypes => 'numeric', prosrc => 'numeric2complex' },
 
 { oid => 7598, descr => 'implementation of << operator',
    proname => 'complex_lt', prorettype => 'bool', proargtypes => 'complex complex', prosrc => 'complex_lt' },
@@ -11452,7 +11486,6 @@
 
 { oid => 6171, descr => 'Legacy cdbhash function',
    proname => 'cdblegacyhash_anyenum', prorettype => 'int4', proargtypes => 'anyenum', prosrc => 'cdblegacyhash_anyenum' },
-
 
 { oid => 6998, descr => 'Create a named restore point on all segments',
    proname => 'gp_create_restore_point', prorows => '1000', proretset => 't', proparallel => 'u', provolatile => 'v', prorettype => 'record', proargtypes => 'text', prosrc => 'gp_create_restore_point' },

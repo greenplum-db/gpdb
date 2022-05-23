@@ -445,24 +445,24 @@ delete from partlockt where i = 4;
 -- GPDB_12_MERGE_FIXME Revisit this post merge and see if we have a chance to unlock the pruned partitions
 -- end_ignore
 select * from locktest_master where coalesce not like 'gp_%' and coalesce not like 'pg_%';
-        coalesce         |       mode       | locktype |  node  
--------------------------+------------------+----------+--------
- partlockt               | AccessShareLock  | relation | master
- partlockt               | ExclusiveLock    | relation | master
- partlockt_1_prt_4       | RowExclusiveLock | relation | master
- partlockt_1_prt_4_i_idx | RowExclusiveLock | relation | master
+        coalesce         |      mode       | locktype |  node  
+-------------------------+-----------------+----------+--------
+ partlockt               | AccessShareLock | relation | master
+ partlockt               | ExclusiveLock   | relation | master
+ partlockt_1_prt_4       | ExclusiveLock   | relation | master
+ partlockt_1_prt_4_i_idx | ExclusiveLock   | relation | master
 (4 rows)
 
 -- start_ignore
 -- GPDB_12_MERGE_FIXME Revisit this post merge and see if we have a chance to unlock the root table
 -- end_ignore
 select * from locktest_segments where coalesce not like 'gp_%' and coalesce not like 'pg_%';
-        coalesce         |       mode       | locktype |   node    
--------------------------+------------------+----------+-----------
- partlockt               | AccessShareLock  | relation | 1 segment
- partlockt               | RowExclusiveLock | relation | 1 segment
- partlockt_1_prt_4       | RowExclusiveLock | relation | 1 segment
- partlockt_1_prt_4_i_idx | RowExclusiveLock | relation | 1 segment
+        coalesce         |      mode       | locktype |   node    
+-------------------------+-----------------+----------+-----------
+ partlockt               | AccessShareLock | relation | 1 segment
+ partlockt               | ExclusiveLock   | relation | 1 segment
+ partlockt_1_prt_4       | ExclusiveLock   | relation | 1 segment
+ partlockt_1_prt_4_i_idx | ExclusiveLock   | relation | 1 segment
 (4 rows)
 
 commit;

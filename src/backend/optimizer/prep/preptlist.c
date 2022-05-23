@@ -433,16 +433,7 @@ expand_targetlist(PlannerInfo *root, List *tlist, int command_type,
 	/*
 	 * If an UPDATE can move the tuples from one segment to another, we will
 	 * need to create a Split Update node for it. The node is created later
-	 * in the planning, but if it's needed, and the table has OIDs, we must
-	 * ensure that the target list contains the old OID so that the Split
-	 * Update can copy it to the new tuple.
-	 *
-	 * GPDB_96_MERGE_FIXME: we used to copy all old distribution key columns,
-	 * but we only need this for the OID now. Can we desupport Split Updates
-	 * on tables with OIDs, and get rid of this?
-	 *
-	 * GPDB_12_MERGE_FIXME: Tables with special OIDS is now gone. We can
-	 * definitely get rid of this now.
+	 * in the planning.
 	 */
 	if (command_type == CMD_UPDATE)
 	{

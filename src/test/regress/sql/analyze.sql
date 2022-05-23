@@ -1,3 +1,7 @@
+-- start_matchsubs
+-- m/Executing SQL: select pg_catalog.gp_acquire_sample_rows\(\d+, \d+, \'t\'\);/
+-- s/Executing SQL: select pg_catalog.gp_acquire_sample_rows\(\d+, \d+, \'t\'\);/Executing SQL: select pg_catalog.gp_acquire_sample_rows\(XXX, XXX, \'t\'\)/;
+-- end_matchsubs
 DROP DATABASE IF EXISTS testanalyze;
 CREATE DATABASE testanalyze;
 \c testanalyze
@@ -503,3 +507,15 @@ SELECT relpages, reltuples FROM pg_class WHERE relname = 'ana_c2';
 SELECT * FROM pg_stats WHERE tablename = 'ana_parent';
 SELECT * FROM pg_stats WHERE tablename = 'ana_c1';
 SELECT * FROM pg_stats WHERE tablename = 'ana_c2';
+
+-- Analyzing root table using ROOTPARTITION keyword on a column data type with no equality operator.
+create table no_eqop (a int, b int, c xml) partition by range(b) (start(1) end (6) every (3));
+insert into no_eqop select i, i % 5 + 1, '<foo>bar</foo>'::xml from generate_series(1, 1000)i;
+insert into no_eqop select i, i % 5 + 1, NULL from generate_series(1, 1000)i;
+insert into no_eqop select NULL, i % 5 + 1, '<foo>bar</foo>'::xml from generate_series(1, 1000)i;
+analyze verbose rootpartition no_eqop(c);
+select * from pg_stats where tablename = 'no_eqop';
+analyze no_eqop(c);
+-- Simply merges leaf stats. gp_acquire_sample_rows() is not executed
+analyze verbose rootpartition no_eqop(c);
+select * from pg_stats where tablename = 'no_eqop';

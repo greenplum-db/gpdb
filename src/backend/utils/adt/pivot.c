@@ -235,10 +235,13 @@ static Datum oid_pivot_accum(FunctionCallInfo fcinfo, Oid type)
 	else
 	{
 		int elsize, size, nelem;
+		Oid eltype = type;
 
 		switch (type) {
 			case INT4OID:
-				elsize = 4;
+				/* addition of two int4 should be int8, otherwise it may cause overflow in addition*/
+				elsize = 8;
+				eltype = INT8OID;
 				break;
 			case INT8OID:
 			case FLOAT8OID:
@@ -254,7 +257,7 @@ static Datum oid_pivot_accum(FunctionCallInfo fcinfo, Oid type)
 		SET_VARSIZE(data, size);
 		data->ndim = 1;
 		data->dataoffset = 0;
-		data->elemtype = type;
+		data->elemtype = eltype;
 		ARR_DIMS(data)[0] = nelem;
 		ARR_LBOUND(data)[0] = 1;
 		memset(ARR_DATA_PTR(data), 0, nelem * elsize);
@@ -268,7 +271,7 @@ static Datum oid_pivot_accum(FunctionCallInfo fcinfo, Oid type)
 	switch (type) {
 		case INT4OID:
 		{
-			int32 *datap = (int32*) ARR_DATA_PTR(data);
+			int64 *datap = (int64*) ARR_DATA_PTR(data);
 			int32  value = PG_GETARG_INT32(3);
 			datap[i] += value;
 			break;

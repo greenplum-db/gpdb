@@ -3435,6 +3435,75 @@ DROP TABLE IF EXISTS dist_tab_a;
 DROP TABLE IF EXISTS dist_tab_b;
 DROP TABLE IF EXISTS result_tab;
 
+-- Test ORCA not falling back to Postgres planner during
+-- SimplifySelectOnOuterJoin stage. Previously, we could get assertion error
+-- trying to EberEvaluate() strict function with zero arguments.
+-- Postgres planner will fold our function, because it has additional
+-- eval_const_expressions() call for subplan. ORCA has only one call to
+-- fold_constants() at the very beginning and doesn't perform folding later.
+CREATE TABLE join_null_rej1(i int);
+CREATE TABLE join_null_rej2(i int);
+
+INSERT INTO join_null_rej1(i) VALUES (1), (2), (3);
+INSERT INTO join_null_rej2 SELECT i FROM join_null_rej1;
+
+CREATE OR REPLACE FUNCTION join_null_rej_func() RETURNS int AS $$
+BEGIN
+    RETURN 5;
+END;
+$$ LANGUAGE plpgsql STABLE STRICT;
+
+EXPLAIN (COSTS OFF) SELECT (
+    SELECT count(*) cnt
+    FROM join_null_rej1 t1
+    LEFT JOIN join_null_rej2 t2 ON t1.i = t2.i
+    WHERE t2.i < join_null_rej_func()
+);
+-- Optional, but let's check we get same result for both, folded and
+-- not folded join_null_rej_func() function.
+SELECT (
+    SELECT count(*) cnt
+    FROM join_null_rej1 t1
+    LEFT JOIN join_null_rej2 t2 ON t1.i = t2.i
+    WHERE t2.i < join_null_rej_func()
+);
+-- Check Sort node placed under GatherMerge in case we use Update from Select
+-- with window function. Placing Sort node upper and executing it on one
+-- segment can lead to slow query execution and can consume all spills for
+-- heavy datasets. Sort node should be on it's place for both, Postgres
+-- optimizer and ORCA.
+create table window_agg_test(i int, j int) distributed randomly;
+explain
+update window_agg_test t
+set i = tt.i 
+from (select (min(i) over (order by j)) as i, j from window_agg_test) tt
+where t.j = tt.j;
+
+----------------------------------
+-- Test ORCA support for const TVF
+----------------------------------
+create type complex_t as (r float8, i float8);
+-- Nested composite
+create type quad as (c1 complex_t, c2 complex_t);
+create function quad_func_cast() returns quad immutable as $$ select ((1.1,null),(2.2,null))::quad $$ language sql;
+explain select c1 from quad_func_cast();
+explain select c2 from quad_func_cast();
+explain select (c1).r from quad_func_cast();
+explain select (c2).i from quad_func_cast();
+select c1 from quad_func_cast();
+select c2 from quad_func_cast();
+select (c1).r from quad_func_cast();
+select (c2).i from quad_func_cast();
+
+create type mix_type as (a text, b integer, c bool);
+create function mix_func_cast() returns mix_type immutable as $$ select ('column1', 1, true)::mix_type $$ language sql;
+explain select a from mix_func_cast();
+explain select b from mix_func_cast();
+explain select c from mix_func_cast();
+select a from mix_func_cast();
+select b from mix_func_cast();
+select c from mix_func_cast();
+
 -- start_ignore
 DROP SCHEMA orca CASCADE;
 -- end_ignore

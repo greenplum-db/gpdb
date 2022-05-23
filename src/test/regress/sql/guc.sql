@@ -317,9 +317,6 @@ $$ LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = n1, pg_temp;
 
--- Destroy the QD-QE libpq connections.
-select cleanupAllGangs();
-
 select n1.drop_table('public','t1');
 
 -- After funtion drop table, public schema is still in search_path

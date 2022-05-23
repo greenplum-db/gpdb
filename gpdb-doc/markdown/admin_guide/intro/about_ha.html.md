@@ -44,5 +44,5 @@ Since the master does not contain any user data, only the system catalog tables 
 
 The *interconnect* refers to the inter-process communication between the segments and the network infrastructure on which this communication relies. You can achieve a highly available interconnect using by deploying dual Gigabit Ethernet switches on your network and redundant Gigabit connections to the Greenplum Database host \(master and segment\) servers. For performance reasons, 10-Gb Ethernet, or faster, is recommended.
 
-**Parent topic:**[Greenplum Database Concepts](../intro/partI.html)
+**Parent topic:** [Greenplum Database Concepts](../intro/partI.html)
 

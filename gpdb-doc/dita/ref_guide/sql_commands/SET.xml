@@ -7,10 +7,10 @@
     <p id="sql_command_desc">Changes the value of a Greenplum Database configuration parameter.</p>
     <section id="section2">
       <title>Synopsis</title>
-      <codeblock id="sql_command_synopsis">SET [SESSION | LOCAL] <varname>configuration_parameter</varname> {TO | =} <varname>value</varname> | 
-    '<varname>value</varname>' | DEFAULT}
+      <codeblock id="sql_command_synopsis">SET [SESSION | LOCAL] &lt;configuration_parameter> {TO | =} &lt;value> | 
+    '&lt;value>' | DEFAULT}
 
-SET [SESSION | LOCAL] TIME ZONE {<varname>timezone</varname> | LOCAL | DEFAULT}</codeblock>
+SET [SESSION | LOCAL] TIME ZONE {&lt;timezone> | LOCAL | DEFAULT}</codeblock>
     </section>
     <section id="section3">
       <title>Description</title>
@@ -29,8 +29,8 @@ SET [SESSION | LOCAL] TIME ZONE {<varname>timezone</varname> | LOCAL | DEFAULT}<
         value will be seen until the end of the transaction, but afterwards (if the transaction is
         committed) the <codeph>SET</codeph> value will take effect.</p>
       <p>If <codeph>SET LOCAL</codeph> is used within a function that includes a
-          <codeph>SET</codeph> option for the same configuration parameter (see <codeph><xref
-            href="./CREATE_FUNCTION.xml#topic1" type="topic" format="dita"/></codeph>), the effects
+          <codeph>SET</codeph> option for the same configuration parameter (see <xref
+            href="./CREATE_FUNCTION.xml#topic1" type="topic" format="dita"/>), the effects
         of the <codeph>SET LOCAL</codeph> command disappear at function exit; the value in effect
         when the function was called is restored anyway. This allows <codeph>SET LOCAL</codeph> to
         be used for dynamic or repeated changes of a parameter within a function, while retaining
@@ -122,8 +122,8 @@ SET [SESSION | LOCAL] TIME ZONE {<varname>timezone</varname> | LOCAL | DEFAULT}<
     </section>
     <section id="section7">
       <title>See Also</title>
-      <p><codeph><xref href="RESET.xml#topic1" type="topic" format="dita"/></codeph>, <codeph><xref
-            href="./SHOW.xml#topic1" type="topic" format="dita"/></codeph></p>
+      <p><xref href="RESET.xml#topic1" type="topic" format="dita"/>, <xref
+            href="./SHOW.xml#topic1" type="topic" format="dita"/></p>
     </section>
   </body>
 </topic>

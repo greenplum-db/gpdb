@@ -2071,6 +2071,19 @@ ServerLoop(void)
 			AbortStartTime != 0 &&
 			(now - AbortStartTime) >= SIGKILL_CHILDREN_AFTER_SECS)
 		{
+#ifdef FAULT_INJECTOR
+			if (SIMPLE_FAULT_INJECTOR("postmaster_server_loop_no_sigkill") == FaultInjectorTypeSkip)
+			{
+				/* 
+				 * This prevents sending SIGKILL to child processes for testing purpose.
+				 * Since each time hitting this fault will print a log, let's wait 0.1s just 
+				 * not to overwhelm the logs. Reaching here means we are shutting down so 
+				 * making postmaster slower should be OK (only for testing anyway).
+				 */
+				pg_usleep(100000L); 
+				continue;
+			}
+#endif
 			/* We were gentle with them before. Not anymore */
 			TerminateChildren(SIGKILL);
 			/* reset flag so we don't SIGKILL again */
@@ -2646,6 +2659,11 @@ retry1:
 					 errdetail(POSTMASTER_IN_RECOVERY_DETAIL_MSG " %X/%X",
 						   (uint32) (recptr >> 32), (uint32) recptr)));
 			break;
+		case CAC_RESET:
+			ereport(FATAL,
+					(errcode(ERRCODE_CANNOT_CONNECT_NOW),
+					 errmsg(POSTMASTER_IN_RESET_MSG)));
+			break;
 		case CAC_TOOMANY:
 			ereport(FATAL,
 					(errcode(ERRCODE_TOO_MANY_CONNECTIONS),
@@ -2854,8 +2872,14 @@ canAcceptConnections(void)
 		else if (!FatalError &&
 				 pmState == PM_HOT_STANDBY)
 			result = CAC_OK;	/* connection OK during hot standby */
-		else
+		else if (pmState == PM_STARTUP || pmState == PM_RECOVERY)
 			return CAC_RECOVERY;	/* else must be crash recovery */
+		else
+			/* 
+			 * otherwise must be resetting: could be PM_WAIT_BACKENDS, 
+			 * PM_WAIT_DEAD_END or PM_NO_CHILDREN.
+			 */
+			return CAC_RESET;
 	}
 
 	/*
@@ -5603,7 +5627,7 @@ sigusr1_handler(SIGNAL_ARGS)
 		pmState == PM_STARTUP && Shutdown == NoShutdown)
 	{
 		/* WAL redo has started. We're out of reinitialization. */
-		bool		promote_trigger_file_exist;
+		bool		promotion_requested = false;
 
 		FatalError = false;
 		Assert(AbortStartTime == 0);
@@ -5630,21 +5654,32 @@ sigusr1_handler(SIGNAL_ARGS)
 		 * PM_STATUS_STANDBY, instead wish pg_ctl -w to wait till
 		 * connections can be actually accepted by the database.
 		 */
-		promote_trigger_file_exist = false;
 		if (PromoteTriggerFile != NULL && strcmp(PromoteTriggerFile, "") != 0)
 		{
 			struct stat stat_buf;
 
 			if (stat(PromoteTriggerFile, &stat_buf) == 0)
-				promote_trigger_file_exist = true;
+				promotion_requested = true;
 		}
+		/*
+		 * GPDB: Setting recovery_target_action
+		 * configuration parameter to 'promote' will also result
+		 * into promotion after recovery is completed.
+		 */
+		if (recoveryTargetAction == RECOVERY_TARGET_ACTION_PROMOTE)
+			promotion_requested = true;
 
 		/*
 		 * If we aren't planning to enter hot standby mode later, treat
 		 * RECOVERY_STARTED as meaning we're out of startup, and report status
 		 * accordingly.
+		 *
+		 * GPDB: Avoid PM_STATUS_STANDBY if promotion requested as wish "pg_ctl -w"
+		 * to wait till connections can be actually accepted by the database via
+		 * PM_STATUS_READY state instead. PM_STATUS_STANDBY will incorrectly show
+		 * database is ready to accept connections during promotion.
 		 */
-		if (!EnableHotStandby && !promote_trigger_file_exist)
+		if (!EnableHotStandby && !promotion_requested)
 		{
 			AddToDataDirLockFile(LOCK_FILE_LINE_PM_STATUS, PM_STATUS_STANDBY);
 #ifdef USE_SYSTEMD

@@ -56,7 +56,7 @@ class BuildMirrorsTestCase(GpTestCase):
             patch('gppylib.operations.buildMirrorSegments.gplog.get_logger_dir', return_value='/tmp/logdir'),
             patch('gppylib.operations.buildMirrorSegments.gplog.logging_is_verbose', return_value=False),
             patch('gppylib.operations.buildMirrorSegments.read_era', self.mock_gp_era),
-            patch('gppylib.recoveryinfo.RecoveryResult.print_bb_rewind_and_start_errors'),
+            patch('gppylib.recoveryinfo.RecoveryResult.print_bb_rewind_update_and_start_errors'),
             patch('gppylib.recoveryinfo.RecoveryResult.print_setup_recovery_errors'),
             patch('gppylib.operations.buildMirrorSegments.dbconn')
         ])
@@ -152,7 +152,7 @@ class BuildMirrorsTestCase(GpTestCase):
 
     def _assert_setup_recovery(self):
         self.assertEqual(1, RecoveryResult.print_setup_recovery_errors.call_count)
-        self.assertEqual(0, RecoveryResult.print_bb_rewind_and_start_errors.call_count)
+        self.assertEqual(0, RecoveryResult.print_bb_rewind_update_and_start_errors.call_count)
         self.assertEqual([], self.mock_logger.info.call_args_list)
         self.assertEqual([], self.mock_logger.error.call_args_list)
 
@@ -161,7 +161,7 @@ class BuildMirrorsTestCase(GpTestCase):
         self.assertEqual(expected_info_msgs, self.mock_logger.info.call_args_list)
         self.assertEqual([], self.mock_logger.error.call_args_list)
         self.assertEqual(0, RecoveryResult.print_setup_recovery_errors.call_count)
-        self.assertEqual(1, RecoveryResult.print_bb_rewind_and_start_errors.call_count)
+        self.assertEqual(1, RecoveryResult.print_bb_rewind_update_and_start_errors.call_count)
 
     def _run_buildMirrors(self, mirrors_to_build, action):
         self.mock_logger = Mock(spec=['log', 'warn', 'info', 'debug', 'error', 'warning', 'fatal'])

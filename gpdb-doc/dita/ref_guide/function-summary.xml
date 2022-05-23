@@ -1416,7 +1416,7 @@ SELECT foo();
         PostgreSQL database. Analytic functions are <i>immutable</i>.</p>
       <note>The Greenplum MADlib Extension for Analytics provides additional advanced functions to
         perform statistical analysis and machine learning with Greenplum Database data. See <xref
-          href="../analytics/madlib.xml#topic1" scope="peer">MADlib Extension for
+          href="../analytics/madlib.html#topic1" scope="external" format="html">MADlib Extension for
         Analytics</xref>.</note>
       <table id="in2073121">
         <title>Advanced Aggregate Functions</title>

@@ -206,7 +206,7 @@ extern int64 ResourceGroupGetQueryMemoryLimit(void);
 
 extern void ResGroupDumpInfo(StringInfo str);
 
-extern int ResGroupGetSegmentNum(void);
+extern int ResGroupGetHostPrimaryCount(void);
 
 extern Bitmapset *CpusetToBitset(const char *cpuset,
 								 int len);

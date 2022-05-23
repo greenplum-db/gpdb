@@ -26,6 +26,7 @@
 #include "cdb/cdbmutate.h"
 #include "cdb/cdbsrlz.h"
 #include "cdb/tupleremap.h"
+#include "catalog/namespace.h" /* for GetTempNamespaceState() */
 #include "nodes/execnodes.h"
 #include "pgstat.h"
 #include "tcop/tcopprot.h"
@@ -36,6 +37,7 @@
 #include "utils/faultinjector.h"
 #include "utils/resgroup.h"
 #include "utils/resource_manager.h"
+#include "utils/resgroup-ops.h"
 #include "utils/session_state.h"
 #include "utils/typcache.h"
 #include "miscadmin.h"
@@ -263,6 +265,21 @@ CdbDispatchPlan(struct QueryDesc *queryDesc,
 	if (queryDesc->extended_query)
 	{
 		verify_shared_snapshot_ready(gp_command_count);
+	}
+
+	/* In the final stage, add the resource information needed for QE by the resource group */
+	stmt->total_memory_coordinator = 0;
+	stmt->nsegments_coordinator = 0;
+
+	if (IsResGroupEnabled() && gp_resource_group_enable_recalculate_query_mem &&
+		memory_spill_ratio != RESGROUP_FALLBACK_MEMORY_SPILL_RATIO)
+	{
+		/*
+		 * We enable resource group re-calculate the query_mem on QE, and we are not in
+		 * fall back mode (use statement_mem).
+		 */
+		stmt->total_memory_coordinator = ResGroupOps_GetTotalMemory();
+		stmt->nsegments_coordinator = ResGroupGetHostPrimaryCount();
 	}
 
 	cdbdisp_dispatchX(queryDesc, planRequiresTxn, cancelOnError);
@@ -866,6 +883,7 @@ buildGpQueryString(DispatchCommandQueryParms *pQueryParms,
 	Oid			currentUserId = GetUserId();
 	int32		numsegments = getgpsegmentCount();
 	StringInfoData resgroupInfo;
+	Oid			tempNamespaceId, tempToastNamespaceId;
 
 	int			tmp,
 				len;
@@ -917,7 +935,10 @@ buildGpQueryString(DispatchCommandQueryParms *pQueryParms,
 		sddesc_len +
 		sizeof(numsegments) +
 		sizeof(resgroupInfo.len) +
-		resgroupInfo.len;
+		resgroupInfo.len +
+		sizeof(tempNamespaceId) +
+		sizeof(tempToastNamespaceId) +
+		0;
 
 	shared_query = palloc(total_query_len);
 
@@ -1012,11 +1033,20 @@ buildGpQueryString(DispatchCommandQueryParms *pQueryParms,
 		pos += resgroupInfo.len;
 	}
 
-	len = pos - shared_query - 1;
+	/* pass process local variables to QEs */
+	GetTempNamespaceState(&tempNamespaceId, &tempToastNamespaceId);
+	tempNamespaceId = htonl(tempNamespaceId);
+	tempToastNamespaceId = htonl(tempToastNamespaceId);
+
+	memcpy(pos, &tempNamespaceId, sizeof(tempNamespaceId));
+	pos += sizeof(tempNamespaceId);
+	memcpy(pos, &tempToastNamespaceId, sizeof(tempToastNamespaceId));
+	pos += sizeof(tempToastNamespaceId);
 
 	/*
 	 * fill in length placeholder
 	 */
+	len = pos - shared_query - 1;
 	tmp = htonl(len);
 	memcpy(shared_query + 1, &tmp, sizeof(len));
 

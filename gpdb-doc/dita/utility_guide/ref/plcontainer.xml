@@ -20,25 +20,25 @@
           and names are case sensitive.</p>
         <section>
           <title>plcontainer Syntax</title>
-          <codeblock><b>plcontainer</b> [<varname>command</varname>] [<b>-h</b> | <b>--help</b>]  [<b>--verbose</b>]</codeblock>
-          <p>Where <varname>command</varname> is one of the following.</p>
-          <codeblock>  image-add {{<b>-f</b> | <b>--file</b>} <varname>image_file</varname> [<b>-ulc</b> | <b>--use_local_copy</b>]} | {{<b>-u</b> | <b>--URL</b>} <varname>image_URL</varname>}
-  image-delete {<b>-i</b> | <b>--image</b>} <varname>image_name</varname>
+          <codeblock>plcontainer [&lt;command>] [-h | --help]  [--verbose]</codeblock>
+          <p>Where &lt;command> is one of the following.</p>
+          <codeblock>  image-add {{-f | --file} &lt;image_file> [-ulc | --use_local_copy]} | {{-u | --URL} &lt;image_URL>}
+  image-delete {-i | --image} &lt;image_name>
   image-list
 
-  runtime-add {<b>-r</b> | <b>--runtime</b>} <varname>runtime_id</varname>
-     {<b>-i</b> | <b>--image</b>} <varname>image_name</varname> {<b>-l | --language</b>} {python | python3 | r}
-     [{<b>-v</b> | <b>--volume</b>} <varname>shared_volume</varname> [{<b>-v</b>| <b>--volume</b>} <varname>shared_volume</varname>...]]
-     [{<b>-s</b> | <b>--setting</b>} <varname>param=value</varname> [{<b>-s</b> | <b>--setting</b>} <varname>param=value</varname> ...]]
-  runtime-replace {<b>-r</b> | <b>--runtime</b>} <varname>runtime_id</varname>
-     {<b>-i</b> | <b>--image</b>} <varname>image_name</varname> <b>-l</b> {r | python}
-     [{<b>-v</b> | <b>--volume</b>} <varname>shared_volume</varname> [{<b>-v</b> | <b>--volume</b>} <varname>shared_volume</varname>...]]
-     [{<b>-s</b> | <b>--setting</b>} <varname>param=value</varname> [{<b>-s</b> | <b>--setting</b>} <varname>param=value</varname> ...]]
-  runtime-show {<b>-r</b> | <b>--runtime</b>} <varname>runtime_id</varname>
-  runtime-delete {<b>-r</b> | <b>--runtime</b>} <varname>runtime_id</varname>
-  runtime-edit [{<b>-e</b> | <b>--editor</b>} <varname>editor</varname>]
-  runtime-backup {<b>-f</b> | <b>--file</b>} <varname>config_file</varname>
-  runtime-restore {<b>-f</b> | <b>--file</b>} <varname>config_file</varname>
+  runtime-add {-r | --runtime} &lt;runtime_id>
+     {-i | --image} &lt;image_name> {-l | --language} {python | python3 | r}
+     [{-v | --volume} &lt;shared_volume> [{-v| --volume} &lt;shared_volume>...]]
+     [{-s | --setting} &lt;param=value> [{-s | --setting} &lt;param=value> ...]]
+  runtime-replace {-r | --runtime} &lt;runtime_id>
+     {-i | --image} &lt;image_name> -l {r | python}
+     [{-v | --volume} &lt;shared_volume> [{-v | --volume} &lt;shared_volume>...]]
+     [{-s | --setting} &lt;param=value> [{-s | --setting} &lt;param=value> ...]]
+  runtime-show {-r | --runtime} &lt;runtime_id>
+  runtime-delete {-r | --runtime} &lt;runtime_id>
+  runtime-edit [{-e | --editor} &lt;editor>]
+  runtime-backup {-f | --file} &lt;config_file>
+  runtime-restore {-f | --file} &lt;config_file>
   runtime-verify</codeblock>
         </section>
         <section>
@@ -63,9 +63,9 @@
                 When you specify an <varname>image_file</varname> and provide the
                 [<b>-ulc</b> | <b>--use_local_copy</b>] option, <codeph>plcontainer</codeph>
                 installs the image only on the host on which you run the command.</pd>
-            <pd>After installing the Docker image, use the <codeph><xref
-                  href="#topic_rw3_52s_dw/runtime_add" format="dita">runtime-add</xref></codeph>
-              command to configure PL/Container to use the Docker image.</pd>
+            <pd>After installing the Docker image, use the <xref
+            href="#topic_rw3_52s_dw/runtime_add" format="dita">runtime-add</xref> command to
+          configure PL/Container to use the Docker image.</pd>
           </plentry>
           <plentry>
             <pt>image-delete {<b>-i</b> | <b>--image</b>} <varname>image_name</varname></pt>
@@ -125,38 +125,35 @@
                   <pt>{<b>-s</b> | <b>--setting</b>}
                       <varname>param</varname>=<varname>value</varname></pt>
                   <pd>Optional. Specify a setting to add to the runtime configuration information.
-                    You can specify this option multiple times. The setting applies to the runtime
-                    configuration specified by the <varname>runtime_id</varname>. The parameter is
-                    the XML attribute of the <codeph><xref href="#topic_ojn_r2s_dw/plc_settings"
-                        format="dita">settings</xref></codeph> element in the PL/Container
-                    configuration file. These are valid parameters.<ul id="ul_dsz_j4w_gcb">
-                      <li><codeph>cpu_share</codeph> - Set the CPU limit for each container in the
-                        runtime configuration. The default value is 1024. The value is a relative
-                        weighting of CPU usage compared to other containers.</li>
-                      <li><codeph>memory_mb</codeph> - Set the memory limit for each container in
-                        the runtime configuration. The default value is 1024. The value is an
-                        integer that specifies the amount of memory in MB. </li>
-                      <li><codeph>resource_group_id</codeph> - Assign the specified resource group
-                        to the runtime configuration. The resource group limits the total CPU and
-                        memory resource usage for all containers that share this runtime
-                        configuration. You must specify the <codeph>groupid</codeph> of the resource
-                        group. For information about managing PL/Container resources, see <xref
-                          href="#topic_resmgmt" format="dita">About PL/Container Resource
-                          Management</xref>.</li>
-                      <li><codeph>roles</codeph> - Specify the Greenplum Database roles that are
-                        allowed to run a container for the runtime configuration. You can specify a
-                        single role name or comma separated lists of role names. The default is no
-                        restriction.</li>
-                      <li><codeph>use_container_logging</codeph> - Enable or disable Docker logging
-                        for the container. The value is either <codeph>yes</codeph> (enable logging)
-                        or <codeph>no</codeph> (disable logging, the default). <p>The Greenplum
-                          Database server configuration parameter <codeph><xref
-                              href="../../ref_guide/config_params/guc-list.xml#log_min_messages"
-                              scope="peer">log_min_messages</xref></codeph> controls the log level.
-                          The default log level is <codeph>warning</codeph>. For information about
-                          PL/Container log information, see <xref href="#plc_notes" format="dita"
-                            >Notes</xref>.</p></li>
-                    </ul></pd>
+                You can specify this option multiple times. The setting applies to the runtime
+                configuration specified by the <varname>runtime_id</varname>. The parameter is the
+                XML attribute of the <xref href="#topic_ojn_r2s_dw/plc_settings" format="dita"
+                  >settings</xref> element in the PL/Container configuration file. These are valid
+                  parameters.<ul id="ul_dsz_j4w_gcb">
+                  <li><codeph>cpu_share</codeph> - Set the CPU limit for each container in the
+                    runtime configuration. The default value is 1024. The value is a relative
+                    weighting of CPU usage compared to other containers.</li>
+                  <li><codeph>memory_mb</codeph> - Set the memory limit for each container in the
+                    runtime configuration. The default value is 1024. The value is an integer that
+                    specifies the amount of memory in MB. </li>
+                  <li><codeph>resource_group_id</codeph> - Assign the specified resource group to
+                    the runtime configuration. The resource group limits the total CPU and memory
+                    resource usage for all containers that share this runtime configuration. You
+                    must specify the <codeph>groupid</codeph> of the resource group. For information
+                    about managing PL/Container resources, see <xref href="#topic_resmgmt"
+                      format="dita">About PL/Container Resource Management</xref>.</li>
+                  <li><codeph>roles</codeph> - Specify the Greenplum Database roles that are allowed
+                    to run a container for the runtime configuration. You can specify a single role
+                    name or comma separated lists of role names. The default is no restriction.</li>
+                  <li><codeph>use_container_logging</codeph> - Enable or disable Docker logging for
+                    the container. The value is either <codeph>yes</codeph> (enable logging) or
+                      <codeph>no</codeph> (disable logging, the default). <p>The Greenplum Database
+                      server configuration parameter <xref
+                        href="../../ref_guide/config_params/guc-list.xml#log_min_messages"
+                        scope="peer">log_min_messages</xref> controls the log level. The default log
+                      level is <codeph>warning</codeph>. For information about PL/Container log
+                      information, see <xref href="#plc_notes" format="dita">Notes</xref>.</p></li>
+                </ul></pd>
                 </plentry>
                 <plentry>
                   <pt>{<b>-v</b> | <b>--volume</b>} <varname>shared-volume</varname></pt>
@@ -178,7 +175,7 @@
                   <pd>When adding configuration information for a new runtime, the utility adds this
                     read-only shared volume information. </pd>
                   <pd>
-                    <codeblock><varname>greenplum-home</varname>/bin/plcontainer_clients:/clientdir:ro</codeblock>
+                    <codeblock>&lt;greenplum-home>/bin/plcontainer_clients:/clientdir:ro</codeblock>
                   </pd>
                   <pd>If needed, you can specify other shared directories. The utility returns an
                     error if the specified <varname>container-dir</varname> is the same as the one
@@ -228,9 +225,9 @@
                   <varname>runtime_id</varname> does not exist, the information is added to the
                 configuration file. The utility adds a startup command and shared directory to the
                 configuration. </p>
-              <p dir="ltr">See <codeph><xref href="#topic_rw3_52s_dw/runtime_add" format="dita"
-                    >runtime-add</xref></codeph> for command options and information added to the
-                configuration.</p>
+              <p dir="ltr">See <xref href="#topic_rw3_52s_dw/runtime_add" format="dita"
+              >runtime-add</xref> for command options and information added to the
+            configuration.</p>
             </pd>
           </plentry>
           <plentry>

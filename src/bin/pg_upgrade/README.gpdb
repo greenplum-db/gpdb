@@ -87,3 +87,20 @@ intention is for this to be a quick test that all objects are handled by
 pg_upgrade; upgrade testing still requires the full run across all
 segments/mirrors. The smoketest can be invoked by "make check" in the
 contrib/pg_upgrade directory.
+
+GPDB Merge notice:
+------------------
+We added the gp_fatal_log() function to replace some of the pg_fatal() calls in
+check.c and check_gp.c to support --continue-check-on-fatal, which allows
+running through all the checks even if we get a fatal failure. We need to
+update any newly added checks to ensure they work with the flag by replacing
+pg_fatal function calls with gp_fatal_log calls.
+
+Note: we cannot skip few checks despite using the --continue-check-on-fatal
+flag. See gp_fatal_log() for details.
+
+For --skip-target-check flag while merging upstream, if we have new checks for
+new/target cluster, they should be skipped when the flag is enabled. See
+is_skip_target_check(). There might be new pre-check steps for the target
+cluster before we check_new_cluster(), such as get_sock_dir(), which must be
+guarded.

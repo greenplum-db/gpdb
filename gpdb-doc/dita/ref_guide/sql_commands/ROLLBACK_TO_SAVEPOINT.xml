@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
-<topic id="topic1"><title id="ee20941">ROLLBACK TO SAVEPOINT</title><body><p id="sql_command_desc">Rolls back the current transaction to a savepoint.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">ROLLBACK [WORK | TRANSACTION] TO [SAVEPOINT] <varname>savepoint_name</varname></codeblock></section><section id="section3"><title>Description</title><p>This command will roll back all commands that were run after the
+<topic id="topic1"><title id="ee20941">ROLLBACK TO SAVEPOINT</title><body><p id="sql_command_desc">Rolls back the current transaction to a savepoint.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">ROLLBACK [WORK | TRANSACTION] TO [SAVEPOINT] &lt;savepoint_name></codeblock></section><section id="section3"><title>Description</title><p>This command will roll back all commands that were run after the
 savepoint was established. The savepoint remains valid and can be rolled
 back to again later, if needed. </p><p><codeph>ROLLBACK TO SAVEPOINT</codeph> implicitly destroys all savepoints
 that were established after the named savepoint.</p></section><section id="section4"><title>Parameters</title><parml><plentry><pt>WORK</pt><pt>TRANSACTION</pt><pd>Optional key words. They have no effect.</pd></plentry><plentry><pt><varname>savepoint_name</varname></pt><pd>The name of a savepoint to roll back to.</pd></plentry></parml></section><section id="section5"><title>Notes</title><p>Use <codeph>RELEASE SAVEPOINT</codeph> to destroy a savepoint without
@@ -39,11 +39,11 @@ SQL allows only <codeph>WORK</codeph>, not <codeph>TRANSACTION</codeph>,
 as a noise word after <codeph>ROLLBACK</codeph>. Also, SQL has an optional
 clause <codeph>AND [NO] CHAIN</codeph> which is not currently supported
 by Greenplum Database. Otherwise, this command conforms to the SQL standard.
-</p></section><section id="section8"><title>See Also</title><p><codeph><xref href="BEGIN.xml#topic1" type="topic" format="dita"/></codeph>, <codeph><xref
+</p></section><section id="section8"><title>See Also</title><p><xref href="BEGIN.xml#topic1" type="topic" format="dita"/>, <xref
                                                 href="COMMIT.xml#topic1" type="topic" format="dita"
-                                        /></codeph>, <codeph><xref href="./SAVEPOINT.xml#topic1"
-                                                type="topic" format="dita"/></codeph>, <codeph><xref
+                                        />, <xref href="./SAVEPOINT.xml#topic1"
+                                                type="topic" format="dita"/>, <xref
                                                 href="RELEASE_SAVEPOINT.xml#topic1" type="topic"
-                                                format="dita"/></codeph>, <codeph><xref
+                                                format="dita"/>, <xref
                                                 href="ROLLBACK.xml#topic1" type="topic"
-                                                format="dita"/></codeph></p></section></body></topic>
+                                                format="dita"/></p></section></body></topic>

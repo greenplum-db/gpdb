@@ -2708,7 +2708,7 @@ perform_work_item(AutoVacuumWorkItem *workitem)
 		switch (workitem->avw_type)
 		{
 			case AVW_BRINSummarizeRange:
-				DirectFunctionCall2(brin_summarize_range,
+				DirectFunctionCall2(brin_summarize_range_internal,
 									ObjectIdGetDatum(workitem->avw_relation),
 									Int64GetDatum((int64) workitem->avw_blockNumber));
 				break;

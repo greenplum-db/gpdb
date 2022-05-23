@@ -25,5 +25,5 @@ The system view `pg_max_external_files` shows how many external table files are 
 SELECT * FROM pg_max_external_files;
 ```
 
-**Parent topic:**[Defining External Tables](../external/g-external-tables.html)
+**Parent topic:** [Defining External Tables](../external/g-external-tables.html)
 

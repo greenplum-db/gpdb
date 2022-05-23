@@ -31,6 +31,7 @@ Feature: Tests for gpmovemirrors
         And verify the database has mirrors
         And all the segments are running
         And the segments are synchronized
+        And check segment conf: postgresql.conf
         And verify that mirrors are recognized after a restart
 
     Scenario: gpmovemirrors can change the port of mirrors within a single host
@@ -43,6 +44,7 @@ Feature: Tests for gpmovemirrors
         And all the segments are running
         And the segments are synchronized
         And verify that mirrors are recognized after a restart
+        And check segment conf: postgresql.conf
 
     Scenario: gpmovemirrors gives a warning when passed identical attributes for new and old mirrors
         Given a standard local demo cluster is created
@@ -177,6 +179,7 @@ Feature: Tests for gpmovemirrors
         And gprecoverseg should return a return code of 0
         And all the segments are running
         And the segments are synchronized
+        And check segment conf: postgresql.conf
         And user can start transactions
 
 
@@ -267,6 +270,7 @@ Feature: Tests for gpmovemirrors
         Then gprecoverseg should return a return code of 0
         And all the segments are running
         And the segments are synchronized
+        And check segment conf: postgresql.conf
 
     @concourse_cluster
     Scenario: gpmovemirrors can change from spread mirroring to group mirroring
@@ -304,6 +308,7 @@ Feature: Tests for gpmovemirrors
         Then gprecoverseg should return a return code of 0
         And all the segments are running
         And the segments are synchronized
+        And check segment conf: postgresql.conf
 
     @concourse_cluster
     Scenario: tablespaces work on a multi-host environment
@@ -359,6 +364,7 @@ Feature: Tests for gpmovemirrors
 
         And the mode of all the created data directories is changed to 0700
         And the cluster is recovered in full and rebalanced
+        And check segment conf: postgresql.conf
         And the row count from table "test_movemirrors" in "postgres" is verified against the saved data
 
     @concourse_cluster
@@ -369,6 +375,7 @@ Feature: Tests for gpmovemirrors
         And the segments are synchronized
         And all files in gpAdminLogs directory are deleted on all hosts in the cluster
         And the information of contents 0,1,2 is saved
+        And check segment conf: postgresql.conf
 
         And sql "DROP TABLE if exists test_movemirrors; CREATE TABLE test_movemirrors AS SELECT generate_series(1,10000) AS i" is executed in "postgres" db
         And the "test_movemirrors" table row count in "postgres" is saved
@@ -390,9 +397,11 @@ Feature: Tests for gpmovemirrors
         And gpAdminLogs directory has no "pg_rewind*" files on all segment hosts
         And gpAdminLogs directory has "gpsegsetuprecovery*" files on all segment hosts
         And gpAdminLogs directory has "gpsegrecovery*" files on all segment hosts
+        And check segment conf: postgresql.conf
 
         And the mode of all the created data directories is changed to 0700
         And the cluster is recovered in full and rebalanced
+        And check segment conf: postgresql.conf
         And the row count from table "test_movemirrors" in "postgres" is verified against the saved data
 
     @concourse_cluster
@@ -403,6 +412,7 @@ Feature: Tests for gpmovemirrors
         And the segments are synchronized
         And all files in gpAdminLogs directory are deleted on all hosts in the cluster
         And the information of contents 0,1,2,3,4,5 is saved
+        And check segment conf: postgresql.conf
 
         And sql "DROP TABLE if exists test_movemirrors; CREATE TABLE test_movemirrors AS SELECT generate_series(1,10000) AS i" is executed in "postgres" db
         And the "test_movemirrors" table row count in "postgres" is saved
@@ -423,9 +433,11 @@ Feature: Tests for gpmovemirrors
         And gpAdminLogs directory has no "pg_rewind*" files on all segment hosts
         And gpAdminLogs directory has "gpsegsetuprecovery*" files on all segment hosts
         And gpAdminLogs directory has "gpsegrecovery*" files on all segment hosts
+        And check segment conf: postgresql.conf
 
         And the mode of all the created data directories is changed to 0700
         And the cluster is recovered in full and rebalanced
+        And check segment conf: postgresql.conf
         And the row count from table "test_movemirrors" in "postgres" is verified against the saved data
 
     @concourse_cluster
@@ -436,6 +448,7 @@ Feature: Tests for gpmovemirrors
         And the segments are synchronized
         And all files in gpAdminLogs directory are deleted on all hosts in the cluster
         And the information of contents 0,1,2,3,4,5 is saved
+        And check segment conf: postgresql.conf
 
         And sql "DROP TABLE if exists test_movemirrors; CREATE TABLE test_movemirrors AS SELECT generate_series(1,10000) AS i" is executed in "postgres" db
         And the "test_movemirrors" table row count in "postgres" is saved
@@ -458,7 +471,9 @@ Feature: Tests for gpmovemirrors
         And gpAdminLogs directory has no "pg_rewind*" files on all segment hosts
         And gpAdminLogs directory has "gpsegsetuprecovery*" files on all segment hosts
         And gpAdminLogs directory has "gpsegrecovery*" files on all segment hosts
+        And check segment conf: postgresql.conf
 
         And the mode of all the created data directories is changed to 0700
         And the cluster is recovered in full and rebalanced
+        And check segment conf: postgresql.conf
         And the row count from table "test_movemirrors" in "postgres" is verified against the saved data

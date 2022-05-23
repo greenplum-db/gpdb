@@ -329,6 +329,8 @@ extern void ao_vacuum_rel_compact(Relation onerel, int options, VacuumParams *pa
 extern void ao_vacuum_rel_post_cleanup(Relation onerel, int options, VacuumParams *params,
 									   BufferAccessStrategy bstrategy);
 
+extern void ao_vacuum_rel(Relation rel, VacuumParams *params, BufferAccessStrategy bstrategy);
+
 extern bool std_typanalyze(VacAttrStats *stats);
 
 /* in utils/misc/sampling.c --- duplicate of declarations in utils/sampling.h */

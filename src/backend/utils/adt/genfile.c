@@ -547,23 +547,20 @@ pg_ls_dir_1arg(PG_FUNCTION_ARGS)
 }
 
 /* ------------------------------------
- * generic file handling functions
+ * pg_file_write_internal - Workhorse for pg_file_write functions.
+ *
+ * This handles the actual work for pg_file_write.
  */
-
-Datum
-pg_file_write(PG_FUNCTION_ARGS)
+static int64
+pg_file_write_internal(text *file, text *data, bool replace)
 {
-	FILE	   *f;
-	char	   *filename;
-	text	   *data;
-	int64		count = 0;
+	FILE       *f;
+	char       *filename;
+	int64           count = 0;
 
-	requireSuperuser();
+	filename = convert_and_check_filename(file);
 
-	filename = convert_and_check_filename(PG_GETARG_TEXT_P(0));
-	data = PG_GETARG_TEXT_P(1);
-
-	if (!PG_GETARG_BOOL(2))
+	if (!replace)
 	{
 		struct stat fst;
 
@@ -572,51 +569,86 @@ pg_file_write(PG_FUNCTION_ARGS)
 					(errcode(ERRCODE_DUPLICATE_FILE),
 					 errmsg("file \"%s\" exists", filename)));
 
-		f = fopen(filename, "wb");
+		f = AllocateFile(filename, "wb");
 	}
 	else
-		f = fopen(filename, "ab");
+		f = AllocateFile(filename, "ab");
 
 	if (!f)
 		ereport(ERROR,
 				(errcode_for_file_access(),
 				 errmsg("could not open file \"%s\" for writing: %m",
-						filename)));
+					 filename)));
 
-	if (VARSIZE(data) != 0)
-	{
-		count = fwrite(VARDATA(data), 1, VARSIZE(data) - VARHDRSZ, f);
+	count = fwrite(VARDATA_ANY(data), 1, VARSIZE_ANY_EXHDR(data), f);
+	if (count != VARSIZE_ANY_EXHDR(data) || FreeFile(f))
+		ereport(ERROR,
+				(errcode_for_file_access(),
+				 errmsg("could not write file \"%s\": %m", filename)));
 
-		if (count != VARSIZE(data) - VARHDRSZ)
-			ereport(ERROR,
-					(errcode_for_file_access(),
-					 errmsg("could not write file \"%s\": %m", filename)));
-	}
-	fclose(f);
+	return (count);
+}
+
+/* ------------------------------------
+ * pg_file_write - old version
+ *
+ * keep the superuser check
+ */
+Datum
+pg_file_write(PG_FUNCTION_ARGS)
+{
+	text	   *file = PG_GETARG_TEXT_PP(0);
+	text	   *data = PG_GETARG_TEXT_PP(1);
+	bool		replace = PG_GETARG_BOOL(2);
+	int64		count = 0;
+
+	requireSuperuser();
+
+	count = pg_file_write_internal(file, data, replace);
+
+	PG_RETURN_INT64(count);
+}
+
+/* ------------------------------------
+ * pg_file_write_v1_1 - Version 1.1
+ *
+ * No superuser check done here- instead privileges are handled by the
+ * GRANT system.
+ */
+Datum
+pg_file_write_v1_1(PG_FUNCTION_ARGS)
+{
+	text	   *file = PG_GETARG_TEXT_PP(0);
+	text	   *data = PG_GETARG_TEXT_PP(1);
+	bool		replace = PG_GETARG_BOOL(2);
+	int64		count = 0;
+
+	count = pg_file_write_internal(file, data, replace);
 
 	PG_RETURN_INT64(count);
 }
 
 
-Datum
-pg_file_rename(PG_FUNCTION_ARGS)
+/* ------------------------------------
+ * pg_file_rename_internal - Workhorse for pg_file_rename functions.
+ *
+ * This handles the actual work for pg_file_rename.
+ */
+static bool
+pg_file_rename_internal(text *file1, text *file2, text *file3)
 {
 	char	   *fn1,
 			   *fn2,
 			   *fn3;
 	int			rc;
 
-	requireSuperuser();
+	fn1 = convert_and_check_filename(file1);
+	fn2 = convert_and_check_filename(file2);
 
-	if (PG_ARGISNULL(0) || PG_ARGISNULL(1))
-		PG_RETURN_NULL();
-
-	fn1 = convert_and_check_filename(PG_GETARG_TEXT_P(0));
-	fn2 = convert_and_check_filename(PG_GETARG_TEXT_P(1));
-	if (PG_ARGISNULL(2))
-		fn3 = 0;
+	if (file3 == NULL)
+		fn3 = NULL;
 	else
-		fn3 = convert_and_check_filename(PG_GETARG_TEXT_P(2));
+		fn3 = convert_and_check_filename(file3);
 
 	if (access(fn1, W_OK) < 0)
 	{
@@ -624,7 +656,7 @@ pg_file_rename(PG_FUNCTION_ARGS)
 				(errcode_for_file_access(),
 				 errmsg("file \"%s\" is not accessible: %m", fn1)));
 
-		PG_RETURN_BOOL(false);
+		return false;
 	}
 
 	if (fn3 && access(fn2, W_OK) < 0)
@@ -633,10 +665,10 @@ pg_file_rename(PG_FUNCTION_ARGS)
 				(errcode_for_file_access(),
 				 errmsg("file \"%s\" is not accessible: %m", fn2)));
 
-		PG_RETURN_BOOL(false);
+		return false;
 	}
 
-	rc = access(fn3 ? fn3 : fn2, 2);
+	rc = access(fn3 ? fn3 : fn2, W_OK);
 	if (rc >= 0 || errno != ENOENT)
 	{
 		ereport(ERROR,
@@ -684,10 +716,75 @@ pg_file_rename(PG_FUNCTION_ARGS)
 				 errmsg("could not rename \"%s\" to \"%s\": %m", fn1, fn2)));
 	}
 
-	PG_RETURN_BOOL(true);
+	return true;
 }
 
+/* ------------------------------------
+ * pg_file_rename - old version
+ *
+ * keep the superuser check
+ */
+Datum
+pg_file_rename(PG_FUNCTION_ARGS)
+{
+	text	   *file1;
+	text	   *file2;
+	text	   *file3;
+	bool		result;
 
+	requireSuperuser();
+
+	if (PG_ARGISNULL(0) || PG_ARGISNULL(1))
+		PG_RETURN_NULL();
+
+	file1 = PG_GETARG_TEXT_PP(0);
+	file2 = PG_GETARG_TEXT_PP(1);
+
+	if (PG_ARGISNULL(2))
+		file3 = NULL;
+	else
+		file3 = PG_GETARG_TEXT_PP(2);
+
+	result = pg_file_rename_internal(file1, file2, file3);
+
+	PG_RETURN_BOOL(result);
+}
+
+/* ------------------------------------
+ * pg_file_rename_v1_1 - Version 1.1
+ *
+ * No superuser check done here- instead privileges are handled by the
+ * GRANT system.
+ */
+Datum
+pg_file_rename_v1_1(PG_FUNCTION_ARGS)
+{
+	text	   *file1;
+	text	   *file2;
+	text	   *file3;
+	bool		result;
+
+	if (PG_ARGISNULL(0) || PG_ARGISNULL(1))
+		PG_RETURN_NULL();
+
+	file1 = PG_GETARG_TEXT_PP(0);
+	file2 = PG_GETARG_TEXT_PP(1);
+
+	if (PG_ARGISNULL(2))
+		file3 = NULL;
+	else
+		file3 = PG_GETARG_TEXT_PP(2);
+
+	result = pg_file_rename_internal(file1, file2, file3);
+
+	PG_RETURN_BOOL(result);
+}
+
+/* ------------------------------------
+ * pg_file_unlink - old version
+ *
+ * keep the superuser check
+ */
 Datum
 pg_file_unlink(PG_FUNCTION_ARGS)
 {
@@ -695,7 +792,41 @@ pg_file_unlink(PG_FUNCTION_ARGS)
 
 	requireSuperuser();
 
-	filename = convert_and_check_filename(PG_GETARG_TEXT_P(0));
+	filename = convert_and_check_filename(PG_GETARG_TEXT_PP(0));
+
+	if (access(filename, W_OK) < 0)
+	{
+		if (errno == ENOENT)
+			PG_RETURN_BOOL(false);
+		else
+			ereport(ERROR,
+					(errcode_for_file_access(),
+					 errmsg("file \"%s\" is not accessible: %m", filename)));
+	}
+
+	if (unlink(filename) < 0)
+	{
+		ereport(WARNING,
+				(errcode_for_file_access(),
+				 errmsg("could not unlink file \"%s\": %m", filename)));
+
+		PG_RETURN_BOOL(false);
+	}
+	PG_RETURN_BOOL(true);
+}
+
+/* ------------------------------------
+ * pg_file_unlink_v1_1 - Version 1.1
+ *
+ * No superuser check done here- instead privileges are handled by the
+ * GRANT system.
+ */
+Datum
+pg_file_unlink_v1_1(PG_FUNCTION_ARGS)
+{
+	char	   *filename;
+
+	filename = convert_and_check_filename(PG_GETARG_TEXT_PP(0));
 
 	if (access(filename, W_OK) < 0)
 	{
@@ -739,27 +870,17 @@ pg_file_length(PG_FUNCTION_ARGS)
 }
 
 
-/*
- * This function returns the name and creation time of the log files, the creation
- * time is parsed from the file name. It's different from 'pg_ls_dir_files' because
- * it returns the modification time of the log files.
- */
-Datum
-pg_logdir_ls(PG_FUNCTION_ARGS)
+static Datum
+pg_logdir_ls_internal(FunctionCallInfo fcinfo)
 {
 	FuncCallContext *funcctx;
 	struct dirent *de;
 	directory_fctx *fctx;
-    bool prefix_is_gpdb = true;
-
-	if (!superuser())
-		ereport(ERROR,
-				(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
-				 (errmsg("only superuser can list the log directory"))));
+	bool prefix_is_gpdb = true;
 
 	if (strcmp(Log_filename, "gpdb-%Y-%m-%d_%H%M%S.csv") != 0 &&
-        strcmp(Log_filename, "gpdb-%Y-%m-%d_%H%M%S.log") != 0 &&
-        strcmp(Log_filename, "postgresql-%Y-%m-%d_%H%M%S.log") != 0 )
+		strcmp(Log_filename, "gpdb-%Y-%m-%d_%H%M%S.log") != 0 &&
+		strcmp(Log_filename, "postgresql-%Y-%m-%d_%H%M%S.log") != 0)
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
 				 (errmsg("the log_filename parameter must equal 'gpdb-%%Y-%%m-%%d_%%H%%M%%S.csv'"))));
@@ -791,7 +912,7 @@ pg_logdir_ls(PG_FUNCTION_ARGS)
 		if (!fctx->dirdesc)
 			ereport(ERROR,
 					(errcode_for_file_access(),
-					 errmsg("could not read directory \"%s\": %m",
+					 errmsg("could not open directory \"%s\": %m",
 							fctx->location)));
 
 		funcctx->user_fctx = fctx;
@@ -815,50 +936,35 @@ pg_logdir_ls(PG_FUNCTION_ARGS)
 		int			tz = 0;
 		struct pg_tm date;
 
-        if (prefix_is_gpdb)
-        {
-            int end = 17;
-            /*
-		     * Default format: gpdb-YYYY-MM-DD_HHMMSS.log or gpdb-YYYY-MM-DD_HHMMSS.csv
-		     */
-		    if (strlen(de->d_name) != 26
-			    || strncmp(de->d_name, "gpdb-", 5) != 0
-			    || de->d_name[15] != '_'
-			    || (strcmp(de->d_name + 22, ".log") != 0 && strcmp(de->d_name + 22, ".csv") != 0))
-            {
-			    
-                /* 
-                 * Not our normal format.  Maybe old format without TIME fields?
-                 */
-             
-                if (strlen(de->d_name) != 26
-			    || strncmp(de->d_name, "gpdb-", 5) != 0
-			    || de->d_name[15] != '_'
-			    || (strcmp(de->d_name + 22, ".log") != 0 && strcmp(de->d_name + 22, ".csv") != 0))
-                    continue;
+		if (prefix_is_gpdb)
+		{
+			/*
+			 * Default format: gpdb-YYYY-MM-DD_HHMMSS.log or gpdb-YYYY-MM-DD_HHMMSS.csv
+			 */
+			if (strlen(de->d_name) != 26
+				|| strncmp(de->d_name, "gpdb-", 5) != 0
+				|| de->d_name[15] != '_'
+				|| (strcmp(de->d_name + 22, ".log") != 0 && strcmp(de->d_name + 22, ".csv") != 0))
+				continue;
+			/* extract timestamp portion of filename */
+			snprintf(timestampbuf, sizeof(timestampbuf), "%s", de->d_name + 5);
+			timestampbuf[17] = '\0';
+		}
+		else
+		{
+			/*
+			 * Default format: postgresql-YYYY-MM-DD_HHMMSS.log
+			 */
+			if (strlen(de->d_name) != 32
+				|| strncmp(de->d_name, "postgresql-", 11) != 0
+				|| de->d_name[21] != '_'
+				|| strcmp(de->d_name + 28, ".log") != 0)
+				continue;
 
-                end = 10;
-
-            }
-		    /* extract timestamp portion of filename */
-		    snprintf(timestampbuf, sizeof(timestampbuf), "%s", de->d_name + 5);
-		    timestampbuf[end] = '\0';
-        }
-        else
-        {
-		    /*
-		     * Default format: postgresql-YYYY-MM-DD_HHMMSS.log
-		     */
-		    if (strlen(de->d_name) != 32
-			    || strncmp(de->d_name, "postgresql-", 11) != 0
-			    || de->d_name[21] != '_'
-			    || strcmp(de->d_name + 28, ".log") != 0)
-			    continue;
-
-		    /* extract timestamp portion of filename */
+			/* extract timestamp portion of filename */
 			snprintf(timestampbuf, sizeof(timestampbuf), "%s", de->d_name + 11);
-		    timestampbuf[17] = '\0';
-        }
+			timestampbuf[17] = '\0';
+		}
 
 		/* parse and decode expected timestamp to verify it's OK format */
 		if (ParseDateTime(timestampbuf, lowstr, MAXDATELEN, field, ftype, MAXDATEFIELDS, &nf))
@@ -870,8 +976,7 @@ pg_logdir_ls(PG_FUNCTION_ARGS)
 		/* Seems the timestamp is OK; prepare and return tuple */
 
 		values[0] = timestampbuf;
-		values[1] = palloc(strlen(fctx->location) + strlen(de->d_name) + 2);
-		sprintf(values[1], "%s/%s", fctx->location, de->d_name);
+		values[1] = psprintf("%s/%s", fctx->location, de->d_name);
 
 		tuple = BuildTupleFromCStrings(funcctx->attinmeta, values);
 
@@ -882,6 +987,33 @@ pg_logdir_ls(PG_FUNCTION_ARGS)
 	SRF_RETURN_DONE(funcctx);
 }
 
+/* ------------------------------------
+ * pg_logdir_ls - Old version
+ *
+ * keep the superuser check
+ */
+Datum
+pg_logdir_ls(PG_FUNCTION_ARGS)
+{
+	if (!superuser())
+		ereport(ERROR,
+				(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
+				 (errmsg("only superuser can list the log directory"))));
+
+	return (pg_logdir_ls_internal(fcinfo));
+}
+
+/* ------------------------------------
+ * pg_logdir_ls_v1_1 - Version 1.1
+ *
+ * No superuser check done here- instead privileges are handled by the
+ * GRANT system.
+ */
+Datum
+pg_logdir_ls_v1_1(PG_FUNCTION_ARGS)
+{
+	return (pg_logdir_ls_internal(fcinfo));
+}
 
 /* Generic function to return a directory listing of files */
 static Datum

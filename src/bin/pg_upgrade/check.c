@@ -246,9 +246,21 @@ report_clusters_compatible(void)
 {
 	if (user_opts.check)
 	{
-		pg_log(PG_REPORT, "\n*Clusters are compatible*\n");
+		if (get_check_fatal_occurred())
+		{
+			char		cwd[MAXPGPATH];
+			if (!getcwd(cwd, MAXPGPATH))
+				pg_fatal("could not determine current directory: %m\n");
+			canonicalize_path(cwd);
+
+			pg_log(PG_REPORT, "\n*Some cluster objects are not compatible*\n\npg_upgrade check output files are located:\n%s\n\n", cwd);
+		} else
+			pg_log(PG_REPORT, "\n*Clusters are compatible*\n");
+
 		/* stops new cluster */
 		stop_postmaster(false);
+		if (get_check_fatal_occurred())
+			exit(1);
 		exit(0);
 	}
 
@@ -346,19 +358,6 @@ check_cluster_versions(void)
 
 	/* cluster versions should already have been obtained */
 	Assert(old_cluster.major_version != 0);
-	Assert(new_cluster.major_version != 0);
-
-	/*
-	 * Upgrading within a major version is a handy feature of pg_upgrade, but
-	 * we don't allow it for within 4.3.x clusters, 4.3.x can only be an old
-	 * version to be upgraded from.
-	 */
-	if (GET_MAJOR_VERSION(old_cluster.major_version) == 802 &&
-		GET_MAJOR_VERSION(new_cluster.major_version) == 802)
-	{
-		pg_log(PG_FATAL,
-			   "old and new cluster cannot both be Greenplum 4.3.x installations\n");
-	}
 
 	/*
 	 * We allow upgrades from/to the same major version for alpha/beta
@@ -374,6 +373,32 @@ check_cluster_versions(void)
 	if (GET_MAJOR_VERSION(old_cluster.major_version) < 802)
 		pg_fatal("This utility can only upgrade from Greenplum version 4.3.x and later.\n");
 
+	/* Ensure binaries match the designated data directories */
+	if (GET_MAJOR_VERSION(old_cluster.major_version) !=
+		GET_MAJOR_VERSION(old_cluster.bin_version))
+		pg_fatal("Old cluster data and binary directories are from different major versions.\n");
+
+	if(is_skip_target_check())
+	{
+		check_ok();
+		return;
+	}
+
+	/* cluster versions should already have been obtained */
+	Assert(new_cluster.major_version != 0);
+
+	/*
+	 * Upgrading within a major version is a handy feature of pg_upgrade, but
+	 * we don't allow it for within 4.3.x clusters, 4.3.x can only be an old
+	 * version to be upgraded from.
+	 */
+	if (GET_MAJOR_VERSION(old_cluster.major_version) == 802 &&
+		GET_MAJOR_VERSION(new_cluster.major_version) == 802)
+	{
+		pg_log(PG_FATAL,
+			   "old and new cluster cannot both be Greenplum 4.3.x installations\n");
+	}
+
 	/* Only current PG version is supported as a target */
 	if (GET_MAJOR_VERSION(new_cluster.major_version) != GET_MAJOR_VERSION(PG_VERSION_NUM))
 		pg_fatal("This utility can only upgrade to Greenplum version %s.\n",
@@ -388,9 +413,6 @@ check_cluster_versions(void)
 		pg_fatal("This utility cannot be used to downgrade to older major Greenplum versions.\n");
 
 	/* Ensure binaries match the designated data directories */
-	if (GET_MAJOR_VERSION(old_cluster.major_version) !=
-		GET_MAJOR_VERSION(old_cluster.bin_version))
-		pg_fatal("Old cluster data and binary directories are from different major versions.\n");
 	if (GET_MAJOR_VERSION(new_cluster.major_version) !=
 		GET_MAJOR_VERSION(new_cluster.bin_version))
 		pg_fatal("New cluster data and binary directories are from different major versions.\n");
@@ -404,8 +426,12 @@ check_cluster_compatibility(bool live_check)
 {
 	/* get/check pg_control data of servers */
 	get_control_data(&old_cluster, live_check);
-	get_control_data(&new_cluster, false);
-	check_control_data(&old_cluster.controldata, &new_cluster.controldata);
+
+	if(!is_skip_target_check())
+	{
+		get_control_data(&new_cluster, false);
+		check_control_data(&old_cluster.controldata, &new_cluster.controldata);
+	}
 
 	/* We read the real port number for PG >= 9.1 */
 	if (live_check && GET_MAJOR_VERSION(old_cluster.major_version) < 901 &&
@@ -413,9 +439,12 @@ check_cluster_compatibility(bool live_check)
 		pg_fatal("When checking a pre-PG 9.1 live old server, "
 				 "you must specify the old server's port number.\n");
 
-	if (live_check && old_cluster.port == new_cluster.port)
-		pg_fatal("When checking a live server, "
-				 "the old and new port numbers must be different.\n");
+	if(!is_skip_target_check())
+	{
+		if (live_check && old_cluster.port == new_cluster.port)
+			pg_fatal("When checking a live server, "
+					 "the old and new port numbers must be different.\n");
+	}
 }
 
 
@@ -434,10 +463,10 @@ check_locale_and_encoding(DbInfo *olddb, DbInfo *newdb)
 				 pg_encoding_to_char(olddb->db_encoding),
 				 pg_encoding_to_char(newdb->db_encoding));
 	if (!equivalent_locale(LC_COLLATE, olddb->db_collate, newdb->db_collate))
-		pg_fatal("lc_collate values for database \"%s\" do not match:  old \"%s\", new \"%s\"\n",
+		gp_fatal_log("lc_collate values for database \"%s\" do not match:  old \"%s\", new \"%s\"\n",
 				 olddb->db_name, olddb->db_collate, newdb->db_collate);
 	if (!equivalent_locale(LC_CTYPE, olddb->db_ctype, newdb->db_ctype))
-		pg_fatal("lc_ctype values for database \"%s\" do not match:  old \"%s\", new \"%s\"\n",
+		gp_fatal_log("lc_ctype values for database \"%s\" do not match:  old \"%s\", new \"%s\"\n",
 				 olddb->db_name, olddb->db_ctype, newdb->db_ctype);
 }
 
@@ -518,7 +547,7 @@ check_new_cluster_is_empty(void)
 		{
 			/* pg_largeobject and its index should be skipped */
 			if (strcmp(rel_arr->rels[relnum].nspname, "pg_catalog") != 0)
-				pg_fatal("New cluster database \"%s\" is not empty: found relation \"%s.%s\"\n",
+				gp_fatal_log("New cluster database \"%s\" is not empty: found relation \"%s.%s\"\n",
 						 new_cluster.dbarr.dbs[dbnum].db_name,
 						 rel_arr->rels[relnum].nspname,
 						 rel_arr->rels[relnum].relname);
@@ -800,7 +829,7 @@ check_is_install_user(ClusterInfo *cluster)
 	 */
 	if (PQntuples(res) != 1 ||
 		atooid(PQgetvalue(res, 0, 1)) != BOOTSTRAP_SUPERUSERID)
-		pg_fatal("database user \"%s\" is not the install user\n",
+		gp_fatal_log("database user \"%s\" is not the install user\n",
 				 os_info.user);
 
 	PQclear(res);
@@ -811,7 +840,7 @@ check_is_install_user(ClusterInfo *cluster)
 							"WHERE rolname !~ '^pg_'");
 
 	if (PQntuples(res) != 1)
-		pg_fatal("could not determine the number of users\n");
+		gp_fatal_log("could not determine the number of users\n");
 
 	/*
 	 * We only allow the install user in the new cluster because other defined
@@ -913,9 +942,9 @@ check_for_prepared_transactions(ClusterInfo *cluster)
 	if (PQntuples(res) != 0)
 	{
 		if (cluster == &old_cluster)
-			pg_fatal("The source cluster contains prepared transactions\n");
+			gp_fatal_log("The source cluster contains prepared transactions\n");
 		else
-			pg_fatal("The target cluster contains prepared transactions\n");
+			gp_fatal_log("The target cluster contains prepared transactions\n");
 	}
 
 	PQclear(res);
@@ -1003,13 +1032,14 @@ check_for_isn_and_int8_passing_mismatch(ClusterInfo *cluster)
 	if (found)
 	{
 		pg_log(PG_REPORT, "fatal\n");
-		pg_fatal("Your installation contains \"contrib/isn\" functions which rely on the\n"
-				 "bigint data type.  Your old and new clusters pass bigint values\n"
-				 "differently so this cluster cannot currently be upgraded.  You can\n"
-				 "manually upgrade databases that use \"contrib/isn\" facilities and remove\n"
-				 "\"contrib/isn\" from the old cluster and restart the upgrade.  A list of\n"
-				 "the problem functions is in the file:\n"
-				 "    %s\n\n", output_path);
+		gp_fatal_log(
+				"| Your installation contains \"contrib/isn\" functions which rely on the\n"
+				"| bigint data type.  Your old and new clusters pass bigint values\n"
+				"| differently so this cluster cannot currently be upgraded.  You can\n"
+				"| manually upgrade databases that use \"contrib/isn\" facilities and remove\n"
+				"| \"contrib/isn\" from the old cluster and restart the upgrade.  A list of\n"
+				"| the problem functions is in the file:\n"
+				"|     %s\n\n", output_path);
 	}
 	else
 		check_ok();
@@ -1082,11 +1112,12 @@ check_for_tables_with_oids(ClusterInfo *cluster)
 	if (found)
 	{
 		pg_log(PG_REPORT, "fatal\n");
-		pg_fatal("Your installation contains tables declared WITH OIDS, which is not supported\n"
-				 "anymore. Consider removing the oid column using\n"
-				 "    ALTER TABLE ... SET WITHOUT OIDS;\n"
-				 "A list of tables with the problem is in the file:\n"
-				 "    %s\n\n", output_path);
+		gp_fatal_log(
+				"| Your installation contains tables declared WITH OIDS, which is not supported\n"
+				"| anymore. Consider removing the oid column using\n"
+				"|     ALTER TABLE ... SET WITHOUT OIDS;\n"
+				"| A list of tables with the problem is in the file:\n"
+				"|     %s\n\n", output_path);
 	}
 	else
 		check_ok();
@@ -1197,12 +1228,13 @@ check_for_reg_data_type_usage(ClusterInfo *cluster)
 	if (found)
 	{
 		pg_log(PG_REPORT, "fatal\n");
-		pg_fatal("Your installation contains one of the reg* data types in user tables.\n"
-				 "These data types reference system OIDs that are not preserved by\n"
-				 "pg_upgrade, so this cluster cannot currently be upgraded.  You can\n"
-				 "remove the problem tables and restart the upgrade.  A list of the problem\n"
-				 "columns is in the file:\n"
-				 "    %s\n\n", output_path);
+		gp_fatal_log(
+				"| Your installation contains one of the reg* data types in user tables.\n"
+				"| These data types reference system OIDs that are not preserved by\n"
+				"| pg_upgrade, so this cluster cannot currently be upgraded.  You can\n"
+				"| remove the problem tables and restart the upgrade.  A list of the problem\n"
+				"| columns is in the file:\n"
+				"|     %s\n\n", output_path);
 	}
 	else
 		check_ok();
@@ -1288,11 +1320,12 @@ check_for_jsonb_9_4_usage(ClusterInfo *cluster)
 	if (found)
 	{
 		pg_log(PG_REPORT, "fatal\n");
-		pg_fatal("Your installation contains the \"jsonb\" data type in user tables.\n"
-				 "The internal format of \"jsonb\" changed during 9.4 beta so this cluster cannot currently\n"
-				 "be upgraded.  You can remove the problem tables and restart the upgrade.  A list\n"
-				 "of the problem columns is in the file:\n"
-				 "    %s\n\n", output_path);
+		gp_fatal_log(
+				"| Your installation contains the \"jsonb\" data type in user tables.\n"
+				"| The internal format of \"jsonb\" changed during 9.4 beta so this cluster cannot currently\n"
+				"| be upgraded.  You can remove the problem tables and restart the upgrade.  A list\n"
+				"| of the problem columns is in the file:\n"
+				"|     %s\n\n", output_path);
 	}
 	else
 		check_ok();
@@ -1319,9 +1352,9 @@ check_for_pg_role_prefix(ClusterInfo *cluster)
 	if (PQntuples(res) != 0)
 	{
 		if (cluster == &old_cluster)
-			pg_fatal("The source cluster contains roles starting with \"pg_\"\n");
+			gp_fatal_log("The source cluster contains roles starting with \"pg_\"\n");
 		else
-			pg_fatal("The target cluster contains roles starting with \"pg_\"\n");
+			gp_fatal_log("The target cluster contains roles starting with \"pg_\"\n");
 	}
 
 	PQclear(res);

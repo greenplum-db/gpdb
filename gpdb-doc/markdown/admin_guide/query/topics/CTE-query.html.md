@@ -15,7 +15,7 @@ See [Data-Modifying Statements in a WITH clause](#topic_zg3_bgh_5gb), for inform
 
 By default, the `RECURSIVE` keyword for the `WITH` clause is enabled. `RECURSIVE` can be disabled by setting the server configuration parameter [gp\_recursive\_cte](../../../ref_guide/config_params/guc-list.html) to `false`.
 
-**Parent topic:**[Querying Data](../../query/topics/query.html)
+**Parent topic:** [Querying Data](../../query/topics/query.html)
 
 ## <a id="topic_xyn_dgh_5gb"></a>SELECT in a WITH Clause 
 

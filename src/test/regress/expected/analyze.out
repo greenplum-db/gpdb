@@ -1,3 +1,7 @@
+-- start_matchsubs
+-- m/Executing SQL: select pg_catalog.gp_acquire_sample_rows\(\d+, \d+, \'t\'\);/
+-- s/Executing SQL: select pg_catalog.gp_acquire_sample_rows\(\d+, \d+, \'t\'\);/Executing SQL: select pg_catalog.gp_acquire_sample_rows\(XXX, XXX, \'t\'\)/;
+-- end_matchsubs
 DROP DATABASE IF EXISTS testanalyze;
 CREATE DATABASE testanalyze;
 \c testanalyze
@@ -1008,4 +1012,29 @@ SELECT * FROM pg_stats WHERE tablename = 'ana_c2';
  public     | ana_c2    | bb      | f         |         0 |         3 |          1 | {bb}             | {1}               |                                    |           1 |                   |                        | 
  public     | ana_c2    | cc      | f         |         0 |         3 |          1 | {cc}             | {1}               |                                    |           1 |                   |                        | 
 (3 rows)
+
+-- Analyzing root table using ROOTPARTITION keyword on a column data type with no equality operator.
+create table no_eqop (a int, b int, c xml) partition by range(b) (start(1) end (6) every (3));
+insert into no_eqop select i, i % 5 + 1, '<foo>bar</foo>'::xml from generate_series(1, 1000)i;
+insert into no_eqop select i, i % 5 + 1, NULL from generate_series(1, 1000)i;
+insert into no_eqop select NULL, i % 5 + 1, '<foo>bar</foo>'::xml from generate_series(1, 1000)i;
+analyze verbose rootpartition no_eqop(c);
+INFO:  analyzing "public.no_eqop" inheritance tree
+INFO:  partition no_eqop_1_prt_1 is not analyzed, so ANALYZE will collect sample for stats calculation
+INFO:  Executing SQL: select pg_catalog.gp_acquire_sample_rows(75185, 10000, 't');
+select * from pg_stats where tablename = 'no_eqop';
+ schemaname | tablename | attname | inherited | null_frac  | avg_width | n_distinct | most_common_vals | most_common_freqs | histogram_bounds | correlation | most_common_elems | most_common_elem_freqs | elem_count_histogram 
+------------+-----------+---------+-----------+------------+-----------+------------+------------------+-------------------+------------------+-------------+-------------------+------------------------+----------------------
+ public     | no_eqop   | c       | t         | 0.33333334 |        15 |          0 |                  |                   |                  |             |                   |                        | 
+(1 row)
+
+analyze no_eqop(c);
+-- Simply merges leaf stats. gp_acquire_sample_rows() is not executed
+analyze verbose rootpartition no_eqop(c);
+INFO:  analyzing "public.no_eqop" inheritance tree
+select * from pg_stats where tablename = 'no_eqop';
+ schemaname | tablename | attname | inherited | null_frac  | avg_width | n_distinct | most_common_vals | most_common_freqs | histogram_bounds | correlation | most_common_elems | most_common_elem_freqs | elem_count_histogram 
+------------+-----------+---------+-----------+------------+-----------+------------+------------------+-------------------+------------------+-------------+-------------------+------------------------+----------------------
+ public     | no_eqop   | c       | t         | 0.33333334 |        15 |          0 |                  |                   |                  |             |                   |                        | 
+(1 row)
 

@@ -32,6 +32,7 @@
 
 #define InvalidFileSegNumber			-1
 #define InvalidUncompressedEof			-1
+#define InvalidAORowNum					-1
 
 #define AO_FILESEGINFO_ARRAY_SIZE		8
 
@@ -133,7 +134,7 @@ extern void ValidateAppendonlySegmentDataBeforeStorage(int segno);
   */
 extern FileSegInfo *GetFileSegInfo(Relation parentrel, Snapshot appendOnlyMetaDataSnapshot, int segno, bool locked);
 
-extern FileSegInfo **GetAllFileSegInfo(Relation parentrel, Snapshot appendOnlyMetaDataSnapshot, int *totalsegs);
+extern FileSegInfo **GetAllFileSegInfo(Relation parentrel, Snapshot appendOnlyMetaDataSnapshot, int *totalsegs, Oid *segrelidptr);
 
 extern void UpdateFileSegInfo(Relation parentrel,
 				  int segno,

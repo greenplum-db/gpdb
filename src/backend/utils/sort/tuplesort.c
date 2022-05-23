@@ -1909,6 +1909,19 @@ tuplesort_gettuple_common(Tuplesortstate *state, bool forward,
 
 	Assert(!WORKER(state));
 
+	/*
+	 * No output if we are told to finish execution.
+	 *
+	 * Note that the sort operation might (or might not) have been interrupted by
+	 * QueryFinishPending previously (see the code of checking 
+	 * QueryFinishPending), so there might not be valid tuples to be returned for
+	 * now. Return false to indicate "no more tuples" anyway.
+	 */
+	if (QueryFinishPending)
+	{
+		return false;
+	}
+
 	switch (state->status)
 	{
 		case TSS_SORTEDINMEM:
@@ -2570,14 +2583,6 @@ mergeruns(Tuplesortstate *state)
 	int			numTapes;
 	int			numInputTapes;
 
-	/* GPDB_12_MERGE_FIXME: This fault injection point is here to placate
-	 * the query_finish_pending test. This used to be only in tuplesort_mk.c,
-	 * not here. This makes the test pass, but it's a bit fake, because we
-	 * don't actually have any checks for QueryFinishPending in tuplesort.c,
-	 * like we used to in tuplesort_mk.c. That means that sort will not
-	 * respond quickly to a query finish interrupt. Should we sprinkle some
-	 * QueryFinishPending checks in this file?
-	 */
 #ifdef FAULT_INJECTOR
 
 	/*
@@ -2588,10 +2593,17 @@ mergeruns(Tuplesortstate *state)
 	HOLD_INTERRUPTS();
 	FaultInjector_InjectFaultIfSet("execsort_sort_mergeruns",
 								   DDLNotSpecified,
-								   "", //databaseName
+								   "", // databaseName
 								   ""); // tableName
 	RESUME_INTERRUPTS();
 #endif
+
+	/* pretend we are done */
+	if (QueryFinishPending)
+	{
+		state->status = TSS_SORTEDONTAPE;
+		return;
+	}
 
 	Assert(state->status == TSS_BUILDRUNS);
 	Assert(state->memtupcount == 0);
@@ -2734,6 +2746,13 @@ mergeruns(Tuplesortstate *state)
 			   state->tp_dummy[state->tapeRange - 1])
 		{
 			bool		allDummy = true;
+
+			if (QueryFinishPending)
+			{
+				/* pretend we are done */
+				state->status = TSS_SORTEDONTAPE;
+				return;
+			}
 
 			for (tapenum = 0; tapenum < state->tapeRange; tapenum++)
 			{
@@ -3018,6 +3037,24 @@ dumptuples(Tuplesortstate *state, bool alltuples)
 	memtupwrite = state->memtupcount;
 	for (i = 0; i < memtupwrite; i++)
 	{
+#ifdef FAULT_INJECTOR
+		/*
+		 * We're injecting an interrupt here. We have to hold interrupts while we're
+		 * injecting it to make sure the interrupt is not handled within the fault
+		 * injector itself.
+		 */
+		HOLD_INTERRUPTS();
+		FaultInjector_InjectFaultIfSet("execsort_dumptuples",
+										DDLNotSpecified,
+										"", // databaseName
+										""); // tableName
+		RESUME_INTERRUPTS();
+#endif
+
+		if (QueryFinishPending)
+		{
+			break;
+		}
 		WRITETUP(state, state->tp_tapenum[state->destTape],
 				 &state->memtuples[i]);
 		state->memtupcount--;
@@ -3313,6 +3350,25 @@ sort_bounded_heap(Tuplesortstate *state)
 	while (state->memtupcount > 1)
 	{
 		SortTuple	stup = state->memtuples[0];
+
+#ifdef FAULT_INJECTOR
+		/*
+		 * We're injecting an interrupt here. We have to hold interrupts while we're
+		 * injecting it to make sure the interrupt is not handled within the fault
+		 * injector itself.
+		 */
+		HOLD_INTERRUPTS();
+		FaultInjector_InjectFaultIfSet("execsort_sort_bounded_heap",
+										DDLNotSpecified,
+										"", // databaseName
+										""); // tableName
+		RESUME_INTERRUPTS();
+#endif
+
+		if (QueryFinishPending)
+		{
+			break;
+		}
 
 		/* this sifts-up the next-largest entry and decreases memtupcount */
 		tuplesort_heap_delete_top(state);

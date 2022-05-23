@@ -115,9 +115,6 @@ extern const char *GetLockNameFromTagType(uint16 locktag_type);
 /* Knowledge about which locktags describe temp objects */
 extern bool LockTagIsTemp(const LOCKTAG *tag);
 
-extern bool CondUpgradeRelLock(Oid relid);
-extern int UpgradeRelLockIfNecessary(Oid relid, int lockmode, bool *lockUpgraded);
-
 extern void GxactLockTableInsert(DistributedTransactionId xid);
 extern void GxactLockTableWait(DistributedTransactionId xid);
 #endif							/* LMGR_H */

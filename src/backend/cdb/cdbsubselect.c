@@ -45,9 +45,16 @@ static Node *add_null_match_clause(Node *clause);
 
 typedef struct NonNullableVarsContext
 {
-	Query	   *query;			/* Query in question. */
+	Query	   *query;              /* Query in question. */
+	List       *varsToCheck;        /* Vars to check when walking to RTE */
 	List	   *nonNullableVars;	/* Known non-nullable vars */
 } NonNullableVarsContext;
+
+typedef struct FindAllVarsContext
+{
+	List       *rtable;
+	List       *vars;
+} FindAllVarsContext;
 
 
 /**
@@ -77,7 +84,10 @@ static bool is_attribute_nonnullable(Oid relationOid, AttrNumber attrNumber);
 static List *fetch_targetlist_exprs(List *targetlist);
 static List *fetch_outer_exprs(Node *testexpr);
 static bool  is_exprs_nullable(Node *exprs, Query *query);
-static bool  is_exprs_nullable_internal(Node *exprs, List *nonnullable_vars);
+static bool  is_exprs_nullable_internal(Node *exprs, List *nonnullable_vars, List *rtable);
+static List *cdb_find_all_vars(Node *exprs, List *rtable);
+static bool  cdb_find_all_vars_walker(Node *node, FindAllVarsContext *context);
+static Var *cdb_map_to_base_var(Var *var, List *rtable);
 
 #define DUMMY_COLUMN_NAME "zero"
 
@@ -1028,6 +1038,7 @@ cdb_find_nonnullable_vars_walker(Node *node, NonNullableVarsContext *context)
 					NonNullableVarsContext c1;
 
 					c1.query = context->query;
+					c1.varsToCheck = context->varsToCheck;
 					c1.nonNullableVars = NIL;
 					ListCell   *lc = NULL;
 					int			orArgNum = 0;
@@ -1039,6 +1050,7 @@ cdb_find_nonnullable_vars_walker(Node *node, NonNullableVarsContext *context)
 						NonNullableVarsContext c2;
 
 						c2.query = context->query;
+						c2.varsToCheck = context->varsToCheck;
 						c2.nonNullableVars = NIL;
 						expression_tree_walker(orArg, cdb_find_nonnullable_vars_walker, &c2);
 
@@ -1128,35 +1140,86 @@ cdb_find_nonnullable_vars_walker(Node *node, NonNullableVarsContext *context)
 
 					ListCell   *lc = NULL;
 
-					foreach(lc, context->query->targetList)
+					foreach(lc, context->varsToCheck)
 					{
-						TargetEntry *tle = (TargetEntry *) lfirst(lc);
+						Var		   *var = (Var *) lfirst(lc);
 
-						Assert(tle->expr);
-
-						if (nodeTag(tle->expr) == T_Var)
+						if (var->varno == rtf->rtindex)
 						{
-							Var		   *var = (Var *) tle->expr;
+							int			attNum = var->varattno;
+							int			relOid = rte->relid;
 
-							if (var->varno == rtf->rtindex)
+							Assert(relOid != InvalidOid);
+
+							if (is_attribute_nonnullable(relOid, attNum))
 							{
-								int			attNum = var->varattno;
-								int			relOid = rte->relid;
-
-								Assert(relOid != InvalidOid);
-
-								if (is_attribute_nonnullable(relOid, attNum))
-								{
-									/*
-									 * Base table constraint on the var. Add
-									 * it to the list!
-									 */
-									context->nonNullableVars = list_append_unique(context->nonNullableVars, var);
-								}
-
+								/*
+								 * Base table constraint on the var. Add
+								 * it to the list!
+								 */
+								context->nonNullableVars = list_append_unique(context->nonNullableVars, var);
 							}
 						}
 					}
+				}
+				else if (rte->rtekind == RTE_SUBQUERY)
+				{
+					/*
+					 * When the RTE is a subquery, the algorithm to extend non-nullable Vars is:
+					 *   1. based on the interested VarsToCheck, find those pointing to this RTE,
+					 *      and build a list of exprs containing the corresponding target entry's
+					 *      expr.
+					 *   2. recusrively invoke is_exprs_nullable for The new list of exprs and the
+					 *      subquery:
+					 *        a. if they are non-nullable, let's expand the knowledage databse
+					 *           using the corresponding Vars in original VarsToCheck
+					 *        b. otherwise, we know the result is nullable, terminate the walk.
+					 */
+					ListCell *lc = NULL;
+					List     *exprs = NIL;
+					foreach(lc, context->varsToCheck)
+					{
+						Var *var = (Var *) lfirst(lc);
+						if (var->varno == rtf->rtindex)
+						{
+							TargetEntry *tle;
+							tle = list_nth(rte->subquery->targetList, var->varattno-1);
+							exprs = lappend(exprs, tle->expr);
+						}
+					}
+
+					/*
+					 * The vars fetched from special RTEs (RTE_JOIN ) are mapped to those in base RTEs,
+					 * so when the walker reach these special RTEs, the exprs can be NIL.
+					 * Empty exprs means no check is needed in this step and the walker should continue
+					 * scanning other parts of the jointree.
+					 * NOTE: break is also needed to avoid call the function 'is_exprs_nullable' on NIL exprs,
+					 * which reports NIL as nullable and terminates the walker
+					 */
+					if (exprs == NIL)
+						break;
+
+					if (is_exprs_nullable((Node *) exprs, rte->subquery))
+					{
+						/*
+						 * The VarsTocheck must be nullable, terminate here.
+						 * Since we are sure the nullable check will fail, so
+						 * set the knowledage database to NIL here.
+						 * */
+						context->nonNullableVars = NIL;
+						return true;
+					}
+
+					foreach(lc, context->varsToCheck)
+					{
+						Var *var = (Var *) lfirst(lc);
+						if (var->varno == rtf->rtindex)
+						{
+							context->nonNullableVars = list_append_unique(
+											context->nonNullableVars, var);
+						}
+					}
+
 				}
 				else if (rte->rtekind == RTE_VALUES)
 				{
@@ -1297,6 +1360,8 @@ fetch_outer_exprs(Node *testexpr)
 		else
 			return NIL;
 	}
+	else if (IsA(testexpr, OpExpr))
+		return list_make1(linitial(((OpExpr *)testexpr)->args));
 	else
 		return NIL;
 }
@@ -1312,17 +1377,18 @@ is_exprs_nullable(Node *exprs, Query *query)
 {
 	NonNullableVarsContext context;
 	context.query           = query;
+	context.varsToCheck     = cdb_find_all_vars(exprs, query->rtable);
 	context.nonNullableVars = NIL;
 
 	/* Find nullable vars in the jointree */
 	(void) expression_tree_walker((Node *) query->jointree,
 								  cdb_find_nonnullable_vars_walker, &context);
 
-	return is_exprs_nullable_internal(exprs, context.nonNullableVars);
+	return is_exprs_nullable_internal(exprs, context.nonNullableVars, query->rtable);
 }
 
 static bool
-is_exprs_nullable_internal(Node *exprs, List *nonnullable_vars)
+is_exprs_nullable_internal(Node *exprs, List *nonnullable_vars, List *rtable)
 {
 	if (exprs == NULL)
 	{
@@ -1335,7 +1401,7 @@ is_exprs_nullable_internal(Node *exprs, List *nonnullable_vars)
 
 	if (IsA(exprs, Var))
 	{
-		Var		   *var = (Var *) exprs;
+		Var		   *var = cdb_map_to_base_var((Var *) exprs, rtable);
 		return !list_member(nonnullable_vars, var);
 	}
 	else if (IsA(exprs, List))
@@ -1344,7 +1410,7 @@ is_exprs_nullable_internal(Node *exprs, List *nonnullable_vars)
 		foreach(lc, (List *) exprs)
 		{
 			if (is_exprs_nullable_internal((Node *) lfirst(lc),
-										   nonnullable_vars))
+										   nonnullable_vars, rtable))
 				return true;
 		}
 		return false;
@@ -1357,7 +1423,7 @@ is_exprs_nullable_internal(Node *exprs, List *nonnullable_vars)
 	else if (IsA(exprs, RelabelType))
 	{
 		RelabelType    *rt = (RelabelType *) exprs;
-		return is_exprs_nullable_internal((Node *) rt->arg, nonnullable_vars);
+		return is_exprs_nullable_internal((Node *) rt->arg, nonnullable_vars, rtable);
 	}
 	else if (IsA(exprs, OpExpr))
 	{
@@ -1366,7 +1432,7 @@ is_exprs_nullable_internal(Node *exprs, List *nonnullable_vars)
 		foreach(lc, op_expr->args)
 		{
 			if (is_exprs_nullable_internal((Node *) lfirst(lc),
-										   nonnullable_vars))
+										   nonnullable_vars, rtable))
 				return true;
 		}
 		return false;
@@ -1452,4 +1518,54 @@ has_correlation_in_funcexpr_rte(List *rtable)
 		}
 	}
 	return false;
+}
+
+static List *
+cdb_find_all_vars(Node *exprs, List *rtable)
+{
+	FindAllVarsContext    context;
+
+	context.rtable = rtable;
+	context.vars = NIL;
+
+	expression_tree_walker(exprs, cdb_find_all_vars_walker, (void *) &context);
+
+	return context.vars;
+}
+
+static bool
+cdb_find_all_vars_walker(Node *node, FindAllVarsContext *context)
+{
+	if (node == NULL)
+		return false;
+
+	if (IsA(node, Var))
+	{
+		Var     *var;
+
+		/*
+		 * The vars fetched from targetList/testexpr.. can be from virtual range table (RTE_JOIN),
+		 * which do not directly match base vars fetched by cdb_find_nonnullable_vars_walker, aligning
+		 * them to base vars is needed before check nullable.
+		 */
+		var = cdb_map_to_base_var((Var *) node, context->rtable);
+		context->vars = list_append_unique(context->vars, var);
+		return false;
+	}
+
+	return expression_tree_walker(node, cdb_find_all_vars_walker, context);
+}
+
+static Var *
+cdb_map_to_base_var(Var *var, List *rtable)
+{
+	RangeTblEntry *rte    = rt_fetch(var->varno, rtable);
+
+	while(rte->rtekind == RTE_JOIN && rte->joinaliasvars)
+	{
+		var = (Var *) list_nth(rte->joinaliasvars, var->varattno-1);
+		rte = rt_fetch(var->varno, rtable);
+	}
+
+	return var;
 }

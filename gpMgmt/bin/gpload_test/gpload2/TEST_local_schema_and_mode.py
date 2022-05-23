@@ -25,10 +25,11 @@ def append_gpload_cmd(test_num, config_path):
 def test_401_gpload_yaml_existing_external_schema():
     """401 test gpload works with an existing external schema"""
     TestBase.drop_tables()
-    schema = "ext_schema_test"
-    TestBase.psql_run(cmd=f'CREATE SCHEMA IF NOT EXISTS {schema};',
-                      dbname='reuse_gptest')
-    TestBase.write_config_file(externalSchema=schema)
+    schema = "'\"EXT_schema_test\"'"
+    f = open(TestBase.mkpath('query401.sql'), 'a')
+    f.write("\\! psql -d reuse_gptest -c \"select count(*) from pg_catalog.pg_namespace where nspname = 'EXT_schema_test';\"")
+    f.close()
+    TestBase.write_config_file(externalSchema=schema, reuse_tables=True)
 
 
 @TestBase.prepare_before_test(num=402, times=1)
@@ -62,6 +63,32 @@ def test_404_gpload_yaml_percent_default_external_schema():
     schema"""
     TestBase.drop_tables()
     TestBase.write_config_file(externalSchema='\'%\'')
+
+
+@TestBase.prepare_before_test(num=405, times=2)
+def test_405_gpload_external_schema_merge():
+    """405 test gpload works with an existing external schema "EXT_schema_test" """
+    TestBase.drop_tables()
+    schema = "'\"EXT_schema_test\"'"
+    f = open(TestBase.mkpath('query405.sql'), 'a')
+    f.write("\\! gpload -f "+TestBase.mkpath('config/config_file1')+'\n')
+    f.write("\\! psql -d reuse_gptest -c \"select count(*) from pg_tables where schemaname = 'EXT_schema_test';\"")
+    f.close()
+    TestBase.write_config_file(externalSchema=schema, reuse_tables=True, mode='merge')
+    TestBase.write_config_file(config='config/config_file1',externalSchema=schema, reuse_tables=True, mode='merge')
+
+
+@TestBase.prepare_before_test(num=406, times=2)
+def test_406_gpload_external_schema_merge():
+    """406 test gpload works with schema test and write as "Test" in config"""
+    TestBase.drop_tables()
+    schema = '"Test"'
+    f = open(TestBase.mkpath('query406.sql'), 'a')
+    f.write("\\! gpload -f "+TestBase.mkpath('config/config_file1')+'\n')
+    f.write("\\! psql -d reuse_gptest -c \"select count(*) from pg_tables where schemaname = 'test';\"")
+    f.close()
+    TestBase.write_config_file(externalSchema=schema, reuse_tables=True, mode='merge')
+    TestBase.write_config_file(config='config/config_file1',externalSchema=schema, reuse_tables=True, mode='merge')
 
 
 @TestBase.prepare_before_test(num=430, times=1)
@@ -829,4 +856,37 @@ def test_544_gpload_mode_merge_update_with_update_condition():
     f.write("\\! gpload -f " + TestBase.mkpath('config/config_file') + "\n")
     f.write("\\! gpload -f " + TestBase.mkpath('config/config_file2') + "\n")
     f.write("\\! psql -d reuse_gptest -c 'select * from texttable order by s1, s2, n1;'")
+    f.close()
+
+
+@TestBase.prepare_before_test(num=545, times=1)
+def test_545_gpload_merge_staging_DK():
+    """545 test gpload merge using target table distribution key as
+    staging table DK as default"""
+    file = TestBase.mkpath('setup.sql')
+    TestBase.runfile(file)
+    TestBase.copy_data('external_file_04.txt', 'data_file.txt')
+    TestBase.write_config_file(mode='merge', file='data_file.txt', table='testtruncate', reuse_tables=True)
+    f = open(TestBase.mkpath('query545.sql'), 'a')
+    f.write("\\! psql -d reuse_gptest -c '\\d staging_gpload_reusable_*'")
+    f.close()
+
+
+@TestBase.prepare_before_test(num=546, times=1)
+def test_546_gpload_merge_staging_DK():
+    """546 test gpload merge using match column as staging table DK 
+    when target is DISTRIBUTED RANDOMLY"""
+    file = TestBase.mkpath('setup.sql')
+    TestBase.runfile(file)
+    TestBase.copy_data("external_file_47.txt", "data_file.txt")
+    TestBase.write_config_file(mode='insert', file='data_file.txt', table='testheaderreuse', delimiter="','", reuse_tables=False)
+    match_col = ['field1']
+    update_col = ['field2']
+    TestBase.copy_data("external_file_546.txt", "data_file1.txt")
+    TestBase.write_config_file(mode='merge', file='data_file1.txt', update_columns=update_col,delimiter="','",
+        match_columns=match_col, config='config/config_file1', table='testheaderreuse', reuse_tables=True)
+    f = open(TestBase.mkpath('query546.sql'), 'w')
+    f.write("\\! gpload -f " + TestBase.mkpath('config/config_file') + "\n")
+    f.write("\\! gpload -f " + TestBase.mkpath('config/config_file1') + "\n")
+    f.write("\\! psql -d reuse_gptest -c '\\d staging_gpload_reusable_*'")
     f.close()
