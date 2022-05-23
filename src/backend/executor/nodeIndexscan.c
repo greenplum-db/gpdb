@@ -902,8 +902,22 @@ ExecIndexRestrPos(IndexScanState *node)
 IndexScanState *
 ExecInitIndexScan(IndexScan *node, EState *estate, int eflags)
 {
-	IndexScanState *indexstate;
 	Relation	currentRelation;
+
+	/*
+	 * open the base relation and acquire appropriate lock on it.
+	 */
+	currentRelation = ExecOpenScanRelation(estate, node->scan.scanrelid, eflags);
+
+	return ExecInitIndexScanForPartition(node, estate, eflags,
+	                                     currentRelation, node->indexid);
+}
+
+IndexScanState *
+ExecInitIndexScanForPartition(IndexScan *node, EState *estate, int eflags,
+	                          Relation currentRelation, Oid indexid)
+{
+	IndexScanState *indexstate;
 	LOCKMODE	lockmode;
 
 	/*
@@ -920,11 +934,6 @@ ExecInitIndexScan(IndexScan *node, EState *estate, int eflags)
 	 * create expression context for node
 	 */
 	ExecAssignExprContext(estate, &indexstate->ss.ps);
-
-	/*
-	 * open the scan relation
-	 */
-	currentRelation = ExecOpenScanRelation(estate, node->scan.scanrelid, eflags);
 
 	indexstate->ss.ss_currentRelation = currentRelation;
 	indexstate->ss.ss_currentScanDesc = NULL;	/* no heap scan here */
@@ -953,11 +962,11 @@ ExecInitIndexScan(IndexScan *node, EState *estate, int eflags)
 	 * in the expression must be found now...)
 	 */
 	indexstate->ss.ps.qual =
-		ExecInitQual(node->scan.plan.qual, (PlanState *) indexstate);
+			ExecInitQual(node->scan.plan.qual, (PlanState *) indexstate);
 	indexstate->indexqualorig =
-		ExecInitQual(node->indexqualorig, (PlanState *) indexstate);
+			ExecInitQual(node->indexqualorig, (PlanState *) indexstate);
 	indexstate->indexorderbyorig =
-		ExecInitExprList(node->indexorderbyorig, (PlanState *) indexstate);
+			ExecInitExprList(node->indexorderbyorig, (PlanState *) indexstate);
 
 	/*
 	 * If we are just doing EXPLAIN (ie, aren't going to run the plan), stop
@@ -969,7 +978,7 @@ ExecInitIndexScan(IndexScan *node, EState *estate, int eflags)
 
 	/* Open the index relation. */
 	lockmode = exec_rt_fetch(node->scan.scanrelid, estate)->rellockmode;
-	indexstate->iss_RelationDesc = index_open(node->indexid, lockmode);
+	indexstate->iss_RelationDesc = index_open(indexid, lockmode);
 
 	/*
 	 * Initialize index-specific scan state
@@ -1021,11 +1030,11 @@ ExecInitIndexScan(IndexScan *node, EState *estate, int eflags)
 		Assert(numOrderByKeys == list_length(node->indexorderbyops));
 		Assert(numOrderByKeys == list_length(node->indexorderbyorig));
 		indexstate->iss_SortSupport = (SortSupportData *)
-			palloc0(numOrderByKeys * sizeof(SortSupportData));
+				palloc0(numOrderByKeys * sizeof(SortSupportData));
 		indexstate->iss_OrderByTypByVals = (bool *)
-			palloc(numOrderByKeys * sizeof(bool));
+				palloc(numOrderByKeys * sizeof(bool));
 		indexstate->iss_OrderByTypLens = (int16 *)
-			palloc(numOrderByKeys * sizeof(int16));
+				palloc(numOrderByKeys * sizeof(int16));
 		i = 0;
 		forboth(lco, node->indexorderbyops, lcx, node->indexorderbyorig)
 		{
@@ -1054,9 +1063,9 @@ ExecInitIndexScan(IndexScan *node, EState *estate, int eflags)
 
 		/* allocate arrays to hold the re-calculated distances */
 		indexstate->iss_OrderByValues = (Datum *)
-			palloc(numOrderByKeys * sizeof(Datum));
+				palloc(numOrderByKeys * sizeof(Datum));
 		indexstate->iss_OrderByNulls = (bool *)
-			palloc(numOrderByKeys * sizeof(bool));
+				palloc(numOrderByKeys * sizeof(bool));
 
 		/* and initialize the reorder queue */
 		indexstate->iss_ReorderQueue = pairingheap_allocate(reorderqueue_cmp,

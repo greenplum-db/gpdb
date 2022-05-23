@@ -35,11 +35,7 @@ XERCES_CPP_NAMESPACE_USE
 class CParseHandlerDynamicIndexScan : public CParseHandlerIndexScan
 {
 private:
-	// part index id
-	ULONG m_part_index_id;
-
-	// printable partition index id
-	ULONG m_part_index_id_printable;
+	ULongPtrArray *m_selector_ids;
 
 	// process the start of an element
 	void StartElement(

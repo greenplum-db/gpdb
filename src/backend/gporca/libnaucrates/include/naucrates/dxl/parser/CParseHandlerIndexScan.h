@@ -60,8 +60,8 @@ protected:
 
 	// common EndElement functionality for IndexScan and IndexOnlyScan
 	void EndElementHelper(const XMLCh *const element_local_name,
-						  Edxltoken token_type, ULONG part_idx_id = 0,
-						  ULONG part_idx_id_printable = 0);
+						  Edxltoken token_type,
+						  ULongPtrArray *selector_ids = nullptr);
 
 public:
 	CParseHandlerIndexScan(const CParseHandlerIndexScan &) = delete;
