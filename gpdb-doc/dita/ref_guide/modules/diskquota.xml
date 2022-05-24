@@ -579,7 +579,10 @@ SELECT diskquota.resume();</codeblock>
         Greenplum Database. Version 1.x of the module will continue to work after you
         upgrade Greenplum.</p>
       <p>If you are using version 1.x of the module and you want to upgrade to
-        <codeph>diskquota</codeph> version 2.0, you must:</p>
+        <codeph>diskquota</codeph> version 2.0, you must perform the following procedure:
+        <note><codeph>diskquota</codeph> will be paused during the upgrade procedure and
+          will be automatically resumed when the upgrade completes.</note>
+      </p>
       <ol>
         <li>Replace the <codeph>diskquota</codeph> shared library in the Greenplum Database
           <codeph>shared_preload_libraries</codeph> server configuration parameter setting
@@ -599,8 +602,7 @@ $ gpstop -ar</codeblock></li>
         <li>Restart Greenplum Database:
           <codeblock>$ gpstop -ar</codeblock></li>
       </ol>
-      <p><codeph>diskquota</codeph> monitors and checks disk quota limits during the
-        upgrade procedure. After upgrade, your existing disk quota rules continue to be
+      <p>After upgrade, your existing disk quota rules continue to be
         enforced, and you can define new tablespace or per-segment rules. You can also
         utilize the new pause/resume disk quota enforcement functions.</p>
     </body>
