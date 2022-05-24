@@ -11,6 +11,12 @@
 -- s/Batches: \d+/Batches: ###/
 -- m/Extra Text: \(seg\d+\)/
 -- s/Extra Text: \(seg\d+\)/Extra Text: ###/
+-- m/Segments: \d+/
+-- s/Segments: \d+/Segments: ###/ 
+-- m/Max: \d+kB/
+-- s/Max: \d+kB/Max: ###kB/
+-- m/segment: \d+/ 
+-- s/segment: \d+/segment: ###/
 -- m/Hash chain length \d+\.\d+ avg, \d+ max/
 -- s/Hash chain length \d+\.\d+ avg, \d+ max/Hash chain length ###/
 -- m/using \d+ of \d+ buckets/
@@ -416,6 +422,7 @@ explain (costs off, timing off, summary off, analyze) select *, rank() over (ord
          ->  Sort (actual rows=8 loops=1)
                Sort Key: pt_1_prt_2.ptid, pt_1_prt_2.pt1
                Sort Method:  quicksort  Memory: 152kB
+               Executor Memory: 85kB  Segments: 3  Max: 29kB (segment 1)
                ->  Nested Loop (actual rows=8 loops=1)
                      Join Filter: true
                      ->  Broadcast Motion 3:3  (slice2; segments: 3) (actual rows=2 loops=1)
@@ -1120,6 +1127,7 @@ explain (costs off, timing off, summary off, analyze) select * from pt, pt1 wher
    ->  Sort (actual rows=5 loops=1)
          Sort Key: pt1_1_prt_2.dist
          Sort Method:  quicksort  Memory: 150kB
+         Executor Memory: 77kB  Segments: 3  Max: 26kB (segment 1)
          ->  Hash Join (actual rows=5 loops=1)
                Hash Cond: (pt1_1_prt_2.ptid = pt_1_prt_2.ptid)
                Extra Text: (seg1)   Hash chain length 1.0 avg, 1 max, using 1 of 131072 buckets.
@@ -1356,6 +1364,7 @@ explain (costs off, timing off, summary off, analyze) select * from dim1 inner j
    ->  Sort (actual rows=50 loops=1)
          Sort Key: fact1_1_prt_1_2_prt_ca.u
          Sort Method:  quicksort  Memory: 158kB
+         Executor Memory: 79kB  Segments: 3  Max: 29kB (segment 1)
          ->  Hash Join (actual rows=50 loops=1)
                Hash Cond: ((fact1_1_prt_1_2_prt_ca.pid = dim1.pid) AND (fact1_1_prt_1_2_prt_ca.code = dim1.code))
                Extra Text: (seg1)   Hash chain length 1.0 avg, 1 max, using 3 of 131072 buckets.
@@ -1443,6 +1452,7 @@ explain (costs off, timing off, summary off, analyze) select * from dim1 inner j
    ->  Sort (actual rows=50 loops=1)
          Sort Key: fact1_1_prt_1_2_prt_ca.u
          Sort Method:  quicksort  Memory: 158kB
+         Executor Memory: 79kB  Segments: 3  Max: 29kB (segment 1)
          ->  Hash Join (actual rows=50 loops=1)
                Hash Cond: ((fact1_1_prt_1_2_prt_ca.pid = dim1.pid) AND (fact1_1_prt_1_2_prt_ca.code = dim1.code))
                Extra Text: (seg1)   Hash chain length 1.0 avg, 1 max, using 3 of 131072 buckets.
@@ -1535,6 +1545,7 @@ explain (costs off, timing off, summary off, analyze) select * from dim1 inner j
    ->  Sort (actual rows=100 loops=1)
          Sort Key: fact1_1_prt_1_2_prt_ca.u
          Sort Method:  quicksort  Memory: 166kB
+         Executor Memory: 82kB  Segments: 3  Max: 32kB (segment 1)
          ->  Hash Join (actual rows=100 loops=1)
                Hash Cond: (fact1_1_prt_1_2_prt_ca.pid = dim1.pid)
                Extra Text: (seg1)   Hash chain length 1.0 avg, 1 max, using 3 of 131072 buckets.
@@ -1672,6 +1683,7 @@ explain (costs off, timing off, summary off, analyze) select * from dim1 inner j
    ->  Sort (actual rows=100 loops=1)
          Sort Key: fact1_1_prt_1_2_prt_ca.u
          Sort Method:  quicksort  Memory: 166kB
+         Executor Memory: 82kB  Segments: 3  Max: 32kB (segment 1)
          ->  Hash Join (actual rows=100 loops=1)
                Hash Cond: (fact1_1_prt_1_2_prt_ca.pid = dim1.pid)
                Extra Text: (seg1)   Hash chain length 1.0 avg, 1 max, using 3 of 131072 buckets.
@@ -2285,6 +2297,7 @@ explain (costs off, timing off, summary off, analyze) select * from dim1 inner j
    ->  Sort (actual rows=50 loops=1)
          Sort Key: fact1_1_prt_1_2_prt_oh.u
          Sort Method:  quicksort  Memory: 158kB
+         Executor Memory: 79kB  Segments: 3  Max: 29kB (segment 1)
          ->  Hash Join (actual rows=50 loops=1)
                Hash Cond: (fact1_1_prt_1_2_prt_oh.pid = dim1.pid)
                Extra Text: (seg1)   Hash chain length 1.0 avg, 1 max, using 3 of 131072 buckets.
@@ -2368,6 +2381,7 @@ explain (costs off, timing off, summary off, analyze) select * from dim1 inner j
    ->  Sort (actual rows=50 loops=1)
          Sort Key: fact1_1_prt_1_2_prt_oh.u
          Sort Method:  quicksort  Memory: 158kB
+         Executor Memory: 79kB  Segments: 3  Max: 29kB (segment 1)
          ->  Hash Join (actual rows=50 loops=1)
                Hash Cond: (fact1_1_prt_1_2_prt_oh.pid = dim1.pid)
                Extra Text: (seg1)   Hash chain length 1.0 avg, 1 max, using 3 of 131072 buckets.
@@ -2751,6 +2765,7 @@ explain (costs off, timing off, summary off, analyze) select * from (select coun
                ->  Sort (actual rows=1 loops=1)
                      Sort Key: jpat.a
                      Sort Method:  quicksort  Memory: 150kB
+                     Executor Memory: 76kB  Segments: 3  Max: 26kB (segment 1)
                      ->  Seq Scan on jpat (actual rows=1 loops=1)
    ->  Hash (actual rows=10 loops=1)
          Buckets: 131072  Batches: 1  Memory Usage: 1025kB
@@ -2985,6 +3000,7 @@ select * from pt, t where t.dist = pt.dist and t.tid = pt.ptid order by t.tid, t
    ->  Sort  (cost=0.00..862.09 rows=33 width=24) (actual rows=2 loops=1)
          Sort Key: t.tid, t.sk
          Sort Method:  quicksort  Memory: 150kB
+         Executor Memory: 76kB  Segments: 3  Max: 26kB (segment 0)
          ->  Hash Join  (cost=0.00..862.05 rows=33 width=24) (actual rows=2 loops=1)
                Hash Cond: ((pt1.dist = t.dist) AND (pt1.ptid = t.tid))
                Extra Text: (seg0)   Hash chain length 1.0 avg, 1 max, using 36 of 262144 buckets.
