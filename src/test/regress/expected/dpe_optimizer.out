@@ -287,6 +287,7 @@ explain (costs off, timing off, summary off, analyze) select * from pt where pti
                                  ->  Sort (actual rows=2 loops=1)
                                        Sort Key: t.tid
                                        Sort Method:  quicksort  Memory: 150kB
+                                       Executor Memory: 178kB  Segments: 3  Max: 60kB (segment 0)
                                        ->  Redistribute Motion 3:3  (slice3; segments: 3) (actual rows=2 loops=1)
                                              Hash Key: t.tid
                                              ->  Seq Scan on t (actual rows=2 loops=1)
@@ -344,6 +345,7 @@ explain (costs off, timing off, summary off, analyze) select * from pt where exi
                                  ->  Sort (actual rows=2 loops=1)
                                        Sort Key: t.tid
                                        Sort Method:  quicksort  Memory: 150kB
+                                       Executor Memory: 76kB  Segments: 3  Max: 26kB (segment 1)
                                        ->  Redistribute Motion 3:3  (slice3; segments: 3) (actual rows=2 loops=1)
                                              Hash Key: t.tid
                                              ->  Seq Scan on t (actual rows=2 loops=1)
@@ -2472,6 +2474,7 @@ explain (costs off, timing off, summary off, analyze) select fact1.code, count(*
          ->  Sort (actual rows=100 loops=1)
                Sort Key: fact1_1_prt_1_2_prt_ca.code
                Sort Method:  quicksort  Memory: 160kB
+               Executor Memory: 86kB  Segments: 3  Max: 31kB (segment 1)
                ->  Redistribute Motion 3:3  (slice2; segments: 3) (actual rows=100 loops=1)
                      Hash Key: fact1_1_prt_1_2_prt_ca.code
                      ->  Hash Join (actual rows=100 loops=1)
@@ -2515,6 +2518,7 @@ explain (costs off, timing off, summary off, analyze) select fact1.code, count(*
          ->  Sort (actual rows=100 loops=1)
                Sort Key: fact1_1_prt_1_2_prt_ca.code
                Sort Method:  quicksort  Memory: 160kB
+               Executor Memory: 86kB  Segments: 3  Max: 31kB (segment 1)
                ->  Redistribute Motion 3:3  (slice2; segments: 3) (actual rows=100 loops=1)
                      Hash Key: fact1_1_prt_1_2_prt_ca.code
                      ->  Hash Join (actual rows=100 loops=1)

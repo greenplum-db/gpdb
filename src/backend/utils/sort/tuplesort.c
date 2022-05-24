@@ -1259,12 +1259,6 @@ tuplesort_end(Tuplesortstate *state)
 		spaceUsed = (state->allowedMem - state->availMem + 1023) / 1024;
 #endif
 
-	if(state->instrument)
-	{
-		state->instrument->workmemused = MemoryContextGetPeakSpace(state->sortcontext);
-		state->instrument->execmemused += MemoryContextGetPeakSpace(state->sortcontext);
-	}
-
 	/*
 	 * Delete temporary "tape" files, if any.
 	 *
@@ -4742,4 +4736,21 @@ tuplesort_set_instrument(Tuplesortstate            *state,
 {
 	state->instrument = instrument;
 	state->explainbuf = explainbuf;
+}
+
+/*
+ * tuplesort_finalize_stats
+ *
+ * Finalize the EXPLAIN ANALYZE stats.
+ */
+void
+tuplesort_finalize_stats(Tuplesortstate *state,
+					TuplesortInstrumentation *stats)
+{
+	if(state->instrument)
+	{
+		state->instrument->workmemused = MemoryContextGetPeakSpace(state->sortcontext);
+		state->instrument->execmemused += MemoryContextGetPeakSpace(state->sortcontext);
+	}
+	tuplesort_get_stats(state, stats);
 }
