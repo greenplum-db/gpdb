@@ -200,7 +200,7 @@ Because each host in a block has multiple mirror instances for each other host i
 
 Block mirroring is not one of the automatic options Greenplum Database offers when you set up or expand a cluster. To use it, you must create your own configuration.
 
-For a new Greenplum system, you can initialize the cluster without mirrors, and then run `gpaddmirrors -i mirror\_config\_file` with a custom mirror configuration file to create the mirrors for each block. You must create the file system locations for the mirror segments before you run `gpaddmirrors`. See the `gpaddmirrors` reference page in the *Greenplum Database Management Utility Guide* for details.
+For a new Greenplum system, you can initialize the cluster without mirrors, and then run `gpaddmirrors -i mirror_config_file` with a custom mirror configuration file to create the mirrors for each block. You must create the file system locations for the mirror segments before you run `gpaddmirrors`. See the `gpaddmirrors` reference page in the *Greenplum Database Management Utility Guide* for details.
 
 If you expand a system that has block mirroring or you want to implement block mirroring at the same time you expand a cluster, it is recommended that you complete the expansion first, using the default grouping mirror configuration, and then use the `gpmovemirrors` utility to move mirrors into the block configuration.
 
@@ -220,10 +220,10 @@ To implement block mirroring with an existing system that has a different mirror
     The `gpmovemirrors` input file has the following format:
 
     ```
-    old\_address|port|data\_dir new\_address|port|data\_dir
+    old_address|port|data_dir new_address|port|data_dir
     ```
 
-    Where old\_address is the host name or IP address of the segment host, port is the communication port, and `data_dir` is the segment instance data directory.
+    Where `old_address` is the host name or IP address of the segment host, port is the communication port, and `data_dir` is the segment instance data directory.
 
     The following example `gpmovemirrors` input file specifies three mirror segments to move.
 
@@ -237,7 +237,7 @@ To implement block mirroring with an existing system that has a different mirror
 4.  Run `gpmovemirrors` with a command like the following:
 
     ```
-    gpmovemirrors -i mirror\_config\_file
+    gpmovemirrors -i mirror_config_file
     ```
 
 

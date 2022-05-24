@@ -89,14 +89,14 @@ See [Distributions](schema.html).
 
         ```
         gp_vmem = ((SWAP + RAM) – (7.5GB + 0.05 * RAM - (300KB *
-              total\_\#\_workfiles))) / 1.7
+              total_#_workfiles))) / 1.7
         ```
 
     -   If the total system memory is equal to or greater than 256 GB:
 
         ```
         gp_vmem = ((SWAP + RAM) – (7.5GB + 0.05 * RAM - (300KB *
-              total\_\#\_workfiles))) / 1.17
+              total_#_workfiles))) / 1.17
         ```
 
 -   Never set `gp_vmem_protect_limit` too high or larger than the physical RAM on the system.
