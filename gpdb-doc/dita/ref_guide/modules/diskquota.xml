@@ -544,6 +544,19 @@ SELECT diskquota.resume();</codeblock>
               <li>If you <codeph>VACUUM FULL</codeph> all tables, set the quota to be no
                 smaller than the size of the largest table in the database.</li>
             </ul></p></li>
+        <li>The size of uncommited tables are not counted in quota views. Even though the
+          <codeph>diskquota.show_fast_role_quota_view</codeph> view may display a smaller
+          used quota than the quota limit, a new query may trigger a quota exceeded
+          condition in the following circumstance:
+          <ul>
+            <li>Hard limit enforcement of disk usage is disabled.</li>
+            <li>A long-running query in a session has consumed the full disk quota.</li>
+          </ul>
+          <codeph>diskquota</codeph> does update the denylist in this scenario, but
+          the <codeph>diskquota.show_fast_role_quota_view</codeph> may not represent the
+          actual used quota because the long-running query is not yet committed.
+          If you execute a new query while the original is still running, the new query
+          will trigger a quota exceeded error.</li>
       </ul>
     </body>
   </topic>
