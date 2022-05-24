@@ -12,6 +12,12 @@
 -- s/Batches: \d+/Batches: ###/
 -- m/Extra Text: \(seg\d+\)/
 -- s/Extra Text: \(seg\d+\)/Extra Text: ###/
+-- m/Segments: \d+/
+-- s/Segments: \d+/Segments: ###/ 
+-- m/Max: \d+kB/
+-- s/Max: \d+kB/Max: ###kB/
+-- m/segment: \d+/ 
+-- s/segment: \d+/segment: ###/
 -- m/Hash chain length \d+\.\d+ avg, \d+ max/
 -- s/Hash chain length \d+\.\d+ avg, \d+ max/Hash chain length ###/
 -- m/using \d+ of \d+ buckets/
