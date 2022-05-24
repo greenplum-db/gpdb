@@ -1273,35 +1273,43 @@ CREATE INDEX sro_idx ON sro_tab ((sro_ifun(a) + sro_ifun(0)))
 	WHERE sro_ifun(a + 10) > sro_ifun(10);
 DROP INDEX sro_idx;
 -- Do the same concurrently
-CREATE INDEX CONCURRENTLY sro_idx ON sro_tab ((sro_ifun(a) + sro_ifun(0)))
-	WHERE sro_ifun(a + 10) > sro_ifun(10);
+-- CREATE INDEX CONCURRENTLY sro_idx ON sro_tab ((sro_ifun(a) + sro_ifun(0)))
+--	WHERE sro_ifun(a + 10) > sro_ifun(10);
 -- REINDEX
 REINDEX TABLE sro_tab;
+NOTICE:  table "sro_tab" has no indexes
 REINDEX INDEX sro_idx;
-REINDEX TABLE CONCURRENTLY sro_tab;  -- v12+ feature
-ERROR:  syntax error at or near "CONCURRENTLY"
-LINE 1: REINDEX TABLE CONCURRENTLY sro_tab;
-                      ^
+ERROR:  relation "sro_idx" does not exist
+-- REINDEX TABLE CONCURRENTLY sro_tab;  -- v12+ feature
 DROP INDEX sro_idx;
+ERROR:  index "sro_idx" does not exist
 -- CLUSTER
 CREATE INDEX sro_cluster_idx ON sro_tab ((sro_ifun(a) + sro_ifun(0)));
 CLUSTER sro_tab USING sro_cluster_idx;
 DROP INDEX sro_cluster_idx;
 -- Check with a partitioned table
 CREATE TABLE sro_ptab (a int) PARTITION BY RANGE (a);
+ERROR:  no partitions specified at depth 1
+LINE 1: CREATE TABLE sro_ptab (a int) PARTITION BY RANGE (a);
+                                                   ^
 ALTER TABLE sro_ptab OWNER TO regress_sro_user;
+ERROR:  relation "sro_ptab" does not exist
 CREATE TABLE sro_part PARTITION OF sro_ptab FOR VALUES FROM (1) TO (10);
+ERROR:  syntax error at or near "PARTITION"
+LINE 1: CREATE TABLE sro_part PARTITION OF sro_ptab FOR VALUES FROM ...
+                              ^
 ALTER TABLE sro_part OWNER TO regress_sro_user;
+ERROR:  relation "sro_part" does not exist
 INSERT INTO sro_ptab VALUES (1), (2), (3);
+ERROR:  relation "sro_ptab" does not exist
+LINE 1: INSERT INTO sro_ptab VALUES (1), (2), (3);
+                    ^
 CREATE INDEX sro_pidx ON sro_ptab ((sro_ifun(a) + sro_ifun(0)))
 	WHERE sro_ifun(a + 10) > sro_ifun(10);
-ERROR:  cannot create index on partitioned table "sro_ptab"
+ERROR:  relation "sro_ptab" does not exist
 REINDEX TABLE sro_ptab;
-NOTICE:  table "sro_ptab" has no indexes
-REINDEX INDEX CONCURRENTLY sro_pidx;  -- v12+ feature
-ERROR:  syntax error at or near "CONCURRENTLY"
-LINE 1: REINDEX INDEX CONCURRENTLY sro_pidx;
-                      ^
+ERROR:  relation "sro_ptab" does not exist
+-- REINDEX INDEX CONCURRENTLY sro_pidx;  -- v12+ feature
 SET SESSION AUTHORIZATION regress_sro_user;
 CREATE FUNCTION unwanted_grant() RETURNS void LANGUAGE sql AS
 	'GRANT regress_group2 TO regress_sro_user';
@@ -1327,16 +1335,12 @@ CREATE CONSTRAINT TRIGGER t AFTER INSERT ON sro_trojan_table
 CREATE OR REPLACE FUNCTION mv_action() RETURNS bool LANGUAGE sql AS
 	'INSERT INTO sro_trojan_table DEFAULT VALUES; SELECT true';
 REFRESH MATERIALIZED VIEW sro_mv;
-ERROR:  function cannot execute on a QE slice because it issues a non-SELECT statement  (seg2 127.0.1.1:6004 pid=2056925)
-CONTEXT:  SQL function "unwanted_grant" during startup
-SQL statement "SELECT unwanted_grant()"
-PL/pgSQL function sro_trojan() line 1 at PERFORM
+ERROR:  cannot fire deferred trigger within security-restricted operation
+CONTEXT:  SQL function "mv_action" statement 1
 \c -
 REFRESH MATERIALIZED VIEW sro_mv;
-ERROR:  function cannot execute on a QE slice because it issues a non-SELECT statement  (seg2 127.0.1.1:6004 pid=2056935)
-CONTEXT:  SQL function "unwanted_grant" during startup
-SQL statement "SELECT unwanted_grant()"
-PL/pgSQL function sro_trojan() line 1 at PERFORM
+ERROR:  cannot fire deferred trigger within security-restricted operation
+CONTEXT:  SQL function "mv_action" statement 1
 BEGIN; SET CONSTRAINTS ALL IMMEDIATE; REFRESH MATERIALIZED VIEW sro_mv; COMMIT;
 ERROR:  function cannot execute on a QE slice because it issues a non-SELECT statement  (seg0 127.0.1.1:6002 pid=2056933)
 CONTEXT:  SQL function "unwanted_grant" during startup
@@ -1356,8 +1360,9 @@ EXCEPTION WHEN OTHERS THEN
 END$$;
 CREATE MATERIALIZED VIEW sro_index_mv AS SELECT 1 AS c;
 CREATE UNIQUE INDEX ON sro_index_mv (c) WHERE unwanted_grant_nofail(1) > 0;
+ERROR:  no pre-assigned OID for relation "sro_index_mv_c_idx" (oid_dispatch.c:698)
 \c -
-REFRESH MATERIALIZED VIEW CONCURRENTLY sro_index_mv;
+-- REFRESH MATERIALIZED VIEW CONCURRENTLY sro_index_mv;
 REFRESH MATERIALIZED VIEW sro_index_mv;
 DROP OWNED BY regress_sro_user;
 DROP ROLE regress_sro_user;

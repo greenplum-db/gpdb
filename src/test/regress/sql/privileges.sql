@@ -757,12 +757,12 @@ CREATE INDEX sro_idx ON sro_tab ((sro_ifun(a) + sro_ifun(0)))
 	WHERE sro_ifun(a + 10) > sro_ifun(10);
 DROP INDEX sro_idx;
 -- Do the same concurrently
-CREATE INDEX CONCURRENTLY sro_idx ON sro_tab ((sro_ifun(a) + sro_ifun(0)))
-	WHERE sro_ifun(a + 10) > sro_ifun(10);
+-- CREATE INDEX CONCURRENTLY sro_idx ON sro_tab ((sro_ifun(a) + sro_ifun(0)))
+--	WHERE sro_ifun(a + 10) > sro_ifun(10);
 -- REINDEX
 REINDEX TABLE sro_tab;
 REINDEX INDEX sro_idx;
-REINDEX TABLE CONCURRENTLY sro_tab;  -- v12+ feature
+-- REINDEX TABLE CONCURRENTLY sro_tab;  -- v12+ feature
 DROP INDEX sro_idx;
 -- CLUSTER
 CREATE INDEX sro_cluster_idx ON sro_tab ((sro_ifun(a) + sro_ifun(0)));
@@ -777,7 +777,7 @@ INSERT INTO sro_ptab VALUES (1), (2), (3);
 CREATE INDEX sro_pidx ON sro_ptab ((sro_ifun(a) + sro_ifun(0)))
 	WHERE sro_ifun(a + 10) > sro_ifun(10);
 REINDEX TABLE sro_ptab;
-REINDEX INDEX CONCURRENTLY sro_pidx;  -- v12+ feature
+-- REINDEX INDEX CONCURRENTLY sro_pidx;  -- v12+ feature
 
 SET SESSION AUTHORIZATION regress_sro_user;
 CREATE FUNCTION unwanted_grant() RETURNS void LANGUAGE sql AS
@@ -819,7 +819,7 @@ END$$;
 CREATE MATERIALIZED VIEW sro_index_mv AS SELECT 1 AS c;
 CREATE UNIQUE INDEX ON sro_index_mv (c) WHERE unwanted_grant_nofail(1) > 0;
 \c -
-REFRESH MATERIALIZED VIEW CONCURRENTLY sro_index_mv;
+-- REFRESH MATERIALIZED VIEW CONCURRENTLY sro_index_mv;
 REFRESH MATERIALIZED VIEW sro_index_mv;
 
 DROP OWNED BY regress_sro_user;
