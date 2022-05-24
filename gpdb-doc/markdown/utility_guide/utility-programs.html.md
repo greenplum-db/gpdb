@@ -60,8 +60,8 @@ Greenplum Database provides the following utility programs. Superscripts identif
 - [plcontainer](ref/plcontainer.html)
 - [plcontainer Configuration File](ref/plcontainer-configuration.html)
 - [psql](ref/psql.html)<sup>3</sup>
-- [pxf](../../pxf/latest/ref/pxf.html)
-- [pxf cluster](../../pxf/latest/ref/pxf-cluster.html)
+- [pxf](https://docs.vmware.com/en/VMware-Tanzu-Greenplum-Platform-Extension-Framework/6.3/tanzu-greenplum-platform-extension-framework/GUID-ref-pxf.html)
+- [pxf cluster](https://docs.vmware.com/en/VMware-Tanzu-Greenplum-Platform-Extension-Framework/6.3/tanzu-greenplum-platform-extension-framework/GUID-ref-pxf-cluster.html)
 - [reindexdb](ref/reindexdb.html)
 - [vacuumdb](ref/vacuumdb.html)
 
