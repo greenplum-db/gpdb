@@ -372,6 +372,10 @@ gz_file_write_one_chunk(gfile_t *fd, int do_flush)
 		
 		z->s.avail_out = COMPRESSION_BUFFER_SIZE;
 		z->s.next_out = z->out;
+		if (z->s.state == 0x0)
+		{                      
+			return -1;
+		}
 		ret1 = deflate(&(z->s), do_flush);    /* no bad return value */
 		assert(ret1 != Z_STREAM_ERROR);  /* state not clobbered */
 		have = COMPRESSION_BUFFER_SIZE - z->s.avail_out;
