@@ -2035,7 +2035,7 @@ select a::ipaddress - 4294967296::bigint from (select ip4 '255.255.255.255' as a
 
 -- predicates and indexing
 
-create table ipranges (r iprange, r4 ip4r, r6 ip6r);
+create table ipranges (r iprange, r4 ip4r, r6 ip6r) distributed by (r);
 
 insert into ipranges
 select r, null, r
@@ -2084,7 +2084,7 @@ select r, r, null
 
 insert into ipranges values ('-',null,null);
 
-create table ipaddrs (a ipaddress, a4 ip4, a6 ip6);
+create table ipaddrs (a ipaddress, a4 ip4, a6 ip6) distributed by (a);
 
 insert into ipaddrs
 select a, null, a
@@ -2168,6 +2168,7 @@ select * from ipaddrs a join ipranges r on (r.r6 >>= a.a6) order by a6,r6;
 -- index-only, on versions that support it:
 
 vacuum ipranges;
+analyze ipranges;
 
 select r from ipranges where r >>= '5555::' order by r;
 select r6 from ipranges where r6 >>= '5555::' order by r6;

@@ -1,3 +1,4 @@
+NO_PGXS := 1
 
 MODULE_big = ip4r
 
@@ -11,7 +12,7 @@ SRC_SQL	= ip4r--2.4.sql \
 	  ip4r--unpackaged2.0--2.0.sql \
 	  ip4r--unpackaged1--2.0.sql
 DATA	= $(addprefix scripts/, $(SRC_SQL))
-REGRESS = ip4r $(REGRESS_$(MAJORVERSION))
+REGRESS = ip4r $(REGRESS_$(MAJORVERSION)) ip4r-explain
 REGRESS_11 := ip4r-v11
 REGRESS_12 := $(REGRESS_11)
 else
@@ -43,7 +44,7 @@ PG_CONFIG ?= pg_config
 PGXS = $(shell $(PG_CONFIG) --pgxs)
 include $(PGXS)
 else
-subdir = contrib/ip4r
+subdir = gpcontrib/ip4r
 top_builddir = ../..
 include $(top_builddir)/src/Makefile.global
 include $(top_srcdir)/contrib/contrib-global.mk

@@ -1,0 +1,16 @@
+How to Maintain a git subtree
+---------------------------
+
+We maintain ip4r using git subtree. There is no need to do anything special if
+you don't want to add/update a git subtree. But if you want to add a repo as a
+git subtree. The following steps describes how.
+
+1) Add the repo URL as a git remote.
+   git remote add -f ip4r_remote git@github.com:RhodiumToad/ip4r.git
+2) Clone the repo to a directory as a subtree.
+   git subtree add --prefix gpcontrib/ip4r ip4r_remote master --squash
+3) To update the subtree later:
+   git fetch ip4r_remote master
+   git subtree pull --prefix gpcontrib/ip4r ip4r_remote master --squash
+4) Update subtree to a specific commit.
+   git subtree merge --prefix gpcontrib/ip4r --squash commit_id
