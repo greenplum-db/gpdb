@@ -474,8 +474,8 @@ ExecSortExplainEnd(PlanState *planstate, struct StringInfoData *buf)
 
 	if (sortstate->tuplesortstate)
 	{
-		tuplesort_get_stats(sortstate->tuplesortstate,
-							&sortstate->sortstats);
+		tuplesort_finalize_stats(sortstate->tuplesortstate,
+								 &sortstate->sortstats);
 
 		if (planstate->instrument)
 		{
@@ -501,8 +501,8 @@ ExecEagerFreeSort(SortState *node)
 		 * Save stats like in ExecSortExplainEnd, so that we can display
 		 * them later in EXPLAIN ANALYZE.
 		 */
-		tuplesort_get_stats(node->tuplesortstate,
-							&node->sortstats);
+		tuplesort_finalize_stats(node->tuplesortstate,
+								 &node->sortstats);
 		if (node->ss.ps.instrument)
 		{
 			node->ss.ps.instrument->workfileCreated = (node->sortstats.spaceType == SORT_SPACE_TYPE_DISK);
