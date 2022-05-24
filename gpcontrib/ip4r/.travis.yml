@@ -1,0 +1,45 @@
+
+addons:
+  apt:
+    sources:
+    - sourceline: "deb http://apt.postgresql.org/pub/repos/apt/ xenial-pgdg main 12"
+      key_url: "https://www.postgresql.org/media/keys/ACCC4CF8.asc"
+    - sourceline: "deb http://apt.postgresql.org/pub/repos/apt/ xenial-pgdg-testing main 12"
+      key_url: "https://www.postgresql.org/media/keys/ACCC4CF8.asc"
+
+before_install:
+  - sudo /etc/init.d/postgresql stop
+  - sudo apt-get -y --purge remove postgresql libpq-dev libpq5 postgresql-client-common postgresql-common
+  - sudo rm -rf /var/lib/postgresql
+  - sudo apt-get update -qq
+  - sudo apt-get -y -o Dpkg::Options::=--force-confdef -o Dpkg::Options::="--force-confnew" ${PGREPO:+-t "$PGREPO"} install postgresql-${PG:?} postgresql-server-dev-${PG:?}
+
+before_script:
+  - sudo -u postgres createuser -s "$USER"
+
+env:
+  matrix:
+    - PG=9.2
+    - PG=9.3
+    - PG=9.4
+    - PG=9.5
+    - PG=9.6
+    - PG=10
+    - PG=11
+    - PG=12 PGREPO=xenial-pgdg-testing
+
+dist: xenial
+
+sudo: required
+
+language: c
+
+compiler:
+  - gcc
+
+script:
+  - make && sudo make install && make installcheck
+
+after_script:
+  - cat regression.diffs || true
+  
