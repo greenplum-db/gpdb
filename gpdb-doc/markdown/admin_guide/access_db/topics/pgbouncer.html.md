@@ -20,11 +20,13 @@ A database connection pool is a cache of database connections. Once a pool of co
 
 The PgBouncer connection pooler, from the PostgreSQL community, is included in your Greenplum Database installation. PgBouncer is a light-weight connection pool manager for Greenplum and PostgreSQL. PgBouncer maintains a pool for connections for each database and user combination. PgBouncer either creates a new database connection for a client or reuses an existing connection for the same user and database. When the client disconnects, PgBouncer returns the connection to the pool for re-use.
 
-PgBouncer shares connections in one of three pool modes:
+In order not to compromise transaction semantics for connection pooling, PgBouncer supports several types of pooling when rotating connections:
 
--   *Session pooling* – When a client connects, a connection is assigned to it as long as it remains connected. When the client disconnects, the connection is placed back into the pool.
--   *Transaction pooling* – A connection is assigned to a client for the duration of a transaction. When PgBouncer notices the transaction is done, the connection is placed back into the pool. This mode can be used only with applications that do not use features that depend upon a session.
--   *Statement pooling* – Statement pooling is like transaction pooling, but multi-statement transactions are not allowed. This mode is intended to enforce autocommit mode on the client and is targeted for PL/Proxy on PostgreSQL.
+- *Session pooling* - Most polite method. When a client connects, a server connection will be assigned to it for the whole duration the client stays connected. When the client disconnects, the server connection will be put back into the pool. This is the default method.
+
+- *Transaction pooling* - A server connection is assigned to a client only during a transaction. When PgBouncer notices that transaction is over, the server connection will be put back into the pool.
+
+- *Statement pooling* - Most aggressive method. The server connection will be put back into the pool immediately after a query completes. Multi-statement transactions are disallowed in this mode as they would break.
 
 You can set a default pool mode for the PgBouncer instance. You can override this mode for individual databases and users.
 
@@ -122,13 +124,7 @@ SCRAM secrets can only be used for logging into a server if the client authentic
 
 **Note:** While the `pgbouncer` installed with Greenplum 6.x supports the `SCRAM-SHA-256` authentication method, the Greenplum 6.x `psql` client is too old to support this type of client authentication. You can not use `SCRAM-SHA-256` authentication with the Greenplum 6.x `psql` client program.
 
-The authentication file can be written by hand, but it’s also useful to generate it from some other list of users and passwords. See `./etc/mkauth.py` for a sample script to generate the authentication file from the `pg_shadow` system table. Alternatively, use
-
-```
-auth_query
-```
-
-instead of `auth_file` to avoid having to maintain a separate authentication file.\\u0000
+The authentication file can be written by hand, but it’s also useful to generate it from some other list of users and passwords. See `./etc/mkauth.py` for a sample script to generate the authentication file from the `pg_shadow` system table. Alternatively, use `auth_query` instead of `auth_file` to avoid having to maintain a separate authentication file.
 
 ### <a id="pgb_hba"></a>Configuring HBA-based Authentication for PgBouncer 
 
@@ -194,7 +190,7 @@ Follow these steps to set up PgBouncer.
     If the `auth_type` in the following example is `md5`, the authentication field must be MD5-encoded. The format for an MD5-encoded password is:
 
     ```
-    "md5" + MD5_encoded(<password\><username\>)
+    "md5" + MD5_encoded(<password><username>)
     ```
 
 3.  Launch `pgbouncer`:
@@ -218,7 +214,7 @@ Follow these steps to set up PgBouncer.
 
 PgBouncer provides a `psql`-like administration console. You log in to the PgBouncer Administration Console by specifying the PgBouncer port number and a virtual database named `pgbouncer`. The console accepts SQL-like commands that you can use to monitor, reconfigure, and manage PgBouncer.
 
-For complete documentation of PgBouncer Administration Console commands, refer to the [PgBouncer Administration Console](../../../utility_guide/ref/pgbouncer-admin.html) command reference.
+For complete documentation of PgBouncer Administration Console commands, refer to the [pgbouncer-admin](../../../utility_guide/ref/pgbouncer-admin.html) command reference.
 
 Follow these steps to get started with the PgBouncer Administration Console.
 
@@ -236,19 +232,14 @@ Follow these steps to get started with the PgBouncer Administration Console.
     pgbouncer=# SHOW help;
     NOTICE:  Console usage
     DETAIL:
-        SHOW HELP|CONFIG|DATABASES|POOLS|CLIENTS|SERVERS|VERSION
-        SHOW FDS|SOCKETS|ACTIVE_SOCKETS|LISTS|MEM
-        SHOW DNS_HOSTS|DNS_ZONES
-        SHOW STATS|STATS_TOTALS|STATS_AVERAGES
+        SHOW HELP|CONFIG|DATABASES|FDS|POOLS|CLIENTS|SERVERS|SOCKETS|LISTS|VERSION|...
         SET key = arg
         RELOAD
-        PAUSE [<db>]
-        RESUME [<db>]
-        DISABLE <db>
-        ENABLE <db>
-        KILL <db>
+        PAUSE
         SUSPEND
+        RESUME
         SHUTDOWN
+        [...]
     ```
 
 3.  If you update PgBouncer configuration by editing the `pgbouncer.ini` configuration file, you use the `RELOAD` command to reload the file:
