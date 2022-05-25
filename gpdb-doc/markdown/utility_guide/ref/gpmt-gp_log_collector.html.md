@@ -55,44 +55,15 @@ This tool collects Greenplum and system log files, along with the relevant confi
 
 The tool also collects the following information:
 
-|Source|Files and outputs|
-|------|-----------------|
-| Database parameters | <ul><li>`version`</li><li>`uptime`</li><li>`pg_resqueue`</li><li>`pg_resgroup_config`</li><li>`pg_database`</li><li>`gp_segment_configuration`</li><li>`gp_configuration_history`</li> |
-| Segment server parameters |-   `uname -a`
--   `sysctl -a`
--   `psaux`
--   `netstat -rn`
--   `netstat -i`
--   `lsof`
--   `ifconfig`
--   `free`
--   `df -h`
+| Source | Files and outputs |
+| ------ | ----------------- |
+| Database parameters | <ul><li>`version`</li><li>`uptime`</li><li>`pg_resqueue`</li><li>`pg_resgroup_config`</li><li>`pg_database`</li><li>`gp_segment_configuration`</li><li>`gp_configuration_history`</li></ul> |
+| Segment server parameters | <ul><li>`uname -a`</li><li>`sysctl -a`</li><li>`psaux`</li><li>`netstat -rn`</li><li>`netstat -i`</li><li>`lsof`</li><li>`ifconfig`</li><li>`free`</li><li>`df -h`</li></ul> |
+| System files from all hosts | <ul><li>`/etc/redhat-release`</li><li>`/etc/sysctl.conf`</li><li>`/etc/sysconfig/network`</li><li>`/etc/security/limits.conf`</li></ul> |
+| Database-related files from all hosts | <ul><li>`$SEG_DIR/pg_hba.conf`</li><li>`$SEG_DIR/pg_log/`</li><li>`$SEG_DIRE/postgresql.conf`</li><li>`~/gpAdminLogs`</li></ul> |
+| GPText files | <ul><li>Installation configuration file: `$GPTXTHOME/lib/python/gptextlib/consts.py` </li><li>`gptext-state -D`</li><li>`<gptext data dir>/solr*/solr.in`</li><li>`<gptext data dir>/solr*/log4j.properties`</li><li>`<gptext data dir>/zoo*/logs/*`</li><li>`commands/bash/-c_echo $PATH`</li><li>`commands/bash/-c_ps -ef | grep solr`</li><li>`commands/bash/-c_ps -ef | grep zookeeper`</li></ul> |
 
-|
-|System files from all hosts|-   `/etc/redhat-release`
--   `/etc/sysctl.conf`
--   `/etc/sysconfig/network`
--   `/etc/security/limits.conf`
-
-|
-|Database related files from all hosts|-   `$SEG_DIR/pg_hba.conf`
--   `$SEG_DIR/pg_log/`
--   `$SEG_DIRE/postgresql.conf`
--   `~/gpAdminLogs`
-
-|
-|GPText files|-   Installation configuration file `$GPTXTHOME/lib/python/gptextlib/consts.py`
--   `gptext-state -D`
--   `<gptext data dir>/solr*/solr.in`
--   `<gptext data dir>/solr*/log4j.properties`
--   `<gptext data dir>/zoo*/logs/*`
--   `commands/bash/-c_echo $PATH`
--   `commands/bash/-c_ps -ef | grep solr`
--   `commands/bash/-c_ps -ef | grep zookeeper`
-
-|
-
-Note: some commands might not be able to be run if user does not have enough permission.
+**NOTE**: Some commands might not be able to be run if user does not have the correct permissions.
 
 ## <a id="exs"></a>Examples 
 
