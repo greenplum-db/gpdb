@@ -3269,6 +3269,7 @@ def impl(context, config_file):
 
 @when('check segment conf: postgresql.conf')
 @then('check segment conf: postgresql.conf')
+@given('check segment conf: postgresql.conf')
 def step_impl(context):
     query = "select dbid, port, hostname, datadir from gp_segment_configuration where content >= 0"
     conn = dbconn.connect(dbconn.DbURL(dbname='postgres'), unsetSearchPath=False)
