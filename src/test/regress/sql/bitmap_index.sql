@@ -360,3 +360,22 @@ SET enable_bitmapscan = OFF;
 explain (analyze, verbose) select * from test_bmsparse where type > 500;
 
 DROP TABLE test_bmsparse;
+
+
+-- test the scenario that we need read the same batch words many times
+-- more detials can be found at https://github.com/greenplum-db/gpdb/issues/13446
+SET enable_seqscan = OFF;
+SET enable_bitmapscan = OFF;
+
+create table foo_13446(a int, b int);
+create index idx_13446 on foo_13446 using bitmap(b);
+insert into foo_13446 select 1, 1 from generate_series(0, 16384);
+-- At current implementation, BMIterateResult can only store 16*1024=16384 TIDs,
+-- if we have 13685 TIDs to read, it must scan same batch words twice, that's what we want
+select count(*) from foo_13446 where b = 1;
+
+drop table foo_13446;
+
+SET enable_seqscan = ON;
+SET enable_bitmapscan = ON;
+

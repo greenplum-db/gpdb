@@ -455,7 +455,7 @@ with v as (select * from t1) select  row_number() over(partition by v1.b), rank(
         </dxl:LogicalWindow>
       </dxl:LogicalCTEAnchor>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="11376">
+    <dxl:Plan Id="0" SpaceSize="14896">
       <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="3141.988407" Rows="333333.333333" Width="24"/>

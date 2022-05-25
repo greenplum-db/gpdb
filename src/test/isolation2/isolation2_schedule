@@ -299,3 +299,6 @@ test: concurrent_vacuum_with_delete
 
 # test if GUC is synchronized from the QD to QEs.
 test: sync_guc
+
+# test pg_export_snapshot with distributed snapshot functionality
+test: export_distributed_snapshot

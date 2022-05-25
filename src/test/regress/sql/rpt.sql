@@ -363,6 +363,7 @@ DROP TABLE foopart;
 -- FIXME: ORCA does not consider this, we need to fix the cases when ORCA
 -- consider this.
 set optimizer = off;
+set enable_bitmapscan = off;
 create table t_hashdist(a int, b int, c int) distributed by (a);
 create table t_replicate_volatile(a int, b int, c int) distributed replicated;
 
@@ -424,6 +425,15 @@ select relname from t_hashdist, (select * from pg_class c join rtbl on c.relname
 explain (costs off) select a from t_hashdist, (select oid from pg_class union all select a from rtbl) vtest;
 
 reset optimizer;
+reset enable_bitmapscan;
+
+-- Github Issue 13532
+create table t1_13532(a int, b int) distributed replicated;
+create table t2_13532(a int, b int) distributed replicated;
+create index idx_t2_13532 on t2_13532(b);
+explain (costs off) select * from t1_13532 x, t2_13532 y where y.a < random() and x.b = y.b;
+set enable_bitmapscan = off;
+explain (costs off) select * from t1_13532 x, t2_13532 y where y.a < random() and x.b = y.b;
 
 -- start_ignore
 drop schema rpt cascade;

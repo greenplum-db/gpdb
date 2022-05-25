@@ -146,28 +146,25 @@ CXformSplitDQA::Transform(CXformContext *pxfctxt, CXformResult *pxfres,
 
 	pxfres->Add(pexprThreeStageDQA);
 
-	if (fScalarDQA)
-	{
-		// generate two-stage agg for scalar DQA case
-		// this transform is useful for cases where distinct column is same as distributed column.
-		// for a query like "select count(distinct a) from bar;"
-		// we generate a two stage agg where the aggregate operator gives us the distinct values.
-		// CScalarProjectList for the Local agg below is empty on purpose.
+	// generate two-stage agg
+	// this transform is useful for cases where distinct column is same as distributed column.
+	// for a query like "select count(distinct a) from bar;"
+	// we generate a two stage agg where the aggregate operator gives us the distinct values.
+	// CScalarProjectList for the Local agg below is empty on purpose.
 
-		//		+--CLogicalGbAgg( Global ) Grp Cols: [][Global]
-		//		|--CLogicalGbAgg( Local ) Grp Cols: ["a" (0)][Local],
-		//		|  |--CLogicalGet "bar" ("bar"),
-		//		|  +--CScalarProjectList
-		//		+--CScalarProjectList
-		//			+--CScalarProjectElement "count" (9)
-		//				+--CScalarAggFunc (count , Distinct: false , Aggregate Stage: Global)
-		//					+--CScalarIdent "a" (0)
+	//		+--CLogicalGbAgg( Global ) Grp Cols: [][Global]
+	//		|--CLogicalGbAgg( Local ) Grp Cols: ["a" (0)][Local],
+	//		|  |--CLogicalGet "bar" ("bar"),
+	//		|  +--CScalarProjectList
+	//		+--CScalarProjectList
+	//			+--CScalarProjectElement "count" (9)
+	//				+--CScalarAggFunc (count , Distinct: false , Aggregate Stage: Global)
+	//					+--CScalarIdent "a" (0)
 
-		CExpression *pexprTwoStageScalarDQA = PexprSplitHelper(
-			mp, col_factory, md_accessor, pexpr, pexprRelational, phmexprcr,
-			pdrgpcrArgDQA, CLogicalGbAgg::EasTwoStageScalarDQA);
-		pxfres->Add(pexprTwoStageScalarDQA);
-	}
+	CExpression *pexprTwoStageScalarDQA = PexprSplitHelper(
+		mp, col_factory, md_accessor, pexpr, pexprRelational, phmexprcr,
+		pdrgpcrArgDQA, CLogicalGbAgg::EasTwoStageScalarDQA);
+	pxfres->Add(pexprTwoStageScalarDQA);
 
 	// generate local DQA, global agg for both scalar and non-scalar agg cases.
 	// for a query like "select count(distinct a) from bar;"
@@ -454,6 +451,7 @@ CXformSplitDQA::PexprSplitHelper(CMemoryPool *mp, CColumnFactory *col_factory,
 			{
 				CExpression *pexprDirectArg =
 					(*(*pexprAggFunc)[EaggfuncIndexDistinct])[ul];
+				pexprDirectArg->AddRef();
 				pdrgpexprDirectArgs->Append(pexprDirectArg);
 			}
 			pdrgpexprChildren->Append(GPOS_NEW(mp) CExpression(
