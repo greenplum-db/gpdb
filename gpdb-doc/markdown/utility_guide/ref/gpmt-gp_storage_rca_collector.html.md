@@ -1,6 +1,6 @@
 # gpmt gp_storage_rca_collector 
 
-This tool collects storage-related artificats and generates a file which can be provided to VMware Customer Support for diagnosis of storage-related errors or system failures.
+This tool collects storage-related artifacts and generates a file which can be provided to VMware Customer Support for diagnosis of storage-related errors or system failures.
 
 ## <a id="usage"></a>Usage 
 

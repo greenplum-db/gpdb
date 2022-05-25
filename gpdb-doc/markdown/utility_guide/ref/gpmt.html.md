@@ -1,6 +1,6 @@
 # gpmt 
 
-GPMT \(Greenplum Magic Tool\) provides a set of diagnostic utilities to troubleshoot and resolve common supportability issues, along with a consistent method for gathering information required by VMware Support.
+GPMT (Greenplum Magic Tool) provides a set of diagnostic utilities to troubleshoot and resolve common supportability issues, along with a consistent method for gathering information required by VMware Support.
 
 ## <a id="syn"></a>Synopsis 
 
@@ -19,14 +19,17 @@ gpmt -verbose
 
 **Greenplum**
 
-[analyze\_session](gpmt-analyze_session.html)
+[analyze_session](gpmt-analyze_session.html)
 :   Collect information from a hung Greenplum Database session for remote analysis.
 
 catalogbackup
 :   For VMware Support use only. Back up catalog prior to performing catalog repairs.
 
-[gp\_log\_collector](gpmt-gp_log_collector.html)
+[gp_log_collector](gpmt-gp_log_collector.html)
 :   Basic Greenplum Database log collection utility.
+
+[gp_storage_rca_collector](gpmt-gp_storage_rca_collector.html.md)
+:   Collects storage-related artifacts.
 
 gpcheckcat
 :   For VMware Support use only. Greenplum Database gpcheckcat log analysis.
@@ -40,7 +43,7 @@ gpcheckup
 [packcore](gpmt-packcore.html)
 :   Package core files into single tarball for remote analysis.
 
-primarymirror\_lengths
+primarymirror_lengths
 :   For VMware Support use only. Check whether primary and mirror AO and AOCO relfiles are the correct lengths.
 
 tablecollect
