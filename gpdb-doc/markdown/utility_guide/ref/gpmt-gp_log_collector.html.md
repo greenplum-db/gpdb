@@ -51,23 +51,14 @@ This tool collects Greenplum and system log files, along with the relevant confi
 -with-gptext-only
 :   Only Collect GPText logs.
 
-**Note**: Hostnames provided through `-hostfile` or `-h` must match the hostname column in`gp_segment_configuration`.
+**Note**: Hostnames provided through `-hostfile` or `-h` must match the hostname column in `gp_segment_configuration`.
 
 The tool also collects the following information:
 
 |Source|Files and outputs|
 |------|-----------------|
-|Database parameters|-   `version`
--   `uptime`
--   `pg_db_role_setting`
--   `pg_resqueue`
--   `pg_resgroup_config`
--   `pg_database`
--   `gp_segment_configuration`
--   `gp_configuration_history`
-
-|
-|Segment servers parameters|-   `uname -a`
+| Database parameters | <ul><li>`version`</li><li>`uptime`</li><li>`pg_resqueue`</li><li>`pg_resgroup_config`</li><li>`pg_database`</li><li>`gp_segment_configuration`</li><li>`gp_configuration_history`</li> |
+| Segment server parameters |-   `uname -a`
 -   `sysctl -a`
 -   `psaux`
 -   `netstat -rn`
