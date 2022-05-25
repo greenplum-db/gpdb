@@ -191,10 +191,11 @@ NORMALIZE_CODESET_IN_LOCALE () {
 	echo "$language_and_territory$([ ! -z $codeset ] && echo ".$codeset")$([ ! -z $modifier ] && echo "@$modifier")"
 }
 
-IN_ARRAY () {
+LOCALE_IS_AVAILABLE () {
 	local locale=$(NORMALIZE_CODESET_IN_LOCALE $1)
+	local all_available_locales=$(locale -a)
 
-	for v in $2; do
+	for v in $all_available_locales; do
 		if [ x"$locale" == x"$v" ] || [ x"$1" == x"$v" ]; then
 			return 1
 		fi

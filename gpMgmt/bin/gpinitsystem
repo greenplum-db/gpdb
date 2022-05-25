@@ -477,7 +477,7 @@ CHK_PARAMS () {
 		# segment hosts.
 		LOCALE_SETTING=$(USE_FIRST_SET_ARG $REQ_LOCALE_SETTING $LC_ALL)
 		if [ x"" != x"$LOCALE_SETTING" ]; then
-			IN_ARRAY $LOCALE_SETTING "`locale -a`"
+			LOCALE_IS_AVAILABLE $LOCALE_SETTING
 			if [ $? -eq 0 ]; then
 				ERROR_EXIT "[FATAL]-Value $LOCALE_SETTING is not a valid value for --locale on this system."
 			fi
@@ -485,7 +485,7 @@ CHK_PARAMS () {
 
 		LCCOLLATE=$(USE_FIRST_SET_ARG $LCCOLLATE $LC_COLLATE $LOCALE_SETTING)
 		if [ x"" != x"$LCCOLLATE" ]; then
-			IN_ARRAY $LCCOLLATE "`locale -a`"
+			LOCALE_IS_AVAILABLE $LCCOLLATE
 			if [ $? -eq 0 ]; then
 				ERROR_EXIT "[FATAL]-Value $LCCOLLATE is not a valid value for --lc-collate on this system."
 			fi	
@@ -493,7 +493,7 @@ CHK_PARAMS () {
 
 		LCCTYPE=$(USE_FIRST_SET_ARG $LCCTYPE $LC_CTYPE $LOCALE_SETTING)
 		if [ x"" != x"$LCCTYPE" ]; then
-			IN_ARRAY $LCCTYPE "`locale -a`"
+			LOCALE_IS_AVAILABLE $LCCTYPE
 			if [ $? -eq 0 ]; then
 				ERROR_EXIT "[FATAL]-Value $LCCTYPE is not a valid value for --lc-ctype on this system."
 			fi
@@ -501,7 +501,7 @@ CHK_PARAMS () {
 
 		LCMESSAGES=$(USE_FIRST_SET_ARG $LCMESSAGES $LC_MESSAGES $LOCALE_SETTING)
 		if [ x"" != x"$LCMESSAGES" ]; then
-			IN_ARRAY $LCMESSAGES "`locale -a`"
+			LOCALE_IS_AVAILABLE $LCMESSAGES
 			if [ $? -eq 0 ]; then
 				ERROR_EXIT "[FATAL]-Value $LCMESSAGES is not a valid value for --lc-messages on this system."
 			fi
@@ -509,7 +509,7 @@ CHK_PARAMS () {
 		
 		LCMONETARY=$(USE_FIRST_SET_ARG $LCMONETARY $LC_MONETARY $LOCALE_SETTING)
 		if [ x"" != x"$LCMONETARY" ]; then
-			IN_ARRAY $LCMONETARY "`locale -a`"
+			LOCALE_IS_AVAILABLE $LCMONETARY
 			if [ $? -eq 0 ]; then
 				ERROR_EXIT "[FATAL]-Value $LCMONETARY is not a valid value for --lc-monetary on this system."
 			fi
@@ -517,7 +517,7 @@ CHK_PARAMS () {
 		
 		LCNUMERIC=$(USE_FIRST_SET_ARG $LCNUMERIC $LC_NUMERIC $LOCALE_SETTING)
 		if [ x"" != x"$LCNUMERIC" ]; then
-			IN_ARRAY $LCNUMERIC "`locale -a`"
+			LOCALE_IS_AVAILABLE $LCNUMERIC
 			if [ $? -eq 0 ]; then
 				ERROR_EXIT "[FATAL]-Value $LCNUMERIC is not a valid value for --lc-numeric on this system."
 			fi
@@ -525,7 +525,7 @@ CHK_PARAMS () {
 		
 		LCTIME=$(USE_FIRST_SET_ARG $LCTIME $LC_TIME $LOCALE_SETTING)
 		if [ x"" != x"$LCTIME" ]; then
-			IN_ARRAY $LCTIME "`locale -a`"
+			LOCALE_IS_AVAILABLE $LCTIME
 			if [ $? -eq 0 ]; then
 				ERROR_EXIT "[FATAL]-Value $LCTIME is not a valid value for --lc-time on this system."
 			fi
