@@ -544,7 +544,7 @@ SELECT diskquota.resume();</codeblock>
               <li>If you <codeph>VACUUM FULL</codeph> all tables, set the quota to be no
                 smaller than the size of the largest table in the database.</li>
             </ul></p></li>
-        <li>The size of uncommited tables are not counted in quota views. Even though the
+        <li>The size of uncommitted tables are not counted in quota views. Even though the
           <codeph>diskquota.show_fast_role_quota_view</codeph> view may display a smaller
           used quota than the quota limit, a new query may trigger a quota exceeded
           condition in the following circumstance:
