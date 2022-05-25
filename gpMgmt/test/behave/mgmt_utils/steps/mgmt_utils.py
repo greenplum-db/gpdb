@@ -3348,24 +3348,28 @@ declare -a MIRROR_ARRAY=(
 def step_impl(context):
     query = "select dbid, port, hostname, datadir from gp_segment_configuration where content >= 0"
     conn = dbconn.connect(dbconn.DbURL(dbname='postgres'), unsetSearchPath=False)
-    segments = dbconn.execSQL(conn, query).fetchall()
-    for segment in segments:
-        dbid = "'%s'" % segment[0]
-        port = "'%s'" % segment[1]
-        hostname = segment[2]
-        datadir = segment[3]
+    try:
+        segments = dbconn.execSQL(conn, query).fetchall()
+        for segment in segments:
+            dbid = "'%s'" % segment[0]
+            port = "'%s'" % segment[1]
+            hostname = segment[2]
+            datadir = segment[3]
 
-        ## check postgresql.conf
-        remote_postgresql_conf = "%s/%s" % (datadir, 'postgresql.conf')
-        local_conf_copy = os.path.join(os.getenv("MASTER_DATA_DIRECTORY"), "%s.%s" % ('postgresql.conf', hostname))
-        cmd = Command(name="Copy remote conf to local to diff",
-                    cmdStr='scp %s:%s %s' % (hostname, remote_postgresql_conf, local_conf_copy))
-        cmd.run(validateAfter=True)
+            ## check postgresql.conf
+            remote_postgresql_conf = "%s/%s" % (datadir, 'postgresql.conf')
+            local_conf_copy = os.path.join(os.getenv("MASTER_DATA_DIRECTORY"), "%s.%s" % ('postgresql.conf', hostname))
+            cmd = Command(name="Copy remote conf to local to diff",
+                          cmdStr='scp %s:%s %s' % (hostname, remote_postgresql_conf, local_conf_copy))
+            cmd.run(validateAfter=True)
 
-        dic = pgconf.readfile(filename=local_conf_copy)
-        if str(dic['port']) != port:
-            raise Exception("port value in postgresql.conf of %s is incorrect. Expected:%s, given:%s" %
-                            (hostname, port, dic['port']))
+            dic = pgconf.readfile(filename=local_conf_copy)
+            if str(dic['port']) != port:
+                raise Exception("port value in postgresql.conf of %s is incorrect. Expected:%s, given:%s" %
+                                (hostname, port, dic['port']))
+    finally:
+        if conn:
+            conn.close()
 
 @given('the transactions are started for dml')
 def impl(context):
