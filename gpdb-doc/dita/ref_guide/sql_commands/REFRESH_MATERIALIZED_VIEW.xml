@@ -7,7 +7,7 @@
     <p id="sql_command_desc">Replaces the contents of a materialized view.</p>
     <section id="section2">
       <title>Synopsis</title>
-      <codeblock id="sql_command_synopsis">REFRESH MATERIALIZED VIEW [ CONCURRENTLY ] <varname>name</varname>
+      <codeblock id="sql_command_synopsis">REFRESH MATERIALIZED VIEW [ CONCURRENTLY ] &lt;name>
     [ WITH [ NO ] DATA ]</codeblock>
     </section>
     <section id="section3">
@@ -55,7 +55,7 @@
     </section>
     <section id="section5">
       <title>Notes</title>
-      <p>While the default index for future <codeph><xref href="CLUSTER.xml"/></codeph> operations
+      <p>While the default index for future <xref href="CLUSTER.xml"/> operations
         is retained, <codeph>REFRESH MATERIALIZED VIEW</codeph> does not order the generated rows
         based on this property. If you want the data to be ordered upon generation, you must use an
           <codeph>ORDER BY</codeph> clause in the materialized view query. However, if a
@@ -78,8 +78,8 @@
       <p><codeph>REFRESH MATERIALIZED VIEW</codeph> is a Greenplum Database extension of the SQL
         standard.</p>
     </section>
-    <section id="section8"><title>See Also</title><codeph><xref href="ALTER_MATERIALIZED_VIEW.xml"
-        /></codeph>, <codeph><xref href="CREATE_MATERIALIZED_VIEW.xml"/></codeph>, <codeph><xref
-          href="DROP_MATERIALIZED_VIEW.xml"/></codeph></section>
+    <section id="section8"><title>See Also</title><xref href="ALTER_MATERIALIZED_VIEW.xml"
+        />, <xref href="CREATE_MATERIALIZED_VIEW.xml"/>, <xref
+          href="DROP_MATERIALIZED_VIEW.xml"/></section>
   </body>
 </topic>

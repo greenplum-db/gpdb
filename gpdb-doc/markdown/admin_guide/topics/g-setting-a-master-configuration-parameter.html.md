@@ -13,5 +13,5 @@ To set a master configuration parameter, set it at the Greenplum Database master
 -   **[Setting Parameters in a Session](../topics/g-setting-parameters-in-a-session.html)**  
 
 
-**Parent topic:**[Setting Configuration Parameters](../topics/g-setting-configuration-parameters.html)
+**Parent topic:** [Setting Configuration Parameters](../topics/g-setting-configuration-parameters.html)
 

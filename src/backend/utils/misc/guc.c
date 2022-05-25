@@ -2465,7 +2465,7 @@ static struct config_int ConfigureNamesInt[] =
 
 	{
 		{"idle_in_transaction_session_timeout", PGC_USERSET, CLIENT_CONN_STATEMENT,
-			gettext_noop("Sets the maximum allowed duration of any idling transaction."),
+			gettext_noop("Sets the maximum allowed idle time between queries, when in a transaction."),
 			gettext_noop("A value of 0 turns off the timeout."),
 			GUC_UNIT_MS
 		},
@@ -2722,7 +2722,7 @@ static struct config_int ConfigureNamesInt[] =
 			NULL
 		},
 		&max_replication_slots,
-		10, 1, MAX_BACKENDS /* XXX? */ ,
+		10, 0, MAX_BACKENDS /* XXX? */ ,
 		NULL, NULL, NULL
 	},
 

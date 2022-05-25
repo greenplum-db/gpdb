@@ -116,5 +116,5 @@ This example specifies LDAP authentication with a secure connection and TLS/SSL 
 host all ldapsuser 0.0.0.0/0 ldap ldapserver=ldaps://myldap.com ldapprefix="uid=" ldapsuffix=",ou=People,dc=example,dc=com"
 ```
 
-**Parent topic:**[Configuring Client Authentication](client_auth.html)
+**Parent topic:** [Configuring Client Authentication](client_auth.html)
 

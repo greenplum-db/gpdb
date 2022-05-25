@@ -7,13 +7,13 @@
         <p>Adds and/or initializes a standby coordinator host for a Greenplum Database system.</p>
         <section id="section2">
             <title>Synopsis</title>
-            <codeblock><b>gpinitstandby</b> { <b>-s</b> <varname>standby_hostname</varname> [<b>-P</b> port] | <b>-r</b> | <b>-n</b> } [<b>-a</b>] [<b>-q</b>] 
-    [<b>-D</b>] [<b>-S</b> <varname>standby_data_directory</varname>] [<b>-l</b> <varname>logfile_directory</varname>] 
-    [<b>--hba-hostnames</b> <varname>boolean</varname>] 
+            <codeblock>gpinitstandby { -s &lt;standby_hostname> [-P port] | -r | -n } [-a] [-q] 
+    [-D] [-S &lt;standby_data_directory>] [-l &lt;logfile_directory>] 
+    [--hba-hostnames &lt;boolean>] 
 
-<b>gpinitstandby</b> <b>-v</b> 
+gpinitstandby -v 
 
-<b>gpinitstandby</b> <b>-?</b></codeblock>
+gpinitstandby -?</codeblock>
         </section>
         <section id="section3">
             <title>Description</title>
@@ -157,10 +157,9 @@
         </section>
         <section id="section6">
             <title>See Also</title>
-            <p><codeph><xref href="./gpinitsystem.xml#topic1" type="topic" format="dita"/></codeph>,
-                        <codeph><xref href="gpaddmirrors.xml#topic1" type="topic" format="dita"
-                    /></codeph>, <codeph><xref href="gpactivatestandby.xml#topic1" type="topic"
-                        format="dita"/></codeph></p>
+            <p><xref href="./gpinitsystem.xml#topic1" type="topic" format="dita"/>, <xref
+                    href="gpaddmirrors.xml#topic1" type="topic" format="dita"/>, <xref
+                    href="gpactivatestandby.xml#topic1" type="topic" format="dita"/></p>
         </section>
     </body>
 </topic>

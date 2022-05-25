@@ -54,5 +54,5 @@ A number of things can prevent a client application from successfully connecting
           </tr>
         </tbody></table>
         
-**Parent topic:**[Accessing the Database](../../access_db/topics/g-accessing-the-database.html)
+**Parent topic:** [Accessing the Database](../../access_db/topics/g-accessing-the-database.html)
 

@@ -219,5 +219,5 @@ SELECT plainto_tsquery('supernovae stars');
  'sn'
 ```
 
-**Parent topic:**[Using Full Text Search](../textsearch/full-text-search.html)
+**Parent topic:** [Using Full Text Search](../textsearch/full-text-search.html)
 

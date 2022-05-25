@@ -173,5 +173,5 @@ Example: In a 4 node cluster, with 12 segments \(3 per node\), if the `--jobs` f
 `http_proxy`
 :   Optional. Allow AWS S3 access via a proxy server. The parameter should contain the proxy url in the form of `http://username:password@proxy.example.com:proxy_port` or `http://proxy.example.com:proxy_port`.
 
-**Parent topic:**[Using gpbackup Storage Plugins](../managing/backup-plugins.html)
+**Parent topic:** [Using gpbackup Storage Plugins](../managing/backup-plugins.html)
 

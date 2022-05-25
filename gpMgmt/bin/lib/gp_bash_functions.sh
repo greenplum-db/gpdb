@@ -37,6 +37,11 @@ GP_UNIQUE_COMMAND=gpstart
 findCmdInPath() {
 		cmdtofind=$1
 
+		CMD=`which $cmdtofind`
+		if [ $? -eq 0 ]; then
+				echo $CMD
+				return
+		fi
 		for pathel in ${CMDPATH[@]}
 				do
 				CMD=$pathel/$cmdtofind

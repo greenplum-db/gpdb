@@ -8,45 +8,45 @@
       database.</p>
     <section id="section2">
       <title>Synopsis</title>
-      <codeblock id="sql_command_synopsis">ALTER EXTENSION <varname>name</varname> UPDATE [ TO <varname>new_version</varname> ]
-ALTER EXTENSION <varname>name</varname> SET SCHEMA <varname>new_schema</varname>
-ALTER EXTENSION <varname>name</varname> ADD <varname>member_object</varname>
-ALTER EXTENSION <varname>name</varname> DROP <varname>member_object</varname>
+      <codeblock id="sql_command_synopsis">ALTER EXTENSION &lt;name> UPDATE [ TO &lt;new_version> ]
+ALTER EXTENSION &lt;name> SET SCHEMA &lt;new_schema>
+ALTER EXTENSION &lt;name> ADD &lt;member_object>
+ALTER EXTENSION &lt;name> DROP &lt;member_object>
 
-where <varname>member_object</varname> is:
+where &lt;member_object> is:
 
-  ACCESS METHOD <varname>object_name</varname> |
-  AGGREGATE <varname>aggregate_name</varname> ( <varname>aggregate_signature</varname> ) |
-  CAST (<varname>source_type</varname> AS <varname>target_type</varname>) |
-  COLLATION <varname>object_name</varname> |
-  CONVERSION <varname>object_name</varname> |
-  DOMAIN <varname>object_name</varname> |
-  EVENT TRIGGER <varname>object_name</varname> |
-  FOREIGN DATA WRAPPER <varname>object_name</varname> |
-  FOREIGN TABLE <varname>object_name</varname> |
-  FUNCTION <varname>function_name</varname> ( [ [ <varname>argmode</varname> ] [ <varname>argname</varname> ] <varname>argtype</varname> [, ...] ] ) |
-  MATERIALIZED VIEW <varname>object_name</varname> |
-  OPERATOR <varname>operator_name</varname> (<varname>left_type</varname>, <varname>right_type</varname>) |
-  OPERATOR CLASS <varname>object_name</varname> USING <varname>index_method</varname> |
-  OPERATOR FAMILY <varname>object_name</varname> USING <varname>index_method</varname> |
-  [ PROCEDURAL ] LANGUAGE <varname>object_name</varname> |
-  SCHEMA <varname>object_name</varname> |
-  SEQUENCE <varname>object_name</varname> |
-  SERVER <varname>object_name</varname> |
-  TABLE <varname>object_name</varname> |
-  TEXT SEARCH CONFIGURATION <varname>object_name</varname> |
-  TEXT SEARCH DICTIONARY <varname>object_name</varname> |
-  TEXT SEARCH PARSER <varname>object_name</varname> |
-  TEXT SEARCH TEMPLATE <varname>object_name</varname> |
-  TRANSFORM FOR <varname>type_name</varname> LANGUAGE <varname>lang_name</varname> |
-  TYPE <varname>object_name</varname> |
-  VIEW <varname>object_name</varname>
+  ACCESS METHOD &lt;object_name> |
+  AGGREGATE &lt;aggregate_name> ( &lt;aggregate_signature> ) |
+  CAST (&lt;source_type> AS &lt;target_type>) |
+  COLLATION &lt;object_name> |
+  CONVERSION &lt;object_name> |
+  DOMAIN &lt;object_name> |
+  EVENT TRIGGER &lt;object_name> |
+  FOREIGN DATA WRAPPER &lt;object_name> |
+  FOREIGN TABLE &lt;object_name> |
+  FUNCTION &lt;function_name> ( [ [ &lt;argmode> ] [ &lt;argname> ] &lt;argtype> [, ...] ] ) |
+  MATERIALIZED VIEW &lt;object_name> |
+  OPERATOR &lt;operator_name> (&lt;left_type>, &lt;right_type>) |
+  OPERATOR CLASS &lt;object_name> USING &lt;index_method> |
+  OPERATOR FAMILY &lt;object_name> USING &lt;index_method> |
+  [ PROCEDURAL ] LANGUAGE &lt;object_name> |
+  SCHEMA &lt;object_name> |
+  SEQUENCE &lt;object_name> |
+  SERVER &lt;object_name> |
+  TABLE &lt;object_name> |
+  TEXT SEARCH CONFIGURATION &lt;object_name> |
+  TEXT SEARCH DICTIONARY &lt;object_name> |
+  TEXT SEARCH PARSER &lt;object_name> |
+  TEXT SEARCH TEMPLATE &lt;object_name> |
+  TRANSFORM FOR &lt;type_name> LANGUAGE &lt;lang_name> |
+  TYPE &lt;object_name> |
+  VIEW &lt;object_name>
 
-and <varname>aggregate_signature</varname> is:
+and &lt;aggregate_signature> is:
 
 * |
-[ <varname>argmode</varname> ] [ <varname>argname</varname> ] <varname>argtype</varname> [ , ... ] |
-[ [ <varname>argmode</varname> ] [ <varname>argname</varname> ] <varname>argtype</varname> [ , ... ] ] ORDER BY [ <varname>argmode</varname> ] [ <varname>argname</varname> ] <varname>argtype</varname> [ , ... ]</codeblock>
+[ &lt;argmode> ] [ &lt;argname> ] &lt;argtype> [ , ... ] |
+[ [ &lt;argmode> ] [ &lt;argname> ] &lt;argtype> [ , ... ] ] ORDER BY [ &lt;argmode> ] [ &lt;argname> ] &lt;argtype> [ , ... ]</codeblock>
     </section>
     <section id="section3">
       <title>Description</title>
@@ -209,8 +209,8 @@ and <varname>aggregate_signature</varname> is:
     </section>
     <section id="section7">
       <title>See Also</title>
-      <p><codeph><xref href="CREATE_EXTENSION.xml#topic1">CREATE EXTENSION</xref></codeph>,
-            <codeph><xref href="DROP_EXTENSION.xml#topic1">DROP EXTENSION</xref></codeph></p>
+      <p><xref href="CREATE_EXTENSION.xml#topic1">CREATE EXTENSION</xref>,
+           <xref href="DROP_EXTENSION.xml#topic1">DROP EXTENSION</xref></p>
     </section>
   </body>
 </topic>

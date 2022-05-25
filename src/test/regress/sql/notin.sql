@@ -475,6 +475,39 @@ select * from t1_12930 where (a, b) not in (select a, b from t2_12930);
 explain select * from t1_12930 where (a, b) not in (select a, b from t2_12930) and b is not null;
 select * from t1_12930 where (a, b) not in (select a, b from t2_12930) and b is not null;
 
+-- outer plan's target list does not contain the columns in qual
+-- non-nullable: t1.a, t1.b, t2.a, t2.b
+truncate t1_12930;
+truncate t2_12930;
+alter table t1_12930 alter column b set not null;
+insert into t1_12930 values (1, 1);
+insert into t2_12930 values (1, 1);
+explain select 1 from t1_12930 where (a, b) not in (select a, b from t2_12930);
+select 1 from t1_12930 where (a, b) not in (select a, b from t2_12930);
+
+-- RTE contains view 
+-- non-nullable: t1.a, t1.b, t2.a, t2.b
+create view v_12930 as select a,b from t1_12930;
+explain select * from t2_12930 where (a,b) not in (select a,b from v_12930);
+select * from t2_12930 where (a,b) not in (select a,b from v_12930);
+explain select * from v_12930 where (a,b) not in (select a,b from t2_12930);
+select * from v_12930 where (a,b) not in (select a,b from t2_12930);
+
+-- var from RTE_JOIN
+-- non-nullable: t1.a, t1.b, t2.a, t2.b, r1.x, r1.y
+truncate t1_12930;
+truncate t2_12930;
+create table r1_12930(x int not null, y int not null);
+insert into t1_12930 values (1, 2), (1, 3);
+insert into t2_12930 values (1, 3), (1, 4);
+insert into r1_12930 values (1, 2), (1, 5);
+explain select * from r1_12930
+inner join t1_12930 on a = x
+where (x, b) not in (select a,b from t2_12930);
+select * from r1_12930
+inner join t1_12930 on a = x
+where (x, b) not in (select a,b from t2_12930);
+
 -- test for issue https://github.com/greenplum-db/gpdb/issues/13212
 create table t1_13212(a int not null, b int not null);
 create table t2_13212(a int not null, b int not null);

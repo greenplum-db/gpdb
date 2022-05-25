@@ -8,13 +8,13 @@
       required by VMware Support.</p>
     <section>
       <title>Synopsis</title>
-      <codeblock><b>gpmt </b> <varname>tool</varname> [<varname>tool_options</varname> ...] 
+      <codeblock>gpmt &lt;tool> [&lt;tool_options> ...] 
 
-<b>gpmt -hostfile</b> <varname>FILE</varname>
+gpmt -hostfile &lt;FILE>
 
-<b>gpmt -help</b>
+gpmt -help
 
-<b>gpmt -verbose</b>
+gpmt -verbose
 </codeblock>
     </section>
     <section>

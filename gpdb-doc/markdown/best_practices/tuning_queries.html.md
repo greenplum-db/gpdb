@@ -10,7 +10,7 @@ When a query runs slower than you expect, you can view the plan the optimizer se
 
 The optimizer produces plans based on statistics generated for tables. It is important to have accurate statistics to produce the best plan. See [Updating Statistics with ANALYZE](analyze.html) in this guide for information about updating statistics.
 
-**Parent topic:**[Greenplum Database Best Practices](intro.html)
+**Parent topic:** [Greenplum Database Best Practices](intro.html)
 
 ## <a id="topic_s1r_jfb_s4"></a>How to Generate Explain Plans 
 

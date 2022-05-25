@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
-<topic id="topic1"><title id="en20941">SHOW</title><body><p id="sql_command_desc">Shows the value of a system configuration parameter.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">SHOW <varname>configuration_parameter</varname>
+<topic id="topic1"><title id="en20941">SHOW</title><body><p id="sql_command_desc">Shows the value of a system configuration parameter.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">SHOW &lt;configuration_parameter>
 
 SHOW ALL</codeblock></section><section id="section3"><title>Description</title><p><codeph>SHOW</codeph> displays the current settings of Greenplum Database
 system configuration parameters. You can set these parameters with the
@@ -30,5 +30,5 @@ details.</p></section><section id="section4"><title>Parameters</title><parml><pl
        .
  xmlbinary        | base64  | Sets how binary values are to be encoded in XML.
  xmloption        | content | Sets whether XML data in implicit parsing and s...
-(331 rows)</codeblock></section><section id="section6"><title>Compatibility</title><p><codeph>SHOW</codeph> is a Greenplum Database extension.</p></section><section id="section7"><title>See Also</title><p><codeph><xref href="SET.xml#topic1" type="topic" format="dita"/></codeph>, <codeph><xref
-            href="RESET.xml#topic1" type="topic" format="dita"/></codeph></p></section></body></topic>
+(331 rows)</codeblock></section><section id="section6"><title>Compatibility</title><p><codeph>SHOW</codeph> is a Greenplum Database extension.</p></section><section id="section7"><title>See Also</title><p><xref href="SET.xml#topic1" type="topic" format="dita"/>, <xref
+            href="RESET.xml#topic1" type="topic" format="dita"/></p></section></body></topic>

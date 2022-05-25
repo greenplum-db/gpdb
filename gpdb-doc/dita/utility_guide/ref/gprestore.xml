@@ -9,34 +9,34 @@
       on segment hosts in CSV data files.</p>
     <section>
       <title>Synopsis</title>
-      <codeblock><b>gprestore --timestamp</b> <varname>YYYYMMDDHHMMSS</varname>
-   [<b>--backup-dir</b> <varname>directory</varname>]
-   [<b>--create-db</b>]
-   [<b>--debug</b>]
-   [<b>--exclude-schema</b> <varname>schema_name</varname> [<b>--exclude-schema</b> <varname>schema_name</varname> ...]]
-   [<b>--exclude-table</b> <varname>schema.table</varname> [<b>--exclude-table</b> <varname>schema.table</varname> ...]]
-   [<b>--exclude-table-file</b> <varname>file_name</varname>]
-   [<b>--exclude-schema-file</b> <varname>file_name</varname>]
-   [<b>--include-schema</b> <varname>schema_name</varname> [<b>--include-schema</b> <varname>schema_name</varname> ...]]
-   [<b>--include-table</b> <varname>schema.table</varname> [<b>--include-table</b> <varname>schema.table</varname> ...]]
-   [<b>--include-schema-file</b> <varname>file_name</varname>]
-   [<b>--include-table-file</b> <varname>file_name</varname>]
-   [<b>--truncate-table</b>]
-   [<b>--redirect-schema</b> <varname>schema_name</varname>]
-   [<b>--data-only</b> | <b>--metadata-only</b>]
-   [<b>--incremental</b>]
-   [<b>--jobs</b> <varname>int</varname>]
-   [<b>--on-error-continue</b>]
-   [<b>--plugin-config</b> <varname>config_file_location</varname>]
-   [<b>--quiet</b>]
-   [<b>--redirect-db</b> <varname>database_name</varname>]
-   [<b>--verbose</b>]
-   [<b>--version</b>]
-   [<b>--with-globals</b>]
-   [<b>--with-stats</b>]
-   [<b>--run-analyze</b>]
+      <codeblock>gprestore --timestamp &lt;YYYMMDDHHMMSS>
+   [--backup-dir &lt;directory>]
+   [--create-db]
+   [--debug]
+   [--exclude-schema &lt;schema_name> [--exclude-schema &lt;schema_name> ...]]
+   [--exclude-table &lt;schema.table> [--exclude-table &lt;schema.table> ...]]
+   [--exclude-table-file &lt;file_name>]
+   [--exclude-schema-file &lt;file_name>]
+   [--include-schema &lt;schema_name> [--include-schema &lt;schema_name> ...]]
+   [--include-table &lt;schema.table> [--include-table &lt;schema.table> ...]]
+   [--include-schema-file &lt;file_name>]
+   [--include-table-file &lt;file_name>]
+   [--truncate-table]
+   [--redirect-schema &lt;schema_name>]
+   [--data-only | --metadata-only]
+   [--incremental]
+   [--jobs &lt;int>]
+   [--on-error-continue]
+   [--plugin-config &lt;config_file_location>]
+   [--quiet]
+   [--redirect-db &lt;database_name>]
+   [--verbose]
+   [--version]
+   [--with-globals]
+   [--with-stats]
+   [--run-analyze]
 
-<b>gprestore --help</b></codeblock>
+gprestore --help</codeblock>
     </section>
     <section>
       <title>Description</title>
@@ -148,8 +148,7 @@
           <pd><codeph>SEQUENCE</codeph> values are updated to match the values taken at the time of
             the backup.</pd>
           <pd>To restore only database tables, without restoring the table data, see the option
-                <codeph><xref href="#topic1/metadata_only" format="dita"
-              >--metadata-only</xref></codeph>.</pd>
+              <xref href="#topic1/metadata_only" format="dita">--metadata-only</xref>.</pd>
         </plentry>
         <plentry>
           <pt><b>--debug</b></pt>
@@ -175,8 +174,7 @@
               <codeph>--include-table</codeph>.</pd>
         </plentry>
         <plentry>
-          <pt><b>--exclude-table</b>
-            <varname>schema.table</varname></pt>
+          <pt><b>--exclude-table</b> &lt;schema.table></pt>
           <pd>Optional. Specifies a table to exclude from the restore operation. You can specify
             this option multiple times. The table must be in the format
               <codeph>&lt;schema-name>.&lt;table-name></codeph>. If a table or schema name uses any
@@ -356,9 +354,8 @@
           <pd>The backup set must contain the DDL for tables to be restored. For example, a backup
             created with the <codeph>gpbackup</codeph> option <codeph>--data-only</codeph> does not
             contain the DDL for tables. </pd>
-          <pd>To restore table data after you create the database tables, see the option
-                <codeph><xref href="#topic1/data_only" format="dita"
-            >--data-only</xref></codeph>.</pd>
+          <pd>To restore table data after you create the database tables, see the option <xref
+              href="#topic1/data_only" format="dita">--data-only</xref>.</pd>
         </plentry>
         <plentry>
           <pt><b>--on-error-continue</b></pt>
@@ -430,8 +427,8 @@
             partitioned table, <codeph>ANALYZE</codeph> is run on the root partitioned table. If
               <codeph>--with-stats</codeph> was specified for the backup, those statistics are
             ignored. You cannot use this option with <codeph>--with-stats</codeph>. </pd>
-          <pd>If the backup being restored used the <codeph>gpbackup</codeph> option <codeph><xref
-                href="gpbackup.xml#topic1/backup_leaf_part">--leaf-partition-data</xref></codeph>,
+          <pd>If the backup being restored used the <codeph>gpbackup</codeph> option <xref
+              href="gpbackup.xml#topic1/backup_leaf_part">--leaf-partition-data</xref>,
               <codeph>gprestore</codeph> runs <codeph>ANALYZE</codeph> only on the individual leaf
             partitions that are restored, not the root partitioned table. For Greenplum Database 5,
               <codeph>ANALYZE</codeph> updates the root partitioned table statistics when all leaf
@@ -493,9 +490,11 @@ $ gprestore --include-schema wikipedia --backup-dir /home/gpadmin/backups/ --tim
     <section id="section9">
       <title>See Also</title>
       <p>
-        <codeph><xref href="./gpbackup.xml" type="topic" format="dita"/></codeph>, <xref
-          href="../../admin_guide/managing/backup-gpbackup.html" format="html" scope="external">Parallel Backup with gpbackup and gprestore</xref> and <xref
-          href="../../admin_guide/managing/backup-s3-plugin.html" format="html" scope="external">Using the S3 Storage Plugin with gpbackup and gprestore</xref></p>
+        <xref href="./gpbackup.xml" type="topic" format="dita"/>, <xref
+          href="../../admin_guide/managing/backup-gpbackup.html" format="html" scope="external"
+          >Parallel Backup with gpbackup and gprestore</xref> and <xref
+          href="../../admin_guide/managing/backup-s3-plugin.html" format="html" scope="external"
+          >Using the S3 Storage Plugin with gpbackup and gprestore</xref></p>
     </section>
   </body>
 </topic>

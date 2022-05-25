@@ -1456,6 +1456,8 @@ CreateFunction(ParseState *pstate, CreateFunctionStmt *stmt)
 		returnsSet = false;
 	}
 
+	validate_sql_exec_location(execLocation, returnsSet);
+
 	if (list_length(trftypes_list) > 0)
 	{
 		ListCell   *lc;
@@ -1790,8 +1792,6 @@ AlterFunction(ParseState *pstate, AlterFunctionStmt *stmt)
 		procForm->proparallel = interpret_func_parallel(parallel_item);
 	if (describe_item)
 	{
-		// GPDB_12_MERGE_FIXME: This cannot happen, because grammar doesn't allow it.
-		// But we probably should support it.
 		elog(ERROR, "cannot change DESCRIBE function");
 	}
 	if (data_access_item)

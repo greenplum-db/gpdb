@@ -70,7 +70,7 @@
         <li id="me144139" class="- topic/li ">The provided Oracle compatibility functions handle
           implicit type conversions differently. For example, using the <codeph
             class="+ topic/ph pr-d/codeph ">decode</codeph>
-            function:<codeblock>decode(<varname>expression</varname>, <varname>value</varname>, <varname>return</varname> [,<varname>value</varname>, <varname>return</varname>]...
+            function:<codeblock>decode(&lt;expression>, &lt;value>, &lt;return> [,&lt;value>, &lt;return>]...
             [, default])</codeblock><p>The original <codeph>orafce</codeph> module
             implementation
             automatically converts <varname>expression</varname> and each <varname>value</varname>
@@ -129,7 +129,7 @@ SELECT DECODE(date1, '2001-11-11', '2001-01-01') FROM TEST;</codeblock><p> The G
         search path for the database to include the <codeph>oracle</codeph> schema name. For
         example, this command sets the default search path for a database to include the
           <codeph>oracle</codeph>
-        schema:<codeblock>ALTER DATABASE <varname>db_name</varname> SET <varname>search_path</varname> = "$user", public, oracle;</codeblock></p>
+        schema:<codeblock>ALTER DATABASE &lt;db_name> SET &lt;search_path> = "$user", public, oracle;</codeblock></p>
       <p>Note the following differences when using the Oracle Compatibility Functions
         with PostgreSQL vs. using them with Greenplum Database: </p>
       <ul id="ul_njs_p4l_4gb">

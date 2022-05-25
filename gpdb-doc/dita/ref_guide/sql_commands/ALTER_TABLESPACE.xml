@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
-<topic id="topic1"><title id="az137232">ALTER TABLESPACE</title><body><p id="sql_command_desc">Changes the definition of a tablespace.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">ALTER TABLESPACE <varname>name</varname> RENAME TO <varname>new_name</varname>
+<topic id="topic1"><title id="az137232">ALTER TABLESPACE</title><body><p id="sql_command_desc">Changes the definition of a tablespace.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">ALTER TABLESPACE &lt;name> RENAME TO &lt;new_name>
 
-ALTER TABLESPACE <varname>name</varname> OWNER TO <varname>new_owner</varname>
+ALTER TABLESPACE &lt;name> OWNER TO &lt;new_owner>
 
-ALTER TABLESPACE <varname>name</varname> SET ( <varname>tablespace_option</varname> = <varname>value</varname> [, ... ] )
+ALTER TABLESPACE &lt;name> SET ( &lt;tablespace_option> = &lt;value> [, ... ] )
 
-ALTER TABLESPACE <varname>name</varname> RESET ( <varname>tablespace_option</varname> [, ... ] )
+ALTER TABLESPACE &lt;name> RESET ( &lt;tablespace_option> [, ... ] )
 
 </codeblock></section><section id="section3"><title>Description</title><p><codeph>ALTER TABLESPACE</codeph> changes the definition of a tablespace.
 </p><p>You must own the tablespace to use <codeph>ALTER TABLESPACE</codeph>.
@@ -28,6 +28,6 @@ or <varname>gp_</varname> (reserved for system tablespaces). </pd></plentry><ple
                                 format="dita" scope="local">random-page-cost</xref>). This may be useful if one
                         tablespace is located on a disk which is faster or slower than the remainder
                         of the I/O subsystem. </pd>
-        </plentry></parml></section><section id="section5"><title>Examples</title><p>Rename tablespace <codeph>index_space</codeph> to <codeph>fast_raid</codeph>:</p><codeblock>ALTER TABLESPACE index_space RENAME TO fast_raid;</codeblock><p>Change the owner of tablespace <codeph>index_space</codeph>:</p><codeblock>ALTER TABLESPACE index_space OWNER TO mary;</codeblock></section><section id="section6"><title>Compatibility</title><p>There is no <codeph>ALTER TABLESPACE</codeph> statement in the SQL standard.</p></section><section id="section7"><title>See Also</title><p><codeph><xref href="./CREATE_TABLESPACE.xml#topic1" type="topic" format="dita"/></codeph>,
-            <codeph><xref href="./DROP_TABLESPACE.xml#topic1" type="topic" format="dita"
-        /></codeph></p></section></body></topic>
+        </plentry></parml></section><section id="section5"><title>Examples</title><p>Rename tablespace <codeph>index_space</codeph> to <codeph>fast_raid</codeph>:</p><codeblock>ALTER TABLESPACE index_space RENAME TO fast_raid;</codeblock><p>Change the owner of tablespace <codeph>index_space</codeph>:</p><codeblock>ALTER TABLESPACE index_space OWNER TO mary;</codeblock></section><section id="section6"><title>Compatibility</title><p>There is no <codeph>ALTER TABLESPACE</codeph> statement in the SQL standard.</p></section><section id="section7"><title>See Also</title><p><xref href="./CREATE_TABLESPACE.xml#topic1" type="topic" format="dita"/>,
+            <xref href="./DROP_TABLESPACE.xml#topic1" type="topic" format="dita"
+        /></p></section></body></topic>

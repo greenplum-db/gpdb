@@ -21,7 +21,7 @@
 
 #define APPENDONLY_COMPACTION_SEGNO_INVALID (-1)
 
-extern void AppendOnlyRecycleDeadSegments(Relation aorel);
+extern void AppendOptimizedRecycleDeadSegments(Relation aorel);
 extern void AppendOnlyCompact(Relation aorel,
 							  int compaction_segno,
 							  int *insert_segno,
@@ -34,6 +34,6 @@ extern bool AppendOnlyCompaction_ShouldCompact(
 								   bool isFull,
 								   Snapshot appendOnlyMetaDataSnapshot);
 extern void AppendOnlyThrowAwayTuple(Relation rel, TupleTableSlot *slot);
-extern void AppendOnlyTruncateToEOF(Relation aorel);
+extern void AppendOptimizedTruncateToEOF(Relation aorel);
 
 #endif

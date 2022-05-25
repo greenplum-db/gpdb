@@ -7,12 +7,12 @@
     <p id="sql_command_desc">Changes the definition of an external table.</p>
     <section id="section2"><title>Synopsis</title>
       <sectiondiv id="sql_cmd_synopsis">
-        <codeblock id="sql_command_synopsis">ALTER EXTERNAL TABLE <varname>name</varname> <varname>action</varname> [, ... ]</codeblock>
+        <codeblock id="sql_command_synopsis">ALTER EXTERNAL TABLE &lt;name> &lt;action> [, ... ]</codeblock>
         <p>where <varname>action</varname> is one of:</p>
-        <codeblock>  ADD [COLUMN] <varname>new_column</varname> <varname>type</varname>
-  DROP [COLUMN] <varname>column</varname> [RESTRICT|CASCADE]
-  ALTER [COLUMN] <varname>column</varname> TYPE <varname>type</varname>
-  OWNER TO <varname>new_owner</varname></codeblock>
+        <codeblock>  ADD [COLUMN] &lt;new_column> &lt;type>
+  DROP [COLUMN] &lt;column> [RESTRICT|CASCADE]
+  ALTER [COLUMN] &lt;column> TYPE &lt;type>
+  OWNER TO &lt;new_owner></codeblock>
       </sectiondiv></section>
     <section id="section3">
       <title>Description</title>
@@ -28,7 +28,7 @@
         <li id="ak137262"><b>OWNER</b> — Changes the owner of the external table to the specified
           user. </li>
       </ul>
-      <p>Use the <codeph><xref href="./ALTER_TABLE.xml#topic1" type="topic" format="dita"/></codeph>
+      <p>Use the <xref href="./ALTER_TABLE.xml#topic1" type="topic" format="dita"/>
         command to perform these actions on an external table.<ul id="ul_gtv_mcm_kbb">
           <li>Set (change) the table schema.</li>
           <li>Rename the table.</li>
@@ -89,9 +89,9 @@
     <section id="section6"><title>Compatibility</title><p><codeph>ALTER EXTERNAL TABLE</codeph> is a
         Greenplum Database extension. There is no <codeph>ALTER EXTERNAL TABLE</codeph> statement in
         the SQL standard or regular PostgreSQL. </p></section>
-    <section id="section7"><title>See Also</title><p><codeph><xref href="./CREATE_EXTERNAL_TABLE.xml#topic1" type="topic" format="dita"/></codeph>,
-            <codeph><xref href="./DROP_EXTERNAL_TABLE.xml#topic1" type="topic" format="dita"
-          /></codeph>,  <codeph><xref href="./ALTER_TABLE.xml#topic1" type="topic" format="dita"
-          /></codeph></p></section>
+    <section id="section7"><title>See Also</title><p><xref href="./CREATE_EXTERNAL_TABLE.xml#topic1" type="topic" format="dita"/>,
+            <xref href="./DROP_EXTERNAL_TABLE.xml#topic1" type="topic" format="dita"
+          />,  <xref href="./ALTER_TABLE.xml#topic1" type="topic" format="dita"
+          /></p></section>
   </body>
 </topic>

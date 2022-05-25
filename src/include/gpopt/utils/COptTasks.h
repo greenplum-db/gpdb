@@ -120,8 +120,7 @@ private:
 	static void Execute(void *(*func)(void *), void *func_arg);
 
 	// map GPOS log severity level to GPDB, print error and delete the given error buffer
-	static void LogExceptionMessageAndDelete(
-		CHAR *err_buf, ULONG severity_level = CException::ExsevInvalid);
+	static void LogExceptionMessageAndDelete(CHAR *err_buf);
 
 	// create optimizer configuration object
 	static COptimizerConfig *CreateOptimizerConfig(CMemoryPool *mp,

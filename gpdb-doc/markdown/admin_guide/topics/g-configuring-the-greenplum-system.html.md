@@ -13,5 +13,5 @@ Server configuration parameters affect the behavior of Greenplum Database.They a
 -   **[Configuration Parameter Categories](../topics/g-configuration-parameter-categories.html)**  
 
 
-**Parent topic:**[Managing a Greenplum System](../managing/partII.html)
+**Parent topic:** [Managing a Greenplum System](../managing/partII.html)
 

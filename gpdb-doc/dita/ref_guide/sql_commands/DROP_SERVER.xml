@@ -7,7 +7,7 @@
         <p id="sql_command_desc">Removes a foreign server descriptor.</p>
         <section id="section2">
             <title>Synopsis</title>
-            <codeblock id="sql_command_synopsis">DROP SERVER [ IF EXISTS ] <varname>servername</varname> [ CASCADE | RESTRICT ]</codeblock>
+            <codeblock id="sql_command_synopsis">DROP SERVER [ IF EXISTS ] &lt;servername> [ CASCADE | RESTRICT ]</codeblock>
         </section>
         <section id="section3">
             <title>Description</title>
@@ -53,9 +53,9 @@
         </section>
         <section id="section8">
             <title>See Also</title>
-            <p><codeph><xref href="CREATE_SERVER.xml#topic1">CREATE SERVER</xref></codeph>,
-                        <codeph><xref href="ALTER_SERVER.xml#topic1">ALTER
-                    SERVER</xref></codeph></p>
+            <p><xref href="CREATE_SERVER.xml#topic1">CREATE SERVER</xref>,
+                        <xref href="ALTER_SERVER.xml#topic1">ALTER
+                    SERVER</xref></p>
         </section>
     </body>
 </topic>

@@ -14,7 +14,7 @@ Roles are defined at the system level, meaning they are valid for all databases 
 
 In order to bootstrap the Greenplum Database system, a freshly initialized system always contains one predefined *superuser* role \(also referred to as the system user\). This role will have the same name as the operating system user that initialized the Greenplum Database system. Customarily, this role is named `gpadmin`. In order to create more roles you first have to connect as this initial role.
 
-**Parent topic:**[Managing Greenplum Database Access](partIII.html)
+**Parent topic:** [Managing Greenplum Database Access](partIII.html)
 
 ## <a id="topic2"></a>Security Best Practices for Roles and Privileges 
 
@@ -53,8 +53,8 @@ A database role may have a number of attributes that define what sort of tasks t
 See [Protecting Passwords in Greenplum Database](#topic9) for additional information about protecting login passwords.
 
 |
-|`VALID UNTIL '*timestamp*'`|Sets a date and time after which the role's password is no longer valid. If omitted the password will be valid for all time.|
-|`RESOURCE QUEUE *queue\_name*`|Assigns the role to the named resource queue for workload management. Any statement that role issues is then subject to the resource queue's limits. Note that the `RESOURCE QUEUE` attribute is not inherited; it must be set on each user-level \(`LOGIN`\) role.|
+|`VALID UNTIL 'timestamp'`|Sets a date and time after which the role's password is no longer valid. If omitted the password will be valid for all time.|
+|`RESOURCE QUEUE queue_name`|Assigns the role to the named resource queue for workload management. Any statement that role issues is then subject to the resource queue's limits. Note that the `RESOURCE QUEUE` attribute is not inherited; it must be set on each user-level \(`LOGIN`\) role.|
 |`DENY {deny_interval | deny_point}`|Restricts access during an interval, specified by day or day and time. For more information see [Time-based Authentication](#topic13).|
 
 You can set these attributes when you create the role, or later using the `ALTER ROLE` command. For example:

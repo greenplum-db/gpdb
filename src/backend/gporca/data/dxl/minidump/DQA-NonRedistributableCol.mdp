@@ -239,7 +239,7 @@ explain select count(distinct h) from testhstore;
         </dxl:LogicalGet>
       </dxl:LogicalGroupBy>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="14">
+    <dxl:Plan Id="0" SpaceSize="17">
       <dxl:Aggregate AggregationStrategy="Plain" StreamSafe="false">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="431.000039" Rows="1.000000" Width="8"/>

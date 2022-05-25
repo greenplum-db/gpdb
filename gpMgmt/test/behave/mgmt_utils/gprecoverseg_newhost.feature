@@ -54,6 +54,7 @@ Feature: gprecoverseg tests involving migrating to a new host
     And datadirs from "before" configuration for "sdw1" are created on "sdw5" with mode 700
     And the user runs "gprecoverseg -aF"
     And gprecoverseg should return a return code of 0
+    And check segment conf: postgresql.conf
     And the cluster configuration is saved for "one_host_down"
     And the "before" and "one_host_down" cluster configuration matches with the expected for gprecoverseg newhost
     And the mirrors replicate and fail over and back correctly
@@ -88,6 +89,7 @@ Feature: gprecoverseg tests involving migrating to a new host
     And datadirs from "before_recoverseg" configuration for "sdw1" are created on "sdw5" with mode 700
     And the user runs "gprecoverseg -a -p sdw5 --hba-hostnames"
     And gprecoverseg should return a return code of 0
+    And check segment conf: postgresql.conf
     And the cluster configuration is saved for "one_host_down"
     And the "before" and "one_host_down" cluster configuration matches with the expected for gprecoverseg newhost
     And the mirrors replicate and fail over and back correctly

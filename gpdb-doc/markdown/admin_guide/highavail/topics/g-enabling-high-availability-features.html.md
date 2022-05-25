@@ -23,5 +23,5 @@ For information about the utilities that are used to enable high availability, s
 -   **[Recovering a Failed Master](../../highavail/topics/g-recovering-a-failed-master.html)**  
 
 
-**Parent topic:**[Managing a Greenplum System](../../managing/partII.html)
+**Parent topic:** [Managing a Greenplum System](../../managing/partII.html)
 

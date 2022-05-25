@@ -8,21 +8,21 @@
       enabled).</p>
     <section id="section2">
       <title>Synopsis</title>
-      <codeblock><b>gprecoverseg</b> [[<b>-p</b> <varname>new_recover_host</varname>[,...]] | <b>-i</b> <varname>recover_config_file</varname>] [<b>-d</b> <varname>master_data_directory</varname>] 
-             [<b>-b</b> <varname>segment_batch_size</varname>] [<b>-B</b> <varname>batch_size</varname>] [<b>-F</b> [<b>-s</b>]] [<b>-a</b>] [<b>-q</b>] 
-	      [<b>--hba-hostnames</b> <varname>boolean</varname>] 
-             [<b>--no-progress</b>] [<b>-l</b> <varname>logfile_directory</varname>]
+      <codeblock>gprecoverseg [[-p &lt;new_recover_host>[,...]] | -i &lt;recover_config_file>] [-d &lt;master_data_directory>] 
+             [-b &lt;segment_batch_size>] [-B &lt;batch_size>] [-F [-s]] [-a] [-q] 
+	      [--hba-hostnames &lt;boolean>] 
+             [--no-progress] [-l &lt;logfile_directory>]
 
-<b>gprecoverseg</b> <b>-r</b> 
+gprecoverseg -r 
 
-<b>gprecoverseg</b> <b>-o</b> <varname>output_recover_config_file</varname> 
-             [<b>-p</b> <varname>new_recover_host</varname>[,...]]
+gprecoverseg -o &lt;output_recover_config_file> 
+             [-p &lt;new_recover_host>[,...]]
 
-<b>gprecoverseg</b> <b>-?</b> | <b>-h</b> | <b>--help</b>
+gprecoverseg -? | -h | --help
         
-<b>gprecoverseg</b> <b>-v</b> | <b>--verbose</b>
+gprecoverseg -v | --verbose
 
-<b>gprecoverseg</b> <b>--version</b></codeblock>
+gprecoverseg --version</codeblock>
     </section>
     <section id="section3"><title>Description</title>In a system with mirrors enabled, the
         <codeph>gprecoverseg</codeph> utility reactivates a failed segment instance and identifies
@@ -56,8 +56,8 @@
         failed segments to a completely new host (using <codeph>-p</codeph>), on an alternative data
         directory location on your remaining live segment hosts (using <codeph>-s</codeph>), or by
         supplying a recovery configuration file (using <codeph>-i</codeph>) in the following format.
-        The word <b>SPACE</b> indicates the location of a required space. Do not add additional
-        spaces.</p><codeblock>&lt;failed_host_address&gt;|&lt;port&gt;|&lt;data_directory&gt;<b>SPACE</b>
+        The word &lt;SPACE> indicates the location of a required space. Do not add additional
+        spaces.</p><codeblock>&lt;failed_host_address&gt;|&lt;port&gt;|&lt;data_directory&gt;&lt;SPACE>
 &lt;recovery_host_address&gt;|&lt;port&gt;|&lt;data_directory&gt;
 </codeblock><p>See
         the <codeph>-i</codeph> option below for details and examples of a recovery configuration
@@ -139,9 +139,9 @@
               pipe-delimited fields in the line. For example:</p><p>
               <codeblock>failedAddress|failedPort|failedDataDirectory</codeblock>
             </p><p>For recovery to a new location, enter two groups of fields separated by a space
-              in the line. The required space is indicated by <b>SPACE</b>. Do not add additional
+              in the line. The required space is indicated by &lt;SPACE>. Do not add additional
               spaces.</p><p>
-              <codeblock>failedAddress|failedPort|failedDataDirectory<b>SPACE</b>newAddress|
+              <codeblock>failedAddress|failedPort|failedDataDirectory&lt;SPACE>newAddress|
 newPort|newDataDirectory</codeblock>
             </p><p>
               <note>Lines beginning with <codeph>#</codeph> are treated as comments and
@@ -150,12 +150,12 @@ newPort|newDataDirectory</codeblock>
               mirror</b></p>
             <codeblock>sdw1-1|50001|/data1/mirror/gpseg16</codeblock>
             <p><b>Recovery of a single mirror to a new host</b></p>
-            <codeblock>sdw1-1|50001|/data1/mirror/gpseg16<b>SPACE</b>sdw4-1|50001|/data1/recover1/gpseg16</codeblock>
+            <codeblock>sdw1-1|50001|/data1/mirror/gpseg16&lt;SPACE>sdw4-1|50001|/data1/recover1/gpseg16</codeblock>
             <p><b>Obtaining a Sample File</b></p>
             <p>You can use the <codeph>-o</codeph> option to output a sample recovery configuration
               file to use as a starting point. The output file lists the currently invalid segments
-              and their default recovery location. This file format can be used with the 
-<codeph>-i</codeph> option for in-place (incremental) recovery.</p></pd>
+              and their default recovery location. This file format can be used with the
+                <codeph>-i</codeph> option for in-place (incremental) recovery.</p></pd>
         </plentry>
         <plentry>
           <pt>-l <varname>logfile_directory</varname></pt>
@@ -240,12 +240,12 @@ newPort|newDataDirectory</codeblock>
       <p>Then, if necessary, rebalance the segments:</p><codeblock>$ gprecoverseg -r</codeblock>
       <p><b>Example 3: Recover Failed Segments to a Separate Host</b></p>
       <p>Recover any failed segment instances to a newly configured new segment host:</p>
-        <codeblock>$ gprecoverseg -i <varname>recover_config_file</varname></codeblock>
+        <codeblock>$ gprecoverseg -i &lt;recover_config_file></codeblock>
     </section>
     <section id="section6">
       <title>See Also</title>
-      <p><codeph><xref href="./gpstart.xml#topic1" type="topic" format="dita"/></codeph>,
-            <codeph><xref href="./gpstop.xml#topic1" type="topic" format="dita"/></codeph></p>
+      <p><xref href="./gpstart.xml#topic1" type="topic" format="dita"/>, <xref
+          href="./gpstop.xml#topic1" type="topic" format="dita"/></p>
     </section>
   </body>
 </topic>

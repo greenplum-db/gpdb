@@ -7,19 +7,19 @@
     <p id="sql_command_desc">Defines a cursor.</p>
     <section id="section2">
       <title>Synopsis</title>
-      <codeblock id="sql_command_synopsis">DECLARE <varname>name</varname> [BINARY] [INSENSITIVE] [NO SCROLL] [PARALLEL RETRIEVE] CURSOR 
+      <codeblock id="sql_command_synopsis">DECLARE &lt;name> [BINARY] [INSENSITIVE] [NO SCROLL] [PARALLEL RETRIEVE] CURSOR 
      [{WITH | WITHOUT} HOLD] 
-     FOR <varname>query</varname> [FOR READ ONLY]</codeblock>
+     FOR &lt;query> [FOR READ ONLY]</codeblock>
     </section>
     <section id="section3">
       <title>Description</title>
       <p><codeph>DECLARE</codeph> allows a user to create a cursor, which can be used to retrieve a
         small number of rows at a time out of a larger query.
         Cursors can return data either in text or in binary format using
-        <codeph><xref href="./FETCH.xml#topic1" type="topic" format="dita" /></codeph>.</p>
+        <xref href="./FETCH.xml#topic1" type="topic" format="dita" />.</p>
       <note>This page describes usage of cursors at the SQL command level. If you are trying to use
         cursors inside a PL/pgSQL function, the rules are different, see <xref
-          href="../../analytics/pl_sql.xml" scope="peer">PL/pgSQL</xref>.</note>
+          href="../../analytics/pl_sql.html" scope="external" format="html">PL/pgSQL</xref>.</note>
       <p>Normal cursors return data in text format, the same as a <codeph>SELECT</codeph> would
         produce. Since data is stored natively in binary format, the system must do a conversion to
         produce the text format. Once the information comes back in text form, the client
@@ -41,8 +41,8 @@
           protocol — any cursor can be treated as either text or binary.
       </note>
       <p>A cursor can be specified in the <codeph>WHERE CURRENT OF</codeph> clause of the
-            <codeph><xref href="./UPDATE.xml#topic1" type="topic" format="dita"/></codeph> or
-            <codeph><xref href="./DELETE.xml#topic1" type="topic" format="dita"/></codeph> statement
+            <xref href="./UPDATE.xml#topic1" type="topic" format="dita"/> or
+            <xref href="./DELETE.xml#topic1" type="topic" format="dita"/> statement
         to update or delete table data. The <codeph>UPDATE</codeph> or <codeph>DELETE</codeph>
         statement can only be run on the server, for example in an interactive psql session or
         a script. Language extensions such as PL/pgSQL do not have support for updatable cursors.
@@ -55,7 +55,7 @@
         Greenplum Database ignores the <codeph>BINARY</codeph> clause when you declare a
         parallel retrieve cursor.</p>
       <p>You open a special retrieve session to each parallel retrieve cursor endpoint, and
-        use the <codeph><xref href="./RETRIEVE.xml#topic1" type="topic" format="dita"/></codeph>
+        use the <xref href="./RETRIEVE.xml#topic1" type="topic" format="dita"/>
         command to retrieve the query results from a parallel retrieve cursor.</p>
       <p></p>
     </section>
@@ -110,12 +110,12 @@
           <pt>
             <varname>query</varname>
           </pt>
-          <pd>A <codeph><xref href="./SELECT.xml#topic1" type="topic" format="dita"/></codeph> or
-                <codeph><xref href="./VALUES.xml#topic1" type="topic" format="dita"/></codeph>
+          <pd>A <xref href="./SELECT.xml#topic1" type="topic" format="dita"/> or
+                <xref href="./VALUES.xml#topic1" type="topic" format="dita"/>
             command which will provide the rows to be returned by the cursor.<p>If the cursor is
-              used in the <codeph>WHERE CURRENT OF</codeph> clause of the <codeph><xref
-                  href="./UPDATE.xml#topic1" type="topic" format="dita"/></codeph> or <codeph><xref
-                  href="./DELETE.xml#topic1" type="topic" format="dita"/></codeph> command, the
+              used in the <codeph>WHERE CURRENT OF</codeph> clause of the <xref
+                  href="./UPDATE.xml#topic1" type="topic" format="dita"/> or <xref
+                  href="./DELETE.xml#topic1" type="topic" format="dita"/> command, the
                 <codeph>SELECT</codeph> command must satisfy the following conditions:</p><ul
               id="ul_rq1_vr2_m4">
               <li id="cm153794">Cannot reference a view or external table.</li>
@@ -171,7 +171,7 @@
           <codeph>FETCH</codeph> or <codeph>RETRIEVE</codeph> to move the cursor position forward, not backwards.</p>
       <p><codeph>DECLARE...FOR UPDATE</codeph> is not supported with append-optimized tables.</p>
       <p>You can see all available cursors by querying the
-        <codeph><xref href="../system_catalogs/pg_cursors.xml">pg_cursors</xref></codeph>
+        <xref href="../system_catalogs/pg_cursors.xml">pg_cursors</xref>
         system view.</p>
     </section>
     <section id="section6">
@@ -194,13 +194,13 @@
     </section>
     <section id="section8">
       <title>See Also</title>
-      <p><codeph><xref href="CLOSE.xml#topic1" type="topic" format="dita"/></codeph>, <codeph><xref
-            href="./DELETE.xml#topic1" type="topic" format="dita"/></codeph>, <codeph><xref
-            href="./FETCH.xml#topic1" type="topic" format="dita"/></codeph>, <codeph><xref
-            href="./MOVE.xml#topic1" type="topic" format="dita"/></codeph>, <codeph><xref
-            href="./RETRIEVE.xml#topic1" type="topic" format="dita"/></codeph>, <codeph><xref
-            href="./SELECT.xml#topic1" type="topic" format="dita"/></codeph>, <codeph><xref
-            href="./UPDATE.xml#topic1" type="topic" format="dita"/></codeph></p>
+      <p><xref href="CLOSE.xml#topic1" type="topic" format="dita"/>, <xref
+            href="./DELETE.xml#topic1" type="topic" format="dita"/>, <xref
+            href="./FETCH.xml#topic1" type="topic" format="dita"/>, <xref
+            href="./MOVE.xml#topic1" type="topic" format="dita"/>, <xref
+            href="./RETRIEVE.xml#topic1" type="topic" format="dita"/>, <xref
+            href="./SELECT.xml#topic1" type="topic" format="dita"/>, <xref
+            href="./UPDATE.xml#topic1" type="topic" format="dita"/></p>
     </section>
   </body>
 </topic>

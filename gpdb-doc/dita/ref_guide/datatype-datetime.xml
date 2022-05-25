@@ -160,7 +160,7 @@ MINUTE TO SECOND
     <p>Remember that any date or time literal input needs to be enclosed in single quotes, like text
      strings. SQL requires the following syntax
      <codeblock>
-<varname>type</varname> [ (<varname>p</varname>) ] '<varname>value</varname>'
+&lt;type> [ (&lt;p>) ] '&lt;value>'
 </codeblock>
      where <varname>p</varname> is an optional precision specification giving the number of
      fractional digits in the seconds field. Precision can be specified for <codeph>time</codeph>,
@@ -731,7 +731,7 @@ January 8 04:05:06 1999 PST
 
      <p><codeph>interval</codeph> values can be written using the following verbose syntax:
      <codeblock>
-<varname>@</varname> <varname>quantity</varname> <varname>unit</varname> <varname>quantity</varname> <varname>unit</varname>... <varname>direction</varname>
+&lt;@> &lt;quantity> &lt;unit> &lt;quantity> &lt;unit>... &lt;direction>
 </codeblock>
      where <varname>quantity</varname> is a number (possibly signed); <varname>unit</varname> is
       <codeph>microsecond</codeph>, <codeph>millisecond</codeph>, <codeph>second</codeph>,
@@ -758,7 +758,7 @@ January 8 04:05:06 1999 PST
       <codeph>alternative format</codeph> of section 4.4.3.3. The format with designators looks like
      this:
      <codeblock>
-P <varname>quantity</varname> <varname>unit</varname> <varname>quantity</varname> <varname>unit</varname> ...  T  <varname>quantity</varname> <varname>unit</varname> ...
+P &lt;quantity> &lt;unit> &lt;quantity> &lt;unit> ...  T  &lt;quantity> &lt;unit> ...
 </codeblock>
      The string must start with a <codeph>P</codeph>, and may include a <codeph>T</codeph> that
      introduces the time-of-day units. The available unit abbreviations are given in <xref
@@ -811,7 +811,7 @@ P <varname>quantity</varname> <varname>unit</varname> <varname>quantity</varname
 
      <p>In the alternative format:
 <codeblock>
-P  <varname>years</varname>-<varname>months</varname>-<varname>days</varname>   T <varname>hours</varname>:<varname>minutes</varname>:<varname>seconds</varname> 
+P  &lt;years>-&lt;months>-&lt;days>   T &lt;hours>:&lt;minutes>:&lt;seconds> 
 </codeblock>
       the string must begin with <codeph>P</codeph>, and a
       <codeph>T</codeph> separates the date and time parts of the interval.

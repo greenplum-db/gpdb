@@ -7,13 +7,13 @@
     <p>Tracks the memory usage of each process in a Greenplum Database cluster.</p>
     <section id="section2">
       <title>Synopsis</title>
-      <codeblock><b>gpmemwatcher</b> [<b>-f</b> | <b>--host_file</b> <varname>hostfile</varname>]   
+      <codeblock>gpmemwatcher [-f | --host_file &lt;hostfile>]   
         
-<b>gpmemwatcher</b> <b>--stop</b> [<b>-f</b> | <b>--host_file</b> <varname>hostfile</varname>]  
+gpmemwatcher --stop [-f | --host_file &lt;hostfile>]  
 
-<b>gpmemwatcher</b> <b>--version</b>
+gpmemwatcher --version
 
-<b>gpmemwatcher</b> <b>-h</b> | <b>--help</b></codeblock>
+gpmemwatcher -h | --help</codeblock>
     </section>
     <section id="section3">
       <title>Description</title>
@@ -22,12 +22,11 @@
         output of the <codeph>ps</codeph> command every 60 seconds. It is a low impact process that
         only consumes 4 MB of memory. It will generate approximately 30 MB of data over a 24-hour
         period. </p>
-      <p>You may use this utility if Greenplum Database is reporting <codeph>Out of
-          memory</codeph> errors and causing segments to go down or queries to fail. You collect the
-        memory usage information of one or multiple servers within the Greenplum Database cluster
-        with <codeph>gpmemwatcher</codeph> and then use <codeph><xref
-            href="./gpmemreport.xml#topic1" type="topic" format="dita"/></codeph> to analyze the
-        files collected.</p>
+      <p>You may use this utility if Greenplum Database is reporting <codeph>Out of memory</codeph>
+        errors and causing segments to go down or queries to fail. You collect the memory usage
+        information of one or multiple servers within the Greenplum Database cluster with
+          <codeph>gpmemwatcher</codeph> and then use <xref href="./gpmemreport.xml#topic1"
+          type="topic" format="dita"/> to analyze the files collected.</p>
     </section>
     <section id="section4">
       <title>Options</title>
@@ -85,7 +84,7 @@ sdw4:/home/gpadmin/gpmemwatcher_dir/working</codeblock>
     </section>
     <section id="section6">
       <title>See Also</title>
-      <p><codeph><xref href="./gpmemreport.xml#topic1" type="topic" format="dita"/></codeph></p>
+      <p><xref href="./gpmemreport.xml#topic1" type="topic" format="dita"/></p>
     </section>
   </body>
 </topic>

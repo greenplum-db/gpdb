@@ -19,7 +19,7 @@ This topic includes the following subtopics:
 -   [Verifying a Backup/Restore Storage Plugin](#topic9339a)
 -   [Packaging and Deploying a Backup/Restore Storage Plugin](#topic9339b)
 
-**Parent topic:**[Parallel Backup with gpbackup and gprestore](../managing/backup-gpbackup.html)
+**Parent topic:** [Parallel Backup with gpbackup and gprestore](../managing/backup-gpbackup.html)
 
 ## <a id="topic9339"></a>Plugin Configuration File 
 

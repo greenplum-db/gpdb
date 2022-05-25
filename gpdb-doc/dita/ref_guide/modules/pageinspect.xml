@@ -37,8 +37,8 @@
     <topic id="topic_info">
       <title>Module Documentation</title>
       <body>
-        <p>See <codeph><xref href="https://www.postgresql.org/docs/12/pageinspect.html"
-            scope="external" format="html">pageinspect</xref></codeph> in the PostgreSQL
+        <p>See <xref href="https://www.postgresql.org/docs/12/pageinspect.html"
+            scope="external" format="html">pageinspect</xref> in the PostgreSQL
           documentation for detailed information about the majority of functions in this
           module.</p>
         <p>The next topic includes documentation for Greenplum-added

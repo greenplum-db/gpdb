@@ -1,14 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
-<topic id="topic1"><title id="cb20941">CREATE SCHEMA</title><body><p id="sql_command_desc">Defines a new schema.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">CREATE SCHEMA <varname>schema_name</varname> [AUTHORIZATION <varname>username</varname>] 
-   [<varname>schema_element</varname> [ ... ]]
+<topic id="topic1"><title id="cb20941">CREATE SCHEMA</title><body><p id="sql_command_desc">Defines a new schema.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">CREATE SCHEMA &lt;schema_name> [AUTHORIZATION &lt;username>] 
+   [&lt;schema_element> [ ... ]]
 
-CREATE SCHEMA AUTHORIZATION <varname>rolename</varname> [<varname>schema_element</varname> [ ... ]]
+CREATE SCHEMA AUTHORIZATION &lt;rolename> [&lt;schema_element> [ ... ]]
 
-CREATE SCHEMA IF NOT EXISTS <varname>schema_name</varname> [ AUTHORIZATION <varname>user_name</varname> ]
+CREATE SCHEMA IF NOT EXISTS &lt;schema_name> [ AUTHORIZATION &lt;user_name> ]
 
-CREATE SCHEMA IF NOT EXISTS AUTHORIZATION <varname>user_name</varname>
+CREATE SCHEMA IF NOT EXISTS AUTHORIZATION &lt;user_name>
 </codeblock></section><section id="section3"><title>Description</title><p><codeph>CREATE SCHEMA</codeph> enters a new schema into the current
 database. The schema name must be distinct from the name of any existing
 schema in the current database. </p><p>A schema is essentially a namespace: it contains named objects (tables,
@@ -58,5 +58,5 @@ objects within it. Greenplum Database allows schemas to contain objects
 owned by users other than the schema owner. This can happen only if the
 schema owner grants the <codeph>CREATE</codeph> privilege on the schema
 to someone else, or a superuser chooses to create objects in it.</p>
-      <p>The <codeph>IF NOT EXISTS</codeph> option is a Greenplum Database extension.</p></section><section id="section8"><title>See Also</title><p><codeph><xref href="ALTER_SCHEMA.xml#topic1" type="topic" format="dita"/></codeph>, <codeph><xref
-            href="./DROP_SCHEMA.xml#topic1" type="topic" format="dita"/></codeph></p></section></body></topic>
+      <p>The <codeph>IF NOT EXISTS</codeph> option is a Greenplum Database extension.</p></section><section id="section8"><title>See Also</title><p><xref href="ALTER_SCHEMA.xml#topic1" type="topic" format="dita"/>, <xref
+            href="./DROP_SCHEMA.xml#topic1" type="topic" format="dita"/></p></section></body></topic>

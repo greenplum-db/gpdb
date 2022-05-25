@@ -7,7 +7,7 @@
     <p id="sql_command_desc">Removes a external table data access protocol from a database.</p>
     <section id="section2">
       <title>Synopsis</title>
-      <codeblock id="sql_command_synopsis">DROP PROTOCOL [IF EXISTS] <varname>name</varname></codeblock>
+      <codeblock id="sql_command_synopsis">DROP PROTOCOL [IF EXISTS] &lt;name></codeblock>
     </section>
     <section id="section3">
       <title>Description</title>
@@ -45,8 +45,8 @@
     </section>
     <section id="section7">
       <title>See Also</title>
-      <p><codeph><xref href="CREATE_EXTERNAL_TABLE.xml#topic1"/></codeph>, <codeph><xref
-            href="CREATE_PROTOCOL.xml#topic1"/></codeph></p>
+      <p><xref href="CREATE_EXTERNAL_TABLE.xml#topic1"/>, <xref
+            href="CREATE_PROTOCOL.xml#topic1"/></p>
     </section>
   </body>
 </topic>

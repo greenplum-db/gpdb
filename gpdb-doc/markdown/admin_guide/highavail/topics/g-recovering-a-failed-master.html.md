@@ -37,5 +37,5 @@ These steps assume a standby master host is configured for the system. See [Enab
 -   **[Restoring Master Mirroring After a Recovery](../../highavail/topics/g-restoring-master-mirroring-after-a-recovery.html)**  
 
 
-**Parent topic:**[Enabling High Availability and Data Consistency Features](../../highavail/topics/g-enabling-high-availability-features.html)
+**Parent topic:** [Enabling High Availability and Data Consistency Features](../../highavail/topics/g-enabling-high-availability-features.html)
 

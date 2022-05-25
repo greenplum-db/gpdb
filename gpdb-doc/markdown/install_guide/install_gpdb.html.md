@@ -15,7 +15,7 @@ Perform the following tasks in order:
 3.  [Confirm the software installation.](#topic10)
 4.  [Next Steps](#topic_cwj_hzb_vhb)
 
-**Parent topic:**[Installing and Upgrading Greenplum](install_guide.html)
+**Parent topic:** [Installing and Upgrading Greenplum](install_guide.html)
 
 ## <a id="topic_oy5_21n_1jb"></a>Installing Greenplum Database 
 

@@ -7,31 +7,31 @@
     <p id="sql_command_desc">Copies data between a file and a table.</p>
     <section id="section2">
       <title>Synopsis</title>
-      <codeblock id="sql_command_synopsis">COPY <varname>table_name</varname> [(<varname>column_name</varname> [, ...])] 
-     FROM {'<varname>filename</varname>' | PROGRAM '<varname>command</varname>' | STDIN}
-     [ [ WITH ] ( <varname>option</varname> [, ...] ) ]
+      <codeblock id="sql_command_synopsis">COPY &lt;table_name> [(&lt;column_name> [, ...])] 
+     FROM {'&lt;filename>' | PROGRAM '&lt;command>' | STDIN}
+     [ [ WITH ] ( &lt;option> [, ...] ) ]
      [ ON SEGMENT ]
 
-COPY { <varname>table_name</varname> [(<varname>column_name</varname> [, ...])] | (<varname>query</varname>)} 
-     TO {'<varname>filename</varname>' | PROGRAM '<varname>command</varname>' | STDOUT}
-     [ [ WITH ] ( <varname>option</varname> [, ...] ) ]
+COPY { &lt;table_name> [(&lt;column_name> [, ...])] | (&lt;query>)} 
+     TO {'&lt;filename>' | PROGRAM '&lt;command>' | STDOUT}
+     [ [ WITH ] ( &lt;option> [, ...] ) ]
      [ ON SEGMENT ]</codeblock>
       <p>where <varname>option</varname> can be one
         of:<codeblock>
-FORMAT <varname>format_name</varname>
-OIDS [ <varname>boolean</varname> ]
-FREEZE [ <varname>boolean</varname> ]
-DELIMITER '<varname>delimiter_character</varname>'
-NULL '<varname>null string</varname>'
-HEADER [ <varname>boolean</varname> ]
-QUOTE '<varname>quote_character</varname>'
-ESCAPE '<varname>escape_character</varname>'
-FORCE_QUOTE { ( <varname>column_name</varname> [, ...] ) | * }
-FORCE_NOT_NULL ( <varname>column_name</varname> [, ...] ) 
-FORCE_NULL ( <varname>column_name</varname> [, ...] )
-ENCODING '<varname>encoding_name</varname>'       
+FORMAT &lt;format_name>
+OIDS [ &lt;boolean> ]
+FREEZE [ &lt;boolean> ]
+DELIMITER '&lt;delimiter_character>'
+NULL '&lt;null string>'
+HEADER [ &lt;boolean> ]
+QUOTE '&lt;quote_character>'
+ESCAPE '&lt;escape_character>'
+FORCE_QUOTE { ( &lt;column_name> [, ...] ) | * }
+FORCE_NOT_NULL ( &lt;column_name> [, ...] ) 
+FORCE_NULL ( &lt;column_name> [, ...] )
+ENCODING '&lt;encoding_name>'       
 FILL MISSING FIELDS
-LOG ERRORS [ SEGMENT REJECT LIMIT <varname>count</varname> [ ROWS | PERCENT ] ]
+LOG ERRORS [ SEGMENT REJECT LIMIT &lt;count> [ ROWS | PERCENT ] ]
 IGNORE EXTERNAL PARTITIONS</codeblock></p>
     </section>
     <section id="section3">
@@ -92,11 +92,11 @@ IGNORE EXTERNAL PARTITIONS</codeblock></p>
         <b>Outputs</b>
         <p>On successful completion, a <codeph>COPY</codeph> command returns a command tag of the
           form, where <varname>count</varname> is the number of rows copied:</p>
-        <codeblock>COPY <varname>count</varname></codeblock>
+        <codeblock>COPY &lt;count></codeblock>
         <p>If running a <codeph>COPY FROM</codeph> command in single row error isolation mode, the
           following notice message will be returned if any rows were not loaded due to format
           errors, where <varname>count</varname> is the number of rows rejected:</p>
-        <codeblock>NOTICE: Rejected <varname>count</varname> badly formatted rows.</codeblock>
+        <codeblock>NOTICE: Rejected &lt;count> badly formatted rows.</codeblock>
       </sectiondiv>
     </section>
     <section id="section5">
@@ -272,7 +272,7 @@ IGNORE EXTERNAL PARTITIONS</codeblock></p>
           <pd>The keywords <codeph>STDIN</codeph> and <codeph>STDOUT</codeph> are not supported with
               <codeph>ON SEGMENT</codeph>. </pd>
           <pd>The <codeph>&lt;SEG_DATA_DIR></codeph> and <codeph>&lt;SEGID></codeph> string literals
-            are used to specify an absolute path and file name with the following syntax:<codeblock>COPY <varname>table</varname> [TO|FROM] '&lt;SEG_DATA_DIR>/<varname>gpdumpname</varname>&lt;SEGID>_<varname>suffix</varname>' ON SEGMENT;</codeblock><parml>
+            are used to specify an absolute path and file name with the following syntax:<codeblock>COPY &lt;table> [TO|FROM] '&lt;SEG_DATA_DIR>/&lt;gpdumpname>&lt;SEGID>_&lt;suffix>' ON SEGMENT;</codeblock><parml>
               <plentry>
                 <pt>&lt;SEG_DATA_DIR></pt>
                 <pd>The string literal representing the absolute path of the segment instance data
@@ -423,7 +423,7 @@ IGNORE EXTERNAL PARTITIONS</codeblock></p>
         client encoding, even if the data does not pass through the client but is read from or
         written to a file directly by the server.</p>
       <p>When copying XML data from a file in text mode, the server configuration parameter
-            <codeph><xref href="../config_params/guc-list.xml#xmloption">xmloption</xref></codeph>
+            <xref href="../config_params/guc-list.xml#xmloption">xmloption</xref>
         affects the validation of the XML data that is copied. If the value is
           <codeph>content</codeph> (the default), XML data is validated as an XML content fragment.
         If the parameter value is <codeph>document</codeph>, XML data is validated as an XML
@@ -544,7 +544,7 @@ IGNORE EXTERNAL PARTITIONS</codeblock></p>
         <p>Your designated <varname>delimiter_character</varname> is <codeph>|</codeph> (pipe
           character), and your designated <varname>escape</varname> character is <codeph>*</codeph>
           (asterisk). The formatted row in your data file would look like this:</p>
-        <codeblock>percentage sign = % | vertical bar = <b>*|</b> | backslash = \</codeblock>
+        <codeblock>percentage sign = % | vertical bar = *| | backslash = \</codeblock>
         <p>Notice how the pipe character that is part of the data has been escaped using the
           asterisk character (*). Also notice that we do not need to escape the backslash since we
           are using an alternative escape character.</p>
@@ -668,7 +668,7 @@ IGNORE EXTERNAL PARTITIONS</codeblock></p>
    SEGMENT REJECT LIMIT 10 ROWS;</codeblock>
       <p>To copy segment data for later use, use the <codeph>ON SEGMENT</codeph> clause. Use of the
           <codeph>COPY TO ON SEGMENT</codeph> command takes the form:</p>
-      <codeblock>COPY <varname>table</varname> TO '&lt;SEG_DATA_DIR>/<varname>gpdumpname</varname>&lt;SEGID>_<varname>suffix</varname>' ON SEGMENT; </codeblock>
+      <codeblock>COPY &lt;table> TO '&lt;SEG_DATA_DIR>/&lt;gpdumpname>&lt;SEGID>_&lt;suffix>' ON SEGMENT; </codeblock>
       <p>The <codeph>&lt;SEGID></codeph> is required. However, you can substitute an absolute path
         for the <codeph>&lt;SEG_DATA_DIR></codeph> string literal in the path. </p>
       <p>When you pass in the string literal <codeph>&lt;SEG_DATA_DIR></codeph> and
@@ -724,23 +724,23 @@ IGNORE EXTERNAL PARTITIONS</codeblock></p>
       <p>There is no <codeph>COPY</codeph> statement in the SQL standard. </p>
       <p>The following syntax was used in earlier versions of Greenplum Database and is still
         supported:
-        <codeblock>COPY <varname>table_name</varname> [(<varname>column_name</varname> [, ...])] FROM {'<varname>filename</varname>' | PROGRAM '<varname>command</varname>' | STDIN}
+        <codeblock>COPY &lt;table_name> [(&lt;column_name> [, ...])] FROM {'&lt;filename>' | PROGRAM '&lt;command>' | STDIN}
      [ [WITH]  
        [ON SEGMENT]
        [BINARY]
        [OIDS]
        [HEADER]
-       [DELIMITER [ AS ] '<varname>delimiter_character</varname>']
-       [NULL [ AS ] '<varname>null string</varname>']
-       [ESCAPE [ AS ] '<varname>escape</varname>' | 'OFF']
+       [DELIMITER [ AS ] '&lt;delimiter_character>']
+       [NULL [ AS ] '&lt;null string>']
+       [ESCAPE [ AS ] '&lt;escape>' | 'OFF']
        [NEWLINE [ AS ] 'LF' | 'CR' | 'CRLF']
-       [CSV [QUOTE [ AS ] '<varname>quote</varname>'] 
-            [FORCE NOT NULL <varname>column_name</varname> [, ...]]
+       [CSV [QUOTE [ AS ] '&lt;quote>'] 
+            [FORCE NOT NULL &lt;column_name> [, ...]]
        [FILL MISSING FIELDS]
        [[LOG ERRORS]  
-       SEGMENT REJECT LIMIT <varname>count</varname> [ROWS | PERCENT] ]
+       SEGMENT REJECT LIMIT &lt;count> [ROWS | PERCENT] ]
 
-COPY { <varname>table_name</varname> [(<varname>column_name</varname> [, ...])] | (<varname>query</varname>)} TO {'<varname>filename</varname>' | PROGRAM '<varname>command</varname>' | STDOUT}
+COPY { &lt;table_name> [(&lt;column_name> [, ...])] | (&lt;query>)} TO {'&lt;filename>' | PROGRAM '&lt;command>' | STDOUT}
       [ [WITH] 
         [ON SEGMENT]
         [BINARY]
@@ -748,9 +748,9 @@ COPY { <varname>table_name</varname> [(<varname>column_name</varname> [, ...])] 
         [HEADER]
         [DELIMITER [ AS ] 'delimiter_character']
         [NULL [ AS ] 'null string']
-        [ESCAPE [ AS ] '<varname>escape</varname>' | 'OFF']
+        [ESCAPE [ AS ] '&lt;escape>' | 'OFF']
         [CSV [QUOTE [ AS ] 'quote'] 
-             [FORCE QUOTE <varname>column_name</varname> [, ...]] | * ]
+             [FORCE QUOTE &lt;column_name> [, ...]] | * ]
       [IGNORE EXTERNAL PARTITIONS ]</codeblock>
       </p>
       <p>Note that in this syntax, <codeph>BINARY</codeph> and <codeph>CSV</codeph> are treated as
@@ -759,9 +759,7 @@ COPY { <varname>table_name</varname> [(<varname>column_name</varname> [, ...])] 
     <section id="section13">
       <title>See Also</title>
       <p>
-        <codeph>
           <xref href="./CREATE_EXTERNAL_TABLE.xml#topic1" type="topic" format="dita"/>
-        </codeph>
       </p>
     </section>
   </body>

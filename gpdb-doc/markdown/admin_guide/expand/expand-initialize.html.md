@@ -10,7 +10,7 @@ The first time you run [gpexpand](../../utility_guide/ref/gpexpand.html) with a 
 -   [Running gpexpand to Initialize New Segments](#topic26)
 -   [Rolling Back a Failed Expansion Setup](#topic27)
 
-**Parent topic:**[Expanding a Greenplum System](../expand/expand-main.html)
+**Parent topic:** [Expanding a Greenplum System](../expand/expand-main.html)
 
 ## <a id="topic23"></a>Creating an Input File for System Expansion 
 

@@ -1,0 +1,14 @@
+# Test relevant to wal_level=minimal
+test: prevent_ao_wal
+
+# Crash recovery tests
+test: crash_recovery
+test: crash_recovery_redundant_dtx
+test: crash_recovery_dtm
+test: gpdispatch
+
+# A tiny set of smoke test
+test: check_gxid
+test: resource_queue_deadlock
+test: sync_guc
+test: upgrade_numsegments

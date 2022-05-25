@@ -7,33 +7,33 @@
         <p id="sql_command_desc">Changes the definition of a foreign table.</p>
         <section id="section2">
             <title>Synopsis</title>
-            <codeblock id="sql_command_synopsis">ALTER FOREIGN TABLE [ IF EXISTS ] <varname>name</varname>
-    <varname>action</varname> [, ... ]
-ALTER FOREIGN TABLE [ IF EXISTS ] <varname>name</varname>
-    RENAME [ COLUMN ] <varname>column_name</varname> TO <varname>new_column_name</varname>
-ALTER FOREIGN TABLE [ IF EXISTS ] <varname>name</varname>
-    RENAME TO <varname>new_name</varname>
-ALTER FOREIGN TABLE [ IF EXISTS ] <varname>name</varname>
-    SET SCHEMA <varname>new_schema</varname>
+            <codeblock id="sql_command_synopsis">ALTER FOREIGN TABLE [ IF EXISTS ] &lt;name>
+    &lt;action> [, ... ]
+ALTER FOREIGN TABLE [ IF EXISTS ] &lt;name>
+    RENAME [ COLUMN ] &lt;column_name> TO &lt;new_column_name>
+ALTER FOREIGN TABLE [ IF EXISTS ] &lt;name>
+    RENAME TO &lt;new_name>
+ALTER FOREIGN TABLE [ IF EXISTS ] &lt;name>
+    SET SCHEMA &lt;new_schema>
 </codeblock>
 
 <p>where <varname>action</varname> is one of:</p><codeblock>
-    ADD [ COLUMN ] <varname>column_name</varname> <varname>column_type</varname> [ COLLATE <varname>collation</varname> ] [ <varname>column_constraint</varname> [ ... ] ]
-    DROP [ COLUMN ] [ IF EXISTS ] <varname>column_name</varname> [ RESTRICT | CASCADE ]
-    ALTER [ COLUMN ] <varname>column_name</varname> [ SET DATA ] TYPE <varname>data_type</varname>
-    ALTER [ COLUMN ] <varname>column_name</varname> SET DEFAULT <varname>expression</varname>
-    ALTER [ COLUMN ] <varname>column_name</varname> DROP DEFAULT
-    ALTER [ COLUMN ] <varname>column_name</varname> { SET | DROP } NOT NULL
-    ALTER [ COLUMN ] <varname>column_name</varname> SET STATISTICS <varname>integer</varname>
-    ALTER [ COLUMN ] <varname>column_name</varname> SET ( <varname>attribute_option</varname> = <varname>value</varname> [, ... ] )
-    ALTER [ COLUMN ] <varname>column_name</varname> RESET ( <varname>attribute_option</varname> [, ... ] )
-    ALTER [ COLUMN ] <varname>column_name</varname> OPTIONS ( [ ADD | SET | DROP ] <varname>option</varname> ['<varname>value</varname>'] [, ... ])
-    DISABLE TRIGGER [ <varname>trigger_name</varname> | ALL | USER ]
-    ENABLE TRIGGER [ <varname>trigger_name</varname> | ALL | USER ]
-    ENABLE REPLICA TRIGGER <varname>trigger_name</varname>
-    ENABLE ALWAYS TRIGGER <varname>trigger_name</varname>
-    OWNER TO <varname>new_owner</varname>
-    OPTIONS ( [ ADD | SET | DROP ] <varname>option</varname> ['<varname>value</varname>'] [, ... ] )</codeblock>
+    ADD [ COLUMN ] &lt;column_name> &lt;column_type> [ COLLATE &lt;collation> ] [ &lt;column_constraint> [ ... ] ]
+    DROP [ COLUMN ] [ IF EXISTS ] &lt;column_name> [ RESTRICT | CASCADE ]
+    ALTER [ COLUMN ] &lt;column_name> [ SET DATA ] TYPE &lt;data_type>
+    ALTER [ COLUMN ] &lt;column_name> SET DEFAULT &lt;expression>
+    ALTER [ COLUMN ] &lt;column_name> DROP DEFAULT
+    ALTER [ COLUMN ] &lt;column_name> { SET | DROP } NOT NULL
+    ALTER [ COLUMN ] &lt;column_name> SET STATISTICS &lt;integer>
+    ALTER [ COLUMN ] &lt;column_name> SET ( &lt;attribute_option> = &lt;value> [, ... ] )
+    ALTER [ COLUMN ] &lt;column_name> RESET ( &lt;attribute_option> [, ... ] )
+    ALTER [ COLUMN ] &lt;column_name> OPTIONS ( [ ADD | SET | DROP ] &lt;option> ['&lt;value>'] [, ... ])
+    DISABLE TRIGGER [ &lt;trigger_name> | ALL | USER ]
+    ENABLE TRIGGER [ &lt;trigger_name> | ALL | USER ]
+    ENABLE REPLICA TRIGGER &lt;trigger_name>
+    ENABLE ALWAYS TRIGGER &lt;trigger_name>
+    OWNER TO &lt;new_owner>
+    OPTIONS ( [ ADD | SET | DROP ] &lt;option> ['&lt;value>'] [, ... ] )</codeblock>
         </section>
         <section id="section3">
             <title>Description</title>
@@ -43,8 +43,8 @@ ALTER FOREIGN TABLE [ IF EXISTS ] <varname>name</varname>
                     <pt>ADD COLUMN</pt>
                     <pd>
                         <p>This form adds a new column to the foreign table, using the same syntax
-                            as <codeph><xref href="CREATE_FOREIGN_TABLE.xml#topic1">CREATE FOREIGN
-                                    TABLE</xref></codeph>. Unlike the case when you add a column to
+                            as <xref href="CREATE_FOREIGN_TABLE.xml#topic1">CREATE FOREIGN
+                                    TABLE</xref>. Unlike the case when you add a column to
                             a regular table, nothing happens to the underlying storage: this action
                             simply declares that some new column is now accessible through the
                             foreign table.</p>
@@ -94,8 +94,8 @@ ALTER FOREIGN TABLE [ IF EXISTS ] <varname>name</varname>
                     <pd>
                         <p>This form sets the per-column statistics-gathering target for subsequent
                                 <codeph>ANALYZE</codeph> operations. See the similar form of
-                                    <codeph><xref href="ALTER_TABLE.xml#topic1">ALTER
-                                TABLE</xref></codeph> for more details.</p>
+                                    <xref href="ALTER_TABLE.xml#topic1">ALTER
+                                TABLE</xref> for more details.</p>
                     </pd>
                 </plentry>
                 <plentry>
@@ -104,8 +104,8 @@ ALTER FOREIGN TABLE [ IF EXISTS ] <varname>name</varname>
                     <pt>RESET ( <varname>attribute_option</varname> [, ... ] )</pt>
                     <pd>
                         <p>This form sets or resets per-attribute options. See the similar form of
-                                    <codeph><xref href="ALTER_TABLE.xml#topic1">ALTER
-                                TABLE</xref></codeph> for more details.</p>
+                                    <xref href="ALTER_TABLE.xml#topic1">ALTER
+                                TABLE</xref> for more details.</p>
                     </pd>
                 </plentry>
                 <plentry>
@@ -239,7 +239,7 @@ ALTER FOREIGN TABLE [ IF EXISTS ] <varname>name</varname>
             <title>Notes</title>
               <p>The key word <codeph>COLUMN</codeph> is noise and can be omitted.</p>
               <p>Consistency with the foreign server is not checked when a column is added or removed with <codeph>ADD COLUMN</codeph> or <codeph>DROP COLUMN</codeph>, a <codeph>NOT NULL</codeph> constraint is added, or a column type is changed with <codeph>SET DATA TYPE</codeph>. It is your responsibility to ensure that the table definition matches the remote side.</p>
-              <p>Refer to <codeph><xref href="CREATE_FOREIGN_TABLE.xml#topic1">CREATE FOREIGN TABLE</xref></codeph> for a further description of valid parameters.</p>
+              <p>Refer to <xref href="CREATE_FOREIGN_TABLE.xml#topic1">CREATE FOREIGN TABLE</xref> for a further description of valid parameters.</p>
         </section>
         <section id="section6">
             <title>Examples</title>
@@ -254,10 +254,10 @@ ALTER FOREIGN TABLE [ IF EXISTS ] <varname>name</varname>
         </section>
         <section id="section8">
             <title>See Also</title>
-            <p><codeph><xref href="ALTER_TABLE.xml#topic1">ALTER TABLE</xref></codeph>,
-                <codeph><xref href="CREATE_FOREIGN_TABLE.xml#topic1">CREATE FOREIGN TABLE</xref></codeph>,
-                        <codeph><xref href="DROP_FOREIGN_TABLE.xml#topic1">DROP
-                    FOREIGN TABLE</xref></codeph></p>
+            <p><xref href="ALTER_TABLE.xml#topic1">ALTER TABLE</xref>,
+                <xref href="CREATE_FOREIGN_TABLE.xml#topic1">CREATE FOREIGN TABLE</xref>,
+                        <xref href="DROP_FOREIGN_TABLE.xml#topic1">DROP
+                    FOREIGN TABLE</xref></p>
         </section>
     </body>
 </topic>

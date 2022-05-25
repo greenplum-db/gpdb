@@ -98,6 +98,8 @@ CDrvdPropScalar::Derive(CMemoryPool *, CExpressionHandle &exprhdl,
 
 	DeriveTotalDistinctAggs(exprhdl);
 
+	DeriveHasScalarFuncProject(exprhdl);
+
 	DeriveHasMultipleDistinctAggs(exprhdl);
 
 	DeriveHasScalarArrayCmp(exprhdl);
@@ -353,6 +355,26 @@ CDrvdPropScalar::DeriveTotalDistinctAggs(CExpressionHandle &exprhdl)
 		}
 	}
 	return m_ulDistinctAggs;
+}
+
+BOOL
+CDrvdPropScalar::HasScalarFuncProject() const
+{
+	GPOS_RTL_ASSERT(IsComplete());
+	return m_fHasScalarFunc;
+}
+
+BOOL
+CDrvdPropScalar::DeriveHasScalarFuncProject(CExpressionHandle &exprhdl)
+{
+	if (!m_is_prop_derived->ExchangeSet(EdptFHasScalarFuncProject))
+	{
+		if (COperator::EopScalarProjectList == exprhdl.Pop()->Eopid())
+		{
+			m_fHasScalarFunc = CScalarProjectList::FHasScalarFunc(exprhdl);
+		}
+	}
+	return m_fHasScalarFunc;
 }
 
 // does operator define Distinct Aggs on different arguments, only applicable to project lists

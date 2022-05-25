@@ -1,16 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
-<topic id="topic1"><title id="oz137116">createdb</title><body><p id="client_util_desc">Creates a new database.</p><section id="section2"><title>Synopsis</title><codeblock id="client_util_synopsis"><b>createdb</b> [<varname>connection-option</varname> ...] [<varname>option</varname> ...] [<varname>dbname</varname> ['<varname>description</varname>']]
+<topic id="topic1"><title id="oz137116">createdb</title><body><p id="client_util_desc">Creates a new database.</p><section id="section2"><title>Synopsis</title><codeblock id="client_util_synopsis">createdb [&lt;connection-option> ...] [&lt;option> ...] [&lt;dbname> ['&lt;description>']]
 
-<b>createdb</b> <b>-? | --help</b>
+createdb -? | --help
 
-<b>createdb</b> <b>-V | --version</b></codeblock></section><section id="section3"><title>Description</title><p><codeph>createdb</codeph> creates a new database in a Greenplum Database system. </p><p>Normally, the database user who runs this command becomes the
+createdb -V | --version</codeblock></section><section id="section3"><title>Description</title><p><codeph>createdb</codeph> creates a new database in a Greenplum Database system. </p><p>Normally, the database user who runs this command becomes the
 owner of the new database. However, a different owner can be specified
 via the <codeph>-O</codeph> option, if the executing user has appropriate
-privileges.</p><p><codeph>createdb</codeph> is a wrapper around the SQL command <codeph><xref
-              href="../../ref_guide/sql_commands/CREATE_DATABASE.xml#topic1"/>
-</codeph>.</p></section><section id="section4"><title>Options</title><parml><plentry><pt><varname>dbname</varname></pt><pd>The name of the database to be created. The name must be unique among all other databases in the
+privileges.</p><p><codeph>createdb</codeph> is a wrapper around the SQL command <xref
+          href="../../ref_guide/sql_commands/CREATE_DATABASE.xml#topic1"/> .</p></section><section id="section4"><title>Options</title><parml><plentry><pt><varname>dbname</varname></pt><pd>The name of the database to be created. The name must be unique among all other databases in the
               Greenplum system. If not specified, reads from the
             environment variable <codeph>PGDATABASE</codeph>, then <codeph>PGUSER</codeph> or
             defaults to the current system user.</pd></plentry><plentry><pt><varname>description</varname></pt><pd>A comment to be associated with the newly created database. Descriptions
@@ -50,10 +49,10 @@ privileges.</p><p><codeph>createdb</codeph> is a wrapper around the SQL command 
         </parml>
       <p>The options <codeph>-D</codeph>, <codeph>-l</codeph>, <codeph>-E</codeph>,
           <codeph>-O</codeph>, and <codeph>-T</codeph> correspond to options of the underlying SQL
-        command <codeph>CREATE DATABASE</codeph>; see <ph><codeph><xref
-              href="../../ref_guide/sql_commands/CREATE_DATABASE.xml#topic1"
-            /></codeph></ph><ph><codeph>CREATE DATABASE</codeph> in the <i>Greenplum Database
-            Reference Guide</i></ph> for more information about them. </p><sectiondiv id="section5"><b>Connection Options</b><parml><plentry><pt>-h <varname>host</varname> | --host=<varname>host</varname></pt><pd>The host name of the machine on which the Greenplum coordinator database
+        command <codeph>CREATE DATABASE</codeph>; see <ph><xref
+            href="../../ref_guide/sql_commands/CREATE_DATABASE.xml#topic1"/></ph><ph><codeph>CREATE
+            DATABASE</codeph> in the <i>Greenplum Database Reference Guide</i></ph> for more
+        information about them. </p><sectiondiv id="section5"><b>Connection Options</b><parml><plentry><pt>-h <varname>host</varname> | --host=<varname>host</varname></pt><pd>The host name of the machine on which the Greenplum coordinator database
               server is running. If not specified, reads from the environment variable
                 <codeph>PGHOST</codeph> or defaults to localhost.</pd></plentry><plentry><pt>-p <varname>port</varname> | --port=<varname>port</varname></pt><pd>The TCP port on which the Greenplum coordinator database server is
               listening for connections. If not specified, reads from the environment variable
@@ -74,7 +73,7 @@ batch jobs and scripts where no user is present to enter a password.</pd></plent
           <codeph>LATIN1</codeph> encoding scheme:</p><codeblock>createdb -p 54321 -h gpmaster -E LATIN1 demo</codeblock></section><section id="section7">
       <title>See Also</title>
       <p><ph otherprops="op-print"><codeph>CREATE DATABASE</codeph> in the <i>Greenplum Database
-            Reference Guide</i></ph><ph><codeph><xref
-              href="../../ref_guide/sql_commands/CREATE_DATABASE.xml#topic1"/></codeph>,
-              <codeph><xref href="dropdb.xml#topic1"/></codeph></ph></p>
+            Reference Guide</i></ph><ph><xref
+            href="../../ref_guide/sql_commands/CREATE_DATABASE.xml#topic1"/>, <xref
+            href="dropdb.xml#topic1"/></ph></p>
     </section></body></topic>

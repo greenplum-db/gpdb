@@ -12,9 +12,9 @@
       access method semantics.</p>
     <p>The majority of the information defining an operator family is not in its
       <codeph>pg_opfamily</codeph> row, but in the associated rows in
-      <codeph><xref href="./pg_amop.xml#topic1" type="topic" format="dita"/></codeph>,
-      <codeph><xref href="./pg_amproc.xml#topic1" type="topic" format="dita"/></codeph>, and
-      <codeph><xref href="./pg_opclass.xml#topic1" type="topic" format="dita"/></codeph>.</p>
+      <xref href="./pg_amop.xml#topic1" type="topic" format="dita"/>,
+      <xref href="./pg_amproc.xml#topic1" type="topic" format="dita"/>, and
+      <xref href="./pg_opclass.xml#topic1" type="topic" format="dita"/>.</p>
     <table id="table_dfn_chh_sfb">
       <title>pg_opfamily</title>
       <tgroup cols="4">

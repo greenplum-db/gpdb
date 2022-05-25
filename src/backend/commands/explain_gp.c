@@ -1086,32 +1086,8 @@ cdbexplain_depositStatsToNode(PlanState *planstate, CdbExplain_RecvStatCtx *ctx)
 	instr->total = ntuples.max_total;
 	INSTR_TIME_ASSIGN(instr->firststart, ntuples.firststart_of_max_total);
 
-	/* Put winner's stats into qDisp PlanState's Instrument node. */
 	/*
-	 * GPDB_12_MERGE_FIXME: does it make sense to also print 'nfiltered1'
-	 * 'nfiltered2' from the "winner", i.e. the QE that returned most rows?
-	 * There's this test case in the upstream 'partition_prune' test:
-	 *
-	 * explain (analyze, costs off, summary off, timing off) select * from list_part where a = list_part_fn(1) + a;
-	 *                       QUERY PLAN                      
-	 * ------------------------------------------------------
-	 *  Append (actual rows=0 loops=1)
-	 *    ->  Seq Scan on list_part1 (actual rows=0 loops=1)
-	 *          Filter: (a = (list_part_fn(1) + a))
-	 *          Rows Removed by Filter: 1
-	 *    ->  Seq Scan on list_part2 (actual rows=0 loops=1)
-	 *          Filter: (a = (list_part_fn(1) + a))
-	 *          Rows Removed by Filter: 1
-	 *    ->  Seq Scan on list_part3 (actual rows=0 loops=1)
-	 *          Filter: (a = (list_part_fn(1) + a))
-	 *          Rows Removed by Filter: 1
-	 *    ->  Seq Scan on list_part4 (actual rows=0 loops=1)
-	 *          Filter: (a = (list_part_fn(1) + a))
-	 *          Rows Removed by Filter: 1
-	 * (13 rows)
-	 *
-	 * We don't print those "Rows Removed by Filter" rows in GPDB, because
-	 * they don't come from the "winner" QE.
+	 * Put winner's stats into qDisp PlanState's Instrument node.
 	 */
 	if (ntuples.agg.vcnt > 0)
 	{

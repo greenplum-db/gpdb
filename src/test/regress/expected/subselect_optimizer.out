@@ -1320,24 +1320,22 @@ select * from x where f1 = 1;
 explain (verbose, costs off)
 with x as (select * from (select f1, random() from subselect_tbl) ss)
 select * from x where f1 = 1;
-                         QUERY PLAN                         
-------------------------------------------------------------
- Sequence
+                           QUERY PLAN                           
+----------------------------------------------------------------
+ Gather Motion 1:1  (slice1; segments: 1)
    Output: share0_ref2.f1, share0_ref2.random
-   ->  Shared Scan (share slice:id 0:0)
-         Output: share0_ref1.f1, share0_ref1.random
-         ->  Result
-               Output: subselect_tbl.f1, random()
-               ->  Gather Motion 1:1  (slice1; segments: 1)
-                     Output: subselect_tbl.f1
-                     ->  Seq Scan on public.subselect_tbl
-                           Output: subselect_tbl.f1
-                           Filter: (subselect_tbl.f1 = 1)
-   ->  Result
+   ->  Sequence
          Output: share0_ref2.f1, share0_ref2.random
-         Filter: (share0_ref2.f1 = 1)
-         ->  Shared Scan (share slice:id 0:0)
+         ->  Shared Scan (share slice:id 1:0)
+               Output: share0_ref1.f1, share0_ref1.random
+               ->  Seq Scan on public.subselect_tbl
+                     Output: subselect_tbl.f1, random()
+                     Filter: (subselect_tbl.f1 = 1)
+         ->  Result
                Output: share0_ref2.f1, share0_ref2.random
+               Filter: (share0_ref2.f1 = 1)
+               ->  Shared Scan (share slice:id 1:0)
+                     Output: share0_ref2.f1, share0_ref2.random
  Optimizer: Pivotal Optimizer (GPORCA)
  Settings: gp_cte_sharing=on, optimizer=on
 (18 rows)

@@ -1872,7 +1872,7 @@ ExecHashJoinReloadHashTable(HashJoinState *hjstate)
 		{
 			Assert(hashtable->stats);
 			hashtable->stats->batchstats[curbatch].innerfilesize =
-				BufFileSize(hashtable->innerBatchFile[curbatch]);
+				BufFileGetSize(hashtable->innerBatchFile[curbatch]);
 		}
 
 		SIMPLE_FAULT_INJECTOR("workfile_hashjoin_failure");

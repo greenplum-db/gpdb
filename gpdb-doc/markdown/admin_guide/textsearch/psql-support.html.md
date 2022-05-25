@@ -158,5 +158,5 @@ Parser: "pg_catalog.default"
  pg_catalog | thesaurus | thesaurus dictionary: phrase by phrase substitution
 ```
 
-**Parent topic:**[Using Full Text Search](../textsearch/full-text-search.html)
+**Parent topic:** [Using Full Text Search](../textsearch/full-text-search.html)
 

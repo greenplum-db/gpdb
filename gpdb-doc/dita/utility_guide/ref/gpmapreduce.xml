@@ -8,27 +8,27 @@
     <p>Runs Greenplum MapReduce jobs as defined in a YAML specification document. </p>
     <section id="section2">
       <title>Synopsis</title>
-      <codeblock><b>gpmapreduce</b> <b>-f</b> <varname>config.yaml</varname> [<varname>dbname</varname> [<varname>username</varname>]] 
-     [<b>-k</b> <varname>name=value</varname> | <b>--key</b> <varname>name=value</varname>] 
-     [<b>-h</b> <varname>hostname</varname> | <b>--host</b> <varname>hostname</varname>] [<b>-p</b> <varname>port</varname>| <b>--port</b> <varname>port</varname>] 
-     [<b>-U</b> <varname>username</varname> | <b>--username</b> <varname>username</varname>] [<b>-W</b>] [<b>-v</b>]
+      <codeblock>gpmapreduce -f &lt;config.yaml> [dbname [&lt;username>]] 
+     [-k &lt;name=value> | --key &lt;name=value>] 
+     [-h &lt;hostname> | --host &lt;hostname>] [-p &lt;port>| --port &lt;port>] 
+     [-U &lt;username> | --username &lt;username>] [-W] [-v]
 
-<b>gpmapreduce</b> <b>-x</b> | <b>--explain</b> 
+gpmapreduce -x | --explain 
 
-<b>gpmapreduce</b> <b>-X</b> | <b>--explain-analyze</b>
+gpmapreduce -X | --explain-analyze
 
-<b>gpmapreduce</b> <b>-V</b> | <b>--version</b> 
+gpmapreduce -V | --version 
 
-<b>gpmapreduce</b> <b>-h</b> | <b>--help</b> </codeblock>
+gpmapreduce -h | --help </codeblock>
     </section>
     <section id="section3">
       <title>Requirements</title>
       <p>The following are required prior to running this program:</p>
       <ul id="ul_v5h_bxq_dp">
-        <li id="kx142094">You must have your MapReduce job defined in a YAML file. See
-          <codeph><xref href="gpmapreduce-yaml.xml#topic1" type="topic" format="dita"/></codeph>
-          for more information about the format of, and keywords supported in, the
-          Greenplum MapReduce YAML configuration file.</li>
+        <li id="kx142094">You must have your MapReduce job defined in a YAML file. See <xref
+            href="gpmapreduce-yaml.xml#topic1" type="topic" format="dita"/> for more information
+          about the format of, and keywords supported in, the Greenplum MapReduce YAML configuration
+          file.</li>
         <li id="kx141300">You must be a Greenplum Database superuser to run MapReduce jobs written
           in untrusted Perl or Python.</li>
         <li id="kx141310">You must be a Greenplum Database superuser to run MapReduce jobs with
@@ -58,8 +58,8 @@
         <plentry>
           <pt>-f <varname>config.yaml</varname></pt>
           <pd>Required. The YAML file that contains the Greenplum MapReduce job definitions. Refer
-           to <codeph><xref href="gpmapreduce-yaml.xml#topic1" type="topic" format="dita"/></codeph>
-           for the format and content of the parameters that you specify in this file.</pd>
+            to <xref href="gpmapreduce-yaml.xml#topic1" type="topic" format="dita"/> for the format
+            and content of the parameters that you specify in this file.</pd>
         </plentry>
         <plentry>
           <pt>-? | --help</pt>
@@ -122,7 +122,7 @@
     </section>
     <section id="section8">
       <title>See Also</title>
-      <p><codeph><xref href="gpmapreduce-yaml.xml#topic1" type="topic" format="dita"/></codeph></p>
+      <p><xref href="gpmapreduce-yaml.xml#topic1" type="topic" format="dita"/></p>
     </section>
   </body>
 </topic>

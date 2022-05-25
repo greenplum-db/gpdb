@@ -1678,7 +1678,7 @@ appendonly_beginscan(Relation relation,
 	 * Get the pg_appendonly information for this table
 	 */
 	seginfo = GetAllFileSegInfo(relation,
-								appendOnlyMetaDataSnapshot, &segfile_count);
+								appendOnlyMetaDataSnapshot, &segfile_count, NULL);
 
 	aoscan = appendonly_beginrangescan_internal(relation,
 												snapshot,
@@ -2154,9 +2154,20 @@ appendonly_fetch_init(Relation relation,
 		GetAllFileSegInfo(
 						  relation,
 						  appendOnlyMetaDataSnapshot,
-						  &aoFetchDesc->totalSegfiles);
-	for (segno = 0; segno < AOTupleId_MultiplierSegmentFileNum; ++segno)
+						  &aoFetchDesc->totalSegfiles,
+						  NULL);
+
+	/* 
+	 * Initialize lastSequence only for segments which we got above is sufficient,
+	 * rather than all AOTupleId_MultiplierSegmentFileNum ones that introducing
+	 * too many unnecessary calls in most cases.
+	 */
+	memset(aoFetchDesc->lastSequence, -1, sizeof(aoFetchDesc->lastSequence));
+	for (int i = -1; i < aoFetchDesc->totalSegfiles; i++)
 	{
+		/* always initailize segment 0 */
+		segno = (i < 0 ? 0 : aoFetchDesc->segmentFileInfo[i]->segno);
+		/* set corresponding bit for target segment */
 		aoFetchDesc->lastSequence[segno] = ReadLastSequence(aoFormData.segrelid, segno);
 	}
 
@@ -2231,6 +2242,14 @@ appendonly_fetch(AppendOnlyFetchDesc aoFetchDesc,
 	int			segmentFileNum = AOTupleIdGet_segmentFileNum(aoTupleId);
 	int64		rowNum = AOTupleIdGet_rowNum(aoTupleId);
 	bool		isSnapshotAny = (aoFetchDesc->snapshot == SnapshotAny);
+
+	Assert(segmentFileNum >= 0);
+
+	if (aoFetchDesc->lastSequence[segmentFileNum] == InvalidAORowNum)
+		ereport(ERROR,
+				(errcode(ERRCODE_INTERNAL_ERROR),
+				 errmsg("Row No. %ld in segment file No. %d is out of scanning scope for target relfilenode %u.",
+				 		rowNum, segmentFileNum, aoFetchDesc->relation->rd_node.relNode)));
 
 	/*
 	 * This is an improvement for brin. BRIN index stores ranges of TIDs in

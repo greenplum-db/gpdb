@@ -435,7 +435,7 @@ AND u_folio = (SELECT max(u_folio)  FROM q68t792_temp c WHERE a.u_vtgnr = c.u_vt
     <dxl:Plan Id="0" SpaceSize="17595">
       <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="2155.680679" Rows="70.000000" Width="10"/>
+          <dxl:Cost StartupCost="0" TotalCost="2155.684179" Rows="70.000000" Width="10"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="u_vtgnr">
@@ -452,7 +452,7 @@ AND u_folio = (SELECT max(u_folio)  FROM q68t792_temp c WHERE a.u_vtgnr = c.u_vt
         <dxl:SortingColumnList/>
         <dxl:Result>
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="2155.677536" Rows="70.000000" Width="10"/>
+            <dxl:Cost StartupCost="0" TotalCost="2155.681036" Rows="70.000000" Width="10"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="u_vtgnr">
@@ -476,7 +476,7 @@ AND u_folio = (SELECT max(u_folio)  FROM q68t792_temp c WHERE a.u_vtgnr = c.u_vt
           <dxl:OneTimeFilter/>
           <dxl:Aggregate AggregationStrategy="Sorted" StreamSafe="false">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="2155.675233" Rows="70.000000" Width="18"/>
+              <dxl:Cost StartupCost="0" TotalCost="2155.678733" Rows="70.000000" Width="18"/>
             </dxl:Properties>
             <dxl:GroupingColumns>
               <dxl:GroupingColumn ColId="0"/>
@@ -491,7 +491,7 @@ AND u_folio = (SELECT max(u_folio)  FROM q68t792_temp c WHERE a.u_vtgnr = c.u_vt
               <dxl:ProjElem ColId="32" Alias="max">
                 <dxl:AggFunc AggMdid="0.2129.1.0" AggDistinct="false" AggStage="Final" AggKind="n" AggArgTypes="">
                   <dxl:ValuesList ParamType="aggargs">
-                  <dxl:Ident ColId="34" ColName="ColRef_0034" TypeMdid="0.25.1.0"/>
+                    <dxl:Ident ColId="34" ColName="ColRef_0034" TypeMdid="0.25.1.0"/>
                   </dxl:ValuesList>
                   <dxl:ValuesList ParamType="aggdirectargs"/>
                   <dxl:ValuesList ParamType="aggorder"/>
@@ -523,7 +523,7 @@ AND u_folio = (SELECT max(u_folio)  FROM q68t792_temp c WHERE a.u_vtgnr = c.u_vt
             <dxl:Filter/>
             <dxl:Sort SortDiscardDuplicates="false">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="2155.673340" Rows="70.000000" Width="44"/>
+                <dxl:Cost StartupCost="0" TotalCost="2155.676840" Rows="70.000000" Width="44"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="0" Alias="u_vtgnr">
@@ -565,7 +565,7 @@ AND u_folio = (SELECT max(u_folio)  FROM q68t792_temp c WHERE a.u_vtgnr = c.u_vt
               <dxl:LimitOffset/>
               <dxl:RedistributeMotion InputSegments="0,1" OutputSegments="0,1">
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="2155.628552" Rows="70.000000" Width="44"/>
+                  <dxl:Cost StartupCost="0" TotalCost="2155.632052" Rows="70.000000" Width="44"/>
                 </dxl:Properties>
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="0" Alias="u_vtgnr">
@@ -620,7 +620,7 @@ AND u_folio = (SELECT max(u_folio)  FROM q68t792_temp c WHERE a.u_vtgnr = c.u_vt
                 </dxl:HashExprList>
                 <dxl:Result>
                   <dxl:Properties>
-                    <dxl:Cost StartupCost="0" TotalCost="2155.623732" Rows="70.000000" Width="44"/>
+                    <dxl:Cost StartupCost="0" TotalCost="2155.627232" Rows="70.000000" Width="44"/>
                   </dxl:Properties>
                   <dxl:ProjList>
                     <dxl:ProjElem ColId="0" Alias="u_vtgnr">
@@ -652,7 +652,7 @@ AND u_folio = (SELECT max(u_folio)  FROM q68t792_temp c WHERE a.u_vtgnr = c.u_vt
                   <dxl:OneTimeFilter/>
                   <dxl:Aggregate AggregationStrategy="Sorted" StreamSafe="false">
                     <dxl:Properties>
-                      <dxl:Cost StartupCost="0" TotalCost="2155.623732" Rows="70.000000" Width="44"/>
+                      <dxl:Cost StartupCost="0" TotalCost="2155.627232" Rows="70.000000" Width="44"/>
                     </dxl:Properties>
                     <dxl:GroupingColumns>
                       <dxl:GroupingColumn ColId="0"/>
@@ -667,9 +667,9 @@ AND u_folio = (SELECT max(u_folio)  FROM q68t792_temp c WHERE a.u_vtgnr = c.u_vt
                       <dxl:ProjElem ColId="34" Alias="ColRef_0034">
                         <dxl:AggFunc AggMdid="0.2129.1.0" AggDistinct="false" AggStage="Partial" AggKind="n" AggArgTypes="">
                           <dxl:ValuesList ParamType="aggargs">
-                          <dxl:Cast TypeMdid="0.25.1.0" FuncId="0.0.0.0">
-                            <dxl:Ident ColId="24" ColName="u_folio" TypeMdid="0.1043.1.0"/>
-                          </dxl:Cast>
+                            <dxl:Cast TypeMdid="0.25.1.0" FuncId="0.0.0.0">
+                              <dxl:Ident ColId="24" ColName="u_folio" TypeMdid="0.1043.1.0"/>
+                            </dxl:Cast>
                           </dxl:ValuesList>
                           <dxl:ValuesList ParamType="aggdirectargs"/>
                           <dxl:ValuesList ParamType="aggorder"/>
@@ -701,7 +701,7 @@ AND u_folio = (SELECT max(u_folio)  FROM q68t792_temp c WHERE a.u_vtgnr = c.u_vt
                     <dxl:Filter/>
                     <dxl:NestedLoopJoin JoinType="Inner" IndexNestedLoopJoin="false" OuterRefAsParam="false">
                       <dxl:Properties>
-                        <dxl:Cost StartupCost="0" TotalCost="2155.621503" Rows="70.000000" Width="39"/>
+                        <dxl:Cost StartupCost="0" TotalCost="2155.625003" Rows="70.000000" Width="39"/>
                       </dxl:Properties>
                       <dxl:ProjList>
                         <dxl:ProjElem ColId="0" Alias="u_vtgnr">
@@ -752,7 +752,7 @@ AND u_folio = (SELECT max(u_folio)  FROM q68t792_temp c WHERE a.u_vtgnr = c.u_vt
                       </dxl:JoinFilter>
                       <dxl:Sort SortDiscardDuplicates="false">
                         <dxl:Properties>
-                          <dxl:Cost StartupCost="0" TotalCost="1293.246803" Rows="70.000000" Width="36"/>
+                          <dxl:Cost StartupCost="0" TotalCost="1293.250303" Rows="70.000000" Width="36"/>
                         </dxl:Properties>
                         <dxl:ProjList>
                           <dxl:ProjElem ColId="0" Alias="u_vtgnr">
@@ -791,7 +791,7 @@ AND u_folio = (SELECT max(u_folio)  FROM q68t792_temp c WHERE a.u_vtgnr = c.u_vt
                         <dxl:LimitOffset/>
                         <dxl:NestedLoopJoin JoinType="Inner" IndexNestedLoopJoin="false" OuterRefAsParam="false">
                           <dxl:Properties>
-                            <dxl:Cost StartupCost="0" TotalCost="1293.210158" Rows="70.000000" Width="36"/>
+                            <dxl:Cost StartupCost="0" TotalCost="1293.213658" Rows="70.000000" Width="36"/>
                           </dxl:Properties>
                           <dxl:ProjList>
                             <dxl:ProjElem ColId="0" Alias="u_vtgnr">
@@ -837,7 +837,7 @@ AND u_folio = (SELECT max(u_folio)  FROM q68t792_temp c WHERE a.u_vtgnr = c.u_vt
                           </dxl:JoinFilter>
                           <dxl:Result>
                             <dxl:Properties>
-                              <dxl:Cost StartupCost="0" TotalCost="431.012206" Rows="70.000000" Width="20"/>
+                              <dxl:Cost StartupCost="0" TotalCost="431.015706" Rows="70.000000" Width="20"/>
                             </dxl:Properties>
                             <dxl:ProjList>
                               <dxl:ProjElem ColId="21" Alias="substr">
@@ -867,7 +867,7 @@ AND u_folio = (SELECT max(u_folio)  FROM q68t792_temp c WHERE a.u_vtgnr = c.u_vt
                                 <dxl:ProjElem ColId="20" Alias="max">
                                   <dxl:AggFunc AggMdid="0.2129.1.0" AggDistinct="false" AggStage="Final" AggKind="n" AggArgTypes="">
                                     <dxl:ValuesList ParamType="aggargs">
-                                    <dxl:Ident ColId="33" ColName="ColRef_0033" TypeMdid="0.25.1.0"/>
+                                      <dxl:Ident ColId="33" ColName="ColRef_0033" TypeMdid="0.25.1.0"/>
                                     </dxl:ValuesList>
                                     <dxl:ValuesList ParamType="aggdirectargs"/>
                                     <dxl:ValuesList ParamType="aggorder"/>
@@ -923,26 +923,26 @@ AND u_folio = (SELECT max(u_folio)  FROM q68t792_temp c WHERE a.u_vtgnr = c.u_vt
                                       <dxl:ProjElem ColId="33" Alias="ColRef_0033">
                                         <dxl:AggFunc AggMdid="0.2129.1.0" AggDistinct="false" AggStage="Partial" AggKind="n" AggArgTypes="">
                                           <dxl:ValuesList ParamType="aggargs">
-                                          <dxl:If TypeMdid="0.25.1.0">
-                                            <dxl:Comparison ComparisonOperator="&lt;" OperatorMdid="0.97.1.0">
-                                              <dxl:FuncExpr FuncId="0.819.1.0" FuncRetSet="false" TypeMdid="0.23.1.0">
-                                                <dxl:Ident ColId="11" ColName="u_zj" TypeMdid="0.1043.1.0"/>
-                                              </dxl:FuncExpr>
-                                              <dxl:ConstValue TypeMdid="0.23.1.0" Value="50"/>
-                                            </dxl:Comparison>
-                                            <dxl:OpExpr OperatorName="||" OperatorMdid="0.654.1.0" OperatorType="0.25.1.0">
-                                              <dxl:ConstValue TypeMdid="0.25.1.0" Value="AAAABjIw" LintValue="873595684"/>
-                                              <dxl:Cast TypeMdid="0.25.1.0" FuncId="0.0.0.0">
-                                                <dxl:Ident ColId="11" ColName="u_zj" TypeMdid="0.1043.1.0"/>
-                                              </dxl:Cast>
-                                            </dxl:OpExpr>
-                                            <dxl:OpExpr OperatorName="||" OperatorMdid="0.654.1.0" OperatorType="0.25.1.0">
-                                              <dxl:ConstValue TypeMdid="0.25.1.0" Value="AAAABjE5" LintValue="882058028"/>
-                                              <dxl:Cast TypeMdid="0.25.1.0" FuncId="0.0.0.0">
-                                                <dxl:Ident ColId="11" ColName="u_zj" TypeMdid="0.1043.1.0"/>
-                                              </dxl:Cast>
-                                            </dxl:OpExpr>
-                                          </dxl:If>
+                                            <dxl:If TypeMdid="0.25.1.0">
+                                              <dxl:Comparison ComparisonOperator="&lt;" OperatorMdid="0.97.1.0">
+                                                <dxl:FuncExpr FuncId="0.819.1.0" FuncRetSet="false" TypeMdid="0.23.1.0">
+                                                  <dxl:Ident ColId="11" ColName="u_zj" TypeMdid="0.1043.1.0"/>
+                                                </dxl:FuncExpr>
+                                                <dxl:ConstValue TypeMdid="0.23.1.0" Value="50"/>
+                                              </dxl:Comparison>
+                                              <dxl:OpExpr OperatorName="||" OperatorMdid="0.654.1.0" OperatorType="0.25.1.0">
+                                                <dxl:ConstValue TypeMdid="0.25.1.0" Value="AAAABjIw" LintValue="873595684"/>
+                                                <dxl:Cast TypeMdid="0.25.1.0" FuncId="0.0.0.0">
+                                                  <dxl:Ident ColId="11" ColName="u_zj" TypeMdid="0.1043.1.0"/>
+                                                </dxl:Cast>
+                                              </dxl:OpExpr>
+                                              <dxl:OpExpr OperatorName="||" OperatorMdid="0.654.1.0" OperatorType="0.25.1.0">
+                                                <dxl:ConstValue TypeMdid="0.25.1.0" Value="AAAABjE5" LintValue="882058028"/>
+                                                <dxl:Cast TypeMdid="0.25.1.0" FuncId="0.0.0.0">
+                                                  <dxl:Ident ColId="11" ColName="u_zj" TypeMdid="0.1043.1.0"/>
+                                                </dxl:Cast>
+                                              </dxl:OpExpr>
+                                            </dxl:If>
                                           </dxl:ValuesList>
                                           <dxl:ValuesList ParamType="aggdirectargs"/>
                                           <dxl:ValuesList ParamType="aggorder"/>

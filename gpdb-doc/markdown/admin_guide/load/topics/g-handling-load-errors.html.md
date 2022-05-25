@@ -29,5 +29,5 @@ When you set `SEGMENT REJECT LIMIT`, Greenplum scans the external data in single
 -   **[Moving Data between Tables](../../load/topics/g-moving-data-between-tables.html)**  
 
 
-**Parent topic:**[Loading and Unloading Data](../../load/topics/g-loading-and-unloading-data.html)
+**Parent topic:** [Loading and Unloading Data](../../load/topics/g-loading-and-unloading-data.html)
 

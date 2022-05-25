@@ -3,6 +3,7 @@
 -- ----------------------------------------------------------------------
 create schema qp_correlated_query;
 set search_path to qp_correlated_query;
+set optimizer_trace_fallback TO on;
 -- ----------------------------------------------------------------------
 -- Test: csq_heap_in.sql (Correlated Subquery: CSQ using IN clause (Heap))
 -- ----------------------------------------------------------------------
@@ -959,6 +960,57 @@ select A.i, B.i, C.j from A, B, C where A.j = all (select C.j from C where C.j =
  1 | -1 | 62
 (10 rows)
 
+-- -- -- --
+-- Test ALL clause with subqueries
+-- -- -- --
+create table qp_csq_all_t1(a int) distributed by (a);
+create table qp_csq_all_t2(b int) distributed by (b);
+insert into qp_csq_all_t1 values (null);
+select * from qp_csq_all_t1 where (select a from qp_csq_all_t1 limit 1) = all(select b from qp_csq_all_t2);
+ a 
+---
+  
+(1 row)
+
+truncate qp_csq_all_t1, qp_csq_all_t2;
+insert into qp_csq_all_t2 values (null);
+select * from qp_csq_all_t1 where (select a from qp_csq_all_t1 limit 1) = all(select b from qp_csq_all_t2);
+ a 
+---
+(0 rows)
+
+truncate qp_csq_all_t1, qp_csq_all_t2;
+insert into qp_csq_all_t1 values (1);
+select * from qp_csq_all_t1 where (select a from qp_csq_all_t1 limit 1) = all(select b from qp_csq_all_t2);
+ a 
+---
+ 1
+(1 row)
+
+truncate qp_csq_all_t1, qp_csq_all_t2;
+insert into qp_csq_all_t2 values (1);
+select * from qp_csq_all_t1 where (select a from qp_csq_all_t1 limit 1) = all(select b from qp_csq_all_t2);
+ a 
+---
+(0 rows)
+
+truncate qp_csq_all_t1, qp_csq_all_t2;
+insert into qp_csq_all_t1 values (1);
+insert into qp_csq_all_t2 values (1);
+select * from qp_csq_all_t1 where (select a from qp_csq_all_t1 limit 1) = all(select b from qp_csq_all_t2);
+ a 
+---
+ 1
+(1 row)
+
+truncate qp_csq_all_t1, qp_csq_all_t2;
+insert into qp_csq_all_t1 values (1);
+insert into qp_csq_all_t2 values (2);
+select * from qp_csq_all_t1 where (select a from qp_csq_all_t1 limit 1) = all(select b from qp_csq_all_t2);
+ a 
+---
+(0 rows)
+
 -- ----------------------------------------------------------------------
 -- Test: Correlated Subquery: CSQ using EXISTS clause (Heap)
 -- ----------------------------------------------------------------------
@@ -1752,6 +1804,8 @@ SELECT a, (SELECT (SELECT d FROM qp_csq_t3 WHERE a=c)) FROM qp_csq_t1 GROUP BY a
 -- Basic queries in SELECT list
 -- -- -- --
 select A.i, (select C.j from C group by C.j having max(C.j) = any (select min(B.j) from B)) as C_j from A,B,C where A.i = 99 order by A.i, C_j limit 10;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  DXL-to-PlStmt Translation: Assert not supported
  i  | c_j 
 ----+-----
  99 |   1
@@ -1777,14 +1831,20 @@ select (select avg(x) from qp_csq_t1, qp_csq_t2 where qp_csq_t1.a = any (select 
 
 -- Planner should fail due to skip-level correlation not supported. Query should not cause segfault like in issue #12054.
 select A.j, (select array_agg(a_B) from (select B.j, (select array_agg(a_C) from (select C.j from C where C.i = A.i) a_C) from B where B.i = A.i order by A.j) a_B) from A;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Whole-row variable
 ERROR:  correlated subquery with skip-level correlations is not supported
 -- Planner should fail due to skip-level correlation not supported. Query should not return wrong results like in issue #12054.
 select A.j, (select array_agg(a_B) from (select B.j, (select sum(a_C.j) from (select C.j from C where C.i = A.i) a_C) from B where B.i = A.i order by A.j) a_B) from A;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Whole-row variable
 ERROR:  correlated subquery with skip-level correlations is not supported
 -- ----------------------------------------------------------------------
 -- Test: Correlated Subquery: CSQ with multiple columns (Heap)
 -- ----------------------------------------------------------------------
 select A.i, B.i from A, B where (A.i,A.j) = (select min(B.i),min(B.j) from B where B.i = A.i) order by A.i, B.i;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Non-Scalar Subquery
  i | i  
 ---+----
  1 | -1
@@ -1802,6 +1862,8 @@ select A.i, B.i from A, B where (A.i,A.j) = (select min(B.i),min(B.j) from B whe
 (12 rows)
 
 select A.i, B.i from A, B where (A.i,A.j) = all(select B.i,B.j from B where B.i = A.i) order by A.i, B.i;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Non-Scalar Subquery
  i  | i  
 ----+----
  19 | -1
@@ -1848,6 +1910,8 @@ select A.i, B.i from A, B where not exists (select B.i,B.j from B where B.i = A.
 (18 rows)
 
 select A.i, B.i from A, B where (A.i,A.j) in (select B.i,B.j from B where B.i = A.i) order by A.i, B.i;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Non-Scalar Subquery
  i | i  
 ---+----
  1 | -1
@@ -1865,6 +1929,8 @@ select A.i, B.i from A, B where (A.i,A.j) in (select B.i,B.j from B where B.i = 
 (12 rows)
 
 select A.i, B.i,C.i from A, B, C where (A.i,B.i) = any (select A.i, B.i from A,B where A.i = C.i and B.i = C.i) order by A.i, B.i, C.i;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Non-Scalar Subquery
  i | i | i 
 ---+---+---
  1 | 1 | 1
@@ -2119,6 +2185,8 @@ select A.i, B.i,C.i from A, B, C where not exists (select A.i, B.i from A,B wher
 (240 rows)
 
 select A.i, B.i,C.i from A, B, C where (A.i,B.i) in (select A.i, B.i from A,B where A.i = C.i and B.i = C.i) order by A.i, B.i, C.i;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Non-Scalar Subquery
  i | i | i 
 ---+---+---
  1 | 1 | 1
@@ -2128,6 +2196,8 @@ select A.i, B.i,C.i from A, B, C where (A.i,B.i) in (select A.i, B.i from A,B wh
 (4 rows)
 
 select * from A,B,C where (A.i,B.i) = any (select A.i, B.i from A,B where A.i < C.i and B.i = C.i and C.i not in (select A.i from A where A.j = 1 and A.j = B.j)) order by 1,2,3,4,5,6;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Non-Scalar Subquery
  i  | j | i  | j | i  | j  
 ----+---+----+---+----+----
   1 | 1 |  2 | 7 |  2 |  7
@@ -2141,6 +2211,8 @@ select * from A,B,C where (A.i,B.i) = any (select A.i, B.i from A,B where A.i < 
 (8 rows)
 
 select A.i as A_i, B.i as B_i,C.i as C_i from A, B, C where (A.i,B.i) = (select min(A.i), min(B.i) from A,B where A.i = C.i and B.i = C.i) order by A_i, B_i, C_i;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Non-Scalar Subquery
  a_i | b_i | c_i 
 -----+-----+-----
    1 |   1 |   1
@@ -2269,6 +2341,8 @@ SELECT id, first_name FROM employee WHERE id IN
 SELECT id, first_name, salary from employee
     where (id, salary) IN
         (SELECT id, MIN(salary) FROM employee GROUP BY id) order by id;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Non-Scalar Subquery
  id | first_name | salary  
 ----+------------+---------
  01 | Jason      | 1234.56
@@ -3650,6 +3724,8 @@ EXPLAIN SELECT a FROM qp_tab1 f1 LEFT JOIN qp_tab2 on a=c WHERE NOT EXISTS(SELEC
 GPDB_12_MERGE_FIXME: Fallsback due to unsupported exec location.
 -- end_ignore
 EXPLAIN SELECT DISTINCT a FROM qp_tab1 WHERE NOT (SELECT TRUE FROM qp_tab2 WHERE EXISTS (SELECT * FROM qp_tab3 WHERE qp_tab2.c = qp_tab3.e));
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  DXL-to-PlStmt Translation: Assert not supported
                                      QUERY PLAN                                     
 ------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)  (cost=1.02..10001.04 rows=1 width=4)
@@ -3672,6 +3748,8 @@ EXPLAIN SELECT DISTINCT a FROM qp_tab1 WHERE NOT (SELECT TRUE FROM qp_tab2 WHERE
 (17 rows)
 
 SELECT DISTINCT a FROM qp_tab1 WHERE NOT (SELECT TRUE FROM qp_tab2 WHERE EXISTS (SELECT * FROM qp_tab3 WHERE qp_tab2.c = qp_tab3.e));
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  DXL-to-PlStmt Translation: Assert not supported
  a 
 ---
 (0 rows)
@@ -3911,3 +3989,4 @@ DROP TABLE IF EXISTS supplier;
 -- ----------------------------------------------------------------------
 set client_min_messages='warning';
 drop schema qp_correlated_query cascade;
+reset optimizer_trace_fallback;

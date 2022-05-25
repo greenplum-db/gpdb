@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
-<topic id="topic1"><title id="ah136704">ALTER CONVERSION</title><body><p id="sql_command_desc">Changes the definition of a conversion.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">ALTER CONVERSION <varname>name</varname> RENAME TO <varname>newname</varname>
+<topic id="topic1"><title id="ah136704">ALTER CONVERSION</title><body><p id="sql_command_desc">Changes the definition of a conversion.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">ALTER CONVERSION &lt;name> RENAME TO &lt;newname>
 
-ALTER CONVERSION <varname>name</varname> OWNER TO <varname>newowner</varname>
+ALTER CONVERSION &lt;name> OWNER TO &lt;newowner>
 
-ALTER CONVERSION <varname>name</varname> SET SCHEMA <varname>new_schema</varname>
+ALTER CONVERSION &lt;name> SET SCHEMA &lt;new_schema>
 </codeblock></section><section id="section3"><title>Description</title><p><codeph>ALTER CONVERSION</codeph> changes the definition of a conversion.</p><p>You must own the conversion to use <codeph>ALTER CONVERSION</codeph>.
 To alter the owner, you must also be a direct or indirect member of the
 new owning role, and that role must have <codeph>CREATE</codeph> privilege
@@ -20,6 +20,6 @@ anyway.) </p></section><section id="section4"><title>Parameters</title><parml><p
           <codeph>latin1_to_unicode</codeph>:</p><codeblock>ALTER CONVERSION iso_8859_1_to_utf8 RENAME TO 
 latin1_to_unicode;</codeblock><p>To change the owner of the conversion <codeph>iso_8859_1_to_utf8</codeph> to
         <codeph>joe</codeph>:</p><codeblock>ALTER CONVERSION iso_8859_1_to_utf8 OWNER TO joe;</codeblock></section><section id="section6"><title>Compatibility</title><p>There is no <codeph>ALTER CONVERSION</codeph> statement in the SQL standard.
-</p></section><section id="section7"><title>See Also</title><p><codeph><xref href="./CREATE_CONVERSION.xml#topic1" type="topic" format="dita"/></codeph>,
-            <codeph><xref href="./DROP_CONVERSION.xml#topic1" type="topic" format="dita"
-        /></codeph></p></section></body></topic>
+</p></section><section id="section7"><title>See Also</title><p><xref href="./CREATE_CONVERSION.xml#topic1" type="topic" format="dita"/>,
+            <xref href="./DROP_CONVERSION.xml#topic1" type="topic" format="dita"
+        /></p></section></body></topic>

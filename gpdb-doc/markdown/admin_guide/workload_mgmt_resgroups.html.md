@@ -26,7 +26,7 @@ This topic includes the following subtopics:
 -   [Moving a Query to a Different Resource Group](#moverg)
 -   [Resource Group Frequently Asked Questions](#topic777999)
 
-**Parent topic:**[Managing Resources](wlmgmt.html)
+**Parent topic:** [Managing Resources](wlmgmt.html)
 
 ## <a id="topic8339intro"></a>Understanding Role and Component Resource Groups 
 
@@ -254,7 +254,7 @@ Using Tanzu Greenplum Command Center, an administrator can create and manage res
 
 Workload management assignment rules assign transactions to different resource groups based on user-defined criteria. If no assignment rule is matched, Greenplum Database assigns the transaction to the role's default resource group.
 
-Refer to the [Greenplum Command Center documentation](http://gpcc.docs.pivotal.io/latest) for more information about creating and managing resource groups and workload management rules.
+Refer to the [Greenplum Command Center documentation](http://docs.vmware.com/en/VMware-Tanzu-Greenplum-Command-Center/index.html) for more information about creating and managing resource groups and workload management rules.
 
 ## <a id="topic71717999"></a>Configuring and Using Resource Groups 
 

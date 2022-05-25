@@ -25,8 +25,8 @@
     <topic id="topic_info">
       <title>Module Documentation</title>
       <body>
-        <p>See <codeph><xref href="https://www.postgresql.org/docs/9.4/sslinfo.html"
-              scope="external" format="html">sslinfo</xref></codeph> in the PostgreSQL documentation
+        <p>See <xref href="https://www.postgresql.org/docs/9.4/sslinfo.html"
+              scope="external" format="html">sslinfo</xref> in the PostgreSQL documentation
           for detailed information about the individual functions in this module.</p>
       </body>
     </topic>

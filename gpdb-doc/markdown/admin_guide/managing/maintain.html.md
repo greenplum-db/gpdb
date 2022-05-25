@@ -6,7 +6,7 @@ To keep a Greenplum Database system running efficiently, the database must be re
 
 Greenplum Database requires that certain tasks be performed regularly to achieve optimal performance. The tasks discussed here are required, but database administrators can automate them using standard UNIX tools such as `cron` scripts. An administrator sets up the appropriate scripts and checks that they ran successfully. See [Recommended Monitoring and Maintenance Tasks](../monitoring/monitoring.html) for additional suggested maintenance activities you can implement to keep your Greenplum system running optimally.
 
-**Parent topic:**[Managing a Greenplum System](../managing/partII.html)
+**Parent topic:** [Managing a Greenplum System](../managing/partII.html)
 
 ## <a id="topic2"></a>Routine Vacuum and Analyze 
 

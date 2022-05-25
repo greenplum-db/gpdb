@@ -11,7 +11,7 @@
       </section>
       <section id="section2">
          <title>Synopsis</title>
-         <codeblock id="sql_command_synopsis">SET CONSTRAINTS { ALL | <varname>name</varname> [, ...] } { DEFERRED | IMMEDIATE }</codeblock>
+         <codeblock id="sql_command_synopsis">SET CONSTRAINTS { ALL | &lt;name> [, ...] } { DEFERRED | IMMEDIATE }</codeblock>
       </section>
       <section id="section3">
          <title>Description</title>

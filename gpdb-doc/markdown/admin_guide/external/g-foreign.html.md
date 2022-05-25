@@ -32,4 +32,4 @@ Greenplum Database adds an `mpp_execute` option to FDW-related SQL commands. If 
 
 **Note:** GPORCA does not support foreign tables, a query on a foreign table always falls back to the Postgres Planner.
 
-**Parent topic:**[Working with External Data](../external/g-working-with-file-based-ext-tables.html)
+**Parent topic:** [Working with External Data](../external/g-working-with-file-based-ext-tables.html)

@@ -180,7 +180,7 @@ CTranslatorExprToDXLUtils::PdxlnListFilterPartKey(CMemoryPool *mp,
 				"Unsupported part filter operator for list partitions : %ls"),
 			pexprPartKey->Pop()->SzId());
 		GPOS_THROW_EXCEPTION(gpopt::ExmaGPOPT, gpopt::ExmiUnsupportedOp,
-							 CException::ExsevDebug1, str->GetBuffer());
+							 str->GetBuffer());
 	}
 
 	GPOS_ASSERT(nullptr != pdxlnPartKey);

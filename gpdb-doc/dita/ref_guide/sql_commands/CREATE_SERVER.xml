@@ -7,11 +7,11 @@
         <p id="sql_command_desc">Defines a new foreign server.</p>
         <section id="section2">
             <title>Synopsis</title>
-            <codeblock id="sql_command_synopsis">CREATE SERVER <varname>server_name</varname> [ TYPE '<varname>server_type</varname>' ] [ VERSION '<varname>server_version</varname>' ]
-    FOREIGN DATA WRAPPER <varname>fdw_name</varname>
+            <codeblock id="sql_command_synopsis">CREATE SERVER &lt;server_name> [ TYPE '&lt;server_type>' ] [ VERSION '&lt;server_version>' ]
+    FOREIGN DATA WRAPPER &lt;fdw_name>
     [ OPTIONS ( [ mpp_execute { 'master' | 'any' | 'all segments' } [, ] ]
-                [ num_segments '<varname>num</varname>' [, ] ]
-                [ <varname>option</varname> '<varname>value</varname>' [, ... ]] ) ]</codeblock>
+                [ num_segments '&lt;num>' [, ] ]
+                [ &lt;option> '&lt;value>' [, ... ]] ) ]</codeblock>
         </section>
         <section id="section3">
             <title>Description</title>
@@ -100,7 +100,7 @@
         </section>
         <section id="section5">
             <title>Notes</title>
-            <p>When using the dblink module (see <codeph><xref href="../modules/dblink.xml#topic1">dblink</xref></codeph>), you can use the foreign server name as an argument of the <codeph>dblink_connect()</codeph> function to provide the connection parameters. You must have the <codeph>USAGE</codeph> privilege on the foreign server to use it in this manner.</p>
+            <p>When using the dblink module (see <xref href="../modules/dblink.xml#topic1">dblink</xref>), you can use the foreign server name as an argument of the <codeph>dblink_connect()</codeph> function to provide the connection parameters. You must have the <codeph>USAGE</codeph> privilege on the foreign server to use it in this manner.</p>
         </section>
         <section id="section6">
             <title>Examples</title>
@@ -113,13 +113,13 @@
         </section>
         <section id="section8">
             <title>See Also</title>
-            <p><codeph><xref href="ALTER_SERVER.xml#topic1">ALTER SERVER</xref></codeph>,
-                        <codeph><xref href="DROP_SERVER.xml#topic1">DROP
-                    SERVER</xref></codeph>,
-                        <codeph><xref href="CREATE_FOREIGN_DATA_WRAPPER.xml#topic1">CREATE
-                    FOREIGN DATA WRAPPER</xref></codeph>,
-                        <codeph><xref href="CREATE_USER_MAPPING.xml#topic1">CREATE
-                    USER MAPPING</xref></codeph></p>
+            <p><xref href="ALTER_SERVER.xml#topic1">ALTER SERVER</xref>,
+                        <xref href="DROP_SERVER.xml#topic1">DROP
+                    SERVER</xref>,
+                        <xref href="CREATE_FOREIGN_DATA_WRAPPER.xml#topic1">CREATE
+                    FOREIGN DATA WRAPPER</xref>,
+                        <xref href="CREATE_USER_MAPPING.xml#topic1">CREATE
+                    USER MAPPING</xref></p>
         </section>
     </body>
 </topic>

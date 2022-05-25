@@ -11,5 +11,5 @@ Performing backups regularly ensures that you can restore your data or rebuild y
 -   **[Parallel Backup with gpbackup and gprestore](../managing/backup-gpbackup.html)**  
 
 
-**Parent topic:**[Managing a Greenplum System](../managing/partII.html)
+**Parent topic:** [Managing a Greenplum System](../managing/partII.html)
 

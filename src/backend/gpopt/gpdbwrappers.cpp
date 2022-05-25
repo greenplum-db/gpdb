@@ -2820,13 +2820,20 @@ gpdb::GetRelChildIndexes(Oid reloid)
 	return partoids;
 }
 
+// Locks on partition leafs and indexes are held during optimizer (after
+// parse-analyze stage). ORCA need this function to lock relation. Here
+// we do not need to consider lock-upgrade issue, reasons are:
+//   1. Only UPDATE|DELETE statement may upgrade lock level
+//   2. ORCA currently does not support DML on partition tables
+//   3. If not partition table, then parser should have already locked
+//   4. Even later ORCA support DML on partition tables, the lock mode
+//      of leafs should be the same as the mode in root's RTE's rellockmode
+//   5. Index does not have lock-upgrade problem.
 void
 gpdb::GPDBLockRelationOid(Oid reloid, LOCKMODE lockmode)
 {
 	GP_WRAP_START;
 	{
-		bool lockUpgraded;
-		lockmode = UpgradeRelLockIfNecessary(reloid, lockmode, &lockUpgraded);
 		LockRelationOid(reloid, lockmode);
 	}
 	GP_WRAP_END;

@@ -3392,17 +3392,19 @@ SetTempNamespaceState(Oid tempNamespaceId, Oid tempToastNamespaceId)
 /*
  * like SetTempNamespaceState, but the process running normally
  *
- * GPDB: used to set session level temporary namespace after gang launched.
+ * GPDB: used to set session level temporary namespace after reader gang launched.
  */
 void
 SetTempNamespaceStateAfterBoot(Oid tempNamespaceId, Oid tempToastNamespaceId)
 {
-	/* same as PG, can not switch to other temp namespace dynamically */
-	Assert(myTempNamespace == InvalidOid || myTempNamespace == tempNamespaceId);
-	Assert(myTempToastNamespace == InvalidOid || myTempToastNamespace == tempToastNamespaceId);
+	Assert(Gp_role == GP_ROLE_EXECUTE);
 
-	/* if the namespace OID already setted, baseSearchPath is still valid */
-	if (myTempNamespace == tempToastNamespaceId && myTempToastNamespace == tempToastNamespaceId)
+	/* writer gang will do InitTempTableNamespace(), ignore the dispatch on writer gang */
+	if (Gp_is_writer)
+		return;
+
+	/* skip rebuild search path if search path is correct and valid */
+	if (tempNamespaceId == myTempNamespace && myTempToastNamespace == tempToastNamespaceId)
 		return;
 
 	myTempNamespace = tempNamespaceId;

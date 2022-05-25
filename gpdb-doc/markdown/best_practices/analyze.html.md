@@ -49,5 +49,5 @@ Setting `gp_autostats_mode` to `none` disables automatics statistics collection.
 
 For partitioned tables, automatic statistics collection is not triggered if data is inserted from the top-level parent table of a partitioned table. But automatic statistics collection *is* triggered if data is inserted directly in a leaf table \(where the data is stored\) of the partitioned table.
 
-**Parent topic:**[System Monitoring and Maintenance](maintenance.html)
+**Parent topic:** [System Monitoring and Maintenance](maintenance.html)
 

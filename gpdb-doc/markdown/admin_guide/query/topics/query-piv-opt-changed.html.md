@@ -28,5 +28,5 @@ There are changes to Greenplum Database behavior with the GPORCA optimizer enabl
 -   Greenplum Database adds the log file message `Planner produced plan` when GPORCA is enabled and Greenplum Database falls back to the Postgres Planner to generate the query plan.
 -   Greenplum Database issues a warning when statistics are missing from one or more table columns. When running an SQL command with GPORCA, Greenplum Database issues a warning if the command performance could be improved by collecting statistics on a column or set of columns referenced by the command. The warning is issued on the command line and information is added to the Greenplum Database log file. For information about collecting statistics on table columns, see the ANALYZE command in the *Greenplum Database Reference Guide*.
 
-**Parent topic:**[About GPORCA](../../query/topics/query-piv-optimizer.html)
+**Parent topic:** [About GPORCA](../../query/topics/query-piv-optimizer.html)
 

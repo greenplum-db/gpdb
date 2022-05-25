@@ -8,45 +8,45 @@
     <section id="section2">
       <title>Synopsis</title>
       <codeblock id="sql_command_synopsis">COMMENT ON
-{ TABLE <varname>object_name</varname> |
-  COLUMN <varname>relation_name.column_name</varname> |
-  AGGREGATE <varname>agg_name</varname> (<varname>agg_signature</varname>) |
-  CAST (<varname>source_type</varname> AS <varname>target_type</varname>) |
-  COLLATION <varname>object_name</varname>
-  CONSTRAINT <varname>constraint_name</varname> ON <varname>table_name</varname> |
-  CONVERSION <varname>object_name</varname> |
-  DATABASE <varname>object_name</varname> |
-  DOMAIN <varname>object_name</varname> |
-  EXTENSION <varname>object_name</varname> |
-  FOREIGN DATA WRAPPER <varname>object_name</varname> |
-  FOREIGN TABLE <varname>object_name</varname> |
-  FUNCTION <varname>func_name</varname> ([[<varname>argmode</varname>] [<varname>argname</varname>] <varname>argtype</varname> [, ...]]) |
-  INDEX <varname>object_name</varname> |
-  LARGE OBJECT <varname>large_object_oid</varname> |
-  MATERIALIZED VIEW <varname>object_name</varname> |
-  OPERATOR <varname>operator_name</varname> (<varname>left_type</varname>, <varname>right_type</varname>) |
-  OPERATOR CLASS <varname>object_name</varname> USING <varname>index_method</varname> |
-  [PROCEDURAL] LANGUAGE <varname>object_name</varname> |
-  RESOURCE GROUP <varname>object_name</varname> |
-  RESOURCE QUEUE <varname>object_name</varname> |
-  ROLE <varname>object_name</varname> |
-  RULE <varname>rule_name</varname> ON <varname>table_name</varname> |
-  SCHEMA <varname>object_name</varname> |
-  SEQUENCE <varname>object_name</varname> |
-  SERVER <varname>object_name</varname> |
-  TABLESPACE <varname>object_name</varname> |
-  TEXT SEARCH CONFIGURATION <varname>object_name</varname> |
-  TEXT SEARCH DICTIONARY <varname>object_name</varname> |
-  TEXT SEARCH PARSER <varname>object_name</varname> |
-  TEXT SEARCH TEMPLATE <varname>object_name</varname> |
-  TRIGGER <varname>trigger_name</varname> ON <varname>table_name</varname> |
-  TYPE <varname>object_name</varname> |
-  VIEW <varname>object_name</varname> } 
-IS '<varname>text</varname>'</codeblock>
+{ TABLE &lt;object_name |
+  COLUMN &lt;relation_name.column_name |
+  AGGREGATE &lt;agg_name (&lt;agg_signature>) |
+  CAST (&lt;source_type AS &lt;target_type>) |
+  COLLATION &lt;object_name
+  CONSTRAINT &lt;constraint_name ON &lt;table_name> |
+  CONVERSION &lt;object_name |
+  DATABASE &lt;object_name |
+  DOMAIN &lt;object_name |
+  EXTENSION &lt;object_name |
+  FOREIGN DATA WRAPPER &lt;object_name |
+  FOREIGN TABLE &lt;object_name |
+  FUNCTION &lt;func_name ([[&lt;argmode>] [&lt;argname>] &lt;argtype> [, ...]]) |
+  INDEX &lt;object_name |
+  LARGE OBJECT &lt;large_object_oid |
+  MATERIALIZED VIEW &lt;object_name |
+  OPERATOR &lt;operator_name (&lt;left_type>, &lt;right_type>) |
+  OPERATOR CLASS &lt;object_name USING &lt;index_method> |
+  [PROCEDURAL] LANGUAGE &lt;object_name |
+  RESOURCE GROUP &lt;object_name |
+  RESOURCE QUEUE &lt;object_name |
+  ROLE &lt;object_name |
+  RULE &lt;rule_name ON &lt;table_name> |
+  SCHEMA &lt;object_name |
+  SEQUENCE &lt;object_name |
+  SERVER &lt;object_name |
+  TABLESPACE &lt;object_name |
+  TEXT SEARCH CONFIGURATION &lt;object_name |
+  TEXT SEARCH DICTIONARY &lt;object_name |
+  TEXT SEARCH PARSER &lt;object_name |
+  TEXT SEARCH TEMPLATE &lt;object_name |
+  TRIGGER &lt;trigger_name ON &lt;table_name> |
+  TYPE &lt;object_name |
+  VIEW &lt;object_name } 
+IS 'text'</codeblock>
 <p>where <varname>agg_signature</varname> is:</p>
 <codeblock>* |
-[ <varname>argmode</varname> ] [ <varname>argname</varname> ] <varname>argtype</varname> [ , ... ] |
-[ [ <varname>argmode</varname> ] [ <varname>argname</varname> ] <varname>argtype</varname> [ , ... ] ] ORDER BY [ <varname>argmode</varname> ] [ <varname>argname</varname> ] <varname>argtype</varname> [ , ... ]</codeblock>
+[ &lt;argmode> ] [ &lt;argname> ] &lt;argtype> [ , ... ] |
+[ [ &lt;argmode> ] [ &lt;argname> ] &lt;argtype> [ , ... ] ] ORDER BY [ &lt;argmode> ] [ &lt;argname> ] &lt;argtype> [ , ... ]</codeblock>
     </section>
     <section id="section3">
       <title>Description</title>

@@ -7,7 +7,7 @@
     <p id="client_util_desc">Interactive command-line interface for Greenplum Database</p>
     <section id="section2">
       <title>Synopsis</title>
-      <codeblock id="client_util_synopsis"><b>psql</b> [<varname>option</varname> ...] [<varname>dbname</varname> [<varname>username</varname>]]</codeblock>
+      <codeblock id="client_util_synopsis">psql [&lt;option> ...] [&lt;dbname> [&lt;username>]]</codeblock>
     </section>
     <section id="section3">
       <title>Description</title>
@@ -76,8 +76,8 @@
             indication or <codeph>\q</codeph> meta-command. Note however that Readline is not used
             in this case (much as if <codeph>-n</codeph> had been specified). </pd>
           <pd>Using this option is subtly different from writing <codeph>psql &lt;
-                <varname>filename</varname></codeph>. In general, both will do what you expect, but
-            using <codeph>-f</codeph> enables some nice features such as error messages with line
+              &lt;filename></codeph>. In general, both will do what you expect, but using
+              <codeph>-f</codeph> enables some nice features such as error messages with line
             numbers. There is also a slight chance that using this option will reduce the start-up
             overhead. On the other hand, the variant using the shell's input redirection is (in
             theory) guaranteed to yield exactly the same output you would have received had you
@@ -256,25 +256,25 @@
         <b>Connecting to a Database</b>
         <p><codeph>psql</codeph> is a client application for Greenplum Database. In order to connect
           to a database you need to know the name of your target database, the host name and port
-          number of the Greenplum coordinator server and what database user name you want to connect as.
-            <codeph>psql</codeph> can be told about those parameters via command line options,
+          number of the Greenplum coordinator server and what database user name you want to connect
+          as. <codeph>psql</codeph> can be told about those parameters via command line options,
           namely <codeph>-d</codeph>, <codeph>-h</codeph>, <codeph>-p</codeph>, and
             <codeph>-U</codeph> respectively. If an argument is found that does not belong to any
           option it will be interpreted as the database name (or the user name, if the database name
           is already given). Not all of these options are required; there are useful defaults. If
           you omit the host name, <codeph>psql</codeph> will connect via a UNIX-domain socket to a
-          coordinator server on the local host, or via TCP/IP to <codeph>localhost</codeph> on machines
-          that do not have UNIX-domain sockets. The default coordinator port number is 5432. If you use a
-          different port for the coordinator, you must specify the port. The default database user name
-          is your operating-system user name, as is the default database name. Note that you cannot
-          just connect to any database under any user name. Your database administrator should have
-          informed you about your access rights.</p>
+          coordinator server on the local host, or via TCP/IP to <codeph>localhost</codeph> on
+          machines that do not have UNIX-domain sockets. The default coordinator port number is
+          5432. If you use a different port for the coordinator, you must specify the port. The
+          default database user name is your operating-system user name, as is the default database
+          name. Note that you cannot just connect to any database under any user name. Your database
+          administrator should have informed you about your access rights.</p>
         <p>When the defaults are not right, you can save yourself some typing by setting any or all
           of the environment variables <codeph>PGAPPNAME</codeph>, <codeph>PGDATABASE</codeph>,
             <codeph>PGHOST</codeph>, <codeph>PGPORT</codeph>, and <codeph>PGUSER</codeph> to
           appropriate values. </p><p>It is also convenient to have a <codeph>~/.pgpass</codeph> file
           to avoid regularly having to type in passwords. This file should reside in your home
-          directory and contain lines of the following format:</p><codeblock><varname>hostname</varname>:<varname>port</varname>:<varname>database</varname>:<varname>username</varname>:<varname>password</varname></codeblock>
+          directory and contain lines of the following format:</p><codeblock>&lt;hostname>:&lt;port>:&lt;database>:&lt;username>:&lt;password></codeblock>
         <p>The permissions on <codeph>.pgpass</codeph> must disallow any access to world or group
           (for example: <codeph>chmod 0600 ~/.pgpass</codeph>). If the permissions are less strict
           than this, the file will be ignored. (The file permissions are not currently checked on
@@ -433,8 +433,8 @@ testdb=#</codeblock>
             read/write from <codeph>psql</codeph>'s standard input or output, use
               <codeph>pstdin</codeph> or <codeph>pstdout</codeph>. This option is useful for
             populating tables in-line within a SQL script file.</pd>
-          <pd>The syntax of the command is similar to that of the SQL <codeph><xref
-                href="../../ref_guide/sql_commands/COPY.xml#topic1"/></codeph> command, and
+          <pd>The syntax of the command is similar to that of the SQL <xref
+              href="../../ref_guide/sql_commands/COPY.xml#topic1"/> command, and
               <varname>option</varname> must indicate one of the options of the SQL
               <codeph>COPY</codeph> command. Note that, because of this, special parsing rules apply
             to the <codeph>\copy</codeph> command. In particular, the variable substitution rules
@@ -675,11 +675,10 @@ testdb=#</codeblock>
           <pt>\dp [<varname>relation_pattern_to_show_privileges</varname>]</pt>
           <pd>Lists tables, views, and sequences with their associated access privileges. If a
             pattern is specified, only tables, views, and sequences whose names match the pattern
-            are listed. The <codeph><xref href="../../ref_guide/sql_commands/GRANT.xml#topic1"
-              /></codeph> and <codeph><xref href="../../ref_guide/sql_commands/REVOKE.xml#topic1"
-              /></codeph> commands are used to set access privileges. The meaning of the privilege
-            display is explained under <codeph><xref
-                href="../../ref_guide/sql_commands/GRANT.xml#topic1"/></codeph>.</pd>
+            are listed. The <xref href="../../ref_guide/sql_commands/GRANT.xml#topic1"/> and <xref
+              href="../../ref_guide/sql_commands/REVOKE.xml#topic1"/> commands are used to set
+            access privileges. The meaning of the privilege display is explained under <xref
+              href="../../ref_guide/sql_commands/GRANT.xml#topic1"/>.</pd>
         </plentry>
         <plentry>
           <pt>\drds [<varname>role-pattern</varname> [database-pattern]]</pt>
@@ -1134,8 +1133,8 @@ lo_import 152801</codeblock>
           <pd>Although you are welcome to set any variable to anything you want,
               <codeph>psql</codeph> treats several variables as special. They are documented in the
             topic about variables.</pd>
-          <pd>This command is unrelated to the SQL command <codeph><xref
-                href="../../ref_guide/sql_commands/SET.xml#topic1"/></codeph>.</pd>
+          <pd>This command is unrelated to the SQL command <xref
+              href="../../ref_guide/sql_commands/SET.xml#topic1"/>.</pd>
         </plentry>
         <plentry>
           <pt>\setenv <varname>name</varname> [ <varname>value</varname> ]</pt>

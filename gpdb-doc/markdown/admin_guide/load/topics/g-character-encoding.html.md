@@ -10,7 +10,7 @@ Data files must be in a character encoding recognized by Greenplum Database. See
 
 **Note:** If you *change* the `ENCODING` value in an existing `gpload` control file, you must manually drop any external tables that were creating using the previous `ENCODING` configuration. `gpload` does not drop and recreate external tables to use the new `ENCODING` if `REUSE_TABLES` is set to `true`.
 
-**Parent topic:**[Formatting Data Files](../../load/topics/g-formatting-data-files.html)
+**Parent topic:** [Formatting Data Files](../../load/topics/g-formatting-data-files.html)
 
 ## <a id="topic103"></a>Changing the Client-Side Character Encoding 
 

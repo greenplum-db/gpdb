@@ -43,7 +43,6 @@
 #include "postmaster/fts.h"
 #include "replication/walsender.h"
 #include "storage/proc.h"
-#include "tcop/idle_resource_cleaner.h"
 #include "utils/builtins.h"
 #include "utils/gdd.h"
 #include "utils/guc_tables.h"
@@ -424,6 +423,9 @@ bool		gp_external_enable_filter_pushdown = true;
 bool		gp_enable_global_deadlock_detector = false;
 
 bool		gp_log_endpoints = false;
+
+/* optional reject to  parse ambigous 5-digits date in YYYMMDD format */
+bool		gp_allow_date_field_width_5digits = false;
 
 static const struct config_enum_entry gp_log_format_options[] = {
 	{"text", 0},
@@ -2814,6 +2816,16 @@ struct config_bool ConfigureNamesBool_gp[] =
 		NULL, NULL, NULL
 	},
 
+	{
+		{"gp_allow_date_field_width_5digits", PGC_USERSET, COMPAT_OPTIONS_PREVIOUS,
+			gettext_noop("Allow parsing input date field with exactly continous 5 digits in non-standard YYYMMDD timeformat (follow pg12+ behave)"),
+			NULL,
+			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+		},
+		&gp_allow_date_field_width_5digits,
+		false,
+		NULL, NULL, NULL
+	},
 	{
 		{"optimizer_enable_eageragg", PGC_USERSET, DEVELOPER_OPTIONS,
 			gettext_noop("Enable Eager Agg transform for pushing aggregate below an innerjoin."),

@@ -2514,14 +2514,15 @@ RecvTupleChunkFromAnyTCP(ChunkTransportState *transportStates,
 						 int16 *srcRoute)
 {
 	ChunkTransportStateEntry *pEntry = NULL;
-	MotionConn *conn;
 	TupleChunkListItem tcItem;
+	MotionConn 	*conn;
 	mpp_fd_set	rset;
 	int			n,
 				i,
 				index;
 	bool		skipSelect = false;
-	int			waitFd = PGINVALID_SOCKET;
+	int 		nwaitfds = 0;
+	int 		*waitFds = NULL;
 
 #ifdef AMS_VERBOSE_LOGGING
 	elog(DEBUG5, "RecvTupleChunkFromAny(motNodeId=%d)", motNodeID);
@@ -2572,21 +2573,27 @@ RecvTupleChunkFromAnyTCP(ChunkTransportState *transportStates,
 		if (skipSelect)
 			break;
 
-		/* 
+		/*
 		 * Also monitor the events on dispatch fds, eg, errors or sequence
 		 * request from QEs.
 		 */
+		nwaitfds = 0;
 		if (Gp_role == GP_ROLE_DISPATCH)
 		{
-			waitFd = cdbdisp_getWaitSocketFd(transportStates->estate->dispatcherState);
-			if (waitFd != PGINVALID_SOCKET)
-			{
-				MPP_FD_SET(waitFd, &rset);
-				if (waitFd > nfds)
-					nfds = waitFd;
-			}
+			waitFds = cdbdisp_getWaitSocketFds(transportStates->estate->dispatcherState, &nwaitfds);
+			if (waitFds != NULL)
+				for (i = 0; i < nwaitfds; i++)
+				{
+					MPP_FD_SET(waitFds[i], &rset);
+					/* record the max fd number for select() later */
+					if (waitFds[i] > nfds)
+						nfds = waitFds[i];
+				}
+
 		}
 
+		// GPDB_12_MERGE_FIXME: should use WaitEventSetWait() instead of select()
+		// follow the routine in ic_udpifc.c
 		n = select(nfds + 1, (fd_set *) &rset, NULL, NULL, &timeout);
 		if (n < 0)
 		{
@@ -2597,12 +2604,23 @@ RecvTupleChunkFromAnyTCP(ChunkTransportState *transportStates,
 					 errmsg("interconnect error receiving an incoming packet"),
 					 errdetail("%s: %m", "select")));
 		}
-		else if (n > 0 && waitFd != PGINVALID_SOCKET && MPP_FD_ISSET(waitFd, &rset))
+		else if (n > 0 && nwaitfds > 0)
 		{
+			bool need_check = false;
+			for (i = 0; i < nwaitfds; i++)
+				if (MPP_FD_ISSET(waitFds[i], &rset))
+				{
+					need_check = true;
+					n--;
+				}
+
 			/* handle events on dispatch connection */
-			checkForCancelFromQD(transportStates);
-			n--;
+			if (need_check)
+				checkForCancelFromQD(transportStates);
 		}
+
+		if (waitFds)
+			pfree(waitFds);
 
 #ifdef AMS_VERBOSE_LOGGING
 		elog(DEBUG5, "RecvTupleChunkFromAny() select() returned %d ready sockets", n);

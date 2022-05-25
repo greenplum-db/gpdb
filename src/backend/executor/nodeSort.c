@@ -123,19 +123,6 @@ ExecSort(PlanState *pstate)
 		node->tuplesortstate = (void *) tuplesortstate;
 
 		/* CDB */
-		/* GPDB_12_MERGE_FIXME: these optimizations are currently broken */
-#if 0
-		{
-			int 		unique = 0;
-			int 		sort_flags = gp_sort_flags; /* get the guc */
-			int         maxdistinct = gp_sort_max_distinct; /* get the guc */
-
-			if (node->noduplicates)
-				unique = 1;
-			
-			cdb_tuplesort_init(tuplesortstate, unique, sort_flags, maxdistinct);
-		}
-#endif
 
 		/* If EXPLAIN ANALYZE, share our Instrumentation object with sort. */
 		/* GPDB_12_MERGE_FIXME: broken */

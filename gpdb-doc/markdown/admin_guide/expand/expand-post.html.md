@@ -7,7 +7,7 @@ After the expansion is completed, you must perform different tasks depending on 
 -   [Removing the Expansion Schema](#topic_xvp_5p2_hpb)
 -   [Setting Up PXF on the New Host](#topic_pxl_1q2_hpb)
 
-**Parent topic:**[Expanding a Greenplum System](../expand/expand-main.html)
+**Parent topic:** [Expanding a Greenplum System](../expand/expand-main.html)
 
 ## <a id="topic_xvp_5p2_hpb"></a>Removing the Expansion Schema 
 
@@ -33,7 +33,7 @@ There are different steps to follow depending on your PXF version and the type o
 
 ### <a id="pxf5"></a>PXF 5 
 
--   You must [install](../../../pxf/latest/installing_pxf.html) the same version of the PXF `rpm` or `deb` on the new hosts.
+-   You must [install](https://docs.vmware.com/en/VMware-Tanzu-Greenplum-Platform-Extension-Framework/6.3/tanzu-greenplum-platform-extension-framework/GUID-installing_pxf.html) the same version of the PXF `rpm` or `deb` on the new hosts.
 -   Log into the Greenplum Master and run the following commands:
 
     ```
@@ -44,7 +44,7 @@ There are different steps to follow depending on your PXF version and the type o
 
 ### <a id="pxf6"></a>PXF 6 
 
--   You must [install](../../../pxf/latest/installing_pxf.html) the same version of the PXF `rpm` or `deb` on the new hosts.
+-   You must [install](https://docs.vmware.com/en/VMware-Tanzu-Greenplum-Platform-Extension-Framework/6.3/tanzu-greenplum-platform-extension-framework/GUID-installing_pxf.html) the same version of the PXF `rpm` or `deb` on the new hosts.
 -   Log into the Greenplum Master and run the following commands:
 
     ```

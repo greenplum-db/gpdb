@@ -7,10 +7,10 @@
     <p id="sql_command_desc">Creates new rows in a table.</p>
     <section id="section2">
       <title>Synopsis</title>
-      <codeblock id="sql_command_synopsis">[ WITH [ RECURSIVE ] <varname>with_query</varname> [, ...] ]
-INSERT INTO <varname>table</varname> [( <varname>column</varname> [, ...] )]
-   {DEFAULT VALUES | VALUES ( {<varname>expression</varname> | DEFAULT} [, ...] ) [, ...] | <varname>query</varname>}
-   [RETURNING * | <varname>output_expression</varname> [[AS] <varname>output_name</varname>] [, ...]]</codeblock>
+      <codeblock id="sql_command_synopsis">[ WITH [ RECURSIVE ] &lt;with_query> [, ...] ]
+INSERT INTO &lt;table> [( &lt;column> [, ...] )]
+   {DEFAULT VALUES | VALUES ( {&lt;expression> | DEFAULT} [, ...] ) [, ...] | &lt;query>}
+   [RETURNING * | &lt;output_expression> [[AS] &lt;output_name>] [, ...]]</codeblock>
     </section>
     <section id="section3">
       <title>Description</title>
@@ -40,7 +40,7 @@ INSERT INTO <varname>table</varname> [( <varname>column</varname> [, ...] )]
       <sectiondiv id="section4">
         <b>Outputs</b>
         <p>On successful completion, an <codeph>INSERT</codeph> command returns a command tag of the
-          form:</p><codeblock>INSERT <varname>oid</varname> <varname>count</varname></codeblock><p>The
+          form:</p><codeblock>INSERT &lt;oid> &lt;count></codeblock><p>The
             <varname>count</varname> is the number of rows inserted. If count is exactly one, and
           the target table has OIDs, then <varname>oid</varname> is the OID assigned to the inserted
           row. Otherwise <varname>oid</varname> is zero.</p>
@@ -63,7 +63,7 @@ INSERT INTO <varname>table</varname> [( <varname>column</varname> [, ...] )]
             query, but the second one takes precedence since it is more closely nested.</pd>
           <pd>See <xref href="../../admin_guide/query/topics/CTE-query.html#topic_zhs_r1s_w1b" format="html" scope="external">WITH Queries (Common Table Expressions)
 </xref> and
-                <codeph><xref href="SELECT.xml#topic1"/></codeph> for details. </pd>
+                <xref href="SELECT.xml#topic1"/> for details. </pd>
         </plentry>
         <plentry>
           <pt>
@@ -169,9 +169,9 @@ INSERT INTO <varname>table</varname> [( <varname>column</varname> [, ...] )]
     </section>
     <section id="section9">
       <title>See Also</title>
-      <p><codeph><xref href="COPY.xml#topic1" type="topic" format="dita"/></codeph>, <codeph><xref
-            href="./SELECT.xml#topic1" type="topic" format="dita"/></codeph>, <codeph><xref
-            href="CREATE_EXTERNAL_TABLE.xml#topic1" type="topic" format="dita"/></codeph>, <xref
+      <p><xref href="COPY.xml#topic1" type="topic" format="dita"/>, <xref
+            href="./SELECT.xml#topic1" type="topic" format="dita"/>, <xref
+            href="CREATE_EXTERNAL_TABLE.xml#topic1" type="topic" format="dita"/>, <xref
           href="../../admin_guide/external/g-s3-protocol.html#amazon-emr" format="html" scope="external">s3:// Protocol</xref></p>
     </section>
   </body>

@@ -18,9 +18,9 @@ Greenplum command-line utilities are located in the $GPHOME/bin directory and ar
 -   Transferring data between Greenplum databases
 -   System state reporting
 
-VMware provides an optional system monitoring and management tool, Greenplum Command Center, which administrators can install and enable with Greenplum Database. Greenplum Command Center provides a web-based user interface for viewing system metrics and allows administrators to perform additional system management tasks. For more information about Greenplum Command Center, see the [Greenplum Command Center documentation](https://gpcc.docs.pivotal.io).
+VMware provides an optional system monitoring and management tool, Greenplum Command Center, which administrators can install and enable with Greenplum Database. Greenplum Command Center provides a web-based user interface for viewing system metrics and allows administrators to perform additional system management tasks. For more information about Greenplum Command Center, see the [Greenplum Command Center documentation](https://docs.vmware.com/en/VMware-Tanzu-Greenplum-Command-Center/index.html).
 
 ![](../graphics/cc_arch_gpdb.png "Greenplum Command Center Architecture")
 
-**Parent topic:**[Greenplum Database Concepts](../intro/partI.html)
+**Parent topic:** [Greenplum Database Concepts](../intro/partI.html)
 

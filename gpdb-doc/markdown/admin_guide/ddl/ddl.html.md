@@ -29,5 +29,5 @@ Most of the advanced Greenplum features are enabled with extensions to the SQL `
 -   **[Creating and Managing Materialized Views](../ddl/ddl-mat-view.html)**  
 
 
-**Parent topic:**[Greenplum Database Administrator Guide](../admin_guide.html)
+**Parent topic:** [Greenplum Database Administrator Guide](../admin_guide.html)
 

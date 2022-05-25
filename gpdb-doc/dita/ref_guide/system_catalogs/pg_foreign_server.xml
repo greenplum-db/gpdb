@@ -55,7 +55,7 @@
             <entry colname="col1"><codeph>srvacl</codeph></entry>
             <entry colname="col2">aclitem[]</entry>
             <entry colname="col3"></entry>
-            <entry colname="col4">Access privileges; see <codeph><xref href="../sql_commands/GRANT.xml#topic1" type="topic" format="dita"/></codeph> and <codeph><xref href="../sql_commands/REVOKE.xml#topic1" type="topic" format="dita"/></codeph> for details.</entry>
+            <entry colname="col4">Access privileges; see <xref href="../sql_commands/GRANT.xml#topic1" type="topic" format="dita"/> and <xref href="../sql_commands/REVOKE.xml#topic1" type="topic" format="dita"/> for details.</entry>
           </row>
           <row>
             <entry colname="col1"><codeph>srvoptions</codeph></entry>

@@ -80,5 +80,5 @@ External web tables allow Greenplum Database to treat dynamic data sources like 
 -   **[Examples for Creating External Tables](../external/g-creating-external-tables---examples.html)**  
 These examples show how to define external data with different protocols. Each `CREATE EXTERNAL TABLE` command can contain only one protocol.
 
-**Parent topic:**[Working with External Data](../external/g-working-with-file-based-ext-tables.html)
+**Parent topic:** [Working with External Data](../external/g-working-with-file-based-ext-tables.html)
 

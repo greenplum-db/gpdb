@@ -2,9 +2,9 @@
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
 <topic id="topic1"><title id="bh20941">CLUSTER</title><body><p id="sql_command_desc">Physically reorders a heap storage table on disk according to an index.
-Not a recommended operation in Greenplum Database.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">CLUSTER <varname>indexname</varname> ON <varname>tablename</varname>
+Not a recommended operation in Greenplum Database.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">CLUSTER &lt;indexname> ON &lt;tablename>
 
-CLUSTER [VERBOSE] <varname>tablename</varname> [ USING index_name ]
+CLUSTER [VERBOSE] &lt;tablename> [ USING index_name ]
 
 CLUSTER [VERBOSE]</codeblock></section><section id="section3"><title>Description</title><p><codeph>CLUSTER</codeph> orders a heap storage table based on an index.
 <codeph>CLUSTER</codeph> on non-B-tree indexes is not supported on append-optmized storage
@@ -26,11 +26,10 @@ recluster by issuing the command again. Setting the table's <codeph>FILLFACTOR</
                                 <varname>tablename</varname> reclusters the table on the same index
                                 that it was clustered before. You can use the
                                         <codeph>CLUSTER</codeph> or <codeph>SET WITHOUT
-                                        CLUSTER</codeph> forms of <codeph><xref
-                                                href="ALTER_TABLE.xml#topic1">ALTER
-                                        TABLE</xref></codeph> to set the index to use for future
-                                cluster operations, or to clear any previous setting.
-                                        <codeph>CLUSTER</codeph> without any parameter reclusters
+                                        CLUSTER</codeph> forms of <xref
+                                        href="ALTER_TABLE.xml#topic1">ALTER TABLE</xref> to set the
+                                index to use for future cluster operations, or to clear any previous
+                                setting. <codeph>CLUSTER</codeph> without any parameter reclusters
                                 all previously clustered tables in the current database that the
                                 calling user owns, or all tables if called by a superuser. This form
                                 of <codeph>CLUSTER</codeph> cannot be run inside a transaction
@@ -87,5 +86,5 @@ order:</p><codeblock>CREATE TABLE newtable AS SELECT * FROM table ORDER BY colum
 DROP table;
 ALTER TABLE newtable RENAME TO table;
 CREATE INDEX column_ix ON table (column);
-VACUUM ANALYZE table;</codeblock></section><section id="section7"><title>Compatibility</title><p>There is no <codeph>CLUSTER</codeph> statement in the SQL standard.</p></section><section id="section8"><title>See Also</title><p><codeph><xref href="./CREATE_TABLE_AS.xml#topic1" type="topic" format="dita"/></codeph>,
-            <codeph><xref href="./CREATE_INDEX.xml#topic1" type="topic" format="dita"/></codeph></p></section></body></topic>
+VACUUM ANALYZE table;</codeblock></section><section id="section7"><title>Compatibility</title><p>There is no <codeph>CLUSTER</codeph> statement in the SQL standard.</p></section><section id="section8"><title>See Also</title><p><xref href="./CREATE_TABLE_AS.xml#topic1" type="topic" format="dita"/>,
+            <xref href="./CREATE_INDEX.xml#topic1" type="topic" format="dita"/></p></section></body></topic>

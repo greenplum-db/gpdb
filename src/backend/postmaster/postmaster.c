@@ -5627,7 +5627,7 @@ sigusr1_handler(SIGNAL_ARGS)
 		pmState == PM_STARTUP && Shutdown == NoShutdown)
 	{
 		/* WAL redo has started. We're out of reinitialization. */
-		bool		promote_trigger_file_exist;
+		bool		promotion_requested = false;
 
 		FatalError = false;
 		Assert(AbortStartTime == 0);
@@ -5654,21 +5654,32 @@ sigusr1_handler(SIGNAL_ARGS)
 		 * PM_STATUS_STANDBY, instead wish pg_ctl -w to wait till
 		 * connections can be actually accepted by the database.
 		 */
-		promote_trigger_file_exist = false;
 		if (PromoteTriggerFile != NULL && strcmp(PromoteTriggerFile, "") != 0)
 		{
 			struct stat stat_buf;
 
 			if (stat(PromoteTriggerFile, &stat_buf) == 0)
-				promote_trigger_file_exist = true;
+				promotion_requested = true;
 		}
+		/*
+		 * GPDB: Setting recovery_target_action
+		 * configuration parameter to 'promote' will also result
+		 * into promotion after recovery is completed.
+		 */
+		if (recoveryTargetAction == RECOVERY_TARGET_ACTION_PROMOTE)
+			promotion_requested = true;
 
 		/*
 		 * If we aren't planning to enter hot standby mode later, treat
 		 * RECOVERY_STARTED as meaning we're out of startup, and report status
 		 * accordingly.
+		 *
+		 * GPDB: Avoid PM_STATUS_STANDBY if promotion requested as wish "pg_ctl -w"
+		 * to wait till connections can be actually accepted by the database via
+		 * PM_STATUS_READY state instead. PM_STATUS_STANDBY will incorrectly show
+		 * database is ready to accept connections during promotion.
 		 */
-		if (!EnableHotStandby && !promote_trigger_file_exist)
+		if (!EnableHotStandby && !promotion_requested)
 		{
 			AddToDataDirLockFile(LOCK_FILE_LINE_PM_STATUS, PM_STATUS_STANDBY);
 #ifdef USE_SYSTEMD

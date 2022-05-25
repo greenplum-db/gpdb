@@ -7,14 +7,14 @@
     <p id="sql_command_desc">Changes the limits of a resource group.</p>
     <section id="section2">
       <title>Synopsis</title>
-      <codeblock id="sql_command_synopsis">ALTER RESOURCE GROUP <varname>name</varname> SET <varname>group_attribute</varname> <varname>value</varname></codeblock>
+      <codeblock id="sql_command_synopsis">ALTER RESOURCE GROUP &lt;name> SET &lt;group_attribute> &lt;value></codeblock>
 <p>where <varname>group_attribute</varname> is one of:</p>
-      <codeblock>CONCURRENCY <varname>integer</varname>
-CPU_RATE_LIMIT <varname>integer</varname> 
-CPUSET <varname>tuple</varname> 
-MEMORY_LIMIT <varname>integer</varname>
-MEMORY_SHARED_QUOTA <varname>integer</varname>
-MEMORY_SPILL_RATIO <varname>integer</varname></codeblock>
+      <codeblock>CONCURRENCY &lt;integer>
+CPU_RATE_LIMIT &lt;integer> 
+CPUSET &lt;tuple> 
+MEMORY_LIMIT &lt;integer>
+MEMORY_SHARED_QUOTA &lt;integer>
+MEMORY_SPILL_RATIO &lt;integer></codeblock>
     </section>
     <section id="section3">
       <title>Description</title>
@@ -100,8 +100,8 @@ MEMORY_SPILL_RATIO <varname>integer</varname></codeblock>
     </section>
     <section id="section5">
       <title>Notes</title>
-      <p>Use <codeph><xref href="./CREATE_ROLE.xml#topic1" type="topic" format="dita"/></codeph> or
-            <codeph><xref href="./ALTER_ROLE.xml#topic1" type="topic" format="dita"/></codeph> to
+      <p>Use <xref href="./CREATE_ROLE.xml#topic1" type="topic" format="dita"/> or
+            <xref href="./ALTER_ROLE.xml#topic1" type="topic" format="dita"/> to
         assign a specific resource group to a role (user).</p>
       <p>You cannot submit an <codeph>ALTER RESOURCE GROUP</codeph> command in an explicit transaction or sub-transaction.</p>
     </section>
@@ -125,11 +125,11 @@ MEMORY_SPILL_RATIO <varname>integer</varname></codeblock>
     </section>
     <section id="section8">
       <title>See Also</title>
-      <p><codeph><xref href="./CREATE_RESOURCE_GROUP.xml#topic1" type="topic" format="dita"
-          /></codeph>, <codeph><xref href="./DROP_RESOURCE_GROUP.xml#topic1" type="topic"
-            format="dita"/></codeph>, <codeph><xref href="./CREATE_ROLE.xml#topic1" type="topic"
-            format="dita"/></codeph>, <codeph><xref href="./ALTER_ROLE.xml#topic1" type="topic"
-            format="dita"/></codeph></p>
+      <p><xref href="./CREATE_RESOURCE_GROUP.xml#topic1" type="topic" format="dita"
+          />, <xref href="./DROP_RESOURCE_GROUP.xml#topic1" type="topic"
+            format="dita"/>, <xref href="./CREATE_ROLE.xml#topic1" type="topic"
+            format="dita"/>, <xref href="./ALTER_ROLE.xml#topic1" type="topic"
+            format="dita"/></p>
     </section>
   </body>
 </topic>
