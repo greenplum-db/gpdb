@@ -10881,6 +10881,9 @@
    proargmodes => '{o,o,o,o,o,o,o,o,o,o}',
    proargnames => '{segid,waiter_dxid,holder_dxid,holdTillEndXact,waiter_lpid,holder_lpid,waiter_lockmode,waiter_locktype,waiter_sessionid,holder_sessionid}',
    prosrc => 'gp_dist_wait_status' },
+{ oid => 6464, descr => 'get current PIDs of overflowed subtransaction',
+   proname => 'gp_find_subtx_overflowed_pids', provolatile => 'v', prorettype => 'text', proargtypes => '', prosrc => 'gp_find_subtx_overflowed_pids' },
+
 
 { oid => 6030, descr => 'Return resource queue information',
    proname => 'pg_resqueue_status', prorows => '1000', proretset => 't', provolatile => 'v', proparallel => 'r', prorettype => 'record', proargtypes => '', prosrc => 'pg_resqueue_status' },

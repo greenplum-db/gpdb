@@ -93,6 +93,8 @@ static HTAB *hostPrimaryCountHashTableInit(void);
 
 static int nextQEIdentifer(CdbComponentDatabases *cdbs);
 
+Datum gp_find_subtx_overflowed_pids(PG_FUNCTION_ARGS);
+
 static HTAB *segment_ip_cache_htab = NULL;
 
 int numsegmentsFromQD = -1;
@@ -1799,4 +1801,33 @@ AvoidCorefileGeneration()
 			 save_errno);
 	}
 #endif
+}
+
+/*
+ * Find the pids when subtransaction overflowed.
+ */
+Datum
+gp_find_subtx_overflowed_pids(PG_FUNCTION_ARGS)
+{
+	int				i;
+	StringInfoData 	buf;
+	bool 			traverse = false;
+
+	initStringInfo(&buf);
+
+	appendStringInfoChar(&buf, '{');
+	LWLockAcquire(ProcArrayLock, LW_SHARED);
+	for (i = 0; i < ProcGlobal->allProcCount; i++)
+	{
+		if (ProcGlobal->allPgXact[i].overflowed)
+		{
+			if (traverse)
+				appendStringInfoString(&buf, ",");
+			appendStringInfo(&buf, "%d", ProcGlobal->allProcs[i].pid);
+			traverse = true;
+		}
+	}
+	LWLockRelease(ProcArrayLock);
+	appendStringInfoChar(&buf, '}');
+	PG_RETURN_TEXT_P(cstring_to_text(buf.data));
 }

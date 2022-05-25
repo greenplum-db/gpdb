@@ -297,4 +297,6 @@ test: create_extension_fail
 # test if motion sockets are created with the gp_segment_configuration.address
 test: motion_socket
 
+# subtransaction overflow test
+test: subtrx_overflow
 # end of tests
