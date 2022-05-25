@@ -195,7 +195,7 @@
     <dxl:Plan Id="0" SpaceSize="16">
       <dxl:Result>
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="441344.177904" Rows="1.000000" Width="1"/>
+          <dxl:Cost StartupCost="0" TotalCost="441344.280304" Rows="1.000000" Width="1"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="3" Alias="?column?">
@@ -209,7 +209,7 @@
         <dxl:OneTimeFilter/>
         <dxl:NestedLoopJoin JoinType="Left" IndexNestedLoopJoin="false" OuterRefAsParam="false">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="441344.177903" Rows="2.000000" Width="8"/>
+            <dxl:Cost StartupCost="0" TotalCost="441344.280303" Rows="2.000000" Width="8"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="9" Alias="ColRef_0009">
@@ -234,7 +234,7 @@
           </dxl:Result>
           <dxl:Assert ErrorCode="P0003">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="0.000082" Rows="1.000000" Width="8"/>
+              <dxl:Cost StartupCost="0" TotalCost="0.000182" Rows="1.000000" Width="8"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="9" Alias="ColRef_0009">
@@ -251,7 +251,7 @@
             </dxl:AssertConstraintList>
             <dxl:Window PartitionColumns="">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="0.000074" Rows="1.000000" Width="16"/>
+                <dxl:Cost StartupCost="0" TotalCost="0.000174" Rows="1.000000" Width="16"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="12" Alias="row_number">
@@ -264,7 +264,7 @@
               <dxl:Filter/>
               <dxl:Result>
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="0.000074" Rows="1.000000" Width="8"/>
+                  <dxl:Cost StartupCost="0" TotalCost="0.000174" Rows="1.000000" Width="8"/>
                 </dxl:Properties>
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="9" Alias="ColRef_0009">
@@ -289,7 +289,7 @@
                 <dxl:OneTimeFilter/>
                 <dxl:Materialize Eager="false">
                   <dxl:Properties>
-                    <dxl:Cost StartupCost="0" TotalCost="0.000066" Rows="1.000000" Width="16"/>
+                    <dxl:Cost StartupCost="0" TotalCost="0.000166" Rows="1.000000" Width="16"/>
                   </dxl:Properties>
                   <dxl:ProjList>
                     <dxl:ProjElem ColId="7" Alias="ColRef_0007">
@@ -302,7 +302,7 @@
                   <dxl:Filter/>
                   <dxl:Aggregate AggregationStrategy="Plain" StreamSafe="false">
                     <dxl:Properties>
-                      <dxl:Cost StartupCost="0" TotalCost="0.000050" Rows="1.000000" Width="16"/>
+                      <dxl:Cost StartupCost="0" TotalCost="0.000150" Rows="1.000000" Width="16"/>
                     </dxl:Properties>
                     <dxl:GroupingColumns/>
                     <dxl:ProjList>
@@ -330,7 +330,7 @@
                     <dxl:Filter/>
                     <dxl:Aggregate AggregationStrategy="Plain" StreamSafe="false">
                       <dxl:Properties>
-                        <dxl:Cost StartupCost="0" TotalCost="0.000043" Rows="1.000000" Width="16"/>
+                        <dxl:Cost StartupCost="0" TotalCost="0.000143" Rows="1.000000" Width="16"/>
                       </dxl:Properties>
                       <dxl:GroupingColumns/>
                       <dxl:ProjList>
@@ -356,7 +356,7 @@
                       <dxl:Filter/>
                       <dxl:Result>
                         <dxl:Properties>
-                          <dxl:Cost StartupCost="0" TotalCost="0.000042" Rows="1.000000" Width="4"/>
+                          <dxl:Cost StartupCost="0" TotalCost="0.000142" Rows="1.000000" Width="4"/>
                         </dxl:Properties>
                         <dxl:ProjList>
                           <dxl:ProjElem ColId="6" Alias="ColRef_0006">
@@ -373,7 +373,7 @@
                         <dxl:OneTimeFilter/>
                         <dxl:Result>
                           <dxl:Properties>
-                            <dxl:Cost StartupCost="0" TotalCost="0.000038" Rows="1.000000" Width="4"/>
+                            <dxl:Cost StartupCost="0" TotalCost="0.000138" Rows="1.000000" Width="4"/>
                           </dxl:Properties>
                           <dxl:ProjList>
                             <dxl:ProjElem ColId="2" Alias="generate_series">
@@ -394,7 +394,7 @@
                           <dxl:OneTimeFilter/>
                           <dxl:Result>
                             <dxl:Properties>
-                              <dxl:Cost StartupCost="0" TotalCost="0.000005" Rows="1.000000" Width="4"/>
+                              <dxl:Cost StartupCost="0" TotalCost="0.000105" Rows="1.000000" Width="4"/>
                             </dxl:Properties>
                             <dxl:ProjList>
                               <dxl:ProjElem ColId="2" Alias="generate_series">

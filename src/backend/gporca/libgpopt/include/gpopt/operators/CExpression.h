@@ -316,6 +316,7 @@ public:
 	ULONG DeriveTotalDistinctAggs();
 	BOOL DeriveHasMultipleDistinctAggs();
 	BOOL DeriveHasScalarArrayCmp();
+	BOOL DeriveHasScalarFuncProject();
 
 };	// class CExpression
 

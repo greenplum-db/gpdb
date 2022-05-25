@@ -353,7 +353,10 @@ CRightJoinTest:
 RightJoinHashed RightJoinRedistribute RightJoinReplicated RightJoinBothReplicated RightJoinDPS RightJoinNoDPSNonDistKey RightJoinTVF;
 
 CSqlFunctionTest:
-SqlFuncNullReject SqlFuncPredFactorize SqlFuncDmlScalar SqlFuncDmlTvf
+SqlFuncNullReject SqlFuncPredFactorize SqlFuncDmlScalar SqlFuncDmlTvf;
+
+CScalarFuncPushDownTest:
+ScalarFuncPushedBelowGather ConstScalarFuncNotPushedBelowGather
 ")
 
 set(mdp_dir "../data/dxl/minidump/")

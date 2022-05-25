@@ -144,10 +144,10 @@ SELECT 0 IS DISTINCT FROM (SELECT COUNT(*) FROM (SELECT UNNEST(ARRAY[1,2,3,4])) 
         </dxl:LogicalConstTable>
       </dxl:LogicalProject>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="12">
+    <dxl:Plan Id="0" SpaceSize="18">
       <dxl:Result>
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="431.000120" Rows="1.000000" Width="1"/>
+          <dxl:Cost StartupCost="0" TotalCost="431.000220" Rows="1.000000" Width="1"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="4" Alias="?column?">
@@ -164,7 +164,7 @@ SELECT 0 IS DISTINCT FROM (SELECT COUNT(*) FROM (SELECT UNNEST(ARRAY[1,2,3,4])) 
         <dxl:OneTimeFilter/>
         <dxl:Result>
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="431.000119" Rows="2.000000" Width="8"/>
+            <dxl:Cost StartupCost="0" TotalCost="431.000219" Rows="2.000000" Width="8"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="5" Alias="ColRef_0005">
@@ -175,7 +175,7 @@ SELECT 0 IS DISTINCT FROM (SELECT COUNT(*) FROM (SELECT UNNEST(ARRAY[1,2,3,4])) 
           <dxl:OneTimeFilter/>
           <dxl:NestedLoopJoin JoinType="Left" IndexNestedLoopJoin="false" OuterRefAsParam="false">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="431.000103" Rows="2.000000" Width="8"/>
+              <dxl:Cost StartupCost="0" TotalCost="431.000203" Rows="2.000000" Width="8"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="3" Alias="count">
@@ -200,7 +200,7 @@ SELECT 0 IS DISTINCT FROM (SELECT COUNT(*) FROM (SELECT UNNEST(ARRAY[1,2,3,4])) 
             </dxl:Result>
             <dxl:Materialize Eager="false">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="0.000011" Rows="1.000000" Width="8"/>
+                <dxl:Cost StartupCost="0" TotalCost="0.000111" Rows="1.000000" Width="8"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="3" Alias="count">
@@ -210,7 +210,7 @@ SELECT 0 IS DISTINCT FROM (SELECT COUNT(*) FROM (SELECT UNNEST(ARRAY[1,2,3,4])) 
               <dxl:Filter/>
               <dxl:Aggregate AggregationStrategy="Plain" StreamSafe="false">
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="0.000003" Rows="1.000000" Width="8"/>
+                  <dxl:Cost StartupCost="0" TotalCost="0.000103" Rows="1.000000" Width="8"/>
                 </dxl:Properties>
                 <dxl:GroupingColumns/>
                 <dxl:ProjList>
@@ -228,7 +228,7 @@ SELECT 0 IS DISTINCT FROM (SELECT COUNT(*) FROM (SELECT UNNEST(ARRAY[1,2,3,4])) 
                 <dxl:Filter/>
                 <dxl:Aggregate AggregationStrategy="Plain" StreamSafe="false">
                   <dxl:Properties>
-                    <dxl:Cost StartupCost="0" TotalCost="0.000002" Rows="1.000000" Width="8"/>
+                    <dxl:Cost StartupCost="0" TotalCost="0.000102" Rows="1.000000" Width="8"/>
                   </dxl:Properties>
                   <dxl:GroupingColumns/>
                   <dxl:ProjList>
@@ -244,7 +244,7 @@ SELECT 0 IS DISTINCT FROM (SELECT COUNT(*) FROM (SELECT UNNEST(ARRAY[1,2,3,4])) 
                   <dxl:Filter/>
                   <dxl:Result>
                     <dxl:Properties>
-                      <dxl:Cost StartupCost="0" TotalCost="0.000002" Rows="1.000000" Width="4"/>
+                      <dxl:Cost StartupCost="0" TotalCost="0.000102" Rows="1.000000" Width="4"/>
                     </dxl:Properties>
                     <dxl:ProjList>
                       <dxl:ProjElem ColId="2" Alias="unnest">
