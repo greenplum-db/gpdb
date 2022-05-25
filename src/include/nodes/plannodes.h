@@ -138,9 +138,6 @@ typedef struct PlannedStmt
 	/* What is the memory reserved for this query's execution? */
 	uint64		query_mem;
 
-	int			total_memory_master;	/* GPDB: The total usable virtual memory on master node in MB */
-	int			nsegments_master;		/* GPDB: The number of primary segments on master node  */
-
 	/*
 	 * GPDB: Used to keep target information for CTAS and it is needed
 	 * to be dispatched to QEs.
@@ -153,6 +150,9 @@ typedef struct PlannedStmt
  	 * GPDB: whether a query is a SPI inner query for extension usage 
  	 */
 	int8		metricsQueryType;
+
+	int			total_memory_master;	/* GPDB: The total usable virtual memory on master node in MB */
+	int			nsegments_master;		/* GPDB: The number of primary segments on master node  */
 } PlannedStmt;
 
 /*

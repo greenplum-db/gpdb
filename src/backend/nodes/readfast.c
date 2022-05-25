@@ -1380,13 +1380,14 @@ _readPlannedStmt(void)
 
 	READ_UINT64_FIELD(query_mem);
 
-	READ_INT_FIELD(total_memory_master);
-	READ_INT_FIELD(nsegments_master);
-
 	READ_NODE_FIELD(intoClause);
 	READ_NODE_FIELD(copyIntoClause);
 	READ_NODE_FIELD(refreshClause);
 	READ_INT8_FIELD(metricsQueryType);
+
+	READ_INT_FIELD(total_memory_master);
+	READ_INT_FIELD(nsegments_master);
+
 	READ_DONE();
 }
 
