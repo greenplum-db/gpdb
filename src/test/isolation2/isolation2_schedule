@@ -218,6 +218,8 @@ test: pg_basebackup_with_tablespaces
 test: pg_basebackup_large_database_oid
 test: enable_autovacuum
 test: idle_gang_cleaner
+# test idle_in_transaction_session_timeout
+test: write_gang_idle_in_transaction_session_timeout
 
 test: segwalrep/die_commit_pending_replication
 
