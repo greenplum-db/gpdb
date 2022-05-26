@@ -123,10 +123,10 @@ insert into foo values (1,'aaa');
 insert into foo values (2,'bbb');
 -- fail
 insert into foo values (1,'ccc');
-ERROR:  duplicate key value violates unique constraint "foo_pkey"  (seg0 172.17.0.2:6002 pid=23394)
+ERROR:  duplicate key value violates unique constraint "foo_pkey"  (seg0 127.0.1.1:6002 pid=287620)
 DETAIL:  Key (id)=(1) already exists.
 insert into foo values (3,'aaa');
-ERROR:  duplicate key value violates unique constraint "foo_name_key"  (seg0 172.17.0.2:6002 pid=23394)
+ERROR:  duplicate key value violates unique constraint "foo_name_key"  (seg0 127.0.1.1:6002 pid=287620)
 DETAIL:  Key (name)=(aaa) already exists.
 drop table if exists foo;
 --
@@ -232,8 +232,8 @@ select * from bar;
  c1 | c2 
 ----+----
   1 |  1
-  2 |  2
   3 |  3
+  2 |  2
 (3 rows)
 
 drop table if exists foo;
@@ -245,9 +245,9 @@ NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause. Creating a NULL policy entr
 select * from foo;
  c1 | c2 
 ----+----
-  3 |  3
-  2 |  2
   1 |  1
+  2 |  2
+  3 |  3
 (3 rows)
 
 create table bar as select * from foo order by c1 limit 1 distributed replicated;
@@ -357,15 +357,15 @@ select * from foo;
 select * from foo1;
  x  | y  
 ----+----
+  6 |  6
+  8 |  8
   9 |  9
  10 | 10
-  2 |  2
-  3 |  3
-  5 |  5
-  8 |  8
   1 |  1
+  3 |  3
   4 |  4
-  6 |  6
+  5 |  5
+  2 |  2
   7 |  7
 (10 rows)
 
@@ -377,26 +377,26 @@ select * from bar;
   4 |  4
   7 |  7
   8 |  8
-  1 |  1
   5 |  5
   6 |  6
   9 |  9
  10 | 10
+  1 |  1
 (10 rows)
 
 select * from bar1;
  x  | y  
 ----+----
-  4 |  4
-  8 |  8
- 10 | 10
-  1 |  1
-  5 |  5
   6 |  6
+  1 |  1
+  4 |  4
   7 |  7
+  8 |  8
   9 |  9
+ 10 | 10
   2 |  2
   3 |  3
+  5 |  5
 (10 rows)
 
 -- alter back
@@ -441,61 +441,61 @@ Distributed randomly
 select * from foo;
  x  | y  
 ----+----
-  2 |  2
-  3 |  3
-  4 |  4
-  7 |  7
-  8 |  8
   1 |  1
   5 |  5
   6 |  6
   9 |  9
  10 | 10
+  2 |  2
+  3 |  3
+  4 |  4
+  7 |  7
+  8 |  8
 (10 rows)
 
 select * from foo1;
  x  | y  
 ----+----
-  1 |  1
-  4 |  4
-  6 |  6
+  2 |  2
   7 |  7
+  6 |  6
+  8 |  8
   9 |  9
  10 | 10
-  2 |  2
+  1 |  1
   3 |  3
+  4 |  4
   5 |  5
-  8 |  8
 (10 rows)
 
 select * from bar;
  x  | y  
 ----+----
-  2 |  2
-  3 |  3
-  4 |  4
-  7 |  7
-  8 |  8
   1 |  1
   5 |  5
   6 |  6
   9 |  9
  10 | 10
+  2 |  2
+  3 |  3
+  4 |  4
+  7 |  7
+  8 |  8
 (10 rows)
 
 select * from bar1;
  x  | y  
 ----+----
-  4 |  4
- 10 | 10
-  5 |  5
-  7 |  7
-  2 |  2
   6 |  6
-  3 |  3
   8 |  8
+  3 |  3
   1 |  1
   9 |  9
+  4 |  4
+  7 |  7
+ 10 | 10
+  2 |  2
+  5 |  5
 (10 rows)
 
 drop table if exists foo;
@@ -909,15 +909,15 @@ explain (costs off) select a from t_replicate_volatile union all select * from n
 
 -- update & delete
 explain (costs off) update t_replicate_volatile set a = 1 where b > random();
-ERROR:  could not devise a plan (cdbpath.c:2082)
+ERROR:  could not devise a plan (cdbpath.c:2089)
 explain (costs off) update t_replicate_volatile set a = 1 from t_replicate_volatile x where x.a + random() = t_replicate_volatile.b;
-ERROR:  could not devise a plan (cdbpath.c:2082)
+ERROR:  could not devise a plan (cdbpath.c:2089)
 explain (costs off) update t_replicate_volatile set a = 1 from t_hashdist x where x.a + random() = t_replicate_volatile.b;
-ERROR:  could not devise a plan (cdbpath.c:2082)
+ERROR:  could not devise a plan (cdbpath.c:2089)
 explain (costs off) delete from t_replicate_volatile where a < random();
-ERROR:  could not devise a plan (cdbpath.c:2082)
+ERROR:  could not devise a plan (cdbpath.c:2089)
 explain (costs off) delete from t_replicate_volatile using t_replicate_volatile x where t_replicate_volatile.a + x.b < random();
-ERROR:  could not devise a plan (cdbpath.c:2082)
+ERROR:  could not devise a plan (cdbpath.c:2089)
 explain (costs off) update t_replicate_volatile set a = random();
 ERROR:  could not devise a plan (createplan.c:6507)
 -- limit
@@ -949,8 +949,6 @@ explain (costs off) select * from t_hashdist cross join (select * from t_replica
 create table rtbl (a int, b int, c int, t text) distributed replicated;
 insert into t_hashdist values (1, 1, 1);
 insert into rtbl values (1, 1, 1, 'rtbl');
-analyze t_hashdist;
-analyze rtbl;
 -- The below tests used to do replicated table scan on entry db which contains empty data.
 -- So a motion node is needed to gather replicated table on entry db.
 -- See issue: https://github.com/greenplum-db/gpdb/issues/11945
@@ -1026,6 +1024,37 @@ explain (costs off) select a from t_hashdist, (select oid from pg_class union al
 (12 rows)
 
 reset enable_bitmapscan;
+-- Github Issue 13532
+create table t1_13532(a int, b int) distributed replicated;
+create table t2_13532(a int, b int) distributed replicated;
+create index idx_t2_13532 on t2_13532(b);
+explain (costs off) select * from t1_13532 x, t2_13532 y where y.a < random() and x.b = y.b;
+                        QUERY PLAN                        
+----------------------------------------------------------
+ Gather Motion 1:1  (slice1; segments: 1)
+   ->  Nested Loop
+         Join Filter: true
+         ->  Seq Scan on t1_13532
+         ->  Index Scan using idx_t2_13532 on t2_13532
+               Index Cond: (b = t1_13532.b)
+               Filter: ((a)::double precision < random())
+ Optimizer: Pivotal Optimizer (GPORCA)
+(8 rows)
+
+set enable_bitmapscan = off;
+explain (costs off) select * from t1_13532 x, t2_13532 y where y.a < random() and x.b = y.b;
+                        QUERY PLAN                        
+----------------------------------------------------------
+ Gather Motion 1:1  (slice1; segments: 1)
+   ->  Nested Loop
+         Join Filter: true
+         ->  Seq Scan on t1_13532
+         ->  Index Scan using idx_t2_13532 on t2_13532
+               Index Cond: (b = t1_13532.b)
+               Filter: ((a)::double precision < random())
+ Optimizer: Pivotal Optimizer (GPORCA)
+(8 rows)
+
 -- ORCA
 -- verify that JOIN derives the inner child distribution if the outer is tainted replicated (in this
 -- case, the inner child is the hash distributed table, but the distribution is random because the
@@ -1213,7 +1242,7 @@ select c from rep_tab where c in (select distinct d from rand_tab);
 
 -- start_ignore
 drop schema rpt cascade;
-NOTICE:  drop cascades to 14 other objects
+NOTICE:  drop cascades to 13 other objects
 DETAIL:  drop cascades to table foo
 drop cascades to table bar
 drop cascades to view v_foo
@@ -1225,7 +1254,6 @@ drop cascades to table t_hashdist
 drop cascades to table t_replicate_volatile
 drop cascades to sequence seq_for_insert_replicated_table
 drop cascades to table rtbl
-drop cascades to table dist_tab
-drop cascades to table rep_tab
-drop cascades to table rand_tab
+drop cascades to table t1_13532
+drop cascades to table t2_13532
 -- end_ignore

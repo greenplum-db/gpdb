@@ -406,9 +406,6 @@ create table rtbl (a int, b int, c int, t text) distributed replicated;
 insert into t_hashdist values (1, 1, 1);
 insert into rtbl values (1, 1, 1, 'rtbl');
 
-analyze t_hashdist;
-analyze rtbl;
-
 -- The below tests used to do replicated table scan on entry db which contains empty data.
 -- So a motion node is needed to gather replicated table on entry db.
 -- See issue: https://github.com/greenplum-db/gpdb/issues/11945
@@ -427,6 +424,14 @@ select relname from t_hashdist, (select * from pg_class c join rtbl on c.relname
 explain (costs off) select a from t_hashdist, (select oid from pg_class union all select a from rtbl) vtest;
 
 reset enable_bitmapscan;
+
+-- Github Issue 13532
+create table t1_13532(a int, b int) distributed replicated;
+create table t2_13532(a int, b int) distributed replicated;
+create index idx_t2_13532 on t2_13532(b);
+explain (costs off) select * from t1_13532 x, t2_13532 y where y.a < random() and x.b = y.b;
+set enable_bitmapscan = off;
+explain (costs off) select * from t1_13532 x, t2_13532 y where y.a < random() and x.b = y.b;
 
 -- ORCA
 -- verify that JOIN derives the inner child distribution if the outer is tainted replicated (in this
