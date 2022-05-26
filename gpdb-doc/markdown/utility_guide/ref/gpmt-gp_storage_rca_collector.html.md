@@ -1,11 +1,11 @@
 # gpmt gp_storage_rca_collector 
 
-This tool collects storage-related artifacts and generates an output file which can be provided to VMware Customer Support for diagnosis of storage-related errors or system failures.
+This tool collects storage-related table data and generates an output file which can be provided to VMware Customer Support for diagnosis of storage-related errors or system failures.
 
 ## <a id="usage"></a>Usage 
 
 ```
-gpmt gp_storage_rca_collector [-db <database> ] [-t <table> ] | -c <ID1,ID2,...> ] [-dir <PATH> ] [-a] [-translog ]
+gpmt gp_storage_rca_collector [-db <DATABASE> ] [-t <TABLE> ] | -c <ID1,ID2,...> ] [-dir <PATH> ] [-a] [-translog ]
 ```
 
 ## <a id="opts"></a>Options 
@@ -26,7 +26,7 @@ gpmt gp_storage_rca_collector [-db <database> ] [-t <table> ] | -c <ID1,ID2,...>
 :   Answer Yes to all prompts.
 
 -translog
-:   Specifies that transaction logs are required.
+:   Specifies that the tool should collect transaction log data. 
 
 The tool also collects the following information:
 
@@ -37,13 +37,13 @@ The tool also collects the following information:
     - gp_distributed_log
     - pg_appendonly
 
-- Transaction logs
+- Data from transaction logs, if you call this tool with the `-translog` option
 
 - AOCO data for a given appendonly, column-oriented table
 
 - AO data for a given appendonly table
 
-Note: some commands might not be able to be run if the user does not have correct permissions.
+**NOTE**: some commands might not be able to be run if the user does not have correct permissions.
 
 ## <a id="exs"></a>Examples 
 
