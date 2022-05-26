@@ -29,7 +29,7 @@ catalogbackup
 :   Basic Greenplum Database log collection utility.
 
 [gp_storage_rca_collector](gpmt-gp_storage_rca_collector.html.md)
-:   Collects storage-related artifacts.
+:   Collect storage-related artifacts.
 
 gpcheckcat
 :   For VMware Support use only. Greenplum Database gpcheckcat log analysis.

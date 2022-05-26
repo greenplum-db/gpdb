@@ -77,6 +77,4 @@ Collect storage rca artifacts for primary segment with contentid [0,1], database
 gpmt storage_rca_collector -db postgres -c 0,1 -t test_table -dir <dir>
 ```
 
-**NOTE**: Output files follow the naming convention <database name>_<dbid>_<artifact name>.
-
-
+**NOTE**: Output files follow the naming convention \<database_name>_\<dbid>_\<artifact_name>.
