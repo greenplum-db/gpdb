@@ -1,7 +1,8 @@
 set datestyle = 'ISO, DMY';
 
+-- Incomplete lines in the middle of the test file
 DROP EXTERNAL TABLE IF EXISTS tbl_ext_fixedwidth;
-CREATE READABLE EXTERNAL TABLE tbl_ext_fixedwidth (
+CREATE EXTERNAL TABLE tbl_ext_fixedwidth (
   s1 char(10), s2 varchar(10), s3 text, dt timestamp,
   n1 smallint, n2 integer, n3 bigint, n4 decimal,
   n5 numeric, n6 real, n7 double precision)
