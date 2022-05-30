@@ -653,14 +653,18 @@ You can obtain the pid of a running query from the `pg_stat_activity` system vie
 
 When you invoke `pg_resgroup_move_query()`, the query is subject to the limits configured for the destination resource group:
 
--   If the group has already reached its concurrent task limit, Greenplum Database queues the query until a slot opens.
+-   If the group has already reached its concurrent task limit, Greenplum Database queues the query until a slot opens or for `gp_resource_group_queuing_timeout` milliseconds if set. 
+-   If the group has a free slot, `pg_resgroup_move_query()` tries to give slot control away to the target process for up to `gp_resource_group_move_timeout` milliseconds. If target process can't handle movement request until `gp_resource_group_queuing_timeout` exceeds, Greenplum Database returns the error: `target process failed to move to a new group`.
+-   If `pg_resgroup_move_query()` was cancelled, but target process already got all slot control, then segment's processes will not be moved to new group. Such inconsistent state will be fixed by the end of transaction or by the any next command dispatched by target process inside same transaction.
 -   If the destination resource group does not have enough memory available to service the query's current memory requirements, Greenplum Database returns the error: `group <group_name> doesn't have enough memory ...`. In this situation, you may choose to increase the group shared memory allotted to the destination resource group, or perhaps wait a period of time for running queries to complete and then invoke the function again.
 
 After Greenplum moves the query, there is no way to guarantee that a query currently running in the destination resource group does not exceed the group memory quota. In this situation, one or more running queries in the destination group may fail, including the moved query. Reserve enough resource group global shared memory to minimize the potential for this scenario to occur.
 
 `pg_resgroup_move_query()` moves only the specified query to the destination resource group. Greenplum Database assigns subsequent queries that you submit in the session to the original resource group.
 
-> **Note** Greenplum Database version 6.8 introduced support for moving a query to a different resource group.
+Successful return of `pg_resgroup_move_query()` doesn't mean target process was successfully moved. Process movement is asynchronous. The current resource group can be checked via `pg_stat_activity` system view.
+
+**Note:** Greenplum Database version 6.8 introduced support for moving a query to a different resource group.
 
 -   If you upgraded from a previous Greenplum 6.x installation, you must manually register the supporting functions for this feature, and grant access to the functions as follows:
 

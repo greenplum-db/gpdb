@@ -4261,6 +4261,16 @@ struct config_int ConfigureNamesInt_gp[] =
 		NULL, NULL, NULL
 	},
 	{
+		{"gp_resource_group_move_timeout", PGC_USERSET, RESOURCES_MGM,
+			gettext_noop("Wait up to the specified time (in ms) while moving process to another resource group (after queuing on it) before give up."),
+			NULL,
+			GUC_UNIT_MS
+		},
+		&gp_resource_group_move_timeout,
+		30000, 10, INT_MAX,
+		NULL, NULL, NULL
+	},
+	{
 		{"gp_perfmon_segment_interval", PGC_POSTMASTER, STATS,
 			gettext_noop("Interval (in ms) between sending segment statistics to perfmon."),
 			NULL,

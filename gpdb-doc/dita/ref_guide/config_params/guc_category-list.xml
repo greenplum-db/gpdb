@@ -1233,6 +1233,9 @@
               <xref href="guc-list.xml#gp_resource_group_queuing_timeout" type="section"
                 >gp_resource_group_queuing_timeout</xref>
             </p><p>
+              <xref href="guc-list.xml#gp_resource_group_move_timeout" type="section"
+                >gp_resource_group_move_timeout</xref>
+            </p><p>
               <xref href="guc-list.xml#gp_resource_manager" type="section"
                 >gp_resource_manager</xref>
             </p></stentry>

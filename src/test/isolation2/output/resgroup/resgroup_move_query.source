@@ -32,9 +32,11 @@ CREATE OR REPLACE FUNCTION is_session_in_group(pid integer, groupname text) RETU
 conn = pg.connect(dbname="isolation2resgrouptest") pt = re.compile(r'con(\d+)') 
 sql = "select sess_id from pg_stat_activity where pid = '%d'" % pid result = conn.query(sql).getresult() session_id = result[0][0] 
 sql = "select groupid from gp_toolkit.gp_resgroup_config where groupname='%s'" % groupname result = conn.query(sql).getresult() groupid = result[0][0] 
-process = subprocess.Popen("ps -ef | grep postgres | grep con%d | grep -v grep | awk '{print $2}'" % session_id, shell=True, stdout=subprocess.PIPE) session_pids = process.communicate()[0].split('\n')[:-1] 
-cgroups_pids = [] path = "@cgroup_mnt_point@/cpu/gpdb/%d/cgroup.procs" % groupid fd = open(path) for line in fd.readlines(): cgroups_pids.append(line.strip('\n')) 
-return set(session_pids).issubset(set(cgroups_pids)) $$ LANGUAGE plpythonu;
+sql = "select hostname from gp_segment_configuration group by hostname" result = conn.query(sql).getresult() hosts = result[0] 
+def get_result(host): stdout = subprocess.check_output(["ssh", "{}".format(host), "ps -ef | grep postgres | grep con{} | grep -v grep | awk '{{print $2}}'".format(session_id)]) session_pids = stdout.split('\n') 
+path = "@cgroup_mnt_point@/cpu/gpdb/{}/cgroup.procs".format(groupid) stdout= subprocess.check_output(["ssh", "{}".format(host), "cat {}".format(path)]) cgroups_pids = stdout.split('\n') 
+return set(session_pids).issubset(set(cgroups_pids)) 
+for host in hosts: if not get_result(host): return False return True $$ LANGUAGE plpythonu;
 CREATE
 
 DROP ROLE IF EXISTS role_move_query;
@@ -46,6 +48,9 @@ ERROR:  resource group "rg_move_query" does not exist
 CREATE RESOURCE GROUP rg_move_query WITH (concurrency=1, cpu_rate_limit=20, memory_limit=20);
 CREATE
 CREATE ROLE role_move_query RESOURCE GROUP rg_move_query;
+CREATE
+
+CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
 CREATE
 
 -- test1: cannot move IDLE sessions
@@ -104,6 +109,11 @@ SELECT is_session_in_group(pid, 'rg_move_query_mem_small') FROM pg_stat_activity
 ---------------------
  f                   
 (1 row)
+SELECT num_running FROM gp_toolkit.gp_resgroup_status WHERE rsgname='rg_move_query_mem_small';
+ num_running 
+-------------
+ 0           
+(1 row)
 1: END;
 END
 1q: ... <quitting>
@@ -124,6 +134,11 @@ SELECT is_session_in_group(pid, 'rg_move_query_mem_small') FROM pg_stat_activity
  is_session_in_group 
 ---------------------
  f                   
+(1 row)
+SELECT num_running FROM gp_toolkit.gp_resgroup_status WHERE rsgname='rg_move_query_mem_small';
+ num_running 
+-------------
+ 0           
 (1 row)
 1: END;
 END
@@ -220,8 +235,434 @@ BEGIN
 ---------------------
  t                   
 (1 row)
+1: END;
+END
 1q: ... <quitting>
 2q: ... <quitting>
+
+-- test8: check destination group has no slot leaking if move signal processed at the time target process became idle
+-- start transaction at first process
+-- start to move it at second process, but suspend before sending signal to it
+-- end transaction at first process
+-- resume at second process, it should throw an error
+1: SET ROLE role_move_query_mem_small;
+SET
+1: BEGIN;
+BEGIN
+1: SELECT 1 a FROM pg_class LIMIT 1;
+ a 
+---
+ 1 
+(1 row)
+2: SELECT gp_inject_fault('resource_group_give_away_begin', 'reset', dbid) FROM gp_segment_configuration where role = 'p' and content = -1;
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+2: SELECT gp_inject_fault('resource_group_give_away_begin', 'suspend', dbid) FROM gp_segment_configuration where role = 'p' and content = -1;
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+2&: SELECT gp_toolkit.pg_resgroup_move_query(pid, 'rg_move_query') FROM pg_stat_activity WHERE query LIKE '%pg_class%' AND rsgname='rg_move_query_mem_small';  <waiting ...>
+1: END;
+END
+1: SELECT gp_wait_until_triggered_fault('resource_group_give_away_begin', 1, dbid) FROM gp_segment_configuration where role = 'p' and content = -1;
+ gp_wait_until_triggered_fault 
+-------------------------------
+ Success:                      
+(1 row)
+1: SELECT gp_inject_fault('resource_group_give_away_begin', 'resume', dbid) FROM gp_segment_configuration where role = 'p' and content = -1;
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+2<:  <... completed>
+ERROR:  target process failed to move to a new group
+2: SELECT num_running FROM gp_toolkit.gp_resgroup_status WHERE rsgname='rg_move_query';
+ num_running 
+-------------
+ 0           
+(1 row)
+
+-- test9: check destination group has no slot leaking if move signal processed at the time target process became dead
+-- start transaction at first process
+-- start to move it at second process, but suspend before sending signal to it
+-- end transaction at first process and quit
+-- resume at second process, it should throw an error
+1: SET ROLE role_move_query_mem_small;
+SET
+1: BEGIN;
+BEGIN
+1: SELECT 1 a FROM pg_class LIMIT 1;
+ a 
+---
+ 1 
+(1 row)
+2: SELECT gp_inject_fault('resource_group_give_away_begin', 'reset', dbid) FROM gp_segment_configuration where role = 'p' and content = -1;
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+2: SELECT gp_inject_fault('resource_group_give_away_begin', 'suspend', dbid) FROM gp_segment_configuration where role = 'p' and content = -1;
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+2&: SELECT gp_toolkit.pg_resgroup_move_query(pid, 'rg_move_query') FROM pg_stat_activity WHERE query LIKE '%pg_class%' AND rsgname='rg_move_query_mem_small';  <waiting ...>
+1: END;
+END
+1q: ... <quitting>
+3: SELECT gp_wait_until_triggered_fault('resource_group_give_away_begin', 1, dbid) FROM gp_segment_configuration where role = 'p' and content = -1;
+ gp_wait_until_triggered_fault 
+-------------------------------
+ Success:                      
+(1 row)
+3: SELECT gp_inject_fault('resource_group_give_away_begin', 'resume', dbid) FROM gp_segment_configuration where role = 'p' and content = -1;
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+2<:  <... completed>
+ERROR:  cannot send signal to process
+2: SELECT num_running FROM gp_toolkit.gp_resgroup_status WHERE rsgname='rg_move_query';
+ num_running 
+-------------
+ 0           
+(1 row)
+
+-- test10: check destination group has no slot leaking if we got an error on latch waiting
+-- sleep at first process
+-- start to move it at second process, send moving signal to first process
+-- suspend at first process after handling moveto* params
+-- interrupt in WaitLatch block at second process, this will force pg_resgroup_move_query to continue
+-- second process should throw an error, but consider moveto* params handled by target
+-- resume at first process
+-- first process should continue with moving as all slot control is on it's side
+-- segments will not be moved to new group until the next command begins
+1: SET ROLE role_move_query_mem_small;
+SET
+1: SELECT gp_inject_fault('resource_group_move_handler_after_qd_control', 'reset', dbid) FROM gp_segment_configuration where role = 'p' and content = -1;
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+1: SELECT gp_inject_fault('resource_group_move_handler_after_qd_control', 'suspend', dbid) FROM gp_segment_configuration where role = 'p' and content = -1;
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+1: BEGIN;
+BEGIN
+1&: SELECT * FROM gp_dist_random('gp_id'), pg_sleep(5) LIMIT 1;  <waiting ...>
+2: SELECT gp_inject_fault('resource_group_give_away_wait_latch', 'reset', dbid) FROM gp_segment_configuration where role = 'p' and content = -1;
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+2: SELECT gp_inject_fault('resource_group_give_away_wait_latch', 'suspend', dbid) FROM gp_segment_configuration where role = 'p' and content = -1;
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+2&: SELECT gp_toolkit.pg_resgroup_move_query(pid, 'rg_move_query') FROM pg_stat_activity WHERE query LIKE '%pg_sleep%' AND rsgname='rg_move_query_mem_small';  <waiting ...>
+3: SELECT gp_wait_until_triggered_fault('resource_group_give_away_wait_latch', 1, dbid) FROM gp_segment_configuration where role = 'p' and content = -1;
+ gp_wait_until_triggered_fault 
+-------------------------------
+ Success:                      
+(1 row)
+3: SELECT pg_cancel_backend(pid) FROM pg_stat_activity WHERE query LIKE '%pg_resgroup_move_query%' AND pid != pg_backend_pid();
+ pg_cancel_backend 
+-------------------
+ t                 
+(1 row)
+3: SELECT gp_inject_fault('resource_group_give_away_wait_latch', 'resume', dbid) FROM gp_segment_configuration where role = 'p' and content = -1;
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+2<:  <... completed>
+ERROR:  canceling statement due to user request
+2: SELECT gp_inject_fault('resource_group_move_handler_after_qd_control', 'resume', dbid) FROM gp_segment_configuration where role = 'p' and content = -1;
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+1<:  <... completed>
+ gpname    | numsegments | dbid | content | pg_sleep 
+-----------+-------------+------+---------+----------
+ Greenplum | -1          | -1   | -1      |          
+(1 row)
+--is_session_in_group works only if all backends moved to group, so it will show 'f', but gp_resgroup_status will show actual result
+2: SELECT is_session_in_group(pid, 'rg_move_query') FROM pg_stat_activity WHERE query LIKE '%pg_sleep%' AND state = 'idle in transaction';
+ is_session_in_group 
+---------------------
+ f                   
+(1 row)
+2: SELECT num_running FROM gp_toolkit.gp_resgroup_status WHERE rsgname='rg_move_query';
+ num_running 
+-------------
+ 1           
+(1 row)
+--if there any next command called in the same transaction, segments will try to fix the situation and move out of inconsistent state
+1: SELECT * FROM gp_dist_random('gp_id'), pg_sleep(1) LIMIT 1;
+ gpname    | numsegments | dbid | content | pg_sleep 
+-----------+-------------+------+---------+----------
+ Greenplum | -1          | -1   | -1      |          
+(1 row)
+2: SELECT is_session_in_group(pid, 'rg_move_query') FROM pg_stat_activity WHERE query LIKE '%pg_sleep%' AND state = 'idle in transaction';
+ is_session_in_group 
+---------------------
+ t                   
+(1 row)
+2: SELECT num_running FROM gp_toolkit.gp_resgroup_status WHERE rsgname='rg_move_query';
+ num_running 
+-------------
+ 1           
+(1 row)
+1: END;
+END
+2: SELECT num_running FROM gp_toolkit.gp_resgroup_status WHERE rsgname='rg_move_query';
+ num_running 
+-------------
+ 0           
+(1 row)
+1q: ... <quitting>
+
+-- test11: check destination group has no slot leaking if target process set latch at the last moment
+-- sleep at first process
+-- start to move it at second process, send moving signal to first process
+-- suspend at first process just before setting latch
+-- wait for timeout on WaitLatch on second process and suspend
+-- resume at first process, it should set latch (which is late) and clean moveto* values
+-- resume at second process, as moveto* was cleaned, we know first process handled signal
+-- moving command at second process should finish successfully
+1: SET ROLE role_move_query_mem_small;
+SET
+1: SELECT gp_inject_fault('resource_group_move_handler_before_qd_control', 'reset', dbid) FROM gp_segment_configuration where role = 'p' and content = -1;
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+1: SELECT gp_inject_fault('resource_group_move_handler_before_qd_control', 'suspend', dbid) FROM gp_segment_configuration where role = 'p' and content = -1;
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+1: SELECT gp_inject_fault('resource_group_move_handler_after_qd_control', 'reset', dbid) FROM gp_segment_configuration where role = 'p' and content = -1;
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+1: SELECT gp_inject_fault('resource_group_move_handler_after_qd_control', 'suspend', dbid) FROM gp_segment_configuration where role = 'p' and content = -1;
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+1: BEGIN;
+BEGIN
+1&: SELECT pg_sleep(3) FROM gp_dist_random('gp_id') LIMIT 1;  <waiting ...>
+2: SELECT gp_inject_fault('resource_group_give_away_after_latch', 'reset', dbid) FROM gp_segment_configuration where role = 'p' and content = -1;
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+2: SELECT gp_inject_fault('resource_group_give_away_after_latch', 'suspend', dbid) FROM gp_segment_configuration where role = 'p' and content = -1;
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+2: SET gp_resource_group_move_timeout = 1000;
+SET
+2&: SELECT gp_toolkit.pg_resgroup_move_query(pid, 'rg_move_query') FROM pg_stat_activity WHERE query LIKE '%pg_sleep%' AND rsgname='rg_move_query_mem_small';  <waiting ...>
+3: SELECT gp_wait_until_triggered_fault('resource_group_give_away_after_latch', 1, dbid) FROM gp_segment_configuration where role = 'p' and content = -1;
+ gp_wait_until_triggered_fault 
+-------------------------------
+ Success:                      
+(1 row)
+3: SELECT gp_inject_fault('resource_group_move_handler_before_qd_control', 'resume', dbid) FROM gp_segment_configuration where role = 'p' and content = -1;
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+3: SELECT gp_wait_until_triggered_fault('resource_group_move_handler_after_qd_control', 1, dbid) FROM gp_segment_configuration where role = 'p' and content = -1;
+ gp_wait_until_triggered_fault 
+-------------------------------
+ Success:                      
+(1 row)
+3: SELECT gp_inject_fault('resource_group_move_handler_after_qd_control', 'resume', dbid) FROM gp_segment_configuration where role = 'p' and content = -1;
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+3: SELECT gp_inject_fault('resource_group_give_away_after_latch', 'resume', dbid) FROM gp_segment_configuration where role = 'p' and content = -1;
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+1<:  <... completed>
+ pg_sleep 
+----------
+          
+(1 row)
+2<:  <... completed>
+ pg_resgroup_move_query 
+------------------------
+ t                      
+(1 row)
+2: RESET gp_resource_group_move_timeout;
+RESET
+3: SELECT is_session_in_group(pid, 'rg_move_query') FROM pg_stat_activity WHERE query LIKE '%pg_sleep%' AND state = 'idle in transaction';
+ is_session_in_group 
+---------------------
+ t                   
+(1 row)
+1: END;
+END
+3: SELECT num_running FROM gp_toolkit.gp_resgroup_status WHERE rsgname='rg_move_query';
+ num_running 
+-------------
+ 0           
+(1 row)
+1q: ... <quitting>
+
+-- test12: check destination group has no slot leaking if taget process recieved one move command at the time of processing another
+-- sleep at first process
+-- start to move it at second process, send moving signal to first process
+-- suspend at first process just before setting latch and moving
+-- run another moving command at third process, it should throw an error as target process is alredy moving
+-- resume at first process, it should continue with moving
+-- moving command at second process should finish successfully
+1: SET ROLE role_move_query_mem_small;
+SET
+1: SELECT gp_inject_fault('resource_group_move_handler_before_qd_control', 'reset', dbid) FROM gp_segment_configuration where role = 'p' and content = -1;
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+1: SELECT gp_inject_fault('resource_group_move_handler_before_qd_control', 'suspend', dbid) FROM gp_segment_configuration where role = 'p' and content = -1;
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+1: BEGIN;
+BEGIN
+1&: SELECT pg_sleep(5) FROM gp_dist_random('gp_id') LIMIT 1;  <waiting ...>
+2&: SELECT gp_toolkit.pg_resgroup_move_query(pid, 'rg_move_query') FROM pg_stat_activity WHERE query LIKE '%pg_sleep%' AND rsgname='rg_move_query_mem_small';  <waiting ...>
+3: SELECT gp_wait_until_triggered_fault('resource_group_move_handler_before_qd_control', 1, dbid) FROM gp_segment_configuration where role = 'p' and content = -1;
+ gp_wait_until_triggered_fault 
+-------------------------------
+ Success:                      
+(1 row)
+3: SELECT gp_toolkit.pg_resgroup_move_query(pid, 'default_group') FROM pg_stat_activity WHERE query LIKE '%pg_sleep%' AND rsgname='rg_move_query_mem_small';
+ERROR:  cannot send signal to process
+3: SELECT gp_inject_fault('resource_group_move_handler_before_qd_control', 'resume', dbid) FROM gp_segment_configuration where role = 'p' and content = -1;
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+1<:  <... completed>
+ pg_sleep 
+----------
+          
+(1 row)
+2<:  <... completed>
+ pg_resgroup_move_query 
+------------------------
+ t                      
+(1 row)
+3: SELECT is_session_in_group(pid, 'rg_move_query') FROM pg_stat_activity WHERE query LIKE '%pg_sleep%' AND state = 'idle in transaction';
+ is_session_in_group 
+---------------------
+ t                   
+(1 row)
+1: END;
+END
+3: SELECT num_running FROM gp_toolkit.gp_resgroup_status WHERE rsgname='rg_move_query';
+ num_running 
+-------------
+ 0           
+(1 row)
+3: SELECT num_running FROM gp_toolkit.gp_resgroup_status WHERE rsgname='default_group';
+ num_running 
+-------------
+ 0           
+(1 row)
+1q: ... <quitting>
+
+-- Test13: check we'll wait and quit by gp_resource_group_move_timeout if target process stuck on signal handling
+1: SET ROLE role_move_query_mem_small;
+SET
+1: SELECT gp_inject_fault('resource_group_move_handler_before_qd_control', 'reset', dbid) FROM gp_segment_configuration where role = 'p' and content = -1;
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+1: SELECT gp_inject_fault('resource_group_move_handler_before_qd_control', 'suspend', dbid) FROM gp_segment_configuration where role = 'p' and content = -1;
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+1: BEGIN;
+BEGIN
+1&: SELECT pg_sleep(3);  <waiting ...>
+2: SET gp_resource_group_move_timeout = 3000;
+SET
+2: SELECT gp_toolkit.pg_resgroup_move_query(pid, 'rg_move_query') FROM pg_stat_activity WHERE query LIKE '%pg_sleep%' AND rsgname='rg_move_query_mem_small';
+ERROR:  target process failed to move to a new group
+2: SELECT gp_inject_fault('resource_group_move_handler_before_qd_control', 'resume', dbid) FROM gp_segment_configuration where role = 'p' and content = -1;
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+2: RESET gp_resource_group_move_timeout;
+RESET
+1<:  <... completed>
+ pg_sleep 
+----------
+          
+(1 row)
+2: SELECT num_running FROM gp_toolkit.gp_resgroup_status WHERE rsgname='rg_move_query';
+ num_running 
+-------------
+ 0           
+(1 row)
+1: END;
+END
+
+-- Test14: check entrydb queries working
+-- Previously, we sent a signal to only one process - dispatcher or entrydb.
+-- This led to various errors - triggered assertions or only entrydb process moving.
+-- But it never led to the only one correct result - ALL processes should be moved.
+-- Here we use is_session_in_group() to precisely check ALL processes were moved.
+1: SET ROLE role_move_query_mem_small;
+SET
+1: BEGIN;
+BEGIN
+--spawn all backends at first short call to guarantee correct pg_resgroup_move_query() execution
+1: SELECT * FROM gp_dist_random('gp_id'), pg_sleep(1) LIMIT 1;
+ gpname    | numsegments | dbid | content | pg_sleep 
+-----------+-------------+------+---------+----------
+ Greenplum | -1          | -1   | -1      |          
+(1 row)
+1&: SELECT * FROM gp_dist_random('gp_id'), pg_sleep(3) LIMIT 1;  <waiting ...>
+2: SELECT gp_toolkit.pg_resgroup_move_query(pid, 'rg_move_query') FROM pg_stat_activity WHERE query LIKE '%pg_sleep%' AND rsgname='rg_move_query_mem_small';
+ pg_resgroup_move_query 
+------------------------
+ t                      
+(1 row)
+1<:  <... completed>
+ gpname    | numsegments | dbid | content | pg_sleep 
+-----------+-------------+------+---------+----------
+ Greenplum | -1          | -1   | -1      |          
+(1 row)
+2: SELECT is_session_in_group(pid, 'rg_move_query') FROM pg_stat_activity WHERE query LIKE '%pg_sleep%' AND state = 'idle in transaction';
+ is_session_in_group 
+---------------------
+ t                   
+(1 row)
+1: END;
+END
 
 DROP ROLE role_move_query;
 DROP

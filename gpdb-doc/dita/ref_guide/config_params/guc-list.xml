@@ -299,6 +299,7 @@
             <li><xref href="#gp_resource_group_cpu_limit"/></li>
             <li><xref href="#gp_resource_group_memory_limit"/></li>
             <li><xref href="#gp_resource_group_queuing_timeout"/></li>
+            <li><xref href="#gp_resource_group_move_timeout"/></li>
             <li>
               <xref href="#gp_resource_manager"/>
             </li>
@@ -4898,6 +4899,38 @@
               <entry colname="col1">0 - <codeph>INT_MAX</codeph> millisecs</entry>
               <entry colname="col2">0 millisecs</entry>
               <entry colname="col3">master<p>session</p><p>reload</p></entry>
+            </row>
+          </tbody>
+        </tgroup>
+      </table>
+    </body>
+  </topic>
+  <topic id="gp_resource_group_move_timeout">
+    <title>gp_resource_group_move_timeout</title>
+    <body>
+      <note>The <codeph>gp_resource_group_move_timeout</codeph> server configuration parameter
+        is enforced only when resource group-based resource management is active.</note>
+      <p>Cancel movement of process to another resource group if target process
+        not replies longer than the specified number of milliseconds. This parameter
+        doesn't include <codeph>gp_resource_group_queuing_timeout</codeph> - queuing
+        on resource group performed before sending movement request.</p>
+      <table id="gp_resource_group_move_timeout_table">
+        <tgroup cols="3">
+          <colspec colnum="1" colname="col1" colwidth="1*"/>
+          <colspec colnum="2" colname="col2" colwidth="1*"/>
+          <colspec colnum="3" colname="col3" colwidth="1*"/>
+          <thead>
+            <row>
+              <entry colname="col1">Value Range</entry>
+              <entry colname="col2">Default</entry>
+              <entry colname="col3">Set Classifications</entry>
+            </row>
+          </thead>
+          <tbody>
+            <row>
+              <entry colname="col1">10 - <codeph>INT_MAX</codeph> millisecs</entry>
+              <entry colname="col2">30000 millisecs</entry>
+              <entry colname="col3">master<p>system</p><p>session</p><p>reload</p></entry>
             </row>
           </tbody>
         </tgroup>

@@ -69,6 +69,7 @@
 #include "utils/session_state.h"
 #include "utils/tqual.h"
 #include "utils/vmem_tracker.h"
+#include "access/xact.h"
 
 #define InvalidSlotId	(-1)
 #define RESGROUP_MAX_SLOTS	(MaxConnections)
@@ -91,6 +92,7 @@ bool						gp_resgroup_print_operator_memory_limits = false;
 bool						gp_resgroup_debug_wait_queue = true;
 int							memory_spill_ratio = 20;
 int							gp_resource_group_queuing_timeout = 0;
+int							gp_resource_group_move_timeout = 30000;
 
 /*
  * Data structures
@@ -2691,7 +2693,7 @@ AssignResGroupOnMaster(void)
 	}
 	PG_CATCH();
 	{
-		UnassignResGroup(false);
+		UnassignResGroup();
 		PG_RE_THROW();
 	}
 	PG_END_TRY();
@@ -2701,10 +2703,10 @@ AssignResGroupOnMaster(void)
  * Detach from a resource group at the end of the transaction.
  */
 void
-UnassignResGroup(bool releaseSlot)
+UnassignResGroup(void)
 {
-	ResGroupData		*group = self->group;
-	ResGroupSlotData	*slot = self->slot;
+	ResGroupData		*group;
+	ResGroupSlotData	*slot;
 
 	if (bypassedGroup)
 	{
@@ -2737,19 +2739,15 @@ UnassignResGroup(bool releaseSlot)
 
 	LWLockAcquire(ResGroupLock, LW_EXCLUSIVE);
 
+	group = self->group;
+	slot = self->slot;
+
 	/* Sub proc memory accounting info from group and slot */
 	selfDetachResGroup(group, slot);
 
 	/* Release the slot if no reference. */
-	if (slot->nProcs == 0 || releaseSlot)
+	if (slot->nProcs == 0)
 	{
-		if (releaseSlot)
-		{
-			/* release the memory left in the slot if there's entryDB */
-			groupDecSlotMemUsage(group, slot);
-			slot->nProcs = 0;
-		}
-
 		groupReleaseSlot(group, slot, false);
 
 		/*
@@ -2816,9 +2814,20 @@ SwitchResGroupOnSegment(const char *buf, int len)
 
 	if (newGroupId == InvalidOid)
 	{
-		UnassignResGroup(false);
+		UnassignResGroup();
 		return;
 	}
+
+	/*
+	 * The working case: pg_resgroup_move_query command was interrupted, but
+	 * at the time target (dispatcher) process already got control over slot.
+	 * If we'll wait until the end of current target process command and then
+	 * will dispatch something on segments in the same transaction, then
+	 * newGroupId will not be equal to current segment's one. We want to move
+	 * out of inconsistent state.
+	 */
+	if (newGroupId != self->groupId)
+		UnassignResGroup();
 
 	if (self->groupId != InvalidOid)
 	{
@@ -2957,7 +2966,7 @@ waitOnGroup(ResGroupData *group, bool isMoveQuery)
 			pfree(new_status);
 		}
 
-		groupWaitCancel(false);
+		groupWaitCancel(isMoveQuery);
 		PG_RE_THROW();
 	}
 	PG_END_TRY();
@@ -3395,7 +3404,12 @@ slotValidate(const ResGroupSlotData *slot)
 	else
 	{
 		Assert(!slotIsInFreelist(slot));
-		AssertImply(Gp_role == GP_ROLE_EXECUTE, slot == sessionGetSlot());
+		/*
+		 * Entrydb process can have different self and session slots at the
+		 * time of moving to another group.
+		 */
+		AssertImply(Gp_role == GP_ROLE_EXECUTE && !IS_QUERY_DISPATCHER(),
+					slot == sessionGetSlot());
 	}
 }
 
@@ -3985,7 +3999,17 @@ static void
 sessionSetSlot(ResGroupSlotData *slot)
 {
 	Assert(slot != NULL);
-	Assert(MySessionState->resGroupSlot == NULL);
+	/*
+	 * Previously, we had an assertion, that MySessionState->resGroupSlot
+	 * should be NULL here. There is a case, when we want to move processes
+	 * from one group to another. We got assertion error on main process,
+	 * if entrydb process not called UnassignResGroup() yet (and vice versa).
+	 * Next call to UnassignResGroup() (by main or entrydb process) will free
+	 * slot and it's OK, but here we want to set new slot to session, so we
+	 * changed assertion.
+	 */
+	AssertImply((Gp_role == GP_ROLE_EXECUTE && !IS_QUERY_DISPATCHER()),
+		MySessionState->resGroupSlot == NULL);
 
 	/*
 	 * SessionStateLock is required since runaway detector will traverse
@@ -4592,8 +4616,6 @@ IsGroupInRedZone(void)
 	return true;
 }
 
-
-
 /*
  * Dump memory information for current resource group.
  * This is the output of resource group runaway.
@@ -4680,47 +4702,149 @@ HandleMoveResourceGroup(void)
 	ResGroupSlotData *slot;
 	ResGroupData *group;
 	ResGroupData *oldGroup;
+	Oid			groupId;
+	pid_t		callerPid;
+
+	Assert(Gp_role == GP_ROLE_DISPATCH || Gp_role == GP_ROLE_EXECUTE);
 
 	/* transaction has finished */
-	if (!selfIsAssigned())
+	if (!IsTransactionState() || !selfIsAssigned())
+	{
+		if (Gp_role == GP_ROLE_DISPATCH)
+		{
+			SpinLockAcquire(&MyProc->movetoMutex);
+
+			/*
+			 * setting movetoGroupId to InvalidOid alone without setting
+			 * movetoResSlot to NULL means target process tried to handle, but
+			 * can't do anything with a command
+			 */
+			MyProc->movetoGroupId = InvalidOid;
+			callerPid = MyProc->movetoCallerPid;
+			SpinLockRelease(&MyProc->movetoMutex);
+
+			/* notify initiator, current command is irrelevant */
+			if (callerPid != InvalidPid)
+				ResGroupMoveNotifyInitiator(callerPid);
+		}
 		return;
+	}
 
 	if (Gp_role == GP_ROLE_DISPATCH)
 	{
+		SIMPLE_FAULT_INJECTOR("resource_group_move_handler_before_qd_control");
+
 		SpinLockAcquire(&MyProc->movetoMutex);
-		slot = (ResGroupSlotData *)MyProc->movetoResSlot;
-		group = slot->group;
+		slot = (ResGroupSlotData *) MyProc->movetoResSlot;
+		groupId = MyProc->movetoGroupId;
+		callerPid = MyProc->movetoCallerPid;
+
+		/* set to NULL to mark we got slot control */
 		MyProc->movetoResSlot = NULL;
+		/* set to InvalidOid to mark we handling the command */
+		MyProc->movetoGroupId = InvalidOid;
+
+		/*
+		 * Don't clean movetoCallerPid. It guards us from another initiators,
+		 * which may overwrite moveto* params.
+		 */
 		SpinLockRelease(&MyProc->movetoMutex);
 
+		if (!slot)
+		{
+			/* moving command is irrelevant */
+			return;
+		}
+
+		/*
+		 * starting from this point, all control over slot should be done
+		 * here, from target process
+		 */
+
+		Assert(groupId != InvalidOid);
+		SIMPLE_FAULT_INJECTOR("resource_group_move_handler_after_qd_control");
+
+		ResGroupMoveNotifyInitiator(callerPid);
+
 		/* unassign the old resource group and release the old slot */
-		UnassignResGroup(true);
+		UnassignResGroup();
 
-		PG_TRY();
-		{
-			sessionSetSlot(slot);
+		sessionSetSlot(slot);
 
-			/* Add proc memory accounting info into group and slot */
-			selfAttachResGroup(group, slot);
+		/* Add proc memory accounting info into group and slot */
+		group = slot->group;
+		selfAttachResGroup(group, slot);
 
-			/* Init self */
-			self->caps = slot->caps;
+		/* Init self */
+		self->caps = slot->caps;
 
-			/* Add into cgroup */
-			ResGroupOps_AssignGroup(self->groupId, &(self->caps), MyProcPid);
-		}
-		PG_CATCH();
-		{
-			UnassignResGroup(false);
-			PG_RE_THROW();
-		}
-		PG_END_TRY();
+		/*
+		 * You may say it's ugly to notify entrydb process here, but not in
+		 * initiator process, but we want to be sure slot was actually
+		 * assigned to session using sessionSetSlot(). We can't do much inside
+		 * one spinlock. Especially, we can't work with multiple LWLocks
+		 * inside of it. So, to keep the solution simple and plain, we decided
+		 * to signal entrydb process here, inside of target process handler.
+		 */
+		(void) ResGroupMoveSignalTarget(MyProc->mppSessionId,
+										NULL, groupId, true);
+
+		/*
+		 * Add into cgroup. On any exception slot will be freed by the end of
+		 * transaction.
+		 */
+		ResGroupOps_AssignGroup(self->groupId, &(self->caps), MyProcPid);
+
 		pgstat_report_resgroup(0, self->groupId);
 	}
-	else if (Gp_role == GP_ROLE_EXECUTE)
+
+	/*
+	 * Move entrydb process. This is very similar to moving of target process,
+	 * but without setting session level slot, which was already set by
+	 * target.
+	 */
+	else if (Gp_role == GP_ROLE_EXECUTE && IS_QUERY_DISPATCHER())
 	{
 		SpinLockAcquire(&MyProc->movetoMutex);
-		Oid groupId = MyProc->movetoGroupId;
+		groupId = MyProc->movetoGroupId;
+		MyProc->movetoGroupId = InvalidOid;
+		SpinLockRelease(&MyProc->movetoMutex);
+
+		/*
+		 * The right session-level slot was set by the dispatcher's part of
+		 * handler (above).
+		 */
+		slot = sessionGetSlot();
+		Assert(slot != NULL);
+		Assert(slot->groupId == groupId);
+
+		group = slot->group;
+
+		/*
+		 * But before we'll attach new slot to current entrydb process, we
+		 * need to unassign all from 'self'.
+		 */
+		UnassignResGroup();
+		/* And now, attach it and increment all counters we need. */
+		selfAttachResGroup(group, slot);
+
+		self->caps = group->caps;
+
+		/* finally we can say we are in a valid resgroup */
+		Assert(selfIsAssigned());
+
+		/* Add into cgroup */
+		ResGroupOps_AssignGroup(self->groupId, &(self->caps), MyProcPid);
+	}
+
+	/*
+	 * Move segment's executor. Use simple manual counters manipulation. We
+	 * can't call same complex designed for coordinator functions like above.
+	 */
+	else if (Gp_role == GP_ROLE_EXECUTE && !IS_QUERY_DISPATCHER())
+	{
+		SpinLockAcquire(&MyProc->movetoMutex);
+		groupId = MyProc->movetoGroupId;
 		MyProc->movetoGroupId = InvalidOid;
 		SpinLockRelease(&MyProc->movetoMutex);
 
@@ -4737,8 +4861,8 @@ HandleMoveResourceGroup(void)
 		Assert(oldGroup != NULL);
 
 		/*
-		 * move the slot memory to the new group, only do it once
-		 * if there're more than once slice.
+		 * move the slot memory to the new group, only do it once if there're
+		 * more than once slice.
 		 */
 		if (slot->groupId != groupId)
 		{
@@ -4760,15 +4884,11 @@ HandleMoveResourceGroup(void)
 			group->nRunning++;
 			Assert(group->memQuotaUsed <= group->memQuotaGranted);
 		}
-
-		/* add the memory of entryDB to slot and group */
-		if (IS_QUERY_DISPATCHER())
-			selfAttachResGroup(group, slot);
-
 		LWLockRelease(ResGroupLock);
 
 		selfSetGroup(group);
 		selfSetSlot(slot);
+
 		self->caps = group->caps;
 
 		/* finally we can say we are in a valid resgroup */
@@ -4834,13 +4954,96 @@ moveQueryCheck(int sessionId, Oid groupId)
 	cdbdisp_clearCdbPgResults(&cdb_pgresults);
 }
 
+/*
+ * Try to give away all slot control to target process.
+ */
+static void
+resGroupGiveSlotAway(int sessionId, ResGroupSlotData ** slot, Oid groupId)
+{
+	long		timeout;
+	int64		curTime;
+	int64		waitStart;
+	int			latchRes;
+	bool		clean = false;
+	bool		res = false;
+
+	SIMPLE_FAULT_INJECTOR("resource_group_give_away_begin");
+
+	if (!ResGroupMoveSignalTarget(sessionId, *slot, groupId, false))
+		ereport(ERROR,
+				(errcode(ERRCODE_UNDEFINED_OBJECT),
+				 (errmsg("cannot send signal to process"))));
+
+	waitStart = GetCurrentIntegerTimestamp();
+
+	for (;;)
+	{
+		curTime = GetCurrentIntegerTimestamp();
+		timeout = gp_resource_group_move_timeout - (curTime - waitStart) / 1000;
+		if (timeout > 0)
+		{
+			PG_TRY();
+			{
+				SIMPLE_FAULT_INJECTOR("resource_group_give_away_wait_latch");
+
+				/*
+				 * do check here to clean all target's moveto* params in case
+				 * of interruption or any exception
+				 */
+				CHECK_FOR_INTERRUPTS();
+
+				latchRes = WaitLatch(&MyProc->procLatch,
+				   WL_LATCH_SET | WL_TIMEOUT | WL_POSTMASTER_DEATH, timeout);
+
+				if (latchRes & WL_POSTMASTER_DEATH)
+					elog(ERROR,
+					 "got WL_POSTMASTER_DEATH waiting on latch; exiting...");
+			}
+			PG_CATCH();
+			{
+				clean = true;
+				ResGroupMoveCheckTargetReady(sessionId, &clean, &res);
+				if (res)
+				{
+					/*
+					 * clean slot variable, because we don't need to touch it
+					 * in current process as control is on the target side
+					 */
+					*slot = NULL;
+					ereport(WARNING,
+							(errmsg("got exception, but slot control is on the target process side"),
+							 errhint("QEs weren't moved. They'll be moved by the next command dispatched in the target transaction, if any.")));
+				}
+				PG_RE_THROW();
+			}
+			PG_END_TRY();
+		}
+		else
+			latchRes = WL_TIMEOUT;
+
+		SIMPLE_FAULT_INJECTOR("resource_group_give_away_after_latch");
+
+		clean = (latchRes & WL_TIMEOUT);
+		ResGroupMoveCheckTargetReady(sessionId, &clean, &res);
+		if (clean)
+			break;
+
+		ResetLatch(&MyProc->procLatch);
+	}
+
+	if (!res)
+		ereport(ERROR,
+				(errcode(ERRCODE_OBJECT_NOT_IN_PREREQUISITE_STATE),
+				 (errmsg("target process failed to move to a new group"))));
+}
+
 void
 ResGroupMoveQuery(int sessionId, Oid groupId, const char *groupName)
 {
 	ResGroupInfo groupInfo;
 	ResGroupData *group;
 	ResGroupSlotData *slot;
-	char *cmd;
+	char	   *cmd;
 
 	Assert(pResGroupControl != NULL);
 	Assert(pResGroupControl->segmentsOnMaster > 0);
@@ -4848,14 +5051,13 @@ ResGroupMoveQuery(int sessionId, Oid groupId, const char *groupName)
 
 	LWLockAcquire(ResGroupLock, LW_SHARED);
 	group = groupHashFind(groupId, false);
+	LWLockRelease(ResGroupLock);
 	if (!group)
 	{
-		LWLockRelease(ResGroupLock);
 		ereport(ERROR,
 				(errcode(ERRCODE_UNDEFINED_OBJECT),
 				 (errmsg("invalid resource group id: %d", groupId))));
 	}
-	LWLockRelease(ResGroupLock);
 
 	groupInfo.group = group;
 	groupInfo.groupId = groupId;
@@ -4869,22 +5071,36 @@ ResGroupMoveQuery(int sessionId, Oid groupId, const char *groupName)
 	{
 		moveQueryCheck(sessionId, groupId);
 
-		ResGroupSignalMoveQuery(sessionId, slot, groupId);
-
-		cmd = psprintf("SELECT gp_toolkit.pg_resgroup_move_query(%d, %s)",
-				sessionId,
-				quote_literal_cstr(groupName));
-		CdbDispatchCommand(cmd, 0, NULL);
+		resGroupGiveSlotAway(sessionId, &slot, groupId);
 	}
 	PG_CATCH();
 	{
-		LWLockAcquire(ResGroupLock, LW_EXCLUSIVE);
-		groupReleaseSlot(group, slot, true);
-		LWLockRelease(ResGroupLock);
+		/*
+		 * There can be exceptional situations, when slot is already on the
+		 * target side. Release slot only if available.
+		 */
+		if (slot)
+		{
+			LWLockAcquire(ResGroupLock, LW_EXCLUSIVE);
+			groupReleaseSlot(group, slot, true);
+			LWLockRelease(ResGroupLock);
+		}
 		PG_RE_THROW();
 	}
 	PG_END_TRY();
+
+	/*
+	 * starting from this point, all slot control should be done from target
+	 * process, so we don't need to release it here if something will go wrong
+	 */
+
+	cmd = psprintf("SELECT gp_toolkit.pg_resgroup_move_query(%d, %s)",
+				   sessionId,
+				   quote_literal_cstr(groupName));
+
+	CdbDispatchCommand(cmd, 0, NULL);
 }
+
 /*
  * get resource group id by session id
  */

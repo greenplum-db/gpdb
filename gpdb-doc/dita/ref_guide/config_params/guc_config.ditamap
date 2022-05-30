@@ -157,6 +157,7 @@
             <topicref href="guc-list.xml#gp_resource_group_cpu_limit"/>
             <topicref href="guc-list.xml#gp_resource_group_memory_limit"/>
             <topicref href="guc-list.xml#gp_resource_group_queuing_timeout"/>
+            <topicref href="guc-list.xml#gp_resource_group_move_timeout"/>
             <topicref href="guc-list.xml#gp_resource_manager"/>
             <topicref href="guc-list.xml#gp_retrieve_conn"/>
             <topicref href="guc-list.xml#gp_role"/>
