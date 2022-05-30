@@ -17,3 +17,21 @@ begin
   end loop;
 end;
 $$ language plpgsql;
+
+create or replace function test_util.extract_plan_stats(explain_query text)
+  returns table (executor_mem_lines bigint,
+                 workmem_wanted_lines bigint)
+as
+$$
+begin
+return query
+  WITH query_plan (et) AS
+(
+  SELECT test_util.get_explain_output(explain_query)
+)
+SELECT
+  (SELECT COUNT(*) FROM query_plan WHERE et like '%Executor Memory: %') as executor_mem_lines,
+  (SELECT COUNT(*) FROM query_plan WHERE et like '%Work_mem wanted: %') as workmem_wanted_lines
+;
+end;
+$$ language plpgsql;
