@@ -56,15 +56,6 @@ union all
 select null, null, array_dims(gp_array_agg(x)) from mergeappend_test r
 order by 1,2;
 
-SELECT count(et) exemem_count from
-test_util.get_explain_output($$
-select a, b, array_dims(gp_array_agg(x)) from mergeappend_test r group by a, b
-union all
-select null, null, array_dims(gp_array_agg(x)) from mergeappend_test r
-order by 1,2
-$$) as et
-WHERE et like '%Executor Memory:%';
-
 SELECT * from
 test_util.extract_plan_stats($$
 select a, b, array_dims(gp_array_agg(x)) from mergeappend_test r group by a, b

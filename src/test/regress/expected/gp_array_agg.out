@@ -165,18 +165,18 @@ order by 1,2;
  Execution Time: 1.461 ms
 (21 rows)
 
-SELECT count(et) exemem_count from
-test_util.get_explain_output($$
+SELECT * from
+test_util.extract_plan_stats($$
 select a, b, array_dims(gp_array_agg(x)) from mergeappend_test r group by a, b
 union all
 select null, null, array_dims(gp_array_agg(x)) from mergeappend_test r
 order by 1,2
-$$) as et
-WHERE et like '%Executor Memory:%';
- exemem_count 
---------------
-            1
-(1 row)
+$$);
+      stats_name      | stats_value 
+----------------------+-------------
+ workmem_wanted_lines |           0
+ executor_mem_lines   |           1
+(2 rows)
 
 -- create a view as we otherwise have to repeat this query a few times.
 create view v_pagg_test as
