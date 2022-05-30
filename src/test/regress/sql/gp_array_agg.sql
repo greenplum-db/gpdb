@@ -6,20 +6,6 @@ create schema test_gp_array_agg;
 set search_path=test_gp_array_agg;
 set optimizer_trace_fallback = on;
 
--- Helper function, to return the EXPLAIN output of a query as a normal
--- result set, so that you can manipulate it further.
-create or replace function get_explain_output(explain_query text) returns setof text as
-$$
-declare
-  explainrow text;
-begin
-  for explainrow in execute 'EXPLAIN analyze ' || explain_query
-  loop
-    return next explainrow;
-  end loop;
-end;
-$$ language plpgsql;
-
 -- Test array_agg(anynonarray)
 create table perct as select a, a / 10 as b from generate_series(1, 100)a distributed by (a);
 drop table if exists t1;
@@ -71,7 +57,7 @@ select null, null, array_dims(gp_array_agg(x)) from mergeappend_test r
 order by 1,2;
 
 SELECT count(et) exemem_count from
-get_explain_output($$
+test_util.get_explain_output($$
 select a, b, array_dims(gp_array_agg(x)) from mergeappend_test r group by a, b
 union all
 select null, null, array_dims(gp_array_agg(x)) from mergeappend_test r
