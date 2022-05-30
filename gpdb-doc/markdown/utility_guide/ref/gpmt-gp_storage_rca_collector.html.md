@@ -1,11 +1,11 @@
-# gpmt gp_storage_rca_collector 
+# storage_rca_collector 
 
 This tool collects storage-related table data and generates an output file which can be provided to VMware Customer Support for diagnosis of storage-related errors or system failures.
 
 ## <a id="usage"></a>Usage 
 
 ```
-gpmt gp_storage_rca_collector [-db <DATABASE> ] [-t <TABLE> ] | -c <ID1,ID2,...> ] [-dir <PATH> ] [-a] [-translog ]
+storage_rca_collector [-db <DATABASE> ] [-t <TABLE> ] | -c <ID1,ID2,...> ] [-dir <PATH> ] [-a] [-translog ]
 ```
 
 ## <a id="opts"></a>Options 
@@ -13,7 +13,7 @@ gpmt gp_storage_rca_collector [-db <DATABASE> ] [-t <TABLE> ] | -c <ID1,ID2,...>
 -db
 :   The database name.
 
--table
+-t
 :   The table name.
 
 -c
@@ -77,4 +77,4 @@ Collect storage rca artifacts for primary segment with contentid [0,1], database
 gpmt storage_rca_collector -db postgres -c 0,1 -t test_table -dir <dir>
 ```
 
-**NOTE**: Output files follow the naming convention \<database_name>_\<dbid>_\<artifact_name>.
+**NOTE**: Output files follow the naming convention \<database name>_\<dbid>_\<artifact name>.

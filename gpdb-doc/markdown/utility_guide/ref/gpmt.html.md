@@ -28,7 +28,7 @@ catalogbackup
 [gp_log_collector](gpmt-gp_log_collector.html)
 :   Basic Greenplum Database log collection utility.
 
-[gp_storage_rca_collector](gpmt-gp_storage_rca_collector.html.md)
+[storage_rca_collector](gpmt-gp_storage_rca_collector.html.md)
 :   Collect storage-related artifacts.
 
 gpcheckcat
