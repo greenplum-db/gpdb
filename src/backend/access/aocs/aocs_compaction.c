@@ -286,7 +286,7 @@ AOCSSegmentFileFullCompaction(Relation aorel,
 		else
 		{
 			/* Tuple is invisible and needs to be dropped */
-			AppendOnlyThrowAwayTuple(aorel, slot);
+			AppendOnlyThrowAwayTuple(aorel, slot, mt_bind);
 		}
 
 		/*
