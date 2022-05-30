@@ -62,7 +62,10 @@ select a, b, array_dims(gp_array_agg(x)) from mergeappend_test r group by a, b
 union all
 select null, null, array_dims(gp_array_agg(x)) from mergeappend_test r
 order by 1,2
-$$);
+$$)
+where stats_name = 'executor_mem_lines'
+or stats_name = 'workmem_wanted_lines'
+order by stats_name;
 
 -- create a view as we otherwise have to repeat this query a few times.
 create view v_pagg_test as
