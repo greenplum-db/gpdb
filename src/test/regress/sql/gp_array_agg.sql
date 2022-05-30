@@ -65,6 +65,14 @@ order by 1,2
 $$) as et
 WHERE et like '%Executor Memory:%';
 
+SELECT * from
+test_util.extract_plan_stats($$
+select a, b, array_dims(gp_array_agg(x)) from mergeappend_test r group by a, b
+union all
+select null, null, array_dims(gp_array_agg(x)) from mergeappend_test r
+order by 1,2
+$$);
+
 -- create a view as we otherwise have to repeat this query a few times.
 create view v_pagg_test as
 select
