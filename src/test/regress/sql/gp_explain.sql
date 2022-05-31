@@ -79,6 +79,22 @@ EXPLAIN ANALYZE SELECT id FROM
 ORDER BY id
 LIMIT 1;
 
+select * from
+  test_util.extract_plan_stats($$
+SELECT id FROM 
+( SELECT id  
+    FROM explaintest
+    WHERE id > ( 
+        SELECT avg(id)
+        FROM explaintest
+    )   
+) as foo 
+ORDER BY id
+LIMIT 1;
+  $$, false)
+where stats_name = 'executor_mem_lines'
+or stats_name = 'workmem_wanted_lines'
+order by stats_name;
 
 -- Verify that the column references are OK. This tests for an old ORCA bug,
 -- where the Filter clause in the IndexScan of this query was incorrectly

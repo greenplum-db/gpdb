@@ -106,8 +106,10 @@ LIMIT 1;
                ->  Sort  (cost=3.17..3.17 rows=2 width=4) (actual time=0.594..0.594 rows=1 loops=1)
                      Sort Key: explaintest.id
                      Sort Method:  top-N heapsort  Memory: 51kB
+                     Executor Memory: 76kB  Segments: 3  Max: 26kB (segment 2)
                      ->  Seq Scan on explaintest  (cost=0.00..3.15 rows=2 width=4) (actual time=0.035..0.040 rows=3 loops=1)
                            Filter: ((id)::numeric > $0)
+                           Rows Removed by Filter: 1
  Planning time: 1.607 ms
    (slice0)    Executor memory: 156K bytes.
  * (slice1)    Executor memory: 94K bytes avg x 3 workers, 100K bytes max (seg1).  Work_mem: 65K bytes max, 1K bytes wanted.
@@ -118,7 +120,29 @@ LIMIT 1;
  Memory wanted:  800kB
  Optimizer: Postgres query optimizer
  Execution time: 25.040 ms
-(24 rows)
+(26 rows)
+
+select * from
+  test_util.extract_plan_stats($$
+SELECT id FROM 
+( SELECT id  
+    FROM explaintest
+    WHERE id > ( 
+        SELECT avg(id)
+        FROM explaintest
+    )   
+) as foo 
+ORDER BY id
+LIMIT 1;
+  $$, false)
+where stats_name = 'executor_mem_lines'
+or stats_name = 'workmem_wanted_lines'
+order by stats_name;
+      stats_name      | stats_value 
+----------------------+-------------
+ executor_mem_lines   |           1
+ workmem_wanted_lines |           0
+(2 rows)
 
 -- Verify that the column references are OK. This tests for an old ORCA bug,
 -- where the Filter clause in the IndexScan of this query was incorrectly
