@@ -62,6 +62,19 @@ explain analyze select d, count(*) from smallt group by d;
  Execution Time: 2.695 ms
 (17 rows)
 
+select * from
+  test_util.extract_plan_stats($$
+select d, count(*) from smallt group by d;
+  $$, false)
+where stats_name = 'executor_mem_lines'
+or stats_name = 'workmem_wanted_lines'
+order by stats_name;
+      stats_name      | stats_value 
+----------------------+-------------
+ executor_mem_lines   |           0
+ workmem_wanted_lines |           0
+(2 rows)
+
 set statement_mem=2560;
 select count(*) from (select i, t, d, count(*) from bigt group by i, t, d) tmp;
  count  
@@ -207,6 +220,21 @@ where t1.d = t2.d;
  Execution Time: 3.142 ms
 (31 rows)
 
+select * from
+  test_util.extract_plan_stats($$
+select t1.*, t2.* from
+(select d, count(*) from smallt group by d) as t1, (select d, sum(i) from smallt group by d) as t2
+where t1.d = t2.d;
+  $$, false)
+where stats_name = 'executor_mem_lines'
+or stats_name = 'workmem_wanted_lines'
+order by stats_name;
+      stats_name      | stats_value 
+----------------------+-------------
+ executor_mem_lines   |           0
+ workmem_wanted_lines |           0
+(2 rows)
+
 set enable_nestloop=off;
 set enable_hashjoin=on;
 -- Rescan on Agg (with Material in the inner side of nestloop)
@@ -258,6 +286,21 @@ where t1.i = t2.i;
  Execution Time: 1.119 ms
 (19 rows)
 
+select * from
+  test_util.extract_plan_stats($$
+select t1.*, t2.* from
+(select i, count(*) from smallt group by i) as t1, (select i, sum(i) from smallt group by i) as t2
+where t1.i = t2.i;
+  $$, false)
+where stats_name = 'executor_mem_lines'
+or stats_name = 'workmem_wanted_lines'
+order by stats_name;
+      stats_name      | stats_value 
+----------------------+-------------
+ executor_mem_lines   |           0
+ workmem_wanted_lines |           0
+(2 rows)
+
 set enable_nestloop=off;
 set enable_hashjoin=on;
 -- Limit on Agg
@@ -293,6 +336,19 @@ explain analyze select d, count(*) from smallt group by d limit 5;
  Optimizer: Postgres query optimizer
  Execution time: 1.363 ms
 (18 rows)
+
+select * from
+  test_util.extract_plan_stats($$
+select d, count(*) from smallt group by d limit 5;
+  $$, false)
+where stats_name = 'executor_mem_lines'
+or stats_name = 'workmem_wanted_lines'
+order by stats_name;
+      stats_name      | stats_value 
+----------------------+-------------
+ executor_mem_lines   |           1
+ workmem_wanted_lines |           0
+(2 rows)
 
 -- HashJoin
 select t1.* from smallt as t1, smallt as t2 where t1.i = t2.i order by 1,2,3;
