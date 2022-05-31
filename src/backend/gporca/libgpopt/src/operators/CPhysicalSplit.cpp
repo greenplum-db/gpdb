@@ -329,8 +329,6 @@ CPhysicalSplit::PdsDerive(CMemoryPool *mp, CExpressionHandle &exprhdl) const
 
 	CDistributionSpecHashed *pdsHashed =
 		CDistributionSpecHashed::PdsConvert(pdsOuter);
-	CColRefSet *pcrsHashed =
-		CUtils::PcrsExtractColumns(mp, pdsHashed->Pdrgpexpr());
 
 	// Consider the below case for updating the same table.:
 	// create table s (a int, b int) distributed by (a);
@@ -353,44 +351,24 @@ CPhysicalSplit::PdsDerive(CMemoryPool *mp, CExpressionHandle &exprhdl) const
 	// this will satisfy the spec requested by CPhysicalDML
 	// (which should ask the child to be distributed by column a), and we will not see a redistribute motion.
 
-	if (!pcrsModified->IsDisjoint(pcrsHashed))
+	do
 	{
-		pcrsModified->Release();
-		pcrsHashed->Release();
-		pcrsDelete->Release();
-		return GPOS_NEW(mp) CDistributionSpecRandom();
-	}
-
-	if (nullptr != pdsHashed->PdshashedEquiv())
-	{
-		CColRefSet *pcrsHashedEquiv = CUtils::PcrsExtractColumns(
-			mp, pdsHashed->PdshashedEquiv()->Pdrgpexpr());
-		CDistributionSpecHashed *pdsHashedEquiv = pdsHashed->PdshashedEquiv();
-		// recursively check for hashed-equivalent colrefs
-		while (pdsHashedEquiv->PdshashedEquiv())
-		{
-			CColRefSet *pcrsHashedEquiv1 = CUtils::PcrsExtractColumns(
-				mp, pdsHashedEquiv->PdshashedEquiv()->Pdrgpexpr());
-			pcrsHashedEquiv->Include(pcrsHashedEquiv1);
-			pcrsHashedEquiv1->Release();
-			pdsHashedEquiv = pdsHashedEquiv->PdshashedEquiv();
-		}
-		if (!pcrsModified->IsDisjoint(pcrsHashedEquiv))
+		CColRefSet *pcrsHashed =
+			CUtils::PcrsExtractColumns(mp, pdsHashed->Pdrgpexpr());
+		if (!pcrsModified->IsDisjoint(pcrsHashed))
 		{
 			pcrsHashed->Release();
-			pcrsHashedEquiv->Release();
 			pcrsModified->Release();
 			pcrsDelete->Release();
 			return GPOS_NEW(mp) CDistributionSpecRandom();
 		}
-		pcrsHashedEquiv->Release();
-	}
+		pcrsHashed->Release();
+	} while (nullptr != (pdsHashed = pdsHashed->PdshashedEquiv()));
 
 	pcrsModified->Release();
-	pcrsHashed->Release();
 	pcrsDelete->Release();
-	pdsHashed->AddRef();
-	return pdsHashed;
+	pdsOuter->AddRef();
+	return pdsOuter;
 }
 
 //---------------------------------------------------------------------------

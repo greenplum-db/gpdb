@@ -4,7 +4,7 @@ Objective: Test ORCA generates a plan that adds a Redistribute Motion on top of 
 CREATE TABLE tab1 (id1 integer, id2 integer) DISTRIBUTED BY (id1);
 INSERT INTO tab1 SELECT i, -i FROM generate_series(-30000, 30000) i;
 EXPLAIN UPDATE tab1 t1 set id1 = t2.new_id1
-FROM 
+FROM
   (SELECT a.id1, a.id2 AS new_id1 FROM tab1 a
     INNER JOIN (SELECT id1 FROM tab1) b
   on b.id1 = a.id1) t2
