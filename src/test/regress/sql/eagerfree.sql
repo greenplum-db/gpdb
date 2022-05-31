@@ -88,6 +88,17 @@ where t1.i = t2.i;
 explain analyze select t1.*, t2.* from
 (select i, count(*) from smallt group by i) as t1, (select i, sum(i) from smallt group by i) as t2
 where t1.i = t2.i;
+
+select * from
+  test_util.extract_plan_stats($$
+select t1.*, t2.* from
+(select i, count(*) from smallt group by i) as t1, (select i, sum(i) from smallt group by i) as t2
+where t1.i = t2.i;
+  $$, false)
+where stats_name = 'executor_mem_lines'
+or stats_name = 'workmem_wanted_lines'
+order by stats_name;
+
 set enable_nestloop=off;
 set enable_hashjoin=on;
 
