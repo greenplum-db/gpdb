@@ -165,22 +165,22 @@ order by 1,2;
  Execution Time: 1.461 ms
 (21 rows)
 
+set optimizer_trace_fallback = off;
 SELECT * from
-test_util.extract_plan_stats($$
+  test_util.extract_plan_stats($$
 select a, b, array_dims(gp_array_agg(x)) from mergeappend_test r group by a, b
 union all
 select null, null, array_dims(gp_array_agg(x)) from mergeappend_test r
-order by 1,2
-$$)
-where stats_name = 'executor_mem_lines'
-or stats_name = 'workmem_wanted_lines'
+order by 1,2;
+  $$, false)
 order by stats_name;
       stats_name      | stats_value 
 ----------------------+-------------
- workmem_wanted_lines |           0
  executor_mem_lines   |           1
+ workmem_wanted_lines |           0
 (2 rows)
 
+set optimizer_trace_fallback = on;
 -- create a view as we otherwise have to repeat this query a few times.
 create view v_pagg_test as
 select
