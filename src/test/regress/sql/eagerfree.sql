@@ -23,6 +23,14 @@ set gp_motion_cost_per_row = 0.1;
 select d, count(*) from smallt group by d;
 explain analyze select d, count(*) from smallt group by d;
 
+select * from
+  test_util.extract_plan_stats($$
+select d, count(*) from smallt group by d;
+  $$, false)
+where stats_name = 'executor_mem_lines'
+or stats_name = 'workmem_wanted_lines'
+order by stats_name;
+
 set statement_mem=2560;
 select count(*) from (select i, t, d, count(*) from bigt group by i, t, d) tmp;
 explain analyze select count(*) from (select i, t, d, count(*) from bigt group by i, t, d) tmp;
