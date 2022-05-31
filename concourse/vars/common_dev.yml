@@ -1,0 +1,6 @@
+---
+# usage: fly set-pipeline -p 6X_STABLE-dev -l common_dev.yml
+aws-bucket: gpdb5-assert-concourse-builds-dev
+google-project-id: data-sandbox-2
+gcs-bucket: pivotal-gpdb-concourse-resources-dev
+gcs-bucket-intermediates: pivotal-gpdb-concourse-resources-intermediates-dev

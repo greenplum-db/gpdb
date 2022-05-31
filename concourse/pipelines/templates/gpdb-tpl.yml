@@ -123,10 +123,10 @@ anchors:
         run:
           path: 'ccp_src/google/ccp_failed_test.sh'
         params:
-          GOOGLE_CREDENTIALS: ((google-service-account-key))
+          GOOGLE_CREDENTIALS: ((google-service-account-key/[[ variables_type ]]))
           GOOGLE_PROJECT_ID: ((google-project-id))
           GOOGLE_ZONE: ((google-zone))
-          GOOGLE_SERVICE_ACCOUNT: ((google-service-account))
+          GOOGLE_SERVICE_ACCOUNT: ((google-service-account/[[ variables_type ]]))
           AWS_ACCESS_KEY_ID: ((tf-machine-access-key-id))
           AWS_SECRET_ACCESS_KEY: ((tf-machine-secret-access-key))
           AWS_DEFAULT_REGION: ((tf-machine-region))
@@ -143,10 +143,10 @@ anchors:
   run:
     path: 'ccp_src/google/ccp_failed_test.sh'
   params:
-    GOOGLE_CREDENTIALS: ((google-service-account-key))
+    GOOGLE_CREDENTIALS: ((google-service-account-key/[[ variables_type ]]))
     GOOGLE_PROJECT_ID: ((google-project-id))
     GOOGLE_ZONE: ((google-zone))
-    GOOGLE_SERVICE_ACCOUNT: ((google-service-account))
+    GOOGLE_SERVICE_ACCOUNT: ((google-service-account/[[ variables_type ]]))
     AWS_ACCESS_KEY_ID: ((tf-machine-access-key-id))
     AWS_SECRET_ACCESS_KEY: ((tf-machine-secret-access-key))
     AWS_DEFAULT_REGION: ((tf-machine-region))
@@ -159,7 +159,7 @@ anchors:
     env:
       AWS_ACCESS_KEY_ID: ((tf-machine-access-key-id))
       AWS_SECRET_ACCESS_KEY: ((tf-machine-secret-access-key))
-      GOOGLE_CREDENTIALS: ((google-service-account-key))
+      GOOGLE_CREDENTIALS: ((google-service-account-key/[[ variables_type ]]))
     vars:
       project_id: ((google-project-id))
     storage:
@@ -564,9 +564,9 @@ resources:
 - name: ccp_src
   type: git
   source:
-    branch: ((ccp-git-branch))
-    private_key: ((ccp-git-key))
-    uri: ((ccp-git-remote))
+    branch: ((gp-concourse-cluster-provisioner-git-branch))
+    private_key: ((gp-concourse-cluster-provisioner-git-key))
+    uri: ((gp-concourse-cluster-provisioner-git-remote))
 
 {% if "centos6" in os_types or
       "ICW"     in test_sections %}
@@ -581,10 +581,10 @@ resources:
 
 - name: terraform.d
   source:
-    access_key_id: ((bucket-access-key-id))
+    access_key_id: ((aws-bucket-access-key-id))
     bucket: ccp-terraform-provider-plugins
     region_name: ((aws-region))
-    secret_access_key: ((bucket-secret-access-key))
+    secret_access_key: ((aws-bucket-secret-access-key))
     versioned_file: plugin-cache.tgz
   type: s3
 
@@ -668,14 +668,14 @@ resources:
     repository: gcr.io/data-gpdb-private-images/gpdb6-rhel8-build
     tag: latest
     username: _json_key
-    password: ((container-registry-readonly-service-account-key))
+    password: ((data-gpdb-private-images-container-registry-readonly-service-account-key))
 - name: gpdb6-rhel8-test
   type: registry-image
   source:
     repository: gcr.io/data-gpdb-private-images/gpdb6-rhel8-test
     tag: latest
     username: _json_key
-    password: ((container-registry-readonly-service-account-key))
+    password: ((data-gpdb-private-images-container-registry-readonly-service-account-key))
 {% endif %}
 
 {% if "photon3" in os_types %}
@@ -717,7 +717,7 @@ resources:
     repository: gcr.io/data-gpdb-private-images/gpdb6-sles12-build
     tag: latest
     username: _json_key
-    password: ((container-registry-readonly-service-account-key))
+    password: ((data-gpdb-private-images-container-registry-readonly-service-account-key))
 {% endif %}
 
 {% if "centos6" in os_types %}
@@ -750,10 +750,10 @@ resources:
 - name: bin_gpdb_centos6_icw_green
   type: s3
   source:
-    access_key_id: ((bucket-access-key-id))
-    bucket: ((bucket-name))
+    access_key_id: ((aws-bucket-access-key-id))
+    bucket: ((aws-bucket))
     region_name: ((aws-region))
-    secret_access_key: ((bucket-secret-access-key))
+    secret_access_key: ((aws-bucket-secret-access-key))
     versioned_file: bin_gpdb_centos6/gpdb_branch_6X_STABLE/icw_green/bin_gpdb.tar.gz
 
 - name: bin_gpdb_centos6_rc
@@ -1022,7 +1022,7 @@ resources:
     env:
       AWS_ACCESS_KEY_ID: ((tf-machine-access-key-id))
       AWS_SECRET_ACCESS_KEY: ((tf-machine-secret-access-key))
-      GOOGLE_CREDENTIALS: ((google-service-account-key))
+      GOOGLE_CREDENTIALS: ((google-service-account-key/[[ variables_type ]]))
     vars:
       project: ((google-project-id))
       region: ((google-region))

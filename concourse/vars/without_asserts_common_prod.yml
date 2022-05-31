@@ -1,0 +1,7 @@
+---
+# usage: fly set-pipeline -p 6X_STABLE_without_asserts -l without_asserts_common_prod.yml
+aws-bucket: gpdb5-concourse-builds
+rc-build-type: prod
+rc-build-type-gcs: ""
+configure_flags: "--enable-tap-tests"
+configure_flags_with_extensions: "--enable-tap-tests --enable-debug-extensions"

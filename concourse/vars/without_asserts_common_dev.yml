@@ -1,0 +1,10 @@
+---
+# usage: fly set-pipeline -p 6X_STABLE_without_asserts-dev -l without_asserts_common_dev.yml
+aws-bucket: gpdb5-concourse-builds-dev
+google-project-id: data-sandbox-2
+gcs-bucket: pivotal-gpdb-concourse-resources-dev
+gcs-bucket-intermediates: pivotal-gpdb-concourse-resources-intermediates-dev
+rc-build-type: prod
+rc-build-type-gcs: ""
+configure_flags: "--enable-tap-tests"
+configure_flags_with_extensions: "--enable-tap-tests --enable-debug-extensions"

@@ -84,22 +84,21 @@ Pipeline validated: all jobs accounted for
 
 NOTE: You can set the production pipelines with the following:
 
-fly -t gpdb-prod \
+fly -t prod \
     set-pipeline \
     -p 6X_STABLE \
     -c ~/workspace/gpdb/concourse/pipelines/gpdb_6X_STABLE-generated.yml \
-    -l ~/workspace/gp-continuous-integration/secrets/gpdb_common-ci-secrets.yml \
-    -l ~/workspace/gp-continuous-integration/secrets/gpdb_6X_STABLE-ci-secrets.prod.yml \
+    -l ~/workspace/gpdb/concourse/vars/common_prod.yml \
     -v gpdb-git-remote=https://github.com/greenplum-db/gpdb.git \
     -v gpdb-git-branch=6X_STABLE \
     -v pipeline-name=6X_STABLE
 
-fly -t gpdb-prod \
+fly -t prod \
     set-pipeline \
     -p 6X_STABLE_without_asserts \
     -c ~/workspace/gpdb/concourse/pipelines/gpdb_6X_STABLE-generated.yml \
-    -l ~/workspace/gp-continuous-integration/secrets/gpdb_common-ci-secrets.yml \
-    -l ~/workspace/gp-continuous-integration/secrets/gpdb_6X_STABLE_without_asserts-ci-secrets.prod.yml \
+    -l ~/workspace/gpdb/concourse/vars/common_prod.yml \
+    -l ~/workspace/gpdb/concourse/vars/without_asserts_common_prod.yml \
     -v gpdb-git-remote=https://github.com/greenplum-db/gpdb.git \
     -v gpdb-git-branch=6X_STABLE \
     -v pipeline-name=6X_STABLE_without_asserts
@@ -136,13 +135,12 @@ $ ./gen_pipeline.py -t dpm -u curry -a CLI
 
 NOTE: You can set the developer pipeline with the following:
 
-fly -t gpdb-dev \
+fly -t dev \
     set-pipeline \
     -p gpdb-dpm-curry \
     -c ~/workspace/gpdb/concourse/pipelines/gpdb-dpm-curry.yml \
-    -l ~/workspace/gp-continuous-integration/secrets/gpdb_common-ci-secrets.yml \
-    -l ~/workspace/gp-continuous-integration/secrets/gpdb_6X_STABLE-ci-secrets.dev.yml \
-    -l ~/workspace/gp-continuous-integration/secrets/ccp_ci_secrets_gpdb-dev.yml \
+    -l ~/workspace/gpdb/concourse/vars/common_prod.yml \
+    -l ~/workspace/gpdb/concourse/vars/common_dev.yml \
     -v gpdb-git-remote=https://github.com/<github-user>/gpdb \
     -v gpdb-git-branch=<branch-name> \
     -v pipeline-name=gpdb-dpm-curry
@@ -165,13 +163,12 @@ $ ./gen_pipeline.py -t cli -u durant -O {centos6,ubuntu18.04} -a {ICW,CLI}
 
 NOTE: You can set the developer pipeline with the following:
 
-fly -t gpdb-dev \
+fly -t dev \
     set-pipeline \
     -p gpdb-cs-durant \
     -c gpdb-cs-durant.yml \
-    -l ~/workspace/gp-continuous-integration/secrets/gpdb_common-ci-secrets.yml \
-    -l ~/workspace/gp-continuous-integration/secrets/gpdb_master-ci-secrets.dev.yml \
-    -l ~/workspace/gp-continuous-integration/secrets/ccp_ci_secrets_gpdb-dev.yml \
+    -l ~/workspace/gpdb/concourse/vars/common_prod.yml \
+    -l ~/workspace/gpdb/concourse/vars/common_dev.yml \
     -v gpdb-git-remote=<https://github.com/<github-user>/gpdb> \
     -v gpdb-git-branch=<branch-name>
 ```
