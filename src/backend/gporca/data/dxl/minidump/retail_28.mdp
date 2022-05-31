@@ -4280,7 +4280,7 @@ ORDER BY to_char(order_datetime,'YYYY-Q')
     <dxl:Plan Id="0" SpaceSize="144">
       <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="989438.980909" Rows="58129406.108810" Width="25"/>
+          <dxl:Cost StartupCost="0" TotalCost="1001749.283506" Rows="58129406.108810" Width="25"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="35" Alias="ship_month">
@@ -4300,7 +4300,7 @@ ORDER BY to_char(order_datetime,'YYYY-Q')
         </dxl:SortingColumnList>
         <dxl:Sort SortDiscardDuplicates="false">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="982913.955073" Rows="58129406.108810" Width="25"/>
+            <dxl:Cost StartupCost="0" TotalCost="995224.257670" Rows="58129406.108810" Width="25"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="35" Alias="ship_month">
@@ -4322,7 +4322,7 @@ ORDER BY to_char(order_datetime,'YYYY-Q')
           <dxl:LimitOffset/>
           <dxl:Aggregate AggregationStrategy="Hashed" StreamSafe="false">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="880769.706276" Rows="58129406.108810" Width="25"/>
+              <dxl:Cost StartupCost="0" TotalCost="893080.008873" Rows="58129406.108810" Width="25"/>
             </dxl:Properties>
             <dxl:GroupingColumns>
               <dxl:GroupingColumn ColId="35"/>
@@ -4349,7 +4349,7 @@ ORDER BY to_char(order_datetime,'YYYY-Q')
             <dxl:Filter/>
             <dxl:RedistributeMotion InputSegments="0,1" OutputSegments="0,1">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="850127.970637" Rows="246206051.943378" Width="27"/>
+                <dxl:Cost StartupCost="0" TotalCost="862438.273234" Rows="246206051.943378" Width="27"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="0" Alias="order_id">
@@ -4374,7 +4374,7 @@ ORDER BY to_char(order_datetime,'YYYY-Q')
               </dxl:HashExprList>
               <dxl:Aggregate AggregationStrategy="Hashed" StreamSafe="true">
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="839724.533912" Rows="246206051.943378" Width="27"/>
+                  <dxl:Cost StartupCost="0" TotalCost="852034.836509" Rows="246206051.943378" Width="27"/>
                 </dxl:Properties>
                 <dxl:GroupingColumns>
                   <dxl:GroupingColumn ColId="35"/>
@@ -4395,7 +4395,7 @@ ORDER BY to_char(order_datetime,'YYYY-Q')
                 <dxl:Filter/>
                 <dxl:Result>
                   <dxl:Properties>
-                    <dxl:Cost StartupCost="0" TotalCost="792426.012376" Rows="246206051.943378" Width="27"/>
+                    <dxl:Cost StartupCost="0" TotalCost="804736.314973" Rows="246206051.943378" Width="27"/>
                   </dxl:Properties>
                   <dxl:ProjList>
                     <dxl:ProjElem ColId="35" Alias="ship_month">
