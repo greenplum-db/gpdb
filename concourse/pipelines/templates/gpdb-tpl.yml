@@ -336,7 +336,7 @@ resources:
   type: git
   source:
     branch: {{ccp-git-branch}}
-    private_key: {{ccp-git-key}}
+    private_key: ((gp-concourse-cluster-provisioner-git-key))
     uri: {{ccp-git-remote}}
 
 - name: ccp-image
@@ -349,14 +349,14 @@ resources:
   type: terraform
   source:
     env:
-      AWS_ACCESS_KEY_ID: {{tf-machine-access-key-id}}
-      AWS_SECRET_ACCESS_KEY: {{tf-machine-secret-access-key}}
-      GOOGLE_CREDENTIALS: {{google-service-account-key}}
+      AWS_ACCESS_KEY_ID: ((tf-machine-access-key-id))
+      AWS_SECRET_ACCESS_KEY: ((tf-machine-secret-access-key))
+      GOOGLE_CREDENTIALS: ((google-service-account-key/[[ variables_type ]]))
     vars:
       project_id: {{google-project-id}}
     storage:
-      access_key_id: {{tf-machine-access-key-id}}
-      secret_access_key: {{tf-machine-secret-access-key}}
+      access_key_id: ((tf-machine-access-key-id))
+      secret_access_key: ((tf-machine-secret-access-key))
       region_name: {{aws-region}}
       # This is not parameterized, on purpose. All tfstates will go to this spot,
       # and different teams will place there clusters' tfstate files under different paths
@@ -365,10 +365,10 @@ resources:
 
 - name: terraform.d
   source:
-    access_key_id: ((bucket-access-key-id))
+    access_key_id: ((aws-bucket-access-key-id))
     bucket: ccp-terraform-provider-plugins
     region_name: ((aws-region))
-    secret_access_key: ((bucket-secret-access-key))
+    secret_access_key: ((aws-bucket-secret-access-key))
     versioned_file: plugin-cache.tgz
   type: s3
 
@@ -379,14 +379,14 @@ resources:
   type: terraform
   source:
     env:
-      AWS_ACCESS_KEY_ID: {{tf-machine-access-key-id}}
-      AWS_SECRET_ACCESS_KEY: {{tf-machine-secret-access-key}}
-      GOOGLE_CREDENTIALS: {{google-service-account-key}}
+      AWS_ACCESS_KEY_ID: ((tf-machine-access-key-id))
+      AWS_SECRET_ACCESS_KEY: ((tf-machine-secret-access-key))
+      GOOGLE_CREDENTIALS: ((google-service-account-key/[[ variables_type ]]))
     vars:
       project_id: {{google-project-id}}
     storage:
-      access_key_id: {{tf-machine-access-key-id}}
-      secret_access_key: {{tf-machine-secret-access-key}}
+      access_key_id: ((tf-machine-access-key-id))
+      secret_access_key: ((tf-machine-secret-access-key))
       region_name: {{aws-region}}
       bucket: gpdb5-pipeline-dynamic-terraform
       bucket_path: clusters-google/
@@ -395,11 +395,11 @@ resources:
   type: terraform
   source:
     env:
-      AWS_ACCESS_KEY_ID: {{tf-machine-access-key-id}}
-      AWS_SECRET_ACCESS_KEY: {{tf-machine-secret-access-key}}
+      AWS_ACCESS_KEY_ID: ((tf-machine-access-key-id))
+      AWS_SECRET_ACCESS_KEY: ((tf-machine-secret-access-key))
     storage:
-      access_key_id: {{tf-machine-access-key-id}}
-      secret_access_key: {{tf-machine-secret-access-key}}
+      access_key_id: ((tf-machine-access-key-id))
+      secret_access_key: ((tf-machine-secret-access-key))
       region_name: {{aws-region}}
       # This is not parameterized, on purpose. All tfstates will go to this spot,
       # and different teams will place there clusters' tfstate files under different paths
@@ -408,10 +408,10 @@ resources:
 
 - name: terraform.d-all
   source:
-    access_key_id: ((bucket-access-key-id))
+    access_key_id: ((aws-bucket-access-key-id))
     bucket: ccp-terraform-provider-plugins
     region_name: ((aws-region))
-    secret_access_key: ((bucket-secret-access-key))
+    secret_access_key: ((aws-bucket-secret-access-key))
     versioned_file: plugin-cache-all.tgz
   type: s3
 
@@ -437,7 +437,7 @@ resources:
   type: git
   source:
     branch: {{gpaddon-git-branch}}
-    private_key: {{gpaddon-git-key}}
+    private_key: ((gpaddon-git-key))
     uri: {{gpaddon-git-remote}}
 
 - name: centos-gpdb-dev-6
@@ -452,7 +452,7 @@ resources:
     repository: gcr.io/data-gpdb-private-images/gpdb5-sles11-build-test
     tag: latest
     username: _json_key
-    password: ((container-registry-readonly-service-account-key))
+    password: ((data-gpdb-private-images-container-registry-readonly-service-account-key))
 
 - name: centos-gpdb-dev-7
   type: registry-image
@@ -466,15 +466,15 @@ resources:
     repository: gcr.io/data-gpdb-private-images/gpdb5-centos6-build-mingw
     tag: 'latest'
     username: _json_key
-    password: ((container-registry-readonly-service-account-key))
+    password: ((data-gpdb-private-images-container-registry-readonly-service-account-key))
 
 - name: bin_gpdb_centos6
   type: s3
   source:
-    access_key_id: {{bucket-access-key-id}}
+    access_key_id: ((aws-bucket-access-key-id))
     bucket: {{bucket-name}}
     region_name: {{aws-region}}
-    secret_access_key: {{bucket-secret-access-key}}
+    secret_access_key: ((aws-bucket-secret-access-key))
     versioned_file: {{bin_gpdb_centos_versioned_file}}
 
 - name: gpdb_artifacts_centos6
@@ -518,55 +518,55 @@ resources:
 - name: bin_gpdb_centos6_icw_green
   type: s3
   source:
-    access_key_id: {{bucket-access-key-id}}
+    access_key_id: ((aws-bucket-access-key-id))
     bucket: {{bucket-name}}
     region_name: {{aws-region}}
-    secret_access_key: {{bucket-secret-access-key}}
+    secret_access_key: ((aws-bucket-secret-access-key))
     versioned_file: bin_gpdb_centos6/gpdb_branch_5X_STABLE/icw_green/bin_gpdb.tar.gz
 
 - name: bin_gpdb_centos7_icw_green
   type: s3
   source:
-    access_key_id: {{bucket-access-key-id}}
+    access_key_id: ((aws-bucket-access-key-id))
     bucket: {{bucket-name}}
     region_name: {{aws-region}}
-    secret_access_key: {{bucket-secret-access-key}}
+    secret_access_key: ((aws-bucket-secret-access-key))
     versioned_file: bin_gpdb_centos7/gpdb_branch_5X_STABLE/icw_green/bin_gpdb.tar.gz
 
 - name: bin_gpdb_sles11_icw_green
   type: s3
   source:
-    access_key_id: {{bucket-access-key-id}}
+    access_key_id: ((aws-bucket-access-key-id))
     bucket: {{bucket-name}}
     region_name: {{aws-region}}
-    secret_access_key: {{bucket-secret-access-key}}
+    secret_access_key: ((aws-bucket-secret-access-key))
     versioned_file: bin_gpdb_sles11/gpdb_branch_5X_STABLE/icw_green/bin_gpdb.tar.gz
 
 - name: bin_gpdb_centos6_rc
   type: s3
   source:
-    access_key_id: {{bucket-access-key-id}}
+    access_key_id: ((aws-bucket-access-key-id))
     bucket: {{gpdb-stable-builds-bucket-name}}
     region_name: {{aws-region}}
-    secret_access_key: {{bucket-secret-access-key}}
+    secret_access_key: ((aws-bucket-secret-access-key))
     versioned_file: release_candidates/bin_gpdb_centos6/gpdb5/bin_gpdb.tar.gz
 
 - name: bin_gpdb_centos7_rc
   type: s3
   source:
-    access_key_id: {{bucket-access-key-id}}
+    access_key_id: ((aws-bucket-access-key-id))
     bucket: {{gpdb-stable-builds-bucket-name}}
     region_name: {{aws-region}}
-    secret_access_key: {{bucket-secret-access-key}}
+    secret_access_key: ((aws-bucket-secret-access-key))
     versioned_file: release_candidates/bin_gpdb_centos7/gpdb5/bin_gpdb.tar.gz
 
 - name: bin_gpdb_sles11_rc
   type: s3
   source:
-    access_key_id: {{bucket-access-key-id}}
+    access_key_id: ((aws-bucket-access-key-id))
     bucket: {{gpdb-stable-builds-bucket-name}}
     region_name: {{aws-region}}
-    secret_access_key: {{bucket-secret-access-key}}
+    secret_access_key: ((aws-bucket-secret-access-key))
     versioned_file: release_candidates/bin_gpdb_sles11/gpdb5/bin_gpdb.tar.gz
 
 {% endif %}
@@ -605,111 +605,111 @@ resources:
 - name: binary_swap_gpdb_centos6
   type: s3
   source:
-    access_key_id: {{bucket-access-key-id}}
+    access_key_id: ((aws-bucket-access-key-id))
     bucket: {{bucket-name}}
     region_name: {{aws-region}}
-    secret_access_key: {{bucket-secret-access-key}}
+    secret_access_key: ((aws-bucket-secret-access-key))
     versioned_file: {{binary_swap_gpdb_centos_versioned_file}}
 
 - name: bin_gpdb_centos7
   type: s3
   source:
-    access_key_id: {{bucket-access-key-id}}
+    access_key_id: ((aws-bucket-access-key-id))
     bucket: {{bucket-name}}
     region_name: {{aws-region}}
-    secret_access_key: {{bucket-secret-access-key}}
+    secret_access_key: ((aws-bucket-secret-access-key))
     versioned_file: {{bin_gpdb_centos7_versioned_file}}
 
 - name: bin_gpdb_sles11
   type: s3
   source:
-    access_key_id: {{bucket-access-key-id}}
+    access_key_id: ((aws-bucket-access-key-id))
     bucket: {{bucket-name}}
     region_name: {{aws-region}}
-    secret_access_key: {{bucket-secret-access-key}}
+    secret_access_key: ((aws-bucket-secret-access-key))
     versioned_file: {{bin_gpdb_sles11_versioned_file}}
 
 - name: bin_gpdb_windows_clients
   type: s3
   source:
-    access_key_id: {{bucket-access-key-id}}
+    access_key_id: ((aws-bucket-access-key-id))
     bucket: {{bucket-name}}
     region_name: {{aws-region}}
-    secret_access_key: {{bucket-secret-access-key}}
+    secret_access_key: ((aws-bucket-secret-access-key))
     regexp: windows-cl/greenplum-clients-5.(.*)-WinXP-x86_32.msi
 
 - name: bin_gpdb_windows_loaders
   type: s3
   source:
-    access_key_id: {{bucket-access-key-id}}
+    access_key_id: ((aws-bucket-access-key-id))
     bucket: {{bucket-name}}
     region_name: {{aws-region}}
-    secret_access_key: {{bucket-secret-access-key}}
+    secret_access_key: ((aws-bucket-secret-access-key))
     regexp: windows-cl/greenplum-loaders-5.(.*)-WinXP-x86_32.msi
 
 {% if "DPM" in test_sections %}
 - name: bin_gpdb4_centos6
   type: s3
   source:
-    access_key_id: {{gpdb4-bucket-access-key-id}}
+    access_key_id: ((gpdb4-bucket-access-key-id))
     bucket: {{gpdb4-bucket-name}}
     region_name: {{aws-region}}
-    secret_access_key: {{gpdb4-bucket-secret-access-key}}
+    secret_access_key: ((gpdb4-bucket-secret-access-key))
     versioned_file: bin_gpdb_centos/bin_gpdb.tar.gz
 
 {% endif %}
 - name: installer_rhel6_gpdb_clients
   type: s3
   source:
-    access_key_id: {{bucket-access-key-id}}
+    access_key_id: ((aws-bucket-access-key-id))
     bucket: {{bucket-name}}
     region_name: {{aws-region}}
-    secret_access_key: {{bucket-secret-access-key}}
+    secret_access_key: ((aws-bucket-secret-access-key))
     regexp: deliverables/greenplum-clients-5.(.*)-rhel6-x86_64.zip
 
 - name: installer_rhel6_gpdb_loaders
   type: s3
   source:
-    access_key_id: {{bucket-access-key-id}}
+    access_key_id: ((aws-bucket-access-key-id))
     bucket: {{bucket-name}}
     region_name: {{aws-region}}
-    secret_access_key: {{bucket-secret-access-key}}
+    secret_access_key: ((aws-bucket-secret-access-key))
     regexp: deliverables/greenplum-loaders-5.(.*)-rhel6-x86_64.zip
 
 - name: installer_rhel7_gpdb_clients
   type: s3
   source:
-    access_key_id: {{bucket-access-key-id}}
+    access_key_id: ((aws-bucket-access-key-id))
     bucket: {{bucket-name}}
     region_name: {{aws-region}}
-    secret_access_key: {{bucket-secret-access-key}}
+    secret_access_key: ((aws-bucket-secret-access-key))
     regexp: deliverables/greenplum-clients-5.(.*)-rhel7-x86_64.zip
 
 - name: installer_rhel7_gpdb_loaders
   type: s3
   source:
-    access_key_id: {{bucket-access-key-id}}
+    access_key_id: ((aws-bucket-access-key-id))
     bucket: {{bucket-name}}
     region_name: {{aws-region}}
-    secret_access_key: {{bucket-secret-access-key}}
+    secret_access_key: ((aws-bucket-secret-access-key))
     regexp: deliverables/greenplum-loaders-5.(.*)-rhel7-x86_64.zip
 
 - name: installer_sles11_gpdb_clients
   type: s3
   source:
-    access_key_id: {{bucket-access-key-id}}
+    access_key_id: ((aws-bucket-access-key-id))
     bucket: {{bucket-name}}
     region_name: {{aws-region}}
-    secret_access_key: {{bucket-secret-access-key}}
+    secret_access_key: ((aws-bucket-secret-access-key))
     regexp: deliverables/greenplum-clients-5.(.*)-sles11-x86_64.zip
 
 - name: installer_sles11_gpdb_loaders
   type: s3
   source:
-    access_key_id: {{bucket-access-key-id}}
+    access_key_id: ((aws-bucket-access-key-id))
     bucket: {{bucket-name}}
     region_name: {{aws-region}}
-    secret_access_key: {{bucket-secret-access-key}}
+    secret_access_key: ((aws-bucket-secret-access-key))
     regexp: deliverables/greenplum-loaders-5.(.*)-sles11-x86_64.zip
 
 {% if "AA" in test_sections %}
@@ -718,33 +718,33 @@ resources:
   source:
     tag_filter: {{madlib-ci-tag-filter}}
     uri: {{madlib-ci-git-remote}}
-    private_key: {{madlib-ci-git-key}}
+    private_key: ((madlib-ci-git-key))
 
 - name: madlib_gppkg_centos6
   type: s3
   source:
-    access_key_id: {{bucket-access-key-id}}
+    access_key_id: ((aws-bucket-access-key-id))
     bucket: madlib-concourse
     region_name: {{aws-region}}
-    secret_access_key: {{bucket-secret-access-key}}
+    secret_access_key: ((aws-bucket-secret-access-key))
     regexp: release/gpdb5/madlib-(.*)-gp5-rhel6-x86_64.gppkg
 
 - name: madlib_gppkg_centos7
   type: s3
   source:
-    access_key_id: {{bucket-access-key-id}}
+    access_key_id: ((aws-bucket-access-key-id))
     bucket: madlib-concourse
     region_name: {{aws-region}}
-    secret_access_key: {{bucket-secret-access-key}}
+    secret_access_key: ((aws-bucket-secret-access-key))
     regexp: release/gpdb5/madlib-(.*)-gp5-rhel7-x86_64.gppkg
 
 - name: gcc_4.4.2_snowflake
   type: s3
   source:
-    access_key_id: {{madlib-s3-access_key_id}}
+    access_key_id: ((madlib-s3-access_key_id))
     bucket: {{gcc-442-bucket}}
     region_name: us-west-2
-    secret_access_key: {{madlib-s3-secret_access_key}}
+    secret_access_key: ((madlib-s3-secret_access_key))
     versioned_file: compiled-rhel-gcc-442.tar.gz
 
 - name: postgis_src
@@ -757,19 +757,19 @@ resources:
 - name: postgis_gppkg_centos6
   type: s3
   source:
-    access_key_id: {{bucket-access-key-id}}
+    access_key_id: ((aws-bucket-access-key-id))
     bucket: madlib-concourse
     region_name: {{aws-region}}
-    secret_access_key: {{bucket-secret-access-key}}
+    secret_access_key: ((aws-bucket-secret-access-key))
     versioned_file: {{postgis-gppkg-rhel6}}
 
 - name: postgis_gppkg_centos7
   type: s3
   source:
-    access_key_id: {{bucket-access-key-id}}
+    access_key_id: ((aws-bucket-access-key-id))
     bucket: madlib-concourse
     region_name: {{aws-region}}
-    secret_access_key: {{bucket-secret-access-key}}
+    secret_access_key: ((aws-bucket-secret-access-key))
     versioned_file: {{postgis-gppkg-rhel7}}
 
 {% endif %}
@@ -778,10 +778,10 @@ resources:
 - name: ddboost_rpm
   type: s3
   source:
-    access_key_id: {{gpdb4-bucket-access-key-id}}
+    access_key_id: ((gpdb4-bucket-access-key-id))
     bucket: {{dpm_bucket}}
     region_name: {{aws-region}}
-    secret_access_key: {{gpdb4-bucket-secret-access-key}}
+    secret_access_key: ((gpdb4-bucket-secret-access-key))
     versioned_file: compat-libstdc-33-3.2.3-69.el6.x86_64.rpm
 
 {% endif %}
@@ -912,16 +912,16 @@ dpm_ccp_destroy_anchor: &dpm_ccp_destroy
     action: destroy
 
 ccp_gen_cluster_default_params_anchor: &ccp_gen_cluster_default_params
-  AWS_ACCESS_KEY_ID: {{tf-machine-access-key-id}}
-  AWS_SECRET_ACCESS_KEY: {{tf-machine-secret-access-key}}
+  AWS_ACCESS_KEY_ID: ((tf-machine-access-key-id))
+  AWS_SECRET_ACCESS_KEY: ((tf-machine-secret-access-key))
   AWS_DEFAULT_REGION: {{aws-region}}
   BUCKET_PATH: clusters-google/
   BUCKET_NAME: {{tf-bucket-name}}
   CLOUD_PROVIDER: google
 
 ccp_aws_gen_cluster_default_params_anchor: &ccp_aws_gen_cluster_default_params
-  AWS_ACCESS_KEY_ID: {{tf-machine-access-key-id}}
-  AWS_SECRET_ACCESS_KEY: {{tf-machine-secret-access-key}}
+  AWS_ACCESS_KEY_ID: ((tf-machine-access-key-id))
+  AWS_SECRET_ACCESS_KEY: ((tf-machine-secret-access-key))
   AWS_DEFAULT_REGION: {{aws-region}}
   BUCKET_PATH: clusters-aws/
   BUCKET_NAME: {{tf-bucket-name}}
@@ -943,12 +943,12 @@ set_failed_anchor: &set_failed
       run:
         path: 'ccp_src/google/ccp_failed_test.sh'
       params:
-        GOOGLE_CREDENTIALS: {{google-service-account-key}}
+        GOOGLE_CREDENTIALS: ((google-service-account-key/[[ variables_type ]]))
         GOOGLE_PROJECT_ID: {{google-project-id}}
         GOOGLE_ZONE: {{google-zone}}
-        GOOGLE_SERVICE_ACCOUNT: {{google-service-account}}
-        AWS_ACCESS_KEY_ID: {{tf-machine-access-key-id}}
-        AWS_SECRET_ACCESS_KEY: {{tf-machine-secret-access-key}}
+        GOOGLE_SERVICE_ACCOUNT: ((google-service-account/[[ variables_type ]]))
+        AWS_ACCESS_KEY_ID: ((tf-machine-access-key-id))
+        AWS_SECRET_ACCESS_KEY: ((tf-machine-secret-access-key))
         AWS_DEFAULT_REGION: {{tf-machine-region}}
         BUCKET_PATH: clusters-google/
         BUCKET_NAME: {{tf-bucket-name}}
@@ -970,12 +970,12 @@ set_failed_two_clusters_anchor: &set_failed_two_clusters
       run:
         path: 'ccp_src/google/ccp_failed_test.sh'
       params:
-        GOOGLE_CREDENTIALS: {{google-service-account-key}}
+        GOOGLE_CREDENTIALS: ((google-service-account-key/[[ variables_type ]]))
         GOOGLE_PROJECT_ID: {{google-project-id}}
         GOOGLE_ZONE: {{google-zone}}
-        GOOGLE_SERVICE_ACCOUNT: {{google-service-account}}
-        AWS_ACCESS_KEY_ID: {{tf-machine-access-key-id}}
-        AWS_SECRET_ACCESS_KEY: {{tf-machine-secret-access-key}}
+        GOOGLE_SERVICE_ACCOUNT: ((google-service-account/[[ variables_type ]]))
+        AWS_ACCESS_KEY_ID: ((tf-machine-access-key-id))
+        AWS_SECRET_ACCESS_KEY: ((tf-machine-secret-access-key))
         AWS_DEFAULT_REGION: {{tf-machine-region}}
         BUCKET_PATH: clusters-google/
         BUCKET_NAME: {{tf-bucket-name}}
@@ -1464,8 +1464,8 @@ jobs:
       file: gpdb_src/concourse/tasks/regression_tests_gpcloud.yml
       image: centos-gpdb-dev-6
       params:
-        gpcloud_access_key_id: {{gpcloud-access-key-id}}
-        gpcloud_secret_access_key: {{gpcloud-secret-access-key}}
+        gpcloud_access_key_id: ((gpcloud-access-key-id))
+        gpcloud_secret_access_key: ((gpcloud-secret-access-key))
         TARGET_OS: centos
     - task: gpcheckcloud_tests_gpcloud_centos
       input_mapping:
@@ -1473,8 +1473,8 @@ jobs:
       file: gpdb_src/concourse/tasks/gpcheckcloud_tests_gpcloud.yml
       image: centos-gpdb-dev-6
       params:
-        gpcloud_access_key_id: {{gpcloud-access-key-id}}
-        gpcloud_secret_access_key: {{gpcloud-secret-access-key}}
+        gpcloud_access_key_id: ((gpcloud-access-key-id))
+        gpcloud_secret_access_key: ((gpcloud-secret-access-key))
         TARGET_OS: centos
 
 - name: QP_optimizer-functional
@@ -1535,8 +1535,8 @@ jobs:
   - task: gen_cluster
     file: ccp_src/ci/tasks/gen_cluster.yml
     params:
-      AWS_ACCESS_KEY_ID: {{tf-machine-access-key-id}}
-      AWS_SECRET_ACCESS_KEY: {{tf-machine-secret-access-key}}
+      AWS_ACCESS_KEY_ID: ((tf-machine-access-key-id))
+      AWS_SECRET_ACCESS_KEY: ((tf-machine-secret-access-key))
       AWS_DEFAULT_REGION: {{aws-region}}
       BUCKET_PATH: clusters-google/
       BUCKET_NAME: {{tf-bucket-name}}
@@ -2452,7 +2452,7 @@ jobs:
     image: centos-gpdb-dev-6
     params:
       BEHAVE_FLAGS: --tags=ddboostsetup,ddpartI
-      CUSTOM_ENV: export DD_SOURCE_HOST={{datadomain_source_host}}; export DD_DEST_HOST={{datadomain_dest_host}}; export DD_USER={{datadomain_user}}; export DD_PASSWORD={{datadomain_password}};
+      CUSTOM_ENV: export DD_SOURCE_HOST={{datadomain_source_host}}; export DD_DEST_HOST={{datadomain_dest_host}}; export DD_USER=((datadomain_user)); export DD_PASSWORD=((datadomain_password));
     on_failure:
       <<: *dpm_debug_sleep
   ensure:
@@ -2532,7 +2532,7 @@ jobs:
     image: centos-gpdb-dev-6
     params:
       BEHAVE_FLAGS: --tags=ddboostsetup,ddpartII
-      CUSTOM_ENV: export DD_SOURCE_HOST={{datadomain_source_host}}; export DD_DEST_HOST={{datadomain_dest_host}}; export DD_USER={{datadomain_user}}; export DD_PASSWORD={{datadomain_password}};
+      CUSTOM_ENV: export DD_SOURCE_HOST={{datadomain_source_host}}; export DD_DEST_HOST={{datadomain_dest_host}}; export DD_USER=((datadomain_user)); export DD_PASSWORD=((datadomain_password));
     on_failure:
       <<: *dpm_debug_sleep
   ensure:
@@ -2612,7 +2612,7 @@ jobs:
     image: centos-gpdb-dev-6
     params:
       BEHAVE_FLAGS: --tags=ddboostsetup,ddpartIII
-      CUSTOM_ENV: export DD_SOURCE_HOST={{datadomain_source_host}}; export DD_DEST_HOST={{datadomain_dest_host}}; export DD_USER={{datadomain_user}}; export DD_PASSWORD={{datadomain_password}};
+      CUSTOM_ENV: export DD_SOURCE_HOST={{datadomain_source_host}}; export DD_DEST_HOST={{datadomain_dest_host}}; export DD_USER=((datadomain_user)); export DD_PASSWORD=((datadomain_password));
     on_failure:
       <<: *dpm_debug_sleep
   ensure:

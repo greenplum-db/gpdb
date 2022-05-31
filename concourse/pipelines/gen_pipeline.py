@@ -130,6 +130,11 @@ def create_pipeline(git_remote, git_branch):
     stagger_sections = False
     if ARGS.pipeline_type == "prod" or len(ARGS.test_sections) > 2:
         stagger_sections = True
+        
+    if ARGS.pipeline_type == 'prod':
+        variables_type = "prod"
+    else:
+        variables_type = "dev"
 
     context = {
         'template_filename': ARGS.template_filename,
@@ -142,7 +147,8 @@ def create_pipeline(git_remote, git_branch):
         'test_trigger': test_trigger,
         'build_test_rc_rpm': ARGS.build_test_rc_rpm,
         'git_username': git_remote.split('/')[-2],
-        'git_branch': git_branch
+        'git_branch': git_branch,
+        'variables_type': variables_type
     }
 
     pipeline_yml = render_template(ARGS.template_filename, context)
@@ -177,8 +183,7 @@ def how_to_use_generated_pipeline_message(git_remote, git_branch):
         msg += '    set-pipeline \\\n'
         msg += '    -p %s \\\n' % pipeline_name
         msg += '    -c %s \\\n' % ARGS.output_filepath
-        msg += '    -l ~/workspace/gp-continuous-integration/secrets/gpdb_common-ci-secrets.yml \\\n'
-        msg += '    -l ~/workspace/gp-continuous-integration/secrets/gpdb_5X_STABLE-ci-secrets.yml\\\n'
+        msg += '    -l %s \\\n' % os.path.join(PIPELINES_DIR, "../vars/common_prod.yml")
         msg += '    -v pipeline-name=%s\n' % pipeline_name
     else:
         pipeline_name  = os.path.basename(ARGS.output_filepath).rsplit('.', 1)[0]
@@ -187,9 +192,8 @@ def how_to_use_generated_pipeline_message(git_remote, git_branch):
         msg += '    set-pipeline \\\n'
         msg += '    -p %s \\\n' % pipeline_name
         msg += '    -c %s \\\n' % ARGS.output_filepath
-        msg += '    -l ~/workspace/gp-continuous-integration/secrets/gpdb_common-ci-secrets.yml \\\n'
-        msg += '    -l ~/workspace/gp-continuous-integration/secrets/gpdb_5X_STABLE-ci-secrets.dev.yml \\\n'
-        msg += '    -l ~/workspace/gp-continuous-integration/secrets/ccp_ci_secrets_dev.yml \\\n'
+        msg += '    -l %s \\\n' % os.path.join(PIPELINES_DIR, "../vars/common_prod.yml")
+        msg += '    -l %s \\\n' % os.path.join(PIPELINES_DIR, "../vars/dev.yml")
         msg += '    -v bucket-name=gpdb5-concourse-builds-dev \\\n'
         msg += '    -v gpdb-git-remote=%s \\\n' % git_remote
         msg += '    -v gpdb-git-branch=%s \\\n' % git_branch

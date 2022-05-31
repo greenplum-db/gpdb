@@ -1,0 +1,2 @@
+configure_flags: "--enable-cassert"
+configure_flags_without_asserts: ""
