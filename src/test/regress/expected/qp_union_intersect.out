@@ -2039,6 +2039,7 @@ order by 1,2;
                ->  Sort  (cost=8.82..9.23 rows=167 width=12) (actual time=0.221..0.265 rows=301 loops=1)
                      Sort Key: r.a, r.b
                      Sort Method:  quicksort  Memory: 202kB
+                     Executor Memory: 76kB  Segments: 3  Max: 26kB (segment 0)
                      ->  Seq Scan on mergeappend_test r  (cost=0.00..2.67 rows=167 width=12) (actual time=0.102..0.147 rows=301 loops=1)
    ->  Sort  (cost=3.19..3.19 rows=1 width=40) (actual time=1.142..1.145 rows=1 loops=1)
          Sort Key: (NULL::integer), (NULL::integer)

@@ -2032,6 +2032,7 @@ order by 1,2;
    ->  Sort  (cost=0.00..862.06 rows=8 width=16) (actual time=1.633..1.637 rows=5 loops=1)
          Sort Key: mergeappend_test.a, mergeappend_test.b
          Sort Method:  quicksort  Memory: 150kB
+         Executor Memory: 76kB  Segments: 3  Max: 26kB (segment 0)
          ->  Append  (cost=0.00..862.06 rows=8 width=16) (actual time=0.482..1.625 rows=5 loops=1)
                ->  HashAggregate  (cost=0.00..431.05 rows=7 width=16) (actual time=0.482..0.489 rows=4 loops=1)
                      Group Key: mergeappend_test.a, mergeappend_test.b
@@ -2050,7 +2051,23 @@ order by 1,2;
  Memory used:  128000kB
  Optimizer: Pivotal Optimizer (GPORCA)
  Execution Time: 2.977 ms
-(23 rows)
+(24 rows)
+
+select * from
+  test_util.extract_plan_stats($$
+select a, b, array_dims(array_agg(x)) from mergeappend_test r group by a, b
+union all
+select null, null, array_dims(array_agg(x)) FROM mergeappend_test r
+order by 1,2;
+  $$, false)
+where stats_name = 'executor_mem_lines'
+or stats_name = 'workmem_wanted_lines'
+order by stats_name;
+      stats_name      | stats_value 
+----------------------+-------------
+ executor_mem_lines   |           1
+ workmem_wanted_lines |           0
+(2 rows)
 
 CREATE TABLE t1(c1 int, c2 int, c3 int);
 CREATE TABLE t2(c1 int, c2 int, c3 int);

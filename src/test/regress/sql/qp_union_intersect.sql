@@ -784,6 +784,17 @@ union all
 select null, null, array_dims(array_agg(x)) FROM mergeappend_test r
 order by 1,2;
 
+select * from
+  test_util.extract_plan_stats($$
+select a, b, array_dims(array_agg(x)) from mergeappend_test r group by a, b
+union all
+select null, null, array_dims(array_agg(x)) FROM mergeappend_test r
+order by 1,2;
+  $$, false)
+where stats_name = 'executor_mem_lines'
+or stats_name = 'workmem_wanted_lines'
+order by stats_name;
+
 CREATE TABLE t1(c1 int, c2 int, c3 int);
 CREATE TABLE t2(c1 int, c2 int, c3 int);
 INSERT INTO t1 SELECT i, i ,i + 1 FROM generate_series(1,10) i;
