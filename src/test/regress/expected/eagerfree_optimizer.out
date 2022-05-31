@@ -49,6 +49,7 @@ explain analyze select d, count(*) from smallt group by d;
          ->  Sort  (cost=0.00..431.01 rows=34 width=4) (actual time=1.510..1.513 rows=35 loops=1)
                Sort Key: d
                Sort Method:  quicksort  Memory: 99kB
+               Executor Memory: 79kB  Segments: 3  Max: 27kB (segment 1)
                ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=34 width=4) (actual time=0.342..1.481 rows=35 loops=1)
                      Hash Key: d
                      ->  Seq Scan on smallt  (cost=0.00..431.00 rows=34 width=4) (actual time=0.002..0.004 rows=50 loops=1)
@@ -59,7 +60,7 @@ explain analyze select d, count(*) from smallt group by d;
  Memory used:  128000kB
  Optimizer: Pivotal Optimizer (GPORCA) version 3.64.0
  Execution time: 2.061 ms
-(16 rows)
+(17 rows)
 
 set statement_mem=2560;
 select count(*) from (select i, t, d, count(*) from bigt group by i, t, d) tmp;
@@ -192,6 +193,7 @@ where t1.d = t2.d;
                ->  Sort  (cost=0.00..431.01 rows=34 width=4) (actual time=0.029..0.032 rows=35 loops=1)
                      Sort Key: smallt.d
                      Sort Method:  quicksort  Memory: 99kB
+                     Executor Memory: 79kB  Segments: 3  Max: 27kB (segment 1)
                      ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=34 width=4) (actual time=0.004..0.011 rows=35 loops=1)
                            Hash Key: smallt.d
                            ->  Seq Scan on smallt  (cost=0.00..431.00 rows=34 width=4) (actual time=0.003..0.018 rows=50 loops=1)
@@ -247,12 +249,12 @@ where t1.i = t2.i;
    ->  Hash Join  (cost=0.00..862.01 rows=4 width=24) (actual time=0.166..0.460 rows=2 loops=2)
          Hash Cond: smallt.i = smallt_1.i
          Extra Text: (seg0)   Hash chain length 1.0 avg, 1 max, using 4 of 131072 buckets.
- 
          ->  GroupAggregate  (cost=0.00..431.01 rows=4 width=12) (actual time=0.041..0.055 rows=2 loops=2)
                Group Key: smallt.i
                ->  Sort  (cost=0.00..431.00 rows=34 width=4) (actual time=0.036..0.042 rows=20 loops=2)
                      Sort Key: smallt.i
                      Sort Method:  quicksort  Memory: 99kB
+                     Executor Memory: 79kB  Segments: 3  Max: 27kB (segment 0)
                      ->  Seq Scan on smallt  (cost=0.00..431.00 rows=34 width=4) (actual time=0.004..0.013 rows=20 loops=2)
          ->  Hash  (cost=431.01..431.01 rows=4 width=12) (actual time=0.072..0.072 rows=2 loops=2)
                ->  GroupAggregate  (cost=0.00..431.01 rows=4 width=12) (actual time=0.053..0.069 rows=2 loops=2)
@@ -260,13 +262,14 @@ where t1.i = t2.i;
                      ->  Sort  (cost=0.00..431.00 rows=34 width=4) (actual time=0.048..0.053 rows=20 loops=2)
                            Sort Key: smallt_1.i
                            Sort Method:  quicksort  Memory: 99kB
+                           Executor Memory: 79kB  Segments: 3  Max: 27kB (segment 0)
                            ->  Seq Scan on smallt smallt_1  (cost=0.00..431.00 rows=34 width=4) (actual time=0.012..0.022 rows=20 loops=2)
    (slice0)    Executor memory: 386K bytes.
    (slice1)    Executor memory: 1238K bytes avg x 3 workers, 1238K bytes max (seg0).  Work_mem: 33K bytes max.
  Memory used:  128000kB
  Optimizer: Pivotal Optimizer (GPORCA) version 2.74.0
  Total runtime: 2.471 ms
-(23 rows)
+(26 rows)
 
 set enable_nestloop=off;
 set enable_hashjoin=on;
@@ -292,6 +295,7 @@ explain analyze select d, count(*) from smallt group by d limit 5;
                      ->  Sort  (cost=0.00..431.01 rows=34 width=4) (actual time=1.449..1.453 rows=26 loops=1)
                            Sort Key: d
                            Sort Method:  quicksort  Memory: 99kB
+                           Executor Memory: 79kB  Segments: 3  Max: 27kB (segment 1)
                            ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=34 width=4) (actual time=0.413..1.428 rows=35 loops=1)
                                  Hash Key: d
                                  ->  Seq Scan on smallt  (cost=0.00..431.00 rows=34 width=4) (actual time=0.003..0.006 rows=50 loops=1)
@@ -302,7 +306,7 @@ explain analyze select d, count(*) from smallt group by d limit 5;
  Memory used:  128000kB
  Optimizer: Pivotal Optimizer (GPORCA) version 3.64.0
  Execution time: 2.024 ms
-(18 rows)
+(19 rows)
 
 -- HashJoin
 select t1.* from smallt as t1, smallt as t2 where t1.i = t2.i order by 1,2,3;
