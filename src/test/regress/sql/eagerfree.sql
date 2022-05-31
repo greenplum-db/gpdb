@@ -106,6 +106,14 @@ set enable_hashjoin=on;
 select d, count(*) from smallt group by d limit 5; --ignore
 explain analyze select d, count(*) from smallt group by d limit 5;
 
+select * from
+  test_util.extract_plan_stats($$
+select d, count(*) from smallt group by d limit 5;
+  $$, false)
+where stats_name = 'executor_mem_lines'
+or stats_name = 'workmem_wanted_lines'
+order by stats_name;
+
 -- HashJoin
 select t1.* from smallt as t1, smallt as t2 where t1.i = t2.i order by 1,2,3;
 explain analyze select t1.* from smallt as t1, smallt as t2 where t1.i = t2.i;
