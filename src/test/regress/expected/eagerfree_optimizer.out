@@ -299,6 +299,21 @@ where t1.i = t2.i;
  Total runtime: 2.471 ms
 (26 rows)
 
+select * from
+  test_util.extract_plan_stats($$
+select t1.*, t2.* from
+(select d, count(*) from smallt group by d) as t1, (select d, sum(i) from smallt group by d) as t2
+where t1.d = t2.d;
+  $$, false)
+where stats_name = 'executor_mem_lines'
+or stats_name = 'workmem_wanted_lines'
+order by stats_name;
+      stats_name      | stats_value 
+----------------------+-------------
+ executor_mem_lines   |           2
+ workmem_wanted_lines |           0
+(2 rows)
+
 set enable_nestloop=off;
 set enable_hashjoin=on;
 -- Limit on Agg
