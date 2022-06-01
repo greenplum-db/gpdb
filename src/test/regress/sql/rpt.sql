@@ -362,6 +362,8 @@ DROP TABLE foopart;
 
 -- FIXME: ORCA does not consider this, we need to fix the cases when ORCA
 -- consider this.
+set optimizer = off;
+set enable_bitmapscan = off;
 create table t_hashdist(a int, b int, c int) distributed by (a);
 create table t_replicate_volatile(a int, b int, c int) distributed replicated;
 
@@ -415,7 +417,6 @@ explain (costs off) create temp table tmp as select * from pg_class c join rtbl 
 create temp table tmp as select * from pg_class c join rtbl on c.relname = rtbl.t;
 select count(*) from tmp; -- should contain 1 row
 
-set enable_bitmapscan=off;
 -- 2. Join hashed table with (replicated table join catalog) should return 1 row
 explain (costs off) select relname from t_hashdist, (select * from pg_class c join rtbl on c.relname = rtbl.t) vtest where t_hashdist.a = vtest.a;
 select relname from t_hashdist, (select * from pg_class c join rtbl on c.relname = rtbl.t) vtest where t_hashdist.a = vtest.a;
@@ -423,6 +424,7 @@ select relname from t_hashdist, (select * from pg_class c join rtbl on c.relname
 -- 3. Join hashed table with (set operation on catalog and replicated table)
 explain (costs off) select a from t_hashdist, (select oid from pg_class union all select a from rtbl) vtest;
 
+reset optimizer;
 reset enable_bitmapscan;
 
 -- Github Issue 13532
