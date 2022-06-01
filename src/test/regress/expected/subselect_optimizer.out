@@ -1234,6 +1234,7 @@ select * from explain_sq_limit();
                      ->  Sort (actual rows=3 loops=1)
                            Sort Key: sq_limit.c1, sq_limit.pk
                            Sort Method:  quicksort  Memory: xxx
+                           Executor Memory: xxx  Segments: 3  Max: 26kB (segment 0)
                            ->  Seq Scan on sq_limit (actual rows=5 loops=1)
  Optimizer: Postgres query optimizer
 (9 rows)

@@ -3640,6 +3640,7 @@ explain (analyze, costs off, summary off, timing off) execute mt_q1(15);
          ->  Sort (actual rows=1 loops=1)
                Sort Key: ma_test_p2.b
                Sort Method:  quicksort  Memory: 150kB
+               Executor Memory: 76kB  Segments: 3  Max: 26kB (segment 1)
                ->  Append (actual rows=1 loops=1)
                      ->  Seq Scan on ma_test_p2 (actual rows=1 loops=1)
                            Filter: ((a >= 15) AND ((a % 10) = 5))
@@ -3648,7 +3649,7 @@ explain (analyze, costs off, summary off, timing off) execute mt_q1(15);
                            Filter: ((a >= 15) AND ((a % 10) = 5))
                            Rows Removed by Filter: 2
  Optimizer: Pivotal Optimizer (GPORCA)
-(14 rows)
+(15 rows)
 
 execute mt_q1(15);
  a  
@@ -3666,12 +3667,13 @@ explain (analyze, costs off, summary off, timing off) execute mt_q1(25);
          ->  Sort (actual rows=1 loops=1)
                Sort Key: ma_test_p3.b
                Sort Method:  quicksort  Memory: 150kB
+               Executor Memory: 76kB  Segments: 3  Max: 26kB (segment 2)
                ->  Append (actual rows=1 loops=1)
                      ->  Seq Scan on ma_test_p3 (actual rows=1 loops=1)
                            Filter: ((a >= 25) AND ((a % 10) = 5))
                            Rows Removed by Filter: 2
  Optimizer: Pivotal Optimizer (GPORCA)
-(11 rows)
+(12 rows)
 
 execute mt_q1(25);
  a  
@@ -3687,10 +3689,11 @@ explain (analyze, costs off, summary off, timing off) execute mt_q1(35);
    ->  Sort (actual rows=0 loops=1)
          Sort Key: (NULL::integer)
          Sort Method:  quicksort  Memory: 50kB
+         Executor Memory: 26kB  Segments: 1  Max: 26kB (segment -1)
          ->  Result (actual rows=0 loops=1)
                One-Time Filter: false
  Optimizer: Pivotal Optimizer (GPORCA)
-(7 rows)
+(8 rows)
 
 execute mt_q1(35);
  a 
@@ -3707,6 +3710,7 @@ explain (analyze, costs off, summary off, timing off) select * from ma_test wher
    ->  Sort (actual rows=8 loops=1)
          Sort Key: ma_test_p1.b
          Sort Method:  quicksort  Memory: 150kB
+         Executor Memory: 76kB  Segments: 3  Max: 26kB (segment 2)
          ->  Nested Loop (actual rows=8 loops=1)
                Join Filter: (ma_test_p1.a >= (min(ma_test_p2_1.b)))
                Rows Removed by Join Filter: 3
