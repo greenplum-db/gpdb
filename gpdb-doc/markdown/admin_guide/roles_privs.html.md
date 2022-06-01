@@ -367,7 +367,7 @@ Greenplum Database supports SHA-256 and SCRAM-SHA-256 password hash algorithms a
 | password_hash_algorithm Parameter Value | pg_hba.conf Authentication Method | Comments |
 |-----------|-------|-------------------|
 | MD5 | md5 | The default Greenplum Database password hash algorithm. |
-| SCRAM-SHA-256 | scram-sha-256 | The most secure method, but may not be supported by older clients. |
+| SCRAM-SHA-256 | scram-sha-256 | The most secure method, **but is not supported by Greenplum Database version 6.20.x and older clients**. |
 | SHA-256 | password | Clear text passwords are sent over the network, SSL-secured client connections are recommended. |
 
 The password hash function runs when the password is set by using any of the following commands:
