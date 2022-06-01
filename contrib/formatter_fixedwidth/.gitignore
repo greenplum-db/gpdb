@@ -5,3 +5,6 @@
 
 regression.diffs
 regression.out
+
+data/fixedwidth_large_multi_fields.tbl
+data/fixedwidth_large_single_field.tbl

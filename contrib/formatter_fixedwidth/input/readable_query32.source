@@ -1,0 +1,26 @@
+set datestyle = 'ISO, DMY';
+
+-- Generate a single field large dataset for testing
+DROP EXTERNAL WEB TABLE IF EXISTS tbl_dataset_gen;
+CREATE EXTERNAL WEB TABLE tbl_dataset_gen (
+  s1 char(10))
+EXECUTE '$(SHELL) @abs_srcdir@/scripts/single_field_generator.sh | tee @abs_srcdir@/data/fixedwidth_large_single_field.tbl' ON HOST
+FORMAT 'TEXT';
+
+\d tbl_dataset_gen;
+
+select * from tbl_dataset_gen ORDER BY s1 desc limit 10;
+
+-- Loading a single field large dataset for testing
+DROP EXTERNAL TABLE IF EXISTS tbl_ext_fixedwidth;
+CREATE EXTERNAL TABLE tbl_ext_fixedwidth (
+  s1 char(10))
+LOCATION
+(
+  'file://@hostname@@abs_srcdir@/data/fixedwidth_large_single_field.tbl'
+)
+FORMAT 'CUSTOM' (formatter='fixedwidth_in', s1='10');
+
+\d tbl_ext_fixedwidth;
+
+SELECT * FROM tbl_ext_fixedwidth ORDER BY s1 desc limit 10;
