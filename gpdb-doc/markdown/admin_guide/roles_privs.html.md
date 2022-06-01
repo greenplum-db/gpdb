@@ -431,7 +431,7 @@ To set `password_hash_algorithm` in a session, use the SQL `SET` command:
 
 Passwords may be hashed using the SHA-256 hash algorithm instead of the default MD5 hash algorithm. The algorithm produces a 64-byte hexadecimal string prefixed with the characters `sha256`.
 
-**Note:** Although SHA-256 uses a stronger cryptographic algorithm and produces a longer hash string, it cannot be used with the `md5` authentication method. To use SHA-256 password hashing the authentication method must be set to `password` in the `pg_hba.conf` configuration file so that clear text passwords are sent to Greenplum Database. **Because clear text passwords are sent over the network, it is very important to use SSL-secured client connections when you use SHA-256.**
+**Note:** Although SHA-256 uses a stronger cryptographic algorithm and produces a longer hash string for password hashing, it does not include SHA-256 password hashing over the network during client authentication. To use SHA-256 password hashing, the authentication method must be set to `password` in the `pg_hba.conf` configuration file so that clear text passwords are sent to Greenplum Database. SHA-256 password hashing cannot be used with the `md5` authentication method. **Because clear text passwords are sent over the network, it is very important to use SSL-secured client connections when you use SHA-256.**
 
 To enable SHA-256 hashing, change the `password_hash_algorithm` configuration parameter from its default value, `MD5`, to `SHA-256`. The parameter can be set either globally or at the session level. To set `password_hash_algorithm` globally, execute these commands in a shell as the `gpadmin` user:
 
