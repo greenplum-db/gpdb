@@ -278,7 +278,6 @@ AppendOnlyMoveTuple(TupleTableSlot *slot,
 					EState *estate)
 {
 	MemTuple	tuple;
-	bool		shouldFree;
 	AOTupleId  *oldAoTupleId;
 	AOTupleId	newAoTupleId;
 
@@ -291,7 +290,7 @@ AppendOnlyMoveTuple(TupleTableSlot *slot,
 	/* Extract all the values of the tuple */
 	slot_getallattrs(slot);
 
-	tuple = ExecFetchSlotMemTuple(slot, &shouldFree, mt_bind);
+	tuple = appendonly_form_memtuple(slot, mt_bind);
 	appendonly_insert(insertDesc,
 					  tuple,
 					  &newAoTupleId);
@@ -308,8 +307,7 @@ AppendOnlyMoveTuple(TupleTableSlot *slot,
 		ResetPerTupleExprContext(estate);
 	}
 
-	if (shouldFree)
-		pfree(tuple);
+	appendonly_free_memtuple(tuple);
 
 	if (Debug_appendonly_print_compaction)
 		ereport(DEBUG5,
@@ -324,7 +322,6 @@ AppendOnlyThrowAwayTuple(Relation rel, TupleTableSlot *slot, MemTupleBinding *mt
 	int			i;
 	int			numAttrs;
 	MemTuple	tuple;
-	bool		shouldFree;
 	TupleDesc	tupleDesc;
 	AOTupleId  *aoTupleId;
 	Datum		toast_values[MaxHeapAttributeNumber];
@@ -336,7 +333,7 @@ AppendOnlyThrowAwayTuple(Relation rel, TupleTableSlot *slot, MemTupleBinding *mt
 	/* Extract all the values of the tuple */
 	slot_getallattrs(slot);
 
-	tuple = ExecFetchSlotMemTuple(slot, &shouldFree, mt_bind);
+	tuple = appendonly_form_memtuple(slot, mt_bind);
 	tupleDesc = rel->rd_att;
 	numAttrs = tupleDesc->natts;
 
@@ -358,8 +355,7 @@ AppendOnlyThrowAwayTuple(Relation rel, TupleTableSlot *slot, MemTupleBinding *mt
 		}
 	}
 
-	if (shouldFree)
-		pfree(tuple);
+	appendonly_free_memtuple(tuple);
 	
 	if (Debug_appendonly_print_compaction)
 		ereport(DEBUG5,
