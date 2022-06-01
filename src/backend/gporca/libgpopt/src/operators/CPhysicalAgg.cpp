@@ -387,7 +387,17 @@ CPhysicalAgg::PrsRequired(CMemoryPool *mp, CExpressionHandle &exprhdl,
 {
 	GPOS_ASSERT(0 == child_index);
 
-	return PrsPassThru(mp, exprhdl, prsRequired, child_index);
+	CRewindabilitySpec *prsChild =
+		PrsPassThru(mp, exprhdl, prsRequired, child_index);
+	if (prsRequired->IsOriginNLJoin())
+	{
+		CRewindabilitySpec *prs = GPOS_NEW(mp)
+			CRewindabilitySpec(CRewindabilitySpec::ErtNone, prsChild->Emht());
+		prsChild->Release();
+		return prs;
+	}
+
+	return prsChild;
 }
 
 //---------------------------------------------------------------------------
