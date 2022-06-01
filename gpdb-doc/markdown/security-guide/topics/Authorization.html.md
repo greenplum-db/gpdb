@@ -63,6 +63,61 @@ The available password encryption methods in Greenplum Database are SCRAM-SHA-25
 
 You can set your chosen encryption method system-wide or on a per-session basis.
 
+### <a id="using-scram-256"></a>Using SCRAM-SHA-256 Password Encryption
+
+To use SCRAM-SHA-256 password encryption, you must set a server configuration parameter either at the system or the session level. This section outlines how to use a server parameter to implement SCRAM-SHA-256 encrypted password storage.
+
+Note that in order to use SCRAM-SHA-256 encryption for password storage, the `pg_hba.conf` client authentication method must be set to `scram-sha-256` rather than the default, `md5`.
+
+### <a id="scram-system-wide"></a>Setting the SCRAM-SHA-256 Password Hash Algorithm System-wide
+
+To set the `password_hash_algorithm` server parameter on a complete Greenplum system \(master and its segments\):
+
+1.  Log in to your Greenplum Database instance as a superuser.
+2.  Execute `gpconfig` with the `password_hash_algorithm` set to SCRAM-SHA-256:
+
+    ```
+    $ gpconfig -c password_hash_algorithm -v 'SCRAM-SHA-256' 
+    ```
+
+3.  Verify the setting:
+
+    ```
+    $ gpconfig -s
+    ```
+
+    You will see:
+
+    ```
+    Master value: SCRAM-SHA-256
+    Segment value: SCRAM-SHA-256 
+    ```
+
+
+### <a id="scram-individual_session"></a>Setting the SCRAM-SHA-256 Password Hash Algorithm for an Individual Session
+
+To set the `password_hash_algorithm` server parameter for an individual session:
+
+1.  Log in to your Greenplum Database instance as a superuser.
+2.  Set the `password_hash_algorithm` to SCRAM-SHA-256:
+
+    ```
+    # set password_hash_algorithm = 'SCRAM-SHA-256'
+      
+    ```
+
+3.  Verify the setting:
+
+    ```
+    # show password_hash_algorithm;
+    ```
+
+    You will see:
+
+    ```
+    SCRAM-SHA-256 
+    ```
+
 ### <a id="using-ssh-256"></a>Using SHA-256 Password Encryption
 
 To use SHA-256 password encryption, you must set a server configuration parameter either at the system or the session level. This section outlines how to use a server parameter to implement SHA-256 encrypted password storage.
@@ -167,61 +222,6 @@ An example of how to use and verify the `SHA-256` `password_hash_algorithm` foll
     Rolpassword
     -----------
     sha256<64 hexadecimal characters>
-    ```
-
-### <a id="using-scram-256"></a>Using SCRAM-SHA-256 Password Encryption
-
-To use SCRAM-SHA-256 password encryption, you must set a server configuration parameter either at the system or the session level. This section outlines how to use a server parameter to implement SCRAM-SHA-256 encrypted password storage.
-
-Note that in order to use SCRAM-SHA-256 encryption for password storage, the `pg_hba.conf` client authentication method must be set to `scram-sha-256` rather than the default, `md5`.
-
-### <a id="scram-system-wide"></a>Setting the SCRAM-SHA-256 Password Hash Algorithm System-wide
-
-To set the `password_hash_algorithm` server parameter on a complete Greenplum system \(master and its segments\):
-
-1.  Log in to your Greenplum Database instance as a superuser.
-2.  Execute `gpconfig` with the `password_hash_algorithm` set to SCRAM-SHA-256:
-
-    ```
-    $ gpconfig -c password_hash_algorithm -v 'SCRAM-SHA-256' 
-    ```
-
-3.  Verify the setting:
-
-    ```
-    $ gpconfig -s
-    ```
-
-    You will see:
-
-    ```
-    Master value: SCRAM-SHA-256
-    Segment value: SCRAM-SHA-256 
-    ```
-
-
-### <a id="scram-individual_session"></a>Setting the SCRAM-SHA-256 Password Hash Algorithm for an Individual Session
-
-To set the `password_hash_algorithm` server parameter for an individual session:
-
-1.  Log in to your Greenplum Database instance as a superuser.
-2.  Set the `password_hash_algorithm` to SCRAM-SHA-256:
-
-    ```
-    # set password_hash_algorithm = 'SCRAM-SHA-256'
-      
-    ```
-
-3.  Verify the setting:
-
-    ```
-    # show password_hash_algorithm;
-    ```
-
-    You will see:
-
-    ```
-    SCRAM-SHA-256 
     ```
 
 ## <a id="time-based-restriction"></a>Restricting Access by Time 
