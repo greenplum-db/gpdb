@@ -105,12 +105,8 @@ User-defined functions provided by the module include:
 |Function Signature|Description|
 |------------------|-----------|
 |void init\_table\_size\_table\(\)|Sizes the existing tables in the current database.|
-|void set\_role\_quota\( role\_name text, quota text \)|Sets a disk quota for a specific role in the current database. **Note:** A role-based disk quota cannot be set for the Greenplum Database system owner.
-
-|
-|void set\_role\_tablespace\_quota\( role\_name text, tablespace\_name text, quota text \)|Sets a disk quota for a specific role and tablespace combination in the current database. **Note:** A role-based disk quota cannot be set for the Greenplum Database system owner.
-
-|
+|void set\_role\_quota\( role\_name text, quota text \)|Sets a disk quota for a specific role in the current database.<br/><br/>**Note:** A role-based disk quota cannot be set for the Greenplum Database system owner.|
+|void set\_role\_tablespace\_quota\( role\_name text, tablespace\_name text, quota text \)|Sets a disk quota for a specific role and tablespace combination in the current database.<br/><br/>**Note:** A role-based disk quota cannot be set for the Greenplum Database system owner.|
 |void set\_schema\_quota\( schema\_name text, quota text \)|Sets a disk quota for a specific schema in the current database.|
 |void set\_schema\_tablespace\_quota\( schema\_name text, tablespace\_name text, quota text \)|Sets a disk quota for a specific schema and tablespace combination in the current database.|
 |void set\_per\_segment\_quota\( tablespace\_name text, ratio float4 \)|Sets a per-segment disk quota for a tablespace in the current database.|
