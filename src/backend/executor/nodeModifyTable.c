@@ -53,6 +53,7 @@
 
 #include "access/fileam.h"
 #include "access/transam.h"
+#include "catalog/pg_statistic.h"
 #include "cdb/cdbaocsam.h"
 #include "cdb/cdbappendonlyam.h"
 #include "cdb/cdbpartition.h"
@@ -99,6 +100,15 @@ ExecCheckPlanOutput(Relation resultRel, List *targetList)
 
 		if (!attr->attisdropped)
 		{
+			/*
+			 * GPDB: Greenplum tooling performs updates to pg_statistic catalog
+			 * for debugging purposes. However, pg_statistic is a special table
+			 * that contains psudo types that will not fulfill the type match.
+			 * Allow check to pass in this specific case.
+			 */
+			if (resultRel->rd_id == StatisticRelationId && attr->atttypid == ANYARRAYOID)
+				continue;
+
 			/* Normal case: demand type match */
 			if (exprType((Node *) tle->expr) != attr->atttypid)
 				ereport(ERROR,
