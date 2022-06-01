@@ -950,7 +950,22 @@ The amount of shared memory, in kilobytes, allocated for query metrics. The defa
 |-----------|-------|-------------------|
 |integer `0 - 131072`|5120|master, system, restart|
 
-## <a id="gp_interconnect_debug_retry_interval"></a>gp\_interconnect\_debug\_retry\_interval 
+## <a id="gp_interconnect_address_type"></a>gp_interconnect_address_type
+
+Specifies the type of address binding strategy Greenplum database should use for communication between segment host sockets. There are two types: `unicast` and `wildcard`. The default is `wildcard`.
+
+- When this parameter is set to `unicast`, Greenplum database  uses the `gp_segment_configuration.address` field to perform address binding. This reduces port usage on segment hosts and prevents interconnect traffic from being routed through unintended (and possibly slower) network interfaces. 
+
+- When this parameter is set to `wildcard`, Greenplum database uses a wildcard address for binding, enabling the use of any network interface compliant with routing rules.
+
+**NOTE**: In some cases, inter-segment communication using the unicast strategy may not be possible. One example is if the source segment's address field and the destination segment's address field are on different subnets and/or existing routing rules don't allow for such
+communication. In these cases, you must configure this parameter to use a wildcard address for address binding.
+
+|Value Range|Default|Set Classifications|
+|-----------|-------|-------------------|
+|???|`wildcard`|master, session, reload|
+
+## <a id="gp_interconnect_debug_retry_interval"></a>gp_interconnect_debug_retry_interval 
 
 Specifies the interval, in seconds, to log Greenplum Database interconnect debugging messages when the server configuration parameter [gp\_log\_interconnect](#gp_log_interconnect) is set to `DEBUG`. The default is 10 seconds.
 
@@ -1035,7 +1050,7 @@ Specifies the amount of time, in seconds, that Greenplum Database waits for netw
 |-----------|-------|-------------------|
 |1 - 7200 seconds|3600 seconds \(1 hour\)|master, session, reload|
 
-## <a id="gp_interconnect_type"></a>gp\_interconnect\_type 
+## <a id="gp_interconnect_type"></a>gp_interconnect_type 
 
 Sets the networking protocol used for Greenplum Database interconnect traffic. UDPIFC specifies using UDP with flow control for interconnect traffic, and is the only value supported.
 
