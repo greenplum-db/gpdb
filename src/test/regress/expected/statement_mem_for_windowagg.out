@@ -97,14 +97,14 @@ NOTICE:  winagg: tuplestore spilled to disk  (seg2 slice1 127.0.0.1:7004 pid=434
 select * from
   test_util.extract_plan_stats($$
 SELECT AVG(x) OVER (PARTITION BY y) FROM dummy_table;
-  $$, false)
+  $$, true)
 where stats_name = 'executor_mem_lines'
 or stats_name = 'workmem_wanted_lines'
 order by stats_name;
       stats_name      | stats_value 
 ----------------------+-------------
  executor_mem_lines   |           1
- workmem_wanted_lines |           0
+ workmem_wanted_lines |           1
 (2 rows)
 
 SELECT gp_inject_fault('winagg_after_spool_tuples', 'reset', dbid)
@@ -153,7 +153,7 @@ NOTICE:  distinct winagg sortstats: sort operation fitted in memory  (seg2 slice
 select * from
   test_util.extract_plan_stats($$
 SELECT AVG(DISTINCT x) OVER (PARTITION BY y) FROM dummy_table;
-  $$, false)
+  $$, true)
 where stats_name = 'executor_mem_lines'
 or stats_name = 'workmem_wanted_lines'
 order by stats_name;
@@ -211,7 +211,7 @@ NOTICE:  distinct winagg sortstats: sort operation spilled to disk  (seg2 slice1
 select * from
   test_util.extract_plan_stats($$
 SELECT AVG(DISTINCT x) OVER (PARTITION BY y) FROM dummy_table;
-  $$, false)
+  $$, true)
 where stats_name = 'executor_mem_lines'
 or stats_name = 'workmem_wanted_lines'
 order by stats_name;
@@ -219,7 +219,7 @@ NOTICE:  distinct winagg sortstats: sort operation spilled to disk
       stats_name      | stats_value 
 ----------------------+-------------
  executor_mem_lines   |           1
- workmem_wanted_lines |           0
+ workmem_wanted_lines |           1
 (2 rows)
 
 SELECT gp_inject_fault_infinite('distinct_winagg_perform_sort', 'reset', dbid)

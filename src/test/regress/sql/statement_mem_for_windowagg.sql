@@ -36,7 +36,7 @@ EXPLAIN ANALYZE SELECT AVG(x) OVER (PARTITION BY y) FROM dummy_table;
 select * from
   test_util.extract_plan_stats($$
 SELECT AVG(x) OVER (PARTITION BY y) FROM dummy_table;
-  $$, false)
+  $$, true)
 where stats_name = 'executor_mem_lines'
 or stats_name = 'workmem_wanted_lines'
 order by stats_name;
@@ -56,7 +56,7 @@ EXPLAIN ANALYZE SELECT AVG(DISTINCT x) OVER (PARTITION BY y) FROM dummy_table;
 select * from
   test_util.extract_plan_stats($$
 SELECT AVG(DISTINCT x) OVER (PARTITION BY y) FROM dummy_table;
-  $$, false)
+  $$, true)
 where stats_name = 'executor_mem_lines'
 or stats_name = 'workmem_wanted_lines'
 order by stats_name;
@@ -76,7 +76,7 @@ EXPLAIN ANALYZE SELECT AVG(DISTINCT x) OVER (PARTITION BY y) FROM dummy_table;
 select * from
   test_util.extract_plan_stats($$
 SELECT AVG(DISTINCT x) OVER (PARTITION BY y) FROM dummy_table;
-  $$, false)
+  $$, true)
 where stats_name = 'executor_mem_lines'
 or stats_name = 'workmem_wanted_lines'
 order by stats_name;
