@@ -53,6 +53,7 @@
 #include "utils/geo_decls.h"
 #include "utils/lsyscache.h"
 #include "utils/memutils.h"
+#include "utils/vmem_tracker.h"
 #include "utils/resource_manager.h"
 #include "utils/timestamp.h"
 
@@ -646,13 +647,17 @@ resGroupPalloc(PG_FUNCTION_ARGS)
 		PG_RETURN_INT32(0);
 
 	ResGroupGetMemInfo(&memLimit, &slotQuota, &sharedQuota);
-	size = ceilf(memLimit * ratio);
+	size = ceilf(VmemTracker_ConvertVmemChunksToMB(memLimit) * ratio);
+	if (size <= 0)
+		elog(ERROR, "invalid alloc size %d", size);
+
 	count = size / 512;
 	for (i = 0; i < count; i++)
 		MemoryContextAlloc(TopMemoryContext, 512 * 1024 * 1024);
 
 	size %= 512;
-	MemoryContextAlloc(TopMemoryContext, size * 1024 * 1024);
+	if (size > 0)
+		MemoryContextAlloc(TopMemoryContext, size * 1024 * 1024);
 
 	PG_RETURN_INT32(0);
 }
