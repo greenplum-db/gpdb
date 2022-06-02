@@ -1,7 +1,14 @@
 -- The following test checks if the correct number and type of sockets are
 -- created for motion connections both on QD and QE backends for the same
--- gp_session_id. Additionally we check if the source address used for creating
--- the motion sockets is equal to gp_segment_configuration.address.
+-- gp_session_id, when gp_interconnect_address_type is 'unicast'. Additionally,
+-- we check if the source address used for creating the motion sockets is equal
+-- to gp_segment_configuration.address. Since the 6X default for
+-- gp_interconnect_address_type is 'wildcard', we must explicitly set it to
+-- 'unicast' before proceeding with the test.
+
+!\retcode gpconfig -c gp_interconnect_address_type -v 'unicast';
+!\retcode gpstop -au;
+
 -- start_matchsubs
 -- m/^INFO:  Checking postgres backend postgres:.*/
 -- s/^INFO:  Checking postgres backend postgres:.*/INFO:  Checking postgres backend postgres: XXX/
@@ -63,23 +70,10 @@ for process in psutil.process_iter():
 
 
 $$ LANGUAGE plpythonu EXECUTE ON MASTER;
-SELECT check_motion_sockets();
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-CONTEXT:  SQL statement "CREATE TEMP TABLE motion_socket_force_create_gang(i int);"
-PL/Python function "check_motion_sockets"
-INFO:  Checking postgres backend postgres:  6000, vanjared regression 127.0.0.1(60826) con67 cmd2 SELECT
-CONTEXT:  PL/Python function "check_motion_sockets"
-INFO:  Checking postgres backend postgres:  6002, vanjared regression 127.0.0.1(60827) con67 seg0 idle in transaction
-CONTEXT:  PL/Python function "check_motion_sockets"
-INFO:  Checking postgres backend postgres:  6003, vanjared regression 127.0.0.1(60828) con67 seg1 idle in transaction
-CONTEXT:  PL/Python function "check_motion_sockets"
-INFO:  Checking postgres backend postgres:  6004, vanjared regression 127.0.0.1(60829) con67 seg2 idle in transaction
-CONTEXT:  PL/Python function "check_motion_sockets"
-INFO:  Checking postgres backend postgres:  6000, vanjared regression 127.0.0.1(60830) con67 seg-1 idle
-CONTEXT:  PL/Python function "check_motion_sockets"
- check_motion_sockets 
-----------------------
- 
-(1 row)
 
+-- check motion sockets in a new session to ensure that the 'unicast' setting
+-- takes effect.
+1: SELECT check_motion_sockets();
+
+!\retcode gpconfig -r gp_interconnect_address_type;
+!\retcode gpstop -au;

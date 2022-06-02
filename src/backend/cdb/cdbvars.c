@@ -209,6 +209,7 @@ int			Gp_interconnect_debug_retry_interval = 10;
 int			interconnect_setup_timeout = 7200;
 
 int			Gp_interconnect_type = INTERCONNECT_TYPE_UDPIFC;
+int 		Gp_interconnect_address_type = INTERCONNECT_ADDRESS_TYPE_UNICAST;
 
 bool		gp_interconnect_aggressive_retry = true;	/* fast-track app-level
 														 * retry */
