@@ -29,6 +29,7 @@
 #include "storage/bufmgr.h"
 #include "storage/ipc.h"
 #include "storage/smgr.h"
+#include "storage/md.h"
 #include "utils/faultinjector.h"
 #include "utils/hsearch.h"
 #include "utils/inval.h"
@@ -42,6 +43,32 @@ file_create_hook_type file_create_hook = NULL;
 file_extend_hook_type file_extend_hook = NULL;
 file_truncate_hook_type file_truncate_hook = NULL;
 file_unlink_hook_type file_unlink_hook = NULL;
+
+
+static const f_smgr smgrsw[] = {
+	/* magnetic disk */
+	{
+		.smgr_init = mdinit,
+		.smgr_shutdown = NULL,
+		.smgr_close = mdclose,
+		.smgr_create = mdcreate,
+		.smgr_create_ao = mdcreate_ao,
+		.smgr_exists = mdexists,
+		.smgr_unlink = mdunlink,
+		.smgr_extend = mdextend,
+		.smgr_prefetch = mdprefetch,
+		.smgr_read = mdread,
+		.smgr_write = mdwrite,
+		.smgr_nblocks = mdnblocks,
+		.smgr_truncate = mdtruncate,
+		.smgr_immedsync = mdimmedsync,
+		.smgr_pre_ckpt = mdpreckpt,
+		.smgr_sync = mdsync,
+		.smgr_post_ckpt = mdpostckpt,
+	},
+};
+
+static const int NSmgr = lengthof(smgrsw);
 
 /*
  * Each backend has a hashtable that stores all extant SMgrRelation objects.
@@ -63,10 +90,28 @@ static void smgrshutdown(int code, Datum arg);
  * case), *not* during postmaster start.  Therefore, any resources created
  * here or destroyed in smgrshutdown are backend-local.
  */
+
+
+void
+smgr_init_standard(void)
+{
+	int i;
+	for (i = 0; i < NSmgr; i++)
+	{
+		if (smgrsw[i].smgr_init)
+			smgrsw[i].smgr_init();
+	}
+	mdinit();
+}
+
+
 void
 smgrinit(void)
 {
-	mdinit();
+	if (smgr_init_hook)
+		(*smgr_init_hook)();
+
+	smgr_init_standard();
 
 	/* register the shutdown proc */
 	on_proc_exit(smgrshutdown, 0);
@@ -78,6 +123,42 @@ smgrinit(void)
 static void
 smgrshutdown(int code, Datum arg)
 {
+	if (smgr_shutdown_hook)
+		(*smgr_shutdown_hook)();
+	
+	int			i;
+	for (i = 0; i < NSmgr; i++)
+	{
+		if (smgrsw[i].smgr_shutdown)
+			smgrsw[i].smgr_shutdown();
+	}
+}
+
+/* Hooks for plugins to get control in smgr */
+smgr_hook_type smgr_hook = NULL;
+smgr_init_hook_type smgr_init_hook = NULL;
+smgr_shutdown_hook_type smgr_shutdown_hook = NULL;
+
+const f_smgr *
+smgr_standard(BackendId backend, RelFileNode rnode)
+{
+	// for md.c 
+	return &smgrsw[0];
+}
+
+const f_smgr *
+smgr(BackendId backend, RelFileNode rnode)
+{
+	const f_smgr *result;
+
+	if (smgr_hook)
+ 	{
+		result = (*smgr_hook)(backend, rnode);
+ 	}
+	else
+		result = smgr_standard(backend, rnode);
+
+	return result;
 }
 
 /*
@@ -126,7 +207,8 @@ smgropen(RelFileNode rnode, BackendId backend)
 		reln->smgr_targblock = InvalidBlockNumber;
 		reln->smgr_fsm_nblocks = InvalidBlockNumber;
 		reln->smgr_vm_nblocks = InvalidBlockNumber;
-		reln->smgr_which = 0;	/* we only have md.c at present */
+
+		reln->smgr = smgr(backend, rnode);
 
 		/* mark it not open */
 		for (forknum = 0; forknum <= MAX_FORKNUM; forknum++)
@@ -197,7 +279,7 @@ smgrclearowner(SMgrRelation *owner, SMgrRelation reln)
 bool
 smgrexists(SMgrRelation reln, ForkNumber forknum)
 {
-	return mdexists(reln, forknum);
+	return (*reln->smgr).smgr_exists(reln, forknum);
 }
 
 /*
@@ -210,8 +292,8 @@ smgrclose(SMgrRelation reln)
 	ForkNumber	forknum;
 
 	for (forknum = 0; forknum <= MAX_FORKNUM; forknum++)
-		mdclose(reln, forknum);
-
+		(*reln->smgr).smgr_close(reln, forknum);
+	
 	owner = reln->smgr_owner;
 
 	if (!owner)
@@ -306,7 +388,7 @@ smgrcreate(SMgrRelation reln, ForkNumber forknum, bool isRedo)
 							reln->smgr_rnode.node.dbNode,
 							isRedo);
 
-	mdcreate(reln, forknum, isRedo);
+	(*(*reln->smgr).smgr_create) (reln, forknum, isRedo);
 
 	if (file_create_hook)
 		(*file_create_hook)(reln->smgr_rnode);
@@ -321,9 +403,10 @@ smgrcreate(SMgrRelation reln, ForkNumber forknum, bool isRedo)
  *		already because we are in a WAL replay sequence.
  */
 void
-smgrcreate_ao(RelFileNodeBackend rnode, int32 segmentFileNum, bool isRedo)
+smgrcreate_ao(SMgrRelation reln, int32 segmentFileNum, bool isRedo)
 {
-	mdcreate_ao(rnode, segmentFileNum, isRedo);
+	RelFileNodeBackend rnode = reln->smgr_rnode;
+	(*(*reln->smgr).smgr_create_ao) (rnode, segmentFileNum, isRedo);
 	if (file_create_hook)
 		(*file_create_hook)(rnode);
 }
@@ -345,7 +428,7 @@ smgrdounlink(SMgrRelation reln, bool isRedo, char relstorage)
 
 	/* Close the forks at smgr level */
 	for (forknum = 0; forknum <= MAX_FORKNUM; forknum++)
-		mdclose(reln, forknum);
+		(*((*reln->smgr).smgr_close)) (reln, forknum);
 
 	/*
 	 * Get rid of any remaining buffers for the relation.  bufmgr will just
@@ -383,8 +466,8 @@ smgrdounlink(SMgrRelation reln, bool isRedo, char relstorage)
 	 * ERROR, because we've already decided to commit or abort the current
 	 * xact.
 	 */
-	for (forknum = 0; forknum <= MAX_FORKNUM; forknum++)
-		mdunlink(rnode, forknum, isRedo, relstorage);
+
+	(*((*reln->smgr).smgr_unlink)) (rnode, InvalidForkNumber, isRedo, relstorage);
 }
 
 /*
@@ -427,7 +510,7 @@ smgrdounlinkall(SMgrRelation *rels, int nrels, bool isRedo, char *relstorages)
 
 		/* Close the forks at smgr level */
 		for (forknum = 0; forknum <= MAX_FORKNUM; forknum++)
-			mdclose(rels[i], forknum);
+			(*rels[i]->smgr).smgr_close(rels[i], forknum);
 
 		if ((relstorages[i] != RELSTORAGE_AOROWS) &&
 			(relstorages[i] != RELSTORAGE_AOCOLS))
@@ -467,8 +550,10 @@ smgrdounlinkall(SMgrRelation *rels, int nrels, bool isRedo, char *relstorages)
 
 	for (i = 0; i < nrels; i++)
 	{
-		for (forknum = 0; forknum <= MAX_FORKNUM; forknum++)
-			mdunlink(rnodes[i], forknum, isRedo, relstorages[i]);
+		for (forknum = 0; forknum <= MAX_FORKNUM; forknum++) {
+			RelFileNodeBackend rnode = rels[i]->smgr_rnode;
+			(*(*rels[i]->smgr).smgr_unlink) (rnode, forknum, isRedo, relstorages[i]);
+		}
 	}
 
 	if (file_unlink_hook)
@@ -492,7 +577,8 @@ void
 smgrextend(SMgrRelation reln, ForkNumber forknum, BlockNumber blocknum,
 		   char *buffer, bool skipFsync)
 {
-	mdextend(reln, forknum, blocknum, buffer, skipFsync);
+	(*(*reln->smgr).smgr_extend) (reln, forknum, blocknum,
+											   buffer, skipFsync);
 	if (file_extend_hook)
 		(*file_extend_hook)(reln->smgr_rnode);
 }
@@ -503,7 +589,7 @@ smgrextend(SMgrRelation reln, ForkNumber forknum, BlockNumber blocknum,
 void
 smgrprefetch(SMgrRelation reln, ForkNumber forknum, BlockNumber blocknum)
 {
-	mdprefetch(reln, forknum, blocknum);
+	(*(*reln->smgr).smgr_prefetch) (reln, forknum, blocknum);
 }
 
 /*
@@ -518,7 +604,7 @@ void
 smgrread(SMgrRelation reln, ForkNumber forknum, BlockNumber blocknum,
 		 char *buffer)
 {
-	mdread(reln, forknum, blocknum, buffer);
+	(*(*reln->smgr).smgr_read) (reln, forknum, blocknum, buffer);
 }
 
 /*
@@ -540,7 +626,8 @@ void
 smgrwrite(SMgrRelation reln, ForkNumber forknum, BlockNumber blocknum,
 		  char *buffer, bool skipFsync)
 {
-	mdwrite(reln, forknum, blocknum, buffer, skipFsync);
+	(*(*reln->smgr).smgr_write) (reln, forknum, blocknum,
+											  buffer, skipFsync);
 }
 
 /*
@@ -550,7 +637,7 @@ smgrwrite(SMgrRelation reln, ForkNumber forknum, BlockNumber blocknum,
 BlockNumber
 smgrnblocks(SMgrRelation reln, ForkNumber forknum)
 {
-	return mdnblocks(reln, forknum);
+	return (*(*reln->smgr).smgr_nblocks) (reln, forknum);
 }
 
 /*
@@ -583,7 +670,8 @@ smgrtruncate(SMgrRelation reln, ForkNumber forknum, BlockNumber nblocks)
 	/*
 	 * Do the truncation.
 	 */
-	mdtruncate(reln, forknum, nblocks);
+
+	(*(*reln->smgr).smgr_truncate) (reln, forknum, nblocks);
 
 	if (file_truncate_hook)
 		(*file_truncate_hook)(reln->smgr_rnode);
@@ -615,7 +703,7 @@ smgrtruncate(SMgrRelation reln, ForkNumber forknum, BlockNumber nblocks)
 void
 smgrimmedsync(SMgrRelation reln, ForkNumber forknum)
 {
-	mdimmedsync(reln, forknum);
+	(*(*reln->smgr).smgr_immedsync) (reln, forknum);
 }
 
 
@@ -625,7 +713,13 @@ smgrimmedsync(SMgrRelation reln, ForkNumber forknum)
 void
 smgrpreckpt(void)
 {
-	mdpreckpt();
+	int			i;
+
+	for (i = 0; i < NSmgr; i++)
+	{
+		if (smgrsw[i].smgr_pre_ckpt)
+			(*(smgrsw[i].smgr_pre_ckpt)) ();
+	}
 }
 
 /*
@@ -634,7 +728,13 @@ smgrpreckpt(void)
 void
 smgrsync(void)
 {
-	mdsync();
+	int			i;
+
+	for (i = 0; i < NSmgr; i++)
+	{
+		if (smgrsw[i].smgr_sync)
+			(*(smgrsw[i].smgr_sync)) ();
+	}
 }
 
 /*
@@ -643,7 +743,13 @@ smgrsync(void)
 void
 smgrpostckpt(void)
 {
-	mdpostckpt();
+	int			i;
+
+	for (i = 0; i < NSmgr; i++)
+	{
+		if (smgrsw[i].smgr_post_ckpt)
+			(*(smgrsw[i].smgr_post_ckpt)) ();
+	}
 }
 
 /*
