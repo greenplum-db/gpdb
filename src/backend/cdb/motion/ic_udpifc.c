@@ -1190,16 +1190,21 @@ setupUDPListeningSocket(int *listenerSocketFd, uint16 *listenerPort, int *txFami
 #endif
 
 	fun = "getaddrinfo";
-	/*
-	 * Restrict what IP address we will listen on to just the one that was
-	 * used to create this QE session.
-	 */
-	Assert(interconnect_address && strlen(interconnect_address) > 0);
-	hints.ai_flags |= AI_NUMERICHOST;
-	if (gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG)
-		ereport(DEBUG1,
-				(errmsg("getaddrinfo called with interconnect_address %s",
-								interconnect_address)));
+	if (Gp_interconnect_address_type == INTERCONNECT_ADDRESS_TYPE_UNICAST)
+	{
+		Assert(interconnect_address && strlen(interconnect_address) > 0);
+		hints.ai_flags |= AI_NUMERICHOST;
+		ereportif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG3,
+				  (errmsg("getaddrinfo called with unicast address: %s",
+						  interconnect_address)));
+	}
+	else
+	{
+		Assert(interconnect_address == NULL);
+		hints.ai_flags |= AI_PASSIVE;
+		ereportif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG3,
+				  (errmsg("getaddrinfo called with wildcard address")));
+	}
 
 	s = getaddrinfo(interconnect_address, service, &hints, &addrs);
 	if (s != 0)
