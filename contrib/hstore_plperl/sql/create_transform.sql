@@ -35,6 +35,15 @@ DROP TRANSFORM FOR hstore LANGUAGE foo;
 DROP TRANSFORM FOR hstore LANGUAGE plperl;
 DROP TRANSFORM IF EXISTS FOR hstore LANGUAGE plperl;
 
+-- test pg_stat_last_operation
+CREATE TRANSFORM FOR hstore LANGUAGE plperl (FROM SQL WITH FUNCTION hstore_to_plperl(internal), TO SQL WITH FUNCTION plperl_to_hstore(internal));
+SELECT oid INTO temp transform_oid FROM pg_transform WHERE trfFROMsql='hstore_to_plperl'::regproc AND trftosql='plperl_to_hstore'::regproc;
+SELECT COUNT(*) = 1 FROM pg_stat_last_operation WHERE classid='pg_transform'::regclass AND objid=(SELECT oid FROM transform_oid limit 1);
+DROP TRANSFORM FOR hstore LANGUAGE plperl;
+SELECT COUNT(*) = 0 FROM pg_stat_last_operation WHERE classid='pg_transform'::regclass AND objid=(SELECT oid FROM transform_oid limit 1);
+DROP TABLE transform_oid;
+-- end of test pg_stat_last_operation
+
 DROP FUNCTION hstore_to_plperl(val internal);
 DROP FUNCTION plperl_to_hstore(val internal);
 
