@@ -9,24 +9,24 @@
         only if the statistics are not current.</ph></p>
     <section>
       <title>Synopsis</title>
-      <codeblock><b>analyzedb</b> <b>-d</b> &lt;dbname>
-   { <b>-s</b> &lt;schema>  | 
-   { <b>-t</b> &lt;schema>.&lt;table> 
-     [ <b>-i</b> &lt;col1>[, &lt;col2>, ...] | 
-       <b>-x</b> &lt;col1>[, &lt;col2>, ...] ] } |
-     { <b>-f</b> | <b>--file</b>} &lt;config-file> }
-   [ <b>-l</b> | <b>--list</b> ]
-   [ <b>--gen_profile_only</b> ]   
-   [ <b>-p</b> &lt;parallel-level> ]
-   [ <b>--full</b> ]
-   [ <b>--skip_root_stats</b> ]
-   [ <b>-v</b> | <b>--verbose</b> ]
-   [ <b>--debug</b> ]
-   [ <b>-a</b> ]
+      <codeblock>analyzedb -d &lt;dbname>
+   { -s &lt;schema>  | 
+   { -t &lt;schema>.&lt;table> 
+     [ -i &lt;col1>[, &lt;col2>, ...] | 
+       -x &lt;col1>[, &lt;col2>, ...] ] } |
+     { -f | --file} &lt;config-file> }
+   [ -l | --list ]
+   [ --gen_profile_only ]   
+   [ -p &lt;parallel-level> ]
+   [ --full ]
+   [ --skip_root_stats ]
+   [ -v | --verbose ]
+   [ --debug ]
+   [ -a ]
 
-<b>analyzedb</b> { <b>--clean_last</b> | <b>--clean_all</b> }
-<b>analyzedb</b> <b>--version</b>
-<b>analyzedb</b> { <b>-?</b> | <b>-h</b> | <b>--help</b> }</codeblock>
+analyzedb { --clean_last | --clean_all }
+analyzedb --version
+analyzedb { -? | -h | --help }</codeblock>
     </section>
     <section>
       <title>Description</title>
