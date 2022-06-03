@@ -963,7 +963,7 @@ communication. In these cases, you must configure this parameter to use a wildca
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|???|`wildcard`|master, session, reload|
+|wildcard,unicast|wildcard|local, system, reload|
 
 ## <a id="gp_interconnect_debug_retry_interval"></a>gp_interconnect_debug_retry_interval 
 
