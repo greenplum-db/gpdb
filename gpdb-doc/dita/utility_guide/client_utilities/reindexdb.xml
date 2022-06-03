@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
-<topic id="topic1"><title id="pg137116">reindexdb</title><body><p id="client_util_desc">Rebuilds indexes in a database.</p><section id="section2"><title>Synopsis</title><codeblock id="client_util_synopsis"><b>reindexdb</b> [<varname>connection-option</varname> ...] [<b>--table</b> | <b>-t</b> <varname>table</varname> ] 
-        [<b>--index</b> | <b>-i</b> <varname>index</varname> ] [<varname>dbname</varname>]
+<topic id="topic1"><title id="pg137116">reindexdb</title><body><p id="client_util_desc">Rebuilds indexes in a database.</p><section id="section2"><title>Synopsis</title><codeblock id="client_util_synopsis"><b>reindexdb</b> [&lt;connection-option> ...] [<b>--table</b> | <b>-t</b> &lt;table> ] 
+        [<b>--index</b> | <b>-i</b> &lt;index> ] [&lt;dbname>]
 
-<b>reindexdb</b> [<varname>connection-option</varname> ...] [<b>--all</b> | <b>-a</b>]
+<b>reindexdb</b> [&lt;connection-option> ...] [<b>--all</b> | <b>-a</b>]
 
-<b>reindexdb</b> [<varname>connection-option</varname> ...] [<b>--system</b> | <b>-s</b>] [<varname>dbname</varname>]
+<b>reindexdb</b> [&lt;connection-option> ...] [<b>--system</b> | <b>-s</b>] [&lt;dbname>]
 
 <b>reindexdb</b> <b>--help</b> 
 

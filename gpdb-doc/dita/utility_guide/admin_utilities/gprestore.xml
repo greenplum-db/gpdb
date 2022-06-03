@@ -9,22 +9,22 @@
       on segment hosts in CSV data files.</p>
     <section>
       <title>Synopsis</title>
-      <codeblock><b>gprestore --timestamp</b> <varname>YYYYMMDDHHMMSS</varname>
-   [<b>--backup-dir</b> <varname>directory</varname>]
+      <codeblock><b>gprestore --timestamp</b> &lt;YYYYMMDDHHMMSS>
+   [<b>--backup-dir</b> &lt;directory>]
    [<b>--create-db</b>]
    [<b>--debug</b>]
-   [<b>--exclude-schema</b> <varname>schema_name</varname>]
-   [<b>--exclude-table</b> <varname>schema.table</varname>]
-   [<b>--exclude-table-file</b> <varname>file_name</varname>]
-   [<b>--include-schema</b> <varname>schema_name</varname>]
-   [<b>--include-table</b> <varname>schema.table</varname>]
-   [<b>--include-table-file</b> <varname>file_name</varname>]
+   [<b>--exclude-schema</b> &lt;schema_name>]
+   [<b>--exclude-table</b> &lt;schema.table>]
+   [<b>--exclude-table-file</b> &lt;file_name>]
+   [<b>--include-schema</b> &lt;schema_name>]
+   [<b>--include-table</b> &lt;schema.table>]
+   [<b>--include-table-file</b> &lt;file_name>]
    [<b>--data-only</b> | <b>--metadata-only</b>]
-   [<b>--jobs</b> <varname>int</varname>]
+   [<b>--jobs</b> &lt;int>]
    [<b>--on-error-continue</b>]
-   [<b>--plugin-config</b> <varname>config_file_location</varname>]
+   [<b>--plugin-config</b> &lt;config_file_location>]
    [<b>--quiet</b>]
-   [<b>--redirect-db</b> <varname>database_name</varname>]
+   [<b>--redirect-db</b> &lt;database_name>]
    [<b>--verbose</b>]
    [<b>--version</b>]
    [<b>--with-globals</b>]

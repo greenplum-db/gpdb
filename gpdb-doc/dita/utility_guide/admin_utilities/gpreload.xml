@@ -6,7 +6,7 @@
   <body>
     <p>Reloads Greenplum Database table data sorting the data based on specified columns. </p>
     <section id="section2"
-      ><title>Synopsis</title><codeblock><b>gpreload</b> <b>-d</b> <varname>database</varname> [<b>-p</b> <varname>port</varname>] {<b>-t</b> | <b>--table-file</b>} <varname>path_to_file</varname> [<b>-a</b>]
+      ><title>Synopsis</title><codeblock><b>gpreload</b> <b>-d</b> &lt;database> [<b>-p</b> &lt;port>] {<b>-t</b> | <b>--table-file</b>} &lt;path_to_file> [<b>-a</b>]
 
 <b>gpreload</b> <b>-h</b> 
 

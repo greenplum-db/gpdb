@@ -8,7 +8,7 @@
             to a single script file or other archive file.</p>
         <section id="section2">
             <title>Synopsis</title>
-            <codeblock id="client_util_synopsis"><b>pg_dumpall</b> [<varname>connection_option</varname> ...] [<varname>dump_option</varname> ...]</codeblock>
+            <codeblock id="client_util_synopsis"><b>pg_dumpall</b> [&lt;connection_option> ...] [&lt;dump_option> ...]</codeblock>
         </section>
         <section id="section3">
             <title>Description</title>

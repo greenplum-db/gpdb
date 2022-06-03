@@ -8,9 +8,9 @@
         <p>Copies files between multiple hosts at once.</p>
         <section id="section2">
             <title>Synopsis</title>
-            <codeblock><b>gpscp</b> { <b>-f</b> <varname>hostfile_gpssh</varname> | <b>-h</b> <varname>hostname</varname> [<b>-h</b> <varname>hostname</varname> ...] } 
-      [<b>-J</b> <varname>character</varname>] [<b>-v</b>] [[<varname>user</varname>@]<varname>hostname</varname>:]<varname>file_to_copy</varname> [...]
-      [[<varname>user</varname>@]<varname>hostname</varname>:]<varname>copy_to_path</varname>
+            <codeblock><b>gpscp</b> { <b>-f</b> &lt;hostfile_gpssh> | <b>-h</b> &lt;hostname> [<b>-h</b> &lt;hostname> ...] } 
+      [<b>-J</b> &lt;character>] [<b>-v</b>] [[&lt;user>@]&lt;hostname>:]&lt;file_to_copy> [...]
+      [[&lt;user>@]&lt;hostname>:]&lt;copy_to_path>
 
 <b>gpscp</b> <b>-?</b> 
 
@@ -55,7 +55,7 @@
                         participate in this SCP session. The syntax of the host file is one host per
                         line as follows:</pd>
                     <pd>
-                        <codeblock>&lt;<varname>hostname</varname>&gt;</codeblock>
+                        <codeblock>&lt;&lt;hostname>&gt;</codeblock>
                     </pd>
                 </plentry>
                 <plentry>

@@ -11,15 +11,15 @@
       release.</note>
     <section id="section2">
       <title>Synopsis</title>
-      <codeblock><b>gpfilespace</b> [<varname>connection_option</varname> ...] [<b>-l</b> <varname>logfile_directory</varname>] 
-              [<b>-o</b> <varname>output_file_name</varname>]
+      <codeblock><b>gpfilespace</b> [&lt;connection_option> ...] [<b>-l</b> &lt;logfile_directory>] 
+              [<b>-o</b> &lt;output_file_name>]
 
-<b>gpfilespace</b> [<varname>connection_option</varname> ...] [<b>-l</b> <varname>logfile_directory</varname>] 
-              [<b>-c</b> <varname>fs_config_file</varname>]
+<b>gpfilespace</b> [&lt;connection_option> ...] [<b>-l</b> &lt;logfile_directory>] 
+              [<b>-c</b> &lt;fs_config_file>]
 
-<ph><b>gpfilespace</b> <b>--movetempfilespace</b> {<varname>filespace_name</varname> | default}
+<ph><b>gpfilespace</b> <b>--movetempfilespace</b> {&lt;filespace_name> | default}
 
-<b>gpfilespace</b> <b>--movetransfilespace</b> {<varname>filespace_name</varname> | default}
+<b>gpfilespace</b> <b>--movetransfilespace</b> {&lt;filespace_name> | default}
 
 <b>gpfilespace</b> <b>--showtempfilespace</b> 
 
@@ -66,7 +66,7 @@
                 segments. A line describes a file system location that a particular segment database
                 instance should use as its data directory location to store database files
                 associated with a tablespace. Each line is in the format
-                of:<codeblock><varname>hostname</varname>:<varname>dbid</varname>:/<varname>filesystem_dir</varname>/<varname>seg_datadir_name</varname></codeblock></li>
+                of:<codeblock>&lt;hostname>:&lt;dbid>:/&lt;filesystem_dir>/&lt;seg_datadir_name></codeblock></li>
             </ul></pd>
         </plentry>
         <plentry>

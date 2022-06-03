@@ -9,8 +9,8 @@
                 <codeph>gpinitsystem</codeph>.</p>
         <section id="section2">
             <title>Synopsis</title>
-            <codeblock><b>gpdeletesystem</b> [<b>-d</b> <varname>master_data_directory</varname>] [<b>-B</b> <varname>parallel_processes</varname>] 
-   [<b>-f</b>] [<b>-l</b> <varname>logfile_directory</varname>] [<b>-D</b>]
+            <codeblock><b>gpdeletesystem</b> [<b>-d</b> &lt;master_data_directory>] [<b>-B</b> &lt;parallel_processes>] 
+   [<b>-f</b>] [<b>-l</b> &lt;logfile_directory>] [<b>-D</b>]
 
 <b>gpdeletesystem</b> <b>-?</b> 
 

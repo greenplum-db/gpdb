@@ -10,21 +10,21 @@
       5.x Support Life.</note>
     <section id="section2">
       <title>Synopsis</title>
-      <codeblock><b>gpdbrestore</b> { <b>-t</b> <varname>timestamp_key</varname> { [<b>-L</b>] |
-   [<b>--netbackup-service-host</b> <varname>netbackup_server</varname> 
-   [<b>--netbackup-block-size</b> <varname>size</varname>] ] }
-   <b>-b</b> <varname>YYYYMMDD</varname> | <b>-R</b> <varname>hostname</varname>:<varname>path_to_dumpset</varname> | <b>-s</b> <varname>database_name</varname> } 
+      <codeblock><b>gpdbrestore</b> { <b>-t</b> &lt;timestamp_key> { [<b>-L</b>] |
+   [<b>--netbackup-service-host</b> &lt;netbackup_server> 
+   [<b>--netbackup-block-size</b> &lt;size>] ] }
+   <b>-b</b> &lt;YYYYMMDD> | <b>-R</b> &lt;hostname>:&lt;path_to_dumpset> | <b>-s</b> &lt;database_name> } 
    [<b>--noplan</b>] [<b>--noanalyze</b>] [<b>-u</b> backup_directory] [<b>--list-backup</b>]
-   [<b>--prefix prefix_string</b>] [<b>--report-status-dir</b> <varname>report_directory</varname>]
-   [<b>-S</b> <varname>schema_name </varname>]
-   [<b>-T</b> <varname>schema.table </varname>] [<b>--table-file</b> <varname>file_name</varname>] [<b>--truncate</b>] [<b>-e</b>]
+   [<b>--prefix prefix_string</b>] [<b>--report-status-dir</b> &lt;report_directory>]
+   [<b>-S</b> &lt;schema_name >]
+   [<b>-T</b> &lt;schema.table >] [<b>--table-file</b> &lt;file_name>] [<b>--truncate</b>] [<b>-e</b>]
    [<b>-m</b>]
    [<b>-restore-stats</b> [<b>include</b> | <b>only</b>]]
-   [<b>-G</b> [<b>include</b> | <b>only</b>]] [<b>--change-schema</b> <varname>schema_name</varname>] 
-   [<b>-B </b> <varname>parallel_processes</varname>] [<b>-d</b> <varname>master_data_directory</varname>] [<b>-a</b>] [<b>-q</b>] 
-   [<b>-l</b> <varname>logfile_directory</varname>] [<b>-v</b>]
-   [<b>--ddboost</b> [<b>--ddboost-storage-unit</b>=<varname>unit-ID</varname>] ]
-   [<b>--redirect</b> <varname>database_name</varname> ]
+   [<b>-G</b> [<b>include</b> | <b>only</b>]] [<b>--change-schema</b> &lt;schema_name>] 
+   [<b>-B </b> &lt;parallel_processes>] [<b>-d</b> &lt;master_data_directory>] [<b>-a</b>] [<b>-q</b>] 
+   [<b>-l</b> &lt;logfile_directory>] [<b>-v</b>]
+   [<b>--ddboost</b> [<b>--ddboost-storage-unit</b>=&lt;unit-ID>] ]
+   [<b>--redirect</b> &lt;database_name> ]
 
 <b>gpdbrestore</b> <b>-?</b> 
 

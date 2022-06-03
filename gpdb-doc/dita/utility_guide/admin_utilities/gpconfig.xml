@@ -7,12 +7,12 @@
     <p>Sets server configuration parameters on all segments within a Greenplum Database system.</p>
     <section id="section2">
       <title>Synopsis</title>
-      <codeblock><b>gpconfig</b> <b>-c</b> <varname>param_name</varname> <b>-v</b> <varname>value</varname> [<b>-m</b> <varname>master_value</varname> | <b>--masteronly</b>]
-       | <b>-r</b> <varname>param_name</varname> [<b>--masteronly</b>]
+      <codeblock><b>gpconfig</b> <b>-c</b> &lt;param_name> <b>-v</b> &lt;value> [<b>-m</b> &lt;master_value> | <b>--masteronly</b>]
+       | <b>-r</b> &lt;param_name> [<b>--masteronly</b>]
        | <b>-l</b>
        [<b>--skipvalidation</b>] [<b>--verbose</b>] [<b>--debug</b>]
 
-<b>gpconfig</b> <b>-s</b> <varname>param_name</varname> [<b>--file</b> | <b>--file-compare</b>] [<b>--verbose</b>] [<b>--debug</b>]
+<b>gpconfig</b> <b>-s</b> &lt;param_name> [<b>--file</b> | <b>--file-compare</b>] [<b>--verbose</b>] [<b>--debug</b>]
 
 <b>gpconfig</b> <b>--help</b></codeblock>
     </section>

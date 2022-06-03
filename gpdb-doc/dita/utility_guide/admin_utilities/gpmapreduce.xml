@@ -8,10 +8,10 @@
     <p>Runs Greenplum MapReduce jobs as defined in a YAML specification document. </p>
     <section id="section2">
       <title>Synopsis</title>
-      <codeblock><b>gpmapreduce</b> <b>-f</b> <varname>yaml_file</varname> [<varname>dbname</varname> [<varname>username</varname>]] 
-     [<b>-k</b> <varname>name=value</varname> | <b>--key</b> <varname>name=value</varname>] 
-     [<b>-h</b> <varname>hostname</varname> | <b>--host</b> <varname>hostname</varname>] [<b>-p</b> <varname>port</varname>| <b>--port</b> <varname>port</varname>] 
-     [<b>-U</b> <varname>username</varname> | <b>--username</b> <varname>username</varname>] [<b>-W</b>] [<b>-v</b>]
+      <codeblock><b>gpmapreduce</b> <b>-f</b> &lt;yaml_file> [&lt;dbname> [&lt;username>]] 
+     [<b>-k</b> &lt;name=value> | <b>--key</b> &lt;name=value>] 
+     [<b>-h</b> &lt;hostname> | <b>--host</b> &lt;hostname>] [<b>-p</b> &lt;port>| <b>--port</b> &lt;port>] 
+     [<b>-U</b> &lt;username> | <b>--username</b> &lt;username>] [<b>-W</b>] [<b>-v</b>]
 
 <b>gpmapreduce</b> <b>-x</b> | <b>--explain</b> 
 

@@ -13,27 +13,27 @@
             <title>Synopsis</title>
             <codeblock><b>gptransfer</b>
    { <b>--full </b>|
-   { [<b>-d</b> <varname>database1</varname> [ <b>-d</b> <varname>database2</varname> ... ]] |
-   [<b>-t</b> <varname>db</varname>.<varname>schema</varname>.<varname>table</varname> [ <b>-t</b> <varname>db</varname>.<varname>schema1</varname>.<varname>table1</varname> ... ]] |
-   [<b>-f</b> <varname>table-file</varname> [<b>--partition-transfer</b>
+   { [<b>-d</b> &lt;database1> [ <b>-d</b> &lt;database2> ... ]] |
+   [<b>-t</b> &lt;db>.&lt;schema>.&lt;table> [ <b>-t</b> &lt;db>.&lt;schema1>.&lt;table1> ... ]] |
+   [<b>-f</b> &lt;table-file> [<b>--partition-transfer</b>
      | <b>--partition-transfer-non-partition-target</b> ]]
-   [<b>-T</b> <varname>db</varname>.<varname>schema</varname>.<varname>table</varname> [ <b>-T</b> <varname>db</varname>.<varname>schema1</varname>.<varname>table1</varname> ... ]]
-   [<b>-F</b> <varname>table-file</varname>] } }
+   [<b>-T</b> &lt;db>.&lt;schema>.&lt;table> [ <b>-T</b> &lt;db>.&lt;schema1>.&lt;table1> ... ]]
+   [<b>-F</b> &lt;table-file>] } }
    [<b>--skip-existing</b> | <b>--truncate</b> | <b>--drop</b>]
-   [<b>--analyze</b>] [<b>--validate</b>=<varname>type</varname>] [<b>-x</b>] [<b>--dry-run</b>]
+   [<b>--analyze</b>] [<b>--validate</b>=&lt;type>] [<b>-x</b>] [<b>--dry-run</b>]
    [<b>--schema-only</b> ]
-   [<b>--source-host</b>=<varname>source_host</varname> [<b>--source-port</b>=<varname>source_port</varname>]
-   [<b>--source-user</b>=<varname>source_user</varname>]]
-   [<b>--base-port</b>=<varname>base_gpfdist_port</varname>]
-   [<b>--dest-host</b>=<varname>dest_host</varname> <b>--source-map-file</b>=<varname>host_map_file</varname>
-   [<b>--dest-port</b>=<varname>port</varname>] [<b>--dest-user</b>=<varname>dest_user</varname>] ]
-   [<b>--dest-database</b>=<varname>dest_database_name</varname>]
-   [<b>--batch-size</b>=<varname>batch_size</varname>] [<b>--sub-batch-size</b>=<varname>sub_batch_size</varname>]
-   [<b>--timeout</b>=<varname>seconds</varname>]
-   [<b>--max-line-length</b>=<varname>length</varname>]
-   [<b>--work-base-dir</b>=<varname>work_dir</varname>] [<b>-l</b> <varname>log_dir</varname>]
+   [<b>--source-host</b>=&lt;source_host> [<b>--source-port</b>=&lt;source_port>]
+   [<b>--source-user</b>=&lt;source_user>]]
+   [<b>--base-port</b>=&lt;base_gpfdist_port>]
+   [<b>--dest-host</b>=&lt;dest_host> <b>--source-map-file</b>=&lt;host_map_file>
+   [<b>--dest-port</b>=&lt;port>] [<b>--dest-user</b>=&lt;dest_user>] ]
+   [<b>--dest-database</b>=&lt;dest_database_name>]
+   [<b>--batch-size</b>=&lt;batch_size>] [<b>--sub-batch-size</b>=&lt;sub_batch_size>]
+   [<b>--timeout</b>=&lt;seconds>]
+   [<b>--max-line-length</b>=&lt;length>]
+   [<b>--work-base-dir</b>=&lt;work_dir>] [<b>-l</b> &lt;log_dir>]
    [<b>--format</b>=[<b>CSV</b>|<b>TEXT</b>] ]
-   [<b>--quote</b>=<varname>character</varname> ]
+   [<b>--quote</b>=&lt;character> ]
    [<b>--no-final-count</b> ]
 
    [<b>-v</b> | <b>--verbose</b>]
@@ -381,7 +381,7 @@
                                         <codeph>-f</codeph> option contains a list of fully
                                     qualified leaf child partition table names with this syntax. </pd>
                                 <pd>
-                                    <codeblock><varname>src_db</varname>.<varname>src_schema</varname>.<varname>src_prt_tbl</varname>[, <varname>dst_db</varname>.<varname>dst_schema</varname>.<varname>dst_prt_tbl</varname>]</codeblock>
+                                    <codeblock>&lt;src_db>.&lt;src_schema>.&lt;src_prt_tbl>[, &lt;dst_db>.&lt;dst_schema>.&lt;dst_prt_tbl>]</codeblock>
                                 </pd>
                                 <pd>Wildcard characters are not supported in the fully qualified
                                     table names. The destination partitioned table must exist. If
@@ -436,7 +436,7 @@
                                     option contains a list of fully qualified leaf child partition
                                     table names in the source database and non-partitioned tables
                                     names in the destination database with this syntax.
-                                    <codeblock><varname>src_db</varname>.<varname>src_schema</varname>.<varname>src_part_tbl</varname>, <varname>dest_db</varname>.<varname>dest_schema</varname>.<varname>dest_tbl</varname></codeblock></pd>
+                                    <codeblock>&lt;src_db>.&lt;src_schema>.&lt;src_part_tbl>, &lt;dest_db>.&lt;dest_schema>.&lt;dest_tbl></codeblock></pd>
                                 <pd>Wildcard characters are not supported in the fully qualified
                                     table names. The destination tables must exist, and both source
                                     and destination table names are required in the file. </pd>

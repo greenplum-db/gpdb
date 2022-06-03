@@ -8,9 +8,9 @@
         <p>Provides SSH access to multiple hosts at once.</p>
         <section id="section2">
             <title>Synopsis</title>
-            <codeblock><b>gpssh</b> { <b>-f</b> <varname>hostfile_gpssh</varname> | <b>- h</b> <varname>hostname</varname> [<b>-h</b> <varname>hostname</varname> ...] } <ph>[<b>-s</b>] </ph>[<b>-e</b>]
-      [<b>-d</b> <varname>seconds</varname>] [<b>-t</b> <varname>multiplier</varname>] [<b>-v</b>]
-      [<varname>bash_command</varname>]
+            <codeblock><b>gpssh</b> { <b>-f</b> &lt;hostfile_gpssh> | <b>- h</b> &lt;hostname> [<b>-h</b> &lt;hostname> ...] } <ph>[<b>-s</b>] </ph>[<b>-e</b>]
+      [<b>-d</b> &lt;seconds>] [<b>-t</b> &lt;multiplier>] [<b>-v</b>]
+      [&lt;bash_command>]
 
 <b>gpssh</b> <b>-?</b> 
 

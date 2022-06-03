@@ -13,7 +13,7 @@
    [ -R | --restart ]
    [ -q | --quiet ]
    [ -v | --verbose ]
-   [ {-u | --user}=<varname>username</varname> ]
+   [ {-u | --user}=&lt;username> ]
 
 pgbouncer [ -V | --version ] | [ -h | --help ]</codeblock>
       </section>

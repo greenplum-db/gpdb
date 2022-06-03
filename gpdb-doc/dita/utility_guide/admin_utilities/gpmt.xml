@@ -8,8 +8,8 @@
       required by VMware Support.</p>
     <section>
       <title>Synopsis</title>
-      <codeblock><b>gpmt</b> tool [<varname>tool_options</varname> ...] 
-[<varname>-hostfile FILE</varname>] [<varname>-help</varname>] [<varname>-verbose</varname>]
+      <codeblock><b>gpmt</b> tool [&lt;tool_options> ...] 
+[&lt;-hostfile FILE>] [&lt;-help>] [&lt;-verbose>]
 </codeblock>
     </section>
     <section>

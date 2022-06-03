@@ -9,18 +9,18 @@
     <p>The utility is in <codeph>$GPHOME/bin/lib</codeph>.</p>
     <section id="section2">
       <title>Synopsis</title>
-      <codeblock><b>gpcheckcat</b> [ <varname>options</varname>] [ <varname>dbname</varname>] 
+      <codeblock><b>gpcheckcat</b> [ &lt;options>] [ &lt;dbname>] 
 
   <b>Options:</b>
-     <b>-g</b> <varname>dir</varname>
-     <b>-p</b> <varname>port</varname>
-     <b>-P</b> <varname>password</varname>
-     <b>-U</b> <varname>user_name</varname>
+     <b>-g</b> &lt;dir>
+     <b>-p</b> &lt;port>
+     <b>-P</b> &lt;password>
+     <b>-U</b> &lt;user_name>
      <b>-S</b> {none | only}
      <b>-O</b>
-     <b>-R</b> <varname>test_name</varname> 
-     <b>-C</b> <varname>catalog_name</varname>
-     <b>-B</b> <varname>parallel_processes</varname>
+     <b>-R</b> &lt;test_name> 
+     <b>-C</b> &lt;catalog_name>
+     <b>-B</b> &lt;parallel_processes>
      <b>-v</b>
      <b>-A</b>
 

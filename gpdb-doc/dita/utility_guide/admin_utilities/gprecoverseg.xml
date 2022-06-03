@@ -8,15 +8,15 @@
       enabled).</p>
     <section id="section2">
       <title>Synopsis</title>
-      <codeblock><b>gprecoverseg</b> [[<b>-p</b> <varname>new_recover_host</varname>[,...]] | <b>-i</b> <varname>recover_config_file</varname>] [<b>-d</b> <varname>master_data_directory</varname>] 
-             [<b>-B</b> <varname>parallel_processes</varname>] [<b>-F</b> [<b>-s</b>]] [<b>-a</b>] [<b>-q</b>] 
-	      [<b>--hba-hostnames</b> <varname>boolean</varname>] 
-             [<b>--no-progress</b>] [<b>-l</b> <varname>logfile_directory</varname>]
+      <codeblock><b>gprecoverseg</b> [[<b>-p</b> &lt;new_recover_host>[,...]] | <b>-i</b> &lt;recover_config_file>] [<b>-d</b> &lt;master_data_directory>] 
+             [<b>-B</b> &lt;parallel_processes>] [<b>-F</b> [<b>-s</b>]] [<b>-a</b>] [<b>-q</b>] 
+	      [<b>--hba-hostnames</b> &lt;boolean>] 
+             [<b>--no-progress</b>] [<b>-l</b> &lt;logfile_directory>]
 
 <b>gprecoverseg</b> <b>-r</b> 
 
-<b>gprecoverseg</b> <b>-o</b> <varname>output_recover_config_file</varname> | <b>-S</b> <varname>output_filespace_config_file</varname>
-             [<b>-p</b> <varname>new_recover_host</varname>[,...]]
+<b>gprecoverseg</b> <b>-o</b> &lt;output_recover_config_file> | <b>-S</b> &lt;output_filespace_config_file>
+             [<b>-p</b> &lt;new_recover_host>[,...]]
 
 <b>gprecoverseg</b> <b>-?</b> 
 
@@ -215,9 +215,9 @@ fs1sdw1-1:50001:/data1/mirror/gpseg16<b>SPACE</b>sdw4-1:
             currently configured segment hosts where you can recover failed segment instances. The
             filespace configuration file is in the format of:</pd>
           <pd>
-            <codeblock>pg_system=<varname>default_fselocation</varname>
-<varname>filespace1_name</varname>=<varname>filespace1_fselocation</varname>
-<varname>filespace2_name</varname>=<varname>filespace2_fselocation</varname>
+            <codeblock>pg_system=&lt;default_fselocation>
+&lt;filespace1_name>=&lt;filespace1_fselocation>
+&lt;filespace2_name>=&lt;filespace2_fselocation>
 ...</codeblock>
           </pd>
           <pd>If your system does not have additional filespaces configured, this file will only
@@ -258,7 +258,7 @@ fs1sdw1-1:50001:/data1/mirror/gpseg16<b>SPACE</b>sdw4-1:
       <codeblock>$ gpstate -m
 $ gprecoverseg -r</codeblock>
       <p>Recover any failed segment instances to a newly configured spare segment host:</p>
-      <codeblock>$ gprecoverseg -i <varname>recover_config_file</varname></codeblock>
+      <codeblock>$ gprecoverseg -i &lt;recover_config_file></codeblock>
       <p>Output the default recovery configuration file:</p>
       <codeblock>$ gprecoverseg -o /home/gpadmin/recover_config_file</codeblock>
     </section>

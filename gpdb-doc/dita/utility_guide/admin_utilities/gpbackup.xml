@@ -6,23 +6,23 @@
     <p>Create a Greenplum Database backup for use with the <codeph>gprestore</codeph> utility. </p>
     <section>
       <title>Synopsis</title>
-      <codeblock><b>gpbackup --dbname</b> <varname>database_name</varname>
-   [<b>--backup-dir</b> <varname>directory</varname>]
-   [<b>--compression-level</b> <varname>level</varname>]
+      <codeblock><b>gpbackup --dbname</b> &lt;database_name>
+   [<b>--backup-dir</b> &lt;directory>]
+   [<b>--compression-level</b> &lt;level>]
    [<b>--data-only</b>]
    [<b>--debug</b>]
-   [<b>--exclude-schema</b> <varname>schema_name</varname>]
-   [<b>--exclude-table</b> <varname>schema.table</varname>]
-   [<b>--exclude-table-file</b> <varname>file_name</varname>]
-   [<b>--include-schema</b> <varname>schema_name</varname>]
-   [<b>--include-table</b> <varname>schema.table</varname>]
-   [<b>--include-table-file</b> <varname>file_name</varname>]
-   [<b>--incremental</b> [<b>--from-timestamp</b> <varname>backup-timestamp</varname>]]
-   [<b>--jobs</b> <varname>int</varname>]
+   [<b>--exclude-schema</b> &lt;schema_name>]
+   [<b>--exclude-table</b> &lt;schema.table>]
+   [<b>--exclude-table-file</b> &lt;file_name>]
+   [<b>--include-schema</b> &lt;schema_name>]
+   [<b>--include-table</b> &lt;schema.table>]
+   [<b>--include-table-file</b> &lt;file_name>]
+   [<b>--incremental</b> [<b>--from-timestamp</b> &lt;backup-timestamp>]]
+   [<b>--jobs</b> &lt;int>]
    [<b>--leaf-partition-data</b>]
    [<b>--metadata-only</b>]
    [<b>--no-compression</b>]
-   [<b>--plugin-config</b> <varname>config_file_location</varname>]
+   [<b>--plugin-config</b> &lt;config_file_location>]
    [<b>--quiet</b>]
    [<b>--single-data-file]</b>
    [<b>--verbose</b>]

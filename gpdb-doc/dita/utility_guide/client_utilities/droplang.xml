@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
-<topic id="topic1"><title id="pd140988">droplang</title><body><p id="client_util_desc">Removes a procedural language.</p><section id="section2"><title>Synopsis</title><codeblock id="client_util_synopsis"><b>droplang</b> [<varname>connection-option</varname> ...] [-e] <varname>langname</varname> [[<b>-d</b>] <varname>dbname</varname>]
+<topic id="topic1"><title id="pd140988">droplang</title><body><p id="client_util_desc">Removes a procedural language.</p><section id="section2"><title>Synopsis</title><codeblock id="client_util_synopsis"><b>droplang</b> [&lt;connection-option> ...] [-e] &lt;langname> [[<b>-d</b>] &lt;dbname>]
 
-<b>droplang</b> [<varname>connection-option</varname> ...] [-e] <b>-l</b> <varname>dbname</varname>
+<b>droplang</b> [&lt;connection-option> ...] [-e] <b>-l</b> &lt;dbname>
 
 <b>droplang</b> <b>--help</b> 
 

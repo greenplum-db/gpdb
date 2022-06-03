@@ -9,15 +9,15 @@
         only if the statistics are not current.</ph></p>
     <section>
       <title>Synopsis</title>
-      <codeblock><b>analyzedb</b> <b>-d</b> <varname>dbname</varname>
-   { <b>-s</b> <varname>schema</varname>  | 
-   { <b>-t</b> <varname>schema</varname>.<varname>table</varname> 
-     [ <b>-i</b> <varname>col1</varname>[, <varname>col2</varname>, ...] | 
-       <b>-x</b> <varname>col1</varname>[, <varname>col2</varname>, ...] ] } |
-     { <b>-f</b> | <b>--file</b>} <varname>config-file</varname> }
+      <codeblock><b>analyzedb</b> <b>-d</b> &lt;dbname>
+   { <b>-s</b> &lt;schema>  | 
+   { <b>-t</b> &lt;schema>.&lt;table> 
+     [ <b>-i</b> &lt;col1>[, &lt;col2>, ...] | 
+       <b>-x</b> &lt;col1>[, &lt;col2>, ...] ] } |
+     { <b>-f</b> | <b>--file</b>} &lt;config-file> }
    [ <b>-l</b> | <b>--list</b> ]
    [ <b>--gen_profile_only</b> ]   
-   [ <b>-p</b> <varname>parallel-level</varname> ]
+   [ <b>-p</b> &lt;parallel-level> ]
    [ <b>--full</b> ]
    [ <b>--skip_root_stats</b> ]
    [ <b>-v</b> | <b>--verbose</b> ]

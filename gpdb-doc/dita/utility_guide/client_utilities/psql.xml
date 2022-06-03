@@ -7,7 +7,7 @@
     <p id="client_util_desc">Interactive command-line interface for Greenplum Database</p>
     <section id="section2">
       <title>Synopsis</title>
-      <codeblock id="client_util_synopsis"><b>psql</b> [<varname>option</varname> ...] [<varname>dbname</varname> [<varname>username</varname>]]</codeblock>
+      <codeblock id="client_util_synopsis"><b>psql</b> [&lt;option> ...] [&lt;dbname> [&lt;username>]]</codeblock>
     </section>
     <section id="section3">
       <title>Description</title>
@@ -246,7 +246,7 @@
         <p>It is also convenient to have a <codeph>~/.pgpass</codeph> file to avoid regularly having
           to type in passwords. This file should reside in your home directory and contain lines of
           the following format:</p>
-        <codeblock><varname>hostname</varname>:<varname>port</varname>:<varname>database</varname>:<varname>username</varname>:<varname>password</varname></codeblock>
+        <codeblock>&lt;hostname>:&lt;port>:&lt;database>:&lt;username>:&lt;password></codeblock>
         <p>The permissions on <codeph>.pgpass</codeph> must disallow any access to world or group
           (for example: <codeph>chmod 0600 ~/.pgpass</codeph>). If the permissions are less strict
           than this, the file will be ignored. (The file permissions are not currently checked on

@@ -10,24 +10,24 @@
          transfer a backup image from one Data Domain system to another.</p>
       <section id="section2">
          <title>Synopsis</title>
-         <codeblock><b>gpmfr</b> <b>--delete</b> {<b>LATEST</b> | <b>OLDEST</b> | <varname>timestamp</varname>}[<b>--remote</b>]
-   [<b>--master-port=</b><varname>master_port</varname>] [<b>--skip-ping</b>]
-   [<b>--ddboost-storage-unit</b>=<varname>unit-ID</varname>]
+         <codeblock><b>gpmfr</b> <b>--delete</b> {<b>LATEST</b> | <b>OLDEST</b> | &lt;timestamp>}[<b>--remote</b>]
+   [<b>--master-port=</b>&lt;master_port>] [<b>--skip-ping</b>]
+   [<b>--ddboost-storage-unit</b>=&lt;unit-ID>]
    [<b>-a</b>] [<b>-v</b> | <b>--verbose</b>]
 
-<b>gpmfr</b> {<b>--replicate | --recover</b>} {<b>LATEST</b> | <b>OLDEST | </b> <varname>timestamp</varname>}
-   <b>--max-streams</b> <varname>max_IO_streams</varname> [<b>--master-port=</b> <varname>master_port</varname>] <b>[--skip-ping]</b>
-   [<b>--ddboost-storage-unit</b>=<varname>unit-ID</varname>]
+<b>gpmfr</b> {<b>--replicate | --recover</b>} {<b>LATEST</b> | <b>OLDEST | </b> &lt;timestamp>}
+   <b>--max-streams</b> &lt;max_IO_streams> [<b>--master-port=</b> &lt;master_port>] <b>[--skip-ping]</b>
+   [<b>--ddboost-storage-unit</b>=&lt;unit-ID>]
    [<b>-a</b>] [<b>-q</b> | <b>--quiet</b>] [<b>-v</b> | <b>--verbose</b>]
 
-<b>gpmfr</b> {<b>--list</b> {<b>LATEST</b> | <b>OLDEST</b> | <varname>timestamp</varname>} }
-   [<b>--ddboost-storage-unit</b>=<varname>unit-ID</varname>]
-   [<b>--master-port=</b><varname>master_port</varname>] [<b>--remote</b>] [<b>--skip-ping</b>]
+<b>gpmfr</b> {<b>--list</b> {<b>LATEST</b> | <b>OLDEST</b> | &lt;timestamp>} }
+   [<b>--ddboost-storage-unit</b>=&lt;unit-ID>]
+   [<b>--master-port=</b>&lt;master_port>] [<b>--remote</b>] [<b>--skip-ping</b>]
    [<b>-v</b> | <b>--verbose</b>]
 
-<b>gpmfr</b> <b>--list-files</b> {<b>LATEST</b> | <b>OLDEST</b> | <varname>timestamp</varname>}
-   [<b>--ddboost-storage-unit</b>=<varname>unit-ID</varname>]
-   [<b>--master-port=</b><varname>master_port</varname>] [<b>--remote</b>] [<b>--skip-ping</b>]
+<b>gpmfr</b> <b>--list-files</b> {<b>LATEST</b> | <b>OLDEST</b> | &lt;timestamp>}
+   [<b>--ddboost-storage-unit</b>=&lt;unit-ID>]
+   [<b>--master-port=</b>&lt;master_port>] [<b>--remote</b>] [<b>--skip-ping</b>]
    [-v | <b>--verbose</b>]
 
 <b>gpmfr</b> <b>--show-streams</b> [<b>--skip-ping</b>] [<b>-v</b> | <b>--verbose</b>]

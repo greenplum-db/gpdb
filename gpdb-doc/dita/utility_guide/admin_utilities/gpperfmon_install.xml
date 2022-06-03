@@ -8,8 +8,8 @@
       and optionally enables the data collection agents.</p>
     <section id="section2">
       <title>Synopsis</title>
-      <codeblock><b>gpperfmon_install --port <varname>gpdb_port</varname> </b>
-      [<b>--enable</b> <b>--password</b> <varname>gpmon_password</varname> [<b>--pgpass</b> <varname>path_to_file</varname>]]
+      <codeblock><b>gpperfmon_install --port &lt;gpdb_port> </b>
+      [<b>--enable</b> <b>--password</b> &lt;gpmon_password> [<b>--pgpass</b> &lt;path_to_file>]]
       [<b>--verbose</b>]
 
 <b>gpperfmon_install</b> <b>--help</b> | <b>-h</b> | <b>-?</b></codeblock>
@@ -79,7 +79,7 @@ host       all           gpmon  ::1/128        <b>password</b></codeblock></p>
           password prompt, you must have a password file that has an entry for the
             <codeph>gpmon</codeph> user. The utility adds the following entry to your password file
           (if the file does not exist, the utility will create
-          it):<codeblock>*:5432:gpperfmon:gpmon:<varname>gpmon_password</varname></codeblock> If
+          it):<codeblock>*:5432:gpperfmon:gpmon:&lt;gpmon_password></codeblock> If
           your password file is not located in the default location (<codeph>~/.pgpass</codeph>),
           use the <codeph>--pgpass</codeph> option to specify the file location.</li>
         <li id="ou140687">Sets the server configuration parameters for Greenplum Command Center. The
@@ -222,12 +222,12 @@ host       all           gpmon  ::1/128        <b>password</b></codeblock></p>
       <ol id="ol_wss_knp_wr">
         <li>Log in to Greenplum Database as a superuser and change the <codeph>gpmon</codeph>
           password with the <codeph>ALTER ROLE</codeph>
-          command.<codeblock># ALTER ROLE gpmon WITH PASSWORD '<varname>new_password</varname>' ;</codeblock></li>
+          command.<codeblock># ALTER ROLE gpmon WITH PASSWORD '&lt;new_password>' ;</codeblock></li>
         <li>Update the password in <codeph>.pgpass</codeph> file that is used by Greenplum Command
           Center. The default file location is the <codeph>gpadmin</codeph> home directory
             (<codeph>~/.pgpass</codeph>). The <codeph>.pgpass</codeph> file contains a line with the
             <codeph>gpmon</codeph>
-          password.<codeblock>*:5432:gpperfmon:gpmon:<varname>new_password</varname></codeblock></li>
+          password.<codeblock>*:5432:gpperfmon:gpmon:&lt;new_password></codeblock></li>
         <li>Restart the Greenplum Command Center with the Command Center <codeph>gpcmdr</codeph>
           utility. <codeblock>$ gpcmdr --restart</codeblock></li>
       </ol>

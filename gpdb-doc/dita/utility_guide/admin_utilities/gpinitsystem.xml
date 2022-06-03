@@ -9,21 +9,21 @@
                 <codeph>gpinitsystem_config</codeph> file.</p>
         <section id="section2">
             <title>Synopsis</title>
-            <codeblock><b>gpinitsystem</b> <b>-c</b> <varname>cluster_configuration_file</varname> 
-            [<b>-h</b> <varname>hostfile_gpinitsystem</varname>]
-            [<b>-B</b> <varname>parallel_processes</varname>] 
-            [<b>-p</b> <varname>postgresql_conf_param_file</varname>]
-            [<b>-s</b> <varname>standby_master_host</varname> [<b>-P</b> <varname>standby_master_port</varname>]
-              [<b>-F</b> <varname>standby_master_filespaces</varname>]]
-            [<b>-m</b> <varname>number</varname> | <b>--max_connections</b>=<varname>number</varname>]
-            [<b>-b</b> <varname>size</varname> | <b>--shared_buffers</b>=<varname>size</varname>]
-            [<b>-n <varname>locale</varname> | --locale</b>=<varname>locale</varname>] [<b>--lc-collate</b>=<varname>locale</varname>] 
-            [<b>--lc-ctype</b>=<varname>locale</varname>] [<b>--lc-messages</b>=<varname>locale</varname>] 
-            [<b>--lc-monetary</b>=<varname>locale</varname>] [<b>--lc-numeric</b>=<varname>locale</varname>] 
-            [<b>--lc-time</b>=<varname>locale</varname>] [<b>-e</b> <varname>password</varname> | <b>--su_password</b>=<varname>password</varname>] 
-            [<b>-S</b>] [<b>-a</b>] [<b>-q</b>] [<b>-l</b> <varname>logfile_directory</varname>] [<b>-D</b>]
-            [<b>-I</b> <varname>input_configuration_file</varname>]
-            [<b>-O</b> <varname>output_configuration_file</varname>]
+            <codeblock><b>gpinitsystem</b> <b>-c</b> &lt;cluster_configuration_file> 
+            [<b>-h</b> &lt;hostfile_gpinitsystem>]
+            [<b>-B</b> &lt;parallel_processes>] 
+            [<b>-p</b> &lt;postgresql_conf_param_file>]
+            [<b>-s</b> &lt;standby_master_host> [<b>-P</b> &lt;standby_master_port>]
+              [<b>-F</b> &lt;standby_master_filespaces>]]
+            [<b>-m</b> &lt;number> | <b>--max_connections</b>=&lt;number>]
+            [<b>-b</b> &lt;size> | <b>--shared_buffers</b>=&lt;size>]
+            [<b>-n &lt;locale> | --locale</b>=&lt;locale>] [<b>--lc-collate</b>=&lt;locale>] 
+            [<b>--lc-ctype</b>=&lt;locale>] [<b>--lc-messages</b>=&lt;locale>] 
+            [<b>--lc-monetary</b>=&lt;locale>] [<b>--lc-numeric</b>=&lt;locale>] 
+            [<b>--lc-time</b>=&lt;locale>] [<b>-e</b> &lt;password> | <b>--su_password</b>=&lt;password>] 
+            [<b>-S</b>] [<b>-a</b>] [<b>-q</b>] [<b>-l</b> &lt;logfile_directory>] [<b>-D</b>]
+            [<b>-I</b> &lt;input_configuration_file>]
+            [<b>-O</b> &lt;output_configuration_file>]
 
 <b>gpinitsystem</b> <b>-v</b></codeblock>
         </section>
@@ -466,7 +466,7 @@ MIRROR_REPLICATION_PORT_BASE = 9000</codeblock>
                             <codeph>MIRROR_ARRAY</codeph> define the Greenplum Database master host
                         and the primary and mirror instances on the segment hosts, respectively,
                         using the format:
-                        <codeblock><varname>host</varname>~<varname>port</varname>~<varname>data_directory</varname>/<varname>seg_prefix&lt;segment_id></varname>~<varname>dbid</varname>~<varname>content_id</varname>~<varname>replication_port</varname></codeblock>The
+                        <codeblock>&lt;host>~&lt;port>~&lt;data_directory>/&lt;seg_prefix&lt;segment_id>>~&lt;dbid>~&lt;content_id>~&lt;replication_port></codeblock>The
                         Greenplum Database master always uses the value -1 for the segment ID and
                         content ID. For
                         example:<codeblock>QD_PRIMARY_ARRAY=127.0.0.1~5432~/gpmaster/gpsne-1~1~-1~0

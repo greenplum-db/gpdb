@@ -9,8 +9,8 @@
             system.</p>
         <section id="section2">
             <title>Synopsis</title>
-            <codeblock><b>gpactivatestandby</b> [<b>-d</b> <varname>standby_master_datadir</varname>] [<b>-f</b>] [<b>-a</b>] [<b>-q</b>] 
-    [<b>-l</b> <varname>logfile_directory</varname>]
+            <codeblock><b>gpactivatestandby</b> [<b>-d</b> &lt;standby_master_datadir>] [<b>-f</b>] [<b>-a</b>] [<b>-q</b>] 
+    [<b>-l</b> &lt;logfile_directory>]
 
 <b>gpactivatestandby</b> <b>-v</b> 
 
@@ -63,7 +63,7 @@
                 disabled master host process was terminated unexpectedly).</p>
             <p>After activating a standby master, run <codeph>ANALYZE</codeph> to update the
                 database query statistics. For example:</p>
-            <codeblock>psql <varname>dbname</varname> -c 'ANALYZE;'</codeblock>
+            <codeblock>psql &lt;dbname> -c 'ANALYZE;'</codeblock>
             <p>After you activate the standby master as the primary master, the Greenplum Database
                 system no longer has a standby master configured. You might want to specify another
                 host to be the new standby with the <codeph><xref href="./gpinitstandby.xml#topic1"

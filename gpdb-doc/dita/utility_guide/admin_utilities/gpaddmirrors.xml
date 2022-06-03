@@ -9,14 +9,14 @@
             mirroring.</p>
         <section id="section2">
             <title>Synopsis</title>
-            <codeblock><b>gpaddmirrors</b> [<b>-p</b> <varname>port_offset</varname>] [<b>-m</b> <varname>datadir_config_file </varname>[<b>-a</b>]] [<b>-s</b>] 
-   [<b>-d</b> <varname>master_data_directory</varname>] [<b>-B</b> <varname>parallel_processes</varname>] [<b>-l</b> <varname>logfile_directory</varname>]
+            <codeblock><b>gpaddmirrors</b> [<b>-p</b> &lt;port_offset>] [<b>-m</b> &lt;datadir_config_file >[<b>-a</b>]] [<b>-s</b>] 
+   [<b>-d</b> &lt;master_data_directory>] [<b>-B</b> &lt;parallel_processes>] [<b>-l</b> &lt;logfile_directory>]
    [<b>-v</b>]
 
-<b>gpaddmirrors</b> <b>-i</b> <varname>mirror_config_file</varname> [<b>-a</b>] [<b>-d</b> <varname>master_data_directory</varname>]
-   [<b>-B</b> <varname>parallel_processes</varname>] [<b>-l</b> <varname>logfile_directory</varname>] [<b>-v</b>]
+<b>gpaddmirrors</b> <b>-i</b> &lt;mirror_config_file> [<b>-a</b>] [<b>-d</b> &lt;master_data_directory>]
+   [<b>-B</b> &lt;parallel_processes>] [<b>-l</b> &lt;logfile_directory>] [<b>-v</b>]
 
-<b>gpaddmirrors</b> <b>-o</b> <varname>output_sample_mirror_config</varname> [<b>-s</b>] [<b>-m</b> <varname>datadir_config_file</varname>]
+<b>gpaddmirrors</b> <b>-o</b> &lt;output_sample_mirror_config> [<b>-s</b>] [<b>-m</b> &lt;datadir_config_file>]
 
 <b>gpaddmirrors</b> <b>-?</b> 
 
@@ -54,9 +54,9 @@ Enter mirror segment data directory location 2 of 2 &gt; /gpdb/m2</codeblock>
                 detailed configuration file using the <codeph>-i</codeph> option. This is useful if
                 you want your mirror segments on a completely different set of hosts than your
                 primary segments. The format of the mirror configuration file is:</p>
-            <codeblock>filespaceOrder=[<varname>filespace1_fsname</varname>[:<varname>filespace2_fsname</varname>:...]
-mirror[<varname>content</varname>]=<varname>content</varname>:<varname>address</varname>:<varname>port</varname>:<varname>mir_replication_port</varname>:<varname>pri_replication_
-port</varname>:<varname>fselocation</varname>[:<varname>fselocation</varname>:...]</codeblock>
+            <codeblock>filespaceOrder=[&lt;filespace1_fsname>[:&lt;filespace2_fsname>:...]
+mirror[&lt;content>]=&lt;content>:&lt;address>:&lt;port>:&lt;mir_replication_port>:<varname>pri_replication_
+port</varname>:&lt;fselocation>[:&lt;fselocation>:...]</codeblock>
             <p>For example (if you do not have additional filespaces configured besides the default
                     <varname>pg_system</varname> filespace):</p>
             <codeblock>filespaceOrder=
@@ -116,9 +116,9 @@ mirror1=1:sdw1-1:60001:61001:62001:/gpdata/mir2/gp1</codeblock>
                         <codeph>pg_filespace</codeph>, and <codeph>pg_filespace_entry</codeph>
                         catalog tables):</pd>
                     <pd>
-                        <codeblock>filespaceOrder=[<varname>filespace1_fsname</varname>[:<varname>filespace2_fsname</varname>:...]
-mirror[<varname>content</varname>]=<varname>content</varname>:<varname>address</varname>:<varname>port</varname>:<varname>mir_replication_port</varname>:<varname>pri_replication_
-port</varname>:<varname>fselocation</varname>[:<varname>fselocation</varname>:...]</codeblock>
+                        <codeblock>filespaceOrder=[&lt;filespace1_fsname>[:&lt;filespace2_fsname>:...]
+mirror[&lt;content>]=&lt;content>:&lt;address>:&lt;port>:&lt;mir_replication_port>:<varname>pri_replication_
+port</varname>:&lt;fselocation>[:&lt;fselocation>:...]</codeblock>
                     </pd>
                     <pd>Note that you only need to specify a name for
                             <codeph>filespaceOrder</codeph> if your system has multiple filespaces
@@ -151,7 +151,7 @@ port</varname>:<varname>fselocation</varname>[:<varname>fselocation</varname>:..
                         default <codeph>pg_system</codeph> filespace, you must also list file system
                         locations for each filespace as follows:</pd>
                     <pd>
-                        <codeblock>filespace <varname>filespace1</varname>
+                        <codeblock>filespace &lt;filespace1>
 /gpfs1/m1
 /gpfs1/m2
 /gpfs1/m3

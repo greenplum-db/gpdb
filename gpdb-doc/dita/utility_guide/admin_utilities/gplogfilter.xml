@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
-<topic id="topic1"><title id="kw142714">gplogfilter</title><body><p>Searches through Greenplum Database log files for specified entries.</p><section id="section2"><title>Synopsis</title><codeblock><b>gplogfilter</b> [<varname>timestamp_options</varname>] [<varname>pattern_options</varname>] 
-     [<varname>output_options</varname>] [<varname>input_options</varname>] [<varname>input_file</varname>] 
+<topic id="topic1"><title id="kw142714">gplogfilter</title><body><p>Searches through Greenplum Database log files for specified entries.</p><section id="section2"><title>Synopsis</title><codeblock><b>gplogfilter</b> [&lt;timestamp_options>] [&lt;pattern_options>] 
+     [&lt;output_options>] [&lt;input_options>] [&lt;input_file>] 
 
 <b>gplogfilter</b> <b>--help</b> 
 

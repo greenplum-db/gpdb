@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
-<topic id="topic1"><title id="pb141029">createuser</title><body><p id="client_util_desc">Creates a new database role.</p><section id="section2"><title>Synopsis</title><codeblock id="client_util_synopsis"><b>createuser</b> [<varname>connection_option</varname> ...] [<varname>role_attribute</varname> ...] [<b>-e</b>] <varname>role_name</varname>
+<topic id="topic1"><title id="pb141029">createuser</title><body><p id="client_util_desc">Creates a new database role.</p><section id="section2"><title>Synopsis</title><codeblock id="client_util_synopsis"><b>createuser</b> [&lt;connection_option> ...] [&lt;role_attribute> ...] [<b>-e</b>] &lt;role_name>
 
 <b>createuser</b> <b>--help</b> 
 

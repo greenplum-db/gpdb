@@ -11,41 +11,41 @@
       5.x Support Life.</note>
     <section id="section2">
       <title>Synopsis</title>
-      <codeblock><b>gpcrondump</b> <b>-x</b> <varname>database_name</varname> 
-   [<b>-s</b> <varname>schema</varname> | <b>-S</b> <varname>schema</varname> | <b>-t</b> <varname>schema.table</varname> | <b>-T</b> <varname>schema.table</varname>] 
-   [<b>--table-file</b>=<varname>filename</varname> | <b>--exclude-table-file</b>=<varname>filename</varname>] 
-   [<b>--schema-file</b>=<varname>filename</varname> | <b>--exclude-schema-file</b>=<varname>filename</varname>]
+      <codeblock><b>gpcrondump</b> <b>-x</b> &lt;database_name> 
+   [<b>-s</b> &lt;schema> | <b>-S</b> &lt;schema> | <b>-t</b> &lt;schema.table> | <b>-T</b> &lt;schema.table>] 
+   [<b>--table-file</b>=&lt;filename> | <b>--exclude-table-file</b>=&lt;filename>] 
+   [<b>--schema-file</b>=&lt;filename> | <b>--exclude-schema-file</b>=&lt;filename>]
    [<b>--dump-stats</b>] 
-   [<b>-u</b> <varname>backup_directory</varname>] [<b>-R</b> <varname>post_dump_script</varname>] [<b>--incremental</b>] 
-   [<b>-K</b> <varname>timestamp</varname> [<b>--list-backup-files</b>] ]
-   [<b>--prefix</b> <varname>prefix_string</varname> [<b>--list-filter-tables</b>]
-   [<b>-c</b> [<b>--cleanup-date</b> <varname>yyyymmdd</varname> | <b>--cleanup-total</b> <varname>n</varname>] ]
+   [<b>-u</b> &lt;backup_directory>] [<b>-R</b> &lt;post_dump_script>] [<b>--incremental</b>] 
+   [<b>-K</b> &lt;timestamp> [<b>--list-backup-files</b>] ]
+   [<b>--prefix</b> &lt;prefix_string> [<b>--list-filter-tables</b>]
+   [<b>-c</b> [<b>--cleanup-date</b> &lt;yyyymmdd> | <b>--cleanup-total</b> &lt;n>] ]
    [<b>-z</b>] [<b>-r</b>] 
-   [<b>-f</b> <varname>free_space_percent</varname>] [<b>-b</b>] [<b>-h</b>] [<b>-H</b>] [<b>-j</b> | <b>-k</b>] [<b>-g</b>] [<b>-G</b>] [<b>-C</b>] 
-   [<b>-d</b> <varname>master_data_directory</varname>] [<b>-B</b> <varname>parallel_processes</varname>] [<b>-a</b>] [<b>-q</b>]
-   [<b>-y</b> <varname>reportfile</varname>] [<b>-l</b> <varname>logfile_directory</varname>]
-   [<b>--email-file</b> <varname>path_to_file</varname>] [<b>-v</b>]
-   { [<b>-E</b> <varname>encoding</varname>] [<b>--inserts</b> | <b>--column-inserts</b>] [<b>--oids</b>] 
+   [<b>-f</b> &lt;free_space_percent>] [<b>-b</b>] [<b>-h</b>] [<b>-H</b>] [<b>-j</b> | <b>-k</b>] [<b>-g</b>] [<b>-G</b>] [<b>-C</b>] 
+   [<b>-d</b> &lt;master_data_directory>] [<b>-B</b> &lt;parallel_processes>] [<b>-a</b>] [<b>-q</b>]
+   [<b>-y</b> &lt;reportfile>] [<b>-l</b> &lt;logfile_directory>]
+   [<b>--email-file</b> &lt;path_to_file>] [<b>-v</b>]
+   { [<b>-E</b> &lt;encoding>] [<b>--inserts</b> | <b>--column-inserts</b>] [<b>--oids</b>] 
      [<b>--no-owner</b> | <b>--use-set-session-authorization</b>] [<b>--no-privileges</b>] 
      [<b>--rsyncable</b>]
-     { [<b>--ddboost</b> [<b>--replicate --max-streams</b> <varname>max_IO_streams</varname>]
-     [<b>--ddboost-skip-ping</b>] [<b>--ddboost-storage-unit</b>=<varname>unit-ID</varname>]] } | 
-     { [<b>--netbackup-service-host</b> <varname>netbackup_server</varname>
-     <b>--netbackup-policy</b> <varname>netbackup_policy</varname>
-     <b>--netbackup-schedule</b> <varname>netbackup_schedule</varname> [<b>--netbackup-block-size</b> <varname>size</varname>] ]
-     [<b>--netbackup-keyword</b> <varname>keyword</varname>] ] } }
+     { [<b>--ddboost</b> [<b>--replicate --max-streams</b> &lt;max_IO_streams>]
+     [<b>--ddboost-skip-ping</b>] [<b>--ddboost-storage-unit</b>=&lt;unit-ID>]] } | 
+     { [<b>--netbackup-service-host</b> &lt;netbackup_server>
+     <b>--netbackup-policy</b> &lt;netbackup_policy>
+     <b>--netbackup-schedule</b> &lt;netbackup_schedule> [<b>--netbackup-block-size</b> &lt;size>] ]
+     [<b>--netbackup-keyword</b> &lt;keyword>] ] } }
 
-<b>gpcrondump</b> <b>--ddboost-host</b> <varname>ddboost_hostname</varname>
-   [<b>--ddboost-host</b> <varname>ddboost_hostname</varname> ... ]
-   <b>--ddboost-user</b> <varname>ddboost_user</varname> <b>--ddboost-backupdir</b> <varname>backup_directory</varname> 
+<b>gpcrondump</b> <b>--ddboost-host</b> &lt;ddboost_hostname>
+   [<b>--ddboost-host</b> &lt;ddboost_hostname> ... ]
+   <b>--ddboost-user</b> &lt;ddboost_user> <b>--ddboost-backupdir</b> &lt;backup_directory> 
    [<b>--ddboost-remote]</b> [<b>--ddboost-skip-ping</b>]
-   [<b>--ddboost-storage-unit</b>=<varname>unit-ID</varname>] 
+   [<b>--ddboost-storage-unit</b>=&lt;unit-ID>] 
 
 <b>gpcrondump</b> <b>--ddboost-show-config</b> [<b>--remote</b>]
 
 <b>gpcrondump</b> <b>--ddboost-config-remove</b>
 
-<b>gpcrondump</b> <b>-o</b> [<b>--cleanup-date</b> <varname>yyyymmdd</varname> | <b>--cleanup-total</b> <varname>n</varname>] 
+<b>gpcrondump</b> <b>-o</b> [<b>--cleanup-date</b> &lt;yyyymmdd> | <b>--cleanup-total</b> &lt;n>] 
 
 <b>gpcrondump</b> <b>-?</b> 
 
@@ -107,7 +107,7 @@
     <section>
       <title>Backup Filenames</title>
       <p>The utility creates backup files with this file name format.</p>
-      <p><codeblock><varname>prefix_</varname>gp_dump_<varname>content</varname>_<varname>dbid</varname>_<varname>timestamp</varname></codeblock>The
+      <p><codeblock>&lt;prefix_>gp_dump_&lt;content>_&lt;dbid>_&lt;timestamp></codeblock>The
           <codeph>content</codeph> and <codeph>dbid</codeph> are identifiers for the Greenplum
         Database segment instances that are assigned by Greenplum Database. For information about
         the identifiers, see the Greenplum Database system catalog table
@@ -812,9 +812,9 @@ gp_dump_20130514093000_regular_files</codeblock>
       <codeblock>
 EMAIL_DETAILS:
     -
-        DBNAME: <varname>database_name</varname>
-        FROM: <varname>from_user</varname>
-        SUBJECT: <varname>subject_text</varname>
+        DBNAME: &lt;database_name>
+        FROM: &lt;from_user>
+        SUBJECT: &lt;subject_text>
 </codeblock>
       <p>When email notification is configured for gpcrondump, the <varname>from_user</varname> and
         the <varname>subject_text</varname> are the strings that <codeph>gpcrondump</codeph> uses in

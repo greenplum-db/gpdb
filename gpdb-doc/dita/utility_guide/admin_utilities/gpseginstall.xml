@@ -8,7 +8,7 @@
         <p>Installs Greenplum Database on segment hosts.</p>
         <section id="section2">
             <title>Synopsis</title>
-            <codeblock><b>gpseginstall</b> <b>-f</b> <varname>hostfile</varname> [<b>-u</b> <varname>gpdb_admin_user</varname>] [<b>-p</b> <varname>password</varname>] 
+            <codeblock><b>gpseginstall</b> <b>-f</b> &lt;hostfile> [<b>-u</b> &lt;gpdb_admin_user>] [<b>-p</b> &lt;password>] 
              [<b>-c</b> u|p|c|s|E|e|l|v]
 
 <b>gpseginstall</b> --help</codeblock>

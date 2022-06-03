@@ -8,13 +8,13 @@
         <p>Verifies the baseline hardware performance of the specified hosts.</p>
         <section id="section2">
             <title>Synopsis</title>
-            <codeblock><b>gpcheckperf</b> <b>-d</b> <varname>test_directory</varname> [<b>-d</b> <varname>test_directory</varname> ...] 
-    {<b>-f</b> <varname>hostfile_gpcheckperf</varname> | <b>- h</b> <varname>hostname</varname> [<b>-h</b> <varname>hostname</varname> ...]} 
-    [<b>-r</b> ds] [<b>-B</b> <varname>block_size</varname>] [<b>-S</b> <varname>file_size</varname>] [<b>-D</b>] [<b>-v</b>|<b>-V</b>]
+            <codeblock><b>gpcheckperf</b> <b>-d</b> &lt;test_directory> [<b>-d</b> &lt;test_directory> ...] 
+    {<b>-f</b> &lt;hostfile_gpcheckperf> | <b>- h</b> &lt;hostname> [<b>-h</b> &lt;hostname> ...]} 
+    [<b>-r</b> ds] [<b>-B</b> &lt;block_size>] [<b>-S</b> &lt;file_size>] [<b>-D</b>] [<b>-v</b>|<b>-V</b>]
 
-<b>gpcheckperf</b> <b>-d</b> <varname>temp_directory</varname>
-    {<b>-f</b> <varname>hostfile_gpchecknet</varname> | <b>- h</b> <varname>hostname</varname> [<b>-h</b> <varname>hostname</varname> ...]} 
-    [ <b>-r</b> n|N|M [<b>--duration</b> <varname>time</varname>] [<b>--netperf</b>] ] [<b>-D</b>] [<b>-v</b> | <b>-V</b>]
+<b>gpcheckperf</b> <b>-d</b> &lt;temp_directory>
+    {<b>-f</b> &lt;hostfile_gpchecknet> | <b>- h</b> &lt;hostname> [<b>-h</b> &lt;hostname> ...]} 
+    [ <b>-r</b> n|N|M [<b>--duration</b> &lt;time>] [<b>--netperf</b>] ] [<b>-D</b>] [<b>-v</b> | <b>-V</b>]
 
 <b>gpcheckperf</b> <b>-?</b>
 
@@ -117,7 +117,7 @@
                         user name and/or SSH port number per host. The syntax of the host file is
                         one host per line as follows:</pd>
                     <pd>
-                        <codeblock>[<varname>username</varname>@]<varname>hostname</varname>[:<varname>ssh_port</varname>]</codeblock>
+                        <codeblock>[&lt;username>@]&lt;hostname>[:&lt;ssh_port>]</codeblock>
                     </pd>
                 </plentry>
                 <plentry>

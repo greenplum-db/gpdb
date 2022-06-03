@@ -7,9 +7,9 @@
         <p>Runs a load job as defined in a YAML formatted control file.</p>
         <section id="section2">
             <title>Synopsis</title>
-            <codeblock><b>gpload</b> <b>-f</b> <varname>control_file</varname> [<b>-l</b> <varname>log_file</varname>] [<b>-h</b> <varname>hostname</varname>] [<b>-p</b> <varname>port</varname>] 
-   [<b>-U</b> <varname>username</varname>] [<b>-d</b> <varname>database</varname>] [<b>-W</b>] [<b>--gpfdist_timeout</b> <varname>seconds</varname>] 
-   [<b>--no_auto_trans</b>] [<b>--max_retries</b> <varname>retry_times</varname>] [[<b>-v</b> | <b>-V</b>] [<b>-q</b>]] [<b>-D</b>]
+            <codeblock><b>gpload</b> <b>-f</b> &lt;control_file> [<b>-l</b> &lt;log_file>] [<b>-h</b> &lt;hostname>] [<b>-p</b> &lt;port>] 
+   [<b>-U</b> &lt;username>] [<b>-d</b> &lt;database>] [<b>-W</b>] [<b>--gpfdist_timeout</b> &lt;seconds>] 
+   [<b>--no_auto_trans</b>] [<b>--max_retries</b> &lt;retry_times>] [[<b>-v</b> | <b>-V</b>] [<b>-q</b>]] [<b>-D</b>]
 
 <b>gpload</b> <b>-?</b> 
 
@@ -185,57 +185,57 @@
             <p>The basic structure of a load control file is:</p>
             <codeblock>---
 <xref href="#topic1/cfversion" format="dita">VERSION</xref>: 1.0.0.1
-<xref href="#topic1/cfdatabase" format="dita">DATABASE</xref>: <varname>db_name</varname>
-<xref href="#topic1/cfuser" format="dita">USER</xref>: <varname>db_username</varname>
-<xref href="#topic1/cfhost" format="dita">HOST</xref>: <varname>master_hostname</varname>
-<xref href="#topic1/cfport" format="dita">PORT</xref>: <varname>master_port</varname>
+<xref href="#topic1/cfdatabase" format="dita">DATABASE</xref>: &lt;db_name>
+<xref href="#topic1/cfuser" format="dita">USER</xref>: &lt;db_username>
+<xref href="#topic1/cfhost" format="dita">HOST</xref>: &lt;master_hostname>
+<xref href="#topic1/cfport" format="dita">PORT</xref>: &lt;master_port>
 <xref href="#topic1/cfgpload" format="dita">GPLOAD</xref>:
    <xref href="#topic1/cfinput" format="dita">INPUT</xref>:
     - <xref href="#topic1/cfsource" format="dita">SOURCE</xref>:
          <xref href="#topic1/cfsourcelocalname" format="dita">LOCAL_HOSTNAME</xref>:
-           - <varname>hostname_or_ip</varname>
-         <xref href="#topic1/cfsourceport" format="dita">PORT</xref>: <varname>http_port</varname>
-       | <xref href="#topic1/cfversion" format="dita">PORT_RANGE</xref>: [<varname>start_port_range</varname>, <varname>end_port_range</varname>]
+           - &lt;hostname_or_ip>
+         <xref href="#topic1/cfsourceport" format="dita">PORT</xref>: &lt;http_port>
+       | <xref href="#topic1/cfversion" format="dita">PORT_RANGE</xref>: [&lt;start_port_range>, &lt;end_port_range>]
          <xref href="#topic1/cfsourcefile" format="dita">FILE</xref>: 
-           - <varname>/path/to/input_file</varname>
+           - &lt;/path/to/input_file>
          <xref href="#topic1/cfsourcessl" format="dita">SSL</xref>: true | false
-         <xref href="#topic1/cfsourcecertificatespath" format="dita">CERTIFICATES_PATH</xref>: <varname>/path/to/certificates</varname>
+         <xref href="#topic1/cfsourcecertificatespath" format="dita">CERTIFICATES_PATH</xref>: &lt;/path/to/certificates>
     - <xref href="#topic1/fqdn" format="dita">FULLY_QUALIFIED_DOMAIN_NAME</xref>: true | false
     - <xref href="#topic1/cfcolumns" format="dita">COLUMNS</xref>:
-           - <varname>field_name</varname>: <varname>data_type</varname>
-    - <xref href="#topic1/cftransform" format="dita">TRANSFORM</xref>: '<varname>transformation</varname>'
-    - <xref href="#topic1/cftransformconfig" format="dita">TRANSFORM_CONFIG</xref>: '<varname>configuration-file-path</varname>' 
-    - <xref href="#topic1/cfmaxlinelength" format="dita">MAX_LINE_LENGTH</xref>: <varname>integer</varname> 
+           - &lt;field_name>: &lt;data_type>
+    - <xref href="#topic1/cftransform" format="dita">TRANSFORM</xref>: '&lt;transformation>'
+    - <xref href="#topic1/cftransformconfig" format="dita">TRANSFORM_CONFIG</xref>: '&lt;configuration-file-path>' 
+    - <xref href="#topic1/cfmaxlinelength" format="dita">MAX_LINE_LENGTH</xref>: &lt;integer> 
     - <xref href="#topic1/cfformat" format="dita">FORMAT</xref>: text | csv
-    - <xref href="#topic1/cfdelimiter" format="dita">DELIMITER</xref>: '<varname>delimiter_character</varname>'
-    - <xref href="#topic1/cfescape" format="dita">ESCAPE</xref>: '<varname>escape_character</varname>' | 'OFF'
-    - <xref href="#topic1/cfnullas" format="dita">NULL_AS</xref>: '<varname>null_string</varname>'
+    - <xref href="#topic1/cfdelimiter" format="dita">DELIMITER</xref>: '&lt;delimiter_character>'
+    - <xref href="#topic1/cfescape" format="dita">ESCAPE</xref>: '&lt;escape_character>' | 'OFF'
+    - <xref href="#topic1/cfnullas" format="dita">NULL_AS</xref>: '&lt;null_string>'
     - <xref href="#topic1/cfforcenotnull" format="dita">FORCE_NOT_NULL</xref>: true | false
-    - <xref href="#topic1/cfquote" format="dita">QUOTE</xref>: '<varname>csv_quote_character</varname>'
+    - <xref href="#topic1/cfquote" format="dita">QUOTE</xref>: '&lt;csv_quote_character>'
     - <xref href="#topic1/cfheader" format="dita">HEADER</xref>: true | false
-    - <xref href="#topic1/cfencoding" format="dita">ENCODING</xref>: <varname>database_encoding</varname>
-    - <xref href="#topic1/cferrorlimit" format="dita">ERROR_LIMIT</xref>: <varname>integer</varname>
+    - <xref href="#topic1/cfencoding" format="dita">ENCODING</xref>: &lt;database_encoding>
+    - <xref href="#topic1/cferrorlimit" format="dita">ERROR_LIMIT</xref>: &lt;integer>
     - <xref href="#topic1/cferrorlog" format="dita">LOG_ERRORS</xref>: true | false
    <xref href="#topic1/cfexternal" format="dita">EXTERNAL</xref>:
-      - <xref href="#topic1/cfschema" format="dita">SCHEMA</xref>: <varname>schema</varname> | '%'
+      - <xref href="#topic1/cfschema" format="dita">SCHEMA</xref>: &lt;schema> | '%'
    <xref href="#topic1/cfoutput" format="dita">OUTPUT</xref>:
-    - <xref href="#topic1/cftable" format="dita">TABLE</xref>: <varname>schema.table_name</varname>
+    - <xref href="#topic1/cftable" format="dita">TABLE</xref>: &lt;schema.table_name>
     - <xref href="#topic1/cfmode" format="dita">MODE</xref>: insert | update | merge
     - <xref href="#topic1/cfmatchcolumns" format="dita">MATCH_COLUMNS</xref>:
-           - <varname>target_column_name</varname>
+           - &lt;target_column_name>
     - <xref href="#topic1/cfupdatecolumns" format="dita">UPDATE_COLUMNS</xref>:
-           - <varname>target_column_name</varname>
-    - <xref href="#topic1/cfupdatecondition" format="dita">UPDATE_CONDITION</xref>: '<varname>boolean_condition</varname>'
+           - &lt;target_column_name>
+    - <xref href="#topic1/cfupdatecondition" format="dita">UPDATE_CONDITION</xref>: '&lt;boolean_condition>'
     - <xref href="#topic1/cfmapping" format="dita">MAPPING</xref>:
-              <varname>target_column_name</varname>: <varname>source_column_name</varname> | '<varname>expression</varname>'
+              &lt;target_column_name>: &lt;source_column_name> | '&lt;expression>'
    <xref href="#topic1/cfpreload" format="dita">PRELOAD</xref>:
     - <xref href="#topic1/cftruncate" format="dita">TRUNCATE</xref>: true | false
     - <xref href="#topic1/cfreusetables" format="dita">REUSE_TABLES</xref>: true | false
-    - <xref href="#topic1/cfstagetbl" format="dita">STAGING_TABLE</xref>: <varname>external_table_name</varname>
+    - <xref href="#topic1/cfstagetbl" format="dita">STAGING_TABLE</xref>: &lt;external_table_name>
     - <xref href="#topic1/cffastmatch" format="dita">FAST_MATCH</xref>: true | false
    <xref href="#topic1/cfsql" format="dita">SQL</xref>:
-    - <xref href="#topic1/cfbefore" format="dita">BEFORE</xref>: "<varname>sql_command</varname>"
-    - <xref href="#topic1/cfafter" format="dita">AFTER</xref>: "<varname>sql_command</varname>"</codeblock>
+    - <xref href="#topic1/cfbefore" format="dita">BEFORE</xref>: "&lt;sql_command>"
+    - <xref href="#topic1/cfafter" format="dita">AFTER</xref>: "&lt;sql_command>"</codeblock>
             <parml>
                 <plentry>
                     <pt id="cfversion">VERSION</pt>
@@ -609,7 +609,7 @@
                                                   <codeph>gpload</codeph> generates a warning
                                                 message with the name of the table that contains the
                                                 error information similar to this message.
-                                                <codeblock><varname>timestamp</varname>|WARN|1 bad row, please use GPDB built-in function gp_read_error_log('<parmname>table-name</parmname>') 
+                                                <codeblock>&lt;timestamp>|WARN|1 bad row, please use GPDB built-in function gp_read_error_log('<parmname>table-name</parmname>') 
    to access the detailed error row</codeblock></pd>
                                             <pd>If <codeph>LOG_ERRORS: true</codeph> is specified,
                                                   <codeph>REUSE_TABLES: true</codeph> must be
@@ -681,7 +681,7 @@
                                                 modes:</pd>
                                             <pd><option>INSERT</option> - Loads data into the target
                                                 table using the following method:
-                                                <codeblock>INSERT INTO <varname>target_table</varname> SELECT * FROM <varname>input_data</varname>;</codeblock></pd>
+                                                <codeblock>INSERT INTO &lt;target_table> SELECT * FROM &lt;input_data>;</codeblock></pd>
                                             <pd><option>UPDATE</option> - Updates the
                                                   <codeph>UPDATE_COLUMNS</codeph> of the target
                                                 table where the rows have
@@ -870,7 +870,7 @@
         <section id="section9">
             <title id="ke146419">Log File Format</title>
             <p>Log files output by <codeph>gpload</codeph> have the following format:</p>
-            <codeblock><varname>timestamp</varname>|<varname>level</varname>|<varname>message</varname></codeblock>
+            <codeblock>&lt;timestamp>|&lt;level>|&lt;message></codeblock>
             <p>Where <varname>timestamp</varname> takes the form: <codeph>YYYY-MM-DD
                     HH:MM:SS</codeph>, <varname>level</varname> is one of <codeph>DEBUG</codeph>,
                     <codeph>LOG</codeph>, <codeph>INFO</codeph>, <codeph>ERROR</codeph>, and
@@ -878,13 +878,13 @@
             <p>Some <codeph>INFO</codeph> messages that may be of interest in the log files are
                 (where <varname>#</varname> corresponds to the actual number of seconds, units of
                 data, or failed rows):</p>
-            <codeblock>INFO|running time: <varname>#.##</varname> seconds
-INFO|transferred <varname>#.#</varname> kB of <varname>#.#</varname> kB.
+            <codeblock>INFO|running time: &lt;#.##> seconds
+INFO|transferred &lt;#.#> kB of &lt;#.#> kB.
 INFO|gpload succeeded
 INFO|gpload succeeded with warnings
 INFO|gpload failed
 INFO|1 bad row
-INFO|<varname>#</varname> bad rows</codeblock>
+INFO|&lt;#> bad rows</codeblock>
         </section>
         <section id="section8">
             <title>Notes</title>

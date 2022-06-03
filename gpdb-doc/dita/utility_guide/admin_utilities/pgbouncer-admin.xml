@@ -6,7 +6,7 @@
     <p>PgBouncer Administration Console.</p>
     <section>
       <title>Synopsis</title>
-      <codeblock>psql -p <varname>port</varname> pgbouncer</codeblock>
+      <codeblock>psql -p &lt;port> pgbouncer</codeblock>
     </section>
     <section>
       <title>Description</title>

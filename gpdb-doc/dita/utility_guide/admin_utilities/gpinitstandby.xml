@@ -9,9 +9,9 @@
             system.</p>
         <section id="section2">
             <title>Synopsis</title>
-            <codeblock><b>gpinitstandby</b> { <b>-s</b> <varname>standby_hostname</varname> [<b>-P</b> port] 
-      [<b>-F</b> <varname>list_of_filespaces</varname>] | <b>-r</b> | <b>-n</b> } 
-      [<b>-a</b>] [<b>-q</b>] [<b>-D</b>] [<b>-l</b> <varname>logfile_directory</varname>]
+            <codeblock><b>gpinitstandby</b> { <b>-s</b> &lt;standby_hostname> [<b>-P</b> port] 
+      [<b>-F</b> &lt;list_of_filespaces>] | <b>-r</b> | <b>-n</b> } 
+      [<b>-a</b>] [<b>-q</b>] [<b>-D</b>] [<b>-l</b> &lt;logfile_directory>]
 
 <b>gpinitstandby</b> <b>-v</b> 
 

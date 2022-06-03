@@ -8,9 +8,9 @@
         <p>Exchanges SSH public keys between hosts.</p>
         <section id="section2">
             <title>Synopsis</title>
-            <codeblock><b>gpssh-exkeys</b> <b>-f</b> <varname>hostfile_exkeys</varname> | <b>- h</b> <varname>hostname</varname> [<b>-h</b> <varname>hostname</varname> ...]
+            <codeblock><b>gpssh-exkeys</b> <b>-f</b> &lt;hostfile_exkeys> | <b>- h</b> &lt;hostname> [<b>-h</b> &lt;hostname> ...]
 
-<b>gpssh-exkeys</b> <b>-e</b> <varname>hostfile_exkeys</varname> <b>-x</b> <varname>hostfile_gpexpand</varname>
+<b>gpssh-exkeys</b> <b>-e</b> &lt;hostfile_exkeys> <b>-x</b> &lt;hostfile_gpexpand>
 
 <b>gpssh-exkeys</b> <b>-?</b> 
 

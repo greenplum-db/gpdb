@@ -39,7 +39,7 @@
           <codeph class="+ topic/ph pr-d/codeph ">oracompat</codeph> schema. To access them, prefix
         the schema name (<codeph class="+ topic/ph pr-d/codeph ">oracompat</codeph>) or alter the
         database search path to include the schema name. For
-          example:<codeblock>ALTER DATABASE <varname>db_name</varname> SET <varname>search_path</varname> = $<varname>user</varname>, public, oracompat; </codeblock><p>If
+          example:<codeblock>ALTER DATABASE &lt;db_name> SET &lt;search_path> = $&lt;user>, public, oracompat; </codeblock><p>If
           you alter the database search path, you must restart the database.</p></note>
     </body>
   </topic>
@@ -60,7 +60,7 @@
         <li id="me144139" class="- topic/li ">The provided Oracle Compatibility functions handle
           implicit type conversions differently. For example, using the <codeph
             class="+ topic/ph pr-d/codeph ">decode</codeph>
-            function:<codeblock>decode(<varname>expression</varname>, <varname>value</varname>, <varname>return</varname> [,<varname>value</varname>, <varname>return</varname>]...
+            function:<codeblock>decode(&lt;expression>, &lt;value>, &lt;return> [,&lt;value>, &lt;return>]...
             [, default])</codeblock><p>Oracle
             automatically converts <varname>expression</varname> and each <varname>value</varname>
             to the datatype of the first <varname>value</varname> before comparing. Oracle
@@ -149,7 +149,7 @@ SELECT DECODE(date1, '2001-11-11', '2001-01-01') FROM TEST;</codeblock><p>Greenp
       <p>Oracle-compliant function to add a given number of months to a given date.</p>
       <section id="me146666" class="- topic/section ">
         <title class="- topic/title ">Synopsis</title>
-        <codeblock xml:space="preserve" class="+ topic/pre pr-d/codeblock ">add_months(<varname>date_expression</varname>, <varname>months_to_add</varname>)</codeblock>
+        <codeblock xml:space="preserve" class="+ topic/pre pr-d/codeblock ">add_months(&lt;date_expression>, &lt;months_to_add>)</codeblock>
         <title class="- topic/title ">Description</title>
         <p>This Oracle-compatible function adds <varname>months_to_add</varname> to a
             <varname>date_expression</varname> and returns a <codeph class="+ topic/ph pr-d/codeph "
@@ -195,7 +195,7 @@ WHERE nextcalldate &gt;= add_months(CURRENT_DATE,6);</codeblock>
           >AND</codeph> operation on the bits of two non-negative values.</p>
       <section id="me146711" class="- topic/section ">
         <title class="- topic/title ">Synopsis</title>
-        <codeblock xml:space="preserve" class="+ topic/pre pr-d/codeblock ">bitand(<varname>expr1</varname>, <varname>expr2</varname>)</codeblock>
+        <codeblock xml:space="preserve" class="+ topic/pre pr-d/codeblock ">bitand(&lt;expr1>, &lt;expr2>)</codeblock>
         <title class="- topic/title ">Description</title>
         <p>This Oracle-compatible function returns an integer representing an <codeph>AND</codeph>
           operation on the bits of two non-negative values (<varname>expr1</varname> and
@@ -232,7 +232,7 @@ WHERE nextcalldate &gt;= add_months(CURRENT_DATE,6);</codeblock>
           </plentry>
         </parml>
         <title class="- topic/title ">Example</title>
-        <codeblock>SELECT bitand(<varname>expr1</varname>, <varname>expr2</varname>)
+        <codeblock>SELECT bitand(&lt;expr1>, &lt;expr2>)
 FROM ClientDB;</codeblock>
         <title class="- topic/title ">Compatibility</title>
         <p>This command is compatible with Oracle syntax and is provided for convenience. </p>
@@ -248,7 +248,7 @@ FROM ClientDB;</codeblock>
       <p>Oracle-compliant function to concatenate two strings together.</p>
       <section id="me146874" class="- topic/section ">
         <title class="- topic/title ">Synopsis</title>
-        <codeblock xml:space="preserve" class="+ topic/pre pr-d/codeblock ">concat (<varname>string1</varname>, <varname>string2</varname>)</codeblock>
+        <codeblock xml:space="preserve" class="+ topic/pre pr-d/codeblock ">concat (&lt;string1>, &lt;string2>)</codeblock>
         <title class="- topic/title ">Description</title>
         <p>This Oracle-compatible function concatenates two strings (<varname>string1</varname> and
             <varname>string2</varname>) together.</p>
@@ -298,7 +298,7 @@ FROM employees </codeblock>
       <p>Oracle-compliant function to return the hyperbolic cosine of a given number.</p>
       <section id="me146951" class="- topic/section ">
         <title class="- topic/title ">Synopsis</title>
-        <codeblock xml:space="preserve" class="+ topic/pre pr-d/codeblock ">cosh(<varname>float8</varname>)</codeblock>
+        <codeblock xml:space="preserve" class="+ topic/pre pr-d/codeblock ">cosh(&lt;float8>)</codeblock>
         <title class="- topic/title ">Description</title>
         <p>This Oracle-compatible function returns the hyperbolic cosine of the floating 8 input
           number (<varname>float8</varname>).</p>
@@ -357,7 +357,7 @@ decodetest;
         function instead of <codeph class="+ topic/ph pr-d/codeph ">decode</codeph>.</p>
       <section id="me154380" class="- topic/section ">
         <title class="- topic/title ">Synopsis</title>
-        <codeblock xml:space="preserve" class="+ topic/pre pr-d/codeblock ">decode(<varname>expression</varname>, <varname>value</varname>, <varname>return</varname> [,<varname>value</varname>, <varname>return</varname>]...
+        <codeblock xml:space="preserve" class="+ topic/pre pr-d/codeblock ">decode(&lt;expression>, &lt;value>, &lt;return> [,&lt;value>, &lt;return>]...
        [, default])</codeblock>
         <title class="- topic/title ">Description</title>
         <p>The Oracle-compatible function decode searches for a value in an expression. If the value
@@ -506,7 +506,7 @@ FROM suppliers;</codeblock></li>
         length in bytes, and the internal representation of the expression.</p>
       <section id="me152601" class="- topic/section ">
         <title class="- topic/title ">Synopsis</title>
-        <codeblock xml:space="preserve" class="+ topic/pre pr-d/codeblock ">dump(<varname>expression</varname> [,<varname>integer</varname>]) </codeblock>
+        <codeblock xml:space="preserve" class="+ topic/pre pr-d/codeblock ">dump(&lt;expression> [,&lt;integer>]) </codeblock>
         <title class="- topic/title ">Description</title>
         <p>This Oracle-compatible function returns a text value that includes the datatype code, the
           length in bytes, and the internal representation of the expression.</p>
@@ -547,7 +547,7 @@ dump('Tech', 1017) returns 'Typ=96 Len=4 CharacterSet=US7ASCII:     T,e,c,h'
       <p>Oracle-compliant function to return the location of a substring in a string.</p>
       <section id="me149267" class="- topic/section ">
         <title class="- topic/title ">Synopsis</title>
-        <codeblock xml:space="preserve" class="+ topic/pre pr-d/codeblock ">instr(<varname>string</varname>, <varname>substring</varname>, [<varname>position</varname>[,<varname>occurrence</varname>]])</codeblock>
+        <codeblock xml:space="preserve" class="+ topic/pre pr-d/codeblock ">instr(&lt;string>, &lt;substring>, [&lt;position>[,&lt;occurrence>]])</codeblock>
         <title class="- topic/title ">Description </title>
         <p>This Oracle-compatible function searches for a <varname>substring</varname> in a
             <varname>string</varname>. If found, it returns an integer indicating the position of
@@ -621,7 +621,7 @@ FROM ClientDB;</codeblock>
       <p>Oracle-compliant function to return the last day in a given month.</p>
       <section id="me147037" class="- topic/section ">
         <title class="- topic/title ">Synopsis</title>
-        <codeblock xml:space="preserve" class="+ topic/pre pr-d/codeblock ">last_day(<varname>date_expression</varname>) </codeblock>
+        <codeblock xml:space="preserve" class="+ topic/pre pr-d/codeblock ">last_day(&lt;date_expression>) </codeblock>
         <title class="- topic/title ">Description</title>
         <p>This Oracle-compatible function returns the last day of the month specified by a
             <varname>date_expression</varname>.</p>
@@ -662,7 +662,7 @@ FROM employees;</codeblock>
         arguments, the text to be aggregated and a delimiter (see next page).</note>
       <section id="me150811" class="- topic/section ">
         <title class="- topic/title ">Synopsis</title>
-        <codeblock xml:space="preserve" class="+ topic/pre pr-d/codeblock ">listagg(<varname>text</varname>) </codeblock>
+        <codeblock xml:space="preserve" class="+ topic/pre pr-d/codeblock ">listagg(&lt;text>) </codeblock>
         <title class="- topic/title ">Description</title>
         <p>This Oracle-compatible function aggregates text values into a string.</p>
         <title class="- topic/title ">Parameters</title>
@@ -694,7 +694,7 @@ FROM employees;</codeblock>
         two arguments, the text to be aggregated and a delimiter (see below).</note>
       <section id="me151350" class="- topic/section ">
         <title class="- topic/title ">Synopsis</title>
-        <codeblock xml:space="preserve" class="+ topic/pre pr-d/codeblock ">listagg(<varname>text</varname>, <varname>separator</varname>) </codeblock>
+        <codeblock xml:space="preserve" class="+ topic/pre pr-d/codeblock ">listagg(&lt;text>, &lt;separator>) </codeblock>
         <title class="- topic/title ">Description</title>
         <p>This Oracle-compatible function aggregates text values into a string, separating each by
           the separator specified in a second argument (<varname>separator</varname>).</p>
@@ -729,7 +729,7 @@ FROM employees;</codeblock>
           class="+ topic/ph pr-d/codeph ">false</codeph>.</p>
       <section id="me151066" class="- topic/section ">
         <title class="- topic/title ">Synopsis</title>
-        <codeblock xml:space="preserve" class="+ topic/pre pr-d/codeblock ">lnnvl(<varname>condition</varname>) </codeblock>
+        <codeblock xml:space="preserve" class="+ topic/pre pr-d/codeblock ">lnnvl(&lt;condition>) </codeblock>
         <title class="- topic/title ">Description</title>
         <p>This Oracle-compatible function takes as an argument a condition and returns <codeph
             class="+ topic/ph pr-d/codeph ">true</codeph> if the condition is false or NULL and
@@ -766,7 +766,7 @@ FROM employees;</codeblock>
       <p>Oracle-compliant function to evaluate the number of months between two given dates.</p>
       <section id="me147112" class="- topic/section ">
         <title class="- topic/title ">Synopsis</title>
-        <codeblock xml:space="preserve" class="+ topic/pre pr-d/codeblock ">months_between(<varname>date_expression1</varname>, <varname>date_expression2</varname>)</codeblock>
+        <codeblock xml:space="preserve" class="+ topic/pre pr-d/codeblock ">months_between(&lt;date_expression1>, &lt;date_expression2>)</codeblock>
         <title class="- topic/title ">Description</title>
         <p>This Oracle-compatible function returns the number of months between
             <varname>date_expression1</varname> and <varname>date_expression2</varname>. </p>
@@ -811,7 +811,7 @@ FROM employees;</codeblock>
         non-number value is encountered. </p>
       <section id="me147257" class="- topic/section ">
         <title class="- topic/title ">Synopsis</title>
-        <codeblock xml:space="preserve" class="+ topic/pre pr-d/codeblock ">nanvl(<varname>float1</varname>, <varname>float2</varname>)</codeblock>
+        <codeblock xml:space="preserve" class="+ topic/pre pr-d/codeblock ">nanvl(&lt;float1>, &lt;float2>)</codeblock>
         <title class="- topic/title ">Description</title>
         <p>This Oracle-compatible function evaluates a floating point number
             (<varname>float1</varname>) such as <codeph class="+ topic/ph pr-d/codeph "
@@ -862,7 +862,7 @@ FROM MyDB;</codeblock>
         date and an integer as its arguments (see next page).</note>
       <section id="me147322" class="- topic/section ">
         <title class="- topic/title ">Synopsis</title>
-        <codeblock xml:space="preserve" class="+ topic/pre pr-d/codeblock ">next_day(<varname>date_expression</varname>, <codeph class="+ topic/ph pr-d/codeph ">day_of_the_week</codeph>)</codeblock>
+        <codeblock xml:space="preserve" class="+ topic/pre pr-d/codeblock ">next_day(&lt;date_expression>, <codeph class="+ topic/ph pr-d/codeph ">day_of_the_week</codeph>)</codeblock>
         <title class="- topic/title ">Description</title>
         <p>This Oracle-compatible function returns the first <codeph class="+ topic/ph pr-d/codeph "
             >day_of_the_week</codeph> (Tuesday, Wednesday, etc.) to occur after a
@@ -910,7 +910,7 @@ FROM employees;</codeblock>
         and an integer as its arguments (see below).</note>
       <section id="me147388" class="- topic/section ">
         <title class="- topic/title ">Synopsis</title>
-        <codeblock xml:space="preserve" class="+ topic/pre pr-d/codeblock ">next_day(<varname>date_expression</varname>, <varname>days_to_add</varname>) </codeblock>
+        <codeblock xml:space="preserve" class="+ topic/pre pr-d/codeblock ">next_day(&lt;date_expression>, &lt;days_to_add>) </codeblock>
         <title class="- topic/title ">Description</title>
         <p>This Oracle-compatible function adds the number of <varname>days_to_add</varname> to a
             <varname>date_expression</varname> and returns the date of the day after the result.</p>
@@ -952,7 +952,7 @@ FROM EMPLOYEES;</codeblock>
       <p>Oracle-compliant function that sorts data according to a specific collation.</p>
       <section id="me152445" class="- topic/section ">
         <title class="- topic/title ">Synopsis</title>
-        <codeblock xml:space="preserve" class="+ topic/pre pr-d/codeblock ">nlssort (<varname>variable</varname>, <varname>collation</varname>)</codeblock>
+        <codeblock xml:space="preserve" class="+ topic/pre pr-d/codeblock ">nlssort (&lt;variable>, &lt;collation>)</codeblock>
         <title class="- topic/title ">Description</title>
         <p>This Oracle-compatible function sorts data according to a specific collation.</p>
         <title class="- topic/title ">Parameters</title>
@@ -1001,7 +1001,7 @@ SELECT * FROM test ORDER BY nlssort(name, 'C');
           class="+ topic/ph pr-d/codeph ">coalesce</codeph> function.</note>
       <section id="me144331" class="- topic/section ">
         <title class="- topic/title ">Synopsis</title>
-        <codeblock xml:space="preserve" class="+ topic/pre pr-d/codeblock ">nvl(<varname>expression_to_evaluate</varname>, <varname>null_replacement_value</varname>)</codeblock>
+        <codeblock xml:space="preserve" class="+ topic/pre pr-d/codeblock ">nvl(&lt;expression_to_evaluate>, &lt;null_replacement_value>)</codeblock>
         <title class="- topic/title ">Description</title>
         <p>This Oracle-compatible function evaluates <varname>expression_to_evaluate</varname>. If
           it is <codeph class="+ topic/ph pr-d/codeph ">null</codeph>, the function returns
@@ -1043,8 +1043,8 @@ FROM contacts;</codeblock>
         values.</p>
       <section id="me149341" class="- topic/section ">
         <title class="- topic/title ">Synopsis</title>
-        <codeblock xml:space="preserve" class="+ topic/pre pr-d/codeblock ">nvl2(<varname>expression_to_evaluate</varname>, <varname>non_null_replacement_value</varname>,
-     <varname>null_replacement_value</varname>)</codeblock>
+        <codeblock xml:space="preserve" class="+ topic/pre pr-d/codeblock ">nvl2(&lt;expression_to_evaluate>, &lt;non_null_replacement_value>,
+     &lt;null_replacement_value>)</codeblock>
         <title class="- topic/title ">Description</title>
         <p>This Oracle-compatible function evaluates <varname>expression_to_evaluate</varname>. If
           it is not <codeph class="+ topic/ph pr-d/codeph ">null</codeph>, the function returns
@@ -1087,7 +1087,7 @@ from clients;</codeblock>
       <p>This Oracle-compliant function extracts a portion of a string.</p>
       <section id="me147448" class="- topic/section ">
         <title class="- topic/title ">Synopsis</title>
-        <codeblock xml:space="preserve" class="+ topic/pre pr-d/codeblock ">oracle.substr(<varname>string</varname>, [<varname>start</varname> [,<varname>char_count</varname>]])</codeblock>
+        <codeblock xml:space="preserve" class="+ topic/pre pr-d/codeblock ">oracle.substr(&lt;string>, [&lt;start> [,&lt;char_count>]])</codeblock>
         <title class="- topic/title ">Description</title>
         <p>This Oracle-compatible function extract a portion of a string.</p>
         <p>If <varname>start</varname> is 0, it is evaluated as 1.</p>
@@ -1140,7 +1140,7 @@ from clients;</codeblock>
       <p>Oracle-compliant function to return the input string in reverse order.</p>
       <section id="me147533" class="- topic/section ">
         <title class="- topic/title ">Synopsis</title>
-        <codeblock xml:space="preserve" class="+ topic/pre pr-d/codeblock ">reverse (<varname>string</varname>)</codeblock>
+        <codeblock xml:space="preserve" class="+ topic/pre pr-d/codeblock ">reverse (&lt;string>)</codeblock>
         <title class="- topic/title ">Description</title>
         <p>This Oracle-compatible function returns the input string (<varname>string</varname>) in
           reverse order.</p>
@@ -1174,7 +1174,7 @@ FROM ClientDB;</codeblock>
         nearest x number of decimal places.</note>
       <section id="me147575" class="- topic/section ">
         <title class="- topic/title ">Synopsis</title>
-        <codeblock xml:space="preserve" class="+ topic/pre pr-d/codeblock ">round (<varname>date_time_expression</varname>, [<varname>unit_of_measure</varname>]) </codeblock>
+        <codeblock xml:space="preserve" class="+ topic/pre pr-d/codeblock ">round (&lt;date_time_expression>, [&lt;unit_of_measure>]) </codeblock>
         <title class="- topic/title ">Description</title>
         <p>This Oracle-compatible function rounds a <varname>date_time_expression</varname> to the
           nearest <varname>unit_of_measure</varname> (day, week, etc.). If a
@@ -1310,7 +1310,7 @@ FROM ClientDB;</codeblock>
       <p>Oracle-compliant function to return the hyperbolic sine of a given number.</p>
       <section id="me147492" class="- topic/section ">
         <title class="- topic/title ">Synopsis</title>
-        <codeblock xml:space="preserve" class="+ topic/pre pr-d/codeblock ">sinh(<varname>float8</varname>)</codeblock>
+        <codeblock xml:space="preserve" class="+ topic/pre pr-d/codeblock ">sinh(&lt;float8>)</codeblock>
         <title class="- topic/title ">Description</title>
         <p>This Oracle-compatible function returns the hyperbolic sine of the floating 8 input
           number (<varname>float8</varname>).</p>
@@ -1342,7 +1342,7 @@ FROM ClientDB;</codeblock>
       <p>Oracle-compliant function to return the hyperbolic tangent of a given number.</p>
       <section id="me147700" class="- topic/section ">
         <title class="- topic/title ">Synopsis</title>
-        <codeblock xml:space="preserve" class="+ topic/pre pr-d/codeblock ">tanh(<varname>float8</varname>)</codeblock>
+        <codeblock xml:space="preserve" class="+ topic/pre pr-d/codeblock ">tanh(&lt;float8>)</codeblock>
         <title class="- topic/title ">Description</title>
         <p>This Oracle-compatible function returns the hyperbolic tangent of the floating 8 input
           number (<varname>float8</varname>).</p>
@@ -1384,7 +1384,7 @@ FROM ClientDB;</codeblock>
       </note>
       <section id="me144477" class="- topic/section ">
         <title class="- topic/title ">Synopsis</title>
-        <codeblock xml:space="preserve" class="+ topic/pre pr-d/codeblock ">trunc(<varname>date_time_expression</varname>, [<varname>unit_of_measure</varname>]) </codeblock>
+        <codeblock xml:space="preserve" class="+ topic/pre pr-d/codeblock ">trunc(&lt;date_time_expression>, [&lt;unit_of_measure>]) </codeblock>
         <title class="- topic/title ">Description</title>
         <p>This Oracle-compatible function truncates a <varname>date_time_expression</varname> to
           the nearest <varname>unit_of_measure</varname> (day, week, etc.). If a

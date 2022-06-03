@@ -7,9 +7,9 @@
     <p>Shows the status of a running Greenplum Database system.</p>
     <section id="section2">
       <title>Synopsis</title>
-      <codeblock><b>gpstate</b> [<b>-d</b> <varname>master_data_directory</varname>] [<b>-B</b> <varname>parallel_processes</varname>] 
+      <codeblock><b>gpstate</b> [<b>-d</b> &lt;master_data_directory>] [<b>-B</b> &lt;parallel_processes>] 
           [<b>-s</b> | <b>-b</b> | <b>-Q</b><ph> | <b>-e</b>] [<b>-m</b> | <b>-c</b></ph>] [<b>-p</b>] [<b>-i</b>] [<b>-f</b>] [<b>-v</b> | <b>-q</b>] 
-          [<b>-l</b> <varname>log_directory</varname>]
+          [<b>-l</b> &lt;log_directory>]
 
 <b>gpstate</b> <b>-?</b> | <b>-h</b> | <b>--help</b></codeblock>
     </section>

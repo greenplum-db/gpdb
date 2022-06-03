@@ -8,8 +8,8 @@
         <p>Starts a Greenplum Database system.</p>
         <section id="section2">
             <title>Synopsis</title>
-            <codeblock><b>gpstart</b> [<b>-d</b> <varname>master_data_directory</varname>] [<b>-B</b> <varname>parallel_processes</varname>] [<b>-R</b>]
-        [<b>-m</b>] [<b>-y</b>] [<b>-a</b>] [<b>-t</b> <varname>timeout_seconds</varname>] [<b>-l</b> <varname>logfile_directory</varname>] 
+            <codeblock><b>gpstart</b> [<b>-d</b> &lt;master_data_directory>] [<b>-B</b> &lt;parallel_processes>] [<b>-R</b>]
+        [<b>-m</b>] [<b>-y</b>] [<b>-a</b>] [<b>-t</b> &lt;timeout_seconds>] [<b>-l</b> &lt;logfile_directory>] 
         [<b>--skip-heap-checksum-validation</b>]
         [<b>-v</b> | <b>-q</b>]
 

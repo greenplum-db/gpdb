@@ -7,15 +7,15 @@
     <p>Expands an existing Greenplum Database across new hosts in the array.</p>
     <section id="section2">
       <title>Synopsis</title>
-      <codeblock><b>gpexpand</b> [{<b>-f</b>|<b>--hosts-file</b>} <varname>hosts_file</varname>]
-        | {<b>-i</b>|<b>--input</b>} <varname>input_file</varname> [<b>-B</b> <varname>batch_size</varname>] [<b>-V</b>|<b>--novacuum</b>] 
-        | [{<b>-d</b> | <b>--duration</b>} <varname>hh:mm:ss</varname> | {<b>-e</b>|<b>--end</b>} '<varname>YYYY-MM-DD hh:mm:ss</varname>'] 
+      <codeblock><b>gpexpand</b> [{<b>-f</b>|<b>--hosts-file</b>} &lt;hosts_file>]
+        | {<b>-i</b>|<b>--input</b>} &lt;input_file> [<b>-B</b> &lt;batch_size>] [<b>-V</b>|<b>--novacuum</b>] 
+        | [{<b>-d</b> | <b>--duration</b>} &lt;hh:mm:ss> | {<b>-e</b>|<b>--end</b>} '&lt;YYYY-MM-DD hh:mm:ss>'] 
           [<b>-a</b>|<b>-analyze</b>] 
-          [<b>-n </b> <varname>parallel_processes</varname>]
+          [<b>-n </b> &lt;parallel_processes>]
         | {<b>-r</b>|<b>--rollback</b>}
         | {<b>-c</b>|<b>--clean</b>}
-        [<b>-D</b> <varname>database_name</varname>] [<b>-v</b>|<b>--verbose</b>] [<b>-s</b>|<b>--silent</b>]
-        [{<b>-t</b>|<b>--tardir</b>} <varname>directory </varname>]
+        [<b>-D</b> &lt;database_name>] [<b>-v</b>|<b>--verbose</b>] [<b>-s</b>|<b>--silent</b>]
+        [{<b>-t</b>|<b>--tardir</b>} &lt;directory >]
         [<b>-S</b>|<b>--simple-progress </b>]
 
 <b>gpexpand -?</b> | <b>-h</b> | <b>--help</b> 
@@ -150,9 +150,9 @@
             the same directory as your expansion configuration file. The filespace configuration
             file is in the format of:</pd>
           <pd>
-            <codeblock>filespaceOrder=<varname>filespace1_name</varname>:<varname>filespace2_name</varname>: ...
-dbid:<varname>/path/for/filespace1</varname>:<varname>/path/for/filespace2</varname>: ...
-dbid:<varname>/path/for/filespace1</varname>:<varname>/path/for/filespace2</varname>: ...
+            <codeblock>filespaceOrder=&lt;filespace1_name>:&lt;filespace2_name>: ...
+dbid:&lt;/path/for/filespace1>:&lt;/path/for/filespace2>: ...
+dbid:&lt;/path/for/filespace1>:&lt;/path/for/filespace2>: ...
 ...</codeblock>
           </pd>
         </plentry>

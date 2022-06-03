@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
-<topic id="topic1"><title id="ot133181">gpmovemirrors</title><body><p>Moves mirror segment instances to new locations.</p><section id="section2"><title>Synopsis</title><codeblock><b>gpmovemirrors</b> <b>-i</b> <varname>move_config_file</varname> [<b>-d</b> <varname>master_data_directory</varname>] 
-          [<b>-l</b> <varname>logfile_directory</varname>] 
-          [<b>-B</b> <varname>parallel_processes</varname>] [<b>-v</b>]
+<topic id="topic1"><title id="ot133181">gpmovemirrors</title><body><p>Moves mirror segment instances to new locations.</p><section id="section2"><title>Synopsis</title><codeblock><b>gpmovemirrors</b> <b>-i</b> &lt;move_config_file> [<b>-d</b> &lt;master_data_directory>] 
+          [<b>-l</b> &lt;logfile_directory>] 
+          [<b>-B</b> &lt;parallel_processes>] [<b>-v</b>]
 
 <b>gpmovemirrors</b> <b>-?</b> 
 
@@ -23,9 +23,9 @@ will be used.</pd></plentry><plentry><pt>-i <varname>move_config_file</varname><
 to move, and where to move them. </pd><pd>You must have one mirror segment listed for each primary segment in the system. Each line inside
             the configuration file has the following format (as per attributes in the
               <codeph>gp_segment_configuration</codeph>, <codeph>pg_filespace</codeph>, and
-              <codeph>pg_filespace_entry</codeph> catalog tables):</pd><pd><codeblock>filespaceOrder=[<varname>filespace1_fsname</varname>[:<varname>filespace2_fsname</varname>:...]
-<varname>old_address</varname>:<varname>port</varname>:<i>fselocation</i> \ 
-[<i>new_address</i>:<varname>port</varname>:<i>replication_port</i>:<i>fselocation</i>[:<varname>fselocation</varname>:...]]</codeblock></pd><pd>Note that you only need to specify a name for <codeph>filespaceOrder</codeph> if your system has
+              <codeph>pg_filespace_entry</codeph> catalog tables):</pd><pd><codeblock>filespaceOrder=[&lt;filespace1_fsname>[:&lt;filespace2_fsname>:...]
+&lt;old_address>:&lt;port>:<i>fselocation</i> \ 
+[<i>new_address</i>:&lt;port>:<i>replication_port</i>:<i>fselocation</i>[:&lt;fselocation>:...]]</codeblock></pd><pd>Note that you only need to specify a name for <codeph>filespaceOrder</codeph> if your system has
             multiple filespaces configured. If your system does not have additional filespaces
             configured besides the default <codeph>pg_system</codeph> filespace, this file will only
             have one location (for the default data directory filespace,

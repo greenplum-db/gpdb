@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
-<topic id="topic1"><title id="oz137116">createdb</title><body><p id="client_util_desc">Creates a new database.</p><section id="section2"><title>Synopsis</title><codeblock id="client_util_synopsis"><b>createdb</b> [<varname>connection_option</varname> ...] [<b>-D</b> <varname>tablespace</varname>] [<b>-E</b> <varname>encoding</varname>] 
-        [<b>-O</b> <varname>owner</varname>] [<b>-T</b> <varname>template</varname>] [<b>-e</b>] [<varname>dbname</varname> ['<varname>description</varname>']]
+<topic id="topic1"><title id="oz137116">createdb</title><body><p id="client_util_desc">Creates a new database.</p><section id="section2"><title>Synopsis</title><codeblock id="client_util_synopsis"><b>createdb</b> [&lt;connection_option> ...] [<b>-D</b> &lt;tablespace>] [<b>-E</b> &lt;encoding>] 
+        [<b>-O</b> &lt;owner>] [<b>-T</b> &lt;template>] [<b>-e</b>] [&lt;dbname> ['&lt;description>']]
 
 <b>createdb</b> <b>--help</b> 
 

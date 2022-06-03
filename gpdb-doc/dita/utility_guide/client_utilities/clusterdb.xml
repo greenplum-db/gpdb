@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
-<topic id="topic1"><title id="oy139586">clusterdb</title><body><p id="client_util_desc">Reclusters tables that were previously clustered with <codeph>CLUSTER</codeph>.</p><section id="section2"><title>Synopsis</title><codeblock id="client_util_synopsis"><b>clusterdb</b> [<varname>connection-option</varname> ...] [<b>-v</b>] [<b>-t</b> <varname>table</varname>] [[<b>-d</b>] <varname>dbname</varname>]
+<topic id="topic1"><title id="oy139586">clusterdb</title><body><p id="client_util_desc">Reclusters tables that were previously clustered with <codeph>CLUSTER</codeph>.</p><section id="section2"><title>Synopsis</title><codeblock id="client_util_synopsis"><b>clusterdb</b> [&lt;connection-option> ...] [<b>-v</b>] [<b>-t</b> &lt;table>] [[<b>-d</b>] &lt;dbname>]
 
-<b>clusterdb</b> [<varname>connection-option</varname> ...] [<b>-a</b>] [<b>-v</b>]
+<b>clusterdb</b> [&lt;connection-option> ...] [<b>-a</b>] [<b>-v</b>]
 
 <b>clusterdb</b> <b>--help</b>
 
