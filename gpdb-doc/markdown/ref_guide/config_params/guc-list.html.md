@@ -952,13 +952,13 @@ The amount of shared memory, in kilobytes, allocated for query metrics. The defa
 
 ## <a id="gp_interconnect_address_type"></a>gp_interconnect_address_type
 
-Specifies the type of address binding strategy Greenplum database should use for communication between segment host sockets. There are two types: `unicast` and `wildcard`. The default is `wildcard`.
+Specifies the type of address binding strategy Greenplum Database uses for communication between segment host sockets. There are two types: `unicast` and `wildcard`. The default is `wildcard`.
 
-- When this parameter is set to `unicast`, Greenplum database  uses the `gp_segment_configuration.address` field to perform address binding. This reduces port usage on segment hosts and prevents interconnect traffic from being routed through unintended (and possibly slower) network interfaces. 
+- When this parameter is set to `unicast`, Greenplum Database  uses the `gp_segment_configuration.address` field to perform address binding. This reduces port usage on segment hosts and prevents interconnect traffic from being routed through unintended (and possibly slower) network interfaces. 
 
-- When this parameter is set to `wildcard`, Greenplum database uses a wildcard address for binding, enabling the use of any network interface compliant with routing rules.
+- When this parameter is set to `wildcard`, Greenplum Database uses a wildcard address for binding, enabling the use of any network interface compliant with routing rules.
 
-**NOTE**: In some cases, inter-segment communication using the unicast strategy may not be possible. One example is if the source segment's address field and the destination segment's address field are on different subnets and/or existing routing rules don't allow for such
+**NOTE**: In some cases, inter-segment communication using the unicast strategy may not be possible. One example is if the source segment's address field and the destination segment's address field are on different subnets and/or existing routing rules do not allow for such
 communication. In these cases, you must configure this parameter to use a wildcard address for address binding.
 
 |Value Range|Default|Set Classifications|
