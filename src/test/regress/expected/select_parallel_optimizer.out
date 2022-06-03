@@ -464,8 +464,8 @@ select * from
  Nested Loop Left Join
    Join Filter: true
    ->  Values Scan on "Values"
-   ->  Finalize Aggregate
-         ->  Materialize
+   ->  Materialize
+         ->  Finalize Aggregate
                ->  Gather Motion 3:1  (slice1; segments: 3)
                      ->  Partial Aggregate
                            ->  Index Scan using tenk1_hundred on tenk1
@@ -492,8 +492,8 @@ select * from
  Nested Loop Left Join
    Join Filter: true
    ->  Values Scan on "Values"
-   ->  Finalize Aggregate
-         ->  Materialize
+   ->  Materialize
+         ->  Finalize Aggregate
                ->  Gather Motion 3:1  (slice1; segments: 3)
                      ->  Partial Aggregate
                            ->  Index Only Scan using tenk1_thous_tenthous on tenk1

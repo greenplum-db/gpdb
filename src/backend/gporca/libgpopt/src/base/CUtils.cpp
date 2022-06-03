@@ -596,6 +596,60 @@ CUtils::FScalarConstArray(CExpression *pexprArray)
 	return fAllConsts;
 }
 
+// returns if the scalar const is an array
+BOOL
+CUtils::FIsConstArray(CExpression *pexpr)
+{
+	CScalarConst *popScalarConst = CScalarConst::PopConvert(pexpr->Pop());
+	CMDAccessor *mda = COptCtxt::PoctxtFromTLS()->Pmda();
+	const IMDType *expr_type = mda->RetrieveType(popScalarConst->MdidType());
+	return !IMDId::IsValid(expr_type->GetArrayTypeMdid());
+}
+
+// returns MDId for gp_percentile agg based on return type
+CMDIdGPDB *
+CUtils::GetPercentileAggMDId(CMemoryPool *mp, CExpression *pexprAggFn)
+{
+	GPOS_ASSERT(COperator::EopScalarAggFunc == pexprAggFn->Pop()->Eopid());
+
+	CScalarAggFunc *popScAggFunc =
+		CScalarAggFunc::PopConvert(pexprAggFn->Pop());
+	IMDId *arg_mdid =
+		CScalar::PopConvert((*(*pexprAggFn)[0])[0]->Pop())->MdidType();
+
+	OID oid_arg_type = CMDIdGPDB::CastMdid(arg_mdid)->Oid();
+	OID return_oid = 0;
+
+	if (popScAggFunc->FHasAmbiguousReturnType())
+		return_oid = GPDB_GP_PERCENTILE_DISC;
+	else
+	{
+		switch (oid_arg_type)
+		{
+			case GPDB_FLOAT8:
+				return_oid = GPDB_GP_PERCENTILE_CONT_FLOAT8;
+				break;
+
+			case GPDB_INTERVAL:
+				return_oid = GPDB_GP_PERCENTILE_CONT_INTERVAL;
+				break;
+
+			case GPDB_TIMESTAMP:
+				return_oid = GPDB_GP_PERCENTILE_CONT_TIMESTAMP;
+				break;
+
+			case GPDB_TIMESTAMPTZ:
+				return_oid = GPDB_GP_PERCENTILE_CONT_TIMESTAMPTZ;
+				break;
+
+			default:
+				// shouldn't come here
+				GPOS_RTL_ASSERT(!"Invalid arg type");
+		}
+	}
+	return GPOS_NEW(mp) CMDIdGPDB(return_oid);
+}
+
 // returns if the scalar constant array has already been collapased
 BOOL
 CUtils::FScalarArrayCollapsed(CExpression *pexprArray)
@@ -4467,6 +4521,21 @@ CUtils::FHasAggWindowFunc(CExpression *pexpr)
 	}
 
 	return fHasAggWindowFunc;
+}
+
+
+// returns true if expression contains ordered aggregate function
+BOOL
+CUtils::FHasOrderedAggToSplit(CExpression *pexpr)
+{
+	GPOS_ASSERT(nullptr != pexpr);
+
+	CScalarAggFunc *popScAggFunc = CScalarAggFunc::PopConvert(pexpr->Pop());
+	return popScAggFunc->AggKind() == EaggfunckindOrderedSet &&
+		   (!FScalarConst((*(*pexpr)[1])[0]) ||
+			!FIsConstArray((*(*pexpr)[1])[0])) &&
+		   (FScalarIdent((*(*pexpr)[0])[0]) ||
+			CScalarIdent::FCastedScId((*(*pexpr)[0])[0]));
 }
 
 BOOL

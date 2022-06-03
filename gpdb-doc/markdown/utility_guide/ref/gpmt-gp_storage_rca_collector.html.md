@@ -5,7 +5,7 @@ This tool collects storage-related table data and generates an output file which
 ## <a id="usage"></a>Usage 
 
 ```
-storage_rca_collector [-db <DATABASE> ] [-t <TABLE> ] | -c <ID1,ID2,...> ] [-dir <PATH> ] [-a] [-translog ]
+storage_rca_collector [-db <database> ] [-t <table> ] | -c <ID1,ID2,...> ] [-dir <path> ] [-a] [-translog ]
 ```
 
 ## <a id="opts"></a>Options 
@@ -77,4 +77,4 @@ Collect storage rca artifacts for primary segment with contentid [0,1], database
 gpmt storage_rca_collector -db postgres -c 0,1 -t test_table -dir <dir>
 ```
 
-**NOTE**: Output files follow the naming convention \<database name>_\<dbid>_\<artifact name>.
+**Note:** Output files follow the naming convention \<database name>\_\<dbid>\_\<artifact name>.

@@ -42,6 +42,7 @@
 		"gp_interconnect_timer_period",
 		"gp_interconnect_transmit_timeout",
 		"gp_interconnect_type",
+		"gp_interconnect_address_type",
 		"gp_log_endpoints",
 		"gp_log_interconnect",
 		"gp_log_resgroup_memory",

@@ -5,9 +5,9 @@ This tool collects Greenplum and system log files, along with the relevant confi
 ## <a id="usage"></a>Usage 
 
 ```
-gpmt gp_log_collector [-failed-segs | -c <ID1,ID2,...>| -hostfile <FILE> | -h <HOST1, HOST2,...>]
+gpmt gp_log_collector [-failed-segs | -c <ID1,ID2,...>| -hostfile <file> | -h <host1, host2,...>]
 [ -start <YYYY-MM-DD> ] [ -end <YYYY-MM-DD> ]
-[ -dir <PATH> ] [ -segdir <PATH> ] [ -a ] [-skip-master] [-with-gptext] [-with-gptext-only] [-with-pxf] [-with-pxf-only] [-with-gpupgrade]
+[ -dir <path> ] [ -segdir <path> ] [ -a ] [-skip-master] [-with-gptext] [-with-gptext-only] [-with-pxf] [-with-pxf-only] [-with-gpupgrade]
 ```
 
 ## <a id="opts"></a>Options 

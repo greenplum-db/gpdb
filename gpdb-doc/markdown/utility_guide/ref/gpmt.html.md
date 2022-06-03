@@ -7,7 +7,7 @@ GPMT (Greenplum Magic Tool) provides a set of diagnostic utilities to troublesho
 ```
 gpmt <tool> [<tool_options> ...] 
 
-gpmt -hostfile <FILE>
+gpmt -hostfile <file>
 
 gpmt -help
 
