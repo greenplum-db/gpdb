@@ -299,11 +299,11 @@ LANGUAGE 'plr';</codeblock><p>This
         <p>This R function lists the available R packages from the R command line:</p>
         <codeblock>&gt; library()</codeblock>
         <p>Display the documentation for a particular R package</p>
-        <codeblock>&gt; library(help="<varname>package_name</varname>")
-&gt; help(package="<varname>package_name</varname>")</codeblock>
+        <codeblock>&gt; library(help="&lt;package_name>")
+&gt; help(package="&lt;package_name>")</codeblock>
         <p>Display the help file for an R function:</p>
-        <codeblock>&gt; help("<varname>function_name</varname>")
-&gt; ?<varname>function_name</varname></codeblock>
+        <codeblock>&gt; help("&lt;function_name>")
+&gt; ?&lt;function_name></codeblock>
         <p>To see what packages are installed, use the R command
             <codeph>installed.packages()</codeph>. This will return a matrix with a row for each
           package that has been installed. Below, we look at the first 5 rows of this matrix.</p>
@@ -311,12 +311,12 @@ LANGUAGE 'plr';</codeblock><p>This
         <p>Any package that does not appear in the installed packages matrix must be installed and
           loaded before its functions can be used. </p>
         <p>An R package can be installed with <codeph>install.packages()</codeph>:</p>
-        <codeblock>&gt; install.packages("<varname>package_name</varname>") 
+        <codeblock>&gt; install.packages("&lt;package_name>") 
 &gt; install.packages("mypkg", dependencies = TRUE, type="source")</codeblock>
         <p>Load a package from the R command
-          line.<codeblock>&gt; library(" <varname>package_name</varname> ") </codeblock></p>
+          line.<codeblock>&gt; library(" &lt;package_name> ") </codeblock></p>
         <p>An R package can be removed with <codeph>remove.packages</codeph></p>
-        <codeblock>&gt; remove.packages("<varname>package_name</varname>")</codeblock>
+        <codeblock>&gt; remove.packages("&lt;package_name>")</codeblock>
         <p>You can use the R command <codeph>-e</codeph> option to run functions from the command
           line. For example, this command displays help on the R package MASS.</p>
         <codeblock>$ R -e 'help("MASS")'</codeblock>

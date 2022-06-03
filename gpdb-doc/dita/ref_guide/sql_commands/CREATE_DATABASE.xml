@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
-<topic id="topic1"><title id="bp20941">CREATE DATABASE</title><body><p id="sql_command_desc">Creates a new database.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">CREATE DATABASE name [ [WITH] [OWNER [=] <varname>dbowner</varname>]
-                     [TEMPLATE [=] <varname>template</varname>]
-                     [ENCODING [=] <varname>encoding</varname>]
-                     [TABLESPACE [=] <varname>tablespace</varname>]
+<topic id="topic1"><title id="bp20941">CREATE DATABASE</title><body><p id="sql_command_desc">Creates a new database.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">CREATE DATABASE name [ [WITH] [OWNER [=] &lt;dbowner>]
+                     [TEMPLATE [=] &lt;template>]
+                     [ENCODING [=] &lt;encoding>]
+                     [TABLESPACE [=] &lt;tablespace>]
                      [CONNECTION LIMIT [=] connlimit ] ]</codeblock></section><section id="section3"><title>Description</title><p><codeph>CREATE DATABASE</codeph> creates a new database. To create a
 database, you must be a superuser or have the special <codeph>CREATEDB</codeph>
 privilege.</p><p>The creator becomes the owner of the new database by default. Superusers

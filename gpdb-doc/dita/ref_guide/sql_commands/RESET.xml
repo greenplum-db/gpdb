@@ -8,7 +8,7 @@
       value.</p>
     <section id="section2">
       <title>Synopsis</title>
-      <codeblock id="sql_command_synopsis">RESET <varname>configuration_parameter</varname>
+      <codeblock id="sql_command_synopsis">RESET &lt;configuration_parameter>
 
 RESET ALL</codeblock>
     </section>

@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
-<topic id="topic1"><title id="bm20941">CREATE AGGREGATE</title><body><p id="sql_command_desc">Defines a new aggregate function.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">CREATE [ORDERED] AGGREGATE <varname>name</varname> (<varname>input_data_type</varname> [ , ... ]) 
-      ( SFUNC = <varname>sfunc</varname>,
-        STYPE = <varname>state_data_type</varname>
-        [, PREFUNC = <varname>prefunc</varname>]
-        [, FINALFUNC = <varname>ffunc</varname>]
-        [, INITCOND = <varname>initial_condition</varname>]
-        [, SORTOP = <varname>sort_operator</varname>] )</codeblock></section><section id="section3"><title>Description</title><p><codeph>CREATE AGGREGATE</codeph> defines a new
+<topic id="topic1"><title id="bm20941">CREATE AGGREGATE</title><body><p id="sql_command_desc">Defines a new aggregate function.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">CREATE [ORDERED] AGGREGATE &lt;name> (&lt;input_data_type> [ , ... ]) 
+      ( SFUNC = &lt;sfunc>,
+        STYPE = &lt;state_data_type>
+        [, PREFUNC = &lt;prefunc>]
+        [, FINALFUNC = &lt;ffunc>]
+        [, INITCOND = &lt;initial_condition>]
+        [, SORTOP = &lt;sort_operator>] )</codeblock></section><section id="section3"><title>Description</title><p><codeph>CREATE AGGREGATE</codeph> defines a new
         aggregate function. Some basic and commonly-used aggregate functions such as
           <codeph>count</codeph>, <codeph>min</codeph>, <codeph>max</codeph>, <codeph>sum</codeph>,
           <codeph>avg</codeph> and so on are already provided in Greenplum Database. If one defines
@@ -73,9 +73,9 @@ ffunc( internal-state ) ---&gt; aggregate-value</codeblock><p>You
         row. If this aggregate can be so optimized, indicate it by specifying a sort operator. The
         basic requirement is that the aggregate must yield the first element in the sort ordering
         induced by the operator; in other
-        words:</p><codeblock>SELECT <varname>agg</varname>(<varname>col</varname>) FROM <varname>tab</varname>; </codeblock><p>must be
+        words:</p><codeblock>SELECT &lt;agg>(&lt;col>) FROM &lt;tab>; </codeblock><p>must be
         equivalent
-        to:</p><codeblock>SELECT <varname>col</varname> FROM <varname>tab</varname> ORDER BY <varname>col</varname> USING <varname>sortop</varname> LIMIT 1;</codeblock><p>Further
+        to:</p><codeblock>SELECT &lt;col> FROM &lt;tab> ORDER BY &lt;col> USING &lt;sortop> LIMIT 1;</codeblock><p>Further
         assumptions are that the aggregate function ignores <codeph>NULL</codeph> inputs, and that
         it delivers a <codeph>NULL</codeph> result if and only if there were no non-null inputs.
         Ordinarily, a data type's <codeph>&lt;</codeph> operator is the proper sort operator for

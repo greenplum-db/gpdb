@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
-<topic id="topic1"><title id="en20941">SHOW</title><body><p id="sql_command_desc">Shows the value of a system configuration parameter.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">SHOW <varname>configuration_parameter</varname>
+<topic id="topic1"><title id="en20941">SHOW</title><body><p id="sql_command_desc">Shows the value of a system configuration parameter.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">SHOW &lt;configuration_parameter>
 
 SHOW ALL</codeblock></section><section id="section3"><title>Description</title><p><codeph>SHOW</codeph> displays the current settings of Greenplum Database
 system configuration parameters. You can set these parameters with the

@@ -7,7 +7,7 @@
     <p id="sql_command_desc">Shows the query plan of a statement.</p>
     <section id="section2">
       <title>Synopsis</title>
-      <codeblock id="sql_command_synopsis">EXPLAIN [ANALYZE] [VERBOSE] <varname>statement</varname></codeblock>
+      <codeblock id="sql_command_synopsis">EXPLAIN [ANALYZE] [VERBOSE] &lt;statement></codeblock>
     </section>
     <section id="section3">
       <title>Description</title>

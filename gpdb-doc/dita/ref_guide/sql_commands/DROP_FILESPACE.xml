@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
-<topic id="topic1"><title id="cu20941">DROP FILESPACE</title><body><p id="sql_command_desc">Removes a filespace.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">DROP FILESPACE [IF EXISTS] <varname>filespacename</varname></codeblock></section><section id="section3"><title>Description</title><p><codeph>DROP FILESPACE</codeph> removes a filespace definition and its
+<topic id="topic1"><title id="cu20941">DROP FILESPACE</title><body><p id="sql_command_desc">Removes a filespace.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">DROP FILESPACE [IF EXISTS] &lt;filespacename></codeblock></section><section id="section3"><title>Description</title><p><codeph>DROP FILESPACE</codeph> removes a filespace definition and its
 system-generated data directories from the system. </p><p>A filespace can only be dropped by its owner or a superuser. The filespace
 must be empty of all tablespace objects before it can be dropped. It
 is possible that tablespaces in other databases may still be using a

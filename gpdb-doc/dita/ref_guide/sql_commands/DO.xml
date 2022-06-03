@@ -7,7 +7,7 @@
     <p id="sql_command_desc">Executes an anonymous code block as a transient anonymous function.</p>
     <section id="section2">
       <title>Synopsis</title>
-      <codeblock id="sql_command_synopsis">DO [ LANGUAGE <varname>lang_name</varname> ] <varname>code</varname></codeblock>
+      <codeblock id="sql_command_synopsis">DO [ LANGUAGE &lt;lang_name> ] &lt;code></codeblock>
     </section>
     <section id="section3">
       <title>Description</title>

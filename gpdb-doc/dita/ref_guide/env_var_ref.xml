@@ -34,7 +34,7 @@
             <body class="- topic/body ">
                 <p>This is the installed location of your Greenplum Database software. For
                     example:</p>
-                <codeblock>GPHOME=/usr/local/greenplum-db-<varname>&lt;version></varname>
+                <codeblock>GPHOME=/usr/local/greenplum-db-&lt;&lt;version>>
 export GPHOME</codeblock>
             </body>
         </topic>

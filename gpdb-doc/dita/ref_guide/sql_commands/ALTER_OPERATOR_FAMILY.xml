@@ -7,18 +7,18 @@
     <p id="sql_command_desc">Changes the definition of an operator family.</p>
     <section id="section2">
       <title>Synopsis</title>
-      <codeblock id="sql_command_synopsis">ALTER OPERATOR FAMILY <varname>name</varname> USING <varname>index_method</varname> ADD
-  {  OPERATOR <varname>strategy_number</varname> <varname>operator_name</varname> ( <varname>op_type</varname>, <varname>op_type</varname> ) [ RECHECK ]
-    | FUNCTION <varname>support_number</varname> [ ( <varname>op_type</varname> [ , <varname>op_type</varname> ] ) ] <varname>funcname</varname> ( <varname>argument_type</varname> [, ...] )
+      <codeblock id="sql_command_synopsis">ALTER OPERATOR FAMILY &lt;name> USING &lt;index_method> ADD
+  {  OPERATOR &lt;strategy_number> &lt;operator_name> ( &lt;op_type>, &lt;op_type> ) [ RECHECK ]
+    | FUNCTION &lt;support_number> [ ( &lt;op_type> [ , &lt;op_type> ] ) ] &lt;funcname> ( &lt;argument_type> [, ...] )
   } [, ... ]
-ALTER OPERATOR FAMILY <varname>name</varname> USING <varname>index_method</varname> DROP
-  {  OPERATOR s<varname>trategy_number</varname> ( <varname>op_type</varname>, <varname>op_type</varname> ) 
-    | FUNCTION <varname>support_number</varname> [ ( <varname>op_type</varname> [ , <varname>op_type</varname> ] ) 
+ALTER OPERATOR FAMILY &lt;name> USING &lt;index_method> DROP
+  {  OPERATOR s&lt;trategy_number> ( &lt;op_type>, &lt;op_type> ) 
+    | FUNCTION &lt;support_number> [ ( &lt;op_type> [ , &lt;op_type> ] ) 
   } [, ... ]
 
-ALTER OPERATOR FAMILY <varname>name</varname> USING <varname>index_method</varname> RENAME TO <varname>newname</varname>
+ALTER OPERATOR FAMILY &lt;name> USING &lt;index_method> RENAME TO &lt;newname>
 
-ALTER OPERATOR FAMILY <varname>name</varname> USING <varname>index_method</varname> OWNER TO <varname>newowner</varname></codeblock>
+ALTER OPERATOR FAMILY &lt;name> USING &lt;index_method> OWNER TO &lt;newowner></codeblock>
     </section>
     <section id="section3">
       <title>Description</title>

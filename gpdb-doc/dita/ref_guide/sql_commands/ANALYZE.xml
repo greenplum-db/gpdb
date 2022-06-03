@@ -7,11 +7,11 @@
     <p id="sql_command_desc">Collects statistics about a database.</p>
     <section id="section2">
       <title>Synopsis</title>
-      <codeblock id="sql_command_synopsis">ANALYZE [VERBOSE] [<varname>table</varname> [ (<varname>column</varname> [, ...] ) ]]
+      <codeblock id="sql_command_synopsis">ANALYZE [VERBOSE] [&lt;table> [ (&lt;column> [, ...] ) ]]
 
-ANALYZE [VERBOSE] {<varname>root_partition_table_name</varname>|<varname>leaf_partition_table_name</varname>} [ (<varname>column</varname> [, ...] )] 
+ANALYZE [VERBOSE] {&lt;root_partition_table_name>|&lt;leaf_partition_table_name>} [ (&lt;column> [, ...] )] 
 
-ANALYZE [VERBOSE] ROOTPARTITION {ALL | <varname>root_partition_table_name</varname> [ (<varname>column</varname> [, ...] )]}</codeblock>
+ANALYZE [VERBOSE] ROOTPARTITION {ALL | &lt;root_partition_table_name> [ (&lt;column> [, ...] )]}</codeblock>
     </section>
     <section id="section3">
       <title>Description</title>

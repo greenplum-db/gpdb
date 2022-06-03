@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
-<topic id="topic1"><title id="co20941">DROP AGGREGATE</title><body><p id="sql_command_desc">Removes an aggregate function.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">DROP AGGREGATE [IF EXISTS] <varname>name</varname> ( <varname>type</varname> [, ...] ) [CASCADE | RESTRICT]</codeblock></section><section id="section3"><title>Description</title><p><codeph>DROP AGGREGATE</codeph> will delete an existing aggregate function.
+<topic id="topic1"><title id="co20941">DROP AGGREGATE</title><body><p id="sql_command_desc">Removes an aggregate function.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">DROP AGGREGATE [IF EXISTS] &lt;name> ( &lt;type> [, ...] ) [CASCADE | RESTRICT]</codeblock></section><section id="section3"><title>Description</title><p><codeph>DROP AGGREGATE</codeph> will delete an existing aggregate function.
 To execute this command the current user must be the owner of the aggregate
 function.</p></section><section id="section4"><title>Parameters</title><parml><plentry><pt>IF EXISTS</pt><pd>Do not throw an error if the aggregate does not exist. A notice is
 issued in this case. </pd></plentry><plentry><pt><varname>name</varname></pt><pd>The name (optionally schema-qualified) of an existing aggregate function.

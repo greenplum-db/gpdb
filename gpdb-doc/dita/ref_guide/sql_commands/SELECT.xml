@@ -7,53 +7,53 @@
     <p id="sql_command_desc">Retrieves rows from a table or view.</p>
     <section id="section2">
       <title>Synopsis</title>
-      <codeblock id="sql_command_synopsis">[ WITH [ RECURSIVE<sup>1</sup> ] <varname>with_query</varname> [, ...] ]
-SELECT [ALL | DISTINCT [ON (<varname>expression</varname> [, ...])]]
-  * | <varname>expression </varname>[[AS] <varname>output_name</varname>] [, ...]
-  [FROM <varname>from_item</varname> [, ...]]
-  [WHERE <varname>condition</varname>]
-  [GROUP BY <varname>grouping_element</varname> [, ...]]
-  [HAVING <varname>condition</varname> [, ...]]
-  [WINDOW <varname>window_name</varname> AS (<varname>window_specification</varname>)]
-  [{UNION | INTERSECT | EXCEPT} [ALL] <varname>select</varname>]
-  [ORDER BY <varname>expression</varname> [ASC | DESC | USING <varname>operator</varname>] [NULLS {FIRST | LAST}] [, ...]]
-  [LIMIT {<varname>count</varname> | ALL}]
-  [OFFSET <varname>start</varname>]
-  [FOR {UPDATE | SHARE} [OF <varname>table_name</varname> [, ...]] [NOWAIT] [...]]</codeblock>
+      <codeblock id="sql_command_synopsis">[ WITH [ RECURSIVE<sup>1</sup> ] &lt;with_query> [, ...] ]
+SELECT [ALL | DISTINCT [ON (&lt;expression> [, ...])]]
+  * | &lt;expression >[[AS] &lt;output_name>] [, ...]
+  [FROM &lt;from_item> [, ...]]
+  [WHERE &lt;condition>]
+  [GROUP BY &lt;grouping_element> [, ...]]
+  [HAVING &lt;condition> [, ...]]
+  [WINDOW &lt;window_name> AS (&lt;window_specification>)]
+  [{UNION | INTERSECT | EXCEPT} [ALL] &lt;select>]
+  [ORDER BY &lt;expression> [ASC | DESC | USING &lt;operator>] [NULLS {FIRST | LAST}] [, ...]]
+  [LIMIT {&lt;count> | ALL}]
+  [OFFSET &lt;start>]
+  [FOR {UPDATE | SHARE} [OF &lt;table_name> [, ...]] [NOWAIT] [...]]</codeblock>
       <p>where <varname>with_query:</varname> is:</p>
-      <codeblock>  <varname>with_query_name</varname> [( <varname>column_name</varname> [, ...] )] AS ( <varname>select</varname> )</codeblock>
+      <codeblock>  &lt;with_query_name> [( &lt;column_name> [, ...] )] AS ( &lt;select> )</codeblock>
       <p>where <varname>grouping_element</varname> can be one of:</p>
       <codeblock>  ()
-  <varname>expression</varname>
-  ROLLUP (<varname>expression</varname> [,...])
-  CUBE (<varname>expression</varname> [,...])
-  GROUPING SETS ((<varname>grouping_element</varname> [, ...]))</codeblock>
+  &lt;expression>
+  ROLLUP (&lt;expression> [,...])
+  CUBE (&lt;expression> [,...])
+  GROUPING SETS ((&lt;grouping_element> [, ...]))</codeblock>
       <p>where <varname>window_specification</varname> can be:</p>
-      <codeblock>  [<varname>window_name</varname>]
-  [PARTITION BY <varname>expression </varname>[, ...]]
-  [ORDER BY <varname>expression</varname> [ASC | DESC | USING <varname>operator</varname>] [NULLS {FIRST | LAST}] [, ...]
+      <codeblock>  [&lt;window_name>]
+  [PARTITION BY &lt;expression >[, ...]]
+  [ORDER BY &lt;expression> [ASC | DESC | USING &lt;operator>] [NULLS {FIRST | LAST}] [, ...]
      [{RANGE | ROWS} 
           { UNBOUNDED PRECEDING
-          | <varname>expression</varname> PRECEDING
+          | &lt;expression> PRECEDING
           | CURRENT ROW
-          | BETWEEN <varname>window_frame_bound</varname> AND <varname>window_frame_bound</varname> }]]
-                    where <varname>window_frame_bound</varname> can be one of:
+          | BETWEEN &lt;window_frame_bound> AND &lt;window_frame_bound> }]]
+                    where &lt;window_frame_bound> can be one of:
                         UNBOUNDED PRECEDING
-                        <varname>expression</varname> PRECEDING
+                        &lt;expression> PRECEDING
                         CURRENT ROW
-                        <varname>expression</varname> FOLLOWING
+                        &lt;expression> FOLLOWING
                         UNBOUNDED FOLLOWING</codeblock>
       <p>where <varname>from_item</varname> can be one of:</p>
-      <codeblock>[ONLY] <varname>table_name</varname> [[AS] <varname>alias</varname> [( <varname>column_alias</varname> [, ...] )]]
-(select) [AS] <varname>alias</varname> [( <varname>column_alias</varname> [, ...] )]<varname>
-with_query_name</varname> [ [AS] <varname>alias</varname> [( <varname>column_alias</varname> [, ...] )]]
-<varname>function_name</varname> ( [<varname>argument</varname> [, ...]] ) [AS] <varname>alias</varname>
-             [( <varname>column_alias</varname> [, ...] 
-                | <varname>column_definition</varname> [, ...] )]
-<varname>function_name</varname> ( [<varname>argument</varname> [, ...]] ) AS 
-              ( <varname>column_definition</varname> [, ...] )
-<varname>from_item</varname> [NATURAL] <varname>join_type</varname> <varname>from_item</varname>
-          [ON <varname>join_condition</varname> | USING ( <varname>join_column</varname> [, ...] )]</codeblock>
+      <codeblock>[ONLY] &lt;table_name> [[AS] &lt;alias> [( &lt;column_alias> [, ...] )]]
+(select) [AS] &lt;alias> [( &lt;column_alias> [, ...] )]<varname>
+with_query_name</varname> [ [AS] &lt;alias> [( &lt;column_alias> [, ...] )]]
+&lt;function_name> ( [&lt;argument> [, ...]] ) [AS] &lt;alias>
+             [( &lt;column_alias> [, ...] 
+                | &lt;column_definition> [, ...] )]
+&lt;function_name> ( [&lt;argument> [, ...]] ) AS 
+              ( &lt;column_definition> [, ...] )
+&lt;from_item> [NATURAL] &lt;join_type> &lt;from_item>
+          [ON &lt;join_condition> | USING ( &lt;join_column> [, ...] )]</codeblock>
       <p><b>Note:</b>
         <sup>1</sup>The <codeph>RECURSIVE</codeph> keyword is a Beta feature.</p>
     </section>
@@ -123,7 +123,7 @@ with_query_name</varname> [ [AS] <varname>alias</varname> [( <varname>column_ali
           feature.</note></p><p>If <codeph>RECURSIVE</codeph> is specified, it
           allows a subquery to reference itself by name. Such a subquery, the
             <varname>select</varname> portion of the <varname>with_query</varname> , must have the
-          form</p><codeblock><varname>non_recursive_term</varname> UNION [ALL] <varname>recursive_term</varname></codeblock><p>The
+          form</p><codeblock>&lt;non_recursive_term> UNION [ALL] &lt;recursive_term></codeblock><p>The
           recursive self-reference must appear on the right-hand side of the <codeph>UNION
             [ALL]</codeph>. Only one recursive self-reference is permitted per query. </p><p>If the
             <codeph>RECURSIVE</codeph> keyword is specified, the <codeph>WITH</codeph> queries need
@@ -310,20 +310,20 @@ SELECT * FROM foo LIMIT 5;</codeblock></p><p>See
           </plentry>
         </parml></sectiondiv><sectiondiv id="section7"><b>The WHERE Clause</b><p>The optional
             <codeph>WHERE</codeph> clause has the general
-          form:</p><codeblock>WHERE <varname>condition</varname></codeblock><p>where
+          form:</p><codeblock>WHERE &lt;condition></codeblock><p>where
             <varname>condition</varname> is any expression that evaluates to a result of type
             <codeph>boolean</codeph>. Any row that does not satisfy this condition will be
           eliminated from the output. A row satisfies the condition if it returns true when the
           actual row values are substituted for any variable references. </p></sectiondiv>
       <sectiondiv id="section8"><b>The GROUP BY Clause</b><p>The optional <codeph>GROUP BY</codeph>
           clause has the general
-          form:</p><codeblock>GROUP BY <varname>grouping_element </varname>[, ...]</codeblock><p>where
+          form:</p><codeblock>GROUP BY &lt;grouping_element >[, ...]</codeblock><p>where
             <varname>grouping_element</varname> can be one
             of:</p><codeblock>()
-<varname>expression</varname>
-ROLLUP (<varname>expression</varname> [,...])
-CUBE (<varname>expression</varname> [,...])
-GROUPING SETS ((<varname>grouping_element</varname> [, ...]))</codeblock><p><codeph>GROUP
+&lt;expression>
+ROLLUP (&lt;expression> [,...])
+CUBE (&lt;expression> [,...])
+GROUPING SETS ((&lt;grouping_element> [, ...]))</codeblock><p><codeph>GROUP
             BY</codeph> will condense into a single row all selected rows that share the same values
           for the grouped expressions. <varname>expression</varname> can be an input column name, or
           the name or ordinal number of an output column (<codeph>SELECT</codeph> list item), or an
@@ -425,20 +425,20 @@ GROUPING SETS ((<varname>grouping_element</varname> [, ...]))</codeblock><p><cod
 GROUP BY vendor
 WINDOW mywindow AS (ORDER BY sum(prc*qty));</codeblock><p>A
             <codeph>WINDOW</codeph> clause has this general
-          form:</p><codeblock>WINDOW <varname>window_name</varname> AS (<varname>window_specification</varname>)</codeblock><p>where
-            <varname>window_specification</varname> can be:</p><codeblock>[<varname>window_name</varname>]
-[PARTITION BY <varname>expression </varname>[, ...]]
-[ORDER BY <varname>expression</varname> [ASC | DESC | USING <varname>operator</varname>] [NULLS {FIRST | LAST}] [, ...]
+          form:</p><codeblock>WINDOW &lt;window_name> AS (&lt;window_specification>)</codeblock><p>where
+            <varname>window_specification</varname> can be:</p><codeblock>[&lt;window_name>]
+[PARTITION BY &lt;expression >[, ...]]
+[ORDER BY &lt;expression> [ASC | DESC | USING &lt;operator>] [NULLS {FIRST | LAST}] [, ...]
     [{RANGE | ROWS} 
       { UNBOUNDED PRECEDING
-      | <varname>expression</varname> PRECEDING
+      | &lt;expression> PRECEDING
       | CURRENT ROW
-      | BETWEEN <varname>window_frame_bound</varname> AND <varname>window_frame_bound</varname> }]]
-             where <varname>window_frame_bound</varname> can be one of:
+      | BETWEEN &lt;window_frame_bound> AND &lt;window_frame_bound> }]]
+             where &lt;window_frame_bound> can be one of:
                UNBOUNDED PRECEDING
-               <varname>expression</varname> PRECEDING
+               &lt;expression> PRECEDING
                CURRENT ROW
-               <varname>expression</varname> FOLLOWING
+               &lt;expression> FOLLOWING
                UNBOUNDED FOLLOWING</codeblock><parml>
           <plentry>
             <pt><varname>window_name</varname></pt>
@@ -518,7 +518,7 @@ WINDOW mywindow AS (ORDER BY sum(prc*qty));</codeblock><p>A
           </plentry>
         </parml></sectiondiv><sectiondiv id="section10"><b>The HAVING Clause</b><p>The optional
             <codeph>HAVING</codeph> clause has the general
-          form:</p><codeblock>HAVING <varname>condition</varname></codeblock><p>where
+          form:</p><codeblock>HAVING &lt;condition></codeblock><p>where
             <varname>condition</varname> is the same as specified for the <codeph>WHERE</codeph>
           clause. <codeph>HAVING</codeph> eliminates group rows that do not satisfy the condition.
             <codeph>HAVING</codeph> is different from <codeph>WHERE</codeph>: <codeph>WHERE</codeph>
@@ -534,7 +534,7 @@ WINDOW mywindow AS (ORDER BY sum(prc*qty));</codeblock><p>A
           functions. Such a query will emit a single row if the <codeph>HAVING</codeph> condition is
           true, zero rows if it is not true. </p></sectiondiv><sectiondiv id="section11"><b>The
           UNION Clause</b><p>The <codeph>UNION</codeph> clause has this general
-          form:</p><codeblock><varname>select_statement</varname> UNION [ALL] <varname>select_statement</varname></codeblock><p>where
+          form:</p><codeblock>&lt;select_statement> UNION [ALL] &lt;select_statement></codeblock><p>where
             <varname>select_statement</varname> is any <codeph>SELECT</codeph> statement without an
             <codeph>ORDER BY</codeph>, <codeph>LIMIT</codeph>, <codeph>FOR UPDATE</codeph>, or
             <codeph>FOR SHARE</codeph> clause. (<codeph>ORDER BY</codeph> and <codeph>LIMIT</codeph>
@@ -556,7 +556,7 @@ WINDOW mywindow AS (ORDER BY sum(prc*qty));</codeblock><p>A
           specified either for a <codeph>UNION</codeph> result or for any input of a
             <codeph>UNION</codeph>. </p></sectiondiv><sectiondiv id="section12"><b>The INTERSECT
           Clause</b><p>The <codeph>INTERSECT</codeph> clause has this general
-          form:</p><codeblock><varname>select_statement</varname> INTERSECT [ALL] <varname>select_statement</varname></codeblock><p>where
+          form:</p><codeblock>&lt;select_statement> INTERSECT [ALL] &lt;select_statement></codeblock><p>where
             <varname>select_statement</varname> is any SELECT statement without an <codeph>ORDER
             BY</codeph>, <codeph>LIMIT</codeph>, <codeph>FOR UPDATE</codeph>, or <codeph>FOR
             SHARE</codeph> clause. </p><p>The <codeph>INTERSECT</codeph> operator computes the set
@@ -575,7 +575,7 @@ WINDOW mywindow AS (ORDER BY sum(prc*qty));</codeblock><p>A
             <codeph>INTERSECT</codeph> result or for any input of an <codeph>INTERSECT</codeph>.
         </p></sectiondiv><sectiondiv id="section13"><b>The EXCEPT Clause</b><p>The
             <codeph>EXCEPT</codeph> clause has this general
-          form:</p><codeblock><varname>select_statement</varname> EXCEPT [ALL] <varname>select_statement</varname></codeblock><p>where
+          form:</p><codeblock>&lt;select_statement> EXCEPT [ALL] &lt;select_statement></codeblock><p>where
             <varname>select_statement</varname> is any <codeph>SELECT</codeph> statement without an
             <codeph>ORDER BY</codeph>, <codeph>LIMIT</codeph>, <codeph>FOR UPDATE</codeph>, or
             <codeph>FOR SHARE</codeph> clause. </p><p>The <codeph>EXCEPT</codeph> operator computes
@@ -592,7 +592,7 @@ WINDOW mywindow AS (ORDER BY sum(prc*qty));</codeblock><p>A
             <codeph>EXCEPT</codeph> result or for any input of an <codeph>EXCEPT</codeph>.
         </p></sectiondiv><sectiondiv id="section14"><b>The ORDER BY Clause</b><p>The optional
             <codeph>ORDER BY</codeph> clause has this general
-          form:</p><codeblock>ORDER BY <varname>expression</varname> [ASC | DESC | USING <varname>operator</varname>] [NULLS { FIRST | LAST}] [, ...]</codeblock><p>where
+          form:</p><codeblock>ORDER BY &lt;expression> [ASC | DESC | USING &lt;operator>] [NULLS { FIRST | LAST}] [, ...]</codeblock><p>where
             <varname>expression</varname> can be the name or ordinal number of an output column
             (<codeph>SELECT</codeph> list item), or it can be an arbitrary expression formed from
           input-column values. </p><p>The <codeph>ORDER BY</codeph> clause causes the result rows to
@@ -658,8 +658,8 @@ weather_reports ORDER BY location, time DESC;</codeblock><p>retrieves
           case, there is an expected performance degradation because of the overhead introduced by
           the lower aggregation level.</p></sectiondiv><sectiondiv id="section16"><b>The LIMIT
           Clause</b><p>The <codeph>LIMIT</codeph> clause consists of two independent
-          sub-clauses:</p><codeblock>LIMIT {<varname>count</varname> | ALL}
-OFFSET <varname>start</varname></codeblock><p>where
+          sub-clauses:</p><codeblock>LIMIT {&lt;count> | ALL}
+OFFSET &lt;start></codeblock><p>where
             <varname>count</varname> specifies the maximum number of rows to return, while
             <varname>start</varname> specifies the number of rows to skip before starting to return
           rows. When both are specified, start rows are skipped before starting to count the count
@@ -678,9 +678,9 @@ OFFSET <varname>start</varname></codeblock><p>where
           unless <codeph>ORDER BY</codeph> is used to constrain the
         order.</p></sectiondiv><sectiondiv id="section17"><b>The FOR UPDATE/FOR SHARE
           Clause</b><p>The <codeph>FOR UPDATE</codeph> clause has this
-          form:</p><codeblock>FOR UPDATE [OF <varname>table_name</varname> [, ...]] [NOWAIT]</codeblock><p>The
+          form:</p><codeblock>FOR UPDATE [OF &lt;table_name> [, ...]] [NOWAIT]</codeblock><p>The
           closely related <codeph>FOR SHARE</codeph> clause has this
-            form:</p><codeblock>FOR SHARE [OF <varname>table_name</varname> [, ...]] [NOWAIT]</codeblock><p><codeph>FOR
+            form:</p><codeblock>FOR SHARE [OF &lt;table_name> [, ...]] [NOWAIT]</codeblock><p><codeph>FOR
             UPDATE</codeph> causes the tables accessed by the <codeph>SELECT</codeph> statement to
           be locked as though for update. This prevents the table from being modified or deleted by
           other transactions until the current transaction ends. That is, other transactions that

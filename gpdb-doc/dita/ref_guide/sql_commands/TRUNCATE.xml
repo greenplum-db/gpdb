@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
-<topic id="topic1"><title id="ep20941">TRUNCATE</title><body><p id="sql_command_desc">Empties a table of all rows.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">TRUNCATE [TABLE] <varname>name</varname> [, ...] [CASCADE | RESTRICT]</codeblock></section><section id="section3"><title>Description</title><p><codeph>TRUNCATE</codeph> quickly removes all rows from a table or set of tables. It has the same
+<topic id="topic1"><title id="ep20941">TRUNCATE</title><body><p id="sql_command_desc">Empties a table of all rows.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">TRUNCATE [TABLE] &lt;name> [, ...] [CASCADE | RESTRICT]</codeblock></section><section id="section3"><title>Description</title><p><codeph>TRUNCATE</codeph> quickly removes all rows from a table or set of tables. It has the same
         effect as an unqualified <codeph><xref href="DELETE.xml#topic1" type="topic" format="dita"
           /></codeph> on each table, but since it does not actually scan the tables it is faster.
         This is most useful on large tables.</p>

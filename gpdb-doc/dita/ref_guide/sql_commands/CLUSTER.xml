@@ -2,9 +2,9 @@
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
 <topic id="topic1"><title id="bh20941">CLUSTER</title><body><p id="sql_command_desc">Physically reorders a heap storage table on disk according to an index.
-Not a recommended operation in Greenplum Database.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">CLUSTER <varname>indexname</varname> ON <varname>tablename</varname>
+Not a recommended operation in Greenplum Database.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">CLUSTER &lt;indexname> ON &lt;tablename>
 
-CLUSTER <varname>tablename</varname>
+CLUSTER &lt;tablename>
 
 CLUSTER</codeblock></section><section id="section3"><title>Description</title><p><codeph>CLUSTER</codeph> orders a heap storage table based on an index.
 <codeph>CLUSTER</codeph> is not supported on append-optmized storage

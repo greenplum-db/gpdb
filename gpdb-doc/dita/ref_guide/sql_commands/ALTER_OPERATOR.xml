@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
-<topic id="topic1"><title id="ar20941">ALTER OPERATOR</title><body><p id="sql_command_desc">Changes the definition of an operator.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">ALTER OPERATOR <varname>name</varname> ( {<varname>lefttype</varname> | NONE} , {<varname>righttype</varname> | NONE} ) 
-   OWNER TO <varname>newowner</varname></codeblock></section><section id="section3"><title>Description</title><p><codeph>ALTER OPERATOR</codeph> changes the definition of an operator.
+<topic id="topic1"><title id="ar20941">ALTER OPERATOR</title><body><p id="sql_command_desc">Changes the definition of an operator.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">ALTER OPERATOR &lt;name> ( {&lt;lefttype> | NONE} , {&lt;righttype> | NONE} ) 
+   OWNER TO &lt;newowner></codeblock></section><section id="section3"><title>Description</title><p><codeph>ALTER OPERATOR</codeph> changes the definition of an operator.
 The only currently available functionality is to change the owner of
 the operator. </p><p>You must own the operator to use <codeph>ALTER OPERATOR</codeph>.
 To alter the owner, you must also be a direct or indirect member of the

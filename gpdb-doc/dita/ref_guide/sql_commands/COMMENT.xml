@@ -2,31 +2,31 @@
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
 <topic id="topic1"><title id="bi20941">COMMENT</title><body><p id="sql_command_desc">Defines or change the comment of an object.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">COMMENT ON
-{ TABLE <varname>object_name</varname> |
-  COLUMN <varname>table_name.column_name</varname> |
-  AGGREGATE <varname>agg_name</varname> (<varname>agg_type</varname> [, ...]) |
-  CAST (<varname>sourcetype</varname> AS <varname>targettype</varname>) |
-  CONSTRAINT <varname>constraint_name</varname> ON <varname>table_name</varname> |
-  CONVERSION <varname>object_name</varname> |
-  DATABASE <varname>object_name</varname> |
-  DOMAIN <varname>object_name</varname> |
-  FILESPACE <varname>object_name</varname> |
-  FUNCTION <varname>func_name</varname> ([[<varname>argmode</varname>] [<varname>argname</varname>] <varname>argtype</varname> [, ...]]) |
-  INDEX <varname>object_name</varname> |
-  LARGE OBJECT <varname>large_object_oid</varname> |
-  OPERATOR <varname>op</varname> (<varname>leftoperand_type</varname>, <varname>rightoperand_type</varname>) |
-  OPERATOR CLASS <varname>object_name</varname> USING <varname>index_method</varname> |
-  [PROCEDURAL] LANGUAGE <varname>object_name</varname> |
-  RESOURCE QUEUE <varname>object_name</varname> |
-  ROLE <varname>object_name</varname> |
-  RULE <varname>rule_name</varname> ON <varname>table_name</varname> |
-  SCHEMA <varname>object_name</varname> |
-  SEQUENCE <varname>object_name</varname> |
-  TABLESPACE <varname>object_name</varname> |
-  TRIGGER <varname>trigger_name</varname> ON <varname>table_name</varname> |
-  TYPE <varname>object_name</varname> |
-  VIEW <varname>object_name</varname> } 
-IS '<varname>text</varname>'</codeblock></section><section id="section3"><title>Description</title><p><codeph>COMMENT</codeph> stores a comment about a database object. To
+{ TABLE &lt;object_name> |
+  COLUMN &lt;table_name.column_name> |
+  AGGREGATE &lt;agg_name> (&lt;agg_type> [, ...]) |
+  CAST (&lt;sourcetype> AS &lt;targettype>) |
+  CONSTRAINT &lt;constraint_name> ON &lt;table_name> |
+  CONVERSION &lt;object_name> |
+  DATABASE &lt;object_name> |
+  DOMAIN &lt;object_name> |
+  FILESPACE &lt;object_name> |
+  FUNCTION &lt;func_name> ([[&lt;argmode>] [&lt;argname>] &lt;argtype> [, ...]]) |
+  INDEX &lt;object_name> |
+  LARGE OBJECT &lt;large_object_oid> |
+  OPERATOR &lt;op> (&lt;leftoperand_type>, &lt;rightoperand_type>) |
+  OPERATOR CLASS &lt;object_name> USING &lt;index_method> |
+  [PROCEDURAL] LANGUAGE &lt;object_name> |
+  RESOURCE QUEUE &lt;object_name> |
+  ROLE &lt;object_name> |
+  RULE &lt;rule_name> ON &lt;table_name> |
+  SCHEMA &lt;object_name> |
+  SEQUENCE &lt;object_name> |
+  TABLESPACE &lt;object_name> |
+  TRIGGER &lt;trigger_name> ON &lt;table_name> |
+  TYPE &lt;object_name> |
+  VIEW &lt;object_name> } 
+IS '&lt;text>'</codeblock></section><section id="section3"><title>Description</title><p><codeph>COMMENT</codeph> stores a comment about a database object. To
 modify a comment, issue a new <codeph>COMMENT</codeph> command for the
 same object. Only one comment string is stored for each object. To remove
 a comment, write <codeph>NULL</codeph> in place of the text string. Comments

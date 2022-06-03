@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
-<topic id="topic1"><title id="am137232">ALTER VIEW</title><body><p id="sql_command_desc">Changes the definition of a view.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">ALTER VIEW <varname>name</varname> RENAME TO <varname>newname</varname>
+<topic id="topic1"><title id="am137232">ALTER VIEW</title><body><p id="sql_command_desc">Changes the definition of a view.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">ALTER VIEW &lt;name> RENAME TO &lt;newname>
 </codeblock></section><section id="section3">
       <title>Description</title>
       <p><codeph>ALTER VIEW</codeph> changes the definition of a view. The only currently available

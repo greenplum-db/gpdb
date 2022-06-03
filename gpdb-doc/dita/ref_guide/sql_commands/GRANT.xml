@@ -7,49 +7,49 @@
       <title>Synopsis</title>
       <codeblock id="sql_command_synopsis">GRANT { {SELECT | INSERT | UPDATE | DELETE | REFERENCES | 
 TRIGGER | TRUNCATE } [,...] | ALL [PRIVILEGES] }
-    ON [TABLE] <varname>tablename</varname> [, ...]
-    TO {<varname>rolename</varname> | PUBLIC} [, ...] [WITH GRANT OPTION]
+    ON [TABLE] &lt;tablename> [, ...]
+    TO {&lt;rolename> | PUBLIC} [, ...] [WITH GRANT OPTION]
 
 GRANT { {USAGE | SELECT | UPDATE} [,...] | ALL [PRIVILEGES] }
-    ON SEQUENCE <varname>sequencename</varname> [, ...]
-    TO { <varname>rolename</varname> | PUBLIC } [, ...] [WITH GRANT OPTION]
+    ON SEQUENCE &lt;sequencename> [, ...]
+    TO { &lt;rolename> | PUBLIC } [, ...] [WITH GRANT OPTION]
 
 GRANT { {CREATE | CONNECT | TEMPORARY | TEMP} [,...] | ALL 
 [PRIVILEGES] }
-    ON DATABASE <varname>dbname</varname> [, ...]
-    TO {<varname>rolename</varname> | PUBLIC} [, ...] [WITH GRANT OPTION]
+    ON DATABASE &lt;dbname> [, ...]
+    TO {&lt;rolename> | PUBLIC} [, ...] [WITH GRANT OPTION]
 
 GRANT { USAGE | ALL [ PRIVILEGES ] }
-    ON FOREIGN DATA WRAPPER <varname>fdwname</varname> [, ...]
-    TO { [ GROUP ] <varname>rolename</varname> | PUBLIC } [, ...] [ WITH GRANT OPTION ]
+    ON FOREIGN DATA WRAPPER &lt;fdwname> [, ...]
+    TO { [ GROUP ] &lt;rolename> | PUBLIC } [, ...] [ WITH GRANT OPTION ]
 
 GRANT { USAGE | ALL [ PRIVILEGES ] }
-    ON FOREIGN SERVER <varname>servername</varname> [, ...]
-    TO { [ GROUP ] <varname>rolename</varname> | PUBLIC } [, ...] [ WITH GRANT OPTION ]
+    ON FOREIGN SERVER &lt;servername> [, ...]
+    TO { [ GROUP ] &lt;rolename> | PUBLIC } [, ...] [ WITH GRANT OPTION ]
 
 GRANT { EXECUTE | ALL [PRIVILEGES] }
-    ON FUNCTION <varname>funcname</varname> ( [ [<varname>argmode</varname>] [<varname>argname</varname>] <varname>argtype</varname> [, ...] 
+    ON FUNCTION &lt;funcname> ( [ [&lt;argmode>] [&lt;argname>] &lt;argtype> [, ...] 
 ] ) [, ...]
-    TO {<varname>rolename</varname> | PUBLIC} [, ...] [WITH GRANT OPTION]
+    TO {&lt;rolename> | PUBLIC} [, ...] [WITH GRANT OPTION]
 
 GRANT { USAGE | ALL [PRIVILEGES] }
-    ON LANGUAGE <varname>langname</varname> [, ...]
-    TO {<varname>rolename</varname> | PUBLIC} [, ...] [WITH GRANT OPTION]
+    ON LANGUAGE &lt;langname> [, ...]
+    TO {&lt;rolename> | PUBLIC} [, ...] [WITH GRANT OPTION]
 
 GRANT { {CREATE | USAGE} [,...] | ALL [PRIVILEGES] }
-    ON SCHEMA <varname>schemaname</varname> [, ...]
-    TO {<varname>rolename</varname> | PUBLIC} [, ...] [WITH GRANT OPTION]
+    ON SCHEMA &lt;schemaname> [, ...]
+    TO {&lt;rolename> | PUBLIC} [, ...] [WITH GRANT OPTION]
 
 GRANT { CREATE | ALL [PRIVILEGES] }
-    ON TABLESPACE <varname>tablespacename</varname> [, ...]
-    TO {<varname>rolename</varname> | PUBLIC} [, ...] [WITH GRANT OPTION]
+    ON TABLESPACE &lt;tablespacename> [, ...]
+    TO {&lt;rolename> | PUBLIC} [, ...] [WITH GRANT OPTION]
 
-GRANT <varname>parent_role</varname> [, ...] 
-    TO <varname>member_role</varname> [, ...] [WITH ADMIN OPTION]
+GRANT &lt;parent_role> [, ...] 
+    TO &lt;member_role> [, ...] [WITH ADMIN OPTION]
 
 GRANT { SELECT | INSERT | ALL [PRIVILEGES] } 
-    ON PROTOCOL <varname>protocolname</varname>
-    TO <varname>username</varname></codeblock>
+    ON PROTOCOL &lt;protocolname>
+    TO &lt;username></codeblock>
     </section>
     <section id="section3">
       <title>Description</title>
@@ -106,13 +106,13 @@ GRANT { SELECT | INSERT | ALL [PRIVILEGES] }
           with the <codeph>GRANT</codeph> command. </p><ul>
           <li id="ds157703">To allow a user to create a readable external table
             with a trusted
-            protocol<codeblock>GRANT SELECT ON PROTOCOL <varname>protocolname</varname> TO <varname>username</varname></codeblock></li>
+            protocol<codeblock>GRANT SELECT ON PROTOCOL &lt;protocolname> TO &lt;username></codeblock></li>
           <li id="ds157705">To allow a user to create a writable external table
             with a trusted
-            protocol<codeblock>GRANT INSERT ON PROTOCOL <varname>protocolname</varname> TO <varname>username</varname></codeblock></li>
+            protocol<codeblock>GRANT INSERT ON PROTOCOL &lt;protocolname> TO &lt;username></codeblock></li>
           <li id="ds157707">To allow a user to create both readable and writable
             external tables with a trusted
-            protocol<codeblock>GRANT ALL ON PROTOCOL <varname>protocolname</varname> TO <varname>username</varname></codeblock></li>
+            protocol<codeblock>GRANT ALL ON PROTOCOL &lt;protocolname> TO &lt;username></codeblock></li>
         </ul><p>You can also use this command to grant users permissions to
           create and use <codeph>hdfs</codeph>, <codeph>s3</codeph>, and
             <codeph>pxf</codeph> external tables. However, external tables of

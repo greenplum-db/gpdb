@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
-<topic id="topic1"><title id="bb137420">ALTER TYPE</title><body><p id="sql_command_desc">Changes the definition of a data type.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">ALTER TYPE <varname>name</varname>
-   OWNER TO <varname>new_owner</varname> | SET SCHEMA <varname>new_schema</varname></codeblock></section><section id="section3"><title>Description</title><p><codeph>ALTER TYPE</codeph> changes the definition of an existing type.
+<topic id="topic1"><title id="bb137420">ALTER TYPE</title><body><p id="sql_command_desc">Changes the definition of a data type.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">ALTER TYPE &lt;name>
+   OWNER TO &lt;new_owner> | SET SCHEMA &lt;new_schema></codeblock></section><section id="section3"><title>Description</title><p><codeph>ALTER TYPE</codeph> changes the definition of an existing type.
 You can change the owner and the schema of a type. </p><p>You must own the type to use <codeph>ALTER TYPE</codeph>. To change
 the schema of a type, you must also have <codeph>CREATE</codeph> privilege
 on the new schema. To alter the owner, you must also be a direct or indirect

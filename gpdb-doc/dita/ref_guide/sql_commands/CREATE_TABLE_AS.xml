@@ -7,13 +7,13 @@
     <p id="sql_command_desc">Defines a new table from the results of a query.</p>
     <section id="section2">
       <title>Synopsis</title>
-      <codeblock id="sql_command_synopsis">CREATE [ [GLOBAL | LOCAL] {TEMPORARY | TEMP} ] TABLE <varname>table_name</varname>
-   [(<varname>column_name</varname> [, ...] )]
-   [ WITH ( <varname>storage_parameter</varname>=<varname>value</varname> [, ... ] ) ]
+      <codeblock id="sql_command_synopsis">CREATE [ [GLOBAL | LOCAL] {TEMPORARY | TEMP} ] TABLE &lt;table_name>
+   [(&lt;column_name> [, ...] )]
+   [ WITH ( &lt;storage_parameter>=&lt;value> [, ... ] ) ]
    [ON COMMIT {PRESERVE ROWS | DELETE ROWS | DROP}]
-   [TABLESPACE <varname>tablespace</varname>]
-   AS <varname>query</varname>
-   [DISTRIBUTED BY (<varname>column</varname>, [ ... ] ) | DISTRIBUTED RANDOMLY]</codeblock>
+   [TABLESPACE &lt;tablespace>]
+   AS &lt;query>
+   [DISTRIBUTED BY (&lt;column>, [ ... ] ) | DISTRIBUTED RANDOMLY]</codeblock>
       <p>where <varname>storage_parameter</varname> is:</p>
       <codeblock>   APPENDONLY={TRUE|FALSE}
    BLOCKSIZE={8192-2097152}

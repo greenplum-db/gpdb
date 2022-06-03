@@ -88,7 +88,7 @@
         <p>After installing the MADlib package, run the <codeph>madpack</codeph> command to add
           MADlib functions to Greenplum Database. <codeph>madpack</codeph> is in
             <codeph>$GPHOME/madlib/bin</codeph>. </p>
-        <codeblock>$ madpack [-s <varname>schema_name</varname>] -p greenplum -c <varname>user</varname>@<varname>host</varname>:<varname>port</varname>/<varname>database</varname> install</codeblock>
+        <codeblock>$ madpack [-s &lt;schema_name>] -p greenplum -c &lt;user>@&lt;host>:&lt;port>/&lt;database> install</codeblock>
         <p>For example, this command creates MADlib functions in the 
             <codeph>testdb</codeph> database running on server <codeph>mdw</codeph> on port
             <codeph>5432</codeph>. The <codeph>madpack</codeph> command logs in as the user
@@ -147,8 +147,8 @@
           functions. <p>Before running the <codeph>madpack</codeph> command to upgrade to MADlib
             1.13, run these <codeph>psql</codeph> commands as the <codeph>gpadmin</codeph> user to
             drop the leftover functions from the databases where MADlib is
-              installed.</p><codeblock>psql <varname>db_name</varname> -c "DROP FUNCTION IF EXISTS <varname>schema</varname>.knn(VARCHAR);"
-psql <varname>db_name</varname> -c "DROP FUNCTION IF EXISTS <varname>schema</varname>.knn();"</codeblock><p><varname>db_name</varname>
+              installed.</p><codeblock>psql &lt;db_name> -c "DROP FUNCTION IF EXISTS &lt;schema>.knn(VARCHAR);"
+psql &lt;db_name> -c "DROP FUNCTION IF EXISTS &lt;schema>.knn();"</codeblock><p><varname>db_name</varname>
             is the name of the database. <varname>schema</varname> is the name of the MADlib
             schema.</p><p>See the <xref
               href="https://cwiki.apache.org/confluence/display/MADLIB/Installation+Guide#InstallationGuide-01/11/18-UpgradingMADlibto1.13"

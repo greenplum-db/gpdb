@@ -220,7 +220,7 @@
           <li id="pv160918">Install the software extension package by running the
               <codeph>gppkg</codeph> command. This example installs the PL/Java extension package on
             a Linux
-            system:<codeblock>$ gppkg -i pljava-1.4.3-gp5-rhel<varname>osversion</varname>-x86_64.gppkg</codeblock></li>
+            system:<codeblock>$ gppkg -i pljava-1.4.3-gp5-rhel&lt;osversion>-x86_64.gppkg</codeblock></li>
           <li>Ensure that the environment variables <codeph>JAVA_HOME</codeph> and
               <codeph>LD_LIBRARY_PATH</codeph> are set properly in
               <codeph>$GPHOME/greenplum_path.sh</codeph> on all Greenplum Database hosts.<ul

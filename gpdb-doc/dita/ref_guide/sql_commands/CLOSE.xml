@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
-<topic id="topic1"><title id="bg20941">CLOSE</title><body><p id="sql_command_desc">Closes a cursor.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">CLOSE <varname>cursor_name</varname></codeblock></section><section id="section3"><title>Description</title><p><codeph>CLOSE</codeph> frees the resources associated with an open cursor.
+<topic id="topic1"><title id="bg20941">CLOSE</title><body><p id="sql_command_desc">Closes a cursor.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">CLOSE &lt;cursor_name></codeblock></section><section id="section3"><title>Description</title><p><codeph>CLOSE</codeph> frees the resources associated with an open cursor.
 After the cursor is closed, no subsequent operations are allowed on it.
 A cursor should be closed when it is no longer needed. </p><p>Every non-holdable open cursor is implicitly closed when a transaction
 is terminated by <codeph>COMMIT</codeph> or <codeph>ROLLBACK</codeph>.

@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
-<topic id="topic1"><title id="bw20941">CREATE OPERATOR</title><body><p id="sql_command_desc">Defines a new operator.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">CREATE OPERATOR <varname>name</varname> ( 
-       PROCEDURE = <varname>funcname</varname>
-       [, LEFTARG = <varname>lefttype</varname>] [, RIGHTARG = <varname>righttype</varname>]
-       [, COMMUTATOR = <varname>com_op</varname>] [, NEGATOR = <varname>neg_op</varname>]
-       [, RESTRICT = <varname>res_proc</varname>] [, JOIN = <varname>join_proc</varname>]
+<topic id="topic1"><title id="bw20941">CREATE OPERATOR</title><body><p id="sql_command_desc">Defines a new operator.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">CREATE OPERATOR &lt;name> ( 
+       PROCEDURE = &lt;funcname>
+       [, LEFTARG = &lt;lefttype>] [, RIGHTARG = &lt;righttype>]
+       [, COMMUTATOR = &lt;com_op>] [, NEGATOR = &lt;neg_op>]
+       [, RESTRICT = &lt;res_proc>] [, JOIN = &lt;join_proc>]
        [, HASHES] [, MERGES] )</codeblock></section><section id="section3"><title>Description</title><p><codeph>CREATE OPERATOR</codeph> defines a new operator. The user who
 defines an operator becomes its owner. </p><p>The operator name is a sequence of up to <codeph>NAMEDATALEN</codeph>-1
 (63 by default) characters from the following list: <codeph>+ - * / &lt;

@@ -1,16 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
-<topic id="topic1"><title id="ax20941">ALTER SEQUENCE</title><body><p id="sql_command_desc">Changes the definition of a sequence generator.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">ALTER SEQUENCE <varname>name</varname> [INCREMENT [ BY ] <varname>increment</varname>] 
-     [MINVALUE <varname>minvalue</varname> | NO MINVALUE] 
-     [MAXVALUE <varname>maxvalue</varname> | NO MAXVALUE] 
-     [RESTART [ WITH ] <varname>start</varname>] 
-     [CACHE <varname>cache</varname>] [[ NO ] CYCLE] 
-     [OWNED BY {<varname>table.column</varname> | NONE}]
+<topic id="topic1"><title id="ax20941">ALTER SEQUENCE</title><body><p id="sql_command_desc">Changes the definition of a sequence generator.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">ALTER SEQUENCE &lt;name> [INCREMENT [ BY ] &lt;increment>] 
+     [MINVALUE &lt;minvalue> | NO MINVALUE] 
+     [MAXVALUE &lt;maxvalue> | NO MAXVALUE] 
+     [RESTART [ WITH ] &lt;start>] 
+     [CACHE &lt;cache>] [[ NO ] CYCLE] 
+     [OWNED BY {&lt;table.column> | NONE}]
 
-ALTER SEQUENCE <varname>name</varname> RENAME TO <varname>new_name
+ALTER SEQUENCE &lt;name> RENAME TO <varname>new_name
 </varname>
-ALTER SEQUENCE <varname>name</varname> SET SCHEMA <varname>new_schema</varname></codeblock></section><section id="section3"><title>Description</title><p><codeph>ALTER SEQUENCE</codeph> changes the parameters of an existing
+ALTER SEQUENCE &lt;name> SET SCHEMA &lt;new_schema></codeblock></section><section id="section3"><title>Description</title><p><codeph>ALTER SEQUENCE</codeph> changes the parameters of an existing
 sequence generator. Any parameters not specifically set in the <codeph>ALTER
 SEQUENCE</codeph> command retain their prior settings.</p><p>You must own the sequence to use <codeph>ALTER SEQUENCE</codeph>.
 To change a sequence's schema, you must also have <codeph>CREATE</codeph>

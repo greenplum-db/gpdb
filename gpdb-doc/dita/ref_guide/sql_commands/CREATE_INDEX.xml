@@ -7,12 +7,12 @@
                 <p id="sql_command_desc">Defines a new index.</p>
                 <section id="section2">
                         <title>Synopsis</title>
-                        <codeblock id="sql_command_synopsis">CREATE [UNIQUE] INDEX <varname>name</varname> ON <varname>table</varname>
+                        <codeblock id="sql_command_synopsis">CREATE [UNIQUE] INDEX &lt;name> ON &lt;table>
        [USING btree|bitmap|gist]
-       ( {<varname>column</varname> | (<varname>expression</varname>)} [<varname>opclass</varname>] [, ...] )
-       [ WITH ( FILLFACTOR = <varname>value</varname> ) ]
-       [TABLESPACE <varname>tablespace</varname>]
-       [WHERE <varname>predicate</varname>]</codeblock>
+       ( {&lt;column> | (&lt;expression>)} [&lt;opclass>] [, ...] )
+       [ WITH ( FILLFACTOR = &lt;value> ) ]
+       [TABLESPACE &lt;tablespace>]
+       [WHERE &lt;predicate>]</codeblock>
                 </section>
                 <section id="section3">
                         <title>Description</title>

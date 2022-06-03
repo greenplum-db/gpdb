@@ -7,9 +7,9 @@
         <p id="sql_command_desc">Deletes rows from a table.</p>
         <section id="section2">
             <title>Synopsis</title>
-            <codeblock id="sql_command_synopsis">DELETE FROM [ONLY] <varname>table</varname> [[AS] <varname>alias</varname>]
-      [USING <varname>usinglist</varname>]
-      [WHERE <varname>condition</varname> | WHERE CURRENT OF <varname>cursor_name</varname> ]</codeblock>
+            <codeblock id="sql_command_synopsis">DELETE FROM [ONLY] &lt;table> [[AS] &lt;alias>]
+      [USING &lt;usinglist>]
+      [WHERE &lt;condition> | WHERE CURRENT OF &lt;cursor_name> ]</codeblock>
         </section>
         <section id="section3">
             <title>Description</title>
@@ -30,7 +30,7 @@
                 <b>Outputs</b>
                 <p>On successful completion, a <codeph>DELETE</codeph> command returns a command tag
                     of the form</p>
-                <codeblock>DELETE <varname>count</varname></codeblock>
+                <codeblock>DELETE &lt;count></codeblock>
                 <p>The count is the number of rows deleted. If count is 0, no rows matched the
                     condition (this is not considered an error). </p>
             </sectiondiv>

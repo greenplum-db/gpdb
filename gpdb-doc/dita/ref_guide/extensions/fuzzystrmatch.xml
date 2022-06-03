@@ -39,8 +39,8 @@
           converting them to the same code.</p>
         <note>Soundex is most useful for English names.</note>
         <p>These functions work with Soundex codes:</p>
-        <codeblock>soundex(text <varname>string1</varname>) returns text
-difference(text <varname>string1</varname>, text <varname>string2</varname>) returns int</codeblock>
+        <codeblock>soundex(text &lt;string1>) returns text
+difference(text &lt;string1>, text &lt;string2>) returns int</codeblock>
         <p>The <apiname>soundex</apiname> function converts a string to its Soundex code. Soundex
           codes consist of four characters.</p>
         <p>The <apiname>difference</apiname> function converts two strings to their Soundex codes
@@ -70,10 +70,10 @@ SELECT * FROM s WHERE difference(s.nm, 'john') > 2;</codeblock>
       <title>Levenshtein Functions</title>
       <body>
         <p>These functions calculate the Levenshtein distance between two strings: </p>
-        <codeblock>levenshtein(text <varname>source</varname>, text <varname>target</varname>, int <varname>ins_cost</varname>, int <varname>del_cost</varname>, int <varname>sub_cost</varname>) returns int
-levenshtein(text <varname>source</varname>, text <varname>target</varname>) returns int
-levenshtein_less_equal(text <varname>source</varname>, text <varname>target</varname>, int <varname>ins_cost</varname>, int <varname>del_cost</varname>, int <varname>sub_cost</varname>, int <varname>max_d</varname>) returns int
-levenshtein_less_equal(text <varname>source</varname>, text <varname>target</varname>, int max_d) returns int</codeblock>
+        <codeblock>levenshtein(text &lt;source>, text &lt;target>, int &lt;ins_cost>, int &lt;del_cost>, int &lt;sub_cost>) returns int
+levenshtein(text &lt;source>, text &lt;target>) returns int
+levenshtein_less_equal(text &lt;source>, text &lt;target>, int &lt;ins_cost>, int &lt;del_cost>, int &lt;sub_cost>, int &lt;max_d>) returns int
+levenshtein_less_equal(text &lt;source>, text &lt;target>, int max_d) returns int</codeblock>
         <p>Both the <codeph>source</codeph> and <codeph>target</codeph> parameters can be any
           non-null string, with a maximum of 255 bytes. The cost parameters
             <codeph>ins_cost</codeph>, <codeph>del_cost</codeph>, and <codeph>sub_cost</codeph>
@@ -120,7 +120,7 @@ test=# SELECT levenshtein_less_equal('extensive', 'exhaustive',4);
         <p>Metaphone, like Soundex, is based on the idea of constructing a representative code for
           an input string. Two strings are then deemed similar if they have the same codes. This
           function calculates the metaphone code of an input string
-          :<codeblock>metaphone(text <varname>source</varname>, int <varname>max_output_length</varname>) returns text</codeblock></p>
+          :<codeblock>metaphone(text &lt;source>, int &lt;max_output_length>) returns text</codeblock></p>
         <p>The <codeph>source</codeph> parameter must be a non-null string with a maximum of 255
           characters. The <codeph>max_output_length</codeph> parameter sets the maximum length of
           the output metaphone code; if longer, the output is truncated to this length. Example:</p>
@@ -140,8 +140,8 @@ test=# SELECT levenshtein_less_equal('extensive', 'exhaustive',4);
           a "primary" and an "alternate". In most cases they are the same, but for non-English names
           especially they can be a bit different, depending on pronunciation. These functions
           compute the primary and alternate
-          codes:<codeblock>dmetaphone(text <varname>source</varname>) returns text
-dmetaphone_alt(text <varname>source</varname>) returns text</codeblock>
+          codes:<codeblock>dmetaphone(text &lt;source>) returns text
+dmetaphone_alt(text &lt;source>) returns text</codeblock>
           There is no length limit on the input strings. Example:</p>
         <codeblock>test=# select dmetaphone('gumbo');
  dmetaphone

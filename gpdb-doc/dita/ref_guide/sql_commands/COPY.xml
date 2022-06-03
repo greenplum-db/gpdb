@@ -7,23 +7,23 @@
     <p id="sql_command_desc">Copies data between a file and a table.</p>
     <section id="section2">
       <title>Synopsis</title>
-      <codeblock id="sql_command_synopsis">COPY <varname>table</varname> [(<varname>column</varname> [, ...])] FROM {'<varname>file</varname>' | PROGRAM '<varname>command</varname>' | STDIN}
+      <codeblock id="sql_command_synopsis">COPY &lt;table> [(&lt;column> [, ...])] FROM {'&lt;file>' | PROGRAM '&lt;command>' | STDIN}
      [ [WITH]  
        [ON SEGMENT]
        [BINARY]
        [OIDS]
        [HEADER]
-       [DELIMITER [ AS ] '<varname>delimiter</varname>']
-       [NULL [ AS ] '<varname>null string</varname>']
-       [ESCAPE [ AS ] '<varname>escape</varname>' | 'OFF']
+       [DELIMITER [ AS ] '&lt;delimiter>']
+       [NULL [ AS ] '&lt;null string>']
+       [ESCAPE [ AS ] '&lt;escape>' | 'OFF']
        [NEWLINE [ AS ] 'LF' | 'CR' | 'CRLF']
-       [CSV [QUOTE [ AS ] '<varname>quote</varname>'] 
-            [FORCE NOT NULL <varname>column</varname> [, ...]]
+       [CSV [QUOTE [ AS ] '&lt;quote>'] 
+            [FORCE NOT NULL &lt;column> [, ...]]
        [FILL MISSING FIELDS]
        [[LOG ERRORS]  
-       SEGMENT REJECT LIMIT <varname>count</varname> [ROWS | PERCENT] ]
+       SEGMENT REJECT LIMIT &lt;count> [ROWS | PERCENT] ]
 
-COPY {table [(<varname>column</varname> [, ...])] | (<varname>query</varname>)} TO {'<varname>file</varname>' | PROGRAM '<varname>command</varname>' | STDOUT}
+COPY {table [(&lt;column> [, ...])] | (&lt;query>)} TO {'&lt;file>' | PROGRAM '&lt;command>' | STDOUT}
       [ [WITH] 
         [ON SEGMENT]
         [BINARY]
@@ -31,7 +31,7 @@ COPY {table [(<varname>column</varname> [, ...])] | (<varname>query</varname>)} 
         [HEADER]
         [DELIMITER [ AS ] 'delimiter']
         [NULL [ AS ] 'null string']
-        [ESCAPE [ AS ] '<varname>escape</varname>' | 'OFF']
+        [ESCAPE [ AS ] '&lt;escape>' | 'OFF']
         [CSV [QUOTE [ AS ] 'quote'] 
              [FORCE QUOTE column [, ...]] ]
       [IGNORE EXTERNAL PARTITIONS ]</codeblock>
@@ -85,11 +85,11 @@ COPY {table [(<varname>column</varname> [, ...])] | (<varname>query</varname>)} 
         <b>Outputs</b>
         <p>On successful completion, a <codeph>COPY</codeph> command returns a command tag of the
           form, where <varname>count</varname> is the number of rows copied:</p>
-        <codeblock>COPY <varname>count</varname></codeblock>
+        <codeblock>COPY &lt;count></codeblock>
         <p>If running a <codeph>COPY FROM</codeph> command in single row error isolation mode, the
           following notice message will be returned if any rows were not loaded due to format
           errors, where <varname>count</varname> is the number of rows rejected:</p>
-        <codeblock>NOTICE: Rejected <varname>count</varname> badly formatted rows.</codeblock>
+        <codeblock>NOTICE: Rejected &lt;count> badly formatted rows.</codeblock>
       </sectiondiv>
     </section>
     <section id="section5">
@@ -165,7 +165,7 @@ COPY {table [(<varname>column</varname> [, ...])] | (<varname>query</varname>)} 
           <pd>The keywords <codeph>STDIN</codeph> and <codeph>STDOUT</codeph> are not supported with
               <codeph>ON SEGMENT</codeph>. </pd>
           <pd>The <codeph>&lt;SEG_DATA_DIR></codeph> and <codeph>&lt;SEGID></codeph> string literals
-            are used to specify an absolute path and file name with the following syntax:<codeblock>COPY <varname>table</varname> [TO|FROM] '&lt;SEG_DATA_DIR>/<varname>gpdumpname</varname>&lt;SEGID>_<varname>suffix</varname>' ON SEGMENT;</codeblock><parml>
+            are used to specify an absolute path and file name with the following syntax:<codeblock>COPY &lt;table> [TO|FROM] '&lt;SEG_DATA_DIR>/&lt;gpdumpname>&lt;SEGID>_&lt;suffix>' ON SEGMENT;</codeblock><parml>
               <plentry>
                 <pt>&lt;SEG_DATA_DIR></pt>
                 <pd>The string literal representing the absolute path of the segment instance data
@@ -623,7 +623,7 @@ COPY {table [(<varname>column</varname> [, ...])] | (<varname>query</varname>)} 
    SEGMENT REJECT LIMIT 10 ROWS;</codeblock>
       <p>To copy segment data for later use, use the <codeph>ON SEGMENT</codeph> clause. Use of the
           <codeph>COPY TO ON SEGMENT</codeph> command takes the form:</p>
-      <codeblock>COPY <varname>table</varname> TO '&lt;SEG_DATA_DIR>/<varname>gpdumpname</varname>&lt;SEGID>_<varname>suffix</varname>' ON SEGMENT; </codeblock>
+      <codeblock>COPY &lt;table> TO '&lt;SEG_DATA_DIR>/&lt;gpdumpname>&lt;SEGID>_&lt;suffix>' ON SEGMENT; </codeblock>
       <p>The <codeph>&lt;SEGID></codeph> is required. However, you can substitute an absolute path
         for the <codeph>&lt;SEG_DATA_DIR></codeph> string literal in the path. </p>
       <p>When you pass in the string literal <codeph>&lt;SEG_DATA_DIR></codeph> and

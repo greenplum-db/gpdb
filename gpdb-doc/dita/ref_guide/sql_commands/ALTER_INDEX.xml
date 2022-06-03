@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
-<topic id="topic1"><title id="ap20941">ALTER INDEX</title><body><p id="sql_command_desc">Changes the definition of an index.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">ALTER INDEX <varname>name</varname> RENAME TO <varname>new_name</varname>
+<topic id="topic1"><title id="ap20941">ALTER INDEX</title><body><p id="sql_command_desc">Changes the definition of an index.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">ALTER INDEX &lt;name> RENAME TO &lt;new_name>
 
-ALTER INDEX <varname>name</varname> SET TABLESPACE <varname>tablespace_name</varname>
+ALTER INDEX &lt;name> SET TABLESPACE &lt;tablespace_name>
 
-ALTER INDEX <varname>name</varname> SET ( FILLFACTOR = <varname>value</varname> )
+ALTER INDEX &lt;name> SET ( FILLFACTOR = &lt;value> )
 
-ALTER INDEX <varname>name</varname> RESET ( FILLFACTOR )</codeblock></section><section id="section3"><title>Description</title><p><codeph>ALTER INDEX</codeph> changes the definition of an existing index.
+ALTER INDEX &lt;name> RESET ( FILLFACTOR )</codeblock></section><section id="section3"><title>Description</title><p><codeph>ALTER INDEX</codeph> changes the definition of an existing index.
 There are several subforms: </p><ul><li id="ap136518"><b>RENAME</b> — Changes the name of the index. There is no effect
 on the stored data.</li><li id="ap136521"><b>SET TABLESPACE</b> — Changes the index's tablespace to the specified
 tablespace and moves the data file(s) associated with the index to the

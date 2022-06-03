@@ -6,7 +6,7 @@
   <body>
     <p id="sql_command_desc">Rebuilds indexes.</p>
     <section id="section2"
-      ><title>Synopsis</title><codeblock id="sql_command_synopsis">REINDEX {INDEX | TABLE | DATABASE | SYSTEM} <varname>name</varname></codeblock></section>
+      ><title>Synopsis</title><codeblock id="sql_command_synopsis">REINDEX {INDEX | TABLE | DATABASE | SYSTEM} &lt;name></codeblock></section>
     <section id="section3"><title>Description</title><p><codeph>REINDEX</codeph> rebuilds an index
         using the data stored in the index's table, replacing the old copy of the index. There are
         several scenarios in which to use <codeph>REINDEX</codeph>: </p><ul>

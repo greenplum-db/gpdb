@@ -7,10 +7,10 @@
         <p id="sql_command_desc">Registers an extension in a Greenplum database.</p>
         <section id="section2">
             <title>Synopsis</title>
-            <codeblock id="sql_command_synopsis">CREATE EXTENSION [ IF NOT EXISTS ] <varname>extension_name</varname>
-  [ WITH ] [ SCHEMA <varname>schema_name</varname> ]
-           [ VERSION <varname>version</varname> ]
-           [ FROM <varname>old_version</varname> ]
+            <codeblock id="sql_command_synopsis">CREATE EXTENSION [ IF NOT EXISTS ] &lt;extension_name>
+  [ WITH ] [ SCHEMA &lt;schema_name> ]
+           [ VERSION &lt;version> ]
+           [ FROM &lt;old_version> ]
            [ CASCADE ]</codeblock>
         </section>
         <section id="section3">

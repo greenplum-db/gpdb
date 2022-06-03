@@ -2,7 +2,7 @@
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
 <topic id="topic1"><title id="ek156485">SET SESSION AUTHORIZATION</title><body><p id="sql_command_desc">Sets the session role identifier and the current role identifier of
-the current session.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">SET [SESSION | LOCAL] SESSION AUTHORIZATION <varname>rolename</varname>
+the current session.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">SET [SESSION | LOCAL] SESSION AUTHORIZATION &lt;rolename>
 
 SET [SESSION | LOCAL] SESSION AUTHORIZATION DEFAULT
 

@@ -1099,9 +1099,9 @@ include $(PGXS)</codeblock></p>
           the GPPC shared library name. You may choose to use the same name
           or differing names for the GPPC and SQL functions.</p>
         <p>Sample <codeph>CREATE FUNCTION ... AS </codeph> syntax follows:
-          <codeblock>CREATE FUNCTION <varname>sql_function_name</varname>(<varname>arg</varname>[, ...]) RETURNS <varname>return_type</varname>
-  AS '<varname>shared_library_path</varname>'[, '<varname>gppc_function_name</varname>']
-LANGUAGE C STRICT [WITH (DESCRIBE=<varname>describe_function</varname>)];</codeblock></p>
+          <codeblock>CREATE FUNCTION &lt;sql_function_name>(&lt;arg>[, ...]) RETURNS &lt;return_type>
+  AS '&lt;shared_library_path>'[, '&lt;gppc_function_name>']
+LANGUAGE C STRICT [WITH (DESCRIBE=&lt;describe_function>)];</codeblock></p>
          <p>You may omit the shared library <codeph>.so</codeph> extension
            when you specify <codeph><varname>shared_library_path</varname></codeph>.</p>
         <p>The following command registers the example <codeph>add_int4s()</codeph>

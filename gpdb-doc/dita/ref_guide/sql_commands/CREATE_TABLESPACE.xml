@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
-<topic id="topic1"><title id="cf20941">CREATE TABLESPACE</title><body><p id="sql_command_desc">Defines a new tablespace.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">CREATE TABLESPACE <varname>tablespace_name</varname> [OWNER <varname>username</varname>] 
-       FILESPACE <varname>filespace_name</varname></codeblock></section><section id="section3"><title>Description</title><p><codeph>CREATE TABLESPACE</codeph> registers a new tablespace for your
+<topic id="topic1"><title id="cf20941">CREATE TABLESPACE</title><body><p id="sql_command_desc">Defines a new tablespace.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">CREATE TABLESPACE &lt;tablespace_name> [OWNER &lt;username>] 
+       FILESPACE &lt;filespace_name></codeblock></section><section id="section3"><title>Description</title><p><codeph>CREATE TABLESPACE</codeph> registers a new tablespace for your
 Greenplum Database system. The tablespace name must be distinct from
 the name of any existing tablespace in the system. </p><p>A tablespace allows superusers to define an alternative location on
 the file system where the data files containing database objects (such

@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
-<topic id="topic1"><title id="bn20941">CREATE CAST</title><body><p id="sql_command_desc">Defines a new cast.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">CREATE CAST (<varname>sourcetype</varname> AS <varname>targettype</varname>) 
-       WITH FUNCTION <varname>funcname</varname> (<varname>argtypes</varname>) 
+<topic id="topic1"><title id="bn20941">CREATE CAST</title><body><p id="sql_command_desc">Defines a new cast.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">CREATE CAST (&lt;sourcetype> AS &lt;targettype>) 
+       WITH FUNCTION &lt;funcname> (&lt;argtypes>) 
        [AS ASSIGNMENT | AS IMPLICIT]
 
-CREATE CAST (<varname>sourcetype</varname> AS <varname>targettype</varname>) WITHOUT FUNCTION 
+CREATE CAST (&lt;sourcetype> AS &lt;targettype>) WITHOUT FUNCTION 
        [AS ASSIGNMENT | AS IMPLICIT]</codeblock></section><section id="section3"><title>Description</title><p><codeph>CREATE CAST</codeph> defines a new cast. A cast specifies how
 to perform a conversion between two data types. For example,</p><codeblock>SELECT CAST(42 AS text);</codeblock><p>converts the integer constant <codeph>42</codeph> to type <codeph>text</codeph> by invoking a
         previously specified function, in this case <codeph>text(int4)</codeph>. If no suitable cast
