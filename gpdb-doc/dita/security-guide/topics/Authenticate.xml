@@ -607,7 +607,7 @@ host     &lt;user-name>     &lt;db-name>     &lt;address>     pam     pamservice
         </parml>
       </section>
       <p>Following are sample <codeph>pg_hba.conf</codeph> entries for RADIUS client
-        authentication:<codeblock>hostssl  all all 0.0.0.0/0 radius radiusserver=servername radiussecret=<varname>sharedsecret</varname></codeblock></p>
+        authentication:<codeblock>hostssl  all all 0.0.0.0/0 radius radiusserver=servername radiussecret=&lt;sharedsecret></codeblock></p>
     </body>
   </topic>
   <topic id="topic_hwn_bk2_jr">

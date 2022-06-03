@@ -73,7 +73,7 @@ host    gpperfmon   gpmon    ::1/128             md5</codeblock></p>
         example:</p>
       <codeblock>host     gpperfmon,accounts   user1     127.0.0.1/28    md5</codeblock>
       <p>To designate a user as an operator, grant the <codeph>gpcc_operator</codeph> role to the
-        user:<codeblock>=# GRANT gpcc_operator TO <varname>user</varname>;</codeblock></p>
+        user:<codeblock>=# GRANT gpcc_operator TO &lt;user>;</codeblock></p>
       <p>You can also grant <codeph>gpcc_operator</codeph> to a group role to make all members of
         the group GPCC operators.</p>
       <p>See the <codeph>gpperfmon_install</codeph> reference in <cite>Greenplum Database Utility

@@ -105,8 +105,8 @@ $ gpconfig -s gp_hadoop_home</codeblock></p></li>
           <codeblock>#= GRANT SELECT ON PROTOCOL gphdfs TO gpadmin;
 #= GRANT INSERT ON PROTOCOL gphdfs TO gpadmin;</codeblock></li>
         <li>Grant Greenplum Database external table privileges to external table owner
-            roles:<codeblock>ALTER ROLE <varname>HDFS_USER</varname> CREATEEXTTABLE (type='readable');
-ALTER ROLE <varname>HDFS_USER</varname> CREATEEXTTABLE (type='writable');</codeblock><note>It
+            roles:<codeblock>ALTER ROLE &lt;HDFS_USER> CREATEEXTTABLE (type='readable');
+ALTER ROLE &lt;HDFS_USER> CREATEEXTTABLE (type='writable');</codeblock><note>It
             is best practice to review database privileges, including gphdfs external table
             privileges, at least annually. </note></li>
       </ol>
@@ -176,11 +176,11 @@ ALTER ROLE <varname>HDFS_USER</varname> CREATEEXTTABLE (type='writable');</codeb
           hosts. Set the resource manager address and yarn Kerberos service principle. For
           example:<codeblock>&lt;property>
     &lt;name>yarn.resourcemanager.address&lt;/name>
-    &lt;value><varname>hostname</varname>:<varname>8032</varname>&lt;/value>
+    &lt;value>&lt;hostname>:&lt;8032>&lt;/value>
 &lt;/property>
 &lt;property>
     &lt;name>yarn.resourcemanager.principal&lt;/name>
-    &lt;value>yarn/<varname>hostname</varname>@<varname>DOMAIN</varname>&lt;/value>
+    &lt;value>yarn/&lt;hostname>@&lt;DOMAIN>&lt;/value>
 &lt;/property></codeblock></li>
         <li>Edit the <filepath>hdfs-site.xml</filepath> client configuration file on all cluster
           hosts. Set properties to identify the NameNode Kerberos principals, the location of the
@@ -222,7 +222,7 @@ ALTER ROLE <varname>HDFS_USER</varname> CREATEEXTTABLE (type='writable');</codeb
     <body>
       <p>Confirm that HDFS is accessible via Kerberos authentication on all hosts in the Greenplum
         cluster. For example, enter the following command to list an HDFS
-        directory:<codeblock>hdfs dfs -ls hdfs://<varname>namenode</varname>:8020</codeblock></p>
+        directory:<codeblock>hdfs dfs -ls hdfs://&lt;namenode>:8020</codeblock></p>
       <section>
         <title>Create a Readable External Table in HDFS</title>
         <p>Follow these steps to verify that you can create a readable external table in a
@@ -234,11 +234,11 @@ ALTER ROLE <varname>HDFS_USER</varname> CREATEEXTTABLE (type='writable');</codeb
 32, Greg
 27, Gloria</codeblock></li>
           <li>Persist the sample text file in
-            HDFS:<codeblock>hdfs dfs -put <varname>test1.txt</varname> hdfs://<varname>namenode</varname>:8020/tmp</codeblock></li>
+            HDFS:<codeblock>hdfs dfs -put &lt;test1.txt> hdfs://&lt;namenode>:8020/tmp</codeblock></li>
           <li>Log in to Greenplum Database and create a readable external table that points to the
               <codeph>test1.txt</codeph> file in
             Hadoop:<codeblock>CREATE EXTERNAL TABLE test_hdfs (age int, name text) 
-LOCATION('gphdfs://<varname>namenode</varname>:<varname>8020</varname>/tmp/test1.txt') 
+LOCATION('gphdfs://&lt;namenode>:&lt;8020>/tmp/test1.txt') 
 FORMAT 'text' (delimiter ',');</codeblock></li>
           <li>Read data from the external table:<codeblock>SELECT * FROM test_hdfs;</codeblock></li>
         </ol>
@@ -252,15 +252,15 @@ FORMAT 'text' (delimiter ',');</codeblock></li>
           <li>Log in to Greenplum Database and create a writable external table pointing to a text
             file in
             HDFS:<codeblock>CREATE WRITABLE EXTERNAL TABLE test_hdfs2 (LIKE test_hdfs) 
-LOCATION ('gphdfs://<varname>namenode</varname>:8020/tmp/test2.txt'
+LOCATION ('gphdfs://&lt;namenode>:8020/tmp/test2.txt'
 FORMAT 'text' (DELIMITER ',');</codeblock></li>
           <li>Load data into the writable external
             table:<codeblock>INSERT INTO test_hdfs2 
 SELECT * FROM test_hdfs;</codeblock></li>
           <li>Check that the file exists in
-            HDFS:<codeblock>hdfs dfs -ls hdfs://<varname>namenode</varname>:8020/tmp/test2.txt</codeblock></li>
+            HDFS:<codeblock>hdfs dfs -ls hdfs://&lt;namenode>:8020/tmp/test2.txt</codeblock></li>
           <li>Verify the contents of the external
-            file:<codeblock>hdfs dfs -cat hdfs://<varname>namenode</varname>:8020/tmp/test2.txt</codeblock></li>
+            file:<codeblock>hdfs dfs -cat hdfs://&lt;namenode>:8020/tmp/test2.txt</codeblock></li>
         </ol>
       </section>
     </body>
@@ -315,7 +315,7 @@ fi</codeblock></p>
           command-line, and can help to troubleshoot connectivity problems outside of the database. </p>
         <ol id="ol_vm1_m4m_qr">
           <li>Save a sample data file in HDFS.
-            <codeblock>hdfs dfs -put test1.txt hdfs://<varname>namenode</varname>:8020/tmp</codeblock></li>
+            <codeblock>hdfs dfs -put test1.txt hdfs://&lt;namenode>:8020/tmp</codeblock></li>
           <li>On the segment host to be tested, create an environment script,
               <codeph>env.sh</codeph>, like the
             following:<codeblock>export JAVA_HOME=/usr/java/default
@@ -327,7 +327,7 @@ export GP_HADOOP_CON_JARDIR=/usr/lib/hadoop</codeblock></li>
 source env.sh
 source $GPHOME/lib/hadoop-env.sh</codeblock></li>
           <li>Test the Greenplum Database HDFS
-            reader:<codeblock>java com.emc.greenplum.gpdb.hdfsconnector.HDFSReader 0 32 TEXT hdp2 gphdfs://<varname>namenode</varname>:8020/tmp/test1.txt</codeblock></li>
+            reader:<codeblock>java com.emc.greenplum.gpdb.hdfsconnector.HDFSReader 0 32 TEXT hdp2 gphdfs://&lt;namenode>:8020/tmp/test1.txt</codeblock></li>
         </ol>
       </section>
     </body>
