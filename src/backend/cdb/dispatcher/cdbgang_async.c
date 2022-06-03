@@ -56,9 +56,11 @@ cdbgang_createGang_async(List *segments, SegmentType segmentType)
 	int		poll_timeout = 0;
 	int		i = 0;
 	int		size = 0;
-	bool	retry = false;
 	int		totalSegs = 0;
+	bool	allStatusDone = true;
+	bool	retry = false;
 
+	WaitEventSet    *volatile gang_waitset = NULL;
 	/* the returned events of waiteventset */
 	WaitEvent		*revents = NULL;
 	/* true means connection status is confirmed, either established or in recovery mode */
@@ -193,7 +195,7 @@ create_gang_retry:
 								errdetail("timeout expired\n (%s)", segdbDesc->whoami)));
 
 			/*
-			 * GPDB_12_MERGE_FIXME: create and destory waiteventset in each loop
+			 * GPDB_12_MERGE_FIXME: create and destroy waiteventset in each loop
 			 * may impact the performance, please see:
 			 * https://github.com/greenplum-db/gpdb/pull/13494#discussion_r874243725
 			 * Let's verify it later.
@@ -202,7 +204,7 @@ create_gang_retry:
 			 * Since the set of FDs can change when we call PQconnectPoll() below,
 			 * create a new wait event set to poll on for every loop iteration.
 			 */
-			WaitEventSet	*gang_waitset = CreateWaitEventSet(CurrentMemoryContext, size);
+			gang_waitset = CreateWaitEventSet(CurrentMemoryContext, size);
 
 			for (i = 0; i < size; i++)
 			{
@@ -271,11 +273,15 @@ create_gang_retry:
 				}
 			}
 
-			bool allStatusDone = true;
+			allStatusDone = true;
 			for (i = 0; i < size; i++)
 				allStatusDone &= connStatusDone[i];
 			if (allStatusDone)
+			{
+				FreeWaitEventSet(gang_waitset);
+				gang_waitset = NULL;
 				break;
+			}
 
 			SIMPLE_FAULT_INJECTOR("create_gang_in_progress");
 
@@ -285,6 +291,7 @@ create_gang_retry:
 			int nready = WaitEventSetWait(gang_waitset, poll_timeout, revents, size, WAIT_EVENT_GANG_ASSIGN);
 			Assert(nready >= 0);
 			FreeWaitEventSet(gang_waitset);
+			gang_waitset = NULL;
 
 			if (nready == 0)
 			{
@@ -337,10 +344,13 @@ create_gang_retry:
 			ELOG_DISPATCHER_DEBUG("createGang: gang creation failed, but retryable.");
 
 			retry = true;
-		}
+		} /* for(;;) */
 	}
 	PG_CATCH();
 	{
+		if (gang_waitset != NULL)
+			FreeWaitEventSet(gang_waitset);
+
 		FtsNotifyProber();
 		/* FTS shows some segment DBs are down */
 		if (FtsTestSegmentDBIsDown(newGangDefinition->db_descriptors, size))

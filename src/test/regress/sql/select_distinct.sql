@@ -138,6 +138,23 @@ SELECT 2 IS NOT DISTINCT FROM 2 as "yes";
 SELECT 2 IS NOT DISTINCT FROM null as "no";
 SELECT null IS NOT DISTINCT FROM null as "yes";
 
+-- join cases
+-- test IS DISTINCT FROM and IS NOT DISTINCT FROM join qual. the postgres planner doesn't support hash join
+-- on IS NOT DISTINCT FROM for now, ORCA support "IS NOT DISTINCT FROM" Hash Join but generates wrong result,
+-- DISABLE ORCA. Please fix me later if ORCA resolve the problem.
+SET optimizer TO off;
+CREATE TABLE distinct_1(a int);
+CREATE TABLE distinct_2(a int);
+INSERT INTO distinct_1 VALUES(1),(2),(NULL);
+INSERT INTO distinct_2 VALUES(1),(NULL);
+EXPLAIN SELECT * FROM distinct_1, distinct_2 WHERE distinct_1.a IS DISTINCT FROM distinct_2.a;
+EXPLAIN SELECT * FROM distinct_1, distinct_2 WHERE distinct_1.a IS NOT DISTINCT FROM distinct_2.a;
+SELECT * FROM distinct_1, distinct_2 WHERE distinct_1.a IS DISTINCT FROM distinct_2.a;
+SELECT * FROM distinct_1, distinct_2 WHERE distinct_1.a IS NOT DISTINCT FROM distinct_2.a;
+DROP TABLE distinct_1;
+DROP TABLE distinct_2;
+RESET optimizer;
+
 -- gpdb start: test inherit/partition table distinct when gp_statistics_pullup_from_child_partition is on
 set gp_statistics_pullup_from_child_partition to on;
 CREATE TABLE sales (id int, date date, amt decimal(10,2))

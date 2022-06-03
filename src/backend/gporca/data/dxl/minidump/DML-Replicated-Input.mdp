@@ -341,7 +341,7 @@ WHERE  sach_vsnr = 465132477;
     <dxl:Plan Id="0" SpaceSize="2">
       <dxl:DMLInsert Columns="0,1,10" ActionCol="11" OidCol="0" CtidCol="0" SegmentIdCol="0" InputSorted="false">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="431.001126" Rows="1.000000" Width="10"/>
+          <dxl:Cost StartupCost="0" TotalCost="431.001226" Rows="1.000000" Width="10"/>
         </dxl:Properties>
         <dxl:DirectDispatchInfo>
           <dxl:KeyValue>
@@ -375,7 +375,7 @@ WHERE  sach_vsnr = 465132477;
         </dxl:TableDescriptor>
         <dxl:RedistributeMotion InputSegments="0" OutputSegments="0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="431.000113" Rows="1.000000" Width="14"/>
+            <dxl:Cost StartupCost="0" TotalCost="431.000213" Rows="1.000000" Width="14"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="ag">
@@ -400,7 +400,7 @@ WHERE  sach_vsnr = 465132477;
           </dxl:HashExprList>
           <dxl:Result>
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="431.000081" Rows="1.000000" Width="14"/>
+              <dxl:Cost StartupCost="0" TotalCost="431.000181" Rows="1.000000" Width="14"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="0" Alias="ag">

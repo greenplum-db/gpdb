@@ -176,7 +176,7 @@ The following parameters control the types of plan operations the Postgres Plann
 
 ### <a id="topic24"></a>Database Statistics Sampling Parameters 
 
-These parameters adjust the amount of data sampled by an `ANALYZE` operation. Adjusting these parameters affects statistics collection system-wide. You can configure statistics collection on particular tables and columns by using the `ALTER TABLE``SET STATISTICS` clause.
+These parameters adjust the amount of data sampled by an `ANALYZE` operation. Adjusting these parameters affects statistics collection system-wide. You can configure statistics collection on particular tables and columns by using the `ALTER TABLE SET STATISTICS` clause.
 
 - [default\_statistics\_target](guc-list.html)
 
@@ -253,6 +253,7 @@ These configuration parameters control Greenplum Database logging.
 - [log\_duration](guc-list.html)
 - [log\_executor\_stats](guc-list.html)
 - [log\_hostname](guc-list.html)
+- [gp\_log\_endpoints](guc-list.html)
 - [gp\_log\_interconnect](guc-list.html)
 - [log\_parser\_stats](guc-list.html)
 - [log\_planner\_stats](guc-list.html)

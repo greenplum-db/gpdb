@@ -104,6 +104,8 @@ public:
 		EcpBitmapScanRebindCost,	// cost of rebind operation in a bitmap scan
 		EcpPenalizeHJSkewUpperLimit,  // upper limit for penalizing a skewed hashjoin operator
 
+		EcpScalarFuncCost,	// cost of scalar func
+
 		EcpSentinel
 	};
 
@@ -273,6 +275,9 @@ private:
 
 	// upper limit for penalizing a skewed hash operator
 	static const CDouble DPenalizeHJSkewUpperLimit;
+
+	// default value of compute scalar func cost
+	static const CDouble DScalarFuncCost;
 
 public:
 	CCostModelParamsGPDB(CCostModelParamsGPDB &) = delete;

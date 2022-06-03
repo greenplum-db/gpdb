@@ -44,7 +44,7 @@ description
 :   Specifies the `LC_COLLATE` setting to be used in this database.
 
 --lc-ctype locale
-:   Specifies the LC\_CTYPE setting to be used in this database.
+:   Specifies the `LC_CTYPE` setting to be used in this database.
 
 -O owner \| --owner=owner
 :   The name of the database user who will own the new database. Defaults to the user running this command. \(This name is processed as a double-quoted identifier.\)
@@ -58,7 +58,7 @@ description
 -? \| --help
 :   Show help about `createdb` command line arguments, and exit.
 
-The options `-D`, `-l`, `-E`, `-O`, and `-T` correspond to options of the underlying SQL command `CREATE DATABASE`; see [CREATE DATABASE](../../ref_guide/sql_commands/CREATE_DATABASE.html)`CREATE DATABASE` in the *Greenplum Database Reference Guide* for more information about them.
+The options `-D`, `-l`, `-E`, `-O`, and `-T` correspond to options of the underlying SQL command `CREATE DATABASE`; see [CREATE DATABASE](../../ref_guide/sql_commands/CREATE_DATABASE.html) in the *Greenplum Database Reference Guide* for more information about them.
 
 **Connection Options**
 

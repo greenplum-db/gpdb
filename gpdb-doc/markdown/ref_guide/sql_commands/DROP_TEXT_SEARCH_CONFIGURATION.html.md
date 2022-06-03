@@ -4,13 +4,13 @@ Removes a text search configuration.
 
 ## <a id="section2"></a>Synopsis 
 
-``` {#sql_command_synopsis}
+```
 DROP TEXT SEARCH CONFIGURATION [ IF EXISTS ] <name> [ CASCADE | RESTRICT ]
 ```
 
 ## <a id="section3"></a>Description 
 
-DROP TEXT SEARCH CONFIGURATION drops an existing text search configuration. To run this command you must be the owner of the configuration.
+`DROP TEXT SEARCH CONFIGURATION` drops an existing text search configuration. To run this command you must be the owner of the configuration.
 
 ## <a id="section4"></a>Parameters 
 

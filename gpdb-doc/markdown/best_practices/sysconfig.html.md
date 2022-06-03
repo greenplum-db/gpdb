@@ -95,7 +95,7 @@ The Linux sysctl `vm.overcommit_memory` and `vm.overcommit_ratio` variables affe
 
 **Note:** For information on configuration of overcommit memory, refer to:
 
--   [https://en.wikipedia.org/wiki/Memory\_overcommitment](https://www.google.com/url?q=https://en.wikipedia.org/wiki/Memory_overcommitment&sa=D&ust=1499719618717000&usg=AFQjCNErcHO7vErv4pn9fIhCxrR0XRiknA)
+-   [https://en.wikipedia.org/wiki/Memory_overcommitment](https://www.google.com/url?q=https://en.wikipedia.org/wiki/Memory_overcommitment&sa=D&ust=1499719618717000&usg=AFQjCNErcHO7vErv4pn9fIhCxrR0XRiknA)
 -   [https://www.kernel.org/doc/Documentation/vm/overcommit-accounting](https://www.google.com/url?q=https://www.kernel.org/doc/Documentation/vm/overcommit-accounting&sa=D&ust=1499719618717000&usg=AFQjCNEmu5tZutAaN1KCSlIwz4hwqihkOQ)
 
 `vm.overcommit_ratio` is the percent of RAM that is used for application processes. The default is 50 on Red Hat Enterprise Linux. See [Resource Queue Segment Memory Configuration](#segment_mem_config) for a formula to calculate an optimal value.
@@ -164,13 +164,13 @@ For scenarios where a large number of workfiles are generated, adjust the calcul
 -   If the total system memory is less than 256 GB:
 
     ```
-    gp_vmem = ((SWAP + RAM) – (7.5GB + 0.05 * RAM - (300KB * total\_\#\_workfiles))) / 1.7
+    gp_vmem = ((SWAP + RAM) – (7.5GB + 0.05 * RAM - (300KB * total_#_workfiles))) / 1.7
     ```
 
 -   If the total system memory is equal to or greater than 256 GB:
 
     ```
-    gp_vmem = ((SWAP + RAM) – (7.5GB + 0.05 * RAM - (300KB * total\_\#\_workfiles))) / 1.17
+    gp_vmem = ((SWAP + RAM) – (7.5GB + 0.05 * RAM - (300KB * total_#_workfiles))) / 1.17
     ```
 
 

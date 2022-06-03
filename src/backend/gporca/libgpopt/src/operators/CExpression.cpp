@@ -1534,4 +1534,11 @@ CExpression::DeriveHasScalarArrayCmp()
 	exprhdl.Attach(this);
 	return m_pdpscalar->DeriveHasScalarArrayCmp(exprhdl);
 }
+BOOL
+CExpression::DeriveHasScalarFuncProject()
+{
+	CExpressionHandle exprhdl(m_mp);
+	exprhdl.Attach(this);
+	return m_pdpscalar->DeriveHasScalarFuncProject(exprhdl);
+}
 // EOF

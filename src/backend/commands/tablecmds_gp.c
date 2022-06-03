@@ -27,6 +27,7 @@
 #include "catalog/pg_inherits.h"
 #include "catalog/pg_partitioned_table.h"
 #include "catalog/pg_opclass.h"
+#include "catalog/heap.h"
 #include "cdb/cdbvars.h"
 #include "cdb/memquota.h"
 #include "commands/extension.h"
@@ -1050,6 +1051,58 @@ AtExecGPSplitPartition(Relation rel, AlterTableCmd *cmd)
 	return stmts;
 }
 
+void GpAlterPartMetaTrackUpdObject(Oid relid, AlterTableType subcmdtype)
+{
+	char	   *subtype;
+	switch (subcmdtype)
+	{
+		case AT_PartTruncate:
+			subtype = "TRUNCATE";
+			break;
+
+		case AT_PartAdd:
+			subtype = "ADD";
+			break;
+
+		case AT_PartDrop:
+			subtype = "DROP";
+			break;
+
+		case AT_PartExchange:
+			subtype = "EXCHANGE";
+			break;
+
+		case AT_PartSplit:
+			subtype = "SPLIT";
+			break;
+
+		case AT_SetDistributedBy:
+			subtype = "SET DISTRIBUTED BY";
+			break;
+
+		case AT_SetTableSpace:
+			subtype = "SET TABLESPACE";
+			break;
+
+		case AT_PartSetTemplate:
+			subtype = "SET TEMPLATE";
+			break;
+
+		case AT_PartRename:
+			subtype = "RENAME";
+			break;
+
+		default:
+			subtype = "UNKNOWN ALTER PARTITION COMMAND";
+			break;
+	}
+	MetaTrackUpdObject(RelationRelationId,
+					   relid,
+					   GetUserId(),
+					   "PARTITION",
+					   subtype);
+}
+
 void
 ATExecGPPartCmds(Relation origrel, AlterTableCmd *cmd)
 {
@@ -1411,6 +1464,19 @@ ATExecGPPartCmds(Relation origrel, AlterTableCmd *cmd)
 					   None_Receiver,
 					   NULL);
 	}
+
+	/* 
+	 * The pg_stat_last_operation table contains metadata tracking 
+	 * information about operations on database objects. Greenplum 
+	 * Database updates this table when a database object is 
+	 * created, altered, truncated, vacuumed, analyzed, or 
+	 * partitioned, and when privileges are granted to an object.
+	 * GpAlterPartMetaTrackUpdObject() will update 
+	 * pg_stat_last_operation for GPDB specific alter partition 
+	 * commands. 
+	 */
+	if (Gp_role == GP_ROLE_DISPATCH)
+		GpAlterPartMetaTrackUpdObject(RelationGetRelid(rel), cmd->subtype);
 }
 
 /*

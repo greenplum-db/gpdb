@@ -93,6 +93,9 @@ public:
 	// check if a project list has multiple distinct aggregates
 	static BOOL FHasMultipleDistinctAggs(CExpressionHandle &exprhdl);
 
+	// check if a project list has a scalar func
+	static BOOL FHasScalarFunc(CExpressionHandle &exprhdl);
+
 };	// class CScalarProjectList
 
 }  // namespace gpopt

@@ -1,5 +1,5 @@
 ---
-title: Retrieving Query Results with a Parallel Retrieve Cursor (Beta)</title>
+title: Retrieving Query Results with a Parallel Retrieve Cursor</title>
 ---
 
 A *parallel retrieve cursor* is an enhanced cursor implementation that you can use to create a special kind of cursor on the Greenplum Database coordinator node, and retrieve query results, on demand and in parallel, directly from the Greenplum segments.

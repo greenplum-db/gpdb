@@ -1182,6 +1182,42 @@ select c from rep_tab where c in (select distinct d from rand_tab);
  2
 (2 rows)
 
+-- Github Issue 13532
+create table t1_13532(a int, b int) distributed replicated;
+create table t2_13532(a int, b int) distributed replicated;
+create index idx_t2_13532 on t2_13532(b);
+explain (costs off) select * from t1_13532 x, t2_13532 y where y.a < random() and x.b = y.b;
+                              QUERY PLAN                              
+----------------------------------------------------------------------
+ Hash Join
+   Hash Cond: (x.b = y.b)
+   ->  Gather Motion 1:1  (slice1; segments: 1)
+         ->  Seq Scan on t1_13532 x
+   ->  Hash
+         ->  Result
+               ->  Gather Motion 1:1  (slice2; segments: 1)
+                     ->  Bitmap Heap Scan on t2_13532 y
+                           Filter: ((a)::double precision < random())
+                           ->  Bitmap Index Scan on idx_t2_13532
+ Optimizer: Postgres query optimizer
+(11 rows)
+
+set enable_bitmapscan = off;
+explain (costs off) select * from t1_13532 x, t2_13532 y where y.a < random() and x.b = y.b;
+                              QUERY PLAN                              
+----------------------------------------------------------------------
+ Hash Join
+   Hash Cond: (x.b = y.b)
+   ->  Gather Motion 1:1  (slice1; segments: 1)
+         ->  Seq Scan on t1_13532 x
+   ->  Hash
+         ->  Result
+               ->  Gather Motion 1:1  (slice2; segments: 1)
+                     ->  Index Scan using idx_t2_13532 on t2_13532 y
+                           Filter: ((a)::double precision < random())
+ Optimizer: Postgres query optimizer
+(10 rows)
+
 -- start_ignore
 drop schema rpt cascade;
 NOTICE:  drop cascades to 7 other objects

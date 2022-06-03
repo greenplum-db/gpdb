@@ -719,6 +719,9 @@ static TupleChunkListItem RecvTupleChunkFromUDPIFC(ChunkTransportState *transpor
 static TupleChunkListItem receiveChunksUDPIFC(ChunkTransportState *pTransportStates, ChunkTransportStateEntry *pEntry,
 					int16 motNodeID, int16 *srcRoute, MotionConn *conn);
 
+static TupleChunkListItem receiveChunksUDPIFCLoop(ChunkTransportState *pTransportStates, ChunkTransportStateEntry *pEntry,
+						int16 *srcRoute, MotionConn *conn, WaitEventSet *waitset, int nevent);
+
 static void SendEosUDPIFC(ChunkTransportState *transportStates,
 			  int motNodeID, TupleChunkListItem tcItem);
 static bool SendChunkUDPIFC(ChunkTransportState *transportStates,
@@ -1190,16 +1193,21 @@ setupUDPListeningSocket(int *listenerSocketFd, uint16 *listenerPort, int *txFami
 #endif
 
 	fun = "getaddrinfo";
-	/*
-	 * Restrict what IP address we will listen on to just the one that was
-	 * used to create this QE session.
-	 */
-	Assert(interconnect_address && strlen(interconnect_address) > 0);
-	hints.ai_flags |= AI_NUMERICHOST;
-	if (gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG)
-		ereport(DEBUG1,
-				(errmsg("getaddrinfo called with interconnect_address %s",
-								interconnect_address)));
+	if (Gp_interconnect_address_type == INTERCONNECT_ADDRESS_TYPE_UNICAST)
+	{
+		Assert(interconnect_address && strlen(interconnect_address) > 0);
+		hints.ai_flags |= AI_NUMERICHOST;
+		ereportif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG3,
+				  (errmsg("getaddrinfo called with unicast address: %s",
+						  interconnect_address)));
+	}
+	else
+	{
+		Assert(interconnect_address == NULL);
+		hints.ai_flags |= AI_PASSIVE;
+		ereportif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG3,
+				  (errmsg("getaddrinfo called with wildcard address")));
+	}
 
 	s = getaddrinfo(interconnect_address, service, &hints, &addrs);
 	if (s != 0)
@@ -3712,14 +3720,10 @@ static TupleChunkListItem
 receiveChunksUDPIFC(ChunkTransportState *pTransportStates, ChunkTransportStateEntry *pEntry,
 					int16 motNodeID, int16 *srcRoute, MotionConn *conn)
 {
-	int			retries = 0;
-	bool		directed = false;
 	int 		nFds = 0;
 	int 		*waitFds = NULL;
 	int 		nevent = 0;
-	MotionConn 	*rxconn = NULL;
-	WaitEvent	*rEvents = NULL;
-	WaitEventSet		*waitset = NULL;
+	WaitEventSet	*waitset = NULL;
 	TupleChunkListItem	tcItem = NULL;
 
 #ifdef AMS_VERBOSE_LOGGING
@@ -3731,7 +3735,6 @@ receiveChunksUDPIFC(ChunkTransportState *pTransportStates, ChunkTransportStateEn
 
 	if (conn != NULL)
 	{
-		directed = true;
 		*srcRoute = conn->route;
 		setMainThreadWaiting(&rx_control_info.mainWaitingState, motNodeID, conn->route,
 							 pTransportStates->sliceTable->ic_instance_id);
@@ -3743,7 +3746,6 @@ receiveChunksUDPIFC(ChunkTransportState *pTransportStates, ChunkTransportStateEn
 							 pTransportStates->sliceTable->ic_instance_id);
 	}
 
-	nFds = 0;
 	nevent = 2; /* nevent = waited fds number + 2 (latch and postmaster) */
 	if (Gp_role == GP_ROLE_DISPATCH)
 	{
@@ -3751,20 +3753,57 @@ receiveChunksUDPIFC(ChunkTransportState *pTransportStates, ChunkTransportStateEn
 		waitFds = cdbdisp_getWaitSocketFds(pTransportStates->estate->dispatcherState, &nFds);
 		if (waitFds != NULL)
 			nevent += nFds;
-
 	}
 
 	/* init WaitEventSet */
 	waitset = CreateWaitEventSet(CurrentMemoryContext, nevent);
-	rEvents = palloc(nevent * sizeof(WaitEvent)); /* returned events */
-	AddWaitEventToSet(waitset, WL_LATCH_SET, PGINVALID_SOCKET, &ic_control_info.latch, NULL);
-	AddWaitEventToSet(waitset, WL_POSTMASTER_DEATH, PGINVALID_SOCKET, NULL, NULL);
 
-	for (int i = 0; i < nFds; i++)
+	/*
+	 * Use PG_TRY() - PG_CATCH() to make sure destroy the waiteventset (close the epoll fd)
+	 * The main receive logic is in receiveChunksUDPIFCLoop()
+	 */
+	PG_TRY();
 	{
-		AddWaitEventToSet(waitset, WL_SOCKET_READABLE, waitFds[i], NULL, NULL);
-	}
+		AddWaitEventToSet(waitset, WL_LATCH_SET, PGINVALID_SOCKET, &ic_control_info.latch, NULL);
+		AddWaitEventToSet(waitset, WL_POSTMASTER_DEATH, PGINVALID_SOCKET, NULL, NULL);
+		for (int i = 0; i < nFds; i++)
+		{
+			AddWaitEventToSet(waitset, WL_SOCKET_READABLE, waitFds[i], NULL, NULL);
+		}
 
+		tcItem = receiveChunksUDPIFCLoop(pTransportStates, pEntry, srcRoute, conn, waitset, nevent);
+	}
+	PG_CATCH();
+	{
+		FreeWaitEventSet(waitset);
+		if (waitFds != NULL)
+			pfree(waitFds);
+
+		PG_RE_THROW();
+	}
+	PG_END_TRY();
+
+	FreeWaitEventSet(waitset);
+	if (waitFds != NULL)
+		pfree(waitFds);
+
+	return tcItem;
+}
+
+static TupleChunkListItem
+receiveChunksUDPIFCLoop(ChunkTransportState *pTransportStates, ChunkTransportStateEntry *pEntry,
+						int16 *srcRoute, MotionConn *conn, WaitEventSet *waitset, int nevent)
+{
+	TupleChunkListItem	tcItem = NULL;
+	MotionConn 	*rxconn = NULL;
+	int			retries = 0;
+	bool		directed = false;
+	WaitEvent	*rEvents = NULL;
+
+	if (conn != NULL)
+		directed = true;
+
+	rEvents = palloc(nevent * sizeof(WaitEvent)); /* returned events */
 	/* we didn't have any data, so we've got to read it from the network. */
 	for (;;)
 	{
@@ -3793,13 +3832,7 @@ receiveChunksUDPIFC(ChunkTransportState *pTransportStates, ChunkTransportStateEn
 
 			if (!directed)
 				*srcRoute = rxconn->route;
-
-			FreeWaitEventSet(waitset);
-			if (rEvents != NULL)
-				pfree(rEvents);
-			if (waitFds != NULL)
-				pfree(waitFds);
-
+			pfree(rEvents);
 			return tcItem;
 		}
 
@@ -3866,14 +3899,7 @@ receiveChunksUDPIFC(ChunkTransportState *pTransportStates, ChunkTransportStateEn
 		}
 
 		pthread_mutex_lock(&ic_control_info.lock);
-
-	}							/* for (;;) */
-
-	FreeWaitEventSet(waitset);
-	if (rEvents != NULL)
-		pfree(rEvents);
-	if (waitFds != NULL)
-		pfree(waitFds);
+	} /* for (;;) */
 
 	/* We either got data, or get cancelled. We never make it out to here. */
 	return NULL;				/* make GCC behave */

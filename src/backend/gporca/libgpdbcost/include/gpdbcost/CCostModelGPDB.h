@@ -195,6 +195,12 @@ private:
 	static CCost CostBitmapLargeNDV(const CCostModelGPDB *pcmgpdb,
 									const SCostingInfo *pci, CDouble dNDV);
 
+	// cost of compute scalar
+	static CCost CostComputeScalar(CMemoryPool *mp, CExpressionHandle &exprhdl,
+								   const SCostingInfo *pci,
+								   ICostModelParams *pcp,
+								   const CCostModelGPDB *pcmgpdb);
+
 public:
 	// ctor
 	CCostModelGPDB(CMemoryPool *mp, ULONG ulSegments,

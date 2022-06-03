@@ -35,6 +35,8 @@ endif
 ifeq "$(with_quicklz)" "yes"
 	recurse_targets += quicklz
 endif
+recurse_targets += ip4r
+
 $(call recurse,all install clean distclean, $(recurse_targets))
 
 all: gpcloud pxf mapreduce orafce
@@ -98,3 +100,4 @@ installcheck:
 	if [ "$(with_zstd)" = "yes" ]; then $(MAKE) -C zstd installcheck; fi
 	if [ "$(with_quicklz)" = "yes" ]; then $(MAKE) -C quicklz installcheck; fi
 	$(MAKE) -C gp_sparse_vector installcheck
+	$(MAKE) -C ip4r installcheck

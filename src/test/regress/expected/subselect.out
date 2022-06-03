@@ -1189,27 +1189,33 @@ begin
 end;
 $$;
 select * from explain_sq_limit();
-                               explain_sq_limit                               
-------------------------------------------------------------------------------
+                              explain_sq_limit                              
+----------------------------------------------------------------------------
  Limit (actual rows=3 loops=1)
-   ->  Subquery Scan on x (actual rows=3 loops=1)
-         ->  Gather Motion 3:1  (slice1; segments: 3) (actual rows=3 loops=1)
-               Merge Key: sq_limit.c1, sq_limit.pk
-               ->  Sort (actual rows=5 loops=1)
-                     Sort Key: sq_limit.c1, sq_limit.pk
-                     Sort Method:  quicksort  Memory: xxx
-                     ->  Seq Scan on sq_limit (actual rows=5 loops=1)
+   ->  Gather Motion 3:1  (slice1; segments: 3) (actual rows=3 loops=1)
+         ->  Limit (actual rows=3 loops=1)
+               ->  Subquery Scan on x (actual rows=3 loops=1)
+                     ->  Sort (actual rows=3 loops=1)
+                           Sort Key: sq_limit.c1, sq_limit.pk
+                           Sort Method:  quicksort  Memory: xxx
+                           ->  Seq Scan on sq_limit (actual rows=5 loops=1)
  Optimizer: Postgres query optimizer
 (9 rows)
 
+-- a subpath is sorted under a subqueryscan. however, the subqueryscan is not.
+-- whether the order of subpath can applied to the subqueryscan is up-to-implement.
+-- now we do not guarantee the order of subpath can apply to the subqueryscan.
+-- so the results of bellow is not stable, so we ignore the results
+--start_ignore
 select * from (select pk,c2 from sq_limit order by c1,pk) as x limit 3;
  pk | c2 
 ----+----
   1 |  1
   5 |  1
-  2 |  2
+  6 |  2
 (3 rows)
 
+--end_ignore
 reset optimizer;
 drop function explain_sq_limit();
 drop table sq_limit;

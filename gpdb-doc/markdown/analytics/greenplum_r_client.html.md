@@ -369,125 +369,77 @@ GreenplumR provides several functions. To obtain reference information for Green
 GreenplumR functions include:
 
 <div class="tablenoborder"><table cellpadding="4" cellspacing="0" summary="" class="table" frame="border" border="1" rules="all"><caption><span class="tablecap"><span class="table--title-label">Table 2. </span>GreenplumR Functions</span></caption><colgroup><col style="width:100pt" /><col style="width:100pt" /><col style="width:500pt" /></colgroup><thead class="thead" style="text-align:left;">
-            <tr class="row">
-              <th class="entry nocellnorowborder" style="vertical-align:top;" id="d24857e700">Category</th>
-
-              <th class="entry nocellnorowborder" style="vertical-align:top;" id="d24857e703">Name</th>
-
-              <th class="entry cell-norowborder" style="vertical-align:top;" id="d24857e706">Description</th>
-
-            </tr>
-
-          </thead>
+<tr class="row">
+<th class="entry nocellnorowborder" style="vertical-align:top;" id="d24857e700">Category</th>
+<th class="entry nocellnorowborder" style="vertical-align:top;" id="d24857e703">Name</th>
+<th class="entry cell-norowborder" style="vertical-align:top;" id="d24857e706">Description</th>
+</tr>
+</thead>
 <tbody class="tbody">
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d24857e700 ">Aggregate Functions</td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d24857e703 ">mean(), sum(), count(), max(), min(), sd(), var(), colMeans(), colSums(), colAgg(), db.array()</td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d24857e706 ">Functions that perform a calculation on
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d24857e700 ">Aggregate Functions</td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d24857e703 ">mean(), sum(), count(), max(), min(), sd(), var(), colMeans(), colSums(), colAgg(), db.array()</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d24857e706 ">Functions that perform a calculation on
                 multiple values and return a single value.</td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" rowspan="5" style="vertical-align:top;" headers="d24857e700 ">Connectivity Functions</td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d24857e703 ">connection info</td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d24857e706 ">Extract connection information.</td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d24857e703 ">db.connect()</td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d24857e706 ">Create a database connection.</td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d24857e703 ">db.connect.dsn()</td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d24857e706 ">Create a database connection using a DSN.</td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d24857e703 ">db.disconnect()</td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d24857e706 ">Disconnect a database connection.</td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d24857e703 ">db.list()</td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d24857e706 ">List database connections.</td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" rowspan="4" style="vertical-align:top;" headers="d24857e700 ">Database Object Functions</td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d24857e703 ">as.db.data.frame()</td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d24857e706 ">Create a db.data.frame from a file or data.frame,
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" rowspan="5" style="vertical-align:top;" headers="d24857e700 ">Connectivity Functions</td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d24857e703 ">connection info</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d24857e706 ">Extract connection information.</td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d24857e703 ">db.connect()</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d24857e706 ">Create a database connection.</td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d24857e703 ">db.connect.dsn()</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d24857e706 ">Create a database connection using a DSN.</td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d24857e703 ">db.disconnect()</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d24857e706 ">Disconnect a database connection.</td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d24857e703 ">db.list()</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d24857e706 ">List database connections.</td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" rowspan="4" style="vertical-align:top;" headers="d24857e700 ">Database Object Functions</td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d24857e703 ">as.db.data.frame()</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d24857e706 ">Create a db.data.frame from a file or data.frame,
                 optionally writing the data to a Greenplum table.</td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d24857e703 ">db.data.frame()</td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d24857e706 ">Create a data frame that references a view or
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d24857e703 ">db.data.frame()</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d24857e706 ">Create a data frame that references a view or
                  table in the database.</td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d24857e703 ">db.objects()</td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d24857e706 ">List the table and view objects in the database.</td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d24857e703 ">db.existsObject()</td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d24857e706 ">Identifies whether a table or view exists in the
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d24857e703 ">db.objects()</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d24857e706 ">List the table and view objects in the database.</td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d24857e703 ">db.existsObject()</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d24857e706 ">Identifies whether a table or view exists in the
                 database.</td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d24857e700 ">Mathematical Functions</td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d24857e703 ">exp(), abs(), log(), log10(), sign(), sqrt(), factorial(), sin(), cos(), tan(), asin(), acos(), atan(), atan2()</td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d24857e706 ">Mathematical functions that take db.obj as an
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d24857e700 ">Mathematical Functions</td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d24857e703 ">exp(), abs(), log(), log10(), sign(), sqrt(), factorial(), sin(), cos(), tan(), asin(), acos(), atan(), atan2()</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d24857e706 ">Mathematical functions that take db.obj as an
                 argument.</td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" rowspan="2" style="vertical-align:top;" headers="d24857e700 ">Greenplum Functions</td>
-
-              <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d24857e703 ">db.gpapply()</td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;" headers="d24857e706 ">Wrap an R function with a UDF and run it on
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" rowspan="2" style="vertical-align:top;" headers="d24857e700 ">Greenplum Functions</td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d24857e703 ">db.gpapply()</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d24857e706 ">Wrap an R function with a UDF and run it on
                 every row of data in a Greenplum table.</td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry row-nocellborder" style="vertical-align:top;" headers="d24857e703 ">db.gptapply()</td>
-
-              <td class="entry cellrowborder" style="vertical-align:top;" headers="d24857e706 ">Wrap an R function with a UDF and run it on
+</tr>
+<tr class="row">
+<td class="entry row-nocellborder" style="vertical-align:top;" headers="d24857e703 ">db.gptapply()</td>
+<td class="entry cellrowborder" style="vertical-align:top;" headers="d24857e706 ">Wrap an R function with a UDF and run it on
                 every row of data grouped by an index in a Greenplum table.</td>
-
-            </tr>
-
-          </tbody>
+</tr>
+</tbody>
 </table>
 </div>
