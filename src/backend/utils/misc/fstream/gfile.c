@@ -372,7 +372,11 @@ gz_file_write_one_chunk(gfile_t *fd, int do_flush)
 		z->s.avail_out = COMPRESSION_BUFFER_SIZE;
 		z->s.next_out = z->out;
 		ret1 = deflate(&(z->s), do_flush);    /* no bad return value */
-		assert(ret1 != Z_STREAM_ERROR);  /* state not clobbered */
+		if (ret1 == Z_STREAM_ERROR)
+		{
+			gfile_printf_then_putc_newline("the gz file is unrepaired, stop writing");
+			return -1;
+		}
 		have = COMPRESSION_BUFFER_SIZE - z->s.avail_out;
 		
 		if ( write_and_retry(fd, z->out, have) != have ) 
