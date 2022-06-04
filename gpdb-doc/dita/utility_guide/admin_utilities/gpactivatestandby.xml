@@ -24,13 +24,11 @@
                 Database master, accepting client connections on the master port. </p>
             <p>When you initialize a standby master, the default is to use the same port as the
                 active master. For information about the master port for the standby master, see
-                        <codeph><xref href="./gpinitstandby.xml#topic1" type="topic" format="dita"
-                    /></codeph>. </p>
+                    <xref href="./gpinitstandby.xml#topic1" type="topic" format="dita"/>. </p>
             <p>You must run this utility from the master host you are activating, not the failed
                 master host you are disabling. Running this utility assumes you have a standby
-                master host configured for the system (see <codeph><xref
-                        href="./gpinitstandby.xml#topic1" type="topic" format="dita"
-                /></codeph>).</p>
+                master host configured for the system (see <xref href="./gpinitstandby.xml#topic1"
+                    type="topic" format="dita"/>).</p>
             <p>The utility will perform the following steps:</p>
             <ul>
                 <li id="jo140686">Stops the synchronization process (<codeph>walreceiver</codeph>)
@@ -66,8 +64,8 @@
             <codeblock>psql &lt;dbname> -c 'ANALYZE;'</codeblock>
             <p>After you activate the standby master as the primary master, the Greenplum Database
                 system no longer has a standby master configured. You might want to specify another
-                host to be the new standby with the <codeph><xref href="./gpinitstandby.xml#topic1"
-                        type="topic" format="dita"/></codeph> utility. </p>
+                host to be the new standby with the <xref href="./gpinitstandby.xml#topic1"
+                    type="topic" format="dita"/> utility. </p>
         </section>
         <section id="section4">
             <title>Options</title>
@@ -121,9 +119,8 @@
         </section>
         <section id="section6">
             <title>See Also</title>
-            <p><codeph><xref href="./gpinitsystem.xml#topic1" type="topic" format="dita"/></codeph>,
-                        <codeph><xref href="./gpinitstandby.xml#topic1" type="topic" format="dita"
-                    /></codeph></p>
+            <p><xref href="./gpinitsystem.xml#topic1" type="topic" format="dita"/>, <xref
+                    href="./gpinitstandby.xml#topic1" type="topic" format="dita"/></p>
         </section>
     </body>
 </topic>

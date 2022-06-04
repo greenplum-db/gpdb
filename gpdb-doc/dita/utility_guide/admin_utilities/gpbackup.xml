@@ -54,10 +54,10 @@
         Greenplum Database master and segment hosts to an absolute path for later use. Additional
         options are provided to filter the backup set in order to include or exclude specific
         tables.</p>
-      <p>You can create an incremental backup with the <codeph><xref href="#topic1/incremental"
-            format="dita">--incremental</xref></codeph> option. Incremental backups are efficient
-        when the total amount of data in append-optimized tables or table partitions that changed is
-        small compared to the data has not changed. See <xref
+      <p>You can create an incremental backup with the <xref href="#topic1/incremental"
+          format="dita">--incremental</xref> option. Incremental backups are efficient when the
+        total amount of data in append-optimized tables or table partitions that changed is small
+        compared to the data has not changed. See <xref
           href="../../admin_guide/managing/backup-gpbackup-incremental.xml"/> for information about
         incremental backups. </p>
       <p>With the default <codeph>--jobs</codeph> option (1 job), each <codeph>gpbackup</codeph>
@@ -388,7 +388,7 @@ my#1schema.my_$590_Table</codeblock></p>
     <section id="section9">
       <title>See Also</title>
       <p>
-        <codeph><xref href="./gprestore.xml" type="topic" format="dita"/></codeph>, <xref
+        <xref href="./gprestore.xml" type="topic" format="dita"/>, <xref
           href="../../admin_guide/managing/backup-gpbackup.xml" format="dita"/> and <xref
           href="../../admin_guide/managing/backup-s3-plugin.xml"/></p>
     </section>

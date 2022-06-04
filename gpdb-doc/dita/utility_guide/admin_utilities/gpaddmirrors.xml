@@ -226,9 +226,9 @@ mirror3=3:sdw2-2:52002:53002:54002:/gpdata/mir2/gp3</codeblock>
         </section>
         <section id="section6">
             <title>See Also</title>
-            <p><codeph><xref href="./gpinitsystem.xml#topic1" type="topic" format="dita"/></codeph>,
-                        <codeph><xref href="./gpinitstandby.xml#topic1" type="topic" format="dita"
-                    /></codeph>, <codeph><xref href="gpactivatestandby.xml#topic1"/></codeph></p>
+            <p><xref href="./gpinitsystem.xml#topic1" type="topic" format="dita"/>, <xref
+                    href="./gpinitstandby.xml#topic1" type="topic" format="dita"/>, <xref
+                    href="gpactivatestandby.xml#topic1"/></p>
         </section>
     </body>
 </topic>

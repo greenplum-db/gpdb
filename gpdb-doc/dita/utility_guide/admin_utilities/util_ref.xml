@@ -198,9 +198,7 @@
                 initializing a Greenplum Database array. It is used internally to create the
                 individual segment instances and the master instance.</entry>
               <entry colname="col3">
-                <codeph>
-                  <xref href="gpinitsystem.xml#topic1" type="topic" format="dita"/>
-                </codeph>
+                <xref href="gpinitsystem.xml#topic1" type="topic" format="dita"/>
               </entry>
             </row>
             <row>
@@ -219,9 +217,8 @@
                 recovering a mirror segment when a full copy is needed. Do not use this utility to
                 back up Greenplum Database segment instances because it does not produce
                 MPP-consistent backups.</entry>
-              <entry colname="col3"><codeph><xref href="gpinitstandby.xml#topic1" type="topic"
-                    format="dita"/></codeph>, <codeph><xref href="gprecoverseg.xml#topic1"
-                    type="topic" format="dita"/></codeph></entry>
+              <entry colname="col3"><xref href="gpinitstandby.xml#topic1" type="topic" format="dita"
+                />, <xref href="gprecoverseg.xml#topic1" type="topic" format="dita"/></entry>
             </row>
             <row>
               <entry colname="col1">
@@ -229,9 +226,7 @@
               </entry>
               <entry colname="col2">Not used in Greenplum Database</entry>
               <entry colname="col3">
-                <codeph>
-                  <xref href="gpstate.xml#topic1" type="topic" format="dita"/>
-                </codeph>
+                <xref href="gpstate.xml#topic1" type="topic" format="dita"/>
               </entry>
             </row>
             <row>
@@ -242,9 +237,8 @@
                   <codeph>gpstop</codeph> when starting or stopping a Greenplum Database array. It
                 is used internally to stop and start the individual segment instances and the master
                 instance in parallel and with the correct options.</entry>
-              <entry colname="col3"><codeph><xref href="gpstart.xml#topic1" type="topic"
-                    format="dita"/></codeph>, <codeph><xref href="gpstop.xml#topic1" type="topic"
-                    format="dita"/></codeph></entry>
+              <entry colname="col3"><xref href="gpstart.xml#topic1" type="topic" format="dita"/>,
+                  <xref href="gpstop.xml#topic1" type="topic" format="dita"/></entry>
             </row>
             <row>
               <entry colname="col1">
@@ -275,11 +269,10 @@
                 database server listener process that accepts client connections. In Greenplum
                 Database, a <codeph>postgres</codeph> database listener process runs on the
                 Greenplum master Instance and on each Segment Instance.</entry>
-              <entry colname="col3">In Greenplum Database, you use <codeph><xref
-                    href="gpstart.xml#topic1" type="topic" format="dita"/></codeph> and
-                    <codeph><xref href="gpstop.xml#topic1" type="topic" format="dita"/></codeph> to
-                start all postmasters (<codeph>postgres</codeph> processes) in the system at once in
-                the correct order and with the correct options.</entry>
+              <entry colname="col3">In Greenplum Database, you use <xref href="gpstart.xml#topic1"
+                  type="topic" format="dita"/> and <xref href="gpstop.xml#topic1" type="topic"
+                  format="dita"/> to start all postmasters (<codeph>postgres</codeph> processes) in
+                the system at once in the correct order and with the correct options.</entry>
             </row>
           </tbody>
         </tgroup>

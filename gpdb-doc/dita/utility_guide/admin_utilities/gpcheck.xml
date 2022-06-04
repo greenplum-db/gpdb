@@ -129,9 +129,8 @@
         </section>
         <section id="section6">
             <title>See Also</title>
-            <p><codeph><xref href="gpssh.xml#topic1"/></codeph>, <codeph><xref
-                        href="gpscp.xml#topic1"/></codeph>, <codeph><xref
-                        href="./gpcheckperf.xml#topic1" type="topic" format="dita"/></codeph></p>
+            <p><xref href="gpssh.xml#topic1"/>, <xref href="gpscp.xml#topic1"/>, <xref
+                    href="./gpcheckperf.xml#topic1" type="topic" format="dita"/></p>
         </section>
     </body>
 </topic>
