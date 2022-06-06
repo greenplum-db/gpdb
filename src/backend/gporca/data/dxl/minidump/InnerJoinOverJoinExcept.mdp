@@ -306,7 +306,7 @@ ON (a.col = b.col);
             <dxl:Ident ColId="0" ColName="col" TypeMdid="0.23.1.0"/>
           </dxl:ProjElem>
         </dxl:ProjList>
-        <dxl:TableDescriptor Mdid="0.16385.1.0" TableName="mytable" LockMode="3">
+        <dxl:TableDescriptor Mdid="0.16385.1.0" TableName="mytable">
           <dxl:Columns>
             <dxl:Column ColId="33" Attno="1" ColName="col" TypeMdid="0.23.1.0" ColWidth="4"/>
             <dxl:Column ColId="34" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
@@ -359,7 +359,7 @@ ON (a.col = b.col);
                 </dxl:ProjElem>
               </dxl:ProjList>
               <dxl:Filter/>
-              <dxl:TableDescriptor Mdid="0.16385.1.0" TableName="mytable" LockMode="1">
+              <dxl:TableDescriptor Mdid="0.16385.1.0" TableName="mytable">
                 <dxl:Columns>
                   <dxl:Column ColId="0" Attno="1" ColName="col" TypeMdid="0.23.1.0" ColWidth="4"/>
                   <dxl:Column ColId="1" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
@@ -446,7 +446,7 @@ ON (a.col = b.col);
                         </dxl:ProjElem>
                       </dxl:ProjList>
                       <dxl:Filter/>
-                      <dxl:TableDescriptor Mdid="0.16385.1.0" TableName="mytable" LockMode="1">
+                      <dxl:TableDescriptor Mdid="0.16385.1.0" TableName="mytable">
                         <dxl:Columns>
                           <dxl:Column ColId="8" Attno="1" ColName="col" TypeMdid="0.23.1.0" ColWidth="4"/>
                           <dxl:Column ColId="9" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
@@ -469,7 +469,7 @@ ON (a.col = b.col);
                         </dxl:ProjElem>
                       </dxl:ProjList>
                       <dxl:Filter/>
-                      <dxl:TableDescriptor Mdid="0.16385.1.0" TableName="mytable" LockMode="1">
+                      <dxl:TableDescriptor Mdid="0.16385.1.0" TableName="mytable">
                         <dxl:Columns>
                           <dxl:Column ColId="16" Attno="1" ColName="col" TypeMdid="0.23.1.0" ColWidth="4"/>
                           <dxl:Column ColId="17" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
@@ -493,7 +493,7 @@ ON (a.col = b.col);
                       </dxl:ProjElem>
                     </dxl:ProjList>
                     <dxl:Filter/>
-                    <dxl:TableDescriptor Mdid="0.16385.1.0" TableName="mytable" LockMode="1">
+                    <dxl:TableDescriptor Mdid="0.16385.1.0" TableName="mytable">
                       <dxl:Columns>
                         <dxl:Column ColId="24" Attno="1" ColName="col" TypeMdid="0.23.1.0" ColWidth="4"/>
                         <dxl:Column ColId="25" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>

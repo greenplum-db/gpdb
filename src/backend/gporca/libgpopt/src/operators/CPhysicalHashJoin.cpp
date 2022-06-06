@@ -46,11 +46,13 @@ CPhysicalHashJoin::CPhysicalHashJoin(CMemoryPool *mp,
 									 CExpressionArray *pdrgpexprOuterKeys,
 									 CExpressionArray *pdrgpexprInnerKeys,
 									 IMdIdArray *hash_opfamilies,
+									 BOOL is_null_aware,
 									 CXform::EXformId origin_xform)
 	: CPhysicalJoin(mp, origin_xform),
 	  m_pdrgpexprOuterKeys(pdrgpexprOuterKeys),
 	  m_pdrgpexprInnerKeys(pdrgpexprInnerKeys),
 	  m_hash_opfamilies(NULL),
+	  m_is_null_aware(is_null_aware),
 	  m_pdrgpdsRedistributeRequests(NULL)
 {
 	GPOS_ASSERT(NULL != mp);
@@ -135,8 +137,6 @@ CPhysicalHashJoin::CreateHashRedistributeRequests(CMemoryPool *mp)
 
 			// add a separate request for each hash join key
 
-			// TODO:  - Dec 30, 2011; change fNullsColocated to false when our
-			// distribution matching can handle differences in NULL colocation
 			CDistributionSpecHashed *pdshashedCurrent =
 				GPOS_NEW(mp) CDistributionSpecHashed(
 					pdrgpexprCurrent, true /* fNullsCollocated */, opfamilies);
@@ -393,8 +393,18 @@ CPhysicalHashJoin::PdshashedMatching(
 			GPOS_WSZ_LIT("Unable to create matching hashed distribution."));
 	}
 
-	return GPOS_NEW(mp) CDistributionSpecHashed(
-		pdrgpexpr, true /* fNullsCollocated */, opfamilies);
+	// nulls colocated for inner hash joins, but not colocated in outer hash joins
+	BOOL fNullsColocated = true;
+
+	if (!m_is_null_aware &&
+		(COperator::EopPhysicalLeftOuterHashJoin == Eopid() ||
+		 COperator::EopPhysicalRightOuterHashJoin == Eopid()))
+	{
+		fNullsColocated = false;
+	}
+
+	return GPOS_NEW(mp)
+		CDistributionSpecHashed(pdrgpexpr, fNullsColocated, opfamilies);
 }
 
 

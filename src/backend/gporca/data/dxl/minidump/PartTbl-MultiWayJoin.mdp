@@ -420,9 +420,9 @@ explain select count(*) from r_p, s c, s d, s e where r_p.a = c.c and r_p.a = d.
         <dxl:GroupingColumns/>
         <dxl:ProjList>
           <dxl:ProjElem ColId="41" Alias="count">
-            <dxl:AggFunc AggMdid="0.2803.1.0" AggDistinct="false" AggStage="Final" AggKind="n" >
+            <dxl:AggFunc AggMdid="0.2803.1.0" AggDistinct="false" AggStage="Final" AggKind="n">
               <dxl:ValuesList ParamType="aggargs">
-              <dxl:Ident ColId="42" ColName="ColRef_0042" TypeMdid="0.20.1.0"/>
+                <dxl:Ident ColId="42" ColName="ColRef_0042" TypeMdid="0.20.1.0"/>
               </dxl:ValuesList>
               <dxl:ValuesList ParamType="aggdirectargs"/>
               <dxl:ValuesList ParamType="aggorder"/>
@@ -449,7 +449,7 @@ explain select count(*) from r_p, s c, s d, s e where r_p.a = c.c and r_p.a = d.
             <dxl:GroupingColumns/>
             <dxl:ProjList>
               <dxl:ProjElem ColId="42" Alias="ColRef_0042">
-                <dxl:AggFunc AggMdid="0.2803.1.0" AggDistinct="false" AggStage="Partial" AggKind="n" >
+                <dxl:AggFunc AggMdid="0.2803.1.0" AggDistinct="false" AggStage="Partial" AggKind="n">
                   <dxl:ValuesList ParamType="aggargs"/>
                   <dxl:ValuesList ParamType="aggdirectargs"/>
                   <dxl:ValuesList ParamType="aggorder"/>

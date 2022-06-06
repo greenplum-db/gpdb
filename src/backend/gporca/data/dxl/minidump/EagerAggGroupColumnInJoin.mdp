@@ -363,9 +363,9 @@
               <dxl:Ident ColId="11" ColName="g2" TypeMdid="0.23.1.0"/>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="20" Alias="max">
-              <dxl:AggFunc AggMdid="0.2116.1.0" AggDistinct="false" AggStage="Final" AggKind="n" >
+              <dxl:AggFunc AggMdid="0.2116.1.0" AggDistinct="false" AggStage="Final" AggKind="n">
                 <dxl:ValuesList ParamType="aggargs">
-                <dxl:Ident ColId="21" ColName="ColRef_0021" TypeMdid="0.23.1.0"/>
+                  <dxl:Ident ColId="21" ColName="ColRef_0021" TypeMdid="0.23.1.0"/>
                 </dxl:ValuesList>
                 <dxl:ValuesList ParamType="aggdirectargs"/>
                 <dxl:ValuesList ParamType="aggorder"/>
@@ -461,9 +461,9 @@
                     </dxl:GroupingColumns>
                     <dxl:ProjList>
                       <dxl:ProjElem ColId="21" Alias="ColRef_0021">
-                        <dxl:AggFunc AggMdid="0.2116.1.0" AggDistinct="false" AggStage="Partial" AggKind="n" >
+                        <dxl:AggFunc AggMdid="0.2116.1.0" AggDistinct="false" AggStage="Partial" AggKind="n">
                           <dxl:ValuesList ParamType="aggargs">
-                          <dxl:Ident ColId="2" ColName="s1" TypeMdid="0.23.1.0"/>
+                            <dxl:Ident ColId="2" ColName="s1" TypeMdid="0.23.1.0"/>
                           </dxl:ValuesList>
                           <dxl:ValuesList ParamType="aggdirectargs"/>
                           <dxl:ValuesList ParamType="aggorder"/>
