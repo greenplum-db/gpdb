@@ -721,7 +721,7 @@
         </dxl:LogicalSelect>
       </dxl:LogicalDelete>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="238">
+    <dxl:Plan Id="0" SpaceSize="222">
       <dxl:DMLDelete Columns="0" ActionCol="21" OidCol="0" CtidCol="1" SegmentIdCol="7" InputSorted="false">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="862.965580" Rows="1.000000" Width="1"/>

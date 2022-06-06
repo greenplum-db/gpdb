@@ -643,12 +643,12 @@ explain (costs off) select * from t1 left join t2 on (t1.a = t2.a) join t3 on (t
 ------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Hash Join
-         Hash Cond: ((t1.a = t2.a) AND (t1.b = t3.b))
-         ->  Seq Scan on t1
+         Hash Cond: (t2.a = t1.a)
+         ->  Seq Scan on t2
          ->  Hash
                ->  Hash Join
-                     Hash Cond: (t2.a = t3.a)
-                     ->  Seq Scan on t2
+                     Hash Cond: ((t1.b = t3.b) AND (t1.a = t3.a))
+                     ->  Seq Scan on t1
                      ->  Hash
                            ->  Seq Scan on t3
  Optimizer: Pivotal Optimizer (GPORCA) version 3.75.0

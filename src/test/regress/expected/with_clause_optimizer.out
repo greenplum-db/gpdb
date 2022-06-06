@@ -2281,18 +2281,18 @@ SELECT count(a1.i)
                      ->  Seq Scan on foo foo_1
                ->  Append
                      ->  Hash Join
-                           Hash Cond: (share0_ref2.i = share1_ref2.i)
-                           ->  Shared Scan (share slice:id 1:0)
+                           Hash Cond: (share1_ref2.i = share0_ref2.i)
+                           ->  Shared Scan (share slice:id 1:1)
                            ->  Hash
-                                 ->  Shared Scan (share slice:id 1:1)
+                                 ->  Shared Scan (share slice:id 1:0)
                      ->  Redistribute Motion 1:3  (slice2)
                            ->  Aggregate
                                  ->  Gather Motion 3:1  (slice3; segments: 3)
                                        ->  Hash Join
-                                             Hash Cond: (share0_ref3.i = share1_ref3.i)
-                                             ->  Shared Scan (share slice:id 3:0)
+                                             Hash Cond: (share1_ref3.i = share0_ref3.i)
+                                             ->  Shared Scan (share slice:id 3:1)
                                              ->  Hash
-                                                   ->  Shared Scan (share slice:id 3:1)
+                                                   ->  Shared Scan (share slice:id 3:0)
  Optimizer: Pivotal Optimizer (GPORCA)
 (22 rows)
 

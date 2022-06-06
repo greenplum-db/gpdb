@@ -10888,7 +10888,7 @@ group  by item.i_item_id, item.i_item_desc, item.i_current_price;
         </dxl:LogicalJoin>
       </dxl:LogicalGroupBy>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="98">
+    <dxl:Plan Id="0" SpaceSize="108">
       <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="102938.691528" Rows="13.696907" Width="127"/>

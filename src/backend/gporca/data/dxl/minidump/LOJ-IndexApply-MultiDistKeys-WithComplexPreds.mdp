@@ -283,7 +283,7 @@
         </dxl:And>
       </dxl:LogicalJoin>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="11">
+    <dxl:Plan Id="0" SpaceSize="12">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="437.000351" Rows="2.000000" Width="16"/>
