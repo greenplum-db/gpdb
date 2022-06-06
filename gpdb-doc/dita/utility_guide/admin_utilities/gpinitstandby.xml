@@ -9,13 +9,13 @@
             system.</p>
         <section id="section2">
             <title>Synopsis</title>
-            <codeblock><b>gpinitstandby</b> { <b>-s</b> &lt;standby_hostname> [<b>-P</b> port] 
-      [<b>-F</b> &lt;list_of_filespaces>] | <b>-r</b> | <b>-n</b> } 
-      [<b>-a</b>] [<b>-q</b>] [<b>-D</b>] [<b>-l</b> &lt;logfile_directory>]
+            <codeblock>gpinitstandby { -s &lt;standby_hostname> [-P port] 
+      [-F &lt;list_of_filespaces>] | -r | -n } 
+      [-a] [-q] [-D] [-l &lt;logfile_directory>]
 
-<b>gpinitstandby</b> <b>-v</b> 
+gpinitstandby -v 
 
-<b>gpinitstandby</b> <b>-?</b></codeblock>
+gpinitstandby -?</codeblock>
         </section>
         <section id="section3">
             <title>Description</title>

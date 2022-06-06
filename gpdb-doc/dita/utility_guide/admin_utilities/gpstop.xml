@@ -8,20 +8,20 @@
         <p>Stops or restarts a Greenplum Database system.</p>
         <section id="section2">
             <title>Synopsis</title>
-            <codeblock><b>gpstop</b> [<b>-d</b> &lt;master_data_directory>] [<b>-B</b> &lt;parallel_processes>] 
-       [<b>-M</b> smart | fast | immediate] [<b>-t</b> &lt;timeout_seconds>] [<b>-r</b>] [<b>-y</b>] [<b>-a</b>] 
-       [<b>-l</b> &lt;logfile_directory>] [<b>-v</b> | <b>-q</b>]
+            <codeblock>gpstop [-d &lt;master_data_directory>] [-B &lt;parallel_processes>] 
+       [-M smart | fast | immediate] [-t &lt;timeout_seconds>] [-r] [-y] [-a] 
+       [-l &lt;logfile_directory>] [-v | -q]
 
-<b>gpstop</b> <b>-m</b> [<b>-d</b> &lt;master_data_directory>] [<b>-y</b>] [<b>-l</b> &lt;logfile_directory>] [<b>-v</b> | <b>-q</b>]
+gpstop -m [-d &lt;master_data_directory>] [-y] [-l &lt;logfile_directory>] [-v | -q]
 
-<b>gpstop</b> <b>-u</b> [<b>-d</b> &lt;master_data_directory>] [<b>-l</b> &lt;logfile_directory>] [<b>-v</b> | <b>-q</b>]
+gpstop -u [-d &lt;master_data_directory>] [-l &lt;logfile_directory>] [-v | -q]
  
-<b>gpstop</b> <b>--host</b> &lt;host_name> [<b>-d</b> &lt;master_data_directory>] [<b>-l</b> &lt;logfile_directory>]
-       [<b>-t</b> &lt;timeout_seconds>] [<b>-a</b>] [<b>-v</b> | <b>-q</b>]
+gpstop --host &lt;host_name> [-d &lt;master_data_directory>] [-l &lt;logfile_directory>]
+       [-t &lt;timeout_seconds>] [-a] [-v | -q]
 
-<b>gpstop</b> <b>--version</b> 
+gpstop --version 
 
-<b>gpstop</b> <b>-?</b> | <b>-h</b> | <b>--help</b></codeblock>
+gpstop -? | -h | --help</codeblock>
         </section>
         <section id="section3">
             <title>Description</title>

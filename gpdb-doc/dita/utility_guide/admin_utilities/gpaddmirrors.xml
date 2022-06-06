@@ -9,18 +9,18 @@
             mirroring.</p>
         <section id="section2">
             <title>Synopsis</title>
-            <codeblock><b>gpaddmirrors</b> [<b>-p</b> &lt;port_offset>] [<b>-m</b> &lt;datadir_config_file >[<b>-a</b>]] [<b>-s</b>] 
-   [<b>-d</b> &lt;master_data_directory>] [<b>-B</b> &lt;parallel_processes>] [<b>-l</b> &lt;logfile_directory>]
-   [<b>-v</b>]
+            <codeblock>gpaddmirrors [-p &lt;port_offset>] [-m &lt;datadir_config_file >[-a]] [-s] 
+   [-d &lt;master_data_directory>] [-B &lt;parallel_processes>] [-l &lt;logfile_directory>]
+   [-v]
 
-<b>gpaddmirrors</b> <b>-i</b> &lt;mirror_config_file> [<b>-a</b>] [<b>-d</b> &lt;master_data_directory>]
-   [<b>-B</b> &lt;parallel_processes>] [<b>-l</b> &lt;logfile_directory>] [<b>-v</b>]
+gpaddmirrors -i &lt;mirror_config_file> [-a] [-d &lt;master_data_directory>]
+   [-B &lt;parallel_processes>] [-l &lt;logfile_directory>] [-v]
 
-<b>gpaddmirrors</b> <b>-o</b> &lt;output_sample_mirror_config> [<b>-s</b>] [<b>-m</b> &lt;datadir_config_file>]
+gpaddmirrors -o &lt;output_sample_mirror_config> [-s] [-m &lt;datadir_config_file>]
 
-<b>gpaddmirrors</b> <b>-?</b> 
+gpaddmirrors -? 
 
-<b>gpaddmirrors</b> <b>--version</b></codeblock>
+gpaddmirrors --version</codeblock>
         </section>
         <section id="section3">
             <title>Description</title>

@@ -8,7 +8,7 @@
     <ul id="ul_wxd_dxc_lr">
       <li>Connections between clients and the master database can be encrypted with SSL. This is
         enabled with the <codeph>ssl</codeph> server configuration parameter, which is
-          <codeph>off</codeph> by default. Setting the <codeph>ssl</codeph> parameter to
+          <codeph>off</codeph> by default.0 Setting the <codeph>ssl</codeph> parameter to
           <codeph>on</codeph> allows client communications with the master to be encrypted. The
         master database must be set up for SSL. See <xref
           href="Authenticate.xml#topic_fzv_wb2_jr/openssl_config"/> for more about encrypting client

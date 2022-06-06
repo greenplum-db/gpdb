@@ -11,45 +11,45 @@
       5.x Support Life.</note>
     <section id="section2">
       <title>Synopsis</title>
-      <codeblock><b>gpcrondump</b> <b>-x</b> &lt;database_name> 
-   [<b>-s</b> &lt;schema> | <b>-S</b> &lt;schema> | <b>-t</b> &lt;schema.table> | <b>-T</b> &lt;schema.table>] 
-   [<b>--table-file</b>=&lt;filename> | <b>--exclude-table-file</b>=&lt;filename>] 
-   [<b>--schema-file</b>=&lt;filename> | <b>--exclude-schema-file</b>=&lt;filename>]
-   [<b>--dump-stats</b>] 
-   [<b>-u</b> &lt;backup_directory>] [<b>-R</b> &lt;post_dump_script>] [<b>--incremental</b>] 
-   [<b>-K</b> &lt;timestamp> [<b>--list-backup-files</b>] ]
-   [<b>--prefix</b> &lt;prefix_string> [<b>--list-filter-tables</b>]
-   [<b>-c</b> [<b>--cleanup-date</b> &lt;yyyymmdd> | <b>--cleanup-total</b> &lt;n>] ]
-   [<b>-z</b>] [<b>-r</b>] 
-   [<b>-f</b> &lt;free_space_percent>] [<b>-b</b>] [<b>-h</b>] [<b>-H</b>] [<b>-j</b> | <b>-k</b>] [<b>-g</b>] [<b>-G</b>] [<b>-C</b>] 
-   [<b>-d</b> &lt;master_data_directory>] [<b>-B</b> &lt;parallel_processes>] [<b>-a</b>] [<b>-q</b>]
-   [<b>-y</b> &lt;reportfile>] [<b>-l</b> &lt;logfile_directory>]
-   [<b>--email-file</b> &lt;path_to_file>] [<b>-v</b>]
-   { [<b>-E</b> &lt;encoding>] [<b>--inserts</b> | <b>--column-inserts</b>] [<b>--oids</b>] 
-     [<b>--no-owner</b> | <b>--use-set-session-authorization</b>] [<b>--no-privileges</b>] 
-     [<b>--rsyncable</b>]
-     { [<b>--ddboost</b> [<b>--replicate --max-streams</b> &lt;max_IO_streams>]
-     [<b>--ddboost-skip-ping</b>] [<b>--ddboost-storage-unit</b>=&lt;unit-ID>]] } | 
-     { [<b>--netbackup-service-host</b> &lt;netbackup_server>
-     <b>--netbackup-policy</b> &lt;netbackup_policy>
-     <b>--netbackup-schedule</b> &lt;netbackup_schedule> [<b>--netbackup-block-size</b> &lt;size>] ]
-     [<b>--netbackup-keyword</b> &lt;keyword>] ] } }
+      <codeblock>gpcrondump -x &lt;database_name> 
+   [-s &lt;schema> | -S &lt;schema> | -t &lt;schema.table> | -T &lt;schema.table>] 
+   [--table-file=&lt;filename> | --exclude-table-file=&lt;filename>] 
+   [--schema-file=&lt;filename> | --exclude-schema-file=&lt;filename>]
+   [--dump-stats] 
+   [-u &lt;backup_directory>] [-R &lt;post_dump_script>] [--incremental] 
+   [-K &lt;timestamp> [--list-backup-files] ]
+   [--prefix &lt;prefix_string> [--list-filter-tables]
+   [-c [--cleanup-date &lt;yyyymmdd> | --cleanup-total &lt;n>] ]
+   [-z] [-r] 
+   [-f &lt;free_space_percent>] [-b] [-h] [-H] [-j | -k] [-g] [-G] [-C] 
+   [-d &lt;master_data_directory>] [-B &lt;parallel_processes>] [-a] [-q]
+   [-y &lt;reportfile>] [-l &lt;logfile_directory>]
+   [--email-file &lt;path_to_file>] [-v]
+   { [-E &lt;encoding>] [--inserts | --column-inserts] [--oids] 
+     [--no-owner | --use-set-session-authorization] [--no-privileges] 
+     [--rsyncable]
+     { [--ddboost [--replicate --max-streams &lt;max_IO_streams>]
+     [--ddboost-skip-ping] [--ddboost-storage-unit=&lt;unit-ID>]] } | 
+     { [--netbackup-service-host &lt;netbackup_server>
+     --netbackup-policy &lt;netbackup_policy>
+     --netbackup-schedule &lt;netbackup_schedule> [--netbackup-block-size &lt;size>] ]
+     [--netbackup-keyword &lt;keyword>] ] } }
 
-<b>gpcrondump</b> <b>--ddboost-host</b> &lt;ddboost_hostname>
-   [<b>--ddboost-host</b> &lt;ddboost_hostname> ... ]
-   <b>--ddboost-user</b> &lt;ddboost_user> <b>--ddboost-backupdir</b> &lt;backup_directory> 
-   [<b>--ddboost-remote]</b> [<b>--ddboost-skip-ping</b>]
-   [<b>--ddboost-storage-unit</b>=&lt;unit-ID>] 
+gpcrondump --ddboost-host &lt;ddboost_hostname>
+   [--ddboost-host &lt;ddboost_hostname> ... ]
+   --ddboost-user &lt;ddboost_user> --ddboost-backupdir &lt;backup_directory> 
+   [--ddboost-remote] [--ddboost-skip-ping]
+   [--ddboost-storage-unit=&lt;unit-ID>] 
 
-<b>gpcrondump</b> <b>--ddboost-show-config</b> [<b>--remote</b>]
+gpcrondump --ddboost-show-config [--remote]
 
-<b>gpcrondump</b> <b>--ddboost-config-remove</b>
+gpcrondump --ddboost-config-remove
 
-<b>gpcrondump</b> <b>-o</b> [<b>--cleanup-date</b> &lt;yyyymmdd> | <b>--cleanup-total</b> &lt;n>] 
+gpcrondump -o [--cleanup-date &lt;yyyymmdd> | --cleanup-total &lt;n>] 
 
-<b>gpcrondump</b> <b>-?</b> 
+gpcrondump -? 
 
-<b>gpcrondump</b> <b>--version</b></codeblock>
+gpcrondump --version</codeblock>
     </section>
     <section id="section3">
       <title>Description</title>

@@ -11,40 +11,40 @@
         <note conref="../../admin_guide/managing/gptransfer.xml#topic_gptransfer/note1"/>
         <section id="section2">
             <title>Synopsis</title>
-            <codeblock><b>gptransfer</b>
-   { <b>--full </b>|
-   { [<b>-d</b> &lt;database1> [ <b>-d</b> &lt;database2> ... ]] |
-   [<b>-t</b> &lt;db>.&lt;schema>.&lt;table> [ <b>-t</b> &lt;db>.&lt;schema1>.&lt;table1> ... ]] |
-   [<b>-f</b> &lt;table-file> [<b>--partition-transfer</b>
-     | <b>--partition-transfer-non-partition-target</b> ]]
-   [<b>-T</b> &lt;db>.&lt;schema>.&lt;table> [ <b>-T</b> &lt;db>.&lt;schema1>.&lt;table1> ... ]]
-   [<b>-F</b> &lt;table-file>] } }
-   [<b>--skip-existing</b> | <b>--truncate</b> | <b>--drop</b>]
-   [<b>--analyze</b>] [<b>--validate</b>=&lt;type>] [<b>-x</b>] [<b>--dry-run</b>]
-   [<b>--schema-only</b> ]
-   [<b>--source-host</b>=&lt;source_host> [<b>--source-port</b>=&lt;source_port>]
-   [<b>--source-user</b>=&lt;source_user>]]
-   [<b>--base-port</b>=&lt;base_gpfdist_port>]
-   [<b>--dest-host</b>=&lt;dest_host> <b>--source-map-file</b>=&lt;host_map_file>
-   [<b>--dest-port</b>=&lt;port>] [<b>--dest-user</b>=&lt;dest_user>] ]
-   [<b>--dest-database</b>=&lt;dest_database_name>]
-   [<b>--batch-size</b>=&lt;batch_size>] [<b>--sub-batch-size</b>=&lt;sub_batch_size>]
-   [<b>--timeout</b>=&lt;seconds>]
-   [<b>--max-line-length</b>=&lt;length>]
-   [<b>--work-base-dir</b>=&lt;work_dir>] [<b>-l</b> &lt;log_dir>]
-   [<b>--format</b>=[<b>CSV</b>|<b>TEXT</b>] ]
-   [<b>--quote</b>=&lt;character> ]
-   [<b>--no-final-count</b> ]
+            <codeblock>gptransfer
+   { --full |
+   { [-d &lt;database1> [ -d &lt;database2> ... ]] |
+   [-t &lt;db>.&lt;schema>.&lt;table> [ -t &lt;db>.&lt;schema1>.&lt;table1> ... ]] |
+   [-f &lt;table-file> [--partition-transfer
+     | --partition-transfer-non-partition-target ]]
+   [-T &lt;db>.&lt;schema>.&lt;table> [ -T &lt;db>.&lt;schema1>.&lt;table1> ... ]]
+   [-F &lt;table-file>] } }
+   [--skip-existing | --truncate | --drop]
+   [--analyze] [--validate=&lt;type>] [-x] [--dry-run]
+   [--schema-only ]
+   [--source-host=&lt;source_host> [--source-port=&lt;source_port>]
+   [--source-user=&lt;source_user>]]
+   [--base-port=&lt;base_gpfdist_port>]
+   [--dest-host=&lt;dest_host> --source-map-file=&lt;host_map_file>
+   [--dest-port=&lt;port>] [--dest-user=&lt;dest_user>] ]
+   [--dest-database=&lt;dest_database_name>]
+   [--batch-size=&lt;batch_size>] [--sub-batch-size=&lt;sub_batch_size>]
+   [--timeout=&lt;seconds>]
+   [--max-line-length=&lt;length>]
+   [--work-base-dir=&lt;work_dir>] [-l &lt;log_dir>]
+   [--format=[CSV|TEXT] ]
+   [--quote=&lt;character> ]
+   [--no-final-count ]
 
-   [<b>-v</b> | <b>--verbose</b>]
-   [<b>-q</b> | <b>--quiet</b>]
-   [<b>--gpfdist-verbose</b>]
-   [<b>--gpfdist-very-verbose</b>]
-   [<b>-a</b>]
+   [-v | --verbose]
+   [-q | --quiet]
+   [--gpfdist-verbose]
+   [--gpfdist-very-verbose]
+   [-a]
 
-<b>gptransfer --version</b>
+gptransfer --version
 
-<b>gptransfer</b> <b>-h</b> | <b>-?</b> | <b>--help</b></codeblock>
+gptransfer -h | -? | --help</codeblock>
         </section>
         <section id="section3">
             <title>Description</title>

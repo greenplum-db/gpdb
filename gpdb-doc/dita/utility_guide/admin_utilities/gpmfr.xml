@@ -10,31 +10,31 @@
          transfer a backup image from one Data Domain system to another.</p>
       <section id="section2">
          <title>Synopsis</title>
-         <codeblock><b>gpmfr</b> <b>--delete</b> {<b>LATEST</b> | <b>OLDEST</b> | &lt;timestamp>}[<b>--remote</b>]
-   [<b>--master-port=</b>&lt;master_port>] [<b>--skip-ping</b>]
-   [<b>--ddboost-storage-unit</b>=&lt;unit-ID>]
-   [<b>-a</b>] [<b>-v</b> | <b>--verbose</b>]
+         <codeblock>gpmfr --delete {LATEST | OLDEST | &lt;timestamp>}[--remote]
+   [--master-port=&lt;master_port>] [--skip-ping]
+   [--ddboost-storage-unit=&lt;unit-ID>]
+   [-a] [-v | --verbose]
 
-<b>gpmfr</b> {<b>--replicate | --recover</b>} {<b>LATEST</b> | <b>OLDEST | </b> &lt;timestamp>}
-   <b>--max-streams</b> &lt;max_IO_streams> [<b>--master-port=</b> &lt;master_port>] <b>[--skip-ping]</b>
-   [<b>--ddboost-storage-unit</b>=&lt;unit-ID>]
-   [<b>-a</b>] [<b>-q</b> | <b>--quiet</b>] [<b>-v</b> | <b>--verbose</b>]
+gpmfr {--replicate | --recover} {LATEST | OLDEST |  &lt;timestamp>}
+   --max-streams &lt;max_IO_streams> [--master-port= &lt;master_port>] [--skip-ping]
+   [--ddboost-storage-unit=&lt;unit-ID>]
+   [-a] [-q | --quiet] [-v | --verbose]
 
-<b>gpmfr</b> {<b>--list</b> {<b>LATEST</b> | <b>OLDEST</b> | &lt;timestamp>} }
-   [<b>--ddboost-storage-unit</b>=&lt;unit-ID>]
-   [<b>--master-port=</b>&lt;master_port>] [<b>--remote</b>] [<b>--skip-ping</b>]
-   [<b>-v</b> | <b>--verbose</b>]
+gpmfr {--list {LATEST | OLDEST | &lt;timestamp>} }
+   [--ddboost-storage-unit=&lt;unit-ID>]
+   [--master-port=&lt;master_port>] [--remote] [--skip-ping]
+   [-v | --verbose]
 
-<b>gpmfr</b> <b>--list-files</b> {<b>LATEST</b> | <b>OLDEST</b> | &lt;timestamp>}
-   [<b>--ddboost-storage-unit</b>=&lt;unit-ID>]
-   [<b>--master-port=</b>&lt;master_port>] [<b>--remote</b>] [<b>--skip-ping</b>]
-   [-v | <b>--verbose</b>]
+gpmfr --list-files {LATEST | OLDEST | &lt;timestamp>}
+   [--ddboost-storage-unit=&lt;unit-ID>]
+   [--master-port=&lt;master_port>] [--remote] [--skip-ping]
+   [-v | --verbose]
 
-<b>gpmfr</b> <b>--show-streams</b> [<b>--skip-ping</b>] [<b>-v</b> | <b>--verbose</b>]
+gpmfr --show-streams [--skip-ping] [-v | --verbose]
 
-<b>gpmfr</b> <b>-h</b> | <b>--help</b>
+gpmfr -h | --help
 
-<b>gpmfr</b> <b>--version</b></codeblock>
+gpmfr --version</codeblock>
       </section>
       <section id="section3">
          <title>Prerequisites</title>

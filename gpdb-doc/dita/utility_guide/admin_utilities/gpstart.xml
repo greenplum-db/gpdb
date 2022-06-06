@@ -8,14 +8,14 @@
         <p>Starts a Greenplum Database system.</p>
         <section id="section2">
             <title>Synopsis</title>
-            <codeblock><b>gpstart</b> [<b>-d</b> &lt;master_data_directory>] [<b>-B</b> &lt;parallel_processes>] [<b>-R</b>]
-        [<b>-m</b>] [<b>-y</b>] [<b>-a</b>] [<b>-t</b> &lt;timeout_seconds>] [<b>-l</b> &lt;logfile_directory>] 
-        [<b>--skip-heap-checksum-validation</b>]
-        [<b>-v</b> | <b>-q</b>]
+            <codeblock>gpstart [-d &lt;master_data_directory>] [-B &lt;parallel_processes>] [-R]
+        [-m] [-y] [-a] [-t &lt;timeout_seconds>] [-l &lt;logfile_directory>] 
+        [--skip-heap-checksum-validation]
+        [-v | -q]
 
-<b>gpstart</b> <b>-?</b> | <b>-h</b> | <b>--help</b> 
+gpstart -? | -h | --help 
 
-<b>gpstart</b> <b>--version</b></codeblock>
+gpstart --version</codeblock>
         </section>
         <section id="section3">
             <title>Description</title>

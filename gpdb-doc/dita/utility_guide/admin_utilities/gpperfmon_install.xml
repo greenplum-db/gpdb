@@ -8,11 +8,11 @@
       and optionally enables the data collection agents.</p>
     <section id="section2">
       <title>Synopsis</title>
-      <codeblock><b>gpperfmon_install --port &lt;gpdb_port> </b>
-      [<b>--enable</b> <b>--password</b> &lt;gpmon_password> [<b>--pgpass</b> &lt;path_to_file>]]
-      [<b>--verbose</b>]
+      <codeblock>gpperfmon_install --port &lt;gpdb_port> 
+      [--enable --password &lt;gpmon_password> [--pgpass &lt;path_to_file>]]
+      [--verbose]
 
-<b>gpperfmon_install</b> <b>--help</b> | <b>-h</b> | <b>-?</b></codeblock>
+gpperfmon_install --help | -h | -?</codeblock>
     </section>
     <section id="section3">
       <title>Description</title>
@@ -51,8 +51,8 @@ host       all           gpmon  ::1/128        md5</codeblock><p>The
                 file. For the <codeph>gpmon</codeph> user change the second field from
                   <codeph>all</codeph> to
                 <codeph>gpperfmon</codeph>:<codeblock>local      gpperfmon     gpmon                  md5
-host       <b>gpperfmon</b>     gpmon    127.0.0.1/28  md5
-host       <b>gpperfmon</b>     gpmon    ::1/128       md5</codeblock></li>
+host       gpperfmon     gpmon    127.0.0.1/28  md5
+host       gpperfmon     gpmon    ::1/128       md5</codeblock></li>
               <li>
                 <p>The <codeph>gpperfmon_install</codeph> utility assumes the default MD5
                   authentication method. Greenplum Database can optionally be configured to use the
@@ -65,8 +65,8 @@ host       <b>gpperfmon</b>     gpmon    ::1/128       md5</codeblock></li>
                   entries, change the authentication method for the <codeph>gpmon</codeph> role from
                     <codeph>md5</codeph> to
                   <codeph>password</codeph>:<codeblock>local      gpperfmon     gpmon                 md5 
-host       all           gpmon  127.0.0.1/28   <b>password</b>
-host       all           gpmon  ::1/128        <b>password</b></codeblock></p>
+host       all           gpmon  127.0.0.1/28   password
+host       all           gpmon  ::1/128        password</codeblock></p>
                 <p>The <codeph>password</codeph> authentication method submits the user's clear text
                   password for authentication and should not be used on an untrusted network. See
                   "Protecting Passwords in Greenplum Database" in the <i>Greenplum Database

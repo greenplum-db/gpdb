@@ -7,13 +7,13 @@
     <p id="client_util_desc">Defines a new procedural language for a database.</p>
     <section id="section2">
       <title>Synopsis</title>
-      <codeblock id="client_util_synopsis"><b>createlang</b> [&lt;connection_option> ...] [<b>-e</b>] &lt;langname> [[<b>-d</b>] &lt;dbname>]
+      <codeblock id="client_util_synopsis">createlang [&lt;connection_option> ...] [-e] &lt;langname> [[-d] &lt;dbname>]
 
-<b>createlang</b> [&lt;connection-option> ...] <b>-l</b> &lt;dbname>
+createlang [&lt;connection-option> ...] -l &lt;dbname>
 
-<b>createlang</b> <b>--help</b> 
+createlang --help 
 
-<b>createlang</b> <b>--version</b></codeblock>
+createlang --version</codeblock>
     </section>
     <section id="section3">
       <title>Description</title>

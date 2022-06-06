@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
-<topic id="topic1"><title id="oz137116">createdb</title><body><p id="client_util_desc">Creates a new database.</p><section id="section2"><title>Synopsis</title><codeblock id="client_util_synopsis"><b>createdb</b> [&lt;connection_option> ...] [<b>-D</b> &lt;tablespace>] [<b>-E</b> &lt;encoding>] 
-        [<b>-O</b> &lt;owner>] [<b>-T</b> &lt;template>] [<b>-e</b>] [&lt;dbname> ['&lt;description>']]
+<topic id="topic1"><title id="oz137116">createdb</title><body><p id="client_util_desc">Creates a new database.</p><section id="section2"><title>Synopsis</title><codeblock id="client_util_synopsis">createdb [&lt;connection_option> ...] [-D &lt;tablespace>] [-E &lt;encoding>] 
+        [-O &lt;owner>] [-T &lt;template>] [-e] [&lt;dbname> ['&lt;description>']]
 
-<b>createdb</b> <b>--help</b> 
+createdb --help 
 
-<b>createdb</b> <b>--version</b></codeblock></section><section id="section3"><title>Description</title><p><codeph>createdb</codeph> creates a new database in a Greenplum Database system. </p><p>Normally, the database user who executes this command becomes the
+createdb --version</codeblock></section><section id="section3"><title>Description</title><p><codeph>createdb</codeph> creates a new database in a Greenplum Database system. </p><p>Normally, the database user who executes this command becomes the
 owner of the new database. However a different owner can be specified
 via the <codeph>-O</codeph> option, if the executing user has appropriate
 privileges.</p><p><codeph>createdb</codeph> is a wrapper around the SQL command <codeph>CREATE

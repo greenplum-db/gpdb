@@ -8,13 +8,13 @@
         <p>Exchanges SSH public keys between hosts.</p>
         <section id="section2">
             <title>Synopsis</title>
-            <codeblock><b>gpssh-exkeys</b> <b>-f</b> &lt;hostfile_exkeys> | <b>- h</b> &lt;hostname> [<b>-h</b> &lt;hostname> ...]
+            <codeblock>gpssh-exkeys -f &lt;hostfile_exkeys> | - h &lt;hostname> [-h &lt;hostname> ...]
 
-<b>gpssh-exkeys</b> <b>-e</b> &lt;hostfile_exkeys> <b>-x</b> &lt;hostfile_gpexpand>
+gpssh-exkeys -e &lt;hostfile_exkeys> -x &lt;hostfile_gpexpand>
 
-<b>gpssh-exkeys</b> <b>-?</b> 
+gpssh-exkeys -? 
 
-<b>gpssh-exkeys</b> <b>--version</b></codeblock>
+gpssh-exkeys --version</codeblock>
         </section>
         <section id="section3">
             <title>Description</title>

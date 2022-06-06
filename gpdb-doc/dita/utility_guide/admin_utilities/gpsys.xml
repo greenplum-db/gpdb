@@ -7,11 +7,11 @@
         <p>Displays information about your operating system.</p>
         <section id="section2">
             <title>Synopsis</title>
-            <codeblock><b>gpsys1</b> [ <b>-a</b> | <b>-m</b> | <b>-p</b> ]
+            <codeblock>gpsys1 [ -a | -m | -p ]
 
-<b>gpsys1</b> <b>-?</b> 
+gpsys1 -? 
 
-<b>gpsys1</b> <b>--version</b></codeblock>
+gpsys1 --version</codeblock>
         </section>
         <section id="section3">
             <title>Description</title>

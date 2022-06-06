@@ -8,13 +8,13 @@
         <p>Copies files between multiple hosts at once.</p>
         <section id="section2">
             <title>Synopsis</title>
-            <codeblock><b>gpscp</b> { <b>-f</b> &lt;hostfile_gpssh> | <b>-h</b> &lt;hostname> [<b>-h</b> &lt;hostname> ...] } 
-      [<b>-J</b> &lt;character>] [<b>-v</b>] [[&lt;user>@]&lt;hostname>:]&lt;file_to_copy> [...]
+            <codeblock>gpscp { -f &lt;hostfile_gpssh> | -h &lt;hostname> [-h &lt;hostname> ...] } 
+      [-J &lt;character>] [-v] [[&lt;user>@]&lt;hostname>:]&lt;file_to_copy> [...]
       [[&lt;user>@]&lt;hostname>:]&lt;copy_to_path>
 
-<b>gpscp</b> <b>-?</b> 
+gpscp -? 
 
-<b>gpscp</b> <b>--version</b></codeblock>
+gpscp --version</codeblock>
         </section>
         <section id="section3">
             <title>Description</title>

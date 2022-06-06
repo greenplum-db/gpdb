@@ -20,25 +20,25 @@
           and names are case sensitive.</p>
         <section>
           <title>plcontainer Syntax</title>
-          <codeblock><b>plcontainer</b> [&lt;command>] [<b>-h</b> | <b>--help</b>]  [<b>--verbose</b>]</codeblock>
+          <codeblock>plcontainer [&lt;command>] [-h | --help]  [--verbose]</codeblock>
           <p>Where <varname>command</varname> is one of the following.</p>
-          <codeblock>  image-add {{<b>-f</b> | <b>--file</b>} &lt;image_file>} | {{<b>-u</b> | <b>--URL</b>} &lt;image_URL>}
-  image-delete {<b>-i</b> | <b>--image</b>} &lt;image_name>
+          <codeblock>  image-add {{-f | --file} &lt;image_file>} | {{-u | --URL} &lt;image_URL>}
+  image-delete {-i | --image} &lt;image_name>
   image-list
 
-  runtime-add {<b>-r</b> | <b>--runtime</b>} &lt;runtime_id>
-     {<b>-i</b> | <b>--image</b>} &lt;image_name> {<b>-l | --language</b>} {python | python3 | r}
-     [{<b>-v</b> | <b>--volume</b>} &lt;shared_volume> [{<b>-v</b>| <b>--volume</b>} &lt;shared_volume>...]]
-     [{<b>-s</b> | <b>--setting</b>} &lt;param=value> [{<b>-s</b> | <b>--setting</b>} &lt;param=value> ...]]
-  runtime-replace {<b>-r</b> | <b>--runtime</b>} &lt;runtime_id>
-     {<b>-i</b> | <b>--image</b>} &lt;image_name> <b>-l</b> {r | python}
-     [{<b>-v</b> | <b>--volume</b>} &lt;shared_volume> [{<b>-v</b> | <b>--volume</b>} &lt;shared_volume>...]]
-     [{<b>-s</b> | <b>--setting</b>} &lt;param=value> [{<b>-s</b> | <b>--setting</b>} &lt;param=value> ...]]
-  runtime-show {<b>-r</b> | <b>--runtime</b>} &lt;runtime_id>
-  runtime-delete {<b>-r</b> | <b>--runtime</b>} &lt;runtime_id>
-  runtime-edit [{<b>-e</b> | <b>--editor</b>} &lt;editor>]
-  runtime-backup {<b>-f</b> | <b>--file</b>} &lt;config_file>
-  runtime-restore {<b>-f</b> | <b>--file</b>} &lt;config_file>
+  runtime-add {-r | --runtime} &lt;runtime_id>
+     {-i | --image} &lt;image_name> {-l | --language} {python | python3 | r}
+     [{-v | --volume} &lt;shared_volume> [{-v| --volume} &lt;shared_volume>...]]
+     [{-s | --setting} &lt;param=value> [{-s | --setting} &lt;param=value> ...]]
+  runtime-replace {-r | --runtime} &lt;runtime_id>
+     {-i | --image} &lt;image_name> -l {r | python}
+     [{-v | --volume} &lt;shared_volume> [{-v | --volume} &lt;shared_volume>...]]
+     [{-s | --setting} &lt;param=value> [{-s | --setting} &lt;param=value> ...]]
+  runtime-show {-r | --runtime} &lt;runtime_id>
+  runtime-delete {-r | --runtime} &lt;runtime_id>
+  runtime-edit [{-e | --editor} &lt;editor>]
+  runtime-backup {-f | --file} &lt;config_file>
+  runtime-restore {-f | --file} &lt;config_file>
   runtime-verify</codeblock>
         </section>
         <section>

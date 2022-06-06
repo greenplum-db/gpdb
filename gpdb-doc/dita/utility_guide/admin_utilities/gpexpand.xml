@@ -7,20 +7,20 @@
     <p>Expands an existing Greenplum Database across new hosts in the array.</p>
     <section id="section2">
       <title>Synopsis</title>
-      <codeblock><b>gpexpand</b> [{<b>-f</b>|<b>--hosts-file</b>} &lt;hosts_file>]
-        | {<b>-i</b>|<b>--input</b>} &lt;input_file> [<b>-B</b> &lt;batch_size>] [<b>-V</b>|<b>--novacuum</b>] 
-        | [{<b>-d</b> | <b>--duration</b>} &lt;hh:mm:ss> | {<b>-e</b>|<b>--end</b>} '&lt;YYYY-MM-DD hh:mm:ss>'] 
-          [<b>-a</b>|<b>-analyze</b>] 
-          [<b>-n </b> &lt;parallel_processes>]
-        | {<b>-r</b>|<b>--rollback</b>}
-        | {<b>-c</b>|<b>--clean</b>}
-        [<b>-D</b> &lt;database_name>] [<b>-v</b>|<b>--verbose</b>] [<b>-s</b>|<b>--silent</b>]
-        [{<b>-t</b>|<b>--tardir</b>} &lt;directory >]
-        [<b>-S</b>|<b>--simple-progress </b>]
+      <codeblock>gpexpand [{-f|--hosts-file} &lt;hosts_file>]
+        | {-i|--input} &lt;input_file> [-B &lt;batch_size>] [-V|--novacuum] 
+        | [{-d | --duration} &lt;hh:mm:ss> | {-e|--end} '&lt;YYYY-MM-DD hh:mm:ss>'] 
+          [-a|-analyze] 
+          [-n  &lt;parallel_processes>]
+        | {-r|--rollback}
+        | {-c|--clean}
+        [-D &lt;database_name>] [-v|--verbose] [-s|--silent]
+        [{-t|--tardir} &lt;directory >]
+        [-S|--simple-progress ]
 
-<b>gpexpand -?</b> | <b>-h</b> | <b>--help</b> 
+gpexpand -? | -h | --help 
 
-<b>gpexpand --version</b></codeblock>
+gpexpand --version</codeblock>
     </section>
     <section id="section3">
       <title>Prerequisites</title>

@@ -7,13 +7,13 @@
         <p>Runs a load job as defined in a YAML formatted control file.</p>
         <section id="section2">
             <title>Synopsis</title>
-            <codeblock><b>gpload</b> <b>-f</b> &lt;control_file> [<b>-l</b> &lt;log_file>] [<b>-h</b> &lt;hostname>] [<b>-p</b> &lt;port>] 
-   [<b>-U</b> &lt;username>] [<b>-d</b> &lt;database>] [<b>-W</b>] [<b>--gpfdist_timeout</b> &lt;seconds>] 
-   [<b>--no_auto_trans</b>] [<b>--max_retries</b> &lt;retry_times>] [[<b>-v</b> | <b>-V</b>] [<b>-q</b>]] [<b>-D</b>]
+            <codeblock>gpload -f &lt;control_file> [-l &lt;log_file>] [-h &lt;hostname>] [-p &lt;port>] 
+   [-U &lt;username>] [-d &lt;database>] [-W] [--gpfdist_timeout &lt;seconds>] 
+   [--no_auto_trans] [--max_retries &lt;retry_times>] [[-v | -V] [-q]] [-D]
 
-<b>gpload</b> <b>-?</b> 
+gpload -? 
 
-<b>gpload</b> <b>--version</b></codeblock>
+gpload --version</codeblock>
         </section>
         <section id="section3">
             <title id="ke141293">Requirements</title>

@@ -10,16 +10,16 @@
             dependencies, across an entire cluster.</p>
         <section id="section2">
             <title>Synopsis</title>
-            <codeblock><b>gppkg</b> [<b>-i</b> &lt;package> | <b>-u</b> &lt;package> | <b>-r </b> &lt;name>-&lt;version> | <b>-c</b>] 
-        [<b>-d</b> &lt;master_data_directory>] [<b>-a</b>] [<b>-v</b>]
+            <codeblock>gppkg [-i &lt;package> | -u &lt;package> | -r  &lt;name>-&lt;version> | -c] 
+        [-d &lt;master_data_directory>] [-a] [-v]
 
-<b>gppkg --migrate</b> &lt;GPHOME_old> &lt;GPHOME_new> [<b>-a</b>] [<b>-v</b>]
+gppkg --migrate &lt;GPHOME_old> &lt;GPHOME_new> [-a] [-v]
 
-<b>gppkg</b> [<b>-q</b> | <b>--query</b>] &lt;query_option>
+gppkg [-q | --query] &lt;query_option>
 
-<b>gppkg</b> <b>-?</b> | <b>--help</b> |<b> -h</b> 
+gppkg -? | --help | -h 
 
-<b>gppkg</b> <b>--version</b></codeblock>
+gppkg --version</codeblock>
         </section>
         <section id="section3">
             <title>Description</title>

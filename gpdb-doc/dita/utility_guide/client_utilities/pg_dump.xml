@@ -8,7 +8,7 @@
       file.</p>
     <section id="section2">
       <title>Synopsis</title>
-      <codeblock id="client_util_synopsis"><b>pg_dump</b> [&lt;connection_option> ...] [&lt;dump_option> ...] &lt;dbname></codeblock>
+      <codeblock id="client_util_synopsis">pg_dump [&lt;connection_option> ...] [&lt;dump_option> ...] &lt;dbname></codeblock>
     </section>
     <section id="section3">
       <title>Description</title>

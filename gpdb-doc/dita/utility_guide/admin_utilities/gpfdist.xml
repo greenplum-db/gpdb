@@ -7,14 +7,14 @@
     <p>Serves data files to or writes data files out from Greenplum Database segments.</p>
     <section id="section2">
       <title>Synopsis</title>
-      <codeblock><b>gpfdist</b> [<b>-d</b> &lt;directory>] [<b>-p</b> &lt;http_port>] [<b>-P</b> &lt;last_http_port>] [<b>-l</b> &lt;log_file>]
-   [<b>-t</b> &lt;timeout>] [<b>-S</b>] [<b>-w</b> &lt;time>] [<b>-v</b> | <b>-V</b>] [<b>-s</b>] [<b>-m</b> &lt;max_length>]
-   [<b>--ssl</b> &lt;certificate_path> [<b>--sslclean</b> &lt;wait_time>] ]
-   [<b>-c</b> &lt;config.yml>]
+      <codeblock>gpfdist [-d &lt;directory>] [-p &lt;http_port>] [-P &lt;last_http_port>] [-l &lt;log_file>]
+   [-t &lt;timeout>] [-S] [-w &lt;time>] [-v | -V] [-s] [-m &lt;max_length>]
+   [--ssl &lt;certificate_path> [--sslclean &lt;wait_time>] ]
+   [-c &lt;config.yml>]
 
-<b>gpfdist -?</b> | <b>--help</b> 
+gpfdist -? | --help 
 
-<b>gpfdist --version</b></codeblock>
+gpfdist --version</codeblock>
     </section>
     <section id="section3">
       <title>Description</title>

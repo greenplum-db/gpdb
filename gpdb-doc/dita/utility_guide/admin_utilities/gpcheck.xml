@@ -10,15 +10,15 @@
             release.</note>
         <section id="section2">
             <title>Synopsis</title>
-            <codeblock><b>gpcheck</b> {{<b>-f</b> | <b>--file</b>} &lt;hostfile_gpcheck> | {<b>-h</b> | <b>--host</b>} &lt;host_ID>| <b>--local</b> } 
-   [<b>-m</b> &lt;master_host>] [<b>-s</b> &lt;standby_master_host>] [<b>--stdout</b> | <b>--zipout</b>] 
-   [<b>--config</b> &lt;config_file>]
+            <codeblock>gpcheck {{-f | --file} &lt;hostfile_gpcheck> | {-h | --host} &lt;host_ID>| --local } 
+   [-m &lt;master_host>] [-s &lt;standby_master_host>] [--stdout | --zipout] 
+   [--config &lt;config_file>]
 
-<b>gpcheck</b> <b>--zipin</b> &lt;gpcheck_zipfile>
+gpcheck --zipin &lt;gpcheck_zipfile>
 
-<b>gpcheck</b> <b>-?</b> 
+gpcheck -? 
 
-<b>gpcheck</b> <b>--version</b></codeblock>
+gpcheck --version</codeblock>
         </section>
         <section id="section3">
             <title>Description</title>

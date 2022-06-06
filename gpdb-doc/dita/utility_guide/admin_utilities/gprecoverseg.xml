@@ -8,19 +8,19 @@
       enabled).</p>
     <section id="section2">
       <title>Synopsis</title>
-      <codeblock><b>gprecoverseg</b> [[<b>-p</b> &lt;new_recover_host>[,...]] | <b>-i</b> &lt;recover_config_file>] [<b>-d</b> &lt;master_data_directory>] 
-             [<b>-B</b> &lt;parallel_processes>] [<b>-F</b> [<b>-s</b>]] [<b>-a</b>] [<b>-q</b>] 
-	      [<b>--hba-hostnames</b> &lt;boolean>] 
-             [<b>--no-progress</b>] [<b>-l</b> &lt;logfile_directory>]
+      <codeblock>gprecoverseg [[-p &lt;new_recover_host>[,...]] | -i &lt;recover_config_file>] [-d &lt;master_data_directory>] 
+             [-B &lt;parallel_processes>] [-F [-s]] [-a] [-q] 
+	      [--hba-hostnames &lt;boolean>] 
+             [--no-progress] [-l &lt;logfile_directory>]
 
-<b>gprecoverseg</b> <b>-r</b> 
+gprecoverseg -r 
 
-<b>gprecoverseg</b> <b>-o</b> &lt;output_recover_config_file> | <b>-S</b> &lt;output_filespace_config_file>
-             [<b>-p</b> &lt;new_recover_host>[,...]]
+gprecoverseg -o &lt;output_recover_config_file> | -S &lt;output_filespace_config_file>
+             [-p &lt;new_recover_host>[,...]]
 
-<b>gprecoverseg</b> <b>-?</b> 
+gprecoverseg -? 
 
-<b>gprecoverseg</b> <b>--version</b></codeblock>
+gprecoverseg --version</codeblock>
     </section>
     <section id="section3"><title>Description</title>In a system with mirrors enabled, the
         <codeph>gprecoverseg</codeph> utility reactivates a failed segment instance and identifies
@@ -55,7 +55,7 @@
         directory location on your remaining live segment hosts (using <codeph>-s</codeph>), or by
         supplying a recovery configuration file (using <codeph>-i</codeph>) in the following format.
         The word <b>SPACE</b> indicates the location of a required space. Do not add additional
-        spaces.</p><codeblock>&lt;failed_host_address&gt;|&lt;port&gt;|&lt;data_directory&gt;<b>SPACE</b>
+        spaces.</p><codeblock>&lt;failed_host_address&gt;|&lt;port&gt;|&lt;data_directory&gt;SPACE
 &lt;recovery_host_address&gt;|&lt;port&gt;|&lt;data_directory&gt;
 </codeblock><p>See
         the <codeph>-i</codeph> option below for details and examples of a recovery configuration
@@ -115,7 +115,7 @@
             line in the file is in the following format. The word <b>SPACE</b> indicates the
             location of a required space. Do not add additional
                 spaces.<codeblock>filespaceOrder=[filespace1_fsname[, filespace2_fsname[, ...]]
-&lt;failed_host_address&gt;:&lt;port&gt;:&lt;data_directory&gt;<b>SPACE</b> 
+&lt;failed_host_address&gt;:&lt;port&gt;:&lt;data_directory&gt;SPACE 
 &lt;recovery_host_address&gt;:&lt;port&gt;:&lt;replication_port&gt;:&lt;data_directory&gt;
 [:&lt;fselocation&gt;:...]</codeblock><p><b>Comments</b></p><p>Lines
               beginning with <codeph>#</codeph> are treated as comments and
@@ -135,25 +135,25 @@
             </p><p>For recovery to a new location, enter two groups of fields separated by a space
               in the line. The required space is indicated by <b>SPACE</b>. Do not add additional
               spaces.</p><p>
-              <codeblock>failedAddress:failedPort:failedDataDirectory<b>SPACE</b>newAddress:
+              <codeblock>failedAddress:failedPort:failedDataDirectorySPACEnewAddress:
 newPort:newReplicationPort:newDataDirectory</codeblock>
             </p><p>On a system with additional filespaces, the second group of fields is expected to
               be followed with a list of the corresponding filespace locations separated by
               additional colons. For example, on a system with two additional filespaces, enter two
               additional directories in the second group, as follows. The required space is
               indicated by <b>SPACE</b>. Do not add additional
-                spaces.</p><codeblock>failedAddress:failedPort:failedDataDirectory<b>SPACE</b>newAddress:
+                spaces.</p><codeblock>failedAddress:failedPort:failedDataDirectorySPACEnewAddress:
 newPort:newReplicationPort:newDataDirectory:location1:location2</codeblock><p><b>Examples</b></p><p><b>In-place
                 recovery of a single
                 mirror</b></p><codeblock>filespaceOrder=
 sdw1-1:50001:/data1/mirror/gpseg16</codeblock><p><b>Recovery
                 of a single mirror to a new
                 host</b></p><codeblock>filespaceOrder=
-sdw1-1:50001:/data1/mirror/gpseg16<b>SPACE</b>sdw4-1:
+sdw1-1:50001:/data1/mirror/gpseg16SPACEsdw4-1:
 50001:51001:/data1/recover1/gpseg16</codeblock><p><b>Recovery
                 of a single mirror to a new host on a system with an extra
                 filespace</b></p><codeblock>filespaceOrder=
-fs1sdw1-1:50001:/data1/mirror/gpseg16<b>SPACE</b>sdw4-1:
+fs1sdw1-1:50001:/data1/mirror/gpseg16SPACEsdw4-1:
 50001:51001:/data1/recover1/gpseg16:/data1/fs1/gpseg16</codeblock><p><b>Obtaining
                 a Sample File</b></p><p>You can use the <codeph>-o</codeph> option to output a
               sample recovery configuration file to use as a starting point.</p></pd>

@@ -1,16 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
-<topic id="topic1"><title id="pg137116">reindexdb</title><body><p id="client_util_desc">Rebuilds indexes in a database.</p><section id="section2"><title>Synopsis</title><codeblock id="client_util_synopsis"><b>reindexdb</b> [&lt;connection-option> ...] [<b>--table</b> | <b>-t</b> &lt;table> ] 
-        [<b>--index</b> | <b>-i</b> &lt;index> ] [&lt;dbname>]
+<topic id="topic1"><title id="pg137116">reindexdb</title><body><p id="client_util_desc">Rebuilds indexes in a database.</p><section id="section2"><title>Synopsis</title><codeblock id="client_util_synopsis">reindexdb [&lt;connection-option> ...] [--table | -t &lt;table> ] 
+        [--index | -i &lt;index> ] [&lt;dbname>]
 
-<b>reindexdb</b> [&lt;connection-option> ...] [<b>--all</b> | <b>-a</b>]
+reindexdb [&lt;connection-option> ...] [--all | -a]
 
-<b>reindexdb</b> [&lt;connection-option> ...] [<b>--system</b> | <b>-s</b>] [&lt;dbname>]
+reindexdb [&lt;connection-option> ...] [--system | -s] [&lt;dbname>]
 
-<b>reindexdb</b> <b>--help</b> 
+reindexdb --help 
 
-<b>reindexdb</b> <b>--version</b></codeblock></section><section id="section3"><title>Description</title><p><codeph>reindexdb</codeph> is a utility for rebuilding indexes in Greenplum Database, and is a wrapper around the SQL command <codeph>REINDEX</codeph>. </p></section><section id="section4"><title>Options</title><parml><plentry><pt>-a | --all</pt><pd>Reindex all databases.</pd></plentry><plentry><pt>[-d] <varname>dbname</varname> | [--dbname] <varname>dbname</varname></pt><pd>Specifies the name of the database to be reindexed. If this is not specified and
+reindexdb --version</codeblock></section><section id="section3"><title>Description</title><p><codeph>reindexdb</codeph> is a utility for rebuilding indexes in Greenplum Database, and is a wrapper around the SQL command <codeph>REINDEX</codeph>. </p></section><section id="section4"><title>Options</title><parml><plentry><pt>-a | --all</pt><pd>Reindex all databases.</pd></plentry><plentry><pt>[-d] <varname>dbname</varname> | [--dbname] <varname>dbname</varname></pt><pd>Specifies the name of the database to be reindexed. If this is not specified and
               <codeph>-all</codeph> is not used, the database name is read from the environment
             variable <codeph>PGDATABASE</codeph>. If that is not set, the user name specified for
             the connection is used.</pd></plentry><plentry><pt>-e | --echo</pt><pd>Echo the commands that <codeph>reindexdb</codeph> generates and sends

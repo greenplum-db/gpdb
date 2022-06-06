@@ -8,13 +8,13 @@
         <p>Provides SSH access to multiple hosts at once.</p>
         <section id="section2">
             <title>Synopsis</title>
-            <codeblock><b>gpssh</b> { <b>-f</b> &lt;hostfile_gpssh> | <b>- h</b> &lt;hostname> [<b>-h</b> &lt;hostname> ...] } <ph>[<b>-s</b>] </ph>[<b>-e</b>]
-      [<b>-d</b> &lt;seconds>] [<b>-t</b> &lt;multiplier>] [<b>-v</b>]
+            <codeblock>gpssh { -f &lt;hostfile_gpssh> | - h &lt;hostname> [-h &lt;hostname> ...] } <ph>[-s] </ph>[-e]
+      [-d &lt;seconds>] [-t &lt;multiplier>] [-v]
       [&lt;bash_command>]
 
-<b>gpssh</b> <b>-?</b> 
+gpssh -? 
 
-<b>gpssh</b> <b>--version</b></codeblock>
+gpssh --version</codeblock>
         </section>
         <section id="section3">
             <title>Description</title>

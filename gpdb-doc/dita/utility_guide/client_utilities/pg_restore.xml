@@ -8,7 +8,7 @@
         <codeph>pg_dump</codeph>.</p>
     <section id="section2">
       <title>Synopsis</title>
-      <codeblock id="client_util_synopsis"><b>pg_restore</b> [&lt;connection_option> ...] [&lt;restore_option> ...] &lt;filename></codeblock>
+      <codeblock id="client_util_synopsis">pg_restore [&lt;connection_option> ...] [&lt;restore_option> ...] &lt;filename></codeblock>
     </section>
     <section id="section3">
       <title>Description</title>

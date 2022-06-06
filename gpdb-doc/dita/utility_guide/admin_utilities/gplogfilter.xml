@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
-<topic id="topic1"><title id="kw142714">gplogfilter</title><body><p>Searches through Greenplum Database log files for specified entries.</p><section id="section2"><title>Synopsis</title><codeblock><b>gplogfilter</b> [&lt;timestamp_options>] [&lt;pattern_options>] 
+<topic id="topic1"><title id="kw142714">gplogfilter</title><body><p>Searches through Greenplum Database log files for specified entries.</p><section id="section2"><title>Synopsis</title><codeblock>gplogfilter [&lt;timestamp_options>] [&lt;pattern_options>] 
      [&lt;output_options>] [&lt;input_options>] [&lt;input_file>] 
 
-<b>gplogfilter</b> <b>--help</b> 
+gplogfilter --help 
 
-<b>gplogfilter</b> <b>--version</b></codeblock></section><section id="section3"><title>Description</title><p>The <codeph>gplogfilter</codeph> utility can be used to search through a Greenplum Database log file for entries matching the specified criteria. If an input
+gplogfilter --version</codeblock></section><section id="section3"><title>Description</title><p>The <codeph>gplogfilter</codeph> utility can be used to search through a Greenplum Database log file for entries matching the specified criteria. If an input
         file is not supplied, then <codeph>gplogfilter</codeph> will use the
           <codeph>$MASTER_DATA_DIRECTORY</codeph> environment variable to locate the Greenplum master log file in the standard logging location. To read
         from standard input, use a dash (<codeph>-</codeph>) as the input file name. Input files may

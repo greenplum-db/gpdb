@@ -9,12 +9,12 @@
                 <codeph>gpinitsystem</codeph>.</p>
         <section id="section2">
             <title>Synopsis</title>
-            <codeblock><b>gpdeletesystem</b> [<b>-d</b> &lt;master_data_directory>] [<b>-B</b> &lt;parallel_processes>] 
-   [<b>-f</b>] [<b>-l</b> &lt;logfile_directory>] [<b>-D</b>]
+            <codeblock>gpdeletesystem [-d &lt;master_data_directory>] [-B &lt;parallel_processes>] 
+   [-f] [-l &lt;logfile_directory>] [-D]
 
-<b>gpdeletesystem</b> <b>-?</b> 
+gpdeletesystem -? 
 
-<b>gpdeletesystem</b> <b>-v</b></codeblock>
+gpdeletesystem -v</codeblock>
         </section>
         <section id="section3">
             <title>Description</title>

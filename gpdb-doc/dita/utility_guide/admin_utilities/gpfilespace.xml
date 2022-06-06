@@ -11,23 +11,23 @@
       release.</note>
     <section id="section2">
       <title>Synopsis</title>
-      <codeblock><b>gpfilespace</b> [&lt;connection_option> ...] [<b>-l</b> &lt;logfile_directory>] 
-              [<b>-o</b> &lt;output_file_name>]
+      <codeblock>gpfilespace [&lt;connection_option> ...] [-l &lt;logfile_directory>] 
+              [-o &lt;output_file_name>]
 
-<b>gpfilespace</b> [&lt;connection_option> ...] [<b>-l</b> &lt;logfile_directory>] 
-              [<b>-c</b> &lt;fs_config_file>]
+gpfilespace [&lt;connection_option> ...] [-l &lt;logfile_directory>] 
+              [-c &lt;fs_config_file>]
 
-<ph><b>gpfilespace</b> <b>--movetempfilespace</b> {&lt;filespace_name> | default}
+<ph>gpfilespace --movetempfilespace {&lt;filespace_name> | default}
 
-<b>gpfilespace</b> <b>--movetransfilespace</b> {&lt;filespace_name> | default}
+gpfilespace --movetransfilespace {&lt;filespace_name> | default}
 
-<b>gpfilespace</b> <b>--showtempfilespace</b> 
+gpfilespace --showtempfilespace 
 
-<b>gpfilespace</b> <b>--showtransfilespace</b></ph> 
+gpfilespace --showtransfilespace</ph> 
 
-<b>gpfilespace -v</b> 
+gpfilespace -v 
 
-<b>gpfilespace -?</b></codeblock>
+gpfilespace -?</codeblock>
     </section>
     <section id="section3">
       <title>Description</title>
@@ -156,7 +156,7 @@
         the <codeph>gpfilespace</codeph> utility:</p>
       <codeblock>$ <b>gpfilespace -o .
 </b>Enter a name for this filespace
-&gt; <b>fastdisk</b>
+&gt; fastdisk
 
 Checking your configuration:
 
@@ -166,15 +166,15 @@ per host.
 Configuring hosts: [sdw1, sdw2]
 
 Please specify 2 locations for the primary segments, one per line:
-primary location 1&gt; <b>/gp_pri_filespc</b>
-primary location 2&gt; <b>/gp_pri_filespc</b>
+primary location 1&gt; /gp_pri_filespc
+primary location 2&gt; /gp_pri_filespc
 
 Please specify 2 locations for the mirror segments, one per line:
-mirror location 1&gt; <b>/gp_mir_filespc</b>
-mirror location 2&gt; <b>/gp_mir_filespc</b>
+mirror location 1&gt; /gp_mir_filespc
+mirror location 2&gt; /gp_mir_filespc
 
 Enter a file system location for the master:
-master location&gt; <b>/gp_master_filespc</b></codeblock>
+master location&gt; /gp_master_filespc</codeblock>
       <p>Example filespace configuration file:</p>
       <codeblock>filespace:fastdisk
 mdw:1:/gp_master_filespc/gp-1

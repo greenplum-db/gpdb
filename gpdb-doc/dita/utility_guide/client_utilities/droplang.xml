@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
-<topic id="topic1"><title id="pd140988">droplang</title><body><p id="client_util_desc">Removes a procedural language.</p><section id="section2"><title>Synopsis</title><codeblock id="client_util_synopsis"><b>droplang</b> [&lt;connection-option> ...] [-e] &lt;langname> [[<b>-d</b>] &lt;dbname>]
+<topic id="topic1"><title id="pd140988">droplang</title><body><p id="client_util_desc">Removes a procedural language.</p><section id="section2"><title>Synopsis</title><codeblock id="client_util_synopsis">droplang [&lt;connection-option> ...] [-e] &lt;langname> [[-d] &lt;dbname>]
 
-<b>droplang</b> [&lt;connection-option> ...] [-e] <b>-l</b> &lt;dbname>
+droplang [&lt;connection-option> ...] [-e] -l &lt;dbname>
 
-<b>droplang</b> <b>--help</b> 
+droplang --help 
 
-<b>droplang</b> <b>--version</b></codeblock></section><section id="section3"><title>Description</title><p><codeph>droplang</codeph> removes an existing programming language from
+droplang --version</codeblock></section><section id="section3"><title>Description</title><p><codeph>droplang</codeph> removes an existing programming language from
 a database. <codeph>droplang</codeph> can drop any procedural language,
 even those not supplied by the Greenplum Database distribution. </p><p>Although programming languages can be removed directly using several
 SQL commands, it is recommended to use <codeph>droplang</codeph> because

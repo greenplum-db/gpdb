@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
-<topic id="topic1"><title id="oy139586">clusterdb</title><body><p id="client_util_desc">Reclusters tables that were previously clustered with <codeph>CLUSTER</codeph>.</p><section id="section2"><title>Synopsis</title><codeblock id="client_util_synopsis"><b>clusterdb</b> [&lt;connection-option> ...] [<b>-v</b>] [<b>-t</b> &lt;table>] [[<b>-d</b>] &lt;dbname>]
+<topic id="topic1"><title id="oy139586">clusterdb</title><body><p id="client_util_desc">Reclusters tables that were previously clustered with <codeph>CLUSTER</codeph>.</p><section id="section2"><title>Synopsis</title><codeblock id="client_util_synopsis">clusterdb [&lt;connection-option> ...] [-v] [-t &lt;table>] [[-d] &lt;dbname>]
 
-<b>clusterdb</b> [&lt;connection-option> ...] [<b>-a</b>] [<b>-v</b>]
+clusterdb [&lt;connection-option> ...] [-a] [-v]
 
-<b>clusterdb</b> <b>--help</b>
+clusterdb --help
 
-<b>clusterdb</b> <b>--version</b></codeblock></section><section id="section3"><title>Description</title><p>To cluster a table means to physically reorder a table on disk according
+clusterdb --version</codeblock></section><section id="section3"><title>Description</title><p>To cluster a table means to physically reorder a table on disk according
 to an index so that index scan operations can access data on disk in
 a somewhat sequential order, thereby improving index seek performance
 for queries that use that index. </p><p>The <codeph>clusterdb</codeph> utility will find any tables in a database

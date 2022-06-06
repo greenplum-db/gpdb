@@ -7,15 +7,15 @@
     <p id="client_util_desc">Garbage-collects and analyzes a database.</p>
     <section id="section2">
       <title>Synopsis</title>
-      <codeblock id="client_util_synopsis"><b>vacuumdb</b> [&lt;connection-option>...] [--full | -f] [<b>-F</b>] [<b>--verbose</b> | <b>-v</b>]
-    [<b>--analyze</b> | <b>-z</b>] [<b>--table</b> | <b>-t</b> &lt;table> [( &lt;column> [,...] )] ] [&lt;dbname>]
+      <codeblock id="client_util_synopsis">vacuumdb [&lt;connection-option>...] [--full | -f] [-F] [--verbose | -v]
+    [--analyze | -z] [--table | -t &lt;table> [( &lt;column> [,...] )] ] [&lt;dbname>]
 
-<b>vacuumdb</b> [&lt;connection-options>...] [<b>--all</b> | <b>-a</b>] [--full | -f] [<b>-F</b>] 
-    [<b>--verbose</b> | <b>-v</b>] [<b>--analyze</b> | <b>-z</b>]
+vacuumdb [&lt;connection-options>...] [--all | -a] [--full | -f] [-F] 
+    [--verbose | -v] [--analyze | -z]
 
-<b>vacuumdb</b> <b>--help</b> 
+vacuumdb --help 
 
-<b>vacuumdb</b> <b>--version</b></codeblock>
+vacuumdb --version</codeblock>
     </section>
     <section id="section3">
       <title>Description</title>

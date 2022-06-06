@@ -8,7 +8,7 @@
       required by VMware Support.</p>
     <section>
       <title>Synopsis</title>
-      <codeblock><b>gpmt</b> tool [&lt;tool_options> ...] 
+      <codeblock>gpmt tool [&lt;tool_options> ...] 
 [&lt;-hostfile FILE>] [&lt;-help>] [&lt;-verbose>]
 </codeblock>
     </section>

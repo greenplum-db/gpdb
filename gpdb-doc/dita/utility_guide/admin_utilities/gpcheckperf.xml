@@ -8,17 +8,17 @@
         <p>Verifies the baseline hardware performance of the specified hosts.</p>
         <section id="section2">
             <title>Synopsis</title>
-            <codeblock><b>gpcheckperf</b> <b>-d</b> &lt;test_directory> [<b>-d</b> &lt;test_directory> ...] 
-    {<b>-f</b> &lt;hostfile_gpcheckperf> | <b>- h</b> &lt;hostname> [<b>-h</b> &lt;hostname> ...]} 
-    [<b>-r</b> ds] [<b>-B</b> &lt;block_size>] [<b>-S</b> &lt;file_size>] [<b>-D</b>] [<b>-v</b>|<b>-V</b>]
+            <codeblock>gpcheckperf -d &lt;test_directory> [-d &lt;test_directory> ...] 
+    {-f &lt;hostfile_gpcheckperf> | - h &lt;hostname> [-h &lt;hostname> ...]} 
+    [-r ds] [-B &lt;block_size>] [-S &lt;file_size>] [-D] [-v|-V]
 
-<b>gpcheckperf</b> <b>-d</b> &lt;temp_directory>
-    {<b>-f</b> &lt;hostfile_gpchecknet> | <b>- h</b> &lt;hostname> [<b>-h</b> &lt;hostname> ...]} 
-    [ <b>-r</b> n|N|M [<b>--duration</b> &lt;time>] [<b>--netperf</b>] ] [<b>-D</b>] [<b>-v</b> | <b>-V</b>]
+gpcheckperf -d &lt;temp_directory>
+    {-f &lt;hostfile_gpchecknet> | - h &lt;hostname> [-h &lt;hostname> ...]} 
+    [ -r n|N|M [--duration &lt;time>] [--netperf] ] [-D] [-v | -V]
 
-<b>gpcheckperf</b> <b>-?</b>
+gpcheckperf -?
 
-<b>gpcheckperf</b> <b>--version</b></codeblock>
+gpcheckperf --version</codeblock>
         </section>
         <section id="section3">
             <title>Description</title>

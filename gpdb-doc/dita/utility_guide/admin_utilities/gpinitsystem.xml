@@ -9,23 +9,23 @@
                 <codeph>gpinitsystem_config</codeph> file.</p>
         <section id="section2">
             <title>Synopsis</title>
-            <codeblock><b>gpinitsystem</b> <b>-c</b> &lt;cluster_configuration_file> 
-            [<b>-h</b> &lt;hostfile_gpinitsystem>]
-            [<b>-B</b> &lt;parallel_processes>] 
-            [<b>-p</b> &lt;postgresql_conf_param_file>]
-            [<b>-s</b> &lt;standby_master_host> [<b>-P</b> &lt;standby_master_port>]
-              [<b>-F</b> &lt;standby_master_filespaces>]]
-            [<b>-m</b> &lt;number> | <b>--max_connections</b>=&lt;number>]
-            [<b>-b</b> &lt;size> | <b>--shared_buffers</b>=&lt;size>]
-            [<b>-n &lt;locale> | --locale</b>=&lt;locale>] [<b>--lc-collate</b>=&lt;locale>] 
-            [<b>--lc-ctype</b>=&lt;locale>] [<b>--lc-messages</b>=&lt;locale>] 
-            [<b>--lc-monetary</b>=&lt;locale>] [<b>--lc-numeric</b>=&lt;locale>] 
-            [<b>--lc-time</b>=&lt;locale>] [<b>-e</b> &lt;password> | <b>--su_password</b>=&lt;password>] 
-            [<b>-S</b>] [<b>-a</b>] [<b>-q</b>] [<b>-l</b> &lt;logfile_directory>] [<b>-D</b>]
-            [<b>-I</b> &lt;input_configuration_file>]
-            [<b>-O</b> &lt;output_configuration_file>]
+            <codeblock>gpinitsystem -c &lt;cluster_configuration_file> 
+            [-h &lt;hostfile_gpinitsystem>]
+            [-B &lt;parallel_processes>] 
+            [-p &lt;postgresql_conf_param_file>]
+            [-s &lt;standby_master_host> [-P &lt;standby_master_port>]
+              [-F &lt;standby_master_filespaces>]]
+            [-m &lt;number> | --max_connections=&lt;number>]
+            [-b &lt;size> | --shared_buffers=&lt;size>]
+            [-n &lt;locale> | --locale=&lt;locale>] [--lc-collate=&lt;locale>] 
+            [--lc-ctype=&lt;locale>] [--lc-messages=&lt;locale>] 
+            [--lc-monetary=&lt;locale>] [--lc-numeric=&lt;locale>] 
+            [--lc-time=&lt;locale>] [-e &lt;password> | --su_password=&lt;password>] 
+            [-S] [-a] [-q] [-l &lt;logfile_directory>] [-D]
+            [-I &lt;input_configuration_file>]
+            [-O &lt;output_configuration_file>]
 
-<b>gpinitsystem</b> <b>-v</b></codeblock>
+gpinitsystem -v</codeblock>
         </section>
         <section id="section3">
             <title>Description</title>
