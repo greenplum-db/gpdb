@@ -19,8 +19,8 @@ createlang --version</codeblock>
       <title>Description</title>
       <p>The <codeph>createlang</codeph> utility adds a new programming language to a database.
           <codeph>createlang</codeph> is a wrapper around the <codeph>SQL</codeph> command
-          <codeph><xref
-              href="../../ref_guide/sql_commands/CREATE_EXTENSION.xml#topic1"/></codeph>.</p>
+          <xref
+              href="../../ref_guide/sql_commands/CREATE_EXTENSION.xml#topic1"/>.</p>
       <note><codeph>createlang</codeph> is deprecated and may be removed in a future release. Direct
         use of the <codeph>CREATE EXTENSION</codeph> command is recommended instead.</note>
       <p>The procedural language packages included in the standard Greenplum Database
@@ -97,10 +97,10 @@ createlang --version</codeblock>
       <title>See Also</title>
       <p><ph otherprops="op-print"><codeph>CREATE LANGUAGE</codeph> and <codeph>DROP
             LANGUAGE</codeph> in the <i>Greenplum Database Reference Guide</i></ph><ph
-          otherprops="op-help"><codeph><xref
-              href="../../ref_guide/sql_commands/CREATE_LANGUAGE.xml#topic1"/></codeph>,
-              <codeph><xref href="../../ref_guide/sql_commands/DROP_LANGUAGE.xml#topic1"
-          /></codeph></ph></p>
+          otherprops="op-help"><xref
+              href="../../ref_guide/sql_commands/CREATE_LANGUAGE.xml#topic1"/>,
+              <xref href="../../ref_guide/sql_commands/DROP_LANGUAGE.xml#topic1"
+          /></ph></p>
     </section>
   </body>
 </topic>

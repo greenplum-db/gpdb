@@ -53,7 +53,7 @@ gpsys1 --version</codeblock>
         </section>
         <section id="section6">
             <title>See Also</title>
-            <p><codeph><xref href="gpcheckperf.xml#topic1">gpcheckperf</xref></codeph></p>
+            <p><xref href="gpcheckperf.xml#topic1">gpcheckperf</xref></p>
         </section>
     </body>
 </topic>

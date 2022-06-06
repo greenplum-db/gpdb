@@ -5,11 +5,11 @@
   <title id="ko142863">gp_restore</title>
   <body>
     <p><draft-comment author="kiyamm">Removed 4.3.3.0</draft-comment>Restores Greenplum databases
-      that were backed up using <codeph><xref href="gp_dump.xml#topic1" type="topic" format="dita"
-        /></codeph>.</p>
+      that were backed up using <xref href="gp_dump.xml#topic1" type="topic" format="dita"
+        />.</p>
     <note>The <codeph>gp_restore</codeph> utility is deprecated and will be removed in a future
-      release. Use <codeph><xref href="gpcrondump.xml#topic1" type="topic" format="dita"/></codeph>
-      and <codeph><xref href="gpdbrestore.xml#topic1" type="topic" format="dita"/></codeph> to
+      release. Use <xref href="gpcrondump.xml#topic1" type="topic" format="dita"/>
+      and <xref href="gpdbrestore.xml#topic1" type="topic" format="dita"/> to
       backup and restore Greenplum databases. </note>
     <section id="section2">
       <title>Synopsis</title>
@@ -25,12 +25,12 @@
     <section id="section3">
       <title>Description</title>
       <p>The <codeph>gp_restore</codeph> utility recreates the data definitions (schema) and user
-        data in a Greenplum database using the script files created by a <codeph><xref
-            href="gp_dump.xml#topic1" type="topic" format="dita"/></codeph> operation. The use of
+        data in a Greenplum database using the script files created by a <xref
+            href="gp_dump.xml#topic1" type="topic" format="dita"/> operation. The use of
         this utility assumes:</p>
       <ol>
-        <li id="ko142893">You have backup files created by a <codeph><xref href="gp_dump.xml#topic1"
-              type="topic" format="dita"/></codeph> operation.</li>
+        <li id="ko142893">You have backup files created by a <xref href="gp_dump.xml#topic1"
+              type="topic" format="dita"/> operation.</li>
         <li id="ko142897">Your Greenplum Database system up and running.</li>
         <li id="ko142901">Your Greenplum Database system has the exact same number of segment
           instances (primary and mirror) as the system that was backed up using
@@ -59,7 +59,7 @@
         individually. The <codeph>gp_restore</codeph> utility takes care of populating each segment
         in the system with its own distinct portion of data.</p>
       <note type="note">
-        <p>The <codeph><xref href="gp_dump.xml#topic1" type="topic" format="dita"/></codeph> utility
+        <p>The <xref href="gp_dump.xml#topic1" type="topic" format="dita"/> utility
           creates a dump file in the master data directory named
             <codeph>gp_dump_1_&lt;</codeph><varname>dbid</varname><codeph>&gt;_&lt;</codeph><varname>timestamp</varname><codeph>&gt;_post_data</codeph>
           that contains commands to rebuild objects associated with the tables. When the database is
@@ -94,8 +94,8 @@
       </ul>
       <p>The 14 digit timestamp is the number that uniquely identifies the backup job to be
         restored, and is part of the filename for each dump file created by a
-          <codeph>gp_dump</codeph> operation. This timestamp must be passed to the <codeph><xref
-            href="#topic1" type="topic" format="dita"/></codeph> utility when restoring a Greenplum
+          <codeph>gp_dump</codeph> operation. This timestamp must be passed to the <xref
+            href="#topic1" type="topic" format="dita"/> utility when restoring a Greenplum
         Database.</p>
       <note type="note">
         <p>The restore status files are stored under the <codeph>db_dumps/&lt;date&gt;</codeph>
@@ -110,10 +110,10 @@
         <plentry>
           <pt>--gp-k=<varname>timestamp_key</varname></pt>
           <pd>Required. The 14 digit timestamp key that uniquely identifies the backup set of data
-            to restore. This timestamp can be found in the <codeph><xref href="gp_dump.xml#topic1"
-                type="topic" format="dita"/></codeph> log file output, as well as at the end of the
-            dump files created by a <codeph><xref href="gp_dump.xml#topic1" type="topic"
-                format="dita"/></codeph> operation. It is of the form
+            to restore. This timestamp can be found in the <xref href="gp_dump.xml#topic1"
+                type="topic" format="dita"/> log file output, as well as at the end of the
+            dump files created by a <xref href="gp_dump.xml#topic1" type="topic"
+                format="dita"/> operation. It is of the form
               <codeph>YYYYMMDDHHMMSS</codeph>.</pd>
         </plentry>
         <plentry>
@@ -173,8 +173,8 @@
           <pd>Specifies the relative or absolute path to backup files on the hosts. If this is a
             relative path, it is considered to be relative to the data directory. If not specified,
             defaults to the data directory of each instance being restored. Use this option if you
-            created your backup files in an alternate location when running <codeph><xref
-                href="gp_dump.xml#topic1" type="topic" format="dita"/></codeph>.</pd>
+            created your backup files in an alternate location when running <xref
+                href="gp_dump.xml#topic1" type="topic" format="dita"/>.</pd>
         </plentry>
         <plentry>
           <pt>--gp-r=<varname>reportfile</varname></pt>
@@ -208,9 +208,9 @@
     </section>
     <section id="section6">
       <title>See Also</title>
-      <p><codeph><xref href="../client_utilities/pg_restore.xml#topic1" type="topic" format="dita"
-          /></codeph>, <codeph><xref href="gpdbrestore.xml#topic1" type="topic" format="dita"
-          /></codeph></p>
+      <p><xref href="../client_utilities/pg_restore.xml#topic1" type="topic" format="dita"
+          />, <xref href="gpdbrestore.xml#topic1" type="topic" format="dita"
+          /></p>
     </section>
   </body>
 </topic>

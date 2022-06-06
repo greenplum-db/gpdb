@@ -4,8 +4,8 @@
   <title id="kp142557">gpcrondump</title>
   <body>
     <p>Writes out a database to SQL script files. The script files can be used to restore the
-      database using the <codeph><xref href="./gpdbrestore.xml#topic1" type="topic" format="dita"
-        /></codeph> utility. The <codeph>gpcrondump</codeph> utility can be called directly or from
+      database using the <xref href="./gpdbrestore.xml#topic1" type="topic" format="dita"
+        /> utility. The <codeph>gpcrondump</codeph> utility can be called directly or from
       a <codeph>crontab</codeph> entry.</p>
     <note>This utility is deprecated and will not be supported after the end of Greenplum Database
       5.x Support Life.</note>
@@ -876,9 +876,7 @@ EMAIL_DETAILS:
     <section id="section9">
       <title>See Also</title>
       <p>
-        <codeph>
           <xref href="./gpdbrestore.xml#topic1" type="topic" format="dita"/>
-        </codeph>
       </p>
     </section>
   </body>

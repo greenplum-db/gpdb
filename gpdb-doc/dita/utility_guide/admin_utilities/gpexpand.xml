@@ -222,7 +222,7 @@ dbid:&lt;/path/for/filespace1>:&lt;/path/for/filespace2>: ...
     <section id="section7">
       <title>See Also</title>
       <p>
-        <codeph><xref href="gpssh-exkeys.xml#topic1"/></codeph>, <xref
+        <xref href="gpssh-exkeys.xml#topic1"/>, <xref
           href="../../admin_guide/expand/expand-main.xml" scope="peer">Expanding a Greenplum System</xref>
         <ph otherprops="op-print">in the <cite>Greenplum Database Administrator
         Guide</cite></ph></p>

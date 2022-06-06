@@ -876,7 +876,7 @@ sdw4,192.0.2.4</codeblock>
         <section id="section8">
             <title>See Also</title>
             <p>
-                <codeph><xref href="gpfdist.xml#topic1">gpfdist</xref></codeph>
+                <xref href="gpfdist.xml#topic1">gpfdist</xref>
             </p>
             <p>For information about loading and unloading data, see the <i>Greenplum Database
                     Administrator Guide</i>.</p>

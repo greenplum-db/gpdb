@@ -249,9 +249,7 @@ $ gpstop -r</codeblock>
     <section id="section6">
       <title>See Also</title>
       <p>
-        <codeph>
           <xref href="./gpstop.xml#topic1" type="topic" format="dita"/>
-        </codeph>
       </p>
     </section>
   </body>

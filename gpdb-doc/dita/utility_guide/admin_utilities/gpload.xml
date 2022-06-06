@@ -20,8 +20,8 @@ gpload --version</codeblock>
             <p>The client machine where <codeph>gpload</codeph> is executed must have the
                 following:</p>
             <ul>
-                <li id="ke147925">The <codeph><xref href="gpfdist.xml#topic1" type="topic"
-                            format="dita"/></codeph> parallel file distribution program installed
+                <li id="ke147925">The <xref href="gpfdist.xml#topic1" type="topic"
+                            format="dita"/> parallel file distribution program installed
                     and in your <codeph>$PATH</codeph>. This program is located in
                         <codeph>$GPHOME/bin</codeph> of your Greenplum Database server
                     installation.</li>
@@ -37,7 +37,7 @@ gpload --version</codeblock>
                 Greenplum Database external table parallel loading feature. Using a load
                 specification defined in a YAML formatted control file, <codeph>gpload</codeph>
                 executes a load by invoking the Greenplum Database parallel file server
-                        (<codeph><xref href="gpfdist.xml" type="topic" format="dita"/></codeph>),
+                        (<xref href="gpfdist.xml" type="topic" format="dita"/>),
                 creating an external table definition based on the source data defined, and
                 executing an <codeph>INSERT</codeph>, <codeph>UPDATE</codeph> or
                     <codeph>MERGE</codeph> operation to load the source data into the target table
@@ -283,8 +283,8 @@ gpload --version</codeblock>
                                 <pt id="cfinput">INPUT</pt>
                                 <pd>Required. Defines the location and the format of the input data
                                     to be loaded. <codeph>gpload</codeph> will start one or more
-                                    instances of the <codeph><xref href="gpfdist.xml#topic1"
-                                            type="topic" format="dita"/></codeph> file distribution
+                                    instances of the <xref href="gpfdist.xml#topic1"
+                                            type="topic" format="dita"/> file distribution
                                     program on the current host and create the required external
                                     table definition(s) in Greenplum Database that point to the
                                     source data. Note that the host from which you run
@@ -298,9 +298,9 @@ gpload --version</codeblock>
                                                 section can have more than one
                                                   <codeph>SOURCE</codeph> block defined. Each
                                                   <codeph>SOURCE</codeph> block defined corresponds
-                                                to one instance of the <codeph><xref
+                                                to one instance of the <xref
                                                   href="gpfdist.xml#topic1" type="topic"
-                                                  format="dita"/></codeph> file distribution program
+                                                  format="dita"/> file distribution program
                                                 that will be started on the local machine. Each
                                                   <codeph>SOURCE</codeph> block defined must have a
                                                   <codeph>FILE</codeph> specification. <p>For more
@@ -325,8 +325,8 @@ gpload --version</codeblock>
                                                   <plentry>
                                                   <pt id="cfsourceport">PORT</pt>
                                                   <pd>Optional. Specifies the specific port number
-                                                  that the <codeph><xref href="gpfdist.xml#topic1"
-                                                  type="topic" format="dita"/></codeph> file
+                                                  that the <xref href="gpfdist.xml#topic1"
+                                                  type="topic" format="dita"/> file
                                                   distribution program should use. You can also
                                                   supply a <codeph>PORT_RANGE</codeph> to select an
                                                   available port from the specified range. If both
@@ -349,8 +349,8 @@ gpload --version</codeblock>
                                                   <codeph>PORT</codeph> to supply a range of port
                                                   numbers from which <codeph>gpload</codeph> can
                                                   choose an available port for this instance of the
-                                                  <codeph><xref href="gpfdist.xml#topic1"
-                                                  type="topic" format="dita"/></codeph> file
+                                                  <xref href="gpfdist.xml#topic1"
+                                                  type="topic" format="dita"/> file
                                                   distribution program.</pd>
                                                   </plentry>
                                                   <plentry>
@@ -809,16 +809,16 @@ gpload --version</codeblock>
                                     exists, the utility uses the table. The utility returns an error
                                     if the existing table schema does not match the
                                         <codeph>OUTPUT</codeph> table schema.</pd>
-                                <pd>The utility uses the value of <codeph><xref
+                                <pd>The utility uses the value of <xref
                                             href="#topic1/cfschema" format="dita"
-                                        >SCHEMA</xref></codeph> in the <codeph>EXTERNAL</codeph>
+                                        >SCHEMA</xref> in the <codeph>EXTERNAL</codeph>
                                     section as the schema for
                                     <varname>external_table_name</varname>. If the
                                         <codeph>SCHEMA</codeph> value is <codeph>%</codeph>, the
                                     schema for <varname>external_table_name</varname> is the same as
-                                    the schema of the target table, the schema of <codeph><xref
+                                    the schema of the target table, the schema of <xref
                                             href="#topic1/cftable" format="dita"
-                                        >TABLE</xref></codeph> in the <codeph>OUTPUT</codeph>
+                                        >TABLE</xref> in the <codeph>OUTPUT</codeph>
                                     section. </pd>
                                 <pd>If <codeph>SCHEMA</codeph> is not set, the utility searches for
                                     the table (using the schemas in the database
@@ -949,7 +949,7 @@ GPLOAD:
         </section>
         <section id="section11">
             <title>See Also</title>
-            <p><codeph><xref href="gpfdist.xml#topic1" type="topic" format="dita"/></codeph>,
+            <p><xref href="gpfdist.xml#topic1" type="topic" format="dita"/>,
                     <codeph>CREATE EXTERNAL TABLE</codeph> in the <cite>Greenplum Database Reference
                     Guide</cite></p>
         </section>

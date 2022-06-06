@@ -32,4 +32,4 @@ system role name.</pd></plentry><plentry><pt>-w | --no-password</pt><pd>Never is
 and a password is not available by other means such as a <codeph>.pgpass</codeph>
 file, the connection attempt will fail. This option can be useful in
 batch jobs and scripts where no user is present to enter a password.</pd></plentry><plentry><pt>-W | --password</pt><pd>Force a password prompt.</pd></plentry></parml></sectiondiv></section><section id="section6"><title>Examples</title><p>To cluster the database <codeph>test</codeph>:</p><codeblock>clusterdb test</codeblock><p>To cluster a single table <codeph>foo</codeph> in a database named <codeph>xyzzy</codeph>:</p><codeblock>clusterdb --table foo xyzzyb</codeblock></section><section id="section7"><title>See Also</title><p><ph otherprops="op-print"><codeph>CLUSTER</codeph> in the <i>Greenplum Database Reference
-            Guide</i></ph><ph otherprops="op-help"><codeph><xref href="../../ref_guide/sql_commands/CLUSTER.xml#topic1"/></codeph></ph></p></section></body></topic>
+            Guide</i></ph><ph otherprops="op-help"><xref href="../../ref_guide/sql_commands/CLUSTER.xml#topic1"/></ph></p></section></body></topic>

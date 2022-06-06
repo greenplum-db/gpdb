@@ -201,9 +201,7 @@ dynamic_library_path='$libdir'</codeblock>
     <section id="section6">
       <title>See Also</title>
       <p>
-        <codeph>
-          <xref href="./gpstop.xml#topic1" type="topic" format="dita"/>
-        </codeph>
+        <xref href="./gpstop.xml#topic1" type="topic" format="dita"/>
       </p>
     </section>
   </body>

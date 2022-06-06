@@ -131,8 +131,8 @@ gprestore --help</codeblock>
             created with the <codeph>gpbackup</codeph> option <codeph>--metadata-only</codeph> does
             not contain table data.</pd>
           <pd>To restore only database tables, without restoring the table data, see the option
-                <codeph><xref href="#topic1/metadata_only" format="dita"
-              >--metadata-only</xref></codeph>.</pd>
+                <xref href="#topic1/metadata_only" format="dita"
+              >--metadata-only</xref>.</pd>
         </plentry>
         <plentry>
           <pt><b>--debug</b></pt>
@@ -250,8 +250,8 @@ gprestore --help</codeblock>
             created with the <codeph>gpbackup</codeph> option <codeph>--data-only</codeph> does not
             contain the DDL for tables. </pd>
           <pd>To restore table data after you create the database tables, see the option
-                <codeph><xref href="#topic1/data_only" format="dita"
-            >--data-only</xref></codeph>.</pd>
+                <xref href="#topic1/data_only" format="dita"
+            >--data-only</xref>.</pd>
         </plentry>
         <plentry>
           <pt><b>--on-error-continue</b></pt>
@@ -356,7 +356,7 @@ $ gprestore --include-schema wikipedia --backup-dir /home/gpadmin/backups/ --tim
     <section id="section9">
       <title>See Also</title>
       <p>
-        <codeph><xref href="./gpbackup.xml" type="topic" format="dita"/></codeph>, <xref
+        <xref href="./gpbackup.xml" type="topic" format="dita"/>, <xref
           href="../../admin_guide/managing/backup-gpbackup.xml" format="dita"/> and <xref
           href="../../admin_guide/managing/backup-s3-plugin.xml"/></p>
     </section>

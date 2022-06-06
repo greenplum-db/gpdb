@@ -371,8 +371,8 @@ gpstate -? | -h | --help</codeblock>
     </section>
     <section id="section7">
       <title>See Also</title>
-      <p><codeph><xref href="gpstart.xml#topic1" type="topic" format="dita"/></codeph>,
-            <codeph><xref href="gplogfilter.xml#topic1" type="topic" format="dita"/></codeph></p>
+      <p><xref href="gpstart.xml#topic1" type="topic" format="dita"/>,
+            <xref href="gplogfilter.xml#topic1" type="topic" format="dita"/></p>
     </section>
   </body>
 </topic>

@@ -13,7 +13,7 @@
     <section id="section3">
       <title>Description</title>
       <p><codeph>pg_restore</codeph> is a utility for restoring a database from an archive created
-        by <codeph><xref href="pg_dump.xml#topic1" type="topic" format="dita"/></codeph> in one of
+        by <xref href="pg_dump.xml#topic1" type="topic" format="dita"/> in one of
         the non-plain-text formats. It will issue the commands necessary to reconstruct the database
         to the state it was in at the time it was saved. The archive files also allow
           <codeph>pg_restore</codeph> to be selective about what is restored, or even to reorder the
@@ -79,8 +79,8 @@
           </plentry>
           <plentry>
             <pt>-F t |c | --format=tar | custom</pt>
-            <pd>The format of the archive produced by <codeph><xref href="pg_dump.xml#topic1"
-                  type="topic" format="dita"/></codeph>. It is not necessary to specify the format,
+            <pd>The format of the archive produced by <xref href="pg_dump.xml#topic1"
+                  type="topic" format="dita"/>. It is not necessary to specify the format,
               since <codeph>pg_restore</codeph> will determine the format automatically. Format can
               be either <codeph>tar</codeph> or <codeph>custom</codeph>.</pd>
           </plentry>
@@ -285,9 +285,7 @@ pg_restore -d newdb db.dump</codeblock>
     <section id="section8">
       <title>See Also</title>
       <p>
-        <codeph>
           <xref href="pg_dump.xml#topic1" type="topic" format="dita"/>
-        </codeph>
       </p>
     </section>
   </body>

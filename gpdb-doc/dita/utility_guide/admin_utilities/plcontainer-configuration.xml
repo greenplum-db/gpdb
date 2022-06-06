@@ -242,9 +242,9 @@
                                                   attribute value <codeph>no</codeph> disables
                                                   logging (the default). </pd>
                                                   <pd>The Greenplum Database server configuration
-                                                parameter <codeph><xref
+                                                parameter <xref
                                                   href="../../ref_guide/config_params/guc-list.xml#log_min_messages"
-                                                  scope="local">log_min_messages</xref></codeph>
+                                                  scope="local">log_min_messages</xref>
                                                 controls the PL/Container log level. The default log
                                                 level is <codeph>warning</codeph>. For information
                                                 about PL/Container log information, see <xref

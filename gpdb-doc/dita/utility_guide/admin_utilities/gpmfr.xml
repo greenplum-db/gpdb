@@ -219,9 +219,9 @@ gpmfr --version</codeblock>
       </section>
       <section id="section7">
          <title>See Also</title>
-         <p><codeph><xref href="gpcrondump.xml#topic1" type="topic" format="dita"/></codeph>,
-                  <codeph><xref href="gpdbrestore.xml#topic1" type="topic" format="dita"
-            /></codeph></p>
+         <p><xref href="gpcrondump.xml#topic1" type="topic" format="dita"/>,
+                  <xref href="gpdbrestore.xml#topic1" type="topic" format="dita"
+            /></p>
       </section>
    </body>
 </topic>

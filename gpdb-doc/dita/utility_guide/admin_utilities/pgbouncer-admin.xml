@@ -1016,8 +1016,8 @@ DETAIL:
   <topic id="seealso">
     <title>See Also</title>
     <body>
-      <p><codeph><xref href="pgbouncer.xml#topic1" type="topic" format="dita"/></codeph>,
-          <codeph><xref href="pgbouncer-ini.xml#topic1" type="topic" format="dita"/></codeph></p>
+      <p><xref href="pgbouncer.xml#topic1" type="topic" format="dita"/>,
+          <xref href="pgbouncer-ini.xml#topic1" type="topic" format="dita"/></p>
       </body>
   </topic>
 </topic>

@@ -280,7 +280,7 @@ remote_password_encryption: "on"
     <section id="section9">
       <title>See Also</title>
       <p>
-        <codeph><xref href="./gprestore.xml" type="topic" format="dita"/></codeph>, <xref
+        <xref href="./gprestore.xml" type="topic" format="dita"/>, <xref
           href="../../admin_guide/managing/backup-gpbackup.xml" format="dita"/> and <xref
           href="../../admin_guide/managing/backup-s3-plugin.xml"/></p>
     </section>

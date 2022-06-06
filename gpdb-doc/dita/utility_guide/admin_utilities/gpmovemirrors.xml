@@ -24,8 +24,8 @@ to move, and where to move them. </pd><pd>You must have one mirror segment liste
             the configuration file has the following format (as per attributes in the
               <codeph>gp_segment_configuration</codeph>, <codeph>pg_filespace</codeph>, and
               <codeph>pg_filespace_entry</codeph> catalog tables):</pd><pd><codeblock>filespaceOrder=[&lt;filespace1_fsname>[:&lt;filespace2_fsname>:...]
-&lt;old_address>:&lt;port>:<i>fselocation</i> \ 
-[<i>new_address</i>:&lt;port>:<i>replication_port</i>:<i>fselocation</i>[:&lt;fselocation>:...]]</codeblock></pd><pd>Note that you only need to specify a name for <codeph>filespaceOrder</codeph> if your system has
+&lt;old_address>:&lt;port>:fselocation \ 
+[new_address:&lt;port>:replication_port:fselocation[:&lt;fselocation>:...]]</codeblock></pd><pd>Note that you only need to specify a name for <codeph>filespaceOrder</codeph> if your system has
             multiple filespaces configured. If your system does not have additional filespaces
             configured besides the default <codeph>pg_system</codeph> filespace, this file will only
             have one location (for the default data directory filespace,

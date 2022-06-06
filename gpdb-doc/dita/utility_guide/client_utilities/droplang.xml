@@ -26,4 +26,4 @@ system role name.</pd></plentry><plentry><pt>-w | --no-password</pt><pd>Never is
 and a password is not available by other means such as a <codeph>.pgpass</codeph>
 file, the connection attempt will fail. This option can be useful in
 batch jobs and scripts where no user is present to enter a password.</pd></plentry><plentry><pt>-W | --password</pt><pd>Force a password prompt.</pd></plentry></parml></sectiondiv></section><section id="section6"><title>Examples</title><p>To remove the language <codeph>pltcl</codeph> from the <codeph>mydatabase</codeph> database:</p><codeblock>droplang pltcl mydatabase</codeblock></section><section id="section7"><title>See Also</title><p><ph otherprops="op-print"><codeph>DROP LANGUAGE</codeph> in the <i>Greenplum Database
-            Reference Guide</i></ph><ph otherprops="op-help"><codeph><xref href="../../ref_guide/sql_commands/DROP_LANGUAGE.xml#topic1"/></codeph></ph></p></section></body></topic>
+            Reference Guide</i></ph><ph otherprops="op-help"><xref href="../../ref_guide/sql_commands/DROP_LANGUAGE.xml#topic1"/></ph></p></section></body></topic>

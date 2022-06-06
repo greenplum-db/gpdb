@@ -15,14 +15,14 @@
       <p><codeph>pg_dump</codeph> is a standard PostgreSQL utility for backing up a database, and is
         also supported in Greenplum Database. It creates a single (non-parallel) dump file. For
         routine backups of Greenplum Database, it is better to use the Greenplum Database backup
-        utility, <codeph><xref href="../admin_utilities/gpcrondump.xml#topic1"/></codeph>, for the
+        utility, <xref href="../admin_utilities/gpcrondump.xml#topic1"/>, for the
         best performance.</p>
       <p>Use <codeph>pg_dump</codeph> if you are migrating your data to another database vendor's
         system, or to another Greenplum Database system with a different segment configuration (for
         example, if the system you are migrating to has greater or fewer segment instances). To
         restore, you must use the corresponding <xref href="./pg_restore.xml#topic1" type="topic"
           format="dita"/> utility (if the dump file is in archive format), or you can use a client
-        program such as <codeph><xref href="psql.xml#topic1" type="topic" format="dita"/></codeph>
+        program such as <xref href="psql.xml#topic1" type="topic" format="dita"/>
         (if the dump file is in plain text format). </p>
       <p>Since <codeph>pg_dump</codeph> is compatible with regular PostgreSQL, it can be used to
         migrate data into Greenplum Database. The <codeph>pg_dump</codeph> utility in Greenplum
@@ -72,8 +72,8 @@
             <pt>-a | --data-only</pt>
             <pd>Dump only the data, not the schema (data definitions). This option is only
               meaningful for the plain-text format. For the archive formats, you may specify the
-              option when you call <codeph><xref href="./pg_restore.xml#topic1" type="topic"
-                  format="dita"/></codeph>. </pd>
+              option when you call <xref href="./pg_restore.xml#topic1" type="topic"
+                  format="dita"/>. </pd>
           </plentry>
           <plentry>
             <pt>-b | --blobs</pt>
@@ -90,8 +90,8 @@
               files so that when you use those files to do a restore, the <codeph>DROP</codeph>
               commands are run prior to the <codeph>CREATE</codeph> commands. This option is only
               meaningful for the plain-text format. For the archive formats, you may specify the
-              option when you call <codeph><xref href="./pg_restore.xml#topic1" type="topic"
-                  format="dita"/></codeph>. </pd>
+              option when you call <xref href="./pg_restore.xml#topic1" type="topic"
+                  format="dita"/>. </pd>
           </plentry>
           <plentry>
             <pt>-C | --create</pt>
@@ -99,8 +99,8 @@
               created database. (With a script of this form, it doesn't matter which database you
               connect to before running the script.) This option is only meaningful for the
               plain-text format. For the archive formats, you may specify the option when you call
-                  <codeph><xref href="./pg_restore.xml#topic1" type="topic" format="dita"
-              /></codeph>. </pd>
+                  <xref href="./pg_restore.xml#topic1" type="topic" format="dita"
+              />. </pd>
           </plentry>
           <plentry>
             <pt>-d | --inserts</pt>
@@ -138,12 +138,12 @@
             <pt>-F p|c|t | --format=plain|custom|tar</pt>
             <pd>Selects the format of the output. format can be one of the following: </pd>
             <pd>p | plain — Output a plain-text SQL script file (the default). </pd>
-            <pd>c | custom — Output a custom archive suitable for input into <codeph><xref
-                  href="./pg_restore.xml#topic1" type="topic" format="dita"/></codeph>. This is the
+            <pd>c | custom — Output a custom archive suitable for input into <xref
+                  href="./pg_restore.xml#topic1" type="topic" format="dita"/>. This is the
               most flexible format in that it allows reordering of loading data as well as object
               definitions. This format is also compressed by default. </pd>
-            <pd>t | tar — Output a tar archive suitable for input into <codeph><xref
-                  href="./pg_restore.xml#topic1" type="topic" format="dita"/></codeph>. Using this
+            <pd>t | tar — Output a tar archive suitable for input into <xref
+                  href="./pg_restore.xml#topic1" type="topic" format="dita"/>. Using this
               archive format allows reordering and/or exclusion of database objects at the time the
               database is restored. It is also possible to limit which data is reloaded at restore
               time. </pd>
@@ -201,8 +201,8 @@
               To make a script that can be restored by any user, but will give that user ownership
               of all the objects, specify <codeph>-O</codeph>. This option is only meaningful for
               the plain-text format. For the archive formats, you may specify the option when you
-              call <codeph><xref href="./pg_restore.xml#topic1" type="topic" format="dita"
-                /></codeph>.</pd>
+              call <xref href="./pg_restore.xml#topic1" type="topic" format="dita"
+                />.</pd>
           </plentry>
           <plentry>
             <pt>-s | --schema-only</pt>
@@ -270,8 +270,8 @@
               specify a superuser name with <codeph>-S</codeph>, or preferably be careful to start
               the resulting script as a superuser. This option is only meaningful for the plain-text
               format. For the archive formats, you may specify the option when you call
-                  <codeph><xref href="./pg_restore.xml#topic1" type="topic" format="dita"
-                /></codeph>.<note>Greenplum Database does not support user-defined
+                  <xref href="./pg_restore.xml#topic1" type="topic" format="dita"
+                />.<note>Greenplum Database does not support user-defined
               triggers.</note></pd>
           </plentry>
           <plentry>
@@ -379,9 +379,9 @@
     </section>
     <section id="section9">
       <title>See Also</title>
-      <p><codeph><xref href="./pg_dumpall.xml#topic1" type="topic" format="dita"/></codeph>,
-            <codeph><xref href="pg_restore.xml#topic1" type="topic" format="dita"/></codeph>,
-            <codeph><xref href="psql.xml#topic1" type="topic" format="dita"/></codeph></p>
+      <p><xref href="./pg_dumpall.xml#topic1" type="topic" format="dita"/>,
+            <xref href="pg_restore.xml#topic1" type="topic" format="dita"/>,
+            <xref href="psql.xml#topic1" type="topic" format="dita"/></p>
     </section>
   </body>
 </topic>

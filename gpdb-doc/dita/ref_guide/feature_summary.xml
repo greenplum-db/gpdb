@@ -108,7 +108,7 @@
           <li id="ik265013"><codeph>CREATE PROCEDURE</codeph> (<codeph>SQL/PSM</codeph>). This can
             be worked around in Greenplum Database by creating a <codeph>FUNCTION</codeph> that
             returns <codeph>void</codeph>, and invoking the function as
-            follows:<codeblock>SELECT <i>myfunc</i>(<i>args</i>);
+            follows:<codeblock>SELECT myfunc(args);
 </codeblock></li>
           <li id="ik265014">The PostgreSQL/Greenplum function definition language
               (<codeph>PL/PGSQL</codeph>) is a subset of Oracle's <codeph>PL/SQL</codeph>, rather

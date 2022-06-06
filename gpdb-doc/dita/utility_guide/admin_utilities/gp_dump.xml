@@ -8,8 +8,8 @@
       script files, which can then be used to restore the database using
       <codeph>gp_restore</codeph>. </p>
     <note>The <codeph>gp_dump</codeph> utility is deprecated and will be removed in a future
-      release. Use <codeph><xref href="gpcrondump.xml#topic1" type="topic" format="dita"/></codeph>
-      and <codeph><xref href="gpdbrestore.xml#topic1" type="topic" format="dita"/></codeph> to
+      release. Use <xref href="gpcrondump.xml#topic1" type="topic" format="dita"/>
+      and <xref href="gpdbrestore.xml#topic1" type="topic" format="dita"/> to
       backup and restore Greenplum databases. </note>
     <section id="section2">
       <title>Synopsis</title>
@@ -56,8 +56,8 @@
             <li id="kn142741">Creates a dump file in the master data directory named
                 <codeph>gp_dump_1_</codeph><varname>dbid</varname><codeph>_</codeph><varname>timestamp</varname><codeph>_post_data</codeph>
               that contains commands to rebuild objects associated with the tables.<p>When the
-                database is restored with <codeph><xref href="./gp_restore.xml#topic1" type="topic"
-                    format="dita"/></codeph>, first, the schema and data are restored, and then, the
+                database is restored with <xref href="./gp_restore.xml#topic1" type="topic"
+                    format="dita"/>, first, the schema and data are restored, and then, the
                 dump file is used to rebuilt the other objects associated with the tables.</p></li>
             <li id="kn142746">Creates a log file in the master data directory named
                 <codeph>gp_dump_status_1_</codeph><varname>dbid</varname><codeph>_</codeph><varname>timestamp</varname>.</li>
@@ -85,8 +85,8 @@
       </ul>
       <p>Note that the 14 digit timestamp is the number that uniquely identifies the backup job, and
         is part of the filename for each dump file created by a <codeph>gp_dump</codeph> operation.
-        This timestamp must be passed to the <codeph><xref href="./gp_restore.xml#topic1"
-            type="topic" format="dita"/></codeph> utility when restoring a Greenplum database.</p>
+        This timestamp must be passed to the <xref href="./gp_restore.xml#topic1"
+            type="topic" format="dita"/> utility when restoring a Greenplum database.</p>
     </section>
     <section id="section4">
       <title>Options</title>
@@ -267,9 +267,9 @@
     </section>
     <section id="section6">
       <title>See Also</title>
-      <p><codeph><xref href="gpdbrestore.xml#topic1" type="topic" format="dita"/></codeph>,
-            <codeph><xref href="gpcrondump.xml#topic1" type="topic" format="dita"/></codeph>,
-            <codeph><xref href="../client_utilities/pg_dump.xml#topic1"/></codeph></p>
+      <p><xref href="gpdbrestore.xml#topic1" type="topic" format="dita"/>,
+            <xref href="gpcrondump.xml#topic1" type="topic" format="dita"/>,
+            <xref href="../client_utilities/pg_dump.xml#topic1"/></p>
     </section>
   </body>
 </topic>

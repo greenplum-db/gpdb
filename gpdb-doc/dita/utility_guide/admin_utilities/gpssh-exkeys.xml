@@ -143,8 +143,8 @@ $ gpssh-exkeys -e hostfile_exkeys -x hostfile_gpexpand</codeblock>
         </section>
         <section id="section6">
             <title>See Also</title>
-            <p><codeph><xref href="gpssh.xml#topic1">gpssh</xref></codeph>, <codeph><xref
-                        href="gpscp.xml#topic1">gpscp</xref></codeph></p>
+            <p><xref href="gpssh.xml#topic1">gpssh</xref>, <xref
+                        href="gpscp.xml#topic1">gpscp</xref></p>
         </section>
     </body>
 </topic>

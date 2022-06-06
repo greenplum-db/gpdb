@@ -49,7 +49,7 @@
         the string must be quoted or the special character must be escaped with a backslash (
           <codeph>\</codeph> ).</p>
       <codeblock># Read each new line literally
-somekey: <i>|</i>   this value contains two lines
+somekey: |   this value contains two lines
    and each line is read literally
 # Treat each new line as a space
 anotherkey: <i>&gt;
@@ -96,77 +96,77 @@ date: 1865
       <codeblock>%YAML 1.1
 ---
 <xref href="#topic3/VERSION" format="dita">VERSION</xref>: 1.0.0.2
-<xref href="#topic3/DATABASE" format="dita">DATABASE</xref>: <i>dbname</i>
-<xref href="#topic3/USER" format="dita">USER</xref>: <i>db_username</i>
-<xref href="#topic3/HOST" format="dita">HOST</xref>: <i>master_hostname</i>
-<xref href="#topic3/PORT" format="dita">PORT</xref>: <i>master_port</i></codeblock>
+<xref href="#topic3/DATABASE" format="dita">DATABASE</xref>: dbname
+<xref href="#topic3/USER" format="dita">USER</xref>: db_username
+<xref href="#topic3/HOST" format="dita">HOST</xref>: master_hostname
+<xref href="#topic3/PORT" format="dita">PORT</xref>: master_port</codeblock>
       <codeblock><xref href="#topic3/DEFINE" format="dita">DEFINE</xref>: 
   - <xref href="#topic3/INPUT" format="dita">INPUT</xref>:
-     <xref href="#topic3/NAME" format="dita">NAME</xref>: <i>input_name</i>
+     <xref href="#topic3/NAME" format="dita">NAME</xref>: input_name
      <xref href="#topic3/FILE" format="dita">FILE</xref>: 
-      - <i>hostname</i>:<i>/path/to/file</i>
+      - hostname:/path/to/file
      <xref href="#topic3/GPFDIST" format="dita">GPFDIST</xref>:
-       - <i>hostname</i>:port<i>/file_pattern</i>
-     <xref href="#topic3/TABLE" format="dita">TABLE</xref>: <i>table_name</i>
-     <xref href="#topic3/QUERY" format="dita">QUERY</xref>: <i>SELECT_statement</i>
-     <xref href="#topic3/EXEC" format="dita">EXEC</xref>: <i>command_string</i>
+       - hostname:port/file_pattern
+     <xref href="#topic3/TABLE" format="dita">TABLE</xref>: table_name
+     <xref href="#topic3/QUERY" format="dita">QUERY</xref>: SELECT_statement
+     <xref href="#topic3/EXEC" format="dita">EXEC</xref>: command_string
      <xref href="#topic3/COLUMNS" format="dita">COLUMNS</xref>:
-       - <i>field_name data_type</i>
+       - field_name data_type
      <xref href="#topic3/FORMAT" format="dita">FORMAT</xref>: TEXT | CSV
-     <xref href="#topic3/DELIMITER" format="dita">DELIMITER</xref>: <i>delimiter_character</i>
-     <xref href="#topic3/ESCAPE" format="dita">ESCAPE</xref>: <i>escape_character</i>
-     <xref href="#topic3/NULL" format="dita">NULL</xref>: <i>null_string</i>
-     <xref href="#topic3/QUOTE" format="dita">QUOTE</xref>: <i>csv_quote_character</i>
-     <xref href="#topic3/ERROR_LIMIT" format="dita">ERROR_LIMIT</xref>: <i>integer</i>
-     <xref href="#topic3/ENCODING" format="dita">ENCODING</xref>: <i>database_encoding</i></codeblock>
+     <xref href="#topic3/DELIMITER" format="dita">DELIMITER</xref>: delimiter_character
+     <xref href="#topic3/ESCAPE" format="dita">ESCAPE</xref>: escape_character
+     <xref href="#topic3/NULL" format="dita">NULL</xref>: null_string
+     <xref href="#topic3/QUOTE" format="dita">QUOTE</xref>: csv_quote_character
+     <xref href="#topic3/ERROR_LIMIT" format="dita">ERROR_LIMIT</xref>: integer
+     <xref href="#topic3/ENCODING" format="dita">ENCODING</xref>: database_encoding</codeblock>
       <codeblock>  - <xref href="#topic3/OUTPUT" format="dita">OUTPUT</xref>:
-     <xref href="#topic3/OUTPUTNAME" format="dita">NAME</xref>: <i>output_name</i>
-     <xref href="#topic3/OUTPUTFILE" format="dita">FILE</xref>: <i>file_path_on_client</i>
-     <xref href="#topic3/OUTPUTTABLE" format="dita">TABLE</xref>: <i>table_name</i>
+     <xref href="#topic3/OUTPUTNAME" format="dita">NAME</xref>: output_name
+     <xref href="#topic3/OUTPUTFILE" format="dita">FILE</xref>: file_path_on_client
+     <xref href="#topic3/OUTPUTTABLE" format="dita">TABLE</xref>: table_name
      <xref href="#topic3/KEYS" format="dita">KEYS</xref>: 
-<i>       - column_name</i>
+       - column_name
      <xref href="#topic3/MODE" format="dita">MODE</xref>: REPLACE | APPEND</codeblock>
       <codeblock>  - <xref href="#topic3/MAP" format="dita">MAP</xref>:
-     <xref href="#topic3/NAME" format="dita">NAME</xref>: <i>function_name</i>
-     <xref href="#topic3/FUNCTION" format="dita">FUNCTION</xref>: <i>function_definition</i>
+     <xref href="#topic3/NAME" format="dita">NAME</xref>: function_name
+     <xref href="#topic3/FUNCTION" format="dita">FUNCTION</xref>: function_definition
      <xref href="#topic3/LANGUAGE" format="dita">LANGUAGE</xref>: perl | python | c
-     <xref href="#topic3/LIBRARY" format="dita">LIBRARY</xref>: <i>/path/filename.so</i>
+     <xref href="#topic3/LIBRARY" format="dita">LIBRARY</xref>: /path/filename.so
      <xref href="#topic3/PARAMETERS" format="dita">PARAMETERS</xref>: 
-<i>       - name</i><i>type</i>
+       - nametype
      <xref href="#topic3/RETURNS" format="dita">RETURNS</xref>: 
-<i>       - name</i><i>type</i>
+       - nametype
      <xref href="#topic3/OPTIMIZE" format="dita">OPTIMIZE</xref>: STRICT IMMUTABLE
      <xref href="#topic3/MODE" format="dita">MODE</xref>: SINGLE | MULTI</codeblock>
       <codeblock>  - <xref href="#topic3/TCF" format="dita">TRANSITION | CONSOLIDATE | FINALIZE</xref>:
-     <xref href="#topic3/TCFNAME" format="dita">NAME</xref>: <i>function_name</i>
-     <xref href="#topic3/FUNCTION" format="dita">FUNCTION</xref>: <i>function_definition</i>
+     <xref href="#topic3/TCFNAME" format="dita">NAME</xref>: function_name
+     <xref href="#topic3/FUNCTION" format="dita">FUNCTION</xref>: function_definition
      <xref href="#topic3/LANGUAGE" format="dita">LANGUAGE</xref>: perl | python | c
-     <xref href="#topic3/LIBRARY" format="dita">LIBRARY</xref>: <i>/path/filename.so</i>
+     <xref href="#topic3/LIBRARY" format="dita">LIBRARY</xref>: /path/filename.so
      <xref href="#topic3/PARAMETERS" format="dita">PARAMETERS</xref>: 
-<i>       - name</i><i>type</i>
+       - nametype
      <xref href="#topic3/RETURNS" format="dita">RETURNS</xref>: 
-<i>       - name</i><i>type</i>
+       - nametype
      <xref href="#topic3/OPTIMIZE" format="dita">OPTIMIZE</xref>: STRICT IMMUTABLE
      <xref href="#topic3/TCFMODE" format="dita">MODE</xref>: SINGLE | MULTI</codeblock>
       <codeblock>  - <xref href="#topic3/REDUCE" format="dita">REDUCE</xref>:
-     <xref href="#topic3/REDUCENAME" format="dita">NAME</xref>: <i>reduce_job_name</i>
-     <xref href="#topic3/TRANSITION" format="dita">TRANSITION</xref>: <i>transition_function_name</i>
-     <xref href="#topic3/CONSOLIDATE" format="dita">CONSOLIDATE</xref>: <i>consolidate_function_name</i>
-     <xref href="#topic3/FINALIZE" format="dita">FINALIZE</xref>: <i>finalize_function_name</i>
-     <xref href="#topic3/INITIALIZE" format="dita">INITIALIZE</xref>: <i>value</i>
+     <xref href="#topic3/REDUCENAME" format="dita">NAME</xref>: reduce_job_name
+     <xref href="#topic3/TRANSITION" format="dita">TRANSITION</xref>: transition_function_name
+     <xref href="#topic3/CONSOLIDATE" format="dita">CONSOLIDATE</xref>: consolidate_function_name
+     <xref href="#topic3/FINALIZE" format="dita">FINALIZE</xref>: finalize_function_name
+     <xref href="#topic3/INITIALIZE" format="dita">INITIALIZE</xref>: value
      <xref href="#topic3/REDUCEKEYS" format="dita">KEYS</xref>:
-<i>       - key_name</i></codeblock>
+       - key_name</codeblock>
       <codeblock>  - <xref href="#topic3/TASK" format="dita">TASK</xref>:
-     <xref href="#topic3/TASKNAME" format="dita">NAME</xref>: <i>task_name</i>
-     <xref href="#topic3/SOURCE" format="dita">SOURCE</xref>: <i>input_name</i>
-     <xref href="#topic3/TASKMAP" format="dita">MAP</xref>: <i>map_function_name</i>
-     <xref href="#topic3/REDUCE" format="dita">REDUCE</xref>: <i>reduce_function_name</i>
+     <xref href="#topic3/TASKNAME" format="dita">NAME</xref>: task_name
+     <xref href="#topic3/SOURCE" format="dita">SOURCE</xref>: input_name
+     <xref href="#topic3/TASKMAP" format="dita">MAP</xref>: map_function_name
+     <xref href="#topic3/REDUCE" format="dita">REDUCE</xref>: reduce_function_name
 <xref href="#topic3/EXECUTE" format="dita">EXECUTE</xref></codeblock>
       <codeblock>  - <xref href="#topic3/RUN" format="dita">RUN</xref>:
-     <xref href="#topic3/EXECUTESOURCE" format="dita">SOURCE</xref>: <i>input_or_task_name</i>
-     <xref href="#topic3/TARGET" format="dita">TARGET</xref>: <i>output_name</i>
-     <xref href="#topic3/EXECUTEMAP" format="dita">MAP</xref>: <i>map_function_name</i>
-     <xref href="#topic3/EXECUTEREDUCE" format="dita">REDUCE</xref>: <i>reduce_function_name</i>...</codeblock>
+     <xref href="#topic3/EXECUTESOURCE" format="dita">SOURCE</xref>: input_or_task_name
+     <xref href="#topic3/TARGET" format="dita">TARGET</xref>: output_name
+     <xref href="#topic3/EXECUTEMAP" format="dita">MAP</xref>: map_function_name
+     <xref href="#topic3/EXECUTEREDUCE" format="dita">REDUCE</xref>: reduce_function_name...</codeblock>
       <parml>
         <plentry>
           <pt id="VERSION">VERSION</pt>

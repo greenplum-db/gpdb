@@ -31,7 +31,7 @@ DROP DATABASE</codeblock></section><section id="section7">
                         <title>See Also</title>
                         <p><ph otherprops="op-print"><codeph>DROP DATABASE</codeph> in the
                                                 <i>Greenplum Database Reference Guide</i></ph><ph
-                                        otherprops="op-help"><codeph><xref
+                                        otherprops="op-help"><xref
                                                   href="../../ref_guide/sql_commands/DROP_DATABASE.xml#topic1"
-                                                /></codeph></ph></p>
+                                                /></ph></p>
                 </section></body></topic>

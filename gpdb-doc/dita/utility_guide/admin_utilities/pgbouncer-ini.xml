@@ -746,8 +746,8 @@ forcedb = host=127.0.0.1 port=300 user=baz password=foo client_encoding=UNICODE 
   <topic id="seealso">
     <title>See Also</title>
     <body>
-      <p><codeph><xref href="pgbouncer.xml#topic1" type="topic" format="dita"/></codeph>,
-          <codeph><xref href="pgbouncer-admin.xml#topic1" type="topic" format="dita"/></codeph>, <xref href="https://pgbouncer.github.io/config.html" format="html" scope="external">PgBouncer Configuration Page</xref></p>
+      <p><xref href="pgbouncer.xml#topic1" type="topic" format="dita"/>,
+          <xref href="pgbouncer-admin.xml#topic1" type="topic" format="dita"/>, <xref href="https://pgbouncer.github.io/config.html" format="html" scope="external">PgBouncer Configuration Page</xref></p>
       </body>
   </topic>
 

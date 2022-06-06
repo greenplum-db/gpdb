@@ -140,8 +140,8 @@ sdw4-1</codeblock>
         </section>
         <section>
             <title>See Also</title>
-            <p><codeph><xref href="gpinitsystem.xml#topic1"/></codeph>, <codeph><xref
-                        href="gpssh-exkeys.xml#topic1"/></codeph></p>
+            <p><xref href="gpinitsystem.xml#topic1"/>, <xref
+                        href="gpssh-exkeys.xml#topic1"/></p>
         </section>
     </body>
 </topic>

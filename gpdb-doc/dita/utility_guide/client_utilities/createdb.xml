@@ -33,6 +33,6 @@ batch jobs and scripts where no user is present to enter a password.</pd></plent
           <codeph>LATIN1</codeph> encoding scheme:</p><codeblock>createdb -p 54321 -h gpmaster -E LATIN1 demo</codeblock></section><section id="section7">
       <title>See Also</title>
       <p><ph otherprops="op-print"><codeph>CREATE DATABASE</codeph> in the <i>Greenplum Database
-            Reference Guide</i></ph><ph otherprops="op-help"><codeph><xref
-              href="../../ref_guide/sql_commands/CREATE_DATABASE.xml#topic1"/></codeph></ph></p>
+            Reference Guide</i></ph><ph otherprops="op-help"><xref
+              href="../../ref_guide/sql_commands/CREATE_DATABASE.xml#topic1"/></ph></p>
     </section></body></topic>

@@ -218,9 +218,9 @@ SELECT name,ST_AsText(geopoint) FROM geotest;</codeblock>
         <title>Building a Spatial Index</title>
         <body>
           <p>You can build a GiST index as follows:</p>
-          <codeblock>CREATE INDEX <i>indexname</i>
-  ON <i>tablename</i>
-  USING GIST ( <i>geometryfield</i> );</codeblock>
+          <codeblock>CREATE INDEX indexname
+  ON tablename
+  USING GIST ( geometryfield );</codeblock>
         </body>
       </topic>
     </topic>

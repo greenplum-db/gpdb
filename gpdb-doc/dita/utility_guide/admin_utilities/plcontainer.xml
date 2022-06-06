@@ -58,8 +58,8 @@
                   Docker repository and image. This example URL points to a local Docker repository
                     <codeph>192.168.0.1:5000/images/mytest_plc_r:devel</codeph></li>
               </ul></pd>
-            <pd>After installing the Docker image, use the <codeph><xref
-                  href="#topic_rw3_52s_dw/runtime_add" format="dita">runtime-add</xref></codeph>
+            <pd>After installing the Docker image, use the <xref
+                  href="#topic_rw3_52s_dw/runtime_add" format="dita">runtime-add</xref>
               command to configure PL/Container to use the Docker image.</pd>
           </plentry>
           <plentry>
@@ -145,9 +145,9 @@
                       <li><codeph>use_container_logging</codeph> - Enable or disable Docker logging
                         for the container. The value is either <codeph>yes</codeph> (enable logging)
                         or <codeph>no</codeph> (disable logging, the default). <p>The Greenplum
-                          Database server configuration parameter <codeph><xref
+                          Database server configuration parameter <xref
                               href="../../ref_guide/config_params/guc-list.xml#log_min_messages"
-                              scope="peer">log_min_messages</xref></codeph> controls the log level.
+                              scope="peer">log_min_messages</xref> controls the log level.
                           The default log level is <codeph>warning</codeph>. For information about
                           PL/Container log information, see <xref href="#plc_notes" format="dita"
                             >Notes</xref>.</p></li>
@@ -223,8 +223,8 @@
                   <varname>runtime_id</varname> does not exist, the information is added to the
                 configuration file. The utility adds a startup command and shared directory to the
                 configuration. </p>
-              <p dir="ltr">See <codeph><xref href="#topic_rw3_52s_dw/runtime_add" format="dita"
-                    >runtime-add</xref></codeph> for command options and information added to the
+              <p dir="ltr">See <xref href="#topic_rw3_52s_dw/runtime_add" format="dita"
+                    >runtime-add</xref> for command options and information added to the
                 configuration.</p>
             </pd>
           </plentry>

@@ -12,7 +12,7 @@ gplogfilter --version</codeblock></section><section id="section3"><title>Descrip
         from standard input, use a dash (<codeph>-</codeph>) as the input file name. Input files may
         be compressed using <codeph>gzip</codeph>. In an input file, a log entry is identified by
         its timestamp in <codeph>YYYY-MM-DD [hh:mm[:ss]]</codeph> format.</p><p>You can also use <codeph>gplogfilter</codeph> to search through all segment log files at once by
-        running it through the <codeph><xref href="./gpssh.xml#topic1" type="topic" format="dita"/></codeph> utility. For example, to display the last three lines of each segment log
+        running it through the <xref href="./gpssh.xml#topic1" type="topic" format="dita"/> utility. For example, to display the last three lines of each segment log
         file:</p><codeblock>gpssh -f seg_host_file
 =&gt; source /usr/local/greenplum-db/greenplum_path.sh
 =&gt; gplogfilter -n 3 /gpdata/*/pg_log/gpdb*.csv</codeblock><p>By default, the output of <codeph>gplogfilter</codeph> is sent to standard
@@ -57,8 +57,8 @@ overwriting it.</pd></plentry></parml></sectiondiv><sectiondiv id="section8"><b>
               name.</pd></plentry><plentry><pt>-u | --unzip</pt><pd>Uncompress the input file using <codeph>gunzip</codeph>. If the input
 file name ends in <codeph>.gz</codeph>, it will be uncompressed by default.</pd></plentry><plentry><pt>--help</pt><pd>Displays the online help.</pd></plentry><plentry><pt>--version</pt><pd>Displays the version of this utility.</pd></plentry></parml></sectiondiv></section><section id="section9"><title>Examples</title><p>Display the last three error messages in the master log file:</p><codeblock>gplogfilter -t -n 3</codeblock><p>Display all log messages in the master log file timestamped in the last
 10 minutes:</p><codeblock>gplogfilter -d :10</codeblock><p>Display log messages in the master log file containing the string <codeph>|con6
-cmd11|</codeph>:</p><codeblock>gplogfilter -f '|con6 cmd11|'</codeblock><p>Using <codeph><xref href="./gpssh.xml#topic1" type="topic" format="dita"/></codeph>, run
+cmd11|</codeph>:</p><codeblock>gplogfilter -f '|con6 cmd11|'</codeblock><p>Using <xref href="./gpssh.xml#topic1" type="topic" format="dita"/>, run
           <codeph>gplogfilter</codeph> on the segment hosts and search for log messages in the
         segment log files containing the string <codeph>con6</codeph> and save output to a file.</p><codeblock>gpssh -f seg_hosts_file -e 'source 
 /usr/local/greenplum-db/greenplum_path.sh ; gplogfilter -f 
-con6 /gpdata/*/pg_log/gpdb*.csv' &gt; seglog.out</codeblock></section><section id="section10"><title>See Also</title><p><codeph><xref href="./gpssh.xml#topic1" type="topic" format="dita"/></codeph>, <codeph><xref href="./gpscp.xml#topic1" type="topic" format="dita"/></codeph></p></section></body></topic>
+con6 /gpdata/*/pg_log/gpdb*.csv' &gt; seglog.out</codeblock></section><section id="section10"><title>See Also</title><p><xref href="./gpssh.xml#topic1" type="topic" format="dita"/>, <xref href="./gpscp.xml#topic1" type="topic" format="dita"/></p></section></body></topic>

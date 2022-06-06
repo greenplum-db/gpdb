@@ -53,7 +53,7 @@ CREATE ROLE</codeblock><p>In the above example, the new password is not actually
                         <title>See Also</title>
                         <p><ph otherprops="op-print"><codeph>CREATE ROLE</codeph> in the
                                                 <i>Greenplum Database Reference Guide</i></ph><ph
-                                        otherprops="op-help"><codeph><xref
+                                        otherprops="op-help"><xref
                                                   href="../../ref_guide/sql_commands/CREATE_ROLE.xml#topic1"
-                                                /></codeph></ph></p>
+                                                /></ph></p>
                 </section></body></topic>

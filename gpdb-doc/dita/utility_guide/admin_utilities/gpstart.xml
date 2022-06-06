@@ -159,8 +159,8 @@ Continue only if you are certain that the standby is not acting as the master.</
         </section>
         <section id="section6">
             <title>See Also</title>
-            <p><codeph><xref href="gpstop.xml#topic1">gpstop</xref></codeph>, <codeph><xref
-                        href="gpinitsystem.xml#topic1"/></codeph></p>
+            <p><xref href="gpstop.xml#topic1">gpstop</xref>, <xref
+                        href="gpinitsystem.xml#topic1"/></p>
         </section>
     </body>
 </topic>

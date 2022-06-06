@@ -98,8 +98,8 @@ pgbouncer [ -V | --version ] | [ -h | --help ]</codeblock>
       </section>
       <section id="section7">
       <title>See Also</title>
-      <p><codeph><xref href="pgbouncer-ini.xml#topic1" type="topic" format="dita"/></codeph>,
-            <codeph><xref href="pgbouncer-admin.xml#topic1" type="topic" format="dita"/></codeph></p>
+      <p><xref href="pgbouncer-ini.xml#topic1" type="topic" format="dita"/>,
+            <xref href="pgbouncer-admin.xml#topic1" type="topic" format="dita"/></p>
     </section>
     </body>
   </topic>

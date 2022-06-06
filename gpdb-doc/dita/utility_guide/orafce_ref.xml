@@ -26,14 +26,14 @@
       <p>The following functions are available by default and do not require running the Oracle
         Compatibility installer: </p>
       <ul class="- topic/ul ">
-        <li id="me155309" class="- topic/li "><codeph><xref href="#topic28" type="topic"
-              format="dita" class="- topic/xref "/></codeph></li>
-        <li id="me155326" class="- topic/li "><codeph><xref href="#topic29" type="topic"
-              format="dita" class="- topic/xref "/></codeph></li>
-        <li id="me155333" class="- topic/li "><codeph><xref href="#topic8" type="topic"
-              format="dita" class="- topic/xref "/></codeph></li>
-        <li id="me155319" class="- topic/li "><codeph><xref href="#topic9" type="topic"
-              format="dita" class="- topic/xref "/></codeph></li>
+        <li id="me155309" class="- topic/li "><xref href="#topic28" type="topic"
+              format="dita" class="- topic/xref "/></li>
+        <li id="me155326" class="- topic/li "><xref href="#topic29" type="topic"
+              format="dita" class="- topic/xref "/></li>
+        <li id="me155333" class="- topic/li "><xref href="#topic8" type="topic"
+              format="dita" class="- topic/xref "/></li>
+        <li id="me155319" class="- topic/li "><xref href="#topic9" type="topic"
+              format="dita" class="- topic/xref "/></li>
       </ul>
       <note type="note" class="- topic/note ">The Oracle Compatibility Functions reside in the
           <codeph class="+ topic/ph pr-d/codeph ">oracompat</codeph> schema. To access them, prefix
@@ -489,9 +489,9 @@ FROM suppliers;</codeblock></li>
         <title class="- topic/title ">Compatibility</title>
         <p>This command is compatible with Oracle syntax and is provided for convenience. </p>
         <title class="- topic/title ">See Also</title>
-        <p>PostgreSQL <codeph><xref
+        <p>PostgreSQL <xref
               href="https://www.postgresql.org/docs/8.3/static/functions-binarystring.html"
-              scope="external" format="html" class="- topic/xref ">decode</xref></codeph> (not
+              scope="external" format="html" class="- topic/xref ">decode</xref> (not
           compatible with Oracle)</p>
       </section>
     </body>
@@ -1073,8 +1073,8 @@ from clients;</codeblock>
         <title class="- topic/title ">Compatibility</title>
         <p>This command is compatible with Oracle syntax and is provided for convenience. </p>
         <title class="- topic/title ">See Also</title>
-        <p><codeph><xref href="#topic9" type="topic" format="dita" class="- topic/xref "
-          /></codeph></p>
+        <p><xref href="#topic9" type="topic" format="dita" class="- topic/xref "
+          /></p>
       </section>
     </body>
   </topic>
@@ -1124,9 +1124,9 @@ from clients;</codeblock>
         <p>Returns all characters of <codeph class="+ topic/ph pr-d/codeph ">name</codeph>,
           beginning with the second character.</p>
         <title class="- topic/title ">Compatibility</title>
-        <p>PostgreSQL <codeph><xref
+        <p>PostgreSQL <xref
               href="https://www.postgresql.org/docs/8.3/static/functions-string.html"
-              scope="external" format="html" class="- topic/xref ">substr</xref></codeph> (not
+              scope="external" format="html" class="- topic/xref ">substr</xref> (not
           compatible with Oracle)</p>
       </section>
     </body>
@@ -1294,9 +1294,9 @@ FROM ClientDB;</codeblock>
         <title class="- topic/title ">Compatibility</title>
         <p>This command is compatible with Oracle syntax and is provided for convenience. </p>
         <title class="- topic/title ">See Also</title>
-        <p>PostgreSQL <codeph><xref
+        <p>PostgreSQL <xref
               href="https://www.postgresql.org/docs/8.3/static/functions-math.html" scope="external"
-              format="html" class="- topic/xref ">round</xref></codeph> (not compatible with
+              format="html" class="- topic/xref ">round</xref> (not compatible with
           Oracle)</p>
       </section>
     </body>
@@ -1486,9 +1486,9 @@ FROM ClientDB;</codeblock>
         <title class="- topic/title ">Compatibility</title>
         <p>This command is compatible with Oracle syntax and is provided for convenience. </p>
         <title class="- topic/title ">See Also</title>
-        <p>PostgreSQL <codeph><xref
+        <p>PostgreSQL <xref
               href="https://www.postgresql.org/docs/8.3/static/functions-math.html" scope="external"
-              format="html" class="- topic/xref ">trunc</xref></codeph> (not compatible with
+              format="html" class="- topic/xref ">trunc</xref> (not compatible with
           Oracle)</p>
       </section>
     </body>

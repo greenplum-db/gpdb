@@ -176,9 +176,7 @@ gpstop -? | -h | --help</codeblock>
         <section id="section6">
             <title>See Also</title>
             <p>
-                <codeph>
                     <xref href="gpstart.xml#topic1">gpstart</xref>
-                </codeph>
             </p>
         </section>
     </body>

@@ -44,7 +44,7 @@ Database the character set (encoding) you would like to use in the client.
 There are several ways to accomplish this: </p><ul><li id="ig167344">Using the <codeph>\encoding</codeph> command in <codeph>psql</codeph>,
 which allows you to change client encoding on the fly.</li><li id="ig167345">Using <codeph>SET</codeph><codeph>client_encoding TO</codeph>.<p>To set the client
             encoding, use the following SQL command:
-            </p><codeblock>=&gt; SET CLIENT_ENCODING TO '<i>value</i>';</codeblock><p>To query the
+            </p><codeblock>=&gt; SET CLIENT_ENCODING TO 'value';</codeblock><p>To query the
             current client encoding: </p><codeblock>=&gt; SHOW client_encoding;</codeblock><p>To
             return to the default encoding:
           </p><codeblock>=&gt; RESET client_encoding;</codeblock></li><li id="ig167351">Using the <codeph>PGCLIENTENCODING</codeph> environment variable. When

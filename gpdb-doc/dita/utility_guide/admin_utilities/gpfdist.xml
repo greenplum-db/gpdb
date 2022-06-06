@@ -197,9 +197,9 @@ gpfdist --version</codeblock>
     </section>
     <section>
       <title>Notes</title>
-      <p>The server configuration parameter <codeph><xref
+      <p>The server configuration parameter <xref
             href="../../ref_guide/config_params/guc-list.xml#verify_gpfdists_cert"
-            >verify_gpfdists_cert</xref></codeph> controls whether SSL certificate authentication is
+            >verify_gpfdists_cert</xref> controls whether SSL certificate authentication is
         enabled when Greenplum Database communicates with the <codeph>gpfdist</codeph> utility to
         either read data from or write data to an external data source. You can set the parameter
         value to <codeph>false</codeph> to disable authentication when testing the communication
@@ -239,7 +239,7 @@ gpfdist --version</codeblock>
     </section>
     <section id="section7">
       <title>See Also</title>
-      <p><codeph><xref href="./gpload.xml#topic1" type="topic" format="dita"/></codeph>,
+      <p><xref href="./gpload.xml#topic1" type="topic" format="dita"/>,
           <codeph>CREATE EXTERNAL TABLE</codeph><ph> in the <i>Greenplum Database Reference
             Guide</i></ph></p>
     </section>

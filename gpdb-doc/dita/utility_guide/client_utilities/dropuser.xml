@@ -28,6 +28,6 @@ DROP ROLE "joe"
 DROP ROLE</codeblock></section><section id="section7">
       <title>See Also</title>
       <p><ph otherprops="op-print"><codeph>DROP ROLE</codeph> in the <i>Greenplum Database Reference
-            Guide</i></ph><ph otherprops="op-help"><codeph><xref
-              href="../../ref_guide/sql_commands/DROP_ROLE.xml#topic1"/></codeph></ph></p>
+            Guide</i></ph><ph otherprops="op-help"><xref
+              href="../../ref_guide/sql_commands/DROP_ROLE.xml#topic1"/></ph></p>
     </section></body></topic>

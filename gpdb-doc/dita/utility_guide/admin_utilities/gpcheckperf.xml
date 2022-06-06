@@ -220,10 +220,10 @@ $ gpcheckperf -f hostfile_gpchecknet_ic2 -r N --netperf -d /tmp</codeblock>
         </section>
         <section id="section6">
             <title>See Also</title>
-            <p><codeph><xref href="./gpssh.xml#topic1" type="topic" format="dita"/></codeph>,
-                        <codeph><xref href="./gpscp.xml#topic1" type="topic" format="dita"
-                    /></codeph>, <codeph><xref href="gpcheck.xml#topic1" type="topic" format="dita"
-                    /></codeph></p>
+            <p><xref href="./gpssh.xml#topic1" type="topic" format="dita"/>,
+                        <xref href="./gpscp.xml#topic1" type="topic" format="dita"
+                    />, <xref href="gpcheck.xml#topic1" type="topic" format="dita"
+                    /></p>
         </section>
     </body>
 </topic>
