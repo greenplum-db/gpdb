@@ -66,7 +66,6 @@ CDistributionSpecTest::EresUnittest()
 	return CUnittest::EresExecute(rgut, GPOS_ARRAY_SIZE(rgut));
 }
 
-
 //---------------------------------------------------------------------------
 //	@function:
 //		CDistributionSpecTest::EresUnittest_Any
@@ -407,6 +406,10 @@ CDistributionSpecTest::EresUnittest_Hashed()
 	pexprScalarA->AddRef();
 	prgpexpr2->Append(pexprScalarA);
 
+	CExpressionArray *prgpexpr3 = GPOS_NEW(mp) CExpressionArray(mp);
+	pexprScalarB->AddRef();
+	prgpexpr3->Append(pexprScalarB);
+
 	// basic hash distribution tests
 
 	// HD{A,B}, nulls colocated, duplicate insensitive
@@ -446,6 +449,46 @@ CDistributionSpecTest::EresUnittest_Hashed()
 	GPOS_ASSERT(!pdshashed1->FMatchSubset(pdshashed3));
 	GPOS_ASSERT(!pdshashed1->FSatisfies(pdshashed3));
 
+	// HD{B}, nulls colocated, duplicate sensitive
+	poptctxt->MarkDMLQuery(true /*fDMLQuery*/);
+	CDistributionSpecHashed *pdshashed4 = GPOS_NEW(mp)
+		CDistributionSpecHashed(prgpexpr3, true /* fNullsCollocated */);
+
+	// HD{B}, nulls not colocated, duplicate sensitive
+	prgpexpr3->AddRef();
+	CDistributionSpecHashed *pdshashed5 = GPOS_NEW(mp)
+		CDistributionSpecHashed(prgpexpr3, false /* fNullsCollocated */);
+
+	// Combine {A} true, {B} false
+	CDistributionSpecHashed *pdshashed6 = pdshashed2->Combine(mp, pdshashed5);
+
+	GPOS_ASSERT(true == pdshashed6->FNullsColocated());
+	GPOS_ASSERT(false == pdshashed6->PdshashedEquiv()->FNullsColocated());
+
+	// Combine {B} true, {A} false
+	CDistributionSpecHashed *pdshashed7 = pdshashed4->Combine(mp, pdshashed3);
+
+	GPOS_ASSERT(true == pdshashed7->FNullsColocated());
+	GPOS_ASSERT(false == pdshashed7->PdshashedEquiv()->FNullsColocated());
+
+	// Copy {A} true, {B} false
+	CDistributionSpecHashed *pdshashed8 = pdshashed7->Copy(mp);
+
+	GPOS_ASSERT(true == pdshashed8->FNullsColocated());
+	GPOS_ASSERT(false == pdshashed8->PdshashedEquiv()->FNullsColocated());
+
+	// Copy {A} true, {B} true
+	CDistributionSpecHashed *pdshashed9 = pdshashed6->Copy(mp, true);
+
+	GPOS_ASSERT(true == pdshashed9->FNullsColocated());
+	GPOS_ASSERT(true == pdshashed9->PdshashedEquiv()->FNullsColocated());
+
+	// Copy {B} false, {A} false
+	CDistributionSpecHashed *pdshashed10 = pdshashed7->Copy(mp, false);
+
+	GPOS_ASSERT(false == pdshashed10->FNullsColocated());
+	GPOS_ASSERT(false == pdshashed10->PdshashedEquiv()->FNullsColocated());
+
 	// hashed and universal
 	CDistributionSpecUniversal *pdsuniversal =
 		GPOS_NEW(mp) CDistributionSpecUniversal();
@@ -484,10 +527,24 @@ CDistributionSpecTest::EresUnittest_Hashed()
 	at.Os() << *pdshashed1 << std::endl;
 	at.Os() << *pdshashed2 << std::endl;
 	at.Os() << *pdshashed3 << std::endl;
+	at.Os() << *pdshashed4 << std::endl;
+	at.Os() << *pdshashed5 << std::endl;
+	at.Os() << *pdshashed6 << std::endl;
+	at.Os() << *pdshashed7 << std::endl;
+	at.Os() << *pdshashed8 << std::endl;
+	at.Os() << *pdshashed9 << std::endl;
+	at.Os() << *pdshashed10 << std::endl;
 
 	pdshashed1->Release();
 	pdshashed2->Release();
 	pdshashed3->Release();
+	pdshashed4->Release();
+	pdshashed5->Release();
+	pdshashed6->Release();
+	pdshashed7->Release();
+	pdshashed8->Release();
+	pdshashed9->Release();
+	pdshashed10->Release();
 
 	pdssSegment->Release();
 	pdsreplicated->Release();
