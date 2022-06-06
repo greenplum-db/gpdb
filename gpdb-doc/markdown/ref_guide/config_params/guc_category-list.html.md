@@ -389,6 +389,7 @@ The following parameters configure the Greenplum Database resource group workloa
 - [gp\_resource\_group\_bypass](guc-list.html)
 - [gp\_resource\_group\_cpu\_ceiling\_enforcement](guc-list.html)
 - [gp\_resource\_group\_cpu\_limit](guc-list.html)
+- [gp\_resource\_group\_enable\_recalculate\_query\_mem](guc-list.html)
 - [gp\_resource\_group\_memory\_limit](guc-list.html)
 - [gp\_resource\_group\_queuing\_timeout](guc-list.html)
 - [gp\_resource\_manager](guc-list.html)
