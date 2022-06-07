@@ -17,6 +17,7 @@
 
 #include "postgres.h"
 
+#include "catalog/pg_am_d.h"
 #include "catalog/pg_appendonly.h"
 #include "catalog/pg_type.h"
 #include "catalog/pg_proc.h"
@@ -32,6 +33,9 @@
 #include "utils/syscache.h"
 #include "utils/fmgroids.h"
 #include "utils/guc.h"
+
+static void ATAOEntriesHeapToAO(Oid heaprelid, Oid aorelid);
+static void SwapAppendonlyEntries(Oid entryRelId1, Oid entryRelId2);
 
 /*
  * Adds an entry into the pg_appendonly catalog table. The entry
@@ -476,7 +480,9 @@ GetAppendEntryForMove(
 	if (!HeapTupleIsValid(tuple))
 	{
 		systable_endscan(scan);
-		return tuple;
+		ereport(ERROR,
+				(errcode(ERRCODE_UNDEFINED_OBJECT),
+					errmsg("pg_appendonly tuple not found for relation: %u", relId)));
 	}
 
     *aosegrelid = heap_getattr(tuple,
@@ -518,9 +524,138 @@ GetAppendEntryForMove(
 }
 
 /*
+ * This function acts as a controller of catalog actions that must be performed
+ * when we:
+ * 1. perform an ALTER TABLE on an existing AO/AOCO table that does not change
+ * the access method (refer to SwapAppendOnlyEntries()).
+ * 2. change the access method from/to AO/AOCO
+ * (refer to individual * ATAOEntriesXXXToYYY() functions)
+ */
+
+void
+ATAOEntries(Form_pg_class relform1, Form_pg_class relform2)
+{
+	switch(relform1->relam)
+	{
+		case HEAP_TABLE_AM_OID:
+			switch(relform2->relam)
+			{
+				case AO_ROW_TABLE_AM_OID:
+					ATAOEntriesHeapToAO(relform1->oid, relform2->oid);
+					break;
+				case AO_COLUMN_TABLE_AM_OID:
+					ereport(ERROR,
+							(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+								errmsg("alter table does not support switch from Heap to AOCO")));
+					break;
+				case HEAP_TABLE_AM_OID:
+				default:
+					Assert(false);
+			}
+			break;
+		case AO_ROW_TABLE_AM_OID:
+			switch(relform2->relam)
+			{
+				case HEAP_TABLE_AM_OID:
+					ereport(ERROR,
+							(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+								errmsg("alter table does not support switch from AO to Heap")));
+					break;
+				case AO_ROW_TABLE_AM_OID:
+					SwapAppendonlyEntries(relform1->oid, relform2->oid);
+					break;
+				case AO_COLUMN_TABLE_AM_OID:
+					ereport(ERROR,
+							(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+								errmsg("alter table does not support switch from AO to AOCO")));
+					break;
+				default:
+					ereport(ERROR,
+							(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+								errmsg("alter table does not support switch from AO to given access method")));
+			}
+			break;
+		case AO_COLUMN_TABLE_AM_OID:
+			switch(relform2->relam)
+			{
+				case HEAP_TABLE_AM_OID:
+					ereport(ERROR,
+							(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+								errmsg("alter table does not support switch from AOCO to Heap")));
+					break;
+				case AO_ROW_TABLE_AM_OID:
+					ereport(ERROR,
+							(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+								errmsg("alter table does not support switch from AOCO to AO")));
+					break;
+				case AO_COLUMN_TABLE_AM_OID:
+					SwapAppendonlyEntries(relform1->oid, relform2->oid);
+					break;
+				default:
+					ereport(ERROR,
+							(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+								errmsg("alter table does not support switch from AOCO to given access method")));
+			}
+			break;
+	}
+}
+
+static void
+ATAOEntriesHeapToAO(Oid heaprelid, Oid aorelid)
+{
+	Relation	pg_appendonly_rel;
+	TupleDesc	pg_appendonly_dsc;
+	HeapTuple	pg_appendonly_tuple;
+	Datum 		*newValues;
+	bool 		*newNulls;
+	bool 		*replace;
+	Oid			aosegrelid;
+	Oid			aoblkdirrelid;
+	Oid			aovisimaprelid;
+
+	pg_appendonly_rel = table_open(AppendOnlyRelationId, RowExclusiveLock);
+	pg_appendonly_dsc = RelationGetDescr(pg_appendonly_rel);
+
+	pg_appendonly_tuple = GetAppendEntryForMove(
+		pg_appendonly_rel,
+		pg_appendonly_dsc,
+		aorelid,
+		&aosegrelid,
+		&aoblkdirrelid,
+		&aovisimaprelid);
+
+	newValues = palloc0(pg_appendonly_dsc->natts * sizeof(Datum));
+	newNulls = palloc0(pg_appendonly_dsc->natts * sizeof(bool));
+	replace = palloc0(pg_appendonly_dsc->natts * sizeof(bool));
+
+	replace[Anum_pg_appendonly_relid - 1] = true;
+	newValues[Anum_pg_appendonly_relid - 1] = heaprelid;
+
+	pg_appendonly_tuple = heap_modify_tuple(pg_appendonly_tuple, pg_appendonly_dsc,
+								   newValues, newNulls, replace);
+
+	CatalogTupleInsert(pg_appendonly_rel, pg_appendonly_tuple);
+
+	heap_freetuple(pg_appendonly_tuple);
+
+	table_close(pg_appendonly_rel, NoLock);
+
+	pfree(newValues);
+	pfree(newNulls);
+	pfree(replace);
+
+	if (OidIsValid(aosegrelid))
+		TransferDependencyLink(heaprelid, aosegrelid, "aoseg");
+	if (OidIsValid(aoblkdirrelid))
+		TransferDependencyLink(heaprelid, aoblkdirrelid, "aoblkdir");
+	if (OidIsValid(aovisimaprelid))
+		TransferDependencyLink(heaprelid, aovisimaprelid, "aovisimap");
+}
+
+/*
  * Swap pg_appendonly entries between tables.
  */
-void
+static void
 SwapAppendonlyEntries(Oid entryRelId1, Oid entryRelId2)
 {
 	Relation	pg_appendonly_rel;
@@ -555,14 +690,6 @@ SwapAppendonlyEntries(Oid entryRelId1, Oid entryRelId2)
 							&aosegrelid2,
 							&aoblkdirrelid2,
 							&aovisimaprelid2);
-
-	if (!HeapTupleIsValid(tupleCopy1) || !HeapTupleIsValid(tupleCopy2))
-	{
-		if (HeapTupleIsValid(tupleCopy1) || HeapTupleIsValid(tupleCopy2))
-			elog(ERROR, "swapping pg_appendonly entries is not permitted for non-appendoptimized tables");
-		table_close(pg_appendonly_rel, NoLock);
-		return;
-	}
 
 	/* Since gp_fastsequence entry is referenced by aosegrelid, it rides along  */
 	simple_heap_delete(pg_appendonly_rel, &tupleCopy1->t_self);

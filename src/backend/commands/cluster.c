@@ -22,6 +22,7 @@
 #include "access/amapi.h"
 #include "access/heapam.h"
 #include "access/multixact.h"
+#include "access/reloptions.h"
 #include "access/relscan.h"
 #include "access/tableam.h"
 #include "access/transam.h"
@@ -709,6 +710,7 @@ make_new_heap(Oid OIDOldHeap, Oid NewTableSpace, Oid NewAccessMethod,
 	Datum		reloptions;
 	bool		isNull;
 	Oid			namespaceid;
+	bool 		valid_opts;
 
 	OldHeap = table_open(OIDOldHeap, lockmode);
 	OldHeapDesc = RelationGetDescr(OldHeap);
@@ -735,6 +737,25 @@ make_new_heap(Oid OIDOldHeap, Oid NewTableSpace, Oid NewAccessMethod,
 		namespaceid = LookupCreationNamespace("pg_temp");
 	else
 		namespaceid = RelationGetNamespace(OldHeap);
+
+	/*
+	 * While changing access method from heap to AO/AOCO, the storage options
+	 * need to be picked from gp_default_storage_options since heap table does
+	 * not store those.
+	 */
+	if (RelationIsHeap(OldHeap) &&
+		(NewAccessMethod == AO_ROW_TABLE_AM_OID ||
+		NewAccessMethod == AO_COLUMN_TABLE_AM_OID))
+	{
+		valid_opts = false;
+		reloptions = (Datum) 0;
+		StdRdOptions *stdRdOptions = (StdRdOptions *)default_reloptions(reloptions,
+																		true,
+																		RELOPT_KIND_APPENDOPTIMIZED);
+		reloptions = transformAOStdRdOptions(stdRdOptions, reloptions);
+	}
+	else
+		valid_opts = true;
 
 	/*
 	 * Create the new heap, using a temporary name in the same namespace as
@@ -772,7 +793,7 @@ make_new_heap(Oid OIDOldHeap, Oid NewTableSpace, Oid NewAccessMethod,
 										  true,
 										  OIDOldHeap,
 										  NULL,
-										  /* valid_opts */ true);
+										  valid_opts);
 	Assert(OIDNewHeap != InvalidOid);
 
 	ReleaseSysCache(tuple);
@@ -811,7 +832,7 @@ make_new_heap(Oid OIDOldHeap, Oid NewTableSpace, Oid NewAccessMethod,
 		ReleaseSysCache(tuple);
 	}
 
-	if (RelationIsAppendOptimized(OldHeap))
+	if (RelationIsAppendOptimized(OldHeap) || NewAccessMethod == AO_ROW_TABLE_AM_OID)
 		NewRelationCreateAOAuxTables(OIDNewHeap, createAoBlockDirectory);
 
 	CacheInvalidateRelcacheByRelid(OIDNewHeap);
@@ -1154,6 +1175,31 @@ swap_relation_files(Oid r1, Oid r2, bool target_is_pg_class,
 		elog(ERROR, "cache lookup failed for relation %u", r2);
 	relform2 = (Form_pg_class) GETSTRUCT(reltup2);
 
+	if (relform1->relam == AO_ROW_TABLE_AM_OID || relform1->relam == AO_COLUMN_TABLE_AM_OID ||
+		relform2->relam == AO_ROW_TABLE_AM_OID || relform2->relam == AO_COLUMN_TABLE_AM_OID)
+		ATAOEntries(relform1, relform2);
+
+	/*
+	 * When we are changing access method from Heap to AO/AOCO, we need to also change the
+	 * reloptions field in the pg_class entry for the table
+	 */
+	if (relform1->relam == HEAP_TABLE_AM_OID &&
+		(relform2->relam == AO_ROW_TABLE_AM_OID || relform2->relam == AO_COLUMN_TABLE_AM_OID))
+	{
+		Datum		val[Natts_pg_class] = {0};
+		bool		null[Natts_pg_class] = {0};
+		bool		repl[Natts_pg_class] = {0};
+		bool 		isNull;
+
+		val[Anum_pg_class_reloptions - 1] = SysCacheGetAttr(RELOID, reltup2, Anum_pg_class_reloptions, &isNull);
+		null[Anum_pg_class_reloptions - 1] = isNull;
+		repl[Anum_pg_class_reloptions - 1] = true;
+
+		reltup1 = heap_modify_tuple(reltup1, RelationGetDescr(relRelation),
+									val, null, repl);
+		relform1 = (Form_pg_class) GETSTRUCT(reltup1);
+	}
+
 	relfilenode1 = relform1->relfilenode;
 	relfilenode2 = relform2->relfilenode;
 
@@ -1287,8 +1333,6 @@ swap_relation_files(Oid r1, Oid r2, bool target_is_pg_class,
 		relform1->relallvisible = relform2->relallvisible;
 		relform2->relallvisible = swap_allvisible;
 	}
-
-	SwapAppendonlyEntries(r1, r2);
 
 	/*
 	 * Update the tuples in pg_class --- unless the target relation of the
