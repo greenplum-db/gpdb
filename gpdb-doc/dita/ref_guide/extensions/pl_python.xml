@@ -32,8 +32,8 @@
       <p>PL/Python is a loadable procedural language. With the Greenplum Database PL/Python
         extension, you can write a Greenplum Database user-defined functions in Python that take
         advantage of Python features and modules to quickly build robust database applications. </p>
-      <p>You can run PL/Python code blocks as anonymous code blocks. See the <codeph><xref
-            href="../sql_commands/DO.xml#topic1">DO</xref></codeph> command in the <cite>Greenplum
+      <p>You can run PL/Python code blocks as anonymous code blocks. See the <xref
+            href="../sql_commands/DO.xml#topic1">DO</xref> command in the <cite>Greenplum
           Database Reference Guide</cite>.</p>
       <p>The Greenplum Database PL/Python extension is installed by default with Greenplum Database.
         Greenplum Database installs a version of Python and PL/Python. This is location of the

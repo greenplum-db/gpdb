@@ -32,6 +32,6 @@ other sessions can be connected to the template database while it is
 being copied. New connections to the template database are locked out
 until <codeph>CREATE DATABASE</codeph> completes.</p><p>The <codeph>CONNECTION LIMIT</codeph> is not enforced against superusers.</p></section><section id="section6"><title>Examples</title><p>To create a new database: </p><codeblock>CREATE DATABASE gpdb;</codeblock><p>To create a database <codeph>sales</codeph> owned by user <codeph>salesapp</codeph> with a
         default tablespace of <codeph>salesspace</codeph>: </p><codeblock>CREATE DATABASE sales OWNER salesapp TABLESPACE salesspace;</codeblock><p>To create a database <codeph>music</codeph> which supports the ISO-8859-1 character set: </p><codeblock>CREATE DATABASE music ENCODING 'LATIN1';</codeblock></section><section id="section7"><title>Compatibility</title><p>There is no <codeph>CREATE DATABASE</codeph> statement in the SQL standard.
-Databases are equivalent to catalogs, whose creation is implementation-defined.</p></section><section id="section8"><title>See Also</title><p><codeph><xref href="ALTER_DATABASE.xml#topic1" type="topic" format="dita"/></codeph>,
-            <codeph><xref href="./DROP_DATABASE.xml#topic1" type="topic" format="dita"
-        /></codeph></p></section></body></topic>
+Databases are equivalent to catalogs, whose creation is implementation-defined.</p></section><section id="section8"><title>See Also</title><p><xref href="ALTER_DATABASE.xml#topic1" type="topic" format="dita"/>,
+            <xref href="./DROP_DATABASE.xml#topic1" type="topic" format="dita"
+        /></p></section></body></topic>

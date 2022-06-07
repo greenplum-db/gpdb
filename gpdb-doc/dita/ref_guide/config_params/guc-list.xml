@@ -1882,7 +1882,7 @@
         on the size of shared memory allocated by a Greenplum server instance, nor does it reserve
         kernel disk cache; it is used only for estimation purposes.</p>
       <p>Set this parameter to a number of
-        <codeph><xref href="#backslash_quote">block_size</xref></codeph> blocks
+        <xref href="#backslash_quote">block_size</xref> blocks
         (default 32K) with no units; for example, <codeph>8192</codeph> for 256MB. You can
         also directly specify the size of the effective cache; for example,
         <codeph>'1GB'</codeph> specifies a size of 32768 blocks. The
@@ -3598,7 +3598,7 @@
       <p>This parameter is ignored for a root partition of a partitioned table. When GPORCA is
         enabled and the root partition does not have statistics, GPORCA always uses the default
         value. You can use <codeph>ANALZYE ROOTPARTITION</codeph> to collect statistics on the root
-        partition. See <codeph><xref href="../../ref_guide/sql_commands/ANALYZE.xml"/></codeph>.</p>
+        partition. See <xref href="../../ref_guide/sql_commands/ANALYZE.xml"/>.</p>
       <table id="table_b2v_b5t_3x">
         <tgroup cols="3">
           <colspec colnum="1" colname="col1" colwidth="1*"/>
@@ -4326,9 +4326,9 @@
       <p>If the value is <codeph>true</codeph>, Greenplum Database ignores the clause, issues a
         warning, and executes the command without the <codeph>INTO ERROR TABLE</codeph> clause. In
         Greenplum Database 5.x and later, you access the error log information with built-in SQL
-        functions. See the <codeph><xref href="../sql_commands/CREATE_EXTERNAL_TABLE.xml">CREATE
-            EXTERNAL TABLE</xref></codeph> or <codeph><xref href="../sql_commands/COPY.xml"
-            >COPY</xref></codeph> command.</p>
+        functions. See the <xref href="../sql_commands/CREATE_EXTERNAL_TABLE.xml">CREATE
+            EXTERNAL TABLE</xref> or <xref href="../sql_commands/COPY.xml"
+            >COPY</xref> command.</p>
       <p>You can set this value to <codeph>true</codeph> to avoid the Greenplum Database error when
         you run applications that execute <codeph>CREATE EXTERNAL TABLE</codeph> or
           <codeph>COPY</codeph> commands that include the Greenplum Database 4.3.x <codeph>INTO
@@ -4397,8 +4397,8 @@
     <title>gp_interconnect_debug_retry_interval</title>
     <body>
       <p>Specifies the interval, in seconds, to log Greenplum Database interconnect debugging
-        messages when the server configuration parameter <codeph><xref href="#gp_log_interconnect"
-            format="dita">gp_log_interconnect</xref></codeph> is set to <codeph>DEBUG</codeph>. The
+        messages when the server configuration parameter <xref href="#gp_log_interconnect"
+            format="dita">gp_log_interconnect</xref> is set to <codeph>DEBUG</codeph>. The
         default is 10 seconds. </p>
       <p>The log messages contain information about the interconnect communication between Greenplum
         Database segment instance worker processes. The information can be helpful when debugging
@@ -7596,9 +7596,9 @@
     <title>max_statement_mem</title>
     <body>
       <p>Sets the maximum memory limit for a query. Helps avoid out-of-memory errors on a segment
-        host during query processing as a result of setting <codeph><xref href="#statement_mem"
+        host during query processing as a result of setting <xref href="#statement_mem"
             format="dita"/>
-        </codeph>too high.</p>
+        too high.</p>
       <p>Taking into account the configuration of a single segment host, calculate
           <codeph>max_statement_mem</codeph> as follows:</p>
       <p>
@@ -7723,11 +7723,11 @@
         the partitioned table and the other child leaf partitions have statistics. When the value is
           <codeph>off</codeph>, you must run <codeph>ANALZYE ROOTPARTITION</codeph> to collect root
         partition statistics. </p>
-      <p>When the value of the server configuration parameter <codeph><xref href="#optimizer"
-            format="dita"/></codeph> is <codeph>on</codeph> (the default), the value of this
+      <p>When the value of the server configuration parameter <xref href="#optimizer"
+            format="dita"/> is <codeph>on</codeph> (the default), the value of this
         parameter should also be <codeph>on</codeph>. For information about collecting table
-        statistics on partitioned tables, see <codeph><xref href="../sql_commands/ANALYZE.xml"
-          /></codeph>.</p>
+        statistics on partitioned tables, see <xref href="../sql_commands/ANALYZE.xml"
+          />.</p>
       <p>For information about the legacy query optimizer and GPORCA, see <xref
           href="../../admin_guide/query/topics/query.xml">Querying Data</xref><ph
           otherprops="op-print"> in the <cite>Greenplum Database Administrator
@@ -8257,8 +8257,8 @@
       <p dir="ltr">Sets the maximum amount of memory on the Greenplum Database master that GPORCA
         uses to cache query metadata (optimization data) during query optimization. The memory limit
         session based. GPORCA caches query metadata during query optimization with the default
-        settings: GPORCA is enabled and <codeph><xref href="#optimizer_metadata_caching"
-            format="dita">optimizer_metadata_caching</xref></codeph> is <codeph>on</codeph>. </p>
+        settings: GPORCA is enabled and <xref href="#optimizer_metadata_caching"
+            format="dita">optimizer_metadata_caching</xref> is <codeph>on</codeph>. </p>
       <p dir="ltr">The default value is 16384 (16MB). This is an optimal value that has been
         determined through performance analysis.</p>
       <p dir="ltr">You can specify a value in KB, MB, or GB. The default unit is KB. For example, a
@@ -8302,8 +8302,8 @@
         optimization.</p>
       <p>This parameter can be set for a database system, an individual database, or a session or
         query.</p>
-      <p>The server configuration parameter <codeph><xref href="#optimizer_mdcache_size"
-            format="dita"/></codeph> controls the size of the query metadata cache.</p>
+      <p>The server configuration parameter <xref href="#optimizer_mdcache_size"
+            format="dita"/> controls the size of the query metadata cache.</p>
       <table id="optimizer_metadata_caching_table">
         <tgroup cols="3">
           <colspec colnum="1" colname="col1" colwidth="1*"/>
@@ -8854,8 +8854,8 @@
           <codeph>$GPHOME/lib/postgresql/java</codeph> directory.</p>
       <note>Performance can be affected if there are many directories to search or a large number of
         jar files.</note>
-      <p>If <codeph><xref href="#pljava_classpath_insecure" format="dita"
-            >pljava_classpath_insecure</xref></codeph> is <codeph>false</codeph>, setting the
+      <p>If <xref href="#pljava_classpath_insecure" format="dita"
+            >pljava_classpath_insecure</xref> is <codeph>false</codeph>, setting the
           <codeph>pljava_classpath</codeph> parameter requires superuser privilege. Setting the
         classpath in SQL code will fail when the code is executed by a user without superuser
         privilege. The <codeph>pljava_classpath</codeph> parameter must have been set previously by
@@ -8887,11 +8887,11 @@
   <topic id="pljava_classpath_insecure">
     <title>pljava_classpath_insecure</title>
     <body>
-      <p>Controls whether the server configuration parameter <codeph><xref href="#pljava_classpath"
-            format="dita">pljava_classpath</xref></codeph> can be set by a user without Greenplum
+      <p>Controls whether the server configuration parameter <xref href="#pljava_classpath"
+            format="dita">pljava_classpath</xref> can be set by a user without Greenplum
         Database superuser privileges. When <codeph>true</codeph>, <codeph>pljava_classpath</codeph>
-        can be set by a regular user. Otherwise, <codeph><xref href="#pljava_classpath"
-            format="dita">pljava_classpath</xref></codeph> can be set only by a database superuser.
+        can be set by a regular user. Otherwise, <xref href="#pljava_classpath"
+            format="dita">pljava_classpath</xref> can be set only by a database superuser.
         The default is <codeph>false</codeph>.</p>
       <note type="warning">Enabling this parameter exposes a security risk by giving
         non-administrator database users the ability to run unauthorized Java methods. </note>
@@ -9259,7 +9259,7 @@
         the percentage of memory that is utilized.</p>
       <p>Either the resource queue or the resource group management scheme can be active in
         Greenplum Database; both schemes cannot be active at the same time. The server configuration
-        parameter <codeph><xref href="#gp_resource_manager"/></codeph> controls which scheme is
+        parameter <xref href="#gp_resource_manager"/> controls which scheme is
         active.</p>
       <p><b>When resource queues are enabled -</b> This parameter sets the percent of utilized
         Greenplum Database vmem memory that triggers the termination of queries. If the percentage
@@ -9268,8 +9268,8 @@
         usage, starting with the query consuming the largest amount of memory. Queries are
         terminated until the percentage of utilized vmem is below the specified percentage.</p>
       <p>Specify the maximum vmem value for active Greenplum Database segment instances with the
-        server configuration parameter <codeph><xref href="#gp_vmem_protect_limit" format="dita"
-          /></codeph>.</p>
+        server configuration parameter <xref href="#gp_vmem_protect_limit" format="dita"
+          />.</p>
       <p>For example, if vmem memory is set to 10GB, and this parameter is 90 (90%), Greenplum
         Database starts terminating queries when the utilized vmem memory exceeds 9 GB.</p>
       <p>For information about resource queues, see <xref href="../../admin_guide/workload_mgmt.xml"
@@ -9469,8 +9469,8 @@
     <title>shared_buffers</title>
     <body>
       <p>Sets the amount of memory a Greenplum Database segment instance uses for shared memory
-        buffers. This setting must be at least 128KB and at least 16KB times <codeph><xref
-            href="#max_connections" type="section">max_connections</xref></codeph>. </p>
+        buffers. This setting must be at least 128KB and at least 16KB times <xref
+            href="#max_connections" type="section">max_connections</xref>. </p>
       <p>Each Greenplum Database segment instance calculates and attempts to allocate certain amount
         of shared memory based on the segment configuration. The value of
           <codeph>shared_buffers</codeph> is significant portion of this shared memory calculation,
@@ -9645,7 +9645,7 @@
     <title>statement_mem</title>
     <body>
       <p>Allocates segment host memory per query. The amount of memory allocated with this parameter
-        cannot exceed <codeph><xref href="#max_statement_mem" format="dita"/></codeph> or the memory
+        cannot exceed <xref href="#max_statement_mem" format="dita"/> or the memory
         limit on the resource queue or resource group through which the query was submitted. If
         additional memory is required for a query, temporary spill files on disk are used.</p>
       <p><i>If you are using resource groups to control resource allocation in your Greenplum
@@ -9661,7 +9661,7 @@ statement_mem = rg_perseg_mem / max_expected_concurrent_queries</codeblock></li>
       <p><i>If you are using resource queues to control resource allocation in your Greenplum
           Database cluster</i>:</p>
       <ul>
-        <li>When <codeph><xref href="#gp_resqueue_memory_policy" format="dita"/> =auto</codeph>,
+        <li>When <xref href="#gp_resqueue_memory_policy" format="dita"/> =auto,
             <codeph>statement_mem</codeph> and resource queue memory limits control query memory
           usage. </li>
         <li>You can use the following calculation to estimate a reasonable

@@ -81,9 +81,9 @@ output parameter. </pd><pd>The <codeph>SETOF</codeph> modifier indicates that th
 return a set of items, rather than a single item. </pd><pd>The type of a column is referenced by writing
                             <codeph><varname>tablename</varname>.<varname>columnname</varname>%TYPE</codeph>. </pd></plentry><plentry><pt><varname>langname</varname></pt><pd>The name of the language that the function is implemented in. May be <codeph>SQL</codeph>,
                             <codeph>C</codeph>, <codeph>internal</codeph>, or the name of a
-                        user-defined procedural language. See <codeph><xref
+                        user-defined procedural language. See <xref
                                 href="./CREATE_LANGUAGE.xml#topic1" type="topic" format="dita"
-                            /></codeph> for the procedural languages supported in Greenplum
+                            /> for the procedural languages supported in Greenplum
                         Database. For backward compatibility, the name may be enclosed by single
                         quotes. </pd></plentry><plentry><pt>IMMUTABLE</pt><pt>STABLE</pt><pt>VOLATILE</pt><pd>These attributes inform the query optimizer about the behavior of
 the function. At most one choice may be specified. If none of these appear,
@@ -275,6 +275,6 @@ can be written either before or after <varname>argname</varname>. But only the f
 way is standard-compliant. </p>
 <p>The SQL standard does not specify parameter defaults.</p>
 </section><section id="section10"><title>See Also</title><p><codeph><xref href="ALTER_FUNCTION.xml#topic1" type="topic" format="dita"/></codeph>,
-                        <codeph><xref href="./DROP_FUNCTION.xml#topic1" type="topic" format="dita"
-                    /></codeph>, <codeph><xref href="./LOAD.xml#topic1" type="topic" format="dita"
-                    /></codeph></p></section></body></topic>
+                        <xref href="./DROP_FUNCTION.xml#topic1" type="topic" format="dita"
+                    />, <xref href="./LOAD.xml#topic1" type="topic" format="dita"
+                    /></p></section></body></topic>

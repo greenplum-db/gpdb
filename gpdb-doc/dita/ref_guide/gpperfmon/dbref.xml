@@ -38,31 +38,31 @@
       partitions.</p>
     <p>The database contains the following categories of tables:</p>
     <ul>
-      <li>The <codeph><xref href="db-database.xml#db-database">database_*</xref></codeph> tables
+      <li>The <xref href="db-database.xml#db-database">database_*</xref> tables
         store query workload information for a Greenplum Database instance.</li>
-      <li>The <codeph><xref href="db-diskspace.xml#db-diskspac">diskspace_*</xref></codeph> tables
+      <li>The <xref href="db-diskspace.xml#db-diskspac">diskspace_*</xref> tables
         store diskspace metrics.</li>
-      <li>The <codeph><xref href="db-log-alert.xml#CommandCenterDatabaseReference-log_alert"
-            >log_alert_*</xref></codeph> tables store error and warning messages from <codeph>pg_log</codeph>.</li>
-      <li>The <codeph><xref href="db-queries.xml#db-queries">queries_*</xref></codeph> tables store
+      <li>The <xref href="db-log-alert.xml#CommandCenterDatabaseReference-log_alert"
+            >log_alert_*</xref> tables store error and warning messages from <codeph>pg_log</codeph>.</li>
+      <li>The <xref href="db-queries.xml#db-queries">queries_*</xref> tables store
         high-level query status information.</li>
-      <li>The <codeph><xref href="db-segment.xml#db-segment">segment_*</xref></codeph> tables store
+      <li>The <xref href="db-segment.xml#db-segment">segment_*</xref> tables store
         memory allocation statistics for the Greenplum Database segment instances.</li>
-      <li>The <codeph><xref href="db-socket-stats.xml#db-socket_stats"
-          >socket_stats_*</xref></codeph> tables store statistical metrics about socket usage for a
+      <li>The <xref href="db-socket-stats.xml#db-socket_stats"
+          >socket_stats_*</xref> tables store statistical metrics about socket usage for a
         Greenplum Database instance. Note: These tables are in place for future use and are not
         currently populated.</li>
-      <li>The <codeph><xref href="db-system.xml#db-system">system_*</xref></codeph> tables store
+      <li>The <xref href="db-system.xml#db-system">system_*</xref> tables store
         system utilization metrics.</li>
     </ul>
     <p>The <codeph>gpperfmon</codeph> database also contains the following views:</p>
     <ul>
-      <li>The <codeph><xref
+      <li>The <xref
             href="db-dynamic-memory-info.xml#CommandCenterDatabaseReference-dynamic_memory_info"
-            >dynamic_memory_info</xref></codeph> view shows an aggregate of all the segments per
+            >dynamic_memory_info</xref> view shows an aggregate of all the segments per
         host and the amount of dynamic memory used per host.</li>
-      <li>The <codeph><xref href="db-memory-info.xml#CommandCenterDatabaseReference-memory_info"
-            >memory_info</xref></codeph> view shows per-host memory information from the
+      <li>The <xref href="db-memory-info.xml#CommandCenterDatabaseReference-memory_info"
+            >memory_info</xref> view shows per-host memory information from the
           <codeph>system_history</codeph> and <codeph>segment_history</codeph> tables.</li>
     </ul>
     <section id="section_et2_wmt_n1b">

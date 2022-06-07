@@ -72,6 +72,6 @@ need to declare casts both ways explicitly. </p><p>It is recommended that you fo
           <codeph>int4(text)</codeph> (This cast is already predefined in the system.):</p><codeblock>CREATE CAST (text AS int4) WITH FUNCTION int4(text);</codeblock></section><section id="section7"><title>Compatibility</title><p>The <codeph>CREATE CAST</codeph> command conforms to the SQL standard,
 except that SQL does not make provisions for binary-compatible types
 or extra arguments to implementation functions. <codeph>AS IMPLICIT</codeph>
-is a Greenplum Database extension, too.</p></section><section id="section8"><title>See Also</title><p><codeph><xref href="./CREATE_FUNCTION.xml#topic1" type="topic" format="dita"/></codeph>,
-            <codeph><xref href="./CREATE_TYPE.xml#topic1" type="topic" format="dita"/></codeph>,
-            <codeph><xref href="./DROP_CAST.xml#topic1" type="topic" format="dita"/></codeph></p></section></body></topic>
+is a Greenplum Database extension, too.</p></section><section id="section8"><title>See Also</title><p><xref href="./CREATE_FUNCTION.xml#topic1" type="topic" format="dita"/>,
+            <xref href="./CREATE_TYPE.xml#topic1" type="topic" format="dita"/>,
+            <xref href="./DROP_CAST.xml#topic1" type="topic" format="dita"/></p></section></body></topic>

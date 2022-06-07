@@ -54,10 +54,10 @@ removes any existing table column association.</pd></plentry>
 results in sessions, other than the current one, that have preallocated
 (cached) sequence values. They will use up all cached values prior to
 noticing the changed sequence generation parameters. The current session
-will be affected immediately.</p><p>Some variants of <codeph><xref href="./ALTER_TABLE.xml#topic1" type="topic" format="dita"
-          /></codeph> can be used with sequences as well. For example, to rename a sequence use
+will be affected immediately.</p><p>Some variants of <xref href="./ALTER_TABLE.xml#topic1" type="topic" format="dita"
+          /> can be used with sequences as well. For example, to rename a sequence use
           <codeph>ALTER TABLE RENAME</codeph>.</p></section><section id="section6"><title>Examples</title><p>Restart a sequence called <codeph>serial</codeph> at <codeph>105</codeph>:</p><codeblock>ALTER SEQUENCE serial RESTART WITH 105;</codeblock></section><section id="section7"><title>Compatibility</title><p><codeph>ALTER SEQUENCE</codeph> conforms to the SQL standard, except for the <codeph>OWNED
           BY</codeph>, <codeph>RENAME TO</codeph>, and <codeph>SET SCHEMA</codeph> clauses, which
-        are Greenplum Database extensions.</p></section><section id="section8"><title>See Also</title><p><codeph><xref href="./CREATE_SEQUENCE.xml#topic1" type="topic" format="dita"/></codeph>,
-            <codeph><xref href="./DROP_SEQUENCE.xml#topic1" type="topic" format="dita"/></codeph>,
-            <codeph><xref href="./ALTER_TABLE.xml#topic1" type="topic" format="dita"/></codeph></p></section></body></topic>
+        are Greenplum Database extensions.</p></section><section id="section8"><title>See Also</title><p><xref href="./CREATE_SEQUENCE.xml#topic1" type="topic" format="dita"/>,
+            <xref href="./DROP_SEQUENCE.xml#topic1" type="topic" format="dita"/>,
+            <xref href="./ALTER_TABLE.xml#topic1" type="topic" format="dita"/></p></section></body></topic>

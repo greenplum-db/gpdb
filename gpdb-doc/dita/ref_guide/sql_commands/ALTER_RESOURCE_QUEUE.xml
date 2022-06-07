@@ -137,11 +137,11 @@
     </section>
     <section id="section8">
       <title>See Also</title>
-      <p><codeph><xref href="./CREATE_RESOURCE_QUEUE.xml#topic1" type="topic" format="dita"
-          /></codeph>, <codeph><xref href="./DROP_RESOURCE_QUEUE.xml#topic1" type="topic"
-            format="dita"/></codeph>, <codeph><xref href="./CREATE_ROLE.xml#topic1" type="topic"
-            format="dita"/></codeph>, <codeph><xref href="./ALTER_ROLE.xml#topic1" type="topic"
-            format="dita"/></codeph></p>
+      <p><xref href="./CREATE_RESOURCE_QUEUE.xml#topic1" type="topic" format="dita"
+          />, <xref href="./DROP_RESOURCE_QUEUE.xml#topic1" type="topic"
+            format="dita"/>, <xref href="./CREATE_ROLE.xml#topic1" type="topic"
+            format="dita"/>, <xref href="./ALTER_ROLE.xml#topic1" type="topic"
+            format="dita"/></p>
     </section>
   </body>
 </topic>

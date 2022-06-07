@@ -60,8 +60,8 @@ ALTER ROLE &lt;name> [ [WITH] &lt;option> [ ... ] ]</codeblock>
           queue. The role would then be subject to the limits assigned to the resource queue when
           issuing queries. Specify <codeph>NONE</codeph> to assign the role to the default resource
           queue. A role can only belong to one resource queue. For a role without
-            <codeph>LOGIN</codeph> privilege, resource queues have no effect. See <codeph><xref
-              href="./CREATE_RESOURCE_QUEUE.xml#topic1" type="topic" format="dita"/></codeph> for
+            <codeph>LOGIN</codeph> privilege, resource queues have no effect. See <xref
+              href="./CREATE_RESOURCE_QUEUE.xml#topic1" type="topic" format="dita"/> for
           more information.</li>
         <li id="av1370583"><b>RESOURCE GROUP</b> — Assigns a resource group to the role. The role
           would then be subject to the concurrent transaction, memory, and CPU limits configured for
@@ -94,8 +94,8 @@ ALTER ROLE &lt;name> [ [WITH] &lt;option> [ ... ] ]</codeblock>
             value. If value is <codeph>DEFAULT</codeph> or if <codeph>RESET</codeph> is used, the
             role-specific variable setting is removed, so the role will inherit the system-wide
             default setting in new sessions. Use <codeph>RESET ALL</codeph> to clear all
-            role-specific settings. See <codeph><xref href="./SET.xml#topic1" type="topic"
-                format="dita"/></codeph> and <xref href="../config_params/guc_config.xml"
+            role-specific settings. See <xref href="./SET.xml#topic1" type="topic"
+                format="dita"/> and <xref href="../config_params/guc_config.xml"
               type="topic" format="dita"/> for information about user-settable configuration
             parameters. </pd>
         </plentry>
@@ -142,8 +142,8 @@ ALTER ROLE &lt;name> [ [WITH] &lt;option> [ ... ] ]</codeblock>
           <pt>PASSWORD password</pt>
           <pt>ENCRYPTED | UNENCRYPTED</pt>
           <pt>VALID UNTIL 'timestamp'</pt>
-          <pd>These clauses alter role attributes originally set by <codeph><xref
-                href="./CREATE_ROLE.xml#topic1" type="topic" format="dita"/></codeph>. </pd>
+          <pd>These clauses alter role attributes originally set by <xref
+                href="./CREATE_ROLE.xml#topic1" type="topic" format="dita"/>. </pd>
         </plentry>
         <plentry>
           <pt>DENY deny_point</pt>
@@ -177,8 +177,8 @@ ALTER ROLE &lt;name> [ [WITH] &lt;option> [ ... ] ]</codeblock>
     </section>
     <section id="section5">
       <title>Notes</title>
-      <p>Use <codeph><xref href="./GRANT.xml#topic1" type="topic" format="dita"/></codeph> and
-            <codeph><xref href="./REVOKE.xml#topic1" type="topic" format="dita"/></codeph> for
+      <p>Use <xref href="./GRANT.xml#topic1" type="topic" format="dita"/> and
+            <xref href="./REVOKE.xml#topic1" type="topic" format="dita"/> for
         adding and removing role memberships.</p>
       <p>Caution must be exercised when specifying an unencrypted password with this command. The
         password will be transmitted to the server in clear text, and it might also be logged in the
@@ -187,8 +187,8 @@ ALTER ROLE &lt;name> [ [WITH] &lt;option> [ ... ] ]</codeblock>
         role's password. </p>
       <p>It is also possible to tie a session default to a specific database rather than to a role.
         Role-specific settings override database-specific ones if there is a conflict. See
-            <codeph><xref href="ALTER_DATABASE.xml#topic1" type="topic" format="dita"
-        /></codeph>.</p>
+            <xref href="ALTER_DATABASE.xml#topic1" type="topic" format="dita"
+        />.</p>
     </section>
     <section id="section6">
       <title>Examples</title>
@@ -219,14 +219,14 @@ ALTER ROLE &lt;name> [ [WITH] &lt;option> [ ... ] ]</codeblock>
     </section>
     <section id="section8">
       <title>See Also</title>
-      <p><codeph><xref href="./CREATE_ROLE.xml#topic1" type="topic" format="dita"/></codeph>,
-            <codeph><xref href="./DROP_ROLE.xml#topic1" type="topic" format="dita"/></codeph>,
-            <codeph><xref href="./SET.xml#topic1" type="topic" format="dita"/></codeph>,
-            <codeph><xref href="./CREATE_RESOURCE_GROUP.xml#topic1" type="topic" format="dita"
-          /></codeph>, <codeph><xref href="./CREATE_RESOURCE_QUEUE.xml#topic1" type="topic"
-            format="dita"/></codeph>, <codeph><xref href="./GRANT.xml#topic1" type="topic"
-            format="dita"/></codeph>, <codeph><xref href="./REVOKE.xml#topic1" type="topic"
-            format="dita"/></codeph></p>
+      <p><xref href="./CREATE_ROLE.xml#topic1" type="topic" format="dita"/>,
+            <xref href="./DROP_ROLE.xml#topic1" type="topic" format="dita"/>,
+            <xref href="./SET.xml#topic1" type="topic" format="dita"/>,
+            <xref href="./CREATE_RESOURCE_GROUP.xml#topic1" type="topic" format="dita"
+          />, <xref href="./CREATE_RESOURCE_QUEUE.xml#topic1" type="topic"
+            format="dita"/>, <xref href="./GRANT.xml#topic1" type="topic"
+            format="dita"/>, <xref href="./REVOKE.xml#topic1" type="topic"
+            format="dita"/></p>
     </section>
   </body>
 </topic>

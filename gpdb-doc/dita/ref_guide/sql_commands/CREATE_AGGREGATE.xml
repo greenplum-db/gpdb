@@ -91,8 +91,8 @@ ffunc( internal-state ) ---&gt; aggregate-value</codeblock><p>You
           the optional <codeph>ORDER BY</codeph> is omitted, a system-defined ordering is used. The
           transition function <codeph>sfunc</codeph> of an ordered aggregate function is called on
           its input arguments in the specified order and on a single segment. There is a new column
-            <codeph>aggordered</codeph> in the <codeph><xref
-              href="../system_catalogs/pg_aggregate.xml" type="topic" format="dita"/></codeph> table
+            <codeph>aggordered</codeph> in the <xref
+              href="../system_catalogs/pg_aggregate.xml" type="topic" format="dita"/> table
           to indicate the aggregate function is defined as an ordered aggregate.</p></sectiondiv></section><section id="section5"><title>Parameters</title><parml><plentry><pt><varname>name</varname></pt><pd>The name (optionally schema-qualified) of the aggregate function
 to create.</pd></plentry><plentry><pt><varname>input_data_type</varname></pt><pd>An input data type on which this aggregate function operates. To
 create a zero-argument aggregate function, write * in place of the list
@@ -167,7 +167,7 @@ Aggregate (cost=1.10..1.11 rows=1 width=32)  
      -&gt; Aggregate (cost=1.04..1.05 rows=1 width=32)
        -&gt; Seq Scan on t1 (cost=0.00..1.03 rows=2 width=8)
  (4 rows)</codeblock></section><section id="section8"><title>Compatibility</title><p><codeph>CREATE AGGREGATE</codeph> is a Greenplum Database language extension.
-The SQL standard does not provide for user-defined aggregate functions.</p></section><section id="section9"><title>See Also</title><p><codeph><xref href="ALTER_AGGREGATE.xml#topic1" type="topic" format="dita"/></codeph>,
-            <codeph><xref href="./DROP_AGGREGATE.xml#topic1" type="topic" format="dita"/></codeph>,
-            <codeph><xref href="./CREATE_FUNCTION.xml#topic1" type="topic" format="dita"
-        /></codeph></p></section></body></topic>
+The SQL standard does not provide for user-defined aggregate functions.</p></section><section id="section9"><title>See Also</title><p><xref href="ALTER_AGGREGATE.xml#topic1" type="topic" format="dita"/>,
+            <xref href="./DROP_AGGREGATE.xml#topic1" type="topic" format="dita"/>,
+            <xref href="./CREATE_FUNCTION.xml#topic1" type="topic" format="dita"
+        /></p></section></body></topic>

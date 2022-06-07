@@ -33,8 +33,8 @@
         </section>
         <section id="section3">
             <title>Description</title>
-            <p><codeph>CREATE GROUP</codeph> is an alias for <codeph><xref
-                        href="./CREATE_ROLE.xml#topic1" type="topic" format="dita"/></codeph>.</p>
+            <p><codeph>CREATE GROUP</codeph> is an alias for <xref
+                        href="./CREATE_ROLE.xml#topic1" type="topic" format="dita"/>.</p>
         </section>
         <section id="section4">
             <title>Compatibility</title>
@@ -42,8 +42,8 @@
         </section>
         <section id="section5">
             <title>See Also</title>
-            <p><codeph><xref href="./CREATE_ROLE.xml#topic1" type="topic" format="dita"
-                /></codeph></p>
+            <p><xref href="./CREATE_ROLE.xml#topic1" type="topic" format="dita"
+                /></p>
         </section>
     </body>
 </topic>

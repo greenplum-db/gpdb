@@ -55,8 +55,8 @@
       <p>To install MADlib on Greenplum Database, you first install a compatible Greenplum MADlib
         package and then install the MADlib function libraries on all databases that will use
         MADlib.</p>
-      <p>The <codeph><xref href="../../utility_guide/admin_utilities/gppkg.xml#topic1"
-          >gppkg</xref></codeph> utility installs Greenplum Database extensions, along with any
+      <p>The <xref href="../../utility_guide/admin_utilities/gppkg.xml#topic1"
+          >gppkg</xref> utility installs Greenplum Database extensions, along with any
         dependencies, on all hosts across a cluster. It also automatically installs extensions on
         new hosts in the case of system expansion segment recovery. </p>
     </body>

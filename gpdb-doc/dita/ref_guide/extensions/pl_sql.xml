@@ -38,11 +38,11 @@
         query plans. You can specify the attribute <codeph>IMMUTABLE</codeph>,
           <codeph>STABLE</codeph>, or <codeph>VOLATILE</codeph> as part of the
           <codeph>LANGUAGE</codeph> clause to classify the type of function, For information about
-        the creating functions and function attributes, see the <codeph><xref
-            href="../sql_commands/CREATE_FUNCTION.xml#topic1"/></codeph> command in the
+        the creating functions and function attributes, see the <xref
+            href="../sql_commands/CREATE_FUNCTION.xml#topic1"/> command in the
           <cite>Greenplum Database Reference Guide</cite>.</p>
-      <p>You can run PL/SQL code blocks as anonymous code blocks. See the <codeph><xref
-            href="../sql_commands/DO.xml#topic1"/></codeph> command in the <cite>Greenplum Database
+      <p>You can run PL/SQL code blocks as anonymous code blocks. See the <xref
+            href="../sql_commands/DO.xml#topic1"/> command in the <cite>Greenplum Database
           Reference Guide</cite>.</p>
     </body>
     <topic id="topic3" xml:lang="en">
@@ -407,7 +407,7 @@ END $$ LANGUAGE plpgsql ;</codeblock></p>
       <p>The Postgres documentation about PL/pgSQL is at <xref
           href="https://www.postgresql.org/docs/8.3/static/plpgsql.html" scope="external"
           format="html">https://www.postgresql.org/docs/8.3/static/plpgsql.html</xref></p>
-      <p>Also, see the <codeph><xref href="../sql_commands/CREATE_FUNCTION.xml#topic1"/></codeph>
+      <p>Also, see the <xref href="../sql_commands/CREATE_FUNCTION.xml#topic1"/>
         command in the <cite>Greenplum Database Reference Guide</cite>.</p>
       <p>For a summary of built-in Greenplum Database functions, see <xref
           href="../function-summary.xml#topic1"/> in the <cite>Greenplum Database Reference

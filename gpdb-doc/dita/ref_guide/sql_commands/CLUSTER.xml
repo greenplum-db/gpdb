@@ -64,5 +64,5 @@ order:</p><codeblock>CREATE TABLE newtable AS SELECT * FROM table ORDER BY colum
 DROP table;
 ALTER TABLE newtable RENAME TO table;
 CREATE INDEX column_ix ON table (column);
-VACUUM ANALYZE table;</codeblock></section><section id="section7"><title>Compatibility</title><p>There is no <codeph>CLUSTER</codeph> statement in the SQL standard.</p></section><section id="section8"><title>See Also</title><p><codeph><xref href="./CREATE_TABLE_AS.xml#topic1" type="topic" format="dita"/></codeph>,
-            <codeph><xref href="./CREATE_INDEX.xml#topic1" type="topic" format="dita"/></codeph></p></section></body></topic>
+VACUUM ANALYZE table;</codeblock></section><section id="section7"><title>Compatibility</title><p>There is no <codeph>CLUSTER</codeph> statement in the SQL standard.</p></section><section id="section8"><title>See Also</title><p><xref href="./CREATE_TABLE_AS.xml#topic1" type="topic" format="dita"/>,
+            <xref href="./CREATE_INDEX.xml#topic1" type="topic" format="dita"/></p></section></body></topic>

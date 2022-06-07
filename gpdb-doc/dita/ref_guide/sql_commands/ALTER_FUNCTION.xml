@@ -59,8 +59,8 @@ FUNCTION</codeph> for more information.</pd></plentry>
               ALL</codeph> to clear all function-local settings. <codeph>SET FROM CURRENT</codeph>
             applies the session's current value of the parameter when the function is entered.</pd>
         </plentry><plentry><pt>RESTRICT</pt><pd>Ignored for conformance with the SQL standard. </pd></plentry></parml></section><section id="section5"><title>Notes</title><p>Greenplum Database has limitations on the use of functions defined as <codeph>STABLE</codeph> or
-          <codeph>VOLATILE</codeph>. See <codeph><xref href="./CREATE_FUNCTION.xml#topic1"
-            type="topic" format="dita"/></codeph> for more information.</p></section><section id="section6"><title>Examples</title><p>To rename the function <codeph>sqrt</codeph> for type <codeph>integer</codeph> to
+          <codeph>VOLATILE</codeph>. See <xref href="./CREATE_FUNCTION.xml#topic1"
+            type="topic" format="dita"/> for more information.</p></section><section id="section6"><title>Examples</title><p>To rename the function <codeph>sqrt</codeph> for type <codeph>integer</codeph> to
           <codeph>square_root</codeph>:</p><codeblock>ALTER FUNCTION sqrt(integer) RENAME TO square_root;</codeblock><p>To change the owner of the function <codeph>sqrt</codeph> for type <codeph>integer</codeph> to
           <codeph>joe</codeph>:</p><codeblock>ALTER FUNCTION sqrt(integer) OWNER TO joe;</codeblock><p>To change the <varname>schema</varname> of the function <codeph>sqrt</codeph> for type
           <codeph>integer</codeph> to <codeph>math</codeph>:</p><codeblock>ALTER FUNCTION sqrt(integer) SET SCHEMA math;</codeblock>
@@ -70,6 +70,6 @@ statement in the SQL standard. The standard allows more properties of
 a function to be modified, but does not provide the ability to rename
 a function, make a function a security definer, or change the owner,
 schema, or volatility of a function. The standard also requires the <codeph>RESTRICT</codeph>
-key word, which is optional in Greenplum Database. </p></section><section id="section8"><title>See Also</title><p><codeph><xref href="./CREATE_FUNCTION.xml#topic1" type="topic" format="dita"/></codeph>,
-            <codeph><xref href="./DROP_FUNCTION.xml#topic1" type="topic" format="dita"
-        /></codeph></p></section></body></topic>
+key word, which is optional in Greenplum Database. </p></section><section id="section8"><title>See Also</title><p><xref href="./CREATE_FUNCTION.xml#topic1" type="topic" format="dita"/>,
+            <xref href="./DROP_FUNCTION.xml#topic1" type="topic" format="dita"
+        /></p></section></body></topic>

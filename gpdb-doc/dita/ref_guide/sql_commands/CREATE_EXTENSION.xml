@@ -140,9 +140,9 @@
         </section>
         <section id="section8">
             <title>See Also</title>
-            <p><codeph><xref href="ALTER_EXTENSION.xml#topic1">ALTER EXTENSION</xref></codeph>,
-                        <codeph><xref href="DROP_EXTENSION.xml#topic1">DROP
-                    EXTENSION</xref></codeph></p>
+            <p><xref href="ALTER_EXTENSION.xml#topic1">ALTER EXTENSION</xref>,
+                        <xref href="DROP_EXTENSION.xml#topic1">DROP
+                    EXTENSION</xref></p>
         </section>
     </body>
 </topic>

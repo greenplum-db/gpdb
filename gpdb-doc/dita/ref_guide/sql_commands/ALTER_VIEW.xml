@@ -13,6 +13,6 @@
       <p>Some variants of <codeph>ALTER TABLE</codeph> can be used with views as well; for example,
         to rename a view, it is also possible to use <codeph>ALTER TABLE RENAME</codeph>. To change
         the schema or owner of a view, you currently must use <codeph>ALTER TABLE</codeph>.</p>
-    </section><section id="section5"><title>Examples</title><p>Rename the  view <codeph>myview</codeph> to <codeph>newview</codeph>:</p><codeblock>ALTER VIEW myview RENAME TO newview;</codeblock><p>Change the owner of tablespace <codeph>myfs</codeph>:</p><codeblock>ALTER FILESPACE myfs OWNER TO dba;</codeblock></section><section id="section6"><title>Compatibility</title><p><codeph>ALTER VIEW</codeph> is a Greenplum Database extension of the SQL standard.</p></section><section id="section7"><title>See Also</title><p><codeph><xref href="CREATE_VIEW.xml#topic1/cj20941">CREATE VIEW</xref></codeph>, <codeph><xref
-            href="DROP_VIEW.xml#topic1/dn20941">DROP VIEW</xref></codeph> in the <i>Greenplum
+    </section><section id="section5"><title>Examples</title><p>Rename the  view <codeph>myview</codeph> to <codeph>newview</codeph>:</p><codeblock>ALTER VIEW myview RENAME TO newview;</codeblock><p>Change the owner of tablespace <codeph>myfs</codeph>:</p><codeblock>ALTER FILESPACE myfs OWNER TO dba;</codeblock></section><section id="section6"><title>Compatibility</title><p><codeph>ALTER VIEW</codeph> is a Greenplum Database extension of the SQL standard.</p></section><section id="section7"><title>See Also</title><p><xref href="CREATE_VIEW.xml#topic1/cj20941">CREATE VIEW</xref>, <xref
+            href="DROP_VIEW.xml#topic1/dn20941">DROP VIEW</xref> in the <i>Greenplum
           Database Utility Guide</i></p></section></body></topic>

@@ -13,6 +13,6 @@ the operator. However, a superuser can alter ownership of any operator
 anyway.) </p></section><section id="section4"><title>Parameters</title><parml><plentry><pt><varname>name</varname></pt><pd>The name (optionally schema-qualified) of an existing operator. </pd></plentry><plentry><pt><varname>lefttype</varname></pt><pd>The data type of the operator's left operand; write <codeph>NONE</codeph>
 if the operator has no left operand. </pd></plentry><plentry><pt><varname>righttype</varname></pt><pd>The data type of the operator's right operand; write <codeph>NONE</codeph>
 if the operator has no right operand. </pd></plentry><plentry><pt><varname>newowner</varname></pt><pd>The new owner of the operator. </pd></plentry></parml></section><section id="section5"><title>Examples</title><p>Change the owner of a custom operator <codeph>a @@ b</codeph> for type <codeph>text</codeph>:</p><codeblock>ALTER OPERATOR @@ (text, text) OWNER TO joe;</codeblock></section><section id="section6"><title>Compatibility</title><p>There is no <codeph>ALTER</codeph><codeph>OPERATOR</codeph> statement
-in the SQL standard. </p></section><section id="section7"><title>See Also</title><p><codeph><xref href="./CREATE_OPERATOR.xml#topic1" type="topic" format="dita"/></codeph>,
-            <codeph><xref href="./DROP_OPERATOR.xml#topic1" type="topic" format="dita"
-        /></codeph></p></section></body></topic>
+in the SQL standard. </p></section><section id="section7"><title>See Also</title><p><xref href="./CREATE_OPERATOR.xml#topic1" type="topic" format="dita"/>,
+            <xref href="./DROP_OPERATOR.xml#topic1" type="topic" format="dita"
+        /></p></section></body></topic>

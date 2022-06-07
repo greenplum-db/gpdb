@@ -9,5 +9,5 @@
 no harm, but it will provoke a warning message.</p></section><section id="section6"><title>Compatibility</title><p>This command is a Greenplum Database extension present for historical
 reasons. <codeph>ROLLBACK</codeph> is the equivalent standard SQL command.
 </p></section><section id="section7"><title>See Also</title><p><xref href="./BEGIN.xml#topic1" type="topic" format="dita"/>, <xref href="./COMMIT.xml#topic1"
-          type="topic" format="dita"/>, <codeph><xref href="./ROLLBACK.xml#topic1" type="topic"
-            format="dita"/></codeph></p></section></body></topic>
+          type="topic" format="dita"/>, <xref href="./ROLLBACK.xml#topic1" type="topic"
+            format="dita"/></p></section></body></topic>

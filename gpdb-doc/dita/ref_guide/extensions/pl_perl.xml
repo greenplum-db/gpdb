@@ -105,8 +105,8 @@ automatically destroyed.)</li>
             <title>Enabling PL/Perl Support</title>
             <body>
                 <p> For each database in which you want to enable PL/Perl, register the language
-                    using the SQL <codeph><xref href="../sql_commands/CREATE_EXTENSION.xml">CREATE
-                            EXTENSION</xref></codeph> command. For example, run the following
+                    using the SQL <xref href="../sql_commands/CREATE_EXTENSION.xml">CREATE
+                            EXTENSION</xref> command. For example, run the following
                     command as the <codeph>gpadmin</codeph> user to register the trusted PL/Perl
                     language for the database named <codeph>testdb</codeph>: </p>
                 <codeblock>$ psql -d testdb -c 'CREATE EXTENSION plperl;'</codeblock>
@@ -115,8 +115,8 @@ automatically destroyed.)</li>
         <topic id="topic62" xml:lang="en">
             <title>Removing PL/Perl Support</title>
             <body>
-                <p> To remove support for PL/Perl from a database, run the SQL <codeph><xref
-                            href="../sql_commands/DROP_EXTENSION.xml">DROP EXTENSION</xref></codeph>
+                <p> To remove support for PL/Perl from a database, run the SQL <xref
+                            href="../sql_commands/DROP_EXTENSION.xml">DROP EXTENSION</xref>
                     command. For example, run the following command as the <codeph>gpadmin</codeph>
                     user to remove support for the trusted PL/Perl language from the database named
                         <codeph>testdb</codeph>: </p>
@@ -132,13 +132,13 @@ automatically destroyed.)</li>
 <title>Developing Functions with PL/Perl</title>
 <body>
 <p>
-You define a PL/Perl function using the standard SQL <codeph><xref href="../sql_commands/CREATE_FUNCTION.xml#topic1">CREATE FUNCTION</xref></codeph> syntax.
+You define a PL/Perl function using the standard SQL <xref href="../sql_commands/CREATE_FUNCTION.xml#topic1">CREATE FUNCTION</xref> syntax.
 The body of a PL/Perl user-defined function is ordinary Perl code. The PL/Perl
 interpreter wraps this code inside a Perl subroutine.
 </p>
 <p>
 You can also create an anonymous code block with PL/Perl. An anonymous code block,
-called with the SQL <codeph><xref href="../sql_commands/DO.xml#topic1">DO</xref></codeph>
+called with the SQL <xref href="../sql_commands/DO.xml#topic1">DO</xref>
 command, receives no arguments, and whatever value it might return is discarded.
 Otherwise, a PL/Perl anonymous code block behaves just like a function.  Only
 database superusers create an anonymous code block with the untrusted
