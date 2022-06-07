@@ -53,11 +53,13 @@ build.sh
 .project
 .settings/
 .vscode/
+.idea/
 GPATH
 GRTAGS
 GTAGS
 lib*dll.def
 lib*.pc
+.DS_Store
 
 # Local excludes in root directory
 /GNUmakefile
