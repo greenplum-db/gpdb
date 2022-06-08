@@ -119,7 +119,7 @@ ALTER ROLE &lt;HDFS_USER> CREATEEXTTABLE (type='writable');</codeblock><note>It
         <li>Log in to the KDC server as root.</li>
         <li>Use the <codeph>kadmin.local</codeph> command to create a new principal for the
             <codeph>gpadmin</codeph>
-          user:<codeblock># kadmin.local -q "addprinc -randkey gpadmin@<i>LOCAL.DOMAIN</i>"</codeblock></li>
+          user:<codeblock># kadmin.local -q "addprinc -randkey gpadmin@LOCAL.DOMAIN"</codeblock></li>
         <li>Use <codeph>kadmin.local</codeph> to generate a Kerberos service principal for each host
           in the Greenplum Database cluster. The service principal should be of the form
             <varname>name</varname>/<varname>role</varname>@<varname>REALM</varname>, where:<ul
