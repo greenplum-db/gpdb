@@ -274,7 +274,7 @@ are not portable, neither are the different available languages. </p><p>For comp
 can be written either before or after <varname>argname</varname>. But only the first
 way is standard-compliant. </p>
 <p>The SQL standard does not specify parameter defaults.</p>
-</section><section id="section10"><title>See Also</title><p><codeph><xref href="ALTER_FUNCTION.xml#topic1" type="topic" format="dita"/></codeph>,
+</section><section id="section10"><title>See Also</title><p><xref href="ALTER_FUNCTION.xml#topic1" type="topic" format="dita"/>,
                         <xref href="./DROP_FUNCTION.xml#topic1" type="topic" format="dita"
                     />, <xref href="./LOAD.xml#topic1" type="topic" format="dita"
                     /></p></section></body></topic>

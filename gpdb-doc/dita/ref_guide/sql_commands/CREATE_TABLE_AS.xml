@@ -158,14 +158,14 @@
     </section>
     <section id="section5">
       <title>Notes</title>
-      <p>This command is functionally similar to <codeph><xref href="./SELECT_INTO.xml#topic1"
-            type="topic" format="dita"/></codeph>, but it is preferred since it is less likely to be
+      <p>This command is functionally similar to <xref href="./SELECT_INTO.xml#topic1"
+            type="topic" format="dita"/>, but it is preferred since it is less likely to be
         confused with other uses of the <codeph>SELECT INTO</codeph> syntax. Furthermore,
           <codeph>CREATE TABLE AS</codeph> offers a superset of the functionality offered by
           <codeph>SELECT INTO</codeph>. </p>
       <p><codeph>CREATE TABLE AS</codeph> can be used for fast data loading from external table data
-        sources. See <codeph><xref href="CREATE_EXTERNAL_TABLE.xml#topic1" type="topic"
-            format="dita"/></codeph>.</p>
+        sources. See <xref href="CREATE_EXTERNAL_TABLE.xml#topic1" type="topic"
+            format="dita"/>.</p>
     </section>
     <section id="section6">
       <title>Examples</title>
