@@ -281,8 +281,8 @@ CREATE TABLE big_objs (
     obj bigobj
 );</codeblock></section><section id="section10"><title>Compatibility</title><p>This <codeph>CREATE TYPE</codeph> command is a Greenplum Database extension.
 There is a <codeph>CREATE TYPE</codeph> statement in the SQL standard
-that is rather different in detail. </p></section><section id="section11"><title>See Also</title><p><codeph><xref href="CREATE_FUNCTION.xml#topic1" type="topic" format="dita"/></codeph>,
-                        <codeph><xref href="ALTER_TYPE.xml#topic1" type="topic" format="dita"
-                    /></codeph>, <codeph><xref href="./DROP_TYPE.xml#topic1" type="topic"
-                        format="dita"/></codeph>, <codeph><xref href="CREATE_DOMAIN.xml#topic1"
-                        type="topic" format="dita"/></codeph></p></section></body></topic>
+that is rather different in detail. </p></section><section id="section11"><title>See Also</title><p><xref href="CREATE_FUNCTION.xml#topic1" type="topic" format="dita"/>,
+                        <xref href="ALTER_TYPE.xml#topic1" type="topic" format="dita"
+                    />, <xref href="./DROP_TYPE.xml#topic1" type="topic"
+                        format="dita"/>, <xref href="CREATE_DOMAIN.xml#topic1"
+                        type="topic" format="dita"/></p></section></body></topic>

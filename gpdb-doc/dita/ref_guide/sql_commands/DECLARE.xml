@@ -15,8 +15,8 @@
       <title>Description</title>
       <p><codeph>DECLARE</codeph> allows a user to create cursors, which can be used to retrieve a
         small number of rows at a time out of a larger query. Cursors can return data either in text
-        or in binary format using <codeph><xref href="./FETCH.xml#topic1" type="topic" format="dita"
-          /></codeph>. </p>
+        or in binary format using <xref href="./FETCH.xml#topic1" type="topic" format="dita"
+          />. </p>
       <p>Normal cursors return data in text format, the same as a <codeph>SELECT</codeph> would
         produce. Since data is stored natively in binary format, the system must do a conversion to
         produce the text format. Once the information comes back in text form, the client
@@ -38,8 +38,8 @@
           protocol — any cursor can be treated as either text or binary.</p>
       </note>
       <p>A cursor can be specified in the <codeph>WHERE CURRENT OF</codeph> clause of the
-            <codeph><xref href="./UPDATE.xml#topic1" type="topic" format="dita"/></codeph> or
-            <codeph><xref href="./DELETE.xml#topic1" type="topic" format="dita"/></codeph> statement
+            <xref href="./UPDATE.xml#topic1" type="topic" format="dita"/> or
+            <xref href="./DELETE.xml#topic1" type="topic" format="dita"/> statement
         to update or delete table data. The <codeph>UPDATE</codeph> or <codeph>DELETE</codeph>
         statement can only be executed on the server, for example in an interactive psql session or
         a script. Language extensions such as PL/pgSQL do not have support for updatable cursors.
@@ -85,12 +85,12 @@
           <pt>
             <varname>query</varname>
           </pt>
-          <pd>A <codeph><xref href="./SELECT.xml#topic1" type="topic" format="dita"/></codeph> or
-                <codeph><xref href="./VALUES.xml#topic1" type="topic" format="dita"/></codeph>
+          <pd>A <xref href="./SELECT.xml#topic1" type="topic" format="dita"/> or
+                <xref href="./VALUES.xml#topic1" type="topic" format="dita"/>
             command which will provide the rows to be returned by the cursor.<p>If the cursor is
-              used in the <codeph>WHERE CURRENT OF</codeph> clause of the <codeph><xref
-                  href="./UPDATE.xml#topic1" type="topic" format="dita"/></codeph> or <codeph><xref
-                  href="./DELETE.xml#topic1" type="topic" format="dita"/></codeph> command, the
+              used in the <codeph>WHERE CURRENT OF</codeph> clause of the <xref
+                  href="./UPDATE.xml#topic1" type="topic" format="dita"/> or <xref
+                  href="./DELETE.xml#topic1" type="topic" format="dita"/> command, the
                 <codeph>SELECT</codeph> command must satisfy the following conditions:</p><ul
               id="ul_rq1_vr2_m4">
               <li id="cm153794">Cannot reference a view or external table.</li>
@@ -165,12 +165,12 @@
     </section>
     <section id="section8">
       <title>See Also</title>
-      <p><codeph><xref href="CLOSE.xml#topic1" type="topic" format="dita"/></codeph>, <codeph><xref
-            href="./DELETE.xml#topic1" type="topic" format="dita"/></codeph>, <codeph><xref
-            href="./FETCH.xml#topic1" type="topic" format="dita"/></codeph>, <codeph><xref
-            href="./MOVE.xml#topic1" type="topic" format="dita"/></codeph>, <codeph><xref
-            href="./SELECT.xml#topic1" type="topic" format="dita"/></codeph>, <codeph><xref
-            href="./UPDATE.xml#topic1" type="topic" format="dita"/></codeph></p>
+      <p><xref href="CLOSE.xml#topic1" type="topic" format="dita"/>, <xref
+            href="./DELETE.xml#topic1" type="topic" format="dita"/>, <xref
+            href="./FETCH.xml#topic1" type="topic" format="dita"/>, <xref
+            href="./MOVE.xml#topic1" type="topic" format="dita"/>, <xref
+            href="./SELECT.xml#topic1" type="topic" format="dita"/>, <xref
+            href="./UPDATE.xml#topic1" type="topic" format="dita"/></p>
     </section>
   </body>
 </topic>

@@ -242,7 +242,7 @@
           <pd>In Greenplum Database, the <codeph>INHERITS</codeph> clause is not used when creating
             partitioned tables. Although the concept of inheritance is used in partition
             hierarchies, the inheritance structure of a partitioned table is created using the
-                <codeph><xref href="#topic1/part_by" format="dita">PARTITION BY</xref></codeph>
+                <xref href="#topic1/part_by" format="dita">PARTITION BY</xref>
             clause. </pd>
           <pd>If the same column name exists in more than one parent table, an error is reported
             unless the data types of the columns match in each of the parent tables. If there is no
@@ -411,8 +411,8 @@
               <codeph>RLE_TYPE</codeph>, the compression level can be set an integer value between 1
             (fastest compression) to 4 (highest compression ratio). </pd>
           <pd>This option is valid only if <codeph>APPENDONLY=TRUE</codeph>.</pd>
-          <pd><b>FILLFACTOR</b> — See <codeph><xref href="CREATE_INDEX.xml#topic1" type="topic"
-                format="dita"/></codeph> for more information about this index storage parameter. </pd>
+          <pd><b>FILLFACTOR</b> — See <xref href="CREATE_INDEX.xml#topic1" type="topic"
+                format="dita"/> for more information about this index storage parameter. </pd>
           <pd><b>OIDS</b> — Set to <codeph>OIDS=FALSE</codeph> (the default) so that rows do not
             have object identifiers assigned to them. Greenplum strongly recommends that you do not
             enable OIDS when creating a table. On large tables, such as those in a typical Greenplum
@@ -641,9 +641,9 @@
               <cmdname>ORIENTATION</cmdname>
             </li>
           </ul><p>The defaults can be set for the system, a database, or a user. For information about
-            setting storage options, see the server configuration parameter <codeph><xref
+            setting storage options, see the server configuration parameter <xref
               href="../../ref_guide/config_params/guc-list.xml#gp_default_storage_options"
-          >gp_default_storage_options</xref></codeph>.</p></li>
+          >gp_default_storage_options</xref>.</p></li>
       </ul>
       <note type="important">The current Greenplum Database legacy optimizer allows list partitions
         with multi-column (composite) partition keys. GPORCA does not support composite keys, so
@@ -750,12 +750,12 @@ PARTITION BY RANGE (year)
     </section>
     <section id="section8">
       <title>See Also</title>
-      <p><codeph><xref href="ALTER_TABLE.xml#topic1" type="topic" format="dita">ALTER
-          TABLE</xref></codeph>, <codeph><xref href="./DROP_TABLE.xml#topic1" type="topic"
-            format="dita">DROP TABLE</xref></codeph>, <codeph><xref
+      <p><xref href="ALTER_TABLE.xml#topic1" type="topic" format="dita">ALTER
+          TABLE</xref>, <xref href="./DROP_TABLE.xml#topic1" type="topic"
+            format="dita">DROP TABLE</xref>, <xref
             href="CREATE_EXTERNAL_TABLE.xml#topic1" type="topic" format="dita">CREATE EXTERNAL
-            TABLE</xref></codeph>, <codeph><xref href="./CREATE_TABLE_AS.xml#topic1" type="topic"
-            format="dita">CREATE TABLE AS</xref></codeph></p>
+            TABLE</xref>, <xref href="./CREATE_TABLE_AS.xml#topic1" type="topic"
+            format="dita">CREATE TABLE AS</xref></p>
     </section>
   </body>
 </topic>

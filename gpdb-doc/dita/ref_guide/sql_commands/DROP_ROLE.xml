@@ -14,8 +14,8 @@ of the target role in other roles, and of other roles in the target role.
 The other roles are not dropped nor otherwise affected.</p></section><section id="section4"><title>Parameters</title><parml><plentry><pt>IF EXISTS</pt><pd>Do not throw an error if the role does not exist. A notice is issued
 in this case.</pd></plentry><plentry><pt><varname>name</varname></pt><pd>The name of the role to remove.</pd></plentry></parml></section><section id="section5"><title>Examples</title><p>Remove the roles named <codeph>sally</codeph> and <codeph>bob</codeph>:</p><codeblock>DROP ROLE sally, bob;</codeblock></section><section id="section6"><title>Compatibility</title><p>The SQL standard defines <codeph>DROP ROLE</codeph>, but it allows only
 one role to be dropped at a time, and it specifies different privilege
-requirements than Greenplum Database uses. </p></section><section id="section7"><title>See Also</title><p><codeph><xref href="./REASSIGN_OWNED.xml#topic1" type="topic" format="dita"/></codeph>,
-            <codeph><xref href="DROP_OWNED.xml#topic1" type="topic" format="dita"/></codeph>,
-            <codeph><xref href="CREATE_ROLE.xml#topic1" type="topic" format="dita"/></codeph>,
-            <codeph><xref href="ALTER_ROLE.xml#topic1" type="topic" format="dita"/></codeph>,
-            <codeph><xref href="./SET_ROLE.xml#topic1" type="topic" format="dita"/></codeph></p></section></body></topic>
+requirements than Greenplum Database uses. </p></section><section id="section7"><title>See Also</title><p><xref href="./REASSIGN_OWNED.xml#topic1" type="topic" format="dita"/>,
+            <xref href="DROP_OWNED.xml#topic1" type="topic" format="dita"/>,
+            <xref href="CREATE_ROLE.xml#topic1" type="topic" format="dita"/>,
+            <xref href="ALTER_ROLE.xml#topic1" type="topic" format="dita"/>,
+            <xref href="./SET_ROLE.xml#topic1" type="topic" format="dita"/></p></section></body></topic>

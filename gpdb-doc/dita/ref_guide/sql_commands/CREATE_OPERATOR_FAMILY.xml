@@ -18,12 +18,12 @@
                 superuser. (This restriction is made because an erroneous operator family definition
                 could confuse or even crash the server.)</p></section><section id="section4"><title>Parameters</title><parml><plentry><pt><varname>name</varname></pt><pd>The (optionally schema-qualified) name of the operator family to be defined. The name can be
                         schema-qualified. </pd></plentry><plentry><pt><varname>index_method</varname></pt><pd>The name of the index method this operator family is for. </pd></plentry></parml></section><section id="section7"><title>Compatibility</title><p><codeph>CREATE OPERATOR FAMILY</codeph> is a Greenplum Database extension. There is no
-    <codeph>CREATE OPERATOR FAMILY</codeph> statement in the SQL standard.</p></section><section id="section8"><title>See Also</title><p><codeph><xref href="ALTER_OPERATOR_FAMILY.xml#topic1" type="topic" format="dita"/></codeph>,
-                        <codeph><xref href="./DROP_OPERATOR_FAMILY.xml#topic1" type="topic"
-                        format="dita"/></codeph>, <codeph><xref href="CREATE_FUNCTION.xml#topic1"
-                        type="topic" format="dita"/></codeph>, <codeph><xref
+    <codeph>CREATE OPERATOR FAMILY</codeph> statement in the SQL standard.</p></section><section id="section8"><title>See Also</title><p><xref href="ALTER_OPERATOR_FAMILY.xml#topic1" type="topic" format="dita"/>,
+                        <xref href="./DROP_OPERATOR_FAMILY.xml#topic1" type="topic"
+                        format="dita"/>, <xref href="CREATE_FUNCTION.xml#topic1"
+                        type="topic" format="dita"/>, <xref
                         href="ALTER_OPERATOR_CLASS.xml#topic1" type="topic" format="dita"
-                /></codeph>, <codeph><xref href="CREATE_OPERATOR_CLASS.xml#topic1" type="topic"
-                        format="dita"/></codeph>, <codeph><xref
+                />, <xref href="CREATE_OPERATOR_CLASS.xml#topic1" type="topic"
+                        format="dita"/>, <xref
                         href="./DROP_OPERATOR_CLASS.xml#topic1" type="topic" format="dita"
-                    /></codeph></p></section></body></topic>
+                    /></p></section></body></topic>

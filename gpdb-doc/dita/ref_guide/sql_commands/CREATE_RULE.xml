@@ -64,6 +64,6 @@ at execution time.</p></section><section id="section6"><title>Examples</title><p
         insert into the partitioned parent table <codeph>rank</codeph>:</p><codeblock>CREATE RULE b2001 AS ON INSERT TO rank WHERE gender='M' and 
 year='2001' DO INSTEAD INSERT INTO b2001 VALUES (NEW.id, 
 NEW.rank, NEW.year, NEW.gender, NEW.count);</codeblock></section><section id="section7"><title>Compatibility</title><p><codeph>CREATE RULE</codeph> is a Greenplum Database language extension,
-as is the entire query rewrite system.</p></section><section id="section8"><title>See Also</title><p><codeph><xref href="./DROP_RULE.xml#topic1" type="topic" format="dita"/></codeph>, <codeph><xref
-            href="./CREATE_TABLE.xml#topic1" type="topic" format="dita"/></codeph>, <codeph><xref
-            href="./CREATE_VIEW.xml#topic1" type="topic" format="dita"/></codeph></p></section></body></topic>
+as is the entire query rewrite system.</p></section><section id="section8"><title>See Also</title><p><xref href="./DROP_RULE.xml#topic1" type="topic" format="dita"/>, <xref
+            href="./CREATE_TABLE.xml#topic1" type="topic" format="dita"/>, <xref
+            href="./CREATE_VIEW.xml#topic1" type="topic" format="dita"/></p></section></body></topic>

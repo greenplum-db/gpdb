@@ -6,10 +6,10 @@
 Greenplum Database system. The tablespace name must be distinct from
 the name of any existing tablespace in the system. </p><p>A tablespace allows superusers to define an alternative location on
 the file system where the data files containing database objects (such
-as tables and indexes) may reside.</p><p>A user with appropriate privileges can pass a tablespace name to <codeph><xref
-            href="CREATE_DATABASE.xml#topic1" type="topic" format="dita"/></codeph>, <codeph><xref
-            href="CREATE_TABLE.xml#topic1" type="topic" format="dita"/></codeph>, or <codeph><xref
-            href="CREATE_INDEX.xml#topic1" type="topic" format="dita"/></codeph> to have the data
+as tables and indexes) may reside.</p><p>A user with appropriate privileges can pass a tablespace name to <xref
+            href="CREATE_DATABASE.xml#topic1" type="topic" format="dita"/>, <xref
+            href="CREATE_TABLE.xml#topic1" type="topic" format="dita"/>, or <xref
+            href="CREATE_INDEX.xml#topic1" type="topic" format="dita"/> to have the data
         files for these objects stored within the specified tablespace.</p><p>In Greenplum Database, there must be a file system location defined for the master, each primary
         segment, and each mirror segment in order for the tablespace to have a location to store its
         objects across an entire Greenplum system. This collection of file system locations is
@@ -24,10 +24,10 @@ the <codeph>gpfilespace</codeph> management utility.</pd></plentry></parml></sec
 </p><p><codeph>CREATE TABLESPACE</codeph> cannot be executed inside a transaction
 block.</p></section><section id="section6"><title>Examples</title><p>Create a new tablespace by specifying the corresponding filespace to
 use: </p><codeblock>CREATE TABLESPACE mytblspace FILESPACE myfilespace;</codeblock></section><section id="section7"><title>Compatibility</title><p><codeph>CREATE TABLESPACE</codeph> is a Greenplum Database extension.
-</p></section><section id="section8"><title>See Also</title><p><codeph><xref href="CREATE_DATABASE.xml#topic1" type="topic" format="dita"/></codeph>,
-            <codeph><xref href="CREATE_TABLE.xml#topic1" type="topic" format="dita"/></codeph>,
-            <codeph><xref href="CREATE_INDEX.xml#topic1" type="topic" format="dita"/></codeph>,
-            <codeph><xref href="./DROP_TABLESPACE.xml#topic1" type="topic" format="dita"/></codeph>,
-            <codeph><xref href="ALTER_TABLESPACE.xml#topic1" type="topic" format="dita"/></codeph>,
-          <codeph>gpfilespace</codeph> in the <i>Greenplum Database Utility Guide</i>
+</p></section><section id="section8"><title>See Also</title><p><xref href="CREATE_DATABASE.xml#topic1" type="topic" format="dita"/>,
+            <xref href="CREATE_TABLE.xml#topic1" type="topic" format="dita"/>,
+            <xref href="CREATE_INDEX.xml#topic1" type="topic" format="dita"/>,
+            <xref href="./DROP_TABLESPACE.xml#topic1" type="topic" format="dita"/>,
+            <xref href="ALTER_TABLESPACE.xml#topic1" type="topic" format="dita"/>,
+          gpfilespace in the <i>Greenplum Database Utility Guide</i>
       </p></section></body></topic>

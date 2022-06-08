@@ -19,8 +19,8 @@ session while the temporary view exists, unless they are referenced with
 schema-qualified names. If any of the tables referenced by the view are
 temporary, the view is created as a temporary view (whether <codeph>TEMPORARY</codeph>
 is specified or not). </pd></plentry><plentry><pt><varname>name</varname></pt><pd>The name (optionally schema-qualified) of a view to be created. </pd></plentry><plentry><pt><varname>column_name</varname></pt><pd>An optional list of names to be used for columns of the view. If
-not given, the column names are deduced from the query. </pd></plentry><plentry><pt><varname>query</varname></pt><pd>A <codeph><xref href="./SELECT.xml#topic1" type="topic" format="dita"/></codeph> or
-                <codeph><xref href="./VALUES.xml#topic1" type="topic" format="dita"/></codeph>
+not given, the column names are deduced from the query. </pd></plentry><plentry><pt><varname>query</varname></pt><pd>A <xref href="./SELECT.xml#topic1" type="topic" format="dita"/> or
+                <xref href="./VALUES.xml#topic1" type="topic" format="dita"/>
             command which will provide the columns and rows of the view.</pd></plentry></parml></section><section id="section5"><title>Notes</title><p>Views in Greenplum Database are read only. The system will not allow
 an insert, update, or delete on a view. You can get the effect of an
 updatable view by creating rewrite rules on the view into appropriate
@@ -49,5 +49,5 @@ view will be checked to ensure data satisfy the view-defining condition
 not, the update will be rejected.</li><li id="cj152050"><b>LOCAL</b> — Check for integrity on this view. </li><li id="cj152053"><b>CASCADED</b> — Check for integrity on this view and on any dependent
 view. <codeph>CASCADED</codeph> is assumed if neither <codeph>CASCADED</codeph>
 nor <codeph>LOCAL</codeph> is specified. </li></ul><p><codeph>CREATE OR REPLACE VIEW</codeph> is a Greenplum Database language
-extension. So is the concept of a temporary view. </p></section><section id="section8"><title>See Also</title><p><codeph><xref href="./SELECT.xml#topic1" type="topic" format="dita"/></codeph>, <codeph><xref
-            href="./DROP_VIEW.xml#topic1" type="topic" format="dita"/></codeph></p></section></body></topic>
+extension. So is the concept of a temporary view. </p></section><section id="section8"><title>See Also</title><p><xref href="./SELECT.xml#topic1" type="topic" format="dita"/>, <xref
+            href="./DROP_VIEW.xml#topic1" type="topic" format="dita"/></p></section></body></topic>

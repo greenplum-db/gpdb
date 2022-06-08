@@ -21,7 +21,7 @@
     </section>
     <section id="section6">
       <title>See Also</title>
-      <p><codeph><xref href="./DROP_ROLE.xml#topic1" type="topic" format="dita"/></codeph></p>
+      <p><xref href="./DROP_ROLE.xml#topic1" type="topic" format="dita"/></p>
     </section>
   </body>
 </topic>

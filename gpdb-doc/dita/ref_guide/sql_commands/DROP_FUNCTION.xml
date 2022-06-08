@@ -18,5 +18,5 @@ argument data types are needed to determine the function's identity.
 if any.</pd></plentry><plentry><pt>CASCADE</pt><pd>Automatically drop objects that depend on the function such as operators.
 </pd></plentry><plentry><pt>RESTRICT</pt><pd>Refuse to drop the function if any objects depend on it. This is
 the default.</pd></plentry></parml></section><section id="section5"><title>Examples</title><p>Drop the square root function: </p><codeblock>DROP FUNCTION sqrt(integer);</codeblock></section><section id="section6"><title>Compatibility</title><p>A <codeph>DROP FUNCTION</codeph> statement is defined in the SQL standard,
-but it is not compatible with this command.</p></section><section id="section7"><title>See Also</title><p><codeph><xref href="CREATE_FUNCTION.xml#topic1" type="topic" format="dita"/></codeph>,
-            <codeph><xref href="ALTER_FUNCTION.xml#topic1" type="topic" format="dita"/></codeph></p></section></body></topic>
+but it is not compatible with this command.</p></section><section id="section7"><title>See Also</title><p><xref href="CREATE_FUNCTION.xml#topic1" type="topic" format="dita"/>,
+            <xref href="ALTER_FUNCTION.xml#topic1" type="topic" format="dita"/></p></section></body></topic>

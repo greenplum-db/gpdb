@@ -10,6 +10,6 @@ if the operator has no right operand.</pd></plentry><plentry><pt>CASCADE</pt><pd
 the default. </pd></plentry></parml></section><section id="section5"><title>Examples</title><p>Remove the power operator <codeph>a^b</codeph> for type <codeph>integer</codeph>:</p><codeblock>DROP OPERATOR ^ (integer, integer);</codeblock><p>Remove the left unary bitwise complement operator <codeph>~b</codeph> for type
           <codeph>bit</codeph>:</p><codeblock>DROP OPERATOR ~ (none, bit);</codeblock><p>Remove the right unary factorial operator <codeph>x!</codeph> for type
         <codeph>bigint</codeph>:</p><codeblock>DROP OPERATOR ! (bigint, none);</codeblock></section><section id="section6"><title>Compatibility</title><p>There is no <codeph>DROP OPERATOR</codeph> statement in the SQL standard.
-</p></section><section id="section7"><title>See Also</title><p><codeph><xref href="ALTER_OPERATOR.xml#topic1" type="topic" format="dita"/></codeph>,
-            <codeph><xref href="CREATE_OPERATOR.xml#topic1" type="topic" format="dita"
-        /></codeph></p></section></body></topic>
+</p></section><section id="section7"><title>See Also</title><p><xref href="ALTER_OPERATOR.xml#topic1" type="topic" format="dita"/>,
+            <xref href="CREATE_OPERATOR.xml#topic1" type="topic" format="dita"
+        /></p></section></body></topic>

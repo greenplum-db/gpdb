@@ -65,8 +65,8 @@
                     </pt>
                     <pd>A list of table expressions, allowing columns from other tables to appear in
                         the <codeph>WHERE</codeph> condition. This is similar to the list of tables
-                        that can be specified in the <codeph>FROM</codeph> Clause of a <codeph><xref
-                                href="./SELECT.xml#topic1" type="topic" format="dita"/></codeph>
+                        that can be specified in the <codeph>FROM</codeph> Clause of a <xref
+                                href="./SELECT.xml#topic1" type="topic" format="dita"/>
                         statement; for example, an alias for the table name can be specified. Do not
                         repeat the target table in the <codeph>usinglist</codeph>, unless you wish
                         to set up a self-join. </pd>
@@ -92,8 +92,8 @@
                         executed on the server, for example in an interactive psql session or a
                         script. Language extensions such as PL/pgSQL do not have support for
                         updatable cursors. </pd>
-                    <pd>See <codeph><xref href="DECLARE.xml#topic1" type="topic" format="dita"
-                            /></codeph> for more information about creating cursors.</pd>
+                    <pd>See <xref href="DECLARE.xml#topic1" type="topic" format="dita"
+                            /> for more information about creating cursors.</pd>
                 </plentry>
             </parml>
         </section>
@@ -135,9 +135,9 @@ name = 'Hannah';</codeblock>
         </section>
         <section id="section9">
             <title>See Also</title>
-            <p><codeph><xref href="DECLARE.xml#topic1" type="topic" format="dita"/></codeph>,
-                        <codeph><xref href="./TRUNCATE.xml#topic1" type="topic" format="dita"
-                    /></codeph></p>
+            <p><xref href="DECLARE.xml#topic1" type="topic" format="dita"/>,
+                        <xref href="./TRUNCATE.xml#topic1" type="topic" format="dita"
+                    /></p>
         </section>
     </body>
 </topic>

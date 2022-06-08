@@ -62,8 +62,8 @@
     </section>
     <section id="section7">
       <title>See Also</title>
-      <p><codeph><xref href="CREATE_EXTENSION.xml#topic1">CREATE EXTENSION</xref></codeph>,
-            <codeph><xref href="ALTER_EXTENSION.xml#topic1">ALTER EXTENSION</xref></codeph></p>
+      <p><xref href="CREATE_EXTENSION.xml#topic1">CREATE EXTENSION</xref>,
+            <xref href="ALTER_EXTENSION.xml#topic1">ALTER EXTENSION</xref></p>
     </section>
   </body>
 </topic>

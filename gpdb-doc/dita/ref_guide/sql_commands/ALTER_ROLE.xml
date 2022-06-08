@@ -67,11 +67,11 @@ ALTER ROLE &lt;name> [ [WITH] &lt;option> [ ... ] ]</codeblock>
           would then be subject to the concurrent transaction, memory, and CPU limits configured for
           the resource group. You can assign a single resource group to one or more roles. You
           cannot assign a resource group that you create for an external component to a role. See
-              <codeph><xref href="./CREATE_RESOURCE_GROUP.xml#topic1" type="topic" format="dita"
-            /></codeph> for additional information.  </li>
+              <xref href="./CREATE_RESOURCE_GROUP.xml#topic1" type="topic" format="dita"
+            /> for additional information.  </li>
         <li id="av137061"><b>WITH <varname>option</varname></b> — Changes many of the role
-          attributes that can be specified in <codeph><xref href="./CREATE_ROLE.xml#topic1"
-              type="topic" format="dita"/></codeph>. Attributes not mentioned in the command retain
+          attributes that can be specified in <xref href="./CREATE_ROLE.xml#topic1"
+              type="topic" format="dita"/>. Attributes not mentioned in the command retain
           their previous settings. Database superusers can change any of these settings for any
           role. Roles having <codeph>CREATEROLE</codeph> privilege can change any of these settings,
           but only for non-superuser roles. Ordinary roles can only change their own password.</li>

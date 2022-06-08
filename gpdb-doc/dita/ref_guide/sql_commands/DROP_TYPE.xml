@@ -9,5 +9,5 @@ default.</pd></plentry></parml></section><section id="section5"><title>Examples<
 apart from the <codeph>IF EXISTS</codeph> option, which is a Greenplum
 Database extension. But note that the <codeph>CREATE TYPE</codeph> command
 and the data type extension mechanisms in Greenplum Database differ from
-the SQL standard.</p></section><section id="section7"><title>See Also</title><p><codeph><xref href="ALTER_TYPE.xml#topic1" type="topic" format="dita"/></codeph>, <codeph><xref
-            href="CREATE_TYPE.xml#topic1" type="topic" format="dita"/></codeph></p></section></body></topic>
+the SQL standard.</p></section><section id="section7"><title>See Also</title><p><xref href="ALTER_TYPE.xml#topic1" type="topic" format="dita"/>, <xref
+            href="CREATE_TYPE.xml#topic1" type="topic" format="dita"/></p></section></body></topic>
