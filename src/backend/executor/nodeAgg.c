@@ -3807,8 +3807,6 @@ ExecInitAgg(Agg *node, EState *estate, int eflags)
 
 		/* Planner should have assigned aggregate to correct level */
 		Assert(aggref->agglevelsup == 0);
-		/* ... and the split mode should match */
-		Assert(aggref->aggsplit == aggstate->aggsplit);
 
 		/* 1. Check for already processed aggs which can be re-used */
 		existing_aggno = find_compatible_peragg(aggref, aggstate, aggno,
@@ -3852,7 +3850,7 @@ ExecInitAgg(Agg *node, EState *estate, int eflags)
 		 * If this aggregation is performing state combines, then instead of
 		 * using the transition function, we'll use the combine function
 		 */
-		if (DO_AGGSPLIT_COMBINE(aggstate->aggsplit))
+		if (DO_AGGSPLIT_COMBINE(aggref->aggsplit))
 		{
 			transfn_oid = aggform->aggcombinefn;
 
@@ -3864,7 +3862,7 @@ ExecInitAgg(Agg *node, EState *estate, int eflags)
 			transfn_oid = aggform->aggtransfn;
 
 		/* Final function only required if we're finalizing the aggregates */
-		if (DO_AGGSPLIT_SKIPFINAL(aggstate->aggsplit))
+		if (DO_AGGSPLIT_SKIPFINAL(aggref->aggsplit))
 			peragg->finalfn_oid = finalfn_oid = InvalidOid;
 		else
 			peragg->finalfn_oid = finalfn_oid = aggform->aggfinalfn;
@@ -3892,10 +3890,10 @@ ExecInitAgg(Agg *node, EState *estate, int eflags)
 			 * every aggregate with an INTERNAL state has a serialization
 			 * function.  Verify that.
 			 */
-			if (DO_AGGSPLIT_SERIALIZE(aggstate->aggsplit))
+			if (DO_AGGSPLIT_SERIALIZE(aggref->aggsplit))
 			{
 				/* serialization only valid when not running finalfn */
-				Assert(DO_AGGSPLIT_SKIPFINAL(aggstate->aggsplit));
+				Assert(DO_AGGSPLIT_SKIPFINAL(aggref->aggsplit));
 
 				if (!OidIsValid(aggform->aggserialfn))
 					elog(ERROR, "serialfunc not provided for serialization aggregation");
@@ -3903,10 +3901,10 @@ ExecInitAgg(Agg *node, EState *estate, int eflags)
 			}
 
 			/* Likewise for deserialization functions */
-			if (DO_AGGSPLIT_DESERIALIZE(aggstate->aggsplit))
+			if (DO_AGGSPLIT_DESERIALIZE(aggref->aggsplit))
 			{
 				/* deserialization only valid when combining states */
-				Assert(DO_AGGSPLIT_COMBINE(aggstate->aggsplit));
+				Assert(DO_AGGSPLIT_COMBINE(aggref->aggsplit));
 
 				if (!OidIsValid(aggform->aggdeserialfn))
 					elog(ERROR, "deserialfunc not provided for deserialization aggregation");

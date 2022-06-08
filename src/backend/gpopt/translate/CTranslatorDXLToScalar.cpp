@@ -587,10 +587,7 @@ CTranslatorDXLToScalar::TranslateDXLScalarAggrefToScalar(
 			aggref->aggsplit = AGGSPLIT_INITIAL_SERIAL;
 			break;
 		case EdxlaggstageIntermediate:
-			GPOS_RAISE(
-				gpdxl::ExmaDXL, gpdxl::ExmiPlStmt2DXLConversion,
-				GPOS_WSZ_LIT(
-					"GPDB_96_MERGE_FIXME: Intermediate aggregate stage not implemented"));
+			aggref->aggsplit = AGGSPLIT_INTERNMEDIATE;
 			break;
 		case EdxlaggstageFinal:
 			aggref->aggsplit = AGGSPLIT_FINAL_DESERIAL;

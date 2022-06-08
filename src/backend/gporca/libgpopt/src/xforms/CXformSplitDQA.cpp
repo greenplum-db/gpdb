@@ -79,40 +79,6 @@ CXformSplitDQA::Exfp(CExpressionHandle &exprhdl) const
 	return CXform::ExfpHigh;
 }
 
-// Checks whether or not the project list contains at least one DQA and one
-// non-DQA.
-static bool
-FContainsRideAlongAggregate(CExpression *pexprProjectList)
-{
-	bool hasDQA = false;
-	bool hasNonDQA = false;
-
-	const ULONG size = pexprProjectList->PdrgPexpr()->Size();
-	for (ULONG ul = 0; ul < size; ul++)
-	{
-		CExpression *pexpr = (*pexprProjectList->PdrgPexpr())[ul];
-
-		const ULONG sizeInner = pexpr->PdrgPexpr()->Size();
-		CScalarAggFunc *paggfunc;
-		if (sizeInner != 1 || (paggfunc = CScalarAggFunc::PopConvert(
-								   (*pexpr->PdrgPexpr())[0]->Pop())) == nullptr)
-		{
-			continue;
-		}
-
-		if (paggfunc->IsDistinct())
-		{
-			hasDQA = true;
-		}
-		else
-		{
-			hasNonDQA = true;
-		}
-	}
-
-	return hasDQA && hasNonDQA;
-}
-
 //---------------------------------------------------------------------------
 //	@function:
 //		CXformSplitDQA::Transform
@@ -184,37 +150,27 @@ CXformSplitDQA::Transform(CXformContext *pxfctxt, CXformResult *pxfres,
 
 	pxfres->Add(pexprThreeStageDQA);
 
-	// GPDB_96_MERGE_FIXME: Postgres 9.6 merge commit 38d881555207 replaced
-	// Greenplum multi-stage aggregate executor code with upstream. In the
-	// process, we lost the intermediate aggregate stage which is useful when
-	// we have a 'ride-along' aggregate. For example,
-	//
-	//     SELECT SUM(a), COUNT(DISTINCT b) FROM foo;
-	//
-	// After we re-implement intermediate aggregate stage in executor we should
-	// be able to re-enable the following transform optimization.
-	if (!FContainsRideAlongAggregate(pexprProjectList))
-	{
-		// generate two-stage agg
-		// this transform is useful for cases where distinct column is same as distributed column.
-		// for a query like "select count(distinct a) from bar;"
-		// we generate a two stage agg where the aggregate operator gives us the distinct values.
-		// CScalarProjectList for the Local agg below is empty on purpose.
 
-		//		+--CLogicalGbAgg( Global ) Grp Cols: [][Global]
-		//		|--CLogicalGbAgg( Local ) Grp Cols: ["a" (0)][Local],
-		//		|  |--CLogicalGet "bar" ("bar"),
-		//		|  +--CScalarProjectList
-		//		+--CScalarProjectList
-		//			+--CScalarProjectElement "count" (9)
-		//				+--CScalarAggFunc (count , Distinct: false , Aggregate Stage: Global)
-		//					+--CScalarIdent "a" (0)
+	// generate two-stage agg
+	// this transform is useful for cases where distinct column is same as distributed column.
+	// for a query like "select count(distinct a) from bar;"
+	// we generate a two stage agg where the aggregate operator gives us the distinct values.
+	// CScalarProjectList for the Local agg below is empty on purpose.
 
-		CExpression *pexprTwoStageScalarDQA = PexprSplitHelper(
-			mp, col_factory, md_accessor, pexpr, pexprRelational, phmexprcr,
-			pdrgpcrArgDQA, CLogicalGbAgg::EasTwoStageScalarDQA);
-		pxfres->Add(pexprTwoStageScalarDQA);
-	}
+	//		+--CLogicalGbAgg( Global ) Grp Cols: [][Global]
+	//		|--CLogicalGbAgg( Local ) Grp Cols: ["a" (0)][Local],
+	//		|  |--CLogicalGet "bar" ("bar"),
+	//		|  +--CScalarProjectList
+	//		+--CScalarProjectList
+	//			+--CScalarProjectElement "count" (9)
+	//				+--CScalarAggFunc (count , Distinct: false , Aggregate Stage: Global)
+	//					+--CScalarIdent "a" (0)
+
+	CExpression *pexprTwoStageScalarDQA = PexprSplitHelper(
+		mp, col_factory, md_accessor, pexpr, pexprRelational, phmexprcr,
+		pdrgpcrArgDQA, CLogicalGbAgg::EasTwoStageScalarDQA);
+	pxfres->Add(pexprTwoStageScalarDQA);
+
 
 	// generate local DQA, global agg for both scalar and non-scalar agg cases.
 	// for a query like "select count(distinct a) from bar;"

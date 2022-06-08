@@ -422,8 +422,6 @@ group by ten order by ten;
 
 select ten, count(four), sum(DISTINCT four) from onek
 group by ten order by ten;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  GPDB Expression type: GPDB_96_MERGE_FIXME: Intermediate aggregate stage not implemented not supported in DXL
  ten | count | sum 
 -----+-------+-----
    0 |   100 |   2

@@ -931,6 +931,8 @@ typedef enum AggSplit
 	 * stripped away from Aggs in setrefs.c.
 	 */
 	AGGSPLIT_DEDUPLICATED = AGGSPLITOP_DEDUPLICATED,
+
+	AGGSPLIT_INTERNMEDIATE = AGGSPLITOP_SKIPFINAL | AGGSPLITOP_SERIALIZE | AGGSPLITOP_COMBINE | AGGSPLITOP_DESERIALIZE,
 } AggSplit;
 
 /* Test whether an AggSplit value selects each primitive option: */
