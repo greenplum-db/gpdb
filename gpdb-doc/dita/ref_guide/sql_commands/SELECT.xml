@@ -841,12 +841,12 @@ SELECT distance, employee_name FROM employee_recursive;</codeblock>
           of STABLE and VOLATILE Functions</b><p>To prevent data from becoming out-of-sync across
           the segments in Greenplum Database, any function classified as <codeph>STABLE</codeph> or
             <codeph>VOLATILE</codeph> cannot be executed at the segment database level if it
-          contains SQL or modifies the database in any way. See <codeph><xref
-              href="CREATE_FUNCTION.xml#topic1" type="topic" format="dita"/></codeph> for more
+          contains SQL or modifies the database in any way. See <xref
+              href="CREATE_FUNCTION.xml#topic1" type="topic" format="dita"/> for more
           information.</p></sectiondiv></section>
     <section id="section25">
       <title>See Also</title>
-      <p><codeph><xref href="EXPLAIN.xml#topic1" type="topic" format="dita"/></codeph></p>
+      <p><xref href="EXPLAIN.xml#topic1" type="topic" format="dita"/></p>
     </section>
   </body>
 </topic>

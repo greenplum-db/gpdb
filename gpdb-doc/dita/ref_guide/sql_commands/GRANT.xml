@@ -324,8 +324,8 @@ GRANT { SELECT | INSERT | ALL [PRIVILEGES] }
     </section>
     <section id="section11">
       <title>See Also</title>
-      <p><codeph><xref href="./REVOKE.xml#topic1" type="topic" format="dita"
-          /></codeph>, <xref href="./CREATE_ROLE.xml#topic1" type="topic"
+      <p><xref href="./REVOKE.xml#topic1" type="topic" format="dita"
+          />, <xref href="./CREATE_ROLE.xml#topic1" type="topic"
           format="dita"/>, <xref href="./ALTER_ROLE.xml#topic1" type="topic"
           format="dita"/></p>
     </section>

@@ -107,14 +107,14 @@
           <pd>The name of the cursor to use in a <codeph>WHERE CURRENT OF</codeph> condition. The
             row to be updated is the one most recently fetched from the cursor. The cursor must be a
             simple (non-join, non-aggregate) query on the <codeph>UPDATE</codeph> command target
-            table. See <codeph><xref href="DECLARE.xml#topic1" type="topic" format="dita"/></codeph>
+            table. See <xref href="DECLARE.xml#topic1" type="topic" format="dita"/>
             for more information about creating cursors. </pd>
           <pd><codeph>WHERE CURRENT OF</codeph> cannot be specified together with a Boolean
             condition. </pd>
           <pd>The <codeph>UPDATE...WHERE CURRENT OF</codeph> statement can only be executed on the
             server, for example in an interactive psql session or a script. Language extensions such
             as PL/pgSQL do not have support for updatable cursors.</pd>
-          <pd>See <codeph><xref href="DECLARE.xml#topic1" type="topic" format="dita"/></codeph> for
+          <pd>See <xref href="DECLARE.xml#topic1" type="topic" format="dita"/> for
             more information about creating cursors.</pd>
         </plentry>
         <plentry>
@@ -210,10 +210,10 @@ COMMIT;</codeblock>
     </section>
     <section id="section9">
       <title>See Also</title>
-      <p><codeph><xref href="DECLARE.xml#topic1" type="topic" format="dita"/></codeph>,
-            <codeph><xref href="DELETE.xml#topic1" type="topic" format="dita"/></codeph>,
-            <codeph><xref href="SELECT.xml#topic1" type="topic" format="dita"/></codeph>,
-            <codeph><xref href="INSERT.xml#topic1" type="topic" format="dita"/></codeph></p>
+      <p><xref href="DECLARE.xml#topic1" type="topic" format="dita"/>,
+            <xref href="DELETE.xml#topic1" type="topic" format="dita"/>,
+            <xref href="SELECT.xml#topic1" type="topic" format="dita"/>,
+            <xref href="INSERT.xml#topic1" type="topic" format="dita"/></p>
     </section>
   </body>
 </topic>

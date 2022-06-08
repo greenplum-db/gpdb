@@ -65,6 +65,6 @@ in host variables. Other than this point, <codeph>FETCH</codeph> is fully
 upward-compatible with the SQL standard. </p><p>The <codeph>FETCH</codeph> forms involving <codeph>FORWARD</codeph>,
 as well as the forms <codeph>FETCH</codeph> count and <codeph>FETCH</codeph><codeph>ALL</codeph>, in which <codeph>FORWARD</codeph> is implicit,
 are Greenplum Database extensions. <codeph>BACKWARD</codeph> is not supported.</p><p>The SQL standard allows only <codeph>FROM</codeph> preceding the cursor
-name; the option to use <codeph>IN</codeph> is an extension.</p></section><section id="section9"><title>See Also</title><p><codeph><xref href="DECLARE.xml#topic1" type="topic" format="dita"/></codeph>, <codeph><xref
-            href="CLOSE.xml#topic1" type="topic" format="dita"/></codeph>, <codeph><xref
-            href="./MOVE.xml#topic1" type="topic" format="dita"/></codeph></p></section></body></topic>
+name; the option to use <codeph>IN</codeph> is an extension.</p></section><section id="section9"><title>See Also</title><p><xref href="DECLARE.xml#topic1" type="topic" format="dita"/>, <xref
+            href="CLOSE.xml#topic1" type="topic" format="dita"/>, <xref
+            href="./MOVE.xml#topic1" type="topic" format="dita"/></p></section></body></topic>

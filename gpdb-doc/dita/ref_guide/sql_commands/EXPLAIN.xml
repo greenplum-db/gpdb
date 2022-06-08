@@ -141,7 +141,7 @@ Gather Motion 2:1 (slice1) (cost=0.00..20.88 rows=1 width=13)
     </section>
     <section id="section8">
       <title>See Also</title>
-      <p><codeph><xref href="ANALYZE.xml#topic1" type="topic" format="dita"/></codeph></p>
+      <p><xref href="ANALYZE.xml#topic1" type="topic" format="dita"/></p>
     </section>
   </body>
 </topic>

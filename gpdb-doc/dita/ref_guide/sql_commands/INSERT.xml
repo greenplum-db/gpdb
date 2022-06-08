@@ -129,9 +129,9 @@
     </section>
     <section id="section9">
       <title>See Also</title>
-      <p><codeph><xref href="COPY.xml#topic1" type="topic" format="dita"/></codeph>, <codeph><xref
-            href="./SELECT.xml#topic1" type="topic" format="dita"/></codeph>, <codeph><xref
-            href="CREATE_EXTERNAL_TABLE.xml#topic1" type="topic" format="dita"/></codeph>, <xref
+      <p><xref href="COPY.xml#topic1" type="topic" format="dita"/>, <xref
+            href="./SELECT.xml#topic1" type="topic" format="dita"/>, <xref
+            href="CREATE_EXTERNAL_TABLE.xml#topic1" type="topic" format="dita"/>, <xref
           href="../../admin_guide/external/g-s3-protocol.xml#amazon-emr"/></p>
     </section>
   </body>
