@@ -314,7 +314,7 @@
                         type="topic" format="dita"/>, <xref
                         href="./REVOKE.xml#topic1" type="topic" format="dita"/>,
                         format="dita"/>
-                        <xref href="CREATE_RESOURCE_QUEUE.xml#topic1" type="topic"
+                        <xref href="CREATE_RESOURCE_QUEUE.xml#topic1" type="topic" format="dita"/>
                 <xref href="CREATE_RESOURCE_GROUP.xml#topic1" type="topic" format="dita"
                     /></p>
         </section>
