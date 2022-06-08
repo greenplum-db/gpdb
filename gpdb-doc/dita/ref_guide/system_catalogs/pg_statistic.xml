@@ -92,7 +92,7 @@
           </row>
           <row>
             <entry colname="col1">
-              <codeph>stakind<i>N</i></codeph>
+              stakind<i>N</i>
             </entry>
             <entry colname="col2">int2</entry>
             <entry colname="col3"/>
@@ -101,7 +101,7 @@
           </row>
           <row>
             <entry colname="col1">
-              <codeph>staop<i>N</i></codeph>
+              staop<i>N</i>
             </entry>
             <entry colname="col2">oid</entry>
             <entry colname="col3">pg_operator.oid</entry>
@@ -111,7 +111,7 @@
           </row>
           <row>
             <entry colname="col1">
-              <codeph>stanumbers<i>N</i></codeph>
+              stanumbers<i>N</i>
             </entry>
             <entry colname="col2">float4[]</entry>
             <entry colname="col3"/>
@@ -121,7 +121,7 @@
           </row>
           <row>
             <entry colname="col1">
-              <codeph>stavalues<i>N</i></codeph>
+              stavalues<i>N</i>
             </entry>
             <entry colname="col2">anyarray</entry>
             <entry colname="col3"/>

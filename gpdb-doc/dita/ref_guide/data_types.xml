@@ -364,25 +364,25 @@
         actual type must be an <codeph>enum</codeph> type. </p>
       <p>When more than one argument position is declared with a polymorphic type, the net effect is
         that only certain combinations of actual argument types are allowed. For example, a function
-        declared as <codeph>equal(<i>anyelement</i>, <i>anyelement</i>)</codeph> takes any two input
+        declared as equal(<i>anyelement</i>, <i>anyelement</i>) takes any two input
         values, so long as they are of the same data type.</p>
       <p>When the return value of a function is declared as a polymorphic type, there must be at
         least one argument position that is also polymorphic, and the actual data type supplied as
         the argument determines the actual result type for that call. For example, if there were not
         already an array subscripting mechanism, one could define a function that implements
-        subscripting as <codeph>subscript(<i>anyarray</i>, integer) returns
-          <i>anyelement</i></codeph>. This declaration constrains the actual first argument to be an
+        subscripting as subscript(<i>anyarray</i>, integer) returns
+          <i>anyelement</i>. This declaration constrains the actual first argument to be an
         array type, and allows the parser to infer the correct result type from the actual first
         argument's type. Another example is that a function declared as
-            <codeph>myfunc(<i>anyarray</i>) returns <i>anyenum</i></codeph> will only accept arrays
+            myfunc(<i>anyarray</i>) returns <i>anyenum</i> will only accept arrays
         of <codeph>enum</codeph> types.</p>
       <p>Note that <i>anynonarray</i> and <i>anyenum</i> do not represent separate type variables;
         they are the same type as <i>anyelement</i>, just with an additional constraint. For
-        example, declaring a function as <codeph>myfunc(<i>anyelement</i>, <i>anyenum</i>)</codeph>
-        is equivalent to declaring it as <codeph>myfunc(<i>anyenum</i>, <i>anyenum</i>)</codeph>:
+        example, declaring a function as myfunc(<i>anyelement</i>, <i>anyenum</i>)
+        is equivalent to declaring it as myfunc(<i>anyenum</i>, <i>anyenum</i>):
         both actual arguments must be the same <codeph>enum</codeph> type.</p>
       <p>A variadic function (one taking a variable number of arguments) is polymorphic when its 
-        last parameter is declared as <codeph>VARIADIC <i>anyarray</i></codeph>. For purposes of
+        last parameter is declared as VARIADIC <i>anyarray</i>. For purposes of
         argument matching and determining the actual result type, such a function behaves the 
         same as if you had declared the appropriate number of <i>anynonarray</i> parameters.</p>
       <p>For more information about polymorphic types, see the Postgres documentation about <xref

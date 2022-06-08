@@ -887,7 +887,7 @@ SELECT foo();
             </row>
             <row>
               <entry colname="col1">
-                <codeph>first_value(<i>expr</i>)</codeph>
+                first_value(<i>expr</i>)
               </entry>
               <entry colname="col2">same as input <ph>expr</ph> type</entry>
               <entry colname="col3">
@@ -905,7 +905,7 @@ SELECT foo();
             </row>
             <row>
               <entry colname="col1">
-                <codeph>lag(<i>expr</i> [,<i>offset</i>] [,<i>default</i>])</codeph>
+                lag(<i>expr</i> [,<i>offset</i>] [,<i>default</i>])
               </entry>
               <entry colname="col2">same as input <i>expr</i> type</entry>
               <entry colname="col3">
@@ -930,24 +930,22 @@ SELECT foo();
             </row>
             <row>
               <entry colname="col1">
-                <codeph>last_value(<i>expr</i></codeph>) </entry>
+                last_value(<i>expr</i>) </entry>
               <entry colname="col2">same as input <i>expr</i> type</entry>
               <entry colname="col3">
-                <codeph>LAST_VALUE(<i>expr</i>) OVER ( [PARTITION BY <i>expr</i>] ORDER BY
-                    <i>expr</i> [ROWS|RANGE <i>frame_expr</i>] )</codeph>
+                LAST_VALUE(<i>expr</i>) OVER ( [PARTITION BY <i>expr</i>] ORDER BY
+                    <i>expr</i> [ROWS|RANGE <i>frame_expr</i>] )
               </entry>
               <entry colname="col4">Returns the last value in an ordered set of values.</entry>
             </row>
             <row>
               <entry colname="col1">
-                <codeph>
-                  <codeph>lead(<i>expr</i> [,<i>offset</i>] [,<i>default</i>])</codeph>
-                </codeph>
+                  lead(<i>expr</i> [,<i>offset</i>] [,<i>default</i>])
               </entry>
               <entry colname="col2">same as input <i>expr</i> type</entry>
               <entry colname="col3">
-                <codeph>LEAD(<i>expr </i>[,<i>offset</i>] [,<i>expr</i><i>default</i>]) OVER (
-                  [PARTITION BY <i>expr</i>] ORDER BY <i>expr</i> )</codeph>
+                LEAD(<i>expr </i>[,<i>offset</i>] [,<i>expr</i><i>default</i>]) OVER (
+                  [PARTITION BY <i>expr</i>] ORDER BY <i>expr</i> )
               </entry>
               <entry colname="col4">Provides access to more than one row of the same table without
                 doing a self join. Given a series of rows returned from a query and a position of
@@ -959,12 +957,12 @@ SELECT foo();
             </row>
             <row>
               <entry colname="col1">
-                <codeph>ntile(<i>expr</i>)</codeph>
+                ntile(<i>expr</i>)
               </entry>
               <entry colname="col2"><codeph>bigint</codeph></entry>
               <entry colname="col3">
-                <codeph>NTILE(<i>expr</i>) OVER ( [PARTITION BY <i>expr</i>] ORDER BY <i>expr</i>
-                  )</codeph>
+                NTILE(<i>expr</i>) OVER ( [PARTITION BY <i>expr</i>] ORDER BY <i>expr</i>
+                  )
               </entry>
               <entry colname="col4">Divides an ordered data set into a number of buckets (as defined
                 by <i>expr</i>) and assigns a bucket number to each row.</entry>
@@ -975,8 +973,8 @@ SELECT foo();
                 <codeph>double precision</codeph>
               </entry>
               <entry colname="col3">
-                <codeph>PERCENT_RANK () OVER ( [PARTITION BY <i>expr</i>] ORDER BY <i>expr
-                  </i>)</codeph>
+                PERCENT_RANK () OVER ( [PARTITION BY <i>expr</i>] ORDER BY <i>expr
+                  </i>)
               </entry>
               <entry colname="col4">Calculates the rank of a hypothetical row <codeph>R</codeph>
                 minus 1, divided by 1 less than the number of rows being evaluated (within a window
@@ -988,7 +986,7 @@ SELECT foo();
               </entry>
               <entry colname="col2"><codeph>bigint</codeph></entry>
               <entry colname="col3">
-                <codeph>RANK () OVER ( [PARTITION BY <i>expr</i>] ORDER BY <i>expr </i>)</codeph>
+                RANK () OVER ( [PARTITION BY <i>expr</i>] ORDER BY <i>expr </i>)
               </entry>
               <entry colname="col4">Calculates the rank of a row in an ordered group of values. Rows
                 with equal values for the ranking criteria receive the same rank. The number of tied
@@ -1001,8 +999,8 @@ SELECT foo();
                 <codeph>bigint</codeph>
               </entry>
               <entry colname="col3">
-                <codeph>ROW_NUMBER () OVER ( [PARTITION BY <i>expr</i>] ORDER BY <i>expr
-                  </i>)</codeph>
+                ROW_NUMBER () OVER ( [PARTITION BY <i>expr</i>] ORDER BY <i>expr
+                  </i>)
               </entry>
               <entry colname="col4">Assigns a unique number to each row to which it is applied
                 (either each row in a window partition or each row of the query).</entry>
@@ -1039,13 +1037,13 @@ SELECT foo();
           <tbody>
             <row>
               <entry colname="col1">
-                <codeph>MEDIAN (<i>expr</i>)</codeph>
+                MEDIAN (<i>expr</i>)
               </entry>
               <entry colname="col2">
                 <codeph>timestamp, timestamptz, interval, float</codeph>
               </entry>
               <entry colname="col3">
-                <codeph>MEDIAN (<i>expression</i>)</codeph>
+                MEDIAN (<i>expression</i>)
                 <p>
                   <i>Example:</i>
                 </p>
@@ -1058,15 +1056,15 @@ GROUP BY department_id; </codeblock>
             </row>
             <row>
               <entry colname="col1">
-                <codeph>PERCENTILE_CONT (<i>expr</i>) WITHIN GROUP (ORDER BY <i>expr</i>
-                  [DESC/ASC])</codeph>
+                PERCENTILE_CONT (<i>expr</i>) WITHIN GROUP (ORDER BY <i>expr</i>
+                  [DESC/ASC])
               </entry>
               <entry colname="col2">
                 <codeph>timestamp, timestamptz, interval, float</codeph>
               </entry>
               <entry colname="col3">
-                <codeph>PERCENTILE_CONT(<i>percentage</i>) WITHIN GROUP (ORDER BY
-                  <i>expression</i>)</codeph>
+                PERCENTILE_CONT(<i>percentage</i>) WITHIN GROUP (ORDER BY
+                  <i>expression</i>)
                 <p>
                   <i>Example:</i>
                 </p>
@@ -1082,14 +1080,14 @@ FROM employees GROUP BY department_id;</codeblock>
                 in this calculation.</entry>
             </row>
             <row>
-              <entry colname="col1"><codeph>PERCENTILE_DISC (<i>expr</i>) WITHIN GROUP (ORDER BY
-                    <i>expr</i> [DESC/ASC])</codeph></entry>
+              <entry colname="col1">PERCENTILE_DISC (<i>expr</i>) WITHIN GROUP (ORDER BY
+                    <i>expr</i> [DESC/ASC])</entry>
               <entry colname="col2">
                 <codeph>timestamp, timestamptz, interval, float</codeph>
               </entry>
               <entry colname="col3">
-                <codeph>PERCENTILE_DISC(<i>percentage</i>) WITHIN GROUP (ORDER BY
-                  <i>expression</i>)</codeph>
+                PERCENTILE_DISC(<i>percentage</i>) WITHIN GROUP (ORDER BY
+                  <i>expression</i>)
                 <p>
                   <i>Example:</i>
                 </p>

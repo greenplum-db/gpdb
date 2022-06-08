@@ -543,10 +543,10 @@ NEXT 10 ROWS ONLY; </codeblock><p>Greenplum
                   tables (<codeph>DISTRIBUTED BY</codeph>), and the constraint columns must be the
                   same as or a superset of the distribution key columns of the table and must
                   include all the distribution key columns of the partitioning
-                    key.</p><p><b>Greenplum Database Clauses:</b></p><p><codeph>DISTRIBUTED BY
-                      (<i>column</i>, [ ... ] ) |</codeph></p><p><codeph>DISTRIBUTED
-                    RANDOMLY</codeph></p><p><codeph>PARTITION BY <i>type</i> (<i>column</i> [, ...])
-                       ( <i>partition_specification</i>, [...] )</codeph></p><p><codeph>WITH
+                    key.</p><p><b>Greenplum Database Clauses:</b></p><p>DISTRIBUTED BY
+                      (<i>column</i>, [ ... ] ) |</p><p>DISTRIBUTED
+                    RANDOMLY</p><p>PARTITION BY <i>type</i> (<i>column</i> [, ...])
+                       ( <i>partition_specification</i>, [...] )</p><p><codeph>WITH
                     (appendonly=true      [,compresslevel=value,blocksize=value]
                 )</codeph></p></entry>
             </row>
