@@ -1302,6 +1302,10 @@ Identifies the maximum percentage of system CPU resources to allocate to resourc
 
 Specifies whether or not Greenplum Database recalculates the maximum amount of memory to allocate per query running in a resource group. The default value is `false`, Greenplum database calculates the maximum per-query memory based on the memory configuration and the number of primary segments on the master host. When set to `true`, Greenplum Database recalculates the maximum per-query memory based on the memory configuration and the number of primary segments on the segment host.
 
+|Value Range|Default|Set Classifications|
+|-----------|-------|-------------------|
+|Boolean|false|master, session, reload|
+
 ## <a id="gp_resource_group_memory_limit"></a>gp\_resource\_group\_memory\_limit 
 
 **Note:** The `gp_resource_group_memory_limit` server configuration parameter is enforced only when resource group-based resource management is active.
