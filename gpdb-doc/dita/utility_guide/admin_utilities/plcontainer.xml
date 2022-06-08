@@ -122,8 +122,8 @@
                   <pd>Optional. Specify a setting to add to the runtime configuration information.
                     You can specify this option multiple times. The setting applies to the runtime
                     configuration specified by the <varname>runtime_id</varname>. The parameter is
-                    the XML attribute of the <codeph><xref href="#topic_ojn_r2s_dw/plc_settings"
-                        format="dita">settings</xref></codeph> element in the PL/Container
+                    the XML attribute of the <xref href="#topic_ojn_r2s_dw/plc_settings"
+                        format="dita">settings</xref> element in the PL/Container
                     configuration file. These are valid parameters.<ul id="ul_dsz_j4w_gcb">
                       <li><codeph>cpu_share</codeph> - Set the CPU limit for each container in the
                         runtime configuration. The default value is 1024. The value is a relative
