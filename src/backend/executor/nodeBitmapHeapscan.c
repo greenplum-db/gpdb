@@ -169,10 +169,9 @@ BitmapHeapNext(BitmapHeapScanState *node)
 		else
 		{
 			/*
-			 * GPDB_12_MERGE_FIXME the parallel StreamBitmap scan is not
-			 * implemented, it must be a TIDBitmap here
-			 */
-			/*
+			 * The parallel StreamBitmap scan is not implemented, it must be a
+			 * TIDBitmap here.
+			 *
 			 * The leader will immediately come out of the function, but
 			 * others will be blocked until leader populates the TBM and wakes
 			 * them up.

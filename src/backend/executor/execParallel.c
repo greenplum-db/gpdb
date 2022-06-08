@@ -476,12 +476,7 @@ ExecParallelInitializeDSM(PlanState *planstate,
 											d->pcxt);
 			break;
 		case T_BitmapHeapScanState:
-			/* GPDB_12_MERGE_FIXME the parallel StreamBitmap scan is not implemented */
-			/*
-			 * if (planstate->plan->parallel_aware)
-			 *     ExecBitmapHeapInitializeDSM((BitmapHeapScanState *) planstate,
-			 *                                 d->pcxt);
-			 */
+			/* The parallel StreamBitmap scan is not implemented */
 			break;
 		case T_HashJoinState:
 			if (planstate->plan->parallel_aware)
