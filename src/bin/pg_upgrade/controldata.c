@@ -198,23 +198,10 @@ get_control_data(ClusterInfo *cluster, bool live_check)
 		pg_fatal("could not get control data using %s: %s\n",
 				 cmd, strerror(errno));
 
-	/* Only in <= 8.3 */
-	if (GET_MAJOR_VERSION(cluster->major_version) <= 803)
+	if (GET_MAJOR_VERSION(cluster->major_version) == 803)
 	{
 		cluster->controldata.float8_pass_by_value = false;
 		got_float8_pass_by_value = true;
-	}
-
-	/*
-	 * In PostgreSQL, checksums were introduced in 9.3 so the test for checksum
-	 * version in upstream applies to <= 9.2. Greenplum backported checksums
-	 * into 5.x which is based on PostgreSQL 8.3 so this test need to go
-	 * against 8.2 instead.
-	 */
-	if (GET_MAJOR_VERSION(cluster->major_version) == 802)
-	{
-		cluster->controldata.data_checksum_version = 0;
-		got_data_checksum_version = true;
 	}
 
 	/* we have the result of cmd in "output". so parse it line by line now */
@@ -229,7 +216,7 @@ get_control_data(ClusterInfo *cluster, bool live_check)
 		 * work 8.2.6 and 8.3.7, so check for non-ASCII output and suggest a
 		 * minor upgrade.
 		 */
-		if (GET_MAJOR_VERSION(cluster->major_version) <= 803)
+		if (GET_MAJOR_VERSION(cluster->major_version) == 803)
 		{
 			for (p = bufin; *p; p++)
 				if (!isascii((unsigned char) *p))
@@ -291,18 +278,6 @@ get_control_data(ClusterInfo *cluster, bool live_check)
 			p++;				/* remove ':' char */
 			segno = str2uint(p);
 			got_log_seg = true;
-		}
-		/* GPDB 4.3 (and PostgreSQL 8.2) wording of the above two. */
-		else if ((p = strstr(bufin, "Current log file ID:")) != NULL)
-		{
-			p = strchr(p, ':');
-
-			if (p == NULL || strlen(p) <= 1)
-				pg_log(PG_FATAL, "%d: controldata retrieval problem\n", __LINE__);
-
-			p++;				/* removing ':' char */
-			logid = str2uint(p);
-			got_log_id = true;
 		}
 		else if ((p = strstr(bufin, "Next log file segment:")) != NULL)
 		{
@@ -751,19 +726,6 @@ check_control_data(ControlData *oldctrl,
 
 	if (oldctrl->index == 0 || oldctrl->index != newctrl->index)
 		pg_fatal("old and new pg_controldata maximum indexed columns are invalid or do not match\n");
-
-	/*
-	 * PostgreSQL's pg_upgrade checks for the maximum TOAST chunk size, because
-	 * the tuptoaster code assumes all chunks to have the same size. GPDB's
-	 * tuptoaster code has been modified to work with any chunk size, to
-	 * support upgrading from GPDB 4.3 to 5.0, because the chunk size was
-	 * changed between those releases (that is, between PostgreSQL 8.2 and
-	 * 8.3). Hence, 'got_toast' is not mandatory in GPDB.
-	 * TODO: Should we only consider got_toast not mandatory for upgrades to
-	 * 5.x?
-	 */
-	if (oldctrl->toast == 0 || oldctrl->toast != newctrl->toast)
-		pg_fatal("old and new pg_controldata maximum TOAST chunk sizes are invalid or do not match\n");
 
 	/* large_object added in 9.5, so it might not exist in the old cluster */
 	if (oldctrl->large_object != 0 &&

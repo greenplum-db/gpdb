@@ -59,7 +59,7 @@ get_tablespace_paths(void)
 	 * 9.2 removed the spclocation column in upstream postgres, in GPDB it was
 	 * removed in 6.0.0 during the 8.4 merge
 	 */
-			 (GET_MAJOR_VERSION(old_cluster.major_version) <= 803) ?
+			 (GET_MAJOR_VERSION(old_cluster.major_version) == 803) ?
 			 "spclocation" : "pg_catalog.pg_tablespace_location(oid) AS spclocation");
 
 	res = executeQueryOrDie(conn, "%s", query);

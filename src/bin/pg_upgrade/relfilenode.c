@@ -237,7 +237,6 @@ static bool
 transfer_relfile_segment(int segno, FileNameMap *map,
 						 const char *type_suffix, bool vm_must_add_frozenbit)
 {
-	const char *msg;
 	char		old_file[MAXPGPATH * 3];
 	char		new_file[MAXPGPATH * 3];
 	char		extent_suffix[65];
@@ -291,28 +290,6 @@ transfer_relfile_segment(int segno, FileNameMap *map,
 
 	/* Copying files might take some time, so give feedback. */
 	pg_log(PG_STATUS, "%s", old_file);
-
-	/*
-	 * If the user requested to add checksums, it is taken care of during
-	 * the heap conversion. Thus, we don't need to explicitly test for that
-	 * here as we do for plain copy.
-	 */
-	if (map->gpdb4_heap_conversion_needed)
-	{
-		pg_log(PG_VERBOSE, "copying and converting \"%s\" to \"%s\"\n",
-				old_file, new_file);
-
-		if ((msg = convert_gpdb4_heap_file(old_file, new_file,
-						map->has_numerics, map->atts, map->natts)) != NULL)
-			pg_log(PG_FATAL, "error while copying and converting relation \"%s.%s\" (\"%s\" to \"%s\"): %s\n",
-					map->nspname, map->relname, old_file, new_file, msg);
-
-		/*
-		 * XXX before the split into transfer_relfile_segment(), this simply
-		 * returned from transfer_relfile() directly. Was that correct?
-		 */
-		return true;
-	}
 
 	/* Rewrite visibility map if needed */
 	if (vm_must_add_frozenbit && (strcmp(type_suffix, "_vm") == 0))
