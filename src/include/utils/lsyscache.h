@@ -218,7 +218,7 @@ extern bool type_exists(Oid oid);
 extern bool function_exists(Oid oid);
 extern bool operator_exists(Oid oid);
 extern bool aggregate_exists(Oid oid);
-extern Oid get_aggregate(const char *aggname, Oid oidType);
+extern Oid get_aggregate(const char *aggname, Oid oidType, int nargs);
 extern List *get_relation_keys(Oid relid);
 extern bool attname_exists(Oid relid, const char *attname);
 extern bool trigger_exists(Oid oid);

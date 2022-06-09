@@ -33,7 +33,7 @@
 #include "cdb/memquota.h"
 #include "commands/vacuum.h"
 #include "miscadmin.h"
-#include "libpq/password_hash.h"
+#include "libpq/crypt.h"
 #include "optimizer/cost.h"
 #include "optimizer/planmain.h"
 #include "pgstat.h"
@@ -256,7 +256,7 @@ bool		gp_ignore_window_exclude = false;
 char	   *gp_auth_time_override_str = NULL;
 
 /* Password hashing */
-int			password_hash_algorithm = PASSWORD_HASH_MD5;
+int			password_hash_algorithm = PASSWORD_TYPE_MD5;
 
 /* include file/line information to stack traces */
 bool		gp_log_stack_trace_lines;
@@ -555,6 +555,12 @@ static const struct config_enum_entry gp_interconnect_types[] = {
 	{NULL, 0}
 };
 
+static const struct config_enum_entry gp_interconnect_address_types[] = {
+	{"wildcard", INTERCONNECT_ADDRESS_TYPE_WILDCARD},
+	{"unicast", INTERCONNECT_ADDRESS_TYPE_UNICAST},
+	{NULL, 0}
+};
+
 static const struct config_enum_entry gp_log_verbosity[] = {
 	{"terse", GPVARS_VERBOSITY_TERSE},
 	{"off", GPVARS_VERBOSITY_OFF},
@@ -581,8 +587,9 @@ static const struct config_enum_entry gp_gpperfmon_log_alert_level[] = {
 
 static const struct config_enum_entry password_hash_algorithm_options[] = {
 	/* {"none", PASSWORD_HASH_NONE}, * this option is not exposed */
-	{"MD5", PASSWORD_HASH_MD5},
-	{"SHA-256", PASSWORD_HASH_SHA_256},
+	{"MD5", PASSWORD_TYPE_MD5},
+	{"SHA-256", PASSWORD_TYPE_SHA256},
+	{"SCRAM-SHA-256", PASSWORD_TYPE_SCRAM_SHA_256},
 	{NULL, 0}
 };
 
@@ -4926,7 +4933,7 @@ struct config_enum ConfigureNamesEnum_gp[] =
 			GUC_SUPERUSER_ONLY
 		},
 		&password_hash_algorithm,
-		PASSWORD_HASH_MD5, password_hash_algorithm_options,
+		PASSWORD_TYPE_MD5, password_hash_algorithm_options,
 		NULL, NULL, NULL
 	},
 
@@ -5014,6 +5021,16 @@ struct config_enum ConfigureNamesEnum_gp[] =
 		},
 		&Gp_interconnect_type,
 		INTERCONNECT_TYPE_UDPIFC, gp_interconnect_types,
+		NULL, NULL, NULL
+	},
+
+	{
+		{"gp_interconnect_address_type", PGC_BACKEND, GP_ARRAY_TUNING,
+		 gettext_noop("Sets the interconnect address type used for inter-node communication."),
+		 gettext_noop("Valid values are \"unicast\" and \"wildcard\"")
+		},
+		&Gp_interconnect_address_type,
+		INTERCONNECT_ADDRESS_TYPE_WILDCARD, gp_interconnect_address_types,
 		NULL, NULL, NULL
 	},
 

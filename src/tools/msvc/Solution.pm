@@ -270,7 +270,7 @@ s{PG_VERSION_STR "[^"]+"}{__STRINGIFY(x) #x\n#define __STRINGIFY2(z) __STRINGIFY
 		}
 		if ($self->{options}->{openssl})
 		{
-			print O "#define USE_SSL 1\n";
+			print O "#define USE_OPENSSL 1\n";
 
 			my ($digit1, $digit2, $digit3) = $self->GetOpenSSLVersion();
 

@@ -1617,4 +1617,18 @@ CExpression::DeriveHasScalarArrayCmp()
 	exprhdl.Attach(this);
 	return m_pdpscalar->DeriveHasScalarArrayCmp(exprhdl);
 }
+BOOL
+CExpression::DeriveHasScalarFuncProject()
+{
+	CExpressionHandle exprhdl(m_mp);
+	exprhdl.Attach(this);
+	return m_pdpscalar->DeriveHasScalarFuncProject(exprhdl);
+}
+ULONG
+CExpression::DeriveTotalOrderedAggs()
+{
+	CExpressionHandle exprhdl(m_mp);
+	exprhdl.Attach(this);
+	return m_pdpscalar->DeriveTotalOrderedAggs(exprhdl);
+}
 // EOF

@@ -566,6 +566,16 @@ CUtils::FScalarConstArray(CExpression *pexprArray)
 	return fAllConsts;
 }
 
+// returns if the scalar const is an array
+BOOL
+CUtils::FIsConstArray(CExpression *pexpr)
+{
+	CScalarConst *popScalarConst = CScalarConst::PopConvert(pexpr->Pop());
+	CMDAccessor *mda = COptCtxt::PoctxtFromTLS()->Pmda();
+	const IMDType *expr_type = mda->RetrieveType(popScalarConst->MdidType());
+	return !IMDId::IsValid(expr_type->GetArrayTypeMdid());
+}
+
 // returns if the scalar constant array has already been collapased
 BOOL
 CUtils::FScalarArrayCollapsed(CExpression *pexprArray)
@@ -4576,6 +4586,43 @@ CUtils::FHasAggWindowFunc(CExpression *pexpr)
 	}
 
 	return fHasAggWindowFunc;
+}
+
+
+// returns true if mdid is a supported ordered agg.
+// Currently we only support inbuilt ordered aggs
+// percentile_disc and percentile_cont for splitting
+BOOL
+CUtils::FIsInbuiltOrderedAgg(IMDId *mdid)
+{
+	GPOS_ASSERT(mdid->IsValid());
+
+	OID agg_oid = CMDIdGPDB::CastMdid(mdid)->Oid();
+	return (agg_oid == GPDB_PERCENTILE_DISC || agg_oid == GPDB_MEDIAN_FLOAT8 ||
+			agg_oid == GPDB_MEDIAN_INTERVAL ||
+			agg_oid == GPDB_MEDIAN_TIMESTAMP ||
+			agg_oid == GPDB_MEDIAN_TIMESTAMPTZ ||
+			agg_oid == GPDB_PERCENTILE_CONT_FLOAT8 ||
+			agg_oid == GPDB_PERCENTILE_CONT_INTERVAL ||
+			agg_oid == GPDB_PERCENTILE_CONT_TIMESTAMP ||
+			agg_oid == GPDB_PERCENTILE_CONT_TIMESTAMPTZ);
+}
+
+
+// returns true if expression contains ordered aggregate function
+BOOL
+CUtils::FHasOrderedAggToSplit(CExpression *pexpr)
+{
+	GPOS_ASSERT(NULL != pexpr);
+
+	CScalarAggFunc *popScAggFunc = CScalarAggFunc::PopConvert(pexpr->Pop());
+	return popScAggFunc->AggKind() == EaggfunckindOrderedSet &&
+		   FIsInbuiltOrderedAgg(popScAggFunc->MDId()) &&
+		   (NULL != popScAggFunc->GetGpAggMDId()) &&
+		   (!FScalarConst((*(*pexpr)[1])[0]) ||
+			!FIsConstArray((*(*pexpr)[1])[0])) &&
+		   (FScalarIdent((*(*pexpr)[0])[0]) ||
+			CScalarIdent::FCastedScId((*(*pexpr)[0])[0]));
 }
 
 BOOL

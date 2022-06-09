@@ -188,7 +188,7 @@ volatile bool *pm_launch_walreceiver = NULL;
 typedef struct bkend
 {
 	pid_t		pid;			/* process id of backend */
-	long		cancel_key;		/* cancel key for cancels for this backend */
+	int32		cancel_key;		/* cancel key for cancels for this backend */
 	int			child_slot;		/* PMChildSlot for this backend, if any */
 
 	/*
@@ -450,14 +450,6 @@ static volatile sig_atomic_t WalReceiverRequested = false;
 static volatile bool StartWorkerNeeded = true;
 static volatile bool HaveCrashedWorker = false;
 
-/*
- * State for assigning random salts and cancel keys.
- * Also, the global MyCancelKey passes the cancel key assigned to a given
- * backend from the postmaster to that backend (via fork).
- */
-static unsigned int random_seed = 0;
-static struct timeval random_start_time;
-
 /* some GUC values used in fetching status from status transition */
 extern char	   *locale_monetary;
 extern char	   *locale_numeric;
@@ -506,8 +498,7 @@ static void processCancelRequest(Port *port, void *pkt, MsgType code);
 static int	initMasks(fd_set *rmask);
 static void report_fork_failure_to_client(Port *port, int errnum);
 static CAC_state canAcceptConnections(void);
-static long PostmasterRandom(void);
-static void RandomSalt(char *md5Salt);
+static bool RandomCancelKey(int32 *cancel_key);
 static void signal_child(pid_t pid, int signal);
 static bool SignalSomeChildren(int signal, int targets);
 static bool SignalUnconnectedWorkers(int signal);
@@ -571,7 +562,7 @@ typedef struct
 	InheritableSocket portsocket;
 	char		DataDir[MAXPGPATH];
 	pgsocket	ListenSocket[MAXLISTEN];
-	long		MyCancelKey;
+	int32		MyCancelKey;
 	int			MyPMChildSlot;
 #ifndef WIN32
 	unsigned long UsedShmemSegID;
@@ -1508,8 +1499,6 @@ PostmasterMain(int argc, char *argv[])
 	 * Remember postmaster startup time
 	 */
 	PgStartTime = GetCurrentTimestamp();
-	/* PostmasterRandom wants its own copy */
-	gettimeofday(&random_start_time, NULL);
 
 	/*
 	 * We're ready to rock and roll...
@@ -2701,7 +2690,7 @@ processCancelRequest(Port *port, void *pkt, MsgType code)
 {
 	CancelRequestPacket *canc = (CancelRequestPacket *) pkt;
 	int			backendPID;
-	long		cancelAuthCode;
+	int32		cancelAuthCode;
 	Backend    *bp;
 
 #ifndef EXEC_BACKEND
@@ -2711,7 +2700,7 @@ processCancelRequest(Port *port, void *pkt, MsgType code)
 #endif
 
 	backendPID = (int) ntohl(canc->backendPID);
-	cancelAuthCode = (long) ntohl(canc->cancelAuthCode);
+	cancelAuthCode = (int32) ntohl(canc->cancelAuthCode);
 
 	/*
 	 * See if we have a matching backend.  In the EXEC_BACKEND case, we can no
@@ -2854,15 +2843,6 @@ ConnCreate(int serverFd)
 		ConnFree(port);
 		return NULL;
 	}
-
-	/*
-	 * Precompute password salt values to use for this connection. It's
-	 * slightly annoying to do this long in advance of knowing whether we'll
-	 * need 'em or not, but we must do the random() calls before we fork, not
-	 * after.  Else the postmaster's random sequence won't get advanced, and
-	 * all backends would end up using the same salt...
-	 */
-	RandomSalt(port->md5Salt);
 
 	/*
 	 * Allocate GSSAPI specific state struct
@@ -4479,7 +4459,14 @@ BackendStartup(Port *port)
 	 * backend will have its own copy in the forked-off process' value of
 	 * MyCancelKey, so that it can transmit the key to the frontend.
 	 */
-	MyCancelKey = PostmasterRandom();
+	if (!RandomCancelKey(&MyCancelKey))
+	{
+		ereport(LOG,
+				(errcode(ERRCODE_OUT_OF_MEMORY),
+				 errmsg("could not acquire random number")));
+		return STATUS_ERROR;
+	}
+
 	bn->cancel_key = MyCancelKey;
 
 	/* Pass down canAcceptConnections state */
@@ -4815,13 +4802,6 @@ BackendRun(Port *port)
 	int			usecs;
 	int			i;
 
-	/*
-	 * Don't want backend to be able to see the postmaster random number
-	 * generator state.  We have to clobber the static random_seed *and* start
-	 * a new random sequence in the random() library function.
-	 */
-	random_seed = 0;
-	random_start_time.tv_usec = 0;
 	/* slightly hacky way to convert timestamptz into integers */
 	TimestampDifference(0, port->SessionStartTime, &secs, &usecs);
 	srandom((unsigned int) (MyProcPid ^ (usecs << 12) ^ secs));
@@ -5715,65 +5695,12 @@ StartupPacketTimeoutHandler(void)
 
 
 /*
- * RandomSalt
+ * Generate a random cancel key.
  */
-static void
-RandomSalt(char *md5Salt)
+static bool
+RandomCancelKey(int32 *cancel_key)
 {
-	long		rand;
-
-	/*
-	 * We use % 255, sacrificing one possible byte value, so as to ensure that
-	 * all bits of the random() value participate in the result. While at it,
-	 * add one to avoid generating any null bytes.
-	 */
-	rand = PostmasterRandom();
-	md5Salt[0] = (rand % 255) + 1;
-	rand = PostmasterRandom();
-	md5Salt[1] = (rand % 255) + 1;
-	rand = PostmasterRandom();
-	md5Salt[2] = (rand % 255) + 1;
-	rand = PostmasterRandom();
-	md5Salt[3] = (rand % 255) + 1;
-}
-
-/*
- * PostmasterRandom
- *
- * Caution: use this only for values needed during connection-request
- * processing.  Otherwise, the intended property of having an unpredictable
- * delay between random_start_time and random_stop_time will be broken.
- */
-static long
-PostmasterRandom(void)
-{
-	/*
-	 * Select a random seed at the time of first receiving a request.
-	 */
-	if (random_seed == 0)
-	{
-		do
-		{
-			struct timeval random_stop_time;
-
-			gettimeofday(&random_stop_time, NULL);
-
-			/*
-			 * We are not sure how much precision is in tv_usec, so we swap
-			 * the high and low 16 bits of 'random_stop_time' and XOR them
-			 * with 'random_start_time'. On the off chance that the result is
-			 * 0, we loop until it isn't.
-			 */
-			random_seed = random_start_time.tv_usec ^
-				((random_stop_time.tv_usec << 16) |
-				 ((random_stop_time.tv_usec >> 16) & 0xffff));
-		}
-		while (random_seed == 0);
-
-		srandom(random_seed);
-	}
-
-	return random();
+	return pg_strong_random(cancel_key, sizeof(int32));
 }
 
 /*
@@ -5974,16 +5901,23 @@ StartAutovacuumWorker(void)
 	 */
 	if (canAcceptConnections() == CAC_OK)
 	{
+		/*
+		 * Compute the cancel key that will be assigned to this session.
+		 * We probably don't need cancel keys for autovac workers, but
+		 * we'd better have something random in the field to prevent
+		 * unfriendly people from sending cancels to them.
+		 */
+		if (!RandomCancelKey(&MyCancelKey))
+		{
+			ereport(LOG,
+					(errcode(ERRCODE_INTERNAL_ERROR),
+					 errmsg("could not acquire random number")));
+			return;
+		}
+
 		bn = (Backend *) malloc(sizeof(Backend));
 		if (bn)
 		{
-			/*
-			 * Compute the cancel key that will be assigned to this session.
-			 * We probably don't need cancel keys for autovac workers, but
-			 * we'd better have something random in the field to prevent
-			 * unfriendly people from sending cancels to them.
-			 */
-			MyCancelKey = PostmasterRandom();
 			bn->cancel_key = MyCancelKey;
 
 			/* Autovac workers are not dead_end and need a child slot */
@@ -6349,8 +6283,25 @@ bgworker_should_start_mpp(BackgroundWorker *worker)
 static bool
 assign_backendlist_entry(RegisteredBgWorker *rw)
 {
-	Backend    *bn = malloc(sizeof(Backend));
+	Backend    *bn;
 
+	/*
+	 * Compute the cancel key that will be assigned to this session. We
+	 * probably don't need cancel keys for background workers, but we'd better
+	 * have something random in the field to prevent unfriendly people from
+	 * sending cancels to them.
+	 */
+	if (!RandomCancelKey(&MyCancelKey))
+	{
+		ereport(LOG,
+				(errcode(ERRCODE_INTERNAL_ERROR),
+				 errmsg("could not acquire random number")));
+
+		rw->rw_crashed_at = GetCurrentTimestamp();
+		return false;
+	}
+
+	bn = malloc(sizeof(Backend));
 	if (bn == NULL)
 	{
 		ereport(LOG,
@@ -6359,15 +6310,7 @@ assign_backendlist_entry(RegisteredBgWorker *rw)
 		return false;
 	}
 
-	/*
-	 * Compute the cancel key that will be assigned to this session. We
-	 * probably don't need cancel keys for background workers, but we'd better
-	 * have something random in the field to prevent unfriendly people from
-	 * sending cancels to them.
-	 */
-	MyCancelKey = PostmasterRandom();
 	bn->cancel_key = MyCancelKey;
-
 	bn->child_slot = MyPMChildSlot = AssignPostmasterChildSlot();
 	bn->bkend_type = BACKEND_TYPE_BGWORKER;
 	bn->dead_end = false;

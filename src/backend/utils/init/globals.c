@@ -47,7 +47,7 @@ volatile bool TermSignalReceived = false;
 int			MyProcPid;
 pg_time_t	MyStartTime;
 struct Port *MyProcPort;
-long		MyCancelKey;
+int32		MyCancelKey;
 int			MyPMChildSlot;
 
 /*

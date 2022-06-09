@@ -777,6 +777,15 @@
 /* Define to 1 if you have the <winsock2.h> header file. */
 #undef HAVE_WINSOCK2_H
 
+/* Define to 1 if you have the `X509_get_signature_nid' function. */
+#undef HAVE_X509_GET_SIGNATURE_NID
+
+/* Define to 1 if your compiler understands __builtin_bswap16. */
+#undef HAVE__BUILTIN_BSWAP16
+
+/* Define to 1 if your compiler understands __builtin_bswap32. */
+#undef HAVE__BUILTIN_BSWAP32
+
 /* Define to 1 if you have the <yaml.h> header file. */
 #undef HAVE_YAML_H
 
@@ -932,6 +941,9 @@
 /* Define to 1 if you want float4 values to be passed by value. (Always
    defined in GPDB) */
 #undef USE_FLOAT4_BYVAL
+
+/* Define to use /dev/urandom for random number generation */
+#undef USE_DEV_URANDOM
 
 /* Define to 1 if you want float8, int8, etc values to be passed by value.
    (Always defined in GPDB) */

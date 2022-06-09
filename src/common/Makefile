@@ -23,7 +23,15 @@ include $(top_builddir)/src/Makefile.global
 override CPPFLAGS := -DFRONTEND $(CPPFLAGS)
 LIBS += $(PTHREAD_LIBS)
 
-OBJS_COMMON = exec.o pgfnames.o psprintf.o relpath.o rmtree.o string.o username.o wait_error.o
+OBJS_COMMON = base64.o scram-common.o exec.o pgfnames.o psprintf.o \
+	relpath.o rmtree.o saslprep.o string.o unicode_norm.o username.o \
+	wait_error.o
+
+ifeq ($(with_openssl),yes)
+OBJS_COMMON += sha2_openssl.o
+else
+OBJS_COMMON += sha2.o
+endif
 
 OBJS_FRONTEND = $(OBJS_COMMON) fe_memutils.o
 

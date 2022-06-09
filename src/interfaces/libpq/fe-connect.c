@@ -85,6 +85,7 @@ static int ldapServiceLookup(const char *purl, PQconninfoOption *options,
 #endif
 
 #include "libpq/ip.h"
+#include "common/scram-common.h"
 #include "mb/pg_wchar.h"
 
 #if defined(_AIX)
@@ -284,7 +285,6 @@ static const internalPQconninfoOption PQconninfoOptions[] = {
 	{"keepalives_count", NULL, NULL, NULL,
 		"TCP-Keepalives-Count", "", 10, /* strlen(INT32_MAX) == 10 */
 	offsetof(struct pg_conn, keepalives_count)},
-
 	/*
 	 * ssl options are allowed even without client SSL support because the
 	 * client can still handle SSL modes "disable" and "allow". Other
@@ -400,6 +400,7 @@ static PGconn *makeEmptyPGconn(void);
 static bool fillPGconn(PGconn *conn, PQconninfoOption *connOptions);
 static void freePGconn(PGconn *conn);
 static void closePGconn(PGconn *conn);
+static void sendTerminateConn(PGconn *conn);
 static PQconninfoOption *conninfo_init(PQExpBuffer errorMessage);
 static PQconninfoOption *parse_connection_string(const char *conninfo,
 						PQExpBuffer errorMessage, bool use_defaults);
@@ -500,8 +501,10 @@ pqDropConnection(PGconn *conn, bool flushInput)
 	conn->ginbuf.length = 0;
 	conn->ginbuf.value = NULL;
 	if (conn->sspitarget)
+	{
 		free(conn->sspitarget);
-	conn->sspitarget = NULL;
+		conn->sspitarget = NULL;
+	}
 	if (conn->sspicred)
 	{
 		FreeCredentialsHandle(conn->sspicred);
@@ -516,6 +519,15 @@ pqDropConnection(PGconn *conn, bool flushInput)
 	}
 	conn->usesspi = 0;
 #endif
+	if (conn->sasl_state)
+	{
+		/*
+		 * XXX: if support for more authentication mechanisms is added, this
+		 * needs to call the right 'free' function.
+		 */
+		pg_fe_scram_free(conn->sasl_state);
+		conn->sasl_state = NULL;
+	}
 }
 
 
@@ -2485,6 +2497,7 @@ keep_going:						/* We will come back to here until there is
 				int			msgLength;
 				int			avail;
 				AuthRequest areq;
+				int			res;
 
 				/*
 				 * Scan the message from current point (note that if we find
@@ -2673,30 +2686,18 @@ keep_going:						/* We will come back to here until there is
 					return PGRES_POLLING_READING;
 				}
 
-				/* Get the password salt if there is one. */
-				if (areq == AUTH_REQ_MD5)
-				{
-					if (pqGetnchar(conn->md5Salt,
-								   sizeof(conn->md5Salt), conn))
-					{
-						/* We'll come back when there are more data */
-						return PGRES_POLLING_READING;
-					}
-				}
 #if defined(ENABLE_GSS) || defined(ENABLE_SSPI)
-
 				/*
-				 * Continue GSSAPI/SSPI authentication
-				 */
+			 	 * Continue GSSAPI/SSPI authentication
+			 	 */
 				if (areq == AUTH_REQ_GSS_CONT)
 				{
 					int			llen = msgLength - 4;
-
 					/*
-					 * We can be called repeatedly for the same buffer. Avoid
-					 * re-allocating the buffer in this case - just re-use the
-					 * old buffer.
-					 */
+ 				 	 * We can be called repeatedly for the same buffer. Avoid
+ 				 	 * re-allocating the buffer in this case - just re-use the
+				 	 * old buffer.
+ 				 	 */
 					if (llen != conn->ginbuf.length)
 					{
 						if (conn->ginbuf.value)
@@ -2707,12 +2708,11 @@ keep_going:						/* We will come back to here until there is
 						if (!conn->ginbuf.value)
 						{
 							printfPQExpBuffer(&conn->errorMessage,
-											  libpq_gettext("out of memory allocating GSSAPI buffer (%d)"),
-											  llen);
+										  libpq_gettext("out of memory allocating GSSAPI buffer (%d)"),
+										  llen);
 							goto error_return;
 						}
 					}
-
 					if (pqGetnchar(conn->ginbuf.value, llen, conn))
 					{
 						/* We'll come back when there is more data. */
@@ -2721,24 +2721,49 @@ keep_going:						/* We will come back to here until there is
 				}
 #endif
 
+				msgLength -= 4;
 				/*
-				 * OK, we successfully read the message; mark data consumed
-				 */
-				conn->inStart = conn->inCursor;
+			 	 * Ensure the password salt is in the input buffer, if it's an
+			 	 * MD5 request.  All the other authentication methods that
+			 	 * contain extra data in the authentication request are only
+			 	 * supported in protocol version 3, in which case we already
+			 	 * read the whole message above.
+			 	 */
+				if (areq == AUTH_REQ_MD5 && PG_PROTOCOL_MAJOR(conn->pversion) < 3)
+				{
+					msgLength += 4;
 
-				/* Respond to the request if necessary. */
+					avail = conn->inEnd - conn->inCursor;
+					if (avail < 4)
+					{
+						/*
+						 * Before returning, try to enlarge the input buffer
+						 * if needed to hold the whole message; see notes in
+						 * pqParseInput3.
+						 */
+						if (pqCheckInBufferSpace(conn->inCursor + (size_t) 4,
+												 conn))
+							goto error_return;
+						/* We'll come back when there is more data */
+						return PGRES_POLLING_READING;
+					}
+				}
 
 				/*
+				 * Process the rest of the authentication request message, and
+				 * respond to it if necessary.
+				 *
 				 * Note that conn->pghost must be non-NULL if we are going to
 				 * avoid the Kerberos code doing a hostname look-up.
 				 */
-
-				if (pg_fe_sendauth(areq, conn) != STATUS_OK)
-				{
-					conn->errorMessage.len = strlen(conn->errorMessage.data);
-					goto error_return;
-				}
+				res = pg_fe_sendauth(areq, msgLength, conn);
 				conn->errorMessage.len = strlen(conn->errorMessage.data);
+
+				/* OK, we have processed the message; mark data consumed */
+				conn->inStart = conn->inCursor;
+
+				if (res != STATUS_OK)
+					goto error_return;
 
 				/*
 				 * Just make sure that any data sent by pg_fe_sendauth is
@@ -3186,19 +3211,13 @@ freePGconn(PGconn *conn)
 }
 
 /*
- * closePGconn
- *	 - properly close a connection to the backend
- *
- * This should reset or release all transient state, but NOT the connection
- * parameters.  On exit, the PGconn should be in condition to start a fresh
- * connection with the same parameters (see PQreset()).
+ * sendTerminateConn
+ *	 - Send a terminate message to backend.
  */
 static void
-closePGconn(PGconn *conn)
+sendTerminateConn(PGconn *conn)
 {
 	/*
-	 * If possible, send Terminate message to close the connection politely.
-	 *
 	 * Note that the protocol doesn't allow us to send Terminate messages
 	 * during the startup phase.
 	 */
@@ -3212,7 +3231,19 @@ closePGconn(PGconn *conn)
 		pqPutMsgEnd(conn);
 		(void) pqFlush(conn);
 	}
-
+}
+/*
+ * closePGconn
+ *	 - properly close a connection to the backend
+ *
+ * This should reset or release all transient state, but NOT the connection
+ * parameters.  On exit, the PGconn should be in condition to start a fresh
+ * connection with the same parameters (see PQreset()).
+ */
+static void
+closePGconn(PGconn *conn)
+{
+	sendTerminateConn(conn);
 	/*
 	 * Must reset the blocking status so a possible reconnect will work.
 	 *

@@ -422,7 +422,6 @@ PG_FUNCTION_INFO_V1(pg_random_bytes);
 Datum
 pg_random_bytes(PG_FUNCTION_ARGS)
 {
-	int			err;
 	int			len = PG_GETARG_INT32(0);
 	bytea	   *res;
 
@@ -435,11 +434,8 @@ pg_random_bytes(PG_FUNCTION_ARGS)
 	SET_VARSIZE(res, VARHDRSZ + len);
 
 	/* generate result */
-	err = px_get_random_bytes((uint8 *) VARDATA(res), len);
-	if (err < 0)
-		ereport(ERROR,
-				(errcode(ERRCODE_EXTERNAL_ROUTINE_INVOCATION_EXCEPTION),
-				 errmsg("Random generator error: %s", px_strerror(err))));
+	if (!pg_strong_random(VARDATA(res), len))
+		px_THROW_ERROR(PXE_NO_RANDOM);
 
 	PG_RETURN_BYTEA_P(res);
 }
@@ -451,14 +447,10 @@ Datum
 pg_random_uuid(PG_FUNCTION_ARGS)
 {
 	uint8	   *buf = (uint8 *) palloc(UUID_LEN);
-	int			err;
 
-	/* generate random bits */
-	err = px_get_random_bytes(buf, UUID_LEN);
-	if (err < 0)
-		ereport(ERROR,
-				(errcode(ERRCODE_EXTERNAL_ROUTINE_INVOCATION_EXCEPTION),
-				 errmsg("Random generator error: %s", px_strerror(err))));
+	/* Generate random bits. */
+	if (!pg_strong_random(buf, UUID_LEN))
+		px_THROW_ERROR(PXE_NO_RANDOM);
 
 	/*
 	 * Set magic numbers for a "version 4" (pseudorandom) UUID, see

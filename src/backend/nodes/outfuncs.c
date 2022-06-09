@@ -323,13 +323,13 @@ _outPlannedStmt(StringInfo str, const PlannedStmt *node)
 
 	WRITE_UINT64_FIELD(query_mem);
 
-	WRITE_INT_FIELD(total_memory_master);
-	WRITE_INT_FIELD(nsegments_master);
-
 	WRITE_NODE_FIELD(intoClause);
 	WRITE_NODE_FIELD(copyIntoClause);
 	WRITE_NODE_FIELD(refreshClause);
 	WRITE_INT_FIELD(metricsQueryType);
+
+	WRITE_INT_FIELD(total_memory_master);
+	WRITE_INT_FIELD(nsegments_master);
 }
 #endif /* COMPILING_BINARY_FUNCS */
 

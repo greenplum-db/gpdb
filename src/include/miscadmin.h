@@ -231,7 +231,7 @@ extern int gp_workfile_max_entries;
 extern PGDLLIMPORT int MyProcPid;
 extern PGDLLIMPORT pg_time_t MyStartTime;
 extern PGDLLIMPORT struct Port *MyProcPort;
-extern long MyCancelKey;
+extern int32 MyCancelKey;
 extern int	MyPMChildSlot;
 
 extern char OutputFileName[];

@@ -302,3 +302,10 @@ test: sync_guc
 
 # test pg_export_snapshot with distributed snapshot functionality
 test: export_distributed_snapshot
+
+# test if motion sockets are created with gp_segment_configuration.address when
+# gp_interconnect_address_type='unicast'
+test: motion_socket
+
+# test alter owner of partition table in utility mode
+test: alter_partition_table_owner

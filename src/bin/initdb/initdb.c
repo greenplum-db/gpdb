@@ -81,7 +81,9 @@ extern const char *select_default_timezone(const char *share_path);
 /* version string we expect back from postgres */
 #define PG_VERSIONSTR "postgres (Greenplum Database) " PG_VERSION "\n"
 
-static const char *auth_methods_host[] = {"trust", "reject", "md5", "password", "ident", "radius",
+
+static const char *auth_methods_host[] = {
+	"trust", "reject", "scram-sha-256", "md5", "password", "ident", "radius",
 #ifdef ENABLE_GSS
 	"gss",
 #endif
@@ -97,8 +99,10 @@ static const char *auth_methods_host[] = {"trust", "reject", "md5", "password", 
 #ifdef USE_SSL
 	"cert",
 #endif
-NULL};
-static const char *auth_methods_local[] = {"trust", "reject", "md5", "password", "peer", "radius",
+	NULL
+};
+static const char *auth_methods_local[] = {
+	"trust", "reject", "scram-sha-256", "md5", "password", "peer", "radius",
 #ifdef USE_PAM
 	"pam", "pam ",
 #endif
@@ -1418,6 +1422,15 @@ setup_config(void)
 
 	conflines = add_assignment(conflines, "include", "'%s'",
 							   GP_INTERNAL_AUTO_CONF_FILE_NAME);
+
+	if (strcmp(authmethodlocal, "scram-sha-256") == 0 ||
+		strcmp(authmethodhost, "scram-sha-256") == 0)
+	{
+		conflines = replace_token(conflines,
+								  "#password_encryption = on",
+								  "password_encryption = on");
+		conflines = add_assignment(conflines, "password_hash_algorithm", "scram-sha-256");
+	}
 
 	snprintf(path, sizeof(path), "%s/postgresql.conf", pg_data);
 
@@ -3113,14 +3126,17 @@ static void
 check_need_password(const char *authmethodlocal, const char *authmethodhost)
 {
 	if ((strcmp(authmethodlocal, "md5") == 0 ||
-		 strcmp(authmethodlocal, "password") == 0) &&
+		 strcmp(authmethodlocal, "password") == 0 ||
+		 strcmp(authmethodlocal, "scram-sha-256") == 0) &&
 		(strcmp(authmethodhost, "md5") == 0 ||
-		 strcmp(authmethodhost, "password") == 0) &&
+		 strcmp(authmethodhost, "password") == 0 ||
+		 strcmp(authmethodhost, "scram-sha-256") == 0) &&
 		!(pwprompt || pwfilename))
 	{
 		fprintf(stderr, _("%s: must specify a password for the superuser to enable %s authentication\n"), progname,
 				(strcmp(authmethodlocal, "md5") == 0 ||
-				 strcmp(authmethodlocal, "password") == 0)
+				 strcmp(authmethodlocal, "password") == 0 ||
+				 strcmp(authmethodlocal, "scram-sha-256") == 0)
 				? authmethodlocal
 				: authmethodhost);
 		exit(1);

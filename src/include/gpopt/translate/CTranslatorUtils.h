@@ -365,6 +365,10 @@ public:
 
 	// return agg kind as a CHAR
 	static CHAR GetAggKind(EdxlAggrefKind aggkind);
+
+	// check if const func returns composite type
+	static BOOL IsCompositeConst(CMemoryPool *mp, CMDAccessor *md_accessor,
+								 const RangeTblFunction *rtfunc);
 };
 }  // namespace gpdxl
 

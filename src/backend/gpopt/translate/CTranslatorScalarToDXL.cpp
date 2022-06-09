@@ -1282,15 +1282,29 @@ CTranslatorScalarToDXL::TranslateAggrefToDXL(
 	IMDId *mdid_return_type = CScalarAggFunc::PmdidLookupReturnType(
 		agg_mdid, (EdxlaggstageNormal == agg_stage), m_md_accessor);
 	IMDId *resolved_ret_type = NULL;
+	const CHAR *gp_percentile_agg_name = "gp_percentile_cont";
 	if (m_md_accessor->RetrieveType(mdid_return_type)->IsAmbiguous())
 	{
 		// if return type given by MD cache is ambiguous, use type provided by aggref node
 		resolved_ret_type = GPOS_NEW(m_mp) CMDIdGPDB(aggref->aggtype);
+		gp_percentile_agg_name = "gp_percentile_disc";
+	}
+
+	CMDIdGPDB *gp_percentile_agg_mdid = NULL;
+	// Fetch gp_percentile_agg's mdid only for supported ordered aggs
+	if (aggref->aggkind == 'o' && CUtils::FIsInbuiltOrderedAgg(agg_mdid))
+	{
+		OID gp_percentile_agg_oid =
+			gpdb::GetAggregate(gp_percentile_agg_name,
+							   CMDIdGPDB::CastMdid(mdid_return_type)->Oid(), 4);
+		if (InvalidOid != gp_percentile_agg_oid)
+			gp_percentile_agg_mdid =
+				GPOS_NEW(m_mp) CMDIdGPDB(gp_percentile_agg_oid);
 	}
 
 	CDXLScalarAggref *aggref_scalar = GPOS_NEW(m_mp) CDXLScalarAggref(
 		m_mp, agg_mdid, resolved_ret_type, is_distinct, agg_stage,
-		CTranslatorUtils::GetAggKind(aggref->aggkind));
+		CTranslatorUtils::GetAggKind(aggref->aggkind), gp_percentile_agg_mdid);
 
 	// create the DXL node holding the scalar aggref
 	CDXLNode *dxlnode = GPOS_NEW(m_mp) CDXLNode(m_mp, aggref_scalar);

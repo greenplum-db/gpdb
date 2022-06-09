@@ -1047,5 +1047,17 @@ SELECT * FROM gp_ao_or_aocs_seg('ao') ORDER BY segno;
  127   | 1        | 1        | 3             | 1     
 (127 rows)
 
+-- Since all transactions have completed, we should be able to evict the AO cache entry.
+SELECT state, count(state) FROM gp_toolkit.__gp_get_ao_entry_from_cache('ao'::regclass) GROUP BY state;
+ state | count 
+-------+-------
+ 1     | 128   
+(1 row)
+SELECT gp_toolkit.__gp_remove_ao_entry_from_cache('ao'::regclass);
+ __gp_remove_ao_entry_from_cache 
+---------------------------------
+                                 
+(1 row)
+
 ALTER RESOURCE GROUP admin_group SET CONCURRENCY 20;
 ALTER

@@ -1122,6 +1122,7 @@ SetSegnoForWrite(Relation rel, int existingsegno)
 	int			i,
 				usesegno = RESERVED_SEGNO;
 	bool		segno_chosen = false;
+	bool		increment_txns_using_rel = true;
 	AORelHashEntryData *aoentry = NULL;
 	TransactionId CurrentXid = GetTopTransactionId();
 
@@ -1149,7 +1150,6 @@ SetSegnoForWrite(Relation rel, int existingsegno)
 
 			Assert(existingsegno == InvalidFileSegNumber);
 
-
 			ereportif(Debug_appendonly_print_segfile_choice, LOG,
 					  (errmsg("SetSegnoForWrite: Choosing a segno for append-only "
 							  "relation \"%s\" (%d) ",
@@ -1159,13 +1159,9 @@ SetSegnoForWrite(Relation rel, int existingsegno)
 
 			aoentry = AORelGetOrCreateHashEntry(RelationGetRelid(rel));
 			Assert(aoentry);
-			aoentry->txns_using_rel++;
-
 			ereportif(Debug_appendonly_print_segfile_choice, LOG,
-					  (errmsg("SetSegnoForWrite: got the hash entry for relation \"%s\" (%d). "
-							  "setting txns_using_rel to %d",
-							  RelationGetRelationName(rel), RelationGetRelid(rel),
-							  aoentry->txns_using_rel)));
+					  (errmsg("SetSegnoForWrite: got the hash entry for relation \"%s\" (%d)",
+							  RelationGetRelationName(rel), RelationGetRelid(rel))));
 
 			/*
 			 * Now pick the not in use segment and is not over the allowed
@@ -1204,7 +1200,7 @@ SetSegnoForWrite(Relation rel, int existingsegno)
 						/* we already used this segno in our txn. use it again */
 						usesegno = i;
 						segno_chosen = true;
-						aoentry->txns_using_rel--;	/* same txn. re-adjust */
+						increment_txns_using_rel = false; /* same transaction; do not increment */
 
 						ereportif(Debug_appendonly_print_segfile_choice, LOG,
 								  (errmsg("SetSegnoForWrite: reusing segno %d for append-"
@@ -1233,6 +1229,23 @@ SetSegnoForWrite(Relation rel, int existingsegno)
 			/* mark this segno as in use */
 			aoentry->relsegfiles[usesegno].state = INSERT_USE;
 			aoentry->relsegfiles[usesegno].xid = CurrentXid;
+
+			/*
+			 * It's important that we increment the AppendOnlyHash entry's
+			 * txns_using_rel here after setting the entry's xid field to
+			 * CurrentXid so that the entry's txns_using_rel will get properly
+			 * decremented during abort handling in
+			 * AtEOXact_AppendOnly_Relation if we encounter an ERROR before
+			 * commit.
+			 */
+			if (increment_txns_using_rel)
+			{
+				aoentry->txns_using_rel++;
+				ereportif(Debug_appendonly_print_segfile_choice, LOG,
+						  (errmsg("SetSegnoForWrite: setting txns_using_rel to %d for relation \"%s\" (%d)",
+								  aoentry->txns_using_rel, RelationGetRelationName(rel),
+								  RelationGetRelid(rel))));
+			}
 
 			release_lightweight_lock();
 			appendOnlyInsertXact = true;

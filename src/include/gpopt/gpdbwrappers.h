@@ -181,7 +181,7 @@ bool IsOrderedAgg(Oid aggid);
 bool IsAggPartialCapable(Oid aggid);
 
 // intermediate result type of given aggregate
-Oid GetAggregate(const char *agg, Oid type_oid);
+Oid GetAggregate(const char *agg, Oid type_oid, int nargs);
 
 // array type oid
 Oid GetArrayType(Oid typid);

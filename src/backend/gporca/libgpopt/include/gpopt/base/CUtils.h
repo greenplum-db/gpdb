@@ -691,6 +691,9 @@ public:
 	// returns if the scalar array has all constant elements or children
 	static BOOL FScalarConstArray(CExpression *pexpr);
 
+	// returns if the scalar constant is an array
+	static BOOL FIsConstArray(CExpression *pexpr);
+
 	// returns if the scalar constant array has already been collapased
 	static BOOL FScalarArrayCollapsed(CExpression *pexprArray);
 
@@ -959,6 +962,12 @@ public:
 
 	// return true if given expression contains window aggregate function
 	static BOOL FHasAggWindowFunc(CExpression *pexpr);
+
+	// return true if given mdid is a supported ordered aggregate function
+	static BOOL FIsInbuiltOrderedAgg(IMDId *mdid);
+
+	// return true if given expression contains ordered aggregate function
+	static BOOL FHasOrderedAggToSplit(CExpression *pexpr);
 
 	// return true if the given expression is a cross join
 	static BOOL FCrossJoin(CExpression *pexpr);

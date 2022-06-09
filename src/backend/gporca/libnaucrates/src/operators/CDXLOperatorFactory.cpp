@@ -1088,6 +1088,16 @@ CDXLOperatorFactory::MakeDXLAggFunc(CDXLMemoryManager *dxl_memory_manager,
 		resolved_rettype = ExtractConvertAttrValueToMdId(
 			dxl_memory_manager, attrs, EdxltokenTypeId, EdxltokenScalarAggref);
 	}
+	IMDId *gp_agg_oid = ExtractConvertAttrValueToMdId(
+		dxl_memory_manager, attrs, EdxltokenAggrefGpAggOid,
+		EdxltokenScalarAggref, true);
+
+	if (NULL != gp_agg_oid)
+	{
+		return GPOS_NEW(mp)
+			CDXLScalarAggref(mp, agg_mdid, resolved_rettype, is_distinct,
+							 agg_stage, agg_kind, gp_agg_oid);
+	}
 
 	return GPOS_NEW(mp) CDXLScalarAggref(mp, agg_mdid, resolved_rettype,
 										 is_distinct, agg_stage, agg_kind);

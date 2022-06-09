@@ -295,14 +295,3 @@ DETAIL:  No plan has been computed for required properties
  Optimizer: Postgres query optimizer
 (5 rows)
 
--- Orca should fallback for functions returning composite types
-create type compType as (a int, b int);
-create function myfunc5() returns compType IMMUTABLE as $$ select 2,3 $$ language sql;
-select a from myfunc5();
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Row-type variable
- a 
----
- 2
-(1 row)
-

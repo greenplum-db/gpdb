@@ -414,10 +414,10 @@
         </dxl:LogicalConstTable>
       </dxl:LogicalProject>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="120">
+    <dxl:Plan Id="0" SpaceSize="180">
       <dxl:Result>
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="1324032.584049" Rows="1.000000" Width="8"/>
+          <dxl:Cost StartupCost="0" TotalCost="1324032.591012" Rows="1.000000" Width="8"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="19" Alias="cnt">
@@ -431,7 +431,7 @@
         <dxl:OneTimeFilter/>
         <dxl:Result>
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="1324032.584041" Rows="2.000000" Width="8"/>
+            <dxl:Cost StartupCost="0" TotalCost="1324032.591004" Rows="2.000000" Width="8"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="20" Alias="ColRef_0020">
@@ -442,7 +442,7 @@
           <dxl:OneTimeFilter/>
           <dxl:NestedLoopJoin JoinType="Left" IndexNestedLoopJoin="false" OuterRefAsParam="false">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="1324032.584025" Rows="2.000000" Width="8"/>
+              <dxl:Cost StartupCost="0" TotalCost="1324032.590988" Rows="2.000000" Width="8"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="18" Alias="cnt">
@@ -465,27 +465,31 @@
               <dxl:Filter/>
               <dxl:OneTimeFilter/>
             </dxl:Result>
-            <dxl:Aggregate AggregationStrategy="Plain" StreamSafe="false">
+            <dxl:Materialize Eager="false">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="862.000479" Rows="1.000000" Width="8"/>
+                <dxl:Cost StartupCost="0" TotalCost="862.000485" Rows="1.000000" Width="8"/>
               </dxl:Properties>
-              <dxl:GroupingColumns/>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="18" Alias="cnt">
-                  <dxl:AggFunc AggMdid="0.2803.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
-                    <dxl:ValuesList ParamType="aggargs"/>
-                    <dxl:ValuesList ParamType="aggdirectargs"/>
-                    <dxl:ValuesList ParamType="aggorder"/>
-                    <dxl:ValuesList ParamType="aggdistinct"/>
-                  </dxl:AggFunc>
+                  <dxl:Ident ColId="18" ColName="cnt" TypeMdid="0.20.1.0"/>
                 </dxl:ProjElem>
               </dxl:ProjList>
               <dxl:Filter/>
-              <dxl:Materialize Eager="false">
+              <dxl:Aggregate AggregationStrategy="Plain" StreamSafe="false">
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="862.000479" Rows="1.200000" Width="1"/>
+                  <dxl:Cost StartupCost="0" TotalCost="862.000477" Rows="1.000000" Width="8"/>
                 </dxl:Properties>
-                <dxl:ProjList/>
+                <dxl:GroupingColumns/>
+                <dxl:ProjList>
+                  <dxl:ProjElem ColId="18" Alias="cnt">
+                    <dxl:AggFunc AggMdid="0.2803.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+                      <dxl:ValuesList ParamType="aggargs"/>
+                      <dxl:ValuesList ParamType="aggdirectargs"/>
+                      <dxl:ValuesList ParamType="aggorder"/>
+                      <dxl:ValuesList ParamType="aggdistinct"/>
+                    </dxl:AggFunc>
+                  </dxl:ProjElem>
+                </dxl:ProjList>
                 <dxl:Filter/>
                 <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
                   <dxl:Properties>
@@ -561,8 +565,8 @@
                     </dxl:TableScan>
                   </dxl:HashJoin>
                 </dxl:GatherMotion>
-              </dxl:Materialize>
-            </dxl:Aggregate>
+              </dxl:Aggregate>
+            </dxl:Materialize>
           </dxl:NestedLoopJoin>
         </dxl:Result>
       </dxl:Result>

@@ -322,7 +322,7 @@ EXPLAIN (COSTS OFF) INSERT INTO distributed_table (val1, val2) SELECT val1, val2
     <dxl:Plan Id="0" SpaceSize="3">
       <dxl:DMLInsert Columns="9,0,1" ActionCol="10" OidCol="0" CtidCol="0" SegmentIdCol="0" InputSorted="false">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="434.666207" Rows="100.000000" Width="24"/>
+          <dxl:Cost StartupCost="0" TotalCost="434.676207" Rows="100.000000" Width="24"/>
         </dxl:Properties>
         <dxl:DirectDispatchInfo/>
         <dxl:ProjList>
@@ -352,7 +352,7 @@ EXPLAIN (COSTS OFF) INSERT INTO distributed_table (val1, val2) SELECT val1, val2
         </dxl:TableDescriptor>
         <dxl:Result>
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="431.020373" Rows="100.000000" Width="28"/>
+            <dxl:Cost StartupCost="0" TotalCost="431.030373" Rows="100.000000" Width="28"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="9" Alias="_etl_id">
@@ -372,7 +372,7 @@ EXPLAIN (COSTS OFF) INSERT INTO distributed_table (val1, val2) SELECT val1, val2
           <dxl:OneTimeFilter/>
           <dxl:RedistributeMotion InputSegments="0" OutputSegments="0,1,2">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="431.019440" Rows="100.000000" Width="24"/>
+              <dxl:Cost StartupCost="0" TotalCost="431.029440" Rows="100.000000" Width="24"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="0" Alias="val1">
@@ -394,7 +394,7 @@ EXPLAIN (COSTS OFF) INSERT INTO distributed_table (val1, val2) SELECT val1, val2
             </dxl:HashExprList>
             <dxl:Result>
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="431.013208" Rows="300.000000" Width="24"/>
+                <dxl:Cost StartupCost="0" TotalCost="431.023208" Rows="300.000000" Width="24"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="0" Alias="val1">
@@ -411,7 +411,7 @@ EXPLAIN (COSTS OFF) INSERT INTO distributed_table (val1, val2) SELECT val1, val2
               <dxl:OneTimeFilter/>
               <dxl:Result>
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="431.013208" Rows="300.000000" Width="24"/>
+                  <dxl:Cost StartupCost="0" TotalCost="431.023208" Rows="300.000000" Width="24"/>
                 </dxl:Properties>
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="9" Alias="_etl_id">

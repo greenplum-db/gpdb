@@ -96,7 +96,7 @@ explain select generate_series(0,2) x, generate_series(0,3) y from (select gener
     <dxl:Plan Id="0" SpaceSize="1">
       <dxl:Result>
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="0.000010" Rows="1.000000" Width="8"/>
+          <dxl:Cost StartupCost="0" TotalCost="0.000210" Rows="1.000000" Width="8"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="2" Alias="x">
@@ -116,7 +116,7 @@ explain select generate_series(0,2) x, generate_series(0,3) y from (select gener
         <dxl:OneTimeFilter/>
         <dxl:Result>
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="0.000002" Rows="1.000000" Width="4"/>
+            <dxl:Cost StartupCost="0" TotalCost="0.000102" Rows="1.000000" Width="4"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="1" Alias="generate_series">

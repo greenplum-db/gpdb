@@ -32,9 +32,9 @@
 #include "commands/seclabel.h"
 #include "commands/user.h"
 #include "libpq/auth.h"
-#include "libpq/password_hash.h"
 #include "libpq/md5.h"
 #include "libpq/pg_sha2.h"
+#include "libpq/crypt.h"
 #include "miscadmin.h"
 #include "storage/lmgr.h"
 #include "utils/acl.h"
@@ -114,8 +114,8 @@ CreateRole(CreateRoleStmt *stmt)
 	ListCell   *item;
 	ListCell   *option;
 	char	   *password = NULL;	/* user password */
-	bool		encrypt_password = Password_encryption; /* encrypt password? */
-	char		encrypted_password[MAX_PASSWD_HASH_LEN + 1];
+	bool		encrypt_password_flag = Password_encryption; /* encrypt password? */
+	int			password_type = password_hash_algorithm;
 	bool		issuper = false;	/* Make the user a superuser? */
 	bool		inherit = true; /* Auto inherit privileges? */
 	bool		createrole = false;		/* Can this user create roles? */
@@ -180,9 +180,9 @@ CreateRole(CreateRoleStmt *stmt)
 						 errmsg("conflicting or redundant options")));
 			dpassword = defel;
 			if (strcmp(defel->defname, "encryptedPassword") == 0)
-				encrypt_password = true;
+				encrypt_password_flag = true;
 			else if (strcmp(defel->defname, "unencryptedPassword") == 0)
-				encrypt_password = false;
+				encrypt_password_flag = false;
 		}
 		else if (strcmp(defel->defname, "sysid") == 0)
 		{
@@ -424,7 +424,7 @@ CreateRole(CreateRoleStmt *stmt)
 	if (check_password_hook && password)
 		(*check_password_hook) (stmt->role,
 								password,
-			   isMD5(password) ? PASSWORD_TYPE_MD5 : PASSWORD_TYPE_PLAINTEXT,
+								get_password_type(password),
 								validUntil_datum,
 								validUntil_null);
 
@@ -458,19 +458,44 @@ CreateRole(CreateRoleStmt *stmt)
 
 	if (password)
 	{
-		if (!encrypt_password || isHashedPasswd(password))
+		if (!encrypt_password_flag)
 			new_record[Anum_pg_authid_rolpassword - 1] =
-				CStringGetTextDatum(password);
+					CStringGetTextDatum(password);
 		else
 		{
-			if (!hash_password(password, stmt->role, strlen(stmt->role),
-							   encrypted_password))
-			{
-				elog(ERROR, "password encryption failed");
-			}
+			/* Encrypt the password to the requested format. */
+			char *shadow_pass;
+			char *logdetail;
 
-			new_record[Anum_pg_authid_rolpassword - 1] =
-				CStringGetTextDatum(encrypted_password);
+			/* * Don't allow an empty password. Libpq treats an empty password the
+			 * same as no password at all, and won't even try to authenticate. But
+			 * other clients might, so allowing it would be confusing. By clearing
+			 * the password when an empty string is specified, the account is
+			 * consistently locked for all clients.
+			 *
+			 * Note that this only covers passwords stored in the database itself.
+			 * There are also checks in the authentication code, to forbid an
+			 * empty password from being used with authentication methods that
+			 * fetch the password from an external system, like LDAP or PAM.
+			 */
+			if (password[0] == '\0' ||
+				plain_crypt_verify(stmt->role, password, "", &logdetail) == STATUS_OK)
+			{
+				if (Gp_role != GP_ROLE_EXECUTE)
+				{
+					ereport(NOTICE,
+							(errmsg("empty string is not a valid password, clearing password")));
+				}
+				new_record_nulls[Anum_pg_authid_rolpassword - 1] = true;
+			}
+			else
+			{
+				/* Encrypt the password to the requested format. */
+				shadow_pass = encrypt_password(password_type, stmt->role,
+											   password);
+				new_record[Anum_pg_authid_rolpassword - 1] =
+						CStringGetTextDatum(shadow_pass);
+			}
 		}
 	}
 	else
@@ -671,8 +696,8 @@ AlterRole(AlterRoleStmt *stmt)
 				new_tuple;
 	ListCell   *option;
 	char	   *password = NULL;	/* user password */
-	bool		encrypt_password = Password_encryption; /* encrypt password? */
-	char		encrypted_password[MAX_PASSWD_HASH_LEN + 1];
+	bool		encrypt_password_flag = Password_encryption; /* encrypt password? */
+	int			password_type = password_hash_algorithm;
 	int			issuper = -1;	/* Make the user a superuser? */
 	int			inherit = -1;	/* Auto inherit privileges? */
 	int			createrole = -1;	/* Can this user create roles? */
@@ -742,9 +767,9 @@ AlterRole(AlterRoleStmt *stmt)
 						 errmsg("conflicting or redundant options")));
 			dpassword = defel;
 			if (strcmp(defel->defname, "encryptedPassword") == 0)
-				encrypt_password = true;
+				encrypt_password_flag = true;
 			else if (strcmp(defel->defname, "unencryptedPassword") == 0)
-				encrypt_password = false;
+				encrypt_password_flag = false;
 
 			if (1 == numopts) alter_subtype = "PASSWORD";
 		}
@@ -999,7 +1024,7 @@ AlterRole(AlterRoleStmt *stmt)
 	if (check_password_hook && password)
 		(*check_password_hook) (stmt->role,
 								password,
-			   isMD5(password) ? PASSWORD_TYPE_MD5 : PASSWORD_TYPE_PLAINTEXT,
+								get_password_type(password),
 								validUntil_datum,
 								validUntil_null);
 
@@ -1092,18 +1117,33 @@ AlterRole(AlterRoleStmt *stmt)
 	/* password */
 	if (password)
 	{
-		if (!encrypt_password || isHashedPasswd(password))
+		if (!encrypt_password_flag)
 			new_record[Anum_pg_authid_rolpassword - 1] =
 				CStringGetTextDatum(password);
 		else
 		{
-
-			if (!hash_password(password, stmt->role, strlen(stmt->role),
-							   encrypted_password))
-				elog(ERROR, "password encryption failed");
-
-			new_record[Anum_pg_authid_rolpassword - 1] =
-				CStringGetTextDatum(encrypted_password);
+			/* Encrypt the password to the requested format. */
+			char *shadow_pass;
+			char *logdetail;
+			/* Like in CREATE USER, don't allow an empty password. */
+			if (password[0] == '\0' ||
+				plain_crypt_verify(stmt->role, password, "", &logdetail) == STATUS_OK)
+			{
+				if (Gp_role != GP_ROLE_EXECUTE)
+				{
+					ereport(NOTICE,
+							(errmsg("empty string is not a valid password, clearing password")));
+				}
+				new_record_nulls[Anum_pg_authid_rolpassword - 1] = true;
+			}
+			else
+			{
+				/* Encrypt the password to the requested format. */
+				shadow_pass = encrypt_password(password_type, stmt->role,
+											   password);
+				new_record[Anum_pg_authid_rolpassword - 1] =
+						CStringGetTextDatum(shadow_pass);
+			}
 		}
 		new_record_repl[Anum_pg_authid_rolpassword - 1] = true;
 	}
@@ -1699,7 +1739,7 @@ RenameRole(const char *oldname, const char *newname)
 
 	datum = heap_getattr(oldtuple, Anum_pg_authid_rolpassword, dsc, &isnull);
 
-	if (!isnull && isMD5(TextDatumGetCString(datum)))
+	if (!isnull && get_password_type(TextDatumGetCString(datum)) == PASSWORD_TYPE_MD5)
 	{
 		/* MD5 uses the username as salt, so just clear it on a rename */
 		repl_repl[Anum_pg_authid_rolpassword - 1] = true;

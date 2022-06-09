@@ -538,6 +538,9 @@ CTranslatorDXLToExpr::PexprLogicalTVF(const CDXLNode *dxlnode)
 	ConstructDXLColId2ColRefMapping(dxl_op->GetDXLColumnDescrArray(),
 									popTVF->PdrgpcrOutput());
 
+	if (!popTVF->FuncMdId()->IsValid())
+		return pexpr;
+
 	const IMDFunction *pmdfunc = m_pmda->RetrieveFunc(mdid_func);
 
 	if (IMDFunction::EfsVolatile == pmdfunc->GetFuncStability())
@@ -3103,6 +3106,7 @@ CTranslatorDXLToExpr::PexprAggFunc(const CDXLNode *pdxlnAggref)
 		// use the resolved type provided in DXL
 		resolved_return_type_mdid->AddRef();
 	}
+	IMDId *gp_agg_mdid = dxl_op->GetGpAggMDid();
 
 	CScalarAggFunc *popScAggFunc = CUtils::PopAggFunc(
 		m_mp, agg_func_mdid,
@@ -3110,6 +3114,12 @@ CTranslatorDXLToExpr::PexprAggFunc(const CDXLNode *pdxlnAggref)
 			CWStringConst(m_mp, (pmdagg->Mdname().GetMDName())->GetBuffer()),
 		dxl_op->IsDistinct(), agg_func_stage, fSplit, resolved_return_type_mdid,
 		agg_func_kind);
+
+	if (NULL != gp_agg_mdid)
+	{
+		gp_agg_mdid->AddRef();
+		popScAggFunc->SetGpAggMDId(gp_agg_mdid);
+	}
 
 	CExpression *pexprAggFunc = NULL;
 

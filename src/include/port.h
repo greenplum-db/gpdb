@@ -373,6 +373,7 @@ extern off_t ftello(FILE *stream);
 
 extern double pg_erand48(unsigned short xseed[3]);
 extern long pg_lrand48(void);
+extern long pg_jrand48(unsigned short xseed[3]);
 extern void pg_srand48(long seed);
 
 #ifndef HAVE_FLS
