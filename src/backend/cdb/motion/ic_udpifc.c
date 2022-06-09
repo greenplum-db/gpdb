@@ -5807,7 +5807,7 @@ checkQDConnectionAlive(void)
 		if (!dispatcherAYT())
 			ereport(ERROR,
 					(errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
-					 errmsg("interconnect error segment lost contact with master (recv)")));
+					 errmsg("interconnect error segment lost contact with master (recv): %m")));
 	}
 }
 
