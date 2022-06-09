@@ -260,6 +260,18 @@ begin
 end; /* in func */
 $$ language plpgsql;
 
+CREATE OR REPLACE FUNCTION is_query_waiting_for_syncrep(iterations int, check_query text) RETURNS bool AS $$
+    for i in range(iterations):
+        results = plpy.execute("SELECT gp_execution_segment() AS content, query, wait_event\
+                                FROM gp_dist_random('pg_stat_activity')\
+                                WHERE gp_execution_segment() = 1 AND\
+                                query = '%s' AND\
+                                wait_event = 'SyncRep'" % check_query )
+        if results:
+            return True
+    return False
+$$ LANGUAGE plpython3u VOLATILE;
+
 create or replace function wait_for_replication_replay (segid int, retries int) returns bool as
 $$
 declare
