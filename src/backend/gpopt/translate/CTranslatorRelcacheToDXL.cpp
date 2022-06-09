@@ -77,6 +77,33 @@ static const ULONG cmp_type_mappings[][2] = {
 
 //---------------------------------------------------------------------------
 //	@function:
+//		GetIndexTypeFromOid
+//
+//	@doc:
+//		Retrieve the type of physical index structure
+//
+//---------------------------------------------------------------------------
+static IMDIndex::EmdindexType
+GetIndexTypeFromOid(OID index_oid)
+{
+	LogicalIndexType indexType = gpdb::GetLogicalIndexType(index_oid);
+	switch (indexType)
+	{
+		case INDTYPE_BTREE:
+			return IMDIndex::EmdindBtree;
+		case INDTYPE_BITMAP:
+			return IMDIndex::EmdindBitmap;
+		case INDTYPE_GIST:
+			return IMDIndex::EmdindGist;
+		case INDTYPE_GIN:
+			return IMDIndex::EmdindGin;
+	}
+	GPOS_RAISE(gpdxl::ExmaMD, gpdxl::ExmiMDObjUnsupported,
+			   GPOS_WSZ_LIT("Query references unknown index type"));
+}
+
+//---------------------------------------------------------------------------
+//	@function:
 //		CTranslatorRelcacheToDXL::RetrieveObject
 //
 //	@doc:
@@ -1144,11 +1171,12 @@ CTranslatorRelcacheToDXL::RetrieveIndex(CMemoryPool *mp,
 	mdid_index->AddRef();
 	IMdIdArray *op_families_mdids = RetrieveIndexOpFamilies(mp, mdid_index);
 
-	CMDIndexGPDB *index = GPOS_NEW(mp) CMDIndexGPDB(
-		mp, mdid_index, mdname, index_clustered, index_type, mdid_item_type,
-		index_key_cols_array, included_cols, op_families_mdids,
-		NULL  // mdpart_constraint
-	);
+	CMDIndexGPDB *index = GPOS_NEW(mp)
+		CMDIndexGPDB(mp, mdid_index, mdname, index_clustered, index_type,
+					 GetIndexTypeFromOid(index_oid), mdid_item_type,
+					 index_key_cols_array, included_cols, op_families_mdids,
+					 NULL  // mdpart_constraint
+		);
 
 	GPOS_DELETE_ARRAY(attno_mapping);
 	return index;
@@ -1407,10 +1435,10 @@ CTranslatorRelcacheToDXL::RetrievePartTableIndex(CMemoryPool *mp,
 
 	IMdIdArray *pdrgpmdidOpFamilies = RetrieveIndexOpFamilies(mp, mdid_index);
 
-	CMDIndexGPDB *index = GPOS_NEW(mp)
-		CMDIndexGPDB(mp, mdid_index, mdname, form_pg_index->indisclustered,
-					 index_type, mdid_item_type, index_key_cols_array,
-					 included_cols, pdrgpmdidOpFamilies, mdpart_constraint);
+	CMDIndexGPDB *index = GPOS_NEW(mp) CMDIndexGPDB(
+		mp, mdid_index, mdname, form_pg_index->indisclustered, index_type,
+		GetIndexTypeFromOid(index_oid), mdid_item_type, index_key_cols_array,
+		included_cols, pdrgpmdidOpFamilies, mdpart_constraint);
 
 	GPOS_DELETE_ARRAY(attno_mapping);
 

@@ -3584,16 +3584,20 @@ CDXLOperatorFactory::ParseOnCommitActionSpec(const Attributes &attrs)
 //
 //---------------------------------------------------------------------------
 IMDIndex::EmdindexType
-CDXLOperatorFactory::ParseIndexType(const Attributes &attrs)
+CDXLOperatorFactory::ParseIndexType(const Attributes &attrs,
+									enum Edxltoken token,
+									IMDIndex::EmdindexType defaultType)
 {
-	const XMLCh *xml_val =
-		attrs.getValue(CDXLTokens::XmlstrToken(EdxltokenIndexType));
+	const XMLCh *xml_val = attrs.getValue(CDXLTokens::XmlstrToken(token));
 
-	if (NULL == xml_val ||
-		0 == XMLString::compareString(
+	if (NULL == xml_val)
+	{
+		return defaultType;
+	}
+
+	if (0 == XMLString::compareString(
 				 xml_val, CDXLTokens::XmlstrToken(EdxltokenIndexTypeBtree)))
 	{
-		// default_val is btree
 		return IMDIndex::EmdindBtree;
 	}
 

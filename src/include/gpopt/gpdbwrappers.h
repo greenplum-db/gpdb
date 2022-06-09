@@ -19,6 +19,7 @@ extern "C" {
 #include "postgres.h"
 
 #include "access/attnum.h"
+#include "nodes/plannodes.h"
 #include "parser/parse_coerce.h"
 #include "utils/faultinjector.h"
 #include "utils/lsyscache.h"
@@ -567,6 +568,9 @@ LogicalIndexes *GetLogicalPartIndexes(Oid oid);
 
 // return the logical info structure for a given logical index oid
 LogicalIndexInfo *GetLogicalIndexInfo(Oid root_oid, Oid index_oid);
+
+// return the logical index type for a given logical index oid
+LogicalIndexType GetLogicalIndexType(Oid index_oid);
 
 // return a list of index oids for a given relation
 List *GetRelationIndexes(Relation relation);

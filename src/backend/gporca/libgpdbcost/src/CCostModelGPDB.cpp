@@ -32,6 +32,7 @@
 #include "gpopt/operators/CPredicateUtils.h"
 #include "gpopt/operators/CScalarBitmapIndexProbe.h"
 #include "gpopt/optimizer/COptimizerConfig.h"
+#include "naucrates/md/CMDIndexGPDB.h"
 #include "naucrates/statistics/CStatisticsUtils.h"
 
 using namespace gpos;
@@ -1849,7 +1850,16 @@ CCostModelGPDB::CostBitmapTableScan(CMemoryPool *mp, CExpressionHandle &exprhdl,
 			CDouble bitmap_union_cost_per_distinct_value(0.000027);
 			CDouble init_cost_advantage_for_bitmap_scan(0.9);
 
-			if (IMDIndex::EmdindBtree == indexType)
+			IMDIndex::EmdindexType indexPhysicalType =
+				((CMDIndexGPDB *) COptCtxt::PoctxtFromTLS()
+					 ->Pmda()
+					 ->RetrieveIndex(CScalarBitmapIndexProbe::PopConvert(
+										 pexprIndexCond->Pop())
+										 ->Pindexdesc()
+										 ->MDId()))
+					->IndexPhysicalType();
+
+			if (IMDIndex::EmdindBtree == indexPhysicalType)
 			{
 				// btree indexes are not sensitive to the NDV, since they don't have any bitmaps
 				c3_dBitmapPageCost = 0.0;

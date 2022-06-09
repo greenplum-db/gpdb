@@ -2061,6 +2061,18 @@ gpdb::GetLogicalIndexInfo(Oid root_oid, Oid index_oid)
 	return NULL;
 }
 
+LogicalIndexType
+gpdb::GetLogicalIndexType(Oid index_oid)
+{
+	GP_WRAP_START;
+	{
+		/* catalog tables: pg_index */
+		return logicalIndexTypeForIndexOid(index_oid);
+	}
+	GP_WRAP_END;
+	return INDTYPE_BTREE;
+}
+
 void
 gpdb::BuildRelationTriggers(Relation rel)
 {

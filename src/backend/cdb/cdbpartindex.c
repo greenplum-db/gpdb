@@ -1643,3 +1643,41 @@ logicalIndexInfoForIndexOid(Oid rootOid, Oid indexOid)
 
 	return plogicalIndexInfo;
 }
+
+/*
+ * logicalIndexTypeForIndexOid
+ *   return the logical index for a given index oid
+ */
+LogicalIndexType
+logicalIndexTypeForIndexOid(Oid indexOid)
+{
+	Relation	indRel;
+	LogicalIndexType indType = INDTYPE_BTREE;
+
+	indRel = index_open(indexOid, AccessShareLock);
+
+	if (GIN_AM_OID == indRel->rd_rel->relam)
+	{
+		indType = INDTYPE_GIN;
+	}
+	else if (GIST_AM_OID == indRel->rd_rel->relam)
+	{
+		indType = INDTYPE_GIST;
+	}
+	else if (BTREE_AM_OID == indRel->rd_rel->relam)
+	{
+		indType = INDTYPE_BTREE;
+	}
+	else if (BITMAP_AM_OID == indRel->rd_rel->relam)
+	{
+		indType = INDTYPE_BITMAP;
+	}
+	else
+	{
+		Assert(!"unknown index type");
+	}
+
+	index_close(indRel, AccessShareLock);
+
+	return indType;
+}

@@ -571,6 +571,7 @@ CDXLTokens::Init(CMemoryPool *mp)
 		{EdxltokenIndexClustered, GPOS_WSZ_LIT("IsClustered")},
 		{EdxltokenIndexPartial, GPOS_WSZ_LIT("IsPartial")},
 		{EdxltokenIndexType, GPOS_WSZ_LIT("IndexType")},
+		{EdxltokenIndexPhysicalType, GPOS_WSZ_LIT("PhysicalIndexType")},
 		{EdxltokenIndexTypeBtree, GPOS_WSZ_LIT("B-tree")},
 		{EdxltokenIndexTypeBitmap, GPOS_WSZ_LIT("Bitmap")},
 		{EdxltokenIndexTypeGist, GPOS_WSZ_LIT("Gist")},

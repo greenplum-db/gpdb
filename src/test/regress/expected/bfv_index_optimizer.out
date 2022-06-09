@@ -168,53 +168,29 @@ explain SELECT count(*)
 FROM bfv_tab2_facttable1 ft, bfv_tab2_dimdate dt, bfv_tab2_dimtabl1 dt1
 WHERE ft.wk_id = dt.wk_id
 AND ft.id = dt1.id;
-                                                             QUERY PLAN                                                             
-----------------------------------------------------------------------------------------------------------------------------------
- Aggregate  (cost=0.00..1134.51 rows=1 width=8)
-   ->  Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..1134.51 rows=4 width=1)
-         ->  Hash Join  (cost=0.00..1134.51 rows=2 width=1)
-               Hash Cond: (bfv_tab2_facttable1.wk_id = bfv_tab2_dimdate.wk_id)
-               ->  Nested Loop  (cost=0.00..703.51 rows=1 width=2)
-                     Join Filter: true
-                     ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=7 width=4)
-                           ->  Seq Scan on bfv_tab2_dimtabl1  (cost=0.00..431.00 rows=3 width=4)
-                     ->  Dynamic Bitmap Heap Scan on bfv_tab2_facttable1 (dynamic scan id: 1)  (cost=0.00..272.51 rows=1 width=2)
-                           Recheck Cond: (id = bfv_tab2_dimtabl1.id)
-                           Filter: (id = bfv_tab2_dimtabl1.id)
-                           ->  Dynamic Bitmap Index Scan on idx_bfv_tab2_facttable1  (cost=0.00..0.00 rows=0 width=0)
-                                 Index Cond: (id = bfv_tab2_dimtabl1.id)
-               ->  Hash  (cost=100.00..100.00 rows=34 width=4)
-                     ->  Partition Selector for bfv_tab2_facttable1 (dynamic scan id: 1)  (cost=10.00..100.00 rows=34 width=4)
-                           ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=10 width=2)
-                                 ->  Seq Scan on bfv_tab2_dimdate  (cost=0.00..431.00 rows=4 width=2)
- Optimizer: Pivotal Optimizer (GPORCA)
-(18 rows)
-
-explain SELECT count(*)
-FROM bfv_tab2_facttable1 ft, bfv_tab2_dimdate dt, bfv_tab2_dimtabl1 dt1
-WHERE ft.wk_id = dt.wk_id
-AND ft.id = dt1.id;
-                                                                    QUERY PLAN                                                                    
-----------------------------------------------------------------------------------------------------------------------------------
- Aggregate  (cost=0.00..1134.51 rows=1 width=8)
-   ->  Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..1134.51 rows=4 width=1)
-         ->  Hash Join  (cost=0.00..1134.51 rows=2 width=1)
-               Hash Cond: (bfv_tab2_facttable1.wk_id = bfv_tab2_dimdate.wk_id)
-               ->  Nested Loop  (cost=0.00..703.51 rows=1 width=2)
+                                                                     QUERY PLAN                                                                     
+----------------------------------------------------------------------------------------------------------------------------------------------------
+ Aggregate  (cost=0.00..1250.34 rows=1 width=8)
+   ->  Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..1250.34 rows=7 width=1)
+         ->  Hash Join  (cost=0.00..1250.34 rows=3 width=1)
+               Hash Cond: (bfv_tab2_dimdate.wk_id = bfv_tab2_facttable1.wk_id)
+               ->  Seq Scan on bfv_tab2_dimdate  (cost=0.00..431.00 rows=4 width=2)
+               ->  Hash  (cost=819.34..819.34 rows=3 width=2)
+                     ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..819.34 rows=3 width=2)
+                           Hash Key: bfv_tab2_facttable1.wk_id
+                           ->  Nested Loop  (cost=0.00..819.34 rows=3 width=2)
                                  Join Filter: true
-                     ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=7 width=4)
-                           ->  Seq Scan on bfv_tab2_dimtabl1  (cost=0.00..431.00 rows=3 width=4)
-                     ->  Dynamic Bitmap Heap Scan on bfv_tab2_facttable1 (dynamic scan id: 1)  (cost=0.00..272.51 rows=1 width=2)
+                                 ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=7 width=4)
+                                       ->  Seq Scan on bfv_tab2_dimtabl1  (cost=0.00..431.00 rows=3 width=4)
+                                 ->  Sequence  (cost=0.00..388.34 rows=1 width=6)
+                                       ->  Partition Selector for bfv_tab2_facttable1 (dynamic scan id: 1)  (cost=10.00..100.00 rows=34 width=4)
+                                             Partitions selected: 20 (out of 20)
+                                       ->  Dynamic Bitmap Heap Scan on bfv_tab2_facttable1 (dynamic scan id: 1)  (cost=0.00..388.34 rows=1 width=6)
                                              Recheck Cond: (id = bfv_tab2_dimtabl1.id)
-                           Filter: (id = bfv_tab2_dimtabl1.id)
                                              ->  Dynamic Bitmap Index Scan on idx_bfv_tab2_facttable1  (cost=0.00..0.00 rows=0 width=0)
                                                    Index Cond: (id = bfv_tab2_dimtabl1.id)
-               ->  Hash  (cost=100.00..100.00 rows=34 width=4)
-                     ->  Partition Selector for bfv_tab2_facttable1 (dynamic scan id: 1)  (cost=10.00..100.00 rows=34 width=4)
-                           ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=10 width=2)
-                                 ->  Seq Scan on bfv_tab2_dimdate  (cost=0.00..431.00 rows=4 width=2)
  Optimizer: Pivotal Optimizer (GPORCA)
-(18 rows)
+(20 rows)
 
 -- start_ignore
 create language plpythonu;

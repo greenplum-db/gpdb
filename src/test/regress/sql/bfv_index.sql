@@ -98,11 +98,6 @@ FROM bfv_tab2_facttable1 ft, bfv_tab2_dimdate dt, bfv_tab2_dimtabl1 dt1
 WHERE ft.wk_id = dt.wk_id
 AND ft.id = dt1.id;
 
-explain SELECT count(*)
-FROM bfv_tab2_facttable1 ft, bfv_tab2_dimdate dt, bfv_tab2_dimtabl1 dt1
-WHERE ft.wk_id = dt.wk_id
-AND ft.id = dt1.id;
-
 -- start_ignore
 create language plpythonu;
 -- end_ignore

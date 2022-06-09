@@ -631,7 +631,9 @@ public:
 		const Attributes &attr);
 
 	// parse index type
-	static IMDIndex::EmdindexType ParseIndexType(const Attributes &attrs);
+	static IMDIndex::EmdindexType ParseIndexType(
+		const Attributes &attrs, enum Edxltoken token,
+		IMDIndex::EmdindexType defaultType);
 };
 
 // parse a comma-separated list of integers numbers into a dynamic array
