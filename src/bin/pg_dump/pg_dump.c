@@ -105,8 +105,6 @@ static bool dosync = true;		/* Issue fsync() to make dump durable on disk. */
 /* START MPP ADDITION */
 bool		dumpGpPolicy;
 bool		isGPbackend;
-int			preDataSchemaOnly;	/* int because getopt_long() */
-int			postDataSchemaOnly;
 
 /* END MPP ADDITION */
 
@@ -518,8 +516,6 @@ main(int argc, char **argv)
 		 */
 		{"gp-syntax", no_argument, NULL, 1000},
 		{"no-gp-syntax", no_argument, NULL, 1001},
-		{"pre-data-schema-only", no_argument, &preDataSchemaOnly, 1},
-		{"post-data-schema-only", no_argument, &postDataSchemaOnly, 1},
 		{"function-oids", required_argument, NULL, 1002},
 		{"relation-oids", required_argument, NULL, 1003},
 		/* END MPP ADDITION */
@@ -540,7 +536,6 @@ main(int argc, char **argv)
 	g_comment_end[0] = '\0';
 	strcpy(g_opaque_type, "opaque");
 
-	preDataSchemaOnly = postDataSchemaOnly = false;
 	progname = get_progname(argv[0]);
 
 	if (argc > 1)
@@ -801,10 +796,6 @@ main(int argc, char **argv)
 	 */
 	if (dopt.binary_upgrade)
 		dopt.sequence_data = 1;
-
-	/* --pre-data-schema-only or --post-data-schema-only implies --schema-only */
-	if (preDataSchemaOnly || postDataSchemaOnly)
-		dopt.schemaOnly = true;
 
 	if (dopt.dataOnly && dopt.schemaOnly)
 	{
@@ -10796,45 +10787,36 @@ dumpDumpableObject(Archive *fout, DumpableObject *dobj)
 	switch (dobj->objType)
 	{
 		case DO_NAMESPACE:
-			if (!postDataSchemaOnly)
 			dumpNamespace(fout, (NamespaceInfo *) dobj);
 			break;
 		case DO_EXTENSION:
 			dumpExtension(fout, (ExtensionInfo *) dobj);
 			break;
 		case DO_TYPE:
-			if (!postDataSchemaOnly)
 			dumpType(fout, (TypeInfo *) dobj);
 			break;
 		case DO_TYPE_STORAGE_OPTIONS:
-			if (!postDataSchemaOnly)
 				dumpTypeStorageOptions(fout, (TypeStorageOptions *) dobj);
 			break;
 		case DO_SHELL_TYPE:
-			if (!postDataSchemaOnly)
 			dumpShellType(fout, (ShellTypeInfo *) dobj);
 			break;
 		case DO_FUNC:
-			if (!postDataSchemaOnly)
 			dumpFunc(fout, (FuncInfo *) dobj);
 			break;
 		case DO_AGG:
-			if (!postDataSchemaOnly)
 			dumpAgg(fout, (AggInfo *) dobj);
 			break;
 		case DO_EXTPROTOCOL:
-			if (!postDataSchemaOnly)
 			dumpExtProtocol(fout, (ExtProtInfo *) dobj);
 			break;
 		case DO_OPERATOR:
-			if (!postDataSchemaOnly)
 			dumpOpr(fout, (OprInfo *) dobj);
 			break;
 		case DO_ACCESS_METHOD:
 			dumpAccessMethod(fout, (AccessMethodInfo *) dobj);
 			break;
 		case DO_OPCLASS:
-			if (!postDataSchemaOnly)
 			dumpOpclass(fout, (OpclassInfo *) dobj);
 			break;
 		case DO_OPFAMILY:
@@ -10844,22 +10826,18 @@ dumpDumpableObject(Archive *fout, DumpableObject *dobj)
 			dumpCollation(fout, (CollInfo *) dobj);
 			break;
 		case DO_CONVERSION:
-			if (!postDataSchemaOnly)
 			dumpConversion(fout, (ConvInfo *) dobj);
 			break;
 		case DO_TABLE:
-			if (!postDataSchemaOnly)
 			dumpTable(fout, (TableInfo *) dobj);
 			break;
 		case DO_TABLE_ATTACH:
 			dumpTableAttach(fout, (TableAttachInfo *) dobj);
 			break;
 		case DO_ATTRDEF:
-			if (!postDataSchemaOnly)
 			dumpAttrDef(fout, (AttrDefInfo *) dobj);
 			break;
 		case DO_INDEX:
-			if (!preDataSchemaOnly)
 			dumpIndex(fout, (IndxInfo *) dobj);
 			break;
 		case DO_INDEX_ATTACH:
@@ -10872,7 +10850,6 @@ dumpDumpableObject(Archive *fout, DumpableObject *dobj)
 			refreshMatViewData(fout, (TableDataInfo *) dobj);
 			break;
 		case DO_RULE:
-			if (!preDataSchemaOnly)
 			dumpRule(fout, (RuleInfo *) dobj);
 			break;
 		case DO_TRIGGER:
@@ -10882,30 +10859,24 @@ dumpDumpableObject(Archive *fout, DumpableObject *dobj)
 			dumpEventTrigger(fout, (EventTriggerInfo *) dobj);
 			break;
 		case DO_CONSTRAINT:
-			if (!preDataSchemaOnly)
 			dumpConstraint(fout, (ConstraintInfo *) dobj);
 			break;
 		case DO_FK_CONSTRAINT:
-			if (!preDataSchemaOnly)
 			dumpConstraint(fout, (ConstraintInfo *) dobj);
 			break;
 		case DO_PROCLANG:
-			if (!postDataSchemaOnly)
 			dumpProcLang(fout, (ProcLangInfo *) dobj);
 			break;
 		case DO_CAST:
-			if (!postDataSchemaOnly)
 			dumpCast(fout, (CastInfo *) dobj);
 			break;
 		case DO_TRANSFORM:
-			if (!postDataSchemaOnly)
 			dumpTransform(fout, (TransformInfo *) dobj);
 			break;
 		case DO_SEQUENCE_SET:
 			dumpSequenceData(fout, (TableDataInfo *) dobj);
 			break;
 		case DO_TABLE_DATA:
-			if (!postDataSchemaOnly)
 				dumpTableData(fout, (TableDataInfo *) dobj);
 			break;
 		case DO_DUMMY_TYPE:
