@@ -322,6 +322,7 @@ extern PGDLLIMPORT int max_parallel_maintenance_workers;
 extern PGDLLIMPORT int statement_mem;
 extern PGDLLIMPORT int max_statement_mem;
 extern PGDLLIMPORT int gp_vmem_limit_per_query;
+extern PGDLLIMPORT double hash_mem_multiplier;
 
 extern int	VacuumCostPageHit;
 extern int	VacuumCostPageMiss;
@@ -545,5 +546,8 @@ extern bool has_rolreplication(Oid roleid);
 /* in access/transam/xlog.c */
 extern bool BackupInProgress(void);
 extern void CancelBackup(void);
+
+/* in executor/nodeHash.c */
+extern size_t get_hash_memory_limit(void);
 
 #endif							/* MISCADMIN_H */

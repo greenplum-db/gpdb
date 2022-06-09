@@ -145,6 +145,7 @@ int			max_statement_mem = 2048000;
 int			gp_vmem_limit_per_query = 0;
 int			maintenance_work_mem = 65536;
 int			max_parallel_maintenance_workers = 2;
+double		hash_mem_multiplier = 2.0;
 
 /*
  * Primary determinants of sizes of shared-memory structures.

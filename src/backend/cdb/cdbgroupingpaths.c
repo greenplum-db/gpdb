@@ -1054,9 +1054,17 @@ add_first_stage_hash_agg_path(PlannerInfo *root,
 												path->rows, path->locus);
 
 	/*
-	 * FIXME:
-	 * Shall we compute hash table size and compare with work_mem here?
+	 * Compute hash table size and compare with work_mem.
 	 */
+	double hashsize = estimate_hashagg_tablesize(path,
+											  ctx->agg_partial_costs,
+											  dNumGroups);
+	Size		hash_mem_limit = get_hash_memory_limit();
+	if (hashsize > hash_mem_limit)
+		ereport(WARNING,
+				(errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED),
+				 errmsg("out of memory"),
+				 errdetail("Hashtable for aggregation size exceeded WorkMem.")));
 
 	if (parse->groupingSets && ctx->new_rollups)
 	{

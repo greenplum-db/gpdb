@@ -3898,3 +3898,26 @@ ExecParallelHashTuplePrealloc(HashJoinTable hashtable, int batchno, size_t size)
 
 	return true;
 }
+
+/*
+ * Calculate the limit on how much memory can be used by Hash and similar
+ * plan types.  This is work_mem times hash_mem_multiplier, and is
+ * expressed in bytes.
+ *
+ * Exported for use by the planner, as well as other hash-like executor
+ * nodes.  This is a rather random place for this, but there is no better
+ * place.
+ */
+size_t
+get_hash_memory_limit(void)
+{
+	double		mem_limit;
+
+	/* Do initial calculation in double arithmetic */
+	mem_limit = (double) maintenance_work_mem * hash_mem_multiplier * 1024.0;
+
+	/* Clamp in case it doesn't fit in size_t */
+	mem_limit = Min(mem_limit, (double) SIZE_MAX);
+
+	return (size_t) mem_limit;
+}
