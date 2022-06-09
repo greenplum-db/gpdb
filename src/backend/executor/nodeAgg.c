@@ -839,14 +839,6 @@ advance_transition_function(AggState *aggstate,
  *
  * When called, CurrentMemoryContext should be the per-query context.
  */
-/*
- * GPDB_12_MERGE_FIXME: diff added in the following commits need to be
- * incorporated into aggstate->phase->evaltrans (most likely in
- * ExecBuildAggTrans)
- *
- * - commit 652e34adaf2e00e8 (Make use of serial/deserial functions to enable
- *   2-phase aggregates.)
- */
 static void
 advance_aggregates(AggState *aggstate)
 {
