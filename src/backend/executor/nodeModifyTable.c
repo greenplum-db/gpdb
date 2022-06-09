@@ -801,7 +801,7 @@ ldelete:;
 
 			AOTupleId *aoTupleId = (AOTupleId *) tupleid;
 			result = appendonly_delete(resultRelInfo->ri_deleteDesc, aoTupleId);
-		} 
+		}
 		else if (isAOColsTable)
 		{
 			if (IsolationUsesXactSnapshot())
@@ -904,6 +904,21 @@ ldelete:;
 				break;
 
 			case HeapTupleUpdated:
+
+				/*
+				 * AO/CS relations don't support the chain of tuple versions as
+				 * it's done for heap relations therefore the scenario when
+				 * transaction seeks live newer version to update/delete is not
+				 * possible. FIXME: If it occurs then most likely we work with
+				 * wrong partition. How it's possible is described in <put PR link here>
+				 */
+				if (isAORowsTable || isAOColsTable)
+					ereport(ERROR,
+							(errcode(ERRCODE_DATA_CORRUPTED),
+							 errmsg("tuple to be %s was already removed",
+									isUpdate ? "updated": "deleted"),
+							 errdetail("for AO/AOCS table this scenario is impossible"),
+							 errhint("perhaps, modification is occuring on wrong partition")));
 				if (IsolationUsesXactSnapshot())
 					ereport(ERROR,
 							(errcode(ERRCODE_T_R_SERIALIZATION_FAILURE),
@@ -932,9 +947,24 @@ ldelete:;
 							 errmsg("concurrent updates distribution keys on the same row is not allowed")));
 				}
 
-				if (!ItemPointerEquals(tupleid, &hufd.ctid))
+				/*
+				 * Check whether we have the newer version for target row after
+				 * concurrent update in heap table
+				 */
+				if (isHeapTable && !ItemPointerEquals(tupleid, &hufd.ctid))
 				{
 					TupleTableSlot *epqslot;
+
+					/*
+					 * FIXME: DML node doesn't initialize `epqstate` parameter
+					 * so we exclude EPQ routine for this type of modification
+					 * and act as in RR and upper isolation levels.
+					 */
+					if (!epqstate)
+						ereport(ERROR,
+								(errcode(ERRCODE_T_R_SERIALIZATION_FAILURE),
+								 errmsg("could not serialize access due to concurrent update"),
+								 errhint("fallback to postgres optimizer")));
 
 					epqslot = EvalPlanQual(estate,
 										   epqstate,
