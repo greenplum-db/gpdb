@@ -383,6 +383,11 @@ cdbdisp_destroyDispatcherState(CdbDispatcherState *ds)
 	results = ds->primaryResults;
 	h = find_dispatcher_handle(ds);
 
+#ifdef FAULT_INJECTOR
+	SIMPLE_FAULT_INJECTOR("cancel_destroy_dispatch_state");
+	elog(LOG, "log during destroying dispatch state");
+#endif
+
 	HOLD_INTERRUPTS();
 
 	if (results != NULL && results->resultArray != NULL)
