@@ -211,6 +211,52 @@ CCostModelGPDB::CostScanOutput(CMemoryPool *,  // mp
 
 //---------------------------------------------------------------------------
 //	@function:
+//		CCostModelGPDB::CostComputeScalar
+//
+//	@doc:
+//		Helper function to return cost of a plan containing compute scalar
+//		operator
+//
+//---------------------------------------------------------------------------
+CCost
+CCostModelGPDB::CostComputeScalar(CMemoryPool *mp, CExpressionHandle &exprhdl,
+								  const SCostingInfo *pci,
+								  ICostModelParams *pcp,
+								  const CCostModelGPDB *pcmgpdb)
+{
+	GPOS_ASSERT(NULL != pci);
+	GPOS_ASSERT(NULL != pcp);
+	GPOS_ASSERT(NULL != pcmgpdb);
+
+	DOUBLE rows = pci->Rows();
+	DOUBLE width = pci->Width();
+	DOUBLE num_rebinds = pci->NumRebinds();
+
+	CCost costLocal =
+		CCost(num_rebinds * CostTupleProcessing(rows, width, pcp).Get());
+	CCost costChild = CostChildren(mp, exprhdl, pci, pcp);
+
+	CCost costCompute(0);
+
+	if (exprhdl.DeriveHasScalarFuncProject(1))
+	{
+		// If the compute scalar operator has a scalar func operator in the
+		// project list then aggregate that cost of the scalar func. The number
+		// of times the scalar func is run is proportional to the number of
+		// rows.
+		costCompute =
+			CCost(pcmgpdb->GetCostModelParams()
+					  ->PcpLookup(CCostModelParamsGPDB::EcpScalarFuncCost)
+					  ->Get() *
+				  rows);
+	}
+
+	return costLocal + costChild + costCompute;
+}
+
+
+//---------------------------------------------------------------------------
+//	@function:
 //		CCostModelGPDB::CostUnary
 //
 //	@doc:
@@ -2010,6 +2056,10 @@ CCostModelGPDB::Cost(
 	GPOS_ASSERT(NULL != pci);
 
 	COperator::EOperatorId op_id = exprhdl.Pop()->Eopid();
+	if (op_id == COperator::EopPhysicalComputeScalar)
+	{
+		return CostComputeScalar(m_mp, exprhdl, pci, m_cost_model_params, this);
+	}
 	if (FUnary(op_id))
 	{
 		return CostUnary(m_mp, exprhdl, pci, m_cost_model_params);

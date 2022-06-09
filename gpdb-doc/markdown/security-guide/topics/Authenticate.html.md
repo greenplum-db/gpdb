@@ -145,15 +145,22 @@ Reject
 Ident
 :   Authenticates based on the client's operating system user name. This is secure for local socket connections. Using `ident` for TCP connections from remote hosts requires that the client's host is running an ident service. The `ident` authentication method should only be used with remote hosts on a trusted, closed network.
 
+scram-sha-256
+:   Perform SCRAM-SHA-256 authentication as described in [RFC5802](https://tools.ietf.org/html/rfc5802) to verify the user's password. SCRAM-SHA-256 authentication is a challenge-response scheme that prevents password sniffing on untrusted connections. It is more secure than the `md5` method, but might not be supported by older clients.
+
 md5
-:   Require the client to supply a double-MD5-hashed password for authentication.
+:   Perform SCRAM-SHA-256 or MD5 authentication to verify the user's password. Allows falling back to a less secure challenge-response mechanism for those users with an MD5-hashed password. The fallback mechanism also prevents password sniffing, but provides no protection if an attacker manages to steal the password hash from the server, and it cannot be used when `db_user_namespace` is enabled. For all other users, `md5` works the same as `scram-sha-256`.
 
 password
-:   Require the client to supply an unencrypted password for authentication. Since the password is sent in clear text over the network, this should not be used on untrusted networks.
+:   Require the client to supply an unencrypted password for authentication. Since the password is sent in clear text over the network, this authentication method should not be used on untrusted networks.
 
-The password-based authentication methods are `md5` and `password`. These methods operate similarly except for the way that the password is sent across the connection: MD5-hashed and clear-text respectively.
+:   Plain `password` authentication sends the password in clear-text, and is therefore vulnerable to password sniffing attacks. It should always be avoided if possible. If the connection is protected by SSL encryption then `password` can be used safely, though. (SSL certificate authentication might be a better choice if one is depending on using SSL).
 
-If you are at all concerned about password "sniffing" attacks then `md5` is preferred. Plain `password` should always be avoided if possible. If the connection is protected by SSL encryption then `password` can be used safely \(although SSL certificate authentication might be a better choice if you are depending on using SSL\).
+:   When using the Greenplum Database `SHA-256` password hashing algorithm, the `password` authentication method must be specifed, and SSL-secured client connections are recommended.
+
+#### <a id="basic_auth_example"></a>Basic Authentication Examples
+
+The password-based authentication methods are `scram-sha-256`, `md5`, and `password`. These methods operate similarly except for the way that the password is sent across the connection.
 
 Following are some sample `pg_hba.conf` basic authentication entries:
 
@@ -166,13 +173,23 @@ local        all   gpuser               ident
 Or:
 
 ```
-
 local    all           gpadmin         ident 
 host     all           gpadmin         localhost      trust 
 host     all           gpadmin         mdw            trust 
 local    replication   gpadmin         ident 
 host     replication   gpadmin         samenet       trust 
 host     all           all             0.0.0.0/0     md5
+```
+
+Or:
+
+```
+# Require SCRAM authentication for most users, but make an exception
+# for user 'mike', who uses an older client that doesn't support SCRAM
+# authentication.
+#
+host    all             mike            .example.com            md5
+host    all             all             .example.com            scram-sha-256
 ```
 
 ### <a id="kerberos_auth"></a>GSSAPI Authentication 

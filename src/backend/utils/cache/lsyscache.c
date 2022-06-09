@@ -3783,7 +3783,7 @@ aggregate_exists(Oid oid)
 
 // Get oid of aggregate with given name and argument type
 Oid
-get_aggregate(const char *aggname, Oid oidType)
+get_aggregate(const char *aggname, Oid oidType, int nargs)
 {
 	CatCList   *catlist;
 	int			i;
@@ -3801,7 +3801,7 @@ get_aggregate(const char *aggname, Oid oidType)
 		Form_pg_proc proctuple = (Form_pg_proc) GETSTRUCT(htup);
 
 		// skip functions with the wrong number of type of arguments
-		if (1 != proctuple->pronargs || oidType != proctuple->proargtypes.values[0])
+		if (nargs != (int) proctuple->pronargs || oidType != proctuple->proargtypes.values[0])
 		{
 			continue;
 		}

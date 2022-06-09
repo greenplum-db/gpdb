@@ -74,6 +74,9 @@ private:
 
 	EdxlAggrefKind m_agg_kind;
 
+	// MDId of corresponding gp_agg for supported ordered aggs (optional)
+	IMDId *m_gp_agg_mdid;
+
 	// private copy ctor
 	CDXLScalarAggref(const CDXLScalarAggref &);
 
@@ -81,7 +84,7 @@ public:
 	// ctor/dtor
 	CDXLScalarAggref(CMemoryPool *mp, IMDId *agg_mdid, IMDId *resolved_rettype,
 					 BOOL is_distinct, EdxlAggrefStage agg_stage,
-					 EdxlAggrefKind aggkind);
+					 EdxlAggrefKind aggkind, IMDId *gp_agg_mdid = NULL);
 
 	virtual ~CDXLScalarAggref();
 
@@ -106,6 +109,12 @@ public:
 	GetAggKind() const
 	{
 		return m_agg_kind;
+	}
+
+	IMDId *
+	GetGpAggMDid() const
+	{
+		return m_gp_agg_mdid;
 	}
 
 	// serialize operator in DXL format

@@ -87,10 +87,9 @@ CONNECTION LIMIT connlimit
 
 PASSWORD password
 :   Sets the user password for roles with the `LOGIN` attribute. If you do not plan to use password authentication you can omit this option. If no password is specified, the password will be set to null and password authentication will always fail for that user. A null password can optionally be written explicitly as `PASSWORD NULL`.
-
-ENCRYPTED
-UNENCRYPTED
-:   These key words control whether the password is stored encrypted in the system catalogs. \(If neither is specified, the default behavior is determined by the configuration parameter password\_encryption.\) If the presented password string is already in MD5-encrypted format, then it is stored encrypted as-is, regardless of whether `ENCRYPTED` or `UNENCRYPTED` is specified \(since the system cannot decrypt the specified encrypted password string\). This allows reloading of encrypted passwords during dump/restore.
+: Specifying an empty string will also set the password to null, but that was not the case before Greenplum Database version 6.21. In earlier versions, an empty string could be used, or not, depending on the authentication method and the exact version, and libpq would refuse to use it in any case.  To avoid the ambiguity, specifying an empty string should be avoided.
+:   The `ENCRYPTED` and `UNENCRYPTED` key words control whether the password is stored encrypted in the system catalogs. \(If neither is specified, the default behavior is determined by the configuration parameter `password_encryption`.\) If the presented password string is already in MD5-encrypted or SCRAM-encrypted format, then it is stored encrypted as-is, regardless of whether `ENCRYPTED` or `UNENCRYPTED` is specified \(since the system cannot decrypt the specified encrypted password string\). This allows reloading of encrypted passwords during dump/restore.
+: Note that older clients might lack support for the SCRAM authentication mechanism.
 
 VALID UNTIL 'timestamp'
 :   The VALID UNTIL clause sets a date and time after which the role's password is no longer valid. If this clause is omitted the password will never expire.

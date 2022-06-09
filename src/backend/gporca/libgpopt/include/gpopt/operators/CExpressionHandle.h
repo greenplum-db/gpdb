@@ -337,6 +337,7 @@ public:
 	ULONG DeriveTotalDistinctAggs(ULONG child_index);
 	BOOL DeriveHasMultipleDistinctAggs(ULONG child_index);
 	BOOL DeriveHasScalarArrayCmp(ULONG child_index);
+	BOOL DeriveHasScalarFuncProject(ULONG child_index);
 
 };	// class CExpressionHandle
 

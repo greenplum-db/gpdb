@@ -480,18 +480,9 @@ checkDispatchResult(CdbDispatcherState *ds, int timeout_sec)
 
 		/*
 		 * Current loop might last for the long time so check on interrupts.
-		 * If error will be thrown then ordinarily cancel all activities on
-		 * segments and re-throw this error at the end of current function.
 		 */
-		PG_TRY();
-		{
-			CHECK_FOR_INTERRUPTS();
-		}
-		PG_CATCH();
-		{
-			cancelRequested = true;
-		}
-		PG_END_TRY();
+
+		CHECK_FOR_INTERRUPTS();
 
 		/*
 		 * escalate waitMode to cancel if:
@@ -499,7 +490,7 @@ checkDispatchResult(CdbDispatcherState *ds, int timeout_sec)
 		 * - or an error has been reported by any QE,
 		 * - in case the caller wants cancelOnError
 		 */
-		if ((cancelRequested || meleeResults->errcode) && meleeResults->cancelOnError)
+		if ((CancelRequested() || meleeResults->errcode) && meleeResults->cancelOnError)
 			pParms->waitMode = DISPATCH_WAIT_CANCEL;
 
 		/*
@@ -649,9 +640,6 @@ checkDispatchResult(CdbDispatcherState *ds, int timeout_sec)
 	}
 
 	pfree(fds);
-
-	if (cancelRequested)
-		PG_RE_THROW();
 }
 
 /*

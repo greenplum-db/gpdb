@@ -13392,9 +13392,9 @@ select * from foo join (select b, count(*) as cnt from tbtree group by b) grby o
          Join Filter: (foo.a = (count()))
          ->  Broadcast Motion 3:3  (slice2; segments: 3)
                ->  Seq Scan on foo
-         ->  HashAggregate
-               Group Key: tbtree.b
-               ->  Materialize
+         ->  Materialize
+               ->  HashAggregate
+                     Group Key: tbtree.b
                      ->  Redistribute Motion 3:3  (slice1; segments: 3)
                            Hash Key: tbtree.b
                            ->  Seq Scan on tbtree
@@ -13410,9 +13410,9 @@ select * from foo join (select min_a, count(*) as cnt from (select min(a) as min
    ->  Nested Loop
          Join Filter: (foo.a = (min(tbitmap.a)))
          ->  Seq Scan on foo
-         ->  HashAggregate
-               Group Key: (min(tbitmap.a))
-               ->  Materialize
+         ->  Materialize
+               ->  HashAggregate
+                     Group Key: (min(tbitmap.a))
                      ->  Redistribute Motion 3:3  (slice2; segments: 3)
                            Hash Key: (min(tbitmap.a))
                            ->  Result
@@ -14543,8 +14543,8 @@ EXPLAIN (COSTS OFF) SELECT (
          ->  Nested Loop Left Join
                Join Filter: true
                ->  Result
-               ->  Aggregate
-                     ->  Materialize
+               ->  Materialize
+                     ->  Aggregate
                            ->  Gather Motion 3:1  (slice1; segments: 3)
                                  ->  Hash Join
                                        Hash Cond: (join_null_rej1.i = join_null_rej2.i)

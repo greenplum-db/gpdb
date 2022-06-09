@@ -210,7 +210,7 @@
     <dxl:Plan Id="0" SpaceSize="0">
       <dxl:Result>
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="452414879.449778" Rows="1.000000" Width="1"/>
+          <dxl:Cost StartupCost="0" TotalCost="452414984.307378" Rows="1.000000" Width="1"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="5" Alias="?column?">
@@ -224,7 +224,7 @@
               <dxl:ParamList/>
               <dxl:Result>
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="441380.314547" Rows="1000.000000" Width="9"/>
+                  <dxl:Cost StartupCost="0" TotalCost="441380.416947" Rows="1000.000000" Width="9"/>
                 </dxl:Properties>
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="2" Alias="generate_series">
@@ -238,7 +238,7 @@
                 <dxl:OneTimeFilter/>
                 <dxl:Result>
                   <dxl:Properties>
-                    <dxl:Cost StartupCost="0" TotalCost="441380.314547" Rows="1000.000000" Width="9"/>
+                    <dxl:Cost StartupCost="0" TotalCost="441380.416947" Rows="1000.000000" Width="9"/>
                   </dxl:Properties>
                   <dxl:ProjList>
                     <dxl:ProjElem ColId="6" Alias="ColRef_0006">
@@ -282,7 +282,7 @@
                   <dxl:OneTimeFilter/>
                   <dxl:Result>
                     <dxl:Properties>
-                      <dxl:Cost StartupCost="0" TotalCost="0.000005" Rows="1.000000" Width="4"/>
+                      <dxl:Cost StartupCost="0" TotalCost="0.000105" Rows="1.000000" Width="4"/>
                     </dxl:Properties>
                     <dxl:ProjList>
                       <dxl:ProjElem ColId="2" Alias="generate_series">

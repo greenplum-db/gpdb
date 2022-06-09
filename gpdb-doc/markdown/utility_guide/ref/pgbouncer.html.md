@@ -7,11 +7,11 @@ Manages database connection pools.
 ## <a id="syn"></a>Synopsis 
 
 ```
-pgbouncer [OPTION ...] pgbouncer.ini
+pgbouncer [OPTION ...] <pgbouncer.ini>
 
   OPTION
    [ -d | --daemon ]
-   [ -R | --restart ]
+   [ -R | --reboot ]
    [ -q | --quiet ]
    [ -v | --verbose ]
    [ {-u | --user}=username ]
@@ -25,7 +25,7 @@ PgBouncer is a light-weight connection pool manager for Greenplum and PostgreSQL
 
 PgBouncer supports the standard connection interface shared by PostgreSQL and Greenplum Database. The Greenplum Database client application \(for example, `psql`\) should connect to the host and port on which PgBouncer is running rather than directly to the Greenplum Database master host and port.
 
-You configure PgBouncer and its access to Greenplum Database via a configuration file. You provide the configuration file name, usually `pgbouncer.ini`, when you run the `pgbouncer` command. This file provides location information for Greenplum databases. The `pgbouncer.ini` file also specifies process, connection pool, authorized users, and authentication configuration for PgBouncer, among other configuration options.
+You configure PgBouncer and its access to Greenplum Database via a configuration file. You provide the configuration file name, usually `<pgbouncer.ini>`, when you run the `pgbouncer` command. This file provides location information for Greenplum databases. The `pgbouncer.ini` file also specifies process, connection pool, authorized users, and authentication configuration for PgBouncer, among other configuration options.
 
 By default, the `pgbouncer` process runs as a foreground process. You can optionally start `pgbouncer` as a background \(daemon\) process with the `-d` option.
 
@@ -38,26 +38,26 @@ For additional information about PgBouncer, refer to the [PgBouncer FAQ](https:/
 ## <a id="opt"></a>Options 
 
 -d \| --daemon
-:   Run PgBouncer as a daemon \(a background process\). The default start-up mode is to run as a foreground process.
+:   Run PgBouncer as a daemon \(a background process\). The default start-up mode is to run as a foreground process. 
 
-:   When run as a daemon, PgBouncer displays start-up messages to `stdout`. To suppress the display of these messages, include the `-q` option when you start PgBouncer.
+:   In daemon mode, setting `pidfile` as well as `logfile` or `syslog` is required. No log messages will be written to `stderr` after going into the background.
 
 :   To stop a PgBouncer process that was started as a daemon, issue the `SHUTDOWN` command from the PgBouncer administration console.
 
--R \| --restart
-:   Restart PgBouncer using the specified command line arguments. Non-TLS connections to databases are maintained during restart; TLS connections are dropped.
+-R \| --reboot
+:   Restart PgBouncer using the specified command line arguments. That means connecting to the running process, loading the open sockets from it, and then using them. If there is no active process, boot normally. Non-TLS connections to databases are maintained during restart; TLS connections are dropped.
 
 :   To restart PgBouncer as a daemon, specify the options `-Rd`.
 
     **Note:** Restart is available only if the operating system supports Unix sockets and the PgBouncer `unix_socket_dir` configuration is not disabled.
 
 -q \| --quiet
-:   Run quietly. Do not display messages to `stdout`.
+:   Run quietly. Do not log to `stderr`. This does not affect logging verbosity, only that `stderr` is not to be used. For use in `init.d` scripts.
 
 -v \| --verbose
 :   Increase message verbosity. Can be specified multiple times.
 
-\{-u \| --user\}=username
+\{-u \| --user\}=\<username\>
 :   Assume the identity of username on PgBouncer process start-up.
 
 -V \| --version
@@ -68,5 +68,5 @@ For additional information about PgBouncer, refer to the [PgBouncer FAQ](https:/
 
 ## <a id="section7"></a>See Also 
 
-`[pgbouncer.ini](pgbouncer-ini.html)`, `[pgbouncer-admin](pgbouncer-admin.html)`
+[pgbouncer.ini](pgbouncer-ini.html), [pgbouncer-admin](pgbouncer-admin.html)
 

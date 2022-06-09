@@ -2495,11 +2495,11 @@ When a password is specified in CREATE USER or ALTER USER without writing either
 
 Specifies the cryptographic hash algorithm that is used when storing an encrypted Greenplum Database user password. The default algorithm is MD5.
 
-For information about setting the password hash algorithm to protect user passwords, see "Protecting Passwords in Greenplum Database" in the *Greenplum Database Administrator Guide*.
+For information about setting the password hash algorithm to protect user passwords, see [Protecting Passwords in Greenplum Database](../../admin_guide/roles_privs.html#topic9).
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|MD5<br/><br/>SHA-256|MD5|master, session, reload, superuser|
+|MD5<br/><br/>SHA-256<br/><br/>SCRAM-SHA-256|MD5|master, session, reload, superuser|
 
 ## <a id="plan_cache_mode"></a>plan\_cache\_mode 
 

@@ -1,0 +1,3 @@
+comment = 'Greenplum percentile aggregate implementation'
+default_version = '1.0.0'
+relocatable = true

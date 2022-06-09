@@ -1077,8 +1077,8 @@ CXformUtils::ImplementMergeJoin(CXformContext *pxfctxt, CXformResult *pxfres,
 		// clean up
 		pdrgpexprOuter->Release();
 		pdrgpexprInner->Release();
-		CRefCount::SafeRelease(join_opfamilies);
 	}
+	CRefCount::SafeRelease(join_opfamilies);
 
 	pexprResult->Release();
 }

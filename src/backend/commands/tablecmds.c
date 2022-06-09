@@ -4523,7 +4523,12 @@ ATPrepCmd(List **wqueue, Relation rel, AlterTableCmd *cmd,
 			{
 				bool do_recurse = false;
 
-				if (Gp_role == GP_ROLE_DISPATCH)
+				if (Gp_role == GP_ROLE_EXECUTE)
+				{
+					if (cmd->def && intVal(cmd->def))
+						do_recurse = true;
+				}
+				else
 				{
 					ATPartitionCheck(cmd->subtype, rel, false, recursing);
 					if (rel_is_partitioned(RelationGetRelid(rel)))
@@ -4532,11 +4537,6 @@ ATPrepCmd(List **wqueue, Relation rel, AlterTableCmd *cmd,
 						/* tell QE to recurse */
 						cmd->def = (Node *)makeInteger(1);
 					}
-				}
-				else if (Gp_role == GP_ROLE_EXECUTE)
-				{
-					if (cmd->def && intVal(cmd->def))
-						do_recurse = true;
 				}
 
 				if (do_recurse)
