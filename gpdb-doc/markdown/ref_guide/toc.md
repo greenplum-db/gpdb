@@ -176,6 +176,7 @@ Doc Index
         - [gp\_array\_agg](./modules/gp_array_agg.md)
         - [gp\_legacy\_string\_agg](./modules/gp_legacy_string_agg.md)
         - [gp\_parallel\_retrieve\_cursor (Beta)](./modules/gp_parallel_retrieve_cursor.md)
+        - [gp\_percentile\_agg](./modules/gp_percentile_agg.md)
         - [gp\_sparse\_vector](./modules/gp_sparse_vector.md)
         - [greenplum\_fdw (Beta)](./modules/greenplum_fdw.md)
         - [hstore](./modules/hstore.md)
