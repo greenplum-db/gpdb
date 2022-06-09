@@ -383,6 +383,8 @@ cdbdisp_destroyDispatcherState(CdbDispatcherState *ds)
 	results = ds->primaryResults;
 	h = find_dispatcher_handle(ds);
 
+	HOLD_INTERRUPTS();
+
 	if (results != NULL && results->resultArray != NULL)
 	{
 		int			i;
@@ -406,6 +408,8 @@ cdbdisp_destroyDispatcherState(CdbDispatcherState *ds)
 
 		RecycleGang(gp, ds->forceDestroyGang);
 	}
+
+	RESUME_INTERRUPTS();
 
 	/*
 	 * Destroy all the idle reader gangs when flag destroyIdleReaderGang is true
