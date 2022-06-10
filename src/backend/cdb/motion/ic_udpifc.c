@@ -152,6 +152,8 @@ int
 #define UDPIC_FLAGS_DUPLICATE   		(64)
 #define UDPIC_FLAGS_CAPACITY    		(128)
 
+#define UDPIC_MIN_BUF_SIZE (128 * 1024)
+
 /*
  * ConnHtabBin
  *
@@ -658,8 +660,7 @@ static void resetRxThreadError(void);
 static void SendDummyPacket(void);
 
 static void getSockAddr(struct sockaddr_storage *peer, socklen_t *peer_len, const char *listenerAddr, int listenerPort);
-static void setXmitSocketOptions(int txfd);
-static uint32 setSocketBufferSize(int fd, int type, int expectedSize, int leastSize);
+static uint32 setUDPSocketBufferSize(int ic_socket, int buffer_type);
 static void setupUDPListeningSocket(int *listenerSocketFd, uint16 *listenerPort, int *txFamily);
 static ChunkTransportStateEntry *startOutgoingUDPConnections(ChunkTransportState *transportStates,
 							ExecSlice *sendSlice,
@@ -1158,41 +1159,33 @@ resetRxThreadError()
 static void
 setupUDPListeningSocket(int *listenerSocketFd, uint16 *listenerPort, int *txFamily)
 {
-	int			errnoSave;
-	int			fd = -1;
-	const char *fun;
+	struct addrinfo 		*addrs = NULL;
+	struct addrinfo 		*addr;
+	struct addrinfo 		hints;
+	int						ret;
+	int 					ic_socket = PGINVALID_SOCKET;
+	struct sockaddr_storage ic_socket_addr;
+	int 					tries = 0;
+	struct sockaddr_storage listenerAddr;
+	socklen_t 				listenerAddrlen = sizeof(ic_socket_addr);
+	uint32					socketSendBufferSize;
+	uint32					socketRecvBufferSize;
 
-
-	/*
-	 * At the moment, we don't know which of IPv6 or IPv4 is wanted, or even
-	 * supported, so just ask getaddrinfo...
-	 *
-	 * Perhaps just avoid this and try socket with AF_INET6 and AF_INT?
-	 *
-	 * Most implementation of getaddrinfo are smart enough to only return a
-	 * particular address family if that family is both enabled, and at least
-	 * one network adapter has an IP address of that family.
-	 */
-	struct addrinfo hints;
-	struct addrinfo *addrs,
-			   *rp;
-	int			s;
-	struct sockaddr_storage our_addr;
-	socklen_t	our_addr_len;
-	char		service[32];
-
-	snprintf(service, 32, "%d", 0);
 	memset(&hints, 0, sizeof(struct addrinfo));
 	hints.ai_family = AF_UNSPEC;	/* Allow IPv4 or IPv6 */
 	hints.ai_socktype = SOCK_DGRAM; /* Datagram socket */
-	hints.ai_protocol = 0;		/* Any protocol - UDP implied for network use due to SOCK_DGRAM */
+	hints.ai_protocol = 0;
+	hints.ai_addrlen = 0;
+	hints.ai_addr = NULL;
+	hints.ai_canonname = NULL;
+	hints.ai_next = NULL;
+	hints.ai_flags |= AI_NUMERICHOST;
 
 #ifdef USE_ASSERT_CHECKING
 	if (gp_udpic_network_disable_ipv6)
 		hints.ai_family = AF_INET;
 #endif
 
-	fun = "getaddrinfo";
 	if (Gp_interconnect_address_type == INTERCONNECT_ADDRESS_TYPE_UNICAST)
 	{
 		Assert(interconnect_address && strlen(interconnect_address) > 0);
@@ -1209,134 +1202,126 @@ setupUDPListeningSocket(int *listenerSocketFd, uint16 *listenerPort, int *txFami
 				  (errmsg("getaddrinfo called with wildcard address")));
 	}
 
-	s = getaddrinfo(interconnect_address, service, &hints, &addrs);
-	if (s != 0)
-		elog(ERROR, "getaddrinfo says %s", gai_strerror(s));
-
 	/*
-	 * getaddrinfo() returns a list of address structures, one for each valid
-	 * address and family we can use.
-	 *
-	 * Try each address until we successfully bind. If socket (or bind) fails,
-	 * we (close the socket and) try the next address.  This can happen if the
-	 * system supports IPv6, but IPv6 is disabled from working, or if it
-	 * supports IPv6 and IPv4 is disabled.
+	 * Restrict what IP address we will listen on to just the one that was
+	 * used to create this QE session.
 	 */
-
-	/*
-	 * If there is both an AF_INET6 and an AF_INET choice, we prefer the
-	 * AF_INET6, because on UNIX it can receive either protocol, whereas
-	 * AF_INET can only get IPv4.  Otherwise we'd need to bind two sockets,
-	 * one for each protocol.
-	 *
-	 * Why not just use AF_INET6 in the hints?	That works perfect if we know
-	 * this machine supports IPv6 and IPv6 is enabled, but we don't know that.
-	 */
-
-#ifndef __darwin__
-#ifdef HAVE_IPV6
-	if (addrs->ai_family == AF_INET && addrs->ai_next != NULL && addrs->ai_next->ai_family == AF_INET6)
+	Assert(interconnect_address && strlen(interconnect_address) > 0);
+	ret = pg_getaddrinfo_all(interconnect_address, NULL, &hints, &addrs);
+	if (ret || !addrs)
 	{
-		/*
-		 * We got both an INET and INET6 possibility, but we want to prefer
-		 * the INET6 one if it works. Reverse the order we got from
-		 * getaddrinfo so that we try things in our preferred order. If we got
-		 * more possibilities (other AFs??), I don't think we care about them,
-		 * so don't worry if the list is more that two, we just rearrange the
-		 * first two.
-		 */
-		struct addrinfo *temp = addrs->ai_next; /* second node */
-
-		addrs->ai_next = addrs->ai_next->ai_next;	/* point old first node to
-													 * third node if any */
-		temp->ai_next = addrs;	/* point second node to first */
-		addrs = temp;			/* start the list with the old second node */
-		elog(DEBUG1, "Have both IPv6 and IPv4 choices");
+		ereport(LOG,
+				(errmsg("could not resolve address for UDP IC socket %s: %s",
+						interconnect_address,
+						gai_strerror(ret))));
+		goto startup_failed;
 	}
-#endif
-#endif
 
-	for (rp = addrs; rp != NULL; rp = rp->ai_next)
+	/*
+	 * On some platforms, pg_getaddrinfo_all() may return multiple addresses
+	 * only one of which will actually work (eg, both IPv6 and IPv4 addresses
+	 * when kernel will reject IPv6).  Worse, the failure may occur at the
+	 * bind() or perhaps even connect() stage.  So we must loop through the
+	 * results till we find a working combination. We will generate DEBUG
+	 * messages, but no error, for bogus combinations.
+	 */
+	for (addr = addrs; addr != NULL; addr = addr->ai_next)
 	{
-		fun = "socket";
 
-		/*
-		 * getaddrinfo gives us all the parameters for the socket() call as
-		 * well as the parameters for the bind() call.
-		 */
-		elog(DEBUG1, "receive socket ai_family %d ai_socktype %d ai_protocol %d", rp->ai_family, rp->ai_socktype, rp->ai_protocol);
-		fd = socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol);
-		if (fd == -1)
+#ifdef HAVE_UNIX_SOCKETS
+		/* Ignore AF_UNIX sockets, if any are returned. */
+		if (addr->ai_family == AF_UNIX)
 			continue;
-		elog(DEBUG1, "receive socket %d ai_family %d ai_socktype %d ai_protocol %d", fd, rp->ai_family, rp->ai_socktype, rp->ai_protocol);
+#endif
 
-		fun = "fcntl(O_NONBLOCK)";
-		if (!pg_set_noblock(fd))
+		ereportif(++tries > 1 && gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG3,
+				  errmsg("trying another address for UDP interconnect socket"));
+
+		ic_socket = socket(addr->ai_family, addr->ai_socktype, addr->ai_protocol);
+		if (ic_socket == PGINVALID_SOCKET)
 		{
-			if (fd >= 0)
-			{
-				closesocket(fd);
-				fd = -1;
-			}
+			ereportif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG3,
+					(errcode_for_socket_access(),
+						errmsg("could not create UDP interconnect socket: %m")));
 			continue;
 		}
 
-		fun = "bind";
-		elog(DEBUG1, "bind addrlen %d fam %d", rp->ai_addrlen, rp->ai_addr->sa_family);
-		if (bind(fd, rp->ai_addr, rp->ai_addrlen) == 0)
+		/*
+		 * Bind the socket to a kernel assigned ephemeral port on the
+		 * interconnect_address.
+		 */
+		if (bind(ic_socket, addr->ai_addr, addr->ai_addrlen) < 0)
 		{
-			*txFamily = rp->ai_family;
-			break;				/* Success */
+			ereportif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG3,
+					(errcode_for_socket_access(),
+						errmsg("could not bind UDP interconnect socket: %m")));
+			closesocket(ic_socket);
+			ic_socket = PGINVALID_SOCKET;
+			continue;
 		}
 
-		if (fd >= 0)
+		/* Call getsockname() to eventually obtain the assigned ephemeral port */
+		if (getsockname(ic_socket, (struct sockaddr *) &listenerAddr, &listenerAddrlen) < 0)
 		{
-			closesocket(fd);
-			fd = -1;
+			ereportif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG3,
+					(errcode_for_socket_access(),
+						errmsg("could not get address of socket for UDP interconnect: %m")));
+			closesocket(ic_socket);
+			ic_socket = PGINVALID_SOCKET;
+			continue;
 		}
+
+		/* If we get here, we have a working socket */
+		break;
 	}
 
-	if (rp == NULL)
-	{							/* No address succeeded */
-		goto error;
+	if (!addr || ic_socket == PGINVALID_SOCKET)
+		goto startup_failed;
+
+	/* Memorize the socket fd, kernel assigned port and address family */
+	*listenerSocketFd = ic_socket;
+	if (listenerAddr.ss_family == AF_INET6)
+	{
+		*listenerPort = ntohs(((struct sockaddr_in6 *) &listenerAddr)->sin6_port);
+		*txFamily = AF_INET6;
 	}
-
-	freeaddrinfo(addrs);		/* No longer needed */
-
-	/*
-	 * Get our socket address (IP and Port), which we will save for others to
-	 * connected to.
-	 */
-	MemSet(&our_addr, 0, sizeof(our_addr));
-	our_addr_len = sizeof(our_addr);
-
-	fun = "getsockname";
-	if (getsockname(fd, (struct sockaddr *) &our_addr, &our_addr_len) < 0)
-		goto error;
-
-	Assert(our_addr.ss_family == AF_INET || our_addr.ss_family == AF_INET6);
-
-	*listenerSocketFd = fd;
-
-	if (our_addr.ss_family == AF_INET6)
-		*listenerPort = ntohs(((struct sockaddr_in6 *) &our_addr)->sin6_port);
 	else
-		*listenerPort = ntohs(((struct sockaddr_in *) &our_addr)->sin_port);
+	{
+		*listenerPort = ntohs(((struct sockaddr_in *) &listenerAddr)->sin_port);
+		*txFamily = AF_INET;
+	}
 
-	setXmitSocketOptions(fd);
+	/* Set up socket non-blocking mode */
+	if (!pg_set_noblock(ic_socket))
+	{
+		ereport(LOG,
+				(errcode_for_socket_access(),
+					errmsg("could not set UDP interconnect socket to nonblocking mode: %m")));
+		goto startup_failed;
+	}
 
+	/* Set up the socket's send and receive buffer sizes. */
+	socketRecvBufferSize = setUDPSocketBufferSize(ic_socket, SO_RCVBUF);
+	if (socketRecvBufferSize == -1)
+		goto startup_failed;
+	ic_control_info.socketRecvBufferSize = socketRecvBufferSize;
+
+	socketSendBufferSize = setUDPSocketBufferSize(ic_socket, SO_SNDBUF);
+	if (socketSendBufferSize == -1)
+		goto startup_failed;
+	ic_control_info.socketSendBufferSize = socketSendBufferSize;
+
+	pg_freeaddrinfo_all(hints.ai_family, addrs);
 	return;
 
-error:
-	errnoSave = errno;
-	if (fd >= 0)
-		closesocket(fd);
-	errno = errnoSave;
+startup_failed:
+	if (addrs)
+		pg_freeaddrinfo_all(hints.ai_family, addrs);
+	if (ic_socket != PGINVALID_SOCKET)
+		closesocket(ic_socket);
 	ereport(ERROR,
 			(errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
-			 errmsg("interconnect error: Could not set up udp listener socket"),
-			 errdetail("%s: %m", fun)));
-	return;
+			 errmsg("interconnect error: Could not set up udp interconnect socket: %m")));
 }
 
 /*
@@ -2122,81 +2107,46 @@ freeRxBuffer(RxBufferPool *p, icpkthdr *buf)
 }
 
 /*
- * setSocketBufferSize
- * 		Set socket buffer size.
+ * Set UDP IC send/receive socket buffer size.
+ *
+ * We must carefully size the UDP IC socket's send/receive buffers. If the size
+ * is too small, say 128K, and send queue depth and receive queue depth are
+ * large, then there might be a lot of dropped/reordered packets. We start
+ * trying from a size of 2MB (unless Gp_udp_bufsize_k is specified), and
+ * gradually back off to UDPIC_MIN_BUF_SIZE. For a given size setting to be
+ * successful, the corresponding UDP kernel buffer size params must be adequate.
+ *
  */
 static uint32
-setSocketBufferSize(int fd, int type, int expectedSize, int leastSize)
+setUDPSocketBufferSize(int ic_socket, int buffer_type)
 {
-	int			bufSize;
-	int			errnoSave;
-	socklen_t	skLen = 0;
-	const char *fun;
+	int 				expected_size;
+	int 				curr_size;
+	ACCEPT_TYPE_ARG3 	option_len = 0;
 
-	fun = "getsockopt";
-	skLen = sizeof(bufSize);
-	if (getsockopt(fd, SOL_SOCKET, type, (char *) &bufSize, &skLen) < 0)
-		goto error;
+	Assert(buffer_type == SO_SNDBUF || buffer_type == SO_RCVBUF);
 
-	elog(DEBUG1, "UDP-IC: xmit default buffer size %d bytes", bufSize);
+	expected_size = (Gp_udp_bufsize_k ? Gp_udp_bufsize_k * 1024 : 2048 * 1024);
 
-	/*
-	 * We'll try the expected size first, and fall back to least size if that
-	 * doesn't work.
-	 */
-
-	bufSize = expectedSize;
-	fun = "setsockopt";
-	while (setsockopt(fd, SOL_SOCKET, type, (const char *) &bufSize, skLen) < 0)
+	curr_size = expected_size;
+	option_len = sizeof(curr_size);
+	while (setsockopt(ic_socket, SOL_SOCKET, buffer_type, (const char *) &curr_size, option_len) < 0)
 	{
-		bufSize = bufSize >> 1;
-		if (bufSize < leastSize)
-			goto error;
+		ereportif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG3,
+				  (errmsg("UDP-IC: setsockopt %s failed to set buffer size = %d bytes: %m",
+						  buffer_type == SO_SNDBUF ? "send": "receive",
+						  curr_size)));
+		curr_size = curr_size >> 1;
+		if (curr_size < UDPIC_MIN_BUF_SIZE)
+			return -1;
 	}
 
-	elog(DEBUG1, "UDP-IC: xmit use buffer size %d bytes", bufSize);
+	ereportif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG3,
+			  (errmsg("UDP-IC: socket %s current buffer size = %d bytes",
+					  buffer_type == SO_SNDBUF ? "send": "receive",
+					  curr_size)));
 
-	return bufSize;
-
-error:
-	errnoSave = errno;
-	if (fd >= 0)
-		closesocket(fd);
-	errno = errnoSave;
-	ereport(ERROR,
-			(errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
-			 errmsg("interconnect error: Could not set up udp listener socket"),
-			 errdetail("%s: %m", fun)));
-	/* Make GCC not complain. */
-	return 0;
-}
-
-/*
- * setXmitSocketOptions
- * 		Set transmit socket options.
- */
-static void
-setXmitSocketOptions(int txfd)
-{
-	uint32		bufSize = 0;
-
-	/*
-	 * The Gp_udp_bufsize_k guc should be set carefully.
-	 *
-	 * If it is small, such as 128K, and send queue depth and receive queue
-	 * depth are large, then it is possible OS can not handle all of the UDP
-	 * packets GPDB delivered to it. OS will introduce a lot of packet losses
-	 * and disordered packets.
-	 *
-	 * In order to set Gp_udp_bufsize_k to a larger value, the OS UDP buffer
-	 * should be set to a large enough value.
-	 *
-	 */
-	bufSize = (Gp_udp_bufsize_k != 0 ? Gp_udp_bufsize_k * 1024 : 2048 * 1024);
-
-	ic_control_info.socketRecvBufferSize = setSocketBufferSize(txfd, SO_RCVBUF, bufSize, 128 * 1024);
-	ic_control_info.socketSendBufferSize = setSocketBufferSize(txfd, SO_SNDBUF, bufSize, 128 * 1024);
-
+	return curr_size;
 }
 
 #if defined(USE_ASSERT_CHECKING) || defined(AMS_VERBOSE_LOGGING)
