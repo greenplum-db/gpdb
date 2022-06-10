@@ -110,7 +110,7 @@ The load is accomplished in a single transaction.
     GROUP BY gp_segment_id ORDER BY 2;
     ```
 
--   By default, `gpfdist` assumes a maximum record size of 32K. To load data records larger than 32K, you must increase the maximum row size parameter by specifying the `-m <*bytes*>` option on the `gpfdist` command line. If you use `gpload`, set the `MAX_LINE_LENGTH` parameter in the `gpload` control file.
+-   By default, `gpfdist` assumes a maximum record size of 32K. To load data records larger than 32K, you must increase the maximum row size parameter by specifying the `-m <bytes>` option on the `gpfdist` command line. If you use `gpload`, set the `MAX_LINE_LENGTH` parameter in the `gpload` control file.
 
     **Note:** Integrations with Informatica Power Exchange are currently limited to the default 32K record length.
 

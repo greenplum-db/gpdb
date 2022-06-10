@@ -97,7 +97,7 @@ This section assumes you are installing Greenplum Database on a Linux machine wi
      (2) DSA and Elgamal
      (3) DSA (sign only)
      (4) RSA (sign only)
-    Your selection? **1**
+    Your selection? 1
     ```
 
 2.  Respond to the prompts and follow the instructions, as shown in this example:
@@ -112,19 +112,19 @@ This section assumes you are installing Greenplum Database on a Linux machine wi
      <n>w = key expires in n weeks
      <n>m = key expires in n months
      <n>y = key expires in n years
-     Key is valid for? (0) **365**
+     Key is valid for? (0) 365
     Key expires at Wed 13 Jan 2016 10:35:39 AM PST
-    Is this correct? (y/N) **y**
+    Is this correct? (y/N) y
     
     GnuPG needs to construct a user ID to identify your key.
     
-    Real name: **John Doe**
-    Email address: **jdoe@email.com**
+    Real name: John Doe
+    Email address: jdoe@email.com
     Comment: 
     You selected this USER-ID:
      "John Doe <jdoe@email.com>"
     
-    Change (N)ame, (C)omment, (E)mail or (O)kay/(Q)uit? **O**
+    Change (N)ame, (C)omment, (E)mail or (O)kay/(Q)uit? O
     You need a Passphrase to protect your secret key.
     *\(For this demo the passphrase is blank.\)*
     can't connect to `/root/.gnupg/S.gpg-agent': No such file or directory

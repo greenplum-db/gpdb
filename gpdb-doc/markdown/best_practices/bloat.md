@@ -104,7 +104,7 @@ A second way to remove bloat from a table is to redistribute the table, which re
 
 The `VACUUM` command only recovers space from tables. To recover the space from indexes, recreate them using the `REINDEX` command.
 
-To rebuild all indexes on a table run `REINDEX *table\_name*;`. To rebuild a particular index, run `REINDEX *index\_name*;`. `REINDEX` sets the `reltuples` and `relpages` to 0 \(zero\) for the index, To update those statistics, run `ANALYZE` on the table after reindexing.
+To rebuild all indexes on a table run `REINDEX table_name;`. To rebuild a particular index, run `REINDEX index_name;`. `REINDEX` sets the `reltuples` and `relpages` to 0 \(zero\) for the index, To update those statistics, run `ANALYZE` on the table after reindexing.
 
 ## Removing Bloat from System Catalogs 
 

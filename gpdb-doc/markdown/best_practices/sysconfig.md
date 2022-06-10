@@ -161,13 +161,13 @@ For scenarios where a large number of workfiles are generated, adjust the calcul
 -   If the total system memory is less than 256 GB:
 
     ```
-    gp_vmem = ((SWAP + RAM) – (7.5GB + 0.05 * RAM - (300KB * total\_\#\_workfiles))) / 1.7
+    gp_vmem = ((SWAP + RAM) – (7.5GB + 0.05 * RAM - (300KB * <total_#_workfiles>))) / 1.7
     ```
 
 -   If the total system memory is equal to or greater than 256 GB:
 
     ```
-    gp_vmem = ((SWAP + RAM) – (7.5GB + 0.05 * RAM - (300KB * total\_\#\_workfiles))) / 1.17
+    gp_vmem = ((SWAP + RAM) – (7.5GB + 0.05 * RAM - (300KB * <total_#_workfiles>))) / 1.17
     ```
 
 
