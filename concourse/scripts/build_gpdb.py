@@ -42,8 +42,9 @@ def main():
     status = gpBuild.install_dependency("bin_gpdb", INSTALL_DIR)
     fail_on_error(status)
 
-    status = create_gpadmin_user()
-    fail_on_error(status)
+    if not options.dbexists:
+        status = create_gpadmin_user()
+        fail_on_error(status)
     status = gpBuild.run_explain_test_suite(options.dbexists)
     fail_on_error(status)
     status = tar_explain_output()
