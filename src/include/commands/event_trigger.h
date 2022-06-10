@@ -34,6 +34,8 @@ typedef struct EventTriggerData
 #define AT_REWRITE_ACCESS_METHOD		0x08
 /* set if AOCS and only the AT_PASS_ADD_COL subcmd is populated */
 #define AT_REWRITE_NEW_COLUMNS_ONLY_AOCS	0x10
+/* set if we need to rewrite a table due to a relopt change. */
+#define AT_REWRITE_ALTER_RELOPTS			0x20
 
 /*
  * EventTriggerData is the node type that is passed as fmgr "context" info

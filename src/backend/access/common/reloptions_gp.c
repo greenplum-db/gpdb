@@ -47,6 +47,16 @@ static relopt_bool boolRelOpts_gp[] =
 {
 	{
 		{
+			SOPT_FILLFACTOR,
+			"Packs bitmap index pages only to this percentage",
+			RELOPT_KIND_BITMAP,
+			ShareUpdateExclusiveLock	/* since it applies only to later
+										 * inserts */
+		},
+		BITMAP_DEFAULT_FILLFACTOR, BITMAP_MIN_FILLFACTOR, 100
+	},
+	{
+		{
 			SOPT_CHECKSUM,
 			"Append table checksum",
 			RELOPT_KIND_APPENDOPTIMIZED,
@@ -60,16 +70,6 @@ static relopt_bool boolRelOpts_gp[] =
 
 static relopt_int intRelOpts_gp[] =
 {
-	{
-		{
-			SOPT_FILLFACTOR,
-			"Packs bitmap index pages only to this percentage",
-			RELOPT_KIND_BITMAP,
-			ShareUpdateExclusiveLock	/* since it applies only to later
-										 * inserts */
-		},
-		BITMAP_DEFAULT_FILLFACTOR, BITMAP_MIN_FILLFACTOR, 100
-	},
 	{
 		{
 			SOPT_BLOCKSIZE,
@@ -116,6 +116,7 @@ static relopt_string stringRelOpts_gp[] =
 
 static void free_options_deep(relopt_value *options, int num_options);
 static relopt_value *get_option_set(relopt_value *options, int num_options, const char *opt_name);
+static bool reloption_is_default(const char *optstr, int optlen);
 
 /*
  * initialize_reloptions_gp
@@ -616,21 +617,6 @@ transformAOStdRdOptions(StdRdOptions *opts, Datum withOpts)
 				astate = accumArrayResult(astate, d, false, TEXTOID,
 										  CurrentMemoryContext);
 			}
-
-			/*
-			 * Record fillfactor only if it's specified in WITH clause.
-			 * Default fillfactor is assumed otherwise.
-			 */
-			soptLen = strlen(SOPT_FILLFACTOR);
-			if (withLen > soptLen &&
-				pg_strncasecmp(strval, SOPT_FILLFACTOR, soptLen) == 0)
-			{
-				d = CStringGetTextDatum(psprintf("%s=%d",
-												 SOPT_FILLFACTOR,
-												 opts->fillfactor));
-				astate = accumArrayResult(astate, d, false, TEXTOID,
-										  CurrentMemoryContext);
-			}
 		}
 	}
 
@@ -688,24 +674,136 @@ transformAOStdRdOptions(StdRdOptions *opts, Datum withOpts)
 		PointerGetDatum(NULL);
 }
 
+/* 
+ * Check if the given reloption string has default value.
+ */
+static bool
+reloption_is_default(const char *optstr, int optlen)
+{
+	char 		*defaultopt = NULL;
+	bool 		res;
+
+	if (optlen > strlen(SOPT_BLOCKSIZE) &&
+		pg_strncasecmp(optstr, SOPT_BLOCKSIZE, strlen(SOPT_BLOCKSIZE)) == 0)
+	{
+		defaultopt = psprintf("%s=%d",
+										 SOPT_BLOCKSIZE,
+										 AO_DEFAULT_BLOCKSIZE);
+	}
+	else if (optlen > strlen(SOPT_COMPTYPE) &&
+		pg_strncasecmp(optstr, SOPT_COMPTYPE, strlen(SOPT_COMPTYPE)) == 0)
+	{
+		defaultopt = psprintf("%s=%s",
+										 SOPT_COMPTYPE,
+										 AO_DEFAULT_COMPRESSTYPE);
+	}
+	else if (optlen > strlen(SOPT_COMPLEVEL) &&
+		pg_strncasecmp(optstr, SOPT_COMPLEVEL, strlen(SOPT_COMPLEVEL)) == 0)
+	{
+		defaultopt = psprintf("%s=%d",
+										 SOPT_COMPLEVEL,
+										 AO_DEFAULT_COMPRESSLEVEL);
+	}
+	else if (optlen > strlen(SOPT_CHECKSUM) &&
+		pg_strncasecmp(optstr, SOPT_CHECKSUM, strlen(SOPT_CHECKSUM)) == 0)
+	{
+		defaultopt = psprintf("%s=%s",
+										 SOPT_CHECKSUM,
+										 AO_DEFAULT_CHECKSUM ? "true" : "false");
+	}
+
+	if (defaultopt != NULL)
+		res = strlen(defaultopt) == optlen && 
+				pg_strncasecmp(optstr, defaultopt, optlen) == 0;
+	else
+		res = false;
+
+	pfree(defaultopt);
+	return res;
+}
+
+/* 
+ * Check if two string arrays of reloptions are the same.
+ *
+ * Note that this will not handle the case where the option doesn't contain 
+ * the '=' sign in it, e.g. "checksum" vs. "checksum=true". But it seems 
+ * that at this point we should always have both options as "x=y" anyways.
+ */
+bool
+relOptionsEquals(Datum oldOptions, Datum newOptions)
+{
+	ArrayType 	*oldoptarray, *newoptarray;
+	Datum 		*opts1, *opts2;
+	int		noldoptions = 0, nnewoptions = 0;
+	int		i, j;
+
+	/* Deconstruct both options. */
+	if (PointerIsValid(DatumGetPointer(oldOptions)))
+	{
+		oldoptarray = DatumGetArrayTypeP(oldOptions);
+		deconstruct_array(oldoptarray, TEXTOID, -1, false, 'i',
+						  &opts1, NULL, &noldoptions);
+	}
+	if (PointerIsValid(DatumGetPointer(newOptions)))
+	{
+		newoptarray = DatumGetArrayTypeP(newOptions);
+		deconstruct_array(newoptarray, TEXTOID, -1, false, 'i',
+						  &opts2, NULL, &nnewoptions);
+	}
+
+	for (i = 0; i < nnewoptions; i++)
+	{
+		char 	*newopt_str = VARDATA(opts2[i]);
+		int	newopt_len = VARSIZE(opts2[i]) - VARHDRSZ;
+		int 	keylen;
+
+		/* Should be "x=y" but better panic here rather than returning wrong result. */
+		Assert(strchr(newopt_str, '=') != 0);
+
+		keylen = strchr(newopt_str, '=') - newopt_str;
+
+		/* Search for a match in old options. */
+		for (j = 0; j < noldoptions; j++)
+		{
+			char 	*oldopt_str = VARDATA(opts1[j]);
+			int	oldopt_len = VARSIZE(opts1[j]) - VARHDRSZ;
+
+			/* Not the same option. */
+			if (oldopt_len <= keylen || 
+					pg_strncasecmp(oldopt_str, newopt_str, keylen) != 0)
+				continue;
+
+			/* Old option should be as "x=y" too. */
+			Assert(oldopt_str[keylen] == '=');
+
+			/* Key found, now they must match exactly otherwise it's a changed option. */
+			if (oldopt_len != newopt_len ||
+					pg_strncasecmp(oldopt_str, newopt_str, oldopt_len) != 0)
+				return false;
+			else
+				break;
+		}
+
+		/* 
+		 * If key not found, then it must've changed unless it's a default value 
+		 * that doesn't appear in the old reloptions.
+		 */
+		if (j == noldoptions && !reloption_is_default(newopt_str, newopt_len))
+			return false;
+	}
+	return true;
+}
+
 void
 validate_and_adjust_options(StdRdOptions *result,
 							relopt_value *options,
 							int num_options, relopt_kind kind, bool validate)
 {
 	int			i;
-	relopt_value *fillfactor_opt;
 	relopt_value *blocksize_opt;
 	relopt_value *comptype_opt;
 	relopt_value *complevel_opt;
 	relopt_value *checksum_opt;
-
-	/* fillfactor */
-	fillfactor_opt = get_option_set(options, num_options, SOPT_FILLFACTOR);
-	if (fillfactor_opt != NULL)
-	{
-		result->fillfactor = fillfactor_opt->values.int_val;
-	}
 
 	/* blocksize */
 	blocksize_opt = get_option_set(options, num_options, SOPT_BLOCKSIZE);
@@ -895,9 +993,6 @@ validate_and_refill_options(StdRdOptions *result, relopt_value *options,
 		ao_storage_opts_changed &&
 		KIND_IS_APPENDOPTIMIZED(kind))
 	{
-		if (!(get_option_set(options, numrelopts, SOPT_FILLFACTOR)))
-			result->fillfactor = ao_storage_opts.fillfactor;
-
 		if (!(get_option_set(options, numrelopts, SOPT_BLOCKSIZE)))
 			result->blocksize = ao_storage_opts.blocksize;
 

@@ -324,10 +324,6 @@ select attname, attstorage from pg_attribute where attrelid='addcol1'::regclass 
 alter table addcol1 alter column f_renamed set storage extended;
 select attname, attstorage from pg_attribute where attrelid='addcol1'::regclass and attname='f_renamed';
 
--- cannot set reloption appendonly
-alter table addcol1 set (appendonly=true, compresslevel=5, fillfactor=50);
-alter table addcol1 reset (appendonly, compresslevel, fillfactor);
-
 -- test some aocs partition table altering
 create table alter_aocs_part_table (a int, b int) with (appendonly=true, orientation=column) distributed by (a)
     partition by range(b) (start (1) end (5) exclusive every (1), default partition foo);

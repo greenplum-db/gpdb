@@ -456,6 +456,7 @@ static void ATExecSetTableSpace(Oid tableOid, Oid newTableSpace, LOCKMODE lockmo
 static void ATExecSetTableSpaceNoStorage(Relation rel, Oid newTableSpace);
 static void ATExecSetRelOptions(Relation rel, List *defList,
 								AlterTableType operation,
+								bool *aoopt_changed,
 								LOCKMODE lockmode);
 static void ATExecEnableDisableTrigger(Relation rel, const char *trigname,
 									   char fires_when, bool skip_system, LOCKMODE lockmode);
@@ -5295,7 +5296,15 @@ ATExecCmd(List **wqueue, AlteredTableInfo *tab, Relation rel,
 		case AT_SetRelOptions:	/* SET (...) */
 		case AT_ResetRelOptions:	/* RESET (...) */
 		case AT_ReplaceRelOptions:	/* replace entire option list */
-			ATExecSetRelOptions(rel, (List *) cmd->def, cmd->subtype, lockmode);
+			{
+				bool 		aoopt_changed = false;
+
+				ATExecSetRelOptions(rel, (List *) cmd->def, cmd->subtype, &aoopt_changed, lockmode);
+
+				/* Will rewrite table if there's a change to the AO reloptions. */
+				if (aoopt_changed)
+					tab->rewrite |= AT_REWRITE_ALTER_RELOPTS;
+			}
 			break;
 		case AT_EnableTrig:		/* ENABLE TRIGGER name */
 			ATExecEnableDisableTrigger(rel, cmd->name,
@@ -14124,7 +14133,7 @@ ATPrepSetTableSpace(AlteredTableInfo *tab, Relation rel, const char *tablespacen
  */
 static void
 ATExecSetRelOptions(Relation rel, List *defList, AlterTableType operation,
-					LOCKMODE lockmode)
+					bool *aoopt_changed, LOCKMODE lockmode)
 {
 	Oid			relid;
 	Relation	pgclass;
@@ -14165,21 +14174,6 @@ ATExecSetRelOptions(Relation rel, List *defList, AlterTableType operation,
 								&isnull);
 	}
 
-	/*
-	 * Disallow all AO options.  ALTER TABLE SET ... command does not rewrite a
-	 * table.  Setting AO options (e.g. setting appendonly=true when it's
-	 * currently unset) involves rewrite of the table and is handled using the
-	 * SET WITH variant of ALTER TABLE.
-	 *
-	 * GPDP_91_MERGE_FIXME: Is it possible to use the new reloptions format to
-	 * avoid replicating each AO reloption here?  How about introducing new
-	 * RELOPT_KIND_AO and RELOPT_KIND_AOCO to relopt_kind?  As of PostgreSQL v12,
-	 * RELOPT_KIND_APPENDOPTIMIZED is introduced and can be leveraged when
-	 * addressing this fixme.
-	 *
-	 * Future work: could convert from SET to SET WITH codepath which
-	 * can support additional reloption types
-	 */
 	if (defList != NIL)
 	{
 		ListCell   *cell;
@@ -14187,17 +14181,7 @@ ATExecSetRelOptions(Relation rel, List *defList, AlterTableType operation,
 		foreach(cell, defList)
 		{
 			DefElem    *def = lfirst(cell);
-			int			kw_len = strlen(def->defname);
 
-			if (pg_strncasecmp(SOPT_APPENDONLY, def->defname, kw_len) == 0 ||
-				pg_strncasecmp(SOPT_BLOCKSIZE, def->defname, kw_len) == 0 ||
-				pg_strncasecmp(SOPT_COMPTYPE, def->defname, kw_len) == 0 ||
-				pg_strncasecmp(SOPT_COMPLEVEL, def->defname, kw_len) == 0 ||
-				pg_strncasecmp(SOPT_CHECKSUM, def->defname, kw_len) == 0)
-				ereport(ERROR,
-						(errcode(ERRCODE_WRONG_OBJECT_TYPE),
-						 errmsg("cannot SET reloption \"%s\"",
-								def->defname)));
 			/*
 			 * Autovacuum on user tables is not enabled in Greenplum.  Move on
 			 * with a warning.  The decision to not error out is in favor of
@@ -14228,12 +14212,23 @@ ATExecSetRelOptions(Relation rel, List *defList, AlterTableType operation,
 		case RELKIND_AOBLOCKDIR:
 		case RELKIND_AOVISIMAP:
 			if (RelationIsAppendOptimized(rel))
-				ereport(ERROR,
-						(errcode(ERRCODE_WRONG_OBJECT_TYPE),
-						 errmsg("altering reloptions for append only tables"
-								" is not permitted")));
+			{
+				StdRdOptions *stdRdOptions = (StdRdOptions *) default_reloptions(newOptions,
+																				 true,
+																				 RELOPT_KIND_APPENDOPTIMIZED);
+				validateAppendOnlyRelOptions(stdRdOptions->blocksize,
+											 gp_safefswritesize,
+											 stdRdOptions->compresslevel,
+											 stdRdOptions->compresstype,
+											 stdRdOptions->checksum,
+											 (rel->rd_amhandler == AO_COLUMN_TABLE_AM_HANDLER_OID));
+				/* If reloptions will be changed, indicate so. */
+				if (aoopt_changed != NULL)
+					*aoopt_changed = !relOptionsEquals(datum, newOptions);
 
-			(void) heap_reloptions(rel->rd_rel->relkind, newOptions, true);
+			}
+			else
+				(void) heap_reloptions(rel->rd_rel->relkind, newOptions, true);
 			break;
 		case RELKIND_VIEW:
 			(void) view_reloptions(newOptions, true);

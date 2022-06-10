@@ -614,7 +614,6 @@ typedef enum
 extern IndexCheckType gp_indexcheck_insert;
 
 /* Storage option names */
-#define SOPT_APPENDONLY    "appendonly"
 #define SOPT_FILLFACTOR    "fillfactor"
 #define SOPT_BLOCKSIZE     "blocksize"
 #define SOPT_COMPTYPE      "compresstype"

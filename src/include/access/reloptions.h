@@ -309,6 +309,8 @@ extern LOCKMODE AlterTableGetRelOptionsLockLevel(List *defList);
 /* in reloptions_gp.c */
 extern Datum transformAOStdRdOptions(StdRdOptions *opts, Datum withOpts);
 
+extern bool relOptionsEquals(Datum oldOptions, Datum newOptions);
+
 extern void validateAppendOnlyRelOptions(int blocksize, int writesize,
 										 int complevel, char* comptype,
 										 bool checksum, bool co);

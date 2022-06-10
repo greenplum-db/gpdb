@@ -563,11 +563,6 @@ select attname, attstorage from pg_attribute where attrelid='addcol1'::regclass 
  f_renamed | x
 (1 row)
 
--- cannot set reloption appendonly
-alter table addcol1 set (appendonly=true, compresslevel=5, fillfactor=50);
-ERROR:  cannot SET reloption "appendonly"
-alter table addcol1 reset (appendonly, compresslevel, fillfactor);
-ERROR:  cannot SET reloption "appendonly"
 -- test some aocs partition table altering
 create table alter_aocs_part_table (a int, b int) with (appendonly=true, orientation=column) distributed by (a)
     partition by range(b) (start (1) end (5) exclusive every (1), default partition foo);
