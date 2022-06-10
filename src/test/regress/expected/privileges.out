@@ -1343,16 +1343,12 @@ CREATE CONSTRAINT TRIGGER t AFTER INSERT ON sro_trojan_table
 CREATE OR REPLACE FUNCTION mv_action() RETURNS bool LANGUAGE sql AS
 	'INSERT INTO sro_trojan_table DEFAULT VALUES; SELECT true';
 REFRESH MATERIALIZED VIEW sro_mv;
-ERROR:  function cannot execute on a QE slice because it issues a non-SELECT statement  (seg2 127.0.1.1:6004 pid=2056925)
-CONTEXT:  SQL function "unwanted_grant" during startup
-SQL statement "SELECT unwanted_grant()"
-PL/pgSQL function sro_trojan() line 1 at PERFORM
+ERROR:  cannot fire deferred trigger within security-restricted operation
+CONTEXT:  SQL function "mv_action" statement 1
 \c -
 REFRESH MATERIALIZED VIEW sro_mv;
-ERROR:  function cannot execute on a QE slice because it issues a non-SELECT statement  (seg2 127.0.1.1:6004 pid=2056935)
-CONTEXT:  SQL function "unwanted_grant" during startup
-SQL statement "SELECT unwanted_grant()"
-PL/pgSQL function sro_trojan() line 1 at PERFORM
+ERROR:  cannot fire deferred trigger within security-restricted operation
+CONTEXT:  SQL function "mv_action" statement 1
 BEGIN; SET CONSTRAINTS ALL IMMEDIATE; REFRESH MATERIALIZED VIEW sro_mv; COMMIT;
 ERROR:  function cannot execute on a QE slice because it issues a non-SELECT statement  (seg0 127.0.1.1:6002 pid=2056933)
 CONTEXT:  SQL function "unwanted_grant" during startup
