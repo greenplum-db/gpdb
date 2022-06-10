@@ -105,10 +105,10 @@
             id="ul_lx5_3jb_sqb">
             <li>If the total system memory is less than 256
               GB:<codeblock>gp_vmem = ((SWAP + RAM) – (7.5GB + 0.05 * RAM - (300KB *
-      <varname>total_#_workfiles</varname>))) / 1.7</codeblock></li>
+      &lt;total_#_workfiles>))) / 1.7</codeblock></li>
             <li>If the total system memory is equal to or greater than 256
               GB:<codeblock>gp_vmem = ((SWAP + RAM) – (7.5GB + 0.05 * RAM - (300KB *
-      <varname>total_#_workfiles</varname>))) / 1.17</codeblock></li>
+      &lt;total_#_workfiles>))) / 1.17</codeblock></li>
           </ul>
         </li>
         <li> Never set <codeph>gp_vmem_protect_limit</codeph> too high or larger than the physical

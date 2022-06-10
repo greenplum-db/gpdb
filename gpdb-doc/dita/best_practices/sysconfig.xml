@@ -161,9 +161,9 @@ kernel.shmall = 197951838</codeblock>
         calculation for <codeph>gp_vmem</codeph> to account for the workfiles.<ul
           id="ul_af1_zjb_sqb">
           <li>If the total system memory is less than 256
-            GB:<codeblock>gp_vmem = ((SWAP + RAM) – (7.5GB + 0.05 * RAM - (300KB * <varname>total_#_workfiles</varname>))) / 1.7</codeblock></li>
+            GB:<codeblock>gp_vmem = ((SWAP + RAM) – (7.5GB + 0.05 * RAM - (300KB * &lt;total_#_workfiles>))) / 1.7</codeblock></li>
           <li>If the total system memory is equal to or greater than 256
-            GB:<codeblock>gp_vmem = ((SWAP + RAM) – (7.5GB + 0.05 * RAM - (300KB * <varname>total_#_workfiles</varname>))) / 1.17</codeblock></li>
+            GB:<codeblock>gp_vmem = ((SWAP + RAM) – (7.5GB + 0.05 * RAM - (300KB * &lt;total_#_workfiles>))) / 1.17</codeblock></li>
         </ul></p>
       <p dir="ltr">For information about monitoring and managing workfile usage, see the
           <i>Greenplum Database Administrator Guide</i>.</p>

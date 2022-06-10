@@ -146,8 +146,8 @@ DISTRIBUTED BY (<i>&lt;original distribution columns&gt;</i>);</codeblock><p>Thi
       <title>Removing Bloat from Indexes</title>
       <p>The <codeph>VACUUM</codeph> command only recovers space from tables. To recover the space
         from indexes, recreate them using the <codeph>REINDEX</codeph> command.</p>
-      <p>To rebuild all indexes on a table run <codeph>REINDEX <i>table_name</i>;</codeph>. To
-        rebuild a particular index, run <codeph>REINDEX <i>index_name</i>;</codeph>.
+      <p>To rebuild all indexes on a table run <codeph>REINDEX table_name;</codeph>. To
+        rebuild a particular index, run <codeph>REINDEX index_name;</codeph>.
           <codeph>REINDEX</codeph> sets the <codeph>reltuples</codeph> and <codeph>relpages</codeph>
         to 0 (zero) for the index, To update those statistics, run <codeph>ANALYZE</codeph> on the
         table after reindexing. </p>

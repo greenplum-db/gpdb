@@ -162,7 +162,7 @@
               <row>
                 <entry colname="col1">
                   <codeph>
-                    <i>monospace italics</i>
+                    monospace italics
                   </codeph>
                 </entry>
                 <entry colname="col2">
@@ -172,21 +172,21 @@
                   </p>
                 </entry>
                 <entry colname="col3"
-                      ><codeph>/home/</codeph><codeph><i>gpadmin</i></codeph>/<codeph><i>config_file</i></codeph><p><codeph>COPY
-                        </codeph><codeph><i>tablename</i></codeph><codeph> FROM
-                        '</codeph><codeph><i>filename</i></codeph><codeph>'</codeph></p></entry>
+                      ><codeph>/home/</codeph><codeph>gpadmin</codeph>/<codeph>config_file</codeph><p><codeph>COPY
+                        </codeph><codeph>tablename</codeph><codeph> FROM
+                        '</codeph><codeph>filename</codeph><codeph>'</codeph></p></entry>
               </row>
               <row>
                 <entry colname="col1">
                   <codeph>
-                    <b>monospace bold</b>
+                    monospace bold
                   </codeph>
                 </entry>
                 <entry colname="col2">Used to call attention to a particular part of a command,
                   parameter, or code snippet.</entry>
                 <entry colname="col3">Change the host name, port, and database name in the JDBC
                   connection
-                      URL:<p><codeph>jdbc:postgresql://</codeph><codeph><b>host</b></codeph><codeph>:</codeph><codeph><b>5432</b></codeph><codeph>/</codeph><codeph><b>mydb</b></codeph></p></entry>
+                      URL:<p><codeph>jdbc:postgresql://</codeph><codeph>host</codeph><codeph>:</codeph><codeph>5432</codeph><codeph>/</codeph><codeph>mydb</codeph></p></entry>
               </row>
               <row>
                 <entry colname="col1">

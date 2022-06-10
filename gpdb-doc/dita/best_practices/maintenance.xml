@@ -49,8 +49,8 @@
         <p><codeph>gpcheckperf</codeph> requires a trusted host setup between the hosts involved in
           the performance test. It calls <codeph>gpssh</codeph> and <codeph>gpscp</codeph>, so these
           utilities must also be in your <codeph>PATH</codeph>. Specify the hosts to check
-          individually (<codeph>-h <i>host1</i> -h <i>host2</i> ...</codeph>) or with <codeph>-f
-              <i>hosts_file</i></codeph>, where <codeph><i>hosts_file</i></codeph> is a text file
+          individually (<codeph>-h host1 -h host2 ...</codeph>) or with <codeph>-f
+              hosts_file</codeph>, where <codeph>hosts_file</codeph> is a text file
           containing a list of the hosts to check. If you have more than one subnet, create a
           separate host file for each subnet so that you can test the subnets separately. </p>
         <p>By default, <codeph>gpcheckperf</codeph> runs the disk I/O test, the memory test, and a

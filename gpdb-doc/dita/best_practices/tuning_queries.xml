@@ -223,10 +223,10 @@
         <p>Greenplum Database aggregation extensions to the <codeph>GROUP BY</codeph> clause can
           perform some common calculations in the database more efficiently than in application or
           procedure code:<ul id="ul_ppq_3fc_s4">
-            <li><codeph>GROUP BY ROLLUP(<i>col1</i>, <i>col2</i>, <i>col3</i>)</codeph></li>
-            <li><codeph>GROUP BY CUBE(<i>col1</i>, <i>col2</i>, <i>col3</i>)</codeph></li>
-            <li><codeph>GROUP BY GROUPING SETS((<i>col1</i>, <i>col2</i>), (<i>col1</i>,
-                <i>col3</i>))</codeph></li>
+            <li><codeph>GROUP BY ROLLUP(col1, col2, col3)</codeph></li>
+            <li><codeph>GROUP BY CUBE(col1, col2, col3)</codeph></li>
+            <li><codeph>GROUP BY GROUPING SETS((col1, col2), (col1,
+                col3))</codeph></li>
           </ul></p>
         <p>A <codeph>ROLLUP</codeph> grouping creates aggregate subtotals that roll up from the most
           detailed level to a grand total, following a list of grouping columns (or expressions).

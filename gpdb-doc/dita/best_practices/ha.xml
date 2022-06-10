@@ -223,9 +223,9 @@
             </li>
             <li dir="ltr">
               <p dir="ltr">Use the <codeph>gpbackup</codeph> command to specify only the schema and
-                tables that you want backed up. See the <codeph><xref
+                tables that you want backed up. See the <xref
                     href="https://gpdb.docs.pivotal.io/latest/utility_guide/ref/gpbackup.html"
-                    format="html" scope="external">gpbackup</xref></codeph> reference for more
+                    format="html" scope="external">gpbackup</xref> reference for more
                 information.</p>
             </li>
             <li dir="ltr">
@@ -294,12 +294,12 @@
           <li><xref href="../admin_guide/managing/monitor.xml"/></li>
           <li><xref href="../admin_guide/highavail/topics/g-recovering-a-failed-segment.xml"/></li>
         </ul><p><i>Greenplum Database Utility Guide</i>:<ul id="ul_fk2_hyl_v4">
-            <li><codeph><xref href="../utility_guide/admin_utilities/gpstate.xml" scope="peer">gpstate</xref></codeph> - view
+            <li><xref href="../utility_guide/admin_utilities/gpstate.xml" scope="peer">gpstate</xref> - view
               state of the Greenplum system</li>
-            <li><codeph><xref href="../utility_guide/admin_utilities/gprecoverseg.xml" scope="peer"
-                >gprecoverseg</xref></codeph> - recover a failed segment</li>
-            <li><codeph><xref href="../utility_guide/admin_utilities/gpactivatestandby.xml"  scope="peer"
-                  >gpactivatestandby</xref></codeph> - make the standby master the active
+            <li><xref href="../utility_guide/admin_utilities/gprecoverseg.xml" scope="peer"
+                >gprecoverseg</xref> - recover a failed segment</li>
+            <li><xref href="../utility_guide/admin_utilities/gpactivatestandby.xml"  scope="peer"
+                  >gpactivatestandby</xref> - make the standby master the active
               master</li>
           </ul></p><p><xref href="http://tools.ietf.org/html/rfc1697" format="html" scope="external"
             >RDBMS MIB Specification</xref></p></section>
@@ -464,7 +464,7 @@ sdw2:50001:/data2/mirror/gpseg2 sdw4:50000:51000:/data/mirror/gpseg2
 sdw3:50001:/data2/mirror/gpseg3 sdw1:50000:51000:/data/mirror/gpseg3
 </codeblock></p></li>
           <li>Run <codeph>gpmovemirrors</codeph> with a command like the
-            following:<codeblock>gpmovemirrors -i <varname>mirror_config_file</varname></codeblock></li>
+            following:<codeblock>gpmovemirrors -i &lt;mirror_config_file></codeblock></li>
         </ol>
         <p>The <codeph>gpmovemirrors</codeph> utility validates the input file, calls
             <codeph>gprecoverseg</codeph> to relocate each specified mirror, and removes the

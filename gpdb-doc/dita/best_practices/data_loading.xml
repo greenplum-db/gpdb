@@ -183,7 +183,7 @@ FROM <i>schema.table</i>
 GROUP BY gp_segment_id ORDER BY 2;</codeblock></li>
         <li>By default, <codeph>gpfdist</codeph> assumes a maximum record size of 32K. To load data
           records larger than 32K, you must increase the maximum row size parameter by specifying
-          the <codeph>-m &lt;<i>bytes</i>></codeph> option on the <codeph>gpfdist</codeph> command
+          the <codeph>-m &lt;bytes></codeph> option on the <codeph>gpfdist</codeph> command
           line. If you use <codeph>gpload</codeph>, set the <codeph>MAX_LINE_LENGTH</codeph>
           parameter in the <codeph>gpload</codeph> control file.<note>Integrations with Informatica
             Power Exchange are currently limited to the default 32K record length.</note></li>

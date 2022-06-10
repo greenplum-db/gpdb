@@ -209,7 +209,7 @@ Please select what kind of key you want:
  (2) DSA and Elgamal
  (3) DSA (sign only)
  (4) RSA (sign only)
-Your selection? <b>1</b></codeblock></li>
+Your selection? 1</codeblock></li>
         <li>Respond to the prompts and follow the instructions, as shown in this
           example:<codeblock>RSA keys may be between 1024 and 4096 bits long.
 What keysize do you want? (2048) Press enter to accept default key size
@@ -220,19 +220,19 @@ Please specify how long the key should be valid.
  &lt;n&gt;w = key expires in n weeks
  &lt;n&gt;m = key expires in n months
  &lt;n&gt;y = key expires in n years
- Key is valid for? (0) <b>365</b>
+ Key is valid for? (0) 365
 Key expires at Wed 13 Jan 2016 10:35:39 AM PST
-Is this correct? (y/N) <b>y</b>
+Is this correct? (y/N) y
 
 GnuPG needs to construct a user ID to identify your key.
 
-Real name: <b>John Doe</b>
-Email address: <b>jdoe@email.com</b>
+Real name: John Doe
+Email address: jdoe@email.com
 Comment: 
 You selected this USER-ID:
  "John Doe &lt;jdoe@email.com&gt;"
 
-Change (N)ame, (C)omment, (E)mail or (O)kay/(Q)uit? <b>O</b>
+Change (N)ame, (C)omment, (E)mail or (O)kay/(Q)uit? O
 You need a Passphrase to protect your secret key.
 <i>(For this demo the passphrase is blank.)</i>
 can't connect to `/root/.gnupg/S.gpg-agent': No such file or directory
