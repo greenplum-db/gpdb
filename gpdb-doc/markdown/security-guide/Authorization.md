@@ -1,8 +1,8 @@
-# Configuring Database Authorization 
+  # Configuring Database Authorization 
 
 Describes how to restrict authorization access to database data at the user level by using roles and permissions.
 
-**Parent topic:**[Greenplum Database Security Configuration Guide](../topics/preface.html)
+**Parent topic:** [Greenplum Database Security Configuration Guide](../topics/preface.html)
 
 ## Access Permissions and Roles 
 
@@ -22,32 +22,12 @@ When an object \(table, view, sequence, database, function, language, schema, or
 
 |Object Type|Privileges|
 |:----------|:---------|
-|Tables, Views, Sequences|-   `SELECT`
--   `INSERT`
--   `UPDATE`
--   `DELETE`
--   `RULE`
--   `ALL`
-
-|
-|External Tables|-   `SELECT`
--   `RULE`
--   `ALL`
-
-|
-|Databases|-   `CONNECT`
--   `CREATE`
--   `TEMPORARY | TEMP`
--   `ALL`
-
-|
+|Tables, Views, Sequences|  `SELECT`<br/>`INSERT`<br/>`UPDATE`<br/>`DELETE`<br/>`RULE`<br/>`ALL`<br/>|
+|External Tables|`SELECT`<br/>`RULE`<br/>`ALL`|
+|Databases|`CONNECT`<br/>`CREATE`<br/>`TEMPORARY or TEMP`<br>`ALL`|
 |Functions|`EXECUTE`|
 |Procedural Languages|`USAGE`|
-|Schemas|-   `CREATE`
--   `USAGE`
--   `ALL`
-
-|
+|Schemas|`CREATE`<br/>`USAGE`<br/>`ALL`|
 
 Privileges must be granted for each object individually. For example, granting `ALL` on a database does not grant full access to the objects within that database. It only grants all of the database-level privileges \(`CONNECT`, `CREATE`, `TEMPORARY`\) to the database itself.
 

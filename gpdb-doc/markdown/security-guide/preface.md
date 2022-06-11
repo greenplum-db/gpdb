@@ -21,9 +21,10 @@ Describes how to restrict authorization access to database data at the user leve
 -   **[Auditing](../topics/Auditing.html)**  
 Describes Greenplum Database events that are logged and should be monitored to detect security threats.
 -   **[Encrypting Data and Database Connections](../topics/Encryption.html)**  
-Describes how to encrypt data at rest in the database or in transit over the network, to protect from evesdroppers or man-in-the-middle attacks.
+Describes how to encrypt data at rest in the database, or in transit over the network, to protect from eavesdroppers or man-in-the-middle attacks.
 -   **[Enabling gphdfs Authentication with a Kerberos-secured Hadoop Cluster \(Deprecated\)](../topics/kerberos-hdfs.html)**  
 Provides steps for configuring Greenplum Database to access external tables in a Hadoop cluster secured with Kerberos.
 -   **[Security Best Practices](../topics/BestPractices.html)**  
 Describes basic security best practices that you should follow to ensure the highest level of system security. 
 
+**Parent topic:** [Greenplum Database Security Configuration Guide](../topics/preface.html)

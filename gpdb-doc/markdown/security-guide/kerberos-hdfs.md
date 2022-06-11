@@ -15,7 +15,7 @@ When a Hadoop cluster is secured with Kerberos \("Kerberized"\), Greenplum Datab
 -   [Testing Greenplum Database Access to HDFS](#topic_dlj_yjv_yr)
 -   [Troubleshooting HDFS with Kerberos](#topic_mwd_rlm_qr)
 
-**Parent topic:**[Greenplum Database Security Configuration Guide](../topics/preface.html)
+**Parent topic:** [Greenplum Database Security Configuration Guide](../topics/preface.html)
 
 ## Prerequisites 
 

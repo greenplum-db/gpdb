@@ -58,13 +58,7 @@ Some add-on products and services that work with Greenplum Database have additio
 |Greenplum Database Interconnect|UDP 1025-65535, dynamically allocated|The Interconnect transports database tuples between Greenplum segments during query execution.|
 |Standby master client listener|TCP 5432, libpq|SQL client connection port on the standby master host. Usually the same as the master client connection port. Configure with the `gpinitstandby` utility `-P` option.|
 |Standby master replicator|TCP 1025-65535, gpsyncmaster|The `gpsyncmaster` process on the master host establishes a connection to the secondary master host to replicate the master's log to the standby master.|
-|Greenplum database file load and transfer utilities: gpfdist, gpload, gptransfer|TCP 8080, HTTPTCP 9000, HTTPS
-
-|The gpfdist file serving utility can run on Greenplum hosts or external hosts. Specify the connection port with the `-p` option when starting the server. The gpload and gptransfer utilities run one or more instances of gpfdist with ports or port ranges specified in a configuration file.
-
-**Note:** The gptransfer utility is deprecated and will be removed in the next major release of Greenplum Database.
-
-|
+|Greenplum database file load and transfer utilities: gpfdist, gpload, gptransfer|TCP 8080, HTTPTCP 9000, HTTPS|The gpfdist file serving utility can run on Greenplum hosts or external hosts. Specify the connection port with the `-p` option when starting the server. The gpload and gptransfer utilities run one or more instances of gpfdist with ports or port ranges specified in a configuration file. **Note:** The gptransfer utility is deprecated and will be removed in the next major release of Greenplum Database.|
 |Gpperfmon agents|TCP 8888|Connection port for gpperfmon agents \(`gpmmon` and `gpsmon`\) executing on Greenplum Database hosts. Configure by setting the `gpperfmon_port` configuration variable in postgresql.conf on master and segment hosts.|
 |Backup completion notification|TCP 25, TCP 587, SMTP|The gpcrondump backup utility can optionally send email to a list of email addresses at completion of a backup. The SMTP service must be enabled on the Greenplum master host.|
 |Greenplum Database secure shell \(SSH\): gpssh, gpscp, gpssh-exkeys, gppkg, gpseginstall|TCP 22, SSH|Many Greenplum utilities use scp and ssh to transfer files between hosts and manage the Greenplum system within the cluster.|
@@ -83,5 +77,4 @@ Some add-on products and services that work with Greenplum Database have additio
 |TCP 13724, vnetd|Symantec NetBackup vnetd communication port.|
 |Pgbouncer connection pooler|TCP, libpq|The pgbouncer connection pooler runs between libpq clients and Greenplum \(or PostgreSQL\) databases. It can be run on the Greenplum master host, but running it on a host outside of the Greenplum cluster is recommended. When it runs on a separate host, pgbouncer can act as a warm standby mechanism for the Greenplum master host, switching to the Greenplum standby host without requiring clients to reconfigure. Set the client connection port and the Greenplum master host address and port in the pgbouncer.ini configuration file.|
 
-**Parent topic:**[Greenplum Database Security Configuration Guide](../topics/preface.html)
-
+**Parent topic:** [Greenplum Database Security Configuration Guide](../topics/preface.html)

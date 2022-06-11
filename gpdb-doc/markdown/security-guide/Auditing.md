@@ -14,287 +14,737 @@ Every database instance in Greenplum Database \(master and segments\) is a runni
 
 The server log files are written in comma-separated values \(CSV\) format. Not all log entries will have values for all of the log fields. For example, only log entries associated with a query worker process will have the `slice_id` populated. Related log entries of a particular query can be identified by its session identifier \(`gp_session_id`\) and command identifier \(`gp_command_count`\).
 
-|\#
+<div class="tablenoborder">
+<table cellpadding="4" cellspacing="0" summary="" class="table" frame="border" border="1" rules="all">
+          
+          
+          
+          
+          <thead class="thead" align="left">
+            <tr class="row">
+              <th class="entry" align="left" valign="top" width="11.76470588235294%" id="d26e83">
+                <p class="p"> # </p>
 
-|Field Name
+              </th>
 
-|Data Type
+              <th class="entry" align="left" valign="top" width="23.52941176470588%" id="d26e89">
+                <p class="p"> Field Name </p>
 
-|Description
+              </th>
 
-|
-|:---|:-----------|:----------|:------------|
-|1
+              <th class="entry" align="left" valign="top" width="23.52941176470588%" id="d26e95">
+                <p class="p"> Data Type </p>
 
-|event\_time
+              </th>
 
-|timestamp with time zone
+              <th class="entry" align="left" valign="top" width="41.17647058823529%" id="d26e101">
+                <p class="p"> Description </p>
 
-|Time that the log entry was written to the log
+              </th>
 
-|
-|2
+            </tr>
 
-|user\_name
+          </thead>
 
-|varchar\(100\)
+          <tbody class="tbody">
+            <tr class="row">
+              <td class="entry" align="left" valign="top" width="11.76470588235294%" headers="d26e83 ">
+                <p class="p"> 1 </p>
 
-|The database user name
+              </td>
 
-|
-|3
+              <td class="entry" align="left" valign="top" width="23.52941176470588%" headers="d26e89 ">
+                <p class="p"> event_time </p>
 
-|database\_name
+              </td>
 
-|varchar\(100\)
+              <td class="entry" align="left" valign="top" width="23.52941176470588%" headers="d26e95 ">
+                <p class="p"> timestamp with time zone </p>
 
-|The database name
+              </td>
 
-|
-|4
+              <td class="entry" align="left" valign="top" width="41.17647058823529%" headers="d26e101 ">
+                <p class="p"> Time that the log entry was written to the log </p>
 
-|process\_id
+              </td>
 
-|varchar\(10\)
+            </tr>
 
-|The system process id \(prefixed with "p"\)
+            <tr class="row">
+              <td class="entry" align="left" valign="top" width="11.76470588235294%" headers="d26e83 ">
+                <p class="p"> 2 </p>
 
-|
-|5
+              </td>
 
-|thread\_id
+              <td class="entry" align="left" valign="top" width="23.52941176470588%" headers="d26e89 ">
+                <p class="p"> user_name </p>
 
-|varchar\(50\)
+              </td>
 
-|The thread count \(prefixed with "th"\)
+              <td class="entry" align="left" valign="top" width="23.52941176470588%" headers="d26e95 ">
+                <p class="p"> varchar(100) </p>
 
-|
-|6
+              </td>
 
-|remote\_host
+              <td class="entry" align="left" valign="top" width="41.17647058823529%" headers="d26e101 ">
+                <p class="p"> The database user name </p>
 
-|varchar\(100\)
+              </td>
 
-|On the master, the hostname/address of the client machine. On the segment, the hostname/address of the master.
+            </tr>
 
-|
-|7
+            <tr class="row">
+              <td class="entry" align="left" valign="top" width="11.76470588235294%" headers="d26e83 ">
+                <p class="p"> 3 </p>
 
-|remote\_port
+              </td>
 
-|varchar\(10\)
+              <td class="entry" align="left" valign="top" width="23.52941176470588%" headers="d26e89 ">
+                <p class="p"> database_name </p>
 
-|The segment or master port number
+              </td>
 
-|
-|8
+              <td class="entry" align="left" valign="top" width="23.52941176470588%" headers="d26e95 ">
+                <p class="p"> varchar(100) </p>
 
-|session\_start\_time
+              </td>
 
-|timestamp with time zone
+              <td class="entry" align="left" valign="top" width="41.17647058823529%" headers="d26e101 ">
+                <p class="p"> The database name </p>
 
-|Time session connection was opened
+              </td>
 
-|
-|9
+            </tr>
 
-|transaction\_id
+            <tr class="row">
+              <td class="entry" align="left" valign="top" width="11.76470588235294%" headers="d26e83 ">
+                <p class="p"> 4 </p>
 
-|int
+              </td>
 
-|Top-level transaction ID on the master. This ID is the parent of any subtransactions.
+              <td class="entry" align="left" valign="top" width="23.52941176470588%" headers="d26e89 ">
+                <p class="p"> process_id </p>
 
-|
-|10
+              </td>
 
-|gp\_session\_id
+              <td class="entry" align="left" valign="top" width="23.52941176470588%" headers="d26e95 ">
+                <p class="p"> varchar(10) </p>
 
-|text
+              </td>
 
-|Session identifier number \(prefixed with "con"\)
+              <td class="entry" align="left" valign="top" width="41.17647058823529%" headers="d26e101 ">
+                <p class="p"> The system process id (prefixed with "p") </p>
 
-|
-|11
+              </td>
 
-|gp\_command\_count
+            </tr>
 
-|text
+            <tr class="row">
+              <td class="entry" align="left" valign="top" width="11.76470588235294%" headers="d26e83 ">
+                <p class="p"> 5 </p>
 
-|The command number within a session \(prefixed with "cmd"\)
+              </td>
 
-|
-|12
+              <td class="entry" align="left" valign="top" width="23.52941176470588%" headers="d26e89 ">
+                <p class="p"> thread_id </p>
 
-|gp\_segment
+              </td>
 
-|text
+              <td class="entry" align="left" valign="top" width="23.52941176470588%" headers="d26e95 ">
+                <p class="p"> varchar(50) </p>
 
-|The segment content identifier \(prefixed with "seg" for primaries or "mir" for mirrors\). The master always has a content id of -1.
+              </td>
 
-|
-|13
+              <td class="entry" align="left" valign="top" width="41.17647058823529%" headers="d26e101 ">
+                <p class="p"> The thread count (prefixed with "th") </p>
 
-|slice\_id
+              </td>
 
-|text
+            </tr>
 
-|The slice id \(portion of the query plan being executed\)
+            <tr class="row">
+              <td class="entry" align="left" valign="top" width="11.76470588235294%" headers="d26e83 ">
+                <p class="p"> 6 </p>
 
-|
-|14
+              </td>
 
-|distr\_tranx\_id
+              <td class="entry" align="left" valign="top" width="23.52941176470588%" headers="d26e89 ">
+                <p class="p"> remote_host </p>
 
-|text
+              </td>
 
-|Distributed transaction ID
+              <td class="entry" align="left" valign="top" width="23.52941176470588%" headers="d26e95 ">
+                <p class="p"> varchar(100) </p>
 
-|
-|15
+              </td>
 
-|local\_tranx\_id
+              <td class="entry" align="left" valign="top" width="41.17647058823529%" headers="d26e101 ">
+                <p class="p"> On the master, the hostname/address of the client machine. On the segment, the
+                  hostname/address of the master. </p>
 
-|text
+              </td>
 
-|Local transaction ID
+            </tr>
 
-|
-|16
+            <tr class="row">
+              <td class="entry" align="left" valign="top" width="11.76470588235294%" headers="d26e83 ">
+                <p class="p"> 7 </p>
 
-|sub\_tranx\_id
+              </td>
 
-|text
+              <td class="entry" align="left" valign="top" width="23.52941176470588%" headers="d26e89 ">
+                <p class="p"> remote_port </p>
 
-|Subtransaction ID
+              </td>
 
-|
-|17
+              <td class="entry" align="left" valign="top" width="23.52941176470588%" headers="d26e95 ">
+                <p class="p"> varchar(10) </p>
 
-|event\_severity
+              </td>
 
-|varchar\(10\)
+              <td class="entry" align="left" valign="top" width="41.17647058823529%" headers="d26e101 ">
+                <p class="p"> The segment or master port number </p>
 
-|Values include: LOG, ERROR, FATAL, PANIC, DEBUG1, DEBUG2
+              </td>
 
-|
-|18
+            </tr>
 
-|sql\_state\_code
+            <tr class="row">
+              <td class="entry" align="left" valign="top" width="11.76470588235294%" headers="d26e83 ">
+                <p class="p"> 8 </p>
 
-|varchar\(10\)
+              </td>
 
-|SQL state code associated with the log message
+              <td class="entry" align="left" valign="top" width="23.52941176470588%" headers="d26e89 ">
+                <p class="p"> session_start_time </p>
 
-|
-|19
+              </td>
 
-|event\_message
+              <td class="entry" align="left" valign="top" width="23.52941176470588%" headers="d26e95 ">
+                <p class="p"> timestamp with time zone </p>
 
-|text
+              </td>
 
-|Log or error message text
+              <td class="entry" align="left" valign="top" width="41.17647058823529%" headers="d26e101 ">
+                <p class="p"> Time session connection was opened </p>
 
-|
-|20
+              </td>
 
-|event\_detail
+            </tr>
 
-|text
+            <tr class="row">
+              <td class="entry" align="left" valign="top" width="11.76470588235294%" headers="d26e83 ">
+                <p class="p"> 9 </p>
 
-|Detail message text associated with an error or warning message
+              </td>
 
-|
-|21
+              <td class="entry" align="left" valign="top" width="23.52941176470588%" headers="d26e89 ">
+                <p class="p"> transaction_id </p>
 
-|event\_hint
+              </td>
 
-|text
+              <td class="entry" align="left" valign="top" width="23.52941176470588%" headers="d26e95 ">
+                <p class="p"> int </p>
 
-|Hint message text associated with an error or warning message
+              </td>
 
-|
-|22
+              <td class="entry" align="left" valign="top" width="41.17647058823529%" headers="d26e101 ">
+                <p class="p"> Top-level transaction ID on the master. This ID is the parent of any
+                  subtransactions. </p>
 
-|internal\_query
+              </td>
 
-|text
+            </tr>
 
-|The internally-generated query text
+            <tr class="row">
+              <td class="entry" align="left" valign="top" width="11.76470588235294%" headers="d26e83 ">
+                <p class="p"> 10 </p>
 
-|
-|23
+              </td>
 
-|internal\_query\_pos
+              <td class="entry" align="left" valign="top" width="23.52941176470588%" headers="d26e89 ">
+                <p class="p"> gp_session_id </p>
 
-|int
+              </td>
 
-|The cursor index into the internally-generated query text
+              <td class="entry" align="left" valign="top" width="23.52941176470588%" headers="d26e95 ">
+                <p class="p"> text </p>
 
-|
-|24
+              </td>
 
-|event\_context
+              <td class="entry" align="left" valign="top" width="41.17647058823529%" headers="d26e101 ">
+                <p class="p"> Session identifier number (prefixed with "con") </p>
 
-|text
+              </td>
 
-|The context in which this message gets generated
+            </tr>
 
-|
-|25
+            <tr class="row">
+              <td class="entry" align="left" valign="top" width="11.76470588235294%" headers="d26e83 ">
+                <p class="p"> 11 </p>
 
-|debug\_query\_string
+              </td>
 
-|text
+              <td class="entry" align="left" valign="top" width="23.52941176470588%" headers="d26e89 ">
+                <p class="p"> gp_command_count </p>
 
-|User-supplied query string with full detail for debugging. This string can be modified for internal use.
+              </td>
 
-|
-|26
+              <td class="entry" align="left" valign="top" width="23.52941176470588%" headers="d26e95 ">
+                <p class="p"> text </p>
 
-|error\_cursor\_pos
+              </td>
 
-|int
+              <td class="entry" align="left" valign="top" width="41.17647058823529%" headers="d26e101 ">
+                <p class="p"> The command number within a session (prefixed with "cmd") </p>
 
-|The cursor index into the query string
+              </td>
 
-|
-|27
+            </tr>
 
-|func\_name
+            <tr class="row">
+              <td class="entry" align="left" valign="top" width="11.76470588235294%" headers="d26e83 ">
+                <p class="p"> 12 </p>
 
-|text
+              </td>
 
-|The function in which this message is generated
+              <td class="entry" align="left" valign="top" width="23.52941176470588%" headers="d26e89 ">
+                <p class="p"> gp_segment </p>
 
-|
-|28
+              </td>
 
-|file\_name
+              <td class="entry" align="left" valign="top" width="23.52941176470588%" headers="d26e95 ">
+                <p class="p"> text </p>
 
-|text
+              </td>
 
-|The internal code file where the message originated
+              <td class="entry" align="left" valign="top" width="41.17647058823529%" headers="d26e101 ">
+                <p class="p"> The segment content identifier (prefixed with "seg" for primaries or
+                  "mir" for mirrors). The master always has a content id of -1. </p>
 
-|
-|29
+              </td>
 
-|file\_line
+            </tr>
 
-|int
+            <tr class="row">
+              <td class="entry" align="left" valign="top" width="11.76470588235294%" headers="d26e83 ">
+                <p class="p"> 13 </p>
 
-|The line of the code file where the message originated
+              </td>
 
-|
-|30
+              <td class="entry" align="left" valign="top" width="23.52941176470588%" headers="d26e89 ">
+                <p class="p"> slice_id </p>
 
-|stack\_trace
+              </td>
 
-|text
+              <td class="entry" align="left" valign="top" width="23.52941176470588%" headers="d26e95 ">
+                <p class="p"> text </p>
 
-|Stack trace text associated with this message
+              </td>
 
-|
+              <td class="entry" align="left" valign="top" width="41.17647058823529%" headers="d26e101 ">
+                <p class="p"> The slice id (portion of the query plan being executed) </p>
 
+              </td>
+
+            </tr>
+
+            <tr class="row">
+              <td class="entry" align="left" valign="top" width="11.76470588235294%" headers="d26e83 ">
+                <p class="p"> 14 </p>
+
+              </td>
+
+              <td class="entry" align="left" valign="top" width="23.52941176470588%" headers="d26e89 ">
+                <p class="p"> distr_tranx_id </p>
+
+              </td>
+
+              <td class="entry" align="left" valign="top" width="23.52941176470588%" headers="d26e95 ">
+                <p class="p"> text </p>
+
+              </td>
+
+              <td class="entry" align="left" valign="top" width="41.17647058823529%" headers="d26e101 ">
+                <p class="p"> Distributed transaction ID </p>
+
+              </td>
+
+            </tr>
+
+            <tr class="row">
+              <td class="entry" align="left" valign="top" width="11.76470588235294%" headers="d26e83 ">
+                <p class="p"> 15 </p>
+
+              </td>
+
+              <td class="entry" align="left" valign="top" width="23.52941176470588%" headers="d26e89 ">
+                <p class="p"> local_tranx_id </p>
+
+              </td>
+
+              <td class="entry" align="left" valign="top" width="23.52941176470588%" headers="d26e95 ">
+                <p class="p"> text </p>
+
+              </td>
+
+              <td class="entry" align="left" valign="top" width="41.17647058823529%" headers="d26e101 ">
+                <p class="p"> Local transaction ID </p>
+
+              </td>
+
+            </tr>
+
+            <tr class="row">
+              <td class="entry" align="left" valign="top" width="11.76470588235294%" headers="d26e83 ">
+                <p class="p"> 16 </p>
+
+              </td>
+
+              <td class="entry" align="left" valign="top" width="23.52941176470588%" headers="d26e89 ">
+                <p class="p"> sub_tranx_id </p>
+
+              </td>
+
+              <td class="entry" align="left" valign="top" width="23.52941176470588%" headers="d26e95 ">
+                <p class="p"> text </p>
+
+              </td>
+
+              <td class="entry" align="left" valign="top" width="41.17647058823529%" headers="d26e101 ">
+                <p class="p"> Subtransaction ID </p>
+
+              </td>
+
+            </tr>
+
+            <tr class="row">
+              <td class="entry" align="left" valign="top" width="11.76470588235294%" headers="d26e83 ">
+                <p class="p"> 17 </p>
+
+              </td>
+
+              <td class="entry" align="left" valign="top" width="23.52941176470588%" headers="d26e89 ">
+                <p class="p"> event_severity </p>
+
+              </td>
+
+              <td class="entry" align="left" valign="top" width="23.52941176470588%" headers="d26e95 ">
+                <p class="p"> varchar(10) </p>
+
+              </td>
+
+              <td class="entry" align="left" valign="top" width="41.17647058823529%" headers="d26e101 ">
+                <p class="p"> Values include: LOG, ERROR, FATAL, PANIC, DEBUG1, DEBUG2 </p>
+
+              </td>
+
+            </tr>
+
+            <tr class="row">
+              <td class="entry" align="left" valign="top" width="11.76470588235294%" headers="d26e83 ">
+                <p class="p"> 18 </p>
+
+              </td>
+
+              <td class="entry" align="left" valign="top" width="23.52941176470588%" headers="d26e89 ">
+                <p class="p"> sql_state_code </p>
+
+              </td>
+
+              <td class="entry" align="left" valign="top" width="23.52941176470588%" headers="d26e95 ">
+                <p class="p"> varchar(10) </p>
+
+              </td>
+
+              <td class="entry" align="left" valign="top" width="41.17647058823529%" headers="d26e101 ">
+                <p class="p"> SQL state code associated with the log message </p>
+
+              </td>
+
+            </tr>
+
+            <tr class="row">
+              <td class="entry" align="left" valign="top" width="11.76470588235294%" headers="d26e83 ">
+                <p class="p"> 19 </p>
+
+              </td>
+
+              <td class="entry" align="left" valign="top" width="23.52941176470588%" headers="d26e89 ">
+                <p class="p"> event_message </p>
+
+              </td>
+
+              <td class="entry" align="left" valign="top" width="23.52941176470588%" headers="d26e95 ">
+                <p class="p"> text </p>
+
+              </td>
+
+              <td class="entry" align="left" valign="top" width="41.17647058823529%" headers="d26e101 ">
+                <p class="p"> Log or error message text </p>
+
+              </td>
+
+            </tr>
+
+            <tr class="row">
+              <td class="entry" align="left" valign="top" width="11.76470588235294%" headers="d26e83 ">
+                <p class="p"> 20 </p>
+
+              </td>
+
+              <td class="entry" align="left" valign="top" width="23.52941176470588%" headers="d26e89 ">
+                <p class="p"> event_detail </p>
+
+              </td>
+
+              <td class="entry" align="left" valign="top" width="23.52941176470588%" headers="d26e95 ">
+                <p class="p"> text </p>
+
+              </td>
+
+              <td class="entry" align="left" valign="top" width="41.17647058823529%" headers="d26e101 ">
+                <p class="p"> Detail message text associated with an error or warning message </p>
+
+              </td>
+
+            </tr>
+
+            <tr class="row">
+              <td class="entry" align="left" valign="top" width="11.76470588235294%" headers="d26e83 ">
+                <p class="p"> 21 </p>
+
+              </td>
+
+              <td class="entry" align="left" valign="top" width="23.52941176470588%" headers="d26e89 ">
+                <p class="p"> event_hint </p>
+
+              </td>
+
+              <td class="entry" align="left" valign="top" width="23.52941176470588%" headers="d26e95 ">
+                <p class="p"> text </p>
+
+              </td>
+
+              <td class="entry" align="left" valign="top" width="41.17647058823529%" headers="d26e101 ">
+                <p class="p"> Hint message text associated with an error or warning message </p>
+
+              </td>
+
+            </tr>
+
+            <tr class="row">
+              <td class="entry" align="left" valign="top" width="11.76470588235294%" headers="d26e83 ">
+                <p class="p"> 22 </p>
+
+              </td>
+
+              <td class="entry" align="left" valign="top" width="23.52941176470588%" headers="d26e89 ">
+                <p class="p"> internal_query </p>
+
+              </td>
+
+              <td class="entry" align="left" valign="top" width="23.52941176470588%" headers="d26e95 ">
+                <p class="p"> text </p>
+
+              </td>
+
+              <td class="entry" align="left" valign="top" width="41.17647058823529%" headers="d26e101 ">
+                <p class="p"> The internally-generated query text </p>
+
+              </td>
+
+            </tr>
+
+            <tr class="row">
+              <td class="entry" align="left" valign="top" width="11.76470588235294%" headers="d26e83 ">
+                <p class="p"> 23 </p>
+
+              </td>
+
+              <td class="entry" align="left" valign="top" width="23.52941176470588%" headers="d26e89 ">
+                <p class="p"> internal_query_pos </p>
+
+              </td>
+
+              <td class="entry" align="left" valign="top" width="23.52941176470588%" headers="d26e95 ">
+                <p class="p"> int </p>
+
+              </td>
+
+              <td class="entry" align="left" valign="top" width="41.17647058823529%" headers="d26e101 ">
+                <p class="p"> The cursor index into the internally-generated query text </p>
+
+              </td>
+
+            </tr>
+
+            <tr class="row">
+              <td class="entry" align="left" valign="top" width="11.76470588235294%" headers="d26e83 ">
+                <p class="p"> 24 </p>
+
+              </td>
+
+              <td class="entry" align="left" valign="top" width="23.52941176470588%" headers="d26e89 ">
+                <p class="p"> event_context </p>
+
+              </td>
+
+              <td class="entry" align="left" valign="top" width="23.52941176470588%" headers="d26e95 ">
+                <p class="p"> text </p>
+
+              </td>
+
+              <td class="entry" align="left" valign="top" width="41.17647058823529%" headers="d26e101 ">
+                <p class="p"> The context in which this message gets generated </p>
+
+              </td>
+
+            </tr>
+
+            <tr class="row">
+              <td class="entry" align="left" valign="top" width="11.76470588235294%" headers="d26e83 ">
+                <p class="p"> 25 </p>
+
+              </td>
+
+              <td class="entry" align="left" valign="top" width="23.52941176470588%" headers="d26e89 ">
+                <p class="p"> debug_query_string </p>
+
+              </td>
+
+              <td class="entry" align="left" valign="top" width="23.52941176470588%" headers="d26e95 ">
+                <p class="p"> text </p>
+
+              </td>
+
+              <td class="entry" align="left" valign="top" width="41.17647058823529%" headers="d26e101 ">
+                <p class="p"> User-supplied query string with full detail for debugging. This string can be
+                  modified for internal use. </p>
+
+              </td>
+
+            </tr>
+
+            <tr class="row">
+              <td class="entry" align="left" valign="top" width="11.76470588235294%" headers="d26e83 ">
+                <p class="p"> 26 </p>
+
+              </td>
+
+              <td class="entry" align="left" valign="top" width="23.52941176470588%" headers="d26e89 ">
+                <p class="p"> error_cursor_pos </p>
+
+              </td>
+
+              <td class="entry" align="left" valign="top" width="23.52941176470588%" headers="d26e95 ">
+                <p class="p"> int </p>
+
+              </td>
+
+              <td class="entry" align="left" valign="top" width="41.17647058823529%" headers="d26e101 ">
+                <p class="p"> The cursor index into the query string </p>
+
+              </td>
+
+            </tr>
+
+            <tr class="row">
+              <td class="entry" align="left" valign="top" width="11.76470588235294%" headers="d26e83 ">
+                <p class="p"> 27 </p>
+
+              </td>
+
+              <td class="entry" align="left" valign="top" width="23.52941176470588%" headers="d26e89 ">
+                <p class="p"> func_name </p>
+
+              </td>
+
+              <td class="entry" align="left" valign="top" width="23.52941176470588%" headers="d26e95 ">
+                <p class="p"> text </p>
+
+              </td>
+
+              <td class="entry" align="left" valign="top" width="41.17647058823529%" headers="d26e101 ">
+                <p class="p"> The function in which this message is generated </p>
+
+              </td>
+
+            </tr>
+
+            <tr class="row">
+              <td class="entry" align="left" valign="top" width="11.76470588235294%" headers="d26e83 ">
+                <p class="p"> 28 </p>
+
+              </td>
+
+              <td class="entry" align="left" valign="top" width="23.52941176470588%" headers="d26e89 ">
+                <p class="p"> file_name </p>
+
+              </td>
+
+              <td class="entry" align="left" valign="top" width="23.52941176470588%" headers="d26e95 ">
+                <p class="p"> text </p>
+
+              </td>
+
+              <td class="entry" align="left" valign="top" width="41.17647058823529%" headers="d26e101 ">
+                <p class="p"> The internal code file where the message originated </p>
+
+              </td>
+
+            </tr>
+
+            <tr class="row">
+              <td class="entry" align="left" valign="top" width="11.76470588235294%" headers="d26e83 ">
+                <p class="p"> 29 </p>
+
+              </td>
+
+              <td class="entry" align="left" valign="top" width="23.52941176470588%" headers="d26e89 ">
+                <p class="p"> file_line </p>
+
+              </td>
+
+              <td class="entry" align="left" valign="top" width="23.52941176470588%" headers="d26e95 ">
+                <p class="p"> int </p>
+
+              </td>
+
+              <td class="entry" align="left" valign="top" width="41.17647058823529%" headers="d26e101 ">
+                <p class="p"> The line of the code file where the message originated </p>
+
+              </td>
+
+            </tr>
+
+            <tr class="row">
+              <td class="entry" align="left" valign="top" width="11.76470588235294%" headers="d26e83 ">
+                <p class="p"> 30 </p>
+
+              </td>
+
+              <td class="entry" align="left" valign="top" width="23.52941176470588%" headers="d26e89 ">
+                <p class="p"> stack_trace </p>
+
+              </td>
+
+              <td class="entry" align="left" valign="top" width="23.52941176470588%" headers="d26e95 ">
+                <p class="p"> text </p>
+
+              </td>
+
+              <td class="entry" align="left" valign="top" width="41.17647058823529%" headers="d26e101 ">
+                <p class="p"> Stack trace text associated with this message </p>
+
+              </td>
+
+            </tr>
+
+          </tbody>
+
+        </table>
+</div>
 Greenplum provides a utility called `gplogfilter` that can be used to search through a Greenplum Database log file for entries matching the specified criteria. By default, this utility searches through the Greenplum master log file in the default logging location. For example, to display the last three lines of the master log file:
 
 ```

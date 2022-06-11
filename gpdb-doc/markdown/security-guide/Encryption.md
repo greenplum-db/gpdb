@@ -1,12 +1,12 @@
 # Encrypting Data and Database Connections 
 
-Describes how to encrypt data at rest in the database or in transit over the network, to protect from evesdroppers or man-in-the-middle attacks.
+Describes how to encrypt data at rest in the database or in transit over the network, to protect from eavesdroppers or man-in-the-middle attacks.
 
 -   Connections between clients and the master database can be encrypted with SSL. This is enabled with the `ssl` server configuration parameter, which is `off` by default.0 Setting the `ssl` parameter to `on` allows client communications with the master to be encrypted. The master database must be set up for SSL. See [OpenSSL Configuration](Authenticate.md#openssl_config) for more about encrypting client connections with SSL.
 -   Greenplum Database allows SSL encryption of data in transit between the Greenplum parallel file distribution server, `gpfdist`, and segment hosts. See [Encrypting gpfdist Connections](#gpfdist_connections) for more information. 
--   The `pgcrypto` module of encryption/decryptions functions protect data at rest in the database. Encryption at the column level protects sensitive information, such as social security numbers or credit card numbers. See [Encrypting Data at Rest with pgcrypto](#pgcrypto) for more information.
+-   The `pgcrypto` module of encryption/decryptions functions protect data at rest in the database. Encryption at the column level protects sensitive information, such as social security numbers or credit card numbers. See [Encrypting Data at Rest with `pgcrypto`](#pgcrypto) for more information.
 
-**Parent topic:**[Greenplum Database Security Configuration Guide](../topics/preface.html)
+**Parent topic:** [Greenplum Database Security Configuration Guide](../topics/preface.html)
 
 ## Encrypting gpfdist Connections 
 
@@ -55,29 +55,29 @@ The following example shows how to securely load data into an external table. Th
     ```
 
 
-## Encrypting Data at Rest with pgcrypto 
+## Encrypting Data at Rest with `pgcrypto` 
 
-The pgcrypto module for Greenplum Database provides functions for encrypting data at rest in the database. Administrators can encrypt columns with sensitive information, such as social security numbers or credit card numbers, to provide an extra layer of protection. Database data stored in encrypted form cannot be read by users who do not have the encryption key, and the data cannot be read directly from disk.
+The `pgcrypto` module for Greenplum Database provides functions for encrypting data at rest in the database. Administrators can encrypt columns with sensitive information, such as social security numbers or credit card numbers, to provide an extra layer of protection. Database data stored in encrypted form cannot be read by users who do not have the encryption key, and the data cannot be read directly from disk.
 
-pgcrypto is installed by default when you install Greenplum Database. You must explicitly enable pgcrypto in each database in which you want to use the module.
+`pgcrypto` is installed by default when you install Greenplum Database. You must explicitly enable `pgcrypto` in each database in which you want to use the module.
 
-pgcrypto allows PGP encryption using symmetric and asymmetric encryption. Symmetric encryption encrypts and decrypts data using the same key and is faster than asymmetric encryption. It is the preferred method in an environment where exchanging secret keys is not an issue. With asymmetric encryption, a public key is used to encrypt data and a private key is used to decrypt data. This is slower then symmetric encryption and it requires a stronger key.
+`pgcrypto` allows PGP encryption using symmetric and asymmetric encryption. Symmetric encryption encrypts and decrypts data using the same key and is faster than asymmetric encryption. It is the preferred method in an environment where exchanging secret keys is not an issue. With asymmetric encryption, a public key is used to encrypt data and a private key is used to decrypt data. This is slower then symmetric encryption and it requires a stronger key.
 
-Using pgcrypto always comes at the cost of performance and maintainability. It is important to use encryption only with the data that requires it. Also, keep in mind that you cannot search encrypted data by indexing the data.
+Using `pgcrypto` always comes at the cost of performance and maintainability. It is important to use encryption only with the data that requires it. Also, keep in mind that you cannot search encrypted data by indexing the data.
 
 Before you implement in-database encryption, consider the following PGP limitations.
 
 -   No support for signing. That also means that it is not checked whether the encryption sub-key belongs to the master key.
 -   No support for encryption key as master key. This practice is generally discouraged, so this limitation should not be a problem.
--   No support for several subkeys. This may seem like a problem, as this is common practice. On the other hand, you should not use your regular GPG/PGP keys with pgcrypto, but create new ones, as the usage scenario is rather different.
+-   No support for several subkeys. This may seem like a problem, as this is common practice. On the other hand, you should not use your regular GPG/PGP keys with `pgcrypto`, but create new ones, as the usage scenario is rather different.
 
 Greenplum Database is compiled with zlib by default; this allows PGP encryption functions to compress data before encrypting. When compiled with OpenSSL, more algorithms will be available.
 
-Because pgcrypto functions run inside the database server, the data and passwords move between pgcrypto and the client application in clear-text. For optimal security, you should connect locally or use SSL connections and you should trust both the system and database administrators.
+Because `pgcrypto` functions run inside the database server, the data and passwords move between `pgcrypto` and the client application in clear-text. For optimal security, you should connect locally or use SSL connections and you should trust both the system and database administrators.
 
-pgcrypto configures itself according to the findings of the main PostgreSQL configure script.
+`pgcrypto` configures itself according to the findings of the main PostgreSQL configure script.
 
-When compiled with `zlib`, pgcrypto encryption functions are able to compress data before encrypting.
+When compiled with `zlib`, `pgcrypto` encryption functions are able to compress data before encrypting.
 
 Pgcrypto has various levels of encryption ranging from basic to advanced built-in functions. The following table shows the supported encryption algorithms.
 
@@ -85,10 +85,10 @@ Pgcrypto has various levels of encryption ranging from basic to advanced built-i
 |:------------------|:-------|:-----------|
 |MD5|yes|yes|
 |SHA1|yes|yes|
-|SHA224/256/384/512|yes|yes [1](#fntarg_1)|
-|Other digest algorithms|no|yes [2](#fntarg_2)|
+|SHA224/256/384/512|yes|yes [<sup>1</sup>](#fntarg_1)|
+|Other digest algorithms|no|yes [<sup>2</sup>](#fntarg_2)|
 |Blowfish|yes|yes|
-|AES|yes|yes[3](#fntarg_3)|
+|AES|yes|yes[<sup>3</sup>](#fntarg_3)|
 |DES/3DES/CAST5|no|yes|
 |Raw Encryption|yes|yes|
 |PGP Symmetric-Key|yes|yes|
@@ -378,7 +378,7 @@ This section shows how to encrypt data inserted into a column using the PGP keys
     
     ```
 
-    **Note:** Different keys may have the same ID. This is rare, but is a normal event. The client application should try to decrypt with each one to see which fits — like handling `ANYKEY`. See [pgp\_key\_id\(\)](https://www.postgresql.org/docs/8.3/static/pgcrypto.html) in the pgcrypto documentation.
+    **Note:** Different keys may have the same ID. This is rare, but is a normal event. The client application should try to decrypt with each one to see which fits — like handling `ANYKEY`. See [pgp\_key\_id\(\)](https://www.postgresql.org/docs/8.3/static/pgcrypto.html) in the `pgcrypto` documentation.
 
 5.  Decrypt the data using the private key.
 
@@ -470,5 +470,5 @@ Consider the following questions when planning for key management:
 
 The Open Web Application Security Project \(OWASP\) provides a very comprehensive [guide to securing encryption keys](https://www.owasp.org/index.php/Cryptographic_Storage_Cheat_Sheet).
 
-[1](#fnsrc_1) SHA2 algorithms were added to OpenSSL in version 0.9.8. For older versions, pgcrypto will use built-in code.[2](#fnsrc_2) Any digest algorithm OpenSSL supports is automatically picked up. This is not possible with ciphers, which need to be supported explicitly.[3](#fnsrc_3) AES is included in OpenSSL since version 0.9.7. For older versions, pgcrypto will use built-in code.
+[<sup>1</sup>](#fnsrc_1) SHA2 algorithms were added to OpenSSL in version 0.9.8. For older versions, `pgcrypto` will use built-in code.[<sup>2</sup>](#fnsrc_2) Any digest algorithm OpenSSL supports is automatically picked up. This is not possible with ciphers, which need to be supported explicitly.[<sup>3</sup>](#fnsrc_3) AES is included in OpenSSL since version 0.9.7. For older versions, `pgcrypto` will use built-in code.
 

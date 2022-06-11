@@ -1,6 +1,6 @@
 # Greenplum Command Center Security 
 
-Greenplum Command Center \(GPCC\) is a web-based application for monitoring and managing Greenplum clusters. GPCC works with data collected by agents running on the segment hosts and saved to the gpperfmon database. The gpperfmon database is created by running the `gpperfmon_install` utility, which also creates the `gpmon` database role that GPCC uses to access the gpperfmon database.
+Greenplum Command Center \(GPCC\) is a web-based application for monitoring and managing Greenplum clusters. GPCC works with data collected by agents running on the segment hosts and saved to the `gpperfmon` database. The `gpperfmon` database is created by running the `gpperfmon_install` utility, which also creates the `gpmon` database role that GPCC uses to access the `gpperfmon` database.
 
 ## The gpmon User 
 
@@ -12,9 +12,9 @@ host     all         gpmon         127.0.0.1/28    md5
 host     all         gpmon         ::1/128         md5
 ```
 
-These entries allow `gpmon` to establish a local socket connection to the gpperfmon database and a TCP/IP connection to any database.
+These entries allow `gpmon` to establish a local socket connection to the `gpperfmon` database and a TCP/IP connection to any database.
 
-The `gpmon` database role is a superuser. In a secure or production environment, it may be desirable to restrict the `gpmon` user to just the gpperfmon database. Do this by editing the `gpmon` host entry in the `pg_hba.conf` file and changing `all` in the database field to `gpperfmon`:
+The `gpmon` database role is a superuser. In a secure or production environment, it may be desirable to restrict the `gpmon` user to just the `gpperfmon` database. Do this by editing the `gpmon` host entry in the `pg_hba.conf` file and changing `all` in the database field to `gpperfmon`:
 
 ```
 local   gpperfmon   gpmon                        md5
@@ -34,13 +34,13 @@ The `gpmon` user can log in to the Command Center Console and has access to all 
 
 GPCC has the following types of users:
 
--   *Self Only* users can view metrics and view and cancel their own queries. Any Greenplum Database user successfully authenticated through the Greenplum Database authentication system can access Greenplum Command Center with Self Only permission. Higher permission levels are required to view and cancel other’s queries and to access the System and Admin Control Center features.
+-   *Self Only* users can view metrics and view and cancel their own queries. Any Greenplum Database user successfully authenticated through the Greenplum Database authentication system can access Greenplum Command Center with Self Only permission. Higher permission levels are required to view and cancel others' queries and to access the System and Admin Control Center features.
 -   *Basic* users can view metrics, view all queries, and cancel their own queries. Users with Basic permission are members of the Greenplum Database `gpcc_basic` group.
 -   *Operator Basic* users can view metrics, view their own and others’ queries, cancel their own queries, and view the System and Admin screens. Users with Operator Basic permission are members of the Greenplum Database `gpcc_operator_basic` group.
--   *Operator* users can view their own and others’ queries, cancel their own and other’s queries, and view the System and Admin screens. Users with Operator permission are members of the Greenplum Database `gpcc_operator` group.
+-   *Operator* users can view their own and others’ queries, cancel their own and others' queries, and view the System and Admin screens. Users with Operator permission are members of the Greenplum Database `gpcc_operator` group.
 -   *Admin* users can access all views and capabilities in the Command Center. Greenplum Database users with the `SUPERUSER` privilege have Admin permissions in Command Center.
 
-To log in to the GPCC web application, a user must be allowed access to the gpperfmon database in `pg_hba.conf`. For example, to make `user1` a regular GPCC user, edit the `pg_hba.conf` file and either add or edit a line for the user so that the gpperfmon database is included in the database field. For example:
+To log in to the GPCC web application, a user must be allowed access to the `gpperfmon` database in `pg_hba.conf`. For example, to make `user1` a regular GPCC user, edit the `pg_hba.conf` file and either add or edit a line for the user so that the `gpperfmon` database is included in the database field. For example:
 
 ```
 host     gpperfmon,accounts   user1     127.0.0.1/28    md5
@@ -77,5 +77,5 @@ gpmon-only
 
 See the [Greenplum Command Center documentation](http://gptext.docs.pivotal.io) for instructions to enable Kerberos authentication with Greenplum Command Center
 
-**Parent topic:**[Greenplum Database Security Configuration Guide](../topics/preface.html)
+**Parent topic:** [Greenplum Database Security Configuration Guide](../topics/preface.html)
 

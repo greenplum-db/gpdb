@@ -10,7 +10,7 @@ When a Greenplum Database system is first initialized, the system contains one p
 -   [Limiting Concurrent Connections](#topic_hwn_bk2_jr)
 -   [Encrypting Client/Server Connections](#topic_ibc_nl2_jr)
 
-**Parent topic:**[Greenplum Database Security Configuration Guide](../topics/preface.html)
+**Parent topic:** [Greenplum Database Security Configuration Guide](../topics/preface.html)
 
 ## Allowing Connections to Greenplum Database 
 
@@ -258,17 +258,15 @@ SSL authentication compares the Common Name \(cn\) attribute of an SSL certifica
 
 Authentication method:
 
--   Cert
+Cert
 
-    Authentication options:
+Authentication options:
 
-    Hostssl
-    :   Connection type must be hostssl.
+:    Hostssl - Connection type must be hostssl.
 
-    map=mapping
-    :   mapping.
+:    map=mapping - mapping.
 
-    :   This is specified in the `pg_ident.conf`, or in the file specified in the `ident_file` server setting.
+    This is specified in the `pg_ident.conf`, or in the file specified in the `ident_file` server setting.
 
     Following are sample `pg_hba.conf` entries for SSL client authentication:
 
@@ -474,7 +472,7 @@ max_connections=500
 max_prepared_transactions=100
 ```
 
-**Note:** Note: Raising the values of these parameters may cause Greenplum Database to request more shared memory. To mitigate this effect, consider decreasing other memory-related parameters such as `gp_cached_segworkers_threshold`.
+**Note:** Raising the values of these parameters may cause Greenplum Database to request more shared memory. To mitigate this effect, consider decreasing other memory-related parameters such as `gp_cached_segworkers_threshold`.
 
 To change the number of allowed connections:
 
