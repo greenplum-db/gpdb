@@ -99,7 +99,7 @@ Finally, through native API integration, Greenplum Database can stream backups d
 
 -   Back up Greenplum databases regularly unless the data is easily restored from sources.
 
--   Use the `gpbackup` command to specify only the schema and tables that you want backed up. See the `[gpbackup](https://gpdb.docs.pivotal.io/latest/utility_guide/ref/gpbackup.html)` reference for more information.
+-   Use the `gpbackup` command to specify only the schema and tables that you want backed up. See the [gpbackup](https://gpdb.docs.pivotal.io/latest/utility_guide/ref/gpbackup.html) reference for more information.
 
 -   `gpbackup` places `SHARED ACCESS` locks on the set of tables to back up. Backups with fewer tables are more efficient for selectively restoring schemas and tables, since `gprestore` does not have to search through the entire database.
 
@@ -134,9 +134,9 @@ You can configure a Greenplum Database system to trigger SNMP \(Simple Network M
 
 *Greenplum Database Utility Guide*:
 
--   `[gpstate](../utility_guide/admin_utilities/gpstate.html)` - view state of the Greenplum system
--   `[gprecoverseg](../utility_guide/admin_utilities/gprecoverseg.html)` - recover a failed segment
--   `[gpactivatestandby](../utility_guide/admin_utilities/gpactivatestandby.html)` - make the standby master the active master
+-   [gpstate](../utility_guide/admin_utilities/gpstate.html) - view state of the Greenplum system
+-   [gprecoverseg](../utility_guide/admin_utilities/gprecoverseg.html) - recover a failed segment
+-   [gpactivatestandby](../utility_guide/admin_utilities/gpactivatestandby.html) - make the standby master the active master
 
 [RDBMS MIB Specification](http://tools.ietf.org/html/rfc1697)
 
@@ -250,7 +250,7 @@ To implement block mirroring with an existing system that has a different mirror
 4.  Run `gpmovemirrors` with a command like the following:
 
     ```
-    gpmovemirrors -i mirror\_config\_file
+    gpmovemirrors -i <mirror_config_file>
     ```
 
 

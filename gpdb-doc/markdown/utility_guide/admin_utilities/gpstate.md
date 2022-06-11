@@ -1,0 +1,173 @@
+# gpstate 
+
+Shows the status of a running Greenplum Database system.
+
+## Synopsis 
+
+```
+gpstate [-d <master_data_directory>] [-B <parallel_processes>] 
+          [-s | -b | -Q \| -e\] \[-m \| -c] [-p] [-i] [-f] [-v | -q] 
+          [-l <log_directory>]
+
+gpstate -? | -h | --help
+```
+
+## Description 
+
+The `gpstate` utility displays information about a running Greenplum Database instance. There is additional information you may want to know about a Greenplum Database system, since it is comprised of multiple PostgreSQL database instances \(segments\) spanning multiple machines. The `gpstate` utility provides additional status information for a Greenplum Database system, such as:
+
+-   Which segments are down.
+-   Master and segment configuration information \(hosts, data directories, etc.\).
+-   The ports used by the system.
+-   A mapping of primary segments to their corresponding mirror segments.
+
+## Options 
+
+-b \(brief status\)
+:   Optional. Display a brief summary of the state of the Greenplum Database system. This is the default option.
+
+-B parallel\_processes
+:   The number of segments to check in parallel. If not specified, the utility will start up to 60 parallel processes depending on how many segment instances it needs to check.
+
+-c \(show primary to mirror mappings\)
+:   Optional. Display mapping of primary segments to their corresponding mirror segments.
+
+-d master\_data\_directory
+:   Optional. The master data directory. If not specified, the value set for `$MASTER_DATA_DIRECTORY` will be used.
+
+-e \(show segments with mirror status issues\)
+:   Show details on primary/mirror segment pairs that have potential issues such as 1\) the active segment is running in change tracking mode, meaning a segment is down 2\) the active segment is in resynchronization mode, meaning it is catching up changes to the mirror 3\) a segment is not in its preferred role, for example a segment that was a primary at system initialization time is now acting as a mirror, meaning you may have one or more segment hosts with unbalanced processing load.
+
+-f \(show standby master details\)
+:   Display details of the standby master host if configured.
+
+-i \(show Greenplum Database version\)
+:   Display the Greenplum Database software version information for each instance.
+
+-l logfile\_directory
+:   The directory to write the log file. Defaults to `~/gpAdminLogs`.
+
+-m \(list mirrors\)
+:   Optional. List the mirror segment instances in the system, their current role, and synchronization status.
+
+-p \(show ports\)
+:   List the port numbers used throughout the Greenplum Database system.
+
+-q \(no screen output\)
+:   Optional. Run in quiet mode. Except for warning messages, command output is not displayed on the screen. However, this information is still written to the log file.
+
+-Q \(quick status\)
+:   Optional. Checks segment status in the system catalog on the master host. Does not poll the segments for status.
+
+-s \(detailed status\)
+:   Optional. Displays detailed status information for the Greenplum Database system.
+
+-v \(verbose output\)
+:   Optional. Displays error messages and outputs detailed status and progress information.
+
+-? \| -h \| --help \(help\)
+:   Displays the online help.
+
+## Output Field Definitions 
+
+The following output fields are reported by `gpstate -s` for the master:
+
+|Output Data|Description|
+|-----------|-----------|
+|Master host|host name of the master|
+|Master postgres process ID|PID of the master database listener process|
+|Master data directory|file system location of the master data directory|
+|Master port|port of the master `postgres` database listener process|
+|Master current role|dispatch = regular operating modeutility = maintenance mode
+
+|
+|Greenplum array configuration type|Standard = one NIC per host Multi-Home = multiple NICs per host
+
+|
+|Greenplum initsystem version|version of Greenplum Database when system was first initialized|
+|Greenplum current version|current version of Greenplum Database|
+|Postgres version|version of PostgreSQL that Greenplum Database is based on|
+|Greenplum mirroring status|physical mirroring or none|
+|Master standby|host name of the standby master|
+|Standby master state|status of the standby master: active or passive|
+
+The following output fields are reported by `gpstate -s` for each segment:
+
+|Output Data|Description|
+|-----------|-----------|
+|Hostname|system-configured host name|
+|Address|network address host name \(NIC name\)|
+|Datadir|file system location of segment data directory|
+|Port|port number of segment `postgres` database listener process|
+|Current Role|current role of a segment: Mirror or Primary|
+|Preferred Role|role at system initialization time: Mirror or Primary|
+|Mirror Status|status of a primary/mirror segment pair:Synchronized = data is up to date on both
+
+Resynchronization = data is currently being copied from one to the other
+
+Change Tracking = segment down and active segment is logging changes
+
+|
+|Change tracking data size|when in Change Tracking mode, the size of the change log file \(may grow and shrink as compression is applied\)|
+|Estimated total data to synchronize|when in Resynchronization mode, the estimated size of data left to syncronize|
+|Data synchronized|when in Resynchronization mode, the estimated size of data that has already been syncronized|
+|Estimated resync progress with mirror|When in Resynchronization mode, the estimated percentage of completion|
+|Estimated resync end time|when in Resynchronization mode, the estimated time to complete|
+|File `postmaster.pid`|status of `postmaster.pid` lock file: Found or Missing|
+|PID from `postmaster.pid` file|PID found in the `postmaster.pid` file|
+|Lock files in `/tmp`|a segment port lock file for its `postgres` process is created in `/tmp` \(file is removed when a segment shuts down\)|
+|Active PID|active process ID of a segment|
+|Master reports status as|segment status as reported in the system catalog: Up or Down|
+|Database status|status of Greenplum Database to incoming requests: Up, Down, or Suspended. A Suspended state means database activity is temporarily paused while a segment transitions from one state to another.|
+
+The following output fields are reported by `gpstate -f` for standby master replication status:
+
+|Output Data|Description|
+|-----------|-----------|
+|Standby address|hostname of the standby master|
+|Standby data dir|file system location of the standby master data directory|
+|Standby port|port of the standby master `postgres` database listener process|
+|Standby PID|process ID of the standby master|
+|Standby status|status of the standby master: Standby host passive|
+|WAL Sender State|write-ahead log \(WAL\) streaming state: streaming, startup,backup, catchup|
+|Sync state|WAL sender syncronization state: sync|
+|Sent Location|WAL sender transaction log \(xlog\) record sent location|
+|Flush Location|WAL receiver xlog record flush location|
+|Replay Location|standby xlog record replay location|
+
+## Examples 
+
+Show detailed status information of a Greenplum Database system:
+
+```
+gpstate -s
+```
+
+Do a quick check for down segments in the master host system catalog:
+
+```
+gpstate -Q
+```
+
+Show information about mirror segment instances:
+
+```
+gpstate -m
+```
+
+Show information about the standby master configuration:
+
+```
+gpstate -f
+```
+
+Display the Greenplum software version information:
+
+```
+gpstate -i
+```
+
+## See Also 
+
+[gpstart](gpstart.html), [gplogfilter](gplogfilter.html)
+

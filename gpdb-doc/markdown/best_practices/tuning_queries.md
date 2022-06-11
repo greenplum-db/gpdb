@@ -113,9 +113,9 @@ When an explain plan shows a broadcast motion with a large number of rows, you s
 
 Greenplum Database aggregation extensions to the `GROUP BY` clause can perform some common calculations in the database more efficiently than in application or procedure code:
 
--   `GROUP BY ROLLUP(*col1*, *col2*, *col3*)`
--   `GROUP BY CUBE(*col1*, *col2*, *col3*)`
--   `GROUP BY GROUPING SETS((*col1*, *col2*), (*col1*, *col3*))`
+-   `GROUP BY ROLLUP(col1, col2, col3)`
+-   `GROUP BY CUBE(col1, col2, col3)`
+-   `GROUP BY GROUPING SETS((col1, col2), (col1, col3))`
 
 A `ROLLUP` grouping creates aggregate subtotals that roll up from the most detailed level to a grand total, following a list of grouping columns \(or expressions\). `ROLLUP` takes an ordered list of grouping columns, calculates the standard aggregate values specified in the `GROUP BY` clause, then creates progressively higher-level subtotals, moving from right to left through the list. Finally, it creates a grand total.
 
