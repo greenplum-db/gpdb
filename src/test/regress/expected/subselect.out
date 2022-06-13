@@ -1305,9 +1305,10 @@ select * from x where f1 = 1;
 (7 rows)
 
 -- SELECT FOR UPDATE cannot be inlined
--- GPDB_12_MERGE_FIXME: Without GDD, we don't do row locking, so it can be
--- inlined. However at the moment, we seem to inline this even when GDD is
--- enabled, losing the LockRows node altogether. That ought to be fixed.
+-- GPDB: select statement with locking clause is not easy to fully supported
+-- in greenplum. The following case even with GDD enabled greenplum will still
+-- lock the table in Exclusive Lock and not generate LockRows plan node.
+-- For detail, please refer to checkCanOptSelectLockingClause.
 explain (verbose, costs off)
 with x as (select * from (select f1 from subselect_tbl for update) ss)
 select * from x where f1 = 1;
