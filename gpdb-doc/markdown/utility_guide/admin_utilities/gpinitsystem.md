@@ -64,10 +64,10 @@ This utility performs the following tasks:
 :   Sets log output level to debug.
 
 -h hostfile\_gpinitsystem
-:   Optional. The full path and filename of a file that contains the host addresses of your segment hosts. If not specified on the command line, you can specify the host file using the `MACHINE_LIST_FILE` parameter in the gpinitsystem\_config file.
+:   Optional. The full path and filename of a file that contains the host addresses of your segment hosts. If not specified on the command line, you can specify the host file using the `MACHINE_LIST_FILE` parameter in the `gpinitsystem\_config` file.
 
 -I input\_configuration\_file
-:   The full path and filename of an input configuration file, which defines the Greenplum Database members and segments using the `QD_PRIMARY_ARRAY` and `PRIMARY_ARRAY` parameters. The input configuration file is typically created by using gpinitsystem with the `-O output\_configuration\_file` option. You must provide either the `-c cluster\_configuration\_file` option or the `-I input\_configuration\_file` option to `gpinitsystem`.
+:   The full path and filename of an input configuration file, which defines the Greenplum Database members and segments using the `QD_PRIMARY_ARRAY` and `PRIMARY_ARRAY` parameters. The input configuration file is typically created by using `gpinitsystem` with the `-O output\_configuration\_file` option. You must provide either the `-c cluster\_configuration\_file` option or the `-I input\_configuration\_file` option to `gpinitsystem`.
 
 --locale=locale \| -n locale
 :   Sets the default locale used by Greenplum Database. If not specified, the `LC_ALL`, `LC_COLLATE`, or `LANG` environment variable of the master host determines the locale. If these are not set, the default locale is `C` \(`POSIX`\). A locale identifier consists of a language identifier and a region identifier, and optionally a character set encoding. For example, `sv_SE` is Swedish as spoken in Sweden, `en_US` is U.S. English, and `fr_CA` is French Canadian. If more than one character set can be useful for a locale, then the specifications look like this: `en_US.UTF-8` \(locale specification and character set encoding\). On most systems, the command `locale` will show the locale environment settings and `locale -a` will show a list of all available locales.
