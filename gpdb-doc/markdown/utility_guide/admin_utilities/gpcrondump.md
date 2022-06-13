@@ -132,7 +132,7 @@ The following is a list of the codes that `gpcrondump` returns.
 
 To have `gpcrondump` send out status email notifications after a back up operation completes, you must place a file named `mail_contacts` in the home directory of the Greenplum superuser \(`gpadmin`\) or in the same directory as the `gpcrondump` utility \(`$GPHOME/bin`\). This file should contain one email address per line. `gpcrondump` will issue a warning if it cannot locate a `mail_contacts` file in either location. If both locations have a `mail_contacts` file, then the one in `$HOME` takes precedence.
 
-You can customize the email Subject and From lines of the email notifications that gpcrondump sends after a back up completes for a database. You specify the option `--email-file` with the location of a YAML file that contains email Subject and From lines that `gpcrondump` uses. for information about the format of the YAML file, see [File Format for Customized Emails](#email_yaml).
+You can customize the email Subject and From lines of the email notifications that `gpcrondump` sends after a back up completes for a database. You specify the option `--email-file` with the location of a YAML file that contains email Subject and From lines that `gpcrondump` uses. for information about the format of the YAML file, see [File Format for Customized Emails](#email_yaml).
 
 **Note:** The UNIX mail utility must be running on Greenplum Database host and must be configured to allow the Greenplum superuser \(`gpadmin`\) to send email.
 
@@ -225,7 +225,7 @@ For external tables, the table definition is backed up, however the data is not 
 --ddboost-host ddboost\_hostname \[--ddboost-host ddboost\_hostname ...\]
 --ddboost-user ddboost\_user --ddboost-backupdir backup\_directory
 \[--ddboost-remote\] \[--ddboost-skip-ping\]
-:   Sets the Data Domain Boost credentials. Do not combine this options with any other gpcrondump options. Do not enter just one part of this option.
+:   Sets the Data Domain Boost credentials. Do not combine this options with any other `gpcrondump` options. Do not enter just one part of this option.
 
 :   ddboost\_hostname is the IP address \(or hostname associated to the IP\) of the host. There is a 30-character limit. If you use two or more network connections to connect to the Data Domain system, specify each connection with the `--ddboost-host` option.
 
@@ -551,7 +551,7 @@ EMAIL_DETAILS:
 
 ```
 
-When email notification is configured for gpcrondump, the from\_user and the subject\_text are the strings that `gpcrondump` uses in the email notification after completing the back up for database\_name.
+When email notification is configured for `gpcrondump`, the from\_user and the subject\_text are the strings that `gpcrondump` uses in the email notification after completing the back up for database\_name.
 
 This example YAML file specifies different From and Subject lines for the databases `testdb100` and `testdb200`.
 
