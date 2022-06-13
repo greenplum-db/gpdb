@@ -62,6 +62,7 @@ extern bool optimizer_enable_ctas;
 extern bool optimizer_enable_dml;
 extern bool optimizer_enable_dml_triggers;
 extern bool optimizer_enable_dml_constraints;
+extern bool optimizer_enable_replicated_table;
 extern bool optimizer_enable_multiple_distinct_aggs;
 
 // OIDs of variants of LEAD window function
@@ -3288,6 +3289,15 @@ CTranslatorQueryToDXL::NoteDistributionPolicyOpclasses(const RangeTblEntry *rte)
 		{
 			gpdb::CloseRelation(rel);
 			return;
+		}
+
+		if (!optimizer_enable_replicated_table &&
+			policy->ptype == POLICYTYPE_REPLICATED)
+		{
+			GPOS_RAISE(
+				gpdxl::ExmaMD, gpdxl::ExmiMDObjUnsupported,
+				GPOS_WSZ_LIT(
+					"Use optimizer_enable_replicated_table to enable replicated tables"));
 		}
 
 		int policy_nattrs = policy->nattrs;

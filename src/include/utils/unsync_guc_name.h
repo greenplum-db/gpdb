@@ -391,6 +391,7 @@
 		"optimizer_enable_tablescan",
 		"optimizer_enable_redistribute_nestloop_loj_inner_child",
 		"optimizer_force_comprehensive_join_implementation",
+		"optimizer_enable_replicated_table",
 		"optimizer_enforce_subplans",
 		"optimizer_enumerate_plans",
 		"optimizer_expand_fulljoin",

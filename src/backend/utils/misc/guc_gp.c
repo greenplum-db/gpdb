@@ -362,7 +362,7 @@ bool		optimizer_enable_mergejoin;
 bool		optimizer_prune_unused_columns;
 bool		optimizer_enable_redistribute_nestloop_loj_inner_child;
 bool		optimizer_force_comprehensive_join_implementation;
-
+bool		optimizer_enable_replicated_table;
 
 /* Optimizer plan enumeration related GUCs */
 bool		optimizer_enumerate_plans;
@@ -3204,6 +3204,17 @@ struct config_bool ConfigureNamesBool_gp[] =
 		false,
 		NULL, NULL, NULL
 	},
+	{
+		{"optimizer_enable_replicated_table", PGC_USERSET, DEVELOPER_OPTIONS,
+		 gettext_noop("Enable replicated tables."),
+		 NULL,
+		 GUC_NOT_IN_SAMPLE
+		 },
+		 &optimizer_enable_replicated_table,
+		 true,
+		 NULL, NULL, NULL
+	},
+
 
 	{
 		{"gp_log_resqueue_priority_sleep_time", PGC_USERSET, RESOURCES_MGM,
