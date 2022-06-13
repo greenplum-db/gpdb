@@ -4,6 +4,8 @@
 create schema rpt;
 set search_path to rpt;
 
+set optimizer_enable_replicated_table=true;
+
 ---------
 -- INSERT
 ---------

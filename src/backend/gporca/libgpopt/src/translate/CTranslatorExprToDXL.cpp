@@ -6903,6 +6903,18 @@ CTranslatorExprToDXL::GetProperties(const CExpression *pexpr)
 		rows = rows * ulSegments;
 	}
 
+	if (GPOS_FTRACE(EopttraceEnableReplicatedTable) == false &&
+		(pexpr->GetDrvdPropPlan()->Pds()->Edt() ==
+			 CDistributionSpec::EdtStrictReplicated ||
+		 pexpr->GetDrvdPropPlan()->Pds()->Edt() ==
+			 CDistributionSpec::EdtTaintedReplicated ||
+		 pexpr->GetDrvdPropPlan()->Pds()->Edt() ==
+			 CDistributionSpec::EdtReplicated))
+	{
+		GPOS_RAISE(gpdxl::ExmaMD, gpdxl::ExmiMDObjUnsupported,
+				   GPOS_WSZ_LIT("Replicated tables"));
+	}
+
 	rows_out_str->AppendFormat(GPOS_WSZ_LIT("%f"), rows.Get());
 
 	// extract our width from statistics object

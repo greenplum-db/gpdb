@@ -290,6 +290,8 @@ CConfigParamMapping::SConfigMappingElem CConfigParamMapping::m_elements[] = {
 	 false,	 // m_negate_param
 	 GPOS_WSZ_LIT(
 		 "Explore a nested loop join even if a hash join is possible")},
+	{EopttraceEnableReplicatedTable, &optimizer_enable_replicated_table, false,
+	 GPOS_WSZ_LIT("Enable replicated tables")}
 
 };
 
