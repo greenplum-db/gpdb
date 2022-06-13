@@ -10,6 +10,12 @@ CREATE FUNCTION randomtext(len int) returns text as $$
   select string_agg(md5(random()::text),'') from generate_series(1, $1 / 32)
 $$ language sql;
 
+create function get_rel_toast_count(relname text) returns int as $$
+reltoastoid = plpy.execute("select \'"+ relname +"\'::regclass::oid;")[0]['oid']
+count = plpy.execute("select count(*) from pg_toast.pg_toast_"+str(reltoastoid)+";")[0]['count']
+return count
+$$ language plpython3u;
+
 -- INSERT 
 -- uses the toast call to store the large tuples
 INSERT INTO toastable_heap VALUES(repeat('a',100000), repeat('b',100001), 1);
@@ -47,13 +53,24 @@ SELECT char_length(a), char_length(b), c, d FROM toastable_ao ORDER BY c;
 TRUNCATE toastable_heap;
 TRUNCATE toastable_ao;
 
+select gp_segment_id, get_rel_toast_count('toastable_heap') from gp_dist_random('gp_id') order by gp_segment_id;
+select gp_segment_id, get_rel_toast_count('toastable_ao') from gp_dist_random('gp_id') order by gp_segment_id;
+
 INSERT INTO toastable_heap VALUES(repeat('a',100002), repeat('b',100003), 2, 20);
 INSERT INTO toastable_ao VALUES(repeat('a',100002), repeat('b',100003), 2, 20);
 
 SELECT char_length(a), char_length(b), c, d FROM toastable_heap;
 SELECT char_length(a), char_length(b), c, d FROM toastable_ao;
 
--- TODO: figure out a way to verify that toasted data is removed after the truncate.
+select gp_segment_id, get_rel_toast_count('toastable_heap') from gp_dist_random('gp_id') order by gp_segment_id;
+select gp_segment_id, get_rel_toast_count('toastable_ao') from gp_dist_random('gp_id') order by gp_segment_id;
+
+delete from toastable_heap;
+delete from toastable_ao;
+
+vacuum toastable_heap, toastable_ao;
+select gp_segment_id, get_rel_toast_count('toastable_heap') from gp_dist_random('gp_id') order by gp_segment_id;
+select gp_segment_id, get_rel_toast_count('toastable_ao') from gp_dist_random('gp_id') order by gp_segment_id;
 
 DROP TABLE toastable_heap;
 DROP TABLE toastable_ao;

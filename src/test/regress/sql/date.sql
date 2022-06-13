@@ -84,6 +84,17 @@ SELECT date '01 08 1999';
 SELECT date '99 08 01';
 SELECT date '1999 08 01';
 
+-- Test guc gp_allow_date_field_width_5digits
+-- should error out
+SELECT date '2020516';
+
+SET gp_allow_date_field_width_5digits=on;
+
+-- should parsed to 0202-05-16 ( non-standard YYYMMDD )
+SELECT date '2020516';
+
+RESET gp_allow_date_field_width_5digits;
+
 SET datestyle TO dmy;
 
 SELECT date 'January 8, 1999';
@@ -134,6 +145,17 @@ SELECT date '01 08 99';
 SELECT date '01 08 1999';
 SELECT date '99 08 01';
 SELECT date '1999 08 01';
+
+-- Test guc gp_allow_date_field_width_5digits
+-- should error out
+SELECT date '2020516';
+
+SET gp_allow_date_field_width_5digits=on;
+
+-- should parsed to 0202-05-16 ( non-standard YYYMMDD )
+SELECT date '2020516';
+
+RESET gp_allow_date_field_width_5digits;
 
 SET datestyle TO mdy;
 
@@ -191,6 +213,17 @@ SELECT date '4714-11-24 BC';
 SELECT date '4714-11-23 BC';  -- out of range
 SELECT date '5874897-12-31';
 SELECT date '5874898-01-01';  -- out of range
+
+-- Test guc gp_allow_date_field_width_5digits
+-- should error out
+SELECT date '2020516';
+
+SET gp_allow_date_field_width_5digits=on;
+
+-- should parsed to 0202-05-16 ( non-standard YYYMMDD )
+SELECT date '2020516';
+
+RESET gp_allow_date_field_width_5digits;
 
 RESET datestyle;
 

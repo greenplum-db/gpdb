@@ -424,6 +424,9 @@ bool		gp_enable_global_deadlock_detector = false;
 
 bool		gp_log_endpoints = false;
 
+/* optional reject to  parse ambigous 5-digits date in YYYMMDD format */
+bool		gp_allow_date_field_width_5digits = false;
+
 static const struct config_enum_entry gp_log_format_options[] = {
 	{"text", 0},
 	{"csv", 1},
@@ -511,6 +514,12 @@ static const struct config_enum_entry gp_interconnect_types[] = {
 #ifdef ENABLE_IC_PROXY
 	{"proxy", INTERCONNECT_TYPE_PROXY},
 #endif  /* ENABLE_IC_PROXY */
+	{NULL, 0}
+};
+
+static const struct config_enum_entry gp_interconnect_address_types[] = {
+	{"wildcard", INTERCONNECT_ADDRESS_TYPE_WILDCARD},
+	{"unicast", INTERCONNECT_ADDRESS_TYPE_UNICAST},
 	{NULL, 0}
 };
 
@@ -2814,6 +2823,16 @@ struct config_bool ConfigureNamesBool_gp[] =
 	},
 
 	{
+		{"gp_allow_date_field_width_5digits", PGC_USERSET, COMPAT_OPTIONS_PREVIOUS,
+			gettext_noop("Allow parsing input date field with exactly continous 5 digits in non-standard YYYMMDD timeformat (follow pg12+ behave)"),
+			NULL,
+			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+		},
+		&gp_allow_date_field_width_5digits,
+		false,
+		NULL, NULL, NULL
+	},
+	{
 		{"optimizer_enable_eageragg", PGC_USERSET, DEVELOPER_OPTIONS,
 			gettext_noop("Enable Eager Agg transform for pushing aggregate below an innerjoin."),
 			NULL,
@@ -4587,6 +4606,16 @@ struct config_enum ConfigureNamesEnum_gp[] =
 		},
 		&Gp_interconnect_type,
 		INTERCONNECT_TYPE_UDPIFC, gp_interconnect_types,
+		NULL, NULL, NULL
+	},
+
+	{
+		{"gp_interconnect_address_type", PGC_BACKEND, GP_ARRAY_TUNING,
+		 gettext_noop("Sets the interconnect address type used for inter-node communication."),
+		 gettext_noop("Valid values are \"unicast\" and \"wildcard\"")
+		},
+		&Gp_interconnect_address_type,
+		INTERCONNECT_ADDRESS_TYPE_UNICAST, gp_interconnect_address_types,
 		NULL, NULL, NULL
 	},
 

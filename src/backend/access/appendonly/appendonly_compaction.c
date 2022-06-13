@@ -278,7 +278,6 @@ AppendOnlyMoveTuple(TupleTableSlot *slot,
 					EState *estate)
 {
 	MemTuple	tuple;
-	bool		shouldFree;
 	AOTupleId  *oldAoTupleId;
 	AOTupleId	newAoTupleId;
 
@@ -291,7 +290,7 @@ AppendOnlyMoveTuple(TupleTableSlot *slot,
 	/* Extract all the values of the tuple */
 	slot_getallattrs(slot);
 
-	tuple = ExecFetchSlotMemTuple(slot, &shouldFree, mt_bind);
+	tuple = appendonly_form_memtuple(slot, mt_bind);
 	appendonly_insert(insertDesc,
 					  tuple,
 					  &newAoTupleId);
@@ -308,8 +307,7 @@ AppendOnlyMoveTuple(TupleTableSlot *slot,
 		ResetPerTupleExprContext(estate);
 	}
 
-	if (shouldFree)
-		pfree(tuple);
+	appendonly_free_memtuple(tuple);
 
 	if (Debug_appendonly_print_compaction)
 		ereport(DEBUG5,
@@ -319,31 +317,51 @@ AppendOnlyMoveTuple(TupleTableSlot *slot,
 }
 
 void
-AppendOnlyThrowAwayTuple(Relation rel, TupleTableSlot *slot)
+AppendOnlyThrowAwayTuple(Relation rel, TupleTableSlot *slot, MemTupleBinding *mt_bind)
 {
-	AOTupleId  *oldAoTupleId;
+	int			i;
+	int			numAttrs;
+	MemTuple	tuple;
+	TupleDesc	tupleDesc;
+	AOTupleId  *aoTupleId;
+	Datum		toast_values[MaxHeapAttributeNumber];
+	bool		toast_isnull[MaxHeapAttributeNumber];
 
 	Assert(slot);
 
-	oldAoTupleId = (AOTupleId *) &slot->tts_tid;
+	aoTupleId = (AOTupleId *) &slot->tts_tid;
 	/* Extract all the values of the tuple */
 	slot_getallattrs(slot);
 
-	/* GPDB_12_MERGE_FIXME: loop through all attributes, call toast_delete_datum()
-	 * on any toasted datums, like toast_delete does for heap tuples */
-#if 0
-	tuple = TupGetMemTuple(slot);
-	if (MemTupleHasExternal(tuple, mt_bind))
+	tuple = appendonly_form_memtuple(slot, mt_bind);
+	tupleDesc = rel->rd_att;
+	numAttrs = tupleDesc->natts;
+
+	Assert(numAttrs <= MaxHeapAttributeNumber);
+
+	memtuple_deform((MemTuple) tuple, mt_bind, toast_values, toast_isnull);
+
+	/* loop through all attributes, delete external stored values */
+	for (i = 0; i < numAttrs; i++)
 	{
-		toast_delete_memtup(rel, tuple, mt_bind);
+		if (TupleDescAttr(tupleDesc, i)->attlen == -1)
+		{
+			Datum		value = toast_values[i];
+
+			if (toast_isnull[i])
+				continue;
+			else if (VARATT_IS_EXTERNAL_ONDISK(PointerGetDatum(value)))
+				toast_delete_datum(rel, value, false);
+		}
 	}
-#endif
+
+	appendonly_free_memtuple(tuple);
 	
 	if (Debug_appendonly_print_compaction)
 		ereport(DEBUG5,
 				(errmsg("Compaction: Throw away tuple (%d," INT64_FORMAT ")",
-						AOTupleIdGet_segmentFileNum(oldAoTupleId),
-						AOTupleIdGet_rowNum(oldAoTupleId))));
+						AOTupleIdGet_segmentFileNum(aoTupleId),
+						AOTupleIdGet_rowNum(aoTupleId))));
 }
 
 /*
@@ -449,7 +467,7 @@ AppendOnlySegmentFileFullCompaction(Relation aorel,
 		else
 		{
 			/* Tuple is invisible and needs to be dropped */
-			AppendOnlyThrowAwayTuple(aorel, slot);
+			AppendOnlyThrowAwayTuple(aorel, slot, mt_bind);
 		}
 
 		/*

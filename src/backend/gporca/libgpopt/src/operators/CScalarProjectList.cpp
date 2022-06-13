@@ -118,6 +118,37 @@ CScalarProjectList::UlDistinctAggs(CExpressionHandle &exprhdl)
 	return ulDistinctAggs;
 }
 
+ULONG
+CScalarProjectList::UlOrderedAggs(CExpressionHandle &exprhdl)
+{
+	// We make do with an inexact representative expression returned by exprhdl.PexprScalarRep(),
+	// knowing that at this time, aggregate functions are accurately contained in it. What's not
+	// exact are subqueries. This is better than just returning 0 for project lists with subqueries.
+	CExpression *pexprPrjList = exprhdl.PexprScalarRep();
+
+	GPOS_ASSERT(nullptr != pexprPrjList);
+	GPOS_ASSERT(COperator::EopScalarProjectList ==
+				pexprPrjList->Pop()->Eopid());
+
+	ULONG ulOrderedAggs = 0;
+	const ULONG arity = pexprPrjList->Arity();
+	for (ULONG ul = 0; ul < arity; ul++)
+	{
+		CExpression *pexprPrjEl = (*pexprPrjList)[ul];
+		CExpression *pexprChild = (*pexprPrjEl)[0];
+		COperator::EOperatorId eopidChild = pexprChild->Pop()->Eopid();
+
+		if (COperator::EopScalarAggFunc == eopidChild)
+		{
+			if (CUtils::FHasOrderedAggToSplit(pexprChild))
+			{
+				ulOrderedAggs++;
+			}
+		}
+	}
+
+	return ulOrderedAggs;
+}
 
 //---------------------------------------------------------------------------
 //	@function:
@@ -153,6 +184,44 @@ CScalarProjectList::FHasMultipleDistinctAggs(CExpressionHandle &exprhdl)
 	phmexprdrgpexpr->Release();
 
 	return (1 < ulDifferentDQAs);
+}
+
+
+//---------------------------------------------------------------------------
+//	@function:
+//		CScalarProjectList::FHasScalarFunc
+//
+//	@doc:
+//		Check if given project list has a scalar func, for example:
+//			select random() from T;
+//
+//---------------------------------------------------------------------------
+BOOL
+CScalarProjectList::FHasScalarFunc(CExpressionHandle &exprhdl)
+{
+	// We make do with an inexact representative expression returned by exprhdl.PexprScalarRep(),
+	// knowing that at this time, aggregate functions are accurately contained in it. What's not
+	// exact are subqueries. This is better than just returning 0 for project lists with subqueries.
+	CExpression *pexprPrjList = exprhdl.PexprScalarRep();
+
+	GPOS_ASSERT(nullptr != pexprPrjList);
+	GPOS_ASSERT(COperator::EopScalarProjectList ==
+				pexprPrjList->Pop()->Eopid());
+
+	const ULONG arity = pexprPrjList->Arity();
+	for (ULONG ul = 0; ul < arity; ul++)
+	{
+		CExpression *pexprPrjEl = (*pexprPrjList)[ul];
+		CExpression *pexprChild = (*pexprPrjEl)[0];
+		COperator::EOperatorId eopidChild = pexprChild->Pop()->Eopid();
+
+		if (COperator::EopScalarFunc == eopidChild)
+		{
+			return true;
+		}
+	}
+
+	return false;
 }
 
 

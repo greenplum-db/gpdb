@@ -42,6 +42,8 @@ By default, analyzedb creates a maximum of 5 concurrent sessions to analyze tabl
 
 For a partitioned, append-optimized table, analyzedb checks the partitioned table root partition and leaf partitions. If needed, the utility updates statistics for non-current partitions and the root partition. For information about how statistics are collected for partitioned tables, see [ANALYZE](../../ref_guide/sql_commands/ANALYZE.html).
 
+`analyzedb` must sample additional partitions within a partitioned table when it encounters a stale partition, even when statistics are already collected. Consider it a best practice to run `analyzedb` on the root partition any time that you add a new partition(s) to a partitioned table. This operation both analyzes the child leaf partitions in parallel and merges any updated statistics into the root partition.
+
 ## <a id="notes"></a>Notes 
 
 The analyzedb utility updates append optimized table statistics if the table has been modified by DML or DDL commands, including INSERT, DELETE, UPDATE, CREATE TABLE, ALTER TABLE and TRUNCATE. The utility determines if a table has been modified by comparing catalog metadata of tables with the previous snapshot of metadata taken during a previous analyzedb operation. The snapshots of table metadata are stored as state files in the directory `db_analyze/<db_name>/<timestamp>` in the Greenplum Database master data directory.

@@ -1,5 +1,5 @@
 ---
-title: Platform Requirements 
+title: Platform Requirements for On-Premise Hardware
 ---
 
 This topic describes the Greenplum Database 6 platform and operating system software requirements.
@@ -121,49 +121,33 @@ Greenplum Databased 6 supports these Java versions for PL/Java and PXF:
 The following table lists minimum recommended specifications for hardware servers intended to support Greenplum Database on Linux systems in a production environment. All host servers in your Greenplum Database system must have the same hardware and software configuration. Greenplum also provides hardware build guides for its certified hardware platforms. It is recommended that you work with a Greenplum Systems Engineer to review your anticipated environment to ensure an appropriate hardware configuration for Greenplum Database.
 
 <div class="tablenoborder"><table cellpadding="4" cellspacing="0" summary="" id="topic_tnl_3mx_zgb__ji162790" class="table" frame="border" border="1" rules="all"><caption><span class="tablecap">Minimum Hardware Requirements</span></caption><colgroup><col style="width:120pt" /><col style="width:255pt" /></colgroup><tbody class="tbody">
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;">Minimum CPU</td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;">Any x86_64 compatible CPU</td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;">Minimum Memory</td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;">16 GB RAM per server</td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry nocellnorowborder" style="vertical-align:top;">Disk Space Requirements</td>
-
-              <td class="entry cell-norowborder" style="vertical-align:top;">
-                <ul class="ul" id="topic_tnl_3mx_zgb__ul_us1_b4n_r4">
-                  <li class="li">150MB per host for Greenplum installation</li>
-
-                  <li class="li">Approximately 300MB per segment instance for metadata</li>
-
-                  <li class="li">Cap disk capacity at 70% full to accommodate temporary files and prevent performance degradation</li>
-
-                </ul>
-
-              </td>
-
-            </tr>
-
-            <tr class="row">
-              <td class="entry row-nocellborder" style="vertical-align:top;">Network Requirements</td>
-
-              <td class="entry cellrowborder" style="vertical-align:top;">10 Gigabit Ethernet within the array<p class="p">NIC bonding is
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;">Minimum CPU</td>
+<td class="entry cell-norowborder" style="vertical-align:top;">Any x86_64 compatible CPU</td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;">Minimum Memory</td>
+<td class="entry cell-norowborder" style="vertical-align:top;">16 GB RAM per server</td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;">Disk Space Requirements</td>
+<td class="entry cell-norowborder" style="vertical-align:top;">
+<ul class="ul" id="topic_tnl_3mx_zgb__ul_us1_b4n_r4">
+<li class="li">150MB per host for Greenplum installation</li>
+<li class="li">Approximately 300MB per segment instance for metadata</li>
+<li class="li">Cap disk capacity at 70% full to accommodate temporary files and prevent performance degradation</li>
+</ul>
+</td>
+</tr>
+<tr class="row">
+<td class="entry row-nocellborder" style="vertical-align:top;">Network Requirements</td>
+<td class="entry cellrowborder" style="vertical-align:top;">10 Gigabit Ethernet within the array<p class="p">NIC bonding is
                   recommended when multiple interfaces are present</p>
 <p class="p">Greenplum Database can use
                   either IPV4 or IPV6 protocols.</p>
 </td>
-
-            </tr>
-
-          </tbody>
+</tr>
+</tbody>
 </table>
 </div>
 
@@ -216,137 +200,85 @@ VMware releases a Clients tool package on various platforms that can be used to 
 -   Windows Server 2012 R2 \(32-bit and 64-bit\)
 -   Windows Server 2008 R2 \(32-bit and 64-bit\)
 
-The Greenplum 6 Clients package includes the client and loader programs provided in the Greenplum 5 packages plus the addition of database/role/language commands and the Greenplum Streaming Server command utilities. Refer to [Greenplum Client and Loader Tools Package](../client_tool_guides/intro.html) for installation and usage details of the Greenplum 6 Client tools.
+The Greenplum 6 Clients package includes the client and loader programs provided in the Greenplum 5 packages plus the addition of database/role/language commands and the Greenplum Streaming Server command utilities. Refer to [Greenplum Client and Loader Tools Package](/vmware/client_tool_guides/intro.html) for installation and usage details of the Greenplum 6 Client tools.
 
 ### <a id="topic_eyc_l2h_zz"></a>Extensions 
 
 This table lists the versions of the Greenplum Extensions that are compatible with this release of Greenplum Database 6.
 
 <div class="tablenoborder"><table cellpadding="4" cellspacing="0" summary="" id="topic_eyc_l2h_zz__table_b1q_m2h_zz" class="table" frame="border" border="1" rules="all"><caption><span class="tablecap">Greenplum Extensions Compatibility </span></caption><colgroup><col /><col /><col /></colgroup><thead class="thead" style="text-align:left;">
-              <tr class="row">
-                <th class="entry nocellnorowborder" style="vertical-align:top;" id="d78288e683">Component</th>
-
-                <th class="entry nocellnorowborder" style="vertical-align:top;" id="d78288e686">Package Version</th>
-
-                <th class="entry cell-norowborder" style="vertical-align:top;" id="d78288e689">Additional Information</th>
-
-              </tr>
-
-            </thead>
+<tr class="row">
+<th class="entry nocellnorowborder" style="vertical-align:top;" id="d78288e683">Component</th>
+<th class="entry nocellnorowborder" style="vertical-align:top;" id="d78288e686">Package Version</th>
+<th class="entry cell-norowborder" style="vertical-align:top;" id="d78288e689">Additional Information</th>
+</tr>
+</thead>
 <tbody class="tbody">
-              <tr class="row">
-                <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d78288e683 "><a class="xref" href="../analytics/pl_java.html">PL/Java</a></td>
-
-                <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d78288e686 ">2.0.4</td>
-
-                <td class="entry cell-norowborder" style="vertical-align:top;" headers="d78288e689 ">Supports Java 8 and 11.</td>
-
-              </tr>
-
-              <tr class="row">
-                <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d78288e683 "><a class="xref" href="../install_guide/install_python_dsmod.html">Python Data Science Module Package</a></td>
-
-                <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d78288e686 ">2.0.2</td>
-
-                <td class="entry cell-norowborder" style="vertical-align:top;" headers="d78288e689 "> </td>
-
-              </tr>
-
-              <tr class="row">
-                <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d78288e683 "><a class="xref" href="../analytics/pl_r.html">PL/R</a></td>
-
-                <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d78288e686 ">3.0.3</td>
-
-                <td class="entry cell-norowborder" style="vertical-align:top;" headers="d78288e689 ">(CentOS) R 3.3.3<p class="p"> (Ubuntu) You install R 3.5.1+.</p>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d78288e683 "><a class="xref" href="../analytics/pl_java.html">PL/Java</a></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d78288e686 ">2.0.4</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d78288e689 ">Supports Java 8 and 11.</td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d78288e683 "><a class="xref" href="../install_guide/install_python_dsmod.html">Python Data Science Module Package</a></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d78288e686 ">2.0.2</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d78288e689 "> </td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d78288e683 "><a class="xref" href="../analytics/pl_r.html">PL/R</a></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d78288e686 ">3.0.3</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d78288e689 ">(CentOS) R 3.3.3<p class="p"> (Ubuntu) You install R 3.5.1+.</p>
 </td>
-
-              </tr>
-
-              <tr class="row">
-                <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d78288e683 "><a class="xref" href="../install_guide/install_r_dslib.html">R Data Science Library Package</a></td>
-
-                <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d78288e686 ">2.0.2</td>
-
-                <td class="entry cell-norowborder" style="vertical-align:top;" headers="d78288e689 "> </td>
-
-              </tr>
-
-              <tr class="row">
-                <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d78288e683 "><a class="xref" href="../analytics/pl_container.html">PL/Container</a></td>
-
-                <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d78288e686 ">2.1.2</td>
-
-                <td class="entry cell-norowborder" style="vertical-align:top;" headers="d78288e689 "> </td>
-
-              </tr>
-
-              <tr class="row">
-                <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d78288e683 ">PL/Container Image for R </td>
-
-                <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d78288e686 ">2.1.2</td>
-
-                <td class="entry cell-norowborder" style="vertical-align:top;" headers="d78288e689 ">R 3.6.3</td>
-
-              </tr>
-
-              <tr class="row">
-                <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d78288e683 ">PL/Container Images for Python </td>
-
-                <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d78288e686 ">2.1.2</td>
-
-                <td class="entry cell-norowborder" style="vertical-align:top;" headers="d78288e689 ">Python 2.7.12<p class="p">Python 3.7</p>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d78288e683 "><a class="xref" href="../install_guide/install_r_dslib.html">R Data Science Library Package</a></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d78288e686 ">2.0.2</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d78288e689 "> </td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d78288e683 "><a class="xref" href="../analytics/pl_container.html">PL/Container</a></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d78288e686 ">2.1.2</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d78288e689 "> </td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d78288e683 ">PL/Container Image for R </td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d78288e686 ">2.1.2</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d78288e689 ">R 3.6.3</td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d78288e683 ">PL/Container Images for Python </td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d78288e686 ">2.1.2</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d78288e689 ">Python 2.7.12<p class="p">Python 3.7</p>
 </td>
-
-              </tr>
-
-              <tr class="row">
-                <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d78288e683 ">PL/Container Beta</td>
-
-                <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d78288e686 ">3.0.0-beta</td>
-
-                <td class="entry cell-norowborder" style="vertical-align:top;" headers="d78288e689 "> </td>
-
-              </tr>
-
-              <tr class="row">
-                <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d78288e683 ">PL/Container Beta Image for R </td>
-
-                <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d78288e686 ">3.0.0-beta</td>
-
-                <td class="entry cell-norowborder" style="vertical-align:top;" headers="d78288e689 ">R 3.4.4</td>
-
-              </tr>
-
-              <tr class="row">
-                <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d78288e683 "><a class="xref" href="../analytics/greenplum_r_client.html">GreenplumR</a></td>
-
-                <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d78288e686 ">1.1.0</td>
-
-                <td class="entry cell-norowborder" style="vertical-align:top;" headers="d78288e689 ">Supports R 3.6+.</td>
-
-              </tr>
-
-              <tr class="row">
-                <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d78288e683 "><a class="xref" href="../analytics/madlib.html">MADlib Machine Learning</a></td>
-
-                <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d78288e686 ">1.19, 1.18, 1.17, 1.16</td>
-
-                <td class="entry cell-norowborder" style="vertical-align:top;" headers="d78288e689 ">Support matrix at <a class="xref" href="https://cwiki.apache.org/confluence/display/MADLIB/FAQ#FAQ-Q1-2WhatdatabaseplatformsdoesMADlibsupportandwhatistheupgradematrix?" target="_blank">MADlib FAQ</a>.</td>
-
-              </tr>
-
-              <tr class="row">
-                <td class="entry row-nocellborder" style="vertical-align:top;" headers="d78288e683 "><a class="xref" href="../analytics/postGIS.html">PostGIS Spatial and Geographic Objects</a></td>
-
-                <td class="entry row-nocellborder" style="vertical-align:top;" headers="d78288e686 ">2.5.4+pivotal.6.build.1, 2.5.4+pivotal.4, 2.5.4+pivotal.3,
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d78288e683 ">PL/Container Beta</td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d78288e686 ">3.0.0-beta</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d78288e689 "> </td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d78288e683 ">PL/Container Beta Image for R </td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d78288e686 ">3.0.0-beta</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d78288e689 ">R 3.4.4</td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d78288e683 "><a class="xref" href="../analytics/greenplum_r_client.html">GreenplumR</a></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d78288e686 ">1.1.0</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d78288e689 ">Supports R 3.6+.</td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d78288e683 "><a class="xref" href="../analytics/madlib.html">MADlib Machine Learning</a></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d78288e686 ">1.19, 1.18, 1.17, 1.16</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d78288e689 ">Support matrix at <a class="xref" href="https://cwiki.apache.org/confluence/display/MADLIB/FAQ#FAQ-Q1-2WhatdatabaseplatformsdoesMADlibsupportandwhatistheupgradematrix?" target="_blank">MADlib FAQ</a>.</td>
+</tr>
+<tr class="row">
+<td class="entry row-nocellborder" style="vertical-align:top;" headers="d78288e683 "><a class="xref" href="../analytics/postGIS.html">PostGIS Spatial and Geographic Objects</a></td>
+<td class="entry row-nocellborder" style="vertical-align:top;" headers="d78288e686 ">2.5.4+pivotal.6.build.1, 2.5.4+pivotal.4, 2.5.4+pivotal.3,
                   2.5.4+pivotal.2, 2.5.4+pivotal.1,<p class="p">2.1.5+pivotal.2-2</p>
 </td>
-
-                <td class="entry cellrowborder" style="vertical-align:top;" headers="d78288e689 "> </td>
-
-              </tr>
-
-            </tbody>
+<td class="entry cellrowborder" style="vertical-align:top;" headers="d78288e689 "> </td>
+</tr>
+</tbody>
 </table>
 </div>
 

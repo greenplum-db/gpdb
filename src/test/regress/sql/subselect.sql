@@ -650,7 +650,13 @@ $$;
 
 select * from explain_sq_limit();
 
+-- a subpath is sorted under a subqueryscan. however, the subqueryscan is not.
+-- whether the order of subpath can applied to the subqueryscan is up-to-implement.
+-- now we do not guarantee the order of subpath can apply to the subqueryscan.
+-- so the results of bellow is not stable, so we ignore the results
+--start_ignore
 select * from (select pk,c2 from sq_limit order by c1,pk) as x limit 3;
+--end_ignore
 reset optimizer;
 
 drop function explain_sq_limit();

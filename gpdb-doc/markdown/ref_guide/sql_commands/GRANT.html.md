@@ -96,8 +96,6 @@ Greenplum Database grants default privileges on some types of objects to `PUBLIC
 
 The object owner can, of course, `REVOKE` both default and expressly granted privileges. \(For maximum security, issue the `REVOKE` in the same transaction that creates the object; then there is no window in which another user can use the object.\)
 
-\>
-
 **GRANT on Roles**
 
 This variant of the `GRANT` command grants membership in a role to one or more other roles. Membership in a role is significant because it conveys the privileges granted to a role to each of its members.

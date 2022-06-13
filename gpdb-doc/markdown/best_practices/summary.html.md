@@ -89,14 +89,14 @@ See [Distributions](schema.html).
 
         ```
         gp_vmem = ((SWAP + RAM) – (7.5GB + 0.05 * RAM - (300KB *
-              total\_\#\_workfiles))) / 1.7
+              total_#_workfiles))) / 1.7
         ```
 
     -   If the total system memory is equal to or greater than 256 GB:
 
         ```
         gp_vmem = ((SWAP + RAM) – (7.5GB + 0.05 * RAM - (300KB *
-              total\_\#\_workfiles))) / 1.17
+              total_#_workfiles))) / 1.17
         ```
 
 -   Never set `gp_vmem_protect_limit` too high or larger than the physical RAM on the system.
@@ -167,13 +167,14 @@ See [System Monitoring and Maintenance](maintenance.html), [Query Profiling](../
 
 ## <a id="_Toc286661612"></a>ANALYZE 
 
--   Determine if analyzing the database is actually needed. Analyzing is not needed if g`p_autostats_mode` is set to `on_no_stats` \(the default\) and the table is not partitioned.
+-   Determine if analyzing the database is actually needed. Analyzing is not needed if `gp_autostats_mode` is set to `on_no_stats` \(the default\) and the table is not partitioned.
 -   Use `analyzedb` in preference to `ANALYZE` when dealing with large sets of tables, as it does not require analyzing the entire database. The `analyzedb` utility updates statistics data for the specified tables incrementally and concurrently. For append optimized tables, `analyzedb` updates statistics incrementally only if the statistics are not current. For heap tables, statistics are always updated. `ANALYZE` does not update the table metadata that the `analyzedb` utility uses to determine whether table statistics are up to date.
 -   Selectively run `ANALYZE` at the table level when needed.
 -   Always run `ANALYZE` after `INSERT`, `UPDATE`. and `DELETE` operations that significantly changes the underlying data.
 -   Always run `ANALYZE` after `CREATE INDEX` operations.
 -   If `ANALYZE` on very large tables takes too long, run `ANALYZE` only on the columns used in a join condition, `WHERE` clause, `SORT`, `GROUP BY`, or `HAVING` clause.
 -   When dealing with large sets of tables, use `analyzedb` instead of `ANALYZE.`
+-   Run `analyzedb` on the root partition any time that you add a new partition(s) to a partitioned table. This operation both analyzes the child leaf partitions in parallel and merges any updated statistics into the root partition.
 
 See [Updating Statistics with ANALYZE](analyze.html).
 
