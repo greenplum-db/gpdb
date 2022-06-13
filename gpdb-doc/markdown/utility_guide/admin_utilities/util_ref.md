@@ -8,7 +8,7 @@ Greenplum Database uses the standard PostgreSQL client and server programs and p
 
 Greenplum Database provides the following management utility programs:
 
-|[analyzedb](analyzedb.html)
+ [analyzedb](analyzedb.html)
 
  [gpactivatestandby](gpactivatestandby.html)
 
@@ -106,8 +106,6 @@ Greenplum Database provides the following management utility programs:
 
  [pxf cluster](../../pxf/ref/pxf-cluster.html)
 
-|
-
 ## Backend Server Programs 
 
 The following standard PostgreSQL server management programs are provided with Greenplum Database and reside in `$GPHOME/bin`. They are modified to handle the parallelism and distribution of a Greenplum Database system. You access these programs only through the Greenplum Database management tools and utilities.
@@ -119,9 +117,7 @@ The following standard PostgreSQL server management programs are provided with G
 |`pg_basebackup`|This program makes a binary copy of a single database instance. Greenplum Database uses it for tasks such as creating a standby master instance, or recovering a mirror segment when a full copy is needed. Do not use this utility to back up Greenplum Database segment instances because it does not produce MPP-consistent backups.|[gpinitstandby](gpinitstandby.html), [gprecoverseg](gprecoverseg.html)|
 |`pg_controldata`|Not used in Greenplum Database|[gpstate](gpstate.html)|
 |`pg_ctl`|This program is called by `gpstart` and `gpstop` when starting or stopping a Greenplum Database array. It is used internally to stop and start the individual segment instances and the master instance in parallel and with the correct options.|[gpstart](gpstart.html), [gpstop](gpstop.html)|
-|`pg_resetxlog`|DO NOT USE**Warning:** This program might cause data loss or cause data to become unavailable. If this program is used, the Pivotal Greenplum Database cluster is not supported. Thecluster must be reinitialized and restoredby the customer.
-
-|N/A|
+|`pg_resetxlog`|DO NOT USE **Warning:** This program might cause data loss or cause data to become unavailable. If this program is used, the Pivotal Greenplum Database cluster is not supported. The cluster must be reinitialized and restored by the customer.|N/A|
 |`postgres`|The `postgres` executable is the actual PostgreSQL server process that processes queries.|The main `postgres` process \(postmaster\) creates other `postgres` subprocesses and `postgres` session as needed to handle client connections.|
 |`postmaster`|`postmaster` starts the `postgres` database server listener process that accepts client connections. In Greenplum Database, a `postgres` database listener process runs on the Greenplum master Instance and on each Segment Instance.|In Greenplum Database, you use [gpstart](gpstart.html) and [gpstop](gpstop.html) to start all postmasters \(`postgres` processes\) in the system at once in the correct order and with the correct options.|
 
