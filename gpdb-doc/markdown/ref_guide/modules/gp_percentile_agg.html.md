@@ -4,6 +4,12 @@ title: gp_percentile_agg
 
 The `gp_percentile_agg` module introduces improved Pivotal Query Optimizer \(GPORCA\) performance for ordered-set aggregate functions including `percentile_cont()`, `percentile_disc()`, and `median()`. These improvements particularly benefit MADlib, which internally invokes these functions.
 
+GPORCA generates a more performant query plan when:
+
+- The sort expression does not include any computed columns.
+- The `<fraction>` provided to the function is a `const` and not an `ARRAY`.
+- The query does not contain a `GROUP BY` clause.
+
 The `gp_percentile_agg` module is a Greenplum Database extension.
 
 ## <a id="topic_reg"></a>Installing and Registering the Module 
