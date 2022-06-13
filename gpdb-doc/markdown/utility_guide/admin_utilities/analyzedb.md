@@ -31,7 +31,7 @@ The analyzedb utility updates statistics on table data for the specified tables 
 
 While performing [ANALYZE](../../ref_guide/sql_commands/ANALYZE.html) operations, analyzedb creates a snapshot of the table metadata and stores it on disk on the master host. An `ANALYZE` operation is performed only if the table has been modified. If a table or partition has not been modified since the last time it was analyzed, analyzedb automatically skips the table or partition because it already contains up-to-date statistics.
 
--   For append optimized tables, analyzedb updates statistics incrementally, if the statistics are not current. For example, if table data is changed after statistics were collected for the table. If there are no statistics for the table, statistics are collected.
+-   For append optimized tables, analyzedb updates statistics incrementally if the statistics are not current -- for example, if table data is changed after statistics were collected for the table. If there are no statistics for the table, statistics are collected.
 -   For heap tables, statistics are always updated.
 
 Specify the `--full` option to update append-optimized table statistics even if the table statistics are current.
@@ -136,7 +136,7 @@ Running the `ANALYZE` command on a table, not using the `analyzedb` utility, doe
 :   Displays the online help.
 
 -v \| --verbose
-:   If specified, sets the logging level to verbose to write additional information the log file and to the command line during command execution. The information includes a list of all the tables to be analyzed \(including child leaf partitions of partitioned tables\). Output also includes the duration of each `ANALYZE` operation.
+:   If specified, sets the logging level to verbose to write additional information to the log file and to the command line during command execution. The information includes a list of all the tables to be analyzed \(including child leaf partitions of partitioned tables\). Output also includes the duration of each `ANALYZE` operation.
 
 --version
 :   Displays the version of this utility.
@@ -186,13 +186,13 @@ $BODY$
 LANGUAGE plpythonu VOLATILE;
 ```
 
-When this `SELECT` command is run by the gpadmin user, the `analyzedb` utility performs an analyze operation on the table `public.mytable` that is in the database `mytest`.
+When this `SELECT` command is run by the `gpadmin` user, the `analyzedb` utility performs an analyze operation on the table `public.mytable` that is in the database `mytest`.
 
 ```
 SELECT analyzedb('-d mytest -t public.mytable') ;
 ```
 
-**Note:** To create a PL/Python function, the PL/Python procedural language must be registered as a language in the database. For example, this `CREATE LANGUAGE` command run as gpadmin registers PL/Python as an untrusted language:
+**Note:** To create a PL/Python function, the PL/Python procedural language must be registered as a language in the database. For example, this `CREATE LANGUAGE` command run as `gpadmin` registers PL/Python as an untrusted language:
 
 ```
 CREATE LANGUAGE plpythonu;
