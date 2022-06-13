@@ -44,10 +44,9 @@ struct DtxContextInfo;         /* cdb/cdbdtxcontextinfo.h */
  * Only flags in PROCARRAY_PROC_FLAGS_MASK are considered when matching
  * PGXACT->vacuumFlags. Other flags are used for different purposes and
  * have no corresponding PROC flag equivalent.
+ * GPDB doesn't use PROC_IN_VACUUM for now, see comment in vacuum_rel().
  */
-#define		PROCARRAY_PROC_FLAGS_MASK	(PROCARRAY_VACUUM_FLAG | \
-										 PROCARRAY_ANALYZE_FLAG | \
-										 PROCARRAY_LOGICAL_DECODING_FLAG)
+#define		PROCARRAY_PROC_FLAGS_MASK	(PROCARRAY_ANALYZE_FLAG | PROCARRAY_LOGICAL_DECODING_FLAG)
 
 /* Use the following flags as an input "flags" to GetOldestXmin function */
 /* Consider all backends except for logical decoding ones which manage xmin separately */

@@ -1,0 +1,64 @@
+set datestyle = 'ISO, DMY';
+-- Generate a multi field large dataset for testing
+DROP EXTERNAL WEB TABLE IF EXISTS tbl_dataset_gen;
+NOTICE:  table "tbl_dataset_gen" does not exist, skipping
+CREATE EXTERNAL WEB TABLE tbl_dataset_gen (
+  s1 char(25))
+EXECUTE '$(SHELL) @abs_srcdir@/scripts/multi_fields_generator.sh | tee @abs_srcdir@/data/fixedwidth_large_multi_fields.tbl' ON HOST
+FORMAT 'TEXT';
+\d tbl_dataset_gen;
+                Foreign table "public.tbl_dataset_gen"
+ Column |     Type      | Collation | Nullable | Default | FDW options 
+--------+---------------+-----------+----------+---------+-------------
+ s1     | character(25) |           |          |         | 
+FDW options: (format 'text', delimiter '	', "null" E'\\N', escape E'\\', format_type 't', command '$(SHELL) @abs_srcdir@/scripts/multi_fields_generator.sh | tee @abs_srcdir@/data/fixedwidth_large_multi_fields.tbl', execute_on 'PER_HOST', log_errors 'f', encoding '6', is_writable 'false')
+
+select * from tbl_dataset_gen ORDER BY s1 desc limit 10;
+            s1             
+---------------------------
+ 00000500002.7182.71828185
+ 00000499993.1413.14159267
+ 00000499982.7182.71828185
+ 00000499973.1413.14159267
+ 00000499962.7182.71828185
+ 00000499953.1413.14159267
+ 00000499942.7182.71828185
+ 00000499933.1413.14159267
+ 00000499922.7182.71828185
+ 00000499913.1413.14159267
+(10 rows)
+
+-- Loading a multi field large dataset for testing
+DROP EXTERNAL TABLE IF EXISTS tbl_ext_fixedwidth;
+CREATE EXTERNAL TABLE tbl_ext_fixedwidth (
+  s1 char(10), s2 real, s3 double precision, s4 integer)
+LOCATION
+(
+  'file://@hostname@@abs_srcdir@/data/fixedwidth_large_multi_fields.tbl'
+)
+FORMAT 'CUSTOM' (formatter='fixedwidth_in', s1='10', s2='5', s3='9', s4='1');
+\d tbl_ext_fixedwidth;
+                Foreign table "public.tbl_ext_fixedwidth"
+ Column |       Type       | Collation | Nullable | Default | FDW options 
+--------+------------------+-----------+----------+---------+-------------
+ s1     | character(10)    |           |          |         | 
+ s2     | real             |           |          |         | 
+ s3     | double precision |           |          |         | 
+ s4     | integer          |           |          |         | 
+FDW options: (formatter 'fixedwidth_in', s1 '10', s2 '5', s3 '9', s4 '1', format 'custom', format_type 'b', location_uris 'file://@hostname@@abs_srcdir@/data/fixedwidth_large_multi_fields.tbl', execute_on 'ALL_SEGMENTS', log_errors 'f', encoding '6', is_writable 'false')
+
+SELECT * FROM tbl_ext_fixedwidth ORDER BY s1 desc limit 10;
+     s1     |  s2   |    s3     | s4 
+------------+-------+-----------+----
+ 0000050000 | 2.718 | 2.7182818 |  5
+ 0000049999 | 3.141 | 3.1415926 |  7
+ 0000049998 | 2.718 | 2.7182818 |  5
+ 0000049997 | 3.141 | 3.1415926 |  7
+ 0000049996 | 2.718 | 2.7182818 |  5
+ 0000049995 | 3.141 | 3.1415926 |  7
+ 0000049994 | 2.718 | 2.7182818 |  5
+ 0000049993 | 3.141 | 3.1415926 |  7
+ 0000049992 | 2.718 | 2.7182818 |  5
+ 0000049991 | 3.141 | 3.1415926 |  7
+(10 rows)
+
