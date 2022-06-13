@@ -2509,6 +2509,8 @@ CTranslatorUtils::IsCompositeConst(CMemoryPool *mp, CMDAccessor *md_accessor,
 
 	const IMDType *type = md_accessor->RetrieveType(mdid_return_type);
 
+	mdid_return_type->Release();
+
 	return type->IsComposite();
 }
 
