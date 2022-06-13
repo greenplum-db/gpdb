@@ -30,7 +30,7 @@ Some `gpcheck` validations require `root` privileges. If you run `gpcheck` as `g
 :   The name of a configuration file to use instead of the default file `$GPHOME/etc/gpcheck.cnf` \(or `~/gpconfigs/gpcheck_dca_config` on the Dell EMC Greenplum Data Computing Appliance\). This file specifies the OS-specific checks to run.
 
 \{-f \| --file\} hostfile\_gpcheck
-:   The name of a file that contains a list of hosts that `gpcheck`uses to validate platform-specific settings. This file should contain a single host name for all hosts in your Greenplum Database system \(master, standby master, and segments\). `gpcheck` uses SSH to connect to the hosts.
+:   The name of a file that contains a list of hosts that `gpcheck` uses to validate platform-specific settings. This file should contain a single host name for all hosts in your Greenplum Database system \(master, standby master, and segments\). `gpcheck` uses SSH to connect to the hosts.
 
 \{-h \| --host\} host\_ID
 :   Checks platform-specific settings on the host in your Greenplum Database system specified by host\_ID. `gpcheck` uses SSH to connect to the host.
