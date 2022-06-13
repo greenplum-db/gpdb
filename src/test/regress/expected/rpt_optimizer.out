@@ -1200,6 +1200,29 @@ explain (costs off) select * from t1_13532 x, t2_13532 y where y.a < random() an
  Optimizer: Pivotal Optimizer (GPORCA)
 (8 rows)
 
+-- test for optimizer_enable_replicated_table
+explain (costs off) select * from rep_tab;
+                QUERY PLAN
+------------------------------------------
+ Gather Motion 1:1  (slice1; segments: 1)
+   ->  Seq Scan on rep_tab
+ Optimizer: Pivotal Optimizer (GPORCA)
+(3 rows)
+
+set optimizer_enable_replicated_table=off;
+set optimizer_trace_fallback=on;
+explain (costs off) select * from rep_tab;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Use optimizer_enable_replicated_table to enable replicated tables
+                QUERY PLAN
+------------------------------------------
+ Gather Motion 1:1  (slice1; segments: 1)
+   ->  Seq Scan on rep_tab
+ Optimizer: Postgres query optimizer
+(3 rows)
+
+reset optimizer_trace_fallback;
+reset optimizer_enable_replicated_table;
 -- start_ignore
 drop schema rpt cascade;
 NOTICE:  drop cascades to 7 other objects

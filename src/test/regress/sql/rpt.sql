@@ -506,6 +506,14 @@ explain (costs off) select * from t1_13532 x, t2_13532 y where y.a < random() an
 set enable_bitmapscan = off;
 explain (costs off) select * from t1_13532 x, t2_13532 y where y.a < random() and x.b = y.b;
 
+-- test for optimizer_enable_replicated_table
+explain (costs off) select * from rep_tab;
+set optimizer_enable_replicated_table=off;
+set optimizer_trace_fallback=on;
+explain (costs off) select * from rep_tab;
+reset optimizer_trace_fallback;
+reset optimizer_enable_replicated_table;
+
 -- start_ignore
 drop schema rpt cascade;
 -- end_ignore
