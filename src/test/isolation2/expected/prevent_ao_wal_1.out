@@ -54,12 +54,12 @@ INSERT 10
 -- Delete data and run vacuum (AO)
 -1U: DELETE FROM ao_foo WHERE n > 5;
 DELETE 5
--1U: VACUUM;
+-1U: VACUUM ao_foo;
 VACUUM
 -- Delete data and run vacuum (AOCO)
 -1U: DELETE FROM aoco_foo WHERE n > 5;
 DELETE 5
--1U: VACUUM;
+-1U: VACUUM aoco_foo;
 VACUUM
 -1Uq: ... <quitting>
 
@@ -92,12 +92,12 @@ INSERT 10
 -- Delete data and run vacuum (AO)
 -1U: DELETE FROM ao_foo WHERE n > 5;
 DELETE 5
--1U: VACUUM;
+-1U: VACUUM ao_foo;
 VACUUM
 -- Delete data and run vacuum (AOCO)
 -1U: DELETE FROM aoco_foo WHERE n > 5;
 DELETE 5
--1U: VACUUM;
+-1U: VACUUM aoco_foo;
 VACUUM
 
 -- Validate wal records

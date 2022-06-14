@@ -42,10 +42,10 @@
 -1U: INSERT INTO aoco_foo SELECT generate_series(1,10), generate_series(1,10);
 -- Delete data and run vacuum (AO)
 -1U: DELETE FROM ao_foo WHERE n > 5;
--1U: VACUUM;
+-1U: VACUUM ao_foo;
 -- Delete data and run vacuum (AOCO)
 -1U: DELETE FROM aoco_foo WHERE n > 5;
--1U: VACUUM;
+-1U: VACUUM aoco_foo;
 -1Uq:
 
 -- Validate wal records (mirrorless setting has alternative answer file for this since wal_level is already minimal)
@@ -66,10 +66,10 @@
 -1U: INSERT INTO aoco_foo SELECT generate_series(1,10), generate_series(1,10);
 -- Delete data and run vacuum (AO)
 -1U: DELETE FROM ao_foo WHERE n > 5;
--1U: VACUUM;
+-1U: VACUUM ao_foo;
 -- Delete data and run vacuum (AOCO)
 -1U: DELETE FROM aoco_foo WHERE n > 5;
--1U: VACUUM;
+-1U: VACUUM aoco_foo;
 
 -- Validate wal records
 ! last_wal_file=$(psql -At -c "SELECT pg_xlogfile_name(pg_current_xlog_location())" postgres) && pg_xlogdump ${last_wal_file} -p ${MASTER_DATA_DIRECTORY}/pg_xlog -r appendonly;
