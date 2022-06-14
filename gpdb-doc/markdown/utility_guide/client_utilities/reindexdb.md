@@ -81,5 +81,5 @@ reindexdb --table foo --index bar abcd
 
 ## See Also 
 
-`REINDEX` in the *Greenplum Database Reference Guide*[REINDEX](../../ref_guide/sql_commands/REINDEX.html)
+[REINDEX](../../ref_guide/sql_commands/REINDEX.html) in the *Greenplum Database Reference Guide*
 

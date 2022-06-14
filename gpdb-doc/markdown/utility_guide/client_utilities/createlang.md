@@ -71,5 +71,5 @@ createlang plperl mytestdb
 
 ## See Also 
 
-`CREATE LANGUAGE` and `DROP LANGUAGE` in the *Greenplum Database Reference Guide*[CREATE LANGUAGE](../../ref_guide/sql_commands/CREATE_LANGUAGE.html), [DROP LANGUAGE](../../ref_guide/sql_commands/DROP_LANGUAGE.html)
+[CREATE LANGUAGE](../../ref_guide/sql_commands/CREATE_LANGUAGE.html), [DROP LANGUAGE](../../ref_guide/sql_commands/DROP_LANGUAGE.html) in the *Greenplum Database Reference Guide*
 

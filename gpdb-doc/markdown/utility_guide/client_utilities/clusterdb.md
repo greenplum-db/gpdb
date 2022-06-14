@@ -77,5 +77,5 @@ clusterdb --table foo xyzzyb
 
 ## See Also 
 
-`CLUSTER` in the *Greenplum Database Reference Guide*[CLUSTER](../../ref_guide/sql_commands/CLUSTER.html)
+[CLUSTER](../../ref_guide/sql_commands/CLUSTER.html) in the *Greenplum Database Reference Guide*
 

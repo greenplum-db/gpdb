@@ -66,5 +66,5 @@ DROP DATABASE
 
 ## See Also 
 
-`DROP DATABASE` in the *Greenplum Database Reference Guide*[DROP DATABASE](../../ref_guide/sql_commands/DROP_DATABASE.html)
+[DROP DATABASE](../../ref_guide/sql_commands/DROP_DATABASE.html) in the *Greenplum Database Reference Guide*
 

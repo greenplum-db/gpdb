@@ -96,5 +96,5 @@ vacuumdb --analyze --verbose --table 'foo(bar)' mydb
 
 ## See Also 
 
-`VACUUM` and `ANALYZE` in the *Greenplum Database Reference Guide* [VACUUM](../../ref_guide/sql_commands/VACUUM.html), [ANALYZE](../../ref_guide/sql_commands/ANALYZE.html)
+[VACUUM](../../ref_guide/sql_commands/VACUUM.html), [ANALYZE](../../ref_guide/sql_commands/ANALYZE.html) in the *Greenplum Database Reference Guide* 
 

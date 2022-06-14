@@ -67,5 +67,5 @@ DROP ROLE
 
 ## See Also 
 
-`DROP ROLE` in the *Greenplum Database Reference Guide*[DROP ROLE](../../ref_guide/sql_commands/DROP_ROLE.html)
+[DROP ROLE](../../ref_guide/sql_commands/DROP_ROLE.html) in the *Greenplum Database Reference Guide*
 

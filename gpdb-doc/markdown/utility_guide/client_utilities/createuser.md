@@ -123,5 +123,5 @@ In the above example, the new password is not actually echoed when typed, but we
 
 ## See Also 
 
-`CREATE ROLE` in the *Greenplum Database Reference Guide*[CREATE ROLE](../../ref_guide/sql_commands/CREATE_ROLE.html)
+[CREATE ROLE](../../ref_guide/sql_commands/CREATE_ROLE.html) in the *Greenplum Database Reference Guide*
 

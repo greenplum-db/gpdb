@@ -63,5 +63,5 @@ droplang pltcl mydatabase
 
 ## See Also 
 
-`DROP LANGUAGE` in the *Greenplum Database Reference Guide*[DROP LANGUAGE](../../ref_guide/sql_commands/DROP_LANGUAGE.html)
+[DROP LANGUAGE](../../ref_guide/sql_commands/DROP_LANGUAGE.html) in the *Greenplum Database Reference Guide*
 
