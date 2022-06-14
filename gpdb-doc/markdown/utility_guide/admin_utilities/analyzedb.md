@@ -200,5 +200,5 @@ CREATE LANGUAGE plpythonu;
 
 ## See Also 
 
-ANALYZE in the *Greenplum Database Reference Guide* [ANALYZE](../../ref_guide/sql_commands/ANALYZE.html)
+[ANALYZE](../../ref_guide/sql_commands/ANALYZE.html) in the *Greenplum Database Reference Guide*
 
