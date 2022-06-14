@@ -153,4 +153,6 @@ SELECT *
        ) alltyprelids
   GROUP BY relname, oid ORDER BY count(*) desc ;
 ```
+## See Also 
 
+[gpcheck](gpcheck.html), [gpcheckperf](gpcheckperf.html)
