@@ -31,8 +31,10 @@ test: prevent_ao_wal
 # so must be scheduled after that one.
 test: packcore
 
+test: insert_root_partition_truncate_deadlock_without_gdd
 # Tests on global deadlock detector
 test: gdd/prepare
+test: gdd/insert_root_partition_truncate_deadlock
 test: gdd/concurrent_update
 test: gdd/dist-deadlock-01 gdd/dist-deadlock-04 gdd/dist-deadlock-05 gdd/dist-deadlock-06 gdd/dist-deadlock-07 gdd/dist-deadlock-102 gdd/dist-deadlock-103 gdd/dist-deadlock-104 gdd/dist-deadlock-106 gdd/non-lock-105
 test: gdd/dist-deadlock-upsert
