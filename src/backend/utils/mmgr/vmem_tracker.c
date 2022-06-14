@@ -427,14 +427,12 @@ int32
 VmemTracker_GetVmemLimitChunks(void)
 {
 	/*
+	 * TODO:
 	 * For backend who has vmem tracker initialized and resource
 	 * group enabled, the vmem limit is not expected to be used
 	 * until resource group is activated, otherwise, there might
 	 * be an inconsistency about the vmem limit.
 	 */
-	AssertImply(vmemTrackerInited && IsResGroupEnabled(),
-				IsResGroupActivated());
-
 	return IsResGroupEnabled() ?
 		ResGroupGetVmemLimitChunks() : vmemChunksQuota;
 }
