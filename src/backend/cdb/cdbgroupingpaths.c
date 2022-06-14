@@ -1053,10 +1053,6 @@ add_first_stage_hash_agg_path(PlannerInfo *root,
 	dNumGroups = estimate_num_groups_on_segment(ctx->dNumGroupsTotal,
 												path->rows, path->locus);
 
-	/*
-	 * FIXME:
-	 * Shall we compute hash table size and compare with work_mem here?
-	 */
 
 	if (parse->groupingSets && ctx->new_rollups)
 	{
