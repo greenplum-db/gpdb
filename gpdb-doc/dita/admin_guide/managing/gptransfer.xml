@@ -6,12 +6,12 @@
     data between databases.</shortdesc>
   <body>
     <note id="note1" otherprops="pivotal">Greenplum Database provides two utilities for migrating
-      data between Greenplum Database installations, <codeph><xref
-          href="../../utility_guide/admin_utilities/gpcopy.xml">gpcopy</xref></codeph> and
+      data between Greenplum Database installations, <xref
+        href="../../utility_guide/admin_utilities/gpcopy.xml">gpcopy</xref> and
         <codeph>gptransfer</codeph>. Use <codeph>gpcopy</codeph> to migrate data to a Greenplum
       Database cluster version 5.9.0 and later. Use the <codeph>gptransfer</codeph> utility to
       migrate data between Greenplum Database installations running software version 5.8.0 or
-        earlier.<p>The <codeph>gptransfer</codeph> utiltiy is deprecated and will be removed in the
+        earlier.<p>The <codeph>gptransfer</codeph> utility is deprecated and will be removed in the
         next major release of Greenplum Database. For information about migrating data with
           <codeph>gpcopy</codeph>, see <xref href="gpcopy-migrate.xml"/>.</p></note>
     <p id="intro1">The <codeph>gptransfer</codeph> migration utility transfers Greenplum Database
