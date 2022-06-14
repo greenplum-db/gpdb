@@ -95,35 +95,13 @@ The `gpperfmon.conf` file contains the following configuration parameters.
 
 |Parameter|Description|
 |---------|-----------|
-|log\_location|Specifies a directory location for gpperfmon log files. Default is `$MASTER_DATA_DIRECTORY/gpperfmon/logs`.|
-|min\_query\_time|Specifies the minimum query run time in seconds for statistics collection. All queries that run longer than this value are logged in the `queries_history` table. For queries with shorter run times, no historical data is collected. Defaults to 20 seconds.
-
- If you know that you want to collect data for all queries, you can set this parameter to a low value. Setting the minimum query run time to zero, however, collects data even for the numerous queries run by Greenplum Command Center, creating a large amount of data that may not be useful.
-
-|
-|max\_log\_size|This parameter is not included in `gpperfmon.conf`, but it may be added to this file.
-
- To prevent the log files from growing to excessive size, you can add the `max_log_size` parameter to `gpperfmon.conf`. The value of this parameter is measured in bytes. For example:
-
- ```
-max_log_size = 10485760
-```
-
- With this setting, the log files will grow to 10MB before the system rolls over to a new log file.
-
-|
-|partition\_age|The number of months that gpperfmon statistics data will be retained. The default value is 0, which means that partitions are never dropped automatically.|
-|quantum|Specifies the time in seconds between updates from data collection agents on all segments. Valid values are 10, 15, 20, 30, and 60. Defaults to 15 seconds.If you prefer a less granular view of performance, or want to collect and analyze minimal amounts of data for system metrics, choose a higher quantum. To collect data more frequently, choose a lower value.
-
-|
+|log\_location|Specifies a directory location for `gpperfmon` log files. Default is `$MASTER_DATA_DIRECTORY/gpperfmon/logs`.|
+|min\_query\_time|Specifies the minimum query run time in seconds for statistics collection. All queries that run longer than this value are logged in the `queries_history` table. For queries with shorter run times, no historical data is collected. Defaults to 20 seconds.<br/><br/>If you know that you want to collect data for all queries, you can set this parameter to a low value. Setting the minimum query run time to zero, however, collects data even for the numerous queries run by Greenplum Command Center, creating a large amount of data that may not be useful.
+|max\_log\_size|This parameter is not included in `gpperfmon.conf`, but it may be added to this file.<br/><br/>To prevent the log files from growing to excessive size, you can add the `max_log_size` parameter to `gpperfmon.conf`. The value of this parameter is measured in bytes. For example:<br/><br/>`max_log_size = 10485760`<br/><br/>With this setting, the log files will grow to 10MB before the system rolls over to a new log file.|
+|partition\_age|The number of months that `gpperfmon` statistics data will be retained. The default value is 0, which means that partitions are never dropped automatically.|
+|quantum|Specifies the time in seconds between updates from data collection agents on all segments. Valid values are 10, 15, 20, 30, and 60. Defaults to 15 seconds.If you prefer a less granular view of performance, or want to collect and analyze minimal amounts of data for system metrics, choose a higher quantum. To collect data more frequently, choose a lower value.|
 |harvest\_interval|The time, in seconds, between data harvests. A data harvest moves recent data from the `gpperfmon` external \(`_tail`\) tables to their corresponding history files. The default is 120. The minimum value is 30.|
-|smdw\_aliases|This parameter allows you to specify additional host names for the standby master. For example, if the standby master has two NICs, you can enter:```
-smdw_aliases=smdw-1,smdw-2
-```
-
-This optional fault tolerance parameter is useful if the Greenplum Command Center loses connectivity with the standby master. Instead of continuously retrying to connect to host smdw, it will try to connect to the NIC-based aliases of `smdw-1` and/or `smdw-2`. This ensures that the Command Center Console can continuously poll and monitor the standby master.
-
-|
+|smdw\_aliases|This parameter allows you to specify additional host names for the standby master. For example, if the standby master has two NICs, you can enter:<br/><br/>`smdw_aliases=smdw-1,smdw-2`<br/><br/>This optional fault tolerance parameter is useful if the Greenplum Command Center loses connectivity with the standby master. Instead of continuously retrying to connect to host smdw, it will try to connect to the NIC-based aliases of `smdw-1` and/or `smdw-2`. This ensures that the Command Center Console can continuously poll and monitor the standby master.|
 
 ## Notes 
 
@@ -148,7 +126,7 @@ The `gpperfmon` database and Greenplum Command Center require the `gpmon` role. 
     ```
 
 
-The gpperfmon monitoring system requires some initialization after startup. Monitoring information appears after a few minutes have passed, and not immediately after installation and startup of the gpperfmon system.
+The `gpperfmon` monitoring system requires some initialization after startup. Monitoring information appears after a few minutes have passed, and not immediately after installation and startup of the `gpperfmon` system.
 
 ## Examples 
 
