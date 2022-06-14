@@ -177,6 +177,7 @@ test: aggregate_with_groupingsets
 
 test: nested_case_null sort bb_mpph
 test: bb_memory_quota memconsumption
+test: DML_partition_pruning
 
 test: tuple_serialization
 # Tests for replicated table
