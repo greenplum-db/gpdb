@@ -78,12 +78,8 @@ The following output fields are reported by `gpstate -s` for the master:
 |Master postgres process ID|PID of the master database listener process|
 |Master data directory|file system location of the master data directory|
 |Master port|port of the master `postgres` database listener process|
-|Master current role|dispatch = regular operating modeutility = maintenance mode
-
-|
-|Greenplum array configuration type|Standard = one NIC per host Multi-Home = multiple NICs per host
-
-|
+|Master current role|dispatch = regular operating modeutility = maintenance mode|
+|Greenplum array configuration type|Standard = one NIC per host Multi-Home = multiple NICs per host|
 |Greenplum initsystem version|version of Greenplum Database when system was first initialized|
 |Greenplum current version|current version of Greenplum Database|
 |Postgres version|version of PostgreSQL that Greenplum Database is based on|
@@ -101,13 +97,7 @@ The following output fields are reported by `gpstate -s` for each segment:
 |Port|port number of segment `postgres` database listener process|
 |Current Role|current role of a segment: Mirror or Primary|
 |Preferred Role|role at system initialization time: Mirror or Primary|
-|Mirror Status|status of a primary/mirror segment pair:Synchronized = data is up to date on both
-
-Resynchronization = data is currently being copied from one to the other
-
-Change Tracking = segment down and active segment is logging changes
-
-|
+|Mirror Status|status of a primary/mirror segment pair:<br/><br/>Synchronized = data is up to date on both<br/><br/>Resynchronization = data is currently being copied from one to the other<br/><br/>Change Tracking = segment down and active segment is logging changes|
 |Change tracking data size|when in Change Tracking mode, the size of the change log file \(may grow and shrink as compression is applied\)|
 |Estimated total data to synchronize|when in Resynchronization mode, the estimated size of data left to syncronize|
 |Data synchronized|when in Resynchronization mode, the estimated size of data that has already been syncronized|
