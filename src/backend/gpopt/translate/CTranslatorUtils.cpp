@@ -284,7 +284,6 @@ CTranslatorUtils::ConvertToCDXLLogicalTVF(CMemoryPool *mp,
 
 		CMDName *func_name =
 			CDXLUtils::CreateMDNameFromCharArray(mp, rte->eref->aliasname);
-		mdid_return_type->AddRef();
 
 		// if TVF evaluates to const, pass invalid key as funcid
 		CDXLLogicalTVF *tvf_dxl = GPOS_NEW(mp)
