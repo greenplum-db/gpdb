@@ -15,7 +15,7 @@ This method works well, but has drawbacks:
 
 The `citext` data type allows you to eliminate calls to `lower` in SQL queries and you can create case-insensitive indexes on columns of type `citext`. `citext` is locale-aware, like the `text` type, which means comparing uppercase and lowercase characters depends on the rules of the LC\_CTYPE locale setting. This behavior is the same as using `lower` in queries, but it is done transparently by the data type, so you do not have to do anything special in your queries.
 
-**Parent topic:**[Additional Supplied Modules](contrib-modules.html)
+**Parent topic:** [Additional Supplied Modules](contrib-modules.html)
 
 ## Installing citext 
 
