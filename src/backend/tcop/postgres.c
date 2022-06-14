@@ -1400,8 +1400,11 @@ exec_mpp_query(const char *query_string,
 		PortalDefineQuery(portal,
 						  NULL,
 						  query_string,
-						  /* GPDB_12_MERGE_FIXME: T_Query is probably not right for utility stmts */
-						  T_Query, /* not a parsed statement, so not T_SelectStmt */
+						  /*
+						   * sourceTag is stored in parsetree, but the original parsetree isn't
+						   * dispatched to QE, so set a generic T_Query here.
+						   */
+						  T_Query,
 						  commandTag,
 						  list_make1(plan),
 						  NULL);
@@ -6038,16 +6041,11 @@ log_disconnections(int code, Datum arg pg_attribute_unused())
 static void
 enable_statement_timeout(void)
 {
-	/*
-	 * GPDB_12_MERGE_FIXME: Postgres commit f8e5f156b30 changed
-	 * statement_timeout logic. GPDB had logic to ignore timeout on QE
-	 * (GPDB-historical commit 4e4abaed4c5). Does that logic need to be
-	 * reapplied here?
-	 */
 	/* must be within an xact */
 	Assert(xact_started);
 
-	if (StatementTimeout > 0)
+	/* always disable statement timeout in QE */
+	if (StatementTimeout > 0 && Gp_role != GP_ROLE_EXECUTE)
 	{
 		if (!stmt_timeout_active)
 		{
