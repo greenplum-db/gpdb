@@ -5,8 +5,8 @@
   <shortdesc>This topic describes how to use the <codeph>gpcopy</codeph> utility to transfer data
     between databases in different Greenplum Database clusters.</shortdesc>
   <body>
-    <p><codeph><xref href="../../utility_guide/admin_utilities/gpcopy.xml">gpcopy</xref></codeph> is
-      a high-performance utility that can copy metadata and data from one Greenplum database to
+    <p><xref href="../../utility_guide/admin_utilities/gpcopy.xml">gpcopy</xref> is a
+      high-performance utility that can copy metadata and data from one Greenplum database to
       another Greenplum database. You can migrate the entire contents of a database, or just
       selected tables. The clusters can have different Greenplum Database versions. For example, you
       can use <codeph>gpcopy</codeph> to migrate data from Greenplum 5 to Greenplum 6.</p>
