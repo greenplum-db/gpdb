@@ -81,5 +81,5 @@ There is no `DO` statement in the SQL standard.
 
 `CREATE LANGUAGE` [Greenplum PL/pgSQL Procedural Language](../extensions/pl_sql.html)
 
-**Parent topic:**[SQL Command Reference](../sql_commands/sql_ref.html)
+**Parent topic:** [SQL Command Reference](../sql_commands/sql_ref.html)
 

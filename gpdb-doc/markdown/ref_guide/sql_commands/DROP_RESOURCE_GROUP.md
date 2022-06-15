@@ -66,5 +66,5 @@ The `DROP RESOURCE GROUP` statement is a Greenplum Database extension.
 
 [ALTER RESOURCE GROUP](ALTER_RESOURCE_GROUP.html), [CREATE RESOURCE GROUP](CREATE_RESOURCE_GROUP.html), [ALTER ROLE](ALTER_ROLE.html)
 
-**Parent topic:**[SQL Command Reference](../sql_commands/sql_ref.html)
+**Parent topic:** [SQL Command Reference](../sql_commands/sql_ref.html)
 

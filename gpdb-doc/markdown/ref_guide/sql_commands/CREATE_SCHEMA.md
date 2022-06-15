@@ -62,5 +62,5 @@ According to the SQL standard, the owner of a schema always owns all objects wit
 
 [ALTER SCHEMA](ALTER_SCHEMA.html), [DROP SCHEMA](DROP_SCHEMA.html)
 
-**Parent topic:**[SQL Command Reference](../sql_commands/sql_ref.html)
+**Parent topic:** [SQL Command Reference](../sql_commands/sql_ref.html)
 

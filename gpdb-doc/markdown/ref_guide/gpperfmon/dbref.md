@@ -119,5 +119,5 @@ The following topics describe the contents of the tables in the `gpperfmon` data
 -   **[memory\_info](../gpperfmon/db-memory-info.html)**  
 
 
-**Parent topic:**[Greenplum Database Reference Guide](../ref_guide.html)
+**Parent topic:** [Greenplum Database Reference Guide](../ref_guide.html)
 

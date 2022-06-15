@@ -138,5 +138,5 @@ There is no `ANALYZE` statement in the SQL standard.
 
 [ALTER TABLE](ALTER_TABLE.html), [EXPLAIN](EXPLAIN.html), [VACUUM](VACUUM.html), `analyzedb` utility in the *Greenplum Database Utility Guide*.
 
-**Parent topic:**[SQL Command Reference](../sql_commands/sql_ref.html)
+**Parent topic:** [SQL Command Reference](../sql_commands/sql_ref.html)
 

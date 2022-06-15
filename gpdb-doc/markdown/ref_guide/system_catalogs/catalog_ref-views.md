@@ -29,5 +29,5 @@ For more information about the standard system views supported in PostgreSQL and
 -   [Statistics Collector Views](https://www.postgresql.org/docs/8.3/static/monitoring-stats.html#MONITORING-STATS-VIEWS-TABLE)
 -   [The Information Schema](https://www.postgresql.org/docs/8.3/static/information-schema.html)
 
-**Parent topic:**[System Catalog Reference](../system_catalogs/catalog_ref.html)
+**Parent topic:** [System Catalog Reference](../system_catalogs/catalog_ref.html)
 

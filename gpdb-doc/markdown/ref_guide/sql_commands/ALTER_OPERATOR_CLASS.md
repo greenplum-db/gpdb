@@ -38,5 +38,5 @@ There is no `ALTER OPERATOR CLASS` statement in the SQL standard.
 
 [CREATE OPERATOR CLASS](CREATE_OPERATOR_CLASS.html), [DROP OPERATOR CLASS](DROP_OPERATOR_CLASS.html)
 
-**Parent topic:**[SQL Command Reference](../sql_commands/sql_ref.html)
+**Parent topic:** [SQL Command Reference](../sql_commands/sql_ref.html)
 

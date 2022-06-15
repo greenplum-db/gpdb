@@ -42,5 +42,5 @@ DROP VIEW topten;
 
 [CREATE VIEW](CREATE_VIEW.html)
 
-**Parent topic:**[SQL Command Reference](../sql_commands/sql_ref.html)
+**Parent topic:** [SQL Command Reference](../sql_commands/sql_ref.html)
 

@@ -47,5 +47,5 @@ ALTER FILESPACE myfs OWNER TO dba;
 
 [CREATE VIEW](CREATE_VIEW.md#cj20941), [DROP VIEW](DROP_VIEW.md#dn20941) in the *Greenplum Database Utility Guide*
 
-**Parent topic:**[SQL Command Reference](../sql_commands/sql_ref.html)
+**Parent topic:** [SQL Command Reference](../sql_commands/sql_ref.html)
 

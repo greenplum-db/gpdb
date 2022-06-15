@@ -63,5 +63,5 @@ The SQL standard includes a `PREPARE` statement, but it is only for use in embed
 
 [EXECUTE](EXECUTE.html), [DEALLOCATE](DEALLOCATE.html)
 
-**Parent topic:**[SQL Command Reference](../sql_commands/sql_ref.html)
+**Parent topic:** [SQL Command Reference](../sql_commands/sql_ref.html)
 

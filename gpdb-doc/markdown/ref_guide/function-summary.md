@@ -8,7 +8,7 @@ Greenplum Database supports built-in functions and operators including analytic 
 -   [Window Functions](#topic30)
 -   [Advanced Aggregate Functions](#topic31)
 
-**Parent topic:**[Greenplum Database Reference Guide](ref_guide.html)
+**Parent topic:** [Greenplum Database Reference Guide](ref_guide.html)
 
 ## Greenplum Database Function Types 
 

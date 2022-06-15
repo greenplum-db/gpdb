@@ -652,5 +652,5 @@ SELECT array\_agg\(x order by y\) over \(ORDER BY z\) FROM ...
 |X305|XMLTable: initializing an XQuery variable|NO| |
 |X400|Name and identifier mapping|NO| |
 
-**Parent topic:**[Greenplum Database Reference Guide](ref_guide.html)
+**Parent topic:** [Greenplum Database Reference Guide](ref_guide.html)
 

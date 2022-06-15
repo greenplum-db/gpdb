@@ -8,5 +8,5 @@ A tablespace requires a file system location to store its database files. In Gre
 |`fsedbid`|integer|gp\_segment\_ configuration.dbid|Segment id.|
 |`fselocation`|text| |File system location for this segment id.|
 
-**Parent topic:**[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
+**Parent topic:** [System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
 

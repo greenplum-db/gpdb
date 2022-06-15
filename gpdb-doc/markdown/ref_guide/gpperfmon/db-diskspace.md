@@ -15,5 +15,5 @@ The `diskspace_*` tables store diskspace metrics.
 |`bytes_used`|bigint|Total bytes used in the file system.|
 |`bytes_available`|bigint|Total bytes available in file system.|
 
-**Parent topic:**[The gpperfmon Database](../gpperfmon/dbref.html)
+**Parent topic:** [The gpperfmon Database](../gpperfmon/dbref.html)
 

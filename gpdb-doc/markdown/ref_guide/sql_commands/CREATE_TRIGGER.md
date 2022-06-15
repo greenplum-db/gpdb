@@ -76,5 +76,5 @@ The `CREATE TRIGGER` statement in Greenplum Database implements a subset of the 
 
 [CREATE FUNCTION](CREATE_FUNCTION.html), [ALTER TRIGGER](ALTER_TRIGGER.html), [DROP TRIGGER](DROP_TRIGGER.html), [CREATE RULE](CREATE_RULE.html)
 
-**Parent topic:**[SQL Command Reference](../sql_commands/sql_ref.html)
+**Parent topic:** [SQL Command Reference](../sql_commands/sql_ref.html)
 

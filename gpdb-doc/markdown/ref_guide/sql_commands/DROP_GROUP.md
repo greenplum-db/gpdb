@@ -20,5 +20,5 @@ There is no `DROP GROUP` statement in the SQL standard.
 
 [DROP ROLE](DROP_ROLE.html)
 
-**Parent topic:**[SQL Command Reference](../sql_commands/sql_ref.html)
+**Parent topic:** [SQL Command Reference](../sql_commands/sql_ref.html)
 

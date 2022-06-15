@@ -8,7 +8,7 @@ To enable Greenplum to process MapReduce functions, define the functions in a do
 
 See the *Greenplum Database Utility Guide* for information about `gpmapreduce`.
 
-**Parent topic:**[Greenplum Database Reference Guide](ref_guide.html)
+**Parent topic:** [Greenplum Database Reference Guide](ref_guide.html)
 
 ## Greenplum MapReduce Document Format 
 

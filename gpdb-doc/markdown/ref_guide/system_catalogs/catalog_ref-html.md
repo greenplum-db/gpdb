@@ -187,5 +187,5 @@ System catalog table and view definitions in alphabetical order.
 -   **[pg\_window](../system_catalogs/pg_window.html)**  
 
 
-**Parent topic:**[System Catalog Reference](../system_catalogs/catalog_ref.html)
+**Parent topic:** [System Catalog Reference](../system_catalogs/catalog_ref.html)
 

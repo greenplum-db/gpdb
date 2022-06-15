@@ -67,5 +67,5 @@ Greenplum Database allows identifier syntax \(rolename\), while the SQL standard
 
 [SET SESSION AUTHORIZATION](SET_SESSION_AUTHORIZATION.html)
 
-**Parent topic:**[SQL Command Reference](../sql_commands/sql_ref.html)
+**Parent topic:** [SQL Command Reference](../sql_commands/sql_ref.html)
 

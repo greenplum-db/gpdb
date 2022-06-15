@@ -30,7 +30,7 @@ This topic contains the following information:
 -   [GPPC Text Function Example](#topic_example_text)
 -   [GPPC Set-Returning Function Example](#topic_example_srf)
 
-**Parent topic:**[Greenplum Database Reference Guide](../ref_guide.html)
+**Parent topic:** [Greenplum Database Reference Guide](../ref_guide.html)
 
 ## Using the GPPC API 
 

@@ -44,5 +44,5 @@ See also the compatibility section of [SET TRANSACTION](SET_TRANSACTION.html).
 
 [BEGIN](BEGIN.html), [SET TRANSACTION](SET_TRANSACTION.html)
 
-**Parent topic:**[SQL Command Reference](../sql_commands/sql_ref.html)
+**Parent topic:** [SQL Command Reference](../sql_commands/sql_ref.html)
 

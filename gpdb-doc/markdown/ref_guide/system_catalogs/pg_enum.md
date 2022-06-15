@@ -7,5 +7,5 @@ The `pg_enum` table contains entries matching enum types to their associated val
 |`enumtypid`|oid|pgtype.oid|The OID of the `pg_type` entry owning this enum value|
 |`enumlabel`|name| |The textual label for this enum value|
 
-**Parent topic:**[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
+**Parent topic:** [System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
 

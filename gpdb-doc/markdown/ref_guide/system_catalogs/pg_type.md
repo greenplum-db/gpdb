@@ -49,5 +49,5 @@ Note that `m` columns can also be moved out to secondary storage, but only as a 
 |`typdefaultbin`|text| |If not null, it is the `nodeToString()` representation of a default expression for the type. This is only used for domains.|
 |`typdefault`|text| |Null if the type has no associated default value. If not null, typdefault must contain a human-readable version of the default expression represented by typdefaultbin. If typdefaultbin is null and typdefault is not, then typdefault is the external representation of the type's default value, which may be fed to the type's input converter to produce a constant.|
 
-**Parent topic:**[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
+**Parent topic:** [System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
 

@@ -9,5 +9,5 @@ A tablespace requires a file system location to store its database files. In Gre
 |`fsname`|name| |The name of the filespace.|
 |`fsowner`|oid|pg\_roles.oid|The object id of the role that created the filespace.|
 
-**Parent topic:**[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
+**Parent topic:** [System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
 

@@ -39,5 +39,5 @@ LOAD '/usr/local/greenplum-db/lib/myfuncs.so';
 
 [CREATE FUNCTION](CREATE_FUNCTION.html)
 
-**Parent topic:**[SQL Command Reference](../sql_commands/sql_ref.html)
+**Parent topic:** [SQL Command Reference](../sql_commands/sql_ref.html)
 

@@ -49,5 +49,5 @@ There is no `TRUNCATE` command in the SQL standard.
 
 [DELETE](DELETE.html), [DROP TABLE](DROP_TABLE.html)
 
-**Parent topic:**[SQL Command Reference](../sql_commands/sql_ref.html)
+**Parent topic:** [SQL Command Reference](../sql_commands/sql_ref.html)
 

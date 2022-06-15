@@ -20,5 +20,5 @@ Only superusers may call `CHECKPOINT`. The command is not intended for use durin
 
 The `CHECKPOINT` command is a Greenplum Database language extension.
 
-**Parent topic:**[SQL Command Reference](../sql_commands/sql_ref.html)
+**Parent topic:** [SQL Command Reference](../sql_commands/sql_ref.html)
 

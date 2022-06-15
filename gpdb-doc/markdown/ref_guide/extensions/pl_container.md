@@ -20,7 +20,7 @@ For reference documentation, see:
 
 The PL/Container language extension is available as an open source module. For information about the module, see the README file in the GitHub repository at [https://github.com/greenplum-db/plcontainer](https://github.com/greenplum-db/plcontainer)
 
-**Parent topic:**[Greenplum Database Reference Guide](../ref_guide.html)
+**Parent topic:** [Greenplum Database Reference Guide](../ref_guide.html)
 
 ## About the PL/Container Language Extension 
 

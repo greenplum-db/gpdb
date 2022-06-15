@@ -9,7 +9,7 @@ This section contains an overview of the Greenplum Database PL/Python Language.
 -   [Examples](#topic11)
 -   [References](#topic12)
 
-**Parent topic:**[Greenplum Database Reference Guide](../ref_guide.html)
+**Parent topic:** [Greenplum Database Reference Guide](../ref_guide.html)
 
 ## About Greenplum PL/Python 
 

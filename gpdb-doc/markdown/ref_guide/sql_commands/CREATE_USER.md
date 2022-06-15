@@ -48,5 +48,5 @@ There is no `CREATE USER` statement in the SQL standard.
 
 [CREATE ROLE](CREATE_ROLE.html)
 
-**Parent topic:**[SQL Command Reference](../sql_commands/sql_ref.html)
+**Parent topic:** [SQL Command Reference](../sql_commands/sql_ref.html)
 

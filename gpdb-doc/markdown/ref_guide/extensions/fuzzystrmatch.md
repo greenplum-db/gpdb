@@ -14,7 +14,7 @@ The Greenplum Database installation contains the files required for the function
 
 The Greenplum Database Fuzzy String Match extension is based on the PostgreSQL fuzzystrmatch module.
 
-**Parent topic:**[Greenplum Database Reference Guide](../ref_guide.html)
+**Parent topic:** [Greenplum Database Reference Guide](../ref_guide.html)
 
 ## Soundex Functions 
 

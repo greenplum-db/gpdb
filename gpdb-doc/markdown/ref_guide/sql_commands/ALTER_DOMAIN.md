@@ -95,5 +95,5 @@ ALTER DOMAIN zipcode SET SCHEMA customers;
 
 [CREATE DOMAIN](CREATE_DOMAIN.html), [DROP DOMAIN](DROP_DOMAIN.html)
 
-**Parent topic:**[SQL Command Reference](../sql_commands/sql_ref.html)
+**Parent topic:** [SQL Command Reference](../sql_commands/sql_ref.html)
 

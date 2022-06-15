@@ -12,5 +12,5 @@ The `pg_tablespace` system catalog table stores information about the available 
 |`spcmrilocations`|text\[\]| |Deprecated.|
 |`spcfsoid`|oid|pg\_filespace.oid|The object id of the filespace used by this tablespace. A filespace defines directory locations on the primary, mirror and master segments.|
 
-**Parent topic:**[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
+**Parent topic:** [System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
 

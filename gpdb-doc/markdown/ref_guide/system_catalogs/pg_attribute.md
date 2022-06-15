@@ -22,5 +22,5 @@ The `pg_attribute` table stores information about table columns. There will be e
 |`attislocal`|boolean| |This column is defined locally in the relation. Note that a column may be locally defined and inherited simultaneously|
 |`attinhcount`|int4| |The number of direct ancestors this column has. A column with a nonzero number of ancestors cannot be dropped nor renamed|
 
-**Parent topic:**[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
+**Parent topic:** [System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
 

@@ -31,5 +31,5 @@ For compiled functions, both built-in and dynamically loaded, `prosrc` contains 
 |`probin`|bytea| |Additional information about how to invoke the function. Again, the interpretation is language-specific.|
 |`proacl`|aclitem\[\]| |Access privileges for the function as given by `GRANT`/`REVOKE`.|
 
-**Parent topic:**[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
+**Parent topic:** [System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
 

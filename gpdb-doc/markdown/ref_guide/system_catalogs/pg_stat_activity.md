@@ -33,5 +33,5 @@ The maximum length of the query text string stored in the column `current_query`
 
 **Note:** When resource groups are enabled. Only query dispatcher \(QD\) processes will have a `rsgid` and `rsgname`. Other server processes such as a query executer \(QE\) process or session connection processes will have a `rsgid` value of `0` and a `rsgname` value of `unknown`. QE processes are managed by the same resource group as the dispatching QD process.
 
-**Parent topic:**[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
+**Parent topic:** [System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
 

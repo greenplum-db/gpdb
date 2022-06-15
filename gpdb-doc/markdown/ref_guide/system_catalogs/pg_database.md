@@ -16,5 +16,5 @@ The `pg_database` system catalog table stores information about the available da
 |`datconfig`|text\[\]| |Session defaults for user-settable server configuration parameters.|
 |`datacl`|aclitem\[\]| |Database access privileges as given by `GRANT` and `REVOKE`.|
 
-**Parent topic:**[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
+**Parent topic:** [System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
 

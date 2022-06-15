@@ -19,5 +19,5 @@ The `pg_exttable` system catalog table is used to track external tables and web 
 |`encoding`|text| |The client encoding.|
 |`writable`|boolean| |`0` for readable external tables, `1` for writable external tables.|
 
-**Parent topic:**[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
+**Parent topic:** [System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
 

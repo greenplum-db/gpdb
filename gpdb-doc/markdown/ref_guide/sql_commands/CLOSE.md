@@ -41,5 +41,5 @@ CLOSE portala;
 
 [DECLARE](DECLARE.html), [FETCH](FETCH.html), [MOVE](MOVE.html)
 
-**Parent topic:**[SQL Command Reference](../sql_commands/sql_ref.html)
+**Parent topic:** [SQL Command Reference](../sql_commands/sql_ref.html)
 

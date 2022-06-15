@@ -17,7 +17,7 @@ This section contains an overview of the Greenplum Database PL/Java language.
 -   [Example](#topic40)
 -   [References](#topic41)
 
-**Parent topic:**[Greenplum Database Reference Guide](../ref_guide.html)
+**Parent topic:** [Greenplum Database Reference Guide](../ref_guide.html)
 
 ## About PL/Java 
 

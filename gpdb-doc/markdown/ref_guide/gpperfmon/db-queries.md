@@ -47,5 +47,5 @@ There are three queries tables, all having the same columns:
 |`rsqname`|varchar\(64\)|If the resource queue-based resource management scheme is active, this column specifies the name of the resource queue.|
 |`rqppriority`|varchar\(64\)|If the resource queue-based resource management scheme is active, this column specifies the priority of the query -- `max, high, med, low, or min`.|
 
-**Parent topic:**[The gpperfmon Database](../gpperfmon/dbref.html)
+**Parent topic:** [The gpperfmon Database](../gpperfmon/dbref.html)
 

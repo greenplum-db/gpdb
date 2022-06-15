@@ -5,7 +5,7 @@ This section provides a high-level overview of the system requirements and featu
 -   [Greenplum SQL Standard Conformance](#topic2)
 -   [Greenplum and PostgreSQL Compatibility](#topic8)
 
-**Parent topic:**[Greenplum Database Reference Guide](ref_guide.html)
+**Parent topic:** [Greenplum Database Reference Guide](ref_guide.html)
 
 ## Greenplum SQL Standard Conformance 
 

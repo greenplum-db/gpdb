@@ -6,5 +6,5 @@ The `gp_global_sequence` table contains the log sequence number position in the 
 |------|----|----------|-----------|
 |`sequence_num`|bigint| |Log sequence number position in the transaction log|
 
-**Parent topic:**[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
+**Parent topic:** [System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
 

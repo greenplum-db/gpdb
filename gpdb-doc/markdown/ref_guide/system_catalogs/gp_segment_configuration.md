@@ -19,5 +19,5 @@ For the master, the value is always -1.
 |`address`|text| |The hostname used to access a particular segment on a segment host. This value may be the same as `hostname` in systems upgraded from 3.x or on systems that do not have per-interface hostnames configured.|
 |`replication_port`|integer| |The TCP port the file block replication process is using to keep primary and mirror segments synchronized.|
 
-**Parent topic:**[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
+**Parent topic:** [System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
 

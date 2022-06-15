@@ -5,7 +5,7 @@ This reference lists and describes the environment variables to set for Greenplu
 -   [Required Environment Variables](#topic2)
 -   [Optional Environment Variables](#topic7)
 
-**Parent topic:**[Greenplum Database Reference Guide](ref_guide.html)
+**Parent topic:** [Greenplum Database Reference Guide](ref_guide.html)
 
 ## Required Environment Variables 
 

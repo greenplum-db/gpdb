@@ -107,5 +107,5 @@ Binary cursors are a Greenplum Database extension.
 
 [CLOSE](CLOSE.html), [DELETE](DELETE.html), [FETCH](FETCH.html), [MOVE](MOVE.html), [SELECT](SELECT.html), [UPDATE](UPDATE.html)
 
-**Parent topic:**[SQL Command Reference](../sql_commands/sql_ref.html)
+**Parent topic:** [SQL Command Reference](../sql_commands/sql_ref.html)
 

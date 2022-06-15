@@ -1877,5 +1877,5 @@ VALUES ( <expression> [, ...] ) [, ...]
 
 See [VALUES](sql_commands/VALUES.html) for more information.
 
-**Parent topic:**[SQL Command Reference](sql_commands/sql_ref.html)
+**Parent topic:** [SQL Command Reference](sql_commands/sql_ref.html)
 

@@ -18,5 +18,5 @@ The `gp_toolkit.gp_resgroup_config` view allows administrators to see the curren
 |`memory_spill_ratio`|text|pg\_resgroupcapability.value for pg\_resgroupcapability.reslimittype = 5|The memory spill ratio \(`MEMORY_SPILL_RATIO`\) value specified for the resource group.|
 |`proposed_memory_spill_ratio`|text|pg\_resgroupcapability.proposed for pg\_resgroupcapability.reslimittype\> = 5|The pending memory spill ratio value for the resource group.|
 
-**Parent topic:**[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
+**Parent topic:** [System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
 

@@ -27,5 +27,5 @@ The `pg_window` table stores information about window functions. Window function
 
 |
 
-**Parent topic:**[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
+**Parent topic:** [System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
 

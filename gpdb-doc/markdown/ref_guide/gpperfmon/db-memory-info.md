@@ -15,5 +15,5 @@ The `memory_info` view shows per-host memory information from the `system_histor
 |`dynamic_memory_used_mb`|numeric|The amount of dynamic memory in MB allocated to query processes running on this segment.|
 |`dynamic_memory_available_mb`|numeric|The amount of additional dynamic memory \(in MB\) available to the query processes running on this segment host. Note that this value is a sum of the available memory for all segments on a host. Even though this value reports available memory, it is possible that one or more segments on the host have exceeded their memory limit.|
 
-**Parent topic:**[The gpperfmon Database](../gpperfmon/dbref.html)
+**Parent topic:** [The gpperfmon Database](../gpperfmon/dbref.html)
 

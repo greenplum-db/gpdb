@@ -10,5 +10,5 @@ The `pg_amop` table stores information about operators associated with index acc
 |`amopreqcheck`|boolean| |Index hit must be rechecked|
 |`amopopr`|oid|pg\_operator.oid|OID of the operator|
 
-**Parent topic:**[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
+**Parent topic:** [System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
 

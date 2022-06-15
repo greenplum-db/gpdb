@@ -22,5 +22,5 @@ These tables are in place for future use and are not currently populated.
 |`frag_sockets_inuse`|int|Number of FRAG sockets in use.|
 |`frag_sockets_memusage_inbytes`|int|Amount of memory consumed by FRAG sockets.|
 
-**Parent topic:**[The gpperfmon Database](../gpperfmon/dbref.html)
+**Parent topic:** [The gpperfmon Database](../gpperfmon/dbref.html)
 

@@ -48,5 +48,5 @@ There is no `ALTER TYPE` statement in the SQL standard.
 
 [CREATE TYPE](CREATE_TYPE.html), [DROP TYPE](DROP_TYPE.html)
 
-**Parent topic:**[SQL Command Reference](../sql_commands/sql_ref.html)
+**Parent topic:** [SQL Command Reference](../sql_commands/sql_ref.html)
 

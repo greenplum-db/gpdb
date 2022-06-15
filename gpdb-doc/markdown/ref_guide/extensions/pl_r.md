@@ -11,7 +11,7 @@ This chapter contains the following information:
 -   [Displaying R Library Information](#topic14)
 -   [References](#topic15)
 
-**Parent topic:**[Greenplum Database Reference Guide](../ref_guide.html)
+**Parent topic:** [Greenplum Database Reference Guide](../ref_guide.html)
 
 ## About Greenplum Database PL/R 
 

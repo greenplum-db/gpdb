@@ -15,5 +15,5 @@ The `pg_aggregate` table stores information about aggregate functions. An aggreg
 |`aggsortop`|oid|pg\_operator.oid|Associated sort operator OID \(zero if none\)|
 |`aggtranstype`|oid|pg\_type.oid|Data type of the aggregate function's internal transition \(state\) data|
 
-**Parent topic:**[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
+**Parent topic:** [System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
 

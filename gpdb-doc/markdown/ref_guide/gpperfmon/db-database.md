@@ -13,5 +13,5 @@ The `database_*` tables store query workload information for a Greenplum Databas
 |`queries_running`|int|The number of active queries running at data collection time.|
 |`queries_queued`|int|The number of queries waiting in a resource group or resource queue, depending upon which resource management scheme is active, at data collection time.|
 
-**Parent topic:**[The gpperfmon Database](../gpperfmon/dbref.html)
+**Parent topic:** [The gpperfmon Database](../gpperfmon/dbref.html)
 

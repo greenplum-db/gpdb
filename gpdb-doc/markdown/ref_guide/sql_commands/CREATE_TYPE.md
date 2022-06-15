@@ -218,5 +218,5 @@ This `CREATE TYPE` command is a Greenplum Database extension. There is a `CREATE
 
 [CREATE FUNCTION](CREATE_FUNCTION.html), [ALTER TYPE](ALTER_TYPE.html), [DROP TYPE](DROP_TYPE.html), [CREATE DOMAIN](CREATE_DOMAIN.html)
 
-**Parent topic:**[SQL Command Reference](../sql_commands/sql_ref.html)
+**Parent topic:** [SQL Command Reference](../sql_commands/sql_ref.html)
 

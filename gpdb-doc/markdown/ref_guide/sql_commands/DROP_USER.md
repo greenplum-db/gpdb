@@ -20,5 +20,5 @@ There is no `DROP USER` statement in the SQL standard. The SQL standard leaves t
 
 [DROP ROLE](DROP_ROLE.html)
 
-**Parent topic:**[SQL Command Reference](../sql_commands/sql_ref.html)
+**Parent topic:** [SQL Command Reference](../sql_commands/sql_ref.html)
 

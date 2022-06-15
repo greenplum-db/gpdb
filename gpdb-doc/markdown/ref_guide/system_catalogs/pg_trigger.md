@@ -26,5 +26,5 @@ The `pg_trigger` system catalog table stores triggers on tables.
 |`tgattr`|int2vector| |Currently not used.|
 |`tgargs`|bytea| |Argument strings to pass to trigger, each NULL-terminated.|
 
-**Parent topic:**[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
+**Parent topic:** [System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
 

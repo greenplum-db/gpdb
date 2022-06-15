@@ -14,5 +14,5 @@ This table is populated only on the master. This table is defined in the `pg_glo
 
 For information about `gpcheck`, `gprecoverseg`, and `gpinitsystem`, see the Greenplum Database Utility Guide.
 
-**Parent topic:**[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
+**Parent topic:** [System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
 

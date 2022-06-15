@@ -9,5 +9,5 @@ The `gp_relation_node` table contains information about the file system objects 
 |`persistent_tid`|tid| |Used by Greenplum Database to internally manage persistent representations of file system objects.|
 |`persistent_serial_num`|bigint| |Log sequence number position in the transaction log for a file block.|
 
-**Parent topic:**[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
+**Parent topic:** [System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
 

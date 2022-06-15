@@ -69,5 +69,5 @@ To display index access statistics that combine statistics from the master and t
            schemaname !~ '^pg_toast';
 ```
 
-**Parent topic:**[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
+**Parent topic:** [System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
 

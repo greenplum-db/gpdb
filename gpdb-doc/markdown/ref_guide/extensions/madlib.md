@@ -10,7 +10,7 @@ This chapter includes the following information:
 -   [Examples](#topic9)
 -   [References](#topic10)
 
-**Parent topic:**[Greenplum Database Reference Guide](../ref_guide.html)
+**Parent topic:** [Greenplum Database Reference Guide](../ref_guide.html)
 
 ## About MADlib 
 

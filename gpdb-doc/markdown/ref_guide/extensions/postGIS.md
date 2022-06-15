@@ -9,7 +9,7 @@ This chapter contains the following information:
 -   [PostGIS Extension Support and Limitations](#postgis_support)
 -   [PostGIS Support Scripts](#topic5)
 
-**Parent topic:**[Greenplum Database Reference Guide](../ref_guide.html)
+**Parent topic:** [Greenplum Database Reference Guide](../ref_guide.html)
 
 ## About PostGIS 
 

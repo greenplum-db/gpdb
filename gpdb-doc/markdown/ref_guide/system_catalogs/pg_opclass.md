@@ -12,5 +12,5 @@ The `pg_opclass` system catalog table defines index access method operator class
 |`opcdefault`|boolean| |True if this operator class is the default for the data type opcintype.|
 |`opckeytype`|oid|pg\_type.oid|Type of data stored in index, or zero if same as opcintype.|
 
-**Parent topic:**[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
+**Parent topic:** [System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
 

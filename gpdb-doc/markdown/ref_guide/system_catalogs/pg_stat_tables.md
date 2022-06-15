@@ -98,5 +98,5 @@ CREATE VIEW pg_stat_user_tables_gpdb5 AS
           schemaname !~ '^pg_toast';
 ```
 
-**Parent topic:**[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
+**Parent topic:** [System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
 

@@ -7,7 +7,7 @@ This chapter includes the following information:
 -   [Trusted/Untrusted Language](#topic31)
 -   [Developing Functions with PL/Perl](#topic33)
 
-**Parent topic:**[Greenplum Database Reference Guide](../ref_guide.html)
+**Parent topic:** [Greenplum Database Reference Guide](../ref_guide.html)
 
 ## About Greenplum PL/Perl 
 

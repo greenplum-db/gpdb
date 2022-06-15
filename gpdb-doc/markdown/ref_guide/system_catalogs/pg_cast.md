@@ -13,5 +13,5 @@ When a `pg_cast` entry has different source and target types and a function that
 |`castfunc`|oid|pg\_proc.oid|The OID of the function to use to perform this cast. Zero is stored if the data types are binary compatible \(that is, no run-time operation is needed to perform the cast\).|
 |`castcontext`|char| |Indicates what contexts the cast may be invoked in. `e` means only as an explicit cast \(using `CAST` or `::` syntax\). `a` means implicitly in assignment to a target column, as well as explicitly. `i` means implicitly in expressions, as well as the other cases*.*|
 
-**Parent topic:**[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
+**Parent topic:** [System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
 

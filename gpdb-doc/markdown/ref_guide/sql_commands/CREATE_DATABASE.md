@@ -76,5 +76,5 @@ There is no `CREATE DATABASE` statement in the SQL standard. Databases are equiv
 
 [ALTER DATABASE](ALTER_DATABASE.html), [DROP DATABASE](DROP_DATABASE.html)
 
-**Parent topic:**[SQL Command Reference](../sql_commands/sql_ref.html)
+**Parent topic:** [SQL Command Reference](../sql_commands/sql_ref.html)
 

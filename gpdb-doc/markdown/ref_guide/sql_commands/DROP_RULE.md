@@ -45,5 +45,5 @@ There is no `DROP RULE` statement in the SQL standard.
 
 [CREATE RULE](CREATE_RULE.html)
 
-**Parent topic:**[SQL Command Reference](../sql_commands/sql_ref.html)
+**Parent topic:** [SQL Command Reference](../sql_commands/sql_ref.html)
 

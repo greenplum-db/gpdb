@@ -35,5 +35,5 @@ There is no `ALTER SCHEMA` statement in the SQL standard.
 
 [CREATE SCHEMA](CREATE_SCHEMA.html), [DROP SCHEMA](DROP_SCHEMA.html)
 
-**Parent topic:**[SQL Command Reference](../sql_commands/sql_ref.html)
+**Parent topic:** [SQL Command Reference](../sql_commands/sql_ref.html)
 

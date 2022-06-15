@@ -43,5 +43,5 @@ There are three `log_alert` tables, all having the same columns:
 |`logline`|text|Source code line|
 |`logstack`|text|Stack trace|
 
-**Parent topic:**[The gpperfmon Database](../gpperfmon/dbref.html)
+**Parent topic:** [The gpperfmon Database](../gpperfmon/dbref.html)
 

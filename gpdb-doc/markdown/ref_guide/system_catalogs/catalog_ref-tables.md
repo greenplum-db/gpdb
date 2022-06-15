@@ -72,5 +72,5 @@
 -   pg\_user\_mapping \(not supported\)
 -   [pg\_window](pg_window.html)
 
-**Parent topic:**[System Catalog Reference](../system_catalogs/catalog_ref.html)
+**Parent topic:** [System Catalog Reference](../system_catalogs/catalog_ref.html)
 

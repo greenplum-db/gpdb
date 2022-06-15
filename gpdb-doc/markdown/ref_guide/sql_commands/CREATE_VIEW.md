@@ -84,5 +84,5 @@ The SQL standard specifies some additional capabilities for the `CREATE VIEW` st
 
 [SELECT](SELECT.html), [DROP VIEW](DROP_VIEW.html)
 
-**Parent topic:**[SQL Command Reference](../sql_commands/sql_ref.html)
+**Parent topic:** [SQL Command Reference](../sql_commands/sql_ref.html)
 

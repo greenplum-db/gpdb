@@ -155,5 +155,5 @@ SELECT (a + b) AS c FROM test_complex;
 
 [CREATE FUNCTION](CREATE_FUNCTION.html), [CREATE TYPE](CREATE_TYPE.html), [ALTER OPERATOR](ALTER_OPERATOR.html), [DROP OPERATOR](DROP_OPERATOR.html)
 
-**Parent topic:**[SQL Command Reference](../sql_commands/sql_ref.html)
+**Parent topic:** [SQL Command Reference](../sql_commands/sql_ref.html)
 

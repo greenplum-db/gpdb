@@ -42,5 +42,5 @@ The SQL standard includes an `EXECUTE` statement, but it is only for use in embe
 
 [DEALLOCATE](DEALLOCATE.html), [PREPARE](PREPARE.html)
 
-**Parent topic:**[SQL Command Reference](../sql_commands/sql_ref.html)
+**Parent topic:** [SQL Command Reference](../sql_commands/sql_ref.html)
 

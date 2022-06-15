@@ -98,5 +98,5 @@ Either `RESTRICT` or `CASCADE` is required according to the standard, but Greenp
 
 [GRANT](GRANT.html)
 
-**Parent topic:**[SQL Command Reference](../sql_commands/sql_ref.html)
+**Parent topic:** [SQL Command Reference](../sql_commands/sql_ref.html)
 

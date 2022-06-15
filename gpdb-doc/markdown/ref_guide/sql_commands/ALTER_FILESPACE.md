@@ -49,5 +49,5 @@ There is no `ALTER FILESPACE` statement in the SQL standard or in PostgreSQL.
 
 [DROP FILESPACE](DROP_FILESPACE.html), `gpfilespace` in the *Greenplum Database Utility Guide*
 
-**Parent topic:**[SQL Command Reference](../sql_commands/sql_ref.html)
+**Parent topic:** [SQL Command Reference](../sql_commands/sql_ref.html)
 

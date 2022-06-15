@@ -469,5 +469,5 @@ The `ADD`, `DROP`, and `SET DEFAULT` forms conform with the SQL standard. The ot
 
 [CREATE TABLE](CREATE_TABLE.html), [DROP TABLE](DROP_TABLE.html)
 
-**Parent topic:**[SQL Command Reference](../sql_commands/sql_ref.html)
+**Parent topic:** [SQL Command Reference](../sql_commands/sql_ref.html)
 

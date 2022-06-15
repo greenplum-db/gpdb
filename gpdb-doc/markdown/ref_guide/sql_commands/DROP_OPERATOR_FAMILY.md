@@ -49,5 +49,5 @@ There is no `DROP OPERATOR FAMILY` statement in the SQL standard.
 
 [ALTER OPERATOR FAMILY](ALTER_OPERATOR_FAMILY.html), [CREATE OPERATOR FAMILY](CREATE_OPERATOR_FAMILY.html), [ALTER OPERATOR CLASS](ALTER_OPERATOR_CLASS.html), [CREATE OPERATOR CLASS](CREATE_OPERATOR_CLASS.md#bx20941), [DROP OPERATOR CLASS](DROP_OPERATOR_CLASS.html)
 
-**Parent topic:**[SQL Command Reference](../sql_commands/sql_ref.html)
+**Parent topic:** [SQL Command Reference](../sql_commands/sql_ref.html)
 

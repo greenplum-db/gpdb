@@ -91,5 +91,5 @@ Except for `ACCESS SHARE`, `ACCESS EXCLUSIVE`, and `SHARE UPDATE EXCLUSIVE` lock
 
 [BEGIN](BEGIN.html), [SET TRANSACTION](SET_TRANSACTION.html), [SELECT](SELECT.html)
 
-**Parent topic:**[SQL Command Reference](../sql_commands/sql_ref.html)
+**Parent topic:** [SQL Command Reference](../sql_commands/sql_ref.html)
 

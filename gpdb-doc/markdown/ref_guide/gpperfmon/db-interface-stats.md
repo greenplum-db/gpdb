@@ -31,5 +31,5 @@ There are three `interface_stats` tables, all having the same columns:
 |`transmit_carrier_errors`|bigint|Number of times carrier errors were encountered during data transmission.|
 |`transmit_compressed_packets`|int|Number of packets transmitted in compressed format.|
 
-**Parent topic:**[The gpperfmon Database](../gpperfmon/dbref.html)
+**Parent topic:** [The gpperfmon Database](../gpperfmon/dbref.html)
 

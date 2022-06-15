@@ -102,5 +102,5 @@ COMMENT ON TABLE mytable IS NULL;
 
 There is no `COMMENT` statement in the SQL standard.
 
-**Parent topic:**[SQL Command Reference](../sql_commands/sql_ref.html)
+**Parent topic:** [SQL Command Reference](../sql_commands/sql_ref.html)
 

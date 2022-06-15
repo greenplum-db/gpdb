@@ -23,5 +23,5 @@ The `pg_partitions` system view is used to show the structure of a partitioned t
 |`partitionisdefault`|boolean| |`T` if this is a default partition, otherwise `F`.|
 |`partitionboundary`|text| |The entire partition specification for this partition.|
 
-**Parent topic:**[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
+**Parent topic:** [System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
 

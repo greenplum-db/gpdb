@@ -34,5 +34,5 @@ The `system_*` tables store system utilization metrics. There are three system t
 |`net_rb_rate`|bigint|Bytes per second on the system network for read operations.|
 |`net_wb_rate`|bigint|Bytes per second on the system network for write operations.|
 
-**Parent topic:**[The gpperfmon Database](../gpperfmon/dbref.html)
+**Parent topic:** [The gpperfmon Database](../gpperfmon/dbref.html)
 

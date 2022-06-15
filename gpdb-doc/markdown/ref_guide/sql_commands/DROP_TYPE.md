@@ -42,5 +42,5 @@ This command is similar to the corresponding command in the SQL standard, apart 
 
 [ALTER TYPE](ALTER_TYPE.html), [CREATE TYPE](CREATE_TYPE.html)
 
-**Parent topic:**[SQL Command Reference](../sql_commands/sql_ref.html)
+**Parent topic:** [SQL Command Reference](../sql_commands/sql_ref.html)
 

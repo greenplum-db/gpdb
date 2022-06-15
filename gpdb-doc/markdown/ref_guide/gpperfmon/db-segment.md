@@ -24,5 +24,5 @@ A particular segment instance is identified by its `hostname` and `dbid` \(the u
 
 See also the views `memory_info` and `dynamic_memory_info` for aggregated memory allocation and utilization by host.
 
-**Parent topic:**[The gpperfmon Database](../gpperfmon/dbref.html)
+**Parent topic:** [The gpperfmon Database](../gpperfmon/dbref.html)
 

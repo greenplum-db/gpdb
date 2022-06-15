@@ -38,5 +38,5 @@ There is no `DROP FILESPACE` statement in the SQL standard or in PostgreSQL.
 
 [ALTER FILESPACE](ALTER_FILESPACE.html), [DROP TABLESPACE](DROP_TABLESPACE.html), `gpfilespace` in the *Greenplum Database Utility Guide*
 
-**Parent topic:**[SQL Command Reference](../sql_commands/sql_ref.html)
+**Parent topic:** [SQL Command Reference](../sql_commands/sql_ref.html)
 

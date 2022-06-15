@@ -27,5 +27,5 @@ The `pg_stat_replication` view contains metadata of the `walsender` process that
 |`sync_priority`|text| |Priorty. the value is `1`.|
 |`sync_state`|text| |WAL sender syncronization state. The value is `sync`.|
 
-**Parent topic:**[System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
+**Parent topic:** [System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
 
