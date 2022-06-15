@@ -2,7 +2,7 @@
 
 Description of the different ways to add data to Greenplum Database.
 
-**Parent topic:**[Greenplum Database Best Practices](intro.html)
+**Parent topic:** [Greenplum Database Best Practices](intro.html)
 
 ## INSERT Statement with Column Values 
 

@@ -35,5 +35,5 @@ To search log files on the segment hosts, use the Greenplum `gplogfilter` utilit
 
 The `log_rotation_age` configuration parameter specifies when a new log file is automatically created while a database instance is running. By default, a new log file is created every day.
 
-**Parent topic:**[System Monitoring and Maintenance](maintenance.html)
+**Parent topic:** [System Monitoring and Maintenance](maintenance.html)
 

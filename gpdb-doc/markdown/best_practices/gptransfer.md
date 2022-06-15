@@ -168,5 +168,5 @@ The failed transfers file is in the format required by the `-f` option, so you c
     -   Copy the `postgresql.conf` and `pg_hba.conf` configuration files from the source to the destination cluster.
     -   Install needed extensions in the destination database with `gppkg`.
 
-**Parent topic:**[Greenplum Database Best Practices](intro.html)
+**Parent topic:** [Greenplum Database Best Practices](intro.html)
 

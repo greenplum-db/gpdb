@@ -225,5 +225,5 @@ See the *Greenplum Database Reference Guide* for descriptions of the columns in 
 
 The `gp_workfile_compress_algorithm` configuration parameter specifies a compression algorithm to apply to spill files. It can have the value `none` \(the default\) or `zlib`. Setting this parameter to `zlib` can improve performance when spill files are used.
 
-**Parent topic:**[Greenplum Database Best Practices](intro.html)
+**Parent topic:** [Greenplum Database Best Practices](intro.html)
 

@@ -158,5 +158,5 @@ Append-optimized tables are handled much differently than heap tables. Although 
 
 If you do run `UPDATE` or `DELETE` commands on an append-optimized table, expired rows are tracked in an auxiliary bitmap instead of the free space map. `VACUUM` is the only way to recover the space. Running `VACUUM` on an append-optimized table with expired rows compacts a table by rewriting the entire table without the expired rows. However, no action is performed if the percentage of expired rows in the table exceeds the value of the `gp_appendonly_compaction_threshold` configuration parameter, which is 10 \(10%\) by default. The threshold is checked on each segment, so it is possible that a `VACUUM` statement will compact an append-only table on some segments and not others. Compacting append-only tables can be disabled by setting the `gp_appendonly_compaction` parameter to `no`.
 
-**Parent topic:**[System Monitoring and Maintenance](maintenance.html)
+**Parent topic:** [System Monitoring and Maintenance](maintenance.html)
 
