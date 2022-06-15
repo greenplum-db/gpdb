@@ -131,12 +131,9 @@ class RecoveryTriplets(abc.ABC):
         """
         pass
 
-    @staticmethod
-    def _get_unreachable_failover_hosts(requests, paralleldegree) -> List[str]:
-        hostlist = set()
+    def _get_unreachable_failover_hosts(self, requests) -> List[str]:
         hostlist = {req.failover_host for req in requests if req.failover_host}
-        unreachable_failover_hosts = get_unreachable_segment_hosts(hostlist, min(paralleldegree, len(hostlist)))
-        return unreachable_failover_hosts
+        return get_unreachable_segment_hosts(hostlist, min(self.paralleldegree, len(hostlist)))
 
     def getInterfaceHostnameWarnings(self):
         return self.interfaceHostnameWarnings
@@ -150,7 +147,7 @@ class RecoveryTriplets(abc.ABC):
     def _convert_requests_to_triplets(self, requests: List[RecoveryTripletRequest]) -> List[RecoveryTriplet]:
         triplets = []
         # Get list of hosts unreachable from the request
-        unreachable_failover_hosts = self._get_unreachable_failover_hosts(requests, self.paralleldegree)
+        unreachable_failover_hosts = self._get_unreachable_failover_hosts(requests)
 
         dbIdToPeerMap = self.gpArray.getDbIdToPeerMap()
         for req in requests:
@@ -186,7 +183,6 @@ class RecoveryTriplets(abc.ABC):
 class RecoveryTripletsInplace(RecoveryTriplets):
     def __init__(self, gpArray, paralleldegree):
         super().__init__(gpArray, paralleldegree)
-        self.paralleldegree = paralleldegree
 
     def getTriplets(self):
         requests = []
@@ -206,7 +202,6 @@ class RecoveryTripletsNewHosts(RecoveryTriplets):
         super().__init__(gpArray, paralleldegree)
         self.newHosts = [] if not newHosts else newHosts[:]
         self.portAssigner = self._PortAssigner(gpArray)
-        self.paralleldegree = paralleldegree
 
     #TODO improvement: skip unreachable new hosts and choose from the rest; right now we fail
     # if the first new host is unreachable even if there is an unused one later in the list.
@@ -288,11 +283,10 @@ class RecoveryTripletsNewHosts(RecoveryTriplets):
 
 
 class RecoveryTripletsUserConfigFile(RecoveryTriplets):
-    def __init__(self, gpArray, config_file, parallelgegree):
-        super().__init__(gpArray,parallelgegree)
+    def __init__(self, gpArray, config_file, paralleldegree):
+        super().__init__(gpArray, paralleldegree)
         self.config_file = config_file
         self.rows = self._parseConfigFile(self.config_file)
-        self.paralleldegree = parallelgegree
 
     def getTriplets(self):
         def _find_failed_from_row():
