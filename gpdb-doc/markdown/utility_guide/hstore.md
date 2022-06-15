@@ -53,154 +53,89 @@ Currently, double quotes are always used to surround key and value strings on ou
      <thead class="thead" align="left">
       <tr class="row">
        <th class="entry" valign="top" id="d69496e294">Function</th>
-
        <th class="entry" valign="top" id="d69496e297">Return Type</th>
-
        <th class="entry" valign="top" id="d69496e300">Description</th>
-
        <th class="entry" valign="top" id="d69496e303">Example</th>
-
        <th class="entry" valign="top" id="d69496e306">Result</th>
-
       </tr>
-
      </thead>
-
      <tbody class="tbody">
       <tr class="row">
        <td class="entry" valign="top" headers="d69496e294 d69496e297 d69496e300 d69496e303 d69496e306 "><samp class="ph codeph">hstore(text, text)</samp></td>
-
        <td class="entry" valign="top" headers="d69496e294 d69496e297 d69496e300 d69496e303 d69496e306 "><samp class="ph codeph">hstore</samp></td>
-
        <td class="entry" valign="top" headers="d69496e294 d69496e297 d69496e300 d69496e303 d69496e306 ">make single-item <samp class="ph codeph">hstore</samp>
 </td>
-
        <td class="entry" valign="top" headers="d69496e294 d69496e297 d69496e300 d69496e303 d69496e306 "><samp class="ph codeph">hstore('a', 'b')</samp></td>
-
        <td class="entry" valign="top" headers="d69496e294 d69496e297 d69496e300 d69496e303 d69496e306 "><samp class="ph codeph">"a"=&gt;"b"</samp></td>
-
       </tr>
-
       <tr class="row">
        <td class="entry" valign="top" headers="d69496e294 d69496e297 d69496e300 d69496e303 d69496e306 "><samp class="ph codeph">akeys(hstore)</samp></td>
-
        <td class="entry" valign="top" headers="d69496e294 d69496e297 d69496e300 d69496e303 d69496e306 "><samp class="ph codeph">text[]</samp></td>
-
        <td class="entry" valign="top" headers="d69496e294 d69496e297 d69496e300 d69496e303 d69496e306 ">get <samp class="ph codeph">hstore</samp>'s keys as array</td>
-
        <td class="entry" valign="top" headers="d69496e294 d69496e297 d69496e300 d69496e303 d69496e306 "><samp class="ph codeph">akeys('a=&gt;1,b=&gt;2')</samp></td>
-
        <td class="entry" valign="top" headers="d69496e294 d69496e297 d69496e300 d69496e303 d69496e306 "><samp class="ph codeph">{a,b}</samp></td>
-
       </tr>
-
       <tr class="row">
        <td class="entry" valign="top" headers="d69496e294 d69496e297 d69496e300 d69496e303 d69496e306 "><samp class="ph codeph">skeys(hstore)</samp></td>
-
        <td class="entry" valign="top" headers="d69496e294 d69496e297 d69496e300 d69496e303 d69496e306 "><samp class="ph codeph">setof text</samp></td>
-
        <td class="entry" valign="top" headers="d69496e294 d69496e297 d69496e300 d69496e303 d69496e306 ">get <samp class="ph codeph">hstore</samp>'s keys as set</td>
-
        <td class="entry" valign="top" headers="d69496e294 d69496e297 d69496e300 d69496e303 d69496e306 "><samp class="ph codeph">skeys('a=&gt;1,b=&gt;2')</samp></td>
-
        <td class="entry" valign="top" headers="d69496e294 d69496e297 d69496e300 d69496e303 d69496e306 ">
         <pre class="pre codeblock">a
 b</pre>
-
        </td>
-
       </tr>
-
       <tr class="row">
        <td class="entry" valign="top" headers="d69496e294 d69496e297 d69496e300 d69496e303 d69496e306 "><samp class="ph codeph">avals(hstore)</samp></td>
-
        <td class="entry" valign="top" headers="d69496e294 d69496e297 d69496e300 d69496e303 d69496e306 "><samp class="ph codeph">text[]</samp></td>
-
        <td class="entry" valign="top" headers="d69496e294 d69496e297 d69496e300 d69496e303 d69496e306 ">get <samp class="ph codeph">hstore</samp>'s values as array</td>
-
        <td class="entry" valign="top" headers="d69496e294 d69496e297 d69496e300 d69496e303 d69496e306 "><samp class="ph codeph">avals('a=&gt;1,b=&gt;2')</samp></td>
-
        <td class="entry" valign="top" headers="d69496e294 d69496e297 d69496e300 d69496e303 d69496e306 "><samp class="ph codeph">{1,2}</samp></td>
-
       </tr>
-
       <tr class="row">
        <td class="entry" valign="top" headers="d69496e294 d69496e297 d69496e300 d69496e303 d69496e306 "><samp class="ph codeph">svals(hstore)</samp></td>
-
        <td class="entry" valign="top" headers="d69496e294 d69496e297 d69496e300 d69496e303 d69496e306 "><samp class="ph codeph">setof text</samp></td>
-
        <td class="entry" valign="top" headers="d69496e294 d69496e297 d69496e300 d69496e303 d69496e306 ">get <samp class="ph codeph">hstore</samp>'s values as set</td>
-
        <td class="entry" valign="top" headers="d69496e294 d69496e297 d69496e300 d69496e303 d69496e306 "><samp class="ph codeph">svals('a=&gt;1,b=&gt;2')</samp></td>
-
        <td class="entry" valign="top" headers="d69496e294 d69496e297 d69496e300 d69496e303 d69496e306 ">
         <pre class="pre codeblock">1
 2</pre>
-
        </td>
-
       </tr>
-
       <tr class="row">
        <td class="entry" valign="top" headers="d69496e294 d69496e297 d69496e300 d69496e303 d69496e306 "><samp class="ph codeph">each(hstore)</samp></td>
-
        <td class="entry" valign="top" headers="d69496e294 d69496e297 d69496e300 d69496e303 d69496e306 "><samp class="ph codeph">setof (key text, value text)</samp></td>
-
        <td class="entry" valign="top" headers="d69496e294 d69496e297 d69496e300 d69496e303 d69496e306 ">get <samp class="ph codeph">hstore</samp>'s keys and values as set</td>
-
        <td class="entry" valign="top" headers="d69496e294 d69496e297 d69496e300 d69496e303 d69496e306 "><samp class="ph codeph">select * from each('a=&gt;1,b=&gt;2')</samp></td>
-
        <td class="entry" valign="top" headers="d69496e294 d69496e297 d69496e300 d69496e303 d69496e306 ">
         <pre class="pre codeblock"> key | value
 -----+-------
  a   | 1
  b   | 2</pre>
-
        </td>
-
       </tr>
-
       <tr class="row">
        <td class="entry" valign="top" headers="d69496e294 d69496e297 d69496e300 d69496e303 d69496e306 "><samp class="ph codeph">exist(hstore,text)</samp></td>
-
        <td class="entry" valign="top" headers="d69496e294 d69496e297 d69496e300 d69496e303 d69496e306 "><samp class="ph codeph">boolean</samp></td>
-
        <td class="entry" valign="top" headers="d69496e294 d69496e297 d69496e300 d69496e303 d69496e306 ">does <samp class="ph codeph">hstore</samp> contain key?</td>
-
        <td class="entry" valign="top" headers="d69496e294 d69496e297 d69496e300 d69496e303 d69496e306 "><samp class="ph codeph">exist('a=&gt;1','a')</samp></td>
-
        <td class="entry" valign="top" headers="d69496e294 d69496e297 d69496e300 d69496e303 d69496e306 "><samp class="ph codeph">t</samp></td>
-
       </tr>
-
       <tr class="row">
        <td class="entry" valign="top" headers="d69496e294 d69496e297 d69496e300 d69496e303 d69496e306 "><samp class="ph codeph">defined(hstore,text)</samp></td>
-
        <td class="entry" valign="top" headers="d69496e294 d69496e297 d69496e300 d69496e303 d69496e306 "><samp class="ph codeph">boolean</samp></td>
-
        <td class="entry" valign="top" headers="d69496e294 d69496e297 d69496e300 d69496e303 d69496e306 ">does <samp class="ph codeph">hstore</samp> contain non-null value for key?</td>
-
        <td class="entry" valign="top" headers="d69496e294 d69496e297 d69496e300 d69496e303 d69496e306 "><samp class="ph codeph">defined('a=&gt;NULL','a')</samp></td>
-
        <td class="entry" valign="top" headers="d69496e294 d69496e297 d69496e300 d69496e303 d69496e306 "><samp class="ph codeph">f</samp></td>
-
       </tr>
-
       <tr class="row">
        <td class="entry" valign="top" headers="d69496e294 d69496e297 d69496e300 d69496e303 d69496e306 "><samp class="ph codeph">delete(hstore,text)</samp></td>
-
        <td class="entry" valign="top" headers="d69496e294 d69496e297 d69496e300 d69496e303 d69496e306 "><samp class="ph codeph">hstore</samp></td>
-
        <td class="entry" valign="top" headers="d69496e294 d69496e297 d69496e300 d69496e303 d69496e306 ">delete any item matching key</td>
-
        <td class="entry" valign="top" headers="d69496e294 d69496e297 d69496e300 d69496e303 d69496e306 "><samp class="ph codeph">delete('a=&gt;1,b=&gt;2','b')</samp></td>
-
        <td class="entry" valign="top" headers="d69496e294 d69496e297 d69496e300 d69496e303 d69496e306 "><samp class="ph codeph">"a"=&gt;"1"</samp></td>
-
       </tr>
-
      </tbody>
-
     </table>
 </div>
 
