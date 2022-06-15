@@ -1497,7 +1497,7 @@ CExpressionHandle::PfpChild(ULONG child_index)
 //		CExpressionHandle::FChildrenHaveVolatileFuncScan
 //
 //	@doc:
-//		Check whether an expression's children have a volatile function
+//		Check whether an expression's children have a volatile function scan
 //
 //---------------------------------------------------------------------------
 BOOL
@@ -1507,6 +1507,29 @@ CExpressionHandle::FChildrenHaveVolatileFuncScan()
 	for (ULONG ul = 0; ul < arity; ul++)
 	{
 		if (PfpChild(ul)->FHasVolatileFunctionScan())
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+
+//---------------------------------------------------------------------------
+//	@function:
+//		CExpressionHandle::FChildrenHaveVolatileFunc
+//
+//	@doc:
+//		Check whether an expression's children have a volatile function
+//
+//---------------------------------------------------------------------------
+BOOL
+CExpressionHandle::FChildrenHaveVolatileFunc()
+{
+	const ULONG arity = Arity();
+	for (ULONG ul = 0; ul < arity; ul++)
+	{
+		if (PfpChild(ul)->Efs() == IMDFunction::EfsVolatile)
 		{
 			return true;
 		}

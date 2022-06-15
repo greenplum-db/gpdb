@@ -4488,6 +4488,17 @@ CUtils::FAnySubquery(COperator *pop)
 	return fInSubquery;
 }
 
+CScalarProjectElement *
+CUtils::PNthProjectElement(CExpression *pexpr, ULONG ul)
+{
+	GPOS_ASSERT(pexpr->Pop()->Eopid() == COperator::EopLogicalProject);
+
+	// Logical Project's first child is relational child and the second
+	// child is the project list. We initially get the project list and then
+	// the nth element in the project list
+	return CScalarProjectElement::PopConvert((*(*pexpr)[1])[ul]->Pop());
+}
+
 // returns the expression under the Nth project element of a CLogicalProject
 CExpression *
 CUtils::PNthProjectElementExpr(CExpression *pexpr, ULONG ul)

@@ -265,8 +265,11 @@ public:
 	// get the function properties of a child
 	CFunctionProp *PfpChild(ULONG child_index);
 
-	// check whether an expression's children have a volatile function
+	// check whether an expression's children have a volatile function scan
 	BOOL FChildrenHaveVolatileFuncScan();
+
+	// check whether an expression's children have a volatile function
+	BOOL FChildrenHaveVolatileFunc();
 
 	// return a representative (inexact) scalar child at given index
 	CExpression *PexprScalarRepChild(ULONG child_index) const;
