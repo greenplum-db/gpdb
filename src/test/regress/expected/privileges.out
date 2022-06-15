@@ -1368,7 +1368,7 @@ EXCEPTION WHEN OTHERS THEN
 END$$;
 CREATE MATERIALIZED VIEW sro_index_mv AS SELECT 1 AS c;
 CREATE UNIQUE INDEX ON sro_index_mv (c) WHERE unwanted_grant_nofail(1) > 0;
-ERROR:  no pre-assigned OID for relation "sro_index_mv_c_idx" (oid_dispatch.c:698)
+ERROR:  UNIQUE and DISTRIBUTED RANDOMLY are incompatible
 \c -
 REFRESH MATERIALIZED VIEW CONCURRENTLY sro_index_mv;
 ERROR:  cannot refresh materialized view "public.sro_index_mv" concurrently
