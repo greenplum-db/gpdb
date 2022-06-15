@@ -15,7 +15,9 @@
 #include "gpos/base.h"
 #include "gpos/common/CAutoRef.h"
 #include "gpos/common/CAutoTimer.h"
+#include "gpos/common/CRefCount.h"
 
+#include "gpopt/base/CCastUtils.h"
 #include "gpopt/base/CColRefSetIter.h"
 #include "gpopt/base/CColRefTable.h"
 #include "gpopt/base/CConstraintInterval.h"
@@ -31,6 +33,7 @@
 #include "gpopt/operators/CLogicalConstTableGet.h"
 #include "gpopt/operators/CLogicalDynamicGet.h"
 #include "gpopt/operators/CLogicalGbAgg.h"
+#include "gpopt/operators/CLogicalGet.h"
 #include "gpopt/operators/CLogicalInnerJoin.h"
 #include "gpopt/operators/CLogicalLimit.h"
 #include "gpopt/operators/CLogicalNAryJoin.h"
@@ -2705,6 +2708,273 @@ CExpressionPreprocessor::PcnstrFromChildPartition(
 	return cnstr;
 }
 
+static BOOL
+IsLogicalGetOrLogicalDynamicGet(COperator::EOperatorId id)
+{
+	return id == COperator::EopLogicalGet ||
+		   id == COperator::EopLogicalDynamicGet;
+}
+
+// Attempt to push down logical project elements
+//
+// When there is a logical project that is *not* immediately above a logical
+// get then there may be lost opportunities to later push down predicates.
+// Consider the following example that has a n-ary join between the logical
+// project and logical get:
+//
+// Input:
+// +--CLogicalSelect
+//    |--CLogicalProject
+//    |  |--CLogicalNAryJoin
+//    |  |  |--CLogicalGet "foo" ("foo"), Columns: ["a" (0), "b" (1), ...
+//    |  |  |--CLogicalGet "bar" ("bar"), Columns: ["c" (9), "d" (10), ...
+//    |  |  +--CScalarCmp (=)
+//    |  |     |--CScalarIdent "a" (0)
+//    |  |     +--CScalarIdent "c" (9)
+//    |  +--CScalarProjectList
+//    |     +--CScalarProjectElement "b" (18)
+//    |        +--CScalarFunc (varchar)
+//    |           |--CScalarCast
+//    |           |  +--CScalarIdent "b" (1)
+//    |           |--CScalarConst (104)
+//    |           +--CScalarConst (1)
+//    +--CScalarCmp (=)
+//       |--CScalarCast
+//       |  +--CScalarIdent "b" (18)
+//       +--CScalarConst (1828233457.000)
+//
+// In this case if we don't push down the logical project, then we cannot later
+// push down the scalar cmp filter either because there is no reference to
+// colid (18) below the n-ary join. However, there is a reference to colid (1)
+// in the logical get. This preprocesor step will take the above tree as input
+// and push the project below the n-ary join. Thus producing following:
+//
+// Output:
+// +--CLogicalSelect
+//   |--CLogicalNAryJoin
+//   |  |--CLogicalProject
+//   |  |  |--CLogicalGet "foo" ("foo"), Columns: ["a" (0), "b" (1), ...
+//   |  |  +--CScalarProjectList
+//   |  |     +--CScalarProjectElement "b" (18)
+//   |  |        +--CScalarFunc (varchar)
+//   |  |           |--CScalarCast
+//   |  |           |  +--CScalarIdent "b" (1)
+//   |  |           |--CScalarConst (104)
+//   |  |           +--CScalarConst (1)
+//   |  |--CLogicalGet "bar" ("bar"), Columns: ["c" (9), "d" (10), ...
+//   |  +--CScalarCmp (=)
+//   |     |--CScalarIdent "a" (0)
+//   |     +--CScalarIdent "c" (9)
+//   +--CScalarCmp (=)
+//      |--CScalarCast
+//      |  +--CScalarIdent "b" (18)
+//      +--CScalarConst (1828233457.000)
+//
+// Notice that now we have a reference to colid (18) below the n-ary join. This
+// allows later normalization steps to push the predicate below the n-ary join.
+//
+// mapColumnsOfProjectElement key is output column set of a project element
+//                            value is the project element itself
+//
+// successfulPushDownColumnSets contains column set of project elements that
+// were pushed down
+CExpression *
+CExpressionPreprocessor::PexprPushProjectElements(
+	CMemoryPool *mp, CExpression *pexpr,
+	ColRefToExprMap *mapColumnsOfProjectElement,
+	std::set<CColRefSet *> &successfulPushDownColumnSets, BOOL &inPushDown)
+{
+	// protect against stack overflow during recursion
+	GPOS_CHECK_STACK_SIZE;
+	GPOS_ASSERT(nullptr != mp);
+	GPOS_ASSERT(nullptr != pexpr);
+
+	BOOL localInPushDown = inPushDown;
+
+	// Here we search for project elements that we should attempt to push down.
+	// After we've found one, we add it to a mapping of the elements' used
+	// columns to the element itself. That mapping will be later used to check
+	// if the element's used columns is a subset of a logical get's output
+	// columns.  Then we fix up the project list if any elements were
+	// successfully pushed down.
+	if (pexpr->Pop()->Eopid() == COperator::EopLogicalProject &&
+		!IsLogicalGetOrLogicalDynamicGet((*pexpr)[0]->Pop()->Eopid()))
+	{
+		CExpression *pexprProjectList = (*pexpr)[1];
+		const ULONG arity = pexprProjectList->Arity();
+		for (ULONG ul = 0; ul < arity; ul++)
+		{
+			CColRefSet *pcolrefs =
+				((*pexprProjectList)[ul])->DeriveUsedColumns();
+			if (pcolrefs != nullptr && pcolrefs->Size() > 0)
+			{
+				// we found something to try to push down
+				mapColumnsOfProjectElement->Insert(pcolrefs,
+												   (*pexprProjectList)[ul]);
+			}
+		}
+
+		// If we have project elements that we should *try* to push down.
+		if (mapColumnsOfProjectElement->Size() > 0)
+		{
+			CExpressionArray *pexprChildren = GPOS_NEW(mp) CExpressionArray(mp);
+			localInPushDown = true;
+			CExpression *newProjectChild = PexprPushProjectElements(
+				mp, (*pexpr)[0], mapColumnsOfProjectElement,
+				successfulPushDownColumnSets, localInPushDown);
+
+			// If we successfully pushed at least 1 project element down.
+			if (successfulPushDownColumnSets.size() > 0)
+			{
+				pexprChildren->Append(newProjectChild);
+
+				ULONG numPushedDown = 0;
+
+				// construct new project list from elements that were *not* pushed down.
+				CExpressionArray *pdrgpexpr = GPOS_NEW(mp) CExpressionArray(mp);
+				for (ULONG ul = 0; ul < arity; ul++)
+				{
+					CColRefSet *pcolrefs =
+						((*pexprProjectList)[ul])->DeriveUsedColumns();
+					if (successfulPushDownColumnSets.find(pcolrefs) ==
+						successfulPushDownColumnSets.end())
+					{
+						// failed to push down, keep project element in project list.
+						(*pexprProjectList)[ul]->AddRef();
+						pdrgpexpr->Append((*pexprProjectList)[ul]);
+					}
+					else
+					{
+						// successfully pushed down...
+						numPushedDown += 1;
+					}
+				}
+
+				if (numPushedDown < arity)
+				{
+					// Sucessfully pushed down some, but not all elements
+					pexprChildren->Append(GPOS_NEW(mp) CExpression(
+						mp, GPOS_NEW(mp) CScalarProjectList(mp), pdrgpexpr));
+
+					return GPOS_NEW(mp) CExpression(
+						mp, GPOS_NEW(mp) CLogicalProject(mp), pexprChildren);
+				}
+
+				// Sucessfully pushed down everything
+				GPOS_ASSERT(numPushedDown == arity);
+
+				newProjectChild->AddRef();
+				pexprChildren->Release();
+				pdrgpexpr->Release();
+				return newProjectChild;
+			}
+
+			// We didn't successfully push anything down.
+			pexprChildren->Release();
+			newProjectChild->Release();
+		}
+		pexpr->AddRef();
+		return pexpr;
+	}
+
+	// recursively process children
+	const ULONG arity = pexpr->Arity();
+	if (arity == 0)
+	{
+		pexpr->AddRef();
+		return pexpr;
+	}
+
+	// We can't safely push project below a group-by aggregate
+	if (pexpr->Pop()->Eopid() == COperator::EopLogicalGbAgg && inPushDown)
+	{
+		pexpr->AddRef();
+		return pexpr;
+	}
+
+	// Here we search for a logical get that we should attempt to push project
+	// elements above. When we find one, we check if the output columns of a
+	// logical get is a superset of any of the mapped project element's used
+	// columns. If it is, then we move the project element to a project list
+	// immediately above the logical get.
+	CExpressionArray *pdrgpexprChildren = GPOS_NEW(mp) CExpressionArray(mp);
+	for (ULONG ul = 0; ul < arity; ul++)
+	{
+		if (IsLogicalGetOrLogicalDynamicGet((*pexpr)[ul]->Pop()->Eopid()))
+		{
+			CColRefSet *pdrgpcrOutput = nullptr;
+			CExpression *pexprLogicalGet = (*pexpr)[ul];
+
+			if ((*pexpr)[ul]->Pop()->Eopid() == COperator::EopLogicalGet)
+			{
+				pdrgpcrOutput = GPOS_NEW(mp) CColRefSet(
+					mp, CLogicalGet::PopConvert(pexprLogicalGet->Pop())
+							->PdrgpcrOutput());
+			}
+			else
+			{
+				GPOS_ASSERT((*pexpr)[ul]->Pop()->Eopid() ==
+							COperator::EopLogicalDynamicGet);
+
+				pdrgpcrOutput = GPOS_NEW(mp) CColRefSet(
+					mp, CLogicalDynamicGet::PopConvert(pexprLogicalGet->Pop())
+							->PdrgpcrOutput());
+			}
+
+			bool found = false;
+			CExpressionArray *pdrgpexpr = GPOS_NEW(mp) CExpressionArray(mp);
+
+			ColRefToExprMapIter hmcrexpri(mapColumnsOfProjectElement);
+			while (hmcrexpri.Advance())
+			{
+				if (pdrgpcrOutput->ContainsAll(hmcrexpri.Key()))
+				{
+					CColRefSet *cols =
+						const_cast<CColRefSet *>(hmcrexpri.Key());
+					CExpression *projEl =
+						const_cast<CExpression *>(hmcrexpri.Value());
+					projEl->AddRef();
+					pdrgpexpr->Append(projEl);
+
+					successfulPushDownColumnSets.insert(
+						cols);	// keep track to remove from project list higher up tree
+					found = true;
+				}
+			}
+
+			CRefCount::SafeRelease(pdrgpcrOutput);
+
+			if (found)
+			{
+				CExpression *pexprLogicalGetNew = GPOS_NEW(mp) CExpression(
+					mp, GPOS_NEW(mp) CLogicalProject(mp), pexprLogicalGet,
+					GPOS_NEW(mp) CExpression(
+						mp, GPOS_NEW(mp) CScalarProjectList(mp), pdrgpexpr));
+				pexprLogicalGet->AddRef();
+
+				pdrgpexprChildren->Append(pexprLogicalGetNew);
+				continue;
+			}
+
+			// didn't find any push down candidates, so add operator back as is.
+			pdrgpexpr->Release();
+			pexprLogicalGet->AddRef();
+			pdrgpexprChildren->Append(pexprLogicalGet);
+		}
+		else
+		{
+			CExpression *pexprChild = PexprPushProjectElements(
+				mp, (*pexpr)[ul], mapColumnsOfProjectElement,
+				successfulPushDownColumnSets, localInPushDown);
+			pdrgpexprChildren->Append(pexprChild);
+		}
+	}
+
+	COperator *pop = pexpr->Pop();
+	pop->AddRef();
+	return GPOS_NEW(mp) CExpression(mp, pop, pdrgpexprChildren);
+}
+
 // main driver, pre-processing of input logical expression
 CExpression *
 CExpressionPreprocessor::PexprPreprocess(
@@ -2838,52 +3108,63 @@ CExpressionPreprocessor::PexprPreprocess(
 	GPOS_CHECK_ABORT;
 	pexprWindowPreprocessed->Release();
 
-	// (18) normalize expression
-	CExpression *pexprNormalized1 =
-		CNormalizer::PexprNormalize(mp, pexprNoUnusedPrEl);
-	GPOS_CHECK_ABORT;
+	// (18) push down project elemnts
+	ColRefToExprMap *mapColumnsOfProjectElement =
+		GPOS_NEW(mp) ColRefToExprMap(mp);
+	std::set<CColRefSet *> successfulPushDownColumnSets;
+	BOOL inPushDown = false;
+	CExpression *pexprPushedDownProjects = PexprPushProjectElements(
+		mp, pexprNoUnusedPrEl, mapColumnsOfProjectElement,
+		successfulPushDownColumnSets, inPushDown);
+	mapColumnsOfProjectElement->Release();
 	pexprNoUnusedPrEl->Release();
 
-	// (19) transform outer join into inner join whenever possible
+	// (19) normalize expression
+	CExpression *pexprNormalized1 =
+		CNormalizer::PexprNormalize(mp, pexprPushedDownProjects);
+	GPOS_CHECK_ABORT;
+	pexprPushedDownProjects->Release();
+
+	// (20) transform outer join into inner join whenever possible
 	CExpression *pexprLOJToIJ = PexprOuterJoinToInnerJoin(mp, pexprNormalized1);
 	GPOS_CHECK_ABORT;
 	pexprNormalized1->Release();
 
-	// (20) collapse cascaded inner and left outer joins
+	// (21) collapse cascaded inner and left outer joins
 	CExpression *pexprCollapsed = PexprCollapseJoins(mp, pexprLOJToIJ);
 	GPOS_CHECK_ABORT;
 	pexprLOJToIJ->Release();
 
-	// (21) after transforming outer joins to inner joins, we may be able to generate more predicates from constraints
+	// (22) after transforming outer joins to inner joins, we may be able to generate more predicates from constraints
 	CExpression *pexprWithPreds =
 		PexprAddPredicatesFromConstraints(mp, pexprCollapsed);
 	GPOS_CHECK_ABORT;
 	pexprCollapsed->Release();
 
-	// (22) eliminate empty subtrees
+	// (23) eliminate empty subtrees
 	CExpression *pexprPruned = PexprPruneEmptySubtrees(mp, pexprWithPreds);
 	GPOS_CHECK_ABORT;
 	pexprWithPreds->Release();
 
-	// (23) collapse cascade of projects
+	// (24) collapse cascade of projects
 	CExpression *pexprCollapsedProjects =
 		PexprCollapseProjects(mp, pexprPruned);
 	GPOS_CHECK_ABORT;
 	pexprPruned->Release();
 
-	// (24) insert dummy project when the scalar subquery is under a project and returns an outer reference
+	// (25) insert dummy project when the scalar subquery is under a project and returns an outer reference
 	CExpression *pexprSubquery = PexprProjBelowSubquery(
 		mp, pexprCollapsedProjects, false /* fUnderPrList */);
 	GPOS_CHECK_ABORT;
 	pexprCollapsedProjects->Release();
 
-	// (25) reorder the children of scalar cmp operator to ensure that left child is scalar ident and right child is scalar const
+	// (26) reorder the children of scalar cmp operator to ensure that left child is scalar ident and right child is scalar const
 	CExpression *pexrReorderedScalarCmpChildren =
 		PexprReorderScalarCmpChildren(mp, pexprSubquery);
 	GPOS_CHECK_ABORT;
 	pexprSubquery->Release();
 
-	// (26) rewrite IN subquery to EXIST subquery with a predicate
+	// (27) rewrite IN subquery to EXIST subquery with a predicate
 	CExpression *pexprExistWithPredFromINSubq =
 		PexprExistWithPredFromINSubq(mp, pexrReorderedScalarCmpChildren);
 	GPOS_CHECK_ABORT;

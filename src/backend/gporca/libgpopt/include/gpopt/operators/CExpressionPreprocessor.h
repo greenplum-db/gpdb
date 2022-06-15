@@ -13,6 +13,8 @@
 #ifndef GPOPT_CExpressionPreprocessor_H
 #define GPOPT_CExpressionPreprocessor_H
 
+#include <set>
+
 #include "gpos/base.h"
 
 #include "gpopt/base/CColumnFactory.h"
@@ -35,6 +37,18 @@ using namespace gpos;
 class CExpressionPreprocessor
 {
 private:
+	// map colref to expression
+	using ColRefToExprMap =
+		CHashMap<CColRefSet, CExpression, HashPtr<CColRefSet>,
+				 EqualPtr<CColRefSet>, CleanupNULL<CColRefSet>,
+				 CleanupNULL<CExpression>>;
+
+	// iterator for map of colref to expression
+	using ColRefToExprMapIter =
+		CHashMapIter<CColRefSet, CExpression, HashPtr<CColRefSet>,
+					 EqualPtr<CColRefSet>, CleanupNULL<CColRefSet>,
+					 CleanupNULL<CExpression>>;
+
 	// map CTE id to collected predicates
 	using CTEPredsMap =
 		CHashMap<ULONG, CExpressionArray, gpos::HashValue<ULONG>,
@@ -204,6 +218,12 @@ private:
 	static CConstraint *PcnstrFromChildPartition(const IMDRelation *partrel,
 												 CColRefArray *pdrgpcrOutput,
 												 ColRefToUlongMap *col_mapping);
+
+	// attempt to push down a project element to a corresponding logical get
+	static CExpression *PexprPushProjectElements(
+		CMemoryPool *mp, CExpression *pexpr,
+		ColRefToExprMap *mapColumnsOfProjectElement,
+		std::set<CColRefSet *> &successfulPushDownColumnSets, BOOL &inPushDown);
 
 	// private ctor
 	CExpressionPreprocessor();
