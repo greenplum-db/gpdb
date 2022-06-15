@@ -2,7 +2,7 @@
 
 Describes the Oracle Compatibility SQL functions in Greenplum Database. These functions target PostgreSQL.
 
-**Parent topic:**[Additional Supplied Modules](contrib-modules.html)
+**Parent topic:** [Additional Supplied Modules](contrib-modules.html)
 
 ## Installing Oracle Compatibility Functions 
 

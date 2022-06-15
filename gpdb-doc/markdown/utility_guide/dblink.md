@@ -10,7 +10,7 @@ You create a `dblink` connection to a database and execute an SQL command in the
 
 Refer to [dblink](https://www.postgresql.org/docs/8.4/static/dblink.html) in the PostgreSQL documentation for more information about individual `dblink` functions.
 
-**Parent topic:**[Additional Supplied Modules](contrib-modules.html)
+**Parent topic:** [Additional Supplied Modules](contrib-modules.html)
 
 ## Limitations 
 

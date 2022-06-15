@@ -11,5 +11,5 @@ The `dblink` module supports connections to other Greenplum Database databases f
 -   **[Oracle Compatibility Functions](orafce_ref.html)**  
 Describes the Oracle Compatibility SQL functions in Greenplum Database. These functions target PostgreSQL.
 
-**Parent topic:**[Greenplum Database Utility Guide](utility_guide.html)
+**Parent topic:** [Greenplum Database Utility Guide](utility_guide.html)
 
