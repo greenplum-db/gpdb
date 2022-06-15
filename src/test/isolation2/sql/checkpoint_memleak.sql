@@ -32,14 +32,16 @@ select gp_inject_fault('ckpt_mem_leak', 'reset', dbid) from gp_segment_configura
 SELECT pg_ctl(datadir, 'stop', 'immediate') FROM gp_segment_configuration WHERE role = 'p' AND content = 1;
 SELECT gp_request_fts_probe_scan();
 
+-- Bring back primary and wait until primary and mirror are up & running
+!\retcode gprecoverseg -a;
+SELECT wait_until_all_segments_synchronized();
+
 -- If there's a memory leak we'll print a special log message. Search if such log record exists, if so, 
 -- we might have a memory leak. Check the log for more information about the memory usage.
 -- Note that currently we are only checking MdCxt.
 select count(*) from gp_toolkit.__gp_log_segment_ext where logsegment = 'seg1' and logtime > (select * from t_ckpt_memleak_test_timestamp) and logmessage like '[CheckpointMemoryLeakTest] Possible memory leak %';
 
--- Bring back primary and re-balance.
-!\retcode gprecoverseg -a;
-SELECT wait_until_all_segments_synchronized();
+-- re-balance
 !\retcode gprecoverseg -ra;
 SELECT wait_until_all_segments_synchronized();
 
