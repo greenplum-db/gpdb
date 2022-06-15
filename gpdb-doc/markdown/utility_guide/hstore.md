@@ -108,7 +108,7 @@ b</pre>
        <td class="entry" valign="top" headers="d69496e294 d69496e297 d69496e300 d69496e303 d69496e306 ">get <samp class="ph codeph">hstore</samp>'s keys and values as set</td>
        <td class="entry" valign="top" headers="d69496e294 d69496e297 d69496e300 d69496e303 d69496e306 "><samp class="ph codeph">select * from each('a=&gt;1,b=&gt;2')</samp></td>
        <td class="entry" valign="top" headers="d69496e294 d69496e297 d69496e300 d69496e303 d69496e306 ">
-        <code>key|value<br/>-------+---------<br/>  a  |  1<br/>  b  |  2</code>
+        <code>key|value<br/>-------+---------<br/>  a   |  1<br/>  b   |  2</code>
        </td>
       </tr>
       <tr class="row">
