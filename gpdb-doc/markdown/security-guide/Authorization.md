@@ -1,4 +1,4 @@
-  # Configuring Database Authorization 
+# Configuring Database Authorization 
 
 Describes how to restrict authorization access to database data at the user level by using roles and permissions.
 
