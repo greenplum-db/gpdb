@@ -270,7 +270,7 @@ select verify('constraint_pt1_1_prt_feb08');
 select verify('constraint_t1');
  verify 
 --------
-      1
+      0
 (1 row)
 
 SELECT * FROM constraint_pt1 ORDER BY date, id;
@@ -367,7 +367,7 @@ select verify('constraint_pt2_1_prt_feb08');
 select verify('constraint_t2');
  verify 
 --------
-      2
+      1
 (1 row)
 
 SELECT * FROM constraint_pt2 ORDER BY date, id;
@@ -512,7 +512,7 @@ select verify('constraint_pt3_1_prt_2_2_prt_3_3_prt_europe');
 select verify('constraint_t3');
  verify 
 --------
-      5
+      4
 (1 row)
 
 INSERT INTO constraint_pt3 SELECT i, 2001, 02, i, 'europe' FROM generate_series(11,15)i;

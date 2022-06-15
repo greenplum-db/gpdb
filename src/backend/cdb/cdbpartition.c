@@ -1244,6 +1244,17 @@ cdb_exchange_part_constraints(Relation table,
 					}
 				}
 			}
+			
+			/* 
+			 * The partition will become a normal table after exchange partition,
+			 * the partition check constraint should be deleted.
+			 */
+			ObjectAddress conobj;
+			conobj.classId = ConstraintRelationId;
+			conobj.objectId = HeapTupleGetOid(tuple);
+			conobj.objectSubId = 0;
+
+			performDeletion(&conobj, DROP_CASCADE, 0);
 		}
 		else if (list_length(entry->cand_cons) > 0) /* and none on whole or
 													 * part */

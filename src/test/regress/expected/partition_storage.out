@@ -111,8 +111,6 @@ Checksum: t
 Indexes:
     "pt_heap_tab_1_prt_pqr_a_idx" btree (a) WHERE c > 10
     "pt_heap_tab_1_prt_pqr_upper_idx" btree (upper(b))
-Check constraints:
-    "pt_heap_tab_1_prt_pqr_check" CHECK (b = 'pqr'::text OR b = 'pqr1'::text OR b = 'pqr2'::text)
 Distributed by: (a)
 Options: appendonly=true, orientation=column, compresslevel=5
 
@@ -133,8 +131,6 @@ Checksum: t
 Indexes:
     "pt_heap_tab_1_prt_def_a_idx" btree (a) WHERE c > 10
     "pt_heap_tab_1_prt_def_upper_idx" btree (upper(b))
-Check constraints:
-    "pt_heap_tab_1_prt_def_check" CHECK (b = 'def'::text OR b = 'def1'::text OR b = 'def3'::text)
 Distributed by: (a)
 Options: appendonly=true, compresslevel=1
 
@@ -151,8 +147,6 @@ Options: appendonly=true, compresslevel=1
 Indexes:
     "pt_heap_tab_1_prt_abc1_a_idx" btree (a) WHERE c > 10
     "pt_heap_tab_1_prt_abc1_upper_idx" btree (upper(b))
-Check constraints:
-    "pt_heap_tab_1_prt_abc1_check" CHECK (b = 'abc'::text OR b = 'abc2'::text)
 Distributed by: (a)
 Options: appendonly=false
 
@@ -309,8 +303,6 @@ Checksum: t
 Indexes:
     "pt_ao_tab_1_prt_pqr_a_idx" btree (a) WHERE c > 10
     "pt_ao_tab_1_prt_pqr_upper_idx" btree (upper(b))
-Check constraints:
-    "pt_ao_tab_1_prt_pqr_check" CHECK (b = 'pqr'::text OR b = 'pqr1'::text OR b = 'pqr2'::text)
 Distributed by: (a)
 Options: appendonly=true, orientation=column, compresslevel=5
 
@@ -331,8 +323,6 @@ Checksum: t
 Indexes:
     "pt_ao_tab_1_prt_def_a_idx" btree (a) WHERE c > 10
     "pt_ao_tab_1_prt_def_upper_idx" btree (upper(b))
-Check constraints:
-    "pt_ao_tab_1_prt_def_check" CHECK (b = 'def'::text OR b = 'def1'::text OR b = 'def3'::text)
 Distributed by: (a)
 Options: appendonly=true, compresslevel=1
 
@@ -349,8 +339,6 @@ Options: appendonly=true, compresslevel=1
 Indexes:
     "pt_ao_tab_1_prt_stu_a_idx" btree (a) WHERE c > 10
     "pt_ao_tab_1_prt_stu_upper_idx" btree (upper(b))
-Check constraints:
-    "pt_ao_tab_1_prt_stu_check" CHECK (b = 'stu'::text OR b = 'stu1'::text OR b = 'stu2'::text)
 Distributed by: (a)
 Options: appendonly=false
 
@@ -518,8 +506,6 @@ Checksum: t
 Indexes:
     "pt_co_tab_1_prt_xyz2_a_idx" btree (a) WHERE c > 10
     "pt_co_tab_1_prt_xyz2_upper_idx" btree (upper(b))
-Check constraints:
-    "pt_co_tab_1_prt_xyz2_check" CHECK (b = 'xyz1'::text)
 Distributed by: (a)
 Options: appendonly=true, orientation=column, compresslevel=5
 
@@ -540,8 +526,6 @@ Checksum: t
 Indexes:
     "pt_co_tab_1_prt_pqr_a_idx" btree (a) WHERE c > 10
     "pt_co_tab_1_prt_pqr_upper_idx" btree (upper(b))
-Check constraints:
-    "pt_co_tab_1_prt_pqr_check" CHECK (b = 'pqr'::text OR b = 'pqr1'::text OR b = 'pqr2'::text)
 Distributed by: (a)
 Options: appendonly=true, compresslevel=5
 
@@ -558,8 +542,6 @@ Options: appendonly=true, compresslevel=5
 Indexes:
     "pt_co_tab_1_prt_stu_a_idx" btree (a) WHERE c > 10
     "pt_co_tab_1_prt_stu_upper_idx" btree (upper(b))
-Check constraints:
-    "pt_co_tab_1_prt_stu_check" CHECK (b = 'stu'::text OR b = 'stu1'::text OR b = 'stu2'::text)
 Distributed by: (a)
 Options: appendonly=false
 
@@ -708,8 +690,6 @@ NOTICE:  CREATE TABLE will create partition "pt_heap_tab_rng_1_prt_newao" for ta
 Indexes:
     "pt_heap_tab_rng_1_prt_heap1_a_idx" btree (a) WHERE c > 10
     "pt_heap_tab_rng_1_prt_heap1_upper_idx" btree (upper(b))
-Check constraints:
-    "pt_heap_tab_rng_1_prt_heap1_check" CHECK (a >= 21 AND a < 23)
 Distributed by: (a)
 Options: appendonly=false
 
@@ -730,8 +710,6 @@ Checksum: t
 Indexes:
     "pt_heap_tab_rng_1_prt_newao_a_idx" btree (a) WHERE c > 10
     "pt_heap_tab_rng_1_prt_newao_upper_idx" btree (upper(b))
-Check constraints:
-    "pt_heap_tab_rng_1_prt_newao_check" CHECK (a >= 40 AND a < 45)
 Distributed by: (a)
 Options: appendonly=true
 
@@ -749,8 +727,6 @@ Checksum: t
 Indexes:
     "pt_heap_tab_rng_1_prt_newco_a_idx" btree (a) WHERE c > 10
     "pt_heap_tab_rng_1_prt_newco_upper_idx" btree (upper(b))
-Check constraints:
-    "pt_heap_tab_rng_1_prt_newco_check" CHECK (a >= 36 AND a < 40)
 Distributed by: (a)
 Options: appendonly=true, orientation=column
 
@@ -900,8 +876,6 @@ NOTICE:  CREATE TABLE will create partition "pt_ao_tab_rng_1_prt_newheap" for ta
 Indexes:
     "pt_ao_tab_rng_1_prt_newheap_a_idx" btree (a) WHERE c > 10
     "pt_ao_tab_rng_1_prt_newheap_upper_idx" btree (upper(b))
-Check constraints:
-    "pt_ao_tab_rng_1_prt_newheap_check" CHECK (a >= 40 AND a < 45)
 Distributed by: (a)
 Options: appendonly=false
 
@@ -922,8 +896,6 @@ Checksum: t
 Indexes:
     "pt_ao_tab_rng_1_prt_ao1_a_idx" btree (a) WHERE c > 10
     "pt_ao_tab_rng_1_prt_ao1_upper_idx" btree (upper(b))
-Check constraints:
-    "pt_ao_tab_rng_1_prt_ao1_check" CHECK (a >= 25 AND a < 27)
 Distributed by: (a)
 Options: appendonly=true
 
@@ -941,8 +913,6 @@ Checksum: t
 Indexes:
     "pt_ao_tab_rng_1_prt_newco_a_idx" btree (a) WHERE c > 10
     "pt_ao_tab_rng_1_prt_newco_upper_idx" btree (upper(b))
-Check constraints:
-    "pt_ao_tab_rng_1_prt_newco_check" CHECK (a >= 36 AND a < 40)
 Distributed by: (a)
 Options: appendonly=true, orientation=column
 
@@ -1092,8 +1062,6 @@ NOTICE:  CREATE TABLE will create partition "pt_co_tab_rng_1_prt_newheap" for ta
 Indexes:
     "pt_co_tab_rng_1_prt_newheap_a_idx" btree (a) WHERE c > 10
     "pt_co_tab_rng_1_prt_newheap_upper_idx" btree (upper(b))
-Check constraints:
-    "pt_co_tab_rng_1_prt_newheap_check" CHECK (a >= 40 AND a < 45)
 Distributed by: (a)
 Options: appendonly=false
 
@@ -1114,8 +1082,6 @@ Checksum: t
 Indexes:
     "pt_co_tab_rng_1_prt_newao_a_idx" btree (a) WHERE c > 10
     "pt_co_tab_rng_1_prt_newao_upper_idx" btree (upper(b))
-Check constraints:
-    "pt_co_tab_rng_1_prt_newao_check" CHECK (a >= 36 AND a < 40)
 Distributed by: (a)
 Options: appendonly=true
 
@@ -1133,8 +1099,6 @@ Checksum: t
 Indexes:
     "pt_co_tab_rng_1_prt_co1_a_idx" btree (a) WHERE c > 10
     "pt_co_tab_rng_1_prt_co1_upper_idx" btree (upper(b))
-Check constraints:
-    "pt_co_tab_rng_1_prt_co1_check" CHECK (a >= 31 AND a < 33)
 Distributed by: (a)
 Options: appendonly=true, orientation=column
 

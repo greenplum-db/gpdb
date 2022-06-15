@@ -512,24 +512,13 @@ NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_9" for table "foo_p"
 create table bar_p(i int, j int) distributed by (i);
 insert into bar_p values(6, 6);
 alter table foo_p exchange partition for(rank(6)) with table bar_p;
--- Should fail.  Prior releases didn't convey constraints out via exchange
--- but we do now, so the following tries to insert a value that can't go
--- in part 6.
+-- issue#13663 Shouldn't fail. bar_p is still a normal table alter EXCHANGE PARTITION.
 insert into bar_p values(10, 10);
-ERROR:  new row for relation "bar_p" violates check constraint "foo_p_1_prt_6_check"
-DETAIL:  Failing row contains (10, 10).
 drop table foo_p;
 select * from bar_p;
- i | j 
----+---
-(0 rows)
-
--- Should succeed.  Conveyed constraint matches.
-insert into bar_p values(6, 6);
-select * from bar_p;
- i | j 
----+---
- 6 | 6
+ i  | j  
+----+----
+ 10 | 10
 (1 row)
 
 drop table bar_p;

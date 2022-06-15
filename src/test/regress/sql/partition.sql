@@ -277,14 +277,9 @@ create table bar_p(i int, j int) distributed by (i);
 
 insert into bar_p values(6, 6);
 alter table foo_p exchange partition for(rank(6)) with table bar_p;
--- Should fail.  Prior releases didn't convey constraints out via exchange
--- but we do now, so the following tries to insert a value that can't go
--- in part 6.
+-- issue#13663 Shouldn't fail. bar_p is still a normal table alter EXCHANGE PARTITION.
 insert into bar_p values(10, 10);
 drop table foo_p;
-select * from bar_p;
--- Should succeed.  Conveyed constraint matches.
-insert into bar_p values(6, 6);
 select * from bar_p;
 drop table bar_p;
 
