@@ -169,7 +169,7 @@ BitmapHeapNext(BitmapHeapScanState *node)
 		else
 		{
 			/*
-			 * GPDB_12_MERGE_TODO the parallel StreamBitmap scan is not
+			 * GPDB_12_MERGE_FEATURE_NOT_SUPPORTED: the parallel StreamBitmap scan is not
 			 * implemented, it must be a TIDBitmap here
 			 */
 			/*
