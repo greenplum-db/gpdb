@@ -47,34 +47,162 @@ Currently, double quotes are always used to surround key and value strings on ou
 
 **Note:** The `=>` operator is deprecated and may be removed in a future release. Use the `hstore(text, text)` function instead.
 
-|Function|Return Type|Description|Example|Result|
-|--------|-----------|-----------|-------|------|
-|`hstore(text, text)`|`hstore`|make single-item `hstore`|`hstore('a', 'b')`|`"a"=>"b"`|
-|`akeys(hstore)`|`text[]`|get `hstore`'s keys as array|`akeys('a=>1,b=>2')`|`{a,b}`|
-|`skeys(hstore)`|`setof text`|get `hstore`'s keys as set|`skeys('a=>1,b=>2')`|```
-a
-b
-```
+<div class="tablenoborder">
+<table cellpadding="4" cellspacing="0" summary="" id="topic_vcn_jkq_1bb__hstore-func-table" class="table" frame="border" border="1" rules="all">
+<caption><span class="tablecap">Table 2. hstore Functions</span></caption>
+     <thead class="thead" align="left">
+      <tr class="row">
+       <th class="entry" valign="top" id="d69496e294">Function</th>
 
-|
-|`avals(hstore)`|`text[]`|get `hstore`'s values as array|`avals('a=>1,b=>2')`|`{1,2}`|
-|`svals(hstore)`|`setof text`|get `hstore`'s values as set|`svals('a=>1,b=>2')`|```
-1
-2
-```
+       <th class="entry" valign="top" id="d69496e297">Return Type</th>
 
-|
-|`each(hstore)`|`setof (key text, value text)`|get `hstore`'s keys and values as set|`select * from each('a=>1,b=>2')`|```
- key | value
+       <th class="entry" valign="top" id="d69496e300">Description</th>
+
+       <th class="entry" valign="top" id="d69496e303">Example</th>
+
+       <th class="entry" valign="top" id="d69496e306">Result</th>
+
+      </tr>
+
+     </thead>
+
+     <tbody class="tbody">
+      <tr class="row">
+       <td class="entry" valign="top" headers="d69496e294 d69496e297 d69496e300 d69496e303 d69496e306 "><samp class="ph codeph">hstore(text, text)</samp></td>
+
+       <td class="entry" valign="top" headers="d69496e294 d69496e297 d69496e300 d69496e303 d69496e306 "><samp class="ph codeph">hstore</samp></td>
+
+       <td class="entry" valign="top" headers="d69496e294 d69496e297 d69496e300 d69496e303 d69496e306 ">make single-item <samp class="ph codeph">hstore</samp>
+</td>
+
+       <td class="entry" valign="top" headers="d69496e294 d69496e297 d69496e300 d69496e303 d69496e306 "><samp class="ph codeph">hstore('a', 'b')</samp></td>
+
+       <td class="entry" valign="top" headers="d69496e294 d69496e297 d69496e300 d69496e303 d69496e306 "><samp class="ph codeph">"a"=&gt;"b"</samp></td>
+
+      </tr>
+
+      <tr class="row">
+       <td class="entry" valign="top" headers="d69496e294 d69496e297 d69496e300 d69496e303 d69496e306 "><samp class="ph codeph">akeys(hstore)</samp></td>
+
+       <td class="entry" valign="top" headers="d69496e294 d69496e297 d69496e300 d69496e303 d69496e306 "><samp class="ph codeph">text[]</samp></td>
+
+       <td class="entry" valign="top" headers="d69496e294 d69496e297 d69496e300 d69496e303 d69496e306 ">get <samp class="ph codeph">hstore</samp>'s keys as array</td>
+
+       <td class="entry" valign="top" headers="d69496e294 d69496e297 d69496e300 d69496e303 d69496e306 "><samp class="ph codeph">akeys('a=&gt;1,b=&gt;2')</samp></td>
+
+       <td class="entry" valign="top" headers="d69496e294 d69496e297 d69496e300 d69496e303 d69496e306 "><samp class="ph codeph">{a,b}</samp></td>
+
+      </tr>
+
+      <tr class="row">
+       <td class="entry" valign="top" headers="d69496e294 d69496e297 d69496e300 d69496e303 d69496e306 "><samp class="ph codeph">skeys(hstore)</samp></td>
+
+       <td class="entry" valign="top" headers="d69496e294 d69496e297 d69496e300 d69496e303 d69496e306 "><samp class="ph codeph">setof text</samp></td>
+
+       <td class="entry" valign="top" headers="d69496e294 d69496e297 d69496e300 d69496e303 d69496e306 ">get <samp class="ph codeph">hstore</samp>'s keys as set</td>
+
+       <td class="entry" valign="top" headers="d69496e294 d69496e297 d69496e300 d69496e303 d69496e306 "><samp class="ph codeph">skeys('a=&gt;1,b=&gt;2')</samp></td>
+
+       <td class="entry" valign="top" headers="d69496e294 d69496e297 d69496e300 d69496e303 d69496e306 ">
+        <pre class="pre codeblock">a
+b</pre>
+
+       </td>
+
+      </tr>
+
+      <tr class="row">
+       <td class="entry" valign="top" headers="d69496e294 d69496e297 d69496e300 d69496e303 d69496e306 "><samp class="ph codeph">avals(hstore)</samp></td>
+
+       <td class="entry" valign="top" headers="d69496e294 d69496e297 d69496e300 d69496e303 d69496e306 "><samp class="ph codeph">text[]</samp></td>
+
+       <td class="entry" valign="top" headers="d69496e294 d69496e297 d69496e300 d69496e303 d69496e306 ">get <samp class="ph codeph">hstore</samp>'s values as array</td>
+
+       <td class="entry" valign="top" headers="d69496e294 d69496e297 d69496e300 d69496e303 d69496e306 "><samp class="ph codeph">avals('a=&gt;1,b=&gt;2')</samp></td>
+
+       <td class="entry" valign="top" headers="d69496e294 d69496e297 d69496e300 d69496e303 d69496e306 "><samp class="ph codeph">{1,2}</samp></td>
+
+      </tr>
+
+      <tr class="row">
+       <td class="entry" valign="top" headers="d69496e294 d69496e297 d69496e300 d69496e303 d69496e306 "><samp class="ph codeph">svals(hstore)</samp></td>
+
+       <td class="entry" valign="top" headers="d69496e294 d69496e297 d69496e300 d69496e303 d69496e306 "><samp class="ph codeph">setof text</samp></td>
+
+       <td class="entry" valign="top" headers="d69496e294 d69496e297 d69496e300 d69496e303 d69496e306 ">get <samp class="ph codeph">hstore</samp>'s values as set</td>
+
+       <td class="entry" valign="top" headers="d69496e294 d69496e297 d69496e300 d69496e303 d69496e306 "><samp class="ph codeph">svals('a=&gt;1,b=&gt;2')</samp></td>
+
+       <td class="entry" valign="top" headers="d69496e294 d69496e297 d69496e300 d69496e303 d69496e306 ">
+        <pre class="pre codeblock">1
+2</pre>
+
+       </td>
+
+      </tr>
+
+      <tr class="row">
+       <td class="entry" valign="top" headers="d69496e294 d69496e297 d69496e300 d69496e303 d69496e306 "><samp class="ph codeph">each(hstore)</samp></td>
+
+       <td class="entry" valign="top" headers="d69496e294 d69496e297 d69496e300 d69496e303 d69496e306 "><samp class="ph codeph">setof (key text, value text)</samp></td>
+
+       <td class="entry" valign="top" headers="d69496e294 d69496e297 d69496e300 d69496e303 d69496e306 ">get <samp class="ph codeph">hstore</samp>'s keys and values as set</td>
+
+       <td class="entry" valign="top" headers="d69496e294 d69496e297 d69496e300 d69496e303 d69496e306 "><samp class="ph codeph">select * from each('a=&gt;1,b=&gt;2')</samp></td>
+
+       <td class="entry" valign="top" headers="d69496e294 d69496e297 d69496e300 d69496e303 d69496e306 ">
+        <pre class="pre codeblock"> key | value
 -----+-------
  a   | 1
- b   | 2
-```
+ b   | 2</pre>
 
-|
-|`exist(hstore,text)`|`boolean`|does `hstore` contain key?|`exist('a=>1','a')`|`t`|
-|`defined(hstore,text)`|`boolean`|does `hstore` contain non-null value for key?|`defined('a=>NULL','a')`|`f`|
-|`delete(hstore,text)`|`hstore`|delete any item matching key|`delete('a=>1,b=>2','b')`|`"a"=>"1"`|
+       </td>
+
+      </tr>
+
+      <tr class="row">
+       <td class="entry" valign="top" headers="d69496e294 d69496e297 d69496e300 d69496e303 d69496e306 "><samp class="ph codeph">exist(hstore,text)</samp></td>
+
+       <td class="entry" valign="top" headers="d69496e294 d69496e297 d69496e300 d69496e303 d69496e306 "><samp class="ph codeph">boolean</samp></td>
+
+       <td class="entry" valign="top" headers="d69496e294 d69496e297 d69496e300 d69496e303 d69496e306 ">does <samp class="ph codeph">hstore</samp> contain key?</td>
+
+       <td class="entry" valign="top" headers="d69496e294 d69496e297 d69496e300 d69496e303 d69496e306 "><samp class="ph codeph">exist('a=&gt;1','a')</samp></td>
+
+       <td class="entry" valign="top" headers="d69496e294 d69496e297 d69496e300 d69496e303 d69496e306 "><samp class="ph codeph">t</samp></td>
+
+      </tr>
+
+      <tr class="row">
+       <td class="entry" valign="top" headers="d69496e294 d69496e297 d69496e300 d69496e303 d69496e306 "><samp class="ph codeph">defined(hstore,text)</samp></td>
+
+       <td class="entry" valign="top" headers="d69496e294 d69496e297 d69496e300 d69496e303 d69496e306 "><samp class="ph codeph">boolean</samp></td>
+
+       <td class="entry" valign="top" headers="d69496e294 d69496e297 d69496e300 d69496e303 d69496e306 ">does <samp class="ph codeph">hstore</samp> contain non-null value for key?</td>
+
+       <td class="entry" valign="top" headers="d69496e294 d69496e297 d69496e300 d69496e303 d69496e306 "><samp class="ph codeph">defined('a=&gt;NULL','a')</samp></td>
+
+       <td class="entry" valign="top" headers="d69496e294 d69496e297 d69496e300 d69496e303 d69496e306 "><samp class="ph codeph">f</samp></td>
+
+      </tr>
+
+      <tr class="row">
+       <td class="entry" valign="top" headers="d69496e294 d69496e297 d69496e300 d69496e303 d69496e306 "><samp class="ph codeph">delete(hstore,text)</samp></td>
+
+       <td class="entry" valign="top" headers="d69496e294 d69496e297 d69496e300 d69496e303 d69496e306 "><samp class="ph codeph">hstore</samp></td>
+
+       <td class="entry" valign="top" headers="d69496e294 d69496e297 d69496e300 d69496e303 d69496e306 ">delete any item matching key</td>
+
+       <td class="entry" valign="top" headers="d69496e294 d69496e297 d69496e300 d69496e303 d69496e306 "><samp class="ph codeph">delete('a=&gt;1,b=&gt;2','b')</samp></td>
+
+       <td class="entry" valign="top" headers="d69496e294 d69496e297 d69496e300 d69496e303 d69496e306 "><samp class="ph codeph">"a"=&gt;"1"</samp></td>
+
+      </tr>
+
+     </tbody>
+
+    </table>
+</div>
 
 ## Indexes 
 
@@ -135,5 +263,5 @@ SELECT key, count(*) FROM
 ...................
 ```
 
-**Parent topic:**[Additional Supplied Modules](contrib-modules.html)
+**Parent topic:** [Additional Supplied Modules](contrib-modules.html)
 
