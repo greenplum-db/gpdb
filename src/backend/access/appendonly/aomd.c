@@ -138,9 +138,7 @@ MakeAOSegmentFileName(Relation rel,
  * the File* routines can be used to read, write, close, etc, the file.
  */
 File
-OpenAOSegmentFile(Relation rel, 
-				  char *filepathname, 
-				  int64	logicalEof)
+OpenAOSegmentFile(char *filepathname, int64	logicalEof)
 {
 	int			fileFlags = O_RDWR | PG_BINARY;
 	File		fd;
@@ -466,7 +464,7 @@ truncate_ao_perFile(const int segno, void *ctx)
 
 	sprintf(segPathSuffixPosition, ".%u", segno);
 
-	fd = OpenAOSegmentFile(aorel, segPath, 0);
+	fd = OpenAOSegmentFile(segPath, 0);
 
 	if (fd >= 0)
 	{
