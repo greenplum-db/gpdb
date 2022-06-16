@@ -78,7 +78,8 @@ public:
 	{
 		return ((CXform::ExfSplitDQA != exfid) &&
 				(CXform::ExfSplitGbAgg != exfid) &&
-				(CXform::ExfEagerAgg != exfid));
+				(CXform::ExfEagerAgg != exfid) &&
+				(CXform::ExfAddLimitAfterSplitGbAgg != exfid));
 	}
 
 	// compute xform promise for a given expression handle

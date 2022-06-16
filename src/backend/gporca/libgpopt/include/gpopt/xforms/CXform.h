@@ -223,6 +223,7 @@ public:
 		ExfLeftJoin2RightJoin,
 		ExfRightOuterJoin2HashJoin,
 		ExfImplementInnerJoin,
+		ExfAddLimitAfterSplitGbAgg,
 		ExfInvalid,
 		ExfSentinel = ExfInvalid
 	};

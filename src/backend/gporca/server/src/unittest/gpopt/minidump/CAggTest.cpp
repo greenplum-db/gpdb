@@ -90,14 +90,14 @@ const CHAR *rgszAggFileNames[] = {
 	"../data/dxl/minidump/ComputedGroupByCol.mdp",
 	"../data/dxl/minidump/GroupByOuterRef.mdp",
 	"../data/dxl/minidump/DuplicateGrpCol.mdp",
-	"../data/dxl/minidump/CountAny.mdp",
-	"../data/dxl/minidump/CountStar.mdp",
+	"../data/dxl/minidump/CountAny.mdp", "../data/dxl/minidump/CountStar.mdp",
 	"../data/dxl/minidump/ProjectCountStar.mdp",
 	"../data/dxl/minidump/ProjectOutsideCountStar.mdp",
 	"../data/dxl/minidump/NestedProjectCountStarWithOuterRefs.mdp",
 	"../data/dxl/minidump/AggregateWithSkew.mdp",
 	"../data/dxl/minidump/OrderedAggUsingGroupColumnInDirectArg.mdp",
-};
+	"../data/dxl/minidump/LimitBtwLocalNGlobalAgg1.mdp",
+	"../data/dxl/minidump/LimitBtwLocalNGlobalAgg2.mdp"};
 
 
 //---------------------------------------------------------------------------

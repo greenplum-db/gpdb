@@ -12,6 +12,7 @@
 #define GPOPT_xforms_H
 
 #include "gpopt/xforms/CXform.h"
+#include "gpopt/xforms/CXformAddLimitAfterSplitGbAgg.h"
 #include "gpopt/xforms/CXformAntiSemiJoinAntiSemiJoinNotInSwap.h"
 #include "gpopt/xforms/CXformAntiSemiJoinAntiSemiJoinSwap.h"
 #include "gpopt/xforms/CXformAntiSemiJoinInnerJoinSwap.h"
