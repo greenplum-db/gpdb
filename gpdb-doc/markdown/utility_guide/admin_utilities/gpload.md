@@ -452,5 +452,5 @@ GPLOAD:
 
 ## See Also 
 
-[gpfdist](gpfdist.html), `CREATE EXTERNAL TABLE` in the *Greenplum Database Reference Guide*
+[gpfdist](gpfdist.html), [CREATE EXTERNAL TABLE](CREATE_EXTERNAL_TABLE.html) in the *Greenplum Database Reference Guide*
 
