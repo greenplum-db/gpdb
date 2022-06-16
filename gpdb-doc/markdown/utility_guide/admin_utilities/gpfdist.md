@@ -158,5 +158,5 @@ kill 3456
 
 ## See Also 
 
-[gpload](gpload.html), `CREATE EXTERNAL TABLE`in the *Greenplum Database Reference Guide*
+[gpload](gpload.html), [CREATE EXTERNAL TABLE](CREATE_EXTERNAL_TABLE.html) in the *Greenplum Database Reference Guide*
 
