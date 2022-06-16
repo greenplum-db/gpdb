@@ -942,10 +942,12 @@ generateRangePartitions(ParseState *pstate,
 	partkey = RelationGetPartitionKey(parentrel);
 
 	/*
-	 * GPDB_12_MERGE_FIXME: We currently disabled support for multi column
-	 * range partitioned tables. PostgreSQL doesn't support that. Not sure
-	 * what to do about that.  Add support for it to PostgreSQL? Simplify the
-	 * grammar to not allow that?
+	 * GPDB_12_MERGE_FEATURE_NOT_SUPPORTED: We currently disabled support for multi-column
+	 * range partitioned tables. If user want to define partition table with multi-column
+	 * range, can use PostgreSQL's grammar:
+	 *
+	 * create table z (a int, b int, c int) partition by range(b, c);
+	 * create table z1 partition of z for values from (10, 10) TO (20, 20);
 	 */
 	if (partkey->partnatts != 1)
 		ereport(ERROR,
