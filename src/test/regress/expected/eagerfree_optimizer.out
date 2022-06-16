@@ -1933,6 +1933,49 @@ and i = 0 order by 1,2,3; --order 1,2,3
  0 | text 5 | 01-06-2011
 (3 rows)
 
+-- Test Subplan with Agg
+with my_group_sum(d, total) as (select d, sum(i) from smallt group by d)
+select count(*) from smallt2
+where 0 < all (select total from my_group_sum, smallt2 as tmp where my_group_sum.d = smallt2.d);
+ count 
+-------
+    43
+(1 row)
+
+--start_ignore
+explain with my_group_sum(d, total) as (select d, sum(i) from smallt group by d)
+        select count(*) from smallt2
+        where 0 < all (select total from my_group_sum, smallt2 as tmp where my_group_sum.d = smallt2.d);
+
+              QUERY PLAN
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Finalize Aggregate  (cost=0.00..1324486.07 rows=1 width=8)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1324486.07 rows=1 width=8)
+         ->  Partial Aggregate  (cost=0.00..1324486.07 rows=1 width=8)
+               ->  Hash Join  (cost=0.00..1324486.07 rows=6 width=1)
+                     Hash Cond: (smallt2.d = smallt.d)
+                     ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=17 width=4)
+                           Hash Key: smallt2.d
+                           ->  Seq Scan on smallt2  (cost=0.00..431.00 rows=17 width=4)
+                     ->  Hash  (cost=1324055.07..1324055.07 rows=3 width=4)
+                           ->  Result  (cost=0.00..1324055.07 rows=3 width=4)
+                                 Filter: ((CASE WHEN (sum((CASE WHEN (0 >= (sum(smallt.i))) THEN 1 ELSE 0 END)) IS NULL) THEN true WHEN (sum((CASE WHEN ((sum(smallt.i)) IS NULL) THEN 1 ELSE 0 END)) > '0'::bigint) THEN NULL::boolean WHEN (0 IS NULL) THEN NULL::boolean WHEN (sum((CASE WHEN (0 >= (sum(smallt.i))) THEN 1 ELSE 0 END)) = '0'::bigint) THEN true ELSE false END) = true)
+                                 ->  HashAggregate  (cost=0.00..1324055.07 rows=7 width=20)
+                                       Group Key: smallt.d
+                                       ->  Nested Loop  (cost=0.00..1324055.03 rows=334 width=12)
+                                             Join Filter: true
+                                             ->  HashAggregate  (cost=0.00..431.01 rows=7 width=12)
+                                                   Group Key: smallt.d
+                                                   ->  Redistribute Motion 3:3  (slice4; segments: 3)  (cost=0.00..431.00 rows=34 width=8)
+                                                         Hash Key: smallt.d
+                                                         ->  Seq Scan on smallt  (cost=0.00..431.00 rows=34 width=8)
+                                             ->  Materialize  (cost=0.00..431.00 rows=50 width=1)
+                                                   ->  Broadcast Motion 3:3  (slice3; segments: 3)  (cost=0.00..431.00 rows=50 width=1)
+                                                         ->  Seq Scan on smallt2 smallt2_1  (cost=0.00..431.00 rows=17 width=1)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(24 rows)
+
+--end_ignore
 -- Nested Subplan
 create table eager_free_r (r1 int, r2 int, r3 int);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'r1' as the Greenplum Database data distribution key for this table.

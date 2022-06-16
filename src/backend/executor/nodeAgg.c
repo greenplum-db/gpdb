@@ -4673,8 +4673,7 @@ ExecReScanAgg(AggState *node)
 		 * we can just rescan the existing hash table; no need to build it
 		 * again.
 		 */
-		if (outerPlan->chgParam == NULL && !node->hash_ever_spilled &&
-			!bms_overlap(node->ss.ps.chgParam, aggnode->aggParams))
+		if (ReuseHashTable(node))
 		{
 			ResetTupleHashIterator(node->perhash[0].hashtable,
 								   &node->perhash[0].hashiter);
@@ -5021,5 +5020,27 @@ ExecEagerFreeAgg(AggState *node)
 void
 ExecSquelchAgg(AggState *node)
 {
+	/*
+	 * Sometimes, ExecSquelchAgg() is called, but the node is rescanned anyway.
+	 * If we destroy the hash table here, then we need to rebuild it later.
+	 * ExecReScanAgg() will try to reuse the hash table if params is not changing
+	 * or affect input expressions, it will rescan the existing hash table.
+	 * Therefore, don't destroy the hash table if reusing hashtable during rescan.
+	 */
+
+	if (!ReuseHashTable(node))
+	{
+		ExecEagerFreeAgg(node);
+	}
+
 	ExecSquelchNode(outerPlanState(node));
+}
+
+bool
+ReuseHashTable(AggState *node)
+{
+	PlanState  *outerPlan = outerPlanState(node);
+	Agg     *aggnode = (Agg *) node->ss.ps.plan;
+	return (outerPlan->chgParam == NULL && !node->hash_ever_spilled &&
+			!bms_overlap(node->ss.ps.chgParam, aggnode->aggParams));
 }
