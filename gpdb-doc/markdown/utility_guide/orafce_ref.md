@@ -89,55 +89,53 @@ There are some differences in the implementation of these compatibility function
 
 The following are the Oracle Compatibility Functions.
 
-|[add\_months](#topic5)
+-   [add\_months](#topic5)
 
- [bitand](#topic6)
+-   [bitand](#topic6)
 
- [concat](#topic7)
+-   [concat](#topic7)
 
- [cosh](#topic8)
+-   [cosh](#topic8)
 
- [decode](#topic9)
+-   [decode](#topic9)
 
- [dump](#topic12)
+-   [dump](#topic12)
 
- [instr](#topic13)
+-   [instr](#topic13)
 
- [last\_day](#topic14)
+-   [last\_day](#topic14)
 
- [listagg](#topic15)
+-   [listagg](#topic15)
 
- [listagg \(2\)](#topic16)
+-   [listagg \(2\)](#topic16)
 
- [lnnvl](#topic17)
+-   [lnnvl](#topic17)
 
- [months\_between](#topic18)
+-   [months\_between](#topic18)
 
-|[nanvl](#topic19)
+-   [nanvl](#topic19)
 
- [next\_day](#topic20)
+-   [next\_day](#topic20)
 
- [next\_day \(2\)](#topic21)
+-   [next\_day \(2\)](#topic21)
 
- [nlssort](#topic22)
+-   [nlssort](#topic22)
 
- [nvl](#topic23)
+-   [nvl](#topic23)
 
- [nvl2](#topic24)
+-   [nvl2](#topic24)
 
- [oracle.substr](#topic25)
+-   [oracle.substr](#topic25)
 
- [reverse](#topic26)
+-   [reverse](#topic26)
 
- [round](#topic27)
+-   [round](#topic27)
 
- [sinh](#topic28)
+-   [sinh](#topic28)
 
- [tanh](#topic29)
+-   [tanh](#topic29)
 
- [trunc](#topic30)
-
-|
+-   [trunc](#topic30)
 
 ## add\_months 
 
