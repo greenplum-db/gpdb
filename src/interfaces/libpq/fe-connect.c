@@ -2618,7 +2618,10 @@ keep_going:						/* We will come back to here until there is
 							err = 1;
 
 						/*
-						 * Set SO_REUSEADDR option to reuse the TCP port
+						 * GPDB: For large clusters running large workloads, the
+						 * number of QEs can be very high. To reduce the chances
+						 * of running out of TCP ports for dispatch, we use
+						 * SO_REUSEADDR.
 						 */
 						if (setsockopt(conn->sock,
 									   SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(reuse)) == -1)
