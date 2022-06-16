@@ -155,7 +155,8 @@ OpenAOSegmentFile(Relation rel,
 		ereport(ERROR,
 				(errcode_for_file_access(),
 				 errmsg("could not open Append-Only segment file \"%s\": %m",
-						filepathname)));
+						filepathname),
+				 errdetail("logicalEof for open operation: %ld", logicalEof)));
 	}
 	return fd;
 }
