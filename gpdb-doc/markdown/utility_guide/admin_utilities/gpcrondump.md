@@ -354,9 +354,9 @@ gpcrondump --ddboost-host 192.0.2.230 --ddboost-user ddboostusername --ddboost-b
 
 :   When adding a backup to set of backups, `gpcrondump` returns an error if the `timestamp` does not specify a date and time that is more recent than all other backups in the set.
 
-:   `--list-backup-files` is optional. When you specify both this option and the `-K ``timestamp` option, `gpcrondump` does not perform a backup. `gpcrondump` creates two text files that contain the names of the files that will be created when `gpcrondump` backs up a Greenplum database. The text files are created in the same location as the backup files.
+:   `--list-backup-files` is optional. When you specify both this option and the `-K `timestamp` option, `gpcrondump` does not perform a backup. `gpcrondump` creates two text files that contain the names of the files that will be created when `gpcrondump` backs up a Greenplum database. The text files are created in the same location as the backup files.
 
-:   The file names use the `timestamp` specified by the `-K ``timestamp` option and have the suffix `_pipes` and `_regular_files`. For example:
+:   The file names use the `timestamp` specified by the `-K `timestamp` option and have the suffix `_pipes` and `_regular_files`. For example:
 
 :   ```
 gp_dump_20130514093000_pipes
