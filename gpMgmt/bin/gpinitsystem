@@ -120,7 +120,7 @@ USAGE () {
 		$ECHO "      -q, quiet mode, do not log progress to screen [default:- verbose output to screen]"
 		$ECHO
 		$ECHO "      Configuration options:"
-		$ECHO "      -b, shared_buffers per instance [default $DEFAULT_BUFFERS]"
+		$ECHO "      -b, <size> shared_buffers per instance [default $DEFAULT_BUFFERS]"
 		$ECHO "          Specify either the number of database I/O buffers (without suffix) or the"
 		$ECHO "          amount of memory to use for buffers (with suffix 'kB', 'MB' or 'GB')."
 		$ECHO "          Applies to coordinator and all segments."
@@ -129,7 +129,7 @@ USAGE () {
 		$ECHO "          Supplies all Greenplum configuration information required by this utility."
 		$ECHO "          Full description of all parameters contained within the example file"
 		$ECHO "          supplied with this distribution."
-		$ECHO "          Also see gpinitsystem_INSTRUCTIONS file for greater detail on"
+		$ECHO "          Also see file $HELP_DOC_NAME for greater detail on"
 		$ECHO "          the operation and configuration of this script"
 		$ECHO "      -e, <password>, password to set for Greenplum superuser in database [default $GP_PASSWD]"
 		$ECHO "      -S, standby_datadir [optional]"
