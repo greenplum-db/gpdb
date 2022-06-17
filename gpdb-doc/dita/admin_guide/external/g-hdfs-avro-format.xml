@@ -95,7 +95,7 @@ done</codeblock></p>
             location of the Avro file in the <codeph>LOCATION</codeph> clause and
               <codeph>'AVRO'</codeph> in the <codeph>FORMAT</codeph> clause. For example, this is
             the syntax for a readable external table.
-            <codeblock>CREATE EXTERNAL TABLE <varname>tablename</varname> (<varname>column_spec</varname>) LOCATION ( 'gphdfs://<varname>location</varname>') FORMAT 'AVRO' </codeblock></p>
+            <codeblock>CREATE EXTERNAL TABLE &lt;tablename> (&lt;column_spec>) LOCATION ( 'gphdfs://&lt;location>') FORMAT 'AVRO' </codeblock></p>
           <p>The <varname>location</varname> can be an individual Avro file or a directory
             containing a set of Avro files. If the location specifies multiple files (a directory
             name or a file name containing wildcard characters), Greenplum Database uses the schema

@@ -36,19 +36,19 @@
         sections to one another. The use of white space is significant. White space should not be
         used simply for formatting purposes, and tabs should not be used at all.</p>
       <p>This is the structure of a DD Boost storage plugin configuration file.</p>
-      <codeblock><xref href="#topic_ddb-plugin/plugin-exe" format="dita">executablepath</xref>: &lt;<varname>absolute-path-to-gpbackup_ddboost_plugin</varname>>
+      <codeblock><xref href="#topic_ddb-plugin/plugin-exe" format="dita">executablepath</xref>: &lt;&lt;absolute-path-to-gpbackup_ddboost_plugin>>
 <xref href="#topic_ddb-plugin/ddb-options" format="dita">options</xref>: 
-  <xref href="#topic_ddb-plugin/ddb-host" format="dita">hostname</xref>: "&lt;<varname>data-domain-host</varname>>"
-  <xref href="#topic_ddb-plugin/ddb-user" format="dita">username</xref>: "&lt;<varname>ddboost-ID</varname>>"
-  <xref href="#topic_ddb-plugin/ddb-pwd" format="dita">password</xref>: "&lt;<varname>ddboost-pwd</varname>>"
-  <xref href="#topic_ddb-plugin/ddb-s-unit" format="dita">storage_unit</xref>: "&lt;<varname>data-domain-id</varname>>"
-  <xref href="#topic_ddb-plugin/ddb-dir" format="dita">directory</xref>: "&lt;<varname>data-domain-dir</varname>>"
+  <xref href="#topic_ddb-plugin/ddb-host" format="dita">hostname</xref>: "&lt;&lt;data-domain-host>>"
+  <xref href="#topic_ddb-plugin/ddb-user" format="dita">username</xref>: "&lt;&lt;ddboost-ID>>"
+  <xref href="#topic_ddb-plugin/ddb-pwd" format="dita">password</xref>: "&lt;&lt;ddboost-pwd>>"
+  <xref href="#topic_ddb-plugin/ddb-s-unit" format="dita">storage_unit</xref>: "&lt;&lt;data-domain-id>>"
+  <xref href="#topic_ddb-plugin/ddb-dir" format="dita">directory</xref>: "&lt;&lt;data-domain-dir>>"
   <xref href="#topic_ddb-plugin/ddb-replication" format="dita">replication</xref>: "on" | "off"
-  <xref href="#topic_ddb-plugin/ddb-remote-host" format="dita">remote_hostname</xref>: "&lt;<varname>remote-dd-host</varname>>"
-  <xref href="#topic_ddb-plugin/ddb-remote-user" format="dita">remote_username</xref>: "&lt;<varname>remote-ddboost-ID</varname>>"
-  <xref href="#topic_ddb-plugin/ddb-remote-pwd" format="dita">remote_password</xref>: "&lt;<varname>remote-dd-pwd</varname>>"
-  <xref href="#topic_ddb-plugin/ddb-remote-s-unit" format="dita">remote_storage_unit</xref>: "&lt;<varname>remote-dd-ID</varname>>"
-  <xref href="#topic_ddb-plugin/ddb-remote-dir" format="dita">remote_directory</xref>: "&lt;<varname>remote-dd-dir</varname>>"</codeblock>
+  <xref href="#topic_ddb-plugin/ddb-remote-host" format="dita">remote_hostname</xref>: "&lt;&lt;remote-dd-host>>"
+  <xref href="#topic_ddb-plugin/ddb-remote-user" format="dita">remote_username</xref>: "&lt;&lt;remote-ddboost-ID>>"
+  <xref href="#topic_ddb-plugin/ddb-remote-pwd" format="dita">remote_password</xref>: "&lt;&lt;remote-dd-pwd>>"
+  <xref href="#topic_ddb-plugin/ddb-remote-s-unit" format="dita">remote_storage_unit</xref>: "&lt;&lt;remote-dd-ID>>"
+  <xref href="#topic_ddb-plugin/ddb-remote-dir" format="dita">remote_directory</xref>: "&lt;&lt;remote-dd-dir>>"</codeblock>
       <parml id="ddb-exe-path">
         <plentry id="plugin-exe">
           <pt>executablepath</pt>
@@ -174,7 +174,7 @@ options:
       <p>The DD Boost storage plugin writes the backup files to this directory of the Data Domain
         storage unit <codeph>gpdb-backup</codeph>. </p>
       <p>
-        <codeblock>/test/backup/<varname>YYYYMMDD</varname>/<varname>YYYYMMDDHHMMSS</varname>/</codeblock>
+        <codeblock>/test/backup/&lt;YYYYMMDD>/&lt;YYYYMMDDHHMMSS>/</codeblock>
       </p>
       <p>This is an example DD Boost storage plugin configuration file that enables
         replication.<codeblock>executablepath: $GPHOME/bin/gpbackup_ddboost_plugin
@@ -209,7 +209,7 @@ options:
         hosts.</p>
       <p>When you perform a backup with the DD Boost storage plugin, the plugin stores the backup
         files in this location in the Data Domain storage unit. </p>
-      <codeblock>&lt;<varname>directory</varname>>/backups/&lt;<varname>datestamp</varname>>/&lt;<varname>timestamp</varname>></codeblock>
+      <codeblock>&lt;&lt;directory>>/backups/&lt;&lt;datestamp>>/&lt;&lt;timestamp>></codeblock>
       <p>Where &lt;<varname>directory</varname>> is the location you specified in the DD Boost
         configuration file, and &lt;<varname>datestamp</varname>> and
           &lt;<varname>timestamp</varname>> are the backup date and time stamps. </p>

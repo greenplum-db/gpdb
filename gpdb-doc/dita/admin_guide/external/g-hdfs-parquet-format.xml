@@ -91,7 +91,7 @@ done</codeblock></p>
             location of the parquet file in the <codeph>LOCATION</codeph> clause and
               <codeph>'PARQUET'</codeph> in the <codeph>FORMAT</codeph> clause. For example, this is
             the syntax for a readable external table.
-            <codeblock>CREATE EXTERNAL TABLE <varname>tablename</varname> (<varname>column_spec</varname>) LOCATION ( 'gphdfs://<varname>location</varname>') FORMAT 'PARQUET' </codeblock></p>
+            <codeblock>CREATE EXTERNAL TABLE &lt;tablename> (&lt;column_spec>) LOCATION ( 'gphdfs://&lt;location>') FORMAT 'PARQUET' </codeblock></p>
           <p>The <varname>location</varname> can be an Parquet file or a directory containing a set
             of Parquet files. For the file name you can specify the wildcard character * to match
             any number of characters. If the location specifies multiple files when reading Parquet

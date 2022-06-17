@@ -143,7 +143,7 @@ wraparound data loss in database "database_name"
               <codeph>ANALYZE</codeph> of a Greenplum Database system catalog. In the script,
             replace <codeph>&lt;<varname>database-name</varname>></codeph> with a database name.</p>
           <codeblock>#!/bin/bash
-DBNAME="&lt;<varname>database-name</varname>>"
+DBNAME="&lt;&lt;database-name>>"
 SYSTABLES="' pg_catalog.' || relname || ';' FROM pg_class a, pg_namespace b 
 WHERE a.relnamespace=b.oid AND b.nspname='pg_catalog' AND a.relkind='r'"
 
@@ -295,10 +295,10 @@ VACUUM cust_info;</codeblock></p>
         <p>Log files for the Greenplum Database management utilities are written to
             <codeph>~/gpAdminLogs</codeph> by default. The naming convention for management log
           files is: </p>
-        <codeblock><varname>script_name</varname>_<varname>date</varname>.log
+        <codeblock>&lt;script_name>_&lt;date>.log
 </codeblock>
         <p>The log entry format is: </p>
-        <codeblock><varname>timestamp</varname>:<varname>utility</varname>:<varname>host</varname>:<varname>user</varname>:[INFO|WARN|FATAL]:<varname>message</varname>
+        <codeblock>&lt;timestamp>:&lt;utility>:&lt;host>:&lt;user>:[INFO|WARN|FATAL]:&lt;message>
 </codeblock>
         <p>The log file for a particular utility execution is appended to its daily log file each
           time that utility is run.</p>

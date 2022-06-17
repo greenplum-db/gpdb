@@ -17,7 +17,7 @@
       in a backup.</p>
     <p>The <codeph>gpcrondump</codeph> utility has one required flag, <codeph>-x</codeph>, which
       specifies the database to
-      dump:<codeblock>gpcrondump -x <varname>mydb</varname></codeblock>This performs a full backup
+      dump:<codeblock>gpcrondump -x &lt;mydb></codeblock>This performs a full backup
       of the specified database to the default locations.</p>
     <note>By default, the utility creates the <codeph>public.gpcrondump_history</codeph> table that
       contains details of the database dump. If the <codeph>public</codeph> schema has been deleted
@@ -29,7 +29,7 @@
         <codeph><varname>data_directory</varname>/db_dumps</codeph> directory. You can specify a
       different backup location using the <codeph>-u</codeph> flag. For example, the following
       command will save backup files to the <codeph>/backups</codeph>
-      directory:<codeblock>gpcrondump <varname>mydb</varname> -u <varname>/backups</varname></codeblock>
+      directory:<codeblock>gpcrondump &lt;mydb> -u &lt;/backups></codeblock>
       The <codeph>gpcrondump</codeph> utility creates the <codeph>db_dumps</codeph> subdirectory in
       the specified directory. If there is more than one primary segment per host, all of the
       segments on the host write their backup files to the same directory. This differs from the
@@ -43,7 +43,7 @@
         <codeph>gp_dump_0_2_20151012195916.gz</codeph>. The <codeph>gpdbrestore</codeph> command
       uses the most recent backup by default but you can specify an earlier backup to restore. </p>
     <p>The utility creates backup files with this file name format.</p>
-    <p><codeblock><varname>prefix_</varname>gp_dump_<varname>content</varname>_<varname>dbid</varname>_<varname>timestamp</varname></codeblock>The
+    <p><codeblock>&lt;prefix_>gp_dump_&lt;content>_&lt;dbid>_&lt;timestamp></codeblock>The
         <codeph>content</codeph> and <codeph>dbid</codeph> are identifiers for the Greenplum
       Database segment instances that are assigned by Greenplum Database. For information about the
       identifiers, see the Greenplum Database system catalog table <i>gp_id</i> in the

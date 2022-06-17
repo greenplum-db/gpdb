@@ -131,14 +131,14 @@ Type "help" for help.</codeblock>
           screen.</note>
         <p>This example runs the <codeph>ktpass</codeph> utility to create the ketyab
             <codeph>dev1.keytab</codeph>.</p>
-        <codeblock>ktpass -out dev1.keytab -princ dev1@EXAMPLE.LOCAL -mapUser dev1 -pass <varname>your_password</varname> -crypto all -ptype KRB5_NT_PRINCIPAL</codeblock>
+        <codeblock>ktpass -out dev1.keytab -princ dev1@EXAMPLE.LOCAL -mapUser dev1 -pass &lt;your_password> -crypto all -ptype KRB5_NT_PRINCIPAL</codeblock>
         <p>It works despite the warning message <codeph>Unable to set SPN mapping data</codeph>.</p>
         <p>This example runs the Java <codeph>ktab.exe</codeph> to create a keytab file
             (<codeph>-a</codeph> option) and list the keytab name and entries (<codeph>-l</codeph>
           <codeph>-e</codeph>
           <codeph>-t</codeph> options).</p>
         <codeblock>C:\Users\dev1>"\Program Files\Java\jre1.8.0_77\bin"\ktab -a dev1
-Password for dev1@EXAMPLE.LOCAL:<varname>your_password</varname>
+Password for dev1@EXAMPLE.LOCAL:&lt;your_password>
 Done!
 Service key for dev1 is saved in C:\Users\dev1\krb5.keytab
 
@@ -315,7 +315,7 @@ kinit</codeblock></li>
             <sli>Principal Type: <codeph>KRB5_NT_PRINCIPAL</codeph></sli>
           </sl></p>
         <codeblock>ktpass -out svcPostgresProd1.keytab -princ postgres/prod1.example.local@EXAMPLE.LOCAL -mapUser svcPostgresProd1
-   -pass <varname>your_password</varname> -crypto all -ptype KRB5_NT_PRINCIPAL</codeblock>
+   -pass &lt;your_password> -crypto all -ptype KRB5_NT_PRINCIPAL</codeblock>
         <note>The AD domain <codeph>@EXAMPLE.LOCAL</codeph> is appended to the SPN.</note>
         <p>You copy the keytab file <codeph>svcPostgresProd1.keytab</codeph> to the Greenplum
           Database master host.</p>
@@ -326,7 +326,7 @@ kinit</codeblock></li>
           the screen as a command ling argument. </p>
         <p>This example command creates the keyab file
             <codeph>svcPostgresProd1.keytab</codeph>.<codeblock>"c:\Program Files\Java\jre1.8.0_77\bin\ktab.exe" -a svcPostgresprod1 -k svcPostgresProd1.keytab
-Password for svcPostgresprod1@EXAMPLE.LOCAL:<varname>your_password</varname>
+Password for svcPostgresprod1@EXAMPLE.LOCAL:&lt;your_password>
 Done!
 Service key for svcPostgresprod1 is saved in svcPostgresProd1.keytab</codeblock><note>If
             you use AES256-CTS-HMAC-SHA1-96 encryption, you must download and install the Java

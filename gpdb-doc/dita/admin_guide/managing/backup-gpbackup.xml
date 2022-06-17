@@ -500,13 +500,13 @@ public.sales_1_prt_dec17 </codeblock></p><p>Then
             <codeph>gpbackup</codeph> email notifications: </p>
         <codeblock><xref href="#topic_uq5_v5v_scb/contacts_yml" format="dita">contacts</xref>:
   <xref href="#topic_uq5_v5v_scb/gpbackup_yml" format="dita">gpbackup</xref>:
-  - <xref href="#topic_uq5_v5v_scb/address_yml" format="dita">address</xref>: <varname>user</varname>@<varname>domain</varname>
+  - <xref href="#topic_uq5_v5v_scb/address_yml" format="dita">address</xref>: &lt;user>@&lt;domain>
     <xref href="#topic_uq5_v5v_scb/status_yml" format="dita">status</xref>:
          <xref href="#topic_uq5_v5v_scb/success_yml" format="dita">success</xref>: [true | false]
          <xref href="#topic_uq5_v5v_scb/success1_yml" format="dita">success_with_errors</xref>: [true | false]
          <xref href="#topic_uq5_v5v_scb/failure_yml" format="dita">failure</xref>: [true | false]
   <xref href="#topic_uq5_v5v_scb/gprestore_yml" format="dita">gprestore</xref>:
-  - <xref href="#topic_uq5_v5v_scb/address_yml" format="dita">address</xref>: <varname>user</varname>@<varname>domain</varname>
+  - <xref href="#topic_uq5_v5v_scb/address_yml" format="dita">address</xref>: &lt;user>@&lt;domain>
     <xref href="#topic_uq5_v5v_scb/status_yml" format="dita">status</xref>:
          <xref href="#topic_uq5_v5v_scb/success_yml" format="dita">success</xref>: [true | false]
          <xref href="#topic_uq5_v5v_scb/success1_yml" format="dita">success_with_errors</xref>: [true | false]

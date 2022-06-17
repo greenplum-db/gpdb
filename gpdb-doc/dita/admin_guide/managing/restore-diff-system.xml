@@ -35,25 +35,25 @@
           to one location on the master host. You can copy each segment dump file to the master,
           load it, and then delete it after it loads successfully.</li>
         <li id="kk158088">Ensure that the database you are restoring to is created in the system.
-          For example:<codeblock>$ createdb <varname>database_name</varname></codeblock></li>
+          For example:<codeblock>$ createdb &lt;database_name></codeblock></li>
         <li id="kk158025">Load the master dump file to restore the database objects. For
-          example:<codeblock>$ psql <varname>database_name</varname> -f /gpdb/backups/gp_dump_-1_1_20160714</codeblock></li>
+          example:<codeblock>$ psql &lt;database_name> -f /gpdb/backups/gp_dump_-1_1_20160714</codeblock></li>
         <li id="kk158097">Load each segment dump file to restore the data. For
-          example:<codeblock>$ psql <varname>database_name</varname> -f /gpdb/backups/gp_dump_0_2_20160714
-$ psql <varname>database_name</varname> -f /gpdb/backups/gp_dump_1_3_20160714
-$ psql <varname>database_name</varname> -f /gpdb/backups/gp_dump_2_4_20160714
-$ psql <varname>database_name</varname> -f /gpdb/backups/gp_dump_3_5_20160714
+          example:<codeblock>$ psql &lt;database_name> -f /gpdb/backups/gp_dump_0_2_20160714
+$ psql &lt;database_name> -f /gpdb/backups/gp_dump_1_3_20160714
+$ psql &lt;database_name> -f /gpdb/backups/gp_dump_2_4_20160714
+$ psql &lt;database_name> -f /gpdb/backups/gp_dump_3_5_20160714
 ...</codeblock></li>
         <li id="kk159206">Load the post data file to restore database objects such as indexes,
           triggers, primary key constraints,
-          etc.<codeblock>$ psql <varname>database_name</varname> -f /gpdb/backups/gp_dump_0_5_20160714_post_data</codeblock></li>
+          etc.<codeblock>$ psql &lt;database_name> -f /gpdb/backups/gp_dump_0_5_20160714_post_data</codeblock></li>
         <li>Update the database sequences based on the values from the original database. <p>You can
             use the system utilities <codeph>gunzip</codeph> and <codeph>egrep</codeph> to extract
             the sequence value information from the original Greenplum Database master dump file
                 <codeph>gp_dump_-1_1_<varname>timestamp</varname>.gz</codeph> into a text file. This
             command extracts the information into the file
               <codeph>schema_path_and_seq_next_val</codeph>.
-            <codeblock>gunzip -c <varname>path_to_master_dump_directory</varname>/gp_dump_-1_1_<varname>timestamp</varname>.gz | egrep "SET search_path|SELECT pg_catalog.setval"  
+            <codeblock>gunzip -c &lt;path_to_master_dump_directory>/gp_dump_-1_1_&lt;timestamp>.gz | egrep "SET search_path|SELECT pg_catalog.setval"  
    > schema_path_and_seq_next_val</codeblock></p><p>This
             example command assumes the original Greenplum Database master dump file is in
               <codeph>/data/gpdb/master/gpseg-1/db_dumps/20150112</codeph>.

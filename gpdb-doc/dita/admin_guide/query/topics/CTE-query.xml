@@ -47,7 +47,7 @@ SELECT sum(n) FROM t;
     <p>The required form of a recursive <codeph>WITH</codeph> clause is a <i>non-recursive term</i>,
       followed by a <codeph>UNION</codeph> (or <codeph>UNION ALL</codeph>), and then a <i>recursive
         term</i>, where only the <i>recursive term</i> can contain a reference to the query output.
-      <codeblock><varname>non_recursive_term</varname> UNION [ ALL ] <varname>recursive_term</varname></codeblock></p>
+      <codeblock>&lt;non_recursive_term> UNION [ ALL ] &lt;recursive_term></codeblock></p>
     <p>A recursive <codeph>WITH</codeph> query is executed as follows:</p>
     <ol id="ol_a3s_r1s_w1b">
       <li>Evaluate the non-recursive term. For <codeph>UNION</codeph> (but not <codeph>UNION

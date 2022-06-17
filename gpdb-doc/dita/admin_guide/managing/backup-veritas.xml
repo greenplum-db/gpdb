@@ -108,7 +108,7 @@
             that are used with the NetBackup client. To configure Greenplum Database to use the
             library files that correspond to the version of the NetBackup client that is installed
             on the hosts, add the following line to the file
-              <codeph>$GPHOME/greenplum_path.sh</codeph>:<codeblock>LD_LIBRARY_PATH=$GPHOME/lib/nbu<varname>NN</varname>/lib:$LD_LIBRARY_PATH </codeblock><p>Replace
+              <codeph>$GPHOME/greenplum_path.sh</codeph>:<codeblock>LD_LIBRARY_PATH=$GPHOME/lib/nbu&lt;NN>/lib:$LD_LIBRARY_PATH </codeblock><p>Replace
               the <varname>NN</varname> with the NetBackup client version that is installed on the
               host (for example, use 77 for NetBackup 7.7.x). </p><p>The
                 <codeph>LD_LIBRARY_PATH</codeph> line should be added before this line in

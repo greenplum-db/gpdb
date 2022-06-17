@@ -35,14 +35,14 @@
         sections to one another. The use of white space is significant. White space should not be
         used simply for formatting purposes, and tabs should not be used at all.</p>
       <p>This is the structure of a S3 storage plugin configuration file.</p>
-      <codeblock><xref href="#topic_ur2_fsn_ndb/s3-exe-path" format="dita">executablepath</xref>: &lt;<varname>absolute-path-to-gpbackup_s3_plugin</varname>>
+      <codeblock><xref href="#topic_ur2_fsn_ndb/s3-exe-path" format="dita">executablepath</xref>: &lt;&lt;absolute-path-to-gpbackup_s3_plugin>>
 <xref href="#topic_ur2_fsn_ndb/s3-options" format="dita">options</xref>: 
-  <xref href="#topic_ur2_fsn_ndb/s3-region" format="dita">region</xref>: &lt;<varname>aws-region</varname>>
-  <xref href="#topic_ur2_fsn_ndb/s3-endpoint" format="dita">endpoint</xref>: &lt;<varname>S3-endpoint</varname>>
-  <xref href="#topic_ur2_fsn_ndb/s3-id" format="dita">aws_access_key_id</xref>: &lt;<varname>aws-user-id</varname>>
-  <xref href="#topic_ur2_fsn_ndb/s3-key" format="dita">aws_secret_access_key</xref>: &lt;<varname>aws-user-id-key</varname>>
-  <xref href="#topic_ur2_fsn_ndb/s3-bucket" format="dita">bucket</xref>: &lt;<varname>s3-bucket</varname>>
-  <xref href="#topic_ur2_fsn_ndb/s3-location" format="dita">folder</xref>: &lt;<varname>s3-location</varname>>
+  <xref href="#topic_ur2_fsn_ndb/s3-region" format="dita">region</xref>: &lt;&lt;aws-region>>
+  <xref href="#topic_ur2_fsn_ndb/s3-endpoint" format="dita">endpoint</xref>: &lt;&lt;S3-endpoint>>
+  <xref href="#topic_ur2_fsn_ndb/s3-id" format="dita">aws_access_key_id</xref>: &lt;&lt;aws-user-id>>
+  <xref href="#topic_ur2_fsn_ndb/s3-key" format="dita">aws_secret_access_key</xref>: &lt;&lt;aws-user-id-key>>
+  <xref href="#topic_ur2_fsn_ndb/s3-bucket" format="dita">bucket</xref>: &lt;&lt;s3-bucket>>
+  <xref href="#topic_ur2_fsn_ndb/s3-location" format="dita">folder</xref>: &lt;&lt;s3-location>>
   <xref href="#topic_ur2_fsn_ndb/s3-encryption" format="dita">encryption</xref>: [on|off]</codeblock>
       <parml id="s3-exe-path">
         <plentry>
@@ -122,7 +122,7 @@ options:
       <p>The S3 storage plugin writes the backup files to this S3 location in the AWS region
         us-west-2. </p>
       <p>
-        <codeblock>gpdb-backup/test/backup3/backups/<varname>YYYYMMDD</varname>/<varname>YYYYMMDDHHMMSS</varname>/</codeblock>
+        <codeblock>gpdb-backup/test/backup3/backups/&lt;YYYYMMDD>/&lt;YYYYMMDDHHMMSS>/</codeblock>
       </p>
     </section>
     <section id="s3_notes">
@@ -131,7 +131,7 @@ options:
         host. The configuration file is required only on the master host.</p>
       <p>When you perform a backup with the S3 storage plugin, the plugin stores the backup files in
         this location in the S3 bucket. </p>
-      <codeblock>&lt;<varname>folder</varname>>/backups/&lt;<varname>datestamp</varname>>/&lt;<varname>timestamp</varname>></codeblock>
+      <codeblock>&lt;&lt;folder>>/backups/&lt;&lt;datestamp>>/&lt;&lt;timestamp>></codeblock>
       <p>Where <varname>folder</varname> is the location you specified in the S3 configuration file,
         and <varname>datestamp</varname> and <varname>timestamp</varname> are the backup date and
         time stamps. </p>

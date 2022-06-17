@@ -53,12 +53,12 @@
         plugin. The Backup/Restore Storage Plugin API defines the format of, and certain keywords
         used in, the plugin configuration file.</p>
       <p>A plugin configuration file is a YAML file in the following format:
-        <codeblock><b>executablepath</b>: <varname>path_to_plugin_executable</varname>
+        <codeblock><b>executablepath</b>: &lt;path_to_plugin_executable>
 <b>options</b>:
-  <varname>keyword1</varname>: <varname>value1</varname>
-  <varname>keyword2</varname>: <varname>value2</varname>
+  &lt;keyword1>: &lt;value1>
+  &lt;keyword2>: &lt;value2>
   ...
-  <varname>keywordN</varname>: <varname>valueN</varname></codeblock></p>
+  &lt;keywordN>: &lt;valueN></codeblock></p>
       <p><codeph>gpbackup</codeph> and <codeph>gprestore</codeph> use the
             <codeph><b>executablepath</b></codeph> value to determine the file system location of
         the plugin executable program.</p>
@@ -111,7 +111,7 @@ options:
 
       <p>The Backup/Restore Storage Plugin API defines the following call syntax for a
         backup/restore storage plugin executable
-        program:<codeblock><varname>plugin_executable</varname> <varname>command</varname> <varname>config_file</varname> <varname>args</varname></codeblock></p>
+        program:<codeblock>&lt;plugin_executable> &lt;command> &lt;config_file> &lt;args></codeblock></p>
 
       <p>where:</p>
       <ul>
@@ -266,7 +266,7 @@ options:
         which in turn individually call/test each Backup/Restore Storage Plugin API command
         implemented in the plugin.</p>
       <p>The test bench program calling syntax is:
-        <codeblock><b>plugin_test_bench.sh</b> <varname>plugin_executable plugin_config</varname></codeblock></p>
+        <codeblock><b>plugin_test_bench.sh</b> &lt;plugin_executable plugin_config></codeblock></p>
       <section id="topic8339191" xml:lang="en">
         <title>Procedure</title>
         <p>To run the Backup/Restore Storage Plugin API test bench against a plugin:</p><ol>

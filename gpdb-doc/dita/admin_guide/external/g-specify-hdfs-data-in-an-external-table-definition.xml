@@ -24,11 +24,11 @@
             <li>To specify the default cluster, the first entry in the MapR configuration file
                   <codeph>/opt/mapr/conf/mapr-clusters.conf</codeph>, specify the location of your
                table with this
-               syntax:<codeblock>LOCATION ('gphdfs:///<varname>file_path</varname>')</codeblock> The
+               syntax:<codeblock>LOCATION ('gphdfs:///&lt;file_path>')</codeblock> The
                   <varname>file_path</varname> is the path to the file.</li>
             <li>To specify another MapR cluster listed in the configuration file, specify the file
                with this syntax:
-               <codeblock>LOCATION ('gphdfs:///mapr/<varname>cluster_name</varname>/<varname>file_path</varname>')</codeblock>The
+               <codeblock>LOCATION ('gphdfs:///mapr/&lt;cluster_name>/&lt;file_path>')</codeblock>The
                   <varname>cluster_name</varname> is the name of the cluster specified in the
                configuration file and <varname>file_path</varname> is the path to the file.</li>
          </ul></p>

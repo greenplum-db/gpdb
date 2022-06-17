@@ -46,20 +46,20 @@
                <codeph>/opt/emc/boostfs</codeph>.</p></li>
             <li>Set up the BoostFS lockbox with the storage unit with the <codeph>boostfs</codeph>
                utility. Enter the Data Domain user password at the
-                  prompts.<codeblock>/opt/emc/boostfs/bin/boostfs lockbox set -d &lt;<varname>Data_Domain_IP</varname>> -s &lt;<varname>Storage_Unit</varname>> -u &lt;<varname>Data_Domain_User</varname>></codeblock><p>The
+                  prompts.<codeblock>/opt/emc/boostfs/bin/boostfs lockbox set -d &lt;&lt;Data_Domain_IP>> -s &lt;&lt;Storage_Unit>> -u &lt;&lt;Data_Domain_User>></codeblock><p>The
                         <codeph>&lt;<varname>Storage_Unit</varname>></codeph> is the Data Domain
                   storage unit ID. The &lt;<varname>Data_Domain_User</varname>> is a Data Domain
                   user with access to the storage unit.</p></li>
             <li>Create the directory in the location you want to mount
-               BoostFS.<codeblock>mkdir &lt;<varname>path_to_mount_directory</varname>></codeblock></li>
+               BoostFS.<codeblock>mkdir &lt;&lt;path_to_mount_directory>></codeblock></li>
             <li>Mount the Data Domain storage unit with the <codeph>boostfs</codeph> utility. Use
                the <codeph>mount</codeph> option <codeph>-allow-others=true</codeph> to allow other
                users to write to the BoostFS mounted file system.
-               <codeblock>/opt/emc/boostfs/bin/boostfs mount &lt;<varname>path_to_mount_directory</varname>> -d $&lt;<varname>Data_Domain_IP</varname>> -s &lt;<varname>Storage_Unit</varname>> -o allow-others=true</codeblock></li>
+               <codeblock>/opt/emc/boostfs/bin/boostfs mount &lt;&lt;path_to_mount_directory>> -d $&lt;&lt;Data_Domain_IP>> -s &lt;&lt;Storage_Unit>> -o allow-others=true</codeblock></li>
             <li>Confirm that the mount was successful by running this
-               command.<codeblock>mountpoint &lt;<varname>mounted_directory</varname>></codeblock>The
+               command.<codeblock>mountpoint &lt;&lt;mounted_directory>></codeblock>The
                command lists the directory as a mount
-               point.<codeblock>&lt;<varname>mounted_directory</varname>> is a mountpoint</codeblock></li>
+               point.<codeblock>&lt;&lt;mounted_directory>> is a mountpoint</codeblock></li>
          </ol>
          <p>You can now run <codeph>gpbackup</codeph> and <codeph>gprestore</codeph> with the
                <codeph>--backup-dir</codeph> option to back up a database to

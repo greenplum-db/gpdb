@@ -62,8 +62,8 @@
         capabilities for disaster recovery purposes, you must set up credentials for both the local
         and remote Data Domain systems. </p>
       <p>To set up credentials, run <codeph>gpcrondump</codeph> with the following options:</p>
-      <codeblock>--ddboost-host <varname>ddboost_hostname</varname> --ddboost-user <varname>ddboost_user</varname>
---ddboost-backupdir <varname>backup_directory</varname> --ddboost-storage-unit <varname>storage_unit_ID</varname></codeblock>
+      <codeblock>--ddboost-host &lt;ddboost_hostname> --ddboost-user &lt;ddboost_user>
+--ddboost-backupdir &lt;backup_directory> --ddboost-storage-unit &lt;storage_unit_ID></codeblock>
       <p>The <codeph>--ddboost-storage-unit</codeph> is optional. If not specified, the storage unit
         ID is <codeph>GPDB</codeph>.</p>
       <p>To remove credentials, run <codeph>gpcrondump</codeph> with the
@@ -82,9 +82,9 @@
           <codeph>gpcrondump</codeph> to set up the login credentials for the Data Domain hostnames
         associated with the network interfaces. To perform this setup for two network connections,
         run <codeph>gpcrondump</codeph> with the following options:</p>
-      <codeblock>--ddboost-host <varname>ddboost_hostname1</varname>
---ddboost-host <varname>ddboost_hostname2</varname> --ddboost-user <varname>ddboost_user</varname>
---ddboost-backupdir <varname>backup_directory</varname></codeblock>
+      <codeblock>--ddboost-host &lt;ddboost_hostname1>
+--ddboost-host &lt;ddboost_hostname2> --ddboost-user &lt;ddboost_user>
+--ddboost-backupdir &lt;backup_directory></codeblock>
     </body>
     <topic id="topic_tsc_41c_yv">
       <title>About DD Boost Credential Files</title>
@@ -282,7 +282,7 @@
       <body>
         <p> Create a username and password for the host to access the DD Boost Storage Unit (SU) at
           the time of backup and restore: </p>
-        <codeblock># user add <varname>user</varname> [password <varname>password</varname>] [priv {admin | security | user}]</codeblock>
+        <codeblock># user add &lt;user> [password &lt;password>] [priv {admin | security | user}]</codeblock>
       </body>
     </topic>
   </topic>

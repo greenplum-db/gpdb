@@ -44,16 +44,16 @@
         host in the network.</p>
       <ol id="ol_t3x_mlv_ft">
         <li id="kk167022">Ensure that the archive host is reachable from the Greenplum master
-          host:<codeblock>$ ping <varname>archive_host</varname></codeblock></li>
+          host:<codeblock>$ ping &lt;archive_host></codeblock></li>
         <li>Ensure that you can ssh into the remote host with the <codeph>gpadmin</codeph> account
-          and no password. <codeblock>$ ssh gpadmin@<varname>archive_host</varname></codeblock></li>
+          and no password. <codeblock>$ ssh gpadmin@&lt;archive_host></codeblock></li>
         <li>Ensure that you can ping the master host from the archive
           host:<codeblock>$ ping mdw</codeblock></li>
         <li id="kk170774">Ensure that the restore's target database exists. For
           example:<codeblock>$ createdb database_name</codeblock></li>
         <li id="kk167026">From the master, run the <codeph>gpdbrestore</codeph> utility. The
             <codeph>-R</codeph> option specifies the host name and path to a complete backup
-            set:<codeblock>$ gpdbrestore -R <i>archive_host</i>:/gpdb/backups/archive/20120714 -e <varname>dbname</varname></codeblock><p>Omit
+            set:<codeblock>$ gpdbrestore -R <i>archive_host</i>:/gpdb/backups/archive/20120714 -e &lt;dbname></codeblock><p>Omit
             the <codeph>-e <varname>dbname</varname></codeph> option if the database has already
             been created.</p></li>
       </ol>

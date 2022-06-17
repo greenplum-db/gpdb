@@ -517,7 +517,7 @@ WHERE logseverity in ('FATAL', 'ERROR')
                                             queries</p><p>Severity: CRITICAL</p></entry>
                                     <entry>Analyze user tables. You can use the
                                             <codeph>analyzedb</codeph> management
-                                        utility:<codeblock>analyzedb -d <varname>&lt;database></varname> -a</codeblock></entry>
+                                        utility:<codeblock>analyzedb -d &lt;&lt;database>> -a</codeblock></entry>
                                     <entry>Analyze updated tables regularly so that the optimizer
                                         can produce efficient query execution plans.</entry>
                                 </row>
@@ -549,9 +549,9 @@ WHERE logseverity in ('FATAL', 'ERROR')
                                                 database, or use the <codeph>reindexdb</codeph>
                                                 command-line utility with the <codeph>-s</codeph>
                                                 option:
-                                                <codeblock>reindexdb -s <varname>&lt;database></varname></codeblock></li>
+                                                <codeblock>reindexdb -s &lt;&lt;database>></codeblock></li>
                                             <li><codeph>ANALYZE</codeph> each of the system
-                                                tables:<codeblock>analyzedb -s pg_catalog -d <varname>&lt;database></varname></codeblock></li>
+                                                tables:<codeblock>analyzedb -s pg_catalog -d &lt;&lt;database>></codeblock></li>
                                         </ol>
                                     </entry>
                                     <entry>The optimizer retrieves information from the system

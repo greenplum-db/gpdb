@@ -263,13 +263,13 @@ gp_email_to='gpdb_dba_group@example.com'
             specify for the <codeph>gp_email_smtp_server</codeph> parameter. To test connectivity,
             use the <codeph>ping</codeph> command:</p>
           <p>
-            <codeblock>$ ping &lt;<varname>my_email_server</varname>></codeblock>
+            <codeblock>$ ping &lt;&lt;my_email_server>></codeblock>
           </p>
           <p>If the master host can contact the SMTP server, run this <codeph>psql</codeph> command
             to log into a database and test email notification with the <codeph>gp_elog</codeph>
             function:</p>
           <p>
-            <codeblock>$ psql -d &lt;<varname>testdb</varname>> -U gpadmin -c "SELECT gp_elog('Test GPDB Email',true);"</codeblock>
+            <codeblock>$ psql -d &lt;&lt;testdb>> -U gpadmin -c "SELECT gp_elog('Test GPDB Email',true);"</codeblock>
           </p>
           <p>The address you specified for the <codeph>gp_email_to</codeph> parameter should receive
             an email with <codeph>Test GPDB Email</codeph> in the subject line.</p>
