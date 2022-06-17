@@ -166,7 +166,7 @@
           incremental backup is based. In this example, the incremental backup is based on the
           backup with timestamp <codeph>20180802171642</codeph>. The backup
             <codeph>20180802171642</codeph> can be an incremental or full backup.</p>
-        <codeblock>$ <b>gpbackup --dbname test --backup-dir /backups --leaf-partition-data --incremental</b>
+        <codeblock>$ gpbackup --dbname test --backup-dir /backups --leaf-partition-data --incremental
 20180803:15:40:51 gpbackup:gpadmin:mdw:002907-[INFO]:-Starting backup of database test
 20180803:15:40:52 gpbackup:gpadmin:mdw:002907-[INFO]:-Backup Timestamp = 20180803154051
 20180803:15:40:52 gpbackup:gpadmin:mdw:002907-[INFO]:-Backup Database = test
@@ -181,7 +181,7 @@ Locks acquired:  5 / 5 [========================================================
 20180803:15:40:52 gpbackup:gpadmin:mdw:002907-[INFO]:-Pre-data metadata backup complete
 20180803:15:40:52 gpbackup:gpadmin:mdw:002907-[INFO]:-Writing post-data metadata
 20180803:15:40:52 gpbackup:gpadmin:mdw:002907-[INFO]:-Post-data metadata backup complete
-20180803:15:40:52 gpbackup:gpadmin:mdw:002907-[INFO]:-<b>Basing incremental backup off of backup with timestamp = 20180802171642</b>
+20180803:15:40:52 gpbackup:gpadmin:mdw:002907-[INFO]:-Basing incremental backup off of backup with timestamp = 20180802171642
 20180803:15:40:52 gpbackup:gpadmin:mdw:002907-[INFO]:-Writing data to file
 Tables backed up:  4 / 4 [==============================================================] 100.00% 0s
 20180803:15:40:52 gpbackup:gpadmin:mdw:002907-[INFO]:-Data backup complete
@@ -196,17 +196,17 @@ Tables backed up:  4 / 4 [======================================================
           operation on the command line. For example, the following <codeph>gprestore</codeph>
           command restores a backup using the timestamp <codeph>20180807092740</codeph>, an
           incremental backup. The output includes the backups that were used to restore the database
-          data.<codeblock>$ <b>gprestore --create-db --timestamp 20180807162904 --verbose</b>
+          data.<codeblock>$ gprestore --create-db --timestamp 20180807162904 --verbose
 ...
 20180807:16:31:56 gprestore:gpadmin:mdw:008603-[INFO]:-Pre-data metadata restore complete
 20180807:16:31:56 gprestore:gpadmin:mdw:008603-[DEBUG]:-Verifying backup file count
-20180807:16:31:56 gprestore:gpadmin:mdw:008603-[DEBUG]:-<b>Restoring data from backup with timestamp: 20180807162654</b>
+20180807:16:31:56 gprestore:gpadmin:mdw:008603-[DEBUG]:-Restoring data from backup with timestamp: 20180807162654
 20180807:16:31:56 gprestore:gpadmin:mdw:008603-[DEBUG]:-Reading data for table public.tbl_ao from file (table 1 of 1)
 20180807:16:31:56 gprestore:gpadmin:mdw:008603-[DEBUG]:-Checking whether segment agents had errors during restore
-20180807:16:31:56 gprestore:gpadmin:mdw:008603-[DEBUG]:-<b>Restoring data from backup with timestamp: 20180807162819</b>
+20180807:16:31:56 gprestore:gpadmin:mdw:008603-[DEBUG]:-Restoring data from backup with timestamp: 20180807162819
 20180807:16:31:56 gprestore:gpadmin:mdw:008603-[DEBUG]:-Reading data for table public.test_ao from file (table 1 of 1)
 20180807:16:31:56 gprestore:gpadmin:mdw:008603-[DEBUG]:-Checking whether segment agents had errors during restore
-20180807:16:31:56 gprestore:gpadmin:mdw:008603-[DEBUG]:-<b>Restoring data from backup with timestamp: 20180807162904</b>
+20180807:16:31:56 gprestore:gpadmin:mdw:008603-[DEBUG]:-Restoring data from backup with timestamp: 20180807162904
 20180807:16:31:56 gprestore:gpadmin:mdw:008603-[DEBUG]:-Reading data for table public.homes2 from file (table 1 of 4)
 20180807:16:31:56 gprestore:gpadmin:mdw:008603-[DEBUG]:-Reading data for table public.test2 from file (table 2 of 4)
 20180807:16:31:56 gprestore:gpadmin:mdw:008603-[DEBUG]:-Reading data for table public.homes2a from file (table 3 of 4)

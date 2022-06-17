@@ -53,8 +53,8 @@
         plugin. The Backup/Restore Storage Plugin API defines the format of, and certain keywords
         used in, the plugin configuration file.</p>
       <p>A plugin configuration file is a YAML file in the following format:
-        <codeblock><b>executablepath</b>: &lt;path_to_plugin_executable>
-<b>options</b>:
+        <codeblock>executablepath: &lt;path_to_plugin_executable>
+options:
   &lt;keyword1>: &lt;value1>
   &lt;keyword2>: &lt;value2>
   ...
@@ -266,7 +266,7 @@ options:
         which in turn individually call/test each Backup/Restore Storage Plugin API command
         implemented in the plugin.</p>
       <p>The test bench program calling syntax is:
-        <codeblock><b>plugin_test_bench.sh</b> &lt;plugin_executable plugin_config></codeblock></p>
+        <codeblock>plugin_test_bench.sh &lt;plugin_executable plugin_config></codeblock></p>
       <section id="topic8339191" xml:lang="en">
         <title>Procedure</title>
         <p>To run the Backup/Restore Storage Plugin API test bench against a plugin:</p><ol>

@@ -565,12 +565,12 @@ chunksize = 67108864</codeblock></p>
             capture the output and create an <codeph>s3</codeph> configuration file to connect to
             Amazon S3. </p><p>The utility is installed in the Greenplum Database
                <codeph>$GPHOME/bin</codeph> directory.</p><b>Syntax</b>
-         <codeblock>gpcheckcloud {<b>-c</b> | <b>-d</b>} "<b>s3://</b>&lt;S3_endpoint>/&lt;bucketname>/[&lt;S3_prefix>] [config=&lt;path_to_config_file>]"
+         <codeblock>gpcheckcloud {-c | -d} "s3://&lt;S3_endpoint>/&lt;bucketname>/[&lt;S3_prefix>] [config=&lt;path_to_config_file>]"
 
-gpcheckcloud <b>-u</b> &lt;file_to_upload> "<b>s3://</b>&lt;S3_endpoint>/&lt;bucketname>/[&lt;S3_prefix>] [config=&lt;path_to_config_file>]"
-gpcheckcloud <b>-t</b>
+gpcheckcloud -u &lt;file_to_upload> "s3://&lt;S3_endpoint>/&lt;bucketname>/[&lt;S3_prefix>] [config=&lt;path_to_config_file>]"
+gpcheckcloud -t
 
-gpcheckcloud <b>-h</b></codeblock>
+gpcheckcloud -h</codeblock>
          <b>Options</b>
          <parml>
             <plentry>

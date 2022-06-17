@@ -59,7 +59,7 @@
       <p>This example <cmdname>CREATE TABLE</cmdname> command creates a range partitioned table.</p>
       <codeblock>CREATE TABLE sales(order_id int, item_id int, amount numeric(15,2), 
       date date, yr_qtr int)
-   <b>range partitioned by yr_qtr</b>;</codeblock>
+   range partitioned by yr_qtr;</codeblock>
       <p>GPORCA improves on these types of queries against partitioned tables:</p>
       <ul id="ul_jdl_zwd_gr">
         <li>Full table scan. Partitions are not enumerated in
@@ -82,30 +82,30 @@
         nested inside an outer query block. In the following query, the <cmdname>SELECT</cmdname> in
         the <cmdname>WHERE</cmdname> clause is a
         subquery.<codeblock>SELECT * FROM part
-  WHERE price > (<b>SELECT avg(price) FROM part</b>);</codeblock></p>
+  WHERE price > (SELECT avg(price) FROM part);</codeblock></p>
       <p>GPORCA also handles queries that contain a correlated subquery (CSQ) more
         efficiently. A correlated subquery is a subquery that uses values from the outer query. In
         the following query, the <codeph>price</codeph> column is used in both the outer query and
         the subquery.
         <codeblock>SELECT * FROM part p1
-  WHERE <b>price</b> > (<b>SELECT avg(</b>price<b>) FROM part p2 
+  WHERE price > (SELECT avg(price<b>) FROM part p2 
   WHERE  p2.brand = p1.brand</b>);</codeblock></p>
       <p>GPORCA generates more efficient plans for the following types of
         subqueries: <ul id="ul_mk2_fyd_gr">
           <li>CSQ in the <cmdname>SELECT</cmdname>
             list.<codeblock>SELECT *,
- (<b>SELECT min(price) FROM part p2 WHERE p1.brand = p2.brand</b>)
+ (SELECT min(price) FROM part p2 WHERE p1.brand = p2.brand)
  AS foo
 FROM part p1;</codeblock></li>
           <li>CSQ in disjunctive (<cmdname>OR</cmdname>) filters.
-            <codeblock>SELECT FROM part p1 WHERE p_size > 40 <b>OR</b> 
+            <codeblock>SELECT FROM part p1 WHERE p_size > 40 OR 
       p_retailprice > 
       (<b>SELECT avg(p_retailprice) 
           FROM part p2 
           WHERE p2.p_brand = p1.p_brand</b>)</codeblock></li>
           <li>Nested CSQ with skip level
               correlations<codeblock>SELECT * FROM part p1 WHERE p1.p_partkey 
-IN (<b>SELECT p_partkey FROM part p2 WHERE p2.p_retailprice = </b>
+IN (SELECT p_partkey FROM part p2 WHERE p2.p_retailprice = 
      (<b>SELECT min(p_retailprice)
        FROM part p3 
        WHERE p3.p_brand = p1.p_brand)</b>
@@ -118,7 +118,7 @@ IN (<b>SELECT p_partkey FROM part p2 WHERE p2.p_retailprice = </b>
         </ul><ul id="ul_qpq_1vs_gr">
           <li>CSQ that must return one
             row.<codeblock>SELECT p_partkey, 
-  (<b>SELECT p_retailprice FROM part p2 WHERE p2.p_brand = p1.p_brand</b> )
+  (SELECT p_retailprice FROM part p2 WHERE p2.p_brand = p1.p_brand )
 FROM part p1;</codeblock></li>
         </ul></p>
     </body>
@@ -129,7 +129,7 @@ FROM part p1;</codeblock></li>
       <p>GPORCA handles queries that contain the <cmdname>WITH</cmdname> clause.
         The <cmdname>WITH</cmdname> clause, also known as a common table expression (CTE), generates
         temporary tables that exist only for the query. This example query contains a
-        CTE.<codeblock><b>WITH v AS (SELECT a, sum(b) as s FROM T where c &lt; 10 GROUP BY a)</b>
+        CTE.<codeblock>WITH v AS (SELECT a, sum(b) as s FROM T where c &lt; 10 GROUP BY a)
   SELECT *FROM  v AS v1 ,  v AS v2
   WHERE v1.a &lt;> v2.a AND v1.s &lt; v2.s;</codeblock></p>
       <p>As part of query optimization, GPORCA can push down predicates into a
@@ -139,9 +139,9 @@ FROM part p1;</codeblock></li>
   FROM v as v1, v as v2, v as v3
   WHERE v1.a &lt; v2.a
     AND v1.s &lt; v3.s
-    AND <b>v1.a = 10</b>
-    AND <b>v2.a = 20</b>
-    AND <b>v3.a = 30</b>;</codeblock></p>
+    AND v1.a = 10
+    AND v2.a = 20
+    AND v3.a = 30;</codeblock></p>
       <p>GPORCA can handle these types of CTEs:<ul id="ul_ohm_d3r_gr">
           <li>CTE that defines one or multiple tables. In this query, the CTE defines two
             tables.<codeblock><b>WITH cte1 AS (SELECT a, sum(b) as s FROM T 
@@ -151,7 +151,7 @@ FROM part p1;</codeblock></li>
   FROM cte1 as v1, cte2 as v2, cte2 as v3
   WHERE v1.a &lt; v2.a AND v1.s &lt; v3.s;</codeblock></li>
           <li>Nested CTEs.
-            <codeblock><b>WITH</b> v AS (<b>WITH</b> w AS (SELECT a, b FROM foo 
+            <codeblock>WITH v AS (WITH w AS (SELECT a, b FROM foo 
                       WHERE b &lt; 5) 
            SELECT w1.a, w2.b 
            FROM w AS w1, w AS w2 
@@ -184,7 +184,7 @@ Update  (cost=0.00..5.46 rows=1 width=1)
    ->  Redistribute Motion 2:2  (slice1; segments: 2)
          Hash Key: a
          ->  Result  (cost=0.00..3.23 rows=1 width=48)
-               ->  <b>Split  (cost=0.00..2.13 rows=1 width=40)</b>
+               ->  Split  (cost=0.00..2.13 rows=1 width=40)
                      ->  Result  (cost=0.00..1.05 rows=1 width=40)
                            ->  Table Scan on dmltest</codeblock></p></li>
           <li>New query plan operator <cmdname>Assert</cmdname> is used for constraints
@@ -192,11 +192,11 @@ Update  (cost=0.00..5.46 rows=1 width=1)
               operator.<codeblock>QUERY PLAN
 ------------------------------------------------------------
  Insert  (cost=0.00..4.61 rows=3 width=8)
-   ->  <b>Assert  (cost=0.00..3.37 rows=3 width=24)</b>
-         <b>Assert Cond: (dmlsource.a > 2) IS DISTINCT FROM</b> 
+   ->  Assert  (cost=0.00..3.37 rows=3 width=24)
+         Assert Cond: (dmlsource.a > 2) IS DISTINCT FROM 
 false
-         ->  <b>Assert  (cost=0.00..2.25 rows=3 width=24)</b>
-               <b>Assert Cond: NOT dmlsource.b IS NULL</b>
+         ->  Assert  (cost=0.00..2.25 rows=3 width=24)
+               Assert Cond: NOT dmlsource.b IS NULL
                ->  Result  (cost=0.00..1.14 rows=3 width=24)
                      ->  Table Scan on dmlsource</codeblock></p></li>
         </ul></p>

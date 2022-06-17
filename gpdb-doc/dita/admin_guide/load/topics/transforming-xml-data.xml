@@ -320,7 +320,7 @@ GPLOAD:
                the following command. (Run <cmdname>gpfdist</cmdname> first, using the command
                   <codeph>gpfdist -c config.yaml</codeph>).</p>
             <codeblock>CREATE READABLE EXTERNAL TABLE prices_readable (LIKE prices)
-   LOCATION ('gpfdist://hostname:8080/prices.xml<b>#transform=prices_input</b>')
+   LOCATION ('gpfdist://hostname:8080/prices.xml#transform=prices_input')
    FORMAT 'TEXT' (DELIMITER '|')
    LOG ERRORS SEGMENT REJECT LIMIT 10;
 </codeblock>

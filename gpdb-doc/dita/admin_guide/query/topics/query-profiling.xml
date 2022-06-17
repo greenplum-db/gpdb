@@ -93,7 +93,7 @@
         <p>The following example describes how to read an <codeph>EXPLAIN</codeph> query plan for a
           query:</p>
         <p>
-          <codeblock><b>EXPLAIN</b> SELECT * FROM names WHERE name = 'Joelle';
+          <codeblock>EXPLAIN SELECT * FROM names WHERE name = 'Joelle';
                      QUERY PLAN
 ------------------------------------------------------------
 Gather Motion 2:1 (slice1) (cost=0.00..20.88 rows=1 width=13)
@@ -159,13 +159,13 @@ workfile I/O affecting 2 workers.
           the same query. The <codeph>bold</codeph> parts of the plan show actual timing and rows
           returned for each plan node, as well as memory and time statistics for the whole
           query.</p>
-        <codeblock><b>EXPLAIN ANALYZE</b> SELECT * FROM names WHERE name = 'Joelle';
+        <codeblock>EXPLAIN ANALYZE SELECT * FROM names WHERE name = 'Joelle';
                      QUERY PLAN
 ------------------------------------------------------------
 Gather Motion 2:1 (slice1; segments: 2) (cost=0.00..20.88 rows=1 width=13)
-    <b>Rows out: 1 rows at destination with 0.305 ms to first row, 0.537 ms to end, start offset by 0.289 ms.</b>
+    Rows out: 1 rows at destination with 0.305 ms to first row, 0.537 ms to end, start offset by 0.289 ms.
         -&gt; Seq Scan on names (cost=0.00..20.88 rows=1 width=13)
-             <b>Rows out: Avg 1 rows x 2 workers. Max 1 rows (seg0) with 0.255 ms to first row, 0.486 ms to end, start offset by 0.968 ms.</b>
+             Rows out: Avg 1 rows x 2 workers. Max 1 rows (seg0) with 0.255 ms to first row, 0.486 ms to end, start offset by 0.968 ms.
                  Filter: name = 'Joelle'::text
  Slice statistics:
 
@@ -173,9 +173,9 @@ Gather Motion 2:1 (slice1; segments: 2) (cost=0.00..20.88 rows=1 width=13)
 
     (slice1) Executor memory: 151K bytes avg x 2 workers, 151K bytes max (seg0).
 
-<b>Statement statistics:</b>
- <b>Memory used: 128000K bytes</b>
- <b>Total runtime: 22.548 ms</b>
+Statement statistics:
+ Memory used: 128000K bytes
+ Total runtime: 22.548 ms
 </codeblock>
         <p>Read the plan from the bottom to the top. The total elapsed time to run this query was
             <i>22.548</i> milliseconds.</p>
@@ -207,8 +207,8 @@ Gather Motion 2:1 (slice1; segments: 2) (cost=0.00..20.88 rows=1 width=13)
    ->  Gather Motion 2:1  (slice1; segments: 2)  (cost=0.00..295.10 rows=1 width=8)
          ->  Aggregate  (cost=0.00..294.10 rows=1 width=8)
                ->  Table Scan on part  (cost=0.00..97.69 rows=100040 width=1)
- Settings:  <b>optimizer=on</b>
- Optimizer status: <b>PQO version 1.584</b>
+ Settings:  optimizer=on
+ Optimizer status: PQO version 1.584
 (5 rows)</codeblock>
             <codeblock>explain select count(*) from part;
 
@@ -218,8 +218,8 @@ Gather Motion 2:1 (slice1; segments: 2) (cost=0.00..20.88 rows=1 width=13)
    ->  Gather Motion 2:1  (slice1; segments: 2)  (cost=3518.99..3519.03 rows=1 width=8)
          ->  Aggregate  (cost=3518.99..3519.00 rows=1 width=8)
                ->  Seq Scan on part  (cost=0.00..3018.79 rows=100040 width=1)
- Settings:  <b>optimizer=on</b>
- Optimizer status: <b>legacy query optimizer</b>
+ Settings:  optimizer=on
+ Optimizer status: legacy query optimizer
 (5 rows)</codeblock>
           </p>
           <p>For this query, the server configuration parameter <codeph>OPTIMIZER</codeph> is
@@ -231,8 +231,8 @@ Gather Motion 2:1 (slice1; segments: 2) (cost=0.00..20.88 rows=1 width=13)
    ->  Gather Motion 2:1  (slice1; segments: 2)  (cost=3518.99..3519.03 rows=1 width=8)
          ->  Aggregate  (cost=3518.99..3519.00 rows=1 width=8)
                ->  Seq Scan on part  (cost=0.00..3018.79 rows=100040 width=1)
- Settings: <b>optimizer=off</b>
- Optimizer status: <b>legacy query optimizer</b>
+ Settings: optimizer=off
+ Optimizer status: legacy query optimizer
 (5 rows)</codeblock></p>
         </body>
       </topic>
