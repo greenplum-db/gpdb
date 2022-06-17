@@ -5,8 +5,8 @@
   <shortdesc>The <codeph>gpfdists://</codeph> protocol is a secure version of the <codeph>gpfdist://
       protocol</codeph>. </shortdesc>
   <body>
-    <p>To use it, you run the <codeph><xref href="../../utility_guide/admin_utilities/gpfdist.xml"
-          >gpfdist</xref></codeph> utility with the <codeph>--ssl</codeph> option. When specified in
+    <p>To use it, you run the <xref href="../../utility_guide/admin_utilities/gpfdist.xml"
+          >gpfdist</xref> utility with the <codeph>--ssl</codeph> option. When specified in
       a URI, the <codeph>gpfdists://</codeph> protocol enables encrypted communication and secure
       identification of the file server and the Greenplum Database to protect against attacks such
       as eavesdropping and man-in-the-middle attacks. </p>
@@ -51,9 +51,9 @@
     </ul>
     <p>For an example of loading data into an external table security, see <xref
         href="g-example-3-multiple-gpfdists-instances.xml#topic47"/>.</p>
-    <p>The server configuration parameter <codeph><xref
+    <p>The server configuration parameter <xref
           href="../../ref_guide/config_params/guc-list.xml#verify_gpfdists_cert"
-          >verify_gpfdists_cert</xref></codeph> controls whether SSL certificate authentication is
+          >verify_gpfdists_cert</xref> controls whether SSL certificate authentication is
       enabled when Greenplum Database communicates with the <codeph>gpfdist</codeph> utility to
       either read data from or write data to an external data source. You can set the parameter
       value to <codeph>false</codeph> to disable authentication when testing the communication

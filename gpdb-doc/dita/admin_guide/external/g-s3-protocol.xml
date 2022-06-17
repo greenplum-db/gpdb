@@ -126,9 +126,9 @@
                format="dita"/>.</p>
          <note id="s3-prefix-note">Although the <varname>S3_prefix</varname> is an optional part of
             the syntax, you should always include an S3 prefix for both writable and read-only S3
-            tables to separate datasets as part of the <codeph><xref
+            tables to separate datasets as part of the <xref
                   href="../../ref_guide/sql_commands/CREATE_EXTERNAL_TABLE.xml#topic1">CREATE
-                  EXTERNAL TABLE</xref></codeph> syntax.</note>
+                  EXTERNAL TABLE</xref> syntax.</note>
          <p>For writable S3 tables, the <codeph>s3</codeph> protocol URL specifies the endpoint and
             bucket name where Greenplum Database uploads data files for the table. The S3 bucket
             permissions must be <codeph>Upload/Delete</codeph> for the S3 user ID that uploads the

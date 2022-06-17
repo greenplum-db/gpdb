@@ -676,8 +676,7 @@ SELECT foo();
                             </entry>
                             <entry colname="col2"><codeph>bigint</codeph></entry>
                             <entry colname="col3">
-                                <codeph>RANK () OVER ( [PARTITION BY &lt;expr>] ORDER BY <i>expr
-                                    </i>)</codeph>
+                                <codeph>RANK () OVER ( [PARTITION BY &lt;expr>] ORDER BY &lt;expr)</codeph>
                             </entry>
                             <entry colname="col4">Calculates the rank of a row in an ordered group
                                 of values. Rows with equal values for the ranking criteria receive
