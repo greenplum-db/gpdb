@@ -170,7 +170,7 @@
                 <codeph>snmpd</codeph> daemon:</p>
             <codeblock># /sbin/chkconfig snmpd on</codeblock>
             <p>Then, verify the system <codeph>snmpd</codeph> daemon is running. Enter:</p>
-            <codeblock># snmpwalk -v 1 -c <i>community_name</i> localhost .1.3.6.1.2.1.1.1.0</codeblock>
+            <codeblock># snmpwalk -v 1 -c community_name localhost .1.3.6.1.2.1.1.1.0</codeblock>
             <p>For example:</p>
             <codeblock># snmpwalk -v 1 -c public localhost .1.3.6.1.2.1.1.1.0</codeblock>
             <p>If this command returns "<codeph>Timeout: No Response from localhost</codeph>", then
@@ -211,7 +211,7 @@ $ gpconfig -c gp_snmp_use_inform_or_trap -v trap --masteronly </codeblock></p></
                 </ul></li>
               <li id="kj170864">To test SNMP notifications, you can use the
                   <codeph>snmptrapd</codeph> trap receiver. As root, enter:<p>
-                  <codeblock># /usr/sbin/snmptrapd -m ALL -Lf ~/<i>filename</i>.log
+                  <codeblock># /usr/sbin/snmptrapd -m ALL -Lf ~/filename.log
 </codeblock>
                 </p><p><codeph>-Lf</codeph> indicates that traps are logged to a file.
                     <codeph>-Le</codeph> indicates that traps are logged to <codeph>stderr</codeph>
@@ -455,7 +455,7 @@ Distributed by: (sale_id)
             you can run a query such as:</p>
           <p>
             <codeblock>=# SELECT gp_segment_id, count(*) 
-   FROM <i>table_name</i> GROUP BY gp_segment_id;
+   FROM table_name GROUP BY gp_segment_id;
 </codeblock>
           </p>
           <p>A table is considered to have a balanced distribution if all segments have roughly the
@@ -474,8 +474,8 @@ Distributed by: (sale_id)
             query predicates are not well matched. To check for processing skew, you can run a query
             such as:</p>
           <p>
-            <codeblock>=# SELECT gp_segment_id, count(*) FROM <i>table_name</i>
-   WHERE <i>column</i>='<i>value</i>' GROUP BY gp_segment_id;
+            <codeblock>=# SELECT gp_segment_id, count(*) FROM table_name
+   WHERE column='value' GROUP BY gp_segment_id;
 </codeblock>
           </p>
           <p>This will show the number of rows returned by segment for the given
@@ -550,7 +550,7 @@ Distributed by: (sale_id)
               <codeph>\d+</codeph> meta-command when working in <codeph>psql</codeph>. For example,
             to see the definition of a table:</p>
           <p>
-            <codeblock>=&gt; \d+ <i>mytable</i>
+            <codeblock>=&gt; \d+ mytable
 </codeblock>
           </p>
         </body>

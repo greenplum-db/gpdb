@@ -8,14 +8,14 @@
                   segments onto a spare set of hardware resources. If mirroring is enabled, you can
                   recover a segment from its mirror onto an alternate host using
                         <codeph>gprecoverseg</codeph>. For example:</p>
-            <codeblock>$ gprecoverseg -i <i>recover_config_file</i>
+            <codeblock>$ gprecoverseg -i recover_config_file
       </codeblock>
             <p>Where the format of <codeph>
                         <i>recover_config_file</i>
                   </codeph> is:</p>
-            <codeblock>filespaceOrder=[<i>filespace1_name</i>[:<i>filespace2_name</i>:...]<i>failed_host_address</i>:
-<i>port</i>:<i>fselocation</i> [<i>recovery_host_address</i>:<i>port</i>:<i>replication_port</i>:<i>fselocation</i>
-[:<i>fselocation</i>:...]]</codeblock>
+            <codeblock>filespaceOrder=[filespace1_name[:filespace2_name:...]failed_host_address:
+port:fselocation [recovery_host_address:port:replication_port:fselocation
+[:fselocation:...]]</codeblock>
             <p>For example, to recover to a different host than the failed host without additional
                   filespaces configured (besides the default <i>pg_system</i> filespace):</p>
             <codeblock>filespaceOrder=sdw5-2:50002:/gpdata/gpseg2 sdw9-2:50002:53002:/gpdata/gpseg2</codeblock>
