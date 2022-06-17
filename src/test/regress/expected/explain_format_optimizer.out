@@ -74,13 +74,13 @@ EXPLAIN (ANALYZE) SELECT * from boxes LEFT JOIN apples ON apples.id = boxes.appl
                            Index Cond: (id = boxes.location_id)
          ->  Index Scan using apples_pkey on apples  (cost=0.00..12.00 rows=1 width=12) (never executed)
                Index Cond: (id = boxes.apple_id)
+ Optimizer: Pivotal Optimizer (GPORCA)
  Planning Time: 40.380 ms
    (slice0)    Executor memory: 56K bytes.
    (slice1)    Executor memory: 43K bytes avg x 3 workers, 43K bytes max (seg0).
    (slice2)    Executor memory: 42K bytes avg x 3 workers, 42K bytes max (seg0).
    (slice3)    Executor memory: 39K bytes avg x 3 workers, 39K bytes max (seg0).
  Memory used:  256000kB
- Optimizer: Pivotal Optimizer (GPORCA)
  Execution Time: 19.964 ms
 (22 rows)
 
@@ -235,9 +235,53 @@ QUERY PLAN
             Plan Rows: 1
             Plan Width: 12
             Index Cond: "(id = boxes.apple_id)"
-  Settings: 
-    Optimizer: "Pivotal Optimizer (GPORCA)"
+  Optimizer: "Pivotal Optimizer (GPORCA)"
 (1 row)
+SET random_page_cost = 1;
+SET cpu_index_tuple_cost = 0.1;
+EXPLAIN (FORMAT YAML, VERBOSE, SETTINGS ON) SELECT * from boxes;
+QUERY PLAN
+- Plan: 
+    Node Type: "Gather Motion"
+    Senders: 3
+    Receivers: 1
+    Slice: 1
+    Segments: #
+    Gang Type: "primary reader"
+    Parallel Aware: false
+    Startup Cost: ###.##
+    Total Cost: ###.##
+    Plan Rows: #####
+    Plan Width: ##
+    Output: 
+      - "id"
+      - "apple_id"
+      - "location_id"
+    Plans: 
+      - Node Type: "Seq Scan"
+        Parent Relationship: "Outer"
+        Slice: 1
+        Segments: #
+        Gang Type: "primary reader"
+        Parallel Aware: false
+        Relation Name: "boxes"
+        Schema: "public"
+        Alias: "boxes"
+        Startup Cost: ###.##
+        Total Cost: ###.##
+        Plan Rows: #####
+        Plan Width: ##
+        Output: 
+          - "id"
+          - "apple_id"
+          - "location_id"
+  Optimizer: "Pivotal Optimizer (GPORCA)"
+  Settings: 
+    cpu_index_tuple_cost: "0.1"
+    random_page_cost: "1"
+(1 row)
+RESET random_page_cost;
+RESET cpu_index_tuple_cost;
 --- Check Explain Analyze YAML output that include the slices information
 -- explain_processing_off
 EXPLAIN (ANALYZE, FORMAT YAML) SELECT * from boxes LEFT JOIN apples ON apples.id = boxes.apple_id LEFT JOIN box_locations ON box_locations.id = boxes.location_id;
@@ -389,6 +433,7 @@ QUERY PLAN
             Actual Loops: 0
             Index Cond: "(id = boxes.apple_id)"
             Rows Removed by Index Recheck: 0
+  Optimizer: "Pivotal Optimizer (GPORCA)"
   Planning Time: 14.827
   Triggers: 
   Slice statistics: 
@@ -411,8 +456,6 @@ QUERY PLAN
         Maximum Memory Used: 60624
   Statement statistics: 
     Memory used: 128000
-  Settings: 
-    Optimizer: "Pivotal Optimizer (GPORCA)"
   Execution Time: 3.332
 (1 row)
 -- explain_processing_on
@@ -441,9 +484,7 @@ QUERY PLAN
       "Function Name": "generate_series",
       "Alias": "generate_series"
     },
-    "Settings": {
-      "Optimizer": "Pivotal Optimizer (GPORCA)"
-    }
+    "Optimizer": "Pivotal Optimizer (GPORCA)"
   }
 ]
 (1 row)
@@ -460,9 +501,7 @@ QUERY PLAN
       <Function-Name>generate_series</Function-Name>
       <Alias>generate_series</Alias>
     </Plan>
-    <Settings>
-      <Optimizer>Pivotal Optimizer (GPORCA)</Optimizer>
-    </Settings>
+    <Optimizer>Pivotal Optimizer (GPORCA)</Optimizer>
   </Query>
 </explain>
 (1 row)
@@ -507,9 +546,7 @@ QUERY PLAN
         }
       ]
     },
-    "Settings": {
-      "Optimizer": "Pivotal Optimizer (GPORCA)"
-    }
+    "Optimizer": "Pivotal Optimizer (GPORCA)"
   }
 ]
 (1 row)

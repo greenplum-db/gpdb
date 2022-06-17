@@ -3418,7 +3418,7 @@ explain (analyze, costs off, summary off, timing off) execute mt_q1(15);
          ->  Index Scan using ma_test_p3_b_idx on ma_test_p3 (actual rows=1 loops=1)
                Filter: ((a >= $1) AND ((a % 10) = 5))
                Rows Removed by Filter: 2
- Optimizer: Postgres query optimizer
+ Optimizer: Pivotal Optimizer (GPORCA)
 (12 rows)
 
 execute mt_q1(15);
@@ -3439,7 +3439,7 @@ explain (analyze, costs off, summary off, timing off) execute mt_q1(25);
          ->  Index Scan using ma_test_p3_b_idx on ma_test_p3 (actual rows=1 loops=1)
                Filter: ((a >= $1) AND ((a % 10) = 5))
                Rows Removed by Filter: 2
- Optimizer: Postgres query optimizer
+ Optimizer: Pivotal Optimizer (GPORCA)
 (9 rows)
 
 execute mt_q1(25);
@@ -3459,7 +3459,7 @@ explain (analyze, costs off, summary off, timing off) execute mt_q1(35);
          Subplans Removed: 2
          ->  Index Scan using ma_test_p1_b_idx on ma_test_p1 (never executed)
                Filter: ((a >= $1) AND ((a % 10) = 5))
- Optimizer: Postgres query optimizer
+ Optimizer: Pivotal Optimizer (GPORCA)
 (8 rows)
 
 execute mt_q1(35);

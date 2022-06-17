@@ -99,11 +99,11 @@ extern struct config_generic *find_option(const char *name, bool create_placehol
 
 extern int listenerBacklog;
 
-/* GUC lists for gp_guc_list_show().  (List of struct config_generic) */
+/* GUC lists for gp_guc_list_init().  (List of struct config_generic) */
 List	   *gp_guc_list_for_explain;
 List	   *gp_guc_list_for_no_plan;
 
-/* For synchornized GUC value is cache in HashTable,
+/* For synchronized GUC value is cache in HashTable,
  * dispatch value along with query when some guc changed
  */
 List       *gp_guc_restore_list = NIL;

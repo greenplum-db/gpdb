@@ -4947,7 +4947,7 @@ int get_num_guc_variables(void)
 /*
  * gp_guc_list_init
  *
- * Builds global lists of interesting GUCs for use with gp_guc_list_show()...
+ * Builds global lists of interesting GUCs...
  *
  * - gp_guc_list_for_explain: consists of planner GUCs, plus 'work_mem'
  * - gp_guc_list_for_no_plan: planner method enables for cdb_no_plan_for_query().
@@ -5002,41 +5002,6 @@ gp_guc_list_init(void)
             gp_guc_list_for_no_plan = lappend(gp_guc_list_for_no_plan, gconf);
 	}
 }                               /* gp_guc_list_init */
-
-
-/*
- * gp_guc_list_show
- *
- * Given a list of GUCs (a List of struct config_generic), construct a list
- * of human-readable strings of the option names and current values, skipping
- * any whose source <= 'excluding'.
- */
-List *
-gp_guc_list_show(GucSource excluding, List *guclist)
-{
-	List	   *options = NIL;
-	ListCell   *cell;
-	char	   *value;
-	char	 	buf[NAMEDATALEN];
-
-	foreach(cell, guclist)
-	{
-		struct config_generic *gconf = (struct config_generic *) lfirst(cell);
-
-		if (gconf->source > excluding)
-        {
-            value = _ShowOption(gconf, true);
-			snprintf(buf, sizeof(buf), "%s=%s", gconf->name, value);
-			options = lappend(options, pstrdup(buf));
-
-			memset(&buf, '\0', sizeof(buf));
-            pfree(value);
-        }
-	}
-
-	return options;
-}
-
 
 /*
  * Build the sorted array.  This is split out so that it could be
@@ -6306,8 +6271,8 @@ BeginReportingGUCOptions(void)
 {
 	int			i;
 
-    /* Build global lists of GUCs for use by callers of gp_guc_list_show(). */
-    gp_guc_list_init();
+	/* Build global lists of GUCs for use. */
+	gp_guc_list_init();
 
 	/*
 	 * Don't do anything unless talking to an interactive frontend of protocol
