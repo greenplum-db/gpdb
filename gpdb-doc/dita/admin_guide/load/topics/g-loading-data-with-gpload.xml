@@ -29,7 +29,7 @@
                 <li id="du168179">Create your load control file. This is a YAML-formatted file that
                     specifies the Greenplum Database connection information,
                         <cmdname>gpfdist</cmdname> configuration information, external table
-                    options, and data format. <p>See the <i>Greenplum Database Reference Guide</i>
+                    options, and data format. <p>See the &lt;Greenplum Database Reference Guide>
                         for details. </p><p>For example:</p>
                     <p>
                         <codeblock>---

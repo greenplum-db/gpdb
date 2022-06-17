@@ -121,7 +121,7 @@
             scripts. External web tables are not rescannable: the data can change while the query
             runs. </li>
       </ul>
-      <p>Dump and restore operate only on external and external web table <i>definitions</i>, not on
+      <p>Dump and restore operate only on external and external web table &lt;definitions>, not on
          the data sources.</p>
    </body>
 </topic>

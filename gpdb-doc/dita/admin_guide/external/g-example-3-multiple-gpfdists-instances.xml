@@ -4,7 +4,7 @@
 <topic id="topic47">
    <title>Example 3—Multiple gpfdists instances </title>
    <body>
-      <p>Creates a readable external table, <i>ext_expenses,</i> from all files with the <i>txt</i>
+      <p>Creates a readable external table, &lt;ext_expenses,> from all files with the &lt;txt>
          extension using the <codeph>gpfdists</codeph> protocol. The column delimiter is a pipe ( |
          ) and NULL (' ') is a space. For information about the location of security certificates,
          see <xref href="g-gpfdists-protocol.xml"/>.</p>

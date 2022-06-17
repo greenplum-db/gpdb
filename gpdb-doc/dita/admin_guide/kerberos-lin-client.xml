@@ -47,7 +47,7 @@
               remote user can connect to Greenplum Database with Kerberos authentication.
               Authorization to access Greenplum Database is controlled by the
                 <codeph>pg_hba.conf</codeph> file. For details, see "Editing the pg_hba.conf File"
-              in the <i>Greenplum Database Administration Guide</i>, and also see the <i>Greenplum
+              in the &lt;Greenplum Database Administration Guide>, and also see the <i>Greenplum
                 Database Security Configuration Guide</i>.</note></li>
           <li id="kd158429">The client system requires the Kerberos configuration file
               <codeph>krb5.conf</codeph> from the Greenplum Database master. </li>

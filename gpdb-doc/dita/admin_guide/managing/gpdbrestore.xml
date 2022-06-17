@@ -24,7 +24,7 @@
       timestamp. For
       example:<codeblock>$ gpdbrestore -t 20151013195916 --list-backup</codeblock></p>
     <p>You can restore a backup to a different database using the <codeph>--redirect
-        <i>database</i></codeph> option. The database is created if it does not exist. The following
+        &lt;database></codeph> option. The database is created if it does not exist. The following
       example restores the most recent backup of the <codeph>mydb</codeph> database to a new
       database named
       <codeph>mydb_snapshot</codeph>:<codeblock>$ gpdbrestore -s grants --redirect grants_snapshot</codeblock></p>
@@ -53,7 +53,7 @@
           example:<codeblock>$ createdb database_name</codeblock></li>
         <li id="kk167026">From the master, run the <codeph>gpdbrestore</codeph> utility. The
             <codeph>-R</codeph> option specifies the host name and path to a complete backup
-            set:<codeblock>$ gpdbrestore -R <i>archive_host</i>:/gpdb/backups/archive/20120714 -e &lt;dbname></codeblock><p>Omit
+            set:<codeblock>$ gpdbrestore -R &lt;archive_host:/gpdb/backups/archive/20120714 -e &lt;dbname></codeblock><p>Omit
             the <codeph>-e <varname>dbname</varname></codeph> option if the database has already
             been created.</p></li>
       </ol>

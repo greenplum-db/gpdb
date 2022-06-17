@@ -32,7 +32,7 @@
         </li>
         <li>After the initialization completes, check the status of standby master, mdw, run
             <codeph>gpstate</codeph> with the <codeph>-f </codeph> option to check the status:<codeblock>$ gpstate -f</codeblock>
-          <p>The status should be <i>In Synch</i>.</p>
+          <p>The status should be &lt;In Synch>.</p>
         </li>
         <li>Stop Greenplum Database master instance on the standby master. For
           example:<codeblock>$ gpstop -m</codeblock>
@@ -43,7 +43,7 @@
             activating.</p>
         </li>
         <li id="ki165618">After the utility completes, run <codeph>gpstate</codeph> to check the status:<codeblock>$ gpstate -f </codeblock>
-          <p>Verify the original primary master status is <i>Active</i>. When a standby master is
+          <p>Verify the original primary master status is &lt;Active>. When a standby master is
             not configured, the command displays <codeph>-No entries found</codeph> and the message
             indicates that a standby master instance is not configured.</p>
         </li>

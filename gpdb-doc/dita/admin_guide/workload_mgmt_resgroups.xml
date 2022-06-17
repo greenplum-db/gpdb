@@ -332,7 +332,7 @@
           reserved divided by the number of all CPU cores, multiplied by 100.</p>
         <p>When you configure <codeph>CPUSET</codeph> for a resource group, Greenplum Database
           disables <codeph>CPU_RATE_LIMIT</codeph> for the group and sets the value to -1.</p>
-        <note>You must configure <codeph>CPUSET</codeph> for a resource group <i>after</i> you have
+        <note>You must configure <codeph>CPUSET</codeph> for a resource group &lt;after> you have
           enabled resource group-based resource management for your Greenplum Database
           cluster.</note>
       </body>
@@ -445,7 +445,7 @@ rg_perseg_mem = ((RAM * (vm.overcommit_ratio / 100) + SWAP) * gp_resource_group_
             first-served basis.</p>
           <note>Greenplum Database tracks, but does not actively monitor, transaction memory usage
             in resource groups. If the memory usage for a resource group exceeds its fixed memory
-            allotment, a transaction in the resource group fails when <i>all</i> of these conditions
+            allotment, a transaction in the resource group fails when &lt;all> of these conditions
             are met:<ul>
               <li>No available resource group shared memory exists.</li>
               <li>No available global shared memory exists.</li>
@@ -795,7 +795,7 @@ gpstart
   <topic id="topic10" xml:lang="en">
     <title id="iz139857">Creating Resource Groups</title>
     <body>
-      <p><i>When you create a resource group for a role</i>, you provide a name, a CPU resource
+      <p>&lt;When you create a resource group for a role>, you provide a name, a CPU resource
         allocation mode, and a memory limit. You can optionally provide a concurrent transaction
         limit and memory shared quota and spill ratio. Use the <xref
             href="../ref_guide/sql_commands/CREATE_RESOURCE_GROUP.xml#topic1" type="topic"
@@ -808,23 +808,23 @@ gpstart
          group. If you specify a <codeph>MEMORY_LIMIT</codeph> of 0, Greenplum Database
          uses global shared memory to fulfill all memory requirements for the resource group.</p>
       <p>For example, to create a
-        resource group named <i>rgroup1</i> with a CPU limit of 20 and a memory limit of 25:</p>
+        resource group named &lt;rgroup1> with a CPU limit of 20 and a memory limit of 25:</p>
       <p>
-        <codeblock>=# CREATE RESOURCE GROUP <i>rgroup1</i> WITH (CPU_RATE_LIMIT=20, MEMORY_LIMIT=25);
+        <codeblock>=# CREATE RESOURCE GROUP &lt;rgroup1 WITH (CPU_RATE_LIMIT=20, MEMORY_LIMIT=25);
 </codeblock>
       </p>
       <p>The CPU limit of 20 is shared by every role to which <codeph>rgroup1</codeph> is assigned.
         Similarly, the memory limit of 25 is shared by every role to which <codeph>rgroup1</codeph>
         is assigned. <codeph>rgroup1</codeph> utilizes the default <codeph>MEMORY_AUDITOR</codeph>
         <codeph>vmtracker</codeph> and the default <codeph>CONCURRENCY</codeph> setting of 20.</p>
-      <p id="iz1527231"><i>When you create a resource group for an external component</i>, you must
+      <p id="iz1527231">&lt;When you create a resource group for an external component>, you must
         provide <codeph>CPU_RATE_LIMIT</codeph> or <codeph>CPUSET</codeph> and
           <codeph>MEMORY_LIMIT</codeph> limit values. You must also provide the
           <codeph>MEMORY_AUDITOR</codeph> and explicitly set <codeph>CONCURRENCY</codeph> to zero
-        (0). For example, to create a resource group named <i>rgroup_extcomp</i> for which you
+        (0). For example, to create a resource group named &lt;rgroup_extcomp> for which you
         reserve CPU core 1 and assign a memory limit of 15:</p>
       <p>
-        <codeblock>=# CREATE RESOURCE GROUP <i>rgroup_extcomp</i> WITH (MEMORY_AUDITOR=cgroup, CONCURRENCY=0,
+        <codeblock>=# CREATE RESOURCE GROUP &lt;rgroup_extcomp WITH (MEMORY_AUDITOR=cgroup, CONCURRENCY=0,
      CPUSET='1', MEMORY_LIMIT=15);
 </codeblock>
       </p>
@@ -833,9 +833,9 @@ gpstart
         change the limits of a resource group, specify the new values that you want for the group.
         For example:</p>
       <p>
-        <codeblock>=# ALTER RESOURCE GROUP <i>rg_role_light</i> SET CONCURRENCY 7;
-=# ALTER RESOURCE GROUP <i>exec</i> SET MEMORY_LIMIT 25;
-=# ALTER RESOURCE GROUP <i>rgroup1</i> SET CPUSET '2,4';
+        <codeblock>=# ALTER RESOURCE GROUP &lt;rg_role_light SET CONCURRENCY 7;
+=# ALTER RESOURCE GROUP &lt;exec SET MEMORY_LIMIT 25;
+=# ALTER RESOURCE GROUP &lt;rgroup1 SET CPUSET '2,4';
 </codeblock>
       </p>
       <note>You cannot set or alter the <codeph>CONCURRENCY</codeph> value for the
@@ -847,7 +847,7 @@ gpstart
         external component in which there are running instances kills the running instances.</p>
       <p>To drop a resource group:</p>
       <p>
-        <codeblock>=# DROP RESOURCE GROUP <i>exec</i>; </codeblock>
+        <codeblock>=# DROP RESOURCE GROUP &lt;exec; </codeblock>
       </p>
     </body>
   </topic>
@@ -886,8 +886,8 @@ gpstart
       <p>Use the <codeph>ALTER ROLE</codeph> or <codeph>CREATE ROLE</codeph> commands to assign a
         resource group to a role. For example:</p>
       <p>
-        <codeblock>=# ALTER ROLE <i>bill</i> RESOURCE GROUP <i>rg_light</i>;
-=# CREATE ROLE <i>mary</i> RESOURCE GROUP <i>exec</i>;
+        <codeblock>=# ALTER ROLE &lt;bill RESOURCE GROUP &lt;rg_light;
+=# CREATE ROLE &lt;mary RESOURCE GROUP &lt;exec;
 </codeblock>
       </p>
       <p>You can assign a resource group to one or more roles. If you have defined a role hierarchy,
@@ -899,7 +899,7 @@ gpstart
         default group, change the role's group name assignment to <codeph>NONE</codeph>. For
         example:</p>
       <p>
-        <codeblock>=# ALTER ROLE <i>mary</i> RESOURCE GROUP NONE;
+        <codeblock>=# ALTER ROLE &lt;mary RESOURCE GROUP NONE;
 </codeblock>
       </p>
     </body>

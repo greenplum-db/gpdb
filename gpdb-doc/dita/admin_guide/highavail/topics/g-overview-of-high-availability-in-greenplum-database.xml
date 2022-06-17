@@ -102,7 +102,7 @@
             Database Postgres instance. The data for each table is spread between the segments based
             on the distribution policy that is defined for the table in the DDL at the time the
             table is created. When segment mirroring is enabled, for each segment there is a
-               <i>primary</i> and <i>mirror</i> pair. The primary and mirror perform the same IO
+               &lt;primary> and &lt;mirror> pair. The primary and mirror perform the same IO
             operations and store copies of the same data. </p>
          <p>The mirror instance for each segment is usually initialized with the
                <codeph>gpinitsystem</codeph> utility or the <codeph>gpexpand</codeph> utility. The
@@ -114,8 +114,8 @@
       </section>
       <section id="master_mirroring">
          <title>Master Mirroring</title>
-         <p>There are two masters in a highly available cluster, a <i>primary</i> and a
-               <i>standby</i>. As with segments, the master and standby should be deployed on
+         <p>There are two masters in a highly available cluster, a &lt;primary> and a
+               &lt;standby>. As with segments, the master and standby should be deployed on
             different hosts so that the cluster can tolerate a single host failure. Clients connect
             to the primary master and queries can be executed only on the primary master. The
             secondary master is kept up-to-date by replicating the write-ahead log (WAL) from the
@@ -185,10 +185,10 @@
       </section>
       <section>
          <title>Incremental Backups</title>
-         <p>Greenplum Database allows <i>incremental backup</i> at the partition level for
+         <p>Greenplum Database allows &lt;incremental backup> at the partition level for
             append-optimized and column-oriented tables. When you perform an incremental backup,
             only the partitions for append-optimized and column-oriented tables that have changed
-            since the previous backup are backed up. (Heap tables are <i>always</i> backed up.)
+            since the previous backup are backed up. (Heap tables are &lt;always> backed up.)
             Restoring an incremental backup requires restoring the previous full backup and
             subsequent incremental backups. </p>
          <p>Incremental backup is beneficial only when the database contains large, partitioned

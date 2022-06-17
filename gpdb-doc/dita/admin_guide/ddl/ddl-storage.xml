@@ -262,7 +262,7 @@
               <entry colname="col2">Set of (dbid, tuplecount) rows</entry>
               <entry colname="col3">Shows the distribution of an append-optimized table's rows
                 across the array. Returns a set of rows, each of which includes a segment
-                  <i>dbid</i> and the number of tuples stored on the segment.</entry>
+                  &lt;dbid> and the number of tuples stored on the segment.</entry>
             </row>
             <row>
               <entry colname="col1"
@@ -280,7 +280,7 @@
         slightly larger than three times the size of the compressed table.</p>
       <p>The distribution of the table is returned as a set of rows that indicate how many tuples
         are stored on each segment. For example, in a system with four primary segments with
-          <i>dbid</i> values ranging from 0 - 3, the function returns four rows similar to the
+          &lt;dbid> values ranging from 0 - 3, the function returns four rows similar to the
         following:</p>
       <p>
         <codeblock>=# SELECT get_ao_distribution('lineitem_comp');
@@ -414,7 +414,7 @@
         column or designate it as the default for all columns, as shown in the following
           <codeph>CREATE TABLE</codeph> clauses.</p>
       <p>
-        <i>General Usage:</i>
+        &lt;General Usage:>
       </p>
       <codeblock>column_name   data_type ENCODING ( storage_directive [, … ] ), …  
 </codeblock>
@@ -423,7 +423,7 @@
       <codeblock>DEFAULT COLUMN ENCODING ( storage_directive [, … ] )
 </codeblock>
       <p>
-        <i>Example:</i>
+        &lt;Example:>
       </p>
       <codeblock>C1 char ENCODING (compresstype=quicklz, blocksize=65536) 
 </codeblock>

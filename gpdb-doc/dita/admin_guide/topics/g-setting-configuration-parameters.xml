@@ -8,7 +8,7 @@
       For example, to change certain parameters, you must be a Greenplum Database superuser. Other
       parameters can be set only at the system level in the <filepath>postgresql.conf</filepath>
       file or require a system restart to take effect. </p>
-      <p>Many configuration parameters are <i>session</i> parameters. You can set session parameters
+      <p>Many configuration parameters are &lt;session> parameters. You can set session parameters
       at the system level, the database level, the role level or the session level. Database users
       can change most session parameters within their session, but some require superuser
       permissions. </p>

@@ -14,8 +14,8 @@
       <ol>
         <li id="ki155584">On the master, run the <codeph>gpstate</codeph> utility with the
             <codeph>-e</codeph> option to show segments with error conditions:<codeblock>$ gpstate -e</codeblock>
-          <p>Segments in <i>Change Tracking</i> mode indicate the corresponding mirror segment is
-            down. When a segment is not in its <i>preferred role</i>, the segment does not operate
+          <p>Segments in &lt;Change Tracking> mode indicate the corresponding mirror segment is
+            down. When a segment is not in its &lt;preferred role>, the segment does not operate
             in the role to which it was assigned at system initialization. This means the system is
             in a potentially unbalanced state, as some segment hosts may have more active segments
             than is optimal for top system performance.</p>
@@ -23,7 +23,7 @@
             /> for instructions to fix this situation.</p>
         </li>
         <li id="ki165350">To get detailed information about a failed segment, check the
-            <i>gp_segment_configuration</i> catalog table. For
+            &lt;gp_segment_configuration> catalog table. For
           example:<codeblock>$ psql -c "SELECT * FROM gp_segment_configuration WHERE status='d';"</codeblock>
         </li>
         <li id="ki162539">For failed segment instances, note the host, port, preferred role, and

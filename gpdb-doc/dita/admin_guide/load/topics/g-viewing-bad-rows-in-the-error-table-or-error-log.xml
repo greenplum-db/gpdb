@@ -72,7 +72,7 @@
                   <entry colname="col2">bytea</entry>
                   <entry colname="col3">In cases where there is a database encoding error (the
                      client encoding used cannot be converted to a server-side encoding), it is not
-                     possible to log the encoding error as <i>rawdata</i>. Instead the raw bytes are
+                     possible to log the encoding error as &lt;rawdata>. Instead the raw bytes are
                      stored and you will see the octal code for any non seven bit ASCII
                      characters.</entry>
                </row>
@@ -82,7 +82,7 @@
       <p>You can use the Greenplum Database built-in SQL function
             <codeph>gp_read_error_log()</codeph> to display formatting errors that are logged
          internally. For example, this command displays the error log information for the table
-            <i>ext_expenses</i>:</p>
+            &lt;ext_expenses>:</p>
       <codeblock>SELECT gp_read_error_log('ext_expenses');</codeblock>
       <p>For information about managing formatting errors that are logged internally, see the
          command <codeph>COPY</codeph> or <codeph>CREATE EXTERNAL TABLE</codeph> in the

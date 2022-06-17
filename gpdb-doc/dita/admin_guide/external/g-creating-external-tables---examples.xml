@@ -10,7 +10,7 @@
             brackets.</note>
         <p>Start <cmdname>gpfdist</cmdname> before you create external tables with the
                 <cmdname>gpfdist</cmdname> protocol. The following code starts the
-                <cmdname>gpfdist</cmdname> file server program in the background on port <i>8081</i>
+                <cmdname>gpfdist</cmdname> file server program in the background on port &lt;8081>
             serving files from directory <filepath>/var/data/staging</filepath>. The logs are saved
             in <filepath>/home/gpadmin/log</filepath>.</p>
         <p>

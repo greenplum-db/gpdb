@@ -4,7 +4,7 @@
 <topic id="topic50">
    <title>Example 6—Multiple files in CSV format with header rows</title>
    <body>
-      <p>Creates a readable external table, <i>ext_expenses,</i> using the <codeph>file</codeph>
+      <p>Creates a readable external table, &lt;ext_expenses,> using the <codeph>file</codeph>
          protocol. The files are <codeph>CSV</codeph> format and have a header row. </p>
       <p>
          <codeblock>=# CREATE EXTERNAL TABLE ext_expenses ( name text, 

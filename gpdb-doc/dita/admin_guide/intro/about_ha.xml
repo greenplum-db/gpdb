@@ -25,7 +25,7 @@
         mirroring are enabled.</p></note>
     <section id="segment_mirroring" xml:lang="en">
       <title id="iw157552">About Segment Mirroring</title>
-      <p>When you deploy your Greenplum Database system, you can configure <i>mirror</i> segments.
+      <p>When you deploy your Greenplum Database system, you can configure &lt;mirror> segments.
         Mirror segments allow database queries to fail over to a backup segment if the primary
         segment becomes unavailable. Mirroring is strongly recommended for production systems<ph
           otherprops="pivotal"> and required for Pivotal support</ph>. </p>
@@ -36,9 +36,9 @@
         designed to maximize availability, or minimize the performance degradation when hosts or
         multiple primary segments fail. </p>
       <p>Two standard mirroring configurations are available when you initialize or expand a
-        Greenplum system. The default configuration, called <i>group mirroring</i>, places all the
+        Greenplum system. The default configuration, called &lt;group mirroring>, places all the
         mirrors for a host's primary segments on one other host in the cluster. The other standard
-        configuration, <i>spread mirroring</i>, can be selected with a command-line option. Spread
+        configuration, &lt;spread mirroring>, can be selected with a command-line option. Spread
         mirroring spreads each host's mirrors over the remaining hosts and requires that there are
         more hosts in the cluster than primary segments per host. </p>
       <p>
@@ -69,8 +69,8 @@
     </section>
     <section id="master_mirroring" xml:lang="en">
       <title id="iw157589">About Master Mirroring</title>
-      <p>You can also optionally deploy a <i>backup</i> or <i>mirror</i> of the master instance on a
-        separate host from the master node. A backup master host serves as a <i>warm standby</i> in
+      <p>You can also optionally deploy a &lt;backup> or &lt;mirror> of the master instance on a
+        separate host from the master node. A backup master host serves as a &lt;warm standby> in
         the event that the primary master host becomes unoperational. The standby master is kept up
         to date by a transaction log replication process, which runs on the standby master host and
         synchronizes the data between the primary and standby master hosts.</p>
@@ -93,7 +93,7 @@
     </section>
     <section id="interconnect_redundancy" xml:lang="en">
       <title id="iw157609">About Interconnect Redundancy</title>
-      <p>The <i>interconnect</i> refers to the inter-process communication between the segments and
+      <p>The &lt;interconnect> refers to the inter-process communication between the segments and
         the network infrastructure on which this communication relies. You can achieve a highly
         available interconnect using by deploying dual Gigabit Ethernet switches on your network
         and redundant Gigabit connections to the Greenplum Database host (master and segment)

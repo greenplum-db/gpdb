@@ -43,9 +43,9 @@
             <codeph>gptransfer</codeph>, you must upgrade one of the clusters to use
             <codeph>gptransfer</codeph>. </li>
         <li>Run the <codeph>gptransfer</codeph> utility either from the source or the destination cluster.</li>
-        <li>If you are transferring data between two different clusters, the number of <i>segment instances</i> in the destination cluster
+        <li>If you are transferring data between two different clusters, the number of &lt;segment instances> in the destination cluster
          must be greater than or equal
-          to the number of segment <i>hosts</i> in the source cluster. The number of segment hosts in the
+          to the number of segment &lt;hosts> in the source cluster. The number of segment hosts in the
           destination cluster may be smaller than the number of segment hosts in the source, but the data will
           transfer at a slower rate.</li>
         <li>The segment hosts in both clusters must have network connectivity with each other.</li>
@@ -89,7 +89,7 @@
         transfer rate. When the destination cluster has the same or a greater number of segments
         than the source cluster, <codeph>gptransfer</codeph> sets up one named pipe and one
           <codeph>gpfdist</codeph> process for each source segment. This is the configuration for
-        optimal data transfer rates and is called <i>fast mode</i>. The following figure illustrates
+        optimal data transfer rates and is called &lt;fast mode>. The following figure illustrates
         a setup on a segment host when the destination cluster has at least as many segments as the
         source cluster. </p>
       <image id="image_ffp_qgg_cp" href="../graphics/gptransfer-fast.png"/>
@@ -98,7 +98,7 @@
         this alternative setup automatically. The difference in configuration means that
         transferring data into a destination cluster with fewer segments than the source cluster is
         not as fast as transferring into a destination cluster of the same or greater size. It is
-        called <i>slow mode</i> because there are fewer <codeph>gpfdist</codeph> processes serving
+        called &lt;slow mode> because there are fewer <codeph>gpfdist</codeph> processes serving
         the data to the destination cluster, although the transfer is still quite fast with one
           <codeph>gpfdist</codeph> per segment host.</p>
       <p>When the destination cluster is smaller than the source cluster, there is one named pipe
@@ -143,7 +143,7 @@
       <p>The host map file is a text file that lists the segment hosts in the source cluster. It is
         used to enable communication between the hosts in Greenplum clusters. The file is specified
         on the <codeph>gptransfer</codeph> command line with the
-            <codeph>--source-map-file=<i>host_map_file</i></codeph> command option. It is a required
+            <codeph>--source-map-file=&lt;host_map_file></codeph> command option. It is a required
         option when using <codeph>gptransfer</codeph> to copy data between two separate Greenplum
         clusters.</p>
       <p>The file contains a list in the following
@@ -188,13 +188,13 @@ host2_name,host2_ipaddr
           <codeph>-t</codeph> command-line option (one option per table) or by using the
           <codeph>-f</codeph> command-line option to specify a file containing a list of tables to
         transfer. Tables are specified in the fully-qualified format
-            <codeph><i>database</i>.<i>schema</i>.<i>table</i></codeph>. The table definition,
+            <codeph>&lt;database>.&lt;schema>.&lt;table></codeph>. The table definition,
         indexes, and table data are copied. The database must already exist on the destination
         cluster.</p>
       <p>By default, <codeph>gptransfer</codeph> fails if you attempt to transfer a table that
         already exists in the destination database:</p>
       <codeblock>[INFO]:-Validating transfer table set...
-[CRITICAL]:- gptransfer failed. (Reason='Table <i>database.schema.table</i> exists in database <i>database</i> .') exiting...</codeblock>
+[CRITICAL]:- gptransfer failed. (Reason='Table &lt;database.schema.table exists in database &lt;database .') exiting...</codeblock>
       <p>Override this behavior with the <codeph>--skip-existing</codeph>,
           <codeph>--truncate</codeph>, or <codeph>--drop</codeph> options.</p>
       <p>The following table shows the objects that are copied in full mode and table mode.</p>
@@ -274,8 +274,8 @@ host2_name,host2_ipaddr
     <section id="validation">
       <title>Validation</title>
       <p>By default, <codeph>gptransfer</codeph> does not validate the data transferred. You can
-        request validation using the <codeph>--validate=<i>type</i></codeph> option. The validation
-          <i>type</i> can be one of the following:<ul id="ul_lqh_wnh_dp">
+        request validation using the <codeph>--validate=&lt;type></codeph> option. The validation
+          &lt;type> can be one of the following:<ul id="ul_lqh_wnh_dp">
           <li><codeph>count</codeph> &#8211; Compares the row counts for the tables in the source
             and destination databases. </li>
           <li><codeph>md5</codeph> &#8211; Sorts tables on both source and destination, and then

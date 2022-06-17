@@ -17,7 +17,7 @@
       images that are stored on a Data Domain system for disaster recover purposes. The
         <codeph>gpmfr</codeph> utility manages the Greenplum Database backup sets that are on the
       primary and a remote Data Domain system. For information about <codeph>gpmfr</codeph>, see the
-        <i>Greenplum Database Utility Guide</i>.</p>
+        &lt;Greenplum Database Utility Guide>.</p>
     <p>Managed file replication requires network configuration when a replication network is being
       used between two Data Domain systems:</p>
     <ul>
@@ -337,13 +337,13 @@
         <li id="kk167029">Ensure the <xref href="backup-ddboost.xml#topic19"/> is complete.</li>
         <li id="kk167030">Add the option <codeph>--ddboost</codeph> to the
             <codeph>gpdbrestore</codeph>
-            command:<codeblock>$ gpdbrestore -t <i>backup_timestamp</i> -v -ddboost</codeblock><p>If
+            command:<codeblock>$ gpdbrestore -t &lt;backup_timestamp -v -ddboost</codeblock><p>If
             needed, specify the Data Domain system storage unit with the
               <codeph>--ddboost-storage-unit</codeph> option.</p></li>
       </ol>
       <note type="note">Some of the <codeph>gpdbrestore</codeph> options available have different
         implications when using Data Domain. For details, see <codeph>gpdbrestore</codeph> in the
-          <i>Greenplum Database Utility Reference</i>.</note>
+          &lt;Greenplum Database Utility Reference>.</note>
     </body>
   </topic>
 </topic>

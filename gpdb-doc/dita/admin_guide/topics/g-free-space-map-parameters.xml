@@ -4,7 +4,7 @@
 <topic id="topic17">
    <title>Free Space Map Parameters</title>
    <body>
-      <p>These parameters control the sizing of the <i>free space map, which contains </i>expired
+      <p>These parameters control the sizing of the &lt;free space map, which contains >expired
          rows. Use <codeph>VACUUM</codeph> to reclaim the free space map disk space. </p>
       <p>See <xref href="../managing/maintain.xml#topic7"/> for information about
          vacuuming a database.</p>

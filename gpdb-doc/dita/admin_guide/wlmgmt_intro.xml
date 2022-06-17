@@ -29,19 +29,19 @@
             <title>Greenplum Database Segment Host Memory</title>
             <image href="graphics/memory.png" id="image_iqn_dsl_zp"/>
           </fig></p>
-        <p>Beginning at the bottom of the illustration, the line labeled <i>A</i> represents the
-          total host memory. The line directly above line <i>A</i> shows that the total host memory
+        <p>Beginning at the bottom of the illustration, the line labeled &lt;A> represents the
+          total host memory. The line directly above line &lt;A> shows that the total host memory
           comprises both physical RAM and swap space. </p>
-        <p>The line labelled <i>B</i> shows that the total memory available must be shared by
+        <p>The line labelled &lt;B> shows that the total memory available must be shared by
           Greenplum Database and all other processes on the host. Non-Greenplum Database processes
           include the operating system and any other applications, for example system monitoring
           agents. Some applications may use a significant portion of memory and, as a result, you
           may have to adjust the number of segments per Greenplum Database host or the amount of
           memory per segment.</p>
-        <p>The segments (<i>C</i>) each get an equal share of the Greenplum Database Memory
-            (<i>B</i>). </p>
-        <p>Within a segment, the currently active resource management scheme, <i>Resource Queues</i>
-        or <i>Resource Groups</i>, governs how memory is allocated to execute a SQL statement. These
+        <p>The segments (&lt;C>) each get an equal share of the Greenplum Database Memory
+            (&lt;B>). </p>
+        <p>Within a segment, the currently active resource management scheme, &lt;Resource Queues>
+        or &lt;Resource Groups>, governs how memory is allocated to execute a SQL statement. These
         constructs allow you to translate business requirements into execution policies in your
         Greenplum Database system and to guard against queries that could degrade performance. For
         an overview of resource groups and resource queues, refer to <xref href="wlmgmt.xml#topic1"

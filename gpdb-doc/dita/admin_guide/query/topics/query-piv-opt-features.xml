@@ -69,8 +69,8 @@
         <li>Range selection. Partition elimination is
           performed.<codeblock>SELECT * FROM sales WHERE yr_qtr BETWEEN 201601 AND 201704 ;</codeblock></li>
         <li>Joins involving partitioned tables. In this example, the partitioned dimension table
-            <i>date_dim</i> is joined with fact table
-          <i>catalog_sales</i>:<codeblock>SELECT * FROM catalog_sales
+            &lt;date_dim> is joined with fact table
+          &lt;catalog_sales>:<codeblock>SELECT * FROM catalog_sales
    WHERE date_id IN (SELECT id FROM date_dim WHERE month=12);</codeblock></li>
       </ul>
     </body>

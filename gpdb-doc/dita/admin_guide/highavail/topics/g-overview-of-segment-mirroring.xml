@@ -5,7 +5,7 @@
     <title>Overview of Segment Mirroring</title>
     <body>
         <p>When Greenplum Database High Availability is enabled, there are two types of segments:
-                <i>primary</i> and <i>mirror</i>. Each primary segment has one corresponding mirror
+                &lt;primary> and &lt;mirror>. Each primary segment has one corresponding mirror
             segment. A primary segment receives requests from the master to make changes to the
             segment's database and then replicates those changes to the corresponding mirror. If 
             Greenplum Database detects that a primary segment has failed or become
@@ -16,8 +16,8 @@
             then exchange the primary and mirror segments so they are in their preferred roles.</p>
         <p>Segment mirroring employs a physical file replication scheme—data file I/O at the primary
             is replicated to the secondary so that the mirror's files are identical to the primary's
-            files. Data in Greenplum Database are represented with <i>tuples</i>, which are packed
-            into <i>blocks</i>. Database tables are stored in disk files consisting of one or more
+            files. Data in Greenplum Database are represented with &lt;tuples>, which are packed
+            into &lt;blocks>. Database tables are stored in disk files consisting of one or more
             blocks. A change to a tuple changes the block it is saved in, which is then written to
             disk on the primary and copied over the network to the mirror. The mirror updates the
             corresponding block in its copy of the file.</p>
@@ -39,19 +39,19 @@
             from the secondary. </p>
         <p>If a primary segment fails, the file replication process stops and the mirror segment
             automatically starts as the active segment instance. The now active mirror's system
-            state becomes <i>Change Tracking</i>, which means the mirror maintains a system table
+            state becomes &lt;Change Tracking>, which means the mirror maintains a system table
             and change-log of all blocks updated while the primary segment is unavailable. When the
             failed primary segment is repaired and ready to be brought back online, an administrator
-            initiates a recovery process and the system goes into <i>Resynchronization</i> state.
+            initiates a recovery process and the system goes into &lt;Resynchronization> state.
             The recovery process applies the logged changes to the repaired primary segment. The
-            system state changes to <i>Synchronized</i> when the recovery process completes.</p>
+            system state changes to &lt;Synchronized> when the recovery process completes.</p>
         <p>If the mirror segment fails or becomes inaccessible while the primary is active, the
-            primary's system state changes to <i>Change Tracking</i>, and it tracks changes to be
+            primary's system state changes to &lt;Change Tracking>, and it tracks changes to be
             applied to the mirror when it is recovered.</p>
         <p>Mirror segments can be placed on hosts in the cluster in different configurations, as
             long as the primary and mirror instance for a segment are on different hosts. Each host
             must have the same number of primary and mirror segments. The default mirroring
-            configuration is <i>group mirroring</i>, where the mirror segments for each host's
+            configuration is &lt;group mirroring>, where the mirror segments for each host's
             primary segments are placed on one other host. If a single host fails, the number of
             active primary segments doubles on the host that backs the failed host. <xref
                 href="#topic3/fig_rrr_nt2_xt" format="dita"/> illustrates a group mirroring
@@ -61,7 +61,7 @@
             <title>Group Segment Mirroring in Greenplum Database</title>
             <image href="../../graphics/group-mirroring.png" id="image_crm_pt2_xt"/>
         </fig>
-        <p><i>Spread mirroring</i> spreads each host's mirrors over multiple hosts so that if any
+        <p>&lt;Spread mirroring> spreads each host's mirrors over multiple hosts so that if any
             single host fails, no other host will have more than one mirror promoted to the active
             primary segment. Spread mirroring is possible only if there are more hosts than segments
             per host. <xref href="#topic3/fig_ew1_qgg_xt" format="dita"/> illustrates the placement

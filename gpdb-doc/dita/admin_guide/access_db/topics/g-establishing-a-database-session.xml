@@ -5,8 +5,8 @@
    <title>Establishing a Database Session</title>
    <body>
       <p>Users can connect to Greenplum Database using a PostgreSQL-compatible client
-         program, such as <codeph>psql</codeph>. Users and administrators <i>always</i> connect to
-            Greenplum Database through the <i>master</i>; the segments cannot accept
+         program, such as <codeph>psql</codeph>. Users and administrators &lt;always> connect to
+            Greenplum Database through the &lt;master>; the segments cannot accept
          client connections.</p>
       <p>In order to establish a connection to the Greenplum Database master, you will
          need to know the following connection information and configure your client program
@@ -29,7 +29,7 @@
                   <entry colname="col1">Application name</entry>
                   <entry colname="col2">The application name that is connecting to the database. The
                      default value, held in the <codeph>application_name</codeph> connection
-                     parameter is <i>psql</i>.</entry>
+                     parameter is &lt;psql>.</entry>
                   <entry colname="col3">
                      <codeph>$PGAPPNAME</codeph>
                   </entry>

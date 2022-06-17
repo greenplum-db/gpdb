@@ -108,7 +108,7 @@
           hardware and operating system (OS) will help you identify and troubleshoot
           hardware-related problems before you explore database-level or query-level tuning
           initiatives. </p>
-        <p>See the <i>Greenplum Database Reference Guide</i> for information about
+        <p>See the &lt;Greenplum Database Reference Guide> for information about
           running the <codeph>gpcheckperf</codeph> utility to validate hardware and network
           performance.</p>
       </body>

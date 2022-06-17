@@ -12,7 +12,7 @@
          <li id="kh160741">Find the parameter to set, uncomment it (remove the preceding
                <codeph>#</codeph> character), and type the desired value.</li>
          <li id="kh160753">Save and close the file.</li>
-         <li id="kh160780">For <i>session</i> parameters that do not require a server restart,
+         <li id="kh160780">For &lt;session> parameters that do not require a server restart,
             upload the <codeph>postgresql.conf</codeph> changes as follows:<p>
                <codeblock>$ gpstop -u</codeblock>
             </p>

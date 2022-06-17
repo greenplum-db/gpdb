@@ -5,8 +5,8 @@
    <title>Runtime Statistics Collection Parameters</title>
    <body>
       <p>These parameters control the server statistics collection feature. When statistics
-          collection is enabled, you can access the statistics data using the <i>pg_stat</i> and
-            <i>pg_statio</i> family of system catalog views.</p>
+          collection is enabled, you can access the statistics data using the &lt;pg_stat> and
+            &lt;pg_statio> family of system catalog views.</p>
       <simpletable id="kh171301">
          <strow>
             <stentry>

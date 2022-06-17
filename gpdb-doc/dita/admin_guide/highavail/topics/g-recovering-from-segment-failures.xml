@@ -11,7 +11,7 @@
       <title>To recover with mirroring enabled</title>
       <ol>
         <li id="ki155643">Ensure you can connect to the segment host from the master host. For
-          example:<codeblock>$ ping <i>failed_seg_host_address</i></codeblock>
+          example:<codeblock>$ ping &lt;failed_seg_host_address</codeblock>
         </li>
         <li id="ki155645">Troubleshoot the problem that prevents the master host from connecting to
           the segment host. For example, the host machine may need to be restarted or replaced.</li>
@@ -23,10 +23,10 @@
           changed files that need to be synchronized. The process can take some time; wait for the
           process to complete. During this process, database write activity is suspended. </li>
         <li id="ki164382">After <codeph>gprecoverseg</codeph> completes, the system goes into
-            <i>Resynchronizing</i> mode and begins copying the changed files. This process runs in
+            &lt;Resynchronizing> mode and begins copying the changed files. This process runs in
           the background while the system is online and accepting database requests.</li>
         <li id="ki158504">When the resynchronization process completes, the system state is
-            <i>Synchronized</i>. Run the <codeph>gpstate</codeph> utility to verify the status of
+            &lt;Synchronized>. Run the <codeph>gpstate</codeph> utility to verify the status of
           the resynchronization process:<codeblock>$ gpstate -m</codeblock>
         </li>
       </ol>
@@ -46,9 +46,9 @@
         rolled back. </p>
       <ol>
         <li id="ki165540">Run <codeph>gpstate -m</codeph> to ensure all mirrors are
-            <i>Synchronized</i>. <codeblock>$ gpstate -m</codeblock>
+            &lt;Synchronized>. <codeblock>$ gpstate -m</codeblock>
         </li>
-        <li id="ki165577">If any mirrors are in <i>Resynchronizing</i> mode, wait for them to
+        <li id="ki165577">If any mirrors are in &lt;Resynchronizing> mode, wait for them to
           complete.</li>
         <li id="ki165591">Run gprecoverseg with the -r option to return the segments to their
           preferred roles.<codeblock>$ gprecoverseg -r</codeblock>
@@ -85,7 +85,7 @@
       <title><ph>To recover without mirroring enabled</ph></title>
       <ol id="ol_lb2_rkq_kr">
         <li id="ki155667">Ensure you can connect to the segment host from the master host. For
-          example:<codeblock>$ ping <i>failed_seg_host_address</i></codeblock>
+          example:<codeblock>$ ping &lt;failed_seg_host_address</codeblock>
         </li>
         <li id="ki155669">Troubleshoot the problem that is preventing the master host from
           connecting to the segment host. For example, the host machine may need to be

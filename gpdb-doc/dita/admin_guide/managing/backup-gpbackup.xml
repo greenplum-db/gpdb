@@ -336,7 +336,7 @@ Restore Status: Success</codeblock></section>
 $ gpbackup --dbname demo --exclude-schema twitter</codeblock></p>
       <p>You can include multiple <codeph>--include-schema</codeph> options in a
           <codeph>gpbackup</codeph>
-        <i>or</i> multiple <codeph>--exclude-schema</codeph> options. For
+        &lt;or> multiple <codeph>--exclude-schema</codeph> options. For
         example:<codeblock>$ gpbackup --dbname demo --include-schema wikipedia --include-schema twitter</codeblock></p>
       <p>To filter the individual tables that are included in a backup set, or excluded from a
         backup set, specify individual tables with the <codeph>--include-table</codeph> option or
@@ -633,8 +633,8 @@ public.sales_1_prt_dec17 </codeblock></p><p>Then
                     <li>DDL for objects that are global to the Greenplum Database cluster, and not
                       owned by a specific database within the cluster.</li>
                     <li>DDL for objects in the backed-up database (specified with
-                        <codeph>--dbname)</codeph> that must be created <i>before</i> to restoring
-                      the actual data, and DDL for objects that must be created <i>after</i>
+                        <codeph>--dbname)</codeph> that must be created &lt;before> to restoring
+                      the actual data, and DDL for objects that must be created &lt;after>
                       restoring the data.</li>
                   </ul>Global objects include:<ul id="ul_f1b_dhj_tbb">
                     <li>Tablespaces</li>
@@ -647,7 +647,7 @@ public.sales_1_prt_dec17 </codeblock></p><p>Then
                   </ul><p><b>Note:</b> Global metadata is not restored by default. You must include
                     the <codeph>--with-globals</codeph> option to the <codeph>gprestore</codeph>
                     command to restore global metadata.</p>Database-specific objects that must be
-                  created <i>before</i> to restoring the actual data include:<ul id="ul_vqn_vsv_scb">
+                  created &lt;before> to restoring the actual data include:<ul id="ul_vqn_vsv_scb">
                     <li>Session-level configuration parameter settings (GUCs)</li>
                     <li>Schemas</li>
                     <li>Procedural language extensions</li>
@@ -662,7 +662,7 @@ public.sales_1_prt_dec17 </codeblock></p><p>Then
                     <li>Casts</li>
                     <li>Views</li>
                     <li>Constraints</li>
-                  </ul>Database-specific objects that must be created <i>after</i> restoring the
+                  </ul>Database-specific objects that must be created &lt;after> restoring the
                   actual data include:<ul id="ul_br4_wsv_scb">
                     <li dir="ltr">Indexes</li>
                     <li dir="ltr">Rules</li>

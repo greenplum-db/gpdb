@@ -84,33 +84,33 @@
                 than 1024 are considered unique. </pd>
             </plentry>
             <plentry>
-              <pt>stakind<i>N</i></pt>
-              <pd>A code number indicating the kind of statistics stored in the <i>N</i>th slot of
+              <pt>stakind&lt;N></pt>
+              <pd>A code number indicating the kind of statistics stored in the &lt;N>th slot of
                 the <codeph>pg_statistic</codeph> row. </pd>
             </plentry>
             <plentry>
-              <pt>staop<i>N</i></pt>
-              <pd>An operator used to derive the statistics stored in the <i>N</i>th slot. For
+              <pt>staop&lt;N></pt>
+              <pd>An operator used to derive the statistics stored in the &lt;N>th slot. For
                 example, a histogram slot would show the &lt; operator that defines the sort order
                 of the data. </pd>
             </plentry>
             <plentry>
-              <pt>stanumbers<i>N</i></pt>
+              <pt>stanumbers&lt;N></pt>
               <pd>float4 array containing numerical statistics of the appropriate kind for the
-                  <i>N</i>th slot, or <codeph>NULL</codeph> if the slot kind does not involve
+                  &lt;N>th slot, or <codeph>NULL</codeph> if the slot kind does not involve
                 numerical values.</pd>
             </plentry>
             <plentry>
-              <pt>stavalues<i>N</i></pt>
-              <pd>Column data values of the appropriate kind for the <i>N</i>th slot, or
+              <pt>stavalues&lt;N></pt>
+              <pd>Column data values of the appropriate kind for the &lt;N>th slot, or
                   <codeph>NULL</codeph> if the slot kind does not store any data values. Each
                 array's element values are actually of the specific column's data type, so there is
-                no way to define these columns' types more specifically than <i>anyarray</i>.</pd>
+                no way to define these columns' types more specifically than &lt;anyarray>.</pd>
             </plentry>
           </parml></p>
         <p>The statistics collected for a column vary for different data types, so the
             <codeph>pg_statistic</codeph> table stores statistics that are appropriate for the data
-          type in four <i>slots</i>, consisting of four columns per slot. For example, the first
+          type in four &lt;slots>, consisting of four columns per slot. For example, the first
           slot, which normally contains the most common values for a column, consists of the columns
             <codeph>stakind1</codeph>, <codeph>staop1</codeph>, <codeph>stanumbers1</codeph>, and
             <codeph>stavalues1</codeph>.</p>
@@ -133,7 +133,7 @@
               <tbody>
                 <row>
                   <entry>1</entry>
-                  <entry><i>Most CommonValues (MCV) Slot</i>
+                  <entry>&lt;Most CommonValues (MCV) Slot>
                     <ul id="ul_ipg_gyc_nt">
                       <li><codeph>staop</codeph> contains the object ID of the "=" operator, used to
                         decide whether values are the same or not.</li>
@@ -148,7 +148,7 @@
                 </row>
                 <row>
                   <entry>2</entry>
-                  <entry><i>Histogram Slot</i> – describes the distribution of scalar data.<ul
+                  <entry>&lt;Histogram Slot> – describes the distribution of scalar data.<ul
                       id="ul_t2f_zyc_nt">
                       <li><codeph>staop</codeph> is the object ID of the "&lt;" operator, which
                         describes the sort ordering. </li>
@@ -161,7 +161,7 @@
                           <codeph>NULL</codeph>. </li>
                     </ul><p>If a Most Common Values slot is also provided, then the histogram
                       describes the data distribution after removing the values listed in the MCV
-                      array. (It is a <i>compressed histogram</i> in the technical parlance). This
+                      array. (It is a &lt;compressed histogram> in the technical parlance). This
                       allows a more accurate representation of the distribution of a column with
                       some very common values. In a column with only a few distinct values, it is
                       possible that the MCV list describes the entire data population; in this case
@@ -169,7 +169,7 @@
                 </row>
                 <row>
                   <entry>3</entry>
-                  <entry><i>Correlation Slot</i> – describes the correlation between the physical
+                  <entry>&lt;Correlation Slot> – describes the correlation between the physical
                     order of table tuples and the ordering of data values of this column. <ul
                       id="ul_yvj_sfd_nt">
                       <li><codeph>staop</codeph> is the object ID of the "&lt;" operator. As with
@@ -183,7 +183,7 @@
                 </row>
                 <row>
                   <entry>99</entry>
-                  <entry><i>Hyperloglog Slot</i> - for child leaf partitions of a partitioned table,
+                  <entry>&lt;Hyperloglog Slot> - for child leaf partitions of a partitioned table,
                     stores the <codeph>hyperloglog_counter</codeph> created for the sampled data.
                     The <codeph>hyperloglog_counter</codeph> data structure is converted into a
                       <codeph>bytea</codeph> and stored in a <codeph>stavalues4</codeph> slot of the
@@ -288,9 +288,9 @@
             <codeph>HAVING</codeph> clauses. </p>
         <p>Analyzing a severely bloated table can generate poor statistics if the sample contains
           empty pages, so it is good practice to vacuum a bloated table before analyzing it. </p>
-        <p>See the <i>SQL Command Reference</i> in the <i>Greenplum Database Reference Guide</i> for
+        <p>See the &lt;SQL Command Reference> in the &lt;Greenplum Database Reference Guide> for
           details of running the <codeph>ANALYZE</codeph> command.</p>
-        <p>Refer to the <i>Greenplum Database Management Utility Reference</i> for details of
+        <p>Refer to the &lt;Greenplum Database Management Utility Reference> for details of
           running the <codeph>analyzedb</codeph> command.</p>
       </section>
       <section id="section_cv2_crv_mt"><title>Analyzing Partitioned Tables</title><p>When the

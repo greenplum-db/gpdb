@@ -132,11 +132,11 @@
       <p>When backing up a database, Greenplum Database locks the following tables:</p>
       <ol id="ol_vtk_x2n_1p">
         <li>When a backup starts, an <codeph>EXCLUSIVE</codeph> lock is acquired on the catalog
-          table <i>pg_class</i> that contains database relation information. The
+          table &lt;pg_class> that contains database relation information. The
             <codeph>EXCLUSIVE</codeph> lock permits only concurrent read operations. Relations such
           as tables, indexes, and views cannot be created or dropped in the database.<p>While
-              <i>pg_class</i> is locked, schema information is collected on database tables that
-            will be backed up.</p><p>The <codeph>EXCLUSIVE</codeph> lock on <i>pg_class</i> is
+              &lt;pg_class> is locked, schema information is collected on database tables that
+            will be backed up.</p><p>The <codeph>EXCLUSIVE</codeph> lock on &lt;pg_class> is
             released after an <codeph>ACCESS SHARE</codeph> lock is acquired on all the tables that
             are to be backed up. See the next item. </p></li>
         <li> When backing up the table data, the backup operation acquires an <codeph>ACCESS
@@ -156,7 +156,7 @@
               <li><codeph>VACUUM FULL</codeph></li>
             </ul></p></li>
       </ol>
-      <p>For information about the catalog table <i>pg_class</i>, see the <i>Greenplum Database
+      <p>For information about the catalog table &lt;pg_class>, see the <i>Greenplum Database
           Reference Guide</i>. For information about Greenplum Database lock modes see <xref
           href="../dml.xml#topic2">About Concurrency Control</xref>.</p>
       <note>For external tables, the table definition is backed up, however the data is not backed
@@ -204,7 +204,7 @@
         <note>You can use a Data Domain server as an NFS file system (without Data Domain Boost) to
           perform incremental backups. </note>
         <p>To create an incremental backup or restore data from an incremental backup, you need the
-          complete backup set. A <i>complete backup set</i> consists of a full backup and any
+          complete backup set. A &lt;complete backup set> consists of a full backup and any
           incremental backups that were created after the last full backup. See <xref href="#topic9"
             type="topic" format="dita"/>.</p>
         <p>Because incremental backups are table-based for append-optimized tables, incremental
@@ -228,7 +228,7 @@
             example, if you created a backup that starts on May 14, 2016, the backup set file names
             would contain <codeph>20160514<varname>hhmmss</varname></codeph>. The
               <varname>hhmmss</varname> represents the time, hour, minute, and second.</p>
-          <p>Assume you created both full and incremental backups of the database <i>mytest</i>. You
+          <p>Assume you created both full and incremental backups of the database &lt;mytest>. You
             used the following command to create full backups: </p>
           <codeblock>gpcrondump –x mytest –u /backupdir</codeblock>
           <p>You used this command to create incremental backups.</p>
@@ -262,7 +262,7 @@
             need the incremental backups <codeph>20160914081205</codeph> and
               <codeph>20160714095512</codeph>, and the full backup
             <codeph>20160514054532</codeph>.</p>
-          <p>To restore the <i>mytest</i> database with the incremental backup
+          <p>To restore the &lt;mytest> database with the incremental backup
               <codeph>20170114051246</codeph>, you need only the incremental backup and the full
             backup <codeph>20161114064330</codeph>. The restore command would be similar to this
             command.</p>
@@ -302,14 +302,14 @@
             backup for the set of tables listed in the file <codeph>user-tables</codeph>. The prefix
               <codeph>user_backup</codeph> identifies the backup set. </p>
           <p>
-            <codeblock>gpcrondump -x mydatabase --table-file=user-tables --prefix <i>user_backup</i></codeblock>
+            <codeblock>gpcrondump -x mydatabase --table-file=user-tables --prefix &lt;user_backup></codeblock>
           </p>
           <p>To create an incremental backup for the backup identified by the prefix
               <codeph>user_backup</codeph>, specify the <codeph>--incremental</codeph> option and
             the option <codeph>--prefix user_backup</codeph> to identify backup set. This example
             creates an incremental backup.</p>
           <p>
-            <codeblock>gpcrondump -x mydatabase --incremental --prefix <i>user_backup</i></codeblock>
+            <codeblock>gpcrondump -x mydatabase --incremental --prefix &lt;user_backup></codeblock>
           </p>
           <p>This command lists the tables that were included or exclued for the full backup.</p>
           <p>
@@ -386,7 +386,7 @@
           backup images that are stored on a Data Domain system for disaster recover purposes. The
             <cmdname>gpmfr</cmdname> utility manages the Greenplum Database backup sets that are on
           the primary and a remote Data Domain system. For information about
-            <cmdname>gpmfr</cmdname>, see the <i>Greenplum Database Utility Guide</i>.</p>
+            <cmdname>gpmfr</cmdname>, see the &lt;Greenplum Database Utility Guide>.</p>
         <p>Managed file replication requires network configuration when a replication network is
           being used between two Data Domain systems:</p>
         <ul>
@@ -686,7 +686,7 @@
       <topic id="topic_myv_lbz_3p">
         <title>Example Back Up and Restore Commands</title>
         <body>
-          <p>This <codeph>gpcrondump</codeph> command backs up the database <i>customer</i> and
+          <p>This <codeph>gpcrondump</codeph> command backs up the database &lt;customer> and
             specifies a NetBackup policy and schedule that are defined on the NetBackup master
             server <codeph>nbu_server1</codeph>. A block size of 1024 bytes is used to transfer data
             to the NetBackup server.
@@ -932,7 +932,7 @@ gp_dump_20170514093000_regular_files</codeblock>The
             <li id="kk156881">Define a crontab entry that calls <cmdname>gpcrondump</cmdname>. For
               example, if your shell is <codeph>bin/bash</codeph> and the <codeph>PATH</codeph>
               includes the location of the Greenplum Database management utilities, schedule a
-              nightly dump of the <i>sales</i> database at one minute past midnight as
+              nightly dump of the &lt;sales> database at one minute past midnight as
                   follows:<p><b>Linux Example:</b></p><p>
                 <codeblock>SHELL=/bin/bash
 GPHOME=/usr/local/greenplum-db-4.3.0.0
@@ -1026,7 +1026,7 @@ jjones@example.com
               </p></li>
             <li id="kk167026">From the master, run the <cmdname>gpdbrestore</cmdname> utility.
                 <codeph>-R</codeph> specifies the host name and path to a complete backup set:<p>
-                <codeblock>$ gpdbrestore -R <i>archive_host</i>:/gpdb/backups/archive/20160714</codeblock>
+                <codeblock>$ gpdbrestore -R &lt;archive_host>:/gpdb/backups/archive/20160714</codeblock>
               </p></li>
           </ol>
           <title>To restore from a Data Domain system using gpdbrestore with Data Domain
@@ -1036,7 +1036,7 @@ jjones@example.com
               complete.</li>
             <li id="kk167030">Add the option <codeph>--ddboost</codeph> to the
                 <codeph>gpdbrestore</codeph> option:<p>
-                <codeblock>$ gpdbrestore -t <i>backup_timestamp</i> -v -ddboost</codeblock>
+                <codeblock>$ gpdbrestore -t &lt;backup_timestamp> -v -ddboost</codeblock>
               </p></li>
           </ol>
           <note type="note">Some of the options available in <cmdname>gpdbrestore</cmdname> have
@@ -1106,7 +1106,7 @@ $ psql <varname>database_name</varname> -f /gpdb/backups/gp_dump_0_5_20160714
                 extracting the information, use the Greenplum Database <codeph>psql</codeph> utility
                 to update the sequences in the database. This example command updates the sequence
                 information in the database
-              <i>test_restore</i>:</p><codeblock>psql test_restore -f schema_path_and_seq_next_val</codeblock></li>
+              &lt;test_restore>:</p><codeblock>psql test_restore -f schema_path_and_seq_next_val</codeblock></li>
           </ol>
         </section>
       </body>

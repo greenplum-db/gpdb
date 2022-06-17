@@ -22,11 +22,11 @@
       </p>
       <p>The goal is to import these <codeph>&lt;mastersthesis&gt;</codeph> and
             <codeph>&lt;phdthesis&gt;</codeph> records into the Greenplum Database. The sample
-         document, <i>dblp.xml</i>, is about 130MB in size uncompressed. The input contains no tabs,
+         document, &lt;dblp.xml>, is about 130MB in size uncompressed. The input contains no tabs,
          so the relevent information can be converted into tab-delimited records as follows:</p>
-      <codeblock>ms/Brown92 <i>tab</i> masters <i>tab</i> Kurt P. Brown <i>tab</i> PRPL: A Database 
-Workload Specification Language, v1.3. <i>tab</i> 1992 <i>tab</i> Univ. of 
-Wisconsin-Madison <i>newline</i>
+      <codeblock>ms/Brown92 &lt;tab> masters &lt;tab> Kurt P. Brown &lt;tab> PRPL: A Database 
+Workload Specification Language, v1.3. &lt;tab> 1992 &lt;tab> Univ. of 
+Wisconsin-Madison &lt;newline>
       </codeblock>
       <p>With the columns:</p>
       <ul>

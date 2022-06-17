@@ -7,7 +7,7 @@
     architecture specially designed to manage large-scale analytic data warehouses and business
     intelligence workloads. </shortdesc>
   <body>
-    <p id="iw157381">MPP (also known as a <i>shared nothing</i> architecture) refers to systems with
+    <p id="iw157381">MPP (also known as a &lt;shared nothing> architecture) refers to systems with
       two or more processors that cooperate to carry out an operation, each processor with its own
       memory, operating system and disks. Greenplum uses this high-performance system architecture
       to distribute the load of multi-terabyte data warehouses, and can use all of a system's
@@ -40,7 +40,7 @@
       structure of Greenplum Database. For example, the system catalog, optimizer, query executor,
       and transaction manager components have been modified and enhanced to be able to execute
       queries simultaneously across all of the parallel PostgreSQL database instances. The Greenplum
-        <i>interconnect</i> (the networking layer) enables communication between the distinct
+        &lt;interconnect> (the networking layer) enables communication between the distinct
       PostgreSQL instances and allows the system to behave as one logical database. </p>
     <p>Greenplum Database also can use declarative partitions and sub-partitions to implicitly
       generate partition constraints.</p>
@@ -54,11 +54,11 @@
       takes an execution plan and uses it to generate a tree of physical operators, evaluates tables
       through physical operators, and delivers results in a query response.</p>
     <p>Greenplum Database stores and processes large amounts of data by distributing the data and
-      processing workload across several servers or <i>hosts</i>. Greenplum Database is an
-        <i>array</i> of individual databases based upon PostgreSQL 8.3 working together to present a
-      single database image. The <i>master</i> is the entry point to the Greenplum Database system.
+      processing workload across several servers or &lt;hosts>. Greenplum Database is an
+        &lt;array> of individual databases based upon PostgreSQL 8.3 working together to present a
+      single database image. The &lt;master> is the entry point to the Greenplum Database system.
       It is the database instance to which clients connect and submit SQL statements. The master
-      coordinates its work with the other database instances in the system, called <i>segments</i>,
+      coordinates its work with the other database instances in the system, called &lt;segments>,
       which store and process the data.</p>
     <fig id="iw157440">
       <title>High-Level Greenplum Database Architecture</title>
@@ -82,9 +82,9 @@
         such as <codeph>psql</codeph> or application programming interfaces (APIs) such as JDBC,
         ODBC or <xref href="https://www.postgresql.org/docs/8.3/static/libpq.html" format="html"
           scope="external">libpq</xref> (the PostgreSQL C API).</p>
-      <p>The master is where the <i>global system catalog</i> resides. The global system catalog is
+      <p>The master is where the &lt;global system catalog> resides. The global system catalog is
         the set of system tables that contain metadata about the Greenplum Database system itself.
-        The master does not contain any user data; data resides only on the <i>segments</i>. The
+        The master does not contain any user data; data resides only on the &lt;segments>. The
         master authenticates client connections, processes incoming SQL commands, distributes
         workloads among segments, coordinates the results returned by each segment, and presents the
         final results to the client program.</p>
@@ -107,11 +107,11 @@
         Greenplum Database system; each segment contains a distinct portion of data. The database
         server processes that serve segment data run under the corresponding segment instances.
         Users interact with segments in a Greenplum Database system through the master.</p>
-      <p>Segments run on a servers called <i>segment hosts</i>. A segment host typically executes
+      <p>Segments run on a servers called &lt;segment hosts>. A segment host typically executes
         from two to eight Greenplum segments, depending on the CPU cores, RAM, storage, network
         interfaces, and workloads. Segment hosts are expected to be identically configured. The key
         to obtaining the best performance from Greenplum Database is to distribute data and
-        workloads <i>evenly</i> across a large number of equally capable segments so that all
+        workloads &lt;evenly> across a large number of equally capable segments so that all
         segments begin working on a task simultaneously and complete their work at the same time.
       </p>
     </body>
@@ -121,7 +121,7 @@
     <shortdesc>The interconect is the networking layer of the Greenplum Database
       architecture.</shortdesc>
     <body>
-      <p>The <i>interconnect</i> refers to the inter-process communication between segments and the
+      <p>The &lt;interconnect> refers to the inter-process communication between segments and the
         network infrastructure on which this communication relies. The Greenplum interconnect uses a
         standard Ethernet switching fabric. For performance reasons, a 10-Gigabit system, or faster,
         is recommended.</p>

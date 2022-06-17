@@ -170,13 +170,13 @@
                 <codeph>snmpd</codeph> daemon:</p>
             <codeblock># /sbin/chkconfig snmpd on</codeblock>
             <p>Then, verify the system <codeph>snmpd</codeph> daemon is running. Enter:</p>
-            <codeblock># snmpwalk -v 1 -c <i>community_name</i> localhost .1.3.6.1.2.1.1.1.0</codeblock>
+            <codeblock># snmpwalk -v 1 -c &lt;community_name localhost .1.3.6.1.2.1.1.1.0</codeblock>
             <p>For example:</p>
             <codeblock># snmpwalk -v 1 -c public localhost .1.3.6.1.2.1.1.1.0</codeblock>
             <p>If this command returns "<codeph>Timeout: No Response from localhost</codeph>", then
               the system <codeph>snmpd</codeph> daemon is not running. If the daemon is running,
               output similar to the following displays:</p>
-            <screen>SNMPv2-MIB::sysDescr.0 = STRING: Linux <i>hostname</i> 
+            <screen>SNMPv2-MIB::sysDescr.0 = STRING: Linux &lt;hostname> 
 2.6.18-92.el5 #1 SMP Tue Jun 10 18:51:06 EDT 2016 x86_64</screen>
           </body>
         </topic>
@@ -211,7 +211,7 @@ $ gpconfig -c gp_snmp_use_inform_or_trap -v trap --masteronly </codeblock></p></
                 </ul></li>
               <li id="kj170864">To test SNMP notifications, you can use the
                   <codeph>snmptrapd</codeph> trap receiver. As root, enter:<p>
-                  <codeblock># /usr/sbin/snmptrapd -m ALL -Lf ~/<i>filename</i>.log
+                  <codeblock># /usr/sbin/snmptrapd -m ALL -Lf ~/&lt;filename.log
 </codeblock>
                 </p><p><codeph>-Lf</codeph> indicates that traps are logged to a file.
                     <codeph>-Le</codeph> indicates that traps are logged to <codeph>stderr</codeph>
@@ -352,13 +352,13 @@ gp_email_to='gpdb_dba_group@example.com'
             can use to determine the disk space usage for a distributed Greenplum Database database,
             schema, table, or index. </p>
           <p>For a list of the available sizing views for checking database object sizes and disk
-            space, see the <i>Greenplum Database Reference Guide</i>.</p>
+            space, see the &lt;Greenplum Database Reference Guide>.</p>
         </body>
         <topic id="topic17" xml:lang="en">
           <title id="kj155338">Viewing Disk Space Usage for a Database </title>
           <body>
-            <p>To see the total size of a database (in bytes), use the <i>gp_size_of_database</i>
-              view in the <i>gp_toolkit</i> administrative schema. For example: </p>
+            <p>To see the total size of a database (in bytes), use the &lt;gp_size_of_database>
+              view in the &lt;gp_toolkit> administrative schema. For example: </p>
             <p>
               <codeblock>=&gt; SELECT * FROM gp_toolkit.gp_size_of_database 
    ORDER BY sodddatname;
@@ -369,10 +369,10 @@ gp_email_to='gpdb_dba_group@example.com'
         <topic id="topic18" xml:lang="en">
           <title id="kj155347">Viewing Disk Space Usage for a Table </title>
           <body>
-            <p>The <i>gp_toolkit</i> administrative schema contains several views for checking the
+            <p>The &lt;gp_toolkit> administrative schema contains several views for checking the
               size of a table. The table sizing views list the table by object ID (not by name). To
               check the size of a table by name, you must look up the relation name
-                (<codeph>relname</codeph>) in the <i>pg_class</i> table. For example:</p>
+                (<codeph>relname</codeph>) in the &lt;pg_class> table. For example:</p>
             <p>
               <codeblock>=&gt; SELECT relname AS name, sotdsize AS size, sotdtoastsize 
    AS toast, sotdadditionalsize AS other 
@@ -387,12 +387,12 @@ gp_email_to='gpdb_dba_group@example.com'
         <topic id="topic19" xml:lang="en">
           <title id="kj176079">Viewing Disk Space Usage for Indexes </title>
           <body>
-            <p>The <i>gp_toolkit</i> administrative schema contains a number of views for checking
+            <p>The &lt;gp_toolkit> administrative schema contains a number of views for checking
               index sizes. To see the total size of all index(es) on a table, use the
-                <i>gp_size_of_all_table_indexes</i> view. To see the size of a particular index, use
-              the <i>gp_size_of_index</i> view. The index sizing views list tables and indexes by
+                &lt;gp_size_of_all_table_indexes> view. To see the size of a particular index, use
+              the &lt;gp_size_of_index> view. The index sizing views list tables and indexes by
               object ID (not by name). To check the size of an index by name, you must look up the
-              relation name (<codeph>relname</codeph>) in the <i>pg_class</i> table. For
+              relation name (<codeph>relname</codeph>) in the &lt;pg_class> table. For
               example:</p>
             <p>
               <codeblock>=&gt; SELECT soisize, relname as indexname
@@ -424,7 +424,7 @@ gp_email_to='gpdb_dba_group@example.com'
             <xref href="#topic23" type="topic" format="dita"/>
           </li>
         </ul>
-        <p>The <i>gp_toolkit</i> administrative schema also contains a number of views for checking
+        <p>The &lt;gp_toolkit> administrative schema also contains a number of views for checking
           data distribution skew on a table. For information about how to check for uneven data
           distribution, see the <cite>Greenplum Database Reference Guide</cite>.</p>
       </body>
@@ -455,7 +455,7 @@ Distributed by: (sale_id)
             you can run a query such as:</p>
           <p>
             <codeblock>=# SELECT gp_segment_id, count(*) 
-   FROM <i>table_name</i> GROUP BY gp_segment_id;
+   FROM &lt;table_name GROUP BY gp_segment_id;
 </codeblock>
           </p>
           <p>A table is considered to have a balanced distribution if all segments have roughly the
@@ -474,8 +474,8 @@ Distributed by: (sale_id)
             query predicates are not well matched. To check for processing skew, you can run a query
             such as:</p>
           <p>
-            <codeblock>=# SELECT gp_segment_id, count(*) FROM <i>table_name</i>
-   WHERE <i>column</i>='<i>value</i>' GROUP BY gp_segment_id;
+            <codeblock>=# SELECT gp_segment_id, count(*) FROM &lt;table_name
+   WHERE &lt;column='&lt;value' GROUP BY gp_segment_id;
 </codeblock>
           </p>
           <p>This will show the number of rows returned by segment for the given
@@ -523,8 +523,8 @@ Distributed by: (sale_id)
       <topic id="topic25" xml:lang="en">
         <title>Viewing the Last Operation Performed</title>
         <body>
-          <p>You can use the system views <i>pg_stat_operations</i> and
-              <i>pg_stat_partition_operations</i> to look up actions performed on an object, such as
+          <p>You can use the system views &lt;pg_stat_operations> and
+              &lt;pg_stat_partition_operations> to look up actions performed on an object, such as
             a table. For example, to see the actions performed on a table, such as when it was
             created and when it was last vacuumed and analyzed:</p>
           <p>
@@ -550,7 +550,7 @@ Distributed by: (sale_id)
               <codeph>\d+</codeph> meta-command when working in <codeph>psql</codeph>. For example,
             to see the definition of a table:</p>
           <p>
-            <codeblock>=&gt; \d+ <i>mytable</i>
+            <codeblock>=&gt; \d+ &lt;mytable
 </codeblock>
           </p>
         </body>
@@ -559,7 +559,7 @@ Distributed by: (sale_id)
     <topic id="topic_slt_ddv_1q">
       <title>Viewing Session Memory Usage Information</title>
       <body>
-        <p>You can create and use the <i>session_level_memory_consumption</i> view that provides
+        <p>You can create and use the &lt;session_level_memory_consumption> view that provides
           information about the current memory utilization for sessions that are running queries on
           Greenplum Database. The view contains session information and information such as the
           database that the session is connected to, the query that the session is currently
@@ -576,7 +576,7 @@ Distributed by: (sale_id)
       <topic id="topic_nby_j1b_dq">
         <title>Creating the session_level_memory_consumption View</title>
         <body>
-          <p>To create the <i>session_level_memory_consumption</i> view in a Greenplum Database, run
+          <p>To create the &lt;session_level_memory_consumption> view in a Greenplum Database, run
             the script <codeph>$GPHOME/share/postgresql/contrib/gp_session_state.sql</codeph> once
             for each database. For example, to install the view in the database
               <codeph>testdb</codeph>, use this
@@ -586,7 +586,7 @@ Distributed by: (sale_id)
       <topic id="topic7" xml:lang="en">
         <title id="ff142493">The session_level_memory_consumption View</title>
         <body>
-          <p>The <i>session_level_memory_consumption</i> view provides information about memory
+          <p>The &lt;session_level_memory_consumption> view provides information about memory
             consumption and idle time for sessions that are running SQL queries. </p>
           <p>When resource queue-based resource management is active, the column
             <codeph>is_runaway</codeph> indicates whether Greenplum
@@ -733,14 +733,14 @@ Distributed by: (sale_id)
     <topic id="topic27" xml:lang="en">
       <title id="kj185498">Viewing Query Workfile Usage Information</title>
       <body>
-        <p>The Greenplum Database administrative schema <i>gp_toolkit</i> contains views that
+        <p>The Greenplum Database administrative schema &lt;gp_toolkit> contains views that
           display information about Greenplum Database workfiles. Greenplum Database creates
           workfiles on disk if it does not have sufficient memory to execute the query in memory.
           This information can be used for troubleshooting and tuning queries. The information in
           the views can also be used to specify the values for the Greenplum Database configuration
           parameters <codeph>gp_workfile_limit_per_query</codeph> and
             <codeph>gp_workfile_limit_per_segment</codeph>. </p>
-        <p>These are the views in the schema <i>gp_toolkit</i>:</p>
+        <p>These are the views in the schema &lt;gp_toolkit>:</p>
         <ul>
           <li id="kj191083">The gp_workfile_entries view contains one row for each operator using
             disk space for workfiles on a segment at the current time.</li>
@@ -750,7 +750,7 @@ Distributed by: (sale_id)
             segment. Each row displays the total amount of disk space used for workfiles on the
             segment at the current time.</li>
         </ul>
-        <p>For information about using <i>gp_toolkit</i>, see <xref href="#topic31" format="dita"
+        <p>For information about using &lt;gp_toolkit>, see <xref href="#topic31" format="dita"
           />.</p>
       </body>
     </topic>
@@ -1010,12 +1010,12 @@ Distributed by: (sale_id)
   <topic id="topic31" xml:lang="en">
     <title id="kj168900">Using gp_toolkit</title>
     <body>
-      <p>Use the Greenplum Database administrative schema <i>gp_toolkit</i> to query the system
+      <p>Use the Greenplum Database administrative schema &lt;gp_toolkit> to query the system
         catalogs, log files, and operating environment for system status information. The
           <codeph>gp_toolkit</codeph> schema contains several views you can access using SQL
-        commands. The <i>gp_toolkit</i> schema is accessible to all database users. Some objects
+        commands. The &lt;gp_toolkit> schema is accessible to all database users. Some objects
         require superuser permissions. Use a command similar to the following to add the
-          <i>gp_toolkit</i> schema to your schema search path:</p>
+          &lt;gp_toolkit> schema to your schema search path:</p>
       <codeblock>=&gt; ALTER ROLE myrole SET search_path TO myschema,gp_toolkit;</codeblock>
       <p>For a description of the available administrative schema views and their usages, see the
           <cite>Greenplum Database Reference Guide</cite>.</p>

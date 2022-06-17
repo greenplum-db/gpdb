@@ -14,7 +14,7 @@
             primary segment instances on that host. For example, if your array has 4 primary segment
             instances per segment host, you can place 4 external files on each segment host. The
             host name used in the URI must match the segment host name as registered in the
-                <i>gp_segment_configuration</i> system catalog table. Tables based on the
+                &lt;gp_segment_configuration> system catalog table. Tables based on the
                 <codeph>file://</codeph> protocol can only be readable tables.</p>
         <p>The system view <codeph>pg_max_external_files</codeph> shows how many external table
             files are permitted per external table. This view lists the available file slots per
