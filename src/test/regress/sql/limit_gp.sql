@@ -69,5 +69,5 @@ drop table t_limit_all;
 create table bar1(x1 int, x2 int, x3 int);
 insert into bar1 select i,1,i from generate_series(1,10000000) i;
 analyze bar1;
-explain select distinct sum(x1) s from bar1 b group by b.x3 limit 1;
+explain (costs off) select distinct sum(x1) s from bar1 b group by b.x3 limit 1;
 drop table bar1;
