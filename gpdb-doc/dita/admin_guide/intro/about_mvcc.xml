@@ -274,7 +274,7 @@ COMMIT;
       <p>Query the <codeph>pg_class</codeph> system table to find out how many pages a table is
         using across all segments. Be sure to <codeph>ANALYZE</codeph> the table first to get
         accurate data.
-        <codeblock>SELECT relname, relpages, reltuples FROM pg_class WHERE relname='<varname>tablename</varname>';</codeblock></p>
+        <codeblock>SELECT relname, relpages, reltuples FROM pg_class WHERE relname='&lt;tablename>';</codeblock></p>
       <p>Another useful tool is the <codeph>gp_bloat_diag</codeph> view in the
           <codeph>gp_toolkit</codeph> schema, which identifies bloat in tables by comparing the
         actual number of pages used by a table to the expected number. See "The gp_toolkit

@@ -31,7 +31,7 @@
     <body>
       <p>The <codeph>CREATE DATABASE</codeph> command creates a new database. For example:</p>
       <p>
-        <codeblock>=&gt; CREATE DATABASE <i>new_dbname</i>;</codeblock>
+        <codeblock>=&gt; CREATE DATABASE new_dbname;</codeblock>
       </p>
       <p>To create a database, you must have privileges to create a database or be a Greenplum Database superuser. If you do not have the correct privileges, you cannot
         create a database. Contact your Greenplum Database administrator to either
@@ -55,7 +55,7 @@
           thereby providing the capability to 'clone' or copy an existing database and all objects
           and data within that database. For example:</p>
         <p>
-          <codeblock>=&gt; CREATE DATABASE <i>new_dbname</i> TEMPLATE <i>old_dbname</i>;</codeblock>
+          <codeblock>=&gt; CREATE DATABASE new_dbname TEMPLATE old_dbname;</codeblock>
         </p>
       </body>
     </topic>
@@ -64,7 +64,7 @@
       <body>
         <p>Another database owner can be assigned when a database is created:</p>
         <p>
-          <codeblock>=&gt; CREATE DATABASE <i>new_dbname</i> WITH <i>owner=new_user</i>;</codeblock>
+          <codeblock>=&gt; CREATE DATABASE new_dbname WITH owner=new_user;</codeblock>
         </p>
       </body>
     </topic>

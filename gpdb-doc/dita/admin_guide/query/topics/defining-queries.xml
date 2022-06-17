@@ -377,9 +377,9 @@ expression::type</codeblock>
                                     <codeph>::</codeph> is historical PostgreSQL usage.</p></li>
                         <li><i>Assignment cast</i> - Greenplum Database implicitly invokes a cast in
                             assignment contexts, when assigning a value to a column of the target
-                            data type. For example, a <codeph><xref
+                            data type. For example, a <xref
                                     href="../../../ref_guide/sql_commands/CREATE_CAST.xml">CREATE
-                                    CAST</xref></codeph> command with the <codeph>AS
+                                    CAST</xref> command with the <codeph>AS
                                 ASSIGNMENT</codeph> clause creates a cast that is applied implicitly
                             in the assignment context. This example assignment cast assumes that
                                 <codeph>tbl1.f1</codeph> is a column of type <codeph>text</codeph>.

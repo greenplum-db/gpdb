@@ -567,12 +567,12 @@ public.sales_1_prt_dec17 </codeblock></p><p>Then
             <plentry>
               <pt id="gprestore_yml"><b>gprestore</b></pt>
               <pd>Optional. Begins the <codeph>gprestore</codeph> email section. This section
-                contains the <codeph><xref href="#topic_uq5_v5v_scb/address_yml" format="dita"
-                    >address</xref></codeph> and <codeph><xref href="#topic_uq5_v5v_scb/status_yml"
-                    format="dita">status</xref></codeph> parameters that are used to send an email
+                contains the <xref href="#topic_uq5_v5v_scb/address_yml" format="dita"
+                    >address</xref> and <xref href="#topic_uq5_v5v_scb/status_yml"
+                    format="dita">status</xref> parameters that are used to send an email
                 notification after a <codeph>gprestore</codeph> operation. The syntax is the same as
-                the <codeph><xref href="#topic_uq5_v5v_scb/gpbackup_yml" format="dita"
-                    >gpbackup</xref></codeph> section.</pd>
+                the <xref href="#topic_uq5_v5v_scb/gpbackup_yml" format="dita"
+                    >gpbackup</xref> section.</pd>
             </plentry>
           </parml>
         </section>

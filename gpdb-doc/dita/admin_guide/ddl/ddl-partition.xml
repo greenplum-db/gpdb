@@ -558,7 +558,7 @@ WHERE tablename='sales';
         partitioned table that consists of three levels, year, quarter, and region, this
           <codeph>ALTER TABLE</codeph> command exchanges a leaf partition <codeph>region</codeph>
         with the table <codeph>region_new</codeph>. </p>
-      <codeblock>ALTER TABLE sales <b>ALTER PARTITION year_1 ALTER PARTITION quarter_4</b> EXCHANGE PARTITION region WITH TABLE region_new ;</codeblock>
+      <codeblock>ALTER TABLE sales ALTER PARTITION year_1 ALTER PARTITION quarter_4 EXCHANGE PARTITION region WITH TABLE region_new ;</codeblock>
       <p>The two <codeph>ALTER PARTITION</codeph> clauses identify which <codeph>region</codeph>
         partition to exchange. Both clauses are required to identify the specific leaf partition to
         exchange.</p>
@@ -605,16 +605,16 @@ WHERE tablename='sales';
         <p>Partitioned tables use the following naming convention. Partitioned subtable names are
           subject to uniqueness requirements and length limitations. </p>
         <p>
-          <codeblock><i>&lt;parentname&gt;</i>_<i>&lt;level&gt;</i>_prt_<i>&lt;partition_name&gt;</i></codeblock>
+          <codeblock>&lt;parentname&gt;_&lt;level&gt;_prt_&lt;partition_name&gt;</codeblock>
         </p>
         <p>For example:</p>
         <p>
-          <codeblock><i>sales_1_prt_jan16</i></codeblock>
+          <codeblock>sales_1_prt_jan16</codeblock>
         </p>
         <p>For auto-generated range partitions, where a number is assigned when no name is
           given):</p>
         <p>
-          <codeblock><i>sales_1_prt_1</i></codeblock>
+          <codeblock>sales_1_prt_1</codeblock>
         </p>
         <p>To rename a partitioned child table, rename the top-level parent table. The
             <i>&lt;parentname&gt;</i> changes in the table names of all associated child table
@@ -625,7 +625,7 @@ WHERE tablename='sales';
         </p>
         <p>Changes the associated table names:</p>
         <p>
-          <codeblock><i>globalsales_1_prt_1</i></codeblock>
+          <codeblock>globalsales_1_prt_1</codeblock>
         </p>
         <p>You can change the name of a partition to make it easier to identify. For example:</p>
         <p>
@@ -634,7 +634,7 @@ WHERE tablename='sales';
         </p>
         <p>Changes the associated table name as follows:</p>
         <p>
-          <codeblock><i>sales_1_prt_jan16</i></codeblock>
+          <codeblock>sales_1_prt_jan16</codeblock>
         </p>
         <p>When altering partitioned tables with the <codeph>ALTER TABLE</codeph> command, always
           refer to the tables by their partition name (<i>jan16</i>) and not their full table name

@@ -26,7 +26,7 @@
   <topic id="topic87" xml:lang="en">
     <title>Creating a Sequence</title>
     <body>
-      <p>The <codeph><xref href="../../ref_guide/sql_commands/CREATE_SEQUENCE.xml#topic1"/></codeph>
+      <p>The <xref href="../../ref_guide/sql_commands/CREATE_SEQUENCE.xml#topic1"/>
         command creates and initializes a sequence with the given sequence name
         and optional start value. The sequence name must be distinct
         from the name of any other sequence, table, index, or view in the same schema. For
@@ -104,7 +104,7 @@
   <topic id="topic89" xml:lang="en">
     <title>Altering a Sequence</title>
     <body>
-      <p>The <codeph><xref href="../../ref_guide/sql_commands/ALTER_SEQUENCE.xml#topic1"/></codeph>
+      <p>The <xref href="../../ref_guide/sql_commands/ALTER_SEQUENCE.xml#topic1"/>
         command changes the attributes of an existing sequence. You can alter the sequence
         minimum, maximum, and increment values. You can also restart the sequence at a specific
         value.</p>
@@ -127,7 +127,7 @@
   <topic id="topic90" xml:lang="en">
     <title>Dropping a Sequence</title>
     <body>
-      <p>The <codeph><xref href="../../ref_guide/sql_commands/DROP_SEQUENCE.xml#topic1"/></codeph>
+      <p>The <xref href="../../ref_guide/sql_commands/DROP_SEQUENCE.xml#topic1"/>
         command removes a sequence. For example, the following command removes the sequence named <codeph>myserial</codeph>:</p>
       <p>
         <codeblock>DROP SEQUENCE myserial;
@@ -139,7 +139,7 @@
     <title>Specifying a Sequence as the Default Value for a Column</title>
     <body>
       <p>You can reference a sequence directly in the
-        <codeph><xref href="../../ref_guide/sql_commands/CREATE_TABLE.xml#topic1"/></codeph>
+        <xref href="../../ref_guide/sql_commands/CREATE_TABLE.xml#topic1"/>
         command in addition to using the <codeph>SERIAL</codeph> or <codeph>BIGSERIAL</codeph> types. For example:</p>
       <p>
         <codeblock>CREATE TABLE tablename ( id INT4 DEFAULT nextval('myserial'), name text );

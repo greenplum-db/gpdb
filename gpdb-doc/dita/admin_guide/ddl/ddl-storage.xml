@@ -402,7 +402,7 @@
       </table>
       <p>The following is the format for adding storage directives.</p>
       <p>
-        <codeblock>[ ENCODING ( <i>storage_directive</i> [,…] ) ] </codeblock>
+        <codeblock>[ ENCODING ( storage_directive [,…] ) ] </codeblock>
       </p>
       <p>where the word ENCODING is required and the storage directive has three parts:</p>
       <ul id="ul_hzg_1wy_sp">
@@ -416,11 +416,11 @@
       <p>
         <i>General Usage:</i>
       </p>
-      <codeblock><i>column_name</i> <i>data_type</i> ENCODING ( <i>storage_directive </i>[, … ] ), …  
+      <codeblock>column_name   data_type ENCODING ( storage_directive [, … ] ), …  
 </codeblock>
-      <codeblock>COLUMN <i>column_name</i> ENCODING ( <i>storage_directive</i> [, … ] ), … 
+      <codeblock>COLUMN column_name ENCODING ( storage_directive [, … ] ), … 
 </codeblock>
-      <codeblock>DEFAULT COLUMN ENCODING ( <i>storage_directive</i> [, … ] )
+      <codeblock>DEFAULT COLUMN ENCODING ( storage_directive [, … ] )
 </codeblock>
       <p>
         <i>Example:</i>

@@ -21,12 +21,12 @@
         for the root partition. <codeph>ANALYZE</codeph> collects statistics on the root and leaf
         partitions, including HyperLogLog (HLL) statistics on the leaf partitions. <codeph>ANALYZE
           ROOTPARTITION</codeph> collects statistics only on the root partition. The server
-        configuration parameter <codeph><xref
+        configuration parameter <xref
             href="../../../ref_guide/config_params/guc-list.xml#optimizer_analyze_root_partition"
-            >optimizer_analyze_root_partition</xref></codeph> controls whether the
-          <codeph>ROOTPARTITION</codeph> keyword is required to collect root statistics for the root
-        partition of a partitioned table. See the <codeph><xref
-            href="../../../ref_guide/sql_commands/ANALYZE.xml#topic1">ANALYZE</xref></codeph>
+            >optimizer_analyze_root_partition</xref> controls whether the
+          ROOTPARTITION keyword is required to collect root statistics for the root
+        partition of a partitioned table. See the <xref
+            href="../../../ref_guide/sql_commands/ANALYZE.xml#topic1">ANALYZE</xref>
         command for information about collecting statistics on partitioned tables.</p>
       <p>Keep in mind that <codeph>ANALYZE</codeph> always scans the entire table before updating
         the root partition statistics. If your table is very large, this operation can take a
@@ -84,13 +84,13 @@
     <title>Disabling Automatic Root Partition Statistics Collection</title>
     <body>
       <p>If you do not intend to execute queries on partitioned tables with GPORCA (setting the
-        server configuration parameter <codeph><xref
+        server configuration parameter <xref
             href="../../../ref_guide/config_params/guc-list.xml#optimizer"
-            >optimizer</xref></codeph> to <codeph>off</codeph>), then you can disable the automatic
+            >optimizer</xref> to <codeph>off</codeph>), then you can disable the automatic
         collection of statistics on the root partition of the partitioned table. The server
-        configuration parameter <codeph><xref
+        configuration parameter <xref
             href="../../../ref_guide/config_params/guc-list.xml#optimizer_analyze_root_partition"
-            >optimizer_analyze_root_partition</xref></codeph> controls whether the
+            >optimizer_analyze_root_partition</xref> controls whether the
           <codeph>ROOTPARTITION</codeph> keyword is required to collect root statistics for the root
         partition of a partitioned table. The default setting for the parameter is
           <codeph>on</codeph>, the <codeph>ANALYZE</codeph> command can collect root partition

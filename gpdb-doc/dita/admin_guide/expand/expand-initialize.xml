@@ -57,7 +57,7 @@
             <li id="no163931">Run <codeph>gpexpand</codeph>. The utility displays messages about how
               to prepare for an expansion operation, and it prompts you to quit or
                 continue.<p>Optionally, specify a hosts file using <codeph>-f</codeph>. For
-                example:</p><codeblock>$ gpexpand -f /home/gpadmin/<i>new_hosts_file</i></codeblock></li>
+                example:</p><codeblock>$ gpexpand -f /home/gpadmin/new_hosts_file</codeblock></li>
             <li id="no163932">At the prompt, select <codeph>Y</codeph> to continue.</li>
             <li id="no168490">Unless you specified a hosts file using <codeph>-f</codeph>, you are
               prompted to enter hostnames. Enter a comma separated list of the hostnames of the new

@@ -5,8 +5,8 @@
   <body>
     <p>Greenplum Database provides utilities that you can use to migrate data between Greenplum
       Database systems.</p>
-    <p otherprops="pivotal">The <codeph><xref href="../../utility_guide/admin_utilities/gpcopy.xml"
-          >gpcopy</xref></codeph> utility can migrate data between Greenplum Database systems
+    <p otherprops="pivotal">The <xref href="../../utility_guide/admin_utilities/gpcopy.xml"
+          >gpcopy</xref> utility can migrate data between Greenplum Database systems
       running software version 5.9.0 or later. The utility can require less disk space to migrate
       between Greenplum Database systems that co-exist on the same hosts. </p>
     <p>The <codeph>gpransfer</codeph> utility can migrate data between Greenplum Database

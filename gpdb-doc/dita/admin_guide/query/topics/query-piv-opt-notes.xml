@@ -50,7 +50,7 @@
         for the table. <p>This parameter is ignored for a root partition of a partitioned table. If
           the root partition does not have statistics, GPORCA always uses the default value. You can
           use <codeph>ANALZYE ROOTPARTITION</codeph> to collect statistics on the root partition.
-          See <codeph><xref href="../../../ref_guide/sql_commands/ANALYZE.xml"/></codeph>.</p></li>
+          See <xref href="../../../ref_guide/sql_commands/ANALYZE.xml"/>.</p></li>
     </ul>
     <p>These server configuration parameters control the display and logging of information.</p>
     <ul id="ul_t3j_fhw_xz">

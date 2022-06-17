@@ -99,8 +99,8 @@
             constraint is always written as a column constraint. For example:</p>
           <p>
             <codeblock>=&gt; CREATE TABLE products 
-       ( product_no integer <b>NOT NUL</b>L,
-         name text <b>NOT NULL</b>,
+       ( product_no integer NOT NULL,
+         name text NOT NULL,
          price numeric );
 </codeblock>
           </p>

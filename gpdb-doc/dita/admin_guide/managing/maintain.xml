@@ -238,8 +238,8 @@ VACUUM cust_info;</codeblock></p>
         <note>You can use the Greenplum Database utility <cmdname>analyzedb</cmdname> to update
           table statistics. Tables can be analyzed concurrently. For append optimized tables,
             <cmdname>analyzedb</cmdname> updates statistics only if the statistics are not current.
-          See the <codeph><xref href="../../utility_guide/admin_utilities/analyzedb.xml"
-              >analyzedb</xref></codeph> utility.</note>
+          See the <xref href="../../utility_guide/admin_utilities/analyzedb.xml"
+              >analyzedb</xref> utility.</note>
       </body>
     </topic>
   </topic>

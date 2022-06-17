@@ -4,9 +4,9 @@
   <topic id="topic_lph_p1k_2hb" otherprops="pivotal">
     <title>Replicating Backups</title>
     <body>
-      <p>You can use <codeph><xref href="../../utility_guide/admin_utilities/gpbackup.xml"
-          >gpbackup</xref></codeph> or <codeph><xref
-            href="../../utility_guide/admin_utilities/gpbackup_manager.xml">gpbackup_manager</xref></codeph>
+      <p>You can use <xref href="../../utility_guide/admin_utilities/gpbackup.xml"
+          >gpbackup</xref> or <xref
+            href="../../utility_guide/admin_utilities/gpbackup_manager.xml">gpbackup_manager</xref>
         with the DD Boost storage plugin to replicate a backup from one Data Domain system to a
         second, remote, Data Domain system for disaster recovery. You can replicate a backup as part
         of the backup process, or replicate an existing backup set as a separate operation. Both
@@ -16,8 +16,8 @@
         on the remote Data Domain system with DD Boost managed file replication. </p>
       <p>When replicating a backup, the Data Domain system where the backup is stored must have
         access to the remote Data Domain system where the replicated backup is stored. </p>
-      <p>To restore data from a replicated backup, use <codeph><xref
-            href="../../utility_guide/admin_utilities/gprestore.xml">gprestore</xref></codeph> with the DD Boost
+      <p>To restore data from a replicated backup, use <xref
+            href="../../utility_guide/admin_utilities/gprestore.xml">gprestore</xref> with the DD Boost
         storage plugin. In the configuration file, specify the location of the backup in the DD
         Boost configuration file. </p>
       <p>For example configuration files, see <xref

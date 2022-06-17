@@ -169,7 +169,7 @@ VACUUM ANALYZE old_table;
         <codeblock>CREATE INDEX gender_idx ON employee (gender);
 </codeblock>
       </p>
-      <p>To create a bitmap index on the column <i>title</i> in the table <i>films</i>:</p>
+      <p>To create a bitmap index on the column title in the table films:</p>
       <p>
         <codeblock>CREATE INDEX title_bmp_idx ON films USING bitmap (title);
 </codeblock>

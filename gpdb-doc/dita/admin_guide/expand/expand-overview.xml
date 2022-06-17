@@ -92,16 +92,16 @@
       different options during the complete expansion process. </p>
     <ol id="ol_jjf_pmg_tt">
       <li id="no165977">To <xref href="expand-initialize.xml#topic23">create an expansion input
-          file</xref>:<codeblock>gpexpand -f <i>hosts_file</i></codeblock></li>
+          file</xref>:<codeblock>gpexpand -f hosts_file</codeblock></li>
       <li id="no166063">To <xref href="expand-initialize.xml#expand-initialize">initialize segments
           and create the expansion
-            schema</xref>:<codeblock>gpexpand -i <i>input_file</i> -D <i>database_name</i></codeblock><p><codeph>gpexpand</codeph>
+            schema</xref>:<codeblock>gpexpand -i input_file -D database_name</codeblock><p><codeph>gpexpand</codeph>
           creates a data directory, copies user tables from all existing databases on the new
           segments, and captures metadata for each table in an expansion schema for status tracking.
           After this process completes, the expansion operation is committed and
         irrevocable.</p></li>
       <li id="no176239"><xref href="expand-redistribute.xml#topic28">To redistribute
-          tables</xref>:<codeblock>gpexpand -d <i>duration</i></codeblock><p>At initialization,
+          tables</xref>:<codeblock>gpexpand -d duration</codeblock><p>At initialization,
             <codeph>gpexpand</codeph> nullifies hash distribution policies on tables in all existing
           databases, except for parent tables of a partitioned table, and sets the distribution
           policy for all tables to random distribution.</p><p>To complete system expansion, you must

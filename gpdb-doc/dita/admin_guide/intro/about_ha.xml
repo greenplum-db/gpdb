@@ -58,11 +58,11 @@
       <p>If the master cannot connect to a segment instance, it marks that segment instance as down
         in the Greenplum Database system catalog and brings up the mirror segment in its place. A
         failed segment instance will remain out of operation until an administrator takes steps to
-        bring that segment back online. The <codeph><xref href="../../utility_guide/admin_utilities/gpstate.xml#topic1"
-        type="topic" format="dita"/></codeph> utility can be used to identify failed segments.
-        An administrator can recover a failed segment while the system is up and running. The
-        recovery process copies over only the changes that were missed while the segment was out
-        of operation.</p>
+        bring that segment back online. The <xref
+          href="../../utility_guide/admin_utilities/gpstate.xml#topic1" type="topic" format="dita"/>
+        utility can be used to identify failed segments. An administrator can recover a failed
+        segment while the system is up and running. The recovery process copies over only the
+        changes that were missed while the segment was out of operation.</p>
       <p>If you do not have mirroring enabled, the system will automatically shut down if a segment
         instance becomes invalid. You must recover all failed segments before operations can
         continue.</p>

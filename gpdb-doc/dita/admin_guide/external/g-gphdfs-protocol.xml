@@ -7,7 +7,7 @@
   <body>
     <note>The <codeph>gphdfs</codeph> external table protocol is deprecated and will be removed
       in the next major release of Greenplum Database. Consider using the Greenplum Platform
-      Extension Framework (PXF) <codeph><xref href="g-pxf-protocol.xml" >pxf</xref></codeph>
+      Extension Framework (PXF) <xref href="g-pxf-protocol.xml" >pxf</xref>
       external table protocol to access data stored in a Hadoop file system.</note>
     <p>The protocol allows specifying external files in Hadoop clusters configured with or without
       Hadoop HA (high availability) and in MapR clusters. File names may contain wildcard characters

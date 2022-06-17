@@ -39,12 +39,12 @@
             location refers to a directory on the master host and standby master, if configured. For
             example, if your configuration has 2 primary and 2 mirror segments per
             host:<codeblock>Enter a name for this filespace&gt; fastdisk
-primary location 1&gt; <i>/gpfs1/seg1
-</i>primary location 2&gt; <i>/gpfs1/seg2
-</i>mirror location 1&gt; <i>/gpfs2/mir1
-</i>mirror location 2&gt; <i>/gpfs2/mir2
-</i>master location&gt; <i>/gpfs1/master
-</i></codeblock></li>
+primary location 1&gt; /gpfs1/seg1
+primary location 2&gt; /gpfs1/seg2
+mirror location 1&gt; /gpfs2/mir1
+mirror location 2&gt; /gpfs2/mir2
+master location&gt; /gpfs1/master
+</codeblock></li>
           <li id="im179011"><codeph>gpfilespace</codeph> creates a configuration file. Examine the
             file to verify that the <codeph>gpfilespace</codeph> configuration is correct. </li>
           <li id="im179508">Run <codeph>gpfilespace</codeph> again to create the filespace based on

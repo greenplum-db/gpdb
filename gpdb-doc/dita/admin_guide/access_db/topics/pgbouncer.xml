@@ -127,7 +127,7 @@ admin_users = gpadmin</codeblock></p>
           text file that Greenplum Database uses for authentication information. PgBouncer
           can work directly with this Greenplum Database authentication file.)</p>
         <p>Use an MD5 encoded password. The format of an MD5 encoded password is: 
-        <codeblock>"md5" + MD5_encoded(<varname>&lt;password>&lt;username></varname>)</codeblock></p>
+        <codeblock>"md5" + MD5_encoded(<password><username>)</codeblock></p>
         <p>You can also obtain the MD5-encoded passwords of all Greenplum Database users from the <codeph>pg_shadow</codeph> view.</p>
       </section>
       <section id="pgb_hba">
@@ -184,7 +184,7 @@ admin_users = gpadmin</codeblock><p>The file lists databases and their connectio
             example: <codeblock>"gpadmin" "gpadmin1234"</codeblock><p>If the <codeph>auth_type</codeph>
               in the following example is <codeph>md5</codeph>, the authentication field must be
               MD5-encoded. The format for an MD5-encoded password
-              is:<codeblock>"md5" + MD5_encoded(<varname>&lt;password>&lt;username></varname>)</codeblock></p></li>
+              is:<codeblock>"md5" + MD5_encoded(<password><username>)</codeblock></p></li>
           <li>Launch
               <codeph>pgbouncer</codeph>:<codeblock>$ $GPHOME/bin/pgbouncer -d pgbouncer.ini</codeblock><p>The
                 <codeph>-d</codeph> option runs PgBouncer as a
@@ -193,7 +193,7 @@ admin_users = gpadmin</codeblock><p>The file lists databases and their connectio
               <codeph>pgbouncer</codeph> command syntax and options.</p></li>
           <li>Update your client applications to connect to <codeph>pgbouncer</codeph> instead of
             directly to Greenplum Database server. For example, to connect to the Greenplum
-            database named <codeph>mydb</codeph> configured above, run <codeph>psql</codeph> as follows:<codeblock>$ psql -p 6543 -U <varname>someuser</varname> pgb_mydb</codeblock><p>The <codeph>-p</codeph> option value is the <codeph>listen_port</codeph> that you configured for the PgBouncer instance.</p></li>
+            database named <codeph>mydb</codeph> configured above, run <codeph>psql</codeph> as follows:<codeblock>$ psql -p 6543 -U <someuser> pgb_mydb</codeblock><p>The <codeph>-p</codeph> option value is the <codeph>listen_port</codeph> that you configured for the PgBouncer instance.</p></li>
         </ol>
       </body>
     </topic>
@@ -210,7 +210,7 @@ admin_users = gpadmin</codeblock><p>The file lists databases and their connectio
         <p>Follow these steps to get started with the PgBouncer Administration Console.</p>
         <ol id="ol_jwt_hyn_ts">
           <li>Use <codeph>psql</codeph> to log in to the <codeph>pgbouncer</codeph>
-            virtual database:<codeblock>$ psql -p 6543 -U <varname>username</varname> pgbouncer</codeblock><p>The
+            virtual database:<codeblock>$ psql -p 6543 -U <username> pgbouncer</codeblock><p>The
               <varname>username</varname> that you specify must be listed in the <codeph>admin_users</codeph> parameter in the
                 <codeph>pgbouncer.ini</codeph> configuration file. You can also log in 
               to the PgBouncer Administration Console with the
