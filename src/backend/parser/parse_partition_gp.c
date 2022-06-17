@@ -891,7 +891,7 @@ makePartitionCreateStmt(Relation parentrel, char *partname, PartitionBoundSpec *
 	childstmt->ofTypename = NULL;
 	childstmt->constraints = NIL;
 	childstmt->options = elem->options ? copyObject(elem->options) : NIL;
-	childstmt->oncommit = ONCOMMIT_NOOP;  // FIXME: copy from parent stmt?
+	childstmt->oncommit = ONCOMMIT_NOOP;
 	childstmt->tablespacename = elem->tablespacename ? pstrdup(elem->tablespacename) : NULL;
 	childstmt->accessMethod = elem->accessMethod ? pstrdup(elem->accessMethod) : NULL;
 	childstmt->if_not_exists = false;

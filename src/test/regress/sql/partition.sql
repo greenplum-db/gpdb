@@ -3793,3 +3793,17 @@ RESET ROLE;
 DROP TABLE public.t_part_acl;
 ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE SELECT ON TABLES FROM user_prt_acl;
 DROP ROLE user_prt_acl;
+
+
+-- test on commit behavior used on partition table
+begin;
+create temp table temp_parent (a int) partition by range(a) (start(1) end(10) every(10)) on commit delete rows;
+insert into temp_parent select i from generate_series(1, 5) i;
+select count(*) from temp_parent;
+commit;
+
+-- DELETE ROWS will not cascaded to its partitions when we use DELETE ROWS behavior
+select count(*) from temp_parent;
+
+drop table temp_parent;
+
