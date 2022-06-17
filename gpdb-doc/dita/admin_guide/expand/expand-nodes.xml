@@ -101,12 +101,12 @@ gpadmin --stdin'</codeblock></li>
         <ol id="ol_lpb_xjr_g4">
           <li id="no162532">Log in as <codeph>gpadmin</codeph> and run the
               <codeph>gpssh-exkeys</codeph> utility referencing the host list files. For
-            example:<codeblock># gpssh-exkeys -e /home/gpadmin/existing_hosts_file -x 
+            example:<codeblock># gpssh-exkeys -e /home/gpadmin/<i>existing_hosts_file</i> -x 
 /home/gpadmin/new_hosts_file</codeblock></li>
           <li id="no160664"><codeph>gpssh-exkeys</codeph> will check the remote hosts and perform
             the key exchange between all hosts. Enter the <codeph>gpadmin</codeph> user password
             when prompted. For
-            example:<codeblock>***Enter password for gpadmin@hostname: &lt;gpadmin_password&gt;</codeblock></li>
+            example:<codeblock>***Enter password for gpadmin@<i>hostname</i>: &lt;gpadmin_password&gt;</codeblock></li>
         </ol>
       </section>
     </body>

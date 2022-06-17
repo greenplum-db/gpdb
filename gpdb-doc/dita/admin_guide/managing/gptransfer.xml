@@ -194,7 +194,7 @@ host2_name,host2_ipaddr
       <p>By default, <codeph>gptransfer</codeph> fails if you attempt to transfer a table that
         already exists in the destination database:</p>
       <codeblock>[INFO]:-Validating transfer table set...
-[CRITICAL]:- gptransfer failed. (Reason='Table database.schema.table exists in database database .') exiting...</codeblock>
+[CRITICAL]:- gptransfer failed. (Reason='Table <i>database.schema.table</i> exists in database <i>database</i> .') exiting...</codeblock>
       <p>Override this behavior with the <codeph>--skip-existing</codeph>,
           <codeph>--truncate</codeph>, or <codeph>--drop</codeph> options.</p>
       <p>The following table shows the objects that are copied in full mode and table mode.</p>

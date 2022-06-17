@@ -810,7 +810,7 @@ gpstart
       <p>For example, to create a
         resource group named <i>rgroup1</i> with a CPU limit of 20 and a memory limit of 25:</p>
       <p>
-        <codeblock>=# CREATE RESOURCE GROUP rgroup1 WITH (CPU_RATE_LIMIT=20, MEMORY_LIMIT=25);
+        <codeblock>=# CREATE RESOURCE GROUP <i>rgroup1</i> WITH (CPU_RATE_LIMIT=20, MEMORY_LIMIT=25);
 </codeblock>
       </p>
       <p>The CPU limit of 20 is shared by every role to which <codeph>rgroup1</codeph> is assigned.
@@ -824,7 +824,7 @@ gpstart
         (0). For example, to create a resource group named <i>rgroup_extcomp</i> for which you
         reserve CPU core 1 and assign a memory limit of 15:</p>
       <p>
-        <codeblock>=# CREATE RESOURCE GROUP rgroup_extcomp WITH (MEMORY_AUDITOR=cgroup, CONCURRENCY=0,
+        <codeblock>=# CREATE RESOURCE GROUP <i>rgroup_extcomp</i> WITH (MEMORY_AUDITOR=cgroup, CONCURRENCY=0,
      CPUSET='1', MEMORY_LIMIT=15);
 </codeblock>
       </p>
@@ -833,9 +833,9 @@ gpstart
         change the limits of a resource group, specify the new values that you want for the group.
         For example:</p>
       <p>
-        <codeblock>=# ALTER RESOURCE GROUP rg_role_light SET CONCURRENCY 7;
-=# ALTER RESOURCE GROUP exec SET MEMORY_LIMIT 25;
-=# ALTER RESOURCE GROUP rgroup1 SET CPUSET '2,4';
+        <codeblock>=# ALTER RESOURCE GROUP <i>rg_role_light</i> SET CONCURRENCY 7;
+=# ALTER RESOURCE GROUP <i>exec</i> SET MEMORY_LIMIT 25;
+=# ALTER RESOURCE GROUP <i>rgroup1</i> SET CPUSET '2,4';
 </codeblock>
       </p>
       <note>You cannot set or alter the <codeph>CONCURRENCY</codeph> value for the
@@ -847,7 +847,7 @@ gpstart
         external component in which there are running instances kills the running instances.</p>
       <p>To drop a resource group:</p>
       <p>
-        <codeblock>=# DROP RESOURCE GROUP exec; </codeblock>
+        <codeblock>=# DROP RESOURCE GROUP <i>exec</i>; </codeblock>
       </p>
     </body>
   </topic>
@@ -886,8 +886,8 @@ gpstart
       <p>Use the <codeph>ALTER ROLE</codeph> or <codeph>CREATE ROLE</codeph> commands to assign a
         resource group to a role. For example:</p>
       <p>
-        <codeblock>=# ALTER ROLE bill RESOURCE GROUP rg_light;
-=# CREATE ROLE mary RESOURCE GROUP exec;
+        <codeblock>=# ALTER ROLE <i>bill</i> RESOURCE GROUP <i>rg_light</i>;
+=# CREATE ROLE <i>mary</i> RESOURCE GROUP <i>exec</i>;
 </codeblock>
       </p>
       <p>You can assign a resource group to one or more roles. If you have defined a role hierarchy,
@@ -899,7 +899,7 @@ gpstart
         default group, change the role's group name assignment to <codeph>NONE</codeph>. For
         example:</p>
       <p>
-        <codeblock>=# ALTER ROLE mary RESOURCE GROUP NONE;
+        <codeblock>=# ALTER ROLE <i>mary</i> RESOURCE GROUP NONE;
 </codeblock>
       </p>
     </body>

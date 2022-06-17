@@ -53,7 +53,7 @@
           example:<codeblock>$ createdb database_name</codeblock></li>
         <li id="kk167026">From the master, run the <codeph>gpdbrestore</codeph> utility. The
             <codeph>-R</codeph> option specifies the host name and path to a complete backup
-            set:<codeblock>$ gpdbrestore -R archive_host:/gpdb/backups/archive/20120714 -e &lt;dbname></codeblock><p>Omit
+            set:<codeblock>$ gpdbrestore -R <i>archive_host</i>:/gpdb/backups/archive/20120714 -e &lt;dbname></codeblock><p>Omit
             the <codeph>-e <varname>dbname</varname></codeph> option if the database has already
             been created.</p></li>
       </ol>

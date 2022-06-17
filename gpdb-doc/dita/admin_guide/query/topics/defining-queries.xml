@@ -71,7 +71,7 @@
             <body>
                 <p>A column reference has the form:</p>
                 <p>
-                    <codeblock>correlation.columnname</codeblock>
+                    <codeblock><i>correlation</i>.<i>columnname</i></codeblock>
                 </p>
                 <p>Here, <codeph>correlation</codeph> is the name of a table (possibly qualified
                     with a schema name) or an alias for a table defined with a <codeph>FROM</codeph>
@@ -112,13 +112,13 @@
                 <p>If an expression yields a value of an array type, you can extract a specific
                     element of the array value as follows:</p>
                 <p>
-                    <codeblock>expression[subscript]
+                    <codeblock><i>expression</i>[<i>subscript</i>]
 </codeblock>
                 </p>
                 <p>You can extract multiple adjacent elements, called an array slice, as follows
                     (including the brackets):</p>
                 <p>
-                    <codeblock>expression[lower_subscript:upper_subscript]
+                    <codeblock><i>expression</i>[<i>lower_subscript</i>:<i>upper_subscript</i>]
 </codeblock>
                 </p>
                 <p>Each subscript is an expression and yields an integer value.</p>
@@ -140,7 +140,7 @@
                 <p>If an expression yields a value of a composite type (row type), you can extract a
                     specific field of the row as follows:</p>
                 <p>
-                    <codeblock>expression.fieldname</codeblock>
+                    <codeblock><i>expression</i>.<i>fieldname</i></codeblock>
                 </p>
                 <p>The row expression usually must be in parentheses, but you can omit these
                     parentheses when the expression to be selected from is a table reference or
@@ -161,15 +161,15 @@
             <body>
                 <p>Operator invocations have the following possible syntaxes:</p>
                 <p>
-                    <codeblock>expression operator expression(binary infix operator)</codeblock>
-                    <codeblock>operator expression(unary prefix operator)</codeblock>
-                    <codeblock>expression operator(unary postfix operator)</codeblock>
+                    <codeblock><i>expression operator expression</i>(binary infix operator)</codeblock>
+                    <codeblock><i>operator expression</i>(unary prefix operator)</codeblock>
+                    <codeblock><i>expression operator</i>(unary postfix operator)</codeblock>
                 </p>
                 <p>Where <i>operator</i> is an operator token, one of the key words
                         <codeph>AND</codeph>, <codeph>OR</codeph>, or <codeph>NOT</codeph>, or
                     qualified operator name in the form:</p>
                 <p>
-                    <codeblock>OPERATOR(schema.operatorname)</codeblock>
+                    <codeblock>OPERATOR(<i>schema</i>.<i>operatorname</i>)</codeblock>
                 </p>
                 <p>Available operators and whether they are unary or binary depends on the operators
                     that the system or user defines. For more information about built-in operators,
@@ -182,7 +182,7 @@
                 <p>The syntax for a function call is the name of a function (possibly qualified with
                     a schema name), followed by its argument list enclosed in parentheses:</p>
                 <p>
-                    <codeblock>function ([expression [, expression ... ]])</codeblock>
+                    <codeblock><i>function</i> ([<i>expression</i> [, <i>expression</i> ... ]])</codeblock>
                 </p>
                 <p>For example, the following function call computes the square root of 2:</p>
                 <p>
@@ -292,26 +292,26 @@
                     to another window function.</p>
                 <p>The syntax of a window expression is:</p>
                 <p>
-                    <codeblock>window_function ( [expression [, ...]] ) OVER ( window_specification )</codeblock>
+                    <codeblock><i>window_function</i> ( [<i>expression</i> [, ...]] ) OVER ( <i>window_specification</i> )</codeblock>
                 </p>
                 <p>Where <i><codeph>window_function</codeph></i> is one of the functions listed in
                         <xref href="../topics/functions-operators.xml#topic30/in164369"/>,
                             <i><codeph>expression</codeph></i> is any value expression that does not
                     contain a window expression, and <i><codeph>window_specification</codeph></i>
                     is:</p>
-                <p><codeblock>[window_name]
-[PARTITION BY expression [, ...]]
-[[ORDER BY expression [ASC | DESC | USING operator] [NULLS {FIRST | LAST}] [, ...]
+                <p><codeblock>[<i>window_name</i>]
+[PARTITION BY <i>expression </i>[, ...]]
+[[ORDER BY <i>expression</i> [ASC | DESC | USING <i>operator</i>] [NULLS {FIRST | LAST}] [, ...]
     [{RANGE | ROWS} 
        { UNBOUNDED PRECEDING
-       | expression PRECEDING
+       | <i>expression</i> PRECEDING
        | CURRENT ROW
-       | BETWEEN window_frame_bound AND window_frame_bound }]]</codeblock>    and
+       | BETWEEN <i>window_frame_bound</i> AND <i>window_frame_bound</i> }]]</codeblock>    and
                     where <codeph><i>window_frame_bound</i></codeph> can be one
                     of:<codeblock>    UNBOUNDED PRECEDING
-    expression PRECEDING
+    <i>expression</i> PRECEDING
     CURRENT ROW
-    expression FOLLOWING
+    <i>expression</i> FOLLOWING
     UNBOUNDED FOLLOWING</codeblock></p>
                 <p>A window expression can appear only in the select list of a
                         <codeph>SELECT</codeph> command. For example:</p>
