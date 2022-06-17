@@ -547,11 +547,8 @@ CHK_MULTI_HOME () {
 		PING_HOST $MHOST
 		SEG_HOSTNAME=$( REMOTE_EXECUTE_AND_GET_OUTPUT $MHOST "$HOSTNAME" )
 		if [ $? -ne 0 ];then
-			LOG_MSG "[FATAL]:-Remote command to host $MHOST failed to get value of hostname"
-			$ECHO "[FATAL]:-Remote command to host $MHOST failed to get value of hostname"
-			LOG_MSG "[FATAL]:-Check to see that you have setup trusted remote ssh on all hosts"
-			$ECHO "[FATAL]:-Check to see that you have setup trusted remote ssh on all hosts"
-
+			LOG_MSG "[FATAL]:-Remote command to host $MHOST failed to get value of hostname" 1
+			LOG_MSG "[FATAL]:-Check to see that you have setup trusted remote ssh on all hosts" 1
 			ERROR_EXIT "[FATAL]:-Unable to get hostname output for $MHOST"
 		fi
 		if [ `$ECHO ${T_SEG_ARRAY[@]}|$TR ' ' '\n'|$GREP -c "^${SEG_HOSTNAME}$"` -eq 0 ];then
