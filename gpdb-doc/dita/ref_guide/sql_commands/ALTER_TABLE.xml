@@ -218,12 +218,11 @@ where &lt;action> is one of:
                                         target table must already contain all the same columns as
                                         the parent (it could have additional columns, too). The
                                         columns must have matching data types, and if they have
-                                                <codeph>NOT</codeph><codeph>NULL</codeph>
-                                        constraints in the parent then they must also have
-                                                <codeph>NOT NULL</codeph> constraints in the child.
-                                        There must also be matching child-table constraints for all
-                                                <codeph>CHECK</codeph> constraints of the
-                                        parent.</li>
+                                                <codeph>NOT NULL</codeph> constraints in the parent
+                                        then they must also have <codeph>NOT NULL</codeph>
+                                        constraints in the child. There must also be matching
+                                        child-table constraints for all <codeph>CHECK</codeph>
+                                        constraints of the parent.</li>
                                 <li id="ay137262"><b>OWNER</b> — Changes the owner of the table,
                                         sequence, or view to the specified user. </li>
                                 <li id="ay137271"><b>SET TABLESPACE</b> — Changes the table's
