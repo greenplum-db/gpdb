@@ -1087,10 +1087,12 @@ generateListPartition(ParseState *pstate,
 	boundspec->is_default = false;
 
 	/*
-	 * GPDB_12_MERGE_FIXME: Greenplum historically does not support multi column
-	 * List partitions. Upstream Postgres allows it. Keep this restriction for
-	 * now and most likely we will get the functionality for free from the merge
-	 * and we should remove this restriction once we verifies that.
+	 * GPDB_12_MERGE_FEATURE_NOT_SUPPORTED: We currently disabled support for multi-column
+	 * range partitioned tables. If user want to define partition table with multi-column
+	 * range, can use PostgreSQL's grammar:
+	 *
+	 * create table z (a int, b int, c int) partition by range(b, c);
+	 * create table z1 partition of z for values from (10, 10) TO (20, 20);
 	 */
 
 	listdatums = NIL;
