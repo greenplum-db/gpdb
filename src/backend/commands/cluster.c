@@ -476,6 +476,12 @@ cluster_rel(Oid tableOid, Oid indexOid, bool recheck, bool verbose, bool printEr
 	/* rebuild_relation does all the dirty work */
 	rebuild_relation(OldHeap, indexOid, verbose);
 
+	/* Roll back any GUC changes executed by index functions */
+	AtEOXact_GUC(false, save_nestlevel);
+
+	/* Restore userid and security context */
+	SetUserIdAndSecContext(save_userid, save_sec_context);
+
 	/* NB: rebuild_relation does heap_close() on OldHeap */
 	return true;
 
