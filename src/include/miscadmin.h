@@ -100,7 +100,6 @@ extern PGDLLIMPORT volatile int32 CritSectionCount;
 
 /* in tcop/postgres.c */
 extern void ProcessInterrupts(const char* filename, int lineno);
-extern bool CancelRequested();
 
 /* Hook get notified when QueryCancelPending or ProcDiePending is raised */
 typedef void (*cancel_pending_hook_type) (void);
@@ -120,6 +119,15 @@ extern int backoffTickCounter;
 extern int gp_resqueue_priority_local_interval;
 
 extern void BackoffBackendTickExpired(void);
+
+/*
+ * Whether request on cancel or termination have arrived?
+ */
+static inline bool
+CancelRequested()
+{
+	return InterruptPending && (ProcDiePending || QueryCancelPending);
+}
 
 static inline void
 BackoffBackendTick(void)

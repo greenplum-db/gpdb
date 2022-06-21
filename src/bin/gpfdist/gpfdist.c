@@ -1307,7 +1307,7 @@ session_get_block(const request_t* r, block_t* retblock, char* line_delim_str, i
 {
 	int 		size;
 	const int 	whole_rows = 1; /* gpfdist must not read data with partial rows */
-	struct fstream_filename_and_offset fos = {0};
+	struct fstream_filename_and_offset fos = {{0}};
 
 	session_t *session = r->session;
 

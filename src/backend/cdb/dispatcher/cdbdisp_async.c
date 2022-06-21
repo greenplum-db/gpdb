@@ -453,7 +453,6 @@ checkDispatchResult(CdbDispatcherState *ds, int timeout_sec)
 	uint8 ftsVersion = 0;
 	struct timeval start_ts, now;
 	int64		diff_us;
-	bool		cancelRequested = false;
 
 	db_count = pParms->dispatchCount;
 	fds = (struct pollfd *) palloc(db_count * sizeof(struct pollfd));

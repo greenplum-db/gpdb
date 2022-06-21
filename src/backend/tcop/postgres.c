@@ -5979,11 +5979,3 @@ log_disconnections(int code, Datum arg __attribute__((unused)))
 					port->user_name, port->database_name, port->remote_host,
 				  port->remote_port[0] ? " port=" : "", port->remote_port)));
 }
-
-/*
- * Whether request on cancel or termination have arrived?
- */
-inline bool
-CancelRequested() {
-	return InterruptPending && (ProcDiePending || QueryCancelPending);
-}
