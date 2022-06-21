@@ -31,9 +31,7 @@ The system catalog table `pg_class` catalogs tables and most everything else tha
 |`relhaspkey`|boolean| |True if the table has \(or once had\) a primary key.|
 |`relhasrules`|boolean| |True if table has rules.|
 |`relhassubclass`|boolean| |True if table has \(or once had\) any inheritance children.|
-|`relfrozenxid`|xid| |All transaction IDs before this one have been replaced with a permanent \(frozen\) transaction ID in this table. This is used to track whether the table needs to be vacuumed in order to prevent transaction ID wraparound or to allow `pg_clog` to be shrunk. The value is `0` \(`InvalidTransactionId`\) if the relation is not a table or if the table does not require vacuuming to prevent transaction ID wraparound. The table still might require vacuuming to reclaim disk space.
-
-|
+|`relfrozenxid`|xid| |All transaction IDs before this one have been replaced with a permanent \(frozen\) transaction ID in this table. This is used to track whether the table needs to be vacuumed in order to prevent transaction ID wraparound or to allow `pg_clog` to be shrunk.<br/>The value is `0` \(`InvalidTransactionId`\) if the relation is not a table or if the table does not require vacuuming to prevent transaction ID wraparound. The table still might require vacuuming to reclaim disk space.<br/>|
 |`relacl`|aclitem\[\]| |Access privileges assigned by `GRANT` and `REVOKE`.|
 |`reloptions`|text\[\]| |Access-method-specific options, as "keyword=value" strings.|
 
