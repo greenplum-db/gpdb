@@ -553,6 +553,13 @@ Feature: gpcheckcat tests
         And validate gpcheckcat logs contain skipping ACL and Owner tests
         And the user runs "dropdb all_good"
 
+    Scenario: gpcheckcat should return 0 if catalog issue is found on one database but the next database in the list has no catalog issue
+        Given database "mis_attr_db" is dropped and recreated
+        And the user runs "psql -d mis_attr_db -c "set allow_system_table_mods=true;DELETE FROM pg_class WHERE relname='gp_fastsequence';""
+        Then psql should return a return code of 0
+        Then the user runs "gpcheckcat -A"
+        Then gpcheckcat should return a return code of 0
+        And the user runs "dropdb mis_attr_db"
 
 ########################### @concourse_cluster tests ###########################
 # The @concourse_cluster tag denotes the scenario that requires a remote cluster

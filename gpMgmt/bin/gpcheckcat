@@ -3346,6 +3346,7 @@ def main():
     for dbname in GV.alldb:
 
         # Reset global variables
+        GV.retcode=SUCCESS
         GV.reset_stmt_queues()
         GPObjects.clear()
         GPObjectGraph.clear()
