@@ -20,15 +20,9 @@ The maximum length of the query text string stored in the column `current_query`
 |`client_port`|integer| |Client port|
 |`application_name`|text| |Client application name|
 |`xact_start`|timestamptz| |Transaction start time|
-|`waiting_reason`|text| |Reason the server process is waiting. The value can be:lock, replication, or resgroup
-
-|
-|`rsgid`|oid|pg\_resgroup.oid|Resource group OID or `0`See [Note](#rsg_note).
-
-|
-|`rsgname`|text|pg\_resgroup.rsgname|Resource group name or `unknown`.See [Note](#rsg_note).
-
-|
+|`waiting_reason`|text| |Reason the server process is waiting. The value can be:lock, replication, or resgroup<br/>|
+|`rsgid`|oid|pg\_resgroup.oid|Resource group OID or `0`<br/>See [Note](#rsg_note).<br/>|
+|`rsgname`|text|pg\_resgroup.rsgname|Resource group name or `unknown`.<br/>See [Note](#rsg_note).<br/>|
 |`rsgqueueduration`|interval| |For a queued query, the total time the query has been queued.|
 
 **Note:** When resource groups are enabled. Only query dispatcher \(QD\) processes will have a `rsgid` and `rsgname`. Other server processes such as a query executer \(QE\) process or session connection processes will have a `rsgid` value of `0` and a `rsgname` value of `unknown`. QE processes are managed by the same resource group as the dispatching QD process.
