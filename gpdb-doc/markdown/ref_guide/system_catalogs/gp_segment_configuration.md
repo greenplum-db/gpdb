@@ -5,11 +5,7 @@ The `gp_segment_configuration` table contains information about mirroring and se
 |column|type|references|description|
 |------|----|----------|-----------|
 |`dbid`|smallint| |The unique identifier of a segment \(or master\) instance.|
-|`content`|smallint| |The content identifier for a segment instance. A primary segment instance and its corresponding mirror will always have the same content identifier.For a segment the value is from 0-*N-1*, where *N* is the number of primary segments in the system.
-
-For the master, the value is always -1.
-
-|
+|`content`|smallint| |The content identifier for a segment instance. A primary segment instance and its corresponding mirror will always have the same content identifier.<br/>For a segment the value is from 0-*N-1*, where *N* is the number of primary segments in the system.<br/>For the master, the value is always -1.|
 |`role`|char| |The role that a segment is currently running as. Values are `p` \(primary\) or `m`\(mirror\).|
 |`preferred_role`|char| |The role that a segment was originally assigned at initialization time. Values are `p` \(primary\) or `m`\(mirror\).|
 |`mode`|char| |The synchronization status of a segment with its mirror copy. Values are `s` \(synchronized\), `c` \(change logging\), or `r` \(resyncing\).|
