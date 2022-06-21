@@ -19,12 +19,8 @@ The system catalog table `pg_class` catalogs tables and most everything else tha
 |`relaosegrelid`|oid| |Deprecatedin Greenplum Database 3.4.|
 |`relhasindex`|boolean| |True if this is a table and it has \(or recently had\) any indexes. This is set by `CREATE INDEX`, but not cleared immediately by `DROP INDEX`. `VACUUM` will clear if it finds the table has no indexes.|
 |`relisshared`|boolean| |True if this table is shared across all databases in the system. Only certain system catalog tables are shared.|
-|`relkind`|char| |The type of object`i` = index, `r` = heap or append-optimized table, `S` = sequence, `u` = uncataloged temporary heap table, `t` = TOAST value, `o` = internal append-optimized segment files and EOFs, `b` = append-optimized block directory, `m` = append-only visibility map, `v` = view, `c` = composite type
-
-|
-|`relstorage`|char| |The storage mode of a table`a`= append-optimized, `c`= column-oriented, `h` = heap, `v` = virtual, `x`= external table.
-
-|
+|`relkind`|char| |The type of object<br/>`i` = index, `r` = heap or append-optimized table, `S` = sequence, `u` = uncataloged temporary heap table, `t` = TOAST value, `o` = internal append-optimized segment files and EOFs, `b` = append-optimized block directory, `m` = append-only visibility map, `v` = view, `c` = composite type<br/>|
+|`relstorage`|char| |The storage mode of a table`a`= append-optimized, `c`= column-oriented, `h` = heap, `v` = virtual, `x`= external table.<br/>|
 |`relnatts`|int2| |Number of user columns in the relation \(system columns not counted\). There must be this many corresponding entries in pg\_attribute.|
 |`relchecks`|int2| |Number of check constraints on the table.|
 |`reltriggers`|int2| |Number of triggers on the table.|
