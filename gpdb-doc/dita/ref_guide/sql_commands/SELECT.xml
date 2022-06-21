@@ -806,8 +806,8 @@ SELECT distance, employee_name FROM employee_recursive;</codeblock>
           [ALL]</codeph>, followed by the recursive part of the query. Be sure that the recursive
         part of the query will eventually return no tuples, or else the query will loop
         indefinitely. See <xref
-          href="../../admin_guide/query/topics/CTE-query.xml#topic_zhs_r1s_w1b"/><ph
-          otherprops="pivotal"> in the <cite>Greenplum Database Administrator Guide</cite></ph> for
+          href="../../admin_guide/query/topics/CTE-query.xml#topic_zhs_r1s_w1b"/>
+        <ph otherprops="pivotal">in the <cite>Greenplum Database Administrator Guide</cite></ph> for
         more examples.</p>
     </section>
     <section id="section19"><title>Compatibility</title><p>The <codeph>SELECT</codeph> statement is
