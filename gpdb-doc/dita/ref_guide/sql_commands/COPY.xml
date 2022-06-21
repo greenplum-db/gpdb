@@ -492,7 +492,7 @@ COPY {table [(&lt;column> [, ...])] | (&lt;query>)} TO {'&lt;file>' | PROGRAM '&
             <codeph>COPY</codeph> treats it as data and not as a field separator or new row.</p>
         <p>By default, the escape character is a \ (backslash) for text-formatted files and a
             <codeph>"</codeph> (double quote) for csv-formatted files. If you want to use a
-          different escape character, you can do so using the <codeph>ESCAPE AS </codeph>clause.
+          different escape character, you can do so using the <codeph>ESCAPE AS</codeph> clause.
           Make sure to choose an escape character that is not used anywhere in your data file as an
           actual data value. You can also disable escaping in text-formatted files by using
             <codeph>ESCAPE 'OFF'</codeph>.</p>
