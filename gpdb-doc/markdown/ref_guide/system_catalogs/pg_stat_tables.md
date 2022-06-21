@@ -22,11 +22,11 @@ In Greenplum Database 5, the `pg_stat_*_tables` views display access statistics 
 |`n_live_tup`|bigint|Estimated number of live rows|
 |`n_dead_tup`|bigint|Estimated number of dead rows|
 |`last_vacuum`|timestamp with time zone|Last time this table was manually vacuumed \(not counting `VACUUM FULL`\)|
-|`last_autovacuum`|timestamp with time zone|Last time this table was vacuumed by the autovacuum daemon1|
+|`last_autovacuum`|timestamp with time zone|Last time this table was vacuumed by the autovacuum daemon<sup>1</sup>|
 |`last_analyze`|timestamp with time zone|Last time this table was manually analyzed|
-|`last_autoanalyze`|timestamp with time zone|Last time this table was analyzed by the autovacuum daemon1|
+|`last_autoanalyze`|timestamp with time zone|Last time this table was analyzed by the autovacuum daemon<sup>1</sup>|
 
-**Note:** 1 In Greenplum Database, the autovacuum daemon is disabled and not supported for user defined databases.
+**Note:** <sup>1</sup>In Greenplum Database, the autovacuum daemon is disabled and not supported for user defined databases.
 
 ## Table Access Statistics from the Master and Segment Instances 
 
