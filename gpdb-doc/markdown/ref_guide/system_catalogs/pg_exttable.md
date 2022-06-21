@@ -13,9 +13,7 @@ The `pg_exttable` system catalog table is used to track external tables and web 
 |`command`|text| |The OS command to execute when the external table is accessed.|
 |`rejectlimit`|integer| |The per segment reject limit for rows with errors, after which the load will fail.|
 |`rejectlimittype`|char| |Type of reject limit threshold: `r` for number of rows.|
-|`fmterrtbl`|oid|pg\_class.oid|The object id of the error table where format errors will be logged.**NOTE:** This column is no longer used and will be removed in a future release.
-
-|
+|`fmterrtbl`|oid|pg\_class.oid|The object id of the error table where format errors will be logged.**NOTE:** This column is no longer used and will be removed in a future release.<br/>|
 |`encoding`|text| |The client encoding.|
 |`writable`|boolean| |`0` for readable external tables, `1` for writable external tables.|
 
