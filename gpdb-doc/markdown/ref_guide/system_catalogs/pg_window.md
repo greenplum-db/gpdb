@@ -13,19 +13,7 @@ The `pg_window` table stores information about window functions. Window function
 |`winprefunc`|regproc|pg\_proc.oid|The OID in `pg_proc` of a preliminary window function to compute the partial value of a deferred-type window function.|
 |`winpretype`|oid|pg\_type.oid|The OID in `pg_type` of the preliminary window function's result type.|
 |winfinfunc|regproc|pg\_proc.oid|The OID in `pg_proc` of a function to compute the final value of a deferred-type window function from the partition row count and the result of `winprefunc`.|
-|winkind|char| |A character indicating membership of the window function in a class of related functions:`w` - ordinary window functions
-
-`n` - NTILE functions
-
-`f` - FIRST\_VALUE functions
-
-`l` - LAST\_VALUE functions
-
-`g` - LAG functions
-
-`d` - LEAD functions
-
-|
+|winkind|char| |A character indicating membership of the window function in a class of related functions:`w` - ordinary window functions<br/>`n` - NTILE functions<br/>`f` - FIRST\_VALUE functions<br/>`l` - LAST\_VALUE functions<br/>`g` - LAG functions<br/>`d` - LEAD functions<br/>|
 
 **Parent topic:** [System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
 
