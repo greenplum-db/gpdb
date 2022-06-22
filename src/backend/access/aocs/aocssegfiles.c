@@ -387,8 +387,7 @@ GetAllAOCSFileSegInfo_pg_aocsseg_rel(int numOfColumns,
 			aocs_seginfo->modcount = DatumGetInt64(d[Anum_pg_aocs_modcount - 1]);
 
 		Assert(!null[Anum_pg_aocs_formatversion - 1]);
-		if (!null[Anum_pg_aocs_formatversion - 1])
-			aocs_seginfo->formatversion = DatumGetInt16(d[Anum_pg_aocs_formatversion - 1]);
+		aocs_seginfo->formatversion = DatumGetInt16(d[Anum_pg_aocs_formatversion - 1]);
 
 		Assert(!null[Anum_pg_aocs_state - 1] || snapshot == SnapshotAny);
 		if (!null[Anum_pg_aocs_state - 1])
