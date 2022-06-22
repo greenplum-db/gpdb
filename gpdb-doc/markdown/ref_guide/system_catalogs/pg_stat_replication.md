@@ -11,15 +11,7 @@ The `pg_stat_replication` view contains metadata of the `walsender` process that
 |`client_addr`|name| |Client IP address.|
 |`client_port`|integer| |Client port number.|
 |`backend_start`|timestamp| |Operation start timestamp.|
-|`state`|text| |WAL sender state. The value can be:`startup`
-
-`backup`
-
-`catchup`
-
-`streaming`
-
-|
+|`state`|text| |WAL sender state. The value can be:<br/>`startup`<br/>`backup`<br/>`catchup`<br/>`streaming`<br/>|
 |`sent_location`|text| |WAL sender xlog record sent location.|
 |`write_location`|text| |WAL receiver xlog record write location.|
 |`flush_location`|text| |WAL receiver xlog record flush location.|
