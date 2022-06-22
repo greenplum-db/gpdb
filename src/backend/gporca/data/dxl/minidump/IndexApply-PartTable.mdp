@@ -1742,10 +1742,10 @@ ORDER BY 1 asc ;
         </dxl:LogicalGroupBy>
       </dxl:LogicalLimit>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="35">
+    <dxl:Plan Id="0" SpaceSize="60">
       <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="2951.636128" Rows="1.000000" Width="8"/>
+          <dxl:Cost StartupCost="0" TotalCost="2951.652030" Rows="1.000000" Width="8"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="23" Alias="fivemin">
@@ -1758,7 +1758,7 @@ ORDER BY 1 asc ;
         </dxl:SortingColumnList>
         <dxl:Sort SortDiscardDuplicates="false">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="2951.636092" Rows="1.000000" Width="8"/>
+            <dxl:Cost StartupCost="0" TotalCost="2951.651994" Rows="1.000000" Width="8"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="23" Alias="fivemin">
@@ -1773,7 +1773,7 @@ ORDER BY 1 asc ;
           <dxl:LimitOffset/>
           <dxl:Aggregate AggregationStrategy="Sorted" StreamSafe="false">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="2951.636092" Rows="1.000000" Width="8"/>
+              <dxl:Cost StartupCost="0" TotalCost="2951.651994" Rows="1.000000" Width="8"/>
             </dxl:Properties>
             <dxl:GroupingColumns>
               <dxl:GroupingColumn ColId="23"/>
@@ -1786,7 +1786,7 @@ ORDER BY 1 asc ;
             <dxl:Filter/>
             <dxl:Sort SortDiscardDuplicates="false">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="2951.636082" Rows="1.000000" Width="8"/>
+                <dxl:Cost StartupCost="0" TotalCost="2951.651984" Rows="1.000000" Width="8"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="23" Alias="fivemin">
@@ -1801,7 +1801,7 @@ ORDER BY 1 asc ;
               <dxl:LimitOffset/>
               <dxl:RedistributeMotion InputSegments="0,1" OutputSegments="0,1">
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="2951.636082" Rows="1.000000" Width="8"/>
+                  <dxl:Cost StartupCost="0" TotalCost="2951.651984" Rows="1.000000" Width="8"/>
                 </dxl:Properties>
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="23" Alias="fivemin">
@@ -1815,39 +1815,45 @@ ORDER BY 1 asc ;
                     <dxl:Ident ColId="23" ColName="fivemin" TypeMdid="0.20.1.0"/>
                   </dxl:HashExpr>
                 </dxl:HashExprList>
-                <dxl:Result>
+                <dxl:NestedLoopJoin JoinType="Inner" IndexNestedLoopJoin="true" OuterRefAsParam="false">
                   <dxl:Properties>
-                    <dxl:Cost StartupCost="0" TotalCost="2951.636066" Rows="1.000000" Width="8"/>
+                    <dxl:Cost StartupCost="0" TotalCost="2951.651968" Rows="1.000000" Width="8"/>
                   </dxl:Properties>
                   <dxl:ProjList>
                     <dxl:ProjElem ColId="23" Alias="fivemin">
-                      <dxl:OpExpr OperatorName="*" OperatorMdid="0.690.1.0" OperatorType="0.20.1.0">
-                        <dxl:OpExpr OperatorName="/" OperatorMdid="0.691.1.0" OperatorType="0.20.1.0">
-                          <dxl:OpExpr OperatorName="/" OperatorMdid="0.691.1.0" OperatorType="0.20.1.0">
-                            <dxl:Ident ColId="1" ColName="event_ts" TypeMdid="0.20.1.0"/>
-                            <dxl:ConstValue TypeMdid="0.23.1.0" Value="100000"/>
-                          </dxl:OpExpr>
-                          <dxl:ConstValue TypeMdid="0.23.1.0" Value="5"/>
-                        </dxl:OpExpr>
-                        <dxl:ConstValue TypeMdid="0.23.1.0" Value="5"/>
-                      </dxl:OpExpr>
+                      <dxl:Ident ColId="23" ColName="fivemin" TypeMdid="0.20.1.0"/>
                     </dxl:ProjElem>
                   </dxl:ProjList>
                   <dxl:Filter/>
-                  <dxl:OneTimeFilter/>
-                  <dxl:NestedLoopJoin JoinType="Inner" IndexNestedLoopJoin="true" OuterRefAsParam="false">
+                  <dxl:JoinFilter>
+                    <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>
+                  </dxl:JoinFilter>
+                  <dxl:Result>
                     <dxl:Properties>
-                      <dxl:Cost StartupCost="0" TotalCost="2951.636062" Rows="1.000000" Width="8"/>
+                      <dxl:Cost StartupCost="0" TotalCost="431.306548" Rows="840.000000" Width="33"/>
                     </dxl:Properties>
                     <dxl:ProjList>
+                      <dxl:ProjElem ColId="23" Alias="fivemin">
+                        <dxl:OpExpr OperatorName="*" OperatorMdid="0.690.1.0" OperatorType="0.20.1.0">
+                          <dxl:OpExpr OperatorName="/" OperatorMdid="0.691.1.0" OperatorType="0.20.1.0">
+                            <dxl:OpExpr OperatorName="/" OperatorMdid="0.691.1.0" OperatorType="0.20.1.0">
+                              <dxl:Ident ColId="1" ColName="event_ts" TypeMdid="0.20.1.0"/>
+                              <dxl:ConstValue TypeMdid="0.23.1.0" Value="100000"/>
+                            </dxl:OpExpr>
+                            <dxl:ConstValue TypeMdid="0.23.1.0" Value="5"/>
+                          </dxl:OpExpr>
+                          <dxl:ConstValue TypeMdid="0.23.1.0" Value="5"/>
+                        </dxl:OpExpr>
+                      </dxl:ProjElem>
+                      <dxl:ProjElem ColId="0" Alias="symbol">
+                        <dxl:Ident ColId="0" ColName="symbol" TypeMdid="0.1042.1.0"/>
+                      </dxl:ProjElem>
                       <dxl:ProjElem ColId="1" Alias="event_ts">
                         <dxl:Ident ColId="1" ColName="event_ts" TypeMdid="0.20.1.0"/>
                       </dxl:ProjElem>
                     </dxl:ProjList>
                     <dxl:Filter/>
-                    <dxl:JoinFilter>
-                      <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>
-                    </dxl:JoinFilter>
+                    <dxl:OneTimeFilter/>
                     <dxl:BroadcastMotion InputSegments="0,1" OutputSegments="0,1">
                       <dxl:Properties>
                         <dxl:Cost StartupCost="0" TotalCost="431.292687" Rows="840.000000" Width="25"/>
@@ -1890,56 +1896,40 @@ ORDER BY 1 asc ;
                         </dxl:TableDescriptor>
                       </dxl:TableScan>
                     </dxl:BroadcastMotion>
-                    <dxl:Append IsTarget="false" IsZapped="false">
+                  </dxl:Result>
+                  <dxl:Append IsTarget="false" IsZapped="false">
+                    <dxl:Properties>
+                      <dxl:Cost StartupCost="0" TotalCost="2520.336966" Rows="1.000000" Width="1"/>
+                    </dxl:Properties>
+                    <dxl:ProjList>
+                      <dxl:ProjElem ColId="11" Alias="ets">
+                        <dxl:Ident ColId="11" ColName="ets" TypeMdid="0.20.1.0"/>
+                      </dxl:ProjElem>
+                      <dxl:ProjElem ColId="12" Alias="sym">
+                        <dxl:Ident ColId="12" ColName="sym" TypeMdid="0.1043.1.0"/>
+                      </dxl:ProjElem>
+                      <dxl:ProjElem ColId="15" Alias="end_ts">
+                        <dxl:Ident ColId="15" ColName="end_ts" TypeMdid="0.20.1.0"/>
+                      </dxl:ProjElem>
+                    </dxl:ProjList>
+                    <dxl:Filter/>
+                    <dxl:IndexScan IndexScanDirection="Forward">
                       <dxl:Properties>
                         <dxl:Cost StartupCost="0" TotalCost="2520.336966" Rows="1.000000" Width="1"/>
                       </dxl:Properties>
                       <dxl:ProjList>
-                        <dxl:ProjElem ColId="11" Alias="ets">
-                          <dxl:Ident ColId="11" ColName="ets" TypeMdid="0.20.1.0"/>
+                        <dxl:ProjElem ColId="24" Alias="ets">
+                          <dxl:Ident ColId="24" ColName="ets" TypeMdid="0.20.1.0"/>
                         </dxl:ProjElem>
-                        <dxl:ProjElem ColId="12" Alias="sym">
-                          <dxl:Ident ColId="12" ColName="sym" TypeMdid="0.1043.1.0"/>
+                        <dxl:ProjElem ColId="25" Alias="sym">
+                          <dxl:Ident ColId="25" ColName="sym" TypeMdid="0.1043.1.0"/>
                         </dxl:ProjElem>
-                        <dxl:ProjElem ColId="15" Alias="end_ts">
-                          <dxl:Ident ColId="15" ColName="end_ts" TypeMdid="0.20.1.0"/>
+                        <dxl:ProjElem ColId="28" Alias="end_ts">
+                          <dxl:Ident ColId="28" ColName="end_ts" TypeMdid="0.20.1.0"/>
                         </dxl:ProjElem>
                       </dxl:ProjList>
-                      <dxl:Filter/>
-                      <dxl:IndexScan IndexScanDirection="Forward">
-                        <dxl:Properties>
-                          <dxl:Cost StartupCost="0" TotalCost="2520.336966" Rows="1.000000" Width="1"/>
-                        </dxl:Properties>
-                        <dxl:ProjList>
-                          <dxl:ProjElem ColId="24" Alias="ets">
-                            <dxl:Ident ColId="24" ColName="ets" TypeMdid="0.20.1.0"/>
-                          </dxl:ProjElem>
-                          <dxl:ProjElem ColId="25" Alias="sym">
-                            <dxl:Ident ColId="25" ColName="sym" TypeMdid="0.1043.1.0"/>
-                          </dxl:ProjElem>
-                          <dxl:ProjElem ColId="28" Alias="end_ts">
-                            <dxl:Ident ColId="28" ColName="end_ts" TypeMdid="0.20.1.0"/>
-                          </dxl:ProjElem>
-                        </dxl:ProjList>
-                        <dxl:Filter>
-                          <dxl:And>
-                            <dxl:Comparison ComparisonOperator="&lt;=" OperatorMdid="0.414.1.0">
-                              <dxl:Ident ColId="24" ColName="ets" TypeMdid="0.20.1.0"/>
-                              <dxl:Ident ColId="1" ColName="event_ts" TypeMdid="0.20.1.0"/>
-                            </dxl:Comparison>
-                            <dxl:Comparison ComparisonOperator="&gt;" OperatorMdid="0.413.1.0">
-                              <dxl:Ident ColId="28" ColName="end_ts" TypeMdid="0.20.1.0"/>
-                              <dxl:Ident ColId="1" ColName="event_ts" TypeMdid="0.20.1.0"/>
-                            </dxl:Comparison>
-                            <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.1054.1.0">
-                              <dxl:Cast TypeMdid="0.1042.1.0" FuncId="0.0.0.0">
-                                <dxl:Ident ColId="25" ColName="sym" TypeMdid="0.1043.1.0"/>
-                              </dxl:Cast>
-                              <dxl:Ident ColId="0" ColName="symbol" TypeMdid="0.1042.1.0"/>
-                            </dxl:Comparison>
-                          </dxl:And>
-                        </dxl:Filter>
-                        <dxl:IndexCondList>
+                      <dxl:Filter>
+                        <dxl:And>
                           <dxl:Comparison ComparisonOperator="&lt;=" OperatorMdid="0.414.1.0">
                             <dxl:Ident ColId="24" ColName="ets" TypeMdid="0.20.1.0"/>
                             <dxl:Ident ColId="1" ColName="event_ts" TypeMdid="0.20.1.0"/>
@@ -1948,59 +1938,59 @@ ORDER BY 1 asc ;
                             <dxl:Ident ColId="28" ColName="end_ts" TypeMdid="0.20.1.0"/>
                             <dxl:Ident ColId="1" ColName="event_ts" TypeMdid="0.20.1.0"/>
                           </dxl:Comparison>
-                        </dxl:IndexCondList>
-                        <dxl:IndexDescriptor Mdid="0.-1013039183.1.0" IndexName="my_tq_agg_small_ets_end_ts_ix_1_prt_p1"/>
-                        <dxl:TableDescriptor Mdid="0.-1013210183.1.1" TableName="my_tq_agg_small_prt_1">
-                          <dxl:Columns>
-                            <dxl:Column ColId="24" Attno="1" ColName="ets" TypeMdid="0.20.1.0" ColWidth="8"/>
-                            <dxl:Column ColId="25" Attno="2" ColName="sym" TypeMdid="0.1043.1.0" ColWidth="16"/>
-                            <dxl:Column ColId="26" Attno="3" ColName="bid_price" TypeMdid="0.1700.1.0" ColWidth="8"/>
-                            <dxl:Column ColId="27" Attno="4" ColName="ask_price" TypeMdid="0.1700.1.0" ColWidth="8"/>
-                            <dxl:Column ColId="28" Attno="5" ColName="end_ts" TypeMdid="0.20.1.0" ColWidth="8"/>
-                            <dxl:Column ColId="29" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
-                            <dxl:Column ColId="30" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0" ColWidth="4"/>
-                            <dxl:Column ColId="31" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0" ColWidth="4"/>
-                            <dxl:Column ColId="32" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0" ColWidth="4"/>
-                            <dxl:Column ColId="33" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0" ColWidth="4"/>
-                            <dxl:Column ColId="34" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0" ColWidth="4"/>
-                            <dxl:Column ColId="35" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0" ColWidth="4"/>
-                          </dxl:Columns>
-                        </dxl:TableDescriptor>
-                      </dxl:IndexScan>
-                      <dxl:IndexScan IndexScanDirection="Forward">
-                        <dxl:Properties>
-                          <dxl:Cost StartupCost="0" TotalCost="2520.336966" Rows="1.000000" Width="1"/>
-                        </dxl:Properties>
-                        <dxl:ProjList>
-                          <dxl:ProjElem ColId="36" Alias="ets">
-                            <dxl:Ident ColId="36" ColName="ets" TypeMdid="0.20.1.0"/>
-                          </dxl:ProjElem>
-                          <dxl:ProjElem ColId="37" Alias="sym">
-                            <dxl:Ident ColId="37" ColName="sym" TypeMdid="0.1043.1.0"/>
-                          </dxl:ProjElem>
-                          <dxl:ProjElem ColId="40" Alias="end_ts">
-                            <dxl:Ident ColId="40" ColName="end_ts" TypeMdid="0.20.1.0"/>
-                          </dxl:ProjElem>
-                        </dxl:ProjList>
-                        <dxl:Filter>
-                          <dxl:And>
-                            <dxl:Comparison ComparisonOperator="&lt;=" OperatorMdid="0.414.1.0">
-                              <dxl:Ident ColId="36" ColName="ets" TypeMdid="0.20.1.0"/>
-                              <dxl:Ident ColId="1" ColName="event_ts" TypeMdid="0.20.1.0"/>
-                            </dxl:Comparison>
-                            <dxl:Comparison ComparisonOperator="&gt;" OperatorMdid="0.413.1.0">
-                              <dxl:Ident ColId="40" ColName="end_ts" TypeMdid="0.20.1.0"/>
-                              <dxl:Ident ColId="1" ColName="event_ts" TypeMdid="0.20.1.0"/>
-                            </dxl:Comparison>
-                            <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.1054.1.0">
-                              <dxl:Cast TypeMdid="0.1042.1.0" FuncId="0.0.0.0">
-                                <dxl:Ident ColId="37" ColName="sym" TypeMdid="0.1043.1.0"/>
-                              </dxl:Cast>
-                              <dxl:Ident ColId="0" ColName="symbol" TypeMdid="0.1042.1.0"/>
-                            </dxl:Comparison>
-                          </dxl:And>
-                        </dxl:Filter>
-                        <dxl:IndexCondList>
+                          <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.1054.1.0">
+                            <dxl:Cast TypeMdid="0.1042.1.0" FuncId="0.0.0.0">
+                              <dxl:Ident ColId="25" ColName="sym" TypeMdid="0.1043.1.0"/>
+                            </dxl:Cast>
+                            <dxl:Ident ColId="0" ColName="symbol" TypeMdid="0.1042.1.0"/>
+                          </dxl:Comparison>
+                        </dxl:And>
+                      </dxl:Filter>
+                      <dxl:IndexCondList>
+                        <dxl:Comparison ComparisonOperator="&lt;=" OperatorMdid="0.414.1.0">
+                          <dxl:Ident ColId="24" ColName="ets" TypeMdid="0.20.1.0"/>
+                          <dxl:Ident ColId="1" ColName="event_ts" TypeMdid="0.20.1.0"/>
+                        </dxl:Comparison>
+                        <dxl:Comparison ComparisonOperator="&gt;" OperatorMdid="0.413.1.0">
+                          <dxl:Ident ColId="28" ColName="end_ts" TypeMdid="0.20.1.0"/>
+                          <dxl:Ident ColId="1" ColName="event_ts" TypeMdid="0.20.1.0"/>
+                        </dxl:Comparison>
+                      </dxl:IndexCondList>
+                      <dxl:IndexDescriptor Mdid="0.-1013039183.1.0" IndexName="my_tq_agg_small_ets_end_ts_ix_1_prt_p1"/>
+                      <dxl:TableDescriptor Mdid="0.-1013210183.1.1" TableName="my_tq_agg_small_prt_1">
+                        <dxl:Columns>
+                          <dxl:Column ColId="24" Attno="1" ColName="ets" TypeMdid="0.20.1.0" ColWidth="8"/>
+                          <dxl:Column ColId="25" Attno="2" ColName="sym" TypeMdid="0.1043.1.0" ColWidth="16"/>
+                          <dxl:Column ColId="26" Attno="3" ColName="bid_price" TypeMdid="0.1700.1.0" ColWidth="8"/>
+                          <dxl:Column ColId="27" Attno="4" ColName="ask_price" TypeMdid="0.1700.1.0" ColWidth="8"/>
+                          <dxl:Column ColId="28" Attno="5" ColName="end_ts" TypeMdid="0.20.1.0" ColWidth="8"/>
+                          <dxl:Column ColId="29" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
+                          <dxl:Column ColId="30" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0" ColWidth="4"/>
+                          <dxl:Column ColId="31" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0" ColWidth="4"/>
+                          <dxl:Column ColId="32" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0" ColWidth="4"/>
+                          <dxl:Column ColId="33" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0" ColWidth="4"/>
+                          <dxl:Column ColId="34" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0" ColWidth="4"/>
+                          <dxl:Column ColId="35" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0" ColWidth="4"/>
+                        </dxl:Columns>
+                      </dxl:TableDescriptor>
+                    </dxl:IndexScan>
+                    <dxl:IndexScan IndexScanDirection="Forward">
+                      <dxl:Properties>
+                        <dxl:Cost StartupCost="0" TotalCost="2520.336966" Rows="1.000000" Width="1"/>
+                      </dxl:Properties>
+                      <dxl:ProjList>
+                        <dxl:ProjElem ColId="36" Alias="ets">
+                          <dxl:Ident ColId="36" ColName="ets" TypeMdid="0.20.1.0"/>
+                        </dxl:ProjElem>
+                        <dxl:ProjElem ColId="37" Alias="sym">
+                          <dxl:Ident ColId="37" ColName="sym" TypeMdid="0.1043.1.0"/>
+                        </dxl:ProjElem>
+                        <dxl:ProjElem ColId="40" Alias="end_ts">
+                          <dxl:Ident ColId="40" ColName="end_ts" TypeMdid="0.20.1.0"/>
+                        </dxl:ProjElem>
+                      </dxl:ProjList>
+                      <dxl:Filter>
+                        <dxl:And>
                           <dxl:Comparison ComparisonOperator="&lt;=" OperatorMdid="0.414.1.0">
                             <dxl:Ident ColId="36" ColName="ets" TypeMdid="0.20.1.0"/>
                             <dxl:Ident ColId="1" ColName="event_ts" TypeMdid="0.20.1.0"/>
@@ -2009,59 +1999,59 @@ ORDER BY 1 asc ;
                             <dxl:Ident ColId="40" ColName="end_ts" TypeMdid="0.20.1.0"/>
                             <dxl:Ident ColId="1" ColName="event_ts" TypeMdid="0.20.1.0"/>
                           </dxl:Comparison>
-                        </dxl:IndexCondList>
-                        <dxl:IndexDescriptor Mdid="0.-1013039182.1.0" IndexName="my_tq_agg_small_ets_end_ts_ix_1_prt_p1"/>
-                        <dxl:TableDescriptor Mdid="0.-1013210182.1.1" TableName="my_tq_agg_small_prt_2">
-                          <dxl:Columns>
-                            <dxl:Column ColId="36" Attno="1" ColName="ets" TypeMdid="0.20.1.0" ColWidth="8"/>
-                            <dxl:Column ColId="37" Attno="2" ColName="sym" TypeMdid="0.1043.1.0" ColWidth="16"/>
-                            <dxl:Column ColId="38" Attno="3" ColName="bid_price" TypeMdid="0.1700.1.0" ColWidth="8"/>
-                            <dxl:Column ColId="39" Attno="4" ColName="ask_price" TypeMdid="0.1700.1.0" ColWidth="8"/>
-                            <dxl:Column ColId="40" Attno="5" ColName="end_ts" TypeMdid="0.20.1.0" ColWidth="8"/>
-                            <dxl:Column ColId="41" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
-                            <dxl:Column ColId="42" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0" ColWidth="4"/>
-                            <dxl:Column ColId="43" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0" ColWidth="4"/>
-                            <dxl:Column ColId="44" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0" ColWidth="4"/>
-                            <dxl:Column ColId="45" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0" ColWidth="4"/>
-                            <dxl:Column ColId="46" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0" ColWidth="4"/>
-                            <dxl:Column ColId="47" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0" ColWidth="4"/>
-                          </dxl:Columns>
-                        </dxl:TableDescriptor>
-                      </dxl:IndexScan>
-                      <dxl:IndexScan IndexScanDirection="Forward">
-                        <dxl:Properties>
-                          <dxl:Cost StartupCost="0" TotalCost="2520.336966" Rows="1.000000" Width="1"/>
-                        </dxl:Properties>
-                        <dxl:ProjList>
-                          <dxl:ProjElem ColId="48" Alias="ets">
-                            <dxl:Ident ColId="48" ColName="ets" TypeMdid="0.20.1.0"/>
-                          </dxl:ProjElem>
-                          <dxl:ProjElem ColId="49" Alias="sym">
-                            <dxl:Ident ColId="49" ColName="sym" TypeMdid="0.1043.1.0"/>
-                          </dxl:ProjElem>
-                          <dxl:ProjElem ColId="52" Alias="end_ts">
-                            <dxl:Ident ColId="52" ColName="end_ts" TypeMdid="0.20.1.0"/>
-                          </dxl:ProjElem>
-                        </dxl:ProjList>
-                        <dxl:Filter>
-                          <dxl:And>
-                            <dxl:Comparison ComparisonOperator="&lt;=" OperatorMdid="0.414.1.0">
-                              <dxl:Ident ColId="48" ColName="ets" TypeMdid="0.20.1.0"/>
-                              <dxl:Ident ColId="1" ColName="event_ts" TypeMdid="0.20.1.0"/>
-                            </dxl:Comparison>
-                            <dxl:Comparison ComparisonOperator="&gt;" OperatorMdid="0.413.1.0">
-                              <dxl:Ident ColId="52" ColName="end_ts" TypeMdid="0.20.1.0"/>
-                              <dxl:Ident ColId="1" ColName="event_ts" TypeMdid="0.20.1.0"/>
-                            </dxl:Comparison>
-                            <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.1054.1.0">
-                              <dxl:Cast TypeMdid="0.1042.1.0" FuncId="0.0.0.0">
-                                <dxl:Ident ColId="49" ColName="sym" TypeMdid="0.1043.1.0"/>
-                              </dxl:Cast>
-                              <dxl:Ident ColId="0" ColName="symbol" TypeMdid="0.1042.1.0"/>
-                            </dxl:Comparison>
-                          </dxl:And>
-                        </dxl:Filter>
-                        <dxl:IndexCondList>
+                          <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.1054.1.0">
+                            <dxl:Cast TypeMdid="0.1042.1.0" FuncId="0.0.0.0">
+                              <dxl:Ident ColId="37" ColName="sym" TypeMdid="0.1043.1.0"/>
+                            </dxl:Cast>
+                            <dxl:Ident ColId="0" ColName="symbol" TypeMdid="0.1042.1.0"/>
+                          </dxl:Comparison>
+                        </dxl:And>
+                      </dxl:Filter>
+                      <dxl:IndexCondList>
+                        <dxl:Comparison ComparisonOperator="&lt;=" OperatorMdid="0.414.1.0">
+                          <dxl:Ident ColId="36" ColName="ets" TypeMdid="0.20.1.0"/>
+                          <dxl:Ident ColId="1" ColName="event_ts" TypeMdid="0.20.1.0"/>
+                        </dxl:Comparison>
+                        <dxl:Comparison ComparisonOperator="&gt;" OperatorMdid="0.413.1.0">
+                          <dxl:Ident ColId="40" ColName="end_ts" TypeMdid="0.20.1.0"/>
+                          <dxl:Ident ColId="1" ColName="event_ts" TypeMdid="0.20.1.0"/>
+                        </dxl:Comparison>
+                      </dxl:IndexCondList>
+                      <dxl:IndexDescriptor Mdid="0.-1013039182.1.0" IndexName="my_tq_agg_small_ets_end_ts_ix_1_prt_p1"/>
+                      <dxl:TableDescriptor Mdid="0.-1013210182.1.1" TableName="my_tq_agg_small_prt_2">
+                        <dxl:Columns>
+                          <dxl:Column ColId="36" Attno="1" ColName="ets" TypeMdid="0.20.1.0" ColWidth="8"/>
+                          <dxl:Column ColId="37" Attno="2" ColName="sym" TypeMdid="0.1043.1.0" ColWidth="16"/>
+                          <dxl:Column ColId="38" Attno="3" ColName="bid_price" TypeMdid="0.1700.1.0" ColWidth="8"/>
+                          <dxl:Column ColId="39" Attno="4" ColName="ask_price" TypeMdid="0.1700.1.0" ColWidth="8"/>
+                          <dxl:Column ColId="40" Attno="5" ColName="end_ts" TypeMdid="0.20.1.0" ColWidth="8"/>
+                          <dxl:Column ColId="41" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
+                          <dxl:Column ColId="42" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0" ColWidth="4"/>
+                          <dxl:Column ColId="43" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0" ColWidth="4"/>
+                          <dxl:Column ColId="44" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0" ColWidth="4"/>
+                          <dxl:Column ColId="45" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0" ColWidth="4"/>
+                          <dxl:Column ColId="46" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0" ColWidth="4"/>
+                          <dxl:Column ColId="47" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0" ColWidth="4"/>
+                        </dxl:Columns>
+                      </dxl:TableDescriptor>
+                    </dxl:IndexScan>
+                    <dxl:IndexScan IndexScanDirection="Forward">
+                      <dxl:Properties>
+                        <dxl:Cost StartupCost="0" TotalCost="2520.336966" Rows="1.000000" Width="1"/>
+                      </dxl:Properties>
+                      <dxl:ProjList>
+                        <dxl:ProjElem ColId="48" Alias="ets">
+                          <dxl:Ident ColId="48" ColName="ets" TypeMdid="0.20.1.0"/>
+                        </dxl:ProjElem>
+                        <dxl:ProjElem ColId="49" Alias="sym">
+                          <dxl:Ident ColId="49" ColName="sym" TypeMdid="0.1043.1.0"/>
+                        </dxl:ProjElem>
+                        <dxl:ProjElem ColId="52" Alias="end_ts">
+                          <dxl:Ident ColId="52" ColName="end_ts" TypeMdid="0.20.1.0"/>
+                        </dxl:ProjElem>
+                      </dxl:ProjList>
+                      <dxl:Filter>
+                        <dxl:And>
                           <dxl:Comparison ComparisonOperator="&lt;=" OperatorMdid="0.414.1.0">
                             <dxl:Ident ColId="48" ColName="ets" TypeMdid="0.20.1.0"/>
                             <dxl:Ident ColId="1" ColName="event_ts" TypeMdid="0.20.1.0"/>
@@ -2070,28 +2060,44 @@ ORDER BY 1 asc ;
                             <dxl:Ident ColId="52" ColName="end_ts" TypeMdid="0.20.1.0"/>
                             <dxl:Ident ColId="1" ColName="event_ts" TypeMdid="0.20.1.0"/>
                           </dxl:Comparison>
-                        </dxl:IndexCondList>
-                        <dxl:IndexDescriptor Mdid="0.-1013039181.1.0" IndexName="my_tq_agg_small_ets_end_ts_ix_1_prt_p1"/>
-                        <dxl:TableDescriptor Mdid="0.-1013210181.1.1" TableName="my_tq_agg_small_prt_3">
-                          <dxl:Columns>
-                            <dxl:Column ColId="48" Attno="1" ColName="ets" TypeMdid="0.20.1.0" ColWidth="8"/>
-                            <dxl:Column ColId="49" Attno="2" ColName="sym" TypeMdid="0.1043.1.0" ColWidth="16"/>
-                            <dxl:Column ColId="50" Attno="3" ColName="bid_price" TypeMdid="0.1700.1.0" ColWidth="8"/>
-                            <dxl:Column ColId="51" Attno="4" ColName="ask_price" TypeMdid="0.1700.1.0" ColWidth="8"/>
-                            <dxl:Column ColId="52" Attno="5" ColName="end_ts" TypeMdid="0.20.1.0" ColWidth="8"/>
-                            <dxl:Column ColId="53" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
-                            <dxl:Column ColId="54" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0" ColWidth="4"/>
-                            <dxl:Column ColId="55" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0" ColWidth="4"/>
-                            <dxl:Column ColId="56" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0" ColWidth="4"/>
-                            <dxl:Column ColId="57" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0" ColWidth="4"/>
-                            <dxl:Column ColId="58" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0" ColWidth="4"/>
-                            <dxl:Column ColId="59" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0" ColWidth="4"/>
-                          </dxl:Columns>
-                        </dxl:TableDescriptor>
-                      </dxl:IndexScan>
-                    </dxl:Append>
-                  </dxl:NestedLoopJoin>
-                </dxl:Result>
+                          <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.1054.1.0">
+                            <dxl:Cast TypeMdid="0.1042.1.0" FuncId="0.0.0.0">
+                              <dxl:Ident ColId="49" ColName="sym" TypeMdid="0.1043.1.0"/>
+                            </dxl:Cast>
+                            <dxl:Ident ColId="0" ColName="symbol" TypeMdid="0.1042.1.0"/>
+                          </dxl:Comparison>
+                        </dxl:And>
+                      </dxl:Filter>
+                      <dxl:IndexCondList>
+                        <dxl:Comparison ComparisonOperator="&lt;=" OperatorMdid="0.414.1.0">
+                          <dxl:Ident ColId="48" ColName="ets" TypeMdid="0.20.1.0"/>
+                          <dxl:Ident ColId="1" ColName="event_ts" TypeMdid="0.20.1.0"/>
+                        </dxl:Comparison>
+                        <dxl:Comparison ComparisonOperator="&gt;" OperatorMdid="0.413.1.0">
+                          <dxl:Ident ColId="52" ColName="end_ts" TypeMdid="0.20.1.0"/>
+                          <dxl:Ident ColId="1" ColName="event_ts" TypeMdid="0.20.1.0"/>
+                        </dxl:Comparison>
+                      </dxl:IndexCondList>
+                      <dxl:IndexDescriptor Mdid="0.-1013039181.1.0" IndexName="my_tq_agg_small_ets_end_ts_ix_1_prt_p1"/>
+                      <dxl:TableDescriptor Mdid="0.-1013210181.1.1" TableName="my_tq_agg_small_prt_3">
+                        <dxl:Columns>
+                          <dxl:Column ColId="48" Attno="1" ColName="ets" TypeMdid="0.20.1.0" ColWidth="8"/>
+                          <dxl:Column ColId="49" Attno="2" ColName="sym" TypeMdid="0.1043.1.0" ColWidth="16"/>
+                          <dxl:Column ColId="50" Attno="3" ColName="bid_price" TypeMdid="0.1700.1.0" ColWidth="8"/>
+                          <dxl:Column ColId="51" Attno="4" ColName="ask_price" TypeMdid="0.1700.1.0" ColWidth="8"/>
+                          <dxl:Column ColId="52" Attno="5" ColName="end_ts" TypeMdid="0.20.1.0" ColWidth="8"/>
+                          <dxl:Column ColId="53" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
+                          <dxl:Column ColId="54" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0" ColWidth="4"/>
+                          <dxl:Column ColId="55" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0" ColWidth="4"/>
+                          <dxl:Column ColId="56" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0" ColWidth="4"/>
+                          <dxl:Column ColId="57" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0" ColWidth="4"/>
+                          <dxl:Column ColId="58" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0" ColWidth="4"/>
+                          <dxl:Column ColId="59" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0" ColWidth="4"/>
+                        </dxl:Columns>
+                      </dxl:TableDescriptor>
+                    </dxl:IndexScan>
+                  </dxl:Append>
+                </dxl:NestedLoopJoin>
               </dxl:RedistributeMotion>
             </dxl:Sort>
           </dxl:Aggregate>

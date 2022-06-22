@@ -220,7 +220,7 @@ from (select regexp_split_to_table(a, ',') as c, b from t) dumb(c, b);
     <dxl:Plan Id="0" SpaceSize="1">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="431.000202" Rows="1.000000" Width="16"/>
+          <dxl:Cost StartupCost="0" TotalCost="431.000283" Rows="1.000000" Width="16"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="9" Alias="c">
@@ -234,34 +234,34 @@ from (select regexp_split_to_table(a, ',') as c, b from t) dumb(c, b);
         <dxl:SortingColumnList/>
         <dxl:Result>
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="431.000142" Rows="1.000000" Width="16"/>
+            <dxl:Cost StartupCost="0" TotalCost="431.000223" Rows="1.000000" Width="16"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="9" Alias="c">
-              <dxl:Ident ColId="9" ColName="c" TypeMdid="0.25.1.0"/>
+              <dxl:FuncExpr FuncId="0.2765.1.0" FuncRetSet="true" TypeMdid="0.25.1.0">
+                <dxl:Ident ColId="0" ColName="a" TypeMdid="0.25.1.0"/>
+                <dxl:ConstValue TypeMdid="0.25.1.0" Value="AAAABSw=" LintValue="161055276"/>
+              </dxl:FuncExpr>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="10" Alias="regexp_split_to_table">
-              <dxl:FuncExpr FuncId="0.2765.1.0" FuncRetSet="true" TypeMdid="0.25.1.0">
-                <dxl:Ident ColId="1" ColName="b" TypeMdid="0.25.1.0"/>
-                <dxl:ConstValue TypeMdid="0.25.1.0" Value="AAAABTs=" LintValue="161178156"/>
-              </dxl:FuncExpr>
+              <dxl:Ident ColId="10" ColName="regexp_split_to_table" TypeMdid="0.25.1.0"/>
             </dxl:ProjElem>
           </dxl:ProjList>
           <dxl:Filter/>
           <dxl:OneTimeFilter/>
           <dxl:Result>
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="431.000103" Rows="1.000000" Width="16"/>
+              <dxl:Cost StartupCost="0" TotalCost="431.000185" Rows="1.000000" Width="20"/>
             </dxl:Properties>
             <dxl:ProjList>
-              <dxl:ProjElem ColId="9" Alias="c">
+              <dxl:ProjElem ColId="10" Alias="regexp_split_to_table">
                 <dxl:FuncExpr FuncId="0.2765.1.0" FuncRetSet="true" TypeMdid="0.25.1.0">
-                  <dxl:Ident ColId="0" ColName="a" TypeMdid="0.25.1.0"/>
-                  <dxl:ConstValue TypeMdid="0.25.1.0" Value="AAAABSw=" LintValue="161055276"/>
+                  <dxl:Ident ColId="1" ColName="b" TypeMdid="0.25.1.0"/>
+                  <dxl:ConstValue TypeMdid="0.25.1.0" Value="AAAABTs=" LintValue="161178156"/>
                 </dxl:FuncExpr>
               </dxl:ProjElem>
-              <dxl:ProjElem ColId="1" Alias="b">
-                <dxl:Ident ColId="1" ColName="b" TypeMdid="0.25.1.0"/>
+              <dxl:ProjElem ColId="0" Alias="a">
+                <dxl:Ident ColId="0" ColName="a" TypeMdid="0.25.1.0"/>
               </dxl:ProjElem>
             </dxl:ProjList>
             <dxl:Filter/>
