@@ -12,11 +12,7 @@ A particular segment instance is identified by its `hostname` and `dbid` \(the u
 
 |Column|Type|Description|
 |------|----|-----------|
-|`ctime`|timestamp\(0\)
-
- \(without time zone\)
-
-|The time the row was created.|
+|`ctime`|timestamp\(0\)<br/>\(without time zone\)<br/>|The time the row was created.<br/>|
 |`dbid`|int|The segment ID \(`dbid` from `gp_segment_configuration`\).|
 |`hostname`|charvar\(64\)|The segment hostname.|
 |`dynamic_memory_used`|bigint|The amount of dynamic memory \(in bytes\) allocated to query processes running on this segment.|
