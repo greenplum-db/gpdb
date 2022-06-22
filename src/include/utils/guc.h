@@ -315,6 +315,8 @@ extern bool fts_diskio_check;
 
 extern bool gp_enable_relsize_collection;
 
+extern bool gp_disable_dtx_visibility_check;
+
 /* Debug DTM Action */
 typedef enum
 {

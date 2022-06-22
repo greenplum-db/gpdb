@@ -41,3 +41,37 @@ count
 (1 row)
 2U: set gp_select_invisible=0;
 SET
+
+-- If gp_disable_dtx_visibility_check is set, all tuples should be vacuumed.
+delete from test_recently_dead_utility;
+DELETE 1000
+
+2U: set gp_select_invisible=1;
+SET
+2U: select count(*) from test_recently_dead_utility;
+count
+-----
+1000 
+(1 row)
+2U: set gp_select_invisible=0;
+SET
+
+2U: set gp_disable_dtx_visibility_check to on;
+SET
+2U: vacuum full test_recently_dead_utility;
+VACUUM
+
+2U: set gp_select_invisible=1;
+SET
+2U: select count(*) from test_recently_dead_utility;
+count
+-----
+0    
+(1 row)
+2U: set gp_select_invisible=0;
+SET
+
+-- Ensure that we ERROR out if gp_disable_dtx_visibility_check is set in
+-- non-utility mode.
+3: set gp_disable_dtx_visibility_check to on;
+ERROR:  gp_disable_dtx_visibility_check can only be set in utility mode (guc_gp.c:6347)

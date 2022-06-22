@@ -45,12 +45,19 @@
  * snapshot can't be checked it returns to not do anything to the tuple. For
  * example running vacuum in utility mode for particular QE directly, in which
  * case don't have distributed snapshot to check against, it will not allow
- * marking tuples DEAD just based on local information.
+ * marking tuples DEAD just based on local information (unless
+ * gp_disable_dtx_visibility_check is on)
  */
 bool
 localXidSatisfiesAnyDistributedSnapshot(TransactionId localXid)
 {
 	DistributedSnapshotCommitted distributedSnapshotCommitted;
+
+	/*
+	 * If the GUC is set, consider tuple as invisible.
+	 */
+	if (gp_disable_dtx_visibility_check)
+		return false;
 
 	/*
 	 * In the QD, the distributed transactions become visible at the same time

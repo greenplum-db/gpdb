@@ -124,6 +124,8 @@ static const char *assign_gp_default_storage_options(
 static bool assign_pljava_classpath_insecure(bool newval, bool doit, GucSource source);
 static bool assign_gp_resource_group_bypass(bool newval, bool doit, GucSource source);
 
+static bool assign_gp_disable_dtx_visibility_check(bool newval, bool doit, GucSource source);
+
 extern struct config_generic *find_option(const char *name, bool create_placeholders, int elevel);
 
 extern bool enable_partition_rules;
@@ -215,6 +217,7 @@ bool		gp_create_table_random_default_distribution = true;
 bool		gp_allow_non_uniform_partitioning_ddl = true;
 bool		gp_enable_exchange_default_partition = false;
 int			dtx_phase2_retry_count = 0;
+bool		gp_disable_dtx_visibility_check = false;
 
 bool		log_dispatch_stats = false;
 
@@ -3437,6 +3440,16 @@ struct config_bool ConfigureNamesBool_gp[] =
 		true, NULL, NULL
 	},
 
+	{
+		{"gp_disable_dtx_visibility_check", PGC_SUSET, DEVELOPER_OPTIONS,
+		 gettext_noop("Disables visibility checks for tuples against a distributed snapshot in utility mode"),
+		 NULL,
+		 GUC_NOT_IN_SAMPLE | GUC_NO_SHOW_ALL
+		},
+		&gp_disable_dtx_visibility_check,
+		false, assign_gp_disable_dtx_visibility_check, NULL
+	},
+
 	/* End-of-list marker */
 	{
 		{NULL, 0, 0, NULL, NULL}, NULL, false, NULL, NULL
@@ -6323,4 +6336,14 @@ assign_gp_default_storage_options(const char *newval,
 		PG_END_TRY();
 	}
 	return doit ? storageOptToString() : newval;
+}
+
+static bool
+assign_gp_disable_dtx_visibility_check(bool newval,
+										bool doit,
+										GucSource source)
+{
+	if (Gp_role != GP_ROLE_UTILITY)
+		elog(ERROR, "gp_disable_dtx_visibility_check can only be set in utility mode");
+	return true;
 }
