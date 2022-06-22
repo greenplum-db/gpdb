@@ -29,12 +29,8 @@ This table describes the values in the Settable Classifications column of the ta
 
 |Set Classification|Description|
 |------------------|-----------|
-|master or local|A *master* parameter only needs to be set in the `postgresql.conf` file of the Greenplum master instance. The value for this parameter is then either passed to \(or ignored by\) the segments at run time.A local parameter must be set in the `postgresql.conf` file of the master AND each segment instance. Each segment instance looks to its own configuration to get the value for the parameter. Local parameters always requires a system restart for changes to take effect.
-
-|
-|session or system|*Session* parameters can be changed on the fly within a database session, and can have a hierarchy of settings: at the system level \(`postgresql.conf`\), at the database level \(`ALTER DATABASE...SET`\), at the role level \(`ALTER ROLE...SET`\), or at the session level \(`SET`\). If the parameter is set at multiple levels, then the most granular setting takes precedence \(for example, session overrides role, role overrides database, and database overrides system\).A *system* parameter can only be changed via the `postgresql.conf`file\(s\).
-
-|
+|master or local|A *master* parameter only needs to be set in the `postgresql.conf` file of the Greenplum master instance. The value for this parameter is then either passed to \(or ignored by\) the segments at run time.<br/>A local parameter must be set in the `postgresql.conf` file of the master AND each segment instance. Each segment instance looks to its own configuration to get the value for the parameter. Local parameters always requires a system restart for changes to take effect.<br/>|
+|session or system|*Session* parameters can be changed on the fly within a database session, and can have a hierarchy of settings: at the system level \(`postgresql.conf`\), at the database level \(`ALTER DATABASE...SET`\), at the role level \(`ALTER ROLE...SET`\), or at the session level \(`SET`\). If the parameter is set at multiple levels, then the most granular setting takes precedence \(for example, session overrides role, role overrides database, and database overrides system\).<br/>A *system* parameter can only be changed via the `postgresql.conf`file\(s\).<br/>|
 |restart or reload|When changing parameter values in the postgresql.conf file\(s\), some require a *restart* of Greenplum Database for the change to take effect. Other parameter values can be refreshed by just reloading the server configuration file \(using `gpstop -u`\), and do not require stopping the system.|
 |superuser|These session parameters can only be set by a database superuser. Regular database users cannot set this parameter.|
 |read only|These parameters are not settable by database users or superusers. The current value of the parameter can be shown but not altered.|
