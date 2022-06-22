@@ -39,6 +39,19 @@ SELECT char_length(a), char_length(b), c FROM toastable_ao ORDER BY c;
     10000000 |    10000032 | 3
 (3 rows)
 
+-- Check that small tuples can be correctly toasted as long as it's beyond the toast
+-- target size (about 1/4 of the table's blocksize)
+CREATE TABLE toastable_ao2(a int, b int[]) WITH (appendonly=true, blocksize=8192);
+INSERT INTO toastable_ao2 SELECT 1, array_agg(x) from generate_series(1, 1000) x;
+INSERT INTO toastable_ao2 SELECT 1, array_agg(x) from generate_series(1, 2030) x;
+SELECT gp_segment_id, get_rel_toast_count('toastable_ao2') FROM gp_dist_random('gp_id') order by gp_segment_id;
+ gp_segment_id | get_rel_toast_count 
+---------------+---------------------
+             0 |                   0
+             1 |                   2
+             2 |                   0
+(3 rows)
+
 -- UPDATE 
 -- (heap rel only) and toast the large tuple
 UPDATE toastable_heap SET a=repeat('A',100000) WHERE c=1;
