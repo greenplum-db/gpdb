@@ -23,9 +23,7 @@ Each data type has an external representation determined by its input and output
 |circle| |24 bytes|<\(x,y\),r\> \(center and radius\)|circle in the plane - not allowed in distribution key columns.|
 |date| |4 bytes|4713 BC - 294,277 AD|calendar date \(year, month, day\)|
 |decimal \[ \(p, s\) \][1](#if139219)|numeric \[ \(p, s\) \]|variable|no limit|user-specified precision, exact|
-|double precision|float8float
-
-|8 bytes|15 decimal digits precision|variable-precision, inexact|
+|double precision|float8<br/>float<br/>|8 bytes|15 decimal digits precision|variable-precision, inexact|
 |inet| |12 or 24 bytes| |IPv4 and IPv6 hosts and networks|
 |integer|int, int4|4 bytes|-2147483648 to +2147483647|usual choice for integer|
 |interval \[ \(p\) \]| |12 bytes|-178000000 years - 178000000 years|time span|
@@ -33,19 +31,19 @@ Each data type has an external representation determined by its input and output
 |lseg| |32 bytes|\(\(x1,y1\),\(x2,y2\)\)|line segment in the plane - not allowed in distribution key columns.|
 |macaddr| |6 bytes| |MAC addresses|
 |money| |8 bytes|-92233720368547758.08 to +92233720368547758.07|currency amount|
-|path[1](#if139219)| |16+16n bytes|\[\(x1,y1\),...\]|geometric path in the plane - not allowed in distribution key columns.|
+|path[<sup>1](#if139219)| |16+16n bytes|\[\(x1,y1\),...\]|geometric path in the plane - not allowed in distribution key columns.|
 |point| |16 bytes|\(x,y\)|geometric point in the plane - not allowed in distribution key columns.|
 |polygon| |40+16n bytes|\(\(x1,y1\),...\)|closed geometric path in the plane - not allowed in distribution key columns.|
 |real|float4|4 bytes|6 decimal digits precision|variable-precision, inexact|
 |serial|serial4|4 bytes|1 to 2147483647|autoincrementing integer|
 |smallint|int2|2 bytes|-32768 to +32767|small range integer|
-|text[1](#if139219)| |1 byte + *string size*|strings of any length|variable unlimited length|
+|text[<sup>1</sup>](#if139219)| |1 byte + *string size*|strings of any length|variable unlimited length|
 |time \[ \(p\) \] \[ without time zone \]| |8 bytes|00:00:00\[.000000\] - 24:00:00\[.000000\]|time of day only|
 |time \[ \(p\) \] with time zone|timetz|12 bytes|00:00:00+1359 - 24:00:00-1359|time of day only, with time zone|
 |timestamp \[ \(p\) \] \[ without time zone \]| |8 bytes|4713 BC - 294,277 AD|both date and time|
 |timestamp \[ \(p\) \] with time zone|timestamptz|8 bytes|4713 BC - 294,277 AD|both date and time, with time zone|
 |uuid| |16 bytes| |Universally Unique Identifiers according to RFC 4122, ISO/IEC 9834-8:2005|
-|xml[1](#if139219)| |1 byte + *xml size*|xml of any length|variable unlimited length|
+|xml[<sup>1</sup>](#if139219)| |1 byte + *xml size*|xml of any length|variable unlimited length|
 |txid\_snapshot| | | |user-level transaction ID snapshot|
 
 ## Pseudo-Types 
@@ -110,5 +108,5 @@ For information about the function `gptext.index()`, see the Pivotal GPText docu
 
 **Parent topic:** [Greenplum Database Reference Guide](ref_guide.html)
 
-1 For variable length data types, if the data is greater than or equal to 127 bytes, the storage overhead is 4 bytes instead of 1.
+<sup>1</sup> For variable length data types, if the data is greater than or equal to 127 bytes, the storage overhead is 4 bytes instead of 1.
 
