@@ -4442,20 +4442,21 @@ from (
 	group by 1,2
      ) as t1 
 group by 1, 2;
-                                               QUERY PLAN                                                
----------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..1324032.28 rows=1 width=12)
-   ->  GroupAggregate  (cost=0.00..1324032.28 rows=1 width=12)
+                                                  QUERY PLAN                                                   
+---------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1324032.19 rows=1 width=12)
+   ->  GroupAggregate  (cost=0.00..1324032.19 rows=1 width=12)
          Group Key: ((bar_6325.bar_6325_attr)::integer), foo_6325.foo_6325_attr
-         ->  Sort  (cost=0.00..1324032.28 rows=1 width=12)
+         ->  Sort  (cost=0.00..1324032.19 rows=1 width=12)
                Sort Key: ((bar_6325.bar_6325_attr)::integer), foo_6325.foo_6325_attr
-               ->  Nested Loop  (cost=0.00..1324032.28 rows=1 width=16)
+               ->  Nested Loop  (cost=0.00..1324032.19 rows=1 width=12)
                      Join Filter: true
-                     ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
-                           ->  Seq Scan on bar_6325  (cost=0.00..431.00 rows=1 width=8)
                      ->  Seq Scan on foo_6325  (cost=0.00..431.00 rows=1 width=8)
- Optimizer: Pivotal Optimizer (GPORCA) version 3.83.0
-(11 rows)
+                     ->  Materialize  (cost=0.00..431.00 rows=1 width=4)
+                           ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
+                                 ->  Seq Scan on bar_6325  (cost=0.00..431.00 rows=1 width=8)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(12 rows)
 
 -- start_ignore
 drop table qp_misc_jiras.foo_6325;
