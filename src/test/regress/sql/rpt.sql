@@ -4,8 +4,6 @@
 create schema rpt;
 set search_path to rpt;
 
-set optimizer_enable_replicated_table=true;
-
 ---------
 -- INSERT
 ---------
@@ -507,6 +505,12 @@ create index idx_t2_13532 on t2_13532(b);
 explain (costs off) select * from t1_13532 x, t2_13532 y where y.a < random() and x.b = y.b;
 set enable_bitmapscan = off;
 explain (costs off) select * from t1_13532 x, t2_13532 y where y.a < random() and x.b = y.b;
+
+-- quick test for optimizer_enable_replicated_table
+explain select * from rep_tab;
+set optimizer_enable_replicated_table=false;
+explain select * from rep_tab;
+reset optimizer_enable_replicated_table;
 
 -- start_ignore
 drop schema rpt cascade;

@@ -3,7 +3,6 @@
 --
 create schema rpt;
 set search_path to rpt;
-set optimizer_enable_replicated_table=true;
 ---------
 -- INSERT
 ---------
@@ -1219,6 +1218,25 @@ explain (costs off) select * from t1_13532 x, t2_13532 y where y.a < random() an
  Optimizer: Postgres query optimizer
 (10 rows)
 
+-- quick test for optimizer_enable_replicated_table
+explain select * from rep_tab;
+                                           QUERY PLAN                                           
+------------------------------------------------------------------------------------------------
+ Gather Motion 1:1  (slice1; segments: 1)  (cost=10000000001.02..10000000001.02 rows=2 width=4)
+   ->  Seq Scan on rep_tab  (cost=10000000000.00..10000000001.02 rows=2 width=4)
+ Optimizer: Postgres query optimizer
+(3 rows)
+
+set optimizer_enable_replicated_table=false;
+explain select * from rep_tab;
+                                           QUERY PLAN                                           
+------------------------------------------------------------------------------------------------
+ Gather Motion 1:1  (slice1; segments: 1)  (cost=10000000001.02..10000000001.02 rows=2 width=4)
+   ->  Seq Scan on rep_tab  (cost=10000000000.00..10000000001.02 rows=2 width=4)
+ Optimizer: Postgres query optimizer
+(3 rows)
+
+reset optimizer_enable_replicated_table;
 -- start_ignore
 drop schema rpt cascade;
 NOTICE:  drop cascades to 7 other objects

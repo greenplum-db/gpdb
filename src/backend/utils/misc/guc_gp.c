@@ -2907,9 +2907,9 @@ struct config_bool ConfigureNamesBool_gp[] =
 	},
 	{
 		{"optimizer_enable_replicated_table", PGC_USERSET, DEVELOPER_OPTIONS,
-		 gettext_noop("Enable replicated tables"),
+		 gettext_noop("Enable replicated tables (toggle via optimizer_enable_replicated_table GUC)"),
 		 NULL,
-		 GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+		 GUC_NOT_IN_SAMPLE
 		 },
 		 &optimizer_enable_replicated_table,
 		 true,
