@@ -47,144 +47,26 @@ The following table lists the categories of built-in functions and operators sup
 |--------------------------|------------------|----------------|------------|
 |[Logical Operators](https://www.postgresql.org/docs/8.3/static/functions.html#FUNCTIONS-LOGICAL)| | | |
 |[Comparison Operators](https://www.postgresql.org/docs/8.3/static/functions-comparison.html)| | | |
-|[Mathematical Functions and Operators](https://www.postgresql.org/docs/8.3/static/functions-math.html)|randomsetseed
-
-| | |
-|[String Functions and Operators](https://www.postgresql.org/docs/8.3/static/functions-string.html)|*All built-in conversion functions*|convertpg\_client\_encoding
-
-| |
+|[Mathematical Functions and Operators](https://www.postgresql.org/docs/8.3/static/functions-math.html)|random<br/>setseed| | |
+|[String Functions and Operators](https://www.postgresql.org/docs/8.3/static/functions-string.html)|*All built-in<br/>conversion<br/>functions*|convert<br/>pg\_client\_encoding| |
 |[Binary String Functions and Operators](https://www.postgresql.org/docs/8.3/static/functions-binarystring.html)| | | |
 |[Bit String Functions and Operators](https://www.postgresql.org/docs/8.3/static/functions-bitstring.html)| | | |
 |[Pattern Matching](https://www.postgresql.org/docs/8.3/static/functions-matching.html)| | | |
-|[Data Type Formatting Functions](https://www.postgresql.org/docs/8.3/static/functions-formatting.html)| |to\_charto\_timestamp
-
-| |
-|[Date/Time Functions and Operators](https://www.postgresql.org/docs/8.3/static/functions-datetime.html)|timeofday|agecurrent\_date
-
-current\_time
-
-current\_timestamp
-
-localtime
-
-localtimestamp
-
-now
-
-| |
+|[Data Type Formatting Functions](https://www.postgresql.org/docs/8.3/static/functions-formatting.html)| |to\_char<br/>to\_timestamp| |
+|[Date/Time Functions and Operators](https://www.postgresql.org/docs/8.3/static/functions-datetime.html)|timeofday|age<br/>current\_date<br/>current\_time<br/>current\_timestamp<br/>localtime<br/>localtimestamp<br/>now| 
 |[Enum Support Functions](https://www.postgresql.org/docs/8.3/static/functions-enum.html)| | | |
 |[Geometric Functions and Operators](https://www.postgresql.org/docs/8.3/static/functions-geometry.html)| | | |
 |[Network Address Functions and Operators](https://www.postgresql.org/docs/8.3/static/functions-net.html)| | | |
-|[Sequence Manipulation Functions](https://www.postgresql.org/docs/8.3/static/functions-sequence.html)|nextval\(\)setval\(\)
-
-| | |
+|[Sequence Manipulation Functions](https://www.postgresql.org/docs/8.3/static/functions-sequence.html)|nextval\(\)<br/>setval\(\)| | |
 |[Conditional Expressions](https://www.postgresql.org/docs/8.3/static/functions-conditional.html)| | | |
 |[Array Functions and Operators](https://www.postgresql.org/docs/8.3/static/functions-array.html)| |*All array functions*| |
 |[Aggregate Functions](https://www.postgresql.org/docs/8.3/static/functions-aggregate.html)| | | |
 |[Subquery Expressions](https://www.postgresql.org/docs/8.3/static/functions-subquery.html)| | | |
 |[Row and Array Comparisons](https://www.postgresql.org/docs/8.3/static/functions-comparisons.html)| | | |
 |[Set Returning Functions](https://www.postgresql.org/docs/8.3/static/functions-srf.html)|generate\_series| | |
-|[System Information Functions](https://www.postgresql.org/docs/8.3/static/functions-info.html)| |*All session information functions* *All access privilege inquiry functions*
-
-*All schema visibility inquiry functions*
-
-*All system catalog information functions*
-
-*All comment information functions*
-
-*All transaction ids and snapshots*
-
-| |
-|[System Administration Functions](https://www.postgresql.org/docs/8.3/static/functions-admin.html)|set\_configpg\_cancel\_backend
-
-pg\_reload\_conf
-
-pg\_rotate\_logfile
-
-pg\_start\_backup
-
-pg\_stop\_backup
-
-pg\_size\_pretty
-
-pg\_ls\_dir
-
-pg\_read\_file
-
-pg\_stat\_file
-
-|current\_setting*All database object size functions*
-
-|**Note:** The function `pg_column_size` displays bytes required to store the value, possibly with TOAST compression.|
-|[XML Functions](https://www.postgresql.org/docs/9.1/static/functions-xml.html) and function-like expressions| |cursor\_to\_xml\(cursor refcursor, count int, nulls boolean, tableforest boolean, targetns text\)
-
- cursor\_to\_xmlschema\(cursor refcursor, nulls boolean, tableforest boolean, targetns text\)
-
- database\_to\_xml\(nulls boolean, tableforest boolean, targetns text\)
-
- database\_to\_xmlschema\(nulls boolean, tableforest boolean, targetns text\)
-
- database\_to\_xml\_and\_xmlschema\(nulls boolean, tableforest boolean, targetns text\)
-
- query\_to\_xml\(query text, nulls boolean, tableforest boolean, targetns text\)
-
- query\_to\_xmlschema\(query text, nulls boolean, tableforest boolean, targetns text\)
-
- query\_to\_xml\_and\_xmlschema\(query text, nulls boolean, tableforest boolean, targetns text\)
-
- schema\_to\_xml\(schema name, nulls boolean, tableforest boolean, targetns text\)
-
- schema\_to\_xmlschema\(schema name, nulls boolean, tableforest boolean, targetns text\)
-
- schema\_to\_xml\_and\_xmlschema\(schema name, nulls boolean, tableforest boolean, targetns text\)
-
- table\_to\_xml\(tbl regclass, nulls boolean, tableforest boolean, targetns text\)
-
- table\_to\_xmlschema\(tbl regclass, nulls boolean, tableforest boolean, targetns text\)
-
- table\_to\_xml\_and\_xmlschema\(tbl regclass, nulls boolean, tableforest boolean, targetns text\)
-
- xmlagg\(xml\)
-
- xmlconcat\(xml\[, ...\]\)
-
- xmlelement\(name name \[, xmlattributes\(value \[AS attname\] \[, ... \]\)\] \[, content, ...\]\)
-
- xmlexists\(text, xml\)
-
- xmlforest\(content \[AS name\] \[, ...\]\)
-
- xml\_is\_well\_formed\(text\)
-
- xml\_is\_well\_formed\_document\(text\)
-
- xml\_is\_well\_formed\_content\(text\)
-
- xmlparse \( \{ DOCUMENT \| CONTENT \} value\)
-
- xpath\(text, xml\)
-
- xpath\(text, xml, text\[\]\)
-
- xpath\_exists\(text, xml\)
-
- xpath\_exists\(text, xml, text\[\]\)
-
- xmlpi\(name target \[, content\]\)
-
- xmlroot\(xml, version text \| no value \[, standalone yes\|no\|no value\]\)
-
- xmlserialize \( \{ DOCUMENT \| CONTENT \} value AS type \)
-
- xml\(text\)
-
- text\(xml\)
-
- xmlcomment\(xml\)
-
- xmlconcat2\(xml, xml\)
-
-| |
+|[System Information Functions](https://www.postgresql.org/docs/8.3/static/functions-info.html)| |*All session information functions*<br/>*All access privilege inquiry functions*<br/>*All schema visibility inquiry functions*<br/>*All system catalog information functions*<br/>*All comment information functions*<br/>*All transaction ids and snapshots*| 
+|[System Administration Functions](https://www.postgresql.org/docs/8.3/static/functions-admin.html)|set\_configpg\_cancel\_backend<br/>pg\_reload\_conf<br/>pg\_rotate\_logfile<br/>pg\_start\_backup<br/>pg\_stop\_backup<br/>pg\_size\_pretty<br/>pg\_ls\_dir<br/>pg\_read\_file<br/>pg\_stat\_file|current\_setting<br/>*All database object size functions*|**Note:** The function `pg_column_size` displays bytes required to store the value, possibly with TOAST compression.|
+|[XML Functions](https://www.postgresql.org/docs/9.1/static/functions-xml.html)<br/>and function-like expressions| |cursor\_to\_xml\(cursor refcursor, count int, nulls boolean, tableforest boolean, targetns text\)<br/><br/>cursor\_to\_xmlschema\(cursor refcursor, nulls boolean, tableforest boolean, targetns text\)<br/><br/>database\_to\_xml\(nulls boolean, tableforest boolean, targetns text\)<br/><br/>database\_to\_xmlschema\(nulls boolean, tableforest boolean, targetns text\)<br/><br/>database\_to\_xml\_and\_xmlschema\(nulls boolean, tableforest boolean, targetns text\)<br/><br/>query\_to\_xml\(query text, nulls boolean, tableforest boolean, targetns text\)<br/><br/>query\_to\_xmlschema\(query text, nulls boolean, tableforest boolean, targetns text\)<br/><br/>query\_to\_xml\_and\_xmlschema\(query text, nulls boolean, tableforest boolean, targetns text\)<br/><br/>schema\_to\_xml\(schema name, nulls boolean, tableforest boolean, targetns text\)<br/><br/>schema\_to\_xmlschema\(schema name, nulls boolean, tableforest boolean, targetns text\<br/><br/><br/>schema\_to\_xml\_and\_xmlschema\(schema name, nulls boolean, tableforest boolean, targetns text\)<br/><br/>table\_to\_xml\(tbl regclass, nulls boolean, tableforest boolean, targetns text\)<br/><br/>table\_to\_xmlschema\(tbl regclass, nulls boolean, tableforest boolean, targetns text<br/><br/>table\_to\_xml\_and\_xmlschema\(tbl regclass, nulls boolean, tableforest boolean, targetns text\)<br/><br/>xmlagg\(xml\)<br/><br/>xmlconcat\(xml\[, ...\]\)<br/><br/>xmlelement\(name name \[, xmlattributes\(value \[AS attname\] \[, ... \]\)\] \[, content, ...\]\)<br/><br/>xmlexists\(text, xml\)<br/><br/>xmlforest\(content \[AS name\] \[, ...\]<br/><br/>xml\_is\_well\_formed\(text\)<br/><br/>xml\_is\_well\_formed\_document\(text\)<br/><br/>xml\_is\_well\_formed\_content\(text\)<br/><br/>xmlparse \( \{ DOCUMENT \| CONTENT \} value\)<br/><br/>xpath\(text, xml\)<br/><br/>xpath\(text, xml, text\[\]\)<br/><br/>xpath\_exists\(text, xml\)<br/><br/>xpath\_exists\(text, xml, text\[\]\)<br/><br/>xmlpi\(name target \[, content\]\)<br/>xmlroot\(xml, version text \| no value \[, standalone yes\|no\|no value\]\)<br/><br/><br/>xmlserialize \( \{ DOCUMENT \| CONTENT \} value AS type \)<br/><br/>xml\(text\)<br/><br/>text\(xml\)<br/><br/>xmlcomment\(xml\)<br/>xmlconcat2\(xml, xml\)| |
 
 ## JSON Functions and Operators 
 
@@ -215,12 +97,10 @@ This table describes the functions that create `json` values.
 
 |Function|Description|Example|Example Result|
 |--------|-----------|-------|--------------|
-|`array_to_json(anyarray [, pretty_bool])`|Returns the array as a JSON array. A Greenplum Database multidimensional array becomes a JSON array of arrays. Line feeds are added between dimension 1 elements if pretty\_bool is `true`.
+|`array_to_json(anyarray [, pretty_bool])`|Returns the array as a JSON array. A Greenplum Database multidimensional array becomes a JSON array of arrays.<br/>Line feeds are added between dimension 1 elements if pretty\_bool is `true`.
 
 |`array_to_json('{{1,5},{99,100}}'::int[])`|`[[1,5],[99,100]]`|
-|`row_to_json(record [, pretty_bool])`|Returns the row as a JSON object. Line feeds are added between level 1 elements if `pretty_bool` is `true`.
-
-|`row_to_json(row(1,'foo'))`|`{"f1":1,"f2":"foo"}`|
+|`row_to_json(record [, pretty_bool])`|Returns the row as a JSON object. Line feeds are added between level 1 elements if `pretty_bool` is `true`.|`row_to_json(row(1,'foo'))`|`{"f1":1,"f2":"foo"}`|
 
 ### JSON Processing Functions 
 
