@@ -1287,7 +1287,7 @@ openFetchSegmentFile(AOCSFetchDesc aocsFetchDesc,
 }
 
 static void
-resetCurrentBlockInfo(CurrentBlock *currentBlock)
+resetCurrentBlockInfo(AOFetchBlockMetadata *currentBlock)
 {
 	currentBlock->have = false;
 	currentBlock->firstRowNum = 0;

@@ -124,7 +124,7 @@ typedef struct AppendOnlyBlockDirectory
 }	AppendOnlyBlockDirectory;
 
 
-typedef struct CurrentBlock
+typedef struct AOFetchBlockMetadata
 {
 	AppendOnlyBlockDirectoryEntry blockDirectoryEntry;
 
@@ -141,16 +141,16 @@ typedef struct CurrentBlock
 	bool isLargeContent;
 	
 	bool		gotContents;
-} CurrentBlock;
+} AOFetchBlockMetadata;
 
-typedef struct CurrentSegmentFile
+typedef struct AOFetchSegmentFile
 {
 	bool isOpen;
 	
 	int num;
 	
 	int64 logicalEof;
-} CurrentSegmentFile;
+} AOFetchSegmentFile;
 
 extern void AppendOnlyBlockDirectoryEntry_GetBeginRange(
 	AppendOnlyBlockDirectoryEntry	*directoryEntry,
