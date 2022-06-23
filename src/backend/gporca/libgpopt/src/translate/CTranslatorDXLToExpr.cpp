@@ -2164,6 +2164,12 @@ CTranslatorDXLToExpr::Ptabdesc(CDXLTableDescr *table_descr)
 
 	if (IMDRelation::EreldistrReplicated == rel_distr_policy)
 	{
+		if (GPOS_FTRACE(EopttraceEnableReplicatedTable) == false)
+		{
+			GPOS_RAISE(gpdxl::ExmaMD, gpdxl::ExmiMDObjUnsupported,
+					   GPOS_WSZ_LIT("Replicated tables"));
+		}
+
 		COptCtxt::PoctxtFromTLS()->SetHasReplicatedTables();
 	}
 
