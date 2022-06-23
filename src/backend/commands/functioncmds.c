@@ -2575,7 +2575,9 @@ CreateTransform(CreateTransformStmt *stmt)
 							   myself.objectId,
 							   GetUserId(),
 							   "ALTER", "TRANSFORM");
-		} else {
+		}
+		else
+		{
 			/* MPP-6929: metadata tracking */
 			MetaTrackAddObject(TransformRelationId,
 							   myself.objectId,
