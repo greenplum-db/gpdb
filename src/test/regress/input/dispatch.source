@@ -376,7 +376,9 @@ END
 $$
 LANGUAGE plpgSQL READS SQL DATA;
 
+SET optimizer=off;
 SELECT dtx_dispatch_f(foo.c1) FROM (SELECT c1 FROM dtx_dispatch_t WHERE c1='1' limit 1) foo;
+RESET optimizer;
 
 DROP FUNCTION dtx_dispatch_f(integer);
 DROP TABLE dtx_dispatch_t;

@@ -631,10 +631,12 @@ EXCEPTION
 END
 $$
 LANGUAGE plpgSQL READS SQL DATA;
+SET optimizer=off;
 SELECT dtx_dispatch_f(foo.c1) FROM (SELECT c1 FROM dtx_dispatch_t WHERE c1='1' limit 1) foo;
 ERROR:  query plan with multiple segworker groups is not supported
 HINT:  dispatching DTX commands to a busy gang
 CONTEXT:  PL/pgSQL function "dtx_dispatch_f" line 1 during statement block entry
+RESET optimizer;
 DROP FUNCTION dtx_dispatch_f(integer);
 DROP TABLE dtx_dispatch_t;
 -- Test interconnect is shut down under portal failure
