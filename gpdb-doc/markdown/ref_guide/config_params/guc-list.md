@@ -2255,9 +2255,7 @@ Increasing this parameter might cause Greenplum Database to request more shared 
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|10 - 65535|250 on master750 on segments
-
-|local<br/>system<br/>restart|
+|10 - 65535|250 on master<br/>750 on segments|local<br/>system<br/>restart|
 
 ## max\_files\_per\_process 
 
@@ -2273,7 +2271,7 @@ Sets the maximum number of disk pages for which free space will be tracked in th
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|integer \> 16 \* *max\_fsm\_relations*|200000|local<br/>system<br/>restart|
+|integer \> 16 \*<br/>*max\_fsm\_relations*|200000|local<br/>system<br/>restart|
 
 ## max\_fsm\_relations 
 
@@ -2327,9 +2325,7 @@ Sets the maximum number of transactions that can be in the prepared state simult
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|integer <= 1000|250 on master250 on segments
-
-|local<br/>system<br/>restart|
+|integer <= 1000|250 on master<br/>250 on segments|local<br/>system<br/>restart|
 
 ## max\_resource\_portals\_per\_transaction 
 
@@ -2357,7 +2353,7 @@ Specifies the maximum safe depth of the server's execution stack. The ideal sett
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|number of kilobytes|2MB|local<br/>system<br/>restart|
+|number of kilobytes|2 MB|local<br/>system<br/>restart|
 
 ## max\_statement\_mem 
 
@@ -2371,7 +2367,7 @@ When changing both `max_statement_mem` and `statement_mem`, `max_statement_mem` 
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|number of kilobytes|2000MB|master<br/>session<br/>reload<br/>superuser|
+|number of kilobytes|2000 MB|master<br/>session<br/>reload<br/>superuser|
 
 ## memory\_spill\_ratio 
 
@@ -2448,11 +2444,7 @@ The `experimental` cost model is more likely to choose a faster bitmap index wit
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|legacycalibrated
-
-experimental
-
-|calibrated|master<br/>session<br/>reload|
+|legacy<br/>calibrated<br/>experimental|calibrated|master<br/>session<br/>reload|
 
 ## optimizer\_cte\_inlining\_bound 
 
@@ -2578,11 +2570,7 @@ This parameter can be set for an individual database, a session, or a query.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|querygreedy
-
-exhaustive
-
-|exhaustive|master<br/>session<br/>reload|
+|query<br/>greedy<br/>exhaustive|exhaustive|master<br/>session<br/>reload|
 
 ## optimizer\_join\_order\_threshold 
 
@@ -2642,9 +2630,7 @@ For information about GPORCA, see [About GPORCA](../../admin_guide/query/topics/
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|ONERRORALWAYS
-
-|ONERROR|master<br/>session<br/>reload|
+|ONERROR<br/>ALWAYS|ONERROR|master<br/>session<br/>reload|
 
 ## optimizer\_nestloop\_factor 
 
@@ -2668,7 +2654,7 @@ The parameter can be set for a database system, an individual database, or a ses
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|boolean|off|master<br/>session<br/>reload|
+|Boolean|off|master<br/>session<br/>reload|
 
 ## optimizer\_penalize\_skew 
 
@@ -2757,9 +2743,7 @@ For information about setting the password hash algorithm to protect user passwo
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|MD5SHA-256
-
-|MD5|master<br/>session<br/>reload<br/>superuser|
+|MD5<br/>SHA-256|MD5|master<br/>session<br/>reload<br/>superuser|
 
 ## pgcrypto.fips 
 
@@ -2841,7 +2825,7 @@ When this parameter is enabled, these changes occur:
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|off|see description.|
+|Boolean|off|see description|
 
 ## pgstat\_track\_activity\_query\_size 
 
@@ -2876,15 +2860,14 @@ Controls whether the server configuration parameter [pljava\_classpath](#pljava_
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
 |Boolean|false|master<br/>session<br/>restart<br/>superuser|
+
 ## pljava\_statement\_cache\_size 
 
 Sets the size in KB of the JRE MRU \(Most Recently Used\) cache for prepared statements.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|number of kilobytes|10|mastersystem
-
-restart<br/>superuser|
+|number of kilobytes|10|master<br/>system<br/>restart<br/>superuser|
 
 ## pljava\_release\_lingering\_savepoints 
 
@@ -2928,7 +2911,7 @@ If queries that use gpfdist run a long time and then return the error "intermitt
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|integer \>= 0|0|master<br/>session<br/>reload|
+|integer \>= 0|0|master<br/>system<br/>reload|
 
 ## repl\_catchup\_within\_range 
 
@@ -2956,11 +2939,7 @@ The 'extended' setting may be useful for exact backwards compatibility with pre-
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|advancedextended
-
-basic
-
-|advanced|master<br/>system<br/>reload|
+|advanced<br/>extended<br/>basic|advanced|master<br/>system<br/>reload|
 
 ## resource\_cleanup\_gangs\_on\_wait 
 
@@ -3008,15 +2987,15 @@ For information about resource groups, see [Using Resource Groups](../../admin_g
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|percentage \(integer\)|90|local<br/>system<br/>restart|
-0
+|percentage<br/>\(integer\)|90|local<br/>system<br/>restart|
+
 ## search\_path 
 
 Specifies the order in which schemas are searched when an object is referenced by a simple name with no schema component. When there are objects of identical names in different schemas, the one found first in the search path is used. The system catalog schema, *pg\_catalog*, is always searched, whether it is mentioned in the path or not. When objects are created without specifying a particular target schema, they will be placed in the first schema listed in the search path. The current effective value of the search path can be examined via the SQL function *current\_schemas\(\)*. *current\_schemas\(\)* shows how the requests appearing in *search\_path* were resolved.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|a comma- separated list of schema names|$user,public|master<br/>session<br/>reload|
+|a comma-separated list of schema names|$user,public|master<br/>session<br/>reload|
 
 ## seq\_page\_cost 
 
@@ -3080,7 +3059,7 @@ See the *Greenplum Database Installation Guide* for information about the Greenp
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|integer \> 16K \* *max\_connections*|125MB|local<br/>system<br/>restart|
+|integer \> 16K \* *max\_connections*|125 MB|local<br/>system<br/>restart|
 
 ## shared\_preload\_libraries 
 
@@ -3151,7 +3130,7 @@ When changing both `max_statement_mem` and `statement_mem`, `max_statement_mem` 
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|number of kilobytes|128MB|master<br/>session<br/>reload|
+|number of kilobytes|128 MB|master<br/>session<br/>reload|
 
 ## statement\_timeout 
 
@@ -3272,9 +3251,7 @@ Sets the current transaction's isolation level.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|read committedserializable
-
-|read committed|master<br/>session<br/>reload|
+|read committed<br/>serializable<br/>|read committed|master<br/>session<br/>reload|
 
 ## transaction\_read\_only 
 
@@ -3316,7 +3293,7 @@ Sets the access permissions of the UNIX-domain socket. UNIX-domain sockets use t
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|numeric UNIX file permission mode \(as accepted by the *chmod* or *umask* commands\)|511|local<br/>system<br/>restart|
+|numeric UNIX file<br/>permission mode<br/>\(as accepted by the<br/>*chmod* or *umask* commands\)|511|local<br/>system<br/>restart|
 
 ## update\_process\_title 
 
@@ -3332,7 +3309,7 @@ The length of time that the process will sleep when the cost limit has been exce
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|milliseconds < 0 \(in multiples of 10\)|0|local<br/>system<br/>restart|
+|milliseconds < 0<br/>\(in multiples of 10\)|0|local<br/>system<br/>restart|
 
 ## vacuum\_cost\_limit 
 
@@ -3423,7 +3400,7 @@ The value of [replication\_timeout](#replication_timeout) controls the time that
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|integer 0- INT\_MAX/1000|10 sec|master<br/>session<br/>reload<br/>superuser|
+|integer 0- INT\_MAX/1000|10 sec|master<br/>system<br/>reload<br/>superuser|
 
 ## writable\_external\_table\_bufsize 
 
