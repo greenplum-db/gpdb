@@ -105,256 +105,834 @@ The following features of SQL 2008 are not supported in Greenplum Database:
 
 Greenplum Database is based on PostgreSQL 8.3 with additional features from newer PostgreSQL releases. To support the distributed nature and typical workload of a Greenplum Database system, some SQL commands have been added or modified, and there are a few PostgreSQL features that are not supported. Greenplum has also added features not found in PostgreSQL, such as physical data distribution, parallel query optimization, external tables, resource queues, and enhanced table partitioning. For full SQL syntax and references, see the [SQL Command Reference](sql_commands/sql_ref.html).
 
-|SQL Command|Supported in Greenplum|Modifications, Limitations, Exceptions|
-|-----------|----------------------|--------------------------------------|
-|`ALTER AGGREGATE`|YES| |
-|`ALTER CONVERSION`|YES| |
-|`ALTER DATABASE`|YES| |
-|`ALTER DOMAIN`|YES| |
-|`ALTER EXTENSION`|YES|Changes the definition of a Greenplum Database extension - based on PostgreSQL 9.6.|
-|`ALTER FILESPACE`|YES|Greenplum Database parallel tablespace feature - not in PostgreSQL 8.3.|
-|`ALTER FUNCTION`|YES| |
-|`ALTER GROUP`|YES|An alias for [ALTER ROLE](sql_commands/ALTER_ROLE.html)|
-|`ALTER INDEX`|YES| |
-|`ALTER LANGUAGE`|YES| |
-|`ALTER OPERATOR`|YES| |
-|`ALTER OPERATOR CLASS`|YES| |
-|`ALTER OPERATOR FAMILY`|YES| |
-|`ALTER PROTOCOL`|YES| |
-|`ALTER RESOURCE QUEUE`|YES|Greenplum Database resource management feature - not in PostgreSQL.|
-|`ALTER ROLE`|YES|**Greenplum Database Clauses:**`RESOURCE QUEUE`*queue\_name*`| none`
-
-|
-|`ALTER SCHEMA`|YES| |
-|`ALTER SEQUENCE`|YES| |
-|`ALTER TABLE`|YES|**Unsupported Clauses / Options:**`CLUSTER ON`
-
-`ENABLE/DISABLE TRIGGER`
-
-**Greenplum Database Clauses:**
-
-`ADD | DROP | RENAME | SPLIT | EXCHANGE PARTITION | SET SUBPARTITION TEMPLATE | SET WITH``(REORGANIZE=true | false) | SET DISTRIBUTED BY`
-
-|
-|`ALTER TABLESPACE`|YES| |
-|`ALTER TRIGGER`|**NO**| |
-|`ALTER TYPE`|YES| |
-|`ALTER USER`|YES|An alias for [ALTER ROLE](sql_commands/ALTER_ROLE.html)|
-|`ALTER VIEW`|YES| |
-|`ANALYZE`|YES| |
-|`BEGIN`|YES| |
-|`CHECKPOINT`|YES| |
-|`CLOSE`|YES| |
-|`CLUSTER`|YES| |
-|`COMMENT`|YES| |
-|`COMMIT`|YES| |
-|`COMMIT PREPARED`|**NO**| |
-|`COPY`|YES|**Modified Clauses:**`ESCAPE [ AS ] '`*escape*`' | 'OFF'`
-
-**Greenplum Database Clauses:**
-
-`[LOG ERRORS] SEGMENT REJECT LIMIT`*count*`[ROWS|PERCENT]`
-
-|
-|`CREATE AGGREGATE`|YES|**Unsupported Clauses / Options:**`[ , SORTOP =`*sort\_operator*`]`
-
-**Greenplum Database Clauses:**
-
-`[ , PREFUNC =`*prefunc*`]`
-
-**Limitations:**
-
-The functions used to implement the aggregate must be `IMMUTABLE` functions.
-
-|
-|`CREATE CAST`|YES| |
-|`CREATE CONSTRAINT TRIGGER`|**NO**| |
-|`CREATE CONVERSION`|YES| |
-|`CREATE DATABASE`|YES| |
-|`CREATE DOMAIN`|YES| |
-|`CREATE EXTENSION`|YES|Loads a new extension into Greenplum Database - based on PostgreSQL 9.6.|
-|`CREATE EXTERNAL TABLE`|YES|Greenplum Database parallel ETL feature - not in PostgreSQL 8.3.|
-|`CREATE FUNCTION`|YES|**Limitations:**Functions defined as `STABLE` or `VOLATILE` can be executed in Greenplum Database provided that they are executed on the master only. `STABLE` and `VOLATILE` functions cannot be used in statements that execute at the segment level.
-
-|
-|`CREATE GROUP`|YES|An alias for [CREATE ROLE](sql_commands/CREATE_ROLE.html)|
-|`CREATE INDEX`|YES|**Greenplum Database Clauses:**`USING bitmap` \(bitmap indexes\)
-
-**Limitations:**
-
-`UNIQUE` indexes are allowed only if they contain all of \(or a superset of\) the Greenplum distribution key columns. On partitioned tables, a unique index is only supported within an individual partition - not across all partitions.
-
-`CONCURRENTLY` keyword not supported in Greenplum.
-
-|
-|`CREATE LANGUAGE`|YES| |
-|`CREATE OPERATOR`|YES|**Limitations:**The function used to implement the operator must be an `IMMUTABLE` function.
-
-|
-|`CREATE OPERATOR CLASS`|YES| |
-|`CREATE OPERATOR FAMILY`|YES| |
-|`CREATE PROTOCOL`|YES| |
-|`CREATE RESOURCE QUEUE`|YES|Greenplum Database resource management feature - not in PostgreSQL 8.3.|
-|`CREATE ROLE`|YES|**Greenplum Database Clauses:**`RESOURCE QUEUE`*queue\_name*`| none`
-
-|
-|`CREATE RULE`|YES| |
-|`CREATE SCHEMA`|YES| |
-|`CREATE SEQUENCE`|YES|**Limitations:**The `lastval()` and `currval()` functions are not supported.
-
-The `setval()` function is only allowed in queries that do not operate on distributed data.
-
-|
-|`CREATE TABLE`|YES|**Unsupported Clauses / Options:**`[GLOBAL | LOCAL]`
-
-`REFERENCES`
-
-`FOREIGN KEY`
-
-`[DEFERRABLE | NOT DEFERRABLE]`
-
-**Limited Clauses:**
-
-`UNIQUE` or `PRIMARY KEY`constraints are only allowed on hash-distributed tables \(`DISTRIBUTED BY`\), and the constraint columns must be the same as or a superset of the distribution key columns of the table and must include all the distribution key columns of the partitioning key.
-
-**Greenplum Database Clauses:**
-
-DISTRIBUTED BY \(*column*, \[ ... \] \) \|
-
-DISTRIBUTED RANDOMLY
-
-PARTITION BY *type* \(*column* \[, ...\]\)    \( *partition\_specification*, \[...\] \)
-
-`WITH (appendonly=true      [,compresslevel=value,blocksize=value] )`
-
-|
-|`CREATE TABLE AS`|YES|See [CREATE TABLE](sql_commands/CREATE_TABLE.html)|
-|`CREATE TABLESPACE`|**NO**|**Greenplum Database Clauses:**`FILESPACE`*filespace\_name*
-
-|
-|`CREATE TRIGGER`|**NO**| |
-|`CREATE TYPE`|YES|**Limitations:**The functions used to implement a new base type must be `IMMUTABLE` functions.
-
-|
-|`CREATE USER`|YES|An alias for [CREATE ROLE](sql_commands/CREATE_ROLE.html)|
-|`CREATE VIEW`|YES| |
-|`DEALLOCATE`|YES| |
-|`DECLARE`|YES|**Unsupported Clauses / Options:**`SCROLL`
-
-`FOR UPDATE [ OF column [, ...] ]`
-
-**Limitations:**
-
-Cursors cannot be backward-scrolled. Forward scrolling is supported.
-
-PL/pgSQL does not have support for updatable cursors.
-
-|
-|`DELETE`|YES|**Unsupported Clauses / Options:**`RETURNING`
-
-|
-|`DISCARD`|YES|**Limitation:** `DISCARD ALL` is not supported.
-
-|
-|`DO`|YES|PostgreSQL 9.0 feature|
-|`DROP AGGREGATE`|YES| |
-|`DROP CAST`|YES| |
-|`DROP CONVERSION`|YES| |
-|`DROP DATABASE`|YES| |
-|`DROP DOMAIN`|YES| |
-|`DROP EXTENSION`|YES|Removes an extension from Greenplum Database – based on PostgreSQL 9.6.|
-|`DROP EXTERNAL TABLE`|YES|Greenplum Database parallel ETL feature - not in PostgreSQL 8.3.|
-|`DROP FILESPACE`|YES|Greenplum Database parallel tablespace feature - not in PostgreSQL 8.3.|
-|`DROP FUNCTION`|YES| |
-|`DROP GROUP`|YES|An alias for [DROP ROLE](sql_commands/DROP_ROLE.html)|
-|`DROP INDEX`|YES| |
-|`DROP LANGUAGE`|YES| |
-|`DROP OPERATOR`|YES| |
-|`DROP OPERATOR CLASS`|YES| |
-|`DROP OPERATOR FAMILY`|YES| |
-|`DROP OWNED`|**NO**| |
-|`DROP PROTOCOL`|YES| |
-|`DROP RESOURCE QUEUE`|YES|Greenplum Database resource management feature - not in PostgreSQL 8.3.|
-|`DROP ROLE`|YES| |
-|`DROP RULE`|YES| |
-|`DROP SCHEMA`|YES| |
-|`DROP SEQUENCE`|YES| |
-|`DROP TABLE`|YES| |
-|`DROP TABLESPACE`|**NO**| |
-|`DROP TRIGGER`|**NO**| |
-|`DROP TYPE`|YES| |
-|`DROP USER`|YES|An alias for [DROP ROLE](sql_commands/DROP_ROLE.html)|
-|`DROP VIEW`|YES| |
-|`END`|YES| |
-|`EXECUTE`|YES| |
-|`EXPLAIN`|YES| |
-|`FETCH`|YES|**Unsupported Clauses / Options:**`LAST`
-
-`PRIOR`
-
-`BACKWARD`
-
-`BACKWARD ALL`
-
-**Limitations:**
-
-Cannot fetch rows in a nonsequential fashion; backward scan is not supported.
-
-|
-|`GRANT`|YES| |
-|`INSERT`|YES|**Unsupported Clauses / Options:**`RETURNING`
-
-|
-|`LISTEN`|**NO**| |
-|`LOAD`|YES| |
-|`LOCK`|YES| |
-|`MOVE`|YES|See [FETCH](sql_commands/FETCH.html)|
-|`NOTIFY`|**NO**| |
-|`PREPARE`|YES| |
-|`PREPARE TRANSACTION`|**NO**| |
-|`REASSIGN OWNED`|YES| |
-|`REINDEX`|YES| |
-|`RELEASE SAVEPOINT`|YES| |
-|`RESET`|YES| |
-|`REVOKE`|YES| |
-|`ROLLBACK`|YES| |
-|`ROLLBACK PREPARED`|**NO**| |
-|`ROLLBACK TO SAVEPOINT`|YES| |
-|`SAVEPOINT`|YES| |
-|`SELECT`|YES|**Limitations:**Limited use of `VOLATILE` and `STABLE` functions in `FROM` or `WHERE` clauses
-
-Text search \(`Tsearch2`\) is not supported
-
-`FETCH FIRST` or `FETCH NEXT` clauses not supported
-
-**Greenplum Database Clauses \(OLAP\):**
-
-`[GROUP BY`*grouping\_element*`[, ...]]`
-
-`[WINDOW`*window\_name*`AS (`*window\_specification*`)]`
-
-`[FILTER (WHERE`*condition*`)]` applied to an aggregate function in the `SELECT` list
-
-|
-|`SELECT INTO`|YES|See [SELECT](sql_commands/SELECT.html)|
-|`SET`|YES| |
-|`SET CONSTRAINTS`|**NO**|In PostgreSQL, this only applies to foreign key constraints, which are currently not enforced in Greenplum Database.|
-|`SET ROLE`|YES| |
-|`SET SESSION AUTHORIZATION`|YES|Deprecated as of PostgreSQL 8.1 - see [SET ROLE](sql_commands/SET_ROLE.html)|
-|`SET TRANSACTION`|YES| |
-|`SHOW`|YES| |
-|`START TRANSACTION`|YES| |
-|`TRUNCATE`|YES| |
-|`UNLISTEN`|**NO**| |
-|`UPDATE`|YES|**Unsupported Clauses:**`RETURNING`
-
-**Limitations:**
-
-`SET` not allowed for Greenplum distribution key columns.
-
-|
-|`VACUUM`|YES|**Limitations:**`VACUUM FULL` is not recommended in Greenplum Database.
-
-|
-|`VALUES`|YES| |
-
+<div class="tablenoborder">
+<table cellpadding="4" cellspacing="0" summary="" id="topic8__ik213423" class="table" frame="border" border="1" rules="all">
+<caption><span class="tablecap">Table 1. SQL Support in Greenplum Database</span></caption>
+          <thead class="thead" align="left">
+            <tr class="row">
+              <th class="entry" valign="top" width="143pt" id="d133063e651">SQL Command</th>
+              <th class="entry" valign="top" width="73pt" id="d133063e654">Supported in Greenplum</th>
+              <th class="entry" valign="top" width="233pt" id="d133063e657">Modifications, Limitations, Exceptions</th>
+            </tr>
+          </thead>
+          <tbody class="tbody">
+            <tr class="row">
+              <td class="entry" valign="top" width="143pt" headers="d133063e651 "><samp class="ph codeph">ALTER AGGREGATE</samp></td>
+              <td class="entry" valign="top" width="73pt" headers="d133063e654 ">YES</td>
+              <td class="entry" valign="top" width="233pt" headers="d133063e657 ">&nbsp;</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" valign="top" width="143pt" headers="d133063e651 "><samp class="ph codeph">ALTER CONVERSION</samp></td>
+              <td class="entry" valign="top" width="73pt" headers="d133063e654 ">YES</td>
+              <td class="entry" valign="top" width="233pt" headers="d133063e657 ">&nbsp;</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" valign="top" width="143pt" headers="d133063e651 "><samp class="ph codeph">ALTER DATABASE</samp></td>
+              <td class="entry" valign="top" width="73pt" headers="d133063e654 ">YES</td>
+              <td class="entry" valign="top" width="233pt" headers="d133063e657 ">&nbsp;</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" valign="top" width="143pt" headers="d133063e651 "><samp class="ph codeph">ALTER DOMAIN</samp></td>
+              <td class="entry" valign="top" width="73pt" headers="d133063e654 ">YES</td>
+              <td class="entry" valign="top" width="233pt" headers="d133063e657 ">&nbsp;</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" valign="top" width="143pt" headers="d133063e651 "><samp class="ph codeph">ALTER EXTENSION</samp></td>
+              <td class="entry" valign="top" width="73pt" headers="d133063e654 ">YES</td>
+              <td class="entry" valign="top" width="233pt" headers="d133063e657 ">Changes the definition of a Greenplum Database extension - based
+                on PostgreSQL 9.6. </td>
+            </tr>
+            <tr class="row">
+              <td class="entry" valign="top" width="143pt" headers="d133063e651 "><samp class="ph codeph">ALTER FILESPACE</samp></td>
+              <td class="entry" valign="top" width="73pt" headers="d133063e654 ">YES</td>
+              <td class="entry" valign="top" width="233pt" headers="d133063e657 ">Greenplum Database parallel tablespace feature - not in
+                PostgreSQL 8.3.</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" valign="top" width="143pt" headers="d133063e651 "><samp class="ph codeph">ALTER FUNCTION</samp></td>
+              <td class="entry" valign="top" width="73pt" headers="d133063e654 ">YES</td>
+              <td class="entry" valign="top" width="233pt" headers="d133063e657 ">&nbsp;</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" valign="top" width="143pt" headers="d133063e651 "><samp class="ph codeph">ALTER GROUP</samp></td>
+              <td class="entry" valign="top" width="73pt" headers="d133063e654 ">YES</td>
+              <td class="entry" valign="top" width="233pt" headers="d133063e657 ">An alias for <a class="xref" href="sql_commands/ALTER_ROLE.html#topic1">ALTER ROLE</a>
+</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" valign="top" width="143pt" headers="d133063e651 "><samp class="ph codeph">ALTER INDEX</samp></td>
+              <td class="entry" valign="top" width="73pt" headers="d133063e654 ">YES</td>
+              <td class="entry" valign="top" width="233pt" headers="d133063e657 ">&nbsp;</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" valign="top" width="143pt" headers="d133063e651 "><samp class="ph codeph">ALTER LANGUAGE</samp></td>
+              <td class="entry" valign="top" width="73pt" headers="d133063e654 ">YES</td>
+              <td class="entry" valign="top" width="233pt" headers="d133063e657 ">&nbsp;</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" valign="top" width="143pt" headers="d133063e651 "><samp class="ph codeph">ALTER OPERATOR</samp></td>
+              <td class="entry" valign="top" width="73pt" headers="d133063e654 ">YES</td>
+              <td class="entry" valign="top" width="233pt" headers="d133063e657 ">&nbsp;</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" valign="top" width="143pt" headers="d133063e651 "><samp class="ph codeph">ALTER OPERATOR CLASS</samp></td>
+              <td class="entry" valign="top" width="73pt" headers="d133063e654 ">YES</td>
+              <td class="entry" valign="top" width="233pt" headers="d133063e657 ">&nbsp;</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" valign="top" width="143pt" headers="d133063e651 "><samp class="ph codeph">ALTER OPERATOR FAMILY</samp></td>
+              <td class="entry" valign="top" width="73pt" headers="d133063e654 ">YES</td>
+              <td class="entry" valign="top" width="233pt" headers="d133063e657 ">&nbsp;</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" valign="top" width="143pt" headers="d133063e651 "><samp class="ph codeph">ALTER PROTOCOL</samp></td>
+              <td class="entry" valign="top" width="73pt" headers="d133063e654 ">YES</td>
+              <td class="entry" valign="top" width="233pt" headers="d133063e657 ">&nbsp;</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" valign="top" width="143pt" headers="d133063e651 "><samp class="ph codeph">ALTER RESOURCE QUEUE</samp></td>
+              <td class="entry" valign="top" width="73pt" headers="d133063e654 ">YES</td>
+              <td class="entry" valign="top" width="233pt" headers="d133063e657 ">Greenplum Database resource management feature - not in
+                PostgreSQL.</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" valign="top" width="143pt" headers="d133063e651 "><samp class="ph codeph">ALTER ROLE</samp></td>
+              <td class="entry" valign="top" width="73pt" headers="d133063e654 ">YES</td>
+              <td class="entry" valign="top" width="233pt" headers="d133063e657 ">
+<strong class="ph b">Greenplum Database Clauses:</strong><p class="p"><samp class="ph codeph">RESOURCE QUEUE
+                    </samp><em class="ph i">queue_name</em><samp class="ph codeph"> | none</samp></p>
+</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" valign="top" width="143pt" headers="d133063e651 "><samp class="ph codeph">ALTER SCHEMA</samp></td>
+              <td class="entry" valign="top" width="73pt" headers="d133063e654 ">YES</td>
+              <td class="entry" valign="top" width="233pt" headers="d133063e657 ">&nbsp;</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" valign="top" width="143pt" headers="d133063e651 "><samp class="ph codeph">ALTER SEQUENCE</samp></td>
+              <td class="entry" valign="top" width="73pt" headers="d133063e654 ">YES</td>
+              <td class="entry" valign="top" width="233pt" headers="d133063e657 ">&nbsp;</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" valign="top" width="143pt" headers="d133063e651 "><samp class="ph codeph">ALTER TABLE</samp></td>
+              <td class="entry" valign="top" width="73pt" headers="d133063e654 ">YES</td>
+              <td class="entry" valign="top" width="233pt" headers="d133063e657 ">
+<strong class="ph b">Unsupported Clauses / Options:</strong><p class="p"><samp class="ph codeph">CLUSTER
+                    ON</samp></p>
+<p class="p"><samp class="ph codeph">ENABLE/DISABLE TRIGGER</samp></p>
+<p class="p"><strong class="ph b">Greenplum
+                    Database Clauses:</strong></p>
+<p class="p"><samp class="ph codeph">ADD | DROP | RENAME | SPLIT | EXCHANGE
+                    PARTITION | SET SUBPARTITION TEMPLATE | SET WITH
+                    </samp><samp class="ph codeph">(REORGANIZE=true | false) | SET DISTRIBUTED
+                BY</samp></p>
+</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" valign="top" width="143pt" headers="d133063e651 "><samp class="ph codeph">ALTER TABLESPACE</samp></td>
+              <td class="entry" valign="top" width="73pt" headers="d133063e654 ">YES</td>
+              <td class="entry" valign="top" width="233pt" headers="d133063e657 ">&nbsp;</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" valign="top" width="143pt" headers="d133063e651 "><samp class="ph codeph">ALTER TRIGGER</samp></td>
+              <td class="entry" valign="top" width="73pt" headers="d133063e654 "><strong class="ph b">NO</strong></td>
+              <td class="entry" valign="top" width="233pt" headers="d133063e657 ">&nbsp;</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" valign="top" width="143pt" headers="d133063e651 "><samp class="ph codeph">ALTER TYPE</samp></td>
+              <td class="entry" valign="top" width="73pt" headers="d133063e654 ">YES</td>
+              <td class="entry" valign="top" width="233pt" headers="d133063e657 ">&nbsp;</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" valign="top" width="143pt" headers="d133063e651 "><samp class="ph codeph">ALTER USER</samp></td>
+              <td class="entry" valign="top" width="73pt" headers="d133063e654 ">YES</td>
+              <td class="entry" valign="top" width="233pt" headers="d133063e657 ">An alias for <a class="xref" href="sql_commands/ALTER_ROLE.html#topic1">ALTER ROLE</a>
+</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" valign="top" width="143pt" headers="d133063e651 "><samp class="ph codeph">ALTER VIEW</samp></td>
+              <td class="entry" valign="top" width="73pt" headers="d133063e654 ">YES</td>
+              <td class="entry" valign="top" width="233pt" headers="d133063e657 ">&nbsp;</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" valign="top" width="143pt" headers="d133063e651 "><samp class="ph codeph">ANALYZE</samp></td>
+              <td class="entry" valign="top" width="73pt" headers="d133063e654 ">YES</td>
+              <td class="entry" valign="top" width="233pt" headers="d133063e657 ">&nbsp;</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" valign="top" width="143pt" headers="d133063e651 "><samp class="ph codeph">BEGIN</samp></td>
+              <td class="entry" valign="top" width="73pt" headers="d133063e654 ">YES</td>
+              <td class="entry" valign="top" width="233pt" headers="d133063e657 ">&nbsp;</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" valign="top" width="143pt" headers="d133063e651 "><samp class="ph codeph">CHECKPOINT</samp></td>
+              <td class="entry" valign="top" width="73pt" headers="d133063e654 ">YES</td>
+              <td class="entry" valign="top" width="233pt" headers="d133063e657 ">&nbsp;</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" valign="top" width="143pt" headers="d133063e651 "><samp class="ph codeph">CLOSE</samp></td>
+              <td class="entry" valign="top" width="73pt" headers="d133063e654 ">YES</td>
+              <td class="entry" valign="top" width="233pt" headers="d133063e657 ">&nbsp;</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" valign="top" width="143pt" headers="d133063e651 "><samp class="ph codeph">CLUSTER</samp></td>
+              <td class="entry" valign="top" width="73pt" headers="d133063e654 ">YES</td>
+              <td class="entry" valign="top" width="233pt" headers="d133063e657 ">&nbsp;</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" valign="top" width="143pt" headers="d133063e651 "><samp class="ph codeph">COMMENT</samp></td>
+              <td class="entry" valign="top" width="73pt" headers="d133063e654 ">YES</td>
+              <td class="entry" valign="top" width="233pt" headers="d133063e657 ">&nbsp;</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" valign="top" width="143pt" headers="d133063e651 "><samp class="ph codeph">COMMIT</samp></td>
+              <td class="entry" valign="top" width="73pt" headers="d133063e654 ">YES</td>
+              <td class="entry" valign="top" width="233pt" headers="d133063e657 ">&nbsp;</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" valign="top" width="143pt" headers="d133063e651 "><samp class="ph codeph">COMMIT PREPARED</samp></td>
+              <td class="entry" valign="top" width="73pt" headers="d133063e654 "><strong class="ph b">NO</strong></td>
+              <td class="entry" valign="top" width="233pt" headers="d133063e657 ">&nbsp;</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" valign="top" width="143pt" headers="d133063e651 "><samp class="ph codeph">COPY</samp></td>
+              <td class="entry" valign="top" width="73pt" headers="d133063e654 ">YES</td>
+              <td class="entry" valign="top" width="233pt" headers="d133063e657 ">
+<strong class="ph b">Modified Clauses:</strong><p class="p"><samp class="ph codeph">ESCAPE [ AS ]
+                    '</samp><em class="ph i">escape</em><samp class="ph codeph">' | 'OFF'</samp></p>
+<p class="p"><strong class="ph b">Greenplum Database
+                    Clauses:</strong></p>
+<p class="p"><samp class="ph codeph">[LOG ERRORS] SEGMENT REJECT LIMIT
+                    </samp><em class="ph i">count</em><samp class="ph codeph"> [ROWS|PERCENT]</samp></p>
+</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" valign="top" width="143pt" headers="d133063e651 "><samp class="ph codeph">CREATE AGGREGATE</samp></td>
+              <td class="entry" valign="top" width="73pt" headers="d133063e654 ">YES</td>
+              <td class="entry" valign="top" width="233pt" headers="d133063e657 ">
+<strong class="ph b">Unsupported Clauses / Options:</strong><p class="p"><samp class="ph codeph">[ , SORTOP =
+                    </samp><em class="ph i">sort_operator</em><samp class="ph codeph"> ]</samp></p>
+<p class="p"><strong class="ph b">Greenplum Database
+                    Clauses:</strong></p>
+<p class="p"><samp class="ph codeph">[ , PREFUNC = </samp><em class="ph i">prefunc</em><samp class="ph codeph">
+                    ]</samp></p>
+<p class="p"><strong class="ph b">Limitations:</strong></p>
+<p class="p">The functions used to implement the
+                  aggregate must be <samp class="ph codeph">IMMUTABLE</samp> functions.</p>
+</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" valign="top" width="143pt" headers="d133063e651 "><samp class="ph codeph">CREATE CAST</samp></td>
+              <td class="entry" valign="top" width="73pt" headers="d133063e654 ">YES</td>
+              <td class="entry" valign="top" width="233pt" headers="d133063e657 ">&nbsp;</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" valign="top" width="143pt" headers="d133063e651 "><samp class="ph codeph">CREATE CONSTRAINT TRIGGER</samp></td>
+              <td class="entry" valign="top" width="73pt" headers="d133063e654 "><strong class="ph b">NO</strong></td>
+              <td class="entry" valign="top" width="233pt" headers="d133063e657 ">&nbsp;</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" valign="top" width="143pt" headers="d133063e651 "><samp class="ph codeph">CREATE CONVERSION</samp></td>
+              <td class="entry" valign="top" width="73pt" headers="d133063e654 ">YES</td>
+              <td class="entry" valign="top" width="233pt" headers="d133063e657 ">&nbsp;</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" valign="top" width="143pt" headers="d133063e651 "><samp class="ph codeph">CREATE DATABASE</samp></td>
+              <td class="entry" valign="top" width="73pt" headers="d133063e654 ">YES</td>
+              <td class="entry" valign="top" width="233pt" headers="d133063e657 ">&nbsp;</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" valign="top" width="143pt" headers="d133063e651 "><samp class="ph codeph">CREATE DOMAIN</samp></td>
+              <td class="entry" valign="top" width="73pt" headers="d133063e654 ">YES</td>
+              <td class="entry" valign="top" width="233pt" headers="d133063e657 ">&nbsp;</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" valign="top" width="143pt" headers="d133063e651 "><samp class="ph codeph">CREATE EXTENSION</samp></td>
+              <td class="entry" valign="top" width="73pt" headers="d133063e654 ">YES</td>
+              <td class="entry" valign="top" width="233pt" headers="d133063e657 ">Loads a new extension into Greenplum Database -  based on
+                PostgreSQL 9.6.</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" valign="top" width="143pt" headers="d133063e651 "><samp class="ph codeph">CREATE EXTERNAL TABLE</samp></td>
+              <td class="entry" valign="top" width="73pt" headers="d133063e654 ">YES</td>
+              <td class="entry" valign="top" width="233pt" headers="d133063e657 ">Greenplum Database parallel ETL feature - not in PostgreSQL
+                8.3.</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" valign="top" width="143pt" headers="d133063e651 "><samp class="ph codeph">CREATE FUNCTION</samp></td>
+              <td class="entry" valign="top" width="73pt" headers="d133063e654 ">YES</td>
+              <td class="entry" valign="top" width="233pt" headers="d133063e657 ">
+<strong class="ph b">Limitations:</strong><p class="p">Functions defined as
+                    <samp class="ph codeph">STABLE</samp> or <samp class="ph codeph">VOLATILE</samp> can be executed in
+                  Greenplum Database provided that they are executed on the master only.
+                    <samp class="ph codeph">STABLE</samp> and <samp class="ph codeph">VOLATILE</samp> functions cannot be used
+                  in statements that execute at the segment level. </p>
+</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" valign="top" width="143pt" headers="d133063e651 "><samp class="ph codeph">CREATE GROUP</samp></td>
+              <td class="entry" valign="top" width="73pt" headers="d133063e654 ">YES</td>
+              <td class="entry" valign="top" width="233pt" headers="d133063e657 ">An alias for <a class="xref" href="sql_commands/CREATE_ROLE.html#topic1">CREATE ROLE</a>
+</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" valign="top" width="143pt" headers="d133063e651 "><samp class="ph codeph">CREATE INDEX</samp></td>
+              <td class="entry" valign="top" width="73pt" headers="d133063e654 ">YES</td>
+              <td class="entry" valign="top" width="233pt" headers="d133063e657 ">
+<strong class="ph b">Greenplum Database Clauses:</strong><p class="p"><samp class="ph codeph">USING
+                    bitmap</samp> (bitmap
+                    indexes)</p>
+<p class="p"><strong class="ph b">Limitations:</strong></p>
+<p class="p"><samp class="ph codeph">UNIQUE</samp> indexes are
+                  allowed only if they contain all of (or a superset of) the Greenplum distribution
+                  key columns. On partitioned tables, a unique index is only supported within an
+                  individual partition - not across all
+                    partitions.</p>
+<p class="p"><samp class="ph codeph">CONCURRENTLY</samp> keyword not supported in
+                  Greenplum.</p>
+</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" valign="top" width="143pt" headers="d133063e651 "><samp class="ph codeph">CREATE LANGUAGE</samp></td>
+              <td class="entry" valign="top" width="73pt" headers="d133063e654 ">YES</td>
+              <td class="entry" valign="top" width="233pt" headers="d133063e657 ">&nbsp;</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" valign="top" width="143pt" headers="d133063e651 "><samp class="ph codeph">CREATE OPERATOR</samp></td>
+              <td class="entry" valign="top" width="73pt" headers="d133063e654 ">YES</td>
+              <td class="entry" valign="top" width="233pt" headers="d133063e657 ">
+<strong class="ph b">Limitations:</strong><p class="p">The function used to implement the
+                  operator must be an <samp class="ph codeph">IMMUTABLE</samp> function.</p>
+</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" valign="top" width="143pt" headers="d133063e651 "><samp class="ph codeph">CREATE OPERATOR CLASS</samp></td>
+              <td class="entry" valign="top" width="73pt" headers="d133063e654 ">YES</td>
+              <td class="entry" valign="top" width="233pt" headers="d133063e657 ">&nbsp;</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" valign="top" width="143pt" headers="d133063e651 "><samp class="ph codeph">CREATE OPERATOR FAMILY</samp></td>
+              <td class="entry" valign="top" width="73pt" headers="d133063e654 ">YES</td>
+              <td class="entry" valign="top" width="233pt" headers="d133063e657 ">&nbsp;</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" valign="top" width="143pt" headers="d133063e651 "><samp class="ph codeph">CREATE PROTOCOL</samp></td>
+              <td class="entry" valign="top" width="73pt" headers="d133063e654 ">YES</td>
+              <td class="entry" valign="top" width="233pt" headers="d133063e657 ">&nbsp;</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" valign="top" width="143pt" headers="d133063e651 "><samp class="ph codeph">CREATE RESOURCE QUEUE</samp></td>
+              <td class="entry" valign="top" width="73pt" headers="d133063e654 ">YES</td>
+              <td class="entry" valign="top" width="233pt" headers="d133063e657 ">Greenplum Database resource management feature - not in
+                PostgreSQL 8.3.</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" valign="top" width="143pt" headers="d133063e651 "><samp class="ph codeph">CREATE ROLE</samp></td>
+              <td class="entry" valign="top" width="73pt" headers="d133063e654 ">YES</td>
+              <td class="entry" valign="top" width="233pt" headers="d133063e657 ">
+<strong class="ph b">Greenplum Database Clauses:</strong><p class="p"><samp class="ph codeph">RESOURCE QUEUE
+                    </samp><em class="ph i">queue_name</em><samp class="ph codeph"> | none</samp></p>
+</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" valign="top" width="143pt" headers="d133063e651 "><samp class="ph codeph">CREATE RULE</samp></td>
+              <td class="entry" valign="top" width="73pt" headers="d133063e654 ">YES</td>
+              <td class="entry" valign="top" width="233pt" headers="d133063e657 ">&nbsp;</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" valign="top" width="143pt" headers="d133063e651 "><samp class="ph codeph">CREATE SCHEMA</samp></td>
+              <td class="entry" valign="top" width="73pt" headers="d133063e654 ">YES</td>
+              <td class="entry" valign="top" width="233pt" headers="d133063e657 ">&nbsp;</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" valign="top" width="143pt" headers="d133063e651 "><samp class="ph codeph">CREATE SEQUENCE</samp></td>
+              <td class="entry" valign="top" width="73pt" headers="d133063e654 ">YES</td>
+              <td class="entry" valign="top" width="233pt" headers="d133063e657 ">
+<strong class="ph b">Limitations:</strong><p class="p">The <samp class="ph codeph">lastval()</samp> and
+                    <samp class="ph codeph">currval()</samp> functions are not supported.</p>
+<p class="p">The
+                    <samp class="ph codeph">setval()</samp> function is only allowed in queries that do not operate
+                  on distributed data.</p>
+</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" valign="top" width="143pt" headers="d133063e651 "><samp class="ph codeph">CREATE TABLE</samp></td>
+              <td class="entry" valign="top" width="73pt" headers="d133063e654 ">YES</td>
+              <td class="entry" valign="top" width="233pt" headers="d133063e657 ">
+<strong class="ph b">Unsupported Clauses / Options:</strong><p class="p"><samp class="ph codeph">[GLOBAL |
+                    LOCAL]</samp></p>
+<p class="p"><samp class="ph codeph">REFERENCES</samp></p>
+<p class="p"><samp class="ph codeph">FOREIGN
+                    KEY</samp></p>
+<p class="p"><samp class="ph codeph">[DEFERRABLE | NOT DEFERRABLE]
+                    </samp></p>
+<p class="p"><strong class="ph b">Limited Clauses:</strong></p>
+<p class="p"><samp class="ph codeph">UNIQUE</samp> or
+                    <samp class="ph codeph">PRIMARY KEY </samp>constraints are only allowed on hash-distributed
+                  tables (<samp class="ph codeph">DISTRIBUTED BY</samp>), and the constraint columns must be the
+                  same as or a superset of the distribution key columns of the table and must
+                  include all the distribution key columns of the partitioning
+                    key.</p>
+<p class="p"><strong class="ph b">Greenplum Database Clauses:</strong></p>
+<p class="p"><samp class="ph codeph">DISTRIBUTED BY
+                      (<em class="ph i">column</em>, [ ... ] ) |</samp></p>
+<p class="p"><samp class="ph codeph">DISTRIBUTED
+                    RANDOMLY</samp></p>
+<p class="p"><samp class="ph codeph">PARTITION BY <em class="ph i">type</em> (<em class="ph i">column</em> [, ...])
+                    &nbsp;&nbsp;&nbsp;( <em class="ph i">partition_specification</em>, [...] )</samp></p>
+<p class="p"><samp class="ph codeph">WITH
+                    (appendonly=true &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[,compresslevel=value,blocksize=value]
+                )</samp></p>
+</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" valign="top" width="143pt" headers="d133063e651 "><samp class="ph codeph">CREATE TABLE AS</samp></td>
+              <td class="entry" valign="top" width="73pt" headers="d133063e654 ">YES</td>
+              <td class="entry" valign="top" width="233pt" headers="d133063e657 ">See <a class="xref" href="sql_commands/CREATE_TABLE.html#topic1">CREATE TABLE</a>
+</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" valign="top" width="143pt" headers="d133063e651 "><samp class="ph codeph">CREATE TABLESPACE</samp></td>
+              <td class="entry" valign="top" width="73pt" headers="d133063e654 "><strong class="ph b">NO</strong></td>
+              <td class="entry" valign="top" width="233pt" headers="d133063e657 ">
+<strong class="ph b">Greenplum Database Clauses:</strong><p class="p"><samp class="ph codeph">FILESPACE
+                    </samp><em class="ph i">filespace_name</em></p>
+</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" valign="top" width="143pt" headers="d133063e651 "><samp class="ph codeph">CREATE TRIGGER</samp></td>
+              <td class="entry" valign="top" width="73pt" headers="d133063e654 "><strong class="ph b">NO</strong></td>
+              <td class="entry" valign="top" width="233pt" headers="d133063e657 ">&nbsp;</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" valign="top" width="143pt" headers="d133063e651 "><samp class="ph codeph">CREATE TYPE</samp></td>
+              <td class="entry" valign="top" width="73pt" headers="d133063e654 ">YES</td>
+              <td class="entry" valign="top" width="233pt" headers="d133063e657 ">
+<strong class="ph b">Limitations:</strong><p class="p">The functions used to implement a new base
+                  type must be <samp class="ph codeph">IMMUTABLE</samp> functions.</p>
+</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" valign="top" width="143pt" headers="d133063e651 "><samp class="ph codeph">CREATE USER</samp></td>
+              <td class="entry" valign="top" width="73pt" headers="d133063e654 ">YES</td>
+              <td class="entry" valign="top" width="233pt" headers="d133063e657 ">An alias for <a class="xref" href="sql_commands/CREATE_ROLE.html#topic1">CREATE ROLE</a>
+</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" valign="top" width="143pt" headers="d133063e651 "><samp class="ph codeph">CREATE VIEW</samp></td>
+              <td class="entry" valign="top" width="73pt" headers="d133063e654 ">YES</td>
+              <td class="entry" valign="top" width="233pt" headers="d133063e657 ">&nbsp;</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" valign="top" width="143pt" headers="d133063e651 "><samp class="ph codeph">DEALLOCATE</samp></td>
+              <td class="entry" valign="top" width="73pt" headers="d133063e654 ">YES</td>
+              <td class="entry" valign="top" width="233pt" headers="d133063e657 ">&nbsp;</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" valign="top" width="143pt" headers="d133063e651 "><samp class="ph codeph">DECLARE</samp></td>
+              <td class="entry" valign="top" width="73pt" headers="d133063e654 ">YES</td>
+              <td class="entry" valign="top" width="233pt" headers="d133063e657 ">
+<strong class="ph b">Unsupported Clauses /
+                  Options:</strong><p class="p"><samp class="ph codeph">SCROLL</samp></p>
+<p class="p"><samp class="ph codeph">FOR UPDATE [ OF column [,
+                    ...] ]</samp></p>
+<p class="p"><strong class="ph b">Limitations:</strong></p>
+<p class="p">Cursors cannot be
+                  backward-scrolled. Forward scrolling is supported.</p>
+<p class="p">PL/pgSQL does not have
+                  support for updatable cursors. </p>
+</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" valign="top" width="143pt" headers="d133063e651 "><samp class="ph codeph">DELETE</samp></td>
+              <td class="entry" valign="top" width="73pt" headers="d133063e654 ">YES</td>
+              <td class="entry" valign="top" width="233pt" headers="d133063e657 ">
+<strong class="ph b">Unsupported Clauses /
+                    Options:</strong><p class="p"><samp class="ph codeph">RETURNING</samp></p>
+</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" valign="top" width="143pt" headers="d133063e651 "><samp class="ph codeph">DISCARD</samp></td>
+              <td class="entry" valign="top" width="73pt" headers="d133063e654 ">YES</td>
+              <td class="entry" valign="top" width="233pt" headers="d133063e657 ">
+                <p class="p"><strong class="ph b">Limitation:</strong>
+                  <samp class="ph codeph">DISCARD ALL</samp> is not supported.</p>
+              </td>
+            </tr>
+            <tr class="row">
+              <td class="entry" valign="top" width="143pt" headers="d133063e651 "><samp class="ph codeph">DO</samp></td>
+              <td class="entry" valign="top" width="73pt" headers="d133063e654 ">YES</td>
+              <td class="entry" valign="top" width="233pt" headers="d133063e657 ">PostgreSQL 9.0 feature</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" valign="top" width="143pt" headers="d133063e651 "><samp class="ph codeph">DROP AGGREGATE</samp></td>
+              <td class="entry" valign="top" width="73pt" headers="d133063e654 ">YES</td>
+              <td class="entry" valign="top" width="233pt" headers="d133063e657 ">&nbsp;</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" valign="top" width="143pt" headers="d133063e651 "><samp class="ph codeph">DROP CAST</samp></td>
+              <td class="entry" valign="top" width="73pt" headers="d133063e654 ">YES</td>
+              <td class="entry" valign="top" width="233pt" headers="d133063e657 ">&nbsp;</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" valign="top" width="143pt" headers="d133063e651 "><samp class="ph codeph">DROP CONVERSION</samp></td>
+              <td class="entry" valign="top" width="73pt" headers="d133063e654 ">YES</td>
+              <td class="entry" valign="top" width="233pt" headers="d133063e657 ">&nbsp;</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" valign="top" width="143pt" headers="d133063e651 "><samp class="ph codeph">DROP DATABASE</samp></td>
+              <td class="entry" valign="top" width="73pt" headers="d133063e654 ">YES</td>
+              <td class="entry" valign="top" width="233pt" headers="d133063e657 ">&nbsp;</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" valign="top" width="143pt" headers="d133063e651 "><samp class="ph codeph">DROP DOMAIN</samp></td>
+              <td class="entry" valign="top" width="73pt" headers="d133063e654 ">YES</td>
+              <td class="entry" valign="top" width="233pt" headers="d133063e657 ">&nbsp;</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" valign="top" width="143pt" headers="d133063e651 "><samp class="ph codeph">DROP EXTENSION</samp></td>
+              <td class="entry" valign="top" width="73pt" headers="d133063e654 ">YES</td>
+              <td class="entry" valign="top" width="233pt" headers="d133063e657 ">Removes an extension from Greenplum Database – based on
+                PostgreSQL 9.6.</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" valign="top" width="143pt" headers="d133063e651 "><samp class="ph codeph">DROP EXTERNAL TABLE</samp></td>
+              <td class="entry" valign="top" width="73pt" headers="d133063e654 ">YES</td>
+              <td class="entry" valign="top" width="233pt" headers="d133063e657 ">Greenplum Database parallel ETL feature - not in PostgreSQL
+                8.3.</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" valign="top" width="143pt" headers="d133063e651 "><samp class="ph codeph">DROP FILESPACE</samp></td>
+              <td class="entry" valign="top" width="73pt" headers="d133063e654 ">YES</td>
+              <td class="entry" valign="top" width="233pt" headers="d133063e657 ">Greenplum Database parallel tablespace feature - not in
+                PostgreSQL 8.3.</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" valign="top" width="143pt" headers="d133063e651 "><samp class="ph codeph">DROP FUNCTION</samp></td>
+              <td class="entry" valign="top" width="73pt" headers="d133063e654 ">YES</td>
+              <td class="entry" valign="top" width="233pt" headers="d133063e657 ">&nbsp;</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" valign="top" width="143pt" headers="d133063e651 "><samp class="ph codeph">DROP GROUP</samp></td>
+              <td class="entry" valign="top" width="73pt" headers="d133063e654 ">YES</td>
+              <td class="entry" valign="top" width="233pt" headers="d133063e657 ">An alias for <a class="xref" href="sql_commands/DROP_ROLE.html#topic1">DROP ROLE</a>
+</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" valign="top" width="143pt" headers="d133063e651 "><samp class="ph codeph">DROP INDEX</samp></td>
+              <td class="entry" valign="top" width="73pt" headers="d133063e654 ">YES</td>
+              <td class="entry" valign="top" width="233pt" headers="d133063e657 ">&nbsp;</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" valign="top" width="143pt" headers="d133063e651 "><samp class="ph codeph">DROP LANGUAGE</samp></td>
+              <td class="entry" valign="top" width="73pt" headers="d133063e654 ">YES</td>
+              <td class="entry" valign="top" width="233pt" headers="d133063e657 ">&nbsp;</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" valign="top" width="143pt" headers="d133063e651 "><samp class="ph codeph">DROP OPERATOR</samp></td>
+              <td class="entry" valign="top" width="73pt" headers="d133063e654 ">YES</td>
+              <td class="entry" valign="top" width="233pt" headers="d133063e657 ">&nbsp;</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" valign="top" width="143pt" headers="d133063e651 "><samp class="ph codeph">DROP OPERATOR CLASS</samp></td>
+              <td class="entry" valign="top" width="73pt" headers="d133063e654 ">YES</td>
+              <td class="entry" valign="top" width="233pt" headers="d133063e657 ">&nbsp;</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" valign="top" width="143pt" headers="d133063e651 "><samp class="ph codeph">DROP OPERATOR FAMILY</samp></td>
+              <td class="entry" valign="top" width="73pt" headers="d133063e654 ">YES</td>
+              <td class="entry" valign="top" width="233pt" headers="d133063e657 ">&nbsp;</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" valign="top" width="143pt" headers="d133063e651 "><samp class="ph codeph">DROP OWNED</samp></td>
+              <td class="entry" valign="top" width="73pt" headers="d133063e654 "><strong class="ph b">NO</strong></td>
+              <td class="entry" valign="top" width="233pt" headers="d133063e657 ">&nbsp;</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" valign="top" width="143pt" headers="d133063e651 "><samp class="ph codeph">DROP PROTOCOL</samp></td>
+              <td class="entry" valign="top" width="73pt" headers="d133063e654 ">YES</td>
+              <td class="entry" valign="top" width="233pt" headers="d133063e657 ">&nbsp;</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" valign="top" width="143pt" headers="d133063e651 "><samp class="ph codeph">DROP RESOURCE QUEUE</samp></td>
+              <td class="entry" valign="top" width="73pt" headers="d133063e654 ">YES</td>
+              <td class="entry" valign="top" width="233pt" headers="d133063e657 ">Greenplum Database resource management feature - not in
+                PostgreSQL 8.3.</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" valign="top" width="143pt" headers="d133063e651 "><samp class="ph codeph">DROP ROLE</samp></td>
+              <td class="entry" valign="top" width="73pt" headers="d133063e654 ">YES</td>
+              <td class="entry" valign="top" width="233pt" headers="d133063e657 ">&nbsp;</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" valign="top" width="143pt" headers="d133063e651 "><samp class="ph codeph">DROP RULE</samp></td>
+              <td class="entry" valign="top" width="73pt" headers="d133063e654 ">YES</td>
+              <td class="entry" valign="top" width="233pt" headers="d133063e657 ">&nbsp;</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" valign="top" width="143pt" headers="d133063e651 "><samp class="ph codeph">DROP SCHEMA</samp></td>
+              <td class="entry" valign="top" width="73pt" headers="d133063e654 ">YES</td>
+              <td class="entry" valign="top" width="233pt" headers="d133063e657 ">&nbsp;</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" valign="top" width="143pt" headers="d133063e651 "><samp class="ph codeph">DROP SEQUENCE</samp></td>
+              <td class="entry" valign="top" width="73pt" headers="d133063e654 ">YES</td>
+              <td class="entry" valign="top" width="233pt" headers="d133063e657 ">&nbsp;</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" valign="top" width="143pt" headers="d133063e651 "><samp class="ph codeph">DROP TABLE</samp></td>
+              <td class="entry" valign="top" width="73pt" headers="d133063e654 ">YES</td>
+              <td class="entry" valign="top" width="233pt" headers="d133063e657 ">&nbsp;</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" valign="top" width="143pt" headers="d133063e651 "><samp class="ph codeph">DROP TABLESPACE</samp></td>
+              <td class="entry" valign="top" width="73pt" headers="d133063e654 "><strong class="ph b">NO</strong></td>
+              <td class="entry" valign="top" width="233pt" headers="d133063e657 ">&nbsp;</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" valign="top" width="143pt" headers="d133063e651 "><samp class="ph codeph">DROP TRIGGER</samp></td>
+              <td class="entry" valign="top" width="73pt" headers="d133063e654 "><strong class="ph b">NO</strong></td>
+              <td class="entry" valign="top" width="233pt" headers="d133063e657 ">&nbsp;</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" valign="top" width="143pt" headers="d133063e651 "><samp class="ph codeph">DROP TYPE</samp></td>
+              <td class="entry" valign="top" width="73pt" headers="d133063e654 ">YES</td>
+              <td class="entry" valign="top" width="233pt" headers="d133063e657 ">&nbsp;</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" valign="top" width="143pt" headers="d133063e651 "><samp class="ph codeph">DROP USER</samp></td>
+              <td class="entry" valign="top" width="73pt" headers="d133063e654 ">YES</td>
+              <td class="entry" valign="top" width="233pt" headers="d133063e657 ">An alias for <a class="xref" href="sql_commands/DROP_ROLE.html#topic1">DROP ROLE</a>
+</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" valign="top" width="143pt" headers="d133063e651 "><samp class="ph codeph">DROP VIEW</samp></td>
+              <td class="entry" valign="top" width="73pt" headers="d133063e654 ">YES</td>
+              <td class="entry" valign="top" width="233pt" headers="d133063e657 ">&nbsp;</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" valign="top" width="143pt" headers="d133063e651 "><samp class="ph codeph">END</samp></td>
+              <td class="entry" valign="top" width="73pt" headers="d133063e654 ">YES</td>
+              <td class="entry" valign="top" width="233pt" headers="d133063e657 ">&nbsp;</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" valign="top" width="143pt" headers="d133063e651 "><samp class="ph codeph">EXECUTE</samp></td>
+              <td class="entry" valign="top" width="73pt" headers="d133063e654 ">YES</td>
+              <td class="entry" valign="top" width="233pt" headers="d133063e657 ">&nbsp;</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" valign="top" width="143pt" headers="d133063e651 "><samp class="ph codeph">EXPLAIN</samp></td>
+              <td class="entry" valign="top" width="73pt" headers="d133063e654 ">YES</td>
+              <td class="entry" valign="top" width="233pt" headers="d133063e657 ">&nbsp;</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" valign="top" width="143pt" headers="d133063e651 "><samp class="ph codeph">FETCH</samp></td>
+              <td class="entry" valign="top" width="73pt" headers="d133063e654 ">YES</td>
+              <td class="entry" valign="top" width="233pt" headers="d133063e657 ">
+<strong class="ph b">Unsupported Clauses /
+                  Options:</strong><p class="p"><samp class="ph codeph">LAST</samp></p>
+<p class="p"><samp class="ph codeph">PRIOR</samp></p>
+<p class="p"><samp class="ph codeph">BACKWARD</samp></p>
+<p class="p"><samp class="ph codeph">BACKWARD
+                    ALL</samp></p>
+<p class="p"><strong class="ph b">Limitations:</strong></p>
+<p class="p">Cannot fetch rows in a
+                  nonsequential fashion; backward scan is not supported.</p>
+</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" valign="top" width="143pt" headers="d133063e651 "><samp class="ph codeph">GRANT</samp></td>
+              <td class="entry" valign="top" width="73pt" headers="d133063e654 ">YES</td>
+              <td class="entry" valign="top" width="233pt" headers="d133063e657 ">&nbsp;</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" valign="top" width="143pt" headers="d133063e651 "><samp class="ph codeph">INSERT</samp></td>
+              <td class="entry" valign="top" width="73pt" headers="d133063e654 ">YES</td>
+              <td class="entry" valign="top" width="233pt" headers="d133063e657 ">
+<strong class="ph b">Unsupported Clauses /
+                    Options:</strong><p class="p"><samp class="ph codeph">RETURNING</samp></p>
+</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" valign="top" width="143pt" headers="d133063e651 "><samp class="ph codeph">LISTEN</samp></td>
+              <td class="entry" valign="top" width="73pt" headers="d133063e654 "><strong class="ph b">NO</strong></td>
+              <td class="entry" valign="top" width="233pt" headers="d133063e657 ">&nbsp;</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" valign="top" width="143pt" headers="d133063e651 "><samp class="ph codeph">LOAD</samp></td>
+              <td class="entry" valign="top" width="73pt" headers="d133063e654 ">YES</td>
+              <td class="entry" valign="top" width="233pt" headers="d133063e657 ">&nbsp;</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" valign="top" width="143pt" headers="d133063e651 "><samp class="ph codeph">LOCK</samp></td>
+              <td class="entry" valign="top" width="73pt" headers="d133063e654 ">YES</td>
+              <td class="entry" valign="top" width="233pt" headers="d133063e657 ">&nbsp;</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" valign="top" width="143pt" headers="d133063e651 "><samp class="ph codeph">MOVE</samp></td>
+              <td class="entry" valign="top" width="73pt" headers="d133063e654 ">YES</td>
+              <td class="entry" valign="top" width="233pt" headers="d133063e657 ">See <a class="xref" href="sql_commands/FETCH.html#topic1">FETCH</a>
+</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" valign="top" width="143pt" headers="d133063e651 "><samp class="ph codeph">NOTIFY</samp></td>
+              <td class="entry" valign="top" width="73pt" headers="d133063e654 "><strong class="ph b">NO</strong></td>
+              <td class="entry" valign="top" width="233pt" headers="d133063e657 ">&nbsp;</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" valign="top" width="143pt" headers="d133063e651 "><samp class="ph codeph">PREPARE</samp></td>
+              <td class="entry" valign="top" width="73pt" headers="d133063e654 ">YES</td>
+              <td class="entry" valign="top" width="233pt" headers="d133063e657 ">&nbsp;</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" valign="top" width="143pt" headers="d133063e651 "><samp class="ph codeph">PREPARE TRANSACTION</samp></td>
+              <td class="entry" valign="top" width="73pt" headers="d133063e654 "><strong class="ph b">NO</strong></td>
+              <td class="entry" valign="top" width="233pt" headers="d133063e657 ">&nbsp;</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" valign="top" width="143pt" headers="d133063e651 "><samp class="ph codeph">REASSIGN OWNED</samp></td>
+              <td class="entry" valign="top" width="73pt" headers="d133063e654 ">YES</td>
+              <td class="entry" valign="top" width="233pt" headers="d133063e657 ">&nbsp;</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" valign="top" width="143pt" headers="d133063e651 "><samp class="ph codeph">REINDEX</samp></td>
+              <td class="entry" valign="top" width="73pt" headers="d133063e654 ">YES</td>
+              <td class="entry" valign="top" width="233pt" headers="d133063e657 ">&nbsp;</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" valign="top" width="143pt" headers="d133063e651 "><samp class="ph codeph">RELEASE SAVEPOINT</samp></td>
+              <td class="entry" valign="top" width="73pt" headers="d133063e654 ">YES</td>
+              <td class="entry" valign="top" width="233pt" headers="d133063e657 ">&nbsp;</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" valign="top" width="143pt" headers="d133063e651 "><samp class="ph codeph">RESET</samp></td>
+              <td class="entry" valign="top" width="73pt" headers="d133063e654 ">YES</td>
+              <td class="entry" valign="top" width="233pt" headers="d133063e657 ">&nbsp;</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" valign="top" width="143pt" headers="d133063e651 "><samp class="ph codeph">REVOKE</samp></td>
+              <td class="entry" valign="top" width="73pt" headers="d133063e654 ">YES</td>
+              <td class="entry" valign="top" width="233pt" headers="d133063e657 ">&nbsp;</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" valign="top" width="143pt" headers="d133063e651 "><samp class="ph codeph">ROLLBACK</samp></td>
+              <td class="entry" valign="top" width="73pt" headers="d133063e654 ">YES</td>
+              <td class="entry" valign="top" width="233pt" headers="d133063e657 ">&nbsp;</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" valign="top" width="143pt" headers="d133063e651 "><samp class="ph codeph">ROLLBACK PREPARED</samp></td>
+              <td class="entry" valign="top" width="73pt" headers="d133063e654 "><strong class="ph b">NO</strong></td>
+              <td class="entry" valign="top" width="233pt" headers="d133063e657 ">&nbsp;</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" valign="top" width="143pt" headers="d133063e651 "><samp class="ph codeph">ROLLBACK TO SAVEPOINT</samp></td>
+              <td class="entry" valign="top" width="73pt" headers="d133063e654 ">YES</td>
+              <td class="entry" valign="top" width="233pt" headers="d133063e657 ">&nbsp;</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" valign="top" width="143pt" headers="d133063e651 "><samp class="ph codeph">SAVEPOINT</samp></td>
+              <td class="entry" valign="top" width="73pt" headers="d133063e654 ">YES</td>
+              <td class="entry" valign="top" width="233pt" headers="d133063e657 ">&nbsp;</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" valign="top" width="143pt" headers="d133063e651 "><samp class="ph codeph">SELECT</samp></td>
+              <td class="entry" valign="top" width="73pt" headers="d133063e654 ">YES</td>
+              <td class="entry" valign="top" width="233pt" headers="d133063e657 ">
+<strong class="ph b">Limitations:</strong><p class="p">Limited use of <samp class="ph codeph">VOLATILE</samp>
+                  and <samp class="ph codeph">STABLE</samp> functions in <samp class="ph codeph">FROM</samp> or
+                    <samp class="ph codeph">WHERE</samp> clauses</p>
+<p class="p">Text search (<samp class="ph codeph">Tsearch2</samp>) is
+                  not supported</p>
+<p class="p"><samp class="ph codeph">FETCH FIRST</samp> or <samp class="ph codeph">FETCH NEXT</samp>
+                  clauses not supported </p>
+<p class="p"><strong class="ph b">Greenplum Database Clauses
+                    (OLAP):</strong></p>
+<p class="p"><samp class="ph codeph">[GROUP BY </samp><em class="ph i">grouping_element</em><samp class="ph codeph"> [,
+                    ...]]</samp></p>
+<p class="p"><samp class="ph codeph">[WINDOW </samp><em class="ph i">window_name</em><samp class="ph codeph"> AS
+                    (</samp><em class="ph i">window_specification</em><samp class="ph codeph">)]</samp></p>
+<p class="p"><samp class="ph codeph">[FILTER
+                    (WHERE </samp><em class="ph i">condition</em><samp class="ph codeph">)]</samp> applied to an aggregate
+                  function in the <samp class="ph codeph">SELECT</samp> list</p>
+</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" valign="top" width="143pt" headers="d133063e651 "><samp class="ph codeph">SELECT INTO</samp></td>
+              <td class="entry" valign="top" width="73pt" headers="d133063e654 ">YES</td>
+              <td class="entry" valign="top" width="233pt" headers="d133063e657 ">See <a class="xref" href="sql_commands/SELECT.html#topic1">SELECT</a>
+</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" valign="top" width="143pt" headers="d133063e651 "><samp class="ph codeph">SET</samp></td>
+              <td class="entry" valign="top" width="73pt" headers="d133063e654 ">YES</td>
+              <td class="entry" valign="top" width="233pt" headers="d133063e657 ">&nbsp;</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" valign="top" width="143pt" headers="d133063e651 "><samp class="ph codeph">SET CONSTRAINTS</samp></td>
+              <td class="entry" valign="top" width="73pt" headers="d133063e654 "><strong class="ph b">NO</strong></td>
+              <td class="entry" valign="top" width="233pt" headers="d133063e657 ">In PostgreSQL, this only applies to foreign key constraints,
+                which are currently not enforced in Greenplum Database.</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" valign="top" width="143pt" headers="d133063e651 "><samp class="ph codeph">SET ROLE</samp></td>
+              <td class="entry" valign="top" width="73pt" headers="d133063e654 ">YES</td>
+              <td class="entry" valign="top" width="233pt" headers="d133063e657 ">&nbsp;</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" valign="top" width="143pt" headers="d133063e651 "><samp class="ph codeph">SET SESSION AUTHORIZATION</samp></td>
+              <td class="entry" valign="top" width="73pt" headers="d133063e654 ">YES</td>
+              <td class="entry" valign="top" width="233pt" headers="d133063e657 ">Deprecated as of PostgreSQL 8.1 - see <a class="xref" href="sql_commands/SET_ROLE.html#topic1">SET ROLE</a>
+</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" valign="top" width="143pt" headers="d133063e651 "><samp class="ph codeph">SET TRANSACTION</samp></td>
+              <td class="entry" valign="top" width="73pt" headers="d133063e654 ">YES</td>
+              <td class="entry" valign="top" width="233pt" headers="d133063e657 ">&nbsp;</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" valign="top" width="143pt" headers="d133063e651 "><samp class="ph codeph">SHOW</samp></td>
+              <td class="entry" valign="top" width="73pt" headers="d133063e654 ">YES</td>
+              <td class="entry" valign="top" width="233pt" headers="d133063e657 ">&nbsp;</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" valign="top" width="143pt" headers="d133063e651 "><samp class="ph codeph">START TRANSACTION</samp></td>
+              <td class="entry" valign="top" width="73pt" headers="d133063e654 ">YES</td>
+              <td class="entry" valign="top" width="233pt" headers="d133063e657 ">&nbsp;</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" valign="top" width="143pt" headers="d133063e651 "><samp class="ph codeph">TRUNCATE</samp></td>
+              <td class="entry" valign="top" width="73pt" headers="d133063e654 ">YES</td>
+              <td class="entry" valign="top" width="233pt" headers="d133063e657 ">&nbsp;</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" valign="top" width="143pt" headers="d133063e651 "><samp class="ph codeph">UNLISTEN</samp></td>
+              <td class="entry" valign="top" width="73pt" headers="d133063e654 "><strong class="ph b">NO</strong></td>
+              <td class="entry" valign="top" width="233pt" headers="d133063e657 ">&nbsp;</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" valign="top" width="143pt" headers="d133063e651 "><samp class="ph codeph">UPDATE</samp></td>
+              <td class="entry" valign="top" width="73pt" headers="d133063e654 ">YES</td>
+              <td class="entry" valign="top" width="233pt" headers="d133063e657 ">
+<strong class="ph b">Unsupported
+                    Clauses:</strong><p class="p"><samp class="ph codeph">RETURNING</samp></p>
+<p class="p"><strong class="ph b">Limitations:</strong></p>
+<p class="p"><samp class="ph codeph">SET</samp>
+                  not allowed for Greenplum distribution key columns.</p>
+</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" valign="top" width="143pt" headers="d133063e651 "><samp class="ph codeph">VACUUM</samp></td>
+              <td class="entry" valign="top" width="73pt" headers="d133063e654 ">YES</td>
+              <td class="entry" valign="top" width="233pt" headers="d133063e657 ">
+<strong class="ph b">Limitations:</strong><p class="p"><samp class="ph codeph">VACUUM FULL</samp> is not
+                  recommended in Greenplum Database.</p>
+</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" valign="top" width="143pt" headers="d133063e651 "><samp class="ph codeph">VALUES</samp></td>
+              <td class="entry" valign="top" width="73pt" headers="d133063e654 ">YES</td>
+              <td class="entry" valign="top" width="233pt" headers="d133063e657 ">&nbsp;</td>
+            </tr>
+          </tbody>
+        </table>
+</div>
