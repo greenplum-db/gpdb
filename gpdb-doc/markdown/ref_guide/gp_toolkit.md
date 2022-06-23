@@ -148,7 +148,7 @@ This table describes the \_\_gp\_aovisimap\_compaction\_info function output tab
 |------|-----------|
 |content|Greenplum Database segment ID.|
 |datafile|ID of the data file on the segment.|
-|compaction\_possible|The value is either `t` or `f`. The value `t` indicates that the data in data file be compacted when a VACUUM operation is performed. The server configuration parameter `gp_appendonly_compaction_threshold` affects this value.<br/>|
+|compaction\_possible|The value is either `t` or `f`. The value `t` indicates that the data in data file be compacted when a VACUUM operation is performed.<br/>The server configuration parameter `gp_appendonly_compaction_threshold` affects this value.<br/>|
 |hidden\_tupcount|In the data file, the number of hidden \(deleted or updated\) rows.|
 |total\_tupcount|In the data file, the total number of rows.|
 |percent\_hidden|In the data file, the ratio \(as a percentage\) of hidden \(deleted or updated\) rows to total rows.|
