@@ -32,10 +32,10 @@ Greenplum Database supports the PostGIS extension with these component versions.
 
 -   PostGIS 2.5.4
 -   Proj 4.8.0
--   Geos 3.4.2
+-   Geos 3.10.2
 -   GDAL 1.11.1
 -   Json 0.12
--   Expat 2.1.0
+-   Expat 2.4.4
 
 For the information about supported Greenplum extension packages and software versions, see [../install\_guide/platform-requirements.html](../install_guide/platform-requirements.html).
 
@@ -452,11 +452,6 @@ This section lists the Greenplum PostGIS extension limitations for user-defined 
 
 -   The `_postgis_index_extent` function is not supported on Greenplum Database 6 due to its dependence on spatial index operations.
 -   The `<->` operator \(`geometry <-> geometry`\) returns the centroid/centroid distance for Greenplum Database 6.
--   The following PostGIS functions are not currently supported because Greenplum PostGIS is compiled with Geos 3.4.2:
-    -   ST\_Subdivide
-    -   ​ST\_ClipByBox2D
-    -   ST\_VoronoiLines
-    -   ST\_VoronoiPolygons
 -   The TIGER geocoder extension is supported. However, upgrading the TIGER geocoder extension is not supported.
 -   The `standardize_address()` function uses `lex`, `gaz` or `rules` tables as parameters. If you are using tables apart from `us_lex`, `us_gaz` or `us_rules`, you should create them with the distribution policy `DISTRIBUTED REPLICATED` to work for Greenplum.
 
