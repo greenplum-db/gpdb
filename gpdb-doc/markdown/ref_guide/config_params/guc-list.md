@@ -463,7 +463,7 @@ The time to wait on a lock before checking to see if there is a deadlock conditi
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Any valid time expression<br/>\(number and unit\)|1s|local<br/>system<br/>restart<br/>|
+|Any valid time expression<br/>\(number and unit\)|1 s|local<br/>system<br/>restart<br/>|
 
 ## debug\_assertions 
 
