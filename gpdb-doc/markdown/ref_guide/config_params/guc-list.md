@@ -2,7 +2,7 @@
 
 Descriptions of the Greenplum Database server configuration parameters listed alphabetically.
 
-|-   [add\_missing\_from](#add_missing_from)
+-   [add\_missing\_from](#add_missing_from)
 -   [application\_name](#application_name)
 -   [array\_nulls](#array_nulls)
 -   [authentication\_timeout](#authentication_timeout)
@@ -151,8 +151,7 @@ Descriptions of the Greenplum Database server configuration parameters listed al
 -   [gp\_server\_version\_num](#gp_server_version_num)
 -   [gp\_session\_id](#gp_session_id)
 -   [gp\_set\_proc\_affinity](#gp_set_proc_affinity)
-
-|-   [gp\_set\_read\_only](#gp_set_read_only)
+-   [gp\_set\_read\_only](#gp_set_read_only)
 -   [gp\_snmp\_community](#gp_snmp_community)
 -   [gp\_snmp\_monitor\_address](#gp_snmp_monitor_address)
 -   [gp\_snmp\_use\_inform\_or\_trap](#gp_snmp_use_inform_or_trap)
@@ -308,31 +307,21 @@ Descriptions of the Greenplum Database server configuration parameters listed al
 -   [xmlbinary](#xmlbinary)
 -   [xmloption](#xmloption)
 
-|
-
 ## add\_missing\_from 
 
 Automatically adds missing table references to FROM clauses. Present for compatibility with releases of PostgreSQL prior to 8.1, where this behavior was allowed by default.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|off|mastersession
+|Boolean|off|master<br/>session<br/>reload|
 
-reload
-
-|
-
-## application\_name 
+## application\_name 0
 
 Sets the application name for a client session. For example, if connecting via `psql`, this will be set to `psql`. Setting an application name allows it to be reported in log messages and statistics views.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|string| |mastersession
-
-reload
-
-|
+|string| |master<br/>session<br/>reload|
 
 ## array\_nulls 
 
@@ -340,11 +329,7 @@ This controls whether the array input parser recognizes unquoted NULL as specify
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|on|mastersession
-
-reload
-
-|
+|Boolean|on|master<br/>session<br/>reload|
 
 ## authentication\_timeout 
 
@@ -352,11 +337,7 @@ Maximum time to complete client authentication. This prevents hung clients from 
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Any valid time expression \(number and unit\)|1min|localsystem
-
-restart
-
-|
+|Any valid time expression \(number and unit\)|1 min|local<br/>system<br/>restart<br/>|
 
 ## backslash\_quote 
 
@@ -364,15 +345,7 @@ This controls whether a quote mark can be represented by \\' in a string literal
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|on \(allow \\' always\)off \(reject always\)
-
-safe\_encoding \(allow only if client encoding does not allow ASCII \\ within a multibyte character\)
-
-|safe\_encoding|mastersession
-
-reload
-
-|
+|on \(allow \\' always\)<br/>off \(reject always\)<br/>safe\_encoding \(allow only if client encoding does not allow ASCII \\ within a multibyte character\)<br/>|safe\_encoding|master<br/>session<br/>reload|
 
 ## block\_size 
 
@@ -388,11 +361,7 @@ Specifies the Bonjour broadcast name. By default, the computer name is used, spe
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|string|unset|mastersystem
-
-restart
-
-|
+|string|unset|master<br/>system<br/>restart<br/>|
 
 ## check\_function\_bodies 
 
@@ -400,11 +369,7 @@ When set to off, disables validation of the function body string during `CREATE 
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|on|mastersession
-
-reload
-
-|
+|Boolean|on|master<br/>session<br/>reload|
 
 ## client\_encoding 
 
@@ -412,11 +377,7 @@ Sets the client-side encoding \(character set\). The default is to use the same 
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|character set|UTF8|mastersession
-
-reload
-
-|
+|character set|UTF8|master<br/>session<br/>reload| 
 
 ## client\_min\_messages 
 
@@ -424,31 +385,7 @@ Controls which message levels are sent to the client. Each level includes all th
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|DEBUG5 DEBUG4
-
-DEBUG3
-
-DEBUG2
-
-DEBUG1
-
-LOG
-
-NOTICE
-
-WARNING
-
-ERROR
-
-FATAL
-
-PANIC
-
-|NOTICE|mastersession
-
-reload
-
-|
+|DEBUG5<br/>DEBUG4<br/>DEBUG3<br/>DEBUG2<br/>DEBUG1<br/>LOG<br/>NOTICE<br/>WARNING<br/>ERROR<br/>FATAL<br/>PANIC|NOTICE|master<br/>session<br/>reload|
 
 ## cpu\_index\_tuple\_cost 
 
@@ -456,11 +393,7 @@ For the legacy query optimizer \(planner\), sets the estimate of the cost of pro
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|floating point|0.005|mastersession
-
-reload
-
-|
+|floating point|0.005|master<br/>session<br/>reload|
 
 ## cpu\_operator\_cost 
 
@@ -468,11 +401,7 @@ For the legacy query optimizer \(planner\), sets the estimate of the cost of pro
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|floating point|0.0025|mastersession
-
-reload
-
-|
+|floating point|0.0025|master<br/>session<br/>reload|
 
 ## cpu\_tuple\_cost 
 
@@ -480,11 +409,7 @@ For the legacy query optimizer \(planner\), Sets the estimate of the cost of pro
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|floating point|0.01|mastersession
-
-reload
-
-|
+|floating point|0.01|master<br/>session<br/>reload|
 
 ## cursor\_tuple\_fraction 
 
@@ -492,11 +417,7 @@ Tells the legacy query optimizer \(planner\) how many rows are expected to be fe
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|integer|1|mastersession
-
-reload
-
-|
+|integer|1|master<br/>session<br/>reload|
 
 ## custom\_variable\_classes 
 
@@ -504,11 +425,7 @@ Specifies one or several class names to be used for custom variables. A custom v
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|comma-separated list of class names|unset|localsystem
-
-restart
-
-|
+|comma-separated list of class names|unset|local<br/>system<br/>restart<br/>|
 
 ## data\_checksums 
 
@@ -530,17 +447,7 @@ Sets the display format for date and time values, as well as the rules for inter
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|<format\>, <date style\>where:
-
-<format\> is ISO, Postgres, SQL, or German
-
-<date style\> is DMY, MDY, or YMD
-
-|ISO, MDY|mastersession
-
-reload
-
-|
+|<format\>, <date style\><br/>where:<br/><format\> is ISO, Postgres, SQL, or German<br/><date style\> is DMY, MDY, or YMD<br/>|ISO, MDY<br>|master<br/>session<br/>reload|
 
 ## db\_user\_namespace 
 
@@ -548,11 +455,7 @@ This enables per-database user names. If on, you should create users as *usernam
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|off|localsystem
-
-restart
-
-|
+|Boolean|off|local<br/>system<br/>restart<br/>
 
 ## deadlock\_timeout 
 
@@ -560,11 +463,7 @@ The time to wait on a lock before checking to see if there is a deadlock conditi
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Any valid time expression \(number and unit\)|1s|localsystem
-
-restart
-
-|
+|Any valid time expression<br/>\(number and unit\)|1s|local<br/>system<br/>restart<br/>|
 
 ## debug\_assertions 
 
@@ -572,11 +471,7 @@ Turns on various assertion checks.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|off|localsystem
-
-restart
-
-|
+|Boolean|off|local<br/>system<br/>restart<br/>|
 
 ## debug\_pretty\_print 
 
@@ -584,11 +479,7 @@ Indents debug output to produce a more readable but much longer output format. *
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|off|mastersession
-
-reload
-
-|
+|Boolean|off|master<br/>session<br/>reload|
 
 ## debug\_print\_parse 
 
@@ -596,11 +487,7 @@ For each executed query, prints the resulting parse tree. *client\_min\_messages
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|off|mastersession
-
-reload
-
-|
+|Boolean|off|master<br/>session<br/>reload|
 
 ## debug\_print\_plan 
 
@@ -608,11 +495,7 @@ For each executed query, prints the Greenplum parallel query execution plan. *cl
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|off|mastersession
-
-reload
-
-|
+|Boolean|off|master<br/>session<br/>reload|
 
 ## debug\_print\_prelim\_plan 
 
@@ -620,11 +503,7 @@ For each executed query, prints the preliminary query plan. *client\_min\_messag
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|off|mastersession
-
-reload
-
-|
+|Boolean|off|master<br/>session<br/>reload|
 
 ## debug\_print\_rewritten 
 
@@ -632,11 +511,7 @@ For each executed query, prints the query rewriter output. *client\_min\_message
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|off|mastersession
-
-reload
-
-|
+|Boolean|off|master<br/>session<br/>reload|
 
 ## debug\_print\_slice\_table 
 
@@ -644,11 +519,7 @@ For each executed query, prints the Greenplum query slice plan. *client\_min\_me
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|off|mastersession
-
-reload
-
-|
+|Boolean|off|master<br/>session<br/>reload|
 
 ## default\_statistics\_target 
 
@@ -656,11 +527,7 @@ Sets the default statistics sampling target \(the number of values that are stor
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|0 \> Integer \> 10000|100|mastersession
-
-reload
-
-|
+|0 \> Integer \> 10000|100|master<br/>session<br/>reload|
 
 ## default\_tablespace 
 
@@ -668,11 +535,7 @@ The default tablespace in which to create objects \(tables and indexes\) when a 
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|name of a tablespace|unset|mastersession
-
-reload
-
-|
+|name of a tablespace|unset|master<br/>session<br/>reload|
 
 ## default\_transaction\_isolation 
 
@@ -680,15 +543,7 @@ Controls the default isolation level of each new transaction.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|read committedread uncommitted
-
-serializable
-
-|read committed|mastersession
-
-reload
-
-|
+|read committed<br/>read uncommitted<br/>serializable<br/>|read committed|master<br/>session<br/>reload|
 
 ## default\_transaction\_read\_only 
 
@@ -696,11 +551,7 @@ Controls the default read-only status of each new transaction. A read-only SQL t
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|off|mastersession
-
-reload
-
-|
+|Boolean|off|master<br/>session<br/>reload|
 
 ## dtx\_phase2\_retry\_count 
 
@@ -710,11 +561,7 @@ When the network is unstable, the master may be unable to connect to one or more
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|0 - `INT_MAX`|10|mastersystem
-
-restart
-
-|
+|0 - `INT_MAX`|10|master<br/>system<br/>restart|
 
 ## dynamic\_library\_path 
 
@@ -722,11 +569,7 @@ If a dynamically loadable module needs to be opened and the file name specified 
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|a list of absolute directory paths separated by colons|$libdir|localsystem
-
-restart
-
-|
+|a list of absolute directory paths separated by colons|$libdir|local<br/>system<br/>restart|
 
 ## effective\_cache\_size 
 
@@ -736,11 +579,7 @@ Set this parameter to a number of [block\_size](#backslash_quote) blocks \(defau
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|1 - INT\_MAX *or* number and unit|16384 \(512MB\)|mastersession
-
-reload
-
-|
+|1 - INT\_MAX *or* number and unit|16384 \(512MB\)|master<br/>session<br/>reload|
 
 ## enable\_bitmapscan 
 
@@ -748,11 +587,7 @@ Enables or disables the use of bitmap-scan plan types by the legacy query optimi
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|on|mastersession
-
-reload
-
-|
+|Boolean|on|master<br/>session<br/>reload|
 
 ## enable\_groupagg 
 
@@ -760,11 +595,7 @@ Enables or disables the use of group aggregation plan types by the legacy query 
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|on|mastersession
-
-reload
-
-|
+|Boolean|on|master<br/>session<br/>reload|
 
 ## enable\_hashagg 
 
@@ -772,11 +603,7 @@ Enables or disables the use of hash aggregation plan types by the legacy query o
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|on|mastersession
-
-reload
-
-|
+|Boolean|on|master<br/>session<br/>reload|
 
 ## enable\_hashjoin 
 
@@ -784,11 +611,7 @@ Enables or disables the use of hash-join plan types by the legacy query optimize
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|on|mastersession
-
-reload
-
-|
+|Boolean|on|master<br/>session<br/>reload|
 
 ## enable\_indexscan 
 
@@ -796,11 +619,7 @@ Enables or disables the use of index-scan plan types by the legacy query optimiz
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|on|mastersession
-
-reload
-
-|
+|Boolean|on|master<br/>session<br/>reload|
 
 ## enable\_mergejoin 
 
@@ -808,11 +627,7 @@ Enables or disables the use of merge-join plan types by the legacy query optimiz
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|off|mastersession
-
-reload
-
-|
+|Boolean|off|master<br/>session<br/>reload|
 
 ## enable\_nestloop 
 
@@ -820,11 +635,7 @@ Enables or disables the use of nested-loop join plans by the legacy query optimi
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|off|mastersession
-
-reload
-
-|
+|Boolean|off|master<br/>session<br/>reload|
 
 ## enable\_seqscan 
 
@@ -832,11 +643,7 @@ Enables or disables the use of sequential scan plan types by the legacy query op
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|on|mastersession
-
-reload
-
-|
+|Boolean|on|master<br/>session<br/>reload|
 
 ## enable\_sort 
 
@@ -844,11 +651,7 @@ Enables or disables the use of explicit sort steps by the legacy query optimizer
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|on|mastersession
-
-reload
-
-|
+|Boolean|on|master<br/>session<br/>reload|
 
 ## enable\_tidscan 
 
@@ -856,11 +659,7 @@ Enables or disables the use of tuple identifier \(TID\) scan plan types by the l
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|on|mastersession
-
-reload
-
-|
+|Boolean|on|master<br/>session<br/>reload|
 
 ## escape\_string\_warning 
 
@@ -868,11 +667,7 @@ When on, a warning is issued if a backslash \(\\\) appears in an ordinary string
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|on|mastersession
-
-reload
-
-|
+|Boolean|on|master<br/>session<br/>reload|
 
 ## explain\_pretty\_print 
 
@@ -880,11 +675,7 @@ Determines whether EXPLAIN VERBOSE uses the indented or non-indented format for 
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|on|mastersession
-
-reload
-
-|
+|Boolean|on|master<br/>session<br/>reload|
 
 ## extra\_float\_digits 
 
@@ -892,11 +683,7 @@ Adjusts the number of digits displayed for floating-point values, including floa
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|integer|0|mastersession
-
-reload
-
-|
+|integer|0|master<br/>session<br/>reload|
 
 ## filerep\_mirrorvalidation\_during\_resync 
 
@@ -904,11 +691,7 @@ The default setting `false` improves Greenplum Database performance during incre
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|false|mastersession
-
-reload
-
-|
+|Boolean|false|master<br/>session<br/>reload|
 
 ## from\_collapse\_limit 
 
@@ -916,11 +699,7 @@ The legacy query optimizer \(planner\) will merge sub-queries into upper queries
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|1-*n*|20|mastersession
-
-reload
-
-|
+|1-*n*|20|master<br/>session<br/>reload|
 
 ## gp\_adjust\_selectivity\_for\_outerjoins 
 
@@ -928,11 +707,7 @@ Enables the selectivity of NULL tests over outer joins.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|on|mastersession
-
-reload
-
-|
+|Boolean|on|master<br/>session<br/>reload|
 
 ## gp\_analyze\_relative\_error 
 
@@ -940,11 +715,7 @@ Sets the estimated acceptable error in the cardinality of the table " a value of
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|floating point < 1.0|0.25|mastersession
-
-reload
-
-|
+|floating point < 1.0|0.25|master<br/>session<br/>reload|
 
 ## gp\_appendonly\_compaction 
 
@@ -952,11 +723,7 @@ Enables compacting segment files during `VACUUM` commands. When disabled, `VACUU
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|on|mastersession
-
-reload
-
-|
+|Boolean|on|master<br/>session<br/>reload|
 
 ## gp\_appendonly\_compaction\_threshold 
 
@@ -964,11 +731,7 @@ Specifies the threshold ratio \(as a percentage\) of hidden rows to total rows t
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|integer \(%\)|10|mastersession
-
-reload
-
-|
+|integer \(%\)|10|master<br/>session<br/>reload|
 
 ## gp\_autostats\_mode 
 
@@ -994,15 +757,7 @@ Automatic statistics collection is triggered if data is inserted directly in a l
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|noneon\_change
-
-on\_no\_stats
-
-|on\_no\_ stats|mastersession
-
-reload
-
-|
+|none<br/>on\_change<br/>on\_no\_stats<br/>|on\_no\_ stats|master<br/>session<br/>reload|
 
 ## gp\_autostats\_mode\_in\_functions 
 
@@ -1022,15 +777,7 @@ The `on_change` option triggers statistics collection only when the number of ro
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|noneon\_change
-
-on\_no\_stats
-
-|none|mastersession
-
-reload
-
-|
+|none<br/>on\_change<br/>none<br/>|none|master<br/>session<br/>reload|
 
 ## gp\_autostats\_on\_change\_threshold 
 
@@ -1038,11 +785,7 @@ Specifies the threshold for automatic statistics collection when `gp_autostats_m
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|integer|2147483647|mastersession
-
-reload
-
-|
+|integer|2147483647|master<br/>session<br/>reload|
 
 ## gp\_backup\_directIO 
 
@@ -1052,11 +795,7 @@ Direct I/O is supported only on Red Hat Enterprise Linux, CentOS, and SUSE.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|on, off|off|localsession
-
-reload
-
-|
+|on, off|off|local<br/>session<br/>reload|
 
 ## gp\_backup\_directIO\_read\_chunk\_mb 
 
@@ -1066,11 +805,7 @@ The default value is the optimal setting. Decreasing it will increase the backup
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|1-200|20 MB|localsession
-
-reload
-
-|
+|1-200|20 MB|local<br/>session<br/>reload|
 
 ## gp\_cached\_segworkers\_threshold 
 
@@ -1078,11 +813,7 @@ When a user starts a session with Greenplum Database and issues a query, the sys
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|integer \> 0|5|mastersession
-
-reload
-
-|
+|integer \> 0|5|master<br/>session<br/>reload|
 
 ## gp\_command\_count 
 
@@ -1102,11 +833,7 @@ Could not send data to client: Connection timed out.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|number of seconds|3600 \(1 hour\)|mastersystem
-
-reload
-
-|
+|number of seconds|3600 \(1 hour\)|master<br/>session<br/>reload|
 
 ## gp\_connections\_per\_thread 
 
@@ -1122,9 +849,7 @@ This parameter is master only and changing it requires a server restart.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|integer \>= 0|0|masterrestart
-
-|
+|integer \>= 0<br/>|0<br/>|master<br/>restart|
 
 ## gp\_content 
 
@@ -1155,11 +880,7 @@ For information about the legacy query optimizer and GPORCA, see "Querying Data"
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|boolean|off|mastersystem
-
-reload
-
-|
+|boolean|off|master<br/>system<br/>reload|
 
 ## gp\_dbid 
 
@@ -1175,11 +896,7 @@ Number of seconds for a Greenplum process to linger after a fatal internal error
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Any valid time expression \(number and unit\)|0|mastersession
-
-reload
-
-|
+|Any valid time expression<br/>\(number and unit\)|0|master<br/>session<br/>reload|
 
 ## gp\_default\_storage\_options 
 
@@ -1227,37 +944,14 @@ This example gpconfig utility command shows the value of the parameter. The para
 gpconfig -s 'gp_default_storage_options'
 ```
 
-|Value Range|Default|Set Classifications 1|
+|Value Range|Default|Set Classifications<sup>1</sup>|
 |-----------|-------|---------------------|
-|APPENDONLY= `TRUE` \| `FALSE`BLOCKSIZE= integer between 8192 and 2097152
+|APPENDONLY=<br/>`TRUE` \| `FALSE`<br/>BLOCKSIZE= integer between 8192 and 2097152<br/>CHECKSUM= `TRUE` \| `FALSE`<br/>COMPRESSTYPE= `ZLIB` \| `QUICKLZ`<sup>2</sup> \| `RLE`\_`TYPE` \| `NONE`<br/>COMPRESSLEVEL= integer between 0 and 19<br/>ORIENTATION= `ROW` \| `COLUMN`<br/>|APPENDONLY=`FALSE`<br/>BLOCKSIZE=`32768`<br/>CHECKSUM=`TRUE`<br/>COMPRESSTYPE=`none`<br/>COMPRESSLEVEL=`0`<br/>ORIENTATION=`ROW`|master<br/>session<br/>reload|
 
-CHECKSUM= `TRUE` \| `FALSE`
 
-COMPRESSTYPE= `ZLIB` \| `QUICKLZ`2 \| `RLE`\_`TYPE` \| `NONE`
+**Note:** <sup>1</sup>The set classification when the parameter is set at the system level with the gpconfig utility.
 
-COMPRESSLEVEL= integer between 0 and 19
-
-ORIENTATION= `ROW` \| `COLUMN`
-
-|APPENDONLY=`FALSE` BLOCKSIZE=`32768`
-
-CHECKSUM=`TRUE`
-
-COMPRESSTYPE=`none`
-
-COMPRESSLEVEL=`0`
-
-ORIENTATION=`ROW`
-
-|mastersession
-
-reload
-
-|
-
-**Note:** 1The set classification when the parameter is set at the system level with the gpconfig utility.
-
-**Note:** 2QuickLZ compression is available only in the commercial release of Pivotal Greenplum Database.
+**Note:** <sup>2</sup>QuickLZ compression is available only in the commercial release of Pivotal Greenplum Database.
 
 ## gp\_dynamic\_partition\_pruning 
 
@@ -1265,11 +959,7 @@ Enables plans that can dynamically eliminate the scanning of partitions.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|on/off|on|mastersession
-
-reload
-
-|
+|on/off|on|master<br/>session<br/>reload|
 
 ## gp\_email\_from 
 
@@ -1283,13 +973,7 @@ or
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|string| |mastersystem
-
-reload
-
-superuser
-
-|
+|string| |master<br/>system<br/>reload<br/>superuser|
 
 ## gp\_email\_smtp\_password 
 
@@ -1297,13 +981,7 @@ The password/passphrase used to authenticate with the SMTP server.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|string| |mastersystem
-
-reload
-
-superuser
-
-|
+|string| |master<br/>system<br/>reload<br/>superuser|
 
 ## gp\_email\_smtp\_server 
 
@@ -1313,13 +991,7 @@ smtp\_servername.domain.com:port
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|string| |mastersystem
-
-reload
-
-superuser
-
-|
+|string| |master<br/>system<br/>reload<br/>superuser|
 
 ## gp\_email\_smtp\_userid 
 
@@ -1327,13 +999,7 @@ The user id used to authenticate with the SMTP server.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|string| |mastersystem
-
-reload
-
-superuser
-
-|
+|string| |master<br/>system<br/>reload<br/>superuser|
 
 ## gp\_email\_to 
 
@@ -1347,13 +1013,7 @@ If this parameter is not set, then email alerts are disabled.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|string| |mastersystem
-
-reload
-
-superuser
-
-|
+|string| |master<br/>system<br/>reload<br/>superuser|
 
 ## gp\_enable\_agg\_distinct 
 
@@ -1361,11 +1021,7 @@ Enables or disables two-phase aggregation to compute a single distinct-qualified
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|on|mastersession
-
-reload
-
-|
+|Boolean|on|master<br/>session<br/>reload|
 
 ## gp\_enable\_agg\_distinct\_pruning 
 
@@ -1373,11 +1029,7 @@ Enables or disables three-phase aggregation and join to compute distinct-qualifi
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|on|mastersession
-
-reload
-
-|
+|Boolean|on|master<br/>session<br/>reload|
 
 ## gp\_enable\_direct\_dispatch 
 
@@ -1385,11 +1037,7 @@ Enables or disables the dispatching of targeted query plans for queries that acc
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|on|mastersystem
-
-restart
-
-|
+|Boolean|on|master<br/>system<br/>restart|
 
 ## gp\_enable\_exchange\_default\_partition 
 
@@ -1401,11 +1049,7 @@ If the value is `on`, Greenplum Database returns a warning stating that exchangi
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|off|mastersession
-
-reload
-
-|
+|Boolean|off|master<br/>session<br/>reload|
 
 ## gp\_enable\_fallback\_plan 
 
@@ -1413,11 +1057,7 @@ Allows use of disabled plan types when a query would not be feasible without the
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|on|mastersession
-
-reload
-
-|
+|Boolean|on|master<br/>session<br/>reload|
 
 ## gp\_enable\_fast\_sri 
 
@@ -1425,11 +1065,7 @@ When set to `on`, the legacy query optimizer \(planner\) plans single row insert
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|on|mastersession
-
-reload
-
-|
+|Boolean|on|master<br/>session<br/>reload|
 
 ## gp\_enable\_gpperfmon 
 
@@ -1437,11 +1073,7 @@ Enables or disables the data collection agents that populate the `gpperfmon` dat
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|off|localsystem
-
-restart
-
-|
+|Boolean|off|local<br/>system<br/>restart|
 
 ## gp\_enable\_groupext\_distinct\_gather 
 
@@ -1449,11 +1081,7 @@ Enables or disables gathering data to a single node to compute distinct-qualifie
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|on|mastersession
-
-reload
-
-|
+|Boolean|on|master<br/>session<br/>reload|
 
 ## gp\_enable\_groupext\_distinct\_pruning 
 
@@ -1461,11 +1089,7 @@ Enables or disables three-phase aggregation and join to compute distinct-qualifi
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|on|mastersession
-
-reload
-
-|
+|Boolean|on|master<br/>session<br/>reload|
 
 ## gp\_enable\_multiphase\_agg 
 
@@ -1473,11 +1097,7 @@ Enables or disables the use of two or three-stage parallel aggregation plans leg
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|on|mastersession
-
-reload
-
-|
+|Boolean|on|master<br/>session<br/>reload|
 
 ## gp\_enable\_predicate\_propagation 
 
@@ -1485,11 +1105,7 @@ When enabled, the legacy query optimizer \(planner\) applies query predicates to
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|on|mastersession
-
-reload
-
-|
+|Boolean|on|master<br/>session<br/>reload|
 
 ## gp\_enable\_preunique 
 
@@ -1497,11 +1113,7 @@ Enables two-phase duplicate removal for `SELECT DISTINCT` queries \(not `SELECT 
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|on|mastersession
-
-reload
-
-|
+|Boolean|on|master<br/>session<br/>reload|
 
 ## gp\_enable\_relsize\_collection 
 
@@ -1511,11 +1123,7 @@ This parameter is ignored for a root partition of a partitioned table. When GPOR
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|off|mastersession
-
-reload
-
-|
+|Boolean|off|master<br/>session<br/>reload|
 
 ## gp\_enable\_sequential\_window\_plans \(Beta\) 
 
@@ -1523,11 +1131,7 @@ If on, enables non-parallel \(sequential\) query plans for queries containing wi
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|on|mastersession
-
-reload
-
-|
+|Boolean|on|master<br/>session<br/>reload|
 
 ## gp\_enable\_segment\_copy\_checking 
 
@@ -1544,11 +1148,7 @@ The parameter can be set for a database system or a session. The parameter canno
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|true|mastersession
-
-reload
-
-|
+|Boolean|true|master<br/>session<br/>reload|
 
 ## gp\_enable\_sort\_distinct 
 
@@ -1556,11 +1156,7 @@ Enable duplicates to be removed while sorting.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|on|mastersession
-
-reload
-
-|
+|Boolean|on|master<br/>session<br/>reload|
 
 ## gp\_enable\_sort\_limit 
 
@@ -1568,11 +1164,7 @@ Enable `LIMIT` operation to be performed while sorting. Sorts more efficiently w
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|on|mastersession
-
-reload
-
-|
+|Boolean|on|master<br/>session<br/>reload|
 
 ## gp\_external\_enable\_exec 
 
@@ -1580,11 +1172,7 @@ Enables or disables the use of external tables that execute OS commands or scrip
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|on|mastersystem
-
-restart
-
-|
+|Boolean|on|master<br/>system<br/>restart|
 
 ## gp\_external\_max\_segs 
 
@@ -1592,11 +1180,7 @@ Sets the number of segments that will scan external table data during an externa
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|integer|64|mastersession
-
-reload
-
-|
+|integer|64|master<br/>session<br/>reload|
 
 ## gp\_external\_enable\_filter\_pushdown 
 
@@ -1604,11 +1188,7 @@ Enable filter pushdown when reading data from external tables. If pushdown fails
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|on|mastersession
-
-reload
-
-|
+|Boolean|on|master<br/>session<br/>reload|
 
 ## gp\_filerep\_tcp\_keepalives\_count 
 
@@ -1618,11 +1198,7 @@ Use this parameter for all connections that are between a primary and mirror seg
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|number of lost keepalives|2|localsystem
-
-restart
-
-|
+|number of lost keepalives|2|local<br/>system<br/>restart|
 
 ## gp\_filerep\_tcp\_keepalives\_idle 
 
@@ -1632,11 +1208,7 @@ Use this parameter for all connections that are between a primary and mirror seg
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|number of seconds|1 min|localsystem
-
-restart
-
-|
+|number of seconds|1 min|local<br/>system<br/>restart|
 
 ## gp\_filerep\_tcp\_keepalives\_interval 
 
@@ -1646,11 +1218,7 @@ Use this parameter for all connections that are between a primary and mirror seg
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|number of seconds|30 sec|localsystem
-
-restart
-
-|
+|number of seconds|30 sec|local<br/>system<br/>restart|
 
 ## gp\_fts\_probe\_interval 
 
@@ -1658,11 +1226,7 @@ Specifies the polling interval for the fault detection process \(`ftsprobe`\). T
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|10 - 3600 seconds|1min|mastersystem
-
-restart
-
-|
+|10 - 3600 seconds|1 min|master<br/>system<br/>restart|
 
 ## gp\_fts\_probe\_retries 
 
@@ -1670,11 +1234,7 @@ Specifies the number of times the fault detection process \(`ftsprobe`\) attempt
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|integer|5|mastersystem
-
-restart
-
-|
+|integer|5|master<br/>system<br/>restart|
 
 ## gp\_fts\_probe\_threadcount 
 
@@ -1682,11 +1242,7 @@ Specifies the number of `ftsprobe` threads to create. This parameter should be s
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|1 - 128|16|mastersystem
-
-restart
-
-|
+|1 - 128|16|master<br/>system<br/>restart|
 
 ## gp\_fts\_probe\_timeout 
 
@@ -1694,11 +1250,7 @@ Specifies the allowed timeout for the fault detection process \(`ftsprobe`\) to 
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|10 - 3600 seconds|20 secs|mastersystem
-
-restart
-
-|
+|10 - 3600 seconds|20 secs|master<br/>system<br/>restart|
 
 ## gp\_log\_fts 
 
@@ -1706,17 +1258,7 @@ Controls the amount of detail the fault detection process \(`ftsprobe`\) writes 
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|OFFTERSE
-
-VERBOSE
-
-DEBUG
-
-|TERSE|mastersystem
-
-restart
-
-|
+|OFF<br/>TERSE<br/>VERBOSE<br/>DEBUG<br/>|TERSE|master<br/>system<br/>restart|
 
 ## gp\_log\_interconnect 
 
@@ -1726,19 +1268,7 @@ Increasing the amount of logging could affect performance and increase disk spac
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|off
-
- terse
-
- verbose
-
- debug
-
-|terse|mastersession
-
-reload
-
-|
+|OFF<br/>TERSE<br/>VERBOSE<br/>DEBUG<br/>|TERSE|master<br/>system<br/>reload|
 
 ## gp\_log\_gang 
 
@@ -1746,17 +1276,7 @@ Controls the amount of information that is written to the log file about query w
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|OFFTERSE
-
-VERBOSE
-
-DEBUG
-
-|OFF|mastersession
-
-restart
-
-|
+|OFF<br/>TERSE<br/>VERBOSE<br/>DEBUG<br/>|OFF|master<br/>system<br/>restart|
 
 ## gp\_gpperfmon\_send\_interval 
 
@@ -1764,13 +1284,7 @@ Sets the frequency that the Greenplum Database server processes send query execu
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Any valid time expression \(number and unit\)|1sec|mastersystem
-
-restart
-
-superuser
-
-|
+|Any valid time expression<br/>\(number and unit\)|1 sec|master<br/>system<br/>restart<br/>superuser|
 
 ## gpperfmon\_log\_alert\_level 
 
@@ -1780,19 +1294,7 @@ Controls which message levels are written to the gpperfmon log. Each level inclu
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|none warning
-
-error
-
-fatal
-
-panic
-
-|none|localsystem
-
-restart
-
-|
+|none<br/>warning<br/>error<br/>fatal<br/>panic|none|local<br/>system<br/>restart|
 
 ## gp\_hadoop\_home 
 
@@ -1800,11 +1302,7 @@ Specifies the installation directory for the Greenplum Database `gphdfs` protoco
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Valid directory name|Value of `HADOOP_HOME`|localsession
-
-reload
-
-|
+|Valid directory name|Value of `HADOOP_HOME`|local<br/>session<br/>reload|
 
 ## gp\_hadoop\_target\_version 
 
@@ -1812,17 +1310,7 @@ The installed version of the Greenplum Database `gphdfs` protocol \(deprecated\)
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|cdhhadoop
-
-hdp
-
-mpr
-
-|hadoop|localsession
-
-reload
-
-|
+|cdh<br/>hadoop<br/>hdp<br/>mpr|hadoop|local<br/>session<br/>reload|
 
 ## gp\_hashjoin\_tuples\_per\_bucket 
 
@@ -1830,11 +1318,7 @@ Sets the target density of the hash table used by HashJoin operations. A smaller
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|integer|5|mastersession
-
-reload
-
-|
+|integer|5|master<br/>session<br/>reload|
 
 ## gp\_idf\_deduplicate 
 
@@ -1842,15 +1326,7 @@ Changes the strategy to compute and process MEDIAN, and PERCENTILE\_DISC.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|autonone
-
-force
-
-|auto|mastersession
-
-reload
-
-|
+|auto<br/>none<br/>force|auto|master<br/>session<br/>reload|
 
 ## gp\_ignore\_error\_table 
 
@@ -1864,11 +1340,7 @@ You can set this value to `true` to avoid the Greenplum Database error when you 
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|false|mastersession
-
-reload
-
-|
+|Boolean|false|master<br/>session<br/>reload|
 
 ## gp\_initial\_bad\_row\_limit 
 
@@ -1882,11 +1354,7 @@ The `SEGMENT REJECT LIMIT` clause can also be specified for the `COPY` command o
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|integer 0 - `INT_MAX`|1000|mastersession
-
-reload
-
-|
+|integer 0 - `INT_MAX`|1000|master<br/>session<br/>reload|
 
 ## gp\_interconnect\_debug\_retry\_interval 
 
@@ -1896,11 +1364,7 @@ The log messages contain information about the interconnect communication betwee
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|1 =< Integer < 4096|10|mastersession
-
-reload
-
-|
+|1 =< Integer < 4096|10|local<br/>session<br/>reload|
 
 ## gp\_interconnect\_fc\_method 
 
@@ -1912,13 +1376,7 @@ Loss based flow control is based on capacity based flow control, and also tunes 
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|CAPACITYLOSS
-
-|LOSS|mastersession
-
-reload
-
-|
+|CAPACITY<br/>LOSS|LOSS|master<br/>session<br/>reload|
 
 ## gp\_interconnect\_hash\_multiplier 
 
@@ -1926,11 +1384,7 @@ Sets the size of the hash table used by the Greenplum Database to track intercon
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|2-25|2|mastersession
-
-reload
-
-|
+|2-25|2|master<br/>session<br/>reload|
 
 ## gp\_interconnect\_queue\_depth 
 
@@ -1938,11 +1392,7 @@ Sets the amount of data per-peer to be queued by the Greenplum Database intercon
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|1-2048|4|mastersession
-
-reload
-
-|
+|1-2048|4|master<br/>session<br/>reload|
 
 ## gp\_interconnect\_setup\_timeout 
 
@@ -1950,11 +1400,7 @@ Specifies the amount of time, in seconds, that Greenplum Database waits for the 
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|0 - 7200 seconds|7200 seconds \(2 hours\)|mastersession
-
-reload
-
-|
+|0 - 7200 seconds|7200 seconds \(2 hours\)|master<br/>session<br/>reload|
 
 ## gp\_interconnect\_snd\_queue\_depth 
 
@@ -1962,11 +1408,7 @@ Sets the amount of data per-peer to be queued by the default UDPIFC interconnect
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|1 - 4096|2|mastersession
-
-reload
-
-|
+|1 - 4096|2|master<br/>session<br/>reload|
 
 ## gp\_interconnect\_transmit\_timeout 
 
@@ -1974,11 +1416,7 @@ Specifies the amount of time, in seconds, that Greenplum Database waits for netw
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|1 - 7200 seconds|3600 seconds \(1 hour\)|mastersession
-
-reload
-
-|
+|1 - 7200 seconds|3600 seconds \(1 hour\)|master<br/>session<br/>reload|
 
 ## gp\_interconnect\_type 
 
@@ -1990,13 +1428,7 @@ With TCP as the interconnect protocol, Greenplum Database has an upper limit of 
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|UDPIFCTCP
-
-|UDPIFC|localsystem
-
-restart
-
-|
+|UDPIFC<br/>TCP|UDPIFC|local<br/>system<br/>restart|
 
 ## gp\_log\_format 
 
@@ -2004,13 +1436,7 @@ Specifies the format of the server log files. If using *gp\_toolkit* administrat
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|csvtext
-
-|csv|localsystem
-
-restart
-
-|
+|csv<br/>text|csv|local<br/>system<br/>restart|
 
 ## gp\_max\_csv\_line\_length 
 
@@ -2020,11 +1446,7 @@ The maximum length of a line in a CSV formatted file that will be imported into 
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|number of bytes|1048576|localsystem
-
-restart
-
-|
+|number of bytes|1048576|local<br/>system<br/>restart|
 
 ## gp\_max\_databases 
 
@@ -2032,11 +1454,7 @@ The maximum number of databases allowed in a Greenplum Database system.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|integer|16|mastersystem
-
-restart
-
-|
+|integer|16|master<br/>system<br/>restart|
 
 ## gp\_max\_filespaces 
 
@@ -2044,11 +1462,7 @@ The maximum number of filespaces allowed in a Greenplum Database system.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|integer|8|mastersystem
-
-restart
-
-|
+|integer|8|master<br/>system<br/>restart|
 
 ## gp\_max\_local\_distributed\_cache 
 
@@ -2060,11 +1474,7 @@ The default value is optimal for a wide variety of SQL processing environments.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|integer|1024|localsystem
-
-restart
-
-|
+|integer|1024|local<br/>system<br/>restart|
 
 ## gp\_max\_packet\_size 
 
@@ -2072,11 +1482,7 @@ Sets the tuple-serialization chunk size for the Greenplum Database interconnect.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|512-65536|8192|mastersystem
-
-restart
-
-|
+|512-65536|8192|master<br/>system<br/>restart|
 
 ## gp\_max\_plan\_size 
 
@@ -2086,11 +1492,7 @@ You can specify a value in `kB`, `MB`, or `GB`. The default unit is `kB`. For ex
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|integer|0|mastersuperuser
-
-session
-
-|
+|integer|0|master<br/>superuser<br/>session|
 
 ## gp\_max\_slices 
 
@@ -2100,11 +1502,7 @@ Executing a query that generates a large number of slices might affect Greenplum
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|0 - INT\_MAX|0|mastersession
-
-reload
-
-|
+|0 - INT\_MAX|0|master<br/>session<br/>reload|
 
 ## gp\_max\_tablespaces 
 
@@ -2112,11 +1510,7 @@ The maximum number of tablespaces allowed in a Greenplum Database system.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|integer|16|mastersystem
-
-restart
-
-|
+|integer|16|master<br/>system<br/>restart|
 
 ## gp\_motion\_cost\_per\_row 
 
@@ -2124,11 +1518,7 @@ Sets the legacy query optimizer \(planner\) cost estimate for a Motion operator 
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|floating point|0|mastersession
-
-reload
-
-|
+|floating point|0|master<br/>session<br/>reload|
 
 ## gp\_num\_contents\_in\_cluster 
 
@@ -2152,11 +1542,7 @@ The parameter can be set for a database system, an individual database, or a ses
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|false|mastersession
-
-restart
-
-|
+|Boolean|false|master<br/>session<br/>restart|
 
 ## gp\_reject\_percent\_threshold 
 
@@ -2164,11 +1550,7 @@ For single row error handling on COPY and external table SELECTs, sets the numbe
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|1-*n*|300|mastersession
-
-reload
-
-|
+|1-*n*|300|master<br/>session<br/>reload|
 
 ## gp\_reraise\_signal 
 
@@ -2176,11 +1558,7 @@ If enabled, will attempt to dump core if a fatal server error occurs.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|on|mastersession
-
-reload
-
-|
+|Boolean|on|master<br/>session<br/>reload|
 
 ## gp\_resgroup\_memory\_policy 
 
@@ -2194,13 +1572,7 @@ When you specify `eager_free`, Greenplum Database distributes memory among opera
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|auto, eager\_free|eager\_free|localsystem
-
-superuser
-
-restart/reload
-
-|
+|auto, eager\_free|eager\_free|local<br/>system<br/>superuser<br/>restart/reload<br/>|
 
 ## gp\_resource\_group\_bypass 
 
@@ -2229,11 +1601,7 @@ Identifies the maximum percentage of system CPU resources to allocate to resourc
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|0.1 - 1.0|0.9|localsystem
-
-restart
-
-|
+|0.1 - 1.0|0.9|local<br/>system<br/>restart|
 
 ## gp\_resource\_group\_memory\_limit 
 
@@ -2243,11 +1611,7 @@ Identifies the maximum percentage of system memory resources to allocate to reso
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|0.1 - 1.0|0.7|localsystem
-
-restart
-
-|
+|0.1 - 1.0|0.7|local<br/>system<br/>restart|
 
 **Note:** When resource group-based resource management is active, the memory allotted to a segment host is equally shared by active primary segments. Greenplum Database assigns memory to primary segments when the segment takes the primary role. The initial memory allotment to a primary segment does not change, even in a failover situation. This may result in a segment host utilizing more memory than the `gp_resource_group_memory_limit` setting permits.
 
@@ -2266,13 +1630,7 @@ Identifies the resource management scheme currently enabled in the Greenplum Dat
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|group queue
-
-|queue|localsystem
-
-restart
-
-|
+|group<br/>queue|queue|local<br/>system<br/>restart|
 
 ## gp\_resqueue\_memory\_policy 
 
@@ -2286,11 +1644,7 @@ When set to `auto`, query memory usage is controlled by [statement\_mem](#statem
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|none, auto, eager\_free|eager\_free|localsystem
-
-restart/reload
-
-|
+|none, auto, eager\_free|eager\_free|local<br/>system<br/>restart/reload|
 
 ## gp\_resqueue\_priority 
 
@@ -2300,11 +1654,7 @@ Enables or disables query prioritization. When this parameter is disabled, exist
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|on|localsystem
-
-restart
-
-|
+|Boolean|on|local<br/>system<br/>restart|
 
 ## gp\_resqueue\_priority\_cpucores\_per\_segment 
 
@@ -2318,11 +1668,7 @@ The default values for the Greenplum Data Computing Appliance are 4 for segments
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|0.1 - 512.0|4|localsystem
-
-restart
-
-|
+|0.1 - 512.0|4|local<br/>system<br/>restart|
 
 ## gp\_resqueue\_priority\_sweeper\_interval 
 
@@ -2332,11 +1678,7 @@ Specifies the interval at which the sweeper process evaluates current CPU usage.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|500 - 15000 ms|1000|localsystem
-
-restart
-
-|
+|500 - 15000 ms|1000|local<br/>system<br/>restart|
 
 ## gp\_role 
 
@@ -2344,11 +1686,7 @@ The role of this server process " set to *dispatch* for the master and *execute*
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|dispatchexecute
-
-utility
-
-| |read only|
+|dispatch<br/>execute<br/>utility| |read only|
 
 ## gp\_safefswritesize 
 
@@ -2356,11 +1694,7 @@ Specifies a minimum size for safe write operations to append-optimized tables in
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|integer|0|localsystem
-
-restart
-
-|
+|integer|0|local<br/>system<br/>restart|
 
 ## gp\_segment\_connect\_timeout 
 
@@ -2368,11 +1702,7 @@ Time that the Greenplum interconnect will try to connect to a segment instance o
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Any valid time expression \(number and unit\)|10min|localsystem
-
-reload
-
-|
+|Any valid time expression<br/>\(number and unit\)|10 min|local<br/>system<br/>reload|
 
 ## gp\_segments\_for\_planner 
 
@@ -2380,11 +1710,7 @@ Sets the number of primary segment instances for the legacy query optimizer \(pl
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|0-*n*|0|mastersession
-
-reload
-
-|
+|0-*n*|0|master<br/>session<br/>reload|
 
 ## gp\_server\_version 
 
@@ -2416,11 +1742,8 @@ If enabled, when a Greenplum server process \(postmaster\) is started it will bi
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|off|mastersystem
+|Boolean|off|master<br/>system<br/>restart|
 
-restart
-
-|
 
 ## gp\_set\_read\_only 
 
@@ -2428,11 +1751,7 @@ Set to on to disable writes to the database. Any in progress transactions must f
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|off|mastersystem
-
-restart
-
-|
+|Boolean|off|master<br/>system<br/>restart|
 
 ## gp\_snmp\_community 
 
@@ -2440,11 +1759,7 @@ Set to the community name you specified for your environment.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|SNMP community name|public|mastersystem
-
-reload
-
-|
+|SNMP community name|public|master<br/>system<br/>reload|
 
 ## gp\_snmp\_monitor\_address 
 
@@ -2452,11 +1767,7 @@ The hostname:port of your network monitor application. Typically, the port numbe
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|hostname:port| |mastersystem
-
-reload
-
-|
+|hostname:port| |master<br/>system<br/>reload|
 
 ## gp\_snmp\_use\_inform\_or\_trap 
 
@@ -2466,13 +1777,7 @@ Inform notifications are the same as trap messages, except that the application 
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|inform trap
-
-|trap|mastersystem
-
-reload
-
-|
+|inform<br/>trap<br/>|trap|master<br/>system<br/>reload|
 
 ## gp\_statistics\_pullup\_from\_child\_partition 
 
@@ -2480,11 +1785,7 @@ Enables the use of statistics from child tables when planning queries on the par
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|on|mastersession
-
-reload
-
-|
+|Boolean|on|master<br/>system<br/>reload|
 
 ## gp\_statistics\_use\_fkeys 
 
@@ -2492,11 +1793,7 @@ When enabled, allows the legacy query optimizer \(planner\) to use foreign key i
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|off|mastersession
-
-reload
-
-|
+|Boolean|off|master<br/>session<br/>reload|
 
 ## gp\_vmem\_idle\_resource\_timeout 
 
@@ -2504,11 +1801,7 @@ If a database session is idle for longer than the time specified, the session wi
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Any valid time expression \(number and unit\)|18s|mastersystem
-
-reload
-
-|
+|Any valid time expression<br/>\(number and unit\)|18 s|master<br/>system<br/>reload|
 
 ## gp\_vmem\_protect\_limit 
 
@@ -2572,11 +1865,7 @@ For information about the kernel parameter, see the *Greenplum Database Installa
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|integer|8192|localsystem
-
-restart
-
-|
+|integer|8192|local<br/>system<br/>restart|
 
 ## gp\_vmem\_protect\_segworker\_cache\_limit 
 
@@ -2584,11 +1873,7 @@ If a query executor process consumes more than this configured amount, then the 
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|number of megabytes|500|localsystem
-
-restart
-
-|
+|number of megabytes|500|local<br/>system<br/>restart|
 
 ## gp\_workfile\_checksumming 
 
@@ -2596,11 +1881,7 @@ Adds a checksum value to each block of a work file \(or spill file\) used by `Ha
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|on|mastersession
-
-reload
-
-|
+|Boolean|on|master<br/>session<br/>reload|
 
 ## gp\_workfile\_compress\_algorithm 
 
@@ -2610,13 +1891,7 @@ If your Greenplum Database installation uses serial ATA \(SATA\) disk drives, se
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|nonezlib
-
-|none|mastersession
-
-reload
-
-|
+|none<br/>zlib<br/>|none|master<br/>session<br/>reload|
 
 ## gp\_workfile\_limit\_files\_per\_query 
 
@@ -2626,11 +1901,7 @@ Set the value to 0 \(zero\) to allow an unlimited number of spill files. master 
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|integer|100000|mastersession
-
-reload
-
-|
+|integer|100000|master<br/>session<br/>reload|
 
 ## gp\_workfile\_limit\_per\_query 
 
@@ -2638,11 +1909,7 @@ Sets the maximum disk size an individual query is allowed to use for creating te
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|kilobytes|0|master session
-
-reload
-
-|
+|kilobytes|0|master<br/>session<br/>reload|
 
 ## gp\_workfile\_limit\_per\_segment 
 
@@ -2650,11 +1917,7 @@ Sets the maximum total disk size that all running queries are allowed to use for
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|kilobytes|0|local system
-
-restart
-
-|
+|kilobytes|0|local<br/>system<br/>restart|
 
 ## gpperfmon\_port 
 
@@ -2662,11 +1925,7 @@ Sets the port on which all data collection agents \(for Command Center\) communi
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|integer|8888|mastersystem
-
-restart
-
-|
+|integer|8888|master<br/>system<br/>restart|
 
 ## ignore\_checksum\_failure 
 
@@ -2682,11 +1941,7 @@ The default setting is off, and it can only be changed by a superuser.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|off|localsystem
-
-restart
-
-|
+|Boolean|off|local<br/>system<br/>restart|
 
 ## integer\_datetimes 
 
@@ -2706,17 +1961,7 @@ The value *iso\_8601* will produce output matching the time interval *format wit
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|postgrespostgres\_verbose
-
-sql\_standard
-
-iso\_8601
-
-|postgres|mastersession
-
-reload
-
-|
+|postgres<br/>postgres\_verbose<br/>sql\_standard<br/>iso\_8601|postgres|master<br/>session<br/>reload|
 
 ## join\_collapse\_limit 
 
@@ -2724,11 +1969,7 @@ The legacy query optimizer \(planner\) will rewrite explicit inner `JOIN` constr
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|1-*n*|20|mastersession
-
-reload
-
-|
+|1-*n*|20|master<br/>session<br/>reload|
 
 ## keep\_wal\_segments 
 
@@ -2738,13 +1979,7 @@ The segment files are used to sycnronize the active master on the standby master
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|integer|5|mastersystem
-
-reload
-
-superuser
-
-|
+|integer|5|master<br/>session<br/>reload<br/>superuser|
 
 ## krb\_caseins\_users 
 
@@ -2752,11 +1987,7 @@ Sets whether Kerberos user names should be treated case-insensitively. The defau
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|off|mastersystem
-
-restart
-
-|
+|Boolean|off|master<br/>system<br/>restart|
 
 ## krb\_server\_keyfile 
 
@@ -2764,11 +1995,7 @@ Sets the location of the Kerberos server key file.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|path and file name|unset|mastersystem
-
-restart
-
-|
+|path and file name|unset|master<br/>system<br/>restart|
 
 ## krb\_srvname 
 
@@ -2776,11 +2003,7 @@ Sets the Kerberos service name.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|service name|postgres|mastersystem
-
-restart
-
-|
+|service name|postgres|master<br/>system<br/>restart|
 
 ## lc\_collate 
 
@@ -2804,11 +2027,7 @@ Sets the language in which messages are displayed. The locales available depends
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|<system dependent\>| |localsystem
-
-restart
-
-|
+|<system dependent\>| |local<br/>system<br/>restart|
 
 ## lc\_monetary 
 
@@ -2816,11 +2035,7 @@ Sets the locale to use for formatting monetary amounts, for example with the *to
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|<system dependent\>| |localsystem
-
-restart
-
-|
+|<system dependent\>| |local<br/>system<br/>restart|
 
 ## lc\_numeric 
 
@@ -2828,11 +2043,7 @@ Sets the locale to use for formatting numbers, for example with the *to\_char* f
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|<system dependent\>| |localsystem
-
-restart
-
-|
+|<system dependent\>| |local<br/>system<br/>restart|
 
 ## lc\_time 
 
@@ -2840,11 +2051,7 @@ This parameter currently does nothing, but may in the future.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|<system dependent\>| |localsystem
-
-restart
-
-|
+|<system dependent\>| |local<br/>system<br/>restart|
 
 ## listen\_addresses 
 
@@ -2852,17 +2059,7 @@ Specifies the TCP/IP address\(es\) on which the server is to listen for connecti
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|localhost,host names,
-
-IP addresses,
-
-\* \(all available IP interfaces\)
-
-|\*|mastersystem
-
-restart
-
-|
+|localhost,<br/>host names,<br/>IP addresses,<br/>\* \(all available IP interfaces\)|\*|master<br/>system<br/>restart|
 
 ## local\_preload\_libraries 
 
@@ -2870,11 +2067,7 @@ Comma separated list of shared library files to preload at the start of a client
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-| | |localsystem
-
-restart
-
-|
+| | |local<br/>system<br/>restart|
 
 ## log\_autostats 
 
@@ -2882,13 +2075,7 @@ Logs information about automatic `ANALYZE` operations related to [gp\_autostats\
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|off|mastersession
-
-reload
-
-superuser
-
-|
+|Boolean|off|master<br/>session<br/>reload<br/>superuser|
 
 ## log\_connections 
 
@@ -2896,11 +2083,7 @@ This outputs a line to the server log detailing each successful connection. Some
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|off|localsystem
-
-restart
-
-|
+|Boolean|off|local<br/>system<br/>restart|
 
 ## log\_disconnections 
 
@@ -2908,11 +2091,7 @@ This outputs a line in the server log at termination of a client session, and in
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|off|localsystem
-
-restart
-
-|
+|Boolean|off|local<br/>system<br/>restart|
 
 ## log\_dispatch\_stats 
 
@@ -2920,11 +2099,7 @@ When set to "on," this parameter adds a log message with verbose information abo
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|off|localsystem
-
-restart
-
-|
+|Boolean|off|local<br/>system<br/>restart|
 
 ## log\_duration 
 
@@ -2932,13 +2107,7 @@ Causes the duration of every completed statement which satisfies *log\_statement
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|off|mastersession
-
-reload
-
-superuser
-
-|
+|Boolean|off|master<br/>session<br/>reload<br/>superuser|
 
 ## log\_error\_verbosity 
 
@@ -2946,17 +2115,7 @@ Controls the amount of detail written in the server log for each message that is
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|TERSEDEFAULT
-
-VERBOSE
-
-|DEFAULT|mastersession
-
-reload
-
-superuser
-
-|
+|TERSE<br/>DEFAULT<br/>VERBOSE|DEFAULT|master<br/>session<br/>reload<br/>superuser|
 
 ## log\_executor\_stats 
 
@@ -2964,11 +2123,7 @@ For each query, write performance statistics of the query executor to the server
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|off|localsystem
-
-restart
-
-|
+|Boolean|off|local<br/>system<br/>restart|
 
 ## log\_hostname 
 
@@ -2976,11 +2131,7 @@ By default, connection log messages only show the IP address of the connecting h
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|off|mastersystem
-
-restart
-
-|
+|Boolean|off|master<br/>system<br/>restart|
 
 ## log\_min\_duration\_statement 
 
@@ -2988,13 +2139,7 @@ Logs the statement and its duration on a single log line if its duration is grea
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|number of milliseconds, 0, -1|-1|mastersession
-
-reload
-
-superuser
-
-|
+|number of milliseconds,<br/>0, -1|-1|master<br/>session<br/>reload<br/>superuser|
 
 ## log\_min\_error\_statement 
 
@@ -3002,33 +2147,7 @@ Controls whether or not the SQL statement that causes an error condition will al
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|DEBUG5 DEBUG4
-
-DEBUG3
-
-DEBUG2
-
-DEBUG1
-
-INFO
-
-NOTICE
-
-WARNING
-
-ERROR
-
-FATAL
-
-PANIC
-
-|ERROR|mastersession
-
-reload
-
-superuser
-
-|
+|DEBUG5<br/>DEBUG4<br/>DEBUG3<br/>DEBUG2<br/>DEBUG1<br/>INFO<br/>NOTICE<br/>WARNING<br/>ERROR<br/>FATAL<br/>PANIC|ERROR|master<br/>session<br/>reload<br/>superuser|
 
 ## log\_min\_messages 
 
@@ -3038,35 +2157,7 @@ If the Greenplum Database PL/Container extension is installed. This parameter al
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|DEBUG5 DEBUG4
-
-DEBUG3
-
-DEBUG2
-
-DEBUG1
-
-INFO
-
-NOTICE
-
-WARNING
-
-LOG
-
-ERROR
-
-FATAL
-
-PANIC
-
-|WARNING|mastersession
-
-reload
-
-superuser
-
-|
+|DEBUG5<br/>DEBUG4<br/>DEBUG3<br/>DEBUG2<br/>DEBUG1<br/>INFO<br/>NOTICE<br/>WARNING<br/>ERROR<br/>FATAL<br/>PANIC|WARNING|master<br/>session<br/>reload<br/>superuser|
 
 ## log\_parser\_stats 
 
@@ -3074,13 +2165,7 @@ For each query, write performance statistics of the query parser to the server l
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|off|mastersession
-
-reload
-
-superuser
-
-|
+|Boolean|off|master<br/>session<br/>reload<br/>superuser|
 
 ## log\_planner\_stats 
 
@@ -3088,13 +2173,7 @@ For each query, write performance statistics of the legacy query optimizer \(pla
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|off|mastersession
-
-reload
-
-superuser
-
-|
+|Boolean|off|master<br/>session<br/>reload<br/>superuser|
 
 ## log\_rotation\_age 
 
@@ -3102,11 +2181,7 @@ Determines the maximum lifetime of an individual log file. After this time has e
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Any valid time expression \(number and unit\)|1d|localsystem
-
-restart
-
-|
+|Any valid time expression<br/>\(number and unit\)|1 d|local<br/>system<br/>restart|
 
 ## log\_rotation\_size 
 
@@ -3116,11 +2191,7 @@ The maximum value is INT\_MAX/1024. If an invalid value is specified, the defaul
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|number of kilobytes|0|localsystem
-
-restart
-
-|
+|number of kilobytes|0|local<br/>system<br/>restart|
 
 ## log\_statement 
 
@@ -3128,19 +2199,7 @@ Controls which SQL statements are logged. DDL logs all data definition commands 
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|NONEDDL
-
-MOD
-
-ALL
-
-|ALL|mastersession
-
-reload
-
-superuser
-
-|
+|NONE<br/>DDL<br/>MOD<br/>ALL|ALL|master<br/>session<br/>reload<br/>superuser|
 
 ## log\_statement\_stats 
 
@@ -3148,13 +2207,7 @@ For each query, write total performance statistics of the query parser, planner,
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|off|mastersession
-
-reload
-
-superuser
-
-|
+|Boolean|off|master<br/>session<br/>reload<br/>superuser|
 
 ## log\_temp\_files 
 
@@ -3162,11 +2215,7 @@ Controls logging of temporary file names and sizes. Temporary files can be creat
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Integer|-1|localsystem
-
-restart
-
-|
+|Integer|-1|local<br/>system<br/>restart|
 
 ## log\_timezone 
 
@@ -3174,11 +2223,7 @@ Sets the time zone used for timestamps written in the log. Unlike [TimeZone](#Ti
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|string|unknown|localsystem
-
-restart
-
-|
+|string|unknown|local<br/>system<br/>restart|
 
 ## log\_truncate\_on\_rotation 
 
@@ -3186,11 +2231,7 @@ Truncates \(overwrites\), rather than appends to, any existing log file of the s
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|off|localsystem
-
-restart
-
-|
+|Boolean|off|local<br/>system<br/>restart|
 
 ## max\_appendonly\_tables 
 
@@ -3204,11 +2245,7 @@ Increasing the limit allocates more shared memory on the master host at server s
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|integer \> 0|10000|mastersystem
-
-restart
-
-|
+|integer \> 0|10000|master<br/>system<br/>restart|
 
 ## max\_connections 
 
@@ -3220,11 +2257,7 @@ Increasing this parameter might cause Greenplum Database to request more shared 
 |-----------|-------|-------------------|
 |10 - 65535|250 on master750 on segments
 
-|localsystem
-
-restart
-
-|
+|local<br/>system<br/>restart|
 
 ## max\_files\_per\_process 
 
@@ -3232,11 +2265,7 @@ Sets the maximum number of simultaneously open files allowed to each server subp
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|integer|1000|localsystem
-
-restart
-
-|
+|integer|1000|local<br/>system<br/>restart|
 
 ## max\_fsm\_pages 
 
@@ -3244,11 +2273,7 @@ Sets the maximum number of disk pages for which free space will be tracked in th
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|integer \> 16 \* *max\_fsm\_relations*|200000|localsystem
-
-restart
-
-|
+|integer \> 16 \* *max\_fsm\_relations*|200000|local<br/>system<br/>restart|
 
 ## max\_fsm\_relations 
 
@@ -3262,11 +2287,7 @@ It costs about 60 bytes of memory for each relation per segment instance. It is 
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|integer|1000|localsystem
-
-restart
-
-|
+|integer|1000|local<br/>system<br/>restart|
 
 ## max\_function\_args 
 
@@ -3298,11 +2319,7 @@ The shared lock table is created with room to describe locks on *max\_locks\_per
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|integer|128|localsystem
-
-restart
-
-|
+|integer|128|local<br/>system<br/>restart|
 
 ## max\_prepared\_transactions 
 
@@ -3312,11 +2329,7 @@ Sets the maximum number of transactions that can be in the prepared state simult
 |-----------|-------|-------------------|
 |integer <= 1000|250 on master250 on segments
 
-|localsystem
-
-restart
-
-|
+|local<br/>system<br/>restart|
 
 ## max\_resource\_portals\_per\_transaction 
 
@@ -3326,11 +2339,7 @@ Sets the maximum number of simultaneously open user-declared cursors allowed per
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|integer|64|mastersystem
-
-restart
-
-|
+|integer|64|master<br/>system<br/>restart|
 
 ## max\_resource\_queues 
 
@@ -3340,11 +2349,7 @@ Sets the maximum number of resource queues that can be created in a Greenplum Da
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|integer|9|mastersystem
-
-restart
-
-|
+|integer|9|master<br/>system<br/>restart|
 
 ## max\_stack\_depth 
 
@@ -3352,11 +2357,7 @@ Specifies the maximum safe depth of the server's execution stack. The ideal sett
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|number of kilobytes|2MB|localsystem
-
-restart
-
-|
+|number of kilobytes|2MB|local<br/>system<br/>restart|
 
 ## max\_statement\_mem 
 
@@ -3370,13 +2371,7 @@ When changing both `max_statement_mem` and `statement_mem`, `max_statement_mem` 
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|number of kilobytes|2000MB|mastersession
-
-reload
-
-superuser
-
-|
+|number of kilobytes|2000MB|master<br/>session<br/>reload<br/>superuser|
 
 ## memory\_spill\_ratio 
 
@@ -3392,11 +2387,7 @@ You can specify an integer percentage value from 0 to 100 inclusive. If you spec
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|0 - 100|20|mastersession
-
-reload
-
-|
+|0 - 100|20|master<br/>session<br/>reload|
 
 ## optimizer 
 
@@ -3410,11 +2401,7 @@ For information about the legacy query optimizer and GPORCA, see [Querying Data]
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|on|mastersession
-
-reload
-
-|
+|Boolean|on|master<br/>session<br/>reload|
 
 ## optimizer\_analyze\_root\_partition 
 
@@ -3428,11 +2415,7 @@ For information about the legacy query optimizer and GPORCA, see [Querying Data]
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|on|mastersession
-
-reload
-
-|
+|Boolean|on|master<br/>session<br/>reload|
 
 ## optimizer\_array\_expansion\_threshold 
 
@@ -3448,11 +2431,7 @@ The parameter can be set for a database system, an individual database, or a ses
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Integer \> 0|100|mastersession
-
-reload
-
-|
+|Integer \> 0|100|master<br/>session<br/>reload|
 
 ## optimizer\_control 
 
@@ -3460,14 +2439,7 @@ Controls whether the server configuration parameter optimizer can be changed wit
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|on|mastersystem
-
-restart
-
-superuser
-
-|
-
+|Boolean|on|master<br/>system<br/>restart<br/>superuser|
 ## optimizer\_cost\_model 
 
 When GPORCA is enabled \(the default\), this parameter controls the cost model that GPORCA chooses for bitmap scans used with bitmap indexes or with btree indexes on AO tables.
@@ -3480,11 +2452,7 @@ The `experimental` cost model is more likely to choose a faster bitmap index wit
 
 experimental
 
-|calibrated|mastersession
-
-reload
-
-|
+|calibrated|master<br/>session<br/>reload|
 
 ## optimizer\_cte\_inlining\_bound 
 
@@ -3494,11 +2462,7 @@ The parameter can be set for a database system, an individual database, or a ses
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Decimal \>= 0|0|mastersession
-
-reload
-
-|
+|Decimal \>= 0|0|master<br/>session<br/>reload|
 
 ## optimizer\_dpe\_stats 
 
@@ -3508,11 +2472,7 @@ The parameter can be set for a database system, an individual database, or a ses
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|true|mastersession
-
-reload
-
-|
+|Boolean|true|master<br/>session<br/>reload|
 
 ## optimizer\_enable\_associativity 
 
@@ -3526,11 +2486,7 @@ For information about GPORCA, see [About GPORCA](../../admin_guide/query/topics/
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|off|mastersession
-
-reload
-
-|
+|Boolean|off|master<br/>session<br/>reload|
 
 ## optimizer\_enable\_dml 
 
@@ -3544,11 +2500,7 @@ For information about GPORCA, see [About GPORCA](../../admin_guide/query/topics/
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|true|mastersession
-
-reload
-
-|
+|Boolean|true|master<br/>session<br/>reload|
 
 ## optimizer\_enable\_master\_only\_queries 
 
@@ -3562,11 +2514,7 @@ For information about GPORCA, see [About GPORCA](../../admin_guide/query/topics/
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|off|mastersession
-
-reload
-
-|
+|Boolean|off|master<br/>session<br/>reload|
 
 ## optimizer\_force\_agg\_skew\_avoidance 
 
@@ -3578,11 +2526,7 @@ For information about GPORCA, see [About GPORCA](../../admin_guide/query/topics/
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|true|mastersession
-
-reload
-
-|
+|Boolean|true|master<br/>session<br/>reload|
 
 ## optimizer\_force\_multistage\_agg 
 
@@ -3592,11 +2536,7 @@ The parameter can be set for a database system, an individual database, or a ses
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|true|mastersession
-
-reload
-
-|
+|Boolean|true|master<br/>session<br/>reload|
 
 ## optimizer\_force\_three\_stage\_scalar\_dqa 
 
@@ -3606,11 +2546,7 @@ The parameter can be set for a database system, an individual database, or a ses
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|true|mastersession
-
-reload
-
-|
+|Boolean|true|master<br/>session<br/>reload|
 
 ## optimizer\_join\_arity\_for\_associativity\_commutativity 
 
@@ -3624,11 +2560,7 @@ This parameter can be set for a database system or a session.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|integer \> 0|18|localsystem
-
-reload
-
-|
+|integer \> 0|18|local<br/>system<br/>restart|
 
 ## optimizer\_join\_order 
 
@@ -3650,11 +2582,7 @@ This parameter can be set for an individual database, a session, or a query.
 
 exhaustive
 
-|exhaustive|mastersession
-
-reload
-
-|
+|exhaustive|master<br/>session<br/>reload|
 
 ## optimizer\_join\_order\_threshold 
 
@@ -3664,11 +2592,7 @@ This parameter has no effect when the `optimizer_join_query` parameter is set to
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|0 - 12|10|mastersession
-
-reload
-
-|
+|0 - 12|10|master<br/>session<br/>reload|
 
 ## optimizer\_mdcache\_size 
 
@@ -3682,11 +2606,7 @@ This parameter can be set for a database system, an individual database, or a se
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Integer \>= 0|16384|mastersession
-
-reload
-
-|
+|Integer \>= 0|16384|master<br/>session<br/>reload|
 
 ## optimizer\_metadata\_caching 
 
@@ -3700,11 +2620,7 @@ The server configuration parameter [optimizer\_mdcache\_size](#optimizer_mdcache
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|on|mastersession
-
-reload
-
-|
+|Boolean|on|master<br/>session<br/>reload|
 
 ## optimizer\_minidump 
 
@@ -3728,11 +2644,7 @@ For information about GPORCA, see [About GPORCA](../../admin_guide/query/topics/
 |-----------|-------|-------------------|
 |ONERRORALWAYS
 
-|ONERROR|mastersession
-
-reload
-
-|
+|ONERROR|master<br/>session<br/>reload|
 
 ## optimizer\_nestloop\_factor 
 
@@ -3742,11 +2654,7 @@ The parameter can be set for a database system, an individual database, or a ses
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|INT\_MAX \> 1|1024|mastersession
-
-reload
-
-|
+|INT\_MAX \> 1|1024|master<br/>session<br/>reload|
 
 ## optimizer\_parallel\_union 
 
@@ -3760,11 +2668,7 @@ The parameter can be set for a database system, an individual database, or a ses
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|boolean|off|mastersession
-
-reload
-
-|
+|boolean|off|master<br/>session<br/>reload|
 
 ## optimizer\_penalize\_skew 
 
@@ -3778,11 +2682,7 @@ For information about GPORCA, see [About GPORCA](../../admin_guide/query/topics/
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|false|mastersession
-
-reload
-
-|
+|Boolean|false|master<br/>session<br/>reload|
 
 ## optimizer\_print\_missing\_stats 
 
@@ -3794,11 +2694,7 @@ The parameter can be set for a database system, an individual database, or a ses
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|true|mastersession
-
-reload
-
-|
+|Boolean|true|master<br/>session<br/>reload|
 
 ## optimizer\_print\_optimization\_stats 
 
@@ -3813,11 +2709,7 @@ This parameter can be set for a database system, an individual database,or a ses
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|off|mastersession
-
-reload
-
-|
+|Boolean|off|master<br/>session<br/>reload|
 
 ## optimizer\_sort\_factor 
 
@@ -3827,11 +2719,7 @@ The parameter can be set for a database system, an individual database, or a ses
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Decimal \> 0|1|mastersession
-
-reload
-
-|
+|Decimal \> 0|1|master<br/>session<br/>reload|
 
 ## optimizer\_use\_gpdb\_allocators 
 
@@ -3841,11 +2729,7 @@ For information about GPORCA, see [About GPORCA](../../admin_guide/query/topics/
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|false|mastersystem
-
-restart
-
-|
+|Boolean|false|master<br/>system<br/>restart|
 
 ## optimizer\_xform\_bind\_threshold 
 
@@ -3855,11 +2739,7 @@ The default value is `0`, GPORCA produces an unlimited set of bindings.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|0 - INT\_MAX|0|mastersession
-
-reload
-
-|
+|0 - INT\_MAX|0|master<br/>session<br/>reload|
 
 ## password\_encryption 
 
@@ -3867,11 +2747,7 @@ When a password is specified in CREATE USER or ALTER USER without writing either
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|on|mastersession
-
-reload
-
-|
+|Boolean|on|master<br/>session<br/>reload|
 
 ## password\_hash\_algorithm 
 
@@ -3883,13 +2759,7 @@ For information about setting the password hash algorithm to protect user passwo
 |-----------|-------|-------------------|
 |MD5SHA-256
 
-|MD5|mastersession
-
-reload
-
-superuser
-
-|
+|MD5|master<br/>session<br/>reload<br/>superuser|
 
 ## pgcrypto.fips 
 
@@ -3979,11 +2849,7 @@ Sets the maximum length limit for the query text stored in `current_query` colum
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|integer|1024|localsystem
-
-restart
-
-|
+|integer|1024|local<br/>system<br/>restart|
 
 ## pljava\_classpath 
 
@@ -3999,13 +2865,7 @@ If [pljava\_classpath\_insecure](#pljava_classpath_insecure) is `false`, setting
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|string| |mastersession
-
-reload
-
-superuser
-
-|
+|string| |master<br/>session<br/>reload<br/>superuser|
 
 ## pljava\_classpath\_insecure 
 
@@ -4015,14 +2875,7 @@ Controls whether the server configuration parameter [pljava\_classpath](#pljava_
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|false|mastersession
-
-restart
-
-superuser
-
-|
-
+|Boolean|false|master<br/>session<br/>restart<br/>superuser|
 ## pljava\_statement\_cache\_size 
 
 Sets the size in KB of the JRE MRU \(Most Recently Used\) cache for prepared statements.
@@ -4031,11 +2884,7 @@ Sets the size in KB of the JRE MRU \(Most Recently Used\) cache for prepared sta
 |-----------|-------|-------------------|
 |number of kilobytes|10|mastersystem
 
-restart
-
-superuser
-
-|
+restart<br/>superuser|
 
 ## pljava\_release\_lingering\_savepoints 
 
@@ -4043,13 +2892,7 @@ If true, lingering savepoints used in PL/Java functions will be released on func
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|true|mastersystem
-
-restart
-
-superuser
-
-|
+|Boolean|true|master<br/>system<br/>restart<br/>superuser|
 
 ## pljava\_vmoptions 
 
@@ -4057,13 +2900,7 @@ Defines the startup options for the Java VM. The default value is an empty strin
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|string| |mastersystem
-
-reload
-
-superuser
-
-|
+|string| |master<br/>system<br/>reload<br/>superuser|
 
 ## port 
 
@@ -4071,11 +2908,7 @@ The database listener port for a Greenplum instance. The master and each segment
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|any valid port number|5432|localsystem
-
-restart
-
-|
+|any valid port number|5432|local<br/>system<br/>restart|
 
 ## random\_page\_cost 
 
@@ -4083,11 +2916,7 @@ Sets the estimate of the cost of a nonsequentially fetched disk page for the leg
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|floating point|100|mastersession
-
-reload
-
-|
+|floating point|100|master<br/>session<br/>reload|
 
 ## readable\_external\_table\_timeout 
 
@@ -4099,11 +2928,7 @@ If queries that use gpfdist run a long time and then return the error "intermitt
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|integer \>= 0|0|mastersystem
-
-reload
-
-|
+|integer \>= 0|0|master<br/>session<br/>reload|
 
 ## repl\_catchup\_within\_range 
 
@@ -4113,13 +2938,7 @@ If the number of segment files does not exceed the value, Greenplum Database blo
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|0 - 64|1|mastersystem
-
-reload
-
-superuser
-
-|
+|0 - 64|1|master<br/>system<br/>reload<br/>superuser|
 
 ## replication\_timeout 
 
@@ -4129,13 +2948,7 @@ The [wal\_receiver\_status\_interval](#wal_receiver_status_interval) controls th
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|0 - INT\_MAX|60000 ms \(60 seconds\)|mastersystem
-
-reload
-
-superuser
-
-|
+|0 - INT\_MAX|60000 ms \(60 seconds\)|master<br/>system<br/>reload<br/>superuser|
 
 ## regex\_flavor 
 
@@ -4147,11 +2960,7 @@ The 'extended' setting may be useful for exact backwards compatibility with pre-
 
 basic
 
-|advanced|mastersession
-
-reload
-
-|
+|advanced|master<br/>system<br/>reload|
 
 ## resource\_cleanup\_gangs\_on\_wait 
 
@@ -4161,11 +2970,7 @@ If a statement is submitted through a resource queue, clean up any idle query ex
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|on|mastersystem
-
-restart
-
-|
+|Boolean|on|master<br/>system<br/>restart|
 
 ## resource\_select\_only 
 
@@ -4175,11 +2980,7 @@ Sets the types of queries managed by resource queues. If set to on, then `SELECT
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|off|mastersystem
-
-restart
-
-|
+|Boolean|off|master<br/>system<br/>restart|
 
 ## runaway\_detector\_activation\_percent 
 
@@ -4207,23 +3008,15 @@ For information about resource groups, see [Using Resource Groups](../../admin_g
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|percentage \(integer\)|90|localsystem
-
-restart
-
-|
-
+|percentage \(integer\)|90|local<br/>system<br/>restart|
+0
 ## search\_path 
 
 Specifies the order in which schemas are searched when an object is referenced by a simple name with no schema component. When there are objects of identical names in different schemas, the one found first in the search path is used. The system catalog schema, *pg\_catalog*, is always searched, whether it is mentioned in the path or not. When objects are created without specifying a particular target schema, they will be placed in the first schema listed in the search path. The current effective value of the search path can be examined via the SQL function *current\_schemas\(\)*. *current\_schemas\(\)* shows how the requests appearing in *search\_path* were resolved.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|a comma- separated list of schema names|$user,public|mastersession
-
-reload
-
-|
+|a comma- separated list of schema names|$user,public|master<br/>session<br/>reload|
 
 ## seq\_page\_cost 
 
@@ -4231,11 +3024,7 @@ For the legacy query optimizer \(planner\), sets the estimate of the cost of a d
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|floating point|1|mastersession
-
-reload
-
-|
+|floating point|1|master<br/>session<br/>reload|
 
 ## server\_encoding 
 
@@ -4291,11 +3080,7 @@ See the *Greenplum Database Installation Guide* for information about the Greenp
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|integer \> 16K \* *max\_connections*|125MB|localsystem
-
-restart
-
-|
+|integer \> 16K \* *max\_connections*|125MB|local<br/>system<br/>restart|
 
 ## shared\_preload\_libraries 
 
@@ -4305,11 +3090,7 @@ A comma-separated list of shared libraries that are to be preloaded at server st
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-| | |localsystem
-
-restart
-
-|
+| | |local<br/>system<br/>restart|
 
 ## ssl 
 
@@ -4317,11 +3098,7 @@ Enables SSL connections.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|off|mastersystem
-
-restart
-
-|
+|Boolean|off|master<br/>system<br/>restart|
 
 ## ssl\_ciphers 
 
@@ -4329,11 +3106,7 @@ Specifies a list of SSL ciphers that are allowed to be used on secure connection
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|string|ALL|mastersystem
-
-restart
-
-|
+|string|ALL|master<br/>system<br/>restart|
 
 ## standard\_conforming\_strings 
 
@@ -4341,11 +3114,7 @@ Determines whether ordinary string literals \('...'\) treat backslashes literall
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|on|mastersession
-
-reload
-
-|
+|Boolean|on|master<br/>session<br/>reload|
 
 ## statement\_mem 
 
@@ -4382,11 +3151,7 @@ When changing both `max_statement_mem` and `statement_mem`, `max_statement_mem` 
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|number of kilobytes|128MB|mastersession
-
-reload
-
-|
+|number of kilobytes|128MB|master<br/>session<br/>reload|
 
 ## statement\_timeout 
 
@@ -4394,11 +3159,7 @@ Abort any statement that takes over the specified number of milliseconds. 0 turn
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|number of milliseconds|0|mastersession
-
-reload
-
-|
+|number of milliseconds|0|master<br/>session<br/>reload|
 
 ## stats\_queue\_level 
 
@@ -4408,11 +3169,7 @@ Collects resource queue statistics on database activity.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|off|mastersession
-
-reload
-
-|
+|Boolean|off|master<br/>session<br/>reload|
 
 ## superuser\_reserved\_connections 
 
@@ -4420,11 +3177,7 @@ Determines the number of connection slots that are reserved for Greenplum Databa
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|integer < *max\_connections*|3|localsystem
-
-restart
-
-|
+|integer < *max\_connections*|3|local<br/>system<br/>restart|
 
 ## tcp\_keepalives\_count 
 
@@ -4434,11 +3187,7 @@ Use this parameter for all connections that are not between a primary and mirror
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|number of lost keepalives|0|localsystem
-
-restart
-
-|
+|number of lost keepalives|0|local<br/>system<br/>restart|
 
 ## tcp\_keepalives\_idle 
 
@@ -4448,11 +3197,7 @@ Use this parameter for all connections that are not between a primary and mirror
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|number of seconds|0|localsystem
-
-restart
-
-|
+|number of seconds|0|local<br/>system<br/>restart|
 
 ## tcp\_keepalives\_interval 
 
@@ -4462,11 +3207,7 @@ Use this parameter for all connections that are not between a primary and mirror
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|number of seconds|0|localsystem
-
-restart
-
-|
+|number of seconds|0|local<br/>system<br/>restart|
 
 ## temp\_buffers 
 
@@ -4474,11 +3215,7 @@ Sets the maximum number of temporary buffers used by each database session. Thes
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|integer|1024|mastersession
-
-reload
-
-|
+|integer|1024|master<br/>session<br/>reload|
 
 ## TimeZone 
 
@@ -4486,9 +3223,7 @@ Sets the time zone for displaying and interpreting time stamps. The default is t
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|time zone abbreviation| |localrestart
-
-|
+|time zone abbreviation| |local<br/>restart|
 
 ## timezone\_abbreviations 
 
@@ -4503,11 +3238,7 @@ To configure Greenplum Database to use a custom collection of timezones, copy th
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|string|Default|mastersession
-
-reload
-
-|
+|string|Default|master<br/>session<br/>reload|
 
 ## track\_activities 
 
@@ -4517,13 +3248,7 @@ Enables the collection of information on the currently executing command of each
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|true|mastersystem
-
-reload
-
-superuser
-
-|
+|Boolean|true|master<br/>system<br/>reload<br/>superuser|
 
 ## track\_activity\_query\_size 
 
@@ -4531,11 +3256,7 @@ Sets the maximum length limit for the query text stored in `current_query` colum
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|integer|1024|localsystem
-
-restart
-
-|
+|integer|1024|local<br/>system<br/>restart|
 
 ## track\_counts 
 
@@ -4543,13 +3264,7 @@ Collects information about executing commands. Enables the collection of informa
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|true|mastersession
-
-reload
-
-superuser
-
-|
+|Boolean|true|master<br/>session<br/>reload<br/>superuser|
 
 ## transaction\_isolation 
 
@@ -4559,11 +3274,7 @@ Sets the current transaction's isolation level.
 |-----------|-------|-------------------|
 |read committedserializable
 
-|read committed|mastersession
-
-reload
-
-|
+|read committed|master<br/>session<br/>reload|
 
 ## transaction\_read\_only 
 
@@ -4571,11 +3282,7 @@ Sets the current transaction's read-only status.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|off|mastersession
-
-reload
-
-|
+|Boolean|off|master<br/>session<br/>reload|
 
 ## transform\_null\_equals 
 
@@ -4583,11 +3290,7 @@ When on, expressions of the form expr = NULL \(or NULL = expr\) are treated as e
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|off|mastersession
-
-reload
-
-|
+|Boolean|off|master<br/>session<br/>reload|
 
 ## unix\_socket\_directory 
 
@@ -4597,11 +3300,7 @@ Specifies the directory of the UNIX-domain socket on which the server is to list
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|directory path|unset|localsystem
-
-restart
-
-|
+|directory path|unset|local<br/>system<br/>restart|
 
 ## unix\_socket\_group 
 
@@ -4609,11 +3308,7 @@ Sets the owning group of the UNIX-domain socket. By default this is an empty str
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|UNIX group name|unset|localsystem
-
-restart
-
-|
+|UNIX group name|unset|local<br/>system<br/>restart|
 
 ## unix\_socket\_permissions 
 
@@ -4621,11 +3316,7 @@ Sets the access permissions of the UNIX-domain socket. UNIX-domain sockets use t
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|numeric UNIX file permission mode \(as accepted by the *chmod* or *umask* commands\)|511|localsystem
-
-restart
-
-|
+|numeric UNIX file permission mode \(as accepted by the *chmod* or *umask* commands\)|511|local<br/>system<br/>restart|
 
 ## update\_process\_title 
 
@@ -4633,11 +3324,7 @@ Enables updating of the process title every time a new SQL command is received b
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|on|localsystem
-
-restart
-
-|
+|Boolean|on|local<br/>system<br/>restart|
 
 ## vacuum\_cost\_delay 
 
@@ -4645,11 +3332,7 @@ The length of time that the process will sleep when the cost limit has been exce
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|milliseconds < 0 \(in multiples of 10\)|0|localsystem
-
-restart
-
-|
+|milliseconds < 0 \(in multiples of 10\)|0|local<br/>system<br/>restart|
 
 ## vacuum\_cost\_limit 
 
@@ -4657,11 +3340,7 @@ The accumulated cost that will cause the vacuuming process to sleep.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|integer \> 0|200|localsystem
-
-restart
-
-|
+|integer \> 0|200|local<br/>system<br/>restart|
 
 ## vacuum\_cost\_page\_dirty 
 
@@ -4669,11 +3348,7 @@ The estimated cost charged when vacuum modifies a block that was previously clea
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|integer \> 0|20|localsystem
-
-restart
-
-|
+|integer \> 0|20|local<br/>system<br/>restart|
 
 ## vacuum\_cost\_page\_hit 
 
@@ -4681,11 +3356,7 @@ The estimated cost for vacuuming a buffer found in the shared buffer cache. It r
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|integer \> 0|1|localsystem
-
-restart
-
-|
+|integer \> 0|1|local<br/>system<br/>restart|
 
 ## vacuum\_cost\_page\_miss 
 
@@ -4693,11 +3364,7 @@ The estimated cost for vacuuming a buffer that has to be read from disk. This re
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|integer \> 0|10|localsystem
-
-restart
-
-|
+|integer \> 0|10|local<br/>system<br/>restart|
 
 ## vacuum\_freeze\_min\_age 
 
@@ -4707,11 +3374,7 @@ For information about `VACUUM` and transaction ID management, see "Managing Data
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|integer 0-100000000000|100000000|localsystem
-
-restart
-
-|
+|integer 0-100000000000|100000000|local<br/>system<br/>restart|
 
 ## validate\_previous\_free\_tid 
 
@@ -4723,11 +3386,7 @@ If Greenplum Database detects a corruption in the free TID list, the free TID li
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|true|mastersession
-
-reload
-
-|
+|Boolean|true|master<br/>session<br/>reload|
 
 ## verify\_gpfdists\_cert 
 
@@ -4746,11 +3405,7 @@ For information about the `gpfdists` protocol, see [gpfdists:// Protocol](../../
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|true|mastersession
-
-reload
-
-|
+|Boolean|true|master<br/>session<br/>reload|
 
 ## vmem\_process\_interrupt 
 
@@ -4758,11 +3413,7 @@ Enables checking for interrupts before reserving vmem memory for a query during 
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|off|mastersession
-
-reload
-
-|
+|Boolean|off|master<br/>session<br/>reload|
 
 ## wal\_receiver\_status\_interval 
 
@@ -4772,13 +3423,7 @@ The value of [replication\_timeout](#replication_timeout) controls the time that
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|integer 0- INT\_MAX/1000|10 sec|mastersystem
-
-reload
-
-superuser
-
-|
+|integer 0- INT\_MAX/1000|10 sec|master<br/>session<br/>reload<br/>superuser|
 
 ## writable\_external\_table\_bufsize 
 
@@ -4786,23 +3431,14 @@ Size of the buffer \(in KB\) that Greenplum Database uses for network communicat
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|integer 32 - 131072 \(32KB - 128MB\)|64|localsession
-
-reload
-
-|
-
+|integer 32 - 131072<br/>\(32KB - 128MB\)|64|local<br/>session<br/>reload|
 ## xid\_stop\_limit 
 
 The number of transaction IDs prior to the ID where transaction ID wraparound occurs. When this limit is reached, Greenplum Database stops creating new transactions to avoid data loss due to transaction ID wraparound.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|integer 10000000 - 2000000000|1000000000|localsystem
-
-restart
-
-|
+|integer 10000000 -<br/>2000000000|1000000000|local<br/>system<br/>restart|
 
 ## xid\_warn\_limit 
 
@@ -4810,11 +3446,7 @@ The number of transaction IDs prior to the limit specified by [xid\_stop\_limit]
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|integer 10000000 - 2000000000|500000000|localsystem
-
-restart
-
-|
+|integer 10000000 - <br/>2000000000|500000000|local<br/>system<br/>restart|
 
 ## xmlbinary 
 
@@ -4824,13 +3456,8 @@ The parameter can be set for a database system, an individual database, or a ses
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|base64hex
+|base64<br/>hex<br/>|base64|master<br/>session<br/>reload|
 
-|base64|mastersession
-
-reload
-
-|
 
 ## xmloption 
 
@@ -4850,11 +3477,5 @@ SET XML OPTION { DOCUMENT | CONTENT }
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|documentcontent
-
-|content|mastersession
-
-reload
-
-|
-
+|document<br/>content|content|master<br/>session<br/>reload|
+ 
