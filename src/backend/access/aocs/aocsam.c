@@ -1289,7 +1289,7 @@ openFetchSegmentFile(AOCSFetchDesc aocsFetchDesc,
 static void
 resetCurrentBlockInfo(AOFetchBlockMetadata *currentBlock)
 {
-	currentBlock->have = false;
+	currentBlock->valid = false;
 	currentBlock->firstRowNum = 0;
 	currentBlock->lastRowNum = 0;
 }
@@ -1509,7 +1509,7 @@ aocs_fetch(AOCSFetchDesc aocsFetchDesc,
 		if (datumStreamFetchDesc->currentSegmentFile.isOpen &&
 			datumStreamFetchDesc->currentSegmentFile.num == segmentFileNum &&
 			aocsFetchDesc->blockDirectory.currentSegmentFileNum == segmentFileNum &&
-			datumStreamFetchDesc->currentBlock.have)
+			datumStreamFetchDesc->currentBlock.valid)
 		{
 			if (rowNum >= datumStreamFetchDesc->currentBlock.firstRowNum &&
 				rowNum <= datumStreamFetchDesc->currentBlock.lastRowNum)

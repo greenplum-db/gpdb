@@ -1456,7 +1456,7 @@ datumstreamread_find_block(DatumStreamRead * datumStream,
 		 */
 		const bool	isOldBlockFormat = (datumStream->getBlockInfo.firstRow == -1);
 
-		datumStreamFetchDesc->currentBlock.have = true;
+		datumStreamFetchDesc->currentBlock.valid = true;
 		datumStreamFetchDesc->currentBlock.fileOffset =
 			AppendOnlyStorageRead_CurrentHeaderOffsetInFile(
 													  &datumStream->ao_read);

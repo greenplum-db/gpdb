@@ -128,7 +128,12 @@ typedef struct AOFetchBlockMetadata
 {
 	AppendOnlyBlockDirectoryEntry blockDirectoryEntry;
 
-	bool have;
+	/*
+	 * Since we have opted to embed this struct inside AppendOnlyFetchDescData
+	 * (as opposed to allocating/deallocating it separately), keep a valid flag
+	 * to indicate whether the metadata stored here is junk or not.
+	 */
+	bool valid;
 
 	int64 fileOffset;
 	

@@ -1897,7 +1897,7 @@ fetchNextBlock(AppendOnlyFetchDesc aoFetchDesc)
 	/*
 	 * Unpack information into member variables.
 	 */
-	aoFetchDesc->currentBlock.have = true;
+	aoFetchDesc->currentBlock.valid = true;
 	aoFetchDesc->currentBlock.fileOffset =
 		executorReadBlock->headerOffsetInFile;
 	aoFetchDesc->currentBlock.overallBlockLen =
@@ -1924,7 +1924,7 @@ fetchFromCurrentBlock(AppendOnlyFetchDesc aoFetchDesc,
 					  int64 rowNum,
 					  TupleTableSlot *slot)
 {
-	Assert(aoFetchDesc->currentBlock.have);
+	Assert(aoFetchDesc->currentBlock.valid);
 	Assert(rowNum >= aoFetchDesc->currentBlock.firstRowNum);
 	Assert(rowNum <= aoFetchDesc->currentBlock.lastRowNum);
 
@@ -2074,7 +2074,7 @@ scanToFetchTuple(AppendOnlyFetchDesc aoFetchDesc,
 static void
 resetCurrentBlockInfo(AOFetchBlockMetadata * currentBlock)
 {
-	currentBlock->have = false;
+	currentBlock->valid = false;
 	currentBlock->firstRowNum = 0;
 	currentBlock->lastRowNum = 0;
 }
@@ -2274,7 +2274,7 @@ appendonly_fetch(AppendOnlyFetchDesc aoFetchDesc,
 	 * Do we have a current block?  If it has the requested tuple, that would
 	 * be a great performance optimization.
 	 */
-	if (aoFetchDesc->currentBlock.have)
+	if (aoFetchDesc->currentBlock.valid)
 	{
 		if (aoFetchDesc->currentSegmentFile.isOpen &&
 			segmentFileNum == aoFetchDesc->currentSegmentFile.num &&
