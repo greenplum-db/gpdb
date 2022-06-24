@@ -3,7 +3,7 @@
 -- complain if script is sourced in psql, rather than via CREATE EXTENSION
 \echo Use "CREATE EXTENSION gp_fault_inject" to load this file. \quit
 
-CREATE FUNCTION gp_inject_fault(
+CREATE FUNCTION @extschema@.gp_inject_fault(
   faultname text,
   type text,
   ddl text,
@@ -19,7 +19,7 @@ AS 'MODULE_PATHNAME'
 LANGUAGE C VOLATILE STRICT NO SQL;
 
 -- Simpler version, without specific session id.
-CREATE FUNCTION gp_inject_fault(
+CREATE FUNCTION @extschema@.gp_inject_fault(
   faultname text,
   type text,
   ddl text,
@@ -30,58 +30,58 @@ CREATE FUNCTION gp_inject_fault(
   extra_arg int4,
   db_id int4)
 RETURNS text
-AS $$ select gp_inject_fault($1, $2, $3, $4, $5, $6, $7, $8, $9, -1) $$
+AS $$ select @extschema@.gp_inject_fault($1, $2, $3, $4, $5, $6, $7, $8, $9, -1) $$
 LANGUAGE SQL;
 
 -- Simpler version, trigger only one time, occurrence start at 1 and
 -- end at 1, no sleep and no ddl/database/tablename/sessionid.
-CREATE FUNCTION gp_inject_fault(
+CREATE FUNCTION @extschema@.gp_inject_fault(
   faultname text,
   type text,
   db_id int4)
 RETURNS text
-AS $$ select gp_inject_fault($1, $2, '', '', '', 1, 1, 0, $3, -1) $$
+AS $$ select @extschema@.gp_inject_fault($1, $2, '', '', '', 1, 1, 0, $3, -1) $$
 LANGUAGE SQL;
 
 -- Simpler version, trigger only one time, occurrence start at 1 and
 -- end at 1, no sleep and no ddl/database/tablename.
-CREATE FUNCTION gp_inject_fault(
+CREATE FUNCTION @extschema@.gp_inject_fault(
   faultname text,
   type text,
   db_id int4,
   gp_session_id int4)
 RETURNS text
-AS $$ select gp_inject_fault($1, $2, '', '', '', 1, 1, 0, $3, $4) $$
+AS $$ select @extschema@.gp_inject_fault($1, $2, '', '', '', 1, 1, 0, $3, $4) $$
 LANGUAGE SQL;
 
 -- Simpler version, always trigger until fault is reset.
-CREATE FUNCTION gp_inject_fault_infinite(
+CREATE FUNCTION @extschema@.gp_inject_fault_infinite(
   faultname text,
   type text,
   db_id int4)
 RETURNS text
-AS $$ select gp_inject_fault($1, $2, '', '', '', 1, -1, 0, $3, -1) $$
+AS $$ select @extschema@.gp_inject_fault($1, $2, '', '', '', 1, -1, 0, $3, -1) $$
 LANGUAGE SQL;
 
 -- Simpler version to avoid confusion for wait_until_triggered fault.
 -- occurrence in call below defines wait until number of times the
 -- fault hits.
-CREATE FUNCTION gp_wait_until_triggered_fault(
+CREATE FUNCTION @extschema@.gp_wait_until_triggered_fault(
   faultname text,
   numtimestriggered int4,
   db_id int4)
 RETURNS text
-AS $$ select gp_inject_fault($1, 'wait_until_triggered', '', '', '', 1, 1, $2, $3, -1) $$
+AS $$ select @extschema@.gp_inject_fault($1, 'wait_until_triggered', '', '', '', 1, 1, $2, $3, -1) $$
 LANGUAGE SQL;
 
-CREATE OR REPLACE FUNCTION insert_noop_xlog_record()
+CREATE OR REPLACE FUNCTION @extschema@.insert_noop_xlog_record()
     RETURNS VOID
 AS 'MODULE_PATHNAME',
 'insert_noop_xlog_record'
 LANGUAGE C;
 
 -- Force a mirror to have applied as much XLOG as it's primary has shipped.
-CREATE OR REPLACE FUNCTION force_mirrors_to_catch_up() RETURNS VOID AS $$
+CREATE OR REPLACE FUNCTION @extschema@.force_mirrors_to_catch_up() RETURNS VOID AS $$
 BEGIN
     -- Switch xlog to have no-op record at far distance from
     -- previously emitted xlog record. This is required due to
@@ -101,10 +101,10 @@ BEGIN
     PERFORM pg_switch_xlog();
     PERFORM pg_switch_xlog() from gp_dist_random('gp_id');
 
-    PERFORM gp_inject_fault('after_xlog_redo_noop', 'sleep', dbid) FROM gp_segment_configuration WHERE role='m';
-    PERFORM insert_noop_xlog_record();
-    PERFORM insert_noop_xlog_record() from gp_dist_random('gp_id');
-    PERFORM gp_wait_until_triggered_fault('after_xlog_redo_noop', 1, dbid) FROM gp_segment_configuration WHERE role='m';
-    PERFORM gp_inject_fault('after_xlog_redo_noop', 'reset', dbid) FROM gp_segment_configuration WHERE role='m';
+    PERFORM @extschema@.gp_inject_fault('after_xlog_redo_noop', 'sleep', dbid) FROM gp_segment_configuration WHERE role='m';
+    PERFORM @extschema@.insert_noop_xlog_record();
+    PERFORM @extschema@.insert_noop_xlog_record() from gp_dist_random('gp_id');
+    PERFORM @extschema@.gp_wait_until_triggered_fault('after_xlog_redo_noop', 1, dbid) FROM gp_segment_configuration WHERE role='m';
+    PERFORM @extschema@.gp_inject_fault('after_xlog_redo_noop', 'reset', dbid) FROM gp_segment_configuration WHERE role='m';
 END;
 $$ LANGUAGE plpgsql;
