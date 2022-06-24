@@ -234,7 +234,10 @@ The following built-in window functions are Greenplum extensions to the PostgreS
 
 <div class="tablenoborder">
 <table cellpadding="4" cellspacing="0" summary="" id="topic31__in2073121" class="table" frame="border" border="1" rules="all">
-<caption><span class="tablecap">Advanced Aggregate Functions</span></caption>
+
+## Advanced Aggregate Functions
+ 
+<caption><span class="tablecap"><var class="keyword varname">Advanced Aggregate Functions</var></span></caption>
           <thead class="thead" align="left">
             <tr class="row">
               <th class="entry" valign="top" width="20.845288240441164%" id="d142067e2153">Function</th>
