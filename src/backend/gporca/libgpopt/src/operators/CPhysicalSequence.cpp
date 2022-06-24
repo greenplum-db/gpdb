@@ -184,7 +184,7 @@ FSearchOperationLocality(CMemoryPool *mp, CGroupExpression *pgexpr,
 {
 	GPOS_CHECK_STACK_SIZE;
 
-	if (pgexpr == NULL)
+	if (pgexpr == nullptr)
 	{
 		return false;
 	}
