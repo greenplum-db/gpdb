@@ -106,7 +106,7 @@ This table describes the functions that process `json` values.
 
 <div class="tablenoborder">
 <table cellpadding="4" cellspacing="0" summary="" id="topic_o5y_14w_2z__table_e41_y3w_mq" class="table" frame="border" border="1" rules="all">
-<caption><span class="tablecap">Table 3. <var class="keyword varname">json</var> Operators</span></caption>        
+<caption><span class="tablecap"><var class="keyword varname">json</var> Operators</span></caption>        
             <thead class="thead" align="left">
               <tr class="row">
                 <th class="entry" valign="top" width="10.351966873706003%" id="d142067e981">Operator</th>
@@ -234,7 +234,7 @@ The following built-in window functions are Greenplum extensions to the PostgreS
 
 <div class="tablenoborder">
 <table cellpadding="4" cellspacing="0" summary="" id="topic31__in2073121" class="table" frame="border" border="1" rules="all">
-<caption><span class="tablecap">Table 7. Advanced Aggregate Functions</span></caption>
+<caption><span class="tablecap">Advanced Aggregate Functions</span></caption>
           <thead class="thead" align="left">
             <tr class="row">
               <th class="entry" valign="top" width="20.845288240441164%" id="d142067e2153">Function</th>
