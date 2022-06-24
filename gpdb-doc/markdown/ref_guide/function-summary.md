@@ -104,7 +104,8 @@ This table describes the functions that create `json` values.
 
 This table describes the functions that process `json` values.
 <div class="tablenoborder">
-<caption><span class="tablecap"><var class="keyword varname"> </span></caption>        
+<table summary="">
+<caption><span class="tablecap"><var class="keyword varname"></span></caption>        
             <thead class="thead" align="left">
               <tr class="row">
                 <th class="entry" valign="top" width="10.351966873706003%" id="d142067e981">Operator</th>
