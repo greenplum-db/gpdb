@@ -3013,7 +3013,23 @@ finalize_plan(PlannerInfo *root, Plan *plan,
 			break;
 
 		case T_PartitionSelector:
-			/* GPDB_12_MERGE_FIXME: need to do something with the paramid here? */
+			/* the paramid in PartitionSelector struct is a special executor param
+			 * which is used to do partition pruning in an Append node on the other
+			 * side of the join. It can also contain normal executor params in
+			 * part_prune_info field.
+			 * But all of the params above are only used to compute which partitions
+			 * on other side of a join can contain rows that match the join quals.
+			 * The tuple from the child plan will pass to the outerplan node directly
+			 * after the computation. So the params above won't affect the output of
+			 * this plan node.
+			 * The params in part_prune_info field still can affect the result of the
+			 * outer join, but the params in part_prune_info are also in join qual or
+			 * join filter of outer join node, so that these params will be added to
+			 * outer join plan's extParam and allParam whatever.
+			 * And PartitionSelector node don't support rescan for now, as the above,
+			 * don't add the paramids here won't affect the execute result.
+			 */
+
 			break;
 			
 		case T_RecursiveUnion:

@@ -348,12 +348,10 @@ appendonly_slot_callbacks(Relation relation)
 }
 
 MemTuple
-ExecFetchSlotMemTuple(TupleTableSlot *slot, bool *shouldFree, MemTupleBinding *mt_bind)
+appendonly_form_memtuple(TupleTableSlot *slot, MemTupleBinding *mt_bind)
 {
 	MemTuple		result;
 	MemoryContext	oldContext;
-
-	*shouldFree = true;
 
 	/*
 	 * In case of a non virtal tuple, make certain that the slot's values are
@@ -369,6 +367,15 @@ ExecFetchSlotMemTuple(TupleTableSlot *slot, bool *shouldFree, MemTupleBinding *m
 	MemoryContextSwitchTo(oldContext);
 
 	return result;
+}
+
+/*
+ * appendonly_free_memtuple
+ */
+void
+appendonly_free_memtuple(MemTuple tuple)
+{
+	pfree(tuple);
 }
 
 /* ------------------------------------------------------------------------
@@ -421,7 +428,15 @@ appendonly_index_fetch_begin(Relation rel)
 static void
 appendonly_index_fetch_reset(IndexFetchTableData *scan)
 {
-	// GPDB_12_MERGE_FIXME: Should we close the underlying AO fetch desc here?
+	/*
+	 * Unlike Heap, we don't release the resources (fetch descriptor and its
+	 * members) here because it is more like a global data structure shared
+	 * across scans, rather than an iterator to yield a granularity of data.
+	 * 
+	 * Additionally, should be aware of that no matter whether allocation or
+	 * release on fetch descriptor, it is considerably expensive.
+	 */
+	return;
 }
 
 static void
@@ -435,6 +450,8 @@ appendonly_index_fetch_end(IndexFetchTableData *scan)
 		pfree(aoscan->aofetch);
 		aoscan->aofetch = NULL;
 	}
+
+	pfree(aoscan);
 }
 
 static bool
@@ -465,11 +482,13 @@ appendonly_index_fetch_tuple(struct IndexFetchTableData *scan,
 								  snapshot,
 								  appendOnlyMetaDataSnapshot);
 	}
-	else
-	{
-		/* GPDB_12_MERGE_FIXME: Is it possible for the 'snapshot' to change
-		 * between calls? Add a sanity check for that here. */
-	}
+
+	/*
+	 * There is no reason to expect changes on snapshot between tuple
+	 * fetching calls after fech_init is called, treat it as a
+	 * programming error in case of occurrence.
+	 */
+	Assert(aoscan->aofetch->snapshot == snapshot);
 
 	appendonly_fetch(aoscan->aofetch, (AOTupleId *) tid, slot);
 
@@ -569,10 +588,9 @@ appendonly_tuple_insert(Relation relation, TupleTableSlot *slot, CommandId cid,
 {
 	AppendOnlyInsertDesc    insertDesc;
 	MemTuple				mtuple;
-	bool					shouldFree = true;
 
 	insertDesc = get_insert_descriptor(relation);
-	mtuple = ExecFetchSlotMemTuple(slot, &shouldFree, insertDesc->mt_bind);
+	mtuple = appendonly_form_memtuple(slot, insertDesc->mt_bind);
 
 	/* Update the tuple with table oid */
 	slot->tts_tableOid = RelationGetRelid(relation);
@@ -582,8 +600,7 @@ appendonly_tuple_insert(Relation relation, TupleTableSlot *slot, CommandId cid,
 
 	pgstat_count_heap_insert(relation, 1);
 
-	if (shouldFree)
-		pfree(mtuple);
+	appendonly_free_memtuple(mtuple);
 }
 
 static void
@@ -659,7 +676,6 @@ appendonly_tuple_update(Relation relation, ItemPointer otid, TupleTableSlot *slo
 	AppendOnlyDeleteDesc	deleteDesc;
 	MemTuple				mtuple;
 	TM_Result				result;
-	bool					shouldFree = true;
 
 	insertDesc = get_insert_descriptor(relation);
 	deleteDesc = get_delete_descriptor(relation, true);
@@ -667,8 +683,7 @@ appendonly_tuple_update(Relation relation, ItemPointer otid, TupleTableSlot *slo
 	/* Update the tuple with table oid */
 	slot->tts_tableOid = RelationGetRelid(relation);
 
-	mtuple = ExecFetchSlotMemTuple(slot, &shouldFree,
-								   insertDesc->mt_bind);
+	mtuple = appendonly_form_memtuple(slot, insertDesc->mt_bind);
 
 #ifdef FAULT_INJECTOR
 	FaultInjector_InjectFaultIfSet(
@@ -689,8 +704,7 @@ appendonly_tuple_update(Relation relation, ItemPointer otid, TupleTableSlot *slo
 	/* No HOT updates with AO tables. */
 	*update_indexes = true;
 
-	if (shouldFree)
-		pfree(mtuple);
+	appendonly_free_memtuple(mtuple);
 
 	return result;
 }

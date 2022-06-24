@@ -56,7 +56,8 @@ s/^Process \d+ waits for ShareUpdateExclusiveLock on relation \d+ of database \d
 m/available \d+ MB/
 s/available \d+ MB//
 
-m/\(cdbdisp_async\.c\:\d+\)/
-s/\(cdbdisp_async\.c:\d+\)/\(cdbdisp_async\.c:LINE_NUM\)/
+# remove the cdbdisp_async suffix of some ERROR messages
+m/ \(cdbdisp_async\.c.*\)/
+s/ \(cdbdisp_async\.c.*\)//
 
 -- end_matchsubs

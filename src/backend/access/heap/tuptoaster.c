@@ -68,7 +68,6 @@ typedef struct toast_compress_header
 #define TOAST_COMPRESS_SET_RAWSIZE(ptr, len) \
 	(((toast_compress_header *) (ptr))->rawsize = (len))
 
-static void toast_delete_datum(Relation rel, Datum value, bool is_speculative);
 static Datum toast_save_datum(Relation rel, Datum value,
 							  struct varlena *oldexternal, bool isFrozen, int options);
 static bool toastrel_valueid_exists(Relation toastrel, Oid valueid);
@@ -1960,7 +1959,7 @@ toast_save_datum(Relation rel, Datum value,
  *	Delete a single external stored value.
  * ----------
  */
-static void
+void
 toast_delete_datum(Relation rel, Datum value, bool is_speculative)
 {
 	struct varlena *attr = (struct varlena *) DatumGetPointer(value);

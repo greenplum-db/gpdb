@@ -5,8 +5,8 @@ This tool collects all the necessary files and generates a script that runs the 
 ## <a id="usage"></a>Usage 
 
 ```
-**gpmt** **packcore** **collect** -core COREFILE [-binary BINARY ] 
-[-keep\_tmp\_dir] [-ignore\_missing\] 
+gpmt packcore collect -core <corefile> [-binary <binary> ] 
+[-keep_tmp_dir] [-ignore_missing] 
 ```
 
 ## <a id="opts"></a>Options 

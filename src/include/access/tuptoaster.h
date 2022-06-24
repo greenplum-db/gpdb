@@ -165,6 +165,14 @@ extern MemTuple toast_insert_or_update_memtup(Relation rel,
 extern void toast_delete(Relation rel, HeapTuple oldtup, bool is_speculative);
 
 /* ----------
+ * toast_delete_datum -
+ *
+ *	Delete a single external stored value.
+ * ----------
+ */
+extern void toast_delete_datum(Relation rel, Datum value, bool is_speculative);
+
+/* ----------
  * heap_tuple_fetch_attr() -
  *
  *		Fetches an external stored attribute from the toast

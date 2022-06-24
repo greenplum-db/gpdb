@@ -1141,7 +1141,7 @@ class PerformHooks(Operation):
             if key is None:
                 return
             key_str = key[0]
-            if key_str.lower() == 'coordinator':
+            if key_str.lower() in ('coordinator', 'master'):
                 if self.standby_host:
                     RemoteCommand(hook[key_str], [self.standby_host]).run()
                 LocalCommand(hook[key_str], True).run()

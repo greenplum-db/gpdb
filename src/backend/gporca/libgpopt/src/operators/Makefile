@@ -184,7 +184,8 @@ OBJS        = CExpression.o \
               CScalarSwitchCase.o \
               CScalarWindowFunc.o \
               CStrictHashedDistributions.o \
-              CWindowPreprocessor.o
+              CWindowPreprocessor.o \
+              COrderedAggPreprocessor.o
 
 include $(top_srcdir)/src/backend/common.mk
 

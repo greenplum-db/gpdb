@@ -247,7 +247,7 @@ typedef enum
 #define GUC_GPDB_NEED_SYNC     0x00400000  /* guc value is synced between master and primary */
 #define GUC_GPDB_NO_SYNC       0x00800000  /* guc value is not synced between master and primary */
 
-/* GUC lists for gp_guc_list_show().  (List of struct config_generic) */
+/* GUC lists for gp_guc_list_init().  (List of struct config_generic) */
 extern List    *gp_guc_list_for_explain;
 extern List    *gp_guc_list_for_no_plan;
 
@@ -735,8 +735,6 @@ extern ArrayType *GUCArrayDelete(ArrayType *array, const char *name);
 extern ArrayType *GUCArrayReset(ArrayType *array);
 
 extern void pg_timezone_abbrev_initialize(void);
-
-extern List *gp_guc_list_show(GucSource excluding, List *guclist);
 
 extern struct config_generic *find_option(const char *name,
 				bool create_placeholders, int elevel);

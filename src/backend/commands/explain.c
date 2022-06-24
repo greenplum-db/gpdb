@@ -694,35 +694,6 @@ ExplainOnePlan(PlannedStmt *plannedstmt, IntoClause *into, ExplainState *es,
 									queryDesc->estate, es);
 
 	/*
-	 * Show non-default GUC settings that might have affected the plan as well
-	 * as optimizer settings etc.
-	 *
-	 * GPDB_12_MERGE_FIXME: This overlaps with the output you get with the
-	 * new uptream "SETTINGS on" option.
-	 */
-	ExplainOpenGroup("Settings", "Settings", true, es);
-
-	if (queryDesc->plannedstmt->planGen == PLANGEN_PLANNER)
-		ExplainPropertyStringInfo("Optimizer", es, "Postgres query optimizer");
-#ifdef USE_ORCA
-	else
-		ExplainPropertyStringInfo("Optimizer", es, "Pivotal Optimizer (GPORCA)");
-#endif
-
-	/* We only list the non-default GUCs in verbose mode */
-	if (es->verbose)
-	{
-		List	*settings;
-
-		settings = gp_guc_list_show(PGC_S_DEFAULT, gp_guc_list_for_explain);
-
-		if (list_length(settings) > 0)
-			ExplainPropertyList("Settings", settings, es);
-	}
-
-	ExplainCloseGroup("Settings", "Settings", true, es);
-
-	/*
 	 * Print info about JITing. Tied to es->costs because we don't want to
 	 * display this in regression tests, as it'd cause output differences
 	 * depending on build options.  Might want to separate that out from COSTS
@@ -769,15 +740,60 @@ ExplainOnePlan(PlannedStmt *plannedstmt, IntoClause *into, ExplainState *es,
 static void
 ExplainPrintSettings(ExplainState *es)
 {
-	int			num;
-	struct config_generic **gucs;
+	int			num = 0;
+	struct config_generic **gucs = NULL;
 
 	/* bail out if information about settings not requested */
-	if (!es->settings)
+	/* Greenplum prints some GUCs when verbose too */
+	if (!es->settings && !es->verbose)
 		return;
 
 	/* request an array of relevant settings */
-	gucs = get_explain_guc_options(&num);
+	if (es->settings)
+		gucs = get_explain_guc_options(&num);
+
+	/*
+	 * We only list the non-default GP GUCs in verbose mode.To be specific,
+	 * only the planner GUCs and work_mem. (See gp_guc_list_for_explain)
+	 */
+	if (es->verbose)
+	{
+		int i = num;
+		ListCell *cell;
+		List *gp_gucs = NIL;
+
+		foreach(cell, gp_guc_list_for_explain)
+		{
+			struct config_generic *gconf = (struct config_generic *) lfirst(cell);
+
+			/*
+			 * Don't overlap with the output you get with the
+			 * new upstream "SETTINGS on" option.
+			 */
+			if (es->settings && (gconf->flags & GUC_EXPLAIN))
+				continue;
+
+			/* Note the non-default GP GUCs */
+			if (gconf->source > PGC_S_DEFAULT)
+				lappend(gp_gucs, cell);
+		}
+
+		if (list_length(gp_gucs) > 0)
+		{
+			num += list_length(gp_gucs);
+			if (gucs)
+				gucs = repalloc(gucs, num * sizeof(struct config_generic *));
+			else
+				gucs = palloc(num * sizeof(struct config_generic *));
+
+			/* Append GP GUCs to the settings list */
+			foreach(cell, gp_gucs)
+			{
+				gucs[i] = lfirst(cell);
+				i++;
+			}
+		}
+	}
 
 	/* also bail out of there are no options */
 	if (!num)
@@ -895,6 +911,13 @@ ExplainPrintPlan(ExplainState *es, QueryDesc *queryDesc)
 	 * If requested, include information about GUC parameters with values that
 	 * don't match the built-in defaults.
 	 */
+	if (queryDesc->plannedstmt->planGen == PLANGEN_PLANNER)
+		ExplainPropertyStringInfo("Optimizer", es, "Postgres query optimizer");
+#ifdef USE_ORCA
+	else
+		ExplainPropertyStringInfo("Optimizer", es, "Pivotal Optimizer (GPORCA)");
+#endif
+
 	ExplainPrintSettings(es);
 }
 

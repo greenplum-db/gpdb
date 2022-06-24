@@ -70,7 +70,7 @@ AOCSCompaction_DropSegmentFile(Relation aorel, int segno)
 			   "segno %d",
 			   pseudoSegNo);
 
-		fd = OpenAOSegmentFile(aorel, filenamepath, 0);
+		fd = OpenAOSegmentFile(filenamepath, 0);
 		if (fd >= 0)
 		{
 			TruncateAOSegmentFile(fd, aorel, pseudoSegNo, 0);
@@ -133,7 +133,7 @@ AOCSSegmentFileTruncateToEOF(Relation aorel, int segno, AOCSVPInfo *vpinfo)
 			   fileSegNo,
 			   segeof);
 
-		fd = OpenAOSegmentFile(aorel, filenamepath, segeof);
+		fd = OpenAOSegmentFile(filenamepath, segeof);
 		if (fd >= 0)
 		{
 			TruncateAOSegmentFile(fd, aorel, fileSegNo, segeof);
@@ -286,7 +286,7 @@ AOCSSegmentFileFullCompaction(Relation aorel,
 		else
 		{
 			/* Tuple is invisible and needs to be dropped */
-			AppendOnlyThrowAwayTuple(aorel, slot);
+			AppendOnlyThrowAwayTuple(aorel, slot, mt_bind);
 		}
 
 		/*

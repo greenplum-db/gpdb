@@ -138,12 +138,11 @@ CREATE TABLE mpp22263 (
         tenthous        int4,
         odd                     int4,
         even            int4,
-        stringu1        name,
-        stringu2        name,
-        string4         name
+        stringu1        name    COLLATE pg_catalog."default",
+        stringu2        name    COLLATE pg_catalog."default",
+        string4         name    COLLATE pg_catalog."default"
 ) distributed by (unique1);
 create index mpp22263_idx1 on mpp22263 using btree(unique1);
--- GPDB_12_MERGE_FIXME: Non default collation
 explain select * from mpp22263, (values(147, 'RFAAAA'), (931, 'VJAAAA')) as v (i, j)
 WHERE mpp22263.unique1 = v.i and mpp22263.stringu1 = v.j;
                                                     QUERY PLAN                                                     
@@ -160,7 +159,6 @@ WHERE mpp22263.unique1 = v.i and mpp22263.stringu1 = v.j;
 -- atmsort.pm masks out differences in the Filter line, so just memorizing
 -- the output of the above EXPLAIN isn't enough to catch a faulty Filter line.
 -- Extract the Filter explicitly.
--- GPDB_12_MERGE_FIXME: Non default collation
 SELECT * from
   get_explain_output($$
 select * from mpp22263, (values(147, 'RFAAAA'), (931, 'VJAAAA')) as v (i, j)
@@ -223,36 +221,34 @@ explain (costs off) select count(*) over (partition by g) from generate_series(1
 CREATE EXTERNAL WEB TABLE dummy_ext_tab (x text) EXECUTE 'echo foo' FORMAT 'text';
 -- External Table Scan
 explain (format json, costs off) SELECT * FROM dummy_ext_tab;
-                   QUERY PLAN                    
--------------------------------------------------
- [                                              +
-   {                                            +
-     "Plan": {                                  +
-       "Node Type": "Gather Motion",            +
-       "Senders": 3,                            +
-       "Receivers": 1,                          +
-       "Slice": 1,                              +
-       "Segments": 3,                           +
-       "Gang Type": "primary reader",           +
-       "Parallel Aware": false,                 +
-       "Plans": [                               +
-         {                                      +
-           "Node Type": "Foreign Scan",         +
-           "Operation": "Select",               +
-           "Parent Relationship": "Outer",      +
-           "Slice": 1,                          +
-           "Segments": 3,                       +
-           "Gang Type": "primary reader",       +
-           "Parallel Aware": false,             +
-           "Relation Name": "dummy_ext_tab",    +
-           "Alias": "dummy_ext_tab"             +
-         }                                      +
-       ]                                        +
-     },                                         +
-     "Settings": {                              +
-       "Optimizer": "Pivotal Optimizer (GPORCA)"+
-     }                                          +
-   }                                            +
+                  QUERY PLAN                   
+-----------------------------------------------
+ [                                            +
+   {                                          +
+     "Plan": {                                +
+       "Node Type": "Gather Motion",          +
+       "Senders": 3,                          +
+       "Receivers": 1,                        +
+       "Slice": 1,                            +
+       "Segments": 3,                         +
+       "Gang Type": "primary reader",         +
+       "Parallel Aware": false,               +
+       "Plans": [                             +
+         {                                    +
+           "Node Type": "Foreign Scan",       +
+           "Operation": "Select",             +
+           "Parent Relationship": "Outer",    +
+           "Slice": 1,                        +
+           "Segments": 3,                     +
+           "Gang Type": "primary reader",     +
+           "Parallel Aware": false,           +
+           "Relation Name": "dummy_ext_tab",  +
+           "Alias": "dummy_ext_tab"           +
+         }                                    +
+       ]                                      +
+     },                                       +
+     "Optimizer": "Pivotal Optimizer (GPORCA)"+
+   }                                          +
  ]
 (1 row)
 
@@ -261,27 +257,26 @@ CREATE TEMP TABLE dummy_aotab (x int4) WITH (appendonly=true);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'x' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 explain (format yaml, costs off) SELECT * FROM dummy_aotab;
-                 QUERY PLAN                  
----------------------------------------------
- - Plan:                                    +
-     Node Type: "Gather Motion"             +
-     Senders: 3                             +
-     Receivers: 1                           +
-     Slice: 1                               +
-     Segments: 3                            +
-     Gang Type: "primary reader"            +
-     Parallel Aware: false                  +
-     Plans:                                 +
-       - Node Type: "Seq Scan"              +
-         Parent Relationship: "Outer"       +
-         Slice: 1                           +
-         Segments: 3                        +
-         Gang Type: "primary reader"        +
-         Parallel Aware: false              +
-         Relation Name: "dummy_aotab"       +
-         Alias: "dummy_aotab"               +
-   Settings:                                +
-     Optimizer: "Pivotal Optimizer (GPORCA)"
+                QUERY PLAN                 
+-------------------------------------------
+ - Plan:                                  +
+     Node Type: "Gather Motion"           +
+     Senders: 3                           +
+     Receivers: 1                         +
+     Slice: 1                             +
+     Segments: 3                          +
+     Gang Type: "primary reader"          +
+     Parallel Aware: false                +
+     Plans:                               +
+       - Node Type: "Seq Scan"            +
+         Parent Relationship: "Outer"     +
+         Slice: 1                         +
+         Segments: 3                      +
+         Gang Type: "primary reader"      +
+         Parallel Aware: false            +
+         Relation Name: "dummy_aotab"     +
+         Alias: "dummy_aotab"             +
+   Optimizer: "Pivotal Optimizer (GPORCA)"
 (1 row)
 
 -- DML node (with ORCA)
@@ -330,9 +325,7 @@ explain (format xml, costs off) insert into dummy_aotab values (1);
          </Plan>                                                   +
        </Plans>                                                    +
      </Plan>                                                       +
-     <Settings>                                                    +
-       <Optimizer>Pivotal Optimizer (GPORCA)</Optimizer>           +
-     </Settings>                                                   +
+     <Optimizer>Pivotal Optimizer (GPORCA)</Optimizer>             +
    </Query>                                                        +
  </explain>
 (1 row)
@@ -400,51 +393,49 @@ explain (slicetable, costs off) SELECT * FROM explaintest;
 
 -- same in JSON format
 explain (slicetable, costs off, format json) SELECT * FROM explaintest;
-                   QUERY PLAN                    
--------------------------------------------------
- [                                              +
-   {                                            +
-     "Plan": {                                  +
-       "Node Type": "Gather Motion",            +
-       "Senders": 3,                            +
-       "Receivers": 1,                          +
-       "Slice": 1,                              +
-       "Segments": 3,                           +
-       "Gang Type": "primary reader",           +
-       "Parallel Aware": false,                 +
-       "Plans": [                               +
-         {                                      +
-           "Node Type": "Seq Scan",             +
-           "Parent Relationship": "Outer",      +
-           "Slice": 1,                          +
-           "Segments": 3,                       +
-           "Gang Type": "primary reader",       +
-           "Parallel Aware": false,             +
-           "Relation Name": "explaintest",      +
-           "Alias": "explaintest"               +
-         }                                      +
-       ]                                        +
-     },                                         +
-     "Slice Table": [                           +
-       {                                        +
-         "Slice ID": 0,                         +
-         "Gang Type": "Dispatcher",             +
-         "Root": 0,                             +
-         "Parent": -1,                          +
-         "Gang Size": 0                         +
-       },                                       +
-       {                                        +
-         "Slice ID": 1,                         +
-         "Gang Type": "Reader",                 +
-         "Root": 0,                             +
-         "Parent": 0,                           +
-         "Gang Size": 3                         +
-       }                                        +
-     ],                                         +
-     "Settings": {                              +
-       "Optimizer": "Pivotal Optimizer (GPORCA)"+
-     }                                          +
-   }                                            +
+                   QUERY PLAN                   
+------------------------------------------------
+ [                                             +
+   {                                           +
+     "Plan": {                                 +
+       "Node Type": "Gather Motion",           +
+       "Senders": 3,                           +
+       "Receivers": 1,                         +
+       "Slice": 1,                             +
+       "Segments": 3,                          +
+       "Gang Type": "primary reader",          +
+       "Parallel Aware": false,                +
+       "Plans": [                              +
+         {                                     +
+           "Node Type": "Seq Scan",            +
+           "Parent Relationship": "Outer",     +
+           "Slice": 1,                         +
+           "Segments": 3,                      +
+           "Gang Type": "primary reader",      +
+           "Parallel Aware": false,            +
+           "Relation Name": "explaintest",     +
+           "Alias": "explaintest"              +
+         }                                     +
+       ]                                       +
+     },                                        +
+     "Optimizer": "Pivotal Optimizer (GPORCA)",+
+     "Slice Table": [                          +
+       {                                       +
+         "Slice ID": 0,                        +
+         "Gang Type": "Dispatcher",            +
+         "Root": 0,                            +
+         "Parent": -1,                         +
+         "Gang Size": 0                        +
+       },                                      +
+       {                                       +
+         "Slice ID": 1,                        +
+         "Gang Type": "Reader",                +
+         "Root": 0,                            +
+         "Parent": 0,                          +
+         "Gang Size": 3                        +
+       }                                       +
+     ]                                         +
+   }                                           +
  ]
 (1 row)
 

@@ -615,10 +615,14 @@ static void
 aoco_index_fetch_reset(IndexFetchTableData *scan)
 {
 	/*
-	 * GPDB_12_MERGE_FIXME: Should we close the underlying AOCO fetch desc
-	 * here?  Remember to change the rescan case in aoco_rescan for bitmap
-	 * scan descriptor (AOCSBITMAPSCANDATA).
+	 * Unlike Heap, we don't release the resources (fetch descriptor and its
+	 * members) here because it is more like a global data structure shared
+	 * across scans, rather than an iterator to yield a granularity of data.
+	 * 
+	 * Additionally, should be aware of that no matter whether allocation or
+	 * release on fetch descriptor, it is considerably expensive.
 	 */
+	return;
 }
 
 static void
@@ -638,6 +642,8 @@ aoco_index_fetch_end(IndexFetchTableData *scan)
 		pfree(aocoscan->proj);
 		aocoscan->proj = NULL;
 	}
+
+	pfree(aocoscan);
 }
 
 static bool
@@ -675,11 +681,13 @@ aoco_index_fetch_tuple(struct IndexFetchTableData *scan,
 											  appendOnlyMetaDataSnapshot,
 											  aocoscan->proj);
 	}
-	else
-	{
-		/* GPDB_12_MERGE_FIXME: Is it possible for the 'snapshot' to change
-		 * between calls? Add a sanity check for that here. */
-	}
+
+	/*
+	 * There is no reason to expect changes on snapshot between tuple
+	 * fetching calls after fech_init is called, treat it as a
+	 * programming error in case of occurrence.
+	 */
+	Assert(aocoscan->aocofetch->snapshot == snapshot);
 
 	ExecClearTuple(slot);
 
