@@ -235,7 +235,6 @@ The following built-in window functions are Greenplum extensions to the PostgreS
 ## Advanced Aggregate Functions
 <div class="tablenoborder">
 <table cellpadding="4" cellspacing="0" summary="" id="topic31__in2073121" class="table" frame="border" border="1" rules="all">
-
 <caption><span class="tablecap"> </span></caption>
           <thead class="thead" align="left">
             <tr class="row">
@@ -258,8 +257,7 @@ The following built-in window functions are Greenplum extensions to the PostgreS
                 <p class="p">
                   <em class="ph i">Example:</em>
                 </p>
-                <pre class="pre codeblock">SELECT department_id, MEDIAN(salary) 
-FROM employees 
+                <pre class="pre codeblock">SELECT department_id, MEDIAN(salary) FROM employees 
 GROUP BY department_id; </pre>
               </td>
               <td class="entry" valign="top" width="26.046435911523513%" headers="d142067e2162 ">Can take a two-dimensional array as input. Treats such arrays as
