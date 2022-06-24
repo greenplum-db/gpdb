@@ -3760,8 +3760,14 @@ CTranslatorQueryToDXL::TranslateCTEToDXL(const RangeTblEntry *rte,
 	const List *cte_producer_target_list =
 		cte_list_entry->GetCTEProducerTargetList(rte->ctename);
 
-	GPOS_ASSERT(nullptr != cte_producer_dxlnode &&
-				nullptr != cte_producer_target_list);
+	// fallback to Postgres optimizer in case of empty target list
+	if (NIL == cte_producer_target_list)
+	{
+		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature,
+				   GPOS_WSZ_LIT("Empty target list"));
+	}
+
+	GPOS_ASSERT(nullptr != cte_producer_dxlnode);
 
 	CDXLLogicalCTEProducer *cte_producer_dxlop =
 		CDXLLogicalCTEProducer::Cast(cte_producer_dxlnode->GetOperator());
