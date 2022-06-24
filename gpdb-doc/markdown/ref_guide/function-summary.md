@@ -101,13 +101,11 @@ This table describes the functions that create `json` values.
 `row_to_json(record [, pretty_bool])`|Returns the row as a JSON object. Line feeds are added between level 1 elements if `pretty_bool` is `true`.|`row_to_json(row(1,'foo'))`|`{"f1":1,"f2":"foo"}`|
 
 ### JSON Processing Functions 
-    <div class="topic nested2" id="topic_z5d_snw_2z">
-      <h3 class="title topictitle3">JSON Processing Functions</h3>
-      <div class="body">
-        <p class="p">This table describes the functions that process <samp class="ph codeph">json</samp> values.</p>
+
+This table describes the functions that process JSON values.
 <div class="tablenoborder">
 <table cellpadding="4" cellspacing="0" summary="" id="topic_z5d_snw_2z__table_wfc_y3w_mq" class="table" frame="border" border="1" rules="all">
-<caption><span class="tablecap">Table 5. JSON Processing Functions</span></caption>
+<caption><span class="tablecap">JSON Processing Functions</span></caption>
             <thead class="thead" align="left">
               <tr class="row">
                 <th class="entry" valign="top" width="20.224719101123597%" id="d142067e1334">Function</th>
