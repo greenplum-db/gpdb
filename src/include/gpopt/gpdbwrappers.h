@@ -27,15 +27,15 @@ extern "C" {
 #include "gpos/types.h"
 
 // fwd declarations
-typedef struct SysScanDescData *SysScanDesc;
+using SysScanDesc = struct SysScanDescData *;
 struct TypeCacheEntry;
-typedef struct NumericData *Numeric;
-typedef struct HeapTupleData *HeapTuple;
-typedef struct RelationData *Relation;
+using Numeric = struct NumericData *;
+using HeapTuple = struct HeapTupleData *;
+using Relation = struct RelationData *;
 struct Value;
-typedef struct TupleDescData *TupleDesc;
+using TupleDesc = struct TupleDescData *;
 struct Query;
-typedef struct ScanKeyData *ScanKey;
+using ScanKey = struct ScanKeyData *;
 struct Bitmapset;
 struct Plan;
 struct ListCell;
@@ -46,7 +46,7 @@ struct ForeignScan;
 struct Uri;
 struct CdbComponentDatabases;
 struct StringInfoData;
-typedef StringInfoData *StringInfo;
+using StringInfo = StringInfoData *;
 struct LogicalIndexes;
 struct ParseState;
 struct DefElem;

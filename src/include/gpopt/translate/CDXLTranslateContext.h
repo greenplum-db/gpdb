@@ -32,20 +32,19 @@ namespace gpdxl
 using namespace gpos;
 
 // hash maps mapping ULONG -> TargetEntry
-typedef CHashMap<ULONG, TargetEntry, gpos::HashValue<ULONG>,
-				 gpos::Equals<ULONG>, CleanupDelete<ULONG>, CleanupNULL>
-	ULongToTargetEntryMap;
-
+using ULongToTargetEntryMap =
+	CHashMap<ULONG, TargetEntry, gpos::HashValue<ULONG>, gpos::Equals<ULONG>,
+			 CleanupDelete<ULONG>, CleanupNULL>;
 // hash maps mapping ULONG -> CMappingElementColIdParamId
-typedef CHashMap<ULONG, CMappingElementColIdParamId, gpos::HashValue<ULONG>,
-				 gpos::Equals<ULONG>, CleanupDelete<ULONG>,
-				 CleanupRelease<CMappingElementColIdParamId> >
-	ULongToColParamMap;
+using ULongToColParamMap =
+	CHashMap<ULONG, CMappingElementColIdParamId, gpos::HashValue<ULONG>,
+			 gpos::Equals<ULONG>, CleanupDelete<ULONG>,
+			 CleanupRelease<CMappingElementColIdParamId>>;
 
-typedef CHashMapIter<ULONG, CMappingElementColIdParamId, gpos::HashValue<ULONG>,
-					 gpos::Equals<ULONG>, CleanupDelete<ULONG>,
-					 CleanupRelease<CMappingElementColIdParamId> >
-	ULongToColParamMapIter;
+using ULongToColParamMapIter =
+	CHashMapIter<ULONG, CMappingElementColIdParamId, gpos::HashValue<ULONG>,
+				 gpos::Equals<ULONG>, CleanupDelete<ULONG>,
+				 CleanupRelease<CMappingElementColIdParamId>>;
 
 
 //---------------------------------------------------------------------------
@@ -116,8 +115,8 @@ public:
 
 
 // array of dxl translation context
-typedef CDynamicPtrArray<const CDXLTranslateContext, CleanupNULL>
-	CDXLTranslationContextArray;
+using CDXLTranslationContextArray =
+	CDynamicPtrArray<const CDXLTranslateContext, CleanupNULL>;
 }  // namespace gpdxl
 
 #endif	// !GPDXL_CDXLTranslateContext_H

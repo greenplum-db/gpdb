@@ -50,10 +50,10 @@ namespace gpdxl
 //---------------------------------------------------------------------------
 class CQueryMutators
 {
-	typedef Node *(*MutatorWalkerFn)();
-	typedef BOOL (*ExprWalkerFn)();
+	using MutatorWalkerFn = Node *(*) ();
+	using ExprWalkerFn = BOOL (*)();
 
-	typedef struct SContextGrpbyPlMutator
+	using CContextGrpbyPlMutator = struct SContextGrpbyPlMutator
 	{
 	public:
 		// memory pool
@@ -92,10 +92,9 @@ class CQueryMutators
 
 		// dtor
 		~SContextGrpbyPlMutator() = default;
+	};
 
-	} CContextGrpbyPlMutator;
-
-	typedef struct SContextIncLevelsupMutator
+	using CContextIncLevelsupMutator = struct SContextIncLevelsupMutator
 	{
 	public:
 		// the current query level
@@ -115,11 +114,10 @@ class CQueryMutators
 
 		// dtor
 		~SContextIncLevelsupMutator() = default;
-
-	} CContextIncLevelsupMutator;
+	};
 
 	// context for walker that iterates over the expression in the target entry
-	typedef struct SContextTLWalker
+	using CContextTLWalker = struct SContextTLWalker
 	{
 	public:
 		// list of target list entries in the query
@@ -136,8 +134,7 @@ class CQueryMutators
 
 		// dtor
 		~SContextTLWalker() = default;
-
-	} CContextTLWalker;
+	};
 
 public:
 	// fall back during since the target list refers to a attribute which algebrizer at this point cannot resolve

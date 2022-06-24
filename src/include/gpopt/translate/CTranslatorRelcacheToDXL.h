@@ -46,7 +46,7 @@ extern "C" {
 
 // fwd decl
 struct RelationData;
-typedef struct RelationData *Relation;
+using Relation = struct RelationData *;
 struct LogicalIndexes;
 
 namespace gpdxl
