@@ -34,7 +34,7 @@
 #include "utils/fmgroids.h"
 #include "utils/guc.h"
 
-static void ATAOEntriesHeapToAO(Oid heaprelid, Oid aorelid);
+static void TransferAppendonlyEntries(Oid fromrelid, Oid torelid);
 static void SwapAppendonlyEntries(Oid entryRelId1, Oid entryRelId2);
 
 /*
@@ -424,6 +424,11 @@ RemoveAppendonlyEntry(Oid relid)
 	table_close(pg_appendonly_rel, NoLock);
 }
 
+/*
+ * Does 2 things:
+ * 	Sever existing dependencies: oid -> *
+ * 	Create a new dependency: oid -> baseOid
+ */
 static void
 TransferDependencyLink(
 	Oid baseOid, 
@@ -524,14 +529,22 @@ GetAppendEntryForMove(
 }
 
 /*
- * This function acts as a controller of catalog actions that must be performed
- * when we:
- * 1. perform an ALTER TABLE on an existing AO/AOCO table that does not change
- * the access method (refer to SwapAppendOnlyEntries()).
- * 2. change the access method from/to AO/AOCO
- * (refer to individual * ATAOEntriesXXXToYYY() functions)
+ * This function acts as a controller of catalog actions that needs to be
+ * performed when we have an AT involving AO/AOCO table, where the original
+ * table could be rewritten.
+ *
+ * Parameters:
+ * relform1: original table that is the target of the AT operation.
+ * relform2: newly created temp table that rows have been CTASed into.
+ *
+ * The actions vary on a case-by-case basis:
+ * 1. If we are not changing the table's AM, we need to swap the pg_appendonly
+ *	entries between the temp table and the original table and rewire aux
+ *	table dependencies.
+ * 2. If we are changing the table's AM, we need to transfer the pg_appendonly
+ *	entry of one table to the other and rewire aux table dependencies. See
+ *	individual case bodies for more details.
  */
-
 void
 ATAOEntries(Form_pg_class relform1, Form_pg_class relform2)
 {
@@ -541,7 +554,16 @@ ATAOEntries(Form_pg_class relform1, Form_pg_class relform2)
 			switch(relform2->relam)
 			{
 				case AO_ROW_TABLE_AM_OID:
-					ATAOEntriesHeapToAO(relform1->oid, relform2->oid);
+					/*
+					 * Since the newly created AO table temp relid will be
+					 * dropped from the catalog (later on in finish_heap_swap()),
+					 * we ensure that the:
+					 * 1. newly created pg_appendonly row carries the original
+					 * 		heap relid.
+					 * 2. newly created AO aux tables depend on the original
+					 * 		heap relid.
+					 */
+					TransferAppendonlyEntries(relform2->oid, relform1->oid);
 					break;
 				case AO_COLUMN_TABLE_AM_OID:
 					ereport(ERROR,
@@ -557,9 +579,19 @@ ATAOEntries(Form_pg_class relform1, Form_pg_class relform2)
 			switch(relform2->relam)
 			{
 				case HEAP_TABLE_AM_OID:
-					ereport(ERROR,
-							(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-								errmsg("alter table does not support switch from AO to Heap")));
+					/*
+					 * Since the newly created heap table temp relid will be
+					 * dropped from the catalog (later on in finish_heap_swap()),
+					 * we ensure that the:
+					 * 1. original AO table's pg_appendonly row carries the heap
+					 * 		temp table's relid.
+					 * 2. original AO table's AO aux tables now depend on the
+					 * 		heap temp table's relid.
+					 * This way when the heap temp table relid is dropped from
+					 * the catalog, the pg_appendonly row and aux tables also
+					 * follow suit.
+					 */
+					TransferAppendonlyEntries(relform1->oid, relform2->oid);
 					break;
 				case AO_ROW_TABLE_AM_OID:
 					SwapAppendonlyEntries(relform1->oid, relform2->oid);
@@ -600,8 +632,17 @@ ATAOEntries(Form_pg_class relform1, Form_pg_class relform2)
 	}
 }
 
+/*
+ * Transfer the pg_appendonly_entry of the relation identified by fromrelid to
+ * the relation identified by torelid.
+ *
+ * This is done by simply overwriting the relid field of the pg_appendonly row
+ * for fromrelid with value = torelid.
+ *
+ * For completeness, also rewire the aux table dependencies to point to torelid.
+ */
 static void
-ATAOEntriesHeapToAO(Oid heaprelid, Oid aorelid)
+TransferAppendonlyEntries(Oid fromrelid, Oid torelid)
 {
 	Relation	pg_appendonly_rel;
 	TupleDesc	pg_appendonly_dsc;
@@ -619,7 +660,7 @@ ATAOEntriesHeapToAO(Oid heaprelid, Oid aorelid)
 	pg_appendonly_tuple = GetAppendEntryForMove(
 		pg_appendonly_rel,
 		pg_appendonly_dsc,
-		aorelid,
+		fromrelid,
 		&aosegrelid,
 		&aoblkdirrelid,
 		&aovisimaprelid);
@@ -629,7 +670,7 @@ ATAOEntriesHeapToAO(Oid heaprelid, Oid aorelid)
 	replace = palloc0(pg_appendonly_dsc->natts * sizeof(bool));
 
 	replace[Anum_pg_appendonly_relid - 1] = true;
-	newValues[Anum_pg_appendonly_relid - 1] = heaprelid;
+	newValues[Anum_pg_appendonly_relid - 1] = torelid;
 
 	pg_appendonly_tuple = heap_modify_tuple(pg_appendonly_tuple, pg_appendonly_dsc,
 								   newValues, newNulls, replace);
@@ -645,15 +686,15 @@ ATAOEntriesHeapToAO(Oid heaprelid, Oid aorelid)
 	pfree(replace);
 
 	if (OidIsValid(aosegrelid))
-		TransferDependencyLink(heaprelid, aosegrelid, "aoseg");
+		TransferDependencyLink(torelid, aosegrelid, "aoseg");
 	if (OidIsValid(aoblkdirrelid))
-		TransferDependencyLink(heaprelid, aoblkdirrelid, "aoblkdir");
+		TransferDependencyLink(torelid, aoblkdirrelid, "aoblkdir");
 	if (OidIsValid(aovisimaprelid))
-		TransferDependencyLink(heaprelid, aovisimaprelid, "aovisimap");
+		TransferDependencyLink(torelid, aovisimaprelid, "aovisimap");
 }
 
 /*
- * Swap pg_appendonly entries between tables.
+ * Swap pg_appendonly entries between tables and transfer aux table dependencies.
  */
 static void
 SwapAppendonlyEntries(Oid entryRelId1, Oid entryRelId2)

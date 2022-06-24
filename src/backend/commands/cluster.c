@@ -89,6 +89,10 @@ static void copy_table_data(Oid OIDNewHeap, Oid OIDOldHeap, Oid OIDOldIndex,
 							TransactionId *pFreezeXid, MultiXactId *pCutoffMulti);
 static List *get_tables_to_cluster(MemoryContext cluster_context);
 
+/* Convenient macro for checking AO AMs */
+#define IsAccessMethodAO(am_oid) \
+	(am_oid == AO_ROW_TABLE_AM_OID || am_oid == AO_COLUMN_TABLE_AM_OID)
+
 
 /*---------------------------------------------------------------------------
  * This cluster code allows for clustering multiple tables at once. Because
@@ -733,19 +737,15 @@ make_new_heap(Oid OIDOldHeap, Oid NewTableSpace, Oid NewAccessMethod,
 	if (isNull)
 		reloptions = (Datum) 0;
 
-	if (relpersistence == RELPERSISTENCE_TEMP)
-		namespaceid = LookupCreationNamespace("pg_temp");
-	else
-		namespaceid = RelationGetNamespace(OldHeap);
-
+	/* 
+	 * Unless we are changing access method, look further.
+	 */
 	/*
 	 * While changing access method from heap to AO/AOCO, the storage options
 	 * need to be picked from gp_default_storage_options since heap table does
 	 * not store those.
 	 */
-	if (RelationIsHeap(OldHeap) &&
-		(NewAccessMethod == AO_ROW_TABLE_AM_OID ||
-		NewAccessMethod == AO_COLUMN_TABLE_AM_OID))
+	if (RelationIsHeap(OldHeap) && IsAccessMethodAO(NewAccessMethod))
 	{
 		valid_opts = false;
 		reloptions = (Datum) 0;
@@ -754,8 +754,19 @@ make_new_heap(Oid OIDOldHeap, Oid NewTableSpace, Oid NewAccessMethod,
 																		RELOPT_KIND_APPENDOPTIMIZED);
 		reloptions = transformAOStdRdOptions(stdRdOptions, reloptions);
 	}
+	/* When changing from AO/AOCO to heap, do not use any of the AO reloptions */
+	else if (RelationIsAppendOptimized(OldHeap) && NewAccessMethod == HEAP_TABLE_AM_OID)
+	{
+		valid_opts = true;
+		reloptions = (Datum) 0;
+	}
 	else
 		valid_opts = true;
+
+	if (relpersistence == RELPERSISTENCE_TEMP)
+		namespaceid = LookupCreationNamespace("pg_temp");
+	else
+		namespaceid = RelationGetNamespace(OldHeap);
 
 	/*
 	 * Create the new heap, using a temporary name in the same namespace as
@@ -1179,12 +1190,9 @@ swap_relation_files(Oid r1, Oid r2, bool target_is_pg_class,
 		relform2->relam == AO_ROW_TABLE_AM_OID || relform2->relam == AO_COLUMN_TABLE_AM_OID)
 		ATAOEntries(relform1, relform2);
 
-	/*
-	 * When we are changing access method from Heap to AO/AOCO, we need to also change the
-	 * reloptions field in the pg_class entry for the table
-	 */
-	if (relform1->relam == HEAP_TABLE_AM_OID &&
-		(relform2->relam == AO_ROW_TABLE_AM_OID || relform2->relam == AO_COLUMN_TABLE_AM_OID))
+	/* Also swap reloptions if we are swaping between heap and AO/AOCO tables. */
+	if ((relform1->relam == HEAP_TABLE_AM_OID && IsAccessMethodAO(relform2->relam)) ||
+		(relform2->relam == HEAP_TABLE_AM_OID && IsAccessMethodAO(relform1->relam)))
 	{
 		Datum		val[Natts_pg_class] = {0};
 		bool		null[Natts_pg_class] = {0};
@@ -1302,18 +1310,19 @@ swap_relation_files(Oid r1, Oid r2, bool target_is_pg_class,
 	{
 		Assert(!TransactionIdIsValid(frozenXid) ||
 			   TransactionIdIsNormal(frozenXid));
-		/*
-		 * Greenplum: append-optimized tables do not have a valid relfrozenxid.
-		 * Leave the relfrozenxid as invalid after rewrite if it is currently
-		 * invalid.
-		 */
-		if (TransactionIdIsValid(relform1->relfrozenxid))
-			relform1->relfrozenxid = frozenXid;
-		else
-			relform1->relfrozenxid = InvalidTransactionId;
+		relform1->relfrozenxid = frozenXid;
 		Assert(MultiXactIdIsValid(cutoffMulti));
 		relform1->relminmxid = cutoffMulti;
 	}
+	/*
+	 * Greenplum: append-optimized tables do not have a valid relfrozenxid.
+	 * Overwrite the entry for both relations.
+	 */
+	if (relform1->relkind != RELKIND_INDEX && IsAccessMethodAO(relform1->relam))
+		relform1->relfrozenxid = InvalidTransactionId;
+	if (relform2->relkind != RELKIND_INDEX && IsAccessMethodAO(relform2->relam))
+		relform2->relfrozenxid = InvalidTransactionId;
+
 	/* swap size statistics too, since new rel has freshly-updated stats */
 	if (swap_stats)
 	{

@@ -284,3 +284,68 @@ SELECT * FROM gp_toolkit.__gp_aoseg('child2');
 ERROR:  'child2' is not an append-only row relation  (seg0 slice1 127.0.0.1:7002 pid=29947)
 SELECT * FROM gp_toolkit.__gp_aovisimap('child2');
 ERROR:  function not supported on relation
+-- Scenario 3: AO to Heap
+CREATE TABLE ao2heap(a int, b int) WITH (appendonly=true);
+CREATE INDEX aoi ON ao2heap(b);
+INSERT INTO ao2heap SELECT i,i FROM generate_series(1,5) i;
+-- Check once that the AO table has the custom reloptions 
+SELECT reloptions FROM pg_class WHERE relname = 'ao2heap';
+            reloptions             
+-----------------------------------
+ {blocksize=65536,compresslevel=5}
+(1 row)
+
+-- Check once that the AO table has relfrozenxid = 0
+SELECT relfrozenxid FROM pg_class WHERE relname = 'ao2heap';
+ relfrozenxid 
+--------------
+            0
+(1 row)
+
+CREATE TEMP TABLE relfilebeforeao2heap AS
+    SELECT -1 segid, relfilenode FROM pg_class WHERE relname in ('ao2heap', 'aoi')
+    UNION SELECT gp_segment_id segid, relfilenode FROM gp_dist_random('pg_class')
+    WHERE relname in ('ao2heap', 'aoi') ORDER BY segid;
+-- Altering AO to heap
+ALTER TABLE ao2heap SET ACCESS METHOD heap;
+-- The tables and indexes should have been rewritten (should have different relfilenodes)
+CREATE TEMP TABLE relfileafterao2heap AS
+    SELECT -1 segid, relfilenode FROM pg_class WHERE relname in ('ao2heap', 'aoi')
+    UNION SELECT gp_segment_id segid, relfilenode FROM gp_dist_random('pg_class')
+    WHERE relname in ('ao2heap', 'aoi') ORDER BY segid;
+SELECT * FROM relfilebeforeao2heap INTERSECT SELECT * FROM relfileafterao2heap;
+ segid | relfilenode 
+-------+-------------
+(0 rows)
+
+-- Check data is intact
+SELECT * FROM ao2heap;
+ a | b 
+---+---
+ 1 | 1
+ 2 | 2
+ 3 | 3
+ 4 | 4
+ 5 | 5
+(5 rows)
+
+-- No AO aux tables should be left
+SELECT * FROM gp_toolkit.__gp_aoseg('ao2heap');
+ERROR:  'ao2heap' is not an append-only row relation
+SELECT * FROM gp_toolkit.__gp_aovisimap('ao2heap');
+ERROR:  function not supported on relation
+-- The new heap table shouldn't have the old AO table's reloptions
+SELECT reloptions FROM pg_class WHERE relname = 'ao2heap';
+ reloptions 
+------------
+ 
+(1 row)
+
+-- The new heap table should have a valid relfrozenxid
+SELECT relfrozenxid <> '0' FROM pg_class WHERE relname = 'ao2heap';
+ ?column? 
+----------
+ t
+(1 row)
+
+DROP TABLE ao2heap;
