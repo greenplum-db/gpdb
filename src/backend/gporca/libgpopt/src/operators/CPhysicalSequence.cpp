@@ -308,7 +308,8 @@ CPhysicalSequence::PdsRequired(CMemoryPool *mp, CExpressionHandle &exprhdl,
 
 		if (FSearchOperationLocality(
 				m_mp, exprhdl.Pgexpr(),
-				COperator::EOperatorId::EopPhysicalCTEProducer, &eelt, 0))
+				COperator::EOperatorId::EopPhysicalCTEProducer, &eelt, 0) &&
+			CUtils::ExecLocalityType(pdsRequired) != eelt)
 		{
 			// CTE Consumer exists as a child and eelt is populated with the
 			// locality. We force the CTE Producer child to have the same
@@ -322,9 +323,7 @@ CPhysicalSequence::PdsRequired(CMemoryPool *mp, CExpressionHandle &exprhdl,
 				case CUtils::EeltSegments:
 					return GPOS_NEW(mp) CDistributionSpecNonSingleton();
 				default:
-					// no motion has been introduced for the CTE Consumer
-					return GPOS_NEW(mp) CDistributionSpecAny(this->Eopid());
-					break;
+					GPOS_ASSERT(false);
 			}
 		}
 		else

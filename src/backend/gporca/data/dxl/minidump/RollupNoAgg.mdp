@@ -228,35 +228,32 @@
         </dxl:LogicalCTEAnchor>
       </dxl:LogicalProject>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="32">
-      <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
+    <dxl:Plan Id="0" SpaceSize="68">
+      <dxl:Result>
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="1293.000189" Rows="3.000000" Width="8"/>
+          <dxl:Cost StartupCost="0" TotalCost="1293.000147" Rows="3.000000" Width="8"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="9" Alias="a">
             <dxl:Ident ColId="9" ColName="a" TypeMdid="0.23.1.0"/>
           </dxl:ProjElem>
           <dxl:ProjElem ColId="28" Alias="?column?">
-            <dxl:Ident ColId="28" ColName="?column?" TypeMdid="0.23.1.0"/>
+            <dxl:ConstValue TypeMdid="0.23.1.0" Value="1"/>
           </dxl:ProjElem>
         </dxl:ProjList>
         <dxl:Filter/>
-        <dxl:SortingColumnList/>
-        <dxl:Result>
+        <dxl:OneTimeFilter/>
+        <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="1293.000081" Rows="3.000000" Width="8"/>
+            <dxl:Cost StartupCost="0" TotalCost="1293.000123" Rows="3.000000" Width="4"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="9" Alias="a">
               <dxl:Ident ColId="9" ColName="a" TypeMdid="0.23.1.0"/>
             </dxl:ProjElem>
-            <dxl:ProjElem ColId="28" Alias="?column?">
-              <dxl:ConstValue TypeMdid="0.23.1.0" Value="1"/>
-            </dxl:ProjElem>
           </dxl:ProjList>
           <dxl:Filter/>
-          <dxl:OneTimeFilter/>
+          <dxl:SortingColumnList/>
           <dxl:Sequence>
             <dxl:Properties>
               <dxl:Cost StartupCost="0" TotalCost="1293.000069" Rows="3.000000" Width="4"/>
@@ -405,8 +402,8 @@
               </dxl:Result>
             </dxl:Append>
           </dxl:Sequence>
-        </dxl:Result>
-      </dxl:GatherMotion>
+        </dxl:GatherMotion>
+      </dxl:Result>
     </dxl:Plan>
   </dxl:Thread>
 </dxl:DXLMessage>

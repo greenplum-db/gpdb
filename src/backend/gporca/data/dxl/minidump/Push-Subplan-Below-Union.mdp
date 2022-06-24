@@ -650,10 +650,10 @@ union
         </dxl:LogicalSelect>
       </dxl:LogicalCTEAnchor>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="2718336">
-      <dxl:Result>
+    <dxl:Plan Id="0" SpaceSize="11867520">
+      <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="7327.003376" Rows="2.000000" Width="36"/>
+          <dxl:Cost StartupCost="0" TotalCost="7327.003324" Rows="2.000000" Width="36"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="35" Alias="district_pop">
@@ -673,10 +673,10 @@ union
           </dxl:ProjElem>
         </dxl:ProjList>
         <dxl:Filter/>
-        <dxl:OneTimeFilter/>
-        <dxl:Sequence>
+        <dxl:SortingColumnList/>
+        <dxl:Result>
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="7327.003376" Rows="2.000000" Width="36"/>
+            <dxl:Cost StartupCost="0" TotalCost="7327.003001" Rows="2.000000" Width="36"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="35" Alias="population">
@@ -694,44 +694,46 @@ union
             <dxl:ProjElem ColId="96" Alias="population">
               <dxl:Ident ColId="96" ColName="population" TypeMdid="0.23.1.0"/>
             </dxl:ProjElem>
-            <dxl:ProjElem ColId="37" Alias="district">
-              <dxl:Ident ColId="37" ColName="district" TypeMdid="0.25.1.0"/>
-            </dxl:ProjElem>
-            <dxl:ProjElem ColId="38" Alias="countrycode">
-              <dxl:Ident ColId="38" ColName="countrycode" TypeMdid="0.1042.1.0"/>
-            </dxl:ProjElem>
           </dxl:ProjList>
-          <dxl:CTEProducer CTEId="0" Columns="4,34,3,2,13">
+          <dxl:Filter/>
+          <dxl:OneTimeFilter/>
+          <dxl:Sequence>
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="1293.000481" Rows="1.000000" Width="1"/>
+              <dxl:Cost StartupCost="0" TotalCost="7327.003001" Rows="2.000000" Width="36"/>
             </dxl:Properties>
             <dxl:ProjList>
-              <dxl:ProjElem ColId="4" Alias="population">
-                <dxl:Ident ColId="4" ColName="population" TypeMdid="0.23.1.0"/>
+              <dxl:ProjElem ColId="35" Alias="population">
+                <dxl:Ident ColId="35" ColName="population" TypeMdid="0.23.1.0"/>
               </dxl:ProjElem>
-              <dxl:ProjElem ColId="34" Alias="num_cities">
-                <dxl:Ident ColId="34" ColName="num_cities" TypeMdid="0.23.1.0"/>
+              <dxl:ProjElem ColId="36" Alias="num_cities">
+                <dxl:Ident ColId="36" ColName="num_cities" TypeMdid="0.23.1.0"/>
               </dxl:ProjElem>
-              <dxl:ProjElem ColId="3" Alias="district">
-                <dxl:Ident ColId="3" ColName="district" TypeMdid="0.25.1.0"/>
+              <dxl:ProjElem ColId="39" Alias="name">
+                <dxl:Ident ColId="39" ColName="name" TypeMdid="0.25.1.0"/>
               </dxl:ProjElem>
-              <dxl:ProjElem ColId="2" Alias="countrycode">
-                <dxl:Ident ColId="2" ColName="countrycode" TypeMdid="0.1042.1.0"/>
+              <dxl:ProjElem ColId="93" Alias="name">
+                <dxl:Ident ColId="93" ColName="name" TypeMdid="0.25.1.0"/>
               </dxl:ProjElem>
-              <dxl:ProjElem ColId="13" Alias="name">
-                <dxl:Ident ColId="13" ColName="name" TypeMdid="0.25.1.0"/>
+              <dxl:ProjElem ColId="96" Alias="population">
+                <dxl:Ident ColId="96" ColName="population" TypeMdid="0.23.1.0"/>
+              </dxl:ProjElem>
+              <dxl:ProjElem ColId="37" Alias="district">
+                <dxl:Ident ColId="37" ColName="district" TypeMdid="0.25.1.0"/>
+              </dxl:ProjElem>
+              <dxl:ProjElem ColId="38" Alias="countrycode">
+                <dxl:Ident ColId="38" ColName="countrycode" TypeMdid="0.1042.1.0"/>
               </dxl:ProjElem>
             </dxl:ProjList>
-            <dxl:Result>
+            <dxl:CTEProducer CTEId="0" Columns="4,34,3,2,13">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="1293.000480" Rows="1.000000" Width="32"/>
+                <dxl:Cost StartupCost="0" TotalCost="1293.000361" Rows="1.000000" Width="1"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="4" Alias="population">
                   <dxl:Ident ColId="4" ColName="population" TypeMdid="0.23.1.0"/>
                 </dxl:ProjElem>
                 <dxl:ProjElem ColId="34" Alias="num_cities">
-                  <dxl:ConstValue TypeMdid="0.23.1.0" Value="1"/>
+                  <dxl:Ident ColId="34" ColName="num_cities" TypeMdid="0.23.1.0"/>
                 </dxl:ProjElem>
                 <dxl:ProjElem ColId="3" Alias="district">
                   <dxl:Ident ColId="3" ColName="district" TypeMdid="0.25.1.0"/>
@@ -743,28 +745,29 @@ union
                   <dxl:Ident ColId="13" ColName="name" TypeMdid="0.25.1.0"/>
                 </dxl:ProjElem>
               </dxl:ProjList>
-              <dxl:Filter/>
-              <dxl:OneTimeFilter/>
-              <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
+              <dxl:Result>
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="1293.000448" Rows="1.000000" Width="23"/>
+                  <dxl:Cost StartupCost="0" TotalCost="1293.000361" Rows="1.000000" Width="32"/>
                 </dxl:Properties>
                 <dxl:ProjList>
-                  <dxl:ProjElem ColId="2" Alias="countrycode">
-                    <dxl:Ident ColId="2" ColName="countrycode" TypeMdid="0.1042.1.0"/>
+                  <dxl:ProjElem ColId="4" Alias="population">
+                    <dxl:Ident ColId="4" ColName="population" TypeMdid="0.23.1.0"/>
+                  </dxl:ProjElem>
+                  <dxl:ProjElem ColId="34" Alias="num_cities">
+                    <dxl:ConstValue TypeMdid="0.23.1.0" Value="1"/>
                   </dxl:ProjElem>
                   <dxl:ProjElem ColId="3" Alias="district">
                     <dxl:Ident ColId="3" ColName="district" TypeMdid="0.25.1.0"/>
                   </dxl:ProjElem>
-                  <dxl:ProjElem ColId="4" Alias="population">
-                    <dxl:Ident ColId="4" ColName="population" TypeMdid="0.23.1.0"/>
+                  <dxl:ProjElem ColId="2" Alias="countrycode">
+                    <dxl:Ident ColId="2" ColName="countrycode" TypeMdid="0.1042.1.0"/>
                   </dxl:ProjElem>
                   <dxl:ProjElem ColId="13" Alias="name">
                     <dxl:Ident ColId="13" ColName="name" TypeMdid="0.25.1.0"/>
                   </dxl:ProjElem>
                 </dxl:ProjList>
                 <dxl:Filter/>
-                <dxl:SortingColumnList/>
+                <dxl:OneTimeFilter/>
                 <dxl:NestedLoopJoin JoinType="Inner" IndexNestedLoopJoin="false" OuterRefAsParam="false">
                   <dxl:Properties>
                     <dxl:Cost StartupCost="0" TotalCost="1293.000345" Rows="1.000000" Width="23"/>
@@ -867,62 +870,27 @@ union
                     </dxl:BroadcastMotion>
                   </dxl:Materialize>
                 </dxl:NestedLoopJoin>
-              </dxl:GatherMotion>
-            </dxl:Result>
-          </dxl:CTEProducer>
-          <dxl:Aggregate AggregationStrategy="Sorted" StreamSafe="false">
-            <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="6034.002823" Rows="2.000000" Width="36"/>
-            </dxl:Properties>
-            <dxl:GroupingColumns>
-              <dxl:GroupingColumn ColId="35"/>
-              <dxl:GroupingColumn ColId="36"/>
-              <dxl:GroupingColumn ColId="37"/>
-              <dxl:GroupingColumn ColId="38"/>
-              <dxl:GroupingColumn ColId="39"/>
-              <dxl:GroupingColumn ColId="93"/>
-              <dxl:GroupingColumn ColId="96"/>
-            </dxl:GroupingColumns>
-            <dxl:ProjList>
-              <dxl:ProjElem ColId="35" Alias="population">
-                <dxl:Ident ColId="35" ColName="population" TypeMdid="0.23.1.0"/>
-              </dxl:ProjElem>
-              <dxl:ProjElem ColId="36" Alias="num_cities">
-                <dxl:Ident ColId="36" ColName="num_cities" TypeMdid="0.23.1.0"/>
-              </dxl:ProjElem>
-              <dxl:ProjElem ColId="39" Alias="name">
-                <dxl:Ident ColId="39" ColName="name" TypeMdid="0.25.1.0"/>
-              </dxl:ProjElem>
-              <dxl:ProjElem ColId="93" Alias="name">
-                <dxl:Ident ColId="93" ColName="name" TypeMdid="0.25.1.0"/>
-              </dxl:ProjElem>
-              <dxl:ProjElem ColId="96" Alias="population">
-                <dxl:Ident ColId="96" ColName="population" TypeMdid="0.23.1.0"/>
-              </dxl:ProjElem>
-              <dxl:ProjElem ColId="37" Alias="district">
-                <dxl:Ident ColId="37" ColName="district" TypeMdid="0.25.1.0"/>
-              </dxl:ProjElem>
-              <dxl:ProjElem ColId="38" Alias="countrycode">
-                <dxl:Ident ColId="38" ColName="countrycode" TypeMdid="0.1042.1.0"/>
-              </dxl:ProjElem>
-            </dxl:ProjList>
-            <dxl:Filter/>
-            <dxl:Sort SortDiscardDuplicates="false">
+              </dxl:Result>
+            </dxl:CTEProducer>
+            <dxl:Aggregate AggregationStrategy="Sorted" StreamSafe="false">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="6034.002678" Rows="2.000000" Width="52"/>
+                <dxl:Cost StartupCost="0" TotalCost="6034.002603" Rows="2.000000" Width="36"/>
               </dxl:Properties>
+              <dxl:GroupingColumns>
+                <dxl:GroupingColumn ColId="35"/>
+                <dxl:GroupingColumn ColId="36"/>
+                <dxl:GroupingColumn ColId="37"/>
+                <dxl:GroupingColumn ColId="38"/>
+                <dxl:GroupingColumn ColId="39"/>
+                <dxl:GroupingColumn ColId="93"/>
+                <dxl:GroupingColumn ColId="96"/>
+              </dxl:GroupingColumns>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="35" Alias="population">
                   <dxl:Ident ColId="35" ColName="population" TypeMdid="0.23.1.0"/>
                 </dxl:ProjElem>
                 <dxl:ProjElem ColId="36" Alias="num_cities">
                   <dxl:Ident ColId="36" ColName="num_cities" TypeMdid="0.23.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="37" Alias="district">
-                  <dxl:Ident ColId="37" ColName="district" TypeMdid="0.25.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="38" Alias="countrycode">
-                  <dxl:Ident ColId="38" ColName="countrycode" TypeMdid="0.1042.1.0"/>
                 </dxl:ProjElem>
                 <dxl:ProjElem ColId="39" Alias="name">
                   <dxl:Ident ColId="39" ColName="name" TypeMdid="0.25.1.0"/>
@@ -933,22 +901,17 @@ union
                 <dxl:ProjElem ColId="96" Alias="population">
                   <dxl:Ident ColId="96" ColName="population" TypeMdid="0.23.1.0"/>
                 </dxl:ProjElem>
+                <dxl:ProjElem ColId="37" Alias="district">
+                  <dxl:Ident ColId="37" ColName="district" TypeMdid="0.25.1.0"/>
+                </dxl:ProjElem>
+                <dxl:ProjElem ColId="38" Alias="countrycode">
+                  <dxl:Ident ColId="38" ColName="countrycode" TypeMdid="0.1042.1.0"/>
+                </dxl:ProjElem>
               </dxl:ProjList>
               <dxl:Filter/>
-              <dxl:SortingColumnList>
-                <dxl:SortingColumn ColId="35" SortOperatorMdid="0.97.1.0" SortOperatorName="&lt;" SortNullsFirst="false"/>
-                <dxl:SortingColumn ColId="36" SortOperatorMdid="0.97.1.0" SortOperatorName="&lt;" SortNullsFirst="false"/>
-                <dxl:SortingColumn ColId="37" SortOperatorMdid="0.664.1.0" SortOperatorName="&lt;" SortNullsFirst="false"/>
-                <dxl:SortingColumn ColId="38" SortOperatorMdid="0.1058.1.0" SortOperatorName="&lt;" SortNullsFirst="false"/>
-                <dxl:SortingColumn ColId="39" SortOperatorMdid="0.664.1.0" SortOperatorName="&lt;" SortNullsFirst="false"/>
-                <dxl:SortingColumn ColId="93" SortOperatorMdid="0.664.1.0" SortOperatorName="&lt;" SortNullsFirst="false"/>
-                <dxl:SortingColumn ColId="96" SortOperatorMdid="0.97.1.0" SortOperatorName="&lt;" SortNullsFirst="false"/>
-              </dxl:SortingColumnList>
-              <dxl:LimitCount/>
-              <dxl:LimitOffset/>
-              <dxl:Append IsTarget="false" IsZapped="false">
+              <dxl:Sort SortDiscardDuplicates="false">
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="6034.002089" Rows="2.000000" Width="52"/>
+                  <dxl:Cost StartupCost="0" TotalCost="6034.002531" Rows="2.000000" Width="52"/>
                 </dxl:Properties>
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="35" Alias="population">
@@ -974,9 +937,20 @@ union
                   </dxl:ProjElem>
                 </dxl:ProjList>
                 <dxl:Filter/>
-                <dxl:NestedLoopJoin JoinType="Inner" IndexNestedLoopJoin="false" OuterRefAsParam="false">
+                <dxl:SortingColumnList>
+                  <dxl:SortingColumn ColId="35" SortOperatorMdid="0.97.1.0" SortOperatorName="&lt;" SortNullsFirst="false"/>
+                  <dxl:SortingColumn ColId="36" SortOperatorMdid="0.97.1.0" SortOperatorName="&lt;" SortNullsFirst="false"/>
+                  <dxl:SortingColumn ColId="37" SortOperatorMdid="0.664.1.0" SortOperatorName="&lt;" SortNullsFirst="false"/>
+                  <dxl:SortingColumn ColId="38" SortOperatorMdid="0.1058.1.0" SortOperatorName="&lt;" SortNullsFirst="false"/>
+                  <dxl:SortingColumn ColId="39" SortOperatorMdid="0.664.1.0" SortOperatorName="&lt;" SortNullsFirst="false"/>
+                  <dxl:SortingColumn ColId="93" SortOperatorMdid="0.664.1.0" SortOperatorName="&lt;" SortNullsFirst="false"/>
+                  <dxl:SortingColumn ColId="96" SortOperatorMdid="0.97.1.0" SortOperatorName="&lt;" SortNullsFirst="false"/>
+                </dxl:SortingColumnList>
+                <dxl:LimitCount/>
+                <dxl:LimitOffset/>
+                <dxl:RedistributeMotion InputSegments="0,1" OutputSegments="0,1">
                   <dxl:Properties>
-                    <dxl:Cost StartupCost="0" TotalCost="3017.000992" Rows="1.000000" Width="52"/>
+                    <dxl:Cost StartupCost="0" TotalCost="6034.002531" Rows="2.000000" Width="52"/>
                   </dxl:Properties>
                   <dxl:ProjList>
                     <dxl:ProjElem ColId="35" Alias="population">
@@ -1002,13 +976,43 @@ union
                     </dxl:ProjElem>
                   </dxl:ProjList>
                   <dxl:Filter/>
-                  <dxl:JoinFilter>
-                    <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>
-                  </dxl:JoinFilter>
-                  <dxl:NestedLoopJoin JoinType="Inner" IndexNestedLoopJoin="false" OuterRefAsParam="false">
+                  <dxl:SortingColumnList/>
+                  <dxl:HashExprList>
+                    <dxl:HashExpr>
+                      <dxl:Ident ColId="35" ColName="population" TypeMdid="0.23.1.0"/>
+                    </dxl:HashExpr>
+                    <dxl:HashExpr>
+                      <dxl:Ident ColId="36" ColName="num_cities" TypeMdid="0.23.1.0"/>
+                    </dxl:HashExpr>
+                    <dxl:HashExpr>
+                      <dxl:Ident ColId="37" ColName="district" TypeMdid="0.25.1.0"/>
+                    </dxl:HashExpr>
+                    <dxl:HashExpr>
+                      <dxl:Ident ColId="38" ColName="countrycode" TypeMdid="0.1042.1.0"/>
+                    </dxl:HashExpr>
+                    <dxl:HashExpr>
+                      <dxl:Ident ColId="39" ColName="name" TypeMdid="0.25.1.0"/>
+                    </dxl:HashExpr>
+                    <dxl:HashExpr>
+                      <dxl:Ident ColId="93" ColName="name" TypeMdid="0.25.1.0"/>
+                    </dxl:HashExpr>
+                    <dxl:HashExpr>
+                      <dxl:Ident ColId="96" ColName="population" TypeMdid="0.23.1.0"/>
+                    </dxl:HashExpr>
+                  </dxl:HashExprList>
+                  <dxl:Aggregate AggregationStrategy="Sorted" StreamSafe="false">
                     <dxl:Properties>
-                      <dxl:Cost StartupCost="0" TotalCost="1293.000280" Rows="1.000000" Width="36"/>
+                      <dxl:Cost StartupCost="0" TotalCost="6034.002368" Rows="2.000000" Width="52"/>
                     </dxl:Properties>
+                    <dxl:GroupingColumns>
+                      <dxl:GroupingColumn ColId="35"/>
+                      <dxl:GroupingColumn ColId="36"/>
+                      <dxl:GroupingColumn ColId="37"/>
+                      <dxl:GroupingColumn ColId="38"/>
+                      <dxl:GroupingColumn ColId="39"/>
+                      <dxl:GroupingColumn ColId="93"/>
+                      <dxl:GroupingColumn ColId="96"/>
+                    </dxl:GroupingColumns>
                     <dxl:ProjList>
                       <dxl:ProjElem ColId="35" Alias="population">
                         <dxl:Ident ColId="35" ColName="population" TypeMdid="0.23.1.0"/>
@@ -1025,14 +1029,17 @@ union
                       <dxl:ProjElem ColId="39" Alias="name">
                         <dxl:Ident ColId="39" ColName="name" TypeMdid="0.25.1.0"/>
                       </dxl:ProjElem>
+                      <dxl:ProjElem ColId="93" Alias="name">
+                        <dxl:Ident ColId="93" ColName="name" TypeMdid="0.25.1.0"/>
+                      </dxl:ProjElem>
+                      <dxl:ProjElem ColId="96" Alias="population">
+                        <dxl:Ident ColId="96" ColName="population" TypeMdid="0.23.1.0"/>
+                      </dxl:ProjElem>
                     </dxl:ProjList>
                     <dxl:Filter/>
-                    <dxl:JoinFilter>
-                      <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>
-                    </dxl:JoinFilter>
-                    <dxl:CTEConsumer CTEId="0" Columns="35,36,37,38,39">
+                    <dxl:Sort SortDiscardDuplicates="false">
                       <dxl:Properties>
-                        <dxl:Cost StartupCost="0" TotalCost="431.000087" Rows="1.000000" Width="36"/>
+                        <dxl:Cost StartupCost="0" TotalCost="6034.002287" Rows="2.000000" Width="52"/>
                       </dxl:Properties>
                       <dxl:ProjList>
                         <dxl:ProjElem ColId="35" Alias="population">
@@ -1050,61 +1057,6 @@ union
                         <dxl:ProjElem ColId="39" Alias="name">
                           <dxl:Ident ColId="39" ColName="name" TypeMdid="0.25.1.0"/>
                         </dxl:ProjElem>
-                      </dxl:ProjList>
-                    </dxl:CTEConsumer>
-                    <dxl:Materialize Eager="true">
-                      <dxl:Properties>
-                        <dxl:Cost StartupCost="0" TotalCost="431.000042" Rows="1.000000" Width="1"/>
-                      </dxl:Properties>
-                      <dxl:ProjList/>
-                      <dxl:Filter/>
-                      <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
-                        <dxl:Properties>
-                          <dxl:Cost StartupCost="0" TotalCost="431.000041" Rows="1.000000" Width="1"/>
-                        </dxl:Properties>
-                        <dxl:ProjList/>
-                        <dxl:Filter/>
-                        <dxl:SortingColumnList/>
-                        <dxl:TableScan>
-                          <dxl:Properties>
-                            <dxl:Cost StartupCost="0" TotalCost="431.000036" Rows="1.000000" Width="1"/>
-                          </dxl:Properties>
-                          <dxl:ProjList/>
-                          <dxl:Filter/>
-                          <dxl:TableDescriptor Mdid="0.40094484.1.1" TableName="country">
-                            <dxl:Columns>
-                              <dxl:Column ColId="70" Attno="1" ColName="code" TypeMdid="0.1042.1.0" ColWidth="3"/>
-                              <dxl:Column ColId="85" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>
-                              <dxl:Column ColId="86" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0"/>
-                              <dxl:Column ColId="87" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0"/>
-                              <dxl:Column ColId="88" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0"/>
-                              <dxl:Column ColId="89" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0"/>
-                              <dxl:Column ColId="90" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0"/>
-                              <dxl:Column ColId="91" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0"/>
-                            </dxl:Columns>
-                          </dxl:TableDescriptor>
-                        </dxl:TableScan>
-                      </dxl:GatherMotion>
-                    </dxl:Materialize>
-                  </dxl:NestedLoopJoin>
-                  <dxl:Materialize Eager="true">
-                    <dxl:Properties>
-                      <dxl:Cost StartupCost="0" TotalCost="1293.000470" Rows="1.000000" Width="16"/>
-                    </dxl:Properties>
-                    <dxl:ProjList>
-                      <dxl:ProjElem ColId="93" Alias="name">
-                        <dxl:Ident ColId="93" ColName="name" TypeMdid="0.25.1.0"/>
-                      </dxl:ProjElem>
-                      <dxl:ProjElem ColId="96" Alias="population">
-                        <dxl:Ident ColId="96" ColName="population" TypeMdid="0.23.1.0"/>
-                      </dxl:ProjElem>
-                    </dxl:ProjList>
-                    <dxl:Filter/>
-                    <dxl:Result>
-                      <dxl:Properties>
-                        <dxl:Cost StartupCost="0" TotalCost="1293.000454" Rows="1.000000" Width="16"/>
-                      </dxl:Properties>
-                      <dxl:ProjList>
                         <dxl:ProjElem ColId="93" Alias="name">
                           <dxl:Ident ColId="93" ColName="name" TypeMdid="0.25.1.0"/>
                         </dxl:ProjElem>
@@ -1112,78 +1064,38 @@ union
                           <dxl:Ident ColId="96" ColName="population" TypeMdid="0.23.1.0"/>
                         </dxl:ProjElem>
                       </dxl:ProjList>
-                      <dxl:Filter>
-                        <dxl:Comparison ComparisonOperator="&gt;" OperatorMdid="0.521.1.0">
-                          <dxl:Ident ColId="96" ColName="population" TypeMdid="0.23.1.0"/>
-                          <dxl:SubPlan TypeMdid="0.23.1.0" SubPlanType="ScalarSubPlan">
-                            <dxl:TestExpr/>
-                            <dxl:ParamList/>
-                            <dxl:Result>
-                              <dxl:Properties>
-                                <dxl:Cost StartupCost="0" TotalCost="431.000027" Rows="1.000000" Width="8"/>
-                              </dxl:Properties>
-                              <dxl:ProjList>
-                                <dxl:ProjElem ColId="173" Alias="population">
-                                  <dxl:Ident ColId="173" ColName="population" TypeMdid="0.23.1.0"/>
-                                </dxl:ProjElem>
-                              </dxl:ProjList>
-                              <dxl:Filter/>
-                              <dxl:OneTimeFilter/>
-                              <dxl:Materialize Eager="true">
-                                <dxl:Properties>
-                                  <dxl:Cost StartupCost="0" TotalCost="431.000027" Rows="1.000000" Width="8"/>
-                                </dxl:Properties>
-                                <dxl:ProjList>
-                                  <dxl:ProjElem ColId="173" Alias="population">
-                                    <dxl:Ident ColId="173" ColName="population" TypeMdid="0.23.1.0"/>
-                                  </dxl:ProjElem>
-                                  <dxl:ProjElem ColId="174" Alias="num_cities">
-                                    <dxl:Ident ColId="174" ColName="num_cities" TypeMdid="0.23.1.0"/>
-                                  </dxl:ProjElem>
-                                  <dxl:ProjElem ColId="175" Alias="district">
-                                    <dxl:Ident ColId="175" ColName="district" TypeMdid="0.25.1.0"/>
-                                  </dxl:ProjElem>
-                                  <dxl:ProjElem ColId="176" Alias="countrycode">
-                                    <dxl:Ident ColId="176" ColName="countrycode" TypeMdid="0.1042.1.0"/>
-                                  </dxl:ProjElem>
-                                  <dxl:ProjElem ColId="177" Alias="name">
-                                    <dxl:Ident ColId="177" ColName="name" TypeMdid="0.25.1.0"/>
-                                  </dxl:ProjElem>
-                                </dxl:ProjList>
-                                <dxl:Filter/>
-                                <dxl:CTEConsumer CTEId="0" Columns="173,174,175,176,177">
-                                  <dxl:Properties>
-                                    <dxl:Cost StartupCost="0" TotalCost="431.000019" Rows="1.000000" Width="8"/>
-                                  </dxl:Properties>
-                                  <dxl:ProjList>
-                                    <dxl:ProjElem ColId="173" Alias="population">
-                                      <dxl:Ident ColId="173" ColName="population" TypeMdid="0.23.1.0"/>
-                                    </dxl:ProjElem>
-                                    <dxl:ProjElem ColId="174" Alias="num_cities">
-                                      <dxl:Ident ColId="174" ColName="num_cities" TypeMdid="0.23.1.0"/>
-                                    </dxl:ProjElem>
-                                    <dxl:ProjElem ColId="175" Alias="district">
-                                      <dxl:Ident ColId="175" ColName="district" TypeMdid="0.25.1.0"/>
-                                    </dxl:ProjElem>
-                                    <dxl:ProjElem ColId="176" Alias="countrycode">
-                                      <dxl:Ident ColId="176" ColName="countrycode" TypeMdid="0.1042.1.0"/>
-                                    </dxl:ProjElem>
-                                    <dxl:ProjElem ColId="177" Alias="name">
-                                      <dxl:Ident ColId="177" ColName="name" TypeMdid="0.25.1.0"/>
-                                    </dxl:ProjElem>
-                                  </dxl:ProjList>
-                                </dxl:CTEConsumer>
-                              </dxl:Materialize>
-                            </dxl:Result>
-                          </dxl:SubPlan>
-                        </dxl:Comparison>
-                      </dxl:Filter>
-                      <dxl:OneTimeFilter/>
-                      <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
+                      <dxl:Filter/>
+                      <dxl:SortingColumnList>
+                        <dxl:SortingColumn ColId="35" SortOperatorMdid="0.97.1.0" SortOperatorName="&lt;" SortNullsFirst="false"/>
+                        <dxl:SortingColumn ColId="36" SortOperatorMdid="0.97.1.0" SortOperatorName="&lt;" SortNullsFirst="false"/>
+                        <dxl:SortingColumn ColId="37" SortOperatorMdid="0.664.1.0" SortOperatorName="&lt;" SortNullsFirst="false"/>
+                        <dxl:SortingColumn ColId="38" SortOperatorMdid="0.1058.1.0" SortOperatorName="&lt;" SortNullsFirst="false"/>
+                        <dxl:SortingColumn ColId="39" SortOperatorMdid="0.664.1.0" SortOperatorName="&lt;" SortNullsFirst="false"/>
+                        <dxl:SortingColumn ColId="93" SortOperatorMdid="0.664.1.0" SortOperatorName="&lt;" SortNullsFirst="false"/>
+                        <dxl:SortingColumn ColId="96" SortOperatorMdid="0.97.1.0" SortOperatorName="&lt;" SortNullsFirst="false"/>
+                      </dxl:SortingColumnList>
+                      <dxl:LimitCount/>
+                      <dxl:LimitOffset/>
+                      <dxl:Append IsTarget="false" IsZapped="false">
                         <dxl:Properties>
-                          <dxl:Cost StartupCost="0" TotalCost="431.000102" Rows="1.000000" Width="16"/>
+                          <dxl:Cost StartupCost="0" TotalCost="6034.002287" Rows="2.000000" Width="52"/>
                         </dxl:Properties>
                         <dxl:ProjList>
+                          <dxl:ProjElem ColId="35" Alias="population">
+                            <dxl:Ident ColId="35" ColName="population" TypeMdid="0.23.1.0"/>
+                          </dxl:ProjElem>
+                          <dxl:ProjElem ColId="36" Alias="num_cities">
+                            <dxl:Ident ColId="36" ColName="num_cities" TypeMdid="0.23.1.0"/>
+                          </dxl:ProjElem>
+                          <dxl:ProjElem ColId="37" Alias="district">
+                            <dxl:Ident ColId="37" ColName="district" TypeMdid="0.25.1.0"/>
+                          </dxl:ProjElem>
+                          <dxl:ProjElem ColId="38" Alias="countrycode">
+                            <dxl:Ident ColId="38" ColName="countrycode" TypeMdid="0.1042.1.0"/>
+                          </dxl:ProjElem>
+                          <dxl:ProjElem ColId="39" Alias="name">
+                            <dxl:Ident ColId="39" ColName="name" TypeMdid="0.25.1.0"/>
+                          </dxl:ProjElem>
                           <dxl:ProjElem ColId="93" Alias="name">
                             <dxl:Ident ColId="93" ColName="name" TypeMdid="0.25.1.0"/>
                           </dxl:ProjElem>
@@ -1192,12 +1104,26 @@ union
                           </dxl:ProjElem>
                         </dxl:ProjList>
                         <dxl:Filter/>
-                        <dxl:SortingColumnList/>
-                        <dxl:TableScan>
+                        <dxl:NestedLoopJoin JoinType="Inner" IndexNestedLoopJoin="false" OuterRefAsParam="false">
                           <dxl:Properties>
-                            <dxl:Cost StartupCost="0" TotalCost="431.000016" Rows="1.000000" Width="16"/>
+                            <dxl:Cost StartupCost="0" TotalCost="3017.001118" Rows="1.000000" Width="52"/>
                           </dxl:Properties>
                           <dxl:ProjList>
+                            <dxl:ProjElem ColId="35" Alias="population">
+                              <dxl:Ident ColId="35" ColName="population" TypeMdid="0.23.1.0"/>
+                            </dxl:ProjElem>
+                            <dxl:ProjElem ColId="36" Alias="num_cities">
+                              <dxl:Ident ColId="36" ColName="num_cities" TypeMdid="0.23.1.0"/>
+                            </dxl:ProjElem>
+                            <dxl:ProjElem ColId="37" Alias="district">
+                              <dxl:Ident ColId="37" ColName="district" TypeMdid="0.25.1.0"/>
+                            </dxl:ProjElem>
+                            <dxl:ProjElem ColId="38" Alias="countrycode">
+                              <dxl:Ident ColId="38" ColName="countrycode" TypeMdid="0.1042.1.0"/>
+                            </dxl:ProjElem>
+                            <dxl:ProjElem ColId="39" Alias="name">
+                              <dxl:Ident ColId="39" ColName="name" TypeMdid="0.25.1.0"/>
+                            </dxl:ProjElem>
                             <dxl:ProjElem ColId="93" Alias="name">
                               <dxl:Ident ColId="93" ColName="name" TypeMdid="0.25.1.0"/>
                             </dxl:ProjElem>
@@ -1206,249 +1132,225 @@ union
                             </dxl:ProjElem>
                           </dxl:ProjList>
                           <dxl:Filter/>
-                          <dxl:TableDescriptor Mdid="0.40094456.1.1" TableName="city">
-                            <dxl:Columns>
-                              <dxl:Column ColId="92" Attno="1" ColName="id" TypeMdid="0.23.1.0"/>
-                              <dxl:Column ColId="93" Attno="2" ColName="name" TypeMdid="0.25.1.0"/>
-                              <dxl:Column ColId="96" Attno="5" ColName="population" TypeMdid="0.23.1.0"/>
-                              <dxl:Column ColId="97" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>
-                              <dxl:Column ColId="98" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0"/>
-                              <dxl:Column ColId="99" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0"/>
-                              <dxl:Column ColId="100" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0"/>
-                              <dxl:Column ColId="101" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0"/>
-                              <dxl:Column ColId="102" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0"/>
-                              <dxl:Column ColId="103" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0"/>
-                            </dxl:Columns>
-                          </dxl:TableDescriptor>
-                        </dxl:TableScan>
-                      </dxl:GatherMotion>
-                    </dxl:Result>
-                  </dxl:Materialize>
-                </dxl:NestedLoopJoin>
-                <dxl:NestedLoopJoin JoinType="Inner" IndexNestedLoopJoin="false" OuterRefAsParam="false">
-                  <dxl:Properties>
-                    <dxl:Cost StartupCost="0" TotalCost="3017.000992" Rows="1.000000" Width="52"/>
-                  </dxl:Properties>
-                  <dxl:ProjList>
-                    <dxl:ProjElem ColId="104" Alias="population">
-                      <dxl:Ident ColId="104" ColName="population" TypeMdid="0.23.1.0"/>
-                    </dxl:ProjElem>
-                    <dxl:ProjElem ColId="105" Alias="num_cities">
-                      <dxl:Ident ColId="105" ColName="num_cities" TypeMdid="0.23.1.0"/>
-                    </dxl:ProjElem>
-                    <dxl:ProjElem ColId="106" Alias="district">
-                      <dxl:Ident ColId="106" ColName="district" TypeMdid="0.25.1.0"/>
-                    </dxl:ProjElem>
-                    <dxl:ProjElem ColId="107" Alias="countrycode">
-                      <dxl:Ident ColId="107" ColName="countrycode" TypeMdid="0.1042.1.0"/>
-                    </dxl:ProjElem>
-                    <dxl:ProjElem ColId="108" Alias="name">
-                      <dxl:Ident ColId="108" ColName="name" TypeMdid="0.25.1.0"/>
-                    </dxl:ProjElem>
-                    <dxl:ProjElem ColId="162" Alias="name">
-                      <dxl:Ident ColId="162" ColName="name" TypeMdid="0.25.1.0"/>
-                    </dxl:ProjElem>
-                    <dxl:ProjElem ColId="165" Alias="population">
-                      <dxl:Ident ColId="165" ColName="population" TypeMdid="0.23.1.0"/>
-                    </dxl:ProjElem>
-                  </dxl:ProjList>
-                  <dxl:Filter/>
-                  <dxl:JoinFilter>
-                    <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>
-                  </dxl:JoinFilter>
-                  <dxl:NestedLoopJoin JoinType="Inner" IndexNestedLoopJoin="false" OuterRefAsParam="false">
-                    <dxl:Properties>
-                      <dxl:Cost StartupCost="0" TotalCost="1293.000280" Rows="1.000000" Width="36"/>
-                    </dxl:Properties>
-                    <dxl:ProjList>
-                      <dxl:ProjElem ColId="104" Alias="population">
-                        <dxl:Ident ColId="104" ColName="population" TypeMdid="0.23.1.0"/>
-                      </dxl:ProjElem>
-                      <dxl:ProjElem ColId="105" Alias="num_cities">
-                        <dxl:Ident ColId="105" ColName="num_cities" TypeMdid="0.23.1.0"/>
-                      </dxl:ProjElem>
-                      <dxl:ProjElem ColId="106" Alias="district">
-                        <dxl:Ident ColId="106" ColName="district" TypeMdid="0.25.1.0"/>
-                      </dxl:ProjElem>
-                      <dxl:ProjElem ColId="107" Alias="countrycode">
-                        <dxl:Ident ColId="107" ColName="countrycode" TypeMdid="0.1042.1.0"/>
-                      </dxl:ProjElem>
-                      <dxl:ProjElem ColId="108" Alias="name">
-                        <dxl:Ident ColId="108" ColName="name" TypeMdid="0.25.1.0"/>
-                      </dxl:ProjElem>
-                    </dxl:ProjList>
-                    <dxl:Filter/>
-                    <dxl:JoinFilter>
-                      <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>
-                    </dxl:JoinFilter>
-                    <dxl:CTEConsumer CTEId="0" Columns="104,105,106,107,108">
-                      <dxl:Properties>
-                        <dxl:Cost StartupCost="0" TotalCost="431.000087" Rows="1.000000" Width="36"/>
-                      </dxl:Properties>
-                      <dxl:ProjList>
-                        <dxl:ProjElem ColId="104" Alias="population">
-                          <dxl:Ident ColId="104" ColName="population" TypeMdid="0.23.1.0"/>
-                        </dxl:ProjElem>
-                        <dxl:ProjElem ColId="105" Alias="num_cities">
-                          <dxl:Ident ColId="105" ColName="num_cities" TypeMdid="0.23.1.0"/>
-                        </dxl:ProjElem>
-                        <dxl:ProjElem ColId="106" Alias="district">
-                          <dxl:Ident ColId="106" ColName="district" TypeMdid="0.25.1.0"/>
-                        </dxl:ProjElem>
-                        <dxl:ProjElem ColId="107" Alias="countrycode">
-                          <dxl:Ident ColId="107" ColName="countrycode" TypeMdid="0.1042.1.0"/>
-                        </dxl:ProjElem>
-                        <dxl:ProjElem ColId="108" Alias="name">
-                          <dxl:Ident ColId="108" ColName="name" TypeMdid="0.25.1.0"/>
-                        </dxl:ProjElem>
-                      </dxl:ProjList>
-                    </dxl:CTEConsumer>
-                    <dxl:Materialize Eager="true">
-                      <dxl:Properties>
-                        <dxl:Cost StartupCost="0" TotalCost="431.000042" Rows="1.000000" Width="1"/>
-                      </dxl:Properties>
-                      <dxl:ProjList/>
-                      <dxl:Filter/>
-                      <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
-                        <dxl:Properties>
-                          <dxl:Cost StartupCost="0" TotalCost="431.000041" Rows="1.000000" Width="1"/>
-                        </dxl:Properties>
-                        <dxl:ProjList/>
-                        <dxl:Filter/>
-                        <dxl:SortingColumnList/>
-                        <dxl:TableScan>
-                          <dxl:Properties>
-                            <dxl:Cost StartupCost="0" TotalCost="431.000036" Rows="1.000000" Width="1"/>
-                          </dxl:Properties>
-                          <dxl:ProjList/>
-                          <dxl:Filter/>
-                          <dxl:TableDescriptor Mdid="0.40094484.1.1" TableName="country">
-                            <dxl:Columns>
-                              <dxl:Column ColId="139" Attno="1" ColName="code" TypeMdid="0.1042.1.0" ColWidth="3"/>
-                              <dxl:Column ColId="154" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>
-                              <dxl:Column ColId="155" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0"/>
-                              <dxl:Column ColId="156" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0"/>
-                              <dxl:Column ColId="157" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0"/>
-                              <dxl:Column ColId="158" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0"/>
-                              <dxl:Column ColId="159" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0"/>
-                              <dxl:Column ColId="160" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0"/>
-                            </dxl:Columns>
-                          </dxl:TableDescriptor>
-                        </dxl:TableScan>
-                      </dxl:GatherMotion>
-                    </dxl:Materialize>
-                  </dxl:NestedLoopJoin>
-                  <dxl:Result>
-                    <dxl:Properties>
-                      <dxl:Cost StartupCost="0" TotalCost="1293.000470" Rows="1.000000" Width="16"/>
-                    </dxl:Properties>
-                    <dxl:ProjList>
-                      <dxl:ProjElem ColId="162" Alias="name">
-                        <dxl:Ident ColId="162" ColName="name" TypeMdid="0.25.1.0"/>
-                      </dxl:ProjElem>
-                      <dxl:ProjElem ColId="165" Alias="population">
-                        <dxl:Ident ColId="165" ColName="population" TypeMdid="0.23.1.0"/>
-                      </dxl:ProjElem>
-                    </dxl:ProjList>
-                    <dxl:Filter>
-                      <dxl:Comparison ComparisonOperator="&gt;" OperatorMdid="0.521.1.0">
-                        <dxl:Ident ColId="165" ColName="population" TypeMdid="0.23.1.0"/>
-                        <dxl:SubPlan TypeMdid="0.23.1.0" SubPlanType="ScalarSubPlan">
-                          <dxl:TestExpr/>
-                          <dxl:ParamList/>
-                          <dxl:Result>
+                          <dxl:JoinFilter>
+                            <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>
+                          </dxl:JoinFilter>
+                          <dxl:CTEConsumer CTEId="0" Columns="35,36,37,38,39">
                             <dxl:Properties>
-                              <dxl:Cost StartupCost="0" TotalCost="431.000027" Rows="1.000000" Width="8"/>
+                              <dxl:Cost StartupCost="0" TotalCost="431.000043" Rows="1.000000" Width="36"/>
                             </dxl:Properties>
                             <dxl:ProjList>
-                              <dxl:ProjElem ColId="208" Alias="population">
-                                <dxl:Ident ColId="208" ColName="population" TypeMdid="0.23.1.0"/>
+                              <dxl:ProjElem ColId="35" Alias="population">
+                                <dxl:Ident ColId="35" ColName="population" TypeMdid="0.23.1.0"/>
+                              </dxl:ProjElem>
+                              <dxl:ProjElem ColId="36" Alias="num_cities">
+                                <dxl:Ident ColId="36" ColName="num_cities" TypeMdid="0.23.1.0"/>
+                              </dxl:ProjElem>
+                              <dxl:ProjElem ColId="37" Alias="district">
+                                <dxl:Ident ColId="37" ColName="district" TypeMdid="0.25.1.0"/>
+                              </dxl:ProjElem>
+                              <dxl:ProjElem ColId="38" Alias="countrycode">
+                                <dxl:Ident ColId="38" ColName="countrycode" TypeMdid="0.1042.1.0"/>
+                              </dxl:ProjElem>
+                              <dxl:ProjElem ColId="39" Alias="name">
+                                <dxl:Ident ColId="39" ColName="name" TypeMdid="0.25.1.0"/>
+                              </dxl:ProjElem>
+                            </dxl:ProjList>
+                          </dxl:CTEConsumer>
+                          <dxl:Materialize Eager="true">
+                            <dxl:Properties>
+                              <dxl:Cost StartupCost="0" TotalCost="2155.000953" Rows="2.000000" Width="16"/>
+                            </dxl:Properties>
+                            <dxl:ProjList>
+                              <dxl:ProjElem ColId="93" Alias="name">
+                                <dxl:Ident ColId="93" ColName="name" TypeMdid="0.25.1.0"/>
+                              </dxl:ProjElem>
+                              <dxl:ProjElem ColId="96" Alias="population">
+                                <dxl:Ident ColId="96" ColName="population" TypeMdid="0.23.1.0"/>
                               </dxl:ProjElem>
                             </dxl:ProjList>
                             <dxl:Filter/>
-                            <dxl:OneTimeFilter/>
-                            <dxl:Materialize Eager="true">
+                            <dxl:BroadcastMotion InputSegments="0,1" OutputSegments="0,1">
                               <dxl:Properties>
-                                <dxl:Cost StartupCost="0" TotalCost="431.000027" Rows="1.000000" Width="8"/>
+                                <dxl:Cost StartupCost="0" TotalCost="2155.000937" Rows="2.000000" Width="16"/>
                               </dxl:Properties>
                               <dxl:ProjList>
-                                <dxl:ProjElem ColId="208" Alias="population">
-                                  <dxl:Ident ColId="208" ColName="population" TypeMdid="0.23.1.0"/>
+                                <dxl:ProjElem ColId="93" Alias="name">
+                                  <dxl:Ident ColId="93" ColName="name" TypeMdid="0.25.1.0"/>
                                 </dxl:ProjElem>
-                                <dxl:ProjElem ColId="209" Alias="num_cities">
-                                  <dxl:Ident ColId="209" ColName="num_cities" TypeMdid="0.23.1.0"/>
-                                </dxl:ProjElem>
-                                <dxl:ProjElem ColId="210" Alias="district">
-                                  <dxl:Ident ColId="210" ColName="district" TypeMdid="0.25.1.0"/>
-                                </dxl:ProjElem>
-                                <dxl:ProjElem ColId="211" Alias="countrycode">
-                                  <dxl:Ident ColId="211" ColName="countrycode" TypeMdid="0.1042.1.0"/>
-                                </dxl:ProjElem>
-                                <dxl:ProjElem ColId="212" Alias="name">
-                                  <dxl:Ident ColId="212" ColName="name" TypeMdid="0.25.1.0"/>
+                                <dxl:ProjElem ColId="96" Alias="population">
+                                  <dxl:Ident ColId="96" ColName="population" TypeMdid="0.23.1.0"/>
                                 </dxl:ProjElem>
                               </dxl:ProjList>
                               <dxl:Filter/>
-                              <dxl:CTEConsumer CTEId="0" Columns="208,209,210,211,212">
+                              <dxl:SortingColumnList/>
+                              <dxl:NestedLoopJoin JoinType="Inner" IndexNestedLoopJoin="false" OuterRefAsParam="false">
                                 <dxl:Properties>
-                                  <dxl:Cost StartupCost="0" TotalCost="431.000019" Rows="1.000000" Width="8"/>
+                                  <dxl:Cost StartupCost="0" TotalCost="2155.000518" Rows="1.000000" Width="16"/>
                                 </dxl:Properties>
                                 <dxl:ProjList>
-                                  <dxl:ProjElem ColId="208" Alias="population">
-                                    <dxl:Ident ColId="208" ColName="population" TypeMdid="0.23.1.0"/>
+                                  <dxl:ProjElem ColId="93" Alias="name">
+                                    <dxl:Ident ColId="93" ColName="name" TypeMdid="0.25.1.0"/>
                                   </dxl:ProjElem>
-                                  <dxl:ProjElem ColId="209" Alias="num_cities">
-                                    <dxl:Ident ColId="209" ColName="num_cities" TypeMdid="0.23.1.0"/>
-                                  </dxl:ProjElem>
-                                  <dxl:ProjElem ColId="210" Alias="district">
-                                    <dxl:Ident ColId="210" ColName="district" TypeMdid="0.25.1.0"/>
-                                  </dxl:ProjElem>
-                                  <dxl:ProjElem ColId="211" Alias="countrycode">
-                                    <dxl:Ident ColId="211" ColName="countrycode" TypeMdid="0.1042.1.0"/>
-                                  </dxl:ProjElem>
-                                  <dxl:ProjElem ColId="212" Alias="name">
-                                    <dxl:Ident ColId="212" ColName="name" TypeMdid="0.25.1.0"/>
+                                  <dxl:ProjElem ColId="96" Alias="population">
+                                    <dxl:Ident ColId="96" ColName="population" TypeMdid="0.23.1.0"/>
                                   </dxl:ProjElem>
                                 </dxl:ProjList>
-                              </dxl:CTEConsumer>
-                            </dxl:Materialize>
-                          </dxl:Result>
-                        </dxl:SubPlan>
-                      </dxl:Comparison>
-                    </dxl:Filter>
-                    <dxl:OneTimeFilter/>
-                    <dxl:Materialize Eager="true">
-                      <dxl:Properties>
-                        <dxl:Cost StartupCost="0" TotalCost="431.000118" Rows="1.000000" Width="16"/>
-                      </dxl:Properties>
-                      <dxl:ProjList>
-                        <dxl:ProjElem ColId="162" Alias="name">
-                          <dxl:Ident ColId="162" ColName="name" TypeMdid="0.25.1.0"/>
-                        </dxl:ProjElem>
-                        <dxl:ProjElem ColId="165" Alias="population">
-                          <dxl:Ident ColId="165" ColName="population" TypeMdid="0.23.1.0"/>
-                        </dxl:ProjElem>
-                      </dxl:ProjList>
-                      <dxl:Filter/>
-                      <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
-                        <dxl:Properties>
-                          <dxl:Cost StartupCost="0" TotalCost="431.000102" Rows="1.000000" Width="16"/>
-                        </dxl:Properties>
-                        <dxl:ProjList>
-                          <dxl:ProjElem ColId="162" Alias="name">
-                            <dxl:Ident ColId="162" ColName="name" TypeMdid="0.25.1.0"/>
-                          </dxl:ProjElem>
-                          <dxl:ProjElem ColId="165" Alias="population">
-                            <dxl:Ident ColId="165" ColName="population" TypeMdid="0.23.1.0"/>
-                          </dxl:ProjElem>
-                        </dxl:ProjList>
-                        <dxl:Filter/>
-                        <dxl:SortingColumnList/>
-                        <dxl:TableScan>
+                                <dxl:Filter/>
+                                <dxl:JoinFilter>
+                                  <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>
+                                </dxl:JoinFilter>
+                                <dxl:TableScan>
+                                  <dxl:Properties>
+                                    <dxl:Cost StartupCost="0" TotalCost="1293.000420" Rows="1.000000" Width="16"/>
+                                  </dxl:Properties>
+                                  <dxl:ProjList>
+                                    <dxl:ProjElem ColId="93" Alias="name">
+                                      <dxl:Ident ColId="93" ColName="name" TypeMdid="0.25.1.0"/>
+                                    </dxl:ProjElem>
+                                    <dxl:ProjElem ColId="96" Alias="population">
+                                      <dxl:Ident ColId="96" ColName="population" TypeMdid="0.23.1.0"/>
+                                    </dxl:ProjElem>
+                                  </dxl:ProjList>
+                                  <dxl:Filter>
+                                    <dxl:Comparison ComparisonOperator="&gt;" OperatorMdid="0.521.1.0">
+                                      <dxl:Ident ColId="96" ColName="population" TypeMdid="0.23.1.0"/>
+                                      <dxl:SubPlan TypeMdid="0.23.1.0" SubPlanType="ScalarSubPlan">
+                                        <dxl:TestExpr/>
+                                        <dxl:ParamList/>
+                                        <dxl:Materialize Eager="false">
+                                          <dxl:Properties>
+                                            <dxl:Cost StartupCost="0" TotalCost="431.000227" Rows="2.000000" Width="8"/>
+                                          </dxl:Properties>
+                                          <dxl:ProjList>
+                                            <dxl:ProjElem ColId="173" Alias="population">
+                                              <dxl:Ident ColId="173" ColName="population" TypeMdid="0.23.1.0"/>
+                                            </dxl:ProjElem>
+                                          </dxl:ProjList>
+                                          <dxl:Filter/>
+                                          <dxl:BroadcastMotion InputSegments="0,1" OutputSegments="0,1">
+                                            <dxl:Properties>
+                                              <dxl:Cost StartupCost="0" TotalCost="431.000219" Rows="2.000000" Width="8"/>
+                                            </dxl:Properties>
+                                            <dxl:ProjList>
+                                              <dxl:ProjElem ColId="173" Alias="population">
+                                                <dxl:Ident ColId="173" ColName="population" TypeMdid="0.23.1.0"/>
+                                              </dxl:ProjElem>
+                                            </dxl:ProjList>
+                                            <dxl:Filter/>
+                                            <dxl:SortingColumnList/>
+                                            <dxl:Result>
+                                              <dxl:Properties>
+                                                <dxl:Cost StartupCost="0" TotalCost="431.000010" Rows="1.000000" Width="8"/>
+                                              </dxl:Properties>
+                                              <dxl:ProjList>
+                                                <dxl:ProjElem ColId="173" Alias="population">
+                                                  <dxl:Ident ColId="173" ColName="population" TypeMdid="0.23.1.0"/>
+                                                </dxl:ProjElem>
+                                              </dxl:ProjList>
+                                              <dxl:Filter/>
+                                              <dxl:OneTimeFilter/>
+                                              <dxl:CTEConsumer CTEId="0" Columns="173,174,175,176,177">
+                                                <dxl:Properties>
+                                                  <dxl:Cost StartupCost="0" TotalCost="431.000010" Rows="1.000000" Width="8"/>
+                                                </dxl:Properties>
+                                                <dxl:ProjList>
+                                                  <dxl:ProjElem ColId="173" Alias="population">
+                                                    <dxl:Ident ColId="173" ColName="population" TypeMdid="0.23.1.0"/>
+                                                  </dxl:ProjElem>
+                                                  <dxl:ProjElem ColId="174" Alias="num_cities">
+                                                    <dxl:Ident ColId="174" ColName="num_cities" TypeMdid="0.23.1.0"/>
+                                                  </dxl:ProjElem>
+                                                  <dxl:ProjElem ColId="175" Alias="district">
+                                                    <dxl:Ident ColId="175" ColName="district" TypeMdid="0.25.1.0"/>
+                                                  </dxl:ProjElem>
+                                                  <dxl:ProjElem ColId="176" Alias="countrycode">
+                                                    <dxl:Ident ColId="176" ColName="countrycode" TypeMdid="0.1042.1.0"/>
+                                                  </dxl:ProjElem>
+                                                  <dxl:ProjElem ColId="177" Alias="name">
+                                                    <dxl:Ident ColId="177" ColName="name" TypeMdid="0.25.1.0"/>
+                                                  </dxl:ProjElem>
+                                                </dxl:ProjList>
+                                              </dxl:CTEConsumer>
+                                            </dxl:Result>
+                                          </dxl:BroadcastMotion>
+                                        </dxl:Materialize>
+                                      </dxl:SubPlan>
+                                    </dxl:Comparison>
+                                  </dxl:Filter>
+                                  <dxl:TableDescriptor Mdid="0.40094456.1.1" TableName="city">
+                                    <dxl:Columns>
+                                      <dxl:Column ColId="92" Attno="1" ColName="id" TypeMdid="0.23.1.0"/>
+                                      <dxl:Column ColId="93" Attno="2" ColName="name" TypeMdid="0.25.1.0"/>
+                                      <dxl:Column ColId="96" Attno="5" ColName="population" TypeMdid="0.23.1.0"/>
+                                      <dxl:Column ColId="97" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>
+                                      <dxl:Column ColId="98" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0"/>
+                                      <dxl:Column ColId="99" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0"/>
+                                      <dxl:Column ColId="100" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0"/>
+                                      <dxl:Column ColId="101" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0"/>
+                                      <dxl:Column ColId="102" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0"/>
+                                      <dxl:Column ColId="103" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0"/>
+                                    </dxl:Columns>
+                                  </dxl:TableDescriptor>
+                                </dxl:TableScan>
+                                <dxl:Materialize Eager="true">
+                                  <dxl:Properties>
+                                    <dxl:Cost StartupCost="0" TotalCost="431.000064" Rows="2.000000" Width="1"/>
+                                  </dxl:Properties>
+                                  <dxl:ProjList/>
+                                  <dxl:Filter/>
+                                  <dxl:BroadcastMotion InputSegments="0,1" OutputSegments="0,1">
+                                    <dxl:Properties>
+                                      <dxl:Cost StartupCost="0" TotalCost="431.000063" Rows="2.000000" Width="1"/>
+                                    </dxl:Properties>
+                                    <dxl:ProjList/>
+                                    <dxl:Filter/>
+                                    <dxl:SortingColumnList/>
+                                    <dxl:TableScan>
+                                      <dxl:Properties>
+                                        <dxl:Cost StartupCost="0" TotalCost="431.000036" Rows="1.000000" Width="1"/>
+                                      </dxl:Properties>
+                                      <dxl:ProjList/>
+                                      <dxl:Filter/>
+                                      <dxl:TableDescriptor Mdid="0.40094484.1.1" TableName="country">
+                                        <dxl:Columns>
+                                          <dxl:Column ColId="70" Attno="1" ColName="code" TypeMdid="0.1042.1.0" ColWidth="3"/>
+                                          <dxl:Column ColId="85" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>
+                                          <dxl:Column ColId="86" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0"/>
+                                          <dxl:Column ColId="87" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0"/>
+                                          <dxl:Column ColId="88" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0"/>
+                                          <dxl:Column ColId="89" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0"/>
+                                          <dxl:Column ColId="90" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0"/>
+                                          <dxl:Column ColId="91" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0"/>
+                                        </dxl:Columns>
+                                      </dxl:TableDescriptor>
+                                    </dxl:TableScan>
+                                  </dxl:BroadcastMotion>
+                                </dxl:Materialize>
+                              </dxl:NestedLoopJoin>
+                            </dxl:BroadcastMotion>
+                          </dxl:Materialize>
+                        </dxl:NestedLoopJoin>
+                        <dxl:NestedLoopJoin JoinType="Inner" IndexNestedLoopJoin="false" OuterRefAsParam="false">
                           <dxl:Properties>
-                            <dxl:Cost StartupCost="0" TotalCost="431.000016" Rows="1.000000" Width="16"/>
+                            <dxl:Cost StartupCost="0" TotalCost="3017.001118" Rows="1.000000" Width="52"/>
                           </dxl:Properties>
                           <dxl:ProjList>
+                            <dxl:ProjElem ColId="104" Alias="population">
+                              <dxl:Ident ColId="104" ColName="population" TypeMdid="0.23.1.0"/>
+                            </dxl:ProjElem>
+                            <dxl:ProjElem ColId="105" Alias="num_cities">
+                              <dxl:Ident ColId="105" ColName="num_cities" TypeMdid="0.23.1.0"/>
+                            </dxl:ProjElem>
+                            <dxl:ProjElem ColId="106" Alias="district">
+                              <dxl:Ident ColId="106" ColName="district" TypeMdid="0.25.1.0"/>
+                            </dxl:ProjElem>
+                            <dxl:ProjElem ColId="107" Alias="countrycode">
+                              <dxl:Ident ColId="107" ColName="countrycode" TypeMdid="0.1042.1.0"/>
+                            </dxl:ProjElem>
+                            <dxl:ProjElem ColId="108" Alias="name">
+                              <dxl:Ident ColId="108" ColName="name" TypeMdid="0.25.1.0"/>
+                            </dxl:ProjElem>
                             <dxl:ProjElem ColId="162" Alias="name">
                               <dxl:Ident ColId="162" ColName="name" TypeMdid="0.25.1.0"/>
                             </dxl:ProjElem>
@@ -1457,30 +1359,214 @@ union
                             </dxl:ProjElem>
                           </dxl:ProjList>
                           <dxl:Filter/>
-                          <dxl:TableDescriptor Mdid="0.40094456.1.1" TableName="city">
-                            <dxl:Columns>
-                              <dxl:Column ColId="161" Attno="1" ColName="id" TypeMdid="0.23.1.0"/>
-                              <dxl:Column ColId="162" Attno="2" ColName="name" TypeMdid="0.25.1.0"/>
-                              <dxl:Column ColId="165" Attno="5" ColName="population" TypeMdid="0.23.1.0"/>
-                              <dxl:Column ColId="166" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>
-                              <dxl:Column ColId="167" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0"/>
-                              <dxl:Column ColId="168" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0"/>
-                              <dxl:Column ColId="169" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0"/>
-                              <dxl:Column ColId="170" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0"/>
-                              <dxl:Column ColId="171" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0"/>
-                              <dxl:Column ColId="172" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0"/>
-                            </dxl:Columns>
-                          </dxl:TableDescriptor>
-                        </dxl:TableScan>
-                      </dxl:GatherMotion>
-                    </dxl:Materialize>
-                  </dxl:Result>
-                </dxl:NestedLoopJoin>
-              </dxl:Append>
-            </dxl:Sort>
-          </dxl:Aggregate>
-        </dxl:Sequence>
-      </dxl:Result>
+                          <dxl:JoinFilter>
+                            <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>
+                          </dxl:JoinFilter>
+                          <dxl:CTEConsumer CTEId="0" Columns="104,105,106,107,108">
+                            <dxl:Properties>
+                              <dxl:Cost StartupCost="0" TotalCost="431.000043" Rows="1.000000" Width="36"/>
+                            </dxl:Properties>
+                            <dxl:ProjList>
+                              <dxl:ProjElem ColId="104" Alias="population">
+                                <dxl:Ident ColId="104" ColName="population" TypeMdid="0.23.1.0"/>
+                              </dxl:ProjElem>
+                              <dxl:ProjElem ColId="105" Alias="num_cities">
+                                <dxl:Ident ColId="105" ColName="num_cities" TypeMdid="0.23.1.0"/>
+                              </dxl:ProjElem>
+                              <dxl:ProjElem ColId="106" Alias="district">
+                                <dxl:Ident ColId="106" ColName="district" TypeMdid="0.25.1.0"/>
+                              </dxl:ProjElem>
+                              <dxl:ProjElem ColId="107" Alias="countrycode">
+                                <dxl:Ident ColId="107" ColName="countrycode" TypeMdid="0.1042.1.0"/>
+                              </dxl:ProjElem>
+                              <dxl:ProjElem ColId="108" Alias="name">
+                                <dxl:Ident ColId="108" ColName="name" TypeMdid="0.25.1.0"/>
+                              </dxl:ProjElem>
+                            </dxl:ProjList>
+                          </dxl:CTEConsumer>
+                          <dxl:Materialize Eager="true">
+                            <dxl:Properties>
+                              <dxl:Cost StartupCost="0" TotalCost="2155.000953" Rows="2.000000" Width="16"/>
+                            </dxl:Properties>
+                            <dxl:ProjList>
+                              <dxl:ProjElem ColId="162" Alias="name">
+                                <dxl:Ident ColId="162" ColName="name" TypeMdid="0.25.1.0"/>
+                              </dxl:ProjElem>
+                              <dxl:ProjElem ColId="165" Alias="population">
+                                <dxl:Ident ColId="165" ColName="population" TypeMdid="0.23.1.0"/>
+                              </dxl:ProjElem>
+                            </dxl:ProjList>
+                            <dxl:Filter/>
+                            <dxl:BroadcastMotion InputSegments="0,1" OutputSegments="0,1">
+                              <dxl:Properties>
+                                <dxl:Cost StartupCost="0" TotalCost="2155.000937" Rows="2.000000" Width="16"/>
+                              </dxl:Properties>
+                              <dxl:ProjList>
+                                <dxl:ProjElem ColId="162" Alias="name">
+                                  <dxl:Ident ColId="162" ColName="name" TypeMdid="0.25.1.0"/>
+                                </dxl:ProjElem>
+                                <dxl:ProjElem ColId="165" Alias="population">
+                                  <dxl:Ident ColId="165" ColName="population" TypeMdid="0.23.1.0"/>
+                                </dxl:ProjElem>
+                              </dxl:ProjList>
+                              <dxl:Filter/>
+                              <dxl:SortingColumnList/>
+                              <dxl:NestedLoopJoin JoinType="Inner" IndexNestedLoopJoin="false" OuterRefAsParam="false">
+                                <dxl:Properties>
+                                  <dxl:Cost StartupCost="0" TotalCost="2155.000518" Rows="1.000000" Width="16"/>
+                                </dxl:Properties>
+                                <dxl:ProjList>
+                                  <dxl:ProjElem ColId="162" Alias="name">
+                                    <dxl:Ident ColId="162" ColName="name" TypeMdid="0.25.1.0"/>
+                                  </dxl:ProjElem>
+                                  <dxl:ProjElem ColId="165" Alias="population">
+                                    <dxl:Ident ColId="165" ColName="population" TypeMdid="0.23.1.0"/>
+                                  </dxl:ProjElem>
+                                </dxl:ProjList>
+                                <dxl:Filter/>
+                                <dxl:JoinFilter>
+                                  <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>
+                                </dxl:JoinFilter>
+                                <dxl:TableScan>
+                                  <dxl:Properties>
+                                    <dxl:Cost StartupCost="0" TotalCost="1293.000420" Rows="1.000000" Width="16"/>
+                                  </dxl:Properties>
+                                  <dxl:ProjList>
+                                    <dxl:ProjElem ColId="162" Alias="name">
+                                      <dxl:Ident ColId="162" ColName="name" TypeMdid="0.25.1.0"/>
+                                    </dxl:ProjElem>
+                                    <dxl:ProjElem ColId="165" Alias="population">
+                                      <dxl:Ident ColId="165" ColName="population" TypeMdid="0.23.1.0"/>
+                                    </dxl:ProjElem>
+                                  </dxl:ProjList>
+                                  <dxl:Filter>
+                                    <dxl:Comparison ComparisonOperator="&gt;" OperatorMdid="0.521.1.0">
+                                      <dxl:Ident ColId="165" ColName="population" TypeMdid="0.23.1.0"/>
+                                      <dxl:SubPlan TypeMdid="0.23.1.0" SubPlanType="ScalarSubPlan">
+                                        <dxl:TestExpr/>
+                                        <dxl:ParamList/>
+                                        <dxl:Materialize Eager="false">
+                                          <dxl:Properties>
+                                            <dxl:Cost StartupCost="0" TotalCost="431.000227" Rows="2.000000" Width="8"/>
+                                          </dxl:Properties>
+                                          <dxl:ProjList>
+                                            <dxl:ProjElem ColId="208" Alias="population">
+                                              <dxl:Ident ColId="208" ColName="population" TypeMdid="0.23.1.0"/>
+                                            </dxl:ProjElem>
+                                          </dxl:ProjList>
+                                          <dxl:Filter/>
+                                          <dxl:BroadcastMotion InputSegments="0,1" OutputSegments="0,1">
+                                            <dxl:Properties>
+                                              <dxl:Cost StartupCost="0" TotalCost="431.000219" Rows="2.000000" Width="8"/>
+                                            </dxl:Properties>
+                                            <dxl:ProjList>
+                                              <dxl:ProjElem ColId="208" Alias="population">
+                                                <dxl:Ident ColId="208" ColName="population" TypeMdid="0.23.1.0"/>
+                                              </dxl:ProjElem>
+                                            </dxl:ProjList>
+                                            <dxl:Filter/>
+                                            <dxl:SortingColumnList/>
+                                            <dxl:Result>
+                                              <dxl:Properties>
+                                                <dxl:Cost StartupCost="0" TotalCost="431.000010" Rows="1.000000" Width="8"/>
+                                              </dxl:Properties>
+                                              <dxl:ProjList>
+                                                <dxl:ProjElem ColId="208" Alias="population">
+                                                  <dxl:Ident ColId="208" ColName="population" TypeMdid="0.23.1.0"/>
+                                                </dxl:ProjElem>
+                                              </dxl:ProjList>
+                                              <dxl:Filter/>
+                                              <dxl:OneTimeFilter/>
+                                              <dxl:CTEConsumer CTEId="0" Columns="208,209,210,211,212">
+                                                <dxl:Properties>
+                                                  <dxl:Cost StartupCost="0" TotalCost="431.000010" Rows="1.000000" Width="8"/>
+                                                </dxl:Properties>
+                                                <dxl:ProjList>
+                                                  <dxl:ProjElem ColId="208" Alias="population">
+                                                    <dxl:Ident ColId="208" ColName="population" TypeMdid="0.23.1.0"/>
+                                                  </dxl:ProjElem>
+                                                  <dxl:ProjElem ColId="209" Alias="num_cities">
+                                                    <dxl:Ident ColId="209" ColName="num_cities" TypeMdid="0.23.1.0"/>
+                                                  </dxl:ProjElem>
+                                                  <dxl:ProjElem ColId="210" Alias="district">
+                                                    <dxl:Ident ColId="210" ColName="district" TypeMdid="0.25.1.0"/>
+                                                  </dxl:ProjElem>
+                                                  <dxl:ProjElem ColId="211" Alias="countrycode">
+                                                    <dxl:Ident ColId="211" ColName="countrycode" TypeMdid="0.1042.1.0"/>
+                                                  </dxl:ProjElem>
+                                                  <dxl:ProjElem ColId="212" Alias="name">
+                                                    <dxl:Ident ColId="212" ColName="name" TypeMdid="0.25.1.0"/>
+                                                  </dxl:ProjElem>
+                                                </dxl:ProjList>
+                                              </dxl:CTEConsumer>
+                                            </dxl:Result>
+                                          </dxl:BroadcastMotion>
+                                        </dxl:Materialize>
+                                      </dxl:SubPlan>
+                                    </dxl:Comparison>
+                                  </dxl:Filter>
+                                  <dxl:TableDescriptor Mdid="0.40094456.1.1" TableName="city">
+                                    <dxl:Columns>
+                                      <dxl:Column ColId="161" Attno="1" ColName="id" TypeMdid="0.23.1.0"/>
+                                      <dxl:Column ColId="162" Attno="2" ColName="name" TypeMdid="0.25.1.0"/>
+                                      <dxl:Column ColId="165" Attno="5" ColName="population" TypeMdid="0.23.1.0"/>
+                                      <dxl:Column ColId="166" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>
+                                      <dxl:Column ColId="167" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0"/>
+                                      <dxl:Column ColId="168" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0"/>
+                                      <dxl:Column ColId="169" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0"/>
+                                      <dxl:Column ColId="170" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0"/>
+                                      <dxl:Column ColId="171" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0"/>
+                                      <dxl:Column ColId="172" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0"/>
+                                    </dxl:Columns>
+                                  </dxl:TableDescriptor>
+                                </dxl:TableScan>
+                                <dxl:Materialize Eager="true">
+                                  <dxl:Properties>
+                                    <dxl:Cost StartupCost="0" TotalCost="431.000064" Rows="2.000000" Width="1"/>
+                                  </dxl:Properties>
+                                  <dxl:ProjList/>
+                                  <dxl:Filter/>
+                                  <dxl:BroadcastMotion InputSegments="0,1" OutputSegments="0,1">
+                                    <dxl:Properties>
+                                      <dxl:Cost StartupCost="0" TotalCost="431.000063" Rows="2.000000" Width="1"/>
+                                    </dxl:Properties>
+                                    <dxl:ProjList/>
+                                    <dxl:Filter/>
+                                    <dxl:SortingColumnList/>
+                                    <dxl:TableScan>
+                                      <dxl:Properties>
+                                        <dxl:Cost StartupCost="0" TotalCost="431.000036" Rows="1.000000" Width="1"/>
+                                      </dxl:Properties>
+                                      <dxl:ProjList/>
+                                      <dxl:Filter/>
+                                      <dxl:TableDescriptor Mdid="0.40094484.1.1" TableName="country">
+                                        <dxl:Columns>
+                                          <dxl:Column ColId="139" Attno="1" ColName="code" TypeMdid="0.1042.1.0" ColWidth="3"/>
+                                          <dxl:Column ColId="154" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>
+                                          <dxl:Column ColId="155" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0"/>
+                                          <dxl:Column ColId="156" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0"/>
+                                          <dxl:Column ColId="157" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0"/>
+                                          <dxl:Column ColId="158" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0"/>
+                                          <dxl:Column ColId="159" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0"/>
+                                          <dxl:Column ColId="160" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0"/>
+                                        </dxl:Columns>
+                                      </dxl:TableDescriptor>
+                                    </dxl:TableScan>
+                                  </dxl:BroadcastMotion>
+                                </dxl:Materialize>
+                              </dxl:NestedLoopJoin>
+                            </dxl:BroadcastMotion>
+                          </dxl:Materialize>
+                        </dxl:NestedLoopJoin>
+                      </dxl:Append>
+                    </dxl:Sort>
+                  </dxl:Aggregate>
+                </dxl:RedistributeMotion>
+              </dxl:Sort>
+            </dxl:Aggregate>
+          </dxl:Sequence>
+        </dxl:Result>
+      </dxl:GatherMotion>
     </dxl:Plan>
   </dxl:Thread>
 </dxl:DXLMessage>
