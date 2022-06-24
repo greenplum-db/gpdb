@@ -207,6 +207,7 @@ This table describes the functions that process `json` values.
                 </td>
               </tr>
             </tbody>
+
           </table>
 </div>
 
@@ -231,56 +232,134 @@ The following built-in window functions are Greenplum extensions to the PostgreS
 |`rank()`|`bigint`|RANK \(\) OVER \( \[PARTITION BY *expr*\] ORDER BY *expr*\)|Calculates the rank of a row in an ordered group of values. Rows with equal values for the ranking criteria receive the same rank. The number of tied rows are added to the rank number to calculate the next rank value. Ranks may not be consecutive numbers in this case.|
 |`row_number()`|`bigint`|ROW\_NUMBER \(\) OVER \( \[PARTITION BY *expr*\] ORDER BY *expr*\)|Assigns a unique number to each row to which it is applied \(either each row in a window partition or each row of the query\).|
 
-## Advanced Aggregate Functions 
-
-The following built-in advanced analytic functions are Greenplum extensions of the PostgreSQL database. Analytic functions are *immutable*.
-
-**Note:** The Greenplum MADlib Extension for Analytics provides additional advanced functions to perform statistical analysis and machine learning with Greenplum Database data. See [Greenplum MADlib Extension for Analytics](extensions/madlib.html).
-
-|Function|Return Type|Full Syntax|Description|
-|--------|-----------|-----------|-----------|
-|MEDIAN \(*expr*\)|`timestamp, timestamptz, interval, float`|MEDIAN \(*expression*\) *Example:*
-
- ```
-SELECT department_id, MEDIAN(salary) 
+<div class="tablenoborder">
+<table cellpadding="4" cellspacing="0" summary="" id="topic31__in2073121" class="table" frame="border" border="1" rules="all">
+<caption><span class="tablecap">Table 7. Advanced Aggregate Functions</span></caption>
+          <thead class="thead" align="left">
+            <tr class="row">
+              <th class="entry" valign="top" width="20.845288240441164%" id="d142067e2153">Function</th>
+              <th class="entry" valign="top" width="12.005779052967869%" id="d142067e2156">Return Type</th>
+              <th class="entry" valign="top" width="41.10249679506745%" id="d142067e2159">Full Syntax</th>
+              <th class="entry" valign="top" width="26.046435911523513%" id="d142067e2162">Description</th>
+            </tr>
+          </thead>
+          <tbody class="tbody">
+            <tr class="row">
+              <td class="entry" valign="top" width="20.845288240441164%" headers="d142067e2153 ">
+                <samp class="ph codeph">MEDIAN (<em class="ph i">expr</em>)</samp>
+              </td>
+              <td class="entry" valign="top" width="12.005779052967869%" headers="d142067e2156 ">
+                <samp class="ph codeph">timestamp, timestamptz, interval, float</samp>
+              </td>
+              <td class="entry" valign="top" width="41.10249679506745%" headers="d142067e2159 ">
+                <samp class="ph codeph">MEDIAN (<em class="ph i">expression</em>)</samp>
+                <p class="p">
+                  <em class="ph i">Example:</em>
+                </p>
+                <pre class="pre codeblock">SELECT department_id, MEDIAN(salary) 
 FROM employees 
-GROUP BY department_id; 
-```
-
-|Can take a two-dimensional array as input. Treats such arrays as matrices.|
-|PERCENTILE\_CONT \(*expr*\) WITHIN GROUP \(ORDER BY *expr* \[DESC/ASC\]\)|`timestamp, timestamptz, interval, float`|PERCENTILE\_CONT\(*percentage*\) WITHIN GROUP \(ORDER BY *expression*\) *Example:*
-
- ```
-SELECT department_id,
+GROUP BY department_id; </pre>
+              </td>
+              <td class="entry" valign="top" width="26.046435911523513%" headers="d142067e2162 ">Can take a two-dimensional array as input. Treats such arrays as
+                matrices.</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" valign="top" width="20.845288240441164%" headers="d142067e2153 ">
+                <samp class="ph codeph">PERCENTILE_CONT (<em class="ph i">expr</em>) WITHIN GROUP (ORDER BY <em class="ph i">expr</em>
+                  [DESC/ASC])</samp>
+              </td>
+              <td class="entry" valign="top" width="12.005779052967869%" headers="d142067e2156 ">
+                <samp class="ph codeph">timestamp, timestamptz, interval, float</samp>
+              </td>
+              <td class="entry" valign="top" width="41.10249679506745%" headers="d142067e2159 ">
+                <samp class="ph codeph">PERCENTILE_CONT(<em class="ph i">percentage</em>) WITHIN GROUP (ORDER BY
+                  <em class="ph i">expression</em>)</samp>
+                <p class="p">
+                  <em class="ph i">Example:</em>
+                </p>
+                <pre class="pre codeblock">SELECT department_id,
 PERCENTILE_CONT (0.5) WITHIN GROUP (ORDER BY salary DESC)
 "Median_cont"; 
-FROM employees GROUP BY department_id;
-```
-
-|Performs an inverse distribution function that assumes a continuous distribution model. It takes a percentile value and a sort specification and returns the same datatype as the numeric datatype of the argument. This returned value is a computed result after performing linear interpolation. Null are ignored in this calculation.|
-|PERCENTILE\_DISC \(*expr*\) WITHIN GROUP \(ORDER BY *expr* \[DESC/ASC\]\)|`timestamp, timestamptz, interval, float`|PERCENTILE\_DISC\(*percentage*\) WITHIN GROUP \(ORDER BY *expression*\) *Example:*
-
- ```
-SELECT department_id, 
+FROM employees GROUP BY department_id;</pre>
+              </td>
+              <td class="entry" valign="top" width="26.046435911523513%" headers="d142067e2162 ">Performs an inverse distribution function that assumes a
+                continuous distribution model. It takes a percentile value and a sort specification
+                and returns the same datatype as the numeric datatype of the argument. This returned
+                value is a computed result after performing linear interpolation. Null are ignored
+                in this calculation.</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" valign="top" width="20.845288240441164%" headers="d142067e2153 "><samp class="ph codeph">PERCENTILE_DISC (<em class="ph i">expr</em>) WITHIN GROUP (ORDER BY
+                    <em class="ph i">expr</em> [DESC/ASC])</samp></td>
+              <td class="entry" valign="top" width="12.005779052967869%" headers="d142067e2156 ">
+                <samp class="ph codeph">timestamp, timestamptz, interval, float</samp>
+              </td>
+              <td class="entry" valign="top" width="41.10249679506745%" headers="d142067e2159 ">
+                <samp class="ph codeph">PERCENTILE_DISC(<em class="ph i">percentage</em>) WITHIN GROUP (ORDER BY
+                  <em class="ph i">expression</em>)</samp>
+                <p class="p">
+                  <em class="ph i">Example:</em>
+                </p>
+                <pre class="pre codeblock">SELECT department_id, 
 PERCENTILE_DISC (0.5) WITHIN GROUP (ORDER BY salary DESC)
 "Median_desc"; 
-FROM employees GROUP BY department_id;
-```
-
-|Performs an inverse distribution function that assumes a discrete distribution model. It takes a percentile value and a sort specification. This returned value is an element from the set. Null are ignored in this calculation.|
-|`sum(array[])`|`smallint[]int[], bigint[], float[]`|`sum(array[[1,2],[3,4]])` *Example:*
-
- ```
-CREATE TABLE mymatrix (myvalue int[]);
+FROM employees GROUP BY department_id;</pre>
+              </td>
+              <td class="entry" valign="top" width="26.046435911523513%" headers="d142067e2162 ">Performs an inverse distribution function that assumes a
+                discrete distribution model. It takes a percentile value and a sort specification.
+                This returned value is an element from the set. Null are ignored in this
+                calculation.</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" valign="top" width="20.845288240441164%" headers="d142067e2153 ">
+                <samp class="ph codeph">sum(array[])</samp>
+              </td>
+              <td class="entry" valign="top" width="12.005779052967869%" headers="d142067e2156 ">
+                <samp class="ph codeph">smallint[]int[], bigint[], float[]</samp>
+              </td>
+              <td class="entry" valign="top" width="41.10249679506745%" headers="d142067e2159 ">
+                <samp class="ph codeph">sum(array[[1,2],[3,4]])</samp>
+                <p class="p">
+                  <em class="ph i">Example:</em>
+                </p>
+                <pre class="pre codeblock">CREATE TABLE mymatrix (myvalue int[]);
 INSERT INTO mymatrix VALUES (array[[1,2],[3,4]]);
 INSERT INTO mymatrix VALUES (array[[0,1],[1,0]]);
 SELECT sum(myvalue) FROM mymatrix;
  sum 
 ---------------
- {{1,3},{4,4}}
-```
-
-|Performs matrix summation. Can take as input a two-dimensional array that is treated as a matrix.|
-|`pivot_sum (label[], label, expr)`|`int[], bigint[], float[]`|`pivot_sum( array['A1','A2'], attr, value)`|A pivot aggregation using sum to resolve duplicate entries.|
-|`unnest (array[])`|set of `anyelement`|`unnest( array['one', 'row', 'per', 'item'])`|Transforms a one dimensional array into rows. Returns a set of `anyelement`, a polymorphic [pseudotype in PostgreSQL](https://www.postgresql.org/docs/8.3/static/datatype-pseudo.html).|
-
+ {{1,3},{4,4}}</pre>
+              </td>
+              <td class="entry" valign="top" width="26.046435911523513%" headers="d142067e2162 ">Performs matrix summation. Can take as input a two-dimensional
+                array that is treated as a matrix.</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" valign="top" width="20.845288240441164%" headers="d142067e2153 ">
+                <samp class="ph codeph">pivot_sum (label[], label, expr)</samp>
+              </td>
+              <td class="entry" valign="top" width="12.005779052967869%" headers="d142067e2156 ">
+                <samp class="ph codeph">int[], bigint[], float[]</samp>
+              </td>
+              <td class="entry" valign="top" width="41.10249679506745%" headers="d142067e2159 ">
+                <samp class="ph codeph">pivot_sum( array['A1','A2'], attr, value)</samp>
+              </td>
+              <td class="entry" valign="top" width="26.046435911523513%" headers="d142067e2162 ">A pivot aggregation using sum to resolve duplicate
+                entries.</td>
+            </tr>
+            <tr class="row">
+              <td class="entry" valign="top" width="20.845288240441164%" headers="d142067e2153 ">
+                <samp class="ph codeph">unnest (array[])</samp>
+              </td>
+              <td class="entry" valign="top" width="12.005779052967869%" headers="d142067e2156 ">set of <samp class="ph codeph">anyelement</samp>
+</td>
+              <td class="entry" valign="top" width="41.10249679506745%" headers="d142067e2159 ">
+                <samp class="ph codeph">unnest( array['one', 'row', 'per', 'item'])</samp>
+              </td>
+              <td class="entry" valign="top" width="26.046435911523513%" headers="d142067e2162 ">Transforms a one dimensional array into rows. Returns a set of
+                  <samp class="ph codeph">anyelement</samp>, a polymorphic <a class="xref" href="https://www.postgresql.org/docs/8.3/static/datatype-pseudo.html" target="_blank"><span class="ph">pseudotype in PostgreSQL</span></a>.</td>
+            </tr>
+          </tbody>
+        </table>
+</div>
+    </div>
+  </div>
