@@ -105,8 +105,7 @@ This table describes the functions that create `json` values.
 This table describes the functions that process `json` values.
 
 <div class="tablenoborder">
-<table cellpadding="4" cellspacing="0" summary="" id="topic_o5y_14w_2z__table_e41_y3w_mq" class="table" frame="border" border="1" rules="all">
-<caption><span class="tablecap"><var class="keyword varname">json</var> Operators</span></caption>        
+<table cellpadding="4" cellspacing="0" summary="" id="topic_o5y_14w_2z__table_e41_y3w_mq" class="table" frame="border" border="1" rules="all">    
             <thead class="thead" align="left">
               <tr class="row">
                 <th class="entry" valign="top" width="10.351966873706003%" id="d142067e981">Operator</th>
@@ -232,12 +231,11 @@ The following built-in window functions are Greenplum extensions to the PostgreS
 |`rank()`|`bigint`|RANK \(\) OVER \( \[PARTITION BY *expr*\] ORDER BY *expr*\)|Calculates the rank of a row in an ordered group of values. Rows with equal values for the ranking criteria receive the same rank. The number of tied rows are added to the rank number to calculate the next rank value. Ranks may not be consecutive numbers in this case.|
 |`row_number()`|`bigint`|ROW\_NUMBER \(\) OVER \( \[PARTITION BY *expr*\] ORDER BY *expr*\)|Assigns a unique number to each row to which it is applied \(either each row in a window partition or each row of the query\).|
 
+## Advanced Aggregate Functions
+
 <div class="tablenoborder">
 <table cellpadding="4" cellspacing="0" summary="" id="topic31__in2073121" class="table" frame="border" border="1" rules="all">
 
-## Advanced Aggregate Functions
- 
-<caption><span class="tablecap"><var class="keyword varname">Advanced Aggregate Functions</var></span></caption>
           <thead class="thead" align="left">
             <tr class="row">
               <th class="entry" valign="top" width="20.845288240441164%" id="d142067e2153">Function</th>
