@@ -189,14 +189,20 @@ FSearchOperationLocality(CMemoryPool *mp, CGroupExpression *pgexpr,
 		return false;
 	}
 
-	GPOS_ASSERT(pgexpr->Id() < sizeof(ULONG) * 8);
+	// recursion limit
+	if (pgexpr->Id() > 8)
+	{
+		return false;
+	}
 
+	GPOS_ASSERT(pgexpr->Id() < sizeof(ULONG) * 8);
 	const ulong visitMask = 1 << pgexpr->Id();
 	if (visitBit & visitMask)
 	{
 		return false;
 	}
 
+	CUtils::EExecLocalityType prevEelt = *eelt;
 	CDistributionSpec *pds = nullptr;
 	switch (pgexpr->Pop()->Eopid())
 	{
@@ -251,6 +257,8 @@ FSearchOperationLocality(CMemoryPool *mp, CGroupExpression *pgexpr,
 			}
 		} while ((cur = (*pgexpr)[i]->PgexprNext(cur)) != nullptr);
 	}
+
+	*eelt = prevEelt;
 
 	return false;
 }
