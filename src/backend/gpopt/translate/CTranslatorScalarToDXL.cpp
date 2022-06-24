@@ -238,10 +238,12 @@ CTranslatorScalarToDXL::TranslateVarToDXL(
 	else
 	{
 		if (m_context == nullptr)
+		{
 			GPOS_RAISE(
 				gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature,
 				GPOS_WSZ_LIT(
 					"Var with no existing mapping in a stand-alone context"));
+		}
 		id = m_context->m_colid_counter->next_id();
 	}
 	CMDName *mdname = GPOS_NEW(m_mp) CMDName(m_mp, str);
@@ -629,7 +631,9 @@ CTranslatorScalarToDXL::CreateScalarArrayCompFromExpr(
 	// extract elements of an ArrayExpr, but doesn't currently know how
 	// to do it from an array-typed Const.)
 	if (IsA(right_expr, Const))
+	{
 		right_expr = gpdb::TransformArrayConstToArrayExpr((Const *) right_expr);
+	}
 
 	CDXLNode *right_node = TranslateScalarToDXL(right_expr, var_colid_mapping);
 
@@ -1251,13 +1255,19 @@ CTranslatorScalarToDXL::TranslateArrayCoerceExprToDXL(
 	Oid elemfuncid = 0;
 
 	if (IsA(array_coerce_expr->elemexpr, FuncExpr))
+	{
 		elemfuncid = ((FuncExpr *) array_coerce_expr->elemexpr)->funcid;
+	}
 	else if (IsA(array_coerce_expr->elemexpr, RelabelType))
+	{
 		;
+	}
 	else
+	{
 		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature,
 				   GPOS_WSZ_LIT("ArrayCoerceExpr with elemexpr that is neither "
 								"FuncExpr or RelabelType"));
+	}
 
 	// GPDB_12_MERGE_FIXME: faking an explicit cast is wrong
 	// This _will_ lead to wrong behavior, e.g.
@@ -1510,11 +1520,15 @@ CTranslatorScalarToDXL::TranslateWindowFrameToDXL(
 	// GPDB_12_MERGE_FIXME: there's no reason ORCA would care about this, other
 	// than that it doesn't roundtrip this piece of info.
 	if ((frame_options & FRAMEOPTION_EXCLUSION))
+	{
 		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature,
 				   GPOS_WSZ_LIT("window frame EXCLUDE"));
+	}
 
 	if ((frame_options & FRAMEOPTION_ROWS) != 0)
+	{
 		frame_spec = EdxlfsRow;
+	}
 	else if ((frame_options & FRAMEOPTION_RANGE) != 0)
 	{
 		frame_spec = EdxlfsRange;
@@ -1523,20 +1537,26 @@ CTranslatorScalarToDXL::TranslateWindowFrameToDXL(
 		// RANGE 1 PRECEDING
 		if ((frame_options &
 			 (FRAMEOPTION_START_OFFSET | FRAMEOPTION_END_OFFSET)))
+		{
 			GPOS_RAISE(
 				gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature,
 				GPOS_WSZ_LIT(
 					"window frame RANGE with OFFSET PRECEDING or FOLLOWING"));
+		}
 	}
 	else if ((frame_options & FRAMEOPTION_GROUPS) != 0)
+	{
 		// GPDB_12_MERGE_FIXME: there's no reason the optimizer would care too
 		// much about this. As long as we recognize and roundtrip this, I think
 		// the executor will take care of it
 		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature,
 				   GPOS_WSZ_LIT("window frame GROUPS mode"));
+	}
 	else
+	{
 		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature,
 				   GPOS_WSZ_LIT("window frame option"));
+	}
 
 
 	// GPDB_12_MERGE_FIXME: the following window frame options are flipped (i.e.
@@ -1546,33 +1566,57 @@ CTranslatorScalarToDXL::TranslateWindowFrameToDXL(
 	// back after the merge.
 	EdxlFrameBoundary leading_boundary;
 	if ((frame_options & FRAMEOPTION_END_UNBOUNDED_PRECEDING) != 0)
+	{
 		leading_boundary = EdxlfbUnboundedPreceding;
+	}
 	else if ((frame_options & FRAMEOPTION_END_OFFSET_PRECEDING) != 0)
+	{
 		leading_boundary = EdxlfbBoundedPreceding;
+	}
 	else if ((frame_options & FRAMEOPTION_END_CURRENT_ROW) != 0)
+	{
 		leading_boundary = EdxlfbCurrentRow;
+	}
 	else if ((frame_options & FRAMEOPTION_END_OFFSET_FOLLOWING) != 0)
+	{
 		leading_boundary = EdxlfbBoundedFollowing;
+	}
 	else if ((frame_options & FRAMEOPTION_END_UNBOUNDED_FOLLOWING) != 0)
+	{
 		leading_boundary = EdxlfbUnboundedFollowing;
+	}
 	else
+	{
 		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature,
 				   GPOS_WSZ_LIT("Unrecognized window frame option"));
+	}
 
 	EdxlFrameBoundary trailing_boundary;
 	if ((frame_options & FRAMEOPTION_START_UNBOUNDED_PRECEDING) != 0)
+	{
 		trailing_boundary = EdxlfbUnboundedPreceding;
+	}
 	else if ((frame_options & FRAMEOPTION_START_OFFSET_PRECEDING) != 0)
+	{
 		trailing_boundary = EdxlfbBoundedPreceding;
+	}
 	else if ((frame_options & FRAMEOPTION_START_CURRENT_ROW) != 0)
+	{
 		trailing_boundary = EdxlfbCurrentRow;
+	}
 	else if ((frame_options & FRAMEOPTION_START_OFFSET_FOLLOWING) != 0)
+	{
 		trailing_boundary = EdxlfbBoundedFollowing;
+	}
 	else if ((frame_options & FRAMEOPTION_START_UNBOUNDED_FOLLOWING) != 0)
+	{
 		trailing_boundary = EdxlfbUnboundedFollowing;
+	}
 	else
+	{
 		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiPlStmt2DXLConversion,
 				   GPOS_WSZ_LIT("Unrecognized window frame option"));
+	}
 
 	// We don't support non-default EXCLUDE [CURRENT ROW | GROUP | TIES |
 	// NO OTHERS] options.
@@ -1620,8 +1664,10 @@ CTranslatorScalarToDXL::TranslateWindowFrameEdgeToDXL(
 	CDXLNode *val_node = TranslateScalarToDXL((Expr *) node, var_colid_mapping);
 
 	if (!m_context)
+	{
 		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature,
 				   GPOS_WSZ_LIT("Window Frame in a stand-alone expression"));
+	}
 
 	if (!IsA(node, Var) && !IsA(node, Const))
 	{
@@ -1685,8 +1731,10 @@ CTranslatorScalarToDXL::TranslateWindowFuncToDXL(
 	}
 
 	if (!m_context)
+	{
 		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature,
 				   GPOS_WSZ_LIT("Window function in a stand-alone expression"));
+	}
 
 	ULONG win_spec_pos = (ULONG) window_func->winref - 1;
 
@@ -2003,9 +2051,13 @@ CTranslatorScalarToDXL::TranslateArrayRefToDXL(
 	INT type_modifier = parrayref->reftypmod;
 	/* slice and/or store operations yield the array type */
 	if (parrayref->reflowerindexpr || parrayref->refassgnexpr)
+	{
 		restype = parrayref->refcontainertype;
+	}
 	else
+	{
 		restype = parrayref->refelemtype;
+	}
 
 	CDXLScalarArrayRef *dxlop = GPOS_NEW(m_mp) CDXLScalarArrayRef(
 		m_mp, GPOS_NEW(m_mp) CMDIdGPDB(parrayref->refelemtype), type_modifier,
@@ -2022,15 +2074,19 @@ CTranslatorScalarToDXL::TranslateArrayRefToDXL(
 	{
 		Expr *child_expr = (Expr *) lfirst(lc);
 		if (child_expr == nullptr)
+		{
 			GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature,
 					   GPOS_WSZ_LIT("Omitted array bound"));
+		}
 	}
 	ForEach(lc, parrayref->refupperindexpr)
 	{
 		Expr *child_expr = (Expr *) lfirst(lc);
 		if (child_expr == nullptr)
+		{
 			GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature,
 					   GPOS_WSZ_LIT("Omitted array bound"));
+		}
 	}
 
 	// add children

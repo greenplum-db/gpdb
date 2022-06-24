@@ -159,16 +159,22 @@ CFunctionalDependency::Equals(const CFunctionalDependencyArray *pdrgpfdFst,
 							  const CFunctionalDependencyArray *pdrgpfdSnd)
 {
 	if (nullptr == pdrgpfdFst && nullptr == pdrgpfdSnd)
+	{
 		return true; /* both empty */
+	}
 
 	if (nullptr == pdrgpfdFst || nullptr == pdrgpfdSnd)
+	{
 		return false; /* one is empty, the other is not */
+	}
 
 	const ULONG ulLenFst = pdrgpfdFst->Size();
 	const ULONG ulLenSnd = pdrgpfdSnd->Size();
 
 	if (ulLenFst != ulLenSnd)
+	{
 		return false;
+	}
 
 	BOOL fEqual = true;
 	for (ULONG ulFst = 0; fEqual && ulFst < ulLenFst; ulFst++)

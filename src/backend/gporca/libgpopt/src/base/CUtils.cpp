@@ -621,7 +621,9 @@ CUtils::GetPercentileAggMDId(CMemoryPool *mp, CExpression *pexprAggFn)
 	OID return_oid = 0;
 
 	if (popScAggFunc->FHasAmbiguousReturnType())
+	{
 		return_oid = GPDB_GP_PERCENTILE_DISC;
+	}
 	else
 	{
 		switch (oid_arg_type)
@@ -4234,7 +4236,9 @@ CUtils::FEquivalanceClassesEqual(CMemoryPool *mp, CColRefSetArray *pdrgpcrsFst,
 	const ULONG ulLenSecond = pdrgpcrsSnd->Size();
 
 	if (ulLenFrst != ulLenSecond)
+	{
 		return false;
+	}
 
 	ColRefToColRefSetMap *phmcscrs = GPOS_NEW(mp) ColRefToColRefSetMap(mp);
 	for (ULONG ulFst = 0; ulFst < ulLenFrst; ulFst++)
@@ -4473,7 +4477,9 @@ CUtils::FExprHasAnyCrFromCrs(CExpression *pexpr, CColRefSet *pcrs)
 				CScalarProjectElement::PopConvert(pexpr->Pop());
 			colref = (CColRef *) popScalarProjectElement->Pcr();
 			if (pcrs->FMember(colref))
+			{
 				return true;
+			}
 			break;
 		}
 		case COperator::EopScalarIdent:
@@ -4482,7 +4488,9 @@ CUtils::FExprHasAnyCrFromCrs(CExpression *pexpr, CColRefSet *pcrs)
 			CScalarIdent *popScalarOp = CScalarIdent::PopConvert(pexpr->Pop());
 			colref = (CColRef *) popScalarOp->Pcr();
 			if (pcrs->FMember(colref))
+			{
 				return true;
+			}
 			break;
 		}
 		default:
@@ -4494,7 +4502,9 @@ CUtils::FExprHasAnyCrFromCrs(CExpression *pexpr, CColRefSet *pcrs)
 	for (ULONG ul = 0; ul < arity; ul++)
 	{
 		if (FExprHasAnyCrFromCrs((*pexpr)[ul], pcrs))
+		{
 			return true;
+		}
 	}
 
 	return false;
@@ -4549,7 +4559,9 @@ CUtils::FCrossJoin(CExpression *pexpr)
 		GPOS_ASSERT(3 == pexpr->Arity());
 		CExpression *pexprPred = (*pexpr)[2];
 		if (CUtils::FScalarConstTrue(pexprPred))
+		{
 			fCrossJoin = true;
+		}
 	}
 	return fCrossJoin;
 }
@@ -4749,7 +4761,9 @@ CUtils::PexprMatchEqualityOrINDF(
 	}
 
 	if (nullptr != pexprMatching)
+	{
 		return CCastUtils::PexprWithoutBinaryCoercibleCasts(pexprMatching);
+	}
 	return pexprMatching;
 }
 

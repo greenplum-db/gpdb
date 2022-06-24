@@ -90,7 +90,9 @@ void
 CErrorContext::Record(CException &exc, VA_LIST vl)
 {
 	if (m_serializing)
+	{
 		return;
+	}
 
 #ifdef GPOS_DEBUG
 	if (m_pending)
@@ -187,7 +189,9 @@ void
 CErrorContext::Serialize()
 {
 	if (m_serializing)
+	{
 		return;
+	}
 
 	if (nullptr == m_mini_dumper_handle ||
 		m_serializable_objects_list.IsEmpty())

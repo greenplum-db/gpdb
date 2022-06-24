@@ -730,8 +730,10 @@ CTranslatorDXLToScalar::TranslateDXLScalarWindowRefToScalar(
 	window_func->winagg = dxlop->IsSimpleAgg();
 
 	if (dxlop->GetDxlWinStage() != EdxlwinstageImmediate)
+	{
 		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLError,
 				   GPOS_WSZ_LIT("Unsupported window function stage"));
+	}
 
 	// translate the arguments of the window function
 	window_func->args = TranslateScalarChildren(window_func->args,

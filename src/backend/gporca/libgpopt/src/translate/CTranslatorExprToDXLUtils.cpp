@@ -1805,7 +1805,9 @@ CTranslatorExprToDXLUtils::FMotionHazard(CMemoryPool *mp, CDXLNode *dxlnode,
 	// non-streaming operator/Gather motion neutralizes any motion hazard that its subtree imposes
 	// hence stop recursing further
 	if (FMotionHazardSafeOp(dxlnode))
+	{
 		return false;
+	}
 
 	if (FDXLOpExists(dxlnode->GetOperator(), peopid, ulOps))
 	{
@@ -1866,7 +1868,9 @@ CTranslatorExprToDXLUtils::FMotionHazardSafeOp(CDXLNode *dxlnode)
 			CDXLPhysicalAgg *pdxlnPhysicalAgg =
 				CDXLPhysicalAgg::Cast(dxlnode->GetOperator());
 			if (pdxlnPhysicalAgg->GetAggStrategy() == EdxlaggstrategyHashed)
+			{
 				fMotionHazardSafeOp = true;
+			}
 		}
 		break;
 

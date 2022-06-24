@@ -133,7 +133,9 @@ CGPOptimizer::GPOPTOptimizedPlan(
 				errmsg(
 					"GPORCA failed to produce a plan, falling back to planner");
 				if (serialized_error_msg)
+				{
 					errdetail("%s", serialized_error_msg);
+				}
 				errfinish(ex.Filename(), ex.Line(), nullptr);
 			}
 		}
@@ -141,7 +143,9 @@ CGPOptimizer::GPOPTOptimizedPlan(
 		*had_unexpected_failure = gpopt_context.m_is_unexpected_failure;
 
 		if (serialized_error_msg)
+		{
 			pfree(serialized_error_msg);
+		}
 	}
 	GPOS_CATCH_END;
 	return plStmt;

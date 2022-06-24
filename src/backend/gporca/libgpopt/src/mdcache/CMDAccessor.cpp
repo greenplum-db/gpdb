@@ -1248,7 +1248,9 @@ CMDAccessor::Serialize(COstream &oos)
 	// Now that we're done iterating and no longer hold the lock,
 	// serialize the entries.
 	for (ul = 0; ul < nentries; ul++)
+	{
 		oos << cacheEntries[ul]->GetStrRepr()->GetBuffer();
+	}
 }
 
 //---------------------------------------------------------------------------

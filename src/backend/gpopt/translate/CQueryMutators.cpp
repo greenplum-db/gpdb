@@ -836,11 +836,15 @@ CQueryMutators::MakeVarInDerivedTable(Node *node,
 	const ULONG attno = gpdb::ListLength(context->m_lower_table_tlist) + 1;
 	TargetEntry *tle = nullptr;
 	if (IsA(node, Aggref) || IsA(node, GroupingFunc))
+	{
 		tle = GetTargetEntryForAggExpr(context->m_mp, context->m_mda, node,
 									   attno);
+	}
 	else if (IsA(node, Var))
+	{
 		tle = gpdb::MakeTargetEntry((Expr *) node, (AttrNumber) attno, nullptr,
 									false);
+	}
 
 	context->m_lower_table_tlist =
 		gpdb::LAppend(context->m_lower_table_tlist, tle);

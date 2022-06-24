@@ -784,7 +784,9 @@ CMDRelationGPDB::Serialize(CXMLSerializer *xml_serializer) const
 
 		// serialize the scalar expression
 		if (nullptr != m_mdpart_constraint)
+		{
 			m_mdpart_constraint->SerializeToDXL(xml_serializer);
+		}
 
 		xml_serializer->CloseElement(
 			CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix),

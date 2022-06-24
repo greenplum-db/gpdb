@@ -179,7 +179,9 @@ COrderedAggPreprocessor::SplitPrjList(
 				}
 			}
 			if (skip)
+			{
 				continue;
+			}
 			if (0 < ul)
 			{
 				pexprRemappedAggConsumer->AddRef();
@@ -560,10 +562,12 @@ COrderedAggPreprocessor::PexprInputAggPrj2Join(CMemoryPool *mp,
 							 ->UlCTEId();
 	ULONG ulCTEIdEnd = ulCTEIdStart;
 	if (has_nlj_ontop)
+	{
 		ulCTEIdEnd =
 			CLogicalCTEConsumer::PopConvert(
 				(*(*(*(*(*pexprOrderedAgg)[arity - 2])[0])[0])[1])[0]->Pop())
 				->UlCTEId();
+	}
 	CExpression *pexpResult = pexprFinalJoin;
 	for (ULONG ul = ulCTEIdEnd; ul > ulCTEIdStart; ul--)
 	{

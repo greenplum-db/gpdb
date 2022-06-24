@@ -545,7 +545,9 @@ CTranslatorDXLToExpr::PexprLogicalTVF(const CDXLNode *dxlnode)
 									popTVF->PdrgpcrOutput());
 
 	if (!popTVF->FuncMdId()->IsValid())
+	{
 		return pexpr;
+	}
 
 	const IMDFunction *pmdfunc = m_pmda->RetrieveFunc(mdid_func);
 

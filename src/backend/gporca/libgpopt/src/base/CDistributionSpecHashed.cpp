@@ -438,7 +438,9 @@ CDistributionSpecHashed::HashValue() const
 {
 	CDistributionSpecHashed *equiv_spec = this->PdshashedEquiv();
 	if (nullptr != equiv_spec)
+	{
 		return equiv_spec->HashValue();
+	}
 
 	ULONG ulHash = (ULONG) Edt();
 
@@ -525,7 +527,9 @@ CDistributionSpecHashed::FMatchHashedDistribution(
 		CExpressionArrays *all_equiv_exprs = pdshashed->HashSpecEquivExprs();
 		CExpressionArray *equiv_distribution_exprs = nullptr;
 		if (nullptr != all_equiv_exprs && all_equiv_exprs->Size() > 0)
+		{
 			equiv_distribution_exprs = (*all_equiv_exprs)[ul];
+		}
 		CExpression *pexprLeft = (*(pdshashed->m_pdrgpexpr))[ul];
 		CExpression *pexprRight = (*m_pdrgpexpr)[ul];
 		BOOL fSuccess = CUtils::Equals(pexprLeft, pexprRight);
@@ -586,7 +590,9 @@ CDistributionSpecHashed::Equals(const CDistributionSpec *input_spec) const
 	GPOS_CHECK_STACK_SIZE;
 
 	if (input_spec->Edt() != Edt())
+	{
 		return false;
+	}
 
 	const CDistributionSpecHashed *other_spec =
 		CDistributionSpecHashed::PdsConvert(input_spec);
@@ -596,7 +602,9 @@ CDistributionSpecHashed::Equals(const CDistributionSpec *input_spec) const
 	// if one of the spec has equivalent spec and other doesn't, they are not equal
 	if ((spec_equiv != nullptr && other_spec_equiv == nullptr) ||
 		(spec_equiv == nullptr && other_spec_equiv != nullptr))
+	{
 		return false;
+	}
 
 	BOOL equals = true;
 	// if both the specs has equivalent specs, compare them
@@ -606,7 +614,9 @@ CDistributionSpecHashed::Equals(const CDistributionSpec *input_spec) const
 	}
 	// if the equivalent spec are not equal, the spec objects are not equal
 	if (!equals)
+	{
 		return false;
+	}
 
 	if (!CUtils::Equals(m_opfamilies, other_spec->m_opfamilies))
 	{
@@ -620,7 +630,9 @@ CDistributionSpecHashed::Equals(const CDistributionSpec *input_spec) const
 		CUtils::Equals(m_pdrgpexpr, other_spec->m_pdrgpexpr);
 
 	if (!matches)
+	{
 		return false;
+	}
 
 	// compare the equivalent expression arrays
 	CExpressionArrays *spec_equiv_exprs = m_equiv_hash_exprs;

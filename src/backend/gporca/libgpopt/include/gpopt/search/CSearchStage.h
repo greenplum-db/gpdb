@@ -73,7 +73,9 @@ public:
 	RestartTimer()
 	{
 		if (m_time_threshold != gpos::ulong_max)
+		{
 			m_timer.Restart();
+		}
 	}
 
 	// is search stage timed-out?
@@ -83,7 +85,9 @@ public:
 	FTimedOut() const
 	{
 		if (m_time_threshold == gpos::ulong_max)
+		{
 			return false;
+		}
 		return m_timer.ElapsedMS() > m_time_threshold;
 	}
 

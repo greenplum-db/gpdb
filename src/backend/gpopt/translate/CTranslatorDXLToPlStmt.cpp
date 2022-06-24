@@ -2871,19 +2871,33 @@ CTranslatorDXLToPlStmt::TranslateDXLWindow(
 					win_frame_leading_dxlnode->GetOperator())
 					->ParseDXLFrameBoundary();
 			if (lead_boundary_type == EdxlfbUnboundedPreceding)
+			{
 				window->frameOptions |= FRAMEOPTION_END_UNBOUNDED_PRECEDING;
+			}
 			if (lead_boundary_type == EdxlfbBoundedPreceding)
+			{
 				window->frameOptions |= FRAMEOPTION_END_OFFSET_PRECEDING;
+			}
 			if (lead_boundary_type == EdxlfbCurrentRow)
+			{
 				window->frameOptions |= FRAMEOPTION_END_CURRENT_ROW;
+			}
 			if (lead_boundary_type == EdxlfbBoundedFollowing)
+			{
 				window->frameOptions |= FRAMEOPTION_END_OFFSET_FOLLOWING;
+			}
 			if (lead_boundary_type == EdxlfbUnboundedFollowing)
+			{
 				window->frameOptions |= FRAMEOPTION_END_UNBOUNDED_FOLLOWING;
+			}
 			if (lead_boundary_type == EdxlfbDelayedBoundedPreceding)
+			{
 				window->frameOptions |= FRAMEOPTION_END_OFFSET_PRECEDING;
+			}
 			if (lead_boundary_type == EdxlfbDelayedBoundedFollowing)
+			{
 				window->frameOptions |= FRAMEOPTION_END_OFFSET_FOLLOWING;
+			}
 			if (0 != win_frame_leading_dxlnode->Arity())
 			{
 				window->endOffset =
@@ -2899,19 +2913,33 @@ CTranslatorDXLToPlStmt::TranslateDXLWindow(
 					win_frame_trailing_dxlnode->GetOperator())
 					->ParseDXLFrameBoundary();
 			if (trail_boundary_type == EdxlfbUnboundedPreceding)
+			{
 				window->frameOptions |= FRAMEOPTION_START_UNBOUNDED_PRECEDING;
+			}
 			if (trail_boundary_type == EdxlfbBoundedPreceding)
+			{
 				window->frameOptions |= FRAMEOPTION_START_OFFSET_PRECEDING;
+			}
 			if (trail_boundary_type == EdxlfbCurrentRow)
+			{
 				window->frameOptions |= FRAMEOPTION_START_CURRENT_ROW;
+			}
 			if (trail_boundary_type == EdxlfbBoundedFollowing)
+			{
 				window->frameOptions |= FRAMEOPTION_START_OFFSET_FOLLOWING;
+			}
 			if (trail_boundary_type == EdxlfbUnboundedFollowing)
+			{
 				window->frameOptions |= FRAMEOPTION_START_UNBOUNDED_FOLLOWING;
+			}
 			if (trail_boundary_type == EdxlfbDelayedBoundedPreceding)
+			{
 				window->frameOptions |= FRAMEOPTION_START_OFFSET_PRECEDING;
+			}
 			if (trail_boundary_type == EdxlfbDelayedBoundedFollowing)
+			{
 				window->frameOptions |= FRAMEOPTION_START_OFFSET_FOLLOWING;
+			}
 			if (0 != win_frame_trailing_dxlnode->Arity())
 			{
 				window->startOffset =
@@ -2923,7 +2951,9 @@ CTranslatorDXLToPlStmt::TranslateDXLWindow(
 			child_contexts->Release();
 		}
 		else
+		{
 			window->frameOptions = FRAMEOPTION_DEFAULTS;
+		}
 	}
 
 	SetParamIds(plan);
@@ -3128,7 +3158,9 @@ ContainsSetReturningFuncOrOp(const CDXLNode *project_list_dxlnode,
 		{
 			case EdxlopScalarFuncExpr:
 				if (CDXLScalarFuncExpr::Cast(op)->ReturnsSet())
+				{
 					return true;
+				}
 				break;
 			case EdxlopScalarOpExpr:
 			{
@@ -3137,7 +3169,9 @@ ContainsSetReturningFuncOrOp(const CDXLNode *project_list_dxlnode,
 				const IMDFunction *md_func =
 					md_accessor->RetrieveFunc(md_sclar_op->FuncMdId());
 				if (md_func->ReturnsSet())
+				{
 					return true;
+				}
 				break;
 			}
 			default:
@@ -3161,16 +3195,24 @@ SanityCheckProjectSetTargetList(List *targetlist)
 			(IsA(expr, OpExpr) && ((OpExpr *) expr)->opretset))
 		{
 			if (IsA(expr, FuncExpr))
+			{
 				args = ((FuncExpr *) expr)->args;
+			}
 			else
+			{
 				args = ((OpExpr *) expr)->args;
+			}
 			if (gpdb::ExpressionReturnsSet((Node *) args))
+			{
 				return false;
+			}
 			continue;
 		}
 
 		if (gpdb::ExpressionReturnsSet((Node *) expr))
+		{
 			return false;
+		}
 	}
 	return true;
 }
@@ -3185,9 +3227,11 @@ CTranslatorDXLToPlStmt::TranslateDXLProjectSet(
 	// GPDB_12_MERGE_FIXME: had we generated a DXLProjectSet in ORCA we wouldn't
 	// have needed to be defensive here...
 	if ((*result_dxlnode)[EdxlresultIndexFilter]->Arity() > 0)
+	{
 		GPOS_RAISE(
 			gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature,
 			GPOS_WSZ_LIT("Unsupported one-time filter in ProjectSet node"));
+	}
 
 	// create project set (nee result) plan node
 	ProjectSet *project_set = MakeNode(ProjectSet);
@@ -3241,9 +3285,11 @@ CTranslatorDXLToPlStmt::TranslateDXLProjectSet(
 	// double check the targetlist is kosher
 	// we are only doing this because ORCA didn't do it...
 	if (!SanityCheckProjectSetTargetList(plan->targetlist))
+	{
 		GPOS_RAISE(
 			gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature,
 			GPOS_WSZ_LIT("Unexpected target list entries in ProjectSet node"));
+	}
 
 	return (Plan *) project_set;
 }
@@ -3267,8 +3313,10 @@ CTranslatorDXLToPlStmt::TranslateDXLResult(
 	// actual result node
 	if (ContainsSetReturningFuncOrOp((*result_dxlnode)[EdxlresultIndexProjList],
 									 m_md_accessor))
+	{
 		return TranslateDXLProjectSet(result_dxlnode, output_context,
 									  ctxt_translation_prev_siblings);
+	}
 
 	// create result plan node
 	Result *result = MakeNode(Result);
@@ -3331,9 +3379,11 @@ CTranslatorDXLToPlStmt::TranslateDXLResult(
 	// double check the targetlist is kosher
 	// we are only doing this because ORCA didn't do it...
 	if (!SanityCheckProjectSetTargetList(plan->targetlist))
+	{
 		GPOS_RAISE(
 			gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature,
 			GPOS_WSZ_LIT("Unexpected target list entries in ProjectSet node"));
+	}
 
 	return (Plan *) result;
 }
@@ -3974,9 +4024,11 @@ CTranslatorDXLToPlStmt::TranslateDXLDml(
 	// partition Oid in the child's target list, but we don't use it for
 	// anything in GPDB.
 	if (m_cmd_type == CMD_UPDATE)
+	{
 		(void) AddJunkTargetEntryForColId(&dml_target_list, &child_context,
 										  phy_dml_dxlop->ActionColId(),
 										  "DMLAction");
+	}
 
 	if (m_cmd_type == CMD_UPDATE || m_cmd_type == CMD_DELETE)
 	{
@@ -3987,8 +4039,10 @@ CTranslatorDXLToPlStmt::TranslateDXLDml(
 								   "gp_segment_id");
 	}
 	if (m_cmd_type == CMD_UPDATE && phy_dml_dxlop->IsOidsPreserved())
+	{
 		AddJunkTargetEntryForColId(&dml_target_list, &child_context,
 								   phy_dml_dxlop->GetTupleOid(), "oid");
+	}
 
 	// Add a Result node on top of the child plan, to coerce the target
 	// list to match the exact physical layout of the target table,
@@ -4020,7 +4074,9 @@ CTranslatorDXLToPlStmt::TranslateDXLDml(
 
 	// ORCA plans all updates as split updates
 	if (m_cmd_type == CMD_UPDATE)
+	{
 		dml->isSplitUpdates = ListMake1Int((int) true);
+	}
 
 	plan->targetlist = NIL;
 	plan->plan_node_id = m_dxl_to_plstmt_context->GetNextPlanId();

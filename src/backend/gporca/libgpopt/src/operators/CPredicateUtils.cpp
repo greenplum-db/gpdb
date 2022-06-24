@@ -1505,7 +1505,9 @@ CPredicateUtils::FNotNullCheckOnColumn(CExpression *pexpr, CColRef *colref)
 	GPOS_ASSERT(nullptr != colref);
 
 	if (0 == pexpr->Arity())
+	{
 		return false;
+	}
 
 	return (FNullCheckOnColumn(pexpr, colref) && FNot(pexpr));
 }

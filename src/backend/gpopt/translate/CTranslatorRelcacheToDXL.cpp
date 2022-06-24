@@ -503,8 +503,10 @@ CTranslatorRelcacheToDXL::RetrieveRelColumns(CMemoryPool *mp,
 		// FIXME: XXX in hindsight, we can fallback less often.
 		//  We _really_ should only fallback on DML, not *all the time*
 		if (rel->rd_att->attrs[ul].attgenerated)
+		{
 			GPOS_RAISE(gpdxl::ExmaMD, gpdxl::ExmiMDObjUnsupported,
 					   GPOS_WSZ_LIT("column has GENERATED default value"));
+		}
 	}
 
 	for (ULONG ul = 0; ul < (ULONG) rel->rd_att->natts; ul++)
@@ -1278,8 +1280,10 @@ CTranslatorRelcacheToDXL::LookupFuncProps(
 	*access = GetEFuncDataAccess(gpdb::FuncDataAccess(func_oid));
 
 	if (gpdb::FuncExecLocation(func_oid) != PROEXECLOCATION_ANY)
+	{
 		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature,
 				   GPOS_WSZ_LIT("unsupported exec location"));
+	}
 
 	*returns_set = gpdb::GetFuncRetset(func_oid);
 	*is_strict = gpdb::FuncStrict(func_oid);
@@ -1620,7 +1624,9 @@ CTranslatorRelcacheToDXL::RetrieveAggIntermediateResultType(CMemoryPool *mp,
 	 * right datatype.
 	 */
 	if (intermediate_type_oid == INTERNALOID)
+	{
 		intermediate_type_oid = BYTEAOID;
+	}
 
 	return GPOS_NEW(mp) CMDIdGPDB(intermediate_type_oid);
 }
@@ -2445,9 +2451,13 @@ CTranslatorRelcacheToDXL::RetrieveRelStorageType(Relation rel)
 				rel_storage_type = IMDRelation::ErelstorageCompositeType;
 			}
 			else if (rel->rd_rel->relkind == RELKIND_PARTITIONED_TABLE)
+			{
 				rel_storage_type = RetrieveStorageTypeForPartitionedTable(rel);
+			}
 			else if (gpdb::RelIsExternalTable(rel->rd_id))
+			{
 				rel_storage_type = IMDRelation::ErelstorageExternal;
+			}
 			else
 			{
 				// GPORCA does not support foreign data wrappers
@@ -2682,7 +2692,9 @@ CTranslatorRelcacheToDXL::IsIndexSupported(Relation index_rel)
 
 	// covering index -- it has INCLUDE (...) columns
 	if (index_rel->rd_index->indnatts > index_rel->rd_index->indnkeyatts)
+	{
 		return false;
+	}
 
 	// index expressions and index constraints not supported
 	return gpdb::HeapAttIsNull(tup, Anum_pg_index_indexprs) &&
