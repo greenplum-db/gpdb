@@ -56,7 +56,7 @@ $GPHOME/ext/R-3.3.3/
 
 **Note:** The version of some shared libraries installed with the operating system might not be compatible with the Greenplum Database PL/R extension.
 
-If a shared library is not compatible, edit the file `$GPHOME/greenplum_path.sh` in all Greenplum Database master and segment hosts and set environment variable `LD_LIBRARY_PATH`to specify the location that is installed with the PL/R extension.
+If a shared library is not compatible, edit the file `$GPHOME/greenplum_path.sh` in all Greenplum Database master and segment hosts and set environment variable `LD_LIBRARY_PATH` to specify the location that is installed with the PL/R extension.
 
 ```
 export *LD\_LIBRARY\_PATH= 
