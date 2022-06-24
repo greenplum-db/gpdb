@@ -104,58 +104,236 @@ This table describes the functions that create `json` values.
 
 This table describes the functions that process `json` values.
 
-|Function|Return Type|Description|Example|Example Result|
-|--------|-----------|-----------|-------|--------------|
-|`json_each(json)`|`setof key text, value json` `setof key text, value jsonb`<br/>|Expands the outermost JSON object into a set of key/value pairs.|`select * from json_each('{"a":"foo", "b":"bar"}')`|<code>&nbsp;key|value<br/>&nbsp;---------+-------------<br/> &nbsp;  a  |  1<br/> &nbsp;  b  |  2</code>||
-|`json_each_text(json)`|`setof key text, value text`|Expands the outermost JSON object into a set of key/value pairs. The returned values are of type `text`.|`select * from json_each_text('{"a":"foo", "b":"bar"}')`|```
- key | value
+<div class="tablenoborder">
+<table cellpadding="4" cellspacing="0" summary="" id="topic_z5d_snw_2z__table_wfc_y3w_mq" class="table" frame="border" border="1" rules="all">
+<caption><span class="tablecap">Table 5. JSON Processing Functions</span></caption>
+            
+            
+            
+            
+            
+            <thead class="thead" align="left">
+              <tr class="row">
+                <th class="entry" valign="top" width="20.224719101123597%" id="d142067e1334">Function</th>
+
+                <th class="entry" valign="top" width="18.726591760299627%" id="d142067e1337">Return Type</th>
+
+                <th class="entry" valign="top" width="18.913857677902623%" id="d142067e1340">Description</th>
+
+                <th class="entry" valign="top" width="23.220973782771537%" id="d142067e1343">Example</th>
+
+                <th class="entry" valign="top" width="18.913857677902623%" id="d142067e1346">Example Result</th>
+
+              </tr>
+
+            </thead>
+
+            <tbody class="tbody">
+              <tr class="row">
+                <td class="entry" valign="top" width="20.224719101123597%" headers="d142067e1334 "><samp class="ph codeph">json_each(json)</samp></td>
+
+                <td class="entry" valign="top" width="18.726591760299627%" headers="d142067e1337 ">
+                  <samp class="ph codeph">setof key text, value json</samp>
+                  <p class="p">
+                    <samp class="ph codeph">setof key text, value jsonb</samp>
+                  </p>
+
+                </td>
+
+                <td class="entry" valign="top" width="18.913857677902623%" headers="d142067e1340 ">Expands the outermost JSON object into a set of key/value pairs.</td>
+
+                <td class="entry" valign="top" width="23.220973782771537%" headers="d142067e1343 ">
+<samp class="ph codeph">select * from json_each('{"a":"foo", "b":"bar"}')</samp>
+                </td>
+
+                <td class="entry" valign="top" width="18.913857677902623%" headers="d142067e1346 ">
+                  <pre class="pre"> key | value
+-----+-------
+ a   | "foo"
+ b   | "bar"
+</pre>
+
+                </td>
+
+              </tr>
+
+              <tr class="row">
+                <td class="entry" valign="top" width="20.224719101123597%" headers="d142067e1334 "><samp class="ph codeph">json_each_text(json)</samp></td>
+
+                <td class="entry" valign="top" width="18.726591760299627%" headers="d142067e1337 ">
+<samp class="ph codeph">setof key text, value text</samp>
+                </td>
+
+                <td class="entry" valign="top" width="18.913857677902623%" headers="d142067e1340 ">Expands the outermost JSON object into a set of key/value pairs. The returned
+                  values are of type <samp class="ph codeph">text</samp>.</td>
+
+                <td class="entry" valign="top" width="23.220973782771537%" headers="d142067e1343 ">
+<samp class="ph codeph">select * from json_each_text('{"a":"foo", "b":"bar"}')</samp>
+                </td>
+
+                <td class="entry" valign="top" width="18.913857677902623%" headers="d142067e1346 ">
+                  <pre class="pre"> key | value
 -----+-------
  a   | foo
  b   | bar
+</pre>
 
-```
+                </td>
 
-|
-|`json_extract_path(from_json json, VARIADIC path_elems text[])`|`json`|Returns the JSON value specified to by `path_elems`. Equivalent to `#>` operator.|`json_extract_path('{"f2":{"f3":1},"f4":{"f5":99,"f6":"foo"}}','f4')`|`{"f5":99,"f6":"foo"}`|
-|`json_extract_path_text(from_json json, VARIADIC path_elems text[])`
+              </tr>
 
-|`text`|Returns the JSON value specified to by `path_elems` as text. Equivalent to `#>>` operator.|`json_extract_path_text('{"f2":{"f3":1},"f4":{"f5":99,"f6":"foo"}}','f4', 'f6')`|`foo`|
-|`json_object_keys(json)`|`setof text`|Returns set of keys in the outermost JSON object.|`json_object_keys('{"f1":"abc","f2":{"f3":"a", "f4":"b"}}')`|```
- json_object_keys
+              <tr class="row">
+                <td class="entry" valign="top" width="20.224719101123597%" headers="d142067e1334 "><samp class="ph codeph">json_extract_path(from_json json, VARIADIC path_elems
+                    text[])</samp></td>
+
+                <td class="entry" valign="top" width="18.726591760299627%" headers="d142067e1337 ">
+<samp class="ph codeph">json</samp>
+                </td>
+
+                <td class="entry" valign="top" width="18.913857677902623%" headers="d142067e1340 ">Returns the JSON value specified to by <samp class="ph codeph">path_elems</samp>.
+                  Equivalent to <samp class="ph codeph">#&gt;</samp> operator.</td>
+
+                <td class="entry" valign="top" width="23.220973782771537%" headers="d142067e1343 ">
+                  <samp class="ph codeph">json_extract_path('{"f2":{"f3":1},"f4":{"f5":99,"f6":"foo"}}','f4')</samp>
+                </td>
+
+                <td class="entry" valign="top" width="18.913857677902623%" headers="d142067e1346 ">
+                  <samp class="ph codeph">{"f5":99,"f6":"foo"}</samp>
+                </td>
+
+              </tr>
+
+              <tr class="row">
+                <td class="entry" valign="top" width="20.224719101123597%" headers="d142067e1334 ">
+                  <p class="p"><samp class="ph codeph">json_extract_path_text(from_json json, VARIADIC path_elems
+                      text[])</samp></p>
+
+                </td>
+
+                <td class="entry" valign="top" width="18.726591760299627%" headers="d142067e1337 ">
+<samp class="ph codeph">text</samp>
+                </td>
+
+                <td class="entry" valign="top" width="18.913857677902623%" headers="d142067e1340 ">Returns the JSON value specified to by <samp class="ph codeph">path_elems</samp> as text.
+                  Equivalent to <samp class="ph codeph">#&gt;&gt;</samp> operator.</td>
+
+                <td class="entry" valign="top" width="23.220973782771537%" headers="d142067e1343 ">
+                  <samp class="ph codeph">json_extract_path_text('{"f2":{"f3":1},"f4":{"f5":99,"f6":"foo"}}','f4',
+                    'f6')</samp>
+                </td>
+
+                <td class="entry" valign="top" width="18.913857677902623%" headers="d142067e1346 ">
+                  <samp class="ph codeph">foo</samp>
+                </td>
+
+              </tr>
+
+              <tr class="row">
+                <td class="entry" valign="top" width="20.224719101123597%" headers="d142067e1334 "><samp class="ph codeph">json_object_keys(json)</samp></td>
+
+                <td class="entry" valign="top" width="18.726591760299627%" headers="d142067e1337 ">
+<samp class="ph codeph">setof text</samp>
+                </td>
+
+                <td class="entry" valign="top" width="18.913857677902623%" headers="d142067e1340 ">Returns set of keys in the outermost JSON object.</td>
+
+                <td class="entry" valign="top" width="23.220973782771537%" headers="d142067e1343 ">
+                  <samp class="ph codeph">json_object_keys('{"f1":"abc","f2":{"f3":"a", "f4":"b"}}')</samp>
+                </td>
+
+                <td class="entry" valign="top" width="18.913857677902623%" headers="d142067e1346 ">
+                  <pre class="pre"> json_object_keys
 ------------------
  f1
  f2
+</pre>
 
-```
+                </td>
 
-|
-|`json_populate_record(base anyelement, from_json json)`|`anyelement`|Expands the object in `from_json` to a row whose columns match the record type defined by base. See [Note](#json-note).|`select * from json_populate_record(null::myrowtype, '{"a":1,"b":2}')`|```
- a | b
+              </tr>
+
+              <tr class="row">
+                <td class="entry" valign="top" width="20.224719101123597%" headers="d142067e1334 "><samp class="ph codeph">json_populate_record(base anyelement, from_json
+                  json)</samp></td>
+
+                <td class="entry" valign="top" width="18.726591760299627%" headers="d142067e1337 ">
+<samp class="ph codeph">anyelement</samp>
+                </td>
+
+                <td class="entry" valign="top" width="18.913857677902623%" headers="d142067e1340 ">Expands the object in <samp class="ph codeph">from_json</samp> to a row whose columns match
+                  the record type defined by base. See <a class="xref" href="#topic_z5d_snw_2z__json-note">Note</a>.</td>
+
+                <td class="entry" valign="top" width="23.220973782771537%" headers="d142067e1343 ">
+                  <samp class="ph codeph">select * from json_populate_record(null::myrowtype,
+                    '{"a":1,"b":2}')</samp>
+                </td>
+
+                <td class="entry" valign="top" width="18.913857677902623%" headers="d142067e1346 ">
+                  <pre class="pre"> a | b
 ---+---
  1 | 2
+</pre>
 
-```
+                </td>
 
-|
-|`json_populate_recordset(base anyelement, from_json json)`|`setof anyelement`|Expands the outermost array of objects in `from_json` to a set of rows whose columns match the record type defined by `base`. See [Note](#json-note).|`select * from json_populate_recordset(null::myrowtype, '[{"a":1,"b":2},{"a":3,"b":4}]')`|```
- a | b
+              </tr>
+
+              <tr class="row">
+                <td class="entry" valign="top" width="20.224719101123597%" headers="d142067e1334 ">
+<samp class="ph codeph">json_populate_recordset(base anyelement, from_json json)</samp>
+                </td>
+
+                <td class="entry" valign="top" width="18.726591760299627%" headers="d142067e1337 ">
+<samp class="ph codeph">setof anyelement</samp>
+                </td>
+
+                <td class="entry" valign="top" width="18.913857677902623%" headers="d142067e1340 ">Expands the outermost array of objects in <samp class="ph codeph">from_json</samp> to a set
+                  of rows whose columns match the record type defined by <samp class="ph codeph">base</samp>. See
+                    <a class="xref" href="#topic_z5d_snw_2z__json-note">Note</a>.</td>
+
+                <td class="entry" valign="top" width="23.220973782771537%" headers="d142067e1343 ">
+                  <samp class="ph codeph">select * from json_populate_recordset(null::myrowtype,
+                    '[{"a":1,"b":2},{"a":3,"b":4}]')</samp>
+                </td>
+
+                <td class="entry" valign="top" width="18.913857677902623%" headers="d142067e1346 ">
+                  <pre class="pre"> a | b
 ---+---
  1 | 2
  3 | 4
+</pre>
 
-```
+                </td>
 
-|
-|`json_array_elements(json)`|`setof json`|Expands a JSON array to a set of JSON values.|`select * from json_array_elements('[1,true, [2,false]]')`|```
-   value
+              </tr>
+
+              <tr class="row">
+                <td class="entry" valign="top" width="20.224719101123597%" headers="d142067e1334 "><samp class="ph codeph">json_array_elements(json)</samp></td>
+
+                <td class="entry" valign="top" width="18.726591760299627%" headers="d142067e1337 "><samp class="ph codeph">setof json</samp></td>
+
+                <td class="entry" valign="top" width="18.913857677902623%" headers="d142067e1340 ">Expands a JSON array to a set of JSON values.</td>
+
+                <td class="entry" valign="top" width="23.220973782771537%" headers="d142067e1343 ">
+<samp class="ph codeph">select * from json_array_elements('[1,true, [2,false]]')</samp>
+                </td>
+
+                <td class="entry" valign="top" width="18.913857677902623%" headers="d142067e1346 ">
+                  <pre class="pre">   value
 -----------
  1
  true
  [2,false]
+</pre>
 
-```
+                </td>
 
-|
+              </tr>
+
+            </tbody>
+
+          </table>
+</div>
 
 **Note:** Many of these functions and operators convert Unicode escapes in JSON strings to regular characters. The functions throw an error for characters that cannot be represented in the database encoding.
 
