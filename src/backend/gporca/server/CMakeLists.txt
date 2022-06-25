@@ -364,6 +364,7 @@ COrderedAggTest:
 CTAS_OrderedAgg_multiple_cols OrderedAgg_multiple_diffcol OrderedAgg_with_groupby OrderedAgg_computed_col
 OrderedAggUsingGroupColumnInDirectArg OrderedAgg_multiple_samecol OrderedAgg_with_nonOrderedAgg OrderedAgg_single
 OrderedAgg_array_fraction OrderedAgg_multiple_samecol_difforderespec OrderedAgg_with_nonconst_fraction
+OrderedAgg_skewed_data
 ")
 
 set(mdp_dir "../data/dxl/minidump/")

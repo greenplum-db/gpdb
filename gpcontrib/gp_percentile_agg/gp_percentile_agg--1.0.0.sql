@@ -16,32 +16,32 @@
 CREATE FUNCTION gp_percentile_cont_float8_transition(float8, float8, float8, int8, int8)
     RETURNS float8
 AS '$libdir/gp_percentile_agg'
-   LANGUAGE C IMMUTABLE STRICT;
+   LANGUAGE C IMMUTABLE;
 
 CREATE FUNCTION gp_percentile_cont_interval_transition(interval, interval, float8, int8, int8)
     RETURNS interval
 AS '$libdir/gp_percentile_agg'
-   LANGUAGE C IMMUTABLE STRICT;
+   LANGUAGE C IMMUTABLE;
 
 CREATE FUNCTION gp_percentile_cont_timestamp_transition(timestamp, timestamp, float8, int8, int8)
     RETURNS timestamp
 AS '$libdir/gp_percentile_agg'
-   LANGUAGE C IMMUTABLE STRICT;
+   LANGUAGE C IMMUTABLE;
 
 CREATE FUNCTION gp_percentile_cont_timestamptz_transition(timestamptz, timestamptz, float8, int8, int8)
     RETURNS timestamptz
 AS '$libdir/gp_percentile_agg'
-   LANGUAGE C IMMUTABLE STRICT;
+   LANGUAGE C IMMUTABLE;
 
 CREATE FUNCTION gp_percentile_disc_transition(anyelement, anyelement, float8, int8, int8)
     RETURNS anyelement
 AS '$libdir/gp_percentile_agg'
-   LANGUAGE C IMMUTABLE STRICT;
+   LANGUAGE C IMMUTABLE;
 
 CREATE FUNCTION gp_percentile_final(anyelement)
     RETURNS anyelement
 AS '$libdir/gp_percentile_agg'
-   LANGUAGE C IMMUTABLE STRICT;
+   LANGUAGE C IMMUTABLE;
 
 -- Creating aggregate functions
 CREATE AGGREGATE gp_percentile_cont(float8, float8, int8, int8)

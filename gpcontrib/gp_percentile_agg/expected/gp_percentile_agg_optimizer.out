@@ -52,47 +52,59 @@ from  (select * from generate_series(1, 99) i ) a ;
 set optimizer_enable_orderedagg=on;
 explain select percentile_cont(0.5) within group (order by a),
 	median(a), percentile_disc(0.5) within group(order by a) from perct;
-                                                                        QUERY PLAN                                                                         
------------------------------------------------------------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice8; segments: 3)  (cost=0.00..2712065311.58 rows=1 width=20)
-   ->  Sequence  (cost=0.00..2712065311.58 rows=1 width=20)
-         ->  Shared Scan (share slice:id 8:0)  (cost=0.00..431.00 rows=34 width=1)
-               ->  Materialize  (cost=0.00..431.00 rows=34 width=1)
-                     ->  Seq Scan on perct  (cost=0.00..431.00 rows=34 width=34)
-         ->  Redistribute Motion 1:3  (slice7)  (cost=0.00..2712064880.58 rows=1 width=20)
-               ->  Nested Loop  (cost=0.00..2712064880.58 rows=1 width=20)
-                     Join Filter: true
-                     ->  Aggregate  (cost=0.00..1324034.93 rows=1 width=16)
-                           ->  Limit  (cost=0.00..1324034.93 rows=34 width=12)
-                                 ->  Gather Motion 3:1  (slice6; segments: 3)  (cost=0.00..1324034.93 rows=100 width=12)
-                                       Merge Key: share0_ref4.a
-                                       ->  Sort  (cost=0.00..1324034.92 rows=34 width=12)
-                                             Sort Key: share0_ref4.a
-                                             ->  Nested Loop  (cost=0.00..1324034.91 rows=34 width=12)
+                                                                              QUERY PLAN                                                                               
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice8; segments: 3)  (cost=0.00..2712071156.19 rows=1 width=20)
+   ->  Sequence  (cost=0.00..2712071156.19 rows=1 width=20)
+         ->  Shared Scan (share slice:id 8:0)  (cost=0.00..431.01 rows=34 width=1)
+               ->  Materialize  (cost=0.00..431.01 rows=34 width=1)
+                     ->  GroupAggregate  (cost=0.00..431.01 rows=34 width=12)
+                           Group Key: perct_1.a
+                           ->  Sort  (cost=0.00..431.00 rows=34 width=4)
+                                 Sort Key: perct_1.a
+                                 ->  Seq Scan on perct perct_1  (cost=0.00..431.00 rows=34 width=4)
+         ->  Sequence  (cost=0.00..2712070725.18 rows=1 width=20)
+               ->  Shared Scan (share slice:id 8:1)  (cost=0.00..431.01 rows=34 width=1)
+                     ->  Materialize  (cost=0.00..431.01 rows=34 width=1)
+                           ->  GroupAggregate  (cost=0.00..431.01 rows=34 width=12)
+                                 Group Key: perct.a
+                                 ->  Sort  (cost=0.00..431.00 rows=34 width=4)
+                                       Sort Key: perct.a
+                                       ->  Seq Scan on perct  (cost=0.00..431.00 rows=34 width=4)
+               ->  Redistribute Motion 1:3  (slice7)  (cost=0.00..2712070294.18 rows=1 width=20)
+                     ->  Nested Loop  (cost=0.00..2712070294.18 rows=1 width=20)
+                           Join Filter: true
+                           ->  Aggregate  (cost=0.00..1324037.57 rows=1 width=16)
+                                 ->  Limit  (cost=0.00..1324037.57 rows=34 width=20)
+                                       ->  Gather Motion 3:1  (slice6; segments: 3)  (cost=0.00..1324037.57 rows=100 width=20)
+                                             Merge Key: share0_ref3.a
+                                             ->  Nested Loop  (cost=0.00..1324037.56 rows=34 width=20)
                                                    Join Filter: true
-                                                   ->  Broadcast Motion 1:3  (slice5)  (cost=0.00..431.00 rows=3 width=8)
-                                                         ->  Aggregate  (cost=0.00..431.00 rows=1 width=8)
-                                                               ->  Gather Motion 3:1  (slice4; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
+                                                   ->  Shared Scan (share slice:id 6:0)  (cost=0.00..431.00 rows=34 width=12)
+                                                   ->  Materialize  (cost=0.00..431.00 rows=1 width=8)
+                                                         ->  Result  (cost=0.00..431.00 rows=1 width=8)
+                                                               ->  Broadcast Motion 1:3  (slice5)  (cost=0.00..431.00 rows=3 width=8)
                                                                      ->  Aggregate  (cost=0.00..431.00 rows=1 width=8)
-                                                                           ->  Shared Scan (share slice:id 4:0)  (cost=0.00..431.00 rows=34 width=4)
-                                                   ->  Shared Scan (share slice:id 6:0)  (cost=0.00..431.00 rows=34 width=4)
-                     ->  Materialize  (cost=0.00..1324034.93 rows=1 width=4)
-                           ->  Aggregate  (cost=0.00..1324034.93 rows=1 width=4)
-                                 ->  Limit  (cost=0.00..1324034.93 rows=34 width=12)
-                                       ->  Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..1324034.93 rows=100 width=12)
-                                             Merge Key: share0_ref2.a
-                                             ->  Sort  (cost=0.00..1324034.92 rows=34 width=12)
-                                                   Sort Key: share0_ref2.a
-                                                   ->  Nested Loop  (cost=0.00..1324034.91 rows=34 width=12)
+                                                                           ->  Gather Motion 3:1  (slice4; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
+                                                                                 ->  Aggregate  (cost=0.00..431.00 rows=1 width=8)
+                                                                                       ->  Shared Scan (share slice:id 4:0)  (cost=0.00..431.00 rows=34 width=8)
+                           ->  Materialize  (cost=0.00..1324037.57 rows=1 width=4)
+                                 ->  Aggregate  (cost=0.00..1324037.57 rows=1 width=4)
+                                       ->  Limit  (cost=0.00..1324037.57 rows=34 width=20)
+                                             ->  Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..1324037.57 rows=100 width=20)
+                                                   Merge Key: share1_ref3.a
+                                                   ->  Nested Loop  (cost=0.00..1324037.56 rows=34 width=20)
                                                          Join Filter: true
-                                                         ->  Broadcast Motion 1:3  (slice2)  (cost=0.00..431.00 rows=3 width=8)
-                                                               ->  Aggregate  (cost=0.00..431.00 rows=1 width=8)
-                                                                     ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
+                                                         ->  Shared Scan (share slice:id 3:1)  (cost=0.00..431.00 rows=34 width=12)
+                                                         ->  Materialize  (cost=0.00..431.00 rows=1 width=8)
+                                                               ->  Broadcast Motion 1:3  (slice2)  (cost=0.00..431.00 rows=3 width=8)
+                                                                     ->  Result  (cost=0.00..431.00 rows=1 width=8)
                                                                            ->  Aggregate  (cost=0.00..431.00 rows=1 width=8)
-                                                                                 ->  Shared Scan (share slice:id 1:0)  (cost=0.00..431.00 rows=34 width=4)
-                                                         ->  Shared Scan (share slice:id 3:0)  (cost=0.00..431.00 rows=34 width=4)
+                                                                                 ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
+                                                                                       ->  Aggregate  (cost=0.00..431.00 rows=1 width=8)
+                                                                                             ->  Shared Scan (share slice:id 1:1)  (cost=0.00..431.00 rows=34 width=8)
  Optimizer: Pivotal Optimizer (GPORCA)
-(38 rows)
+(50 rows)
 
 select percentile_cont(0.5) within group (order by a),
 	median(a), percentile_disc(0.5) within group(order by a) from perct;
@@ -135,23 +147,26 @@ select b, percentile_cont(0.5) within group (order by a),
 (11 rows)
 
 explain select percentile_cont(0.2) within group (order by a) from generate_series(1, 100)a;
-                                                 QUERY PLAN                                                  
--------------------------------------------------------------------------------------------------------------
- Sequence  (cost=0.00..1324105.78 rows=1 width=8)
-   ->  Shared Scan (share slice:id -1:0)  (cost=0.00..0.01 rows=334 width=1)
-         ->  Materialize  (cost=0.00..0.01 rows=334 width=1)
-               ->  Function Scan on generate_series  (cost=0.00..0.00 rows=334 width=4)
-   ->  Aggregate  (cost=0.00..1324105.78 rows=1 width=8)
-         ->  Limit  (cost=0.00..1324105.78 rows=334 width=12)
-               ->  Sort  (cost=0.00..1324105.76 rows=334 width=12)
-                     Sort Key: share0_ref2.generate_series
-                     ->  Nested Loop  (cost=0.00..1324105.09 rows=334 width=12)
+                                                    QUERY PLAN                                                     
+-------------------------------------------------------------------------------------------------------------------
+ Sequence  (cost=0.00..1324182.58 rows=1 width=8)
+   ->  Shared Scan (share slice:id -1:0)  (cost=0.00..0.13 rows=334 width=1)
+         ->  Materialize  (cost=0.00..0.13 rows=334 width=1)
+               ->  HashAggregate  (cost=0.00..0.13 rows=334 width=12)
+                     Group Key: generate_series.generate_series
+                     ->  Function Scan on generate_series  (cost=0.00..0.00 rows=334 width=4)
+   ->  Aggregate  (cost=0.00..1324182.45 rows=1 width=8)
+         ->  Limit  (cost=0.00..1324182.44 rows=334 width=20)
+               ->  Sort  (cost=0.00..1324182.42 rows=334 width=20)
+                     Sort Key: share0_ref3.generate_series
+                     ->  Nested Loop  (cost=0.00..1324181.29 rows=334 width=20)
                            Join Filter: true
-                           ->  Aggregate  (cost=0.00..431.01 rows=1 width=8)
-                                 ->  Shared Scan (share slice:id -1:0)  (cost=0.00..431.01 rows=334 width=4)
-                           ->  Shared Scan (share slice:id -1:0)  (cost=0.00..431.01 rows=334 width=4)
+                           ->  Shared Scan (share slice:id -1:0)  (cost=0.00..431.03 rows=334 width=12)
+                           ->  Result  (cost=0.00..431.02 rows=1 width=8)
+                                 ->  Aggregate  (cost=0.00..431.02 rows=1 width=8)
+                                       ->  Shared Scan (share slice:id -1:0)  (cost=0.00..431.02 rows=334 width=8)
  Optimizer: Pivotal Optimizer (GPORCA)
-(14 rows)
+(17 rows)
 
 select percentile_cont(0.2) within group (order by a) from generate_series(1, 100)a;
  percentile_cont 
@@ -258,37 +273,41 @@ select percentile_cont(0.1) within group (order by a), count(*), sum(a) from per
 (11 rows)
 
 explain select percentile_cont(0.6) within group (order by a), count(*), sum(a) from perct;
-                                                                        QUERY PLAN                                                                         
------------------------------------------------------------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice6; segments: 3)  (cost=0.00..1356694888.30 rows=1 width=24)
-   ->  Sequence  (cost=0.00..1356694888.30 rows=1 width=24)
-         ->  Shared Scan (share slice:id 6:0)  (cost=0.00..431.00 rows=34 width=1)
-               ->  Materialize  (cost=0.00..431.00 rows=34 width=1)
-                     ->  Seq Scan on perct perct_1  (cost=0.00..431.00 rows=34 width=34)
-         ->  Redistribute Motion 1:3  (slice5)  (cost=0.00..1356694457.29 rows=1 width=24)
-               ->  Nested Loop  (cost=0.00..1356694457.29 rows=1 width=24)
+                                                                           QUERY PLAN                                                                            
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice6; segments: 3)  (cost=0.00..1356697594.89 rows=1 width=24)
+   ->  Sequence  (cost=0.00..1356697594.89 rows=1 width=24)
+         ->  Shared Scan (share slice:id 6:0)  (cost=0.00..431.01 rows=34 width=1)
+               ->  Materialize  (cost=0.00..431.01 rows=34 width=1)
+                     ->  GroupAggregate  (cost=0.00..431.01 rows=34 width=12)
+                           Group Key: perct_1.a
+                           ->  Sort  (cost=0.00..431.00 rows=34 width=4)
+                                 Sort Key: perct_1.a
+                                 ->  Seq Scan on perct perct_1  (cost=0.00..431.00 rows=34 width=4)
+         ->  Redistribute Motion 1:3  (slice5)  (cost=0.00..1356697163.89 rows=1 width=24)
+               ->  Nested Loop  (cost=0.00..1356697163.89 rows=1 width=24)
                      Join Filter: true
                      ->  Aggregate  (cost=0.00..431.00 rows=1 width=16)
                            ->  Gather Motion 3:1  (slice4; segments: 3)  (cost=0.00..431.00 rows=1 width=16)
                                  ->  Aggregate  (cost=0.00..431.00 rows=1 width=16)
                                        ->  Seq Scan on perct  (cost=0.00..431.00 rows=34 width=4)
-                     ->  Materialize  (cost=0.00..1324034.93 rows=1 width=8)
-                           ->  Aggregate  (cost=0.00..1324034.93 rows=1 width=8)
-                                 ->  Limit  (cost=0.00..1324034.93 rows=34 width=12)
-                                       ->  Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..1324034.93 rows=100 width=12)
-                                             Merge Key: share0_ref2.a
-                                             ->  Sort  (cost=0.00..1324034.92 rows=34 width=12)
-                                                   Sort Key: share0_ref2.a
-                                                   ->  Nested Loop  (cost=0.00..1324034.91 rows=34 width=12)
-                                                         Join Filter: true
+                     ->  Materialize  (cost=0.00..1324037.57 rows=1 width=8)
+                           ->  Aggregate  (cost=0.00..1324037.57 rows=1 width=8)
+                                 ->  Limit  (cost=0.00..1324037.57 rows=34 width=20)
+                                       ->  Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..1324037.57 rows=100 width=20)
+                                             Merge Key: share0_ref3.a
+                                             ->  Nested Loop  (cost=0.00..1324037.56 rows=34 width=20)
+                                                   Join Filter: true
+                                                   ->  Shared Scan (share slice:id 3:0)  (cost=0.00..431.00 rows=34 width=12)
+                                                   ->  Materialize  (cost=0.00..431.00 rows=1 width=8)
                                                          ->  Broadcast Motion 1:3  (slice2)  (cost=0.00..431.00 rows=3 width=8)
-                                                               ->  Aggregate  (cost=0.00..431.00 rows=1 width=8)
-                                                                     ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
-                                                                           ->  Aggregate  (cost=0.00..431.00 rows=1 width=8)
-                                                                                 ->  Shared Scan (share slice:id 1:0)  (cost=0.00..431.00 rows=34 width=4)
-                                                         ->  Shared Scan (share slice:id 3:0)  (cost=0.00..431.00 rows=34 width=4)
+                                                               ->  Result  (cost=0.00..431.00 rows=1 width=8)
+                                                                     ->  Aggregate  (cost=0.00..431.00 rows=1 width=8)
+                                                                           ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
+                                                                                 ->  Aggregate  (cost=0.00..431.00 rows=1 width=8)
+                                                                                       ->  Shared Scan (share slice:id 1:0)  (cost=0.00..431.00 rows=34 width=8)
  Optimizer: Pivotal Optimizer (GPORCA)
-(28 rows)
+(32 rows)
 
 select percentile_cont(0.6) within group (order by a), count(*), sum(a) from perct;
  percentile_cont | count | sum  
@@ -452,30 +471,36 @@ select count(*), median(b+1) from perct group by b+2
 (11 rows)
 
 explain select median(a) from perct2;
-                                                                  QUERY PLAN                                                                   
------------------------------------------------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice5; segments: 3)  (cost=0.00..1324468.39 rows=1 width=8)
-   ->  Sequence  (cost=0.00..1324468.39 rows=1 width=8)
-         ->  Shared Scan (share slice:id 5:0)  (cost=0.00..431.01 rows=67 width=1)
-               ->  Materialize  (cost=0.00..431.01 rows=67 width=1)
-                     ->  Seq Scan on perct2  (cost=0.00..431.00 rows=67 width=34)
-         ->  Redistribute Motion 1:3  (slice4)  (cost=0.00..1324037.39 rows=1 width=8)
-               ->  Aggregate  (cost=0.00..1324037.39 rows=1 width=8)
-                     ->  Limit  (cost=0.00..1324037.39 rows=67 width=12)
-                           ->  Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..1324037.38 rows=200 width=12)
-                                 Merge Key: share0_ref2.a
-                                 ->  Sort  (cost=0.00..1324037.38 rows=67 width=12)
-                                       Sort Key: share0_ref2.a
-                                       ->  Nested Loop  (cost=0.00..1324037.35 rows=67 width=12)
+                                                                        QUERY PLAN                                                                         
+-----------------------------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice6; segments: 3)  (cost=0.00..1324468.60 rows=1 width=8)
+   ->  Sequence  (cost=0.00..1324468.60 rows=1 width=8)
+         ->  Shared Scan (share slice:id 6:0)  (cost=0.00..431.01 rows=34 width=1)
+               ->  Materialize  (cost=0.00..431.01 rows=34 width=1)
+                     ->  HashAggregate  (cost=0.00..431.01 rows=34 width=12)
+                           Group Key: perct2.a
+                           ->  Redistribute Motion 3:3  (slice5; segments: 3)  (cost=0.00..431.00 rows=67 width=4)
+                                 Hash Key: perct2.a
+                                 ->  Seq Scan on perct2  (cost=0.00..431.00 rows=67 width=4)
+         ->  Redistribute Motion 1:3  (slice4)  (cost=0.00..1324037.59 rows=1 width=8)
+               ->  Aggregate  (cost=0.00..1324037.59 rows=1 width=8)
+                     ->  Limit  (cost=0.00..1324037.59 rows=34 width=20)
+                           ->  Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..1324037.59 rows=100 width=20)
+                                 Merge Key: share0_ref3.a
+                                 ->  Sort  (cost=0.00..1324037.58 rows=34 width=20)
+                                       Sort Key: share0_ref3.a
+                                       ->  Nested Loop  (cost=0.00..1324037.56 rows=34 width=20)
                                              Join Filter: true
-                                             ->  Broadcast Motion 1:3  (slice2)  (cost=0.00..431.00 rows=3 width=8)
-                                                   ->  Aggregate  (cost=0.00..431.00 rows=1 width=8)
-                                                         ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
+                                             ->  Shared Scan (share slice:id 3:0)  (cost=0.00..431.00 rows=34 width=12)
+                                             ->  Materialize  (cost=0.00..431.00 rows=1 width=8)
+                                                   ->  Result  (cost=0.00..431.00 rows=1 width=8)
+                                                         ->  Broadcast Motion 1:3  (slice2)  (cost=0.00..431.00 rows=3 width=8)
                                                                ->  Aggregate  (cost=0.00..431.00 rows=1 width=8)
-                                                                     ->  Shared Scan (share slice:id 1:0)  (cost=0.00..431.00 rows=67 width=4)
-                                             ->  Shared Scan (share slice:id 3:0)  (cost=0.00..431.00 rows=67 width=4)
+                                                                     ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
+                                                                           ->  Aggregate  (cost=0.00..431.00 rows=1 width=8)
+                                                                                 ->  Shared Scan (share slice:id 1:0)  (cost=0.00..431.00 rows=34 width=8)
  Optimizer: Pivotal Optimizer (GPORCA)
-(21 rows)
+(27 rows)
 
 select median(a) from perct2;
  median 
@@ -584,47 +609,65 @@ from perct group by b+1 order by b+1;
 (11 rows)
 
 explain select median(a), median(c) from perct4;
-                                                                        QUERY PLAN                                                                         
------------------------------------------------------------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice8; segments: 3)  (cost=0.00..2712066833.06 rows=1 width=16)
-   ->  Sequence  (cost=0.00..2712066833.06 rows=1 width=16)
-         ->  Shared Scan (share slice:id 8:0)  (cost=0.00..431.00 rows=34 width=1)
-               ->  Materialize  (cost=0.00..431.00 rows=34 width=1)
-                     ->  Seq Scan on perct4  (cost=0.00..431.00 rows=34 width=42)
-         ->  Redistribute Motion 1:3  (slice7)  (cost=0.00..2712066402.06 rows=1 width=16)
-               ->  Nested Loop  (cost=0.00..2712066402.06 rows=1 width=16)
-                     Join Filter: true
-                     ->  Aggregate  (cost=0.00..1324034.93 rows=1 width=8)
-                           ->  Limit  (cost=0.00..1324034.93 rows=34 width=12)
-                                 ->  Gather Motion 3:1  (slice6; segments: 3)  (cost=0.00..1324034.93 rows=100 width=12)
-                                       Merge Key: share0_ref4.a
-                                       ->  Sort  (cost=0.00..1324034.92 rows=34 width=12)
-                                             Sort Key: share0_ref4.a
-                                             ->  Nested Loop  (cost=0.00..1324034.91 rows=34 width=12)
+                                                                           QUERY PLAN                                                                            
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice9; segments: 3)  (cost=0.00..2712065060.98 rows=1 width=16)
+   ->  Sequence  (cost=0.00..2712065060.98 rows=1 width=16)
+         ->  Shared Scan (share slice:id 9:0)  (cost=0.00..431.01 rows=28 width=1)
+               ->  Materialize  (cost=0.00..431.01 rows=28 width=1)
+                     ->  GroupAggregate  (cost=0.00..431.01 rows=28 width=12)
+                           Group Key: perct4_1.a
+                           ->  Sort  (cost=0.00..431.01 rows=34 width=4)
+                                 Sort Key: perct4_1.a
+                                 ->  Redistribute Motion 3:3  (slice8; segments: 3)  (cost=0.00..431.00 rows=34 width=4)
+                                       Hash Key: perct4_1.a
+                                       ->  Seq Scan on perct4 perct4_1  (cost=0.00..431.00 rows=34 width=4)
+         ->  Sequence  (cost=0.00..2712064629.97 rows=1 width=16)
+               ->  Shared Scan (share slice:id 9:1)  (cost=0.00..431.01 rows=1 width=1)
+                     ->  Materialize  (cost=0.00..431.01 rows=1 width=1)
+                           ->  GroupAggregate  (cost=0.00..431.01 rows=1 width=16)
+                                 Group Key: perct4.c
+                                 ->  Sort  (cost=0.00..431.01 rows=1 width=16)
+                                       Sort Key: perct4.c
+                                       ->  Redistribute Motion 3:3  (slice7; segments: 3)  (cost=0.00..431.01 rows=1 width=16)
+                                             Hash Key: perct4.c
+                                             ->  Result  (cost=0.00..431.01 rows=1 width=16)
+                                                   ->  HashAggregate  (cost=0.00..431.01 rows=1 width=16)
+                                                         Group Key: perct4.c
+                                                         ->  Seq Scan on perct4  (cost=0.00..431.00 rows=34 width=8)
+               ->  Redistribute Motion 1:3  (slice6)  (cost=0.00..2712064198.97 rows=1 width=16)
+                     ->  Nested Loop  (cost=0.00..2712064198.97 rows=1 width=16)
+                           Join Filter: true
+                           ->  Aggregate  (cost=0.00..1324036.68 rows=1 width=8)
+                                 ->  Limit  (cost=0.00..1324036.68 rows=28 width=20)
+                                       ->  Gather Motion 3:1  (slice5; segments: 3)  (cost=0.00..1324036.67 rows=82 width=20)
+                                             Merge Key: share0_ref3.a
+                                             ->  Nested Loop  (cost=0.00..1324036.67 rows=28 width=20)
                                                    Join Filter: true
-                                                   ->  Broadcast Motion 1:3  (slice5)  (cost=0.00..431.00 rows=3 width=8)
-                                                         ->  Aggregate  (cost=0.00..431.00 rows=1 width=8)
-                                                               ->  Gather Motion 3:1  (slice4; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
+                                                   ->  Shared Scan (share slice:id 5:0)  (cost=0.00..431.00 rows=28 width=12)
+                                                   ->  Materialize  (cost=0.00..431.00 rows=1 width=8)
+                                                         ->  Result  (cost=0.00..431.00 rows=1 width=8)
+                                                               ->  Broadcast Motion 1:3  (slice4)  (cost=0.00..431.00 rows=3 width=8)
                                                                      ->  Aggregate  (cost=0.00..431.00 rows=1 width=8)
-                                                                           ->  Shared Scan (share slice:id 4:0)  (cost=0.00..431.00 rows=34 width=4)
-                                                   ->  Shared Scan (share slice:id 6:0)  (cost=0.00..431.00 rows=34 width=4)
-                     ->  Materialize  (cost=0.00..1324036.42 rows=1 width=8)
-                           ->  Aggregate  (cost=0.00..1324036.42 rows=1 width=8)
-                                 ->  Limit  (cost=0.00..1324036.42 rows=34 width=16)
-                                       ->  Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..1324036.41 rows=100 width=16)
-                                             Merge Key: share0_ref2.c
-                                             ->  Sort  (cost=0.00..1324036.41 rows=34 width=16)
-                                                   Sort Key: share0_ref2.c
-                                                   ->  Nested Loop  (cost=0.00..1324036.39 rows=34 width=16)
-                                                         Join Filter: true
-                                                         ->  Broadcast Motion 1:3  (slice2)  (cost=0.00..431.00 rows=3 width=8)
-                                                               ->  Aggregate  (cost=0.00..431.00 rows=1 width=8)
-                                                                     ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
-                                                                           ->  Aggregate  (cost=0.00..431.00 rows=1 width=8)
-                                                                                 ->  Shared Scan (share slice:id 1:0)  (cost=0.00..431.00 rows=34 width=8)
-                                                         ->  Shared Scan (share slice:id 3:0)  (cost=0.00..431.00 rows=34 width=8)
+                                                                           ->  Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
+                                                                                 ->  Aggregate  (cost=0.00..431.00 rows=1 width=8)
+                                                                                       ->  Shared Scan (share slice:id 3:0)  (cost=0.00..431.00 rows=28 width=8)
+                           ->  Aggregate  (cost=0.00..1324032.52 rows=1 width=8)
+                                 ->  Limit  (cost=0.00..1324032.52 rows=1 width=24)
+                                       ->  Sort  (cost=0.00..1324032.52 rows=1 width=24)
+                                             Sort Key: share1_ref2.c
+                                             ->  Nested Loop  (cost=0.00..1324032.52 rows=1 width=24)
+                                                   Join Filter: true
+                                                   ->  Result  (cost=0.00..431.00 rows=1 width=8)
+                                                         ->  Aggregate  (cost=0.00..431.00 rows=1 width=8)
+                                                               ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
+                                                                     ->  Result  (cost=0.00..431.00 rows=1 width=8)
+                                                                           ->  Shared Scan (share slice:id 2:1)  (cost=0.00..431.00 rows=1 width=8)
+                                                   ->  Materialize  (cost=0.00..431.00 rows=1 width=16)
+                                                         ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=16)
+                                                               ->  Shared Scan (share slice:id 1:1)  (cost=0.00..431.00 rows=1 width=16)
  Optimizer: Pivotal Optimizer (GPORCA)
-(38 rows)
+(56 rows)
 
 select median(a), median(c) from perct4;
  median | median 
@@ -732,30 +775,34 @@ select sum(median(a)) over (partition by b) from perct group by b order by b;
 (11 rows)
 
 explain select percentile_disc(0) within group (order by a) from perct;
-                                                                  QUERY PLAN                                                                   
------------------------------------------------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice5; segments: 3)  (cost=0.00..1324465.93 rows=1 width=4)
-   ->  Sequence  (cost=0.00..1324465.93 rows=1 width=4)
-         ->  Shared Scan (share slice:id 5:0)  (cost=0.00..431.00 rows=34 width=1)
-               ->  Materialize  (cost=0.00..431.00 rows=34 width=1)
-                     ->  Seq Scan on perct  (cost=0.00..431.00 rows=34 width=34)
-         ->  Redistribute Motion 1:3  (slice4)  (cost=0.00..1324034.93 rows=1 width=4)
-               ->  Aggregate  (cost=0.00..1324034.93 rows=1 width=4)
-                     ->  Limit  (cost=0.00..1324034.93 rows=34 width=12)
-                           ->  Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..1324034.93 rows=100 width=12)
-                                 Merge Key: share0_ref2.a
-                                 ->  Sort  (cost=0.00..1324034.92 rows=34 width=12)
-                                       Sort Key: share0_ref2.a
-                                       ->  Nested Loop  (cost=0.00..1324034.91 rows=34 width=12)
-                                             Join Filter: true
-                                             ->  Broadcast Motion 1:3  (slice2)  (cost=0.00..431.00 rows=3 width=8)
-                                                   ->  Aggregate  (cost=0.00..431.00 rows=1 width=8)
-                                                         ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
-                                                               ->  Aggregate  (cost=0.00..431.00 rows=1 width=8)
-                                                                     ->  Shared Scan (share slice:id 1:0)  (cost=0.00..431.00 rows=34 width=4)
-                                             ->  Shared Scan (share slice:id 3:0)  (cost=0.00..431.00 rows=34 width=4)
+                                                                     QUERY PLAN                                                                      
+-----------------------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice5; segments: 3)  (cost=0.00..1324468.58 rows=1 width=4)
+   ->  Sequence  (cost=0.00..1324468.58 rows=1 width=4)
+         ->  Shared Scan (share slice:id 5:0)  (cost=0.00..431.01 rows=34 width=1)
+               ->  Materialize  (cost=0.00..431.01 rows=34 width=1)
+                     ->  GroupAggregate  (cost=0.00..431.01 rows=34 width=12)
+                           Group Key: perct.a
+                           ->  Sort  (cost=0.00..431.00 rows=34 width=4)
+                                 Sort Key: perct.a
+                                 ->  Seq Scan on perct  (cost=0.00..431.00 rows=34 width=4)
+         ->  Redistribute Motion 1:3  (slice4)  (cost=0.00..1324037.57 rows=1 width=4)
+               ->  Aggregate  (cost=0.00..1324037.57 rows=1 width=4)
+                     ->  Limit  (cost=0.00..1324037.57 rows=34 width=20)
+                           ->  Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..1324037.57 rows=100 width=20)
+                                 Merge Key: share0_ref3.a
+                                 ->  Nested Loop  (cost=0.00..1324037.56 rows=34 width=20)
+                                       Join Filter: true
+                                       ->  Shared Scan (share slice:id 3:0)  (cost=0.00..431.00 rows=34 width=12)
+                                       ->  Materialize  (cost=0.00..431.00 rows=1 width=8)
+                                             ->  Result  (cost=0.00..431.00 rows=1 width=8)
+                                                   ->  Broadcast Motion 1:3  (slice2)  (cost=0.00..431.00 rows=3 width=8)
+                                                         ->  Aggregate  (cost=0.00..431.00 rows=1 width=8)
+                                                               ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
+                                                                     ->  Aggregate  (cost=0.00..431.00 rows=1 width=8)
+                                                                           ->  Shared Scan (share slice:id 1:0)  (cost=0.00..431.00 rows=34 width=8)
  Optimizer: Pivotal Optimizer (GPORCA)
-(21 rows)
+(25 rows)
 
 select percentile_disc(0) within group (order by a) from perct;
  percentile_disc 
@@ -799,37 +846,41 @@ execute p(0.8);
 
 deallocate p;
 explain select sum((select median(a) from perct)) from perct;
-                                                                                 QUERY PLAN                                                                                  
------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
- Aggregate  (cost=0.00..1357135807.06 rows=1 width=8)
-   ->  Gather Motion 3:1  (slice6; segments: 3)  (cost=0.00..1357135807.06 rows=1 width=8)
-         ->  Aggregate  (cost=0.00..1357135807.06 rows=1 width=8)
-               ->  Nested Loop Left Join  (cost=0.00..1357135807.06 rows=67 width=8)
+                                                                                    QUERY PLAN                                                                                     
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Aggregate  (cost=0.00..1357138415.08 rows=1 width=8)
+   ->  Gather Motion 3:1  (slice6; segments: 3)  (cost=0.00..1357138415.08 rows=1 width=8)
+         ->  Aggregate  (cost=0.00..1357138415.08 rows=1 width=8)
+               ->  Nested Loop Left Join  (cost=0.00..1357138415.08 rows=67 width=8)
                      Join Filter: true
                      ->  Seq Scan on perct perct_1  (cost=0.00..431.00 rows=34 width=1)
-                     ->  Materialize  (cost=0.00..1324465.93 rows=1 width=8)
-                           ->  Broadcast Motion 3:3  (slice5; segments: 3)  (cost=0.00..1324465.93 rows=1 width=8)
-                                 ->  Sequence  (cost=0.00..1324465.93 rows=1 width=8)
-                                       ->  Shared Scan (share slice:id 5:0)  (cost=0.00..431.00 rows=34 width=1)
-                                             ->  Materialize  (cost=0.00..431.00 rows=34 width=1)
-                                                   ->  Seq Scan on perct  (cost=0.00..431.00 rows=34 width=34)
-                                       ->  Redistribute Motion 1:3  (slice4)  (cost=0.00..1324034.93 rows=1 width=8)
-                                             ->  Aggregate  (cost=0.00..1324034.93 rows=1 width=8)
-                                                   ->  Limit  (cost=0.00..1324034.93 rows=34 width=12)
-                                                         ->  Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..1324034.93 rows=100 width=12)
-                                                               Merge Key: share0_ref2.a
-                                                               ->  Sort  (cost=0.00..1324034.92 rows=34 width=12)
-                                                                     Sort Key: share0_ref2.a
-                                                                     ->  Nested Loop  (cost=0.00..1324034.91 rows=34 width=12)
+                     ->  Materialize  (cost=0.00..1324468.48 rows=1 width=8)
+                           ->  Broadcast Motion 3:3  (slice5; segments: 3)  (cost=0.00..1324468.48 rows=1 width=8)
+                                 ->  Sequence  (cost=0.00..1324468.48 rows=1 width=8)
+                                       ->  Shared Scan (share slice:id 5:0)  (cost=0.00..431.01 rows=34 width=1)
+                                             ->  Materialize  (cost=0.00..431.01 rows=34 width=1)
+                                                   ->  GroupAggregate  (cost=0.00..431.01 rows=34 width=12)
+                                                         Group Key: perct.a
+                                                         ->  Sort  (cost=0.00..431.00 rows=34 width=4)
+                                                               Sort Key: perct.a
+                                                               ->  Seq Scan on perct  (cost=0.00..431.00 rows=34 width=4)
+                                       ->  Redistribute Motion 1:3  (slice4)  (cost=0.00..1324037.47 rows=1 width=8)
+                                             ->  Aggregate  (cost=0.00..1324037.47 rows=1 width=8)
+                                                   ->  Result  (cost=0.00..1324037.47 rows=34 width=20)
+                                                         ->  Limit  (cost=0.00..1324037.46 rows=34 width=20)
+                                                               ->  Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..1324037.46 rows=100 width=20)
+                                                                     Merge Key: share0_ref3.a
+                                                                     ->  Nested Loop  (cost=0.00..1324037.45 rows=34 width=20)
                                                                            Join Filter: true
-                                                                           ->  Broadcast Motion 1:3  (slice2)  (cost=0.00..431.00 rows=3 width=8)
-                                                                                 ->  Aggregate  (cost=0.00..431.00 rows=1 width=8)
-                                                                                       ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
-                                                                                             ->  Aggregate  (cost=0.00..431.00 rows=1 width=8)
-                                                                                                   ->  Shared Scan (share slice:id 1:0)  (cost=0.00..431.00 rows=34 width=4)
-                                                                           ->  Shared Scan (share slice:id 3:0)  (cost=0.00..431.00 rows=34 width=4)
+                                                                           ->  Shared Scan (share slice:id 3:0)  (cost=0.00..431.00 rows=34 width=12)
+                                                                           ->  Materialize  (cost=0.00..431.00 rows=1 width=8)
+                                                                                 ->  Broadcast Motion 1:3  (slice2)  (cost=0.00..431.00 rows=3 width=8)
+                                                                                       ->  Aggregate  (cost=0.00..431.00 rows=1 width=8)
+                                                                                             ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
+                                                                                                   ->  Aggregate  (cost=0.00..431.00 rows=1 width=8)
+                                                                                                         ->  Shared Scan (share slice:id 1:0)  (cost=0.00..431.00 rows=34 width=8)
  Optimizer: Pivotal Optimizer (GPORCA)
-(28 rows)
+(32 rows)
 
 select sum((select median(a) from perct)) from perct;
  sum  
@@ -838,30 +889,34 @@ select sum((select median(a) from perct)) from perct;
 (1 row)
 
 explain select percentile_cont(null) within group (order by a) from perct;
-                                                                  QUERY PLAN                                                                   
------------------------------------------------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice5; segments: 3)  (cost=0.00..1324465.93 rows=1 width=8)
-   ->  Sequence  (cost=0.00..1324465.93 rows=1 width=8)
-         ->  Shared Scan (share slice:id 5:0)  (cost=0.00..431.00 rows=34 width=1)
-               ->  Materialize  (cost=0.00..431.00 rows=34 width=1)
-                     ->  Seq Scan on perct  (cost=0.00..431.00 rows=34 width=34)
-         ->  Redistribute Motion 1:3  (slice4)  (cost=0.00..1324034.93 rows=1 width=8)
-               ->  Aggregate  (cost=0.00..1324034.93 rows=1 width=8)
-                     ->  Limit  (cost=0.00..1324034.93 rows=34 width=12)
-                           ->  Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..1324034.93 rows=100 width=12)
-                                 Merge Key: share0_ref2.a
-                                 ->  Sort  (cost=0.00..1324034.92 rows=34 width=12)
-                                       Sort Key: share0_ref2.a
-                                       ->  Nested Loop  (cost=0.00..1324034.91 rows=34 width=12)
-                                             Join Filter: true
-                                             ->  Broadcast Motion 1:3  (slice2)  (cost=0.00..431.00 rows=3 width=8)
-                                                   ->  Aggregate  (cost=0.00..431.00 rows=1 width=8)
-                                                         ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
-                                                               ->  Aggregate  (cost=0.00..431.00 rows=1 width=8)
-                                                                     ->  Shared Scan (share slice:id 1:0)  (cost=0.00..431.00 rows=34 width=4)
-                                             ->  Shared Scan (share slice:id 3:0)  (cost=0.00..431.00 rows=34 width=4)
+                                                                     QUERY PLAN                                                                      
+-----------------------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice5; segments: 3)  (cost=0.00..1324468.58 rows=1 width=8)
+   ->  Sequence  (cost=0.00..1324468.58 rows=1 width=8)
+         ->  Shared Scan (share slice:id 5:0)  (cost=0.00..431.01 rows=34 width=1)
+               ->  Materialize  (cost=0.00..431.01 rows=34 width=1)
+                     ->  GroupAggregate  (cost=0.00..431.01 rows=34 width=12)
+                           Group Key: perct.a
+                           ->  Sort  (cost=0.00..431.00 rows=34 width=4)
+                                 Sort Key: perct.a
+                                 ->  Seq Scan on perct  (cost=0.00..431.00 rows=34 width=4)
+         ->  Redistribute Motion 1:3  (slice4)  (cost=0.00..1324037.57 rows=1 width=8)
+               ->  Aggregate  (cost=0.00..1324037.57 rows=1 width=8)
+                     ->  Limit  (cost=0.00..1324037.57 rows=34 width=20)
+                           ->  Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..1324037.57 rows=100 width=20)
+                                 Merge Key: share0_ref3.a
+                                 ->  Nested Loop  (cost=0.00..1324037.56 rows=34 width=20)
+                                       Join Filter: true
+                                       ->  Shared Scan (share slice:id 3:0)  (cost=0.00..431.00 rows=34 width=12)
+                                       ->  Materialize  (cost=0.00..431.00 rows=1 width=8)
+                                             ->  Result  (cost=0.00..431.00 rows=1 width=8)
+                                                   ->  Broadcast Motion 1:3  (slice2)  (cost=0.00..431.00 rows=3 width=8)
+                                                         ->  Aggregate  (cost=0.00..431.00 rows=1 width=8)
+                                                               ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
+                                                                     ->  Aggregate  (cost=0.00..431.00 rows=1 width=8)
+                                                                           ->  Shared Scan (share slice:id 1:0)  (cost=0.00..431.00 rows=34 width=8)
  Optimizer: Pivotal Optimizer (GPORCA)
-(21 rows)
+(25 rows)
 
 select percentile_cont(null) within group (order by a) from perct;
  percentile_cont 
@@ -963,26 +1018,33 @@ from percts group by b order by b;
 
 explain select percentile_cont(1.0/86400) within group (order by a) from percts
 	where c between 1 and 2;
-                                                   QUERY PLAN                                                   
-----------------------------------------------------------------------------------------------------------------
- Sequence  (cost=0.00..1324463.26 rows=1 width=8)
+                                                       QUERY PLAN                                                       
+------------------------------------------------------------------------------------------------------------------------
+ Sequence  (cost=0.00..1324463.47 rows=1 width=8)
    ->  Shared Scan (share slice:id 0:0)  (cost=0.00..431.00 rows=1 width=1)
          ->  Materialize  (cost=0.00..431.00 rows=1 width=1)
-               ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=3 width=42)
-                     ->  Seq Scan on percts  (cost=0.00..431.00 rows=1 width=42)
-                           Filter: ((c >= 1) AND (c <= 2))
-   ->  Aggregate  (cost=0.00..1324032.25 rows=1 width=8)
-         ->  Limit  (cost=0.00..1324032.25 rows=1 width=16)
-               ->  Sort  (cost=0.00..1324032.25 rows=1 width=16)
+               ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..431.00 rows=3 width=16)
+                     ->  GroupAggregate  (cost=0.00..431.00 rows=1 width=16)
+                           Group Key: percts.a
+                           ->  Sort  (cost=0.00..431.00 rows=1 width=8)
+                                 Sort Key: percts.a
+                                 ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
+                                       Hash Key: percts.a
+                                       ->  Seq Scan on percts  (cost=0.00..431.00 rows=1 width=8)
+                                             Filter: ((c >= 1) AND (c <= 2))
+   ->  Aggregate  (cost=0.00..1324032.47 rows=1 width=8)
+         ->  Limit  (cost=0.00..1324032.47 rows=1 width=24)
+               ->  Sort  (cost=0.00..1324032.47 rows=1 width=24)
                      Sort Key: share0_ref3.a
-                     ->  Nested Loop  (cost=0.00..1324032.25 rows=1 width=16)
+                     ->  Nested Loop  (cost=0.00..1324032.47 rows=1 width=24)
                            Join Filter: true
-                           ->  Shared Scan (share slice:id 0:0)  (cost=0.00..431.00 rows=1 width=8)
+                           ->  Shared Scan (share slice:id 0:0)  (cost=0.00..431.00 rows=1 width=16)
                            ->  Materialize  (cost=0.00..431.00 rows=1 width=8)
-                                 ->  Aggregate  (cost=0.00..431.00 rows=1 width=8)
-                                       ->  Shared Scan (share slice:id 0:0)  (cost=0.00..431.00 rows=1 width=8)
+                                 ->  Result  (cost=0.00..431.00 rows=1 width=8)
+                                       ->  Aggregate  (cost=0.00..431.00 rows=1 width=8)
+                                             ->  Shared Scan (share slice:id 0:0)  (cost=0.00..431.00 rows=1 width=8)
  Optimizer: Pivotal Optimizer (GPORCA)
-(17 rows)
+(24 rows)
 
 select percentile_cont(1.0/86400) within group (order by a) from percts
 	where c between 1 and 2;
@@ -993,47 +1055,63 @@ select percentile_cont(1.0/86400) within group (order by a) from percts
 
 explain select percentile_cont(0.1) within group (order by a),
        percentile_cont(0.9) within group (order by a desc) from percts;
-                                                                        QUERY PLAN                                                                         
------------------------------------------------------------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice8; segments: 3)  (cost=0.00..2712068354.83 rows=1 width=16)
-   ->  Sequence  (cost=0.00..2712068354.83 rows=1 width=16)
-         ->  Shared Scan (share slice:id 8:0)  (cost=0.00..431.00 rows=34 width=1)
-               ->  Materialize  (cost=0.00..431.00 rows=34 width=1)
-                     ->  Seq Scan on percts  (cost=0.00..431.00 rows=34 width=38)
-         ->  Redistribute Motion 1:3  (slice7)  (cost=0.00..2712067923.83 rows=1 width=16)
-               ->  Nested Loop  (cost=0.00..2712067923.83 rows=1 width=16)
-                     Join Filter: true
-                     ->  Aggregate  (cost=0.00..1324036.42 rows=1 width=8)
-                           ->  Limit  (cost=0.00..1324036.42 rows=34 width=16)
-                                 ->  Gather Motion 3:1  (slice6; segments: 3)  (cost=0.00..1324036.41 rows=100 width=16)
-                                       Merge Key: share0_ref4.a
-                                       ->  Sort  (cost=0.00..1324036.41 rows=34 width=16)
-                                             Sort Key: share0_ref4.a
-                                             ->  Nested Loop  (cost=0.00..1324036.39 rows=34 width=16)
-                                                   Join Filter: true
-                                                   ->  Broadcast Motion 1:3  (slice5)  (cost=0.00..431.00 rows=3 width=8)
-                                                         ->  Aggregate  (cost=0.00..431.00 rows=1 width=8)
-                                                               ->  Gather Motion 3:1  (slice4; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
-                                                                     ->  Aggregate  (cost=0.00..431.00 rows=1 width=8)
-                                                                           ->  Shared Scan (share slice:id 4:0)  (cost=0.00..431.00 rows=34 width=8)
-                                                   ->  Shared Scan (share slice:id 6:0)  (cost=0.00..431.00 rows=34 width=8)
-                     ->  Materialize  (cost=0.00..1324036.42 rows=1 width=8)
-                           ->  Aggregate  (cost=0.00..1324036.42 rows=1 width=8)
-                                 ->  Limit  (cost=0.00..1324036.42 rows=34 width=16)
-                                       ->  Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..1324036.41 rows=100 width=16)
-                                             Merge Key: share0_ref2.a
-                                             ->  Sort  (cost=0.00..1324036.41 rows=34 width=16)
-                                                   Sort Key: share0_ref2.a
-                                                   ->  Nested Loop  (cost=0.00..1324036.39 rows=34 width=16)
+                                                                                 QUERY PLAN                                                                                  
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice10; segments: 3)  (cost=0.00..2712073029.49 rows=1 width=16)
+   ->  Sequence  (cost=0.00..2712073029.49 rows=1 width=16)
+         ->  Shared Scan (share slice:id 10:0)  (cost=0.00..431.01 rows=34 width=1)
+               ->  Materialize  (cost=0.00..431.01 rows=34 width=1)
+                     ->  HashAggregate  (cost=0.00..431.01 rows=34 width=16)
+                           Group Key: percts_1.a
+                           ->  Redistribute Motion 3:3  (slice9; segments: 3)  (cost=0.00..431.00 rows=34 width=8)
+                                 Hash Key: percts_1.a
+                                 ->  Seq Scan on percts percts_1  (cost=0.00..431.00 rows=34 width=8)
+         ->  Sequence  (cost=0.00..2712072598.48 rows=1 width=16)
+               ->  Shared Scan (share slice:id 10:1)  (cost=0.00..431.01 rows=34 width=1)
+                     ->  Materialize  (cost=0.00..431.01 rows=34 width=1)
+                           ->  HashAggregate  (cost=0.00..431.01 rows=34 width=16)
+                                 Group Key: percts.a
+                                 ->  Redistribute Motion 3:3  (slice8; segments: 3)  (cost=0.00..431.00 rows=34 width=8)
+                                       Hash Key: percts.a
+                                       ->  Seq Scan on percts  (cost=0.00..431.00 rows=34 width=8)
+               ->  Redistribute Motion 1:3  (slice7)  (cost=0.00..2712072167.47 rows=1 width=16)
+                     ->  Nested Loop  (cost=0.00..2712072167.47 rows=1 width=16)
+                           Join Filter: true
+                           ->  Aggregate  (cost=0.00..1324038.49 rows=1 width=8)
+                                 ->  Limit  (cost=0.00..1324038.49 rows=34 width=24)
+                                       ->  Gather Motion 3:1  (slice6; segments: 3)  (cost=0.00..1324038.48 rows=100 width=24)
+                                             Merge Key: share0_ref3.a
+                                             ->  Sort  (cost=0.00..1324038.48 rows=34 width=24)
+                                                   Sort Key: share0_ref3.a
+                                                   ->  Nested Loop  (cost=0.00..1324038.45 rows=34 width=24)
                                                          Join Filter: true
-                                                         ->  Broadcast Motion 1:3  (slice2)  (cost=0.00..431.00 rows=3 width=8)
-                                                               ->  Aggregate  (cost=0.00..431.00 rows=1 width=8)
-                                                                     ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
+                                                         ->  Shared Scan (share slice:id 6:0)  (cost=0.00..431.00 rows=34 width=16)
+                                                         ->  Materialize  (cost=0.00..431.00 rows=1 width=8)
+                                                               ->  Result  (cost=0.00..431.00 rows=1 width=8)
+                                                                     ->  Broadcast Motion 1:3  (slice5)  (cost=0.00..431.00 rows=3 width=8)
                                                                            ->  Aggregate  (cost=0.00..431.00 rows=1 width=8)
-                                                                                 ->  Shared Scan (share slice:id 1:0)  (cost=0.00..431.00 rows=34 width=8)
-                                                         ->  Shared Scan (share slice:id 3:0)  (cost=0.00..431.00 rows=34 width=8)
+                                                                                 ->  Gather Motion 3:1  (slice4; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
+                                                                                       ->  Aggregate  (cost=0.00..431.00 rows=1 width=8)
+                                                                                             ->  Shared Scan (share slice:id 4:0)  (cost=0.00..431.00 rows=34 width=8)
+                           ->  Materialize  (cost=0.00..1324038.49 rows=1 width=8)
+                                 ->  Aggregate  (cost=0.00..1324038.49 rows=1 width=8)
+                                       ->  Limit  (cost=0.00..1324038.49 rows=34 width=24)
+                                             ->  Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..1324038.48 rows=100 width=24)
+                                                   Merge Key: share1_ref3.a
+                                                   ->  Sort  (cost=0.00..1324038.48 rows=34 width=24)
+                                                         Sort Key: share1_ref3.a
+                                                         ->  Nested Loop  (cost=0.00..1324038.45 rows=34 width=24)
+                                                               Join Filter: true
+                                                               ->  Shared Scan (share slice:id 3:1)  (cost=0.00..431.00 rows=34 width=16)
+                                                               ->  Materialize  (cost=0.00..431.00 rows=1 width=8)
+                                                                     ->  Broadcast Motion 1:3  (slice2)  (cost=0.00..431.00 rows=3 width=8)
+                                                                           ->  Result  (cost=0.00..431.00 rows=1 width=8)
+                                                                                 ->  Aggregate  (cost=0.00..431.00 rows=1 width=8)
+                                                                                       ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
+                                                                                             ->  Aggregate  (cost=0.00..431.00 rows=1 width=8)
+                                                                                                   ->  Shared Scan (share slice:id 1:1)  (cost=0.00..431.00 rows=34 width=8)
  Optimizer: Pivotal Optimizer (GPORCA)
-(38 rows)
+(54 rows)
 
 select percentile_cont(0.1) within group (order by a),
        percentile_cont(0.9) within group (order by a desc) from percts;
@@ -1044,30 +1122,36 @@ select percentile_cont(0.1) within group (order by a),
 
 explain select percentile_cont(0.1) within group (order by a),
        percentile_cont(0.2) within group (order by a) from perctsz;
-                                                                  QUERY PLAN                                                                   
------------------------------------------------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice5; segments: 3)  (cost=0.00..1324467.42 rows=1 width=16)
-   ->  Sequence  (cost=0.00..1324467.42 rows=1 width=16)
-         ->  Shared Scan (share slice:id 5:0)  (cost=0.00..431.00 rows=34 width=1)
-               ->  Materialize  (cost=0.00..431.00 rows=34 width=1)
-                     ->  Seq Scan on perctsz  (cost=0.00..431.00 rows=34 width=38)
-         ->  Redistribute Motion 1:3  (slice4)  (cost=0.00..1324036.42 rows=1 width=16)
-               ->  Aggregate  (cost=0.00..1324036.42 rows=1 width=16)
-                     ->  Limit  (cost=0.00..1324036.42 rows=34 width=16)
-                           ->  Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..1324036.41 rows=100 width=16)
-                                 Merge Key: share0_ref2.a
-                                 ->  Sort  (cost=0.00..1324036.41 rows=34 width=16)
-                                       Sort Key: share0_ref2.a
-                                       ->  Nested Loop  (cost=0.00..1324036.39 rows=34 width=16)
+                                                                        QUERY PLAN                                                                         
+-----------------------------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice6; segments: 3)  (cost=0.00..1324469.50 rows=1 width=16)
+   ->  Sequence  (cost=0.00..1324469.50 rows=1 width=16)
+         ->  Shared Scan (share slice:id 6:0)  (cost=0.00..431.01 rows=34 width=1)
+               ->  Materialize  (cost=0.00..431.01 rows=34 width=1)
+                     ->  HashAggregate  (cost=0.00..431.01 rows=34 width=16)
+                           Group Key: perctsz.a
+                           ->  Redistribute Motion 3:3  (slice5; segments: 3)  (cost=0.00..431.00 rows=34 width=8)
+                                 Hash Key: perctsz.a
+                                 ->  Seq Scan on perctsz  (cost=0.00..431.00 rows=34 width=8)
+         ->  Redistribute Motion 1:3  (slice4)  (cost=0.00..1324038.49 rows=1 width=16)
+               ->  Aggregate  (cost=0.00..1324038.49 rows=1 width=16)
+                     ->  Limit  (cost=0.00..1324038.49 rows=34 width=24)
+                           ->  Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..1324038.48 rows=100 width=24)
+                                 Merge Key: share0_ref3.a
+                                 ->  Sort  (cost=0.00..1324038.48 rows=34 width=24)
+                                       Sort Key: share0_ref3.a
+                                       ->  Nested Loop  (cost=0.00..1324038.45 rows=34 width=24)
                                              Join Filter: true
-                                             ->  Broadcast Motion 1:3  (slice2)  (cost=0.00..431.00 rows=3 width=8)
-                                                   ->  Aggregate  (cost=0.00..431.00 rows=1 width=8)
-                                                         ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
+                                             ->  Shared Scan (share slice:id 3:0)  (cost=0.00..431.00 rows=34 width=16)
+                                             ->  Materialize  (cost=0.00..431.00 rows=1 width=8)
+                                                   ->  Result  (cost=0.00..431.00 rows=1 width=8)
+                                                         ->  Broadcast Motion 1:3  (slice2)  (cost=0.00..431.00 rows=3 width=8)
                                                                ->  Aggregate  (cost=0.00..431.00 rows=1 width=8)
-                                                                     ->  Shared Scan (share slice:id 1:0)  (cost=0.00..431.00 rows=34 width=8)
-                                             ->  Shared Scan (share slice:id 3:0)  (cost=0.00..431.00 rows=34 width=8)
+                                                                     ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
+                                                                           ->  Aggregate  (cost=0.00..431.00 rows=1 width=8)
+                                                                                 ->  Shared Scan (share slice:id 1:0)  (cost=0.00..431.00 rows=34 width=8)
  Optimizer: Pivotal Optimizer (GPORCA)
-(21 rows)
+(27 rows)
 
 select percentile_cont(0.1) within group (order by a),
        percentile_cont(0.2) within group (order by a) from perctsz;
@@ -1131,32 +1215,36 @@ select median(a), b from perct group by b order by b desc;
 (11 rows)
 
 explain select count(*) from(select median(a) from perct group by ())s;
-                                                                        QUERY PLAN                                                                         
------------------------------------------------------------------------------------------------------------------------------------------------------------
- Aggregate  (cost=0.00..1324465.93 rows=1 width=8)
-   ->  Gather Motion 3:1  (slice5; segments: 3)  (cost=0.00..1324465.93 rows=1 width=1)
-         ->  Sequence  (cost=0.00..1324465.93 rows=1 width=1)
-               ->  Shared Scan (share slice:id 5:0)  (cost=0.00..431.00 rows=34 width=1)
-                     ->  Materialize  (cost=0.00..431.00 rows=34 width=1)
-                           ->  Seq Scan on perct  (cost=0.00..431.00 rows=34 width=34)
-               ->  Redistribute Motion 1:3  (slice4)  (cost=0.00..1324034.93 rows=1 width=1)
-                     ->  Result  (cost=0.00..1324034.93 rows=1 width=1)
-                           ->  Aggregate  (cost=0.00..1324034.93 rows=1 width=1)
-                                 ->  Limit  (cost=0.00..1324034.93 rows=34 width=12)
-                                       ->  Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..1324034.93 rows=100 width=12)
-                                             Merge Key: share0_ref2.a
-                                             ->  Sort  (cost=0.00..1324034.92 rows=34 width=12)
-                                                   Sort Key: share0_ref2.a
-                                                   ->  Nested Loop  (cost=0.00..1324034.91 rows=34 width=12)
-                                                         Join Filter: true
-                                                         ->  Broadcast Motion 1:3  (slice2)  (cost=0.00..431.00 rows=3 width=8)
-                                                               ->  Aggregate  (cost=0.00..431.00 rows=1 width=8)
-                                                                     ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
-                                                                           ->  Aggregate  (cost=0.00..431.00 rows=1 width=8)
-                                                                                 ->  Shared Scan (share slice:id 1:0)  (cost=0.00..431.00 rows=34 width=4)
-                                                         ->  Shared Scan (share slice:id 3:0)  (cost=0.00..431.00 rows=34 width=4)
+                                                                           QUERY PLAN                                                                            
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Aggregate  (cost=0.00..1324468.58 rows=1 width=8)
+   ->  Gather Motion 3:1  (slice5; segments: 3)  (cost=0.00..1324468.58 rows=1 width=1)
+         ->  Sequence  (cost=0.00..1324468.58 rows=1 width=1)
+               ->  Shared Scan (share slice:id 5:0)  (cost=0.00..431.01 rows=34 width=1)
+                     ->  Materialize  (cost=0.00..431.01 rows=34 width=1)
+                           ->  GroupAggregate  (cost=0.00..431.01 rows=34 width=12)
+                                 Group Key: perct.a
+                                 ->  Sort  (cost=0.00..431.00 rows=34 width=4)
+                                       Sort Key: perct.a
+                                       ->  Seq Scan on perct  (cost=0.00..431.00 rows=34 width=4)
+               ->  Redistribute Motion 1:3  (slice4)  (cost=0.00..1324037.57 rows=1 width=1)
+                     ->  Result  (cost=0.00..1324037.57 rows=1 width=1)
+                           ->  Aggregate  (cost=0.00..1324037.57 rows=1 width=1)
+                                 ->  Limit  (cost=0.00..1324037.57 rows=34 width=20)
+                                       ->  Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..1324037.57 rows=100 width=20)
+                                             Merge Key: share0_ref3.a
+                                             ->  Nested Loop  (cost=0.00..1324037.56 rows=34 width=20)
+                                                   Join Filter: true
+                                                   ->  Shared Scan (share slice:id 3:0)  (cost=0.00..431.00 rows=34 width=12)
+                                                   ->  Materialize  (cost=0.00..431.00 rows=1 width=8)
+                                                         ->  Result  (cost=0.00..431.00 rows=1 width=8)
+                                                               ->  Broadcast Motion 1:3  (slice2)  (cost=0.00..431.00 rows=3 width=8)
+                                                                     ->  Aggregate  (cost=0.00..431.00 rows=1 width=8)
+                                                                           ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
+                                                                                 ->  Aggregate  (cost=0.00..431.00 rows=1 width=8)
+                                                                                       ->  Shared Scan (share slice:id 1:0)  (cost=0.00..431.00 rows=34 width=8)
  Optimizer: Pivotal Optimizer (GPORCA)
-(23 rows)
+(27 rows)
 
 select count(*) from(select median(a) from perct group by ())s;
  count 
@@ -1197,37 +1285,41 @@ select median(a) from perct group by grouping sets((b)) order by b;
 (11 rows)
 
 explain select distinct median(a), count(*) from perct;
-                                                                     QUERY PLAN                                                                      
------------------------------------------------------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice6; segments: 3)  (cost=0.00..1356694888.00 rows=1 width=16)
-   ->  Sequence  (cost=0.00..1356694888.00 rows=1 width=16)
-         ->  Shared Scan (share slice:id 6:0)  (cost=0.00..431.00 rows=34 width=1)
-               ->  Materialize  (cost=0.00..431.00 rows=34 width=1)
-                     ->  Seq Scan on perct perct_1  (cost=0.00..431.00 rows=34 width=34)
-         ->  Redistribute Motion 1:3  (slice5)  (cost=0.00..1356694457.00 rows=1 width=16)
-               ->  Nested Loop  (cost=0.00..1356694457.00 rows=1 width=16)
+                                                                        QUERY PLAN                                                                         
+-----------------------------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice6; segments: 3)  (cost=0.00..1356697594.60 rows=1 width=16)
+   ->  Sequence  (cost=0.00..1356697594.60 rows=1 width=16)
+         ->  Shared Scan (share slice:id 6:0)  (cost=0.00..431.01 rows=34 width=1)
+               ->  Materialize  (cost=0.00..431.01 rows=34 width=1)
+                     ->  GroupAggregate  (cost=0.00..431.01 rows=34 width=12)
+                           Group Key: perct_1.a
+                           ->  Sort  (cost=0.00..431.00 rows=34 width=4)
+                                 Sort Key: perct_1.a
+                                 ->  Seq Scan on perct perct_1  (cost=0.00..431.00 rows=34 width=4)
+         ->  Redistribute Motion 1:3  (slice5)  (cost=0.00..1356697163.60 rows=1 width=16)
+               ->  Nested Loop  (cost=0.00..1356697163.60 rows=1 width=16)
                      Join Filter: true
-                     ->  Aggregate  (cost=0.00..1324034.93 rows=1 width=8)
-                           ->  Limit  (cost=0.00..1324034.93 rows=34 width=12)
-                                 ->  Gather Motion 3:1  (slice4; segments: 3)  (cost=0.00..1324034.93 rows=100 width=12)
-                                       Merge Key: share0_ref2.a
-                                       ->  Sort  (cost=0.00..1324034.92 rows=34 width=12)
-                                             Sort Key: share0_ref2.a
-                                             ->  Nested Loop  (cost=0.00..1324034.91 rows=34 width=12)
-                                                   Join Filter: true
+                     ->  Aggregate  (cost=0.00..1324037.57 rows=1 width=8)
+                           ->  Limit  (cost=0.00..1324037.57 rows=34 width=20)
+                                 ->  Gather Motion 3:1  (slice4; segments: 3)  (cost=0.00..1324037.57 rows=100 width=20)
+                                       Merge Key: share0_ref3.a
+                                       ->  Nested Loop  (cost=0.00..1324037.56 rows=34 width=20)
+                                             Join Filter: true
+                                             ->  Shared Scan (share slice:id 4:0)  (cost=0.00..431.00 rows=34 width=12)
+                                             ->  Materialize  (cost=0.00..431.00 rows=1 width=8)
                                                    ->  Broadcast Motion 1:3  (slice3)  (cost=0.00..431.00 rows=3 width=8)
-                                                         ->  Aggregate  (cost=0.00..431.00 rows=1 width=8)
-                                                               ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
-                                                                     ->  Aggregate  (cost=0.00..431.00 rows=1 width=8)
-                                                                           ->  Shared Scan (share slice:id 2:0)  (cost=0.00..431.00 rows=34 width=4)
-                                                   ->  Shared Scan (share slice:id 4:0)  (cost=0.00..431.00 rows=34 width=4)
+                                                         ->  Result  (cost=0.00..431.00 rows=1 width=8)
+                                                               ->  Aggregate  (cost=0.00..431.00 rows=1 width=8)
+                                                                     ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
+                                                                           ->  Aggregate  (cost=0.00..431.00 rows=1 width=8)
+                                                                                 ->  Shared Scan (share slice:id 2:0)  (cost=0.00..431.00 rows=34 width=8)
                      ->  Materialize  (cost=0.00..431.00 rows=1 width=8)
                            ->  Aggregate  (cost=0.00..431.00 rows=1 width=8)
                                  ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
                                        ->  Aggregate  (cost=0.00..431.00 rows=1 width=8)
                                              ->  Seq Scan on perct  (cost=0.00..431.00 rows=34 width=1)
  Optimizer: Pivotal Optimizer (GPORCA)
-(28 rows)
+(32 rows)
 
 select distinct median(a), count(*) from perct;
  median | count 
@@ -1306,30 +1398,36 @@ select median(a - '2011-12-31 00:00:00 UTC'::timestamptz) from perctsz group by 
 
 --numeric types
 explain select percentile_cont(0.95) within group( order by c) from perctnum;
-                                                                  QUERY PLAN                                                                   
------------------------------------------------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice5; segments: 3)  (cost=0.00..1324467.05 rows=1 width=8)
-   ->  Sequence  (cost=0.00..1324467.05 rows=1 width=8)
-         ->  Shared Scan (share slice:id 5:0)  (cost=0.00..431.00 rows=34 width=1)
-               ->  Materialize  (cost=0.00..431.00 rows=34 width=1)
-                     ->  Seq Scan on perctnum  (cost=0.00..431.00 rows=34 width=37)
-         ->  Redistribute Motion 1:3  (slice4)  (cost=0.00..1324036.04 rows=1 width=8)
-               ->  Aggregate  (cost=0.00..1324036.04 rows=1 width=8)
-                     ->  Limit  (cost=0.00..1324036.04 rows=34 width=15)
-                           ->  Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..1324036.04 rows=100 width=15)
-                                 Merge Key: share0_ref2.c
-                                 ->  Sort  (cost=0.00..1324036.04 rows=34 width=15)
-                                       Sort Key: share0_ref2.c
-                                       ->  Nested Loop  (cost=0.00..1324036.02 rows=34 width=15)
+                                                                        QUERY PLAN                                                                         
+-----------------------------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice6; segments: 3)  (cost=0.00..1324469.27 rows=1 width=8)
+   ->  Sequence  (cost=0.00..1324469.27 rows=1 width=8)
+         ->  Shared Scan (share slice:id 6:0)  (cost=0.00..431.01 rows=34 width=1)
+               ->  Materialize  (cost=0.00..431.01 rows=34 width=1)
+                     ->  HashAggregate  (cost=0.00..431.01 rows=34 width=15)
+                           Group Key: perctnum.c
+                           ->  Redistribute Motion 3:3  (slice5; segments: 3)  (cost=0.00..431.00 rows=34 width=7)
+                                 Hash Key: perctnum.c
+                                 ->  Seq Scan on perctnum  (cost=0.00..431.00 rows=34 width=7)
+         ->  Redistribute Motion 1:3  (slice4)  (cost=0.00..1324038.26 rows=1 width=8)
+               ->  Aggregate  (cost=0.00..1324038.26 rows=1 width=8)
+                     ->  Limit  (cost=0.00..1324038.26 rows=34 width=23)
+                           ->  Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..1324038.26 rows=100 width=23)
+                                 Merge Key: share0_ref3.c
+                                 ->  Sort  (cost=0.00..1324038.25 rows=34 width=23)
+                                       Sort Key: share0_ref3.c
+                                       ->  Nested Loop  (cost=0.00..1324038.23 rows=34 width=23)
                                              Join Filter: true
-                                             ->  Broadcast Motion 1:3  (slice2)  (cost=0.00..431.00 rows=3 width=8)
-                                                   ->  Aggregate  (cost=0.00..431.00 rows=1 width=8)
-                                                         ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
+                                             ->  Shared Scan (share slice:id 3:0)  (cost=0.00..431.00 rows=34 width=15)
+                                             ->  Materialize  (cost=0.00..431.00 rows=1 width=8)
+                                                   ->  Result  (cost=0.00..431.00 rows=1 width=8)
+                                                         ->  Broadcast Motion 1:3  (slice2)  (cost=0.00..431.00 rows=3 width=8)
                                                                ->  Aggregate  (cost=0.00..431.00 rows=1 width=8)
-                                                                     ->  Shared Scan (share slice:id 1:0)  (cost=0.00..431.00 rows=34 width=7)
-                                             ->  Shared Scan (share slice:id 3:0)  (cost=0.00..431.00 rows=34 width=7)
+                                                                     ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
+                                                                           ->  Aggregate  (cost=0.00..431.00 rows=1 width=8)
+                                                                                 ->  Shared Scan (share slice:id 1:0)  (cost=0.00..431.00 rows=34 width=8)
  Optimizer: Pivotal Optimizer (GPORCA)
-(21 rows)
+(27 rows)
 
 select percentile_cont(0.95) within group( order by c) from perctnum;
  percentile_cont 
@@ -1443,30 +1541,34 @@ select percentile_cont((select 0.1 from gp_id)) within group (order by a) from p
 
 -- volatile argument
 explain select percentile_cont(floor(random()*0.1)+0.5) within group (order by a) from perct;
-                                                                  QUERY PLAN                                                                   
------------------------------------------------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice5; segments: 3)  (cost=0.00..1324465.93 rows=1 width=8)
-   ->  Sequence  (cost=0.00..1324465.93 rows=1 width=8)
-         ->  Shared Scan (share slice:id 5:0)  (cost=0.00..431.00 rows=34 width=1)
-               ->  Materialize  (cost=0.00..431.00 rows=34 width=1)
-                     ->  Seq Scan on perct  (cost=0.00..431.00 rows=34 width=34)
-         ->  Redistribute Motion 1:3  (slice4)  (cost=0.00..1324034.93 rows=1 width=8)
-               ->  Aggregate  (cost=0.00..1324034.93 rows=1 width=8)
-                     ->  Limit  (cost=0.00..1324034.93 rows=34 width=12)
-                           ->  Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..1324034.93 rows=100 width=12)
-                                 Merge Key: share0_ref2.a
-                                 ->  Sort  (cost=0.00..1324034.92 rows=34 width=12)
-                                       Sort Key: share0_ref2.a
-                                       ->  Nested Loop  (cost=0.00..1324034.91 rows=34 width=12)
-                                             Join Filter: true
-                                             ->  Broadcast Motion 1:3  (slice2)  (cost=0.00..431.00 rows=3 width=8)
-                                                   ->  Aggregate  (cost=0.00..431.00 rows=1 width=8)
-                                                         ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
-                                                               ->  Aggregate  (cost=0.00..431.00 rows=1 width=8)
-                                                                     ->  Shared Scan (share slice:id 1:0)  (cost=0.00..431.00 rows=34 width=4)
-                                             ->  Shared Scan (share slice:id 3:0)  (cost=0.00..431.00 rows=34 width=4)
+                                                                     QUERY PLAN                                                                      
+-----------------------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice5; segments: 3)  (cost=0.00..1324468.58 rows=1 width=8)
+   ->  Sequence  (cost=0.00..1324468.58 rows=1 width=8)
+         ->  Shared Scan (share slice:id 5:0)  (cost=0.00..431.01 rows=34 width=1)
+               ->  Materialize  (cost=0.00..431.01 rows=34 width=1)
+                     ->  GroupAggregate  (cost=0.00..431.01 rows=34 width=12)
+                           Group Key: perct.a
+                           ->  Sort  (cost=0.00..431.00 rows=34 width=4)
+                                 Sort Key: perct.a
+                                 ->  Seq Scan on perct  (cost=0.00..431.00 rows=34 width=4)
+         ->  Redistribute Motion 1:3  (slice4)  (cost=0.00..1324037.57 rows=1 width=8)
+               ->  Aggregate  (cost=0.00..1324037.57 rows=1 width=8)
+                     ->  Limit  (cost=0.00..1324037.57 rows=34 width=20)
+                           ->  Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..1324037.57 rows=100 width=20)
+                                 Merge Key: share0_ref3.a
+                                 ->  Nested Loop  (cost=0.00..1324037.56 rows=34 width=20)
+                                       Join Filter: true
+                                       ->  Shared Scan (share slice:id 3:0)  (cost=0.00..431.00 rows=34 width=12)
+                                       ->  Materialize  (cost=0.00..431.00 rows=1 width=8)
+                                             ->  Result  (cost=0.00..431.00 rows=1 width=8)
+                                                   ->  Broadcast Motion 1:3  (slice2)  (cost=0.00..431.00 rows=3 width=8)
+                                                         ->  Aggregate  (cost=0.00..431.00 rows=1 width=8)
+                                                               ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
+                                                                     ->  Aggregate  (cost=0.00..431.00 rows=1 width=8)
+                                                                           ->  Shared Scan (share slice:id 1:0)  (cost=0.00..431.00 rows=34 width=8)
  Optimizer: Pivotal Optimizer (GPORCA)
-(21 rows)
+(25 rows)
 
 select percentile_cont(floor(random()*0.1)+0.5) within group (order by a) from perct;
  percentile_cont 
@@ -1476,58 +1578,66 @@ select percentile_cont(floor(random()*0.1)+0.5) within group (order by a) from p
 
 -- out of range
 explain select percentile_cont(-0.1) within group (order by a) from perct;
-                                                                  QUERY PLAN                                                                   
------------------------------------------------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice5; segments: 3)  (cost=0.00..1324465.93 rows=1 width=8)
-   ->  Sequence  (cost=0.00..1324465.93 rows=1 width=8)
-         ->  Shared Scan (share slice:id 5:0)  (cost=0.00..431.00 rows=34 width=1)
-               ->  Materialize  (cost=0.00..431.00 rows=34 width=1)
-                     ->  Seq Scan on perct  (cost=0.00..431.00 rows=34 width=34)
-         ->  Redistribute Motion 1:3  (slice4)  (cost=0.00..1324034.93 rows=1 width=8)
-               ->  Aggregate  (cost=0.00..1324034.93 rows=1 width=8)
-                     ->  Limit  (cost=0.00..1324034.93 rows=34 width=12)
-                           ->  Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..1324034.93 rows=100 width=12)
-                                 Merge Key: share0_ref2.a
-                                 ->  Sort  (cost=0.00..1324034.92 rows=34 width=12)
-                                       Sort Key: share0_ref2.a
-                                       ->  Nested Loop  (cost=0.00..1324034.91 rows=34 width=12)
-                                             Join Filter: true
-                                             ->  Broadcast Motion 1:3  (slice2)  (cost=0.00..431.00 rows=3 width=8)
-                                                   ->  Aggregate  (cost=0.00..431.00 rows=1 width=8)
-                                                         ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
-                                                               ->  Aggregate  (cost=0.00..431.00 rows=1 width=8)
-                                                                     ->  Shared Scan (share slice:id 1:0)  (cost=0.00..431.00 rows=34 width=4)
-                                             ->  Shared Scan (share slice:id 3:0)  (cost=0.00..431.00 rows=34 width=4)
+                                                                     QUERY PLAN                                                                      
+-----------------------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice5; segments: 3)  (cost=0.00..1324468.58 rows=1 width=8)
+   ->  Sequence  (cost=0.00..1324468.58 rows=1 width=8)
+         ->  Shared Scan (share slice:id 5:0)  (cost=0.00..431.01 rows=34 width=1)
+               ->  Materialize  (cost=0.00..431.01 rows=34 width=1)
+                     ->  GroupAggregate  (cost=0.00..431.01 rows=34 width=12)
+                           Group Key: perct.a
+                           ->  Sort  (cost=0.00..431.00 rows=34 width=4)
+                                 Sort Key: perct.a
+                                 ->  Seq Scan on perct  (cost=0.00..431.00 rows=34 width=4)
+         ->  Redistribute Motion 1:3  (slice4)  (cost=0.00..1324037.57 rows=1 width=8)
+               ->  Aggregate  (cost=0.00..1324037.57 rows=1 width=8)
+                     ->  Limit  (cost=0.00..1324037.57 rows=34 width=20)
+                           ->  Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..1324037.57 rows=100 width=20)
+                                 Merge Key: share0_ref3.a
+                                 ->  Nested Loop  (cost=0.00..1324037.56 rows=34 width=20)
+                                       Join Filter: true
+                                       ->  Shared Scan (share slice:id 3:0)  (cost=0.00..431.00 rows=34 width=12)
+                                       ->  Materialize  (cost=0.00..431.00 rows=1 width=8)
+                                             ->  Result  (cost=0.00..431.00 rows=1 width=8)
+                                                   ->  Broadcast Motion 1:3  (slice2)  (cost=0.00..431.00 rows=3 width=8)
+                                                         ->  Aggregate  (cost=0.00..431.00 rows=1 width=8)
+                                                               ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
+                                                                     ->  Aggregate  (cost=0.00..431.00 rows=1 width=8)
+                                                                           ->  Shared Scan (share slice:id 1:0)  (cost=0.00..431.00 rows=34 width=8)
  Optimizer: Pivotal Optimizer (GPORCA)
-(21 rows)
+(25 rows)
 
 select percentile_cont(-0.1) within group (order by a) from perct;
 ERROR:  percentile value -0.1 is not between 0 and 1
 explain select percentile_cont(1.00000001) within group (order by a) from perct;
-                                                                  QUERY PLAN                                                                   
------------------------------------------------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice5; segments: 3)  (cost=0.00..1324465.93 rows=1 width=8)
-   ->  Sequence  (cost=0.00..1324465.93 rows=1 width=8)
-         ->  Shared Scan (share slice:id 5:0)  (cost=0.00..431.00 rows=34 width=1)
-               ->  Materialize  (cost=0.00..431.00 rows=34 width=1)
-                     ->  Seq Scan on perct  (cost=0.00..431.00 rows=34 width=34)
-         ->  Redistribute Motion 1:3  (slice4)  (cost=0.00..1324034.93 rows=1 width=8)
-               ->  Aggregate  (cost=0.00..1324034.93 rows=1 width=8)
-                     ->  Limit  (cost=0.00..1324034.93 rows=34 width=12)
-                           ->  Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..1324034.93 rows=100 width=12)
-                                 Merge Key: share0_ref2.a
-                                 ->  Sort  (cost=0.00..1324034.92 rows=34 width=12)
-                                       Sort Key: share0_ref2.a
-                                       ->  Nested Loop  (cost=0.00..1324034.91 rows=34 width=12)
-                                             Join Filter: true
-                                             ->  Broadcast Motion 1:3  (slice2)  (cost=0.00..431.00 rows=3 width=8)
-                                                   ->  Aggregate  (cost=0.00..431.00 rows=1 width=8)
-                                                         ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
-                                                               ->  Aggregate  (cost=0.00..431.00 rows=1 width=8)
-                                                                     ->  Shared Scan (share slice:id 1:0)  (cost=0.00..431.00 rows=34 width=4)
-                                             ->  Shared Scan (share slice:id 3:0)  (cost=0.00..431.00 rows=34 width=4)
+                                                                     QUERY PLAN                                                                      
+-----------------------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice5; segments: 3)  (cost=0.00..1324468.58 rows=1 width=8)
+   ->  Sequence  (cost=0.00..1324468.58 rows=1 width=8)
+         ->  Shared Scan (share slice:id 5:0)  (cost=0.00..431.01 rows=34 width=1)
+               ->  Materialize  (cost=0.00..431.01 rows=34 width=1)
+                     ->  GroupAggregate  (cost=0.00..431.01 rows=34 width=12)
+                           Group Key: perct.a
+                           ->  Sort  (cost=0.00..431.00 rows=34 width=4)
+                                 Sort Key: perct.a
+                                 ->  Seq Scan on perct  (cost=0.00..431.00 rows=34 width=4)
+         ->  Redistribute Motion 1:3  (slice4)  (cost=0.00..1324037.57 rows=1 width=8)
+               ->  Aggregate  (cost=0.00..1324037.57 rows=1 width=8)
+                     ->  Limit  (cost=0.00..1324037.57 rows=34 width=20)
+                           ->  Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..1324037.57 rows=100 width=20)
+                                 Merge Key: share0_ref3.a
+                                 ->  Nested Loop  (cost=0.00..1324037.56 rows=34 width=20)
+                                       Join Filter: true
+                                       ->  Shared Scan (share slice:id 3:0)  (cost=0.00..431.00 rows=34 width=12)
+                                       ->  Materialize  (cost=0.00..431.00 rows=1 width=8)
+                                             ->  Result  (cost=0.00..431.00 rows=1 width=8)
+                                                   ->  Broadcast Motion 1:3  (slice2)  (cost=0.00..431.00 rows=3 width=8)
+                                                         ->  Aggregate  (cost=0.00..431.00 rows=1 width=8)
+                                                               ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
+                                                                     ->  Aggregate  (cost=0.00..431.00 rows=1 width=8)
+                                                                           ->  Shared Scan (share slice:id 1:0)  (cost=0.00..431.00 rows=34 width=8)
  Optimizer: Pivotal Optimizer (GPORCA)
-(21 rows)
+(25 rows)
 
 select percentile_cont(1.00000001) within group (order by a) from perct;
 ERROR:  percentile value 1 is not between 0 and 1
@@ -1568,31 +1678,35 @@ LINE 1: select percentile_cont(0.8) within group (order by a, a + 1,...
 HINT:  No function matches the given name and argument types. You might need to add explicit type casts.
 -- set-returning
 explain select generate_series(1, 2), median(a) from perct;
-                                                                     QUERY PLAN                                                                      
------------------------------------------------------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice5; segments: 3)  (cost=0.00..1324465.93 rows=1 width=12)
-   ->  Result  (cost=0.00..1324465.93 rows=1 width=12)
-         ->  Sequence  (cost=0.00..1324465.93 rows=1 width=8)
-               ->  Shared Scan (share slice:id 5:0)  (cost=0.00..431.00 rows=34 width=1)
-                     ->  Materialize  (cost=0.00..431.00 rows=34 width=1)
-                           ->  Seq Scan on perct  (cost=0.00..431.00 rows=34 width=34)
-               ->  Redistribute Motion 1:3  (slice4)  (cost=0.00..1324034.93 rows=1 width=8)
-                     ->  Aggregate  (cost=0.00..1324034.93 rows=1 width=8)
-                           ->  Limit  (cost=0.00..1324034.93 rows=34 width=12)
-                                 ->  Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..1324034.93 rows=100 width=12)
-                                       Merge Key: share0_ref2.a
-                                       ->  Sort  (cost=0.00..1324034.92 rows=34 width=12)
-                                             Sort Key: share0_ref2.a
-                                             ->  Nested Loop  (cost=0.00..1324034.91 rows=34 width=12)
-                                                   Join Filter: true
-                                                   ->  Broadcast Motion 1:3  (slice2)  (cost=0.00..431.00 rows=3 width=8)
-                                                         ->  Aggregate  (cost=0.00..431.00 rows=1 width=8)
-                                                               ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
-                                                                     ->  Aggregate  (cost=0.00..431.00 rows=1 width=8)
-                                                                           ->  Shared Scan (share slice:id 1:0)  (cost=0.00..431.00 rows=34 width=4)
-                                                   ->  Shared Scan (share slice:id 3:0)  (cost=0.00..431.00 rows=34 width=4)
+                                                                        QUERY PLAN                                                                         
+-----------------------------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice5; segments: 3)  (cost=0.00..1324468.58 rows=1 width=12)
+   ->  Result  (cost=0.00..1324468.58 rows=1 width=12)
+         ->  Sequence  (cost=0.00..1324468.58 rows=1 width=8)
+               ->  Shared Scan (share slice:id 5:0)  (cost=0.00..431.01 rows=34 width=1)
+                     ->  Materialize  (cost=0.00..431.01 rows=34 width=1)
+                           ->  GroupAggregate  (cost=0.00..431.01 rows=34 width=12)
+                                 Group Key: perct.a
+                                 ->  Sort  (cost=0.00..431.00 rows=34 width=4)
+                                       Sort Key: perct.a
+                                       ->  Seq Scan on perct  (cost=0.00..431.00 rows=34 width=4)
+               ->  Redistribute Motion 1:3  (slice4)  (cost=0.00..1324037.57 rows=1 width=8)
+                     ->  Aggregate  (cost=0.00..1324037.57 rows=1 width=8)
+                           ->  Limit  (cost=0.00..1324037.57 rows=34 width=20)
+                                 ->  Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..1324037.57 rows=100 width=20)
+                                       Merge Key: share0_ref3.a
+                                       ->  Nested Loop  (cost=0.00..1324037.56 rows=34 width=20)
+                                             Join Filter: true
+                                             ->  Shared Scan (share slice:id 3:0)  (cost=0.00..431.00 rows=34 width=12)
+                                             ->  Materialize  (cost=0.00..431.00 rows=1 width=8)
+                                                   ->  Result  (cost=0.00..431.00 rows=1 width=8)
+                                                         ->  Broadcast Motion 1:3  (slice2)  (cost=0.00..431.00 rows=3 width=8)
+                                                               ->  Aggregate  (cost=0.00..431.00 rows=1 width=8)
+                                                                     ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
+                                                                           ->  Aggregate  (cost=0.00..431.00 rows=1 width=8)
+                                                                                 ->  Shared Scan (share slice:id 1:0)  (cost=0.00..431.00 rows=34 width=8)
  Optimizer: Pivotal Optimizer (GPORCA)
-(22 rows)
+(26 rows)
 
 select generate_series(1, 2), median(a) from perct;
  generate_series | median 
@@ -1603,14 +1717,14 @@ select generate_series(1, 2), median(a) from perct;
 
 -- GROUPING SETS
 explain select median(a) from perct group by grouping sets((), (b));
-                                                                           QUERY PLAN                                                                            
------------------------------------------------------------------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice6; segments: 3)  (cost=0.00..1325327.94 rows=12 width=8)
-   ->  Sequence  (cost=0.00..1325327.94 rows=4 width=8)
+                                                                              QUERY PLAN                                                                               
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice6; segments: 3)  (cost=0.00..1325330.59 rows=12 width=8)
+   ->  Sequence  (cost=0.00..1325330.59 rows=4 width=8)
          ->  Shared Scan (share slice:id 6:0)  (cost=0.00..431.00 rows=34 width=1)
                ->  Materialize  (cost=0.00..431.00 rows=34 width=1)
                      ->  Seq Scan on perct  (cost=0.00..431.00 rows=34 width=8)
-         ->  Append  (cost=0.00..1324896.94 rows=4 width=8)
+         ->  Append  (cost=0.00..1324899.59 rows=4 width=8)
                ->  Result  (cost=0.00..431.01 rows=4 width=8)
                      ->  GroupAggregate  (cost=0.00..431.01 rows=4 width=8)
                            Group Key: share0_ref2.b
@@ -1619,28 +1733,32 @@ explain select median(a) from perct group by grouping sets((), (b));
                                  ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=34 width=8)
                                        Hash Key: share0_ref2.b
                                        ->  Shared Scan (share slice:id 1:0)  (cost=0.00..431.00 rows=34 width=8)
-               ->  Result  (cost=0.00..1324465.93 rows=1 width=8)
-                     ->  Sequence  (cost=0.00..1324465.93 rows=1 width=8)
+               ->  Result  (cost=0.00..1324468.58 rows=1 width=8)
+                     ->  Sequence  (cost=0.00..1324468.58 rows=1 width=8)
                            ->  Shared Scan (share slice:id 6:1)  (cost=0.00..431.00 rows=34 width=1)
                                  ->  Materialize  (cost=0.00..431.00 rows=34 width=1)
-                                       ->  Shared Scan (share slice:id 6:0)  (cost=0.00..431.00 rows=34 width=8)
-                           ->  Redistribute Motion 1:3  (slice5)  (cost=0.00..1324034.93 rows=1 width=8)
-                                 ->  Aggregate  (cost=0.00..1324034.93 rows=1 width=8)
-                                       ->  Limit  (cost=0.00..1324034.93 rows=34 width=12)
-                                             ->  Gather Motion 3:1  (slice4; segments: 3)  (cost=0.00..1324034.93 rows=100 width=12)
-                                                   Merge Key: share1_ref2.a
-                                                   ->  Sort  (cost=0.00..1324034.92 rows=34 width=12)
-                                                         Sort Key: share1_ref2.a
-                                                         ->  Nested Loop  (cost=0.00..1324034.91 rows=34 width=12)
-                                                               Join Filter: true
-                                                               ->  Broadcast Motion 1:3  (slice3)  (cost=0.00..431.00 rows=3 width=8)
-                                                                     ->  Aggregate  (cost=0.00..431.00 rows=1 width=8)
-                                                                           ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
-                                                                                 ->  Aggregate  (cost=0.00..431.00 rows=1 width=8)
-                                                                                       ->  Shared Scan (share slice:id 2:1)  (cost=0.00..431.00 rows=34 width=4)
-                                                               ->  Shared Scan (share slice:id 4:1)  (cost=0.00..431.00 rows=34 width=4)
+                                       ->  GroupAggregate  (cost=0.00..431.00 rows=34 width=12)
+                                             Group Key: share0_ref3.a
+                                             ->  Sort  (cost=0.00..431.00 rows=34 width=4)
+                                                   Sort Key: share0_ref3.a
+                                                   ->  Shared Scan (share slice:id 6:0)  (cost=0.00..431.00 rows=34 width=4)
+                           ->  Redistribute Motion 1:3  (slice5)  (cost=0.00..1324037.57 rows=1 width=8)
+                                 ->  Aggregate  (cost=0.00..1324037.57 rows=1 width=8)
+                                       ->  Limit  (cost=0.00..1324037.57 rows=34 width=20)
+                                             ->  Gather Motion 3:1  (slice4; segments: 3)  (cost=0.00..1324037.57 rows=100 width=20)
+                                                   Merge Key: share1_ref3.a
+                                                   ->  Nested Loop  (cost=0.00..1324037.56 rows=34 width=20)
+                                                         Join Filter: true
+                                                         ->  Shared Scan (share slice:id 4:1)  (cost=0.00..431.00 rows=34 width=12)
+                                                         ->  Materialize  (cost=0.00..431.00 rows=1 width=8)
+                                                               ->  Result  (cost=0.00..431.00 rows=1 width=8)
+                                                                     ->  Broadcast Motion 1:3  (slice3)  (cost=0.00..431.00 rows=3 width=8)
+                                                                           ->  Aggregate  (cost=0.00..431.00 rows=1 width=8)
+                                                                                 ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
+                                                                                       ->  Aggregate  (cost=0.00..431.00 rows=1 width=8)
+                                                                                             ->  Shared Scan (share slice:id 2:1)  (cost=0.00..431.00 rows=34 width=8)
  Optimizer: Pivotal Optimizer (GPORCA)
-(35 rows)
+(39 rows)
 
 select median(a) from perct group by grouping sets((), (b));
  median 
@@ -1676,37 +1794,41 @@ LINE 1: select percentile_cont(0.5) within group (order by point(0,0...
 HINT:  No function matches the given name and argument types. You might need to add explicit type casts.
 -- outer references
 explain select (select a from perct where median(t.a) = 5) from perct t;
-                                                                                     QUERY PLAN                                                                                      
--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice6; segments: 3)  (cost=0.00..1357135822.46 rows=1 width=4)
-   ->  Result  (cost=0.00..1357135822.46 rows=1 width=4)
-         ->  Sequence  (cost=0.00..1324465.93 rows=1 width=8)
-               ->  Shared Scan (share slice:id 6:0)  (cost=0.00..431.00 rows=34 width=1)
-                     ->  Materialize  (cost=0.00..431.00 rows=34 width=1)
-                           ->  Seq Scan on perct  (cost=0.00..431.00 rows=34 width=34)
-               ->  Redistribute Motion 1:3  (slice4)  (cost=0.00..1324034.93 rows=1 width=8)
-                     ->  Aggregate  (cost=0.00..1324034.93 rows=1 width=8)
-                           ->  Limit  (cost=0.00..1324034.93 rows=34 width=12)
-                                 ->  Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..1324034.93 rows=100 width=12)
-                                       Merge Key: share0_ref2.a
-                                       ->  Sort  (cost=0.00..1324034.92 rows=34 width=12)
-                                             Sort Key: share0_ref2.a
-                                             ->  Nested Loop  (cost=0.00..1324034.91 rows=34 width=12)
-                                                   Join Filter: true
-                                                   ->  Broadcast Motion 1:3  (slice2)  (cost=0.00..431.00 rows=3 width=8)
-                                                         ->  Aggregate  (cost=0.00..431.00 rows=1 width=8)
-                                                               ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
-                                                                     ->  Aggregate  (cost=0.00..431.00 rows=1 width=8)
-                                                                           ->  Shared Scan (share slice:id 1:0)  (cost=0.00..431.00 rows=34 width=4)
-                                                   ->  Shared Scan (share slice:id 3:0)  (cost=0.00..431.00 rows=34 width=4)
+                                                                                                           QUERY PLAN                                                                                                           
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice6; segments: 3)  (cost=0.00..1357138531.43 rows=1 width=4)
+   ->  Result  (cost=0.00..1357138531.43 rows=1 width=4)
+         ->  Sequence  (cost=0.00..1324468.58 rows=1 width=8)
+               ->  Shared Scan (share slice:id 6:0)  (cost=0.00..431.01 rows=34 width=1)
+                     ->  Materialize  (cost=0.00..431.01 rows=34 width=1)
+                           ->  GroupAggregate  (cost=0.00..431.01 rows=34 width=12)
+                                 Group Key: perct.a
+                                 ->  Sort  (cost=0.00..431.00 rows=34 width=4)
+                                       Sort Key: perct.a
+                                       ->  Seq Scan on perct  (cost=0.00..431.00 rows=34 width=4)
+               ->  Redistribute Motion 1:3  (slice4)  (cost=0.00..1324037.57 rows=1 width=8)
+                     ->  Aggregate  (cost=0.00..1324037.57 rows=1 width=8)
+                           ->  Limit  (cost=0.00..1324037.57 rows=34 width=20)
+                                 ->  Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..1324037.57 rows=100 width=20)
+                                       Merge Key: share0_ref3.a
+                                       ->  Nested Loop  (cost=0.00..1324037.56 rows=34 width=20)
+                                             Join Filter: true
+                                             ->  Shared Scan (share slice:id 3:0)  (cost=0.00..431.00 rows=34 width=12)
+                                             ->  Materialize  (cost=0.00..431.00 rows=1 width=8)
+                                                   ->  Result  (cost=0.00..431.00 rows=1 width=8)
+                                                         ->  Broadcast Motion 1:3  (slice2)  (cost=0.00..431.00 rows=3 width=8)
+                                                               ->  Aggregate  (cost=0.00..431.00 rows=1 width=8)
+                                                                     ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
+                                                                           ->  Aggregate  (cost=0.00..431.00 rows=1 width=8)
+                                                                                 ->  Shared Scan (share slice:id 1:0)  (cost=0.00..431.00 rows=34 width=8)
          SubPlan 1  (slice6; segments: 3)
            ->  Result  (cost=0.00..431.01 rows=40 width=4)
-                 One-Time Filter: ((gp_percentile_cont((share0_ref2.a)::double precision, 0.5::double precision, (count((count(share0_ref3.a)))), 1::bigint)) = 5::double precision)
+                 One-Time Filter: ((gp_percentile_cont((share0_ref3.a)::double precision, 0.5::double precision, (int8((pg_catalog.sum((sum(share0_ref2."ColRef_0020")))))), share0_ref3."ColRef_0020")) = 5::double precision)
                  ->  Materialize  (cost=0.00..431.01 rows=100 width=4)
                        ->  Broadcast Motion 3:3  (slice5; segments: 3)  (cost=0.00..431.01 rows=100 width=4)
                              ->  Seq Scan on perct perct_1  (cost=0.00..431.00 rows=34 width=4)
  Optimizer: Pivotal Optimizer (GPORCA)
-(28 rows)
+(32 rows)
 
 select (select a from perct where median(t.a) = 5) from perct t;
  a 
@@ -1715,38 +1837,42 @@ select (select a from perct where median(t.a) = 5) from perct t;
 (1 row)
 
 explain select (select array_agg(a ORDER BY a) from perct where median(t.a) = 50.5) from (select * from perct t order by a offset 0) as t;
-                                                                                          QUERY PLAN                                                                                          
-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice6; segments: 3)  (cost=0.00..1357135829.77 rows=1 width=8)
-   ->  Result  (cost=0.00..1357135829.77 rows=1 width=8)
-         ->  Sequence  (cost=0.00..1324465.93 rows=1 width=8)
-               ->  Shared Scan (share slice:id 6:0)  (cost=0.00..431.00 rows=34 width=1)
-                     ->  Materialize  (cost=0.00..431.00 rows=34 width=1)
-                           ->  Seq Scan on perct  (cost=0.00..431.00 rows=34 width=34)
-               ->  Redistribute Motion 1:3  (slice4)  (cost=0.00..1324034.93 rows=1 width=8)
-                     ->  Aggregate  (cost=0.00..1324034.93 rows=1 width=8)
-                           ->  Limit  (cost=0.00..1324034.93 rows=34 width=12)
-                                 ->  Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..1324034.93 rows=100 width=12)
-                                       Merge Key: share0_ref2.a
-                                       ->  Sort  (cost=0.00..1324034.92 rows=34 width=12)
-                                             Sort Key: share0_ref2.a
-                                             ->  Nested Loop  (cost=0.00..1324034.91 rows=34 width=12)
-                                                   Join Filter: true
-                                                   ->  Broadcast Motion 1:3  (slice2)  (cost=0.00..431.00 rows=3 width=8)
-                                                         ->  Aggregate  (cost=0.00..431.00 rows=1 width=8)
-                                                               ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
-                                                                     ->  Aggregate  (cost=0.00..431.00 rows=1 width=8)
-                                                                           ->  Shared Scan (share slice:id 1:0)  (cost=0.00..431.00 rows=34 width=4)
-                                                   ->  Shared Scan (share slice:id 3:0)  (cost=0.00..431.00 rows=34 width=4)
+                                                                                                               QUERY PLAN                                                                                                                
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice6; segments: 3)  (cost=0.00..1357138538.74 rows=1 width=8)
+   ->  Result  (cost=0.00..1357138538.74 rows=1 width=8)
+         ->  Sequence  (cost=0.00..1324468.58 rows=1 width=8)
+               ->  Shared Scan (share slice:id 6:0)  (cost=0.00..431.01 rows=34 width=1)
+                     ->  Materialize  (cost=0.00..431.01 rows=34 width=1)
+                           ->  GroupAggregate  (cost=0.00..431.01 rows=34 width=12)
+                                 Group Key: perct.a
+                                 ->  Sort  (cost=0.00..431.00 rows=34 width=4)
+                                       Sort Key: perct.a
+                                       ->  Seq Scan on perct  (cost=0.00..431.00 rows=34 width=4)
+               ->  Redistribute Motion 1:3  (slice4)  (cost=0.00..1324037.57 rows=1 width=8)
+                     ->  Aggregate  (cost=0.00..1324037.57 rows=1 width=8)
+                           ->  Limit  (cost=0.00..1324037.57 rows=34 width=20)
+                                 ->  Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..1324037.57 rows=100 width=20)
+                                       Merge Key: share0_ref3.a
+                                       ->  Nested Loop  (cost=0.00..1324037.56 rows=34 width=20)
+                                             Join Filter: true
+                                             ->  Shared Scan (share slice:id 3:0)  (cost=0.00..431.00 rows=34 width=12)
+                                             ->  Materialize  (cost=0.00..431.00 rows=1 width=8)
+                                                   ->  Result  (cost=0.00..431.00 rows=1 width=8)
+                                                         ->  Broadcast Motion 1:3  (slice2)  (cost=0.00..431.00 rows=3 width=8)
+                                                               ->  Aggregate  (cost=0.00..431.00 rows=1 width=8)
+                                                                     ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
+                                                                           ->  Aggregate  (cost=0.00..431.00 rows=1 width=8)
+                                                                                 ->  Shared Scan (share slice:id 1:0)  (cost=0.00..431.00 rows=34 width=8)
          SubPlan 1  (slice6; segments: 3)
            ->  Aggregate  (cost=0.00..431.01 rows=1 width=8)
                  ->  Result  (cost=0.00..431.01 rows=40 width=4)
-                       One-Time Filter: ((gp_percentile_cont((share0_ref2.a)::double precision, 0.5::double precision, (count((count(share0_ref3.a)))), 1::bigint)) = 50.5::double precision)
+                       One-Time Filter: ((gp_percentile_cont((share0_ref3.a)::double precision, 0.5::double precision, (int8((pg_catalog.sum((sum(share0_ref2."ColRef_0021")))))), share0_ref3."ColRef_0021")) = 50.5::double precision)
                        ->  Materialize  (cost=0.00..431.01 rows=100 width=4)
                              ->  Broadcast Motion 3:3  (slice5; segments: 3)  (cost=0.00..431.01 rows=100 width=4)
                                    ->  Seq Scan on perct perct_1  (cost=0.00..431.00 rows=34 width=4)
  Optimizer: Pivotal Optimizer (GPORCA)
-(29 rows)
+(33 rows)
 
 select (select array_agg(a ORDER BY a) from perct where median(t.a) = 50.5) from (select * from perct t order by a offset 0) as t;
                                                                                                                                                array_agg                                                                                                                                               

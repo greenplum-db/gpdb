@@ -65,6 +65,7 @@ typedef ULONG OID;
 #define GPDB_COUNT_ANY OID(2147)   // count(Any)
 #define GPDB_UUID OID(2950)
 #define GPDB_ANY OID(2283)
+#define GPDB_INT8_CAST OID(1779)  // int8(numeric)
 #define GPDB_PERCENTILE_DISC \
 	OID(3972)  // percentile_disc(fraction) group within(ANYELEMENT)
 #define GPDB_PERCENTILE_CONT_FLOAT8 \

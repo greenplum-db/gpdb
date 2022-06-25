@@ -61,11 +61,6 @@ COrderedAggPreprocessor::SplitPrjList(
 		GPOS_NEW(mp) CExpressionArray(mp);
 
 	CExpressionArray *pdrgpexprOtherPrEl = GPOS_NEW(mp) CExpressionArray(mp);
-	// create CTE using SeqPrj child expression
-	CExpression *pexprRemappedAggConsumer = NULL;
-	CExpression *pexprAggConsumer = NULL;
-	CreateCTE(mp, pexprInputAggPrj, &pexprRemappedAggConsumer,
-			  &pexprAggConsumer);
 
 	// iterate over project list and split project elements between
 	// Ordered Aggs list, and Other aggs list
@@ -105,7 +100,7 @@ COrderedAggPreprocessor::SplitPrjList(
 					 uidx++)
 				{
 					// For multiple ordered-set aggs on the same ORDERING column and ORDERING SPEC(ASC/DESC), we optimize
-					// to add the new aggregate as a ProjectiElement to the ProjectList of an existing JOIN, instead of
+					// to add the new aggregate as a ProjectElement to the ProjectList of an existing JOIN, instead of
 					// creating a new JOIN for doing the same SORT.
 					// Eg. SELECT percentile_cont(0.25) WITHIN GROUP(ORDER BY a), percentile_cont(0.5) WITHIN GROUP(ORDER BY a) from tab;
 					// Currently, to check if colref's SORT ORDER Spec(Asc/Desc) is same, we match only the SortOp and NullFirst
@@ -138,10 +133,14 @@ COrderedAggPreprocessor::SplitPrjList(
 						const CColRef *total_count_colref =
 							CCastUtils::PcrExtractFromScIdOrCastScId(
 								(*(*pCurrExprAggFunc)[0])[2]);
+						const CColRef *peer_count_colref =
+							CCastUtils::PcrExtractFromScIdOrCastScId(
+								(*(*pCurrExprAggFunc)[0])[3]);
 
 						CExpression *pexprNewAggFunc = PexprFinalAgg(
 							mp, pexprAggFunc, pcrPrjElem,
-							const_cast<CColRef *>(total_count_colref));
+							const_cast<CColRef *>(total_count_colref),
+							const_cast<CColRef *>(peer_count_colref));
 						CExpression *pexprAddPrjElem =
 							CUtils::PexprScalarProjectElement(mp, pcrPrjElem,
 															  pexprNewAggFunc);
@@ -176,37 +175,75 @@ COrderedAggPreprocessor::SplitPrjList(
 				}
 			}
 			if (skip)
-				continue;
-			if (0 < ul)
 			{
-				pexprRemappedAggConsumer->AddRef();
-				pexprAggConsumer->AddRef();
+				continue;
 			}
-			// CREATE total count aggregate
+
+			/*
+			 * This preprocessor step, splits the percentile_cont() function into the following pattern
+			 * Sequence
+			 * |
+			 * |_____ CTEProducer (SELECT col, count(col) peer_count FROM table GROUP BY col)
+			 * |      |
+			 * |      |______ Scan (table)
+			 * |
+			 * |______ CLogicalGbAgg (gp_percentile agg(col, percentile_fraction, total_cnt, peer_count))
+			 *         |____NLJ
+			 *              |
+			 *              |_______ CLogicalGbAgg (count total rows => SELECT SUM(peer_count) total_cnt FROM CTE)
+			 *              |        |
+			 *              |        |_____ CTEConsumer
+			 *              |
+			 *              |_______ CTEConsumer
+			 * */
+
+			// STEP 1: CREATE Aggregate for peer_count
 			CColumnFactory *col_factory = COptCtxt::PoctxtFromTLS()->Pcf();
 			CMDAccessor *md_accessor = COptCtxt::PoctxtFromTLS()->Pmda();
 			CExpression *pexprAgg = CUtils::PexprAgg(
 				mp, md_accessor, IMDType::EaggCount, colref, false);
-			CColRef *total_count_colref = col_factory->PcrCreate(
+			CColRef *peer_count_colref = col_factory->PcrCreate(
 				md_accessor->RetrieveType(
 					CScalarAggFunc::PopConvert(pexprAgg->Pop())->MdidType()),
 				CScalarAggFunc::PopConvert(pexprAgg->Pop())->TypeModifier());
 			CExpression *pexprNewPrjElem = CUtils::PexprScalarProjectElement(
-				mp, total_count_colref, pexprAgg);
+				mp, peer_count_colref, pexprAgg);
 			CExpression *pexprCountAggPrjList = GPOS_NEW(mp) CExpression(
 				mp, GPOS_NEW(mp) CScalarProjectList(mp), pexprNewPrjElem);
+			CColRefArray *pc = GPOS_NEW(mp) CColRefArray(mp);
+			pc->Append(const_cast<CColRef *>(colref));
 			(*pexprInputAggPrj)[0]->AddRef();
+			CExpression *pexprPeerCountAgg = CUtils::PexprLogicalGbAggGlobal(
+				mp, pc, (*pexprInputAggPrj)[0], pexprCountAggPrjList);
+
+			// STEP 1(a): CREATE CTE for the peer_count
+			CExpression *pexprRemappedPCConsumer = NULL;
+			CExpression *pexprPCConsumer = NULL;
+			CreateCTE(mp, pexprPeerCountAgg, &pexprRemappedPCConsumer,
+					  &pexprPCConsumer);
+
+			// STEP 2: Create Aggregate for calculating total_count SUM(peer_count)
+			CExpression *pexprSumAgg = CUtils::PexprAgg(
+				mp, md_accessor, IMDType::EaggSum, peer_count_colref, false);
+			CColRef *total_count_colref = col_factory->PcrCreate(
+				md_accessor->RetrieveType(
+					CScalarAggFunc::PopConvert(pexprSumAgg->Pop())->MdidType()),
+				CScalarAggFunc::PopConvert(pexprSumAgg->Pop())->TypeModifier());
+			CExpression *pexprSumPrjElem = CUtils::PexprScalarProjectElement(
+				mp, total_count_colref, pexprSumAgg);
+			CExpression *pexprSumAggPrjList = GPOS_NEW(mp) CExpression(
+				mp, GPOS_NEW(mp) CScalarProjectList(mp), pexprSumPrjElem);
 			CExpression *pexprTotalCountAgg = CUtils::PexprLogicalGbAggGlobal(
-				mp, GPOS_NEW(mp) CColRefArray(mp), (*pexprInputAggPrj)[0],
-				pexprCountAggPrjList);
+				mp, GPOS_NEW(mp) CColRefArray(mp), pexprPeerCountAgg,
+				pexprSumAggPrjList);
 
 			// to match requested columns upstream, we have to re-use the same computed
 			// columns that define the aggregates, we avoid recreating new columns during
 			// expression copy by passing must_exist as false
 			CColRefArray *pdrgpcrChildOutput =
-				pexprAggConsumer->DeriveOutputColumns()->Pdrgpcr(mp);
+				pexprPCConsumer->DeriveOutputColumns()->Pdrgpcr(mp);
 			CColRefArray *pdrgpcrConsumerOutput =
-				CLogicalCTEConsumer::PopConvert(pexprRemappedAggConsumer->Pop())
+				CLogicalCTEConsumer::PopConvert(pexprRemappedPCConsumer->Pop())
 					->Pdrgpcr();
 			UlongToColRefMap *colref_mapping = CUtils::PhmulcrMapping(
 				mp, pdrgpcrChildOutput, pdrgpcrConsumerOutput);
@@ -217,24 +254,50 @@ COrderedAggPreprocessor::SplitPrjList(
 			pdrgpcrChildOutput->Release();
 			pexprTotalCountAgg->Release();
 
-			// finalize total count agg expression by replacing its child with CTE consumer
+			// finalize total_count agg expression by replacing its child with CTE consumer
 			pexprTotalCountAggRemapped->Pop()->AddRef();
 			(*pexprTotalCountAggRemapped)[1]->AddRef();
 			CExpression *pexprFinalGbAgg = GPOS_NEW(mp) CExpression(
-				mp, pexprTotalCountAggRemapped->Pop(), pexprRemappedAggConsumer,
+				mp, pexprTotalCountAggRemapped->Pop(), pexprRemappedPCConsumer,
 				(*pexprTotalCountAggRemapped)[1]);
 			pexprTotalCountAggRemapped->Release();
-
 
 			CExpression *pexprJoinCondition =
 				CUtils::PexprScalarConstBool(mp, true /*value*/);
 
-			// create a join between expanded total count and CTE Consumer expressions
+			// STEP 3: CREATE a join between expanded total_count and CTEConsumer expressions
+			const CColRef *pcrSum = CScalarProjectElement::PopConvert(
+										(*(*pexprFinalGbAgg)[1])[0]->Pop())
+										->Pcr();
+			CExpression *pexprScalarIdentSum =
+				CUtils::PexprScalarIdent(mp, pcrSum);
+
+			// STEP 3(a): Explicit Cast total_count to bigint.
+			// Since count() returns bigint, sum(count()) returns numeric and gp_percentile agg's
+			// expect the total_count as bigint, therefore adding an explicit cast on top
+			IMDId *mdid_func = GPOS_NEW(mp) CMDIdGPDB(GPDB_INT8_CAST);
+			const IMDFunction *cast_func = md_accessor->RetrieveFunc(mdid_func);
+			const CWStringConst *pstrFunc = GPOS_NEW(mp) CWStringConst(
+				mp, (cast_func->Mdname().GetMDName())->GetBuffer());
+			mdid_func->AddRef();
+			cast_func->GetResultTypeMdid()->AddRef();
+			CScalarFunc *popCastScalarFunc = GPOS_NEW(mp) CScalarFunc(
+				mp, mdid_func, cast_func->GetResultTypeMdid(), -1, pstrFunc);
+			CExpression *pexprCastScalarIdent = GPOS_NEW(mp)
+				CExpression(mp, popCastScalarFunc, pexprScalarIdentSum);
+			CExpressionArray *colref_array1 = GPOS_NEW(mp) CExpressionArray(mp);
+			colref_array1->Append(pexprCastScalarIdent);
+			CExpression *pexprProjected = CUtils::PexprAddProjection(
+				mp, pexprFinalGbAgg, colref_array1, false);
+			CColRef *new_total_count_ref =
+				CUtils::PcrFromProjElem((*(*pexprProjected)[1])[0]);
 			CExpression *pexprJoin =
 				CUtils::PexprLogicalJoin<CLogicalInnerJoin>(
-					mp, pexprAggConsumer, pexprFinalGbAgg, pexprJoinCondition);
+					mp, pexprPCConsumer, pexprProjected, pexprJoinCondition);
+			colref_array1->Release();
+			mdid_func->Release();
 
-			// create ordered spec for the Join to merge on the colref passed in as part
+			// STEP 4: CREATE ordered spec for the Join to merge on the colref passed in as part
 			// of the ordered agg's WITHIN(ORDER BY) clause
 			COrderSpec *pos = GPOS_NEW(mp) COrderSpec(mp);
 			IMDId *mdid_curr_sortop =
@@ -263,9 +326,10 @@ COrderedAggPreprocessor::SplitPrjList(
 			CExpression *pexprJoinLimit = GPOS_NEW(mp) CExpression(
 				mp, popLimit, pexprJoin, pexprLimitOffset, pexprLimitCount);
 
-			// Create the final gp_percentile agg on top
+			// STEP 5: CREATE the final gp_percentile agg on top
 			CExpression *pexprNewAggFunc =
-				PexprFinalAgg(mp, pexprAggFunc, pcrPrjElem, total_count_colref);
+				PexprFinalAgg(mp, pexprAggFunc, pcrPrjElem, new_total_count_ref,
+							  peer_count_colref);
 			CExpression *pexprExistingPrjElem =
 				CUtils::PexprScalarProjectElement(mp, pcrPrjElem,
 												  pexprNewAggFunc);
@@ -376,17 +440,14 @@ COrderedAggPreprocessor::SplitOrderedAggsPrj(
 //
 //---------------------------------------------------------------------------
 void
-COrderedAggPreprocessor::CreateCTE(CMemoryPool *mp,
-								   CExpression *pexprInputAggPrj,
+COrderedAggPreprocessor::CreateCTE(CMemoryPool *mp, CExpression *pexprChild,
 								   CExpression **ppexprFirstConsumer,
 								   CExpression **ppexprSecondConsumer)
 {
-	GPOS_ASSERT(NULL != pexprInputAggPrj);
-	GPOS_ASSERT(COperator::EopLogicalGbAgg == pexprInputAggPrj->Pop()->Eopid());
+	GPOS_ASSERT(NULL != pexprChild);
 	GPOS_ASSERT(NULL != ppexprFirstConsumer);
 	GPOS_ASSERT(NULL != ppexprSecondConsumer);
 
-	CExpression *pexprChild = (*pexprInputAggPrj)[0];
 	CColRefSet *pcrsChildOutput = pexprChild->DeriveOutputColumns();
 	CColRefArray *pdrgpcrChildOutput = pcrsChildOutput->Pdrgpcr(mp);
 
@@ -398,7 +459,7 @@ COrderedAggPreprocessor::CreateCTE(CMemoryPool *mp,
 	CColRefArray *pdrgpcrProducerOutput =
 		pexprCTEProd->DeriveOutputColumns()->Pdrgpcr(mp);
 
-	//	 first consumer creates new output columns to be used later as input to GbAgg expression
+	// first consumer creates new output columns to be used later as input to GbAgg expression
 	*ppexprFirstConsumer = GPOS_NEW(mp) CExpression(
 		mp, GPOS_NEW(mp) CLogicalCTEConsumer(
 				mp, ulCTEId, CUtils::PdrgpcrCopy(mp, pdrgpcrProducerOutput)));
@@ -429,8 +490,14 @@ CExpression *
 COrderedAggPreprocessor::PexprFinalAgg(CMemoryPool *mp,
 									   CExpression *pexprAggFunc,
 									   CColRef *arg_col_ref,
-									   CColRef *total_count_colref)
+									   CColRef *total_count_colref,
+									   CColRef *peer_count_colref)
 {
+	GPOS_ASSERT(NULL != pexprAggFunc);
+	GPOS_ASSERT(NULL != arg_col_ref);
+	GPOS_ASSERT(NULL != total_count_colref);
+	GPOS_ASSERT(NULL != peer_count_colref);
+
 	CScalarAggFunc *popScAggFunc =
 		CScalarAggFunc::PopConvert(pexprAggFunc->Pop());
 	CExpressionArray *pdrgpexpr = GPOS_NEW(mp) CExpressionArray(mp);
@@ -447,11 +514,10 @@ COrderedAggPreprocessor::PexprFinalAgg(CMemoryPool *mp,
 	pexprAggFuncDirectArg->AddRef();
 	pdrgpexprChildren->Append(pexprAggFuncDirectArg);
 	pdrgpexprChildren->Append(CUtils::PexprScalarIdent(mp, total_count_colref));
-	// Currently passing dummy peer_count as 1 always. Will pass along the
-	// calculated peer_count col_ref once we dedup data for handling skew
-	CExpression *pexprDummyPeerCount =
-		CUtils::PexprScalarConstInt8(mp, 1 /*val*/);
-	pdrgpexprChildren->Append(pexprDummyPeerCount);
+	// Passing along the calculated peer_count col_ref for handling skew
+	CExpression *pexprPeerCount =
+		CUtils::PexprScalarIdent(mp, peer_count_colref);
+	pdrgpexprChildren->Append(pexprPeerCount);
 
 	pdrgpexpr->Append(
 		GPOS_NEW(mp) CExpression(mp, popScalarValuesList, pdrgpexprChildren));
@@ -536,14 +602,15 @@ COrderedAggPreprocessor::PexprInputAggPrj2Join(CMemoryPool *mp,
 		pexprTopmostCTE = (*pexprTopmostCTE)[0];
 	}
 	ULONG ulCTEIdStart = CLogicalCTEConsumer::PopConvert(
-							 (*(*(*(*pexprTopmostCTE)[0])[0])[1])[0]->Pop())
+							 (*(*(*pexprTopmostCTE)[0])[0])[0]->Pop())
 							 ->UlCTEId();
 	ULONG ulCTEIdEnd = ulCTEIdStart;
 	if (has_nlj_ontop)
-		ulCTEIdEnd =
-			CLogicalCTEConsumer::PopConvert(
-				(*(*(*(*(*pexprOrderedAgg)[arity - 2])[0])[0])[1])[0]->Pop())
-				->UlCTEId();
+	{
+		ulCTEIdEnd = CLogicalCTEConsumer::PopConvert(
+						 (*(*(*(*pexprOrderedAgg)[arity - 2])[0])[0])[0]->Pop())
+						 ->UlCTEId();
+	}
 	CExpression *pexpResult = pexprFinalJoin;
 	for (ULONG ul = ulCTEIdEnd; ul > ulCTEIdStart; ul--)
 	{

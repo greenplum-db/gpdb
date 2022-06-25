@@ -60,6 +60,10 @@ gp_percentile_cont_transition(FunctionCallInfo fcinfo,
 	int64        first_row;
 	int64        second_row;
 
+	/* Return state for NULL inputs of val*/
+	if (PG_ARGISNULL(1) && !PG_ARGISNULL(0))
+		PG_RETURN_DATUM(PG_GETARG_DATUM(0));
+
 	/* Ignore NULL inputs for val, percent and total_count*/
 	if (PG_ARGISNULL(1) || PG_ARGISNULL(2) || PG_ARGISNULL(3))
 		PG_RETURN_NULL();
@@ -75,8 +79,9 @@ gp_percentile_cont_transition(FunctionCallInfo fcinfo,
 	Datum val = PG_GETARG_DATUM(1);
 	Datum return_state = prev_state;
 	int64 total_rows = PG_GETARG_INT64(3);
-	first_row = (int64) floor(percentile * (total_rows - 1));
-	second_row = (int64) ceil(percentile * (total_rows - 1));
+	int64 peer_count = PG_GETARG_INT64(4);
+	first_row = (int64) floor(percentile * (total_rows - 1) + 1);
+	second_row = (int64) ceil(percentile * (total_rows - 1) + 1);
 	double proportion = (percentile * (total_rows - 1)) - floor(percentile * (total_rows - 1));
 	int64 *cnt;
 
@@ -94,17 +99,17 @@ gp_percentile_cont_transition(FunctionCallInfo fcinfo,
 		cnt = (int64 *) fcinfo->flinfo->fn_extra;
 	}
 
-	if(*cnt == first_row)
+	if(*cnt <= first_row && first_row < *cnt + peer_count)
 	{
 		return_state = val;
 	}
-	else if(*cnt == second_row)
+	else if(*cnt <= second_row && second_row < *cnt + peer_count)
 	{
 		return_state = lerpfunc(prev_state, val, proportion);
 	}
-	*cnt = *cnt + 1;
+	*cnt = *cnt + peer_count;
 
-	if(*cnt >= total_rows)
+	if(*cnt > total_rows)
 	{
 		/* Clean up, so the next group can see NULL for fn_extra */
 		pfree(cnt);
@@ -159,6 +164,10 @@ gp_percentile_disc_transition(PG_FUNCTION_ARGS)
 {
 	int64        rownum;
 
+	/* Return state for NULL inputs of val*/
+	if (PG_ARGISNULL(1) && !PG_ARGISNULL(0))
+		PG_RETURN_DATUM(PG_GETARG_DATUM(0));
+
 	/* Ignore NULL inputs for val, percent and total_count*/
 	if (PG_ARGISNULL(1) || PG_ARGISNULL(2) || PG_ARGISNULL(3))
 			PG_RETURN_NULL();
@@ -173,6 +182,7 @@ gp_percentile_disc_transition(PG_FUNCTION_ARGS)
 	Datum val = PG_GETARG_DATUM(1);
 	Datum return_state = prev_state;
 	int64 total_rows = PG_GETARG_INT64(3);
+	int64 peer_count = PG_GETARG_INT64(4);
 	rownum = (int64) ceil(percentile * (total_rows));
 	int64 *cnt;
 
@@ -181,20 +191,22 @@ gp_percentile_disc_transition(PG_FUNCTION_ARGS)
 		cnt = (int64 *) MemoryContextAllocZero(fcinfo->flinfo->fn_mcxt, sizeof(int64));
 		*cnt = 1;
 		fcinfo->flinfo->fn_extra = cnt;
+		if (percentile == 0.0)
+			rownum = 1;
 	}
 	else
 	{
 		cnt = (int64 *) fcinfo->flinfo->fn_extra;
 	}
 
-	if(*cnt == rownum - 1)
+	if(*cnt <= rownum && rownum < *cnt + peer_count)
 	{
 		return_state = val;
 	}
 
-	*cnt = *cnt + 1;
+	*cnt = *cnt + peer_count;
 
-	if(*cnt >= total_rows)
+	if(*cnt > total_rows)
 	{
 		/* Clean up, so the next group can see NULL for fn_extra */
 		pfree(cnt);

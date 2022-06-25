@@ -57,7 +57,8 @@ private:
 	static CExpression *PexprFinalAgg(CMemoryPool *mp,
 									  CExpression *pexprAggFunc,
 									  CColRef *arg_col_ref,
-									  CColRef *total_count_colref);
+									  CColRef *total_count_colref,
+									  CColRef *peer_count_colref);
 
 	// transform sequence project expression into an inner join expression
 	static CExpression *PexprInputAggPrj2Join(CMemoryPool *mp,
