@@ -6,7 +6,7 @@ The tables in the following sections suggest activities that a Greenplum System 
 
 It is not necessary to implement all of these suggestions in every cluster; use the frequency and severity recommendations as a guide to implement measures according to your service requirements.
 
-**Parent topic:**[Managing a Greenplum System](../managing/partII.html)
+**Parent topic:** [Managing a Greenplum System](../managing/partII.html)
 
 ## Database State Monitoring Activities 
 

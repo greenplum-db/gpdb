@@ -11,7 +11,7 @@ This section contains the following topics:
 -   [Designing JSON documents](#topic_eyt_3tw_mq)
 -   [JSON Functions and Operators](#topic_gn4_x3w_mq)
 
-**Parent topic:**[Querying Data](../../query/topics/query.html)
+**Parent topic:** [Querying Data](../../query/topics/query.html)
 
 ## About JSON Data 
 

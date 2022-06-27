@@ -12,5 +12,5 @@ With mirroring disabled, the system automatically shuts down if a segment instan
 
 See [Detecting a Failed Segment](g-detecting-a-failed-segment.html) for a more detailed description of the fault detection and recovery process and configuration options.
 
-**Parent topic:**[Overview of Greenplum Database High Availability](../../highavail/topics/g-overview-of-high-availability-in-greenplum-database.html)
+**Parent topic:** [Overview of Greenplum Database High Availability](../../highavail/topics/g-overview-of-high-availability-in-greenplum-database.html)
 

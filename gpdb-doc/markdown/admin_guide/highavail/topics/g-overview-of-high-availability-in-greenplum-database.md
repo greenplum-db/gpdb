@@ -110,5 +110,5 @@ If you maintain dual clusters and use incremental backup, you can populate the s
 -   **[Overview of Fault Detection and Recovery](../../highavail/topics/g-overview-of-fault-detection-and-recovery.html)**  
 
 
-**Parent topic:**[Enabling High Availability and Data Consistency Features](../../highavail/topics/g-enabling-high-availability-features.html)
+**Parent topic:** [Enabling High Availability and Data Consistency Features](../../highavail/topics/g-enabling-high-availability-features.html)
 

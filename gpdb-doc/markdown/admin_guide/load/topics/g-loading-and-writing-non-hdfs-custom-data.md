@@ -9,5 +9,5 @@ For information about importing custom data from HDFS, see [Reading and Writing 
 -   **[Using a Custom Protocol](../../load/topics/g-using-a-custom-protocol.html)**  
 
 
-**Parent topic:**[Loading and Unloading Data](../../load/topics/g-loading-and-unloading-data.html)
+**Parent topic:** [Loading and Unloading Data](../../load/topics/g-loading-and-unloading-data.html)
 

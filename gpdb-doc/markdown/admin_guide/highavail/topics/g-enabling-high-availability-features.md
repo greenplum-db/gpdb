@@ -19,5 +19,5 @@ A Greenplum Database cluster can be made highly available by providing a fault-t
 -   **[Recovering a Failed Master](../../highavail/topics/g-recovering-a-failed-master.html)**  
 
 
-**Parent topic:**[Managing a Greenplum System](../../managing/partII.html)
+**Parent topic:** [Managing a Greenplum System](../../managing/partII.html)
 

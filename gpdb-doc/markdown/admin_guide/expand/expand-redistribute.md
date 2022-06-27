@@ -12,7 +12,7 @@ While table redistribution is underway, any new tables or partitions created are
 -   [Redistributing Tables Using gpexpand](#topic30)
 -   [Monitoring Table Redistribution](#topic31)
 
-**Parent topic:**[Expanding a Greenplum System](../expand/expand-main.html)
+**Parent topic:** [Expanding a Greenplum System](../expand/expand-main.html)
 
 ## Ranking Tables for Redistribution 
 

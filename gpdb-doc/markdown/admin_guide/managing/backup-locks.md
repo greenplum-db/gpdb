@@ -43,5 +43,5 @@ If more than one database is specified, this process is executed for each databa
 -   If the backup succeeded and a post-dump script was specified with the -R option, `gpcrondump` runs the script now.
 -   `gpcrondump` reports the backup status, sends email if configured, and saves the backup status in the `public.gpcrondump_history` table in the database.
 
-**Parent topic:**[Parallel Backup with gpcrondump and gpdbrestore](../managing/backup-heading.html)
+**Parent topic:** [Parallel Backup with gpcrondump and gpdbrestore](../managing/backup-heading.html)
 

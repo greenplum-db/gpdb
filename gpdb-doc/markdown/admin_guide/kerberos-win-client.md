@@ -7,7 +7,7 @@ You can configure Microsoft Windows client applications to connect to a Greenplu
 
 For information about configuring Greenplum Database with Kerberos authentication, see [Using Kerberos Authentication](kerberos.html).
 
-**Parent topic:**[Configuring Client Authentication](client_auth.html)
+**Parent topic:** [Configuring Client Authentication](client_auth.html)
 
 ## Configuring Kerberos on Windows for Greenplum Database Clients 
 

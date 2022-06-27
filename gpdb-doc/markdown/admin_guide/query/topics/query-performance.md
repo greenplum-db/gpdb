@@ -13,5 +13,5 @@ Greenplum Database dynamically eliminates irrelevant partitions in a table and o
 
 **Note:** Greenplum Database uses GPORCA, the Greenplum next generation query optimizer, by default. GPORCA extends the planning and optimization capabilities of the Greenplum Database legacy optimizer. For information about the features and limitations of GPORCA, see [Overview of GPORCA](query-piv-opt-overview.html).
 
-**Parent topic:**[Querying Data](../../query/topics/query.html)
+**Parent topic:** [Querying Data](../../query/topics/query.html)
 

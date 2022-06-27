@@ -29,5 +29,5 @@ For information about using Greenplum Database external tables with Amazon EMR w
 -   **[Using Amazon EMR with Greenplum Database installed on AWS \(Deprecated\)](../external/g-hdfs-emr-config.html)**  
 
 
-**Parent topic:**[Working with External Data](../external/g-working-with-file-based-ext-tables.html)
+**Parent topic:** [Working with External Data](../external/g-working-with-file-based-ext-tables.html)
 

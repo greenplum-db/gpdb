@@ -10,7 +10,7 @@ Table partitioning enables supporting very large tables, such as fact tables, by
 -   [Viewing Your Partition Design](#topic76)
 -   [Maintaining Partitioned Tables](#topic77)
 
-**Parent topic:**[Defining Database Objects](../ddl/ddl.html)
+**Parent topic:** [Defining Database Objects](../ddl/ddl.html)
 
 ## About Table Partitioning 
 

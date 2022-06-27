@@ -15,5 +15,5 @@ If the master cannot connect to a segment instance, it marks that segment as dow
 -   **[Recovering From Segment Failures](../../highavail/topics/g-recovering-from-segment-failures.html)**  
 
 
-**Parent topic:**[Enabling High Availability and Data Consistency Features](../../highavail/topics/g-enabling-high-availability-features.html)
+**Parent topic:** [Enabling High Availability and Data Consistency Features](../../highavail/topics/g-enabling-high-availability-features.html)
 

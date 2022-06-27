@@ -7,7 +7,7 @@ This topic describes how to construct SQL queries in Greenplum Database.
 -   [SQL Lexicon](#topic3)
 -   [SQL Value Expressions](#topic4)
 
-**Parent topic:**[Querying Data](../../query/topics/query.html)
+**Parent topic:** [Querying Data](../../query/topics/query.html)
 
 ## SQL Lexicon 
 

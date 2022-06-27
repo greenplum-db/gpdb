@@ -47,5 +47,5 @@ FORMAT 'CUSTOM' (formatter=fixedwidth_out,
 
 ```
 
-**Parent topic:**[Using a Custom Format](../../load/topics/g-using-a-custom-format.html)
+**Parent topic:** [Using a Custom Format](../../load/topics/g-using-a-custom-format.html)
 

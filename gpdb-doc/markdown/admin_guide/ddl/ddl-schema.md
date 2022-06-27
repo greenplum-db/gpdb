@@ -2,7 +2,7 @@
 
 Schemas logically organize objects and data in a database. Schemas allow you to have more than one object \(such as tables\) with the same name in the database without conflict if the objects are in different schemas.
 
-**Parent topic:**[Defining Database Objects](../ddl/ddl.html)
+**Parent topic:** [Defining Database Objects](../ddl/ddl.html)
 
 ## The Default "Public" Schema 
 

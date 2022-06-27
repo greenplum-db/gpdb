@@ -32,7 +32,7 @@ The following topics describe the components that make up a Greenplum Database s
 -   [About the Greenplum Segments](#arch_segments)
 -   [About the Greenplum Interconnect](#arch_interconnect)
 
-**Parent topic:**[Greenplum Database Concepts](../intro/partI.html)
+**Parent topic:** [Greenplum Database Concepts](../intro/partI.html)
 
 ## About the Greenplum Master 
 

@@ -33,5 +33,5 @@ The *gp\_segment\_configuration* and *pg\_filespace\_entry* system catalog table
 
 The new recovery segment host must be pre-installed with the Greenplum Database software and configured exactly as the existing segment hosts.
 
-**Parent topic:**[Recovering From Segment Failures](../../highavail/topics/g-recovering-from-segment-failures.html)
+**Parent topic:** [Recovering From Segment Failures](../../highavail/topics/g-recovering-from-segment-failures.html)
 

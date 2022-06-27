@@ -59,5 +59,5 @@ Because the previous code uses the default compression options for `compression_
 
 ```
 
-**Parent topic:**[Accessing HDFS Data with gphdfs \(Deprecated\)](../external/g-using-hadoop-distributed-file-system--hdfs--tables.html)
+**Parent topic:** [Accessing HDFS Data with gphdfs \(Deprecated\)](../external/g-using-hadoop-distributed-file-system--hdfs--tables.html)
 

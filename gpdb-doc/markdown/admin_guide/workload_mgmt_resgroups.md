@@ -23,7 +23,7 @@ This topic includes the following subtopics:
 -   [Monitoring Resource Group Status](#topic22)
 -   [Resource Group Frequently Asked Questions](#topic777999)
 
-**Parent topic:**[Managing Resources](wlmgmt.html)
+**Parent topic:** [Managing Resources](wlmgmt.html)
 
 ## Understanding Role and Component Resource Groups 
 

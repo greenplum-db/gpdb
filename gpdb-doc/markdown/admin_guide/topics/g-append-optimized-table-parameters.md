@@ -9,7 +9,7 @@ See [Creating and Managing Tables](../ddl/ddl-table.html) for more information a
 -   `gp_enable_exchange_default_partition`
 -   `gp_enable_segment_copy_checking`
 
-**Parent topic:**[Configuration Parameter Categories](../topics/g-configuration-parameter-categories.html)
+**Parent topic:** [Configuration Parameter Categories](../topics/g-configuration-parameter-categories.html)
 
 ## Append-Optimized Table Parameters 
 

@@ -36,5 +36,5 @@ To perform a non-parallel restore using parallel backup files, you can copy the 
 
 Another non-parallel method for backing up Greenplum Database data is to use the `COPY TO` SQL command to copy all or a portion of a table out of the database to a delimited text file on the master host.
 
-**Parent topic:**[Backing Up and Restoring Databases](../managing/backup-main.html)
+**Parent topic:** [Backing Up and Restoring Databases](../managing/backup-main.html)
 

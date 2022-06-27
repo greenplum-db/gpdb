@@ -58,5 +58,5 @@ The `gpfdist` parallel file server allows you to set up transformations that ena
 -   **[Example Custom Data Access Protocol](../../load/topics/g-example-custom-data-access-protocol.html)**  
 
 
-**Parent topic:**[Greenplum Database Administrator Guide](../../admin_guide.html)
+**Parent topic:** [Greenplum Database Administrator Guide](../../admin_guide.html)
 

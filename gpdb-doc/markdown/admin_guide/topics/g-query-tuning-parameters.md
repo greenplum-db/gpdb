@@ -17,5 +17,5 @@
 -   **[Other Legacy Query Optimizer Configuration Parameters](../topics/g-other-query-planner-configuration-parameters.html)**  
 
 
-**Parent topic:**[Configuration Parameter Categories](../topics/g-configuration-parameter-categories.html)
+**Parent topic:** [Configuration Parameter Categories](../topics/g-configuration-parameter-categories.html)
 

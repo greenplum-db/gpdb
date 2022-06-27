@@ -21,5 +21,5 @@ Redistribute tables to balance existing data over the newly expanded cluster.
 -   **[Removing the Expansion Schema](../expand/expand-rm-schema.html)**  
 To clean up after expanding the Greenplum cluster, remove the expansion schema.
 
-**Parent topic:**[Managing a Greenplum System](../managing/partII.html)
+**Parent topic:** [Managing a Greenplum System](../managing/partII.html)
 

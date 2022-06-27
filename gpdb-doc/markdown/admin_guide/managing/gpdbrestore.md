@@ -62,5 +62,5 @@ This procedure assumes that the backup set was moved off the Greenplum array to 
     Omit the `-e dbname` option if the database has already been created.
 
 
-**Parent topic:**[Parallel Backup with gpcrondump and gpdbrestore](../managing/backup-heading.html)
+**Parent topic:** [Parallel Backup with gpcrondump and gpdbrestore](../managing/backup-heading.html)
 

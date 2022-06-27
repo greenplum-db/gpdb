@@ -15,5 +15,5 @@ Only a set of tables or set of schemas can be specified. For example, the `-s` o
 
 Refer to [Incremental Backup with Sets](backup-incremental.md#section_djm_lbb_tt) for additional information about using these `gpcrondump` options with incremental backups.
 
-**Parent topic:**[Parallel Backup with gpcrondump and gpdbrestore](../managing/backup-heading.html)
+**Parent topic:** [Parallel Backup with gpcrondump and gpdbrestore](../managing/backup-heading.html)
 

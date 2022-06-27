@@ -49,7 +49,7 @@ Restrictions for `HDFS` files are as follows.
     -   Only the `gphdfs_export` formatter is allowed for writable external tables with a custom format.
     -   You can set compression only for writable external tables. Compression settings are automatic for readable external tables.
 
-**Parent topic:**[Accessing HDFS Data with gphdfs \(Deprecated\)](../external/g-using-hadoop-distributed-file-system--hdfs--tables.html)
+**Parent topic:** [Accessing HDFS Data with gphdfs \(Deprecated\)](../external/g-using-hadoop-distributed-file-system--hdfs--tables.html)
 
 ## Setting Compression Options for Hadoop Writable External Tables 
 

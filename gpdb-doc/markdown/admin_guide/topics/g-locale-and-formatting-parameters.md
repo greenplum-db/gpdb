@@ -24,5 +24,5 @@
 
 |
 
-**Parent topic:**[Client Connection Default Parameters](../topics/g-client-connection-default-parameters.html)
+**Parent topic:** [Client Connection Default Parameters](../topics/g-client-connection-default-parameters.html)
 

@@ -12,5 +12,5 @@
 
 |
 
-**Parent topic:**[Greenplum Array Configuration Parameters](../topics/g-greenplum-array-configuration-parameters.html)
+**Parent topic:** [Greenplum Array Configuration Parameters](../topics/g-greenplum-array-configuration-parameters.html)
 

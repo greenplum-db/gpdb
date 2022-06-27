@@ -26,5 +26,5 @@ The built-in SQL function `gp_truncate_error_log('external\_table')` deletes the
 SELECT gp_truncate_error_log('ext_expenses'); 
 ```
 
-**Parent topic:**[Handling Load Errors](../../load/topics/g-handling-load-errors.html)
+**Parent topic:** [Handling Load Errors](../../load/topics/g-handling-load-errors.html)
 

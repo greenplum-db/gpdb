@@ -39,5 +39,5 @@ For details about configuration parameter categories, see the *Greenplum Databas
 -   **[Greenplum Database Extension Parameters](../topics/g-greenplum-extension-parameters.html)**  
 
 
-**Parent topic:**[Configuring the Greenplum Database System](../topics/g-configuring-the-greenplum-system.html)
+**Parent topic:** [Configuring the Greenplum Database System](../topics/g-configuring-the-greenplum-system.html)
 

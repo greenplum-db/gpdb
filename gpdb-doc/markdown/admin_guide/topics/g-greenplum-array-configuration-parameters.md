@@ -13,5 +13,5 @@ The parameters in this topic control the configuration of the Greenplum Database
 -   **[Read-Only Parameters](../topics/g-read-only-parameters.html)**  
 
 
-**Parent topic:**[Configuration Parameter Categories](../topics/g-configuration-parameter-categories.html)
+**Parent topic:** [Configuration Parameter Categories](../topics/g-configuration-parameter-categories.html)
 

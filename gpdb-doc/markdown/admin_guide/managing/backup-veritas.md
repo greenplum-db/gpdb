@@ -9,7 +9,7 @@ For Greenplum Database on Red Hat Enterprise Linux, you can configure Greenplum 
 -   [Performing a Back Up or Restore with NetBackup](#topic_t1d_qbz_3p)
 -   [Example NetBackup Back Up and Restore Commands](#topic_myv_lbz_3p)
 
-**Parent topic:**[Parallel Backup with gpcrondump and gpdbrestore](../managing/backup-heading.html)
+**Parent topic:** [Parallel Backup with gpcrondump and gpdbrestore](../managing/backup-heading.html)
 
 ## About NetBackup Software 
 

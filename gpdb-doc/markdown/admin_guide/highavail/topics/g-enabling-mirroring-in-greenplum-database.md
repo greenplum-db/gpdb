@@ -12,5 +12,5 @@ You can enable the following types of mirroring:
 -   **[Enabling Master Mirroring](../../highavail/topics/g-enabling-master-mirroring.html)**  
 
 
-**Parent topic:**[Enabling High Availability and Data Consistency Features](../../highavail/topics/g-enabling-high-availability-features.html)
+**Parent topic:** [Enabling High Availability and Data Consistency Features](../../highavail/topics/g-enabling-high-availability-features.html)
 

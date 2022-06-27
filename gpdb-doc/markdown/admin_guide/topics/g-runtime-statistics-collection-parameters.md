@@ -12,5 +12,5 @@ These parameters control the server statistics collection feature. When statisti
 
 |
 
-**Parent topic:**[Configuration Parameter Categories](../topics/g-configuration-parameter-categories.html)
+**Parent topic:** [Configuration Parameter Categories](../topics/g-configuration-parameter-categories.html)
 

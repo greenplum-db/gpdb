@@ -11,7 +11,7 @@ This topic includes the following subtopics:
 -   [Working With Transactions](#topic7)
 -   [Vacuuming the Database](#topic9)
 
-**Parent topic:**[Greenplum Database Administrator Guide](admin_guide.html)
+**Parent topic:** [Greenplum Database Administrator Guide](admin_guide.html)
 
 ## About Concurrency Control in Greenplum Database 
 

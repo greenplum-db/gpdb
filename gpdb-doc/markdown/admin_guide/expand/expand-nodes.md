@@ -10,7 +10,7 @@ Generally, you should run performance tests when an administrator modifies host 
 
 **Note:** Preparing host systems for use by a Greenplum Database system assumes that the new hosts' operating system has been properly configured to match the existing hosts.
 
-**Parent topic:**[Expanding a Greenplum System](../expand/expand-main.html)
+**Parent topic:** [Expanding a Greenplum System](../expand/expand-main.html)
 
 ## Adding New Nodes to the Trusted Host Environment 
 

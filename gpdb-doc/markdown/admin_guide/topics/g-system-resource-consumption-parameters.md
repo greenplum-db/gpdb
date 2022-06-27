@@ -11,5 +11,5 @@
 -   **[Transaction ID Management Parameters](../topics/g-transaction-id-management-parameters.html)**  
 
 
-**Parent topic:**[Configuration Parameter Categories](../topics/g-configuration-parameter-categories.html)
+**Parent topic:** [Configuration Parameter Categories](../topics/g-configuration-parameter-categories.html)
 

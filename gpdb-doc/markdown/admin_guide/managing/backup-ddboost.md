@@ -17,7 +17,7 @@ Refer to Data Domain Boost documentation for detailed information.
 
 **Note:** You can use a Data Domain server as an NFS file system \(without Data Domain Boost\) to perform incremental backups.
 
-**Parent topic:**[Parallel Backup with gpcrondump and gpdbrestore](../managing/backup-heading.html)
+**Parent topic:** [Parallel Backup with gpcrondump and gpdbrestore](../managing/backup-heading.html)
 
 ## Data Domain Boost Requirements 
 

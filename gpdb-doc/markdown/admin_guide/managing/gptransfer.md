@@ -155,5 +155,5 @@ If you have many empty tables to transfer, consider a DDL script instead of `gpt
 
 `gptransfer` creates table indexes before transferring the data. This slows the data transfer since indexes are updated at the same time the data is inserted in the table. For large tables especially, consider dropping indexes before running `gptransfer` and recreating the indexes when the transfer is complete.
 
-**Parent topic:**[Migrating Data](../managing/migrating-data.html)
+**Parent topic:** [Migrating Data](../managing/migrating-data.html)
 

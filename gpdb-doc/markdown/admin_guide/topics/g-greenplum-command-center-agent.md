@@ -12,5 +12,5 @@ The following parameters configure the data collection agents that populate the 
 
 |
 
-**Parent topic:**[System Monitoring Parameters](../topics/g-system-monitoring-parameters.html)
+**Parent topic:** [System Monitoring Parameters](../topics/g-system-monitoring-parameters.html)
 

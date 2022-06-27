@@ -7,5 +7,5 @@
 -   `gp_role`
 -   `gp_session_id`
 
-**Parent topic:**[Greenplum Array Configuration Parameters](../topics/g-greenplum-array-configuration-parameters.html)
+**Parent topic:** [Greenplum Array Configuration Parameters](../topics/g-greenplum-array-configuration-parameters.html)
 

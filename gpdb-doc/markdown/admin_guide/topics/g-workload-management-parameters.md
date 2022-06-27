@@ -30,5 +30,5 @@ The following configuration parameters configure Greenplum Database resource que
 
 |
 
-**Parent topic:**[Configuration Parameter Categories](../topics/g-configuration-parameter-categories.html)
+**Parent topic:** [Configuration Parameter Categories](../topics/g-configuration-parameter-categories.html)
 

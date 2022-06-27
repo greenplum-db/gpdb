@@ -16,5 +16,5 @@ You can configure the execution cost of `VACUUM` and `ANALYZE` commands to reduc
 
 |
 
-**Parent topic:**[System Resource Consumption Parameters](../topics/g-system-resource-consumption-parameters.html)
+**Parent topic:** [System Resource Consumption Parameters](../topics/g-system-resource-consumption-parameters.html)
 

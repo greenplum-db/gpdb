@@ -26,5 +26,5 @@ These parameters control system memory usage. You can adjust `gp_vmem_protect_li
 
 |
 
-**Parent topic:**[System Resource Consumption Parameters](../topics/g-system-resource-consumption-parameters.html)
+**Parent topic:** [System Resource Consumption Parameters](../topics/g-system-resource-consumption-parameters.html)
 

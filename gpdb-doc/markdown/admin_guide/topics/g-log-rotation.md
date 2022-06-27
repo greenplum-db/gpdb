@@ -8,5 +8,5 @@
 
 |
 
-**Parent topic:**[Error Reporting and Logging Parameters](../topics/g-error-reporting-and-logging-parameters.html)
+**Parent topic:** [Error Reporting and Logging Parameters](../topics/g-error-reporting-and-logging-parameters.html)
 

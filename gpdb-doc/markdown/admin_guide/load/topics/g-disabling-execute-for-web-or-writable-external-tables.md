@@ -7,5 +7,5 @@ gp_external_enable_exec = off
 
 ```
 
-**Parent topic:**[Defining a Command-Based Writable External Web Table](../../load/topics/g-defining-a-command-based-writable-external-web-table.html)
+**Parent topic:** [Defining a Command-Based Writable External Web Table](../../load/topics/g-defining-a-command-based-writable-external-web-table.html)
 

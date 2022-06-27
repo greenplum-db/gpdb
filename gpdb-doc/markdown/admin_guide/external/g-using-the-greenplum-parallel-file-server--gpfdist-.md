@@ -11,7 +11,7 @@ This topic describes the setup and management tasks for using gpfdist with exter
 -   [Starting and Stopping gpfdist](#topic17)
 -   [Troubleshooting gpfdist](#topic18)
 
-**Parent topic:**[Working with External Data](../external/g-working-with-file-based-ext-tables.html)
+**Parent topic:** [Working with External Data](../external/g-working-with-file-based-ext-tables.html)
 
 ## About gpfdist and External Tables 
 
