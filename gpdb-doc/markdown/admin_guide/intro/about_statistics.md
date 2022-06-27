@@ -63,26 +63,10 @@ The `stakindN` columns each contain a numeric code to describe the type of stati
 
 |stakind Code|Description|
 |------------|-----------|
-|1|*Most CommonValues \(MCV\) Slot* -   `staop` contains the object ID of the "=" operator, used to decide whether values are the same or not.
--   `stavalues` contains an array of the K most common non-null values appearing in the column.
--   `stanumbers` contains the frequencies \(fractions of total row count\) of the values in the `stavalues` array.
-
-The values are ordered in decreasing frequency. Since the arrays are variable-size, K can be chosen by the statistics collector. Values must occur more than once to be added to the `stavalues` array; a unique column has no MCV slot.|
-|2|*Histogram Slot* – describes the distribution of scalar data.-   `staop` is the object ID of the "<" operator, which describes the sort ordering.
--   `stavalues` contains M \(where `M>=2`\) non-null values that divide the non-null column data values into `M-1` bins of approximately equal population. The first `stavalues` item is the minimum value and the last is the maximum value.
--   `stanumbers` is not used and should be `NULL`.
-
-If a Most Common Values slot is also provided, then the histogram describes the data distribution after removing the values listed in the MCV array. \(It is a *compressed histogram* in the technical parlance\). This allows a more accurate representation of the distribution of a column with some very common values. In a column with only a few distinct values, it is possible that the MCV list describes the entire data population; in this case the histogram reduces to empty and should be omitted.
-
-|
-|3|*Correlation Slot* – describes the correlation between the physical order of table tuples and the ordering of data values of this column. -   `staop` is the object ID of the "<" operator. As with the histogram, more than one entry could theoretically appear.
--   `stavalues` is not used and should be `NULL`.
--   `stanumbers` contains a single entry, the correlation coefficient between the sequence of data values and the sequence of their actual tuple positions. The coefficient ranges from +1 to -1.
-
-|
-|99|*Hyperloglog Slot* - for child leaf partitions of a partitioned table, stores the `hyperloglog_counter` created for the sampled data. The `hyperloglog_counter` data structure is converted into a `bytea` and stored in a `stavalues4` slot of the `pg_statistic` catalog table.|
-
-The `pg_stats` view presents the contents of `pg_statistic` in a friendlier format. The `pg_stats` view has the following columns:
+|1|*Most CommonValues \(MCV\) Slot*<br/><br/>-   `staop` contains the object ID of the "=" operator, used to decide whether values are the same or not.<br/><br/>-   `stavalues` contains an array of the K most common non-null values appearing in the column.<br/><br/>-   `stanumbers` contains the frequencies \(fractions of total row count\) of the values in the `stavalues` array.<br/><br/>The values are ordered in decreasing frequency. Since the arrays are variable-size, K can be chosen by the statistics collector. Values must occur more than once to be added to the `stavalues` array; a unique column has no MCV slot.|<br/>
+|2|*Histogram Slot*– describes the distribution of scalar data.<br/><br/>-   `staop` is the object ID of the "<" operator, which describes the sort ordering.<br/><br/>-   `stavalues` contains M \(where `M>=2`\) non-null values that divide the non-null column data values into `M-1` bins of approximately equal population. The first `stavalues` item is the minimum value and the last is the maximum value.<br/><br/>-   `stanumbers` is not used and should be `NULL`.<br/><br/>If a Most Common Values slot is also provided, then the histogram describes the data distribution after removing the values listed in the MCV array. \(It is a *compressed histogram* in the technical parlance\). This allows a more accurate representation of the distribution of a column with some very common values. In a column with only a few distinct values, it is possible that the MCV list describes the entire data population; in this case the histogram reduces to empty and should be omitted.<br/>|
+|3|*Correlation Slot* – describes the correlation between the physical order of table tuples and the ordering of data values of this column.<br/><br/>-   `staop` is the object ID of the "<" operator. As with the histogram, more than one entry could theoretically appear.<br/><br/>-   `stavalues` is not used and should be `NULL`.<br/><br/>-   `stanumbers` contains a single entry, the correlation coefficient between the sequence of data values and the sequence of their actual tuple positions. The coefficient ranges from +1 to -1.<br/><br/>|
+|99|*Hyperloglog Slot* - for child leaf partitions of a partitioned table, stores the `hyperloglog_counter` created for the sampled data. The `hyperloglog_counter` data structure is converted into a `bytea` and stored in a `stavalues4` slot of the `pg_statistic` catalog table.|<br/><br/>The `pg_stats` view presents the contents of `pg_statistic` in a friendlier format. The `pg_stats` view has the following columns:
 
 schemaname
 :   The name of the schema containing the table.
