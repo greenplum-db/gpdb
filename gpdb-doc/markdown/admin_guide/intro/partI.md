@@ -4,23 +4,17 @@ This section provides an overview of Greenplum Database components and features 
 
 This section contains the following topics:
 
--   [About the Greenplum Architecture](arch_overview.html)
--   [About Management and Monitoring Utilities](about_utilities.html)
--   [About Parallel Data Loading](about_loading.html)
--   [About Redundancy and Failover in Greenplum Database](about_ha.html)
--   [About Database Statistics in Greenplum Database](about_statistics.html)
-
--   **[About the Greenplum Architecture](../intro/arch_overview.html)**  
+-   **[About the Greenplum Architecture](arch_overview.html)**  
 Greenplum Database is a massively parallel processing \(MPP\) database server with an architecture specially designed to manage large-scale analytic data warehouses and business intelligence workloads.
--   **[About Management and Monitoring Utilities](../intro/about_utilities.html)**  
+-   **[About Management and Monitoring Utilities](about_utilities.html)**  
 Greenplum Database provides standard command-line utilities for performing common monitoring and administration tasks.
--   **[About Concurrency Control in Greenplum Database](../intro/about_mvcc.html)**  
+-   **[About Concurrency Control in Greenplum Database](about_mvcc.html)**  
 Greenplum Database uses the PostgreSQL Multiversion Concurrency Control \(MVCC\) model to manage concurrent transactions for heap tables.
--   **[About Parallel Data Loading](../intro/about_loading.html)**  
+-   **[About Parallel Data Loading](about_loading.html)**  
 This topic provides a short introduction to Greenplum Database data loading features.
--   **[About Redundancy and Failover in Greenplum Database](../intro/about_ha.html)**  
+-   **[About Redundancy and Failover in Greenplum Database](about_ha.html)**  
 This topic provides a high-level overview of Greenplum Database high availability features.
--   **[About Database Statistics in Greenplum Database](../intro/about_statistics.html)**  
+-   **[About Database Statistics in Greenplum Database](about_statistics.html)**  
 An overview of statistics gathered by the [ANALYZE](../../ref_guide/sql_commands/ANALYZE.html) command in Greenplum Database.
 
 **Parent topic:**[Greenplum Database Administrator Guide](../admin_guide.html)
