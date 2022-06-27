@@ -4,18 +4,6 @@ This section describes basic system administration tasks performed by a Greenplu
 
 This section contains the following topics:
 
--   [About the Greenplum Database Release Version Number](versioning.html)
--   [Starting and Stopping Greenplum Database](startstop.html)
--   [Accessing the Database](../access_db/topics/g-accessing-the-database.html)
--   [Configuring the Greenplum Database System](../topics/g-configuring-the-greenplum-system.html)
--   [Enabling High Availability and Data Consistency Features](../highavail/topics/g-enabling-high-availability-features.html)
--   [Backing Up and Restoring Databases](backup-main.html)
--   [Expanding a Greenplum System](../expand/expand-main.html)
--   [Migrating Data with gptransfer](gptransfer.html)
--   [Migrating Data with gpcopy](gpcopy-migrate.html)
--   [Defining Database Objects](../ddl/ddl.html)
--   [Routine System Maintenance Tasks](maintain.html)
-
 -   **[About the Greenplum Database Release Version Number](../managing/versioning.html)**  
 Greenplum Database version numbers and they way they change identify what has been modified from one Greenplum Database release to the next.
 -   **[Starting and Stopping Greenplum Database](../managing/startstop.html)**  
