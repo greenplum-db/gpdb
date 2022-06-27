@@ -23,7 +23,8 @@ ifeq "$(enable_debug_extensions)" "yes"
                gp_legacy_string_agg \
                gp_array_agg \
                gp_percentile_agg \
-               gp_error_handling
+               gp_error_handling \
+               gp_subtransaction_overflow
 else
 	recurse_targets = gp_sparse_vector \
                gp_distribution_policy \
@@ -33,7 +34,8 @@ else
                gp_legacy_string_agg \
                gp_array_agg \
                gp_percentile_agg \
-               gp_error_handling
+               gp_error_handling \
+               gp_subtransaction_overflow
 endif
 
 ifeq "$(with_zstd)" "yes"
@@ -96,3 +98,4 @@ installcheck:
 	if [ "$(with_quicklz)" = "yes" ]; then $(MAKE) -C quicklz installcheck; fi
 	$(MAKE) -C gp_sparse_vector installcheck
 	$(MAKE) -C gp_percentile_agg installcheck
+	$(MAKE) -C gp_subtransaction_overflow installcheck

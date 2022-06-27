@@ -1,0 +1,5 @@
+# gp_subtransaction_overflow extension
+
+comment = 'get the pids of subtransactions overflowed'
+default_version = '1.0.0'
+relocatable = true
