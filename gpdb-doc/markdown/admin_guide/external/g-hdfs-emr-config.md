@@ -43,5 +43,5 @@ This table lists EMR and Hadooop version information that can be used to configu
 |3.8|2.4|9000|`hadoop2`|Apache Hadoop 2.x|
 |3.3|2.4|9000|`hadoop2`|Apache Hadoop 2.x|
 
-**Parent topic:**[Accessing HDFS Data with gphdfs \(Deprecated\)](../external/g-using-hadoop-distributed-file-system--hdfs--tables.html)
+**Parent topic:** [Accessing HDFS Data with gphdfs \(Deprecated\)](../external/g-using-hadoop-distributed-file-system--hdfs--tables.html)
 

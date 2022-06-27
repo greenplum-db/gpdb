@@ -9,5 +9,5 @@ When automatic statistics collection is enabled, you can run `ANALYZE` automatic
 
 **Warning:** Depending on the specific nature of your database operations, automatic statistics collection can have a negative performance impact. Carefully evaluate whether the default setting of `on_no_stats` is appropriate for your system.
 
-**Parent topic:**[Configuration Parameter Categories](../topics/g-configuration-parameter-categories.html)
+**Parent topic:** [Configuration Parameter Categories](../topics/g-configuration-parameter-categories.html)
 

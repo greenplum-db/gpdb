@@ -37,7 +37,7 @@ The log file contains messages that indicate which query optimizer was used. If 
 
 **Note:** You can configure Greenplum Database to display log messages on the psql command line by setting the Greenplum Database server configuration parameter `client_min_messages` to `LOG`. See the *Greenplum Database Reference Guide* for information about the parameter.
 
-**Parent topic:**[About GPORCA](../../query/topics/query-piv-optimizer.html)
+**Parent topic:** [About GPORCA](../../query/topics/query-piv-optimizer.html)
 
 ## Examples 
 

@@ -7,5 +7,5 @@
 -   **[What to Log](../topics/g-what-to-log.html)**  
 
 
-**Parent topic:**[Configuration Parameter Categories](../topics/g-configuration-parameter-categories.html)
+**Parent topic:** [Configuration Parameter Categories](../topics/g-configuration-parameter-categories.html)
 

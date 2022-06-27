@@ -13,5 +13,5 @@ This topic describes how to use the `gpcopy` utility to transfer data between da
 -   **[Migrating Data with gptransfer](../managing/gptransfer.html)**  
 This topic describes how to use the `gptransfer` utility to transfer data between databases.
 
-**Parent topic:**[Managing a Greenplum System](../managing/partII.html)
+**Parent topic:** [Managing a Greenplum System](../managing/partII.html)
 

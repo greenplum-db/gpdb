@@ -22,5 +22,5 @@ Use the `gplogfilter` utility to check the Greenplum Database log files for addi
     ```
 
 
-**Parent topic:**[Detecting a Failed Segment](../../highavail/topics/g-detecting-a-failed-segment.html)
+**Parent topic:** [Detecting a Failed Segment](../../highavail/topics/g-detecting-a-failed-segment.html)
 

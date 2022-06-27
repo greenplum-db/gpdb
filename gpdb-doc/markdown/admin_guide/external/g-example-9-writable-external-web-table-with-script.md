@@ -9,5 +9,5 @@ Creates a writable external web table, `campaign_out`, that pipes output data re
     FORMAT 'TEXT' (DELIMITER '|');
 ```
 
-**Parent topic:**[Examples for Creating External Tables](../external/g-creating-external-tables---examples.html)
+**Parent topic:** [Examples for Creating External Tables](../external/g-creating-external-tables---examples.html)
 

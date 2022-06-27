@@ -4,7 +4,7 @@ This topic provides an overview of how Greenplum Database processes queries. Und
 
 Users issue queries to Greenplum Database as they would to any database management system. They connect to the database instance on the Greenplum master host using a client application such as `psql` and submit SQL statements.
 
-**Parent topic:**[Querying Data](../../query/topics/query.html)
+**Parent topic:** [Querying Data](../../query/topics/query.html)
 
 ## Understanding Query Planning and Dispatch 
 

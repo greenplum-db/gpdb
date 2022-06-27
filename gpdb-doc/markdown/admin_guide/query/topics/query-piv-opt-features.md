@@ -14,7 +14,7 @@ GPORCA also includes these optimization enhancements:
 -   Sort order optimization
 -   Data skew estimates included in query optimization
 
-**Parent topic:**[About GPORCA](../../query/topics/query-piv-optimizer.html)
+**Parent topic:** [About GPORCA](../../query/topics/query-piv-optimizer.html)
 
 ## Queries Against Partitioned Tables 
 

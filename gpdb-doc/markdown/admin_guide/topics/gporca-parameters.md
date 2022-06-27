@@ -38,5 +38,5 @@
 
 |
 
-**Parent topic:**[Query Tuning Parameters](../topics/g-query-tuning-parameters.html)
+**Parent topic:** [Query Tuning Parameters](../topics/g-query-tuning-parameters.html)
 

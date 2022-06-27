@@ -20,7 +20,7 @@ To restore data from incremental backups, you need a complete incremental backup
 -   **[Using Incremental Backups](../managing/backup-gpbackup-incremental.html)**  
 
 
-**Parent topic:**[Parallel Backup with gpbackup and gprestore](../managing/backup-gpbackup.html)
+**Parent topic:** [Parallel Backup with gpbackup and gprestore](../managing/backup-gpbackup.html)
 
 ## About Incremental Backup Sets 
 
@@ -47,7 +47,7 @@ When you create an incremental backup you include these options with the other `
     If you do not specify `--from-timestamp`, `gpbackup` attempts to find a compatible backup based on information in the `gpbackup` history file. See [Incremental Backup Notes](#incr_backup_notes).
 
 
-**Parent topic:**[Creating Incremental Backups with gpbackup and gprestore](../managing/backup-gpbackup-incremental.html)
+**Parent topic:** [Creating Incremental Backups with gpbackup and gprestore](../managing/backup-gpbackup-incremental.html)
 
 ## Using Incremental Backups 
 
@@ -207,5 +207,5 @@ The incremental back up set, a full backup and associated incremental backups, m
 
 **Warning:** Changes to the Greenplum Database segment configuration invalidate incremental backups. After you change the segment configuration \(add or remove segment instances\), you must create a full backup before you can create an incremental backup.
 
-**Parent topic:**[Creating Incremental Backups with gpbackup and gprestore](../managing/backup-gpbackup-incremental.html)
+**Parent topic:** [Creating Incremental Backups with gpbackup and gprestore](../managing/backup-gpbackup-incremental.html)
 

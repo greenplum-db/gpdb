@@ -14,5 +14,5 @@ The following parameters configure the system to send email alerts for fatal err
 
 |
 
-**Parent topic:**[System Monitoring Parameters](../topics/g-system-monitoring-parameters.html)
+**Parent topic:** [System Monitoring Parameters](../topics/g-system-monitoring-parameters.html)
 

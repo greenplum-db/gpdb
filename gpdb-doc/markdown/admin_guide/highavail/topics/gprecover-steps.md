@@ -146,5 +146,5 @@ Following are some factors that can affect the duration of the segment recovery 
 -   The size of the data.
 -   The size of system files, such as transaction log files, pg\_database, pg\_auth, and pg\_auth\_time\_constraint.
 
-**Parent topic:**[Recovering From Segment Failures](../../highavail/topics/g-recovering-from-segment-failures.html)
+**Parent topic:** [Recovering From Segment Failures](../../highavail/topics/g-recovering-from-segment-failures.html)
 

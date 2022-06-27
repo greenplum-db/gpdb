@@ -10,5 +10,5 @@ Creates a readable external web table that executes a script once per segment ho
 
 ```
 
-**Parent topic:**[Examples for Creating External Tables](../external/g-creating-external-tables---examples.html)
+**Parent topic:** [Examples for Creating External Tables](../external/g-creating-external-tables---examples.html)
 

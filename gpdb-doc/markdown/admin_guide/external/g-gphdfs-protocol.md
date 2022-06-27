@@ -14,5 +14,5 @@ Each Greenplum segment reads one set of Hadoop data blocks. For writing, each Gr
 
 The `FORMAT` clause describes the format of the external table files. Valid file formats are similar to the formatting options available with the PostgreSQL `COPY` command and user-defined formats for the `gphdfs` protocol. If the data in the file does not use the default column delimiter, escape character, null string and so on, you must specify the additional formatting options so that Greenplum Database reads the data in the external file correctly. The `gphdfs` protocol requires a one-time setup. See [One-time HDFS Protocol Installation](g-one-time-hdfs-protocol-installation.html).
 
-**Parent topic:**[Defining External Tables](../external/g-external-tables.html)
+**Parent topic:** [Defining External Tables](../external/g-external-tables.html)
 

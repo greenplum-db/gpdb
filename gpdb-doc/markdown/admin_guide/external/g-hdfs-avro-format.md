@@ -4,7 +4,7 @@
 
 You can use the Greenplum Database `gphdfs` protocol to access Avro files on a Hadoop file system \(HDFS\).
 
-**Parent topic:**[Accessing HDFS Data with gphdfs \(Deprecated\)](../external/g-using-hadoop-distributed-file-system--hdfs--tables.html)
+**Parent topic:** [Accessing HDFS Data with gphdfs \(Deprecated\)](../external/g-using-hadoop-distributed-file-system--hdfs--tables.html)
 
 ## About the Avro File Format 
 

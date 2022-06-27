@@ -11,5 +11,5 @@ This parameter controls validation between Greenplum Database primary segment an
 
 -   `filerep_mirrorvalidation_during_resync`
 
-**Parent topic:**[Configuration Parameter Categories](../topics/g-configuration-parameter-categories.html)
+**Parent topic:** [Configuration Parameter Categories](../topics/g-configuration-parameter-categories.html)
 

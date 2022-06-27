@@ -44,5 +44,5 @@ There are many more `gpcrondump` options available to configure backups. Refer t
 
 Backing up a database with `gpcrondump` while simultaneously running DDL commands might cause issues with locks. You might see either the DDL command or `gpcrondump` waiting to acquire locks.
 
-**Parent topic:**[Parallel Backup with gpcrondump and gpdbrestore](../managing/backup-heading.html)
+**Parent topic:** [Parallel Backup with gpcrondump and gpdbrestore](../managing/backup-heading.html)
 

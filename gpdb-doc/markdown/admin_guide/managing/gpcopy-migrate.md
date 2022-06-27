@@ -6,5 +6,5 @@ This topic describes how to use the `gpcopy` utility to transfer data between da
 
 **Note:** The `gpcopy` utility is available as a separate download for the commercial release of Pivotal Greenplum Database. See the [Pivotal gpcopy Documentation](https://gpdb.docs.pivotal.io/gpcopy).
 
-**Parent topic:**[Migrating Data](../managing/migrating-data.html)
+**Parent topic:** [Migrating Data](../managing/migrating-data.html)
 

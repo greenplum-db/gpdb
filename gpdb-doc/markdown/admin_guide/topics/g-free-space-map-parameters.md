@@ -7,5 +7,5 @@ See [Vacuum and Analyze for Query Optimization](../managing/maintain.html) for i
 -   `max_fsm_pages`
 -   `max_fsm_relations`
 
-**Parent topic:**[System Resource Consumption Parameters](../topics/g-system-resource-consumption-parameters.html)
+**Parent topic:** [System Resource Consumption Parameters](../topics/g-system-resource-consumption-parameters.html)
 

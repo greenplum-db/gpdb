@@ -34,5 +34,5 @@ If the primary master fails, log replication stops. Use the `gpstate -f` command
 -   **[Restoring Master Mirroring After a Recovery](../../highavail/topics/g-restoring-master-mirroring-after-a-recovery.html)**  
 
 
-**Parent topic:**[Enabling High Availability and Data Consistency Features](../../highavail/topics/g-enabling-high-availability-features.html)
+**Parent topic:** [Enabling High Availability and Data Consistency Features](../../highavail/topics/g-enabling-high-availability-features.html)
 

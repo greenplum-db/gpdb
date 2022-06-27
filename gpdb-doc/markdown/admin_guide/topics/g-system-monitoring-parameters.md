@@ -7,5 +7,5 @@
 -   **[Greenplum Command Center Agent](../topics/g-greenplum-command-center-agent.html)**  
 
 
-**Parent topic:**[Configuration Parameter Categories](../topics/g-configuration-parameter-categories.html)
+**Parent topic:** [Configuration Parameter Categories](../topics/g-configuration-parameter-categories.html)
 

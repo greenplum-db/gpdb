@@ -117,5 +117,5 @@ For information about Amazon S3, see [Amazon S3](https://aws.amazon.com/s3/).
 -   For information about Amazon S3 regions and endpoints, see [http://docs.aws.amazon.com/general/latest/gr/rande.html\#s3\_region](http://docs.aws.amazon.com/general/latest/gr/rande.html#s3_region).
 -   For information about S3 buckets and folders, see the Amazon S3 documentation [https://aws.amazon.com/documentation/s3/](https://aws.amazon.com/documentation/s3/).
 
-**Parent topic:**[Using gpbackup Storage Plugins](../managing/backup-plugins.html)
+**Parent topic:** [Using gpbackup Storage Plugins](../managing/backup-plugins.html)
 

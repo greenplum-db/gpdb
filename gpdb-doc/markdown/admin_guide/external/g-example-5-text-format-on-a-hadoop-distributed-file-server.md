@@ -16,5 +16,5 @@ gphdfs requires only one data path.
 
 For examples of reading and writing custom formatted data on a Hadoop Distributed File System, see [Reading and Writing Custom-Formatted HDFS Data with gphdfs \(Deprecated\)](g-reading-and-writing-custom-formatted-hdfs-data.html).
 
-**Parent topic:**[Examples for Creating External Tables](../external/g-creating-external-tables---examples.html)
+**Parent topic:** [Examples for Creating External Tables](../external/g-creating-external-tables---examples.html)
 

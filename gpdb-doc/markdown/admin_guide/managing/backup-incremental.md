@@ -86,7 +86,7 @@ gpcrondump -x mydb --incremental --prefix myschema --list-filter-tables
 
 ```
 
-**Parent topic:**[Parallel Backup with gpcrondump and gpdbrestore](../managing/backup-heading.html)
+**Parent topic:** [Parallel Backup with gpcrondump and gpdbrestore](../managing/backup-heading.html)
 
 ## Restoring From an Incremental Backup 
 

@@ -76,5 +76,5 @@ You can display the information in the Greenplum Database system view pg\_stat\_
 $ psql dbname -c 'SELECT procpid, state FROM pg_stat_replication;'
 ```
 
-**Parent topic:**[Recovering a Failed Master](../../highavail/topics/g-recovering-a-failed-master.html)
+**Parent topic:** [Recovering a Failed Master](../../highavail/topics/g-recovering-a-failed-master.html)
 

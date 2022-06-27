@@ -20,5 +20,5 @@
 
 |
 
-**Parent topic:**[Connection and Authentication Parameters](../topics/g-connection-and-authentication-parameters.html)
+**Parent topic:** [Connection and Authentication Parameters](../topics/g-connection-and-authentication-parameters.html)
 

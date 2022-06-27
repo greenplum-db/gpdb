@@ -51,7 +51,7 @@ Not all SQL statements submitted through a resource queue are evaluated against 
 
 Also, an SQL statement that is run during the execution of an `EXPLAIN ANALYZE` command is excluded from resource queues.
 
-**Parent topic:**[Managing Resources](wlmgmt.html)
+**Parent topic:** [Managing Resources](wlmgmt.html)
 
 ## Resource Queue Example 
 

@@ -8,7 +8,7 @@ The first time you run `gpexpand` with a valid input file it creates the expansi
 -   [Running gpexpand to Initialize New Segments](#topic26)
 -   [Rolling Back a Failed Expansion Setup](#topic27)
 
-**Parent topic:**[Expanding a Greenplum System](../expand/expand-main.html)
+**Parent topic:** [Expanding a Greenplum System](../expand/expand-main.html)
 
 ## Creating an Input File for System Expansion 
 

@@ -5,5 +5,5 @@ These parameters adjust the amount of data sampled by an `ANALYZE` operation. Ad
 -   `default_statistics_target`
 -   `gp_analyze_relative_error`
 
-**Parent topic:**[Query Tuning Parameters](../topics/g-query-tuning-parameters.html)
+**Parent topic:** [Query Tuning Parameters](../topics/g-query-tuning-parameters.html)
 

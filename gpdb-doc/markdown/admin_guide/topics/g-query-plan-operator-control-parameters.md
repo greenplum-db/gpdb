@@ -50,5 +50,5 @@ The following parameters control the types of plan operations the legacy query o
 
 |
 
-**Parent topic:**[Query Tuning Parameters](../topics/g-query-tuning-parameters.html)
+**Parent topic:** [Query Tuning Parameters](../topics/g-query-tuning-parameters.html)
 

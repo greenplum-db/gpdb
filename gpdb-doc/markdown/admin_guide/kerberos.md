@@ -33,7 +33,7 @@ Following are the tasks to complete to set up Kerberos authentication for Greenp
 -   [Configuring Kerberos on Windows for Greenplum Database Clients](kerberos-win-client.html)
 -   [Configuring Client Authentication with Active Directory](kerberos-win-client.html)
 
-**Parent topic:**[Configuring Client Authentication](client_auth.html)
+**Parent topic:** [Configuring Client Authentication](client_auth.html)
 
 ## Creating Greenplum Database Principals in the KDC Database 
 

@@ -6,5 +6,5 @@ How you restore a database from parallel backup files depends on how you answer 
 2.  **Are you recreating the Greenplum Database system, or just restoring your data?**If Greenplum Database is running and you are restoring your data, use `gpdbrestore`. If you lost your entire array and need to rebuild the entire system from backup, use `gpinitsystem`.
 3.  **Are you restoring to a system with the same number of segment instances as your backup set?** If you are restoring to an array with the same number of segment hosts and segment instances per host, use `gpdbrestore`. If you are migrating to a different array configuration, you must do a non-parallel restore. See [Restoring to a Different Greenplum System Configuration](restore-diff-system.html).
 
-**Parent topic:**[Parallel Backup with gpcrondump and gpdbrestore](../managing/backup-heading.html)
+**Parent topic:** [Parallel Backup with gpcrondump and gpdbrestore](../managing/backup-heading.html)
 

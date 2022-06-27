@@ -6,5 +6,5 @@ The following parameters configure the maximum number of databases, tablespaces,
 -   `gp_max_filespaces`
 -   `gp_max_databases`
 
-**Parent topic:**[Configuration Parameter Categories](../topics/g-configuration-parameter-categories.html)
+**Parent topic:** [Configuration Parameter Categories](../topics/g-configuration-parameter-categories.html)
 

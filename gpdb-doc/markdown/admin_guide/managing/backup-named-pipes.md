@@ -29,7 +29,7 @@ Backing up with named pipes is not supported if the `--ddboost` option is specif
 1.  Direct the contents of each backup file to the input of its named pipe, for example `cat filename > pipename`, if the backup file is accessible as a local file object.
 2.  Run the `gpdbrestore` command to restore the database using the named pipes.
 
-**Parent topic:**[Parallel Backup with gpcrondump and gpdbrestore](../managing/backup-heading.html)
+**Parent topic:** [Parallel Backup with gpcrondump and gpdbrestore](../managing/backup-heading.html)
 
 ## Example 
 

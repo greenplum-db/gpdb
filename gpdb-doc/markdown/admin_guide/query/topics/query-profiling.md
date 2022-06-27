@@ -32,7 +32,7 @@ SET gp_log_dynamic_partition_pruning = on;
 
 For information about GPORCA, see [Querying Data](query.html).
 
-**Parent topic:**[Querying Data](../../query/topics/query.html)
+**Parent topic:** [Querying Data](../../query/topics/query.html)
 
 ## Reading EXPLAIN Output 
 

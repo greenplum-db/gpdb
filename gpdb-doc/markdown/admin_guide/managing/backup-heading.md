@@ -27,5 +27,5 @@
 -   **[Restoring to a Different Greenplum System Configuration](../managing/restore-diff-system.html)**  
 
 
-**Parent topic:**[Backing Up and Restoring Databases](../managing/backup-main.html)
+**Parent topic:** [Backing Up and Restoring Databases](../managing/backup-main.html)
 

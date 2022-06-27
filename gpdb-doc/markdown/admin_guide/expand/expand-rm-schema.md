@@ -17,5 +17,5 @@ You can safely remove the expansion schema after the expansion operation is comp
     **Note:** Some systems require you to press Enter twice.
 
 
-**Parent topic:**[Expanding a Greenplum System](../expand/expand-main.html)
+**Parent topic:** [Expanding a Greenplum System](../expand/expand-main.html)
 

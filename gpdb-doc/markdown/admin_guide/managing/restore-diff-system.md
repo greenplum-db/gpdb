@@ -62,5 +62,5 @@ Segment dump files contain a `COPY` command for each table followed by the data 
     ```
 
 
-**Parent topic:**[Parallel Backup with gpcrondump and gpdbrestore](../managing/backup-heading.html)
+**Parent topic:** [Parallel Backup with gpcrondump and gpdbrestore](../managing/backup-heading.html)
 

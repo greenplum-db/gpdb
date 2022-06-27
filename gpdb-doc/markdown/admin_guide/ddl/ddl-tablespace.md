@@ -4,7 +4,7 @@ Tablespaces allow database administrators to have multiple file systems per mach
 
 A tablespace requires a file system location to store its database files. In Greenplum Database, the master and each segment \(primary and mirror\) require a distinct storage location. The collection of file system locations for all components in a Greenplum system is a *filespace*. Filespaces can be used by one or more tablespaces.
 
-**Parent topic:**[Defining Database Objects](../ddl/ddl.html)
+**Parent topic:** [Defining Database Objects](../ddl/ddl.html)
 
 ## Creating a Filespace 
 

@@ -22,5 +22,5 @@ See [Defining External Tables](../external/g-external-tables.html) for more info
 
 |
 
-**Parent topic:**[Configuration Parameter Categories](../topics/g-configuration-parameter-categories.html)
+**Parent topic:** [Configuration Parameter Categories](../topics/g-configuration-parameter-categories.html)
 

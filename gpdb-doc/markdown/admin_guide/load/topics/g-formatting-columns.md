@@ -16,5 +16,5 @@ FORMAT 'TEXT' (DELIMITER '|');
 
 ```
 
-**Parent topic:**[Formatting Data Files](../../load/topics/g-formatting-data-files.html)
+**Parent topic:** [Formatting Data Files](../../load/topics/g-formatting-data-files.html)
 

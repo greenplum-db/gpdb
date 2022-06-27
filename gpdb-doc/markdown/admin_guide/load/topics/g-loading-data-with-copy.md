@@ -6,5 +6,5 @@ The `COPY` source file must be accessible to the master host. Specify the `COPY`
 
 Greenplum copies data from `STDIN` or `STDOUT` using the connection between the client and the master server.
 
-**Parent topic:**[Loading and Unloading Data](../../load/topics/g-loading-and-unloading-data.html)
+**Parent topic:** [Loading and Unloading Data](../../load/topics/g-loading-and-unloading-data.html)
 

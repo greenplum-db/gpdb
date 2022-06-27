@@ -9,7 +9,7 @@ The topics in this section help to ensure that you are prepared to execute a sys
 -   [Planning New Segment Initialization](#topic6) provides information about planning to initialize new segment hosts with `gpexpand`.
 -   [Planning Table Redistribution](#topic10) provides information about planning the data redistribution after the new segment hosts have been initialized.
 
-**Parent topic:**[Expanding a Greenplum System](../expand/expand-main.html)
+**Parent topic:** [Expanding a Greenplum System](../expand/expand-main.html)
 
 ## System Expansion Checklist 
 

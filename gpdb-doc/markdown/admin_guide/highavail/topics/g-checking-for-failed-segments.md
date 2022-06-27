@@ -28,5 +28,5 @@ With mirroring enabled, you may have failed segments in the system without inter
     ```
 
 
-**Parent topic:**[Detecting a Failed Segment](../../highavail/topics/g-detecting-a-failed-segment.html)
+**Parent topic:** [Detecting a Failed Segment](../../highavail/topics/g-detecting-a-failed-segment.html)
 

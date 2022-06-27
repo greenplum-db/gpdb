@@ -8,7 +8,7 @@ The parameters in this topic control the configuration of Greenplum Database ext
 -   `pljava_release_lingering_savepoints`
 -   `pljava_vmoptions`
 
-**Parent topic:**[Configuration Parameter Categories](../topics/g-configuration-parameter-categories.html)
+**Parent topic:** [Configuration Parameter Categories](../topics/g-configuration-parameter-categories.html)
 
 ## XML Data Parameters 
 

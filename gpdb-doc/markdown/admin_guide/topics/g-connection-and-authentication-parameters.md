@@ -9,5 +9,5 @@ See [Managing Greenplum Database Access](../partIII.html) for information about 
 -   **[Security and Authentication Parameters](../topics/g-security-and-authentication-parameters.html)**  
 
 
-**Parent topic:**[Configuration Parameter Categories](../topics/g-configuration-parameter-categories.html)
+**Parent topic:** [Configuration Parameter Categories](../topics/g-configuration-parameter-categories.html)
 

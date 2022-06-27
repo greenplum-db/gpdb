@@ -37,7 +37,7 @@ VACUUM ANALYZE old_table;
 
 ```
 
-**Parent topic:**[Defining Database Objects](../ddl/ddl.html)
+**Parent topic:** [Defining Database Objects](../ddl/ddl.html)
 
 ## Index Types 
 

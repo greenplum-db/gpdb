@@ -18,5 +18,5 @@
 
 **Note:** Greenplum Database supports only the UDPIFC and TCP interconnect types.
 
-**Parent topic:**[Greenplum Array Configuration Parameters](../topics/g-greenplum-array-configuration-parameters.html)
+**Parent topic:** [Greenplum Array Configuration Parameters](../topics/g-greenplum-array-configuration-parameters.html)
 

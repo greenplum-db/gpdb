@@ -10,5 +10,5 @@ The following parameters send SNMP notifications when events occur.
 
 |
 
-**Parent topic:**[System Monitoring Parameters](../topics/g-system-monitoring-parameters.html)
+**Parent topic:** [System Monitoring Parameters](../topics/g-system-monitoring-parameters.html)
 

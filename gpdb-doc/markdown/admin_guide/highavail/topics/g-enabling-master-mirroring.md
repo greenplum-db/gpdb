@@ -25,5 +25,5 @@ $ psql dbname -c 'SELECT procpid, state FROM pg_stat_replication;'
 
 For information about the `pg_stat_replication` system view, see the *Greenplum Database Reference Guide*.
 
-**Parent topic:**[Enabling Mirroring in Greenplum Database](../../highavail/topics/g-enabling-mirroring-in-greenplum-database.html)
+**Parent topic:** [Enabling Mirroring in Greenplum Database](../../highavail/topics/g-enabling-mirroring-in-greenplum-database.html)
 

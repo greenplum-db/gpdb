@@ -114,5 +114,5 @@ If a segment host is not recoverable and you have lost one or more segments, rec
 -   **[About the Segment Recovery Process](../../highavail/topics/gprecover-steps.html)**  
 
 
-**Parent topic:**[Recovering a Failed Segment](../../highavail/topics/g-recovering-a-failed-segment.html)
+**Parent topic:** [Recovering a Failed Segment](../../highavail/topics/g-recovering-a-failed-segment.html)
 

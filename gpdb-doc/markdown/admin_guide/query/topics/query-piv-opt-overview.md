@@ -16,5 +16,5 @@ The following figure shows how GPORCA fits into the query planning architecture.
 
 **Note:** All legacy query optimizer \(planner\) server configuration parameters are ignored by GPORCA. However, if Greenplum Database falls back to the legacy optimizer, the planner server configuration parameters will impact the query plan generation. For a list of legacy query optimizer \(planner\) server configuration parameters, see [Query Tuning Parameters](../../topics/g-query-tuning-parameters.html).
 
-**Parent topic:**[About GPORCA](../../query/topics/query-piv-optimizer.html)
+**Parent topic:** [About GPORCA](../../query/topics/query-piv-optimizer.html)
 

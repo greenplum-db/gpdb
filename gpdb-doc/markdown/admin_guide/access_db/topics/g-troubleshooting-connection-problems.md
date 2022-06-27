@@ -13,5 +13,5 @@ A number of things can prevent a client application from successfully connecting
 |
 |Too many clients already|By default, Greenplum Database is configured to allow a maximum of 250 concurrent user connections on the master and 750 on a segment. A connection attempt that causes that limit to be exceeded will be refused. This limit is controlled by the `max_connections` parameter in the `postgresql.conf` configuration file of the Greenplum Database master. If you change this setting for the master, you must also make appropriate changes at the segments.|
 
-**Parent topic:**[Accessing the Database](../../access_db/topics/g-accessing-the-database.html)
+**Parent topic:** [Accessing the Database](../../access_db/topics/g-accessing-the-database.html)
 

@@ -34,5 +34,5 @@ The following example changes the default chunk size to 10MB.
 $ gpconfig -c gp_backup_directIO_read_chunk_mb -v 10
 ```
 
-**Parent topic:**[Parallel Backup with gpcrondump and gpdbrestore](../managing/backup-heading.html)
+**Parent topic:** [Parallel Backup with gpcrondump and gpdbrestore](../managing/backup-heading.html)
 

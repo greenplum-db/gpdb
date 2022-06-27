@@ -29,7 +29,7 @@ For information about the `gpbackup` and `gprestore` utility options, see [gpbac
 -   **[Backup/Restore Storage Plugin API \(Beta\)](../managing/backup-plugin-api.html)**  
 
 
-**Parent topic:**[Backing Up and Restoring Databases](../managing/backup-main.html)
+**Parent topic:** [Backing Up and Restoring Databases](../managing/backup-main.html)
 
 ## Requirements and Limitations 
 
@@ -49,7 +49,7 @@ The `gpbackup` and `gprestore` utilities are available with Greenplum Database 5
     For tables that might be dropped during a backup, you can exclude the tables from a backup with a `gpbackup` table filtering option such as `--exclude-table` or `--exclude-schema`.
 
 
-**Parent topic:**[Parallel Backup with gpbackup and gprestore](../managing/backup-gpbackup.html)
+**Parent topic:** [Parallel Backup with gpbackup and gprestore](../managing/backup-gpbackup.html)
 
 ## Objects Included in a Backup or Restore 
 
@@ -105,7 +105,7 @@ When restoring to an existing database, `gprestore` assumes the `public` schema 
 
 See also [Understanding Backup Files](#topic_xnj_b4c_tbb).
 
-**Parent topic:**[Parallel Backup with gpbackup and gprestore](../managing/backup-gpbackup.html)
+**Parent topic:** [Parallel Backup with gpbackup and gprestore](../managing/backup-gpbackup.html)
 
 ## Performing Basic Backup and Restore Operations 
 
@@ -282,7 +282,7 @@ One of these codes is returned after `gpbackup` or `gprestore` completes.
 -   **1** – Backup or restore completed with non-fatal errors. See log file for more information.
 -   **2** – Backup or restore failed with a fatal error. See log file for more information.
 
-**Parent topic:**[Parallel Backup with gpbackup and gprestore](../managing/backup-gpbackup.html)
+**Parent topic:** [Parallel Backup with gpbackup and gprestore](../managing/backup-gpbackup.html)
 
 ## Filtering the Contents of a Backup or Restore 
 
@@ -408,7 +408,7 @@ After creating a backup set with `gpbackup`, you can filter the schemas and tabl
     When restoring a backup set that contains data from some leaf partitions of a partitioned table, the partitioned table is restored along with the data for the leaf partitions. For example, you create a backup with the `gpbackup` option `--include-table-file` and the text file lists some leaf partitions of a partitioned table. Restoring the backup creates the partitioned table and restores the data only for the leaf partitions listed in the file.
 
 
-**Parent topic:**[Parallel Backup with gpbackup and gprestore](../managing/backup-gpbackup.html)
+**Parent topic:** [Parallel Backup with gpbackup and gprestore](../managing/backup-gpbackup.html)
 
 ## Configuring Email Notifications 
 
@@ -426,7 +426,7 @@ The email contains summary information about the operation including options, du
 
 **Note:** The UNIX mail utility must be running on the Greenplum Database host and must be configured to allow the Greenplum superuser \(`gpadmin`\) to send email. Also ensure that the mail program executable is locatable via the `gpadmin` user's `$PATH`.
 
-**Parent topic:**[Parallel Backup with gpbackup and gprestore](../managing/backup-gpbackup.html)
+**Parent topic:** [Parallel Backup with gpbackup and gprestore](../managing/backup-gpbackup.html)
 
 ### gpbackup and gprestore Email File Format 
 
@@ -581,5 +581,5 @@ Each data file uses the file name format gpbackup\_<content\_id\>\_<YYYYMMDDHHMM
 
 You can optionally specify the gzip compression level \(from 1-9\) using the `--compression-level` option, or disable compression entirely with `--no-compression`. If you do not specify a compression level, `gpbackup` uses compression level 1 by default.
 
-**Parent topic:**[Parallel Backup with gpbackup and gprestore](../managing/backup-gpbackup.html)
+**Parent topic:** [Parallel Backup with gpbackup and gprestore](../managing/backup-gpbackup.html)
 
