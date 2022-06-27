@@ -285,34 +285,48 @@ ERROR:  'child2' is not an append-only row relation  (seg0 slice1 127.0.0.1:7002
 SELECT * FROM gp_toolkit.__gp_aovisimap('child2');
 ERROR:  function not supported on relation
 -- Scenario 3: AO to Heap
+SET gp_default_storage_options = 'blocksize=65536, compresstype=zlib, compresslevel=5, checksum=true';
 CREATE TABLE ao2heap(a int, b int) WITH (appendonly=true);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE TABLE ao2heap2(a int, b int) WITH (appendonly=true);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 CREATE INDEX aoi ON ao2heap(b);
 INSERT INTO ao2heap SELECT i,i FROM generate_series(1,5) i;
--- Check once that the AO table has the custom reloptions 
-SELECT reloptions FROM pg_class WHERE relname = 'ao2heap';
-            reloptions             
------------------------------------
- {blocksize=65536,compresslevel=5}
-(1 row)
+INSERT INTO ao2heap2 SELECT i,i FROM generate_series(1,5) i;
+-- Check once that the AO tables have the custom reloptions 
+SELECT relname, reloptions FROM pg_class WHERE relname LIKE 'ao2heap%';
+ relname  |            reloptions             
+----------+-----------------------------------
+ ao2heap  | {blocksize=65536,compresslevel=5}
+ ao2heap2 | {blocksize=65536,compresslevel=5}
+(2 rows)
 
--- Check once that the AO table has relfrozenxid = 0
-SELECT relfrozenxid FROM pg_class WHERE relname = 'ao2heap';
- relfrozenxid 
---------------
-            0
-(1 row)
+-- Check once that the AO tables have relfrozenxid = 0
+SELECT relname, relfrozenxid FROM pg_class WHERE relname LIKE 'ao2heap%';
+ relname  | relfrozenxid 
+----------+--------------
+ ao2heap  |            0
+ ao2heap2 |            0
+(2 rows)
 
 CREATE TEMP TABLE relfilebeforeao2heap AS
-    SELECT -1 segid, relfilenode FROM pg_class WHERE relname in ('ao2heap', 'aoi')
+    SELECT -1 segid, relfilenode FROM pg_class WHERE relname in ('ao2heap', 'ao2heap2', 'aoi')
     UNION SELECT gp_segment_id segid, relfilenode FROM gp_dist_random('pg_class')
-    WHERE relname in ('ao2heap', 'aoi') ORDER BY segid;
+    WHERE relname in ('ao2heap', 'ao2heap2', 'aoi') ORDER BY segid;
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'segid' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 -- Altering AO to heap
 ALTER TABLE ao2heap SET ACCESS METHOD heap;
+ALTER TABLE ao2heap2 SET WITH (appendoptimized=false);
 -- The tables and indexes should have been rewritten (should have different relfilenodes)
 CREATE TEMP TABLE relfileafterao2heap AS
-    SELECT -1 segid, relfilenode FROM pg_class WHERE relname in ('ao2heap', 'aoi')
+    SELECT -1 segid, relfilenode FROM pg_class WHERE relname in ('ao2heap', 'ao2heap2', 'aoi')
     UNION SELECT gp_segment_id segid, relfilenode FROM gp_dist_random('pg_class')
-    WHERE relname in ('ao2heap', 'aoi') ORDER BY segid;
+    WHERE relname in ('ao2heap', 'ao2heap2', 'aoi') ORDER BY segid;
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'segid' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 SELECT * FROM relfilebeforeao2heap INTERSECT SELECT * FROM relfileafterao2heap;
  segid | relfilenode 
 -------+-------------
@@ -322,30 +336,47 @@ SELECT * FROM relfilebeforeao2heap INTERSECT SELECT * FROM relfileafterao2heap;
 SELECT * FROM ao2heap;
  a | b 
 ---+---
- 1 | 1
  2 | 2
  3 | 3
  4 | 4
+ 1 | 1
+ 5 | 5
+(5 rows)
+
+SELECT * FROM ao2heap2;
+ a | b 
+---+---
+ 2 | 2
+ 3 | 3
+ 4 | 4
+ 1 | 1
  5 | 5
 (5 rows)
 
 -- No AO aux tables should be left
 SELECT * FROM gp_toolkit.__gp_aoseg('ao2heap');
-ERROR:  'ao2heap' is not an append-only row relation
+ERROR:  'ao2heap' is not an append-only row relation  (seg0 slice1 127.0.1.1:7002 pid=6817)
 SELECT * FROM gp_toolkit.__gp_aovisimap('ao2heap');
 ERROR:  function not supported on relation
--- The new heap table shouldn't have the old AO table's reloptions
-SELECT reloptions FROM pg_class WHERE relname = 'ao2heap';
- reloptions 
-------------
- 
-(1 row)
+SELECT * FROM gp_toolkit.__gp_aoseg('ao2heap2');
+ERROR:  'ao2heap2' is not an append-only row relation  (seg0 slice1 127.0.1.1:7002 pid=6817)
+SELECT * FROM gp_toolkit.__gp_aovisimap('ao2heap2');
+ERROR:  function not supported on relation
+-- The new heap tables shouldn't have the old AO table's reloptions
+SELECT relname, reloptions FROM pg_class WHERE relname LIKE 'ao2heap%';
+ relname  | reloptions 
+----------+------------
+ ao2heap  | 
+ ao2heap2 | 
+(2 rows)
 
--- The new heap table should have a valid relfrozenxid
-SELECT relfrozenxid <> '0' FROM pg_class WHERE relname = 'ao2heap';
- ?column? 
-----------
- t
-(1 row)
+-- The new heap tables should have a valid relfrozenxid
+SELECT relname, relfrozenxid <> '0' FROM pg_class WHERE relname LIKE 'ao2heap%';
+ relname  | ?column? 
+----------+----------
+ ao2heap  | t
+ ao2heap2 | t
+(2 rows)
 
 DROP TABLE ao2heap;
+DROP TABLE ao2heap2;

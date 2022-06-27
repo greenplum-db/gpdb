@@ -145,44 +145,53 @@ SELECT * FROM gp_toolkit.__gp_aoseg('child2');
 SELECT * FROM gp_toolkit.__gp_aovisimap('child2');
 
 -- Scenario 3: AO to Heap
+SET gp_default_storage_options = 'blocksize=65536, compresstype=zlib, compresslevel=5, checksum=true';
+
 CREATE TABLE ao2heap(a int, b int) WITH (appendonly=true);
+CREATE TABLE ao2heap2(a int, b int) WITH (appendonly=true);
 CREATE INDEX aoi ON ao2heap(b);
 
 INSERT INTO ao2heap SELECT i,i FROM generate_series(1,5) i;
+INSERT INTO ao2heap2 SELECT i,i FROM generate_series(1,5) i;
 
--- Check once that the AO table has the custom reloptions 
-SELECT reloptions FROM pg_class WHERE relname = 'ao2heap';
+-- Check once that the AO tables have the custom reloptions 
+SELECT relname, reloptions FROM pg_class WHERE relname LIKE 'ao2heap%';
 
--- Check once that the AO table has relfrozenxid = 0
-SELECT relfrozenxid FROM pg_class WHERE relname = 'ao2heap';
+-- Check once that the AO tables have relfrozenxid = 0
+SELECT relname, relfrozenxid FROM pg_class WHERE relname LIKE 'ao2heap%';
 
 CREATE TEMP TABLE relfilebeforeao2heap AS
-    SELECT -1 segid, relfilenode FROM pg_class WHERE relname in ('ao2heap', 'aoi')
+    SELECT -1 segid, relfilenode FROM pg_class WHERE relname in ('ao2heap', 'ao2heap2', 'aoi')
     UNION SELECT gp_segment_id segid, relfilenode FROM gp_dist_random('pg_class')
-    WHERE relname in ('ao2heap', 'aoi') ORDER BY segid;
+    WHERE relname in ('ao2heap', 'ao2heap2', 'aoi') ORDER BY segid;
 
 -- Altering AO to heap
 ALTER TABLE ao2heap SET ACCESS METHOD heap;
+ALTER TABLE ao2heap2 SET WITH (appendoptimized=false);
 
 -- The tables and indexes should have been rewritten (should have different relfilenodes)
 CREATE TEMP TABLE relfileafterao2heap AS
-    SELECT -1 segid, relfilenode FROM pg_class WHERE relname in ('ao2heap', 'aoi')
+    SELECT -1 segid, relfilenode FROM pg_class WHERE relname in ('ao2heap', 'ao2heap2', 'aoi')
     UNION SELECT gp_segment_id segid, relfilenode FROM gp_dist_random('pg_class')
-    WHERE relname in ('ao2heap', 'aoi') ORDER BY segid;
+    WHERE relname in ('ao2heap', 'ao2heap2', 'aoi') ORDER BY segid;
 
 SELECT * FROM relfilebeforeao2heap INTERSECT SELECT * FROM relfileafterao2heap;
 
 -- Check data is intact
 SELECT * FROM ao2heap;
+SELECT * FROM ao2heap2;
 
 -- No AO aux tables should be left
 SELECT * FROM gp_toolkit.__gp_aoseg('ao2heap');
 SELECT * FROM gp_toolkit.__gp_aovisimap('ao2heap');
+SELECT * FROM gp_toolkit.__gp_aoseg('ao2heap2');
+SELECT * FROM gp_toolkit.__gp_aovisimap('ao2heap2');
 
--- The new heap table shouldn't have the old AO table's reloptions
-SELECT reloptions FROM pg_class WHERE relname = 'ao2heap';
+-- The new heap tables shouldn't have the old AO table's reloptions
+SELECT relname, reloptions FROM pg_class WHERE relname LIKE 'ao2heap%';
 
--- The new heap table should have a valid relfrozenxid
-SELECT relfrozenxid <> '0' FROM pg_class WHERE relname = 'ao2heap';
+-- The new heap tables should have a valid relfrozenxid
+SELECT relname, relfrozenxid <> '0' FROM pg_class WHERE relname LIKE 'ao2heap%';
 
 DROP TABLE ao2heap;
+DROP TABLE ao2heap2;
