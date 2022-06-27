@@ -4,12 +4,6 @@ This section provides an overview of Greenplum Database components and features 
 
 This section contains the following topics:
 
--   [About the Greenplum Architecture](arch_overview.html)
--   [About Management and Monitoring Utilities](about_utilities.html)
--   [About Parallel Data Loading](about_loading.html)
--   [About Redundancy and Failover in Greenplum Database](about_ha.html)
--   [About Database Statistics in Greenplum Database](about_statistics.html)
-
 -   **[About the Greenplum Architecture](../intro/arch_overview.html)**  
 Greenplum Database is a massively parallel processing \(MPP\) database server with an architecture specially designed to manage large-scale analytic data warehouses and business intelligence workloads.
 -   **[About Management and Monitoring Utilities](../intro/about_utilities.html)**  
