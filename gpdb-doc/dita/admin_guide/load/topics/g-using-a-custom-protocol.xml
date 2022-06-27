@@ -61,14 +61,14 @@ FORMAT 'TEXT';
          then use the <codeph>GRANT</codeph> command to grant access to your users. For example:</p>
       <ul>
          <li id="du201414">Allow a user to create a readable external table with a trusted
-            protocol<codeblock>GRANT SELECT ON PROTOCOL <i>&lt;protocol name&gt;</i> TO <i>&lt;user name&gt;</i>;</codeblock>
+            protocol<codeblock>GRANT SELECT ON PROTOCOL &lt;&lt;protocol name&gt;> TO &lt;&lt;user name&gt;>;</codeblock>
          </li>
          <li id="du201461">Allow a user to create a writable external table with a trusted
-            protocol<codeblock>GRANT INSERT ON PROTOCOL <i>&lt;protocol name&gt;</i> TO <i>&lt;user name&gt;</i>;</codeblock>
+            protocol<codeblock>GRANT INSERT ON PROTOCOL &lt;&lt;protocol name&gt;> TO &lt;&lt;user name&gt;>;</codeblock>
          </li>
          <li id="du201474">Allow a user to create readable and writable external tables with a
             trusted
-            protocol<codeblock>GRANT ALL ON PROTOCOL <i>&lt;protocol name&gt;</i> TO <i>&lt;user name&gt;</i>;</codeblock>
+            protocol<codeblock>GRANT ALL ON PROTOCOL &lt;&lt;protocol name&gt;> TO &lt;&lt;user name&gt;>;</codeblock>
          </li>
       </ul>
    </body>

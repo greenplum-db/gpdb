@@ -67,7 +67,7 @@
           transaction IDs are no longer available and before transaction ID wraparound occurs: </p>
         <p>
           <codeph>WARNING: database "database_name" must be vacuumed within
-              <i>number_of_transactions</i> transactions</codeph>
+              &lt;number_of_transactions> transactions</codeph>
         </p>
         <p>When the warning is issued, a <codeph>VACUUM</codeph> operation is required. If a
             <codeph>VACUUM</codeph> operation is not performed, Greenplum Database stops creating
@@ -281,7 +281,7 @@ VACUUM cust_info;</codeblock></p>
         <p>Greenplum Database has log file rotation enabled on the master and all segment instances.
           Daily log files are created in the <codeph>pg_log</codeph> subdirectory of the master and
           each segment data directory using the following naming convention:
-              <codeph>gpdb-<i>YYYY</i>-<i>MM</i>-<i>DD_hhmmss</i>.csv</codeph>. Although log files
+              <codeph>gpdb-&lt;YYYY>-&lt;MM>-&lt;DD_hhmmss>.csv</codeph>. Although log files
           are rolled over daily, they are not automatically truncated or deleted. Administrators
           need to implement scripts or programs to periodically clean up old log files in the
             <codeph>pg_log</codeph> directory of the master and each segment instance.</p>

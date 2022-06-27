@@ -11,7 +11,7 @@
       <title>To recover with mirroring enabled</title>
       <ol>
         <li id="ki155643">Ensure you can connect to the segment host from the master host. For
-          example:<codeblock>$ ping <i>failed_seg_host_address</i></codeblock>
+          example:<codeblock>$ ping &lt;failed_seg_host_address></codeblock>
         </li>
         <li id="ki155645">Troubleshoot the problem that prevents the master host from connecting to
           the segment host. For example, the host machine may need to be restarted or replaced.</li>
@@ -85,7 +85,7 @@
       <title><ph>To recover without mirroring enabled</ph></title>
       <ol id="ol_lb2_rkq_kr">
         <li id="ki155667">Ensure you can connect to the segment host from the master host. For
-          example:<codeblock>$ ping <i>failed_seg_host_address</i></codeblock>
+          example:<codeblock>$ ping &lt;failed_seg_host_address></codeblock>
         </li>
         <li id="ki155669">Troubleshoot the problem that is preventing the master host from
           connecting to the segment host. For example, the host machine may need to be

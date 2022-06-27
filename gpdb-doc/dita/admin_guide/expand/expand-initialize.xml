@@ -105,12 +105,12 @@
                   <codeph>gpexpand</codeph> must have permissions to create directories in them.
                 </p><p>After you have entered all required information, the utility generates an
                 input file and saves it in the current directory. For
-                example:</p><codeblock>gpexpand_inputfile_yyyymmdd<i>_145134</i></codeblock><p>If
+                example:</p><codeblock>gpexpand_inputfile_yyyymmdd&lt;_145134></codeblock><p>If
                 the Greenplum cluster is configured with tablespaces, the utility automatically
                 generates an additional tablespace mapping file. This file is required for later
                 parsing by the utility so make sure it is present before proceeding with the next
                 step. For example:
-              </p><codeblock>gpexpand_inputfile_yyyymmdd<i>_145134</i>.ts</codeblock></li>
+              </p><codeblock>gpexpand_inputfile_yyyymmdd&lt;_145134>.ts</codeblock></li>
           </ol>
         </section>
       </body>

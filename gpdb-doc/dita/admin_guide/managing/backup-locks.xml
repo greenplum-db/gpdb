@@ -20,19 +20,19 @@
       <li>If any of the following filter options are specified, <codeph>gpcrondump</codeph> prepares
         filters to determine the set of tables to back up. Otherwise, all tables are included in the
           backup.<ul id="ul_sjc_gvp_4x">
-          <li><codeph>-s <i>schema_name</i></codeph> – Includes all the tables qualified by the
+          <li><codeph>-s &lt;schema_name></codeph> – Includes all the tables qualified by the
             specified schema.</li>
-          <li><codeph>-S <i>schema_name</i></codeph> – Excludes all tables qualified by the
+          <li><codeph>-S &lt;schema_name></codeph> – Excludes all tables qualified by the
             specified schema.</li>
-          <li><codeph>--schema-file=<i>filename</i></codeph> – Includes all the tables qualified by
+          <li><codeph>--schema-file=&lt;filename></codeph> – Includes all the tables qualified by
             the schema listed in <i>filename</i>.</li>
-          <li><codeph>--exclude-schema-file=<i>filename</i></codeph> – Excludes all tables qualified
+          <li><codeph>--exclude-schema-file=&lt;filename></codeph> – Excludes all tables qualified
             by the schema listed in <i>filename</i>.</li>
-          <li><codeph>-t <i>schema.table_name</i></codeph> – Dumps the specified table.</li>
-          <li><codeph>-T <i>schema.table_name</i></codeph> – Excludes the specified table.</li>
-          <li><codeph>--table-file=<i>filename</i></codeph> – Dumps the tables specified in
+          <li><codeph>-t &lt;schema.table_name></codeph> – Dumps the specified table.</li>
+          <li><codeph>-T &lt;schema.table_name></codeph> – Excludes the specified table.</li>
+          <li><codeph>--table-file=&lt;filename></codeph> – Dumps the tables specified in
               <i>filename</i>.</li>
-          <li><codeph>--exclude-table-file=<i>filename</i></codeph> – Dumps all tables except tables
+          <li><codeph>--exclude-table-file=&lt;filename></codeph> – Dumps all tables except tables
             specified in <i>filename</i>.</li>
         </ul></li>
       <li><codeph>gpcrondump</codeph> verifies the backup targets:<ul id="ul_wgz_kpc_px">
@@ -49,7 +49,7 @@
         The lock permits only concurrent read operations on a table. While the lock is on the
         catalog table, relations such as tables, indexes, and views cannot be created, altered, or
         dropped in the database. <p><codeph>gpcrondump</codeph> starts a thread to watch for a lock
-          file (<codeph><i>dump_dir</i>/gp_lockfile_<i>timestamp</i></codeph>) to appear, signaling
+          file (<codeph>&lt;dump_dir>/gp_lockfile_&lt;timestamp></codeph>) to appear, signaling
           the parallel backup on the segments has completed.</p></li>
       <li><codeph>gpcrondump</codeph> locks tables that are to be backed up with an <codeph>ACCESS
           SHARE</codeph> lock. <p>An <codeph>ACCESS SHARE</codeph> lock only conflicts with an
@@ -65,7 +65,7 @@
       <li>Threads are created and dispatched for the master and segments to perform the database
         dump. </li>
       <li>When the threads have acquired <codeph>ACCESS SHARED</codeph> locks on all the required
-        tables, the <codeph><i>dump_dir</i>/gp_lockfile_<i>timestamp</i></codeph> lock file is
+        tables, the <codeph>&lt;dump_dir>/gp_lockfile_&lt;timestamp></codeph> lock file is
         created, signaling <codeph>gpcrondump</codeph> to release the <codeph>EXCLUSIVE</codeph>
         lock on the <i>pg_class</i> catalog table, while tables are being backed up.</li>
       <li><codeph>gpcrondump</codeph> checks the status files for each primary segment for any

@@ -42,7 +42,7 @@
               master host from a remote client, network problems can prevent a connection (for
               example, DNS host name resolution problems, the host system is down, and so on.). To
               ensure that network problems are not the cause, connect to the Greenplum master host from the remote client host. For example:
-                <codeph>ping <i>hostname</i>
+                <codeph>ping &lt;hostname>
               </codeph>. <p id="io141723">If the system cannot resolve the host names and IP
                 addresses of the hosts involved in Greenplum Database, queries and
                 connections will fail. For some operations, connections to the Greenplum Database master use <codeph>localhost</codeph> and others use the

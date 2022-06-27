@@ -143,7 +143,7 @@
       <p>The host map file is a text file that lists the segment hosts in the source cluster. It is
         used to enable communication between the hosts in Greenplum clusters. The file is specified
         on the <codeph>gptransfer</codeph> command line with the
-            <codeph>--source-map-file=<i>host_map_file</i></codeph> command option. It is a required
+            <codeph>--source-map-file=&lt;host_map_file></codeph> command option. It is a required
         option when using <codeph>gptransfer</codeph> to copy data between two separate Greenplum
         clusters.</p>
       <p>The file contains a list in the following
@@ -188,13 +188,13 @@ host2_name,host2_ipaddr
           <codeph>-t</codeph> command-line option (one option per table) or by using the
           <codeph>-f</codeph> command-line option to specify a file containing a list of tables to
         transfer. Tables are specified in the fully-qualified format
-            <codeph><i>database</i>.<i>schema</i>.<i>table</i></codeph>. The table definition,
+            <codeph>&lt;database>.&lt;schema>.&lt;table></codeph>. The table definition,
         indexes, and table data are copied. The database must already exist on the destination
         cluster.</p>
       <p>By default, <codeph>gptransfer</codeph> fails if you attempt to transfer a table that
         already exists in the destination database:</p>
       <codeblock>[INFO]:-Validating transfer table set...
-[CRITICAL]:- gptransfer failed. (Reason='Table <i>database.schema.table</i> exists in database <i>database</i> .') exiting...</codeblock>
+[CRITICAL]:- gptransfer failed. (Reason='Table &lt;database.schema.table> exists in database &lt;database> .') exiting...</codeblock>
       <p>Override this behavior with the <codeph>--skip-existing</codeph>,
           <codeph>--truncate</codeph>, or <codeph>--drop</codeph> options.</p>
       <p>The following table shows the objects that are copied in full mode and table mode.</p>
@@ -274,7 +274,7 @@ host2_name,host2_ipaddr
     <section id="validation">
       <title>Validation</title>
       <p>By default, <codeph>gptransfer</codeph> does not validate the data transferred. You can
-        request validation using the <codeph>--validate=<i>type</i></codeph> option. The validation
+        request validation using the <codeph>--validate=&lt;type></codeph> option. The validation
           <i>type</i> can be one of the following:<ul id="ul_lqh_wnh_dp">
           <li><codeph>count</codeph> &#8211; Compares the row counts for the tables in the source
             and destination databases. </li>

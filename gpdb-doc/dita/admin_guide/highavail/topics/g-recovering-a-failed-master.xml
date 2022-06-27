@@ -30,7 +30,7 @@
             <codeph>gpactivatestandby</codeph> utility, use <codeph>gpinitstandby</codeph> to
           configure a new standby master at a later time. Run <codeph>gpinitstandby</codeph> on your
           active master host. For
-          example:<codeblock>$ gpinitstandby -s <i>new_standby_master_hostname</i>
+          example:<codeblock>$ gpinitstandby -s &lt;new_standby_master_hostname>
                </codeblock>
         </li>
       </ol>

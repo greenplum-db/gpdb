@@ -36,10 +36,10 @@
           SCP to each other without a password prompt.</li>
         <li id="ki155422">Create a configuration file that lists the host names, ports, and data
           directories on which to create mirrors. To create a sample configuration file to use as a
-          starting point, run:<codeblock>$ gpaddmirrors -o <i>filename</i>          </codeblock>
-          <p>The format of the mirror configuration file is: </p><codeblock>filespaceOrder=[<i>filespace1_fsname</i>[:<i>filespace2_fsname</i>:...] 
-<i>mirror</i>[<i>content</i>]=<i>content</i>:<i>address</i>:<i>port</i>:<i>mir_replication_port</i>:
-<i>pri_replication_port</i>:<i>fselocation</i>[:<i>fselocation</i>:...]</codeblock>
+          starting point, run:<codeblock>$ gpaddmirrors -o &lt;filename>          </codeblock>
+          <p>The format of the mirror configuration file is: </p><codeblock>filespaceOrder=[&lt;filespace1_fsname>[:&lt;filespace2_fsname>:...] 
+&lt;mirror>[&lt;content>]=&lt;content>:&lt;address>:&lt;port>:&lt;mir_replication_port>:
+&lt;pri_replication_port>:&lt;fselocation>[:&lt;fselocation>:...]</codeblock>
           <p>For example, a configuration for two segment hosts and two segments per host, with no
             additional filespaces configured besides the default <i>pg_system</i> filespace:</p>
           <codeblock>filespaceOrder=
@@ -50,7 +50,7 @@ mirror3=3:sdw2-2:52002:53002:54002:/gpdata/mir1/gp3
 </codeblock>
         </li>
         <li id="ki155430">Run the <codeph>gpaddmirrors</codeph> utility to enable mirroring in your
-          Greenplum Database system:<codeblock>$ gpaddmirrors -i <i>mirror_config_file</i>
+          Greenplum Database system:<codeblock>$ gpaddmirrors -i &lt;mirror_config_file>
                </codeblock>
           <p>Where <codeph>-i</codeph> names the mirror configuration file you created.</p>
         </li>

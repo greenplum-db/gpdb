@@ -158,8 +158,8 @@ a.current_query
 </codeblock>
             </p>
             <p>Log lines have the format of:</p>
-            <codeblock><i>timestamp</i> | <i>user</i> | <i>database</i> | <i>statement_id</i> | <i>con#</i><i>cmd#</i> 
-|:-<i>LOG_LEVEL</i>: <i>log_message
+            <codeblock>&lt;timestamp> | &lt;user> | &lt;database> | &lt;statement_id> | &lt;con#>&lt;cmd#> 
+|:-&lt;LOG_LEVEL>: <i>log_message
 </i></codeblock>
             <p>You may want to focus your search for <codeph>WARNING</codeph>,
                     <codeph>ERROR</codeph>, <codeph>FATAL</codeph> or <codeph>PANIC</codeph> log

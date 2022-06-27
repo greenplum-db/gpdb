@@ -141,7 +141,7 @@
               </row>
               <row>
                 <entry colname="col1">
-                  <codeph>CONNECTION LIMIT <i>connlimit</i></codeph>
+                  <codeph>CONNECTION LIMIT &lt;connlimit></codeph>
                 </entry>
                 <entry colname="col2">If role can log in, this specifies how many concurrent
                   connections the role can make. -1 (the default) means no limit. </entry>
@@ -160,7 +160,7 @@
               </row>
               <row>
                 <entry colname="col1">
-                  <codeph>PASSWORD '<i>password</i>'</codeph>
+                  <codeph>PASSWORD '&lt;password>'</codeph>
                 </entry>
                 <entry colname="col2">Sets the role's password. If you do not plan to use password
                   authentication you can omit this option. If no password is specified, the password
@@ -178,7 +178,7 @@
                     <codeph>ENCRYPTED</codeph> nor <codeph>UNENCRYPTED</codeph> is specified, the
                   default behavior is determined by the <codeph>password_encryption</codeph>
                   configuration parameter, which is <codeph>on</codeph> by default. <p>If the
-                    supplied <codeph><i>password</i></codeph> string is already in hashed format, it
+                    supplied <codeph>&lt;password></codeph> string is already in hashed format, it
                     is stored as-is, regardless of whether <codeph>ENCRYPTED</codeph> or
                       <codeph>UNENCRYPTED</codeph> is specified. </p><p>See <xref href="#topic9"
                       format="dita"/> for additional information about protecting login
@@ -186,7 +186,7 @@
               </row>
               <row>
                 <entry colname="col1">
-                  <codeph>VALID UNTIL '<i>timestamp</i>'</codeph>
+                  <codeph>VALID UNTIL '&lt;timestamp>'</codeph>
                 </entry>
                 <entry colname="col2">Sets a date and time after which the role's password is no
                   longer valid. If omitted the password will be valid for all time.</entry>
@@ -194,7 +194,7 @@
               <row>
 
                 <entry colname="col1">
-                  <codeph>RESOURCE QUEUE <i>queue_name</i></codeph>
+                  <codeph>RESOURCE QUEUE &lt;queue_name></codeph>
                 </entry>
 
                 <entry colname="col2">Assigns the role to the named resource queue for workload

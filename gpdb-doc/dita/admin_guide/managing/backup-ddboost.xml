@@ -337,7 +337,7 @@
         <li id="kk167029">Ensure the <xref href="backup-ddboost.xml#topic19"/> is complete.</li>
         <li id="kk167030">Add the option <codeph>--ddboost</codeph> to the
             <codeph>gpdbrestore</codeph>
-            command:<codeblock>$ gpdbrestore -t <i>backup_timestamp</i> -v -ddboost</codeblock><p>If
+            command:<codeblock>$ gpdbrestore -t &lt;backup_timestamp> -v -ddboost</codeblock><p>If
             needed, specify the Data Domain system storage unit with the
               <codeph>--ddboost-storage-unit</codeph> option.</p></li>
       </ol>
