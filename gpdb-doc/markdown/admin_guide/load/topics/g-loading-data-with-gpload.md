@@ -14,7 +14,7 @@ The Greenplum `gpload` utility loads data using readable external tables and the
 
 2.  Create your load control file. This is a YAML-formatted file that specifies the Greenplum Database connection information, gpfdist configuration information, external table options, and data format.
 
-    See the <Greenplum Database Reference Guide\> for details.
+    See the *Greenplum Database Reference Guide* for details.
 
     For example:
 

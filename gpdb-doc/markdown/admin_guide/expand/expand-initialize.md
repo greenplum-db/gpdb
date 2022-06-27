@@ -25,7 +25,7 @@ Before you run `gpexpand` to create an input file in interactive mode, ensure yo
 -   The mirroring strategy used in existing hosts, if any
 -   The number of segments to add per host, if any
 
-The utility automatically generates an input file based on this information, `dbid`, `content` ID, and data directory values stored in <gp\_segment\_configuration\>, and saves the file in the current directory.
+The utility automatically generates an input file based on this information, `dbid`, `content` ID, and data directory values stored in *gp\_segment\_configuration*, and saves the file in the current directory.
 
 #### To create an input file in interactive mode 
 
@@ -93,13 +93,13 @@ The utility automatically generates an input file based on this information, `db
     After you have entered all required information, the utility generates an input file and saves it in the current directory. For example:
 
     ```
-    gpexpand_inputfile_yyyymmdd<_145134
+    gpexpand_inputfile_yyyymmdd<_145134>
     ```
 
     If the Greenplum cluster is configured with tablespaces, the utility automatically generates an additional tablespace mapping file. This file is required for later parsing by the utility so make sure it is present before proceeding with the next step. For example:
 
     ```
-    gpexpand_inputfile_yyyymmdd<_145134.ts
+    gpexpand_inputfile_yyyymmdd<_145134>.ts
     ```
 
 
@@ -127,12 +127,12 @@ For each new segment, this format of expansion input file requires the following
 |Parameter|Valid Values|Description|
 |---------|------------|-----------|
 |hostname|Hostname|Hostname for the segment host.|
-|port|An available port number|Database listener port for the segment, incremented on the existing segment <port\> base number.|
+|port|An available port number|Database listener port for the segment, incremented on the existing segment *port* base number.|
 |fselocation|Directory name|The data directory \(filespace\) location for a segment as per the pg\_filespace\_entry system catalog.|
-|dbid|Integer. Must not conflict with existing <dbid\> values.|Database ID for the segment. The values you enter should be incremented sequentially from existing <dbid\> values shown in the system catalog `gp_segment_configuration`. For example, to add four nodes to an existing ten-segment array with <dbid \> values of 1-10, list new <dbid\> values of 11, 12, 13 and 14.|
-|content|Integer. Must not conflict with existing <content\> values.|The content ID of the segment. A primary segment and its mirror should have the same content ID, incremented sequentially from existing values. For more information, see <content\> in the reference for `gp_segment_configuration`.|
+|dbid|Integer. Must not conflict with existing *dbid* values.|Database ID for the segment. The values you enter should be incremented sequentially from existing *dbid* values shown in the system catalog `gp_segment_configuration`. For example, to add four nodes to an existing ten-segment array with *dbid* values of 1-10, list new *dbid* values of 11, 12, 13 and 14.|
+|content|Integer. Must not conflict with existing *content* values.|The content ID of the segment. A primary segment and its mirror should have the same content ID, incremented sequentially from existing values. For more information, see *content* in the reference for `gp_segment_configuration`.|
 |preferred\_role|`p | m`|Determines whether this segment is a primary or mirror. Specify `p` for primary and `m` for mirror.|
-|replication\_port|An available port number|File replication port for the segment, incremented on the existing segment <replication\_port\> base number.|
+|replication\_port|An available port number|File replication port for the segment, incremented on the existing segment *replication\_port* base number.|
 
 ## Running gpexpand to Initialize New Segments 
 

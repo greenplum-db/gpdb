@@ -20,7 +20,7 @@ All of these options have default values which will be used if the option is not
 
 If the default values are not correct, you can set the environment variables `PGDATABASE`, `PGHOST`, `PGPORT`, and `PGUSER` to the appropriate values, or use a `psql` `~/.pgpass` file to contain frequently-used passwords.
 
-For information about Greenplum Database environment variables, see the <Greenplum Database Reference Guide\>. For information about psql, see the <Greenplum Database Utility Guide\>.
+For information about Greenplum Database environment variables, see the *Greenplum Database Reference Guide*. For information about psql, see the *Greenplum Database Utility Guide*.
 
 **Parent topic:**[Accessing the Database](../../access_db/topics/g-accessing-the-database.html)
 

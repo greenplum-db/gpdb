@@ -22,7 +22,7 @@ MEMORY\_LIMIT
 :   The amount of memory used by all the queries in the queue \(per segment\). For example, setting MEMORY\_LIMIT to 2GB on the ETL queue allows ETL queries to use up to 2GB of memory in each segment.
 
 ACTIVE\_STATEMENTS
-:   The number of <slots\> for a queue; the maximum concurrency level for a queue. When all slots are used, new queries must wait. Each query uses an equal amount of memory by default.
+:   The number of *slots* for a queue; the maximum concurrency level for a queue. When all slots are used, new queries must wait. Each query uses an equal amount of memory by default.
 
 :   For example, the `pg_default` resource queue has ACTIVE\_STATEMENTS = 20.
 
@@ -45,9 +45,9 @@ The number of concurrent queries a resource queue allows depends on whether the 
 -   If no `MEMORY_LIMIT` is set for a resource queue, the amount of memory allocated per query is the value of the [statement\_mem](../ref_guide/config_params/guc-list.html) server configuration parameter. The maximum memory the resource queue can use is the product of `statement_mem` and `ACTIVE_STATEMENTS`.
 -   When a `MEMORY_LIMIT` is set on a resource queue, the number of queries that the queue can execute concurrently is limited by the queue's available memory.
 
-A query admitted to the system is allocated an amount of memory and a query plan tree is generated for it. Each node of the tree is an operator, such as a sort or hash join. Each operator is a separate execution thread and is allocated a fraction of the overall statement memory, at minimum 100KB. If the plan has a large number of operators, the minimum memory required for operators can exceed the available memory and the query will be rejected with an insufficient memory error. Operators determine if they can complete their tasks in the memory allocated, or if they must spill data to disk, in work files. The mechanism that allocates and controls the amount of memory used by each operator is called <memory quota\>.
+A query admitted to the system is allocated an amount of memory and a query plan tree is generated for it. Each node of the tree is an operator, such as a sort or hash join. Each operator is a separate execution thread and is allocated a fraction of the overall statement memory, at minimum 100KB. If the plan has a large number of operators, the minimum memory required for operators can exceed the available memory and the query will be rejected with an insufficient memory error. Operators determine if they can complete their tasks in the memory allocated, or if they must spill data to disk, in work files. The mechanism that allocates and controls the amount of memory used by each operator is called *memory quota*.
 
-Not all SQL statements submitted through a resource queue are evaluated against the queue limits. By default only `SELECT`, `SELECT INTO`, `CREATE TABLE AS SELECT`, and `DECLARE CURSOR` statements are evaluated. If the server configuration parameter `resource_select_only` is set to <off\>, then `INSERT`, `UPDATE`, and `DELETE` statements will be evaluated as well.
+Not all SQL statements submitted through a resource queue are evaluated against the queue limits. By default only `SELECT`, `SELECT INTO`, `CREATE TABLE AS SELECT`, and `DECLARE CURSOR` statements are evaluated. If the server configuration parameter `resource_select_only` is set to *off*, then `INSERT`, `UPDATE`, and `DELETE` statements will be evaluated as well.
 
 Also, an SQL statement that is run during the execution of an `EXPLAIN ANALYZE` command is excluded from resource queues.
 
@@ -112,11 +112,11 @@ The `PRIORITY` setting for a resource queue differs from the `MEMORY_LIMIT` and 
 
 The comparative size or complexity of the queries does not affect the allotment of CPU. If a simple, low-cost query is running simultaneously with a large, complex query, and their priority settings are the same, they will be allocated the same share of available CPU resources. When a new query becomes active, the CPU shares will be recalculated, but queries of equal priority will still have equal amounts of CPU.
 
-For example, an administrator creates three resource queues: <adhoc\> for ongoing queries submitted by business analysts, <reporting\> for scheduled reporting jobs, and <executive\> for queries submitted by executive user roles. The administrator wants to ensure that scheduled reporting jobs are not heavily affected by unpredictable resource demands from ad-hoc analyst queries. Also, the administrator wants to make sure that queries submitted by executive roles are allotted a significant share of CPU. Accordingly, the resource queue priorities are set as shown:
+For example, an administrator creates three resource queues: *adhoc* for ongoing queries submitted by business analysts, *reporting* for scheduled reporting jobs, and *executive* for queries submitted by executive user roles. The administrator wants to ensure that scheduled reporting jobs are not heavily affected by unpredictable resource demands from ad-hoc analyst queries. Also, the administrator wants to make sure that queries submitted by executive roles are allotted a significant share of CPU. Accordingly, the resource queue priorities are set as shown:
 
--   <adhoc\> — Low priority
--   <reporting\> — High priority
--   <executive\> — Maximum priority
+-   *adhoc* — Low priority
+-   *reporting* — High priority
+-   *executive* — Maximum priority
 
 At runtime, the CPU share of active statements is determined by these priority settings. If queries 1 and 2 from the reporting queue are running simultaneously, they have equal shares of CPU. When an ad-hoc query becomes active, it claims a smaller share of CPU. The exact share used by the reporting queries is adjusted, but remains equal due to their equal priority setting:
 
@@ -150,7 +150,7 @@ Resource scheduling is enabled by default when you install Greenplum Database, a
 1.  The following parameters are for the general configuration of resource queues:
     -   `max_resource_queues` - Sets the maximum number of resource queues.
     -   `max_resource_portals_per_transaction` - Sets the maximum number of simultaneously open cursors allowed per transaction. Note that an open cursor will hold an active query slot in a resource queue.
-    -   `resource_select_only` - If set to <on\>, then `SELECT`, `SELECT INTO`, `CREATE TABLE AS``SELECT`, and `DECLARE CURSOR` commands are evaluated. If set to <off\>`INSERT`, `UPDATE`, and `DELETE` commands will be evaluated as well.
+    -   `resource_select_only` - If set to *on*, then `SELECT`, `SELECT INTO`, `CREATE TABLE AS``SELECT`, and `DECLARE CURSOR` commands are evaluated. If set to *off*`INSERT`, `UPDATE`, and `DELETE` commands will be evaluated as well.
     -   `resource_cleanup_gangs_on_wait` - Cleans up idle segment worker processes before taking a slot in the resource queue.
     -   `stats_queue_level` - Enables statistics collection on resource queue usage, which can then be viewed by querying the pg\_stat\_resqueues system view.
 2.  The following parameters are related to memory utilization:
@@ -164,7 +164,7 @@ Resource scheduling is enabled by default when you install Greenplum Database, a
     -   `gp_vmem_protect_limit` - Sets the upper boundary that all query processes can consume and should not exceed the amount of physical memory of a segment host. When a segment host reaches this limit during query execution, the queries that cause the limit to be exceeded will be cancelled.
     -   `gp_vmem_idle_resource_timeout` and `gp_vmem_protect_segworker_cache_limit` - used to free memory on segment hosts held by idle database processes. Administrators may want to adjust these settings on systems with lots of concurrency.
     -   `shared_buffers` - Sets the amount of memory a Greenplum server instance uses for shared memory buffers. This setting must be at least 128 kilobytes and at least 16 kilobytes times `max_connections`. The value must not exceed the operating system shared memory maximum allocation request size, `shmmax` on Linux. See the *Greenplum Database Installation Guide* for recommended OS memory settings for your platform.
-3.  The following parameters are related to query prioritization. Note that the following parameters are all <local\> parameters, meaning they must be set in the `postgresql.conf` files of the master and all segments:
+3.  The following parameters are related to query prioritization. Note that the following parameters are all *local* parameters, meaning they must be set in the `postgresql.conf` files of the master and all segments:
     -   `gp_resqueue_priority` - The query prioritization feature is enabled by default.
     -   `gp_resqueue_priority_sweeper_interval` - Sets the interval at which CPU usage is recalculated for all active statements. The default value for this parameter should be sufficient for typical database operations.
     -   `gp_resqueue_priority_cpucores_per_segment` - Specifies the number of CPU cores allocated per segment instance. The default value is 4 for the master and segments. For Greenplum Data Computing Appliance Version 2, the default value is 4 for segments and 25 for the master.
@@ -210,14 +210,14 @@ Creating a resource queue involves giving it a name, setting an active query lim
 
 ### Creating Queues with an Active Query Limit 
 
-Resource queues with an `ACTIVE_STATEMENTS` setting limit the number of queries that can be executed by roles assigned to that queue. For example, to create a resource queue named <adhoc\> with an active query limit of three:
+Resource queues with an `ACTIVE_STATEMENTS` setting limit the number of queries that can be executed by roles assigned to that queue. For example, to create a resource queue named *adhoc* with an active query limit of three:
 
 ```
 =# CREATE RESOURCE QUEUE adhoc WITH (ACTIVE_STATEMENTS=3);
 
 ```
 
-This means that for all roles assigned to the <adhoc\> resource queue, only three active queries can be running on the system at any given time. If this queue has three queries running, and a fourth query is submitted by a role in that queue, that query must wait until a slot is free before it can run.
+This means that for all roles assigned to the *adhoc* resource queue, only three active queries can be running on the system at any given time. If this queue has three queries running, and a fourth query is submitted by a role in that queue, that query must wait until a slot is free before it can run.
 
 ### Creating Queues with Memory Limits 
 
@@ -248,14 +248,14 @@ As a general guideline, `MEMORY_LIMIT` for all of your resource queues should no
 
 To control a resource queue's consumption of available CPU resources, an administrator can assign an appropriate priority level. When high concurrency causes contention for CPU resources, queries and statements associated with a high-priority resource queue will claim a larger share of available CPU than lower priority queries and statements.
 
-Priority settings are created or altered using the `WITH` parameter of the commands `CREATE RESOURCE QUEUE` and `ALTER RESOURCE QUEUE`. For example, to specify priority settings for the <adhoc\> and <reporting\> queues, an administrator would use the following commands:
+Priority settings are created or altered using the `WITH` parameter of the commands `CREATE RESOURCE QUEUE` and `ALTER RESOURCE QUEUE`. For example, to specify priority settings for the *adhoc* and *reporting* queues, an administrator would use the following commands:
 
 ```
 =# ALTER RESOURCE QUEUE adhoc WITH (PRIORITY=LOW);
 =# ALTER RESOURCE QUEUE reporting WITH (PRIORITY=HIGH);
 ```
 
-To create the <executive\> queue with maximum priority, an administrator would use the following command:
+To create the *executive* queue with maximum priority, an administrator would use the following command:
 
 ```
 =# CREATE RESOURCE QUEUE executive WITH (ACTIVE_STATEMENTS=3, PRIORITY=MAX);
@@ -285,7 +285,7 @@ Superusers are always exempt from resource queue limits. Superuser queries will 
 
 ### Removing a Role from a Resource Queue 
 
-All users <must\> be assigned to a resource queue. If not explicitly assigned to a particular queue, users will go into the default resource queue, `pg_default`. If you wish to remove a role from a resource queue and put them in the default queue, change the role's queue assignment to `none`. For example:
+All users *must* be assigned to a resource queue. If not explicitly assigned to a particular queue, users will go into the default resource queue, `pg_default`. If you wish to remove a role from a resource queue and put them in the default queue, change the role's queue assignment to `none`. For example:
 
 ```
 =# ALTER ROLE `role_name` RESOURCE QUEUE none;
@@ -301,22 +301,22 @@ After a resource queue has been created, you can change or reset the queue limit
 The `ALTER RESOURCE QUEUE` command changes the limits of a resource queue. To change the limits of a resource queue, specify the new values you want for the queue. For example:
 
 ```
-=# ALTER RESOURCE QUEUE <adhoc WITH (ACTIVE_STATEMENTS=5);
-=# ALTER RESOURCE QUEUE <exec WITH (PRIORITY=MAX);
+=# ALTER RESOURCE QUEUE <adhoc> WITH (ACTIVE_STATEMENTS=5);
+=# ALTER RESOURCE QUEUE <exec> WITH (PRIORITY=MAX);
 
 ```
 
 To reset active statements or memory limit to no limit, enter a value of `-1`. To reset the maximum query cost to no limit, enter a value of `-1.0`. For example:
 
 ```
-=# ALTER RESOURCE QUEUE <adhoc WITH (MAX_COST=-1.0, MEMORY_LIMIT='2GB');
+=# ALTER RESOURCE QUEUE <adhoc> WITH (MAX_COST=-1.0, MEMORY_LIMIT='2GB');
 
 ```
 
 You can use the `ALTER RESOURCE QUEUE` command to change the priority of queries associated with a resource queue. For example, to set a queue to the minimum priority level:
 
 ```
-ALTER RESOURCE QUEUE <webuser WITH (PRIORITY=MIN);
+ALTER RESOURCE QUEUE <webuser> WITH (PRIORITY=MIN);
 
 ```
 
@@ -325,7 +325,7 @@ ALTER RESOURCE QUEUE <webuser WITH (PRIORITY=MIN);
 The `DROP RESOURCE QUEUE` command drops a resource queue. To drop a resource queue, the queue cannot have any roles assigned to it, nor can it have any statements waiting in the queue. See [Removing a Role from a Resource Queue](#topic18) and [Clearing a Waiting Statement From a Resource Queue](#topic27) for instructions on emptying a resource queue. To drop a resource queue:
 
 ```
-=# DROP RESOURCE QUEUE <name;
+=# DROP RESOURCE QUEUE <name>;
 
 ```
 
@@ -441,9 +441,9 @@ Do not use any operating system `KILL` command.
 
 ### Viewing the Priority of Active Statements 
 
-The <gp\_toolkit\> administrative schema has a view called <gp\_resq\_priority\_statement\>, which lists all statements currently being executed and provides the priority, session ID, and other information.
+The *gp\_toolkit* administrative schema has a view called *gp\_resq\_priority\_statement*, which lists all statements currently being executed and provides the priority, session ID, and other information.
 
-This view is only available through the `gp_toolkit` administrative schema. See the <Greenplum Database Reference Guide\> for more information.
+This view is only available through the `gp_toolkit` administrative schema. See the *Greenplum Database Reference Guide* for more information.
 
 ### Resetting the Priority of an Active Statement 
 
@@ -451,7 +451,7 @@ Superusers can adjust the priority of a statement currently being executed using
 
 `=# SELECT gp_adjust_priority(752, 24905, 'HIGH')`
 
-To obtain the session ID and statement count parameters required by this function, superusers can use the `gp_toolkit` administrative schema view, <gp\_resq\_priority\_statement\>. From the view, use these values for the function parameters.
+To obtain the session ID and statement count parameters required by this function, superusers can use the `gp_toolkit` administrative schema view, *gp\_resq\_priority\_statement*. From the view, use these values for the function parameters.
 
 -   The value of the `rqpsession` column for the `session_id` parameter
 -   The value of the `rqpcommand` column for the `statement_count` parameter

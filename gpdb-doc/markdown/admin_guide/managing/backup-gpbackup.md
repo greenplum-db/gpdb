@@ -295,7 +295,7 @@ $ gpbackup --dbname demo --include-schema wikipedia
 $ gpbackup --dbname demo --exclude-schema twitter
 ```
 
-You can include multiple `--include-schema` options in a `gpbackup` <or\> multiple `--exclude-schema` options. For example:
+You can include multiple `--include-schema` options in a `gpbackup` *or* multiple `--exclude-schema` options. For example:
 
 ```
 $ gpbackup --dbname demo --include-schema wikipedia --include-schema twitter
@@ -514,7 +514,7 @@ By default, metadata and supporting files are stored on the Greenplum Database m
 |File name|Description|
 |---------|-----------|
 |gpbackup\_<YYYYMMDDHHMMSS\>\_metadata.sql|Contains global and database-specific metadata:-   DDL for objects that are global to the Greenplum Database cluster, and not owned by a specific database within the cluster.
--   DDL for objects in the backed-up database \(specified with `--dbname)` that must be created <before\> to restoring the actual data, and DDL for objects that must be created <after\> restoring the data.
+-   DDL for objects in the backed-up database \(specified with `--dbname)` that must be created *before* to restoring the actual data, and DDL for objects that must be created *after* restoring the data.
 
 Global objects include:-   Tablespaces
 -   Databases
@@ -526,7 +526,7 @@ Global objects include:-   Tablespaces
 
 **Note:** Global metadata is not restored by default. You must include the `--with-globals` option to the `gprestore` command to restore global metadata.
 
-Database-specific objects that must be created <before\> to restoring the actual data include:-   Session-level configuration parameter settings \(GUCs\)
+Database-specific objects that must be created *before* to restoring the actual data include:-   Session-level configuration parameter settings \(GUCs\)
 -   Schemas
 -   Procedural language extensions
 -   Types
@@ -541,7 +541,7 @@ Database-specific objects that must be created <before\> to restoring the actual
 -   Views
 -   Constraints
 
-Database-specific objects that must be created <after\> restoring the actual data include:-   Indexes
+Database-specific objects that must be created *after* restoring the actual data include:-   Indexes
 -   Rules
 -   Triggers. \(While Greenplum Database does not support triggers, any trigger definitions that are present are backed up and restored.\)
 

@@ -14,13 +14,13 @@ The following figure illustrates how memory is consumed on a Greenplum Database 
 
 ![](graphics/memory.png "Greenplum Database Segment Host Memory")
 
-Beginning at the bottom of the illustration, the line labeled <A\> represents the total host memory. The line directly above line <A\> shows that the total host memory comprises both physical RAM and swap space.
+Beginning at the bottom of the illustration, the line labeled *A* represents the total host memory. The line directly above line *A* shows that the total host memory comprises both physical RAM and swap space.
 
-The line labelled <B\> shows that the total memory available must be shared by Greenplum Database and all other processes on the host. Non-Greenplum Database processes include the operating system and any other applications, for example system monitoring agents. Some applications may use a significant portion of memory and, as a result, you may have to adjust the number of segments per Greenplum Database host or the amount of memory per segment.
+The line labelled *B* shows that the total memory available must be shared by Greenplum Database and all other processes on the host. Non-Greenplum Database processes include the operating system and any other applications, for example system monitoring agents. Some applications may use a significant portion of memory and, as a result, you may have to adjust the number of segments per Greenplum Database host or the amount of memory per segment.
 
-The segments \(<C\>\) each get an equal share of the Greenplum Database Memory \(<B\>\).
+The segments \(*C*\) each get an equal share of the Greenplum Database Memory \(*B*\).
 
-Within a segment, the currently active resource management scheme, <Resource Queues\> or <Resource Groups\>, governs how memory is allocated to execute a SQL statement. These constructs allow you to translate business requirements into execution policies in your Greenplum Database system and to guard against queries that could degrade performance. For an overview of resource groups and resource queues, refer to [Managing Resources](wlmgmt.html).
+Within a segment, the currently active resource management scheme, *Resource Queues* or *Resource Groups*, governs how memory is allocated to execute a SQL statement. These constructs allow you to translate business requirements into execution policies in your Greenplum Database system and to guard against queries that could degrade performance. For an overview of resource groups and resource queues, refer to [Managing Resources](wlmgmt.html).
 
 ## Options for Configuring Segment Host Memory 
 

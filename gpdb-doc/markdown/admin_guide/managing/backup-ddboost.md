@@ -2,7 +2,7 @@
 
 Dell EMC Data Domain Boost \(DD Boost\) is Dell EMC software that can be used with the `gpcrondump` and `gpdbrestore` utilities to perform faster backups to the Dell EMC Data Domain storage appliance. Data Domain performs deduplication on the data it stores, so after the initial backup operation, the appliance stores only pointers to data that is unchanged. This reduces the size of backups on disk. When DD Boost is used with `gpcrondump`, Greenplum Database participates in the deduplication process, reducing the volume of data sent over the network. When you restore files from the Data Domain system with Data Domain Boost, some files are copied to the master local disk and are restored from there, and others are restored directly.
 
-With Data Domain Boost managed file replication, you can replicate Greenplum Database backup images that are stored on a Data Domain system for disaster recover purposes. The `gpmfr` utility manages the Greenplum Database backup sets that are on the primary and a remote Data Domain system. For information about `gpmfr`, see the <Greenplum Database Utility Guide\>.
+With Data Domain Boost managed file replication, you can replicate Greenplum Database backup images that are stored on a Data Domain system for disaster recover purposes. The `gpmfr` utility manages the Greenplum Database backup sets that are on the primary and a remote Data Domain system. For information about `gpmfr`, see the *Greenplum Database Utility Guide*.
 
 Managed file replication requires network configuration when a replication network is being used between two Data Domain systems:
 
@@ -255,11 +255,11 @@ Some of the options available in `gpcrondump` have different implications when u
 2.  Add the option `--ddboost` to the `gpdbrestore` command:
 
     ```
-    $ gpdbrestore -t <backup_timestamp -v -ddboost
+    $ gpdbrestore -t <backup_timestamp> -v -ddboost
     ```
 
     If needed, specify the Data Domain system storage unit with the `--ddboost-storage-unit` option.
 
 
-**Note:** Some of the `gpdbrestore` options available have different implications when using Data Domain. For details, see `gpdbrestore` in the <Greenplum Database Utility Reference\>.
+**Note:** Some of the `gpdbrestore` options available have different implications when using Data Domain. For details, see `gpdbrestore` in the *Greenplum Database Utility Reference*.
 

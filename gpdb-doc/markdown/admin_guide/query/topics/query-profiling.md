@@ -2,7 +2,7 @@
 
 Examine the query plans of poorly performing queries to identify possible performance tuning opportunities.
 
-Greenplum Database devises a <query plan\> for each query. Choosing the right query plan to match the query and data structure is necessary for good performance. A query plan defines how Greenplum Database will run the query in the parallel execution environment.
+Greenplum Database devises a *query plan* for each query. Choosing the right query plan to match the query and data structure is necessary for good performance. A query plan defines how Greenplum Database will run the query in the parallel execution environment.
 
 The query optimizer uses data statistics maintained by the database to choose a query plan with the lowest possible cost. Cost is measured in disk I/O, shown as units of disk page fetches. The goal is to minimize the total execution cost for the plan.
 
@@ -73,9 +73,9 @@ Gather Motion 2:1 (slice1) (cost=0.00..20.88 rows=1 width=13)
 
 ```
 
-Read the plan from the bottom to the top. To start, the query optimizer sequentially scans the <names\> table. Notice the `WHERE` clause is applied as a <filter\> condition. This means the scan operation checks the condition for each row it scans and outputs only the rows that satisfy the condition.
+Read the plan from the bottom to the top. To start, the query optimizer sequentially scans the *names* table. Notice the `WHERE` clause is applied as a *filter* condition. This means the scan operation checks the condition for each row it scans and outputs only the rows that satisfy the condition.
 
-The results of the scan operation are passed to a <gather motion\> operation. In Greenplum Database, a gather motion is when segments send rows to the master. In this example, we have two segment instances that send to one master instance. This operation is working on `slice1` of the parallel query execution plan. A query plan is divided into <slices\> so the segments can work on portions of the query plan in parallel.
+The results of the scan operation are passed to a *gather motion* operation. In Greenplum Database, a gather motion is when segments send rows to the master. In this example, we have two segment instances that send to one master instance. This operation is working on `slice1` of the parallel query execution plan. A query plan is divided into *slices* so the segments can work on portions of the query plan in parallel.
 
 The estimated startup cost for this plan is `00.00` \(no cost\) and a total cost of `20.88` disk page fetches. The optimizer estimates this query will return one row.
 
@@ -85,7 +85,7 @@ The estimated startup cost for this plan is `00.00` \(no cost\) and a total cost
 
 -   The total runtime \(in milliseconds\) in which the query executed.
 -   The memory used by each slice of the query plan, as well as the memory reserved for the whole query statement.
--   The number of <workers\> \(segments\) involved in a plan node operation. Only segments that return rows are counted.
+-   The number of *workers* \(segments\) involved in a plan node operation. Only segments that return rows are counted.
 -   The maximum number of rows returned by the segment that produced the most rows for the operation. If multiple segments produce an equal number of rows, `EXPLAIN ANALYZE` shows the segment with the longest *<time\> to end*.
 -   The segment id of the segment that produced the most rows for an operation.
 -   For relevant operations, the amount of memory \(`work_mem`\) used by the operation. If the `work_mem` was insufficient to perform the operation in memory, the plan shows the amount of data spilled to disk for the lowest-performing segment. For example:
@@ -97,7 +97,7 @@ The estimated startup cost for this plan is `00.00` \(no cost\) and a total cost
     
     ```
 
--   The time \(in milliseconds\) in which the segment that produced the most rows retrieved the first row, and the time taken for that segment to retrieve all rows. The result may omit <<time\> to first row\> if it is the same as the <<time\> to end\>.
+-   The time \(in milliseconds\) in which the segment that produced the most rows retrieved the first row, and the time taken for that segment to retrieve all rows. The result may omit *<time\> to first row* if it is the same as the *<time\> to end*.
 
 ### EXPLAIN ANALYZE Examples 
 
@@ -124,9 +124,9 @@ Statement statistics:
 
 ```
 
-Read the plan from the bottom to the top. The total elapsed time to run this query was <22.548\> milliseconds.
+Read the plan from the bottom to the top. The total elapsed time to run this query was *22.548* milliseconds.
 
-The <sequential scan\> operation had only one segment \(<seg0\>\) that returned rows, and it returned just <1 row\>. It took <0.255\> milliseconds to find the first row and <0.486\> to scan all rows. This result is close to the optimizer's estimate: the query optimizer estimated it would return one row for this query. The <gather motion\> \(segments sending data to the master\) received 1 row . The total elapsed time for this operation was <0.537\> milliseconds.
+The *sequential scan* operation had only one segment \(*seg0*\) that returned rows, and it returned just *1 row*. It took *0.255* milliseconds to find the first row and *0.486* to scan all rows. This result is close to the optimizer's estimate: the query optimizer estimated it would return one row for this query. The *gather motion* \(segments sending data to the master\) received 1 row . The total elapsed time for this operation was *0.537* milliseconds.
 
 #### Determining the Query Optimizer 
 
@@ -185,7 +185,7 @@ If a query performs poorly, examine its query plan and ask the following questio
 
     See the *Greenplum Database Reference Guide* for more information on the `EXPLAIN ANALYZE` and `ANALYZE` commands.
 
--   **Are selective predicates applied early in the plan?** Apply the most selective filters early in the plan so fewer rows move up the plan tree. If the query plan does not correctly estimate query predicate selectivity, collect more statistics on the relevant columns. See the `ANALYZE` command in the <Greenplum Database Reference Guide\> for more information collecting statistics.You can also try reordering the `WHERE` clause of your SQL statement.
+-   **Are selective predicates applied early in the plan?** Apply the most selective filters early in the plan so fewer rows move up the plan tree. If the query plan does not correctly estimate query predicate selectivity, collect more statistics on the relevant columns. See the `ANALYZE` command in the *Greenplum Database Reference Guide* for more information collecting statistics.You can also try reordering the `WHERE` clause of your SQL statement.
 -   **Does the optimizer choose the best join order?** When you have a query that joins multiple tables, make sure that the optimizer chooses the most selective join order. Joins that eliminate the largest number of rows should be done earlier in the plan so fewer rows move up the plan tree.
 
     If the plan is not choosing the optimal join order, set `join_collapse_limit=1` and use explicit `JOIN` syntax in your SQL statement to force the legacy query optimizer \(planner\) to the specified join order. You can also collect more statistics on the relevant join columns.

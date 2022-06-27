@@ -4,7 +4,7 @@ These examples show how to define external data with different protocols. Each `
 
 **Note:** When using IPv6, always enclose the numeric IP addresses in square brackets.
 
-Start gpfdist before you create external tables with the gpfdist protocol. The following code starts the gpfdist file server program in the background on port <8081\> serving files from directory /var/data/staging. The logs are saved in /home/gpadmin/log.
+Start gpfdist before you create external tables with the gpfdist protocol. The following code starts the gpfdist file server program in the background on port *8081* serving files from directory /var/data/staging. The logs are saved in /home/gpadmin/log.
 
 ```
 gpfdist -p 8081 -d /var/data/staging -l /home/gpadmin/log &

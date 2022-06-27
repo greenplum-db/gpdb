@@ -11,9 +11,9 @@ The performance of Greenplum Database depends on the hardware and IT infrastruct
 -   **Disk Failure** – Although a single disk failure should not dramatically affect database performance if you are using RAID, disk resynchronization does consume resources on the host with failed disks. The `gpcheckperf` utility can help identify segment hosts that have disk I/O issues.
 -   **Host Failure** – When a host is offline, the segments on that host are nonoperational. This means other hosts in the array must perform twice their usual workload because they are running the primary segments and multiple mirrors. If mirrors are not enabled, service is interrupted. Service is temporarily interrupted to recover failed segments. The `gpstate` utility helps identify failed segments.
 -   **Network Failure** – Failure of a network interface card, a switch, or DNS server can bring down segments. If host names or IP addresses cannot be resolved within your Greenplum array, these manifest themselves as interconnect errors in Greenplum Database. The `gpcheckperf` utility helps identify segment hosts that have network issues.
--   **Disk Capacity** – Disk capacity on your segment hosts should never exceed 70 percent full. Greenplum Database needs some free space for runtime processing. To reclaim disk space that deleted rows occupy, run `VACUUM` after loads or updates.The <gp\_toolkit\> administrative schema has many views for checking the size of distributed database objects.
+-   **Disk Capacity** – Disk capacity on your segment hosts should never exceed 70 percent full. Greenplum Database needs some free space for runtime processing. To reclaim disk space that deleted rows occupy, run `VACUUM` after loads or updates.The *gp\_toolkit* administrative schema has many views for checking the size of distributed database objects.
 
-    See the <Greenplum Database Reference Guide\> for information about checking database object sizes and disk space.
+    See the *Greenplum Database Reference Guide* for information about checking database object sizes and disk space.
 
 
 ## Managing Workload 
@@ -93,7 +93,7 @@ To help optimize database design, review the maximum limits that Greenplum Datab
 |Indexes per Table|Unlimited|
 |Columns per Index|32|
 |Table-level Constraints per Table|Unlimited|
-|Table Name Length|63 Bytes \(Limited by <name\> data type\)|
+|Table Name Length|63 Bytes \(Limited by *name* data type\)|
 
 Dimensions listed as unlimited are not intrinsically limited by Greenplum Database. However, they are limited in practice to available disk space and memory/swap space. Performance may suffer when these values are unusually large.
 

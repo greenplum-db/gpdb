@@ -18,7 +18,7 @@ While table redistribution is underway, any new tables or partitions created are
 
 For large systems, you can control the table redistribution order. Adjust tables' `rank` values in the expansion schema to prioritize heavily-used tables and minimize performance impact. Available free disk space can affect table ranking; see [Managing Redistribution in Large-Scale Greenplum Systems](expand-planning.html).
 
-To rank tables for redistribution by updating `rank` values in <gpexpand.status\_detail\>, connect to Greenplum Database using `psql` or another supported client. Update <gpexpand.status\_detail\> with commands such as:
+To rank tables for redistribution by updating `rank` values in *gpexpand.status\_detail*, connect to Greenplum Database using `psql` or another supported client. Update *gpexpand.status\_detail* with commands such as:
 
 ```
 => UPDATE gpexpand.status_detail SET rank=10;
@@ -27,7 +27,7 @@ To rank tables for redistribution by updating `rank` values in <gpexpand.status\
 => UPDATE gpexpand.status_detail SET rank=2 WHERE fq_name = 'public.orders';
 ```
 
-These commands lower the priority of all tables to `10` and then assign a rank of `1` to `lineitem` and a rank of `2` to `orders`. When table redistribution begins, `lineitem` is redistributed first, followed by `orders` and all other tables in <gpexpand.status\_detail\>. To exclude a table from redistribution, remove the table from <gpexpand.status\_detail\>.
+These commands lower the priority of all tables to `10` and then assign a rank of `1` to `lineitem` and a rank of `2` to `orders`. When table redistribution begins, `lineitem` is redistributed first, followed by `orders` and all other tables in *gpexpand.status\_detail*. To exclude a table from redistribution, remove the table from *gpexpand.status\_detail*.
 
 ## Redistributing Tables Using gpexpand 
 
@@ -40,10 +40,10 @@ These commands lower the priority of all tables to `10` and then assign a rank o
     $ gpexpand -d 60:00:00
     ```
 
-    The utility redistributes tables until the last table in the schema completes or it reaches the specified duration or end time. `gpexpand` updates the status and time in <gpexpand.status\> when a session starts and finishes.
+    The utility redistributes tables until the last table in the schema completes or it reaches the specified duration or end time. `gpexpand` updates the status and time in *gpexpand.status* when a session starts and finishes.
 
 
-**Note:** After completing table redistribution, run the `VACUUM ANALYZE` and `REINDEX`commands on the catalog tables to update table statistics, and rebuild indexes. See [Routine Vacuum and Analyze](../managing/maintain.html) in the <Administration Guide\> and [`VACUUM`](../../ref_guide/sql_commands/VACUUM.md#er20941) in the <Reference Guide\>.
+**Note:** After completing table redistribution, run the `VACUUM ANALYZE` and `REINDEX`commands on the catalog tables to update table statistics, and rebuild indexes. See [Routine Vacuum and Analyze](../managing/maintain.html) in the *Administration Guide* and [`VACUUM`](../../ref_guide/sql_commands/VACUUM.md#er20941) in the *Reference Guide*.
 
 ## Monitoring Table Redistribution 
 
@@ -56,7 +56,7 @@ See also [Monitoring the Cluster Expansion State](expand-initialize.html) for in
 
 ### Viewing Expansion Status 
 
-After the first table completes redistribution, <gpexpand.expansion\_progress\> calculates its estimates and refreshes them based on all tables' redistribution rates. Calculations restart each time you start a table redistribution session with `gpexpand`. To monitor progress, connect to Greenplum Database using `psql` or another supported client; query <gpexpand.expansion\_progress\> with a command like the following:
+After the first table completes redistribution, *gpexpand.expansion\_progress* calculates its estimates and refreshes them based on all tables' redistribution rates. Calculations restart each time you start a table redistribution session with `gpexpand`. To monitor progress, connect to Greenplum Database using `psql` or another supported client; query *gpexpand.expansion\_progress* with a command like the following:
 
 ```
 =# SELECT * FROM gpexpand.expansion_progress;
@@ -73,7 +73,7 @@ After the first table completes redistribution, <gpexpand.expansion\_progress\> 
 
 ### Viewing Table Status 
 
-The table <gpexpand.status\_detail\> stores status, time of last update, and more facts about each table in the schema. To see a table's status, connect to Greenplum Database using `psql` or another supported client and query <gpexpand.status\_detail\>:
+The table *gpexpand.status\_detail* stores status, time of last update, and more facts about each table in the schema. To see a table's status, connect to Greenplum Database using `psql` or another supported client and query *gpexpand.status\_detail*:
 
 ```
 => SELECT status, expansion_started, source_bytes FROM

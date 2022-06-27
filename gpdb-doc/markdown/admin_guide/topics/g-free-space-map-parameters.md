@@ -1,6 +1,6 @@
 # Free Space Map Parameters 
 
-These parameters control the sizing of the <free space map, which contains \>expired rows. Use `VACUUM` to reclaim the free space map disk space.
+These parameters control the sizing of the *free space map, which contains*expired rows. Use `VACUUM` to reclaim the free space map disk space.
 
 See [Vacuum and Analyze for Query Optimization](../managing/maintain.html) for information about vacuuming a database.
 

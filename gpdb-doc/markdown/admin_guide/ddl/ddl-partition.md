@@ -14,12 +14,12 @@ Table partitioning enables supporting very large tables, such as fact tables, by
 
 ## About Table Partitioning 
 
-Partitioning does not change the physical distribution of table data across the segments. Table distribution is physical: Greenplum Database physically divides partitioned tables and non-partitioned tables across segments to enable parallel query processing. Table <partitioning\> is logical: Greenplum Database logically divides big tables to improve query performance and facilitate data warehouse maintenance tasks, such as rolling old data out of the data warehouse.
+Partitioning does not change the physical distribution of table data across the segments. Table distribution is physical: Greenplum Database physically divides partitioned tables and non-partitioned tables across segments to enable parallel query processing. Table *partitioning* is logical: Greenplum Database logically divides big tables to improve query performance and facilitate data warehouse maintenance tasks, such as rolling old data out of the data warehouse.
 
 Greenplum Database supports:
 
--   <range partitioning\>: division of data based on a numerical range, such as date or price.
--   <list partitioning\>: division of data based on a list of values, such as sales territory or product line.
+-   *range partitioning*: division of data based on a numerical range, such as date or price.
+-   *list partitioning*: division of data based on a list of values, such as sales territory or product line.
 -   A combination of both types.
 
 ![](../graphics/partitions.jpg "Example Multi-level Partition Design")
@@ -36,7 +36,7 @@ To insert data into a partitioned table, you specify the root partitioned table,
 
 ## Deciding on a Table Partitioning Strategy 
 
-Not all tables are good candidates for partitioning. If the answer is <yes\> to all or most of the following questions, table partitioning is a viable database design strategy for improving query performance. If the answer is <no\> to most of the following questions, table partitioning is not the right solution for that table. Test your design strategy to ensure that query performance improves as expected.
+Not all tables are good candidates for partitioning. If the answer is *yes* to all or most of the following questions, table partitioning is a viable database design strategy for improving query performance. If the answer is *no* to most of the following questions, table partitioning is not the right solution for that table. Test your design strategy to ensure that query performance improves as expected.
 
 -   **Is the table large enough?** Large fact tables are good candidates for table partitioning. If you have millions or billions of records in a table, you may see performance benefits from logically breaking that data up into smaller chunks. For smaller tables with only a few thousand rows or less, the administrative overhead of maintaining the partitions will outweigh any performance benefits you might see.
 -   **Are you experiencing unsatisfactory performance?** As with any performance tuning initiative, a table should be partitioned only if queries against that table are producing slower response times than desired.
@@ -145,7 +145,7 @@ For more information about default partitions, see [Adding a Default Partition](
 
 ### Defining Multi-level Partitions 
 
-You can create a multi-level partition design with subpartitions of partitions. Using a <subpartition template\> ensures that every partition has the same subpartition design, including partitions that you add later. For example, the following SQL creates the two-level partition design shown in [Figure 1](#im207241):
+You can create a multi-level partition design with subpartitions of partitions. Using a *subpartition template* ensures that every partition has the same subpartition design, including partitions that you add later. For example, the following SQL creates the two-level partition design shown in [Figure 1](#im207241):
 
 ```
 CREATE TABLE sales (trans_id int, date date, amount 
@@ -266,7 +266,7 @@ Best practice for loading data into partitioned tables is to create an intermedi
 
 When a table is partitioned based on the query predicate, you can use `EXPLAIN` to verify that the query optimizer scans only the relevant data to examine the query plan.
 
-For example, suppose a <sales\> table is date-range partitioned by month and subpartitioned by region as shown in [Figure 1](#im207241). For the following query:
+For example, suppose a *sales* table is date-range partitioned by month and subpartitioned by region as shown in [Figure 1](#im207241). For the following query:
 
 ```
 EXPLAIN SELECT * FROM sales WHERE date='01-07-12' AND 
@@ -277,8 +277,8 @@ region='usa';
 The query plan for this query should show a table scan of only the following tables:
 
 -   the default partition returning 0-1 rows \(if your partition design has one\)
--   the January 2012 partition \(<sales\_1\_prt\_1\>\) returning 0-1 rows
--   the USA region subpartition \(<sales\_1\_2\_prt\_usa\>\) returning *some number* of rows.
+-   the January 2012 partition \(*sales\_1\_prt\_1*\) returning 0-1 rows
+-   the USA region subpartition \(*sales\_1\_2\_prt\_usa*\) returning *some number* of rows.
 
 The following example shows the relevant portion of the query plan.
 
@@ -306,7 +306,7 @@ The following limitations can result in a query plan that shows a non-selective 
 
 ## Viewing Your Partition Design 
 
-You can look up information about your partition design using the *[pg\_partitions](../../ref_guide/system_catalogs/pg_partitions.html)* system view. For example, to see the partition design of the <sales\> table:
+You can look up information about your partition design using the *[pg\_partitions](../../ref_guide/system_catalogs/pg_partitions.html)* system view. For example, to see the partition design of the *sales* table:
 
 ```
 SELECT partitionboundary, partitiontablename, partitionname, 
@@ -322,11 +322,11 @@ The following table and views also show information about partitioned tables.
 -   *[pg\_partition\_templates](../../ref_guide/system_catalogs/pg_partition_templates.html)*- Shows the subpartitions created using a subpartition template.
 -   *[pg\_partition\_columns](../../ref_guide/system_catalogs/pg_partition_columns.html)* - Shows the partition key columns used in a partition design.
 
-For information about Greenplum Database system catalog tables and views, see the <Greenplum Database Reference Guide\>.
+For information about Greenplum Database system catalog tables and views, see the *Greenplum Database Reference Guide*.
 
 ## Maintaining Partitioned Tables 
 
-To maintain a partitioned table, use the `ALTER TABLE` command against the top-level parent table. The most common scenario is to drop old partitions and add new ones to maintain a rolling window of data in a range partition design. You can convert \(<exchange\>\) older partitions to the append-optimized compressed storage format to save space. If you have a default partition in your partition design, you add a partition by <splitting\> the default partition.
+To maintain a partitioned table, use the `ALTER TABLE` command against the top-level parent table. The most common scenario is to drop old partitions and add new ones to maintain a rolling window of data in a range partition design. You can convert \(*exchange*\) older partitions to the append-optimized compressed storage format to save space. If you have a default partition in your partition design, you add a partition by *splitting* the default partition.
 
 -   [Adding a Partition](#topic78)
 -   [Renaming a Partition](#topic79)
@@ -352,7 +352,7 @@ The two `ALTER PARTITION` clauses identify which `region` partition to exchange.
 
 ### Adding a Partition 
 
-You can add a partition to a partition design with the `ALTER TABLE` command. If the original partition design included subpartitions defined by a <subpartition template\>, the newly added partition is subpartitioned according to that template. For example:
+You can add a partition to a partition design with the `ALTER TABLE` command. If the original partition design included subpartitions defined by a *subpartition template*, the newly added partition is subpartitioned according to that template. For example:
 
 ```
 ALTER TABLE sales ADD PARTITION 
@@ -403,7 +403,7 @@ For auto-generated range partitions, where a number is assigned when no name is 
 sales_1_prt_1
 ```
 
-To rename a partitioned child table, rename the top-level parent table. The <<parentname\>\> changes in the table names of all associated child table partitions. For example, the following command:
+To rename a partitioned child table, rename the top-level parent table. The *<parentname\>* changes in the table names of all associated child table partitions. For example, the following command:
 
 ```
 ALTER TABLE sales RENAME TO globalsales;
@@ -429,7 +429,7 @@ Changes the associated table name as follows:
 sales_1_prt_jan16
 ```
 
-When altering partitioned tables with the `ALTER TABLE` command, always refer to the tables by their partition name \(<jan16\>\) and not their full table name \(<sales\_1\_prt\_jan16\>\).
+When altering partitioned tables with the `ALTER TABLE` command, always refer to the tables by their partition name \(*jan16*\) and not their full table name \(*sales\_1\_prt\_jan16*\).
 
 **Note:** The table name cannot be a partition name in an `ALTER TABLE` statement. For example, `ALTER TABLE sales...` is correct, `ALTER TABLE sales_1_part_jan16...` is not allowed.
 
@@ -504,7 +504,7 @@ For information about the parameter, see "Server Configuration Parameters" in th
 
 ### Splitting a Partition 
 
-Splitting a partition divides a partition into two partitions. You can split a partition using the `ALTER TABLE` command. You can split partitions only at the lowest level of your partition hierarchy \(partitions that contain data\). For a multi-level partition, only range partitions can be split, not list partitions. The split value you specify goes into the <latter\> partition.
+Splitting a partition divides a partition into two partitions. You can split a partition using the `ALTER TABLE` command. You can split partitions only at the lowest level of your partition hierarchy \(partitions that contain data\). For a multi-level partition, only range partitions can be split, not list partitions. The split value you specify goes into the *latter* partition.
 
 For example, to split a monthly partition into two with the first partition containing dates January 1-15 and the second partition containing dates January 16-31:
 

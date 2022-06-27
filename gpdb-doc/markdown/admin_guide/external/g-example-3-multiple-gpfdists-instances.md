@@ -1,6 +1,6 @@
 # Example 3—Multiple gpfdists instances 
 
-Creates a readable external table, <ext\_expenses,\> from all files with the <txt\> extension using the `gpfdists` protocol. The column delimiter is a pipe \( \| \) and NULL \(' '\) is a space. For information about the location of security certificates, see [gpfdists:// Protocol](g-gpfdists-protocol.html).
+Creates a readable external table, *ext\_expenses,* from all files with the *txt* extension using the `gpfdists` protocol. The column delimiter is a pipe \( \| \) and NULL \(' '\) is a space. For information about the location of security certificates, see [gpfdists:// Protocol](g-gpfdists-protocol.html).
 
 1.  Run `gpfdist` with the `--ssl` option.
 2.  Run the following command.

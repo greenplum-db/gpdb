@@ -31,7 +31,7 @@ For information about the Greenplum Database utilities, see the *Greenplum Datab
     $ gpstate -f
     ```
 
-    The status should be <In Synch\>.
+    The status should be *In Synch*.
 
 5.  Stop Greenplum Database master instance on the standby master. For example:
 
@@ -53,7 +53,7 @@ For information about the Greenplum Database utilities, see the *Greenplum Datab
     $ gpstate -f 
     ```
 
-    Verify the original primary master status is <Active\>. When a standby master is not configured, the command displays `-No entries found` and the message indicates that a standby master instance is not configured.
+    Verify the original primary master status is *Active*. When a standby master is not configured, the command displays `-No entries found` and the message indicates that a standby master instance is not configured.
 
 8.  On the standby master host, move or remove the data directory, `gpseg-1`. This example moves the directory:
 

@@ -63,7 +63,7 @@ External tables can be file-based or web-based. External tables using the `file:
 -   Regular \(file-based\) external tables access static flat files. Regular external tables are rescannable: the data is static while the query runs.
 -   Web \(web-based\) external tables access dynamic data sources, either on a web server with the `http://` protocol or by executing OS commands or scripts. External web tables are not rescannable: the data can change while the query runs.
 
-Dump and restore operate only on external and external web table <definitions\>, not on the data sources.
+Dump and restore operate only on external and external web table *definitions*, not on the data sources.
 
 -   **[file:// Protocol](../external/g-file-protocol.html)**  
 The `file://` protocol is used in a URI that specifies the location of an operating system file.

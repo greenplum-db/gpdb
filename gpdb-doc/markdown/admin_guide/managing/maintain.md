@@ -14,7 +14,7 @@ Vacuuming an append-optimized table follows a different process than vacuuming h
 
 If the ratio of hidden rows to total rows in a segment file is less than a threshold value \(10, by default\), the segment file is not compacted. The threshold value can be configured with the `gp_appendonly_compaction_threshold` server configuration parameter. `VACUUM FULL` ignores the value of `gp_appendonly_compaction_threshold` and rewrites the segment file regardless of the ratio.
 
-You can use the `__gp_aovisimap_compaction_info()` function in the the <gp\_toolkit\> schema to investigate the effectiveness of a VACUUM operation on append-optimized tables.
+You can use the `__gp_aovisimap_compaction_info()` function in the the *gp\_toolkit* schema to investigate the effectiveness of a VACUUM operation on append-optimized tables.
 
 For information about the `__gp_aovisimap_compaction_info()` function see, "Checking Append-Optimized Tables" in the *Greenplum Database Reference Guide*.
 
@@ -129,11 +129,11 @@ You can run both `VACUUM` and `ANALYZE` operations in the same command. For exam
 
 Running the VACUUM ANALYZE command might produce incorrect statistics when the command is run on a table with a significant amount of bloat \(a significant amount of table disk space is occupied by deleted or obsolete rows\). For large tables, the `ANALYZE` command calculates statistics from a random sample of rows. It estimates the number rows in the table by multiplying the average number of rows per page in the sample by the number of actual pages in the table. If the sample contains many empty pages, the estimated row count can be inaccurate.
 
-For a table, you can view information about the amount of unused disk space \(space that is occupied by deleted or obsolete rows\) in the <gp\_toolkit\> view <gp\_bloat\_diag\>. If the `bdidiag` column for a table contains the value `significant amount of bloat suspected`, a significant amount of table disk space consists of unused space. Entries are added to the <gp\_bloat\_diag\> view after a table has been vacuumed.
+For a table, you can view information about the amount of unused disk space \(space that is occupied by deleted or obsolete rows\) in the *gp\_toolkit* view *gp\_bloat\_diag*. If the `bdidiag` column for a table contains the value `significant amount of bloat suspected`, a significant amount of table disk space consists of unused space. Entries are added to the *gp\_bloat\_diag* view after a table has been vacuumed.
 
 To remove unused disk space from the table, you can run the command VACUUM FULL on the table. Due to table lock requirements, VACUUM FULL might not be possible until a maintenance period.
 
-As a temporary workaround, run ANALYZE to compute column statistics and then run VACUUM on the table to generate an accurate row count. This example runs ANALYZE and then VACUUM on the <cust\_info\> table.
+As a temporary workaround, run ANALYZE to compute column statistics and then run VACUUM on the table to generate an accurate row count. This example runs ANALYZE and then VACUUM on the *cust\_info* table.
 
 ```
 ANALYZE cust_info;

@@ -1,6 +1,6 @@
 # Example 6—Multiple files in CSV format with header rows 
 
-Creates a readable external table, <ext\_expenses,\> using the `file` protocol. The files are `CSV` format and have a header row.
+Creates a readable external table, *ext\_expenses,* using the `file` protocol. The files are `CSV` format and have a header row.
 
 ```
 =# CREATE EXTERNAL TABLE ext_expenses ( name text, 

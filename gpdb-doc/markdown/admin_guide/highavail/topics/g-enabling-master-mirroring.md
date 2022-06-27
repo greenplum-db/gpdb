@@ -7,7 +7,7 @@ For information about the utilities `gpinitsystem` and `gpinitstandby`, see the 
 ## To add a standby master to an existing system 
 
 1.  Ensure the standby master host is installed and configured: `gpadmin` system user created, Greenplum Database binaries installed, environment variables set, SSH keys exchanged, and data directory created.
-2.  Run the `gpinitstandby` utility on the currently active <primary\> master host to add a standby master host to your Greenplum Database system. For example:
+2.  Run the `gpinitstandby` utility on the currently active *primary* master host to add a standby master host to your Greenplum Database system. For example:
 
     ```
     $ gpinitstandby -s smdw
@@ -23,7 +23,7 @@ You can display the information in the Greenplum Database system view pg\_stat\_
 $ psql dbname -c 'SELECT procpid, state FROM pg_stat_replication;'
 ```
 
-For information about the `pg_stat_replication` system view, see the <Greenplum Database Reference Guide\>.
+For information about the `pg_stat_replication` system view, see the *Greenplum Database Reference Guide*.
 
 **Parent topic:**[Enabling Mirroring in Greenplum Database](../../highavail/topics/g-enabling-mirroring-in-greenplum-database.html)
 

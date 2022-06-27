@@ -12,7 +12,7 @@ The following example logs errors internally in Greenplum Database and sets an e
      ROWS;
 ```
 
-Use the built-in SQL function `gp_read_error_log('external\_table')` to read the error log data. This example command displays the log errors for <ext\_expenses\>:
+Use the built-in SQL function `gp_read_error_log('external\_table')` to read the error log data. This example command displays the log errors for *ext\_expenses*:
 
 ```
 SELECT gp_read_error_log('ext_expenses');

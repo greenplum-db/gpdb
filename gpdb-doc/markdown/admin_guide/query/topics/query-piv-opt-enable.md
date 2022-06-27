@@ -32,7 +32,7 @@ Set the server configuration parameter optimizer for the Greenplum Database syst
 
 ## Enabling GPORCA for a Database 
 
-Set the server configuration parameter optimizer for individual Greenplum databases with the ALTER DATABASE command. For example, this command enables GPORCA for the database <test\_db\>.
+Set the server configuration parameter optimizer for individual Greenplum databases with the ALTER DATABASE command. For example, this command enables GPORCA for the database *test\_db*.
 
 ```
 > ALTER DATABASE test_db SET OPTIMIZER = ON ;

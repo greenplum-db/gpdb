@@ -71,7 +71,7 @@ Use bitmap indexes sparingly. Test and compare query performance with and withou
 
 ## Creating an Index 
 
-The `CREATE INDEX` command defines an index on a table. A B-tree index is the default index type. For example, to create a B-tree index on the column <gender\> in the table <employee\>:
+The `CREATE INDEX` command defines an index on a table. A B-tree index is the default index type. For example, to create a B-tree index on the column *gender* in the table *employee*:
 
 ```
 CREATE INDEX gender_idx ON employee (gender);
@@ -89,7 +89,7 @@ CREATE INDEX title_bmp_idx ON films USING bitmap (title);
 
 Greenplum Database indexes do not require maintenance and tuning. You can check which indexes are used by the real-life query workload. Use the `EXPLAIN` command to examine index usage for a query.
 
-The query plan shows the steps or <plan nodes\> that the database will take to answer a query and time estimates for each plan node. To examine the use of indexes, look for the following query plan node types in your `EXPLAIN` output:
+The query plan shows the steps or *plan nodes* that the database will take to answer a query and time estimates for each plan node. To examine the use of indexes, look for the following query plan node types in your `EXPLAIN` output:
 
 -   **Index Scan** - A scan of an index.
 -   **Bitmap Heap Scan** - Retrieves all

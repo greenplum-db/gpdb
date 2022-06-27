@@ -56,7 +56,7 @@ This procedure assumes that the backup set was moved off the Greenplum array to 
 5.  From the master, run the `gpdbrestore` utility. The `-R` option specifies the host name and path to a complete backup set:
 
     ```
-    $ gpdbrestore -R <archive_host:/gpdb/backups/archive/20120714 -e <dbname>
+    $ gpdbrestore -R <archive_host>:/gpdb/backups/archive/20120714 -e <dbname>
     ```
 
     Omit the `-e dbname` option if the database has already been created.

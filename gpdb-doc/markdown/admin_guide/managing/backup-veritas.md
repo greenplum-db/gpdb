@@ -169,7 +169,7 @@ For information about `CLIENT_READ_TIMEOUT` and the `nbgetconfig`, and `nbsetcon
 
 ## Example NetBackup Back Up and Restore Commands 
 
-This `gpcrondump` command backs up the database <customer\> and specifies a NetBackup policy and schedule that are defined on the NetBackup master server `nbu_server1`. A block size of 1024 bytes is used to transfer data to the NetBackup server.
+This `gpcrondump` command backs up the database *customer* and specifies a NetBackup policy and schedule that are defined on the NetBackup master server `nbu_server1`. A block size of 1024 bytes is used to transfer data to the NetBackup server.
 
 ```
 gpcrondump -x customer --netbackup-service-host=nbu_server1 \

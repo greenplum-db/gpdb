@@ -96,7 +96,7 @@ After you finish configuring the `snmpd.conf` file, start the system `snmpd` dae
 Then, verify the system `snmpd` daemon is running. Enter:
 
 ```
-# snmpwalk -v 1 -c <community_name localhost .1.3.6.1.2.1.1.1.0
+# snmpwalk -v 1 -c <community_name> localhost .1.3.6.1.2.1.1.1.0
 ```
 
 For example:
@@ -108,7 +108,7 @@ For example:
 If this command returns "`Timeout: No Response from localhost`", then the system `snmpd` daemon is not running. If the daemon is running, output similar to the following displays:
 
 ```screen
-SNMPv2-MIB::sysDescr.0 = STRING: Linux <hostname> 
+SNMPv2-MIB::sysDescr.0 = STRING: Linux *hostname* 
 2.6.18-92.el5 #1 SMP Tue Jun 10 18:51:06 EDT 2016 x86_64
 ```
 
@@ -132,7 +132,7 @@ SNMPv2-MIB::sysDescr.0 = STRING: Linux <hostname>
 2.  To test SNMP notifications, you can use the `snmptrapd` trap receiver. As root, enter:
 
     ```
-    # /usr/sbin/snmptrapd -m ALL -Lf ~/<filename.log
+    # /usr/sbin/snmptrapd -m ALL -Lf ~/<filename>.log
     
     ```
 
@@ -256,11 +256,11 @@ You can use the `gp_disk_free` external table in the `gp_toolkit` administrative
 
 The `gp_toolkit` administrative schema contains several views that you can use to determine the disk space usage for a distributed Greenplum Database database, schema, table, or index.
 
-For a list of the available sizing views for checking database object sizes and disk space, see the <Greenplum Database Reference Guide\>.
+For a list of the available sizing views for checking database object sizes and disk space, see the *Greenplum Database Reference Guide*.
 
 ##### Viewing Disk Space Usage for a Database 
 
-To see the total size of a database \(in bytes\), use the <gp\_size\_of\_database\> view in the <gp\_toolkit\> administrative schema. For example:
+To see the total size of a database \(in bytes\), use the *gp\_size\_of\_database* view in the *gp\_toolkit* administrative schema. For example:
 
 ```
 => SELECT * FROM gp_toolkit.gp_size_of_database 
@@ -270,7 +270,7 @@ To see the total size of a database \(in bytes\), use the <gp\_size\_of\_databas
 
 ##### Viewing Disk Space Usage for a Table 
 
-The <gp\_toolkit\> administrative schema contains several views for checking the size of a table. The table sizing views list the table by object ID \(not by name\). To check the size of a table by name, you must look up the relation name \(`relname`\) in the <pg\_class\> table. For example:
+The *gp\_toolkit* administrative schema contains several views for checking the size of a table. The table sizing views list the table by object ID \(not by name\). To check the size of a table by name, you must look up the relation name \(`relname`\) in the *pg\_class* table. For example:
 
 ```
 => SELECT relname AS name, sotdsize AS size, sotdtoastsize 
@@ -284,7 +284,7 @@ For a list of the available table sizing views, see the *Greenplum Database Refe
 
 ##### Viewing Disk Space Usage for Indexes 
 
-The <gp\_toolkit\> administrative schema contains a number of views for checking index sizes. To see the total size of all index\(es\) on a table, use the <gp\_size\_of\_all\_table\_indexes\> view. To see the size of a particular index, use the <gp\_size\_of\_index\> view. The index sizing views list tables and indexes by object ID \(not by name\). To check the size of an index by name, you must look up the relation name \(`relname`\) in the <pg\_class\> table. For example:
+The *gp\_toolkit* administrative schema contains a number of views for checking index sizes. To see the total size of all index\(es\) on a table, use the *gp\_size\_of\_all\_table\_indexes* view. To see the size of a particular index, use the *gp\_size\_of\_index* view. The index sizing views list tables and indexes by object ID \(not by name\). To check the size of an index by name, you must look up the relation name \(`relname`\) in the *pg\_class* table. For example:
 
 ```
 => SELECT soisize, relname as indexname
@@ -302,7 +302,7 @@ All tables in Greenplum Database are distributed, meaning their data is divided 
 -   [Viewing Data Distribution](#topic22)
 -   [Checking for Query Processing Skew](#topic23)
 
-The <gp\_toolkit\> administrative schema also contains a number of views for checking data distribution skew on a table. For information about how to check for uneven data distribution, see the *Greenplum Database Reference Guide*.
+The *gp\_toolkit* administrative schema also contains a number of views for checking data distribution skew on a table. For information about how to check for uneven data distribution, see the *Greenplum Database Reference Guide*.
 
 #### Viewing a Table's Distribution Key 
 
@@ -327,7 +327,7 @@ To see the data distribution of a table's rows \(the number of rows on each segm
 
 ```
 =# SELECT gp_segment_id, count(*) 
-   FROM <table_name GROUP BY gp_segment_id;
+   FROM <table_name> GROUP BY gp_segment_id;
 
 ```
 
@@ -340,8 +340,8 @@ When a query is being processed, all segments should have equal workloads to ens
 Query processing workload can be skewed if the table's data distribution policy and the query predicates are not well matched. To check for processing skew, you can run a query such as:
 
 ```
-=# SELECT gp_segment_id, count(*) FROM <table_name
-   WHERE <column='<value' GROUP BY gp_segment_id;
+=# SELECT gp_segment_id, count(*) FROM <table_name>
+   WHERE <column>='<value>' GROUP BY gp_segment_id;
 
 ```
 
@@ -369,7 +369,7 @@ Greenplum Database tracks various metadata information in its system catalogs ab
 
 #### Viewing the Last Operation Performed 
 
-You can use the system views <pg\_stat\_operations\> and <pg\_stat\_partition\_operations\> to look up actions performed on an object, such as a table. For example, to see the actions performed on a table, such as when it was created and when it was last vacuumed and analyzed:
+You can use the system views *pg\_stat\_operations* and *pg\_stat\_partition\_operations* to look up actions performed on an object, such as a table. For example, to see the actions performed on a table, such as when it was created and when it was last vacuumed and analyzed:
 
 ```
 => SELECT schemaname as schema, objname as table, 
@@ -391,20 +391,20 @@ You can use the system views <pg\_stat\_operations\> and <pg\_stat\_partition\_o
 To see the definition of an object, such as a table or view, you can use the `\d+` meta-command when working in `psql`. For example, to see the definition of a table:
 
 ```
-=> \d+ <mytable
+=> \d+ <mytable>
 
 ```
 
 ### Viewing Session Memory Usage Information 
 
-You can create and use the <session\_level\_memory\_consumption\> view that provides information about the current memory utilization for sessions that are running queries on Greenplum Database. The view contains session information and information such as the database that the session is connected to, the query that the session is currently running, and memory consumed by the session processes.
+You can create and use the *session\_level\_memory\_consumption* view that provides information about the current memory utilization for sessions that are running queries on Greenplum Database. The view contains session information and information such as the database that the session is connected to, the query that the session is currently running, and memory consumed by the session processes.
 
 -   [Creating the session\_level\_memory\_consumption View](#topic_nby_j1b_dq)
 -   [The session\_level\_memory\_consumption View](#topic7)
 
 #### Creating the session\_level\_memory\_consumption View 
 
-To create the <session\_level\_memory\_consumption\> view in a Greenplum Database, run the script `$GPHOME/share/postgresql/contrib/gp_session_state.sql` once for each database. For example, to install the view in the database `testdb`, use this command:
+To create the *session\_level\_memory\_consumption* view in a Greenplum Database, run the script `$GPHOME/share/postgresql/contrib/gp_session_state.sql` once for each database. For example, to install the view in the database `testdb`, use this command:
 
 ```
 $ psql -d testdb -f $GPHOME/share/postgresql/contrib/gp_session_state.sql
@@ -412,7 +412,7 @@ $ psql -d testdb -f $GPHOME/share/postgresql/contrib/gp_session_state.sql
 
 #### The session\_level\_memory\_consumption View 
 
-The <session\_level\_memory\_consumption\> view provides information about memory consumption and idle time for sessions that are running SQL queries.
+The *session\_level\_memory\_consumption* view provides information about memory consumption and idle time for sessions that are running SQL queries.
 
 When resource queue-based resource management is active, the column `is_runaway` indicates whether Greenplum Database considers the session a runaway session based on the vmem memory consumption of the session's queries. Under the resource queue-based resource management scheme, Greenplum Database considers the session a runaway when the queries consume an excessive amount of memory. The Greenplum Database server configuration parameter `runaway_detector_activation_percent` governs the conditions under which Greenplum Database considers a session a runaway session.
 
@@ -438,15 +438,15 @@ The `is_runaway`, `runaway_vmem_mb`, and `runaway_command_cnt` columns are not a
 
 ### Viewing Query Workfile Usage Information 
 
-The Greenplum Database administrative schema <gp\_toolkit\> contains views that display information about Greenplum Database workfiles. Greenplum Database creates workfiles on disk if it does not have sufficient memory to execute the query in memory. This information can be used for troubleshooting and tuning queries. The information in the views can also be used to specify the values for the Greenplum Database configuration parameters `gp_workfile_limit_per_query` and `gp_workfile_limit_per_segment`.
+The Greenplum Database administrative schema *gp\_toolkit* contains views that display information about Greenplum Database workfiles. Greenplum Database creates workfiles on disk if it does not have sufficient memory to execute the query in memory. This information can be used for troubleshooting and tuning queries. The information in the views can also be used to specify the values for the Greenplum Database configuration parameters `gp_workfile_limit_per_query` and `gp_workfile_limit_per_segment`.
 
-These are the views in the schema <gp\_toolkit\>:
+These are the views in the schema *gp\_toolkit*:
 
 -   The gp\_workfile\_entries view contains one row for each operator using disk space for workfiles on a segment at the current time.
 -   The gp\_workfile\_usage\_per\_query view contains one row for each query using disk space for workfiles on a segment at the current time.
 -   The gp\_workfile\_usage\_per\_segment view contains one row for each segment. Each row displays the total amount of disk space used for workfiles on the segment at the current time.
 
-For information about using <gp\_toolkit\>, see [Using gp\_toolkit](#topic31).
+For information about using *gp\_toolkit*, see [Using gp\_toolkit](#topic31).
 
 ## Viewing the Database Server Log Files 
 
@@ -514,7 +514,7 @@ $ gpssh -f seg_host_file
 
 ## Using gp\_toolkit 
 
-Use the Greenplum Database administrative schema <gp\_toolkit\> to query the system catalogs, log files, and operating environment for system status information. The `gp_toolkit` schema contains several views you can access using SQL commands. The <gp\_toolkit\> schema is accessible to all database users. Some objects require superuser permissions. Use a command similar to the following to add the <gp\_toolkit\> schema to your schema search path:
+Use the Greenplum Database administrative schema *gp\_toolkit* to query the system catalogs, log files, and operating environment for system status information. The `gp_toolkit` schema contains several views you can access using SQL commands. The *gp\_toolkit* schema is accessible to all database users. Some objects require superuser permissions. Use a command similar to the following to add the *gp\_toolkit* schema to your schema search path:
 
 ```
 => ALTER ROLE myrole SET search_path TO myschema,gp_toolkit;

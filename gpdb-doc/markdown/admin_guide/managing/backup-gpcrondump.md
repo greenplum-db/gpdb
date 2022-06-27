@@ -24,7 +24,7 @@ gpcrondump <mydb> -u </backups>
 
 The `gpcrondump` utility creates the `db_dumps` subdirectory in the specified directory. If there is more than one primary segment per host, all of the segments on the host write their backup files to the same directory. This differs from the default, where each segment writes backups to its own data directory. This can be used to consolidate backups to a single directory or mounted storage device.
 
-In the `db_dumps` directory, backups are saved to a directory in the format <YYYYMMDD\>, for example `data\_directory/db_dumps/20151012` for a backup created on October 12, 2015. The backup file names in the directory contain a full timestamp for the backup in the format <YYYYMMDDHHMMSS\>, for example `gp_dump_0_2_20151012195916.gz`. The `gpdbrestore` command uses the most recent backup by default but you can specify an earlier backup to restore.
+In the `db_dumps` directory, backups are saved to a directory in the format *YYYYMMDD*, for example `data\_directory/db_dumps/20151012` for a backup created on October 12, 2015. The backup file names in the directory contain a full timestamp for the backup in the format *YYYYMMDDHHMMSS*, for example `gp_dump_0_2_20151012195916.gz`. The `gpdbrestore` command uses the most recent backup by default but you can specify an earlier backup to restore.
 
 The utility creates backup files with this file name format.
 
@@ -32,13 +32,13 @@ The utility creates backup files with this file name format.
 <prefix_>gp_dump_<content>_<dbid>_<timestamp>
 ```
 
-The `content` and `dbid` are identifiers for the Greenplum Database segment instances that are assigned by Greenplum Database. For information about the identifiers, see the Greenplum Database system catalog table <gp\_id\> in the *Greenplum Database Reference Guide*.
+The `content` and `dbid` are identifiers for the Greenplum Database segment instances that are assigned by Greenplum Database. For information about the identifiers, see the Greenplum Database system catalog table *gp\_id* in the *Greenplum Database Reference Guide*.
 
 If you include the `-g` option, `gpcrondump` saves the configuration files with the backup. These configuration files are dumped in the master or segment data directory to `db_dumps/YYYYMMDD/config_files_timestamp.tar`. If `--ddboost` is specified, the backup is located on the default storage unit in the directory specified by `--ddboost-backupdir` when the Data Domain Boost credentials were set. The `-G` option backs up global objects such as roles and tablespaces to a file in the master backup directory named `gp_global_-1_1_timestamp`.
 
 If `--ddboost` is specified, the backup is located on the default storage unit in the directory specified by `--ddboost-backupdir` when the Data Domain Boost credentials were set.
 
-There are many more `gpcrondump` options available to configure backups. Refer to the <Greenplum Utility Reference Guide\> for information about all of the available options. See [Backing Up Databases with Data Domain Boost](backup-ddboost.html) for details of backing up with Data Domain Boost.
+There are many more `gpcrondump` options available to configure backups. Refer to the *Greenplum Utility Reference Guide* for information about all of the available options. See [Backing Up Databases with Data Domain Boost](backup-ddboost.html) for details of backing up with Data Domain Boost.
 
 **Warning:** Backing up a database with `gpcrondump` while simultaneously running `ALTER TABLE` might cause `gpcrondump` to fail.
 

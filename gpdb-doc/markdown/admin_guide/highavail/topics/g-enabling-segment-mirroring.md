@@ -19,24 +19,24 @@ Mirror segments allow database queries to fail over to a backup segment if the p
 
 ## To add segment mirrors to an existing system \(different hosts from primaries\) 
 
-1.  Ensure the Greenplum Database software is installed on all hosts. See the <Greenplum Database Installation Guide\> for detailed installation instructions.
+1.  Ensure the Greenplum Database software is installed on all hosts. See the *Greenplum Database Installation Guide* for detailed installation instructions.
 2.  Allocate the data storage area for mirror data on all segment hosts.
 3.  Use `gpssh-exkeys` to ensure the segment hosts can SSH and SCP to each other without a password prompt.
 4.  Create a configuration file that lists the host names, ports, and data directories on which to create mirrors. To create a sample configuration file to use as a starting point, run:
 
     ```
-    $ gpaddmirrors -o <filename          
+    $ gpaddmirrors -o <filename>          
     ```
 
     The format of the mirror configuration file is:
 
     ```
-    filespaceOrder=[<filespace1_fsname[:<filespace2_fsname:...] 
-    <mirror[<content]=<content:<address:<port:<mir_replication_port:
-    <pri_replication_port:<fselocation[:<fselocation:...]
+    filespaceOrder=[<filespace1_fsname>[:<filespace2_fsname>:...] 
+    <mirror>[<content>]=<content>:<address>:<port>:<mir_replication_port>:
+    <pri_replication_port>:<fselocation>[:<fselocation>:...]
     ```
 
-    For example, a configuration for two segment hosts and two segments per host, with no additional filespaces configured besides the default <pg\_system\> filespace:
+    For example, a configuration for two segment hosts and two segments per host, with no additional filespaces configured besides the default *pg\_system* filespace:
 
     ```
     filespaceOrder=
@@ -50,7 +50,7 @@ Mirror segments allow database queries to fail over to a backup segment if the p
 5.  Run the `gpaddmirrors` utility to enable mirroring in your Greenplum Database system:
 
     ```
-    $ gpaddmirrors -i <mirror_config_file
+    $ gpaddmirrors -i <mirror_config_file>
                    
     ```
 

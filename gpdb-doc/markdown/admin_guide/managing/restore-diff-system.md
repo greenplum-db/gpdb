@@ -55,7 +55,7 @@ Segment dump files contain a `COPY` command for each table followed by the data 
       | egrep "SET search_path|SELECT pg_catalog.setval" > schema_path_and_seq_next_val
     ```
 
-    After extracting the information, use the Greenplum Database `psql` utility to update the sequences in the database. This example command updates the sequence information in the database <test\_restore\>:
+    After extracting the information, use the Greenplum Database `psql` utility to update the sequences in the database. This example command updates the sequence information in the database *test\_restore*:
 
     ```
     psql test_restore -f schema_path_and_seq_next_val

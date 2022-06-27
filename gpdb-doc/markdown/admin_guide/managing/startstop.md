@@ -44,7 +44,7 @@ The `gpstop` utility with the `-r` option can stop and then restart Greenplum Da
 
 Reload changes to Greenplum Database configuration files without interrupting the system.
 
-The `gpstop` utility can reload changes to the pg\_hba.conf configuration file and to <runtime\> parameters in the master postgresql.conf file and pg\_hba.conf file without service interruption. Active sessions pick up changes when they reconnect to the database. Many server configuration parameters require a full system restart \(`gpstop -r`\) to activate. For information about server configuration parameters, see the *Greenplum Database Reference Guide*.
+The `gpstop` utility can reload changes to the pg\_hba.conf configuration file and to *runtime* parameters in the master postgresql.conf file and pg\_hba.conf file without service interruption. Active sessions pick up changes when they reconnect to the database. Many server configuration parameters require a full system restart \(`gpstop -r`\) to activate. For information about server configuration parameters, see the *Greenplum Database Reference Guide*.
 
 -   Reload configuration file changes without shutting down the system using the `gpstop` utility:
 

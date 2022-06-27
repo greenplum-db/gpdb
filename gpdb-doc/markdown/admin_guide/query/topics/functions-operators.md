@@ -30,7 +30,7 @@ SELECT foo();
 
 ```
 
-If a statement has a `FROM` clause containing a distributed table <and\> the function in the `FROM` clause returns a set of rows, the statement can run on the segments:
+If a statement has a `FROM` clause containing a distributed table *and* the function in the `FROM` clause returns a set of rows, the statement can run on the segments:
 
 ```
 SELECT * from foo();
@@ -68,7 +68,7 @@ Greenplum Database includes JSON processing functions that manipulate values the
 |[Mathematical Functions and Operators](https://www.postgresql.org/docs/8.3/static/functions-math.html)|randomsetseed
 
 | | |
-|[String Functions and Operators](https://www.postgresql.org/docs/8.3/static/functions-string.html)|<All built-in conversion functions\>|convertpg\_client\_encoding
+|[String Functions and Operators](https://www.postgresql.org/docs/8.3/static/functions-string.html)|*All built-in conversion functions*|convertpg\_client\_encoding
 
 | |
 |[Binary String Functions and Operators](https://www.postgresql.org/docs/8.3/static/functions-binarystring.html)| | | |
@@ -97,20 +97,20 @@ now
 
 | | |
 |[Conditional Expressions](https://www.postgresql.org/docs/8.3/static/functions-conditional.html)| | | |
-|[Array Functions and Operators](https://www.postgresql.org/docs/8.3/static/functions-array.html)| |<All array functions\>| |
+|[Array Functions and Operators](https://www.postgresql.org/docs/8.3/static/functions-array.html)| |*All array functions*| |
 |[Aggregate Functions](https://www.postgresql.org/docs/8.3/static/functions-aggregate.html)| | | |
 |[Subquery Expressions](https://www.postgresql.org/docs/8.3/static/functions-subquery.html)| | | |
 |[Row and Array Comparisons](https://www.postgresql.org/docs/8.3/static/functions-comparisons.html)| | | |
 |[Set Returning Functions](https://www.postgresql.org/docs/8.3/static/functions-srf.html)|generate\_series| | |
-|[System Information Functions](https://www.postgresql.org/docs/8.3/static/functions-info.html)| |<All session information functions\> <All access privilege inquiry functions\>
+|[System Information Functions](https://www.postgresql.org/docs/8.3/static/functions-info.html)| |*All session information functions* *All access privilege inquiry functions*
 
-<All schema visibility inquiry functions\>
+*All schema visibility inquiry functions*
 
-<All system catalog information functions\>
+*All system catalog information functions*
 
-<All comment information functions\>
+*All comment information functions*
 
-<All transaction ids and snapshots\>
+*All transaction ids and snapshots*
 
 | |
 |[System Administration Functions](https://www.postgresql.org/docs/8.3/static/functions-admin.html)|set\_configpg\_cancel\_backend
@@ -208,30 +208,30 @@ pg\_stat\_file
 
 ## Window Functions 
 
-The following built-in window functions are Greenplum extensions to the PostgreSQL database. All window functions are <immutable\>. For more information about window functions, see [Window Expressions](defining-queries.html).
+The following built-in window functions are Greenplum extensions to the PostgreSQL database. All window functions are *immutable*. For more information about window functions, see [Window Expressions](defining-queries.html).
 
 |Function|Return Type|Full Syntax|Description|
 |--------|-----------|-----------|-----------|
 |`cume_dist()`|`double precision`|`CUME_DIST() OVER ( [PARTITION BY` expr `] ORDER BY` expr `)`|Calculates the cumulative distribution of a value in a group of values. Rows with equal values always evaluate to the same cumulative distribution value.|
 |`dense_rank()`|`bigint`|`DENSE_RANK () OVER ( [PARTITION BY` expr `] ORDER BY` expr `)`|Computes the rank of a row in an ordered group of rows without skipping rank values. Rows with equal values are given the same rank value.|
 |`first_value(<expr>)`|same as input expr type|`FIRST_VALUE(` expr `) OVER ( [PARTITION BY` expr `] ORDER BY` expr `[ROWS|RANGE` frame\_expr `] )`|Returns the first value in an ordered set of values.|
-|`lag(<expr> [,<offset>] [,<default>])`|same as input <expr\> type|`LAG(` <expr\> `[,` <offset\> `] [,` <default\> `]) OVER ( [PARTITION BY` <expr\> `] ORDER BY` <expr\> `)`|Provides access to more than one row of the same table without doing a self join. Given a series of rows returned from a query and a position of the cursor, `LAG` provides access to a row at a given physical offset prior to that position. The default `offset` is 1. <default\> sets the value that is returned if the offset goes beyond the scope of the window. If <default\> is not specified, the default value is null.|
-|`last_value(<expr>`\)|same as input <expr\> type|`LAST_VALUE(<expr>) OVER ( [PARTITION BY <expr>] ORDER BY <expr> [ROWS|RANGE <frame_expr>] )`|Returns the last value in an ordered set of values.|
-|``lead(<expr> [,<offset>] [,<default>])``|same as input <expr\> type|`LEAD(<expr >[,<offset>] [,<expr><default>]) OVER ( [PARTITION BY <expr>] ORDER BY <expr> )`|Provides access to more than one row of the same table without doing a self join. Given a series of rows returned from a query and a position of the cursor, `lead` provides access to a row at a given physical offset after that position. If <offset\> is not specified, the default offset is 1. <default\> sets the value that is returned if the offset goes beyond the scope of the window. If <default\> is not specified, the default value is null.|
-|`ntile(<expr>)`|`bigint`|`NTILE(<expr>) OVER ( [PARTITION BY <expr>] ORDER BY <expr> )`|Divides an ordered data set into a number of buckets \(as defined by <expr\>\) and assigns a bucket number to each row.|
+|`lag(<expr> [,<offset>] [,<default>])`|same as input *expr* type|`LAG(` *expr* `[,` *offset* `] [,` *default* `]) OVER ( [PARTITION BY` *expr* `] ORDER BY` *expr* `)`|Provides access to more than one row of the same table without doing a self join. Given a series of rows returned from a query and a position of the cursor, `LAG` provides access to a row at a given physical offset prior to that position. The default `offset` is 1. *default* sets the value that is returned if the offset goes beyond the scope of the window. If *default* is not specified, the default value is null.|
+|`last_value(<expr>`\)|same as input *expr* type|`LAST_VALUE(<expr>) OVER ( [PARTITION BY <expr>] ORDER BY <expr> [ROWS|RANGE <frame_expr>] )`|Returns the last value in an ordered set of values.|
+|``lead(<expr> [,<offset>] [,<default>])``|same as input *expr* type|`LEAD(<expr >[,<offset>] [,<expr><default>]) OVER ( [PARTITION BY <expr>] ORDER BY <expr> )`|Provides access to more than one row of the same table without doing a self join. Given a series of rows returned from a query and a position of the cursor, `lead` provides access to a row at a given physical offset after that position. If *offset* is not specified, the default offset is 1. *default* sets the value that is returned if the offset goes beyond the scope of the window. If *default* is not specified, the default value is null.|
+|`ntile(<expr>)`|`bigint`|`NTILE(<expr>) OVER ( [PARTITION BY <expr>] ORDER BY <expr> )`|Divides an ordered data set into a number of buckets \(as defined by *expr*\) and assigns a bucket number to each row.|
 |`percent_rank()`|`double precision`|`PERCENT_RANK () OVER ( [PARTITION BY <expr>] ORDER BY <expr >)`|Calculates the rank of a hypothetical row `R` minus 1, divided by 1 less than the number of rows being evaluated \(within a window partition\).|
-|`rank()`|`bigint`|`RANK () OVER ( [PARTITION BY <expr>] ORDER BY <expr)`|Calculates the rank of a row in an ordered group of values. Rows with equal values for the ranking criteria receive the same rank. The number of tied rows are added to the rank number to calculate the next rank value. Ranks may not be consecutive numbers in this case.|
+|`rank()`|`bigint`|`RANK () OVER ( [PARTITION BY <expr>] ORDER BY <expr>)`|Calculates the rank of a row in an ordered group of values. Rows with equal values for the ranking criteria receive the same rank. The number of tied rows are added to the rank number to calculate the next rank value. Ranks may not be consecutive numbers in this case.|
 |`row_number()`|`bigint`|`ROW_NUMBER () OVER ( [PARTITION BY <expr>] ORDER BY <expr >)`|Assigns a unique number to each row to which it is applied \(either each row in a window partition or each row of the query\).|
 
 ## Advanced Aggregate Functions 
 
-The following built-in advanced aggregate functions are Greenplum extensions of the PostgreSQL database. These functions are <immutable\>. Greenplum Database does not support the PostgreSQL ordered-set aggregate functions.
+The following built-in advanced aggregate functions are Greenplum extensions of the PostgreSQL database. These functions are *immutable*. Greenplum Database does not support the PostgreSQL ordered-set aggregate functions.
 
 **Note:** The Greenplum MADlib Extension for Analytics provides additional advanced functions to perform statistical analysis and machine learning with Greenplum Database data. See [Greenplum MADlib Extension for Analytics](../../../ref_guide/extensions/madlib.html) in the *Greenplum Database Reference Guide*.
 
 |Function|Return Type|Full Syntax|Description|
 |--------|-----------|-----------|-----------|
-|`MEDIAN (<expr>)`|`timestamp, timestamptz, interval, float`|`MEDIAN (<expression>)` <Example:\>
+|`MEDIAN (<expr>)`|`timestamp, timestamptz, interval, float`|`MEDIAN (<expression>)` *Example:*
 
  ```
 SELECT department_id, MEDIAN(salary) 
@@ -240,7 +240,7 @@ GROUP BY department_id;
 ```
 
 |Can take a two-dimensional array as input. Treats such arrays as matrices.|
-|`sum(array[])`|`smallint[], int[], bigint[], float[]`|`sum(array[[1,2],[3,4]])` <Example:\>
+|`sum(array[])`|`smallint[], int[], bigint[], float[]`|`sum(array[[1,2],[3,4]])` *Example:*
 
  ```
 CREATE TABLE mymatrix (myvalue int[]);

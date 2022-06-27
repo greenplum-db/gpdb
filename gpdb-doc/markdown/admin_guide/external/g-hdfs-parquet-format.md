@@ -235,7 +235,7 @@ For writable external tables, you can add parameters after the file specified in
 |
 |pagesize|\> 1024 Bytes|Write only|1 MB|
 |rowgroupsize|\> 1024 Bytes|Write only|8 MB|
-|parquetversion <or\> pqversion|`v1`, `v2`|Write only|`v1`|
+|parquetversion *or* pqversion|`v1`, `v2`|Write only|`v1`|
 |codec|`UNCOMPRESSED`, `GZIP`, `LZO`, `snappy`|Write only|`UNCOMPRESSED`|
 |dictionaryenable1|`true`, `false`|Write only|false|
 |dictionarypagesize1|\> 1024 Bytes|Write only|512 KB|

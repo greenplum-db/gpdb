@@ -131,7 +131,7 @@ Resource groups that you configure with `CPUSET` have a higher priority on CPU r
 
 When you configure `CPUSET` for a resource group, Greenplum Database disables `CPU_RATE_LIMIT` for the group and sets the value to -1.
 
-**Note:** You must configure `CPUSET` for a resource group <after\> you have enabled resource group-based resource management for your Greenplum Database cluster.
+**Note:** You must configure `CPUSET` for a resource group *after* you have enabled resource group-based resource management for your Greenplum Database cluster.
 
 ### Assigning CPU Resources by Percentage 
 
@@ -187,7 +187,7 @@ Resource group global shared memory is available only to resource groups that yo
 
 When available, Greenplum Database allocates global shared memory to a transaction after first allocating slot and resource group shared memory \(if applicable\). Greenplum Database allocates resource group global shared memory to transactions on a first-come first-served basis.
 
-**Note:** Greenplum Database tracks, but does not actively monitor, transaction memory usage in resource groups. If the memory usage for a resource group exceeds its fixed memory allotment, a transaction in the resource group fails when <all\> of these conditions are met:
+**Note:** Greenplum Database tracks, but does not actively monitor, transaction memory usage in resource groups. If the memory usage for a resource group exceeds its fixed memory allotment, a transaction in the resource group fails when *all* of these conditions are met:
 
 -   No available resource group shared memory exists.
 -   No available global shared memory exists.
@@ -425,23 +425,23 @@ Keep in mind that the `CPU_RATE_LIMIT` and `MEMORY_LIMIT` values for the default
 
 ## Creating Resource Groups 
 
-<When you create a resource group for a role\>, you provide a name, a CPU resource allocation mode, and a memory limit. You can optionally provide a concurrent transaction limit and memory shared quota and spill ratio. Use the [CREATE RESOURCE GROUP](../ref_guide/sql_commands/CREATE_RESOURCE_GROUP.html) command to create a new resource group.
+*When you create a resource group for a role*, you provide a name, a CPU resource allocation mode, and a memory limit. You can optionally provide a concurrent transaction limit and memory shared quota and spill ratio. Use the [CREATE RESOURCE GROUP](../ref_guide/sql_commands/CREATE_RESOURCE_GROUP.html) command to create a new resource group.
 
 When you create a resource group for a role, you must provide `CPU_RATE_LIMIT` or `CPUSET` and `MEMORY_LIMIT` limit values. These limits identify the percentage of Greenplum Database resources to allocate to this resource group. You specify a `MEMORY_LIMIT` to reserve a fixed amount of memory for the resource group. If you specify a `MEMORY_LIMIT` of 0, Greenplum Database uses global shared memory to fulfill all memory requirements for the resource group.
 
-For example, to create a resource group named <rgroup1\> with a CPU limit of 20 and a memory limit of 25:
+For example, to create a resource group named *rgroup1* with a CPU limit of 20 and a memory limit of 25:
 
 ```
-=# CREATE RESOURCE GROUP <rgroup1 WITH (CPU_RATE_LIMIT=20, MEMORY_LIMIT=25);
+=# CREATE RESOURCE GROUP <rgroup1> WITH (CPU_RATE_LIMIT=20, MEMORY_LIMIT=25);
 
 ```
 
 The CPU limit of 20 is shared by every role to which `rgroup1` is assigned. Similarly, the memory limit of 25 is shared by every role to which `rgroup1` is assigned. `rgroup1` utilizes the default `MEMORY_AUDITOR` `vmtracker` and the default `CONCURRENCY` setting of 20.
 
-<When you create a resource group for an external component\>, you must provide `CPU_RATE_LIMIT` or `CPUSET` and `MEMORY_LIMIT` limit values. You must also provide the `MEMORY_AUDITOR` and explicitly set `CONCURRENCY` to zero \(0\). For example, to create a resource group named <rgroup\_extcomp\> for which you reserve CPU core 1 and assign a memory limit of 15:
+*When you create a resource group for an external component*, you must provide `CPU_RATE_LIMIT` or `CPUSET` and `MEMORY_LIMIT` limit values. You must also provide the `MEMORY_AUDITOR` and explicitly set `CONCURRENCY` to zero \(0\). For example, to create a resource group named *rgroup\_extcomp* for which you reserve CPU core 1 and assign a memory limit of 15:
 
 ```
-=# CREATE RESOURCE GROUP <rgroup_extcomp WITH (MEMORY_AUDITOR=cgroup, CONCURRENCY=0,
+=# CREATE RESOURCE GROUP <rgroup_extcomp> WITH (MEMORY_AUDITOR=cgroup, CONCURRENCY=0,
      CPUSET='1', MEMORY_LIMIT=15);
 
 ```
@@ -449,9 +449,9 @@ The CPU limit of 20 is shared by every role to which `rgroup1` is assigned. Simi
 The [ALTER RESOURCE GROUP](../ref_guide/sql_commands/ALTER_RESOURCE_GROUP.html) command updates the limits of a resource group. To change the limits of a resource group, specify the new values that you want for the group. For example:
 
 ```
-=# ALTER RESOURCE GROUP <rg_role_light SET CONCURRENCY 7;
-=# ALTER RESOURCE GROUP <exec SET MEMORY_LIMIT 25;
-=# ALTER RESOURCE GROUP <rgroup1 SET CPUSET '2,4';
+=# ALTER RESOURCE GROUP <rg_role_light> SET CONCURRENCY 7;
+=# ALTER RESOURCE GROUP <exec> SET MEMORY_LIMIT 25;
+=# ALTER RESOURCE GROUP <rgroup1> SET CPUSET '2,4';
 
 ```
 
@@ -462,7 +462,7 @@ The [DROP RESOURCE GROUP](../ref_guide/sql_commands/DROP_RESOURCE_GROUP.html) co
 To drop a resource group:
 
 ```
-=# DROP RESOURCE GROUP <exec; 
+=# DROP RESOURCE GROUP <exec>; 
 ```
 
 ## Configuring Automatic Query Termination 
@@ -480,8 +480,8 @@ When you create a resource group with the default `MEMORY_AUDITOR` `vmtracker`, 
 Use the `ALTER ROLE` or `CREATE ROLE` commands to assign a resource group to a role. For example:
 
 ```
-=# ALTER ROLE <bill RESOURCE GROUP <rg_light;
-=# CREATE ROLE <mary RESOURCE GROUP <exec;
+=# ALTER ROLE <bill> RESOURCE GROUP <rg_light>;
+=# CREATE ROLE <mary> RESOURCE GROUP <exec>;
 
 ```
 
@@ -492,7 +492,7 @@ You can assign a resource group to one or more roles. If you have defined a role
 If you wish to remove a resource group assignment from a role and assign the role the default group, change the role's group name assignment to `NONE`. For example:
 
 ```
-=# ALTER ROLE <mary RESOURCE GROUP NONE;
+=# ALTER ROLE <mary> RESOURCE GROUP NONE;
 
 ```
 

@@ -42,7 +42,7 @@ SELECT sum(n) FROM t;
 
 ```
 
-The required form of a recursive `WITH` clause is a <non-recursive term\>, followed by a `UNION` \(or `UNION ALL`\), and then a *recursive term*, where only the <recursive term\> can contain a reference to the query output.
+The required form of a recursive `WITH` clause is a *non-recursive term*, followed by a `UNION` \(or `UNION ALL`\), and then a *recursive term*, where only the *recursive term* can contain a reference to the query output.
 
 ```
 <non_recursive_term> UNION [ ALL ] <recursive_term>
@@ -50,10 +50,10 @@ The required form of a recursive `WITH` clause is a <non-recursive term\>, follo
 
 A recursive `WITH` query is executed as follows:
 
-1.  Evaluate the non-recursive term. For `UNION` \(but not `UNION ALL`\), discard duplicate rows. Include all remaining rows in the result of the recursive query, and also place them in a temporary <working table\>.
+1.  Evaluate the non-recursive term. For `UNION` \(but not `UNION ALL`\), discard duplicate rows. Include all remaining rows in the result of the recursive query, and also place them in a temporary *working table*.
 2.  As long as the working table is not empty, repeat these steps:
-    1.  Evaluate the recursive term, substituting the current contents of the working table for the recursive self-reference. For `UNION` \(but not `UNION ALL`\), discard duplicate rows and rows that duplicate any previous result row. Include all remaining rows in the result of the recursive query, and also place them in a temporary <intermediate table\>.
-    2.  Replace the contents of the <working table\> with the contents of the <intermediate table\>, then empty the <intermediate table\>.
+    1.  Evaluate the recursive term, substituting the current contents of the working table for the recursive self-reference. For `UNION` \(but not `UNION ALL`\), discard duplicate rows and rows that duplicate any previous result row. Include all remaining rows in the result of the recursive query, and also place them in a temporary *intermediate table*.
+    2.  Replace the contents of the *working table* with the contents of the *intermediate table*, then empty the *intermediate table*.
 
 **Note:** Strictly speaking, the process is iteration not recursion, but `RECURSIVE` is the terminology chosen by the SQL standards committee.
 

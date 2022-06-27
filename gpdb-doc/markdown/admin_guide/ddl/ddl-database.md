@@ -2,15 +2,15 @@
 
 A Greenplum Database system is a single instance of Greenplum Database. There can be several separate Greenplum Database systems installed, but usually just one is selected by environment variable settings. See your Greenplum administrator for details.
 
-There can be multiple databases in a Greenplum Database system. This is different from some database management systems \(such as Oracle\) where the database instance <is\> the database. Although you can create many databases in a Greenplum system, client programs can connect to and access only one database at a time — you cannot cross-query between databases.
+There can be multiple databases in a Greenplum Database system. This is different from some database management systems \(such as Oracle\) where the database instance *is* the database. Although you can create many databases in a Greenplum system, client programs can connect to and access only one database at a time — you cannot cross-query between databases.
 
 **Parent topic:**[Defining Database Objects](../ddl/ddl.html)
 
 ## About Template Databases 
 
-Each new database you create is based on a <template\>. Greenplum provides a default database, <template1\>. Use <postgres\> to connect to Greenplum Database for the first time. Greenplum Database uses <template1\> to create databases unless you specify another template. Do not create any objects in <template1\> unless you want those objects to be in every database you create.
+Each new database you create is based on a *template*. Greenplum provides a default database, *template1*. Use *postgres* to connect to Greenplum Database for the first time. Greenplum Database uses *template1* to create databases unless you specify another template. Do not create any objects in *template1* unless you want those objects to be in every database you create.
 
-Greenplum Database uses another database templates, <template0\>, internally. Do not drop or modify <template0\>. You can use <template0\> to create a completely clean database containing only the standard objects predefined by Greenplum Database at initialization, especially if you modified <template1\>.
+Greenplum Database uses another database templates, *template0*, internally. Do not drop or modify *template0*. You can use *template0* to create a completely clean database containing only the standard objects predefined by Greenplum Database at initialization, especially if you modified *template1*.
 
 ## Creating a Database 
 
@@ -22,7 +22,7 @@ The `CREATE DATABASE` command creates a new database. For example:
 
 To create a database, you must have privileges to create a database or be a Greenplum Database superuser. If you do not have the correct privileges, you cannot create a database. Contact your Greenplum Database administrator to either give you the necessary privilege or to create a database for you.
 
-You can also use the client program `createdb` to create a database. For example, running the following command in a command line terminal connects to Greenplum Database using the provided host name and port and creates a database named <mydatabase\>:
+You can also use the client program `createdb` to create a database. For example, running the following command in a command line terminal connects to Greenplum Database using the provided host name and port and creates a database named *mydatabase*:
 
 ```
 $ createdb -h masterhost -p 5432 mydatabase
@@ -36,7 +36,7 @@ Some objects, such as roles, are shared by all the databases in a Greenplum Data
 
 ### Cloning a Database 
 
-By default, a new database is created by cloning the standard system database template, <template1\>. Any database can be used as a template when creating a new database, thereby providing the capability to 'clone' or copy an existing database and all objects and data within that database. For example:
+By default, a new database is created by cloning the standard system database template, *template1*. Any database can be used as a template when creating a new database, thereby providing the capability to 'clone' or copy an existing database and all objects and data within that database. For example:
 
 ```
 => CREATE DATABASE new_dbname TEMPLATE old_dbname;
@@ -77,7 +77,7 @@ The `DROP DATABASE` command drops \(or deletes\) a database. It removes the syst
 => DROP DATABASE mydatabase;
 ```
 
-You can also use the client program `dropdb` to drop a database. For example, the following command connects to Greenplum Database using the provided host name and port and drops the database <mydatabase\>:
+You can also use the client program `dropdb` to drop a database. For example, the following command connects to Greenplum Database using the provided host name and port and drops the database *mydatabase*:
 
 ```
 $ dropdb -h masterhost -p 5432 mydatabase

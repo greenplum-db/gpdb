@@ -12,7 +12,7 @@ Greenplum Database uses the PostgreSQL Multiversion Concurrency Control \(MVCC\)
 
 The MVCC model depends on the system's ability to manage multiple versions of data rows. A query operates on a snapshot of the database at the start of the query. A snapshot is the set of rows that are visible at the beginning of a statement or transaction. The snapshot ensures the query has a consistent and valid view of the database for the duration of its execution.
 
-Each transaction is assigned a unique <transaction ID\> \(XID\), an incrementing 32-bit value. When a new transaction starts, it is assigned the next XID. An SQL statement that is not enclosed in a transaction is treated as a single-statement transaction—the `BEGIN` and `COMMIT` are added implicitly. This is similar to autocommit in some database systems.
+Each transaction is assigned a unique *transaction ID* \(XID\), an incrementing 32-bit value. When a new transaction starts, it is assigned the next XID. An SQL statement that is not enclosed in a transaction is treated as a single-statement transaction—the `BEGIN` and `COMMIT` are added implicitly. This is similar to autocommit in some database systems.
 
 **Note:** Greenplum Database assigns XID values only to transactions that involve DDL or DML operations, which are typically the only transactions that require an XID.
 
@@ -20,7 +20,7 @@ When a transaction inserts a row, the XID is saved with the row in the `xmin` sy
 
 Multi-statement transactions must also record which command within a transaction inserted a row \(`cmin`\) or deleted a row \(`cmax`\) so that the transaction can see changes made by previous commands in the transaction. The command sequence is only relevant during the transaction, so the sequence is reset to 0 at the beginning of a transaction.
 
-XID is a property of the database. Each segment database has its own XID sequence that cannot be compared to the XIDs of other segment databases. The master coordinates distributed transactions with the segments using a cluster-wide <session ID number\>, called `gp_session_id`. The segments maintain a mapping of distributed transaction IDs with their local XIDs. The master coordinates distributed transactions across all of the segment with the two-phase commit protocol. If a transaction fails on any one segment, it is rolled back on all segments.
+XID is a property of the database. Each segment database has its own XID sequence that cannot be compared to the XIDs of other segment databases. The master coordinates distributed transactions with the segments using a cluster-wide *session ID number*, called `gp_session_id`. The segments maintain a mapping of distributed transaction IDs with their local XIDs. The master coordinates distributed transactions across all of the segment with the two-phase commit protocol. If a transaction fails on any one segment, it is rolled back on all segments.
 
 You can see the `xmin`, `xmax`, `cmin`, and `cmax` columns for any row with a `SELECT` statement:
 
@@ -32,7 +32,7 @@ Because you run the `SELECT` command on the master, the XIDs are the distributed
 
 ## Transaction ID Wraparound 
 
-The MVCC model uses transaction IDs \(XIDs\) to determine which rows are visible at the beginning of a query or transaction. The XID is a 32-bit value, so a database could theoretically execute over four billion transactions before the value overflows and wraps to zero. However, Greenplum Database uses <modulo 232\> arithmetic with XIDs, which allows the transaction IDs to wrap around, much as a clock wraps at twelve o'clock. For any given XID, there could be about two billion past XIDs and two billion future XIDs. This works until a version of a row persists through about two billion transactions, when it suddenly appears to be a new row. To prevent this, Greenplum has a special XID, called `FrozenXID`, which is always considered older than any regular XID it is compared with. The `xmin` of a row must be replaced with `FrozenXID` within two billion transactions, and this is one of the functions the `VACUUM` command performs.
+The MVCC model uses transaction IDs \(XIDs\) to determine which rows are visible at the beginning of a query or transaction. The XID is a 32-bit value, so a database could theoretically execute over four billion transactions before the value overflows and wraps to zero. However, Greenplum Database uses *modulo 232* arithmetic with XIDs, which allows the transaction IDs to wrap around, much as a clock wraps at twelve o'clock. For any given XID, there could be about two billion past XIDs and two billion future XIDs. This works until a version of a row persists through about two billion transactions, when it suddenly appears to be a new row. To prevent this, Greenplum has a special XID, called `FrozenXID`, which is always considered older than any regular XID it is compared with. The `xmin` of a row must be replaced with `FrozenXID` within two billion transactions, and this is one of the functions the `VACUUM` command performs.
 
 Vacuuming the database at least every two billion transactions prevents XID wraparound. Greenplum Database monitors the transaction ID and warns if a `VACUUM` operation is required.
 
@@ -56,9 +56,9 @@ The server configuration parameters `xid_warn_limit` and `xid_stop_limit` contro
 
 The SQL standard describes three phenomena that can occur when database transactions run concurrently:
 
--   <Dirty read\> – a transaction can read uncommitted data from another concurrent transaction.
--   <Non-repeatable read\> – a row read twice in a transaction can change because another concurrent transaction committed changes after the transaction began.
--   <Phantom read\> – a query executed twice in the same transaction can return two different sets of rows because another concurrent transaction added rows.
+-   *Dirty read* – a transaction can read uncommitted data from another concurrent transaction.
+-   *Non-repeatable read* – a row read twice in a transaction can change because another concurrent transaction committed changes after the transaction began.
+-   *Phantom read* – a query executed twice in the same transaction can return two different sets of rows because another concurrent transaction added rows.
 
 The SQL standard defines four transaction isolation modes that database systems must support:
 
@@ -71,13 +71,13 @@ The SQL standard defines four transaction isolation modes that database systems 
 
 The Greenplum Database SQL commands allow you to request `READ UNCOMMITTED`, `READ COMMITTED`, or `SERIALIZABLE`. Greenplum Database treats `READ UNCOMMITTED` the same as `READ COMMITTED`. Requesting `REPEATABLE READ` produces an error; use `SERIALIZABLE` instead. The default isolation mode is `READ COMMITTED`.
 
-The difference between `READ COMMITTED` and `SERIALIZABLE` is that in `READ COMMITTED` mode, each statement in a transaction sees only rows committed before the <statement\> started, while in `SERIALIZABLE` mode, all statements in a transaction see only rows committed before the <transaction\> started.
+The difference between `READ COMMITTED` and `SERIALIZABLE` is that in `READ COMMITTED` mode, each statement in a transaction sees only rows committed before the *statement* started, while in `SERIALIZABLE` mode, all statements in a transaction see only rows committed before the *transaction* started.
 
-The `READ COMMITTED` isolation mode permits greater concurrency and better performance than the `SERIALIZABLE` mode. It allows *non-repeatable reads*, where the values in a row retrieved twice in a transaction can differ because another concurrent transaction has committed changes since the transaction began. `READ COMMITTED` mode also permits <phantom reads\>, where a query executed twice in the same transaction can return two different sets of rows.
+The `READ COMMITTED` isolation mode permits greater concurrency and better performance than the `SERIALIZABLE` mode. It allows *non-repeatable reads*, where the values in a row retrieved twice in a transaction can differ because another concurrent transaction has committed changes since the transaction began. `READ COMMITTED` mode also permits *phantom reads*, where a query executed twice in the same transaction can return two different sets of rows.
 
 The `SERIALIZABLE` isolation mode prevents both non-repeatable reads and phantom reads, but at the cost of concurrency and performance. Each concurrent transaction has a consistent view of the database taken at the beginning of execution. A concurrent transaction that attempts to modify data modified by another transaction is rolled back. Applications that execute transactions in `SERIALIZABLE` mode must be prepared to handle transactions that fail due to serialization errors. If `SERIALIZABLE` isolation mode is not required by the application, it is better to use `READ COMMITTED` mode.
 
-The SQL standard specifies that concurrent serializable transactions produce the same database state they would produce if executed sequentially. The MVCC snapshot isolation model prevents dirty reads, non-repeatable reads, and phantom reads without expensive locking, but there are other interactions that can occur between some `SERIALIZABLE` transactions in Greenplum Database that prevent them from being truly serializable. These anomalies can often be attributed to the fact that Greenplum Database does not perform <predicate locking\>, which means that a write in one transaction can affect the result of a previous read in another concurrent transaction.
+The SQL standard specifies that concurrent serializable transactions produce the same database state they would produce if executed sequentially. The MVCC snapshot isolation model prevents dirty reads, non-repeatable reads, and phantom reads without expensive locking, but there are other interactions that can occur between some `SERIALIZABLE` transactions in Greenplum Database that prevent them from being truly serializable. These anomalies can often be attributed to the fact that Greenplum Database does not perform *predicate locking*, which means that a write in one transaction can affect the result of a previous read in another concurrent transaction.
 
 Transactions that run concurrently should be examined to identify interactions that are not prevented by disallowing concurrent updates of the same data. Problems identified can be prevented by using explicit table locks or by requiring the conflicting transactions to update a dummy row introduced to represent the conflict.
 
@@ -103,7 +103,7 @@ The default transaction isolation mode can be changed for a session by setting t
 
 Updating or deleting a row leaves an expired version of the row in the table. When an expired row is no longer referenced by any active transactions, it can be removed and the space it occupied can be reused. The `VACUUM` command marks the space used by expired rows for reuse.
 
-When expired rows accumulate in a table, the disk files must be extended to accommodate new rows. Performance suffers due to the increased disk I/O required to execute queries. This condition is called <bloat\> and it should be managed by regularly vacuuming tables.
+When expired rows accumulate in a table, the disk files must be extended to accommodate new rows. Performance suffers due to the increased disk I/O required to execute queries. This condition is called *bloat* and it should be managed by regularly vacuuming tables.
 
 The `VACUUM` command \(without `FULL`\) can run concurrently with other queries. It marks the space previously used by the expired rows as free. If the amount of remaining free space is significant, it adds the page to the table's free space map. When Greenplum Database later needs space for new rows, it first consults the table's free space map to find pages with available space. If none are found, new pages will be appended to the file.
 
@@ -114,10 +114,10 @@ The `VACUUM FULL` command rewrites the table without expired rows, reducing the 
 The free space map resides in shared memory and keeps track of free space for all tables and indexes. Each table or index uses about 60 bytes of memory and each page with free space consumes six bytes. Two system configuration parameters configure the size of the free space map:
 
 **max\_fsm\_pages**
-:   Sets the maximum number of disk pages that can be added to the shared free space map. Six bytes of shared memory are consumed for each page slot. The default is 200000. This parameter must be set to at least 16 times the value of <max\_fsm\_relations\>.
+:   Sets the maximum number of disk pages that can be added to the shared free space map. Six bytes of shared memory are consumed for each page slot. The default is 200000. This parameter must be set to at least 16 times the value of *max\_fsm\_relations*.
 
 **max\_fsm\_relations**
-:   Sets the maximum number of relations that will be tracked in the shared memory free space map. This parameter should be set to a value larger than the total number of <tables + indexes + system tables\>. The default is 1000. About 60 bytes of memory are consumed for each relation per segment instance. It is better to set the parameter too high than too low.
+:   Sets the maximum number of relations that will be tracked in the shared memory free space map. This parameter should be set to a value larger than the total number of *tables + indexes + system tables*. The default is 1000. About 60 bytes of memory are consumed for each relation per segment instance. It is better to set the parameter too high than too low.
 
 If the free space map is undersized, some disk pages with available space will not be added to the map, and that space cannot be reused until at least the next `VACUUM` command runs. This causes files to grow.
 
@@ -129,7 +129,7 @@ Query the `pg_class` system table to find out how many pages a table is using ac
 SELECT relname, relpages, reltuples FROM pg_class WHERE relname='<tablename>';
 ```
 
-Another useful tool is the `gp_bloat_diag` view in the `gp_toolkit` schema, which identifies bloat in tables by comparing the actual number of pages used by a table to the expected number. See "The gp\_toolkit Administrative Schema" in the <Greenplum Database Reference Guide\> for more about `gp_bloat_diag`.
+Another useful tool is the `gp_bloat_diag` view in the `gp_toolkit` schema, which identifies bloat in tables by comparing the actual number of pages used by a table to the expected number. See "The gp\_toolkit Administrative Schema" in the *Greenplum Database Reference Guide* for more about `gp_bloat_diag`.
 
 -   **[Example of Managing Transaction IDs](../intro/mvcc_example.html)**  
 

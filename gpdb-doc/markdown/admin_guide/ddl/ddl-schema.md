@@ -6,7 +6,7 @@ Schemas logically organize objects and data in a database. Schemas allow you to 
 
 ## The Default "Public" Schema 
 
-Every database has a default schema named <public\>. If you do not create any schemas, objects are created in the <public\> schema. All database roles \(users\) have `CREATE` and `USAGE` privileges in the <public\> schema. When you create a schema, you grant privileges to your users to allow access to the schema.
+Every database has a default schema named *public*. If you do not create any schemas, objects are created in the *public* schema. All database roles \(users\) have `CREATE` and `USAGE` privileges in the *public* schema. When you create a schema, you grant privileges to your users to allow access to the schema.
 
 ## Creating a Schema 
 
@@ -42,7 +42,7 @@ To specify an object's location in a database, use the schema-qualified name. Fo
 
 ```
 
-You can set the `search_path` configuration parameter to specify the order in which to search the available schemas for objects. The schema listed first in the search path becomes the <default\> schema. If a schema is not specified, objects are created in the default schema.
+You can set the `search_path` configuration parameter to specify the order in which to search the available schemas for objects. The schema listed first in the search path becomes the *default* schema. If a schema is not specified, objects are created in the default schema.
 
 ### Setting the Schema Search Path 
 

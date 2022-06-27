@@ -20,7 +20,7 @@ See the *Greenplum Database Utility Guide* for complete syntax and usage informa
 -   The source and destination Greenplum clusters must both be version 4.2 or higher.
 -   At least one Greenplum instance must include the `gptransfer` utility in its distribution. If neither the source or destination includes `gptransfer`, you must upgrade one of the clusters to use `gptransfer`.
 -   Run the `gptransfer` utility either from the source or the destination cluster.
--   If you are transferring data between two different clusters, the number of <segment instances\> in the destination cluster must be greater than or equal to the number of segment <hosts\> in the source cluster. The number of segment hosts in the destination cluster may be smaller than the number of segment hosts in the source, but the data will transfer at a slower rate.
+-   If you are transferring data between two different clusters, the number of *segment instances* in the destination cluster must be greater than or equal to the number of segment *hosts* in the source cluster. The number of segment hosts in the destination cluster may be smaller than the number of segment hosts in the source, but the data will transfer at a slower rate.
 -   The segment hosts in both clusters must have network connectivity with each other.
 -   Every host in both clusters must be able to connect to every other host with certificate-authenticated SSH. You can use the `gpssh_exkeys` utility to exchange public keys between the hosts of both clusters.
 
@@ -40,11 +40,11 @@ See the *Greenplum Database Utility Guide* for complete syntax and usage informa
 
 ## Fast Mode and Slow Mode 
 
-`gptransfer` sets up data transfer using the `gpfdist` parallel file serving utility, which serves the data evenly to the destination segments. Running more `gpfdist` processes increases the parallelism and the data transfer rate. When the destination cluster has the same or a greater number of segments than the source cluster, `gptransfer` sets up one named pipe and one `gpfdist` process for each source segment. This is the configuration for optimal data transfer rates and is called <fast mode\>. The following figure illustrates a setup on a segment host when the destination cluster has at least as many segments as the source cluster.
+`gptransfer` sets up data transfer using the `gpfdist` parallel file serving utility, which serves the data evenly to the destination segments. Running more `gpfdist` processes increases the parallelism and the data transfer rate. When the destination cluster has the same or a greater number of segments than the source cluster, `gptransfer` sets up one named pipe and one `gpfdist` process for each source segment. This is the configuration for optimal data transfer rates and is called *fast mode*. The following figure illustrates a setup on a segment host when the destination cluster has at least as many segments as the source cluster.
 
 ![](../graphics/gptransfer-fast.png)
 
-The configuration of the input end of the named pipes differs when there are fewer segments in the destination cluster than in the source cluster. `gptransfer` handles this alternative setup automatically. The difference in configuration means that transferring data into a destination cluster with fewer segments than the source cluster is not as fast as transferring into a destination cluster of the same or greater size. It is called <slow mode\> because there are fewer `gpfdist` processes serving the data to the destination cluster, although the transfer is still quite fast with one `gpfdist` per segment host.
+The configuration of the input end of the named pipes differs when there are fewer segments in the destination cluster than in the source cluster. `gptransfer` handles this alternative setup automatically. The difference in configuration means that transferring data into a destination cluster with fewer segments than the source cluster is not as fast as transferring into a destination cluster of the same or greater size. It is called *slow mode* because there are fewer `gpfdist` processes serving the data to the destination cluster, although the transfer is still quite fast with one `gpfdist` per segment host.
 
 When the destination cluster is smaller than the source cluster, there is one named pipe per segment host and all segments on the host send their data through it. The segments on the source host write their data to a writable external web table connected to a `gpfdist` process on the input end of the named pipe. This consolidates the table data into a single named pipe. A `gpfdist` process on the output of the named pipe serves the consolidated data to the destination cluster. The following figure illustrates this configuration.
 
@@ -98,7 +98,7 @@ By default, `gptransfer` fails if you attempt to transfer a table that already e
 
 ```
 [INFO]:-Validating transfer table set...
-[CRITICAL]:- gptransfer failed. (Reason='Table <database.schema.table exists in database <database .') exiting...
+[CRITICAL]:- gptransfer failed. (Reason='Table <database.schema.table> exists in database <database> .') exiting...
 ```
 
 Override this behavior with the `--skip-existing`, `--truncate`, or `--drop` options.
@@ -124,7 +124,7 @@ The `-x` option enables table locking. An exclusive lock is placed on the source
 
 ## Validation 
 
-By default, `gptransfer` does not validate the data transferred. You can request validation using the `--validate=<type>` option. The validation <type\> can be one of the following:
+By default, `gptransfer` does not validate the data transferred. You can request validation using the `--validate=<type>` option. The validation *type* can be one of the following:
 
 -   `count` – Compares the row counts for the tables in the source and destination databases.
 -   `md5` – Sorts tables on both source and destination, and then performs a row-by-row comparison of the MD5 hashes of the sorted rows.

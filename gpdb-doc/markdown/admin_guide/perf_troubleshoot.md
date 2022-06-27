@@ -20,7 +20,7 @@ Failed segments can indicate a hardware failure, such as a failed disk drive or 
 
 ### Checking for Active Sessions \(Workload\) 
 
-The <pg\_stat\_activity\> system catalog view shows one row per server process; it shows the database OID, database name, process ID, user OID, user name, current query, time at which the current query began execution, time at which the process was started, client address, and port number. To obtain the most information about the current system workload, query this view as the database superuser. For example:
+The *pg\_stat\_activity* system catalog view shows one row per server process; it shows the database OID, database name, process ID, user OID, user name, current query, time at which the current query began execution, time at which the process was started, client address, and port number. To obtain the most information about the current system workload, query this view as the database superuser. For example:
 
 ```
 SELECT * FROM pg_stat_activity;
@@ -31,9 +31,9 @@ Note that the information does not update instantaneously.
 
 ### Checking for Locks \(Contention\) 
 
-The <pg\_locks\> system catalog view allows you to see information about outstanding locks. If a transaction is holding a lock on an object, any other queries must wait for that lock to be released before they can continue. This may appear to the user as if a query is hanging.
+The *pg\_locks* system catalog view allows you to see information about outstanding locks. If a transaction is holding a lock on an object, any other queries must wait for that lock to be released before they can continue. This may appear to the user as if a query is hanging.
 
-Examine <pg\_locks\> for ungranted locks to help identify contention between database client sessions. <pg\_locks\> provides a global view of all locks in the database system, not only those relevant to the current database. You can join its relation column against `pg_class.oid` to identify locked relations \(such as tables\), but this works correctly only for relations in the current database. You can join the `pid` column to the `pg_stat_activity.procpid` to see more information about the session holding or waiting to hold a lock. For example:
+Examine *pg\_locks* for ungranted locks to help identify contention between database client sessions. *pg\_locks* provides a global view of all locks in the database system, not only those relevant to the current database. You can join its relation column against `pg_class.oid` to identify locked relations \(such as tables\), but this works correctly only for relations in the current database. You can join the `pid` column to the `pg_stat_activity.procpid` to see more information about the session holding or waiting to hold a lock. For example:
 
 ```
 SELECT locktype, database, c.relname, l.relation, 
@@ -45,14 +45,14 @@ a.current_query
 
 ```
 
-If you use resource groups, queries that are waiting will also show in <pg\_locks\>. To see how many queries are waiting to run in a resource group, use the< gp\_resgroup\_status \>system catalog view. For example:
+If you use resource groups, queries that are waiting will also show in *pg\_locks*. To see how many queries are waiting to run in a resource group, use the*gp\_resgroup\_status*system catalog view. For example:
 
 ```
 SELECT * FROM gp_toolkit.gp_resgroup_status;
 
 ```
 
-Similarly, if you use resource queues, queries that are waiting in a queue also show in <pg\_locks\>. To see how many queries are waiting to run from a resource queue, use the< gp\_resqueue\_status \>system catalog view. For example:
+Similarly, if you use resource queues, queries that are waiting in a queue also show in *pg\_locks*. To see how many queries are waiting to run from a resource queue, use the*gp\_resqueue\_status*system catalog view. For example:
 
 ```
 SELECT * FROM gp_toolkit.gp_resqueue_status;
@@ -63,7 +63,7 @@ SELECT * FROM gp_toolkit.gp_resqueue_status;
 
 You can use system monitoring utilities such as `ps`, `top`, `iostat`, `vmstat`, `netstat` and so on to monitor database activity on the hosts in your Greenplum Database array. These tools can help identify Greenplum Database processes \(`postgres` processes\) currently running on the system and the most resource intensive tasks with regards to CPU, memory, disk I/O, or network activity. Look at these system statistics to identify queries that degrade database performance by overloading the system and consuming excessive resources. Greenplum Database's management tool `gpssh` allows you to run these system monitoring commands on several hosts simultaneously.
 
-You can create and use the Greenplum Database <session\_level\_memory\_consumption\> view that provides information about the current memory utilization and idle time for sessions that are running queries on Greenplum Database. For information about the view, see [Viewing Session Memory Usage Information](managing/monitor.html).
+You can create and use the Greenplum Database *session\_level\_memory\_consumption* view that provides information about the current memory utilization and idle time for sessions that are running queries on Greenplum Database. For information about the view, see [Viewing Session Memory Usage Information](managing/monitor.html).
 
 You can enable a dedicated database, `gpperfmon`, in which data collection agents running on each segment host save query and system utilization metrics. Refer to the `gperfmon_install` management utility reference in the *Greenplum Database Management Utility Reference Guide* for help creating the `gpperfmon` database and managing the agents. See documentation for the tables and views in the `gpperfmon` database in the *Greenplum Database Reference Guide*.
 
@@ -77,7 +77,7 @@ When an out of memory event occurs during query execution, the Greenplum Databas
 
 ## Investigating Error Messages 
 
-Greenplum Database log messages are written to files in the `pg_log` directory within the master's or segment's data directory. Because the master log file contains the most information, you should always check it first. Log files roll over daily and use the naming convention: `gpdb-`<`YYYY`\>`-`<`MM`\>`-`<`DD_hhmmss.csv`\>. To locate the log files on the master host:
+Greenplum Database log messages are written to files in the `pg_log` directory within the master's or segment's data directory. Because the master log file contains the most information, you should always check it first. Log files roll over daily and use the naming convention: `gpdb-`*`YYYY`*`-`*`MM`*`-`*`DD_hhmmss.csv`*. To locate the log files on the master host:
 
 ```
 $ cd $MASTER_DATA_DIRECTORY/pg_log
@@ -87,8 +87,8 @@ $ cd $MASTER_DATA_DIRECTORY/pg_log
 Log lines have the format of:
 
 ```
-<timestamp | <user | <database | <statement_id | <con#<cmd# 
-|:-<LOG_LEVEL: *log\_message
+<timestamp> | <user> | <database> | <statement_id> | <con#><cmd#> 
+|:-<LOG_LEVEL>: *log\_message
 *
 ```
 
@@ -99,7 +99,7 @@ $ gplogfilter -t
 
 ```
 
-To search for related log entries in the segment log files, you can run `gplogfilter` on the segment hosts using `gpssh`. You can identify corresponding log entries by the <`statement_id`\> or <`con`\>`#` \(session identifier\). For example, to search for log messages in the segment log files containing the string `con6` and save output to a file:
+To search for related log entries in the segment log files, you can run `gplogfilter` on the segment hosts using `gpssh`. You can identify corresponding log entries by the *`statement_id`* or *`con`*`#` \(session identifier\). For example, to search for log messages in the segment log files containing the string `con6` and save output to a file:
 
 ```
 gpssh -f seg_hosts_file -e 'source 

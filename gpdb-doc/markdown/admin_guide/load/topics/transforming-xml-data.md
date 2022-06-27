@@ -1,6 +1,6 @@
 # Transforming External Data with gpfdist and gpload 
 
-The `gpfdist` parallel file server allows you to set up transformations that enable Greenplum Database external tables to read and write files in formats that are not supported with the `CREATE EXTERNAL TABLE` command's `FORMAT` clause. An <input\> transformation reads a file in the foreign data format and outputs rows to `gpfdist` in the CSV or other text format specified in the external table's `FORMAT` clause. An <output\> transformation receives rows from `gpfdist` in text format and converts them to the foreign data format.
+The `gpfdist` parallel file server allows you to set up transformations that enable Greenplum Database external tables to read and write files in formats that are not supported with the `CREATE EXTERNAL TABLE` command's `FORMAT` clause. An *input* transformation reads a file in the foreign data format and outputs rows to `gpfdist` in the CSV or other text format specified in the external table's `FORMAT` clause. An *output* transformation receives rows from `gpfdist` in text format and converts them to the foreign data format.
 
 **Note:** `gpfdist` and `gpload` are compatible only with the Greenplum Database major version in which they are shipped. For example, a `gpfdist` utility that is installed with Greenplum Database 4.x cannot be used with Greenplum Database 5.x or 6.x.
 
@@ -24,7 +24,7 @@ Transformations are configured in a YAML-formatted configuration file passed to 
 
 If you want to load the external data into a table in the Greenplum database, you can use the `gpload` utility to automate the tasks to create an external table, run `gpfdist`, and load the transformed data into the database table.
 
-Accessing data in external XML files from within the database is a common example requiring transformation. The following diagram shows <gpfdist\> performing a transformation on XML files on an ETL server.
+Accessing data in external XML files from within the database is a common example requiring transformation. The following diagram shows *gpfdist* performing a transformation on XML files on an ETL server.
 
 ![](../../graphics/ext-tables-xml.png "External Tables using XML Transformations")
 
@@ -43,7 +43,7 @@ To prepare for the transformation project:
 2.  Examine the source files and note the file structure and element names.
 3.  Choose the elements to import and decide if any other limits are appropriate.
 
-For example, the following XML file, <prices.xml\>, is a simple XML file that contains price records. Each price record contains two fields: an item number and a price.
+For example, the following XML file, *prices.xml*, is a simple XML file that contains price records. Each price record contains two fields: an item number and a price.
 
 ```
 <?xml version="1.0" encoding="ISO-8859-1" ?>
@@ -79,7 +79,7 @@ In the price example, the next step is to transform the XML data into a two-colu
 
 ```
 
-The following STX transform, called <input\_transform.stx\>, performs the data transformation.
+The following STX transform, called *input\_transform.stx*, performs the data transformation.
 
 ```
 <?xml version="1.0"?>
@@ -117,7 +117,7 @@ This STX transform declares two temporary variables, `itemnumber` and `price`, a
 
 The gpfdist configuration is specified as a YAML 1.1 document. It contains rules that gpfdist uses to select a transformation to apply when loading or extracting data.
 
-This example gpfdist configuration contains the following items that are required for the <prices.xml\> transformation scenario:
+This example gpfdist configuration contains the following items that are required for the *prices.xml* transformation scenario:
 
 -   the `config.yaml` file defining `TRANSFORMATIONS`
 -   the `input_transform.sh` wrapper script, referenced in the `config.yaml` file
@@ -317,7 +317,7 @@ STDERR
 
 ## XML Transformation Examples 
 
-The following examples demonstrate the complete process for different types of XML data and STX transformations. Files and detailed instructions associated with these examples are in the GitHub repo `github.com://greenplum-db/gpdb` in the [gpMgmt/demo/gpfdist\_transform](https://github.com/greenplum-db/gpdb/blob/master/gpMgmt/demo/gpfdist_transform) directory. Read the README file in the <Before You Begin\> section before you run the examples. The README file explains how to download the example data file used in the examples.
+The following examples demonstrate the complete process for different types of XML data and STX transformations. Files and detailed instructions associated with these examples are in the GitHub repo `github.com://greenplum-db/gpdb` in the [gpMgmt/demo/gpfdist\_transform](https://github.com/greenplum-db/gpdb/blob/master/gpMgmt/demo/gpfdist_transform) directory. Read the README file in the *Before You Begin* section before you run the examples. The README file explains how to download the example data file used in the examples.
 
 ### Command-based External Web Tables 
 
@@ -354,7 +354,7 @@ The U.S. Internal Revenue Service \(IRS\) made a significant commitment to XML a
 
 XML, XML Schema and stylesheets play a role in their data representation and business workflow. The actual XML data is extracted from a ZIP file attached to a MIME "transmission file" message. For more information about MeF, see [Modernized e-File \(Overview\)](https://www.irs.gov/uac/modernized-e-file-overview) on the IRS web site.
 
-The sample XML document, <RET990EZ\_2006.xml\>, is about 350KB in size with two elements:
+The sample XML document, *RET990EZ\_2006.xml*, is about 350KB in size with two elements:
 
 -   ReturnHeader
 -   ReturnData
@@ -433,7 +433,7 @@ The oil rig information consists of a top level `<rigs>` element with multiple c
 
 The goal is to import the information for this rig into Greenplum Database.
 
-The sample document, <rig.xml\>, is about 11KB in size. The input does not contain tabs so the relevant information can be converted into records delimited with a pipe \(\|\).
+The sample document, *rig.xml*, is about 11KB in size. The input does not contain tabs so the relevant information can be converted into records delimited with a pipe \(\|\).
 
 `W-12|6507/7-A-42|xr31|Deep Drill #5|Deep Drilling Co.|John Doe|John.Doe@example.com|`
 

@@ -47,7 +47,7 @@ When approaching a performance tuning initiative, you should know your system's 
 
 Most database performance problems are caused not by the database, but by the underlying systems on which the database runs. I/O bottlenecks, memory problems, and network issues can notably degrade database performance. Knowing the baseline capabilities of your hardware and operating system \(OS\) will help you identify and troubleshoot hardware-related problems before you explore database-level or query-level tuning initiatives.
 
-See the <Greenplum Database Reference Guide\> for information about running the `gpcheckperf` utility to validate hardware and network performance.
+See the *Greenplum Database Reference Guide* for information about running the `gpcheckperf` utility to validate hardware and network performance.
 
 ### Performance Benchmarks 
 

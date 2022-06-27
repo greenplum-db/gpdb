@@ -79,7 +79,7 @@ For information about the `gpbackup` and `gprestore` utility options, see [gpbac
 
 Each backup has a timestamp taken when the backup is created. For example, if you create a backup on May 14, 2017, the backup file names contain `20170514hhmmss`. The hhmmss represents the time: hour, minute, and second.
 
-This example assumes that you have created two full backups and incremental backups of the database <mytest\>. To create the full backups, you used this command:
+This example assumes that you have created two full backups and incremental backups of the database *mytest*. To create the full backups, you used this command:
 
 ```
 gpbackup --dbname mytest --backup-dir /mybackup --leaf-partition-data

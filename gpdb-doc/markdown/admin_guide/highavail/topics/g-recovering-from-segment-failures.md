@@ -7,7 +7,7 @@ Segment host failures usually cause multiple segment failures: all primary or mi
 1.  Ensure you can connect to the segment host from the master host. For example:
 
     ```
-    $ ping <failed_seg_host_address
+    $ ping <failed_seg_host_address>
     ```
 
 2.  Troubleshoot the problem that prevents the master host from connecting to the segment host. For example, the host machine may need to be restarted or replaced.
@@ -18,8 +18,8 @@ Segment host failures usually cause multiple segment failures: all primary or mi
     ```
 
 4.  The recovery process brings up the failed segments and identifies the changed files that need to be synchronized. The process can take some time; wait for the process to complete. During this process, database write activity is suspended.
-5.  After `gprecoverseg` completes, the system goes into <Resynchronizing\> mode and begins copying the changed files. This process runs in the background while the system is online and accepting database requests.
-6.  When the resynchronization process completes, the system state is <Synchronized\>. Run the `gpstate` utility to verify the status of the resynchronization process:
+5.  After `gprecoverseg` completes, the system goes into *Resynchronizing* mode and begins copying the changed files. This process runs in the background while the system is online and accepting database requests.
+6.  When the resynchronization process completes, the system state is *Synchronized*. Run the `gpstate` utility to verify the status of the resynchronization process:
 
     ```
     $ gpstate -m
@@ -36,13 +36,13 @@ $ gpstate -e
 
 All segments must be online and fully synchronized to rebalance the system. Database sessions remain connected during rebalancing, but queries in progress are canceled and rolled back.
 
-1.  Run `gpstate -m` to ensure all mirrors are <Synchronized\>.
+1.  Run `gpstate -m` to ensure all mirrors are *Synchronized*.
 
     ```
     $ gpstate -m
     ```
 
-2.  If any mirrors are in <Resynchronizing\> mode, wait for them to complete.
+2.  If any mirrors are in *Resynchronizing* mode, wait for them to complete.
 3.  Run gprecoverseg with the -r option to return the segments to their preferred roles.
 
     ```
@@ -92,7 +92,7 @@ If a segment host is not recoverable and you have lost one or more segments, rec
 1.  Ensure you can connect to the segment host from the master host. For example:
 
     ```
-    $ ping <failed_seg_host_address
+    $ ping <failed_seg_host_address>
     ```
 
 2.  Troubleshoot the problem that is preventing the master host from connecting to the segment host. For example, the host machine may need to be restarted.

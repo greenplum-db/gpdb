@@ -66,7 +66,7 @@ GPORCA improves on these types of queries against partitioned tables:
     SELECT * FROM sales WHERE yr_qtr BETWEEN 201601 AND 201704 ;
     ```
 
--   Joins involving partitioned tables. In this example, the partitioned dimension table <date\_dim\> is joined with fact table <catalog\_sales\>:
+-   Joins involving partitioned tables. In this example, the partitioned dimension table *date\_dim* is joined with fact table *catalog\_sales*:
 
     ```
     SELECT * FROM catalog_sales

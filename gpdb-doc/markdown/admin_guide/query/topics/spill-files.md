@@ -11,12 +11,12 @@ Reasons that cause a large number of spill files to be generated include:
 -   Data skew is present in the queried data.
 -   The amount memory allocated for the query is too low.
 
-You might be able to run the query successfully by changing the query, changing the data distribution, or changing the system memory configuration. You can use the <gp\_workfile\_\*\> views to see spill file usage information. You can control the maximum amount of memory that can used by a query with the Greenplum Database server configuration parameters `max_statement_mem`, `statement_mem`, or through resource queues.
+You might be able to run the query successfully by changing the query, changing the data distribution, or changing the system memory configuration. You can use the *gp\_workfile\_\** views to see spill file usage information. You can control the maximum amount of memory that can used by a query with the Greenplum Database server configuration parameters `max_statement_mem`, `statement_mem`, or through resource queues.
 
 [Monitoring a Greenplum System](../../managing/monitor.html) contains the following information:
 
 -   Information about skew and how to check for data skew
--   Information about using the <gp\_workfile\_\* views\>
+-   Information about using the *gp\_workfile\_\* views*
 
 For information about server configuration parameters, see the *Greenplum Database Reference Guide*. For information about resource queues, see [Using Resource Queues](../../workload_mgmt.html).
 

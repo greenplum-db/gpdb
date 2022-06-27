@@ -62,19 +62,19 @@ Declare custom protocols with the SQL command `CREATE TRUSTED PROTOCOL`, then us
 -   Allow a user to create a readable external table with a trusted protocol
 
     ```
-    GRANT SELECT ON PROTOCOL <<protocol name> TO <<user name>;
+    GRANT SELECT ON PROTOCOL <<protocol name>> TO <<user name>>;
     ```
 
 -   Allow a user to create a writable external table with a trusted protocol
 
     ```
-    GRANT INSERT ON PROTOCOL <<protocol name> TO <<user name>;
+    GRANT INSERT ON PROTOCOL <<protocol name>> TO <<user name>>;
     ```
 
 -   Allow a user to create readable and writable external tables with a trusted protocol
 
     ```
-    GRANT ALL ON PROTOCOL <<protocol name> TO <<user name>;
+    GRANT ALL ON PROTOCOL <<protocol name>> TO <<user name>>;
     ```
 
 

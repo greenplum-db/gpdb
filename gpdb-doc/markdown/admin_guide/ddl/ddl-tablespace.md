@@ -2,7 +2,7 @@
 
 Tablespaces allow database administrators to have multiple file systems per machine and decide how to best use physical storage to store database objects. They are named locations within a filespace in which you can create objects. Tablespaces allow you to assign different storage for frequently and infrequently used database objects or to control the I/O performance on certain database objects. For example, place frequently-used tables on file systems that use high performance solid-state drives \(SSD\), and place other tables on standard hard drives.
 
-A tablespace requires a file system location to store its database files. In Greenplum Database, the master and each segment \(primary and mirror\) require a distinct storage location. The collection of file system locations for all components in a Greenplum system is a <filespace\>. Filespaces can be used by one or more tablespaces.
+A tablespace requires a file system location to store its database files. In Greenplum Database, the master and each segment \(primary and mirror\) require a distinct storage location. The collection of file system locations for all components in a Greenplum system is a *filespace*. Filespaces can be used by one or more tablespaces.
 
 **Parent topic:**[Defining Database Objects](../ddl/ddl.html)
 
@@ -56,7 +56,7 @@ The dedicated filespace for temporary and transaction files is tracked in two se
 
 ### About Temporary and Transaction Files 
 
-Unless otherwise specified, temporary and transaction files are stored together with all user data. The default location of temporary files, <<filespace\_directory\>\>/<<tablespace\_oid\>\>/<<database\_oid\>\>/pgsql\_tmp is changed when you use `gpfilespace --movetempfiles` for the first time.
+Unless otherwise specified, temporary and transaction files are stored together with all user data. The default location of temporary files, *<filespace\_directory\>*/*<tablespace\_oid\>*/*<database\_oid\>*/pgsql\_tmp is changed when you use `gpfilespace --movetempfiles` for the first time.
 
 Also note the following information about temporary or transaction files:
 
@@ -105,7 +105,7 @@ CREATE TABLE tablename(options) TABLESPACE spacename
 
 ```
 
-For example, the following command creates a table in the tablespace <space1\>:
+For example, the following command creates a table in the tablespace *space1*:
 
 ```
 CREATE TABLE foo(i int) TABLESPACE space1;
@@ -129,11 +129,11 @@ You can use a tablespace from any database if you have appropriate privileges.
 Every Greenplum Database system has the following default tablespaces.
 
 -   `pg_global` for shared system catalogs.
--   `pg_default`, the default tablespace. Used by the <template1\> and <template0\> databases.
+-   `pg_default`, the default tablespace. Used by the *template1* and *template0* databases.
 
 These tablespaces use the system default filespace, `pg_system`, the data directory location created at system initialization.
 
-To see filespace information, look in the <pg\_filespace\> and <pg\_filespace\_entry\> catalog tables. You can join these tables with <pg\_tablespace\> to see the full definition of a tablespace. For example:
+To see filespace information, look in the *pg\_filespace* and *pg\_filespace\_entry* catalog tables. You can join these tables with *pg\_tablespace* to see the full definition of a tablespace. For example:
 
 ```
 =# SELECT spcname as tblspc, fsname as filespc, 

@@ -2,7 +2,7 @@
 
 The Greenplum Database authorization mechanism stores roles and permissions to access database objects in the database and is administered using SQL statements or command-line utilities.
 
-Greenplum Database manages database access permissions using <roles\>. The concept of roles subsumes the concepts of <users\> and <groups\>. A role can be a database user, a group, or both. Roles can own database objects \(for example, tables\) and can assign privileges on those objects to other roles to control access to the objects. Roles can be members of other roles, thus a member role can inherit the object privileges of its parent role.
+Greenplum Database manages database access permissions using *roles*. The concept of roles subsumes the concepts of *users* and *groups*. A role can be a database user, a group, or both. Roles can own database objects \(for example, tables\) and can assign privileges on those objects to other roles to control access to the objects. Roles can be members of other roles, thus a member role can inherit the object privileges of its parent role.
 
 Every Greenplum Database system contains a set of database roles \(users and groups\). Those roles are separate from the users and groups managed by the operating system on which the server runs. However, for convenience you may want to maintain a relationship between operating system user names and Greenplum Database role names, since many of the client applications use the current operating system user name as the default.
 
@@ -10,7 +10,7 @@ In Greenplum Database, users log in and connect through the master instance, whi
 
 Roles are defined at the system level, meaning they are valid for all databases in the system.
 
-In order to bootstrap the Greenplum Database system, a freshly initialized system always contains one predefined <superuser\> role \(also referred to as the system user\). This role will have the same name as the operating system user that initialized the Greenplum Database system. Customarily, this role is named `gpadmin`. In order to create more roles you first have to connect as this initial role.
+In order to bootstrap the Greenplum Database system, a freshly initialized system always contains one predefined *superuser* role \(also referred to as the system user\). This role will have the same name as the operating system user that initialized the Greenplum Database system. Customarily, this role is named `gpadmin`. In order to create more roles you first have to connect as this initial role.
 
 **Parent topic:**[Managing Greenplum Database Access](partIII.html)
 
@@ -208,7 +208,7 @@ The hash function executes when the password is set by using any of the followin
 
 The `ENCRYPTED` keyword may be omitted when the `password_encryption` system configuration parameter is `on`, which is the default value. The `password_encryption` configuration parameter determines whether clear text or hashed passwords are saved when the `ENCRYPTED` or `UNENCRYPTED` keyword is not present in the command.
 
-**Note:** The SQL command syntax and `password_encryption` configuration variable include the term <encrypt\>, but the passwords are not technically encrypted. They are <hashed\> and therefore cannot be decrypted.
+**Note:** The SQL command syntax and `password_encryption` configuration variable include the term *encrypt*, but the passwords are not technically encrypted. They are *hashed* and therefore cannot be decrypted.
 
 The hash is calculated on the concatenated clear text password and role name. The MD5 hash produces a 32-byte hexadecimal string prefixed with the characters `md5`. The hashed password is saved in the `rolpassword` column of the `pg_authid` system table.
 

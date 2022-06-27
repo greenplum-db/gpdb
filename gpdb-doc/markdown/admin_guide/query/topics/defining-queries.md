@@ -48,7 +48,7 @@ SQL constructs such as functions and operators are expressions but do not follow
 A column reference has the form:
 
 ```
-<correlation.<columnname
+<correlation>.<columnname>
 ```
 
 Here, `correlation` is the name of a table \(possibly qualified with a schema name\) or an alias for a table defined with a `FROM` clause or one of the keywords `NEW` or `OLD`. `NEW` and `OLD` can appear only in rewrite rules, but you can use other correlation names in any SQL statement. If the column name is unique across all tables in the query, you can omit the "`correlation.`" part of the column reference.
@@ -76,14 +76,14 @@ Here, the `$1` references the value of the first function argument whenever the 
 If an expression yields a value of an array type, you can extract a specific element of the array value as follows:
 
 ```
-<expression[<subscript]
+<expression>[<subscript>]
 
 ```
 
 You can extract multiple adjacent elements, called an array slice, as follows \(including the brackets\):
 
 ```
-<expression[<lower_subscript:<upper_subscript]
+<expression>[<lower_subscript>:<upper_subscript>]
 
 ```
 
@@ -112,7 +112,7 @@ $1[10:42]
 If an expression yields a value of a composite type \(row type\), you can extract a specific field of the row as follows:
 
 ```
-<expression.<fieldname
+<expression>.<fieldname>
 ```
 
 The row expression usually must be in parentheses, but you can omit these parentheses when the expression to be selected from is a table reference or positional parameter. For example:
@@ -139,21 +139,21 @@ A qualified column reference is a special case of field selection syntax.
 Operator invocations have the following possible syntaxes:
 
 ```
-<expression operator expression(binary infix operator)
+<expression operator expression>(binary infix operator)
 ```
 
 ```
-<operator expression(unary prefix operator)
+<operator expression>(unary prefix operator)
 ```
 
 ```
-<expression operator(unary postfix operator)
+<expression operator>(unary postfix operator)
 ```
 
-Where <operator\> is an operator token, one of the key words `AND`, `OR`, or `NOT`, or qualified operator name in the form:
+Where *operator* is an operator token, one of the key words `AND`, `OR`, or `NOT`, or qualified operator name in the form:
 
 ```
-OPERATOR(<schema.<operatorname)
+OPERATOR(<schema>.<operatorname>)
 ```
 
 Available operators and whether they are unary or binary depends on the operators that the system or user defines. For more information about built-in operators, see [Built-in Functions and Operators](functions-operators.html).
@@ -163,7 +163,7 @@ Available operators and whether they are unary or binary depends on the operator
 The syntax for a function call is the name of a function \(possibly qualified with a schema name\), followed by its argument list enclosed in parentheses:
 
 ```
-<function ([<expression [, <expression ... ]])
+<function> ([<expression> [, <expression> ... ]])
 ```
 
 For example, the following function call computes the square root of 2:
@@ -183,7 +183,7 @@ An aggregate expression applies an aggregate function across the rows that a que
 -   `<aggregate_name>(DISTINCT <expression> [ , ... ] )` — operates across all distinct non-null values of input rows.
 -   `<aggregate_name>(*)` — operates on all rows with values both null and non-null. Generally, this form is most useful for the `count(*)` aggregate function.
 
-Where <aggregate\_name\> is a previously defined aggregate \(possibly schema-qualified\) and <expression\> is any value expression that does not contain an aggregate expression.
+Where *aggregate\_name* is a previously defined aggregate \(possibly schema-qualified\) and *expression* is any value expression that does not contain an aggregate expression.
 
 For example, `count(*)` yields the total number of input rows, `count(f1)` yields the number of input rows in which `f1` is non-null, and`count(distinct f1)` yields the number of distinct non-null values of `f1`.
 
@@ -218,36 +218,36 @@ The following are current limitations of the aggregate expressions:
 
 Window expressions allow application developers to more easily compose complex online analytical processing \(OLAP\) queries using standard SQL commands. For example, with window expressions, users can calculate moving averages or sums over various intervals, reset aggregations and ranks as selected column values change, and express complex ratios in simple terms.
 
-A window expression represents the application of a <window function\> applied to a <window frame\>, which is defined in a special `OVER()` clause. A window partition is a set of rows that are grouped together to apply a window function. Unlike aggregate functions, which return a result value for each group of rows, window functions return a result value for every row, but that value is calculated with respect to the rows in a particular window partition. If no partition is specified, the window function is computed over the complete intermediate result set.
+A window expression represents the application of a *window function* applied to a *window frame*, which is defined in a special `OVER()` clause. A window partition is a set of rows that are grouped together to apply a window function. Unlike aggregate functions, which return a result value for each group of rows, window functions return a result value for every row, but that value is calculated with respect to the rows in a particular window partition. If no partition is specified, the window function is computed over the complete intermediate result set.
 
 Greenplum Database does not support specifying a window function as an argument to another window function.
 
 The syntax of a window expression is:
 
 ```
-<window_function ( [<expression [, ...]] ) OVER ( <window_specification )
+<window_function> ( [<expression> [, ...]] ) OVER ( <window_specification> )
 ```
 
-Where <`window_function`\> is one of the functions listed in [Table 3](functions-operators.md#in164369), <`expression`\> is any value expression that does not contain a window expression, and <`window_specification`\> is:
+Where *`window_function`* is one of the functions listed in [Table 3](functions-operators.md#in164369), *`expression`* is any value expression that does not contain a window expression, and *`window_specification`* is:
 
 ```
-[<window_name]
-[PARTITION BY <expression [, ...]]
-[[ORDER BY <expression [ASC | DESC | USING <operator] [NULLS {FIRST | LAST}] [, ...]
+[<window_name>]
+[PARTITION BY <expression >[, ...]]
+[[ORDER BY <expression> [ASC | DESC | USING <operator>] [NULLS {FIRST | LAST}] [, ...]
     [{RANGE | ROWS} 
        { UNBOUNDED PRECEDING
-       | <expression PRECEDING
+       | <expression> PRECEDING
        | CURRENT ROW
-       | BETWEEN <window_frame_bound AND <window_frame_bound }]]
+       | BETWEEN <window_frame_bound> AND <window_frame_bound> }]]
 ```
 
     and where `<window_frame_bound>` can be one of:
 
 ```
     UNBOUNDED PRECEDING
-    <expression PRECEDING
+    <expression> PRECEDING
     CURRENT ROW
-    <expression FOLLOWING
+    <expression> FOLLOWING
     UNBOUNDED FOLLOWING
 ```
 
@@ -258,7 +258,7 @@ SELECT count(*) OVER(PARTITION BY customer_id), * FROM sales;
 
 ```
 
-The `OVER` clause differentiates window functions from other aggregate or reporting functions. The `OVER` clause defines the <`window_specification`\> to which the window function is applied. A window specification has the following characteristics:
+The `OVER` clause differentiates window functions from other aggregate or reporting functions. The `OVER` clause defines the *`window_specification`* to which the window function is applied. A window specification has the following characteristics:
 
 -   The `PARTITION BY` clause defines the window partitions to which the window function is applied. If omitted, the entire result set is treated as one partition.
 -   The `ORDER BY` clause defines the expression\(s\) for sorting rows within a window partition. The `ORDER BY` clause of a window specification is separate and distinct from the `ORDER BY` clause of a regular query expression. The `ORDER BY` clause is required for the window functions that calculate rankings, as it identifies the measure\(s\) for the ranking values. For OLAP aggregations, the `ORDER BY` clause is required to use window frames \(the `ROWS` \| `RANGE` clause\).
@@ -273,7 +273,7 @@ A type cast specifies a conversion from one data type to another. A cast applied
 
 Greenplum Database supports three types of casts applied to a value expression:
 
--   <Explicit cast\> - Greenplum Database applies a cast when you explicitly specify a cast between two data types. Greenplum Database accepts two equivalent syntaxes for explicit type casts:
+-   *Explicit cast* - Greenplum Database applies a cast when you explicitly specify a cast between two data types. Greenplum Database accepts two equivalent syntaxes for explicit type casts:
 
     ```
     CAST ( expression AS type )
@@ -282,13 +282,13 @@ Greenplum Database supports three types of casts applied to a value expression:
 
     The `CAST` syntax conforms to SQL; the syntax with `::` is historical PostgreSQL usage.
 
--   <Assignment cast\> - Greenplum Database implicitly invokes a cast in assignment contexts, when assigning a value to a column of the target data type. For example, a [CREATE CAST](../../../ref_guide/sql_commands/CREATE_CAST.html) command with the `AS ASSIGNMENT` clause creates a cast that is applied implicitly in the assignment context. This example assignment cast assumes that `tbl1.f1` is a column of type `text`. The `INSERT` command is allowed because the value is implicitly cast from the `integer` to `text` type.
+-   *Assignment cast* - Greenplum Database implicitly invokes a cast in assignment contexts, when assigning a value to a column of the target data type. For example, a [CREATE CAST](../../../ref_guide/sql_commands/CREATE_CAST.html) command with the `AS ASSIGNMENT` clause creates a cast that is applied implicitly in the assignment context. This example assignment cast assumes that `tbl1.f1` is a column of type `text`. The `INSERT` command is allowed because the value is implicitly cast from the `integer` to `text` type.
 
     ```
     INSERT INTO tbl1 (f1) VALUES (42);
     ```
 
--   <Implicit cast\> - Greenplum Database implicitly invokes a cast in assignment or expression contexts. For example, a `CREATE CAST` command with the `AS IMPLICIT` clause creates an implicit cast, a cast that is applied implicitly in both the assignment and expression context. This example implicit cast assumes that `tbl1.c1` is a column of type `int`. For the calculation in the predicate, the value of `c1` is implicitly cast from `int` to a `decimal` type.
+-   *Implicit cast* - Greenplum Database implicitly invokes a cast in assignment or expression contexts. For example, a `CREATE CAST` command with the `AS IMPLICIT` clause creates an implicit cast, a cast that is applied implicitly in both the assignment and expression context. This example implicit cast assumes that `tbl1.c1` is a column of type `int`. For the calculation in the predicate, the value of `c1` is implicitly cast from `int` to a `decimal` type.
 
     ```
     SELECT * FROM tbl1 WHERE tbl1.c2 = (4.3 + tbl1.c1) ;
@@ -334,7 +334,7 @@ The following examples illustrate how to rewrite some of these types of queries 
 
 #### Example 3 - CSQ in the Select List 
 
-<Original Query\>
+*Original Query*
 
 ```
 SELECT T1.a,
@@ -344,7 +344,7 @@ FROM t1;
 
 Rewrite this query to perform an inner join with `t1` first and then perform a left join with `t1` again. The rewrite applies for only an equijoin in the correlated condition.
 
-<Rewritten Query\>
+*Rewritten Query*
 
 ```
 SELECT t1.a, dt2 FROM t1 
@@ -358,7 +358,7 @@ SELECT t1.a, dt2 FROM t1
 
 ### Example 4 - CSQs connected by OR Clauses 
 
-<Original Query\>
+*Original Query*
 
 ```
 SELECT * FROM t1 
@@ -370,7 +370,7 @@ OR x < (SELECT COUNT(*) FROM t3 WHERE t1.y = t3.y)
 
 Rewrite this query to separate it into two parts with a union on the `OR` conditions.
 
-<Rewritten Query\>
+*Rewritten Query*
 
 ```
 SELECT * FROM t1 

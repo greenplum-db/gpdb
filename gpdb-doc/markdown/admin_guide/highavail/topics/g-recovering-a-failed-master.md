@@ -13,7 +13,7 @@ If the primary master fails, log replication stops. Use the `gpstate -f` command
 
     Where `-d` specifies the data directory of the master host you are activating.
 
-    After you activate the standby, it becomes the <active\> or <primary\> master for your Greenplum Database array.
+    After you activate the standby, it becomes the *active* or *primary* master for your Greenplum Database array.
 
 3.  After the utility finishes, run `gpstate` to check the status:
 
@@ -21,12 +21,12 @@ If the primary master fails, log replication stops. Use the `gpstate -f` command
     $ gpstate -f
     ```
 
-    The newly activated master's status should be <Active\>. If you configured a new standby host, its status is <Passive\>. When a standby master is not configured, the command displays `-No entries found` and the message indicates that a standby master instance is not configured.
+    The newly activated master's status should be *Active*. If you configured a new standby host, its status is *Passive*. When a standby master is not configured, the command displays `-No entries found` and the message indicates that a standby master instance is not configured.
 
 4.  Optional: If you did not specify a new standby host when running the `gpactivatestandby` utility, use `gpinitstandby` to configure a new standby master at a later time. Run `gpinitstandby` on your active master host. For example:
 
     ```
-    $ gpinitstandby -s <new_standby_master_hostname
+    $ gpinitstandby -s <new_standby_master_hostname>
                    
     ```
 

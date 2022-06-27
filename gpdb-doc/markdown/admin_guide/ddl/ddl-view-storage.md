@@ -11,7 +11,7 @@ A view is similar to a table, both are relations - that is "something with colum
 
 For more technical information about views, see the PostgreSQL documentation about [Views and the Rule System](https://www.postgresql.org/docs/9.4/rules-views.html).
 
-Also, a view definition is <not\> stored as a string, but in the form of a query parse tree. Views are parsed when they are created, which has several consequences:
+Also, a view definition is *not* stored as a string, but in the form of a query parse tree. Views are parsed when they are created, which has several consequences:
 
 -   Object names are resolved during `CREATE VIEW`, so the current setting of `search_path` affects the view definition.
 -   Objects are referred to by their internal immutable object ID rather than by their name. Consequently, renaming an object or column referenced in a view definition can be performed without dropping the view.

@@ -93,7 +93,7 @@ To perform an update, you need:
 -   The new values of the columns
 -   One or more conditions specifying the row or rows to be updated.
 
-For example, the following command updates all products that have a price of <5\> to have a price of <10\>:
+For example, the following command updates all products that have a price of *5* to have a price of *10*:
 
 ```
 UPDATE products SET price = 10 WHERE price = 5;
@@ -109,7 +109,7 @@ Using `UPDATE` in Greenplum Database has the following restrictions:
 
 ## Deleting Rows 
 
-The `DELETE` command deletes rows from a table. Specify a `WHERE` clause to delete rows that match certain criteria. If you do not specify a `WHERE` clause, all rows in the table are deleted. The result is a valid, but empty, table. For example, to remove all rows from the products table that have a price of <10\>:
+The `DELETE` command deletes rows from a table. Specify a `WHERE` clause to delete rows that match certain criteria. If you do not specify a `WHERE` clause, all rows in the table are deleted. The result is a valid, but empty, table. For example, to remove all rows from the products table that have a price of *10*:
 
 ```
 DELETE FROM products WHERE price = 10;
@@ -156,9 +156,9 @@ The following are the Greenplum Database SQL transaction commands:
 
 Greenplum Database accepts the standard SQL transaction levels as follows:
 
--   <read uncommitted\> and <read committed \> behave like the standard <read committed\>
--   <repeatable read\> is disallowed. If the behavior of <repeatable read\> is required, use <serializable\>.
--   <serializable\> behaves in a manner similar to SQL standard <serializable\>
+-   *read uncommitted* and *read committed* behave like the standard *read committed*
+-   *repeatable read* is disallowed. If the behavior of *repeatable read* is required, use *serializable*.
+-   *serializable* behaves in a manner similar to SQL standard *serializable*
 
 The following information describes the behavior of the Greenplum transaction levels:
 
@@ -209,7 +209,7 @@ The `VACUUM` command collects table-level statistics such as the number of rows 
 
 ### Configuring the Free Space Map 
 
-Expired rows are held in the <free space map\>. The free space map must be sized large enough to hold all expired rows in your database. If not, a regular `VACUUM` command cannot reclaim space occupied by expired rows that overflow the free space map.
+Expired rows are held in the *free space map*. The free space map must be sized large enough to hold all expired rows in your database. If not, a regular `VACUUM` command cannot reclaim space occupied by expired rows that overflow the free space map.
 
 `VACUUM FULL` reclaims all expired row space, but it is an expensive operation and can take an unacceptably long time to finish on large, distributed Greenplum Database tables. If the free space map overflows, you can recreate the table with a `CREATE TABLE AS`statement and drop the old table. Using `VACUUM FULL` is discouraged.
 

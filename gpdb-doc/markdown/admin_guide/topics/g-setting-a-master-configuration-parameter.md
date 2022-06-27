@@ -1,6 +1,6 @@
 # Setting a Master Configuration Parameter 
 
-To set a master configuration parameter, set it at the Greenplum Database master instance. If it is also a <session\> parameter, you can set the parameter for a particular database, role or session. If a parameter is set at multiple levels, the most granular level takes precedence. For example, session overrides role, role overrides database, and database overrides system.
+To set a master configuration parameter, set it at the Greenplum Database master instance. If it is also a *session* parameter, you can set the parameter for a particular database, role or session. If a parameter is set at multiple levels, the most granular level takes precedence. For example, session overrides role, role overrides database, and database overrides system.
 
 -   **[Setting Parameters at the System Level](../topics/g-setting-parameters-at-the-system-level.html)**  
 

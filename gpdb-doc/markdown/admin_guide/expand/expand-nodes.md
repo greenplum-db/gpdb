@@ -93,14 +93,14 @@ First perform the process as `root`, for administration convenience, and then as
 1.  Log in as `gpadmin` and run the `gpssh-exkeys` utility referencing the host list files. For example:
 
     ```
-    # gpssh-exkeys -e /home/gpadmin/<existing_hosts_file -x 
+    # gpssh-exkeys -e /home/gpadmin/<existing_hosts_file> -x 
     /home/gpadmin/new_hosts_file
     ```
 
 2.  `gpssh-exkeys` will check the remote hosts and perform the key exchange between all hosts. Enter the `gpadmin` user password when prompted. For example:
 
     ```
-    ***Enter password for gpadmin@<hostname: <gpadmin_password>
+    ***Enter password for gpadmin@<hostname>: <gpadmin_password>
     ```
 
 
@@ -141,7 +141,7 @@ For a network divided into subnets, repeat this procedure with a separate host f
 
 ## Integrating New Hardware into the System 
 
-Before initializing the system with the new segments, shut down the system with `gpstop` to prevent user activity from skewing performance test results. Then, repeat the performance tests using host files that include <all\> nodes, existing and new:
+Before initializing the system with the new segments, shut down the system with `gpstop` to prevent user activity from skewing performance test results. Then, repeat the performance tests using host files that include *all* nodes, existing and new:
 
 -   [Verifying OS Settings](#topic19)
 -   [Validating Disk I/O and Memory Bandwidth](#topic20)

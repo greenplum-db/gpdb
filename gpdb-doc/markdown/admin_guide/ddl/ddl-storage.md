@@ -139,14 +139,14 @@ Greenplum provides built-in functions to check the compression ratio and the dis
 |--------|-----------|-----------|
 |get\_ao\_distribution\(name\)get\_ao\_distribution\(oid\)
 
-|Set of \(dbid, tuplecount\) rows|Shows the distribution of an append-optimized table's rows across the array. Returns a set of rows, each of which includes a segment <dbid\> and the number of tuples stored on the segment.|
+|Set of \(dbid, tuplecount\) rows|Shows the distribution of an append-optimized table's rows across the array. Returns a set of rows, each of which includes a segment *dbid* and the number of tuples stored on the segment.|
 |get\_ao\_compression\_ratio\(name\)get\_ao\_compression\_ratio\(oid\)
 
 |float8|Calculates the compression ratio for a compressed append-optimized table. If information is not available, this function returns a value of -1.|
 
 The compression ratio is returned as a common ratio. For example, a returned value of `3.19`, or `3.19:1`, means that the uncompressed table is slightly larger than three times the size of the compressed table.
 
-The distribution of the table is returned as a set of rows that indicate how many tuples are stored on each segment. For example, in a system with four primary segments with <dbid\> values ranging from 0 - 3, the function returns four rows similar to the following:
+The distribution of the table is returned as a set of rows that indicate how many tuples are stored on each segment. For example, in a system with four primary segments with *dbid* values ranging from 0 - 3, the function returns four rows similar to the following:
 
 ```
 =# SELECT get_ao_distribution('lineitem_comp');
@@ -224,7 +224,7 @@ where the word ENCODING is required and the storage directive has three parts:
 
 Separate multiple storage directives with a comma. Apply a storage directive to a single column or designate it as the default for all columns, as shown in the following `CREATE TABLE` clauses.
 
-<General Usage:\>
+*General Usage:*
 
 ```
 column_name   data_type ENCODING ( storage_directive [, … ] ), …  
@@ -241,7 +241,7 @@ DEFAULT COLUMN ENCODING ( storage_directive [, … ] )
 
 ```
 
-<Example:\>
+*Example:*
 
 ```
 C1 char ENCODING (compresstype=quicklz, blocksize=65536) 

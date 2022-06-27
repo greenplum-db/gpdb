@@ -178,7 +178,7 @@ When the configuration file you provide to a `CREATE WRITABLE EXTERNAL TABLE` ca
 
 S3 transparently decrypts data during read operations of encrypted files accessed via readable external tables you create using the `s3` protocol. No additional configuration is required.
 
-For further encryption configuration granularity, you may consider creating Amazon Web Services S3 <Bucket Policy\>\(s\), identifying the objects you want to encrypt and the write actions on those objects as described in the [Protecting Data Using Server-Side Encryption with Amazon S3-Managed Encryption Keys \(SSE-S3\)](http://docs.aws.amazon.com/AmazonS3/latest/dev/UsingServerSideEncryption.html) AWS documentation.
+For further encryption configuration granularity, you may consider creating Amazon Web Services S3 *Bucket Policy*\(s\), identifying the objects you want to encrypt and the write actions on those objects as described in the [Protecting Data Using Server-Side Encryption with Amazon S3-Managed Encryption Keys \(SSE-S3\)](http://docs.aws.amazon.com/AmazonS3/latest/dev/UsingServerSideEncryption.html) AWS documentation.
 
 ## s3 Protocol Proxy Support 
 

@@ -2,7 +2,7 @@
 
 This topic explains how to configure client connections and authentication for Greenplum Database.
 
-When a Greenplum Database system is first initialized, the system contains one predefined <superuser\> role. This role will have the same name as the operating system user who initialized the Greenplum Database system. This role is referred to as `gpadmin`. By default, the system is configured to only allow local connections to the database from the `gpadmin` role. If you want to allow any other roles to connect, or if you want to allow connections from remote hosts, you have to configure Greenplum Database to allow such connections. This section explains how to configure client connections and authentication to Greenplum Database.
+When a Greenplum Database system is first initialized, the system contains one predefined *superuser* role. This role will have the same name as the operating system user who initialized the Greenplum Database system. This role is referred to as `gpadmin`. By default, the system is configured to only allow local connections to the database from the `gpadmin` role. If you want to allow any other roles to connect, or if you want to allow connections from remote hosts, you have to configure Greenplum Database to allow such connections. This section explains how to configure client connections and authentication to Greenplum Database.
 
 -   **[Using LDAP Authentication with TLS/SSL](ldap.html)**  
 You can control access to Greenplum Database with an LDAP server and, optionally, secure the connection with encryption by adding parameters to pg\_hba.conf file entries.
@@ -87,7 +87,7 @@ This example shows how to edit the pg\_hba.conf file of the master to allow remo
     # allow the 'dba' role access to any database from any
     # host with IP address 192.168.x.x and use md5 encrypted
     # passwords to authenticate the user
-    # Note that to use SHA-256 encryption, replace <md5 with
+    # Note that to use SHA-256 encryption, replace <md5> with
     # password in the line below
     host    all   dba   192.168.0.0/32  md5
     # allow all roles access to any database from any
@@ -110,7 +110,7 @@ This example shows how to edit the pg\_hba.conf file of the master to allow remo
 
 Greenplum Database allocates some resources on a per-connection basis, so setting the maximum number of connections allowed is recommended.
 
-To limit the number of active concurrent sessions to your Greenplum Database system, you can configure the `max_connections` server configuration parameter. This is a <local\> parameter, meaning that you must set it in the `postgresql.conf` file of the master, the standby master, and each segment instance \(primary and mirror\). The recommended value of `max_connections` on segments is 5-10 times the value on the master.
+To limit the number of active concurrent sessions to your Greenplum Database system, you can configure the `max_connections` server configuration parameter. This is a *local* parameter, meaning that you must set it in the `postgresql.conf` file of the master, the standby master, and each segment instance \(primary and mirror\). The recommended value of `max_connections` on segments is 5-10 times the value on the master.
 
 When you set `max_connections`, you must also set the dependent parameter `max_prepared_transactions`. This value must be at least as large as the value of `max_connections` on the master, and segment instances should be set to the same value as the master.
 
@@ -212,7 +212,7 @@ To create a quick self-signed certificate for the server for testing, use the fo
 
 ```
 
-Enter the information requested by the prompts. Be sure to enter the local host name as <Common Name\>. The challenge password can be left blank.
+Enter the information requested by the prompts. Be sure to enter the local host name as *Common Name*. The challenge password can be left blank.
 
 The program will generate a key that is passphrase protected, and does not accept a passphrase that is less than four characters long.
 

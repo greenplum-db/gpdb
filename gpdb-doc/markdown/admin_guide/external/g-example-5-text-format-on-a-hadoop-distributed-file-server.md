@@ -2,7 +2,7 @@
 
 **Note:** The `gphdfs` external table protocol is deprecated and will be removed in the next major release of Greenplum Database.
 
-Creates a readable external table, <ext\_expenses,\> using the `gphdfs` protocol. The column delimiter is a pipe \( \| \).
+Creates a readable external table, *ext\_expenses,* using the `gphdfs` protocol. The column delimiter is a pipe \( \| \).
 
 ```
 =# CREATE EXTERNAL TABLE ext_expenses ( name text, 

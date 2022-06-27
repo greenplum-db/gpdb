@@ -45,42 +45,42 @@ stawidth
 stadistinct
 :   A positive number is an estimate of the number of distinct values in the column; the number is not expected to vary with the number of rows. A negative value is the number of distinct values divided by the number of rows, that is, the ratio of rows with distinct values for the column, negated. This form is used when the number of distinct values increases with the number of rows. A unique column, for example, has an `n_distinct` value of -1.0. Columns with an average width greater than 1024 are considered unique.
 
-stakind<N\>
-:   A code number indicating the kind of statistics stored in the <N\>th slot of the `pg_statistic` row.
+stakind*N*
+:   A code number indicating the kind of statistics stored in the *N*th slot of the `pg_statistic` row.
 
-staop<N\>
-:   An operator used to derive the statistics stored in the <N\>th slot. For example, a histogram slot would show the < operator that defines the sort order of the data.
+staop*N*
+:   An operator used to derive the statistics stored in the *N*th slot. For example, a histogram slot would show the < operator that defines the sort order of the data.
 
-stanumbers<N\>
-:   float4 array containing numerical statistics of the appropriate kind for the <N\>th slot, or `NULL` if the slot kind does not involve numerical values.
+stanumbers*N*
+:   float4 array containing numerical statistics of the appropriate kind for the *N*th slot, or `NULL` if the slot kind does not involve numerical values.
 
-stavalues<N\>
-:   Column data values of the appropriate kind for the <N\>th slot, or `NULL` if the slot kind does not store any data values. Each array's element values are actually of the specific column's data type, so there is no way to define these columns' types more specifically than <anyarray\>.
+stavalues*N*
+:   Column data values of the appropriate kind for the *N*th slot, or `NULL` if the slot kind does not store any data values. Each array's element values are actually of the specific column's data type, so there is no way to define these columns' types more specifically than *anyarray*.
 
-The statistics collected for a column vary for different data types, so the `pg_statistic` table stores statistics that are appropriate for the data type in four <slots\>, consisting of four columns per slot. For example, the first slot, which normally contains the most common values for a column, consists of the columns `stakind1`, `staop1`, `stanumbers1`, and `stavalues1`.
+The statistics collected for a column vary for different data types, so the `pg_statistic` table stores statistics that are appropriate for the data type in four *slots*, consisting of four columns per slot. For example, the first slot, which normally contains the most common values for a column, consists of the columns `stakind1`, `staop1`, `stanumbers1`, and `stavalues1`.
 
 The `stakindN` columns each contain a numeric code to describe the type of statistics stored in their slot. The `stakind` code numbers from 1 to 99 are reserved for core PostgreSQL data types. Greenplum Database uses code numbers 1, 2, 3, and 99. A value of 0 means the slot is unused. The following table describes the kinds of statistics stored for the three codes.
 
 |stakind Code|Description|
 |------------|-----------|
-|1|<Most CommonValues \(MCV\) Slot\> -   `staop` contains the object ID of the "=" operator, used to decide whether values are the same or not.
+|1|*Most CommonValues \(MCV\) Slot* -   `staop` contains the object ID of the "=" operator, used to decide whether values are the same or not.
 -   `stavalues` contains an array of the K most common non-null values appearing in the column.
 -   `stanumbers` contains the frequencies \(fractions of total row count\) of the values in the `stavalues` array.
 
 The values are ordered in decreasing frequency. Since the arrays are variable-size, K can be chosen by the statistics collector. Values must occur more than once to be added to the `stavalues` array; a unique column has no MCV slot.|
-|2|<Histogram Slot\> – describes the distribution of scalar data.-   `staop` is the object ID of the "<" operator, which describes the sort ordering.
+|2|*Histogram Slot* – describes the distribution of scalar data.-   `staop` is the object ID of the "<" operator, which describes the sort ordering.
 -   `stavalues` contains M \(where `M>=2`\) non-null values that divide the non-null column data values into `M-1` bins of approximately equal population. The first `stavalues` item is the minimum value and the last is the maximum value.
 -   `stanumbers` is not used and should be `NULL`.
 
-If a Most Common Values slot is also provided, then the histogram describes the data distribution after removing the values listed in the MCV array. \(It is a <compressed histogram\> in the technical parlance\). This allows a more accurate representation of the distribution of a column with some very common values. In a column with only a few distinct values, it is possible that the MCV list describes the entire data population; in this case the histogram reduces to empty and should be omitted.
+If a Most Common Values slot is also provided, then the histogram describes the data distribution after removing the values listed in the MCV array. \(It is a *compressed histogram* in the technical parlance\). This allows a more accurate representation of the distribution of a column with some very common values. In a column with only a few distinct values, it is possible that the MCV list describes the entire data population; in this case the histogram reduces to empty and should be omitted.
 
 |
-|3|<Correlation Slot\> – describes the correlation between the physical order of table tuples and the ordering of data values of this column. -   `staop` is the object ID of the "<" operator. As with the histogram, more than one entry could theoretically appear.
+|3|*Correlation Slot* – describes the correlation between the physical order of table tuples and the ordering of data values of this column. -   `staop` is the object ID of the "<" operator. As with the histogram, more than one entry could theoretically appear.
 -   `stavalues` is not used and should be `NULL`.
 -   `stanumbers` contains a single entry, the correlation coefficient between the sequence of data values and the sequence of their actual tuple positions. The coefficient ranges from +1 to -1.
 
 |
-|99|<Hyperloglog Slot\> - for child leaf partitions of a partitioned table, stores the `hyperloglog_counter` created for the sampled data. The `hyperloglog_counter` data structure is converted into a `bytea` and stored in a `stavalues4` slot of the `pg_statistic` catalog table.|
+|99|*Hyperloglog Slot* - for child leaf partitions of a partitioned table, stores the `hyperloglog_counter` created for the sampled data. The `hyperloglog_counter` data structure is converted into a `bytea` and stored in a `stavalues4` slot of the `pg_statistic` catalog table.|
 
 The `pg_stats` view presents the contents of `pg_statistic` in a friendlier format. The `pg_stats` view has the following columns:
 
@@ -134,9 +134,9 @@ Running `ANALYZE` with no arguments updates statistics for all tables in the dat
 
 Analyzing a severely bloated table can generate poor statistics if the sample contains empty pages, so it is good practice to vacuum a bloated table before analyzing it.
 
-See the <SQL Command Reference\> in the <Greenplum Database Reference Guide\> for details of running the `ANALYZE` command.
+See the *SQL Command Reference* in the *Greenplum Database Reference Guide* for details of running the `ANALYZE` command.
 
-Refer to the <Greenplum Database Management Utility Reference\> for details of running the `analyzedb` command.
+Refer to the *Greenplum Database Management Utility Reference* for details of running the `analyzedb` command.
 
 ### Analyzing Partitioned Tables 
 

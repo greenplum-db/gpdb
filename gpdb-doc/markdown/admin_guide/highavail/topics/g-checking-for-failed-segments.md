@@ -10,11 +10,11 @@ With mirroring enabled, you may have failed segments in the system without inter
     $ gpstate -e
     ```
 
-    Segments in <Change Tracking\> mode indicate the corresponding mirror segment is down. When a segment is not in its <preferred role\>, the segment does not operate in the role to which it was assigned at system initialization. This means the system is in a potentially unbalanced state, as some segment hosts may have more active segments than is optimal for top system performance.
+    Segments in *Change Tracking* mode indicate the corresponding mirror segment is down. When a segment is not in its *preferred role*, the segment does not operate in the role to which it was assigned at system initialization. This means the system is in a potentially unbalanced state, as some segment hosts may have more active segments than is optimal for top system performance.
 
     See [Recovering From Segment Failures](g-recovering-from-segment-failures.html) for instructions to fix this situation.
 
-2.  To get detailed information about a failed segment, check the <gp\_segment\_configuration\> catalog table. For example:
+2.  To get detailed information about a failed segment, check the *gp\_segment\_configuration* catalog table. For example:
 
     ```
     $ psql -c "SELECT * FROM gp_segment_configuration WHERE status='d';"

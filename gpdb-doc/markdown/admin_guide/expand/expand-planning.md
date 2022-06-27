@@ -48,7 +48,7 @@ This checklist summarizes the tasks for a Greenplum Database system expansion.
 
 A deliberate, thorough approach to deploying compatible hardware greatly minimizes risk to the expansion process.
 
-Hardware resources and configurations for new segment hosts should match those of the existing hosts. Work with <Greenplum Platform Engineering\> before making a hardware purchase to expand Greenplum Database.
+Hardware resources and configurations for new segment hosts should match those of the existing hosts. Work with *Greenplum Platform Engineering* before making a hardware purchase to expand Greenplum Database.
 
 The steps to plan and set up new hardware platforms vary for each deployment. Some considerations include how to:
 
@@ -100,11 +100,11 @@ At initialization, `gpexpand` creates an expansion schema. If you do not specify
 
 The expansion schema stores metadata for each table in the system so its status can be tracked throughout the expansion process. The expansion schema consists of two tables and a view for tracking expansion operation progress:
 
--   <gpexpand.status\>
--   <gpexpand.status\_detail\>
--   <gpexpand.expansion\_progress\>
+-   *gpexpand.status*
+-   *gpexpand.status\_detail*
+-   *gpexpand.expansion\_progress*
 
-Control expansion process aspects by modifying <gpexpand.status\_detail\>. For example, removing a record from this table prevents the system from expanding the table across new segments. Control the order in which tables are processed for redistribution by updating the `rank` value for a record. For more information, see [Ranking Tables for Redistribution](expand-redistribute.html).
+Control expansion process aspects by modifying *gpexpand.status\_detail*. For example, removing a record from this table prevents the system from expanding the table across new segments. Control the order in which tables are processed for redistribution by updating the `rank` value for a record. For more information, see [Ranking Tables for Redistribution](expand-redistribute.html).
 
 ## Planning Table Redistribution 
 

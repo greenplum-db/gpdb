@@ -10,15 +10,15 @@ Optimal distributions are critical when joining large tables together. To perfor
 
 ## Local \(Co-located\) Joins 
 
-Using a hash distribution that evenly distributes table rows across all segments and results in local joins can provide substantial performance gains. When joined rows are on the same segment, much of the processing can be accomplished within the segment instance. These are called <local\> or <co-located\> joins. Local joins minimize data movement; each segment operates independently of the other segments, without network traffic or communications between segments.
+Using a hash distribution that evenly distributes table rows across all segments and results in local joins can provide substantial performance gains. When joined rows are on the same segment, much of the processing can be accomplished within the segment instance. These are called *local* or *co-located* joins. Local joins minimize data movement; each segment operates independently of the other segments, without network traffic or communications between segments.
 
-To achieve local joins for large tables commonly joined together, distribute the tables on the same column. Local joins require that both sides of a join be distributed on the same columns \(and in the same order\) <and\> that all columns in the distribution clause are used when joining tables. The distribution columns must also be the same data type—although some values with different data types may appear to have the same representation, they are stored differently and hash to different values, so they are stored on different segments.
+To achieve local joins for large tables commonly joined together, distribute the tables on the same column. Local joins require that both sides of a join be distributed on the same columns \(and in the same order\) *and* that all columns in the distribution clause are used when joining tables. The distribution columns must also be the same data type—although some values with different data types may appear to have the same representation, they are stored differently and hash to different values, so they are stored on different segments.
 
 ## Data Skew 
 
 Data skew may be caused by uneven data distribution due to the wrong choice of distribution keys or single tuple table insert or copy operations. Present at the table level, data skew, is often the root cause of poor query performance and out of memory conditions. Skewed data affects scan \(read\) performance, but it also affects all other query execution operations, for instance, joins and group by operations.
 
-It is very important to <validate\> distributions to <ensure\> that data is evenly distributed after the initial load. It is equally important to <continue\> to validate distributions after incremental loads.
+It is very important to *validate* distributions to *ensure* that data is evenly distributed after the initial load. It is equally important to *continue* to validate distributions after incremental loads.
 
 The following query shows the number of rows per segment as well as the variance from the minimum and maximum numbers of rows:
 
@@ -85,7 +85,7 @@ If single segments are failing, that is, not all segments on a host, it may be a
     Total 14856967207 bytes (13.8366 GB)
     ```
 
-    If there is a <significant and sustained\> difference in disk usage, then the queries being executed should be investigated for possible skew \(the example output above does not reveal significant skew\). In monitoring systems, there will always be some skew, but often it is <transient\> and will be <short in duration\>.
+    If there is a *significant and sustained* difference in disk usage, then the queries being executed should be investigated for possible skew \(the example output above does not reveal significant skew\). In monitoring systems, there will always be some skew, but often it is *transient* and will be *short in duration*.
 
 3.  If significant and sustained skew appears, the next task is to identify the offending query.
 
@@ -148,7 +148,7 @@ If single segments are failing, that is, not all segments on a host, it may be a
     root     29622 29566  0 12:50 pts/16   00:00:00 grep 15673
     ```
 
-6.  On the master, check the `pg_log` log file for the user in the previous command \(`sbaskin`\), connection \(`con699238`, and command \(`cmd32`\). The line in the log file with these three values <should\> be the line that contains the query, but occasionally, the command number may differ slightly. For example, the `ps` output may show `cmd32`, but in the log file it is `cmd34`. If the query is still running, the last query for the user and connection is the offending query.
+6.  On the master, check the `pg_log` log file for the user in the previous command \(`sbaskin`\), connection \(`con699238`, and command \(`cmd32`\). The line in the log file with these three values *should* be the line that contains the query, but occasionally, the command number may differ slightly. For example, the `ps` output may show `cmd32`, but in the log file it is `cmd34`. If the query is still running, the last query for the user and connection is the offending query.
 
 The remedy for processing skew in almost all cases is to rewrite the query. Creating temporary tables can eliminate skew. Temporary tables can be randomly distributed to force a two-stage aggregation.
 

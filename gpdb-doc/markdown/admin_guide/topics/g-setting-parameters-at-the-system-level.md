@@ -5,7 +5,7 @@ Master parameter settings in the master `postgresql.conf`file are the system-wid
 1.  Edit the `$MASTER_DATA_DIRECTORY/postgresql.conf` file.
 2.  Find the parameter to set, uncomment it \(remove the preceding `#` character\), and type the desired value.
 3.  Save and close the file.
-4.  For <session\> parameters that do not require a server restart, upload the `postgresql.conf` changes as follows:
+4.  For *session* parameters that do not require a server restart, upload the `postgresql.conf` changes as follows:
 
     ```
     $ gpstop -u

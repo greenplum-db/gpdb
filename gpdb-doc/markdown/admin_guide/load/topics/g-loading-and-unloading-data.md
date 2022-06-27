@@ -44,7 +44,7 @@ Data managed by your organization may already reside in external sources such as
 -   **[Using the Greenplum-Informatica Connector](https://greenplum-informatica.docs.pivotal.io)**  
 
 -   **[Transforming External Data with gpfdist and gpload](../../load/topics/transforming-xml-data.html)**  
-The `gpfdist` parallel file server allows you to set up transformations that enable Greenplum Database external tables to read and write files in formats that are not supported with the `CREATE EXTERNAL TABLE` command's `FORMAT` clause. An <input\> transformation reads a file in the foreign data format and outputs rows to `gpfdist` in the CSV or other text format specified in the external table's `FORMAT` clause. An <output\> transformation receives rows from `gpfdist` in text format and converts them to the foreign data format.
+The `gpfdist` parallel file server allows you to set up transformations that enable Greenplum Database external tables to read and write files in formats that are not supported with the `CREATE EXTERNAL TABLE` command's `FORMAT` clause. An *input* transformation reads a file in the foreign data format and outputs rows to `gpfdist` in the CSV or other text format specified in the external table's `FORMAT` clause. An *output* transformation receives rows from `gpfdist` in text format and converts them to the foreign data format.
 -   **[Loading Data with COPY](../../load/topics/g-loading-data-with-copy.html)**  
 
 -   **[Running COPY in Single Row Error Isolation Mode](../../load/topics/g-running-copy-in-single-row-error-isolation-mode.html)**  

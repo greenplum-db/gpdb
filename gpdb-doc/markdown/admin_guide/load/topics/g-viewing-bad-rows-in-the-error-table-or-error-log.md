@@ -15,9 +15,9 @@ Greenplum Database captures the following error information in a table format:
 |
 |errmsg|text|The error message text.|
 |rawdata|text|The raw data of the rejected row.|
-|rawbytes|bytea|In cases where there is a database encoding error \(the client encoding used cannot be converted to a server-side encoding\), it is not possible to log the encoding error as <rawdata\>. Instead the raw bytes are stored and you will see the octal code for any non seven bit ASCII characters.|
+|rawbytes|bytea|In cases where there is a database encoding error \(the client encoding used cannot be converted to a server-side encoding\), it is not possible to log the encoding error as *rawdata*. Instead the raw bytes are stored and you will see the octal code for any non seven bit ASCII characters.|
 
-You can use the Greenplum Database built-in SQL function `gp_read_error_log()` to display formatting errors that are logged internally. For example, this command displays the error log information for the table <ext\_expenses\>:
+You can use the Greenplum Database built-in SQL function `gp_read_error_log()` to display formatting errors that are logged internally. For example, this command displays the error log information for the table *ext\_expenses*:
 
 ```
 SELECT gp_read_error_log('ext_expenses');

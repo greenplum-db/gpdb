@@ -33,7 +33,7 @@ Changes to the Greenplum Database segment configuration invalidate incremental b
 
 Each backup set has a key, which is a timestamp taken when the backup is created. For example, if you create a backup on May 14, 2016, the backup set file names contain `20160514hhmmss`. The hhmmss represents the time: hour, minute, and second.
 
-For this example, assume you have created both full and incremental backups of the database <mytest\>. To create the full backup, you used the following command:
+For this example, assume you have created both full and incremental backups of the database *mytest*. To create the full backup, you used the following command:
 
 ```
 gpcrondump -x mytest -u /backupdir 
@@ -57,7 +57,7 @@ To create a new incremental backup, you need both the most recent incremental ba
 
 To restore a database with the incremental backup `20160914081205`, you need the incremental backups `20160914081205` and `20160714095512`, and the full backup `20160514054532`.
 
-To restore the <mytest\> database with the incremental backup `20170114051246`, you need only the incremental backup and the full backup `20161114064330`. The restore command would be similar to this command.
+To restore the *mytest* database with the incremental backup `20170114051246`, you need only the incremental backup and the full backup `20161114064330`. The restore command would be similar to this command.
 
 ```
 gpdbrestore -t 20170114051246 -u /backupdir

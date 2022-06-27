@@ -108,7 +108,7 @@ Severity: IMPORTANT
 |Run the following `psql` command:
 
 ```
-psql <dbname -c 'SELECT procpid, state FROM pg_stat_replication;'
+psql <dbname> -c 'SELECT procpid, state FROM pg_stat_replication;'
 ```
 
 |Check the pg\_log file from the master and standby master for errors. If there are no unexpected errors and the machines are up, run the `gpinitstandby` utility to bring the standby online.
@@ -307,7 +307,7 @@ SELECT * FROM gp_toolkit.gp_bloat_diag;
 Severity: CRITICAL
 
 |Vacuum user tables:```
-VACUUM <<table>;
+VACUUM <<table>>;
 ```
 
 |Vacuum updated tables regularly to prevent bloating.|
@@ -354,9 +354,9 @@ analyzedb -s pg_catalog -d <<database>>
 Severity: IMPORTANT
 
 |Follow the vendor's instructions to update the Linux kernel.|Keep the kernel current to include bug fixes and security fixes, and to avoid difficult future upgrades.|
-|Install Greenplum Database minor releases, for example 5.0.<x\>.Recommended frequency: quarterly
+|Install Greenplum Database minor releases, for example 5.0.*x*.Recommended frequency: quarterly
 
 Severity: IMPORTANT
 
-|Follow upgrade instructions in the Greenplum Database <Release Notes\>. Always upgrade to the latest in the series.|Keep the Greenplum Database software current to incorporate bug fixes, performance enhancements, and feature enhancements into your Greenplum cluster.|
+|Follow upgrade instructions in the Greenplum Database *Release Notes*. Always upgrade to the latest in the series.|Keep the Greenplum Database software current to incorporate bug fixes, performance enhancements, and feature enhancements into your Greenplum cluster.|
 

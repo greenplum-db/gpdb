@@ -47,7 +47,7 @@ The `gp_external_max_segs` server configuration parameter controls the number of
 
 ## Installing gpfdist 
 
-gpfdist is installed in `$GPHOME/bin` of your Greenplum Database master host installation. Run gpfdist on a machine other than the Greenplum Database master or standby master, such as on a machine devoted to ETL processing. Running gpfdist on the master or standby master can have a performance impact on query execution. To install gpfdist on your ETL server, get it from the <Greenplum Load Tools\> package and follow its installation instructions.
+gpfdist is installed in `$GPHOME/bin` of your Greenplum Database master host installation. Run gpfdist on a machine other than the Greenplum Database master or standby master, such as on a machine devoted to ETL processing. Running gpfdist on the master or standby master can have a performance impact on query execution. To install gpfdist on your ETL server, get it from the *Greenplum Load Tools* package and follow its installation instructions.
 
 ## Starting and Stopping gpfdist 
 
@@ -96,7 +96,7 @@ $ kill 3456
 The segments access gpfdist at runtime. Ensure that the Greenplum segment hosts have network access to gpfdist. gpfdist is a web server: test connectivity by running the following command from each host in the Greenplum array \(segments and master\):
 
 ```
-$ wget http://<gpfdist_hostname:<port/<filename
+$ wget http://<gpfdist_hostname>:<port>/<filename>
          
 ```
 
