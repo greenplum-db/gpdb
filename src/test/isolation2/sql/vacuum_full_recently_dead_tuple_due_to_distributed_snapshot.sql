@@ -28,17 +28,19 @@ update test_recently_dead_utility set b = 1;
 2U: set gp_select_invisible=0;
 
 -- If gp_disable_dtx_visibility_check is set, all tuples should be vacuumed.
-delete from test_recently_dead_utility;
+create table test_recently_dead_utility2(a int, b int, c text);
+insert into test_recently_dead_utility2 select 1, g, 'foobar' from generate_series(1, 1000) g;
+delete from test_recently_dead_utility2;
 
 2U: set gp_select_invisible=1;
-2U: select count(*) from test_recently_dead_utility;
+2U: select count(*) from test_recently_dead_utility2;
 2U: set gp_select_invisible=0;
 
 2U: set gp_disable_dtx_visibility_check to on;
-2U: vacuum full test_recently_dead_utility;
+2U: vacuum full test_recently_dead_utility2;
 
 2U: set gp_select_invisible=1;
-2U: select count(*) from test_recently_dead_utility;
+2U: select count(*) from test_recently_dead_utility2;
 2U: set gp_select_invisible=0;
 
 -- Ensure that we ERROR out if gp_disable_dtx_visibility_check is set in
