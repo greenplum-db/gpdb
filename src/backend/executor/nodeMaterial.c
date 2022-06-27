@@ -31,6 +31,7 @@
 #include "miscadmin.h"
 
 #include "cdb/cdbvars.h"
+#include "utils/faultinjector.h"
 
 static void ExecMaterialExplainEnd(PlanState *planstate, struct StringInfoData *buf);
 static void ExecChildRescan(MaterialState *node);
@@ -163,6 +164,7 @@ ExecMaterial(MaterialState *node)
 			{
 				if (ma->driver_slice == currentSliceId)
 				{
+					SIMPLE_FAULT_INJECTOR("material_pre_tuplestore_flush");
 					ntuplestore_flush(ts);
 					shareinput_writer_notifyready(node->share_lk_ctxt, ma->share_id,
 												  ma->nsharer_xslice, estate->es_plannedstmt->planGen);

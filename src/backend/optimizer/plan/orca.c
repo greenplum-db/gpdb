@@ -179,12 +179,6 @@ optimize_query(Query *parse, ParamListInfo boundParams)
 	 * that will be later used for readable column names in EXPLAIN, if
 	 * needed.
 	 */
-	foreach(lp, glob->subplans)
-	{
-		Plan	   *subplan = (Plan *) lfirst(lp);
-
-		collect_shareinput_producers(root, subplan);
-	}
 	collect_shareinput_producers(root, result->planTree);
 
 	/* Post-process ShareInputScan nodes */
@@ -194,12 +188,6 @@ optimize_query(Query *parse, ParamListInfo boundParams)
 	 * Fix ShareInputScans for EXPLAIN, like in standard_planner(). For all
 	 * subplans first, and then for the main plan tree.
 	 */
-	foreach(lp, glob->subplans)
-	{
-		Plan	   *subplan = (Plan *) lfirst(lp);
-
-		lfirst(lp) = replace_shareinput_targetlists(root, subplan);
-	}
 	result->planTree = replace_shareinput_targetlists(root, result->planTree);
 
 	/*
