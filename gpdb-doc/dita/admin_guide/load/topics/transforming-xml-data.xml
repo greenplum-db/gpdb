@@ -6,9 +6,9 @@
    <shortdesc>The <codeph>gpfdist</codeph> parallel file server allows you to set up transformations
       that enable Greenplum Database external tables to read and write files in formats that are not
       supported with the <codeph>CREATE EXTERNAL TABLE</codeph> command's <codeph>FORMAT</codeph>
-      clause. An &lt;input> transformation reads a file in the foreign data format and outputs
+      clause. An <i>input</i> transformation reads a file in the foreign data format and outputs
       rows to <codeph>gpfdist</codeph> in the CSV or other text format specified in the external
-      table's <codeph>FORMAT</codeph> clause. An &lt;output> transformation receives rows from
+      table's <codeph>FORMAT</codeph> clause. An <i>output</i> transformation receives rows from
          <codeph>gpfdist</codeph> in text format and converts them to the foreign data
       format.</shortdesc>
    <body>
@@ -44,7 +44,7 @@
             table, run <codeph>gpfdist</codeph>, and load the transformed data into the database
             table.</p>
          <p>Accessing data in external XML files from within the database is a common example
-            requiring transformation. The following diagram shows &lt;gpfdist> performing a
+            requiring transformation. The following diagram shows <i>gpfdist</i> performing a
             transformation on XML files on an ETL server.</p>
          <fig id="du185408">
             <title>External Tables using XML Transformations</title>
@@ -72,7 +72,7 @@
             <li> Examine the source files and note the file structure and element names.</li>
             <li> Choose the elements to import and decide if any other limits are appropriate.</li>
          </ol>
-         <p>For example, the following XML file, &lt;prices.xml>, is a simple XML file that
+         <p>For example, the following XML file, <i>prices.xml</i>, is a simple XML file that
             contains price records. Each price record contains two fields: an item number and a
             price.</p>
          <codeblock>&lt;?xml version="1.0" encoding="ISO-8859-1" ?&gt;
@@ -111,7 +111,7 @@
 711121|24.99
 </codeblock>
          </p>
-         <p>The following STX transform, called &lt;input_transform.stx>, performs the data
+         <p>The following STX transform, called <i>input_transform.stx</i>, performs the data
             transformation.</p>
          <codeblock>&lt;?xml version="1.0"?&gt;
 &lt;stx:transform version="1.0"
@@ -157,7 +157,7 @@
             contains rules that <cmdname>gpfdist</cmdname> uses to select a transformation to apply
             when loading or extracting data. </p>
          <p>This example <cmdname>gpfdist</cmdname> configuration contains the following items that
-            are required for the &lt;prices.xml> transformation scenario:</p>
+            are required for the <i>prices.xml</i> transformation scenario:</p>
          <ul id="ul_lct_m12_pbb">
             <li id="du219363">the <codeph>config.yaml</codeph> file defining
                   <codeph>TRANSFORMATIONS</codeph>
@@ -462,7 +462,7 @@ TRANSFORMATIONS:
                   <xref
                   href="https://github.com/greenplum-db/gpdb/blob/master/gpMgmt/demo/gpfdist_transform"
                   format="html" scope="external">gpMgmt/demo/gpfdist_transform</xref>
-            directory. Read the README file in the &lt;Before You Begin> section before you run
+            directory. Read the README file in the <i>Before You Begin</i> section before you run
             the examples. The README file explains how to download the example data file used in the
             examples.</p>
       </body>
@@ -518,7 +518,7 @@ TRANSFORMATIONS:
                "transmission file" message. For more information about MeF, see <xref
                   href="https://www.irs.gov/uac/modernized-e-file-overview" scope="external"
                   format="html">Modernized e-File (Overview)</xref> on the IRS web site.</p>
-            <p>The sample XML document, &lt;RET990EZ_2006.xml>, is about 350KB in size with two
+            <p>The sample XML document, <i>RET990EZ_2006.xml</i>, is about 350KB in size with two
                elements:</p>
             <ul id="ul_egs_y42_pbb">
                <li id="du202262">ReturnHeader</li>
@@ -602,7 +602,7 @@ TRANSFORMATIONS:
      &lt;approvals&gt;DNV&lt;/approvals&gt;
  ... more data ...</codeblock>
             <p>The goal is to import the information for this rig into Greenplum Database. </p>
-            <p>The sample document, &lt;rig.xml>, is about 11KB in size. The input does not
+            <p>The sample document, <i>rig.xml</i>, is about 11KB in size. The input does not
                contain tabs so the relevant information can be converted into records delimited with
                a pipe (|).</p>
             <p>

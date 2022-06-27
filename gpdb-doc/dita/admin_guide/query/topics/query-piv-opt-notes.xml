@@ -12,7 +12,7 @@
             href="query-piv-uniform-part-tbl.xml#topic1"/>.</li>
         <li>The server configuration parameter <codeph>optimizer_enable_master_only_queries</codeph>
           is set to <codeph>on</codeph> when running against master only tables such as the system
-          table &lt;pg_attribute>. For information about the parameter, see the <cite>Greenplum
+          table <i>pg_attribute</i>. For information about the parameter, see the <cite>Greenplum
             Database Reference Guide</cite>.<note>Enabling this parameter decreases performance of
             short running catalog queries. To avoid this issue, set this parameter only for a
             session or a query. </note></li>

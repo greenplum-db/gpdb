@@ -163,8 +163,8 @@ VACUUM ANALYZE old_table;
     <title>Creating an Index</title>
     <body>
       <p>The <codeph>CREATE INDEX</codeph> command defines an index on a table. A B-tree index is
-        the default index type. For example, to create a B-tree index on the column &lt;gender> in
-        the table &lt;employee>:</p>
+        the default index type. For example, to create a B-tree index on the column <i>gender</i> in
+        the table <i>employee</i>:</p>
       <p>
         <codeblock>CREATE INDEX gender_idx ON employee (gender);
 </codeblock>
@@ -182,7 +182,7 @@ VACUUM ANALYZE old_table;
       <p>Greenplum Database indexes do not require maintenance and tuning. You can check which
         indexes are used by the real-life query workload. Use the <codeph>EXPLAIN</codeph> command
         to examine index usage for a query.</p>
-      <p>The query plan shows the steps or &lt;plan nodes> that the database will take to answer a
+      <p>The query plan shows the steps or <i>plan nodes</i> that the database will take to answer a
         query and time estimates for each plan node. To examine the use of indexes, look for the
         following query plan node types in your <codeph>EXPLAIN</codeph> output:</p>
       <ul id="ul_f3n_nwy_sp">

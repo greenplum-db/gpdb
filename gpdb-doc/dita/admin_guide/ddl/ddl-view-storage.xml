@@ -20,7 +20,7 @@
     <p>For more technical information about views, see the PostgreSQL documentation about <xref
         href="https://www.postgresql.org/docs/9.4/rules-views.html" format="html">Views and the Rule
         System</xref>.</p>
-    <p>Also, a view definition is &lt;not> stored as a string, but in the form of a query parse
+    <p>Also, a view definition is <i>not</i> stored as a string, but in the form of a query parse
       tree. Views are parsed when they are created, which has several consequences:</p>
     <ul id="ul_mrc_15l_flb">
       <li>Object names are resolved during <codeph>CREATE VIEW</codeph>, so the current setting of

@@ -17,7 +17,7 @@
       </p>
       <p>Use the built-in SQL function
             <codeph>gp_read_error_log('<varname>external_table</varname>')</codeph> to read the
-         error log data. This example command displays the log errors for &lt;ext_expenses>:</p>
+         error log data. This example command displays the log errors for <i>ext_expenses</i>:</p>
       <p>
          <codeblock>SELECT gp_read_error_log('ext_expenses');</codeblock>
       </p>

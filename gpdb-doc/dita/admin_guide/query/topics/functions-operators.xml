@@ -96,7 +96,7 @@ SELECT foo();
 </codeblock>
             </p>
             <p>If a statement has a <codeph>FROM</codeph> clause containing a distributed table
-                    &lt;and> the function in the <codeph>FROM</codeph> clause returns a set of
+                    <i>and</i> the function in the <codeph>FROM</codeph> clause returns a set of
                 rows, the statement can run on the segments:</p>
             <p>
                 <codeblock>SELECT * from foo();
@@ -217,7 +217,7 @@ SELECT foo();
                                 </xref>
                             </entry>
                             <entry colname="col2">
-                                &lt;All built-in conversion functions>
+                                <i>All built-in conversion functions</i>
                             </entry>
                             <entry colname="col3">convert<p>pg_client_encoding</p></entry>
                             <entry colname="col4"/>
@@ -349,7 +349,7 @@ SELECT foo();
                             </entry>
                             <entry colname="col2"/>
                             <entry colname="col3">
-                                &lt;All array functions>
+                                <i>All array functions</i>
                             </entry>
                             <entry colname="col4"/>
                         </row>
@@ -411,17 +411,17 @@ SELECT foo();
                             </entry>
                             <entry colname="col2"/>
                             <entry colname="col3">
-                                &lt;All session information functions>
+                                <i>All session information functions</i>
                                 <p>
-                                    &lt;All access privilege inquiry functions>
+                                    <i>All access privilege inquiry functions</i>
                                 </p><p>
-                                    &lt;All schema visibility inquiry functions>
+                                    <i>All schema visibility inquiry functions</i>
                                 </p><p>
-                                    &lt;All system catalog information functions>
+                                    <i>All system catalog information functions</i>
                                 </p><p>
-                                    &lt;All comment information functions>
+                                    <i>All comment information functions</i>
                                 </p><p>
-                                    &lt;All transaction ids and snapshots>
+                                    <i>All transaction ids and snapshots</i>
                                 </p></entry>
                             <entry colname="col4"/>
                         </row>
@@ -511,7 +511,7 @@ SELECT foo();
         <title id="in179666">Window Functions</title>
         <body>
             <p>The following built-in window functions are Greenplum extensions to the PostgreSQL
-                database. All window functions are &lt;immutable>. For more information about
+                database. All window functions are <i>immutable</i>. For more information about
                 window functions, see <xref href="../topics/defining-queries.xml#topic13"/>.</p>
             <table id="in164369">
                 <title>Window functions</title>
@@ -567,7 +567,7 @@ SELECT foo();
                         </row>
                         <row>
                             <entry colname="col1">
-                                <codeph>first_value(&lt;expr>)</codeph>
+                                <codeph>first_value(<i>expr</i>)</codeph>
                             </entry>
                             <entry colname="col2">same as input <ph>expr</ph> type</entry>
                             <entry colname="col3">
@@ -586,38 +586,38 @@ SELECT foo();
                         </row>
                         <row>
                             <entry colname="col1">
-                                <codeph>lag(&lt;expr> [,&lt;offset>] [,&lt;default>])</codeph>
+                                <codeph>lag(<i>expr</i> [,<i>offset</i>] [,<i>default</i>])</codeph>
                             </entry>
-                            <entry colname="col2">same as input &lt;expr> type</entry>
+                            <entry colname="col2">same as input <i>expr</i> type</entry>
                             <entry colname="col3">
                                 <codeph>LAG(</codeph>
-                                &lt;expr>
+                                <i>expr</i>
                                 <codeph> [,</codeph>
-                                &lt;offset>
+                                <i>offset</i>
                                 <codeph>] [,</codeph>
-                                &lt;default>
+                                <i>default</i>
                                 <codeph>]) OVER ( [PARTITION BY </codeph>
-                                &lt;expr>
+                                <i>expr</i>
                                 <codeph>] ORDER BY </codeph>
-                                &lt;expr>
+                                <i>expr</i>
                                 <codeph> )</codeph>
                             </entry>
                             <entry colname="col4">Provides access to more than one row of the same
                                 table without doing a self join. Given a series of rows returned
                                 from a query and a position of the cursor, <codeph>LAG</codeph>
                                 provides access to a row at a given physical offset prior to that
-                                position. The default <codeph>offset</codeph> is 1. &lt;default>
+                                position. The default <codeph>offset</codeph> is 1. <i>default</i>
                                 sets the value that is returned if the offset goes beyond the scope
-                                of the window. If &lt;default> is not specified, the default value
+                                of the window. If <i>default</i> is not specified, the default value
                                 is null.</entry>
                         </row>
                         <row>
                             <entry colname="col1">
-                                <codeph>last_value(&lt;expr></codeph>)</entry>
-                            <entry colname="col2">same as input &lt;expr> type</entry>
+                                <codeph>last_value(<i>expr</i></codeph>)</entry>
+                            <entry colname="col2">same as input <i>expr</i> type</entry>
                             <entry colname="col3">
-                                <codeph>LAST_VALUE(&lt;expr>) OVER ( [PARTITION BY &lt;expr>]
-                                    ORDER BY &lt;expr> [ROWS|RANGE &lt;frame_expr>] )</codeph>
+                                <codeph>LAST_VALUE(<i>expr</i>) OVER ( [PARTITION BY <i>expr</i>]
+                                    ORDER BY <i>expr</i> [ROWS|RANGE <i>frame_expr</i>] )</codeph>
                             </entry>
                             <entry colname="col4">Returns the last value in an ordered set of
                                 values.</entry>
@@ -625,36 +625,36 @@ SELECT foo();
                         <row>
                             <entry colname="col1">
                                 <codeph>
-                                    <codeph>lead(&lt;expr> [,&lt;offset>]
-                                        [,&lt;default>])</codeph>
+                                    <codeph>lead(<i>expr</i> [,<i>offset</i>]
+                                        [,<i>default</i>])</codeph>
                                 </codeph>
                             </entry>
-                            <entry colname="col2">same as input &lt;expr> type</entry>
+                            <entry colname="col2">same as input <i>expr</i> type</entry>
                             <entry colname="col3">
-                                <codeph>LEAD(&lt;expr >[,&lt;offset>]
-                                        [,&lt;expr>&lt;default>]) OVER ( [PARTITION BY
-                                        &lt;expr>] ORDER BY &lt;expr> )</codeph>
+                                <codeph>LEAD(<i>expr </i>[,<i>offset</i>]
+                                        [,<i>expr</i><i>default</i>]) OVER ( [PARTITION BY
+                                        <i>expr</i>] ORDER BY <i>expr</i> )</codeph>
                             </entry>
                             <entry colname="col4">Provides access to more than one row of the same
                                 table without doing a self join. Given a series of rows returned
                                 from a query and a position of the cursor, <codeph>lead</codeph>
                                 provides access to a row at a given physical offset after that
-                                position. If &lt;offset> is not specified, the default offset is
-                                1. &lt;default> sets the value that is returned if the offset goes
-                                beyond the scope of the window. If &lt;default> is not specified,
+                                position. If <i>offset</i> is not specified, the default offset is
+                                1. <i>default</i> sets the value that is returned if the offset goes
+                                beyond the scope of the window. If <i>default</i> is not specified,
                                 the default value is null.</entry>
                         </row>
                         <row>
                             <entry colname="col1">
-                                <codeph>ntile(&lt;expr>)</codeph>
+                                <codeph>ntile(<i>expr</i>)</codeph>
                             </entry>
                             <entry colname="col2"><codeph>bigint</codeph></entry>
                             <entry colname="col3">
-                                <codeph>NTILE(&lt;expr>) OVER ( [PARTITION BY &lt;expr>] ORDER
-                                    BY &lt;expr> )</codeph>
+                                <codeph>NTILE(<i>expr</i>) OVER ( [PARTITION BY <i>expr</i>] ORDER
+                                    BY <i>expr</i> )</codeph>
                             </entry>
                             <entry colname="col4">Divides an ordered data set into a number of
-                                buckets (as defined by &lt;expr>) and assigns a bucket number to
+                                buckets (as defined by <i>expr</i>) and assigns a bucket number to
                                 each row.</entry>
                         </row>
                         <row>
@@ -663,8 +663,8 @@ SELECT foo();
                                 <codeph>double precision</codeph>
                             </entry>
                             <entry colname="col3">
-                                <codeph>PERCENT_RANK () OVER ( [PARTITION BY &lt;expr>] ORDER BY
-                                        &lt;expr >)</codeph>
+                                <codeph>PERCENT_RANK () OVER ( [PARTITION BY <i>expr</i>] ORDER BY
+                                        <i>expr </i>)</codeph>
                             </entry>
                             <entry colname="col4">Calculates the rank of a hypothetical row
                                     <codeph>R</codeph> minus 1, divided by 1 less than the number of
@@ -676,7 +676,7 @@ SELECT foo();
                             </entry>
                             <entry colname="col2"><codeph>bigint</codeph></entry>
                             <entry colname="col3">
-                                <codeph>RANK () OVER ( [PARTITION BY &lt;expr>] ORDER BY &lt;expr)</codeph>
+                                <codeph>RANK () OVER ( [PARTITION BY &lt;expr>] ORDER BY &lt;expr>)</codeph>
                             </entry>
                             <entry colname="col4">Calculates the rank of a row in an ordered group
                                 of values. Rows with equal values for the ranking criteria receive
@@ -690,8 +690,8 @@ SELECT foo();
                                 <codeph>bigint</codeph>
                             </entry>
                             <entry colname="col3">
-                                <codeph>ROW_NUMBER () OVER ( [PARTITION BY &lt;expr>] ORDER BY
-                                        &lt;expr >)</codeph>
+                                <codeph>ROW_NUMBER () OVER ( [PARTITION BY <i>expr</i>] ORDER BY
+                                        <i>expr </i>)</codeph>
                             </entry>
                             <entry colname="col4">Assigns a unique number to each row to which it is
                                 applied (either each row in a window partition or each row of the
@@ -706,7 +706,7 @@ SELECT foo();
         <title id="in184703">Advanced Aggregate Functions</title>
         <body>
             <p>The following built-in advanced aggregate functions are Greenplum extensions of the
-                PostgreSQL database. These functions are &lt;immutable>. Greenplum Database does
+                PostgreSQL database. These functions are <i>immutable</i>. Greenplum Database does
                 not support the PostgreSQL ordered-set aggregate functions.
                 <note>The Greenplum MADlib Extension for Analytics provides additional advanced
                     functions to perform statistical analysis and machine learning with Greenplum
@@ -731,15 +731,15 @@ SELECT foo();
                     <tbody>
                         <row>
                             <entry colname="col1">
-                                <codeph>MEDIAN (&lt;expr>)</codeph>
+                                <codeph>MEDIAN (<i>expr</i>)</codeph>
                             </entry>
                             <entry colname="col2">
                                 <codeph>timestamp, timestamptz, interval, float</codeph>
                             </entry>
                             <entry colname="col3">
-                                <codeph>MEDIAN (&lt;expression>)</codeph>
+                                <codeph>MEDIAN (<i>expression</i>)</codeph>
                                 <p>
-                                    &lt;Example:>
+                                    <i>Example:</i>
                                 </p>
                                 <codeblock>SELECT department_id, MEDIAN(salary) 
 FROM employees 
@@ -758,7 +758,7 @@ GROUP BY department_id; </codeblock>
                             <entry colname="col3">
                                 <codeph>sum(array[[1,2],[3,4]])</codeph>
                                 <p>
-                                    &lt;Example:>
+                                    <i>Example:</i>
                                 </p>
                                 <codeblock>CREATE TABLE mymatrix (myvalue int[]);
 INSERT INTO mymatrix 

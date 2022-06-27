@@ -270,7 +270,7 @@ server_side_encryption = sse-s3
                readable external tables you create using the <codeph>s3</codeph> protocol. No
                additional configuration is required. </p>
             <p>For further encryption configuration granularity, you may consider creating Amazon
-               Web Services S3 &lt;Bucket Policy>(s), identifying the objects you want to encrypt
+               Web Services S3 <i>Bucket Policy</i>(s), identifying the objects you want to encrypt
                and the write actions on those objects as described in the <xref
                   href="http://docs.aws.amazon.com/AmazonS3/latest/dev/UsingServerSideEncryption.html"
                   format="html" scope="external">Protecting Data Using Server-Side Encryption with

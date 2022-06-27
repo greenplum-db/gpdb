@@ -140,7 +140,7 @@ FROM gp_master_mirroring;</codeblock></p>
 <pd>IMPORTANT</pd></entry>
               <entry>
                 <p>Run the following <codeph>psql</codeph>
-                  command:<codeblock>psql &lt;dbname> -c 'SELECT procpid, state FROM pg_stat_replication;'</codeblock></p>
+                  command:<codeblock>psql <i>dbname</i> -c 'SELECT procpid, state FROM pg_stat_replication;'</codeblock></p>
               </entry>
               <entry>
                 <p>Check the <filepath>pg_log</filepath> file from the master and standby master for
@@ -421,7 +421,7 @@ WHERE logseverity in ('FATAL', 'ERROR')
                   <entry>Mark deleted rows in heap tables so that they space they occupy can be
                       reused.<p>Recommended frequency: daily</p><pt>Severity</pt>
 <pd>CRITICAL</pd></entry>
-                  <entry>Vacuum user tables:<codeblock>VACUUM &lt;&lt;table>>;</codeblock></entry>
+                  <entry>Vacuum user tables:<codeblock>VACUUM <i>&lt;table></i>;</codeblock></entry>
                   <entry>Vacuum updated tables regularly to prevent bloating. </entry>
                 </section>
 </parml>
@@ -431,7 +431,7 @@ WHERE logseverity in ('FATAL', 'ERROR')
                       before executing queries</p><pt>Severity</pt>
 <pd>CRITICAL</pd></entry>
                   <entry>Analyze user
-                    tables:<codeblock>ANALYZE &lt;&lt;table>>;</codeblock></entry>
+                    tables:<codeblock>ANALYZE <i>&lt;table></i>;</codeblock></entry>
                   <entry>Analyze updated tables regularly so that the optimizer can produce
                     efficient query execution plans.</entry>
                 </section>
@@ -482,9 +482,9 @@ WHERE logseverity in ('FATAL', 'ERROR')
               <section><title>Upgrade Greenplum Datab ase</title>
 <parml>
                 <entry>Install Greenplum Database minor releases, for example
-                    4.3.&lt;x.y>.<p>Recommended frequency: quarterly</p><p>Severity:
+                    4.3.<i>x.y</i>.<p>Recommended frequency: quarterly</p><p>Severity:
                   IMPORTANT</p></entry>
-                <entry>Follow upgrade instructions in the Greenplum Database &lt;Release Notes>.
+                <entry>Follow upgrade instructions in the Greenplum Database <i>Release Notes</i>.
                   Always upgrade to the latest in the series.</entry>
                 <entry>Keep the Greenplum Database software current to incorporate bug fixes,
                   performance enhancements, and feature enhancements into your Greenplum cluster.  </entry>

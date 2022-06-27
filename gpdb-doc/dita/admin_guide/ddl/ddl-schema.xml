@@ -10,9 +10,9 @@
   <topic id="topic18" xml:lang="en">
     <title>The Default "Public" Schema</title>
     <body>
-      <p>Every database has a default schema named &lt;public>. If you do not create any schemas,
-        objects are created in the &lt;public> schema. All database roles (users) have
-          <codeph>CREATE</codeph> and <codeph>USAGE</codeph> privileges in the &lt;public> schema.
+      <p>Every database has a default schema named <i>public</i>. If you do not create any schemas,
+        objects are created in the <i>public</i> schema. All database roles (users) have
+          <codeph>CREATE</codeph> and <codeph>USAGE</codeph> privileges in the <i>public</i> schema.
         When you create a schema, you grant privileges to your users to allow access to the
         schema.</p>
     </body>
@@ -52,7 +52,7 @@
       </p>
       <p>You can set the <codeph>search_path</codeph> configuration parameter to specify the order
         in which to search the available schemas for objects. The schema listed first in the search
-        path becomes the &lt;default> schema. If a schema is not specified, objects are created in
+        path becomes the <i>default</i> schema. If a schema is not specified, objects are created in
         the default schema.</p>
     </body>
     <topic id="topic21" xml:lang="en">

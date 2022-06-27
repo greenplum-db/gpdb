@@ -118,7 +118,7 @@
               <codeph>20170514<varname>hhmmss</varname></codeph>. The <varname>hhmmss</varname>
           represents the time: hour, minute, and second.</p>
         <p>This example assumes that you have created two full backups and incremental backups of
-          the database &lt;mytest>. To create the full backups, you used this command: </p>
+          the database <i>mytest</i>. To create the full backups, you used this command: </p>
         <codeblock>gpbackup --dbname mytest --backup-dir /mybackup --leaf-partition-data</codeblock>
         <p>You created incremental backups with this command:</p>
         <codeblock>gpbackup --dbname mytest --backup-dir /mybackup --leaf-partition-data --incremental</codeblock>

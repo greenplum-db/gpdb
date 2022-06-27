@@ -17,12 +17,12 @@
           host you are activating. For example:<codeblock>$ gpactivatestandby -d /data/master/gpseg-1</codeblock>
           <p>Where <codeph>-d</codeph> specifies the data directory of the master host you are
             activating.</p>
-          <p>After you activate the standby, it becomes the &lt;active> or &lt;primary> master
+          <p>After you activate the standby, it becomes the <i>active</i> or <i>primary</i> master
             for your Greenplum Database array. </p>
         </li>
         <li id="ki155816">After the utility finishes, run <codeph>gpstate</codeph> to check the status:<codeblock>$ gpstate -f</codeblock>
-          <p>The newly activated master's status should be &lt;Active>. If you configured a new
-            standby host, its status is &lt;Passive>. When a standby master is not configured, the
+          <p>The newly activated master's status should be <i>Active</i>. If you configured a new
+            standby host, its status is <i>Passive</i>. When a standby master is not configured, the
             command displays <codeph>-No entries found</codeph> and the message indicates that a
             standby master instance is not configured.</p>
         </li>
@@ -30,7 +30,7 @@
             <codeph>gpactivatestandby</codeph> utility, use <codeph>gpinitstandby</codeph> to
           configure a new standby master at a later time. Run <codeph>gpinitstandby</codeph> on your
           active master host. For
-          example:<codeblock>$ gpinitstandby -s &lt;new_standby_master_hostname
+          example:<codeblock>$ gpinitstandby -s <i>new_standby_master_hostname</i>
                </codeblock>
         </li>
       </ol>

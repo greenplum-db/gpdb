@@ -62,7 +62,7 @@ $ psql &lt;database_name> -f /gpdb/backups/gp_dump_3_5_20160714
             extracting the information, use the Greenplum Database <codeph>psql</codeph> utility to
             update the sequences in the database. This example command updates the sequence
             information in the database
-          &lt;test_restore>:</p><codeblock>psql test_restore -f schema_path_and_seq_next_val</codeblock></li>
+          <i>test_restore</i>:</p><codeblock>psql test_restore -f schema_path_and_seq_next_val</codeblock></li>
       </ol>
     </section>
   </body>

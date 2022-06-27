@@ -9,21 +9,21 @@
         Greenplum administrator for details.</p>
     <p>There can be multiple databases in a Greenplum Database system. This is
       different from some database management systems (such as Oracle) where the database instance
-        &lt;is> the database. Although you can create many databases in a Greenplum system, client programs can connect to and access only one
+        <i>is</i> the database. Although you can create many databases in a Greenplum system, client programs can connect to and access only one
       database at a time — you cannot cross-query between databases.</p>
   </body>
   <topic id="topic3" xml:lang="en">
     <title id="im140508">About Template Databases</title>
     <body>
-      <p>Each new database you create is based on a &lt;template>. Greenplum provides a default database, &lt;template1>. Use
-          &lt;postgres> to connect to Greenplum Database for the first time.
-          Greenplum Database uses &lt;template1> to create databases unless you
-        specify another template. Do not create any objects in &lt;template1> unless you want
+      <p>Each new database you create is based on a <i>template</i>. Greenplum provides a default database, <i>template1</i>. Use
+          <i>postgres</i> to connect to Greenplum Database for the first time.
+          Greenplum Database uses <i>template1</i> to create databases unless you
+        specify another template. Do not create any objects in <i>template1</i> unless you want
         those objects to be in every database you create. </p>
-      <p>Greenplum Database uses another database templates, &lt;template0>, internally. Do not drop or
-          modify &lt;template0>. You can use &lt;template0> to create a completely clean
+      <p>Greenplum Database uses another database templates, <i>template0</i>, internally. Do not drop or
+          modify <i>template0</i>. You can use <i>template0</i> to create a completely clean
           database containing only the standard objects predefined by Greenplum Database at
-          initialization, especially if you modified &lt;template1>.</p>
+          initialization, especially if you modified <i>template1</i>.</p>
     </body>
   </topic>
   <topic id="topic4" xml:lang="en">
@@ -38,7 +38,7 @@
         give you the necessary privilege or to create a database for you.</p>
       <p>You can also use the client program <codeph>createdb</codeph> to create a database. For
         example, running the following command in a command line terminal connects to Greenplum Database using the provided host name and port and creates a database named
-          &lt;mydatabase>:</p>
+          <i>mydatabase</i>:</p>
       <p>
         <codeblock>$ createdb -h masterhost -p 5432 mydatabase</codeblock>
       </p>
@@ -51,7 +51,7 @@
       <title>Cloning a Database</title>
       <body>
         <p>By default, a new database is created by cloning the standard system database template,
-            &lt;template1>. Any database can be used as a template when creating a new database,
+            <i>template1</i>. Any database can be used as a template when creating a new database,
           thereby providing the capability to 'clone' or copy an existing database and all objects
           and data within that database. For example:</p>
         <p>
@@ -110,7 +110,7 @@
       </p>
       <p>You can also use the client program <codeph>dropdb</codeph> to drop a database. For
         example, the following command connects to Greenplum Database using the
-        provided host name and port and drops the database &lt;mydatabase>:</p>
+        provided host name and port and drops the database <i>mydatabase</i>:</p>
       <p>
         <codeblock>$ dropdb -h masterhost -p 5432 mydatabase</codeblock>
       </p>

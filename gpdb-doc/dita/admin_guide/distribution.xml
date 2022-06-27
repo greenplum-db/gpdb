@@ -24,12 +24,12 @@
         <p>Using a hash distribution that evenly distributes table rows across all segments and
           results in local joins can provide substantial performance gains. When joined rows are on
           the same segment, much of the processing can be accomplished within the segment instance.
-          These are called &lt;local> or &lt;co-located> joins. Local joins minimize data
+          These are called <i>local</i> or <i>co-located</i> joins. Local joins minimize data
           movement; each segment operates independently of the other segments, without network
           traffic or communications between segments. </p>
         <p>To achieve local joins for large tables commonly joined together, distribute the tables
           on the same column. Local joins require that both sides of a join be distributed on the
-          same columns (and in the same order) &lt;and> that all columns in the distribution
+          same columns (and in the same order) <i>and</i> that all columns in the distribution
           clause are used when joining tables. The distribution columns must also be the same data
           type—although some values with different data types may appear to have the same
           representation, they are stored differently and hash to different values, so they are
@@ -44,8 +44,8 @@
           skew, is often the root cause of poor query performance and out of memory conditions.
           Skewed data affects scan (read) performance, but it also affects all other query execution
           operations, for instance, joins and group by operations. </p>
-        <p>It is very important to &lt;validate> distributions to &lt;ensure> that data is
-          evenly distributed after the initial load. It is equally important to &lt;continue> to
+        <p>It is very important to <i>validate</i> distributions to <i>ensure</i> that data is
+          evenly distributed after the initial load. It is equally important to <i>continue</i> to
           validate distributions after incremental loads. </p>
         <p>The following query shows the number of rows per segment as well as the variance from the
           minimum and maximum numbers of rows:</p>
@@ -115,10 +115,10 @@ Segment node[sdw6] 1830073754 bytes (1.70439 GB)
 Segment node[sdw7] 1767310099 bytes (1.64594 GB)
 Segment node[sdw8] 1765105802 bytes (1.64388 GB)
 Total 14856967207 bytes (13.8366 GB)</codeblock></p><p>If
-              there is a &lt;significant and sustained> difference in disk usage, then the queries
+              there is a <i>significant and sustained</i> difference in disk usage, then the queries
               being executed should be investigated for possible skew (the example output above does
               not reveal significant skew). In monitoring systems, there will always be some skew,
-              but often it is &lt;transient> and will be &lt;short in duration>. </p></li>
+              but often it is <i>transient</i> and will be <i>short in duration</i>. </p></li>
           <li>If significant and sustained skew appears, the next task is to identify the offending
             query. <p>The command in the previous step sums up the entire node. This time, find the
               actual segment directory. You can do this from the master or by logging into the
@@ -173,7 +173,7 @@ root     29622 29566  0 12:50 pts/16   00:00:00 grep 15673</codeblock>
           <li>On the master, check the <codeph>pg_log</codeph> log file for the user in the previous
             command (<codeph>sbaskin</codeph>), connection (<codeph>con699238</codeph>, and command
               (<codeph>cmd32</codeph>). The line in the log file with these three values
-              &lt;should> be the line that contains the query, but occasionally, the command
+              <i>should</i> be the line that contains the query, but occasionally, the command
             number may differ slightly. For example, the <codeph>ps</codeph> output may show
               <codeph>cmd32</codeph>, but in the log file it is <codeph>cmd34</codeph>. If the query
             is still running, the last query for the user and connection is the offending query.

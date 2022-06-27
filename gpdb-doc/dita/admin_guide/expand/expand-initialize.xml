@@ -48,7 +48,7 @@
         </ul>
         <p>The utility automatically generates an input file based on this information,
             <codeph>dbid</codeph>, <codeph>content</codeph> ID, and data directory values stored in
-            &lt;gp_segment_configuration>, and saves the file in the current directory.</p>
+            <i>gp_segment_configuration</i>, and saves the file in the current directory.</p>
         <section id="no163887">
           <title>To create an input file in interactive mode</title>
           <ol>
@@ -105,12 +105,12 @@
                   <codeph>gpexpand</codeph> must have permissions to create directories in them.
                 </p><p>After you have entered all required information, the utility generates an
                 input file and saves it in the current directory. For
-                example:</p><codeblock>gpexpand_inputfile_yyyymmdd&lt;_145134</codeblock><p>If
+                example:</p><codeblock>gpexpand_inputfile_yyyymmdd<i>_145134</i></codeblock><p>If
                 the Greenplum cluster is configured with tablespaces, the utility automatically
                 generates an additional tablespace mapping file. This file is required for later
                 parsing by the utility so make sure it is present before proceeding with the next
                 step. For example:
-              </p><codeblock>gpexpand_inputfile_yyyymmdd&lt;_145134.ts</codeblock></li>
+              </p><codeblock>gpexpand_inputfile_yyyymmdd<i>_145134</i>.ts</codeblock></li>
           </ol>
         </section>
       </body>
@@ -151,7 +151,7 @@ sdw5:sdw5-1:60012:/gpdata/mirror/gp10:14:10:m:63011</codeblock>
                 <entry colname="col1">port</entry>
                 <entry colname="col2">An available port number</entry>
                 <entry colname="col3">Database listener port for the segment, incremented on the
-                  existing segment &lt;port> base number. </entry>
+                  existing segment <i>port</i> base number. </entry>
               </row>
               <row>
                 <entry colname="col1">fselocation</entry>
@@ -161,21 +161,21 @@ sdw5:sdw5-1:60012:/gpdata/mirror/gp10:14:10:m:63011</codeblock>
               </row>
               <row>
                 <entry colname="col1">dbid</entry>
-                <entry colname="col2">Integer. Must not conflict with existing &lt;dbid>
+                <entry colname="col2">Integer. Must not conflict with existing <i>dbid</i>
                   values.</entry>
                 <entry colname="col3">Database ID for the segment. The values you enter should be
-                  incremented sequentially from existing &lt;dbid> values shown in the system
+                  incremented sequentially from existing <i>dbid</i> values shown in the system
                   catalog <codeph>gp_segment_configuration</codeph>. For example, to add four nodes
-                  to an existing ten-segment array with &lt;dbid > values of 1-10, list new
-                    &lt;dbid> values of 11, 12, 13 and 14.</entry>
+                  to an existing ten-segment array with <i>dbid </i> values of 1-10, list new
+                    <i>dbid</i> values of 11, 12, 13 and 14.</entry>
               </row>
               <row>
                 <entry colname="col1">content</entry>
-                <entry colname="col2">Integer. Must not conflict with existing &lt;content>
+                <entry colname="col2">Integer. Must not conflict with existing <i>content</i>
                   values.</entry>
                 <entry colname="col3">The content ID of the segment. A primary segment and its
                   mirror should have the same content ID, incremented sequentially from existing
-                  values. For more information, see &lt;content> in the reference for
+                  values. For more information, see <i>content</i> in the reference for
                     <codeph>gp_segment_configuration</codeph>.</entry>
               </row>
               <row>
@@ -190,7 +190,7 @@ sdw5:sdw5-1:60012:/gpdata/mirror/gp10:14:10:m:63011</codeblock>
                 <entry colname="col1">replication_port</entry>
                 <entry colname="col2">An available port number</entry>
                 <entry colname="col3">File replication port for the segment, incremented on the
-                  existing segment &lt;replication_port> base number.</entry>
+                  existing segment <i>replication_port</i> base number.</entry>
               </row>
             </tbody>
           </tgroup>

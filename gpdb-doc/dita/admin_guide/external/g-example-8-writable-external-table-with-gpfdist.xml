@@ -4,9 +4,9 @@
 <topic id="topic52">
    <title>Example 8—Writable External Table with gpfdist</title>
    <body>
-      <p>Creates a writable external table, &lt;sales_out,> that uses
+      <p>Creates a writable external table, <i>sales_out,</i> that uses
                             <cmdname>gpfdist</cmdname> to write output data to the file
-                            &lt;sales.out>. The column delimiter is a pipe ( | ) and NULL (' ') is
+                            <i>sales.out</i>. The column delimiter is a pipe ( | ) and NULL (' ') is
                         a space. The file will be created in the directory specified when you
                         started the gpfdist file server.</p>
       <p>

@@ -8,12 +8,12 @@
       Database configuration file, <filepath>postgresql.conf</filepath>, resides in the data
       directory of the database instance.</p>
     <p>The master and each segment instance have their own <filepath>postgresql.conf</filepath>
-      file. Some parameters are &lt;local>: each segment instance examines its
+      file. Some parameters are <i>local</i>: each segment instance examines its
         <filepath>postgresql.conf</filepath> file to get the value of that parameter. Set local
       parameters on the master and on each segment instance.</p>
-    <p>Other parameters are &lt;master> parameters that you set on the master instance. The value
+    <p>Other parameters are <i>master</i> parameters that you set on the master instance. The value
       is passed down to (or in some cases ignored by) the segment instances at query run time.</p>
     <p>See the <cite>Greenplum Database Reference Guide</cite> for information
-      about &lt;local> and &lt;master> server configuration parameters.</p>
+      about <i>local</i> and <i>master</i> server configuration parameters.</p>
   </body>
 </topic>

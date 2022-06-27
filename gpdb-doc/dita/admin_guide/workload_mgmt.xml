@@ -50,7 +50,7 @@
         </plentry>
         <plentry>
           <pt>ACTIVE_STATEMENTS</pt>
-          <pd>The number of &lt;slots> for a queue; the maximum concurrency level for a queue.
+          <pd>The number of <i>slots</i> for a queue; the maximum concurrency level for a queue.
             When all slots are used, new queries must wait. Each query uses an equal amount of
             memory by default. </pd>
           <pd>For example, the <codeph>pg_default</codeph> resource queue has
@@ -112,11 +112,11 @@
       required for operators can exceed the available memory and the query will be rejected with an
       insufficient memory error. Operators determine if they can complete their tasks in the memory
       allocated, or if they must spill data to disk, in work files. The mechanism that allocates and
-      controls the amount of memory used by each operator is called &lt;memory quota>. </p>
+      controls the amount of memory used by each operator is called <i>memory quota</i>. </p>
     <p>Not all SQL statements submitted through a resource queue are evaluated against the queue
       limits. By default only <codeph>SELECT</codeph>, <codeph>SELECT INTO</codeph>, <codeph>CREATE
         TABLE AS SELECT</codeph>, and <codeph>DECLARE CURSOR</codeph> statements are evaluated. If
-      the server configuration parameter <codeph>resource_select_only</codeph> is set to &lt;off>,
+      the server configuration parameter <codeph>resource_select_only</codeph> is set to <i>off</i>,
       then <codeph>INSERT</codeph><ph>, <codeph>UPDATE</codeph>, and <codeph>DELETE</codeph></ph>
       statements will be evaluated as well.</p>
     <p>Also, an SQL statement that is run during the execution of an <codeph>EXPLAIN
@@ -266,16 +266,16 @@
         priority settings are the same, they will be allocated the same share of available CPU
         resources. When a new query becomes active, the CPU shares will be recalculated, but queries
         of equal priority will still have equal amounts of CPU. </p>
-      <p>For example, an administrator creates three resource queues: &lt;adhoc> for ongoing
-        queries submitted by business analysts, &lt;reporting> for scheduled reporting jobs, and
-          &lt;executive> for queries submitted by executive user roles. The administrator wants to
+      <p>For example, an administrator creates three resource queues: <i>adhoc</i> for ongoing
+        queries submitted by business analysts, <i>reporting</i> for scheduled reporting jobs, and
+          <i>executive</i> for queries submitted by executive user roles. The administrator wants to
         ensure that scheduled reporting jobs are not heavily affected by unpredictable resource
         demands from ad-hoc analyst queries. Also, the administrator wants to make sure that queries
         submitted by executive roles are allotted a significant share of CPU. Accordingly, the
         resource queue priorities are set as shown:<ul id="ul_ppy_3cy_wq">
-          <li id="iz160250">&lt;adhoc> — Low priority</li>
-          <li id="iz161065">&lt;reporting> — High priority</li>
-          <li id="iz161070">&lt;executive> — Maximum priority</li>
+          <li id="iz160250"><i>adhoc</i> — Low priority</li>
+          <li id="iz161065"><i>reporting</i> — High priority</li>
+          <li id="iz161070"><i>executive</i> — Maximum priority</li>
         </ul></p>
       <p>At runtime, the CPU share of active statements is determined by these priority settings. If
         queries 1 and 2 from the reporting queue are running simultaneously, they have equal shares
@@ -339,10 +339,10 @@
               <li id="iz153405"><codeph>max_resource_portals_per_transaction</codeph> - Sets the
                 maximum number of simultaneously open cursors allowed per transaction. Note that an
                 open cursor will hold an active query slot in a resource queue.</li>
-              <li id="iz154513"><codeph>resource_select_only</codeph> - If set to &lt;on>, then
+              <li id="iz154513"><codeph>resource_select_only</codeph> - If set to <i>on</i>, then
                   <codeph>SELECT</codeph>, <codeph>SELECT INTO</codeph>, <codeph>CREATE TABLE
                   AS</codeph><codeph>SELECT</codeph>, and <codeph>DECLARE CURSOR</codeph> commands
-                are evaluated. If set to &lt;off><codeph>INSERT</codeph><ph>,
+                are evaluated. If set to <i>off</i><codeph>INSERT</codeph><ph>,
                     <codeph>UPDATE</codeph>, and <codeph>DELETE</codeph></ph> commands will be
                 evaluated as well.</li>
               <li id="iz157925"><codeph>resource_cleanup_gangs_on_wait</codeph> - Cleans up idle
@@ -384,7 +384,7 @@
                   Guide</i> for recommended OS memory settings for your platform.</li>
             </ul></li>
           <li id="iz169487">The following parameters are related to query prioritization. Note that
-            the following parameters are all &lt;local> parameters, meaning they must be set in
+            the following parameters are all <i>local</i> parameters, meaning they must be set in
             the <codeph>postgresql.conf</codeph> files of the master and all segments:<ul
               id="ul_lm2_x3c_34">
               <li id="iz158643"><codeph>gp_resqueue_priority</codeph> - The query prioritization
@@ -443,12 +443,12 @@
       <body>
         <p id="iz152723">Resource queues with an <codeph>ACTIVE_STATEMENTS</codeph> setting limit
           the number of queries that can be executed by roles assigned to that queue. For example,
-          to create a resource queue named &lt;adhoc> with an active query limit of three:</p>
+          to create a resource queue named <i>adhoc</i> with an active query limit of three:</p>
         <p>
           <codeblock>=# CREATE RESOURCE QUEUE adhoc WITH (ACTIVE_STATEMENTS=3);
 </codeblock>
         </p>
-        <p>This means that for all roles assigned to the &lt;adhoc> resource queue, only three
+        <p>This means that for all roles assigned to the <i>adhoc</i> resource queue, only three
           active queries can be running on the system at any given time. If this queue has three
           queries running, and a fourth query is submitted by a role in that queue, that query must
           wait until a slot is free before it can run.</p>
@@ -504,11 +504,11 @@ MEMORY_LIMIT='2000MB');
           claim a larger share of available CPU than lower priority queries and statements. </p>
         <p>Priority settings are created or altered using the <codeph>WITH</codeph> parameter of the
           commands <codeph>CREATE RESOURCE QUEUE</codeph> and <codeph>ALTER RESOURCE QUEUE</codeph>.
-          For example, to specify priority settings for the &lt;adhoc> and &lt;reporting>
+          For example, to specify priority settings for the <i>adhoc</i> and <i>reporting</i>
           queues, an administrator would use the following commands: </p>
         <codeblock>=# ALTER RESOURCE QUEUE adhoc WITH (PRIORITY=LOW);
 =# ALTER RESOURCE QUEUE reporting WITH (PRIORITY=HIGH);</codeblock>
-        <p>To create the &lt;executive> queue with maximum priority, an administrator would use
+        <p>To create the <i>executive</i> queue with maximum priority, an administrator would use
           the following command:</p>
         <codeblock>=# CREATE RESOURCE QUEUE executive WITH (ACTIVE_STATEMENTS=3, PRIORITY=MAX);</codeblock>
         <p>When the query prioritization feature is enabled, resource queues are given a
@@ -547,7 +547,7 @@ MEMORY_LIMIT='2000MB');
     <topic id="topic18" xml:lang="en">
       <title id="iz153619">Removing a Role from a Resource Queue</title>
       <body>
-        <p>All users &lt;must> be assigned to a resource queue. If not explicitly assigned to a
+        <p>All users <i>must</i> be assigned to a resource queue. If not explicitly assigned to a
           particular queue, users will go into the default resource queue,
             <codeph>pg_default</codeph>. If you wish to remove a role from a resource queue and put
           them in the default queue, change the role's queue assignment to <codeph>none</codeph>.
@@ -574,22 +574,22 @@ MEMORY_LIMIT='2000MB');
           To change the limits of a resource queue, specify the new values you want for the queue.
           For example:</p>
         <p>
-          <codeblock>=# ALTER RESOURCE QUEUE &lt;adhoc WITH (ACTIVE_STATEMENTS=5);
-=# ALTER RESOURCE QUEUE &lt;exec WITH (PRIORITY=MAX);
+          <codeblock>=# ALTER RESOURCE QUEUE <i>adhoc</i> WITH (ACTIVE_STATEMENTS=5);
+=# ALTER RESOURCE QUEUE <i>exec</i> WITH (PRIORITY=MAX);
 </codeblock>
         </p>
         <p>To reset active statements or memory limit to no limit, enter a value of
             <codeph>-1</codeph>. To reset the maximum query cost to no limit, enter a value of
             <codeph>-1.0</codeph>. For example:</p>
         <p>
-          <codeblock>=# ALTER RESOURCE QUEUE &lt;adhoc WITH (MAX_COST=-1.0, MEMORY_LIMIT='2GB');
+          <codeblock>=# ALTER RESOURCE QUEUE <i>adhoc</i> WITH (MAX_COST=-1.0, MEMORY_LIMIT='2GB');
 </codeblock>
         </p>
         <p>You can use the <codeph>ALTER RESOURCE QUEUE</codeph> command to change the priority of
           queries associated with a resource queue. For example, to set a queue to the minimum
           priority level:</p>
         <p>
-          <codeblock>ALTER RESOURCE QUEUE &lt;webuser WITH (PRIORITY=MIN);
+          <codeblock>ALTER RESOURCE QUEUE <i>webuser</i> WITH (PRIORITY=MIN);
 </codeblock>
         </p>
       </body>
@@ -603,7 +603,7 @@ MEMORY_LIMIT='2000MB');
           and <xref href="#topic27" type="topic" format="dita"/> for instructions on emptying a
           resource queue. To drop a resource queue:</p>
         <p>
-          <codeblock>=# DROP RESOURCE QUEUE &lt;name;
+          <codeblock>=# DROP RESOURCE QUEUE <i>name</i>;
 </codeblock>
         </p>
       </body>
@@ -764,11 +764,11 @@ MEMORY_LIMIT='2000MB');
     <topic id="topic28" xml:lang="en">
       <title id="iz164264">Viewing the Priority of Active Statements</title>
       <body>
-        <p>The &lt;gp_toolkit> administrative schema has a view called
-            &lt;gp_resq_priority_statement>, which lists all statements currently being executed
+        <p>The <i>gp_toolkit</i> administrative schema has a view called
+            <i>gp_resq_priority_statement</i>, which lists all statements currently being executed
           and provides the priority, session ID, and other information.</p>
         <p>This view is only available through the <codeph>gp_toolkit</codeph> administrative
-          schema. <ph>See the &lt;Greenplum Database Reference Guide> for more
+          schema. <ph>See the <i>Greenplum Database Reference Guide</i> for more
           information.</ph></p>
       </body>
     </topic>
@@ -784,7 +784,7 @@ MEMORY_LIMIT='2000MB');
         </p>
         <p>To obtain the session ID and statement count parameters required by this function,
           superusers can use the <codeph>gp_toolkit</codeph> administrative schema view,
-            &lt;gp_resq_priority_statement>. From the view, use these values for the function
+            <i>gp_resq_priority_statement</i>. From the view, use these values for the function
           parameters.</p>
         <ul>
           <li id="iz174657">The value of the <codeph>rqpsession</codeph> column for the

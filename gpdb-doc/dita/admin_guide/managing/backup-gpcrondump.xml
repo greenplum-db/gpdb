@@ -36,17 +36,17 @@
       default, where each segment writes backups to its own data directory. This can be used to
       consolidate backups to a single directory or mounted storage device. </p>
     <p>In the <codeph>db_dumps</codeph> directory, backups are saved to a directory in the format
-        &lt;YYYYMMDD>, for example
+        <i>YYYYMMDD</i>, for example
         <codeph><varname>data_directory</varname>/db_dumps/20151012</codeph> for a backup created on
       October 12, 2015. The backup file names in the directory contain a full timestamp for the
-      backup in the format &lt;YYYYMMDDHHMMSS>, for example
+      backup in the format <i>YYYYMMDDHHMMSS</i>, for example
         <codeph>gp_dump_0_2_20151012195916.gz</codeph>. The <codeph>gpdbrestore</codeph> command
       uses the most recent backup by default but you can specify an earlier backup to restore. </p>
     <p>The utility creates backup files with this file name format.</p>
     <p><codeblock>&lt;prefix_>gp_dump_&lt;content>_&lt;dbid>_&lt;timestamp></codeblock>The
         <codeph>content</codeph> and <codeph>dbid</codeph> are identifiers for the Greenplum
       Database segment instances that are assigned by Greenplum Database. For information about the
-      identifiers, see the Greenplum Database system catalog table &lt;gp_id> in the
+      identifiers, see the Greenplum Database system catalog table <i>gp_id</i> in the
         <cite>Greenplum Database Reference Guide</cite>. </p>
     <p>If you include the <codeph>-g</codeph> option, <codeph>gpcrondump</codeph> saves the
       configuration files with the backup. These configuration files are dumped in the master or
@@ -61,7 +61,7 @@
       in the directory specified by <codeph>--ddboost-backupdir</codeph> when the Data Domain Boost
       credentials were set.</p>
     <p>There are many more <codeph>gpcrondump</codeph> options available to configure backups. Refer
-      to the &lt;Greenplum Utility Reference Guide> for information about all of the available
+      to the <i>Greenplum Utility Reference Guide</i> for information about all of the available
       options. <ph otherprops="pivotal">See <xref href="backup-ddboost.xml#topic17"/> for details of
         backing up with Data Domain Boost. </ph></p>
     <note type="warning">Backing up a database with <codeph>gpcrondump</codeph> while simultaneously

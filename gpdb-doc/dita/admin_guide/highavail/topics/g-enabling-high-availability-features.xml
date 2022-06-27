@@ -20,6 +20,6 @@
             deployment environments are generally not supported for production use unless both
             Greenplum master and segment mirroring are enabled.</p></note>
       <p>For information about the utilities that are used to enable high availability, see the
-            &lt;Greenplum Database Utility Guide>. </p>
+            <i>Greenplum Database Utility Guide</i>. </p>
    </body>
 </topic>

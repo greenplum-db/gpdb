@@ -143,7 +143,7 @@
               </row>
               <row>
                 <entry colname="col1">
-                  &lt;italics>
+                  <i>italics</i>
                 </entry>
                 <entry colname="col2">
                   <ph>New terms where they are defined</ph>
@@ -153,13 +153,13 @@
                 </entry>
                 <entry colname="col3">
                   <ph>The </ph>
-                  &lt;master instance >
+                  <i>master instance </i>
                   <ph>is the </ph>
                   <codeph>postgres</codeph>
                   <ph> process that accepts client connections.</ph>
                   <p>
                     <ph>Catalog information for Greenplum Database resides in the </ph>
-                    &lt;pg_catalog>
+                    <i>pg_catalog</i>
                     <ph> schema.</ph>
                   </p>
                 </entry>
@@ -190,7 +190,7 @@
               <row>
                 <entry colname="col1">
                   <codeph>
-                    &lt;monospace italics>
+                    <i>monospace italics</i>
                   </codeph>
                 </entry>
                 <entry colname="col2">
@@ -200,9 +200,9 @@
                   </p>
                 </entry>
                 <entry colname="col3"
-                      ><codeph>/home/</codeph><codeph>&lt;gpadmin></codeph>/<codeph>&lt;config_file></codeph><p><codeph>COPY
-                        </codeph><codeph>&lt;tablename></codeph><codeph> FROM
-                        '</codeph><codeph>&lt;filename></codeph><codeph>'</codeph></p></entry>
+                      ><codeph>/home/</codeph><codeph><i>gpadmin</i></codeph>/<codeph><i>config_file</i></codeph><p><codeph>COPY
+                        </codeph><codeph><i>tablename</i></codeph><codeph> FROM
+                        '</codeph><codeph><i>filename</i></codeph><codeph>'</codeph></p></entry>
               </row>
               <row>
                 <entry colname="col1">

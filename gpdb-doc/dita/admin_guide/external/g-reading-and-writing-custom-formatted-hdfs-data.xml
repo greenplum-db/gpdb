@@ -45,7 +45,7 @@ com.emc.greenplum.gpdb.hadoop.mapreduce.lib.output
             should place the corresponding <codeph>gphdfs</codeph> connector jar in the
                 <codeph>$HADOOP_HOME/lib</codeph> directory and restart the job tracker. If this is
             not done, a Hadoop user can still use the <codeph>gphdfs</codeph> connector jar; but
-            with the &lt;distributed cache> technique. </p>
+            with the <i>distributed cache</i> technique. </p>
     </body>
     <topic id="topic26">
         <title>Example 1 - Read Custom-Formatted Data from HDFS</title>

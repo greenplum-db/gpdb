@@ -29,7 +29,7 @@
       <p>
          <codeblock>=&gt; SELECT * FROM mytable;</codeblock>
       </p>
-      <p>See the &lt;Greenplum Reference Guide> for information about using the
+      <p>See the <i>Greenplum Reference Guide</i> for information about using the
             <codeph>psql</codeph> client application and SQL commands and syntax.</p>
    </body>
 </topic>

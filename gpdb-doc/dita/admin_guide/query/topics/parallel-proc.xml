@@ -44,16 +44,16 @@
     <title id="iy139957">Understanding Greenplum Query Plans</title>
     <body>
       <p>A query plan is the set of operations Greenplum Database will perform to
-        produce the answer to a query. Each &lt;node> or step in the plan represents a database
+        produce the answer to a query. Each <i>node</i> or step in the plan represents a database
         operation such as a table scan, join, aggregation, or sort. Plans are read and executed from
         bottom to top.</p>
       <p id="iy146386">In addition to common database operations such as table scans, joins, and so
-        on, Greenplum Database has an additional operation type called &lt;motion>.
+        on, Greenplum Database has an additional operation type called <i>motion</i>.
         A motion operation involves moving tuples between the segments during query processing. Note
         that not every query requires a motion. For example, a targeted query plan does not require
         data to move across the interconnect. </p>
-      <p>To achieve maximum parallelism during query execution, Greenplum divides the work of the query plan into &lt;slices>. A slice is a portion of the plan
-        that segments can work on independently. A query plan is sliced wherever a &lt;motion>
+      <p>To achieve maximum parallelism during query execution, Greenplum divides the work of the query plan into <i>slices</i>. A slice is a portion of the plan
+        that segments can work on independently. A query plan is sliced wherever a <i>motion</i>
         operation occurs in the plan, with one slice on each side of the motion.</p>
       <p>For example, consider the following simple query involving a join between two tables:</p>
       <p>
@@ -64,17 +64,17 @@ WHERE dateCol = '04-30-2016';
       </p>
       <p><xref href="#topic3/iy140224" type="fig" format="dita"/> shows the query plan. Each segment
         receives a copy of the query plan and works on it in parallel. </p>
-      <p>The query plan for this example has a &lt;redistribute motion> that moves tuples between
+      <p>The query plan for this example has a <i>redistribute motion</i> that moves tuples between
         the segments to complete the join. The redistribute motion is necessary because the customer
         table is distributed across the segments by <codeph>cust_id</codeph>, but the sales table is
         distributed across the segments by <codeph>sale_id</codeph>. To perform the join, the
           <codeph>sales</codeph> tuples must be redistributed by <codeph>cust_id</codeph>. The plan
-        is sliced on either side of the redistribute motion, creating &lt;slice 1> and <i>slice
+        is sliced on either side of the redistribute motion, creating <i>slice 1</i> and <i>slice
           2</i>. </p>
-      <p>This query plan has another type of motion operation called a &lt;gather motion>. A
+      <p>This query plan has another type of motion operation called a <i>gather motion</i>. A
         gather motion is when the segments send results back up to the master for presentation to
         the client. Because a query plan is always sliced wherever a motion occurs, this plan also
-        has an implicit slice at the very top of the plan (&lt;slice 3>). Not all query plans
+        has an implicit slice at the very top of the plan (<i>slice 3</i>). Not all query plans
         involve a gather motion. For example, a <codeph>CREATE TABLE x AS SELECT...</codeph>
         statement would not have a gather motion because tuples are sent to the newly created table,
         not to the master. </p>
@@ -90,18 +90,18 @@ WHERE dateCol = '04-30-2016';
     <body>
       <p id="iy141128">Greenplum creates a number of database processes
         to handle the work of a query. On the master, the query worker process is called the
-          &lt;query dispatcher> (QD). The QD is responsible for creating and dispatching the query
+          <i>query dispatcher</i> (QD). The QD is responsible for creating and dispatching the query
         plan. It also accumulates and presents the final results. On the segments, a query worker
-        process is called a &lt;query executor> (QE). A QE is responsible for completing its
+        process is called a <i>query executor</i> (QE). A QE is responsible for completing its
         portion of work and communicating its intermediate results to the other worker
         processes.</p>
-      <p>There is at least one worker process assigned to each &lt;slice> of the query plan. A
+      <p>There is at least one worker process assigned to each <i>slice</i> of the query plan. A
         worker process works on its assigned portion of the query plan independently. During query
         execution, each segment will have a number of processes working on the query in parallel. </p>
       <p>Related processes that are working on the same slice of the query plan but on different
-        segments are called &lt;gangs>. As a portion of work is completed, tuples flow up the
+        segments are called <i>gangs</i>. As a portion of work is completed, tuples flow up the
         query plan from one gang of processes to the next. This inter-process communication between
-        the segments is referred to as the &lt;interconnect> component of Greenplum Database.</p>
+        the segments is referred to as the <i>interconnect</i> component of Greenplum Database.</p>
       <p><xref href="#topic4/iy141495" type="fig" format="dita"/> shows the query worker processes
         on the master and two segment instances for the query plan illustrated in <xref
           href="#topic3/iy140224" type="fig" format="dita"/>.</p>

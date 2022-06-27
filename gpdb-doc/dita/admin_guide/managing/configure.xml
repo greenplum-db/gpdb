@@ -19,14 +19,14 @@
         Database configuration file, <filepath>postgresql.conf</filepath>, resides in the data
         directory of the database instance.</p>
       <p>The master and each segment instance have their own <filepath>postgresql.conf</filepath>
-        file. Some parameters are &lt;local>: each segment instance examines its
+        file. Some parameters are <i>local</i>: each segment instance examines its
           <filepath>postgresql.conf</filepath> file to get the value of that parameter. Set local
         parameters on the master and on each segment instance.</p>
-      <p>Other parameters are &lt;master> parameters that you set on the master instance. The
+      <p>Other parameters are <i>master</i> parameters that you set on the master instance. The
         value is passed down to (or in some cases ignored by) the segment instances at query run
         time.</p>
-      <p>See the <cite>Greenplum Database Reference Guide</cite> for information about &lt;local>
-        and &lt;master> server configuration parameters.</p>
+      <p>See the <cite>Greenplum Database Reference Guide</cite> for information about <i>local</i>
+        and <i>master</i> server configuration parameters.</p>
     </body>
   </topic>
   <topic id="topic3" xml:lang="en">
@@ -38,7 +38,7 @@
         For example, to change certain parameters, you must be a Greenplum Database superuser. Other
         parameters can be set only at the system level in the <filepath>postgresql.conf</filepath>
         file or require a system restart to take effect. </p>
-      <p>Many configuration parameters are &lt;session> parameters. You can set session parameters
+      <p>Many configuration parameters are <i>session</i> parameters. You can set session parameters
         at the system level, the database level, the role level or the session level. Database users
         can change most session parameters within their session, but some require superuser
         permissions. See the <cite>Greenplum Database Reference Guide</cite> for information about
@@ -64,7 +64,7 @@
       <title id="kh156891">Setting a Master Configuration Parameter</title>
       <body>
         <p>To set a master configuration parameter, set it at the Greenplum master instance. If it
-          is also a &lt;session> parameter, you can set the parameter for a particular database,
+          is also a <i>session</i> parameter, you can set the parameter for a particular database,
           role or session. If a parameter is set at multiple levels, the most granular level takes
           precedence. For example, session overrides role, role overrides database, and database
           overrides system.</p>
@@ -80,7 +80,7 @@
             <li id="kh160741">Find the parameter to set, uncomment it (remove the preceding
                 <codeph>#</codeph> character), and type the desired value.</li>
             <li id="kh160753">Save and close the file.</li>
-            <li id="kh160780">For &lt;session> parameters that do not require a server restart,
+            <li id="kh160780">For <i>session</i> parameters that do not require a server restart,
               upload the <codeph>postgresql.conf</codeph> changes as follows:<p>
                 <codeblock>$ gpstop -u</codeblock>
               </p></li>
@@ -892,7 +892,7 @@
       <body>
         <p>These parameters control the server statistics collection feature. When statistics
           collection is enabled, you can access system catalog statistics data using the
-            &lt;pg_stat> and &lt;pg_statio> family of system catalog views.</p>
+            <i>pg_stat</i> and <i>pg_statio</i> family of system catalog views.</p>
         <simpletable id="kh171301">
           <strow>
             <stentry>

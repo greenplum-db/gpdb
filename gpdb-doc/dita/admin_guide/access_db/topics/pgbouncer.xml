@@ -40,14 +40,14 @@
           existing connection for the same user and database. When the client disconnects, PgBouncer
           returns the connection to the pool for re-use.</p>
         <p>PgBouncer shares connections in one of three pool modes:<ul id="ul_jyx_rvg_cs">
-            <li>&lt;Session pooling> – When a client connects, a connection is assigned to it as
+            <li><i>Session pooling</i> – When a client connects, a connection is assigned to it as
               long as it remains connected. When the client disconnects, the connection is placed
               back into the pool.</li>
-            <li>&lt;Transaction pooling> – A connection is assigned to a client for the duration
+            <li><i>Transaction pooling</i> – A connection is assigned to a client for the duration
               of a transaction. When PgBouncer notices the transaction is done, the connection is
               placed back into the pool. This mode can be used only with applications that do not
               use features that depend upon a session. </li>
-            <li>&lt;Statement pooling> – Statement pooling is like transaction pooling, but
+            <li><i>Statement pooling</i> – Statement pooling is like transaction pooling, but
               multi-statement transactions are not allowed. This mode is intended to enforce
               autocommit mode on the client and is targeted for PL/Proxy on PostgreSQL.</li>
           </ul></p>

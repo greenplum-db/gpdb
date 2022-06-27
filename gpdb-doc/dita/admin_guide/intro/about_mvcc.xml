@@ -29,7 +29,7 @@
         set of rows that are visible at the beginning of a statement or transaction. The snapshot
         ensures the query has a consistent and valid view of the database for the duration of its
         execution. </p>
-      <p>Each transaction is assigned a unique &lt;transaction ID> (XID), an incrementing 32-bit
+      <p>Each transaction is assigned a unique <i>transaction ID</i> (XID), an incrementing 32-bit
         value. When a new transaction starts, it is assigned the next XID. An SQL statement that is
         not enclosed in a transaction is treated as a single-statement transaction—the
           <codeph>BEGIN</codeph> and <codeph>COMMIT</codeph> are added implicitly. This is similar
@@ -53,7 +53,7 @@
         transaction. </p>
       <p>XID is a property of the database. Each segment database has its own XID sequence that
         cannot be compared to the XIDs of other segment databases. The master coordinates
-        distributed transactions with the segments using a cluster-wide &lt;session ID number>,
+        distributed transactions with the segments using a cluster-wide <i>session ID number</i>,
         called <codeph>gp_session_id</codeph>. The segments maintain a mapping of distributed
         transaction IDs with their local XIDs. The master coordinates distributed transactions
         across all of the segment with the two-phase commit protocol. If a transaction fails on any
@@ -71,7 +71,7 @@
       <p>The MVCC model uses transaction IDs (XIDs) to determine which rows are visible at the
         beginning of a query or transaction. The XID is a 32-bit value, so a database could
         theoretically execute over four billion transactions before the value overflows and wraps to
-        zero. However, Greenplum Database uses &lt;modulo 2<sup>32</sup>> arithmetic with XIDs,
+        zero. However, Greenplum Database uses <i>modulo 2<sup>32</sup></i> arithmetic with XIDs,
         which allows the transaction IDs to wrap around, much as a clock wraps at twelve o'clock.
         For any given XID, there could be about two billion past XIDs and two billion future XIDs.
         This works until a version of a row persists through about two billion transactions, when it
@@ -104,11 +104,11 @@
       <title>Transaction Isolation Modes</title>
       <p>The SQL standard describes three phenomena that can occur when database transactions run
           concurrently:<ul id="ul_up2_tq3_pt">
-          <li>&lt;Dirty read> – a transaction can read uncommitted data from another concurrent
+          <li><i>Dirty read</i> – a transaction can read uncommitted data from another concurrent
             transaction. </li>
-          <li>&lt;Non-repeatable read> – a row read twice in a transaction can change because
+          <li><i>Non-repeatable read</i> – a row read twice in a transaction can change because
             another concurrent transaction committed changes after the transaction began. </li>
-          <li>&lt;Phantom read> – a query executed twice in the same transaction can return two
+          <li><i>Phantom read</i> – a query executed twice in the same transaction can return two
             different sets of rows because another concurrent transaction added rows.</li>
         </ul></p>
       <p>The SQL standard defines four transaction isolation modes that database systems must
@@ -164,14 +164,14 @@
           COMMITTED</codeph>. </p>
       <p>The difference between <codeph>READ COMMITTED</codeph> and <codeph>SERIALIZABLE</codeph> is
         that in <codeph>READ COMMITTED</codeph> mode, each statement in a transaction sees only rows
-        committed before the &lt;statement> started, while in <codeph>SERIALIZABLE</codeph> mode,
-        all statements in a transaction see only rows committed before the &lt;transaction>
+        committed before the <i>statement</i> started, while in <codeph>SERIALIZABLE</codeph> mode,
+        all statements in a transaction see only rows committed before the <i>transaction</i>
         started. </p>
       <p>The <codeph>READ COMMITTED</codeph> isolation mode permits greater concurrency and better
         performance than the <codeph>SERIALIZABLE</codeph> mode. It allows <i>non-repeatable
           reads</i>, where the values in a row retrieved twice in a transaction can differ because
         another concurrent transaction has committed changes since the transaction began.
-          <codeph>READ COMMITTED</codeph> mode also permits &lt;phantom reads>, where a query
+          <codeph>READ COMMITTED</codeph> mode also permits <i>phantom reads</i>, where a query
         executed twice in the same transaction can return two different sets of rows.</p>
       <p>The <codeph>SERIALIZABLE</codeph> isolation mode prevents both non-repeatable reads and
         phantom reads, but at the cost of concurrency and performance. Each concurrent transaction
@@ -187,7 +187,7 @@
         locking, but there are other interactions that can occur between some
           <codeph>SERIALIZABLE</codeph> transactions in Greenplum Database that prevent them from
         being truly serializable. These anomalies can often be attributed to the fact that Greenplum
-        Database does not perform &lt;predicate locking>, which means that a write in one
+        Database does not perform <i>predicate locking</i>, which means that a write in one
         transaction can affect the result of a previous read in another concurrent transaction. </p>
       <p>Transactions that run concurrently should be examined to identify interactions that are not
         prevented by disallowing concurrent updates of the same data. Problems identified can be
@@ -215,7 +215,7 @@ COMMIT;
         used by expired rows for reuse.</p>
       <p>When expired rows accumulate in a table, the disk files must be extended to accommodate new
         rows. Performance suffers due to the increased disk I/O required to execute queries. This
-        condition is called &lt;bloat> and it should be managed by regularly vacuuming tables. </p>
+        condition is called <i>bloat</i> and it should be managed by regularly vacuuming tables. </p>
       <p>The <codeph>VACUUM</codeph> command (without <codeph>FULL</codeph>) can run concurrently
         with other queries. It marks the space previously used by the expired rows as free. If the
         amount of remaining free space is significant, it adds the page to the table's free space
@@ -250,7 +250,7 @@ COMMIT;
           </pt>
           <pd>Sets the maximum number of disk pages that can be added to the shared free space map.
             Six bytes of shared memory are consumed for each page slot. The default is 200000. This
-            parameter must be set to at least 16 times the value of &lt;max_fsm_relations>.</pd>
+            parameter must be set to at least 16 times the value of <i>max_fsm_relations</i>.</pd>
         </plentry>
         <plentry>
           <pt>
@@ -259,7 +259,7 @@ COMMIT;
           <pd>
             <p>Sets the maximum number of relations that will be tracked in the shared memory free
               space map. This parameter should be set to a value larger than the total number of
-                &lt;tables + indexes + system tables>. The default is 1000. About 60 bytes of
+                <i>tables + indexes + system tables</i>. The default is 1000. About 60 bytes of
               memory are consumed for each relation per segment instance. It is better to set the
               parameter too high than too low.</p>
           </pd>
@@ -278,7 +278,7 @@ COMMIT;
       <p>Another useful tool is the <codeph>gp_bloat_diag</codeph> view in the
           <codeph>gp_toolkit</codeph> schema, which identifies bloat in tables by comparing the
         actual number of pages used by a table to the expected number. See "The gp_toolkit
-        Administrative Schema" in the &lt;Greenplum Database Reference Guide> for more about
+        Administrative Schema" in the <i>Greenplum Database Reference Guide</i> for more about
           <codeph>gp_bloat_diag</codeph>. </p>
     </section>
   </body>

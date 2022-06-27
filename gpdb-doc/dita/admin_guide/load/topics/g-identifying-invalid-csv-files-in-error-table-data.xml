@@ -4,7 +4,7 @@
 <topic id="topic59">
    <title>Identifying Invalid CSV Files in Error Table Data</title>
    <body>
-      <p>If a CSV file contains invalid formatting, the &lt;rawdata> field in the error table can
+      <p>If a CSV file contains invalid formatting, the <i>rawdata</i> field in the error table can
       contain several combined rows. For example, if a closing quote for a specific field is
       missing, all the following newlines are treated as embedded newlines. When this happens,
         Greenplum stops parsing a row when it reaches 64K, puts that

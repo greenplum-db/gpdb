@@ -41,7 +41,7 @@
     <body>
       <p>Set the server configuration parameter <cmdname>optimizer</cmdname> for individual Greenplum databases with the <cmdname>ALTER DATABASE</cmdname>
         command. For example, this command enables GPORCA for the database
-          &lt;test_db>.<codeblock>> ALTER DATABASE test_db SET OPTIMIZER = ON ;</codeblock></p>
+          <i>test_db</i>.<codeblock>> ALTER DATABASE test_db SET OPTIMIZER = ON ;</codeblock></p>
     </body>
   </topic>
   <topic id="topic_lx4_vqk_br">

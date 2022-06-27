@@ -444,7 +444,7 @@ done</codeblock></p>
                   <entry colname="col3"> 8 MB</entry>
                 </row>
                 <row>
-                  <entry colname="col1">parquetversion &lt;or> pqversion</entry>
+                  <entry colname="col1">parquetversion <i>or</i> pqversion</entry>
                   <entry colname="col2">
                     <codeph>v1</codeph>, <codeph>v2</codeph></entry>
                   <entry>Write only</entry>

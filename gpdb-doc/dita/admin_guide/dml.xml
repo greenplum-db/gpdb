@@ -174,8 +174,8 @@
         <li id="ix142076">The new values of the columns</li>
         <li id="ix142077">One or more conditions specifying the row or rows to be updated.</li>
       </ul>
-      <p>For example, the following command updates all products that have a price of &lt;5> to
-        have a price of &lt;10>:</p>
+      <p>For example, the following command updates all products that have a price of <i>5</i> to
+        have a price of <i>10</i>:</p>
       <p>
         <codeblock>UPDATE products SET price = 10 WHERE price = 5;
 </codeblock>
@@ -199,7 +199,7 @@
           <codeph>WHERE</codeph> clause to delete rows that match certain criteria. If you do not
         specify a <codeph>WHERE</codeph> clause, all rows in the table are deleted. The result is a
         valid, but empty, table. For example, to remove all rows from the products table that have a
-        price of &lt;10>:</p>
+        price of <i>10</i>:</p>
       <p>
         <codeblock>DELETE FROM products WHERE price = 10;
 </codeblock>
@@ -261,12 +261,12 @@
       <body>
         <p>Greenplum Database accepts the standard SQL transaction levels as follows:</p>
         <ul>
-          <li id="ix153961">&lt;read uncommitted> and &lt;read committed > behave like the
-            standard &lt;read committed></li>
-          <li>&lt;repeatable read> is disallowed. If the behavior of &lt;repeatable read> is
-            required, use &lt;serializable>.</li>
-          <li id="ix153971">&lt;serializable> behaves in a manner similar to SQL standard
-              &lt;serializable></li>
+          <li id="ix153961"><i>read uncommitted</i> and <i>read committed </i> behave like the
+            standard <i>read committed</i></li>
+          <li><i>repeatable read</i> is disallowed. If the behavior of <i>repeatable read</i> is
+            required, use <i>serializable</i>.</li>
+          <li id="ix153971"><i>serializable</i> behaves in a manner similar to SQL standard
+              <i>serializable</i></li>
         </ul>
         <p>The following information describes the behavior of the Greenplum transaction levels:</p>
         <ul>
@@ -354,7 +354,7 @@
     <topic id="topic10" xml:lang="en">
       <title>Configuring the Free Space Map</title>
       <body>
-        <p>Expired rows are held in the &lt;free space map>. The free space map must be sized
+        <p>Expired rows are held in the <i>free space map</i>. The free space map must be sized
           large enough to hold all expired rows in your database. If not, a regular
             <codeph>VACUUM</codeph> command cannot reclaim space occupied by expired rows that
           overflow the free space map.</p>

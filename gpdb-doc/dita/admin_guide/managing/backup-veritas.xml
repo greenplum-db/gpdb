@@ -233,7 +233,7 @@
   <topic id="topic_myv_lbz_3p">
     <title>Example NetBackup Back Up and Restore Commands</title>
     <body>
-      <p>This <codeph>gpcrondump</codeph> command backs up the database &lt;customer> and
+      <p>This <codeph>gpcrondump</codeph> command backs up the database <i>customer</i> and
         specifies a NetBackup policy and schedule that are defined on the NetBackup master server
           <codeph>nbu_server1</codeph>. A block size of 1024 bytes is used to transfer data to the
         NetBackup server.

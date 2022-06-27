@@ -192,7 +192,7 @@
       <p>A deliberate, thorough approach to deploying compatible hardware greatly minimizes risk to
         the expansion process.</p>
       <p>Hardware resources and configurations for new segment hosts should match those of the
-        existing hosts. Work with &lt;Greenplum Platform Engineering> before making a hardware
+        existing hosts. Work with <i>Greenplum Platform Engineering</i> before making a hardware
         purchase to expand Greenplum Database.</p>
       <p>The steps to plan and set up new hardware platforms vary for each deployment. Some
         considerations include how to:</p>
@@ -286,16 +286,16 @@
           a view for tracking expansion operation progress:</p>
         <ul id="ul_ont_tl5_mr">
           <li id="no165180">
-            &lt;gpexpand.status>
+            <i>gpexpand.status</i>
           </li>
           <li id="no165184">
-            &lt;gpexpand.status_detail>
+            <i>gpexpand.status_detail</i>
           </li>
           <li id="no165207">
-            &lt;gpexpand.expansion_progress>
+            <i>gpexpand.expansion_progress</i>
           </li>
         </ul>
-        <p>Control expansion process aspects by modifying &lt;gpexpand.status_detail>. For
+        <p>Control expansion process aspects by modifying <i>gpexpand.status_detail</i>. For
           example, removing a record from this table prevents the system from expanding the table
           across new segments. Control the order in which tables are processed for redistribution by
           updating the <codeph>rank</codeph> value for a record. For more information, see <xref

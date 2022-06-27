@@ -63,7 +63,7 @@
             <codeph>20160514<varname>hhmmss</varname></codeph>. The <varname>hhmmss</varname>
         represents the time: hour, minute, and second.</p>
       <p>For this example, assume you have created both full and incremental backups of the database
-          &lt;mytest>. To create the full backup, you used the following command: </p>
+          <i>mytest</i>. To create the full backup, you used the following command: </p>
       <codeblock>gpcrondump -x mytest -u /backupdir </codeblock>
       <p>Later, after some changes have been made to append optimized tables, you created an
         increment backup with the following command:</p>
@@ -95,7 +95,7 @@
       <p>To restore a database with the incremental backup <codeph>20160914081205</codeph>, you need
         the incremental backups <codeph>20160914081205</codeph> and <codeph>20160714095512</codeph>,
         and the full backup <codeph>20160514054532</codeph>.</p>
-      <p>To restore the &lt;mytest> database with the incremental backup
+      <p>To restore the <i>mytest</i> database with the incremental backup
           <codeph>20170114051246</codeph>, you need only the incremental backup and the full backup
           <codeph>20161114064330</codeph>. The restore command would be similar to this command.</p>
       <codeblock>gpdbrestore -t 20170114051246 -u /backupdir</codeblock>

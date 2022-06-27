@@ -126,6 +126,6 @@
       <li id="no165990">To remove the expansion schema:<codeblock>gpexpand -c</codeblock></li>
     </ol>
     <p>For information about the <codeph>gpexpand</codeph> utility and the other utilities that are
-      used for system expansion, see the &lt;Greenplum Database Utility Guide>. </p>
+      used for system expansion, see the <i>Greenplum Database Utility Guide</i>. </p>
   </body>
 </topic>

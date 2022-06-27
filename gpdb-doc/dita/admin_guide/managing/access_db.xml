@@ -11,8 +11,8 @@
       applications through PostgreSQL-compatible database connectivity libraries.</shortdesc>
     <body>
       <p>Users can connect to Greenplum Database using a PostgreSQL-compatible client program, such
-        as <codeph>psql</codeph>. Users and administrators &lt;always> connect to Greenplum
-        Database through the &lt;master>; the segments cannot accept client connections.</p>
+        as <codeph>psql</codeph>. Users and administrators <i>always</i> connect to Greenplum
+        Database through the <i>master</i>; the segments cannot accept client connections.</p>
       <p>In order to establish a connection to the Greenplum Database master, you will need to know
         the following connection information and configure your client program accordingly.</p>
       <table id="io140729">
@@ -33,7 +33,7 @@
               <entry colname="col1">Application name</entry>
               <entry colname="col2">The application name that is connecting to the database. The
                 default value, held in the <codeph>application_name</codeph> connection parameter is
-                  &lt;psql>.</entry>
+                  <i>psql</i>.</entry>
               <entry colname="col3">
                 <codeph>$PGAPPNAME</codeph>
               </entry>
@@ -196,8 +196,8 @@
           and <codeph>PGUSER</codeph> to the appropriate values, or use a
             <codeph>psql</codeph><codeph>~/.pgpass</codeph> file to contain frequently-used
           passwords. For information about Greenplum Database environment variables, see the
-            &lt;Greenplum Database Reference Guide>. For information about psql, see the
-            &lt;Greenplum Database Utility Guide>.</p>
+            <i>Greenplum Database Reference Guide</i>. For information about psql, see the
+            <i>Greenplum Database Utility Guide</i>.</p>
       </body>
       <topic id="topic5" xml:lang="en">
         <title id="io141913">Connecting with psql</title>
@@ -225,7 +225,7 @@
           <p>
             <codeblock>=&gt; SELECT * FROM mytable;</codeblock>
           </p>
-          <p>See the &lt;Greenplum Reference Guide> for information about using the
+          <p>See the <i>Greenplum Reference Guide</i> for information about using the
               <codeph>psql</codeph> client application and SQL commands and syntax.</p>
         </body>
       </topic>
@@ -302,7 +302,7 @@
               <row>
                 <entry colname="col1">JDBC</entry>
                 <entry colname="col2">pgjdbc</entry>
-                <entry colname="col3">Available in the &lt;Greenplum Database Connectivity>
+                <entry colname="col3">Available in the <i>Greenplum Database Connectivity</i>
                   package, which can be downloaded from <xref
                     href="https://network.pivotal.io/products/pivotal-gpdb" scope="external" format="html"
                       ><ph>Pivotal Network</ph></xref>.</entry>
@@ -408,7 +408,7 @@
                 client, network problems can prevent a connection (for example, DNS host name
                 resolution problems, the host system is down, and so on.). To ensure that network
                 problems are not the cause, connect to the Greenplum master host from the remote
-                client host. For example: <codeph>ping &lt;hostname></codeph>. <p id="io141723">If
+                client host. For example: <codeph>ping <i>hostname</i></codeph>. <p id="io141723">If
                   the system cannot resolve the host names and IP addresses of the hosts involved in
                   Greenplum Database, queries and connections will fail. For some operations,
                   connections to the Greenplum Database master use <codeph>localhost</codeph> and

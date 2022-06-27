@@ -24,7 +24,7 @@
       </li>
     </ul>
     <p>For information about the Greenplum Database utilities that are used to enable high
-      availability, see the &lt;Greenplum Database Utility Guide>. </p>
+      availability, see the <i>Greenplum Database Utility Guide</i>. </p>
   </body>
   <topic id="topic2" xml:lang="en">
     <title id="ki155204">Overview of High Availability in Greenplum Database</title>
@@ -47,14 +47,14 @@
       <title id="ki155227">Overview of Segment Mirroring</title>
       <body>
         <p>When Greenplum Database High Availability is enabled, there are two types of segments:
-            &lt;primary> and &lt;mirror>. Each primary segment has one corresponding mirror
+            <i>primary</i> and <i>mirror</i>. Each primary segment has one corresponding mirror
           segment. A primary segment receives requests from the master to make changes to the
           segment's database and then replicates those changes to the corresponding mirror. If a
           primary segment becomes unavailable, database queries fail over to the mirror segment.</p>
         <p>Segment mirroring employs a physical file replication scheme&#8212;data file I/O at the
           primary is replicated to the secondary so that the mirror's files are identical to the
-          primary's files. Data in Greenplum Database are represented with &lt;tuples>, which are
-          packed into &lt;blocks>. Database tables are stored in disk files consisting of one or
+          primary's files. Data in Greenplum Database are represented with <i>tuples</i>, which are
+          packed into <i>blocks</i>. Database tables are stored in disk files consisting of one or
           more blocks. A change to a tuple changes the block it is saved in, which is then written
           to disk on the primary and copied over the network to the mirror. The mirror updates the
           corresponding block in its copy of the file.</p>
@@ -83,14 +83,14 @@
         </fig>
         <p>If a primary segment fails, the file replication process stops and the mirror segment
           automatically starts as the active segment instance. The now active mirror's system state
-          becomes &lt;Change Tracking>, which means the mirror maintains a system table and
+          becomes <i>Change Tracking</i>, which means the mirror maintains a system table and
           change-log of all blocks updated while the primary segment is unavailable. When the failed
           primary segment is repaired and ready to be brought back online, an administrator
-          initiates a recovery process and the system goes into &lt;Resynchronization> state. The
+          initiates a recovery process and the system goes into <i>Resynchronization</i> state. The
           recovery process applies the logged changes to the repaired primary segment. The system
-          state changes to &lt;Synchronized> when the recovery process completes.</p>
+          state changes to <i>Synchronized</i> when the recovery process completes.</p>
         <p>If the mirror segment fails or becomes inaccessible while the primary is active, the
-          primary's system state changes to &lt;Change Tracking>, and it tracks changes to be
+          primary's system state changes to <i>Change Tracking</i>, and it tracks changes to be
           applied to the mirror when it is recovered.</p>
       </body>
     </topic>
@@ -197,7 +197,7 @@
             primaries)</title>
           <ol>
             <li id="ki155416">Ensure the Greenplum Database software is installed on all hosts. See
-              the &lt;Greenplum Database Installation Guide> for detailed installation
+              the <i>Greenplum Database Installation Guide</i> for detailed installation
               instructions.</li>
             <li id="ki161799">Allocate the data storage area for mirror data on all segment
               hosts.</li>
@@ -206,13 +206,13 @@
             <li id="ki155422">Create a configuration file that lists the host names, ports, and data
               directories on which to create mirrors. To create a sample configuration file to use
               as a starting point,
-                run:<codeblock>$ gpaddmirrors -o &lt;filename></codeblock><p>The format of the
+                run:<codeblock>$ gpaddmirrors -o <i>filename</i></codeblock><p>The format of the
                 mirror configuration file is:
-                </p><codeblock>filespaceOrder=[&lt;filespace1_fsname>[:&lt;filespace2_fsname>:...] 
-&lt;mirror>[&lt;content>]=&lt;content>:&lt;address>:&lt;port>:&lt;mir_replication_port>:
-&lt;pri_replication_port>:&lt;fselocation>[:&lt;fselocation>:...]</codeblock><p>For
+                </p><codeblock>filespaceOrder=[<i>filespace1_fsname</i>[:<i>filespace2_fsname</i>:...] 
+<i>mirror</i>[<i>content</i>]=<i>content</i>:<i>address</i>:<i>port</i>:<i>mir_replication_port</i>:
+<i>pri_replication_port</i>:<i>fselocation</i>[:<i>fselocation</i>:...]</codeblock><p>For
                 example, a configuration for two segment hosts and two segments per host, with no
-                additional filespaces configured besides the default &lt;pg_system>
+                additional filespaces configured besides the default <i>pg_system</i>
                 filespace):</p><codeblock>filespaceOrder=
 mirror0=0:sdw1:sdw1-1:52001:53001:54001:/gpdata/mir1/gp0
 mirror1=1:sdw1:sdw1-2:52002:53002:54002:/gpdata/mir1/gp1
@@ -221,7 +221,7 @@ mirror3=3:sdw2:sdw2-2:52002:53002:54002:/gpdata/mir1/gp3
 </codeblock></li>
             <li id="ki155430">Run the <codeph>gpaddmirrors</codeph> utility to enable mirroring in
               your Greenplum Database
-                system:<codeblock>$ gpaddmirrors -i &lt;mirror_config_file></codeblock><p>Where
+                system:<codeblock>$ gpaddmirrors -i <i>mirror_config_file</i></codeblock><p>Where
                   <codeph>-i</codeph> names the mirror configuration file you just created.</p></li>
           </ol>
         </section>
@@ -240,10 +240,10 @@ mirror3=3:sdw2:sdw2-2:52002:53002:54002:/gpdata/mir1/gp3
             <li id="ki160206">Ensure the standby master host is installed and configured:
                 <codeph>gpadmin</codeph> system user created, Greenplum Database binaries installed,
               environment variables set, SSH keys exchanged, and data directory created. See the
-                &lt;Greenplum Database Installation Guide> for detailed installation
+                <i>Greenplum Database Installation Guide</i> for detailed installation
               instructions.</li>
             <li id="ki155475">Run the <codeph>gpinitstandby</codeph> utility on the currently active
-                &lt;primary> master host to add a standby master host to your Greenplum Database
+                <i>primary</i> master host to add a standby master host to your Greenplum Database
               system. For example:<codeblock>$ gpinitstandby -s smdw</codeblock><p>Where
                   <codeph>-s</codeph> specifies the standby master host name.</p></li>
             <li id="ki155485">To switch operations to a standby master, see <xref href="#topic16"
@@ -256,7 +256,7 @@ mirror3=3:sdw2:sdw2-2:52002:53002:54002:/gpdata/mir1/gp3
             displays the process ID and state of the <codeph>walsender</codeph> process:</p>
           <codeblock>$ psql dbname -c 'SELECT procpid, state FROM pg_stat_replication;'</codeblock>
           <p>For information about the <codeph>pg_stat_replication</codeph> system view, see the
-              &lt;Greenplum Database Reference Guide>. </p>
+              <i>Greenplum Database Reference Guide</i>. </p>
         </section>
       </body>
     </topic>
@@ -295,15 +295,15 @@ mirror3=3:sdw2:sdw2-2:52002:53002:54002:/gpdata/mir1/gp3
           <ol>
             <li id="ki155584">On the master, run the <codeph>gpstate</codeph> utility with the
                 <codeph>-e</codeph> option to show segments with error
-                conditions:<codeblock>$ gpstate -e</codeblock><p>Segments in &lt;Change Tracking>
+                conditions:<codeblock>$ gpstate -e</codeblock><p>Segments in <i>Change Tracking</i>
                 mode indicate the corresponding mirror segment is down. When a segment is not in its
-                  &lt;preferred role>, the segment does not operate in the role to which it was
+                  <i>preferred role</i>, the segment does not operate in the role to which it was
                 assigned at system initialization. This means the system is in a potentially
                 unbalanced state, as some segment hosts may have more active segments than is
                 optimal for top system performance.</p><p>See <xref href="#topic14" type="topic"
                   format="dita"/> for instructions to fix this situation.</p></li>
             <li id="ki165350">To get detailed information about a failed segment, check the
-                &lt;gp_segment_configuration> catalog table. For
+                <i>gp_segment_configuration</i> catalog table. For
               example:<codeblock>$ psql -c "SELECT * FROM gp_segment_configuration WHERE status='d';"</codeblock></li>
             <li id="ki162539">For failed segment instances, note the host, port, preferred role, and
               data directory. This information will help determine the host and segment instances to
@@ -378,7 +378,7 @@ mirror3=3:sdw2:sdw2-2:52002:53002:54002:/gpdata/mir1/gp3
           <title>To recover with mirroring enabled</title>
           <ol>
             <li id="ki155643">Ensure you can connect to the segment host from the master host. For
-              example:<codeblock>$ ping &lt;failed_seg_host_address></codeblock></li>
+              example:<codeblock>$ ping <i>failed_seg_host_address</i></codeblock></li>
             <li id="ki155645">Troubleshoot the problem that prevents the master host from connecting
               to the segment host. For example, the host machine may need to be restarted or
               replaced.</li>
@@ -389,10 +389,10 @@ mirror3=3:sdw2:sdw2-2:52002:53002:54002:/gpdata/mir1/gp3
               changed files that need to be synchronized. The process can take some time; wait for
               the process to complete. During this process, database write activity is suspended. </li>
             <li id="ki164382">After <codeph>gprecoverseg</codeph> completes, the system goes into
-                &lt;Resynchronizing> mode and begins copying the changed files. This process runs
+                <i>Resynchronizing</i> mode and begins copying the changed files. This process runs
               in the background while the system is online and accepting database requests.</li>
             <li id="ki158504">When the resynchronization process completes, the system state is
-                &lt;Synchronized>. Run the <codeph>gpstate</codeph> utility to verify the status
+                <i>Synchronized</i>. Run the <codeph>gpstate</codeph> utility to verify the status
               of the resynchronization process:<codeblock>$ gpstate -m</codeblock></li>
           </ol>
           <title id="ki155666">To return all segments to their preferred role</title>
@@ -409,8 +409,8 @@ mirror3=3:sdw2:sdw2-2:52002:53002:54002:/gpdata/mir1/gp3
             rolled back. </p>
           <ol>
             <li id="ki165540">Run <codeph>gpstate -m</codeph> to ensure all mirrors are
-                &lt;Synchronized>. <codeblock>$ gpstate -m</codeblock></li>
-            <li id="ki165577">If any mirrors are in &lt;Resynchronizing> mode, wait for them to
+                <i>Synchronized</i>. <codeblock>$ gpstate -m</codeblock></li>
+            <li id="ki165577">If any mirrors are in <i>Resynchronizing</i> mode, wait for them to
               complete.</li>
             <li id="ki165591">Run gprecoverseg with the -r option to return the segments to their
               preferred roles.<codeblock>$ gprecoverseg -r</codeblock></li>
@@ -456,16 +456,16 @@ mirror3=3:sdw2:sdw2-2:52002:53002:54002:/gpdata/mir1/gp3
             onto a spare set of hardware resources. If mirroring is enabled, you can recover a
             segment from its mirror onto an alternate host using <ph>gprecoverseg</ph>. For
             example:</p>
-          <codeblock>$ gprecoverseg -i &lt;recover_config_file></codeblock>
-          <p>Where the format of <codeph>&lt;recover_config_file></codeph> is:</p>
-          <codeblock>filespaceOrder=[&lt;filespace1_name>[:&lt;filespace2_name>:...]&lt;failed_host_address>:
-&lt;port>:&lt;fselocation> [&lt;recovery_host_address>:&lt;port>:&lt;replication_port>:&lt;fselocation>
-[:&lt;fselocation>:...]]</codeblock>
+          <codeblock>$ gprecoverseg -i <i>recover_config_file</i></codeblock>
+          <p>Where the format of <codeph><i>recover_config_file</i></codeph> is:</p>
+          <codeblock>filespaceOrder=[<i>filespace1_name</i>[:<i>filespace2_name</i>:...]<i>failed_host_address</i>:
+<i>port</i>:<i>fselocation</i> [<i>recovery_host_address</i>:<i>port</i>:<i>replication_port</i>:<i>fselocation</i>
+[:<i>fselocation</i>:...]]</codeblock>
           <p>For example, to recover to a different host than the failed host without additional
-            filespaces configured (besides the default &lt;pg_system> filespace):</p>
+            filespaces configured (besides the default <i>pg_system</i> filespace):</p>
           <codeblock>filespaceOrder=
 sdw5-2:50002:/gpdata/gpseg2 sdw9-2:50002:53002:/gpdata/gpseg2</codeblock>
-          <p>The &lt;gp_segment_configuration> and &lt;pg_filespace_entry> system catalog tables
+          <p>The <i>gp_segment_configuration</i> and <i>pg_filespace_entry</i> system catalog tables
             can help determine your current segment configuration so you can plan your mirror
             recovery configuration. For example, run the following query:</p>
           <codeblock>=# SELECT dbid, content, hostname, address, port, 
@@ -495,12 +495,12 @@ sdw5-2:50002:/gpdata/gpseg2 sdw9-2:50002:53002:/gpdata/gpseg2</codeblock>
             master host you are activating. For
               example:<codeblock>$ gpactivatestandby -d /data/master/gpseg-1</codeblock><p>Where
                 <codeph>-d</codeph> specifies the data directory of the master host you are
-              activating.</p><p>After you activate the standby, it becomes the &lt;active> or
-                &lt;primary> master for your Greenplum Database array. </p></li>
+              activating.</p><p>After you activate the standby, it becomes the <i>active</i> or
+                <i>primary</i> master for your Greenplum Database array. </p></li>
           <li id="ki155816">After the utility finishes, run <codeph>gpstate</codeph> to check the
               status:<codeblock>$ gpstate -f</codeblock><p>The newly activated master's status
-              should be &lt;Active>. If you configured a new standby host, its status is
-                &lt;Passive>. If not configured, its status is &lt;Not Configured>.</p></li>
+              should be <i>Active</i>. If you configured a new standby host, its status is
+                <i>Passive</i>. If not configured, its status is <i>Not Configured</i>.</p></li>
           <li id="ki169625">After switching to the newly active master host, run
               <codeph>ANALYZE</codeph> on it. For
             example:<codeblock>$ psql <codeph>dbname</codeph> -c 'ANALYZE;'</codeblock></li>
@@ -508,7 +508,7 @@ sdw5-2:50002:/gpdata/gpseg2 sdw9-2:50002:53002:/gpdata/gpseg2</codeblock>
               <codeph>gpactivatestandby</codeph> utility, use <codeph>gpinitstandby</codeph> to
             configure a new standby master at a later time. Run <codeph>gpinitstandby</codeph> on
             your active master host. For
-            example:<codeblock>$ gpinitstandby -s &lt;new_standby_master_hostname></codeblock></li>
+            example:<codeblock>$ gpinitstandby -s <i>new_standby_master_hostname</i></codeblock></li>
         </ol>
       </section>
     </body>
@@ -531,7 +531,7 @@ sdw5-2:50002:/gpdata/gpseg2 sdw9-2:50002:53002:/gpdata/gpseg2</codeblock>
             <li id="ki160936">Ensure the original master host is in dependable running condition;
               ensure the cause of the original failure is fixed.</li>
             <li id="ki160940">Initialize a standby master on the original master host. For
-              example:<codeblock>$ gpinitstandby -s &lt;original_master_hostname></codeblock></li>
+              example:<codeblock>$ gpinitstandby -s <i>original_master_hostname</i></codeblock></li>
             <li id="ki160961">Run the <codeph>gpactivatestandby</codeph> utility from the original
               master host (currently a standby master). For
                 example:<codeblock>$ gpactivatestandby -d $MASTER_DATA_DIRECTORY</codeblock><p>Where
@@ -539,11 +539,11 @@ sdw5-2:50002:/gpdata/gpseg2 sdw9-2:50002:53002:/gpdata/gpseg2</codeblock>
                 activating.</p></li>
             <li id="ki165618">After the utility finishes, run <codeph>gpstate</codeph> to check the
                 status:<codeblock>$ gpstate -f</codeblock><p>Verify the original primary master
-                status is &lt;Active>, and the standby master status is <i>Not
+                status is <i>Active</i>, and the standby master status is <i>Not
               Configured</i>.</p></li>
             <li id="ki165609">After the original master host runs the primary Greenplum Database
               master, you can initialize a standby master on the original standby master host. For
-              example:<codeblock>$ gpinitstandby -s &lt;original_standby_master_hostname></codeblock></li>
+              example:<codeblock>$ gpinitstandby -s <i>original_standby_master_hostname</i></codeblock></li>
           </ol>
           <title>To check the status of the master mirroring process (optional)</title>
           <p>You can display the information in the Greenplum Database system view

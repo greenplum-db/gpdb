@@ -4,13 +4,13 @@
   <title>File-Based Replication in Greenplum Database</title>
   <body>
     <p>Greenplum Database is a massively parallel database, and thus a distributed system. Greenplum
-      Database consists of two types of entities, a &lt;master> instance and a number of workers,
-      called &lt;segments>. </p>
+      Database consists of two types of entities, a <i>master</i> instance and a number of workers,
+      called <i>segments</i>. </p>
     <p>This short article discusses the segment-level replication scheme at a very high level.
       Master replication is a topic for another article. Each Greenplum Database segment can be seen
       as a single Postgres instance having its own catalog and share of data. When a Greenplum
       Database system runs with High Availability enabled, the segments are divided into two
-      categories: &lt;primary> and &lt;secondary>, or &lt;mirror>. Each primary segment has
+      categories: <i>primary</i> and <i>secondary</i>, or <i>mirror</i>. Each primary segment has
       one corresponding mirror segment. A primary segment, as the name suggests, receives requests
       from the master to make changes to the segment's database, and then replicates those changes
       to the corresponding mirror. </p>
@@ -18,8 +18,8 @@
       operations at the primary are replicated to the secondary. To commit a change on the primary,
       the change must also succeed on the mirror. Changes to the primary and secondary segments are
       both saved on disk before a transaction completes. </p>
-    <p>Data in Greenplum Database are represented with &lt;tuples>, which are packed into
-        &lt;blocks>. Each block has one or more tuples packed into it. Database tables are stored
+    <p>Data in Greenplum Database are represented with <i>tuples</i>, which are packed into
+        <i>blocks</i>. Each block has one or more tuples packed into it. Database tables are stored
       as disk files consisting of one or more blocks. The block is the smallest unit of I/O. Any
       change to a tuple changes the block it is saved in, and causes the primary to replicate the
       block to the secondary, which writes the new content to the corresponding block in its copy of
@@ -61,10 +61,10 @@
         the mirror becomes unavailable, however, the primary must not stop, and the mirror must be
         brought up to date when it comes back online. The primary segment detects when the mirror is
         down and saves the changes it cannot apply through file replication. This situation is
-        called &lt;change-tracking>. The primary keeps track of the changes while the mirror is
+        called <i>change-tracking</i>. The primary keeps track of the changes while the mirror is
         down, maintaining a change log file and a system catalog to track the blocks changed in the
         database while the mirror is down. This change-set later allows the mirror to catch up with
-        the primary, a process called a &lt;resync >procedure. The rsync is triggered when the
+        the primary, a process called a <i>resync </i>procedure. The rsync is triggered when the
         secondary comes back online.</p>
     </section>
   </body>

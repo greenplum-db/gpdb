@@ -6,7 +6,7 @@
    <body>
       <note>The <codeph>gphdfs</codeph> external table protocol is deprecated and will be
         removed in the next major release of Greenplum Database.</note>
-      <p>Creates a readable external table, &lt;ext_expenses,> using the
+      <p>Creates a readable external table, <i>ext_expenses,</i> using the
                             <codeph>gphdfs</codeph> protocol. The column delimiter is a pipe ( |
                         ).</p>
       <p>

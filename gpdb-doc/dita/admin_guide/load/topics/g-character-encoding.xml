@@ -16,13 +16,13 @@
       the server encoding. When sending data back to the client, Greenplum converts the data from
       the server character encoding into the specified client encoding.</p>
     <p>Data files must be in a character encoding recognized by Greenplum Database.
-        <ph>See the &lt;Greenplum Database Reference Guide> for the supported
+        <ph>See the <i>Greenplum Database Reference Guide</i> for the supported
         character sets. </ph>Data files that contain invalid or unsupported encoding sequences
       encounter errors when loading into Greenplum Database.</p>
     <note type="note">On data files generated on a Microsoft Windows operating system, run the
         <codeph>dos2unix</codeph> system command to remove any Windows-only characters before
       loading into Greenplum Database.</note>
-    <note>If you &lt;change> the <codeph>ENCODING</codeph> value in an existing
+    <note>If you <i>change</i> the <codeph>ENCODING</codeph> value in an existing
         <codeph>gpload</codeph> control file, you must manually drop any external tables that were
       creating using the previous <codeph>ENCODING</codeph> configuration. <codeph>gpload</codeph>
       does not drop and recreate external tables to use the new <codeph>ENCODING</codeph> if

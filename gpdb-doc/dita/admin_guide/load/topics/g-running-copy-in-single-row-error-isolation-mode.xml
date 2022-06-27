@@ -6,7 +6,7 @@
     <body>
         <p>By default, <codeph>COPY</codeph> stops an operation at the first error: if the data
             contains an error, the operation fails and no data loads. If you run <codeph>COPY
-                FROM</codeph> in &lt;single row error isolation mode>, Greenplum skips rows that
+                FROM</codeph> in <i>single row error isolation mode</i>, Greenplum skips rows that
             contain format errors and loads properly formatted rows. Single row error isolation mode
             applies only to rows in the input file that contain format errors. If the data contains
             a constraint error such as violation of a <codeph>NOT NULL</codeph>,

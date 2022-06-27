@@ -63,7 +63,7 @@
       system.</shortdesc>
     <taskbody>
       <context>The <codeph>gpstop</codeph> utility can reload changes to the
-          <filepath>pg_hba.conf</filepath> configuration file and to &lt;runtime> parameters in
+          <filepath>pg_hba.conf</filepath> configuration file and to <i>runtime</i> parameters in
         the master <filepath>postgresql.conf</filepath> file and <filepath>pg_hba.conf</filepath>
         file without service interruption. Active sessions pick up changes when they reconnect to
         the database. Many server configuration parameters require a full system restart

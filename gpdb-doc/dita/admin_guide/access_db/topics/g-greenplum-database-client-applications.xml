@@ -91,7 +91,7 @@
             <codeph>PGUSER</codeph> to the appropriate values, or use a <codeph>psql</codeph>
          <codeph>~/.pgpass</codeph> file to contain frequently-used passwords. </p>
       <p>For information about Greenplum Database environment variables, see the
-            &lt;Greenplum Database Reference Guide>. For information about psql, see the
-            &lt;Greenplum Database Utility Guide>.</p>
+            <i>Greenplum Database Reference Guide</i>. For information about psql, see the
+            <i>Greenplum Database Utility Guide</i>.</p>
    </body>
 </topic>

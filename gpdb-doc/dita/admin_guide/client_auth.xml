@@ -7,7 +7,7 @@
     Greenplum Database.</shortdesc>
   <body>
     <p>When a Greenplum Database system is first initialized, the system contains one predefined
-        &lt;superuser> role. This role will have the same name as the operating system user who
+        <i>superuser</i> role. This role will have the same name as the operating system user who
       initialized the Greenplum Database system. This role is referred to as
         <codeph>gpadmin</codeph>. By default, the system is configured to only allow local
       connections to the database from the <codeph>gpadmin</codeph> role. If you want to allow any
@@ -194,7 +194,7 @@ host    all   gpadmin   ::1/128       ident
 # allow the 'dba' role access to any database from any
 # host with IP address 192.168.x.x and use md5 encrypted
 # passwords to authenticate the user
-# Note that to use SHA-256 encryption, replace &lt;md5 with
+# Note that to use SHA-256 encryption, replace <i>md5</i> with
 # password in the line below
 host    all   dba   192.168.0.0/32  md5
 # allow all roles access to any database from any
@@ -222,7 +222,7 @@ host    all   all   192.168.0.0/32  ldap ldapserver=usldap1 ldapport=138
     <body>
       <p>To limit the number of active concurrent sessions to your Greenplum Database system, you
         can configure the <codeph>max_connections</codeph> server configuration parameter. This is a
-          &lt;local> parameter, meaning that you must set it in the
+          <i>local</i> parameter, meaning that you must set it in the
           <codeph>postgresql.conf</codeph> file of the master, the standby master, and each segment
         instance (primary and mirror). The recommended value of <codeph>max_connections</codeph> on
         segments is 5-10 times the value on the master.</p>
@@ -344,7 +344,7 @@ max_prepared_transactions=100
 </codeblock>
         </p>
         <p>Enter the information requested by the prompts. Be sure to enter the local host name as
-            &lt;Common Name>. The challenge password can be left blank.</p>
+            <i>Common Name</i>. The challenge password can be left blank.</p>
         <p>The program will generate a key that is passphrase protected, and does not accept a
           passphrase that is less than four characters long. </p>
         <p>To use this certificate with Greenplum Database, remove the passphrase with the following

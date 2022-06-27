@@ -32,9 +32,9 @@
         <li id="jb155762"><b>Disk Capacity</b> – Disk capacity on your segment hosts should never
           exceed 70 percent full. Greenplum Database needs some free space for runtime
           processing. <ph>To reclaim disk space that deleted rows occupy, run
-              <codeph>VACUUM</codeph> after loads or updates. </ph>The &lt;gp_toolkit>
+              <codeph>VACUUM</codeph> after loads or updates. </ph>The <i>gp_toolkit</i>
           administrative schema has many views for checking the size of distributed database
-          objects. <p>See the &lt;Greenplum Database Reference Guide> for
+          objects. <p>See the <i>Greenplum Database Reference Guide</i> for
             information about checking database object sizes and disk space.</p></li>
       </ul>
     </body>
@@ -216,7 +216,7 @@
               </row>
               <row>
                 <entry colname="col1">Table Name Length</entry>
-                <entry colname="col2">63 Bytes (Limited by &lt;name> data type)</entry>
+                <entry colname="col2">63 Bytes (Limited by <i>name</i> data type)</entry>
               </row>
             </tbody>
           </tgroup>

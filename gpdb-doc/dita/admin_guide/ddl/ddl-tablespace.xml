@@ -13,7 +13,7 @@
     <p>A tablespace requires a file system location to store its database files. In Greenplum
       Database, the master and each segment (primary and mirror) require a distinct storage
       location. The collection of file system locations for all components in a Greenplum system is
-      a &lt;filespace>. Filespaces can be used by one or more tablespaces.</p>
+      a <i>filespace</i>. Filespaces can be used by one or more tablespaces.</p>
   </body>
   <topic id="topic10" xml:lang="en">
     <title id="im199401">Creating a Filespace</title>
@@ -74,7 +74,7 @@ master location&gt; /gpfs1/master
       <body>
         <p>Unless otherwise specified, temporary and transaction files are stored together with all
           user data. The default location of temporary files,
-            &lt;&lt;filespace_directory&gt;>/&lt;&lt;tablespace_oid&gt;>/&lt;&lt;database_oid&gt;>/pgsql_tmp
+            <i>&lt;filespace_directory&gt;</i>/<i>&lt;tablespace_oid&gt;</i>/<i>&lt;database_oid&gt;</i>/pgsql_tmp
           is changed when you use <codeph>gpfilespace --movetempfiles</codeph> for the first time. </p>
         <p>Also note the following information about temporary or transaction files:</p>
         <ul id="ul_gkl_hvy_sp">
@@ -129,7 +129,7 @@ master location&gt; /gpfs1/master
         <codeblock>CREATE TABLE tablename(options) TABLESPACE spacename
 </codeblock>
       </p>
-      <p>For example, the following command creates a table in the tablespace &lt;space1>:</p>
+      <p>For example, the following command creates a table in the tablespace <i>space1</i>:</p>
       <p>
         <codeblock>CREATE TABLE foo(i int) TABLESPACE space1;
 </codeblock>
@@ -158,12 +158,12 @@ CREATE TABLE foo(i int);
       <ul id="ul_mml_hvy_sp">
         <li id="im200050"><codeph>pg_global</codeph> for shared system catalogs.</li>
         <li id="im200067"><codeph>pg_default</codeph>, the default tablespace. Used by the
-            &lt;template1> and &lt;template0> databases. </li>
+            <i>template1</i> and <i>template0</i> databases. </li>
       </ul>
       <p>These tablespaces use the system default filespace, <codeph>pg_system</codeph>, the data
         directory location created at system initialization.</p>
-      <p>To see filespace information, look in the &lt;pg_filespace> and &lt;pg_filespace_entry>
-        catalog tables. You can join these tables with &lt;pg_tablespace> to see the full
+      <p>To see filespace information, look in the <i>pg_filespace</i> and <i>pg_filespace_entry</i>
+        catalog tables. You can join these tables with <i>pg_tablespace</i> to see the full
         definition of a tablespace. For example:</p>
       <p>
         <codeblock>=# SELECT spcname as tblspc, fsname as filespc, 

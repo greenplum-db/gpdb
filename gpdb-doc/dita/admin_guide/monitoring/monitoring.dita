@@ -160,7 +160,7 @@ FROM gp_master_mirroring;</codeblock></p>
                                         minutes</p><p>Severity: IMPORTANT</p></entry>
                                 <entry>
                                     <p>Run the following <codeph>psql</codeph>
-                                        command:<codeblock>psql &lt;dbname -c 'SELECT procpid, state FROM pg_stat_replication;'</codeblock></p>
+                                        command:<codeblock>psql <i>dbname</i> -c 'SELECT procpid, state FROM pg_stat_replication;'</codeblock></p>
                                 </entry>
                                 <entry>
                                     <p>Check the <filepath>pg_log</filepath> file from the master
@@ -507,7 +507,7 @@ WHERE logseverity in ('FATAL', 'ERROR')
                                         occupy can be reused.<p>Recommended frequency:
                                             daily</p><p>Severity: CRITICAL</p></entry>
                                     <entry>Vacuum user
-                                        tables:<codeblock>VACUUM &lt;&lt;table>;</codeblock></entry>
+                                        tables:<codeblock>VACUUM <i>&lt;table></i>;</codeblock></entry>
                                     <entry>Vacuum updated tables regularly to prevent bloating.
                                     </entry>
                                 </row>
@@ -596,10 +596,10 @@ WHERE logseverity in ('FATAL', 'ERROR')
                             </row>
                             <row>
                                 <entry>Install Greenplum Database minor releases<ph>, for example
-                                            5.0.&lt;x></ph>.<p>Recommended frequency:
+                                            5.0.<i>x</i></ph>.<p>Recommended frequency:
                                         quarterly</p><p>Severity: IMPORTANT</p></entry>
                                 <entry>Follow upgrade instructions in the Greenplum Database
-                                    &lt;Release Notes>. Always upgrade to the latest in the
+                                    <i>Release Notes</i>. Always upgrade to the latest in the
                                     series.</entry>
                                 <entry>Keep the Greenplum Database software current to
                                     incorporate bug fixes, performance enhancements, and feature

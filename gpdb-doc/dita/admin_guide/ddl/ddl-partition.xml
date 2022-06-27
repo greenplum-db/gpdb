@@ -23,14 +23,14 @@
       <p>Partitioning does not change the physical distribution of table data across the segments.
         Table distribution is physical: Greenplum Database physically divides partitioned tables and
         non-partitioned tables across segments to enable parallel query processing. Table
-          &lt;partitioning> is logical: Greenplum Database logically divides big tables to improve
+          <i>partitioning</i> is logical: Greenplum Database logically divides big tables to improve
         query performance and facilitate data warehouse maintenance tasks, such as rolling old data
         out of the data warehouse. </p>
       <p>Greenplum Database supports:</p>
       <ul id="ul_ohc_2wy_sp">
-        <li id="im204035">&lt;range partitioning>: division of data based on a numerical range,
+        <li id="im204035"><i>range partitioning</i>: division of data based on a numerical range,
           such as date or price.</li>
-        <li id="im207235">&lt;list partitioning>: division of data based on a list of values, such
+        <li id="im207235"><i>list partitioning</i>: division of data based on a list of values, such
           as sales territory or product line.</li>
         <li id="im207242">A combination of both types.</li>
       </ul>
@@ -69,9 +69,9 @@
   <topic id="topic65" xml:lang="en">
     <title>Deciding on a Table Partitioning Strategy</title>
     <body>
-      <p>Not all tables are good candidates for partitioning. If the answer is &lt;yes> to all or
+      <p>Not all tables are good candidates for partitioning. If the answer is <i>yes</i> to all or
         most of the following questions, table partitioning is a viable database design strategy for
-        improving query performance. If the answer is &lt;no> to most of the following questions,
+        improving query performance. If the answer is <i>no</i> to most of the following questions,
         table partitioning is not the right solution for that table. Test your design strategy to
         ensure that query performance improves as expected.</p>
       <ul id="ul_jpc_2wy_sp">
@@ -253,7 +253,7 @@ PARTITION BY LIST (gender)
       <title id="im148875">Defining Multi-level Partitions</title>
       <body>
         <p>You can create a multi-level partition design with subpartitions of partitions. Using a
-            &lt;subpartition template> ensures that every partition has the same subpartition
+            <i>subpartition template</i> ensures that every partition has the same subpartition
           design, including partitions that you add later. For example, the following SQL creates
           the two-level partition design shown in <xref href="#topic_tvx_nsz_bt/im207241"
             format="dita"/>:</p>
@@ -425,7 +425,7 @@ GRANT SELECT ON sales TO guest;
       <p>When a table is partitioned based on the query predicate, you can use
           <codeph>EXPLAIN</codeph> to verify that the query optimizer scans only the relevant data
         to examine the query plan.</p>
-      <p>For example, suppose a &lt;sales> table is date-range partitioned by month and
+      <p>For example, suppose a <i>sales</i> table is date-range partitioned by month and
         subpartitioned by region as shown in <xref href="#topic_tvx_nsz_bt/im207241" format="dita"
         />. For the following query:</p>
       <p>
@@ -437,8 +437,8 @@ region='usa';
       <ul id="ul_xyc_2wy_sp">
         <li id="im152925">the default partition returning 0-1 rows (if your partition design has
           one)</li>
-        <li id="im148892">the January 2012 partition (&lt;sales_1_prt_1>) returning 0-1 rows </li>
-        <li id="im148893">the USA region subpartition (&lt;sales_1_2_prt_usa>) returning <i>some
+        <li id="im148892">the January 2012 partition (<i>sales_1_prt_1</i>) returning 0-1 rows </li>
+        <li id="im148893">the USA region subpartition (<i>sales_1_2_prt_usa</i>) returning <i>some
             number</i> of rows. </li>
       </ul>
       <p>The following example shows the relevant portion of the query plan.</p>
@@ -478,7 +478,7 @@ Filter: "date"=01-07-12::date AND region='USA'::text
     <body>
       <p>You can look up information about your partition design using the <i><xref
             href="../../ref_guide/system_catalogs/pg_partitions.xml">pg_partitions</xref></i> system
-        view. For example, to see the partition design of the &lt;sales> table:</p>
+        view. For example, to see the partition design of the <i>sales</i> table:</p>
       <p>
         <codeblock>SELECT partitionboundary, partitiontablename, partitionname, 
 partitionlevel, partitionrank 
@@ -500,7 +500,7 @@ WHERE tablename='sales';
           design.</li>
       </ul>
       <p otherprops="op-print">For information about Greenplum Database system catalog tables and
-        views, see the &lt;Greenplum Database Reference Guide>. </p>
+        views, see the <i>Greenplum Database Reference Guide</i>. </p>
     </body>
   </topic>
   <topic id="topic77" xml:lang="en">
@@ -509,9 +509,9 @@ WHERE tablename='sales';
       <p>To maintain a partitioned table, use the <codeph>ALTER TABLE</codeph> command against the
         top-level parent table. The most common scenario is to drop old partitions and add new ones
         to maintain a rolling window of data in a range partition design. You can convert
-          (&lt;exchange>) older partitions to the append-optimized compressed storage format to
+          (<i>exchange</i>) older partitions to the append-optimized compressed storage format to
         save space. If you have a default partition in your partition design, you add a partition by
-          &lt;splitting> the default partition.</p>
+          <i>splitting</i> the default partition.</p>
       <ul id="ul_ufd_2wy_sp">
         <li id="im154171">
           <xref href="#topic78" type="topic" format="dita"/>
@@ -568,7 +568,7 @@ WHERE tablename='sales';
       <body>
         <p>You can add a partition to a partition design with the <codeph>ALTER TABLE</codeph>
           command. If the original partition design included subpartitions defined by a
-            &lt;subpartition template>, the newly added partition is subpartitioned according to
+            <i>subpartition template</i>, the newly added partition is subpartitioned according to
           that template. For example:</p>
         <p>
           <codeblock>ALTER TABLE sales ADD PARTITION 
@@ -617,7 +617,7 @@ WHERE tablename='sales';
           <codeblock>sales_1_prt_1</codeblock>
         </p>
         <p>To rename a partitioned child table, rename the top-level parent table. The
-            &lt;&lt;parentname&gt;> changes in the table names of all associated child table
+            <i>&lt;parentname&gt;</i> changes in the table names of all associated child table
           partitions. For example, the following command:</p>
         <p>
           <codeblock>ALTER TABLE sales RENAME TO globalsales;
@@ -637,8 +637,8 @@ WHERE tablename='sales';
           <codeblock>sales_1_prt_jan16</codeblock>
         </p>
         <p>When altering partitioned tables with the <codeph>ALTER TABLE</codeph> command, always
-          refer to the tables by their partition name (&lt;jan16>) and not their full table name
-            (&lt;sales_1_prt_jan16>).</p>
+          refer to the tables by their partition name (<i>jan16</i>) and not their full table name
+            (<i>sales_1_prt_jan16</i>).</p>
         <note type="note">The table name cannot be a partition name in an <codeph>ALTER
             TABLE</codeph> statement. For example, <codeph>ALTER TABLE sales...</codeph> is correct,
             <codeph>ALTER TABLE sales_1_part_jan16...</codeph> is not allowed.</note>
@@ -745,7 +745,7 @@ WITH TABLE jan12;
           using the <codeph>ALTER TABLE</codeph> command. You can split partitions only at the
           lowest level of your partition hierarchy (partitions that contain data). For a multi-level
           partition, only range partitions can be split, not list partitions. The split value you
-          specify goes into the &lt;latter> partition. </p>
+          specify goes into the <i>latter</i> partition. </p>
         <p>For example, to split a monthly partition into two with the first partition containing
           dates January 1-15 and the second partition containing dates January 16-31:</p>
         <p>

@@ -4,8 +4,8 @@
 <topic id="topic46">
    <title>Example 2—Multiple gpfdist instances </title>
    <body>
-      <p>Creates a readable external table, &lt;ext_expenses,> using the
-            <cmdname>gpfdist</cmdname> protocol from all files with the &lt;txt> extension. The
+      <p>Creates a readable external table, <i>ext_expenses,</i> using the
+            <cmdname>gpfdist</cmdname> protocol from all files with the <i>txt</i> extension. The
          column delimiter is a pipe ( | ) and NULL (' ') is a space.</p>
       <p>
          <codeblock>=# CREATE EXTERNAL TABLE ext_expenses ( name text, 

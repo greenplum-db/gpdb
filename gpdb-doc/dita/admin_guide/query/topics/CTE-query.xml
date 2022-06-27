@@ -44,23 +44,23 @@ GROUP BY region, product;
 )
 SELECT sum(n) FROM t;
 </codeblock>
-    <p>The required form of a recursive <codeph>WITH</codeph> clause is a &lt;non-recursive term>,
+    <p>The required form of a recursive <codeph>WITH</codeph> clause is a <i>non-recursive term</i>,
       followed by a <codeph>UNION</codeph> (or <codeph>UNION ALL</codeph>), and then a <i>recursive
-        term</i>, where only the &lt;recursive term> can contain a reference to the query output.
+        term</i>, where only the <i>recursive term</i> can contain a reference to the query output.
       <codeblock>&lt;non_recursive_term> UNION [ ALL ] &lt;recursive_term></codeblock></p>
     <p>A recursive <codeph>WITH</codeph> query is executed as follows:</p>
     <ol id="ol_a3s_r1s_w1b">
       <li>Evaluate the non-recursive term. For <codeph>UNION</codeph> (but not <codeph>UNION
           ALL</codeph>), discard duplicate rows. Include all remaining rows in the result of the
-        recursive query, and also place them in a temporary &lt;working table>.</li>
+        recursive query, and also place them in a temporary <i>working table</i>.</li>
       <li>As long as the working table is not empty, repeat these steps:<ol id="ol_b3s_r1s_w1b">
           <li>Evaluate the recursive term, substituting the current contents of the working table
             for the recursive self-reference. For <codeph>UNION</codeph> (but not <codeph>UNION
               ALL</codeph>), discard duplicate rows and rows that duplicate any previous result row.
             Include all remaining rows in the result of the recursive query, and also place them in
-            a temporary &lt;intermediate table>.</li>
-          <li>Replace the contents of the &lt;working table> with the contents of the
-              &lt;intermediate table>, then empty the &lt;intermediate table>.</li>
+            a temporary <i>intermediate table</i>.</li>
+          <li>Replace the contents of the <i>working table</i> with the contents of the
+              <i>intermediate table</i>, then empty the <i>intermediate table</i>.</li>
         </ol></li>
     </ol>
     <note>Strictly speaking, the process is iteration not recursion, but <codeph>RECURSIVE</codeph>

@@ -36,7 +36,7 @@
           <codeph>gp_appendonly_compaction_threshold</codeph> and rewrites the segment file
         regardless of the ratio.</p>
       <p>You can use the <codeph>__gp_aovisimap_compaction_info()</codeph> function in the the
-          &lt;gp_toolkit> schema to investigate the effectiveness of a <cmdname>VACUUM</cmdname>
+          <i>gp_toolkit</i> schema to investigate the effectiveness of a <cmdname>VACUUM</cmdname>
         operation on append-optimized tables. </p>
       <p>For information about the <codeph>__gp_aovisimap_compaction_info()</codeph> function see,
         "Checking Append-Optimized Tables" in the <cite>Greenplum Database Reference
@@ -67,7 +67,7 @@
           transaction IDs are no longer available and before transaction ID wraparound occurs: </p>
         <p>
           <codeph>WARNING: database "database_name" must be vacuumed within
-              &lt;number_of_transactions> transactions</codeph>
+              <i>number_of_transactions</i> transactions</codeph>
         </p>
         <p>When the warning is issued, a <codeph>VACUUM</codeph> operation is required. If a
             <codeph>VACUUM</codeph> operation is not performed, Greenplum Database stops creating
@@ -218,10 +218,10 @@ analyzedb -s pg_catalog -d $DBNAME
           in the sample by the number of actual pages in the table. If the sample contains many
           empty pages, the estimated row count can be inaccurate. </p>
         <p>For a table, you can view information about the amount of unused disk space (space that
-          is occupied by deleted or obsolete rows) in the &lt;gp_toolkit> view
-            &lt;gp_bloat_diag>. If the <codeph>bdidiag</codeph> column for a table contains the
+          is occupied by deleted or obsolete rows) in the <i>gp_toolkit</i> view
+            <i>gp_bloat_diag</i>. If the <codeph>bdidiag</codeph> column for a table contains the
           value <codeph>significant amount of bloat suspected</codeph>, a significant amount of
-          table disk space consists of unused space. Entries are added to the &lt;gp_bloat_diag>
+          table disk space consists of unused space. Entries are added to the <i>gp_bloat_diag</i>
           view after a table has been vacuumed.</p>
         <p>To remove unused disk space from the table, you can run the command <cmdname>VACUUM
             FULL</cmdname> on the table. Due to table lock requirements, <cmdname>VACUUM
@@ -229,7 +229,7 @@ analyzedb -s pg_catalog -d $DBNAME
         <p>As a temporary workaround, run <cmdname>ANALYZE</cmdname> to compute column statistics
           and then run <cmdname>VACUUM</cmdname> on the table to generate an accurate row count.
           This example runs <cmdname>ANALYZE</cmdname> and then <cmdname>VACUUM</cmdname> on the
-            &lt;cust_info> table.<codeblock>ANALYZE cust_info;
+            <i>cust_info</i> table.<codeblock>ANALYZE cust_info;
 VACUUM cust_info;</codeblock></p>
         <note type="important">If you intend to execute queries on partitioned tables with GPORCA
           enabled (the default), you must collect statistics on the partitioned table root partition
@@ -281,7 +281,7 @@ VACUUM cust_info;</codeblock></p>
         <p>Greenplum Database has log file rotation enabled on the master and all segment instances.
           Daily log files are created in the <codeph>pg_log</codeph> subdirectory of the master and
           each segment data directory using the following naming convention:
-              <codeph>gpdb-&lt;YYYY>-&lt;MM>-&lt;DD_hhmmss>.csv</codeph>. Although log files
+              <codeph>gpdb-<i>YYYY</i>-<i>MM</i>-<i>DD_hhmmss</i>.csv</codeph>. Although log files
           are rolled over daily, they are not automatically truncated or deleted. Administrators
           need to implement scripts or programs to periodically clean up old log files in the
             <codeph>pg_log</codeph> directory of the master and each segment instance.</p>
