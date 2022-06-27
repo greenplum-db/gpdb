@@ -1824,25 +1824,13 @@ shareinput_walker(Node *node, ShareInputContext *ctx)
 		if (IsA(node, SubPlan))
 		{
 			SubPlan    *subplan = (SubPlan *) node;
-			ListCell   *lc;
-			int			plan_id = 0;
 
 			/*
 			 * The code around rtables (for SubqueryScan and
 			 * TableFunctionScan) works only with appropriate subroot. Find
 			 * one and copy to context.
 			 */
-			foreach(lc, root->glob->subroots)
-			{
-				Node	   *subroot = (Node *) lfirst(lc);
-
-				plan_id++;
-				if (plan_id == subplan->plan_id)
-				{
-					ctx->base.node = subroot;
-					break;
-				}
-			}
+			ctx->base.node = (Node *) planner_subplan_get_root(root, subplan);
 		}
 		else if (IsA(node, SubqueryScan))
 		{
@@ -2974,6 +2962,10 @@ fixup_subplan_walker(Node *node, SubPlanWalkerContext *context)
 			PlannerInfo *root = (PlannerInfo *) context->base.node;
 			Plan	    *dupsubplan = (Plan *) copyObject(planner_subplan_get_plan(root, subplan));
 			int			 newplan_id = list_length(root->glob->subplans) + 1;
+			PlannerInfo *dupsubroot = makeNode(PlannerInfo);
+
+			memcpy(dupsubroot, planner_subplan_get_root(root, subplan), sizeof(PlannerInfo));
+			root->glob->subroots = lappend(root->glob->subroots, dupsubroot);
 
 			subplan->plan_id = newplan_id;
 			root->glob->subplans = lappend(root->glob->subplans, dupsubplan);
