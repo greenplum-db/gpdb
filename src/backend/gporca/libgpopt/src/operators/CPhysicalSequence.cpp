@@ -314,7 +314,6 @@ CPhysicalSequence::PdsRequired(CMemoryPool *mp, CExpressionHandle &exprhdl,
 			// CTE Consumer exists as a child and eelt is populated with the
 			// locality. We force the CTE Producer child to have the same
 			// number of nodes (the physical location does not matter)
-
 			switch (eelt)
 			{
 				case CUtils::EeltMaster:
@@ -323,7 +322,8 @@ CPhysicalSequence::PdsRequired(CMemoryPool *mp, CExpressionHandle &exprhdl,
 				case CUtils::EeltSegments:
 					return GPOS_NEW(mp) CDistributionSpecNonSingleton();
 				default:
-					GPOS_ASSERT(false);
+					GPOS_RAISE(gpopt::ExmaGPOPT,
+							   gpopt::ExmiUnsatisfiedRequiredProperties);
 			}
 		}
 		else
