@@ -1210,7 +1210,10 @@ explain select * from rep_tab;
 (3 rows)
 
 set optimizer_enable_replicated_table=false;
+set optimizer_trace_fallback=true;
 explain select * from rep_tab;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Replicated tables
                                            QUERY PLAN                                           
 ------------------------------------------------------------------------------------------------
  Gather Motion 1:1  (slice1; segments: 1)  (cost=10000000001.02..10000000001.02 rows=2 width=4)

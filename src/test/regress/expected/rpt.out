@@ -1228,6 +1228,7 @@ explain select * from rep_tab;
 (3 rows)
 
 set optimizer_enable_replicated_table=false;
+set optimizer_trace_fallback=true;
 explain select * from rep_tab;
                                            QUERY PLAN                                           
 ------------------------------------------------------------------------------------------------
@@ -1236,6 +1237,7 @@ explain select * from rep_tab;
  Optimizer: Postgres query optimizer
 (3 rows)
 
+reset optimizer_trace_fallback;
 reset optimizer_enable_replicated_table;
 -- start_ignore
 drop schema rpt cascade;

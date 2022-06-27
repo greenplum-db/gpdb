@@ -509,7 +509,9 @@ explain (costs off) select * from t1_13532 x, t2_13532 y where y.a < random() an
 -- quick test for optimizer_enable_replicated_table
 explain select * from rep_tab;
 set optimizer_enable_replicated_table=false;
+set optimizer_trace_fallback=true;
 explain select * from rep_tab;
+reset optimizer_trace_fallback;
 reset optimizer_enable_replicated_table;
 
 -- start_ignore
