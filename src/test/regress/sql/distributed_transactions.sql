@@ -519,20 +519,6 @@ select count(*) = 5 as passed from subt_reindex_co
 select count(*) = 0 as passed from subt_reindex_ao
  where x = 'AO sp4';
 
--- truncate cases
-savepoint sp7; -- child of sp2
-truncate subt_reindex_heap;
-truncate subt_reindex_ao;
-savepoint sp8; -- child of sp7
-truncate subt_reindex_co;
-select count(*) = 0 as passed from subt_reindex_heap where i < 7;
-select count(*) = 0 as passed from subt_reindex_ao where i < 6;
-select count(*) = 0 as passed from subt_reindex_co where i < 6;
-rollback to sp8;
-update subt_reindex_co set x = 'CO sp8', b = '((1,1),(8,8))'
- where i = 2;
-release savepoint sp7; -- commit sp7
-
 -- Test rollback of truncate in a committed subtransaction.
 rollback to sp2;
 

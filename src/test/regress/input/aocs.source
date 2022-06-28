@@ -688,3 +688,29 @@ select count(*) from aocs_small_and_dense_content;
 
 select gp_inject_fault('appendonly_skip_compression', 'reset', dbid)
 from gp_segment_configuration where role = 'p' and content = 0;
+
+
+-- test truncate aoco table in current transaction and sub-transaction
+-- more details can look at https://github.com/greenplum-db/gpdb/issues/13699
+
+-- should success, create and truncate ao table in the same transaction;
+begin;
+create table aoco_13699(a int, b int) with (appendonly = true, orientation = column); 
+insert into aoco_13699 select i, i from generate_series(1, 100) i;
+select count(*) from aoco_13699;
+truncate table aoco_13699;
+select count(*) from aoco_13699;
+abort;
+
+-- should fail, create and truncate aoco table in the different transaction;
+begin;
+create table aoco_13699(a int, b int) with (appendonly = true, orientation = column);
+insert into aoco_13699 select i, i from generate_series(1, 100) i;
+select count(*) from aoco_13699;
+savepoint s1;
+-- should error
+truncate table aoco_13699;
+-- should error too
+rollback to s1;
+truncate table aoco_13699;
+abort;

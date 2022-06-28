@@ -1317,3 +1317,42 @@ from gp_segment_configuration where role = 'p' and content = 0;
  Success:
 (1 row)
 
+-- test truncate aoco table in current transaction and sub-transaction
+-- more details can look at https://github.com/greenplum-db/gpdb/issues/13699
+-- should success, create and truncate ao table in the same transaction;
+begin;
+create table aoco_13699(a int, b int) with (appendonly = true, orientation = column); 
+insert into aoco_13699 select i, i from generate_series(1, 100) i;
+select count(*) from aoco_13699;
+ count 
+-------
+   100
+(1 row)
+
+truncate table aoco_13699;
+select count(*) from aoco_13699;
+ count 
+-------
+     0
+(1 row)
+
+abort;
+-- should fail, create and truncate aoco table in the different transaction;
+begin;
+create table aoco_13699(a int, b int) with (appendonly = true, orientation = column);
+insert into aoco_13699 select i, i from generate_series(1, 100) i;
+select count(*) from aoco_13699;
+ count 
+-------
+   100
+(1 row)
+
+savepoint s1;
+-- should error
+truncate table aoco_13699;
+ERROR:  Can not truncate AO/AOCO table in (sub)transaction which is not created by current (sub)transaction or previous committed transaction.
+-- should error too
+rollback to s1;
+truncate table aoco_13699;
+ERROR:  Can not truncate AO/AOCO table in (sub)transaction which is not created by current (sub)transaction or previous committed transaction.
+abort;

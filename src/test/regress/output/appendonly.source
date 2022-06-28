@@ -1646,6 +1646,49 @@ select * from ao_inh_p4;
  16 | 16 | 15
 (6 rows)
 
+-- test truncate ao table in current transaction and sub-transaction
+-- more details can look at https://github.com/greenplum-db/gpdb/issues/13699
+-- should success, create and truncate ao table in the same transaction;
+begin;
+create table ao_13699(a int, b int) with (appendonly = true); 
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into ao_13699 select i, i from generate_series(1, 100) i;
+select count(*) from ao_13699;
+ count 
+-------
+   100
+(1 row)
+
+truncate table ao_13699;
+select count(*) from ao_13699;
+ count 
+-------
+     0
+(1 row)
+
+abort;
+-- should fail, create and truncate ao table in the different transaction;
+begin;
+create table ao_13699(a int, b int) with (appendonly = true); 
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into ao_13699 select i, i from generate_series(1, 100) i;
+select count(*) from ao_13699;
+ count 
+-------
+   100
+(1 row)
+
+savepoint s1;
+-- should error
+truncate table ao_13699;
+ERROR:  Can not truncate AO/AOCO table in (sub)transaction which is not created by current (sub)transaction or previous committed transaction.
+-- should error too
+rollback to s1;
+truncate table ao_13699;
+ERROR:  Can not truncate AO/AOCO table in (sub)transaction which is not created by current (sub)transaction or previous committed transaction.
+abort;
 --------------------------------------------------------------------------------
 -- Finally check to detect if any dangling gp_fastsequence entries are left
 -- behind by this SQL file

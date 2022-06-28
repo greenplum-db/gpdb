@@ -817,6 +817,32 @@ select * from ao_inh_p1;
 select * from ao_inh_p4;
 
 
+-- test truncate ao table in current transaction and sub-transaction
+-- more details can look at https://github.com/greenplum-db/gpdb/issues/13699
+
+-- should success, create and truncate ao table in the same transaction;
+begin;
+create table ao_13699(a int, b int) with (appendonly = true); 
+insert into ao_13699 select i, i from generate_series(1, 100) i;
+select count(*) from ao_13699;
+truncate table ao_13699;
+select count(*) from ao_13699;
+abort;
+
+-- should fail, create and truncate ao table in the different transaction;
+begin;
+create table ao_13699(a int, b int) with (appendonly = true); 
+insert into ao_13699 select i, i from generate_series(1, 100) i;
+select count(*) from ao_13699;
+savepoint s1;
+-- should error
+truncate table ao_13699;
+-- should error too
+rollback to s1;
+truncate table ao_13699;
+abort;
+
+
 --------------------------------------------------------------------------------
 -- Finally check to detect if any dangling gp_fastsequence entries are left
 -- behind by this SQL file

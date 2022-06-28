@@ -2183,6 +2183,13 @@ ExecuteTruncateGuts(List *explicit_rels, List *relids, List *relids_logged,
 		}
 		else
 		{
+
+			if (RelationIsAppendOptimized(rel) && rel->rd_createSubid != InvalidSubTransactionId)
+				ereport(ERROR, 
+						(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+						 errmsg("Can not truncate AO/AOCO table in (sub)transaction "
+								"which is not created by current (sub)transaction or previous committed transaction.")));
+
 			Oid			heap_relid;
 			Oid			toast_relid;
 
