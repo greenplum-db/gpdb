@@ -5718,6 +5718,21 @@ ATRewriteTables(AlterTableStmt *parsetree, List **wqueue, LOCKMODE lockmode)
 			 * AO/AOCO tables, and should not be set, pass in
 			 * InvalidTransactionId instead of RecentXmin.
 			 */
+
+			/*
+			 * Example workflow of changing access method from a
+			 * Heap table (Oid:a) to an AO table:
+			 * - Create transient AO table (Oid:b) and its AO aux tables in
+			 * 	 make_new_heap
+			 * - Copy table data into the transient table
+			 * - Swap Oids in the pg_appendonly entry so that newly generated
+			 * 	 aux tables are mapped to Oid a in ATAOEntries
+			 * - Swap attributes in pg_class entry between the two tables
+			 * 	 (such as relfilenode, relam, ...)
+			 * - Now dropping the transient table will use the heap AM and
+			 *   delete the original heap relation file.
+			 */
+
 			if (NewAccessMethod == AO_ROW_TABLE_AM_OID || NewAccessMethod == AO_COLUMN_TABLE_AM_OID)
 				relfrozenxid = InvalidTransactionId;
 			else
