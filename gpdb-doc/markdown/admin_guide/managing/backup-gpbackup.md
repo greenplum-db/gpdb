@@ -53,43 +53,15 @@ The `gpbackup` and `gprestore` utilities are available with Greenplum Database 5
 
 ## Objects Included in a Backup or Restore 
 
-The following table lists the objects that are backed up and restored with `gpbackup` and `gprestore`. Database objects are backed up for the database you specify with the `--dbname` option. Global objects \(Greenplum Database system objects\) are also backed up by default, but they are restored only if you include the `--with-globals` option to `gprestore`.
+The following table lists the objects that are backed up and restored with `gpbackup` and `gprestore`. 
+
+**Database objects** are backed up for the database you specify with the `--dbname` option.
+
+**Global objects** \(Greenplum Database system objects\) are also backed up by default, but they are restored only if you include the `--with-globals` option to `gprestore`.
 
 |Database \(for database specified with `--dbname`\)|Global \(requires the `--with-globals` option to restore\)|
 |---------------------------------------------------|----------------------------------------------------------|
-|-   Session-level configuration parameter settings \(GUCs\)
--   Schemas, see [Note](#schema_note)
--   Procedural language extensions
--   Sequences
--   Comments
--   Tables
--   Indexes
--   Owners
--   Writable External Tables \(DDL only\)
--   Readable External Tables \(DDL only\)
--   Functions
--   Aggregates
--   Casts
--   Types
--   Views
--   Protocols
--   Triggers. \(While Greenplum Database does not support triggers, any trigger definitions that are present are backed up and restored.\)
--   Rules
--   Domains
--   Operators, operator families, and operator classes
--   Conversions
--   Extensions
--   Text search parsers, dictionaries, templates, and configurations
-
-|-   Tablespaces
--   Databases
--   Database-wide configuration parameter settings \(GUCs\)
--   Resource group definitions
--   Resource queue definitions
--   Roles
--   `GRANT` assignments of roles to databases
-
-|
+|- Session-level configuration parameter settings \(GUCs\)<br/>   -   Schemas, see [Note](#schema_note)><br/>-   Procedural language extensions<br/>- Sequences<br/>- Comments<br/>- Tables<br/>- Indexes<br/>- Owners<br/>- Writable External Tables \(DDL only\)<br/>- Readable External Tables \(DDL only\)<br/>- Functions<br/>-   Aggregates<br/>- Casts<br/>- Types<br/>- Views<br/> - Materialized Views (DDL only)<br/>- Protocols<br/>- Triggers \(While Greenplum Database does not support triggers, any trigger definitions that are present are backed up and restored.\)<br/>- Rules<br/>-   Domains<br/>- Operators, operator families, and operator classes<br/>- Conversions<br/>- Extensions<br/>- Text search parsers, dictionaries, templates, and configurations<br/><br/>|- Tablespaces<br/>-   Databases<br/>-   Database-wide configuration parameter settings \(GUCs\)<br/>- Resource group definitions<br/>- Resource queue definitions<br/>- Roles<br/>- `GRANT` assignments of roles to databases<br/>|<br/>
 
 **Note:** These schemas are not included in a backup.
 
@@ -282,7 +254,7 @@ One of these codes is returned after `gpbackup` or `gprestore` completes.
 -   **1** – Backup or restore completed with non-fatal errors. See log file for more information.
 -   **2** – Backup or restore failed with a fatal error. See log file for more information.
 
-**Parent topic:** [Parallel Backup with gpbackup and gprestore](../managing/backup-gpbackup.html)
+**Parent topic:**  [Parallel Backup with gpbackup and gprestore](../managing/backup-gpbackup.html)
 
 ## Filtering the Contents of a Backup or Restore 
 
@@ -407,7 +379,6 @@ After creating a backup set with `gpbackup`, you can filter the schemas and tabl
 
     When restoring a backup set that contains data from some leaf partitions of a partitioned table, the partitioned table is restored along with the data for the leaf partitions. For example, you create a backup with the `gpbackup` option `--include-table-file` and the text file lists some leaf partitions of a partitioned table. Restoring the backup creates the partitioned table and restores the data only for the leaf partitions listed in the file.
 
-
 **Parent topic:** [Parallel Backup with gpbackup and gprestore](../managing/backup-gpbackup.html)
 
 ## Configuring Email Notifications 
@@ -513,59 +484,11 @@ By default, metadata and supporting files are stored on the Greenplum Database m
 
 |File name|Description|
 |---------|-----------|
-|gpbackup\_<YYYYMMDDHHMMSS\>\_metadata.sql|Contains global and database-specific metadata:-   DDL for objects that are global to the Greenplum Database cluster, and not owned by a specific database within the cluster.
--   DDL for objects in the backed-up database \(specified with `--dbname)` that must be created *before* to restoring the actual data, and DDL for objects that must be created *after* restoring the data.
-
-Global objects include:-   Tablespaces
--   Databases
--   Database-wide configuration parameter settings \(GUCs\)
--   Resource group definitions
--   Resource queue definitions
--   Roles
--   `GRANT` assignments of roles to databases
-
-**Note:** Global metadata is not restored by default. You must include the `--with-globals` option to the `gprestore` command to restore global metadata.
-
-Database-specific objects that must be created *before* to restoring the actual data include:-   Session-level configuration parameter settings \(GUCs\)
--   Schemas
--   Procedural language extensions
--   Types
--   Sequences
--   Functions
--   Tables
--   Protocols
--   Operators and operator classes
--   Conversions
--   Aggregates
--   Casts
--   Views
--   Constraints
-
-Database-specific objects that must be created *after* restoring the actual data include:-   Indexes
--   Rules
--   Triggers. \(While Greenplum Database does not support triggers, any trigger definitions that are present are backed up and restored.\)
-
-|
+|gpbackup\_<YYYYMMDDHHMMSS\>\_metadata.sql|Contains global and database-specific metadata:<br/>-   DDL for objects that are global to the Greenplum Database cluster, and not owned by a specific database within the cluster.<br/>-   DDL for objects in the backed-up database \(specified with `--dbname)` that must be created *before* to restoring the actual data, and DDL for objects that must be created *after* restoring the data.<br/>Global objects include:<br/>-   Tablespaces<br/>-   Databases<br/>-   Database-wide configuration parameter settings \(GUCs\)<br/>-   Resource group definitions<br/>-   Resource queue definitions<br/>-   Roles<br/>-   `GRANT` assignments of roles to databases<br/><br/>**Note:** Global metadata is not restored by default. You must include the `--with-globals` option to the `gprestore` command to restore global metadata.<br/><br/>Database-specific objects that must be created *before* to restoring the actual data include:<br/>-   Session-level configuration parameter settings \(GUCs\)<br/>-   Schemas<br/>-   Procedural language extensions<br/>-   Types<br/>-   Sequences<br/>-   Functions<br/>-   Tables<br/>-   Protocols<br/>-   Operators and operator classes<br/>-   Conversions<br/>-   Aggregates<br/>-   Casts<br/>-   Views<br/>- Materialized Views Note: Materialized view data is not restored, only the definition.<br/>- Constraints<br/><br/>Database-specific objects that must be created *after* restoring the actual data include:<br/>-   Indexes<br/>-   Rules<br/>-  Triggers. \(While Greenplum Database does not support triggers, any trigger definitions that are present are backed up and restored.\)|
 |gpbackup\_<YYYYMMDDHHMMSS\>\_toc.yaml|Contains metadata for locating object DDL in the \_predata.sql and \_postdata.sql files. This file also contains the table names and OIDs used for locating the corresponding table data in CSV data files that are created on each segment. See [Segment Data Files](#section_oys_cpj_tbb).|
-|gpbackup\_<YYYYMMDDHHMMSS\>\_report|Contains information about the backup operation that is used to populate the email notice \(if configured\) that is sent after the backup completes. This file contains information such as:-   Command-line options that were provided
--   Database that was backed up
--   Database version
--   Backup type
-
-See [Configuring Email Notifications](#topic_qwd_d5d_tbb).|
-|gpbackup\_<YYYYMMDDHHMMSS\>\_config.yaml|Contains metadata about the execution of the particular backup task, including: -   `gpbackup` version
--   Database name
--   Greenplum Database version
--   Additional option settings such as `--no-compression`, `--compression-level`, `--metadata-only`, `--data-only`, and `--with-stats`.
-
-|
-|gpbackup\_history.yaml|Contains information about options that were used when creating a backup with `gpbackup`, and information about incremental backups.Stored on the Greenplum Database master host in the Greenplum Database master data directory.
-
-This file is not backed up by `gpbackup`.
-
-For information about incremental backups, see [Creating Incremental Backups with gpbackup and gprestore](backup-gpbackup-incremental.html).
-
-|
+|gpbackup\_<YYYYMMDDHHMMSS\>\_report|Contains information about the backup operation that is used to populate the email notice \(if configured\) that is sent after the backup completes. This file contains information such as:<br/>-   Command-line options that were provided:<br/>-   Database that was backed up<br/>-   Database version<br/>-   Backup type<br/><br/>See [Configuring Email Notifications](#topic_qwd_d5d_tbb).|
+|gpbackup\_<YYYYMMDDHHMMSS\>\_config.yaml|Contains metadata about the execution of the particular backup task, including:<br/>-   `gpbackup` version<br/>-   Database name<br/>-   Greenplum Database version<br/>-   Additional option settings such as `--no-compression`, `--compression-level`, `--metadata-only`, `--data-only`, and `--with-stats`.|
+|gpbackup\_history.yaml|Contains information about options that were used when creating a backup with `gpbackup`, and information about incremental backups.<br/><br/>Stored on the Greenplum Database master host in the Greenplum Database master data directory.<br/><br/>This file is not backed up by `gpbackup`.<br/><br/>For information about incremental backups, see [Creating Incremental Backups with gpbackup and gprestore](backup-gpbackup-incremental.html).|
 
 ### Segment Data Files 
 
