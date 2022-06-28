@@ -1,20 +1,19 @@
 # When to Log 
 
-|`client_min_messages`
+`client_min_messages`
 
- `gp_interconnect_debug_retry_interval`
+`gp_interconnect_debug_retry_interval`
 
- `log_error_verbosity`
+`log_error_verbosity`
 
 `log_min_duration_statement`
 
-|`log_min_error_statement`
+`log_min_error_statement`
 
- `log_min_messages`
+`log_min_messages`
 
- `optimizer_minidump`
+`optimizer_minidump`<br/></br>
 
-|
 
 **Parent topic:** [Error Reporting and Logging Parameters](../topics/g-error-reporting-and-logging-parameters.html)
 
