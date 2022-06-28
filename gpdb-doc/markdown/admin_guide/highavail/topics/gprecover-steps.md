@@ -14,24 +14,8 @@ Consider a single primary-mirror segment pair where the primary is active and th
 
 | |`preferred_role`|`role`|`mode`|`status`|
 |--|----------------|------|------|--------|
-|Primary|`p`\(primary\)
-
-|`p`\(primary\)
-
-|`c`\(change tracking\)
-
-|`u`\(up\)
-
-|
-|Mirror|`m`\(mirror\)
-
-|`m`\(mirror\)
-
-|`s`\(synchronizing\)
-
-|`d`\(down\)
-
-|
+|Primary|`p`\(primary\)<br/></br>|`p`\(primary\)<br/></br>|`c`\(change tracking\)<br/></br>|`u`\(up\)|
+|Mirror|`m`\(mirror\)|`m`\(mirror\)|`s`\(synchronizing\)|`d`\(down\)|
 
 The segments are in their preferred roles, but the mirror is down. The primary is up and is in change tracking mode because it is unable to send changes to its mirror.
 
@@ -62,24 +46,8 @@ Once `gprecoverseg` has completed, the segments are in the states shown in the f
 
 | |`preferred_role`|`role`|`mode`|`status`|
 |--|----------------|------|------|--------|
-|Primary|`p`\(primary\)
-
-|`p`\(primary\)
-
-|`r`\(resynchronizing\)
-
-|`u`\(up\)
-
-|
-|Mirror|`m`\(mirror\)
-
-|`m`\(mirror\)
-
-|`r`\(resynchronizing\)
-
-|`u`\(up\)
-
-|
+|Primary|`p`\(primary\)|`p`\(primary\)|`r`\(resynchronizing\)|`u`\(up\)|
+|Mirror|`m`\(mirror\)|`m`\(mirror\)|`r`\(resynchronizing\)|`u`\(up\)|
 
 ## Data File Replication 
 
@@ -117,24 +85,8 @@ When all segment recovery and file replication processes are complete, the segme
 
 | |`preferred_role`|`role`|`mode`|`status`|
 |--|----------------|------|------|--------|
-|Primary|`p`\(primary\)
-
-|`p`\(primary\)
-
-|`s`\(synchronized\)
-
-|`u`\(up\)
-
-|
-|Mirror|`m`\(mirror\)
-
-|`m`\(mirror\)
-
-|`s`\(synchronized\)
-
-|`u`\(up\)
-
-|
+|Primary|`p`\(primary\)|`p`\(primary\)|`s`\(synchronized\)|`u`\(up\)|
+|Mirror|`m`\(mirror\)|`m`\(mirror\)|`s`\(synchronized\)|`u`\(up\)|
 
 ## Factors Affecting Duration of Segment Recovery 
 
