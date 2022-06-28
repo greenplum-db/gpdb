@@ -6,23 +6,21 @@ The following parameters provide compatibility with older PostgreSQL and Greenpl
 
 ## PostgreSQL 
 
-`add_missing_from`
+- `add_missing_from`
 
-`array_nulls`
+- `array_nulls`
 
-`backslash_quote`
+- `backslash_quote`
 
-`escape_string_warning`
+- `escape_string_warning`
 
-`regex_flavor`
+- `regex_flavor`
 
-`standard_conforming_strings`
+- `standard_conforming_strings`
 
-`transform_null_equals`<br/></br>
-
-
+- `transform_null_equals`<br/></br>
 
 ## Greenplum Database 
 
-`gp_ignore_error_table`
+- `gp_ignore_error_table`
 
