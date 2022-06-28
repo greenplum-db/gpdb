@@ -1928,6 +1928,12 @@ InitPlan(QueryDesc *queryDesc, int eflags)
 			Oid            relid = getrelid(linitial_int(resultRelations), rangeTable);
 			bool           containRoot = false;
 
+			if(Gp_role == GP_ROLE_UTILITY && operation == CMD_INSERT && rel_is_parent(relid))
+				ereport(ERROR,
+						(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+							errmsg("INSERT in utility mode is not supported "
+								   "on roots of inheritance and partition hierarchies")));
+
 			if (rel_is_child_partition(relid))
 				relid = rel_partition_get_master(relid);
 			else

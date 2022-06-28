@@ -3562,6 +3562,13 @@ CopyFrom(CopyState cstate)
 							RelationGetRelationName(cstate->rel))));
 	}
 
+	if (Gp_role == GP_ROLE_UTILITY && rel_is_parent(cstate->rel->rd_id))
+		ereport(ERROR,
+				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+					errmsg("COPY FROM in utility mode is not supported on roots "
+						   "of inheritance and partition hierarchies"),
+					errhint("consider using COPY FROM with the ON SEGMENT clause")));
+
 	tupDesc = RelationGetDescr(cstate->rel);
 	num_phys_attrs = tupDesc->natts;
 	attr_count = list_length(cstate->attnumlist);

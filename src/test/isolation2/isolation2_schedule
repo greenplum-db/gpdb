@@ -309,3 +309,6 @@ test: motion_socket
 
 # test alter owner of partition table in utility mode
 test: alter_partition_table_owner
+
+# test copy/insert in utility mode on partition/inheritance hierarchies
+test: copy_insert_utility_mode_hierarchies
