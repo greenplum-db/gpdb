@@ -22,7 +22,7 @@
 
 `unix_socket_group`
 
-`unix_socket_permissions`
+`unix_socket_permissions`<br/></br>
 
 
 **Parent topic:** [Connection and Authentication Parameters](../topics/g-connection-and-authentication-parameters.html)
