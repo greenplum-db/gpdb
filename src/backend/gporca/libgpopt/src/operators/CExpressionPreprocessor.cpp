@@ -3108,63 +3108,52 @@ CExpressionPreprocessor::PexprPreprocess(
 	GPOS_CHECK_ABORT;
 	pexprWindowPreprocessed->Release();
 
-	// (18) push down project elemnts
-	ColRefToExprMap *mapColumnsOfProjectElement =
-		GPOS_NEW(mp) ColRefToExprMap(mp);
-	std::set<CColRefSet *> successfulPushDownColumnSets;
-	BOOL inPushDown = false;
-	CExpression *pexprPushedDownProjects = PexprPushProjectElements(
-		mp, pexprNoUnusedPrEl, mapColumnsOfProjectElement,
-		successfulPushDownColumnSets, inPushDown);
-	mapColumnsOfProjectElement->Release();
+	// (18) normalize expression
+	CExpression *pexprNormalized1 =
+		CNormalizer::PexprNormalize(mp, pexprNoUnusedPrEl);
+	GPOS_CHECK_ABORT;
 	pexprNoUnusedPrEl->Release();
 
-	// (19) normalize expression
-	CExpression *pexprNormalized1 =
-		CNormalizer::PexprNormalize(mp, pexprPushedDownProjects);
-	GPOS_CHECK_ABORT;
-	pexprPushedDownProjects->Release();
-
-	// (20) transform outer join into inner join whenever possible
+	// (19) transform outer join into inner join whenever possible
 	CExpression *pexprLOJToIJ = PexprOuterJoinToInnerJoin(mp, pexprNormalized1);
 	GPOS_CHECK_ABORT;
 	pexprNormalized1->Release();
 
-	// (21) collapse cascaded inner and left outer joins
+	// (20) collapse cascaded inner and left outer joins
 	CExpression *pexprCollapsed = PexprCollapseJoins(mp, pexprLOJToIJ);
 	GPOS_CHECK_ABORT;
 	pexprLOJToIJ->Release();
 
-	// (22) after transforming outer joins to inner joins, we may be able to generate more predicates from constraints
+	// (21) after transforming outer joins to inner joins, we may be able to generate more predicates from constraints
 	CExpression *pexprWithPreds =
 		PexprAddPredicatesFromConstraints(mp, pexprCollapsed);
 	GPOS_CHECK_ABORT;
 	pexprCollapsed->Release();
 
-	// (23) eliminate empty subtrees
+	// (22) eliminate empty subtrees
 	CExpression *pexprPruned = PexprPruneEmptySubtrees(mp, pexprWithPreds);
 	GPOS_CHECK_ABORT;
 	pexprWithPreds->Release();
 
-	// (24) collapse cascade of projects
+	// (23) collapse cascade of projects
 	CExpression *pexprCollapsedProjects =
 		PexprCollapseProjects(mp, pexprPruned);
 	GPOS_CHECK_ABORT;
 	pexprPruned->Release();
 
-	// (25) insert dummy project when the scalar subquery is under a project and returns an outer reference
+	// (24) insert dummy project when the scalar subquery is under a project and returns an outer reference
 	CExpression *pexprSubquery = PexprProjBelowSubquery(
 		mp, pexprCollapsedProjects, false /* fUnderPrList */);
 	GPOS_CHECK_ABORT;
 	pexprCollapsedProjects->Release();
 
-	// (26) reorder the children of scalar cmp operator to ensure that left child is scalar ident and right child is scalar const
+	// (25) reorder the children of scalar cmp operator to ensure that left child is scalar ident and right child is scalar const
 	CExpression *pexrReorderedScalarCmpChildren =
 		PexprReorderScalarCmpChildren(mp, pexprSubquery);
 	GPOS_CHECK_ABORT;
 	pexprSubquery->Release();
 
-	// (27) rewrite IN subquery to EXIST subquery with a predicate
+	// (26) rewrite IN subquery to EXIST subquery with a predicate
 	CExpression *pexprExistWithPredFromINSubq =
 		PexprExistWithPredFromINSubq(mp, pexrReorderedScalarCmpChildren);
 	GPOS_CHECK_ABORT;
@@ -3176,11 +3165,22 @@ CExpressionPreprocessor::PexprPreprocess(
 	GPOS_CHECK_ABORT;
 	pexprExistWithPredFromINSubq->Release();
 
-	// (28) normalize expression again
-	CExpression *pexprNormalized2 =
-		CNormalizer::PexprNormalize(mp, pexprPrunedPartitions);
-	GPOS_CHECK_ABORT;
+	// (28) push down project elemnts
+	ColRefToExprMap *mapColumnsOfProjectElement =
+		GPOS_NEW(mp) ColRefToExprMap(mp);
+	std::set<CColRefSet *> successfulPushDownColumnSets;
+	BOOL inPushDown = false;
+	CExpression *pexprPushedDownProjects = PexprPushProjectElements(
+		mp, pexprPrunedPartitions, mapColumnsOfProjectElement,
+		successfulPushDownColumnSets, inPushDown);
+	mapColumnsOfProjectElement->Release();
 	pexprPrunedPartitions->Release();
+
+	// (29) normalize expression again
+	CExpression *pexprNormalized2 =
+		CNormalizer::PexprNormalize(mp, pexprPushedDownProjects);
+	GPOS_CHECK_ABORT;
+	pexprPushedDownProjects->Release();
 
 	return pexprNormalized2;
 }
