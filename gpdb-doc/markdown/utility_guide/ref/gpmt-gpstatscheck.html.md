@@ -5,8 +5,8 @@ This tool can be used to verify if all tables involved in a query have optimal s
 ## <a id="usage"></a>Usage 
 
 ```
-**gpmt** **gpstatscheck** -f QUERYFILE
-[-p PORT] [-d DATABASE\] 
+gpmt gpstatscheck -f <query-file>
+[-p <port>] [-d <database>] 
 ```
 
 ## <a id="opts"></a>Options 

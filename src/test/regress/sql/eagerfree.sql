@@ -159,6 +159,16 @@ where i < all (select total from (select d, sum(i) as total from smallt group by
     where my_group_sum.d = smallt.d and smallt.d = tmp.d and my_group_sum.d = smallt2.d)
 and i = 0 order by 1,2,3; --order 1,2,3
 
+-- Test Subplan with Agg
+with my_group_sum(d, total) as (select d, sum(i) from smallt group by d)
+select count(*) from smallt2
+where 0 < all (select total from my_group_sum, smallt2 as tmp where my_group_sum.d = smallt2.d);
+--start_ignore
+explain with my_group_sum(d, total) as (select d, sum(i) from smallt group by d)
+        select count(*) from smallt2
+        where 0 < all (select total from my_group_sum, smallt2 as tmp where my_group_sum.d = smallt2.d);
+--end_ignore
+
 -- Nested Subplan
 create table eager_free_r (r1 int, r2 int, r3 int);
 create table eager_free_s (s1 int, s2 int, s3 int);

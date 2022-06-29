@@ -3598,7 +3598,7 @@ create_bitmap_scan_plan(PlannerInfo *root,
 	bitmapqualplan = create_bitmap_subplan(root, best_path->bitmapqual,
 										   &bitmapqualorig, &indexquals,
 										   &indexECs);
-	/* GPDB_12_MERGE_FIXME the parallel StreamBitmap scan is not implemented */
+	/* GPDB_12_MERGE_FEATURE_NOT_SUPPORTED: the parallel StreamBitmap scan is not implemented */
 	/*
 	 * if (best_path->path.parallel_aware)
 	 *     bitmap_subplan_mark_shared(bitmapqualplan);

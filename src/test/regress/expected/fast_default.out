@@ -306,9 +306,8 @@ SELECT c_bigint, c_text FROM T WHERE c_bigint = -1 LIMIT 1;
                ->  Seq Scan on fast_default.t
                      Output: c_bigint, c_text
                      Filter: (t.c_bigint = '-1'::integer)
- Optimizer: Postgres query optimizer
- Settings: optimizer=off
-(11 rows)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(10 rows)
 
 SELECT c_bigint, c_text FROM T WHERE c_text = 'hello' LIMIT 1;
  c_bigint | c_text 
@@ -328,9 +327,8 @@ EXPLAIN (VERBOSE TRUE, COSTS FALSE) SELECT c_bigint, c_text FROM T WHERE c_text 
                ->  Seq Scan on fast_default.t
                      Output: c_bigint, c_text
                      Filter: (t.c_text = 'hello'::text)
- Optimizer: Postgres query optimizer
- Settings: optimizer=off
-(11 rows)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(10 rows)
 
 -- COALESCE
 SELECT COALESCE(c_bigint, pk), COALESCE(c_text, pk::text)
@@ -389,9 +387,8 @@ SELECT * FROM T ORDER BY c_bigint, c_text, pk LIMIT 10;
                      Sort Key: t.c_bigint, t.c_text, t.pk
                      ->  Seq Scan on fast_default.t
                            Output: pk, c_bigint, c_text
- Optimizer: Postgres query optimizer
- Settings: optimizer=off
-(14 rows)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(13 rows)
 
 -- LIMIT
 SELECT * FROM T WHERE c_bigint > -1 ORDER BY c_bigint, c_text, pk LIMIT 10;
@@ -426,9 +423,8 @@ SELECT * FROM T WHERE c_bigint > -1 ORDER BY c_bigint, c_text, pk LIMIT 10;
                      ->  Seq Scan on fast_default.t
                            Output: pk, c_bigint, c_text
                            Filter: (t.c_bigint > '-1'::integer)
- Optimizer: Postgres query optimizer
- Settings: optimizer=off
-(15 rows)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(14 rows)
 
 --  DELETE with RETURNING
 DELETE FROM T WHERE pk BETWEEN 10 AND 20 RETURNING *;
@@ -459,8 +455,7 @@ DELETE FROM T WHERE pk BETWEEN 10 AND 20 RETURNING *;
                Output: ctid, gp_segment_id
                Filter: ((t.pk >= 10) AND (t.pk <= 20))
  Optimizer: Postgres query optimizer
- Settings: optimizer=off
-(9 rows)
+(8 rows)
 
 -- UPDATE
 UPDATE T SET c_text = '"' || c_text || '"'  WHERE pk < 10;

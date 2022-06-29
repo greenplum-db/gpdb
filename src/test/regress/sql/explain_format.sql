@@ -80,6 +80,11 @@ EXPLAIN (ANALYZE) SELECT * from boxes LEFT JOIN apples ON apples.id = boxes.appl
 -- end_matchsubs
 -- Check Explain YAML output
 EXPLAIN (FORMAT YAML) SELECT * from boxes LEFT JOIN apples ON apples.id = boxes.apple_id LEFT JOIN box_locations ON box_locations.id = boxes.location_id;
+SET random_page_cost = 1;
+SET cpu_index_tuple_cost = 0.1;
+EXPLAIN (FORMAT YAML, VERBOSE, SETTINGS ON) SELECT * from boxes;
+RESET random_page_cost;
+RESET cpu_index_tuple_cost;
 
 --- Check Explain Analyze YAML output that include the slices information
 -- explain_processing_off

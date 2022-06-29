@@ -259,6 +259,16 @@ def gpexpand_status_file_exists(coordinator_data_directory):
     return os.path.exists(coordinator_data_directory + '/gpexpand.status')
 
 
+def is_cluster_up_and_balanced(dburl):
+    conn = dbconn.connect(dburl, encoding='UTF8')
+    try:
+        count = dbconn.querySingleton(conn,
+                                      "select count(*) from gp_segment_configuration where status <> 'u' or preferred_role <> role;")
+    finally:
+        conn.close()
+
+    return count == 0
+
 # -------------------------------------------------------------------------
 # expansion schema
 
@@ -2389,6 +2399,11 @@ def main(options, args, parser):
         configurationInterface.getConfigurationProvider().initializeProvider(gpEnv.getCoordinatorPort())
 
         dburl = dbconn.DbURL(dbname=DBNAME, port=gpEnv.getCoordinatorPort())
+
+        # check if the cluster is in good health if not exit from gpexpand
+        if not is_cluster_up_and_balanced(dburl):
+            logger.error('One or more segments are either down or not in preferred role. Please fix the issue before running gpexpand.')
+            sys.exit(1)
 
         gpexpand_db_status = gpexpand.prepare_gpdb_state(logger, dburl, options)
 

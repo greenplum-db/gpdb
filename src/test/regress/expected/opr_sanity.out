@@ -1423,9 +1423,14 @@ WHERE a.aggfnoid = p.oid AND
      -- we could carry the check further, but 3 args is enough for now
      OR (p.pronargs > 3)
     );
- aggfnoid | proname | oid | proname 
-----------+---------+-----+---------
-(0 rows)
+ aggfnoid |      proname       | oid  |                  proname                  
+----------+--------------------+------+-------------------------------------------
+     7189 | gp_percentile_cont | 7184 | gp_percentile_cont_float8_transition
+     7190 | gp_percentile_cont | 7185 | gp_percentile_cont_interval_transition
+     7191 | gp_percentile_cont | 7186 | gp_percentile_cont_timestamp_transition
+     7192 | gp_percentile_cont | 7187 | gp_percentile_cont_timestamptz_transition
+     7194 | gp_percentile_disc | 7193 | gp_percentile_disc_transition
+(5 rows)
 
 -- Cross-check finalfn (if present) against its entry in pg_proc.
 SELECT a.aggfnoid::oid, p.proname, pfn.oid, pfn.proname
@@ -1446,9 +1451,13 @@ WHERE a.aggfnoid = p.oid AND
      -- we could carry the check further, but 4 args is enough for now
      OR (pfn.pronargs > 4)
     );
- aggfnoid | proname | oid | proname 
-----------+---------+-----+---------
-(0 rows)
+ aggfnoid |      proname       | oid  |       proname       
+----------+--------------------+------+---------------------
+     7189 | gp_percentile_cont | 7188 | gp_percentile_final
+     7190 | gp_percentile_cont | 7188 | gp_percentile_final
+     7191 | gp_percentile_cont | 7188 | gp_percentile_final
+     7192 | gp_percentile_cont | 7188 | gp_percentile_final
+(4 rows)
 
 -- If transfn is strict then either initval should be non-NULL, or
 -- input type should match transtype so that the first non-null input

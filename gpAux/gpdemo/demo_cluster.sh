@@ -82,9 +82,8 @@ checkDemoConfig(){
         return 1
     fi
 
-    for (( i=0; i<`expr 4 \* $NUM_PRIMARY_MIRROR_PAIRS`; i++ )); do
-	PORT_NUM=`expr $DEMO_PORT_BASE + $i`
-
+    # Check if all Segment Ports are free
+    for PORT_NUM in ${DEMO_SEG_PORTS_LIST}; do
         echo "  Segment port check .. : ${PORT_NUM}"
         PORT_FILE="/tmp/.s.PGSQL.${PORT_NUM}"
         if [ -f ${PORT_FILE} -o -S ${PORT_FILE} ] ; then 
