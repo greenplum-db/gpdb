@@ -4,13 +4,11 @@ Securing Greenplum Database includes protecting access to the database through n
 
 This section contains the following topics:
 
--   [Configuring Client Authentication](client_auth.html)
-    -   [Using LDAP Authentication with TLS/SSL](ldap.html)
-    -   [Using Kerberos Authentication](kerberos.html)
--   [Managing Roles and Privileges](roles_privs.html)
-
 -   **[Configuring Client Authentication](client_auth.html)**  
 This topic explains how to configure client connections and authentication for Greenplum Database.
+    -   [Using LDAP Authentication with TLS/SSL](ldap.html)
+    -   [Using Kerberos Authentication](kerberos.html)
+<br/><br/>
 -   **[Managing Roles and Privileges](roles_privs.html)**  
 The Greenplum Database authorization mechanism stores roles and permissions to access database objects in the database and is administered using SQL statements or command-line utilities.
 
