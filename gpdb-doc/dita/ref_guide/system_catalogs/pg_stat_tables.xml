@@ -99,7 +99,7 @@
             <entry><codeph>last_vacuum</codeph></entry>
             <entry>timestamp with time zone</entry>
             <entry>Last time this table was manually vacuumed (not counting <codeph>VACUUM
-                FULL</codeph>)<note>Greenplum Database 5.x does not populate this column value.</note></entry>
+                FULL</codeph>)</entry>
           </row>
           <row>
             <entry><codeph>last_autovacuum</codeph></entry>
@@ -150,6 +150,7 @@ SELECT
     m.n_tup_hot_upd,
     m.n_live_tup,
     m.n_dead_tup,
+    s.last_vacuum,
     s.last_analyze
 FROM
     (SELECT
