@@ -1062,7 +1062,7 @@ The `PROXY` value specifies using the TCP protocol, and when running queries, us
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|UDPIFC, TCP, PROXY|UDPIFC|local, system, restart|
+|UDPIFC, TCP, PROXY|UDPIFC|local, session, reload|
 
 ## <a id="gp_log_format"></a>gp\_log\_format 
 
