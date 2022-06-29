@@ -63,6 +63,7 @@ def get_recovery_progress_file(gplog):
 def get_recovery_progress_pattern():
     return r"\d+\/\d+ (kB|mB) \(\d+\%\)"
 
+
 #
 # note: it's a little quirky that caller must set up failed/failover so that failover is in gparray but
 #                                 failed is not (if both set)...change that, or at least protect against problems
@@ -132,10 +133,11 @@ class GpMirrorListToBuild:
         SEQUENTIAL = 2
 
     class Action:
-        ADDMIRRORS='add'
-        RECOVERMIRRORS='recover'
+        ADDMIRRORS = 'add'
+        RECOVERMIRRORS = 'recover'
 
-    def __init__(self, toBuild, pool, quiet, parallelDegree, additionalWarnings=None, logger=logger, forceoverwrite=False, progressMode=Progress.INPLACE, parallelPerHost=gp.DEFAULT_SEGHOST_NUM_WORKERS):
+    def __init__(self, toBuild, pool, quiet, parallelDegree, additionalWarnings=None, logger=logger,
+                 forceoverwrite=False, progressMode=Progress.INPLACE, parallelPerHost=gp.DEFAULT_SEGHOST_NUM_WORKERS):
         self.__mirrorsToBuild = toBuild
         self.__pool = pool
         self.__quiet = quiet
@@ -157,6 +159,7 @@ class GpMirrorListToBuild:
         _join_and_show_segment_progress(). This class is tightly coupled to that
         implementation.
         """
+
         def __init__(self, name, cmdStr, dbid, filePath, ctxt, remoteHost):
             super(GpMirrorListToBuild.ProgressCommand, self).__init__(name, cmdStr, ctxt, remoteHost)
             self.dbid = dbid
@@ -230,8 +233,9 @@ class GpMirrorListToBuild:
             return True
 
         if actionName not in [GpMirrorListToBuild.Action.ADDMIRRORS, GpMirrorListToBuild.Action.RECOVERMIRRORS]:
-            raise Exception('Invalid action. Valid values are {} and {}'.format(GpMirrorListToBuild.Action.RECOVERMIRRORS,
-                                                                                GpMirrorListToBuild.Action.ADDMIRRORS))
+            raise Exception(
+                'Invalid action. Valid values are {} and {}'.format(GpMirrorListToBuild.Action.RECOVERMIRRORS,
+                                                                    GpMirrorListToBuild.Action.ADDMIRRORS))
 
         self.__logger.info("%s segment(s) to %s" % (len(self.__mirrorsToBuild), actionName))
 
@@ -260,7 +264,7 @@ class GpMirrorListToBuild:
         # race where gp_request_fts_probe_scan() can return early during the
         # first call. Remove this duplication once that race is fixed.
         for _ in range(2):
-            dbconn.execSQL(conn,"SELECT gp_request_fts_probe_scan()")
+            dbconn.execSQL(conn, "SELECT gp_request_fts_probe_scan()")
         conn.close()
 
     def _update_config(self, recovery_info_by_host, gpArray):
@@ -308,8 +312,8 @@ class GpMirrorListToBuild:
 
         final_sql = "SET allow_system_table_mods=true;\n"
         for dbid in backout_map:
-            #TODO 1. we don't need to check for both bb and rewind
-            #TODO 2. we can ignore incremental dbids. Ideally incremental dbids won't have a backout script
+            # TODO 1. we don't need to check for both bb and rewind
+            # TODO 2. we can ignore incremental dbids. Ideally incremental dbids won't have a backout script
             # but being explicit in the code will make the intent clear
             if recovery_results.was_bb_rewind_successful(dbid):
                 continue
@@ -328,11 +332,10 @@ class GpMirrorListToBuild:
             signal.signal(signal.SIGINT, signal.default_int_handler)
         self.__logger.debug("Successfully reverted the gp_segment_configuration updates for the failed mirrors")
 
-
     def remove_postmaster_pid_from_remotehost(self, host, datadir):
-        cmd = base.Command(name = 'remove the postmaster.pid file',
-                           cmdStr = 'rm -f %s/postmaster.pid' % datadir,
-                           ctxt=gp.REMOTE, remoteHost = host)
+        cmd = base.Command(name='remove the postmaster.pid file',
+                           cmdStr='rm -f %s/postmaster.pid' % datadir,
+                           ctxt=gp.REMOTE, remoteHost=host)
         cmd.run()
 
         return_code = cmd.get_return_code()
@@ -425,7 +428,6 @@ class GpMirrorListToBuild:
             if os.path.exists(combined_progress_filepath):
                 os.remove(combined_progress_filepath)
 
-
     def _get_progress_cmd(self, progressFile, targetSegmentDbId, targetHostname):
         """
         # There is race between when the recovery process creates the progressFile
@@ -441,7 +443,8 @@ class GpMirrorListToBuild:
         return None
 
     def _get_remove_cmd(self, cmd, target_host):
-        return base.Command("remove file", "rm -f {}".format(pipes.quote(cmd)), ctxt=base.REMOTE, remoteHost=target_host)
+        return base.Command("remove file", "rm -f {}".format(pipes.quote(cmd)), ctxt=base.REMOTE,
+                            remoteHost=target_host)
 
     def __runWaitAndCheckWorkerPoolForErrorsAndClear(self, cmds, suppressErrorCheck=False, progressCmds=[]):
         for cmd in cmds:
@@ -468,7 +471,7 @@ class GpMirrorListToBuild:
         completed_setup_results = self._do_setup_for_recovery(recovery_info_by_host)
         setup_recovery_results = RecoveryResult(action_name, completed_setup_results, self.__logger)
         setup_recovery_results.print_setup_recovery_errors()
-        #FIXME we should raise this exception outside the function
+        # FIXME we should raise this exception outside the function
         if not setup_recovery_results.setup_successful():
             raise ExceptionNoStackTraceNeeded()
 
@@ -494,7 +497,8 @@ class GpMirrorListToBuild:
         :param recovery_info_by_host:
         :return:
         """
-        self.__logger.info('Initiating segment recovery. Upon completion, will start the successfully recovered segments')
+        self.__logger.info(
+            'Initiating segment recovery. Upon completion, will start the successfully recovered segments')
         cmds = []
         progress_cmds = []
         era = read_era(gpEnv.getCoordinatorDataDir(), logger=self.__logger)
@@ -539,23 +543,32 @@ class GpMirrorListToBuild:
 
     def _get_running_postgres_segments(self, segments):
         running_segments = []
-        for seg in segments:
-            datadir = self.dereference_remote_symlink(seg.getSegmentDataDirectory(), seg.getSegmentHostName())
-            pid = get_pid_from_remotehost(seg.getSegmentHostName(), datadir)
-            if pid is not None:
-                if check_pid_on_remotehost(pid, seg.getSegmentHostName()):
-                    if is_pid_postmaster(datadir, pid, seg.getSegmentHostName()):
-                        running_segments.append(seg)
-                    else:
-                        self.__logger.info("Skipping to stop segment %s on host %s since it is not a postgres process" % (
-                            seg.getSegmentDataDirectory(), seg.getSegmentHostName()))
-                else:
-                    self.__logger.debug("Skipping to stop segment %s on host %s since process with pid %s is not running" % (
-                        seg.getSegmentDataDirectory(), seg.getSegmentHostName(), pid))
-            else:
-                self.__logger.debug("Skipping to stop segment %s on host %s since pid could not be found" % (
-                    seg.getSegmentDataDirectory(), seg.getSegmentHostName()))
+        self.__logger.debug("Starting to dereference symlink")
+        datadir_map = self.dereference_all_remote_symlink_parallel(segments)
+        self.__logger.debug("Done with dereference symlink. Start getting PID")
+        pid_map = self.get_pid_from_all_remotehost_parallel(segments, datadir_map)
+        self.__logger.debug("Done with get-PID. Starting to check PID")
+        pid_map = self.check_pid_on_all_remotehost_parallel(segments, pid_map)
+        self.__logger.debug("Done with checking PID, starting to confirm if PID is postmaster")
+        is_postmaster_map = self.is_pid_postmaster_all_parallel(segments, datadir_map, pid_map)
+        self.__logger.debug("Done checking PID postmaster. Processing further")
 
+        for seg in segments:
+            dbid = seg.getSegmentDbId()
+            if(dbid not in is_postmaster_map):
+                self.__logger.debug(
+                    "Skipping to stop segment %s on host %s since process pidnot found for DBID %d is not running" % (
+                        seg.getSegmentDataDirectory(), seg.getSegmentHostName(), dbid))
+            elif(not is_postmaster_map[dbid]):
+                self.__logger.info(
+                    "Skipping to stop segment %s on host %s since it is not a postgres process" % (
+                        seg.getSegmentDataDirectory(), seg.getSegmentHostName()))
+            elif(not is_postmaster_map[dbid]):
+                self.__logger.debug("DBID:%d Skipping stopping segmnet as its not a postmaster process" % dbid)
+            else:
+                self.__logger.debug("DBID:%d adding to segments to be stopped" % dbid)
+                running_segments.append(seg)
+        self.__logger.debug("Returning from _get_running_postgres_segments")
         return running_segments
 
     def dereference_remote_symlink(self, datadir, host):
@@ -567,6 +580,182 @@ class GpMirrorListToBuild:
             self.__logger.warning('Unable to determine if %s is symlink. Assuming it is not symlink' % (datadir))
             return datadir
         return results.stdout.strip()
+
+    '''
+    Function : dereference_all_remote_symlink_parallel
+    Input:
+    :param: segments list of segments to resolve symlink
+    :return: datadir_map Map of dbid vs datadir. if not able to get datadir, returns unresolved datadir assuming its not a symlink
+    '''
+    def dereference_all_remote_symlink_parallel(self, segments):
+        completed_results = []
+        for seg in segments:
+            datadir = seg.getSegmentDataDirectory()
+            host = seg.getSegmentHostName()
+            dbid = seg.getSegmentDbId()
+            cmdStr = """python -c 'import os; print(os.path.realpath("%s"))'""" % datadir
+            cmd = base.Command("dbid:%d:%s" % (dbid, datadir),
+                               cmdStr=cmdStr, ctxt=base.REMOTE,
+                               remoteHost=host)
+            self.__pool.addCommand(cmd)
+
+        self.__pool.join()
+        datadir_map = {}
+        completed_results = self.__pool.getCompletedItems()
+        for cmd in completed_results:
+            dbid_str = cmd.get_command_name().split(':')
+            dbid = int(dbid_str[1])
+            datadir_orig = dbid_str[2]
+            results = cmd.get_results()
+            if results.rc != 0:
+                self.__logger.warning('For Dbid:%d Unable to determine if %s is symlink. Assuming it is not symlink. Error: %s'
+                                      % (dbid, datadir_orig, cmd.get_stderr()))
+                datadir_map[dbid] = datadir_orig
+            else:
+                datadir_map[dbid] = results.stdout.strip()
+        self.__pool.empty_completed_items()
+        return datadir_map
+
+    def get_pid_from_all_remotehost_parallel(self, segments, datadir_map):
+        for seg in segments:
+            dbid = seg.getSegmentDbId()
+            host = seg.getSegmentHostName()
+            self.__logger.debug('DBID:%d', dbid)
+            if dbid not in datadir_map:
+                self.__logger.warning('DBID:%d not found in datadir-map. Skipping. Datadir map: %s' % (dbid, datadir_map))
+                continue
+            datadir = datadir_map[dbid]
+            cmd = base.Command(name="%d" % dbid,
+                          cmdStr='head -1 %s/postmaster.pid' % datadir,
+                          ctxt=base.REMOTE, remoteHost=host)
+            self.__pool.addCommand(cmd)
+
+        self.__pool.join()
+        pid_map = {}
+        completed_results = self.__pool.getCompletedItems()
+        for cmd in completed_results:
+            dbid = int(cmd.get_command_name())
+            results = cmd.get_results()
+            if results.rc != 0:
+                self.__logger.warning('For Dbid:%s Unable to fetch pid from datadir:%s Error: %s'
+                                      % (dbid, datadir_map[dbid], results.stderr.strip()))
+            else:
+                pid_map[dbid] = int(results.stdout.strip())
+        self.__pool.empty_completed_items()
+        return pid_map
+
+    def check_pid_on_all_remotehost_parallel(self, segments, pid_map):
+        for seg in segments:
+            dbid = seg.getSegmentDbId()
+            host = seg.getSegmentHostName()
+            if dbid not in pid_map or not pid_map[dbid] or pid_map[dbid] == 0:
+                self.__logger.warning('For DBID:%d no PID found. Skipping to stop segment on host %s since pid could not be found.' % (dbid, host))
+                if dbid in pid_map:
+                    del pid_map[dbid]
+                continue
+            cmd = base.Command(name="%d" % dbid, cmdStr='kill -0 %d' % pid_map[dbid], ctxt=base.REMOTE, remoteHost=host)
+            self.__pool.addCommand(cmd)
+
+        self.__pool.join()
+        completed_results = self.__pool.getCompletedItems()
+        for cmd in completed_results:
+            dbid = int(cmd.get_command_name())
+            if cmd.get_return_code() == 0:
+                self.__logger.debug("For DBID:%s, process %d exists"
+                                    % (dbid, pid_map[dbid]))
+            else:
+                self.__logger.warning('DBID:%d Error while signaling process PID:%d. Skipping'
+                                      % (dbid, pid_map[dbid]))
+                del pid_map[dbid]
+
+        self.__pool.empty_completed_items()
+        return pid_map
+
+    def is_pid_postmaster_all_parallel(self, segments, datadir_map, pid_map):
+        hostmap_pgrep = {}
+        hostname_pwdx = {}
+        is_postmaster_map = {}
+        # Check for pggrep command
+        for seg in segments:
+            host = seg.getSegmentHostName()
+            dbid = seg.getSegmentDbId()
+            if(not dbid in pid_map):
+                self.__logger.debug('Skipping PGREP check for DBID:%d. No PID present.' % dbid)
+                continue
+            # Validate pgrep command for each segment host
+            if(host not in hostmap_pgrep):
+                cmd = base.Command('%s' % host, 'pgrep', ctxt=base.REMOTE, remoteHost=host)
+                self.__pool.addCommand(cmd)
+
+        self.__pool.join()
+        completed_results = self.__pool.getCompletedItems()
+        for cmd in completed_results:
+            host = cmd.get_command_name()
+            if cmd.get_return_code() == gp.COMMAND_NOT_FOUND:
+                self.__logger.warning('Command pgrep was not found on host %s. Assuming its running.' % host)
+                hostmap_pgrep[host] = False
+            else:
+                hostmap_pgrep[host] = True
+
+        self.__pool.empty_completed_items()
+
+        # Check for pwdx command
+        # TODO this can be written as new function for both pgrep and pwdx
+        for seg in segments:
+            host = seg.getSegmentHostName()
+            dbid = seg.getSegmentDbId()
+            if(not dbid in pid_map):
+                self.__logger.debug('DBID:%d No PID present. Skipping PWDX Check. Assuming its runing.' % dbid)
+                continue
+            # Validate pwdx command for each segment host
+            if(host not in hostname_pwdx):
+                cmd = base.Command('%s' % host, 'pwdx', ctxt=base.REMOTE, remoteHost=host)
+                self.__pool.addCommand(cmd)
+
+        self.__pool.join()
+        completed_results = self.__pool.getCompletedItems()
+        for cmd in completed_results:
+            host = cmd.get_command_name()
+            if cmd.get_return_code() == gp.COMMAND_NOT_FOUND:
+                self.__logger.warning('Command pwdx was not found on host %s. Assuming its running.' % host)
+                hostname_pwdx[host] = False
+            else:
+                hostname_pwdx[host] = True
+        self.__pool.empty_completed_items()
+
+        # Execure pgrep and check if the process exists
+        for seg in segments:
+            host = seg.getSegmentHostName()
+            dbid = seg.getSegmentDbId()
+            datadir = datadir_map[dbid]
+            if(dbid not in pid_map or not pid_map[dbid]):
+                self.__logger.warning('DBID:%d. No PID found. Skipping process running check. Assuming its not running.' % dbid)
+                is_postmaster_map[dbid] = False
+                continue
+            if(host not in hostmap_pgrep and host not in hostname_pwdx):
+                self.__logger.debug("For DBID:%d, Host %s has missing command pgrep/pwdx. Skipping process running check"
+                                    %(dbid, host))
+                continue
+            pid = pid_map[dbid]
+            cmdStr = 'pgrep postgres | xargs -I{} pwdx {} | grep "%s" | grep "^%s:" | cat' % (datadir, pid)
+            cmd = base.Command("%d" % dbid, cmdStr, ctxt=base.REMOTE, remoteHost=host)
+            self.__pool.addCommand(cmd)
+
+        self.__pool.join()
+
+        completed_results = self.__pool.getCompletedItems()
+        for cmd in completed_results:
+            dbid = int(cmd.get_command_name())
+            if not cmd.get_return_code():
+                self.__logger.warning('DBID:%d Error while executing pgrep command. Error:%s. Assuming its a postmaster process' % (dbid, cmd.get_stderr().strip()))
+                is_postmaster_map[dbid] = True
+            else:
+                if not cmd.get_stdout().strip():
+                    is_postmaster_map[dbid] = False
+                else:
+                    is_postmaster_map[dbid] = True
+        self.__pool.empty_completed_items()
+        return is_postmaster_map
 
     def _get_failed_reachable_segments(self):
         # will stop the failed segment.  Note that we do this even if we are recovering to a different location!
@@ -588,8 +777,9 @@ class GpMirrorListToBuild:
 
         self.__logger.info("Ensuring %d failed segment(s) are stopped" % (len(failed_reachable_segments)))
         segments = self._get_running_postgres_segments(failed_reachable_segments)
+        for seg in segments:
+            self.__logger.debug("Stopping segment:%d on host %s" %(seg.getSegmentDbId(), seg.getSegmentHostName()))
         segmentByHost = GpArray.getSegmentsByHostName(segments)
-
 
         cmds = []
         for hostName, segments in segmentByHost.items():
@@ -648,7 +838,7 @@ class GpMirrorListToBuild:
             else:
                 if last_seg_up_count != seg_up_count:
                     print("\n", end=' ')
-                    #FIXME - this message prints negative values
+                    # FIXME - this message prints negative values
                     self.__logger.info("%d of %d segments have been marked down." %
                                        (initial_seg_up_count - seg_up_count, initial_seg_up_count))
                     last_seg_up_count = seg_up_count

@@ -604,6 +604,12 @@ class Command(object):
             self.logger.debug(self.results)
             raise ExecutionError("non-zero rc: %d" % self.results.rc, self)
 
+    def get_command_name(self):
+        if self.name:
+            return self.name
+        else:
+            self.logger.debug("Command Name not set, command:%s" % self.cmdStr)
+            return ""
 
 class SQLCommand(Command):
     """Base class for commands that execute SQL statements.  Classes

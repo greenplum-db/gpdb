@@ -23,6 +23,8 @@ from test.unit.gp_unittest import Contains, GpTestCase
 
 from gppylib.recoveryinfo import RecoveryInfo, RecoveryResult
 
+import gppylib.commands.base
+
 
 class BuildMirrorsTestCase(GpTestCase):
     """
@@ -95,7 +97,7 @@ class BuildMirrorsTestCase(GpTestCase):
         build_mirrors_obj._run_setup_recovery = Mock(return_value=RecoveryResult('action', [], None))
         build_mirrors_obj._clean_up_failed_segments = Mock()
         build_mirrors_obj._GpMirrorListToBuild__runWaitAndCheckWorkerPoolForErrorsAndClear = Mock()
-        build_mirrors_obj._get_running_postgres_segments = Mock()
+        build_mirrors_obj._get_running_postgres_segments = Mock(return_value=[self.primary, self.mirror])
         build_mirrors_obj._revert_config_update = Mock()
         # build_mirrors_obj._run_b = Mock()
         build_mirrors_obj._trigger_fts_probe = Mock()
@@ -798,13 +800,16 @@ class BuildMirrorSegmentsTestCase(GpTestCase):
                                status='u', hostname='primaryhost', address='primaryhost-1',
                                port=3333, datadir='/primary')
         self.mock_logger = Mock(spec=['log', 'warn', 'info', 'debug', 'error', 'warning', 'fatal'])
+        self.__pool = Mock()
+        #self.__pool.getCompletedItems.return_value = [base.Command(name='1:/tmp/link/seg0', cmdStr='hostname'), Mock(name='2:/tmp/link/seg1')]
+
         gplog.get_unittest_logger()
         self.apply_patches([
         ])
 
         self.buildMirrorSegs = GpMirrorListToBuild(
             toBuild = [],
-            pool = None,
+            pool = self.__pool,
             quiet = True,
             parallelDegree = 0,
             logger=self.mock_logger
@@ -821,57 +826,69 @@ class BuildMirrorSegmentsTestCase(GpTestCase):
     #     self.buildMirrorSegs._run_recovery(Mock())
     #     pass
 
-    @patch('gppylib.operations.buildMirrorSegments.get_pid_from_remotehost')
-    @patch('gppylib.operations.buildMirrorSegments.is_pid_postmaster')
-    @patch('gppylib.operations.buildMirrorSegments.check_pid_on_remotehost')
-    def test_get_running_postgres_segments_empty_segs(self, mock1, mock2, mock3):
+    @patch('gppylib.operations.buildMirrorSegments.GpMirrorListToBuild.dereference_all_remote_symlink_parallel')
+    @patch('gppylib.operations.buildMirrorSegments.GpMirrorListToBuild.get_pid_from_all_remotehost_parallel')
+    @patch('gppylib.operations.buildMirrorSegments.GpMirrorListToBuild.check_pid_on_all_remotehost_parallel')
+    @patch('gppylib.operations.buildMirrorSegments.GpMirrorListToBuild.is_pid_postmaster_all_parallel',
+           return_value={})
+    def test_get_running_postgres_segments_empty_segs(self, mock1, mock2, mock3, mock4):
         toBuild = []
         expected_output = []
         segs = self.buildMirrorSegs._get_running_postgres_segments(toBuild)
         self.assertEqual(segs, expected_output)
 
-    @patch('gppylib.operations.buildMirrorSegments.get_pid_from_remotehost')
-    @patch('gppylib.operations.buildMirrorSegments.is_pid_postmaster', return_value=True)
-    @patch('gppylib.operations.buildMirrorSegments.check_pid_on_remotehost', return_value=True)
-    def test_get_running_postgres_segments_all_pid_postmaster(self, mock1, mock2, mock3):
-        mock_segs = [Mock(), Mock()]
+    @patch('gppylib.operations.buildMirrorSegments.GpMirrorListToBuild.dereference_all_remote_symlink_parallel')
+    @patch('gppylib.operations.buildMirrorSegments.GpMirrorListToBuild.get_pid_from_all_remotehost_parallel')
+    @patch('gppylib.operations.buildMirrorSegments.GpMirrorListToBuild.check_pid_on_all_remotehost_parallel')
+    @patch('gppylib.operations.buildMirrorSegments.GpMirrorListToBuild.is_pid_postmaster_all_parallel',
+           return_value={1: True, 2: True})
+    def test_get_running_postgres_segments_all_pid_postmaster(self, mock1, mock2, mock3, mock4):
+        mock_segs = [self.coordinator, self.primary]
         segs = self.buildMirrorSegs._get_running_postgres_segments(mock_segs)
         self.assertEqual(segs, mock_segs)
 
-    @patch('gppylib.operations.buildMirrorSegments.get_pid_from_remotehost')
-    @patch('gppylib.operations.buildMirrorSegments.is_pid_postmaster', side_effect=[True, False])
-    @patch('gppylib.operations.buildMirrorSegments.check_pid_on_remotehost', return_value=True)
-    def test_get_running_postgres_segments_some_pid_postmaster(self, mock1, mock2, mock3):
-        mock_segs = [Mock(), Mock()]
+    @patch('gppylib.operations.buildMirrorSegments.GpMirrorListToBuild.dereference_all_remote_symlink_parallel')
+    @patch('gppylib.operations.buildMirrorSegments.GpMirrorListToBuild.get_pid_from_all_remotehost_parallel')
+    @patch('gppylib.operations.buildMirrorSegments.GpMirrorListToBuild.check_pid_on_all_remotehost_parallel')
+    @patch('gppylib.operations.buildMirrorSegments.GpMirrorListToBuild.is_pid_postmaster_all_parallel',
+           return_value={1: True, 2: False})
+    def test_get_running_postgres_segments_some_pid_postmaster(self, mock1, mock2, mock3, mock4):
+        mock_segs = [self.coordinator, self.primary]
         expected_output = []
         expected_output.append(mock_segs[0])
         segs = self.buildMirrorSegs._get_running_postgres_segments(mock_segs)
         self.assertEqual(segs, expected_output)
 
-    @patch('gppylib.operations.buildMirrorSegments.get_pid_from_remotehost')
-    @patch('gppylib.operations.buildMirrorSegments.is_pid_postmaster', side_effect=[True, False])
-    @patch('gppylib.operations.buildMirrorSegments.check_pid_on_remotehost', side_effect=[True, False])
-    def test_get_running_postgres_segments_one_pid_postmaster(self, mock1, mock2, mock3):
-        mock_segs = [Mock(), Mock()]
+    @patch('gppylib.operations.buildMirrorSegments.GpMirrorListToBuild.dereference_all_remote_symlink_parallel')
+    @patch('gppylib.operations.buildMirrorSegments.GpMirrorListToBuild.get_pid_from_all_remotehost_parallel')
+    @patch('gppylib.operations.buildMirrorSegments.GpMirrorListToBuild.check_pid_on_all_remotehost_parallel')
+    @patch('gppylib.operations.buildMirrorSegments.GpMirrorListToBuild.is_pid_postmaster_all_parallel',
+           return_value={1: True, 2: False})
+    def test_get_running_postgres_segments_one_pid_postmaster(self, mock1, mock2, mock3, mock4):
+        mock_segs = [self.coordinator, self.primary]
         expected_output = []
         expected_output.append(mock_segs[0])
         segs = self.buildMirrorSegs._get_running_postgres_segments(mock_segs)
         self.assertEqual(segs, expected_output)
 
-    @patch('gppylib.operations.buildMirrorSegments.get_pid_from_remotehost')
-    @patch('gppylib.operations.buildMirrorSegments.is_pid_postmaster', side_effect=[False, False])
-    @patch('gppylib.operations.buildMirrorSegments.check_pid_on_remotehost', side_effect=[True, False])
-    def test_get_running_postgres_segments_no_pid_postmaster(self, mock1, mock2, mock3):
-        mock_segs = [Mock(), Mock()]
+    @patch('gppylib.operations.buildMirrorSegments.GpMirrorListToBuild.dereference_all_remote_symlink_parallel')
+    @patch('gppylib.operations.buildMirrorSegments.GpMirrorListToBuild.get_pid_from_all_remotehost_parallel')
+    @patch('gppylib.operations.buildMirrorSegments.GpMirrorListToBuild.check_pid_on_all_remotehost_parallel')
+    @patch('gppylib.operations.buildMirrorSegments.GpMirrorListToBuild.is_pid_postmaster_all_parallel',
+           return_value={1: False, 2: False})
+    def test_get_running_postgres_segments_no_pid_postmaster(self, mock1, mock2, mock3, mock4):
+        mock_segs = [self.coordinator, self.primary]
         expected_output = []
         segs = self.buildMirrorSegs._get_running_postgres_segments(mock_segs)
         self.assertEqual(segs, expected_output)
 
-    @patch('gppylib.operations.buildMirrorSegments.get_pid_from_remotehost')
-    @patch('gppylib.operations.buildMirrorSegments.is_pid_postmaster', side_effect=[False, False])
-    @patch('gppylib.operations.buildMirrorSegments.check_pid_on_remotehost', side_effect=[False, False])
-    def test_get_running_postgres_segments_no_pid_running(self, mock1, mock2, mock3):
-        mock_segs = [Mock(), Mock()]
+    @patch('gppylib.operations.buildMirrorSegments.GpMirrorListToBuild.dereference_all_remote_symlink_parallel')
+    @patch('gppylib.operations.buildMirrorSegments.GpMirrorListToBuild.get_pid_from_all_remotehost_parallel')
+    @patch('gppylib.operations.buildMirrorSegments.GpMirrorListToBuild.check_pid_on_all_remotehost_parallel')
+    @patch('gppylib.operations.buildMirrorSegments.GpMirrorListToBuild.is_pid_postmaster_all_parallel',
+           return_value={1: False, 2: False})
+    def test_get_running_postgres_segments_no_pid_running(self, mock1, mock2, mock3, mock4):
+        mock_segs = [self.coordinator, self.primary]
         expected_output = []
         segs = self.buildMirrorSegs._get_running_postgres_segments(mock_segs)
         self.assertEqual(segs, expected_output)
@@ -883,13 +900,134 @@ class BuildMirrorSegmentsTestCase(GpTestCase):
         host = 'h1'
         self.assertEqual(self.buildMirrorSegs.dereference_remote_symlink(datadir, host), '/tmp/seg0')
 
+    @patch('gppylib.operations.buildMirrorSegments.GpMirrorListToBuild')
+    @patch('gppylib.commands.base.Command.get_results',
+           return_value=base.CommandResult(rc=0, stdout=b'/tmp/seg0', stderr=b'', completed=True, halt=False))
+    def test_dereference_all_remote_symlink_parallel_valid_symlink(self, mock1, mock2):
+        seg1 = Segment(content=0, preferred_role='p', dbid=1, role='p', mode='s',
+                              status='u', hostname='localhost', address='localhost',
+                              port=1111, datadir='/tmp/link/seg0')
+
+        seg2 = Segment(content=1, preferred_role='p', dbid=2, role='p', mode='s',
+                               status='u', hostname='localhost', address='localhost',
+                               port=2222, datadir='/tmp/link/seg1')
+
+        mock_segs = [seg1, seg2]
+        self.__pool.getCompletedItems.return_value = [
+            base.Command(name='dbid:1:/tmp/link/seg0', cmdStr='hostname'),
+            base.Command(name='dbid:2:/tmp/link/seg1', cmdStr='hostname')]
+        self.assertEqual(self.buildMirrorSegs.dereference_all_remote_symlink_parallel(mock_segs), {1: '/tmp/seg0', 2: '/tmp/seg0'})
+
+    @patch('gppylib.operations.buildMirrorSegments.GpMirrorListToBuild')
+    @patch('gppylib.commands.base.Command.get_results',
+           return_value=base.CommandResult(rc=1, stdout=b'', stderr=b'', completed=True, halt=False))
+    @patch('gppylib.commands.base.Command.get_stderr', return_value='Invalid path')
+    def test_dereference_all_remote_symlink_parallel_non_valid_symlink(self, mock1, mock2, mock3):
+        seg1 = Segment(content=0, preferred_role='p', dbid=1, role='p', mode='s',
+                              status='u', hostname='localhost', address='localhost',
+                              port=1111, datadir='/tmp/link/seg0')
+
+        mock_segs = [seg1]
+        self.__pool.getCompletedItems.return_value = [
+            base.Command(name='dbid:1:/tmp/link/seg0', cmdStr='hostname')]
+        self.assertEqual(self.buildMirrorSegs.dereference_all_remote_symlink_parallel(mock_segs), {1: '/tmp/link/seg0'})
+        self.mock_logger.warning.assert_any_call(
+            'For Dbid:1 Unable to determine if /tmp/link/seg0 is symlink. Assuming it is not symlink. Error: Invalid path')
+
     @patch('gppylib.commands.base.Command.run')
-    @patch('gppylib.commands.base.Command.get_results', return_value=base.CommandResult(rc=1, stdout=b'', stderr=b'', completed=True, halt=False))
+    @patch('gppylib.commands.base.Command.get_results',
+           return_value=base.CommandResult(rc=1, stdout=b'', stderr=b'Error while executing command', completed=True, halt=False))
     def test_dereference_remote_symlink_unable_to_determine_symlink(self, mock1, mock2):
         datadir = '/tmp/seg0'
         host = 'h1'
         self.assertEqual(self.buildMirrorSegs.dereference_remote_symlink(datadir, host), '/tmp/seg0')
         self.mock_logger.warning.assert_any_call('Unable to determine if /tmp/seg0 is symlink. Assuming it is not symlink')
+
+    @patch('gppylib.commands.base.Command.get_results',
+           return_value=base.CommandResult(rc=0, stdout=b'1234', stderr=b'', completed=True, halt=False))
+    def test_get_pid_from_all_remotehost_parallel_get_valid_pid(self, mock1):
+        mock_segs = [Segment(content=0, preferred_role='p', dbid=1, role='p', mode='s',
+                              status='u', hostname='localhost', address='localhost',
+                              port=1111, datadir='/tmp/link/seg0')]
+
+        datadir_map = {1: '/tmp/seg0', 2: '/tmp/seg1'}
+        self.__pool.getCompletedItems.return_value = [base.Command(name='1', cmdStr='hostname')]
+        gppylib.commands.base.Command.get_stdout.return_value = '1234'
+        self.assertEqual(self.buildMirrorSegs.get_pid_from_all_remotehost_parallel(mock_segs, datadir_map), {1: 1234})
+
+    @patch('gppylib.commands.base.Command.get_results',
+           return_value=base.CommandResult(rc=1, stdout=b'',
+                                           stderr=b'File /tmp/seg0/postmaster.pid file does not exists', completed=True, halt=False))
+    def test_get_pid_from_all_remotehost_parallel_not_valid_pid(self, mock1):
+        seg1 = Segment(content=0, preferred_role='p', dbid=1, role='p', mode='s',
+                              status='u', hostname='localhost', address='localhost',
+                              port=1111, datadir='/tmp/link/seg0')
+
+        mock_segs = [seg1]
+        datadir_map = {1: '/tmp/seg0'}
+        self.__pool.getCompletedItems.return_value = [base.Command(name='1', cmdStr='hostname')]
+        gppylib.commands.base.Command.get_stdout.return_value = '1234'
+        self.assertEqual(self.buildMirrorSegs.get_pid_from_all_remotehost_parallel(mock_segs, datadir_map), {})
+        self.mock_logger.warning.assert_any_call(
+            'For Dbid:1 Unable to fetch pid from datadir:/tmp/seg0 Error: File /tmp/seg0/postmaster.pid file does not exists')
+
+    @patch('gppylib.commands.base.Command.get_results',
+           return_value=base.CommandResult(rc=0, stdout=b'', stderr=b'', completed=True, halt=False))
+    @patch('gppylib.commands.base.Command.get_return_code', return_value=0)
+    def test_check_pid_on_all_remotehost_parallel_valid_process(self, mock1, mock2):
+        seg1 = Segment(content=0, preferred_role='p', dbid=1, role='p', mode='s',
+                              status='u', hostname='localhost', address='localhost',
+                              port=1111, datadir='/tmp/link/seg0')
+
+        mock_segs = [seg1]
+        pid_map = {1: 1234}
+        self.__pool.getCompletedItems.return_value = [
+            base.Command(name='1', cmdStr='hostname')]
+        self.assertEqual(self.buildMirrorSegs.check_pid_on_all_remotehost_parallel(mock_segs, pid_map), {1: 1234})
+
+    @patch('gppylib.commands.base.Command.get_results',
+           return_value=base.CommandResult(rc=1, stdout=b'', stderr=b'Process not found', completed=True, halt=False))
+    @patch('gppylib.commands.base.Command.get_return_code', return_value=1)
+    def test_check_pid_on_all_remotehost_parallel_non_valid_process(self, mock1, mock2):
+        seg1 = Segment(content=0, preferred_role='p', dbid=1, role='p', mode='s',
+                              status='u', hostname='localhost', address='localhost',
+                              port=1111, datadir='/tmp/link/seg0')
+
+        mock_segs = [seg1]
+        pid_map = {1: 1234}
+        self.__pool.getCompletedItems.return_value = [base.Command(name='1', cmdStr='hostname')]
+        self.assertEqual(self.buildMirrorSegs.check_pid_on_all_remotehost_parallel(mock_segs, pid_map), {})
+        self.mock_logger.warning.assert_any_call('DBID:1 Error while signaling process PID:1234. Skipping')
+
+
+    @patch('gppylib.commands.base.Command.get_return_code', return_value=Mock(return_value=0))
+    @patch('gppylib.commands.base.Command.get_stdout', return_value=Mock(return_value='1234'))
+    def test_is_pid_postmaster_all_parallel_valid_process(self, mock1, mock2):
+        seg1 = Segment(content=0, preferred_role='p', dbid=1, role='p', mode='s',
+                              status='u', hostname='localhost', address='localhost',
+                              port=1111, datadir='/tmp/link/seg0')
+
+        mock_segs = [seg1]
+        pid_map = {1: 1234}
+        datadir_map = {1: '/tmp/seg0'}
+        self.__pool.getCompletedItems.return_value = [base.Command(name='1', cmdStr='hostname')]
+        self.assertEqual(self.buildMirrorSegs.is_pid_postmaster_all_parallel(mock_segs, datadir_map, pid_map), {1: True})
+
+    @patch('gppylib.commands.base.Command.get_return_code', return_value=Mock(return_value=1))
+    @patch('gppylib.commands.base.Command.get_stderr', return_value='Command execution error..!')
+    @patch('gppylib.commands.base.Command.get_stdout', return_value=Mock(return_value=''))
+    def test_is_pid_postmaster_all_parallel_non_valid_process(self, mock1, mock2, mock3):
+        seg1 = Segment(content=0, preferred_role='p', dbid=1, role='p', mode='s',
+                       status='u', hostname='localhost', address='localhost',
+                       port=1111, datadir='/tmp/link/seg0')
+
+        mock_segs = [seg1]
+        pid_map = {1: 1234}
+        datadir_map = {1: '/tmp/seg0'}
+        self.__pool.getCompletedItems.return_value = [base.Command(name='1', cmdStr='hostname')]
+        self.__pool.getCompletedItems()[0].get_return_code.return_value = 1
+        self.assertEqual(self.buildMirrorSegs.is_pid_postmaster_all_parallel(mock_segs, datadir_map, pid_map),
+                         {1: True})
 
     def _createGpArrayWith2Primary2Mirrors(self):
         self.coordinator = Segment.initFromString(
@@ -928,6 +1066,7 @@ class BuildMirrorSegmentsTestCase(GpTestCase):
 
         with self.assertRaisesRegex(Exception, r"Segment dbid's 2 and 1 on host samehost cannot have the same data directory '/data'"):
             self.buildMirrorSegs.checkForPortAndDirectoryConflicts(gpArray)
+
 
 
 class SegmentProgressTestCase(GpTestCase):
