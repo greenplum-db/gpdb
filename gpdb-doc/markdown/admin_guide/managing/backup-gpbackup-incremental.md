@@ -73,7 +73,7 @@ When you add an incremental backup to a backup set, `gpbackup` ensures that the 
 
 If you try to add an incremental backup to a backup set, the backup operation fails if the `gpbackup` options are not consistent.
 
-For information about the `gpbackup` and `gprestore` utility options, see [gpbackup](../../utility_guide/admin_utilities/gpbackup.html) and [gprestore](../../utility_guide/admin_utilities/gprestore.html)in the *Greenplum Database Utility Guide*.
+For information about the `gpbackup` and `gprestore` utility options, see [gpbackup](../../utility_guide/admin_utilities/gpbackup.html) and [gprestore](../../utility_guide/admin_utilities/gprestore.html) in the *Greenplum Database Utility Guide*.
 
 ### Example Using Incremental Backup Sets 
 
