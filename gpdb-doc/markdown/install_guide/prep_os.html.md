@@ -168,6 +168,9 @@ net.ipv4.tcp_syncookies = 1
 net.ipv4.conf.default.accept_source_route = 0
 net.ipv4.tcp_max_syn_backlog = 4096
 net.ipv4.conf.all.arp_filter = 1
+net.ipv4.ipfrag_high_thresh = 41943040
+net.ipv4.ipfrag_low_thresh = 31457280
+net.ipv4.ipfrag_time = 60
 net.core.netdev_max_backlog = 10000
 net.core.rmem_max = 2097152
 net.core.wmem_max = 2097152
@@ -236,6 +239,28 @@ net.ipv4.ip_local_reserved_ports=65330
 ```
 
 For additional requirements and recommendations for cloud deployments, see *[Greenplum Database Cloud Technical Recommendations](../cloud/gpdb-cloud-tech-rec.html)*.
+
+**IP Fragmentation Settings**
+
+When the Greenplum Database interconnect uses UDP (the default), the network interface card controls IP packet fragmentation and reassemblies.
+
+If the UDP message size is larger than the size of the maximum transmission unit (MTU) of a network, the IP layer fragments the message. (Refer to [Networking](#networking) later in this topic for more information about MTU sizes for Greenplum Database.) The receiver must store the fragments in a buffer before it can reorganize and reassemble the message.
+
+The following `sysctl.conf` operating system parameters control the reassembly process:
+
+| OS Parameter | Description |
+|--------------|-------------|
+| net.ipv4.ipfrag_high_thresh | The maximum amount of memory used to reassemble IP fragments before the kernel starts to remove fragments to free up resources. The default value is 4194304 bytes (4MB). |
+| net.ipv4.ipfrag_low_thresh | The minimum amount of memory used to reassemble IP fragments. The default value is 3145728 bytes (3MB). (Deprecated after kernel version 4.17.) |
+| net.ipv4.ipfrag_time | The maximum amount of time (in seconds) to keep an IP fragment in memory. The default value is 30. |
+
+The recommended settings for these parameters for Greenplum Database follow:
+
+``` pre
+net.ipv4.ipfrag_high_thresh = 41943040
+net.ipv4.ipfrag_low_thresh = 31457280
+net.ipv4.ipfrag_time = 60
+```
 
 **System Memory**
 
