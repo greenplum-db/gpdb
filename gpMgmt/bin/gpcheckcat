@@ -97,6 +97,9 @@ def setError(level):
     '''
     GV.retcode = max(level, GV.retcode)
 
+def setScriptRetCode(level):
+    GV.script_retcode = max(level,GV.script_retcode)
+
 
 ###############################
 class Global():
@@ -148,6 +151,7 @@ class Global():
         self.catalog = None
         self.max_content = 0
         self.report_cfg = {}
+        self.script_retcode = SUCCESS
 
     def reset_stmt_queues(self):
 
@@ -3383,12 +3387,13 @@ def main():
             runAllChecks(run_tests)
 
         checkcatReport()
+        setScriptRetCode(GV.retcode)
 
         # skip shared tables on subsequent passes
         if not GV.opt['-S']:
             GV.opt['-S'] = "none"
 
-    sys.exit(GV.retcode)
+    sys.exit(GV.script_retcode)
 
 #############
 if __name__ == '__main__':
