@@ -11117,12 +11117,10 @@ FROM   (SELECT *
                      ->  Seq Scan on tab_1  (cost=0.00..431.00 rows=1 width=5)
                      ->  Hash  (cost=431.00..431.00 rows=1 width=4)
                            ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
-                                 ->  Result  (cost=0.00..431.00 rows=1 width=4)
-                                       Filter: ((tab_2.cd)::text = (tab_2.cd)::text)
-                                       ->  Seq Scan on tab_2  (cost=0.00..431.00 rows=1 width=7)
+                                 ->  Seq Scan on tab_2  (cost=0.00..431.00 rows=1 width=7)
                ->  Seq Scan on tab_3  (cost=0.00..431.00 rows=1 width=8)
  Optimizer: Pivotal Optimizer (GPORCA)
-(13 rows)
+(11 rows)
 
 SELECT Count(*)
 FROM   (SELECT *
