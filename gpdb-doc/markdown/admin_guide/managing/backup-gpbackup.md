@@ -426,29 +426,29 @@ This is the format of the `gp_email_contacts.yaml` YAML file for `gpbackup` emai
 #### Email YAML File Sections 
 
 **contacts**
-:   Required. The section that contains the `gpbackup` and `gprestore` sections. The YAML file can contain a `gpbackup` section, a `gprestore` section, or one of each.
+Required. The section that contains the `gpbackup` and `gprestore` sections. The YAML file can contain a `gpbackup` section, a `gprestore` section, or one of each.
 
 **gpbackup**
-:   Optional. Begins the `gpbackup` email section.
+Optional. Begins the `gpbackup` email section.
 
     **address**
-    :   Required. At least one email address must be specified. Multiple email `address` parameters can be specified. Each `address` requires a `status` section.
+    Required. At least one email address must be specified. Multiple email `address` parameters can be specified. Each `address` requires a `status` section.
 
-    :   user@domain is a single, valid email address.
+    user@domain is a single, valid email address.
 
     **status**
-    :   Required. Specify when the utility sends an email to the specified email address. The default is to not send email notification.
+    Required. Specify when the utility sends an email to the specified email address. The default is to not send email notification.
 
-    :   You specify sending email notifications based on the completion status of a backup or restore operation. At least one of these parameters must be specified and each parameter can appear at most once.
+    You specify sending email notifications based on the completion status of a backup or restore operation. At least one of these parameters must be specified and each parameter can appear at most once.
 
         **success**
-        :   Optional. Specify if an email is sent if the operation completes without errors. If the value is `true`, an email is sent if the operation completes without errors. If the value is `false` \(the default\), an email is not sent.
+        Optional. Specify if an email is sent if the operation completes without errors. If the value is `true`, an email is sent if the operation completes without errors. If the value is `false` \(the default\), an email is not sent.
 
         **success\_with\_errors**
-        :   Optional. Specify if an email is sent if the operation completes with errors. If the value is `true`, an email is sent if the operation completes with errors. If the value is `false` \(the default\), an email is not sent.
+        Optional. Specify if an email is sent if the operation completes with errors. If the value is `true`, an email is sent if the operation completes with errors. If the value is `false` \(the default\), an email is not sent.
 
         **failure**
-        :   Optional. Specify if an email is sent if the operation fails. If the value is `true`, an email is sent if the operation fails. If the value is `false` \(the default\), an email is not sent.
+        Optional. Specify if an email is sent if the operation fails. If the value is `true`, an email is sent if the operation fails. If the value is `false` \(the default\), an email is not sent.
 
 **gprestore**
 :   Optional. Begins the `gprestore` email section. This section contains the [address](#address_yml) and [status](#status_yml) parameters that are used to send an email notification after a `gprestore` operation. The syntax is the same as the [gpbackup](#gpbackup_yml) section.
