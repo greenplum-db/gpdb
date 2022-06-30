@@ -1428,7 +1428,7 @@ With TCP as the interconnect protocol, Greenplum Database has an upper limit of 
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|UDPIFC<br/>TCP|UDPIFC|local<br/>system<br/>restart|
+|UDPIFC<br/>TCP|UDPIFC|local<br/>local<br/>session<br/>reload|
 
 ## gp\_log\_format 
 
