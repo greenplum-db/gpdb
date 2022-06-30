@@ -13,7 +13,7 @@ This section contains the following topics:
 
 **Parent topic:** [Querying Data](../../query/topics/query.html)
 
-## About JSON Data 
+## About JSON Data
 
 When Greenplum Database stores data as `json` data type, an exact copy of the input text is stored and the JSON processing functions reparse the data on each execution.
 
@@ -83,12 +83,8 @@ This table describes the functions that create `json` values.
 
 |Function|Description|Example|Example Result|
 |--------|-----------|-------|--------------|
-|`array_to_json(anyarray [, pretty_bool])`|Returns the array as a JSON array. A Greenplum Database multidimensional array becomes a JSON array of arrays. Line feeds are added between dimension 1 elements if pretty\_bool is `true`.
-
-|`array_to_json('{{1,5},{99,100}}'::int[])`|`[[1,5],[99,100]]`|
-|`row_to_json(record [, pretty_bool])`|Returns the row as a JSON object. Line feeds are added between level 1 elements if `pretty_bool` is `true`.
-
-|`row_to_json(row(1,'foo'))`|`{"f1":1,"f2":"foo"}`|
+|`array_to_json(anyarray [, pretty_bool])`|Returns the array as a JSON array. A Greenplum Database multidimensional array becomes a JSON array of arrays. Line feeds are added between dimension 1 elements if pretty\_bool is `true`.|`array_to_json('{{1,5},{99,100}}'::int[])`|`[[1,5],[99,100]]`|
+|`row_to_json(record [, pretty_bool])`|Returns the row as a JSON object. Line feeds are added between level 1 elements if `pretty_bool` is `true`.|`row_to_json(row(1,'foo'))`|`{"f1":1,"f2":"foo"}`|
 
 ### JSON Processing Functions 
 
