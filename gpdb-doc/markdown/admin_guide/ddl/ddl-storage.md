@@ -97,10 +97,10 @@ The following table summarizes the available compression algorithms.
 
 |Table Orientation|Available Compression Types|Supported Algorithms|
 |-----------------|---------------------------|--------------------|
-|Row|Table|`ZLIB` and `QUICKLZ`1|
-|Column|Column and Table|`RLE_TYPE`, `ZLIB`, and `QUICKLZ`1|
+|Row|Table|`ZLIB` and `QUICKLZ`<sup>1</sup>|
+|Column|Column and Table|`RLE_TYPE`, `ZLIB`, and `QUICKLZ`<sup>1</sup>|
 
-**Note:** 1QuickLZ compression is not available in the open source version of Greenplum Database.
+**Note:** <sup>1</sup>QuickLZ compression is not available in the open source version of Greenplum Database.
 
 When choosing a compression type and level for append-optimized tables, consider these factors:
 
@@ -137,12 +137,8 @@ Greenplum provides built-in functions to check the compression ratio and the dis
 
 |Function|Return Type|Description|
 |--------|-----------|-----------|
-|get\_ao\_distribution\(name\)get\_ao\_distribution\(oid\)
-
-|Set of \(dbid, tuplecount\) rows|Shows the distribution of an append-optimized table's rows across the array. Returns a set of rows, each of which includes a segment *dbid* and the number of tuples stored on the segment.|
-|get\_ao\_compression\_ratio\(name\)get\_ao\_compression\_ratio\(oid\)
-
-|float8|Calculates the compression ratio for a compressed append-optimized table. If information is not available, this function returns a value of -1.|
+|get\_ao\_distribution\(name\)get\_ao\_distribution\(oid\)|Set of \(dbid, tuplecount\) rows|Shows the distribution of an append-optimized table's rows across the array. Returns a set of rows, each of which includes a segment *dbid* and the number of tuples stored on the segment.|
+|get\_ao\_compression\_ratio\(name\)get\_ao\_compression\_ratio\(oid\)|float8|Calculates the compression ratio for a compressed append-optimized table. If information is not available, this function returns a value of -1|
 
 The compression ratio is returned as a common ratio. For example, a returned value of `3.19`, or `3.19:1`, means that the uncompressed table is slightly larger than three times the size of the compressed table.
 
