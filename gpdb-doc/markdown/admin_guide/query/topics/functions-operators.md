@@ -65,146 +65,26 @@ Greenplum Database includes JSON processing functions that manipulate values the
 |--------------------------|------------------|----------------|------------|
 |[Logical Operators](https://www.postgresql.org/docs/8.3/static/functions.html#FUNCTIONS-LOGICAL)| | | |
 |[Comparison Operators](https://www.postgresql.org/docs/8.3/static/functions-comparison.html)| | | |
-|[Mathematical Functions and Operators](https://www.postgresql.org/docs/8.3/static/functions-math.html)|randomsetseed
-
-| | |
-|[String Functions and Operators](https://www.postgresql.org/docs/8.3/static/functions-string.html)|*All built-in conversion functions*|convertpg\_client\_encoding
-
-| |
+|[Mathematical Functions and Operators](https://www.postgresql.org/docs/8.3/static/functions-math.html)|random<br/><br/>setseed| | |
+|[String Functions and Operators](https://www.postgresql.org/docs/8.3/static/functions-string.html)|*All built-in conversion functions*|convert<br/><br/>pg\_client\_encoding| |
 |[Binary String Functions and Operators](https://www.postgresql.org/docs/8.3/static/functions-binarystring.html)| | | |
 |[Bit String Functions and Operators](https://www.postgresql.org/docs/8.3/static/functions-bitstring.html)| | | |
 |[Pattern Matching](https://www.postgresql.org/docs/8.3/static/functions-matching.html)| | | |
-|[Data Type Formatting Functions](https://www.postgresql.org/docs/8.3/static/functions-formatting.html)| |to\_charto\_timestamp
-
-| |
-|[Date/Time Functions and Operators](https://www.postgresql.org/docs/8.3/static/functions-datetime.html)|timeofday|agecurrent\_date
-
-current\_time
-
-current\_timestamp
-
-localtime
-
-localtimestamp
-
-now
-
-| |
+|[Data Type Formatting Functions](https://www.postgresql.org/docs/8.3/static/functions-formatting.html)| |to\_charto\_timestamp| |
+|[Date/Time Functions and Operators](https://www.postgresql.org/docs/8.3/static/functions-datetime.html)|timeofday|age<br/><br/>current\_date<br/><br/>current\_time<br/><br/>current\_timestamp<br/><br/>localtime<br/><br/>localtimestamp<br/><br/>now| |
 |[Enum Support Functions](https://www.postgresql.org/docs/8.3/static/functions-enum.html)| | | |
 |[Geometric Functions and Operators](https://www.postgresql.org/docs/8.3/static/functions-geometry.html)| | | |
 |[Network Address Functions and Operators](https://www.postgresql.org/docs/8.3/static/functions-net.html)| | | |
-|[Sequence Manipulation Functions](https://www.postgresql.org/docs/8.3/static/functions-sequence.html)|nextval\(\)setval\(\)
-
-| | |
+|[Sequence Manipulation Functions](https://www.postgresql.org/docs/8.3/static/functions-sequence.html)|nextval\(\)<br/><br/>setval\(\)| | |
 |[Conditional Expressions](https://www.postgresql.org/docs/8.3/static/functions-conditional.html)| | | |
 |[Array Functions and Operators](https://www.postgresql.org/docs/8.3/static/functions-array.html)| |*All array functions*| |
 |[Aggregate Functions](https://www.postgresql.org/docs/8.3/static/functions-aggregate.html)| | | |
 |[Subquery Expressions](https://www.postgresql.org/docs/8.3/static/functions-subquery.html)| | | |
 |[Row and Array Comparisons](https://www.postgresql.org/docs/8.3/static/functions-comparisons.html)| | | |
 |[Set Returning Functions](https://www.postgresql.org/docs/8.3/static/functions-srf.html)|generate\_series| | |
-|[System Information Functions](https://www.postgresql.org/docs/8.3/static/functions-info.html)| |*All session information functions* *All access privilege inquiry functions*
-
-*All schema visibility inquiry functions*
-
-*All system catalog information functions*
-
-*All comment information functions*
-
-*All transaction ids and snapshots*
-
-| |
-|[System Administration Functions](https://www.postgresql.org/docs/8.3/static/functions-admin.html)|set\_configpg\_cancel\_backend
-
-pg\_terminate\_backend
-
-pg\_reload\_conf
-
-pg\_rotate\_logfile
-
-pg\_start\_backup
-
-pg\_stop\_backup
-
-pg\_size\_pretty
-
-pg\_ls\_dir
-
-pg\_read\_file
-
-pg\_stat\_file
-
-|current\_setting*All database object size functions*
-
-|**Note:** The function `pg_column_size` displays bytes required to store the value, possibly with TOAST compression.|
-|[XML Functions](https://www.postgresql.org/docs/9.1/static/functions-xml.html) and function-like expressions| |cursor\_to\_xml\(cursor refcursor, count int, nulls boolean, tableforest boolean, targetns text\)
-
- cursor\_to\_xmlschema\(cursor refcursor, nulls boolean, tableforest boolean, targetns text\)
-
- database\_to\_xml\(nulls boolean, tableforest boolean, targetns text\)
-
- database\_to\_xmlschema\(nulls boolean, tableforest boolean, targetns text\)
-
- database\_to\_xml\_and\_xmlschema\( nulls boolean, tableforest boolean, targetns text\)
-
- query\_to\_xml\(query text, nulls boolean, tableforest boolean, targetns text\)
-
- query\_to\_xmlschema\(query text, nulls boolean, tableforest boolean, targetns text\)
-
- query\_to\_xml\_and\_xmlschema\( query text, nulls boolean, tableforest boolean, targetns text\)
-
- schema\_to\_xml\(schema name, nulls boolean, tableforest boolean, targetns text\)
-
- schema\_to\_xmlschema\( schema name, nulls boolean, tableforest boolean, targetns text\)
-
- schema\_to\_xml\_and\_xmlschema\( schema name, nulls boolean, tableforest boolean, targetns text\)
-
- table\_to\_xml\(tbl regclass, nulls boolean, tableforest boolean, targetns text\)
-
- table\_to\_xmlschema\( tbl regclass, nulls boolean, tableforest boolean, targetns text\)
-
- table\_to\_xml\_and\_xmlschema\( tbl regclass, nulls boolean, tableforest boolean, targetns text\)
-
- xmlagg\(xml\)
-
- xmlconcat\(xml\[, ...\]\)
-
- xmlelement\(name name \[, xmlattributes\(value \[AS attname\] \[, ... \]\)\] \[, content, ...\]\)
-
- xmlexists\(text, xml\)
-
- xmlforest\(content \[AS name\] \[, ...\]\)
-
- xml\_is\_well\_formed\(text\)
-
- xml\_is\_well\_formed\_document\(text\)
-
- xml\_is\_well\_formed\_content\(text\)
-
- xmlparse \( \{ DOCUMENT \| CONTENT \} value\)
-
- xpath\(text, xml\)
-
- xpath\(text, xml, text\[\]\)
-
- xpath\_exists\(text, xml\)
-
- xpath\_exists\(text, xml, text\[\]\)
-
- xmlpi\(name target \[, content\]\)
-
- xmlroot\(xml, version text \| no value \[, standalone yes\|no\|no value\]\)
-
- xmlserialize \( \{ DOCUMENT \| CONTENT \} value AS type \)
-
- xml\(text\)
-
- text\(xml\)
-
- xmlcomment\(xml\)
-
- xmlconcat2\(xml, xml\)
-
-| |
+|[System Information Functions](https://www.postgresql.org/docs/8.3/static/functions-info.html)| |*All session information functions*<br/><br/>*All access privilege inquiry functions*<br/><br/>*All schema visibility inquiry functions*<br/><br/>*All system catalog information functions*<br/><br/>*All comment information functions*<br/><br/>*All transaction ids and snapshots*| |
+|[System Administration Functions](https://www.postgresql.org/docs/8.3/static/functions-admin.html)|set\_config<br/><br/>pg\_cancel\_backend<br/><br/>pg\_terminate\_backend<br/><br/>pg\_reload\_conf<br/><br/>pg\_rotate\_logfile<br/><br/>pg\_start\_backup<br/><br/>pg\_stop\_backup<br/><br/>pg\_size\_pretty<br/><br/>pg\_ls\_dir<br/><br/>pg\_read\_file<br/><br/>pg\_stat\_file<br/><br/>|current\_setting<br/><br/>*All database object size functions*|**Note:** The function `pg_column_size` displays bytes required to store the value, possibly with TOAST compression.|
+|[XML Functions](https://www.postgresql.org/docs/9.1/static/functions-xml.html) and function-like expressions| |cursor\_to\_xml\(cursor refcursor, count int, nulls boolean, tableforest boolean, targetns text\)<br/><br/>cursor\_to\_xmlschema\(cursor refcursor, nulls boolean, tableforest boolean, targetns text\)<br/><br/>database\_to\_xml\(nulls boolean, tableforest boolean, targetns text\)<br/><br/>database\_to\_xmlschema\(nulls boolean, tableforest boolean, targetns text\)<br/><br/>database\_to\_xml\_and\_xmlschema\( nulls boolean, tableforest boolean, targetns text\)<br/><br/>query\_to\_xml\(query text, nulls boolean, tableforest boolean, targetns text\)<br/><br/>query\_to\_xmlschema\(query text, nulls boolean, tableforest boolean, targetns text\)<br/><br/>query\_to\_xml\_and\_xmlschema\( query text, nulls boolean, tableforest boolean, targetns text\)<br/><br/>schema\_to\_xml\(schema name, nulls boolean, tableforest boolean, targetns text\)<br/><br/>schema\_to\_xmlschema\( schema name, nulls boolean, tableforest boolean, targetns text\)<br/><br/>schema\_to\_xml\_and\_xmlschema\( schema name, nulls boolean, tableforest boolean, targetns text\)<br/><br/>table\_to\_xml\(tbl regclass, nulls boolean, tableforest boolean, targetns text\)<br/><br/>table\_to\_xmlschema\( tbl regclass, nulls boolean, tableforest boolean, targetns text\)<br/><br/>table\_to\_xml\_and\_xmlschema\( tbl regclass, nulls boolean, tableforest boolean, targetns text\)<br/><br/>xmlagg\(xml\)<br/><br/>xmlconcat\(xml\[, ...\]\)<br/><br/>xmlelement\(name name \[, xmlattributes\(value \[AS attname\] \[, ... \]\)\] \[, content, ...\]\)<br/><br/>xmlexists\(text, xml\)<br/><br/>xmlforest\(content \[AS name\] \[, ...\]\)<br/><br/>xml\_is\_well\_formed\(text\)<br/><br/>xml\_is\_well\_formed\_document\(text\)<br/><br/>xml\_is\_well\_formed\_content\(text\)<br/><br/>xmlparse \( \{ DOCUMENT \| CONTENT \} value\)<br/><br/>xpath\(text, xml\)<br/><br/>xpath\(text, xml, text\[\]\)<br/><br/>xpath\_exists\(text, xml\)<br/><br/>xpath\_exists\(text, xml, text\[\]\)<br/><br/>xmlpi\(name target \[, content\]\)<br/><br/>xmlroot\(xml, version text \| no value \[, standalone yes\|no\|no value\]\)<br/><br/>xmlserialize \( \{ DOCUMENT \| CONTENT \} value AS type \)<br/><br/>xml\(text\)<br/><br/>text\(xml\)<br/><br/>xmlcomment\(xml\)<br/><br/>xmlconcat2\(xml, xml\)|
 
 ## Window Functions 
 
@@ -224,26 +104,62 @@ The following built-in window functions are Greenplum extensions to the PostgreS
 |`row_number()`|`bigint`|`ROW_NUMBER () OVER ( [PARTITION BY <expr>] ORDER BY <expr >)`|Assigns a unique number to each row to which it is applied \(either each row in a window partition or each row of the query\).|
 
 ## Advanced Aggregate Functions 
-
-The following built-in advanced aggregate functions are Greenplum extensions of the PostgreSQL database. These functions are *immutable*. Greenplum Database does not support the PostgreSQL ordered-set aggregate functions.
-
-**Note:** The Greenplum MADlib Extension for Analytics provides additional advanced functions to perform statistical analysis and machine learning with Greenplum Database data. See [Greenplum MADlib Extension for Analytics](../../../ref_guide/extensions/madlib.html) in the *Greenplum Database Reference Guide*.
-
-|Function|Return Type|Full Syntax|Description|
-|--------|-----------|-----------|-----------|
-|`MEDIAN (<expr>)`|`timestamp, timestamptz, interval, float`|`MEDIAN (<expression>)` *Example:*
-
- ```
-SELECT department_id, MEDIAN(salary) 
+    <div class="topic nested1" xml:lang="en" lang="en" id="topic31">
+        <h2 class="title topictitle2">Advanced Aggregate Functions</h2>
+        <div class="body">
+            <div class="p">The following built-in advanced aggregate functions are Greenplum extensions of the
+                PostgreSQL database. These functions are <em class="ph i">immutable</em>. Greenplum Database does
+                not support the PostgreSQL ordered-set aggregate functions.
+                <div class="note note">
+<span class="notetitle">Note:</span> The Greenplum MADlib Extension for Analytics provides additional advanced
+                    functions to perform statistical analysis and machine learning with Greenplum
+                    Database data. See <a class="xref" href="../../../ref_guide/extensions/madlib.html#topic1">Greenplum MADlib Extension for Analytics</a> in the <cite class="cite">Greenplum
+                        Database Reference Guide</cite>.</div>
+</div>
+<div class="tablenoborder">
+<table cellpadding="4" cellspacing="0" summary="" id="topic31__in2073121" class="table" frame="border" border="1" rules="all">
+<caption><span class="tablecap">Table 4. Advanced Aggregate Functions</span></caption>                
+                    <thead class="thead" align="left">
+                        <tr class="row">
+                            <th class="entry" valign="top" width="23.00684070063499%" id="d100389e1524">Function</th>
+                            <th class="entry" valign="top" width="18.098714684499523%" id="d100389e1527">Return Type</th>
+                            <th class="entry" valign="top" width="31.2862357741035%" id="d100389e1530">Full Syntax</th>
+                            <th class="entry" valign="top" width="27.60820884076199%" id="d100389e1533">Description</th>
+                        </tr>
+                    </thead>
+                    <tbody class="tbody">
+                        <tr class="row">
+                            <td class="entry" valign="top" width="23.00684070063499%" headers="d100389e1524 ">
+                                <samp class="ph codeph">MEDIAN (<em class="ph i">expr</em>)</samp>
+                            </td>
+                            <td class="entry" valign="top" width="18.098714684499523%" headers="d100389e1527 ">
+                                <samp class="ph codeph">timestamp, timestamptz, interval, float</samp>
+                            </td>
+                            <td class="entry" valign="top" width="31.2862357741035%" headers="d100389e1530 ">
+                                <samp class="ph codeph">MEDIAN (<em class="ph i">expression</em>)</samp>
+                                <p class="p">
+                                    <em class="ph i">Example:</em>
+                                </p>
+                                <pre class="pre codeblock">SELECT department_id, MEDIAN(salary) 
 FROM employees 
-GROUP BY department_id; 
-```
-
-|Can take a two-dimensional array as input. Treats such arrays as matrices.|
-|`sum(array[])`|`smallint[], int[], bigint[], float[]`|`sum(array[[1,2],[3,4]])` *Example:*
-
- ```
-CREATE TABLE mymatrix (myvalue int[]);
+GROUP BY department_id; </pre>
+                            </td>
+                            <td class="entry" valign="top" width="27.60820884076199%" headers="d100389e1533 ">Can take a two-dimensional array as input. Treats
+                                such arrays as matrices.</td>
+                        </tr>
+                        <tr class="row">
+                            <td class="entry" valign="top" width="23.00684070063499%" headers="d100389e1524 ">
+                                <samp class="ph codeph">sum(array[])</samp>
+                            </td>
+                            <td class="entry" valign="top" width="18.098714684499523%" headers="d100389e1527 ">
+                                <samp class="ph codeph">smallint[], int[], bigint[], float[]</samp>
+                            </td>
+                            <td class="entry" valign="top" width="31.2862357741035%" headers="d100389e1530 ">
+                                <samp class="ph codeph">sum(array[[1,2],[3,4]])</samp>
+                                <p class="p">
+                                    <em class="ph i">Example:</em>
+                                </p>
+                                <pre class="pre codeblock">CREATE TABLE mymatrix (myvalue int[]);
 INSERT INTO mymatrix 
    VALUES (array[[1,2],[3,4]]);
 INSERT INTO mymatrix 
@@ -251,10 +167,71 @@ INSERT INTO mymatrix
 SELECT sum(myvalue) FROM mymatrix;
  sum 
 ---------------
- {{1,3},{4,4}}
-```
-
-|Performs matrix summation. Can take as input a two-dimensional array that is treated as a matrix.|
-|`pivot_sum (label[], label, expr)`|`int[], bigint[], float[]`|`pivot_sum( array['A1','A2'], attr, value)`|A pivot aggregation using sum to resolve duplicate entries.|
-|`unnest (array[])`|set of `anyelement`|`unnest( array['one', 'row', 'per', 'item'])`|Transforms a one dimensional array into rows. Returns a set of `anyelement`, a polymorphic [pseudotype in PostgreSQL](https://www.postgresql.org/docs/8.3/static/datatype-pseudo.html).|
-
+ {{1,3},{4,4}}</pre>
+                            </td>
+                            <td class="entry" valign="top" width="27.60820884076199%" headers="d100389e1533 ">Performs matrix summation. Can take as input a
+                                two-dimensional array that is treated as a matrix.</td>
+                        </tr>
+                        <tr class="row">
+                            <td class="entry" valign="top" width="23.00684070063499%" headers="d100389e1524 ">
+                                <samp class="ph codeph">pivot_sum (label[], label, expr)</samp>
+                            </td>
+                            <td class="entry" valign="top" width="18.098714684499523%" headers="d100389e1527 ">
+                                <samp class="ph codeph">int[], bigint[], float[]</samp>
+                            </td>
+                            <td class="entry" valign="top" width="31.2862357741035%" headers="d100389e1530 ">
+                                <samp class="ph codeph">pivot_sum( array['A1','A2'], attr, value)</samp>
+                            </td>
+                            <td class="entry" valign="top" width="27.60820884076199%" headers="d100389e1533 ">A pivot aggregation using sum to resolve duplicate
+                                entries.</td>
+                        </tr>
+                        <tr class="row">
+                            <td class="entry" valign="top" width="23.00684070063499%" headers="d100389e1524 ">
+                                <samp class="ph codeph">unnest (array[])</samp>
+                            </td>
+                            <td class="entry" valign="top" width="18.098714684499523%" headers="d100389e1527 ">set of <samp class="ph codeph">anyelement</samp>
+</td>
+                            <td class="entry" valign="top" width="31.2862357741035%" headers="d100389e1530 ">
+                                <samp class="ph codeph">unnest( array['one', 'row', 'per', 'item'])</samp>
+                            </td>
+                            <td class="entry" valign="top" width="27.60820884076199%" headers="d100389e1533 ">Transforms a one dimensional array into rows.
+                                Returns a set of <samp class="ph codeph">anyelement</samp>, a polymorphic <a class="xref" href="https://www.postgresql.org/docs/8.3/static/datatype-pseudo.html" target="_blank"><span class="ph">pseudotype in
+                                PostgreSQL</span></a>.</td>
+                        </tr>
+                    </tbody>
+                </table>
+</div>
+        </div>
+    </div>
+          <div></div>
+          <footer class="site-footer-links">
+            <div class="copyright">
+  <a href='https://www.vmware.com/help/privacy.html'  target="_blank">Privacy Policy</a> | 
+  <a href='https://www.vmware.com/help/legal.html'  target="_blank">Terms of Use</a> | 
+	<a href="https://www.vmware.com/help/privacy/california-privacy-rights.html">Your California Privacy Rights</a> | 
+	<a class="ot-sdk-show-settings">Cookie Settings</a>
+  <br/>
+  Copyright &copy; 2022 <a href='https://vmware.com' target="_blank">VMware</a>, Inc. or its affiliates. All Rights Reserved.
+  <br/>
+  <br/>
+</div>
+<div class="support">
+  Need help? <a href="https://tanzu.vmware.com/support" target="_blank">Visit Support</a>
+</div>
+          </footer>
+        </main>
+        <div class='sidebar'>
+            <div class="js-quick-links">
+            </div>
+            <div class='product-info'>
+                <a href="https://network.pivotal.io/products/pivotal-gpdb/">Download</a><br/>
+                <a href="https://community.pivotal.io/s/topic/0TO0P000000IKdLWAW/pivotal-greenplum">Ask for Help</a><br/>
+                <a href="https://community.pivotal.io/s/topic/0TO0P000000IKdLWAW/pivotal-greenplum?tabset-fea77=2">Knowledge Base</a><br/>
+                <a href="/5290/pdf/GPDB5290Docs.pdf">PDF</a><br/>
+            </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<div id="scrim"></div>
