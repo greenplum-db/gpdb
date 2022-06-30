@@ -21,7 +21,7 @@ SELECT id FROM (
 DROP TABLE IF EXISTS pt1;
 --end_ignore
 -- When a query had a partitioned table and a correlated subquery, it 
--- failid with Query Optimizer. There was implemented a fix which
+-- failed with Query Optimizer. There was implemented a fix which
 -- fixes this problem.
 DROP TABLE IF EXISTS t1, t2;
 NOTICE:  table "t1" does not exist, skipping
