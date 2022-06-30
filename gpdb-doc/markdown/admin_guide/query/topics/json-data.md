@@ -92,7 +92,7 @@ This table describes the functions that process `json` values.
 
 <div class="tablenoborder">
 <table cellpadding="4" cellspacing="0" summary="" id="topic_z5d_snw_2z__table_wfc_y3w_mq" class="table" frame="border" border="1" rules="all">
-<caption><span class="tablecap">JSON Processing Functions</span></caption>         
+<caption><span class="tablecap"></span></caption>         
             <thead class="thead" align="left">
               <tr class="row">
                 <th class="entry" valign="top" width="20.224719101123597%" id="d104919e582">Function</th>
