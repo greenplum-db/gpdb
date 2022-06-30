@@ -104,21 +104,15 @@ The following built-in window functions are Greenplum extensions to the PostgreS
 |`row_number()`|`bigint`|`ROW_NUMBER () OVER ( [PARTITION BY <expr>] ORDER BY <expr >)`|Assigns a unique number to each row to which it is applied \(either each row in a window partition or each row of the query\).|
 
 ## Advanced Aggregate Functions 
-    <div class="topic nested1" xml:lang="en" lang="en" id="topic31">
-        <h2 class="title topictitle2">Advanced Aggregate Functions</h2>
-        <div class="body">
-            <div class="p">The following built-in advanced aggregate functions are Greenplum extensions of the
-                PostgreSQL database. These functions are <em class="ph i">immutable</em>. Greenplum Database does
-                not support the PostgreSQL ordered-set aggregate functions.
-                <div class="note note">
-<span class="notetitle">Note:</span> The Greenplum MADlib Extension for Analytics provides additional advanced
-                    functions to perform statistical analysis and machine learning with Greenplum
-                    Database data. See <a class="xref" href="../../../ref_guide/extensions/madlib.html#topic1">Greenplum MADlib Extension for Analytics</a> in the <cite class="cite">Greenplum
-                        Database Reference Guide</cite>.</div>
+
+The following built-in advanced aggregate functions are Greenplum extensions of the PostgreSQL database. These functions are *immutable*. Greenplum Database does not support the PostgreSQL ordered-set aggregate functions.
+
+Note: The Greenplum MADlib Extension for Analytics provides additional advanced functions to perform statistical analysis and machine learning with Greenplum Database data. See <a class="xref" href="../../../ref_guide/extensions/madlib.html#topic1">Greenplum MADlib Extension for Analytics</a> in the *Greenplum Database Reference Guide.*
+
 </div>
 <div class="tablenoborder">
 <table cellpadding="4" cellspacing="0" summary="" id="topic31__in2073121" class="table" frame="border" border="1" rules="all">
-<caption><span class="tablecap">Table 4. Advanced Aggregate Functions</span></caption>                
+<caption><span class="tablecap"></span></caption>                
                     <thead class="thead" align="left">
                         <tr class="row">
                             <th class="entry" valign="top" width="23.00684070063499%" id="d100389e1524">Function</th>
@@ -201,37 +195,3 @@ SELECT sum(myvalue) FROM mymatrix;
                     </tbody>
                 </table>
 </div>
-        </div>
-    </div>
-          <div></div>
-          <footer class="site-footer-links">
-            <div class="copyright">
-  <a href='https://www.vmware.com/help/privacy.html'  target="_blank">Privacy Policy</a> | 
-  <a href='https://www.vmware.com/help/legal.html'  target="_blank">Terms of Use</a> | 
-	<a href="https://www.vmware.com/help/privacy/california-privacy-rights.html">Your California Privacy Rights</a> | 
-	<a class="ot-sdk-show-settings">Cookie Settings</a>
-  <br/>
-  Copyright &copy; 2022 <a href='https://vmware.com' target="_blank">VMware</a>, Inc. or its affiliates. All Rights Reserved.
-  <br/>
-  <br/>
-</div>
-<div class="support">
-  Need help? <a href="https://tanzu.vmware.com/support" target="_blank">Visit Support</a>
-</div>
-          </footer>
-        </main>
-        <div class='sidebar'>
-            <div class="js-quick-links">
-            </div>
-            <div class='product-info'>
-                <a href="https://network.pivotal.io/products/pivotal-gpdb/">Download</a><br/>
-                <a href="https://community.pivotal.io/s/topic/0TO0P000000IKdLWAW/pivotal-greenplum">Ask for Help</a><br/>
-                <a href="https://community.pivotal.io/s/topic/0TO0P000000IKdLWAW/pivotal-greenplum?tabset-fea77=2">Knowledge Base</a><br/>
-                <a href="/5290/pdf/GPDB5290Docs.pdf">PDF</a><br/>
-            </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-<div id="scrim"></div>
