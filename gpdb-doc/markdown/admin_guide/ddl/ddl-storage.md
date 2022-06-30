@@ -180,7 +180,7 @@ The following table details the types of storage directives and possible values 
 
 |Name|Definition|Values|Comment|
 |----|----------|------|-------|
-|`COMPRESSTYPE`|Type of compression.|`zlib: deflate algorithm`<br/><br/>`quicklz`: fast compression<br/><br/>`RLE_TYPE`: run-length encoding<br/><br/>`none`: no compression|Values are not case-sensitive.|
+|`COMPRESSTYPE`|Type of compression.|`zlib`: deflate algorithm<br/><br/>`quicklz`: fast compression<br/><br/>`RLE_TYPE`: run-length encoding<br/><br/>`none`: no compression|Values are not case-sensitive.|
 |`COMPRESSLEVEL`|Compression level.|`zlib` compression: `1`-`9`|`1` is the fastest method with the least compression. `1` is the default.<br/><br/>`9` is the slowest method with the most compression.|
 |`COMPRESSLEVEL`|Compression level.|`QuickLZ` compression:<br/><br/>`1` – use compression|`1` is the default.|
 |`COMPRESSLEVEL`|Compression level.|`RLE_TYPE` compression:<br/><br/>`1` – `4`<br/><br/>`1` - apply RLE only<br/><br/>`2` - apply RLE then apply zlib compression level 1<br/><br/>`3` - apply RLE then apply zlib compression level 5<br/><br/>`4` - apply RLE then apply zlib compression level 9|`1` is the fastest method with the least compression.<br/><br/>`4` is the slowest method with the most compression.<br/><br/>`1` is the default.|
