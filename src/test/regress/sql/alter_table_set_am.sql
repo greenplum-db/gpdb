@@ -53,7 +53,10 @@ SET gp_default_storage_options = 'blocksize=65536, compresstype=zlib, compressle
 ALTER TABLE heap2ao SET ACCESS METHOD ao_row;
 ALTER TABLE heap2ao2 SET WITH (appendoptimized=true);
 
--- The altered table should inherit storage options from gp_default_storage_options
+-- The altered tables should have AO AM
+SELECT c.relname, a.amname FROM pg_class c JOIN pg_am a ON c.relam = a.oid WHERE c.relname LIKE 'heap2ao%';
+
+-- The altered tables should inherit storage options from gp_default_storage_options
 SELECT blocksize,compresslevel,checksum,compresstype,columnstore
 FROM pg_appendonly WHERE relid in ('heap2ao'::regclass::oid, 'heap2ao2'::regclass::oid);
 SELECT reloptions from pg_class where relname in ('heap2ao', 'heap2ao2');
@@ -80,14 +83,14 @@ SELECT * FROM gp_toolkit.__gp_aovisimap('heap2ao2');
 
 -- check inherited tables
 CREATE TABLE heapbase (a int, b int);
-CREATE TABLE child (c int) INHERITS (heapbase);
+CREATE TABLE heapchild (c int) INHERITS (heapbase);
 CREATE TABLE heapbase2 (a int, b int);
-CREATE TABLE child2 (c int) INHERITS (heapbase2);
+CREATE TABLE heapchild2 (c int) INHERITS (heapbase2);
 
 INSERT INTO heapbase SELECT i,i FROM generate_series(1,5) i;
-INSERT INTO child SELECT i,i,i FROM generate_series(1,5) i;
+INSERT INTO heapchild SELECT i,i,i FROM generate_series(1,5) i;
 INSERT INTO heapbase2 SELECT i,i FROM generate_series(1,5) i;
-INSERT INTO child2 SELECT i,i,i FROM generate_series(1,5) i;
+INSERT INTO heapchild2 SELECT i,i,i FROM generate_series(1,5) i;
 
 CREATE TEMP TABLE inheritrelfilebefore AS
     SELECT -1 segid, relfilenode FROM pg_class WHERE relname in ('heapbase', 'heapbase2')
@@ -95,22 +98,25 @@ CREATE TEMP TABLE inheritrelfilebefore AS
     WHERE relname in ('heapbase', 'heapbase2') ORDER BY segid;
 
 CREATE TEMP TABLE inheritchildrelfilebefore AS
-    SELECT -1 segid, relfilenode FROM pg_class WHERE relname in ('child', 'child2')
+    SELECT -1 segid, relfilenode FROM pg_class WHERE relname in ('heapchild', 'heapchild2')
     UNION SELECT gp_segment_id segid, relfilenode FROM gp_dist_random('pg_class')
-    WHERE relname in ('child', 'child2') ORDER BY segid;
+    WHERE relname in ('heapchild', 'heapchild2') ORDER BY segid;
 
 ALTER TABLE heapbase SET ACCESS METHOD ao_row;
 ALTER TABLE heapbase2 SET WITH (appendoptimized=true);
 
--- The altered table should inherit storage options from gp_default_storage_options
+-- The altered tables should inherit storage options from gp_default_storage_options
 show gp_default_storage_options;
 SELECT blocksize,compresslevel,checksum,compresstype,columnstore
 FROM pg_appendonly WHERE relid in ('heapbase'::regclass::oid, 'heapbase2'::regclass::oid);
 SELECT reloptions from pg_class where relname in ('heapbase','heapbase2');
 
 SELECT blocksize,compresslevel,checksum,compresstype,columnstore
-FROM pg_appendonly WHERE relid in ('child'::regclass::oid, 'child2'::regclass::oid);
-SELECT reloptions from pg_class where relname in ('child','child2');
+FROM pg_appendonly WHERE relid in ('heapchild'::regclass::oid, 'heapchild2'::regclass::oid);
+SELECT reloptions from pg_class where relname in ('heapchild','heapchild2');
+
+-- The altered parent tables should have AO AM but child tables are still heap
+SELECT c.relname, a.amname FROM pg_class c JOIN pg_am a ON c.relam = a.oid WHERE c.relname LIKE 'heapbase%' OR c.relname LIKE 'heapchild%';
 
 -- Check data is intact
 SELECT * FROM heapbase;
@@ -126,9 +132,9 @@ SELECT * FROM inheritrelfilebefore INTERSECT SELECT * FROM inheritrelfileafter;
 
 -- relfile node should not change for child table
 CREATE TEMP TABLE inheritchildrelfileafter AS
-    SELECT -1 segid, relfilenode FROM pg_class WHERE relname in ('child', 'child2')
+    SELECT -1 segid, relfilenode FROM pg_class WHERE relname in ('heapchild', 'heapchild2')
     UNION SELECT gp_segment_id segid, relfilenode FROM gp_dist_random('pg_class')
-    WHERE relname in ('child', 'child2') ORDER BY segid;
+    WHERE relname in ('heapchild', 'heapchild2') ORDER BY segid;
 
 SELECT count(*) FROM (SELECT * FROM inheritchildrelfilebefore UNION SELECT * FROM inheritchildrelfileafter)a;
 
@@ -139,10 +145,10 @@ SELECT * FROM gp_toolkit.__gp_aoseg('heapbase2');
 SELECT * FROM gp_toolkit.__gp_aovisimap('heapbase2');
 
 -- aux tables are not created for child table
-SELECT * FROM gp_toolkit.__gp_aoseg('child');
-SELECT * FROM gp_toolkit.__gp_aovisimap('child');
-SELECT * FROM gp_toolkit.__gp_aoseg('child2');
-SELECT * FROM gp_toolkit.__gp_aovisimap('child2');
+SELECT * FROM gp_toolkit.__gp_aoseg('heapchild');
+SELECT * FROM gp_toolkit.__gp_aovisimap('heapchild');
+SELECT * FROM gp_toolkit.__gp_aoseg('heapchild2');
+SELECT * FROM gp_toolkit.__gp_aovisimap('heapchild2');
 
 -- Scenario 3: AO to Heap
 SET gp_default_storage_options = 'blocksize=65536, compresstype=zlib, compresslevel=5, checksum=true';
@@ -186,6 +192,9 @@ SELECT * FROM gp_toolkit.__gp_aoseg('ao2heap');
 SELECT * FROM gp_toolkit.__gp_aovisimap('ao2heap');
 SELECT * FROM gp_toolkit.__gp_aoseg('ao2heap2');
 SELECT * FROM gp_toolkit.__gp_aovisimap('ao2heap2');
+
+-- The altered tabless should have heap AM.
+SELECT c.relname, a.amname FROM pg_class c JOIN pg_am a ON c.relam = a.oid WHERE c.relname LIKE 'ao2heap%';
 
 -- The new heap tables shouldn't have the old AO table's reloptions
 SELECT relname, reloptions FROM pg_class WHERE relname LIKE 'ao2heap%';
