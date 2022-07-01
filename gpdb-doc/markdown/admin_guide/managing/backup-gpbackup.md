@@ -413,40 +413,40 @@ contacts:
   - address: user@domain
     status:
          success: [true | false]
-         success\_with\_errors: [true | false]
+         success_with_errors: [true | false]
          failure: [true | false]
   gprestore:
-  - address: <user>@<domain>
+  - address: user@domain
     status:
          success: [true | false]
-         success\_with\_errors: [true | false]
+         success_with_errors: [true | false]
          failure: [true | false]
 ```
 
 #### Email YAML File Sections 
 
 ```
-**contacts**
+contacts
       Required. The section that contains the `gpbackup` and `gprestore` sections. The YAML file can contain a `gpbackup` section, a `gprestore` section, or one of each.
-**gpbackup**
+gpbackup
       Optional. Begins the `gpbackup` email section.
 
-      **address**
-            Required. At least one email address must be specified. Multiple email `address` parameters can be specified. Each `address` requires a `status` section.
+      address
+            Required. At least one email address must be specified. Multiple email 'address' parameters can be specified. Each 'address' requires a 'status' section.
             user@domain is a single, valid email address.
-      **status**
+      status
             Required. Specify when the utility sends an email to the specified email address. The default is to not send email notification.
             You specify sending email notifications based on the completion status of a backup or restore operation. At least one of these parameters must be specified and each parameter can appear at most once.
 
-            **success**
-                  Optional. Specify if an email is sent if the operation completes without errors. If the value is `true`, an email is sent if the operation completes without errors. If the value is `false` \(the default\), an email is not sent.
-            **success\_with\_errors**
-                  Optional. Specify if an email is sent if the operation completes with errors. If the value is `true`, an email is sent if the operation completes with errors. If the value is `false` \(the default\), an email is not sent.
-            **failure**
-                  Optional. Specify if an email is sent if the operation fails. If the value is `true`, an email is sent if the operation fails. If the value is `false` \(the default\), an email is not sent.
+            success
+                  Optional. Specify if an email is sent if the operation completes without errors. If the value is 'true', an email is sent if the operation completes without errors. If the value is 'false' (the default), an email is not sent.
+            success_with_errors
+                  Optional. Specify if an email is sent if the operation completes with errors. If the value is 'true', an email is sent if the operation completes with errors. If the value is 'false' (the default), an email is not sent.
+            failure
+                  Optional. Specify if an email is sent if the operation fails. If the value is 'true', an email is sent if the operation fails. If the value is 'false' (the default), an email is not sent.
 
-**gprestore**
-      Optional. Begins the `gprestore` email section. This section contains the [address](#address_yml) and [status](#status_yml) parameters that are used to send an email notification after a `gprestore` operation. The syntax is the same as the [gpbackup](#gpbackup_yml) section.
+gprestore
+      Optional. Begins the 'gprestore' email section. This section contains the address and status parameters that are used to send an email notification after a 'gprestore' operation. The syntax is the same as the gpbackup section.
 ```
 
 #### Examples 
@@ -501,4 +501,3 @@ Each data file uses the file name format gpbackup\_<content\_id\>\_<YYYYMMDDHHMM
 You can optionally specify the gzip compression level \(from 1-9\) using the `--compression-level` option, or disable compression entirely with `--no-compression`. If you do not specify a compression level, `gpbackup` uses compression level 1 by default.
 
 **Parent topic:** [Parallel Backup with gpbackup and gprestore](../managing/backup-gpbackup.html)
-
