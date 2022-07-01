@@ -93,7 +93,7 @@ For writable external tables, you can specify `schema`, `namespace`, and paramet
 
 |Parameter|Value|Readable/Writable|Default Value|
 |---------|-----|-----------------|-------------|
-|schema|URL\_to\_schema\_file|Read and Write|None.<br/>For a readable external table:<br/>-   The specified schema overrides the schema in the Avro file. See [Avro Schema Overrides](#topic_zrv_2yv_vs)<br/><br/>-   If not specified, Greenplum Database uses the Avro file schema.<br/><br/>For a writable external table:<br/>-   Uses the specified schema when creating the Avro file.<br/><br/>-   If not specified, Greenplum Database creates a schema according to the external table definition.<br/><br/>|
+|schema|URL\_to\_schema\_file|Read and Write|None.<br/><br/>For a readable external table:<br/><br/>-   The specified schema overrides the schema in the Avro file. See [Avro Schema Overrides](#topic_zrv_2yv_vs)<br/><br/>-   If not specified, Greenplum Database uses the Avro file schema.<br/><br/>For a writable external table:<br/><br/>-   Uses the specified schema when creating the Avro file.<br/><br/>-   If not specified, Greenplum Database creates a schema according to the external table definition.<br/><br/>|
 |namespace|avro\_namespace|Write only|`public.avro`<br/><br/>If specified, a valid *Avro namespace*.<br/><br/>|
 |compress|`true` or `false`|Write only|`false`|
 |compression\_type|`block`|Write only|Optional.<br/><br/>For `avro` format, `compression_type` must be `block` if `compress` is `true`.|
@@ -144,12 +144,8 @@ This table lists the Avro complex data types and the and the Greenplum Database 
 
 |Avro Data Type|Greenplum Database Data Type|
 |--------------|----------------------------|
-|enum|intThe integer represents the zero-based position of the symbol in the schema.
-
-|
-|array|arrayThe Greenplum Database array dimensions match the Avro array dimensions. The element type is converted from the Avro data type to the Greenplum Database data type.
-
-|
+|enum|int<br/><br/>The integer represents the zero-based position of the symbol in the schema.|
+|array|array<br/><br/>The Greenplum Database array dimensions match the Avro array dimensions. The element type is converted from the Avro data type to the Greenplum Database data type|
 |maps|Not supported|
 |union|The first non-null data type.|
 |fixed|bytea|
@@ -317,12 +313,8 @@ For a writable external table, if the `schema` option is not specified, Greenplu
 |double|`["double", "null"]`|
 |bytea|`["bytes", "null"]`|
 |text|`["string", "null"]`|
-|array|`[{array}, "null"]` The Greenplum Database array is converted to an Avro array with same dimensions and same element type as the Greenplum Database array.
-
-|
-|other data types|`["string", "null"]` Data are formatted strings. The `gphdfs` protocol casts the data to Greenplum Database text and writes the text to the Avro file as an Avro string. For example, date and time data are formatted as date and time strings and converted to Avro string type.
-
-|
+|array|`[{array}, "null"]`<br/><br/>The Greenplum Database array is converted to an Avro array with same dimensions and same element type as the Greenplum Database array.|
+|other data types|`["string", "null"]`<br/><br/>Data are formatted strings. The `gphdfs` protocol casts the data to Greenplum Database text and writes the text to the Avro file as an Avro string. For example, date and time data are formatted as date and time strings and converted to Avro string type.|
 
 You can specify a schema with the `schema` option. When you specify a schema, the file can be on the segment hosts or a file on the HDFS that is accessible to Greenplum Database. For a local file, the file must exist in all segment hosts in the same location. For a file on the HDFS, the file must exist in the same cluster as the data file.
 
