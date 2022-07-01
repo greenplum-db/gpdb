@@ -3816,9 +3816,3 @@ commit;
 -- no relations remain in this case.
 select count(*) from pg_class where relname like 'temp_parent_%';
 
-
-
-
-
-
-
