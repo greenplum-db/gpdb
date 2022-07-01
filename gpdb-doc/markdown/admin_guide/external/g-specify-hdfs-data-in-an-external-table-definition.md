@@ -58,15 +58,9 @@ Compression options for Hadoop Writable External Tables use the form of a URI qu
 |Compression Option|Values|Default Value|
 |------------------|------|-------------|
 |compress|`true` or `false`|`false`|
-|compression\_type|`BLOCK` or `RECORD`|`RECORD` For `AVRO` format, `compression_type` must be `block` if `compress` is `true`.
-
-|
-|codec|Codec class name|`GzipCodec` for `text` format and `DefaultCodec` for `gphdfs_export` format.For `AVRO` format, the value is either `deflate` \(the default\) or `snappy`
-
-|
-|codec\_level \(for `AVRO` format and `deflate` codec only\)|integer between 1 and 9|`6` The level controls the trade-off between speed and compression. Valid values are 1 to 9, where 1 is the fastest and 9 is the most compressed.
-
-|
+|compression\_type|`BLOCK` or `RECORD`|`RECORD`<br/>For `AVRO` format, `compression_type` must be `block` if `compress` is `true`.|
+|codec|Codec class name|`GzipCodec` for `text` format and `DefaultCodec` for `gphdfs_export` format.<br/><br/>For `AVRO` format, the value is either `deflate` \(the default\) or `snappy`|
+|codec\_level \(for `AVRO` format and `deflate` codec only\)|integer between 1 and 9|`6`<br/><br/>The level controls the trade-off between speed and compression. Valid values are 1 to 9, where 1 is the fastest and 9 is the most compressed.|
 
 Place compression options in the query portion of the URI.
 
