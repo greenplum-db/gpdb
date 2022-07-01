@@ -93,28 +93,12 @@ For writable external tables, you can specify `schema`, `namespace`, and paramet
 
 |Parameter|Value|Readable/Writable|Default Value|
 |---------|-----|-----------------|-------------|
-|schema|URL\_to\_schema\_file|Read and Write|None.For a readable external table
-
--   The specified schema overrides the schema in the Avro file. See [Avro Schema Overrides](#topic_zrv_2yv_vs)
--   If not specified, Greenplum Database uses the Avro file schema.
-
-For a writable external table
-
--   Uses the specified schema when creating the Avro file.
--   If not specified, Greenplum Database creates a schema according to the external table definition.
-
-|
-|namespace|avro\_namespace|Write only|`public.avro` If specified, a valid Avro namespace.
-
-|
+|schema|URL\_to\_schema\_file|Read and Write|None.<br/>For a readable external table:<br/>-   The specified schema overrides the schema in the Avro file. See [Avro Schema Overrides](#topic_zrv_2yv_vs)<br/><br/>-   If not specified, Greenplum Database uses the Avro file schema.<br/><br/>For a writable external table:<br/>-   Uses the specified schema when creating the Avro file.<br/><br/>-   If not specified, Greenplum Database creates a schema according to the external table definition.<br/><br/>|
+|namespace|avro\_namespace|Write only|`public.avro`<br/><br/>If specified, a valid *Avro namespace*.<br/><br/>|
 |compress|`true` or `false`|Write only|`false`|
-|compression\_type|`block`|Write only|Optional. For `avro` format, `compression_type` must be `block` if `compress` is `true`.
-
-|
+|compression\_type|`block`|Write only|Optional.<br/><br/>For `avro` format, `compression_type` must be `block` if `compress` is `true`.|
 |codec|`deflate` or `snappy`|Write only|`deflate`|
-|codec\_level \(`deflate` codec only\)|integer between 1 and 9|Write only|`6` The level controls the trade-off between speed and compression. Valid values are 1 to 9, where 1 is the fastest and 9 is the most compressed.
-
-|
+|codec\_level \(`deflate` codec only\)|integer between 1 and 9|Write only|`6`<br/><br/>The level controls the trade-off between speed and compression. Valid values are 1 to 9, where 1 is the fastest and 9 is the most compressed.|
 
 This set of parameters specify `snappy` compression:
 
