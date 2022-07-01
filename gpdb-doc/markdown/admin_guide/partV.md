@@ -4,12 +4,6 @@ The topics in this section cover Greenplum Database performance management, incl
 
 This section contains the following topics:
 
--   [Defining Database Performance](perf_intro.html)
--   [Common Causes of Performance Issues](perf_issues.html)
--   [Greenplum Database Memory Overview](wlmgmt_intro.html)
--   [Managing Resources](wlmgmt.html)
--   [Investigating a Performance Problem](perf_troubleshoot.html)
-
 -   **[Defining Database Performance](perf_intro.html)**  
 Managing system performance includes measuring performance, identifying the causes of performance problems, and applying the tools and techniques available to you to remedy the problems.
 -   **[Common Causes of Performance Issues](perf_issues.html)**  
