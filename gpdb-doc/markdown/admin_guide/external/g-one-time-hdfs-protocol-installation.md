@@ -25,22 +25,8 @@ Install and configure Hadoop for use with `gphdfs` as follows:
 
     |Configuration Parameter|Description|Default Value|Set Classifications|
     |-----------------------|-----------|-------------|-------------------|
-    |`gp_hadoop_target_version`|The Hadoop target. Choose one of the following: `cdh`
-
-`hadoop`
-
-`hdp`
-
-`mpr`
-
-|`hadoop`|mastersession
-
-reload|
-    |`gp_hadoop_home`|This parameter specifies the installation directory for Hadoop.|`NULL`|mastersession
-
-reload
-
-|
+    |`gp_hadoop_target_version`|The Hadoop target. Choose one of the following: `cdh`<br/>`hadoop`<br/>`hdp`<br/>`mpr`<br/>|`hadoop`|master<br/>session<br/>reload|
+    |`gp_hadoop_home`|This parameter specifies the installation directory for Hadoop.|`NULL`|master<br/>session<br/>reload|
 
     For example, the following commands use the Greenplum Database utilities `gpconfig` and `gpstop` to set the server configuration parameters and restart Greenplum Database:
 
