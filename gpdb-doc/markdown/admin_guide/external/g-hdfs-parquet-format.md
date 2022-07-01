@@ -230,19 +230,17 @@ For writable external tables, you can add parameters after the file specified in
 
 |Option|Values|Readable/Writable|Default Value|
 |------|------|-----------------|-------------|
-|schema|URL\_to\_schema|Write only|None.If not specified, the `gphdfs` protocol creates a schema according to the external table definition.
-
-|
+|schema|URL\_to\_schema|Write only|None.<br/><br/>If not specified, the `gphdfs` protocol creates a schema according to the external table definition.|
 |pagesize|\> 1024 Bytes|Write only|1 MB|
 |rowgroupsize|\> 1024 Bytes|Write only|8 MB|
 |parquetversion *or* pqversion|`v1`, `v2`|Write only|`v1`|
 |codec|`UNCOMPRESSED`, `GZIP`, `LZO`, `snappy`|Write only|`UNCOMPRESSED`|
-|dictionaryenable1|`true`, `false`|Write only|false|
-|dictionarypagesize1|\> 1024 Bytes|Write only|512 KB|
+|dictionaryenable<sup>1</sup>|`true`, `false`|Write only|false|
+|dictionarypagesize<sup>1</sup>|\> 1024 Bytes|Write only|512 KB|
 
 **Note:**
 
-1.  Creates an internal dictionary. Enabling a dictionary can improve Parquet file compression if text columns contain similar or duplicate data.
+<sup>1</sup> Creates an internal dictionary. Enabling a dictionary can improve Parquet file compression if text columns contain similar or duplicate data.
 
 When writing a Parquet file, the `gphdfs` protocol can generate a Parquet schema based on the table definition.
 
