@@ -103,9 +103,10 @@ This table describes the functions that create `json` values.
 ### JSON Processing Functions 
 
 This table describes the functions that process `json` values.
+
 <div class="tablenoborder">
 <table cellpadding="4" cellspacing="0" summary="" id="topic_z5d_snw_2z__table_wfc_y3w_mq" class="table" frame="border" border="1" rules="all">
-<caption><span class="tablecap">JSON Processing Functions</span></caption>
+<caption><span class="tablecap"></span></caption>
             <thead class="thead" align="left">
               <tr class="row">
                 <th class="entry" valign="top" width="10.351966873706003%" id="d142067e981">Operator</th>
