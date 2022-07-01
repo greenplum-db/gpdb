@@ -200,6 +200,8 @@ def getversion():
     row = curs.getresult()[0]
     version = row[0]
 
+    db.close()
+
     logger.debug('got version %s' % version)
     return version
 
@@ -213,6 +215,8 @@ def getalldbs():
     curs = db.query('''
     select datname from pg_database where datallowconn order by datname ''')
     row = curs.getresult()
+
+    db.close()
     return row
 
 
@@ -4069,6 +4073,8 @@ def getClassOidForRelfilenode(relfilenode):
     except Exception, e:
         setError(ERROR_NOREPAIR)
         myprint('  Execution error: ' + str(e))
+    finally:
+        conn.close()
 
 
 # -------------------------------------------------------------------------------
@@ -4092,6 +4098,8 @@ def getResourceTypeOid(oid):
     except Exception, e:
         setError(ERROR_NOREPAIR)
         myprint('  Execution error: ' + str(e))
+    finally:
+        db.close()
 
 
 #-------------------------------------------------------------------------------
