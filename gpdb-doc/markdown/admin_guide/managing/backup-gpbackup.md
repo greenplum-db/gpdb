@@ -427,16 +427,16 @@ contacts:
 
 ```
 contacts
-      Required. The section that contains the `gpbackup` and 
-      `gprestore` sections. The YAML file can contain a `gpbackup` 
-      section, a `gprestore` section, or one of each.
+      Required. The section that contains the gpbackup and gprestore 
+      sections. The YAML file can contain a gpbackup section, a 
+      gprestore section, or one of each.
 gpbackup
-      Optional. Begins the `gpbackup` email section.
+      Optional. Begins the gpbackup email section.
 
       address
             Required. At least one email address must be specified. 
-            Multiple email 'address' parameters can be specified. 
-            Each 'address' requires a 'status' section.
+            Multiple email address parameters can be specified. 
+            Each address requires a status section.
             user@domain is a single, valid email address.
       status
             Required. Specify when the utility sends an email to the 
@@ -449,10 +449,10 @@ gpbackup
 
             success
                   Optional. Specify if an email is sent if the 
-                  operation completes without errors. If the value is 
-                  'true', an email is sent if the operation completes 
-                  without errors. If the value is 'false' (the default), 
-                  an email is not sent.
+                  operation completes without errors. If the value 
+                  is 'true', an email is sent if the operation 
+                  completes without errors. If the value is 'false' 
+                  (the default), an email is not sent.
             success_with_errors
                   Optional. Specify if an email is sent if the operation
                   completes with errors. If the value is 'true', an email 
@@ -465,10 +465,11 @@ gpbackup
                   an email is not sent.
 
 gprestore
-      Optional. Begins the 'gprestore' email section. This section 
+      Optional. Begins the gprestore email section. This section 
       contains the address and status parameters that are used to send 
-      an email notification after a 'gprestore' operation. The syntax 
+      an email notification after a gprestore operation. The syntax 
       is the same as the gpbackup section.
+      
 ```
 
 #### Examples 
