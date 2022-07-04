@@ -127,7 +127,6 @@ getSchemaData(Archive *fout, int *numTablesPtr)
 	int			numForeignServers;
 	int			numDefaultACLs;
 	int			numEventTriggers;
-	int  		numTypeStorageOptions;
 
 	/* GPDB specific variables */
 	int			numExtProtocols;
@@ -172,10 +171,6 @@ getSchemaData(Archive *fout, int *numTablesPtr)
 	/* this must be after getTables and getFuncs */
 	pg_log_info("reading user-defined types");
 	(void) getTypes(fout, &numTypes);
-
-	/* this must be after getFuncs */
-	pg_log_info("reading type storage options");
-	getTypeStorageOptions(fout, &numTypeStorageOptions);
 
 	/* this must be after getFuncs, too */
 	pg_log_info("reading procedural languages");

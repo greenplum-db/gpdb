@@ -81,7 +81,6 @@ typedef enum
 	DO_BLOB,
 	DO_BLOB_DATA,
 	DO_EXTPROTOCOL,
-	DO_TYPE_STORAGE_OPTIONS,
 	DO_PRE_DATA_BOUNDARY,
 	DO_POST_DATA_BOUNDARY,
 	DO_EVENT_TRIGGER,
@@ -182,12 +181,12 @@ typedef struct _typeInfo
 	 * result of format_type(), which will be quoted if needed, and might be
 	 * schema-qualified too.
 	 */
-	char	   *ftypname;
-	char	   *rolname;		/* name of owner, or empty string */
-	char	   *typacl;
-	char	   *rtypacl;
-	char	   *inittypacl;
-	char	   *initrtypacl;
+	char		*ftypname;
+	char		*rolname;		/* name of owner, or empty string */
+	char		*typacl;
+	char		*rtypacl;
+	char		*inittypacl;
+	char		*initrtypacl;
 	Oid			typelem;
 	Oid			typrelid;
 	char		typrelkind;		/* 'r', 'v', 'c', etc */
@@ -199,6 +198,7 @@ typedef struct _typeInfo
 	/* If it's a domain, we store links to its constraints here: */
 	int			nDomChecks;
 	struct _constraintInfo *domChecks;
+	char		*typstorage; /* GPDB: store the type's encoding clause */
 } TypeInfo;
 
 typedef struct _typeCache
@@ -211,21 +211,6 @@ typedef struct _typeCache
 	char	   *arraytypname;
 	Oid			arraytypnsp;
 } TypeCache;
-
-typedef struct _typeStorageOptions
-{
-	DumpableObject dobj;
-
-	/*
-	 * Note: dobj.name is the pg_type.typname entry.  format_type() might
-	 * produce something different than typname
-	 */
-	char     *typnamespace;
-	char     *typoptions; /* storage options */
-	char     *rolname;		/* name of owner, or empty string */
-} TypeStorageOptions;
-
-
 
 typedef struct _shellTypeInfo
 {
@@ -780,7 +765,6 @@ extern void getPublicationTables(Archive *fout, TableInfo tblinfo[],
 extern void getSubscriptions(Archive *fout);
 
 /* START MPP ADDITION */
-extern TypeStorageOptions *getTypeStorageOptions(Archive *fout, int *numTypes);
 extern ExtProtInfo *getExtProtocols(Archive *fout, int *numExtProtocols);
 extern BinaryUpgradeInfo *getBinaryUpgradeObjects(void);
 
