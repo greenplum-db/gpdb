@@ -113,7 +113,6 @@ typedef enum
 	DO_BLOB,
 	DO_BLOB_DATA,
 	DO_EXTPROTOCOL,
-	DO_TYPE_STORAGE_OPTIONS,
 	DO_PRE_DATA_BOUNDARY,
 	DO_POST_DATA_BOUNDARY,
 	DO_EVENT_TRIGGER,
@@ -179,6 +178,7 @@ typedef struct _typeInfo
 	/* If it's a domain, we store links to its constraints here: */
 	int			nDomChecks;
 	struct _constraintInfo *domChecks;
+	char		*typstorage; /* GPDB: store the type's encoding clause */
 } TypeInfo;
 
 typedef struct _typeCache
@@ -191,21 +191,6 @@ typedef struct _typeCache
 	char	   *arraytypname;
 	Oid			arraytypnsp;
 } TypeCache;
-
-typedef struct _typeStorageOptions
-{
-	DumpableObject dobj;
-
-	/*
-	 * Note: dobj.name is the pg_type.typname entry.  format_type() might
-	 * produce something different than typname
-	 */
-	char     *typnamespace;
-	char     *typoptions; /* storage options */
-	char     *rolname;		/* name of owner, or empty string */
-} TypeStorageOptions;
-
-
 
 typedef struct _shellTypeInfo
 {
@@ -659,7 +644,6 @@ extern void processExtensionTables(Archive *fout, ExtensionInfo extinfo[],
 					   int numExtensions);
 extern EventTriggerInfo *getEventTriggers(Archive *fout, int *numEventTriggers);
 /* START MPP ADDITION */
-extern TypeStorageOptions *getTypeStorageOptions(Archive *fout, int *numTypes);
 extern ExtProtInfo *getExtProtocols(Archive *fout, int *numExtProtocols);
 extern BinaryUpgradeInfo *getBinaryUpgradeObjects(void);
 

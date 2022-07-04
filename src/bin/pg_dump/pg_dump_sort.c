@@ -1329,11 +1329,6 @@ describeDumpableObject(DumpableObject *obj, char *buf, int bufsize)
 					 "TYPE %s  (ID %d OID %u)",
 					 obj->name, obj->dumpId, obj->catId.oid);
 			return;
-		case DO_TYPE_STORAGE_OPTIONS:
-			snprintf(buf, bufsize,
-					 "TYPE STORAGE OPTIONS FOR TYPE %s.%s  (ID %d OID %u) OPTIONS %s",
-					 ((TypeStorageOptions *)obj)->typnamespace, obj->name, obj->dumpId, obj->catId.oid, ((TypeStorageOptions *)obj)->typoptions);
-			return;
 		case DO_SHELL_TYPE:
 			snprintf(buf, bufsize,
 					 "SHELL TYPE %s  (ID %d OID %u)",
