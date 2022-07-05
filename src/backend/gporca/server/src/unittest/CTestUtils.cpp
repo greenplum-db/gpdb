@@ -4194,6 +4194,9 @@ CTestUtils::EresUnittest_RunTests(const CHAR **rgszFileNames,
 	// prefer MDQA
 	CAutoTraceFlag atf5(EopttraceForceExpandedMDQAs, true);
 
+	// enable replicated tables
+	CAutoTraceFlag atf6(EopttraceEnableReplicatedTable, true);
+
 	GPOS_RESULT eres = EresUnittest_RunTestsWithoutAdditionalTraceFlags(
 		rgszFileNames, pulTestCounter, ulTests, fMatchPlans, fTestSpacePruning);
 	return eres;
