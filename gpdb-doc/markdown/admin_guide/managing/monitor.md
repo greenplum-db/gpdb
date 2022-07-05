@@ -61,7 +61,7 @@ Before setting up SNMP support on Greenplum Database, ensure SNMP is installed o
 |CentOS|net-snmp|
 |SUSE|N/A|
 
-<sup>1<sup/>SNMP is installed by default on SUSE platforms.
+ <sup>1</sup> SNMP is installed by default on SUSE platforms.
 
 The `snmp.conf` configuration file is located in `/etc/snmp/`.
 
