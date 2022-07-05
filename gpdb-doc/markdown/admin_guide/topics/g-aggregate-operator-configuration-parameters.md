@@ -4,7 +4,7 @@
 
 - `gp_enable_agg_distinct_pruning`
 
-- - `gp_enable_multiphase_agg`
+- `gp_enable_multiphase_agg`
 
 - `gp_enable_preunique`
 
