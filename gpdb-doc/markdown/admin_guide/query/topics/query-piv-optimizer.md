@@ -4,15 +4,6 @@ In Greenplum Database, the default GPORCA optimizer co-exists with the Postgres 
 
 These sections describe GPORCA functionality and usage:
 
--   [Overview of GPORCA](query-piv-opt-overview.html)
--   [Enabling and Disabling GPORCA](query-piv-opt-enable.html)
--   [Considerations when Using GPORCA](query-piv-opt-notes.html)
--   [GPORCA Features and Enhancements](query-piv-opt-features.html)
--   [Changed Behavior with the GPORCA](query-piv-opt-changed.html)
--   [GPORCA Limitations](query-piv-opt-limitations.html)
--   [Determining the Query Optimizer that is Used](query-piv-opt-fallback.html)
--   [About Uniform Multi-level Partitioned Tables](query-piv-uniform-part-tbl.html)
-
 -   **[Overview of GPORCA](../../query/topics/query-piv-opt-overview.html)**  
 GPORCA extends the planning and optimization capabilities of the Greenplum Database legacy optimizer.
 -   **[Enabling and Disabling GPORCA](../../query/topics/query-piv-opt-enable.html)**  
