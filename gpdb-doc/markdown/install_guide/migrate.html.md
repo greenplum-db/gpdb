@@ -72,7 +72,7 @@ Following are some issues that are known to cause errors when restoring a Greenp
 -   The `INTO error_table` clause of the `CREATE EXTERNAL TABLE` and `COPY` commands was deprecated in Greenplum 4.3 and is unsupported in Greenplum 5 and 6. Remove this clause from any external table definitions before you create a backup of your Greenplum 4.3 system. The `ERROR_TABLE` parameter of the `gpload` utility load control YAML file must also be removed from any `gpload` YAML files before you run `gpload`.
 -   The `int4_avg_accum()` function signature changed in Greenplum 6 from `int4_avg_accum(bytea, integer)` to `int4_avg_accum(bigint[], integer)`. This function is the state transition function \(*sfunc*\) called when calculating the average of a series of 4-byte integers. If you have created a custom aggregate in a previous Greenplum release that called the built-in `int4_avg_accum()` function, you will need to revise your aggregate for the new signature.
 -   The `string_agg(expression)` function has been removed from Greenplum 6. The function concatenates text values into a string. You can replace the single argument function with the function `string_agg(expression, delimiter)` and specify an empty string as the `delimiter`, for example `string_agg(txt_col1, '').`
--   The `offset` argument of the `lag(expr, offset[, default])` window function has changed from `int8` in Greenplum 4.3 to `int4` in Greenplum 5 and 6.
+-   The `offset` argument of the `lag(value, offset[, default])` and `lead(value, offset[, default])` window functions has changed from data type `int8` (`bigint`) in Greenplum 4.3 and 5 to `int4` (`integer`) in Greenplum 6. If you used these functions to create views in Greenplum 5, you must remove the views before you migrate to Greenplum 6. Refer to [About Migrating Views Created with lag()/lead() Functions](#laglead) for additional information and migration actions.
 -   `gpbackup` saves the distribution policy and distribution key for each table in the backup so that data can be restored to the same segment. If a table's distribution key in the Greenplum 4.3 or 5 database is incompatible with Greenplum 6, `gprestore` cannot restore the table to the correct segment in the Greenplum 6 database. This can happen if the distribution key in the older Greenplum release has columns with data types not allowed in Greenplum 6 distribution keys, or if the data representation for data types has changed or is insufficient for Greenplum 6 to generate the same hash value for a distribution key. You should correct these kinds of problems by altering distribution keys in the tables before you back up the Greenplum database.
 -   Greenplum 6 requires primary keys and unique index keys to match a table's distribution key. The leaf partitions of partitioned tables must have the same distribution policy as the root partition. These known issues should be corrected in the source Greenplum database before you back up the database:
     -   If the primary key is different than the distribution key for a table, alter the table to either remove the primary key or change the primary key to match the distribution key.
@@ -120,6 +120,50 @@ Following are some issues that are known to cause errors when restoring a Greenp
     If you restore a backup containing an operator like this to a Greenplum 6 system, `gprestore` produces an error: `ERROR: only boolean operators can have negators (SQLSTATE 42P13)`.
 
 -   In Greenplum Database 4.3 and 5, the undocumented server configuration parameter `allow_system_table_mods` could have a value of `none`, `ddl`, `dml`, or `all`. In Greenplum 6, this parameter has changed to a Boolean value, with a default value of `false`. If there are any references to this parameter in the source database, remove them to prevent errors during the restore.
+
+### <a id="laglead"></a>About Migrating Views Created with lag()/lead() Functions
+
+The `offset` argument of the `lag(value, offset[, default])` and `lead(value, offset[, default])` window functions has changed from data type `int8` (`bigint`) in Greenplum 4.3 and 5 to `int4` (`integer`) in Greenplum 6. If you used these functions to create views in Greenplum 5, you must remove the views before you migrate to Greenplum 6.
+
+In addition to the `offset` argument data type change, Greenplum Database 6 removes all data-type-specific `lag()` and `lead()` functions:
+
+```
+<data-type> lag( value <data-type>[, offset bigint[, default <data-type>]] )
+```
+```
+<data-type> lead( value <data-type>[, offset bigint[, default <data-type>]] )
+```
+
+And replaces them with these more generic function signatures:
+
+```
+anyelement lag( value anyelement[, offset integer[, default anyelement]] )
+```
+```
+anyelement lead( value anyelement[, offset integer[, default anyelement]] )
+```
+
+To migrate to the `lag()` and `lead()` functions in Greenplum Database 6, you must:
+
+1. Identify all views in your Greenplum Database 5 installation that were created using the two- or three-argument `lag()` or `lead()` functions. Run the following SQL command to identify the views:
+
+    ``` sql
+    SELECT ev_class::regclass::text viewname
+      FROM pg_rewrite pgr
+      WHERE ev_action ~
+        (SELECT $$:winfnoid ($$||string_agg(oid::text,'|')||$$) :$$
+          FROM (SELECT DISTINCT oid FROM pg_catalog.pg_proc WHERE (proname, pronamespace) IN
+          (('lag', 11), ('lead', 11)) AND proargtypes[1]=20)s1);
+    ```
+
+1. For each view that you identify:
+
+    1. Note the command that you used to create the view.
+    1. Drop the view in your Greenplum 5 installation.
+    1. After you migrate to Greenplum 6:
+
+        1. Recreate the view, if desired, in your Greenplum 6 installation; be sure to specify an `integer`-type `offset` argument to the function. (You are not required to modify the `value` or `default` argument types in the function because an `anyelement` type accepts any data type.)
+        1. If you have any scripts that invoke `lag()` or `lead()` functions, ensure that that they reference an `integer`-type `offset`.
 
 ## <a id="backup-and-restore"></a>Backing Up and Restoring a Database 
 
