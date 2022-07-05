@@ -46,6 +46,13 @@ int	runaway_detector_activation_percent = 80;
 static int32 redZoneChunks = 0;
 
 /*
+ * When runaway_detector_activation_percent set to 0 or 100, means disable runaway detection,
+ * and also disable Red-Zone check for resource group. We use the INT32_MAX to indicate that
+ * the current config is disabled Red-Zone check.
+ */
+#define DisableRedZoneCheckChunksValue INT32_MAX
+
+/*
  * A shared memory binary flag (0 or 1) that identifies one process at-a-time as runaway
  * detector. At red-zone each process tries to determine runaway query, but only the first
  * process that succeeds to set this counter to 1 becomes the detector.
@@ -93,32 +100,30 @@ RedZoneHandler_ShmemInit()
 
 	if(!IsUnderPostmaster)
 	{
-		redZoneChunks = 0;
-
 		/*
-		 * runaway_detector_activation_percent = 100% is reserved for not enforcing runaway
-		 * detection by setting the redZoneChunks to an artificially high value. Also, during
-		 * gpinitsystem we may start a QD without initializing the gp_vmem_protect_limit.
-		 * This may result in 0 vmem protect limit. In such case, we ensure that the
-		 * redZoneChunks is set to a large value.
+		 * runaway_detector_activation_percent equals to 0 or 100 is reserved for not
+		 * enforcing runaway detection by setting the redZoneChunks to an artificially
+		 * high value, that's DisableRedZoneCheckChunksValue.
+		 *
+		 * Also, during gpinitsystem we may start a QD without initializing the
+		 * gp_vmem_protect_limit. This may result in 0 vmem protect limit. In such case,
+		 * we ensure that the redZoneChunks is set to a large value.
+		 *
+		 * When we enable resource group, we will not use redZoneChunks to determine
+		 * whether the current process is in red-zone or not, so we can calculate the
+		 * redZoneChunks, but it'll never be used.
 		 */
-		if (runaway_detector_activation_percent != 100)
-		{
+		if (runaway_detector_activation_percent != 0 &&
+			runaway_detector_activation_percent != 100 &&
+			gp_vmem_protect_limit != 0)
 			/*
 			 * Calculate red zone threshold in MB, and then convert MB to "chunks"
 			 * using chunk size for efficient comparison to detect red zone
 			 */
 			redZoneChunks = VmemTracker_ConvertVmemMBToChunks(gp_vmem_protect_limit * (((float) runaway_detector_activation_percent) / 100.0));
-		}
-
-		/*
-		 * 0 means disable red-zone completely
-		 * we also disable red-zone for resource group
-		 */
-		if (redZoneChunks == 0 || IsResGroupEnabled())
-		{
-			redZoneChunks = INT32_MAX;
-		}
+		else
+			/* 0 or 100 means disable red-zone completely */
+			redZoneChunks = DisableRedZoneCheckChunksValue;
 
 		*isRunawayDetector = 0;
 	}
@@ -131,6 +136,13 @@ bool
 RedZoneHandler_IsVmemRedZone()
 {
 	Assert(!vmemTrackerInited || redZoneChunks > 0);
+
+	/*
+	 * if runaway_detector_activation_percent be set to 0 or 100, means
+	 * disable runaway detection, just return false.
+	 */
+	if (redZoneChunks == DisableRedZoneCheckChunksValue)
+		return false;
 
 	if (vmemTrackerInited)
 	{
