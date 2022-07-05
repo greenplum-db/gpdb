@@ -32,79 +32,79 @@ gpstop -u
    <td class="entry" colspan="2"><p class="p"><strong class="ph b">Online Pre-Expansion Tasks</strong></p> <span class="ph">* System is up and available</span> </td> 
   </tr> 
   <tr class="row"> 
-   <td class="entry"> <img class="image" id="topic4__image_gr2_s1m_2r" src="Images/admin_guide-graphics-green-checkbox.jpg" width="29" height="28" /> </td> 
+   <td class="entry"> <img class="image" id="topic4__image_gr2_s1m_2r" src="../graphics/green-checkbox.jpg" width="29" height="28" /> </td> 
    <td class="entry">Plan for ordering, building, and networking new hardware platforms, or provisioning cloud resources. </td> 
   </tr> 
   <tr class="row"> 
-   <td class="entry"> <img class="image" id="topic4__image_ryl_s1m_2r" src="Images/admin_guide-graphics-green-checkbox.jpg" width="29" height="28" /> </td> 
+   <td class="entry"> <img class="image" id="topic4__image_ryl_s1m_2r" src="../graphics/green-checkbox.jpg" width="29" height="28" /> </td> 
    <td class="entry">Devise a database expansion plan. Map the number of segments per host, schedule the downtime period for testing performance and creating the expansion schema, and schedule the intervals for table redistribution.</td> 
   </tr> 
   <tr class="row"> 
-   <td class="entry"> <img class="image" id="topic4__image_e2s_s1m_2r" src="Images/admin_guide-graphics-green-checkbox.jpg" width="29" height="28" /> </td> 
+   <td class="entry"> <img class="image" id="topic4__image_e2s_s1m_2r" src="../graphics/green-checkbox.jpg" width="29" height="28" /> </td> 
    <td class="entry">Perform a complete schema dump.</td> 
   </tr> 
   <tr class="row"> 
-   <td class="entry"> <img class="image" id="topic4__image_yq5_s1m_2r" src="Images/admin_guide-graphics-green-checkbox.jpg" width="29" height="28" /> </td> 
+   <td class="entry"> <img class="image" id="topic4__image_yq5_s1m_2r" src="../graphics/green-checkbox.jpg" width="29" height="28" /> </td> 
    <td class="entry">Install Greenplum Database binaries on new hosts. </td> 
   </tr> 
   <tr class="row"> 
-   <td class="entry"> <img class="image" id="topic4__image_vxw_s1m_2r" src="Images/admin_guide-graphics-green-checkbox.jpg" width="29" height="28" /> </td> 
+   <td class="entry"> <img class="image" id="topic4__image_vxw_s1m_2r" src="../graphics/green-checkbox.jpg" width="29" height="28" /> </td> 
    <td class="entry">Copy SSH keys to the new hosts (<code class="ph codeph">gpssh-exkeys</code>).</td> 
   </tr> 
   <tr class="row"> 
-   <td class="entry"> <img class="image" id="topic4__image_qkb_t1m_2r" src="Images/admin_guide-graphics-green-checkbox.jpg" width="29" height="28" /> </td> 
+   <td class="entry"> <img class="image" id="topic4__image_qkb_t1m_2r" src="../graphics/green-checkbox.jpg" width="29" height="28" /> </td> 
    <td class="entry">Validate disk I/O and memory bandwidth of the new hardware or cloud resources (<code class="ph codeph">gpcheckperf</code>).</td> 
   </tr> 
   <tr class="row"> 
-   <td class="entry"> <img class="image" id="topic4__image_ojd_t1m_2r" src="Images/admin_guide-graphics-green-checkbox.jpg" width="29" height="28" /> </td> 
+   <td class="entry"> <img class="image" id="topic4__image_ojd_t1m_2r" src="../graphics/green-checkbox.jpg" width="29" height="28" /> </td> 
    <td class="entry">Validate that the master data directory has no extremely large files in the <code class="ph codeph">log</code> directory.</td> 
   </tr> 
   <tr class="row"> 
    <td class="entry" colspan="2"><p class="p"><strong class="ph b">Offline Pre-Expansion Tasks</strong></p> <span class="ph">* The system is unavailable to all user activity during this process.</span> </td> 
   </tr> 
   <tr class="row"> 
-   <td class="entry"> <img class="image" id="topic4__image_wch_t1m_2r" src="Images/admin_guide-graphics-green-checkbox.jpg" width="29" height="28" /> </td> 
+   <td class="entry"> <img class="image" id="topic4__image_wch_t1m_2r" src="../graphics/green-checkbox.jpg" width="29" height="28" /> </td> 
    <td class="entry">Validate that there are no catalog issues (<code class="ph codeph">gpcheckcat</code>).</td> 
   </tr> 
   <tr class="row"> 
-   <td class="entry"> <img class="image" id="topic4__image_q3q_t1m_2r" src="Images/admin_guide-graphics-green-checkbox.jpg" width="29" height="28" /> </td> 
+   <td class="entry"> <img class="image" id="topic4__image_q3q_t1m_2r" src="../graphics/green-checkbox.jpg" width="29" height="28" /> </td> 
    <td class="entry">Validate disk I/O and memory bandwidth of the combined existing and new hardware or cloud resources (<code class="ph codeph">gpcheckperf</code>). </td> 
   </tr> 
   <tr class="row"> 
    <td class="entry" colspan="2"><p class="p"><strong class="ph b">Online Segment Instance Initialization</strong></p><span class="ph">* System is up and available</span> </td> 
   </tr> 
   <tr class="row"> 
-   <td class="entry"> <img class="image" id="topic4__image_ct3_t1m_2r" src="Images/admin_guide-graphics-green-checkbox.jpg" width="29" height="28" /> </td> 
+   <td class="entry"> <img class="image" id="topic4__image_ct3_t1m_2r" src="../graphics/green-checkbox.jpg" width="29" height="28" /> </td> 
    <td class="entry">Prepare an expansion input file (<code class="ph codeph">gpexpand</code>). </td> 
   </tr> 
   <tr class="row"> 
-   <td class="entry"> <img class="image" id="topic4__image_rcs_t1m_2r" src="Images/admin_guide-graphics-green-checkbox.jpg" width="29" height="28" /> </td> 
+   <td class="entry"> <img class="image" id="topic4__image_rcs_t1m_2r" src="../graphics/green-checkbox.jpg" width="29" height="28" /> </td> 
    <td class="entry">Initialize new segments into the system and create an expansion schema (<code class="ph codeph">gpexpand -i <var class="keyword varname">input_file</var></code>).</td> 
   </tr> 
   <tr class="row"> 
    <td class="entry" colspan="2"><p class="p"><strong class="ph b">Online Expansion and Table Redistribution</strong></p> <span class="ph">* System is up and available</span> </td> 
   </tr> 
   <tr class="row"> 
-   <td class="entry"> <img class="image" id="topic4__image_jzy_t1m_2r" src="Images/admin_guide-graphics-green-checkbox.jpg" width="29" height="28" /> </td> 
+   <td class="entry"> <img class="image" id="topic4__image_jzy_t1m_2r" src="../graphics/green-checkbox.jpg" width="29" height="28" /> </td> 
    <td class="entry">Before you start table redistribution, stop any automated snapshot processes or other processes that consume disk space.</td> 
   </tr> 
   <tr class="row"> 
-   <td class="entry"> <img class="image" id="topic4__image_aq1_51m_2r" src="Images/admin_guide-graphics-green-checkbox.jpg" width="29" height="28" /> </td> 
+   <td class="entry"> <img class="image" id="topic4__image_aq1_51m_2r" src="../graphics/green-checkbox.jpg" width="29" height="28" /> </td> 
    <td class="entry">Redistribute tables through the expanded system (<code class="ph codeph">gpexpand</code>).</td> 
   </tr> 
   <tr class="row"> 
-   <td class="entry"> <img class="image" id="topic4__image_xjc_51m_2r" src="Images/admin_guide-graphics-green-checkbox.jpg" width="29" height="28" /> </td> 
+   <td class="entry"> <img class="image" id="topic4__image_xjc_51m_2r" src="../graphics/green-checkbox.jpg" width="29" height="28" /> </td> 
    <td class="entry">Remove expansion schema (<code class="ph codeph">gpexpand -c</code>).</td> 
   </tr> 
   <tr class="row"> 
-   <td class="entry"> <img class="image" id="topic4__image_sk2_51m_2r" src="Images/admin_guide-graphics-green-checkbox.jpg" width="29" height="28" /> </td> 
+   <td class="entry"> <img class="image" id="topic4__image_sk2_51m_2r" src="../graphics/green-checkbox.jpg../graphics/green-checkbox.jpg" width="29" height="28" /> </td> 
    <td class="entry"><strong class="ph b">Important:</strong> Run <code class="ph codeph">analyze</code> to update distribution statistics.<p class="p">During the expansion, use <code class="ph codeph">gpexpand -a</code>, and post-expansion, use <code class="ph codeph">analyze</code>.</p></td> 
   </tr> 
   <tr class="row"> 
    <td class="entry" colspan="2"><p class="p"><strong class="ph b">Back Up Databases</strong></p><span class="ph">* System is up and available</span></td> 
   </tr> 
   <tr class="row"> 
-   <td class="entry"><img class="image" id="topic4__image_ogk_mj4_lhb" src="Images/admin_guide-graphics-green-checkbox.jpg" width="29" height="28" /></td> 
+   <td class="entry"><img class="image" id="topic4__image_ogk_mj4_lhb" src="../graphics/green-checkbox.jpg" width="29" height="28" /></td> 
    <td class="entry">Back up databases using the <code class="ph codeph">gpbackup</code> utility. Backups you created before you began the system expansion cannot be restored to the newly expanded system because the <code class="ph codeph">gprestore</code> utility can only restore backups to a Greenplum Database system with the same number of segments.</td> 
   </tr> 
  </tbody>
