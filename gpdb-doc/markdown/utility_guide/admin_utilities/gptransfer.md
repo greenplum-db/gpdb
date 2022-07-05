@@ -2,7 +2,7 @@
 
 The `gptransfer` utility copies objects from databases in a source Greenplum Database system to databases in a destination Greenplum Database system.
 
-**Note:** Greenplum Database provides two utilities for migrating data between Greenplum Database installations, [`gpcopy`](./gpcopy.html) and `gptransfer`. Use `gpcopy` to migrate data to a Greenplum Database cluster version 5.9.0 and later. Use the `gptransfer` utility to migrate data between Greenplum Database installations running software version 5.8.0 or earlier.
+**Note:** Greenplum Database provides two utilities for migrating data between Greenplum Database installations, [gpcopy](./gpcopy.html) and `gptransfer`. Use `gpcopy` to migrate data to a Greenplum Database cluster version 5.9.0 and later. Use the `gptransfer` utility to migrate data between Greenplum Database installations running software version 5.8.0 or earlier.
 
 The `gptransfer` utiltiy is deprecated and will be removed in the next major release of Greenplum Database. For information about migrating data with `gpcopy`, see [Migrating Data with gpcopy](../../admin_guide/managing/gpcopy-migrate.html).
 
