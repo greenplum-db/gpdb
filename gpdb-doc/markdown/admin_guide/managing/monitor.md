@@ -55,13 +55,13 @@ The Greenplum Database SNMP support allows a Network Management System to obtain
 
 Before setting up SNMP support on Greenplum Database, ensure SNMP is installed on the master host. If the `snmpd` file is not present in the `/usr/sbin` directory, then SNMP is not installed on the system. Depending on the platform on which you are running Greenplum Database, install the following:
 
-|Operating System|Packages1|
+|Operating System|Packages<sup>1<sup/>|
 |----------------|---------|
 |Red Hat Enterprise|net-snmp<br/><br/>net-snmp-libs<br/><br/>net-snmp-utils|
 |CentOS|net-snmp|
 |SUSE|N/A|
 
-1.  SNMP is installed by default on SUSE platforms.
+<sup>1<sup/>SNMP is installed by default on SUSE platforms.
 
 The `snmp.conf` configuration file is located in `/etc/snmp/`.
 
