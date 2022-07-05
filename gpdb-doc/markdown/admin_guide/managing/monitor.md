@@ -57,11 +57,7 @@ Before setting up SNMP support on Greenplum Database, ensure SNMP is installed o
 
 |Operating System|Packages1|
 |----------------|---------|
-|Red Hat Enterprise|net-snmpnet-snmp-libs
-
-net-snmp-utils
-
-|
+|Red Hat Enterprise|net-snmp<br/><br/>net-snmp-libs<br/><br/>net-snmp-utils|
 |CentOS|net-snmp|
 |SUSE|N/A|
 
@@ -429,9 +425,7 @@ The `is_runaway`, `runaway_vmem_mb`, and `runaway_command_cnt` columns are not a
 |`is_runaway`|boolean| |Session is marked as runaway on the segment.|
 |`qe_count`|integer| |Number of query processes for the session.|
 |`active_qe_count`|integer| |Number of active query processes for the session.|
-|`dirty_qe_count`|integer| |Number of query processes that have not yet released their memory.The value is `-1` for sessions that are not running.
-
-|
+|`dirty_qe_count`|integer| |Number of query processes that have not yet released their memory.The value is `-1` for sessions that are not running.|
 |`runaway_vmem_mb`|integer| |Amount of vmem memory that the session was consuming when it was marked as a runaway session.|
 |`runaway_command_cnt`|integer| |Command count for the session when it was marked as a runaway session.|
 |`idle_start`|timestamptz| |The last time a query process in this session became idle.|
