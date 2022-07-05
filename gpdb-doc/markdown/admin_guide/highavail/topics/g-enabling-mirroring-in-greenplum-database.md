@@ -4,9 +4,6 @@ You can configure your Greenplum Database system with mirroring at setup time us
 
 You can enable the following types of mirroring:
 
--   [Enabling Segment Mirroring](g-enabling-segment-mirroring.html)
--   [Enabling Master Mirroring](g-enabling-master-mirroring.html)
-
 -   **[Enabling Segment Mirroring](../../highavail/topics/g-enabling-segment-mirroring.html)**  
 
 -   **[Enabling Master Mirroring](../../highavail/topics/g-enabling-master-mirroring.html)**  
