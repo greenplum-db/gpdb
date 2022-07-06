@@ -37,7 +37,6 @@
 #include "catalog/namespace.h"
 #include "catalog/objectaccess.h"
 #include "catalog/partition.h"
-#include "catalog/pg_am.h"
 #include "catalog/pg_appendonly.h"
 #include "catalog/pg_attribute_encoding.h"
 #include "catalog/pg_collation.h"
@@ -457,6 +456,7 @@ static void ATExecSetTableSpaceNoStorage(Relation rel, Oid newTableSpace);
 static void ATExecSetRelOptions(Relation rel, List *defList,
 								AlterTableType operation,
 								bool *aoopt_changed,
+								bool am_change_heap_ao,
 								LOCKMODE lockmode);
 static void ATExecEnableDisableTrigger(Relation rel, const char *trigname,
 									   char fires_when, bool skip_system, LOCKMODE lockmode);
@@ -5279,7 +5279,24 @@ ATExecCmd(List **wqueue, AlteredTableInfo *tab, Relation rel,
 			/* nothing to do here, oid columns don't exist anymore */
 			break;
 		case AT_SetAccessMethod:	/* SET ACCESS METHOD */
-			/* handled specially in Phase 3 */
+			/* Set reloptions if specified any. Otherwise handled specially in Phase 3. */
+			if (cmd->def)
+			{
+				bool aoopt_changed = false;
+				bool am_change_heap_ao = OidIsValid(tab->newAccessMethod) && 
+						((IsAccessMethodAO(tab->newAccessMethod) && !RelationIsAppendOptimized(rel)) ||
+						(!IsAccessMethodAO(tab->newAccessMethod) && RelationIsAppendOptimized(rel)));
+
+				ATExecSetRelOptions(rel, (List *) cmd->def, cmd->subtype, &aoopt_changed, am_change_heap_ao, lockmode);
+
+				/* 
+				 * When user sets the same access method as the existing one, the
+				 * rewrite flag won't be set. But it's possible that the storage
+				 * option changed, in which case we'll still have to rewrite.
+				 */
+				if (aoopt_changed)
+					tab->rewrite |= AT_REWRITE_ALTER_RELOPTS;
+			}
 			break;
 		case AT_SetTableSpace:	/* SET TABLESPACE */
 
@@ -5299,7 +5316,7 @@ ATExecCmd(List **wqueue, AlteredTableInfo *tab, Relation rel,
 			{
 				bool 		aoopt_changed = false;
 
-				ATExecSetRelOptions(rel, (List *) cmd->def, cmd->subtype, &aoopt_changed, lockmode);
+				ATExecSetRelOptions(rel, (List *) cmd->def, cmd->subtype, &aoopt_changed, false, lockmode);
 
 				/* Will rewrite table if there's a change to the AO reloptions. */
 				if (aoopt_changed)
@@ -14145,10 +14162,14 @@ ATPrepSetTableSpace(AlteredTableInfo *tab, Relation rel, const char *tablespacen
 
 /*
  * Set, reset, or replace reloptions.
+ *
+ * GPDB specific arguments: 
+ * 	aoopt_changed: whether any AO storage options have been changed in this function.
+ * 	am_change_heap_ao: whether we are changing the AM from heap->AO/CO or vice-versa.
  */
 static void
 ATExecSetRelOptions(Relation rel, List *defList, AlterTableType operation,
-					bool *aoopt_changed, LOCKMODE lockmode)
+					bool *aoopt_changed, bool am_change_heap_ao, LOCKMODE lockmode)
 {
 	Oid			relid;
 	Relation	pgclass;
@@ -14173,11 +14194,13 @@ ATExecSetRelOptions(Relation rel, List *defList, AlterTableType operation,
 	if (!HeapTupleIsValid(tuple))
 		elog(ERROR, "cache lookup failed for relation %u", relid);
 
-	if (operation == AT_ReplaceRelOptions)
+	if (operation == AT_ReplaceRelOptions || am_change_heap_ao)
 	{
 		/*
-		 * If we're supposed to replace the reloptions list, we just pretend
-		 * there were none before.
+		 * If we're supposed to replace the reloptions list, or if we're
+		 * changing AM between heap and AO/CO so the old reloptions won't 
+		 * apply to the new table anymore, we just pretend there were
+		 * none before.
 		 */
 		datum = (Datum) 0;
 		isnull = true;
@@ -14226,7 +14249,12 @@ ATExecSetRelOptions(Relation rel, List *defList, AlterTableType operation,
 		case RELKIND_AOSEGMENTS:
 		case RELKIND_AOBLOCKDIR:
 		case RELKIND_AOVISIMAP:
-			if (RelationIsAppendOptimized(rel))
+			/*
+			 * Validate the reloptions as for AO/CO table if (1) we'll change AM to 
+			 * AO/CO, or (2) we are not changing AM but the relation is just AO/CO.
+			 */
+			if ((RelationIsAppendOptimized(rel) && !am_change_heap_ao) || 
+					(!RelationIsAppendOptimized(rel) && am_change_heap_ao))
 			{
 				StdRdOptions *stdRdOptions = (StdRdOptions *) default_reloptions(newOptions,
 																				 true,

@@ -89,10 +89,6 @@ static void copy_table_data(Oid OIDNewHeap, Oid OIDOldHeap, Oid OIDOldIndex,
 							TransactionId *pFreezeXid, MultiXactId *pCutoffMulti);
 static List *get_tables_to_cluster(MemoryContext cluster_context);
 
-/* Convenient macro for checking AO AMs */
-#define IsAccessMethodAO(am_oid) \
-	(am_oid == AO_ROW_TABLE_AM_OID || am_oid == AO_COLUMN_TABLE_AM_OID)
-
 
 /*---------------------------------------------------------------------------
  * This cluster code allows for clustering multiple tables at once. Because
@@ -714,7 +710,6 @@ make_new_heap(Oid OIDOldHeap, Oid NewTableSpace, Oid NewAccessMethod,
 	Datum		reloptions;
 	bool		isNull;
 	Oid			namespaceid;
-	bool 		valid_opts;
 
 	OldHeap = table_open(OIDOldHeap, lockmode);
 	OldHeapDesc = RelationGetDescr(OldHeap);
@@ -738,30 +733,70 @@ make_new_heap(Oid OIDOldHeap, Oid NewTableSpace, Oid NewAccessMethod,
 		reloptions = (Datum) 0;
 
 	/* 
-	 * Unless we are changing access method, look further.
+	 * Unless we are changing access method between heap and AO/CO, look further.
 	 */
 	/*
-	 * While changing access method from heap to AO/AOCO, the storage options
-	 * need to be picked from gp_default_storage_options since heap table does
-	 * not store those.
+	 * GPDB: some considerations when AM is going to change between heap and AO/CO:
+	 *
+	 * If user has also requested setting new reloptions, the new reloptions should have
+	 * replaced the old ones at this point. We just need to reuse those on the new table.
+	 *
+	 * If user does NOT request new reloptions, we should discard the existing reloptions.
+	 * And one more consideration if we are changing the table from heap to AO: we should
+	 * also pick up options from gp_default_storage_options, just like CREATE TABLE does.
 	 */
 	if (RelationIsHeap(OldHeap) && IsAccessMethodAO(NewAccessMethod))
 	{
-		valid_opts = false;
-		reloptions = (Datum) 0;
+		/*
+		 * Heap to AO/CO: filter out any reloptions that belong to heap, 
+		 * and pick up from gp_default_storage_options.
+		 */
+		int 		numoptions;
+		relopt_value 	*options;
+
+		/* 
+		 * Process the reloptions as for AO tables. And validate=false will silently 
+		 * filter out any reloptions that belong to heap.
+		 */
 		StdRdOptions *stdRdOptions = (StdRdOptions *)default_reloptions(reloptions,
-																		true,
-																		RELOPT_KIND_APPENDOPTIMIZED);
+																	false, /* validate */
+																	RELOPT_KIND_APPENDOPTIMIZED);
+
+		/* Pick up from gp_default_storage_options. */
+		options = parseRelOptions(reloptions, false, RELOPT_KIND_APPENDOPTIMIZED, &numoptions);
+		validate_and_refill_options(stdRdOptions, options, numoptions, RELOPT_KIND_APPENDOPTIMIZED, true);
+
+		/* Update the reloptions string. */
 		reloptions = transformAOStdRdOptions(stdRdOptions, reloptions);
 	}
-	/* When changing from AO/AOCO to heap, do not use any of the AO reloptions */
 	else if (RelationIsAppendOptimized(OldHeap) && NewAccessMethod == HEAP_TABLE_AM_OID)
 	{
-		valid_opts = true;
-		reloptions = (Datum) 0;
+		/*
+		 * AO/CO to Heap: unfortunately we don't have a convenient routine to transform
+		 * heap StdRdOptions back to reloption string. So we take a slightly different
+		 * approach than the case of heap to AO/CO: we check if there is any AO reloptions:
+		 * 
+		 * (1) If there is, just discard them (AO options do not apply to heap). 
+		 * (2) If there is none, that means we either have replaced it with heap reloptions
+		 * or the reloptions field is just empty, and either way we will pass the existing
+		 * reloptions on to the new table.
+		 *
+		 * This is possible because at this point we only have either AO/AOCO reloptions or
+		 * heap reloptions, but we cannot have both (see ATExecSetRelOptions).
+		 */
+		Datum 	aoreloptions = (Datum) 0;
+		StdRdOptions *stdRdOptions = (StdRdOptions *)default_reloptions(reloptions,
+																	false, /* validate */
+																	RELOPT_KIND_APPENDOPTIMIZED);
+
+		/*
+		 * Transform the stdRdOptions to get a reloptions string, from which we will 
+		 * know if there is any AO reloptions.
+		 */
+		aoreloptions = transformAOStdRdOptions(stdRdOptions, aoreloptions);
+		if (aoreloptions != (Datum) 0)
+			reloptions = (Datum) 0;
 	}
-	else
-		valid_opts = true;
 
 	if (relpersistence == RELPERSISTENCE_TEMP)
 		namespaceid = LookupCreationNamespace("pg_temp");
@@ -804,7 +839,7 @@ make_new_heap(Oid OIDOldHeap, Oid NewTableSpace, Oid NewAccessMethod,
 										  true,
 										  OIDOldHeap,
 										  NULL,
-										  valid_opts);
+										  true);
 	Assert(OIDNewHeap != InvalidOid);
 
 	ReleaseSysCache(tuple);

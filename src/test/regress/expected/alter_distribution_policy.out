@@ -318,9 +318,9 @@ alter table atsdb drop column n;
 alter table atsdb set with(appendonly = true, compresslevel = 3);
 select relname, segrelid != 0, reloptions from pg_class, pg_appendonly where pg_class.oid =
 'atsdb'::regclass and relid = pg_class.oid;
- relname | ?column? | reloptions 
----------+----------+------------
- atsdb   | t        | 
+ relname | ?column? |    reloptions     
+---------+----------+-------------------
+ atsdb   | t        | {compresslevel=3}
 (1 row)
 
 select * from distcheck where rel = 'atsdb';
@@ -443,9 +443,9 @@ select * from distcheck where rel = 'atsdb';
 
 select relname, segrelid != 0, reloptions from pg_class, pg_appendonly where pg_class.oid =
 'atsdb'::regclass and relid = pg_class.oid;
- relname | ?column? | reloptions 
----------+----------+------------
- atsdb   | t        | 
+ relname | ?column? |    reloptions     
+---------+----------+-------------------
+ atsdb   | t        | {compresslevel=3}
 (1 row)
 
 select * from atsdb;

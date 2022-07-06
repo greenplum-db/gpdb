@@ -3261,6 +3261,7 @@ alter_table_cmd:
 								(errcode(ERRCODE_SYNTAX_ERROR),
 								 errmsg("invalid storage type"),
 								 parser_errposition(@3)));
+						n->def = (Node *) $3;
 					}
 					$$ = (Node *)n;
 				}
@@ -3313,6 +3314,32 @@ alter_table_cmd:
 					AlterTableCmd *n = makeNode(AlterTableCmd);
 					n->subtype = AT_SetAccessMethod;
 					n->name = $4;
+					$$ = (Node *)n;
+				}
+			/* ALTER TABLE <name> SET ACCESS METHOD <amname> WITH (<reloptions>) */
+			| SET ACCESS METHOD name WITH definition
+				{
+					AlterTableCmd *n = makeNode(AlterTableCmd);
+					char *witham = greenplumLegacyAOoptions(n->name, &$6);
+					n->subtype = AT_SetAccessMethod;
+					n->name = $4;
+					/*
+					 * If there's any legacy AO options specified in the WITH
+					 * clause such as 'appendonly' or 'appendoptimized', it has
+					 * to match with the AM name.
+					 */
+					if (witham && 
+							(strlen(witham) != strlen(n->name) || 
+							strncmp(n->name, witham, strlen(n->name) != 0)))
+					{
+						ereport(ERROR,
+								(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+								 errmsg("ACCESS METHOD is specified as \"%s\" but "
+								 	"the WITH option indicates it to be \"%s\"",
+									n->name, witham),
+								 parser_errposition(@5)));
+					}
+					n->def = (Node *) $6;
 					$$ = (Node *)n;
 				}
 			/* ALTER TABLE <name> SET TABLESPACE <tablespacename> */

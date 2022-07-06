@@ -36,6 +36,9 @@ ALTER TABLE heap2ao2 ADD CONSTRAINT unique_constraint UNIQUE (a);
 INSERT INTO heap2ao SELECT i,i FROM generate_series(1,5) i;
 INSERT INTO heap2ao2 SELECT i,i FROM generate_series(1,5) i;
 
+-- Check reloptions once before altering.
+SELECT reloptions from pg_class where relname in ('heap2ao', 'heap2ao2');
+
 CREATE TEMP TABLE relfilebeforeao AS
     SELECT -1 segid, relfilenode FROM pg_class WHERE relname in ('heap2ao', 'heap2ao2', 'heapi')
     UNION SELECT gp_segment_id segid, relfilenode FROM gp_dist_random('pg_class')
@@ -57,6 +60,7 @@ ALTER TABLE heap2ao2 SET WITH (appendoptimized=true);
 SELECT c.relname, a.amname FROM pg_class c JOIN pg_am a ON c.relam = a.oid WHERE c.relname LIKE 'heap2ao%';
 
 -- The altered tables should inherit storage options from gp_default_storage_options
+-- And, the original heap reloptions are gone (in this case, 'fillfactor'). 
 SELECT blocksize,compresslevel,checksum,compresstype,columnstore
 FROM pg_appendonly WHERE relid in ('heap2ao'::regclass::oid, 'heap2ao2'::regclass::oid);
 SELECT reloptions from pg_class where relname in ('heap2ao', 'heap2ao2');
@@ -211,6 +215,131 @@ SELECT relname, relfrozenxid <> '0' FROM pg_class WHERE relname LIKE 'ao2heap%';
 
 DROP TABLE ao2heap;
 DROP TABLE ao2heap2;
+
+-- Scenario 4: Set reloptions along with change of AM.
+
+CREATE TABLE ataoset(a int);
+CREATE TABLE ataoset2(a int);
+INSERT INTO ataoset select * from generate_series(1, 5);
+INSERT INTO ataoset2 select * from generate_series(1, 5);
+
+-- Error: user specifies a different AM than the one indicated in the WITH clause
+ALTER TABLE ataoset SET ACCESS METHOD ao_row WITH(appendonly=true, orientation=column);
+
+-- Error: user specifiies AO reloption when altering an AO table to heap.
+CREATE TABLE ao2heaperror (a int) WITH (appendonly=true);
+ALTER TABLE ao2heaperror SET ACCESS METHOD heap WITH (blocksize=65536);
+DROP TABLE ao2heaperror;
+
+-- Scenario 4.1: change from heap to AO with customized storage options
+CREATE TEMP TABLE relfilebeforeat AS
+    SELECT -1 segid, relname, relfilenode FROM pg_class WHERE relname LIKE 'ataoset%'
+    UNION SELECT gp_segment_id segid, relname, relfilenode FROM gp_dist_random('pg_class')
+    WHERE relname LIKE 'ataoset%' ORDER BY segid;
+
+ALTER TABLE ataoset SET WITH (appendonly=true, blocksize=65536, compresslevel=7);
+ALTER TABLE ataoset2 SET ACCESS METHOD ao_row WITH (blocksize=65536, compresslevel=7);
+
+CREATE TEMP TABLE relfileafterat AS
+    SELECT -1 segid, relname, relfilenode FROM pg_class WHERE relname LIKE 'ataoset%'
+    UNION SELECT gp_segment_id segid, relname, relfilenode FROM gp_dist_random('pg_class')
+    WHERE relname LIKE 'ataoset%' ORDER BY segid;
+
+-- relfilenode changed
+SELECT * FROM relfilebeforeat INTERSECT SELECT * FROM relfileafterat;
+
+DROP TABLE relfilebeforeat;
+DROP TABLE relfileafterat;
+
+-- table AMs are changed to AO, and reloptions changed to what we set
+SELECT c.relname, a.amname, c.reloptions FROM pg_class c JOIN pg_am a ON c.relam = a.oid WHERE c.relname LIKE 'ataoset%';
+
+-- data are intact
+SELECT count(*) FROM ataoset;
+SELECT count(*) FROM ataoset2;
+
+-- Scenario 4.2. Alter the table w/ the exact same reloptions. 
+-- AM, relfilenodes and reloptions all should remain the same
+CREATE TEMP TABLE relfilebeforeat AS
+    SELECT -1 segid, relname, relfilenode FROM pg_class WHERE relname LIKE 'ataoset%'
+    UNION SELECT gp_segment_id segid, relname, relfilenode FROM gp_dist_random('pg_class')
+    WHERE relname LIKE 'ataoset%' ORDER BY segid;
+
+-- Firstly alter them with the exact same options as case 1.
+-- Secondly alter them with same option values but different order.
+-- Neither should trigger table rewrite. 
+ALTER TABLE ataoset SET WITH (appendonly=true, blocksize=65536, compresslevel=7);
+ALTER TABLE ataoset SET WITH (appendonly=true, compresslevel=7, blocksize=65536);
+ALTER TABLE ataoset2 SET ACCESS METHOD ao_row WITH (blocksize=65536, compresslevel=7);
+ALTER TABLE ataoset2 SET ACCESS METHOD ao_row WITH (compresslevel=7, blocksize=65536);
+
+CREATE TEMP TABLE relfileafterat AS
+    SELECT -1 segid, relname, relfilenode FROM pg_class WHERE relname LIKE 'ataoset%'
+    UNION SELECT gp_segment_id segid, relname, relfilenode FROM gp_dist_random('pg_class')
+    WHERE relname LIKE 'ataoset%' ORDER BY segid;
+
+-- no change to relfilenode
+SELECT * FROM relfilebeforeat EXCEPT SELECT * FROM relfileafterat;
+
+DROP TABLE relfilebeforeat;
+DROP TABLE relfileafterat;
+
+-- table AMs are still AO, but reloptions should reflect the order of options in the most recent ALTER TABLE
+SELECT c.relname, a.amname, c.reloptions FROM pg_class c JOIN pg_am a ON c.relam = a.oid WHERE c.relname LIKE 'ataoset%';
+
+-- data still intact
+SELECT count(*) FROM ataoset;
+SELECT count(*) FROM ataoset2;
+
+-- Scenario 4.3. Use the same syntax to alter from AO to AO, but specifying different storage options.
+--         Table should be rewritten.
+CREATE TEMP TABLE relfilebeforeao AS
+    SELECT -1 segid, relname, relfilenode FROM pg_class WHERE relname LIKE 'ataoset%'
+    UNION SELECT gp_segment_id segid, relname, relfilenode FROM gp_dist_random('pg_class')
+    WHERE relname LIKE 'ataoset%' ORDER BY segid;
+
+ALTER TABLE ataoset SET WITH (appendonly=true, blocksize=32768);
+ALTER TABLE ataoset2 SET ACCESS METHOD ao_row WITH (blocksize=32768);
+
+CREATE TEMP TABLE relfileafterao AS
+    SELECT -1 segid, relname, relfilenode FROM pg_class WHERE relname LIKE 'ataoset%'
+    UNION SELECT gp_segment_id segid, relname, relfilenode FROM gp_dist_random('pg_class')
+    WHERE relname LIKE 'ataoset%' ORDER BY segid;
+
+-- table is rewritten
+SELECT * FROM relfilebeforeao INTERSECT SELECT * FROM relfileafterao;
+
+-- reloptions changed too
+SELECT c.relname, a.amname, c.reloptions FROM pg_class c JOIN pg_am a ON c.relam = a.oid WHERE c.relname LIKE 'ataoset%';
+
+DROP TABLE relfilebeforeao;
+DROP TABLE relfileafterao;
+
+-- Scenario 4.4. Alter the tables back to heap and set some reloptions too.
+CREATE TEMP TABLE relfilebeforeat AS
+    SELECT -1 segid, relname, relfilenode FROM pg_class WHERE relname LIKE 'ataoset%'
+    UNION SELECT gp_segment_id segid, relname, relfilenode FROM gp_dist_random('pg_class')
+    WHERE relname LIKE 'ataoset%' ORDER BY segid;
+
+ALTER TABLE ataoset SET ACCESS METHOD heap WITH (fillfactor=70);
+ALTER TABLE ataoset2 SET ACCESS METHOD heap WITH (fillfactor=70);
+
+CREATE TEMP TABLE relfileafterat AS
+    SELECT -1 segid, relname, relfilenode FROM pg_class WHERE relname LIKE 'ataoset%'
+    UNION SELECT gp_segment_id segid, relname, relfilenode FROM gp_dist_random('pg_class')
+    WHERE relname LIKE 'ataoset%' ORDER BY segid;
+
+-- there's a table rewrite
+SELECT * FROM relfilebeforeat INTERSECT SELECT * FROM relfileafterat;
+
+DROP TABLE relfilebeforeat;
+DROP TABLE relfileafterat;
+
+-- reloptions and AM also changed
+SELECT c.relname, a.amname, c.reloptions FROM pg_class c JOIN pg_am a ON c.relam = a.oid WHERE c.relname LIKE 'ataoset%';
+
+DROP TABLE ataoset;
+DROP TABLE ataoset2;
 
 -- Final scenario: run the iterations of AT from "A" to "B" and back to "A", that includes:
 -- 1. Heap->AO->Heap->AO
