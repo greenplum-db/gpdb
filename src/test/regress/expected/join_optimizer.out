@@ -3082,8 +3082,8 @@ from nt3 as nt3
     ) as ss2
     on ss2.id = nt3.nt2_id
 where nt3.id = 1 and ss2.b3;
-                                     QUERY PLAN                                     
-------------------------------------------------------------------------------------
+                                  QUERY PLAN                                  
+------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Hash Join
          Hash Cond: (nt3.nt2_id = nt2.id)
@@ -3091,17 +3091,18 @@ where nt3.id = 1 and ss2.b3;
                Index Cond: (id = 1)
          ->  Hash
                ->  Broadcast Motion 3:3  (slice2; segments: 3)
-                     ->  Result
-                           Filter: ((nt2.b1 AND ((NOT (nt1.id IS NULL)))))
-                           ->  Nested Loop Left Join
-                                 Join Filter: true
-                                 ->  Redistribute Motion 3:3  (slice3; segments: 3)
-                                       Hash Key: nt2.nt1_id
-                                       ->  Seq Scan on nt2
+                     ->  Nested Loop
+                           Join Filter: true
+                           ->  Redistribute Motion 3:3  (slice3; segments: 3)
+                                 Hash Key: nt2.nt1_id
+                                 ->  Seq Scan on nt2
+                                       Filter: b1
+                           ->  Result
+                                 Filter: ((NOT (nt1.id IS NULL)))
                                  ->  Index Scan using nt1_pkey on nt1
                                        Index Cond: (id = nt2.nt1_id)
  Optimizer: Pivotal Optimizer (GPORCA)
-(17 rows)
+(18 rows)
 
 select nt3.id
 from nt3 as nt3
@@ -3747,7 +3748,7 @@ order by fault;
    ->  Sort
          Sort Key: ((COALESCE(tenk1.unique1, '-1'::integer) + int8_tbl.q1))
          ->  Result
-               Filter: (((COALESCE(tenk1.unique1, '-1'::integer) + int8_tbl.q1)) = 122)
+               Filter: ((COALESCE(tenk1.unique1, '-1'::integer) + int8_tbl.q1) = 122)
                ->  Hash Right Join
                      Hash Cond: ((tenk1.unique2)::bigint = int8_tbl.q2)
                      ->  Redistribute Motion 3:3  (slice2; segments: 3)
