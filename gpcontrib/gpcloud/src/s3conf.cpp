@@ -93,8 +93,14 @@ S3Params InitConfig(const string& urlWithOptions) {
 
     params.setDebugCurl(s3Cfg.GetBool(configSection, "debug_curl", "false"));
 
-    params.setCred(s3Cfg.Get(configSection, "accessid", ""), s3Cfg.Get(configSection, "secret", ""),
-                   s3Cfg.Get(configSection, "token", ""));
+    string accessId = s3Cfg.Get(configSection, "accessid", "");
+    string secret = s3Cfg.Get(configSection, "secret", "");
+    if(accessId.empty() && secret.empty())
+    {
+        S3WARN("Both accessid and secret are empty in s3 config file, try to read default aws credentials.");
+        GetAwsProfileInfo(configSection, accessId, secret);
+    }
+    params.setCred(accessId, secret, s3Cfg.Get(configSection, "token", ""));
 
     s3ext_logserverhost = s3Cfg.Get(configSection, "logserverhost", "127.0.0.1");
 
@@ -131,6 +137,22 @@ S3Params InitConfig(const string& urlWithOptions) {
     CheckEssentialConfig(params);
 
     return params;
+}
+
+void GetAwsProfileInfo(const string configSection, string& accessId, string& secret)
+{
+    string home(getenv("HOME"));
+    string configPath = home + "/.aws/credentials";
+    Config awsCfg(configPath);
+    S3_CHECK_OR_DIE(awsCfg.Handle() != NULL, S3RuntimeError,
+                    "Failed to parse aws credentials file '" + configPath + "', or it doesn't exist(or http failed)");
+    S3_CHECK_OR_DIE(awsCfg.SectionExist(configSection), S3ConfigError,
+                    "Selected section '" + configSection +
+                    "' does not exist, please check your aws credentials file",
+                   configSection);
+    
+    accessId = awsCfg.Get(configSection, "aws_access_key_id", "");
+    secret = awsCfg.Get(configSection, "aws_secret_access_key", "");   
 }
 
 void CheckEssentialConfig(const S3Params& params) {
