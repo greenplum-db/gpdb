@@ -1005,13 +1005,8 @@ cdbexplain_depositStatsToNode(PlanState *planstate, CdbExplain_RecvStatCtx *ctx)
 	cdbexplain_depStatAcc_init0(&totalWorkfileCreated);
 	cdbexplain_depStatAcc_init0(&totalPartTableScanned);
 	for (int i = 0; i < NUM_SORT_METHOD; i++)
-	{
 		for (int j = 0; j < NUM_SORT_SPACE_TYPE; j++)
-		{
 			cdbexplain_depStatAcc_init0(&sortSpaceUsed[j][i]);
-			cdbexplain_depStatAcc_init0(&sortSpaceUsed[j][i]);
-		}
-	}
 
 	/* Initialize per-slice accumulators. */
 	cdbexplain_depStatAcc_init0(&peakmemused);
@@ -1057,14 +1052,6 @@ cdbexplain_depositStatsToNode(PlanState *planstate, CdbExplain_RecvStatCtx *ctx)
 									  (double) rsi->sortstats.spaceUsed, rsh, rsi, nsi);
 		}
 
-		Assert(rsi->sortstats.sortMethod < NUM_SORT_METHOD);
-		Assert(rsi->sortstats.spaceType < NUM_SORT_SPACE_TYPE);
-		if (rsi->sortstats.sortMethod != SORT_TYPE_STILL_IN_PROGRESS)
-		{
-			cdbexplain_depStatAcc_upd(&sortSpaceUsed[rsi->sortstats.spaceType][rsi->sortstats.sortMethod],
-									  (double) rsi->sortstats.spaceUsed, rsh, rsi, nsi);
-		}
-
 		/* Update per-slice accumulators. */
 		cdbexplain_depStatAcc_upd(&peakmemused, rsh->worker.peakmemused, rsh, rsi, nsi);
 		cdbexplain_depStatAcc_upd(&vmem_reserved, rsh->worker.vmem_reserved, rsh, rsi, nsi);
@@ -1078,13 +1065,8 @@ cdbexplain_depositStatsToNode(PlanState *planstate, CdbExplain_RecvStatCtx *ctx)
 	ns->totalWorkfileCreated = totalWorkfileCreated.agg;
 	ns->totalPartTableScanned = totalPartTableScanned.agg;
 	for (int i = 0; i < NUM_SORT_METHOD; i++)
-	{
 		for (int j = 0; j < NUM_SORT_SPACE_TYPE; j++)
-		{
 			ns->sortSpaceUsed[j][i] = sortSpaceUsed[j][i].agg;
-			ns->sortSpaceUsed[j][i] = sortSpaceUsed[j][i].agg;
-		}
-	}
 
 	/* Roll up summary over all nodes of slice into RecvStatCtx. */
 	ctx->workmemused_max = Max(ctx->workmemused_max, workmemused.agg.vmax);

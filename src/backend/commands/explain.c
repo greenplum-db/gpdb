@@ -3265,7 +3265,7 @@ show_sort_info(SortState *sortstate, ExplainState *es)
 				sortMethod, spaceType, (long) agg->vsum);
 			if (es->verbose)
 			{
-				appendStringInfo(es->str, "  Max Memory: %ldkB  Avg Memory: %ldkb (%d segments)",
+				appendStringInfo(es->str, "  Max Memory: %ldkB  Avg Memory: %ldkB (%d segments)",
 								 (long) agg->vmax,
 								 (long) (agg->vsum / agg->vcnt),
 								 agg->vcnt);
