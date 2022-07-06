@@ -569,3 +569,20 @@ return rv[0]['val']
 $$;
 
 SELECT test_prep_bytea_output();
+
+-- GPDB special AnyTable type or Table Value Expressions. or tablefunc in other test
+CREATE OR REPLACE FUNCTION test_anytable(t anytable) RETURNS void
+LANGUAGE plpythonu
+AS $$
+for i in t:
+   plpy.info(str(i))
+$$;
+
+SELECT * FROM test_anytable(TABLE(SELECT * FROM (VALUES (1)) a));
+SELECT * FROM test_anytable(TABLE(SELECT * FROM (VALUES (1, 2)) a));
+SELECT * FROM test_anytable(TABLE(SELECT * FROM (VALUES (1), (2)) a));
+SELECT * FROM test_anytable(TABLE(SELECT * FROM (VALUES ('a'), ('b')) a));
+
+SELECT * FROM test_anytable(TABLE(SELECT * FROM (VALUES (1, 2)) a SCATTER BY 1));
+
+DROP FUNCTION test_anytable(t anytable);

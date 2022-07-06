@@ -1007,3 +1007,50 @@ INFO:  {'val': b'\xaa\x00\xbb'}
  \xaa00bb
 (1 row)
 
+-- GPDB special AnyTable type or Table Value Expressions. or tablefunc in other test
+CREATE OR REPLACE FUNCTION test_anytable(t anytable) RETURNS void
+LANGUAGE plpython3u
+AS $$
+for i in t:
+   plpy.info(str(i))
+$$;
+SELECT * FROM test_anytable(TABLE(SELECT * FROM (VALUES (1)) a));
+INFO:  (1,)
+ test_anytable 
+---------------
+ 
+(1 row)
+
+SELECT * FROM test_anytable(TABLE(SELECT * FROM (VALUES (1, 2)) a));
+INFO:  (1, 2)
+ test_anytable 
+---------------
+ 
+(1 row)
+
+SELECT * FROM test_anytable(TABLE(SELECT * FROM (VALUES (1), (2)) a));
+INFO:  (1,)
+INFO:  (2,)
+ test_anytable 
+---------------
+ 
+(1 row)
+
+SELECT * FROM test_anytable(TABLE(SELECT * FROM (VALUES ('a'), ('b')) a));
+INFO:  ('a',)
+INFO:  ('b',)
+ test_anytable 
+---------------
+ 
+(1 row)
+
+SELECT * FROM test_anytable(TABLE(SELECT * FROM (VALUES (1, 2)) a SCATTER BY 1));
+INFO:  (1, 2)  (seg1 slice1 127.0.0.1:7003 pid=225428)
+ test_anytable 
+---------------
+ 
+ 
+ 
+(3 rows)
+
+DROP FUNCTION test_anytable(t anytable);
