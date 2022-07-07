@@ -61,6 +61,7 @@ test: guc_gp
 test: toast
 test: misc_jiras
 test: statement_mem_for_windowagg
+test: write_gang_idle_in_transaction_session_timeout
 
 # namespace_gp test will show diff if concurrent tests use temporary tables.
 # So run it separately.
