@@ -798,7 +798,6 @@ extern TypeStorageOptions *getTypeStorageOptions(Archive *fout, int *numTypes);
 extern ExtProtInfo *getExtProtocols(Archive *fout, int *numExtProtocols);
 extern BinaryUpgradeInfo *getBinaryUpgradeObjects(void);
 
-extern bool	testExtProtocolSupport(Archive *fout);
 /* END MPP ADDITION */
 
 #endif							/* PG_DUMP_H */

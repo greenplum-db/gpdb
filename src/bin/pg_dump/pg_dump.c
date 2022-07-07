@@ -159,12 +159,6 @@ const char *EXT_PARTITION_NAME_POSTFIX = "_external_partition__";
 /* pg_class.relstorage value used in GPDB 6.x and below to mark external tables. */
 #define RELSTORAGE_EXTERNAL 'x'
 
-/* flag indicating whether or not this GP database supports partitioning */
-static bool gp_partitioning_available = false;
-
-/* flag indicating whether or not this GP database supports column encoding */
-static bool gp_attribute_encoding_available = false;
-
 static DumpId binary_upgrade_dumpid;
 
 /* override for standard extra_float_digits setting */
@@ -366,8 +360,6 @@ static void expand_oid_patterns(SimpleStringList *patterns,
 
 static bool is_returns_table_function(int nallargs, char **argmodes);
 static bool testGPbackend(Archive *fout);
-static bool testPartitioningSupport(Archive *fout);
-static bool testAttributeEncodingSupport(Archive *fout);
 
 static char *nextToken(register char **stringp, register const char *delim);
 static void addDistributedBy(Archive *fout, PQExpBuffer q, TableInfo *tbinfo, int actual_atts);
@@ -1028,16 +1020,6 @@ main(int argc, char **argv)
 		username_subquery = "SELECT rolname FROM pg_catalog.pg_roles WHERE oid =";
 	else
 		error_unsupported_server_version(fout);
-
-	/*
-	 * Remember whether or not this GP database supports partitioning.
-	 */
-	gp_partitioning_available = testPartitioningSupport(fout);
-
-	/*
-	 * Remember whether or not this GP database supports column encoding.
-	 */
-	gp_attribute_encoding_available = testAttributeEncodingSupport(fout);
 
 	/* check the version for the synchronized snapshots feature */
 	if (numWorkers > 1 && fout->remoteVersion < 90200
@@ -5753,15 +5735,6 @@ getTypeStorageOptions(Archive *fout, int *numTypes)
 	int			i_typoptions;
 	int			i_rolname;
 
-	if (gp_attribute_encoding_available == false)
-	{
-		numTypes = 0;
-		tstorageoptions = (TypeStorageOptions *) pg_malloc(0);
-		destroyPQExpBuffer(query);
-		return tstorageoptions;
-	}
-
-
 	/*
 	 * The following statement used format_type to resolve an internal name to its equivalent sql name.
 	 * The format_type seems to do two things, it translates an internal type name (e.g. bpchar) into its
@@ -9496,7 +9469,7 @@ getTableAttrs(Archive *fout, TableInfo *tblinfo, int numTables)
 		 * attencoding is a Greenplum specific column in the query, make sure
 		 * it wasn't missed in a merge with PostgreSQL.
 		 */
-		if (gp_attribute_encoding_available && i_attencoding < 0)
+		if (i_attencoding < 0)
 		{
 			pg_log_warning("attencoding column required in table attributes query");
 			exit_nicely(1);
@@ -9555,7 +9528,7 @@ getTableAttrs(Archive *fout, TableInfo *tblinfo, int numTables)
 			tbinfo->inhNotNull[j] = false;
 
 			/* column storage attributes */
-			if (gp_attribute_encoding_available && !PQgetisnull(res, j, i_attencoding))
+			if (!PQgetisnull(res, j, i_attencoding))
 				tbinfo->attencoding[j] = pg_strdup(PQgetvalue(res, j, i_attencoding));
 			else
 				tbinfo->attencoding[j] = NULL;
@@ -17838,10 +17811,12 @@ dumpTableSchema(Archive *fout, TableInfo *tbinfo)
 			addDistributedBy(fout, q, tbinfo, actual_atts);
 
 		/*
-		 * If GP partitioning is supported add the partitioning constraints to
-		 * the table definition.
+		 * Add the partitioning constraints to the table definition. This
+		 * check used to look for existence of pg_partition table to make the
+		 * decision, instead seems better to decide based on version. GPDB6
+		 * and below have pg_get_partition_def functions.
 		 */
-		if (gp_partitioning_available)
+		if (fout->remoteVersion <= 90400)
 		{
 			bool		isTemplatesSupported = fout->remoteVersion >= 80214;
 			bool		isPartitioned = false;
@@ -17855,10 +17830,6 @@ dumpTableSchema(Archive *fout, TableInfo *tbinfo)
 				/* use 4.x version of function */
 				appendPQExpBuffer(query, "SELECT "
 				   "pg_get_partition_def('%u'::pg_catalog.oid, true, true) ",
-								  tbinfo->dobj.catId.oid);
-			else	/* use 3.x version of function */
-				appendPQExpBuffer(query, "SELECT "
-						 "pg_get_partition_def('%u'::pg_catalog.oid, true) ",
 								  tbinfo->dobj.catId.oid);
 
 			res = ExecuteSqlQuery(fout, query->data, PGRES_TUPLES_OK);
@@ -17944,9 +17915,7 @@ dumpTableSchema(Archive *fout, TableInfo *tbinfo)
 			}
 
 			destroyPQExpBuffer(query);
-		}
-
-		/* END MPP ADDITION */
+		} /* END MPP ADDITION */
 
 		/* Dump generic options if any */
 		if (ftoptions && ftoptions[0])
@@ -18110,29 +18079,20 @@ dumpTableSchema(Archive *fout, TableInfo *tbinfo)
 									  tbinfo->attalign[j]);
 					appendStringLiteralAH(q, tbinfo->attnames[j], fout);
 
-					if (gp_partitioning_available)
-					{
-						/*
-						 * Do for all descendants of a partition table.
-						 * No hurt if this is not a table with partitions.
-						 */
-						appendPQExpBufferStr(q, "\n  AND attrelid IN (SELECT ");
-						appendStringLiteralAH(q, qualrelname, fout);
-						appendPQExpBufferStr(q, "::pg_catalog.regclass ");
-						appendPQExpBufferStr(q, "UNION SELECT pr.parchildrelid FROM "
-										  "pg_catalog.pg_partition_rule pr, "
-										  "pg_catalog.pg_partition p WHERE "
-										  "pr.parchildrelid != 0 AND "
-										  "pr.paroid = p.oid AND p.parrelid = ");
-						appendStringLiteralAH(q, qualrelname, fout);
-						appendPQExpBufferStr(q, "::pg_catalog.regclass);\n");
-					}
-					else
-					{
-						appendPQExpBufferStr(q, "\n  AND attrelid = ");
-						appendStringLiteralAH(q, qualrelname, fout);
-						appendPQExpBufferStr(q, "::pg_catalog.regclass;\n");
-					}
+					/*
+					 * Do for all descendants of a partition table.
+					 * No hurt if this is not a table with partitions.
+					 */
+					appendPQExpBufferStr(q, "\n  AND attrelid IN (SELECT ");
+					appendStringLiteralAH(q, qualrelname, fout);
+					appendPQExpBufferStr(q, "::pg_catalog.regclass ");
+					appendPQExpBufferStr(q, "UNION SELECT pr.parchildrelid FROM "
+										 "pg_catalog.pg_partition_rule pr, "
+										 "pg_catalog.pg_partition p WHERE "
+										 "pr.parchildrelid != 0 AND "
+										 "pr.paroid = p.oid AND p.parrelid = ");
+					appendStringLiteralAH(q, qualrelname, fout);
+					appendPQExpBufferStr(q, "::pg_catalog.regclass);\n");
 
 					/*
 					 * GPDB: Upstream uses ALTER TABLE ONLY below. Because we
@@ -20631,77 +20591,6 @@ testGPbackend(Archive *fout)
 
 	return isGPbackend;
 }
-
-/*
- * testPartitioningSupport - tests whether or not the current GP
- * database includes support for partitioning.
- */
-static bool
-testPartitioningSupport(Archive *fout)
-{
-	PQExpBuffer query;
-	PGresult   *res;
-	bool		isSupported;
-
-	query = createPQExpBuffer();
-
-	appendPQExpBuffer(query, "SELECT 1 FROM pg_class WHERE relname = 'pg_partition' and relnamespace = 11;");
-	res = ExecuteSqlQuery(fout, query->data, PGRES_TUPLES_OK);
-
-	isSupported = (PQntuples(res) == 1);
-
-	PQclear(res);
-	destroyPQExpBuffer(query);
-
-	return isSupported;
-}
-
-
-/*
- * testAttributeEncodingSupport - tests whether or not the current GP
- * database includes support for column encoding.
- */
-static bool
-testAttributeEncodingSupport(Archive *fout)
-{
-	PQExpBuffer query;
-	PGresult   *res;
-	bool		isSupported;
-
-	query = createPQExpBuffer();
-
-	appendPQExpBuffer(query, "SELECT 1 from pg_catalog.pg_class where relnamespace = 11 and relname  = 'pg_attribute_encoding';");
-	res = ExecuteSqlQuery(fout, query->data, PGRES_TUPLES_OK);
-
-	isSupported = (PQntuples(res) == 1);
-
-	PQclear(res);
-	destroyPQExpBuffer(query);
-
-	return isSupported;
-}
-
-
-bool
-testExtProtocolSupport(Archive *fout)
-{
-	PQExpBuffer query;
-	PGresult   *res;
-	bool		isSupported;
-
-	query = createPQExpBuffer();
-
-	appendPQExpBuffer(query, "SELECT 1 FROM pg_class WHERE relname = 'pg_extprotocol' and relnamespace = 11;");
-	res = ExecuteSqlQuery(fout, query->data, PGRES_TUPLES_OK);
-
-	isSupported = (PQntuples(res) == 1);
-
-	PQclear(res);
-	destroyPQExpBuffer(query);
-
-	return isSupported;
-}
-
 
 /*
  *	addDistributedBy

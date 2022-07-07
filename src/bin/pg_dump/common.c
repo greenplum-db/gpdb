@@ -183,11 +183,8 @@ getSchemaData(Archive *fout, int *numTablesPtr)
 	oprinfo = getOperators(fout, &numOperators);
 	oprinfoindex = buildIndexArray(oprinfo, numOperators, sizeof(OprInfo));
 
-	if (testExtProtocolSupport(fout))
-	{
-		pg_log_info("reading user-defined external protocols");
-		getExtProtocols(fout, &numExtProtocols);
-	}
+	pg_log_info("reading user-defined external protocols");
+	getExtProtocols(fout, &numExtProtocols);
 
 	pg_log_info("reading user-defined access methods");
 	getAccessMethods(fout, &numAccessMethods);
