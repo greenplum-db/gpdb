@@ -1079,8 +1079,11 @@ _bt_delitems_vacuum(Relation rel, Buffer buf,
 	Size		updatedbuflen = 0;
 	OffsetNumber updatedoffsets[MaxIndexTuplesPerPage];
 
-	/* Shouldn't be called unless there's something to do */
-	Assert(ndeletable > 0 || nupdatable > 0);
+	/* Shouldn't be called unless there's something to do,
+	 * but we need a dummy XLOG_BTREE_VACUUM WAL record in 
+	 * btvacuumscan(), that is an exception. 
+	 */
+	Assert(ndeletable >= 0 || nupdatable > 0);
 
 	for (int i = 0; i < nupdatable; i++)
 	{
