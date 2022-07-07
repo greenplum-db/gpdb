@@ -356,8 +356,7 @@ static void expand_oid_patterns(SimpleStringList *patterns,
 						   SimpleOidList *oids);
 
 static bool is_returns_table_function(int nallargs, char **argmodes);
-static void testGPbackend(Archive *fout, DumpOptions *dopt);
-static void testPartitioningSupport(Archive *fout, DumpOptions *dopt);
+static bool testGPbackend(Archive *fout);
 
 static char *nextToken(register char **stringp, register const char *delim);
 static void addDistributedBy(Archive *fout, PQExpBuffer q, const TableInfo *tbinfo, int actual_atts);
@@ -934,11 +933,6 @@ main(int argc, char **argv)
 	 */
 	if (fout->isStandby)
 		dopt.no_unlogged_table_data = true;
-
-	/*
-	 * Remember whether or not this GP database supports partitioning.
-	 */
-	testPartitioningSupport(fout, &dopt);
 
 	/* check the version for the synchronized snapshots feature */
 	if (numWorkers > 1 && fout->remoteVersion < 90200
@@ -16931,10 +16925,12 @@ dumpTableSchema(Archive *fout, const TableInfo *tbinfo)
 			addDistributedBy(fout, q, tbinfo, actual_atts);
 
 		/*
-		 * If GP partitioning is supported add the partitioning constraints to
-		 * the table definition.
+		 * Add the partitioning constraints to the table definition. This
+		 * check used to look for existence of pg_partition table to make the
+		 * decision, instead seems better to decide based on version. GPDB6
+		 * and below have pg_get_partition_def functions.
 		 */
-		if (dopt->gp_partitioning_available)
+		if (fout->remoteVersion <= 90400)
 		{
 			bool		isPartitioned = false;
 			PQExpBuffer query = createPQExpBuffer();
@@ -17026,9 +17022,7 @@ dumpTableSchema(Archive *fout, const TableInfo *tbinfo)
 			}
 
 			destroyPQExpBuffer(query);
-		}
-
-		/* END MPP ADDITION */
+		} /* END MPP ADDITION */
 
 		/* Dump generic options if any */
 		if (ftoptions && ftoptions[0])
@@ -17200,7 +17194,8 @@ dumpTableSchema(Archive *fout, const TableInfo *tbinfo)
 									  tbinfo->attalign[j]);
 					appendStringLiteralAH(q, tbinfo->attnames[j], fout);
 
-					if (dopt->gp_partitioning_available)
+					/* GPDB partitioning */
+					if (fout->remoteVersion <= 90400)
 					{
 						/*
 						 * Do for all descendants of a partition table.
@@ -19736,25 +19731,6 @@ testGPbackend(Archive *fout, DumpOptions *dopt)
 	res = ExecuteSqlQuery(fout, query->data, PGRES_TUPLES_OK);
 
 	dopt->isGPbackend = (PQntuples(res) == 1);
-
-	PQclear(res);
-	destroyPQExpBuffer(query);
-}
-
-/*
- * testPartitioningSupport - tests whether or not the current GP
- * database includes support for partitioning.
- */
-static void
-testPartitioningSupport(Archive *fout, DumpOptions *dopt)
-{
-	PQExpBuffer query = createPQExpBuffer();
-	PGresult   *res;
-
-	appendPQExpBuffer(query, "SELECT 1 FROM pg_class WHERE relname = 'pg_partition' and relnamespace = 11;");
-	res = ExecuteSqlQuery(fout, query->data, PGRES_TUPLES_OK);
-
-	dopt->gp_partitioning_available = (PQntuples(res) == 1);
 
 	PQclear(res);
 	destroyPQExpBuffer(query);
