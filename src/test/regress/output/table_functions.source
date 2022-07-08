@@ -2441,7 +2441,6 @@ END;
 $$ language plpgsql NO SQL;
 ERROR:  PL/pgSQL functions cannot accept type anytable
 CREATE FUNCTION tf_python(anytable) returns int AS $$ return 1 $$ language plpython3u NO SQL;
-ERROR:  PL/Python functions cannot accept type anytable
 -- ====================================
 -- Test support of dynamic return types (aka the DESCRIBE callback)
 -- ====================================
@@ -3262,7 +3261,7 @@ DEALLOCATE p6;
 -- Cleanup
 -- =======
 DROP SCHEMA table_function CASCADE;
-NOTICE:  drop cascades to 37 other objects
+NOTICE:  drop cascades to 38 other objects
 DETAIL:  drop cascades to table example
 drop cascades to table history
 drop cascades to table example_r
@@ -3291,6 +3290,7 @@ drop cascades to function multiset_4(anytable)
 drop cascades to function multiset_5(anytable)
 drop cascades to function multiset_6(anytable)
 drop cascades to function multi_args(anytable,integer)
+drop cascades to function tf_python(anytable)
 drop cascades to function sessionize_describe(internal)
 drop cascades to function sessionize_plain(anytable,interval)
 drop cascades to function sessionize_static(anytable,interval)
