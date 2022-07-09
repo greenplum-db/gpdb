@@ -97,7 +97,7 @@ gpstop -u
    <td class="entry">Remove expansion schema (<code class="ph codeph">gpexpand -c</code>).</td> 
   </tr> 
   <tr class="row"> 
-   <td class="entry"> <img class="image" id="topic4__image_sk2_51m_2r" src="../graphics/green-checkbox.jpg../graphics/green-checkbox.jpg" width="29" height="28" /> </td> 
+   <td class="entry"> <img class="image" id="topic4__image_sk2_51m_2r" src="../graphics/green-checkbox.jpg" width="29" height="28" /> </td> 
    <td class="entry"><strong class="ph b">Important:</strong> Run <code class="ph codeph">analyze</code> to update distribution statistics.<p class="p">During the expansion, use <code class="ph codeph">gpexpand -a</code>, and post-expansion, use <code class="ph codeph">analyze</code>.</p></td> 
   </tr> 
   <tr class="row"> 
