@@ -570,6 +570,7 @@ ac_hostname=`(hostname || uname -n) 2>/dev/null | sed 1q`
 #
 # Initializations.
 #
+ac_default_prefix=/usr/local
 ac_clean_files=
 ac_config_libobj_dir=.
 LIBOBJS=
@@ -1592,10 +1593,10 @@ Optional Packages:
   --with-libs=DIRS        alternative spelling of --with-libraries
   --with-pgport=PORTNUM   set default port number [5432]
   --with-blocksize=BLOCKSIZE
-                          set table block size in kB [8]
+                          set table block size in kB [32]
   --with-segsize=SEGSIZE  set table segment size in GB [1]
   --with-wal-blocksize=BLOCKSIZE
-                          set WAL block size in kB [8]
+                          set WAL block size in kB [32]
   --with-CC=CMD           set compiler (deprecated)
   --with-llvm             build with LLVM based JIT support
   --with-icu              build with ICU support
