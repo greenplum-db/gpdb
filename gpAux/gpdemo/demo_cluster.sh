@@ -131,19 +131,23 @@ cleanDemo(){
     ##
 
     if [ "${GPDEMO_DESTRUCTIVE_CLEAN}" != "false" ]; then
-        if [ -f hostfile ];  then
+        if [ -f hostfile ]; then
             echo "Deleting hostfile"
             rm -f hostfile
         fi
-        if [ -f clusterConfigFile ];  then
+        if [ -f clusterConfigFile ]; then
             echo "Deleting clusterConfigFile"
             rm -f clusterConfigFile
         fi
-        if [ -d ${DATADIRS} ];  then
+        if [ -f clusterConfigPostgresAddonsFile ]; then
+            echo "Deleting clusterConfigPostgresAddonsFile"
+            rm -f clusterConfigPostgresAddonsFile
+        fi
+        if [ -d ${DATADIRS} ]; then
             echo "Deleting ${DATADIRS}"
             rm -rf ${DATADIRS}
         fi
-        if [ -d logs ];  then
+        if [ -d logs ]; then
             rm -rf logs
         fi
         rm -f optimizer-state.log gpdemo-env.sh
