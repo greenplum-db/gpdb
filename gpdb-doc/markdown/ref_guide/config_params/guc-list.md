@@ -2761,7 +2761,7 @@ When this parameter is enabled, these changes occur:
 
 **To enable `pgcrypto.fips`**
 
-1.  Enable the `pgcrypto` functions as an extension if it is not enabled. See [pgcrypto Cryptographic Functions](../../install_guide/install_pgcrypto.html).This example `psql` command creates the `pgcrypto` extension in the database `testdb`.
+1.  Enable the `pgcrypto` functions as an extension if it is not enabled. See [pgcrypto Cryptographic Functions](/vmware/install_guide/install_pgcrypto.html).This example `psql` command creates the `pgcrypto` extension in the database `testdb`.
 
     ```
     psql -d testdb -c 'CREATE EXTENSION pgcrypto'
@@ -2802,7 +2802,7 @@ When this parameter is enabled, these changes occur:
 
 **To disable `pgcrypto.fips`**
 
-1.  If the database does not use `pgcrypto` functions, disable the `pgcrypto` extension. See [pgcrypto Cryptographic Functions](../../install_guide/install_pgcrypto.html).This example `psql` command drops the `pgcrypto` extension in the database `testdb`.
+1.  If the database does not use `pgcrypto` functions, disable the `pgcrypto` extension. See [pgcrypto Cryptographic Functions](/vmware/install_guide/install_pgcrypto.html).This example `psql` command drops the `pgcrypto` extension in the database `testdb`.
 
     ```
     psql -d testdb -c 'DROP EXTENSION pgcrypto'

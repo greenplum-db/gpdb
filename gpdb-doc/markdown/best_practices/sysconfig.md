@@ -102,7 +102,7 @@ See also [Memory and Resource Management with Resource Queues](workloads.html).
 
 ## Shared Memory Settings 
 
-Greenplum Database uses shared memory to communicate between `postgres` processes that are part of the same `postgres` instance. The following shared memory settings should be set in `sysctl` and are rarely modified. See the [`sysctl.conf`](../install_guide/prep_os_install_gpdb.html) file parameters in the *Greenplum Database Installation Guide* for further details.
+Greenplum Database uses shared memory to communicate between `postgres` processes that are part of the same `postgres` instance. The following shared memory settings should be set in `sysctl` and are rarely modified. See the [`sysctl.conf`](/vmware/install_guide/prep_os_install_gpdb.html) file parameters in the *Greenplum Database Installation Guide* for further details.
 
 ```
 kernel.shmmax = 810810728448
@@ -110,7 +110,7 @@ kernel.shmmni = 4096
 kernel.shmall = 197951838
 ```
 
-See [Setting the Greenplum Recommended OS Parameters](../install_guide/prep_os_install_gpdb.html) for more details.
+See [Setting the Greenplum Recommended OS Parameters](/vmware/install_guide/prep_os_install_gpdb.html) for more details.
 
 ## Number of Segments per Host 
 

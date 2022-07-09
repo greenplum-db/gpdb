@@ -339,7 +339,7 @@ $ gpssh -s -h sdw1
 $
 ```
 
-Greenplum Database provides a collection of data science-related Python libraries that can be used with the Greenplum Database PL/Python language. You can download these libraries in `.gppkg` format from [VMware Tanzu Network](https://network.pivotal.io/products/pivotal-gpdb). For information about the libraries, see [Python Data Science Module Package](../../install_guide/install_python_dsmod.html).
+Greenplum Database provides a collection of data science-related Python libraries that can be used with the Greenplum Database PL/Python language. You can download these libraries in `.gppkg` format from [VMware Tanzu Network](https://network.pivotal.io/products/pivotal-gpdb). For information about the libraries, see [Python Data Science Module Package](/vmware/install_guide/install_python_dsmod.html).
 
 These sections describe installing and testing Python modules:
 
