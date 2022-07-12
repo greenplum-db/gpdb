@@ -67,7 +67,7 @@ You can create and use the Greenplum Database *session\_level\_memory\_consumpti
 
 You can enable a dedicated database, `gpperfmon`, in which data collection agents running on each segment host save query and system utilization metrics. Refer to the `gperfmon_install` management utility reference in the *Greenplum Database Management Utility Reference Guide* for help creating the `gpperfmon` database and managing the agents. See documentation for the tables and views in the `gpperfmon` database in the *Greenplum Database Reference Guide*.
 
-The optional Greenplum Command Center web-based user interface graphically displays query and system utilization metrics saved in the `gpperfmon` database. See the [Greenplum Command Center Documentation](https://gpcc.docs.pivotal.io) web site for procedures to enable Greenplum Command Center.
+The optional Greenplum Command Center web-based user interface graphically displays query and system utilization metrics saved in the `gpperfmon` database. See the [Greenplum Command Center Documentation](https://docs.vmware.com/en/VMware-Tanzu-Greenplum-Command-Center/index.html) web site for procedures to enable Greenplum Command Center.
 
 ## Troubleshooting Problem Queries 
 

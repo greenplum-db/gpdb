@@ -64,7 +64,7 @@ When run without the `--enable` option, the utility just creates the `gpperfmon`
     -   `gp_external_enable_exec=on` \(in the master `postgresql.conf` file\)
     Data collection agents can be configured by setting parameters in the `gpperfmon.conf` configuration file. See [Data Collection Agent Configuration](#section_p51_bxc_wz) for details.
 
-    For information about Greenplum Command Center, see the [Greenplum Command Center Documentation](https://gpcc.docs.pivotal.io).
+    For information about Greenplum Command Center, see the [Greenplum Command Center Documentation](https://docs.vmware.com/en/VMware-Tanzu-Greenplum-Command-Center/index.html).
 
 
 ## Options 

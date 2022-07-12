@@ -75,7 +75,7 @@ Normal
 gpmon-only
 :   The Command Center uses the `gpmon` database role for all Greenplum Database connections. No client principals are needed in the Command Center’s keytab file.
 
-See the [Greenplum Command Center documentation](http://gptext.docs.pivotal.io) for instructions to enable Kerberos authentication with Greenplum Command Center
+See the [Greenplum Command Center documentation](https://docs.vmware.com/en/VMware-Tanzu-Greenplum-Text/3.9/tanzu-greenplum-text/GUID-welcome.html) for instructions to enable Kerberos authentication with Greenplum Command Center
 
 **Parent topic:** [Greenplum Database Security Configuration Guide](../topics/preface.html)
 

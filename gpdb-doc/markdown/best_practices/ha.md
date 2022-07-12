@@ -99,13 +99,13 @@ Finally, through native API integration, Greenplum Database can stream backups d
 
 -   Back up Greenplum databases regularly unless the data is easily restored from sources.
 
--   Use the `gpbackup` command to specify only the schema and tables that you want backed up. See the [gpbackup](https://gpdb.docs.pivotal.io/latest/utility_guide/ref/gpbackup.html) reference for more information.
+-   Use the `gpbackup` command to specify only the schema and tables that you want backed up. See the [gpbackup](/oss/utility_guide/ref/gpbackup.html) reference for more information.
 
 -   `gpbackup` places `SHARED ACCESS` locks on the set of tables to back up. Backups with fewer tables are more efficient for selectively restoring schemas and tables, since `gprestore` does not have to search through the entire database.
 
 -   Use incremental backups when heap tables are relatively small and few append-optimized or column-oriented partitions are modified between backups.
 -   If backups are saved to local cluster storage, move the files to a safe, off-cluster location when the backup is complete. Backup files and database files that reside on the same storage can be lost simultaneously.
--   If your operating system supports direct I/O, set the `gp_backup_directIO` configuration parameter to reduce CPU usage during backups. See [Using Direct I/O](http://gpdb.docs.pivotal.io/latest/admin_guide/managing/backup-direct-io.html) for more information.
+-   If your operating system supports direct I/O, set the `gp_backup_directIO` configuration parameter to reduce CPU usage during backups. See [Using Direct I/O](/oss/admin_guide/managing/backup-direct-io.html) for more information.
 
 -   If backups are saved to NFS mounts, use a scale-out NFS solution such as Dell EMC Isilon to prevent IO bottlenecks.
 
