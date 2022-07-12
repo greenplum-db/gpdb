@@ -2718,7 +2718,7 @@ CollapseSelectAndReplaceColref(CMemoryPool *mp, CExpression *pexpr,
 	//    +--CLogicalProject (col1...n, expr as x)
 	//       +-- CLogicalNAryJoin
 	// Output:
-	// +--CLogicalSelect (x = 'meh')
+	// +--CLogicalSelect (expr = 'meh')
 	//    +-- CLogicalNAryJoin
 	if (pexpr->Pop()->Eopid() == COperator::EopLogicalSelect &&
 		(*pexpr)[0]->Pop()->Eopid() == COperator::EopLogicalProject &&
@@ -2835,6 +2835,35 @@ CExpressionPreprocessor::PexprTransposeSelectAndProject(CMemoryPool *mp,
 		CExpressionArray *pdrgpexpr = GPOS_NEW(mp) CExpressionArray(mp);
 		for (ULONG ul = 0; ul < (*pproject)[1]->Arity(); ul++)
 		{
+			CExpression *pprojexpr =
+				CUtils::PNthProjectElementExpr(pproject, ul);
+
+			CExpressionHandle exprhdl(mp);
+			exprhdl.Attach(pprojexpr);
+			exprhdl.DeriveProps(nullptr /*pdpctxt*/);
+
+			if (exprhdl.DeriveHasNonScalarFunction(1))
+			{
+				// Bail if project expression contains a set-returning function
+				pdrgpexpr->Release();
+				pexpr->AddRef();
+				return pexpr;
+			}
+
+			if (exprhdl.FChildrenHaveVolatileFunc())
+			{
+				// Bail if project expression contains a volatile function
+				pdrgpexpr->Release();
+				pexpr->AddRef();
+				return pexpr;
+			}
+
+			// TODO: In order to support mixed pushable and non-pushable
+			//       predicates we need to be able to deconstruct a select
+			//       conjunction constraint into pushable and non-pushable
+			//       parts.
+			//
+			//       NB: JoinOnViewWithMixOfPushableAndNonpushablePredicates.mdp
 			pselectNew = CollapseSelectAndReplaceColref(
 				mp, pselectNew, CUtils::PNthProjectElement(pproject, ul)->Pcr(),
 				CUtils::PNthProjectElementExpr(pproject, ul));
