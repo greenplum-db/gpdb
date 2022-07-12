@@ -61,8 +61,6 @@ static void executeCommand(PGconn *conn, const char *query);
 static void expand_dbname_patterns(PGconn *conn, SimpleStringList *patterns,
 								   SimpleStringList *names);
 
-static void error_unsupported_server_version(PGconn *conn) pg_attribute_noreturn();
-
 static char pg_dump_bin[MAXPGPATH];
 static const char *progname;
 static PQExpBuffer pgdumpopts;
@@ -950,22 +948,15 @@ dumpResQueues(PGconn *conn)
 					  "3 as ord FROM pg_resqueue "
 					  "UNION "
 					  "SELECT oid, rsqname, 'ignorecostlimit' as resname, "
-					  "%s as ressetting, "
+					  "rsqignorecostlimit::text as ressetting, "
 					  "4 as ord FROM pg_resqueue "
-					  "%s"
-					  "order by rsqname,  ord",
-					  (server_version >= 80205 ?
-					   "rsqignorecostlimit::text"
-					   : "0 AS"),
-					  (server_version >= 80214 ?
-					   "UNION "
-					   "SELECT rq.oid, rq.rsqname, rt.resname, rc.ressetting, "
-					   "rt.restypid as ord FROM "
-					   "pg_resqueue rq,  pg_resourcetype rt, "
-					   "pg_resqueuecapability rc WHERE "
-					   "rq.oid=rc.resqueueid and rc.restypid = rt.restypid "
-					   : "")
-		);
+					  "UNION "
+						  "SELECT rq.oid, rq.rsqname, rt.resname, rc.ressetting, "
+						  "rt.restypid as ord FROM "
+						  "pg_resqueue rq,  pg_resourcetype rt, "
+						  "pg_resqueuecapability rc WHERE "
+						  "rq.oid=rc.resqueueid and rc.restypid = rt.restypid "
+						  "order by rsqname,  ord");
 
 	res = executeQuery(conn, buf->data);
 
@@ -1238,7 +1229,7 @@ dumpRoles(PGconn *conn)
 						  " %s %s %s %s"
 						  "FROM %s "
 						  "ORDER BY 2", role_catalog, resq_col, resgroup_col, extauth_col, hdfs_col, role_catalog);
-	else if (server_version >= 80200)
+	else
 		printfPQExpBuffer(buf,
 						  "SELECT oid, rolname, rolsuper, rolinherit, "
 						  "rolcreaterole, rolcreatedb, rolcatupdate, "
@@ -1250,51 +1241,6 @@ dumpRoles(PGconn *conn)
 						  " %s %s %s %s"
 						  "FROM %s "
 						  "ORDER BY 2", role_catalog, resq_col, resgroup_col, extauth_col, hdfs_col, role_catalog);
-	else if (server_version >= 80100)
-		printfPQExpBuffer(buf,
-						  "SELECT oid, rolname, rolsuper, rolinherit, "
-						  "rolcreaterole, rolcreatedb, "
-						  "rolcanlogin, rolconnlimit, rolpassword, "
-						  "rolvaliduntil, false as rolreplication, "
-						  "false as rolbypassrls, "
-						  "null as rolcomment, "
-						  "rolname = current_user AS is_current_user "
-						  "FROM %s "
-						  "ORDER BY 2", role_catalog);
-	else
-		printfPQExpBuffer(buf,
-						  "SELECT 0 as oid, usename as rolname, "
-						  "usesuper as rolsuper, "
-						  "true as rolinherit, "
-						  "usesuper as rolcreaterole, "
-						  "usecreatedb as rolcreatedb, "
-						  "true as rolcanlogin, "
-						  "-1 as rolconnlimit, "
-						  "passwd as rolpassword, "
-						  "valuntil as rolvaliduntil, "
-						  "false as rolreplication, "
-						  "false as rolbypassrls, "
-						  "null as rolcomment, "
-						  "usename = current_user AS is_current_user "
-						  "FROM pg_shadow "
-						  "UNION ALL "
-						  "SELECT 0 as oid, groname as rolname, "
-						  "false as rolsuper, "
-						  "true as rolinherit, "
-						  "false as rolcreaterole, "
-						  "false as rolcreatedb, "
-						  "false as rolcanlogin, "
-						  "-1 as rolconnlimit, "
-						  "null::text as rolpassword, "
-						  "null::timestamptz as rolvaliduntil, "
-						  "false as rolreplication, "
-						  "false as rolbypassrls, "
-						  "null as rolcomment, "
-						  "false AS is_current_user "
-						  "FROM pg_group "
-						  "WHERE NOT EXISTS (SELECT 1 FROM pg_shadow "
-						  " WHERE usename = groname) "
-						  "ORDER BY 2");
 
 	res = executeQuery(conn, buf->data);
 
@@ -1660,11 +1606,6 @@ dumpTablespaces(PGconn *conn)
 	 * Note that we do not support initial privileges (pg_init_privs) on
 	 * tablespaces, so this logic cannot make use of buildACLQueries().
 	 */
-	if (server_version < 80214)
-	{
-		/* Filespaces were introduced in GP 4.0 (server_version 8.2.14) */
-		return;
-	}
 
 	if (server_version >= 90600)
 		res = executeQuery(conn, "SELECT oid, spcname, "
@@ -1714,7 +1655,7 @@ dumpTablespaces(PGconn *conn)
 						   "FROM pg_catalog.pg_tablespace "
 						   "WHERE spcname !~ '^pg_' "
 						   "ORDER BY 1");
-	else if (server_version >= 80200)
+	else
 		res = executeQuery(conn, "SELECT oid, spcname, "
 						   "pg_catalog.pg_get_userbyid(spcowner) AS spcowner, "
 						   "spclocation, spcacl, '' as rspcacl, null, "
@@ -1722,17 +1663,6 @@ dumpTablespaces(PGconn *conn)
 						   "FROM pg_catalog.pg_tablespace "
 						   "WHERE spcname !~ '^pg_' "
 						   "ORDER BY 1");
-	else
-	{
-		error_unsupported_server_version(conn);
-		res = executeQuery(conn, "SELECT oid, spcname, "
-						   "pg_catalog.pg_get_userbyid(spcowner) AS spcowner, "
-						   "spclocation, spcacl, '' as rspcacl, "
-						   "null, null "
-						   "FROM pg_catalog.pg_tablespace "
-						   "WHERE spcname !~ '^pg_' "
-						   "ORDER BY 1");
-	}
 
 	if (PQntuples(res) > 0)
 		fprintf(OPF, "--\n-- Tablespaces\n--\n\n");
@@ -2310,11 +2240,11 @@ connectDatabase(const char *dbname, const char *connection_string,
 	my_version = PG_VERSION_NUM;
 
 	/*
-	 * We allow the server to be back to 8.0, and up to any minor release of
+	 * We allow the server to be back to 8.3, and up to any minor release of
 	 * our own major version.  (See also version check in pg_dump.c.)
 	 */
 	if (my_version != server_version
-		&& (server_version < 80200 ||		/* we can handle back to 8.2 */
+		&& (server_version < 80300 ||		/* we can handle back to 8.3 */
 			(server_version / 100) > (my_version / 100)))
 	{
 		pg_log_error("server version: %s; %s version: %s",
@@ -2424,28 +2354,4 @@ dumpTimestamp(const char *msg)
 
 	if (strftime(buf, sizeof(buf), PGDUMP_STRFTIME_FMT, localtime(&now)) != 0)
 		fprintf(OPF, "-- %s %s\n\n", msg, buf);
-}
-
-/*
- * This GPDB-specific function is copied (in spirit) from pg_dump.c.
- *
- * PostgreSQL's pg_dumpall supports very old server versions, but in GPDB, we
- * only need to go back to 8.2-derived GPDB versions (4.something?). A lot of
- * that code to deal with old versions has been removed. But in order to not
- * change the formatting of the surrounding code, and to make it more clear
- * when reading a diff against the corresponding PostgreSQL version of
- * pg_dumpall, calls to this function has been left in place of the removed
- * code.
- *
- * This function should never actually be used, because check that the server
- * version is new enough at the beginning of pg_dumpall. This is just for
- * documentation purposes, to show were upstream code has been removed, and
- * to avoid those diffs or merge conflicts with upstream.
- */
-static void
-error_unsupported_server_version(PGconn *conn)
-{
-	fprintf(stderr, _("unexpected server version %d\n"), server_version);
-	PQfinish(conn);
-	exit(1);
 }
