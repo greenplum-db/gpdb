@@ -25,7 +25,7 @@ For information about GDAL, see [http://www.gdal.org](http://www.gdal.org).
 
 ### Greenplum PostGIS Extension 
 
-The Greenplum Database PostGIS extension package is available from [VMware Tanzu Network](https://network.pivotal.io/products/pivotal-gpdb). After you download the package, you can follow the instructions in [Verifying the Greenplum Database Software Download](../../install_guide/verify_sw.html) to verify the integrity of the **Greenplum Advanced Analytics PostGIS** software. You can install the package using the Greenplum Package Manager \(`gppkg`\). For details, see `gppkg` in the *Greenplum Database Utility Guide*.
+The Greenplum Database PostGIS extension package is available from [VMware Tanzu Network](https://network.pivotal.io/products/pivotal-gpdb). After you download the package, you can follow the instructions in [Verifying the Greenplum Database Software Download](/vmware/install_guide/verify_sw.html) to verify the integrity of the **Greenplum Advanced Analytics PostGIS** software. You can install the package using the Greenplum Package Manager \(`gppkg`\). For details, see `gppkg` in the *Greenplum Database Utility Guide*.
 
 Greenplum Database supports the PostGIS extension with these component versions.
 

@@ -116,7 +116,7 @@ To install and use PL/Java:
 Before you install the PL/Java extension, make sure that your Greenplum database is running, you have sourced `greenplum_path.sh`, and that the `$MASTER_DATA_DIRECTORY` and `$GPHOME` variables are set.
 
 1.  Download the PL/Java extension package from the Greenplum Database page on [VMware Tanzu Network](https://network.pivotal.io/products/pivotal-gpdb) then copy it to the master host.
-2.  Follow the instructions in [Verifying the Greenplum Database Software Download](../../install_guide/verify_sw.html) to verify the integrity of the **Greenplum Procedural Languages PL/Java** software.
+2.  Follow the instructions in [Verifying the Greenplum Database Software Download](/vmware/install_guide/verify_sw.html) to verify the integrity of the **Greenplum Procedural Languages PL/Java** software.
 3.  Install the software extension package by running the `gppkg` command. This example installs the PL/Java extension package on a Linux system:
 
     ```

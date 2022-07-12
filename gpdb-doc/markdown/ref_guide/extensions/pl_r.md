@@ -32,7 +32,7 @@ For information about `gppkg`, see the *Greenplum Database Utility Guide*.
 Before you install the PL/R extension, make sure that your Greenplum Database is running, you have sourced `greenplum_path.sh`, and that the `$MASTER_DATA_DIRECTORY` and `$GPHOME` variables are set.
 
 1.  Download the PL/R extension package from [VMware Tanzu Network](https://network.pivotal.io/products/pivotal-gpdb).
-2.  Follow the instructions in [Verifying the Greenplum Database Software Download](../../install_guide/verify_sw.html) to verify the integrity of the **Greenplum Procedural Languages PL/R** software.
+2.  Follow the instructions in [Verifying the Greenplum Database Software Download](/vmware/install_guide/verify_sw.html) to verify the integrity of the **Greenplum Procedural Languages PL/R** software.
 3.  Copy the PL/R package to the Greenplum Database master host.
 4.  Install the software extension package by running the `gppkg` command. This example installs the PL/R extension on a Linux system:
 
@@ -199,7 +199,7 @@ CREATE TABLE wj_model_results_roi AS SELECT *
 
 R packages are modules that contain R functions and data sets. You can install R packages to extend R and PL/R functionality in Greenplum Database.
 
-Greenplum Database provides a collection of data science-related R libraries that can be used with the Greenplum Database PL/R language. You can download these libraries in `.gppkg` format from [VMware Tanzu Network](https://network.pivotal.io/products/pivotal-gpdb). For information about the libraries, see [R Data Science Library Package](../../install_guide/install_r_dslib.html).
+Greenplum Database provides a collection of data science-related R libraries that can be used with the Greenplum Database PL/R language. You can download these libraries in `.gppkg` format from [VMware Tanzu Network](https://network.pivotal.io/products/pivotal-gpdb). For information about the libraries, see [R Data Science Library Package](/vmware/install_guide/install_r_dslib.html).
 
 **Note:** If you expand Greenplum Database and add segment hosts, you must install the R packages in the R installation of the new hosts.
 

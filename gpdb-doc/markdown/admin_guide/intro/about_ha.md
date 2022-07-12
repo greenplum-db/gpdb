@@ -10,7 +10,7 @@ Kubernetes enables quick recovery from both pod and host failures, and Kubernete
 
 ## About Segment Mirroring 
 
-When you deploy your Greenplum Database system, you can configure *mirror* segments. Mirror segments allow database queries to fail over to a backup segment if the primary segment becomes unavailable. Mirroring is strongly recommended for production systemsand required for Pivotal support.
+When you deploy your Greenplum Database system, you can configure *mirror* segments. Mirror segments allow database queries to fail over to a backup segment if the primary segment becomes unavailable. Mirroring is strongly recommended for production systemsand required for VMware support.
 
 The secondary \(mirror\) segment must always reside on a different host than its primary segment to protect against a single host failure. In virtualized environments, the secondary \(mirror\) must always reside on a different storage system than the master. Mirror segments can be arranged over the remaining hosts in the cluster in configurations designed to maximize availability, or minimize the performance degradation when hosts or multiple primary segments fail.
 

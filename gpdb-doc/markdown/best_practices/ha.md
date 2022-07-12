@@ -6,7 +6,7 @@ Greenplum Database supports highly available, fault-tolerant database services w
 
 ## Disk Storage 
 
-With the Greenplum Database "shared-nothing" MPP architecture, the master host and segment hosts each have their own dedicated memory and disk storage, and each master or segment instance has its own independent data directory. For both reliability and high performance, Pivotal recommends a hardware RAID storage solution with from 8 to 24 disks. A larger number of disks improves I/O throughput when using RAID 5 \(or 6\) because striping increases parallel disk I/O. The RAID controller can continue to function with a failed disk because it saves parity data on each disk in a way that it can reconstruct the data on any failed member of the array. If a hot spare is configured \(or an operator replaces the failed disk with a new one\) the controller rebuilds the failed disk automatically.
+With the Greenplum Database "shared-nothing" MPP architecture, the master host and segment hosts each have their own dedicated memory and disk storage, and each master or segment instance has its own independent data directory. For both reliability and high performance, VMware recommends a hardware RAID storage solution with from 8 to 24 disks. A larger number of disks improves I/O throughput when using RAID 5 \(or 6\) because striping increases parallel disk I/O. The RAID controller can continue to function with a failed disk because it saves parity data on each disk in a way that it can reconstruct the data on any failed member of the array. If a hot spare is configured \(or an operator replaces the failed disk with a new one\) the controller rebuilds the failed disk automatically.
 
 RAID 1 exactly mirrors disks, so if a disk fails, a replacement is immediately available with performance equivalent to that before the failure. With RAID 5 each I/O for data on the failed array member must be reconstructed from data on the remaining active drives until the replacement disk is rebuilt, so there is a temporary performance degradation. If the Greenplum master and segments are mirrored, you can switch any affected Greenplum instances to their mirrors during the rebuild to maintain acceptable performance.
 
@@ -109,7 +109,7 @@ Finally, through native API integration, Greenplum Database can stream backups d
 
 -   If backups are saved to NFS mounts, use a scale-out NFS solution such as Dell EMC Isilon to prevent IO bottlenecks.
 
--   Consider using Pivotal Greenplum Database integration to stream backups to the Dell EMC Data Domain or Veritas NetBackup enterprise backup platforms.
+-   Consider using Tanzu Greenplum integration to stream backups to the Dell EMC Data Domain or Veritas NetBackup enterprise backup platforms.
 
 ## Detecting Failed Master and Segment Instances 
 
@@ -117,7 +117,7 @@ Recovering from system failures requires intervention from a system administrato
 
 The Greenplum Database server `ftsprobe` subprocess handles fault detection. `ftsprobe` connects to and scans all segments and database processes at intervals that you can configure with the `gp_fts_probe_interval` configuration parameter. If `ftsprobe` cannot connect to a segment, it marks the segment “down” in the Greenplum Database system catalog. The segment remains down until an administrator runs the `gprecoverseg` recovery utility.
 
-You can configure a Greenplum Database system to trigger SNMP \(Simple Network Management Protocol\) alerts or send email notifications to system administrators if certain database events occur. See "Using SNMP with a Greenplum Database System" in the *Pivotal Greenplum Database Administrator Guide* for instructions to set up SNMP.
+You can configure a Greenplum Database system to trigger SNMP \(Simple Network Management Protocol\) alerts or send email notifications to system administrators if certain database events occur. See "Using SNMP with a Greenplum Database System" in the *Tanzu Greenplum Administrator Guide* for instructions to set up SNMP.
 
 ### Best Practices 
 
@@ -142,7 +142,7 @@ You can configure a Greenplum Database system to trigger SNMP \(Simple Network M
 
 ## Segment Mirroring Configurations 
 
-Segment mirroring allows database queries to fail over to a backup segment if the primary segment fails or becomes unavailable. Pivotal requires mirroring for supported production Greenplum Database systems.
+Segment mirroring allows database queries to fail over to a backup segment if the primary segment fails or becomes unavailable. VMware requires mirroring for supported production Greenplum Database systems.
 
 A primary segment and its mirror must be on different hosts to ensure high availability. Each host in a Greenplum Database system has the same number of primary segments and mirror segments. Multi-homed hosts should have the same numbers of primary and mirror segments on each interface. This ensures that segment hosts and network resources are equally loaded when all primary segments are operational and brings the most resources to bear on query processing.
 

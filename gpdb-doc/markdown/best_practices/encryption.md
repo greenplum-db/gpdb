@@ -77,7 +77,7 @@ Pgcrypto has various levels of encryption ranging from basic to advanced built-i
 
 To use PGP asymmetric encryption in Greenplum Database, you must first create public and private keys and install them.
 
-This section assumes you are installing Greenplum Database on a Linux machine with the Gnu Privacy Guard \(`gpg`\) command line tool. Pivotal recommends using the latest version of GPG to create keys. Download and install Gnu Privacy Guard \(GPG\) for your operating system from [https://www.gnupg.org/download/](https://www.gnupg.org/download/). On the GnuPG website you will find installers for popular Linux distributions and links for Windows and Mac OS X installers.
+This section assumes you are installing Greenplum Database on a Linux machine with the Gnu Privacy Guard \(`gpg`\) command line tool. VMware recommends using the latest version of GPG to create keys. Download and install Gnu Privacy Guard \(GPG\) for your operating system from [https://www.gnupg.org/download/](https://www.gnupg.org/download/). On the GnuPG website you will find installers for popular Linux distributions and links for Windows and Mac OS X installers.
 
 1.  As root, execute the following command and choose option 1 from the menu:
 

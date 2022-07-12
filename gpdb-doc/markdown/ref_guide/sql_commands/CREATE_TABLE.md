@@ -288,9 +288,9 @@ WITH \( storage\_option=value \)
 
 :   **CHECKSUM** — This option is valid only for append-optimized tables \(`APPENDONLY=TRUE`\). The value `TRUE` is the default and enables CRC checksum validation for append-optimized tables. The checksum is calculated during block creation and is stored on disk. Checksum validation is performed during block reads. If the checksum calculated during the read does not match the stored checksum, the transaction is aborted. If you set the value to `FALSE` to disable checksum validation, checking the table data for on-disk corruption will not be performed.
 
-:   **COMPRESSTYPE** — Set to `ZLIB` \(the default\), `RLE-TYPE`, or `QUICKLZ`1 to specify the type of compression used. The value `NONE`disables compression. QuickLZ uses less CPU power and compresses data faster at a lower compression ratio than zlib. Conversely, zlib provides more compact compression ratios at lower speeds. This option is only valid if `APPENDONLY=TRUE`.
+:   **COMPRESSTYPE** — Set to `ZLIB` \(the default\), `RLE-TYPE`, or `QUICKLZ`<sup>1</sup> to specify the type of compression used. The value `NONE`disables compression. QuickLZ uses less CPU power and compresses data faster at a lower compression ratio than zlib. Conversely, zlib provides more compact compression ratios at lower speeds. This option is only valid if `APPENDONLY=TRUE`.
 
-    **Note:** 1QuickLZ compression is available only in the commercial release of Pivotal Greenplum Database.
+    **Note:** <sup>1</sup>QuickLZ compression is available only in the commercial release of Tanzu Greenplum.
 
     The value `RLE_TYPE` is supported only if `ORIENTATION` =`column` is specified, Greenplum Database uses the run-length encoding \(RLE\) compression algorithm. RLE compresses data better than the zlib or QuickLZ compression algorithm when the same data value occurs in many consecutive rows.
 

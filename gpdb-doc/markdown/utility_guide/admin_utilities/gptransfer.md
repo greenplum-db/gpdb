@@ -130,7 +130,7 @@ When you copy data from a source Greenplum Database system with a larger number 
 
 **Validating Table Data with SHA-256**
 
-Validating table data with SHA-256 \(specifying the option `--validate=sha256`\) requires the Greenplum Database pgcrypto extension. The extension is included with Pivotal Greenplum 5.x. When copying data from a supported Pivotal Greenplum 4.3.x system, the extension package must be installed on the 4.3.x system. You do not need to run `pgcrypto.sql` to install the pgcrypto functions in a Greenplum 4.3.x database.
+Validating table data with SHA-256 \(specifying the option `--validate=sha256`\) requires the Greenplum Database pgcrypto extension. The extension is included with Tanzu Greenplum 5.x. When copying data from a supported Tanzu Greenplum 4.3.x system, the extension package must be installed on the 4.3.x system. You do not need to run `pgcrypto.sql` to install the pgcrypto functions in a Greenplum 4.3.x database.
 
 ## Options 
 

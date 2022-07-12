@@ -43,7 +43,7 @@ Before you install the MADlib package, make sure that your Greenplum atabase is 
 
 1.  Download the MADlib extension package from [VMware Tanzu Network](https://network.pivotal.io/products/pivotal-gpdb).
 2.  Copy the MADlib package to the Greenplum Database master host.
-3.  Follow the instructions in [Verifying the Greenplum Database Software Download](../../install_guide/verify_sw.html) to verify the integrity of the **Greenplum Advanced Analytics MADlib** software.
+3.  Follow the instructions in [Verifying the Greenplum Database Software Download](/vmware/install_guide/verify_sw.html) to verify the integrity of the **Greenplum Advanced Analytics MADlib** software.
 4.  Unpack the MADlib distribution package. For example:
 
     ```

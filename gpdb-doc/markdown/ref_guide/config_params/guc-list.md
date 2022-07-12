@@ -951,7 +951,7 @@ gpconfig -s 'gp_default_storage_options'
 
 **Note:** <sup>1</sup>The set classification when the parameter is set at the system level with the gpconfig utility.
 
-**Note:** <sup>2</sup>QuickLZ compression is available only in the commercial release of Pivotal Greenplum Database.
+**Note:** <sup>2</sup>QuickLZ compression is available only in the commercial release of Tanzu Greenplum.
 
 ## gp\_dynamic\_partition\_pruning 
 
@@ -2761,7 +2761,7 @@ When this parameter is enabled, these changes occur:
 
 **To enable `pgcrypto.fips`**
 
-1.  Enable the `pgcrypto` functions as an extension if it is not enabled. See [pgcrypto Cryptographic Functions](../../install_guide/install_pgcrypto.html).This example `psql` command creates the `pgcrypto` extension in the database `testdb`.
+1.  Enable the `pgcrypto` functions as an extension if it is not enabled. See [pgcrypto Cryptographic Functions](/vmware/install_guide/install_pgcrypto.html).This example `psql` command creates the `pgcrypto` extension in the database `testdb`.
 
     ```
     psql -d testdb -c 'CREATE EXTENSION pgcrypto'
@@ -2802,7 +2802,7 @@ When this parameter is enabled, these changes occur:
 
 **To disable `pgcrypto.fips`**
 
-1.  If the database does not use `pgcrypto` functions, disable the `pgcrypto` extension. See [pgcrypto Cryptographic Functions](../../install_guide/install_pgcrypto.html).This example `psql` command drops the `pgcrypto` extension in the database `testdb`.
+1.  If the database does not use `pgcrypto` functions, disable the `pgcrypto` extension. See [pgcrypto Cryptographic Functions](/vmware/install_guide/install_pgcrypto.html).This example `psql` command drops the `pgcrypto` extension in the database `testdb`.
 
     ```
     psql -d testdb -c 'DROP EXTENSION pgcrypto'
@@ -3359,7 +3359,7 @@ Enables a test that validates the free tuple ID \(TID\) list. The list is mainta
 
 If Greenplum Database detects a corruption in the free TID list, the free TID list is rebuilt, a warning is logged, and a warning is returned by queries for which the check failed. Greenplum Database attempts to execute the queries.
 
-**Note:** If a warning is returned, please contact Pivotal Support.
+**Note:** If a warning is returned, please contact VMware Support.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|

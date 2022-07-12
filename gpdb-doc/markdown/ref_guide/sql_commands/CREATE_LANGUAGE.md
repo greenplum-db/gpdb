@@ -23,7 +23,7 @@ Superusers can register a new language with a Greenplum database. A database own
 
 The PL/Perl, PL/Java, and PL/R libraries require the correct versions of Perl, Java, and R to be installed, respectively.
 
-On RHEL and SUSE platforms, download the appropriate extensions from [Pivotal Network](https://network.pivotal.io/products/pivotal-gpdb), then install the extensions using the Greenplum Package Manager \(`gppkg`\) utility to ensure that all dependencies are installed as well as the extensions. See the Greenplum Database Utility Guide for details about `gppkg`.
+On RHEL and SUSE platforms, download the appropriate extensions from [VMware Tanzu Network](https://network.pivotal.io/products/pivotal-gpdb), then install the extensions using the Greenplum Package Manager \(`gppkg`\) utility to ensure that all dependencies are installed as well as the extensions. See the Greenplum Database Utility Guide for details about `gppkg`.
 
 There are two forms of the `CREATE LANGUAGE` command. In the first form, the user specifies the name of the desired language and the Greenplum Database server uses the `pg_pltemplate` system catalog to determine the correct parameters. In the second form, the user specifies the language parameters as well as the language name. You can use the second form to create a language that is not defined in `pg_pltemplate`.
 

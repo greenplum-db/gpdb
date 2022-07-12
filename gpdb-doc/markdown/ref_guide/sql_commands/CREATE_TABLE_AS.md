@@ -55,9 +55,9 @@ WITH \( storage\_parameter=value \)
 
 :   ORIENTATION — Set to `column` for column-oriented storage, or `row` \(the default\) for row-oriented storage. This option is only valid if `APPENDONLY=TRUE`. Heap-storage tables can only be row-oriented.
 
-:   COMPRESSTYPE — Set to `ZLIB` \(the default\) or `QUICKLZ`1 to specify the type of compression used. QuickLZ uses less CPU power and compresses data faster at a lower compression ratio than zlib. Conversely, zlib provides more compact compression ratios at lower speeds. This option is only valid if `APPENDONLY=TRUE`.
+:   COMPRESSTYPE — Set to `ZLIB` \(the default\) or `QUICKLZ`<sup>1</sup> to specify the type of compression used. QuickLZ uses less CPU power and compresses data faster at a lower compression ratio than zlib. Conversely, zlib provides more compact compression ratios at lower speeds. This option is only valid if `APPENDONLY=TRUE`.
 
-    **Note:** 1QuickLZ compression is available only in the commercial release of Pivotal Greenplum Database.
+    **Note:**<sup>1</sup>QuickLZ compression is available only in the commercial release of Tanzu Greenplum.
 
 :   COMPRESSLEVEL — For zlib compression of append-optimized tables, set to a value between 1 \(fastest compression\) to 9 \(highest compression ratio\). QuickLZ compression level can only be set to 1. If not declared, the default is 1. This option is only valid if `APPENDONLY=TRUE`.
 

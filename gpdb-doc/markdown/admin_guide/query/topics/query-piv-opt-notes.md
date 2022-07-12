@@ -36,7 +36,7 @@ These server configuration parameters control the display and logging of informa
 
 For information about the parameters, see the *Greenplum Database Reference Guide*.
 
-GPORCA generates minidumps to describe the optimization context for a given query. The minidump files are used by Pivotal support to analyze Greenplum Database issues.The information in the file is not in a format that can be easily used for debugging or troubleshooting. The minidump file is located under the master data directory and uses the following naming format:
+GPORCA generates minidumps to describe the optimization context for a given query. The minidump files are used by VMware support to analyze Greenplum Database issues.The information in the file is not in a format that can be easily used for debugging or troubleshooting. The minidump file is located under the master data directory and uses the following naming format:
 
 `Minidump_date_time.mdp`
 

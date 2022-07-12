@@ -114,7 +114,7 @@ For information about using DD Boost and Data Domain systems with Greenplum Data
 
 **Using NetBackup**
 
-Veritas NetBackup integration is included with Pivotal Greenplum Database. Greenplum Database must be configured to communicate with the Veritas NetBackup master server that is used to backup the database.
+Veritas NetBackup integration is included with Tanzu Greenplum. Greenplum Database must be configured to communicate with the Veritas NetBackup master server that is used to backup the database.
 
 When backing up a large amount of data, set the NetBackup `CLIENT_READ_TIMEOUT` option to a value that is at least twice the expected duration of the operation \(in seconds\). The `CLIENT_READ_TIMEOUT` default value is `300` seconds \(5 minutes\).
 
@@ -138,7 +138,7 @@ You can customize the email Subject and From lines of the email notifications th
 
 **Limitations**
 
-Dell EMC DD Boost is integrated with Pivotal Greenplum Database and requires a DD Boost license. Open source Greenplum Database cannot use the DD Boost software, but can back up to a Dell EMC Data Domain system mounted as an NFS share on the Greenplum master and segment hosts.
+Dell EMC DD Boost is integrated with Tanzu Greenplum and requires a DD Boost license. Open source Greenplum Database cannot use the DD Boost software, but can back up to a Dell EMC Data Domain system mounted as an NFS share on the Greenplum master and segment hosts.
 
 NetBackup is not compatible with DD Boost. Both NetBackup and DD Boost cannot be used in a single back up operation.
 

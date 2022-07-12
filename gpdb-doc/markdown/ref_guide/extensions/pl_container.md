@@ -60,7 +60,7 @@ The following sections describe these tasks in detail.
 
 ### Prerequisites 
 
--   PL/Container is supported on PivotalGreenplum Database 5.2.x on Red Hat Enterprise Linux \(RHEL\) 7.x \(or later\) and CentOS 7.x \(or later\). PL/Container is not supported on RHEL/CentOS 6.x systems, because those platforms do not officially support Docker.
+-   PL/Container is supported on Tanzu Greenplum 5.2.x on Red Hat Enterprise Linux \(RHEL\) 7.x \(or later\) and CentOS 7.x \(or later\). PL/Container is not supported on RHEL/CentOS 6.x systems, because those platforms do not officially support Docker.
 
     **Note:** PL/Container 1.6.0 \(introduced in Greenplum 5.26\) and later versions support Docker images with Python 3 installed.
 
@@ -166,7 +166,7 @@ For a list of observations while using Docker and PL/Container, see the [Notes](
 Install the PL/Container language extension using the `gppkg` utility.
 
 1.  Download the "PL/Container for RHEL 7" package that applies to your Greenplum Database version, from the [VMware Tanzu Network](https://network.pivotal.io/products/pivotal-gpdb/). PL/Container is listed under Greenplum Procedural Languages.
-2.  Follow the instructions in [Verifying the Greenplum Database Software Download](../../install_guide/verify_sw.html) to verify the integrity of the **Greenplum Procedural Languages PL/Container** software.
+2.  Follow the instructions in [Verifying the Greenplum Database Software Download](/vmware/install_guide/verify_sw.html) to verify the integrity of the **Greenplum Procedural Languages PL/Container** software.
 3.  As `gpadmin`, copy the PL/Container language extension package to the master host.
 4.  Run the package installation command:
 
@@ -232,9 +232,9 @@ The PL/Container open source module contains dockerfiles to build Docker images 
 
     -   PL/Container for Python 2 - Docker image with Python 2.7.12 and the Python Data Science Module package installed.
     -   PL/Container for R - A Docker image with container with R-3.3.3 and the R Data Science Library package installed.
-    The Data Science packages contain a set of Python modules or R functions and data sets related to data science. For information about the packages, see [Python Data Science Module Package](../../install_guide/install_python_dsmod.html) and [R Data Science Library Package](../../install_guide/install_r_dslib.html).
+    The Data Science packages contain a set of Python modules or R functions and data sets related to data science. For information about the packages, see [Python Data Science Module Package](/vmware/install_guide/install_python_dsmod.html) and [R Data Science Library Package](/vmware/install_guide/install_r_dslib.html).
 
-    If you require different images from the ones provided by Pivotal Greenplum, you can create custom Docker images, install the image, and add the image to the PL/Container configuration.
+    If you require different images from the ones provided by Tanzu Greenplum, you can create custom Docker images, install the image, and add the image to the PL/Container configuration.
 
 -   Use the `plcontainer` utility command `image-add` to install the images on all Greenplum Database hosts where `-f` indicates the location of the downloaded files:
 
