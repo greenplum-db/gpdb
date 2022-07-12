@@ -2822,7 +2822,7 @@ _readBitmapIndexScan(void)
 static DynamicBitmapIndexScan *
 _readDynamicBitmapIndexScan(void)
 {
-	READ_LOCALS(DynamicBitmapIndexScan);
+	READ_LOCALS_NO_FIELDS(DynamicBitmapIndexScan);
 
 	/* DynamicBitmapIndexScan has some content from BitmapIndexScan. */
 	readBitmapIndexScanFields(&local_node->biscan);

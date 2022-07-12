@@ -5669,9 +5669,9 @@ CTranslatorDXLToPlStmt::TranslateDXLBitmapTblScan(
 	DynamicBitmapHeapScan *dscan;
 	BitmapHeapScan *bitmap_tbl_scan;
 
+	dscan = MakeNode(DynamicBitmapHeapScan);
 	if (is_dynamic)
 	{
-		dscan = MakeNode(DynamicBitmapHeapScan);
 		bitmap_tbl_scan = &dscan->bitmapheapscan;
 
 		CDXLPhysicalDynamicBitmapTableScan *phy_dyn_bitmap_tblscan_dxlop =
