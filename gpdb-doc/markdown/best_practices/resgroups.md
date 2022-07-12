@@ -69,7 +69,7 @@ Greenplum Database resource groups provide a powerful mechanism for managing the
 -   Greenplum Database assigns unreserved memory \(100 - \(sum of all resource group `MEMORY_LIMIT`s\) to a global shared memory pool. This memory is available to all queries on a first-come, first-served basis.
 -   Alter resource groups dynamically to match the real requirements of the group for the workload and the time of day.
 -   Use the `gptoolkit` views to examine resource group resource usage and to monitor how the groups are working.
--   Consider using Pivotal Greenplum Command Center to create and manage resource groups, and to define the criteria under which Command Center dynamically assigns a transaction to a resource group.
+-   Consider using Tanzu Greenplum Command Center to create and manage resource groups, and to define the criteria under which Command Center dynamically assigns a transaction to a resource group.
 
 ## Low Memory Queries 
 
