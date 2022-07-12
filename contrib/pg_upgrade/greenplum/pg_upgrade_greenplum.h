@@ -152,4 +152,6 @@ is_gpdb6(ClusterInfo *cluster)
 	return GET_MAJOR_VERSION(cluster->major_version) == 904;
 }
 
+extern void compute_old_cluster_chkpnt_oldstxid(void);
+
 #endif /* PG_UPGRADE_GREENPLUM_H */

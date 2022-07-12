@@ -91,6 +91,14 @@ check_and_dump_old_cluster(bool live_check, char **sequence_script_file_name)
 	/* Extract a list of databases and tables from the old cluster */
 	get_db_and_rel_infos(&old_cluster);
 
+	/*
+	 * GPDB5: The chkpnt_oldstxid field is missing from a 5X cluster's control
+	 * file. So, we have to calculate it ourselves here, before it gets used in
+	 * copy_clog_xlog_xid(), to populate the new cluster's oldest XID.
+	 */
+	if (GET_MAJOR_VERSION(old_cluster.major_version) < 901)
+		compute_old_cluster_chkpnt_oldstxid();
+
 	if (!user_opts.check || is_greenplum_dispatcher_mode())
 		init_tablespaces();
 
