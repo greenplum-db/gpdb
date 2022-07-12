@@ -2,7 +2,7 @@
 
 **Note:** The DD Boost storage plugin is available only in the commercial release of Tanzu Greenplum.
 
-Dell EMC Data Domain Boost \(DD Boost\) is Dell EMC software that can be used with the [gpbackup](../../utility_guide/admin_utilities/gpbackup.html) and [gprestore](../../utility_guide/admin_utilities/gprestore.html) utilities to perform faster backups to the Dell EMC Data Domain storage appliance. You can also replicate a backup on a separate, remote Data Domain system for disaster recovery with gpbackup or [gpbackup\_manager](../../utility_guide/admin_utilities/gpbackup_manager.html). For information about replication, see [Replicating Backups](replication-ddb.html).
+Dell EMC Data Domain Boost \(DD Boost\) is Dell EMC software that can be used with the [gpbackup](../../utility_guide/admin_utilities/gpbackup.html) and [gprestore](../../utility_guide/admin_utilities/gprestore.html) utilities to perform faster backups to the Dell EMC Data Domain storage appliance. You can also replicate a backup on a separate, remote Data Domain system for disaster recovery with gpbackup or [gpbackup\_manager](https://docs.vmware.com/en/VMware-Tanzu-Greenplum-Backup-and-Restore/1.25/tanzu-greenplum-backup-and-restore/GUID-utility_guide-ref-gpbackup_manager.html). For information about replication, see [Replicating Backups](replication-ddb.html).
 
 To use the DD Boost storage plugin application, you first create a configuration file to specify the location of the plugin, the DD Boost login, and the backup location. When you run `gpbackup` or `gprestore`, you specify the configuration file with the option `--plugin-config`. For information about the configuration file, see [DD Boost Storage Plugin Configuration File Format](#ddb-plugin-config).
 

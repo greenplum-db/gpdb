@@ -91,5 +91,5 @@ gpreload -d mytest --table-file data-tables.txt
 
 ## See Also 
 
-[CREATE TABLE](CREATE_TABLE.html)  in the *Greenplum Database Reference Guide*
+[CREATE TABLE](/oss/ref_guide/sql_commands/CREATE_TABLE.html)  in the *Greenplum Database Reference Guide*
 
