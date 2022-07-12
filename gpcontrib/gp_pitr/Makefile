@@ -1,10 +1,10 @@
 EXTENSION = gp_pitr
 MODULES = gp_pitr
 
-EXTENSION_VERSION = 1.0
+EXTENSION_VERSION = 1.1
 
 
-DATA = gp_pitr--1.0.sql
+DATA = gp_pitr--1.1.sql gp_pitr--1.0--1.1.sql
 
 OBJS = gp_pitr.o
 
