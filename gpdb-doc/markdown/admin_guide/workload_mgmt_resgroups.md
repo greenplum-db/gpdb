@@ -243,7 +243,7 @@ Workload management rules are defined in Command Center and stored in Greenplum 
 
 Workload management assignment rules assign transactions to different resource groups based on user-defined criteria. If no assignment rule is matched, Greenplum Database assigns the transaction to the role's default resource group. Workload management idle session kill rules set the maximum number of seconds that sessions managed by a resource group can remain idle before they are terminated.
 
-Refer to the [Greenplum Command Center documentation](http://gpcc.docs.pivotal.io/latest) for more information about creating and managing resource groups and workload management rules.
+Refer to the [Greenplum Command Center documentation](http://docs.vmware.com/en/VMware-Tanzu-Greenplum-Command-Center/index.html) for more information about creating and managing resource groups and workload management rules.
 
 ## Configuring and Using Resource Groups 
 

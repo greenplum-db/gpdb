@@ -143,5 +143,5 @@ $ gpfilespace -c gpfilespace_config_1
 
 ## See Also 
 
-[CREATE TABLESPACE](CREATE_TABLESPACE.html) in the *Greenplum Database Reference Guide*
+[CREATE TABLESPACE](/oss/ref_guide/sql_commands/CREATE_TABLESPACE.html) in the *Greenplum Database Reference Guide*
 

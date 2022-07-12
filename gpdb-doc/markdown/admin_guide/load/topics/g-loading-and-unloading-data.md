@@ -12,10 +12,10 @@ Greenplum Database can read from and write to several types of external data sou
 -   The `gpfdist` utility is the Greenplum Database parallel file distribution program. It is an HTTP server that is used with external tables to allow Greenplum Database segments to load external data in parallel, from multiple file systems. You can run multiple instances of `gpfdist` on different hosts and network interfaces and access them in parallel.
 -   The `gpload` utility automates the steps of a load task using `gpfdist` and a YAML-formatted control file.
 -   You can create readable and writable external tables with the Greenplum Platform Extension Framework \(PXF\), and use these tables to load data into, or offload data from, Greenplum Database. For information about using PXF, refer to [Accessing External Data with PXF](../../external/pxf-overview.html).
--   The Greenplum-Kafka Integration provides high-speed, parallel data transfer from Kafka to Greenplum Database. For information about using these tools, refer to the [Greenplum-Kafka Integration](https://greenplum.docs.pivotal.io/streaming-server/1-4/kafka/intro.html) documentation.
--   The Greenplum Streaming Server is an ETL tool and API that you can use to load data into Greenplum Database. For information about using this tool, refer to the [Greenplum Streaming Server](https://greenplum.docs.pivotal.io/streaming-server/1-4/intro.html) documentation.
--   The Greenplum-Spark Connector provides high speed, parallel data transfer between Tanzu Greenplum and Apache Spark. For information about using the Greenplum-Spark Connector, refer to the documentation at [https://greenplum-spark.docs.pivotal.io/](https://greenplum-spark.docs.pivotal.io/).
--   The Greenplum-Informatica Connector provides high speed data transfer from an Informatica PowerCenter cluster to a Tanzu Greenplum cluster for batch and streaming ETL operations. For information about using the Greenplum-Informatica Connector, refer to the documentation at [https://greenplum-informatica.docs.pivotal.io/](https://greenplum-informatica.docs.pivotal.io/).
+-   The [Greenplum-Kafka Integration](https://docs.vmware.com/en/VMware-Tanzu-Greenplum-Streaming-Server/1.7/greenplum-streaming-server/GUID-kafka-loading.html) provides high-speed, parallel data transfer from Kafka to Greenplum Database.
+-   The [Greenplum Streaming Server](https://docs.vmware.com/en/VMware-Tanzu-Greenplum-Streaming-Server/1.7/greenplum-streaming-server/GUID-intro.html) is an ETL tool and API that you can use to load data into Greenplum Database.
+-   The [Greenplum-Spark Connector](https://docs.vmware.com/en/VMware-Tanzu-Greenplum-Connector-for-Apache-Spark/2.1/tanzu-greenplum-connector-spark/GUID-index.html) provides high speed, parallel data transfer between Tanzu Greenplum and Apache Spark.
+-   The [Greenplum-Informatica Connector](https://docs.vmware.com/en/VMware-Tanzu-Greenplum-Connector-for-Informatica/1.0/tanzu-greenplum-connector-informatica/GUID-index.html) provides high speed data transfer from an Informatica PowerCenter cluster to a Tanzu Greenplum cluster for batch and streaming ETL operations.
 
 The method you choose to load data depends on the characteristics of the source data—its location, size, format, and any transformations required.
 
@@ -35,13 +35,13 @@ Greenplum Database leverages the parallel architecture of the Hadoop Distributed
 
 -   **[Accessing External Data with PXF](../../external/pxf-overview.html)**  
 Data managed by your organization may already reside in external sources such as Hadoop, object stores, and other SQL databases. The Greenplum Platform Extension Framework \(PXF\) provides access to this external data via built-in connectors that map an external data source to a Greenplum Database table definition.
--   **[Loading Kafka Data with the Greenplum-Kafka Integration](https://greenplum.docs.pivotal.io/streaming-server/1-4/kafka/intro.html)**  
+-   **[Loading Kafka Data with the Greenplum-Kafka Integration](https://docs.vmware.com/en/VMware-Tanzu-Greenplum-Streaming-Server/1.7/greenplum-streaming-server/GUID-kafka-loading.html)**  
 
--   **[Loading Data with the Greenplum Streaming Server](https://greenplum.docs.pivotal.io/streaming-server/1-4/intro.html)**  
+-   **[Loading Data with the Greenplum Streaming Server](https://docs.vmware.com/en/VMware-Tanzu-Greenplum-Streaming-Server/1.7/greenplum-streaming-server/GUID-loading-gpss.html)**  
 
--   **[Using the Greenplum-Spark Connector](https://greenplum-spark.docs.pivotal.io)**  
+-   **[Using the Greenplum-Spark Connector](https://docs.vmware.com/en/VMware-Tanzu-Greenplum-Connector-for-Apache-Spark/2.1/tanzu-greenplum-connector-spark/GUID-index.html)**  
 
--   **[Using the Greenplum-Informatica Connector](https://greenplum-informatica.docs.pivotal.io)**  
+-   **[Using the Greenplum-Informatica Connector](https://docs.vmware.com/en/VMware-Tanzu-Greenplum-Connector-for-Informatica/1.0/tanzu-greenplum-connector-informatica/GUID-index.html)**  
 
 -   **[Transforming External Data with gpfdist and gpload](../../load/topics/transforming-xml-data.html)**  
 The `gpfdist` parallel file server allows you to set up transformations that enable Greenplum Database external tables to read and write files in formats that are not supported with the `CREATE EXTERNAL TABLE` command's `FORMAT` clause. An *input* transformation reads a file in the foreign data format and outputs rows to `gpfdist` in the CSV or other text format specified in the external table's `FORMAT` clause. An *output* transformation receives rows from `gpfdist` in text format and converts them to the foreign data format.
