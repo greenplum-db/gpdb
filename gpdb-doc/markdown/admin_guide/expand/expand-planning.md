@@ -10,105 +10,162 @@
  <li><a href="#topic6">Planning New Segment Initialization</a> provides information about planning to initialize new segment hosts with <code>gpexpand</code>.</li> 
  <li><a href="#topic10">Planning Table Redistribution</a> provides information about planning the data redistribution after the new segment hosts have been initialized.</li> 
 </ul> 
-<p><strong>Important:</strong> When expanding a Greenplum Database system, you must disable Greenplum interconnect proxies before adding new hosts and segment instances to the system, and you must update the <code>gp_interconnect_proxy_addresses</code> parameter with the newly-added segment instances before you re-enable interconnect proxies. For example, these commands disable Greenplum interconnect proxies by setting the interconnect to the default (<code>UDPIFC</code>) and reloading the <code>postgresql.conf</code> file to update the Greenplum system configuration.</p> 
-<pre class="pre codeblock vm-code-block prettyprint"><code>gpconfig -r gp_interconnect_type
-gpstop -u
-</code></pre> 
-<p>For information about Greenplum interconnect proxies, see <a href="GUID-admin_guide-managing-proxy-ic.html">Configuring Proxies for the Greenplum Interconnect</a>.</p> 
 <p><strong>Parent topic:</strong> <a href="GUID-admin_guide-expand-expand-main.html">Expanding a Greenplum System</a></p> 
 <h2 id="system-expansion-checklist"><a id="topic4"></a>System Expansion Checklist</h2> 
 <p>This checklist summarizes the tasks for a Greenplum Database system expansion.</p> 
-<table class="table table frame-all" id="topic4__table_pvq_yzl_2r">
- <caption>
-  <span class="table--title-label">Table 1. </span>
-  <span class="title">Greenplum Database System Expansion Checklist</span>
- </caption>
- <colgroup>
-  <col style="width:11.173184357541901%" />
-  <col style="width:88.82681564245812%" />
- </colgroup>
- <tbody class="tbody"> 
-  <tr class="row"> 
-   <td class="entry" colspan="2"><p class="p"><strong class="ph b">Online Pre-Expansion Tasks</strong></p> <span class="ph">* System is up and available</span> </td> 
-  </tr> 
-  <tr class="row"> 
-   <td class="entry"> <img class="image" id="topic4__image_gr2_s1m_2r" src="../graphics/green-checkbox.jpg" width="29" height="28" /> </td> 
-   <td class="entry">Plan for ordering, building, and networking new hardware platforms, or provisioning cloud resources. </td> 
-  </tr> 
-  <tr class="row"> 
-   <td class="entry"> <img class="image" id="topic4__image_ryl_s1m_2r" src="../graphics/green-checkbox.jpg" width="29" height="28" /> </td> 
-   <td class="entry">Devise a database expansion plan. Map the number of segments per host, schedule the downtime period for testing performance and creating the expansion schema, and schedule the intervals for table redistribution.</td> 
-  </tr> 
-  <tr class="row"> 
-   <td class="entry"> <img class="image" id="topic4__image_e2s_s1m_2r" src="../graphics/green-checkbox.jpg" width="29" height="28" /> </td> 
-   <td class="entry">Perform a complete schema dump.</td> 
-  </tr> 
-  <tr class="row"> 
-   <td class="entry"> <img class="image" id="topic4__image_yq5_s1m_2r" src="../graphics/green-checkbox.jpg" width="29" height="28" /> </td> 
-   <td class="entry">Install Greenplum Database binaries on new hosts. </td> 
-  </tr> 
-  <tr class="row"> 
-   <td class="entry"> <img class="image" id="topic4__image_vxw_s1m_2r" src="../graphics/green-checkbox.jpg" width="29" height="28" /> </td> 
-   <td class="entry">Copy SSH keys to the new hosts (<code class="ph codeph">gpssh-exkeys</code>).</td> 
-  </tr> 
-  <tr class="row"> 
-   <td class="entry"> <img class="image" id="topic4__image_qkb_t1m_2r" src="../graphics/green-checkbox.jpg" width="29" height="28" /> </td> 
-   <td class="entry">Validate disk I/O and memory bandwidth of the new hardware or cloud resources (<code class="ph codeph">gpcheckperf</code>).</td> 
-  </tr> 
-  <tr class="row"> 
-   <td class="entry"> <img class="image" id="topic4__image_ojd_t1m_2r" src="../graphics/green-checkbox.jpg" width="29" height="28" /> </td> 
-   <td class="entry">Validate that the master data directory has no extremely large files in the <code class="ph codeph">log</code> directory.</td> 
-  </tr> 
-  <tr class="row"> 
-   <td class="entry" colspan="2"><p class="p"><strong class="ph b">Offline Pre-Expansion Tasks</strong></p> <span class="ph">* The system is unavailable to all user activity during this process.</span> </td> 
-  </tr> 
-  <tr class="row"> 
-   <td class="entry"> <img class="image" id="topic4__image_wch_t1m_2r" src="../graphics/green-checkbox.jpg" width="29" height="28" /> </td> 
-   <td class="entry">Validate that there are no catalog issues (<code class="ph codeph">gpcheckcat</code>).</td> 
-  </tr> 
-  <tr class="row"> 
-   <td class="entry"> <img class="image" id="topic4__image_q3q_t1m_2r" src="../graphics/green-checkbox.jpg" width="29" height="28" /> </td> 
-   <td class="entry">Validate disk I/O and memory bandwidth of the combined existing and new hardware or cloud resources (<code class="ph codeph">gpcheckperf</code>). </td> 
-  </tr> 
-  <tr class="row"> 
-   <td class="entry" colspan="2"><p class="p"><strong class="ph b">Online Segment Instance Initialization</strong></p><span class="ph">* System is up and available</span> </td> 
-  </tr> 
-  <tr class="row"> 
-   <td class="entry"> <img class="image" id="topic4__image_ct3_t1m_2r" src="../graphics/green-checkbox.jpg" width="29" height="28" /> </td> 
-   <td class="entry">Prepare an expansion input file (<code class="ph codeph">gpexpand</code>). </td> 
-  </tr> 
-  <tr class="row"> 
-   <td class="entry"> <img class="image" id="topic4__image_rcs_t1m_2r" src="../graphics/green-checkbox.jpg" width="29" height="28" /> </td> 
-   <td class="entry">Initialize new segments into the system and create an expansion schema (<code class="ph codeph">gpexpand -i <var class="keyword varname">input_file</var></code>).</td> 
-  </tr> 
-  <tr class="row"> 
-   <td class="entry" colspan="2"><p class="p"><strong class="ph b">Online Expansion and Table Redistribution</strong></p> <span class="ph">* System is up and available</span> </td> 
-  </tr> 
-  <tr class="row"> 
-   <td class="entry"> <img class="image" id="topic4__image_jzy_t1m_2r" src="../graphics/green-checkbox.jpg" width="29" height="28" /> </td> 
-   <td class="entry">Before you start table redistribution, stop any automated snapshot processes or other processes that consume disk space.</td> 
-  </tr> 
-  <tr class="row"> 
-   <td class="entry"> <img class="image" id="topic4__image_aq1_51m_2r" src="../graphics/green-checkbox.jpg" width="29" height="28" /> </td> 
-   <td class="entry">Redistribute tables through the expanded system (<code class="ph codeph">gpexpand</code>).</td> 
-  </tr> 
-  <tr class="row"> 
-   <td class="entry"> <img class="image" id="topic4__image_xjc_51m_2r" src="../graphics/green-checkbox.jpg" width="29" height="28" /> </td> 
-   <td class="entry">Remove expansion schema (<code class="ph codeph">gpexpand -c</code>).</td> 
-  </tr> 
-  <tr class="row"> 
-   <td class="entry"> <img class="image" id="topic4__image_sk2_51m_2r" src="../graphics/green-checkbox.jpg" width="29" height="28" /> </td> 
-   <td class="entry"><strong class="ph b">Important:</strong> Run <code class="ph codeph">analyze</code> to update distribution statistics.<p class="p">During the expansion, use <code class="ph codeph">gpexpand -a</code>, and post-expansion, use <code class="ph codeph">analyze</code>.</p></td> 
-  </tr> 
-  <tr class="row"> 
-   <td class="entry" colspan="2"><p class="p"><strong class="ph b">Back Up Databases</strong></p><span class="ph">* System is up and available</span></td> 
-  </tr> 
-  <tr class="row"> 
-   <td class="entry"><img class="image" id="topic4__image_ogk_mj4_lhb" src="../graphics/green-checkbox.jpg" width="29" height="28" /></td> 
-   <td class="entry">Back up databases using the <code class="ph codeph">gpbackup</code> utility. Backups you created before you began the system expansion cannot be restored to the newly expanded system because the <code class="ph codeph">gprestore</code> utility can only restore backups to a Greenplum Database system with the same number of segments.</td> 
-  </tr> 
- </tbody>
-</table> 
+<div class="topic nested1" xml:lang="en" lang="en" id="topic4">
+    <h2 class="title topictitle2">System Expansion Checklist</h2>
+    <div class="body">
+      <div class="p">This checklist summarizes the tasks for a Greenplum Database system expansion. 
+<div class="tablenoborder">
+<table cellpadding="4" cellspacing="0" summary="" id="topic4__table_pvq_yzl_2r" class="table" frame="border" border="1" rules="all">
+<caption><span class="tablecap">Table 1. Greenplum Database System Expansion Checklist</span></caption>
+            <tbody class="tbody">
+              <tr class="row">
+                <td class="entry" colspan="2" valign="top">
+<p class="p"><strong class="ph b">Online Pre-Expansion Tasks</strong></p>
+                  <span class="ph">* System is up and available</span>
+                </td>
+              </tr>
+              <tr class="row">
+                <td class="entry" valign="top" width="11.173184357541901%">
+                  <img class="image" id="topic4__image_gr2_s1m_2r" src="../graphics/green-checkbox.jpg" width="29" height="28">
+                </td>
+                <td class="entry" valign="top" width="88.82681564245812%">Devise and execute a plan for ordering, building, and networking new hardware
+                  platforms, or provisioning cloud resources. </td>
+              </tr>
+              <tr class="row">
+                <td class="entry" valign="top" width="11.173184357541901%">
+                  <img class="image" id="topic4__image_ryl_s1m_2r" src="../graphics/green-checkbox.jpg" width="29" height="28">
+                </td>
+                <td class="entry" valign="top" width="88.82681564245812%">Devise a database expansion plan. Map the number of segments per host,
+                  schedule the downtime period for testing performance and creating the expansion
+                  schema, and schedule the intervals for table redistribution.</td>
+              </tr>
+              <tr class="row">
+                <td class="entry" valign="top" width="11.173184357541901%">
+                  <img class="image" id="topic4__image_e2s_s1m_2r" src="../graphics/green-checkbox.jpg" width="29" height="28">
+                </td>
+                <td class="entry" valign="top" width="88.82681564245812%">Perform a complete schema dump.</td>
+              </tr>
+              <tr class="row">
+                <td class="entry" valign="top" width="11.173184357541901%">
+                  <img class="image" id="topic4__image_yq5_s1m_2r" src="../graphics/green-checkbox.jpg" width="29" height="28">
+                </td>
+                <td class="entry" valign="top" width="88.82681564245812%">Install Greenplum Database binaries on new hosts. </td>
+              </tr>
+              <tr class="row">
+                <td class="entry" valign="top" width="11.173184357541901%">
+                  <img class="image" id="topic4__image_vxw_s1m_2r" src="../graphics/green-checkbox.jpg" width="29" height="28">
+                </td>
+                <td class="entry" valign="top" width="88.82681564245812%">Copy SSH keys to the new hosts (<samp class="ph codeph">gpssh-exkeys</samp>).</td>
+              </tr>
+              <tr class="row">
+                <td class="entry" valign="top" width="11.173184357541901%">
+                  <img class="image" id="topic4__image_zrz_s1m_2r" src="../graphics/green-checkbox.jpg" width="29" height="28">
+                </td>
+                <td class="entry" valign="top" width="88.82681564245812%">Validate the operating system environment of the new hardware or cloud
+                  resources (<samp class="ph codeph">gpcheck</samp>).</td>
+              </tr>
+              <tr class="row">
+                <td class="entry" valign="top" width="11.173184357541901%">
+                  <img class="image" id="topic4__image_qkb_t1m_2r" src="../graphics/green-checkbox.jpg" width="29" height="28">
+                </td>
+                <td class="entry" valign="top" width="88.82681564245812%">Validate disk I/O and memory bandwidth of the new hardware or cloud resources
+                  (<samp class="ph codeph">gpcheckperf</samp>).</td>
+              </tr>
+              <tr class="row">
+                <td class="entry" valign="top" width="11.173184357541901%">
+                  <img class="image" id="topic4__image_ojd_t1m_2r" src="../graphics/green-checkbox.jpg" width="29" height="28">
+                </td>
+                <td class="entry" valign="top" width="88.82681564245812%">Validate that the master data directory has no extremely large files in the
+                    <samp class="ph codeph">pg_log</samp> or <samp class="ph codeph">gpperfmon/data</samp>
+                  <span class="ph">directories</span>.</td>
+              </tr>
+              <tr class="row">
+                <td class="entry" valign="top" width="11.173184357541901%">
+                  <img class="image" id="topic4__image_wch_t1m_2r" src="../graphics/green-checkbox.jpg" width="29" height="28">
+                </td>
+                <td class="entry" valign="top" width="88.82681564245812%">Validate that there are no catalog issues
+                  (<samp class="ph codeph">gpcheckcat</samp>).</td>
+              </tr>
+              <tr class="row">
+                <td class="entry" valign="top" width="11.173184357541901%">
+                  <img class="image" id="topic4__image_ct3_t1m_2r" src="../graphics/green-checkbox.jpg" width="29" height="28">
+                </td>
+                <td class="entry" valign="top" width="88.82681564245812%">Prepare an expansion input file (<samp class="ph codeph">gpexpand</samp>). </td>
+              </tr>
+              <tr class="row">
+                <td class="entry" colspan="2" valign="top">
+<p class="p"><strong class="ph b">Offline Expansion Tasks</strong></p>
+                  <span class="ph">* The system is locked and unavailable to all user activity
+                    during this process.</span>
+                </td>
+              </tr>
+              <tr class="row">
+                <td class="entry" valign="top" width="11.173184357541901%">
+                  <img class="image" id="topic4__image_hgm_t1m_2r" src="../graphics/green-checkbox.jpg" width="29" height="28">
+                </td>
+                <td class="entry" valign="top" width="88.82681564245812%">Validate the operating system environment of the combined existing and new
+                  hardware or cloud resources (<samp class="ph codeph">gpcheck</samp>). </td>
+              </tr>
+              <tr class="row">
+                <td class="entry" valign="top" width="11.173184357541901%">
+                  <img class="image" id="topic4__image_q3q_t1m_2r" src="../graphics/green-checkbox.jpg" width="29" height="28">
+                </td>
+                <td class="entry" valign="top" width="88.82681564245812%">Validate disk I/O and memory bandwidth of the combined existing and new
+                  hardware or cloud resources (<samp class="ph codeph">gpcheckperf</samp>). </td>
+              </tr>
+              <tr class="row">
+                <td class="entry" valign="top" width="11.173184357541901%">
+                  <img class="image" id="topic4__image_rcs_t1m_2r" src="../graphics/green-checkbox.jpg" width="29" height="28">
+                </td>
+                <td class="entry" valign="top" width="88.82681564245812%">Initialize new segments into the system and create an expansion schema
+                    (<samp class="ph codeph">gpexpand -i <var class="keyword varname">input_file</var></samp>).</td>
+              </tr>
+              <tr class="row">
+                <td class="entry" colspan="2" valign="top">
+<p class="p"><strong class="ph b">Online Expansion and Table
+                    Redistribution</strong></p>
+                  <span class="ph">* System is up and available</span>
+                </td>
+              </tr>
+              <tr class="row">
+                <td class="entry" valign="top" width="11.173184357541901%">
+                  <img class="image" id="topic4__image_jzy_t1m_2r" src="../graphics/green-checkbox.jpg" width="29" height="28">
+                </td>
+                <td class="entry" valign="top" width="88.82681564245812%">Before you start table redistribution, stop any automated snapshot processes
+                  or other processes that consume disk space.</td>
+              </tr>
+              <tr class="row">
+                <td class="entry" valign="top" width="11.173184357541901%">
+                  <img class="image" id="topic4__image_aq1_51m_2r" src="../graphics/green-checkbox.jpg" width="29" height="28">
+                </td>
+                <td class="entry" valign="top" width="88.82681564245812%">Redistribute tables through the expanded system
+                  (<samp class="ph codeph">gpexpand</samp>).</td>
+              </tr>
+              <tr class="row">
+                <td class="entry" valign="top" width="11.173184357541901%">
+                  <img class="image" id="topic4__image_xjc_51m_2r" src="../graphics/green-checkbox.jpg" width="29" height="28">
+                </td>
+                <td class="entry" valign="top" width="88.82681564245812%">Remove expansion schema (<samp class="ph codeph">gpexpand -c</samp>).</td>
+              </tr>
+              <tr class="row">
+                <td class="entry" valign="top" width="11.173184357541901%">
+                  <img class="image" id="topic4__image_sk2_51m_2r" src="../graphics/green-checkbox.jpg" width="29" height="28">
+                </td>
+                <td class="entry" valign="top" width="88.82681564245812%">
+<strong class="ph b">Important:</strong> Run <samp class="ph codeph">analyze</samp> to update distribution
+                    statistics.<p class="p">During the expansion, use <samp class="ph codeph">gpexpand -a</samp>, and
+                    post-expansion, use <samp class="ph codeph">analyze</samp>.</p>
+</td>
+              </tr>
+            </tbody>
+          </table>
+</div>
+</div>
+    </div>
+  </div>
 <h2 id="planning-new-hardware-platforms"><a id="topic5"></a>Planning New Hardware Platforms</h2> 
 <p>A deliberate, thorough approach to deploying compatible hardware greatly minimizes risk to the expansion process.</p> 
 <p>Hardware resources and configurations for new segment hosts should match those of the existing hosts. Work with <em>VMware Support</em> before making a hardware purchase to expand Greenplum Database.</p> 
@@ -116,13 +173,13 @@ gpstop -u
 <ul> 
  <li>Prepare the physical space for the new hardware; consider cooling, power supply, and other physical factors.</li> 
  <li>Determine the physical networking and cabling required to connect the new and existing hardware.</li> 
- <li>Map the existing IP address spaces and developing a networking plan for the expanded system.</li> 
+ <li>Map the existing IP address spaces and develop a networking plan for the expanded system.</li> 
  <li>Capture the system configuration (users, profiles, NICs, and so on) from existing hardware to use as a detailed list for ordering new hardware.</li> 
  <li>Create a custom build plan for deploying hardware with the desired configuration in the particular site and environment.</li> 
 </ul> 
 <p>After selecting and adding new hardware to your network environment, ensure you perform the tasks described in <a href="GUID-admin_guide-expand-expand-nodes.html">Preparing and Adding Hosts</a>.</p> 
 <h2 id="planning-new-segment-initialization"><a id="topic6"></a>Planning New Segment Initialization</h2> 
-<p>Expanding Greenplum Database can be performed when the system is up and available. Run <code>gpexpand</code> to initialize new segment instances into the system and create an expansion schema.</p> 
+<p>Expanding Greenplum Database requires a limited period of system downtime. During this period, run <code>gpexpand</code> to initialize new segments into the array and create an expansion schema.</p> 
 <p>The time required depends on the number of schema objects in the Greenplum system and other factors related to hardware performance. In most environments, the initialization of new segments requires less than thirty minutes offline.</p> 
 <p>These utilities cannot be run while <code>gpexpand</code> is performing segment initialization.</p> 
 <ul> 
@@ -139,14 +196,14 @@ gpstop -u
 <ul> 
  <li><strong>Group Mirroring</strong> — Add at least two new hosts so the mirrors for the first host can reside on the second host, and the mirrors for the second host can reside on the first. This is the default type of mirroring if you enable segment mirroring during system initialization.</li> 
  <li><strong>Spread Mirroring</strong> — Add at least one more host to the system than the number of segments per host. The number of separate hosts must be greater than the number of segment instances per host to ensure even spreading. You can specify this type of mirroring during system initialization or when you enable segment mirroring for an existing system.</li> 
- <li><strong>Block Mirroring</strong> — Adding one or more blocks of host systems. For example add a block of four or eight hosts. Block mirroring is a custom mirroring configuration. For more information about block mirroring, see <a href="GUID-best_practices-ha.html#topic_ngz_qf4_tt">Segment Mirroring Configurations</a>.</li> 
+ <li><strong>Block Mirroring</strong> — Adding one or more blocks of host systems. For example add a block of four or eight hosts. Block mirroring is a custom mirroring configuration.</li> 
 </ul> 
 <h3 id="increasing-segments-per-host"><a id="topic8"></a>Increasing Segments Per Host</h3> 
 <p>By default, new hosts are initialized with as many primary segments as existing hosts have. You can increase the segments per host or add new segments to existing hosts.</p> 
 <p>For example, if existing hosts currently have two segments per host, you can use <code>gpexpand</code> to initialize two additional segments on existing hosts for a total of four segments and initialize four new segments on new hosts.</p> 
 <p>The interactive process for creating an expansion input file prompts for this option; you can also specify new segment directories manually in the input configuration file. For more information, see <a href="GUID-admin_guide-expand-expand-initialize.html">Creating an Input File for System Expansion</a>.</p> 
 <h3 id="about-the-expansion-schema"><a id="topic9"></a>About the Expansion Schema</h3> 
-<p>At initialization, the <code>gpexpand</code> utility creates an expansion schema named <em>gpexpand</em> in the postgres database.</p> 
+<p>At initialization, <code>gpexpand</code> creates an expansion schema. If you do not specify a database at initialization (<code>gpexpand -D</code>), the schema is created in the database indicated by the PGDATABASE environment variable.</p> 
 <p>The expansion schema stores metadata for each table in the system so its status can be tracked throughout the expansion process. The expansion schema consists of two tables and a view for tracking expansion operation progress:</p> 
 <ul> 
  <li><em>gpexpand.status</em></li> 
@@ -159,14 +216,8 @@ gpstop -u
 <p><strong>Important:</strong> To perform table redistribution, your segment hosts must have enough disk space to temporarily hold a copy of your largest table. All tables are unavailable for read and write operations during redistribution.</p> 
 <p>The performance impact of table redistribution depends on the size, storage type, and partitioning design of a table. For any given table, redistributing it with <code>gpexpand</code> takes as much time as a <code>CREATE TABLE AS SELECT</code> operation would. When redistributing a terabyte-scale fact table, the expansion utility can use much of the available system resources, which could affect query performance or other database workloads.</p> 
 <h3 id="managing-redistribution-in-large-scale-greenplum-systems"><a id="topic11"></a>Managing Redistribution in Large-Scale Greenplum Systems</h3> 
-<p>When planning the redistribution phase, consider the impact of the <code>ACCESS EXCLUSIVE</code> lock taken on each table, and the table data redistribution method. User activity on a table can delay its redistribution, but also tables are unavailable for user activity during redistribution.</p> 
-<p>You can manage the order in which tables are redistributed by adjusting their ranking. See <a href="GUID-admin_guide-expand-expand-redistribute.html">Ranking Tables for Redistribution</a>. Manipulating the redistribution order can help adjust for limited disk space and restore optimal query performance for high-priority queries sooner.</p> 
-<h4 id="table-redistribution-methods"><a id="tabred"></a>Table Redistribution Methods</h4> 
-<p>There are two methods of redistributing data when performing a Greenplum Database expansion.</p> 
-<ul> 
- <li><code>rebuild</code> - Create a new table, copy all the data from the old to the new table, and replace the old table. This is the default. The rebuild method is similar to creating a new table with a <code>CREATE TABLE AS SELECT</code> command. During data redistribution, an <code>ACCESS EXCLUSIVE</code> lock is acquired on the table.</li> 
- <li><code>move</code> - Scan all the data and perform an <code>UPDATE</code> operation to move rows as needed to different segment instances. During data redistribution, an <code>ACCESS EXCLUSIVE</code> lock is acquired on the table. In general, this method requires less disk space, however, it creates obsolete table rows and might require a <code>VACUUM</code> operation on the table after the data redistribution. Also, this method updates indexes one row at a time, which can be much slower than rebuilding the index with the <code>CREATE INDEX</code> command.</li> 
-</ul> 
+<p>You can manage the order in which tables are redistributed by adjusting their ranking. See <a href="GUID-admin_guide-expand-expand-redistribute.html">Ranking Tables for Redistribution</a>. Manipulating the redistribution order can help adjust for limited disk space and restore optimal query performance for high-priority queries sooner.</p>
+<p>When planning the redistribution phase, consider the impact of the exclusive lock taken on each table during redistribution. User activity on a table can delay its redistribution, but also tables are unavailable for user activity during redistribution.</p>  
 <h4 id="systems-with-abundant-free-disk-space"><a id="systs"></a>Systems with Abundant Free Disk Space</h4> 
 <p>In systems with abundant free disk space (required to store a copy of the largest table), you can focus on restoring optimum query performance as soon as possible by first redistributing important tables that queries use heavily. Assign high ranking to these tables, and schedule redistribution operations for times of low system usage. Run one redistribution process at a time until large or critical tables have been redistributed.</p> 
 <h4 id="systems-with-limited-free-disk-space"><a id="systslim"></a>Systems with Limited Free Disk Space</h4> 
@@ -180,10 +231,39 @@ gpstop -u
 <p><code>gpexpand</code> redistributes append-optimized and compressed append-optimized tables at different rates than heap tables. The CPU capacity required to compress and decompress data tends to increase the impact on system performance. For similar-sized tables with similar data, you may find overall performance differences like the following:</p> 
 <ul> 
  <li>Uncompressed append-optimized tables expand 10% faster than heap tables.</li> 
- <li>Append-optimized tables that are defined to use data compression expand at a significantly slower rate than uncompressed append-optimized tables, potentially up to 80% slower.</li> 
+ <li><code>zlib</code>-compressed append-optimized tables expand at a significantly slower rate than uncompressed append-optimized tables, potentially up to 80% slower.</li> 
  <li>Systems with data compression such as ZFS/LZJB take longer to redistribute.</li> 
 </ul> 
-<p><strong>Important:</strong> If your system hosts use data compression, use identical compression settings on the new hosts to avoid disk space shortage.</p> 
+<p><strong>Important:</strong> If your system hosts use data compression, use identical compression settings on the new hosts to avoid disk space shortage.</p>
+    <div class="topic nested2" xml:lang="en" lang="en" id="topic14">
+      <h3 class="title topictitle3">Redistributing Tables with Primary Key Constraints</h3>
+      <div class="body">
+        <p class="p">There is a time period during which primary key constraints cannot be enforced between
+          the initialization of new segments and successful table redistribution. Duplicate data
+          inserted into tables during this period prevents the expansion utility from redistributing
+          the affected tables.</p>
+        <div class="p">After a table is redistributed, the primary key constraint is properly enforced again. If
+          an expansion process violates constraints, the expansion utility logs errors and displays
+          warnings when it completes. To fix constraint violations, perform one of the following
+            remedies:<ul class="ul" id="topic14__ul_g1d_jfr_g4">
+            <li class="li" id="topic14__no169634">Clean up duplicate data in the primary key columns, and re-run
+                <samp class="ph codeph">gpexpand</samp>. </li>
+            <li class="li" id="topic14__no169656">Drop the primary key constraints, and re-run
+              <samp class="ph codeph">gpexpand</samp>. </li>
+          </ul>
+</div>
+      </div>
+    </div>
+    <div class="topic nested2" xml:lang="en" lang="en" id="topic15">
+      <h3 class="title topictitle3">Redistributing Tables with User-Defined Data Types</h3>
+      <div class="body">
+        <p class="p">You cannot perform redistribution with the expansion utility on tables with dropped
+          columns of user-defined data types. To redistribute tables with dropped columns of
+          user-defined types, first re-create the table using <samp class="ph codeph">CREATE TABLE AS
+            SELECT</samp>. After this process removes the dropped columns, redistribute the table
+          with <samp class="ph codeph">gpexpand</samp>.</p>
+      </div>
+    </div>
 <h3 id="redistributing-partitioned-tables"><a id="topic16"></a>Redistributing Partitioned Tables</h3> 
 <p>Because the expansion utility can process each individual partition on a large table, an efficient partition design reduces the performance impact of table redistribution. Only the child tables of a partitioned table are set to a random distribution policy. The read/write lock for redistribution applies to only one child table at a time.</p> 
 <h3 id="redistributing-indexed-tables"><a id="topic_qq2_x3r_g4"></a>Redistributing Indexed Tables</h3> 
