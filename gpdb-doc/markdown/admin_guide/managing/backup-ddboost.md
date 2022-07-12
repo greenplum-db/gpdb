@@ -23,7 +23,7 @@ Refer to Data Domain Boost documentation for detailed information.
 
 Using Data Domain Boost requires the following.
 
--   Data Domain Boost is included only with the commercial release of Pivotal Greenplum Database.
+-   Data Domain Boost is included only with the commercial release of Tanzu Greenplum.
 -   Purchase and install Dell EMC Data Domain Boost and Replicator licenses on the Data Domain systems.
 -   Obtain sizing recommendations for Data Domain Boost. Make sure the Data Domain system supports sufficient write and read streams for the number of segment hosts in your Greenplum cluster.
 

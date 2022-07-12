@@ -60,7 +60,7 @@ The following sections describe these tasks in detail.
 
 ### Prerequisites 
 
--   PL/Container is supported on PivotalGreenplum Database 5.2.x on Red Hat Enterprise Linux \(RHEL\) 7.x \(or later\) and CentOS 7.x \(or later\). PL/Container is not supported on RHEL/CentOS 6.x systems, because those platforms do not officially support Docker.
+-   PL/Container is supported on Tanzu Greenplum 5.2.x on Red Hat Enterprise Linux \(RHEL\) 7.x \(or later\) and CentOS 7.x \(or later\). PL/Container is not supported on RHEL/CentOS 6.x systems, because those platforms do not officially support Docker.
 
     **Note:** PL/Container 1.6.0 \(introduced in Greenplum 5.26\) and later versions support Docker images with Python 3 installed.
 
@@ -234,7 +234,7 @@ The PL/Container open source module contains dockerfiles to build Docker images 
     -   PL/Container for R - A Docker image with container with R-3.3.3 and the R Data Science Library package installed.
     The Data Science packages contain a set of Python modules or R functions and data sets related to data science. For information about the packages, see [Python Data Science Module Package](/vmware/install_guide/install_python_dsmod.html) and [R Data Science Library Package](/vmware/install_guide/install_r_dslib.html).
 
-    If you require different images from the ones provided by Pivotal Greenplum, you can create custom Docker images, install the image, and add the image to the PL/Container configuration.
+    If you require different images from the ones provided by Tanzu Greenplum, you can create custom Docker images, install the image, and add the image to the PL/Container configuration.
 
 -   Use the `plcontainer` utility command `image-add` to install the images on all Greenplum Database hosts where `-f` indicates the location of the downloaded files:
 

@@ -21,7 +21,7 @@ NetBackup includes the following server and client software:
 
 See the *Veritas NetBackup Getting Started Guide* for information about NetBackup.
 
-See the Release Notes for information about compatible NetBackup versions for this release of Pivotal Greenplum Database.
+See the Release Notes for information about compatible NetBackup versions for this release of Tanzu Greenplum.
 
 ## Limitations 
 

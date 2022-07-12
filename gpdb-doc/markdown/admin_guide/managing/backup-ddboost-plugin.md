@@ -1,6 +1,6 @@
 # Using the DD Boost Storage Plugin with gpbackup and gprestore 
 
-**Note:** The DD Boost storage plugin is available only in the commercial release of Pivotal Greenplum Database.
+**Note:** The DD Boost storage plugin is available only in the commercial release of Tanzu Greenplum.
 
 Dell EMC Data Domain Boost \(DD Boost\) is Dell EMC software that can be used with the [gpbackup](../../utility_guide/admin_utilities/gpbackup.html) and [gprestore](../../utility_guide/admin_utilities/gprestore.html) utilities to perform faster backups to the Dell EMC Data Domain storage appliance. You can also replicate a backup on a separate, remote Data Domain system for disaster recovery with gpbackup or [gpbackup\_manager](../../utility_guide/admin_utilities/gpbackup_manager.html). For information about replication, see [Replicating Backups](replication-ddb.html).
 
@@ -35,7 +35,7 @@ This is the structure of a DD Boost storage plugin configuration file.
 ```
 
 executablepath
-:   Required. Absolute path to the plugin executable. For example, the Pivotal Greenplum Database installation location is `$GPHOME/bin/gpbackup_ddboost_plugin`. The plugin must be in the same location on every Greenplum Database host.
+:   Required. Absolute path to the plugin executable. For example, the Tanzu Greenplum installation location is `$GPHOME/bin/gpbackup_ddboost_plugin`. The plugin must be in the same location on every Greenplum Database host.
 
 options
 :   Required. Begins the DD Boost storage plugin options section.
@@ -144,7 +144,7 @@ options:
 
 ## Notes 
 
-Dell EMC DD Boost is integrated with Pivotal Greenplum Database and requires a DD Boost license. Open source Greenplum Database cannot use the DD Boost software, but can back up to a Dell EMC Data Domain system mounted as an NFS share on the Greenplum master and segment hosts.
+Dell EMC DD Boost is integrated with Tanzu Greenplum and requires a DD Boost license. Open source Greenplum Database cannot use the DD Boost software, but can back up to a Dell EMC Data Domain system mounted as an NFS share on the Greenplum master and segment hosts.
 
 When you perform a backup with the DD Boost storage plugin, the plugin stores the backup files in this location in the Data Domain storage unit.
 

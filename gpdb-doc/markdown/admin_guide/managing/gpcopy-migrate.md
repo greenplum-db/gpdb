@@ -4,7 +4,7 @@ This topic describes how to use the `gpcopy` utility to transfer data between da
 
 [gpcopy](../../utility_guide/admin_utilities/gpcopy.html) is a high-performance utility that can copy metadata and data from one Greenplum database to another Greenplum database. You can migrate the entire contents of a database, or just selected tables. The clusters can have different Greenplum Database versions. For example, you can use `gpcopy` to migrate data from Greenplum 5 to Greenplum 6.
 
-**Note:** The `gpcopy` utility is available as a separate download for the commercial release of Pivotal Greenplum Database. See the [Pivotal gpcopy Documentation](https://gpdb.docs.pivotal.io/gpcopy).
+**Note:** The `gpcopy` utility is available as a separate download for the commercial release of Tanzu Greenplum. See the [Tanzu Greenplum Data Copy Utility Documentation](https://gpdb.docs.pivotal.io/gpcopy).
 
 **Parent topic:** [Migrating Data](../managing/migrating-data.html)
 

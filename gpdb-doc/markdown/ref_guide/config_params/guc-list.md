@@ -951,7 +951,7 @@ gpconfig -s 'gp_default_storage_options'
 
 **Note:** <sup>1</sup>The set classification when the parameter is set at the system level with the gpconfig utility.
 
-**Note:** <sup>2</sup>QuickLZ compression is available only in the commercial release of Pivotal Greenplum Database.
+**Note:** <sup>2</sup>QuickLZ compression is available only in the commercial release of Tanzu Greenplum.
 
 ## gp\_dynamic\_partition\_pruning 
 
@@ -3359,7 +3359,7 @@ Enables a test that validates the free tuple ID \(TID\) list. The list is mainta
 
 If Greenplum Database detects a corruption in the free TID list, the free TID list is rebuilt, a warning is logged, and a warning is returned by queries for which the check failed. Greenplum Database attempts to execute the queries.
 
-**Note:** If a warning is returned, please contact Pivotal Support.
+**Note:** If a warning is returned, please contact VMware Support.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|

@@ -237,7 +237,7 @@ Resource groups for roles track all Greenplum Database memory allocated via the 
 
 ## Using Greenplum Command Center to Manage Resource Groups 
 
-Using Pivotal Greenplum Command Center, an administrator can create and manage resource groups, change roles' resource groups, and create workload management rules.
+Using Tanzu Greenplum Command Center, an administrator can create and manage resource groups, change roles' resource groups, and create workload management rules.
 
 Workload management rules are defined in Command Center and stored in Greenplum Database. When a transaction is submitted, Greenplum Database calls the workload management database extension to evaluate and apply the rules.
 

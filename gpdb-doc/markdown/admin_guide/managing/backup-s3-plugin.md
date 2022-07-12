@@ -31,7 +31,7 @@ This is the structure of a S3 storage plugin configuration file.
 ```
 
 executablepath
-:   Required. Absolute path to the plugin executable. For example, the Pivotal Greenplum Database installation location is `$GPHOME/bin/gpbackup_s3_plugin`. The plugin must be in the same location on every Greenplum Database host.
+:   Required. Absolute path to the plugin executable. For example, the Tanzu Greenplum installation location is `$GPHOME/bin/gpbackup_s3_plugin`. The plugin must be in the same location on every Greenplum Database host.
 
 options
 :   Required. Begins the S3 storage plugin options section.

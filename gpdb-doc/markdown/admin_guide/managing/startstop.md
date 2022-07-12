@@ -57,7 +57,7 @@ The `gpstop` utility can reload changes to the pg\_hba.conf configuration file a
 
 Start only the master to perform maintenance or administrative tasks without affecting data on the segments.
 
-Maintenance mode should only be used with direction from Pivotal Technical Support.For example, you could connect to a database only on the master instance in maintenance mode and edit system catalog settings. For more information about system catalog tables, see the *Greenplum Database Reference Guide*.
+Maintenance mode should only be used with direction from VMware Technical Support. For example, you could connect to a database only on the master instance in maintenance mode and edit system catalog settings. For more information about system catalog tables, see the *Greenplum Database Reference Guide*.
 
 1.  Run `gpstart` using the -m option:
 

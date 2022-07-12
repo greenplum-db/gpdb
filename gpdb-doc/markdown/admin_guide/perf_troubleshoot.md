@@ -108,7 +108,7 @@ con6 /gpdata/*/pg_log/gpdb*.csv' > seglog.out
 
 ```
 
-### Gathering Information for Pivotal Customer Support 
+### Gathering Information for VMware Customer Support 
 
 The Greenplum Magic Tool \(GPMT\) utility can run diagnostics and collect information from a Greenplum Database system. You can then send the information to VMware Customer Support to aid in the diagnosis of Greenplum Database errors or system failures.
 
