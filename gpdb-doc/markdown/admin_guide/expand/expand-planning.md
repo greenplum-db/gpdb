@@ -14,7 +14,7 @@
 <div class="topic nested1" xml:lang="en" lang="en" id="topic4">
     <h2 class="title topictitle2">System Expansion Checklist</h2>
     <div class="body">
-      <div class="p">This checklist summarizes the tasks for a Greenplum Database system expansion. <br/><br/>
+      <div class="p">This checklist summarizes the tasks for a Greenplum Database system expansion. <br/>
 <div class="tablenoborder">
 <table cellpadding="4" cellspacing="0" summary="" id="topic4__table_pvq_yzl_2r" class="table" frame="border" border="1" rules="all">
 <caption><span class="tablecap">Table 1. Greenplum Database System Expansion Checklist</span></caption>
@@ -189,7 +189,7 @@
 </ul> 
 <p><strong>Important:</strong> After you begin initializing new segments, you can no longer restore the system using backup files created for the pre-expansion system. When initialization successfully completes, the expansion is committed and cannot be rolled back.</p> 
 <h3 id="planning-mirror-segments"><a id="topic7"></a>Planning Mirror Segments</h3> 
-<p>If your existing system has mirror segments, the new segments must have mirroring configured. If there are no mirrors configured for existing segments, you cannot add mirrors to new hosts with the <code>gpexpand</code> utility. For more information about segment mirroring configurations that are available during system initialization, see <a href="GUID-admin_guide-highavail-topics-g-overview-of-segment-mirroring.html#mirror_configs">About Segment Mirroring Configurations</a>.</p> 
+<p>If your existing system has mirror segments, the new segments must have mirroring configured. If there are no mirrors configured for existing segments, you cannot add mirrors to new hosts with the <code>gpexpand</code> utility. For more information about segment mirroring configurations that are available during system initialization, see <a href="GUID-admin_guide-highavail-topics-g-overview-of-segment-mirroring.html#mirror_configs">Overview of Segment Mirroring Configurations</a>.</p> 
 <p>For Greenplum Database systems with mirror segments, ensure you add enough new host machines to accommodate new mirror segments. The number of new hosts required depends on your mirroring strategy:</p> 
 <ul> 
  <li><strong>Group Mirroring</strong> — Add at least two new hosts so the mirrors for the first host can reside on the second host, and the mirrors for the second host can reside on the first. This is the default type of mirroring if you enable segment mirroring during system initialization.</li> 
