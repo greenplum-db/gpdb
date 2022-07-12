@@ -11,19 +11,17 @@
  <li><a href="#topic10">Planning Table Redistribution</a> provides information about planning the data redistribution after the new segment hosts have been initialized.</li> 
 </ul> 
 <p><strong>Parent topic:</strong> <a href="GUID-admin_guide-expand-expand-main.html">Expanding a Greenplum System</a></p> 
-<h2 id="system-expansion-checklist"><a id="topic4"></a>System Expansion Checklist</h2> 
-<p>This checklist summarizes the tasks for a Greenplum Database system expansion.</p> 
 <div class="topic nested1" xml:lang="en" lang="en" id="topic4">
     <h2 class="title topictitle2">System Expansion Checklist</h2>
     <div class="body">
-      <div class="p">This checklist summarizes the tasks for a Greenplum Database system expansion. 
+      <div class="p">This checklist summarizes the tasks for a Greenplum Database system expansion. <br/><br/>
 <div class="tablenoborder">
 <table cellpadding="4" cellspacing="0" summary="" id="topic4__table_pvq_yzl_2r" class="table" frame="border" border="1" rules="all">
 <caption><span class="tablecap">Table 1. Greenplum Database System Expansion Checklist</span></caption>
             <tbody class="tbody">
               <tr class="row">
                 <td class="entry" colspan="2" valign="top">
-<p class="p"><strong class="ph b">Online Pre-Expansion Tasks</strong></p>
+<p class="p"><strong class="ph b">Online Pre-Expansion Tasks</strong></p><br/>
                   <span class="ph">* System is up and available</span>
                 </td>
               </tr>
@@ -58,28 +56,28 @@
                 <td class="entry" valign="top" width="11.173184357541901%">
                   <img class="image" id="topic4__image_vxw_s1m_2r" src="../graphics/green-checkbox.jpg" width="29" height="28">
                 </td>
-                <td class="entry" valign="top" width="88.82681564245812%">Copy SSH keys to the new hosts (<samp class="ph codeph">gpssh-exkeys</samp>).</td>
+                <td class="entry" valign="top" width="88.82681564245812%">Copy SSH keys to the new hosts (<code class="ph codeph">gpssh-exkeys</code>).</td>
               </tr>
               <tr class="row">
                 <td class="entry" valign="top" width="11.173184357541901%">
                   <img class="image" id="topic4__image_zrz_s1m_2r" src="../graphics/green-checkbox.jpg" width="29" height="28">
                 </td>
                 <td class="entry" valign="top" width="88.82681564245812%">Validate the operating system environment of the new hardware or cloud
-                  resources (<samp class="ph codeph">gpcheck</samp>).</td>
+                  resources (<code class="ph codeph">gpcheck</code>).</td>
               </tr>
               <tr class="row">
                 <td class="entry" valign="top" width="11.173184357541901%">
                   <img class="image" id="topic4__image_qkb_t1m_2r" src="../graphics/green-checkbox.jpg" width="29" height="28">
                 </td>
                 <td class="entry" valign="top" width="88.82681564245812%">Validate disk I/O and memory bandwidth of the new hardware or cloud resources
-                  (<samp class="ph codeph">gpcheckperf</samp>).</td>
+                  (<code class="ph codeph">gpcheckperf</code>).</td>
               </tr>
               <tr class="row">
                 <td class="entry" valign="top" width="11.173184357541901%">
                   <img class="image" id="topic4__image_ojd_t1m_2r" src="../graphics/green-checkbox.jpg" width="29" height="28">
                 </td>
                 <td class="entry" valign="top" width="88.82681564245812%">Validate that the master data directory has no extremely large files in the
-                    <samp class="ph codeph">pg_log</samp> or <samp class="ph codeph">gpperfmon/data</samp>
+                    <code class="ph codeph">pg_log</code> or <code class="ph codeph">gpperfmon/data</code>
                   <span class="ph">directories</span>.</td>
               </tr>
               <tr class="row">
@@ -87,17 +85,17 @@
                   <img class="image" id="topic4__image_wch_t1m_2r" src="../graphics/green-checkbox.jpg" width="29" height="28">
                 </td>
                 <td class="entry" valign="top" width="88.82681564245812%">Validate that there are no catalog issues
-                  (<samp class="ph codeph">gpcheckcat</samp>).</td>
+                  (<code class="ph codeph">gpcheckcat</code>).</td>
               </tr>
               <tr class="row">
                 <td class="entry" valign="top" width="11.173184357541901%">
                   <img class="image" id="topic4__image_ct3_t1m_2r" src="../graphics/green-checkbox.jpg" width="29" height="28">
                 </td>
-                <td class="entry" valign="top" width="88.82681564245812%">Prepare an expansion input file (<samp class="ph codeph">gpexpand</samp>). </td>
+                <td class="entry" valign="top" width="88.82681564245812%">Prepare an expansion input file (<code class="ph codeph">gpexpand</code>). </td>
               </tr>
               <tr class="row">
                 <td class="entry" colspan="2" valign="top">
-<p class="p"><strong class="ph b">Offline Expansion Tasks</strong></p>
+<p class="p"><strong class="ph b">Offline Expansion Tasks</strong></p><br/>
                   <span class="ph">* The system is locked and unavailable to all user activity
                     during this process.</span>
                 </td>
@@ -107,26 +105,26 @@
                   <img class="image" id="topic4__image_hgm_t1m_2r" src="../graphics/green-checkbox.jpg" width="29" height="28">
                 </td>
                 <td class="entry" valign="top" width="88.82681564245812%">Validate the operating system environment of the combined existing and new
-                  hardware or cloud resources (<samp class="ph codeph">gpcheck</samp>). </td>
+                  hardware or cloud resources (<code class="ph codeph">gpcheck</code>). </td>
               </tr>
               <tr class="row">
                 <td class="entry" valign="top" width="11.173184357541901%">
                   <img class="image" id="topic4__image_q3q_t1m_2r" src="../graphics/green-checkbox.jpg" width="29" height="28">
                 </td>
                 <td class="entry" valign="top" width="88.82681564245812%">Validate disk I/O and memory bandwidth of the combined existing and new
-                  hardware or cloud resources (<samp class="ph codeph">gpcheckperf</samp>). </td>
+                  hardware or cloud resources (<code class="ph codeph">gpcheckperf</code>). </td>
               </tr>
               <tr class="row">
                 <td class="entry" valign="top" width="11.173184357541901%">
                   <img class="image" id="topic4__image_rcs_t1m_2r" src="../graphics/green-checkbox.jpg" width="29" height="28">
                 </td>
                 <td class="entry" valign="top" width="88.82681564245812%">Initialize new segments into the system and create an expansion schema
-                    (<samp class="ph codeph">gpexpand -i <var class="keyword varname">input_file</var></samp>).</td>
+                    (<code class="ph codeph">gpexpand -i <var class="keyword varname">input_file</var></code>).</td>
               </tr>
               <tr class="row">
                 <td class="entry" colspan="2" valign="top">
 <p class="p"><strong class="ph b">Online Expansion and Table
-                    Redistribution</strong></p>
+                    Redistribution</strong></p><br/>
                   <span class="ph">* System is up and available</span>
                 </td>
               </tr>
@@ -142,22 +140,22 @@
                   <img class="image" id="topic4__image_aq1_51m_2r" src="../graphics/green-checkbox.jpg" width="29" height="28">
                 </td>
                 <td class="entry" valign="top" width="88.82681564245812%">Redistribute tables through the expanded system
-                  (<samp class="ph codeph">gpexpand</samp>).</td>
+                  (<code class="ph codeph">gpexpand</code>).</td>
               </tr>
               <tr class="row">
                 <td class="entry" valign="top" width="11.173184357541901%">
                   <img class="image" id="topic4__image_xjc_51m_2r" src="../graphics/green-checkbox.jpg" width="29" height="28">
                 </td>
-                <td class="entry" valign="top" width="88.82681564245812%">Remove expansion schema (<samp class="ph codeph">gpexpand -c</samp>).</td>
+                <td class="entry" valign="top" width="88.82681564245812%">Remove expansion schema (<code class="ph codeph">gpexpand -c</code>).</td>
               </tr>
               <tr class="row">
                 <td class="entry" valign="top" width="11.173184357541901%">
                   <img class="image" id="topic4__image_sk2_51m_2r" src="../graphics/green-checkbox.jpg" width="29" height="28">
                 </td>
                 <td class="entry" valign="top" width="88.82681564245812%">
-<strong class="ph b">Important:</strong> Run <samp class="ph codeph">analyze</samp> to update distribution
-                    statistics.<p class="p">During the expansion, use <samp class="ph codeph">gpexpand -a</samp>, and
-                    post-expansion, use <samp class="ph codeph">analyze</samp>.</p>
+<strong class="ph b">Important:</strong> Run <code class="ph codeph">analyze</code> to update distribution
+                    statistics.<p class="p">During the expansion, use <code class="ph codeph">gpexpand -a</code>, and
+                    post-expansion, use <code class="ph codeph">analyze</code>.</p>
 </td>
               </tr>
             </tbody>
@@ -247,9 +245,9 @@
           warnings when it completes. To fix constraint violations, perform one of the following
             remedies:<ul class="ul" id="topic14__ul_g1d_jfr_g4">
             <li class="li" id="topic14__no169634">Clean up duplicate data in the primary key columns, and re-run
-                <samp class="ph codeph">gpexpand</samp>. </li>
+                <code class="ph codeph">gpexpand</code>. </li>
             <li class="li" id="topic14__no169656">Drop the primary key constraints, and re-run
-              <samp class="ph codeph">gpexpand</samp>. </li>
+              <code class="ph codeph">gpexpand</code>. </li>
           </ul>
 </div>
       </div>
@@ -259,9 +257,9 @@
       <div class="body">
         <p class="p">You cannot perform redistribution with the expansion utility on tables with dropped
           columns of user-defined data types. To redistribute tables with dropped columns of
-          user-defined types, first re-create the table using <samp class="ph codeph">CREATE TABLE AS
-            SELECT</samp>. After this process removes the dropped columns, redistribute the table
-          with <samp class="ph codeph">gpexpand</samp>.</p>
+          user-defined types, first re-create the table using <code class="ph codeph">CREATE TABLE AS
+            SELECT</code>. After this process removes the dropped columns, redistribute the table
+          with <code class="ph codeph">gpexpand</code>.</p>
       </div>
     </div>
 <h3 id="redistributing-partitioned-tables"><a id="topic16"></a>Redistributing Partitioned Tables</h3> 
