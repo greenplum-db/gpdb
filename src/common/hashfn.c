@@ -27,7 +27,17 @@
  *
  *-------------------------------------------------------------------------
  */
+
+/*
+ * GPDB: We carry a dependency on pthread_win32.h in elog.h, which causes
+ * compilation errors when building Windows clients (as elog.h is included by
+ * postgres.h). So use postgres-fe.h instead for this case.
+ */
+#if defined (WIN32) && defined (FRONTEND)
+#include "postgres_fe.h"
+#else
 #include "postgres.h"
+#endif
 
 #include "common/hashfn.h"
 
