@@ -6163,7 +6163,7 @@ column_to_scan(AOCSFileSegInfo **segInfos, int nseg, int natts, Relation aocsrel
 	}
 
 	if (list_length(drop_segno_list) > 0 && Gp_role != GP_ROLE_DISPATCH)
-		AOCSDrop(aocsrel, drop_segno_list);
+		AOCSDrop(aocsrel, drop_segno_list, NULL);
 
 	return scancol;
 }

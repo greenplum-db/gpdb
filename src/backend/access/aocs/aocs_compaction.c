@@ -49,7 +49,7 @@
  * the relation is dropped later, the code in mdunlink() will remove all
  * segments, including any empty ones we've left behind.
  */
-static void
+void
 AOCSCompaction_DropSegmentFile(Relation aorel,
 							   int segno)
 {
@@ -422,17 +422,16 @@ AOCSSegmentFileFullCompaction(Relation aorel,
 	return true;
 }
 
-
 /*
- * Performs a compaction of an append-only AOCS relation.
- *
- * In non-utility mode, all compaction segment files should be
- * marked as in-use/in-compaction in the appendonlywriter.c code.
- *
+ * Performs dead segments collection or drop of an ao_column relation:
+ * if collect_dead_segs is not NULL, only do collecting, dropping
+ * will be done by AppendOptimizedDropDeadSegments() later;
+ * if collect_dead_segs is NULL, do dropping in-place.
  */
 void
 AOCSDrop(Relation aorel,
-		 List *compaction_segno)
+		 List *compaction_segno,
+		 Bitmapset **collect_dead_segs)
 {
 	const char *relname;
 	int			total_segfiles;
@@ -457,30 +456,38 @@ AOCSDrop(Relation aorel,
 	for (i = 0; i < total_segfiles; i++)
 	{
 		segno = segfile_array[i]->segno;
-		if (!list_member_int(compaction_segno, segno))
+		if (collect_dead_segs == NULL)
 		{
-			continue;
-		}
+			if (!list_member_int(compaction_segno, segno))
+				continue;
 
-		/*
-		 * Get the transaction write-lock for the Append-Only segment file.
-		 *
-		 * NOTE: This is a transaction scope lock that must be held until
-		 * commit / abort.
-		 */
-		LockRelationAppendOnlySegmentFile(&aorel->rd_node,
-										  segfile_array[i]->segno,
-										  AccessExclusiveLock,
-										  /* dontWait */ false);
+			/*
+			 * Try to get the transaction write-lock for the Append-Only segment
+			 * file.
+			 *
+			 * NOTE: This is a transaction scope lock that must be held until
+			 * commit / abort.
+			 */
+			LockRelationAppendOnlySegmentFile(
+											  &aorel->rd_node,
+											  segfile_array[i]->segno,
+											  AccessExclusiveLock,
+											  false);
+		}
 
 		/* Re-fetch under the write lock to get latest committed eof. */
 		fsinfo = GetAOCSFileSegInfo(aorel, appendOnlyMetaDataSnapshot, segno);
 
 		if (fsinfo->state == AOSEG_STATE_AWAITING_DROP)
 		{
-			Assert(HasLockForSegmentFileDrop(aorel));
-			AOCSCompaction_DropSegmentFile(aorel, segno);
-			ClearAOCSFileSegInfo(aorel, segno, AOSEG_STATE_DEFAULT);
+			if (collect_dead_segs == NULL)
+			{
+				Assert(HasLockForSegmentFileDrop(aorel));
+				AOCSCompaction_DropSegmentFile(aorel, segno);
+				ClearAOCSFileSegInfo(aorel, segno, AOSEG_STATE_DEFAULT);
+			}
+			else
+				*collect_dead_segs = bms_add_member(*collect_dead_segs, segno);
 		}
 		pfree(fsinfo);
 	}
@@ -491,7 +498,6 @@ AOCSDrop(Relation aorel,
 		pfree(segfile_array);
 	}
 }
-
 
 /*
  * Performs a compaction of an append-only relation in column-orientation.

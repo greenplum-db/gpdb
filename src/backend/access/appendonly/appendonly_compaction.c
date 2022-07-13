@@ -26,6 +26,7 @@
 #include "access/aomd.h"
 #include "access/aosegfiles.h"
 #include "access/appendonly_compaction.h"
+#include "access/aocs_compaction.h"
 #include "access/genam.h"
 #include "access/heapam.h"
 #include "access/transam.h"
@@ -504,14 +505,13 @@ HasLockForSegmentFileDrop(Relation aorel)
 }
 
 /*
- * Performs a compaction of an append-only relation.
- *
- * In non-utility mode, all compaction segment files should be
- * marked as in-use/in-compaction in the appendonlywriter.c code.
- *
+ * Performs dead segments collection or drop of an ao_row relation:
+ * if collect_dead_segs is not NULL, only do collecting, dropping
+ * will be done by AppendOptimizedDropDeadSegments() later;
+ * if collect_dead_segs is NULL, do dropping in-place.
  */
 void
-AppendOnlyDrop(Relation aorel, List *compaction_segno)
+AppendOnlyDrop(Relation aorel, List *compaction_segno, Bitmapset **collect_dead_segs)
 {
 	const char *relname;
 	int			total_segfiles;
@@ -535,34 +535,40 @@ AppendOnlyDrop(Relation aorel, List *compaction_segno)
 	for (i = 0; i < total_segfiles; i++)
 	{
 		segno = segfile_array[i]->segno;
-		if (!list_member_int(compaction_segno, segno))
+		if (collect_dead_segs == NULL)
 		{
-			continue;
-		}
+			if (!list_member_int(compaction_segno, segno))
+				continue;
 
-		/*
-		 * Try to get the transaction write-lock for the Append-Only segment
-		 * file.
-		 *
-		 * NOTE: This is a transaction scope lock that must be held until
-		 * commit / abort.
-		 */
-		LockRelationAppendOnlySegmentFile(
-										  &aorel->rd_node,
-										  segfile_array[i]->segno,
-										  AccessExclusiveLock,
-										  false);
+			/*
+			 * Try to get the transaction write-lock for the Append-Only segment
+			 * file.
+			 *
+			 * NOTE: This is a transaction scope lock that must be held until
+			 * commit / abort.
+			 */
+			LockRelationAppendOnlySegmentFile(
+											  &aorel->rd_node,
+											  segfile_array[i]->segno,
+											  AccessExclusiveLock,
+											  false);
+		}
 
 		/* Re-fetch under the write lock to get latest committed eof. */
 		fsinfo = GetFileSegInfo(aorel, appendOnlyMetaDataSnapshot, segno);
 
 		if (fsinfo->state == AOSEG_STATE_AWAITING_DROP)
 		{
-			Assert(HasLockForSegmentFileDrop(aorel));
-			Assert(!HasSerializableBackends(false));
-			AppendOnlyCompaction_DropSegmentFile(aorel, segno);
-			ClearFileSegInfo(aorel, segno,
-							 AOSEG_STATE_DEFAULT);
+			if (collect_dead_segs == NULL)
+			{
+				Assert(HasLockForSegmentFileDrop(aorel));
+				Assert(!HasSerializableBackends(false));
+				AppendOnlyCompaction_DropSegmentFile(aorel, segno);
+				ClearFileSegInfo(aorel, segno,
+								AOSEG_STATE_DEFAULT);
+			}
+			else
+				*collect_dead_segs = bms_add_member(*collect_dead_segs, segno);			
 		}
 		pfree(fsinfo);
 	}
@@ -572,6 +578,53 @@ AppendOnlyDrop(Relation aorel, List *compaction_segno)
 		FreeAllSegFileInfo(segfile_array, total_segfiles);
 		pfree(segfile_array);
 	}
+}
+
+/*
+ * Reset AWAITING_DROP segments.
+ * 
+ * Callers should guarantee that the segfile is no longer needed by any
+ * running transaction. It is not necessary to hold a lock on the segfile
+ * row, though.
+ */
+static inline void
+AppendOptimizedDropDeadSegment(Relation aorel, int segno)
+{
+	/*
+	 * Try to get the transaction write-lock for the Append-Only segment
+	 * file.
+	 *
+	 * NOTE: This is a transaction scope lock that must be held until
+	 * commit / abort.
+	 */
+	LockRelationAppendOnlySegmentFile(&aorel->rd_node,
+									  segno,
+									  AccessExclusiveLock,
+									  false);
+	if (RelationIsAoRows(aorel))
+	{
+		AppendOnlyCompaction_DropSegmentFile(aorel, segno);
+		ClearFileSegInfo(aorel, segno, AOSEG_STATE_DEFAULT);
+	}
+	else
+	{
+		AOCSCompaction_DropSegmentFile(aorel, segno);
+		ClearAOCSFileSegInfo(aorel, segno, AOSEG_STATE_DEFAULT);
+	}
+}
+
+void
+AppendOptimizedDropDeadSegments(Relation aorel, Bitmapset *segnos)
+{
+	int segno;
+
+	/*
+	 * Drop segments in batch with concurrent-safety, we already
+	 * held transaction scope AccessExclusiveLock for the segfile.
+	 */
+	segno = -1;
+	while ((segno = bms_next_member(segnos, segno)) >= 0)
+		AppendOptimizedDropDeadSegment(aorel, segno);
 }
 
 /*

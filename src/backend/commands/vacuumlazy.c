@@ -52,6 +52,7 @@
 #include "access/visibilitymap.h"
 #include "catalog/catalog.h"
 #include "catalog/storage.h"
+#include "catalog/pg_appendonly_fn.h"
 #include "commands/dbcommands.h"
 #include "commands/vacuum.h"
 #include "miscadmin.h"
@@ -61,6 +62,7 @@
 #include "storage/bufmgr.h"
 #include "storage/freespace.h"
 #include "storage/lmgr.h"
+#include "storage/procarray.h"
 #include "utils/lsyscache.h"
 #include "utils/memutils.h"
 #include "utils/pg_rusage.h"
@@ -170,6 +172,10 @@ static bool lazy_tid_reaped(ItemPointer itemptr, void *state);
 static int	vac_cmp_itemptr(const void *left, const void *right);
 static bool heap_page_is_all_visible(Relation rel, Buffer buf,
 						 TransactionId *visibility_cutoff_xid);
+static void ao_vacuum_rel_prepare(Relation onerel, VacuumStmt *vacstmt);
+static void ao_vacuum_rel_compact(Relation onerel, VacuumStmt *vacstmt);
+static void ao_vacuum_rel_cleanup(Relation onerel, VacuumStmt *vacstmt, LVRelStats *vacrelstats);
+static void ao_vacuum_rel_recycle_dead_segments(Relation onerel, VacuumStmt *vacstmt);
 
 
 /*
@@ -453,14 +459,7 @@ lazy_vacuum_aorel(Relation onerel, VacuumStmt *vacstmt)
 	switch (vacstmt->appendonly_phase)
 	{
 		case AOVAC_PREPARE:
-			elogif(Debug_appendonly_print_compaction, LOG,
-				   "Vacuum prepare phase %s", RelationGetRelationName(onerel));
-
-			vacuum_appendonly_indexes(onerel, vacstmt);
-			if (RelationIsAoRows(onerel))
-				AppendOnlyTruncateToEOF(onerel);
-			else
-				AOCSTruncateToEOF(onerel);
+			ao_vacuum_rel_prepare(onerel, vacstmt);
 
 			/*
 			 * MPP-23647.  For empty tables, we skip compaction phase
@@ -500,19 +499,7 @@ lazy_vacuum_aorel(Relation onerel, VacuumStmt *vacstmt)
 			break;
 
 		case AOVAC_CLEANUP:
-			elogif(Debug_appendonly_print_compaction, LOG,
-				   "Vacuum cleanup phase %s", RelationGetRelationName(onerel));
-
-			vacuum_appendonly_fill_stats(onerel, GetActiveSnapshot(),
-										 &vacrelstats->rel_pages,
-										 &vacrelstats->new_rel_tuples,
-										 &vacrelstats->hasindex);
-			/* reset the remaining LVRelStats values */
-			vacrelstats->nonempty_pages = 0;
-			vacrelstats->num_dead_tuples = 0;
-			vacrelstats->max_dead_tuples = 0;
-			vacrelstats->tuples_deleted = 0;
-			vacrelstats->pages_removed = 0;
+			ao_vacuum_rel_cleanup(onerel, vacstmt, vacrelstats);
 			break;
 
 		default:
@@ -544,6 +531,155 @@ lazy_vacuum_aorel(Relation onerel, VacuumStmt *vacstmt)
 							 vacrelstats->new_rel_tuples,
 							 0 /* num_dead_tuples */);
 	}
+}
+
+static void
+ao_vacuum_rel_prepare(Relation onerel, VacuumStmt *vacstmt)
+{
+	elogif(Debug_appendonly_print_compaction, LOG,
+		   "Vacuum prepare phase %s", RelationGetRelationName(onerel));
+
+	if (Gp_role == GP_ROLE_DISPATCH)
+		/*
+		 * For QD, no need to perform recycling as no data segfile exists,
+		 * just scan indexes to update statistic.
+		 */
+		vacuum_appendonly_indexes(onerel, vacstmt, NULL);
+	else
+		/* 
+		 * Truncate AWAITING_DROP segments that are no longer visible to anyone
+		 * to 0 bytes. We cannot actually remove them yet, because there might
+		 * still be index entries pointing to them. We cannot recycle the segments
+		 * until the indexes have been vacuumed.
+		 *
+		 * This is optional. We'll drop old AWAITING_DROP segments in the
+		 * post-cleanup phase, too, but doing this first helps to reclaim some
+		 * space earlier. The compaction phase might need the space.
+		 *
+		 * This could run in a local transaction.
+		 */
+		ao_vacuum_rel_recycle_dead_segments(onerel, vacstmt);
+
+	/*
+	 * Also truncate all live segments to the EOF values stored in pg_aoseg.
+	 * This releases space left behind by aborted inserts.
+	 */
+	if (RelationIsAoRows(onerel))
+		AppendOnlyTruncateToEOF(onerel);
+	else
+		AOCSTruncateToEOF(onerel);
+}
+
+static void
+ao_vacuum_rel_compact(Relation onerel, VacuumStmt *vacstmt)
+{
+	Assert(vacstmt->appendonly_phase == AOVAC_COMPACT);
+	Assert(list_length(vacstmt->appendonly_compaction_insert_segno) == 1);
+
+	int insert_segno = linitial_int(vacstmt->appendonly_compaction_insert_segno);
+
+	if (insert_segno == APPENDONLY_COMPACTION_SEGNO_INVALID)
+	{
+		elogif(Debug_appendonly_print_compaction, LOG,
+		"Vacuum pseudo-compaction phase %s", RelationGetRelationName(onerel));
+	}
+	else
+	{
+		elogif(Debug_appendonly_print_compaction, LOG,
+			"Vacuum compaction phase %s", RelationGetRelationName(onerel));
+		if (RelationIsAoRows(onerel))
+		{
+			AppendOnlyCompact(onerel,
+								vacstmt->appendonly_compaction_segno,
+								insert_segno, (vacstmt->options & VACOPT_FULL));
+		}
+		else
+		{
+			Assert(RelationIsAoCols(onerel));
+			AOCSCompact(onerel,
+						vacstmt->appendonly_compaction_segno,
+						insert_segno, (vacstmt->options & VACOPT_FULL));
+		}
+	}
+}
+
+static void
+ao_vacuum_rel_cleanup(Relation onerel, VacuumStmt *vacstmt, LVRelStats *vacrelstats)
+{
+	elogif(Debug_appendonly_print_compaction, LOG,
+		   "Vacuum cleanup phase %s", RelationGetRelationName(onerel));
+
+	vacuum_appendonly_fill_stats(onerel, GetActiveSnapshot(),
+								 &vacrelstats->rel_pages,
+								 &vacrelstats->new_rel_tuples,
+								 &vacrelstats->hasindex);
+	/* reset the remaining LVRelStats values */
+	vacrelstats->nonempty_pages = 0;
+	vacrelstats->num_dead_tuples = 0;
+	vacrelstats->max_dead_tuples = 0;
+	vacrelstats->tuples_deleted = 0;
+	vacrelstats->pages_removed = 0;
+}
+
+/*
+ * Recycling AWAITING_DROP segments.
+ */
+static void
+ao_vacuum_rel_recycle_dead_segments(Relation onerel, VacuumStmt *vacstmt)
+{
+	Bitmapset	*dead_segs = NULL;
+	bool		need_drop;
+
+	if (RelationIsAoRows(onerel))
+		AppendOnlyDrop(onerel, vacstmt->appendonly_compaction_segno, &dead_segs);
+	else
+		AOCSDrop(onerel, vacstmt->appendonly_compaction_segno, &dead_segs);
+
+	need_drop = !bms_is_empty(dead_segs);
+	if (need_drop)
+	{
+		/*
+		 * Vacuum indexes only when we do find AWAITING_DROP segments.
+		 *
+		 * Do index vacuuming before dropping dead segments for data
+		 * consistency and crash safety. If dropping dead segments before
+		 * cleaning up index tuples, the following issues may occur:
+		 * 
+		 * a) The dead segment file becomes available as soon as dropping
+		 * complete. Concurrent inserts may fill it with new tuples hence
+		 * might be deleted soon in the following index vacuuming;
+		 * 
+		 * b) Crash happens in-between ao_vacuum_rel_recycle_dead_segments()
+		 * and vacuum_appendonly_indexes() result in losing the opportunity
+		 * to clean index entries fully as a state for which index tuples
+		 * to delete will be lost in this case.
+		 * 
+		 * So make sure to vacuum indexs to be based on persistent information
+		 * (AWAITING_DROP state in pg_aoseg) to cleanup dead index tuples
+		 * effectively.
+		 */
+		vacuum_appendonly_indexes(onerel, vacstmt, dead_segs);
+		/*
+		 * Truncate AWAITING_DROP the above collected segments to 0 byte.
+		 * Assuming no transaction is able to access the dead segments as it
+		 * has been already marked as AWAITING_DROP, AccessExclusiveLock will
+		 * be held in case of concurrent VACUUM being on the same file.
+		 */
+		if (vacstmt->appendonly_phase == AOVAC_DROP)
+			AppendOptimizedDropDeadSegments(onerel, dead_segs);
+	}
+	else
+	{
+		/*
+		 * If no AWAITING_DROP segments were found, we called
+		 * vacuum_appendonly_indexes() in AOVAC_DROP phase
+		 * for updating statistics.
+		 */
+		if (vacstmt->appendonly_phase == AOVAC_DROP)
+			vacuum_appendonly_indexes(onerel, vacstmt, dead_segs);
+	}
+
+	bms_free(dead_segs);
 }
 
 /*
@@ -1824,9 +1960,7 @@ vacuum_appendonly_rel(Relation aorel, VacuumStmt *vacstmt)
 					relname)));
 
 	if (Gp_role == GP_ROLE_DISPATCH)
-	{
 		return;
-	}
 
 	if (vacstmt->appendonly_phase == AOVAC_DROP)
 	{
@@ -1835,47 +1969,10 @@ vacuum_appendonly_rel(Relation aorel, VacuumStmt *vacstmt)
 		elogif(Debug_appendonly_print_compaction, LOG,
 			"Vacuum drop phase %s", RelationGetRelationName(aorel));
 
-		if (RelationIsAoRows(aorel))
-		{
-			AppendOnlyDrop(aorel, vacstmt->appendonly_compaction_segno);
-		}
-		else
-		{
-			Assert(RelationIsAoCols(aorel));
-			AOCSDrop(aorel, vacstmt->appendonly_compaction_segno);
-		}
+		ao_vacuum_rel_recycle_dead_segments(aorel, vacstmt);
 	}
 	else
-	{
-		Assert(vacstmt->appendonly_phase == AOVAC_COMPACT);
-		Assert(list_length(vacstmt->appendonly_compaction_insert_segno) == 1);
-
-		int insert_segno = linitial_int(vacstmt->appendonly_compaction_insert_segno);
-
-		if (insert_segno == APPENDONLY_COMPACTION_SEGNO_INVALID)
-		{
-			elogif(Debug_appendonly_print_compaction, LOG,
-			"Vacuum pseudo-compaction phase %s", RelationGetRelationName(aorel));
-		}
-		else
-		{
-			elogif(Debug_appendonly_print_compaction, LOG,
-				"Vacuum compaction phase %s", RelationGetRelationName(aorel));
-			if (RelationIsAoRows(aorel))
-			{
-				AppendOnlyCompact(aorel,
-								  vacstmt->appendonly_compaction_segno,
-								  insert_segno, (vacstmt->options & VACOPT_FULL));
-			}
-			else
-			{
-				Assert(RelationIsAoCols(aorel));
-				AOCSCompact(aorel,
-							vacstmt->appendonly_compaction_segno,
-							insert_segno, (vacstmt->options & VACOPT_FULL));
-			}
-		}
-	}
+		ao_vacuum_rel_compact(aorel, vacstmt);
 }
 
 /*
