@@ -81,7 +81,7 @@ Currently, double quotes are always used to surround key and value strings on ou
        <td class="entry" valign="top" headers="d69496e294 d69496e297 d69496e300 d69496e303 d69496e306 ">get <samp class="ph codeph">hstore</samp>'s keys as set</td>
        <td class="entry" valign="top" headers="d69496e294 d69496e297 d69496e300 d69496e303 d69496e306 "><samp class="ph codeph">skeys('a=&gt;1,b=&gt;2')</samp></td>
        <td class="entry" valign="top" headers="d69496e294 d69496e297 d69496e300 d69496e303 d69496e306 ">
-        <pre class="pre codeblock">a
+        <pre class="pre">a
 b</pre>
        </td>
       </tr>
@@ -98,7 +98,7 @@ b</pre>
        <td class="entry" valign="top" headers="d69496e294 d69496e297 d69496e300 d69496e303 d69496e306 ">get <samp class="ph codeph">hstore</samp>'s values as set</td>
        <td class="entry" valign="top" headers="d69496e294 d69496e297 d69496e300 d69496e303 d69496e306 "><samp class="ph codeph">svals('a=&gt;1,b=&gt;2')</samp></td>
        <td class="entry" valign="top" headers="d69496e294 d69496e297 d69496e300 d69496e303 d69496e306 ">
-        <pre class="pre codeblock">1
+        <pre class="pre">1
 2</pre>
        </td>
       </tr>
