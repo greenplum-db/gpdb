@@ -1026,7 +1026,7 @@ test_config_settings(void)
 		}
 		if (n_connections > 0 || i == connslen - 1)
 		{
-			pg_log_error("%s: error %d from: %s\n",
+			pg_log_error("%s: error %d from: %s",
 						 progname, status, cmd);
 			exit(1);
 		}
