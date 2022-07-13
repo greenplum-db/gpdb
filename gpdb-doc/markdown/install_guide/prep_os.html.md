@@ -383,10 +383,39 @@ The XFS options can also be set in the `/etc/fstab` file. This example entry fro
     |                          | RHEL 8</br>Ubuntu | `none` |
     | Other | RHEL 7 | `deadline` |
     |       | RHEL 8</br>Ubuntu| `mq-deadline` |
-    <br>
-    You can configure the disk scheduler as described in this RedHat Enterprise Linux documentation for [RHEL 7](https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/7/html/performance_tuning_guide/sect-red_hat_enterprise_linux-performance_tuning_guide-storage_and_file_systems-configuration_tools#sect-Red_Hat_Enterprise_Linux-Performance_Tuning_Guide-Configuration_tools-Setting_the_default_IO_scheduler) or [RHEL 8](https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/8/html/monitoring_and_managing_system_status_and_performance/setting-the-disk-scheduler_monitoring-and-managing-system-status-and-performance). The Ubuntu wiki [IOSchedulers](https://wiki.ubuntu.com/Kernel/Reference/IOSchedulers) topic describes the I/O schedulers available on Ubuntu systems.
+    </br>
+    To specify a scheduler until the next system reboot, run the following:
 
-    (If you used the `grubby` command to configure the disk scheduler on a RHEL or CentOS 7.x system and it does not update the kernels, see the [Note](#grubby_note) at the end of the section.)
+    ```
+    # echo schedulername > /sys/block/<devname>/queue/scheduler
+    ```
+
+    For example:
+
+    ```
+    # echo deadline > /sys/block/sbd/queue/scheduler
+    ```
+
+    **Note:** Using the `echo` command to set the disk I/O scheduler policy is not persistent; you must ensure that you run the command whenever the system reboots. How to run the command will vary based on your system.
+
+    To specify the I/O scheduler at boot time on systems that use `grub2` such as RHEL 7.x or CentOS 7.x, use the system utility `grubby`. This command adds the parameter when run as `root`:
+
+    ```
+    # grubby --update-kernel=ALL --args="elevator=deadline"
+    ```
+
+    After adding the parameter, reboot the system.
+
+    This `grubby` command displays kernel parameter settings:
+
+    ```
+    # grubby --info=ALL
+    ```
+
+    Refer to your operating system documentation for more information about the `grubby` utility. If you used the `grubby` command to configure the disk scheduler on a RHEL or CentOS 7.x system and it does not update the kernels, see the [Note](#grubby_note) at the end of the section.
+
+    For additional information about configuring the disk scheduler, refer to the RedHat Enterprise Linux documentation for [RHEL 7](https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/7/html/performance_tuning_guide/sect-red_hat_enterprise_linux-performance_tuning_guide-storage_and_file_systems-configuration_tools#sect-Red_Hat_Enterprise_Linux-Performance_Tuning_Guide-Configuration_tools-Setting_the_default_IO_scheduler) or [RHEL 8](https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/8/html/monitoring_and_managing_system_status_and_performance/setting-the-disk-scheduler_monitoring-and-managing-system-status-and-performance). The Ubuntu wiki [IOSchedulers](https://wiki.ubuntu.com/Kernel/Reference/IOSchedulers) topic describes the I/O schedulers available on Ubuntu systems.
+
 
 ### <a id="networking"></a>Networking
 
@@ -483,9 +512,9 @@ Restart the SSH daemon after you update `MaxStartups` and `MaxSessions`. For exa
 # service sshd restart
 ```
 
-<a id="grubby_note"></a>
-
 For detailed information about SSH configuration options, refer to the SSH documentation for your Linux distribution.
+
+<a id="grubby_note"></a>
 
 **Note:** If the `grubby` command does not update the kernels of a RHEL 7.x or CentOS 7.x system, you can manually update all kernels on the system. For example, to add the parameter `transparent_hugepage=never` to all kernels on a system.
 
