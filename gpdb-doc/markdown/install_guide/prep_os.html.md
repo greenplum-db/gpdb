@@ -382,8 +382,7 @@ The XFS options can also be set in the `/etc/fstab` file. This example entry fro
     | Solid-State Drives (SSD) | RHEL 7 | `noop` |
     |                          | RHEL 8</br>Ubuntu | `none` |
     | Other | RHEL 7 | `deadline` |
-    |       | RHEL 8 | `mq-deadline` |
-    |       | Ubuntu | `mq-deadline` or `bfq` |
+    |       | RHEL 8</br>Ubuntu| `mq-deadline` |
     <br>
     You can configure the disk scheduler as described in this RedHat Enterprise Linux documentation for [RHEL 7](https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/7/html/performance_tuning_guide/sect-red_hat_enterprise_linux-performance_tuning_guide-storage_and_file_systems-configuration_tools#sect-Red_Hat_Enterprise_Linux-Performance_Tuning_Guide-Configuration_tools-Setting_the_default_IO_scheduler) or [RHEL 8](https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/8/html/monitoring_and_managing_system_status_and_performance/setting-the-disk-scheduler_monitoring-and-managing-system-status-and-performance). The Ubuntu wiki [IOSchedulers](https://wiki.ubuntu.com/Kernel/Reference/IOSchedulers) topic describes the I/O schedulers available on Ubuntu systems.
 
