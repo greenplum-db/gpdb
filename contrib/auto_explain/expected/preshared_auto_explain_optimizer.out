@@ -1,0 +1,70 @@
+-- need to start cluster with gpconfig -c shared_preload_libraries -v 'auto_explain' before this test
+SET enable_nestloop = ON;
+SET CLIENT_MIN_MESSAGES = LOG;
+SET auto_explain.log_min_duration = 0;
+LOG:  statement: SET auto_explain.log_min_duration = 0;
+CREATE TABLE t1 as select generate_series(1, 10*1000*1000);
+LOG:  statement: CREATE TABLE t1 as select generate_series(1, 10*1000*1000);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause. Creating a NULL policy entry.
+LOG:  duration: 0.006 ms  plan:
+Query Text: CREATE TABLE t1 as select generate_series(1, 10*1000*1000);
+Result  (cost=0.00..0.00 rows=0 width=0)
+  ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..0.01 rows=1 width=4)
+        ->  Result  (cost=0.00..0.00 rows=1 width=8)
+              ->  Result  (cost=0.00..0.00 rows=1 width=4)
+                    One-Time Filter: (gp_execution_segment() = 0)
+                    ->  Result  (cost=0.00..0.00 rows=1 width=4)
+                          ->  Result  (cost=0.00..0.00 rows=1 width=1)
+CREATE TABLE t2 (i int, j int);
+LOG:  statement: CREATE TABLE t2 (i int, j int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+SELECT t3.i, t4.j FROM t2 as t3 join t2 as t4 on t3.i = t4.j;
+LOG:  statement: SELECT t3.i, t4.j FROM t2 as t3 join t2 as t4 on t3.i = t4.j;
+LOG:  duration: 3.521 ms  plan:
+Query Text: SELECT t3.i, t4.j FROM t2 as t3 join t2 as t4 on t3.i = t4.j;
+Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..862.00 rows=1 width=8)
+  ->  Hash Join  (cost=0.00..862.00 rows=1 width=8)
+        Hash Cond: (t2.i = t2_1.j)
+        ->  Seq Scan on t2  (cost=0.00..431.00 rows=1 width=4)
+        ->  Hash  (cost=431.00..431.00 rows=1 width=4)
+              ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
+                    Hash Key: t2_1.j
+                    ->  Seq Scan on t2 t2_1  (cost=0.00..431.00 rows=1 width=4)
+ i | j 
+---+---
+(0 rows)
+
+DROP TABLE t1;
+LOG:  statement: DROP TABLE t1;
+DROP TABLE t2;
+LOG:  statement: DROP TABLE t2;
+SET auto_explain.log_min_duration = 1;
+LOG:  statement: SET auto_explain.log_min_duration = 1;
+CREATE TABLE t1 as select generate_series(1, 10*1000*1000);
+LOG:  statement: CREATE TABLE t1 as select generate_series(1, 10*1000*1000);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause. Creating a NULL policy entry.
+CREATE TABLE t2 (i int, j int);
+LOG:  statement: CREATE TABLE t2 (i int, j int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+SELECT t3.i, t4.j FROM t2 as t3 join t2 as t4 on t3.i = t4.j;
+LOG:  statement: SELECT t3.i, t4.j FROM t2 as t3 join t2 as t4 on t3.i = t4.j;
+LOG:  duration: 2.033 ms  plan:
+Query Text: SELECT t3.i, t4.j FROM t2 as t3 join t2 as t4 on t3.i = t4.j;
+Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..862.00 rows=1 width=8)
+  ->  Hash Join  (cost=0.00..862.00 rows=1 width=8)
+        Hash Cond: (t2.i = t2_1.j)
+        ->  Seq Scan on t2  (cost=0.00..431.00 rows=1 width=4)
+        ->  Hash  (cost=431.00..431.00 rows=1 width=4)
+              ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
+                    Hash Key: t2_1.j
+                    ->  Seq Scan on t2 t2_1  (cost=0.00..431.00 rows=1 width=4)
+ i | j 
+---+---
+(0 rows)
+
+DROP TABLE t1;
+LOG:  statement: DROP TABLE t1;
+DROP TABLE t2;
+LOG:  statement: DROP TABLE t2;

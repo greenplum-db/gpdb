@@ -72,7 +72,7 @@ void
 _PG_init(void)
 {
 	/* Only run auto_explain on the Query Dispatcher node */
-	if (Gp_role != GP_ROLE_DISPATCH)
+	if (!IS_QUERY_DISPATCHER())
 		return;
 
 	/* Define custom GUC variables. */
