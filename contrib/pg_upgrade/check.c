@@ -97,7 +97,7 @@ check_and_dump_old_cluster(bool live_check, char **sequence_script_file_name)
 	 * copy_clog_xlog_xid(), to populate the new cluster's oldest XID.
 	 */
 	if (GET_MAJOR_VERSION(old_cluster.major_version) < 901)
-		compute_old_cluster_chkpnt_oldstxid();
+		set_old_cluster_chkpnt_oldstxid();
 
 	if (!user_opts.check || is_greenplum_dispatcher_mode())
 		init_tablespaces();

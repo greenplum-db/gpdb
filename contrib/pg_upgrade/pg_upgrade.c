@@ -202,17 +202,8 @@ main(int argc, char **argv)
 	invalidate_indexes();
 
 	/*
-	 * vacuum freeze the database before restoring the ao segment tables
-	 * catalog data on segments. The catalog copied from the master indicates
-	 * that the files have 0 EOF and will not go further to open the files
-	 * in Prepare phase which will otherwise result in error as the physical
-	 * files are not yet copied from the old segment.
-	 */
-	freeze_all_databases();
-
-	/*
-	 * vacuum freeze is done prior to copying / linking the data. The xmin
-	 * of the tuples (yet to be copied/linked) for the user created tables can be
+	 * Since freeze_master_data() was executed on the copied master, the xmin of
+	 * the tuples (yet to be copied/linked) for the user created tables can be
 	 * lower than the relfrozenxid updated with vacuum freeze.
 	 * So, it's safe / better to update the relfrozenxid, relminmxid for the
 	 * relations using datfrozenxid which is the lowest available relfrozenxid
@@ -233,6 +224,12 @@ main(int argc, char **argv)
 	 * server.
 	 */
 	restore_aosegment_tables();
+
+	if (is_greenplum_dispatcher_mode())
+	{
+		/* freeze master data *right before* stopping */
+		freeze_master_data();
+	}
 
 	stop_postmaster(false);
 

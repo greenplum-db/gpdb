@@ -70,19 +70,11 @@ reset_system_identifier(void)
  * schema has been restored to allow the data to be visible on the segments.
  * All databases need to be frozen including those where datallowconn is false.
  *
- * On master and segments, vacuuming will also update the checkpoint's oldestXID and
- * checkpoint's oldestXID's DB which was set to default (triggering autovacuum)
- * when pg_resetxlog was executed to update the checkpoint's NextXID,
- * otherwise vacuuming the tables will generate warnings requesting the user to
- * vacuum the tables.
- *
- * Note:
- * In postgres autovacuum is enabled and will be automatically triggered
- * once the checkpoint's oldestXID is updated by pg_resetxlog, but in GPDB vacuum
- * has to be triggered manually.
+ * Note: No further updates should occur after freezing the master data
+ * directory.
  */
 void
-freeze_all_databases(void)
+freeze_master_data(void)
 {
        PGconn                  *conn;
        PGconn                  *conn_template1;
@@ -97,7 +89,7 @@ freeze_all_databases(void)
        TransactionId   txid_after;
        int32                   txns_from_freeze;
 
-       prep_status("Freezing all rows in all databases");
+       prep_status("Freezing all rows in new master after object restore");
 
        /* Temporarily allow connections to all databases for vacuum freeze */
        conn_template1 = connectToServer(&new_cluster, "template1");
@@ -193,11 +185,11 @@ freeze_all_databases(void)
 }
 
 /*
- * GPDB5: Calculate the oldest datfrozenxid in the old cluster by taking the
- * minimum across all databases in the old cluster.
+ * GPDB5: Calculate the oldest xid in the old cluster by taking the minimum
+ * datfrozenxid across all databases in the old cluster.
  */
 void
-compute_old_cluster_chkpnt_oldstxid()
+set_old_cluster_chkpnt_oldstxid()
 {
 	TransactionId	oldestXid = InvalidTransactionId;
 

@@ -90,7 +90,7 @@ bool get_check_fatal_occurred(void);
 bool is_skip_target_check(void);
 
 /* pg_upgrade_greenplum.c */
-void freeze_all_databases(void);
+extern void freeze_master_data(void);
 void reset_system_identifier(void);
 
 /* frozenxids_gp.c */
@@ -152,6 +152,6 @@ is_gpdb6(ClusterInfo *cluster)
 	return GET_MAJOR_VERSION(cluster->major_version) == 904;
 }
 
-extern void compute_old_cluster_chkpnt_oldstxid(void);
+extern void set_old_cluster_chkpnt_oldstxid(void);
 
 #endif /* PG_UPGRADE_GREENPLUM_H */
