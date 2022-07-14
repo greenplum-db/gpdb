@@ -586,6 +586,7 @@ InitProcess(void)
 
 	/* Init gxact */
 	MyTmGxact->gxid = InvalidDistributedTransactionId;
+	pg_atomic_init_u64(&(MyTmGxact->atomic_gxid), InvalidDistributedTransactionId);
 	resetTmGxact();
 
 	/*

@@ -417,6 +417,7 @@ ProcArrayEndGxact(TMGXACT *tmGxact)
 	AssertImply(Gp_role == GP_ROLE_DISPATCH && gxid != InvalidDistributedTransactionId,
 				LWLockHeldByMe(ProcArrayLock));
 	tmGxact->gxid = InvalidDistributedTransactionId;
+	pg_atomic_init_u64(&(tmGxact->atomic_gxid), InvalidDistributedTransactionId);
 	tmGxact->xminDistributedSnapshot = InvalidDistributedTransactionId;
 	tmGxact->includeInCkpt = false;
 	tmGxact->sessionId = 0;
@@ -2001,9 +2002,15 @@ CreateDistributedSnapshot(DistributedSnapshot *ds)
 		if (dxid != InvalidDistributedTransactionId && dxid < globalXminDistributedSnapshots)
 			globalXminDistributedSnapshots = dxid;
 
-		/* just fetch once */
-		gxid = gxact_candidate->gxid;
-		if (gxid == InvalidDistributedTransactionId)
+		/* Atomic fetch gxid */
+		gxid = pg_atomic_read_u64(&gxact_candidate->atomic_gxid);
+
+		/*
+		* Skip further gxid to avoid enlarging inProgressXidArray
+		* as we already have held ProcArrayLock and latestCompletedGxid
+		* can not be changed.
+		*/
+		if (gxid == InvalidDistributedTransactionId || gxid >= xmax)
 			continue;
 
 		/*
@@ -2013,10 +2020,6 @@ CreateDistributedSnapshot(DistributedSnapshot *ds)
 		if (gxid < xmin)
 		{
 			xmin = gxid;
-		}
-		if (gxid > xmax)
-		{
-			xmax = gxid;
 		}
 
 		if (gxact_candidate == MyTmGxact)

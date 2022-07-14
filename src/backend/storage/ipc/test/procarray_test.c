@@ -53,6 +53,7 @@ test__CreateDistributedSnapshot(void **state)
 
 	/* This is going to act as our gxact */
 	allTmGxact[procArray->pgprocnos[0]].gxid = 20;
+	pg_atomic_init_u64(&(allTmGxact[procArray->pgprocnos[0]].atomic_gxid), 20);
 	allTmGxact[procArray->pgprocnos[0]].xminDistributedSnapshot = InvalidDistributedTransactionId;
 
 	procArray->numProcs = 1;
@@ -81,9 +82,11 @@ test__CreateDistributedSnapshot(void **state)
 	allTmGxact[procArray->pgprocnos[0]].xminDistributedSnapshot = InvalidDistributedTransactionId;
 
 	allTmGxact[procArray->pgprocnos[1]].gxid = 10;
+	pg_atomic_init_u64(&(allTmGxact[procArray->pgprocnos[1]].atomic_gxid), 10);
 	allTmGxact[procArray->pgprocnos[1]].xminDistributedSnapshot = 5;
 
 	allTmGxact[procArray->pgprocnos[2]].gxid = 30;
+	pg_atomic_init_u64(&(allTmGxact[procArray->pgprocnos[2]].atomic_gxid), 30);
 	allTmGxact[procArray->pgprocnos[2]].xminDistributedSnapshot = 20;
 
 	procArray->numProcs = 3;
@@ -94,10 +97,10 @@ test__CreateDistributedSnapshot(void **state)
 	/* perform all the validations */
 	assert_true(ds.xminAllDistributedSnapshots == 5);
 	assert_true(ds.xmin == 10);
-	assert_true(ds.xmax == 30);
-	assert_true(ds.count == 2);
+	/* xmax should be latestCompletedGxid+1 */
+	assert_true(ds.xmax == 25);
+	assert_true(ds.count == 1);
 	assert_true(ds.inProgressXidArray[0] == 10);
-	assert_true(ds.inProgressXidArray[1] == 30);
 	assert_true(MyTmGxact->xminDistributedSnapshot == 10);
 
 	/*************************************************************************
@@ -107,9 +110,11 @@ test__CreateDistributedSnapshot(void **state)
 	allTmGxact[procArray->pgprocnos[0]].xminDistributedSnapshot = InvalidDistributedTransactionId;
 
 	allTmGxact[procArray->pgprocnos[3]].gxid = 15;
+	pg_atomic_init_u64(&(allTmGxact[procArray->pgprocnos[3]].atomic_gxid), 15);
 	allTmGxact[procArray->pgprocnos[3]].xminDistributedSnapshot = 12;
 
 	allTmGxact[procArray->pgprocnos[4]].gxid = 7;
+	pg_atomic_init_u64(&(allTmGxact[procArray->pgprocnos[4]].atomic_gxid), 7);
 	allTmGxact[procArray->pgprocnos[4]].xminDistributedSnapshot = 7;
 
 	procArray->numProcs = 5;
@@ -123,13 +128,12 @@ test__CreateDistributedSnapshot(void **state)
 	/* perform all the validations */
 	assert_true(ds.xminAllDistributedSnapshots == 5);
 	assert_true(ds.xmin == 7);
-	assert_true(ds.xmax == 30);
-	assert_true(ds.count == 4);
+	assert_true(ds.xmax == 25);
+	assert_true(ds.count == 3);
 	assert_true(MyTmGxact->xminDistributedSnapshot == 7);
 	assert_true(ds.inProgressXidArray[0] == 7);
 	assert_true(ds.inProgressXidArray[1] == 10);
 	assert_true(ds.inProgressXidArray[2] == 15);
-	assert_true(ds.inProgressXidArray[3] == 30);
 
 	free(ds.inProgressXidArray);
 	free(allTmGxact);

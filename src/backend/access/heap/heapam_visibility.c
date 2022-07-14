@@ -1069,7 +1069,7 @@ HeapTupleSatisfiesMVCC(Relation relation, HeapTuple htup, Snapshot snapshot,
 													&setDistributedSnapshotIgnore);
 			if (snapshotCheckResult == XID_NOT_IN_SNAPSHOT)
 			{
-				if (snapshotCheckResult == XID_SURELY_COMMITTED || TransactionIdDidCommit(xvac))
+				if (TransactionIdDidCommit(xvac))
 				{
 					SetHintBits(tuple, buffer, relation, HEAP_XMIN_INVALID,
 								InvalidTransactionId);

@@ -294,7 +294,24 @@ currentDtxActivate(void)
 		SpinLockAcquire(shmGxidGenLock);
 		if (ShmemVariableCache->GxidCount > 0)
 		{
-			MyTmGxact->gxid = ShmemVariableCache->nextGxid++;
+			/*
+			* pg_atomic_write_u64 is necessary.
+			* Though we have shmGxidGenLock when assigning gxid and
+			* have ProcArrayLock when fetching gxid during
+			* CreateDistributedSnapshot(), it is not enough as the
+			* DistributedTransactionId is unit64 now.
+			* We need to keep gxid atomic.
+			*/
+			pg_atomic_write_u64(&MyTmGxact->atomic_gxid, ShmemVariableCache->nextGxid++);
+
+			/*
+			* We must ensure using the new value here.
+			* It's safe to assign gxid here because we use pg_atomic_read_u64
+			* to fetch gxid during CreateDistributedSnapshot().
+			*/
+			pg_write_barrier();
+			MyTmGxact->gxid = MyTmGxact->atomic_gxid.value;
+
 			ShmemVariableCache->GxidCount--;
 			SpinLockRelease(shmGxidGenLock);
 			break;

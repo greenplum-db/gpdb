@@ -15,6 +15,7 @@
 #include "cdb/cdbpublic.h"
 #ifndef FRONTEND
 #include "storage/s_lock.h"
+#include "port/atomics.h"
 #endif
 #include "nodes/plannodes.h"
 
@@ -207,6 +208,18 @@ typedef struct TMGXACT
 	 * transaction ends, with ProcArrayLock held.
 	 */
 	DistributedTransactionId	gxid;
+
+#ifndef FRONTEND
+	/*
+	* Atomic assign and fetch an uint64 DistributedTransactionId,
+	* cooperate with gxid.
+	* When first assigning and fetching gxid, using this to keep
+	* atomic and then assign/fetch gxid with its value.
+	* Only use this on QD when necessary as QE's gxid and
+	* DistributedSnapshot is dispathed from QD.
+	*/
+	pg_atomic_uint64 			atomic_gxid;
+#endif
 
 	/*
 	 * This is similar to xmin of PROC, stores lowest dxid on first snapshot
