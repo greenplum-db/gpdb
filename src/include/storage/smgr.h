@@ -137,7 +137,8 @@ extern const f_smgr *smgr_standard(BackendId backend, RelFileNode rnode, SMgrImp
 extern const f_smgr *smgr(BackendId backend, RelFileNode rnode, SMgrImpl which);
 
 extern void smgrinit(void);
-extern SMgrRelation smgropen(RelFileNode rnode, BackendId backend, SMgrImpl which);
+extern SMgrRelation smgropen(RelFileNode rnode, BackendId backend,
+							  SMgrImpl which);
 extern bool smgrexists(SMgrRelation reln, ForkNumber forknum);
 extern void smgrsetowner(SMgrRelation *owner, SMgrRelation reln);
 extern void smgrclearowner(SMgrRelation *owner, SMgrRelation reln);
