@@ -743,7 +743,7 @@ WHERE relname='tenk_ao2'));
  NormalXid |      1 | t        |             0
 (6 rows)
 
--- WITH OIDS is no longer supported
+-- OIDS
 CREATE TABLE aowithoids(a int, b int) WITH (appendonly=true,oids=true);
 NOTICE:  OIDS=TRUE is not recommended for user-created tables
 HINT:  Use OIDS=FALSE to prevent wrap-around of the OID counter.

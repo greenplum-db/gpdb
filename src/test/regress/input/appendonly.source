@@ -347,7 +347,7 @@ last_sequence = 0, gp_segment_id from gp_dist_random('gp_fastsequence') WHERE ob
 IN (SELECT segrelid FROM pg_appendonly WHERE relid IN (SELECT oid FROM pg_class
 WHERE relname='tenk_ao2'));
 
--- WITH OIDS is no longer supported
+-- OIDS
 CREATE TABLE aowithoids(a int, b int) WITH (appendonly=true,oids=true);
 COPY aowithoids FROM STDIN;
 1	1
