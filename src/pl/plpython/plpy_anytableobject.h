@@ -20,7 +20,6 @@ typedef struct PLyAnytableObject
 } PLyAnytableObject;
 
 extern void PLy_anytable_init_type(void);
-extern PyObject *PLy_anytable(PyObject *self, PyObject *args);
 extern PyObject *PLyAnytable_FromAnytable(PLyDatumToOb *arg, Datum d);
 
 #endif	/* PLPY_ANYTABLEOBJECT_H */

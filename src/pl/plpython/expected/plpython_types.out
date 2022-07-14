@@ -1044,6 +1044,22 @@ INFO:  ('b',)
  
 (1 row)
 
+SELECT * FROM test_anytable(TABLE(SELECT * FROM (VALUES ('a'), (null)) a));
+INFO:  ('a',)
+INFO:  (None,)
+ test_anytable 
+---------------
+ 
+(1 row)
+
+SELECT * FROM test_anytable(TABLE(SELECT * FROM (VALUES (1, null, (1, 2)::named_pair_2), (1, 0.30000000000000004::float, null)) a));
+INFO:  (1, None, {'i': 1, 'j': 2})
+INFO:  (1, 0.30000000000000004, None)
+ test_anytable 
+---------------
+ 
+(1 row)
+
 SELECT * FROM test_anytable(TABLE(SELECT * FROM (VALUES (1, 2)) a SCATTER BY 1));
 INFO:  (1, 2)  (seg1 slice1 127.0.0.1:7003 pid=225428)
  test_anytable 

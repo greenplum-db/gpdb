@@ -582,6 +582,9 @@ SELECT * FROM test_anytable(TABLE(SELECT * FROM (VALUES (1)) a));
 SELECT * FROM test_anytable(TABLE(SELECT * FROM (VALUES (1, 2)) a));
 SELECT * FROM test_anytable(TABLE(SELECT * FROM (VALUES (1), (2)) a));
 SELECT * FROM test_anytable(TABLE(SELECT * FROM (VALUES ('a'), ('b')) a));
+SELECT * FROM test_anytable(TABLE(SELECT * FROM (VALUES ('a'), (null)) a));
+
+SELECT * FROM test_anytable(TABLE(SELECT * FROM (VALUES (1, null, (1, 2)::named_pair_2), (1, 0.30000000000000004::float, null)) a));
 
 SELECT * FROM test_anytable(TABLE(SELECT * FROM (VALUES (1, 2)) a SCATTER BY 1));
 
