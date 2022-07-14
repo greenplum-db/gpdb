@@ -28,13 +28,14 @@ OBJS		= $(SRCS:.c=.o)
 EXTENSION = pgcrypto
 DATA = pgcrypto--1.1.sql pgcrypto--1.0--1.1.sql pgcrypto--unpackaged--1.0.sql
 
-REGRESS_OPTS = --dbname=$(CONTRIB_TESTDB) --init-file=$(top_builddir)/src/test/regress/init_file 
+REGRESS_OPTS = --dbname=$(CONTRIB_TESTDB) --init-file=$(top_builddir)/src/test/regress/init_file
 
 REGRESS = init md5 sha1 hmac-md5 hmac-sha1 blowfish rijndael \
 	$(CF_TESTS) \
 	crypt-des crypt-md5 crypt-blowfish crypt-xdes \
 	pgp-armor pgp-decrypt pgp-encrypt $(CF_PGP_TESTS) \
-	pgp-pubkey-decrypt pgp-pubkey-encrypt pgp-info
+	pgp-pubkey-decrypt pgp-pubkey-encrypt pgp-info \
+	setup_fips fips
 
 EXTRA_CLEAN = gen-rtab
 
