@@ -65,7 +65,7 @@ struct cipher_info
 	int			block_len;
 };
 
-static const struct digest_info digest_list[] = {
+static const struct digest_info digest_list_all[] = {
 	{"md5", PGP_DIGEST_MD5},
 	{"sha1", PGP_DIGEST_SHA1},
 	{"sha-1", PGP_DIGEST_SHA1},
@@ -76,7 +76,18 @@ static const struct digest_info digest_list[] = {
 	{NULL, 0}
 };
 
-static const struct cipher_info cipher_list[] = {
+static const struct digest_info digest_list_fips[] = {
+	{"sha1", PGP_DIGEST_SHA1},
+	{"sha-1", PGP_DIGEST_SHA1},
+	{"sha256", PGP_DIGEST_SHA256},
+	{"sha384", PGP_DIGEST_SHA384},
+	{"sha512", PGP_DIGEST_SHA512},
+	{NULL, 0}
+};
+
+static const struct digest_info *digest_list = digest_list_all;
+
+static const struct cipher_info cipher_list_all[] = {
 	{"3des", PGP_SYM_DES3, "3des-ecb", 192 / 8, 64 / 8},
 	{"cast5", PGP_SYM_CAST5, "cast5-ecb", 128 / 8, 64 / 8},
 	{"bf", PGP_SYM_BLOWFISH, "bf-ecb", 128 / 8, 64 / 8},
@@ -88,6 +99,17 @@ static const struct cipher_info cipher_list[] = {
 	{"twofish", PGP_SYM_TWOFISH, "twofish-ecb", 256 / 8, 128 / 8},
 	{NULL, 0, NULL}
 };
+
+static const struct cipher_info cipher_list_fips[] = {
+	{"3des", PGP_SYM_DES3, "3des-ecb", 192 / 8, 64 / 8},
+	{"aes", PGP_SYM_AES_128, "aes-ecb", 128 / 8, 128 / 8},
+	{"aes128", PGP_SYM_AES_128, "aes-ecb", 128 / 8, 128 / 8},
+	{"aes192", PGP_SYM_AES_192, "aes-ecb", 192 / 8, 128 / 8},
+	{"aes256", PGP_SYM_AES_256, "aes-ecb", 256 / 8, 128 / 8},
+	{NULL, 0, NULL}
+};
+
+static const struct cipher_info *cipher_list = cipher_list_all;
 
 static const struct cipher_info *
 get_cipher_info(int code)
@@ -356,4 +378,18 @@ pgp_set_symkey(PGP_Context *ctx, const uint8 *key, int len)
 	ctx->sym_key = key;
 	ctx->sym_key_len = len;
 	return 0;
+}
+
+void
+pgp_disable_fipsmode(void)
+{
+	cipher_list = cipher_list_all;
+	digest_list = digest_list_all;
+}
+
+void
+pgp_enable_fipsmode(void)
+{
+	cipher_list = cipher_list_fips;
+	digest_list = digest_list_fips;
 }
