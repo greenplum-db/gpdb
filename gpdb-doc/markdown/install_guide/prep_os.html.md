@@ -376,14 +376,41 @@ The XFS options can also be set in the `/etc/fstab` file. This example entry fro
 
     A typical Linux disk I/O scheduler supports multiple access policies. The optimal policy selection depends on the underlying storage infrastructure. The recommended scheduler policy settings for Greenplum Database systems for specific OSs and storage device types follow:
 
-    | Storage Device Type | OS | Recommended Scheduler Policy |
-    |-------------------|---------------|-------|
-    | Non-Volatile Memory Express (NVMe) | RHEL 7</br>RHEL 8</br>Ubuntu | `none` |
-    | Solid-State Drives (SSD) | RHEL 7 | `noop` |
-    |                          | RHEL 8</br>Ubuntu | `none` |
-    | Other | RHEL 7 | `deadline` |
-    |       | RHEL 8</br>Ubuntu| `mq-deadline` |
-    </br>
+    <table>
+      <thead>
+        <tr>
+          <th>Storage Device Type</th>
+          <th>OS</th>
+          <th>Recommended Scheduler Policy</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Non-Volatile Memory Express (NVMe)</td>
+          <td>RHEL 7</br>RHEL 8</br>Ubuntu</td>
+          <td><code>none</code></td>
+        </tr>
+        <tr>
+          <td rowspan="2">Solid-State Drives (SSD)</td>
+          <td>RHEL 7</td>
+          <td><code>noop</code></td>
+        </tr>
+        <tr>
+          <td>RHEL 8</br>Ubuntu</td>
+          <td><code>none</code></td>
+        </tr>
+        <tr>
+          <td rowspan="2">Other</td>
+          <td>RHEL 7</td>
+          <td><code>deadline</code></td>
+        </tr>
+        <tr>
+          <td>RHEL 8</br>Ubuntu</td>
+          <td><code>mq-deadline</code></td>
+        </tr>
+      </tbody>
+    </table>
+
     To specify a scheduler until the next system reboot, run the following:
 
     ```
