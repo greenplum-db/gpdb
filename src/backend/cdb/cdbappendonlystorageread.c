@@ -235,7 +235,7 @@ AppendOnlyStorageRead_DoOpenFile(AppendOnlyStorageRead *storageRead,
 	elogif(Debug_appendonly_print_read_block, LOG,
 		   "Append-Only storage read: opening table '%s', segment file '%s', fileFlags 0x%x",
 		   storageRead->relationName,
-		   storageRead->segmentFileName,
+		   filePathName,
 		   fileFlags);
 
 	/*
