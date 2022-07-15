@@ -675,7 +675,7 @@ TransferAppendonlyEntries(Oid fromrelid, Oid torelid)
 	pg_appendonly_tuple = heap_modify_tuple(pg_appendonly_tuple, pg_appendonly_dsc,
 								   newValues, newNulls, replace);
 
-	CatalogTupleInsert(pg_appendonly_rel, pg_appendonly_tuple);
+	CatalogTupleUpdate(pg_appendonly_rel, &pg_appendonly_tuple->t_self, pg_appendonly_tuple);
 
 	heap_freetuple(pg_appendonly_tuple);
 

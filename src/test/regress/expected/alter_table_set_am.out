@@ -136,6 +136,14 @@ SELECT * FROM gp_toolkit.__gp_aovisimap('heap2ao2');
 -----+-------+---------
 (0 rows)
 
+-- pg_appendonly should have entries associated with the new AO tables
+SELECT c.relname FROM pg_class c, pg_appendonly p WHERE c.relname LIKE 'heap2ao%' AND c.oid = p.relid;
+ relname  
+----------
+ heap2ao
+ heap2ao2
+(2 rows)
+
 -- check inherited tables
 CREATE TABLE heapbase (a int, b int);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
@@ -293,6 +301,13 @@ SELECT * FROM gp_toolkit.__gp_aovisimap('heapbase2');
 -----+-------+---------
 (0 rows)
 
+SELECT c.relname FROM pg_class c, pg_appendonly p WHERE c.relname LIKE 'heapbase%' AND c.oid = p.relid;
+  relname  
+-----------
+ heapbase
+ heapbase2
+(2 rows)
+
 -- aux tables are not created for child table
 SELECT * FROM gp_toolkit.__gp_aoseg('heapchild');
 ERROR:  'heapchild' is not an append-only row relation  (seg0 slice1 127.0.0.1:7002 pid=29947)
@@ -302,6 +317,11 @@ SELECT * FROM gp_toolkit.__gp_aoseg('heapchild2');
 ERROR:  'heapchild2' is not an append-only row relation  (seg0 slice1 127.0.0.1:7002 pid=29947)
 SELECT * FROM gp_toolkit.__gp_aovisimap('heapchild2');
 ERROR:  function not supported on relation
+SELECT c.relname FROM pg_class c, pg_appendonly p WHERE c.relname LIKE 'heapchild%' AND c.oid = p.relid;
+ relname 
+---------
+(0 rows)
+
 -- Scenario 3: AO to Heap
 SET gp_default_storage_options = 'blocksize=65536, compresstype=zlib, compresslevel=5, checksum=true';
 CREATE TABLE ao2heap(a int, b int) WITH (appendonly=true);
@@ -380,7 +400,13 @@ SELECT * FROM gp_toolkit.__gp_aoseg('ao2heap2');
 ERROR:  'ao2heap2' is not an append-only row relation  (seg0 slice1 127.0.1.1:7002 pid=6817)
 SELECT * FROM gp_toolkit.__gp_aovisimap('ao2heap2');
 ERROR:  function not supported on relation
--- The altered tabless should have heap AM.
+-- No pg_appendonly entries should be left too
+SELECT c.relname FROM pg_class c, pg_appendonly p WHERE c.relname LIKE 'ao2heap%' AND c.oid = p.relid;
+ relname 
+---------
+(0 rows)
+
+-- The altered tables should have heap AM.
 SELECT c.relname, a.amname FROM pg_class c JOIN pg_am a ON c.relam = a.oid WHERE c.relname LIKE 'ao2heap%';
  relname  | amname 
 ----------+--------
@@ -406,3 +432,22 @@ SELECT relname, relfrozenxid <> '0' FROM pg_class WHERE relname LIKE 'ao2heap%';
 
 DROP TABLE ao2heap;
 DROP TABLE ao2heap2;
+-- Final scenario: run the iterations of AT from "A" to "B" and back to "A", that includes:
+-- 1. Heap->AO->Heap->AO
+-- (TODO) 2. AO->AOCO->AO->AOCO
+-- (TODO) 3. Heap->AOCO->Heap->AOCO
+-- 1. Heap->AO->Heap->AO
+CREATE TABLE heapao(a int, b int) WITH (appendonly=true);
+CREATE INDEX heapaoindex ON heapao(b);
+INSERT INTO heapao SELECT i,i FROM generate_series(1,5) i;
+ALTER TABLE heapao SET ACCESS METHOD ao_row;
+ALTER TABLE heapao SET ACCESS METHOD heap;
+ALTER TABLE heapao SET ACCESS METHOD ao_row;
+-- Just checking data is intact. 
+SELECT count(*) FROM heapao;
+ count 
+-------
+     5
+(1 row)
+
+DROP TABLE heapao;

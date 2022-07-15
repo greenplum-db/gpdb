@@ -80,6 +80,8 @@ SELECT * FROM gp_toolkit.__gp_aovisimap('heap2ao');
 SELECT * FROM gp_toolkit.__gp_aoseg('heap2ao2');
 SELECT * FROM gp_toolkit.__gp_aovisimap('heap2ao2');
 
+-- pg_appendonly should have entries associated with the new AO tables
+SELECT c.relname FROM pg_class c, pg_appendonly p WHERE c.relname LIKE 'heap2ao%' AND c.oid = p.relid;
 
 -- check inherited tables
 CREATE TABLE heapbase (a int, b int);
@@ -143,12 +145,14 @@ SELECT * FROM gp_toolkit.__gp_aoseg('heapbase');
 SELECT * FROM gp_toolkit.__gp_aovisimap('heapbase');
 SELECT * FROM gp_toolkit.__gp_aoseg('heapbase2');
 SELECT * FROM gp_toolkit.__gp_aovisimap('heapbase2');
+SELECT c.relname FROM pg_class c, pg_appendonly p WHERE c.relname LIKE 'heapbase%' AND c.oid = p.relid;
 
 -- aux tables are not created for child table
 SELECT * FROM gp_toolkit.__gp_aoseg('heapchild');
 SELECT * FROM gp_toolkit.__gp_aovisimap('heapchild');
 SELECT * FROM gp_toolkit.__gp_aoseg('heapchild2');
 SELECT * FROM gp_toolkit.__gp_aovisimap('heapchild2');
+SELECT c.relname FROM pg_class c, pg_appendonly p WHERE c.relname LIKE 'heapchild%' AND c.oid = p.relid;
 
 -- Scenario 3: AO to Heap
 SET gp_default_storage_options = 'blocksize=65536, compresstype=zlib, compresslevel=5, checksum=true';
@@ -193,7 +197,10 @@ SELECT * FROM gp_toolkit.__gp_aovisimap('ao2heap');
 SELECT * FROM gp_toolkit.__gp_aoseg('ao2heap2');
 SELECT * FROM gp_toolkit.__gp_aovisimap('ao2heap2');
 
--- The altered tabless should have heap AM.
+-- No pg_appendonly entries should be left too
+SELECT c.relname FROM pg_class c, pg_appendonly p WHERE c.relname LIKE 'ao2heap%' AND c.oid = p.relid;
+
+-- The altered tables should have heap AM.
 SELECT c.relname, a.amname FROM pg_class c JOIN pg_am a ON c.relam = a.oid WHERE c.relname LIKE 'ao2heap%';
 
 -- The new heap tables shouldn't have the old AO table's reloptions
@@ -204,3 +211,21 @@ SELECT relname, relfrozenxid <> '0' FROM pg_class WHERE relname LIKE 'ao2heap%';
 
 DROP TABLE ao2heap;
 DROP TABLE ao2heap2;
+
+-- Final scenario: run the iterations of AT from "A" to "B" and back to "A", that includes:
+-- 1. Heap->AO->Heap->AO
+-- (TODO) 2. AO->AOCO->AO->AOCO
+-- (TODO) 3. Heap->AOCO->Heap->AOCO
+
+-- 1. Heap->AO->Heap->AO
+CREATE TABLE heapao(a int, b int) WITH (appendonly=true);
+CREATE INDEX heapaoindex ON heapao(b);
+INSERT INTO heapao SELECT i,i FROM generate_series(1,5) i;
+
+ALTER TABLE heapao SET ACCESS METHOD ao_row;
+ALTER TABLE heapao SET ACCESS METHOD heap;
+ALTER TABLE heapao SET ACCESS METHOD ao_row;
+
+-- Just checking data is intact. 
+SELECT count(*) FROM heapao;
+DROP TABLE heapao;
