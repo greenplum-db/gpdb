@@ -1905,6 +1905,11 @@ CGroup::FResetStats()
 		return true;
 	}
 
+	if (FDuplicateGroup())
+	{
+		return PgroupDuplicate()->FResetStats();
+	}
+
 	BOOL fResetStats = false;
 	if (FHasNewLogicalOperators())
 	{
