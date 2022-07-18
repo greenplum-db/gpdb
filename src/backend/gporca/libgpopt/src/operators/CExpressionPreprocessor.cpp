@@ -2830,10 +2830,11 @@ CExpressionPreprocessor::PexprTransposeSelectAndProject(CMemoryPool *mp,
 		(*(*pexpr)[0])[0]->Pop()->Eopid() == COperator::EopLogicalNAryJoin)
 	{
 		CExpression *pproject = (*pexpr)[0];
+		CExpression *pprojectList = (*pproject)[1];
 		CExpression *pselectNew = pexpr;
 
 		CExpressionArray *pdrgpexpr = GPOS_NEW(mp) CExpressionArray(mp);
-		for (ULONG ul = 0; ul < (*pproject)[1]->Arity(); ul++)
+		for (ULONG ul = 0; ul < pprojectList->Arity(); ul++)
 		{
 			CExpression *pprojexpr =
 				CUtils::PNthProjectElementExpr(pproject, ul);
@@ -2871,10 +2872,10 @@ CExpressionPreprocessor::PexprTransposeSelectAndProject(CMemoryPool *mp,
 		pdrgpexpr->Append(pselectNew);
 
 		CExpressionArray *pdrgpprojelems = GPOS_NEW(mp) CExpressionArray(mp);
-		for (ULONG ul = 0; ul < (*pproject)[1]->Arity(); ul++)
+		for (ULONG ul = 0; ul < pprojectList->Arity(); ul++)
 		{
-			(*(*pproject)[1])[ul]->AddRef();
-			pdrgpprojelems->Append((*(*pproject)[1])[ul]);
+			(*pprojectList)[ul]->AddRef();
+			pdrgpprojelems->Append((*pprojectList)[ul]);
 		}
 		pdrgpexpr->Append(GPOS_NEW(mp) CExpression(
 			mp, GPOS_NEW(mp) CScalarProjectList(mp), pdrgpprojelems));
@@ -3087,7 +3088,7 @@ CExpressionPreprocessor::PexprPreprocess(
 	GPOS_CHECK_ABORT;
 	pexprExistWithPredFromINSubq->Release();
 
-	// (87) push down project elemnts
+	// (28) swap logical select over logical project
 	CExpression *pexprTransposeSelectAndProject =
 		PexprTransposeSelectAndProject(mp, pexprPrunedPartitions);
 	pexprPrunedPartitions->Release();
