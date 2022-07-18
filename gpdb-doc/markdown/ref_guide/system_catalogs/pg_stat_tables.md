@@ -22,9 +22,9 @@ In Greenplum Database 5, the `pg_stat_*_tables` views display access statistics 
 |`n_live_tup`|bigint|Estimated number of live rows|
 |`n_dead_tup`|bigint|Estimated number of dead rows|
 |`last_vacuum`|timestamp with time zone|Last time this table was manually vacuumed \(not counting `VACUUM FULL`\)|
-|`last_autovacuum`|timestamp with time zone|Last time this table was vacuumed by the autovacuum daemon<sup>1</sup>|
+|`last_autovacuum`|timestamp with time zone|Last time this table was vacuumed by the autovacuum daemon<sup>1</sup>. **Note:**  Greenplum Database 5.x does not populate this column value.|
 |`last_analyze`|timestamp with time zone|Last time this table was manually analyzed|
-|`last_autoanalyze`|timestamp with time zone|Last time this table was analyzed by the autovacuum daemon<sup>1</sup>|
+|`last_autoanalyze`|timestamp with time zone|Last time this table was analyzed by the autovacuum daemon<sup>1</sup>. **Note:**  Greenplum Database 5.x does not populate this column value.|
 
 **Note:** <sup>1</sup>In Greenplum Database, the autovacuum daemon is disabled and not supported for user defined databases.
 
@@ -54,9 +54,7 @@ SELECT
     m.n_live_tup,
     m.n_dead_tup,
     s.last_vacuum,
-    s.last_autovacuum,
-    s.last_analyze,
-    s.last_autoanalyze
+    s.last_analyze
 FROM
     (SELECT
          relid,
@@ -73,9 +71,7 @@ FROM
          sum(n_live_tup) as n_live_tup,
          sum(n_dead_tup) as n_dead_tup,
          max(last_vacuum) as last_vacuum,
-         max(last_autovacuum) as last_autovacuum,
-         max(last_analyze) as last_analyze,
-         max(last_autoanalyze) as last_autoanalyze
+         max(last_analyze) as last_analyze
      FROM gp_dist_random('pg_stat_all_tables')
      WHERE relid >= 16384
      GROUP BY relid, schemaname, relname
