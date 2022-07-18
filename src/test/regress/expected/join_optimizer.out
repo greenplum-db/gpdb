@@ -3434,13 +3434,13 @@ where t1.unique2 < 42 and t1.stringu1 > t2.stringu2;
                ->  Nested Loop
                      Join Filter: true
                      ->  Result
-                           ->  Result
-                                 Filter: ((11) < 42)
-                                 ->  Hash Left Join
-                                       Hash Cond: ((1) = (1))
+                           ->  Hash Left Join
+                                 Hash Cond: ((1) = (1))
+                                 ->  Result
+                                       One-Time Filter: (11 < 42)
                                        ->  Result
-                                       ->  Hash
-                                             ->  Result
+                                 ->  Hash
+                                       ->  Result
                      ->  Index Scan using tenk1_unique1 on tenk1
                            Index Cond: (unique1 = (3))
                ->  Hash
@@ -4920,30 +4920,29 @@ from
      left join uniquetbl u1 ON u1.f1 = t1.string4) ss
   on t0.f1 = ss.case1
 where ss.stringu2 !~* ss.case1;
-                                            QUERY PLAN                                            
---------------------------------------------------------------------------------------------------
+                                                  QUERY PLAN                                                  
+--------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Hash Join
          Hash Cond: ((CASE tenk1.ten WHEN 0 THEN 'doh!'::text ELSE NULL::text END) = text_tbl.f1)
          ->  Redistribute Motion 3:3  (slice2; segments: 3)
                Hash Key: (CASE tenk1.ten WHEN 0 THEN 'doh!'::text ELSE NULL::text END)
-               ->  Result
-                     Filter: (tenk1.stringu2 !~* (CASE tenk1.ten WHEN 0 THEN 'doh!'::text ELSE NULL::text END))
-                     ->  Hash Left Join
-                           Hash Cond: (tenk1.string4 = (uniquetbl.f1)::name)
-                           ->  Nested Loop
-                                 Join Filter: true
-                                 ->  Broadcast Motion 3:3  (slice3; segments: 3)
-                                       ->  Seq Scan on int4_tbl
-                                 ->  Index Scan using tenk1_unique2 on tenk1
-                                       Index Cond: (unique2 = int4_tbl.f1)
-                           ->  Hash
-                                 ->  Broadcast Motion 3:3  (slice4; segments: 3)
-                                       ->  Seq Scan on uniquetbl
+               ->  Hash Left Join
+                     Hash Cond: (tenk1.string4 = (uniquetbl.f1)::name)
+                     ->  Nested Loop
+                           Join Filter: true
+                           ->  Broadcast Motion 3:3  (slice3; segments: 3)
+                                 ->  Seq Scan on int4_tbl
+                           ->  Index Scan using tenk1_unique2 on tenk1
+                                 Index Cond: (unique2 = int4_tbl.f1)
+                                 Filter: (stringu2 !~* CASE ten WHEN 0 THEN 'doh!'::text ELSE NULL::text END)
+                     ->  Hash
+                           ->  Broadcast Motion 3:3  (slice4; segments: 3)
+                                 ->  Seq Scan on uniquetbl
          ->  Hash
                ->  Seq Scan on text_tbl
  Optimizer: Pivotal Optimizer (GPORCA)
-(21 rows)
+(20 rows)
 
 select t0.*
 from
