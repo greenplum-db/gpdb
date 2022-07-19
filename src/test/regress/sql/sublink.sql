@@ -40,3 +40,22 @@ cte_b AS
 )
 SELECT *
 FROM cte_b as first, cte_b as second;
+
+
+--
+-- Test GROUP BY IN exists subquery
+-- More details can be found in https://github.com/greenplum-db/gpdb/issues/11849
+--
+create table group_by_sublink(a int);
+insert into group_by_sublink select i from generate_series(1, 5) i;
+explain (costs off)
+select a from group_by_sublink where exists (select avg(a) from group_by_sublink group by a);
+select a from group_by_sublink where exists (select avg(a) from group_by_sublink group by a);
+
+-- The below SQL will not "prune" any more, as remove unnecessary clauses during planning stage.
+-- Such as ORDER BY, DISTINCT, DISTINCT ON. But we can manually optimize it by rewriting the SQL.
+explain (costs off)
+select a from group_by_sublink where exists (select a from group_by_sublink order by a desc);
+explain (costs off)
+select a from group_by_sublink where exists (select distinct a from group_by_sublink);
+

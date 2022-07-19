@@ -1749,6 +1749,18 @@ simplify_EXISTS_query(PlannerInfo *root, Query *query)
 		return false;
 
 	/*
+	 * In GPDB, we will try to pull up the correlated EXISTS sublink which has
+	 * aggregate node, this is different from upstream, and we can find some
+	 * examples at qp_correlated_query.sql.
+	 * But for uncorrelated EXISTS sublink with aggreate node, we should do nothing
+	 * for it! Since it will be made a InitPlan to calculate only once. And
+	 * if we try to simplify that, we could remove necessary node incorrectly,
+	 * and lead to wrong final result.
+	 */
+	if (!contain_vars_of_level(query->jointree->quals, 1))
+		return false;
+
+	/*
 	 * LIMIT with a constant positive (or NULL) value doesn't affect the
 	 * semantics of EXISTS, so let's ignore such clauses.  This is worth doing
 	 * because people accustomed to certain other DBMSes may be in the habit
