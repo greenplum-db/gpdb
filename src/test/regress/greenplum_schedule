@@ -301,4 +301,6 @@ test: create_extension_fail
 # test if motion sockets are created with the gp_segment_configuration.address
 test: motion_socket
 
+test: gp_dist_wait_status
+
 # end of tests
