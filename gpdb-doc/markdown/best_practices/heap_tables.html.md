@@ -18,7 +18,7 @@ Affected workloads include: restoring from a backup, loading data with `gpcopy` 
 
 Greenplum Database uses hint bits to mark tuples as created and/or deleted by transactions. Hint bits, when set, can help in determining visibility of tuples without expensive `pg_xact` and `pg_subtrans` commit log lookups.
 
-Hint bits are updated for every tuple on the first scan of the tuple after its creation or deletion. Because hint bits are checked and set on a per-tuple basis, an operation can result in heavy writes to a database table even when you are just reading from it. When data checksums are enabled for heap tables (the default), hint bit updates are always WAL-logged.
+Hint bits are updated for every tuple on the first scan of the tuple after its creation or deletion. Because hint bits are checked and set on a per-tuple basis, even a read can result in heavy writes. When data checksums are enabled for heap tables (the default), hint bit updates are always WAL-logged.
 
 **Solution**:
 
