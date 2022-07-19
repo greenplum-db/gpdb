@@ -1,6 +1,8 @@
 -- start_ignore
 DROP TABLE IF EXISTS d_xpect_setup;
+NOTICE:  table "d_xpect_setup" does not exist, skipping
 DROP VIEW IF EXISTS v_xpect_triangle_de;
+NOTICE:  view "v_xpect_triangle_de" does not exist, skipping
 -- end_ignore
 CREATE TABLE d_xpect_setup (
     key character varying(20) NOT NULL,
@@ -51,19 +53,23 @@ HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sur
 insert into group_by_sublink select i from generate_series(1, 5) i;
 explain (costs off)
 select a from group_by_sublink where exists (select avg(a) from group_by_sublink group by a);
-                             QUERY PLAN                              
----------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)
-   InitPlan 1 (returns $0)  (slice2)
-     ->  Gather Motion 3:1  (slice3; segments: 3)
-           ->  HashAggregate
-                 Group Key: group_by_sublink_1.a
-                 ->  Seq Scan on group_by_sublink group_by_sublink_1
-   ->  Result
-         One-Time Filter: $0
+                                      QUERY PLAN                                       
+---------------------------------------------------------------------------------------
+ Result
+   Filter: (SubPlan 1)
+   ->  Gather Motion 3:1  (slice1; segments: 3)
          ->  Seq Scan on group_by_sublink
- Optimizer: Postgres query optimizer
-(10 rows)
+   SubPlan 1
+     ->  Limit
+           ->  Materialize
+                 ->  Gather Motion 3:1  (slice2; segments: 3)
+                       ->  GroupAggregate
+                             Group Key: group_by_sublink_1.a
+                             ->  Sort
+                                   Sort Key: group_by_sublink_1.a
+                                   ->  Seq Scan on group_by_sublink group_by_sublink_1
+ Optimizer: Pivotal Optimizer (GPORCA)
+(14 rows)
 
 select count(*) from group_by_sublink where exists (select avg(a) from group_by_sublink group by a);
  count 
@@ -75,17 +81,19 @@ select count(*) from group_by_sublink where exists (select avg(a) from group_by_
 -- throwed,
 explain (costs off)
 select a from group_by_sublink where exists (select a from group_by_sublink order by a desc);
-                          QUERY PLAN                           
----------------------------------------------------------------
+                               QUERY PLAN                               
+------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   InitPlan 1 (returns $0)  (slice2)
-     ->  Gather Motion 3:1  (slice3; segments: 3)
-           ->  Seq Scan on group_by_sublink group_by_sublink_1
-   ->  Result
-         One-Time Filter: $0
-         ->  Seq Scan on group_by_sublink
- Optimizer: Postgres query optimizer
-(8 rows)
+   ->  Nested Loop Semi Join
+         Join Filter: true
+         ->  Seq Scan on group_by_sublink group_by_sublink_1
+         ->  Materialize
+               ->  Broadcast Motion 1:3  (slice2)
+                     ->  Limit
+                           ->  Gather Motion 3:1  (slice3; segments: 3)
+                                 ->  Seq Scan on group_by_sublink
+ Optimizer: Pivotal Optimizer (GPORCA)
+(10 rows)
 
 select count(*) from group_by_sublink where exists (select a from group_by_sublink order by a desc);
  count 
@@ -95,17 +103,19 @@ select count(*) from group_by_sublink where exists (select a from group_by_subli
 
 explain (costs off)
 select a from group_by_sublink where exists (select distinct a from group_by_sublink);
-                          QUERY PLAN                           
----------------------------------------------------------------
+                               QUERY PLAN                               
+------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   InitPlan 1 (returns $0)  (slice2)
-     ->  Gather Motion 3:1  (slice3; segments: 3)
-           ->  Seq Scan on group_by_sublink group_by_sublink_1
-   ->  Result
-         One-Time Filter: $0
-         ->  Seq Scan on group_by_sublink
- Optimizer: Postgres query optimizer
-(8 rows)
+   ->  Nested Loop Semi Join
+         Join Filter: true
+         ->  Seq Scan on group_by_sublink group_by_sublink_1
+         ->  Materialize
+               ->  Broadcast Motion 1:3  (slice2)
+                     ->  Limit
+                           ->  Gather Motion 3:1  (slice3; segments: 3)
+                                 ->  Seq Scan on group_by_sublink
+ Optimizer: Pivotal Optimizer (GPORCA)
+(10 rows)
 
 select count(*) from group_by_sublink where exists (select distinct a from group_by_sublink);
  count 
@@ -115,17 +125,19 @@ select count(*) from group_by_sublink where exists (select distinct a from group
 
 explain (costs off)
 select a from group_by_sublink where exists (select distinct on (a) a from group_by_sublink);
-                          QUERY PLAN                           
----------------------------------------------------------------
+                               QUERY PLAN                               
+------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   InitPlan 1 (returns $0)  (slice2)
-     ->  Gather Motion 3:1  (slice3; segments: 3)
-           ->  Seq Scan on group_by_sublink group_by_sublink_1
-   ->  Result
-         One-Time Filter: $0
-         ->  Seq Scan on group_by_sublink
- Optimizer: Postgres query optimizer
-(8 rows)
+   ->  Nested Loop Semi Join
+         Join Filter: true
+         ->  Seq Scan on group_by_sublink group_by_sublink_1
+         ->  Materialize
+               ->  Broadcast Motion 1:3  (slice2)
+                     ->  Limit
+                           ->  Gather Motion 3:1  (slice3; segments: 3)
+                                 ->  Seq Scan on group_by_sublink
+ Optimizer: Pivotal Optimizer (GPORCA)
+(10 rows)
 
 select count(*) from group_by_sublink where exists (select distinct on (a) a from group_by_sublink);
  count 
@@ -135,21 +147,21 @@ select count(*) from group_by_sublink where exists (select distinct on (a) a fro
 
 explain (costs off)
 select a from group_by_sublink where exists (select sum(a) over (order by a) from group_by_sublink );
-                                QUERY PLAN                                 
----------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)
-   InitPlan 1 (returns $0)  (slice2)
-     ->  WindowAgg
-           Order By: group_by_sublink_1.a
-           ->  Gather Motion 3:1  (slice3; segments: 3)
-                 Merge Key: group_by_sublink_1.a
+                                   QUERY PLAN                                    
+---------------------------------------------------------------------------------
+ Result
+   Filter: (SubPlan 1)
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         ->  Seq Scan on group_by_sublink
+   SubPlan 1
+     ->  Limit
+           ->  WindowAgg
+                 Order By: group_by_sublink_1.a
                  ->  Sort
                        Sort Key: group_by_sublink_1.a
-                       ->  Seq Scan on group_by_sublink group_by_sublink_1
-   ->  Result
-         One-Time Filter: $0
-         ->  Seq Scan on group_by_sublink
- Optimizer: Postgres query optimizer
+                       ->  Gather Motion 3:1  (slice2; segments: 3)
+                             ->  Seq Scan on group_by_sublink group_by_sublink_1
+ Optimizer: Pivotal Optimizer (GPORCA)
 (13 rows)
 
 select count(*) from group_by_sublink where exists (select sum(a) over (order by a) from group_by_sublink );

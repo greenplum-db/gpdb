@@ -1748,6 +1748,8 @@ simplify_EXISTS_query(PlannerInfo *root, Query *query)
 		query->rowMarks)
 		return false;
 
+	bool is_correlated = contain_vars_of_level(query->jointree->quals, 1);
+
 	/*
 	 * LIMIT with a constant positive (or NULL) value doesn't affect the
 	 * semantics of EXISTS, so let's ignore such clauses.  This is worth doing
@@ -1809,8 +1811,13 @@ simplify_EXISTS_query(PlannerInfo *root, Query *query)
 	 * change a nonzero-rows result to zero rows or vice versa.  (Furthermore,
 	 * since our parsetree representation of these clauses depends on the
 	 * targetlist, we'd better throw them away if we drop the targetlist.)
+	 *
+	 * We only throw targetlist in correlated sublinks. For uncorrelated
+	 * sublinks, we'll do nothing to it's targetlist, since it will be
+	 * optimized to a InitPlan Node, which need targetlist.
 	 */
-	query->targetList = NIL;
+	if (is_correlated)
+		query->targetList = NIL;
 
 	/*
 	 * Delete GROUP BY if no aggregates.
@@ -1824,7 +1831,13 @@ simplify_EXISTS_query(PlannerInfo *root, Query *query)
 	 */
 	if (!query->hasAggs)
 		query->groupClause = NIL;
-	query->windowClause = NIL;
+
+	/*
+	 * Those clauses could be throwed in correlated and uncorrelated sublinks,
+	 * it will not change the correctness of the results, except windowClause.
+	 */
+	if (is_correlated)
+		query->windowClause = NIL;
 	query->distinctClause = NIL;
 	query->sortClause = NIL;
 	query->hasDistinctOn = false;
