@@ -3308,19 +3308,11 @@ alter_table_cmd:
 					n->newowner = $3;
 					$$ = (Node *)n;
 				}
-			/* ALTER TABLE <name> SET ACCESS METHOD <amname> */
-			| SET ACCESS METHOD name
-				{
-					AlterTableCmd *n = makeNode(AlterTableCmd);
-					n->subtype = AT_SetAccessMethod;
-					n->name = $4;
-					$$ = (Node *)n;
-				}
 			/* ALTER TABLE <name> SET ACCESS METHOD <amname> WITH (<reloptions>) */
-			| SET ACCESS METHOD name WITH definition
+			| SET ACCESS METHOD name OptWith
 				{
 					AlterTableCmd *n = makeNode(AlterTableCmd);
-					char *witham = greenplumLegacyAOoptions(n->name, &$6);
+					char *witham = greenplumLegacyAOoptions(n->name, &$5);
 					n->subtype = AT_SetAccessMethod;
 					n->name = $4;
 					/*
@@ -3328,18 +3320,24 @@ alter_table_cmd:
 					 * clause such as 'appendonly' or 'appendoptimized', it has
 					 * to match with the AM name.
 					 */
-					if (witham && 
-							(strlen(witham) != strlen(n->name) || 
-							strncmp(n->name, witham, strlen(n->name) != 0)))
+					if (witham) 
 					{
-						ereport(ERROR,
-								(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-								 errmsg("ACCESS METHOD is specified as \"%s\" but "
-								 	"the WITH option indicates it to be \"%s\"",
-									n->name, witham),
-								 parser_errposition(@5)));
+						if (strlen(witham) != strlen(n->name) || 
+							strncmp(n->name, witham, strlen(n->name) != 0))
+							ereport(ERROR,
+									(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+									 errmsg("ACCESS METHOD is specified as \"%s\" but "
+										"the WITH option indicates it to be \"%s\"",
+										n->name, witham),
+									 parser_errposition(@5)));
+						else
+							ereport(NOTICE,
+									(errcode(ERRCODE_SYNTAX_ERROR),
+									 errmsg("Redundant clauses are used to indicate the access method."),
+									 errhint("Only one of these is needed to indicate access method: the "
+										"SET ACCESS METHOD clause or the options in the WITH clause.")));
 					}
-					n->def = (Node *) $6;
+					n->def = (Node *) $5;
 					$$ = (Node *)n;
 				}
 			/* ALTER TABLE <name> SET TABLESPACE <tablespacename> */

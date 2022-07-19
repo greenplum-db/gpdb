@@ -610,12 +610,168 @@ SELECT c.relname, a.amname, c.reloptions FROM pg_class c JOIN pg_am a ON c.relam
 
 DROP TABLE ataoset;
 DROP TABLE ataoset2;
--- Final scenario: run the iterations of AT from "A" to "B" and back to "A", that includes:
+-- Scenario 5: AO to AOCO 
+SET gp_default_storage_options = 'blocksize=65536, compresstype=zlib, compresslevel=5, checksum=true';
+CREATE TABLE ao2co(a int, b int) WITH (appendonly=true);
+CREATE TABLE ao2co2(a int, b int) WITH (appendonly=true);
+CREATE TABLE ao2co3(a int, b int) WITH (appendonly=true);
+CREATE TABLE ao2co4(a int, b int) WITH (appendonly=true);
+CREATE INDEX index_ao2co ON ao2co(b);
+CREATE INDEX index_ao2co3 ON ao2co3(b);
+INSERT INTO ao2co SELECT i,i FROM generate_series(1,5) i;
+INSERT INTO ao2co2 SELECT i,i FROM generate_series(1,5) i;
+INSERT INTO ao2co3 SELECT i,i FROM generate_series(1,5) i;
+INSERT INTO ao2co4 SELECT i,i FROM generate_series(1,5) i;
+-- ERROR: conflicting storage option specified.
+ALTER TABLE ao2co SET ACCESS METHOD ao_column WITH (appendoptimized=true, orientation=row);
+ERROR:  ACCESS METHOD is specified as "ao_column" but the WITH option indicates it to be "ao_row"
+LINE 1: ALTER TABLE ao2co SET ACCESS METHOD ao_column WITH (appendop...
+                                                      ^
+-- Use of *both* ACCESS METHOD and WITH clauses is allowed, but we'll print a hint to indicate the redundancy.
+ALTER TABLE ao2co SET ACCESS METHOD ao_row WITH (appendoptimized=true, orientation=row);
+HINT:  Only one of these is needed to indicate access method: the SET ACCESS METHOD clause or the options in the WITH clause.
+NOTICE:  Redundant clauses are used to indicate the access method.
+CREATE TEMP TABLE relfilebeforeao AS
+    SELECT -1 segid, relname, relfilenode FROM pg_class WHERE relname LIKE 'ao2co%'
+    UNION SELECT gp_segment_id segid, relname, relfilenode FROM gp_dist_random('pg_class')
+    WHERE relname LIKE 'ao2co%' ORDER BY segid;
+-- Check once the reloptions
+SELECT c.relname, a.amname, c.reloptions FROM pg_class c JOIN pg_am a ON c.relam = a.oid WHERE c.relname LIKE 'ao2co%';
+ relname | amname |            reloptions             
+---------+--------+-----------------------------------
+ ao2co   | ao_row | {blocksize=65536,compresslevel=5}
+ ao2co2  | ao_row | {blocksize=65536,compresslevel=5}
+ ao2co3  | ao_row | {blocksize=65536,compresslevel=5}
+ ao2co4  | ao_row | {blocksize=65536,compresslevel=5}
+(4 rows)
+
+-- Altering AO to AOCO with various syntaxes, reloptions:
+ALTER TABLE ao2co SET ACCESS METHOD ao_column;
+ALTER TABLE ao2co2 SET WITH (appendoptimized=true, orientation=column);
+ALTER TABLE ao2co3 SET ACCESS METHOD ao_column WITH (blocksize=32768, compresslevel=3);
+ALTER TABLE ao2co4 SET WITH (appendoptimized=true, orientation=column, blocksize=32768, compresslevel=3);
+-- The tables are rewritten
+CREATE TEMP TABLE relfileafterao AS
+    SELECT -1 segid, relname, relfilenode FROM pg_class WHERE relname LIKE 'ao2co%'
+    UNION SELECT gp_segment_id segid, relname, relfilenode FROM gp_dist_random('pg_class')
+    WHERE relname LIKE 'ao2co%' ORDER BY segid;
+SELECT * FROM relfilebeforeao INTERSECT SELECT * FROM relfileafterao;
+ segid | relname | relfilenode 
+-------+---------+-------------
+(0 rows)
+
+DROP TABLE relfilebeforeao;
+DROP TABLE relfileafterao;
+-- Check data is intact
+SELECT count(*) FROM ao2co;
+ count 
+-------
+     5
+(1 row)
+
+SELECT count(*) FROM ao2co2;
+ count 
+-------
+     5
+(1 row)
+
+SELECT count(*) FROM ao2co3;
+ count 
+-------
+     5
+(1 row)
+
+SELECT count(*) FROM ao2co4;
+ count 
+-------
+     5
+(1 row)
+
+-- Aux tables should have been deleted for the old AO table and recreated for the new AOCO table
+-- Only tested for 2 out of the 4 tables being created, where the tables were altered w/wo reloptions. 
+-- No need to test the other ones created by the alternative syntax SET WITH().
+SELECT * FROM gp_toolkit.__gp_aoseg('ao2co');
+ERROR:  'ao2co' is not an append-only row relation
+SELECT * FROM gp_toolkit.__gp_aovisimap('ao2co');
+ tid | segno | row_num 
+-----+-------+---------
+(0 rows)
+
+SELECT count(*) FROM gp_toolkit.__gp_aocsseg('ao2co');
+ count 
+-------
+     6
+(1 row)
+
+SELECT * FROM gp_toolkit.__gp_aoblkdir('ao2co');
+ tupleid | segno | columngroup_no | entry_no | first_row_no | file_offset | row_count 
+---------+-------+----------------+----------+--------------+-------------+-----------
+(0 rows)
+
+SELECT * FROM gp_toolkit.__gp_aoseg('ao2co3');
+ERROR:  'ao2co3' is not an append-only row relation
+SELECT * FROM gp_toolkit.__gp_aovisimap('ao2co3');
+ tid | segno | row_num 
+-----+-------+---------
+(0 rows)
+
+SELECT count(*) FROM gp_toolkit.__gp_aocsseg('ao2co3');
+ count 
+-------
+     6
+(1 row)
+
+SELECT * FROM gp_toolkit.__gp_aoblkdir('ao2co3');
+ tupleid | segno | columngroup_no | entry_no | first_row_no | file_offset | row_count 
+---------+-------+----------------+----------+--------------+-------------+-----------
+(0 rows)
+
+-- pg_attribute_encoding should have columns for the AOCO table
+SELECT c.relname, a.attnum, a.attoptions FROM pg_attribute_encoding a, pg_class c WHERE a.attrelid = c.oid AND c.relname LIKE 'ao2co%';
+ relname | attnum |                     attoptions                      
+---------+--------+-----------------------------------------------------
+ ao2co   |      1 | {compresstype=zlib,blocksize=65536,compresslevel=5}
+ ao2co   |      2 | {compresstype=zlib,blocksize=65536,compresslevel=5}
+ ao2co2  |      1 | {compresstype=zlib,blocksize=65536,compresslevel=5}
+ ao2co2  |      2 | {compresstype=zlib,blocksize=65536,compresslevel=5}
+ ao2co3  |      1 | {blocksize=32768,compresslevel=3,compresstype=zlib}
+ ao2co3  |      2 | {blocksize=32768,compresslevel=3,compresstype=zlib}
+ ao2co4  |      1 | {blocksize=32768,compresslevel=3,compresstype=zlib}
+ ao2co4  |      2 | {blocksize=32768,compresslevel=3,compresstype=zlib}
+(8 rows)
+
+-- AM and reloptions changed accordingly
+SELECT c.relname, a.amname, c.reloptions FROM pg_class c JOIN pg_am a ON c.relam = a.oid WHERE c.relname LIKE 'ao2co%';
+ relname |  amname   |            reloptions             
+---------+-----------+-----------------------------------
+ ao2co   | ao_column | {blocksize=65536,compresslevel=5}
+ ao2co2  | ao_column | {blocksize=65536,compresslevel=5}
+ ao2co3  | ao_column | {blocksize=32768,compresslevel=3}
+ ao2co4  | ao_column | {blocksize=32768,compresslevel=3}
+(4 rows)
+
+-- pg_appendonly should reflect the changes in reloptions
+SELECT c.relname,a.blocksize,a.compresslevel,a.checksum,a.compresstype,a.columnstore
+FROM pg_appendonly a, pg_class c WHERE a.relid = c.oid AND relname like ('ao2co%');
+ relname | blocksize | compresslevel | checksum | compresstype | columnstore 
+---------+-----------+---------------+----------+--------------+-------------
+ ao2co   |     65536 |             5 | t        | zlib         | t
+ ao2co2  |     65536 |             5 | t        | zlib         | t
+ ao2co3  |     32768 |             3 | t        | zlib         | t
+ ao2co4  |     32768 |             3 | t        | zlib         | t
+(4 rows)
+
+DROP TABLE ao2co;
+DROP TABLE ao2co2;
+DROP TABLE ao2co3;
+DROP TABLE ao2co4;
+-- Final scenario: the iterations of altering table from storage type "A" to "B" and back to "A". 
+-- The following cases will cover all variations of such iterations:
 -- 1. Heap->AO->Heap->AO
 -- (TODO) 2. AO->AOCO->AO->AOCO
 -- (TODO) 3. Heap->AOCO->Heap->AOCO
 -- 1. Heap->AO->Heap->AO
-CREATE TABLE heapao(a int, b int) WITH (appendonly=true);
+CREATE TABLE heapao(a int, b int);
 CREATE INDEX heapaoindex ON heapao(b);
 INSERT INTO heapao SELECT i,i FROM generate_series(1,5) i;
 ALTER TABLE heapao SET ACCESS METHOD ao_row;

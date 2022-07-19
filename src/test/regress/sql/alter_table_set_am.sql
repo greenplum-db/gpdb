@@ -343,13 +343,90 @@ SELECT c.relname, a.amname, c.reloptions FROM pg_class c JOIN pg_am a ON c.relam
 DROP TABLE ataoset;
 DROP TABLE ataoset2;
 
--- Final scenario: run the iterations of AT from "A" to "B" and back to "A", that includes:
+-- Scenario 5: AO to AOCO 
+SET gp_default_storage_options = 'blocksize=65536, compresstype=zlib, compresslevel=5, checksum=true';
+CREATE TABLE ao2co(a int, b int) WITH (appendonly=true);
+CREATE TABLE ao2co2(a int, b int) WITH (appendonly=true);
+CREATE TABLE ao2co3(a int, b int) WITH (appendonly=true);
+CREATE TABLE ao2co4(a int, b int) WITH (appendonly=true);
+CREATE INDEX index_ao2co ON ao2co(b);
+CREATE INDEX index_ao2co3 ON ao2co3(b);
+
+INSERT INTO ao2co SELECT i,i FROM generate_series(1,5) i;
+INSERT INTO ao2co2 SELECT i,i FROM generate_series(1,5) i;
+INSERT INTO ao2co3 SELECT i,i FROM generate_series(1,5) i;
+INSERT INTO ao2co4 SELECT i,i FROM generate_series(1,5) i;
+
+-- ERROR: conflicting storage option specified.
+ALTER TABLE ao2co SET ACCESS METHOD ao_column WITH (appendoptimized=true, orientation=row);
+-- Use of *both* ACCESS METHOD and WITH clauses is allowed, but we'll print a hint to indicate the redundancy.
+ALTER TABLE ao2co SET ACCESS METHOD ao_row WITH (appendoptimized=true, orientation=row);
+
+CREATE TEMP TABLE relfilebeforeao AS
+    SELECT -1 segid, relname, relfilenode FROM pg_class WHERE relname LIKE 'ao2co%'
+    UNION SELECT gp_segment_id segid, relname, relfilenode FROM gp_dist_random('pg_class')
+    WHERE relname LIKE 'ao2co%' ORDER BY segid;
+
+-- Check once the reloptions
+SELECT c.relname, a.amname, c.reloptions FROM pg_class c JOIN pg_am a ON c.relam = a.oid WHERE c.relname LIKE 'ao2co%';
+
+-- Altering AO to AOCO with various syntaxes, reloptions:
+ALTER TABLE ao2co SET ACCESS METHOD ao_column;
+ALTER TABLE ao2co2 SET WITH (appendoptimized=true, orientation=column);
+ALTER TABLE ao2co3 SET ACCESS METHOD ao_column WITH (blocksize=32768, compresslevel=3);
+ALTER TABLE ao2co4 SET WITH (appendoptimized=true, orientation=column, blocksize=32768, compresslevel=3);
+
+-- The tables are rewritten
+CREATE TEMP TABLE relfileafterao AS
+    SELECT -1 segid, relname, relfilenode FROM pg_class WHERE relname LIKE 'ao2co%'
+    UNION SELECT gp_segment_id segid, relname, relfilenode FROM gp_dist_random('pg_class')
+    WHERE relname LIKE 'ao2co%' ORDER BY segid;
+
+SELECT * FROM relfilebeforeao INTERSECT SELECT * FROM relfileafterao;
+DROP TABLE relfilebeforeao;
+DROP TABLE relfileafterao;
+
+-- Check data is intact
+SELECT count(*) FROM ao2co;
+SELECT count(*) FROM ao2co2;
+SELECT count(*) FROM ao2co3;
+SELECT count(*) FROM ao2co4;
+
+-- Aux tables should have been deleted for the old AO table and recreated for the new AOCO table
+-- Only tested for 2 out of the 4 tables being created, where the tables were altered w/wo reloptions. 
+-- No need to test the other ones created by the alternative syntax SET WITH().
+SELECT * FROM gp_toolkit.__gp_aoseg('ao2co');
+SELECT * FROM gp_toolkit.__gp_aovisimap('ao2co');
+SELECT count(*) FROM gp_toolkit.__gp_aocsseg('ao2co');
+SELECT * FROM gp_toolkit.__gp_aoblkdir('ao2co');
+SELECT * FROM gp_toolkit.__gp_aoseg('ao2co3');
+SELECT * FROM gp_toolkit.__gp_aovisimap('ao2co3');
+SELECT count(*) FROM gp_toolkit.__gp_aocsseg('ao2co3');
+SELECT * FROM gp_toolkit.__gp_aoblkdir('ao2co3');
+
+-- pg_attribute_encoding should have columns for the AOCO table
+SELECT c.relname, a.attnum, a.attoptions FROM pg_attribute_encoding a, pg_class c WHERE a.attrelid = c.oid AND c.relname LIKE 'ao2co%';
+
+-- AM and reloptions changed accordingly
+SELECT c.relname, a.amname, c.reloptions FROM pg_class c JOIN pg_am a ON c.relam = a.oid WHERE c.relname LIKE 'ao2co%';
+
+-- pg_appendonly should reflect the changes in reloptions
+SELECT c.relname,a.blocksize,a.compresslevel,a.checksum,a.compresstype,a.columnstore
+FROM pg_appendonly a, pg_class c WHERE a.relid = c.oid AND relname like ('ao2co%');
+
+DROP TABLE ao2co;
+DROP TABLE ao2co2;
+DROP TABLE ao2co3;
+DROP TABLE ao2co4;
+
+-- Final scenario: the iterations of altering table from storage type "A" to "B" and back to "A". 
+-- The following cases will cover all variations of such iterations:
 -- 1. Heap->AO->Heap->AO
 -- (TODO) 2. AO->AOCO->AO->AOCO
 -- (TODO) 3. Heap->AOCO->Heap->AOCO
 
 -- 1. Heap->AO->Heap->AO
-CREATE TABLE heapao(a int, b int) WITH (appendonly=true);
+CREATE TABLE heapao(a int, b int);
 CREATE INDEX heapaoindex ON heapao(b);
 INSERT INTO heapao SELECT i,i FROM generate_series(1,5) i;
 
@@ -360,3 +437,4 @@ ALTER TABLE heapao SET ACCESS METHOD ao_row;
 -- Just checking data is intact. 
 SELECT count(*) FROM heapao;
 DROP TABLE heapao;
+

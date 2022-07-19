@@ -518,6 +518,7 @@ static bool prebuild_temp_table(Relation rel, RangeVar *tmpname, DistributedBy *
 
 static void prepare_AlterTableStmt_for_dispatch(AlterTableStmt *stmt);
 static List *strip_gpdb_part_commands(List *cmds);
+static void populate_rel_col_encodings(Relation rel, List *stenc, List *withOptions);
 
 
 /* ----------------------------------------------------------------
@@ -4166,6 +4167,35 @@ strip_gpdb_part_commands(List *cmds)
 	return newcmds;
 }
 
+/* 
+ * Populate the column encoding option for each column in the relation. 
+ */
+static void populate_rel_col_encodings(Relation rel, List *stenc, List *withOptions)
+{
+	int 		attno;
+	List 		*colDefs = NIL;
+	TupleDesc 	tupdesc = RelationGetDescr(rel);
+
+	/* Figure out the column definition list. */
+	for (attno = 0; attno < tupdesc->natts; attno++)
+	{
+		Form_pg_attribute 	att = TupleDescAttr(tupdesc, attno);
+		ColumnDef 		*cd = makeColumnDef(NameStr(att->attname),
+								att->atttypid, 
+								att->atttypmod,
+								0);
+		colDefs = lappend(colDefs, cd);
+	}
+
+	List *attr_encodings = transformColumnEncoding(rel,
+							colDefs /*column clauses*/,
+							stenc /*encoding clauses*/,
+							withOptions /*withOptions*/,
+							rel->rd_rel->relkind == RELKIND_PARTITIONED_TABLE /*rootpartition*/,
+							false /*errorOnEncodingClause*/);
+	AddRelationAttributeEncodings(rel, attr_encodings);
+}
+
 /*
  * AlterTableInternal
  *
@@ -5306,6 +5336,11 @@ ATExecCmd(List **wqueue, AlteredTableInfo *tab, Relation rel,
 				if (aoopt_changed)
 					tab->rewrite |= AT_REWRITE_ALTER_RELOPTS;
 			}
+
+			/* If we are changing AM to AOCO, add pg_attribute_encoding entries for each column. */
+			if (tab->newAccessMethod == AO_COLUMN_TABLE_AM_OID) 
+				populate_rel_col_encodings(rel, NULL, (List*)cmd->def);
+
 			break;
 		case AT_SetTableSpace:	/* SET TABLESPACE */
 

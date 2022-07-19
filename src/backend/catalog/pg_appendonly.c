@@ -597,9 +597,7 @@ ATAOEntries(Form_pg_class relform1, Form_pg_class relform2)
 					SwapAppendonlyEntries(relform1->oid, relform2->oid);
 					break;
 				case AO_COLUMN_TABLE_AM_OID:
-					ereport(ERROR,
-							(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-								errmsg("alter table does not support switch from AO to AOCO")));
+					SwapAppendonlyEntries(relform1->oid, relform2->oid);
 					break;
 				default:
 					ereport(ERROR,
