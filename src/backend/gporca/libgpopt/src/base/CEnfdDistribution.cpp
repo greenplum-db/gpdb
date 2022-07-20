@@ -156,9 +156,8 @@ CEnfdDistribution::Epet(CExpressionHandle &exprhdl, CPhysical *popPhysical,
 		}
 
 		//If the child is non-singleton and enforcers flag is false, set the distribution type as prohibited
-		if ((CDistributionSpec::EdtNonSingleton == m_pds->Edt()) &&
-			(!CDistributionSpecNonSingleton::PdsConvert(m_pds)
-				  ->FAllowEnforcers()))
+		if (CDistributionSpec::EdtNonSingleton == m_pds->Edt() &&
+			!CDistributionSpecNonSingleton::PdsConvert(m_pds)->FAllowEnforced())
 		{
 			return EpetProhibited;
 		}

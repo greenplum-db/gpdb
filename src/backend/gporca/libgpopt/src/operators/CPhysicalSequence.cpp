@@ -250,11 +250,13 @@ CPhysicalSequence::PdsRequired(CMemoryPool *mp,
 		return GPOS_NEW(mp) CDistributionSpecAny(this->Eopid());
 	}
 
-	//If first child is non-singleton, non-universal and tainted replicated/replicated, request a non-singleton distribution on second child without enforcers
+	// first child is tainted replicated/replicated,
+	// impose non-singleton distribution without enforcers on second child
 	if (CDistributionSpec::EdtTaintedReplicated == pds->Edt() ||
 		CDistributionSpec::EdtStrictReplicated == pds->Edt())
 	{
-		return GPOS_NEW(mp) CDistributionSpecNonSingleton(true, false);
+		return GPOS_NEW(mp) CDistributionSpecNonSingleton(
+			true /* fAllowReplicated */, false /* fAllowEnforced */);
 	}
 
 	// first child is non-singleton, request a non-singleton distribution on second child
