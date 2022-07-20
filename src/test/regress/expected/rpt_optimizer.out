@@ -3,6 +3,87 @@
 --
 create schema rpt;
 set search_path to rpt;
+-- If the producer is replicated, request a non-singleton spec
+-- that is not allowed to be enforced, to avoid potential CTE hang issue
+drop table if exists with_test1 cascade;
+NOTICE:  table "with_test1" does not exist, skipping
+create table with_test1 (i character varying(10)) DISTRIBUTED REPLICATED;
+explain
+WITH cte1 AS ( SELECT *,ROW_NUMBER() OVER ( PARTITION BY i) AS RANK_DESC FROM with_test1),
+cte2 AS ( SELECT 'COL1' TBLNM,COUNT(*) DIFFCNT FROM ( SELECT * FROM cte1) X)
+select * FROM ( SELECT 'COL1' TBLNM FROM cte1) A LEFT JOIN cte2 C ON A.TBLNM=C.TBLNM;
+                                             QUERY PLAN                                             
+----------------------------------------------------------------------------------------------------
+ Sequence  (cost=0.00..1293.00 rows=2 width=24)
+   ->  Shared Scan (share slice:id 0:0)  (cost=0.00..431.00 rows=1 width=1)
+         ->  Gather Motion 1:1  (slice1; segments: 1)  (cost=0.00..431.00 rows=1 width=16)
+               ->  WindowAgg  (cost=0.00..431.00 rows=3 width=16)
+                     Partition By: with_test1.i
+                     ->  Sort  (cost=0.00..431.00 rows=3 width=10)
+                           Sort Key: with_test1.i
+                           ->  Seq Scan on with_test1  (cost=0.00..431.00 rows=3 width=10)
+   ->  Hash Left Join  (cost=0.00..862.00 rows=2 width=24)
+         Hash Cond: (('COL1'::text) = ('COL1'::text))
+         ->  Result  (cost=0.00..431.00 rows=1 width=8)
+               ->  Shared Scan (share slice:id 0:0)  (cost=0.00..431.00 rows=1 width=1)
+         ->  Hash  (cost=431.00..431.00 rows=1 width=16)
+               ->  Result  (cost=0.00..431.00 rows=1 width=16)
+                     Filter: (('COL1'::text) = 'COL1'::text)
+                     ->  Aggregate  (cost=0.00..431.00 rows=1 width=8)
+                           ->  Shared Scan (share slice:id 0:0)  (cost=0.00..431.00 rows=1 width=1)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(18 rows)
+
+WITH cte1 AS ( SELECT *,ROW_NUMBER() OVER ( PARTITION BY i) AS RANK_DESC FROM with_test1),
+     cte2 AS ( SELECT 'COL1' TBLNM,COUNT(*) DIFFCNT FROM ( SELECT * FROM cte1) X)
+select * FROM ( SELECT 'COL1' TBLNM FROM cte1) A LEFT JOIN cte2 C ON A.TBLNM=C.TBLNM;
+ tblnm | tblnm | diffcnt 
+-------+-------+---------
+(0 rows)
+
+-- This is expected to fall back to planner.
+drop table if exists with_test2 cascade;
+NOTICE:  table "with_test2" does not exist, skipping
+drop table if exists with_test3 cascade;
+NOTICE:  table "with_test3" does not exist, skipping
+create table with_test2 (id bigserial NOT NULL, isc varchar(15) NOT NULL,iscd varchar(15) NULL) DISTRIBUTED REPLICATED;
+create table with_test3 (id numeric NULL, rc varchar(255) NULL,ri numeric NULL) DISTRIBUTED REPLICATED;
+insert into with_test2 (isc,iscd) values ('CMN_BIN_YES', 'CMN_BIN_YES');
+insert into with_test3 (id,rc,ri) values (113551,'CMN_BIN_YES',101991), (113552,'CMN_BIN_NO',101991), (113553,'CMN_BIN_ERR',101991), (113554,'CMN_BIN_NULL',101991);
+explain
+WITH
+    t1 AS (SELECT * FROM with_test2),
+    t2 AS (SELECT id, rc FROM with_test3 WHERE ri = 101991)
+SELECT p.*FROM t1 p JOIN t2 r ON p.isc = r.rc JOIN t2 r1 ON p.iscd = r1.rc LIMIT 1;
+                                               QUERY PLAN                                                
+---------------------------------------------------------------------------------------------------------
+ Gather Motion 1:1  (slice1; segments: 1)  (cost=390.63..390.63 rows=1 width=104)
+   ->  Limit  (cost=332.63..390.63 rows=1 width=104)
+         ->  Hash Join  (cost=332.63..739.49 rows=7 width=104)
+               Hash Cond: ((with_test2.iscd)::text = (r1.rc)::text)
+               ->  Hash Join  (cost=166.32..572.78 rows=129 width=104)
+                     Hash Cond: ((with_test2.isc)::text = (r.rc)::text)
+                     ->  Seq Scan on with_test2  (cost=0.00..344.00 rows=24400 width=104)
+                     ->  Hash  (cost=166.25..166.25 rows=5 width=516)
+                           ->  Subquery Scan on r  (cost=0.00..166.25 rows=5 width=516)
+                                 ->  Seq Scan on with_test3  (cost=0.00..166.25 rows=5 width=548)
+                                       Filter: (ri = '101991'::numeric)
+               ->  Hash  (cost=166.25..166.25 rows=5 width=516)
+                     ->  Subquery Scan on r1  (cost=0.00..166.25 rows=5 width=516)
+                           ->  Seq Scan on with_test3 with_test3_1  (cost=0.00..166.25 rows=5 width=548)
+                                 Filter: (ri = '101991'::numeric)
+ Optimizer: Postgres query optimizer
+(16 rows)
+
+WITH
+    t1 AS (SELECT * FROM with_test2),
+    t2 AS (SELECT id, rc FROM with_test3 WHERE ri = 101991)
+SELECT p.*FROM t1 p JOIN t2 r ON p.isc = r.rc JOIN t2 r1 ON p.iscd = r1.rc LIMIT 1;
+ id |     isc     |    iscd     
+----+-------------+-------------
+  1 | CMN_BIN_YES | CMN_BIN_YES
+(1 row)
+
 ---------
 -- INSERT
 ---------
