@@ -81,9 +81,6 @@ SELECT gp_inject_fault_infinite('distinct_winagg_perform_sort', 'skip', dbid)
 
 SELECT COUNT(*)
   FROM (SELECT AVG(DISTINCT x) OVER (PARTITION BY y) FROM dummy_table) tt;
-NOTICE:  distinct winagg sortstats: sort operation (mk-sort) spilled to disk  (seg0 slice1 127.0.0.1:6002 pid=237567)
-NOTICE:  distinct winagg sortstats: sort operation (mk-sort) spilled to disk  (seg1 slice1 127.0.0.1:6003 pid=237568)
-NOTICE:  distinct winagg sortstats: sort operation (mk-sort) spilled to disk  (seg2 slice1 127.0.0.1:6004 pid=237569)
  count 
 -------
  60003
@@ -111,9 +108,6 @@ SELECT gp_inject_fault_infinite('distinct_winagg_perform_sort', 'skip', dbid)
 
 SELECT COUNT(*)
   FROM (SELECT AVG(DISTINCT x) OVER (PARTITION BY y) FROM dummy_table) tt;
-NOTICE:  distinct winagg sortstats: sort operation (pg-sort) spilled to disk  (seg0 slice1 127.0.0.1:6002 pid=237567)
-NOTICE:  distinct winagg sortstats: sort operation (pg-sort) spilled to disk  (seg1 slice1 127.0.0.1:6003 pid=237568)
-NOTICE:  distinct winagg sortstats: sort operation (pg-sort) spilled to disk  (seg2 slice1 127.0.0.1:6004 pid=237569)
  count 
 -------
  60003
@@ -144,9 +138,6 @@ SELECT gp_inject_fault_infinite('distinct_winagg_perform_sort', 'skip', dbid)
 
 SELECT COUNT(*)
   FROM (SELECT AVG(DISTINCT x) OVER (PARTITION BY y) FROM dummy_table) tt;
-NOTICE:  distinct winagg sortstats: sort operation (mk-sort) fitted in memory  (seg0 slice1 127.0.0.1:6002 pid=237567)
-NOTICE:  distinct winagg sortstats: sort operation (mk-sort) fitted in memory  (seg1 slice1 127.0.0.1:6003 pid=237568)
-NOTICE:  distinct winagg sortstats: sort operation (mk-sort) fitted in memory  (seg2 slice1 127.0.0.1:6004 pid=237569)
  count 
 -------
  60003
@@ -174,9 +165,6 @@ SELECT gp_inject_fault_infinite('distinct_winagg_perform_sort', 'skip', dbid)
 
 SELECT COUNT(*)
   FROM (SELECT AVG(DISTINCT x) OVER (PARTITION BY y) FROM dummy_table) tt;
-NOTICE:  distinct winagg sortstats: sort operation (pg-sort) fitted in memory  (seg2 slice1 127.0.0.1:6004 pid=237569)
-NOTICE:  distinct winagg sortstats: sort operation (pg-sort) fitted in memory  (seg0 slice1 127.0.0.1:6002 pid=237567)
-NOTICE:  distinct winagg sortstats: sort operation (pg-sort) fitted in memory  (seg1 slice1 127.0.0.1:6003 pid=237568)
  count 
 -------
  60003
