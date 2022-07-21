@@ -613,7 +613,7 @@ AppendOptimizedRecycleDeadSegments(Relation aorel)
 		else
 		{
 			if (cutoff_xid == InvalidTransactionId)
-				cutoff_xid = GetOldestXmin(NULL, true);
+				cutoff_xid = GetOldestXmin(NULL, PROCARRAY_FLAGS_VACUUM);
 
 			visible_to_all = TransactionIdPrecedes(xmin, cutoff_xid);
 		}
