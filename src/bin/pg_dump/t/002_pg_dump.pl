@@ -1513,6 +1513,77 @@ my %tests = (
 		unlike => { exclude_dump_test_schema => 1, },
 	},
 
+	'CREATE FUNCTION dump_test.write_to_file_stable' => {
+		create_order => 17,
+		create_sql   => 'CREATE FUNCTION dump_test.write_to_file_stable()
+					   RETURNS integer AS \'$libdir/gpextprotocol.so\',
+					   \'demoprot_export\' LANGUAGE C STABLE;',
+		regexp => qr/^
+			\QCREATE FUNCTION dump_test.write_to_file_stable() \E
+			\QRETURNS integer\E
+			\n\s+\QLANGUAGE c STABLE NO SQL\E
+			\n\s+AS\ \'\$
+			\Qlibdir\/gpextprotocol.so', 'demoprot_export';\E
+			/xm,
+		like =>
+		  { %full_runs, %dump_test_schema_runs, section_pre_data => 1, },
+		unlike => { exclude_dump_test_schema => 1, },
+	},
+
+	'CREATE FUNCTION dump_test.read_from_file_stable' => {
+		create_order => 17,
+		create_sql   => 'CREATE FUNCTION dump_test.read_from_file_stable()
+					   RETURNS integer AS \'$libdir/gpextprotocol.so\',
+					   \'demoprot_export\' LANGUAGE C STABLE;',
+		regexp => qr/^
+			\QCREATE FUNCTION dump_test.read_from_file_stable() \E
+			\QRETURNS integer\E
+			\n\s+\QLANGUAGE c STABLE NO SQL\E
+			\n\s+AS\ \'\$
+			\Qlibdir\/gpextprotocol.so', 'demoprot_export';\E
+			/xm,
+		like =>
+		  { %full_runs, %dump_test_schema_runs, section_pre_data => 1, },
+		unlike => { exclude_dump_test_schema => 1, },
+	},
+
+	'CREATE PROTOCOL demoprot' => {
+		create_order => 18,
+		create_sql   => 'CREATE PROTOCOL demoprot ( readfunc = dump_test.read_from_file_stable, writefunc = dump_test.write_to_file_stable);',
+		regexp => qr/^
+		\QCREATE  PROTOCOL demoprot ( readfunc = 'read_from_file_stable', writefunc = 'write_to_file_stable');\E
+		/xm,
+		like =>
+		  { %full_runs, %dump_test_schema_runs, section_pre_data => 1, },
+			unlike => { only_dump_test_schema => 1, test_schema_plus_blobs => 1 },
+	},
+
+	'CREATE EXTERNAL WEB TABLE dump_test.dummy_ext_tab' => {
+		create_order => 19,
+		create_sql   => 'CREATE EXTERNAL WEB TABLE dump_test.dummy_ext_tab (x text) EXECUTE \'echo foo\' FORMAT \'text\';',
+		regexp => qr/^
+		\QCREATE FOREIGN TABLE dump_test.dummy_ext_tab (\E
+		\n\s+\Qx text\E
+		\n\Q)\E
+		\n\QSERVER gp_exttable_server\E
+		\n\QOPTIONS (\E
+		\n\s+\Qcommand 'echo foo',\E
+		\n\s+\Qdelimiter '\E\s+\Q',\E
+		\n\s+\Qencoding '6',\E
+		\n\s+\Qescape E'\\',\E
+		\n\s+\Qexecute_on 'ALL_SEGMENTS',\E
+		\n\s+\Qformat 'text',\E
+		\n\s+\Qformat_type 't',\E
+		\n\s+\Qis_writable 'false',\E
+		\n\s+\Qlog_errors 'f',\E
+		\n\s+\Q"null" E'\\N'\E
+		\n\Q);\E
+		/xm,
+		like =>
+		  { %full_runs, %dump_test_schema_runs, section_pre_data => 1, },
+			unlike => { exclude_dump_test_schema => 1, },
+	},
+
 	'CREATE FUNCTION dump_test.trigger_func' => {
 		create_order => 30,
 		create_sql   => 'CREATE FUNCTION dump_test.trigger_func()
