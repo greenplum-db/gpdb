@@ -98,14 +98,14 @@ CWindowPreprocessor::SplitPrjList(
 		{
 			if (fHasOrderSpecs)
 			{
-				(*pdrgpos)[ul]->AddRef();
-				pdrgposOther->Append((*pdrgpos)[ul]);
+				(*pdrgpos)[0]->AddRef();
+				pdrgposOther->Append((*pdrgpos)[0]);
 			}
 
 			if (fHasFrameSpecs)
 			{
-				(*pdrgpwf)[ul]->AddRef();
-				pdrgpwfOther->Append((*pdrgpwf)[ul]);
+				(*pdrgpwf)[0]->AddRef();
+				pdrgpwfOther->Append((*pdrgpwf)[0]);
 			}
 
 			pexprWinFunc->AddRef();
