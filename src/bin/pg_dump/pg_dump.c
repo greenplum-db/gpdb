@@ -301,7 +301,6 @@ static char *format_function_signature(Archive *fout,
 static char *convertRegProcReference(const char *proc);
 static char *getFormattedOperatorName(const char *oproid);
 static char *convertTSFunction(Archive *fout, Oid funcOid);
-static Oid	findLastBuiltinOid_V71(Archive *fout);
 static char *getFormattedTypeName(Archive *fout, Oid oid, OidOptions opts);
 static void getBlobs(Archive *fout);
 static void dumpBlob(Archive *fout, const BlobInfo *binfo);
@@ -967,15 +966,7 @@ main(int argc, char **argv)
 	if (dumpsnapshot && fout->remoteVersion < 90200)
 		fatal("Exported snapshots are not supported by this server version.");
 
-	/*
-	 * Find the last built-in OID, if needed (prior to 8.1)
-	 *
-	 * With 8.1 and above, we can just use FirstNormalObjectId - 1.
-	 */
-	if (fout->remoteVersion < 80100)
-		g_last_builtin_oid = findLastBuiltinOid_V71(fout);
-	else
-		g_last_builtin_oid = FirstNormalObjectId - 1;
+	g_last_builtin_oid = FirstNormalObjectId - 1;
 
 	pg_log_info("last built-in OID is %u", g_last_builtin_oid);
 
@@ -5292,15 +5283,6 @@ getExtensions(Archive *fout, int *numExtensions)
 	int			i_extconfig;
 	int			i_extcondition;
 
-	/*
-	 * Before 8.3 (porting from PG 9.1), there are no extensions.
-	 */
-	if (fout->remoteVersion < 80300)
-	{
-		*numExtensions = 0;
-		return NULL;
-	}
-
 	query = createPQExpBuffer();
 
 	appendPQExpBufferStr(query, "SELECT x.tableoid, x.oid, "
@@ -9205,13 +9187,6 @@ getTSParsers(Archive *fout, int *numTSParsers)
 	int			i_prsheadline;
 	int			i_prslextype;
 
-	/* Before 8.3, there is no built-in text search support */
-	if (fout->remoteVersion < 80300)
-	{
-		*numTSParsers = 0;
-		return NULL;
-	}
-
 	query = createPQExpBuffer();
 
 	/*
@@ -9290,13 +9265,6 @@ getTSDictionaries(Archive *fout, int *numTSDicts)
 	int			i_dicttemplate;
 	int			i_dictinitoption;
 
-	/* Before 8.3, there is no built-in text search support */
-	if (fout->remoteVersion < 80300)
-	{
-		*numTSDicts = 0;
-		return NULL;
-	}
-
 	query = createPQExpBuffer();
 
 	appendPQExpBuffer(query, "SELECT tableoid, oid, dictname, "
@@ -9368,13 +9336,6 @@ getTSTemplates(Archive *fout, int *numTSTemplates)
 	int			i_tmplinit;
 	int			i_tmpllexize;
 
-	/* Before 8.3, there is no built-in text search support */
-	if (fout->remoteVersion < 80300)
-	{
-		*numTSTemplates = 0;
-		return NULL;
-	}
-
 	query = createPQExpBuffer();
 
 	appendPQExpBufferStr(query, "SELECT tableoid, oid, tmplname, "
@@ -9439,13 +9400,6 @@ getTSConfigurations(Archive *fout, int *numTSConfigs)
 	int			i_cfgnamespace;
 	int			i_cfgowner;
 	int			i_cfgparser;
-
-	/* Before 8.3, there is no built-in text search support */
-	if (fout->remoteVersion < 80300)
-	{
-		*numTSConfigs = 0;
-		return NULL;
-	}
 
 	query = createPQExpBuffer();
 
@@ -17034,23 +16988,15 @@ dumpTableSchema(Archive *fout, const TableInfo *tbinfo)
 		 */
 		if (gp_partitioning_available)
 		{
-			bool		isTemplatesSupported = fout->remoteVersion >= 80214;
 			bool		isPartitioned = false;
 			PQExpBuffer query = createPQExpBuffer();
 			PGresult   *res;
 
 			/* does support GP partitioning. */
 			resetPQExpBuffer(query);
-			/* MPP-6297: dump by tablename */
-			if (isTemplatesSupported)
-				/* use 4.x version of function */
-				appendPQExpBuffer(query, "SELECT "
-				   "pg_get_partition_def('%u'::pg_catalog.oid, true, true) ",
-								  tbinfo->dobj.catId.oid);
-			else	/* use 3.x version of function */
-				appendPQExpBuffer(query, "SELECT "
-						 "pg_get_partition_def('%u'::pg_catalog.oid, true) ",
-								  tbinfo->dobj.catId.oid);
+			appendPQExpBuffer(query, "SELECT "
+				  "pg_get_partition_def('%u'::pg_catalog.oid, true, true) ",
+								tbinfo->dobj.catId.oid);
 
 			res = ExecuteSqlQuery(fout, query->data, PGRES_TUPLES_OK);
 
@@ -17070,42 +17016,39 @@ dumpTableSchema(Archive *fout, const TableInfo *tbinfo)
 
 			PQclear(res);
 
-			/*
-			 * MPP-6095: dump ALTER TABLE statements for subpartition
-			 * templates
-			 */
-			if (isTemplatesSupported)
+		 /*
+			* MPP-6095: dump ALTER TABLE statements for subpartition
+			* templates
+			*/
+			resetPQExpBuffer(query);
+
+			appendPQExpBuffer(
+								query, "SELECT "
+								"pg_get_partition_template_def('%u'::pg_catalog.oid, true, true) ",
+								tbinfo->dobj.catId.oid);
+
+			res = ExecuteSqlQuery(fout, query->data, PGRES_TUPLES_OK);
+
+			if (PQntuples(res) != 1)
 			{
-				resetPQExpBuffer(query);
-
-				appendPQExpBuffer(
-								  query, "SELECT "
-								  "pg_get_partition_template_def('%u'::pg_catalog.oid, true, true) ",
-								  tbinfo->dobj.catId.oid);
-
-				res = ExecuteSqlQuery(fout, query->data, PGRES_TUPLES_OK);
-
-				if (PQntuples(res) != 1)
-				{
-					if (PQntuples(res) < 1)
-						pg_log_warning("query to obtain definition of table \"%s\" returned no data",
-									   tbinfo->dobj.name);
-					else
-						pg_log_warning("query to obtain definition of table \"%s\" returned more than one definition",
-									   tbinfo->dobj.name);
-					exit_nicely(1);
-				}
-
-				/*
-				 * MPP-9537: terminate (with semicolon) the previous
-				 * statement, and dump the template definitions
-				 */
-				if (!PQgetisnull(res, 0, 0) &&
-					PQgetlength(res, 0, 0))
-					appendPQExpBuffer(q, ";\n %s", PQgetvalue(res, 0, 0));
-
-				PQclear(res);
+				if (PQntuples(res) < 1)
+					pg_log_warning("query to obtain definition of table \"%s\" returned no data",
+										tbinfo->dobj.name);
+				else
+					pg_log_warning("query to obtain definition of table \"%s\" returned more than one definition",
+										tbinfo->dobj.name);
+				exit_nicely(1);
 			}
+
+			/*
+				* MPP-9537: terminate (with semicolon) the previous
+				* statement, and dump the template definitions
+				*/
+			if (!PQgetisnull(res, 0, 0) &&
+				PQgetlength(res, 0, 0))
+				appendPQExpBuffer(q, ";\n %s", PQgetvalue(res, 0, 0));
+
+			PQclear(res);
 
 			if (isPartitioned)
 			{
@@ -18377,29 +18320,6 @@ dumpTableConstraintComment(Archive *fout, const ConstraintInfo *coninfo)
 
 	destroyPQExpBuffer(conprefix);
 	free(qtabname);
-}
-
-/*
- * findLastBuiltinOid_V71 -
- *
- * find the last built in oid
- *
- * For 7.1 through 8.0, we do this by retrieving datlastsysoid from the
- * pg_database entry for the current database.  (Note: current_database()
- * requires 7.3; pg_dump requires 8.0 now.)
- */
-static Oid
-findLastBuiltinOid_V71(Archive *fout)
-{
-	PGresult   *res;
-	Oid			last_oid;
-
-	res = ExecuteSqlQueryForSingleRow(fout,
-									  "SELECT datlastsysoid FROM pg_database WHERE datname = current_database()");
-	last_oid = atooid(PQgetvalue(res, 0, PQfnumber(res, "datlastsysoid")));
-	PQclear(res);
-
-	return last_oid;
 }
 
 /*
