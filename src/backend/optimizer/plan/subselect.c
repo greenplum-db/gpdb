@@ -1748,7 +1748,8 @@ simplify_EXISTS_query(PlannerInfo *root, Query *query)
 		query->rowMarks)
 		return false;
 
-	bool is_correlated = contain_vars_of_level(query->jointree->quals, 1);
+	bool is_correlated = contain_vars_of_level(query->jointree->quals, 1) ||
+						 contain_vars_of_level((Node *) query, 1);
 
 	/*
 	 * LIMIT with a constant positive (or NULL) value doesn't affect the
