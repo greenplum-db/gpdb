@@ -6482,6 +6482,7 @@ getTables(Archive *fout, int *numTables)
 	int			i;
 	PQExpBuffer query = createPQExpBuffer();
 	TableInfo  *tblinfo;
+	bool 		lockTableDumped = false;
 	int			i_reltableoid;
 	int			i_reloid;
 	int			i_relname;
@@ -6832,6 +6833,8 @@ getTables(Archive *fout, int *numTables)
 		ExecuteSqlStatement(fout, query->data);
 	}
 
+	resetPQExpBuffer(query);
+
 	for (i = 0; i < ntups; i++)
 	{
 		tblinfo[i].dobj.objType = DO_TABLE;
@@ -6962,6 +6965,11 @@ getTables(Archive *fout, int *numTables)
 		 *
 		 * We only need to lock the table for certain components; see
 		 * pg_dump.h
+		 * 
+		 * GPDB: Build a single LOCK TABLE statement to lock all interesting tables.
+		 * This is more performant than issuing a separate LOCK TABLE statement for each table,
+		 * with considerable savings in FE/BE overhead. It does come at the cost of some increased
+		 * memory usage in both FE and BE, which we will be able to tolerate.
 		 */
 
 		/* GPDB_96_MERGE_FIXME: Is the parrelid check still needed? */
@@ -6970,12 +6978,23 @@ getTables(Archive *fout, int *numTables)
 			(tblinfo[i].relkind == RELKIND_RELATION ||
 			 tblinfo[i].relkind == RELKIND_PARTITIONED_TABLE))
 		{
-			resetPQExpBuffer(query);
-			appendPQExpBuffer(query,
-							  "LOCK TABLE %s IN ACCESS SHARE MODE",
-							  fmtQualifiedDumpable(&tblinfo[i]));
-			ExecuteSqlStatement(fout, query->data);
+			if (!lockTableDumped)
+				appendPQExpBuffer(query,
+						"LOCK TABLE %s ",
+						fmtQualifiedDumpable(&tblinfo[i]));
+			else
+				appendPQExpBuffer(query,
+						",%s ",
+						fmtQualifiedDumpable(&tblinfo[i]));
+			lockTableDumped = true;
 		}
+	}
+	/* Are there any tables to lock? */
+	if (lockTableDumped)
+	{
+	appendPQExpBuffer(query,
+			"IN ACCESS SHARE MODE");
+	ExecuteSqlStatement(fout, query->data);
 	}
 
 	if (dopt->lockWaitTimeout)
