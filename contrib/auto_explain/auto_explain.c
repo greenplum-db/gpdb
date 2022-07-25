@@ -66,9 +66,15 @@ static int	nesting_level = 0;
 /* Is the current top-level query to be sampled? */
 static bool current_query_sampled = false;
 
+/*
+ * If auto_explain is enabled as shared_preload_library
+ * and some work (as executor) is doing at master we need to disable auto_explain.
+ * At this case auto_explain will be disabled by check Gp_role.
+ */
 #define auto_explain_enabled() \
 	(auto_explain_log_min_duration >= 0 && \
 	 (nesting_level == 0 || auto_explain_log_nested_statements) && \
+	 Gp_role == GP_ROLE_DISPATCH && \
 	 current_query_sampled)
 
 /* Saved hook values in case of unload */
