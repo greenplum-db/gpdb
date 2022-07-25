@@ -65,9 +65,9 @@ JOBS_THAT_SHOULD_NOT_BLOCK_RELEASE = ['prepare_binary_swap_gpdb_centos6', 'clien
 def suggested_git_remote():
     default_remote = "<https://github.com/<github-user>/gpdb>"
 
-    remote = subprocess.check_output("git ls-remote --get-url", shell=True).rstrip()
+    remote = subprocess.check_output(["git", "ls-remote", "--get-url"]).decode('utf-8').rstrip()
 
-    if "greenplum-db/gpdb"  in remote:
+    if "greenplum-db/gpdb" in remote:
         return default_remote
 
     if "git@" in remote:
@@ -78,14 +78,17 @@ def suggested_git_remote():
     return remote
 
 def suggested_git_branch():
-    default_branch = "<branch-name>"
+    """Try to guess the current git branch"""
+    branch = subprocess.check_output(["git", "rev-parse", "--abbrev-ref", "HEAD"]).decode('utf-8').rstrip()
+    if branch == "master" or is_a_base_branch(branch):
+        return "<branch-name>"
+    return branch
 
-    branch = subprocess.check_output("git rev-parse --abbrev-ref HEAD", shell=True).rstrip()
 
-    if branch == "master" or branch == "5X_STABLE":
-        return default_branch
-    else:
-        return branch
+def is_a_base_branch(branch):
+    # best effort in matching a base branch (5X_STABLE, 6X_STABLE, etc.)
+    matched = re.match("\d+X_STABLE", branch)
+    return matched is not None
 
 
 def render_template(template_filename, context):
