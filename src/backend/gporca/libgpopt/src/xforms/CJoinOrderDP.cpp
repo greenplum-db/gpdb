@@ -639,6 +639,13 @@ CJoinOrderDP::DCost(CExpression *pexpr)
 	const ULONG arity = pexpr->Arity();
 	if (0 == arity)
 	{
+		if (NULL == pexpr->Pstats())
+		{
+			GPOS_RAISE(
+				CException::ExmaInvalid, CException::ExmiAssert,
+				GPOS_WSZ_LIT("stats were not derived on an input component"));
+		}
+
 		// leaf operator, use its estimated number of rows as cost
 		dCost = CDouble(pexpr->Pstats()->Rows());
 	}

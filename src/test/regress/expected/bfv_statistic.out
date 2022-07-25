@@ -401,3 +401,33 @@ EXPLAIN SELECT * FROM test_join_card1 t1, test_join_card2 t2, test_join_card3 t3
 DROP TABLE IF EXISTS test_join_card1;
 DROP TABLE IF EXISTS test_join_card2;
 -- end_ignore
+-- ORCA: Test previous scenario with duplicate memo groups running multiple
+--       xforms that need stats before applying and reset after applying. It
+--       used to be that this scenario could lead to SIGSEGV where stats were
+--       reset and were not re-derived between applying the xforms.
+SET optimizer_join_order=exhaustive;
+SET optimizer_trace_fallback=on;
+CREATE TABLE duplicate_memo_group_test_t1 (c11 varchar, c12 integer) DISTRIBUTED BY (c11);
+CREATE TABLE duplicate_memo_group_test_t2 (c2 varchar) DISTRIBUTED BY (c2);
+CREATE TABLE duplicate_memo_group_test_t3 (c3 varchar) DISTRIBUTED BY (c3);
+INSERT INTO duplicate_memo_group_test_t1 SELECT 'something', generate_series(1,900);
+INSERT INTO duplicate_memo_group_test_t2 SELECT generate_series(1,900);
+ANALYZE duplicate_memo_group_test_t1;
+ANALYZE duplicate_memo_group_test_t2;
+SELECT
+     (SELECT c11 FROM duplicate_memo_group_test_t1 WHERE c12 = 100) AS column1,
+     (SELECT sum(c12)
+FROM duplicate_memo_group_test_t1
+     INNER JOIN duplicate_memo_group_test_t2 ON c11 = c2
+     INNER JOIN duplicate_memo_group_test_t3 ON c2 = c3
+     INNER JOIN duplicate_memo_group_test_t3 a1 on a1.c3 = a2.c3
+     LEFT OUTER JOIN duplicate_memo_group_test_t3 a3 ON a1.c3 = a3.c3
+     LEFT OUTER JOIN duplicate_memo_group_test_t3 a4 ON a1.c3 = a4.c3
+) AS column2
+FROM duplicate_memo_group_test_t3 a2;
+ column1 | column2 
+---------+---------
+(0 rows)
+
+RESET optimizer_join_order;
+RESET optimizer_trace_fallback;

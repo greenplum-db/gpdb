@@ -1453,7 +1453,8 @@ CGroup::PstatsRecursiveDerive(CMemoryPool *pmpLocal, CMemoryPool *pmpGlobal,
 	}
 
 	IStatistics *stats = NULL;
-	// if this is a duplicate group, return stats from the duplicate
+	// if a duplicate group is found, the stats is derived of the duplicate
+	// group and returned, no stats will be derived of the group itself
 	if (FDuplicateGroup())
 	{
 		// call stat derivation on the duplicate group
@@ -1905,6 +1906,14 @@ CGroup::FResetStats()
 	{
 		// end recursion early if group stats have been already reset
 		return true;
+	}
+
+	// if a duplicate group is found, the duplicate group stats will be
+	// reset, whereas the group's own stats (most likely NULL) won't be
+	// reset
+	if (FDuplicateGroup())
+	{
+		return PgroupDuplicate()->FResetStats();
 	}
 
 	BOOL fResetStats = false;

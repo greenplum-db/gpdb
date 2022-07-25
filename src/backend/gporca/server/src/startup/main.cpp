@@ -51,6 +51,7 @@
 #include "unittest/gpopt/base/CDistributionSpecTest.h"
 #include "unittest/gpopt/base/CEquivalenceClassesTest.h"
 #include "unittest/gpopt/base/CFunctionalDependencyTest.h"
+#include "unittest/gpopt/base/CGroupTest.h"
 #include "unittest/gpopt/base/CKeyCollectionTest.h"
 #include "unittest/gpopt/base/CMaxCardTest.h"
 #include "unittest/gpopt/base/COrderSpecTest.h"
@@ -192,6 +193,7 @@ static gpos::CUnittest rgut[] = {
 	GPOS_UNITTEST_STD(CNameTest),
 	GPOS_UNITTEST_STD(COrderSpecTest),
 	GPOS_UNITTEST_STD(CRangeTest),
+	GPOS_UNITTEST_STD(CGroupTest),
 	GPOS_UNITTEST_STD(CPredicateUtilsTest),
 	GPOS_UNITTEST_STD(CScalarIsDistinctFromTest),
 	GPOS_UNITTEST_STD(CPartConstraintTest),
