@@ -1339,6 +1339,7 @@ jobs:
   - task: ic_gpdb
     file: gpdb_src/concourse/tasks/ic_gpdb_binary_swap.yml
     image: centos-gpdb-dev-6
+    timeout: 24h
     params:
       MAKE_TEST_COMMAND: PGOPTIONS='-c optimizer=off' installcheck-world
       BLDWRAP_POSTGRES_CONF_ADDONS: "fsync=off"
@@ -1362,6 +1363,7 @@ jobs:
   - task: ic_gpdb
     file: gpdb_src/concourse/tasks/ic_gpdb.yml
     image: centos-gpdb-dev-6
+    timeout: 24h
     params:
       MAKE_TEST_COMMAND: PGOPTIONS='-c gp_interconnect_type=tcp -c optimizer=off' installcheck-world
       BLDWRAP_POSTGRES_CONF_ADDONS: "fsync=off"
@@ -1380,6 +1382,7 @@ jobs:
   - task: ic_gpdb
     file: gpdb_src/concourse/tasks/ic_gpdb.yml
     image: centos-gpdb-dev-6
+    timeout: 24h
     params:
       MAKE_TEST_COMMAND: PGOPTIONS='-c optimizer=on' installcheck-world
       BLDWRAP_POSTGRES_CONF_ADDONS: "fsync=off"
@@ -1399,6 +1402,7 @@ jobs:
   - task: ic_gpdb
     file: gpdb_src/concourse/tasks/ic_gpdb.yml
     image: centos-gpdb-dev-7
+    timeout: 24h
     params:
       MAKE_TEST_COMMAND: PGOPTIONS='-c optimizer=on' installcheck-world
       BLDWRAP_POSTGRES_CONF_ADDONS: "fsync=off"
@@ -1418,6 +1422,7 @@ jobs:
   - task: ic_gpdb
     file: gpdb_src/concourse/tasks/ic_gpdb.yml
     image: centos-gpdb-dev-7
+    timeout: 24h
     params:
       MAKE_TEST_COMMAND: PGOPTIONS='-c optimizer=off' installcheck-world
       BLDWRAP_POSTGRES_CONF_ADDONS: "fsync=off"
@@ -1437,6 +1442,7 @@ jobs:
   - task: ic_gpdb
     file: gpdb_src/concourse/tasks/ic_gpdb_sles11.yml
     image: gpdb5-sles11-build-test
+    timeout: 24h
     params:
       MAKE_TEST_COMMAND: PGOPTIONS='-c optimizer=on' installcheck-world
       BLDWRAP_POSTGRES_CONF_ADDONS: "fsync=off"
