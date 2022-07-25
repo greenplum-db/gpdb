@@ -16,6 +16,7 @@ installcheck:
 	@cp -rf input source_replaced/input
 	@cp -rf output source_replaced/output
 	@./generate_config_file.sh $(config_file)
+	@./generate_aws_profiles.sh
 	@perl -p -i -e 's/\@config_file\@/$(config_file)/;s/\@read_prefix\@/$(read_prefix)/;s/\@write_prefix\@/$(write_prefix)/;s/\@write_encrypt_prefix\@/$(write_encrypt_prefix)/' source_replaced/input/*.source source_replaced/output/*.source
 	@cp $(top_builddir)/src/test/regress/init_file source_replaced/init_file
 	@perl -p -i -e 's/-- end_matchsubs/\nm\/\\(\.\*\\.cpp:\\d\+\\)\/\ns\/\\(\.\*\\.cpp:\\d\+\\)\/\/\n-- end_matchsubs/' source_replaced/init_file
