@@ -333,6 +333,18 @@ auth_failed(Port *port, int status, char *logdetail)
 
 	cdetail = psprintf(_("Connection matched pg_hba.conf line %d: \"%s\""),
 					   port->hba->linenumber, port->hba->rawline);
+
+    /*
+     * Avoid leak user infomations when failed to connect database using LDAP,
+     * and we need hide failed details return by LDAP.
+     * */
+    if (port->hba->auth_method == uaLDAP)
+    {
+        pfree(cdetail);
+        cdetail = NULL;
+        logdetail = NULL;
+    }
+
 	if (logdetail)
 		logdetail = psprintf("%s\n%s", logdetail, cdetail);
 	else
@@ -2834,8 +2846,7 @@ CheckLDAPAuth(Port *port)
 	if (r != LDAP_SUCCESS)
 	{
 		ereport(LOG,
-			(errmsg("LDAP login failed for user \"%s\" on server \"%s\": %s",
-					fulluser, port->hba->ldapserver, ldap_err2string(r))));
+			(errmsg("LDAP login failed for user on server.")));
 		pfree(passwd);
 		pfree(fulluser);
 		return STATUS_ERROR;
