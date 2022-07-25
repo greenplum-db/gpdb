@@ -455,7 +455,9 @@ string ReplaceNewlineWithSpace(const string &urlWithOptions)
    size_t urlLen = urlWithOptionsProcessed.size();
    for(size_t index = 0; index < urlLen; ++index)
    {
-       if(urlWithOptionsProcessed[index] == '\n')
+       if(urlWithOptionsProcessed[index] == '\n' ||
+          urlWithOptionsProcessed[index] == '\t' ||
+          urlWithOptionsProcessed[index] == '\r')
            urlWithOptionsProcessed[index] = ' ';
    }
    return urlWithOptionsProcessed;
