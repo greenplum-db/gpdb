@@ -16071,10 +16071,6 @@ prebuild_temp_table(Relation rel, RangeVar *tmpname, DistributedBy *distro,
 			rel->rd_rel->relhasindex)
 			cs->buildAoBlkdir = true;
 
-		/* 
-		 * For AO/CO tables, need to remove table level compression settings 
-		 * for the AO_COLUMN case since they're set at the column level.
-		 */
 		if (RelationIsAoCols(rel))
 		{
 			ListCell *lc;
@@ -16083,10 +16079,7 @@ prebuild_temp_table(Relation rel, RangeVar *tmpname, DistributedBy *distro,
 			{
 				DefElem *de = lfirst(lc);
 
-				if (!useExistingColumnAttributes || 
-						!de->defname || 
-						!is_storage_encoding_directive(de->defname))
-					cs->options = lappend(cs->options, de);
+				cs->options = lappend(cs->options, de);
 			}
 			if (useExistingColumnAttributes)
 				col_encs = RelationGetUntransformedAttributeOptions(rel);
