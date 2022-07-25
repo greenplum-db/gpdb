@@ -50,8 +50,16 @@ static ExecutorRun_hook_type prev_ExecutorRun = NULL;
 static ExecutorFinish_hook_type prev_ExecutorFinish = NULL;
 static ExecutorEnd_hook_type prev_ExecutorEnd = NULL;
 
+
+/*
+ * Greenplum specific behavior:
+ *   segment QEs will not init this extension. But for entryDB, which
+ *   is forked from QD, all hooks of auto_explain have already existed
+ *   in it, need to add a condition to disable auto_explain.
+ */
 #define auto_explain_enabled() \
 	(auto_explain_log_min_duration >= 0 && \
+	 Gp_role == GP_ROLE_DISPATCH && \
 	 (nesting_level == 0 || auto_explain_log_nested_statements))
 
 void		_PG_init(void);
@@ -71,8 +79,14 @@ static void explain_ExecutorEnd(QueryDesc *queryDesc);
 void
 _PG_init(void)
 {
-	/* Only run auto_explain on the Query Dispatcher node */
-	if (Gp_role != GP_ROLE_DISPATCH)
+	/*
+	 * Greenplum specific behavior
+	 * Only run auto_explain on the Query Dispatcher node, normally we should
+	 * test Gp_role here (we do this for master branch), however, in Greenplum 6
+	 * all postmaster processes will have Gp_role with the value GP_ROLE_DISPATCH,
+	 * new QEs will set Gp_role when the receive dispatch from QD.
+	 */
+	if (!IS_QUERY_DISPATCHER())
 		return;
 
 	/* Define custom GUC variables. */

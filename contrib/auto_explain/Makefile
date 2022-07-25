@@ -3,7 +3,7 @@
 MODULE_big = auto_explain
 OBJS = auto_explain.o
 
-REGRESS = auto_explain
+REGRESS = auto_explain bfv_preload_auto_explain
 REGRESS_OPTS = --init-file=init_file
 
 ifdef USE_PGXS
