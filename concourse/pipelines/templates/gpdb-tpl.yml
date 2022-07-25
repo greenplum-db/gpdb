@@ -1495,6 +1495,7 @@ jobs:
     {% endif %}
     file: gpdb_src/concourse/tasks/ic_gpdb_binary_swap.yml
     image: gpdb6-centos6-test
+    timeout: 24h
     params:
       MAKE_TEST_COMMAND: -k PGOPTIONS='-c optimizer=off' installcheck-world
       TEST_OS: centos
@@ -1525,6 +1526,7 @@ jobs:
     {% endif %}
     file: gpdb_src/concourse/tasks/ic_gpdb.yml
     image: gpdb6-centos6-test
+    timeout: 24h
     params:
       MAKE_TEST_COMMAND: -k PGOPTIONS='-c optimizer=on' installcheck-world
       TEST_OS: centos
@@ -1550,6 +1552,7 @@ jobs:
     {% endif %}
     file: gpdb_src/concourse/tasks/ic_gpdb.yml
     image: gpdb6-centos6-test
+    timeout: 24h
     params:
       MAKE_TEST_COMMAND: -k PGOPTIONS='-c gp_interconnect_type=proxy -c optimizer=off' EXTRA_REGRESS_OPTS=--exclude-tests=external_table installcheck-world
       TEST_OS: centos
@@ -1575,6 +1578,7 @@ jobs:
     {% endif %}
     file: gpdb_src/concourse/tasks/ic_gpdb.yml
     image: gpdb6-centos6-test
+    timeout: 24h
     params:
       MAKE_TEST_COMMAND: -k PGOPTIONS='-c gp_interconnect_type=proxy -c optimizer=on' EXTRA_REGRESS_OPTS=--exclude-tests=external_table installcheck-world
       TEST_OS: centos
@@ -1600,6 +1604,7 @@ jobs:
     {% endif %}
     file: gpdb_src/concourse/tasks/ic_gpdb.yml
     image: gpdb6-centos6-test
+    timeout: 24h
     params:
       MAKE_TEST_COMMAND: -k PGOPTIONS='-c gp_interconnect_type=tcp -c optimizer=off' installcheck-world
       TEST_OS: centos
@@ -1626,6 +1631,7 @@ jobs:
     {% endif %}
     file: gpdb_src/concourse/tasks/ic_gpdb.yml
     image: gpdb6-centos7-test
+    timeout: 24h
     params:
       MAKE_TEST_COMMAND: -k PGOPTIONS='-c optimizer=on' installcheck-world
       TEST_OS: centos
@@ -1651,6 +1657,7 @@ jobs:
     {% endif %}
     file: gpdb_src/concourse/tasks/ic_gpdb.yml
     image: gpdb6-centos7-test
+    timeout: 24h
     params:
       MAKE_TEST_COMMAND: -k PGOPTIONS='-c optimizer=off' installcheck-world
       TEST_OS: centos
@@ -1676,6 +1683,7 @@ jobs:
     {% endif %}
     file: gpdb_src/concourse/tasks/ic_gpdb.yml
     image: gpdb6-centos7-test
+    timeout: 24h
     params:
       MAKE_TEST_COMMAND: -k PGOPTIONS='-c gp_interconnect_type=proxy -c optimizer=on' installcheck-world
       TEST_OS: centos
@@ -1701,6 +1709,7 @@ jobs:
     {% endif %}
     file: gpdb_src/concourse/tasks/ic_gpdb.yml
     image: gpdb6-centos7-test
+    timeout: 24h
     params:
       MAKE_TEST_COMMAND: -k PGOPTIONS='-c gp_interconnect_type=proxy -c optimizer=off' installcheck-world
       TEST_OS: centos
@@ -1726,6 +1735,7 @@ jobs:
     {% endif %}
     file: gpdb_src/concourse/tasks/ic_gpdb.yml
     image: gpdb6-centos7-test
+    timeout: 24h
     params:
       MAKE_TEST_COMMAND: -k PGOPTIONS='-c optimizer=on' installcheck-mirrorless
       TEST_OS: centos
@@ -1790,6 +1800,7 @@ jobs:
       {% endif %}
       file: gpdb_src/concourse/tasks/ic_gpdb.yml
       image: gpdb6-rhel8-test
+      timeout: 24h
       params:
         MAKE_TEST_COMMAND: -k PGOPTIONS='-c optimizer=on' installcheck-world
         TEST_OS: centos
@@ -1812,6 +1823,7 @@ jobs:
       {% endif %}
       file: gpdb_src/concourse/tasks/ic_gpdb.yml
       image: gpdb6-rhel8-test
+      timeout: 24h
       params:
         MAKE_TEST_COMMAND: -k PGOPTIONS='-c optimizer=off' installcheck-world
         TEST_OS: centos
@@ -1833,6 +1845,7 @@ jobs:
       {% endif %}
       file: gpdb_src/concourse/tasks/ic_gpdb.yml
       image: gpdb6-rhel8-test
+      timeout: 24h
       params:
         MAKE_TEST_COMMAND: -k PGOPTIONS='-c gp_interconnect_type=proxy -c optimizer=on' installcheck-world
         TEST_OS: centos
@@ -1855,6 +1868,7 @@ jobs:
       {% endif %}
       file: gpdb_src/concourse/tasks/ic_gpdb.yml
       image: gpdb6-rhel8-test
+      timeout: 24h
       params:
         MAKE_TEST_COMMAND: -k PGOPTIONS='-c gp_interconnect_type=proxy -c optimizer=off' installcheck-world
         TEST_OS: centos
@@ -1878,6 +1892,7 @@ jobs:
     tags: [icw-rhel8]
     file: gpdb_src/concourse/tasks/ic_gpdb.yml
     image: gpdb6-rhel8-test
+    timeout: 24h
     params:
       MAKE_TEST_COMMAND: -k PGOPTIONS='-c optimizer=on' installcheck-mirrorless
       TEST_OS: centos
@@ -1926,6 +1941,7 @@ jobs:
     {% endif %}
     file: gpdb_src/concourse/tasks/ic_gpdb.yml
     image: gpdb6-oracle7-test
+    timeout: 24h
     params:
       MAKE_TEST_COMMAND: -k PGOPTIONS='-c optimizer=on' installcheck-world
       TEST_OS: centos
@@ -1951,6 +1967,7 @@ jobs:
     {% endif %}
     file: gpdb_src/concourse/tasks/ic_gpdb.yml
     image: gpdb6-oracle7-test
+    timeout: 24h
     params:
       MAKE_TEST_COMMAND: -k PGOPTIONS='-c optimizer=off' installcheck-world
       TEST_OS: centos
@@ -1978,6 +1995,7 @@ jobs:
       {% endif %}
       file: gpdb_src/concourse/tasks/ic_gpdb.yml
       image: gpdb6-ubuntu18.04-test
+      timeout: 24h
       params:
         MAKE_TEST_COMMAND: -k PGOPTIONS='-c optimizer=on' installcheck-world
         TEST_OS: ubuntu
@@ -2003,6 +2021,7 @@ jobs:
       {% endif %}
       file: gpdb_src/concourse/tasks/ic_gpdb.yml
       image: gpdb6-ubuntu18.04-test
+      timeout: 24h
       params:
         MAKE_TEST_COMMAND: -k PGOPTIONS='-c optimizer=off' installcheck-world
         TEST_OS: ubuntu
@@ -2028,6 +2047,7 @@ jobs:
       {% endif %}
       file: gpdb_src/concourse/tasks/ic_gpdb.yml
       image: gpdb6-ubuntu18.04-test
+      timeout: 24h
       params:
         MAKE_TEST_COMMAND: -k PGOPTIONS='-c gp_interconnect_type=proxy -c optimizer=on' installcheck-world
         TEST_OS: ubuntu
@@ -2053,6 +2073,7 @@ jobs:
       {% endif %}
       file: gpdb_src/concourse/tasks/ic_gpdb.yml
       image: gpdb6-ubuntu18.04-test
+      timeout: 24h
       params:
         MAKE_TEST_COMMAND: -k PGOPTIONS='-c gp_interconnect_type=proxy -c optimizer=off' installcheck-world
         TEST_OS: ubuntu
@@ -2078,6 +2099,7 @@ jobs:
     {% endif %}
     file: gpdb_src/concourse/tasks/ic_gpdb.yml
     image: gpdb6-ubuntu18.04-test
+    timeout: 24h
     params:
       MAKE_TEST_COMMAND: -k PGOPTIONS='-c optimizer=on' installcheck-mirrorless
       TEST_OS: centos
