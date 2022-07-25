@@ -250,6 +250,15 @@ CPhysicalSequence::PdsRequired(CMemoryPool *mp,
 		return GPOS_NEW(mp) CDistributionSpecAny(this->Eopid());
 	}
 
+	// If the producer is replicated, request a non-singleton spec
+	// that is not allowed to be enforced, to avoid potential CTE hang issue.
+	if (CDistributionSpec::EdtTaintedReplicated == pds->Edt() ||
+		CDistributionSpec::EdtStrictReplicated == pds->Edt())
+	{
+		return GPOS_NEW(mp) CDistributionSpecNonSingleton(
+			true /* fAllowReplicated */, false /* fAllowEnforced */);
+	}
+
 	// first child is non-singleton, request a non-singleton distribution on second child
 	return GPOS_NEW(mp) CDistributionSpecNonSingleton();
 }
