@@ -1576,10 +1576,14 @@ CExpressionPreprocessor::PexprScalarPredicates(
 			{
 				CConstraint *pcnstr = ppc->Pcnstr()->Pcnstr(mp, crs);
 				CConstraint *pcnstrCol = pcnstr->PcnstrRemapForColumn(mp, colref);
-
 				CExpression *pexprScalar = pcnstrCol->PexprScalar(mp);
-				pexprScalar->AddRef();
-				pdrgpexpr->Append(pexprScalar);
+
+				if (!CUtils::FScalarNotNull(pexprScalar))
+				{
+					pexprScalar->AddRef();
+					pdrgpexpr->Append(pexprScalar);
+				}
+
 				pcrsProcessed->Include(colref);
 				pcnstr->Release();
 				pcnstrCol->Release();
@@ -1816,6 +1820,9 @@ CExpressionPreprocessor::PexprFromConstraints(
 
 	CExpressionArray *pdrgpexprChildren = GPOS_NEW(mp) CExpressionArray(mp);
 
+	BOOL anySubquery = pexpr->Pop()->Eopid() == COperator::EopLogicalSelect &&
+					   CUtils::FAnySubquery((*pexpr)[1]->Pop());
+
 	for (ULONG ul = 0; ul < ulChildren; ul++)
 	{
 		CExpression *pexprChild = (*pexpr)[ul];
@@ -1841,9 +1848,6 @@ CExpressionPreprocessor::PexprFromConstraints(
 		// this avoids generating duplicate predicates on the parent node if a
 		// predicate has already been placed on the child.
 		pcrsOutChild->Exclude(pcrsProcessed);
-
-		BOOL anySubquery = pexpr->Pop()->Eopid() == COperator::EopLogicalSelect &&
-						   CUtils::FAnySubquery((*pexpr)[1]->Pop());
 
 		// generate predicates for the output columns of child
 		CExpression *pexprPred =
