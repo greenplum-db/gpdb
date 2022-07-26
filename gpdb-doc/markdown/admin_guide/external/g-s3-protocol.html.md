@@ -185,7 +185,7 @@ Refer to [Protecting Data Using Server-Side Encryption](http://docs.aws.amazon.c
 
 **Configuring S3 Server-Side Encryption**
 
-`s3` protocol server-side encryption is disabled by default. To take advantage of server-side encryption on AWS S3 objects you write using the Greenplum Database `s3` protocol, you must set the `server_side_encryption` configuration parameter in your `s3` protocol configuration file to the value `sse-s3`:
+`s3` protocol server-side encryption is deactivated by default. To take advantage of server-side encryption on AWS S3 objects you write using the Greenplum Database `s3` protocol, you must set the `server_side_encryption` configuration parameter in your `s3` protocol configuration file to the value `sse-s3`:
 
 ```
 
@@ -274,7 +274,7 @@ If this parameter is not set or is an empty string \(`proxy = ""`\), S3 uses the
 There can be at most one `proxy` parameter in the configuration file. The URL specified by the parameter is the proxy for all supported protocols.
 
 `server_side_encryption`
-:   The S3 server-side encryption method that has been configured for the bucket. Greenplum Database supports only server-side encryption with Amazon S3-managed keys, identified by the configuration parameter value `sse-s3`. Server-side encryption is disabled \(`none`\) by default.
+:   The S3 server-side encryption method that has been configured for the bucket. Greenplum Database supports only server-side encryption with Amazon S3-managed keys, identified by the configuration parameter value `sse-s3`. Server-side encryption is deactivated \(`none`\) by default.
 
 `threadnum`
 :   The maximum number of concurrent threads a segment can create when uploading data to or downloading data from the S3 bucket. The default is 4. The minimum is 1 and the maximum is 8.

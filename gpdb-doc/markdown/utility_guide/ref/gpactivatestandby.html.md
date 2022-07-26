@@ -19,7 +19,7 @@ The `gpactivatestandby` utility activates a backup, standby coordinator host and
 
 When you initialize a standby coordinator, the default is to use the same port as the active coordinator. For information about the coordinator port for the standby coordinator, see [gpinitstandby](gpinitstandby.html).
 
-You must run this utility from the coordinator host you are activating, not the failed coordinator host you are disabling. Running this utility assumes you have a standby coordinator host configured for the system \(see [gpinitstandby](gpinitstandby.html)\).
+You must run this utility from the coordinator host you are activating, not the failed coordinator host you are deactivating. Running this utility assumes you have a standby coordinator host configured for the system \(see [gpinitstandby](gpinitstandby.html)\).
 
 The utility will perform the following steps:
 
@@ -32,7 +32,7 @@ A backup, standby Greenplum coordinator host serves as a 'warm standby' in the e
 
 If the primary coordinator fails, the log replication process is shutdown, and the standby coordinator can be activated in its place by using the `gpactivatestandby` utility. Upon activation of the standby coordinator, the replicated logs are used to reconstruct the state of the Greenplum coordinator host at the time of the last successfully committed transaction.
 
-In order to use `gpactivatestandby` to activate a new primary coordinator host, the coordinator host that was previously serving as the primary coordinator cannot be running. The utility checks for a `postmaster.pid` file in the data directory of the disabled coordinator host, and if it finds it there, it will assume the old coordinator host is still active. In some cases, you may need to remove the `postmaster.pid` file from the disabled coordinator host data directory before running `gpactivatestandby` \(for example, if the disabled coordinator host process was terminated unexpectedly\).
+In order to use `gpactivatestandby` to activate a new primary coordinator host, the coordinator host that was previously serving as the primary coordinator cannot be running. The utility checks for a `postmaster.pid` file in the data directory of the deactivated coordinator host, and if it finds it there, it will assume the old coordinator host is still active. In some cases, you may need to remove the `postmaster.pid` file from the deactivated coordinator host data directory before running `gpactivatestandby` \(for example, if the deactivated coordinator host process was terminated unexpectedly\).
 
 After activating a standby coordinator, run `ANALYZE` to update the database query statistics. For example:
 

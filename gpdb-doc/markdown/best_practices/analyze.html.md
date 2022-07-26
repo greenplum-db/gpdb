@@ -45,7 +45,7 @@ Setting the `gp_autostats_allow_nonowner` server configuration parameter to `tru
 -   `gp_autostats_mode=on_change` and the table is modified by a non-owner.
 -   `gp_autostats_mode=on_no_stats` and the first user to `INSERT` or `COPY` into the table is a non-owner.
 
-Setting `gp_autostats_mode` to `none` disables automatics statistics collection.
+Setting `gp_autostats_mode` to `none` deactivates automatics statistics collection.
 
 For partitioned tables, automatic statistics collection is not triggered if data is inserted from the top-level parent table of a partitioned table. But automatic statistics collection *is* triggered if data is inserted directly in a leaf table \(where the data is stored\) of the partitioned table.
 

@@ -131,7 +131,7 @@ Views available in the `diskquota` module include:
 
 -   [diskquota.naptime](#naptime) - Controls how frequently \(in seconds\) that `diskquota` recalculates the table sizes.
 -   [diskquota.max\_active\_tables](#shmem) - Identifies the maximum number of relations \(including tables, indexes, etc.\) that the `diskquota` module can monitor at the same time.
--   [diskquota.hard\_limit](#hardlimit) - Enables or disables the hard limit enforcement of disk usage.
+-   [diskquota.hard\_limit](#hardlimit) -  Activates or deactivates  the hard limit enforcement of disk usage.
 
 You use the `gpconfig` command to set these parameters in the same way that you would set any Greenplum Database server configuration parameter.
 
@@ -158,7 +158,7 @@ The `diskquota.max_active_tables` server configuration parameter identifies the 
 
 When you enable enforcement of a hard limit of disk usage, `diskquota` checks the quota during query execution. If at any point a currently running query exceeds a quota limit, `diskquota` terminates the query.
 
-By default, hard limit disk usage enforcement is disabled for all databases. To enable hard limit enforcement for all databases, set the `diskquota.hard_limit` server configuration parameter to `'on'`, and then reload the Greenplum Database configuration:
+By default, hard limit disk usage enforcement is deactivated for all databases. To activate hard limit enforcement for all databases, set the `diskquota.hard_limit` server configuration parameter to `'on'`, and then reload the Greenplum Database configuration:
 
 ```
 $ gpconfig -c diskquota.hard_limit -v 'on'
@@ -181,7 +181,7 @@ You can perform the following tasks with the `diskquota` module:
 -   [Set a Tablespace Disk Quota for a Schema or Role](#tablespace_quota)
 -   [Set a Per-Segment Tablespace Disk Quota](#per_seg_tblsp_quota)
 -   [Display Disk Quotas and Disk Usage](#quotas_usage)
--   [Temporarily Disable Disk Quota Monitoring](#temp_disable)
+-   [Temporarily Deactivate Disk Quota Monitoring](#temp_disable)
 
 ### <a id="status"></a>Viewing the diskquota Status 
 
@@ -344,7 +344,7 @@ SELECT schema_name, tablespace_name, quota_in_mb, nspsize_tablespace_in_bytes
 
 ### <a id="temp_disable"></a>About Temporarily Disabling diskquota 
 
-You can temporarily disable the `diskquota` module by removing the shared library from `shared_preload_libraries`. For example::
+You can temporarily deactivate the `diskquota` module by removing the shared library from `shared_preload_libraries`. For example::
 
 ```
 $ gpconfig -s shared_preload_libraries
@@ -356,7 +356,7 @@ $ gpconfig -c shared_preload_libraries -v 'auto_explain'
 $ gpstop -ar
 ```
 
-**Note:** When you disable the `diskquota` module in this manner, disk quota monitoring ceases. To re-initiate disk quota monitoring in this scenario, you must:
+**Note:** When you deactivate the `diskquota` module in this manner, disk quota monitoring ceases. To re-initiate disk quota monitoring in this scenario, you must:
 
 1.  Re-add the library to `shared_preload_libraries`.
 2.  Restart Greenplum Database.
@@ -403,7 +403,7 @@ The `diskquota` module has the following limitations and known issues:
     -   If you `VACUUM FULL` all tables, set the quota to be no smaller than the size of the largest table in the database.
 -   The size of uncommitted tables are not counted in quota views. Even though the `diskquota.show_fast_role_quota_view` view may display a smaller used quota than the quota limit, a new query may trigger a quota exceeded condition in the following circumstance:
 
-    -   Hard limit enforcement of disk usage is disabled.
+    -   Hard limit enforcement of disk usage is deactivated.
     -   A long-running query in a session has consumed the full disk quota.
     `diskquota` does update the denylist in this scenario, but the `diskquota.show_fast_role_quota_view` may not represent the actual used quota because the long-running query is not yet committed. If you execute a new query while the original is still running, the new query will trigger a quota exceeded error.
 

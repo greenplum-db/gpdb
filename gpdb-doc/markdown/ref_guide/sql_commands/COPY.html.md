@@ -105,7 +105,7 @@ STDOUT
 :   Specifies that output goes to the client application. The `ON SEGMENT` clause is not supported with `STDOUT`.
 
 boolean
-:   Specifies whether the selected option should be turned on or off. You can write `TRUE`, `ON`, or `1` to enable the option, and `FALSE`, `OFF`, or `0` to disable it. The boolean value can also be omitted, in which case `TRUE` is assumed.
+:   Specifies whether the selected option should be turned on or off. You can write `TRUE`, `ON`, or `1` to enable the option, and `FALSE`, `OFF`, or `0` to deactivate it. The boolean value can also be omitted, in which case `TRUE` is assumed.
 
 FORMAT
 :   Selects the data format to be read or written: `text`, `csv` \(Comma Separated Values\), or `binary`. The default is `text`.
@@ -170,7 +170,7 @@ ON SEGMENT
 
 :   When the `PROGRAM command` clause is specified, the `<SEGID>` string literal is required in the command, the `<SEG_DATA_DIR>` string literal is optional. See [Examples](#section11).
 
-:   For a `COPY FROM...ON SEGMENT` command, the table distribution policy is checked when data is copied into the table. By default, an error is returned if a data row violates the table distribution policy. You can disable the distribution policy check with the server configuration parameter `gp_enable_segment_copy_checking`. See [Notes](#section6).
+:   For a `COPY FROM...ON SEGMENT` command, the table distribution policy is checked when data is copied into the table. By default, an error is returned if a data row violates the table distribution policy. You can deactivate the distribution policy check with the server configuration parameter `gp_enable_segment_copy_checking`. See [Notes](#section6).
 
 NEWLINE
 :   Specifies the newline used in your data files — `LF` \(Line feed, 0x0A\), `CR` \(Carriage return, 0x0D\), or `CRLF` \(Carriage return plus line feed, 0x0D 0x0A\). If not specified, a Greenplum Database segment will detect the newline type by looking at the first row of data it receives and using the first newline type encountered.
@@ -286,7 +286,7 @@ The data file has two reserved characters that have special meaning to `COPY`:
 
 If your data contains either of these characters, you must escape the character so `COPY` treats it as data and not as a field separator or new row.
 
-By default, the escape character is a \\ \(backslash\) for text-formatted files and a `"` \(double quote\) for csv-formatted files. If you want to use a different escape character, you can do so using the `ESCAPE AS`clause. Make sure to choose an escape character that is not used anywhere in your data file as an actual data value. You can also disable escaping in text-formatted files by using `ESCAPE 'OFF'`.
+By default, the escape character is a \\ \(backslash\) for text-formatted files and a `"` \(double quote\) for csv-formatted files. If you want to use a different escape character, you can do so using the `ESCAPE AS`clause. Make sure to choose an escape character that is not used anywhere in your data file as an actual data value. You can also deactivate escaping in text-formatted files by using `ESCAPE 'OFF'`.
 
 For example, suppose you have a table with three columns and you want to load the following three fields using `COPY`.
 
