@@ -25,7 +25,7 @@ As part of the startup process, the utility checks the consistency of heap check
 
 If the Greenplum Database system is configured with a standby coordinator, and `gpstart` does not detect it during startup, `gpstart` displays a warning and lets you cancel the startup operation.
 
--   If the `-a` option \(disable interactive mode prompts\) is not specified, `gpstart` displays and logs these messages:
+-   If the `-a` option \(deactivate interactive mode prompts\) is not specified, `gpstart` displays and logs these messages:
 
     ```
     Standby host is unreachable, cannot determine whether the standby is currently acting as the coordinator. Received error: <error>
@@ -50,7 +50,7 @@ If the standby coordinator is not accessible, you can start the system and troub
 ## <a id="section4"></a>Options 
 
 -a
-:   Do not prompt the user for confirmation. Disables interactive mode.
+:   Do not prompt the user for confirmation. Deactivates interactive mode.
 
 -B parallel\_processes
 :   The number of segments to start in parallel. If not specified, the utility will start up to 64 parallel processes depending on how many segment instances it needs to start.

@@ -181,7 +181,7 @@ You can perform the following tasks with the `diskquota` module:
 -   [Set a Tablespace Disk Quota for a Schema or Role](#tablespace_quota)
 -   [Set a Per-Segment Tablespace Disk Quota](#per_seg_tblsp_quota)
 -   [Display Disk Quotas and Disk Usage](#quotas_usage)
--   [Temporarily Deactivate Disk Quota Monitoring](#temp_disable)
+-   [Temporarily Deactivate Disk Quota Monitoring](#temp_deactivate)
 
 ### <a id="status"></a>Viewing the diskquota Status 
 
@@ -342,7 +342,7 @@ SELECT schema_name, tablespace_name, quota_in_mb, nspsize_tablespace_in_bytes
 
 ```
 
-### <a id="temp_disable"></a>About Temporarily Disabling diskquota 
+### <a id="temp_deactivate"></a>About Temporarily Disabling diskquota 
 
 You can temporarily deactivate the `diskquota` module by removing the shared library from `shared_preload_libraries`. For example::
 
