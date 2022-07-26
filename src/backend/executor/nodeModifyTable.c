@@ -910,7 +910,8 @@ ldelete:;
 				 * it's done for heap relations therefore the scenario when
 				 * transaction seeks live newer version to update/delete is not
 				 * possible. FIXME: If it occurs then most likely we work with
-				 * wrong partition. How it's possible is described in <put PR link here>
+				 * wrong partition. How it's possible is described in
+				 * https://github.com/greenplum-db/gpdb/pull/13860
 				 */
 				if (isAORowsTable || isAOColsTable)
 					ereport(ERROR,
