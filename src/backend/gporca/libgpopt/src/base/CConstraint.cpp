@@ -459,15 +459,13 @@ CConstraint::PcnstrFromScalarCmp(
 		}
 
 		BOOL pcrLeftIncludesNull =
-			infer_nulls_as && CColRef::EcrtTable == pcrLeft->Ecrt()
-				? CColRefTable::PcrConvert(const_cast<CColRef *>(pcrLeft))
-					  ->IsNullable()
-				: false;
+			infer_nulls_as && CColRef::EcrtTable == pcrLeft->Ecrt() &&
+			CColRefTable::PcrConvert(const_cast<CColRef *>(pcrLeft))
+				->IsNullable();
 		BOOL pcrRightIncludesNull =
-			infer_nulls_as && CColRef::EcrtTable == pcrRight->Ecrt()
-				? CColRefTable::PcrConvert(const_cast<CColRef *>(pcrRight))
-					  ->IsNullable()
-				: false;
+			infer_nulls_as && CColRef::EcrtTable == pcrRight->Ecrt() &&
+			CColRefTable::PcrConvert(const_cast<CColRef *>(pcrRight))
+				->IsNullable();
 
 		*ppdrgpcrs = GPOS_NEW(mp) CColRefSetArray(mp);
 		BOOL checkEquality = CPredicateUtils::IsEqualityOp(pexpr) &&

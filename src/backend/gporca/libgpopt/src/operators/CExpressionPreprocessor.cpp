@@ -1558,7 +1558,7 @@ CExpression *
 CExpressionPreprocessor::PexprScalarPredicates(
 	CMemoryPool *mp, CPropConstraint *ppc,
 	CPropConstraint *constraintsForOuterRefs, CColRefSet *pcrsNotNull,
-	CColRefSet *pcrs, CColRefSet *pcrsProcessed)
+	CColRefSet *pcrs, CColRefSet *pcrsProcessed, BOOL equivOnly)
 {
 	CExpressionArray *pdrgpexpr = GPOS_NEW(mp) CExpressionArray(mp);
 
@@ -1566,6 +1566,25 @@ CExpressionPreprocessor::PexprScalarPredicates(
 	while (crsi.Advance())
 	{
 		CColRef *colref = crsi.Pcr();
+
+		if (!equivOnly)
+		{
+			// add predicates that are inferred from subquery,
+			// instead of equiv classes
+			CColRefSet *crs = ppc->PcrsEquivClass(colref);
+			if (crs != nullptr)
+			{
+				CConstraint *pcnstr = ppc->Pcnstr()->Pcnstr(mp, crs);
+				CConstraint *pcnstrCol = pcnstr->PcnstrRemapForColumn(mp, colref);
+
+				CExpression *pexprScalar = pcnstrCol->PexprScalar(mp);
+				pexprScalar->AddRef();
+				pdrgpexpr->Append(pexprScalar);
+				pcrsProcessed->Include(colref);
+				pcnstr->Release();
+				pcnstrCol->Release();
+			}
+		}
 
 		CExpression *pexprScalar = ppc->PexprScalarMappedFromEquivCols(
 			mp, colref, constraintsForOuterRefs);
@@ -1673,7 +1692,7 @@ CExpressionPreprocessor::PexprWithImpliedPredsOnLOJInnerChild(
 	CColRefSet *pcrsProcessed = GPOS_NEW(mp) CColRefSet(mp);
 	CExpression *pexprPred =
 		PexprScalarPredicates(mp, ppc, nullptr /*no outer refs*/,
-							  pcrsInnerNotNull, pcrsInnerOutput, pcrsProcessed);
+							  pcrsInnerNotNull, pcrsInnerOutput, pcrsProcessed, true);
 	pcrsProcessed->Release();
 	ppc->Release();
 
@@ -1823,10 +1842,13 @@ CExpressionPreprocessor::PexprFromConstraints(
 		// predicate has already been placed on the child.
 		pcrsOutChild->Exclude(pcrsProcessed);
 
+		BOOL anySubquery = pexpr->Pop()->Eopid() == COperator::EopLogicalSelect &&
+						   CUtils::FAnySubquery((*pexpr)[1]->Pop());
+
 		// generate predicates for the output columns of child
 		CExpression *pexprPred =
 			PexprScalarPredicates(mp, ppc, constraintsForOuterRefs, pcrsNotNull,
-								  pcrsOutChild, pcrsProcessed);
+								  pcrsOutChild, pcrsProcessed, !anySubquery);
 		pcrsOutChild->Release();
 
 		if (nullptr != pexprPred)

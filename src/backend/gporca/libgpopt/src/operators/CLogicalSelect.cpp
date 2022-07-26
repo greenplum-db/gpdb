@@ -15,14 +15,10 @@
 
 #include "gpopt/base/CColRefSet.h"
 #include "gpopt/base/CColRefSetIter.h"
-#include "gpopt/base/CColRefTable.h"
-#include "gpopt/base/COptCtxt.h"
 #include "gpopt/operators/CExpression.h"
 #include "gpopt/operators/CExpressionHandle.h"
-#include "gpopt/operators/CPatternTree.h"
 #include "gpopt/operators/CPredicateUtils.h"
 #include "naucrates/statistics/CFilterStatsProcessor.h"
-#include "naucrates/statistics/CStatisticsUtils.h"
 using namespace gpopt;
 
 //---------------------------------------------------------------------------
@@ -134,6 +130,112 @@ CLogicalSelect::DeriveMaxCard(CMemoryPool *,  // mp
 	return exprhdl.DeriveMaxCard(0);
 }
 
+CPropConstraint *
+CLogicalSelect::DerivePropertyConstraint(CMemoryPool *mp,
+						 CExpressionHandle &exprhdl) const
+{
+	CColRefSetArray *pdrgpcrs = GPOS_NEW(mp) CColRefSetArray(mp);
+	CConstraintArray *pdrgpcnstr = GPOS_NEW(mp) CConstraintArray(mp);
+
+	// collect constraint properties from relational children
+	// and predicates from scalar children
+	for (ULONG ul = 0; ul < exprhdl.Arity(); ul++)
+	{
+		if (exprhdl.FScalarChild(ul))
+		{
+			CExpression *pexprScalar = exprhdl.PexprScalarExactChild(ul);
+			if (nullptr == pexprScalar)
+			{
+				continue;
+			}
+
+			if (CUtils::FPredicate(pexprScalar))
+			{
+				CColRefSetArray *pdrgpcrsChild = nullptr;
+				CConstraint *pcnstr = CConstraint::PcnstrFromScalarExpr(
+					mp, pexprScalar, &pdrgpcrsChild);
+
+				if (nullptr != pcnstr)
+				{
+					pdrgpcnstr->Append(pcnstr);
+
+					// merge with the equivalence classes we have so far
+					CColRefSetArray *pdrgpcrsMerged =
+						CUtils::PdrgpcrsMergeEquivClasses(mp, pdrgpcrs,
+														  pdrgpcrsChild);
+					pdrgpcrs->Release();
+					pdrgpcrs = pdrgpcrsMerged;
+				}
+				CRefCount::SafeRelease(pdrgpcrsChild);
+			}
+			else if (CUtils::FAnySubquery(pexprScalar->Pop()))
+			{
+				CExpression *pexprRel = (*pexprScalar)[0];
+				GPOS_ASSERT(pexprRel->Pop()->FLogical());
+				if (pexprRel->HasOuterRefs())
+				{
+					CPropConstraint *ppc = pexprRel->DerivePropertyConstraint();
+					CColRefSet *outRefs = pexprRel->DeriveOuterReferences();
+
+					CColRefSetIter crsi(*outRefs);
+					while (ppc != nullptr && crsi.Advance())
+					{
+						CColRef *colref = crsi.Pcr();
+						CColRefSet *equivOutRefs = ppc->PcrsEquivClass(colref);
+						if (equivOutRefs == nullptr || equivOutRefs->Size() == 0)
+						{
+							CRefCount::SafeRelease(equivOutRefs);
+							continue;
+						}
+						CConstraint *cnstr4Outer = ppc->Pcnstr()->Pcnstr(mp, equivOutRefs);
+						if (cnstr4Outer == nullptr || cnstr4Outer->IsConstraintUnbounded())
+						{
+							CRefCount::SafeRelease(equivOutRefs);
+							CRefCount::SafeRelease(cnstr4Outer);
+							continue;
+						}
+
+						CConstraint *cnstrCol = cnstr4Outer->PcnstrRemapForColumn(mp, colref);
+						pdrgpcnstr->Append(cnstrCol);
+						cnstr4Outer->Release();
+
+						CColRefSet *crs = GPOS_NEW(mp) CColRefSet(mp);
+						crs->Include(colref);
+
+						CColRefSetArray *pdrgpcrsMerged =
+							CUtils::AddEquivClassToArray(mp, crs, pdrgpcrs);
+						pdrgpcrs->Release();
+						crs->Release();
+						pdrgpcrs = pdrgpcrsMerged;
+					}
+				}
+			}
+		}
+		else // for relational child
+		{
+			CPropConstraint *ppc = exprhdl.DerivePropertyConstraint(ul);
+			// equivalence classes coming from child
+			CColRefSetArray *pdrgpcrsChild = ppc->PdrgpcrsEquivClasses();
+
+			// merge with the equivalence classes we have so far
+			CColRefSetArray *pdrgpcrsMerged =
+				CUtils::PdrgpcrsMergeEquivClasses(mp, pdrgpcrs, pdrgpcrsChild);
+			pdrgpcrs->Release();
+			pdrgpcrs = pdrgpcrsMerged;
+
+			// constraint coming from child
+			CConstraint *pcnstr = ppc->Pcnstr();
+			if (nullptr != pcnstr)
+			{
+				pcnstr->AddRef();
+				pdrgpcnstr->Append(pcnstr);
+			}
+		}
+	}
+
+	CConstraint *pcnstrNew = CConstraint::PcnstrConjunction(mp, pdrgpcnstr);
+	return GPOS_NEW(mp) CPropConstraint(mp, pdrgpcrs, pcnstrNew);
+}
 
 //---------------------------------------------------------------------------
 //	@function:

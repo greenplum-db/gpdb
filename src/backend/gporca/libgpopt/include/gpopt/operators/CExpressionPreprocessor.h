@@ -66,15 +66,11 @@ private:
 	static CExpression *PexprScalarPredicates(
 		CMemoryPool *mp, CPropConstraint *ppc,
 		CPropConstraint *constraintsForOuterRefs, CColRefSet *pcrsNotNull,
-		CColRefSet *pcrs, CColRefSet *pcrsProcessed);
+		CColRefSet *pcrs, CColRefSet *pcrsProcessed, BOOL equivOnly);
 
 	// eliminate self comparisons
 	static CExpression *PexprEliminateSelfComparison(CMemoryPool *mp,
 													 CExpression *pexpr);
-
-	// remove CTE Anchor nodes
-	static CExpression *PexprRemoveCTEAnchors(CMemoryPool *mp,
-											  CExpression *pexpr);
 
 	// trim superfluos equality
 	static CExpression *PexprPruneSuperfluousEquality(CMemoryPool *mp,

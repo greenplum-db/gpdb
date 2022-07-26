@@ -4424,14 +4424,7 @@ CUtils::FAnySubquery(COperator *pop)
 {
 	GPOS_ASSERT(nullptr != pop);
 
-	BOOL fInSubquery = false;
-	if (COperator::EopScalarSubqueryAny == pop->Eopid())
-	{
-		fInSubquery = true;
-	}
-
-
-	return fInSubquery;
+	return COperator::EopScalarSubqueryAny == pop->Eopid();
 }
 
 CScalarProjectElement *
