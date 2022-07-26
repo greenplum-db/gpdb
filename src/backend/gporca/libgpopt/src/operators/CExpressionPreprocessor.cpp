@@ -2843,7 +2843,7 @@ CExpressionPreprocessor::PexprTransposeSelectAndProject(CMemoryPool *mp,
 			exprhdl.Attach(pprojexpr);
 			exprhdl.DeriveProps(nullptr /*pdpctxt*/);
 
-			if (exprhdl.Arity() > 0 && exprhdl.DeriveHasNonScalarFunction(1))
+			if (exprhdl.Arity() > 1 && exprhdl.DeriveHasNonScalarFunction(1))
 			{
 				// Bail if project expression contains a set-returning function
 				pdrgpexpr->Release();
