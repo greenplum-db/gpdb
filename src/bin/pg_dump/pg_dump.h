@@ -211,9 +211,6 @@ typedef struct _typeInfo
 	char		*ftypname;
 	const char  *rolname;
 	char		*typacl;
-	char		*rtypacl;
-	char		*inittypacl;
-	char		*initrtypacl;
 	Oid			typelem;
 	Oid			typrelid;
 	char		typrelkind;		/* 'r', 'v', 'c', etc */
