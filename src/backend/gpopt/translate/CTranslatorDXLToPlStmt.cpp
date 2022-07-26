@@ -454,8 +454,12 @@ CTranslatorDXLToPlStmt::TranslateDXLOperatorToPlan(
 									 ctxt_translation_prev_siblings);
 			break;
 		}
-		// GPDB_12_MERGE_FIXME: stop generating AssertOp from ORCA
-		//			case EdxlopPhysicalAssert: { plan = TranslateDXLAssert(dxlnode, output_context, ctxt_translation_prev_siblings); break;}
+		case EdxlopPhysicalAssert:
+		{
+			plan = TranslateDXLAssert(dxlnode, output_context,
+									  ctxt_translation_prev_siblings);
+			break;
+		}
 		case EdxlopPhysicalCTEProducer:
 		{
 			plan = TranslateDXLCTEProducerToSharedScan(
