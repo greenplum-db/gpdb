@@ -2029,6 +2029,8 @@ and CITY_CNT/LANG_CNT > (select  max(CITY_CNT/LANG_CNT)  from allcountrystats,co
 WHERE allcountrystats.code = country.code
 and FOO.region = country.region
 group by FOO.region order by FOO.region;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Multiple Distinct Qualified Aggregates are disabled in the optimizer
  region_city_cnt | region_lang_cnt |          region           
 -----------------+-----------------+---------------------------
              840 |             192 | Caribbean
@@ -2138,6 +2140,8 @@ where longlivingregions.region = denseregions.region and allcountrystats.code = 
 and country.indepyear > 1900
 order by name
 LIMIT 50;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Multiple Distinct Qualified Aggregates are disabled in the optimizer
  city_cnt | lang_cnt |                 name                  | REGION_LIFETIME  | REGION_POP | lang_count | REGION_GNP |          region           
 ----------+----------+---------------------------------------+------------------+------------+------------+------------+---------------------------
         4 |        5 | Afghanistan                           | 61.3500003814697 | 1490776000 |         54 |  810604.00 | Southern and Central Asia
@@ -2868,6 +2872,8 @@ and CITY_CNT/LANG_CNT > (select  max(CITY_CNT/LANG_CNT)  from allcountrystats,co
 WHERE allcountrystats.code = country.code
 and FOO.region = country.region
 group by FOO.region order by FOO.region;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Multiple Distinct Qualified Aggregates are disabled in the optimizer
  region_city_cnt | region_lang_cnt |          region           
 -----------------+-----------------+---------------------------
              840 |             192 | Caribbean
@@ -2977,6 +2983,8 @@ where longlivingregions.region = denseregions.region and allcountrystats.code = 
 and country.indepyear > 1900
 order by name
 LIMIT 50;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Multiple Distinct Qualified Aggregates are disabled in the optimizer
  city_cnt | lang_cnt |                 name                  | REGION_SURFACE_AREA | REGION_LIFETIME  | REGION_POP | lang_count | REGION_GNP |          region           
 ----------+----------+---------------------------------------+---------------------+------------------+------------+------------+------------+---------------------------
         4 |        5 | Afghanistan                           |         90749795.00 | 61.3500003814697 | 1490776000 |         54 |  810604.00 | Southern and Central Asia
@@ -3270,6 +3278,8 @@ and CITY_CNT/LANG_CNT > (select  max(CITY_CNT/LANG_CNT)  from allcountrystats,co
 WHERE allcountrystats.code = country.code
 and FOO.region = country.region
 group by FOO.region order by FOO.region;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Multiple Distinct Qualified Aggregates are disabled in the optimizer
  region_city_cnt | region_lang_cnt |          region           
 -----------------+-----------------+---------------------------
              840 |             192 | Caribbean
@@ -4482,6 +4492,8 @@ and CITY_CNT/LANG_CNT > (select  max(CITY_CNT/LANG_CNT)  from allcountrystats,co
 WHERE allcountrystats.code = country.code
 and FOO.region = country.region
 group by FOO.region order by FOO.region;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Multiple Distinct Qualified Aggregates are disabled in the optimizer
  region_city_cnt | region_lang_cnt |          region           
 -----------------+-----------------+---------------------------
              840 |             192 | Caribbean
@@ -4595,6 +4607,8 @@ where longlivingregions.region = denseregions.region and allcountrystats.code = 
 and country.indepyear > 1900
 order by name
 LIMIT 50;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Multiple Distinct Qualified Aggregates are disabled in the optimizer
  city_cnt | lang_cnt |                 name                  | REGION_SURFACE_AREA | REGION_LIFETIME  | REGION_POP | lang_count | REGION_GNP |          region           
 ----------+----------+---------------------------------------+---------------------+------------------+------------+------------+------------+---------------------------
         4 |        5 | Afghanistan                           |         90749795.00 | 61.3500003814697 | 1490776000 |         54 |  810604.00 | Southern and Central Asia
@@ -5277,6 +5291,8 @@ and CITY_CNT/LANG_CNT > (select  max(CITY_CNT/LANG_CNT)  from allcountrystats,co
 WHERE allcountrystats.code = country.code
 and FOO.region = country.region
 group by FOO.region order by FOO.region;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Multiple Distinct Qualified Aggregates are disabled in the optimizer
  region_city_cnt | region_lang_cnt |          region           
 -----------------+-----------------+---------------------------
              840 |             192 | Caribbean
@@ -5390,6 +5406,8 @@ where longlivingregions.region = denseregions.region and allcountrystats.code = 
 and country.indepyear > 1900
 order by name
 LIMIT 50;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Multiple Distinct Qualified Aggregates are disabled in the optimizer
  city_cnt | lang_cnt |                 name                  | REGION_SURFACE_AREA | REGION_LIFETIME  | REGION_POP | lang_count | REGION_GNP |          region           
 ----------+----------+---------------------------------------+---------------------+------------------+------------+------------+------------+---------------------------
         4 |        5 | Afghanistan                           |         90749795.00 | 61.3500003814697 | 1490776000 |         54 |  810604.00 | Southern and Central Asia
@@ -6119,6 +6137,8 @@ and CITY_CNT/LANG_CNT > (select  max(CITY_CNT/LANG_CNT)  from allcountrystats,co
 WHERE allcountrystats.code = country.code
 and FOO.region = country.region
 group by FOO.region order by FOO.region;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Multiple Distinct Qualified Aggregates are disabled in the optimizer
  region_city_cnt | region_lang_cnt |          region           
 -----------------+-----------------+---------------------------
              840 |             192 | Caribbean
@@ -6228,6 +6248,8 @@ where longlivingregions.region = denseregions.region and allcountrystats.code = 
 and country.indepyear > 1900
 order by name
 LIMIT 50;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Multiple Distinct Qualified Aggregates are disabled in the optimizer
  city_cnt | lang_cnt |                 name                  | REGION_SURFACE_AREA | REGION_LIFETIME  | REGION_POP | lang_count | REGION_GNP |          region           
 ----------+----------+---------------------------------------+---------------------+------------------+------------+------------+------------+---------------------------
         4 |        5 | Afghanistan                           |         90749795.00 | 61.3500003814697 | 1490776000 |         54 |  810604.00 | Southern and Central Asia
@@ -7017,6 +7039,8 @@ and CITY_AO_CNT/LANG_CNT > (select  max(CITY_AO_CNT/LANG_CNT)  from allcountry_a
 WHERE allcountry_aostats.code = country_ao.code
 and FOO.region = country_ao.region
 group by FOO.region order by FOO.region;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Multiple Distinct Qualified Aggregates are disabled in the optimizer
  region_city_ao_cnt | region_lang_cnt |          region           
 --------------------+-----------------+---------------------------
                 840 |             192 | Caribbean
@@ -7130,6 +7154,8 @@ where longlivingregions.region = denseregions.region and allcountry_aostats.code
 and country_ao.indepyear > 1900
 order by name
 LIMIT 50;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Multiple Distinct Qualified Aggregates are disabled in the optimizer
  city_ao_cnt | lang_cnt |                 name                  | REGION_SURFACE_AREA | REGION_LIFETIME  | REGION_POP | lang_count | REGION_GNP |          region           
 -------------+----------+---------------------------------------+---------------------+------------------+------------+------------+------------+---------------------------
            4 |        5 | Afghanistan                           |         90749795.00 | 61.3500003814697 | 1490776000 |         54 |  810604.00 | Southern and Central Asia
@@ -7913,6 +7939,8 @@ and CITY_CO_CNT/LANG_CNT > (select  max(CITY_CO_CNT/LANG_CNT)  from allcountry_c
 WHERE allcountry_costats.code = country_co.code
 and FOO.region = country_co.region
 group by FOO.region order by FOO.region;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Multiple Distinct Qualified Aggregates are disabled in the optimizer
  region_city_co_cnt | region_lang_cnt |          region           
 --------------------+-----------------+---------------------------
                 840 |             192 | Caribbean
@@ -8026,6 +8054,8 @@ where longlivingregions.region = denseregions.region and allcountry_costats.code
 and country_co.indepyear > 1900
 order by name
 LIMIT 50;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Multiple Distinct Qualified Aggregates are disabled in the optimizer
  city_co_cnt | lang_cnt |                 name                  | REGION_SURFACE_AREA | REGION_LIFETIME  | REGION_POP | lang_count | REGION_GNP |          region           
 -------------+----------+---------------------------------------+---------------------+------------------+------------+------------+------------+---------------------------
            4 |        5 | Afghanistan                           |         90749795.00 | 61.3500003814697 | 1490776000 |         54 |  810604.00 | Southern and Central Asia
@@ -8263,6 +8293,8 @@ where longlivingregions.region = denseregions.region and allcountrystats.code = 
 and country.indepyear > 1900
 order by name
 LIMIT 50;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Multiple Distinct Qualified Aggregates are disabled in the optimizer
  city_cnt | lang_cnt |                 name                  | REGION_SURFACE_AREA | REGION_LIFETIME  | REGION_POP | lang_count | REGION_GNP |          region           
 ----------+----------+---------------------------------------+---------------------+------------------+------------+------------+------------+---------------------------
         4 |        5 | Afghanistan                           |         90749795.00 | 61.3500003814697 | 1490776000 |         54 |  810604.00 | Southern and Central Asia
@@ -9500,6 +9532,22 @@ where longlivingregions.region = denseregions.region and allcountrystats.code = 
 and country.indepyear > 1900
 );
 \d+ view_with_shared_scans;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Queries on master-only tables
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Queries on master-only tables
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Queries on master-only tables
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Queries on master-only tables
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Queries on master-only tables
+CONTEXT:  SQL function "col_description" during startup
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Queries on master-only tables
+CONTEXT:  SQL statement "SELECT * FROM pg_catalog.pg_rewrite WHERE ev_class = $1 AND rulename = $2"
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Queries on master-only tables
                 View "qp_with_clause.view_with_shared_scans"
        Column        |       Type       | Modifiers | Storage  | Description 
 ---------------------+------------------+-----------+----------+-------------
@@ -9602,6 +9650,8 @@ UNION ALL
   WHERE longlivingregions.region = denseregions.region AND allcountrystats.code = country.code AND country.region = longlivingregions.region AND country.indepyear > 1900;
 
 select city_cnt,lang_cnt,name,region from view_with_shared_scans order by name LIMIT 50;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Multiple Distinct Qualified Aggregates are disabled in the optimizer
  city_cnt | lang_cnt |                 name                  |          region           
 ----------+----------+---------------------------------------+---------------------------
         4 |        5 | Afghanistan                           | Southern and Central Asia
@@ -9657,6 +9707,8 @@ select city_cnt,lang_cnt,name,region from view_with_shared_scans order by name L
 (50 rows)
 
 select city_cnt,lang_cnt,name,"REGION_POP","REGION_GNP",region from view_with_shared_scans where region = 'Eastern Europe';
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Multiple Distinct Qualified Aggregates are disabled in the optimizer
  city_cnt | lang_cnt |        name        | REGION_POP | REGION_GNP |     region     
 ----------+----------+--------------------+------------+------------+----------------
       189 |       12 | Russian Federation |  307026000 |  659980.00 | Eastern Europe
