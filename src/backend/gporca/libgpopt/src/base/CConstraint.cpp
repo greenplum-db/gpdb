@@ -221,22 +221,29 @@ CConstraint::PcnstrFromScalarExpr(
 		}
 
 		CConstraint *pcnstr = NULL;
-		*ppdrgpcrs = GPOS_NEW(mp) CColRefSetArray(mp);
 
 		// first, try creating a single interval constraint from the expression
 		pcnstr = CConstraintInterval::PciIntervalFromScalarExpr(
 			mp, pexpr, colref, infer_nulls_as);
-		if (NULL == pcnstr && CUtils::FScalarArrayCmp(pexpr))
+		if (NULL == pcnstr)
 		{
 			// if the interval creation failed, try creating a disjunction or conjunction
 			// of several interval constraints in the array case
-			pcnstr =
-				PcnstrFromScalarArrayCmp(mp, pexpr, colref, infer_nulls_as);
+			if (CUtils::FScalarArrayCmp(pexpr))
+			{
+				pcnstr =
+					PcnstrFromScalarArrayCmp(mp, pexpr, colref, infer_nulls_as);
+			}
+			else
+			{
+				return PcnstrFromExistsAnySubquery(mp, pexpr, ppdrgpcrs);
+			}
 		}
 
 		if (NULL != pcnstr)
 		{
-			AddColumnToEquivClasses(mp, colref, ppdrgpcrs);
+			*ppdrgpcrs = GPOS_NEW(mp) CColRefSetArray(mp);
+			AddColumnToEquivClasses(mp, colref, *ppdrgpcrs);
 		}
 		return pcnstr;
 	}
@@ -253,6 +260,10 @@ CConstraint::PcnstrFromScalarExpr(
 			// return the constraints of the inner join predicates
 			return PcnstrFromScalarExpr(mp, (*pexpr)[0], ppdrgpcrs,
 										infer_nulls_as);
+
+		case COperator::EopScalarSubqueryAny:
+		case COperator::EopScalarSubqueryExists:
+			return PcnstrFromExistsAnySubquery(mp, pexpr, ppdrgpcrs);
 
 		default:
 			return NULL;
@@ -348,12 +359,12 @@ CConstraint::PcnstrConjDisj(CMemoryPool *mp, CConstraintArray *pdrgpcnstr,
 //---------------------------------------------------------------------------
 void
 CConstraint::AddColumnToEquivClasses(CMemoryPool *mp, const CColRef *colref,
-									 CColRefSetArray **ppdrgpcrs)
+									 CColRefSetArray *ppdrgpcrs)
 {
-	const ULONG length = (*ppdrgpcrs)->Size();
+	const ULONG length = ppdrgpcrs->Size();
 	for (ULONG ul = 0; ul < length; ul++)
 	{
-		CColRefSet *pcrs = (**ppdrgpcrs)[ul];
+		CColRefSet *pcrs = (*ppdrgpcrs)[ul];
 		if (pcrs->FMember(colref))
 		{
 			return;
@@ -363,7 +374,7 @@ CConstraint::AddColumnToEquivClasses(CMemoryPool *mp, const CColRef *colref,
 	CColRefSet *pcrsNew = GPOS_NEW(mp) CColRefSet(mp);
 	pcrsNew->Include(colref);
 
-	(*ppdrgpcrs)->Append(pcrsNew);
+	ppdrgpcrs->Append(pcrsNew);
 }
 
 //---------------------------------------------------------------------------
@@ -454,15 +465,13 @@ CConstraint::PcnstrFromScalarCmp(
 		}
 
 		BOOL pcrLeftIncludesNull =
-			infer_nulls_as && CColRef::EcrtTable == pcrLeft->Ecrt()
-				? CColRefTable::PcrConvert(const_cast<CColRef *>(pcrLeft))
-					  ->IsNullable()
-				: false;
+			infer_nulls_as && CColRef::EcrtTable == pcrLeft->Ecrt() &&
+			CColRefTable::PcrConvert(const_cast<CColRef *>(pcrLeft))
+				->IsNullable();
 		BOOL pcrRightIncludesNull =
-			infer_nulls_as && CColRef::EcrtTable == pcrRight->Ecrt()
-				? CColRefTable::PcrConvert(const_cast<CColRef *>(pcrRight))
-					  ->IsNullable()
-				: false;
+			infer_nulls_as && CColRef::EcrtTable == pcrRight->Ecrt() &&
+			CColRefTable::PcrConvert(const_cast<CColRef *>(pcrRight))
+				->IsNullable();
 
 		*ppdrgpcrs = GPOS_NEW(mp) CColRefSetArray(mp);
 		BOOL checkEquality = CPredicateUtils::IsEqualityOp(pexpr) &&
@@ -591,6 +600,58 @@ CConstraint::PcnstrFromScalarBoolOp(
 	}
 
 	return NULL;
+}
+
+// create constraint from EXISTS/ANY scalar subquery
+CConstraint *
+CConstraint::PcnstrFromExistsAnySubquery(CMemoryPool *mp, CExpression *pexpr,
+										 CColRefSetArray **ppdrgpcrs)
+{
+	GPOS_ASSERT(NULL != pexpr);
+
+	if (!CUtils::FCorrelatedExistsAnySubquery(pexpr))
+	{
+		return NULL;
+	}
+
+	CExpression *pexprRel = (*pexpr)[0];
+	GPOS_ASSERT(pexprRel->Pop()->FLogical());
+
+	CPropConstraint *ppc = pexprRel->DerivePropertyConstraint();
+	if (ppc == NULL)
+	{
+		return NULL;
+	}
+
+	*ppdrgpcrs = GPOS_NEW(mp) CColRefSetArray(mp);
+	CConstraintArray *pdrgpcnstr = GPOS_NEW(mp) CConstraintArray(mp);
+	CColRefSet *outRefs = pexprRel->DeriveOuterReferences();
+	CColRefSetIter crsi(*outRefs);
+
+	while (crsi.Advance())
+	{
+		CColRef *colref = crsi.Pcr();
+		CColRefSet *equivOutRefs = ppc->PcrsEquivClass(colref);
+		if (equivOutRefs == NULL || equivOutRefs->Size() == 0)
+		{
+			CRefCount::SafeRelease(equivOutRefs);
+			continue;
+		}
+		CConstraint *cnstr4Outer = ppc->Pcnstr()->Pcnstr(mp, equivOutRefs);
+		if (cnstr4Outer == NULL || cnstr4Outer->IsConstraintUnbounded())
+		{
+			CRefCount::SafeRelease(equivOutRefs);
+			CRefCount::SafeRelease(cnstr4Outer);
+			continue;
+		}
+
+		CConstraint *cnstrCol = cnstr4Outer->PcnstrRemapForColumn(mp, colref);
+		pdrgpcnstr->Append(cnstrCol);
+		cnstr4Outer->Release();
+		AddColumnToEquivClasses(mp, colref, *ppdrgpcrs);
+	}
+
+	return CConstraint::PcnstrConjunction(mp, pdrgpcnstr);
 }
 
 //---------------------------------------------------------------------------

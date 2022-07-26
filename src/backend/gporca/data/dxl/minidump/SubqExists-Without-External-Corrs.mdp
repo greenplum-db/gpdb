@@ -434,7 +434,7 @@
     <dxl:Plan Id="0" SpaceSize="150026">
       <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="12930.008073" Rows="1.000000" Width="8"/>
+          <dxl:Cost StartupCost="0" TotalCost="12930.008270" Rows="1.000000" Width="8"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="i">
@@ -448,7 +448,7 @@
         <dxl:SortingColumnList/>
         <dxl:NestedLoopJoin JoinType="In" IndexNestedLoopJoin="false" OuterRefAsParam="false">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="12930.008037" Rows="1.000000" Width="8"/>
+            <dxl:Cost StartupCost="0" TotalCost="12930.008234" Rows="1.000000" Width="8"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="i">
@@ -491,32 +491,32 @@
           </dxl:TableScan>
           <dxl:Materialize Eager="false">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="1293.001304" Rows="2.000000" Width="1"/>
+              <dxl:Cost StartupCost="0" TotalCost="1293.001337" Rows="2.000000" Width="1"/>
             </dxl:Properties>
             <dxl:ProjList/>
             <dxl:Filter/>
             <dxl:BroadcastMotion InputSegments="-1" OutputSegments="0,1">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="1293.001303" Rows="2.000000" Width="1"/>
+                <dxl:Cost StartupCost="0" TotalCost="1293.001336" Rows="2.000000" Width="1"/>
               </dxl:Properties>
               <dxl:ProjList/>
               <dxl:Filter/>
               <dxl:SortingColumnList/>
               <dxl:Limit>
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="1293.001251" Rows="1.000000" Width="1"/>
+                  <dxl:Cost StartupCost="0" TotalCost="1293.001283" Rows="1.000000" Width="1"/>
                 </dxl:Properties>
                 <dxl:ProjList/>
                 <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
                   <dxl:Properties>
-                    <dxl:Cost StartupCost="0" TotalCost="1293.001250" Rows="1.000000" Width="1"/>
+                    <dxl:Cost StartupCost="0" TotalCost="1293.001282" Rows="1.000000" Width="1"/>
                   </dxl:Properties>
                   <dxl:ProjList/>
                   <dxl:Filter/>
                   <dxl:SortingColumnList/>
                   <dxl:HashJoin JoinType="Inner">
                     <dxl:Properties>
-                      <dxl:Cost StartupCost="0" TotalCost="1293.001245" Rows="1.000000" Width="1"/>
+                      <dxl:Cost StartupCost="0" TotalCost="1293.001278" Rows="1.000000" Width="1"/>
                     </dxl:Properties>
                     <dxl:ProjList/>
                     <dxl:Filter/>
@@ -553,7 +553,7 @@
                     </dxl:TableScan>
                     <dxl:BroadcastMotion InputSegments="0,1" OutputSegments="0,1">
                       <dxl:Properties>
-                        <dxl:Cost StartupCost="0" TotalCost="862.000950" Rows="2.000000" Width="4"/>
+                        <dxl:Cost StartupCost="0" TotalCost="862.000983" Rows="2.000000" Width="4"/>
                       </dxl:Properties>
                       <dxl:ProjList>
                         <dxl:ProjElem ColId="19" Alias="j">
@@ -564,7 +564,7 @@
                       <dxl:SortingColumnList/>
                       <dxl:HashJoin JoinType="In">
                         <dxl:Properties>
-                          <dxl:Cost StartupCost="0" TotalCost="862.000846" Rows="1.000000" Width="4"/>
+                          <dxl:Cost StartupCost="0" TotalCost="862.000878" Rows="1.000000" Width="4"/>
                         </dxl:Properties>
                         <dxl:ProjList>
                           <dxl:ProjElem ColId="19" Alias="j">
@@ -585,7 +585,7 @@
                         </dxl:HashCondList>
                         <dxl:TableScan>
                           <dxl:Properties>
-                            <dxl:Cost StartupCost="0" TotalCost="431.000021" Rows="1.000000" Width="8"/>
+                            <dxl:Cost StartupCost="0" TotalCost="431.000069" Rows="1.000000" Width="8"/>
                           </dxl:Properties>
                           <dxl:ProjList>
                             <dxl:ProjElem ColId="18" Alias="i">
@@ -595,7 +595,13 @@
                               <dxl:Ident ColId="19" ColName="j" TypeMdid="0.23.1.0"/>
                             </dxl:ProjElem>
                           </dxl:ProjList>
-                          <dxl:Filter/>
+                          <dxl:Filter>
+                            <dxl:Not>
+                              <dxl:IsNull>
+                                <dxl:Ident ColId="19" ColName="j" TypeMdid="0.23.1.0"/>
+                              </dxl:IsNull>
+                            </dxl:Not>
+                          </dxl:Filter>
                           <dxl:TableDescriptor Mdid="0.1159276.1.1" TableName="a">
                             <dxl:Columns>
                               <dxl:Column ColId="18" Attno="1" ColName="i" TypeMdid="0.23.1.0"/>
@@ -623,12 +629,10 @@
                             </dxl:ProjElem>
                           </dxl:ProjList>
                           <dxl:Filter>
-                            <dxl:ArrayComp OperatorName="&lt;&gt;" OperatorMdid="0.518.1.0" OperatorType="All">
+                            <dxl:Comparison ComparisonOperator="&lt;&gt;" OperatorMdid="0.518.1.0">
                               <dxl:Ident ColId="27" ColName="i" TypeMdid="0.23.1.0"/>
-                              <dxl:Array ArrayType="0.1007.1.0" ElementType="0.23.1.0" MultiDimensional="false">
-                                <dxl:ConstValue TypeMdid="0.23.1.0" Value="10"/>
-                              </dxl:Array>
-                            </dxl:ArrayComp>
+                              <dxl:ConstValue TypeMdid="0.23.1.0" Value="10"/>
+                            </dxl:Comparison>
                           </dxl:Filter>
                           <dxl:TableDescriptor Mdid="0.1159322.1.1" TableName="c">
                             <dxl:Columns>

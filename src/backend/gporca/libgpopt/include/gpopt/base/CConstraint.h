@@ -97,7 +97,7 @@ private:
 	// add column as a new equivalence class, if it is not already in one of the
 	// existing equivalence classes
 	static void AddColumnToEquivClasses(CMemoryPool *mp, const CColRef *colref,
-										CColRefSetArray **ppdrgpcrs);
+										CColRefSetArray *ppdrgpcrs);
 
 	// create constraint from scalar comparison
 	static CConstraint *PcnstrFromScalarCmp(CMemoryPool *mp, CExpression *pexpr,
@@ -238,6 +238,10 @@ public:
 											 CExpression *pexpr,
 											 CColRefSetArray **ppdrgpcrs,
 											 BOOL infer_nulls_as = false);
+
+	// create constraint from EXISTS/ANY scalar subquery
+	static CConstraint *PcnstrFromExistsAnySubquery(
+		CMemoryPool *mp, CExpression *pexpr, CColRefSetArray **ppdrgpcrs);
 
 	// create conjunction from array of constraints
 	static CConstraint *PcnstrConjunction(CMemoryPool *mp,

@@ -591,12 +591,10 @@
                     </dxl:ProjElem>
                   </dxl:ProjList>
                   <dxl:Filter>
-                    <dxl:ArrayComp OperatorName="&lt;&gt;" OperatorMdid="0.518.1.0" OperatorType="All">
+                    <dxl:Comparison ComparisonOperator="&lt;&gt;" OperatorMdid="0.518.1.0">
                       <dxl:Ident ColId="27" ColName="i" TypeMdid="0.23.1.0"/>
-                      <dxl:Array ArrayType="0.1007.1.0" ElementType="0.23.1.0" MultiDimensional="false">
-                        <dxl:ConstValue TypeMdid="0.23.1.0" Value="10"/>
-                      </dxl:Array>
-                    </dxl:ArrayComp>
+                      <dxl:ConstValue TypeMdid="0.23.1.0" Value="10"/>
+                    </dxl:Comparison>
                   </dxl:Filter>
                   <dxl:TableDescriptor Mdid="0.1159322.1.1" TableName="c">
                     <dxl:Columns>

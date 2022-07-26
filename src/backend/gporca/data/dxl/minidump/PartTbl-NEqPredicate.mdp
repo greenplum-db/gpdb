@@ -524,20 +524,11 @@
             <dxl:PartFilters>
               <dxl:Or>
                 <dxl:Or>
-                  <dxl:Or>
-                    <dxl:Comparison ComparisonOperator="&lt;" OperatorMdid="0.97.1.0">
-                      <dxl:PartBound Level="0" Type="0.23.1.0" LowerBound="true"/>
-                      <dxl:ConstValue TypeMdid="0.23.1.0" Value="2"/>
-                    </dxl:Comparison>
-                    <dxl:PartBoundOpen Level="0" LowerBound="true"/>
-                  </dxl:Or>
-                  <dxl:Or>
-                    <dxl:Comparison ComparisonOperator="&gt;" OperatorMdid="0.521.1.0">
-                      <dxl:PartBound Level="0" Type="0.23.1.0" LowerBound="false"/>
-                      <dxl:ConstValue TypeMdid="0.23.1.0" Value="2"/>
-                    </dxl:Comparison>
-                    <dxl:PartBoundOpen Level="0" LowerBound="false"/>
-                  </dxl:Or>
+                  <dxl:Comparison ComparisonOperator="&lt;&gt;" OperatorMdid="0.518.1.0">
+                    <dxl:PartBound Level="0" Type="0.23.1.0" LowerBound="false"/>
+                    <dxl:ConstValue TypeMdid="0.23.1.0" Value="2"/>
+                  </dxl:Comparison>
+                  <dxl:PartBoundOpen Level="0" LowerBound="false"/>
                 </dxl:Or>
                 <dxl:DefaultPart Level="0"/>
               </dxl:Or>
@@ -549,12 +540,10 @@
               <dxl:ConstValue TypeMdid="0.23.1.0" Value="1"/>
             </dxl:PropagationExpression>
             <dxl:PrintableFilter>
-              <dxl:ArrayComp OperatorName="&lt;&gt;" OperatorMdid="0.518.1.0" OperatorType="All">
+              <dxl:Comparison ComparisonOperator="&lt;&gt;" OperatorMdid="0.518.1.0">
                 <dxl:Ident ColId="2" ColName="c" TypeMdid="0.23.1.0"/>
-                <dxl:Array ArrayType="0.1007.1.0" ElementType="0.23.1.0" MultiDimensional="false">
-                  <dxl:ConstValue TypeMdid="0.23.1.0" Value="2"/>
-                </dxl:Array>
-              </dxl:ArrayComp>
+                <dxl:ConstValue TypeMdid="0.23.1.0" Value="2"/>
+              </dxl:Comparison>
             </dxl:PrintableFilter>
           </dxl:PartitionSelector>
           <dxl:DynamicTableScan PartIndexId="1">

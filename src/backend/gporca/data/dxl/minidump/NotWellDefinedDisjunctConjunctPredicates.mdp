@@ -1160,12 +1160,10 @@
                       <dxl:Ident ColId="10" ColName="a" TypeMdid="0.20.1.0"/>
                       <dxl:ConstValue TypeMdid="0.23.1.0" Value="1"/>
                     </dxl:Comparison>
-                    <dxl:ArrayComp OperatorName="&lt;&gt;" OperatorMdid="0.518.1.0" OperatorType="All">
+                    <dxl:Comparison ComparisonOperator="&lt;&gt;" OperatorMdid="0.518.1.0">
                       <dxl:Ident ColId="11" ColName="b" TypeMdid="0.23.1.0"/>
-                      <dxl:Array ArrayType="0.1007.1.0" ElementType="0.23.1.0" MultiDimensional="false">
-                        <dxl:ConstValue TypeMdid="0.23.1.0" Value="101"/>
-                      </dxl:Array>
-                    </dxl:ArrayComp>
+                      <dxl:ConstValue TypeMdid="0.23.1.0" Value="101"/>
+                    </dxl:Comparison>
                   </dxl:And>
                 </dxl:Or>
                 <dxl:Or>

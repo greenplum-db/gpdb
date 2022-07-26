@@ -184,8 +184,9 @@ select * from A where exists (select * from B where A.i in (select C.i from C wh
                                  ->  Seq Scan on c
                                  ->  Hash
                                        ->  Seq Scan on b
+                                             Filter: (NOT (i IS NULL))
  Optimizer: Pivotal Optimizer (GPORCA) version 2.70.0
-(15 rows)
+(16 rows)
 
 select * from A where exists (select * from B where A.i in (select C.i from C where C.i = B.i));
  i | j 

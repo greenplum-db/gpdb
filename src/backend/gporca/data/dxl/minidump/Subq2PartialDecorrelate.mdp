@@ -437,7 +437,7 @@
     <dxl:Plan Id="0" SpaceSize="67">
       <dxl:Result>
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="1356692154.938896" Rows="1.000000" Width="8"/>
+          <dxl:Cost StartupCost="0" TotalCost="1356692189.437047" Rows="1.000000" Width="8"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="a">
@@ -460,17 +460,17 @@
             </dxl:ParamList>
             <dxl:Aggregate AggregationStrategy="Plain" StreamSafe="false">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="1324032.682141" Rows="1.000000" Width="8"/>
+                <dxl:Cost StartupCost="0" TotalCost="1324032.715830" Rows="1.000000" Width="8"/>
               </dxl:Properties>
               <dxl:GroupingColumns/>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="27" Alias="sum">
                   <dxl:AggFunc AggMdid="0.2108.1.0" AggDistinct="false" AggStage="Normal" AggKind="n" >
                     <dxl:ValuesList ParamType="aggargs">
-                    <dxl:OpExpr OperatorName="+" OperatorMdid="0.551.1.0" OperatorType="0.23.1.0">
-                      <dxl:Ident ColId="9" ColName="a" TypeMdid="0.23.1.0"/>
-                      <dxl:Ident ColId="0" ColName="a" TypeMdid="0.23.1.0"/>
-                    </dxl:OpExpr>
+                      <dxl:OpExpr OperatorName="+" OperatorMdid="0.551.1.0" OperatorType="0.23.1.0">
+                        <dxl:Ident ColId="9" ColName="a" TypeMdid="0.23.1.0"/>
+                        <dxl:Ident ColId="0" ColName="a" TypeMdid="0.23.1.0"/>
+                      </dxl:OpExpr>
                     </dxl:ValuesList>
                     <dxl:ValuesList ParamType="aggdirectargs"/>
                     <dxl:ValuesList ParamType="aggorder"/>
@@ -481,7 +481,7 @@
               <dxl:Filter/>
               <dxl:Result>
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="1324032.682140" Rows="1.000000" Width="4"/>
+                  <dxl:Cost StartupCost="0" TotalCost="1324032.715829" Rows="1.000000" Width="4"/>
                 </dxl:Properties>
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="9" Alias="a">
@@ -587,7 +587,7 @@
                 <dxl:OneTimeFilter/>
                 <dxl:Materialize Eager="true">
                   <dxl:Properties>
-                    <dxl:Cost StartupCost="0" TotalCost="431.000133" Rows="1.000000" Width="8"/>
+                    <dxl:Cost StartupCost="0" TotalCost="431.000166" Rows="1.000000" Width="8"/>
                   </dxl:Properties>
                   <dxl:ProjList>
                     <dxl:ProjElem ColId="9" Alias="a">
@@ -600,7 +600,7 @@
                   <dxl:Filter/>
                   <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
                     <dxl:Properties>
-                      <dxl:Cost StartupCost="0" TotalCost="431.000125" Rows="1.000000" Width="8"/>
+                      <dxl:Cost StartupCost="0" TotalCost="431.000158" Rows="1.000000" Width="8"/>
                     </dxl:Properties>
                     <dxl:ProjList>
                       <dxl:ProjElem ColId="9" Alias="a">
@@ -614,7 +614,7 @@
                     <dxl:SortingColumnList/>
                     <dxl:TableScan>
                       <dxl:Properties>
-                        <dxl:Cost StartupCost="0" TotalCost="431.000021" Rows="1.000000" Width="8"/>
+                        <dxl:Cost StartupCost="0" TotalCost="431.000069" Rows="1.000000" Width="8"/>
                       </dxl:Properties>
                       <dxl:ProjList>
                         <dxl:ProjElem ColId="9" Alias="a">
@@ -624,7 +624,13 @@
                           <dxl:Ident ColId="10" ColName="b" TypeMdid="0.23.1.0"/>
                         </dxl:ProjElem>
                       </dxl:ProjList>
-                      <dxl:Filter/>
+                      <dxl:Filter>
+                        <dxl:Not>
+                          <dxl:IsNull>
+                            <dxl:Ident ColId="10" ColName="b" TypeMdid="0.23.1.0"/>
+                          </dxl:IsNull>
+                        </dxl:Not>
+                      </dxl:Filter>
                       <dxl:TableDescriptor Mdid="0.294934.1.0" TableName="bar">
                         <dxl:Columns>
                           <dxl:Column ColId="9" Attno="1" ColName="a" TypeMdid="0.23.1.0" ColWidth="4"/>

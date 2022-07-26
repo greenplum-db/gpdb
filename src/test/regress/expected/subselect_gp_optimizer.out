@@ -1989,6 +1989,7 @@ select * from simplify_sub t1 where exists (select 1 from simplify_sub t2 where 
    Filter: (SubPlan 1)
    ->  Gather Motion 3:1  (slice1; segments: 3)
          ->  Seq Scan on simplify_sub
+               Filter: (NOT (i IS NULL))
    SubPlan 1  (slice0)
      ->  Result
            ->  Result
@@ -2041,6 +2042,7 @@ select * from simplify_sub t1 where exists (select 1 from simplify_sub t2 where 
    ->  Nested Loop Semi Join
          Join Filter: true
          ->  Seq Scan on simplify_sub
+               Filter: (NOT (i IS NULL))
          ->  Limit
                ->  Result
                      ->  Result
@@ -2081,6 +2083,7 @@ select * from simplify_sub t1 where exists (select 1 from simplify_sub t2 where 
    ->  Hash Semi Join
          Hash Cond: (simplify_sub.i = simplify_sub_1.i)
          ->  Seq Scan on simplify_sub
+               Filter: (NOT (i IS NULL))
          ->  Hash
                ->  Result
                      ->  Seq Scan on simplify_sub simplify_sub_1
@@ -2121,6 +2124,7 @@ select * from simplify_sub t1 where exists (select 1 from simplify_sub t2 where 
    ->  Hash Semi Join
          Hash Cond: (simplify_sub.i = simplify_sub_1.i)
          ->  Seq Scan on simplify_sub
+               Filter: (NOT (i IS NULL))
          ->  Hash
                ->  Result
                      ->  Seq Scan on simplify_sub simplify_sub_1
