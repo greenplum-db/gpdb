@@ -385,6 +385,7 @@ COptTasks::CreateOptimizerConfig(CMemoryPool *mp, ICostModel *cost_model)
 	ULONG push_group_by_below_setop_threshold =
 		(ULONG) optimizer_push_group_by_below_setop_threshold;
 	ULONG xform_bind_threshold = (ULONG) optimizer_xform_bind_threshold;
+	ULONG skew_factor = (ULONG) optimizer_skew_factor;
 
 	return GPOS_NEW(mp) COptimizerConfig(
 		GPOS_NEW(mp)
@@ -399,7 +400,8 @@ COptTasks::CreateOptimizerConfig(CMemoryPool *mp, ICostModel *cost_model)
 				  broadcast_threshold,
 				  false, /* don't create Assert nodes for constraints, we'll
 								      * enforce them ourselves in the executor */
-				  push_group_by_below_setop_threshold, xform_bind_threshold),
+				  push_group_by_below_setop_threshold, xform_bind_threshold,
+				  skew_factor),
 		GPOS_NEW(mp) CWindowOids(OID(F_WINDOW_ROW_NUMBER), OID(F_WINDOW_RANK)));
 }
 

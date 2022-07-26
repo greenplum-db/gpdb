@@ -19,6 +19,7 @@
 #define BROADCAST_THRESHOLD ULONG(10000000)
 #define PUSH_GROUP_BY_BELOW_SETOP_THRESHOLD ULONG(10)
 #define XFORM_BIND_THRESHOLD ULONG(0)
+#define SKEW_FACTOR ULONG(0)
 
 
 namespace gpopt
@@ -52,13 +53,15 @@ private:
 
 	// private copy ctor
 	CHint(const CHint &);
+	ULONG m_ulSkewFactor;
 
 public:
 	// ctor
 	CHint(ULONG join_arity_for_associativity_commutativity,
 		  ULONG array_expansion_threshold, ULONG ulJoinOrderDPLimit,
 		  ULONG broadcast_threshold, BOOL enforce_constraint_on_dml,
-		  ULONG push_group_by_below_setop_threshold, ULONG xform_bind_threshold)
+		  ULONG push_group_by_below_setop_threshold, ULONG xform_bind_threshold,
+		  ULONG skew_factor)
 		: m_ulJoinArityForAssociativityCommutativity(
 			  join_arity_for_associativity_commutativity),
 		  m_ulArrayExpansionThreshold(array_expansion_threshold),
@@ -67,7 +70,8 @@ public:
 		  m_fEnforceConstraintsOnDML(enforce_constraint_on_dml),
 		  m_ulPushGroupByBelowSetopThreshold(
 			  push_group_by_below_setop_threshold),
-		  m_ulXform_bind_threshold(xform_bind_threshold)
+		  m_ulXform_bind_threshold(xform_bind_threshold),
+		  m_ulSkewFactor(skew_factor)
 	{
 	}
 
@@ -132,6 +136,13 @@ public:
 		return m_ulXform_bind_threshold;
 	}
 
+	// User defined skew multiplier, multiplied to the skew ratio calculated from 1000 samples
+	ULONG
+	UlSkewFactor() const
+	{
+		return m_ulSkewFactor;
+	}
+
 	// generate default hint configurations, which disables sort during insert on
 	// append only row-oriented partitioned tables by default
 	static CHint *
@@ -144,7 +155,8 @@ public:
 			BROADCAST_THRESHOLD,				 /*broadcast_threshold*/
 			true,								 /* enforce_constraint_on_dml */
 			PUSH_GROUP_BY_BELOW_SETOP_THRESHOLD, /* push_group_by_below_setop_threshold */
-			XFORM_BIND_THRESHOLD				 /* xform_bind_threshold */
+			XFORM_BIND_THRESHOLD,				 /* xform_bind_threshold */
+			SKEW_FACTOR							 /* skew_factor */
 		);
 	}
 

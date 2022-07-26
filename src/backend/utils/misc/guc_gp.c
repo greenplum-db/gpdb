@@ -397,6 +397,7 @@ int			optimizer_join_order;
 int			optimizer_cte_inlining_bound;
 int			optimizer_push_group_by_below_setop_threshold;
 int			optimizer_xform_bind_threshold;
+int			optimizer_skew_factor;
 bool		optimizer_force_multistage_agg;
 bool		optimizer_force_three_stage_scalar_dqa;
 bool		optimizer_force_expanded_distinct_aggs;
@@ -4383,6 +4384,17 @@ struct config_int ConfigureNamesInt_gp[] =
 		0, 0, INT_MAX,
 		NULL, NULL, NULL
 	},
+
+    {
+            {"optimizer_skew_factor", PGC_USERSET, DEVELOPER_OPTIONS,
+             gettext_noop("Coefficient of skew ratio computed from sample stastics. Default 0: skew computation from sample statistics turned off. [1,100]: skew ratio computed from sample statistics. The skewness used for costing is the product of the optimizer_skew_factor and the skew ratio."),
+             NULL,
+             GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+            },
+            &optimizer_skew_factor,
+            0, 0, 100,
+            NULL, NULL, NULL
+    },
 
 	{
 		{"optimizer_join_order_threshold", PGC_USERSET, QUERY_TUNING_METHOD,
