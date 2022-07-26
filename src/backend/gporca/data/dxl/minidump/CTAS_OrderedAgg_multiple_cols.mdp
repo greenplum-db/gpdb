@@ -1803,7 +1803,7 @@ EXPLAIN CREATE TABLE test AS
       </dxl:LogicalCTAS>
     </dxl:Query>
     <dxl:Plan Id="0" SpaceSize="29379751833600">
-      <dxl:PhysicalCTAS Name="fake ctas rel" IsTemporary="true" HasOids="false" StorageType="Heap" DistributionPolicy="Random" InsertColumns="19,20,21" VarTypeModList="-1,-1,-1">
+      <dxl:PhysicalCTAS Name="fake ctas rel" IsTemporary="true" StorageType="Heap" DistributionPolicy="Random" InsertColumns="19,20,21" VarTypeModList="-1,-1,-1">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="2778516240645.427246" Rows="1.000000" Width="24"/>
         </dxl:Properties>
