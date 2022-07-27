@@ -225,16 +225,6 @@ typedef struct _typeInfo
 	char		*typstorage; /* GPDB: store the type's encoding clause */
 } TypeInfo;
 
-typedef struct _typeCache
-{
-	DumpableObject dobj;
-
-	Oid			typnsp;
-
-	Oid			arraytypoid;
-	char	   *arraytypname;
-	Oid			arraytypnsp;
-} TypeCache;
 
 typedef struct _shellTypeInfo
 {
