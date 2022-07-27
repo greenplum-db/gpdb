@@ -223,6 +223,9 @@ typedef struct _typeInfo
 	int			nDomChecks;
 	struct _constraintInfo *domChecks;
 	char		*typstorage; /* GPDB: store the type's encoding clause */
+	Oid			typarrayoid; /* OID for type's auto-generated array type, or 0 */
+	char		*typarrayname; /* name of type's auto-generated array type */
+	Oid			typarrayns; /* schema for type's auto-generated array type */
 } TypeInfo;
 
 
@@ -390,7 +393,27 @@ typedef struct _tableInfo
 	struct _tableDataInfo *dataObj; /* TableDataInfo, if dumping its data */
 	int			numTriggers;	/* number of triggers for table */
 	struct _triggerInfo *triggers;	/* array of TriggerInfo structs */
+
+	/* GPDB */
+	Oid		toast_index; 				/* OID of toast table's index */
+	Oid		toast_type;					/* OID of toast table's composite type */
+	struct _aotableInfo	*aotbl; /* AO auxilliary table metadata */
+	char	*distclause; /* distributed by clause */
 } TableInfo;
+
+/* AO auxilliary table metadata */
+typedef struct _aotableInfo
+{
+	bool 	columnstore;
+	Oid 	segrelid;
+	Oid 	segreltype;
+	Oid 	blkdirrelid;
+	Oid 	blkdirreltype;
+	Oid 	blkdiridxid;
+	Oid 	visimaprelid;
+	Oid 	visimapreltype;
+	Oid 	visimapidxid;
+} AOTableInfo;
 
 typedef struct _tableAttachInfo
 {
@@ -435,7 +458,16 @@ typedef struct _indxInfo
 
 	/* if there is an associated constraint object, its dumpId: */
 	DumpId		indexconstraint;
+	struct _bmIndxInfo *bmidx; /* bitmap index auxiliary table metadata */
 } IndxInfo;
+
+/* bitmap index auxiliary table metadata */
+typedef struct _bmIndxInfo
+{
+	Oid		bmrelid;
+	Oid		bmreltype;
+	Oid		bmidxid;
+} BMIndxInfo;
 
 typedef struct _indexAttachInfo
 {
@@ -698,6 +730,7 @@ extern CollInfo *findCollationByOid(Oid oid);
 extern NamespaceInfo *findNamespaceByOid(Oid oid);
 extern ExtensionInfo *findExtensionByOid(Oid oid);
 extern PublicationInfo *findPublicationByOid(Oid oid);
+extern IndxInfo	*findIndexByOid(Oid oid);
 
 extern void recordExtensionMembership(CatalogId catId, ExtensionInfo *ext);
 extern ExtensionInfo *findOwningExtension(CatalogId catalogId);
@@ -760,6 +793,8 @@ extern void getSubscriptions(Archive *fout);
 /* START MPP ADDITION */
 extern ExtProtInfo *getExtProtocols(Archive *fout, int *numExtProtocols);
 extern BinaryUpgradeInfo *getBinaryUpgradeObjects(void);
+extern void getAOTableInfo(Archive *fout);
+extern void getBMIndxInfo(Archive *fout);
 /* END MPP ADDITION */
 
 #endif							/* PG_DUMP_H */

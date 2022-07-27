@@ -88,8 +88,6 @@ static void flagInhAttrs(DumpOptions *dopt, TableInfo *tblinfo, int numTables);
 static void findParentsByOid(TableInfo *self,
 							 InhInfo *inhinfo, int numInherits);
 static int	strInArray(const char *pattern, char **arr, int arr_size);
-static IndxInfo *findIndexByOid(Oid oid);
-
 
 /*
  * getSchemaData
@@ -250,6 +248,13 @@ getSchemaData(Archive *fout, int *numTablesPtr)
 	pg_log_info("reading indexes");
 	getIndexes(fout, tblinfo, numTables);
 
+	if (fout->dopt->binary_upgrade)
+	{
+		pg_log_info("reading append-optimized table info");
+		getAOTableInfo(fout);
+		pg_log_info("reading bitmap index info");
+		getBMIndxInfo(fout);
+	}
 	pg_log_info("flagging indexes in partitioned tables");
 	flagInhIndexes(fout, tblinfo, numTables);
 
@@ -809,7 +814,7 @@ findTableByOid(Oid oid)
  *	  finds the DumpableObject for the index with the given oid
  *	  returns NULL if not found
  */
-static IndxInfo *
+IndxInfo *
 findIndexByOid(Oid oid)
 {
 	CatalogId	catId;
