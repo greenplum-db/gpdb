@@ -1834,7 +1834,7 @@ nested_subplan_mutator(Node *node, plan_tree_base_prefix *context)
 
 			memcpy(newsubroot, planner_subplan_get_root(root, sp), sizeof(PlannerInfo));
 
-			plan_tree_walker(newsubplan, nested_subplan_mutator, context);
+			plan_tree_walker((Node *) newsubplan, nested_subplan_mutator, context);
 
 			root->glob->subplans = lappend(root->glob->subplans, newsubplan);
 			root->glob->subroots = lappend(root->glob->subroots, newsubroot);
