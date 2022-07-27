@@ -6523,6 +6523,7 @@ getTables(Archive *fout, int *numTables)
 	int			i_relstorage;
 	int			i_parrelid;
 	int			i_parlevel;
+	int			i_distclause;
 
 	/*
 	 * Find all the tables and table-like objects.
@@ -6673,6 +6674,19 @@ getTables(Archive *fout, int *numTables)
 		appendPQExpBufferStr(query,
 							 "c.relacl, NULL AS acldefault, ");
 
+	/* GPDB5: We expect either an empty policy entry, or exactly
+	 * 1 policy entry in gp_distribution_policy for a given table.
+	 * If there is more than 1 entry in the policy table for an
+	 * oid the scalar subquery will fail as intended.
+	 */
+	if (isGPDB6000OrLater(fout))
+	 		appendPQExpBufferStr(query,
+							"pg_catalog.pg_get_table_distributedby(c.oid) as distclause, ");
+	else
+			appendPQExpBufferStr(query,
+							"(SELECT attrnums FROM pg_catalog.gp_distribution_policy p "
+					  	"WHERE p.localoid = c.oid) as distclause, ");
+
 	if (fout->remoteVersion >= 100000)
 		appendPQExpBufferStr(query,
 						  "pg_get_partkeydef(c.oid) AS partkeydef, "
@@ -6817,6 +6831,7 @@ getTables(Archive *fout, int *numTables)
 	i_relstorage = PQfnumber(res, "relstorage");
 	i_parrelid = PQfnumber(res, "parrelid");
 	i_parlevel = PQfnumber(res, "parlevel");
+	i_distclause = PQfnumber(res, "distclause");
 
 	if (dopt->lockWaitTimeout)
 	{
@@ -6899,6 +6914,8 @@ getTables(Archive *fout, int *numTables)
 		tblinfo[i].partbound = pg_strdup(PQgetvalue(res, i, i_partbound));
 
 		tblinfo[i].relstorage = *(PQgetvalue(res, i, i_relstorage));
+		tblinfo[i].distclause = pg_strdup(PQgetvalue(res, i, i_distclause));
+
 		if (tblinfo[i].parrelid != 0)
 		{
 			/*
@@ -19835,22 +19852,9 @@ addDistributedBy(Archive *fout, PQExpBuffer q, const TableInfo *tbinfo, int actu
 {
 	if (isGPDB6000OrLater(fout))
 	{
-		PQExpBuffer query = createPQExpBuffer();
-		PGresult   *res;
-		char	   *dby;
+		if (strcmp(tbinfo->distclause, "") != 0)
+			appendPQExpBuffer(q, " %s", tbinfo->distclause);
 
-		appendPQExpBuffer(query,
-						  "SELECT pg_catalog.pg_get_table_distributedby(%u)",
-						  tbinfo->dobj.catId.oid);
-
-		res = ExecuteSqlQueryForSingleRow(fout, query->data);
-
-		dby = PQgetvalue(res, 0, 0);
-		if (strcmp(dby, "") != 0)
-			appendPQExpBuffer(q, " %s", PQgetvalue(res, 0, 0));
-
-		PQclear(res);
-		destroyPQExpBuffer(query);
 	}
 	else
 		addDistributedByOld(fout, q, tbinfo, actual_atts);
@@ -19864,19 +19868,10 @@ static void
 addDistributedByOld(Archive *fout, PQExpBuffer q, const TableInfo *tbinfo, int actual_atts)
 {
 	DumpOptions *dopt = fout->dopt;
-	PQExpBuffer query = createPQExpBuffer();
-	PGresult   *res;
-	char	   *policydef;
+	char	   *policydef = tbinfo->distclause;
 	char	   *policycol;
 
-	appendPQExpBuffer(query,
-					  "SELECT attrnums FROM pg_catalog.gp_distribution_policy as p "
-					  "WHERE p.localoid = %u",
-					  tbinfo->dobj.catId.oid);
-
-	res = ExecuteSqlQuery(fout, query->data, PGRES_TUPLES_OK);
-
-	if (PQntuples(res) != 1)
+	if (strcmp(policydef, "") == 0)
 	{
 		/*
 		 * There is no entry in the policy table for this table. Report an
@@ -19885,7 +19880,7 @@ addDistributedByOld(Archive *fout, PQExpBuffer q, const TableInfo *tbinfo, int a
 		 * In binary_upgrade mode, we run directly against segments, and there
 		 * are no gp_distribution_policy rows in segments.
 		 */
-		if (PQntuples(res) < 1 && actual_atts > 0 && !dopt->binary_upgrade)
+		if (actual_atts > 0 && !dopt->binary_upgrade)
 		{
 			/* if this is a catalog table we allow dumping it, skip the error */
 			if (strncmp(tbinfo->dobj.namespace->dobj.name, "pg_", 3) != 0)
@@ -19895,17 +19890,6 @@ addDistributedByOld(Archive *fout, PQExpBuffer q, const TableInfo *tbinfo, int a
 				exit_nicely(1);
 			}
 		}
-
-		/*
-		 * There is more than 1 entry in the policy table for this table.
-		 * Report an error.
-		 */
-		if (PQntuples(res) > 1)
-		{
-			pg_log_warning("query to obtain distribution policy of table \"%s\" returned more than one policy",
-						   tbinfo->dobj.name);
-			exit_nicely(1);
-		}
 	}
 	else
 	{
@@ -19913,7 +19897,7 @@ addDistributedByOld(Archive *fout, PQExpBuffer q, const TableInfo *tbinfo, int a
 		 * There is exactly 1 policy entry for this table (either a concrete
 		 * one or NULL).
 		 */
-		policydef = PQgetvalue(res, 0, 0);
+		policydef = tbinfo->distclause;
 
 		if (strlen(policydef) > 0)
 		{
@@ -19944,9 +19928,6 @@ addDistributedByOld(Archive *fout, PQExpBuffer q, const TableInfo *tbinfo, int a
 			appendPQExpBufferStr(q, " DISTRIBUTED RANDOMLY");
 		}
 	}
-
-	PQclear(res);
-	destroyPQExpBuffer(query);
 }
 
 /*
