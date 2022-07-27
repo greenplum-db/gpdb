@@ -185,16 +185,6 @@ typedef struct _typeInfo
 	Oid			typarrayns; /* schema for type's auto-generated array type */
 } TypeInfo;
 
-typedef struct _typeCache
-{
-	DumpableObject dobj;
-
-	Oid			typnsp;
-
-	Oid			arraytypoid;
-	char	   *arraytypname;
-	Oid			arraytypnsp;
-} TypeCache;
 
 typedef struct _shellTypeInfo
 {
