@@ -1569,7 +1569,7 @@ my %tests = (
 		\n\QOPTIONS (\E
 		\n\s+\Qcommand 'echo foo',\E
 		\n\s+\Qdelimiter '\E\s+\Q',\E
-		\n\s+\Qencoding '6',\E
+		\n\s+\Qencoding '\E\d\Q',\E
 		\n\s+\Qescape E'\\',\E
 		\n\s+\Qexecute_on 'ALL_SEGMENTS',\E
 		\n\s+\Qformat 'text',\E
