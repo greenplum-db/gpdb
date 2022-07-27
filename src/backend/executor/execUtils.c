@@ -1712,14 +1712,16 @@ void mppExecutorCleanup(QueryDesc *queryDesc)
 	EState	   *estate;
 
 	/* caller must have switched into per-query memory context already */
-	estate = queryDesc->estate;
-	ds = estate->dispatcherState;
+	if (queryDesc->estate) {
+		estate = queryDesc->estate;
+		ds = estate->dispatcherState;
+	}
 
 	/* GPDB hook for collecting query info */
 	if (query_info_collect_hook && QueryCancelCleanup)
 		(*query_info_collect_hook)(METRICS_QUERY_CANCELING, queryDesc);
 	/* Clean up the interconnect. */
-	if (estate->es_interconnect_is_setup)
+	if (estate && estate->es_interconnect_is_setup)
 	{
 		TeardownInterconnect(estate->interconnect_context, true);
 		estate->es_interconnect_is_setup = false;
