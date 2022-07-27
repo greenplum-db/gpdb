@@ -205,6 +205,11 @@ typedef struct _dumpOptions
 
 	int			sequence_data;	/* dump sequence data even in schema-only mode */
 	int			do_nothing;
+
+	/* GPDB */
+	bool		dumpGpPolicy;
+	bool		isGPbackend;
+	bool 		gp_partitioning_available;
 } DumpOptions;
 
 /*

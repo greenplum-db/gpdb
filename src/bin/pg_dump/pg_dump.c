@@ -107,11 +107,6 @@ typedef enum OidOptions
 /* global decls */
 static bool dosync = true;		/* Issue fsync() to make dump durable on disk. */
 
-/* GPDB_95_MERGE_FIXME: put those flags to DumpOptions to avoid using global variables  */
-/* START MPP ADDITION */
-bool		dumpGpPolicy;
-bool		isGPbackend;
-
 /* END MPP ADDITION */
 
 /*
@@ -159,9 +154,6 @@ const char *EXT_PARTITION_NAME_POSTFIX = "_external_partition__";
 
 /* pg_class.relstorage value used in GPDB 6.x and below to mark external tables. */
 #define RELSTORAGE_EXTERNAL 'x'
-
-/* flag indicating whether or not this GP database supports partitioning */
-static bool gp_partitioning_available = false;
 
 static DumpId binary_upgrade_dumpid;
 
@@ -371,8 +363,8 @@ static void expand_oid_patterns(SimpleStringList *patterns,
 						   SimpleOidList *oids);
 
 static bool is_returns_table_function(int nallargs, char **argmodes);
-static bool testGPbackend(Archive *fout);
-static bool testPartitioningSupport(Archive *fout);
+static void testGPbackend(Archive *fout, DumpOptions *dopt);
+static void testPartitioningSupport(Archive *fout, DumpOptions *dopt);
 
 static char *nextToken(register char **stringp, register const char *delim);
 static void addDistributedBy(Archive *fout, PQExpBuffer q, const TableInfo *tbinfo, int actual_atts);
@@ -915,7 +907,7 @@ main(int argc, char **argv)
 	/*
 	 * Determine whether or not we're interacting with a GP backend.
 	 */
-	isGPbackend = testGPbackend(fout);
+	testGPbackend(fout, &dopt);
 
 	/*
 	 * Now that the type of backend is known, determine the gp-syntax option
@@ -924,14 +916,14 @@ main(int argc, char **argv)
 	switch (gp_syntax_option)
 	{
 		case GPS_NOT_SPECIFIED:
-			dumpGpPolicy = isGPbackend;
+			dopt.dumpGpPolicy = dopt.isGPbackend;
 			break;
 		case GPS_DISABLED:
-			dumpGpPolicy = false;
+			dopt.dumpGpPolicy = false;
 			break;
 		case GPS_ENABLED:
-			dumpGpPolicy = isGPbackend;
-			if (!isGPbackend)
+			dopt.dumpGpPolicy = dopt.isGPbackend;
+			if (!dopt.isGPbackend)
 				pg_log_warning("server is not a Greenplum Database instance; --gp-syntax option ignored");
 			break;
 	}
@@ -953,7 +945,7 @@ main(int argc, char **argv)
 	/*
 	 * Remember whether or not this GP database supports partitioning.
 	 */
-	gp_partitioning_available = testPartitioningSupport(fout);
+	testPartitioningSupport(fout, &dopt);
 
 	/* check the version for the synchronized snapshots feature */
 	if (numWorkers > 1 && fout->remoteVersion < 90200
@@ -16980,14 +16972,14 @@ dumpTableSchema(Archive *fout, const TableInfo *tbinfo)
 		/*
 		 * Dump distributed by clause.
 		 */
-		if (dumpGpPolicy && tbinfo->relkind != RELKIND_FOREIGN_TABLE)
+		if (dopt->dumpGpPolicy && tbinfo->relkind != RELKIND_FOREIGN_TABLE)
 			addDistributedBy(fout, q, tbinfo, actual_atts);
 
 		/*
 		 * If GP partitioning is supported add the partitioning constraints to
 		 * the table definition.
 		 */
-		if (gp_partitioning_available)
+		if (dopt->gp_partitioning_available)
 		{
 			bool		isPartitioned = false;
 			PQExpBuffer query = createPQExpBuffer();
@@ -17087,7 +17079,7 @@ dumpTableSchema(Archive *fout, const TableInfo *tbinfo)
 		if (ftoptions && ftoptions[0])
 			appendPQExpBuffer(q, "\nOPTIONS (\n    %s\n)", ftoptions);
 
-		if (dumpGpPolicy && tbinfo->relkind == RELKIND_FOREIGN_TABLE && strcmp(srvname, GP_EXTTABLE_SERVER_NAME) == 0)
+		if (dopt->dumpGpPolicy && tbinfo->relkind == RELKIND_FOREIGN_TABLE && strcmp(srvname, GP_EXTTABLE_SERVER_NAME) == 0)
 			addDistributedBy(fout, q, tbinfo, actual_atts);
 
 		appendPQExpBufferStr(q, ";\n");
@@ -17253,7 +17245,7 @@ dumpTableSchema(Archive *fout, const TableInfo *tbinfo)
 									  tbinfo->attalign[j]);
 					appendStringLiteralAH(q, tbinfo->attnames[j], fout);
 
-					if (gp_partitioning_available)
+					if (dopt->gp_partitioning_available)
 					{
 						/*
 						 * Do for all descendants of a partition table.
@@ -19779,49 +19771,38 @@ findDumpableDependencies(ArchiveHandle *AH, const DumpableObject *dobj,
 /*
  * isGPbackend - returns true if the connected backend is a GreenPlum DB backend.
  */
-static bool
-testGPbackend(Archive *fout)
+static void
+testGPbackend(Archive *fout, DumpOptions *dopt)
 {
-	PQExpBuffer query;
+	PQExpBuffer query = createPQExpBuffer();
 	PGresult   *res;
-	bool		isGPbackend;
 
-	query = createPQExpBuffer();
+	appendPQExpBuffer(query, "SELECT 1 FROM current_setting('gp_role');");
+	res = ExecuteSqlQuery(fout, query->data, PGRES_TUPLES_OK);
 
-	appendPQExpBuffer(query, "SELECT current_setting('gp_role');");
-	ArchiveHandle *AH = (ArchiveHandle *) fout;
-	res = PQexec(AH->connection, query->data);
-
-	isGPbackend = (PQresultStatus(res) == PGRES_TUPLES_OK);
+	dopt->isGPbackend = (PQntuples(res) == 1);
 
 	PQclear(res);
 	destroyPQExpBuffer(query);
-
-	return isGPbackend;
 }
 
 /*
  * testPartitioningSupport - tests whether or not the current GP
  * database includes support for partitioning.
  */
-static bool
-testPartitioningSupport(Archive *fout)
+static void
+testPartitioningSupport(Archive *fout, DumpOptions *dopt)
 {
-	PQExpBuffer query;
+	PQExpBuffer query = createPQExpBuffer();
 	PGresult   *res;
-	bool		isSupported;
-
-	query = createPQExpBuffer();
 
 	appendPQExpBuffer(query, "SELECT 1 FROM pg_class WHERE relname = 'pg_partition' and relnamespace = 11;");
 	res = ExecuteSqlQuery(fout, query->data, PGRES_TUPLES_OK);
 
-	isSupported = (PQntuples(res) == 1);
+	dopt->gp_partitioning_available = (PQntuples(res) == 1);
 
 	PQclear(res);
 	destroyPQExpBuffer(query);
-
-	return isSupported;
 }
 
 /*
