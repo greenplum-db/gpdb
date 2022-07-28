@@ -323,7 +323,11 @@ standard_ExecutorStart(QueryDesc *queryDesc, int eflags)
 			}
 			PG_CATCH();
 			{
-				mppExecutorCleanup(queryDesc);
+				/* GPDB hook for collecting query info */
+				if (query_info_collect_hook) {
+					(*query_info_collect_hook)(QueryCancelCleanup ? METRICS_QUERY_CANCELED : METRICS_QUERY_ERROR, queryDesc);
+				}
+					
 				PG_RE_THROW();
 			}
 			PG_END_TRY();
