@@ -634,19 +634,17 @@ where into_table.a=from_table.a and into_table.b=from_table.b and into_table.c=f
  Update
    ->  Redistribute Motion 3:3  (slice2; segments: 3)
          Hash Key: into_table.a, into_table.b, into_table.c
-         ->  Result
-               ->  Partition Selector for into_table
-                     ->  Split
-                           ->  Hash Join
-                                 Hash Cond: ((into_table.a = from_table.a) AND (into_table.b = from_table.b) AND (into_table.c = from_table.c))
-                                 ->  Redistribute Motion 3:3  (slice1; segments: 3)
-                                       Hash Key: into_table.a
-                                       ->  Sequence
-                                             ->  Partition Selector for into_table (dynamic scan id: 1)
-                                                   Partitions selected: 4 (out of 4)
-                                             ->  Dynamic Seq Scan on into_table (dynamic scan id: 1)
-                                 ->  Hash
-                                       ->  Seq Scan on from_table
+         ->  Split
+               ->  Hash Join
+                     Hash Cond: ((into_table.a = from_table.a) AND (into_table.b = from_table.b) AND (into_table.c = from_table.c))
+                     ->  Redistribute Motion 3:3  (slice1; segments: 3)
+                           Hash Key: into_table.a
+                           ->  Sequence
+                                 ->  Partition Selector for into_table (dynamic scan id: 1)
+                                       Partitions selected: 4 (out of 4)
+                                 ->  Dynamic Seq Scan on into_table (dynamic scan id: 1)
+                     ->  Hash
+                           ->  Seq Scan on from_table
  Optimizer: Pivotal Optimizer (GPORCA)
 (17 rows)
 

@@ -141,14 +141,6 @@ CXformUpdate2DML::Transform(CXformContext *pxfctxt, CXformResult *pxfres,
 		pexprAssertConstraints = pexprSplit;
 	}
 
-	CExpression *pexprProject = pexprAssertConstraints;
-	if (ptabdesc->IsPartitioned())
-	{
-		// generate a partition selector
-		pexprProject = CXformUtils::PexprLogicalPartitionSelector(
-			mp, ptabdesc, pdrgpcrInsert, pexprAssertConstraints);
-	}
-
 	const ULONG num_cols = pdrgpcrInsert->Size();
 
 	CBitSet *pbsModified = GPOS_NEW(mp) CBitSet(mp, ptabdesc->ColumnCount());
@@ -172,7 +164,7 @@ CXformUpdate2DML::Transform(CXformContext *pxfctxt, CXformResult *pxfres,
 		GPOS_NEW(mp) CLogicalDML(mp, CLogicalDML::EdmlUpdate, ptabdesc,
 								 pdrgpcrDelete, pbsModified, pcrAction, pcrCtid,
 								 pcrSegmentId, pcrTupleOid),
-		pexprProject);
+		pexprAssertConstraints);
 
 	// TODO:  - Oct 30, 2012; detect and handle AFTER triggers on update
 

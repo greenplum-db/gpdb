@@ -1331,36 +1331,12 @@ CXformUtils::PexprLogicalDMLOverProject(CMemoryPool *mp,
 		val = CScalarDMLAction::EdmlactionDelete;
 	}
 
-	// new expressions to project
+	// generate one project node with new column: action
 	IMDId *rel_mdid = ptabdesc->MDId();
-	CExpression *pexprProject = NULL;
-	CColRef *pcrAction = NULL;
-
-	if (ptabdesc->IsPartitioned())
-	{
-		// generate a PartitionSelector node which generates OIDs, then add a project
-		// on top of that to add the action column
-		CExpression *pexprSelector = PexprLogicalPartitionSelector(
-			mp, ptabdesc, colref_array, pexprChild);
-		pexprProject = CUtils::PexprAddProjection(
-			mp, pexprSelector, CUtils::PexprScalarConstInt4(mp, val));
-		CExpression *pexprPrL = (*pexprProject)[1];
-		pcrAction = CUtils::PcrFromProjElem((*pexprPrL)[0]);
-	}
-	else
-	{
-		CExpressionArray *pdrgpexprProjected =
-			GPOS_NEW(mp) CExpressionArray(mp);
-		// generate one project node with new column: action
-		pdrgpexprProjected->Append(CUtils::PexprScalarConstInt4(mp, val));
-
-		pexprProject =
-			CUtils::PexprAddProjection(mp, pexprChild, pdrgpexprProjected);
-		pdrgpexprProjected->Release();
-
-		CExpression *pexprPrL = (*pexprProject)[1];
-		pcrAction = CUtils::PcrFromProjElem((*pexprPrL)[0]);
-	}
+	CExpression *pexprProject = CUtils::PexprAddProjection(
+		mp, pexprChild, CUtils::PexprScalarConstInt4(mp, val));
+	CExpression *pexprPrL = (*pexprProject)[1];
+	CColRef *pcrAction = CUtils::PcrFromProjElem((*pexprPrL)[0]);
 
 	GPOS_ASSERT(NULL != pcrAction);
 

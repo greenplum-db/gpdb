@@ -3087,26 +3087,25 @@ where  trg.key1 = src.key1
                                                        QUERY PLAN
 ------------------------------------------------------------------------------------------------------------------------
  Update
-   ->  Partition Selector for t_part1
-         ->  Split
-               ->  Hash Join
-                     Hash Cond: (t_part1.key1 = t_part1_1.key1)
-                     ->  Sequence
-                           ->  Partition Selector for t_part1 (dynamic scan id: 1)
-                                 Partitions selected: 1 (out of 399)
-                           ->  Dynamic Seq Scan on t_part1 (dynamic scan id: 1)
-                                 Filter: (key1 = 2)
-                     ->  Hash
-                           ->  Broadcast Motion 1:3  (slice2; segments: 1)
-                                 ->  Result
-                                       Filter: (t_part1_1.key1 = 2)
-                                       ->  WindowAgg
-                                             ->  Gather Motion 3:1  (slice1; segments: 3)
-                                                   ->  Sequence
-                                                         ->  Partition Selector for t_part1 (dynamic scan id: 2)
-                                                               Partitions selected: 1 (out of 399)
-                                                         ->  Dynamic Seq Scan on t_part1 t_part1_1 (dynamic scan id: 2)
-                                                               Filter: (key1 = 2)
+   ->  Split
+         ->  Hash Join
+               Hash Cond: (t_part1.key1 = t_part1_1.key1)
+               ->  Sequence
+                     ->  Partition Selector for t_part1 (dynamic scan id: 1)
+                           Partitions selected: 1 (out of 399)
+                     ->  Dynamic Seq Scan on t_part1 (dynamic scan id: 1)
+                           Filter: (key1 = 2)
+               ->  Hash
+                     ->  Broadcast Motion 1:3  (slice2; segments: 1)
+                           ->  Result
+                                 Filter: (t_part1_1.key1 = 2)
+                                 ->  WindowAgg
+                                       ->  Gather Motion 3:1  (slice1; segments: 3)
+                                             ->  Sequence
+                                                   ->  Partition Selector for t_part1 (dynamic scan id: 2)
+                                                         Partitions selected: 1 (out of 399)
+                                                   ->  Dynamic Seq Scan on t_part1 t_part1_1 (dynamic scan id: 2)
+                                                         Filter: (key1 = 2)
  Optimizer: Pivotal Optimizer (GPORCA)
 (22 rows)
 

@@ -67,28 +67,27 @@ explain (costs off ) update rank_12402 set rank = 1 where id in (select id from 
                                                      QUERY PLAN                                                     
 --------------------------------------------------------------------------------------------------------------------
  Update
-   ->  Partition Selector for rank_12402
-         ->  Split
-               ->  Result
+   ->  Split
+         ->  Result
+               ->  Hash Semi Join
+                     Hash Cond: (rank_12402.value = rank1_12402_1.value)
                      ->  Hash Semi Join
-                           Hash Cond: (rank_12402.value = rank1_12402_1.value)
-                           ->  Hash Semi Join
-                                 Hash Cond: (rank_12402.id = rank1_12402.id)
-                                 ->  Sequence
-                                       ->  Partition Selector for rank_12402 (dynamic scan id: 1)
-                                             Partitions selected: 2 (out of 2)
-                                       ->  Dynamic Seq Scan on rank_12402 (dynamic scan id: 1)
-                                 ->  Hash
-                                       ->  Sequence
-                                             ->  Partition Selector for rank1_12402 (dynamic scan id: 2)
-                                                   Partitions selected: 2 (out of 2)
-                                             ->  Dynamic Seq Scan on rank1_12402 (dynamic scan id: 2)
+                           Hash Cond: (rank_12402.id = rank1_12402.id)
+                           ->  Sequence
+                                 ->  Partition Selector for rank_12402 (dynamic scan id: 1)
+                                       Partitions selected: 2 (out of 2)
+                                 ->  Dynamic Seq Scan on rank_12402 (dynamic scan id: 1)
                            ->  Hash
-                                 ->  Broadcast Motion 3:3  (slice1; segments: 3)
-                                       ->  Sequence
-                                             ->  Partition Selector for rank1_12402 (dynamic scan id: 3)
-                                                   Partitions selected: 2 (out of 2)
-                                             ->  Dynamic Seq Scan on rank1_12402 rank1_12402_1 (dynamic scan id: 3)
+                                 ->  Sequence
+                                       ->  Partition Selector for rank1_12402 (dynamic scan id: 2)
+                                             Partitions selected: 2 (out of 2)
+                                       ->  Dynamic Seq Scan on rank1_12402 (dynamic scan id: 2)
+                     ->  Hash
+                           ->  Broadcast Motion 3:3  (slice1; segments: 3)
+                                 ->  Sequence
+                                       ->  Partition Selector for rank1_12402 (dynamic scan id: 3)
+                                             Partitions selected: 2 (out of 2)
+                                       ->  Dynamic Seq Scan on rank1_12402 rank1_12402_1 (dynamic scan id: 3)
  Optimizer: Pivotal Optimizer (GPORCA)
 (24 rows)
 

@@ -19,18 +19,17 @@
     ---------------------------------------------------------------------------------------------------------------------------------
      Delete  (cost=0.00..862.03 rows=1 width=1)
        ->  Result  (cost=0.00..862.00 rows=1 width=26)
-             ->  Partition Selector for pt2  (cost=0.00..862.00 rows=1 width=22)
-                   ->  Explicit Redistribute Motion 4:4  (slice2; segments: 4)  (cost=0.00..862.00 rows=1 width=22)
-                         ->  Hash EXISTS Join  (cost=0.00..862.00 rows=1 width=22)
-                               Hash Cond: public.pt2.i = r.b
-                               ->  Redistribute Motion 4:4  (slice1; segments: 4)  (cost=0.00..431.00 rows=1 width=22)
-                                     Hash Key: public.pt2.i
-                                     ->  Sequence  (cost=0.00..431.00 rows=1 width=22)
-                                           ->  Partition Selector for pt2 (dynamic scan id: 1)  (cost=10.00..100.00 rows=25 width=4)
-                                                 Partitions selected: 5 (out of 5)
-                                           ->  Dynamic Table Scan on pt2 (dynamic scan id: 1)  (cost=0.00..431.00 rows=1 width=22)
-                               ->  Hash  (cost=431.00..431.00 rows=1 width=4)
-                                     ->  Table Scan on r  (cost=0.00..431.00 rows=1 width=4)
+             ->  Explicit Redistribute Motion 4:4  (slice2; segments: 4)  (cost=0.00..862.00 rows=1 width=22)
+                   ->  Hash EXISTS Join  (cost=0.00..862.00 rows=1 width=22)
+                         Hash Cond: public.pt2.i = r.b
+                         ->  Redistribute Motion 4:4  (slice1; segments: 4)  (cost=0.00..431.00 rows=1 width=22)
+                               Hash Key: public.pt2.i
+                               ->  Sequence  (cost=0.00..431.00 rows=1 width=22)
+                                     ->  Partition Selector for pt2 (dynamic scan id: 1)  (cost=10.00..100.00 rows=25 width=4)
+                                           Partitions selected: 5 (out of 5)
+                                     ->  Dynamic Table Scan on pt2 (dynamic scan id: 1)  (cost=0.00..431.00 rows=1 width=22)
+                         ->  Hash  (cost=431.00..431.00 rows=1 width=4)
+                               ->  Table Scan on r  (cost=0.00..431.00 rows=1 width=4)
      Optimizer status: PQO version 3.83.0
     (15 rows)
   ]]>
@@ -341,7 +340,7 @@
     <dxl:Plan Id="0" SpaceSize="40">
       <dxl:DMLDelete Columns="0,1,2" ActionCol="24" CtidCol="3" SegmentIdCol="9">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="862.025900" Rows="1.000000" Width="1"/>
+          <dxl:Cost StartupCost="0" TotalCost="862.025894" Rows="1.000000" Width="1"/>
         </dxl:Properties>
         <dxl:DirectDispatchInfo/>
         <dxl:ProjList>
@@ -371,7 +370,7 @@
         </dxl:TableDescriptor>
         <dxl:Result>
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="862.000509" Rows="1.000000" Width="26"/>
+            <dxl:Cost StartupCost="0" TotalCost="862.000503" Rows="1.000000" Width="26"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="i">
@@ -395,9 +394,9 @@
           </dxl:ProjList>
           <dxl:Filter/>
           <dxl:OneTimeFilter/>
-          <dxl:PartitionSelector RelationMdid="6.24803.1.0" PartitionLevels="1" ScanId="0">
+          <dxl:RoutedDistributeMotion SegmentIdCol="9" InputSegments="0,1,2,3" OutputSegments="0,1,2,3">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="862.000502" Rows="1.000000" Width="22"/>
+              <dxl:Cost StartupCost="0" TotalCost="862.000497" Rows="1.000000" Width="22"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="0" Alias="i">
@@ -416,26 +415,11 @@
                 <dxl:Ident ColId="9" ColName="gp_segment_id" TypeMdid="0.23.1.0"/>
               </dxl:ProjElem>
             </dxl:ProjList>
-            <dxl:PartEqFilters>
-              <dxl:PartEqFilterElems>
-                <dxl:Ident ColId="2" ColName="k" TypeMdid="0.23.1.0"/>
-              </dxl:PartEqFilterElems>
-            </dxl:PartEqFilters>
-            <dxl:PartFilters>
-              <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>
-            </dxl:PartFilters>
-            <dxl:ResidualFilter>
-              <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>
-            </dxl:ResidualFilter>
-            <dxl:PropagationExpression>
-              <dxl:ConstValue TypeMdid="0.23.1.0" IsNull="true"/>
-            </dxl:PropagationExpression>
-            <dxl:PrintableFilter>
-              <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>
-            </dxl:PrintableFilter>
-            <dxl:RoutedDistributeMotion SegmentIdCol="9" InputSegments="0,1,2,3" OutputSegments="0,1,2,3">
+            <dxl:Filter/>
+            <dxl:SortingColumnList/>
+            <dxl:HashJoin JoinType="In">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="862.000497" Rows="1.000000" Width="22"/>
+                <dxl:Cost StartupCost="0" TotalCost="862.000480" Rows="1.000000" Width="22"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="0" Alias="i">
@@ -455,10 +439,16 @@
                 </dxl:ProjElem>
               </dxl:ProjList>
               <dxl:Filter/>
-              <dxl:SortingColumnList/>
-              <dxl:HashJoin JoinType="In">
+              <dxl:JoinFilter/>
+              <dxl:HashCondList>
+                <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
+                  <dxl:Ident ColId="0" ColName="i" TypeMdid="0.23.1.0"/>
+                  <dxl:Ident ColId="11" ColName="b" TypeMdid="0.23.1.0"/>
+                </dxl:Comparison>
+              </dxl:HashCondList>
+              <dxl:RedistributeMotion InputSegments="0,1,2,3" OutputSegments="0,1,2,3">
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="862.000480" Rows="1.000000" Width="22"/>
+                  <dxl:Cost StartupCost="0" TotalCost="431.000052" Rows="1.000000" Width="22"/>
                 </dxl:Properties>
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="0" Alias="i">
@@ -478,16 +468,15 @@
                   </dxl:ProjElem>
                 </dxl:ProjList>
                 <dxl:Filter/>
-                <dxl:JoinFilter/>
-                <dxl:HashCondList>
-                  <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
+                <dxl:SortingColumnList/>
+                <dxl:HashExprList>
+                  <dxl:HashExpr>
                     <dxl:Ident ColId="0" ColName="i" TypeMdid="0.23.1.0"/>
-                    <dxl:Ident ColId="11" ColName="b" TypeMdid="0.23.1.0"/>
-                  </dxl:Comparison>
-                </dxl:HashCondList>
-                <dxl:RedistributeMotion InputSegments="0,1,2,3" OutputSegments="0,1,2,3">
+                  </dxl:HashExpr>
+                </dxl:HashExprList>
+                <dxl:Sequence>
                   <dxl:Properties>
-                    <dxl:Cost StartupCost="0" TotalCost="431.000052" Rows="1.000000" Width="22"/>
+                    <dxl:Cost StartupCost="0" TotalCost="431.000006" Rows="1.000000" Width="22"/>
                   </dxl:Properties>
                   <dxl:ProjList>
                     <dxl:ProjElem ColId="0" Alias="i">
@@ -506,14 +495,28 @@
                       <dxl:Ident ColId="9" ColName="gp_segment_id" TypeMdid="0.23.1.0"/>
                     </dxl:ProjElem>
                   </dxl:ProjList>
-                  <dxl:Filter/>
-                  <dxl:SortingColumnList/>
-                  <dxl:HashExprList>
-                    <dxl:HashExpr>
-                      <dxl:Ident ColId="0" ColName="i" TypeMdid="0.23.1.0"/>
-                    </dxl:HashExpr>
-                  </dxl:HashExprList>
-                  <dxl:Sequence>
+                  <dxl:PartitionSelector RelationMdid="6.24803.1.0" PartitionLevels="1" ScanId="1">
+                    <dxl:Properties>
+                      <dxl:Cost StartupCost="10" TotalCost="100" Rows="100" Width="4"/>
+                    </dxl:Properties>
+                    <dxl:ProjList/>
+                    <dxl:PartEqFilters>
+                      <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>
+                    </dxl:PartEqFilters>
+                    <dxl:PartFilters>
+                      <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>
+                    </dxl:PartFilters>
+                    <dxl:ResidualFilter>
+                      <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>
+                    </dxl:ResidualFilter>
+                    <dxl:PropagationExpression>
+                      <dxl:ConstValue TypeMdid="0.23.1.0" Value="1"/>
+                    </dxl:PropagationExpression>
+                    <dxl:PrintableFilter>
+                      <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>
+                    </dxl:PrintableFilter>
+                  </dxl:PartitionSelector>
+                  <dxl:DynamicTableScan PartIndexId="1">
                     <dxl:Properties>
                       <dxl:Cost StartupCost="0" TotalCost="431.000006" Rows="1.000000" Width="22"/>
                     </dxl:Properties>
@@ -534,92 +537,49 @@
                         <dxl:Ident ColId="9" ColName="gp_segment_id" TypeMdid="0.23.1.0"/>
                       </dxl:ProjElem>
                     </dxl:ProjList>
-                    <dxl:PartitionSelector RelationMdid="6.24803.1.0" PartitionLevels="1" ScanId="1">
-                      <dxl:Properties>
-                        <dxl:Cost StartupCost="10" TotalCost="100" Rows="100" Width="4"/>
-                      </dxl:Properties>
-                      <dxl:ProjList/>
-                      <dxl:PartEqFilters>
-                        <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>
-                      </dxl:PartEqFilters>
-                      <dxl:PartFilters>
-                        <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>
-                      </dxl:PartFilters>
-                      <dxl:ResidualFilter>
-                        <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>
-                      </dxl:ResidualFilter>
-                      <dxl:PropagationExpression>
-                        <dxl:ConstValue TypeMdid="0.23.1.0" Value="1"/>
-                      </dxl:PropagationExpression>
-                      <dxl:PrintableFilter>
-                        <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>
-                      </dxl:PrintableFilter>
-                    </dxl:PartitionSelector>
-                    <dxl:DynamicTableScan PartIndexId="1">
-                      <dxl:Properties>
-                        <dxl:Cost StartupCost="0" TotalCost="431.000006" Rows="1.000000" Width="22"/>
-                      </dxl:Properties>
-                      <dxl:ProjList>
-                        <dxl:ProjElem ColId="0" Alias="i">
-                          <dxl:Ident ColId="0" ColName="i" TypeMdid="0.23.1.0"/>
-                        </dxl:ProjElem>
-                        <dxl:ProjElem ColId="1" Alias="j">
-                          <dxl:Ident ColId="1" ColName="j" TypeMdid="0.23.1.0"/>
-                        </dxl:ProjElem>
-                        <dxl:ProjElem ColId="2" Alias="k">
-                          <dxl:Ident ColId="2" ColName="k" TypeMdid="0.23.1.0"/>
-                        </dxl:ProjElem>
-                        <dxl:ProjElem ColId="3" Alias="ctid">
-                          <dxl:Ident ColId="3" ColName="ctid" TypeMdid="0.27.1.0"/>
-                        </dxl:ProjElem>
-                        <dxl:ProjElem ColId="9" Alias="gp_segment_id">
-                          <dxl:Ident ColId="9" ColName="gp_segment_id" TypeMdid="0.23.1.0"/>
-                        </dxl:ProjElem>
-                      </dxl:ProjList>
-                      <dxl:Filter/>
-                      <dxl:TableDescriptor Mdid="6.24803.1.0" TableName="pt2">
-                        <dxl:Columns>
-                          <dxl:Column ColId="0" Attno="1" ColName="i" TypeMdid="0.23.1.0" ColWidth="4"/>
-                          <dxl:Column ColId="1" Attno="2" ColName="j" TypeMdid="0.23.1.0" ColWidth="4"/>
-                          <dxl:Column ColId="2" Attno="3" ColName="k" TypeMdid="0.23.1.0" ColWidth="4"/>
-                          <dxl:Column ColId="3" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
-                          <dxl:Column ColId="4" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0" ColWidth="4"/>
-                          <dxl:Column ColId="5" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0" ColWidth="4"/>
-                          <dxl:Column ColId="6" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0" ColWidth="4"/>
-                          <dxl:Column ColId="7" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0" ColWidth="4"/>
-                          <dxl:Column ColId="8" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0" ColWidth="4"/>
-                          <dxl:Column ColId="9" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0" ColWidth="4"/>
-                        </dxl:Columns>
-                      </dxl:TableDescriptor>
-                    </dxl:DynamicTableScan>
-                  </dxl:Sequence>
-                </dxl:RedistributeMotion>
-                <dxl:TableScan>
-                  <dxl:Properties>
-                    <dxl:Cost StartupCost="0" TotalCost="431.000023" Rows="1.000000" Width="4"/>
-                  </dxl:Properties>
-                  <dxl:ProjList>
-                    <dxl:ProjElem ColId="11" Alias="b">
-                      <dxl:Ident ColId="11" ColName="b" TypeMdid="0.23.1.0"/>
-                    </dxl:ProjElem>
-                  </dxl:ProjList>
-                  <dxl:Filter/>
-                  <dxl:TableDescriptor Mdid="6.24827.1.0" TableName="r">
-                    <dxl:Columns>
-                      <dxl:Column ColId="11" Attno="2" ColName="b" TypeMdid="0.23.1.0" ColWidth="4"/>
-                      <dxl:Column ColId="13" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
-                      <dxl:Column ColId="14" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0" ColWidth="4"/>
-                      <dxl:Column ColId="15" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0" ColWidth="4"/>
-                      <dxl:Column ColId="16" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0" ColWidth="4"/>
-                      <dxl:Column ColId="17" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0" ColWidth="4"/>
-                      <dxl:Column ColId="18" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0" ColWidth="4"/>
-                      <dxl:Column ColId="19" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0" ColWidth="4"/>
-                    </dxl:Columns>
-                  </dxl:TableDescriptor>
-                </dxl:TableScan>
-              </dxl:HashJoin>
-            </dxl:RoutedDistributeMotion>
-          </dxl:PartitionSelector>
+                    <dxl:Filter/>
+                    <dxl:TableDescriptor Mdid="6.24803.1.0" TableName="pt2">
+                      <dxl:Columns>
+                        <dxl:Column ColId="0" Attno="1" ColName="i" TypeMdid="0.23.1.0" ColWidth="4"/>
+                        <dxl:Column ColId="1" Attno="2" ColName="j" TypeMdid="0.23.1.0" ColWidth="4"/>
+                        <dxl:Column ColId="2" Attno="3" ColName="k" TypeMdid="0.23.1.0" ColWidth="4"/>
+                        <dxl:Column ColId="3" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
+                        <dxl:Column ColId="4" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0" ColWidth="4"/>
+                        <dxl:Column ColId="5" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0" ColWidth="4"/>
+                        <dxl:Column ColId="6" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0" ColWidth="4"/>
+                        <dxl:Column ColId="7" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0" ColWidth="4"/>
+                        <dxl:Column ColId="8" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0" ColWidth="4"/>
+                        <dxl:Column ColId="9" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0" ColWidth="4"/>
+                      </dxl:Columns>
+                    </dxl:TableDescriptor>
+                  </dxl:DynamicTableScan>
+                </dxl:Sequence>
+              </dxl:RedistributeMotion>
+              <dxl:TableScan>
+                <dxl:Properties>
+                  <dxl:Cost StartupCost="0" TotalCost="431.000023" Rows="1.000000" Width="4"/>
+                </dxl:Properties>
+                <dxl:ProjList>
+                  <dxl:ProjElem ColId="11" Alias="b">
+                    <dxl:Ident ColId="11" ColName="b" TypeMdid="0.23.1.0"/>
+                  </dxl:ProjElem>
+                </dxl:ProjList>
+                <dxl:Filter/>
+                <dxl:TableDescriptor Mdid="6.24827.1.0" TableName="r">
+                  <dxl:Columns>
+                    <dxl:Column ColId="11" Attno="2" ColName="b" TypeMdid="0.23.1.0" ColWidth="4"/>
+                    <dxl:Column ColId="13" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
+                    <dxl:Column ColId="14" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0" ColWidth="4"/>
+                    <dxl:Column ColId="15" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0" ColWidth="4"/>
+                    <dxl:Column ColId="16" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0" ColWidth="4"/>
+                    <dxl:Column ColId="17" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0" ColWidth="4"/>
+                    <dxl:Column ColId="18" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0" ColWidth="4"/>
+                    <dxl:Column ColId="19" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0" ColWidth="4"/>
+                  </dxl:Columns>
+                </dxl:TableDescriptor>
+              </dxl:TableScan>
+            </dxl:HashJoin>
+          </dxl:RoutedDistributeMotion>
         </dxl:Result>
       </dxl:DMLDelete>
     </dxl:Plan>
