@@ -1938,7 +1938,9 @@ CGroup::FResetStats()
 			GPOS_CHECK_ABORT;
 
 			CGroup *pgroupChild = (*pgexprCurrent)[ul];
-			if (!pgroupChild->FScalar() && pgroupChild->FResetStats())
+			if (!pgroupChild->FScalar() &&
+				(this == pgroupChild->PgroupDuplicate() ||
+				 pgroupChild->FResetStats()))
 			{
 				fResetStats = true;
 				// we cannot break here since we must visit all child groups
