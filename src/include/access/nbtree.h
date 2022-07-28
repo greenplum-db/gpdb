@@ -704,6 +704,7 @@ extern Size btestimateparallelscan(void);
 extern void btinitparallelscan(void *target);
 extern bool btgettuple(IndexScanDesc scan, ScanDirection dir);
 extern int64 btgetbitmap(IndexScanDesc scan, Node **bmNodeP);
+extern void btinitbitmap(Node **bmNodeP);
 extern void btrescan(IndexScanDesc scan, ScanKey scankey, int nscankeys,
 					 ScanKey orderbys, int norderbys);
 extern void btparallelrescan(IndexScanDesc scan);

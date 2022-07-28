@@ -134,6 +134,9 @@ typedef bool (*amgettuple_function) (IndexScanDesc scan,
 typedef int64 (*amgetbitmap_function) (IndexScanDesc scan,
 									   Node **bmNodeP);
 
+/* init empty bitmap */
+typedef void (*aminitbitmap_function) (Node **bmNodeP);
+
 /* end index scan */
 typedef void (*amendscan_function) (IndexScanDesc scan);
 
@@ -225,6 +228,7 @@ typedef struct IndexAmRoutine
 	amendscan_function amendscan;
 	ammarkpos_function ammarkpos;	/* can be NULL */
 	amrestrpos_function amrestrpos; /* can be NULL */
+    aminitbitmap_function aminitbitmap; /* can be NULL */
 
 	/* interface functions to support parallel index scans */
 	amestimateparallelscan_function amestimateparallelscan; /* can be NULL */

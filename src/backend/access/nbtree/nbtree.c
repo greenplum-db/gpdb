@@ -150,6 +150,7 @@ bthandler(PG_FUNCTION_ARGS)
 	amroutine->amestimateparallelscan = btestimateparallelscan;
 	amroutine->aminitparallelscan = btinitparallelscan;
 	amroutine->amparallelrescan = btparallelrescan;
+    amroutine->aminitbitmap = btinitbitmap;
 
 	PG_RETURN_POINTER(amroutine);
 }
@@ -361,6 +362,20 @@ btgettuple(IndexScanDesc scan, ScanDirection dir)
 	} while (so->numArrayKeys && _bt_advance_array_keys(scan, dir));
 
 	return res;
+}
+
+/*
+ * btinitbitmap() -- construct an empty TIDBitmap.
+ * */
+void btinitbitmap(Node **bmNodeP)
+{
+    TIDBitmap  *tbm;
+
+    Assert(bmNodeP);
+    tbm = tbm_create(work_mem * 1024L, NULL);
+    *bmNodeP = (Node *) tbm;
+
+    return;
 }
 
 /*

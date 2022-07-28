@@ -28,6 +28,7 @@
  *		index_fetch_heap		- get the scan's next heap tuple
  *		index_getnext_slot	- get the next tuple from a scan
  *		index_getbitmap - get all tuples from a scan
+ *      index_initbitmap - get an empty bitmap
  *		index_bulk_delete	- bulk deletion of index tuples
  *		index_vacuum_cleanup	- post-deletion cleanup of an index
  *		index_can_return	- does index support index-only scans?
@@ -633,6 +634,20 @@ index_getnext_slot(IndexScanDesc scan, ScanDirection direction, TupleTableSlot *
 	}
 
 	return false;
+}
+
+/*
+ * index_initbitmap - get an empty bitmap
+ * */
+void
+index_initbitmap(IndexScanDesc scan, Node **bitmapP)
+{
+	SCAN_CHECKS;
+	CHECK_SCAN_PROCEDURE(amgetbitmap);
+
+    scan->indexRelation->rd_indam->aminitbitmap(bitmapP);
+
+    return;
 }
 
 /* ----------------

@@ -108,6 +108,7 @@ bmhandler(PG_FUNCTION_ARGS)
 	amroutine->amendscan = bmendscan;
 	amroutine->ammarkpos = bmmarkpos;
 	amroutine->amrestrpos = bmrestrpos;
+    amroutine->aminitbitmap = bminitbitmap;
 
 	PG_RETURN_POINTER(amroutine);
 }
@@ -238,6 +239,29 @@ stream_begin_iterate(StreamNode *self, StreamBMIterator *iterator)
 
 		iterator->opaque = so;
 	}
+}
+
+/*
+ * bminitbitmap() -- return a empty bitmap.
+ * */
+void
+bminitbitmap(Node **bmNodeP)
+{
+    IndexStream  *is;
+
+    is = (IndexStream *)palloc0(sizeof(IndexStream));
+	is->type = BMS_INDEX;
+	is->begin_iterate = stream_begin_iterate;
+	is->free = indexstream_free;
+	is->set_instrument = NULL;
+	is->upd_instrument = NULL;
+	is->opaque = NULL;
+
+	StreamBitmap *sb = makeNode(StreamBitmap);
+	sb->streamNode = is;
+	*bmNodeP = (Node *) sb;
+
+    return;
 }
 
 /*
