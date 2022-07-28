@@ -1578,7 +1578,9 @@ CExpressionPreprocessor::PexprScalarPredicates(
 				CConstraint *pcnstrCol = pcnstr->PcnstrRemapForColumn(mp, colref);
 				CExpression *pexprScalar = pcnstrCol->PexprScalar(mp);
 
-				if (!CUtils::FScalarNotNull(pexprScalar))
+//				if (!CUtils::FScalarNotNull(pexprScalar))
+				if (!(CUtils::FScalarNotNull(pexprScalar) &&
+					  pcrsNotNull->FMember(colref)))
 				{
 					pexprScalar->AddRef();
 					pdrgpexpr->Append(pexprScalar);
@@ -1869,7 +1871,15 @@ CExpressionPreprocessor::PexprFromConstraints(
 	COperator *pop = pexpr->Pop();
 	pop->AddRef();
 
-	return GPOS_NEW(mp) CExpression(mp, pop, pdrgpexprChildren);
+	CExpression *pexprPred = GPOS_NEW(mp) CExpression(mp, pop, pdrgpexprChildren);
+	if (constraintsForOuterRefs != nullptr)
+	{
+		CExpression *pexprNormalized =
+			CNormalizer::PexprNormalize(mp, pexprPred);
+		pexprPred->Release();
+		return pexprNormalized;
+	}
+	return pexprPred;
 }
 
 // eliminate subtrees that have a zero output cardinality, replacing them

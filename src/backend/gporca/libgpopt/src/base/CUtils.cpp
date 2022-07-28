@@ -736,13 +736,22 @@ CUtils::PexprScalarArrayCmp(CMemoryPool *mp,
 		return nullptr;
 	}
 
-	pmdidColType->AddRef();
-	pmdidArrType->AddRef();
 	pmdidCmpOp->AddRef();
-
 	const CMDName mdname = md_accessor->RetrieveScOp(pmdidCmpOp)->Mdname();
 	CWStringConst strOp(mdname.GetMDName()->GetBuffer());
 
+	if (pexprScalarChildren->Size() == 1)
+	{
+		(*pexprScalarChildren)[0]->AddRef();
+		CExpression *scalarCmp = CUtils::PexprScalarCmp(mp, colref,
+									  (*pexprScalarChildren)[0],
+									  strOp,pmdidCmpOp);
+		pexprScalarChildren->Release();
+		return scalarCmp;
+	}
+
+	pmdidColType->AddRef();
+	pmdidArrType->AddRef();
 	CExpression *pexprArray = GPOS_NEW(mp)
 		CExpression(mp,
 					GPOS_NEW(mp) CScalarArray(mp, pmdidColType, pmdidArrType,
