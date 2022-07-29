@@ -1939,6 +1939,10 @@ CGroup::FResetStats()
 
 			CGroup *pgroupChild = (*pgexprCurrent)[ul];
 			if (!pgroupChild->FScalar() &&
+				// FIXME: Scenario exists where this group is child's duplicate
+				//        group. When the case arises, the child's children
+				//        won’t be reset. Otherwise we can hit infinite loop
+				//        that resets child->this->child.
 				(this == pgroupChild->PgroupDuplicate() ||
 				 pgroupChild->FResetStats()))
 			{
