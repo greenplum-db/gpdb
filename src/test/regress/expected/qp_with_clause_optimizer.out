@@ -615,7 +615,6 @@ where e1.code = e2.code order by e2.COUNTRY,e1.language LIMIT 20;
  GIB  | Gibraltar              | Gibraltar              | English        | t          |       88.9 | GIB  | Gibraltar              | Gibraltar              | English        | t          |       88.9
 (20 rows)
 
-SET optimizer_trace_fallback=off;
 -- query 2 using multiple CTEs with same names as tables. 
 with country as 
 (select country.code,country.name COUNTRY, city.name CAPITAL, language, isofficial, percentage
@@ -657,7 +656,6 @@ order by COUNTRY,percentage1 LIMIT 20;-- queries using same name for CTEs and th
  GIB   | Gibraltar              | Gibraltar              | English        | t           |        88.9 | Gibraltar
 (20 rows)
 
-SET optimizer_trace_fallback=on;
 -- query1
 with c1 as 
 (select country.code,country.name COUNTRY, city.name CAPITAL, language, isofficial, percentage

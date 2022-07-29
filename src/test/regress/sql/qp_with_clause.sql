@@ -5607,7 +5607,6 @@ select * from
 (select * from country where percentage > 50) e2
 where e1.code = e2.code order by e2.COUNTRY,e1.language LIMIT 20;
 
-SET optimizer_trace_fallback=off;
 -- query 2 using multiple CTEs with same names as tables. 
 with country as 
 (select country.code,country.name COUNTRY, city.name CAPITAL, language, isofficial, percentage
@@ -5625,7 +5624,6 @@ where e1.code = e2.code order by e2.COUNTRY,e1.language
 select code1,country1,capital1,language1,isofficial1,percentage1,country.COUNTRY from country,countrylanguage where country.code = countrylanguage.code1
 and country.percentage = countrylanguage.percentage1
 order by COUNTRY,percentage1 LIMIT 20;-- queries using same name for CTEs and the subquery aliases in the main query
-SET optimizer_trace_fallback=on;
 
 -- query1
 with c1 as 
