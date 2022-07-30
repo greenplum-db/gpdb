@@ -7,6 +7,8 @@ EXTENSION = pg_buffercache
 DATA = pg_buffercache--1.1.sql pg_buffercache--1.0--1.1.sql pg_buffercache--unpackaged--1.0.sql
 PGFILEDESC = "pg_buffercache - monitoring of shared buffer cache in real-time"
 
+REGRESS = pg_buffercache
+
 ifdef USE_PGXS
 PG_CONFIG = pg_config
 PGXS := $(shell $(PG_CONFIG) --pgxs)
