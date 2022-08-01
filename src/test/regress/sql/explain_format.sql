@@ -87,6 +87,10 @@ EXPLAIN (FORMAT YAML) SELECT * from boxes LEFT JOIN apples ON apples.id = boxes.
 SET random_page_cost = 1;
 SET cpu_index_tuple_cost = 0.1;
 EXPLAIN (FORMAT YAML, VERBOSE) SELECT * from boxes;
+-- ignore variable JIT gucs which can be showed when SETTINGS=ON
+-- start_matchignore
+-- m/^\s+jit\w*:/
+-- end_matchignore
 EXPLAIN (FORMAT YAML, VERBOSE, SETTINGS ON) SELECT * from boxes;
 
 --- Check Explain Analyze YAML output that include the slices information
@@ -96,6 +100,13 @@ EXPLAIN (ANALYZE, FORMAT YAML) SELECT * from boxes LEFT JOIN apples ON apples.id
 -- start_matchsubs
 -- m/Executor Memory: \d+kB  Segments: 3  Max: \d+kB \(segment \d\)/
 -- s/Executor Memory: \d+kB  Segments: 3  Max: \d+kB \(segment \d\)/Executor Memory: ###kB  Segments: 3  Max: ##kB (segment #)/
+-- end_matchsubs
+-- ignore the variable JIT gucs in Settings (unaligned mode + text format)
+-- start_matchsubs
+-- m/^Settings:.*/
+-- s/,?\s*jit\w*\s*=\s*[^,\n]+//g
+-- m/^Settings:.*/
+-- s/^Settings:[,\s]*/Settings: /
 -- end_matchsubs
 --- Check explain analyze sort infomation in verbose mode
 EXPLAIN (ANALYZE, VERBOSE) SELECT * from boxes ORDER BY apple_id;

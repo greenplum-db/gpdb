@@ -85,6 +85,12 @@ m/Distributed randomly/
 m/WARNING:  interconnect may encountered a network error, please check your network/
 m/Failing to send packet/
 
+# When JIT enabled, the following output can be generated but indicate nothing wrong. so ignore it.
+m/^DEBUG:  successfully loaded JIT provider/
+m/^DEBUG:  probing availability of JIT provider/
+m/^DEBUG:  LLVMJIT detected CPU/
+m/^DEBUG:  time to inline:/
+
 -- end_matchignore
 
 -- start_matchsubs
@@ -160,5 +166,17 @@ m/ The shortest establish conn time: \d+\.\d+ ms, segindex: \d+,/
 s/ The shortest establish conn time: \d+\.\d+ ms, segindex: \d+,/ The shortest establish conn time: xx\.xx ms, segindex: xx,/
 m/ The longest  establish conn time: \d+\.\d+ ms, segindex: \d+/
 s/ The longest  establish conn time: \d+\.\d+ ms, segindex: \d+/ The longest  establish conn time: xx\.xx ms, segindex: xx/
+
+# convert QUERY PLAN header to a fixed-width format. The width of header
+# SHOULD NOT be taken into account when compared with the expected one.
+# This is important because we invoke same test with different sets of
+# PGOPTIONS and non-default ones among them are reported by EXPLAIN
+# VERBOSE or EXPLAIN (SETTINGS on). As a result, the width of EXPLAIN output
+# and its header can vary.
+m/^\s+QUERY PLAN\s*$/
+s/^\s+QUERY PLAN\s*$/ QUERY PLAN \n/
+
+m/^------------+\s*$/
+s/^------------+\s*$/------------\n/
 
 -- end_matchsubs

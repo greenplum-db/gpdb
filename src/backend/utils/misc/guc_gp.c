@@ -739,6 +739,16 @@ struct config_bool ConfigureNamesBool_gp[] =
 	},
 
 	{
+		{"gp_explain_jit", PGC_USERSET, DEVELOPER_OPTIONS,
+			gettext_noop("Enables JIT instrumentation output for EXPLAIN"),
+			NULL
+		},
+		&gp_explain_jit,
+		false,
+		NULL, NULL, NULL
+	},
+
+	{
 		{"gp_enable_motion_deadlock_sanity", PGC_USERSET, DEVELOPER_OPTIONS,
 			gettext_noop("Enable verbose check at planning time."),
 			NULL,

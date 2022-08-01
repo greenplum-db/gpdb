@@ -196,6 +196,7 @@
 		"gp_enable_slow_writer_testmode",
 		"gp_enable_sort_limit",
 		"gp_encoding_check_locale_compatibility",
+		"gp_explain_jit",
 		"gp_external_enable_exec",
 		"gp_external_max_segs",
 		"gp_fts_mark_mirror_down_grace_period",

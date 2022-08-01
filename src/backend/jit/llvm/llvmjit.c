@@ -45,7 +45,6 @@
 #include <llvm-c/Transforms/Utils.h>
 #endif
 
-
 /* Handle of a module emitted via ORC JIT */
 typedef struct LLVMJitHandle
 {
