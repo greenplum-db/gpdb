@@ -333,9 +333,9 @@ DefineExternalRelation(CreateExternalStmt *createExtStmt)
 				 nodeTag(dencoding->arg));
 	}
 
-	/* If encoding is defaulted, use database encoding */
+	/* If encoding is defaulted, use database server encoding */
 	if (encoding < 0)
-		encoding = pg_get_client_encoding();
+		encoding = GetDatabaseEncoding();
 
 	/*
 	 * If the number of locations (file or http URIs) exceed the number of
