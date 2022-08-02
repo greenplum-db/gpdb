@@ -292,7 +292,6 @@ CPhysicalHashJoin::PdsMatch(CMemoryPool *mp, CDistributionSpec *pds,
 	}
 }
 
-
 //---------------------------------------------------------------------------
 //	@function:
 //		CPhysicalHashJoin::PdshashedMatching
@@ -392,8 +391,17 @@ CPhysicalHashJoin::PdshashedMatching(
 			GPOS_WSZ_LIT("Unable to create matching hashed distribution."));
 	}
 
-	return GPOS_NEW(mp) CDistributionSpecHashed(
-		pdrgpexpr, false /* fNullsCollocated */, opfamilies);
+	// nulls colocated for inner hash joins, but not colocated in outer hash joins
+	BOOL fNullsColocated = true;
+
+	if (COperator::EopPhysicalLeftOuterHashJoin == Eopid() ||
+		COperator::EopPhysicalRightOuterHashJoin == Eopid())
+	{
+		fNullsColocated = false;
+	}
+
+	return GPOS_NEW(mp)
+		CDistributionSpecHashed(pdrgpexpr, fNullsColocated, opfamilies);
 }
 
 

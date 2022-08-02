@@ -279,7 +279,7 @@ SELECT * FROM foo,bar WHERE a=(SELECT c);
         </dxl:Comparison>
       </dxl:LogicalJoin>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="80">
+    <dxl:Plan Id="0" SpaceSize="84">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="883135.989715" Rows="1.000000" Width="16"/>
