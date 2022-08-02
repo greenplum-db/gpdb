@@ -60,9 +60,10 @@ CPhysicalDML::CPhysicalDML(CMemoryPool *mp, CLogicalDML::EDMLOperator edmlop,
 	GPOS_ASSERT(nullptr != pdrgpcrSource);
 	GPOS_ASSERT(nullptr != pbsModified);
 	GPOS_ASSERT(nullptr != pcrAction);
-	GPOS_ASSERT_IMP(
-		CLogicalDML::EdmlDelete == edmlop || CLogicalDML::EdmlUpdate == edmlop,
-		nullptr != pcrCtid && nullptr != pcrSegmentId);
+	GPOS_ASSERT_IMP(CLogicalDML::EdmlDelete == edmlop ||
+						CLogicalDML::EdmlSplitUpdate == edmlop ||
+						CLogicalDML::EdmlInPlaceUpdate == edmlop,
+					nullptr != pcrCtid && nullptr != pcrSegmentId);
 
 	m_pds =
 		CPhysical::PdsCompute(m_mp, m_ptabdesc, pdrgpcrSource, pcrSegmentId);
@@ -83,33 +84,9 @@ CPhysicalDML::CPhysicalDML(CMemoryPool *mp, CLogicalDML::EDMLOperator edmlop,
 		// Update of the distribution key: This will be handled with a Split node below the DML node,
 		//         with the split deleting the existing rows and this DML node inserting the new rows,
 		//         so this is handled here like an insert, using hash distribution for all partitions.
-		BOOL is_update_without_changing_distribution_key = false;
-
-		if (CLogicalDML::EdmlUpdate == edmlop)
-		{
-			CDistributionSpecHashed *hashDistSpec =
-				CDistributionSpecHashed::PdsConvert(m_pds);
-			CColRefSet *updatedCols = GPOS_NEW(mp) CColRefSet(mp);
-			CColRefSet *distributionCols = hashDistSpec->PcrsUsed(mp);
-
-			// compute a ColRefSet of the updated columns
-			for (ULONG c = 0; c < pdrgpcrSource->Size(); c++)
-			{
-				if (pbsModified->Get(c))
-				{
-					updatedCols->Include((*pdrgpcrSource)[c]);
-				}
-			}
-
-			is_update_without_changing_distribution_key =
-				!updatedCols->FIntersects(distributionCols);
-
-			updatedCols->Release();
-			distributionCols->Release();
-		}
 
 		if (CLogicalDML::EdmlDelete == edmlop ||
-			is_update_without_changing_distribution_key)
+			CLogicalDML::EdmlInPlaceUpdate == edmlop)
 		{
 			m_pds->Release();
 			m_pds = GPOS_NEW(mp) CDistributionSpecRandom();
@@ -388,7 +365,8 @@ CPhysicalDML::HashValue() const
 		gpos::CombineHashes(ulHash, CUtils::UlHashColArray(m_pdrgpcrSource));
 
 	if (CLogicalDML::EdmlDelete == m_edmlop ||
-		CLogicalDML::EdmlUpdate == m_edmlop)
+		CLogicalDML::EdmlSplitUpdate == m_edmlop ||
+		CLogicalDML::EdmlInPlaceUpdate == m_edmlop)
 	{
 		ulHash = gpos::CombineHashes(ulHash, gpos::HashPtr<CColRef>(m_pcrCtid));
 		ulHash =
@@ -475,7 +453,7 @@ CPhysicalDML::PosComputeRequired(CMemoryPool *mp, CTableDescriptor *ptabdesc)
 	COrderSpec *pos = GPOS_NEW(mp) COrderSpec(mp);
 
 	const CBitSetArray *pdrgpbsKeys = ptabdesc->PdrgpbsKeys();
-	if (1 < pdrgpbsKeys->Size() && CLogicalDML::EdmlUpdate == m_edmlop)
+	if (1 < pdrgpbsKeys->Size() && CLogicalDML::EdmlSplitUpdate == m_edmlop)
 	{
 		// if this is an update on the target table's keys, enforce order on
 		// the action column, see explanation in function's comment
@@ -559,7 +537,11 @@ CPhysicalDML::ComputeRequiredLocalColumns(CMemoryPool *mp)
 
 	// include source columns
 	m_pcrsRequiredLocal->Include(m_pdrgpcrSource);
-	m_pcrsRequiredLocal->Include(m_pcrAction);
+	// Action column is not required for InPlaceUpdate operator.
+	if (CLogicalDML::EdmlInPlaceUpdate != m_edmlop)
+	{
+		m_pcrsRequiredLocal->Include(m_pcrAction);
+	}
 
 	if (m_pcrTableOid != nullptr)
 	{
@@ -567,7 +549,8 @@ CPhysicalDML::ComputeRequiredLocalColumns(CMemoryPool *mp)
 	}
 
 	if (CLogicalDML::EdmlDelete == m_edmlop ||
-		CLogicalDML::EdmlUpdate == m_edmlop)
+		CLogicalDML::EdmlInPlaceUpdate == m_edmlop ||
+		CLogicalDML::EdmlSplitUpdate == m_edmlop)
 	{
 		m_pcrsRequiredLocal->Include(m_pcrCtid);
 		m_pcrsRequiredLocal->Include(m_pcrSegmentId);
@@ -596,7 +579,7 @@ CPhysicalDML::OsPrint(IOstream &os) const
 	}
 
 	os << SzId() << " (";
-	os << CLogicalDML::m_rgwszDml[m_edmlop] << ", ";
+	CLogicalDML::PrintOperatorType(os, m_edmlop);
 	m_ptabdesc->Name().OsPrint(os);
 	os << "), Source Columns: [";
 	CUtils::OsPrintDrgPcr(os, m_pdrgpcrSource);
@@ -612,7 +595,8 @@ CPhysicalDML::OsPrint(IOstream &os) const
 	}
 
 	if (CLogicalDML::EdmlDelete == m_edmlop ||
-		CLogicalDML::EdmlUpdate == m_edmlop)
+		CLogicalDML::EdmlInPlaceUpdate == m_edmlop ||
+		CLogicalDML::EdmlSplitUpdate == m_edmlop)
 	{
 		os << ", ";
 		m_pcrCtid->OsPrint(os);

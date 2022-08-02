@@ -5338,8 +5338,11 @@ CTranslatorExprToDXL::Edxldmloptype(const CLogicalDML::EDMLOperator edmlop)
 		case CLogicalDML::EdmlDelete:
 			return Edxldmldelete;
 
-		case CLogicalDML::EdmlUpdate:
-			return Edxldmlupdate;
+		case CLogicalDML::EdmlSplitUpdate:
+			return Edxldmlsplitupdate;
+
+		case CLogicalDML::EdmlInPlaceUpdate:
+			return Edxldmlinplaceupdate;
 
 		default:
 			GPOS_ASSERT(!"Unrecognized DML operation");

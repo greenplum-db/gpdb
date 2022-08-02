@@ -680,7 +680,7 @@ WHERE t1.id1 = t2.id1;
       </dxl:LogicalUpdate>
     </dxl:Query>
     <dxl:Plan Id="0" SpaceSize="34">
-      <dxl:DMLUpdate Columns="0,1" ActionCol="27" OidCol="28" CtidCol="2" SegmentIdCol="8" InputSorted="false" PreserveOids="false">
+      <dxl:DMLSplitUpdate Columns="0,1" ActionCol="27" OidCol="28" CtidCol="2" SegmentIdCol="8" InputSorted="false" PreserveOids="false">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="5381.429219" Rows="60001.000000" Width="1"/>
         </dxl:Properties>
@@ -918,7 +918,7 @@ WHERE t1.id1 = t2.id1;
             </dxl:Split>
           </dxl:RedistributeMotion>
         </dxl:Result>
-      </dxl:DMLUpdate>
+      </dxl:DMLSplitUpdate>
     </dxl:Plan>
   </dxl:Thread>
 </dxl:DXLMessage>

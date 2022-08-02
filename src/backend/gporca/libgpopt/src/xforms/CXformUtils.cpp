@@ -1474,9 +1474,11 @@ BOOL
 CXformUtils::FTriggerApplies(CLogicalDML::EDMLOperator edmlop,
 							 const IMDTrigger *pmdtrigger)
 {
-	return ((CLogicalDML::EdmlInsert == edmlop && pmdtrigger->IsInsert()) ||
-			(CLogicalDML::EdmlDelete == edmlop && pmdtrigger->IsDelete()) ||
-			(CLogicalDML::EdmlUpdate == edmlop && pmdtrigger->IsUpdate()));
+	return (
+		(CLogicalDML::EdmlInsert == edmlop && pmdtrigger->IsInsert()) ||
+		(CLogicalDML::EdmlDelete == edmlop && pmdtrigger->IsDelete()) ||
+		(CLogicalDML::EdmlSplitUpdate == edmlop && pmdtrigger->IsUpdate()) ||
+		(CLogicalDML::EdmlInPlaceUpdate == edmlop && pmdtrigger->IsUpdate()));
 }
 
 //---------------------------------------------------------------------------
@@ -1607,7 +1609,8 @@ CXformUtils::PexprRowTrigger(CMemoryPool *mp, CExpression *pexprChild,
 		case CLogicalDML::EdmlDelete:
 			type |= GPMD_TRIGGER_DELETE;
 			break;
-		case CLogicalDML::EdmlUpdate:
+		case CLogicalDML::EdmlInPlaceUpdate:
+		case CLogicalDML::EdmlSplitUpdate:
 			type |= GPMD_TRIGGER_UPDATE;
 			break;
 		default:

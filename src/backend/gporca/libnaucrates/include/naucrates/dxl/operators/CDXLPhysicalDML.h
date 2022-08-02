@@ -27,7 +27,8 @@ enum EdxlDmlType
 {
 	Edxldmlinsert,
 	Edxldmldelete,
-	Edxldmlupdate,
+	Edxldmlsplitupdate,
+	Edxldmlinplaceupdate,
 	EdxldmlSentinel
 };
 

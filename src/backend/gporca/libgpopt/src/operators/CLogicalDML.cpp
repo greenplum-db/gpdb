@@ -21,8 +21,6 @@
 
 using namespace gpopt;
 
-const WCHAR CLogicalDML::m_rgwszDml[EdmlSentinel][10] = {
-	GPOS_WSZ_LIT("Insert"), GPOS_WSZ_LIT("Delete"), GPOS_WSZ_LIT("Update")};
 
 //---------------------------------------------------------------------------
 //	@function:
@@ -76,7 +74,8 @@ CLogicalDML::CLogicalDML(CMemoryPool *mp, EDMLOperator edmlop,
 	GPOS_ASSERT(nullptr != pdrgpcrSource);
 	GPOS_ASSERT(nullptr != pbsModified);
 	GPOS_ASSERT(nullptr != pcrAction);
-	GPOS_ASSERT_IMP(EdmlDelete == edmlop || EdmlUpdate == edmlop,
+	GPOS_ASSERT_IMP(EdmlDelete == edmlop || EdmlInPlaceUpdate == m_edmlop ||
+						EdmlSplitUpdate == m_edmlop,
 					nullptr != pcrCtid && nullptr != pcrSegmentId);
 
 	m_pcrsLocalUsed->Include(m_pdrgpcrSource);
@@ -162,7 +161,8 @@ CLogicalDML::HashValue() const
 	ulHash =
 		gpos::CombineHashes(ulHash, CUtils::UlHashColArray(m_pdrgpcrSource));
 
-	if (EdmlDelete == m_edmlop || EdmlUpdate == m_edmlop)
+	if (EdmlDelete == m_edmlop || EdmlSplitUpdate == m_edmlop ||
+		EdmlInPlaceUpdate == m_edmlop)
 	{
 		ulHash = gpos::CombineHashes(ulHash, gpos::HashPtr<CColRef>(m_pcrCtid));
 		ulHash =
@@ -356,7 +356,7 @@ CLogicalDML::OsPrint(IOstream &os) const
 	}
 
 	os << SzId() << " (";
-	os << m_rgwszDml[m_edmlop] << ", ";
+	CLogicalDML::PrintOperatorType(os, m_edmlop);
 	m_ptabdesc->Name().OsPrint(os);
 	os << "), Affected Columns: [";
 	CUtils::OsPrintDrgPcr(os, m_pdrgpcrSource);
@@ -371,7 +371,8 @@ CLogicalDML::OsPrint(IOstream &os) const
 		os << ")";
 	}
 
-	if (EdmlDelete == m_edmlop || EdmlUpdate == m_edmlop)
+	if (EdmlDelete == m_edmlop || EdmlSplitUpdate == m_edmlop ||
+		EdmlInPlaceUpdate == m_edmlop)
 	{
 		os << ", ";
 		m_pcrCtid->OsPrint(os);
@@ -380,6 +381,42 @@ CLogicalDML::OsPrint(IOstream &os) const
 	}
 
 	return os;
+}
+
+//---------------------------------------------------------------------------
+//	@function:
+//		CLogicalDML::PrintOperatorType
+//
+//	@doc:
+//		Helper function to print DML operator type based on the given operator
+//	    enum, used in OSPrint to print objects.
+//
+//---------------------------------------------------------------------------
+void
+CLogicalDML::PrintOperatorType(IOstream &os, EDMLOperator edmlOperator)
+{
+	switch (edmlOperator)
+	{
+		case EdmlInsert:
+			os << "Insert, ";
+			break;
+
+		case EdmlDelete:
+			os << "Delete, ";
+			break;
+
+		case EdmlInPlaceUpdate:
+			os << "InPlaceUpdate, ";
+			break;
+
+		case EdmlSplitUpdate:
+			os << "SplitUpdate, ";
+			break;
+
+		default:
+			GPOS_ASSERT(!"Unrecognized DML Operator");
+			break;
+	}
 }
 
 // EOF

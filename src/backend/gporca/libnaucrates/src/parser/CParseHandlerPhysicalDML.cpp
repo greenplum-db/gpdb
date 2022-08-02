@@ -71,7 +71,10 @@ CParseHandlerPhysicalDML::StartElement(const XMLCh *const,	// element_uri,
 				 CDXLTokens::XmlstrToken(EdxltokenPhysicalDMLDelete),
 				 element_local_name) &&
 		0 != XMLString::compareString(
-				 CDXLTokens::XmlstrToken(EdxltokenPhysicalDMLUpdate),
+				 CDXLTokens::XmlstrToken(EdxltokenPhysicalDMLSplitUpdate),
+				 element_local_name) &&
+		0 != XMLString::compareString(
+				 CDXLTokens::XmlstrToken(EdxltokenPhysicalDMLInPlaceUpdate),
 				 element_local_name))
 	{
 		CWStringDynamic *str = CDXLUtils::CreateDynamicStringFromXMLChArray(
@@ -88,11 +91,19 @@ CParseHandlerPhysicalDML::StartElement(const XMLCh *const,	// element_uri,
 		m_dxl_dml_type = Edxldmldelete;
 	}
 	else if (0 == XMLString::compareString(
-					  CDXLTokens::XmlstrToken(EdxltokenPhysicalDMLUpdate),
+					  CDXLTokens::XmlstrToken(EdxltokenPhysicalDMLSplitUpdate),
 					  element_local_name))
 	{
-		token_type = EdxltokenPhysicalDMLUpdate;
-		m_dxl_dml_type = Edxldmlupdate;
+		token_type = EdxltokenPhysicalDMLSplitUpdate;
+		m_dxl_dml_type = Edxldmlsplitupdate;
+	}
+	else if (0 ==
+			 XMLString::compareString(
+				 CDXLTokens::XmlstrToken(EdxltokenPhysicalDMLInPlaceUpdate),
+				 element_local_name))
+	{
+		token_type = EdxltokenPhysicalDMLInPlaceUpdate;
+		m_dxl_dml_type = Edxldmlinplaceupdate;
 	}
 
 	const XMLCh *src_colids_xml = CDXLOperatorFactory::ExtractAttrValue(
@@ -120,7 +131,7 @@ CParseHandlerPhysicalDML::StartElement(const XMLCh *const,	// element_uri,
 	{
 		m_preserve_oids = CDXLOperatorFactory::ConvertAttrValueToBool(
 			m_parse_handler_mgr->GetDXLMemoryManager(), preserve_oids_xml,
-			EdxltokenUpdatePreservesOids, EdxltokenPhysicalDMLUpdate);
+			EdxltokenUpdatePreservesOids, EdxltokenPhysicalDMLSplitUpdate);
 	}
 
 	if (m_preserve_oids)
@@ -128,7 +139,7 @@ CParseHandlerPhysicalDML::StartElement(const XMLCh *const,	// element_uri,
 		m_tuple_oid_col_oid =
 			CDXLOperatorFactory::ExtractConvertAttrValueToUlong(
 				m_parse_handler_mgr->GetDXLMemoryManager(), attrs,
-				EdxltokenTupleOidColId, EdxltokenPhysicalDMLUpdate);
+				EdxltokenTupleOidColId, EdxltokenPhysicalDMLSplitUpdate);
 	}
 
 	const XMLCh *input_sort_req_xml =
@@ -284,10 +295,17 @@ CParseHandlerPhysicalDML::GetDmlOpType(const XMLCh *dml_op_type_xml)
 	}
 
 	if (0 == XMLString::compareString(
-				 CDXLTokens::XmlstrToken(EdxltokenPhysicalDMLUpdate),
+				 CDXLTokens::XmlstrToken(EdxltokenPhysicalDMLSplitUpdate),
 				 dml_op_type_xml))
 	{
-		return Edxldmlupdate;
+		return Edxldmlsplitupdate;
+	}
+
+	if (0 == XMLString::compareString(
+				 CDXLTokens::XmlstrToken(EdxltokenPhysicalDMLInPlaceUpdate),
+				 dml_op_type_xml))
+	{
+		return Edxldmlinplaceupdate;
 	}
 
 	return EdxldmlSentinel;

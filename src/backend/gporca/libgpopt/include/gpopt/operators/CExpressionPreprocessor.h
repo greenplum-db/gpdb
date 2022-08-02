@@ -209,6 +209,9 @@ private:
 	static CExpression *PexprTransposeSelectAndProject(CMemoryPool *mp,
 													   CExpression *pexpr);
 
+	static CExpression *ConvertSplitUpdateToInPlaceUpdate(CMemoryPool *mp,
+														  CExpression *expr);
+
 	// private ctor
 	CExpressionPreprocessor();
 

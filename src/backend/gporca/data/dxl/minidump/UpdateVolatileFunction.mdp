@@ -411,7 +411,7 @@
       </dxl:LogicalUpdate>
     </dxl:Query>
     <dxl:Plan Id="0" SpaceSize="2">
-      <dxl:DMLUpdate Columns="0,1" ActionCol="10" OidCol="11" CtidCol="2" SegmentIdCol="8" InputSorted="false" PreserveOids="false">
+      <dxl:DMLSplitUpdate Columns="0,1" ActionCol="10" OidCol="11" CtidCol="2" SegmentIdCol="8" InputSorted="false" PreserveOids="false">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="532.767550" Rows="1000.000000" Width="1"/>
         </dxl:Properties>
@@ -574,7 +574,7 @@
             </dxl:Split>
           </dxl:RedistributeMotion>
         </dxl:Result>
-      </dxl:DMLUpdate>
+      </dxl:DMLSplitUpdate>
     </dxl:Plan>
   </dxl:Thread>
 </dxl:DXLMessage>

@@ -77,6 +77,7 @@ OBJS        = CExpression.o \
               CLogicalUnion.o \
               CLogicalUnionAll.o \
               CLogicalUpdate.o \
+              CLogicalInPlaceUpdate.o \
               CNormalizer.o \
               COperator.o \
               CPattern.o \

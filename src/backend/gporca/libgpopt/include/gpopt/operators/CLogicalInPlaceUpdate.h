@@ -1,15 +1,13 @@
 //---------------------------------------------------------------------------
-//	Greenplum Database
-//	Copyright (C) 2012 EMC Corp.
 //
 //	@filename:
-//		CLogicalDML.h
+//		CLogicalInPlaceUpdate.h
 //
 //	@doc:
-//		Logical DML operator
+//		Logical InPlaceUpdate operator
 //---------------------------------------------------------------------------
-#ifndef GPOPT_CLogicalDML_H
-#define GPOPT_CLogicalDML_H
+#ifndef GPOPT_MASTER_CLOGICALINPLACEUPDATE_H
+#define GPOPT_MASTER_CLOGICALINPLACEUPDATE_H
 
 #include "gpos/base.h"
 
@@ -22,44 +20,23 @@ class CTableDescriptor;
 
 //---------------------------------------------------------------------------
 //	@class:
-//		CLogicalDML
+//		CLogicalInPlaceUpdate
 //
 //	@doc:
-//		Logical DML operator
+//		Logical InPlaceUpdate operator
 //
 //---------------------------------------------------------------------------
-class CLogicalDML : public CLogical
+class CLogicalInPlaceUpdate : public CLogical
 {
-public:
-	// enum of DML operators
-	enum EDMLOperator
-	{
-		EdmlInsert,
-		EdmlDelete,
-		EdmlSplitUpdate,
-		EdmlInPlaceUpdate,
-		EdmlSentinel
-	};
-
-
 private:
-	// dml operator
-	EDMLOperator m_edmlop;
-
 	// table descriptor
 	CTableDescriptor *m_ptabdesc;
 
-	// source columns
-	CColRefArray *m_pdrgpcrSource;
+	// columns to insert
+	CColRefArray *m_pdrgpcrInsert;
 
-	// set of modified columns from the target table
-	CBitSet *m_pbsModified;
-
-	// action column
-	CColRef *m_pcrAction;
-
-	// table oid column
-	CColRef *m_pcrTableOid;
+	// columns to delete
+	CColRefArray *m_pdrgpcrDelete;
 
 	// ctid column
 	CColRef *m_pcrCtid;
@@ -67,71 +44,47 @@ private:
 	// segmentId column
 	CColRef *m_pcrSegmentId;
 
-	// tuple oid column if one exists
-	CColRef *m_pcrTupleOid;
-
 public:
-	CLogicalDML(const CLogicalDML &) = delete;
+	CLogicalInPlaceUpdate(const CLogicalInPlaceUpdate &) = delete;
 
 	// ctor
-	explicit CLogicalDML(CMemoryPool *mp);
+	explicit CLogicalInPlaceUpdate(CMemoryPool *mp);
 
 	// ctor
-	CLogicalDML(CMemoryPool *mp, EDMLOperator edmlop,
-				CTableDescriptor *ptabdesc, CColRefArray *colref_array,
-				CBitSet *pbsModified, CColRef *pcrAction, CColRef *pcrTableOid,
-				CColRef *pcrCtid, CColRef *pcrSegmentId, CColRef *pcrTupleOid);
+	CLogicalInPlaceUpdate(CMemoryPool *mp, CTableDescriptor *ptabdesc,
+						  CColRefArray *pdrgpcrInsert,
+						  CColRefArray *m_pdrgpcrDelete, CColRef *pcrCtid,
+						  CColRef *pcrSegmentId);
 
 	// dtor
-	~CLogicalDML() override;
+	~CLogicalInPlaceUpdate() override;
 
 	// ident accessors
 	EOperatorId
 	Eopid() const override
 	{
-		return EopLogicalDML;
+		return EopLogicalInPlaceUpdate;
 	}
 
 	// return a string for operator name
 	const CHAR *
 	SzId() const override
 	{
-		return "CLogicalDML";
+		return "CLogicalInPlaceUpdate";
 	}
 
-	// dml operator
-	EDMLOperator
-	Edmlop() const
-	{
-		return m_edmlop;
-	}
-
-	// source columns
+	// columns to insert
 	CColRefArray *
-	PdrgpcrSource() const
+	PdrgpcrInsert() const
 	{
-		return m_pdrgpcrSource;
+		return m_pdrgpcrInsert;
 	}
 
-	// modified columns set
-	CBitSet *
-	PbsModified() const
+	// columns to delete
+	CColRefArray *
+	PdrgpcrDelete() const
 	{
-		return m_pbsModified;
-	}
-
-	// action column
-	CColRef *
-	PcrAction() const
-	{
-		return m_pcrAction;
-	}
-
-	// table oid column
-	CColRef *
-	PcrTableOid() const
-	{
-		return m_pcrTableOid;
+		return m_pdrgpcrDelete;
 	}
 
 	// ctid column
@@ -153,13 +106,6 @@ public:
 	Ptabdesc() const
 	{
 		return m_ptabdesc;
-	}
-
-	// tuple oid column
-	CColRef *
-	PcrTupleOid() const
-	{
-		return m_pcrTupleOid;
 	}
 
 	// operator specific hash function
@@ -188,9 +134,14 @@ public:
 	CColRefSet *DeriveOutputColumns(CMemoryPool *mp,
 									CExpressionHandle &exprhdl) override;
 
+
 	// derive constraint property
-	CPropConstraint *DerivePropertyConstraint(
-		CMemoryPool *mp, CExpressionHandle &exprhdl) const override;
+	CPropConstraint *
+	DerivePropertyConstraint(CMemoryPool *,	 // mp
+							 CExpressionHandle &exprhdl) const override
+	{
+		return CLogical::PpcDeriveConstraintPassThru(exprhdl, 0 /*ulChild*/);
+	}
 
 	// derive max card
 	CMaxCard DeriveMaxCard(CMemoryPool *mp,
@@ -242,24 +193,20 @@ public:
 	//-------------------------------------------------------------------------------------
 
 	// conversion function
-	static CLogicalDML *
+	static CLogicalInPlaceUpdate *
 	PopConvert(COperator *pop)
 	{
 		GPOS_ASSERT(nullptr != pop);
-		GPOS_ASSERT(EopLogicalDML == pop->Eopid());
+		GPOS_ASSERT(EopLogicalInPlaceUpdate == pop->Eopid());
 
-		return dynamic_cast<CLogicalDML *>(pop);
+		return dynamic_cast<CLogicalInPlaceUpdate *>(pop);
 	}
 
 	// debug print
 	IOstream &OsPrint(IOstream &) const override;
 
-	// Helper function to print DML operator type.
-	static void PrintOperatorType(IOstream &os, EDMLOperator);
-
-};	// class CLogicalDML
+};	// class CLogicalInPlaceUpdate
 }  // namespace gpopt
 
-#endif	// !GPOPT_CLogicalDML_H
 
-// EOF
+#endif	//GPOPT_MASTER_CLOGICALINPLACEUPDATE_H

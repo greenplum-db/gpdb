@@ -4159,8 +4159,9 @@ CTranslatorDXLToPlStmt::TranslateDXLDml(
 	ModifyTable *dml = MakeNode(ModifyTable);
 	Plan *plan = &(dml->plan);
 	AclMode acl_mode = ACL_NO_RIGHTS;
+	EdxlDmlType phy_dml_dxlop_dmltype = phy_dml_dxlop->GetDmlOpType();
 
-	switch (phy_dml_dxlop->GetDmlOpType())
+	switch (phy_dml_dxlop_dmltype)
 	{
 		case gpdxl::Edxldmldelete:
 		{
@@ -4168,7 +4169,8 @@ CTranslatorDXLToPlStmt::TranslateDXLDml(
 			acl_mode = ACL_DELETE;
 			break;
 		}
-		case gpdxl::Edxldmlupdate:
+		case gpdxl::Edxldmlsplitupdate:
+		case gpdxl::Edxldmlinplaceupdate:
 		{
 			m_cmd_type = CMD_UPDATE;
 			acl_mode = ACL_UPDATE;
@@ -4250,7 +4252,7 @@ CTranslatorDXLToPlStmt::TranslateDXLDml(
 	// these based on the resnames. ORCA also includes a similar column for
 	// partition Oid in the child's target list, but we don't use it for
 	// anything in GPDB.
-	if (m_cmd_type == CMD_UPDATE)
+	if (phy_dml_dxlop_dmltype == gpdxl::Edxldmlsplitupdate)
 	{
 		(void) AddJunkTargetEntryForColId(&dml_target_list, &child_context,
 										  phy_dml_dxlop->ActionColId(),
@@ -4265,7 +4267,8 @@ CTranslatorDXLToPlStmt::TranslateDXLDml(
 								   phy_dml_dxlop->GetSegmentIdColId(),
 								   "gp_segment_id");
 	}
-	if (m_cmd_type == CMD_UPDATE && phy_dml_dxlop->IsOidsPreserved())
+	if (phy_dml_dxlop_dmltype == gpdxl::Edxldmlsplitupdate &&
+		phy_dml_dxlop->IsOidsPreserved())
 	{
 		AddJunkTargetEntryForColId(&dml_target_list, &child_context,
 								   phy_dml_dxlop->GetTupleOid(), "oid");
@@ -4302,7 +4305,10 @@ CTranslatorDXLToPlStmt::TranslateDXLDml(
 	// ORCA plans all updates as split updates
 	if (m_cmd_type == CMD_UPDATE)
 	{
-		dml->isSplitUpdates = ListMake1Int((int) true);
+		dml->isSplitUpdates =
+			(phy_dml_dxlop_dmltype == gpdxl::Edxldmlsplitupdate)
+				? ListMake1Int((int) true)
+				: ListMake1Int((int) false);
 	}
 
 	plan->targetlist = NIL;

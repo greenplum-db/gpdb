@@ -98,8 +98,11 @@ CDXLPhysicalDML::GetOpNameStr() const
 			return CDXLTokens::GetDXLTokenStr(EdxltokenPhysicalDMLInsert);
 		case Edxldmldelete:
 			return CDXLTokens::GetDXLTokenStr(EdxltokenPhysicalDMLDelete);
-		case Edxldmlupdate:
-			return CDXLTokens::GetDXLTokenStr(EdxltokenPhysicalDMLUpdate);
+		case Edxldmlsplitupdate:
+			return CDXLTokens::GetDXLTokenStr(EdxltokenPhysicalDMLSplitUpdate);
+		case Edxldmlinplaceupdate:
+			return CDXLTokens::GetDXLTokenStr(
+				EdxltokenPhysicalDMLInPlaceUpdate);
 		default:
 			return nullptr;
 	}
@@ -137,7 +140,7 @@ CDXLPhysicalDML::SerializeToDXL(CXMLSerializer *xml_serializer,
 	xml_serializer->AddAttribute(
 		CDXLTokens::GetDXLTokenStr(EdxltokenInputSorted), m_input_sort_req);
 
-	if (Edxldmlupdate == m_dxl_dml_type)
+	if (Edxldmlsplitupdate == m_dxl_dml_type)
 	{
 		xml_serializer->AddAttribute(
 			CDXLTokens::GetDXLTokenStr(EdxltokenUpdatePreservesOids),
