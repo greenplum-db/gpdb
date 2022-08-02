@@ -488,8 +488,6 @@ FROM duplicate_memo_group_test_t1
      LEFT OUTER JOIN duplicate_memo_group_test_t3 a4 ON a1.c3 = a4.c3
 ) AS column2
 FROM duplicate_memo_group_test_t3 a2;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  DXL-to-PlStmt Translation: Assert not supported
  column1 | column2 
 ---------+---------
 (0 rows)

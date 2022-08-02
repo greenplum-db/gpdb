@@ -645,6 +645,7 @@ UPDATE dml_union_s SET b = (SELECT NULL UNION SELECT NULL)::numeric;
 --
 -- To make the output stable, arbitrarily fix optimizer_segments to 2, to get the latter.
 set optimizer_segments=2;
+ANALYZE dml_union_r, dml_union_s;
 SELECT COUNT(DISTINCT(a)) FROM dml_union_r;
 UPDATE dml_union_r SET a = ( SELECT a FROM dml_union_r UNION ALL SELECT a FROM dml_union_s);
 reset optimizer_segments;

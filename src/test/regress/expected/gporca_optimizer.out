@@ -7973,18 +7973,14 @@ with x as (select * from orca.r) select * from x order by a;
 -- with x as (select * from orca.rcte where a < 10) select * from x x1, x x2 where x2.a = x1.b limit 1;
 -- correlated execution
 select (select 1 union select 2);
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  DXL-to-PlStmt Translation: Assert not supported
-ERROR:  more than one row returned by a subquery used as an expression
+ERROR:  one or more assertions failed
+DETAIL:  Expected no more than one row to be returned by expression
 select (select generate_series(1,5));
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  DXL-to-PlStmt Translation: Assert not supported
-ERROR:  more than one row returned by a subquery used as an expression
+ERROR:  one or more assertions failed
+DETAIL:  Expected no more than one row to be returned by expression
 select (select a from orca.foo inner1 where inner1.a=outer1.a  union select b from orca.foo inner2 where inner2.b=outer1.b) from orca.foo outer1;
 ERROR:  more than one row returned by a subquery used as an expression  (seg0 slice1 127.0.1.1:7002 pid=573815)
 select (select generate_series(1,1)) as series;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  DXL-to-PlStmt Translation: Assert not supported
  series 
 --------
       1
@@ -8725,8 +8721,6 @@ select (select (select sum(foo.a + bar.d) * 2 from jazz) from bar) from foo grou
 
 -- nested group by
 select (select max(f) from bar where d = 1 group by a, e) from foo group by a;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  DXL-to-PlStmt Translation: Assert not supported
  max 
 -----
    1
@@ -8763,8 +8757,6 @@ select max(a) from foo group by (select e from bar where bar.e = foo.a);
 
 -- nested subquery in group by
 select max(a) from foo group by (select g from jazz where foo.a = (select max(a) from foo where c = 1 group by b));
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  DXL-to-PlStmt Translation: Assert not supported
  max 
 -----
    3
@@ -8773,8 +8765,6 @@ DETAIL:  DXL-to-PlStmt Translation: Assert not supported
 
 -- group by inside groupby inside group by
 select max(a) from foo group by (select min(g) from jazz where foo.a = (select max(g) from jazz group by h) group by h);
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  DXL-to-PlStmt Translation: Assert not supported
  max 
 -----
    2
@@ -8801,8 +8791,6 @@ select * from foo order by ((select min(bar.e + 1) * 2 from bar group by foo.a) 
 
 -- everything in the kitchen sink
 select max(b), (select foo.a * count(bar.e) from bar), (with cte as (select e, min(d) as dd from bar group by e) select max(a) * sum(dd) from cte), count(*) from foo group by foo.a, (select min(g) from jazz where foo.a = (select max(g) from jazz group by h) group by h), (with cte as (select min(g) from jazz group by h) select a from cte) order by ((select min(bar.e + 1) * 2 from bar group by foo.a) - foo.a);
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  DXL-to-PlStmt Translation: Assert not supported
  max | ?column? | ?column? | count 
 -----+----------+----------+-------
    3 |        9 |       18 |     1
@@ -9197,8 +9185,6 @@ WITH (appendonly=true, compresstype=zlib) DISTRIBUTED BY (uid136);
  UPDATE pg_class
  SET
          relpages = 30915::int, reltuples = 7.28661e+07::real WHERE relname = 'tmp_verd_s_pp_provtabs_agt_0015_extract1' AND relnamespace = (SELECT oid FROM pg_namespace WHERE nspname = 'xvclin');
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  DXL-to-PlStmt Translation: Assert not supported
 insert into pg_statistic
 values (
   'orca.tmp_verd_s_pp_provtabs_agt_0015_extract1'::regclass,
@@ -10627,8 +10613,6 @@ insert into canSetTag_input_data values(3, 0, 'B', 1);
 create table canSetTag_bug_table as
 SELECT attr, class, (select canSetTag_Func(count(distinct class)::int) from canSetTag_input_data)
    as dclass FROM canSetTag_input_data GROUP BY attr, class distributed by (attr);
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  DXL-to-PlStmt Translation: Assert not supported
 drop function canSetTag_Func(x int);
 drop table canSetTag_bug_table;
 drop table canSetTag_input_data;
@@ -11255,8 +11239,6 @@ NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'name'
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 insert into bar values('person');
 select * from unnest((select string_to_array(name, ',') from bar)) as a;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  DXL-to-PlStmt Translation: Assert not supported
    a    
 --------
  person

@@ -1725,6 +1725,7 @@ DETAIL:  Failing row contains (5, null, s, 5).
 --
 -- To make the output stable, arbitrarily fix optimizer_segments to 2, to get the latter.
 set optimizer_segments=2;
+ANALYZE dml_union_r, dml_union_s;
 SELECT COUNT(DISTINCT(a)) FROM dml_union_r;
  count 
 -------

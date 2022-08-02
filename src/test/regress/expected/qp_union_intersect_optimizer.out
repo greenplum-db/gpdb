@@ -637,7 +637,8 @@ SELECT COUNT(*) FROM dml_union_r;
 (1 row)
 
 INSERT INTO dml_union_r SELECT (SELECT dml_union_r.d::int FROM dml_union_r INTERSECT SELECT dml_union_s.d FROM dml_union_s ORDER BY 1),1,'newval',1.000;
-ERROR:  more than one row returned by a subquery used as an expression
+ERROR:  one or more assertions failed  (seg0 slice1 10.138.0.30:7002 pid=2878957)
+DETAIL:  Expected no more than one row to be returned by expression
 SELECT COUNT(*) FROM dml_union_r;
  count 
 -------
@@ -1725,6 +1726,7 @@ DETAIL:  Failing row contains (1, null, s, 1).
 --
 -- To make the output stable, arbitrarily fix optimizer_segments to 2, to get the latter.
 set optimizer_segments=2;
+ANALYZE dml_union_r, dml_union_s;
 SELECT COUNT(DISTINCT(a)) FROM dml_union_r;
  count 
 -------
@@ -1732,12 +1734,13 @@ SELECT COUNT(DISTINCT(a)) FROM dml_union_r;
 (1 row)
 
 UPDATE dml_union_r SET a = ( SELECT a FROM dml_union_r UNION ALL SELECT a FROM dml_union_s);
-ERROR:  more than one row returned by a subquery used as an expression
+ERROR:  more than one row returned by a subquery used as an expression  (seg2 slice1 10.138.0.30:7004 pid=3108610)
 reset optimizer_segments;
 --SELECT COUNT(DISTINCT(a)) FROM dml_union_r;
 -- @description union_update_test31: Negative Tests  more than one row returned by a sub-query used as an expression
 UPDATE dml_union_r SET b = ( SELECT a FROM dml_union_r EXCEPT ALL SELECT a FROM dml_union_s);
-ERROR:  more than one row returned by a subquery used as an expression
+ERROR:  one or more assertions failed  (seg2 10.138.0.30:7004 pid=2878859)
+DETAIL:  Expected no more than one row to be returned by expression
 --
 -- Test mixing a set-returning function, which can be evaluated anywhere,
 -- (it has General locus) and a diststributed table, in an Append.

@@ -3971,6 +3971,7 @@ SELECT SUM(a) FROM dml_heap_r;
  5106
 (1 row)
 
+ANALYZE dml_heap_s, dml_heap_r;
 UPDATE dml_heap_r SET a = ( SELECT DISTINCT(b) FROM dml_heap_s ) FROM dml_heap_s WHERE dml_heap_r.b = dml_heap_s.a;
 ERROR:  more than one row returned by a subquery used as an expression
 SELECT SUM(a) FROM dml_heap_r;

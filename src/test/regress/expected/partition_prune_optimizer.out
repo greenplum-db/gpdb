@@ -3216,39 +3216,51 @@ create table boolp_f partition of boolp for values in('f');
 NOTICE:  table has parent, setting distribution columns to match parent table
 explain (analyze, costs off, summary off, timing off)
 select * from boolp where a = (select value from boolvalues where value);
-                                QUERY PLAN                                
---------------------------------------------------------------------------
+                                           QUERY PLAN                                           
+------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3) (actual rows=0 loops=1)
-   InitPlan 1 (returns $0)  (slice2)
-     ->  Gather Motion 3:1  (slice3; segments: 3) (actual rows=1 loops=1)
-           ->  Seq Scan on boolvalues (actual rows=1 loops=1)
-                 Filter: value
-                 Rows Removed by Filter: 1
-   ->  Append (never executed)
-         ->  Seq Scan on boolp_f (never executed)
-               Filter: (a = $0)
-         ->  Seq Scan on boolp_t (never executed)
-               Filter: (a = $0)
- Optimizer: Postgres query optimizer
-(12 rows)
+   ->  Hash Join (never executed)
+         Hash Cond: (boolvalues.value = boolp.a)
+         ->  Redistribute Motion 1:3  (slice2) (never executed)
+               ->  Assert (actual rows=1 loops=1)
+                     Assert Cond: ((row_number() OVER (?)) = 1)
+                     ->  WindowAgg (actual rows=1 loops=1)
+                           ->  Gather Motion 3:1  (slice3; segments: 3) (actual rows=1 loops=1)
+                                 ->  Seq Scan on boolvalues (actual rows=1 loops=1)
+                                       Filter: value
+                                       Rows Removed by Filter: 1
+         ->  Hash (never executed)
+               Buckets: 262144  Batches: 1  Memory Usage: 2048kB
+               ->  Broadcast Motion 3:3  (slice4; segments: 3) (never executed)
+                     ->  Dynamic Seq Scan on boolp (never executed)
+                           Number of partitions to scan: 2 
+                           Partitions scanned:  Avg 2.0 x 3 workers.  Max 2 parts (seg0).
+ Optimizer: Pivotal Optimizer (GPORCA)
+(18 rows)
 
 explain (analyze, costs off, summary off, timing off)
 select * from boolp where a = (select value from boolvalues where not value);
-                                QUERY PLAN                                
---------------------------------------------------------------------------
+                                           QUERY PLAN                                           
+------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3) (actual rows=0 loops=1)
-   InitPlan 1 (returns $0)  (slice2)
-     ->  Gather Motion 3:1  (slice3; segments: 3) (actual rows=1 loops=1)
-           ->  Seq Scan on boolvalues (actual rows=1 loops=1)
-                 Filter: (NOT value)
-                 Rows Removed by Filter: 1
-   ->  Append (never executed)
-         ->  Seq Scan on boolp_f (never executed)
-               Filter: (a = $0)
-         ->  Seq Scan on boolp_t (never executed)
-               Filter: (a = $0)
- Optimizer: Postgres query optimizer
-(12 rows)
+   ->  Hash Join (never executed)
+         Hash Cond: (boolvalues.value = boolp.a)
+         ->  Redistribute Motion 1:3  (slice2) (never executed)
+               ->  Assert (actual rows=1 loops=1)
+                     Assert Cond: ((row_number() OVER (?)) = 1)
+                     ->  WindowAgg (actual rows=1 loops=1)
+                           ->  Gather Motion 3:1  (slice3; segments: 3) (actual rows=1 loops=1)
+                                 ->  Seq Scan on boolvalues (actual rows=1 loops=1)
+                                       Filter: (NOT value)
+                                       Rows Removed by Filter: 1
+         ->  Hash (never executed)
+               Buckets: 262144  Batches: 1  Memory Usage: 2048kB
+               ->  Broadcast Motion 3:3  (slice4; segments: 3) (never executed)
+                     ->  Dynamic Seq Scan on boolp (never executed)
+                           Number of partitions to scan: 2 
+                           Partitions scanned:  Avg 2.0 x 3 workers.  Max 2 parts (seg0).
+ Optimizer: Pivotal Optimizer (GPORCA)
+(18 rows)
 
 drop table boolp;
 --

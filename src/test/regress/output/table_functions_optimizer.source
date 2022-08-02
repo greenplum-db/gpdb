@@ -311,7 +311,8 @@ ERROR:  subquery must return only one column
 LINE 1: SELECT scalar_1((select 1, 2));
                         ^
 SELECT scalar_1((select 1 union select 2));  -- subquery returns multiple rows
-ERROR:  more than one row returned by a subquery used as an expression
+ERROR:  one or more assertions failed
+DETAIL:  Expected no more than one row to be returned by expression
 SELECT scalar_1(TABLE(select 1));  -- TableValue expression does not match type
 ERROR:  function scalar_1(anytable) does not exist
 LINE 1: SELECT scalar_1(TABLE(select 1));

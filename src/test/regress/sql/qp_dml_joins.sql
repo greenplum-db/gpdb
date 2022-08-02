@@ -1679,6 +1679,7 @@ rollback;
 
 --Negative test - Update with sub-query returning more than one row
 SELECT SUM(a) FROM dml_heap_r;
+ANALYZE dml_heap_s, dml_heap_r;
 UPDATE dml_heap_r SET a = ( SELECT DISTINCT(b) FROM dml_heap_s ) FROM dml_heap_s WHERE dml_heap_r.b = dml_heap_s.a;
 SELECT SUM(a) FROM dml_heap_r;
 
