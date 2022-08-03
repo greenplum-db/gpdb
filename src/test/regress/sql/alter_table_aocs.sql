@@ -473,6 +473,20 @@ ALTER TABLE aocs_alter_add_col_no_compress ADD COLUMN d int;
 \d+ aocs_alter_add_col_no_compress 
 DROP TABLE aocs_alter_add_col_no_compress;
 
+-- test case: ensure reorganize keep default compresstype, compresslevel and blocksize table options
+CREATE TABLE aocs_alter_add_col_reorganize(a int) WITH (appendonly=true, orientation=column, compresstype=rle_type, compresslevel=4, blocksize=65536);
+ALTER TABLE aocs_alter_add_col_reorganize SET WITH (reorganize=true);
+SET gp_default_storage_options ='appendonly=true, orientation=column, compresstype=zlib, compresslevel=2';
+-- use statement encoding
+ALTER TABLE aocs_alter_add_col_reorganize ADD COLUMN b int ENCODING(compresstype=zlib, compresslevel=3, blocksize=16384);
+-- use table setting
+ALTER TABLE aocs_alter_add_col_reorganize ADD COLUMN c int;
+RESET gp_default_storage_options;
+-- use table setting
+ALTER TABLE aocs_alter_add_col_reorganize ADD COLUMN d int;
+\d+ aocs_alter_add_col_reorganize
+DROP TABLE aocs_alter_add_col_reorganize;
+
 RESET gp_add_column_inherits_table_setting;
 
 --
