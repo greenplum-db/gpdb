@@ -1,0 +1,103 @@
+ALTER DATABASE contrib_regression SET pgcrypto.fips TO on;
+\c contrib_regression
+SHOW pgcrypto.fips;
+ pgcrypto.fips 
+---------------
+ on
+(1 row)
+
+CREATE TABLE fipstest (data text, res text, salt text);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'data' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+INSERT INTO fipstest VALUES ('password', '', '');
+SELECT 'Test digest md5: EXPECTED ERROR FAIL FIPS' as comment;
+                  comment                  
+-------------------------------------------
+ Test digest md5: EXPECTED ERROR FAIL FIPS
+(1 row)
+
+SELECT digest('santa claus', 'md5');
+ERROR:  Cannot use "md5": No such hash algorithm
+SELECT 'Test digest sha256: EXPECTED PASS' as comment;
+              comment              
+-----------------------------------
+ Test digest sha256: EXPECTED PASS
+(1 row)
+
+SELECT digest('santa claus', 'sha256');
+                               digest                               
+--------------------------------------------------------------------
+ \x675b8f61fc27140b5f06fec4613d8b3d9b913a82074d4c790374558c18d2cb7d
+(1 row)
+
+SELECT 'Test hmac md5: EXPECTED ERROR FAIL FIPS' as comment;
+                 comment                 
+-----------------------------------------
+ Test hmac md5: EXPECTED ERROR FAIL FIPS
+(1 row)
+
+SELECT hmac('santa claus', 'aaa', 'md5');
+ERROR:  Cannot use "md5": No such hash algorithm
+SELECT 'Test hmac sha256: EXPECTED PASS' as comment;
+             comment             
+---------------------------------
+ Test hmac sha256: EXPECTED PASS
+(1 row)
+
+SELECT hmac('santa claus', 'aaa', 'sha256');
+                                hmac                                
+--------------------------------------------------------------------
+ \xc88fe8ff0541b1bb25abd971fa7642d256a1c0109f7e56875d593a3daaeacf54
+(1 row)
+
+SELECT 'Test gen_salt : EXPECTED FAIL FIPS' as comment;
+              comment               
+------------------------------------
+ Test gen_salt : EXPECTED FAIL FIPS
+(1 row)
+
+UPDATE fipstest SET salt = gen_salt('md5');
+ERROR:  requested functionality not allowed in FIPS mode (pgcrypto.c:201)
+SELECT 'Test crypt : EXPECTED FAIL FIPS' as comment;
+             comment             
+---------------------------------
+ Test crypt : EXPECTED FAIL FIPS
+(1 row)
+
+UPDATE fipstest SET res = crypt(data, salt);
+ERROR:  requested functionality not allowed in FIPS mode (pgcrypto.c:254)
+SELECT res = crypt(data, res) AS "worked" FROM fipstest;
+ERROR:  requested functionality not allowed in FIPS mode (pgcrypto.c:254)
+SELECT 'Test pgp : EXPECTED PASS' as comment;
+         comment          
+--------------------------
+ Test pgp : EXPECTED PASS
+(1 row)
+
+select pgp_sym_decrypt(pgp_sym_encrypt('santa clause', 'mypass', 'cipher-algo=aes256'), 'mypass');
+ERROR:  requested functionality not allowed in FIPS mode (openssl.c:1055)
+SELECT 'Test pgp : EXPECTED FAIL FIPS' as comment;
+            comment            
+-------------------------------
+ Test pgp : EXPECTED FAIL FIPS
+(1 row)
+
+select pgp_sym_decrypt(pgp_sym_encrypt('santa clause', 'mypass', 'cipher-algo=bf'), 'mypass');
+ERROR:  Unsupported cipher algorithm
+SELECT 'Test raw encrypt : EXPECTED PASS' as comment;
+             comment              
+----------------------------------
+ Test raw encrypt : EXPECTED PASS
+(1 row)
+
+SELECT encrypt('santa claus', 'mypass', 'aes') as raw_aes;
+ERROR:  requested functionality not allowed in FIPS mode (openssl.c:1055)
+SELECT 'Test raw encrypt : EXPECTED FAIL FIPS' as comment;
+                comment                
+---------------------------------------
+ Test raw encrypt : EXPECTED FAIL FIPS
+(1 row)
+
+SELECT encrypt('santa claus', 'mypass', 'bf') as raw_blowfish;
+ERROR:  requested functionality not allowed in FIPS mode (openssl.c:1055)
+DROP TABLE fipstest;
