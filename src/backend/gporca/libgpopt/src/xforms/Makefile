@@ -132,8 +132,7 @@ OBJS        = CDecorrelator.o \
               CXformUnnestTVF.o \
               CXformUpdate2DML.o \
               CXformUtils.o \
-              CxformSelect2DynamicBitmapBoolOp.o \
-              CXformInPlaceUpdate2DML.o
+              CxformSelect2DynamicBitmapBoolOp.o
 
 include $(top_srcdir)/src/backend/common.mk
 

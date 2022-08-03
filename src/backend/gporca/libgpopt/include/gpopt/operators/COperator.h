@@ -131,7 +131,6 @@ public:
 		EopLogicalInsert,
 		EopLogicalDelete,
 		EopLogicalUpdate,
-		EopLogicalInPlaceUpdate,
 		EopLogicalDML,
 		EopLogicalSplit,
 		EopLogicalRowTrigger,

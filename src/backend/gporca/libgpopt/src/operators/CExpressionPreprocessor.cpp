@@ -31,7 +31,6 @@
 #include "gpopt/operators/CLogicalConstTableGet.h"
 #include "gpopt/operators/CLogicalDynamicGet.h"
 #include "gpopt/operators/CLogicalGbAgg.h"
-#include "gpopt/operators/CLogicalInPlaceUpdate.h"
 #include "gpopt/operators/CLogicalInnerJoin.h"
 #include "gpopt/operators/CLogicalLimit.h"
 #include "gpopt/operators/CLogicalNAryJoin.h"
@@ -2900,19 +2899,22 @@ CExpressionPreprocessor::PexprTransposeSelectAndProject(CMemoryPool *mp,
 	}
 }
 
-// Preprocessor function to convert Update operator to InPlaceUpdate, if only
-// non-distribution columns are changed by update operation.
+// Preprocessor function to decide if the Update operator to be proceeded with
+// split update or inplace update based on the columns modified by the update
+// operation.
 
-// Example:
+// Split-Update if any of the modified columns is a distribution column or a partition key,
+// InPlace Update if all the modified columns are non-distribution columns and not partition keys.
 
+// Example: Update Modified non-distribution columns.
 // Input:
-// +--CLogicalUpdate ("s"), Delete Columns: ["a" (0), "b" (1)], Insert Columns: ["a" (0), "b" (9)], "ctid" (2), "gp_segment_id" (8)
+// +--CLogicalUpdate ("s", "SplitUpdate"), Delete Columns: ["a" (0), "b" (1)], Insert Columns: ["a" (0), "b" (9)], "ctid" (2), "gp_segment_id" (8)
 //   +--CLogicalProject
 //      |--CLogicalGet
 //      +--CScalarProjectList
 //
 // Output:
-// +--CLogicalInPlaceUpdate ("s"), Delete Columns: ["a" (0), "b" (1)], Insert Columns: ["a" (0), "b" (9)], "ctid" (2), "gp_segment_id" (8)
+// +--CLogicalUpdate ("s", "InPlaceUpdate"), Delete Columns: ["a" (0), "b" (1)], Insert Columns: ["a" (0), "b" (9)], "ctid" (2), "gp_segment_id" (8)
 //	 +--CLogicalProject
 //		|--CLogicalGet
 //		+--CScalarProjectList
@@ -2927,15 +2929,33 @@ CExpressionPreprocessor::ConvertSplitUpdateToInPlaceUpdate(CMemoryPool *mp,
 	if (COperator::EopLogicalUpdate == pop->Eopid())
 	{
 		CLogicalUpdate *popUpdate = CLogicalUpdate::PopConvert(pop);
+		CTableDescriptor *tabdesc = popUpdate->Ptabdesc();
 		CColRefArray *pdrgpcrInsert = popUpdate->PdrgpcrInsert();
 		CColRefArray *pdrgpcrDelete = popUpdate->PdrgpcrDelete();
 		const ULONG num_cols = pdrgpcrInsert->Size();
 		BOOL split_update = false;
+		CColRefArray *ppartColRefs = GPOS_NEW(mp) CColRefArray(mp);
+		const ULongPtrArray *pdrgpulPart = tabdesc->PdrgpulPart();
+		const ULONG ulPartKeys = pdrgpulPart->Size();
+
+		// Uses split update if any of the modified columns are either
+		// distribution or partition keys.
+		// FIXME: Tested on distribution columns. Validate this after DML on
+		//  partitioned tables is implemented in Orca
+		for (ULONG ul = 0; ul < ulPartKeys; ul++)
+		{
+			ULONG *pulPartKey = (*pdrgpulPart)[ul];
+			CColRef *colref = (*pdrgpcrInsert)[*pulPartKey];
+			ppartColRefs->Append(colref);
+		}
+
 		for (ULONG ul = 0; ul < num_cols; ul++)
 		{
 			CColRef *pcrInsert = (*pdrgpcrInsert)[ul];
 			CColRef *pcrDelete = (*pdrgpcrDelete)[ul];
-			if (pcrInsert != pcrDelete && pcrDelete->IsDistCol())
+			// Checking if column is either distribution or is a partition key.
+			if (pcrInsert != pcrDelete && pcrDelete->IsDistCol() &&
+				(ppartColRefs->Find(pcrInsert) != nullptr))
 			{
 				split_update = true;
 				break;
@@ -2945,16 +2965,16 @@ CExpressionPreprocessor::ConvertSplitUpdateToInPlaceUpdate(CMemoryPool *mp,
 		{
 			CExpression *pexprChild = (*pexpr)[0];
 			pexprChild->AddRef();
-			CTableDescriptor *tabdesc = popUpdate->Ptabdesc();
 			pdrgpcrInsert->AddRef();
 			pdrgpcrDelete->AddRef();
 			tabdesc->AddRef();
-			CExpression *pexprNew = GPOS_NEW(mp) CExpression(
-				mp,
-				GPOS_NEW(mp) CLogicalInPlaceUpdate(
-					mp, tabdesc, pdrgpcrInsert, pdrgpcrDelete,
-					popUpdate->PcrCtid(), popUpdate->PcrSegmentId()),
-				pexprChild);
+			CExpression *pexprNew = GPOS_NEW(mp)
+				CExpression(mp,
+							GPOS_NEW(mp) CLogicalUpdate(
+								mp, tabdesc, pdrgpcrDelete, pdrgpcrInsert,
+								popUpdate->PcrCtid(), popUpdate->PcrSegmentId(),
+								popUpdate->PcrTupleOid(), true),
+							pexprChild);
 			return pexprNew;
 		}
 	}
@@ -3157,19 +3177,19 @@ CExpressionPreprocessor::PexprPreprocess(
 		PexprTransposeSelectAndProject(mp, pexprPrunedPartitions);
 	pexprPrunedPartitions->Release();
 
-	// (29) normalize expression again
-	CExpression *pexprNormalized2 =
-		CNormalizer::PexprNormalize(mp, pexprTransposeSelectAndProject);
+	// (29) convert split update to inplace update
+	CExpression *pexprSplitUpdateToInplace =
+		ConvertSplitUpdateToInPlaceUpdate(mp, pexprTransposeSelectAndProject);
 	GPOS_CHECK_ABORT;
 	pexprTransposeSelectAndProject->Release();
 
-	// (30) convert split update to inplace update
-	CExpression *pexprSplitUpdateToInplace =
-		ConvertSplitUpdateToInPlaceUpdate(mp, pexprNormalized2);
+	// (30) normalize expression again
+	CExpression *pexprNormalized2 =
+		CNormalizer::PexprNormalize(mp, pexprSplitUpdateToInplace);
 	GPOS_CHECK_ABORT;
-	pexprNormalized2->Release();
+	pexprSplitUpdateToInplace->Release();
 
-	return pexprSplitUpdateToInplace;
+	return pexprNormalized2;
 }
 
 // EOF

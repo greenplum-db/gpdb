@@ -72,7 +72,6 @@
 #include "gpopt/xforms/CXformImplementTVF.h"
 #include "gpopt/xforms/CXformImplementTVFNoArgs.h"
 #include "gpopt/xforms/CXformImplementUnionAll.h"
-#include "gpopt/xforms/CXformInPlaceUpdate2DML.h"
 #include "gpopt/xforms/CXformIndexGet2IndexOnlyScan.h"
 #include "gpopt/xforms/CXformIndexGet2IndexScan.h"
 #include "gpopt/xforms/CXformInlineCTEConsumer.h"

@@ -1824,11 +1824,12 @@ CTestUtils::PexprLogicalUpdate(CMemoryPool *mp)
 
 	ptabdesc->AddRef();
 
-	return GPOS_NEW(mp) CExpression(
-		mp,
-		GPOS_NEW(mp) CLogicalUpdate(mp, ptabdesc, pdrgpcrDelete, pdrgpcrInsert,
-									colref, colref, nullptr /*pcrTupleOid*/),
-		pexprGet);
+	return GPOS_NEW(mp)
+		CExpression(mp,
+					GPOS_NEW(mp) CLogicalUpdate(mp, ptabdesc, pdrgpcrDelete,
+												pdrgpcrInsert, colref, colref,
+												nullptr /*pcrTupleOid*/, false),
+					pexprGet);
 }
 
 //---------------------------------------------------------------------------

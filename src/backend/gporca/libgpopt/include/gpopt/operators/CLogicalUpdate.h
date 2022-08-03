@@ -49,6 +49,9 @@ private:
 	// tuple oid column
 	CColRef *m_pcrTupleOid;
 
+	// InPlace Update
+	BOOL m_fInPlace;
+
 public:
 	CLogicalUpdate(const CLogicalUpdate &) = delete;
 
@@ -59,7 +62,7 @@ public:
 	CLogicalUpdate(CMemoryPool *mp, CTableDescriptor *ptabdesc,
 				   CColRefArray *pdrgpcrDelete, CColRefArray *pdrgpcrInsert,
 				   CColRef *pcrCtid, CColRef *pcrSegmentId,
-				   CColRef *pcrTupleOid);
+				   CColRef *pcrTupleOid, BOOL fInPlace);
 
 	// dtor
 	~CLogicalUpdate() override;
@@ -118,6 +121,12 @@ public:
 	Ptabdesc() const
 	{
 		return m_ptabdesc;
+	}
+
+	BOOL
+	FInPlace()
+	{
+		return m_fInPlace;
 	}
 
 	// operator specific hash function

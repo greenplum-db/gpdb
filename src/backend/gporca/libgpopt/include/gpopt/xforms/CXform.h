@@ -223,7 +223,6 @@ public:
 		ExfLeftJoin2RightJoin,
 		ExfRightOuterJoin2HashJoin,
 		ExfImplementInnerJoin,
-		ExfInPlaceUpdate2DML,
 		ExfInvalid,
 		ExfSentinel = ExfInvalid
 	};
