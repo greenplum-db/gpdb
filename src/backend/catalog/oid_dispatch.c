@@ -193,7 +193,7 @@ ClearOidAssignmentsOnCommit(void)
 	preserve_oids_on_commit = false;
 }
 
-extern void
+void
 RestoreOidAssignments(List *oid_assignments)
 {
 	dispatch_oids = oid_assignments;
