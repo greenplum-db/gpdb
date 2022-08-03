@@ -906,11 +906,13 @@ ldelete:;
 			case HeapTupleUpdated:
 
 				/*
-				 * AO/CS relations don't support the chain of tuple versions as
-				 * it's done for heap relations therefore the scenario when
-				 * transaction seeks live newer version to update/delete is not
-				 * possible. FIXME: If it occurs then most likely we work with
-				 * wrong partition. How it's possible is described in
+				 * AO/AOCS relations don't support the chain of tuple versions
+				 * as it's done for heap relations and update/delete on these
+				 * types of relation is protected by Exclusive lock therefore
+				 * the scenario when transaction have to seek a live newer
+				 * version to update/delete is not possible.
+				 * FIXME: If it occurs then most likely we work with wrong
+				 * partition. How it's possible is described in
 				 * https://github.com/greenplum-db/gpdb/pull/13860
 				 */
 				if (isAORowsTable || isAOColsTable)
@@ -920,6 +922,9 @@ ldelete:;
 									isUpdate ? "updated": "deleted"),
 							 errdetail("for AO/AOCS table this scenario is impossible"),
 							 errhint("perhaps, modification is occuring on wrong partition")));
+
+				Assert(isHeapTable);
+
 				if (IsolationUsesXactSnapshot())
 					ereport(ERROR,
 							(errcode(ERRCODE_T_R_SERIALIZATION_FAILURE),
@@ -952,7 +957,7 @@ ldelete:;
 				 * Check whether we have the newer version for target row after
 				 * concurrent update in heap table
 				 */
-				if (isHeapTable && !ItemPointerEquals(tupleid, &hufd.ctid))
+				if (!ItemPointerEquals(tupleid, &hufd.ctid))
 				{
 					TupleTableSlot *epqslot;
 
@@ -965,7 +970,7 @@ ldelete:;
 						ereport(ERROR,
 								(errcode(ERRCODE_T_R_SERIALIZATION_FAILURE),
 								 errmsg("could not serialize access due to concurrent update"),
-								 errhint("fallback to postgres optimizer")));
+								 errhint("Use PostgreSQL Planner instead of Optimizer for this query via optimizer=off GUC setting")));
 
 					epqslot = EvalPlanQual(estate,
 										   epqstate,
