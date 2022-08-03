@@ -1609,6 +1609,99 @@ CExpressionPreprocessor::PexprFromConstraintsScalar(
 
 	if (!CUtils::FHasSubquery(pexpr))
 	{
+		CExpressionArray *childrenArray = GPOS_NEW(mp) CExpressionArray(mp);
+		if (COperator::EopScalarBoolOp == pexpr->Pop()->Eopid())
+		{
+			const ULONG childrenCount = pexpr->Arity();
+			for (ULONG ul = 0; ul < childrenCount; ul++)
+			{
+				CExpression *pexprChildOfBool = (*pexpr)[ul];
+				CColRefSet *columnsToCheck = GPOS_NEW(mp) CColRefSet(mp);
+				columnsToCheck->Include(pexprChildOfBool->DeriveUsedColumns());
+				CColRefSetIter iterator(*columnsToCheck);
+				BOOL canBeRemoved = false;
+				while (iterator.Advance())
+				{
+					CColRef *columnRef = iterator.Pcr();
+					CExpression *pexprScalar =
+						constraintsForOuterRefs->PexprScalarMappedFromEquivCols(
+							mp, columnRef, constraintsForOuterRefs);
+					if (nullptr != pexprScalar &&
+						COperator::EopScalarCmp == pexprScalar->Pop()->Eopid())
+					{
+						canBeRemoved = true;
+					}
+				}
+				if (!canBeRemoved)
+				{
+					pexprChildOfBool->AddRef();
+					childrenArray->Append(pexprChildOfBool);
+				}
+				columnsToCheck->Release();
+			}
+			if (0 == childrenArray->Size())
+			{
+				CExpression *pexprConstTrue =
+					CUtils::PexprScalarConstBool(mp, true /*value*/);
+				pexprConstTrue->AddRef();
+				return pexprConstTrue;
+			}
+
+			else if (1 == childrenArray->Size())
+			{
+				CExpression *pexprNew = (*childrenArray)[0];
+				pexprNew->AddRef();
+				return pexprNew;
+			}
+			else
+			{
+				COperator *pop = pexpr->Pop();
+				pop->AddRef();
+				return GPOS_NEW(mp) CExpression(mp, pop, childrenArray);
+			}
+		}
+
+
+		else if (COperator::EopScalarCmp == pexpr->Pop()->Eopid())
+		{
+			CColRefSet *columnsToCheck = GPOS_NEW(mp) CColRefSet(mp);
+			columnsToCheck->Include(pexpr->DeriveUsedColumns());
+			CColRefSetIter iterator(*columnsToCheck);
+			BOOL canBeRemoved = false;
+			while (iterator.Advance())
+			{
+				CColRef *columnRef = iterator.Pcr();
+				CExpression *pexprScalar =
+					constraintsForOuterRefs->PexprScalarMappedFromEquivCols(
+						mp, columnRef, constraintsForOuterRefs);
+				if (nullptr != pexprScalar &&
+					COperator::EopScalarCmp == pexprScalar->Pop()->Eopid())
+				{
+					canBeRemoved = true;
+				}
+			}
+			if (!canBeRemoved)
+			{
+				pexpr->AddRef();
+				childrenArray->Append(pexpr);
+			}
+			columnsToCheck->Release();
+
+			if (0 == childrenArray->Size())
+			{
+				CExpression *pexprConstTrue =
+					CUtils::PexprScalarConstBool(mp, true /*value*/);
+				pexprConstTrue->AddRef();
+				return pexprConstTrue;
+			}
+			else
+			{
+				CExpression *pexprNew = (*childrenArray)[0];
+				pexprNew->AddRef();
+				return pexprNew;
+			}
+		}
+
 		pexpr->AddRef();
 		return pexpr;
 	}
@@ -1795,6 +1888,38 @@ CExpressionPreprocessor::PexprFromConstraints(
 	CColRefSet *pcrsNotNull = pexpr->DeriveNotNullColumns();
 
 	CExpressionArray *pdrgpexprChildren = GPOS_NEW(mp) CExpressionArray(mp);
+
+//	Input:
+// +--CLogicalNAryJoin
+// |--CLogicalGet "foo" ("foo"), Columns: ["a" (0), "b" (1), "ctid" (2), "xmin" (3), "cmin" (4), "xmax" (5), "cmax" (6), "tableoid" (7), "gp_segment_id" (8)] Key sets: {[2,8]}
+// |--CLogicalSelect
+// |  |--CLogicalGet "bar" ("bar"), Columns: ["c" (9), "d" (10), "ctid" (11), "xmin" (12), "cmin" (13), "xmax" (14), "cmax" (15), "tableoid" (16), "gp_segment_id" (17)] Key sets: {[2,8]}
+// |  +--CScalarCmp (=)
+// |     |--CScalarIdent "d" (10)
+// |     +--CScalarConst (1098678817.000)
+// +--CScalarBoolOp (EboolopAnd)
+//   |--CScalarCmp (=)
+//   |  |--CScalarIdent "a" (0)
+//   |  +--CScalarIdent "c" (9)
+//   +--CScalarCmp (=)
+//	  |--CScalarIdent "b" (1)
+//	  +--CScalarIdent "d" (10)
+//
+// Output:
+// +--CLogicalNAryJoin
+// |--CLogicalSelect
+// |  |--CLogicalGet "foo" ("foo"), Columns: ["a" (0), "b" (1), "ctid" (2), "xmin" (3), "cmin" (4), "xmax" (5), "cmax" (6), "tableoid" (7), "gp_segment_id" (8)] Key sets: {[2,8]}
+// |  +--CScalarCmp (=)
+// |     |--CScalarIdent "b" (1)
+// |     +--CScalarConst (1098678817.000)
+// |--CLogicalSelect
+// |  |--CLogicalGet "bar" ("bar"), Columns: ["c" (9), "d" (10), "ctid" (11), "xmin" (12), "cmin" (13), "xmax" (14), "cmax" (15), "tableoid" (16), "gp_segment_id" (17)] Key sets: {[2,8]}
+// |  +--CScalarCmp (=)
+// |     |--CScalarIdent "d" (10)
+// |     +--CScalarConst (1098678817.000)
+// +--CScalarCmp (=)
+//    |--CScalarIdent "a" (0)
+//    +--CScalarIdent "c" (9)
 
 	for (ULONG ul = 0; ul < ulChildren; ul++)
 	{
