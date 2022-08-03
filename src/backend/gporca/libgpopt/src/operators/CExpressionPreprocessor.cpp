@@ -1609,6 +1609,39 @@ CExpressionPreprocessor::PexprFromConstraintsScalar(
 
 	if (!CUtils::FHasSubquery(pexpr))
 	{
+
+		//	Input:
+		// +--CLogicalNAryJoin
+		// |--CLogicalGet "foo" ("foo"), Columns: ["a" (0), "b" (1), "ctid" (2), "xmin" (3), "cmin" (4), "xmax" (5), "cmax" (6), "tableoid" (7), "gp_segment_id" (8)] Key sets: {[2,8]}
+		// |--CLogicalSelect
+		// |  |--CLogicalGet "bar" ("bar"), Columns: ["c" (9), "d" (10), "ctid" (11), "xmin" (12), "cmin" (13), "xmax" (14), "cmax" (15), "tableoid" (16), "gp_segment_id" (17)] Key sets: {[2,8]}
+		// |  +--CScalarCmp (=)
+		// |     |--CScalarIdent "d" (10)
+		// |     +--CScalarConst (1098678817.000)
+		// +--CScalarBoolOp (EboolopAnd)
+		//   |--CScalarCmp (=)
+		//   |  |--CScalarIdent "a" (0)
+		//   |  +--CScalarIdent "c" (9)
+		//   +--CScalarCmp (=)
+		//	  |--CScalarIdent "b" (1)
+		//	  +--CScalarIdent "d" (10)
+		//
+		// Output:
+		// +--CLogicalNAryJoin
+		// |--CLogicalSelect
+		// |  |--CLogicalGet "foo" ("foo"), Columns: ["a" (0), "b" (1), "ctid" (2), "xmin" (3), "cmin" (4), "xmax" (5), "cmax" (6), "tableoid" (7), "gp_segment_id" (8)] Key sets: {[2,8]}
+		// |  +--CScalarCmp (=)
+		// |     |--CScalarIdent "b" (1)
+		// |     +--CScalarConst (1098678817.000)
+		// |--CLogicalSelect
+		// |  |--CLogicalGet "bar" ("bar"), Columns: ["c" (9), "d" (10), "ctid" (11), "xmin" (12), "cmin" (13), "xmax" (14), "cmax" (15), "tableoid" (16), "gp_segment_id" (17)] Key sets: {[2,8]}
+		// |  +--CScalarCmp (=)
+		// |     |--CScalarIdent "d" (10)
+		// |     +--CScalarConst (1098678817.000)
+		// +--CScalarCmp (=)
+		//    |--CScalarIdent "a" (0)
+		//    +--CScalarIdent "c" (9)
+		
 		CExpressionArray *childrenArray = GPOS_NEW(mp) CExpressionArray(mp);
 		if (COperator::EopScalarBoolOp == pexpr->Pop()->Eopid())
 		{
@@ -1889,37 +1922,6 @@ CExpressionPreprocessor::PexprFromConstraints(
 
 	CExpressionArray *pdrgpexprChildren = GPOS_NEW(mp) CExpressionArray(mp);
 
-//	Input:
-// +--CLogicalNAryJoin
-// |--CLogicalGet "foo" ("foo"), Columns: ["a" (0), "b" (1), "ctid" (2), "xmin" (3), "cmin" (4), "xmax" (5), "cmax" (6), "tableoid" (7), "gp_segment_id" (8)] Key sets: {[2,8]}
-// |--CLogicalSelect
-// |  |--CLogicalGet "bar" ("bar"), Columns: ["c" (9), "d" (10), "ctid" (11), "xmin" (12), "cmin" (13), "xmax" (14), "cmax" (15), "tableoid" (16), "gp_segment_id" (17)] Key sets: {[2,8]}
-// |  +--CScalarCmp (=)
-// |     |--CScalarIdent "d" (10)
-// |     +--CScalarConst (1098678817.000)
-// +--CScalarBoolOp (EboolopAnd)
-//   |--CScalarCmp (=)
-//   |  |--CScalarIdent "a" (0)
-//   |  +--CScalarIdent "c" (9)
-//   +--CScalarCmp (=)
-//	  |--CScalarIdent "b" (1)
-//	  +--CScalarIdent "d" (10)
-//
-// Output:
-// +--CLogicalNAryJoin
-// |--CLogicalSelect
-// |  |--CLogicalGet "foo" ("foo"), Columns: ["a" (0), "b" (1), "ctid" (2), "xmin" (3), "cmin" (4), "xmax" (5), "cmax" (6), "tableoid" (7), "gp_segment_id" (8)] Key sets: {[2,8]}
-// |  +--CScalarCmp (=)
-// |     |--CScalarIdent "b" (1)
-// |     +--CScalarConst (1098678817.000)
-// |--CLogicalSelect
-// |  |--CLogicalGet "bar" ("bar"), Columns: ["c" (9), "d" (10), "ctid" (11), "xmin" (12), "cmin" (13), "xmax" (14), "cmax" (15), "tableoid" (16), "gp_segment_id" (17)] Key sets: {[2,8]}
-// |  +--CScalarCmp (=)
-// |     |--CScalarIdent "d" (10)
-// |     +--CScalarConst (1098678817.000)
-// +--CScalarCmp (=)
-//    |--CScalarIdent "a" (0)
-//    +--CScalarIdent "c" (9)
 
 	for (ULONG ul = 0; ul < ulChildren; ul++)
 	{
