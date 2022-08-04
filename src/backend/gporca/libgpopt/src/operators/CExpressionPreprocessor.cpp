@@ -1705,7 +1705,7 @@ CExpressionPreprocessor::PexprFromConstraintsScalar(
 				CColRef *columnRef = iterator.Pcr();
 				CExpression *pexprScalar =
 					constraintsForOuterRefs->PexprScalarMappedFromEquivCols(
-						mp, columnRef, constraintsForOuterRefs);
+						mp, columnRef, nullptr);
 				if (nullptr != pexprScalar &&
 					COperator::EopScalarCmp == pexprScalar->Pop()->Eopid())
 				{
