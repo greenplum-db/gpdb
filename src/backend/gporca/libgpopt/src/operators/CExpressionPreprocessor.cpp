@@ -1606,7 +1606,6 @@ CExpressionPreprocessor::PexprFromConstraintsScalar(
 {
 	GPOS_ASSERT(nullptr != pexpr);
 	GPOS_ASSERT(pexpr->Pop()->FScalar());
-
 	if (!CUtils::FHasSubquery(pexpr))
 	{
 
@@ -1641,7 +1640,7 @@ CExpressionPreprocessor::PexprFromConstraintsScalar(
 		// +--CScalarCmp (=)
 		//    |--CScalarIdent "a" (0)
 		//    +--CScalarIdent "c" (9)
-		
+
 		CExpressionArray *childrenArray = GPOS_NEW(mp) CExpressionArray(mp);
 		if (COperator::EopScalarBoolOp == pexpr->Pop()->Eopid())
 		{
@@ -1658,7 +1657,7 @@ CExpressionPreprocessor::PexprFromConstraintsScalar(
 					CColRef *columnRef = iterator.Pcr();
 					CExpression *pexprScalar =
 						constraintsForOuterRefs->PexprScalarMappedFromEquivCols(
-							mp, columnRef, constraintsForOuterRefs);
+							mp, columnRef, nullptr);
 					if (nullptr != pexprScalar &&
 						COperator::EopScalarCmp == pexprScalar->Pop()->Eopid())
 					{
