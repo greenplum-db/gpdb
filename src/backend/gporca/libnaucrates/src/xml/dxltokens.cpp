@@ -139,8 +139,7 @@ CDXLTokens::Init(CMemoryPool *mp)
 		{EdxltokenPhysicalWindow, GPOS_WSZ_LIT("Window")},
 		{EdxltokenPhysicalDMLInsert, GPOS_WSZ_LIT("DMLInsert")},
 		{EdxltokenPhysicalDMLDelete, GPOS_WSZ_LIT("DMLDelete")},
-		{EdxltokenPhysicalDMLSplitUpdate, GPOS_WSZ_LIT("DMLSplitUpdate")},
-		{EdxltokenPhysicalDMLInPlaceUpdate, GPOS_WSZ_LIT("DMLInPlaceUpdate")},
+		{EdxltokenPhysicalDMLUpdate, GPOS_WSZ_LIT("DMLUpdate")},
 		{EdxltokenDirectDispatchInfo, GPOS_WSZ_LIT("DirectDispatchInfo")},
 		{EdxltokenDirectDispatchIsRaw, GPOS_WSZ_LIT("IsRaw")},
 		{EdxltokenDirectDispatchKeyValue, GPOS_WSZ_LIT("KeyValue")},
@@ -418,6 +417,7 @@ CDXLTokens::Init(CMemoryPool *mp)
 		{EdxltokenTupleOidColId, GPOS_WSZ_LIT("TupleOidCol")},
 		{EdxltokenUpdatePreservesOids, GPOS_WSZ_LIT("PreserveOids")},
 		{EdxltokenInputSorted, GPOS_WSZ_LIT("InputSorted")},
+		{EdxltokenSplitUpdate, GPOS_WSZ_LIT("IsSplitUpdate")},
 
 		{EdxltokenInputSegments, GPOS_WSZ_LIT("InputSegments")},
 		{EdxltokenOutputSegments, GPOS_WSZ_LIT("OutputSegments")},

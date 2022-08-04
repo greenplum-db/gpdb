@@ -301,7 +301,7 @@
       </dxl:LogicalUpdate>
     </dxl:Query>
     <dxl:Plan Id="0" SpaceSize="12">
-      <dxl:DMLInPlaceUpdate Columns="0,1" ActionCol="18" OidCol="19" CtidCol="2" SegmentIdCol="8" InputSorted="false">
+      <dxl:DMLUpdate Columns="0,1" ActionCol="18" OidCol="19" CtidCol="2" SegmentIdCol="8" InputSorted="false" IsSplitUpdate="false" PreserveOids="false">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="865.922915" Rows="100.000000" Width="1"/>
         </dxl:Properties>
@@ -438,7 +438,7 @@
             </dxl:TableScan>
           </dxl:HashJoin>
         </dxl:Result>
-      </dxl:DMLInPlaceUpdate>
+      </dxl:DMLUpdate>
     </dxl:Plan>
   </dxl:Thread>
 </dxl:DXLMessage>

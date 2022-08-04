@@ -1408,10 +1408,10 @@ CXformUtils::PexprLogicalDMLOverProject(CMemoryPool *mp,
 
 	CExpression *pexprDML = GPOS_NEW(mp) CExpression(
 		mp,
-		GPOS_NEW(mp)
-			CLogicalDML(mp, edmlop, ptabdesc, colref_array,
-						GPOS_NEW(mp) CBitSet(mp) /*pbsModified*/, pcrAction,
-						pcrOid, pcrCtid, pcrSegmentId, nullptr /*pcrTupleOid*/),
+		GPOS_NEW(mp) CLogicalDML(mp, edmlop, ptabdesc, colref_array,
+								 GPOS_NEW(mp) CBitSet(mp) /*pbsModified*/,
+								 pcrAction, pcrOid, pcrCtid, pcrSegmentId,
+								 nullptr /*pcrTupleOid*/, true),
 		pexprProject);
 
 	CExpression *pexprOutput = pexprDML;
@@ -1474,11 +1474,9 @@ BOOL
 CXformUtils::FTriggerApplies(CLogicalDML::EDMLOperator edmlop,
 							 const IMDTrigger *pmdtrigger)
 {
-	return (
-		(CLogicalDML::EdmlInsert == edmlop && pmdtrigger->IsInsert()) ||
-		(CLogicalDML::EdmlDelete == edmlop && pmdtrigger->IsDelete()) ||
-		(CLogicalDML::EdmlSplitUpdate == edmlop && pmdtrigger->IsUpdate()) ||
-		(CLogicalDML::EdmlInPlaceUpdate == edmlop && pmdtrigger->IsUpdate()));
+	return ((CLogicalDML::EdmlInsert == edmlop && pmdtrigger->IsInsert()) ||
+			(CLogicalDML::EdmlDelete == edmlop && pmdtrigger->IsDelete()) ||
+			(CLogicalDML::EdmlUpdate == edmlop && pmdtrigger->IsUpdate()));
 }
 
 //---------------------------------------------------------------------------
@@ -1609,8 +1607,7 @@ CXformUtils::PexprRowTrigger(CMemoryPool *mp, CExpression *pexprChild,
 		case CLogicalDML::EdmlDelete:
 			type |= GPMD_TRIGGER_DELETE;
 			break;
-		case CLogicalDML::EdmlInPlaceUpdate:
-		case CLogicalDML::EdmlSplitUpdate:
+		case CLogicalDML::EdmlUpdate:
 			type |= GPMD_TRIGGER_UPDATE;
 			break;
 		default:

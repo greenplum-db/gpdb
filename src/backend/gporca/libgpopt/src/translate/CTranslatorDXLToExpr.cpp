@@ -1499,7 +1499,7 @@ CTranslatorDXLToExpr::PexprLogicalUpdate(const CDXLNode *dxlnode)
 		m_mp,
 		GPOS_NEW(m_mp)
 			CLogicalUpdate(m_mp, ptabdesc, pdrgpcrDelete, pdrgpcrInsert,
-						   pcrCtid, pcrSegmentId, pcrTupleOid, false),
+						   pcrCtid, pcrSegmentId, pcrTupleOid, true),
 		pexprChild);
 }
 

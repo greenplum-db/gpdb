@@ -36,7 +36,7 @@ CLogicalUpdate::CLogicalUpdate(CMemoryPool *mp)
 	  m_pcrCtid(nullptr),
 	  m_pcrSegmentId(nullptr),
 	  m_pcrTupleOid(nullptr),
-	  m_fInPlace(false)
+	  m_fSplit(true)
 {
 	m_fPattern = true;
 }
@@ -53,7 +53,7 @@ CLogicalUpdate::CLogicalUpdate(CMemoryPool *mp, CTableDescriptor *ptabdesc,
 							   CColRefArray *pdrgpcrDelete,
 							   CColRefArray *pdrgpcrInsert, CColRef *pcrCtid,
 							   CColRef *pcrSegmentId, CColRef *pcrTupleOid,
-							   BOOL fInPlace)
+							   BOOL fSplit)
 	: CLogical(mp),
 	  m_ptabdesc(ptabdesc),
 	  m_pdrgpcrDelete(pdrgpcrDelete),
@@ -61,7 +61,7 @@ CLogicalUpdate::CLogicalUpdate(CMemoryPool *mp, CTableDescriptor *ptabdesc,
 	  m_pcrCtid(pcrCtid),
 	  m_pcrSegmentId(pcrSegmentId),
 	  m_pcrTupleOid(pcrTupleOid),
-	  m_fInPlace(fInPlace)
+	  m_fSplit(fSplit)
 
 {
 	GPOS_ASSERT(nullptr != ptabdesc);
@@ -121,7 +121,7 @@ CLogicalUpdate::Matches(COperator *pop) const
 		   m_ptabdesc->MDId()->Equals(popUpdate->Ptabdesc()->MDId()) &&
 		   m_pdrgpcrDelete->Equals(popUpdate->PdrgpcrDelete()) &&
 		   m_pdrgpcrInsert->Equals(popUpdate->PdrgpcrInsert()) &&
-		   m_fInPlace == popUpdate->FInPlace();
+		   m_fSplit == popUpdate->FSplit();
 }
 
 //---------------------------------------------------------------------------
@@ -178,7 +178,7 @@ CLogicalUpdate::PopCopyWithRemappedColumns(CMemoryPool *mp,
 	}
 	return GPOS_NEW(mp)
 		CLogicalUpdate(mp, m_ptabdesc, pdrgpcrDelete, pdrgpcrInsert, pcrCtid,
-					   pcrSegmentId, pcrTupleOid, m_fInPlace);
+					   pcrSegmentId, pcrTupleOid, m_fSplit);
 }
 
 //---------------------------------------------------------------------------
@@ -288,7 +288,7 @@ CLogicalUpdate::OsPrint(IOstream &os) const
 
 	os << SzId() << " (";
 	m_ptabdesc->Name().OsPrint(os);
-	if (m_fInPlace)
+	if (m_fSplit)
 	{
 		os << ", InPlaceUpdate";
 	}

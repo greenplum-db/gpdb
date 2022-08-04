@@ -239,7 +239,7 @@
       </dxl:LogicalUpdate>
     </dxl:Query>
     <dxl:Plan Id="0" SpaceSize="5">
-      <dxl:DMLInPlaceUpdate Columns="0,9" ActionCol="10" OidCol="11" CtidCol="2" SegmentIdCol="8" InputSorted="false">
+      <dxl:DMLUpdate Columns="0,9" ActionCol="10" OidCol="11" CtidCol="2" SegmentIdCol="8" InputSorted="false" IsSplitUpdate="false" PreserveOids="false">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="434.908815" Rows="100.000000" Width="1"/>
         </dxl:Properties>
@@ -327,7 +327,7 @@
             </dxl:TableDescriptor>
           </dxl:TableScan>
         </dxl:Result>
-      </dxl:DMLInPlaceUpdate>
+      </dxl:DMLUpdate>
     </dxl:Plan>
   </dxl:Thread>
 </dxl:DXLMessage>

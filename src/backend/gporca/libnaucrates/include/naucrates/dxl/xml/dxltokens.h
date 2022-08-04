@@ -367,6 +367,7 @@ enum Edxltoken
 	EdxltokenTupleOidColId,
 	EdxltokenUpdatePreservesOids,
 	EdxltokenInputSorted,
+	EdxltokenSplitUpdate,
 
 	EdxltokenInputSegments,
 	EdxltokenOutputSegments,
@@ -663,8 +664,7 @@ enum Edxltoken
 	EdxltokenPhysicalCTAS,
 	EdxltokenPhysicalDMLInsert,
 	EdxltokenPhysicalDMLDelete,
-	EdxltokenPhysicalDMLSplitUpdate,
-	EdxltokenPhysicalDMLInPlaceUpdate,
+	EdxltokenPhysicalDMLUpdate,
 	EdxltokenDirectDispatchInfo,
 	EdxltokenDirectDispatchIsRaw,
 	EdxltokenDirectDispatchKeyValue,

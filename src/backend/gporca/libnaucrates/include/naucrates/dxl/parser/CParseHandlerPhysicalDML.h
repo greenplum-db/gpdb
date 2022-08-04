@@ -62,6 +62,9 @@ private:
 	// needs data to be sorted
 	BOOL m_input_sort_req;
 
+	// Split Update
+	BOOL m_fSplit;
+
 	// process the start of an element
 	void StartElement(
 		const XMLCh *const element_uri,			// URI of element's namespace

@@ -87,25 +87,22 @@ CXformUpdate2DML::Transform(CXformContext *pxfctxt, CXformResult *pxfres,
 	CColRef *pcrCtid = popUpdate->PcrCtid();
 	CColRef *pcrSegmentId = popUpdate->PcrSegmentId();
 	CColRef *pcrTupleOid = popUpdate->PcrTupleOid();
-	BOOL fInPlace = popUpdate->FInPlace();
+	BOOL fSplit = popUpdate->FSplit();
 
 	// child of update operator
 	CExpression *pexprChild = (*pexpr)[0];
 	pexprChild->AddRef();
 
-	CLogicalDML::EDMLOperator edmlOp = (fInPlace)
-										   ? CLogicalDML::EdmlInPlaceUpdate
-										   : CLogicalDML::EdmlSplitUpdate;
-
 	IMDId *rel_mdid = ptabdesc->MDId();
-	if (CXformUtils::FTriggersExist(edmlOp, ptabdesc, true /*fBefore*/))
+	if (CXformUtils::FTriggersExist(CLogicalDML::EdmlUpdate, ptabdesc,
+									true /*fBefore*/))
 	{
 		rel_mdid->AddRef();
 		pdrgpcrDelete->AddRef();
 		pdrgpcrInsert->AddRef();
-		pexprChild = CXformUtils::PexprRowTrigger(mp, pexprChild, edmlOp,
-												  rel_mdid, true /*fBefore*/,
-												  pdrgpcrDelete, pdrgpcrInsert);
+		pexprChild = CXformUtils::PexprRowTrigger(
+			mp, pexprChild, CLogicalDML::EdmlUpdate, rel_mdid, true /*fBefore*/,
+			pdrgpcrDelete, pdrgpcrInsert);
 	}
 
 	// generate the action column and split operator
@@ -117,7 +114,7 @@ CXformUpdate2DML::Transform(CXformContext *pxfctxt, CXformResult *pxfres,
 	CColRef *pcrAction = col_factory->PcrCreate(pmdtype, default_type_modifier);
 
 	CExpression *pexprSplit = nullptr;
-	if (edmlOp == CLogicalDML::EdmlSplitUpdate)
+	if (fSplit)
 	{
 		pdrgpcrDelete->AddRef();
 		pdrgpcrInsert->AddRef();
@@ -187,7 +184,7 @@ CXformUpdate2DML::Transform(CXformContext *pxfctxt, CXformResult *pxfres,
 	CExpression *pexprDML = nullptr;
 	// create logical DML
 	ptabdesc->AddRef();
-	if (edmlOp == CLogicalDML::EdmlSplitUpdate)
+	if (fSplit)
 	{
 		CBitSet *pbsModified =
 			GPOS_NEW(mp) CBitSet(mp, ptabdesc->ColumnCount());
@@ -207,9 +204,9 @@ CXformUpdate2DML::Transform(CXformContext *pxfctxt, CXformResult *pxfres,
 		pexprDML = GPOS_NEW(mp) CExpression(
 			mp,
 			GPOS_NEW(mp)
-				CLogicalDML(mp, CLogicalDML::EdmlSplitUpdate, ptabdesc,
+				CLogicalDML(mp, CLogicalDML::EdmlUpdate, ptabdesc,
 							pdrgpcrDelete, pbsModified, pcrAction, pcrTableOid,
-							pcrCtid, pcrSegmentId, pcrTupleOid),
+							pcrCtid, pcrSegmentId, pcrTupleOid, fSplit),
 			pexprProject);
 	}
 	else
@@ -217,10 +214,10 @@ CXformUpdate2DML::Transform(CXformContext *pxfctxt, CXformResult *pxfres,
 		pdrgpcrInsert->AddRef();
 		pexprDML = GPOS_NEW(mp) CExpression(
 			mp,
-			GPOS_NEW(mp)
-				CLogicalDML(mp, CLogicalDML::EdmlInPlaceUpdate, ptabdesc,
-							pdrgpcrInsert, GPOS_NEW(mp) CBitSet(mp), pcrAction,
-							pcrTableOid, pcrCtid, pcrSegmentId, nullptr),
+			GPOS_NEW(mp) CLogicalDML(mp, CLogicalDML::EdmlUpdate, ptabdesc,
+									 pdrgpcrInsert, GPOS_NEW(mp) CBitSet(mp),
+									 pcrAction, pcrTableOid, pcrCtid,
+									 pcrSegmentId, nullptr, fSplit),
 			pexprProject);
 	}
 
