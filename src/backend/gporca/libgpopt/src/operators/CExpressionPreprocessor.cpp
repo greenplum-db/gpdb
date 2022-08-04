@@ -2954,8 +2954,8 @@ CExpressionPreprocessor::ConvertSplitUpdateToInPlaceUpdate(CMemoryPool *mp,
 			CColRef *pcrInsert = (*pdrgpcrInsert)[ul];
 			CColRef *pcrDelete = (*pdrgpcrDelete)[ul];
 			// Checking if column is either distribution or is a partition key.
-			if (pcrInsert != pcrDelete && pcrDelete->IsDistCol() &&
-				(ppartColRefs->Find(pcrInsert) != nullptr))
+			if ((pcrInsert != pcrDelete) && (pcrDelete->IsDistCol() ||
+				(ppartColRefs->Find(pcrInsert) != nullptr)))
 			{
 				split_update = true;
 				break;
