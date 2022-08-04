@@ -241,6 +241,26 @@ stream_begin_iterate(StreamNode *self, StreamBMIterator *iterator)
 }
 
 /*
+ * bminitbitmap() -- return an empty bitmap.
+ * */
+void
+bminitbitmap(Node **bmNodeP)
+{
+    IndexStream  *is;
+
+    is = (IndexStream *)palloc0(sizeof(IndexStream));
+    is->type = BMS_INDEX;
+    is->begin_iterate = stream_begin_iterate;
+    is->free = indexstream_free;
+
+    StreamBitmap *sb = makeNode(StreamBitmap);
+    sb->streamNode = is;
+    *bmNodeP = (Node *) sb;
+
+    return;
+}
+
+/*
  * bmgetbitmap() -- return a stream bitmap.
  */
 int64
