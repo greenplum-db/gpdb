@@ -17,14 +17,14 @@ resources:
   type: git
   source:
     branch: 6X_explain_test
-    private_key: ((slack-trigger-git-key))
+    private_key: ((qp/slack-trigger-git-key))
     uri: ((slack-trigger-git-remote))
 
 - name: gp_workloads
   type: git-lfs
   source:
     branch: master
-    private_key: ((gp_workloads_deploy_key))
+    private_key: ((qp/gp_workloads_deploy_key))
     uri: ((gp_workloads-git-remote))
 
 - name: gpdb6-centos7-build
@@ -36,42 +36,42 @@ resources:
   type: gcs
   source:
     bucket: ((gcs-bucket))
-    json_key: ((concourse-gcs-resources-service-account-key))
+    json_key: ((qp/concourse-gcs-resources-service-account-key))
     regexp: gp-internal-artifacts/centos7/libquicklz-(1\.5\.0-.*)-1.el7.x86_64.rpm
 
 - name: libquicklz-devel-centos7
   type: gcs
   source:
     bucket: ((gcs-bucket))
-    json_key: ((concourse-gcs-resources-service-account-key))
+    json_key: ((qp/concourse-gcs-resources-service-account-key))
     regexp: gp-internal-artifacts/centos7/libquicklz-devel-(1\.5\.0-.*)-1.el7.x86_64.rpm
 
 - name: libsigar-centos7
   type: gcs
   source:
     bucket: ((gcs-bucket))
-    json_key: ((concourse-gcs-resources-service-account-key))
+    json_key: ((qp/concourse-gcs-resources-service-account-key))
     regexp: gp-internal-artifacts/centos7/sigar-rhel7_x86_64-(1\.6\.5-.*).targz
 
 - name: python-centos7
   type: gcs
   source:
     bucket: ((gcs-bucket))
-    json_key: ((concourse-gcs-resources-service-account-key))
+    json_key: ((qp/concourse-gcs-resources-service-account-key))
     regexp: gp-internal-artifacts/centos7/python-(2\.7\.12-.*).tar.gz
 
 - name: bin_gpdb_centos7_branch
   type: gcs
   source:
     bucket: ((gcs-bucket-orca))
-    json_key: ((concourse-gcs-resources-orca-service-account-key))
+    json_key: ((qp/concourse-gcs-resources-orca-service-account-key))
     versioned_file: ((pipeline-name))/bin_gpdb_centos7/bin_gpdb.tar.gz
 
 - name: bin_gpdb_centos7_baseline
   type: gcs
   source:
     bucket: ((gcs-bucket-orca))
-    json_key: ((concourse-gcs-resources-orca-service-account-key))
+    json_key: ((qp/concourse-gcs-resources-orca-service-account-key))
     versioned_file: ((pipeline-name))/bin_gpdb_centos7/bin_gpdb_baseline.tar.gz
 
 - name: gpdb_main_src  # used for yml task files
@@ -89,21 +89,21 @@ resources:
   type: gcs
   source:
     bucket: ((gcs-bucket-orca))
-    json_key: ((concourse-gcs-resources-orca-service-account-key))
+    json_key: ((qp/concourse-gcs-resources-orca-service-account-key))
     versioned_file: ((pipeline-name))/explain_intermediate/explain_((workload1))_branch.tar.gz
 
 - name: explain_output_((workload1))_baseline
   type: gcs
   source:
     bucket: ((gcs-bucket-orca))
-    json_key: ((concourse-gcs-resources-orca-service-account-key))
+    json_key: ((qp/concourse-gcs-resources-orca-service-account-key))
     versioned_file: ((pipeline-name))/explain_intermediate/explain_((workload1))_baseline.tar.gz
 
 - name: explain_((workload1))_results
   type: gcs
   source:
     bucket: ((gcs-bucket-orca))
-    json_key: ((concourse-gcs-resources-orca-service-account-key))
+    json_key: ((qp/concourse-gcs-resources-orca-service-account-key))
     versioned_file: ((pipeline-name))/explain_results/explain_((workload1))_results.tar.gz
 
 ## resources for workload2
@@ -111,21 +111,21 @@ resources:
   type: gcs
   source:
     bucket: ((gcs-bucket-orca))
-    json_key: ((concourse-gcs-resources-orca-service-account-key))
+    json_key: ((qp/concourse-gcs-resources-orca-service-account-key))
     versioned_file: ((pipeline-name))/explain_intermediate/explain_((workload2))_branch.tar.gz
 
 - name: explain_output_((workload2))_baseline
   type: gcs
   source:
     bucket: ((gcs-bucket-orca))
-    json_key: ((concourse-gcs-resources-orca-service-account-key))
+    json_key: ((qp/concourse-gcs-resources-orca-service-account-key))
     versioned_file: ((pipeline-name))/explain_intermediate/explain_((workload2))_baseline.tar.gz
 
 - name: explain_((workload2))_results
   type: gcs
   source:
     bucket: ((gcs-bucket-orca))
-    json_key: ((concourse-gcs-resources-orca-service-account-key))
+    json_key: ((qp/concourse-gcs-resources-orca-service-account-key))
     versioned_file: ((pipeline-name))/explain_results/explain_((workload2))_results.tar.gz
 
 ## resources for workload 3
@@ -133,21 +133,21 @@ resources:
   type: gcs
   source:
     bucket: ((gcs-bucket-orca))
-    json_key: ((concourse-gcs-resources-orca-service-account-key))
+    json_key: ((qp/concourse-gcs-resources-orca-service-account-key))
     versioned_file: ((pipeline-name))/explain_intermediate/explain_((workload3))_branch.tar.gz
 
 - name: explain_output_((workload3))_baseline
   type: gcs
   source:
     bucket: ((gcs-bucket-orca))
-    json_key: ((concourse-gcs-resources-orca-service-account-key))
+    json_key: ((qp/concourse-gcs-resources-orca-service-account-key))
     versioned_file: ((pipeline-name))/explain_intermediate/explain_((workload3))_baseline.tar.gz
 
 - name: explain_((workload3))_results
   type: gcs
   source:
     bucket: ((gcs-bucket-orca))
-    json_key: ((concourse-gcs-resources-orca-service-account-key))
+    json_key: ((qp/concourse-gcs-resources-orca-service-account-key))
     versioned_file: ((pipeline-name))/explain_results/explain_((workload3))_results.tar.gz
 
 ## resources for workload 4
@@ -155,21 +155,21 @@ resources:
   type: gcs
   source:
     bucket: ((gcs-bucket-orca))
-    json_key: ((concourse-gcs-resources-orca-service-account-key))
+    json_key: ((qp/concourse-gcs-resources-orca-service-account-key))
     versioned_file: ((pipeline-name))/explain_intermediate/explain_((workload4))_branch.tar.gz
 
 - name: explain_output_((workload4))_baseline
   type: gcs
   source:
     bucket: ((gcs-bucket-orca))
-    json_key: ((concourse-gcs-resources-orca-service-account-key))
+    json_key: ((qp/concourse-gcs-resources-orca-service-account-key))
     versioned_file: ((pipeline-name))/explain_intermediate/explain_((workload4))_baseline.tar.gz
 
 - name: explain_((workload4))_results
   type: gcs
   source:
     bucket: ((gcs-bucket-orca))
-    json_key: ((concourse-gcs-resources-orca-service-account-key))
+    json_key: ((qp/concourse-gcs-resources-orca-service-account-key))
     versioned_file: ((pipeline-name))/explain_results/explain_((workload4))_results.tar.gz
 
 ## resources for workload 5
@@ -177,21 +177,21 @@ resources:
   type: gcs
   source:
     bucket: ((gcs-bucket-orca))
-    json_key: ((concourse-gcs-resources-orca-service-account-key))
+    json_key: ((qp/concourse-gcs-resources-orca-service-account-key))
     versioned_file: ((pipeline-name))/explain_intermediate/explain_((workload5))_branch.tar.gz
 
 - name: explain_output_((workload5))_baseline
   type: gcs
   source:
     bucket: ((gcs-bucket-orca))
-    json_key: ((concourse-gcs-resources-orca-service-account-key))
+    json_key: ((qp/concourse-gcs-resources-orca-service-account-key))
     versioned_file: ((pipeline-name))/explain_intermediate/explain_((workload5))_baseline.tar.gz
 
 - name: explain_((workload5))_results
   type: gcs
   source:
     bucket: ((gcs-bucket-orca))
-    json_key: ((concourse-gcs-resources-orca-service-account-key))
+    json_key: ((qp/concourse-gcs-resources-orca-service-account-key))
     versioned_file: ((pipeline-name))/explain_results/explain_((workload5))_results.tar.gz
 
 ## resources for workload 6
@@ -199,21 +199,21 @@ resources:
   type: gcs
   source:
     bucket: ((gcs-bucket-orca))
-    json_key: ((concourse-gcs-resources-orca-service-account-key))
+    json_key: ((qp/concourse-gcs-resources-orca-service-account-key))
     versioned_file: ((pipeline-name))/explain_intermediate/explain_((workload6))_branch.tar.gz
 
 - name: explain_output_((workload6))_baseline
   type: gcs
   source:
     bucket: ((gcs-bucket-orca))
-    json_key: ((concourse-gcs-resources-orca-service-account-key))
+    json_key: ((qp/concourse-gcs-resources-orca-service-account-key))
     versioned_file: ((pipeline-name))/explain_intermediate/explain_((workload6))_baseline.tar.gz
 
 - name: explain_((workload6))_results
   type: gcs
   source:
     bucket: ((gcs-bucket-orca))
-    json_key: ((concourse-gcs-resources-orca-service-account-key))
+    json_key: ((qp/concourse-gcs-resources-orca-service-account-key))
     versioned_file: ((pipeline-name))/explain_results/explain_((workload6))_results.tar.gz
 
 ## ======================================================================
