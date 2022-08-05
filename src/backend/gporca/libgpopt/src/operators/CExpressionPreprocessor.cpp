@@ -1647,28 +1647,46 @@ CExpressionPreprocessor::PexprFromConstraintsScalar(
 			for (ULONG ul = 0; ul < childrenCount; ul++)
 			{
 				CExpression *pexprChildOfBool = (*pexpr)[ul];
-				CColRefSet *columnsToCheck = GPOS_NEW(mp) CColRefSet(mp);
-				columnsToCheck->Include(pexprChildOfBool->DeriveUsedColumns());
-				CColRefSetIter iterator(*columnsToCheck);
-				BOOL canBeRemoved = false;
-				while (iterator.Advance())
+				if (COperator::EopScalarCmp ==
+						pexprChildOfBool->Pop()->Eopid() &&
+					IMDType::EcmptEq ==
+						CScalarCmp::PopConvert(pexprChildOfBool->Pop())
+							->ParseCmpType())
 				{
-					CColRef *columnRef = iterator.Pcr();
-					CExpression *pexprScalar =
-						constraintsForOuterRefs->PexprScalarMappedFromEquivCols(
-							mp, columnRef, nullptr);
-					if (nullptr != pexprScalar &&
-						COperator::EopScalarCmp == pexprScalar->Pop()->Eopid())
+					CColRefSet *columnsToCheck = GPOS_NEW(mp) CColRefSet(mp);
+					columnsToCheck->Include(
+						pexprChildOfBool->DeriveUsedColumns());
+					CColRefSetIter iterator(*columnsToCheck);
+					BOOL canBeRemoved = false;
+					while (iterator.Advance())
 					{
-						canBeRemoved = true;
+						CColRef *columnRef = iterator.Pcr();
+						CExpression *pexprScalar =
+							constraintsForOuterRefs
+								->PexprScalarMappedFromEquivCols(mp, columnRef,
+																 nullptr);
+						if (nullptr != pexprScalar &&
+							COperator::EopScalarCmp ==
+								pexprScalar->Pop()->Eopid() &&
+							IMDType::EcmptEq ==
+								CScalarCmp::PopConvert(pexprScalar->Pop())
+									->ParseCmpType())
+						{
+							canBeRemoved = true;
+						}
 					}
+					if (!canBeRemoved)
+					{
+						pexprChildOfBool->AddRef();
+						childrenArray->Append(pexprChildOfBool);
+					}
+					columnsToCheck->Release();
 				}
-				if (!canBeRemoved)
+				else
 				{
 					pexprChildOfBool->AddRef();
 					childrenArray->Append(pexprChildOfBool);
 				}
-				columnsToCheck->Release();
 			}
 			if (0 == childrenArray->Size())
 			{
