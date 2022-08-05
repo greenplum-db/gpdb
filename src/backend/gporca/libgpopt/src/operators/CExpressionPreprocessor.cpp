@@ -1608,7 +1608,6 @@ CExpressionPreprocessor::PexprFromConstraintsScalar(
 	GPOS_ASSERT(pexpr->Pop()->FScalar());
 	if (!CUtils::FHasSubquery(pexpr))
 	{
-
 		//	Input:
 		// +--CLogicalNAryJoin
 		// |--CLogicalGet "foo" ("foo"), Columns: ["a" (0), "b" (1), "ctid" (2), "xmin" (3), "cmin" (4), "xmax" (5), "cmax" (6), "tableoid" (7), "gp_segment_id" (8)] Key sets: {[2,8]}
