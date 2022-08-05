@@ -682,22 +682,20 @@ SELECT * FROM rw_view2;
 (2 rows)
 
 EXPLAIN (costs off) UPDATE rw_view2 SET a=3 WHERE a=2;
-                                        QUERY PLAN                                         
--------------------------------------------------------------------------------------------
+                                  QUERY PLAN                                   
+-------------------------------------------------------------------------------
  Update on base_tbl
-   ->  Result
-         ->  Split
-               ->  Hash Join
-                     Hash Cond: (base_tbl_1.a = base_tbl_2.a)
-                     ->  Index Scan using base_tbl_pkey on base_tbl base_tbl_1
-                           Index Cond: (a = 2)
-                     ->  Hash
-                           ->  Result
-                                 Filter: ((base_tbl_2.a = 2) AND (base_tbl_2.a < 10))
-                                 ->  Index Scan using base_tbl_pkey on base_tbl base_tbl_2
-                                       Index Cond: (a > 0)
- Optimizer: Pivotal Optimizer (GPORCA) version 3.83.0
-(13 rows)
+   ->  Hash Join
+         Hash Cond: (base_tbl_1.a = base_tbl_2.a)
+         ->  Index Scan using base_tbl_pkey on base_tbl base_tbl_1
+               Index Cond: (a = 2)
+         ->  Hash
+               ->  Result
+                     Filter: ((base_tbl_2.a = 2) AND (base_tbl_2.a < 10))
+                     ->  Index Scan using base_tbl_pkey on base_tbl base_tbl_2
+                           Index Cond: (a > 0)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(11 rows)
 
 EXPLAIN (costs off) DELETE FROM rw_view2 WHERE a=2;
                                   QUERY PLAN                                   
@@ -2289,21 +2287,19 @@ EXPLAIN (costs off) INSERT INTO rw_view1 VALUES (2, 'New row 2');
  Optimizer: Pivotal Optimizer (GPORCA) version 3.83.0
  
  Update on base_tbl
-   ->  Result
-         ->  Split
-               ->  Nested Loop Semi Join
-                     Join Filter: true
-                     ->  Index Scan using base_tbl_pkey on base_tbl base_tbl_2
-                           Index Cond: (id = 2)
-                     ->  Materialize
-                           ->  Broadcast Motion 1:3  (slice1; segments: 1)
-                                 ->  Result
-                                       ->  Limit
-                                             ->  Gather Motion 3:1  (slice2; segments: 3)
-                                                   ->  Index Scan using base_tbl_pkey on base_tbl base_tbl_1
-                                                         Index Cond: (id = 2)
- Optimizer: Pivotal Optimizer (GPORCA) version 3.83.0
-(34 rows)
+   ->  Nested Loop Semi Join
+         Join Filter: true
+         ->  Index Scan using base_tbl_pkey on base_tbl base_tbl_2
+               Index Cond: (id = 2)
+         ->  Materialize
+               ->  Broadcast Motion 1:3  (slice1; segments: 1)
+                     ->  Result
+                           ->  Limit
+                                 ->  Gather Motion 3:1  (slice2; segments: 3)
+                                       ->  Index Scan using base_tbl_pkey on base_tbl base_tbl_1
+                                             Index Cond: (id = 2)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(32 rows)
 
 INSERT INTO rw_view1 VALUES (2, 'New row 2');
 SELECT * FROM base_tbl;

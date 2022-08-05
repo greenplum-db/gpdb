@@ -76,7 +76,7 @@ CLogicalDML::CLogicalDML(CMemoryPool *mp, EDMLOperator edmlop,
 	GPOS_ASSERT(nullptr != pdrgpcrSource);
 	GPOS_ASSERT(nullptr != pbsModified);
 	GPOS_ASSERT(nullptr != pcrAction);
-	GPOS_ASSERT_IMP(EdmlDelete == edmlop || EdmlUpdate == m_edmlop,
+	GPOS_ASSERT_IMP(EdmlDelete == edmlop || EdmlUpdate == edmlop,
 					nullptr != pcrCtid && nullptr != pcrSegmentId);
 
 	m_pcrsLocalUsed->Include(m_pdrgpcrSource);
@@ -357,9 +357,9 @@ CLogicalDML::OsPrint(IOstream &os) const
 	}
 
 	os << SzId() << " (";
-	CLogicalDML::PrintOperatorType(os, m_edmlop, m_fSplit);
 	m_ptabdesc->Name().OsPrint(os);
-	os << "), Affected Columns: [";
+	CLogicalDML::PrintOperatorType(os, m_edmlop, m_fSplit);
+	os << "Affected Columns: [";
 	CUtils::OsPrintDrgPcr(os, m_pdrgpcrSource);
 	os << "], Action: (";
 	m_pcrAction->OsPrint(os);
@@ -399,21 +399,21 @@ CLogicalDML::PrintOperatorType(IOstream &os, EDMLOperator edmlOperator,
 	switch (edmlOperator)
 	{
 		case EdmlInsert:
-			os << "Insert, ";
+			os << "), Insert, ";
 			break;
 
 		case EdmlDelete:
-			os << "Delete, ";
+			os << "), Delete, ";
 			break;
 
 		case EdmlUpdate:
 			if (fSplit)
 			{
-				os << "SplitUpdate, ";
+				os << "), Split Update, ";
 			}
 			else
 			{
-				os << "InPlaceUpdate, ";
+				os << "), In-place Update, ";
 			}
 			break;
 

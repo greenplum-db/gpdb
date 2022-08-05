@@ -2903,18 +2903,18 @@ CExpressionPreprocessor::PexprTransposeSelectAndProject(CMemoryPool *mp,
 // split update or inplace update based on the columns modified by the update
 // operation.
 
-// Split-Update if any of the modified columns is a distribution column or a partition key,
+// Split Update if any of the modified columns is a distribution column or a partition key,
 // InPlace Update if all the modified columns are non-distribution columns and not partition keys.
 
 // Example: Update Modified non-distribution columns.
 // Input:
-// +--CLogicalUpdate ("s", "SplitUpdate"), Delete Columns: ["a" (0), "b" (1)], Insert Columns: ["a" (0), "b" (9)], "ctid" (2), "gp_segment_id" (8)
+// +--CLogicalUpdate ("foo"), Split Update, Delete Columns: ["a" (0), "b" (1)], Insert Columns: ["a" (0), "b" (9)], "ctid" (2), "gp_segment_id" (8)
 //   +--CLogicalProject
 //      |--CLogicalGet
 //      +--CScalarProjectList
 //
 // Output:
-// +--CLogicalUpdate ("s", "InPlaceUpdate"), Delete Columns: ["a" (0), "b" (1)], Insert Columns: ["a" (0), "b" (9)], "ctid" (2), "gp_segment_id" (8)
+// +--CLogicalUpdate ("foo"), In-place Update, Delete Columns: ["a" (0), "b" (1)], Insert Columns: ["a" (0), "b" (9)], "ctid" (2), "gp_segment_id" (8)
 //	 +--CLogicalProject
 //		|--CLogicalGet
 //		+--CScalarProjectList
@@ -2926,59 +2926,60 @@ CExpressionPreprocessor::ConvertSplitUpdateToInPlaceUpdate(CMemoryPool *mp,
 	GPOS_ASSERT(nullptr != mp);
 	GPOS_ASSERT(nullptr != pexpr);
 	COperator *pop = pexpr->Pop();
-	if (COperator::EopLogicalUpdate == pop->Eopid())
+	if (COperator::EopLogicalUpdate != pop->Eopid())
 	{
-		CLogicalUpdate *popUpdate = CLogicalUpdate::PopConvert(pop);
-		CTableDescriptor *tabdesc = popUpdate->Ptabdesc();
-		CColRefArray *pdrgpcrInsert = popUpdate->PdrgpcrInsert();
-		CColRefArray *pdrgpcrDelete = popUpdate->PdrgpcrDelete();
-		const ULONG num_cols = pdrgpcrInsert->Size();
-		BOOL split_update = false;
-		CColRefArray *ppartColRefs = GPOS_NEW(mp) CColRefArray(mp);
-		const ULongPtrArray *pdrgpulPart = tabdesc->PdrgpulPart();
-		const ULONG ulPartKeys = pdrgpulPart->Size();
+		pexpr->AddRef();
+		return pexpr;
+	}
+	CLogicalUpdate *popUpdate = CLogicalUpdate::PopConvert(pop);
+	CTableDescriptor *tabdesc = popUpdate->Ptabdesc();
+	CColRefArray *pdrgpcrInsert = popUpdate->PdrgpcrInsert();
+	CColRefArray *pdrgpcrDelete = popUpdate->PdrgpcrDelete();
+	const ULONG num_cols = pdrgpcrInsert->Size();
+	BOOL split_update = false;
+	CColRefArray *ppartColRefs = GPOS_NEW(mp) CColRefArray(mp);
+	const ULongPtrArray *pdrgpulPart = tabdesc->PdrgpulPart();
+	const ULONG ulPartKeys = pdrgpulPart->Size();
 
-		// Uses split update if any of the modified columns are either
-		// distribution or partition keys.
-		// FIXME: Tested on distribution columns. Validate this after DML on
-		//  partitioned tables is implemented in Orca
-		for (ULONG ul = 0; ul < ulPartKeys; ul++)
-		{
-			ULONG *pulPartKey = (*pdrgpulPart)[ul];
-			CColRef *colref = (*pdrgpcrInsert)[*pulPartKey];
-			ppartColRefs->Append(colref);
-		}
+	// Uses split update if any of the modified columns are either
+	// distribution or partition keys.
+	// FIXME: Tested on distribution columns. Validate this after DML on
+	//  partitioned tables is implemented in Orca
+	for (ULONG ul = 0; ul < ulPartKeys; ul++)
+	{
+		ULONG *pulPartKey = (*pdrgpulPart)[ul];
+		CColRef *colref = (*pdrgpcrInsert)[*pulPartKey];
+		ppartColRefs->Append(colref);
+	}
 
-		for (ULONG ul = 0; ul < num_cols; ul++)
+	for (ULONG ul = 0; ul < num_cols; ul++)
+	{
+		CColRef *pcrInsert = (*pdrgpcrInsert)[ul];
+		CColRef *pcrDelete = (*pdrgpcrDelete)[ul];
+		// Checking if column is either distribution or partition key.
+		if (pcrInsert != pcrDelete &&
+			(pcrDelete->IsDistCol() ||
+			 ppartColRefs->Find(pcrInsert) != nullptr))
 		{
-			CColRef *pcrInsert = (*pdrgpcrInsert)[ul];
-			CColRef *pcrDelete = (*pdrgpcrDelete)[ul];
-			// Checking if column is either distribution or is a partition key.
-			if ((pcrInsert != pcrDelete) &&
-				(pcrDelete->IsDistCol() ||
-				 (ppartColRefs->Find(pcrInsert) != nullptr)))
-			{
-				split_update = true;
-				break;
-			}
+			split_update = true;
+			break;
 		}
-		ppartColRefs->Release();
-		if (!split_update)
-		{
-			CExpression *pexprChild = (*pexpr)[0];
-			pexprChild->AddRef();
-			pdrgpcrInsert->AddRef();
-			pdrgpcrDelete->AddRef();
-			tabdesc->AddRef();
-			CExpression *pexprNew = GPOS_NEW(mp)
-				CExpression(mp,
-							GPOS_NEW(mp) CLogicalUpdate(
-								mp, tabdesc, pdrgpcrDelete, pdrgpcrInsert,
-								popUpdate->PcrCtid(), popUpdate->PcrSegmentId(),
-								popUpdate->PcrTupleOid(), false),
-							pexprChild);
-			return pexprNew;
-		}
+	}
+	ppartColRefs->Release();
+	if (!split_update)
+	{
+		CExpression *pexprChild = (*pexpr)[0];
+		pexprChild->AddRef();
+		pdrgpcrInsert->AddRef();
+		pdrgpcrDelete->AddRef();
+		tabdesc->AddRef();
+		CExpression *pexprNew = GPOS_NEW(mp) CExpression(
+			mp,
+			GPOS_NEW(mp) CLogicalUpdate(
+				mp, tabdesc, pdrgpcrDelete, pdrgpcrInsert, popUpdate->PcrCtid(),
+				popUpdate->PcrSegmentId(), popUpdate->PcrTupleOid(), false),
+			pexprChild);
+		return pexprNew;
 	}
 	pexpr->AddRef();
 	return pexpr;

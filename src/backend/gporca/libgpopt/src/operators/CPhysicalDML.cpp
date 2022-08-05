@@ -577,9 +577,9 @@ CPhysicalDML::OsPrint(IOstream &os) const
 	}
 
 	os << SzId() << " (";
-	CLogicalDML::PrintOperatorType(os, m_edmlop, m_fSplit);
 	m_ptabdesc->Name().OsPrint(os);
-	os << "), Source Columns: [";
+	CLogicalDML::PrintOperatorType(os, m_edmlop, m_fSplit);
+	os << "Source Columns: [";
 	CUtils::OsPrintDrgPcr(os, m_pdrgpcrSource);
 	os << "], Action: (";
 	m_pcrAction->OsPrint(os);

@@ -285,18 +285,17 @@ CLogicalUpdate::OsPrint(IOstream &os) const
 	{
 		return COperator::OsPrint(os);
 	}
-
 	os << SzId() << " (";
 	m_ptabdesc->Name().OsPrint(os);
 	if (m_fSplit)
 	{
-		os << ", InPlaceUpdate";
+		os << "), Split Update";
 	}
 	else
 	{
-		os << ", SplitUpdate";
+		os << "), In-place Update";
 	}
-	os << "), Delete Columns: [";
+	os << ", Delete Columns: [";
 	CUtils::OsPrintDrgPcr(os, m_pdrgpcrDelete);
 	os << "], Insert Columns: [";
 	CUtils::OsPrintDrgPcr(os, m_pdrgpcrInsert);
