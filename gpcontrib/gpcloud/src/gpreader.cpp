@@ -53,7 +53,7 @@ int thread_cleanup(void) {
     for (int i = 0; i < CRYPTO_num_locks(); i++) {
         MUTEX_CLEANUP(mutex_buf[i]);
     }
-    delete mutex_buf;
+    delete[] mutex_buf;
     mutex_buf = NULL;
     return 1;
 }
