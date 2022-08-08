@@ -358,6 +358,31 @@ EXPLAIN SELECT * FROM t1 JOIN t2 ON t1.a=t2.a;
 RESET optimizer_enable_hashjoin;
 RESET optimizer_enable_nljoin;
 
+-- Test hashed distribution spec derivation and -- 
+-- motion enforcement given INDF join condition --
+-- Outer joins' inner table yields false nulls  --
+-- colocation if join condition is null-aware   --
+drop table o1;
+drop table o2;
+drop table o3;
+
+create table o1 (a1 int, b1 int) distributed by (a1);
+create table o2 (a2 int, b2 int) distributed by (a2);
+create table o3 (a3 int, b3 int) distributed by (a3);
+
+insert into o1 select i, i from generate_series(1,20) i;
+insert into o2 select i, null from generate_series(11,30) i;
+insert into o3 values (NULL, 20);
+
+select * from o1 left join o2 on a1 = a2 left join o3 on a2 is not distinct from a3;
+select * from o1 left join o2 on a1 = a2 left join o3 on a2 is not distinct from a3 and b2 is distinct from b3;
+select * from o1 left join o2 on a1 = a2 left join o3 on a2 is not distinct from a3 and b2 = b3;
+
+explain select * from o1 left join o2 on a1 = a2 left join o3 on a2 is not distinct from a3;
+explain select * from o1 left join o2 on a1 = a2 left join o3 on a2 is not distinct from a3 and b2 is distinct from b3;
+explain select * from o1 left join o2 on a1 = a2 left join o3 on a2 is not distinct from a3 and b2 = b3;
+
+
 -- Clean up. None of the objects we create are very interesting to keep around.
 reset search_path;
 set client_min_messages='warning';

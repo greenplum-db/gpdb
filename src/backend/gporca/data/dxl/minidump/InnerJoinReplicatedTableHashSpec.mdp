@@ -358,7 +358,7 @@ EXPLAIN SELECT b2, sum(c1) FROM t1, t2 WHERE a1 = b2 GROUP BY b2 ORDER BY b2;
         </dxl:LogicalGroupBy>
       </dxl:LogicalLimit>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="260">
+    <dxl:Plan Id="0" SpaceSize="255">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="862.000465" Rows="1.000000" Width="12"/>

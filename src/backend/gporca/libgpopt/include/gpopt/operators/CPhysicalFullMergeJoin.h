@@ -24,6 +24,7 @@ public:
 	explicit CPhysicalFullMergeJoin(
 		CMemoryPool *mp, CExpressionArray *outer_merge_clauses,
 		CExpressionArray *inner_merge_clauses, IMdIdArray *hash_opfamilies,
+		BOOL is_null_aware = true,
 		CXform::EXformId origin_xform = CXform::ExfSentinel);
 
 	// dtor

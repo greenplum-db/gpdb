@@ -45,11 +45,13 @@ CPhysicalHashJoin::CPhysicalHashJoin(CMemoryPool *mp,
 									 CExpressionArray *pdrgpexprOuterKeys,
 									 CExpressionArray *pdrgpexprInnerKeys,
 									 IMdIdArray *hash_opfamilies,
+									 BOOL is_null_aware,
 									 CXform::EXformId origin_xform)
 	: CPhysicalJoin(mp, origin_xform),
 	  m_pdrgpexprOuterKeys(pdrgpexprOuterKeys),
 	  m_pdrgpexprInnerKeys(pdrgpexprInnerKeys),
 	  m_hash_opfamilies(nullptr),
+	  m_is_null_aware(is_null_aware),
 	  m_pdrgpdsRedistributeRequests(nullptr)
 {
 	GPOS_ASSERT(nullptr != mp);
@@ -136,7 +138,7 @@ CPhysicalHashJoin::CreateHashRedistributeRequests(CMemoryPool *mp)
 
 			CDistributionSpecHashed *pdshashedCurrent =
 				GPOS_NEW(mp) CDistributionSpecHashed(
-					pdrgpexprCurrent, false /* fNullsCollocated */, opfamilies);
+					pdrgpexprCurrent, true /* fNullsCollocated */, opfamilies);
 			m_pdrgpdsRedistributeRequests->Append(pdshashedCurrent);
 		}
 	}
@@ -148,7 +150,7 @@ CPhysicalHashJoin::CreateHashRedistributeRequests(CMemoryPool *mp)
 		m_hash_opfamilies->AddRef();
 	}
 	CDistributionSpecHashed *pdshashed = GPOS_NEW(mp) CDistributionSpecHashed(
-		pdrgpexpr, false /* fNullsCollocated */, m_hash_opfamilies);
+		pdrgpexpr, true /* fNullsCollocated */, m_hash_opfamilies);
 	m_pdrgpdsRedistributeRequests->Append(pdshashed);
 }
 
@@ -394,8 +396,9 @@ CPhysicalHashJoin::PdshashedMatching(
 	// nulls colocated for inner hash joins, but not colocated in outer hash joins
 	BOOL fNullsColocated = true;
 
-	if (COperator::EopPhysicalLeftOuterHashJoin == Eopid() ||
-		COperator::EopPhysicalRightOuterHashJoin == Eopid())
+	if (!m_is_null_aware &&
+		(COperator::EopPhysicalLeftOuterHashJoin == Eopid() ||
+		 COperator::EopPhysicalRightOuterHashJoin == Eopid()))
 	{
 		fNullsColocated = false;
 	}
