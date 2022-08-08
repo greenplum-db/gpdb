@@ -6976,7 +6976,7 @@ getBMIndxInfo(Archive *fout)
 	Oid bitmap_index_namespace;
 
 	/* On GPDB5 pg_bitmapindex OID is 3012 */
-	fout->remoteVersion >= 90400 ? bitmap_index_namespace = PG_BITMAPINDEX_NAMESPACE : 3012;
+	bitmap_index_namespace = fout->remoteVersion >= 90400 ? PG_BITMAPINDEX_NAMESPACE : 3012;
 
 	resetPQExpBuffer(query);
 
