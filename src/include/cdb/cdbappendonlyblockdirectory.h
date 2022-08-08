@@ -157,6 +157,11 @@ typedef struct AOFetchSegmentFile
 	int64 logicalEof;
 } AOFetchSegmentFile;
 
+typedef struct AppendOnlyBlockDirectorySeqScan {
+	AppendOnlyBlockDirectory blkdir;
+	SysScanDesc sysScan;
+} AppendOnlyBlockDirectorySeqScan;
+
 extern void AppendOnlyBlockDirectoryEntry_GetBeginRange(
 	AppendOnlyBlockDirectoryEntry	*directoryEntry,
 	int64							*fileOffset,
@@ -217,4 +222,40 @@ extern void AppendOnlyBlockDirectory_DeleteSegmentFile(
 		Snapshot snapshot,
 		int segno,
 		int columnGroupNo);
+
+static inline uint32
+minipage_size(uint32 nEntry)
+{
+	return offsetof(Minipage, entry) + sizeof(MinipageEntry) * nEntry;
+}
+
+/*
+ * copy_out_minipage
+ *
+ * Copy out the minipage content from a deformed tuple.
+ */
+static inline void
+copy_out_minipage(MinipagePerColumnGroup *minipageInfo,
+				  Datum minipage_value,
+				  bool minipage_isnull)
+{
+	struct varlena *value;
+	struct varlena *detoast_value;
+
+	Assert(!minipage_isnull);
+
+	value = (struct varlena *)
+		DatumGetPointer(minipage_value);
+	detoast_value = pg_detoast_datum(value);
+	Assert(VARSIZE(detoast_value) <= minipage_size(NUM_MINIPAGE_ENTRIES));
+
+	memcpy(minipageInfo->minipage, detoast_value, VARSIZE(detoast_value));
+	if (detoast_value != value)
+		pfree(detoast_value);
+
+	Assert(minipageInfo->minipage->nEntry <= NUM_MINIPAGE_ENTRIES);
+
+	minipageInfo->numMinipageEntries = minipageInfo->minipage->nEntry;
+}
+
 #endif

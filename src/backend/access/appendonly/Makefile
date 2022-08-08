@@ -15,7 +15,7 @@ OBJS = appendonlyam_handler.o appendonlyam.o aosegfiles.o aomd.o \
 	   appendonlyblockdirectory.o appendonly_visimap.o \
 	   appendonly_visimap_entry.o appendonly_visimap_store.o \
 	   appendonly_compaction.o appendonly_visimap_udf.o \
-	   aomd_filehandler.o
+	   appendonly_blkdir_udf.o aomd_filehandler.o
 
 include $(top_srcdir)/src/backend/common.mk
 
