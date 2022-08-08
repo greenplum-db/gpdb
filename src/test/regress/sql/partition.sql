@@ -443,8 +443,22 @@ alter table foo_p exchange partition for(rank(3)) with table bar_p;
 alter table foo_p exchange partition for(rank(3)) with table bar_p without validation;
 truncate foo_p;
 analyze foo_p;
+-- Create index on partitioned table containing external table
+create index idx_mpp32358 on foo_p(j);
+drop index idx_mpp32358;
+alter table foo_p exchange partition for(rank(3)) with table bar_p without validation;
+
+-- Exchange a indexed partition with an external table
+create index idx_mpp32358 on foo_p(j);
+alter table foo_p exchange partition for(rank(3)) with table bar_p without validation;
+drop index idx_mpp32358;
+alter table foo_p exchange partition for(rank(3)) with table bar_p without validation;
+-- Should fail. Can not exchange partition with external table if there are unique indexes on root partition.
+create unique index idx_mpp32358 on foo_p(i, j);
+alter table foo_p exchange partition for(rank(3)) with table bar_p without validation;
+
 drop table foo_p;
-drop table bar_p;
+drop external table bar_p;
 
 -- Check for overflow of circular data types like time
 -- Should fail
