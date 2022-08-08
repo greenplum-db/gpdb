@@ -43,12 +43,18 @@ explain (costs off, verbose)
 delete from p_ao_1_prt_extra where a = 1;
                                            QUERY PLAN                                            
 -------------------------------------------------------------------------------------------------
- Delete on public.p_ao_1_prt_extra
-   ->  Seq Scan on public.p_ao_1_prt_extra
-         Output: ctid, gp_segment_id
-         Filter: (p_ao_1_prt_extra.a = 1)
- Optimizer: Postgres query optimizer
- Settings: optimizer=off
-(6 rows)
+ Delete
+   Output: p_ao_1_prt_extra.a, "outer".ColRef_0004, p_ao_1_prt_extra.ctid
+   ->  Result
+         Output: p_ao_1_prt_extra.a, p_ao_1_prt_extra.ctid, p_ao_1_prt_extra.gp_segment_id, 0
+         ->  Seq Scan on public.p_ao_1_prt_extra
+               Output: p_ao_1_prt_extra.a, p_ao_1_prt_extra.ctid, p_ao_1_prt_extra.gp_segment_id
+               Filter: (p_ao_1_prt_extra.a = 1)
+ Optimizer: Pivotal Optimizer (GPORCA)
+ Settings: optimizer=on
+(9 rows)
 
 delete from p_ao_1_prt_extra where a = 1;
+ERROR:  tuple to be deleted was already removed  (seg1 127.0.1.1:6033 pid=281892)
+DETAIL:  for AO/AOCS table this scenario is impossible
+HINT:  perhaps, modification is occuring on wrong partition

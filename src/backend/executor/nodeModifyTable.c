@@ -911,7 +911,7 @@ ldelete:;
 				 * types of relation is protected by Exclusive lock therefore
 				 * the scenario when transaction have to seek a live newer
 				 * version to update/delete is not possible.
-				 * FIXME: If it occurs then most likely we work with wrong
+				 * TODO: If it occurs then most likely we work with wrong
 				 * partition. How it's possible is described in
 				 * https://github.com/greenplum-db/gpdb/pull/13860
 				 */
@@ -962,9 +962,9 @@ ldelete:;
 					TupleTableSlot *epqslot;
 
 					/*
-					 * FIXME: DML node doesn't initialize `epqstate` parameter
-					 * so we exclude EPQ routine for this type of modification
-					 * and act as in RR and upper isolation levels.
+					 * TODO: DML node doesn't initialize `epqstate` parameter so
+					 * we exclude EPQ routine for this type of modification and
+					 * act as in RR and upper isolation levels.
 					 */
 					if (!epqstate)
 						ereport(ERROR,

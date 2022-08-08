@@ -23,9 +23,7 @@ delete from p_ao_1_prt_2;
 select tableoid::regclass, ctid, a from p_ao;
 
 -- perform deletion from default partition
--- optimizer has to be ORCA
--- before fix it generated SIGSEGV
-set optimizer to on;
+-- before fix in case of ORCA it generated SIGSEGV
 explain (costs off, verbose)
 delete from p_ao_1_prt_extra where a = 1;
 delete from p_ao_1_prt_extra where a = 1;

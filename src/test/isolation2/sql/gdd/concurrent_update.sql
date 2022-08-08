@@ -132,24 +132,28 @@ DROP TABLE t_concurrent_update;
 0: drop table tab_update_epq1;
 0: drop table tab_update_epq2;
 0q:
+1q:
+2q:
 
 -- Currently the DML node (modification variant in ORCA) doesn't support EPQ
 -- routine so concurrent modification is not possible in this case. User have
 -- to be informed to fallback to postgres optimizer.
+-- This test makes sense just for ORCA
 create table test as select 0 as i;
 -- in session 1, turn off the optimizer so it will invoke heap_update
 1: set optimizer = off;
 1: begin;
 1: update test set i = i + 1;
--- in session 2, turn on optimizer so DML invokes EPQ
-2: set optimizer = on;
+-- in session 2, in case of ORCA DML invokes EPQ
 -- the following SQL will hang due to XID lock
 2&: delete from test where i = 0;
 -- commit session1's transaction so the above session2 will continue and emit
--- error about serialization failure
+-- error about serialization failure in case of ORCA
 1: end;
 2<:
 drop table test;
+1q:
+2q:
 
 -- split update is to implement updating on hash keys,
 -- it deletes the tuple and insert a new tuple in a
