@@ -118,7 +118,6 @@ SELECT * FROM relfilebeforeao INTERSECT SELECT * FROM relfileafterao;
 (0 rows)
 
 -- aux tables are created, pg_appendonly row is created
--- FIXME: add check for gp_aoblkdir
 SELECT * FROM gp_toolkit.__gp_aoseg('heap2ao');
  segment_id | segno | eof | tupcount | varblockcount | eof_uncompressed | modcount | formatversion | state 
 ------------+-------+-----+----------+---------------+------------------+----------+---------------+-------
@@ -127,10 +126,18 @@ SELECT * FROM gp_toolkit.__gp_aoseg('heap2ao');
           1 |     0 |  40 |        1 |             1 |               40 |        1 |             3 |     1
 (3 rows)
 
-SELECT * FROM gp_toolkit.__gp_aovisimap('heap2ao');
- tid | segno | row_num 
------+-------+---------
+SELECT gp_segment_id, (gp_toolkit.__gp_aovisimap('heap2ao')).* FROM gp_dist_random('gp_id');
+ gp_segment_id | tid | segno | row_num 
+---------------+-----+-------+---------
 (0 rows)
+
+SELECT gp_segment_id, (gp_toolkit.__gp_aoblkdir('heap2ao')).* FROM gp_dist_random('gp_id');
+ gp_segment_id | tupleid | segno | columngroup_no | entry_no | first_row_no | file_offset | row_count 
+---------------+---------+-------+----------------+----------+--------------+-------------+-----------
+             0 | (0,1)   |     0 |              0 |        0 |            1 |           0 |         3
+             1 | (0,1)   |     0 |              0 |        0 |            1 |           0 |         1
+             2 | (0,1)   |     0 |              0 |        0 |            1 |           0 |         1
+(3 rows)
 
 SELECT * FROM gp_toolkit.__gp_aoseg('heap2ao2');
  segment_id | segno | eof | tupcount | varblockcount | eof_uncompressed | modcount | formatversion | state 
@@ -140,9 +147,9 @@ SELECT * FROM gp_toolkit.__gp_aoseg('heap2ao2');
           0 |     0 |  72 |        3 |             1 |               88 |        1 |             3 |     1
 (3 rows)
 
-SELECT * FROM gp_toolkit.__gp_aovisimap('heap2ao2');
- tid | segno | row_num 
------+-------+---------
+SELECT gp_segment_id, (gp_toolkit.__gp_aovisimap('heap2ao2')).* FROM gp_dist_random('gp_id');
+ gp_segment_id | tid | segno | row_num 
+---------------+-----+-------+---------
 (0 rows)
 
 -- pg_appendonly should have entries associated with the new AO tables
@@ -292,9 +299,9 @@ SELECT * FROM gp_toolkit.__gp_aoseg('heapbase');
           2 |     0 |  40 |        1 |             1 |               40 |        1 |             3 |     1
 (3 rows)
 
-SELECT * FROM gp_toolkit.__gp_aovisimap('heapbase');
- tid | segno | row_num 
------+-------+---------
+SELECT gp_segment_id, (gp_toolkit.__gp_aovisimap('heapbase')).* FROM gp_dist_random('gp_id');
+ gp_segment_id | tid | segno | row_num 
+---------------+-----+-------+---------
 (0 rows)
 
 SELECT * FROM gp_toolkit.__gp_aoseg('heapbase2');
@@ -305,9 +312,9 @@ SELECT * FROM gp_toolkit.__gp_aoseg('heapbase2');
           0 |     0 |  72 |        3 |             1 |               88 |        1 |             3 |     1
 (3 rows)
 
-SELECT * FROM gp_toolkit.__gp_aovisimap('heapbase2');
- tid | segno | row_num 
------+-------+---------
+SELECT gp_segment_id, (gp_toolkit.__gp_aovisimap('heapbase2')).* FROM gp_dist_random('gp_id');
+ gp_segment_id | tid | segno | row_num 
+---------------+-----+-------+---------
 (0 rows)
 
 SELECT c.relname FROM pg_class c, pg_appendonly p WHERE c.relname LIKE 'heapbase%' AND c.oid = p.relid;
@@ -319,13 +326,13 @@ SELECT c.relname FROM pg_class c, pg_appendonly p WHERE c.relname LIKE 'heapbase
 
 -- aux tables are not created for child table
 SELECT * FROM gp_toolkit.__gp_aoseg('heapchild');
-ERROR:  'heapchild' is not an append-only row relation  (seg0 slice1 127.0.0.1:7002 pid=29947)
-SELECT * FROM gp_toolkit.__gp_aovisimap('heapchild');
-ERROR:  function not supported on relation
+ERROR:  'heapchild' is not an append-only row relation  (seg0 slice1 192.168.0.148:7002 pid=674753)
+SELECT gp_segment_id, (gp_toolkit.__gp_aovisimap('heapchild')).* FROM gp_dist_random('gp_id');
+ERROR:  function not supported on relation  (seg0 slice1 192.168.0.148:7002 pid=674753)
 SELECT * FROM gp_toolkit.__gp_aoseg('heapchild2');
-ERROR:  'heapchild2' is not an append-only row relation  (seg0 slice1 127.0.0.1:7002 pid=29947)
-SELECT * FROM gp_toolkit.__gp_aovisimap('heapchild2');
-ERROR:  function not supported on relation
+ERROR:  'heapchild2' is not an append-only row relation  (seg0 slice1 192.168.0.148:7002 pid=674753)
+SELECT gp_segment_id, (gp_toolkit.__gp_aovisimap('heapchild2')).* FROM gp_dist_random('gp_id');
+ERROR:  function not supported on relation  (seg0 slice1 192.168.0.148:7002 pid=674753)
 SELECT c.relname FROM pg_class c, pg_appendonly p WHERE c.relname LIKE 'heapchild%' AND c.oid = p.relid;
  relname 
 ---------
@@ -402,13 +409,15 @@ SELECT * FROM ao2heap2;
 
 -- No AO aux tables should be left
 SELECT * FROM gp_toolkit.__gp_aoseg('ao2heap');
-ERROR:  'ao2heap' is not an append-only row relation  (seg0 slice1 127.0.1.1:7002 pid=6817)
-SELECT * FROM gp_toolkit.__gp_aovisimap('ao2heap');
-ERROR:  function not supported on relation
+ERROR:  'ao2heap' is not an append-only row relation  (seg0 slice1 192.168.0.148:7002 pid=674753)
+SELECT gp_segment_id, (gp_toolkit.__gp_aovisimap('ao2heap')).* FROM gp_dist_random('gp_id');
+ERROR:  function not supported on relation  (seg0 slice1 192.168.0.148:7002 pid=674753)
+SELECT gp_segment_id, (gp_toolkit.__gp_aoblkdir('ao2heap')).* FROM gp_dist_random('gp_id');
+ERROR:  function not supported on non append-optimized relation  (seg2 slice1 192.168.0.148:7004 pid=1401173)
 SELECT * FROM gp_toolkit.__gp_aoseg('ao2heap2');
-ERROR:  'ao2heap2' is not an append-only row relation  (seg0 slice1 127.0.1.1:7002 pid=6817)
-SELECT * FROM gp_toolkit.__gp_aovisimap('ao2heap2');
-ERROR:  function not supported on relation
+ERROR:  'ao2heap2' is not an append-only row relation  (seg0 slice1 192.168.0.148:7002 pid=674753)
+SELECT gp_segment_id, (gp_toolkit.__gp_aovisimap('ao2heap2')).* FROM gp_dist_random('gp_id');
+ERROR:  function not supported on relation  (seg0 slice1 192.168.0.148:7002 pid=674753)
 -- No pg_appendonly entries should be left too
 SELECT c.relname FROM pg_class c, pg_appendonly p WHERE c.relname LIKE 'ao2heap%' AND c.oid = p.relid;
  relname 

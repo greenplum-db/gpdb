@@ -78,11 +78,12 @@ CREATE TEMP TABLE relfileafterao AS
 SELECT * FROM relfilebeforeao INTERSECT SELECT * FROM relfileafterao;
 
 -- aux tables are created, pg_appendonly row is created
--- FIXME: add check for gp_aoblkdir
 SELECT * FROM gp_toolkit.__gp_aoseg('heap2ao');
-SELECT * FROM gp_toolkit.__gp_aovisimap('heap2ao');
+SELECT gp_segment_id, (gp_toolkit.__gp_aovisimap('heap2ao')).* FROM gp_dist_random('gp_id');
+SELECT gp_segment_id, (gp_toolkit.__gp_aoblkdir('heap2ao')).* FROM gp_dist_random('gp_id');
+
 SELECT * FROM gp_toolkit.__gp_aoseg('heap2ao2');
-SELECT * FROM gp_toolkit.__gp_aovisimap('heap2ao2');
+SELECT gp_segment_id, (gp_toolkit.__gp_aovisimap('heap2ao2')).* FROM gp_dist_random('gp_id');
 
 -- pg_appendonly should have entries associated with the new AO tables
 SELECT c.relname FROM pg_class c, pg_appendonly p WHERE c.relname LIKE 'heap2ao%' AND c.oid = p.relid;
@@ -146,16 +147,16 @@ SELECT count(*) FROM (SELECT * FROM inheritchildrelfilebefore UNION SELECT * FRO
 
 -- aux tables are created, pg_appendonly row is created
 SELECT * FROM gp_toolkit.__gp_aoseg('heapbase');
-SELECT * FROM gp_toolkit.__gp_aovisimap('heapbase');
+SELECT gp_segment_id, (gp_toolkit.__gp_aovisimap('heapbase')).* FROM gp_dist_random('gp_id');
 SELECT * FROM gp_toolkit.__gp_aoseg('heapbase2');
-SELECT * FROM gp_toolkit.__gp_aovisimap('heapbase2');
+SELECT gp_segment_id, (gp_toolkit.__gp_aovisimap('heapbase2')).* FROM gp_dist_random('gp_id');
 SELECT c.relname FROM pg_class c, pg_appendonly p WHERE c.relname LIKE 'heapbase%' AND c.oid = p.relid;
 
 -- aux tables are not created for child table
 SELECT * FROM gp_toolkit.__gp_aoseg('heapchild');
-SELECT * FROM gp_toolkit.__gp_aovisimap('heapchild');
+SELECT gp_segment_id, (gp_toolkit.__gp_aovisimap('heapchild')).* FROM gp_dist_random('gp_id');
 SELECT * FROM gp_toolkit.__gp_aoseg('heapchild2');
-SELECT * FROM gp_toolkit.__gp_aovisimap('heapchild2');
+SELECT gp_segment_id, (gp_toolkit.__gp_aovisimap('heapchild2')).* FROM gp_dist_random('gp_id');
 SELECT c.relname FROM pg_class c, pg_appendonly p WHERE c.relname LIKE 'heapchild%' AND c.oid = p.relid;
 
 -- Scenario 3: AO to Heap
@@ -197,9 +198,10 @@ SELECT * FROM ao2heap2;
 
 -- No AO aux tables should be left
 SELECT * FROM gp_toolkit.__gp_aoseg('ao2heap');
-SELECT * FROM gp_toolkit.__gp_aovisimap('ao2heap');
+SELECT gp_segment_id, (gp_toolkit.__gp_aovisimap('ao2heap')).* FROM gp_dist_random('gp_id');
+SELECT gp_segment_id, (gp_toolkit.__gp_aoblkdir('ao2heap')).* FROM gp_dist_random('gp_id');
 SELECT * FROM gp_toolkit.__gp_aoseg('ao2heap2');
-SELECT * FROM gp_toolkit.__gp_aovisimap('ao2heap2');
+SELECT gp_segment_id, (gp_toolkit.__gp_aovisimap('ao2heap2')).* FROM gp_dist_random('gp_id');
 
 -- No pg_appendonly entries should be left too
 SELECT c.relname FROM pg_class c, pg_appendonly p WHERE c.relname LIKE 'ao2heap%' AND c.oid = p.relid;
