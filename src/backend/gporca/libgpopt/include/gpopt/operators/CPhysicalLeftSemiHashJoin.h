@@ -36,7 +36,7 @@ public:
 	CPhysicalLeftSemiHashJoin(
 		CMemoryPool *mp, CExpressionArray *pdrgpexprOuterKeys,
 		CExpressionArray *pdrgpexprInnerKeys,
-		IMdIdArray *hash_opfamilies = NULL,
+		IMdIdArray *hash_opfamilies = NULL, BOOL is_null_aware = true,
 		CXform::EXformId origin_xform = CXform::ExfSentinel);
 
 	// dtor

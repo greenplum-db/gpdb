@@ -3488,6 +3488,149 @@ explain (costs off) select * from t_9427 where a in (select a from t_9427 where 
 
 drop table t_9427;
 reset optimizer;
+-- Test hashed distribution spec derivation and -- 
+-- motion enforcement given INDF join condition --
+-- Outer joins' inner table yields false nulls  --
+-- colocation if join condition is null-aware   --
+drop table o1;
+ERROR:  table "o1" does not exist
+drop table o2;
+ERROR:  table "o2" does not exist
+drop table o3;
+ERROR:  table "o3" does not exist
+create table o1 (a1 int, b1 int) distributed by (a1);
+create table o2 (a2 int, b2 int) distributed by (a2);
+create table o3 (a3 int, b3 int) distributed by (a3);
+insert into o1 select i, i from generate_series(1,20) i;
+insert into o2 select i, null from generate_series(11,30) i;
+insert into o3 values (NULL, 20);
+select * from o1 left join o2 on a1 = a2 left join o3 on a2 is not distinct from a3;
+ a1 | b1 | a2 | b2 | a3 | b3 
+----+----+----+----+----+----
+  2 |  2 |    |    |    | 20
+  3 |  3 |    |    |    | 20
+  4 |  4 |    |    |    | 20
+  7 |  7 |    |    |    | 20
+  8 |  8 |    |    |    | 20
+ 16 | 16 | 16 |    |    |   
+ 18 | 18 | 18 |    |    |   
+ 19 | 19 | 19 |    |    |   
+  5 |  5 |    |    |    | 20
+  6 |  6 |    |    |    | 20
+  9 |  9 |    |    |    | 20
+ 10 | 10 |    |    |    | 20
+ 11 | 11 | 11 |    |    |   
+ 13 | 13 | 13 |    |    |   
+ 14 | 14 | 14 |    |    |   
+ 17 | 17 | 17 |    |    |   
+  1 |  1 |    |    |    | 20
+ 12 | 12 | 12 |    |    |   
+ 15 | 15 | 15 |    |    |   
+ 20 | 20 | 20 |    |    |   
+(20 rows)
+
+select * from o1 left join o2 on a1 = a2 left join o3 on a2 is not distinct from a3 and b2 is distinct from b3;
+ a1 | b1 | a2 | b2 | a3 | b3 
+----+----+----+----+----+----
+  5 |  5 |    |    |    | 20
+  6 |  6 |    |    |    | 20
+  9 |  9 |    |    |    | 20
+ 10 | 10 |    |    |    | 20
+ 11 | 11 | 11 |    |    |   
+ 13 | 13 | 13 |    |    |   
+ 14 | 14 | 14 |    |    |   
+ 17 | 17 | 17 |    |    |   
+  1 |  1 |    |    |    | 20
+ 12 | 12 | 12 |    |    |   
+ 15 | 15 | 15 |    |    |   
+ 20 | 20 | 20 |    |    |   
+  2 |  2 |    |    |    | 20
+  3 |  3 |    |    |    | 20
+  4 |  4 |    |    |    | 20
+  7 |  7 |    |    |    | 20
+  8 |  8 |    |    |    | 20
+ 16 | 16 | 16 |    |    |   
+ 18 | 18 | 18 |    |    |   
+ 19 | 19 | 19 |    |    |   
+(20 rows)
+
+select * from o1 left join o2 on a1 = a2 left join o3 on a2 is not distinct from a3 and b2 = b3;
+ a1 | b1 | a2 | b2 | a3 | b3 
+----+----+----+----+----+----
+  5 |  5 |    |    |    |   
+  6 |  6 |    |    |    |   
+  9 |  9 |    |    |    |   
+ 10 | 10 |    |    |    |   
+ 11 | 11 | 11 |    |    |   
+ 13 | 13 | 13 |    |    |   
+ 14 | 14 | 14 |    |    |   
+ 17 | 17 | 17 |    |    |   
+  1 |  1 |    |    |    |   
+ 12 | 12 | 12 |    |    |   
+ 15 | 15 | 15 |    |    |   
+ 20 | 20 | 20 |    |    |   
+  2 |  2 |    |    |    |   
+  3 |  3 |    |    |    |   
+  4 |  4 |    |    |    |   
+  7 |  7 |    |    |    |   
+  8 |  8 |    |    |    |   
+ 16 | 16 | 16 |    |    |   
+ 18 | 18 | 18 |    |    |   
+ 19 | 19 | 19 |    |    |   
+(20 rows)
+
+explain select * from o1 left join o2 on a1 = a2 left join o3 on a2 is not distinct from a3;
+                                            QUERY PLAN                                             
+---------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..1293.01 rows=44 width=24)
+   ->  Hash Left Join  (cost=0.00..1293.01 rows=15 width=24)
+         Hash Cond: (NOT (o2.a2 IS DISTINCT FROM o3.a3))
+         ->  Hash Left Join  (cost=0.00..862.00 rows=14 width=16)
+               Hash Cond: (o1.a1 = o2.a2)
+               ->  Seq Scan on o1  (cost=0.00..431.00 rows=7 width=8)
+               ->  Hash  (cost=431.00..431.00 rows=7 width=8)
+                     ->  Seq Scan on o2  (cost=0.00..431.00 rows=7 width=8)
+         ->  Hash  (cost=431.00..431.00 rows=1 width=8)
+               ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
+                     ->  Seq Scan on o3  (cost=0.00..431.00 rows=1 width=8)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(12 rows)
+
+explain select * from o1 left join o2 on a1 = a2 left join o3 on a2 is not distinct from a3 and b2 is distinct from b3;
+                                            QUERY PLAN                                             
+---------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..1293.01 rows=40 width=24)
+   ->  Hash Left Join  (cost=0.00..1293.01 rows=14 width=24)
+         Hash Cond: (NOT (o2.a2 IS DISTINCT FROM o3.a3))
+         Join Filter: (o2.b2 IS DISTINCT FROM o3.b3)
+         ->  Hash Left Join  (cost=0.00..862.00 rows=14 width=16)
+               Hash Cond: (o1.a1 = o2.a2)
+               ->  Seq Scan on o1  (cost=0.00..431.00 rows=7 width=8)
+               ->  Hash  (cost=431.00..431.00 rows=7 width=8)
+                     ->  Seq Scan on o2  (cost=0.00..431.00 rows=7 width=8)
+         ->  Hash  (cost=431.00..431.00 rows=1 width=8)
+               ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
+                     ->  Seq Scan on o3  (cost=0.00..431.00 rows=1 width=8)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(13 rows)
+
+explain select * from o1 left join o2 on a1 = a2 left join o3 on a2 is not distinct from a3 and b2 = b3;
+                                            QUERY PLAN                                             
+---------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..1293.01 rows=40 width=24)
+   ->  Hash Left Join  (cost=0.00..1293.01 rows=14 width=24)
+         Hash Cond: ((NOT (o2.a2 IS DISTINCT FROM o3.a3)) AND (o2.b2 = o3.b3))
+         ->  Hash Left Join  (cost=0.00..862.00 rows=14 width=16)
+               Hash Cond: (o1.a1 = o2.a2)
+               ->  Seq Scan on o1  (cost=0.00..431.00 rows=7 width=8)
+               ->  Hash  (cost=431.00..431.00 rows=7 width=8)
+                     ->  Seq Scan on o2  (cost=0.00..431.00 rows=7 width=8)
+         ->  Hash  (cost=431.00..431.00 rows=1 width=8)
+               ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
+                     ->  Seq Scan on o3  (cost=0.00..431.00 rows=1 width=8)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(12 rows)
+
 -- Clean up. None of the objects we create are very interesting to keep around.
 reset search_path;
 set client_min_messages='warning';

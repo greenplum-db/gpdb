@@ -218,7 +218,8 @@ private:
 											  CExpressionArray *pdrgpexprOuter,
 											  CExpressionArray *pdrgpexprInner,
 											  IMdIdArray *join_opfamilies,
-											  CXformResult *pxfres);
+											  CXformResult *pxfres,
+											  BOOL is_hash_join_null_aware);
 
 	// helper for transforming SubqueryAll into aggregate subquery
 	static void SubqueryAllToAgg(
@@ -791,12 +792,10 @@ CXformUtils::TransformImplementBinaryOp(CXformContext *pxfctxt,
 
 template <class T>
 void
-CXformUtils::AddHashOrMergeJoinAlternative(CMemoryPool *mp,
-										   CExpression *pexprJoin,
-										   CExpressionArray *pdrgpexprOuter,
-										   CExpressionArray *pdrgpexprInner,
-										   IMdIdArray *opfamilies,
-										   CXformResult *pxfres)
+CXformUtils::AddHashOrMergeJoinAlternative(
+	CMemoryPool *mp, CExpression *pexprJoin, CExpressionArray *pdrgpexprOuter,
+	CExpressionArray *pdrgpexprInner, IMdIdArray *opfamilies,
+	CXformResult *pxfres, BOOL is_hash_join_null_aware)
 {
 	GPOS_ASSERT(CUtils::FLogicalJoin(pexprJoin->Pop()));
 	GPOS_ASSERT(3 == pexprJoin->Arity());
@@ -809,8 +808,9 @@ CXformUtils::AddHashOrMergeJoinAlternative(CMemoryPool *mp,
 		(*pexprJoin)[ul]->AddRef();
 	}
 	CLogicalJoin *popLogicalJoin = CLogicalJoin::PopConvert(pexprJoin->Pop());
-	T *op = GPOS_NEW(mp) T(mp, pdrgpexprOuter, pdrgpexprInner, opfamilies,
-						   popLogicalJoin->OriginXform());
+	T *op =
+		GPOS_NEW(mp) T(mp, pdrgpexprOuter, pdrgpexprInner, opfamilies,
+					   is_hash_join_null_aware, popLogicalJoin->OriginXform());
 	CExpression *pexprResult = GPOS_NEW(mp)
 		CExpression(mp, op, (*pexprJoin)[0], (*pexprJoin)[1], (*pexprJoin)[2]);
 	pxfres->Add(pexprResult);
@@ -862,9 +862,9 @@ CXformUtils::ImplementHashJoin(CXformContext *pxfctxt, CXformResult *pxfres,
 		else
 		{
 			// we have computed hash join keys on scalar child before, reuse them
-			AddHashOrMergeJoinAlternative<T>(mp, pexpr, pdrgpexprOuter,
-											 pdrgpexprInner, join_opfamilies,
-											 pxfres);
+			AddHashOrMergeJoinAlternative<T>(
+				mp, pexpr, pdrgpexprOuter, pdrgpexprInner, join_opfamilies,
+				pxfres, true /*is_hash_join_null_aware*/);
 		}
 
 		return;
@@ -887,12 +887,18 @@ CXformUtils::ImplementHashJoin(CXformContext *pxfctxt, CXformResult *pxfres,
 	CExpressionArray *pdrgpexpr =
 		CCastUtils::PdrgpexprCastEquality(mp, pexprScalar);
 	ULONG ulPreds = pdrgpexpr->Size();
+	BOOL is_hash_join_null_aware = false;
 	for (ULONG ul = 0; ul < ulPreds; ul++)
 	{
 		CExpression *pexprPred = (*pdrgpexpr)[ul];
 		if (CPhysicalJoin::FHashJoinCompatible(pexprPred, pexprOuter,
 											   pexprInner))
 		{
+			if (!is_hash_join_null_aware)
+			{
+				is_hash_join_null_aware |= CPredicateUtils::FINDF(pexprPred);
+			}
+
 			CExpression *pexprPredInner;
 			CExpression *pexprPredOuter;
 			IMDId *mdid_scop;
@@ -936,7 +942,7 @@ CXformUtils::ImplementHashJoin(CXformContext *pxfctxt, CXformResult *pxfres,
 	{
 		AddHashOrMergeJoinAlternative<T>(mp, pexprResult, pdrgpexprOuter,
 										 pdrgpexprInner, join_opfamilies,
-										 pxfres);
+										 pxfres, is_hash_join_null_aware);
 	}
 	else
 	{
@@ -986,9 +992,9 @@ CXformUtils::ImplementMergeJoin(CXformContext *pxfctxt, CXformResult *pxfres,
 		else
 		{
 			// we have computed join keys on scalar child before, reuse them
-			AddHashOrMergeJoinAlternative<T>(mp, pexpr, pdrgpexprOuter,
-											 pdrgpexprInner, join_opfamilies,
-											 pxfres);
+			AddHashOrMergeJoinAlternative<T>(
+				mp, pexpr, pdrgpexprOuter, pdrgpexprInner, join_opfamilies,
+				pxfres, true /*is_hash_join_null_aware*/);
 		}
 
 		return;
@@ -1068,9 +1074,9 @@ CXformUtils::ImplementMergeJoin(CXformContext *pxfctxt, CXformResult *pxfres,
 	// Add an alternative only if we found at least one merge-joinable predicate
 	if (0 != pdrgpexprOuter->Size())
 	{
-		AddHashOrMergeJoinAlternative<T>(mp, pexprResult, pdrgpexprOuter,
-										 pdrgpexprInner, join_opfamilies,
-										 pxfres);
+		AddHashOrMergeJoinAlternative<T>(
+			mp, pexprResult, pdrgpexprOuter, pdrgpexprInner, join_opfamilies,
+			pxfres, true /*is_hash_join_null_aware*/);
 	}
 	else
 	{

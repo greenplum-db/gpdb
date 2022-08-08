@@ -32,9 +32,9 @@ using namespace gpopt;
 CPhysicalLeftOuterHashJoin::CPhysicalLeftOuterHashJoin(
 	CMemoryPool *mp, CExpressionArray *pdrgpexprOuterKeys,
 	CExpressionArray *pdrgpexprInnerKeys, IMdIdArray *hash_opfamilies,
-	CXform::EXformId origin_xform)
+	BOOL is_null_aware, CXform::EXformId origin_xform)
 	: CPhysicalHashJoin(mp, pdrgpexprOuterKeys, pdrgpexprInnerKeys,
-						hash_opfamilies, origin_xform)
+						hash_opfamilies, is_null_aware, origin_xform)
 {
 }
 
@@ -140,6 +140,11 @@ CPhysicalLeftOuterHashJoin::PdsDerive(CMemoryPool *mp,
 		pds = pdsOuter;
 	}
 
+	// TODO: Similar to the case where both outer and inner relations
+	// are hash distributed, when only the outer relation is hash
+	// distributed, we can also return a combined hash distribution spec.
+	// The combined spec contains nulls colocated outer relation, and
+	// nulls not colocated inner relation.
 	if (CDistributionSpec::EdtHashed == pds->Edt())
 	{
 		CDistributionSpecHashed *pdsHashed =
