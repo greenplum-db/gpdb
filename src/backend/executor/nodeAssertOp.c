@@ -114,8 +114,7 @@ ExecInitAssertOp(AssertOp *node, EState *estate, int eflags)
 	/*
 	 * Initialize result type and projection.
 	 */
-	ExecInitResultTypeTL(&assertOpState->ps);
-	ExecInitResultSlot(&assertOpState->ps, &TTSOpsMinimalTuple);
+	ExecInitResultTupleSlotTL(&assertOpState->ps, &TTSOpsMinimalTuple);
 
 	ExecAssignProjectionInfo(&assertOpState->ps, NULL);
 
