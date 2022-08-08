@@ -1724,7 +1724,10 @@ CExpressionPreprocessor::PexprFromConstraintsScalar(
 					constraintsForOuterRefs->PexprScalarMappedFromEquivCols(
 						mp, columnRef, nullptr);
 				if (nullptr != pexprScalar &&
-					COperator::EopScalarCmp == pexprScalar->Pop()->Eopid())
+					COperator::EopScalarCmp == pexprScalar->Pop()->Eopid() &&
+					IMDType::EcmptEq ==
+						CScalarCmp::PopConvert(pexprScalar->Pop())
+							->ParseCmpType())
 				{
 					canBeRemoved = true;
 				}
