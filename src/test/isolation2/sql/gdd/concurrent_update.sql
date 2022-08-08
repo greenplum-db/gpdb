@@ -139,7 +139,7 @@ DROP TABLE t_concurrent_update;
 -- routine so concurrent modification is not possible in this case. User have
 -- to be informed to fallback to postgres optimizer.
 -- This test makes sense just for ORCA
-create table test as select 0 as i;
+create table test as select 0 as i distributed randomly;
 -- in session 1, turn off the optimizer so it will invoke heap_update
 1: set optimizer = off;
 1: begin;

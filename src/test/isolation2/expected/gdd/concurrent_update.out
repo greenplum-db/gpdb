@@ -255,7 +255,7 @@ DROP
 -- routine so concurrent modification is not possible in this case. User have
 -- to be informed to fallback to postgres optimizer.
 -- This test makes sense just for ORCA
-create table test as select 0 as i;
+create table test as select 0 as i distributed randomly;
 CREATE 1
 -- in session 1, turn off the optimizer so it will invoke heap_update
 1: set optimizer = off;
@@ -272,7 +272,7 @@ UPDATE 1
 1: end;
 END
 2<:  <... completed>
-ERROR:  tuple to be deleted was already moved to another segment due to concurrent update
+DELETE 0
 drop table test;
 DROP
 1q: ... <quitting>
