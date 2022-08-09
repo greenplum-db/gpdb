@@ -1488,15 +1488,12 @@ CTranslatorDXLToExpr::PexprLogicalUpdate(const CDXLNode *dxlnode)
 	CColRefArray *pdrgpcrDelete =
 		CTranslatorDXLToExprUtils::Pdrgpcr(m_mp, m_phmulcr, pdrgpulDeleteCols);
 
-	// KIMURA TODO: delete?
-	CColRef *pcrTupleOid = nullptr;
-
-	return GPOS_NEW(m_mp) CExpression(
-		m_mp,
-		GPOS_NEW(m_mp)
-			CLogicalUpdate(m_mp, ptabdesc, pdrgpcrDelete, pdrgpcrInsert,
-						   pcrCtid, pcrSegmentId, pcrTupleOid, true),
-		pexprChild);
+	return GPOS_NEW(m_mp)
+		CExpression(m_mp,
+					GPOS_NEW(m_mp) CLogicalUpdate(m_mp, ptabdesc, pdrgpcrDelete,
+												  pdrgpcrInsert, pcrCtid,
+												  pcrSegmentId, true),
+					pexprChild);
 }
 
 //---------------------------------------------------------------------------

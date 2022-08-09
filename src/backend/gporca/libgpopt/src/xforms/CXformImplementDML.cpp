@@ -89,7 +89,6 @@ CXformImplementDML::Transform(CXformContext *pxfctxt, CXformResult *pxfres,
 	CColRef *pcrTableOid = popDML->PcrTableOid();
 	CColRef *pcrCtid = popDML->PcrCtid();
 	CColRef *pcrSegmentId = popDML->PcrSegmentId();
-	CColRef *pcrTupleOid = popDML->PcrTupleOid();
 	BOOL fSplit = popDML->FSplit();
 
 	// child of DML operator
@@ -99,9 +98,9 @@ CXformImplementDML::Transform(CXformContext *pxfctxt, CXformResult *pxfres,
 	// create physical DML
 	CExpression *pexprAlt = GPOS_NEW(mp) CExpression(
 		mp,
-		GPOS_NEW(mp) CPhysicalDML(mp, edmlop, ptabdesc, pdrgpcrSource,
-								  pbsModified, pcrAction, pcrTableOid, pcrCtid,
-								  pcrSegmentId, pcrTupleOid, fSplit),
+		GPOS_NEW(mp)
+			CPhysicalDML(mp, edmlop, ptabdesc, pdrgpcrSource, pbsModified,
+						 pcrAction, pcrTableOid, pcrCtid, pcrSegmentId, fSplit),
 		pexprChild);
 	// add alternative to transformation result
 	pxfres->Add(pexprAlt);

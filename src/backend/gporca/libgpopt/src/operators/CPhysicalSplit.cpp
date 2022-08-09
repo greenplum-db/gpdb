@@ -33,15 +33,13 @@ using namespace gpopt;
 //---------------------------------------------------------------------------
 CPhysicalSplit::CPhysicalSplit(CMemoryPool *mp, CColRefArray *pdrgpcrDelete,
 							   CColRefArray *pdrgpcrInsert, CColRef *pcrCtid,
-							   CColRef *pcrSegmentId, CColRef *pcrAction,
-							   CColRef *pcrTupleOid)
+							   CColRef *pcrSegmentId, CColRef *pcrAction)
 	: CPhysical(mp),
 	  m_pdrgpcrDelete(pdrgpcrDelete),
 	  m_pdrgpcrInsert(pdrgpcrInsert),
 	  m_pcrCtid(pcrCtid),
 	  m_pcrSegmentId(pcrSegmentId),
 	  m_pcrAction(pcrAction),
-	  m_pcrTupleOid(pcrTupleOid),
 	  m_pcrsRequiredLocal(nullptr)
 {
 	GPOS_ASSERT(nullptr != pdrgpcrDelete);
@@ -54,10 +52,6 @@ CPhysicalSplit::CPhysicalSplit(CMemoryPool *mp, CColRefArray *pdrgpcrDelete,
 	m_pcrsRequiredLocal = GPOS_NEW(mp) CColRefSet(mp);
 	m_pcrsRequiredLocal->Include(m_pdrgpcrDelete);
 	m_pcrsRequiredLocal->Include(m_pdrgpcrInsert);
-	if (nullptr != m_pcrTupleOid)
-	{
-		m_pcrsRequiredLocal->Include(m_pcrTupleOid);
-	}
 }
 
 //---------------------------------------------------------------------------
@@ -424,7 +418,6 @@ CPhysicalSplit::Matches(COperator *pop) const
 		return m_pcrCtid == popSplit->PcrCtid() &&
 			   m_pcrSegmentId == popSplit->PcrSegmentId() &&
 			   m_pcrAction == popSplit->PcrAction() &&
-			   m_pcrTupleOid == popSplit->PcrTupleOid() &&
 			   m_pdrgpcrDelete->Equals(popSplit->PdrgpcrDelete()) &&
 			   m_pdrgpcrInsert->Equals(popSplit->PdrgpcrInsert());
 	}

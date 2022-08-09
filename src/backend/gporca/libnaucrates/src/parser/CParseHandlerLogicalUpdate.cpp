@@ -37,8 +37,7 @@ CParseHandlerLogicalUpdate::CParseHandlerLogicalUpdate(
 	  m_ctid_colid(0),
 	  m_segid_colid(0),
 	  m_deletion_colid_array(nullptr),
-	  m_insert_colid_array(nullptr),
-	  m_tuple_oid_col_oid(0)
+	  m_insert_colid_array(nullptr)
 {
 }
 
@@ -144,8 +143,7 @@ CParseHandlerLogicalUpdate::EndElement(const XMLCh *const,	// element_uri,
 	m_dxl_node = GPOS_NEW(m_mp)
 		CDXLNode(m_mp, GPOS_NEW(m_mp) CDXLLogicalUpdate(
 						   m_mp, table_descr, m_ctid_colid, m_segid_colid,
-						   m_deletion_colid_array, m_insert_colid_array,
-						   m_tuple_oid_col_oid));
+						   m_deletion_colid_array, m_insert_colid_array));
 
 	AddChildFromParseHandler(child_parse_handler);
 

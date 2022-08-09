@@ -66,9 +66,6 @@ private:
 	// segmentId column
 	CColRef *m_pcrSegmentId;
 
-	// tuple oid column if one exists
-	CColRef *m_pcrTupleOid;
-
 	// Split Update
 	BOOL m_fSplit;
 
@@ -82,8 +79,7 @@ public:
 	CLogicalDML(CMemoryPool *mp, EDMLOperator edmlop,
 				CTableDescriptor *ptabdesc, CColRefArray *colref_array,
 				CBitSet *pbsModified, CColRef *pcrAction, CColRef *pcrTableOid,
-				CColRef *pcrCtid, CColRef *pcrSegmentId, CColRef *pcrTupleOid,
-				BOOL fSplit);
+				CColRef *pcrCtid, CColRef *pcrSegmentId, BOOL fSplit);
 
 	// dtor
 	~CLogicalDML() override;
@@ -156,13 +152,6 @@ public:
 	Ptabdesc() const
 	{
 		return m_ptabdesc;
-	}
-
-	// tuple oid column
-	CColRef *
-	PcrTupleOid() const
-	{
-		return m_pcrTupleOid;
 	}
 
 	// Is update using split

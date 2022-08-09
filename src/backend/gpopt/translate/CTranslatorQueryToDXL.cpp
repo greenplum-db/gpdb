@@ -1258,8 +1258,6 @@ CTranslatorQueryToDXL::TranslateUpdateQueryToDXL()
 	ULONG segmentid_colid = 0;
 	GetCtidAndSegmentId(&ctid_colid, &segmentid_colid);
 
-	ULONG tuple_oid_colid = 0;
-
 	// get (resno -> colId) mapping of columns to be updated
 	IntToUlongMap *update_column_map = UpdatedColumnMapping();
 
@@ -1297,9 +1295,9 @@ CTranslatorQueryToDXL::TranslateUpdateQueryToDXL()
 	}
 
 	update_column_map->Release();
-	CDXLLogicalUpdate *pdxlopupdate = GPOS_NEW(m_mp) CDXLLogicalUpdate(
-		m_mp, table_descr, ctid_colid, segmentid_colid, delete_colid_array,
-		insert_colid_array, tuple_oid_colid);
+	CDXLLogicalUpdate *pdxlopupdate = GPOS_NEW(m_mp)
+		CDXLLogicalUpdate(m_mp, table_descr, ctid_colid, segmentid_colid,
+						  delete_colid_array, insert_colid_array);
 
 	return GPOS_NEW(m_mp) CDXLNode(m_mp, pdxlopupdate, query_dxlnode);
 }

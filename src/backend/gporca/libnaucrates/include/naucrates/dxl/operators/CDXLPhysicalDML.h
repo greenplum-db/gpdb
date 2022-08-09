@@ -63,9 +63,6 @@ private:
 	// segmentid column id
 	ULONG m_segid_colid;
 
-	// tuple oid column id
-	ULONG m_tuple_oid;
-
 	// direct dispatch info for insert statements
 	CDXLDirectDispatchInfo *m_direct_dispatch_info;
 
@@ -83,7 +80,6 @@ public:
 					CDXLTableDescr *table_descr,
 					ULongPtrArray *src_colids_array, ULONG action_colid,
 					ULONG oid_colid, ULONG ctid_colid, ULONG segid_colid,
-					ULONG tuple_oid,
 					CDXLDirectDispatchInfo *dxl_direct_dispatch_info,
 					BOOL input_sort_req, BOOL fSplit);
 
@@ -143,13 +139,6 @@ public:
 	GetSegmentIdColId() const
 	{
 		return m_segid_colid;
-	}
-
-	// tuple oid column id
-	ULONG
-	GetTupleOid() const
-	{
-		return m_tuple_oid;
 	}
 
 	// direct dispatch info

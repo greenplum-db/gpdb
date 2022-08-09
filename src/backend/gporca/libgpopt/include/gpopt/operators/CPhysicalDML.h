@@ -58,9 +58,6 @@ private:
 	// segmentid column
 	CColRef *m_pcrSegmentId;
 
-	// tuple oid column
-	CColRef *m_pcrTupleOid;
-
 	// target table distribution spec
 	CDistributionSpec *m_pds;
 
@@ -92,8 +89,7 @@ public:
 	CPhysicalDML(CMemoryPool *mp, CLogicalDML::EDMLOperator edmlop,
 				 CTableDescriptor *ptabdesc, CColRefArray *pdrgpcrSource,
 				 CBitSet *pbsModified, CColRef *pcrAction, CColRef *pcrTableOid,
-				 CColRef *pcrCtid, CColRef *pcrSegmentId, CColRef *pcrTupleOid,
-				 BOOL fSplit);
+				 CColRef *pcrCtid, CColRef *pcrSegmentId, BOOL fSplit);
 
 	// dtor
 	~CPhysicalDML() override;
@@ -152,13 +148,6 @@ public:
 	PcrSegmentId() const
 	{
 		return m_pcrSegmentId;
-	}
-
-	// tuple oid column
-	CColRef *
-	PcrTupleOid() const
-	{
-		return m_pcrTupleOid;
 	}
 
 	// source columns

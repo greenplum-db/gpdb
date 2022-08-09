@@ -48,16 +48,13 @@ private:
 	// segmentid column id
 	ULONG m_segid_colid;
 
-	// tuple oid column id
-	ULONG m_tuple_oid;
-
 public:
 	CDXLPhysicalSplit(const CDXLPhysicalSplit &) = delete;
 
 	// ctor
 	CDXLPhysicalSplit(CMemoryPool *mp, ULongPtrArray *delete_colid_array,
 					  ULongPtrArray *insert_colid_array, ULONG action_colid,
-					  ULONG ctid_colid, ULONG segid_colid, ULONG tuple_oid);
+					  ULONG ctid_colid, ULONG segid_colid);
 
 	// dtor
 	~CDXLPhysicalSplit() override;
@@ -101,13 +98,6 @@ public:
 	GetSegmentIdColId() const
 	{
 		return m_segid_colid;
-	}
-
-	// tuple oid column id
-	ULONG
-	GetTupleOid() const
-	{
-		return m_tuple_oid;
 	}
 
 #ifdef GPOS_DEBUG

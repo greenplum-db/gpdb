@@ -38,8 +38,7 @@ CPhysicalDML::CPhysicalDML(CMemoryPool *mp, CLogicalDML::EDMLOperator edmlop,
 						   CTableDescriptor *ptabdesc,
 						   CColRefArray *pdrgpcrSource, CBitSet *pbsModified,
 						   CColRef *pcrAction, CColRef *pcrTableOid,
-						   CColRef *pcrCtid, CColRef *pcrSegmentId,
-						   CColRef *pcrTupleOid, BOOL fSplit)
+						   CColRef *pcrCtid, CColRef *pcrSegmentId, BOOL fSplit)
 	: CPhysical(mp),
 	  m_edmlop(edmlop),
 	  m_ptabdesc(ptabdesc),
@@ -49,7 +48,6 @@ CPhysicalDML::CPhysicalDML(CMemoryPool *mp, CLogicalDML::EDMLOperator edmlop,
 	  m_pcrTableOid(pcrTableOid),
 	  m_pcrCtid(pcrCtid),
 	  m_pcrSegmentId(pcrSegmentId),
-	  m_pcrTupleOid(pcrTupleOid),
 	  m_pds(nullptr),
 	  m_pos(nullptr),
 	  m_pcrsRequiredLocal(nullptr),
@@ -393,7 +391,6 @@ CPhysicalDML::Matches(COperator *pop) const
 			   m_pcrTableOid == popDML->PcrTableOid() &&
 			   m_pcrCtid == popDML->PcrCtid() &&
 			   m_pcrSegmentId == popDML->PcrSegmentId() &&
-			   m_pcrTupleOid == popDML->PcrTupleOid() &&
 			   m_ptabdesc->MDId()->Equals(popDML->Ptabdesc()->MDId()) &&
 			   m_pdrgpcrSource->Equals(popDML->PdrgpcrSource()) &&
 			   m_fSplit == popDML->FSplit();
@@ -552,11 +549,6 @@ CPhysicalDML::ComputeRequiredLocalColumns(CMemoryPool *mp)
 	{
 		m_pcrsRequiredLocal->Include(m_pcrCtid);
 		m_pcrsRequiredLocal->Include(m_pcrSegmentId);
-	}
-
-	if (nullptr != m_pcrTupleOid)
-	{
-		m_pcrsRequiredLocal->Include(m_pcrTupleOid);
 	}
 }
 

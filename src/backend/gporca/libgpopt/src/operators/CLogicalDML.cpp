@@ -39,7 +39,6 @@ CLogicalDML::CLogicalDML(CMemoryPool *mp)
 	  m_pcrTableOid(nullptr),
 	  m_pcrCtid(nullptr),
 	  m_pcrSegmentId(nullptr),
-	  m_pcrTupleOid(nullptr),
 	  m_fSplit(true)
 {
 	m_fPattern = true;
@@ -57,8 +56,7 @@ CLogicalDML::CLogicalDML(CMemoryPool *mp, EDMLOperator edmlop,
 						 CTableDescriptor *ptabdesc,
 						 CColRefArray *pdrgpcrSource, CBitSet *pbsModified,
 						 CColRef *pcrAction, CColRef *pcrTableOid,
-						 CColRef *pcrCtid, CColRef *pcrSegmentId,
-						 CColRef *pcrTupleOid, BOOL fSplit)
+						 CColRef *pcrCtid, CColRef *pcrSegmentId, BOOL fSplit)
 	: CLogical(mp),
 	  m_edmlop(edmlop),
 	  m_ptabdesc(ptabdesc),
@@ -68,7 +66,6 @@ CLogicalDML::CLogicalDML(CMemoryPool *mp, EDMLOperator edmlop,
 	  m_pcrTableOid(pcrTableOid),
 	  m_pcrCtid(pcrCtid),
 	  m_pcrSegmentId(pcrSegmentId),
-	  m_pcrTupleOid(pcrTupleOid),
 	  m_fSplit(fSplit)
 {
 	GPOS_ASSERT(EdmlSentinel != edmlop);
@@ -93,11 +90,6 @@ CLogicalDML::CLogicalDML(CMemoryPool *mp, EDMLOperator edmlop,
 	if (nullptr != m_pcrSegmentId)
 	{
 		m_pcrsLocalUsed->Include(m_pcrSegmentId);
-	}
-
-	if (nullptr != m_pcrTupleOid)
-	{
-		m_pcrsLocalUsed->Include(m_pcrTupleOid);
 	}
 }
 
@@ -139,7 +131,6 @@ CLogicalDML::Matches(COperator *pop) const
 		   m_pcrTableOid == popDML->PcrTableOid() &&
 		   m_pcrCtid == popDML->PcrCtid() &&
 		   m_pcrSegmentId == popDML->PcrSegmentId() &&
-		   m_pcrTupleOid == popDML->PcrTupleOid() &&
 		   m_ptabdesc->MDId()->Equals(popDML->Ptabdesc()->MDId()) &&
 		   m_pdrgpcrSource->Equals(popDML->PdrgpcrSource()) &&
 		   m_fSplit == popDML->FSplit();
@@ -210,18 +201,11 @@ CLogicalDML::PopCopyWithRemappedColumns(CMemoryPool *mp,
 			CUtils::PcrRemap(m_pcrSegmentId, colref_mapping, must_exist);
 	}
 
-	CColRef *pcrTupleOid = nullptr;
-	if (nullptr != m_pcrTupleOid)
-	{
-		pcrTupleOid =
-			CUtils::PcrRemap(m_pcrTupleOid, colref_mapping, must_exist);
-	}
-
 	m_ptabdesc->AddRef();
 
-	return GPOS_NEW(mp) CLogicalDML(
-		mp, m_edmlop, m_ptabdesc, colref_array, m_pbsModified, pcrAction,
-		pcrTableOid, pcrCtid, pcrSegmentId, pcrTupleOid, m_fSplit);
+	return GPOS_NEW(mp)
+		CLogicalDML(mp, m_edmlop, m_ptabdesc, colref_array, m_pbsModified,
+					pcrAction, pcrTableOid, pcrCtid, pcrSegmentId, m_fSplit);
 }
 
 //---------------------------------------------------------------------------
@@ -247,11 +231,6 @@ CLogicalDML::DeriveOutputColumns(CMemoryPool *mp,
 	}
 
 	pcrsOutput->Include(m_pcrAction);
-
-	if (nullptr != m_pcrTupleOid)
-	{
-		pcrsOutput->Include(m_pcrTupleOid);
-	}
 
 	return pcrsOutput;
 }

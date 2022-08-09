@@ -2975,9 +2975,9 @@ CExpressionPreprocessor::ConvertSplitUpdateToInPlaceUpdate(CMemoryPool *mp,
 		tabdesc->AddRef();
 		CExpression *pexprNew = GPOS_NEW(mp) CExpression(
 			mp,
-			GPOS_NEW(mp) CLogicalUpdate(
-				mp, tabdesc, pdrgpcrDelete, pdrgpcrInsert, popUpdate->PcrCtid(),
-				popUpdate->PcrSegmentId(), popUpdate->PcrTupleOid(), false),
+			GPOS_NEW(mp) CLogicalUpdate(mp, tabdesc, pdrgpcrDelete,
+										pdrgpcrInsert, popUpdate->PcrCtid(),
+										popUpdate->PcrSegmentId(), false),
 			pexprChild);
 		return pexprNew;
 	}
