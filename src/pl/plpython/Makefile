@@ -118,6 +118,7 @@ REGRESS = \
 	plpython_subtransaction \
 	plpython_transaction \
 	plpython_gpdb \
+	plpython3_path_guc \
 	plpython_drop
 
 REGRESS_PLPYTHON3_MANGLE := $(REGRESS)
