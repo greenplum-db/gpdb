@@ -185,8 +185,9 @@ optimize_query(Query *parse, ParamListInfo boundParams)
 	(void) apply_shareinput_xslice(result->planTree, root);
 
 	/*
-	 * Fix ShareInputScans for EXPLAIN, like in standard_planner(). For all
-	 * subplans first, and then for the main plan tree.
+	 * Fix ShareInputScans for EXPLAIN, like in standard_planner(). Subplans
+	 * will be visited from references to them during walking through the main
+	 * plan tree (see shareinput_walker comments)
 	 */
 	result->planTree = replace_shareinput_targetlists(root, result->planTree);
 

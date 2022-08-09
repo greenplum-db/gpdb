@@ -3110,6 +3110,14 @@ ExecutePlan(EState *estate,
 
 	/*
 	 * Make sure slice dependencies are met
+	 *
+	 * ExecSliceDependencyNode walks subtree to find ShareInputScan nodes and
+	 * call ExecSliceDependencyShareInputScan for them, but doesn't visit
+	 * subplans. ExecSliceDependencyShareInputScan validates that
+	 * ShareInputScan belong current slice and calls
+	 * shareinput_reader_waitready to wait until the producer node completes
+	 * its work and notifies all readers. If a reader node is located inside
+	 * a subplan, it won't notify writer, and writer will wait forever.
 	 */
 	foreach(lc, estate->es_subplanstates)
 	{
