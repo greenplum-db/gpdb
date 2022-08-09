@@ -66,10 +66,10 @@ CheckForAssertViolations(AssertOpState* node, TupleTableSlot* slot)
 /*
  * Evaluate Constraints (in node->ps.qual) and project output TupleTableSlot.
  * */
-TupleTableSlot*
-ExecAssertOp(struct PlanState *node)
+static TupleTableSlot*
+ExecAssertOp(PlanState *pstate)
 {
-	PlanState *outerNode = outerPlanState(node);
+	PlanState *outerNode = outerPlanState(pstate);
 	TupleTableSlot *slot = ExecProcNode(outerNode);
 
 	if (TupIsNull(slot))
@@ -77,11 +77,11 @@ ExecAssertOp(struct PlanState *node)
 		return NULL;
 	}
 
-	AssertOpState *pstate = castNode(AssertOpState, node);
+	AssertOpState *node = castNode(AssertOpState, pstate);
 
-	CheckForAssertViolations(pstate, slot);
+	CheckForAssertViolations(node, slot);
 
-	return ExecProject(pstate->ps.ps_ProjInfo);
+	return ExecProject(node->ps.ps_ProjInfo);
 }
 
 /**
