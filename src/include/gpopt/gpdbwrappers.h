@@ -686,9 +686,6 @@ List *GetMergeJoinOpFamilies(Oid opno);
 // and takes ownership of the result
 Expr *EvaluateExpr(Expr *expr, Oid result_type, int32 typmod);
 
-// interpret the value of "With oids" option from a list of defelems
-bool InterpretOidsOption(List *options, bool allowOids);
-
 // extract string value from defelem's value
 char *DefGetString(DefElem *defelem);
 

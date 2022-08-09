@@ -62,9 +62,6 @@ private:
 	// is this a temporary relation
 	BOOL m_is_temp_table;
 
-	// does this table have oids
-	BOOL m_has_oids;
-
 	// storage type
 	Erelstoragetype m_rel_storage_type;
 
@@ -111,7 +108,7 @@ public:
 	// ctor
 	CMDRelationCtasGPDB(
 		CMemoryPool *mp, IMDId *mdid, CMDName *mdname_schema, CMDName *mdname,
-		BOOL fTemporary, BOOL fHasOids, Erelstoragetype rel_storage_type,
+		BOOL fTemporary, Erelstoragetype rel_storage_type,
 		Ereldistrpolicy rel_distr_policy, CMDColumnArray *mdcol_array,
 		ULongPtrArray *distr_col_array, IMdIdArray *distr_opfamilies,
 		IMdIdArray *distr_opclasses, ULongPtr2dArray *keyset_array,
@@ -139,13 +136,6 @@ public:
 
 	// distribution policy (none, hash, random)
 	Ereldistrpolicy GetRelDistribution() const override;
-
-	// does this table have oids
-	BOOL
-	HasOids() const override
-	{
-		return m_has_oids;
-	}
 
 	// is this a temp relation
 	BOOL

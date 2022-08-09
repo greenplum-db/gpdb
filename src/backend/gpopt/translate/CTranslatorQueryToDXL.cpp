@@ -993,15 +993,13 @@ CTranslatorQueryToDXL::TranslateCTASToDXL()
 	CDXLCtasStorageOptions::CDXLCtasOptionArray *ctas_storage_options =
 		GetDXLCtasOptionArray(NIL, &rel_storage_type);
 
-	//	BOOL has_oids = gpdb::InterpretOidsOption(into_clause->options);
-	BOOL has_oids = false;
 	BOOL fTempTable = true;
 	CDXLLogicalCTAS *ctas_dxlop = GPOS_NEW(m_mp) CDXLLogicalCTAS(
 		m_mp, mdid, md_schema_name, md_relname, dxl_col_descr_array,
 		GPOS_NEW(m_mp) CDXLCtasStorageOptions(
 			md_tablespace_name, ctas_commit_action, ctas_storage_options),
 		rel_distr_policy, distribution_colids, distr_opfamilies,
-		distr_opclasses, fTempTable, has_oids, rel_storage_type, source_array,
+		distr_opclasses, fTempTable, rel_storage_type, source_array,
 		var_typmods);
 
 	return GPOS_NEW(m_mp) CDXLNode(m_mp, ctas_dxlop, query_dxlnode);
@@ -1262,10 +1260,6 @@ CTranslatorQueryToDXL::TranslateUpdateQueryToDXL()
 
 	ULONG tuple_oid_colid = 0;
 
-
-	// GPDB_12_MERGE_FIXME: Dead code, this needs to be removed from Orca too
-	BOOL has_oids = false;
-
 	// get (resno -> colId) mapping of columns to be updated
 	IntToUlongMap *update_column_map = UpdatedColumnMapping();
 
@@ -1305,7 +1299,7 @@ CTranslatorQueryToDXL::TranslateUpdateQueryToDXL()
 	update_column_map->Release();
 	CDXLLogicalUpdate *pdxlopupdate = GPOS_NEW(m_mp) CDXLLogicalUpdate(
 		m_mp, table_descr, ctid_colid, segmentid_colid, delete_colid_array,
-		insert_colid_array, has_oids, tuple_oid_colid);
+		insert_colid_array, tuple_oid_colid);
 
 	return GPOS_NEW(m_mp) CDXLNode(m_mp, pdxlopupdate, query_dxlnode);
 }

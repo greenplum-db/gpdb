@@ -40,7 +40,6 @@ CParseHandlerMDRelation::CParseHandlerMDRelation(
 	  m_mdname_schema(nullptr),
 	  m_mdname(nullptr),
 	  m_is_temp_table(false),
-	  m_has_oids(false),
 	  m_rel_storage_type(IMDRelation::ErelstorageSentinel),
 	  m_rel_distr_policy(IMDRelation::EreldistrSentinel),
 	  m_distr_col_array(nullptr),
@@ -137,16 +136,6 @@ CParseHandlerMDRelation::StartElement(const XMLCh *const element_uri,
 	m_is_temp_table = CDXLOperatorFactory::ExtractConvertAttrValueToBool(
 		m_parse_handler_mgr->GetDXLMemoryManager(), attrs,
 		EdxltokenRelTemporary, EdxltokenRelation);
-
-	// parse whether relation has oids
-	const XMLCh *xmlszHasOids =
-		attrs.getValue(CDXLTokens::XmlstrToken(EdxltokenRelHasOids));
-	if (nullptr != xmlszHasOids)
-	{
-		m_has_oids = CDXLOperatorFactory::ConvertAttrValueToBool(
-			m_parse_handler_mgr->GetDXLMemoryManager(), xmlszHasOids,
-			EdxltokenRelHasOids, EdxltokenRelation);
-	}
 
 	// parse storage type
 	const XMLCh *xmlszStorageType = CDXLOperatorFactory::ExtractAttrValue(
@@ -288,7 +277,7 @@ CParseHandlerMDRelation::EndElement(const XMLCh *const,	 // element_uri,
 		m_partition_cols_array, m_str_part_types_array, m_num_of_partitions,
 		child_partitions, m_convert_hash_to_random, m_key_sets_arrays,
 		md_index_info_array, mdid_triggers_array, mdid_check_constraint_array,
-		m_part_constraint, m_has_oids);
+		m_part_constraint);
 
 	// deactivate handler
 	m_parse_handler_mgr->DeactivateHandler();

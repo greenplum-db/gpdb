@@ -55,13 +55,6 @@ public:
 	// return true if a hash distributed table needs to be considered as random
 	BOOL ConvertHashToRandom() const override = 0;
 
-	// does this table have oids
-	BOOL
-	HasOids() const override
-	{
-		return false;
-	}
-
 	// number of partition columns
 	ULONG
 	PartColumnCount() const override

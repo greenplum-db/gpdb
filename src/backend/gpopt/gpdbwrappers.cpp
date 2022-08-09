@@ -2426,19 +2426,6 @@ gpdb::EvaluateExpr(Expr *expr, Oid result_type, int32 typmod)
 	return nullptr;
 }
 
-// interpret the value of "With oids" option from a list of defelems
-// GPDB_12_MERGE_FIXME: this leaves dead code in CMDRelationGPDB
-bool
-gpdb::InterpretOidsOption(List *options, bool allowOids)
-{
-	GP_WRAP_START;
-	{
-		return false;
-	}
-	GP_WRAP_END;
-	return false;
-}
-
 char *
 gpdb::DefGetString(DefElem *defelem)
 {

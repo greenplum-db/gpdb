@@ -142,9 +142,6 @@ public:
 	// return true if a hash distributed table needs to be considered as random
 	virtual BOOL ConvertHashToRandom() const = 0;
 
-	// does this table have oids
-	virtual BOOL HasOids() const = 0;
-
 	// is this a partitioned table
 	virtual BOOL IsPartitioned() const = 0;
 

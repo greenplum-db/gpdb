@@ -358,7 +358,6 @@ CTranslatorRelcacheToDXL::RetrieveRel(CMemoryPool *mp, CMDAccessor *md_accessor,
 	ULongPtr2dArray *keyset_array = nullptr;
 	IMdIdArray *check_constraint_mdids = nullptr;
 	BOOL is_temporary = false;
-	BOOL has_oids = false;
 	BOOL is_partitioned = false;
 	IMDRelation *md_rel = nullptr;
 	IMdIdArray *partition_oids = nullptr;
@@ -435,7 +434,6 @@ CTranslatorRelcacheToDXL::RetrieveRel(CMemoryPool *mp, CMDAccessor *md_accessor,
 	check_constraint_mdids = RetrieveRelCheckConstraints(mp, oid);
 
 	is_temporary = (rel->rd_rel->relpersistence == RELPERSISTENCE_TEMP);
-	has_oids = false;
 
 	GPOS_DELETE_ARRAY(attno_mapping);
 
@@ -476,7 +474,7 @@ CTranslatorRelcacheToDXL::RetrieveRel(CMemoryPool *mp, CMDAccessor *md_accessor,
 			distr_cols, distr_op_families, part_keys, part_types,
 			num_leaf_partitions, partition_oids, convert_hash_to_random,
 			keyset_array, md_index_info_array, mdid_triggers_array,
-			check_constraint_mdids, mdpart_constraint, has_oids);
+			check_constraint_mdids, mdpart_constraint);
 	}
 
 	return md_rel;

@@ -71,7 +71,6 @@ const CHAR *rgszDMLFileNames[] = {
 	"../data/dxl/minidump/UpdateDistrKey.mdp",
 	"../data/dxl/minidump/UpdateNoCardinalityAssert.mdp",
 	"../data/dxl/minidump/SelfUpdate.mdp",
-	"../data/dxl/minidump/UpdateWithOids.mdp",
 	"../data/dxl/minidump/UpdateUniqueConstraint.mdp",
 	"../data/dxl/minidump/UpdateUniqueConstraint-2.mdp",
 	"../data/dxl/minidump/UpdateVolatileFunction.mdp",

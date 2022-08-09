@@ -512,7 +512,6 @@ CDXLTokens::Init(CMemoryPool *mp)
 		{EdxltokenDoubleValue, GPOS_WSZ_LIT("DoubleValue")},
 
 		{EdxltokenRelTemporary, GPOS_WSZ_LIT("IsTemporary")},
-		{EdxltokenRelHasOids, GPOS_WSZ_LIT("HasOids")},
 
 		{EdxltokenEntireRow, GPOS_WSZ_LIT("*")},
 

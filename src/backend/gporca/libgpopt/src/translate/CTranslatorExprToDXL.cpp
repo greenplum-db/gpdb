@@ -5049,8 +5049,8 @@ CTranslatorExprToDXL::PdxlnCTAS(CExpression *pexpr,
 		GPOS_NEW(m_mp) CMDName(m_mp, pmdrel->Mdname().GetMDName()),
 		dxl_col_descr_array, pmdrel->GetDxlCtasStorageOption(),
 		pmdrel->GetRelDistribution(), pdrgpulDistr, pmdrel->GetDistrOpClasses(),
-		pmdrel->IsTemporary(), pmdrel->HasOids(),
-		pmdrel->RetrieveRelStorageType(), pdrgpul, vartypemod_array);
+		pmdrel->IsTemporary(), pmdrel->RetrieveRelStorageType(), pdrgpul,
+		vartypemod_array);
 
 	CDXLNode *pdxlnCTAS = GPOS_NEW(m_mp) CDXLNode(m_mp, pdxlopCTAS);
 	CDXLPhysicalProperties *dxl_properties = GetProperties(pexpr);

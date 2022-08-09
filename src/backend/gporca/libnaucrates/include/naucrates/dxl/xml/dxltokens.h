@@ -464,7 +464,6 @@ enum Edxltoken
 	EdxltokenDoubleValue,
 
 	EdxltokenRelTemporary,
-	EdxltokenRelHasOids,
 
 	EdxltokenRelStorageType,
 	EdxltokenRelStorageHeap,
