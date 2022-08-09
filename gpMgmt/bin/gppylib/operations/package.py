@@ -1587,7 +1587,7 @@ class GpScp(Operation):
                                      dstFile=self.target_path,
                                      dstHost=host))
         self.pool.join()
-
+        self.pool.check_results()
 
 class HostOperation(Operation):
     """
