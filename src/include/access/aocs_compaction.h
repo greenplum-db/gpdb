@@ -17,8 +17,9 @@
 #include "utils/rel.h"
 
 extern void AOCSDrop(Relation aorel,
-		 List *compaction_segno,
-		 Bitmapset **collect_dead_segs);
+			List *compaction_segno);
+extern Bitmapset *AOCSCollectDeadSegments(Relation aorel,
+			List *compaction_segno);
 extern void AOCSCompact(Relation aorel,
 			List *compaction_segno_list,
 			int insert_segno,

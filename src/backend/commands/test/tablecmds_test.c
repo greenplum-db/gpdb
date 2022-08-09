@@ -95,7 +95,6 @@ test__column_to_scan(void **state)
 	Gp_role = GP_ROLE_EXECUTE;
 	expect_value(AOCSDrop, aorel, &reldata);
 	expect_check(AOCSDrop, compaction_segno, check_segno_list, drop_segno_list);
-	expect_any(AOCSDrop, collect_dead_segs);
 	will_be_called(AOCSDrop);
 
 	/* Column 1 (vpe index 1) has the smallest eof */

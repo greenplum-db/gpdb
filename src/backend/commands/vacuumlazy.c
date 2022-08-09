@@ -547,13 +547,10 @@ ao_vacuum_rel_prepare(Relation onerel, VacuumStmt *vacstmt)
 		vacuum_appendonly_indexes(onerel, vacstmt, NULL);
 	else
 		/* 
-		 * Truncate AWAITING_DROP segments that are no longer visible to anyone
-		 * to 0 bytes. We cannot actually remove them yet, because there might
-		 * still be index entries pointing to them. We cannot recycle the segments
-		 * until the indexes have been vacuumed.
+		 * Recycle AWAITING_DROP segments that are no longer visible to anyone.
 		 *
 		 * This is optional. We'll drop old AWAITING_DROP segments in the
-		 * post-cleanup phase, too, but doing this first helps to reclaim some
+		 * cleanup phase, too, but doing this first helps to reclaim some
 		 * space earlier. The compaction phase might need the space.
 		 *
 		 * This could run in a local transaction.
@@ -627,13 +624,13 @@ ao_vacuum_rel_cleanup(Relation onerel, VacuumStmt *vacstmt, LVRelStats *vacrelst
 static void
 ao_vacuum_rel_recycle_dead_segments(Relation onerel, VacuumStmt *vacstmt)
 {
-	Bitmapset	*dead_segs = NULL;
+	Bitmapset	*dead_segs;
 	bool		need_drop;
 
 	if (RelationIsAoRows(onerel))
-		AppendOnlyDrop(onerel, vacstmt->appendonly_compaction_segno, &dead_segs);
+		dead_segs = AppendOnlyCollectDeadSegments(onerel, vacstmt->appendonly_compaction_segno);
 	else
-		AOCSDrop(onerel, vacstmt->appendonly_compaction_segno, &dead_segs);
+		dead_segs = AOCSCollectDeadSegments(onerel, vacstmt->appendonly_compaction_segno);
 
 	need_drop = !bms_is_empty(dead_segs);
 	if (need_drop)
