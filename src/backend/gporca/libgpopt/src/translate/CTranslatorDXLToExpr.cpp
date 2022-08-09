@@ -1488,12 +1488,8 @@ CTranslatorDXLToExpr::PexprLogicalUpdate(const CDXLNode *dxlnode)
 	CColRefArray *pdrgpcrDelete =
 		CTranslatorDXLToExprUtils::Pdrgpcr(m_mp, m_phmulcr, pdrgpulDeleteCols);
 
+	// KIMURA TODO: delete?
 	CColRef *pcrTupleOid = nullptr;
-	if (pdxlopUpdate->IsOidsPreserved())
-	{
-		ULONG tuple_oid = pdxlopUpdate->GetTupleOid();
-		pcrTupleOid = LookupColRef(m_phmulcr, tuple_oid);
-	}
 
 	return GPOS_NEW(m_mp) CExpression(
 		m_mp,

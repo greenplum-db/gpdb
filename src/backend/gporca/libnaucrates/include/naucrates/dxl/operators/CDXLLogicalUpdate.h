@@ -49,9 +49,6 @@ private:
 	// list of insertion column ids
 	ULongPtrArray *m_insert_colid_array;
 
-	// should update preserve tuple oids
-	BOOL m_preserve_oids;
-
 	// tuple oid column id
 	ULONG m_tuple_oid;
 
@@ -62,8 +59,7 @@ public:
 	CDXLLogicalUpdate(CMemoryPool *mp, CDXLTableDescr *table_descr,
 					  ULONG ctid_colid, ULONG segid_colid,
 					  ULongPtrArray *delete_colid_array,
-					  ULongPtrArray *insert_colid_array, BOOL preserve_oids,
-					  ULONG tuple_oid);
+					  ULongPtrArray *insert_colid_array, ULONG tuple_oid);
 
 	// dtor
 	~CDXLLogicalUpdate() override;
@@ -107,13 +103,6 @@ public:
 	GetInsertionColIdArray() const
 	{
 		return m_insert_colid_array;
-	}
-
-	// does update preserve oids
-	BOOL
-	IsOidsPreserved() const
-	{
-		return m_preserve_oids;
 	}
 
 	// tuple oid column id

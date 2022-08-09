@@ -4266,11 +4266,6 @@ CTranslatorDXLToPlStmt::TranslateDXLDml(
 								   phy_dml_dxlop->GetSegmentIdColId(),
 								   "gp_segment_id");
 	}
-	if (m_cmd_type == CMD_UPDATE && phy_dml_dxlop->IsOidsPreserved() && isSplit)
-	{
-		AddJunkTargetEntryForColId(&dml_target_list, &child_context,
-								   phy_dml_dxlop->GetTupleOid(), "oid");
-	}
 
 	// Add a Result node on top of the child plan, to coerce the target
 	// list to match the exact physical layout of the target table,
