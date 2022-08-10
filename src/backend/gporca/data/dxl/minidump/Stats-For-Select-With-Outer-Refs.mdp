@@ -468,7 +468,7 @@
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
       <dxl:RelationStatistics Mdid="2.2604.1.1" Name="pg_attrdef" Rows="0.000000"/>
-      <dxl:Relation Mdid="0.2604.1.1" Name="pg_attrdef" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="MasterOnly" Keys="11,4">
+      <dxl:Relation Mdid="0.2604.1.1" Name="pg_attrdef" IsTemporary="false" StorageType="Heap" DistributionPolicy="MasterOnly" Keys="11,4">
         <dxl:Columns>
           <dxl:Column Name="adrelid" Attno="1" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -536,7 +536,7 @@
       </dxl:ColumnStatistics>
       <dxl:ColumnStatistics Mdid="1.1249.1.1.5" Name="attnum" Width="2.000000"/>
       <dxl:RelationStatistics Mdid="2.1249.1.1" Name="pg_attribute" Rows="2585.000000"/>
-      <dxl:Relation Mdid="0.1249.1.1" Name="pg_attribute" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="MasterOnly" Keys="23,17">
+      <dxl:Relation Mdid="0.1249.1.1" Name="pg_attribute" IsTemporary="false" StorageType="Heap" DistributionPolicy="MasterOnly" Keys="23,17">
         <dxl:Columns>
           <dxl:Column Name="attrelid" Attno="1" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>

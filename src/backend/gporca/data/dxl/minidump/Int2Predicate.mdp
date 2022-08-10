@@ -870,7 +870,7 @@
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
       <dxl:RelationStatistics Mdid="2.281939.1.1" Name="hsdss__mgrs_coord" Rows="66979000.000000"/>
-      <dxl:Relation Mdid="0.281939.1.1" Name="hsdss__mgrs_coord" IsTemporary="false" HasOids="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,5">
+      <dxl:Relation Mdid="0.281939.1.1" Name="hsdss__mgrs_coord" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,5">
         <dxl:Columns>
           <dxl:Column Name="mgrs_coord" Attno="1" Mdid="0.1042.1.0" Nullable="false" ColWidth="15">
             <dxl:DefaultValue/>

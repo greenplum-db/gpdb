@@ -128,7 +128,7 @@ Optimizer status: PQO version 2.65.1
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
       <dxl:RelationStatistics Mdid="2.573684.1.0" Name="gist_tbl" Rows="100.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.573684.1.0" Name="gist_tbl" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Random" Keys="9,3" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="0.573684.1.0" Name="gist_tbl" IsTemporary="false" StorageType="Heap" DistributionPolicy="Random" Keys="9,3" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="b" Attno="1" Mdid="0.603.1.0" Nullable="true" ColWidth="32">
             <dxl:DefaultValue/>

@@ -538,7 +538,7 @@
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
       <dxl:RelationStatistics Mdid="2.40615.1.1" Name="dm_calendar" Rows="730.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.40615.1.1" Name="dm_calendar" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0;38,32">
+      <dxl:Relation Mdid="0.40615.1.1" Name="dm_calendar" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0;38,32">
         <dxl:Columns>
           <dxl:Column Name="calendar_id" Attno="1" Mdid="0.20.1.0" Nullable="false" ColWidth="8">
             <dxl:DefaultValue/>

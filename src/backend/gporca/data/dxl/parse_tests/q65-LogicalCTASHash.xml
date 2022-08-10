@@ -5,7 +5,7 @@
       <dxl:Ident ColId="2" ColName="a" TypeMdid="0.23.1.0"/>
     </dxl:OutputColumns>
     <dxl:CTEList/>
-    <dxl:LogicalCTAS Mdid="5.252525.1.0" Schema="bla" Name="r" IsTemporary="true" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" InsertColumns="2" VarTypeModList="-1">
+    <dxl:LogicalCTAS Mdid="5.252525.1.0" Schema="bla" Name="r" IsTemporary="true" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" InsertColumns="2" VarTypeModList="-1">
       <dxl:Columns>
         <dxl:Column ColId="3" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
       </dxl:Columns>

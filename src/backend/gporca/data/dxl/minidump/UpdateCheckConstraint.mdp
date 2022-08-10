@@ -133,7 +133,7 @@
           <dxl:ConstValue TypeMdid="0.23.1.0" Value="0"/>
         </dxl:Comparison>
       </dxl:CheckConstraint>
-      <dxl:Relation Mdid="0.17005.1.0" Name="r" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="4,20">
+      <dxl:Relation Mdid="0.17005.1.0" Name="r" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="4,20">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -196,7 +196,7 @@
       <dxl:ColumnStatistics Mdid="1.17005.1.1.5" Name="xmin" Width="4.000000"/>
       <dxl:ColumnStatistics Mdid="1.17005.1.1.4" Name="ctid" Width="6.000000"/>
       <dxl:RelationStatistics Mdid="2.17005.1.1" Name="r" Rows="0.000000"/>
-      <dxl:Relation Mdid="0.17005.1.1" Name="r" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="4,10">
+      <dxl:Relation Mdid="0.17005.1.1" Name="r" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="4,10">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -245,7 +245,7 @@
     <dxl:Query>
       <dxl:OutputColumns/>
       <dxl:CTEList/>
-      <dxl:LogicalUpdate DeleteColumns="1,2,3,4" InsertColumns="1,12,3,4" CtidCol="5" SegmentIdCol="11" PreserveOids="false">
+      <dxl:LogicalUpdate DeleteColumns="1,2,3,4" InsertColumns="1,12,3,4" CtidCol="5" SegmentIdCol="11">
         <dxl:TableDescriptor Mdid="0.17005.1.1" TableName="r">
           <dxl:Columns>
             <dxl:Column ColId="13" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
@@ -294,7 +294,7 @@
       </dxl:LogicalUpdate>
     </dxl:Query>
     <dxl:Plan Id="0" SpaceSize="2">
-      <dxl:DMLUpdate Columns="0,11,2,3" ActionCol="12" OidCol="13" CtidCol="4" SegmentIdCol="10" InputSorted="false" IsSplitUpdate="false" PreserveOids="false">
+      <dxl:DMLUpdate Columns="0,11,2,3" ActionCol="12" OidCol="13" CtidCol="4" SegmentIdCol="10" InputSorted="false" IsSplitUpdate="false">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="431.058730" Rows="1.000000" Width="1"/>
         </dxl:Properties>

@@ -27,7 +27,7 @@
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
       <dxl:RelationStatistics Mdid="2.49159.1.0" Name="t2" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="0.49159.1.0" Name="t2" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,1" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="0.49159.1.0" Name="t2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,1" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="b" Attno="1" Mdid="0.1042.1.0" TypeModifier="6" Nullable="true" ColWidth="2">
             <dxl:DefaultValue/>
@@ -59,7 +59,7 @@
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:RelationStatistics Mdid="2.49156.1.0" Name="t1" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="0.49156.1.0" Name="t1" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,1" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="0.49156.1.0" Name="t1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,1" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.1042.1.0" TypeModifier="6" Nullable="true" ColWidth="2">
             <dxl:DefaultValue/>
@@ -92,7 +92,7 @@
       </dxl:Relation>
       <dxl:ColumnStatistics Mdid="1.49159.1.0.0" Name="b" Width="8.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
       <dxl:RelationStatistics Mdid="2.49162.1.0" Name="t3" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="0.49162.1.0" Name="t3" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,1" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="0.49162.1.0" Name="t3" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,1" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="c" Attno="1" Mdid="0.1043.1.0" TypeModifier="28" Nullable="true" ColWidth="24">
             <dxl:DefaultValue/>

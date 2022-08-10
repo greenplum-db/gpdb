@@ -172,7 +172,7 @@
           <dxl:Opfamily Mdid="0.7102.1.0"/>
         </dxl:Opfamilies>
       </dxl:GPDBScalarOp>
-      <dxl:CTASRelation Mdid="5.1.1.0" Name="fake ctas rel" IsTemporary="true" HasOids="false" StorageType="Heap" VarTypeModList="-1" DistributionPolicy="Random">
+      <dxl:CTASRelation Mdid="5.1.1.0" Name="fake ctas rel" IsTemporary="true" StorageType="Heap" VarTypeModList="-1" DistributionPolicy="Random">
         <dxl:Columns>
           <dxl:Column Name="coalesce" Attno="1" Mdid="0.701.1.0" Nullable="true">
             <dxl:DefaultValue/>
@@ -347,7 +347,7 @@
           </dxl:LogicalProject>
         </dxl:LogicalCTEProducer>
       </dxl:CTEList>
-      <dxl:LogicalCTAS Mdid="5.1.1.0" Name="fake ctas rel" IsTemporary="true" HasOids="false" StorageType="Heap" DistributionPolicy="Random" InsertColumns="15" VarTypeModList="-1">
+      <dxl:LogicalCTAS Mdid="5.1.1.0" Name="fake ctas rel" IsTemporary="true" StorageType="Heap" DistributionPolicy="Random" InsertColumns="15" VarTypeModList="-1">
         <dxl:Columns>
           <dxl:Column ColId="16" Attno="1" ColName="coalesce" TypeMdid="0.701.1.0"/>
         </dxl:Columns>
@@ -445,7 +445,7 @@
       </dxl:LogicalCTAS>
     </dxl:Query>
     <dxl:Plan Id="0" SpaceSize="84">
-      <dxl:PhysicalCTAS Name="fake ctas rel" IsTemporary="true" HasOids="false" StorageType="Heap" DistributionPolicy="Random" InsertColumns="20" VarTypeModList="-1">
+      <dxl:PhysicalCTAS Name="fake ctas rel" IsTemporary="true" StorageType="Heap" DistributionPolicy="Random" InsertColumns="20" VarTypeModList="-1">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="1324033.270477" Rows="1.000000" Width="8"/>
         </dxl:Properties>

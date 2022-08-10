@@ -115,7 +115,7 @@
       <dxl:ColumnStatistics Mdid="1.17075.1.1.5" Name="xmax" Width="4.000000"/>
       <dxl:ColumnStatistics Mdid="1.17075.1.1.4" Name="cmin" Width="4.000000"/>
       <dxl:RelationStatistics Mdid="2.17075.1.1" Name="s" Rows="0.000000"/>
-      <dxl:Relation Mdid="0.17075.1.1" Name="s" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0;2,8">
+      <dxl:Relation Mdid="0.17075.1.1" Name="s" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0;2,8">
         <dxl:Columns>
           <dxl:Column Name="c" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -157,7 +157,7 @@
     <dxl:Query>
       <dxl:OutputColumns/>
       <dxl:CTEList/>
-      <dxl:LogicalUpdate DeleteColumns="1,2" InsertColumns="10,2" CtidCol="3" SegmentIdCol="9" PreserveOids="false">
+      <dxl:LogicalUpdate DeleteColumns="1,2" InsertColumns="10,2" CtidCol="3" SegmentIdCol="9">
         <dxl:TableDescriptor Mdid="0.17075.1.1" TableName="s">
           <dxl:Columns>
             <dxl:Column ColId="11" Attno="1" ColName="c" TypeMdid="0.23.1.0"/>
@@ -196,7 +196,7 @@
       </dxl:LogicalUpdate>
     </dxl:Query>
     <dxl:Plan Id="0" SpaceSize="3">
-      <dxl:DMLUpdate Columns="0,1" ActionCol="10" OidCol="11" CtidCol="2" SegmentIdCol="8" InputSorted="false" PreserveOids="false">
+      <dxl:DMLUpdate Columns="0,1" ActionCol="10" OidCol="11" CtidCol="2" SegmentIdCol="8" InputSorted="false">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="431.101721" Rows="1.000000" Width="1"/>
         </dxl:Properties>
@@ -303,7 +303,7 @@
                   <dxl:Ident ColId="0" ColName="c" TypeMdid="0.23.1.0"/>
                 </dxl:HashExpr>
               </dxl:HashExprList>
-              <dxl:Split DeleteColumns="0,1" InsertColumns="9,1" ActionCol="10" CtidCol="2" SegmentIdCol="8" PreserveOids="false">
+              <dxl:Split DeleteColumns="0,1" InsertColumns="9,1" ActionCol="10" CtidCol="2" SegmentIdCol="8">
                 <dxl:Properties>
                   <dxl:Cost StartupCost="0" TotalCost="431.000064" Rows="2.000000" Width="22"/>
                 </dxl:Properties>

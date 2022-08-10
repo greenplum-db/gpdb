@@ -143,7 +143,7 @@ WHERE t1.id1 = t2.id1;
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
       <dxl:RelationStatistics Mdid="2.57388.1.0" Name="tab1" Rows="60001.000000" RelPages="67" RelAllVisible="0" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.57388.1.0" Name="tab1" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="0.57388.1.0" Name="tab1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="id1" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -606,7 +606,7 @@ WHERE t1.id1 = t2.id1;
         <dxl:Ident ColId="11" ColName="id1" TypeMdid="0.23.1.0"/>
       </dxl:OutputColumns>
       <dxl:CTEList/>
-      <dxl:LogicalUpdate DeleteColumns="1,2" InsertColumns="11,2" CtidCol="3" SegmentIdCol="9" PreserveOids="false">
+      <dxl:LogicalUpdate DeleteColumns="1,2" InsertColumns="11,2" CtidCol="3" SegmentIdCol="9">
         <dxl:TableDescriptor Mdid="0.57388.1.0" TableName="tab1" LockMode="7">
           <dxl:Columns>
             <dxl:Column ColId="28" Attno="1" ColName="id1" TypeMdid="0.23.1.0" ColWidth="4"/>
@@ -680,7 +680,7 @@ WHERE t1.id1 = t2.id1;
       </dxl:LogicalUpdate>
     </dxl:Query>
     <dxl:Plan Id="0" SpaceSize="34">
-      <dxl:DMLUpdate Columns="0,1" ActionCol="27" OidCol="28" CtidCol="2" SegmentIdCol="8" InputSorted="false" PreserveOids="false">
+      <dxl:DMLUpdate Columns="0,1" ActionCol="27" OidCol="28" CtidCol="2" SegmentIdCol="8" InputSorted="false">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="5381.429219" Rows="60001.000000" Width="1"/>
         </dxl:Properties>
@@ -760,7 +760,7 @@ WHERE t1.id1 = t2.id1;
                 <dxl:Ident ColId="0" ColName="id1" TypeMdid="0.23.1.0"/>
               </dxl:HashExpr>
             </dxl:HashExprList>
-            <dxl:Split DeleteColumns="0,1" InsertColumns="10,1" ActionCol="27" CtidCol="2" SegmentIdCol="8" PreserveOids="false">
+            <dxl:Split DeleteColumns="0,1" InsertColumns="10,1" ActionCol="27" CtidCol="2" SegmentIdCol="8">
               <dxl:Properties>
                 <dxl:Cost StartupCost="0" TotalCost="1315.067048" Rows="120002.000000" Width="22"/>
               </dxl:Properties>

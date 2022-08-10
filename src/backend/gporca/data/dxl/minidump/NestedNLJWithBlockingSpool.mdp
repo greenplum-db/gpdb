@@ -55,7 +55,7 @@
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
       <dxl:RelationStatistics Mdid="2.98306.1.0" Name="part" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="0.98306.1.0" Name="part" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0;15,9" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="0.98306.1.0" Name="part" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0;15,9" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="p_partkey" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue>
@@ -361,7 +361,7 @@
         <dxl:ResultType Mdid="0.23.1.0"/>
       </dxl:GPDBFunc>
       <dxl:RelationStatistics Mdid="2.98421.1.0" Name="lineitem" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="0.98421.1.0" Name="lineitem" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0,3" Keys="0,3;22,16" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="0.98421.1.0" Name="lineitem" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0,3" Keys="0,3;22,16" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="l_orderkey" Attno="1" Mdid="0.20.1.0" Nullable="false" ColWidth="8">
             <dxl:DefaultValue/>

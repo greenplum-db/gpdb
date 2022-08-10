@@ -137,7 +137,7 @@ WHERE tt.event_ts >= tq.ets AND
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
       <dxl:RelationStatistics Mdid="2.32989847.1.1" Name="my_tq_agg_small_part" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="0.32989847.1.0" Name="my_tq_agg_small_part" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="10,11,5" PartitionColumns="2" PartitionTypes="r">
+      <dxl:Relation Mdid="0.32989847.1.0" Name="my_tq_agg_small_part" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="10,11,5" PartitionColumns="2" PartitionTypes="r">
         <dxl:Columns>
           <dxl:Column Name="ets" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -188,7 +188,7 @@ WHERE tt.event_ts >= tq.ets AND
           <dxl:Partition Mdid="0.32989847003.1.0"/>
         </dxl:Partitions>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.32989847001.1.0" Name="my_tq_agg_small_part_prt_1" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="10,11,5" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="0.32989847001.1.0" Name="my_tq_agg_small_part_prt_1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="10,11,5" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="ets" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -249,7 +249,7 @@ WHERE tt.event_ts >= tq.ets AND
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.32989847002.1.0" Name="my_tq_agg_small_part_prt_2" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="10,11,5" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="0.32989847002.1.0" Name="my_tq_agg_small_part_prt_2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="10,11,5" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="ets" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -310,7 +310,7 @@ WHERE tt.event_ts >= tq.ets AND
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.32989847003.1.0" Name="my_tq_agg_small_part_prt_3" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="10,11,5" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="0.32989847003.1.0" Name="my_tq_agg_small_part_prt_3" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="10,11,5" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="ets" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -371,7 +371,7 @@ WHERE tt.event_ts >= tq.ets AND
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.32989847.1.1" Name="my_tq_agg_small_part" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="10,11,5" PartitionColumns="2" PartitionTypes="r">
+      <dxl:Relation Mdid="0.32989847.1.1" Name="my_tq_agg_small_part" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="10,11,5" PartitionColumns="2" PartitionTypes="r">
         <dxl:Columns>
           <dxl:Column Name="ets" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -422,7 +422,7 @@ WHERE tt.event_ts >= tq.ets AND
           <dxl:Partition Mdid="0.32989847003.1.1"/>
         </dxl:Partitions>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.32989847001.1.1" Name="my_tq_agg_small_part_prt_1" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="10,11,5" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="0.32989847001.1.1" Name="my_tq_agg_small_part_prt_1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="10,11,5" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="ets" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -483,7 +483,7 @@ WHERE tt.event_ts >= tq.ets AND
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.32989847002.1.1" Name="my_tq_agg_small_part_prt_2" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="10,11,5" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="0.32989847002.1.1" Name="my_tq_agg_small_part_prt_2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="10,11,5" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="ets" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -544,7 +544,7 @@ WHERE tt.event_ts >= tq.ets AND
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.32989847003.1.1" Name="my_tq_agg_small_part_prt_3" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="10,11,5" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="0.32989847003.1.1" Name="my_tq_agg_small_part_prt_3" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="10,11,5" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="ets" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -816,7 +816,7 @@ WHERE tt.event_ts >= tq.ets AND
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
       <dxl:RelationStatistics Mdid="2.32989821.1.1" Name="my_tt_agg_small" Rows="1.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.32989821.1.1" Name="my_tt_agg_small" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="10,4">
+      <dxl:Relation Mdid="0.32989821.1.1" Name="my_tt_agg_small" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="10,4">
         <dxl:Columns>
           <dxl:Column Name="symbol" Attno="1" Mdid="0.1042.1.0" Nullable="true" ColWidth="16">
             <dxl:DefaultValue/>

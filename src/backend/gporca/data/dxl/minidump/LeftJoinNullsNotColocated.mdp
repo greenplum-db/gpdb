@@ -79,7 +79,7 @@ on id2 = id3 distributed by (id1);
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.CTAS,0.GPDB">
       <dxl:RelationStatistics Mdid="2.24576.1.0" Name="t1" Rows="80413904.000000" RelPages="62859" RelAllVisible="0" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.24576.1.0" Name="t1" IsTemporary="false" HasOids="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,1" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="0.24576.1.0" Name="t1" IsTemporary="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,1" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="id1" Attno="1" Mdid="0.20.1.0" Nullable="true" ColWidth="8">
             <dxl:DefaultValue/>
@@ -114,7 +114,7 @@ on id2 = id3 distributed by (id1);
         </dxl:DistrOpfamilies>
       </dxl:Relation>
       <dxl:RelationStatistics Mdid="2.24583.1.0" Name="t2" Rows="24360400.000000" RelPages="63655" RelAllVisible="0" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.24583.1.0" Name="t2" IsTemporary="false" HasOids="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,1" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="0.24583.1.0" Name="t2" IsTemporary="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,1" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="id2" Attno="1" Mdid="0.20.1.0" Nullable="true" ColWidth="8">
             <dxl:DefaultValue/>
@@ -149,7 +149,7 @@ on id2 = id3 distributed by (id1);
         </dxl:DistrOpfamilies>
       </dxl:Relation>
       <dxl:RelationStatistics Mdid="2.24590.1.0" Name="t3" Rows="82916496.000000" RelPages="34975" RelAllVisible="0" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.24590.1.0" Name="t3" IsTemporary="false" HasOids="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,1" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="0.24590.1.0" Name="t3" IsTemporary="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,1" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="id3" Attno="1" Mdid="0.20.1.0" Nullable="true" ColWidth="8">
             <dxl:DefaultValue/>
@@ -318,7 +318,7 @@ on id2 = id3 distributed by (id1);
         <dxl:SumAgg Mdid="0.0.0.0"/>
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
-      <dxl:CTASRelation Mdid="5.1.1.0" Name="fake ctas rel" IsTemporary="true" HasOids="false" StorageType="Heap" VarTypeModList="-1,-1,-1" DistributionPolicy="Hash" DistributionColumns="0">
+      <dxl:CTASRelation Mdid="5.1.1.0" Name="fake ctas rel" IsTemporary="true" StorageType="Heap" VarTypeModList="-1,-1,-1" DistributionPolicy="Hash" DistributionColumns="0">
         <dxl:Columns>
           <dxl:Column Name="id1" Attno="1" Mdid="0.20.1.0" Nullable="true">
             <dxl:DefaultValue/>
@@ -349,7 +349,7 @@ on id2 = id3 distributed by (id1);
         <dxl:Ident ColId="17" ColName="id3" TypeMdid="0.20.1.0"/>
       </dxl:OutputColumns>
       <dxl:CTEList/>
-      <dxl:LogicalCTAS Mdid="5.1.1.0" Name="fake ctas rel" IsTemporary="true" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" InsertColumns="1,9,17" VarTypeModList="-1,-1,-1">
+      <dxl:LogicalCTAS Mdid="5.1.1.0" Name="fake ctas rel" IsTemporary="true" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" InsertColumns="1,9,17" VarTypeModList="-1,-1,-1">
         <dxl:Columns>
           <dxl:Column ColId="25" Attno="1" ColName="id1" TypeMdid="0.20.1.0"/>
           <dxl:Column ColId="26" Attno="2" ColName="id2" TypeMdid="0.20.1.0"/>
@@ -419,7 +419,7 @@ on id2 = id3 distributed by (id1);
       </dxl:LogicalCTAS>
     </dxl:Query>
     <dxl:Plan Id="0" SpaceSize="10">
-      <dxl:PhysicalCTAS Name="fake ctas rel" IsTemporary="true" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" InsertColumns="0,8,16" VarTypeModList="-1,-1,-1">
+      <dxl:PhysicalCTAS Name="fake ctas rel" IsTemporary="true" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" InsertColumns="0,8,16" VarTypeModList="-1,-1,-1">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="13046.116228" Rows="83728676.430400" Width="24"/>
         </dxl:Properties>

@@ -215,7 +215,7 @@ explain select count(*) from r_p, s c, s d, s e where r_p.a = c.c and r_p.a = d.
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
       <dxl:RelationStatistics Mdid="2.57425.1.0" Name="r_p" Rows="10.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.57425.1.0" Name="r_p" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Random" Keys="9,10,4" PartitionColumns="0" PartitionTypes="l" NumberLeafPartitions="2">
+      <dxl:Relation Mdid="0.57425.1.0" Name="r_p" IsTemporary="false" StorageType="Heap" DistributionPolicy="Random" Keys="9,10,4" PartitionColumns="0" PartitionTypes="l" NumberLeafPartitions="2">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -259,7 +259,7 @@ explain select count(*) from r_p, s c, s d, s e where r_p.a = c.c and r_p.a = d.
           <dxl:Partition Mdid="0.57425002.1.0"/>
         </dxl:Partitions>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.57425001.1.0" Name="r_p_prt_1" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Random" Keys="9,10,4" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="0.57425001.1.0" Name="r_p_prt_1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Random" Keys="9,10,4" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -310,7 +310,7 @@ explain select count(*) from r_p, s c, s d, s e where r_p.a = c.c and r_p.a = d.
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.57425002.1.0" Name="r_p_prt_2" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Random" Keys="9,10,4" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="0.57425002.1.0" Name="r_p_prt_2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Random" Keys="9,10,4" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -380,7 +380,7 @@ explain select count(*) from r_p, s c, s d, s e where r_p.a = c.c and r_p.a = d.
         <dxl:ResultType Mdid="0.20.1.0"/>
         <dxl:IntermediateResultType Mdid="0.20.1.0"/>
       </dxl:GPDBAgg>
-      <dxl:Relation Mdid="0.57461.1.0" Name="s" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Random" Keys="9,3" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="0.57461.1.0" Name="s" IsTemporary="false" StorageType="Heap" DistributionPolicy="Random" Keys="9,3" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="c" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>

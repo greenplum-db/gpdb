@@ -178,7 +178,7 @@ EXPLAIN SELECT b2, sum(c1) FROM t1 LEFT JOIN t2 ON a1 = b2 GROUP BY b2 ORDER BY 
       </dxl:Type>
       <dxl:ColumnStatistics Mdid="1.16439.1.0.0" Name="a1" Width="4.000000" NullFreq="0.000000" NdvRemain="1.000000" FreqRemain="1.000000" ColStatsMissing="false"/>
       <dxl:RelationStatistics Mdid="2.16439.1.0" Name="t1" Rows="1.000000" RelPages="1" RelAllVisible="0" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.16439.1.0" Name="t1" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="0.16439.1.0" Name="t1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="a1" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -219,7 +219,7 @@ EXPLAIN SELECT b2, sum(c1) FROM t1 LEFT JOIN t2 ON a1 = b2 GROUP BY b2 ORDER BY 
         </dxl:DistrOpfamilies>
       </dxl:Relation>
       <dxl:RelationStatistics Mdid="2.16442.1.0" Name="t2" Rows="1.000000" RelPages="1" RelAllVisible="0" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.16442.1.0" Name="t2" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="0.16442.1.0" Name="t2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="a2" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>

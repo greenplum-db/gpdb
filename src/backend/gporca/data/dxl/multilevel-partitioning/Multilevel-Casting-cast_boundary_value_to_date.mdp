@@ -175,7 +175,7 @@ explain select * from TestPartitionFilterCasting where p1 = 'a';
       <dxl:ColumnStatistics Mdid="1.651256.1.1.7" Name="xmax" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
       <dxl:ColumnStatistics Mdid="1.651256.1.1.6" Name="cmin" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
       <dxl:RelationStatistics Mdid="2.651256.1.1" Name="testpartitionfiltercasting" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="0.651256.1.1" Name="testpartitionfiltercasting" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,10,4" PartitionColumns="1,2,3" PartitionTypes="l,l,l" NumberLeafPartitions="1">
+      <dxl:Relation Mdid="0.651256.1.1" Name="testpartitionfiltercasting" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,10,4" PartitionColumns="1,2,3" PartitionTypes="l,l,l" NumberLeafPartitions="1">
         <dxl:Columns>
           <dxl:Column Name="d1" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>

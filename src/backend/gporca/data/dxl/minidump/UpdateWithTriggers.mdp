@@ -117,7 +117,7 @@
       <dxl:ColumnStatistics Mdid="1.187777.1.1.1" Name="1.187777.1.1.1" Width="8.000000"/>
       <dxl:ColumnStatistics Mdid="1.187777.1.1.0" Name="1.187777.1.1.0" Width="8.000000"/>
       <dxl:RelationStatistics Mdid="2.187777.1.1" Name="2.187777.1.1" Rows="8.000000"/>
-      <dxl:Relation Mdid="0.187777.1.1" Name="t_trig" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="3,9">
+      <dxl:Relation Mdid="0.187777.1.1" Name="t_trig" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="3,9">
         <dxl:Columns>
           <dxl:Column Name="t1" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -163,7 +163,7 @@
     <dxl:Query>
       <dxl:OutputColumns/>
       <dxl:CTEList/>
-      <dxl:LogicalUpdate DeleteColumns="1,2,3" InsertColumns="1,11,3" CtidCol="4" SegmentIdCol="10" PreserveOids="false">
+      <dxl:LogicalUpdate DeleteColumns="1,2,3" InsertColumns="1,11,3" CtidCol="4" SegmentIdCol="10">
         <dxl:TableDescriptor Mdid="0.187777.1.1" TableName="t_trig">
           <dxl:Columns>
             <dxl:Column ColId="12" Attno="1" ColName="t1" TypeMdid="0.23.1.0"/>
@@ -204,7 +204,7 @@
       </dxl:LogicalUpdate>
     </dxl:Query>
     <dxl:Plan Id="0" SpaceSize="2">
-      <dxl:DMLUpdate Columns="0,10,2" ActionCol="11" OidCol="12" CtidCol="3" SegmentIdCol="9" InputSorted="false" IsSplitUpdate="false" PreserveOids="false">
+      <dxl:DMLUpdate Columns="0,10,2" ActionCol="11" OidCol="12" CtidCol="3" SegmentIdCol="9" InputSorted="false" IsSplitUpdate="false">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="431.406832" Rows="8.000000" Width="1"/>
         </dxl:Properties>

@@ -184,7 +184,7 @@
         <dxl:SumAgg Mdid="0.2108.1.0"/>
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
-      <dxl:Relation Mdid="0.795132.1.0" Name="insert_tbl" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3">
+      <dxl:Relation Mdid="0.795132.1.0" Name="insert_tbl" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3">
         <dxl:Columns>
           <dxl:Column Name="x" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue>
@@ -297,7 +297,7 @@
         <dxl:SumAgg Mdid="0.0.0.0"/>
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
-      <dxl:Relation Mdid="0.795132.1.1" Name="insert_tbl" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3">
+      <dxl:Relation Mdid="0.795132.1.1" Name="insert_tbl" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3">
         <dxl:Columns>
           <dxl:Column Name="x" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue>
@@ -363,7 +363,7 @@
         <dxl:Ident ColId="11" ColName="y" TypeMdid="0.25.1.0"/>
       </dxl:OutputColumns>
       <dxl:CTEList/>
-      <dxl:LogicalUpdate DeleteColumns="1,2,3" InsertColumns="1,11,3" CtidCol="4" SegmentIdCol="10" PreserveOids="false">
+      <dxl:LogicalUpdate DeleteColumns="1,2,3" InsertColumns="1,11,3" CtidCol="4" SegmentIdCol="10">
         <dxl:TableDescriptor Mdid="0.795132.1.1" TableName="insert_tbl">
           <dxl:Columns>
             <dxl:Column ColId="12" Attno="1" ColName="x" TypeMdid="0.23.1.0"/>
@@ -410,7 +410,7 @@
       </dxl:LogicalUpdate>
     </dxl:Query>
     <dxl:Plan Id="0" SpaceSize="2">
-      <dxl:DMLUpdate Columns="0,10,2" ActionCol="11" OidCol="12" CtidCol="3" SegmentIdCol="9" InputSorted="false" IsSplitUpdate="false" PreserveOids="false">
+      <dxl:DMLUpdate Columns="0,10,2" ActionCol="11" OidCol="12" CtidCol="3" SegmentIdCol="9" InputSorted="false" IsSplitUpdate="false">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="0.000000" Rows="0.000000" Width="1"/>
         </dxl:Properties>

@@ -89,7 +89,7 @@ EXPLAIN CREATE TABLE test AS
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.CTAS,0.GPDB">
       <dxl:RelationStatistics Mdid="2.188551.1.0" Name="foo1" Rows="100.000000" RelPages="3" RelAllVisible="0" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.188551.1.0" Name="foo1" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="0.188551.1.0" Name="foo1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -1461,7 +1461,7 @@ EXPLAIN CREATE TABLE test AS
           <dxl:UpperBound Closed="true" TypeMdid="0.23.1.0" Value="100"/>
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
-      <dxl:CTASRelation Mdid="5.1.1.0" Name="fake ctas rel" IsTemporary="true" HasOids="false" StorageType="Heap" VarTypeModList="-1,-1,-1" DistributionPolicy="Random">
+      <dxl:CTASRelation Mdid="5.1.1.0" Name="fake ctas rel" IsTemporary="true" StorageType="Heap" VarTypeModList="-1,-1,-1" DistributionPolicy="Random">
         <dxl:Columns>
           <dxl:Column Name="first_quartile" Attno="1" Mdid="0.1022.1.0" Nullable="true">
             <dxl:DefaultValue/>
@@ -1539,7 +1539,7 @@ EXPLAIN CREATE TABLE test AS
         <dxl:Ident ColId="22" ColName="third_quartile" TypeMdid="0.1022.1.0"/>
       </dxl:OutputColumns>
       <dxl:CTEList/>
-      <dxl:LogicalCTAS Mdid="5.1.1.0" Name="fake ctas rel" IsTemporary="true" HasOids="false" StorageType="Heap" DistributionPolicy="Random" InsertColumns="20,21,22" VarTypeModList="-1,-1,-1">
+      <dxl:LogicalCTAS Mdid="5.1.1.0" Name="fake ctas rel" IsTemporary="true" StorageType="Heap" DistributionPolicy="Random" InsertColumns="20,21,22" VarTypeModList="-1,-1,-1">
         <dxl:Columns>
           <dxl:Column ColId="23" Attno="1" ColName="first_quartile" TypeMdid="0.1022.1.0"/>
           <dxl:Column ColId="24" Attno="2" ColName="median_quartile" TypeMdid="0.1022.1.0"/>
@@ -1741,7 +1741,7 @@ EXPLAIN CREATE TABLE test AS
       </dxl:LogicalCTAS>
     </dxl:Query>
     <dxl:Plan Id="0" SpaceSize="818812800">
-      <dxl:PhysicalCTAS Name="fake ctas rel" IsTemporary="true" HasOids="false" StorageType="Heap" DistributionPolicy="Random" InsertColumns="19,20,21" VarTypeModList="-1,-1,-1">
+      <dxl:PhysicalCTAS Name="fake ctas rel" IsTemporary="true" StorageType="Heap" DistributionPolicy="Random" InsertColumns="19,20,21" VarTypeModList="-1,-1,-1">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="2778510692279.118164" Rows="1.000000" Width="24"/>
         </dxl:Properties>

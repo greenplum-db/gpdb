@@ -181,7 +181,7 @@ where (cd.dyear = 2001 and s.tickets_cnt &gt; 3) or (cd.dmoy = 4 and s.tickets_c
         <dxl:InverseOp Mdid="0.420.1.0"/>
       </dxl:GPDBScalarOp>
       <dxl:RelationStatistics Mdid="2.15667435.1.1" Name="cust" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="0.15667435.1.1" Name="cust" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3">
+      <dxl:Relation Mdid="0.15667435.1.1" Name="cust" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3">
         <dxl:Columns>
           <dxl:Column Name="cid" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -229,7 +229,7 @@ where (cd.dyear = 2001 and s.tickets_cnt &gt; 3) or (cd.dmoy = 4 and s.tickets_c
       <dxl:ColumnStatistics Mdid="1.15667435.1.1.5" Name="cmin" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000"/>
       <dxl:ColumnStatistics Mdid="1.15667435.1.1.4" Name="xmin" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000"/>
       <dxl:RelationStatistics Mdid="2.15667463.1.1" Name="datedim" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="0.15667463.1.1" Name="datedim" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3">
+      <dxl:Relation Mdid="0.15667463.1.1" Name="datedim" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3">
         <dxl:Columns>
           <dxl:Column Name="date_sk" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -282,7 +282,7 @@ where (cd.dyear = 2001 and s.tickets_cnt &gt; 3) or (cd.dmoy = 4 and s.tickets_c
         <dxl:Commutator Mdid="0.96.1.0"/>
         <dxl:InverseOp Mdid="0.518.1.0"/>
       </dxl:GPDBScalarOp>
-      <dxl:Relation Mdid="0.15667489.1.1" Name="sales" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0,1" Keys="11,5">
+      <dxl:Relation Mdid="0.15667489.1.1" Name="sales" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0,1" Keys="11,5">
         <dxl:Columns>
           <dxl:Column Name="item_sk" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>

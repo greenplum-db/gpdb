@@ -328,7 +328,7 @@
       </dxl:LogicalUpdate>
     </dxl:Query>
     <dxl:Plan Id="0" SpaceSize="12">
-      <dxl:DMLUpdate Columns="0,1" ActionCol="19" OidCol="20" CtidCol="2" SegmentIdCol="8" InputSorted="false" PreserveOids="false">
+      <dxl:DMLUpdate Columns="0,1" ActionCol="19" OidCol="20" CtidCol="2" SegmentIdCol="8" InputSorted="false">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="862.815480" Rows="8.000000" Width="1"/>
         </dxl:Properties>
@@ -438,7 +438,7 @@
                   </dxl:Not>
                 </dxl:AssertConstraint>
               </dxl:AssertConstraintList>
-              <dxl:Split DeleteColumns="0,1" InsertColumns="18,9" ActionCol="19" CtidCol="2" SegmentIdCol="8" PreserveOids="false">
+              <dxl:Split DeleteColumns="0,1" InsertColumns="18,9" ActionCol="19" CtidCol="2" SegmentIdCol="8">
                 <dxl:Properties>
                   <dxl:Cost StartupCost="0" TotalCost="862.002045" Rows="16.000000" Width="26"/>
                 </dxl:Properties>

@@ -226,7 +226,7 @@
       </dxl:ColumnStatistics>
       <dxl:RelationStatistics Mdid="2.415906.1.1" Name="c" Rows="1.000000"/>
       <dxl:RelationStatistics Mdid="2.415860.1.1" Name="a" Rows="1.000000"/>
-      <dxl:Relation Mdid="0.415906.1.1" Name="c" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
+      <dxl:Relation Mdid="0.415906.1.1" Name="c" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
         <dxl:Columns>
           <dxl:Column Name="i" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -260,7 +260,7 @@
         <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.415860.1.1" Name="a" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
+      <dxl:Relation Mdid="0.415860.1.1" Name="a" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
         <dxl:Columns>
           <dxl:Column Name="i" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -301,7 +301,7 @@
       <dxl:ColumnStatistics Mdid="1.415860.1.1.3" Name="xmin" Width="4.000000"/>
       <dxl:ColumnStatistics Mdid="1.415860.1.1.2" Name="ctid" Width="6.000000"/>
       <dxl:RelationStatistics Mdid="2.415883.1.1" Name="b" Rows="1.000000"/>
-      <dxl:Relation Mdid="0.415883.1.1" Name="b" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
+      <dxl:Relation Mdid="0.415883.1.1" Name="b" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
         <dxl:Columns>
           <dxl:Column Name="i" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
