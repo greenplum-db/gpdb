@@ -135,7 +135,6 @@
 		<xsd:attributeGroup ref="dxl:MetadataIdAttributes"/>
 		<xsd:attribute name="Name" type="xsd:string" use="required"/>
 		<xsd:attribute name="IsTemporary" type="xsd:boolean" use="required"/>
-		<xsd:attribute name="HasOids" type="xsd:boolean" use="optional"/>
 		<xsd:attribute name="ConvertHashToRandom" type="xsd:boolean" use="optional"/>
 		<xsd:attribute name="DistributionColumns" type="xsd:string" use="optional"/>
 		<xsd:attribute name="Keys" type="xsd:string" use="optional"/>
@@ -171,7 +170,6 @@
 		</xsd:sequence>
 		<xsd:attributeGroup ref="dxl:MetadataIdAttributes"/>
 		<xsd:attribute name="Name" type="xsd:string" use="required"/>
-		<xsd:attribute name="HasOids" type="xsd:boolean" use="optional"/>
 		<xsd:attribute name="DistributionColumns" type="xsd:string" use="optional"/>
 		<xsd:attribute name="Keys" type="xsd:string" use="optional"/>
 		<xsd:attribute name="DistributionPolicy" use="required">
@@ -194,7 +192,6 @@
 		<xsd:attribute name="Schema" type="xsd:string" use="optional"/>
 		<xsd:attribute name="Name" type="xsd:string" use="required"/>
 		<xsd:attribute name="IsTemporary" type="xsd:boolean" use="required"/>
-		<xsd:attribute name="HasOids" type="xsd:boolean" use="optional"/>
 		<xsd:attribute name="DistributionColumns" type="xsd:string" use="optional"/>
 		<xsd:attribute name="PartitionColumns" type="xsd:string" use="optional"/>
 		<xsd:attribute name="StorageType" use="required">
@@ -613,7 +610,6 @@
 				<xsd:attribute name="ActionCol" type="xsd:unsignedLong" use="required"/>
 				<xsd:attribute name="CtidCol" type="xsd:unsignedLong" use="required"/>
 				<xsd:attribute name="SegmentIdCol" type="xsd:unsignedLong" use="required"/>
-				<xsd:attribute name="PreserveOids" type="xsd:boolean" use="optional"/> 
 				<xsd:attribute name="TupleOidCol" type="xsd:unsignedLong" use="optional"/>
 			</xsd:extension>
 		</xsd:complexContent>
@@ -670,7 +666,6 @@
 				<xsd:attribute name="OidCol" type="xsd:unsignedLong" use="required"/>
 				<xsd:attribute name="CtidCol" type="xsd:unsignedLong" use="required"/>
 				<xsd:attribute name="SegmentIdCol" type="xsd:unsignedLong" use="required"/>
-				<xsd:attribute name="PreserveOids" type="xsd:boolean" use="optional"/> 
 				<xsd:attribute name="TupleOidCol" type="xsd:unsignedLong" use="optional"/>
 			</xsd:extension>
 		</xsd:complexContent>
@@ -1658,7 +1653,6 @@
 		<xsd:attribute name="InsertColumns" type="xsd:string" use="required"/>
 		<xsd:attribute name="CtidCol" type="xsd:unsignedLong" use="required"/>
 		<xsd:attribute name="SegmentIdCol" type="xsd:unsignedLong" use="required"/>
-		<xsd:attribute name="PreserveOids" type="xsd:boolean" use="optional"/> 
 		<xsd:attribute name="TupleOidCol" type="xsd:unsignedLong" use="optional"/>
 	</xsd:complexType>
 
