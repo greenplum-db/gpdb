@@ -498,30 +498,25 @@ Bitmapset *
 AOCSCollectDeadSegments(Relation aorel,
 						List *compaction_segno)
 {
-	const char *relname;
 	int	total_segfiles;
-	AOCSFileSegInfo **segfile_array, *fsinfo;
-	int segno;
+	AOCSFileSegInfo **segfile_array;
 	Snapshot appendOnlyMetaDataSnapshot = SnapshotSelf;
 	Bitmapset *dead_segs = NULL;
 
 	Assert(Gp_role == GP_ROLE_EXECUTE || Gp_role == GP_ROLE_UTILITY);
 	Assert(RelationIsAoCols(aorel));
 
-	relname = RelationGetRelationName(aorel);
-
 	elogif(Debug_appendonly_print_compaction, LOG,
-		   "Drop AOCS relation %s", relname);
+		   "Collect AOCS relation %s", RelationGetRelationName(aorel));
 
 	/* Get information about all the file segments we need to scan */
 	segfile_array = GetAllAOCSFileSegInfo(aorel, appendOnlyMetaDataSnapshot, &total_segfiles);
 
 	for (int i = 0; i < total_segfiles; i++)
 	{
-		segno = segfile_array[i]->segno;
+		int segno = segfile_array[i]->segno;
 
-		/* Re-fetch under the write lock to get latest committed eof. */
-		fsinfo = GetAOCSFileSegInfo(aorel, appendOnlyMetaDataSnapshot, segno);
+		AOCSFileSegInfo *fsinfo = GetAOCSFileSegInfo(aorel, appendOnlyMetaDataSnapshot, segno);
 		if (fsinfo->state == AOSEG_STATE_AWAITING_DROP)
 			dead_segs = bms_add_member(dead_segs, segno);
 

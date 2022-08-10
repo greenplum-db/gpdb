@@ -125,8 +125,7 @@ static void vac_truncate_clog(TransactionId frozenXID,
 							  MultiXactId lastSaneMinMulti);
 static bool vacuum_rel(Relation onerel, Oid relid, VacuumStmt *vacstmt, LOCKMODE lmode,
 		   bool for_wraparound);
-static void scan_index(Relation indrel, double num_tuples,
-					   bool check_stats, int elevel);
+static void scan_index(Relation indrel, bool check_stats, int elevel);
 static bool appendonly_tid_reaped(ItemPointer itemptr, void *state);
 static void dispatchVacuum(VacuumStmt *vacstmt, VacuumStatsContext *ctx);
 static void vacuumStatement_Relation(VacuumStmt *vacstmt, Oid relid,
@@ -2646,7 +2645,7 @@ vacuum_appendonly_indexes(Relation aoRelation, VacuumStmt *vacstmt, Bitmapset *d
 		{
 			for (i = 0; i < nindexes; i++)
 			{
-				scan_index(Irel[i], Irel[i]->rd_rel->reltuples, true, elevel);
+				scan_index(Irel[i], true, elevel);
 			}
 		}
 		else
@@ -2691,9 +2690,15 @@ vac_is_partial_index(Relation indrel)
  *	scan_index() -- scan one index relation to update pg_class statistics.
  *
  * We use this when we have no deletions to do.
+ * 
+ * We used to pass an argument num_tuples with value of table->reltuples to
+ * ivinfo.num_heap_tuples, now with the new VACUUM strategy, we removed it
+ * since we cannot get table->reltuples in the calling context.
+ * Therefore, ivinfo.num_heap_tuples is not an accurate value, so we need
+ * to set estimated_count to true.
  */
 static void
-scan_index(Relation indrel, double num_tuples, bool check_stats, int elevel)
+scan_index(Relation indrel, bool check_stats, int elevel)
 {
 	IndexBulkDeleteResult *stats;
 	IndexVacuumInfo ivinfo;
@@ -2705,7 +2710,7 @@ scan_index(Relation indrel, double num_tuples, bool check_stats, int elevel)
 	ivinfo.analyze_only = false;
 	ivinfo.estimated_count = true;
 	ivinfo.message_level = elevel;
-	ivinfo.num_heap_tuples = num_tuples;
+	ivinfo.num_heap_tuples = indrel->rd_rel->reltuples; /* inaccurate */
 	ivinfo.strategy = vac_strategy;
 
 	stats = index_vacuum_cleanup(&ivinfo, NULL);
@@ -2830,7 +2835,7 @@ vacuum_appendonly_index(Relation indexRelation,
  *
  * Is a particular tid for an appendonly reaped? the inputed state
  * is a bitmap of dropped segno. The index entry is reaped only
- * because of the segment no is a member of dead_segs. In this
+ * because of the segment number is a member of dead_segs. In this
  * way, no need to scan visibility map so the performance would be
  * good.
  *

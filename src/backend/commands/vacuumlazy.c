@@ -658,9 +658,10 @@ ao_vacuum_rel_recycle_dead_segments(Relation onerel, VacuumStmt *vacstmt)
 		vacuum_appendonly_indexes(onerel, vacstmt, dead_segs);
 		/*
 		 * Truncate AWAITING_DROP the above collected segments to 0 byte.
-		 * Assuming no transaction is able to access the dead segments as it
-		 * has been already marked as AWAITING_DROP, AccessExclusiveLock will
-		 * be held in case of concurrent VACUUM being on the same file.
+		 * We can do this safely only in DROP phase as we filtered out concurrent
+		 * transactions being accessing the dead segments at that moment on QD, and
+		 * other transaction started afterwards could see segments with AWAITING_DROP
+		 * state hence won't access them.
 		 */
 		if (vacstmt->appendonly_phase == AOVAC_DROP)
 			AppendOptimizedDropDeadSegments(onerel, dead_segs);

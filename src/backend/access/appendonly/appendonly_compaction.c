@@ -510,10 +510,8 @@ HasLockForSegmentFileDrop(Relation aorel)
 Bitmapset *
 AppendOnlyCollectDeadSegments(Relation aorel, List *compaction_segno)
 {
-	const char *relname;
 	int total_segfiles;
-	FileSegInfo **segfile_array, *fsinfo;
-	int segno;
+	FileSegInfo **segfile_array;
 	Snapshot appendOnlyMetaDataSnapshot = SnapshotSelf;
 	Bitmapset *dead_segs = NULL;
 
@@ -521,20 +519,17 @@ AppendOnlyCollectDeadSegments(Relation aorel, List *compaction_segno)
 	Assert(Gp_role == GP_ROLE_EXECUTE || Gp_role == GP_ROLE_UTILITY);
 	Assert(RelationIsAoRows(aorel));
 
-	relname = RelationGetRelationName(aorel);
-
 	elogif(Debug_appendonly_print_compaction, LOG,
-		   "Drop AO relation %s", relname);
+		   "Collect AO relation %s", RelationGetRelationName(aorel));
 
 	/* Get information about all the file segments we need to scan */
 	segfile_array = GetAllFileSegInfo(aorel, appendOnlyMetaDataSnapshot, &total_segfiles);
 
 	for (int i = 0; i < total_segfiles; i++)
 	{
-		segno = segfile_array[i]->segno;
+		int segno = segfile_array[i]->segno;
 
-		/* Re-fetch under the write lock to get latest committed eof. */
-		fsinfo = GetFileSegInfo(aorel, appendOnlyMetaDataSnapshot, segno);
+		FileSegInfo *fsinfo = GetFileSegInfo(aorel, appendOnlyMetaDataSnapshot, segno);
 		if (fsinfo->state == AOSEG_STATE_AWAITING_DROP)
 			dead_segs = bms_add_member(dead_segs, segno);
 
@@ -561,8 +556,7 @@ static inline void
 AppendOptimizedDropDeadSegment(Relation aorel, int segno)
 {
 	/*
-	 * Try to get the transaction write-lock for the Append-Only segment
-	 * file.
+	 * Get the transaction write-lock for the Append-Only segment file.
 	 *
 	 * NOTE: This is a transaction scope lock that must be held until
 	 * commit / abort.
@@ -588,10 +582,6 @@ AppendOptimizedDropDeadSegments(Relation aorel, Bitmapset *segnos)
 {
 	int segno;
 
-	/*
-	 * Drop segments in batch with concurrent-safety, we already
-	 * held transaction scope AccessExclusiveLock for the segfile.
-	 */
 	segno = -1;
 	while ((segno = bms_next_member(segnos, segno)) >= 0)
 		AppendOptimizedDropDeadSegment(aorel, segno);
