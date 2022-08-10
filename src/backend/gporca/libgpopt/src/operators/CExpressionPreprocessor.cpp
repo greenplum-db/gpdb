@@ -1641,7 +1641,9 @@ CExpressionPreprocessor::PexprFromConstraintsScalar(
 		//    +--CScalarIdent "c" (9)
 
 		CExpressionArray *childrenArray = GPOS_NEW(mp) CExpressionArray(mp);
-		if (COperator::EopScalarBoolOp == pexpr->Pop()->Eopid())
+		if (COperator::EopScalarBoolOp == pexpr->Pop()->Eopid() &&
+			CScalarBoolOp::EboolopNot !=
+				CScalarBoolOp::PopConvert(pexpr->Pop())->Eboolop())
 		{
 			const ULONG childrenCount = pexpr->Arity();
 			for (ULONG ul = 0; ul < childrenCount; ul++)
