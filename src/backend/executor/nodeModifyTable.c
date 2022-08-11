@@ -731,7 +731,6 @@ ExecDelete(ModifyTableState *mtstate,
 		   bool *tupleDeleted,
 		   TupleTableSlot **epqreturnslot)
 {
-	/* PlanGenerator planGen = estate->es_plannedstmt->planGen; */
 	ResultRelInfo *resultRelInfo;
 	Relation	resultRelationDesc;
 	TM_Result	result;
@@ -759,34 +758,7 @@ ExecDelete(ModifyTableState *mtstate,
 	/*
 	 * get information on the (current) result relation
 	 */
-	// GPDB_12_MERGE_FIXME: How to do this in new partitioning implementation?
-	// Can we change the way ORCA deletion plans work?
-#if 0
-	if (estate->es_result_partitions && planGen == PLANGEN_OPTIMIZER)
-	{
-		Assert(estate->es_result_partitions->part->parrelid);
-
-#ifdef USE_ASSERT_CHECKING
-		Oid parent = estate->es_result_partitions->part->parrelid;
-#endif
-
-		/* Obtain part for current tuple. */
-		resultRelInfo = slot_get_partition(planSlot, estate, true);
-		estate->es_result_relation_info = resultRelInfo;
-
-#ifdef USE_ASSERT_CHECKING
-		Oid part = RelationGetRelid(resultRelInfo->ri_RelationDesc);
-#endif
-
-		Assert(parent != part);
-	}
-	else
-	{
-		resultRelInfo = estate->es_result_relation_info;
-	}
-#else
 	resultRelInfo = estate->es_result_relation_info;
-#endif
 	resultRelationDesc = resultRelInfo->ri_RelationDesc;
 
 	/* BEFORE ROW DELETE Triggers */
@@ -2449,7 +2421,7 @@ ExecModifyTable(PlanState *pstate)
 				bool		isNull;
 
 				relkind = resultRelInfo->ri_RelationDesc->rd_rel->relkind;
-				if (relkind == RELKIND_RELATION || relkind == RELKIND_MATVIEW)
+				if (relkind == RELKIND_RELATION || relkind == RELKIND_MATVIEW || relkind == RELKIND_PARTITIONED_TABLE)
 				{
 					datum = ExecGetJunkAttribute(slot,
 												 junkfilter->jf_junkAttNo,
@@ -2571,12 +2543,17 @@ ExecModifyTable(PlanState *pstate)
 				}
 				break;
 			case CMD_DELETE:
+				if (proute)
+					slot = ExecPrepareTupleRouting(node, estate, proute,
+												   resultRelInfo, slot);
 				slot = ExecDelete(node, tupleid, segid, oldtuple, planSlot,
 								  &node->mt_epqstate, estate,
 								  true, node->canSetTag,
 								  false /* changingPart */ ,
 								  false /* splitUpdate */ ,
 								  NULL, NULL);
+				if (proute)
+					estate->es_result_relation_info = resultRelInfo;
 				break;
 			default:
 				elog(ERROR, "unknown operation");
@@ -2770,6 +2747,15 @@ ExecInitModifyTable(ModifyTable *node, EState *estate, int eflags)
 
 	/* Get the target relation */
 	rel = (getTargetResultRelInfo(mtstate))->ri_RelationDesc;
+
+	/*
+	 * GPDB: ORCA performs DELETE on a partitioned table via the root
+	 * partition. However, during execution we still need to find the
+	 * corresponding leaf partitions. Thus routing is also set up in this
+	 * scenario.
+	 */
+	if (estate->es_plannedstmt->planGen == PLANGEN_OPTIMIZER && operation == CMD_DELETE)
+		update_tuple_routing_needed = true;
 
 	/*
 	 * If it's not a partitioned table after all, UPDATE tuple routing should
