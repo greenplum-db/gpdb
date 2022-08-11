@@ -419,6 +419,87 @@ DROP TABLE ao2co2;
 DROP TABLE ao2co3;
 DROP TABLE ao2co4;
 
+-- Scenario 6: AOCO to Heap
+SET gp_default_storage_options = 'blocksize=65536, compresstype=zlib, compresslevel=5, checksum=true';
+
+CREATE TABLE co2heap(a int, b int) WITH (appendonly=true, orientation=column);
+CREATE TABLE co2heap2(a int, b int) WITH (appendonly=true, orientation=column);
+CREATE TABLE co2heap3(a int, b int) WITH (appendonly=true, orientation=column);
+CREATE TABLE co2heap4(a int, b int) WITH (appendonly=true, orientation=column);
+CREATE INDEX aoi ON co2heap(b);
+
+INSERT INTO co2heap SELECT i,i FROM generate_series(1,5) i;
+INSERT INTO co2heap2 SELECT i,i FROM generate_series(1,5) i;
+INSERT INTO co2heap3 SELECT i,i FROM generate_series(1,5) i;
+INSERT INTO co2heap4 SELECT i,i FROM generate_series(1,5) i;
+
+-- Prior-ATSETAM checks:
+-- Check once that the AO tables have the custom reloptions 
+SELECT relname, reloptions FROM pg_class WHERE relname LIKE 'co2heap%';
+-- Check once that the AO tables have relfrozenxid = 0
+SELECT relname, relfrozenxid FROM pg_class WHERE relname LIKE 'co2heap%';
+-- Check once that the pg_attribute_encoding has entries for the AOCO tables.
+SELECT c.relname, a.attnum, attoptions FROM pg_attribute_encoding a, pg_class c WHERE a.attrelid=c.oid AND c.relname LIKE 'co2heap%';
+
+CREATE TEMP TABLE relfilebeforeco2heap AS
+    SELECT -1 segid, relfilenode FROM pg_class WHERE relname LIKE 'co2heap%'
+    UNION SELECT gp_segment_id segid, relfilenode FROM gp_dist_random('pg_class')
+    WHERE relname LIKE 'co2heap%' ORDER BY segid;
+
+-- Various cases of altering AOCO to AO:
+-- 1. Basic ATSETAMs:
+ALTER TABLE co2heap SET ACCESS METHOD heap;
+ALTER TABLE co2heap2 SET WITH (appendoptimized=false);
+-- 2. ATSETAM with reloptions:
+ALTER TABLE co2heap3 SET ACCESS METHOD heap WITH (fillfactor=70);
+ALTER TABLE co2heap4 SET WITH (appendoptimized=false, fillfactor=70);
+
+-- The tables and indexes should have been rewritten (should have different relfilenodes)
+CREATE TEMP TABLE relfileafterco2heap AS
+    SELECT -1 segid, relfilenode FROM pg_class WHERE relname LIKE 'co2heap%'
+    UNION SELECT gp_segment_id segid, relfilenode FROM gp_dist_random('pg_class')
+    WHERE relname LIKE 'co2heap%' ORDER BY segid;
+
+SELECT * FROM relfilebeforeco2heap INTERSECT SELECT * FROM relfileafterco2heap;
+
+-- Check data is intact
+SELECT count(*) FROM co2heap;
+SELECT count(*) FROM co2heap2;
+SELECT count(*) FROM co2heap3;
+SELECT count(*) FROM co2heap4;
+
+-- No AO aux tables should be left.
+-- Only testing 2 out of the 4 tables being created, where the tables were altered w/wo reloptions. 
+-- No need to test the other ones created by the alternative syntax SET WITH().
+SELECT * FROM gp_toolkit.__gp_aoseg('co2heap');
+SELECT * FROM gp_toolkit.__gp_aovisimap('co2heap');
+SELECT count(*) FROM gp_toolkit.__gp_aocsseg('co2heap');
+SELECT * FROM gp_toolkit.__gp_aoblkdir('co2heap');
+SELECT * FROM gp_toolkit.__gp_aoseg('co2heap3');
+SELECT * FROM gp_toolkit.__gp_aovisimap('co2heap3');
+SELECT count(*) FROM gp_toolkit.__gp_aocsseg('co2heap3');
+SELECT * FROM gp_toolkit.__gp_aoblkdir('co2heap3');
+
+-- No pg_appendonly entries should be left too
+SELECT c.relname FROM pg_class c, pg_appendonly p WHERE c.relname LIKE 'co2heap%' AND c.oid = p.relid;
+
+-- The altered tables should have heap AM.
+SELECT c.relname, a.amname FROM pg_class c JOIN pg_am a ON c.relam = a.oid WHERE c.relname LIKE 'co2heap%';
+
+-- The new heap tables shouldn't have the old AO table's reloptions
+SELECT relname, reloptions FROM pg_class WHERE relname LIKE 'co2heap%';
+
+-- The new heap tables should have a valid relfrozenxid
+SELECT relname, relfrozenxid <> '0' FROM pg_class WHERE relname LIKE 'co2heap%';
+
+-- The pg_attribute_encoding entries for the altered tables should have all gone.
+SELECT c.relname, a.attnum, attoptions FROM pg_attribute_encoding a, pg_class c WHERE a.attrelid=c.oid AND c.relname LIKE 'co2heap%';
+
+DROP TABLE co2heap;
+DROP TABLE co2heap2;
+DROP TABLE co2heap3;
+DROP TABLE co2heap4;
+
 -- Final scenario: the iterations of altering table from storage type "A" to "B" and back to "A". 
 -- The following cases will cover all variations of such iterations:
 -- 1. Heap->AO->Heap->AO

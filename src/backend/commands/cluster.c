@@ -883,9 +883,16 @@ make_new_heap(Oid OIDOldHeap, Oid NewTableSpace, Oid NewAccessMethod,
 
 	CacheInvalidateRelcacheByRelid(OIDNewHeap);
 
-	cloneAttributeEncoding(OIDOldHeap,
-						   OIDNewHeap,
-						   RelationGetNumberOfAttributes(OldHeap));
+	/* 
+	 * Copy the pg_attribute_encoding entries over if new table needs them.
+	 * Note that in the case of AM change from heap/ao to aoco, we still need 
+	 * to do this since we created those entries for the heap/ao table at the 
+	 * phase 2 of ATSETAM (see ATExecCmd).
+	 */
+	if (NewAccessMethod == AO_COLUMN_TABLE_AM_OID)
+		cloneAttributeEncoding(OIDOldHeap,
+							   OIDNewHeap,
+							   RelationGetNumberOfAttributes(OldHeap));
 
 	table_close(OldHeap, NoLock);
 
