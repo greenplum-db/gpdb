@@ -519,7 +519,7 @@ static bool prebuild_temp_table(Relation rel, RangeVar *tmpname, DistributedBy *
 static void prepare_AlterTableStmt_for_dispatch(AlterTableStmt *stmt);
 static List *strip_gpdb_part_commands(List *cmds);
 static void populate_rel_col_encodings(Relation rel, List *stenc, List *withOptions);
-static void remove_rel_opts(Relation rel);
+static void clear_rel_opts(Relation rel);
 
 
 /* ----------------------------------------------------------------
@@ -5327,7 +5327,7 @@ ATExecCmd(List **wqueue, AlteredTableInfo *tab, Relation rel,
 
 				/* If we are changing access method, simply remove all the existing ones. */
 				if (OidIsValid(tab->newAccessMethod))
-					remove_rel_opts(rel);
+					clear_rel_opts(rel);
 
 				ATExecSetRelOptions(rel, (List *) cmd->def, cmd->subtype, &aoopt_changed, valid_as_ao, lockmode);
 
@@ -14231,7 +14231,7 @@ ATPrepSetTableSpace(AlteredTableInfo *tab, Relation rel, const char *tablespacen
  *
  * GPDB specific arguments: 
  * 	aoopt_changed: whether any AO storage options have been changed in this function.
- * 	am_change_heap_ao: whether we are changing the AM from heap->AO/CO or vice-versa.
+ * 	valid_as_ao: whether we validate teh reloptions as AO tables.
  */
 static void
 ATExecSetRelOptions(Relation rel, List *defList, AlterTableType operation,
@@ -16066,10 +16066,10 @@ get_rel_opts(Relation rel)
 }
 
 /*
- * GPDB: Convenience function to remove the pg_class.reloptions field for a given relation.
+ * GPDB: Convenience function to clear the pg_class.reloptions field for a given relation.
  */
 static void
-remove_rel_opts(Relation rel)
+clear_rel_opts(Relation rel)
 {
 	Datum           val[Natts_pg_class] = {0};
 	bool            null[Natts_pg_class] = {0};

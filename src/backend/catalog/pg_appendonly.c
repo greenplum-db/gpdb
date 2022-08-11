@@ -617,9 +617,10 @@ ATAOEntries(Form_pg_class relform1, Form_pg_class relform2)
 					RemoveAttributeEncodingsByRelid(relform1->oid);
 					break;
 				case AO_ROW_TABLE_AM_OID:
-					ereport(ERROR,
-							(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-								errmsg("alter table does not support switch from AOCO to AO")));
+					/* For pg_appendonly entries, it's same as AO->AO/CO. */
+					SwapAppendonlyEntries(relform1->oid, relform2->oid);
+					/* For pg_attribute_encoding entries, it's same as AOCO->heap.*/
+					RemoveAttributeEncodingsByRelid(relform1->oid);
 					break;
 				case AO_COLUMN_TABLE_AM_OID:
 					SwapAppendonlyEntries(relform1->oid, relform2->oid);
