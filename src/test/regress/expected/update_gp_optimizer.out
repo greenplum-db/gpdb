@@ -107,6 +107,7 @@ CREATE TABLE keo3 ( sky_per character varying(24), bky_per character varying(24)
 INSERT INTO keo3 VALUES ('1', '1');
 CREATE TABLE keo4 ( keo_para_required_period character varying(6), keo_para_budget_date character varying(24)) DISTRIBUTED RANDOMLY;
 INSERT INTO keo4 VALUES ('1', '1');
+ANALYZE keo1, keo2, keo3, keo4;
 -- Explicit Redistribution motion should be added in case of GPDB Planner (test case not applicable for ORCA)
 EXPLAIN (COSTS OFF) UPDATE keo1 SET user_vie_act_cntr_marg_cum = 234.682 FROM
     ( SELECT a.user_vie_project_code_pk FROM keo1 a INNER JOIN keo2 b
@@ -129,34 +130,36 @@ WHERE t1.user_vie_project_code_pk = keo1.user_vie_project_code_pk;
                            ->  Broadcast Motion 3:3  (slice1; segments: 3)
                                  ->  Hash Join
                                        Hash Cond: ((keo1_2.user_vie_project_code_pk)::text = (keo2.projects_pk)::text)
-                                       ->  Redistribute Motion 1:3  (slice2; segments: 1)
-                                             ->  Hash Join
-                                                   Hash Cond: ((keo1_2.user_vie_fiscal_year_period_sk)::text = (max((keo3.sky_per)::text)))
-                                                   ->  Gather Motion 3:1  (slice3; segments: 3)
-                                                         ->  Seq Scan on keo1 keo1_2
-                                                   ->  Hash
-                                                         ->  Aggregate
-                                                               ->  Hash Join
-                                                                     Hash Cond: ((keo3.bky_per)::text = (keo4.keo_para_required_period)::text)
-                                                                     ->  Gather Motion 3:1  (slice4; segments: 3)
-                                                                           ->  Seq Scan on keo3
-                                                                     ->  Hash
-                                                                           ->  Assert
-                                                                                 Assert Cond: ((row_number() OVER (?)) = 1)
-                                                                                 ->  WindowAgg
+                                       ->  Hash Join
+                                             Hash Cond: ((max((keo3.sky_per)::text)) = (keo1_2.user_vie_fiscal_year_period_sk)::text)
+                                             ->  Redistribute Motion 1:3  (slice2; segments: 1)
+                                                   ->  Aggregate
+                                                         ->  Hash Join
+                                                               Hash Cond: ((keo3.bky_per)::text = (keo4_1.keo_para_required_period)::text)
+                                                               ->  Gather Motion 3:1  (slice3; segments: 3)
+                                                                     ->  Seq Scan on keo3
+                                                               ->  Hash
+                                                                     ->  Assert
+                                                                           Assert Cond: ((row_number() OVER (?)) = 1)
+                                                                           ->  WindowAgg
+                                                                                 ->  Gather Motion 3:1  (slice4; segments: 3)
                                                                                        ->  Hash Join
-                                                                                             Hash Cond: ((keo4.keo_para_budget_date)::text = (min((keo4_1.keo_para_budget_date)::text)))
-                                                                                             ->  Gather Motion 3:1  (slice5; segments: 3)
-                                                                                                   ->  Seq Scan on keo4
-                                                                                             ->  Hash
+                                                                                             Hash Cond: ((min((keo4.keo_para_budget_date)::text)) = (keo4_1.keo_para_budget_date)::text)
+                                                                                             ->  Redistribute Motion 1:3  (slice5; segments: 1)
                                                                                                    ->  Aggregate
                                                                                                          ->  Gather Motion 3:1  (slice6; segments: 3)
-                                                                                                               ->  Seq Scan on keo4 keo4_1
+                                                                                                               ->  Seq Scan on keo4
+                                                                                             ->  Hash
+                                                                                                   ->  Broadcast Motion 3:3  (slice7; segments: 3)
+                                                                                                         ->  Seq Scan on keo4 keo4_1
+                                             ->  Hash
+                                                   ->  Broadcast Motion 3:3  (slice8; segments: 3)
+                                                         ->  Seq Scan on keo1 keo1_2
                                        ->  Hash
-                                             ->  Broadcast Motion 3:3  (slice7; segments: 3)
+                                             ->  Broadcast Motion 3:3  (slice9; segments: 3)
                                                    ->  Seq Scan on keo2
  Optimizer: Pivotal Optimizer (GPORCA)
-(37 rows)
+(39 rows)
 
 UPDATE keo1 SET user_vie_act_cntr_marg_cum = 234.682 FROM
     ( SELECT a.user_vie_project_code_pk FROM keo1 a INNER JOIN keo2 b

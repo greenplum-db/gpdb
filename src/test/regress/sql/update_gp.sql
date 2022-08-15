@@ -82,6 +82,7 @@ INSERT INTO keo3 VALUES ('1', '1');
 
 CREATE TABLE keo4 ( keo_para_required_period character varying(6), keo_para_budget_date character varying(24)) DISTRIBUTED RANDOMLY;
 INSERT INTO keo4 VALUES ('1', '1');
+ANALYZE keo1, keo2, keo3, keo4;
 -- Explicit Redistribution motion should be added in case of GPDB Planner (test case not applicable for ORCA)
 EXPLAIN (COSTS OFF) UPDATE keo1 SET user_vie_act_cntr_marg_cum = 234.682 FROM
     ( SELECT a.user_vie_project_code_pk FROM keo1 a INNER JOIN keo2 b
