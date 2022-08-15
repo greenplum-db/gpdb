@@ -500,6 +500,86 @@ DROP TABLE co2heap2;
 DROP TABLE co2heap3;
 DROP TABLE co2heap4;
 
+-- Scenario 7: AOCO to AO
+CREATE TABLE co2ao(a int, b int) WITH (appendonly=true, orientation=column, compresstype=rle_type, compresslevel=3);
+CREATE TABLE co2ao2(a int, b int) WITH (appendonly=true, orientation=column, compresstype=rle_type, compresslevel=3);
+CREATE TABLE co2ao3(a int, b int) WITH (appendonly=true, orientation=column, compresstype=rle_type, compresslevel=3);
+CREATE TABLE co2ao4(a int, b int) WITH (appendonly=true, orientation=column, compresstype=rle_type, compresslevel=3);
+CREATE INDEX aoi ON co2ao(b);
+CREATE INDEX aoi2 ON co2ao3(b);
+
+INSERT INTO co2ao SELECT i,i FROM generate_series(1,5) i;
+INSERT INTO co2ao2 SELECT i,i FROM generate_series(1,5) i;
+INSERT INTO co2ao3 SELECT i,i FROM generate_series(1,5) i;
+INSERT INTO co2ao4 SELECT i,i FROM generate_series(1,5) i;
+
+-- Prior-ATSETAM checks:
+-- Check once that the AOCO tables have the custom reloptions 
+SELECT relname, reloptions FROM pg_class WHERE relname LIKE 'co2ao%';
+-- Check once that pg_appendonly has expected entries.
+SELECT c.relname, p.compresstype, p.compresslevel, p.blocksize FROM pg_class c, pg_appendonly p WHERE c.relname LIKE 'co2ao%' AND c.oid = p.relid;
+-- Check once that the pg_attribute_encoding has entries for the AOCO tables.
+SELECT c.relname, a.* FROM pg_attribute_encoding a, pg_class c WHERE a.attrelid=c.oid AND c.relname LIKE 'co2ao%';
+
+CREATE TEMP TABLE relfilebeforeco2ao AS
+    SELECT -1 segid, relfilenode FROM pg_class WHERE relname LIKE 'co2ao%'
+    UNION SELECT gp_segment_id segid, relfilenode FROM gp_dist_random('pg_class')
+    WHERE relname LIKE 'co2ao%' ORDER BY segid;
+
+-- Various cases of altering AOCO to AO:
+-- 1. Basic ATSETAMs:
+ALTER TABLE co2ao SET ACCESS METHOD ao_row;
+ALTER TABLE co2ao2 SET WITH (appendoptimized=true);
+-- 2. ATSETAM with reloptions:
+ALTER TABLE co2ao3 SET ACCESS METHOD ao_row WITH (compresstype=zlib, compresslevel=7);
+ALTER TABLE co2ao4 SET WITH (appendoptimized=true, compresstype=zlib, compresslevel=7);
+
+-- The tables and indexes should have been rewritten (should have different relfilenodes)
+CREATE TEMP TABLE relfileafterco2ao AS
+    SELECT -1 segid, relfilenode FROM pg_class WHERE relname LIKE 'co2ao%'
+    UNION SELECT gp_segment_id segid, relfilenode FROM gp_dist_random('pg_class')
+    WHERE relname LIKE 'co2ao%' ORDER BY segid;
+
+SELECT * FROM relfilebeforeco2ao INTERSECT SELECT * FROM relfileafterco2ao;
+
+DROP TABLE relfilebeforeco2ao;
+DROP TABLE relfileafterco2ao;
+
+-- Check data is intact
+SELECT count(*) FROM co2ao;
+SELECT count(*) FROM co2ao2;
+SELECT count(*) FROM co2ao3;
+SELECT count(*) FROM co2ao4;
+
+-- AO aux tables should still be there.
+-- Only testing 2 out of the 4 tables being created, where the tables were altered w/wo reloptions. 
+-- No need to test the other ones created by the alternative syntax SET WITH().
+SELECT * FROM gp_toolkit.__gp_aoseg('co2ao');
+SELECT * FROM gp_toolkit.__gp_aovisimap('co2ao');
+SELECT count(*) FROM gp_toolkit.__gp_aocsseg('co2ao');
+SELECT * FROM gp_toolkit.__gp_aoblkdir('co2ao');
+SELECT * FROM gp_toolkit.__gp_aoseg('co2ao3');
+SELECT * FROM gp_toolkit.__gp_aovisimap('co2ao3');
+SELECT count(*) FROM gp_toolkit.__gp_aocsseg('co2ao3');
+SELECT * FROM gp_toolkit.__gp_aoblkdir('co2ao3');
+
+-- pg_appendonly entries should be still be there, but options has changed accordingly.
+SELECT c.relname, p.compresstype, p.compresslevel, p.blocksize FROM pg_class c, pg_appendonly p WHERE c.relname LIKE 'co2ao%' AND c.oid = p.relid;
+
+-- The altered tables should show AOCO AM.
+SELECT c.relname, a.amname FROM pg_class c JOIN pg_am a ON c.relam = a.oid WHERE c.relname LIKE 'co2ao%';
+
+-- The new tables should have new reloptions.
+SELECT relname, reloptions FROM pg_class WHERE relname LIKE 'co2ao%';
+
+-- The pg_attribute_encoding entries for the altered tables should have all gone.
+SELECT c.relname, a.* FROM pg_attribute_encoding a, pg_class c WHERE a.attrelid=c.oid AND c.relname LIKE 'co2ao%';
+
+DROP TABLE co2ao;
+DROP TABLE co2ao2;
+DROP TABLE co2ao3;
+DROP TABLE co2ao4;
+
 -- Final scenario: the iterations of altering table from storage type "A" to "B" and back to "A". 
 -- The following cases will cover all variations of such iterations:
 -- 1. Heap->AO->Heap->AO

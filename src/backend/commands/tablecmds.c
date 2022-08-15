@@ -457,7 +457,7 @@ static void ATExecSetTableSpaceNoStorage(Relation rel, Oid newTableSpace);
 static void ATExecSetRelOptions(Relation rel, List *defList,
 								AlterTableType operation,
 								bool *aoopt_changed,
-								bool am_change_heap_ao,
+								bool valid_as_ao,
 								LOCKMODE lockmode);
 static void ATExecEnableDisableTrigger(Relation rel, const char *trigname,
 									   char fires_when, bool skip_system, LOCKMODE lockmode);
@@ -519,6 +519,7 @@ static bool prebuild_temp_table(Relation rel, RangeVar *tmpname, DistributedBy *
 static void prepare_AlterTableStmt_for_dispatch(AlterTableStmt *stmt);
 static List *strip_gpdb_part_commands(List *cmds);
 static void populate_rel_col_encodings(Relation rel, List *stenc, List *withOptions);
+static void remove_rel_opts(Relation rel);
 
 
 /* ----------------------------------------------------------------
@@ -5319,14 +5320,16 @@ ATExecCmd(List **wqueue, AlteredTableInfo *tab, Relation rel,
 			break;
 		case AT_SetAccessMethod:	/* SET ACCESS METHOD */
 			/* Set reloptions if specified any. Otherwise handled specially in Phase 3. */
-			if (cmd->def)
 			{
 				bool aoopt_changed = false;
-				bool am_change_heap_ao = OidIsValid(tab->newAccessMethod) && 
-						((IsAccessMethodAO(tab->newAccessMethod) && !RelationIsAppendOptimized(rel)) ||
-						(!IsAccessMethodAO(tab->newAccessMethod) && RelationIsAppendOptimized(rel)));
+				bool valid_as_ao = (OidIsValid(tab->newAccessMethod) && IsAccessMethodAO(tab->newAccessMethod)) 
+							|| (!OidIsValid(tab->newAccessMethod) && RelationIsAppendOptimized(rel));
 
-				ATExecSetRelOptions(rel, (List *) cmd->def, cmd->subtype, &aoopt_changed, am_change_heap_ao, lockmode);
+				/* If we are changing access method, simply remove all the existing ones. */
+				if (OidIsValid(tab->newAccessMethod))
+					remove_rel_opts(rel);
+
+				ATExecSetRelOptions(rel, (List *) cmd->def, cmd->subtype, &aoopt_changed, valid_as_ao, lockmode);
 
 				/* 
 				 * When user sets the same access method as the existing one, the
@@ -5359,8 +5362,9 @@ ATExecCmd(List **wqueue, AlteredTableInfo *tab, Relation rel,
 		case AT_ReplaceRelOptions:	/* replace entire option list */
 			{
 				bool 		aoopt_changed = false;
+				bool 		valid_as_ao = RelationIsAppendOptimized(rel);
 
-				ATExecSetRelOptions(rel, (List *) cmd->def, cmd->subtype, &aoopt_changed, false, lockmode);
+				ATExecSetRelOptions(rel, (List *) cmd->def, cmd->subtype, &aoopt_changed, valid_as_ao, lockmode);
 
 				/* Will rewrite table if there's a change to the AO reloptions. */
 				if (aoopt_changed)
@@ -14231,7 +14235,7 @@ ATPrepSetTableSpace(AlteredTableInfo *tab, Relation rel, const char *tablespacen
  */
 static void
 ATExecSetRelOptions(Relation rel, List *defList, AlterTableType operation,
-					bool *aoopt_changed, bool am_change_heap_ao, LOCKMODE lockmode)
+					bool *aoopt_changed, bool valid_as_ao, LOCKMODE lockmode)
 {
 	Oid			relid;
 	Relation	pgclass;
@@ -14256,13 +14260,11 @@ ATExecSetRelOptions(Relation rel, List *defList, AlterTableType operation,
 	if (!HeapTupleIsValid(tuple))
 		elog(ERROR, "cache lookup failed for relation %u", relid);
 
-	if (operation == AT_ReplaceRelOptions || am_change_heap_ao)
+	if (operation == AT_ReplaceRelOptions)
 	{
 		/*
-		 * If we're supposed to replace the reloptions list, or if we're
-		 * changing AM between heap and AO/CO so the old reloptions won't 
-		 * apply to the new table anymore, we just pretend there were
-		 * none before.
+		 * If we're supposed to replace the reloptions list, we just 
+		 * pretend there were none before.
 		 */
 		datum = (Datum) 0;
 		isnull = true;
@@ -14311,12 +14313,7 @@ ATExecSetRelOptions(Relation rel, List *defList, AlterTableType operation,
 		case RELKIND_AOSEGMENTS:
 		case RELKIND_AOBLOCKDIR:
 		case RELKIND_AOVISIMAP:
-			/*
-			 * Validate the reloptions as for AO/CO table if (1) we'll change AM to 
-			 * AO/CO, or (2) we are not changing AM but the relation is just AO/CO.
-			 */
-			if ((RelationIsAppendOptimized(rel) && !am_change_heap_ao) || 
-					(!RelationIsAppendOptimized(rel) && am_change_heap_ao))
+			if (valid_as_ao)
 			{
 				StdRdOptions *stdRdOptions = (StdRdOptions *) default_reloptions(newOptions,
 																				 true,
@@ -16066,6 +16063,39 @@ get_rel_opts(Relation rel)
 	ReleaseSysCache(optsTuple);
 
 	return newOptions;
+}
+
+/*
+ * GPDB: Convenience function to remove the pg_class.reloptions field for a given relation.
+ */
+static void
+remove_rel_opts(Relation rel)
+{
+	Datum           val[Natts_pg_class] = {0};
+	bool            null[Natts_pg_class] = {0};
+	bool            repl[Natts_pg_class] = {0};
+	Relation 	classrel;
+	HeapTuple 	tup;
+
+	classrel = table_open(RelationRelationId, RowExclusiveLock);
+
+	tup = SearchSysCacheCopy1(RELOID, RelationGetRelid(rel));
+	if (!HeapTupleIsValid(tup))
+		elog(ERROR, "cache lookup failed for relation %u", RelationGetRelid(rel));
+
+	val[Anum_pg_class_reloptions - 1] = (Datum) 0;
+	null[Anum_pg_class_reloptions - 1] = true;
+	repl[Anum_pg_class_reloptions - 1] = true;
+
+	tup = heap_modify_tuple(tup, RelationGetDescr(classrel),
+								val, null, repl);
+	CatalogTupleUpdate(classrel, &tup->t_self, tup);
+
+	heap_freetuple(tup);
+
+	table_close(classrel, RowExclusiveLock);
+
+	CommandCounterIncrement(); 
 }
 
 static RangeVar *

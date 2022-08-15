@@ -19,6 +19,7 @@
 
 #include "catalog/pg_am_d.h"
 #include "catalog/pg_appendonly.h"
+#include "catalog/pg_attribute_encoding.h"
 #include "catalog/pg_type.h"
 #include "catalog/pg_proc.h"
 #include "catalog/gp_fastsequence.h"

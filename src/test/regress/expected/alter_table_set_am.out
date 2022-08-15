@@ -723,7 +723,7 @@ SELECT count(*) FROM gp_toolkit.__gp_aocsseg('ao2co3');
 
 SELECT * FROM gp_toolkit.__gp_aoblkdir('ao2co3');
  tupleid | segno | columngroup_no | entry_no | first_row_no | file_offset | row_count 
----------+-------+----------------+----------+--------------+-------------+-----------
+
 (0 rows)
 
 -- pg_attribute_encoding should have columns for the AOCO table
@@ -744,8 +744,8 @@ SELECT c.relname, a.attnum, a.attoptions FROM pg_attribute_encoding a, pg_class 
 SELECT c.relname, a.amname, c.reloptions FROM pg_class c JOIN pg_am a ON c.relam = a.oid WHERE c.relname LIKE 'ao2co%';
  relname |  amname   |            reloptions             
 ---------+-----------+-----------------------------------
- ao2co   | ao_column | {blocksize=65536,compresslevel=5}
- ao2co2  | ao_column | {blocksize=65536,compresslevel=5}
+ ao2co   | ao_column | 
+ ao2co2  | ao_column | 
  ao2co3  | ao_column | {blocksize=32768,compresslevel=3}
  ao2co4  | ao_column | {blocksize=32768,compresslevel=3}
 (4 rows)
@@ -755,8 +755,8 @@ SELECT c.relname,a.blocksize,a.compresslevel,a.checksum,a.compresstype,a.columns
 FROM pg_appendonly a, pg_class c WHERE a.relid = c.oid AND relname like ('ao2co%');
  relname | blocksize | compresslevel | checksum | compresstype | columnstore 
 ---------+-----------+---------------+----------+--------------+-------------
- ao2co   |     65536 |             5 | t        | zlib         | t
- ao2co2  |     65536 |             5 | t        | zlib         | t
+ ao2co   |     32768 |             0 | t        |              | t
+ ao2co2  |     32768 |             0 | t        |              | t
  ao2co3  |     32768 |             3 | t        | zlib         | t
  ao2co4  |     32768 |             3 | t        | zlib         | t
 (4 rows)
