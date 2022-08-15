@@ -707,18 +707,16 @@ CStatisticsTest::EresUnittest_CStatisticsCopy()
 	CMemoryPool *mp = amp.Pmp();
 
 	// create another statistics structure with a single int4 column with id 10
-	UlongToHistogramMap *phmulhist2 = GPOS_NEW(mp) UlongToHistogramMap(mp);
-	phmulhist2->Insert(GPOS_NEW(mp) ULONG(10), PhistExampleInt4Dim(mp));
+	UlongToHistogramMap *phmulhist = GPOS_NEW(mp) UlongToHistogramMap(mp);
+	phmulhist->Insert(GPOS_NEW(mp) ULONG(10), PhistExampleInt4Dim(mp));
 
-	UlongToDoubleMap *phmuldoubleWidth2 = GPOS_NEW(mp) UlongToDoubleMap(mp);
-	phmuldoubleWidth2->Insert(GPOS_NEW(mp) ULONG(10),
-							  GPOS_NEW(mp) CDouble(4.0));
+	UlongToDoubleMap *phmuldoubleWidth = GPOS_NEW(mp) UlongToDoubleMap(mp);
+	phmuldoubleWidth->Insert(GPOS_NEW(mp) ULONG(10), GPOS_NEW(mp) CDouble(4.0));
 
-	CStatistics *pstats = GPOS_NEW(mp)
-		CStatistics(mp, phmulhist2, phmuldoubleWidth2, 100.0 /* rows */,
-					false /* is_empty */, ULONG(5) /* relpages */,
-					ULONG(10) /* relallvisible */, CDouble(100.0) /* rebinds */,
-					ULONG(3) /* num predicates */);
+	CStatistics *pstats = GPOS_NEW(mp) CStatistics(
+		mp, phmulhist, phmuldoubleWidth, 100.0 /* rows */, false /* is_empty */,
+		ULONG(5) /* relpages */, ULONG(10) /* relallvisible */,
+		CDouble(100.0) /* rebinds */, ULONG(3) /* num predicates */);
 
 	IStatistics *stats_copy = pstats->CopyStats(mp);
 
@@ -747,6 +745,8 @@ CStatisticsTest::EresUnittest_CStatisticsCopy()
 	}
 	stats_copy->Release();
 	stats_copy_remap->Release();
+	pstats->Release();
+	colref_mapping->Release();
 
 	return eres;
 }
