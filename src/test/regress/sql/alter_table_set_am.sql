@@ -1,6 +1,6 @@
 -- Check changing table access method
 
--- Scenario 1: Changing to the same AM: it should have no effect but 
+-- Scenario 1: Changing to the same AM: it should have no effect but
 -- make sure it doesn't rewrite table or blow up existing reloptions:
 CREATE TABLE sameam_heap(a int, b int) WITH (fillfactor=70) DISTRIBUTED BY (a);
 CREATE TABLE sameam_heap2(a int, b int) WITH (fillfactor=70) DISTRIBUTED BY (a);
@@ -442,7 +442,7 @@ INSERT INTO co2heap3 SELECT i,i FROM generate_series(1,5) i;
 INSERT INTO co2heap4 SELECT i,i FROM generate_series(1,5) i;
 
 -- Prior-ATSETAM checks:
--- Check once that the AO tables have the custom reloptions 
+-- Check once that the AO tables have the custom reloptions
 SELECT relname, reloptions FROM pg_class WHERE relname LIKE 'co2heap%';
 -- Check once that the AO tables have relfrozenxid = 0
 SELECT relname, relfrozenxid FROM pg_class WHERE relname LIKE 'co2heap%';
@@ -477,7 +477,7 @@ SELECT count(*) FROM co2heap3;
 SELECT count(*) FROM co2heap4;
 
 -- No AO aux tables should be left.
--- Only testing 2 out of the 4 tables being created, where the tables were altered w/wo reloptions. 
+-- Only testing 2 out of the 4 tables being created, where the tables were altered w/wo reloptions.
 -- No need to test the other ones created by the alternative syntax SET WITH().
 SELECT * FROM gp_toolkit.__gp_aoseg('co2heap');
 SELECT * FROM gp_toolkit.__gp_aovisimap('co2heap');
@@ -522,7 +522,7 @@ INSERT INTO co2ao3 SELECT i,i FROM generate_series(1,5) i;
 INSERT INTO co2ao4 SELECT i,i FROM generate_series(1,5) i;
 
 -- Prior-ATSETAM checks:
--- Check once that the AOCO tables have the custom reloptions 
+-- Check once that the AOCO tables have the custom reloptions
 SELECT relname, reloptions FROM pg_class WHERE relname LIKE 'co2ao%';
 -- Check once that pg_appendonly has expected entries.
 SELECT c.relname, p.compresstype, p.compresslevel, p.blocksize FROM pg_class c, pg_appendonly p WHERE c.relname LIKE 'co2ao%' AND c.oid = p.relid;
@@ -563,7 +563,7 @@ SELECT count(*) FROM co2ao3;
 SELECT count(*) FROM co2ao4;
 
 -- AO aux tables should still be there, but AOCO seg tables are not.
--- Only testing 2 out of the 4 tables being created, where the tables were altered w/wo reloptions. 
+-- Only testing 2 out of the 4 tables being created, where the tables were altered w/wo reloptions.
 -- No need to test the other ones created by the alternative syntax SET WITH().
 SELECT * FROM gp_toolkit.__gp_aoseg('co2ao');
 SELECT * FROM gp_toolkit.__gp_aocsseg('co2ao');
@@ -591,11 +591,84 @@ DROP TABLE co2ao2;
 DROP TABLE co2ao3;
 DROP TABLE co2ao4;
 
--- Final scenario: the iterations of altering table from storage type "A" to "B" and back to "A". 
+-- Scenario 8: Heap to AOCO
+SET gp_default_storage_options = 'blocksize=65536, compresstype=zlib, compresslevel=5, checksum=true';
+CREATE TABLE heap2co(a int, b int);
+CREATE TABLE heap2co2(a int, b int);
+CREATE TABLE heap2co3(a int, b int);
+CREATE TABLE heap2co4(a int, b int);
+CREATE INDEX index_heap2co ON heap2co(b);
+CREATE INDEX index_heap2co3 ON heap2co3(b);
+
+INSERT INTO heap2co SELECT i,i FROM generate_series(1,5) i;
+INSERT INTO heap2co2 SELECT i,i FROM generate_series(1,5) i;
+INSERT INTO heap2co3 SELECT i,i FROM generate_series(1,5) i;
+INSERT INTO heap2co4 SELECT i,i FROM generate_series(1,5) i;
+
+CREATE TEMP TABLE relfilebeforeaoco AS
+SELECT -1 segid, relname, relfilenode FROM pg_class WHERE relname LIKE 'heap2co%'
+UNION SELECT gp_segment_id segid, relname, relfilenode FROM gp_dist_random('pg_class')
+WHERE relname LIKE 'heap2co%' ORDER BY segid;
+
+-- ERROR: conflicting storage option specified.
+ALTER TABLE heap2co SET ACCESS METHOD ao_column WITH (appendoptimized=false);
+-- Use of *both* ACCESS METHOD and WITH clauses is allowed, but we'll print a hint to indicate the redundancy.
+ALTER TABLE heap2co SET ACCESS METHOD ao_column WITH (appendoptimized=true, orientation=column);
+
+-- Check once the reloptions
+SELECT c.relname, a.amname, c.reloptions FROM pg_class c JOIN pg_am a ON c.relam = a.oid WHERE c.relname LIKE 'heap2co%';
+
+-- Altering AO to AOCO with various syntaxes, reloptions:
+ALTER TABLE heap2co SET ACCESS METHOD ao_column;
+ALTER TABLE heap2co2 SET WITH (appendoptimized=true, orientation=column);
+ALTER TABLE heap2co3 SET ACCESS METHOD ao_column WITH (blocksize=32768, compresslevel=3);
+ALTER TABLE heap2co4 SET WITH (appendoptimized=true, orientation=column, blocksize=32768, compresslevel=3);
+
+-- The tables are rewritten
+CREATE TEMP TABLE relfileafteraoco AS
+SELECT -1 segid, relname, relfilenode FROM pg_class WHERE relname LIKE 'heap2co%'
+UNION SELECT gp_segment_id segid, relname, relfilenode FROM gp_dist_random('pg_class')
+WHERE relname LIKE 'heap2co%' ORDER BY segid;
+
+SELECT * FROM relfilebeforeaoco INTERSECT SELECT * FROM relfileafteraoco;
+DROP TABLE relfilebeforeaoco;
+DROP TABLE relfileafteraoco;
+
+-- Check data is intact
+SELECT count(*) FROM heap2co;
+SELECT count(*) FROM heap2co2;
+SELECT count(*) FROM heap2co3;
+SELECT count(*) FROM heap2co4;
+
+-- Aux tables should have been created for the new AOCO table
+-- Only tested for 2 out of the 4 tables being created, where the tables were altered w/wo reloptions.
+SELECT gp_segment_id, (gp_toolkit.__gp_aovisimap('heap2co')).* FROM gp_dist_random('gp_id');
+SELECT gp_segment_id, (gp_toolkit.__gp_aoblkdir('heap2co')).* FROM gp_dist_random('gp_id');
+SELECT count(*) FROM gp_toolkit.__gp_aocsseg('heap2co');
+SELECT gp_segment_id, (gp_toolkit.__gp_aovisimap('heap2co3')).* FROM gp_dist_random('gp_id');
+SELECT gp_segment_id, (gp_toolkit.__gp_aoblkdir('heap2co3')).* FROM gp_dist_random('gp_id');
+SELECT count(*) FROM gp_toolkit.__gp_aocsseg('heap2co3');
+
+-- pg_attribute_encoding should have columns for the AOCO table
+SELECT c.relname, a.attnum, a.attoptions FROM pg_attribute_encoding a, pg_class c WHERE a.attrelid = c.oid AND c.relname LIKE 'heap2co%';
+
+-- AM and reloptions changed accordingly
+SELECT c.relname, a.amname, c.reloptions FROM pg_class c JOIN pg_am a ON c.relam = a.oid WHERE c.relname LIKE 'heap2co%';
+
+-- pg_appendonly should reflect the changes in reloptions
+SELECT c.relname,a.blocksize,a.compresslevel,a.checksum,a.compresstype,a.columnstore
+FROM pg_appendonly a, pg_class c WHERE a.relid = c.oid AND relname like ('heap2co%');
+
+DROP TABLE heap2co;
+DROP TABLE heap2co2;
+DROP TABLE heap2co3;
+DROP TABLE heap2co4;
+
+-- Final scenario: the iterations of altering table from storage type "A" to "B" and back to "A".
 -- The following cases will cover all variations of such iterations:
 -- 1. Heap->AO->Heap->AO
 -- 2. AO->AOCO->AO->AOCO
--- (TODO) 3. Heap->AOCO->Heap->AOCO
+-- 3. Heap->AOCO->Heap->AOCO
 
 -- 1. Heap->AO->Heap->AO
 CREATE TABLE heapao(a int, b int);
@@ -619,7 +692,19 @@ ALTER TABLE aoco SET ACCESS METHOD ao_column;
 ALTER TABLE aoco SET ACCESS METHOD ao_row;
 ALTER TABLE aoco SET ACCESS METHOD ao_column;
 
--- Just checking data is intact. 
+-- Just checking data is intact.
 SELECT count(*) FROM aoco;
 DROP TABLE aoco;
 
+-- 3. Heap->AOCO->Heap->AOCO
+CREATE TABLE heapco(a int, b int);
+CREATE INDEX heapcoindex ON heapco(b);
+INSERT INTO heapco SELECT i,i FROM generate_series(1,5) i;
+
+ALTER TABLE heapco SET ACCESS METHOD ao_column;
+ALTER TABLE heapco SET ACCESS METHOD heap;
+ALTER TABLE heapco SET ACCESS METHOD ao_column;
+
+-- Just checking data is intact.
+SELECT count(*) FROM heapco;
+DROP TABLE heapco;

@@ -568,9 +568,7 @@ ATAOEntries(Form_pg_class relform1, Form_pg_class relform2)
 					TransferAppendonlyEntries(relform2->oid, relform1->oid);
 					break;
 				case AO_COLUMN_TABLE_AM_OID:
-					ereport(ERROR,
-							(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-								errmsg("alter table does not support switch from Heap to AOCO")));
+					TransferAppendonlyEntries(relform2->oid, relform1->oid);
 					break;
 				case HEAP_TABLE_AM_OID:
 				default:
