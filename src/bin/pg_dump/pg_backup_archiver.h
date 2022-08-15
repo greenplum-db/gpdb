@@ -21,11 +21,9 @@
  *
  *-------------------------------------------------------------------------
  */
-
 #ifndef __PG_BACKUP_ARCHIVE__
 #define __PG_BACKUP_ARCHIVE__
 
-#include "postgres_fe.h"
 
 #include <time.h>
 
@@ -113,9 +111,8 @@ typedef z_stream *z_streamp;
 #define WORKER_INHIBIT_DATA			  11
 #define WORKER_IGNORED_ERRORS		  12
 
-struct _archiveHandle;
-struct _tocEntry;
-struct _restoreList;
+typedef struct _archiveHandle ArchiveHandle;
+typedef struct _tocEntry TocEntry;
 struct ParallelArgs;
 struct ParallelState;
 
@@ -141,40 +138,40 @@ typedef enum T_Action
 	ACT_RESTORE
 } T_Action;
 
-typedef void (*ClosePtr) (struct _archiveHandle * AH);
-typedef void (*ReopenPtr) (struct _archiveHandle * AH);
-typedef void (*ArchiveEntryPtr) (struct _archiveHandle * AH, struct _tocEntry * te);
+typedef void (*ClosePtr) (ArchiveHandle *AH);
+typedef void (*ReopenPtr) (ArchiveHandle *AH);
+typedef void (*ArchiveEntryPtr) (ArchiveHandle *AH, TocEntry *te);
 
-typedef void (*StartDataPtr) (struct _archiveHandle * AH, struct _tocEntry * te);
-typedef void (*WriteDataPtr) (struct _archiveHandle * AH, const void *data, size_t dLen);
-typedef void (*EndDataPtr) (struct _archiveHandle * AH, struct _tocEntry * te);
+typedef void (*StartDataPtr) (ArchiveHandle *AH, TocEntry *te);
+typedef void (*WriteDataPtr) (ArchiveHandle *AH, const void *data, size_t dLen);
+typedef void (*EndDataPtr) (ArchiveHandle *AH, TocEntry *te);
 
-typedef void (*StartBlobsPtr) (struct _archiveHandle * AH, struct _tocEntry * te);
-typedef void (*StartBlobPtr) (struct _archiveHandle * AH, struct _tocEntry * te, Oid oid);
-typedef void (*EndBlobPtr) (struct _archiveHandle * AH, struct _tocEntry * te, Oid oid);
-typedef void (*EndBlobsPtr) (struct _archiveHandle * AH, struct _tocEntry * te);
+typedef void (*StartBlobsPtr) (ArchiveHandle *AH, TocEntry *te);
+typedef void (*StartBlobPtr) (ArchiveHandle *AH, TocEntry *te, Oid oid);
+typedef void (*EndBlobPtr) (ArchiveHandle *AH, TocEntry *te, Oid oid);
+typedef void (*EndBlobsPtr) (ArchiveHandle *AH, TocEntry *te);
 
-typedef int (*WriteBytePtr) (struct _archiveHandle * AH, const int i);
-typedef int (*ReadBytePtr) (struct _archiveHandle * AH);
-typedef void (*WriteBufPtr) (struct _archiveHandle * AH, const void *c, size_t len);
-typedef void (*ReadBufPtr) (struct _archiveHandle * AH, void *buf, size_t len);
-typedef void (*SaveArchivePtr) (struct _archiveHandle * AH);
-typedef void (*WriteExtraTocPtr) (struct _archiveHandle * AH, struct _tocEntry * te);
-typedef void (*ReadExtraTocPtr) (struct _archiveHandle * AH, struct _tocEntry * te);
-typedef void (*PrintExtraTocPtr) (struct _archiveHandle * AH, struct _tocEntry * te);
-typedef void (*PrintTocDataPtr) (struct _archiveHandle * AH, struct _tocEntry * te, RestoreOptions *ropt);
+typedef int (*WriteBytePtr) (ArchiveHandle *AH, const int i);
+typedef int (*ReadBytePtr) (ArchiveHandle *AH);
+typedef void (*WriteBufPtr) (ArchiveHandle *AH, const void *c, size_t len);
+typedef void (*ReadBufPtr) (ArchiveHandle *AH, void *buf, size_t len);
+typedef void (*SaveArchivePtr) (ArchiveHandle *AH);
+typedef void (*WriteExtraTocPtr) (ArchiveHandle *AH, TocEntry *te);
+typedef void (*ReadExtraTocPtr) (ArchiveHandle *AH, TocEntry *te);
+typedef void (*PrintExtraTocPtr) (ArchiveHandle *AH, TocEntry *te);
+typedef void (*PrintTocDataPtr) (ArchiveHandle *AH, TocEntry *te);
 
-typedef void (*ClonePtr) (struct _archiveHandle * AH);
-typedef void (*DeClonePtr) (struct _archiveHandle * AH);
+typedef void (*ClonePtr) (ArchiveHandle *AH);
+typedef void (*DeClonePtr) (ArchiveHandle *AH);
 
-typedef char *(*WorkerJobRestorePtr) (struct _archiveHandle * AH, struct _tocEntry * te);
-typedef char *(*WorkerJobDumpPtr) (struct _archiveHandle * AH, struct _tocEntry * te);
-typedef char *(*MasterStartParallelItemPtr) (struct _archiveHandle * AH, struct _tocEntry * te,
+typedef char *(*WorkerJobRestorePtr) (ArchiveHandle *AH, TocEntry *te);
+typedef char *(*WorkerJobDumpPtr) (ArchiveHandle *AH, TocEntry *te);
+typedef char *(*MasterStartParallelItemPtr) (ArchiveHandle *AH, TocEntry *te,
 														 T_Action act);
-typedef int (*MasterEndParallelItemPtr) (struct _archiveHandle * AH, struct _tocEntry * te,
+typedef int (*MasterEndParallelItemPtr) (ArchiveHandle *AH, TocEntry *te,
 											  const char *str, T_Action act);
 
-typedef size_t (*CustomOutPtr) (struct _archiveHandle * AH, const void *buf, size_t len);
+typedef size_t (*CustomOutPtr) (ArchiveHandle *AH, const void *buf, size_t len);
 
 typedef void (*DieFuncPtr) (int taskRC, char * pszErrorMsg);
 
@@ -238,7 +235,7 @@ typedef enum
 	REQ_SPECIAL = 0x04			/* for special TOC entries */
 } teReqs;
 
-typedef struct _archiveHandle
+struct _archiveHandle
 {
 	Archive		public;			/* Public part of archive */
 	char		vmaj;			/* Version of file */
@@ -312,7 +309,7 @@ typedef struct _archiveHandle
 
 	/* Stuff for direct DB connection */
 	char	   *archdbname;		/* DB name *read* from archive */
-	enum trivalue promptPassword;
+	trivalue	promptPassword;
 	char	   *savedPassword;	/* password for ropt->username, if known */
 	char	   *use_role;
 	PGconn	   *connection;
@@ -350,9 +347,6 @@ typedef struct _archiveHandle
 	ArchiveMode mode;			/* File mode - r or w */
 	void	   *formatData;		/* Header data specific to file format */
 
-	RestoreOptions *ropt;		/* Used to check restore options in ahwrite
-								 * etc */
-
 	/* these vars track state to avoid sending redundant SET commands */
 	char	   *currUser;		/* current username, or NULL if unknown */
 	char	   *currSchema;		/* current schema, or NULL */
@@ -369,11 +363,9 @@ typedef struct _archiveHandle
 	RestorePass restorePass;	/* used only during parallel restore */
 	struct _tocEntry *currentTE;
 	struct _tocEntry *lastErrorTE;
+};
 
-	DieFuncPtr dieFuncPtr;      /* Called upon die to report the status */
-} ArchiveHandle;
-
-typedef struct _tocEntry
+struct _tocEntry
 {
 	struct _tocEntry *prev;
 	struct _tocEntry *next;
@@ -411,15 +403,13 @@ typedef struct _tocEntry
 	int			nRevDeps;		/* number of such dependencies */
 	DumpId	   *lockDeps;		/* dumpIds of objects this one needs lock on */
 	int			nLockDeps;		/* number of such dependencies */
-} TocEntry;
+};
 
 extern int	parallel_restore(struct ParallelArgs *args);
 extern void on_exit_close_archive(Archive *AHX);
 
 extern void warn_or_exit_horribly(ArchiveHandle *AH, const char *modulename, const char *fmt,...) __attribute__((format(PG_PRINTF_ATTRIBUTE, 3, 4)));
 
-extern void WriteTOC(ArchiveHandle *AH);
-extern void ReadTOC(ArchiveHandle *AH);
 extern void WriteHead(ArchiveHandle *AH);
 extern void ReadHead(ArchiveHandle *AH);
 extern void WriteToc(ArchiveHandle *AH);

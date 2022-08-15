@@ -174,7 +174,7 @@ static void WaitForTerminatingWorkers(ParallelState *pstate);
 static void setup_cancel_handler(void);
 static void set_cancel_pstate(ParallelState *pstate);
 static void set_cancel_slot_archive(ParallelSlot *slot, ArchiveHandle *AH);
-static void RunWorker(ArchiveHandle *AH, ParallelSlot *slot, RestoreOptions *ropt);
+static void RunWorker(ArchiveHandle *AH, ParallelSlot *slot);
 static bool HasEveryWorkerTerminated(ParallelState *pstate);
 static void lockTableForWorker(ArchiveHandle *AH, TocEntry *te);
 static void WaitForCommands(ArchiveHandle *AH, int pipefd[2]);
@@ -808,7 +808,7 @@ set_cancel_slot_archive(ParallelSlot *slot, ArchiveHandle *AH)
  * upon return.
  */
 static void
-RunWorker(ArchiveHandle *AH, ParallelSlot *slot, RestoreOptions *ropt)
+RunWorker(ArchiveHandle *AH, ParallelSlot *slot)
 {
 	int			pipefd[2];
 
@@ -833,7 +833,7 @@ RunWorker(ArchiveHandle *AH, ParallelSlot *slot, RestoreOptions *ropt)
 	/*
 	 * Call the setup worker function that's defined in the ArchiveHandle.
 	 */
-	(AH->SetupWorkerPtr) ((Archive *) AH, ropt);
+	(AH->SetupWorkerPtr) ((Archive *) AH);
 
 	/*
 	 * Execute commands until done.
@@ -877,7 +877,7 @@ init_spawned_worker_win32(WorkerInfo *wi)
  * workers are created with fork().
  */
 ParallelState *
-ParallelBackupStart(ArchiveHandle *AH, RestoreOptions *ropt)
+ParallelBackupStart(ArchiveHandle *AH)
 {
 	ParallelState *pstate;
 	int			i;
@@ -993,7 +993,7 @@ ParallelBackupStart(ArchiveHandle *AH, RestoreOptions *ropt)
 			}
 
 			/* Run the worker ... */
-			RunWorker(AH, slot, ropt);
+			RunWorker(AH, slot);
 
 			/* We can just exit(0) when done */
 			exit(0);

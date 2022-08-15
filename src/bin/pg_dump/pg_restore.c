@@ -38,12 +38,13 @@
  *
  *-------------------------------------------------------------------------
  */
+#include "postgres_fe.h"
 
-#include "pg_backup_archiver.h"
-#include "pg_backup_utils.h"
+#include "getopt_long.h"
+
 #include "dumputils.h"
 #include "parallel.h"
-#include "getopt_long.h"
+#include "pg_backup_utils.h"
 
 #include <ctype.h>
 
@@ -397,6 +398,8 @@ main(int argc, char **argv)
 
 	AH = OpenArchive(inputFileSpec, opts->format);
 
+	SetArchiveOptions(AH, NULL, opts);
+
 	/*
 	 * We don't have a connection yet but that doesn't matter. The connection
 	 * is initialized to NULL and if we terminate through exit_nicely() while
@@ -413,15 +416,15 @@ main(int argc, char **argv)
 	AH->exit_on_error = opts->exit_on_error;
 
 	if (opts->tocFile)
-		SortTocFromFile(AH, opts);
+		SortTocFromFile(AH);
 
 	AH->numWorkers = numWorkers;
 
 	if (opts->tocSummary)
-		PrintTOCSummary(AH, opts);
+		PrintTOCSummary(AH);
 	else
 	{
-		SetArchiveRestoreOptions(AH, opts);
+		ProcessArchiveRestoreOptions(AH);
 		RestoreArchive(AH);
 	}
 

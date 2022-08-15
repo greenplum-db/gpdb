@@ -31,7 +31,6 @@
  *
  *-------------------------------------------------------------------------
  */
-
 #include "postgres_fe.h"
 
 #include <unistd.h>
@@ -62,12 +61,12 @@
 #include "catalog/gp_policy.h"
 #include "libpq/libpq-fs.h"
 
-#include "pg_backup_archiver.h"
-#include "pg_backup_db.h"
-#include "pg_backup_utils.h"
 #include "dumputils.h"
 #include "fe_utils/connect.h"
 #include "parallel.h"
+#include "pg_backup_db.h"
+#include "pg_backup_utils.h"
+#include "pg_dump.h"
 
 
 typedef struct
@@ -87,16 +86,17 @@ typedef struct
 	int			objsubid;		/* subobject (table column #) */
 } SecLabelItem;
 
+typedef enum OidOptions
+{
+	zeroAsOpaque = 1,
+	zeroAsAny = 2,
+	zeroAsStar = 4,
+	zeroAsNone = 8
+} OidOptions;
+
 /* global decls */
 bool		g_verbose;			/* User wants verbose narration of our
 								 * activities. */
-
-/* various user-settable parameters */
-static bool schemaOnly;
-static bool dataOnly;
-static int	dumpSections;		/* bitmask of chosen sections */
-static bool aclsSkip;
-static const char *lockWaitTimeout;
 
 /* START MPP ADDITION */
 bool		dumpPolicy;
@@ -133,9 +133,6 @@ static SimpleOidList function_include_oids = {NULL, NULL};
 
 static SimpleOidList preassigned_oids = {NULL, NULL};
 
-/* default, if no "inclusion" switches appear, is to dump everything */
-static bool include_everything = true;
-
 char		g_opaque_type[10];	/* name for the opaque type */
 
 /* placeholders for the delimiters for comments */
@@ -146,22 +143,11 @@ static const CatalogId nilCatalogId = {0, 0};
 
 const char *EXT_PARTITION_NAME_POSTFIX = "_external_partition__";
 
-/* flags for various command-line long options */
-static int	binary_upgrade = 0;
-static int	disable_dollar_quoting = 0;
-static int	dump_inserts = 0;
-static int	column_inserts = 0;
-static int	if_exists = 0;
-static int	no_security_labels = 0;
-static int	no_synchronized_snapshots = 0;
-static int	no_unlogged_table_data = 0;
-static int	serializable_deferrable = 0;
-
 /* flag indicating whether or not this GP database supports partitioning */
-static bool gp_partitioning_available = false;
+bool gp_partitioning_available = false;
 
 /* flag indicating whether or not this GP database supports column encoding */
-static bool gp_attribute_encoding_available = false;
+bool gp_attribute_encoding_available = false;
 
 /*
  * Macro for producing quoted, schema-qualified name of a dumpable object.
@@ -174,8 +160,8 @@ static bool gp_attribute_encoding_available = false;
 static DumpId binary_upgrade_dumpid;
 
 static void help(const char *progname);
-static void setup_connection(Archive *AH, const char *dumpencoding,
-				 char *use_role);
+static void setup_connection(Archive *AH,
+							const char *dumpencoding, char *use_role);
 static ArchiveFormat parseArchiveFormat(const char *format, ArchiveMode *mode);
 static void expand_schema_name_patterns(Archive *fout,
 							SimpleStringList *patterns,
@@ -259,8 +245,8 @@ static void addBoundaryDependencies(DumpableObject **dobjs, int numObjs,
 						DumpableObject *boundaryObjs);
 
 static void getDomainConstraints(Archive *fout, TypeInfo *tyinfo);
-static void getTableData(TableInfo *tblinfo, int numTables, bool oids);
-static void makeTableDataInfo(TableInfo *tbinfo, bool oids);
+static void getTableData(DumpOptions *dopt, TableInfo *tblinfo, int numTables, bool oids);
+static void makeTableDataInfo(DumpOptions *dopt, TableInfo *tbinfo, bool oids);
 static void buildMatViewRefreshDependencies(Archive *fout);
 static void getTableDataFKConstraints(void);
 static char *format_function_arguments(FuncInfo *finfo, char *funcargs,
@@ -322,7 +308,7 @@ static bool nonemptyReloptions(const char *reloptions);
 static void fmtReloptionsArray(Archive *fout, PQExpBuffer buffer,
 				   const char *reloptions, const char *prefix);
 static char *get_synchronized_snapshot(Archive *fout);
-static void setupDumpWorker(Archive *AHX, RestoreOptions *ropt);
+static void setupDumpWorker(Archive *AHX);
 
 
 /* START MPP ADDITION */
@@ -463,37 +449,25 @@ main(int argc, char **argv)
 	int			c;
 	const char *filename = NULL;
 	const char *format = "p";
-	const char *dbname = NULL;
-	const char *pghost = NULL;
-	const char *pgport = NULL;
-	const char *username = NULL;
-	const char *dumpencoding = NULL;
-	bool		oids = false;
 	TableInfo  *tblinfo;
 	int			numTables;
 	DumpableObject **dobjs;
 	int			numObjs;
 	DumpableObject *boundaryObjs;
 	int			i;
-	int			numWorkers = 1;
-	enum trivalue prompt_password = TRI_DEFAULT;
-	int			compressLevel = -1;
-	int			plainText = 0;
-	int			outputClean = 0;
-	int			outputCreateDB = 0;
-	bool		outputBlobs = false;
-	int			outputNoOwner = 0;
-	char	   *outputSuperuser = NULL;
-	char	   *use_role = NULL;
 	int			optindex;
 	RestoreOptions *ropt;
-	ArchiveFormat archiveFormat = archUnknown;
-	ArchiveMode archiveMode;
 	Archive    *fout;			/* the script file */
+	const char *dumpencoding = NULL;
+	char	   *use_role = NULL;
+	int			numWorkers = 1;
+	trivalue	prompt_password = TRI_DEFAULT;
+	int			compressLevel = -1;
+	int			plainText = 0;
+	ArchiveFormat archiveFormat = archUnknown;
+	ArchiveMode	archiveMode;
 
-	static int	disable_triggers = 0;
-	static int	outputNoTablespaces = 0;
-	static int	use_setsessauth = 0;
+	static DumpOptions dopt;
 
 	/*
 	 * The default value for gp_syntax_option depends upon whether or not the
@@ -504,8 +478,7 @@ main(int argc, char **argv)
 		GPS_NOT_SPECIFIED, GPS_DISABLED, GPS_ENABLED
 	}			gp_syntax_option = GPS_NOT_SPECIFIED;
 
-	static struct option long_options[] = {
-		{"binary-upgrade", no_argument, &binary_upgrade, 1},	/* not documented */
+	struct option long_options[] = {
 		{"data-only", no_argument, NULL, 'a'},
 		{"blobs", no_argument, NULL, 'b'},
 		{"clean", no_argument, NULL, 'c'},
@@ -540,23 +513,24 @@ main(int argc, char **argv)
 		/*
 		 * the following options don't have an equivalent short option letter
 		 */
-		{"attribute-inserts", no_argument, &column_inserts, 1},
-		{"column-inserts", no_argument, &column_inserts, 1},
-		{"disable-dollar-quoting", no_argument, &disable_dollar_quoting, 1},
-		{"disable-triggers", no_argument, &disable_triggers, 1},
+		{"attribute-inserts", no_argument, &dopt.column_inserts, 1},
+		{"binary-upgrade", no_argument, &dopt.binary_upgrade, 1},
+		{"column-inserts", no_argument, &dopt.column_inserts, 1},
+		{"disable-dollar-quoting", no_argument, &dopt.disable_dollar_quoting, 1},
+		{"disable-triggers", no_argument, &dopt.disable_triggers, 1},
 		{"exclude-table-data", required_argument, NULL, 4},
-		{"if-exists", no_argument, &if_exists, 1},
-		{"inserts", no_argument, &dump_inserts, 1},
+		{"if-exists", no_argument, &dopt.if_exists, 1},
+		{"inserts", no_argument, &dopt.dump_inserts, 1},
 		{"lock-wait-timeout", required_argument, NULL, 2},
-		{"no-tablespaces", no_argument, &outputNoTablespaces, 1},
+		{"no-tablespaces", no_argument, &dopt.outputNoTablespaces, 1},
 		{"quote-all-identifiers", no_argument, &quote_all_identifiers, 1},
 		{"role", required_argument, NULL, 3},
 		{"section", required_argument, NULL, 5},
-		{"serializable-deferrable", no_argument, &serializable_deferrable, 1},
-		{"use-set-session-authorization", no_argument, &use_setsessauth, 1},
-		{"no-security-labels", no_argument, &no_security_labels, 1},
-		{"no-synchronized-snapshots", no_argument, &no_synchronized_snapshots, 1},
-		{"no-unlogged-table-data", no_argument, &no_unlogged_table_data, 1},
+		{"serializable-deferrable", no_argument, &dopt.serializable_deferrable, 1},
+		{"use-set-session-authorization", no_argument, &dopt.use_setsessauth, 1},
+		{"no-security-labels", no_argument, &dopt.no_security_labels, 1},
+		{"no-synchronized-snapshots", no_argument, &dopt.no_synchronized_snapshots, 1},
+		{"no-unlogged-table-data", no_argument, &dopt.no_unlogged_table_data, 1},
 
 		/* START MPP ADDITION */
 
@@ -588,9 +562,6 @@ main(int argc, char **argv)
 	g_comment_end[0] = '\0';
 	strcpy(g_opaque_type, "opaque");
 
-	dataOnly = schemaOnly = false;
-	dumpSections = DUMP_UNSECTIONED;
-	lockWaitTimeout = NULL;
 	preDataSchemaOnly = postDataSchemaOnly = false;
 
 	progname = get_progname(argv[0]);
@@ -613,29 +584,31 @@ main(int argc, char **argv)
 		}
 	}
 
-	while ((c = getopt_long(argc, argv, "abcCdDE:f:F:h:in:N:oOp:RsS:t:T:U:vWxX:Z:",
+	InitDumpOptions(&dopt);
+
+	while ((c = getopt_long(argc, argv, "abcCd:E:f:F:h:ij:n:N:oOp:RsS:t:T:U:vwWxZ:",
 							long_options, &optindex)) != -1)
 	{
 		switch (c)
 		{
 			case 'a':			/* Dump data only */
-				dataOnly = true;
+				dopt.dataOnly = true;
 				break;
 
 			case 'b':			/* Dump blobs */
-				outputBlobs = true;
+				dopt.outputBlobs = true;
 				break;
 
 			case 'c':			/* clean (i.e., drop) schema prior to create */
-				outputClean = 1;
+				dopt.outputClean = 1;
 				break;
 
 			case 'C':			/* Create DB */
-				outputCreateDB = 1;
+				dopt.outputCreateDB = 1;
 				break;
 
 			case 'd':			/* database name */
-				dbname = pg_strdup(optarg);
+				dopt.dbname = pg_strdup(optarg);
 				break;
 
 			case 'E':			/* Dump encoding */
@@ -651,7 +624,7 @@ main(int argc, char **argv)
 				break;
 
 			case 'h':			/* server host */
-				pghost = pg_strdup(optarg);
+				dopt.pghost = pg_strdup(optarg);
 				break;
 
 			case 'i':
@@ -664,7 +637,7 @@ main(int argc, char **argv)
 
 			case 'n':			/* include schema(s) */
 				simple_string_list_append(&schema_include_patterns, optarg);
-				include_everything = false;
+				dopt.include_everything = false;
 				break;
 
 			case 'N':			/* exclude schema(s) */
@@ -672,15 +645,15 @@ main(int argc, char **argv)
 				break;
 
 			case 'o':			/* Dump oids */
-				oids = true;
+				dopt.oids = true;
 				break;
 
 			case 'O':			/* Don't reconnect to match owner */
-				outputNoOwner = 1;
+				dopt.outputNoOwner = 1;
 				break;
 
 			case 'p':			/* server port */
-				pgport = pg_strdup(optarg);
+				dopt.pgport = pg_strdup(optarg);
 				break;
 
 			case 'R':
@@ -688,16 +661,16 @@ main(int argc, char **argv)
 				break;
 
 			case 's':			/* dump schema only */
-				schemaOnly = true;
+				dopt.schemaOnly = true;
 				break;
 
 			case 'S':			/* Username for superuser in plain text output */
-				outputSuperuser = pg_strdup(optarg);
+				dopt.outputSuperuser = pg_strdup(optarg);
 				break;
 
 			case 't':			/* include table(s) */
 				simple_string_list_append(&table_include_patterns, optarg);
-				include_everything = false;
+				dopt.include_everything = false;
 				break;
 
 			case 'T':			/* exclude table(s) */
@@ -705,7 +678,7 @@ main(int argc, char **argv)
 				break;
 
 			case 'U':
-				username = pg_strdup(optarg);
+				dopt.username = pg_strdup(optarg);
 				break;
 
 			case 'v':			/* verbose */
@@ -721,7 +694,7 @@ main(int argc, char **argv)
 				break;
 
 			case 'x':			/* skip ACL dump */
-				aclsSkip = true;
+				dopt.aclsSkip = true;
 				break;
 
 			case 'Z':			/* Compression Level */
@@ -738,7 +711,7 @@ main(int argc, char **argv)
 				break;
 
 			case 2:				/* lock-wait-timeout */
-				lockWaitTimeout = pg_strdup(optarg);
+				dopt.lockWaitTimeout = pg_strdup(optarg);
 				break;
 
 			case 3:				/* SET ROLE */
@@ -750,7 +723,7 @@ main(int argc, char **argv)
 				break;
 
 			case 5:				/* section */
-				set_dump_section(optarg, &dumpSections);
+				set_dump_section(optarg, &dopt.dumpSections);
 				break;
 
 			case 1000:				/* gp-syntax */
@@ -773,12 +746,12 @@ main(int argc, char **argv)
 
 			case 1002:
 				simple_string_list_append(&funcid_string_list, optarg);
-				include_everything = false;
+				dopt.include_everything = false;
 				break;
 
 			case 1003:
 				simple_string_list_append(&relid_string_list, optarg);
-				include_everything = false;
+				dopt.include_everything = false;
 				break;
 
 			default:
@@ -791,8 +764,8 @@ main(int argc, char **argv)
 	 * Non-option argument specifies database name as long as it wasn't
 	 * already specified with -d / --dbname
 	 */
-	if (optind < argc && dbname == NULL)
-		dbname = argv[optind++];
+	if (optind < argc && dopt.dbname == NULL)
+		dopt.dbname = argv[optind++];
 
 	/* Complain if any arguments remain */
 	if (optind < argc)
@@ -805,33 +778,33 @@ main(int argc, char **argv)
 	}
 
 	/* --column-inserts implies --inserts */
-	if (column_inserts)
-		dump_inserts = 1;
+	if (dopt.column_inserts)
+		dopt.dump_inserts = 1;
 
 	/* --pre-data-schema-only or --post-data-schema-only implies --schema-only */
 	if (preDataSchemaOnly || postDataSchemaOnly)
-		schemaOnly = true;
+		dopt.schemaOnly = true;
 
-	if (dataOnly && schemaOnly)
+	if (dopt.dataOnly && dopt.schemaOnly)
 	{
 		write_msg(NULL, "options -s/--schema-only and -a/--data-only cannot be used together\n");
 		exit_nicely(1);
 	}
 
-	if (dataOnly && outputClean)
+	if (dopt.dataOnly && dopt.outputClean)
 	{
 		write_msg(NULL, "options -c/--clean and -a/--data-only cannot be used together\n");
 		exit_nicely(1);
 	}
 
-	if (dump_inserts && oids)
+	if (dopt.dump_inserts && dopt.oids)
 	{
 		write_msg(NULL, "options --inserts/--column-inserts and -o/--oids cannot be used together\n");
 		write_msg(NULL, "(The INSERT command cannot set OIDs.)\n");
 		exit_nicely(1);
 	}
 
-	if (if_exists && !outputClean)
+	if (dopt.if_exists && !dopt.outputClean)
 		exit_horribly(NULL, "option --if-exists requires option -c/--clean\n");
 
 	/* Identify archive format to emit */
@@ -879,6 +852,9 @@ main(int argc, char **argv)
 	fout = CreateArchive(filename, archiveFormat, compressLevel, archiveMode,
 						 setupDumpWorker);
 
+	/* Make dump options accessible right away */
+	SetArchiveOptions(fout, &dopt, NULL);
+
 	/* Register the cleanup hook */
 	on_exit_close_archive(fout);
 
@@ -901,7 +877,7 @@ main(int argc, char **argv)
 	 * Open the database using the Archiver, so it knows about it. Errors mean
 	 * death.
 	 */
-	ConnectDatabase(fout, dbname, pghost, pgport, username, prompt_password, binary_upgrade);
+	ConnectDatabase(fout, dopt.dbname, dopt.pghost, dopt.pgport, dopt.username, prompt_password, dopt.binary_upgrade);
 	setup_connection(fout, dumpencoding, use_role);
 
 	/*
@@ -935,7 +911,7 @@ main(int argc, char **argv)
 	 * access to nonexistent pg_seclabel catalog)
 	 */
 	if (fout->remoteVersion < 90100)
-		no_security_labels = 1;
+		dopt.no_security_labels = 1;
 
 	/*
 	 * When running against 9.0 or later, check if we are in recovery mode,
@@ -951,7 +927,7 @@ main(int argc, char **argv)
 			 * On hot standby slaves, never try to dump unlogged table data,
 			 * since it will just throw an error.
 			 */
-			no_unlogged_table_data = true;
+			dopt.no_unlogged_table_data = true;
 		}
 		PQclear(res);
 	}
@@ -974,7 +950,7 @@ main(int argc, char **argv)
 
 	/* check the version for the synchronized snapshots feature */
 	if (numWorkers > 1 && fout->remoteVersion < 90200
-		&& !no_synchronized_snapshots)
+		&& !dopt.no_synchronized_snapshots)
 		exit_horribly(NULL,
 		 "Synchronized snapshots are not supported by this server version.\n"
 		  "Run with --no-synchronized-snapshots instead if you do not need\n"
@@ -1016,23 +992,23 @@ main(int argc, char **argv)
 	 * Dumping blobs is now default unless we saw an inclusion switch or -s
 	 * ... but even if we did see one of these, -b turns it back on.
 	 */
-	if (include_everything && !schemaOnly)
-		outputBlobs = true;
+	if (dopt.include_everything && !dopt.schemaOnly)
+		dopt.outputBlobs = true;
 
 	/*
 	 * Now scan the database and create DumpableObject structs for all the
 	 * objects we intend to dump.
 	 */
-	tblinfo = getSchemaData(fout, &numTables, binary_upgrade);
+	tblinfo = getSchemaData(fout, &numTables);
 
 	if (fout->remoteVersion < 80400)
 		guessConstraintInheritance(tblinfo, numTables);
 
-	if (!schemaOnly)
+	if (!dopt.schemaOnly)
 	{
-		getTableData(tblinfo, numTables, oids);
+		getTableData(&dopt, tblinfo, numTables, dopt.oids);
 		buildMatViewRefreshDependencies(fout);
-		if (dataOnly)
+		if (dopt.dataOnly)
 			getTableDataFKConstraints();
 	}
 
@@ -1044,7 +1020,7 @@ main(int argc, char **argv)
 	 * However, we do need to collect blob information as there may be
 	 * comments or other information on blobs that we do need to dump out.
 	 */
-	if (outputBlobs || binary_upgrade)
+	if (dopt.outputBlobs || dopt.binary_upgrade)
 		getBlobs(fout);
 
 	/*
@@ -1097,7 +1073,7 @@ main(int argc, char **argv)
 	dumpSearchPath(fout);
 
 	/* The database item is always next, unless we don't want it at all */
-	if (include_everything && !dataOnly)
+	if (dopt.include_everything && !dopt.dataOnly)
 		dumpDatabase(fout);
 
 	int binfo_index = -1;
@@ -1110,7 +1086,7 @@ main(int argc, char **argv)
 	}
 
 	/* Amend the Oid preassignment TOC with the actual Oids gathered */
-	if (binary_upgrade && binfo_index >= 0)
+	if (dopt.binary_upgrade && binfo_index >= 0)
 		dumpPreassignedOidDefinition(fout, (BinaryUpgradeInfo *) dobjs[binfo_index]);
 
 	/*
@@ -1118,19 +1094,26 @@ main(int argc, char **argv)
 	 */
 	ropt = NewRestoreOptions();
 	ropt->filename = filename;
-	ropt->dropSchema = outputClean;
-	ropt->dataOnly = dataOnly;
-	ropt->schemaOnly = schemaOnly;
-	ropt->if_exists = if_exists;
-	ropt->dumpSections = dumpSections;
-	ropt->aclsSkip = aclsSkip;
-	ropt->superuser = outputSuperuser;
-	ropt->createDB = outputCreateDB;
-	ropt->noOwner = outputNoOwner;
-	ropt->noTablespace = outputNoTablespaces;
-	ropt->disable_triggers = disable_triggers;
-	ropt->use_setsessauth = use_setsessauth;
-	ropt->binary_upgrade = binary_upgrade;
+
+	/* if you change this list, see dumpOptionsFromRestoreOptions */
+	ropt->dropSchema = dopt.outputClean;
+	ropt->dataOnly = dopt.dataOnly;
+	ropt->schemaOnly = dopt.schemaOnly;
+	ropt->if_exists = dopt.if_exists;
+	ropt->column_inserts = dopt.column_inserts;
+	ropt->dumpSections = dopt.dumpSections;
+	ropt->aclsSkip = dopt.aclsSkip;
+	ropt->superuser = dopt.outputSuperuser;
+	ropt->createDB = dopt.outputCreateDB;
+	ropt->noOwner = dopt.outputNoOwner;
+	ropt->noTablespace = dopt.outputNoTablespaces;
+	ropt->disable_triggers = dopt.disable_triggers;
+	ropt->use_setsessauth = dopt.use_setsessauth;
+	ropt->disable_dollar_quoting = dopt.disable_dollar_quoting;
+	ropt->dump_inserts = dopt.dump_inserts;
+	ropt->no_security_labels = dopt.no_security_labels;
+	ropt->lockWaitTimeout = dopt.lockWaitTimeout;
+	ropt->include_everything = dopt.include_everything;
 
 	if (compressLevel == -1)
 		ropt->compression = 0;
@@ -1139,9 +1122,12 @@ main(int argc, char **argv)
 
 	ropt->suppressDumpWarnings = true;	/* We've already shown them */
 
-	ropt->binary_upgrade = binary_upgrade;
+	ropt->binary_upgrade = dopt.binary_upgrade;
 
-	SetArchiveRestoreOptions(fout, ropt);
+	SetArchiveOptions(fout, &dopt, ropt);
+
+	/* Mark which entries should be output */
+	ProcessArchiveRestoreOptions(fout);
 
 	/*
 	 * The archive's TOC entries are now marked as to which ones will actually
@@ -1243,6 +1229,7 @@ help(const char *progname)
 static void
 setup_connection(Archive *AH, const char *dumpencoding, char *use_role)
 {
+	DumpOptions *dopt = AH->dopt;
 	PGconn	   *conn = GetConnection(AH);
 	const char *std_strings;
 
@@ -1347,7 +1334,7 @@ setup_connection(Archive *AH, const char *dumpencoding, char *use_role)
 		 * REPEATABLE READ transaction provides the appropriate integrity
 		 * guarantees.  This is a kluge, but safe for back-patching.
 		 */
-		if (serializable_deferrable && AH->sync_snapshot_id == NULL)
+		if (dopt->serializable_deferrable && AH->sync_snapshot_id == NULL)
 			ExecuteSqlStatement(AH,
 								"SET TRANSACTION ISOLATION LEVEL "
 								"SERIALIZABLE, READ ONLY, DEFERRABLE");
@@ -1369,7 +1356,7 @@ setup_connection(Archive *AH, const char *dumpencoding, char *use_role)
 
 
 
-	if (AH->numWorkers > 1 && AH->remoteVersion >= 90200 && !no_synchronized_snapshots)
+	if (AH->numWorkers > 1 && AH->remoteVersion >= 90200 && !dopt->no_synchronized_snapshots)
 	{
 		if (AH->sync_snapshot_id)
 		{
@@ -1387,7 +1374,7 @@ setup_connection(Archive *AH, const char *dumpencoding, char *use_role)
 
 /* Set up connection for a parallel worker process */
 static void
-setupDumpWorker(Archive *AH, RestoreOptions *ropt)
+setupDumpWorker(Archive *AH)
 {
 	/*
 	 * We want to re-select all the same values the master connection is
@@ -1525,6 +1512,7 @@ expand_table_name_patterns(Archive *fout,
 		 */
 		if (cell != patterns->head)
 			appendPQExpBufferStr(query, "UNION ALL\n");
+
 		appendPQExpBuffer(query,
 						  "SELECT c.oid"
 						  "\nFROM pg_catalog.pg_class c"
@@ -1564,8 +1552,9 @@ expand_table_name_patterns(Archive *fout,
  * Returns true if object is an extension member, else false.
  */
 static bool
-checkExtensionMembership(DumpableObject *dobj)
+checkExtensionMembership(DumpableObject *dobj, Archive *fout)
 {
+	DumpOptions *dopt = fout->dopt;
 	ExtensionInfo *ext = findOwningExtension(dobj->catId);
 
 	if (ext == NULL)
@@ -1582,7 +1571,7 @@ checkExtensionMembership(DumpableObject *dobj)
 	 * exactly reproduce the database contents rather than replace the
 	 * extension contents with something different.
 	 */
-	if (!binary_upgrade)
+	if (!dopt->binary_upgrade)
 		dobj->dump = false;
 	else
 		dobj->dump = ext->dobj.dump;
@@ -1636,9 +1625,9 @@ expand_oid_patterns(SimpleStringList *patterns, SimpleOidList *oids)
  * such extensions by their having OIDs in the range reserved for initdb.
  */
 static void
-selectDumpableNamespace(NamespaceInfo *nsinfo)
+selectDumpableNamespace(NamespaceInfo *nsinfo, Archive *fout)
 {
-	if (checkExtensionMembership(&nsinfo->dobj))
+	if (checkExtensionMembership(&nsinfo->dobj, fout))
 		return;					/* extension membership overrides all else */
 
 	/*
@@ -1665,6 +1654,15 @@ selectDumpableNamespace(NamespaceInfo *nsinfo)
 		simple_oid_list_member(&schema_exclude_oids,
 							   nsinfo->dobj.catId.oid))
 		nsinfo->dobj.dump = false;
+
+	/*
+	 * If the schema belongs to an extension, allow extension membership to
+	 * override the dump decision for the schema itself.  However, this does
+	 * not change dump_contains, so this won't change what we do with objects
+	 * within the schema.  (If they belong to the extension, they'll get
+	 * suppressed by it, otherwise not.)
+	 */
+	(void) checkExtensionMembership(&nsinfo->dobj, fout);
 }
 
 /*
@@ -1672,9 +1670,9 @@ selectDumpableNamespace(NamespaceInfo *nsinfo)
  *		Mark a table as to be dumped or not
  */
 static void
-selectDumpableTable(TableInfo *tbinfo)
+selectDumpableTable(TableInfo *tbinfo, Archive *fout)
 {
-	if (checkExtensionMembership(&tbinfo->dobj))
+	if (checkExtensionMembership(&tbinfo->dobj, fout))
 		return;					/* extension membership overrides all else */
 
 	/*
@@ -1710,7 +1708,7 @@ selectDumpableTable(TableInfo *tbinfo)
  * object (the table or base type).
  */
 static void
-selectDumpableType(TypeInfo *tyinfo)
+selectDumpableType(TypeInfo *tyinfo, Archive *fout)
 {
 	/* skip complex types, except for standalone composite types */
 	if (OidIsValid(tyinfo->typrelid) &&
@@ -1739,7 +1737,7 @@ selectDumpableType(TypeInfo *tyinfo)
 		 */
 	}
 
-	if (checkExtensionMembership(&tyinfo->dobj))
+	if (checkExtensionMembership(&tyinfo->dobj, fout))
 		return;					/* extension membership overrides all else */
 
 	/* dump only types in dumpable namespaces */
@@ -1788,14 +1786,14 @@ selectDumpableFunction(FuncInfo *finfo)
  * and aclsSkip are checked separately.
  */
 static void
-selectDumpableDefaultACL(DefaultACLInfo *dinfo)
+selectDumpableDefaultACL(DumpOptions *dopt, DefaultACLInfo *dinfo)
 {
 	/* Default ACLs can't be extension members */
 
 	if (dinfo->dobj.namespace)
 		dinfo->dobj.dump = dinfo->dobj.namespace->dobj.dump;
 	else
-		dinfo->dobj.dump = include_everything;
+		dinfo->dobj.dump = dopt->include_everything;
 }
 
 /*
@@ -1808,15 +1806,15 @@ selectDumpableDefaultACL(DefaultACLInfo *dinfo)
  * OID is in the range reserved for initdb.
  */
 static void
-selectDumpableCast(CastInfo *cast)
+selectDumpableCast(CastInfo *cast, Archive *fout)
 {
-	if (checkExtensionMembership(&cast->dobj))
+	if (checkExtensionMembership(&cast->dobj, fout))
 		return;					/* extension membership overrides all else */
 
 	if (cast->dobj.catId.oid < (Oid) FirstNormalObjectId)
 		cast->dobj.dump = false;
 	else
-		cast->dobj.dump = include_everything;
+		cast->dobj.dump = fout->dopt->include_everything;
 }
 
 /*
@@ -1828,15 +1826,15 @@ selectDumpableCast(CastInfo *cast)
  * language's OID is in the range reserved for initdb.
  */
 static void
-selectDumpableProcLang(ProcLangInfo *plang)
+selectDumpableProcLang(ProcLangInfo *plang, Archive *fout)
 {
-	if (checkExtensionMembership(&plang->dobj))
+	if (checkExtensionMembership(&plang->dobj, fout))
 		return;					/* extension membership overrides all else */
 
 	if (plang->dobj.catId.oid < (Oid) FirstNormalObjectId)
 		plang->dobj.dump = false;
 	else
-		plang->dobj.dump = include_everything;
+		plang->dobj.dump = fout->dopt->include_everything;
 }
 
 /*
@@ -1850,12 +1848,12 @@ selectDumpableProcLang(ProcLangInfo *plang)
  * such extensions by their having OIDs in the range reserved for initdb.
  */
 static void
-selectDumpableExtension(ExtensionInfo *extinfo)
+selectDumpableExtension(DumpOptions *dopt, ExtensionInfo *extinfo)
 {
-	if (binary_upgrade && extinfo->dobj.catId.oid < (Oid) FirstNormalObjectId)
+	if (dopt->binary_upgrade && extinfo->dobj.catId.oid < (Oid) FirstNormalObjectId)
 		extinfo->dobj.dump = false;
 	else
-		extinfo->dobj.dump = include_everything;
+		extinfo->dobj.dump = dopt->include_everything;
 }
 
 /*
@@ -1865,9 +1863,9 @@ selectDumpableExtension(ExtensionInfo *extinfo)
  * Use this only for object types without a special-case routine above.
  */
 static void
-selectDumpableObject(DumpableObject *dobj)
+selectDumpableObject(DumpableObject *dobj, Archive *fout)
 {
-	if (checkExtensionMembership(dobj))
+	if (checkExtensionMembership(dobj, fout))
 		return;					/* extension membership overrides all else */
 
 	/*
@@ -1877,7 +1875,7 @@ selectDumpableObject(DumpableObject *dobj)
 	if (dobj->namespace)
 		dobj->dump = dobj->namespace->dobj.dump;
 	else
-		dobj->dump = include_everything;
+		dobj->dump = fout->dopt->include_everything;
 }
 
 /*
@@ -2057,6 +2055,7 @@ dumpTableData_insert(Archive *fout, void *dcontext)
 {
 	TableDataInfo *tdinfo = (TableDataInfo *) dcontext;
 	TableInfo  *tbinfo = tdinfo->tdtable;
+	DumpOptions *dopt = fout->dopt;
 	PQExpBuffer q = createPQExpBuffer();
 	PQExpBuffer insertStmt = NULL;
 	PGresult   *res;
@@ -2107,7 +2106,7 @@ dumpTableData_insert(Archive *fout, void *dcontext)
 				else
 				{
 					/* append the list of column names if required */
-					if (column_inserts)
+					if (dopt->column_inserts)
 					{
 						appendPQExpBufferStr(insertStmt, "(");
 						for (field = 0; field < nfields; field++)
@@ -2226,13 +2225,14 @@ dumpTableData_insert(Archive *fout, void *dcontext)
 static void
 dumpTableData(Archive *fout, TableDataInfo *tdinfo)
 {
+	DumpOptions *dopt = fout->dopt;
 	TableInfo  *tbinfo = tdinfo->tdtable;
 	PQExpBuffer copyBuf = createPQExpBuffer();
 	PQExpBuffer clistBuf = createPQExpBuffer();
 	DataDumperPtr dumpFn;
 	char	   *copyStmt;
 
-	if (!dump_inserts)
+	if (!dopt->dump_inserts)
 	{
 		/* Dump/restore using COPY */
 		dumpFn = dumpTableData_copy;
@@ -2316,14 +2316,14 @@ refreshMatViewData(Archive *fout, TableDataInfo *tdinfo)
  *	  set up dumpable objects representing the contents of tables
  */
 static void
-getTableData(TableInfo *tblinfo, int numTables, bool oids)
+getTableData(DumpOptions *dopt, TableInfo *tblinfo, int numTables, bool oids)
 {
 	int			i;
 
 	for (i = 0; i < numTables; i++)
 	{
 		if (tblinfo[i].dobj.dump)
-			makeTableDataInfo(&(tblinfo[i]), oids);
+			makeTableDataInfo(dopt, &(tblinfo[i]), oids);
 	}
 }
 
@@ -2334,7 +2334,7 @@ getTableData(TableInfo *tblinfo, int numTables, bool oids)
  * table data; the "dump" flag in such objects isn't used.
  */
 static void
-makeTableDataInfo(TableInfo *tbinfo, bool oids)
+makeTableDataInfo(DumpOptions *dopt, TableInfo *tbinfo, bool oids)
 {
 	TableDataInfo *tdinfo;
 
@@ -2357,7 +2357,7 @@ makeTableDataInfo(TableInfo *tbinfo, bool oids)
 
 	/* Don't dump data in unlogged tables, if so requested */
 	if (tbinfo->relpersistence == RELPERSISTENCE_UNLOGGED &&
-		no_unlogged_table_data)
+		dopt->no_unlogged_table_data)
 		return;
 
 	/* Check that the data is not explicitly excluded */
@@ -2690,6 +2690,7 @@ dumpPreassignedOidDefinition(Archive *fout, BinaryUpgradeInfo *binfo)
 static void
 dumpDatabase(Archive *fout)
 {
+	DumpOptions *dopt = fout->dopt;
 	PQExpBuffer dbQry = createPQExpBuffer();
 	PQExpBuffer delQry = createPQExpBuffer();
 	PQExpBuffer creaQry = createPQExpBuffer();
@@ -2815,7 +2816,7 @@ dumpDatabase(Archive *fout)
 						  fmtId(tablespace));
 	appendPQExpBufferStr(creaQry, ";\n");
 
-	if (binary_upgrade)
+	if (dopt->binary_upgrade)
 	{
 		appendPQExpBufferStr(creaQry, "\n-- For binary upgrade, set datfrozenxid and datminmxid.\n");
 		appendPQExpBufferStr(creaQry, "SET allow_system_table_mods = true;\n");
@@ -2856,7 +2857,7 @@ dumpDatabase(Archive *fout)
 	 * pg_largeobject and pg_largeobject_metadata come from the old system
 	 * intact, so set their relfrozenxids and relminmxids.
 	 */
-	if (binary_upgrade)
+	if (dopt->binary_upgrade)
 	{
 		PGresult   *lo_res;
 		PQExpBuffer loFrozenQry = createPQExpBuffer();
@@ -2987,7 +2988,7 @@ dumpDatabase(Archive *fout)
 	}
 
 	/* Dump shared security label. */
-	if (!no_security_labels && fout->remoteVersion >= 90200)
+	if (!dopt->no_security_labels && fout->remoteVersion >= 90200)
 	{
 		PGresult   *shres;
 		PQExpBuffer seclabelQry;
@@ -3017,7 +3018,6 @@ dumpDatabase(Archive *fout)
 	destroyPQExpBuffer(creaQry);
 	destroyPQExpBuffer(labelq);
 }
-
 
 /*
  * dumpEncoding: put the correct encoding into the archive
@@ -3233,6 +3233,7 @@ getBlobs(Archive *fout)
 static void
 dumpBlob(Archive *fout, BlobInfo *binfo)
 {
+	DumpOptions *dopt = fout->dopt;
 	PQExpBuffer cquery = createPQExpBuffer();
 	PQExpBuffer dquery = createPQExpBuffer();
 
@@ -3270,7 +3271,7 @@ dumpBlob(Archive *fout, BlobInfo *binfo)
 	 * copied over by pg_upgrade as it is part of the pg_largeobject_metadata
 	 * table.
 	 */
-	if (binfo->blobacl && !binary_upgrade)
+	if (binfo->blobacl && !dopt->binary_upgrade)
 		dumpACL(fout, binfo->dobj.catId, binfo->dobj.dumpId, "LARGE OBJECT",
 				binfo->dobj.name, NULL,
 				NULL, binfo->rolname, binfo->blobacl);
@@ -3284,8 +3285,9 @@ dumpBlob(Archive *fout, BlobInfo *binfo)
  *	dump the data contents of all large objects
  */
 static int
-dumpBlobs(Archive *fout, void *arg __attribute__((unused)))
+dumpBlobs(Archive *fout, void *arg)
 {
+	DumpOptions *dopt = fout->dopt;
 	const char *blobQry;
 	const char *blobFetchQry;
 	PGconn	   *conn = GetConnection(fout);
@@ -3299,7 +3301,7 @@ dumpBlobs(Archive *fout, void *arg __attribute__((unused)))
 	 * Do not dump out blob data in binary-upgrade mode, pg_upgrade will copy
 	 * the pg_largeobject table over entirely from the old cluster.
 	 */
-	if (binary_upgrade)
+	if (dopt->binary_upgrade)
 		return 1;
 
 	if (g_verbose)
@@ -3885,7 +3887,7 @@ getNamespaces(Archive *fout, int *numNamespaces)
 		nsinfo[i].nspacl = pg_strdup(PQgetvalue(res, i, i_nspacl));
 
 		/* Decide whether to dump this namespace */
-		selectDumpableNamespace(&nsinfo[i]);
+		selectDumpableNamespace(&nsinfo[i], fout);
 
 		if (strlen(nsinfo[i].rolname) == 0)
 			write_msg(NULL, "WARNING: owner of schema \"%s\" appears to be invalid\n",
@@ -3942,6 +3944,7 @@ findNamespace(Archive *fout, Oid nsoid, Oid objoid)
 ExtensionInfo *
 getExtensions(Archive *fout, int *numExtensions)
 {
+	DumpOptions *dopt = fout->dopt;
 	PGresult   *res;
 	int			ntups;
 	int			i;
@@ -4001,7 +4004,7 @@ getExtensions(Archive *fout, int *numExtensions)
 		extinfo[i].extcondition = pg_strdup(PQgetvalue(res, i, i_extcondition));
 
 		/* Decide whether we want to dump it */
-		selectDumpableExtension(&(extinfo[i]));
+		selectDumpableExtension(dopt, &(extinfo[i]));
 	}
 
 	PQclear(res);
@@ -4178,7 +4181,7 @@ getTypes(Archive *fout, int *numTypes)
 			tyinfo[i].isArray = false;
 
 		/* Decide whether we want to dump it */
-		selectDumpableType(&tyinfo[i]);
+		selectDumpableType(&tyinfo[i], fout);
 
 		/*
 		 * If it's a domain, fetch info about its constraints, if any
@@ -4396,7 +4399,7 @@ getOperators(Archive *fout, int *numOprs)
 		oprinfo[i].oprcode = atooid(PQgetvalue(res, i, i_oprcode));
 
 		/* Decide whether we want to dump it */
-		selectDumpableObject(&(oprinfo[i].dobj));
+		selectDumpableObject(&(oprinfo[i].dobj), fout);
 
 		if (strlen(oprinfo[i].rolname) == 0)
 			write_msg(NULL, "WARNING: owner of operator \"%s\" appears to be invalid\n",
@@ -4478,7 +4481,7 @@ getCollations(Archive *fout, int *numCollations)
 		collinfo[i].rolname = pg_strdup(PQgetvalue(res, i, i_rolname));
 
 		/* Decide whether we want to dump it */
-		selectDumpableObject(&(collinfo[i].dobj));
+		selectDumpableObject(&(collinfo[i].dobj), fout);
 	}
 
 	PQclear(res);
@@ -4556,7 +4559,7 @@ getConversions(Archive *fout, int *numConversions)
 		convinfo[i].rolname = pg_strdup(PQgetvalue(res, i, i_rolname));
 
 		/* Decide whether we want to dump it */
-		selectDumpableObject(&(convinfo[i].dobj));
+		selectDumpableObject(&(convinfo[i].dobj), fout);
 	}
 
 	PQclear(res);
@@ -4632,7 +4635,7 @@ getOpclasses(Archive *fout, int *numOpclasses)
 		opcinfo[i].rolname = pg_strdup(PQgetvalue(res, i, i_rolname));
 
 		/* Decide whether we want to dump it */
-		selectDumpableObject(&(opcinfo[i].dobj));
+		selectDumpableObject(&(opcinfo[i].dobj), fout);
 
 		if (fout->remoteVersion >= 70300)
 		{
@@ -4717,7 +4720,7 @@ getOpfamilies(Archive *fout, int *numOpfamilies)
 		opfinfo[i].rolname = pg_strdup(PQgetvalue(res, i, i_rolname));
 
 		/* Decide whether we want to dump it */
-		selectDumpableObject(&(opfinfo[i].dobj));
+		selectDumpableObject(&(opfinfo[i].dobj), fout);
 
 		if (fout->remoteVersion >= 70300)
 		{
@@ -4744,6 +4747,7 @@ getOpfamilies(Archive *fout, int *numOpfamilies)
 AggInfo *
 getAggregates(Archive *fout, int *numAggs)
 {
+	DumpOptions *dopt = fout->dopt;
 	PGresult   *res;
 	int			ntups;
 	int			i;
@@ -4776,7 +4780,7 @@ getAggregates(Archive *fout, int *numAggs)
 						  "(SELECT oid FROM pg_namespace "
 						  "WHERE nspname = 'pg_catalog')",
 						  username_subquery);
-		if (binary_upgrade && fout->remoteVersion >= 90100)
+		if (dopt->binary_upgrade && fout->remoteVersion >= 90100)
 			appendPQExpBufferStr(query,
 								 " OR EXISTS(SELECT 1 FROM pg_depend WHERE "
 								 "classid = 'pg_proc'::regclass AND "
@@ -4851,7 +4855,7 @@ getAggregates(Archive *fout, int *numAggs)
 		}
 
 		/* Decide whether we want to dump it */
-		selectDumpableObject(&(agginfo[i].aggfn.dobj));
+		selectDumpableObject(&(agginfo[i].aggfn.dobj), fout);
 	}
 
 	PQclear(res);
@@ -4950,7 +4954,7 @@ getExtProtocols(Archive *fout, int *numExtProtocols)
 		ptcinfo[i].ptctrusted = *(PQgetvalue(res, i, i_ptctrusted)) == 't';
 
 		/* Decide whether we want to dump it */
-		selectDumpableObject(&(ptcinfo[i].dobj));
+		selectDumpableObject(&(ptcinfo[i].dobj), fout);
 	}
 
 	PQclear(res);
@@ -4970,6 +4974,7 @@ getExtProtocols(Archive *fout, int *numExtProtocols)
 FuncInfo *
 getFuncs(Archive *fout, int *numFuncs)
 {
+	DumpOptions *dopt = fout->dopt;
 	PGresult   *res;
 	int			ntups;
 	int			i;
@@ -5038,7 +5043,7 @@ getFuncs(Archive *fout, int *numFuncs)
 #if 0
 		if (binary_upgrade && fout->remoteVersion >= 90100)
 #endif
-		if (binary_upgrade && fout->remoteVersion >= 80300)
+		if (dopt->binary_upgrade && fout->remoteVersion >= 80300)
 			appendPQExpBufferStr(query,
 							   "\n  OR EXISTS(SELECT 1 FROM pg_depend WHERE "
 								 "classid = 'pg_proc'::regclass AND "
@@ -5113,7 +5118,7 @@ getFuncs(Archive *fout, int *numFuncs)
 
 		/* Decide whether we want to dump it */
 		selectDumpableFunction(&finfo[i]);
-		selectDumpableObject(&(finfo[i].dobj));
+		selectDumpableObject(&(finfo[i].dobj), fout);
 
 		if (strlen(finfo[i].rolname) == 0)
 			write_msg(NULL,
@@ -5138,6 +5143,7 @@ getFuncs(Archive *fout, int *numFuncs)
 TableInfo *
 getTables(Archive *fout, int *numTables)
 {
+	DumpOptions *dopt = fout->dopt;
 	PGresult   *res;
 	int			ntups;
 	int			i;
@@ -5527,7 +5533,7 @@ getTables(Archive *fout, int *numTables)
 	i_parrelid = PQfnumber(res, "parrelid");
 	i_parlevel = PQfnumber(res, "parlevel");
 
-	if (lockWaitTimeout && fout->remoteVersion >= 70300)
+	if (dopt->lockWaitTimeout && fout->remoteVersion >= 70300)
 	{
 		/*
 		 * Arrange to fail instead of waiting forever for a table lock.
@@ -5538,7 +5544,7 @@ getTables(Archive *fout, int *numTables)
 		 */
 		resetPQExpBuffer(query);
 		appendPQExpBufferStr(query, "SET statement_timeout = ");
-		appendStringLiteralConn(query, lockWaitTimeout, GetConnection(fout));
+		appendStringLiteralConn(query, dopt->lockWaitTimeout, GetConnection(fout));
 		ExecuteSqlStatement(fout, query->data);
 	}
 
@@ -5617,7 +5623,7 @@ getTables(Archive *fout, int *numTables)
 		if (tblinfo[i].relkind == RELKIND_COMPOSITE_TYPE)
 			tblinfo[i].dobj.dump = false;
 		else
-			selectDumpableTable(&tblinfo[i]);
+			selectDumpableTable(&tblinfo[i], fout);
 		tblinfo[i].interesting = tblinfo[i].dobj.dump;
 		tblinfo[i].dummy_view = false;	/* might get set during sort */
 		tblinfo[i].postponed_def = false;		/* might get set during sort */
@@ -5648,7 +5654,7 @@ getTables(Archive *fout, int *numTables)
 					  tblinfo[i].dobj.name);
 	}
 
-	if (lockWaitTimeout && fout->remoteVersion >= 70300)
+	if (dopt->lockWaitTimeout && fout->remoteVersion >= 70300)
 	{
 		ExecuteSqlStatement(fout, "SET statement_timeout = 0");
 	}
@@ -6579,7 +6585,7 @@ getEventTriggers(Archive *fout, int *numEventTriggers)
 		evtinfo[i].evtenabled = *(PQgetvalue(res, i, i_evtenabled));
 
 		/* Decide whether we want to dump it */
-		selectDumpableObject(&(evtinfo[i].dobj));
+		selectDumpableObject(&(evtinfo[i].dobj), fout);
 	}
 
 	PQclear(res);
@@ -6696,10 +6702,7 @@ getProcLangs(Archive *fout, int *numProcLangs)
 		planginfo[i].lanowner = pg_strdup(PQgetvalue(res, i, i_lanowner));
 
 		/* Decide whether we want to dump it */
-		selectDumpableProcLang(&(planginfo[i]));
-
-		/* Decide whether we want to dump it */
-		selectDumpableProcLang(&(planginfo[i]));
+		selectDumpableProcLang(&(planginfo[i]), fout);
 	}
 
 	PQclear(res);
@@ -6812,7 +6815,7 @@ getCasts(Archive *fout, int *numCasts)
 		}
 
 		/* Decide whether we want to dump it */
-		selectDumpableCast(&(castinfo[i]));
+		selectDumpableCast(&(castinfo[i]), fout);
 	}
 
 	PQclear(res);
@@ -6838,6 +6841,7 @@ getCasts(Archive *fout, int *numCasts)
 void
 getTableAttrs(Archive *fout, TableInfo *tblinfo, int numTables)
 {
+	DumpOptions *dopt = fout->dopt;
 	int			i,
 				j;
 	PQExpBuffer q = createPQExpBuffer();
@@ -7107,7 +7111,7 @@ getTableAttrs(Archive *fout, TableInfo *tblinfo, int numTables)
 			 * GPDB: If root partition table has dropped column, we must do an
 			 * extra check later.
 			 */
-			if (binary_upgrade && tbinfo->parparent && tbinfo->attisdropped[j])
+			if (dopt->binary_upgrade && tbinfo->parparent && tbinfo->attisdropped[j])
 				rootPartHasDroppedAttr = true;
 		}
 
@@ -7189,7 +7193,7 @@ getTableAttrs(Archive *fout, TableInfo *tblinfo, int numTables)
 					addObjectDependency(&attrdefs[j].dobj,
 										tbinfo->dobj.dumpId);
 				}
-				else if (!shouldPrintColumn(tbinfo, adnum - 1))
+				else if (!shouldPrintColumn(dopt, tbinfo, adnum - 1))
 				{
 					/* column will be suppressed, print default separately */
 					attrdefs[j].separate = true;
@@ -7355,7 +7359,7 @@ getTableAttrs(Archive *fout, TableInfo *tblinfo, int numTables)
 		 * have been confirmed by `pg_upgrade --check` heterogeneous partition
 		 * table check.
 		 */
-		if (binary_upgrade && rootPartHasDroppedAttr)
+		if (dopt->binary_upgrade && rootPartHasDroppedAttr)
 		{
 			int numDistinctNatts;
 			int childPartNumNatts;
@@ -7436,9 +7440,9 @@ getTableAttrs(Archive *fout, TableInfo *tblinfo, int numTables)
  * the dropped column reference.
  */
 bool
-shouldPrintColumn(TableInfo *tbinfo, int colno)
+shouldPrintColumn(DumpOptions *dopt, TableInfo *tbinfo, int colno)
 {
-	if (binary_upgrade && !tbinfo->ignoreRootPartDroppedAttr)
+	if (dopt->binary_upgrade && !tbinfo->ignoreRootPartDroppedAttr)
 		return true;
 	return ((tbinfo->attislocal[colno] || tbinfo->relstorage == RELSTORAGE_EXTERNAL) &&
 	        !tbinfo->attisdropped[colno]);
@@ -7524,7 +7528,7 @@ getTSParsers(Archive *fout, int *numTSParsers)
 		prsinfo[i].prslextype = atooid(PQgetvalue(res, i, i_prslextype));
 
 		/* Decide whether we want to dump it */
-		selectDumpableObject(&(prsinfo[i].dobj));
+		selectDumpableObject(&(prsinfo[i].dobj), fout);
 	}
 
 	PQclear(res);
@@ -7606,7 +7610,7 @@ getTSDictionaries(Archive *fout, int *numTSDicts)
 			dictinfo[i].dictinitoption = pg_strdup(PQgetvalue(res, i, i_dictinitoption));
 
 		/* Decide whether we want to dump it */
-		selectDumpableObject(&(dictinfo[i].dobj));
+		selectDumpableObject(&(dictinfo[i].dobj), fout);
 	}
 
 	PQclear(res);
@@ -7680,7 +7684,7 @@ getTSTemplates(Archive *fout, int *numTSTemplates)
 		tmplinfo[i].tmpllexize = atooid(PQgetvalue(res, i, i_tmpllexize));
 
 		/* Decide whether we want to dump it */
-		selectDumpableObject(&(tmplinfo[i].dobj));
+		selectDumpableObject(&(tmplinfo[i].dobj), fout);
 	}
 
 	PQclear(res);
@@ -7755,7 +7759,7 @@ getTSConfigurations(Archive *fout, int *numTSConfigs)
 		cfginfo[i].cfgparser = atooid(PQgetvalue(res, i, i_cfgparser));
 
 		/* Decide whether we want to dump it */
-		selectDumpableObject(&(cfginfo[i].dobj));
+		selectDumpableObject(&(cfginfo[i].dobj), fout);
 	}
 
 	PQclear(res);
@@ -7860,7 +7864,7 @@ getForeignDataWrappers(Archive *fout, int *numForeignDataWrappers)
 		fdwinfo[i].fdwacl = pg_strdup(PQgetvalue(res, i, i_fdwacl));
 
 		/* Decide whether we want to dump it */
-		selectDumpableObject(&(fdwinfo[i].dobj));
+		selectDumpableObject(&(fdwinfo[i].dobj), fout);
 	}
 
 	PQclear(res);
@@ -7949,7 +7953,7 @@ getForeignServers(Archive *fout, int *numForeignServers)
 		srvinfo[i].srvacl = pg_strdup(PQgetvalue(res, i, i_srvacl));
 
 		/* Decide whether we want to dump it */
-		selectDumpableObject(&(srvinfo[i].dobj));
+		selectDumpableObject(&(srvinfo[i].dobj), fout);
 	}
 
 	PQclear(res);
@@ -7969,6 +7973,7 @@ getForeignServers(Archive *fout, int *numForeignServers)
 DefaultACLInfo *
 getDefaultACLs(Archive *fout, int *numDefaultACLs)
 {
+	DumpOptions *dopt = fout->dopt;
 	DefaultACLInfo *daclinfo;
 	PQExpBuffer query;
 	PGresult   *res;
@@ -8033,7 +8038,7 @@ getDefaultACLs(Archive *fout, int *numDefaultACLs)
 		daclinfo[i].defaclacl = pg_strdup(PQgetvalue(res, i, i_defaclacl));
 
 		/* Decide whether we want to dump it */
-		selectDumpableDefaultACL(&(daclinfo[i]));
+		selectDumpableDefaultACL(dopt, &(daclinfo[i]));
 	}
 
 	PQclear(res);
@@ -8071,19 +8076,19 @@ dumpComment(Archive *fout, const char *type, const char *name,
 			const char *namespace, const char *owner,
 			CatalogId catalogId, int subid, DumpId dumpId)
 {
+	DumpOptions *dopt = fout->dopt;
 	CommentItem *comments;
 	int			ncomments;
 
 	/* Comments are schema not data ... except blob comments are data */
 	if (strcmp(type, "LARGE OBJECT") != 0)
 	{
-		if (dataOnly)
+		if (dopt->dataOnly)
 			return;
 	}
 	else
 	{
-		/* We do dump blob comments in binary-upgrade mode */
-		if (schemaOnly && !binary_upgrade)
+		if (dopt->schemaOnly && !dopt->binary_upgrade)
 			return;
 	}
 
@@ -8142,13 +8147,14 @@ static void
 dumpTableComment(Archive *fout, TableInfo *tbinfo,
 				 const char *reltypename)
 {
+	DumpOptions *dopt = fout->dopt;
 	CommentItem *comments;
 	int			ncomments;
 	PQExpBuffer query;
 	PQExpBuffer tag;
 
 	/* Comments are SCHEMA not data */
-	if (dataOnly)
+	if (dopt->dataOnly)
 		return;
 
 	/* Search for comments associated with relation, using table */
@@ -8395,7 +8401,7 @@ dumpDumpableObject(Archive *fout, DumpableObject *dobj)
 			break;
 		case DO_TYPE_STORAGE_OPTIONS:
 			if (!postDataSchemaOnly)
-				dumpTypeStorageOptions(fout, (TypeStorageOptions *) dobj);
+			dumpTypeStorageOptions(fout, (TypeStorageOptions *) dobj);
 			break;
 		case DO_SHELL_TYPE:
 			if (!postDataSchemaOnly)
@@ -8422,6 +8428,7 @@ dumpDumpableObject(Archive *fout, DumpableObject *dobj)
 			dumpOpclass(fout, (OpclassInfo *) dobj);
 			break;
 		case DO_OPFAMILY:
+			if (!postDataSchemaOnly)
 			dumpOpfamily(fout, (OpfamilyInfo *) dobj);
 			break;
 		case DO_COLLATION:
@@ -8534,12 +8541,13 @@ dumpDumpableObject(Archive *fout, DumpableObject *dobj)
 static void
 dumpNamespace(Archive *fout, NamespaceInfo *nspinfo)
 {
+	DumpOptions *dopt = fout->dopt;
 	PQExpBuffer q;
 	PQExpBuffer delq;
 	char	   *qnspname;
 
 	/* Skip if not to be dumped */
-	if (!nspinfo->dobj.dump || dataOnly)
+	if (!nspinfo->dobj.dump || dopt->dataOnly)
 		return;
 
 	/* don't dump dummy namespace from pre-7.3 source */
@@ -8553,12 +8561,12 @@ dumpNamespace(Archive *fout, NamespaceInfo *nspinfo)
 
 	appendPQExpBuffer(delq, "DROP SCHEMA %s;\n", qnspname);
 
-	if (binary_upgrade)
+	if (dopt->binary_upgrade)
 		binary_upgrade_set_namespace_oid(fout, q, nspinfo->dobj.catId.oid);
 
 	appendPQExpBuffer(q, "CREATE SCHEMA %s;\n", qnspname);
 
-	if (binary_upgrade)
+	if (dopt->binary_upgrade)
 		binary_upgrade_extension_member(q, &nspinfo->dobj,
 										"SCHEMA", qnspname, NULL);
 
@@ -8596,12 +8604,13 @@ dumpNamespace(Archive *fout, NamespaceInfo *nspinfo)
 static void
 dumpExtension(Archive *fout, ExtensionInfo *extinfo)
 {
+	DumpOptions *dopt = fout->dopt;
 	PQExpBuffer q;
 	PQExpBuffer delq;
 	char	   *qextname;
 
 	/* Skip if not to be dumped */
-	if (!extinfo->dobj.dump || dataOnly)
+	if (!extinfo->dobj.dump || dopt->dataOnly)
 		return;
 
 	q = createPQExpBuffer();
@@ -8611,7 +8620,7 @@ dumpExtension(Archive *fout, ExtensionInfo *extinfo)
 
 	appendPQExpBuffer(delq, "DROP EXTENSION %s;\n", qextname);
 
-	if (!binary_upgrade)
+	if (!dopt->binary_upgrade)
 	{
 		/*
 		 * In a regular dump, we use IF NOT EXISTS so that there isn't a
@@ -8715,8 +8724,9 @@ dumpExtension(Archive *fout, ExtensionInfo *extinfo)
 static void
 dumpType(Archive *fout, TypeInfo *tyinfo)
 {
+	DumpOptions *dopt = fout->dopt;
 	/* Skip if not to be dumped */
-	if (!tyinfo->dobj.dump || dataOnly)
+	if (!tyinfo->dobj.dump || dopt->dataOnly)
 		return;
 
 	/* Dump out in proper style */
@@ -8744,6 +8754,7 @@ dumpType(Archive *fout, TypeInfo *tyinfo)
 static void
 dumpEnumType(Archive *fout, TypeInfo *tyinfo)
 {
+	DumpOptions *dopt = fout->dopt;
 	PQExpBuffer q = createPQExpBuffer();
 	PQExpBuffer delq = createPQExpBuffer();
 	PQExpBuffer query = createPQExpBuffer();
@@ -8781,7 +8792,7 @@ dumpEnumType(Archive *fout, TypeInfo *tyinfo)
 	 */
 	appendPQExpBuffer(delq, "DROP TYPE %s;\n", qualtypname);
 
-	if (binary_upgrade)
+	if (dopt->binary_upgrade)
 		binary_upgrade_set_type_oids_by_type_oid(fout, q, tyinfo->dobj.catId.oid,
 												 tyinfo->dobj.namespace->dobj.catId.oid,
 												 tyinfo->dobj.name);
@@ -8789,7 +8800,7 @@ dumpEnumType(Archive *fout, TypeInfo *tyinfo)
 	appendPQExpBuffer(q, "CREATE TYPE %s AS ENUM (",
 					  qualtypname);
 
-	if (!binary_upgrade)
+	if (!dopt->binary_upgrade)
 	{
 		for (i = 0; i < num; i++)
 		{
@@ -8804,7 +8815,7 @@ dumpEnumType(Archive *fout, TypeInfo *tyinfo)
 
 	appendPQExpBufferStr(q, "\n);\n");
 
-	if (binary_upgrade)
+	if (dopt->binary_upgrade)
 	{
 		/* Labels with dump-assigned (preserved) oids */
 		for (i = 0; i < num; i++)
@@ -8827,7 +8838,7 @@ dumpEnumType(Archive *fout, TypeInfo *tyinfo)
 		}
 	}
 
-	if (binary_upgrade)
+	if (dopt->binary_upgrade)
 		binary_upgrade_extension_member(q, &tyinfo->dobj,
 										"TYPE", qtypname,
 										tyinfo->dobj.namespace->dobj.name);
@@ -8870,6 +8881,7 @@ dumpEnumType(Archive *fout, TypeInfo *tyinfo)
 static void
 dumpRangeType(Archive *fout, TypeInfo *tyinfo)
 {
+	DumpOptions *dopt = fout->dopt;
 	PQExpBuffer q = createPQExpBuffer();
 	PQExpBuffer delq = createPQExpBuffer();
 	PQExpBuffer query = createPQExpBuffer();
@@ -8905,7 +8917,7 @@ dumpRangeType(Archive *fout, TypeInfo *tyinfo)
 	 */
 	appendPQExpBuffer(delq, "DROP TYPE %s;\n", qualtypname);
 
-	if (binary_upgrade)
+	if (dopt->binary_upgrade)
 		binary_upgrade_set_type_oids_by_type_oid(fout, q, tyinfo->dobj.catId.oid,
 				tyinfo->dobj.namespace->dobj.catId.oid, tyinfo->dobj.name);
 
@@ -8946,7 +8958,7 @@ dumpRangeType(Archive *fout, TypeInfo *tyinfo)
 
 	appendPQExpBufferStr(q, "\n);\n");
 
-	if (binary_upgrade)
+	if (dopt->binary_upgrade)
 		binary_upgrade_extension_member(q, &tyinfo->dobj,
 										"TYPE", qtypname,
 										tyinfo->dobj.namespace->dobj.name);
@@ -8994,6 +9006,7 @@ dumpRangeType(Archive *fout, TypeInfo *tyinfo)
 static void
 dumpUndefinedType(Archive *fout, TypeInfo *tyinfo)
 {
+	DumpOptions *dopt = fout->dopt;
 	PQExpBuffer q = createPQExpBuffer();
 	PQExpBuffer delq = createPQExpBuffer();
 	char	   *qtypname;
@@ -9004,7 +9017,7 @@ dumpUndefinedType(Archive *fout, TypeInfo *tyinfo)
 
 	appendPQExpBuffer(delq, "DROP TYPE %s;\n", qualtypname);
 
-	if (binary_upgrade)
+	if (dopt->binary_upgrade)
 		binary_upgrade_set_type_oids_by_type_oid(fout,
 												 q, tyinfo->dobj.catId.oid,
 												 tyinfo->dobj.namespace->dobj.catId.oid,
@@ -9013,7 +9026,7 @@ dumpUndefinedType(Archive *fout, TypeInfo *tyinfo)
 	appendPQExpBuffer(q, "CREATE TYPE %s;\n",
 					  qualtypname);
 
-	if (binary_upgrade)
+	if (dopt->binary_upgrade)
 		binary_upgrade_extension_member(q, &tyinfo->dobj,
 										"TYPE", qtypname,
 										tyinfo->dobj.namespace->dobj.name);
@@ -9054,6 +9067,7 @@ dumpUndefinedType(Archive *fout, TypeInfo *tyinfo)
 static void
 dumpBaseType(Archive *fout, TypeInfo *tyinfo)
 {
+	DumpOptions *dopt = fout->dopt;
 	PQExpBuffer q = createPQExpBuffer();
 	PQExpBuffer delq = createPQExpBuffer();
 	PQExpBuffer query = createPQExpBuffer();
@@ -9300,7 +9314,7 @@ dumpBaseType(Archive *fout, TypeInfo *tyinfo)
 	appendPQExpBuffer(delq, "DROP TYPE %s CASCADE;\n", qualtypname);
 
 	/* We might already have a shell type, but setting pg_type_oid is harmless */
-	if (binary_upgrade)
+	if (dopt->binary_upgrade)
 		binary_upgrade_set_type_oids_by_type_oid(fout, q, tyinfo->dobj.catId.oid,
 				tyinfo->dobj.namespace->dobj.catId.oid, tyinfo->dobj.name);
 
@@ -9394,7 +9408,7 @@ dumpBaseType(Archive *fout, TypeInfo *tyinfo)
 
 	appendPQExpBufferStr(q, "\n);\n");
 
-	if (binary_upgrade)
+	if (dopt->binary_upgrade)
 		binary_upgrade_extension_member(q, &tyinfo->dobj,
 										"TYPE", qtypname,
 										tyinfo->dobj.namespace->dobj.name);
@@ -9485,6 +9499,7 @@ dumpTypeStorageOptions(Archive *fout, TypeStorageOptions *tstorageoptions)
 static void
 dumpDomain(Archive *fout, TypeInfo *tyinfo)
 {
+	DumpOptions *dopt = fout->dopt;
 	PQExpBuffer q = createPQExpBuffer();
 	PQExpBuffer delq = createPQExpBuffer();
 	PQExpBuffer query = createPQExpBuffer();
@@ -9540,7 +9555,7 @@ dumpDomain(Archive *fout, TypeInfo *tyinfo)
 		typdefault = NULL;
 	typcollation = atooid(PQgetvalue(res, 0, PQfnumber(res, "typcollation")));
 
-	if (binary_upgrade)
+	if (dopt->binary_upgrade)
 		binary_upgrade_set_type_oids_by_type_oid(fout, q, tyinfo->dobj.catId.oid,
 				tyinfo->dobj.namespace->dobj.catId.oid, tyinfo->dobj.name);
 
@@ -9592,7 +9607,7 @@ dumpDomain(Archive *fout, TypeInfo *tyinfo)
 
 	appendPQExpBuffer(delq, "DROP DOMAIN %s;\n", qualtypname);
 
-	if (binary_upgrade)
+	if (dopt->binary_upgrade)
 		binary_upgrade_extension_member(q, &tyinfo->dobj,
 										"DOMAIN", qtypname,
 										tyinfo->dobj.namespace->dobj.name);
@@ -9635,6 +9650,7 @@ dumpDomain(Archive *fout, TypeInfo *tyinfo)
 static void
 dumpCompositeType(Archive *fout, TypeInfo *tyinfo)
 {
+	DumpOptions *dopt = fout->dopt;
 	PQExpBuffer q = createPQExpBuffer();
 	PQExpBuffer dropped = createPQExpBuffer();
 	PQExpBuffer delq = createPQExpBuffer();
@@ -9703,7 +9719,7 @@ dumpCompositeType(Archive *fout, TypeInfo *tyinfo)
 	i_attisdropped = PQfnumber(res, "attisdropped");
 	i_attcollation = PQfnumber(res, "attcollation");
 
-	if (binary_upgrade)
+	if (dopt->binary_upgrade)
 	{
 		binary_upgrade_set_type_oids_by_type_oid(fout, q, tyinfo->dobj.catId.oid,
 				tyinfo->dobj.namespace->dobj.catId.oid, tyinfo->dobj.name);
@@ -9733,7 +9749,7 @@ dumpCompositeType(Archive *fout, TypeInfo *tyinfo)
 		attisdropped = (PQgetvalue(res, i, i_attisdropped)[0] == 't');
 		attcollation = atooid(PQgetvalue(res, i, i_attcollation));
 
-		if (attisdropped && !binary_upgrade)
+		if (attisdropped && !dopt->binary_upgrade)
 			continue;
 
 		/* Format properly if not first attr */
@@ -9791,7 +9807,7 @@ dumpCompositeType(Archive *fout, TypeInfo *tyinfo)
 
 	appendPQExpBuffer(delq, "DROP TYPE %s;\n", qualtypname);
 
-	if (binary_upgrade)
+	if (dopt->binary_upgrade)
 		binary_upgrade_extension_member(q, &tyinfo->dobj,
 										"TYPE", qtypname,
 										tyinfo->dobj.namespace->dobj.name);
@@ -9951,10 +9967,11 @@ dumpCompositeTypeColComments(Archive *fout, TypeInfo *tyinfo)
 static void
 dumpShellType(Archive *fout, ShellTypeInfo *stinfo)
 {
+	DumpOptions *dopt = fout->dopt;
 	PQExpBuffer q;
 
 	/* Skip if not to be dumped */
-	if (!stinfo->dobj.dump || dataOnly)
+	if (!stinfo->dobj.dump || dopt->dataOnly)
 		return;
 
 	q = createPQExpBuffer();
@@ -9968,7 +9985,7 @@ dumpShellType(Archive *fout, ShellTypeInfo *stinfo)
 	 * after it's filled in, otherwise the backend complains.
 	 */
 
-	if (binary_upgrade)
+	if (dopt->binary_upgrade)
 		binary_upgrade_set_type_oids_by_type_oid(fout, q,
 										   stinfo->baseType->dobj.catId.oid,
 										   stinfo->baseType->dobj.namespace->dobj.catId.oid,
@@ -9998,6 +10015,7 @@ dumpShellType(Archive *fout, ShellTypeInfo *stinfo)
 static void
 dumpProcLang(Archive *fout, ProcLangInfo *plang)
 {
+	DumpOptions *dopt = fout->dopt;
 	PQExpBuffer defqry;
 	PQExpBuffer delqry;
 	bool		useParams;
@@ -10007,7 +10025,7 @@ dumpProcLang(Archive *fout, ProcLangInfo *plang)
 	FuncInfo   *validatorInfo = NULL;
 
 	/* Skip if not to be dumped */
-	if (!plang->dobj.dump || dataOnly)
+	if (!plang->dobj.dump || dopt->dataOnly)
 		return;
 
 	/*
@@ -10083,7 +10101,7 @@ dumpProcLang(Archive *fout, ProcLangInfo *plang)
 	}
 	appendPQExpBufferStr(defqry, ";\n");
 
-	if (binary_upgrade)
+	if (dopt->binary_upgrade)
 		binary_upgrade_extension_member(defqry, &plang->dobj,
 										"LANGUAGE", qlanname, NULL);
 
@@ -10324,6 +10342,7 @@ format_function_signature(Archive *fout, FuncInfo *finfo, bool honor_quotes)
 static void
 dumpFunc(Archive *fout, FuncInfo *finfo)
 {
+	DumpOptions *dopt = fout->dopt;
 	PQExpBuffer query;
 	PQExpBuffer q;
 	PQExpBuffer delqry;
@@ -10366,7 +10385,7 @@ dumpFunc(Archive *fout, FuncInfo *finfo)
 	int			i;
 
 	/* Skip if not to be dumped */
-	if (!finfo->dobj.dump || dataOnly)
+	if (!finfo->dobj.dump || dopt->dataOnly)
 		return;
 
 	query = createPQExpBuffer();
@@ -10484,7 +10503,7 @@ dumpFunc(Archive *fout, FuncInfo *finfo)
 			 * where we have bin, use dollar quoting if allowed and src
 			 * contains quote or backslash; else use regular quoting.
 			 */
-			if (disable_dollar_quoting ||
+			if (dopt->disable_dollar_quoting ||
 			  (strchr(prosrc, '\'') == NULL && strchr(prosrc, '\\') == NULL))
 				appendStringLiteralAH(asPart, prosrc, fout);
 			else
@@ -10497,7 +10516,7 @@ dumpFunc(Archive *fout, FuncInfo *finfo)
 		{
 			appendPQExpBufferStr(asPart, "AS ");
 			/* with no bin, dollar quote src unconditionally if allowed */
-			if (disable_dollar_quoting)
+			if (dopt->disable_dollar_quoting)
 				appendStringLiteralAH(asPart, prosrc, fout);
 			else
 				appendStringLiteralDQ(asPart, prosrc, NULL);
@@ -10743,7 +10762,7 @@ dumpFunc(Archive *fout, FuncInfo *finfo)
 
 	appendPQExpBuffer(q, ";\n");
 
-	if (binary_upgrade)
+	if (dopt->binary_upgrade)
 		binary_upgrade_extension_member(q, &finfo->dobj,
 										"FUNCTION", funcsig,
 										finfo->dobj.namespace->dobj.name);
@@ -10798,6 +10817,7 @@ dumpFunc(Archive *fout, FuncInfo *finfo)
 static void
 dumpCast(Archive *fout, CastInfo *cast)
 {
+	DumpOptions *dopt = fout->dopt;
 	PQExpBuffer defqry;
 	PQExpBuffer delqry;
 	PQExpBuffer labelq;
@@ -10807,7 +10827,7 @@ dumpCast(Archive *fout, CastInfo *cast)
 	char	   *targetType;
 
 	/* Skip if not to be dumped */
-	if (!cast->dobj.dump || dataOnly)
+	if (!cast->dobj.dump || dopt->dataOnly)
 		return;
 
 	/* Cannot dump if we don't have the cast function's info */
@@ -10872,7 +10892,7 @@ dumpCast(Archive *fout, CastInfo *cast)
 	appendPQExpBuffer(castargs, "(%s AS %s)",
 					  sourceType, targetType);
 
-	if (binary_upgrade)
+	if (dopt->binary_upgrade)
 		binary_upgrade_extension_member(defqry, &cast->dobj,
 										"CAST", castargs->data, NULL);
 
@@ -10905,6 +10925,7 @@ dumpCast(Archive *fout, CastInfo *cast)
 static void
 dumpOpr(Archive *fout, OprInfo *oprinfo)
 {
+	DumpOptions *dopt = fout->dopt;
 	PQExpBuffer query;
 	PQExpBuffer q;
 	PQExpBuffer delq;
@@ -10936,7 +10957,7 @@ dumpOpr(Archive *fout, OprInfo *oprinfo)
 	char	   *oprref;
 
 	/* Skip if not to be dumped */
-	if (!oprinfo->dobj.dump || dataOnly)
+	if (!oprinfo->dobj.dump || dopt->dataOnly)
 		return;
 
 	/*
@@ -11090,7 +11111,7 @@ dumpOpr(Archive *fout, OprInfo *oprinfo)
 					  fmtId(oprinfo->dobj.namespace->dobj.name),
 					  oprinfo->dobj.name, details->data);
 
-	if (binary_upgrade)
+	if (dopt->binary_upgrade)
 		binary_upgrade_extension_member(q, &oprinfo->dobj,
 										"OPERATOR", oprid->data,
 										oprinfo->dobj.namespace->dobj.name);
@@ -11238,6 +11259,7 @@ convertTSFunction(Archive *fout, Oid funcOid)
 static void
 dumpOpclass(Archive *fout, OpclassInfo *opcinfo)
 {
+	DumpOptions *dopt = fout->dopt;
 	PQExpBuffer query;
 	PQExpBuffer q;
 	PQExpBuffer delq;
@@ -11280,7 +11302,7 @@ dumpOpclass(Archive *fout, OpclassInfo *opcinfo)
 	int			i;
 
 	/* Skip if not to be dumped */
-	if (!opcinfo->dobj.dump || dataOnly)
+	if (!opcinfo->dobj.dump || dopt->dataOnly)
 		return;
 
 	query = createPQExpBuffer();
@@ -11569,7 +11591,7 @@ dumpOpclass(Archive *fout, OpclassInfo *opcinfo)
 	appendPQExpBuffer(nameusing, " USING %s",
 					  fmtId(amname));
 
-	if (binary_upgrade)
+	if (dopt->binary_upgrade)
 		binary_upgrade_extension_member(q, &opcinfo->dobj,
 										"OPERATOR CLASS", nameusing->data,
 										opcinfo->dobj.namespace->dobj.name);
@@ -11608,6 +11630,7 @@ dumpOpclass(Archive *fout, OpclassInfo *opcinfo)
 static void
 dumpOpfamily(Archive *fout, OpfamilyInfo *opfinfo)
 {
+	DumpOptions *dopt = fout->dopt;
 	PQExpBuffer query;
 	PQExpBuffer q;
 	PQExpBuffer delq;
@@ -11640,7 +11663,7 @@ dumpOpfamily(Archive *fout, OpfamilyInfo *opfinfo)
 	int			i;
 
 	/* Skip if not to be dumped */
-	if (!opfinfo->dobj.dump || dataOnly)
+	if (!opfinfo->dobj.dump || dopt->dataOnly)
 		return;
 
 	query = createPQExpBuffer();
@@ -11833,7 +11856,7 @@ dumpOpfamily(Archive *fout, OpfamilyInfo *opfinfo)
 	appendPQExpBuffer(nameusing, " USING %s",
 					  fmtId(amname));
 
-	if (binary_upgrade)
+	if (dopt->binary_upgrade)
 		binary_upgrade_extension_member(q, &opfinfo->dobj,
 										"OPERATOR FAMILY", nameusing->data,
 										opfinfo->dobj.namespace->dobj.name);
@@ -11869,6 +11892,7 @@ dumpOpfamily(Archive *fout, OpfamilyInfo *opfinfo)
 static void
 dumpCollation(Archive *fout, CollInfo *collinfo)
 {
+	DumpOptions *dopt = fout->dopt;
 	PQExpBuffer query;
 	PQExpBuffer q;
 	PQExpBuffer delq;
@@ -11880,7 +11904,7 @@ dumpCollation(Archive *fout, CollInfo *collinfo)
 	const char *collctype;
 
 	/* Skip if not to be dumped */
-	if (!collinfo->dobj.dump || dataOnly)
+	if (!collinfo->dobj.dump || dopt->dataOnly)
 		return;
 
 	query = createPQExpBuffer();
@@ -11915,7 +11939,7 @@ dumpCollation(Archive *fout, CollInfo *collinfo)
 	appendStringLiteralAH(q, collctype, fout);
 	appendPQExpBufferStr(q, ");\n");
 
-	if (binary_upgrade)
+	if (dopt->binary_upgrade)
 		binary_upgrade_extension_member(q, &collinfo->dobj,
 										"COLLATION", qcollname,
 										collinfo->dobj.namespace->dobj.name);
@@ -11950,6 +11974,7 @@ dumpCollation(Archive *fout, CollInfo *collinfo)
 static void
 dumpConversion(Archive *fout, ConvInfo *convinfo)
 {
+	DumpOptions *dopt = fout->dopt;
 	PQExpBuffer query;
 	PQExpBuffer q;
 	PQExpBuffer delq;
@@ -11965,7 +11990,7 @@ dumpConversion(Archive *fout, ConvInfo *convinfo)
 	bool		condefault;
 
 	/* Skip if not to be dumped */
-	if (!convinfo->dobj.dump || dataOnly)
+	if (!convinfo->dobj.dump || dopt->dataOnly)
 		return;
 
 	query = createPQExpBuffer();
@@ -12007,7 +12032,7 @@ dumpConversion(Archive *fout, ConvInfo *convinfo)
 	/* regproc is automatically quoted in 7.3 and above */
 	appendPQExpBuffer(q, " FROM %s;\n", conproc);
 
-	if (binary_upgrade)
+	if (dopt->binary_upgrade)
 		binary_upgrade_extension_member(q, &convinfo->dobj,
 										"CONVERSION", qconvname,
 										convinfo->dobj.namespace->dobj.name);
@@ -12082,6 +12107,7 @@ format_aggregate_signature(AggInfo *agginfo, Archive *fout, bool honor_quotes)
 static void
 dumpAgg(Archive *fout, AggInfo *agginfo)
 {
+	DumpOptions *dopt = fout->dopt;
 	PQExpBuffer query;
 	PQExpBuffer q;
 	PQExpBuffer delq;
@@ -12131,7 +12157,7 @@ dumpAgg(Archive *fout, AggInfo *agginfo)
 	bool		convertok;
 
 	/* Skip if not to be dumped */
-	if (!agginfo->aggfn.dobj.dump || dataOnly)
+	if (!agginfo->aggfn.dobj.dump || dopt->dataOnly)
 		return;
 
 	query = createPQExpBuffer();
@@ -12372,7 +12398,7 @@ dumpAgg(Archive *fout, AggInfo *agginfo)
 					  fmtId(agginfo->aggfn.dobj.namespace->dobj.name),
 					  aggfullsig ? aggfullsig : aggsig, details->data);
 
-	if (binary_upgrade)
+	if (dopt->binary_upgrade)
 		binary_upgrade_extension_member(q, &agginfo->aggfn.dobj,
 										"AGGREGATE", aggsig,
 								   agginfo->aggfn.dobj.namespace->dobj.name);
@@ -12470,6 +12496,7 @@ getFunctionName(Archive *fout, Oid oid)
 static void
 dumpExtProtocol(Archive *fout, ExtProtInfo *ptcinfo)
 {
+	DumpOptions *dopt = fout->dopt;
 #define FCOUNT	3
 #define READFN_IDX 0
 #define WRITEFN_IDX 1
@@ -12495,7 +12522,7 @@ dumpExtProtocol(Archive *fout, ExtProtInfo *ptcinfo)
 	bool		has_internal = false;
 
 	/* Skip if not to be dumped */
-	if (!ptcinfo->dobj.dump || dataOnly)
+	if (!ptcinfo->dobj.dump || dopt->dataOnly)
 		return;
 
 	/* init and fill the protoFuncs array */
@@ -12649,12 +12676,13 @@ dumpExtProtocol(Archive *fout, ExtProtInfo *ptcinfo)
 static void
 dumpTSParser(Archive *fout, TSParserInfo *prsinfo)
 {
+	DumpOptions *dopt = fout->dopt;
 	PQExpBuffer q;
 	PQExpBuffer delq;
 	char	   *qprsname;
 
 	/* Skip if not to be dumped */
-	if (!prsinfo->dobj.dump || dataOnly)
+	if (!prsinfo->dobj.dump || dopt->dataOnly)
 		return;
 
 	q = createPQExpBuffer();
@@ -12680,7 +12708,7 @@ dumpTSParser(Archive *fout, TSParserInfo *prsinfo)
 	appendPQExpBuffer(delq, "DROP TEXT SEARCH PARSER %s;\n",
 					  fmtQualifiedDumpable(prsinfo));
 
-	if (binary_upgrade)
+	if (dopt->binary_upgrade)
 		binary_upgrade_extension_member(q, &prsinfo->dobj,
 										"TEXT SEARCH PARSER", qprsname,
 										prsinfo->dobj.namespace->dobj.name);
@@ -12712,6 +12740,7 @@ dumpTSParser(Archive *fout, TSParserInfo *prsinfo)
 static void
 dumpTSDictionary(Archive *fout, TSDictInfo *dictinfo)
 {
+	DumpOptions *dopt = fout->dopt;
 	PQExpBuffer q;
 	PQExpBuffer delq;
 	PQExpBuffer query;
@@ -12721,7 +12750,7 @@ dumpTSDictionary(Archive *fout, TSDictInfo *dictinfo)
 	char	   *tmplname;
 
 	/* Skip if not to be dumped */
-	if (!dictinfo->dobj.dump || dataOnly)
+	if (!dictinfo->dobj.dump || dopt->dataOnly)
 		return;
 
 	q = createPQExpBuffer();
@@ -12784,12 +12813,13 @@ dumpTSDictionary(Archive *fout, TSDictInfo *dictinfo)
 static void
 dumpTSTemplate(Archive *fout, TSTemplateInfo *tmplinfo)
 {
+	DumpOptions *dopt = fout->dopt;
 	PQExpBuffer q;
 	PQExpBuffer delq;
 	char	   *qtmplname;
 
 	/* Skip if not to be dumped */
-	if (!tmplinfo->dobj.dump || dataOnly)
+	if (!tmplinfo->dobj.dump || dopt->dataOnly)
 		return;
 
 	q = createPQExpBuffer();
@@ -12836,6 +12866,7 @@ dumpTSTemplate(Archive *fout, TSTemplateInfo *tmplinfo)
 static void
 dumpTSConfig(Archive *fout, TSConfigInfo *cfginfo)
 {
+	DumpOptions *dopt = fout->dopt;
 	PQExpBuffer q;
 	PQExpBuffer delq;
 	PQExpBuffer query;
@@ -12849,7 +12880,7 @@ dumpTSConfig(Archive *fout, TSConfigInfo *cfginfo)
 	int			i_dictname;
 
 	/* Skip if not to be dumped */
-	if (!cfginfo->dobj.dump || dataOnly)
+	if (!cfginfo->dobj.dump || dopt->dataOnly)
 		return;
 
 	q = createPQExpBuffer();
@@ -12949,12 +12980,13 @@ dumpTSConfig(Archive *fout, TSConfigInfo *cfginfo)
 static void
 dumpForeignDataWrapper(Archive *fout, FdwInfo *fdwinfo)
 {
+	DumpOptions *dopt = fout->dopt;
 	PQExpBuffer q;
 	PQExpBuffer delq;
 	char	   *qfdwname;
 
 	/* Skip if not to be dumped */
-	if (!fdwinfo->dobj.dump || dataOnly)
+	if (!fdwinfo->dobj.dump || dopt->dataOnly)
 		return;
 
 	q = createPQExpBuffer();
@@ -12979,7 +13011,7 @@ dumpForeignDataWrapper(Archive *fout, FdwInfo *fdwinfo)
 	appendPQExpBuffer(delq, "DROP FOREIGN DATA WRAPPER %s;\n",
 					  qfdwname);
 
-	if (binary_upgrade)
+	if (dopt->binary_upgrade)
 		binary_upgrade_extension_member(q, &fdwinfo->dobj,
 										"FOREIGN DATA WRAPPER", qfdwname,
 										NULL);
@@ -13018,6 +13050,7 @@ dumpForeignDataWrapper(Archive *fout, FdwInfo *fdwinfo)
 static void
 dumpForeignServer(Archive *fout, ForeignServerInfo *srvinfo)
 {
+	DumpOptions *dopt = fout->dopt;
 	PQExpBuffer q;
 	PQExpBuffer delq;
 	PQExpBuffer query;
@@ -13026,7 +13059,7 @@ dumpForeignServer(Archive *fout, ForeignServerInfo *srvinfo)
 	char	   *fdwname;
 
 	/* Skip if not to be dumped */
-	if (!srvinfo->dobj.dump || dataOnly)
+	if (!srvinfo->dobj.dump || dopt->dataOnly)
 		return;
 
 	q = createPQExpBuffer();
@@ -13066,7 +13099,7 @@ dumpForeignServer(Archive *fout, ForeignServerInfo *srvinfo)
 	appendPQExpBuffer(delq, "DROP SERVER %s;\n",
 					  qsrvname);
 
-	if (binary_upgrade)
+	if (dopt->binary_upgrade)
 		binary_upgrade_extension_member(q, &srvinfo->dobj,
 										"SERVER", qsrvname, NULL);
 
@@ -13209,12 +13242,13 @@ dumpUserMappings(Archive *fout,
 static void
 dumpDefaultACL(Archive *fout, DefaultACLInfo *daclinfo)
 {
+	DumpOptions *dopt = fout->dopt;
 	PQExpBuffer q;
 	PQExpBuffer tag;
 	const char *type;
 
 	/* Skip if not to be dumped */
-	if (!daclinfo->dobj.dump || dataOnly || aclsSkip)
+	if (!daclinfo->dobj.dump || dopt->dataOnly || dopt->aclsSkip)
 		return;
 
 	q = createPQExpBuffer();
@@ -13292,14 +13326,15 @@ dumpACL(Archive *fout, CatalogId objCatId, DumpId objDumpId,
 		const char *nspname, const char *owner,
 		const char *acls)
 {
+	DumpOptions *dopt = fout->dopt;
 	PQExpBuffer sql;
 
 	/* Do nothing if ACL dump is not enabled */
-	if (aclsSkip)
+	if (dopt->aclsSkip)
 		return;
 
 	/* --data-only skips ACLs *except* BLOB ACLs */
-	if (dataOnly && strcmp(type, "LARGE OBJECT") != 0)
+	if (dopt->dataOnly && strcmp(type, "LARGE OBJECT") != 0)
 		return;
 
 	sql = createPQExpBuffer();
@@ -13356,25 +13391,26 @@ dumpSecLabel(Archive *fout, const char *type, const char *name,
 			 const char *namespace, const char *owner,
 			 CatalogId catalogId, int subid, DumpId dumpId)
 {
+	DumpOptions *dopt = fout->dopt;
 	SecLabelItem *labels;
 	int			nlabels;
 	int			i;
 	PQExpBuffer query;
 
 	/* do nothing, if --no-security-labels is supplied */
-	if (no_security_labels)
+	if (dopt->no_security_labels)
 		return;
 
 	/* Security labels are schema not data ... except blob labels are data */
 	if (strcmp(type, "LARGE OBJECT") != 0)
 	{
-		if (dataOnly)
+		if (dopt->dataOnly)
 			return;
 	}
 	else
 	{
 		/* We do dump blob security labels in binary-upgrade mode */
-		if (schemaOnly && !binary_upgrade)
+		if (dopt->schemaOnly && !dopt->binary_upgrade)
 			return;
 	}
 
@@ -13427,6 +13463,7 @@ dumpSecLabel(Archive *fout, const char *type, const char *name,
 static void
 dumpTableSecLabel(Archive *fout, TableInfo *tbinfo, const char *reltypename)
 {
+	DumpOptions *dopt = fout->dopt;
 	SecLabelItem *labels;
 	int			nlabels;
 	int			i;
@@ -13434,11 +13471,11 @@ dumpTableSecLabel(Archive *fout, TableInfo *tbinfo, const char *reltypename)
 	PQExpBuffer target;
 
 	/* do nothing, if --no-security-labels is supplied */
-	if (no_security_labels)
+	if (dopt->no_security_labels)
 		return;
 
 	/* SecLabel are SCHEMA not data */
-	if (dataOnly)
+	if (dopt->dataOnly)
 		return;
 
 	/* Search for comments associated with relation, using table */
@@ -13649,7 +13686,9 @@ collectSecLabels(Archive *fout, SecLabelItem **items)
 static void
 dumpTable(Archive *fout, TableInfo *tbinfo)
 {
-	if (tbinfo->dobj.dump && !dataOnly)
+	DumpOptions *dopt = fout->dopt;
+
+	if (tbinfo->dobj.dump && !dopt->dataOnly)
 	{
 		char	   *namecopy;
 		const char *objtype;
@@ -13710,6 +13749,7 @@ dumpTable(Archive *fout, TableInfo *tbinfo)
 static void
 dumpExternal(Archive *fout, TableInfo *tbinfo, PQExpBuffer q, PQExpBuffer delq)
 {
+		DumpOptions *dopt = fout->dopt;
 		PGresult   *res;
 		char	   *urilocations;
 		char	   *execlocations;
@@ -13874,7 +13914,7 @@ dumpExternal(Archive *fout, TableInfo *tbinfo, PQExpBuffer q, PQExpBuffer delq)
 		if (writable && writable[0] == 't')
 			iswritable = true;
 
-		if (binary_upgrade)
+		if (dopt->binary_upgrade)
 			binary_upgrade_set_pg_class_oids(fout, q, tbinfo->dobj.catId.oid, false);
 
 		appendPQExpBuffer(q, "CREATE %sEXTERNAL %sTABLE %s (",
@@ -13887,7 +13927,7 @@ dumpExternal(Archive *fout, TableInfo *tbinfo, PQExpBuffer q, PQExpBuffer delq)
 		for (j = 0; j < tbinfo->numatts; j++)
 		{
 			/* Is the attribute not dropped? */
-			if (shouldPrintColumn(tbinfo, j))
+			if (shouldPrintColumn(dopt, tbinfo, j))
 			{
 				/* Format properly if not first attr */
 				if (actual_atts > 0)
@@ -14193,6 +14233,7 @@ createDummyViewAsClause(Archive *fout, TableInfo *tbinfo)
 static void
 dumpTableSchema(Archive *fout, TableInfo *tbinfo)
 {
+	DumpOptions *dopt = fout->dopt;
 	PQExpBuffer q = createPQExpBuffer();
 	PQExpBuffer delq = createPQExpBuffer();
 	char	   *qrelname;
@@ -14211,7 +14252,7 @@ dumpTableSchema(Archive *fout, TableInfo *tbinfo)
 	qrelname = pg_strdup(fmtId(tbinfo->dobj.name));
 	qualrelname = pg_strdup(fmtQualifiedDumpable(tbinfo));
 
-	if (binary_upgrade)
+	if (dopt->binary_upgrade)
 		binary_upgrade_set_type_oids_by_rel_oid(fout, q,
 												tbinfo->dobj.catId.oid);
 
@@ -14228,7 +14269,7 @@ dumpTableSchema(Archive *fout, TableInfo *tbinfo)
 
 		appendPQExpBuffer(delq, "DROP VIEW %s;\n", qualrelname);
 
-		if (binary_upgrade)
+		if (dopt->binary_upgrade)
 			binary_upgrade_set_pg_class_oids(fout, q,
 											 tbinfo->dobj.catId.oid, false);
 
@@ -14312,7 +14353,7 @@ dumpTableSchema(Archive *fout, TableInfo *tbinfo)
 
 		appendPQExpBuffer(delq, "DROP %s %s;\n", reltypename, qualrelname);
 
-		if (binary_upgrade)
+		if (dopt->binary_upgrade)
 		{
 			binary_upgrade_set_pg_class_oids(fout, q,
 											 tbinfo->dobj.catId.oid, false);
@@ -14365,7 +14406,7 @@ dumpTableSchema(Archive *fout, TableInfo *tbinfo)
 		 * Attach to type, if reloftype; except in case of a binary upgrade,
 		 * we dump the table normally and attach it to the type afterward.
 		 */
-		if (tbinfo->reloftype && !binary_upgrade)
+		if (tbinfo->reloftype && !dopt->binary_upgrade)
 			appendPQExpBuffer(q, " OF %s", tbinfo->reloftype);
 
 		if (tbinfo->relkind != RELKIND_MATVIEW)
@@ -14380,7 +14421,7 @@ dumpTableSchema(Archive *fout, TableInfo *tbinfo)
 				 * columns, and then fix up the dropped and nonlocal cases
 				 * below.
 				 */
-				if (shouldPrintColumn(tbinfo, j))
+				if (shouldPrintColumn(dopt, tbinfo, j))
 				{
 					/*
 					 * Default value --- suppress if to be printed separately.
@@ -14394,11 +14435,11 @@ dumpTableSchema(Archive *fout, TableInfo *tbinfo)
 					 */
 					bool		has_notnull = (tbinfo->notnull[j] &&
 											   (!tbinfo->inhNotNull[j] ||
-												binary_upgrade));
+												dopt->binary_upgrade));
 
 					/* Skip column if fully defined by reloftype */
 					if (tbinfo->reloftype &&
-						!has_default && !has_notnull && !binary_upgrade)
+						!has_default && !has_notnull && !dopt->binary_upgrade)
 						continue;
 
 					/* Format properly if not first attr */
@@ -14426,7 +14467,7 @@ dumpTableSchema(Archive *fout, TableInfo *tbinfo)
 					}
 
 					/* Attribute type */
-					if (tbinfo->reloftype && !binary_upgrade)
+					if (tbinfo->reloftype && !dopt->binary_upgrade)
 					{
 						appendPQExpBufferStr(q, " WITH OPTIONS");
 					}
@@ -14489,7 +14530,7 @@ dumpTableSchema(Archive *fout, TableInfo *tbinfo)
 
 			if (actual_atts)
 				appendPQExpBufferStr(q, "\n)");
-			else if (!(tbinfo->reloftype && !binary_upgrade))
+			else if (!(tbinfo->reloftype && !dopt->binary_upgrade))
 			{
 				/*
 				 * We must have a parenthesized attribute list, even though
@@ -14498,7 +14539,7 @@ dumpTableSchema(Archive *fout, TableInfo *tbinfo)
 				appendPQExpBufferStr(q, " (\n)");
 			}
 
-			if (numParents > 0 && !binary_upgrade)
+			if (numParents > 0 && !dopt->binary_upgrade)
 			{
 				appendPQExpBufferStr(q, "\nINHERITS (");
 				for (k = 0; k < numParents; k++)
@@ -14785,7 +14826,7 @@ dumpTableSchema(Archive *fout, TableInfo *tbinfo)
 		 * (manual user intervention should have been done after heterogeneous
 		 * partition tables were flagged via pg_upgrade --check).
 		 */
-		if (binary_upgrade && (tbinfo->relkind == RELKIND_RELATION ||
+		if (dopt->binary_upgrade && (tbinfo->relkind == RELKIND_RELATION ||
 							   tbinfo->relkind == RELKIND_FOREIGN_TABLE))
 		{
 			/*
@@ -14920,7 +14961,7 @@ dumpTableSchema(Archive *fout, TableInfo *tbinfo)
 		 * of other relations; so this "if" lacks RELKIND_TOASTVALUE, and the
 		 * child toast table is handled below.)
 		 */
-		if (binary_upgrade &&
+		if (dopt->binary_upgrade &&
 			(tbinfo->relkind == RELKIND_RELATION ||
 			 tbinfo->relkind == RELKIND_MATVIEW))
 		{
@@ -14963,7 +15004,7 @@ dumpTableSchema(Archive *fout, TableInfo *tbinfo)
 		 * matview is not populated even though this matview is; in any case,
 		 * we want to transfer the matview's heap storage, not run REFRESH.
 		 */
-		if (binary_upgrade && tbinfo->relkind == RELKIND_MATVIEW &&
+		if (dopt->binary_upgrade && tbinfo->relkind == RELKIND_MATVIEW &&
 			tbinfo->relispopulated)
 		{
 			appendPQExpBuffer(q, "SET allow_system_table_mods = true;\n");
@@ -14993,7 +15034,7 @@ dumpTableSchema(Archive *fout, TableInfo *tbinfo)
 			 * it is NOT NULL and did not inherit that property from a parent,
 			 * we have to mark it separately.
 			 */
-			if (!shouldPrintColumn(tbinfo, j) &&
+			if (!shouldPrintColumn(dopt, tbinfo, j) &&
 				tbinfo->notnull[j] && !tbinfo->inhNotNull[j])
 			{
 				appendPQExpBuffer(q, "ALTER TABLE ONLY %s ",
@@ -15125,7 +15166,7 @@ dumpTableSchema(Archive *fout, TableInfo *tbinfo)
 		}
 	}
 
-	if (binary_upgrade)
+	if (dopt->binary_upgrade)
 		binary_upgrade_extension_member(q, &tbinfo->dobj,
 										reltypename, qrelname,
 										tbinfo->dobj.namespace->dobj.name);
@@ -15178,6 +15219,7 @@ dumpTableSchema(Archive *fout, TableInfo *tbinfo)
 static void
 dumpAttrDef(Archive *fout, AttrDefInfo *adinfo)
 {
+	DumpOptions *dopt = fout->dopt;
 	TableInfo  *tbinfo = adinfo->adtable;
 	int			adnum = adinfo->adnum;
 	PQExpBuffer q;
@@ -15185,7 +15227,7 @@ dumpAttrDef(Archive *fout, AttrDefInfo *adinfo)
 	char	   *qualrelname;
 
 	/* Skip if table definition not to be dumped */
-	if (!tbinfo->dobj.dump || dataOnly)
+	if (!tbinfo->dobj.dump || dopt->dataOnly)
 		return;
 
 	/* Skip if not "separate"; it was dumped in the table's definition */
@@ -15269,13 +15311,14 @@ getAttrName(int attrnum, TableInfo *tblInfo)
 static void
 dumpIndex(Archive *fout, IndxInfo *indxinfo)
 {
+	DumpOptions *dopt = fout->dopt;
 	TableInfo  *tbinfo = indxinfo->indextable;
 	bool		is_constraint = (indxinfo->indexconstraint != 0);
 	PQExpBuffer q;
 	PQExpBuffer delq;
 	char	   *qindxname;
 
-	if (dataOnly)
+	if (dopt->dataOnly)
 		return;
 
 	q = createPQExpBuffer();
@@ -15292,7 +15335,7 @@ dumpIndex(Archive *fout, IndxInfo *indxinfo)
 	 */
 	if (!is_constraint)
 	{
-		if (binary_upgrade)
+		if (dopt->binary_upgrade)
 			binary_upgrade_set_pg_class_oids(fout, q, indxinfo->dobj.catId.oid, true);
 
 		/* Plain secondary index */
@@ -15358,12 +15401,13 @@ dumpIndex(Archive *fout, IndxInfo *indxinfo)
 static void
 dumpConstraint(Archive *fout, ConstraintInfo *coninfo)
 {
+	DumpOptions *dopt = fout->dopt;
 	TableInfo  *tbinfo = coninfo->contable;
 	PQExpBuffer q;
 	PQExpBuffer delq;
 
 	/* Skip if not to be dumped */
-	if (!coninfo->dobj.dump || dataOnly)
+	if (!coninfo->dobj.dump || dopt->dataOnly)
 		return;
 
 	q = createPQExpBuffer();
@@ -15383,7 +15427,7 @@ dumpConstraint(Archive *fout, ConstraintInfo *coninfo)
 			exit_horribly(NULL, "missing index for constraint \"%s\"\n",
 						  coninfo->dobj.name);
 
-		if (binary_upgrade)
+		if (dopt->binary_upgrade)
 			binary_upgrade_set_pg_class_oids(fout, q, indxinfo->dobj.catId.oid, true);
 
 		appendPQExpBuffer(q, "ALTER TABLE ONLY %s\n",
@@ -15611,6 +15655,7 @@ dumpTableConstraintComment(Archive *fout, ConstraintInfo *coninfo)
 static void
 dumpSequence(Archive *fout, TableInfo *tbinfo)
 {
+	DumpOptions *dopt = fout->dopt;
 	PGresult   *res;
 	char	   *startv,
 			   *incby,
@@ -15699,7 +15744,7 @@ dumpSequence(Archive *fout, TableInfo *tbinfo)
 
 	resetPQExpBuffer(query);
 
-	if (binary_upgrade)
+	if (dopt->binary_upgrade)
 	{
 		binary_upgrade_set_pg_class_oids(fout, query,
 										 tbinfo->dobj.catId.oid, false);
@@ -15734,7 +15779,7 @@ dumpSequence(Archive *fout, TableInfo *tbinfo)
 
 	/* binary_upgrade:	no need to clear TOAST table oid */
 
-	if (binary_upgrade)
+	if (dopt->binary_upgrade)
 		binary_upgrade_extension_member(query, &tbinfo->dobj,
 										"SEQUENCE", qseqname,
 										tbinfo->dobj.namespace->dobj.name);
@@ -15861,6 +15906,7 @@ dumpSequenceData(Archive *fout, TableDataInfo *tdinfo)
 static void
 dumpTrigger(Archive *fout, TriggerInfo *tginfo)
 {
+	DumpOptions *dopt = fout->dopt;
 	TableInfo  *tbinfo = tginfo->tgtable;
 	PQExpBuffer query;
 	PQExpBuffer delqry;
@@ -15875,7 +15921,7 @@ dumpTrigger(Archive *fout, TriggerInfo *tginfo)
 	 * we needn't check dobj.dump because TriggerInfo wouldn't have been
 	 * created in the first place for non-dumpable triggers
 	 */
-	if (dataOnly)
+	if (dopt->dataOnly)
 		return;
 
 	query = createPQExpBuffer();
@@ -16069,12 +16115,13 @@ dumpTrigger(Archive *fout, TriggerInfo *tginfo)
 static void
 dumpEventTrigger(Archive *fout, EventTriggerInfo *evtinfo)
 {
+	DumpOptions *dopt = fout->dopt;
 	PQExpBuffer query;
 	PQExpBuffer delqry;
 	char	   *qevtname;
 
 	/* Skip if not to be dumped */
-	if (!evtinfo->dobj.dump || dataOnly)
+	if (!evtinfo->dobj.dump || dopt->dataOnly)
 		return;
 
 	query = createPQExpBuffer();
@@ -16123,7 +16170,7 @@ dumpEventTrigger(Archive *fout, EventTriggerInfo *evtinfo)
 	appendPQExpBuffer(delqry, "DROP EVENT TRIGGER %s;\n",
 					  qevtname);
 
-	if (binary_upgrade)
+	if (dopt->binary_upgrade)
 		binary_upgrade_extension_member(query, &evtinfo->dobj,
 										"EVENT TRIGGER", qevtname, NULL);
 
@@ -16151,6 +16198,7 @@ dumpEventTrigger(Archive *fout, EventTriggerInfo *evtinfo)
 static void
 dumpRule(Archive *fout, RuleInfo *rinfo)
 {
+	DumpOptions *dopt = fout->dopt;
 	TableInfo  *tbinfo = rinfo->ruletable;
 	bool		is_view;
 	PQExpBuffer query;
@@ -16162,7 +16210,7 @@ dumpRule(Archive *fout, RuleInfo *rinfo)
 	char	   *tag;
 
 	/* Skip if not to be dumped */
-	if (!rinfo->dobj.dump || dataOnly)
+	if (!rinfo->dobj.dump || dopt->dataOnly)
 		return;
 
 	/*
@@ -16432,6 +16480,7 @@ void
 processExtensionTables(Archive *fout, ExtensionInfo extinfo[],
 					   int numExtensions)
 {
+	DumpOptions *dopt = fout->dopt;
 	PQExpBuffer query;
 	PGresult   *res;
 	int			ntups,
@@ -16513,7 +16562,7 @@ processExtensionTables(Archive *fout, ExtensionInfo extinfo[],
 					 * of the --oids setting.  This is because row filtering
 					 * conditions aren't compatible with dumping OIDs.
 					 */
-					makeTableDataInfo(configtbl, false);
+					makeTableDataInfo(dopt, configtbl, false);
 					if (configtbl->dataObj != NULL)
 					{
 						if (strlen(extconditionarray[j]) > 0)
@@ -17123,6 +17172,7 @@ addDistributedBy(Archive *fout, PQExpBuffer q, TableInfo *tbinfo, int actual_att
 static void
 addDistributedByOld(Archive *fout, PQExpBuffer q, TableInfo *tbinfo, int actual_atts)
 {
+	DumpOptions *dopt = fout->dopt;
 	PQExpBuffer query = createPQExpBuffer();
 	PGresult   *res;
 	char	   *policydef;
@@ -17144,7 +17194,7 @@ addDistributedByOld(Archive *fout, PQExpBuffer q, TableInfo *tbinfo, int actual_
 		 * In binary_upgrade mode, we run directly against segments, and there
 		 * are no gp_distribution_policy rows in segments.
 		 */
-		if (PQntuples(res) < 1 && actual_atts > 0 && !binary_upgrade)
+		if (PQntuples(res) < 1 && actual_atts > 0 && !dopt->binary_upgrade)
 		{
 			/* if this is a catalog table we allow dumping it, skip the error */
 			if (strncmp(tbinfo->dobj.namespace->dobj.name, "pg_", 3) != 0)

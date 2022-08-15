@@ -16,52 +16,14 @@
 #ifndef PG_DUMP_H
 #define PG_DUMP_H
 
-#include "postgres_fe.h"
-#include "pqexpbuffer.h"
-#include "libpq-fe.h"
+#include "pg_backup.h"
 
-/*
- * pg_dump uses two different mechanisms for identifying database objects:
- *
- * CatalogId represents an object by the tableoid and oid of its defining
- * entry in the system catalogs.  We need this to interpret pg_depend entries,
- * for instance.
- *
- * DumpId is a simple sequential integer counter assigned as dumpable objects
- * are identified during a pg_dump run.  We use DumpId internally in preference
- * to CatalogId for two reasons: it's more compact, and we can assign DumpIds
- * to "objects" that don't have a separate CatalogId.  For example, it is
- * convenient to consider a table, its data, and its ACL as three separate
- * dumpable "objects" with distinct DumpIds --- this lets us reason about the
- * order in which to dump these things.
- */
 
-typedef struct
-{
-	Oid			tableoid;
-	Oid			oid;
-} CatalogId;
-
-typedef int DumpId;
-
-/*
- * Data structures for simple lists of OIDs and strings.  The support for
- * these is very primitive compared to the backend's List facilities, but
- * it's all we need in pg_dump.
- */
-
-typedef struct SimpleOidListCell
-{
-	struct SimpleOidListCell *next;
-	Oid			val;
-} SimpleOidListCell;
-
-typedef struct SimpleOidList
-{
-	SimpleOidListCell *head;
-	SimpleOidListCell *tail;
-} SimpleOidList;
-
+#define oidcmp(x,y) ( ((x) < (y) ? -1 : ((x) > (y)) ?  1 : 0) )
+#define oideq(x,y) ( (x) == (y) )
+#define oidle(x,y) ( (x) <= (y) )
+#define oidge(x,y) ( (x) >= (y) )
+#define oidzero(x) ( (x) == 0 )
 
 /*
  * The data structures used to store system catalog information.  Every
@@ -570,18 +532,7 @@ extern const char *EXT_PARTITION_NAME_POSTFIX;
  *	common utility functions
  */
 
-struct Archive;
-typedef struct Archive Archive;
-
-extern TableInfo *getSchemaData(Archive *, int *numTablesPtr, int binary_upgrade);
-
-typedef enum _OidOptions
-{
-	zeroAsOpaque = 1,
-	zeroAsAny = 2,
-	zeroAsStar = 4,
-	zeroAsNone = 8
-} OidOptions;
+extern TableInfo *getSchemaData(Archive *fout, int *numTablesPtr);
 
 extern void DetectChildConstraintDropped(TableInfo *tbinfo, PQExpBuffer q); /* GPDB only */
 extern void AssignDumpId(DumpableObject *dobj);
@@ -643,7 +594,7 @@ extern void getTriggers(Archive *fout, TableInfo tblinfo[], int numTables);
 extern ProcLangInfo *getProcLangs(Archive *fout, int *numProcLangs);
 extern CastInfo *getCasts(Archive *fout, int *numCasts);
 extern void getTableAttrs(Archive *fout, TableInfo *tbinfo, int numTables);
-extern bool shouldPrintColumn(TableInfo *tbinfo, int colno);
+extern bool shouldPrintColumn(DumpOptions *dopt, TableInfo *tbinfo, int colno);
 extern TSParserInfo *getTSParsers(Archive *fout, int *numTSParsers);
 extern TSDictInfo *getTSDictionaries(Archive *fout, int *numTSDicts);
 extern TSTemplateInfo *getTSTemplates(Archive *fout, int *numTSTemplates);

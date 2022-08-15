@@ -9,12 +9,14 @@
  *
  *-------------------------------------------------------------------------
  */
+#include "postgres_fe.h"
 
 #include "fe_utils/connect.h"
-#include "pg_backup_db.h"
-#include "pg_backup_utils.h"
 #include "dumputils.h"
 #include "parallel.h"
+#include "pg_backup_archiver.h"
+#include "pg_backup_db.h"
+#include "pg_backup_utils.h"
 
 #include <unistd.h>
 #include <ctype.h>
@@ -242,7 +244,7 @@ ConnectDatabase(Archive *AHX,
 				const char *pghost,
 				const char *pgport,
 				const char *username,
-				enum trivalue prompt_password,
+				trivalue prompt_password,
 				bool binary_upgrade)
 {
 	ArchiveHandle *AH = (ArchiveHandle *) AHX;
@@ -582,8 +584,10 @@ ExecuteSimpleCommands(ArchiveHandle *AH, const char *buf, size_t bufLen)
  * Implement ahwrite() for direct-to-DB restore
  */
 int
-ExecuteSqlCommandBuf(ArchiveHandle *AH, const char *buf, size_t bufLen)
+ExecuteSqlCommandBuf(Archive *AHX, const char *buf, size_t bufLen)
 {
+	ArchiveHandle *AH = (ArchiveHandle *) AHX;
+
 	if (AH->outputKind == OUTPUT_COPYDATA)
 	{
 		/*
@@ -635,8 +639,10 @@ ExecuteSqlCommandBuf(ArchiveHandle *AH, const char *buf, size_t bufLen)
  * Terminate a COPY operation during direct-to-DB restore
  */
 void
-EndDBCopyMode(ArchiveHandle *AH, TocEntry *te)
+EndDBCopyMode(Archive *AHX, const char *tocEntryTag)
 {
+	ArchiveHandle *AH = (ArchiveHandle *) AHX;
+
 	if (AH->pgCopyIn)
 	{
 		PGresult   *res;
@@ -649,27 +655,31 @@ EndDBCopyMode(ArchiveHandle *AH, TocEntry *te)
 		res = PQgetResult(AH->connection);
 		if (PQresultStatus(res) != PGRES_COMMAND_OK)
 			warn_or_exit_horribly(AH, modulename, "COPY failed for table \"%s\": %s",
-								  te->tag, PQerrorMessage(AH->connection));
+								  tocEntryTag, PQerrorMessage(AH->connection));
 		PQclear(res);
 
 		/* Do this to ensure we've pumped libpq back to idle state */
 		if (PQgetResult(AH->connection) != NULL)
 			write_msg(NULL, "WARNING: unexpected extra results during COPY of table \"%s\"\n",
-					  te->tag);
+					  tocEntryTag);
 
 		AH->pgCopyIn = false;
 	}
 }
 
 void
-StartTransaction(ArchiveHandle *AH)
+StartTransaction(Archive *AHX)
 {
+	ArchiveHandle *AH = (ArchiveHandle *) AHX;
+
 	ExecuteSqlCommand(AH, "BEGIN", "could not start database transaction");
 }
 
 void
-CommitTransaction(ArchiveHandle *AH)
+CommitTransaction(Archive *AHX)
 {
+	ArchiveHandle *AH = (ArchiveHandle *) AHX;
+
 	ExecuteSqlCommand(AH, "COMMIT", "could not commit database transaction");
 }
 

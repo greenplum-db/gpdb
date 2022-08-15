@@ -27,12 +27,11 @@
  *
  *-------------------------------------------------------------------------
  */
+#include "postgres_fe.h"
 
-#include "pg_backup.h"
 #include "pg_backup_archiver.h"
 #include "pg_backup_tar.h"
 #include "pg_backup_utils.h"
-#include "parallel.h"
 #include "pgtar.h"
 
 #include <sys/stat.h>
@@ -50,7 +49,7 @@ static int	_ReadByte(ArchiveHandle *);
 static void _WriteBuf(ArchiveHandle *AH, const void *buf, size_t len);
 static void _ReadBuf(ArchiveHandle *AH, void *buf, size_t len);
 static void _CloseArchive(ArchiveHandle *AH);
-static void _PrintTocData(ArchiveHandle *AH, TocEntry *te, RestoreOptions *ropt);
+static void _PrintTocData(ArchiveHandle *AH, TocEntry *te);
 static void _WriteExtraToc(ArchiveHandle *AH, TocEntry *te);
 static void _ReadExtraToc(ArchiveHandle *AH, TocEntry *te);
 static void _PrintExtraToc(ArchiveHandle *AH, TocEntry *te);
@@ -104,7 +103,7 @@ typedef struct
 /* translator: this is a module name */
 static const char *modulename = gettext_noop("tar archiver");
 
-static void _LoadBlobs(ArchiveHandle *AH, RestoreOptions *ropt);
+static void _LoadBlobs(ArchiveHandle *AH);
 
 static TAR_MEMBER *tarOpen(ArchiveHandle *AH, const char *filename, char mode);
 static void tarClose(ArchiveHandle *AH, TAR_MEMBER *TH);
@@ -749,7 +748,7 @@ _EndData(ArchiveHandle *AH, TocEntry *te)
  * Print data for a given file
  */
 static void
-_PrintFileData(ArchiveHandle *AH, char *filename, RestoreOptions *ropt)
+_PrintFileData(ArchiveHandle *AH, char *filename)
 {
 	lclContext *ctx = (lclContext *) AH->formatData;
 	char		buf[4096];
@@ -776,7 +775,7 @@ _PrintFileData(ArchiveHandle *AH, char *filename, RestoreOptions *ropt)
  * Print data for a given TOC entry
 */
 static void
-_PrintTocData(ArchiveHandle *AH, TocEntry *te, RestoreOptions *ropt)
+_PrintTocData(ArchiveHandle *AH, TocEntry *te)
 {
 	lclContext *ctx = (lclContext *) AH->formatData;
 	lclTocEntry *tctx = (lclTocEntry *) te->formatData;
@@ -825,13 +824,13 @@ _PrintTocData(ArchiveHandle *AH, TocEntry *te, RestoreOptions *ropt)
 	}
 
 	if (strcmp(te->desc, "BLOBS") == 0)
-		_LoadBlobs(AH, ropt);
+		_LoadBlobs(AH);
 	else
-		_PrintFileData(AH, tctx->filename, ropt);
+		_PrintFileData(AH, tctx->filename);
 }
 
 static void
-_LoadBlobs(ArchiveHandle *AH, RestoreOptions *ropt)
+_LoadBlobs(ArchiveHandle *AH)
 {
 	Oid			oid;
 	lclContext *ctx = (lclContext *) AH->formatData;
@@ -854,7 +853,7 @@ _LoadBlobs(ArchiveHandle *AH, RestoreOptions *ropt)
 			{
 				ahlog(AH, 1, "restoring large object with OID %u\n", oid);
 
-				StartRestoreBlob(AH, oid, ropt->dropSchema);
+				StartRestoreBlob(AH, oid, AH->public.ropt->dropSchema);
 
 				while ((cnt = tarRead(buf, 4095, th)) > 0)
 				{
@@ -947,6 +946,7 @@ _CloseArchive(ArchiveHandle *AH)
 	TAR_MEMBER *th;
 	RestoreOptions *ropt;
 	RestoreOptions *savRopt;
+	DumpOptions *savDopt;
 	int			savVerbose,
 				i;
 
@@ -986,22 +986,25 @@ _CloseArchive(ArchiveHandle *AH)
 		ctx->scriptTH = th;
 
 		ropt = NewRestoreOptions();
-		memcpy(ropt, AH->ropt, sizeof(RestoreOptions));
+		memcpy(ropt, AH->public.ropt, sizeof(RestoreOptions));
 		ropt->filename = NULL;
 		ropt->dropSchema = 1;
 		ropt->compression = 0;
 		ropt->superuser = NULL;
 		ropt->suppressDumpWarnings = true;
 
-		savRopt = AH->ropt;
-		AH->ropt = ropt;
+		savDopt = AH->public.dopt;
+		savRopt = AH->public.ropt;
+
+		SetArchiveOptions((Archive *) AH, NULL, ropt);
 
 		savVerbose = AH->public.verbose;
 		AH->public.verbose = 0;
 
 		RestoreArchive((Archive *) AH);
 
-		AH->ropt = savRopt;
+		SetArchiveOptions((Archive *) AH, savDopt, savRopt);
+
 		AH->public.verbose = savVerbose;
 
 		tarClose(AH, th);
