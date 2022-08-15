@@ -29,7 +29,6 @@
 #include "access/distributedlog.h"
 #include "cdb/cdbvars.h"
 
-
 /* Number of OIDs to prefetch (preallocate) per XLOG write */
 #define VAR_OID_PREFETCH		8192
 
@@ -271,7 +270,11 @@ GetNewTransactionId(bool isSubXact)
 				mypgxact->nxids = nxids + 1;
 			}
 			else
+			{
 				mypgxact->overflowed = true;
+				ereportif (gp_log_suboverflow_statement, LOG,
+						(errmsg("Statement caused suboverflow: %s", debug_query_string)));
+			}
 		}
 	}
 

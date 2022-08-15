@@ -328,6 +328,7 @@
 		"max_replication_slots",
 		"max_resource_portals_per_transaction",
 		"max_resource_queues",
+		"max_slot_wal_keep_size",
 		"max_stack_depth",
 		"max_standby_archive_delay",
 		"max_standby_streaming_delay",
@@ -537,4 +538,3 @@
 		"xmlbinary",
 		"xmloption",
 		"zero_damaged_pages",
-		"max_slot_wal_keep_size",
