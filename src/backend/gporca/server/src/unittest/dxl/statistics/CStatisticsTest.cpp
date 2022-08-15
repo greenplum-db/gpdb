@@ -58,6 +58,8 @@ CStatisticsTest::EresUnittest()
 	CUnittest rgutSharedOptCtxt[] = {
 		GPOS_UNITTEST_FUNC(CStatisticsTest::EresUnittest_CStatisticsBasic),
 		GPOS_UNITTEST_FUNC(CStatisticsTest::EresUnittest_UnionAll),
+		GPOS_UNITTEST_FUNC(CStatisticsTest::EresUnittest_CStatisticsCopy),
+
 		// TODO,  Mar 18 2013 temporarily disabling the test
 		// GPOS_UNITTEST_FUNC(CStatisticsTest::EresUnittest_CStatisticsSelectDerivation),
 	};
@@ -694,6 +696,58 @@ CStatisticsTest::EresUnittest_CStatisticsSelectDerivation()
 		mp, szQuerySelect, szPlanSelect,
 		true  // ignore mismatch in output dxl due to column id differences
 	);
+}
+
+// test that stats copy methods copy all fields
+GPOS_RESULT
+CStatisticsTest::EresUnittest_CStatisticsCopy()
+{
+	CAutoMemoryPool amp;
+	CMemoryPool *mp = amp.Pmp();
+
+	// create another statistics structure with a single int4 column with id 10
+	UlongToHistogramMap *phmulhist = GPOS_NEW(mp) UlongToHistogramMap(mp);
+	phmulhist->Insert(GPOS_NEW(mp) ULONG(10), PhistExampleInt4Dim(mp));
+
+	UlongToDoubleMap *phmuldoubleWidth = GPOS_NEW(mp) UlongToDoubleMap(mp);
+	phmuldoubleWidth->Insert(GPOS_NEW(mp) ULONG(10), GPOS_NEW(mp) CDouble(4.0));
+
+	CStatistics *pstats = GPOS_NEW(mp) CStatistics(
+		mp, phmulhist, phmuldoubleWidth, 100.0 /* rows */, false /* is_empty */,
+		ULONG(5) /* relpages */, ULONG(10) /* relallvisible */,
+		CDouble(100.0) /* rebinds */, ULONG(3) /* num predicates */);
+
+	IStatistics *stats_copy = pstats->CopyStats(mp);
+
+	UlongToColRefMap *colref_mapping = GPOS_NEW(mp) UlongToColRefMap(mp);
+	IStatistics *stats_copy_remap =
+		pstats->CopyStatsWithRemap(mp, colref_mapping, false);
+
+	GPOS_RESULT eres = GPOS_OK;
+	if (pstats->Width() != stats_copy->Width() ||
+		pstats->NumRebinds() != stats_copy->NumRebinds() ||
+		pstats->RelPages() != stats_copy->RelPages() ||
+		pstats->RelAllVisible() != stats_copy->RelAllVisible() ||
+		pstats->GetNumberOfPredicates() != stats_copy->GetNumberOfPredicates())
+	{
+		eres = GPOS_FAILED;
+	}
+
+	if (pstats->Width() != stats_copy_remap->Width() ||
+		pstats->NumRebinds() != stats_copy_remap->NumRebinds() ||
+		pstats->RelPages() != stats_copy_remap->RelPages() ||
+		pstats->RelAllVisible() != stats_copy_remap->RelAllVisible() ||
+		pstats->GetNumberOfPredicates() !=
+			stats_copy_remap->GetNumberOfPredicates())
+	{
+		eres = GPOS_FAILED;
+	}
+	stats_copy->Release();
+	stats_copy_remap->Release();
+	pstats->Release();
+	colref_mapping->Release();
+
+	return eres;
 }
 
 // EOF

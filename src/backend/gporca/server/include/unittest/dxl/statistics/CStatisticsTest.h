@@ -119,6 +119,9 @@ public:
 	// GbAgg test when grouping on repeated columns
 	static GPOS_RESULT EresUnittest_GbAggWithRepeatedGbCols();
 
+	// test that stats copy methods copy all fields
+	static GPOS_RESULT EresUnittest_CStatisticsCopy();
+
 
 };	// class CStatisticsTest
 }  // namespace gpnaucrates
