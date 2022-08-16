@@ -8,7 +8,7 @@ which can cause query performance degradation in the system, including catalog q
 |`segid`|integer|The id of the segment containing the suboverflowed backend.|
 |`pids`|interger[]|A list of the pids of all suboverflowed backends on this segment.|
 
-For more information on handling suboverflowed backends o prevent performance issues, see  
+For more information on handling suboverflowed backends to prevent performance issues, see [Checking for and Terminating Overflowed Backends](../../admin_guide/managing/monitor.html#a-idcheckbackendsachecking-for-and-terminating-overflowed-backends).
 
 **Parent topic:** [System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
 
