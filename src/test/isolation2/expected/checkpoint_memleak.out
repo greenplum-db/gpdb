@@ -63,6 +63,15 @@ SELECT gp_request_fts_probe_scan();
  t                         
 (1 row)
 
+-- Do a utility mode SELECT on the erstwhile mirror to ensure that it has been
+-- promoted and can serve queries. Otherwise, gprecoverseg will fail below.
+-- Conveniently, the framework will make this statement block.
+1U: SELECT 1;
+ ?column? 
+----------
+ 1        
+(1 row)
+
 -- Bring back primary and wait until primary and mirror are up & running
 !\retcode gprecoverseg -a;
 (exited with code 0)

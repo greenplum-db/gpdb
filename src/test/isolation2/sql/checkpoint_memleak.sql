@@ -32,6 +32,11 @@ select gp_inject_fault('ckpt_mem_leak', 'reset', dbid) from gp_segment_configura
 SELECT pg_ctl(datadir, 'stop', 'immediate') FROM gp_segment_configuration WHERE role = 'p' AND content = 1;
 SELECT gp_request_fts_probe_scan();
 
+-- Do a utility mode SELECT on the erstwhile mirror to ensure that it has been
+-- promoted and can serve queries. Otherwise, gprecoverseg will fail below.
+-- Conveniently, the framework will make this statement block.
+1U: SELECT 1;
+
 -- Bring back primary and wait until primary and mirror are up & running
 !\retcode gprecoverseg -a;
 SELECT wait_until_all_segments_synchronized();
