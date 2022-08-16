@@ -9,8 +9,8 @@ The `gp_subtransaction_overflow` module is a Greenplum Database extension.
 
 The `gp_subtransaction_overflow` module is installed when you install Greenplum Database. Before you can use the view and user-defined function defined in the module, you must register the `gp_subtransaction_overflow` extension in each database where you want to use the function, using the following command:
 
-    ```
-    CREATE EXTENSION gp_subtransaction_overflow;
-    ```
+```
+CREATE EXTENSION gp_subtransaction_overflow;
+```
 
 For more information on how to use this module, see [Monitoring a Greenplum System](../../admin_guide/managing/monitor.html).
