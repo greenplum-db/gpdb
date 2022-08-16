@@ -32,7 +32,7 @@ static const char *modulename = gettext_noop("archiver (db)");
 
 static void _check_database_version(ArchiveHandle *AH);
 static PGconn *_connectDB(ArchiveHandle *AH, const char *newdbname, const char *newUser);
-static void notice_processor(void *arg __attribute__((unused)), const char *message);
+static void notice_processor(void *arg pg_attribute_unused(), const char *message);
 
 static void
 _check_database_version(ArchiveHandle *AH)
@@ -392,7 +392,7 @@ GetConnection(Archive *AHX)
 }
 
 static void
-notice_processor(void *arg __attribute__((unused)), const char *message)
+notice_processor(void *arg pg_attribute_unused(), const char *message)
 {
 	write_msg(NULL, "%s", message);
 }

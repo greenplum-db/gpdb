@@ -1853,7 +1853,7 @@ warn_or_exit_horribly(ArchiveHandle *AH,
 #ifdef NOT_USED
 
 static void
-			_moveAfter(ArchiveHandle *AH __attribute__((unused)), TocEntry *pos, TocEntry *te)
+			_moveAfter(ArchiveHandle *AH pg_attribute_unused(), TocEntry *pos, TocEntry *te)
 {
 	/* Unlink te from list */
 	te->prev->next = te->next;
