@@ -1,5 +1,7 @@
 -- @Description Ensures that an ALTER TABLE ADD COLUMN will drop segfiles in
---              AOSEG_STATE_AWAITING_DROP state left over by a previous vacuum
+--              AOSEG_STATE_AWAITING_DROP state left over by a previous vacuum.
+--              We removed recycling dead segfiles from ADD COLUMN workflow, so
+--              the test expected result were adjusted accordingly.
 --
 CREATE TABLE aoco_add_column_after_vacuum_skip_drop (a INT, b INT) WITH (appendonly=true, orientation=column);
 CREATE
@@ -46,9 +48,9 @@ ALTER
 0U: SELECT segno, column_num, state FROM gp_toolkit.__gp_aocsseg('aoco_add_column_after_vacuum_skip_drop');
  segno | column_num | state 
 -------+------------+-------
- 1     | 0          | 1     
- 1     | 1          | 1     
- 1     | 2          | 1     
+ 1     | 0          | 2     
+ 1     | 1          | 2     
+ 1     | 2          | 2     
  2     | 0          | 1     
  2     | 1          | 1     
  2     | 2          | 1     
@@ -60,10 +62,10 @@ INSERT 100
 0U: SELECT segno, tupcount > 0, state FROM gp_toolkit.__gp_aocsseg('aoco_add_column_after_vacuum_skip_drop');
  segno | ?column? | state 
 -------+----------+-------
- 1     | t        | 1     
- 1     | t        | 1     
- 1     | t        | 1     
- 2     | f        | 1     
- 2     | f        | 1     
- 2     | f        | 1     
+ 1     | t        | 2     
+ 1     | t        | 2     
+ 1     | t        | 2     
+ 2     | t        | 1     
+ 2     | t        | 1     
+ 2     | t        | 1     
 (6 rows)

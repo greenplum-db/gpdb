@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
-<topic id="topic1"><title id="ej20941">SET ROLE</title><body><p id="sql_command_desc">Sets the current role identifier of the current session.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">SET [SESSION | LOCAL] ROLE <varname>rolename</varname>
+<topic id="topic1"><title id="ej20941">SET ROLE</title><body><p id="sql_command_desc">Sets the current role identifier of the current session.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">SET [SESSION | LOCAL] ROLE &lt;rolename>
 
 SET [SESSION | LOCAL] ROLE NONE
 
@@ -51,5 +51,5 @@ the SQL standard requires the role name to be written as a string literal.
 SQL does not allow this command during a transaction; Greenplum Database
 does not make this restriction. The <codeph>SESSION</codeph> and <codeph>LOCAL</codeph>
 modifiers are a Greenplum Database extension, as is the <codeph>RESET</codeph>
-syntax.</p></section><section id="section8"><title>See Also</title><p><codeph><xref href="./SET_SESSION_AUTHORIZATION.xml#topic1" type="topic" format="dita"
-    /></codeph></p></section></body></topic>
+syntax.</p></section><section id="section8"><title>See Also</title><p><xref href="./SET_SESSION_AUTHORIZATION.xml#topic1" type="topic" format="dita"
+    /></p></section></body></topic>

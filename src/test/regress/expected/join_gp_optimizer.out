@@ -643,12 +643,12 @@ explain (costs off) select * from t1 left join t2 on (t1.a = t2.a) join t3 on (t
 ------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Hash Join
-         Hash Cond: ((t1.a = t2.a) AND (t1.b = t3.b))
-         ->  Seq Scan on t1
+         Hash Cond: (t2.a = t1.a)
+         ->  Seq Scan on t2
          ->  Hash
                ->  Hash Join
-                     Hash Cond: (t2.a = t3.a)
-                     ->  Seq Scan on t2
+                     Hash Cond: ((t1.b = t3.b) AND (t1.a = t3.a))
+                     ->  Seq Scan on t1
                      ->  Hash
                            ->  Seq Scan on t3
  Optimizer: Pivotal Optimizer (GPORCA) version 3.75.0
@@ -1115,26 +1115,21 @@ explain select * from (t_joinsize_1 join t_joinsize_2 on t_joinsize_1.c2 = t_joi
                                                     QUERY PLAN                                                     
 -------------------------------------------------------------------------------------------------------------------
  Hash Join  (cost=0.00..1300.54 rows=99503 width=20)
-   Hash Cond: (t_joinsize_2.c2 = t_joinsize_1_1_prt_2.c2)
+   Hash Cond: (t_joinsize_2.c2 = t_joinsize_1.c2)
    ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.04 rows=1000 width=8)
          ->  Seq Scan on t_joinsize_2  (cost=0.00..431.01 rows=334 width=8)
    ->  Hash  (cost=862.13..862.13 rows=598 width=12)
          ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..862.13 rows=598 width=12)
                ->  Hash Join  (cost=0.00..862.10 rows=200 width=12)
-                     Hash Cond: (t_joinsize_1_1_prt_2.c1 = t_joinsize_3.c)
-                     ->  Append  (cost=0.00..431.01 rows=400 width=8)
-                           ->  Seq Scan on t_joinsize_1_1_prt_2  (cost=0.00..431.01 rows=400 width=8)
-                           ->  Seq Scan on t_joinsize_1_1_prt_3  (cost=0.00..431.01 rows=400 width=8)
-                           ->  Seq Scan on t_joinsize_1_1_prt_4  (cost=0.00..431.01 rows=400 width=8)
-                           ->  Seq Scan on t_joinsize_1_1_prt_5  (cost=0.00..431.01 rows=400 width=8)
-                           ->  Seq Scan on t_joinsize_1_1_prt_6  (cost=0.00..431.01 rows=400 width=8)
-                           ->  Seq Scan on t_joinsize_1_1_prt_extra  (cost=0.00..431.01 rows=400 width=8)
+                     Hash Cond: (t_joinsize_1.c1 = t_joinsize_3.c)
+                     ->  Dynamic Seq Scan on t_joinsize_1  (cost=0.00..431.01 rows=400 width=8)
+                           Number of partitions to scan: 6 
                      ->  Hash  (cost=431.00..431.00 rows=34 width=4)
                            ->  Redistribute Motion 3:3  (slice3; segments: 3)  (cost=0.00..431.00 rows=34 width=4)
                                  Hash Key: t_joinsize_3.c
                                  ->  Seq Scan on t_joinsize_3  (cost=0.00..431.00 rows=34 width=4)
  Optimizer: Pivotal Optimizer (GPORCA)
-(20 rows)
+(15 rows)
 
 drop table t_joinsize_1;
 drop table t_joinsize_2;

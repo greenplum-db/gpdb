@@ -21,11 +21,10 @@ UPDATE 1
  ao       | ExclusiveLock | relation | master 
 (1 row)
 2: SELECT * FROM locktest_segments WHERE coalesce = 'ao';
- coalesce | mode             | locktype | node       
-----------+------------------+----------+------------
- ao       | AccessShareLock  | relation | n segments 
- ao       | RowExclusiveLock | relation | n segments 
-(2 rows)
+ coalesce | mode          | locktype | node       
+----------+---------------+----------+------------
+ ao       | ExclusiveLock | relation | n segments 
+(1 row)
 -- The case here should update a tuple at the same seg with(2).
 -- Under jump hash, (2) and (3) are on the same seg(seg0).
 1&: UPDATE ao SET b = 42 WHERE a = 3;  <waiting ...>

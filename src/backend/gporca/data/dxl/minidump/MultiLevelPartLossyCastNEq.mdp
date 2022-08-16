@@ -185,7 +185,7 @@ default subpartition other2
       <dxl:ColumnStatistics Mdid="1.49387.1.0.1" Name="b" Width="8.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
       <dxl:ColumnStatistics Mdid="1.49387.1.0.0" Name="a" Width="8.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
       <dxl:RelationStatistics Mdid="2.49387.1.0" Name="multi" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="0.49387.1.0" Name="multi" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,9,3" PartitionColumns="0,1,2" PartitionTypes="r,l,r" NumberLeafPartitions="16">
+      <dxl:Relation Mdid="0.49387.1.0" Name="multi" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,9,3" PartitionColumns="0,1,2" PartitionTypes="r,l,r" NumberLeafPartitions="16">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.701.1.0" Nullable="true" ColWidth="8">
             <dxl:DefaultValue/>

@@ -27,6 +27,7 @@
 #include "cdb/cdbutil.h"
 #include "cdb/cdbvars.h"
 #include "cdb/cdbfts.h"
+#include "common/hashfn.h"
 #include "postmaster/startup.h"
 #include "utils/builtins.h"
 #include "utils/fmgroids.h"

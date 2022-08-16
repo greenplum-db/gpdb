@@ -10,9 +10,9 @@
     <section>
       <title>Synopsis</title>
     </section>
-    <codeblock id="sql_command_synopsis">CREATE TEXT SEARCH TEMPLATE <varname>name</varname> (
-    [ INIT = <varname>init_function</varname> , ]
-    LEXIZE = <varname>lexize_function</varname>
+    <codeblock id="sql_command_synopsis">CREATE TEXT SEARCH TEMPLATE &lt;name> (
+    [ INIT = &lt;init_function> , ]
+    LEXIZE = &lt;lexize_function>
 )</codeblock>
     <section id="section3">
       <title>Description</title>
@@ -28,7 +28,7 @@
         template encapsulates the "unsafe" aspects of defining a dictionary. The parameters that can
         be set when defining a dictionary are safe for unprivileged users to set, and so creating a
         dictionary need not be a privileged operation.</p>
-      <p>Refer to <xref href="../../admin_guide/textsearch/full-text-search.xml#full-text-search"/>
+      <p>Refer to <xref href="../../admin_guide/textsearch/full-text-search.html#full-text-search" format="html" scope="external">Using Full Text Search</xref>
         for further information.</p>
     </section>
     <section id="section4">
@@ -59,8 +59,8 @@
     </section>
     <section id="section8">
       <title>See Also</title>
-      <p><codeph><xref href="DROP_TEXT_SEARCH_TEMPLATE.xml#topic1"/></codeph>, <codeph><xref
-            href="ALTER_TEXT_SEARCH_TEMPLATE.xml#topic1"/></codeph>
+      <p><xref href="DROP_TEXT_SEARCH_TEMPLATE.xml#topic1"/>, <xref
+            href="ALTER_TEXT_SEARCH_TEMPLATE.xml#topic1"/>
       </p>
     </section>
   </body>

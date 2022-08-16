@@ -694,35 +694,6 @@ ExplainOnePlan(PlannedStmt *plannedstmt, IntoClause *into, ExplainState *es,
 									queryDesc->estate, es);
 
 	/*
-	 * Show non-default GUC settings that might have affected the plan as well
-	 * as optimizer settings etc.
-	 *
-	 * GPDB_12_MERGE_FIXME: This overlaps with the output you get with the
-	 * new uptream "SETTINGS on" option.
-	 */
-	ExplainOpenGroup("Settings", "Settings", true, es);
-
-	if (queryDesc->plannedstmt->planGen == PLANGEN_PLANNER)
-		ExplainPropertyStringInfo("Optimizer", es, "Postgres query optimizer");
-#ifdef USE_ORCA
-	else
-		ExplainPropertyStringInfo("Optimizer", es, "Pivotal Optimizer (GPORCA)");
-#endif
-
-	/* We only list the non-default GUCs in verbose mode */
-	if (es->verbose)
-	{
-		List	*settings;
-
-		settings = gp_guc_list_show(PGC_S_DEFAULT, gp_guc_list_for_explain);
-
-		if (list_length(settings) > 0)
-			ExplainPropertyList("Settings", settings, es);
-	}
-
-	ExplainCloseGroup("Settings", "Settings", true, es);
-
-	/*
 	 * Print info about JITing. Tied to es->costs because we don't want to
 	 * display this in regression tests, as it'd cause output differences
 	 * depending on build options.  Might want to separate that out from COSTS
@@ -769,15 +740,60 @@ ExplainOnePlan(PlannedStmt *plannedstmt, IntoClause *into, ExplainState *es,
 static void
 ExplainPrintSettings(ExplainState *es)
 {
-	int			num;
-	struct config_generic **gucs;
+	int			num = 0;
+	struct config_generic **gucs = NULL;
 
 	/* bail out if information about settings not requested */
-	if (!es->settings)
+	/* Greenplum prints some GUCs when verbose too */
+	if (!es->settings && !es->verbose)
 		return;
 
 	/* request an array of relevant settings */
-	gucs = get_explain_guc_options(&num);
+	if (es->settings)
+		gucs = get_explain_guc_options(&num);
+
+	/*
+	 * We only list the non-default GP GUCs in verbose mode.To be specific,
+	 * only the planner GUCs and work_mem. (See gp_guc_list_for_explain)
+	 */
+	if (es->verbose)
+	{
+		int i = num;
+		ListCell *cell;
+		List *gp_gucs = NIL;
+
+		foreach(cell, gp_guc_list_for_explain)
+		{
+			struct config_generic *gconf = (struct config_generic *) lfirst(cell);
+
+			/*
+			 * Don't overlap with the output you get with the
+			 * new upstream "SETTINGS on" option.
+			 */
+			if (es->settings && (gconf->flags & GUC_EXPLAIN))
+				continue;
+
+			/* Note the non-default GP GUCs */
+			if (gconf->source > PGC_S_DEFAULT)
+				lappend(gp_gucs, cell);
+		}
+
+		if (list_length(gp_gucs) > 0)
+		{
+			num += list_length(gp_gucs);
+			if (gucs)
+				gucs = repalloc(gucs, num * sizeof(struct config_generic *));
+			else
+				gucs = palloc(num * sizeof(struct config_generic *));
+
+			/* Append GP GUCs to the settings list */
+			foreach(cell, gp_gucs)
+			{
+				gucs[i] = lfirst(cell);
+				i++;
+			}
+		}
+	}
 
 	/* also bail out of there are no options */
 	if (!num)
@@ -895,6 +911,13 @@ ExplainPrintPlan(ExplainState *es, QueryDesc *queryDesc)
 	 * If requested, include information about GUC parameters with values that
 	 * don't match the built-in defaults.
 	 */
+	if (queryDesc->plannedstmt->planGen == PLANGEN_PLANNER)
+		ExplainPropertyStringInfo("Optimizer", es, "Postgres query optimizer");
+#ifdef USE_ORCA
+	else
+		ExplainPropertyStringInfo("Optimizer", es, "Pivotal Optimizer (GPORCA)");
+#endif
+
 	ExplainPrintSettings(es);
 }
 
@@ -1321,6 +1344,7 @@ ExplainPreScanNode(PlanState *planstate, Bitmapset **rels_used)
 		case T_IndexScan:
 		case T_IndexOnlyScan:
 		case T_BitmapHeapScan:
+		case T_DynamicBitmapHeapScan:
 		case T_TidScan:
 		case T_SubqueryScan:
 		case T_FunctionScan:
@@ -1329,6 +1353,8 @@ ExplainPreScanNode(PlanState *planstate, Bitmapset **rels_used)
 		case T_CteScan:
 		case T_NamedTuplestoreScan:
 		case T_WorkTableScan:
+		case T_DynamicSeqScan:
+		case T_DynamicIndexScan:
 		case T_ShareInputScan:
 			*rels_used = bms_add_member(*rels_used,
 										((Scan *) plan)->scanrelid);
@@ -1485,6 +1511,9 @@ ExplainNode(PlanState *planstate, List *ancestors,
 		case T_SeqScan:
 			pname = sname = "Seq Scan";
 			break;
+		case T_DynamicSeqScan:
+			pname = sname = "Dynamic Seq Scan";
+			break;
 		case T_SampleScan:
 			pname = sname = "Sample Scan";
 			break;
@@ -1497,11 +1526,17 @@ ExplainNode(PlanState *planstate, List *ancestors,
 		case T_IndexScan:
 			pname = sname = "Index Scan";
 			break;
+		case T_DynamicIndexScan:
+			pname = sname = "Dynamic Index Scan";
+			break;
 		case T_IndexOnlyScan:
 			pname = sname = "Index Only Scan";
 			break;
 		case T_BitmapIndexScan:
 			pname = sname = "Bitmap Index Scan";
+			break;
+		case T_DynamicBitmapIndexScan:
+			pname = sname = "Dynamic Bitmap Index Scan";
 			break;
 		case T_BitmapHeapScan:
 			/*
@@ -1510,6 +1545,9 @@ ExplainNode(PlanState *planstate, List *ancestors,
 			 * of the table type.
 			 */
 			pname = sname = "Bitmap Heap Scan";
+			break;
+		case T_DynamicBitmapHeapScan:
+			pname = sname = "Dynamic Bitmap Heap Scan";
 			break;
 		case T_TidScan:
 			pname = sname = "Tid Scan";
@@ -1787,8 +1825,10 @@ ExplainNode(PlanState *planstate, List *ancestors,
 	switch (nodeTag(plan))
 	{
 		case T_SeqScan:
+		case T_DynamicSeqScan:
 		case T_SampleScan:
 		case T_BitmapHeapScan:
+		case T_DynamicBitmapHeapScan:
 		case T_TidScan:
 		case T_SubqueryScan:
 		case T_FunctionScan:
@@ -1829,6 +1869,34 @@ ExplainNode(PlanState *planstate, List *ancestors,
 				BitmapIndexScan *bitmapindexscan = (BitmapIndexScan *) plan;
 				const char *indexname =
 				explain_get_index_name(bitmapindexscan->indexid);
+
+				if (es->format == EXPLAIN_FORMAT_TEXT)
+					appendStringInfo(es->str, " on %s", indexname);
+				else
+					ExplainPropertyText("Index Name", indexname, es);
+			}
+			break;
+		case T_DynamicIndexScan:
+			{
+				DynamicIndexScan *dynamicIndexScan = (DynamicIndexScan *) plan;
+				Oid indexoid = dynamicIndexScan->indexscan.indexid;
+				const char *indexname =
+						explain_get_index_name(indexoid);
+
+				if (es->format == EXPLAIN_FORMAT_TEXT)
+					appendStringInfo(es->str, " on %s", indexname);
+				else
+					ExplainPropertyText("Index Name", indexname, es);
+
+				ExplainScanTarget((Scan *) plan, es);
+			}
+			break;
+		case T_DynamicBitmapIndexScan:
+			{
+				BitmapIndexScan *bitmapindexscan = (BitmapIndexScan *) plan;
+				Oid indexoid = bitmapindexscan->indexid;
+				const char *indexname =
+				explain_get_index_name(indexoid);
 
 				if (es->format == EXPLAIN_FORMAT_TEXT)
 					appendStringInfo(es->str, " on %s", indexname);
@@ -2068,6 +2136,7 @@ ExplainNode(PlanState *planstate, List *ancestors,
 	switch (nodeTag(plan))
 	{
 		case T_IndexScan:
+		case T_DynamicIndexScan:
 			show_scan_qual(((IndexScan *) plan)->indexqualorig,
 						   "Index Cond", planstate, ancestors, es);
 			if (((IndexScan *) plan)->indexqualorig)
@@ -2078,7 +2147,12 @@ ExplainNode(PlanState *planstate, List *ancestors,
 			show_scan_qual(plan->qual, "Filter", planstate, ancestors, es);
 			if (plan->qual)
 				show_instrumentation_count("Rows Removed by Filter", 1,
+
 										   planstate, es);
+			if (IsA(plan, DynamicIndexScan))
+				ExplainPropertyInteger(
+									   "Number of partitions to scan", "",
+									   list_length(((DynamicIndexScan *) plan)->partOids), es);
 			break;
 		case T_IndexOnlyScan:
 			show_scan_qual(((IndexOnlyScan *) plan)->indexqual,
@@ -2097,12 +2171,19 @@ ExplainNode(PlanState *planstate, List *ancestors,
 									 planstate->instrument->ntuples2, 0, es);
 			break;
 		case T_BitmapIndexScan:
+		case T_DynamicBitmapIndexScan:
 			show_scan_qual(((BitmapIndexScan *) plan)->indexqualorig,
 						   "Index Cond", planstate, ancestors, es);
 			break;
 		case T_BitmapHeapScan:
+		case T_DynamicBitmapHeapScan:
 		{
 			List		*bitmapqualorig;
+
+			if (IsA(plan, DynamicBitmapHeapScan))
+				ExplainPropertyInteger(
+						"Number of partitions to scan", "",
+						list_length(((DynamicBitmapHeapScan *) plan)->partOids), es);
 
 			bitmapqualorig = ((BitmapHeapScan *) plan)->bitmapqualorig;
 
@@ -2126,11 +2207,25 @@ ExplainNode(PlanState *planstate, List *ancestors,
 			/* fall through to print additional fields the same as SeqScan */
 			/* FALLTHROUGH */
 		case T_SeqScan:
+		case T_DynamicSeqScan:
 		case T_ValuesScan:
 		case T_CteScan:
 		case T_NamedTuplestoreScan:
 		case T_WorkTableScan:
 		case T_SubqueryScan:
+			/*
+			 * GPDB_12_MERGE_FIXME: we used to show something along the lines of
+			 * "Partitions selected: 1 (out of 5)" under the partition selector.
+			 * By eleminating the (static) partition selector during translation,
+			 * we only get the survivor count, and lose the size of the universe
+			 * temporarily. However, if we manage to shift the static pruning
+			 * information sufficiently adjacent to (or better, into) a DXL Dynamic
+			 * Table Scan, we should be able to get that information back.
+			 */
+			if (IsA(plan, DynamicSeqScan))
+				ExplainPropertyInteger(
+					"Number of partitions to scan", "",
+					list_length(((DynamicSeqScan *) plan)->partOids), es);
 			show_scan_qual(plan->qual, "Filter", planstate, ancestors, es);
 			if (plan->qual)
 				show_instrumentation_count("Rows Removed by Filter", 1,
@@ -3242,7 +3337,7 @@ show_sort_info(SortState *sortstate, ExplainState *es)
 				sortMethod, spaceType, (long) agg->vsum);
 			if (es->verbose)
 			{
-				appendStringInfo(es->str, "  Max Memory: %ldkB  Avg Memory: %ldkb (%d segments)",
+				appendStringInfo(es->str, "  Max Memory: %ldkB  Avg Memory: %ldkB (%d segments)",
 								 (long) agg->vmax,
 								 (long) (agg->vsum / agg->vcnt),
 								 agg->vcnt);
@@ -3803,10 +3898,13 @@ ExplainTargetRel(Plan *plan, Index rti, ExplainState *es)
 	switch (nodeTag(plan))
 	{
 		case T_SeqScan:
+		case T_DynamicSeqScan:
 		case T_SampleScan:
 		case T_IndexScan:
+		case T_DynamicIndexScan:
 		case T_IndexOnlyScan:
 		case T_BitmapHeapScan:
+		case T_DynamicBitmapHeapScan:
 		case T_TidScan:
 		case T_ForeignScan:
 		case T_CustomScan:
@@ -3817,7 +3915,6 @@ ExplainTargetRel(Plan *plan, Index rti, ExplainState *es)
 			if (es->verbose)
 				namespace = get_namespace_name(get_rel_namespace(rte->relid));
 			objecttag = "Relation Name";
-
 			break;
 		case T_FunctionScan:
 			{

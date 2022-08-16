@@ -378,5 +378,5 @@ The stopword file format is the same as already explained.
 
 A Snowball dictionary recognizes everything, whether or not it is able to simplify the word, so it should be placed at the end of the dictionary list. It is useless to have it before any other dictionary because a token will never pass through it to the next dictionary.
 
-**Parent topic:**[Using Full Text Search](../textsearch/full-text-search.html)
+**Parent topic:** [Using Full Text Search](../textsearch/full-text-search.html)
 

@@ -1047,7 +1047,7 @@ WITH RECURSIVE x(n) AS (
 	UNION ALL
 	SELECT level+1, row_number() over() FROM x, bar)
   SELECT * FROM x LIMIT 10;
-ERROR:  window functions in a recursive query is not implemented
+ERROR:  window functions in the target list of a recursive query is not supported in Greenplum
 LINE 4:  SELECT level+1, row_number() over() FROM x, bar)
                          ^
 CREATE TEMPORARY TABLE y (a INTEGER) DISTRIBUTED RANDOMLY;

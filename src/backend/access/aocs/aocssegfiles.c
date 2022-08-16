@@ -88,10 +88,6 @@ InsertInitialAOCSFileSegInfo(Relation prel, int32 segno, int32 nvp, Oid segrelid
 
 	segrel = heap_open(segrelid, RowExclusiveLock);
 
-	InsertFastSequenceEntry(segrelid,
-							(int64) segno,
-							0);
-
 	values[Anum_pg_aocs_segno - 1] = Int32GetDatum(segno);
 	values[Anum_pg_aocs_vpinfo - 1] = PointerGetDatum(vpinfo);
 	values[Anum_pg_aocs_tupcount - 1] = Int64GetDatum(0);
@@ -267,7 +263,8 @@ GetAOCSFileSegInfo(Relation prel,
 AOCSFileSegInfo **
 GetAllAOCSFileSegInfo(Relation prel,
 					  Snapshot appendOnlyMetaDataSnapshot,
-					  int32 *totalseg)
+					  int32 *totalseg,
+					  Oid *segrelidptr)
 {
 	Relation	pg_aocsseg_rel;
 	AOCSFileSegInfo **results;
@@ -283,6 +280,9 @@ GetAllAOCSFileSegInfo(Relation prel,
 	if (segrelid == InvalidOid)
 		elog(ERROR, "could not find pg_aoseg aux table for AOCO table \"%s\"",
 			 RelationGetRelationName(prel));
+
+	if (segrelidptr != NULL)
+		*segrelidptr = segrelid;
 
 	pg_aocsseg_rel = relation_open(segrelid, AccessShareLock);
 
@@ -383,8 +383,7 @@ GetAllAOCSFileSegInfo_pg_aocsseg_rel(int numOfColumns,
 			aocs_seginfo->modcount = DatumGetInt64(d[Anum_pg_aocs_modcount - 1]);
 
 		Assert(!null[Anum_pg_aocs_formatversion - 1]);
-		if (!null[Anum_pg_aocs_formatversion - 1])
-			aocs_seginfo->formatversion = DatumGetInt16(d[Anum_pg_aocs_formatversion - 1]);
+		aocs_seginfo->formatversion = DatumGetInt16(d[Anum_pg_aocs_formatversion - 1]);
 
 		Assert(!null[Anum_pg_aocs_state - 1] || snapshot == SnapshotAny);
 		if (!null[Anum_pg_aocs_state - 1])
@@ -449,7 +448,7 @@ GetAOCSSSegFilesTotals(Relation parentrel, Snapshot appendOnlyMetaDataSnapshot)
 	totals = (FileSegTotals *) palloc0(sizeof(FileSegTotals));
 	memset(totals, 0, sizeof(FileSegTotals));
 
-	allseg = GetAllAOCSFileSegInfo(parentrel, appendOnlyMetaDataSnapshot, &totalseg);
+	allseg = GetAllAOCSFileSegInfo(parentrel, appendOnlyMetaDataSnapshot, &totalseg, NULL);
 	for (s = 0; s < totalseg; s++)
 	{
 		int32		nEntry;

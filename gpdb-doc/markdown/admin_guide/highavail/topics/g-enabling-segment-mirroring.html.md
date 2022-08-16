@@ -56,5 +56,5 @@ Mirror segments allow database queries to fail over to a backup segment if the p
     The `-i` option specifies the mirror configuration file you created.
 
 
-**Parent topic:**[Enabling Mirroring in Greenplum Database](../../highavail/topics/g-enabling-mirroring-in-greenplum-database.html)
+**Parent topic:** [Enabling Mirroring in Greenplum Database](../../highavail/topics/g-enabling-mirroring-in-greenplum-database.html)
 

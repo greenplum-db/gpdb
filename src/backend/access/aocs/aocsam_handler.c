@@ -31,6 +31,7 @@
 #include "cdb/cdbvars.h"
 #include "commands/vacuum.h"
 #include "executor/executor.h"
+#include "nodes/makefuncs.h"
 #include "nodes/nodeFuncs.h"
 #include "pgstat.h"
 #include "storage/lmgr.h"
@@ -614,10 +615,14 @@ static void
 aoco_index_fetch_reset(IndexFetchTableData *scan)
 {
 	/*
-	 * GPDB_12_MERGE_FIXME: Should we close the underlying AOCO fetch desc
-	 * here?  Remember to change the rescan case in aoco_rescan for bitmap
-	 * scan descriptor (AOCSBITMAPSCANDATA).
+	 * Unlike Heap, we don't release the resources (fetch descriptor and its
+	 * members) here because it is more like a global data structure shared
+	 * across scans, rather than an iterator to yield a granularity of data.
+	 * 
+	 * Additionally, should be aware of that no matter whether allocation or
+	 * release on fetch descriptor, it is considerably expensive.
 	 */
+	return;
 }
 
 static void
@@ -637,6 +642,8 @@ aoco_index_fetch_end(IndexFetchTableData *scan)
 		pfree(aocoscan->proj);
 		aocoscan->proj = NULL;
 	}
+
+	pfree(aocoscan);
 }
 
 static bool
@@ -674,11 +681,13 @@ aoco_index_fetch_tuple(struct IndexFetchTableData *scan,
 											  appendOnlyMetaDataSnapshot,
 											  aocoscan->proj);
 	}
-	else
-	{
-		/* GPDB_12_MERGE_FIXME: Is it possible for the 'snapshot' to change
-		 * between calls? Add a sanity check for that here. */
-	}
+
+	/*
+	 * There is no reason to expect changes on snapshot between tuple
+	 * fetching calls after fech_init is called, treat it as a
+	 * programming error in case of occurrence.
+	 */
+	Assert(aocoscan->aocofetch->snapshot == snapshot);
 
 	ExecClearTuple(slot);
 
@@ -948,7 +957,7 @@ aoco_relation_set_new_filenode(Relation rel,
 			   rel->rd_rel->relkind == RELKIND_MATVIEW ||
 			   rel->rd_rel->relkind == RELKIND_TOASTVALUE);
 		smgrcreate(srel, INIT_FORKNUM, false);
-		log_smgrcreate(newrnode, INIT_FORKNUM);
+		log_smgrcreate(newrnode, INIT_FORKNUM, SMGR_AO);
 		smgrimmedsync(srel, INIT_FORKNUM);
 	}
 
@@ -1026,7 +1035,7 @@ aoco_relation_copy_data(Relation rel, const RelFileNode *newrnode)
 		 */
 		smgrcreate(dstrel, INIT_FORKNUM, false);
 
-		log_smgrcreate(newrnode, INIT_FORKNUM);
+		log_smgrcreate(newrnode, INIT_FORKNUM, SMGR_AO);
 	}
 
 	/* drop old relation, and close new one */
@@ -1039,13 +1048,12 @@ aoco_vacuum_rel(Relation onerel, VacuumParams *params,
                       BufferAccessStrategy bstrategy)
 {
 	/*
-	 * GPDB_12_MERGE_FIXME: This is a dummy function in order to proceed with
-	 * the implementation of the aocsam_handler.
-	 *
-	 * It's not invoked ever, we do the AO different phases vacuuming in
-	 * vacuum_rel() directly for now.
+	 * Implemented but not invoked, we do the AO_COLUMN different phases vacuuming by
+	 * calling ao_vacuum_rel() in vacuum_rel() directly for now.
 	 */
-	elog(ERROR, "not implemented yet");
+	ao_vacuum_rel(onerel, params, bstrategy);
+
+	return;
 }
 
 static void
@@ -1283,6 +1291,11 @@ aoco_index_build_range_scan(Relation heapRelation,
 	ExprContext *econtext;
 	Snapshot	snapshot;
 	bool		need_unregister_snapshot = false;
+	bool		need_create_blk_directory = false;
+	List	   *tlist = NIL;
+	List	   *qual = indexInfo->ii_Predicate;
+	Oid			blkdirrelid;
+	Oid			blkidxrelid;
 	TransactionId OldestXmin;
 
 	/*
@@ -1336,6 +1349,17 @@ aoco_index_build_range_scan(Relation heapRelation,
 	if (!IsBootstrapProcessingMode() && !indexInfo->ii_Concurrent)
 		OldestXmin = GetOldestXmin(heapRelation, PROCARRAY_FLAGS_VACUUM);
 
+	/*
+	 * If block directory is empty, it must also be built along with the index.
+	 */
+	GetAppendOnlyEntryAuxOids(RelationGetRelid(heapRelation), NULL, NULL,
+							  &blkdirrelid, &blkidxrelid, NULL, NULL);
+
+	Relation blkdir = relation_open(blkdirrelid, AccessShareLock);
+
+	need_create_blk_directory = RelationGetNumberOfBlocks(blkdir) == 0;
+	relation_close(blkdir, NoLock);
+
 	if (!scan)
 	{
 		/*
@@ -1352,12 +1376,48 @@ aoco_index_build_range_scan(Relation heapRelation,
 		else
 			snapshot = SnapshotAny;
 
-		scan = table_beginscan_strat(heapRelation,	/* relation */
-		                             snapshot,	/* snapshot */
-		                             0, /* number of keys */
-		                             NULL,	/* scan key */
-		                             true,	/* buffer access strategy OK */
-		                             allow_sync);	/* syncscan OK? */
+		/*
+		 * Scan all columns if we need to create block directory.
+		 */
+		if (need_create_blk_directory)
+		{
+			scan = table_beginscan_strat(heapRelation,	/* relation */
+										 snapshot,		/* snapshot */
+										 0,		/* number of keys */
+										 NULL,		/* scan key */
+										 true,			/* buffer access strategy OK */
+										 allow_sync);	/* syncscan OK? */
+		}
+		else
+		{
+			/*
+			 * if block directory has created, we can only scan needed column.
+			 */
+			for (int i = 0; i < indexInfo->ii_NumIndexAttrs; i++)
+			{
+				AttrNumber attrnum = indexInfo->ii_IndexAttrNumbers[i];
+				Form_pg_attribute attr = TupleDescAttr(RelationGetDescr(heapRelation), attrnum - 1);
+				Var *var = makeVar(i,
+								   attrnum,
+								   attr->atttypid,
+								   attr->atttypmod,
+								   attr->attcollation,
+								   0);
+
+				/* Build a target list from index info */
+				tlist = lappend(tlist,
+								makeTargetEntry((Expr *) var,
+												list_length(tlist) + 1,
+												NULL,
+												false));
+			}
+
+			/* Push down target list and qual to scan */
+			scan = table_beginscan_es(heapRelation,	/* relation */
+									  snapshot,		/* snapshot */
+									  tlist,		/* targetlist */
+									  qual);		/* qual */
+		}
 	}
 	else
 	{
@@ -1376,14 +1436,6 @@ aoco_index_build_range_scan(Relation heapRelation,
 	aocoscan = (AOCSScanDesc) scan;
 
 	/*
-	 * If block directory is empty, it must also be built along with the index.
-	 */
-	Oid blkdirrelid;
-	Oid blkidxrelid;
-
-	GetAppendOnlyEntryAuxOids(RelationGetRelid(aocoscan->rs_base.rs_rd), NULL, NULL,
-	                          &blkdirrelid, &blkidxrelid, NULL, NULL);
-	/*
 	 * Note that block directory is created during creation of the first
 	 * index.  If it is found empty, it means the block directory was created
 	 * by this create index transaction.  The caller (DefineIndex) must have
@@ -1392,8 +1444,7 @@ aoco_index_build_range_scan(Relation heapRelation,
 	 * blocked.  We can rest assured of exclusive access to the block
 	 * directory relation.
 	 */
-	Relation blkdir = relation_open(blkdirrelid, AccessShareLock);
-	if (RelationGetNumberOfBlocks(blkdir) == 0)
+	if (need_create_blk_directory)
 	{
 		/*
 		 * Allocate blockDirectory in scan descriptor to let the access method
@@ -1403,7 +1454,6 @@ aoco_index_build_range_scan(Relation heapRelation,
 		Assert(aocoscan->blockDirectory == NULL);
 		aocoscan->blockDirectory = palloc0(sizeof(AppendOnlyBlockDirectory));
 	}
-	relation_close(blkdir, NoLock);
 
 
 	/* GPDB_12_MERGE_FIXME */
@@ -1605,7 +1655,7 @@ aoco_relation_size(Relation rel, ForkNumber forkNumber)
 		return totalbytes;
 
 	snapshot = RegisterSnapshot(GetLatestSnapshot());
-	allseg = GetAllAOCSFileSegInfo(rel, snapshot, &totalseg);
+	allseg = GetAllAOCSFileSegInfo(rel, snapshot, &totalseg, NULL);
 	for (int seg = 0; seg < totalseg; seg++)
 	{
 		for (int attr = 0; attr < RelationGetNumberOfAttributes(rel); attr++)
@@ -1646,7 +1696,6 @@ aoco_relation_needs_toast_table(Relation rel)
 	 */
 	return false;
 }
-
 
 /* ------------------------------------------------------------------------
  * Planner related callbacks for the heap AM

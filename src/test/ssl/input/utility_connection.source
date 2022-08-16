@@ -1,0 +1,7 @@
+-- make sure the sslmode is verify-full
+\! echo $PGSSLMODE;
+-- connect QE via SSL connection
+\! psql -d test_sslconnection -c "SELECT port FROM gp_segment_configuration WHERE content = 0 and role = 'p'" | grep '[0-9]$' | PGOPTIONS="-c gp_role=utility" xargs psql -d test_sslconnection -c "SELECT current_user;" -p;
+\! psql -d test_sslconnection -c "SELECT port FROM gp_segment_configuration WHERE content = 0 and role = 'p'" | grep '[0-9]$' | PGOPTIONS="-c gp_role=utility" xargs psql -d test_sslconnection -c "SELECT ssl_is_used();" -p;
+\! psql -d test_sslconnection -c "SELECT port FROM gp_segment_configuration WHERE content = 0 and role = 'p'" | grep '[0-9]$' | PGOPTIONS="-c gp_role=utility" xargs psql -d test_sslconnection -c "SHOW gp_role;" -p;
+

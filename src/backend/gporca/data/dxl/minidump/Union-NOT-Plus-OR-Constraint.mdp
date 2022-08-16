@@ -21,7 +21,7 @@ explain SELECT a.f3 FROM tb a JOIN tb b ON a.f1 = b.f1 AND NOT ( a.f2 = 0 OR a.f
       <dxl:TraceFlags Value="102001,102002,102003,102074,102120,102144,103001,103014,103015,103022,103027,103033,104003,104004,104005"/>
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
-      <dxl:Relation Mdid="0.32768.1.0" Name="tb" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Random" Keys="9,3" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="0.32768.1.0" Name="tb" IsTemporary="false" StorageType="Heap" DistributionPolicy="Random" Keys="9,3" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="f1" Attno="1" Mdid="0.21.1.0" Nullable="true" ColWidth="2">
             <dxl:DefaultValue/>
@@ -288,7 +288,7 @@ explain SELECT a.f3 FROM tb a JOIN tb b ON a.f1 = b.f1 AND NOT ( a.f2 = 0 OR a.f
         </dxl:LogicalProject>
       </dxl:Union>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="1488">
+    <dxl:Plan Id="0" SpaceSize="2168">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="862.001805" Rows="1.000000" Width="8"/>

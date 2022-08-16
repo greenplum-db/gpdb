@@ -9,5 +9,5 @@ If an external table file or external web table data source has an error, one of
 -   **Tables without error isolation mode**: any operation that reads from that table fails. Loading from external and external web tables without error isolation mode is an all or nothing operation.
 -   **Tables with error isolation mode**: the entire file will be loaded, except for the problematic rows \(subject to the configured REJECT\_LIMIT\)
 
-**Parent topic:**[Handling Load Errors](../../load/topics/g-handling-load-errors.html)
+**Parent topic:** [Handling Load Errors](../../load/topics/g-handling-load-errors.html)
 

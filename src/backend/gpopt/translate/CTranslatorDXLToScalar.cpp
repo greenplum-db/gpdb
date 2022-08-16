@@ -587,10 +587,7 @@ CTranslatorDXLToScalar::TranslateDXLScalarAggrefToScalar(
 			aggref->aggsplit = AGGSPLIT_INITIAL_SERIAL;
 			break;
 		case EdxlaggstageIntermediate:
-			GPOS_RAISE(
-				gpdxl::ExmaDXL, gpdxl::ExmiPlStmt2DXLConversion,
-				GPOS_WSZ_LIT(
-					"GPDB_96_MERGE_FIXME: Intermediate aggregate stage not implemented"));
+			aggref->aggsplit = AGGSPLIT_INTERNMEDIATE;
 			break;
 		case EdxlaggstageFinal:
 			aggref->aggsplit = AGGSPLIT_FINAL_DESERIAL;
@@ -730,8 +727,10 @@ CTranslatorDXLToScalar::TranslateDXLScalarWindowRefToScalar(
 	window_func->winagg = dxlop->IsSimpleAgg();
 
 	if (dxlop->GetDxlWinStage() != EdxlwinstageImmediate)
+	{
 		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLError,
 				   GPOS_WSZ_LIT("Unsupported window function stage"));
+	}
 
 	// translate the arguments of the window function
 	window_func->args = TranslateScalarChildren(window_func->args,
@@ -879,6 +878,58 @@ CTranslatorDXLToScalar::TranslateDXLScalarSubplanToScalar(
 
 //---------------------------------------------------------------------------
 //      @function:
+//              CTranslatorDXLToScalar::TranslateDXLTestExprScalarIdentToExpr
+//
+//      @doc:
+//              Translate subplan test expression parameter
+//
+//---------------------------------------------------------------------------
+void
+CTranslatorDXLToScalar::TranslateDXLTestExprScalarIdentToExpr(
+	CDXLNode *child_node, Param *param, CDXLScalarIdent **ident, Expr **expr)
+{
+	if (EdxlopScalarIdent == child_node->GetOperator()->GetDXLOperator())
+	{
+		// Ident
+		*ident = CDXLScalarIdent::Cast(child_node->GetOperator());
+		*expr = (Expr *) param;
+	}
+	else if (EdxlopScalarCast == child_node->GetOperator()->GetDXLOperator() &&
+			 child_node->Arity() > 0 &&
+			 EdxlopScalarIdent ==
+				 (*child_node)[0]->GetOperator()->GetDXLOperator())
+	{
+		// Casted Ident
+		*ident = CDXLScalarIdent::Cast((*child_node)[0]->GetOperator());
+		CDXLScalarCast *scalar_cast =
+			CDXLScalarCast::Cast(child_node->GetOperator());
+		*expr =
+			TranslateDXLScalarCastWithChildExpr(scalar_cast, (Expr *) param);
+	}
+	else if (EdxlopScalarCoerceViaIO ==
+				 child_node->GetOperator()->GetDXLOperator() &&
+			 child_node->Arity() > 0 &&
+			 EdxlopScalarIdent ==
+				 (*child_node)[0]->GetOperator()->GetDXLOperator())
+	{
+		// CoerceViaIO over Ident
+		*ident = CDXLScalarIdent::Cast((*child_node)[0]->GetOperator());
+		CDXLScalarCoerceViaIO *coerce =
+			CDXLScalarCoerceViaIO::Cast(child_node->GetOperator());
+		*expr =
+			TranslateDXLScalarCoerceViaIOWithChildExpr(coerce, (Expr *) param);
+	}
+	else
+	{
+		// ORCA currently only supports PARAMs of the form id or cast(id)
+		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiDXL2PlStmtConversion,
+				   GPOS_WSZ_LIT("Unsupported subplan test expression"));
+	}
+}
+
+
+//---------------------------------------------------------------------------
+//      @function:
 //              CTranslatorDXLToScalar::TranslateDXLSubplanTestExprToScalar
 //
 //      @doc:
@@ -932,10 +983,13 @@ CTranslatorDXLToScalar::TranslateDXLSubplanTestExprToScalar(
 		Param *param1 = MakeNode(Param);
 		param1->paramkind = PARAM_EXEC;
 
-		// Ident
-		CDXLScalarIdent *outer_ident =
-			CDXLScalarIdent::Cast(outer_child_node->GetOperator());
-		Expr *outer_expr = (Expr *) param1;
+		CDXLScalarIdent *outer_ident = nullptr;
+		Expr *outer_expr = nullptr;
+
+		TranslateDXLTestExprScalarIdentToExpr(outer_child_node, param1,
+											  &outer_ident, &outer_expr);
+		GPOS_ASSERT(nullptr != outer_ident);
+		GPOS_ASSERT(nullptr != outer_expr);
 
 		// finalize outer expression
 		param1->paramtype = CMDIdGPDB::CastMdid(outer_ident->MdidType())->Oid();
@@ -962,47 +1016,10 @@ CTranslatorDXLToScalar::TranslateDXLSubplanTestExprToScalar(
 
 	CDXLScalarIdent *inner_ident = nullptr;
 	Expr *inner_expr = nullptr;
-	if (EdxlopScalarIdent == inner_child_node->GetOperator()->GetDXLOperator())
-	{
-		// Ident
-		inner_ident = CDXLScalarIdent::Cast(inner_child_node->GetOperator());
-		inner_expr = (Expr *) param;
-	}
-	else if (EdxlopScalarCast ==
-				 inner_child_node->GetOperator()->GetDXLOperator() &&
-			 inner_child_node->Arity() > 0 &&
-			 EdxlopScalarIdent ==
-				 (*inner_child_node)[0]->GetOperator()->GetDXLOperator())
-	{
-		// Casted Ident
-		inner_ident =
-			CDXLScalarIdent::Cast((*inner_child_node)[0]->GetOperator());
-		CDXLScalarCast *scalar_cast =
-			CDXLScalarCast::Cast(inner_child_node->GetOperator());
-		inner_expr =
-			TranslateDXLScalarCastWithChildExpr(scalar_cast, (Expr *) param);
-	}
-	else if (EdxlopScalarCoerceViaIO ==
-				 inner_child_node->GetOperator()->GetDXLOperator() &&
-			 inner_child_node->Arity() > 0 &&
-			 EdxlopScalarIdent ==
-				 (*inner_child_node)[0]->GetOperator()->GetDXLOperator())
-	{
-		// CoerceViaIO over Ident
-		inner_ident =
-			CDXLScalarIdent::Cast((*inner_child_node)[0]->GetOperator());
-		CDXLScalarCoerceViaIO *coerce =
-			CDXLScalarCoerceViaIO::Cast(inner_child_node->GetOperator());
-		inner_expr =
-			TranslateDXLScalarCoerceViaIOWithChildExpr(coerce, (Expr *) param);
-	}
-	else
-	{
-		// ORCA currently only supports PARAMs on the inner side of the form id or cast(id)
-		// The outer side may be any non-param thing.
-		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiDXL2PlStmtConversion,
-				   GPOS_WSZ_LIT("Unsupported subplan test expression"));
-	}
+
+	TranslateDXLTestExprScalarIdentToExpr(inner_child_node, param, &inner_ident,
+										  &inner_expr);
+
 	GPOS_ASSERT(nullptr != inner_ident);
 	GPOS_ASSERT(nullptr != inner_expr);
 

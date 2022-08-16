@@ -197,7 +197,7 @@ select a from foo_hashed union all select b from foo_hashed union select 1 from 
         </dxl:Opfamilies>
       </dxl:GPDBScalarOp>
       <dxl:RelationStatistics Mdid="2.17297760.1.1" Name="foo_hashed" Rows="10.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.17297760.1.1" Name="foo_hashed" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
+      <dxl:Relation Mdid="0.17297760.1.1" Name="foo_hashed" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>

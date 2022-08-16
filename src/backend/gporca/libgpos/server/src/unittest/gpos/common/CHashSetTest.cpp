@@ -65,9 +65,8 @@ CHashSetTest::EresUnittest_Basic()
 
 	const ULONG ulCnt = GPOS_ARRAY_SIZE(rgul);
 
-	typedef CHashSet<ULONG_PTR, HashPtr<ULONG_PTR>, Equals<ULONG_PTR>,
-					 CleanupNULL<ULONG_PTR> >
-		UlongPtrHashSet;
+	using UlongPtrHashSet = CHashSet<ULONG_PTR, HashPtr<ULONG_PTR>,
+									 Equals<ULONG_PTR>, CleanupNULL<ULONG_PTR>>;
 
 	UlongPtrHashSet *phs = GPOS_NEW(mp) UlongPtrHashSet(mp, 128);
 	for (ULONG ul = 0; ul < ulCnt; ul++)
@@ -105,9 +104,9 @@ CHashSetTest::EresUnittest_Ownership()
 
 	ULONG ulCnt = 256;
 
-	typedef CHashSet<ULONG_PTR, HashPtr<ULONG_PTR>, Equals<ULONG_PTR>,
-					 CleanupDelete<ULONG_PTR> >
-		UlongPtrHashSet;
+	using UlongPtrHashSet =
+		CHashSet<ULONG_PTR, HashPtr<ULONG_PTR>, Equals<ULONG_PTR>,
+				 CleanupDelete<ULONG_PTR>>;
 
 	UlongPtrHashSet *phs = GPOS_NEW(mp) UlongPtrHashSet(mp, 32);
 	for (ULONG ul = 0; ul < ulCnt; ul++)

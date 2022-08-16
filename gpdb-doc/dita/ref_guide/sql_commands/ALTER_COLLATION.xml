@@ -6,11 +6,11 @@
   <body>
     <p id="sql_command_desc">Changes the definition of a collation.</p>
     <section id="section2"><title>Synopsis</title>
-      <codeblock id="sql_command_synopsis">ALTER COLLATION <varname>name</varname> RENAME TO <varname>new_name</varname>
+      <codeblock id="sql_command_synopsis">ALTER COLLATION &lt;name> RENAME TO &lt;new_name>
 
-ALTER COLLATION <varname>name</varname> OWNER TO <varname>new_owner</varname>
+ALTER COLLATION &lt;name> OWNER TO &lt;new_owner>
 
-ALTER COLLATION <varname>name</varname> SET SCHEMA <varname>new_schema</varname></codeblock>
+ALTER COLLATION &lt;name> SET SCHEMA &lt;new_schema></codeblock>
     </section>
     <section id="section4">
       <title>Parameters</title>
@@ -54,9 +54,8 @@ ALTER COLLATION <varname>name</varname> SET SCHEMA <varname>new_schema</varname>
     </section>
     <section id="section7">
       <title>See Also</title>
-      <p><codeph><xref href="./CREATE_COLLATION.xml#topic1" type="topic" format="dita"/></codeph>,
-            <codeph><xref href="./DROP_COLLATION.xml#topic1" type="topic" format="dita"
-        /></codeph></p>
+      <p><xref href="./CREATE_COLLATION.xml#topic1" type="topic" format="dita"/>, <xref
+          href="./DROP_COLLATION.xml#topic1" type="topic" format="dita"/></p>
     </section>
   </body>
 </topic>

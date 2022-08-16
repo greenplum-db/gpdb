@@ -172,7 +172,7 @@
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
       <dxl:RelationStatistics Mdid="2.471019.1.1" Name="sale" Rows="12.000000"/>
-      <dxl:Relation Mdid="0.471019.1.1" Name="sale" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0,1,2" Keys="0,1,2;12,6">
+      <dxl:Relation Mdid="0.471019.1.1" Name="sale" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0,1,2" Keys="0,1,2;12,6">
         <dxl:Columns>
           <dxl:Column Name="cn" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -408,7 +408,7 @@
         </dxl:LogicalGroupBy>
       </dxl:Union>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="7068">
+    <dxl:Plan Id="0" SpaceSize="49476">
       <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="862.002353" Rows="13.000000" Width="8"/>

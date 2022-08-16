@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
-<topic id="topic1"><title id="ar20941">ALTER OPERATOR</title><body><p id="sql_command_desc">Changes the definition of an operator.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">ALTER OPERATOR <varname>name</varname> ( {<varname>left_type</varname> | NONE} , {<varname>right_type</varname> | NONE} ) 
-   OWNER TO <varname>new_owner</varname>
+<topic id="topic1"><title id="ar20941">ALTER OPERATOR</title><body><p id="sql_command_desc">Changes the definition of an operator.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">ALTER OPERATOR &lt;name> ( {&lt;left_type> | NONE} , {&lt;right_type> | NONE} ) 
+   OWNER TO &lt;new_owner>
 
-ALTER OPERATOR <varname>name</varname> ( {<varname>left_type</varname> | NONE} , {<varname>right_type</varname> | NONE} ) 
-    SET SCHEMA <varname>new_schema</varname>
+ALTER OPERATOR &lt;name> ( {&lt;left_type> | NONE} , {&lt;right_type> | NONE} ) 
+    SET SCHEMA &lt;new_schema>
 </codeblock></section><section id="section3"><title>Description</title><p><codeph>ALTER OPERATOR</codeph> changes the definition of an operator.
 The only currently available functionality is to change the owner of
 the operator. </p><p>You must own the operator to use <codeph>ALTER OPERATOR</codeph>.
@@ -21,6 +21,6 @@ if the operator has no right operand. </pd></plentry><plentry><pt><varname>new_o
           <pt><varname>new_schema</varname></pt>
           <pd>The new schema for the operator.</pd>
         </plentry></parml></section><section id="section5"><title>Examples</title><p>Change the owner of a custom operator <codeph>a @@ b</codeph> for type <codeph>text</codeph>:</p><codeblock>ALTER OPERATOR @@ (text, text) OWNER TO joe;</codeblock></section><section id="section6"><title>Compatibility</title><p>There is no <codeph>ALTER</codeph><codeph>OPERATOR</codeph> statement
-in the SQL standard. </p></section><section id="section7"><title>See Also</title><p><codeph><xref href="./CREATE_OPERATOR.xml#topic1" type="topic" format="dita"/></codeph>,
-            <codeph><xref href="./DROP_OPERATOR.xml#topic1" type="topic" format="dita"
-        /></codeph></p></section></body></topic>
+in the SQL standard. </p></section><section id="section7"><title>See Also</title><p><xref href="./CREATE_OPERATOR.xml#topic1" type="topic" format="dita"/>,
+            <xref href="./DROP_OPERATOR.xml#topic1" type="topic" format="dita"
+        /></p></section></body></topic>

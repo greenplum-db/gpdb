@@ -7,65 +7,65 @@
                 <p id="sql_command_desc">Changes the definition of a table.</p>
                 <section id="section2">
                         <title>Synopsis</title>
-                        <codeblock id="sql_command_synopsis">ALTER TABLE [IF EXISTS] [ONLY] <varname>name</varname> 
-    <varname>action</varname> [, ... ]
+                        <codeblock id="sql_command_synopsis">ALTER TABLE [IF EXISTS] [ONLY] &lt;name> 
+    &lt;action> [, ... ]
 
-ALTER TABLE [IF EXISTS] [ONLY] <varname>name</varname> 
-    RENAME [COLUMN] <varname>column_name</varname> TO <varname>new_column_name</varname>
+ALTER TABLE [IF EXISTS] [ONLY] &lt;name> 
+    RENAME [COLUMN] &lt;column_name> TO &lt;new_column_name>
 
-ALTER TABLE [ IF EXISTS ] [ ONLY ] <varname>name</varname> 
-    RENAME CONSTRAINT <varname>constraint_name</varname> TO <varname>new_constraint_name</varname>
+ALTER TABLE [ IF EXISTS ] [ ONLY ] &lt;name> 
+    RENAME CONSTRAINT &lt;constraint_name> TO &lt;new_constraint_name>
 
-ALTER TABLE [IF EXISTS] <varname>name</varname> 
-    RENAME TO <varname>new_name</varname>
+ALTER TABLE [IF EXISTS] &lt;name> 
+    RENAME TO &lt;new_name>
 
-ALTER TABLE [IF EXISTS] <varname>name</varname> 
-    SET SCHEMA <varname>new_schema</varname>
+ALTER TABLE [IF EXISTS] &lt;name> 
+    SET SCHEMA &lt;new_schema>
 
-ALTER TABLE ALL IN TABLESPACE <varname>name</varname> [ OWNED BY <varname>role_name</varname> [, ... ] ]
-    SET TABLESPACE <varname>new_tablespace</varname> [ NOWAIT ]
+ALTER TABLE ALL IN TABLESPACE &lt;name> [ OWNED BY &lt;role_name> [, ... ] ]
+    SET TABLESPACE &lt;new_tablespace> [ NOWAIT ]
 
-ALTER TABLE [IF EXISTS] [ONLY] <varname>name</varname> SET 
+ALTER TABLE [IF EXISTS] [ONLY] &lt;name> SET 
      WITH (REORGANIZE=true|false)
-   | DISTRIBUTED BY ({<varname>column_name</varname> [<varname>opclass</varname>]} [, ... ] )
+   | DISTRIBUTED BY ({&lt;column_name> [&lt;opclass>]} [, ... ] )
    | DISTRIBUTED RANDOMLY
    | DISTRIBUTED REPLICATED 
 
-ALTER TABLE <varname>name</varname>
-   [ ALTER PARTITION { <varname>partition_name</varname> | FOR (RANK(<varname>number</varname>)) 
-   | FOR (<varname>value</varname>) } [...] ] <varname>partition_action</varname>
+ALTER TABLE &lt;name>
+   [ ALTER PARTITION { &lt;partition_name> | FOR (RANK(&lt;number>)) 
+   | FOR (&lt;value>) } [...] ] &lt;partition_action>
 
-where <varname>action</varname> is one of:
+where &lt;action> is one of:
                         
-  ADD [COLUMN] <varname>column_name data_type</varname> [ DEFAULT <varname>default_expr</varname> ]
-      [<varname>column_constraint</varname> [ ... ]]
-      [ COLLATE <varname>collation</varname> ]
-      [ ENCODING ( <varname>storage_directive</varname> [,...] ) ]
-  DROP [COLUMN] [IF EXISTS] <varname>column_name</varname> [RESTRICT | CASCADE]
-  ALTER [COLUMN] <varname>column_name</varname> [ SET DATA ] TYPE <varname>type</varname> [COLLATE <varname>collation</varname>] [USING <varname>expression</varname>]
-  ALTER [COLUMN] <varname>column_name</varname> SET DEFAULT <varname>expression</varname>
-  ALTER [COLUMN] <varname>column_name</varname> DROP DEFAULT
-  ALTER [COLUMN] <varname>column_name</varname> { SET | DROP } NOT NULL
-  ALTER [COLUMN] <varname>column_name</varname> SET STATISTICS <varname>integer</varname>
-  ALTER [COLUMN] column SET ( <varname>attribute_option</varname> = <varname>value</varname> [, ... ] )
-  ALTER [COLUMN] column RESET ( <varname>attribute_option</varname> [, ... ] )
-  ADD <varname>table_constraint</varname> [NOT VALID]
-  ADD <varname>table_constraint_using_index</varname>
-  VALIDATE CONSTRAINT <varname>constraint_name</varname>
-  DROP CONSTRAINT [IF EXISTS] <varname>constraint_name</varname> [RESTRICT | CASCADE]
-  DISABLE TRIGGER [<varname>trigger_name</varname> | ALL | USER]
-  ENABLE TRIGGER [<varname>trigger_name</varname> | ALL | USER]
-  CLUSTER ON <varname>index_name</varname>
+  ADD [COLUMN] &lt;column_name data_type> [ DEFAULT &lt;default_expr> ]
+      [&lt;column_constraint> [ ... ]]
+      [ COLLATE &lt;collation> ]
+      [ ENCODING ( &lt;storage_parameter> [,...] ) ]
+  DROP [COLUMN] [IF EXISTS] &lt;column_name> [RESTRICT | CASCADE]
+  ALTER [COLUMN] &lt;column_name> [ SET DATA ] TYPE &lt;type> [COLLATE &lt;collation>] [USING &lt;expression>]
+  ALTER [COLUMN] &lt;column_name> SET DEFAULT &lt;expression>
+  ALTER [COLUMN] &lt;column_name> DROP DEFAULT
+  ALTER [COLUMN] &lt;column_name> { SET | DROP } NOT NULL
+  ALTER [COLUMN] &lt;column_name> SET STATISTICS &lt;integer>
+  ALTER [COLUMN] column SET ( &lt;attribute_option> = &lt;value> [, ... ] )
+  ALTER [COLUMN] column RESET ( &lt;attribute_option> [, ... ] )
+  ADD &lt;table_constraint> [NOT VALID]
+  ADD &lt;table_constraint_using_index>
+  VALIDATE CONSTRAINT &lt;constraint_name>
+  DROP CONSTRAINT [IF EXISTS] &lt;constraint_name> [RESTRICT | CASCADE]
+  DISABLE TRIGGER [&lt;trigger_name> | ALL | USER]
+  ENABLE TRIGGER [&lt;trigger_name> | ALL | USER]
+  CLUSTER ON &lt;index_name>
   SET WITHOUT CLUSTER
   SET WITHOUT OIDS
-  SET (<varname>storage_parameter</varname> = <varname>value</varname>)
-  RESET (<varname>storage_parameter</varname> [, ... ])
-  INHERIT <varname>parent_table</varname>
-  NO INHERIT <varname>parent_table</varname>
+  SET (&lt;storage_parameter> = &lt;value>)
+  RESET (&lt;storage_parameter> [, ... ])
+  INHERIT &lt;parent_table>
+  NO INHERIT &lt;parent_table>
   OF <codeph>type_name</codeph>
   NOT OF
-  OWNER TO <varname>new_owner</varname>
-  SET TABLESPACE <varname>new_tablespace</varname></codeblock>
+  OWNER TO &lt;new_owner>
+  SET TABLESPACE &lt;new_tablespace></codeblock>
                         <p>where <varname>table_constraint_using_index</varname> is:</p>
                         <pre>  [ CONSTRAINT <varname>constraint_name</varname> ]
   { UNIQUE | PRIMARY KEY } USING INDEX <varname>index_name</varname>
@@ -73,53 +73,53 @@ where <varname>action</varname> is one of:
                         <p>where <varname>partition_action</varname> is one of:</p>
                         <codeblock>  ALTER DEFAULT PARTITION
   DROP DEFAULT PARTITION [IF EXISTS]
-  DROP PARTITION [IF EXISTS] { <varname>partition_name</varname> | 
-      FOR (RANK(<varname>number</varname>)) | FOR (<varname>value</varname>) } [CASCADE]
+  DROP PARTITION [IF EXISTS] { &lt;partition_name> | 
+      FOR (RANK(&lt;number>)) | FOR (&lt;value>) } [CASCADE]
   TRUNCATE DEFAULT PARTITION
-  TRUNCATE PARTITION { <varname>partition_name</varname> | FOR (RANK(<varname>number</varname>)) | 
-      FOR (<varname>value</varname>) }
-  RENAME DEFAULT PARTITION TO <varname>new_partition_name</varname>
-  RENAME PARTITION { <varname>partition_name</varname> | FOR (RANK(<varname>number</varname>)) | 
-      FOR (<varname>value</varname>) } TO <varname>new_partition_name</varname>
-  ADD DEFAULT PARTITION <varname>name</varname> [ ( <varname>subpartition_spec</varname> ) ]
-  ADD PARTITION [<varname>partition_name</varname>] <varname>partition_element</varname>
-     [ ( <varname>subpartition_spec</varname> ) ]
-  EXCHANGE PARTITION { <varname>partition_name</varname> | FOR (RANK(<varname>number</varname>)) | 
-       FOR (<varname>value</varname>) } WITH TABLE <varname>table_name</varname>
+  TRUNCATE PARTITION { &lt;partition_name> | FOR (RANK(&lt;number>)) | 
+      FOR (&lt;value>) }
+  RENAME DEFAULT PARTITION TO &lt;new_partition_name>
+  RENAME PARTITION { &lt;partition_name> | FOR (RANK(&lt;number>)) | 
+      FOR (&lt;value>) } TO &lt;new_partition_name>
+  ADD DEFAULT PARTITION &lt;name> [ ( &lt;subpartition_spec> ) ]
+  ADD PARTITION [&lt;partition_name>] &lt;partition_element>
+     [ ( &lt;subpartition_spec> ) ]
+  EXCHANGE PARTITION { &lt;partition_name> | FOR (RANK(&lt;number>)) | 
+       FOR (&lt;value>) } WITH TABLE &lt;table_name>
         [ WITH | WITHOUT VALIDATION ]
-  EXCHANGE DEFAULT PARTITION WITH TABLE <varname>table_name</varname>
+  EXCHANGE DEFAULT PARTITION WITH TABLE &lt;table_name>
    [ WITH | WITHOUT VALIDATION ]
-  SET SUBPARTITION TEMPLATE (<varname>subpartition_spec</varname>)
+  SET SUBPARTITION TEMPLATE (&lt;subpartition_spec>)
   SPLIT DEFAULT PARTITION
-    {  AT (<varname>list_value</varname>)
-     | START([<varname>datatype</varname>] <varname>range_value</varname>) [INCLUSIVE | EXCLUSIVE] 
-        END([<varname>datatype</varname>] <varname>range_value</varname>) [INCLUSIVE | EXCLUSIVE] }
-    [ INTO ( PARTITION <varname>new_partition_name</varname>, 
-             PARTITION <varname>default_partition_name</varname> ) ]
-  SPLIT PARTITION { <varname>partition_name</varname> | FOR (RANK(<varname>number</varname>)) | 
-     FOR (<varname>value</varname>) } AT (<varname>value</varname>) 
-    [ INTO (PARTITION <varname>partition_name</varname>, PARTITION <varname>partition_name</varname>)]  </codeblock>
+    {  AT (&lt;list_value>)
+     | START([&lt;datatype>] &lt;range_value>) [INCLUSIVE | EXCLUSIVE] 
+        END([&lt;datatype>] &lt;range_value>) [INCLUSIVE | EXCLUSIVE] }
+    [ INTO ( PARTITION &lt;new_partition_name>, 
+             PARTITION &lt;default_partition_name> ) ]
+  SPLIT PARTITION { &lt;partition_name> | FOR (RANK(&lt;number>)) | 
+     FOR (&lt;value>) } AT (&lt;value>) 
+    [ INTO (PARTITION &lt;partition_name>, PARTITION &lt;partition_name>)]  </codeblock>
                         <p>where <varname>partition_element</varname> is:</p>
-                        <codeblock>    VALUES (<varname>list_value</varname> [,...] )
-  | START ([<varname>datatype</varname>] '<varname>start_value</varname>') [INCLUSIVE | EXCLUSIVE]
-     [ END ([<varname>datatype</varname>] '<varname>end_value</varname>') [INCLUSIVE | EXCLUSIVE] ]
-  | END ([<varname>datatype</varname>] '<varname>end_value</varname>') [INCLUSIVE | EXCLUSIVE]
-[ WITH ( <varname>partition_storage_parameter</varname>=<varname>value</varname> [, ... ] ) ]
-[ TABLESPACE <varname>tablespace</varname> ]</codeblock>
+                        <codeblock>    VALUES (&lt;list_value> [,...] )
+  | START ([&lt;datatype>] '&lt;start_value>') [INCLUSIVE | EXCLUSIVE]
+     [ END ([&lt;datatype>] '&lt;end_value>') [INCLUSIVE | EXCLUSIVE] ]
+  | END ([&lt;datatype>] '&lt;end_value>') [INCLUSIVE | EXCLUSIVE]
+[ WITH ( &lt;partition_storage_parameter>=&lt;value> [, ... ] ) ]
+[ TABLESPACE &lt;tablespace> ]</codeblock>
                         <p>where <varname>subpartition_spec</varname> is:</p>
-                        <codeblock><varname>subpartition_element</varname> [, ...]</codeblock>
+                        <codeblock>&lt;subpartition_element> [, ...]</codeblock>
                         <p>and <varname>subpartition_element</varname> is:</p>
-                        <codeblock>   DEFAULT SUBPARTITION <varname>subpartition_name</varname>
-  | [SUBPARTITION <varname>subpartition_name</varname>] VALUES (<varname>list_value</varname> [,...] )
-  | [SUBPARTITION <varname>subpartition_name</varname>] 
-     START ([<varname>datatype</varname>] '<varname>start_value</varname>') [INCLUSIVE | EXCLUSIVE]
-     [ END ([<varname>datatype</varname>] '<varname>end_value</varname>') [INCLUSIVE | EXCLUSIVE] ]
-     [ EVERY ( [<varname>number | datatype</varname>] '<varname>interval_value</varname>') ]
-  | [SUBPARTITION <varname>subpartition_name</varname>] 
-     END ([<varname>datatype</varname>] '<varname>end_value</varname>') [INCLUSIVE | EXCLUSIVE]
-     [ EVERY ( [<varname>number | datatype</varname>] '<varname>interval_value</varname>') ]
-[ WITH ( <varname>partition_storage_parameter</varname>=<varname>value</varname> [, ... ] ) ]
-[ TABLESPACE <varname>tablespace</varname> ]</codeblock>
+                        <codeblock>   DEFAULT SUBPARTITION &lt;subpartition_name>
+  | [SUBPARTITION &lt;subpartition_name>] VALUES (&lt;list_value> [,...] )
+  | [SUBPARTITION &lt;subpartition_name>] 
+     START ([&lt;datatype>] '&lt;start_value>') [INCLUSIVE | EXCLUSIVE]
+     [ END ([&lt;datatype>] '&lt;end_value>') [INCLUSIVE | EXCLUSIVE] ]
+     [ EVERY ( [&lt;number | datatype>] '&lt;interval_value>') ]
+  | [SUBPARTITION &lt;subpartition_name>] 
+     END ([&lt;datatype>] '&lt;end_value>') [INCLUSIVE | EXCLUSIVE]
+     [ EVERY ( [&lt;number | datatype>] '&lt;interval_value>') ]
+[ WITH ( &lt;partition_storage_parameter>=&lt;value> [, ... ] ) ]
+[ TABLESPACE &lt;tablespace> ]</codeblock>
                         <p>where <varname>storage_parameter</varname> is:</p>
                         <codeblock>   appendoptimized={TRUE|FALSE}
    blocksize={8192-2097152}
@@ -135,9 +135,9 @@ where <varname>action</varname> is one of:
                                 There are several subforms: </p>
                         <ul>
                                 <li id="ay136723"><b>ADD COLUMN</b> — Adds a new column to the
-                                        table, using the same syntax as <codeph><xref
+                                        table, using the same syntax as <xref
                                                   href="CREATE_TABLE.xml">CREATE
-                                                TABLE</xref></codeph>. The <codeph>ENCODING</codeph>
+                                                TABLE</xref>. The <codeph>ENCODING</codeph>
                                         clause is valid only for append-optimized, column-oriented
                                                 tables.<p>When you add a column to an
                                                 append-optimized, column-oriented table, Greenplum
@@ -154,9 +154,9 @@ where <varname>action</varname> is one of:
                                                   in the <codeph>WITH</codeph> clause when the table
                                                   was created.</li>
                                                   <li>The compression parameter setting specified in
-                                                  the server configuration parameter <codeph><xref
+                                                  the server configuration parameter <xref
                                                   href="../config_params/guc-list.xml#gp_default_storage_options"
-                                                  >gp_default_storage_option</xref></codeph>.</li>
+                                                  >gp_default_storage_option</xref>.</li>
                                                   <li>The default compression parameter value.</li>
                                                 </ol></p><p>For append-optimized and hash tables,
                                                   <codeph>ADD COLUMN</codeph> requires a table
@@ -224,8 +224,8 @@ where <varname>action</varname> is one of:
                                                 options are <codeph>n_distinct</codeph> and
                                                   <codeph>n_distinct_inherited</codeph>, which
                                                 override the number-of-distinct-values estimates
-                                                made by subsequent <codeph><xref
-                                                  href="ANALYZE.xml#topic1">ANALYZE</xref></codeph>
+                                                made by subsequent <xref
+                                                  href="ANALYZE.xml#topic1">ANALYZE</xref>
                                                 operations. <codeph>n_distinct</codeph> affects the
                                                 statistics for the table itself, while
                                                   <codeph>n_distinct_inherited</codeph> affects the
@@ -267,8 +267,8 @@ where <varname>action</varname> is one of:
                                         assume that the constraint holds for all rows in the table,
                                         until it is validated by using the <codeph>VALIDATE
                                                 CONSTRAINT</codeph> option. Constraint checks are
-                                        skipped at create table time, so the <codeph><xref
-                                                href="CREATE_TABLE.xml#topic1"/></codeph> syntax
+                                        skipped at create table time, so the <xref
+                                                href="CREATE_TABLE.xml#topic1"/> syntax
                                         does not include this option. </li>
                                 <li><b>VALIDATE CONSTRAINT</b> — This form validates a foreign key
                                         constraint that was previously created as <codeph>NOT
@@ -333,8 +333,8 @@ where <varname>action</varname> is one of:
                                                 <codeph>CLUSTER</codeph> is not the recommended way
                                         to physically reorder a table in Greenplum Database because
                                         it takes so long. It is better to recreate the table with
-                                                  <codeph><xref href="./CREATE_TABLE_AS.xml#topic1"
-                                                  type="topic" format="dita"/></codeph> and order it
+                                                  <xref href="./CREATE_TABLE_AS.xml#topic1"
+                                                  type="topic" format="dita"/> and order it
                                         by the index column(s). <note><codeph>CLUSTER ON</codeph> is
                                                 not supported on append-optimized
                                         tables.</note></li>
@@ -373,8 +373,8 @@ where <varname>action</varname> is one of:
                                         fillfactors are appropriate. Note that the table contents
                                         will not be modified immediately by this command. You will
                                         need to rewrite the table to get the desired effects. That
-                                        can be done with <codeph><xref href="VACUUM.xml#topic1"
-                                                /></codeph> or one of the forms of <codeph>ALTER
+                                        can be done with <xref href="VACUUM.xml#topic1"
+                                                /> or one of the forms of <codeph>ALTER
                                                 TABLE</codeph> that forces a table rewrite. For
                                         information about the forms of <codeph>ALTER TABLE</codeph>
                                         that perform a table rewrite, see <xref
@@ -460,8 +460,7 @@ where <varname>action</varname> is one of:
                         <note>If you add a partition to a table that has subpartition encodings, the
                                 new partition inherits the storage directives for the subpartitions.
                                 For more information about the precedence of compression settings,
-                                see <xref href="../../admin_guide/ddl/ddl-storage.xml#topic40">Using
-                                        Compression</xref>.</note>
+                                see <xref href="../../admin_guide/ddl/ddl-storage.html#topic40" format="html" scope="external">Using Compression</xref>.</note>
                         <p>All the forms of <codeph>ALTER TABLE</codeph> that act on a single table,
                                 except <codeph>RENAME</codeph> and <codeph>SET SCHEMA</codeph>, can
                                 be combined into a list of multiple alterations to apply together.
@@ -620,8 +619,8 @@ where <varname>action</varname> is one of:
                                                 not the recommended way to physically reorder a
                                                 table in Greenplum Database because it takes so
                                                 long. It is better to recreate the table with
-                                                  <codeph><xref href="./CREATE_TABLE_AS.xml#topic1"
-                                                  type="topic" format="dita"/></codeph> and order it
+                                                  <xref href="./CREATE_TABLE_AS.xml#topic1"
+                                                  type="topic" format="dita"/> and order it
                                                 by the index column(s).</pd>
                                 </plentry>
                                 <plentry>
@@ -767,8 +766,8 @@ where <varname>action</varname> is one of:
                                                 partition. For example, you may want older
                                                 partitions to be append-optimized tables and newer
                                                 partitions to be regular heap tables. See
-                                                  <codeph><xref href="./CREATE_TABLE.xml#topic1"
-                                                  type="topic" format="dita"/></codeph> for a
+                                                  <xref href="./CREATE_TABLE.xml#topic1"
+                                                  type="topic" format="dita"/> for a
                                                 description of the storage options.</pd>
                                         <pd><b>TABLESPACE</b> - The name of the tablespace in which
                                                 the partition is to be created.</pd>
@@ -1042,9 +1041,9 @@ where <varname>action</varname> is one of:
                                 to the descendants. This ensures that the descendants always have
                                 columns matching the parent. </p>
                         <p>To see the structure of a partitioned table, you can use the view
-                                                <codeph><xref
+                                                <xref
                                                 href="../system_catalogs/pg_partitions.xml"
-                                                type="topic" format="dita"/></codeph>. This view can
+                                                type="topic" format="dita"/>. This view can
                                 help identify the particular partitions you may want to alter.</p>
                         <p>A recursive <codeph>DROP COLUMN</codeph> operation will remove a
                                 descendant table's column only if the descendant does not inherit
@@ -1161,9 +1160,9 @@ INTO (PARTITION jan081to15, PARTITION jan0816to31);</codeblock>
                 </section>
                 <section id="section8">
                         <title>See Also</title>
-                        <p><codeph><xref href="./CREATE_TABLE.xml#topic1" type="topic" format="dita"
-                                        /></codeph>, <codeph><xref href="./DROP_TABLE.xml#topic1"
-                                                type="topic" format="dita"/></codeph></p>
+                        <p><xref href="./CREATE_TABLE.xml#topic1" type="topic" format="dita"
+                                        />, <xref href="./DROP_TABLE.xml#topic1"
+                                                type="topic" format="dita"/></p>
                 </section>
         </body>
 </topic>

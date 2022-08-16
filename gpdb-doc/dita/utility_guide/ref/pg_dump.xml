@@ -8,26 +8,25 @@
       file.</p>
     <section id="section2">
       <title>Synopsis</title>
-      <codeblock id="client_util_synopsis"><b>pg_dump</b> [<varname>connection-option</varname> ...] [<varname>dump_option</varname> ...] [<varname>dbname</varname>]
+      <codeblock id="client_util_synopsis">pg_dump [&lt;connection-option> ...] [&lt;dump_option> ...] [&lt;dbname>]
 
-<b>pg_dump</b> <b>-? | --help</b>
+pg_dump -? | --help
 
-<b>pg_dump</b> <b>-V | --version</b></codeblock>
+pg_dump -V | --version</codeblock>
     </section>
     <section id="section3">
       <title>Description</title>
       <p><codeph>pg_dump</codeph> is a standard PostgreSQL utility for backing up a database, and is
         also supported in Greenplum Database. It creates a single (non-parallel) dump file. For
         routine backups of Greenplum Database, it is better to use the Greenplum Database backup
-        utility, <codeph><xref href="gpbackup.xml#topic1"/></codeph>, for the
-        best performance.</p>
+        utility, <xref href="gpbackup.xml#topic1"/>, for the best performance.</p>
       <p>Use <codeph>pg_dump</codeph> if you are migrating your data to another database vendor's
         system, or to another Greenplum Database system with a different segment configuration (for
         example, if the system you are migrating to has greater or fewer segment instances). To
         restore, you must use the corresponding <xref href="./pg_restore.xml#topic1" type="topic"
           format="dita"/> utility (if the dump file is in archive format), or you can use a client
-        program such as <codeph><xref href="psql.xml#topic1" type="topic" format="dita"/></codeph>
-        (if the dump file is in plain text format). </p>
+        program such as <xref href="psql.xml#topic1" type="topic" format="dita"/> (if the dump file
+        is in plain text format). </p>
       <p>Since <codeph>pg_dump</codeph> is compatible with regular PostgreSQL, it can be used to
         migrate data into Greenplum Database. The <codeph>pg_dump</codeph> utility in Greenplum
         Database is very similar to the PostgreSQL <codeph>pg_dump</codeph> utility, with the
@@ -95,27 +94,25 @@
           </plentry>
           <plentry>
             <pt>-c | --clean</pt>
-            <pd>Adds commands to the text output file to clean (drop) database objects prior to 
-              outputting the commands for creating them. (Restore might generate some harmless
-              error messages, if any objects were not present in the destination database.)
-              Note that objects are not dropped before the dump
-              operation begins, but <codeph>DROP</codeph> commands are added to the DDL dump output
-              files so that when you use those files to do a restore, the <codeph>DROP</codeph>
-              commands are run prior to the <codeph>CREATE</codeph> commands. This option is only
-              meaningful for the plain-text format. For the archive formats, you may specify the
-              option when you call <codeph><xref href="./pg_restore.xml#topic1" type="topic"
-                  format="dita"/></codeph>. </pd>
+            <pd>Adds commands to the text output file to clean (drop) database objects prior to
+              outputting the commands for creating them. (Restore might generate some harmless error
+              messages, if any objects were not present in the destination database.) Note that
+              objects are not dropped before the dump operation begins, but <codeph>DROP</codeph>
+              commands are added to the DDL dump output files so that when you use those files to do
+              a restore, the <codeph>DROP</codeph> commands are run prior to the
+                <codeph>CREATE</codeph> commands. This option is only meaningful for the plain-text
+              format. For the archive formats, you may specify the option when you call <xref
+                href="./pg_restore.xml#topic1" type="topic" format="dita"/>. </pd>
           </plentry>
           <plentry>
             <pt>-C | --create</pt>
             <pd>Begin the output with a command to create the database itself and reconnect to the
-              created database. (With a script of this form, it doesn't matter which database 
-              in the destination installation you connect to before running the script.) If
-              <codeph>--clean</codeph> is also specified, the script drops and recreates the
+              created database. (With a script of this form, it doesn't matter which database in the
+              destination installation you connect to before running the script.) If
+                <codeph>--clean</codeph> is also specified, the script drops and recreates the
               target database before reconnecting to it. This option is only meaningful for the
               plain-text format. For the archive formats, you may specify the option when you call
-                  <codeph><xref href="./pg_restore.xml#topic1" type="topic" format="dita"
-              /></codeph>. </pd>
+                <xref href="./pg_restore.xml#topic1" type="topic" format="dita"/>. </pd>
           </plentry>
           <plentry>
             <pt>-E <varname>encoding</varname> | --encoding=<varname>encoding</varname></pt>
@@ -137,12 +134,11 @@
             <pt>-F p|c|d|t | --format=plain|custom|directory|tar</pt>
             <pd>Selects the format of the output. format can be one of the following: </pd>
             <pd>p | plain — Output a plain-text SQL script file (the default). </pd>
-            <pd>c | custom — Output a custom archive suitable for input into <codeph><xref
-                  href="./pg_restore.xml#topic1" type="topic" format="dita"/></codeph>.
-              Together with the directory output format, this is the most flexible
-              output format in that it allows manual selection and reordering of
-              archived items during restore. This format is compressed by default and
-              also supports parallel dumps.</pd>
+            <pd>c | custom — Output a custom archive suitable for input into <xref
+                href="./pg_restore.xml#topic1" type="topic" format="dita"/>. Together with the
+              directory output format, this is the most flexible output format in that it allows
+              manual selection and reordering of archived items during restore. This format is
+              compressed by default and also supports parallel dumps.</pd>
             <pd>d | directory — Output a directory-format archive suitable for input into
               <codeph>pg_restore</codeph>. This will create a directory with one file for
               each table and blob being dumped, plus a so-called Table of Contents file
@@ -151,12 +147,12 @@
               manipulated with standard Unix tools; for example, files in an uncompressed
               archive can be compressed with the <codeph>gzip</codeph> tool. This format
               is compressed by default.</pd>
-            <pd>t | tar — Output a tar-format archive suitable for input into <codeph><xref
-                  href="./pg_restore.xml#topic1" type="topic" format="dita"/></codeph>. The tar
-              format is compatible with the directory format; extracting a tar-format archive
-              produces a valid directory-format archive. However, the tar format does not support
-              compression. Also, when using tar format the
-              relative order of table data items cannot be changed during restore.</pd>
+            <pd>t | tar — Output a tar-format archive suitable for input into <xref
+                href="./pg_restore.xml#topic1" type="topic" format="dita"/>. The tar format is
+              compatible with the directory format; extracting a tar-format archive produces a valid
+              directory-format archive. However, the tar format does not support compression. Also,
+              when using tar format the relative order of table data items cannot be changed during
+              restore.</pd>
           </plentry>
           <plentry>
             <pt>-j <varname>njobs</varname> | --jobs=<varname>njobs</varname></pt>
@@ -169,10 +165,10 @@
               on the query dispatcher (coordinator) node, not across the query executor
               (segment) nodes as is the case when you use <codeph>gpbackup</codeph>.
               </note></pd>
-            <pd><codeph>pg_dump</codeph> will open <varname>njobs</varname> + 1 connections to
-              the database, so make sure your <codeph><xref href="../../ref_guide/config_params/guc-list.xml#max_connections"
-                type="dita">max_connections</xref></codeph> setting is high enough to
-              accommodate all connections.</pd>
+            <pd><codeph>pg_dump</codeph> will open <varname>njobs</varname> + 1 connections to the
+              database, so make sure your <xref
+                href="../../ref_guide/config_params/guc-list.xml#max_connections" type="dita"
+                >max_connections</xref> setting is high enough to accommodate all connections.</pd>
             <pd>Requesting exclusive locks on database objects while running a parallel dump could
               cause the dump to fail. The reason is that the <codeph>pg_dump</codeph> coordinator
               process requests shared locks on the objects that the worker processes are going to
@@ -248,8 +244,7 @@
               To make a script that can be restored by any user, but will give that user ownership
               of all the objects, specify <codeph>-O</codeph>. This option is only meaningful for
               the plain-text format. For the archive formats, you may specify the option when you
-              call <codeph><xref href="./pg_restore.xml#topic1" type="topic" format="dita"
-                /></codeph>.</pd>
+              call <xref href="./pg_restore.xml#topic1" type="topic" format="dita"/>.</pd>
           </plentry>
           <plentry>
             <pt>-s | --schema-only</pt>
@@ -353,10 +348,9 @@
                 <codeph>--disable-triggers</codeph> must be done as superuser. So, you should also
               specify a superuser name with <codeph>-S</codeph>, or preferably be careful to start
               the resulting script as a superuser. This option is only meaningful for the plain-text
-              format. For the archive formats, you may specify the option when you call
-                  <codeph><xref href="./pg_restore.xml#topic1" type="topic" format="dita"
-                /></codeph>.<note>Greenplum Database does not support user-defined
-              triggers.</note></pd>
+              format. For the archive formats, you may specify the option when you call <xref
+                href="./pg_restore.xml#topic1" type="topic" format="dita"/>.<note>Greenplum Database
+                does not support user-defined triggers.</note></pd>
           </plentry>
           <plentry>
             <pt><codeph>--exclude-table-data=<varname>table</varname></codeph></pt>
@@ -610,9 +604,9 @@
     </section>
     <section id="section9">
       <title>See Also</title>
-      <p><codeph><xref href="./pg_dumpall.xml#topic1" type="topic" format="dita"/></codeph>,
-            <codeph><xref href="pg_restore.xml#topic1" type="topic" format="dita"/></codeph>,
-            <codeph><xref href="psql.xml#topic1" type="topic" format="dita"/></codeph></p>
+      <p><xref href="./pg_dumpall.xml#topic1" type="topic" format="dita"/>, <xref
+          href="pg_restore.xml#topic1" type="topic" format="dita"/>, <xref href="psql.xml#topic1"
+          type="topic" format="dita"/></p>
     </section>
   </body>
 </topic>

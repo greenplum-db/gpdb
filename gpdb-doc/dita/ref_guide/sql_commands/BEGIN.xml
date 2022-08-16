@@ -7,7 +7,7 @@
         <p id="sql_command_desc">Starts a transaction block.</p>
         <section id="section2">
             <title>Synopsis</title>
-            <codeblock id="sql_command_synopsis">BEGIN [WORK | TRANSACTION] [<varname>transaction_mode</varname>]</codeblock>
+            <codeblock id="sql_command_synopsis">BEGIN [WORK | TRANSACTION] [&lt;transaction_mode>]</codeblock>
             <p>where <varname>transaction_mode</varname> is:</p>
             <codeblock>   ISOLATION LEVEL {READ UNCOMMITTED | READ COMMITTED | REPEATABLE READ | SERIALIZABLE}
    READ WRITE | READ ONLY
@@ -28,8 +28,8 @@
                 several related changes: other sessions will be unable to see the intermediate
                 states wherein not all the related updates have been done. </p>
             <p>If the isolation level, read/write mode, or deferrable mode is specified, the new
-                transaction has those characteristics, as if <codeph><xref
-                        href="./SET_TRANSACTION.xml#topic1" type="topic" format="dita"/></codeph>
+                transaction has those characteristics, as if <xref
+                        href="./SET_TRANSACTION.xml#topic1" type="topic" format="dita"/>
                 was run. </p>
         </section>
         <section id="section4">
@@ -78,11 +78,11 @@
         </section>
         <section id="section5">
             <title>Notes</title>
-            <p><codeph><xref href="./START_TRANSACTION.xml#topic1" type="topic" format="dita"
-                    /></codeph> has the same functionality as <codeph>BEGIN</codeph>. </p>
-            <p>Use <codeph><xref href="./COMMIT.xml#topic1" type="topic" format="dita"/></codeph> or
-                        <codeph><xref href="./ROLLBACK.xml#topic1" type="topic" format="dita"
-                    /></codeph> to terminate a transaction block. </p>
+            <p><xref href="./START_TRANSACTION.xml#topic1" type="topic" format="dita"
+                    /> has the same functionality as <codeph>BEGIN</codeph>. </p>
+            <p>Use <xref href="./COMMIT.xml#topic1" type="topic" format="dita"/> or
+                        <xref href="./ROLLBACK.xml#topic1" type="topic" format="dita"
+                    /> to terminate a transaction block. </p>
             <p>Issuing <codeph>BEGIN</codeph> when already inside a transaction block will provoke a
                 warning message. The state of the transaction is not affected. To nest transactions
                 within a transaction block, use savepoints (see <codeph>SAVEPOINT</codeph>).</p>
@@ -97,8 +97,8 @@
         <section id="section7">
             <title>Compatibility</title>
             <p><codeph>BEGIN</codeph> is a Greenplum Database language extension. It is equivalent
-                to the SQL-standard command <codeph><xref href="./START_TRANSACTION.xml#topic1"
-                        type="topic" format="dita"/></codeph>.</p>
+                to the SQL-standard command <xref href="./START_TRANSACTION.xml#topic1"
+                        type="topic" format="dita"/>.</p>
             <p><codeph>DEFERRABLE</codeph>
                 <varname>transaction_mode</varname> is a Greenplum Database language extension.</p>
             <p>Incidentally, the <codeph>BEGIN</codeph> key word is used for a different purpose in
@@ -107,11 +107,11 @@
         </section>
         <section id="section8">
             <title>See Also</title>
-            <p><codeph><xref href="./COMMIT.xml#topic1" type="topic" format="dita"/></codeph>,
-                        <codeph><xref href="./ROLLBACK.xml#topic1" type="topic" format="dita"
-                    /></codeph>, <codeph><xref href="./START_TRANSACTION.xml#topic1" type="topic"
-                        format="dita"/></codeph>, <codeph><xref href="./SAVEPOINT.xml#topic1"
-                        type="topic" format="dita"/></codeph></p>
+            <p><xref href="./COMMIT.xml#topic1" type="topic" format="dita"/>,
+                        <xref href="./ROLLBACK.xml#topic1" type="topic" format="dita"
+                    />, <xref href="./START_TRANSACTION.xml#topic1" type="topic"
+                        format="dita"/>, <xref href="./SAVEPOINT.xml#topic1"
+                        type="topic" format="dita"/></p>
         </section>
     </body>
 </topic>

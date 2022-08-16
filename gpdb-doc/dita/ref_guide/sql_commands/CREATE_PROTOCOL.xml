@@ -8,9 +8,9 @@
             defining a Greenplum Database external table.</p>
         <section id="section2">
             <title>Synopsis</title>
-            <codeblock id="sql_command_synopsis">CREATE [TRUSTED] PROTOCOL <varname>name</varname> (
-   [readfunc='<varname>read_call_handler</varname>'] [, writefunc='<varname>write_call_handler</varname>']
-   [, validatorfunc='<varname>validate_handler</varname>' ])</codeblock>
+            <codeblock id="sql_command_synopsis">CREATE [TRUSTED] PROTOCOL &lt;name> (
+   [readfunc='&lt;read_call_handler>'] [, writefunc='&lt;write_call_handler>']
+   [, validatorfunc='&lt;validate_handler>' ])</codeblock>
         </section>
         <section id="section3">
             <title>Description</title>
@@ -67,9 +67,9 @@
             <p>Greenplum Database handles external tables of type <codeph>file</codeph>,
                     <codeph>gpfdist</codeph>, and <codeph>gpfdists</codeph> internally. 
                 See
-                    <xref href="../../admin_guide/external/g-s3-protocol.xml#amazon-emr/s3_prereq"/>
+                    <xref href="../../admin_guide/external/g-s3-protocol.html#amazon-emr/s3_prereq" format="html" scope="external">s3:// Protocol</xref>
                 for information about enabling the <codeph>S3</codeph> protocol. Refer to <xref
-                    href="../../admin_guide/external/g-pxf-protocol.xml" type="topic"></xref> for
+                    href="../../admin_guide/external/g-pxf-protocol.html" format="html" scope="external">pxf:// Protocol</xref> for
                 information about using the <codeph>pxf</codeph> protocol.</p>
             <p>Any shared library that implements a data access protocol must be located in the same
                 location on all Greenplum Database segment hosts. For example, the shared library
@@ -87,9 +87,9 @@
         </section>
         <section id="section8">
             <title>See Also</title>
-            <p><codeph><xref href="ALTER_PROTOCOL.xml#topic1"/></codeph>, <codeph><xref
-                        href="CREATE_EXTERNAL_TABLE.xml#topic1"/></codeph>, <codeph><xref
-                        href="DROP_PROTOCOL.xml#topic1"/></codeph>, <xref href="GRANT.xml#topic1"
+            <p><xref href="ALTER_PROTOCOL.xml#topic1"/>, <xref
+                        href="CREATE_EXTERNAL_TABLE.xml#topic1"/>, <xref
+                        href="DROP_PROTOCOL.xml#topic1"/>, <xref href="GRANT.xml#topic1"
                 /></p>
         </section>
     </body>

@@ -32,7 +32,7 @@ One use of a materialized view is to allow faster access to data brought in from
 
 If a subquery is associated with a single query, consider using the `WITH` clause of the `SELECT` command instead of creating a seldom-used materialized view.
 
-**Parent topic:**[Defining Database Objects](../ddl/ddl.html)
+**Parent topic:** [Defining Database Objects](../ddl/ddl.html)
 
 ## <a id="topic_hn3_xy5_kjb"></a>Creating Materialized Views 
 

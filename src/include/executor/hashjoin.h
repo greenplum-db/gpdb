@@ -359,8 +359,8 @@ typedef struct HashJoinTableData
 	 * These arrays are allocated for the life of the hash join, but only if
 	 * nbatch > 1.  A file is opened only when we first write a tuple into it
 	 * (otherwise its pointer remains NULL).  Note that the zero'th array
-	 * elements never get used, since we will process rather than dump out any
-	 * tuples of batch zero.
+	 * elements can still get used while nbatch > 1 in GPDB to support rescan
+	 * of hashjoin.
 	 */
 	BufFile	  **innerBatchFile; /* buffered virtual temp file per batch */
 	BufFile   **outerBatchFile; /* buffered virtual temp file per batch */

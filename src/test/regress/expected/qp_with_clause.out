@@ -16,6 +16,7 @@ NOTICE:  table "country" does not exist, skipping
 DROP TABLE IF EXISTS countrylanguage cascade;
 NOTICE:  table "countrylanguage" does not exist, skipping
 --end_ignore
+SET optimizer_trace_fallback=on;
 BEGIN;
 --SET client_encoding = 'LATIN1';
 CREATE TABLE city (
@@ -11147,3 +11148,4 @@ NOTICE:  drop cascades to table countrylanguage
 NOTICE:  drop cascades to table country
 NOTICE:  drop cascades to table city
 -- end_ignore
+RESET optimizer_trace_fallback;

@@ -1,7 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE topic
-  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
-<topic id="topic1">
-  <title>Accessing the Database</title>
-  <shortdesc>This topic describes the various client tools you can use to connect to Greenplum Database, and how to establish a database session. </shortdesc>
-</topic>

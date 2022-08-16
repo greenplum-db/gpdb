@@ -1371,9 +1371,9 @@ addRangeTableEntry(ParseState *pstate,
  * given an already-open relation instead of a RangeVar reference.
  *
  * lockmode is the lock type required for query execution; it must be one
- * of AccessShareLock, RowShareLock, or RowExclusiveLock depending on the
- * RTE's role within the query.  The caller must hold that lock mode
- * or a stronger one.
+ * of AccessShareLock, RowShareLock, RowExclusiveLock, or ExclusiveLock
+ * depending on the RTE's role within the query.  The caller must hold that
+ * lock mode or a stronger one.
  *
  * Note: properly, lockmode should be declared LOCKMODE not int, but that
  * would require importing storage/lock.h into parse_relation.h.  Since
@@ -1394,7 +1394,8 @@ addRangeTableEntryForRelation(ParseState *pstate,
 
 	Assert(lockmode == AccessShareLock ||
 		   lockmode == RowShareLock ||
-		   lockmode == RowExclusiveLock);
+		   lockmode == RowExclusiveLock ||
+		   lockmode == ExclusiveLock); /* GPDB: we might upgrade lock level */
 	Assert(CheckRelationLockedByMe(rel, lockmode, true));
 
 	rte->rtekind = RTE_RELATION;

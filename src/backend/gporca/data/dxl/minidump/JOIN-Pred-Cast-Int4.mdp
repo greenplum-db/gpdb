@@ -347,7 +347,7 @@
       <dxl:ColumnStatistics Mdid="1.440380.1.1.2" Name="xmin" Width="4.000000" NullFreq="0.000000"/>
       <dxl:RelationStatistics Mdid="2.440406.1.1" Name="bbigint" Rows="101.000000"/>
       <dxl:RelationStatistics Mdid="2.440380.1.1" Name="aint" Rows="100.000000"/>
-      <dxl:Relation Mdid="0.440406.1.1" Name="bbigint" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,1">
+      <dxl:Relation Mdid="0.440406.1.1" Name="bbigint" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,1">
         <dxl:Columns>
           <dxl:Column Name="i" Attno="1" Mdid="0.20.1.0" Nullable="true" ColWidth="8">
             <dxl:DefaultValue/>
@@ -378,7 +378,7 @@
         <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.440380.1.1" Name="aint" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,1">
+      <dxl:Relation Mdid="0.440380.1.1" Name="aint" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,1">
         <dxl:Columns>
           <dxl:Column Name="i" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -453,7 +453,7 @@
         </dxl:Comparison>
       </dxl:LogicalJoin>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="10">
+    <dxl:Plan Id="0" SpaceSize="11">
       <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="862.022378" Rows="1.000000" Width="12"/>

@@ -324,10 +324,6 @@ select attname, attstorage from pg_attribute where attrelid='addcol1'::regclass 
 alter table addcol1 alter column f_renamed set storage extended;
 select attname, attstorage from pg_attribute where attrelid='addcol1'::regclass and attname='f_renamed';
 
--- cannot set reloption appendonly
-alter table addcol1 set (appendonly=true, compresslevel=5, fillfactor=50);
-alter table addcol1 reset (appendonly, compresslevel, fillfactor);
-
 -- test some aocs partition table altering
 create table alter_aocs_part_table (a int, b int) with (appendonly=true, orientation=column) distributed by (a)
     partition by range(b) (start (1) end (5) exclusive every (1), default partition foo);
@@ -472,3 +468,17 @@ RESET gp_default_storage_options;
 ALTER TABLE aocs_alter_add_col_no_compress ADD COLUMN d int;
 \d+ aocs_alter_add_col_no_compress 
 DROP TABLE aocs_alter_add_col_no_compress;
+
+-- test case: ensure reorganize keep default compresstype, compresslevel and blocksize table options
+CREATE TABLE aocs_alter_add_col_reorganize(a int) WITH (appendonly=true, orientation=column, compresstype=rle_type, compresslevel=4, blocksize=65536);
+ALTER TABLE aocs_alter_add_col_reorganize SET WITH (reorganize=true);
+SET gp_default_storage_options ='compresstype=zlib, compresslevel=2';
+-- use statement encoding
+ALTER TABLE aocs_alter_add_col_reorganize ADD COLUMN b int ENCODING(compresstype=zlib, compresslevel=3, blocksize=16384);
+-- use table setting
+ALTER TABLE aocs_alter_add_col_reorganize ADD COLUMN c int;
+RESET gp_default_storage_options;
+-- use table setting
+ALTER TABLE aocs_alter_add_col_reorganize ADD COLUMN d int;
+\d+ aocs_alter_add_col_reorganize
+DROP TABLE aocs_alter_add_col_reorganize;

@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
-<topic id="topic1"><title id="pb141029">createuser</title><body><p id="client_util_desc">Creates a new database role.</p><section id="section2"><title>Synopsis</title><codeblock id="client_util_synopsis"><b>createuser</b> [<varname>connection-option</varname> ...] [<varname>role_attribute</varname> ...] [<b>-e</b>] <varname>role_name</varname>
+<topic id="topic1"><title id="pb141029">createuser</title><body><p id="client_util_desc">Creates a new database role.</p><section id="section2"><title>Synopsis</title><codeblock id="client_util_synopsis">createuser [&lt;connection-option> ...] [&lt;role_attribute> ...] [-e] &lt;role_name>
 
-<b>createuser</b> <b>-? | --help</b> 
+createuser -? | --help 
 
-<b>createuser</b> <b>-V | --version</b></codeblock></section><section id="section3"><title>Description</title><p><codeph>createuser</codeph> creates a new Greenplum Database role. You must be a
+createuser -V | --version</codeblock></section><section id="section3"><title>Description</title><p><codeph>createuser</codeph> creates a new Greenplum Database role. You must be a
                                 superuser or have the <codeph>CREATEROLE</codeph> privilege to
                                 create new roles. You must connect to the database as a superuser to
                                 create new superusers.</p><p>Superusers can bypass all access permission checks within the database,
@@ -65,19 +65,19 @@ and a password is not available by other means such as a <codeph>.pgpass</codeph
 file, the connection attempt will fail. This option can be useful in
 batch jobs and scripts where no user is present to enter a password.</pd></plentry><plentry><pt>-W | --password</pt><pd>Force a password prompt.</pd></plentry></parml></sectiondiv></section><section id="section6"><title>Examples</title>
   <p>To create a role <codeph>joe</codeph> on the default database
-        server:<codeblock>$ <b>createuser joe</b></codeblock></p><p>To create a role <codeph>joe</codeph> on the default database server with prompting for some
-        additional attributes: </p><codeblock>$ <b>createuser --interactive joe</b>
+        server:<codeblock>$ createuser joe</codeblock></p><p>To create a role <codeph>joe</codeph> on the default database server with prompting for some
+        additional attributes: </p><codeblock>$ createuser --interactive joe
 Shall the new role be a superuser? (y/n) <b>n</b>
 Shall the new role be allowed to create databases? (y/n) <b>n</b>
 Shall the new role be allowed to create more new roles? (y/n) <b>n</b>
 CREATE ROLE</codeblock><p>To create the same role <codeph>joe</codeph> using connection options, with attributes explicitly
-        specified, and taking a look at the underlying command:</p><codeblock><b>createuser -h coordinatorhost -p 54321 -S -D -R -e joe</b>
+        specified, and taking a look at the underlying command:</p><codeblock>createuser -h coordinatorhost -p 54321 -S -D -R -e joe
 CREATE ROLE joe NOSUPERUSER NOCREATEDB NOCREATEROLE INHERIT 
 LOGIN;
 CREATE ROLE</codeblock><p>To create the role <codeph>joe</codeph> as a superuser, and assign password
-          <codeph>admin123</codeph> immediately:</p><codeblock><b>createuser -P -s -e joe</b>
-Enter password for new role: <b>admin123</b>
-Enter it again: <b>admin123</b>
+          <codeph>admin123</codeph> immediately:</p><codeblock>createuser -P -s -e joe
+Enter password for new role: admin123
+Enter it again: admin123
 CREATE ROLE joe PASSWORD 'admin123' SUPERUSER CREATEDB 
 CREATEROLE INHERIT LOGIN;
 CREATE ROLE</codeblock><p>In the above example, the new password is not actually echoed when typed, but we show what was
@@ -85,7 +85,7 @@ CREATE ROLE</codeblock><p>In the above example, the new password is not actually
         the <codeph>-e</codeph> option is used.</p></section><section id="section7">
                         <title>See Also</title>
                         <p><ph otherprops="op-print"><codeph>CREATE ROLE</codeph> in the
-            <i>Greenplum Database Reference Guide</i></ph><ph><codeph><xref
-              href="../../ref_guide/sql_commands/CREATE_ROLE.xml#topic1"/></codeph>, <codeph><xref
-              href="dropuser.xml#topic1"/></codeph></ph></p>
+            <i>Greenplum Database Reference Guide</i></ph><ph><xref
+            href="../../ref_guide/sql_commands/CREATE_ROLE.xml#topic1"/>, <xref
+            href="dropuser.xml#topic1"/></ph></p>
                 </section></body></topic>

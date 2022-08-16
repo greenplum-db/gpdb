@@ -152,7 +152,9 @@ static TupleTableSlot *ExecHashJoinGetSavedTuple(HashJoinState *hjstate,
 												 uint32 *hashvalue,
 												 TupleTableSlot *tupleSlot);
 static bool ExecHashJoinNewBatch(HashJoinState *hjstate);
+#ifdef USE_ASSERT_CHECKING
 static bool isNotDistinctJoin(List *qualList);
+#endif
 static bool ExecParallelHashJoinNewBatch(HashJoinState *hjstate);
 static void ExecParallelHashJoinPartitionOuter(HashJoinState *node);
 
@@ -1736,6 +1738,7 @@ ReleaseHashTable(HashJoinState *node)
 
 }
 
+#ifdef USE_ASSERT_CHECKING
 /* Is this an IS-NOT-DISTINCT-join qual list (as opposed the an equijoin)?
  *
  * XXX We perform an abbreviated test based on the assumptions that 
@@ -1762,6 +1765,7 @@ isNotDistinctJoin(List *qualList)
 	}
 	return false;
 }
+#endif
 
 static void
 ExecEagerFreeHashJoin(HashJoinState *node)
@@ -1800,9 +1804,7 @@ SpillCurrentBatch(HashJoinState *node)
 
 	for (i = 0; i < hashtable->nbuckets; i++)
 	{
-		/* GPDB_12_MERGE_FIXME: this only looks at 'unshared'. I think this is
-		 * broken for parallel hashjoins
-		 */
+		/* don't need to consider parallel hashjoins which use shared tuplestores instead of raw files */
 		tuple = hashtable->buckets.unshared[i];
 
 		while (tuple != NULL)
@@ -1874,7 +1876,7 @@ ExecHashJoinReloadHashTable(HashJoinState *hjstate)
 		{
 			Assert(hashtable->stats);
 			hashtable->stats->batchstats[curbatch].innerfilesize =
-				BufFileSize(hashtable->innerBatchFile[curbatch]);
+				BufFileGetSize(hashtable->innerBatchFile[curbatch]);
 		}
 
 		SIMPLE_FAULT_INJECTOR("workfile_hashjoin_failure");

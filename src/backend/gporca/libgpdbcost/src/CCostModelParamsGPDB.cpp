@@ -183,6 +183,9 @@ const CDouble CCostModelParamsGPDB::DBitmapScanRebindCost(0.06);
 // see CCostModelGPDB::CostHashJoin() for why this is needed
 const CDouble CCostModelParamsGPDB::DPenalizeHJSkewUpperLimit(10.0);
 
+// default scalar func cost
+const CDouble CCostModelParamsGPDB::DScalarFuncCost(1.0e-04);
+
 #define GPOPT_COSTPARAM_NAME_MAX_LENGTH 80
 
 // parameter names in the same order of param enumeration
@@ -238,6 +241,7 @@ const CHAR rgszCostParamNames[CCostModelParamsGPDB::EcpSentinel]
 								 "BitmapPageCostLargerNDV",
 								 "BitmapPageCostSmallerNDV",
 								 "BitmapNDVThreshold",
+								 "ScalarFuncCostUnit",
 };
 
 //---------------------------------------------------------------------------
@@ -428,6 +432,10 @@ CCostModelParamsGPDB::CCostModelParamsGPDB(CMemoryPool *mp) : m_mp(mp)
 	m_rgpcp[EcpPenalizeHJSkewUpperLimit] = GPOS_NEW(mp) SCostParam(
 		EcpPenalizeHJSkewUpperLimit, DPenalizeHJSkewUpperLimit,
 		DPenalizeHJSkewUpperLimit - 1.0, DPenalizeHJSkewUpperLimit + 1.0);
+
+	m_rgpcp[EcpScalarFuncCost] =
+		GPOS_NEW(mp) SCostParam(EcpScalarFuncCost, DScalarFuncCost,
+								DScalarFuncCost - 0.0, DScalarFuncCost + 0.0);
 }
 
 
@@ -571,12 +579,16 @@ CCostModelParamsGPDB::Equals(ICostModelParams *pcm) const
 {
 	CCostModelParamsGPDB *pcmgOther = dynamic_cast<CCostModelParamsGPDB *>(pcm);
 	if (nullptr == pcmgOther)
+	{
 		return false;
+	}
 
 	for (ULONG ul = 0U; ul < GPOS_ARRAY_SIZE(m_rgpcp); ul++)
 	{
 		if (!m_rgpcp[ul]->Equals(pcmgOther->m_rgpcp[ul]))
+		{
 			return false;
+		}
 	}
 
 	return true;

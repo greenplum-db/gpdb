@@ -1,19 +1,19 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
-<topic id="topic1"><title id="ax20941">ALTER SEQUENCE</title><body><p id="sql_command_desc">Changes the definition of a sequence generator.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">ALTER SEQUENCE [ IF EXISTS ] <varname>name</varname> [INCREMENT [ BY ] <varname>increment</varname>] 
-     [MINVALUE <varname>minvalue</varname> | NO MINVALUE] 
-     [MAXVALUE <varname>maxvalue</varname> | NO MAXVALUE] 
-     [START [ WITH ] <varname>start</varname> ]
-     [RESTART [ [ WITH ] <varname>restart</varname>] ]
-     [CACHE <varname>cache</varname>] [[ NO ] CYCLE] 
-     [OWNED BY {<varname>table.column</varname> | NONE}]
+<topic id="topic1"><title id="ax20941">ALTER SEQUENCE</title><body><p id="sql_command_desc">Changes the definition of a sequence generator.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">ALTER SEQUENCE [ IF EXISTS ] &lt;name> [INCREMENT [ BY ] &lt;increment>] 
+     [MINVALUE &lt;minvalue> | NO MINVALUE] 
+     [MAXVALUE &lt;maxvalue> | NO MAXVALUE] 
+     [START [ WITH ] &lt;start> ]
+     [RESTART [ [ WITH ] &lt;restart>] ]
+     [CACHE &lt;cache>] [[ NO ] CYCLE] 
+     [OWNED BY {&lt;table.column> | NONE}]
 
-ALTER SEQUENCE [ IF EXISTS ] <varname>name</varname> OWNER TO <varname>new_owner</varname>
+ALTER SEQUENCE [ IF EXISTS ] &lt;name> OWNER TO &lt;new_owner>
 
-ALTER SEQUENCE [ IF EXISTS ] <varname>name</varname> RENAME TO <varname>new_name</varname>
+ALTER SEQUENCE [ IF EXISTS ] &lt;name> RENAME TO &lt;new_name>
 
-ALTER SEQUENCE [ IF EXISTS ] <varname>name</varname> SET SCHEMA <varname>new_schema</varname></codeblock></section><section id="section3"><title>Description</title><p><codeph>ALTER SEQUENCE</codeph> changes the parameters of an existing
+ALTER SEQUENCE [ IF EXISTS ] &lt;name> SET SCHEMA &lt;new_schema></codeblock></section><section id="section3"><title>Description</title><p><codeph>ALTER SEQUENCE</codeph> changes the parameters of an existing
 sequence generator. Any parameters not specifically set in the <codeph>ALTER
 SEQUENCE</codeph> command retain their prior settings.</p><p>You must own the sequence to use <codeph>ALTER SEQUENCE</codeph>.
 To change a sequence's schema, you must also have <codeph>CREATE</codeph>
@@ -91,6 +91,6 @@ will be affected immediately.</p><p>For historical reasons, <codeph>ALTER TABLE<
         the forms shown above.</p></section><section id="section6"><title>Examples</title><p>Restart a sequence called <codeph>serial</codeph> at <codeph>105</codeph>:</p><codeblock>ALTER SEQUENCE serial RESTART WITH 105;</codeblock></section><section id="section7"><title>Compatibility</title><p><codeph>ALTER SEQUENCE</codeph> conforms to the SQL standard, except for the <codeph>START
           WITH</codeph>, <codeph>OWNED BY</codeph>, <codeph>OWNER TO</codeph>, <codeph>RENAME
           TO</codeph>, and <codeph>SET SCHEMA</codeph> clauses, which are Greenplum Database
-        extensions.</p></section><section id="section8"><title>See Also</title><p><codeph><xref href="./CREATE_SEQUENCE.xml#topic1" type="topic" format="dita"/></codeph>,
-            <codeph><xref href="./DROP_SEQUENCE.xml#topic1" type="topic" format="dita"/></codeph>,
-            <codeph><xref href="./ALTER_TABLE.xml#topic1" type="topic" format="dita"/></codeph></p></section></body></topic>
+        extensions.</p></section><section id="section8"><title>See Also</title><p><xref href="./CREATE_SEQUENCE.xml#topic1" type="topic" format="dita"/>,
+            <xref href="./DROP_SEQUENCE.xml#topic1" type="topic" format="dita"/>,
+            <xref href="./ALTER_TABLE.xml#topic1" type="topic" format="dita"/></p></section></body></topic>

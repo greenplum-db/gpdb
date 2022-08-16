@@ -1724,48 +1724,6 @@ AcquireExecutorLocks(List *stmt_list, bool acquire)
 			 * fail if it's been dropped entirely --- we'll just transiently
 			 * acquire a non-conflicting lock.
 			 */
-/* GPDB_12_MERGE_FIXME: Where does this GPDB-specific logic belong now? */
-#if 0
-			if (list_member_int(plannedstmt->resultRelations, rt_index))
-			{
-				/*
-				 * RowExclusiveLock is acquired in PostgreSQL here.  Greenplum
-				 * acquires ExclusiveLock to avoid distributed deadlock due to
-				 * concurrent UPDATE/DELETE on the same table.  This is in
-				 * parity with CdbTryOpenRelation(). If it is heap table and
-				 * the GDD is enabled, we could acquire RowExclusiveLock here.
-				 */
-				if ((plannedstmt->commandType == CMD_UPDATE ||
-					 plannedstmt->commandType == CMD_DELETE ||
-					 IsOnConflictUpdate(plannedstmt)) &&
-					CondUpgradeRelLock(rte->relid))
-					lockmode = ExclusiveLock;
-				else
-					lockmode = RowExclusiveLock;
-			}
-			else
-			{
-				/*
-				 * Greenplum specific behavior:
-				 * The implementation of select statement with locking clause
-				 * (for update | no key update | share | key share) in postgres
-				 * is to hold RowShareLock on tables during parsing stage, and
-				 * generate a LockRows plan node for executor to lock the tuples.
-				 * It is not easy to lock tuples in Greenplum database, since
-				 * tuples may be fetched through motion nodes.
-				 *
-				 * But when Global Deadlock Detector is enabled, and the select
-				 * statement with locking clause contains only one table, we are
-				 * sure that there are no motions. For such simple cases, we could
-				 * make the behavior just the same as Postgres.
-				 */
-				rc = get_plan_rowmark(plannedstmt->rowMarks, rt_index);
-				if (rc != NULL)
-					lockmode = rc->canOptSelectLockingClause ? RowShareLock : ExclusiveLock;
-				else
-					lockmode = AccessShareLock;
-			}
-#endif
 			if (acquire)
 				LockRelationOid(rte->relid, rte->rellockmode);
 			else
@@ -1811,7 +1769,6 @@ static void
 ScanQueryForLocks(Query *parsetree, bool acquire)
 {
 	ListCell   *lc;
-	int			rt_index;
 
 	/* Shouldn't get called on utility commands */
 	Assert(parsetree->commandType != CMD_UTILITY);
@@ -1819,63 +1776,17 @@ ScanQueryForLocks(Query *parsetree, bool acquire)
 	/*
 	 * First, process RTEs of the current query level.
 	 */
-	rt_index = 0;
 	foreach(lc, parsetree->rtable)
 	{
 		RangeTblEntry *rte = (RangeTblEntry *) lfirst(lc);
-		LOCKMODE	lockmode;
 
-		rt_index++;
 		switch (rte->rtekind)
 		{
 			case RTE_RELATION:
-				/* Acquire or release the appropriate type of lock */
-				if (rt_index == parsetree->resultRelation)
-				{
-					/*
-					 * RowExclusiveLock is acquired in PostgreSQL here.  Greenplum
-					 * acquires ExclusiveLock to avoid distributed deadlock due to
-					 * concurrent UPDATE/DELETE on the same table.  This is in
-					 * parity with CdbTryOpenRelation(). If it is heap table and
-					 * the GDD is enabled, we could acquire RowExclusiveLock here.
-					 */
-					if ((parsetree->commandType == CMD_UPDATE ||
-						 parsetree->commandType == CMD_DELETE ||
-						 (parsetree->onConflict &&
-						  parsetree->onConflict->action == ONCONFLICT_UPDATE)) &&
-						CondUpgradeRelLock(rte->relid))
-						lockmode = ExclusiveLock;
-					else
-						lockmode = RowExclusiveLock;
-				}
-				else
-				{
-					/*
-					 * Greenplum specific behavior:
-					 * The implementation of select statement with locking clause
-					 * (for update | no key update | share | key share) in postgres
-					 * is to hold RowShareLock on tables during parsing stage, and
-					 * generate a LockRows plan node for executor to lock the tuples.
-					 * It is not easy to lock tuples in Greenplum database, since
-					 * tuples may be fetched through motion nodes.
-					 *
-					 * But when Global Deadlock Detector is enabled, and the select
-					 * statement with locking clause contains only one table, we are
-					 * sure that there are no motions. For such simple cases, we could
-					 * make the behavior just the same as Postgres.
-					 */
-					RowMarkClause *rc;
-
-					rc = get_parse_rowmark(parsetree, rt_index);
-					if (rc != NULL)
-						lockmode = parsetree->canOptSelectLockingClause ? RowShareLock : ExclusiveLock;
-					else
-						lockmode = AccessShareLock;
-				}
 				if (acquire)
-					LockRelationOid(rte->relid, lockmode);
+					LockRelationOid(rte->relid, rte->rellockmode);
 				else
-					UnlockRelationOid(rte->relid, lockmode);
+					UnlockRelationOid(rte->relid, rte->rellockmode);
 				break;
 
 			case RTE_SUBQUERY:

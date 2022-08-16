@@ -27,15 +27,15 @@ extern "C" {
 #include "gpos/types.h"
 
 // fwd declarations
-typedef struct SysScanDescData *SysScanDesc;
+using SysScanDesc = struct SysScanDescData *;
 struct TypeCacheEntry;
-typedef struct NumericData *Numeric;
-typedef struct HeapTupleData *HeapTuple;
-typedef struct RelationData *Relation;
+using Numeric = struct NumericData *;
+using HeapTuple = struct HeapTupleData *;
+using Relation = struct RelationData *;
 struct Value;
-typedef struct TupleDescData *TupleDesc;
+using TupleDesc = struct TupleDescData *;
 struct Query;
-typedef struct ScanKeyData *ScanKey;
+using ScanKey = struct ScanKeyData *;
 struct Bitmapset;
 struct Plan;
 struct ListCell;
@@ -46,7 +46,7 @@ struct ForeignScan;
 struct Uri;
 struct CdbComponentDatabases;
 struct StringInfoData;
-typedef StringInfoData *StringInfo;
+using StringInfo = StringInfoData *;
 struct LogicalIndexes;
 struct ParseState;
 struct DefElem;
@@ -685,9 +685,6 @@ List *GetMergeJoinOpFamilies(Oid opno);
 // returns the result of evaluating 'expr' as an Expr. Caller keeps ownership of 'expr'
 // and takes ownership of the result
 Expr *EvaluateExpr(Expr *expr, Oid result_type, int32 typmod);
-
-// interpret the value of "With oids" option from a list of defelems
-bool InterpretOidsOption(List *options, bool allowOids);
 
 // extract string value from defelem's value
 char *DefGetString(DefElem *defelem);

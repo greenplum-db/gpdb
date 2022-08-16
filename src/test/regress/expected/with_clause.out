@@ -1,8 +1,6 @@
 drop table if exists with_test1 cascade;
 NOTICE:  table "with_test1" does not exist, skipping
 create table with_test1 (i int, t text, value int) distributed by (i);
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 insert into with_test1 select i%10, 'text' || i%20, i%30 from generate_series(0, 99) i;
 analyze with_test1;
 drop table if exists with_test2 cascade;
@@ -2199,6 +2197,42 @@ WITH RECURSIVE r1 AS (
 )
 SELECT * FROM r1 LIMIT 1;
 ERROR:  joining nested RECURSIVE clauses is not supported
+-- GPDB
+-- Greenplum does not support window functions in recursive part's target list
+-- See issue https://github.com/greenplum-db/gpdb/issues/13299 for details.
+-- Previously the following SQL will PANIC or Assert Fail if compiled with assert.
+create table t_window_ordered_set_agg_rte(a bigint, b bigint, c bigint);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into t_window_ordered_set_agg_rte select i,i,i from generate_series(1, 10)i;
+-- should error out during parse-analyze
+with recursive rcte(x,y) as
+(
+  select a, b from t_window_ordered_set_agg_rte
+  union all
+  select (first_value(c) over (partition by b))::int, a+x
+  from rcte,
+       t_window_ordered_set_agg_rte as t
+  where t.b = x
+)
+select * from rcte limit 10;
+ERROR:  window functions in the target list of a recursive query is not supported in Greenplum
+LINE 5:   select (first_value(c) over (partition by b))::int, a+x
+                  ^
+-- should error out during parse-analyze
+with recursive rcte(x,y) as
+(
+  select a, b from t_window_ordered_set_agg_rte
+  union all
+  select first_value(c) over (partition by b), a+x
+  from rcte,
+       t_window_ordered_set_agg_rte as t
+  where t.b = x
+)
+select * from rcte limit 10;
+ERROR:  window functions in the target list of a recursive query is not supported in Greenplum
+LINE 5:   select first_value(c) over (partition by b), a+x
+                 ^
 -- This used to deadlock, before the IPC between ShareInputScans across
 -- slices was rewritten.
 set gp_cte_sharing=on;

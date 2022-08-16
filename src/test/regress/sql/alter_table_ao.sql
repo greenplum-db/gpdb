@@ -45,10 +45,6 @@ select attname, attstorage from pg_attribute where attrelid='ao1'::regclass and 
 alter table ao1 alter column col3 set storage extended;
 select attname, attstorage from pg_attribute where attrelid='ao1'::regclass and attname='col3';
 
--- cannot set reloption appendonly
-alter table ao1 set (appendonly=true, compresslevel=5, fillfactor=50);
-alter table ao1 reset (appendonly, compresslevel, fillfactor);
-
 ---
 --- check catalog contents after alter table on AO tables 
 ---

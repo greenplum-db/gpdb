@@ -82,7 +82,7 @@ public:
 	}
 };
 // array of index qual info
-typedef CDynamicPtrArray<CIndexQualInfo, CleanupDelete> CIndexQualInfoArray;
+using CIndexQualInfoArray = CDynamicPtrArray<CIndexQualInfo, CleanupDelete>;
 }  // namespace gpdxl
 
 #endif	// !GPDXL_CIndexQualInfo_H

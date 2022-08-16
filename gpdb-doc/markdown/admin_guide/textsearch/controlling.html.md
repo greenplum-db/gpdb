@@ -276,5 +276,5 @@ FROM (SELECT id, body, q, ts_rank_cd(ti, q) AS rank
       LIMIT 10) AS foo;
 ```
 
-**Parent topic:**[Using Full Text Search](../textsearch/full-text-search.html)
+**Parent topic:** [Using Full Text Search](../textsearch/full-text-search.html)
 

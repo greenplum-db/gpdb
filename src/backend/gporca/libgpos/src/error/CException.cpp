@@ -17,8 +17,8 @@
 
 using namespace gpos;
 
-const CHAR *CException::m_severity[] = {"INVALID", "PANIC",	 "FATAL", "ERROR",
-										"WARNING", "NOTICE", "TRACE"};
+const CHAR *CException::m_severity[] = {"INVALID", "ERROR", "WARNING", "NOTICE",
+										"TRACE"};
 
 
 // invalid exception
@@ -52,19 +52,6 @@ CException::CException(ULONG major, ULONG minor, const CHAR *filename,
 	  m_filename(const_cast<CHAR *>(filename)),
 	  m_line(line)
 {
-	m_severity_level = CException::ExsevSentinel;
-	m_sql_state = GetSQLState(major, minor);
-}
-
-// ctor
-CException::CException(ULONG major, ULONG minor, const CHAR *filename,
-					   ULONG line, ULONG severity_level)
-	: m_major(major),
-	  m_minor(minor),
-	  m_filename(const_cast<CHAR *>(filename)),
-	  m_line(line),
-	  m_severity_level(severity_level)
-{
 	m_sql_state = GetSQLState(major, minor);
 }
 
@@ -80,7 +67,6 @@ CException::CException(ULONG major, ULONG minor, const CHAR *filename,
 CException::CException(ULONG major, ULONG minor)
 	: m_major(major), m_minor(minor), m_filename(nullptr), m_line(0)
 {
-	m_severity_level = CException::ExsevSentinel;
 	m_sql_state = GetSQLState(major, minor);
 }
 
@@ -111,33 +97,6 @@ CException::Raise(const CHAR *filename, ULONG line, ULONG major, ULONG minor,
 
 		VA_LIST va_list;
 		VA_START(va_list, minor);
-
-		err_ctxt->Record(exc, va_list);
-
-		VA_END(va_list);
-
-		err_ctxt->Serialize();
-	}
-
-	Raise(exc);
-}
-
-
-void
-CException::Raise(const CHAR *filename, ULONG line, ULONG major, ULONG minor,
-				  ULONG severity_level...)
-{
-	// manufacture actual exception object
-	CException exc(major, minor, filename, line, severity_level);
-
-	// during bootstrap there's no context object otherwise, record
-	// all details in the context object
-	if (nullptr != ITask::Self())
-	{
-		CErrorContext *err_ctxt = CTask::Self()->ConvertErrCtxt();
-
-		VA_LIST va_list;
-		VA_START(va_list, severity_level);
 
 		err_ctxt->Record(exc, va_list);
 

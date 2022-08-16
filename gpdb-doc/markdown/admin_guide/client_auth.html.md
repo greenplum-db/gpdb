@@ -15,7 +15,7 @@ You can configure Linux client applications to connect to a Greenplum Database s
 -   **[Configuring Kerberos For Windows Clients](kerberos-win-client.html)**  
 You can configure Microsoft Windows client applications to connect to a Greenplum Database system that is configured to authenticate with Kerberos.
 
-**Parent topic:**[Managing Greenplum Database Access](partIII.html)
+**Parent topic:** [Managing Greenplum Database Access](partIII.html)
 
 ## <a id="topic2"></a>Allowing Connections to Greenplum Database 
 

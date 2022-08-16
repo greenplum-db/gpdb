@@ -297,6 +297,33 @@ typedef enum GpVars_Interconnect_Type
 
 extern int Gp_interconnect_type;
 
+/*
+ * We support different strategies for address binding for sockets used for
+ * motion communication over the interconnect.
+ *
+ * One approach is to use an unicast address, specifically the segment's
+ * gp_segment_configuration.address field to perform the address binding. This
+ * has the benefits of reducing port usage on a segment host and ensures that
+ * the NIC backed by the address field is the only one used for communication
+ * (and not an externally facing slower NIC, like the ones that typically back
+ * the gp_segment_configuration.hostname field)
+ *
+ * In some cases, inter-segment communication using the unicast address
+ * mentioned above, may not be possible. One such example is if the source
+ * segment's address field and the destination segment's address field are on
+ * different subnets and/or existing routing rules don't allow for such
+ * communication. In these cases, using a wildcard address for address binding
+ * is the only available fallback, enabling the use of any network interface
+ * compliant with routing rules.
+ */
+typedef enum GpVars_Interconnect_Address_Type
+{
+	INTERCONNECT_ADDRESS_TYPE_UNICAST = 0,
+	INTERCONNECT_ADDRESS_TYPE_WILDCARD
+} GpVars_Interconnect_Address_Type;
+
+extern int Gp_interconnect_address_type;
+
 extern char *gp_interconnect_proxy_addresses;
 
 typedef enum GpVars_Interconnect_Method
@@ -655,6 +682,9 @@ extern int gp_sessionstate_loglevel;
 extern int gp_workfile_bytes_to_checksum;
 
 extern bool coredump_on_memerror;
+
+/* Greenplum resource group query_mem re-calculate on QE */
+extern bool gp_resource_group_enable_recalculate_query_mem;
 
 /*
  * Autostats feature, whether or not to to automatically run ANALYZE after 

@@ -199,8 +199,15 @@ ftsConnectStart(fts_segment_info *ftsInfo)
 	return true;
 }
 
+/*
+ * Check if the primary segment is restarting normally by examing the PQ error message.
+ * It could be that they are in RESET (waiting for the children to exit) or making 
+ * progress in RECOVERY. Note there is no good source of RESET progress indications 
+ * that we could check, so we simply always allow it. Normally RESET should be fast 
+ * and there's a timeout in postmaster to guard against long wait.
+ */
 static void
-checkIfFailedDueToRecoveryInProgress(fts_segment_info *ftsInfo)
+checkIfFailedDueToNormalRestart(fts_segment_info *ftsInfo)
 {
 	if (strstr(PQerrorMessage(ftsInfo->conn), _(POSTMASTER_IN_RECOVERY_MSG)) ||
 		strstr(PQerrorMessage(ftsInfo->conn), _(POSTMASTER_IN_STARTUP_MSG)))
@@ -241,6 +248,7 @@ checkIfFailedDueToRecoveryInProgress(fts_segment_info *ftsInfo)
 		 */
 		if (tmpptr <= ftsInfo->xlogrecptr)
 		{
+			ftsInfo->restart_state = PM_IN_RECOVERY_NOT_MAKING_PROGRESS;
 			elog(LOG, "FTS: detected segment is in recovery mode and not making progress (content=%d) "
 				 "primary dbid=%d, mirror dbid=%d",
 				 ftsInfo->primary_cdbinfo->config->segindex,
@@ -249,7 +257,7 @@ checkIfFailedDueToRecoveryInProgress(fts_segment_info *ftsInfo)
 		}
 		else
 		{
-			ftsInfo->recovery_making_progress = true;
+			ftsInfo->restart_state = PM_IN_RECOVERY_MAKING_PROGRESS;
 			ftsInfo->xlogrecptr = tmpptr;
 			elogif(gp_log_fts >= GPVARS_VERBOSITY_VERBOSE, LOG,
 				   "FTS: detected segment is in recovery mode replayed (%X/%X) (content=%d) "
@@ -260,6 +268,15 @@ checkIfFailedDueToRecoveryInProgress(fts_segment_info *ftsInfo)
 				   ftsInfo->primary_cdbinfo->config->dbid,
 				   ftsInfo->mirror_cdbinfo->config->dbid);
 		}
+	}
+	else if (strstr(PQerrorMessage(ftsInfo->conn), _(POSTMASTER_IN_RESET_MSG)))
+	{
+		ftsInfo->restart_state = PM_IN_RESETTING;
+		elog(LOG, "FTS: detected segment is in RESET state (content=%d) "
+				   "primary dbid=%d, mirror dbid=%d",
+				   ftsInfo->primary_cdbinfo->config->segindex,
+				   ftsInfo->primary_cdbinfo->config->dbid,
+				   ftsInfo->mirror_cdbinfo->config->dbid);
 	}
 }
 
@@ -296,10 +313,11 @@ ftsConnect(fts_context *context)
 			case FTS_SYNCREP_OFF_SEGMENT:
 			case FTS_PROMOTE_SEGMENT:
 				/*
-				 * We always default to false.  If connect fails due to recovery in progress
-				 * this variable will be set based on LSN value in error message.
+				 * We always default to PM_NOT_IN_RESTART.  If connect fails, we then check
+				 * the primary's restarting state, so we can skip promoting mirror if it's in
+				 * PM_IN_RESETTING or PM_IN_RECOVERY_MAKING_PROGRESS.
 				 */
-				ftsInfo->recovery_making_progress = false;
+				ftsInfo->restart_state = PM_NOT_IN_RESTART;
 				if (ftsInfo->conn == NULL)
 				{
 					AssertImply(ftsInfo->retry_count > 0,
@@ -348,7 +366,7 @@ ftsConnect(fts_context *context)
 
 						case PGRES_POLLING_FAILED:
 							ftsInfo->state = nextFailedState(ftsInfo->state);
-							checkIfFailedDueToRecoveryInProgress(ftsInfo);
+							checkIfFailedDueToNormalRestart(ftsInfo);
 							elog(LOG, "FTS: cannot establish libpq connection "
 								 "(content=%d, dbid=%d): %s, retry_count=%d",
 								 ftsInfo->primary_cdbinfo->config->segindex,
@@ -1060,8 +1078,19 @@ processResponse(fts_context *context)
 			case FTS_PROBE_FAILED:
 				/* Primary is down */
 
-				/* If primary is in recovery, do not mark it down and promote mirror */
-				if (ftsInfo->recovery_making_progress)
+				/* If primary is in resetting or making progress in recovery, do not mark it down and promote mirror */
+				if (ftsInfo->restart_state == PM_IN_RESETTING)
+				{
+					Assert(strstr(PQerrorMessage(ftsInfo->conn), _(POSTMASTER_IN_RESET_MSG)));
+					elogif(gp_log_fts >= GPVARS_VERBOSITY_VERBOSE, LOG,
+						 "FTS: detected segment is in resetting mode "
+						 "(content=%d) primary dbid=%d, mirror dbid=%d",
+						 primary->config->segindex, primary->config->dbid, mirror->config->dbid);
+
+					ftsInfo->state = FTS_RESPONSE_PROCESSED;
+					break;
+				}
+				else if (ftsInfo->restart_state == PM_IN_RECOVERY_MAKING_PROGRESS)
 				{
 					Assert(strstr(PQerrorMessage(ftsInfo->conn), _(POSTMASTER_IN_RECOVERY_MSG)) ||
 						   strstr(PQerrorMessage(ftsInfo->conn), _(POSTMASTER_IN_STARTUP_MSG)));
@@ -1235,7 +1264,7 @@ FtsWalRepInitProbeContext(CdbComponentDatabases *cdbs, fts_context *context)
 		ftsInfo->result.isRoleMirror = false;
 		ftsInfo->result.dbid = primary->config->dbid;
 		ftsInfo->state = FTS_PROBE_SEGMENT;
-		ftsInfo->recovery_making_progress = false;
+		ftsInfo->restart_state = PM_NOT_IN_RESTART;
 		ftsInfo->xlogrecptr = InvalidXLogRecPtr;
 
 		ftsInfo->primary_cdbinfo = primary;

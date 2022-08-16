@@ -345,17 +345,17 @@ SELECT * FROM polygon_tbl WHERE f1 ~ '((1,1),(2,2),(2,1))'::polygon
 EXPLAIN (COSTS OFF)
 SELECT * FROM circle_tbl WHERE f1 && circle(point(1,-2), 1)
     ORDER BY area(f1);
-                             QUERY PLAN                             
---------------------------------------------------------------------
+                          QUERY PLAN                          
+--------------------------------------------------------------
  Result
-   ->  Sort
-         Sort Key: (area(f1))
-         ->  Result
-               ->  Gather Motion 3:1  (slice1; segments: 3)
-                     ->  Index Scan using gcircleind on circle_tbl
-                           Index Cond: (f1 && '<(1,-2),1>'::circle)
-                           Filter: (f1 && '<(1,-2),1>'::circle)
- Optimizer: Pivotal Optimizer (GPORCA) version 2.68.0
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: (area(f1))
+         ->  Sort
+               Sort Key: (area(f1))
+               ->  Index Scan using gcircleind on circle_tbl
+                     Index Cond: (f1 && '<(1,-2),1>'::circle)
+                     Filter: (f1 && '<(1,-2),1>'::circle)
+ Optimizer: Pivotal Optimizer (GPORCA)
 (9 rows)
 
 SELECT * FROM circle_tbl WHERE f1 && circle(point(1,-2), 1)

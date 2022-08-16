@@ -34,5 +34,5 @@ gpfdist -p 8081 -d /var/data/staging -l /home/gpadmin/log &
 -   **[Example 10—Readable and Writable External Tables with XML Transformations](../external/g-example-10-readable-and-writable-external-tables-with-xml-transformations.html)**  
 
 
-**Parent topic:**[Defining External Tables](../external/g-external-tables.html)
+**Parent topic:** [Defining External Tables](../external/g-external-tables.html)
 

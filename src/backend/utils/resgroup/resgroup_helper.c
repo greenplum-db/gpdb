@@ -237,8 +237,6 @@ pg_resgroup_get_status(PG_FUNCTION_ARGS)
 			int ctxsize = sizeof(ResGroupStatCtx) +
 				sizeof(ResGroupStat) * (MaxResourceGroups - 1);
 
-			(void) inGroupId;
-
 			funcctx->user_fctx = palloc(ctxsize);
 			ctx = (ResGroupStatCtx *) funcctx->user_fctx;
 

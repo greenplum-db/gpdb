@@ -1090,6 +1090,7 @@
                             <dxl:ConstValue TypeMdid="0.19.1.0" Value="cGdfY2F0YWxvZwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA&#xA;AAAAAAAAAAAAAAAAAAAAAAAAAA=="/>
                           </dxl:Comparison>
                         </dxl:IndexCondList>
+	<dxl:Partitions/>
                         <dxl:IndexDescriptor Mdid="0.2684.1.0" IndexName="pg_namespace_nspname_index"/>
                         <dxl:TableDescriptor Mdid="0.2615.1.1" TableName="pg_namespace">
                           <dxl:Columns>
@@ -1191,6 +1192,7 @@
                           <dxl:ConstValue TypeMdid="0.19.1.0" Value="dGlkeWNhdAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA&#xA;AAAAAAAAAAAAAAAAAAAAAAAAAA=="/>
                         </dxl:Comparison>
                       </dxl:IndexCondList>
+	<dxl:Partitions/>
                       <dxl:IndexDescriptor Mdid="0.2684.1.0" IndexName="pg_namespace_nspname_index"/>
                       <dxl:TableDescriptor Mdid="0.2615.1.1" TableName="pg_namespace">
                         <dxl:Columns>

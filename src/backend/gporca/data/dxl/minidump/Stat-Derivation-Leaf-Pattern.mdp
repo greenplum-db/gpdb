@@ -241,7 +241,7 @@ AND
         <dxl:SumAgg Mdid="0.0.0.0"/>
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
-      <dxl:Relation Mdid="0.2898.1.0" Name="pg_foreign_data_wrapper" IsTemporary="false" HasOids="true" StorageType="Heap" DistributionPolicy="MasterOnly" Keys="12,5">
+      <dxl:Relation Mdid="0.2898.1.0" Name="pg_foreign_data_wrapper" IsTemporary="false" StorageType="Heap" DistributionPolicy="MasterOnly" Keys="12,5">
         <dxl:Columns>
           <dxl:Column Name="fdwname" Attno="1" Mdid="0.19.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -290,7 +290,7 @@ AND
         <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.2898.1.1" Name="pg_foreign_data_wrapper" IsTemporary="false" HasOids="true" StorageType="Heap" DistributionPolicy="MasterOnly" Keys="12,5">
+      <dxl:Relation Mdid="0.2898.1.1" Name="pg_foreign_data_wrapper" IsTemporary="false" StorageType="Heap" DistributionPolicy="MasterOnly" Keys="12,5">
         <dxl:Columns>
           <dxl:Column Name="fdwname" Attno="1" Mdid="0.19.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -438,7 +438,7 @@ AND
           <dxl:Opfamily Mdid="0.1989.1.0"/>
         </dxl:Opfamilies>
       </dxl:Index>
-      <dxl:Relation Mdid="0.1260.1.0" Name="pg_authid" IsTemporary="false" HasOids="true" StorageType="Heap" DistributionPolicy="MasterOnly" Keys="24,17">
+      <dxl:Relation Mdid="0.1260.1.0" Name="pg_authid" IsTemporary="false" StorageType="Heap" DistributionPolicy="MasterOnly" Keys="24,17">
         <dxl:Columns>
           <dxl:Column Name="rolname" Attno="1" Mdid="0.19.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -526,7 +526,7 @@ AND
         </dxl:Triggers>
         <dxl:CheckConstraints/>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.1260.1.1" Name="pg_authid" IsTemporary="false" HasOids="true" StorageType="Heap" DistributionPolicy="MasterOnly" Keys="24,17">
+      <dxl:Relation Mdid="0.1260.1.1" Name="pg_authid" IsTemporary="false" StorageType="Heap" DistributionPolicy="MasterOnly" Keys="24,17">
         <dxl:Columns>
           <dxl:Column Name="rolname" Attno="1" Mdid="0.19.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -1720,6 +1720,7 @@ AND
                         </dxl:Cast>
                       </dxl:Comparison>
                     </dxl:IndexCondList>
+	<dxl:Partitions/>
                     <dxl:IndexDescriptor Mdid="0.2676.1.0" IndexName="pg_authid_rolname_index"/>
                     <dxl:TableDescriptor Mdid="0.1260.1.1" TableName="pg_authid">
                       <dxl:Columns>
@@ -1822,6 +1823,7 @@ AND
                       <dxl:Ident ColId="18" ColName="oid" TypeMdid="0.26.1.0"/>
                     </dxl:Comparison>
                   </dxl:IndexCondList>
+	<dxl:Partitions/>
                   <dxl:IndexDescriptor Mdid="0.2677.1.0" IndexName="pg_authid_oid_index"/>
                   <dxl:TableDescriptor Mdid="0.1260.1.1" TableName="pg_authid">
                     <dxl:Columns>

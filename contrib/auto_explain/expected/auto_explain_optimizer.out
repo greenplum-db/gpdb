@@ -31,17 +31,15 @@ SET auto_explain.log_timing = FALSE;
 LOG:  statement: SET auto_explain.log_timing = FALSE;
 SET auto_explain.log_verbose = FALSE;
 LOG:  statement: SET auto_explain.log_verbose = FALSE;
--- start_ignore
--- GPDB_12_MERGE_FIXME: Non default collations
--- end_ignore
 SELECT relname FROM pg_class WHERE relname='pg_class';
 LOG:  statement: SELECT relname FROM pg_class WHERE relname='pg_class';
-"Feature not supported: Non-default collation",
+"Feature not supported: Queries on master-only tables",
 LOG:  duration: 0.026 ms  plan:
 Query Text: SELECT relname FROM pg_class WHERE relname='pg_class';
 Index Only Scan using pg_class_relname_nsp_index on pg_class  (cost=0.15..4.17 rows=1 width=64) (actual rows=1 loops=1)
   Index Cond: (relname = 'pg_class'::name)
   Heap Fetches: 0
+Optimizer: Postgres query optimizer
   (slice0)    Executor memory: 105K bytes.
 Memory used:  128000kB
  relname  
@@ -61,6 +59,7 @@ Finalize Aggregate  (cost=0.00..1326086.34 rows=1 width=8) (actual rows=1 loops=
                     ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.02 rows=1001 width=1) (actual rows=1001 loops=1)
                           ->  Seq Scan on t1  (cost=0.00..431.01 rows=334 width=1) (actual rows=340 loops=1)
                     ->  Seq Scan on t2  (cost=0.00..431.01 rows=334 width=1) (actual rows=340 loops=1002)
+Optimizer: Pivotal Optimizer (GPORCA)
   (slice0)    Executor memory: 67K bytes.
   (slice1)    Executor memory: 119K bytes avg x 3 workers, 119K bytes max (seg0).
   (slice2)    Executor memory: 42K bytes avg x 3 workers, 42K bytes max (seg0).
@@ -77,12 +76,9 @@ LOG:  statement: SET auto_explain.log_triggers = FALSE;
 SET auto_explain.log_verbose = TRUE;
 LOG:  statement: SET auto_explain.log_verbose = TRUE;
 -- this select should not dump execution plan
--- start_ignore
--- GPDB_12_MERGE_FIXME: Non default collation
--- end_ignore
 SELECT relname FROM pg_class WHERE relname='pg_class';
 LOG:  statement: SELECT relname FROM pg_class WHERE relname='pg_class';
-"Feature not supported: Non-default collation",
+"Feature not supported: Queries on master-only tables",
  relname  
 ----------
  pg_class
@@ -104,6 +100,7 @@ Finalize Aggregate  (cost=0.00..1326086.34 rows=1 width=8) (actual rows=1 loops=
                     ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.02 rows=1001 width=1) (actual rows=1001 loops=1)
                           ->  Seq Scan on auto_explain_test.t1  (cost=0.00..431.01 rows=334 width=1) (actual rows=340 loops=1)
                     ->  Seq Scan on auto_explain_test.t2  (cost=0.00..431.01 rows=334 width=1) (actual rows=340 loops=1002)
+Optimizer: Pivotal Optimizer (GPORCA)
   (slice0)    Executor memory: 67K bytes.
   (slice1)    Executor memory: 119K bytes avg x 3 workers, 119K bytes max (seg0).
   (slice2)    Executor memory: 42K bytes avg x 3 workers, 42K bytes max (seg0).

@@ -1140,6 +1140,7 @@ transformOnConflictClause(ParseState *pstate,
 	if (onConflictClause->action == ONCONFLICT_UPDATE)
 	{
 		Relation	targetrel = pstate->p_target_relation;
+		RangeTblEntry    *rte = pstate->p_target_rangetblentry;
 
 		/*
 		 * All INSERT expressions have been parsed, get ready for potentially
@@ -1153,9 +1154,14 @@ transformOnConflictClause(ParseState *pstate,
 		 * relation, and no permission checks are required on it.  (We'll
 		 * check the actual target relation, instead.)
 		 */
+		/*
+		 * GPDB spec. The lockmode of actual target relation might be upgraded.
+		 * The pseudo one should follow it to avoid involving another lockmode
+		 * which is not the appropriate.
+		 */
 		exclRte = addRangeTableEntryForRelation(pstate,
 												targetrel,
-												RowExclusiveLock,
+												rte->rellockmode, /* GPDB */
 												makeAlias("excluded", NIL),
 												false, false);
 		exclRte->relkind = RELKIND_COMPOSITE_TYPE;

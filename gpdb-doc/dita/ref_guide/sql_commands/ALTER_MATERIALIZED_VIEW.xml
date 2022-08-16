@@ -7,27 +7,27 @@
     <p id="sql_command_desc">Changes the definition of a materialized view.</p>
     <section id="section2">
       <title>Synopsis</title>
-      <codeblock id="sql_command_synopsis">ALTER MATERIALIZED VIEW [ IF EXISTS ] <varname>name</varname> <varname>action</varname> [, ... ]
-ALTER MATERIALIZED VIEW [ IF EXISTS ] <varname>name</varname>
-    RENAME [ COLUMN ] <varname>column_name</varname> TO <varname>new_column_name</varname>
-ALTER MATERIALIZED VIEW [ IF EXISTS ] <varname>name</varname>
-    RENAME TO <varname>new_name</varname>
-ALTER MATERIALIZED VIEW [ IF EXISTS ] <varname>name</varname>
-    SET SCHEMA <varname>new_schema</varname>
-ALTER MATERIALIZED VIEW ALL IN TABLESPACE <varname>name</varname> [ OWNED BY <varname>role_name</varname> [, ... ] ]
-    SET TABLESPACE <varname>new_tablespace</varname> [ NOWAIT ]
+      <codeblock id="sql_command_synopsis">ALTER MATERIALIZED VIEW [ IF EXISTS ] &lt;name> &lt;action> [, ... ]
+ALTER MATERIALIZED VIEW [ IF EXISTS ] &lt;name>
+    RENAME [ COLUMN ] &lt;column_name> TO &lt;new_column_name>
+ALTER MATERIALIZED VIEW [ IF EXISTS ] &lt;name>
+    RENAME TO &lt;new_name>
+ALTER MATERIALIZED VIEW [ IF EXISTS ] &lt;name>
+    SET SCHEMA &lt;new_schema>
+ALTER MATERIALIZED VIEW ALL IN TABLESPACE &lt;name> [ OWNED BY &lt;role_name> [, ... ] ]
+    SET TABLESPACE &lt;new_tablespace> [ NOWAIT ]
 
-where <varname>action</varname> is one of:
+where &lt;action> is one of:
 
-    ALTER [ COLUMN ] <varname>column_name</varname> SET STATISTICS <varname>integer</varname>
-    ALTER [ COLUMN ] <varname>column_name</varname> SET ( <varname>attribute_option</varname> = <varname>value</varname> [, ... ] )
-    ALTER [ COLUMN ] <varname>column_name</varname> RESET ( <varname>attribute_option</varname> [, ... ] )
-    ALTER [ COLUMN ] <varname>column_name</varname> SET STORAGE { PLAIN | EXTERNAL | EXTENDED | MAIN }
-    CLUSTER ON <varname>index_name</varname>
+    ALTER [ COLUMN ] &lt;column_name> SET STATISTICS &lt;integer>
+    ALTER [ COLUMN ] &lt;column_name> SET ( &lt;attribute_option> = &lt;value> [, ... ] )
+    ALTER [ COLUMN ] &lt;column_name> RESET ( &lt;attribute_option> [, ... ] )
+    ALTER [ COLUMN ] &lt;column_name> SET STORAGE { PLAIN | EXTERNAL | EXTENDED | MAIN }
+    CLUSTER ON &lt;index_name>
     SET WITHOUT CLUSTER
-    SET ( <varname>storage_paramete</varname>r = <varname>value</varname> [, ... ] )
-    RESET ( <varname>storage_parameter</varname> [, ... ] )
-    OWNER TO <varname>new_owner</varname></codeblock>
+    SET ( &lt;storage_paramete>r = &lt;value> [, ... ] )
+    RESET ( &lt;storage_parameter> [, ... ] )
+    OWNER TO &lt;new_owner></codeblock>
     </section>
     <section id="section3">
       <title>Description</title>
@@ -42,8 +42,8 @@ where <varname>action</varname> is one of:
         ownership of any view anyway.)</p>
       <p>The statement subforms and actions available for <codeph>ALTER MATERIALIZED VIEW</codeph>
         are a subset of those available for <codeph>ALTER TABLE</codeph>, and have the same meaning
-        when used for materialized views. See the descriptions for <codeph><xref
-            href="ALTER_TABLE.xml"/></codeph> for details.</p>
+        when used for materialized views. See the descriptions for <xref
+            href="ALTER_TABLE.xml"/> for details.</p>
     </section>
     <section id="section4">
       <title>Parameters</title>
@@ -86,9 +86,9 @@ where <varname>action</varname> is one of:
     </section>
     <section id="section8">
       <title>See Also</title>
-      <p><codeph><xref href="CREATE_MATERIALIZED_VIEW.xml"/></codeph>, <codeph><xref
-            href="DROP_MATERIALIZED_VIEW.xml"/></codeph>, <codeph><xref
-            href="REFRESH_MATERIALIZED_VIEW.xml"/></codeph></p>
+      <p><xref href="CREATE_MATERIALIZED_VIEW.xml"/>, <xref
+            href="DROP_MATERIALIZED_VIEW.xml"/>, <xref
+            href="REFRESH_MATERIALIZED_VIEW.xml"/></p>
     </section>
   </body>
 </topic>

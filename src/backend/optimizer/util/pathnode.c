@@ -3190,22 +3190,15 @@ create_resultscan_path(PlannerInfo *root, RelOptInfo *rel,
 
 	{
 		char		exec_location;
-
 		exec_location = check_execute_on_functions((Node *) rel->reltarget->exprs);
 
-		if (exec_location == PROEXECLOCATION_COORDINATOR)
-			CdbPathLocus_MakeEntry(&pathnode->locus);
-		else if (exec_location == PROEXECLOCATION_ALL_SEGMENTS)
-		{
-			/* GPDB_12_MERGE_FIXME: I'm not sure if this makes sense. This
-			 * would return multiple rows, one for each segment, but usually
-			 * a "SELECT func()" is expected to return just one row.
-			 */
-			CdbPathLocus_MakeStrewn(&pathnode->locus,
-									getgpsegmentCount());
-		}
-		else
-			CdbPathLocus_MakeGeneral(&pathnode->locus);
+		/*
+		 * A function with EXECUTE ON { COORDINATOR | ALL SEGMENTS } attribute
+		 * must be a set-returning function, a subquery has set-returning 
+		 * functions in tlist can't be pulled up as RTE_RESULT relation.
+		 */
+		Assert(exec_location == PROEXECLOCATION_ANY);
+		CdbPathLocus_MakeGeneral(&pathnode->locus);
 	}
 
 	cost_resultscan(pathnode, root, rel, pathnode->param_info);
@@ -4628,7 +4621,6 @@ create_tup_split_path(PlannerInfo *root,
  * 'having_qual' is the HAVING quals if any
  * 'rollups' is a list of RollupData nodes
  * 'agg_costs' contains cost info about the aggregate functions to be computed
- * 'numGroups' is the estimated total number of groups
  */
 GroupingSetsPath *
 create_groupingsets_path(PlannerInfo *root,
@@ -4638,8 +4630,7 @@ create_groupingsets_path(PlannerInfo *root,
 						 List *having_qual,
 						 AggStrategy aggstrategy,
 						 List *rollups,
-						 const AggClauseCosts *agg_costs,
-						 double numGroups)
+						 const AggClauseCosts *agg_costs)
 {
 	GroupingSetsPath *pathnode = makeNode(GroupingSetsPath);
 	PathTarget *target = rel->reltarget;

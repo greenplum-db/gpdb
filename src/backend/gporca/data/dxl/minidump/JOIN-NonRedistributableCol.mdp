@@ -34,7 +34,7 @@ explain select * from foo, testhstore where foo.b = testhstore.h;
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
       <dxl:RelationStatistics Mdid="2.65536.1.0" Name="testhstore" Rows="1.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.65536.1.0" Name="testhstore" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Random" Keys="7,1" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="0.65536.1.0" Name="testhstore" IsTemporary="false" StorageType="Heap" DistributionPolicy="Random" Keys="7,1" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="h" Attno="1" Mdid="0.32774.1.0" Nullable="true" ColWidth="5">
             <dxl:DefaultValue/>
@@ -81,7 +81,7 @@ explain select * from foo, testhstore where foo.b = testhstore.h;
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
       <dxl:RelationStatistics Mdid="2.65542.1.0" Name="foo" Rows="2.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.65542.1.0" Name="foo" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="0.65542.1.0" Name="foo" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -270,7 +270,7 @@ explain select * from foo, testhstore where foo.b = testhstore.h;
         </dxl:Comparison>
       </dxl:LogicalJoin>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="12">
+    <dxl:Plan Id="0" SpaceSize="17">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="862.000526" Rows="1.000000" Width="14"/>

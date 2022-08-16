@@ -168,7 +168,7 @@ select * from pt;
         </dxl:Opfamilies>
       </dxl:GPDBScalarOp>
       <dxl:RelationStatistics Mdid="2.11482010.1.1" Name="pt" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="0.11482010.1.1" Name="pt" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,9,3" PartitionColumns="2,1" PartitionTypes="r,r">
+      <dxl:Relation Mdid="0.11482010.1.1" Name="pt" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,9,3" PartitionColumns="2,1" PartitionTypes="r,r">
         <dxl:Columns>
           <dxl:Column Name="i" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>

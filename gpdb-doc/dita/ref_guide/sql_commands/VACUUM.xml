@@ -7,12 +7,12 @@
     <p id="sql_command_desc">Garbage-collects and optionally analyzes a database.</p>
     <section id="section2">
       <title>Synopsis</title>
-      <codeblock id="sql_command_synopsis">VACUUM [({ FULL | FREEZE | VERBOSE | ANALYZE } [, ...])] [<varname>table</varname> [(<varname>column</varname> [, ...] )]]
+      <codeblock id="sql_command_synopsis">VACUUM [({ FULL | FREEZE | VERBOSE | ANALYZE } [, ...])] [&lt;table> [(&lt;column> [, ...] )]]
         
-VACUUM [FULL] [FREEZE] [VERBOSE] [<varname>table</varname>]
+VACUUM [FULL] [FREEZE] [VERBOSE] [&lt;table>]
 
 VACUUM [FULL] [FREEZE] [VERBOSE] ANALYZE
-              [<varname>table</varname> [(<varname>column</varname> [, ...] )]]</codeblock>
+              [&lt;table> [(&lt;column> [, ...] )]]</codeblock>
     </section>
     <section id="section3">
       <title>Description</title>
@@ -25,8 +25,8 @@ VACUUM [FULL] [FREEZE] [VERBOSE] ANALYZE
         With a parameter, <codeph>VACUUM</codeph> processes only that table.</p>
       <p><codeph>VACUUM ANALYZE</codeph> performs a <codeph>VACUUM</codeph> and then an
           <codeph>ANALYZE</codeph> for each selected table. This is a handy combination form for
-        routine maintenance scripts. See <codeph><xref href="ANALYZE.xml#topic1"
-          >ANALYZE</xref></codeph> for more details about its processing.</p>
+        routine maintenance scripts. See <xref href="ANALYZE.xml#topic1"
+          >ANALYZE</xref> for more details about its processing.</p>
       <p><codeph>VACUUM</codeph> (without <codeph>FULL</codeph>) marks deleted and obsoleted data in
         tables and indexes for future reuse and reclaims space for re-use only if the space is at
         the end of the table and an exclusive table lock can be easily obtained. Unused space at the
@@ -187,9 +187,7 @@ VACUUM [FULL] [FREEZE] [VERBOSE] ANALYZE
     <section id="section9">
       <title>See Also</title>
       <p>
-        <codeph>
           <xref href="ANALYZE.xml#topic1">ANALYZE</xref>
-        </codeph>
       </p>
     </section>
   </body>

@@ -309,6 +309,9 @@ public:
 	// equality function over xform ids
 	static BOOL FEqualIds(const CHAR *szIdOne, const CHAR *szIdTwo);
 
+	// returns a set containing all xforms related to nl join
+	// caller takes ownership of the returned set
+	static CBitSet *PbsNLJoinXforms(CMemoryPool *mp);
 
 	// returns a set containing all xforms related to index join
 	// caller takes ownership of the returned set

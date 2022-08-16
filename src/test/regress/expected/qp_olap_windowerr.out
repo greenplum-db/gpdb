@@ -1,8 +1,6 @@
 --
 -- STANDARD DATA FOR olap_* TESTS.
 --
---- start_ignore
-set optimizer_trace_fallback = on;
 drop table cf_olap_windowerr_customer;
 ERROR:  table "cf_olap_windowerr_customer" does not exist
 drop table cf_olap_windowerr_vendor;

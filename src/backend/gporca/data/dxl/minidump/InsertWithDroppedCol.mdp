@@ -62,7 +62,7 @@
         <dxl:Commutator Mdid="0.91.1.0"/>
         <dxl:InverseOp Mdid="0.85.1.0"/>
       </dxl:GPDBScalarOp>
-      <dxl:Relation Mdid="0.41076.1.0" Name="altable" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3">
+      <dxl:Relation Mdid="0.41076.1.0" Name="altable" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -160,7 +160,7 @@
         <dxl:Commutator Mdid="0.97.1.0"/>
         <dxl:InverseOp Mdid="0.523.1.0"/>
       </dxl:GPDBScalarOp>
-      <dxl:Relation Mdid="0.41076.1.1" Name="altable" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3">
+      <dxl:Relation Mdid="0.41076.1.1" Name="altable" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>

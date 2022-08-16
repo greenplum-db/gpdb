@@ -84,9 +84,11 @@ extern PGDLLIMPORT volatile sig_atomic_t QueryCancelCleanup; /* GPDB only */
 extern PGDLLIMPORT volatile sig_atomic_t QueryFinishPending;
 extern PGDLLIMPORT volatile sig_atomic_t ProcDiePending;
 extern PGDLLIMPORT volatile sig_atomic_t IdleInTransactionSessionTimeoutPending;
+extern PGDLLIMPORT volatile sig_atomic_t IdleGangTimeoutPending;
 extern PGDLLIMPORT volatile sig_atomic_t ConfigReloadPending;
 
 extern PGDLLIMPORT volatile sig_atomic_t ClientConnectionLost;
+extern PGDLLIMPORT volatile sig_atomic_t CheckClientConnectionPending;
 
 /* these are marked volatile because they are examined by signal handlers: */
 extern PGDLLIMPORT volatile int32 InterruptHoldoffCount;
@@ -95,7 +97,6 @@ extern PGDLLIMPORT volatile int32 CritSectionCount;
 
 /* in tcop/postgres.c */
 extern void ProcessInterrupts(const char* filename, int lineno);
-extern bool CancelRequested();
 
 /* Hook get notified when QueryCancelPending or ProcDiePending is raised */
 typedef void (*cancel_pending_hook_type) (void);
@@ -126,6 +127,15 @@ BackoffBackendTick(void)
 		/* Enough time has passed. Perform backoff. */
 		BackoffBackendTickExpired();
 	}
+}
+
+/*
+ * Whether request on cancel or termination have arrived?
+ */
+static inline bool
+CancelRequested()
+{
+	return InterruptPending && (ProcDiePending || QueryCancelPending);
 }
 
 #ifndef WIN32

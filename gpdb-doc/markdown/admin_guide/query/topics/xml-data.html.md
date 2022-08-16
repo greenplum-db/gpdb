@@ -19,7 +19,7 @@ This section contains the following topics:
 -   [Mapping Tables to XML](#topic_ucn_mkp_xz)
 -   [Using XML Functions and Expressions](#topic_gn4_x3w_mq)
 
-**Parent topic:**[Querying Data](../../query/topics/query.html)
+**Parent topic:** [Querying Data](../../query/topics/query.html)
 
 ## <a id="topic_upc_tcs_fz"></a>Creating XML Values 
 

@@ -30,8 +30,8 @@ class CXMLSerializer;
 class CDXLScalarSortGroupClause;
 
 // arrays of column references
-typedef CDynamicPtrArray<CDXLScalarSortGroupClause, CleanupRelease>
-	CDXLScalarSortGroupClauseArray;
+using CDXLScalarSortGroupClauseArray =
+	CDynamicPtrArray<CDXLScalarSortGroupClause, CleanupRelease>;
 
 //---------------------------------------------------------------------------
 //	@class:

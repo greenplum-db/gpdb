@@ -11,7 +11,7 @@ from gppylib.operations.utils import RemoteOperation
 # TODO: Improve RawRemoteOperation
 """
 Requirements:
-1. Clean Code: Remove python -c "lots of inline stuff".
+1. Clean Code: Remove python3 -c "lots of inline stuff".
 2. Eliminate redundancy: Remove having to create a FooRemote operation to accompany Foo.
 
 Proposal:
@@ -50,7 +50,7 @@ class RawRemoteOperation(Operation):
 class ListRemoteFiles(RawRemoteOperation):
     def __init__(self, path, host):
         self.path, self.host = path, host
-        super(ListRemoteFiles, self).__init__(""" python -c "import os, pickle; print(pickle.dumps(os.listdir('%s')))" """ % path, host)
+        super(ListRemoteFiles, self).__init__(""" python3 -c "import os, sys, pickle; sys.stdout.buffer.write(pickle.dumps(os.listdir('%s')))" """ % path, host)
     def __str__(self):
         return "ListRemoteFiles(%s, %s)" % (self.path, self.host)
 
@@ -65,7 +65,7 @@ class ListFiles(Operation):
 class ListRemoteFilesByPattern(RawRemoteOperation):
     def __init__(self, path, pattern, host):
         self.path, self.pattern, self.host = path, pattern, host
-        super(ListRemoteFilesByPattern, self).__init__(""" python -c "import os, fnmatch, pickle; print(pickle.dumps(fnmatch.filter(os.listdir('%s'), '%s')))" """ % (path, pattern), host)
+        super(ListRemoteFilesByPattern, self).__init__(""" python3 -c "import os, sys, fnmatch, pickle; sys.stdout.buffer.write(pickle.dumps(fnmatch.filter(os.listdir('%s'), '%s')))" """ % (path, pattern), host)
     def __str__(self):
         return "ListRemoteFilesByPattern(%s, %s, %s)" % (self.path, self.pattern, self.host)
 
@@ -80,7 +80,7 @@ class ListFilesByPattern(Operation):
 class CheckRemoteDir(RawRemoteOperation):
     def __init__(self, path, host):
         self.path, self.host = path, host
-        super(CheckRemoteDir, self).__init__(""" python -c "import os, pickle; print(pickle.dumps(os.path.isdir('%s')))" """ % path, host)
+        super(CheckRemoteDir, self).__init__(""" python3 -c "import os, sys, pickle; sys.stdout.buffer.write(pickle.dumps(os.path.isdir('%s')))" """ % path, host)
     def __str__(self):
         return "CheckRemoteDir(%s, %s)" % (self.path, self.host)
 
@@ -95,7 +95,7 @@ class CheckDir(Operation):
 class MakeRemoteDir(RawRemoteOperation):
     def __init__(self, path, host):
         self.path, self.host = path, host
-        super(MakeRemoteDir, self).__init__(""" python -c "import os, pickle; print(pickle.dumps(os.makedirs('%s')))" """ % path, host)
+        super(MakeRemoteDir, self).__init__(""" python3 -c "import os, sys, pickle; sys.stdout.buffer.write(pickle.dumps(os.makedirs('%s')))" """ % path, host)
     def __str__(self):
         return "MakeRemoteDir(%s, %s)" % (self.path, self.host)
 
@@ -114,14 +114,14 @@ class MakeDir(Operation):
 class CheckRemoteFile(RawRemoteOperation):
     def __init__(self, path, host):
         self.path, self.host = path, host
-        super(CheckRemoteFile, self).__init__(""" python -c "import os, pickle; print(pickle.dumps(os.path.isfile('%s')))" """ % path, host)
+        super(CheckRemoteFile, self).__init__(""" python3 -c "import os, sys, pickle; sys.stdout.buffer.write(pickle.dumps(os.path.isfile('%s')))" """ % path, host)
     def __str__(self):
         return "CheckRemoteFile(%s, %s)" % (self.path, self.host)
 
 class CheckRemotePath(RawRemoteOperation):
     def __init__(self, path, host):
         self.path, self.host = path, host
-        super(CheckRemotePath, self).__init__(""" python -c "import os, pickle; print(pickle.dumps(os.path.exists('%s')))" """ % path, host)
+        super(CheckRemotePath, self).__init__(""" python3 -c "import os, sys, pickle; sys.stdout.buffer.write(pickle.dumps(os.path.exists('%s')))" """ % path, host)
     def __str__(self):
         return "CheckRemotePath(%s, %s)" % (self.path, self.host)
 
@@ -136,7 +136,7 @@ class CheckFile(Operation):
 class RemoveRemoteFile(RawRemoteOperation):
     def __init__(self, path, host):
         self.path, self.host = path, host
-        super(RemoveRemoteFile, self).__init__(""" python -c "import os, pickle; print(pickle.dumps(os.remove('%s')))" """ % path, host)
+        super(RemoveRemoteFile, self).__init__(""" python3 -c "import os, sys, pickle; sys.stdout.buffer.write(pickle.dumps(os.remove('%s')))" """ % path, host)
     def __str__(self):
         return "RemoveRemoteFile(%s, %s)" % (self.path, self.host)
 
@@ -151,7 +151,7 @@ class RemoveFile(Operation):
 class RemoveRemoteTree(RawRemoteOperation):
     def __init__(self, path, host):
         self.path, self.host = path, host
-        super(RemoveRemoteTree, self).__init__(""" python -c "import shutil, pickle; print(pickle.dumps(shutil.rmtree('%s')))" """ % path, host)
+        super(RemoveRemoteTree, self).__init__(""" python3 -c "import sys, shutil, pickle; sys.stdout.buffer.write(pickle.dumps(shutil.rmtree('%s')))" """ % path, host)
     def __str__(self):
         return "RemoveRemoteTree(%s, %s)" % (self.path, self.host)
 

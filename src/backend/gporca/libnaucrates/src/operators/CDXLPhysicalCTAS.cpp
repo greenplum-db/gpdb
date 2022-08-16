@@ -36,8 +36,7 @@ CDXLPhysicalCTAS::CDXLPhysicalCTAS(
 	CDXLCtasStorageOptions *dxl_ctas_opt,
 	IMDRelation::Ereldistrpolicy rel_distr_policy,
 	ULongPtrArray *distr_column_pos_array, IMdIdArray *distr_opclasses,
-	BOOL is_temporary, BOOL has_oids,
-	IMDRelation::Erelstoragetype rel_storage_type,
+	BOOL is_temporary, IMDRelation::Erelstoragetype rel_storage_type,
 	ULongPtrArray *src_colids_array, IntPtrArray *vartypemod_array)
 	: CDXLPhysical(mp),
 	  m_mdname_schema(mdname_schema),
@@ -48,7 +47,6 @@ CDXLPhysicalCTAS::CDXLPhysicalCTAS(
 	  m_distr_column_pos_array(distr_column_pos_array),
 	  m_distr_opclasses(distr_opclasses),
 	  m_is_temp_table(is_temporary),
-	  m_has_oids(has_oids),
 	  m_rel_storage_type(rel_storage_type),
 	  m_src_colids_array(src_colids_array),
 	  m_vartypemod_array(vartypemod_array)
@@ -138,8 +136,6 @@ CDXLPhysicalCTAS::SerializeToDXL(CXMLSerializer *xml_serializer,
 								 m_mdname_rel->GetMDName());
 	xml_serializer->AddAttribute(
 		CDXLTokens::GetDXLTokenStr(EdxltokenRelTemporary), m_is_temp_table);
-	xml_serializer->AddAttribute(
-		CDXLTokens::GetDXLTokenStr(EdxltokenRelHasOids), m_has_oids);
 	GPOS_ASSERT(nullptr != IMDRelation::GetStorageTypeStr(m_rel_storage_type));
 	xml_serializer->AddAttribute(
 		CDXLTokens::GetDXLTokenStr(EdxltokenRelStorageType),

@@ -980,10 +980,10 @@ DECLARE c1 CURSOR FOR SELECT stringu1 FROM onek WHERE stringu1 = 'DZAAAA';
                       QUERY PLAN                       
 -------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  Index Only Scan using onek_stringu1 on onek
+   ->  Index Scan using onek_stringu1 on onek
          Index Cond: (stringu1 = 'DZAAAA'::name)
- Optimizer: Postgres query optimizer
-(6 rows)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(4 rows)
 
 DECLARE c1 CURSOR FOR SELECT stringu1 FROM onek WHERE stringu1 = 'DZAAAA';
 FETCH FROM c1;

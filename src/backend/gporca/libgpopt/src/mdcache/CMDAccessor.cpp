@@ -1117,7 +1117,8 @@ CMDAccessor::Pstats(CMemoryPool *mp, IMDId *rel_mdid, CColRefSet *pcrsHist,
 
 	return GPOS_NEW(mp) CStatistics(
 		mp, col_histogram_mapping, colid_width_mapping, rows, fEmptyTable,
-		pmdRelStats->RelPages(), pmdRelStats->RelAllVisible());
+		pmdRelStats->RelPages(), pmdRelStats->RelAllVisible(),
+		1.0 /* default rebinds */, 0 /* default predicates*/);
 }
 
 
@@ -1248,7 +1249,9 @@ CMDAccessor::Serialize(COstream &oos)
 	// Now that we're done iterating and no longer hold the lock,
 	// serialize the entries.
 	for (ul = 0; ul < nentries; ul++)
+	{
 		oos << cacheEntries[ul]->GetStrRepr()->GetBuffer();
+	}
 }
 
 //---------------------------------------------------------------------------

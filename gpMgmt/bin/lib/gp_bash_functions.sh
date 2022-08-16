@@ -37,6 +37,11 @@ GP_UNIQUE_COMMAND=gpstart
 findCmdInPath() {
 		cmdtofind=$1
 
+		CMD=`which $cmdtofind`
+		if [ $? -eq 0 ]; then
+				echo $CMD
+				return
+		fi
 		for pathel in ${CMDPATH[@]}
 				do
 				CMD=$pathel/$cmdtofind
@@ -289,11 +294,9 @@ ERROR_EXIT () {
 ERROR_CHK () {
 	LOG_MSG "[INFO]:-Start Function $FUNCNAME"
 	if [ $# -ne 3 ];then
-		INITIAL_LEVEL=$DEBUG_LEVEL
-		DEBUG_LEVEL=1
-		LOG_MSG "[WARN]:-Incorrect # parameters supplied to $FUNCNAME"
-		DEBUG_LEVEL=$INITIAL_LEVEL
-		return;fi
+		LOG_MSG "[WARN]:-Incorrect # parameters supplied to $FUNCNAME" 1
+		return;
+	fi
 	RETVAL=$1;shift
 	MSG_TXT=$1;shift
 	ACTION=$1 #1=issue warn, 2=fatal
@@ -301,10 +304,7 @@ ERROR_CHK () {
 		LOG_MSG "[INFO]:-Successfully completed $MSG_TXT"
 	else
 		if [ $ACTION -eq 1 ];then
-			INITIAL_LEVEL=$DEBUG_LEVEL
-			DEBUG_LEVEL=1
-			LOG_MSG "[WARN]:-Issue with $MSG_TXT"
-			DEBUG_LEVEL=$INITIAL_LEVEL
+			LOG_MSG "[WARN]:-Issue with $MSG_TXT" 1
 		else
 			LOG_MSG "[INFO]:-End Function $FUNCNAME"
 			ERROR_EXIT "[FATAL]:-Failed to complete $MSG_TXT "
@@ -353,9 +353,9 @@ SED_PG_CONF () {
 				fi
 			else
 				if [ $KEEP_PREV -eq 0 ];then
-					$SED -i'.bak1' -e "s/${SEARCH_TXT}/${SUB_TXT} #${SEARCH_TXT}/" $FILENAME
+					$SED -i'.bak1' -e "s/^[ ]*${SEARCH_TXT}[ ]*=/${SUB_TXT} #${SEARCH_TXT}/" $FILENAME
 				else
-					$SED -i'.bak1' -e "s/${SEARCH_TXT}.*/${SUB_TXT}/" $FILENAME
+					$SED -i'.bak1' -e "s/^[ ]*${SEARCH_TXT}[ ]*=.*/${SUB_TXT}/" $FILENAME
 				fi
 				RETVAL=$?
 				if [ $RETVAL -ne 0 ]; then
@@ -364,7 +364,7 @@ SED_PG_CONF () {
 					LOG_MSG "[INFO]:-Replaced line in $FILENAME"
 					$RM -f ${FILENAME}.bak1
 				fi
-				$SED -i'.bak2' -e "s/^#${SEARCH_TXT}/${SEARCH_TXT}/" $FILENAME
+				$SED -i'.bak2' -e "s/^[ ]*#${SEARCH_TXT}[ ]*=/${SEARCH_TXT}/" $FILENAME
 				RETVAL=$?
 				if [ $RETVAL -ne 0 ]; then
 					ERROR_EXIT "[FATAL]:-Failed to replace #$SEARCH_TXT in $FILENAME"
@@ -395,9 +395,9 @@ SED_PG_CONF () {
 			fi
 		else
 			if [ $KEEP_PREV -eq 0 ];then
-				SED_COMMAND="s/${SEARCH_TXT}/${SUB_TXT} #${SEARCH_TXT}/"
+				SED_COMMAND="s/^[ ]*${SEARCH_TXT}[ ]*=/${SUB_TXT} #${SEARCH_TXT}/"
 			else
-				SED_COMMAND="s/${SEARCH_TXT}.*/${SUB_TXT}/"
+				SED_COMMAND="s/^[ ]*${SEARCH_TXT}[ ]*=.*/${SUB_TXT}/"
 			fi
 			$TRUSTED_SHELL $SED_HOST sed -i'.bak1' -f /dev/stdin "$FILENAME" <<< "$SED_COMMAND" > /dev/null 2>&1
 			if [ $RETVAL -ne 0 ]; then
@@ -407,7 +407,7 @@ SED_PG_CONF () {
 				$TRUSTED_SHELL $SED_HOST "$RM -f ${FILENAME}.bak1" > /dev/null 2>&1
 			fi
 
-			SED_COMMAND="s/^#${SEARCH_TXT}/${SEARCH_TXT}/"
+			SED_COMMAND="s/^[ ]*#${SEARCH_TXT}[ ]*=/${SEARCH_TXT}/"
 			$TRUSTED_SHELL $SED_HOST sed -i'.bak2' -f /dev/stdin "$FILENAME" <<< "$SED_COMMAND" > /dev/null 2>&1
 			if [ $RETVAL -ne 0 ]; then
 				ERROR_EXIT "[FATAL]:-Failed to substitute #${SEARCH_TXT} in $FILENAME on $SED_HOST"

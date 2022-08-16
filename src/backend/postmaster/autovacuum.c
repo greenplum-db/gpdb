@@ -59,6 +59,53 @@
  *
  *-------------------------------------------------------------------------
  */
+
+/*-------------------------------------------------------------------------
+ * GPDB:
+ *
+ * Distributed auto vacuum means to trigger auto vacuum on QD, and QD
+ * manages to dispatch the vacuum request to QEs as distributed transaction.
+ *
+ * In GPDB there is no distributed auto vacuum yet. For now, all auto vaccums
+ * happen on segments locally and do not interact with other auto vaccums.
+ *
+ * GPDB team had a detailed discussion about distributed auto vacuum. We have
+ * no plan for GPDB7, and will determine the approach in future based on
+ * feedback from customer.
+ *
+ * More tech details about distributed auto vacuum for future reference:
+ *
+ * What's the benefits of the distributed auto vacuum? It might be better global
+ * consistency because local auto vacuum happens in different times and different
+ * transactions. We can also expect relieving performance jitter theoretically if
+ * we can control cluster-size auto vacuum. In addition, we may be able to clean
+ * some code because the code of local auto vacuum and distributed user-invoked
+ * vacuum are inter-laying for now.
+ *
+ * Furthermore, we are still not certain about benefit of the consistency produced
+ * by distributed auto vacuum. Theoretically, we can get more precise statis info
+ * accordingly, but we need more feedback to evaluate the benefit for customer.
+ *
+ * What's the disadvantages? There might be possible troubles to align to upstream
+ * vacuum codes since PG vacuum always happens locally. Importing more complexity
+ * is another concern.
+ *
+ * In MPP setting it's kind of expected all nodes will have a similar activity or
+ * bloat on the table (especially catalog tables should have the same effect on all
+ * segments), though that's not really true for OLTP user tables. Hence making the
+ * global decision to vacuum a table or not, instead of local can become
+ * disadvantageous. For example, only one segment has heavy bloat on a table and
+ * the rest of the segments are not. Global/distributed vacuum unnecessarily will
+ * trigger on all segments even if not required.
+ *
+ * A possible solution is a kind of unbalanced strategy: when a distributed auto
+ * vacuum is triggered, we don't need to perform actual vacuum on all segments. A
+ * segment can determine not to perform actual vacuum if it has heavy bloat. Since
+ * auto vacuum is repeated, the vacuum is supposed to be finished at sometime with
+ * light workload in future. There might also be space for more complex scheduling
+ * strategy of distributed auto vacuum based on performance monitoring.
+ */
+
 #include "postgres.h"
 
 #include <signal.h>
@@ -2708,7 +2755,7 @@ perform_work_item(AutoVacuumWorkItem *workitem)
 		switch (workitem->avw_type)
 		{
 			case AVW_BRINSummarizeRange:
-				DirectFunctionCall2(brin_summarize_range,
+				DirectFunctionCall2(brin_summarize_range_internal,
 									ObjectIdGetDatum(workitem->avw_relation),
 									Int64GetDatum((int64) workitem->avw_blockNumber));
 				break;

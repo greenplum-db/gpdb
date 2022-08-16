@@ -713,6 +713,124 @@ Select gp_segment_id, count(*) from part_t1 group by gp_segment_id;
 (3 rows)
 
 drop table part_t1;
+-- Test expanding an AO table without index, and current gp_default_storage_options is different
+-- from the table created.
+select gp_debug_set_create_table_default_numsegments(2);
+ gp_debug_set_create_table_default_numsegments 
+-----------------------------------------------
+ 2
+(1 row)
+
+set gp_default_storage_options = '';
+-- Create a AO table with default row-oriented storage
+create table t_9526 (a int, b text) WITH (appendoptimized=true) distributed by (a);
+-- Set default storage method to column-oriented, and change the default value of blocksize, compresstype, etc.
+SET gp_default_storage_options = 'blocksize=65536, compresstype=zlib, compresslevel=5, checksum=true';
+set default_table_access_method = ao_column;
+-- Should successful and the table is still row-oriented
+alter table t_9526 expand table;
+show gp_default_storage_options;
+                   gp_default_storage_options                    
+-----------------------------------------------------------------
+ blocksize=65536,compresstype=zlib,compresslevel=5,checksum=true
+(1 row)
+
+select localoid::regclass::name, policytype, numsegments, distkey, distclass
+from gp_distribution_policy where localoid = 't_9526'::regclass::oid;
+ localoid | policytype | numsegments | distkey | distclass 
+----------+------------+-------------+---------+-----------
+ t_9526   | p          |           3 | 1       | 10054
+(1 row)
+
+-- storage paramter should be same with before
+select blocksize,compresslevel,checksum,compresstype,columnstore from pg_appendonly where relid='t_9526'::regclass::oid;
+ blocksize | compresslevel | checksum | compresstype | columnstore 
+-----------+---------------+----------+--------------+-------------
+     32768 |             0 | t        | none         | f
+(1 row)
+
+-- set back
+set gp_default_storage_options = '';
+drop table t_9526;
+-- Test expanding an AO table with index, and current gp_default_storage_options is different
+-- from the table created.
+select gp_debug_set_create_table_default_numsegments(2);
+ gp_debug_set_create_table_default_numsegments 
+-----------------------------------------------
+ 2
+(1 row)
+
+set gp_default_storage_options = '';
+-- Create a AO table with default row-oriented storage and build index for it
+create table t_9527 (a int, b text) WITH (appendoptimized=true) distributed by (a);
+create index idx_9527 on t_9527(b);
+-- Set default storage method to column-oriented, and change the default value of blocksize, compresstype, etc.
+SET gp_default_storage_options = 'blocksize=65536, compresstype=zlib, compresslevel=5, checksum=true';
+set default_table_access_method = ao_column;
+-- Should successful and the table is still row-oriented
+alter table t_9527 expand table;
+show gp_default_storage_options;
+                   gp_default_storage_options                    
+-----------------------------------------------------------------
+ blocksize=65536,compresstype=zlib,compresslevel=5,checksum=true
+(1 row)
+
+select localoid::regclass::name, policytype, numsegments, distkey, distclass
+    from gp_distribution_policy where localoid = 't_9527'::regclass::oid;
+ localoid | policytype | numsegments | distkey | distclass 
+----------+------------+-------------+---------+-----------
+ t_9527   | p          |           3 | 1       | 10054
+(1 row)
+
+-- storage paramter should be same with before
+select blocksize,compresslevel,checksum,compresstype,columnstore from pg_appendonly where relid='t_9527'::regclass::oid;
+ blocksize | compresslevel | checksum | compresstype | columnstore 
+-----------+---------------+----------+--------------+-------------
+     32768 |             0 | t        | none         | f
+(1 row)
+
+-- set back
+set gp_default_storage_options = '';
+drop table t_9527;
+-- Test change the distribution policy of an AO table with index, and current gp_default_storage_options is different
+-- from the table created.
+select gp_debug_set_create_table_default_numsegments(2);
+ gp_debug_set_create_table_default_numsegments 
+-----------------------------------------------
+ 2
+(1 row)
+
+set gp_default_storage_options = '';
+-- Create a AO table with default row-oriented storage and build index for it
+create table t_9528 (a int, b text) WITH (appendoptimized=true) distributed by (a);
+create index idx_9528 on t_9528(b);
+SET gp_default_storage_options = 'blocksize=65536, compresstype=zlib, compresslevel=5, checksum=true';
+set default_table_access_method = ao_column;
+-- Should successful and the table is still row-oriented
+alter table t_9528 set distributed by (b);
+show gp_default_storage_options;
+                   gp_default_storage_options                    
+-----------------------------------------------------------------
+ blocksize=65536,compresstype=zlib,compresslevel=5,checksum=true
+(1 row)
+
+select localoid::regclass::name, policytype, numsegments, distkey, distclass
+    from gp_distribution_policy where localoid = 't_9528'::regclass::oid;
+ localoid | policytype | numsegments | distkey | distclass 
+----------+------------+-------------+---------+-----------
+ t_9528   | p          |           2 | 2       | 10072
+(1 row)
+
+-- storage paramter should be same with before
+select blocksize,compresslevel,checksum,compresstype,columnstore from pg_appendonly where relid='t_9528'::regclass::oid;
+ blocksize | compresslevel | checksum | compresstype | columnstore 
+-----------+---------------+----------+--------------+-------------
+     32768 |             0 | t        | none         | f
+(1 row)
+
+-- set back
+set gp_default_storage_options = '';
+drop table t_9528;
 -- start_ignore
 -- We need to do a cluster expansion which will check if there are partial
 -- tables, we need to drop the partial tables to keep the cluster expansion

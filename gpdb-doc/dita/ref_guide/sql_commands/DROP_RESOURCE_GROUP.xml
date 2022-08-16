@@ -7,7 +7,7 @@
     <p id="sql_command_desc">Removes a resource group.</p>
     <section id="section2">
       <title>Synopsis</title>
-      <codeblock id="sql_command_synopsis">DROP RESOURCE GROUP <varname>group_name</varname></codeblock>
+      <codeblock id="sql_command_synopsis">DROP RESOURCE GROUP &lt;group_name></codeblock>
     </section>
     <section id="section3">
       <title>Description</title>
@@ -35,7 +35,7 @@
       <title>Notes</title>
       <p>You cannot submit a <codeph>DROP RESOURCE GROUP</codeph> command in an explicit transaction
         or sub-transaction.</p>
-      <p>Use <codeph><xref href="ALTER_ROLE.xml#topic1" type="topic" format="dita"/></codeph> to
+      <p>Use <xref href="ALTER_ROLE.xml#topic1" type="topic" format="dita"/> to
         remove a resource group assigned to a specific user/role.</p>
       <p> Perform the following query to view all of the currently active queries for all resource
         groups:</p>
@@ -63,10 +63,10 @@
     </section>
     <section id="section8">
       <title>See Also</title>
-      <p><codeph><xref href="ALTER_RESOURCE_GROUP.xml#topic1" type="topic" format="dita"/></codeph>,
-            <codeph><xref href="CREATE_RESOURCE_GROUP.xml#topic1" type="topic" format="dita"
-          /></codeph>, <codeph><xref href="ALTER_ROLE.xml#topic1" type="topic" format="dita"
-          /></codeph></p>
+      <p><xref href="ALTER_RESOURCE_GROUP.xml#topic1" type="topic" format="dita"/>,
+            <xref href="CREATE_RESOURCE_GROUP.xml#topic1" type="topic" format="dita"
+          />, <xref href="ALTER_ROLE.xml#topic1" type="topic" format="dita"
+          /></p>
     </section>
   </body>
 </topic>

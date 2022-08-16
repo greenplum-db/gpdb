@@ -1117,7 +1117,9 @@ CGroupExpression::ContainsCircularDependencies()
 	{
 		CGroup *child_group = (*child_groups)[ul];
 		if (child_group->FScalar())
+		{
 			continue;
+		}
 		CGroup *child_duplicate_group = child_group->PgroupDuplicate();
 		if (child_duplicate_group != nullptr)
 		{

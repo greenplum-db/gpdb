@@ -1545,7 +1545,7 @@ gp_proto1_read(char *buf, int bufsz, URL_CURL_FILE *file, CopyState pstate, char
 				char x = file->in.ptr[file->in.bot + n - 1];
 				file->in.ptr[file->in.bot + n - 1] = 0;
 				ereport(ERROR,
-						(errcode(ERRCODE_DATA_EXCEPTION),
+						(errcode(ERRCODE_CONNECTION_FAILURE),
 						 errmsg("gpfdist error - %s%c", &file->in.ptr[file->in.bot], x)));
 			}
 

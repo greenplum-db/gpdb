@@ -152,6 +152,8 @@ int
 #define UDPIC_FLAGS_DUPLICATE   		(64)
 #define UDPIC_FLAGS_CAPACITY    		(128)
 
+#define UDPIC_MIN_BUF_SIZE (128 * 1024)
+
 /*
  * ConnHtabBin
  *
@@ -282,13 +284,6 @@ struct ReceiveControlInfo
 
 	/* Cursor history table. */
 	CursorICHistoryTable cursorHistoryTable;
-
-	/*
-	 * Last distributed transaction id when SetupUDPInterconnect is called.
-	 * Coupled with cursorHistoryTable, it is used to handle multiple
-	 * concurrent cursor cases.
-	 */
-	DistributedTransactionId lastDXatId;
 };
 
 /*
@@ -665,8 +660,7 @@ static void resetRxThreadError(void);
 static void SendDummyPacket(void);
 
 static void getSockAddr(struct sockaddr_storage *peer, socklen_t *peer_len, const char *listenerAddr, int listenerPort);
-static void setXmitSocketOptions(int txfd);
-static uint32 setSocketBufferSize(int fd, int type, int expectedSize, int leastSize);
+static uint32 setUDPSocketBufferSize(int ic_socket, int buffer_type);
 static void setupUDPListeningSocket(int *listenerSocketFd, uint16 *listenerPort, int *txFamily);
 static ChunkTransportStateEntry *startOutgoingUDPConnections(ChunkTransportState *transportStates,
 							ExecSlice *sendSlice,
@@ -726,6 +720,9 @@ static TupleChunkListItem RecvTupleChunkFromUDPIFC(ChunkTransportState *transpor
 static TupleChunkListItem receiveChunksUDPIFC(ChunkTransportState *pTransportStates, ChunkTransportStateEntry *pEntry,
 					int16 motNodeID, int16 *srcRoute, MotionConn *conn);
 
+static TupleChunkListItem receiveChunksUDPIFCLoop(ChunkTransportState *pTransportStates, ChunkTransportStateEntry *pEntry,
+						int16 *srcRoute, MotionConn *conn, WaitEventSet *waitset, int nevent);
+
 static void SendEosUDPIFC(ChunkTransportState *transportStates,
 			  int motNodeID, TupleChunkListItem tcItem);
 static bool SendChunkUDPIFC(ChunkTransportState *transportStates,
@@ -774,6 +771,8 @@ static inline void logPkt(char *prefix, icpkthdr *pkt);
 static void aggregateStatistics(ChunkTransportStateEntry *pEntry);
 
 static inline bool pollAcks(ChunkTransportState *transportStates, int fd, int timeout);
+
+static ssize_t sendtoWithRetry(int socket, const void *message, size_t length, int flags, const struct sockaddr *dest_addr, socklen_t dest_len, int retry, const char *errDetail);
 
 /* #define TRANSFER_PROTOCOL_STATS */
 
@@ -1160,189 +1159,169 @@ resetRxThreadError()
 static void
 setupUDPListeningSocket(int *listenerSocketFd, uint16 *listenerPort, int *txFamily)
 {
-	int			errnoSave;
-	int			fd = -1;
-	const char *fun;
+	struct addrinfo 		*addrs = NULL;
+	struct addrinfo 		*addr;
+	struct addrinfo 		hints;
+	int						ret;
+	int 					ic_socket = PGINVALID_SOCKET;
+	struct sockaddr_storage ic_socket_addr;
+	int 					tries = 0;
+	struct sockaddr_storage listenerAddr;
+	socklen_t 				listenerAddrlen = sizeof(ic_socket_addr);
+	uint32					socketSendBufferSize;
+	uint32					socketRecvBufferSize;
 
-
-	/*
-	 * At the moment, we don't know which of IPv6 or IPv4 is wanted, or even
-	 * supported, so just ask getaddrinfo...
-	 *
-	 * Perhaps just avoid this and try socket with AF_INET6 and AF_INT?
-	 *
-	 * Most implementation of getaddrinfo are smart enough to only return a
-	 * particular address family if that family is both enabled, and at least
-	 * one network adapter has an IP address of that family.
-	 */
-	struct addrinfo hints;
-	struct addrinfo *addrs,
-			   *rp;
-	int			s;
-	struct sockaddr_storage our_addr;
-	socklen_t	our_addr_len;
-	char		service[32];
-
-	snprintf(service, 32, "%d", 0);
 	memset(&hints, 0, sizeof(struct addrinfo));
 	hints.ai_family = AF_UNSPEC;	/* Allow IPv4 or IPv6 */
 	hints.ai_socktype = SOCK_DGRAM; /* Datagram socket */
-	hints.ai_flags = AI_PASSIVE;	/* For wildcard IP address */
-	hints.ai_protocol = 0;		/* Any protocol - UDP implied for network use due to SOCK_DGRAM */
+	hints.ai_protocol = 0;
+	hints.ai_addrlen = 0;
+	hints.ai_addr = NULL;
+	hints.ai_canonname = NULL;
+	hints.ai_next = NULL;
+	hints.ai_flags |= AI_NUMERICHOST;
 
 #ifdef USE_ASSERT_CHECKING
 	if (gp_udpic_network_disable_ipv6)
 		hints.ai_family = AF_INET;
 #endif
 
-	fun = "getaddrinfo";
-	/*
-	 * We set interconnect_address on the primary to the local address of the connection from QD
-	 * to the primary, which is the primary's ADDRESS from gp_segment_configuration,
-	 * used for interconnection.
-	 * However it's wrong on the master. Because the connection from the client to the master may
-	 * have different IP addresses as its destination, which is very likely not the master's
-	 * ADDRESS in gp_segment_configuration.
-	 */
-	if (interconnect_address)
+	if (Gp_interconnect_address_type == INTERCONNECT_ADDRESS_TYPE_UNICAST)
 	{
-		/*
-		 * Restrict what IP address we will listen on to just the one that was
-		 * used to create this QE session.
-		 */
+		Assert(interconnect_address && strlen(interconnect_address) > 0);
 		hints.ai_flags |= AI_NUMERICHOST;
-		ereport(DEBUG1, (errmsg("binding to %s only", interconnect_address)));
-		if (gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG)
-			ereport(DEBUG4, (errmsg("binding address %s", interconnect_address)));
+		ereportif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG3,
+				  (errmsg("getaddrinfo called with unicast address: %s",
+						  interconnect_address)));
 	}
-	s = getaddrinfo(interconnect_address, service, &hints, &addrs);
-	if (s != 0)
-		elog(ERROR, "getaddrinfo says %s", gai_strerror(s));
-
-	/*
-	 * getaddrinfo() returns a list of address structures, one for each valid
-	 * address and family we can use.
-	 *
-	 * Try each address until we successfully bind. If socket (or bind) fails,
-	 * we (close the socket and) try the next address.  This can happen if the
-	 * system supports IPv6, but IPv6 is disabled from working, or if it
-	 * supports IPv6 and IPv4 is disabled.
-	 */
-
-	/*
-	 * If there is both an AF_INET6 and an AF_INET choice, we prefer the
-	 * AF_INET6, because on UNIX it can receive either protocol, whereas
-	 * AF_INET can only get IPv4.  Otherwise we'd need to bind two sockets,
-	 * one for each protocol.
-	 *
-	 * Why not just use AF_INET6 in the hints?	That works perfect if we know
-	 * this machine supports IPv6 and IPv6 is enabled, but we don't know that.
-	 */
-
-#ifndef __darwin__
-#ifdef HAVE_IPV6
-	if (addrs->ai_family == AF_INET && addrs->ai_next != NULL && addrs->ai_next->ai_family == AF_INET6)
-	{
-		/*
-		 * We got both an INET and INET6 possibility, but we want to prefer
-		 * the INET6 one if it works. Reverse the order we got from
-		 * getaddrinfo so that we try things in our preferred order. If we got
-		 * more possibilities (other AFs??), I don't think we care about them,
-		 * so don't worry if the list is more that two, we just rearrange the
-		 * first two.
-		 */
-		struct addrinfo *temp = addrs->ai_next; /* second node */
-
-		addrs->ai_next = addrs->ai_next->ai_next;	/* point old first node to
-													 * third node if any */
-		temp->ai_next = addrs;	/* point second node to first */
-		addrs = temp;			/* start the list with the old second node */
-		elog(DEBUG1, "Have both IPv6 and IPv4 choices");
-	}
-#endif
-#endif
-
-	for (rp = addrs; rp != NULL; rp = rp->ai_next)
-	{
-		fun = "socket";
-
-		/*
-		 * getaddrinfo gives us all the parameters for the socket() call as
-		 * well as the parameters for the bind() call.
-		 */
-		elog(DEBUG1, "receive socket ai_family %d ai_socktype %d ai_protocol %d", rp->ai_family, rp->ai_socktype, rp->ai_protocol);
-		fd = socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol);
-		if (fd == -1)
-			continue;
-		elog(DEBUG1, "receive socket %d ai_family %d ai_socktype %d ai_protocol %d", fd, rp->ai_family, rp->ai_socktype, rp->ai_protocol);
-
-		fun = "fcntl(O_NONBLOCK)";
-		if (!pg_set_noblock(fd))
-		{
-			if (fd >= 0)
-			{
-				closesocket(fd);
-				fd = -1;
-			}
-			continue;
-		}
-
-		fun = "bind";
-		elog(DEBUG1, "bind addrlen %d fam %d", rp->ai_addrlen, rp->ai_addr->sa_family);
-		if (bind(fd, rp->ai_addr, rp->ai_addrlen) == 0)
-		{
-			*txFamily = rp->ai_family;
-			break;				/* Success */
-		}
-
-		if (fd >= 0)
-		{
-			closesocket(fd);
-			fd = -1;
-		}
-	}
-
-	if (rp == NULL)
-	{							/* No address succeeded */
-		goto error;
-	}
-
-	freeaddrinfo(addrs);		/* No longer needed */
-
-	/*
-	 * Get our socket address (IP and Port), which we will save for others to
-	 * connected to.
-	 */
-	MemSet(&our_addr, 0, sizeof(our_addr));
-	our_addr_len = sizeof(our_addr);
-
-	fun = "getsockname";
-	if (getsockname(fd, (struct sockaddr *) &our_addr, &our_addr_len) < 0)
-		goto error;
-
-	Assert(our_addr.ss_family == AF_INET || our_addr.ss_family == AF_INET6);
-
-	*listenerSocketFd = fd;
-
-	if (our_addr.ss_family == AF_INET6)
-		*listenerPort = ntohs(((struct sockaddr_in6 *) &our_addr)->sin6_port);
 	else
-		*listenerPort = ntohs(((struct sockaddr_in *) &our_addr)->sin_port);
+	{
+		Assert(interconnect_address == NULL);
+		hints.ai_flags |= AI_PASSIVE;
+		ereportif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG3,
+				  (errmsg("getaddrinfo called with wildcard address")));
+	}
 
-	setXmitSocketOptions(fd);
+	/*
+	 * Restrict what IP address we will listen on to just the one that was
+	 * used to create this QE session.
+	 */
+	Assert(interconnect_address && strlen(interconnect_address) > 0);
+	ret = pg_getaddrinfo_all(interconnect_address, NULL, &hints, &addrs);
+	if (ret || !addrs)
+	{
+		ereport(LOG,
+				(errmsg("could not resolve address for UDP IC socket %s: %s",
+						interconnect_address,
+						gai_strerror(ret))));
+		goto startup_failed;
+	}
 
+	/*
+	 * On some platforms, pg_getaddrinfo_all() may return multiple addresses
+	 * only one of which will actually work (eg, both IPv6 and IPv4 addresses
+	 * when kernel will reject IPv6).  Worse, the failure may occur at the
+	 * bind() or perhaps even connect() stage.  So we must loop through the
+	 * results till we find a working combination. We will generate DEBUG
+	 * messages, but no error, for bogus combinations.
+	 */
+	for (addr = addrs; addr != NULL; addr = addr->ai_next)
+	{
+
+#ifdef HAVE_UNIX_SOCKETS
+		/* Ignore AF_UNIX sockets, if any are returned. */
+		if (addr->ai_family == AF_UNIX)
+			continue;
+#endif
+
+		ereportif(++tries > 1 && gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG3,
+				  errmsg("trying another address for UDP interconnect socket"));
+
+		ic_socket = socket(addr->ai_family, addr->ai_socktype, addr->ai_protocol);
+		if (ic_socket == PGINVALID_SOCKET)
+		{
+			ereportif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG3,
+					(errcode_for_socket_access(),
+						errmsg("could not create UDP interconnect socket: %m")));
+			continue;
+		}
+
+		/*
+		 * Bind the socket to a kernel assigned ephemeral port on the
+		 * interconnect_address.
+		 */
+		if (bind(ic_socket, addr->ai_addr, addr->ai_addrlen) < 0)
+		{
+			ereportif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG3,
+					(errcode_for_socket_access(),
+						errmsg("could not bind UDP interconnect socket: %m")));
+			closesocket(ic_socket);
+			ic_socket = PGINVALID_SOCKET;
+			continue;
+		}
+
+		/* Call getsockname() to eventually obtain the assigned ephemeral port */
+		if (getsockname(ic_socket, (struct sockaddr *) &listenerAddr, &listenerAddrlen) < 0)
+		{
+			ereportif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG3,
+					(errcode_for_socket_access(),
+						errmsg("could not get address of socket for UDP interconnect: %m")));
+			closesocket(ic_socket);
+			ic_socket = PGINVALID_SOCKET;
+			continue;
+		}
+
+		/* If we get here, we have a working socket */
+		break;
+	}
+
+	if (!addr || ic_socket == PGINVALID_SOCKET)
+		goto startup_failed;
+
+	/* Memorize the socket fd, kernel assigned port and address family */
+	*listenerSocketFd = ic_socket;
+	if (listenerAddr.ss_family == AF_INET6)
+	{
+		*listenerPort = ntohs(((struct sockaddr_in6 *) &listenerAddr)->sin6_port);
+		*txFamily = AF_INET6;
+	}
+	else
+	{
+		*listenerPort = ntohs(((struct sockaddr_in *) &listenerAddr)->sin_port);
+		*txFamily = AF_INET;
+	}
+
+	/* Set up socket non-blocking mode */
+	if (!pg_set_noblock(ic_socket))
+	{
+		ereport(LOG,
+				(errcode_for_socket_access(),
+					errmsg("could not set UDP interconnect socket to nonblocking mode: %m")));
+		goto startup_failed;
+	}
+
+	/* Set up the socket's send and receive buffer sizes. */
+	socketRecvBufferSize = setUDPSocketBufferSize(ic_socket, SO_RCVBUF);
+	if (socketRecvBufferSize == -1)
+		goto startup_failed;
+	ic_control_info.socketRecvBufferSize = socketRecvBufferSize;
+
+	socketSendBufferSize = setUDPSocketBufferSize(ic_socket, SO_SNDBUF);
+	if (socketSendBufferSize == -1)
+		goto startup_failed;
+	ic_control_info.socketSendBufferSize = socketSendBufferSize;
+
+	pg_freeaddrinfo_all(hints.ai_family, addrs);
 	return;
 
-error:
-	errnoSave = errno;
-	if (fd >= 0)
-		closesocket(fd);
-	errno = errnoSave;
+startup_failed:
+	if (addrs)
+		pg_freeaddrinfo_all(hints.ai_family, addrs);
+	if (ic_socket != PGINVALID_SOCKET)
+		closesocket(ic_socket);
 	ereport(ERROR,
 			(errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
-			 errmsg("interconnect error: Could not set up udp listener socket"),
-			 errdetail("%s: %m", fun)));
-	return;
+			 errmsg("interconnect error: Could not set up udp interconnect socket: %m")));
 }
 
 /*
@@ -1452,7 +1431,6 @@ InitMotionUDPIFC(int *listenerSocketFd, uint16 *listenerPort)
 
 	/* allocate a buffer for sending disorder messages */
 	rx_control_info.disorderBuffer = palloc0(MIN_PACKET_SIZE);
-	rx_control_info.lastDXatId = InvalidTransactionId;
 	rx_control_info.lastTornIcId = 0;
 	initCursorICHistoryTable(&rx_control_info.cursorHistoryTable);
 
@@ -1783,9 +1761,6 @@ destroyConnHashTable(ConnHashTable *ht)
 /*
  * sendControlMessage
  * 		Helper function to send a control message.
- *
- * It is different from sendOnce which retries on interrupts...
- * Here, we leave it to retransmit logic to handle these cases.
  */
 static inline void
 sendControlMessage(icpkthdr *pkt, int fd, struct sockaddr *addr, socklen_t peerLen)
@@ -1806,13 +1781,10 @@ sendControlMessage(icpkthdr *pkt, int fd, struct sockaddr *addr, socklen_t peerL
 	if (gp_interconnect_full_crc)
 		addCRC(pkt);
 
-	n = sendto(fd, (const char *) pkt, pkt->len, 0, addr, peerLen);
-
-	/*
-	 * No need to handle EAGAIN here: no-space just means that we dropped the
-	 * packet: our ordinary retransmit mechanism will handle that case
-	 */
-
+	char errDetail[100];
+	snprintf(errDetail, sizeof(errDetail), "Send control message: got error with seq %u", pkt->seq);
+	/* Retry for infinite times since we have no retransmit mechanism for control message */
+	n = sendtoWithRetry(fd, (const char *) pkt, pkt->len, 0, addr, peerLen, -1, errDetail);
 	if (n < pkt->len)
 		write_log("sendcontrolmessage: got error %d errno %d seq %d", n, errno, pkt->seq);
 }
@@ -2135,81 +2107,46 @@ freeRxBuffer(RxBufferPool *p, icpkthdr *buf)
 }
 
 /*
- * setSocketBufferSize
- * 		Set socket buffer size.
+ * Set UDP IC send/receive socket buffer size.
+ *
+ * We must carefully size the UDP IC socket's send/receive buffers. If the size
+ * is too small, say 128K, and send queue depth and receive queue depth are
+ * large, then there might be a lot of dropped/reordered packets. We start
+ * trying from a size of 2MB (unless Gp_udp_bufsize_k is specified), and
+ * gradually back off to UDPIC_MIN_BUF_SIZE. For a given size setting to be
+ * successful, the corresponding UDP kernel buffer size params must be adequate.
+ *
  */
 static uint32
-setSocketBufferSize(int fd, int type, int expectedSize, int leastSize)
+setUDPSocketBufferSize(int ic_socket, int buffer_type)
 {
-	int			bufSize;
-	int			errnoSave;
-	socklen_t	skLen = 0;
-	const char *fun;
+	int 				expected_size;
+	int 				curr_size;
+	ACCEPT_TYPE_ARG3 	option_len = 0;
 
-	fun = "getsockopt";
-	skLen = sizeof(bufSize);
-	if (getsockopt(fd, SOL_SOCKET, type, (char *) &bufSize, &skLen) < 0)
-		goto error;
+	Assert(buffer_type == SO_SNDBUF || buffer_type == SO_RCVBUF);
 
-	elog(DEBUG1, "UDP-IC: xmit default buffer size %d bytes", bufSize);
+	expected_size = (Gp_udp_bufsize_k ? Gp_udp_bufsize_k * 1024 : 2048 * 1024);
 
-	/*
-	 * We'll try the expected size first, and fall back to least size if that
-	 * doesn't work.
-	 */
-
-	bufSize = expectedSize;
-	fun = "setsockopt";
-	while (setsockopt(fd, SOL_SOCKET, type, (const char *) &bufSize, skLen) < 0)
+	curr_size = expected_size;
+	option_len = sizeof(curr_size);
+	while (setsockopt(ic_socket, SOL_SOCKET, buffer_type, (const char *) &curr_size, option_len) < 0)
 	{
-		bufSize = bufSize >> 1;
-		if (bufSize < leastSize)
-			goto error;
+		ereportif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG3,
+				  (errmsg("UDP-IC: setsockopt %s failed to set buffer size = %d bytes: %m",
+						  buffer_type == SO_SNDBUF ? "send": "receive",
+						  curr_size)));
+		curr_size = curr_size >> 1;
+		if (curr_size < UDPIC_MIN_BUF_SIZE)
+			return -1;
 	}
 
-	elog(DEBUG1, "UDP-IC: xmit use buffer size %d bytes", bufSize);
+	ereportif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG3,
+			  (errmsg("UDP-IC: socket %s current buffer size = %d bytes",
+					  buffer_type == SO_SNDBUF ? "send": "receive",
+					  curr_size)));
 
-	return bufSize;
-
-error:
-	errnoSave = errno;
-	if (fd >= 0)
-		closesocket(fd);
-	errno = errnoSave;
-	ereport(ERROR,
-			(errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
-			 errmsg("interconnect error: Could not set up udp listener socket"),
-			 errdetail("%s: %m", fun)));
-	/* Make GCC not complain. */
-	return 0;
-}
-
-/*
- * setXmitSocketOptions
- * 		Set transmit socket options.
- */
-static void
-setXmitSocketOptions(int txfd)
-{
-	uint32		bufSize = 0;
-
-	/*
-	 * The Gp_udp_bufsize_k guc should be set carefully.
-	 *
-	 * If it is small, such as 128K, and send queue depth and receive queue
-	 * depth are large, then it is possible OS can not handle all of the UDP
-	 * packets GPDB delivered to it. OS will introduce a lot of packet losses
-	 * and disordered packets.
-	 *
-	 * In order to set Gp_udp_bufsize_k to a larger value, the OS UDP buffer
-	 * should be set to a large enough value.
-	 *
-	 */
-	bufSize = (Gp_udp_bufsize_k != 0 ? Gp_udp_bufsize_k * 1024 : 2048 * 1024);
-
-	ic_control_info.socketRecvBufferSize = setSocketBufferSize(txfd, SO_RCVBUF, bufSize, 128 * 1024);
-	ic_control_info.socketSendBufferSize = setSocketBufferSize(txfd, SO_SNDBUF, bufSize, 128 * 1024);
-
+	return curr_size;
 }
 
 #if defined(USE_ASSERT_CHECKING) || defined(AMS_VERBOSE_LOGGING)
@@ -3084,29 +3021,32 @@ SetupUDPIFCInterconnect_Internal(SliceTable *sliceTable)
 
 	if (Gp_role == GP_ROLE_DISPATCH)
 	{
-		DistributedTransactionId distTransId = 0;
-		TransactionId localTransId = 0;
-		TransactionId subtransId = 0;
-
-		GetAllTransactionXids(&(distTransId),
-							  &(localTransId),
-							  &(subtransId));
-
-		/*
-		 * Prune only when we are not in the save transaction and there is a
-		 * large number of entries in the table
+		/* 
+		 * Prune the history table if it is too large
+		 * 
+		 * We only keep history of constant length so that
+		 * - The history table takes only constant amount of memory.
+		 * - It is long enough so that it is almost impossible to receive 
+		 *   packets from an IC instance that is older than the first one 
+		 *   in the history.
 		 */
-		if (distTransId != rx_control_info.lastDXatId && rx_control_info.cursorHistoryTable.count > (2 * CURSOR_IC_TABLE_SIZE))
+		if (rx_control_info.cursorHistoryTable.count > (2 * CURSOR_IC_TABLE_SIZE))
 		{
-			if (gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG)
-				elog(DEBUG1, "prune cursor history table (count %d), icid %d", rx_control_info.cursorHistoryTable.count, sliceTable->ic_instance_id);
-			pruneCursorIcEntry(&rx_control_info.cursorHistoryTable, sliceTable->ic_instance_id);
+			uint32 prune_id = sliceTable->ic_instance_id - CURSOR_IC_TABLE_SIZE;
+
+			/* 
+			 * Only prune if we didn't underflow -- also we want the prune id
+			 * to be newer than the limit (hysteresis)
+			 */
+			if (prune_id < sliceTable->ic_instance_id)
+			{
+				if (gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG)
+					elog(DEBUG1, "prune cursor history table (count %d), icid %d", rx_control_info.cursorHistoryTable.count, sliceTable->ic_instance_id);
+				pruneCursorIcEntry(&rx_control_info.cursorHistoryTable, prune_id);
+			}
 		}
 
 		addCursorIcEntry(&rx_control_info.cursorHistoryTable, sliceTable->ic_instance_id, gp_command_count);
-
-		/* save the latest transaction id. */
-		rx_control_info.lastDXatId = distTransId;
 	}
 
 	/* now we'll do some setup for each of our Receiving Motion Nodes. */
@@ -3730,10 +3670,11 @@ static TupleChunkListItem
 receiveChunksUDPIFC(ChunkTransportState *pTransportStates, ChunkTransportStateEntry *pEntry,
 					int16 motNodeID, int16 *srcRoute, MotionConn *conn)
 {
-	int			retries = 0;
-	bool		directed = false;
-	MotionConn *rxconn = NULL;
-	TupleChunkListItem tcItem = NULL;
+	int 		nFds = 0;
+	int 		*waitFds = NULL;
+	int 		nevent = 0;
+	WaitEventSet	*waitset = NULL;
+	TupleChunkListItem	tcItem = NULL;
 
 #ifdef AMS_VERBOSE_LOGGING
 	elog(DEBUG5, "receivechunksUDP: motnodeid %d", motNodeID);
@@ -3744,7 +3685,6 @@ receiveChunksUDPIFC(ChunkTransportState *pTransportStates, ChunkTransportStateEn
 
 	if (conn != NULL)
 	{
-		directed = true;
 		*srcRoute = conn->route;
 		setMainThreadWaiting(&rx_control_info.mainWaitingState, motNodeID, conn->route,
 							 pTransportStates->sliceTable->ic_instance_id);
@@ -3756,6 +3696,64 @@ receiveChunksUDPIFC(ChunkTransportState *pTransportStates, ChunkTransportStateEn
 							 pTransportStates->sliceTable->ic_instance_id);
 	}
 
+	nevent = 2; /* nevent = waited fds number + 2 (latch and postmaster) */
+	if (Gp_role == GP_ROLE_DISPATCH)
+	{
+		/* get all wait sock fds */
+		waitFds = cdbdisp_getWaitSocketFds(pTransportStates->estate->dispatcherState, &nFds);
+		if (waitFds != NULL)
+			nevent += nFds;
+	}
+
+	/* init WaitEventSet */
+	waitset = CreateWaitEventSet(CurrentMemoryContext, nevent);
+
+	/*
+	 * Use PG_TRY() - PG_CATCH() to make sure destroy the waiteventset (close the epoll fd)
+	 * The main receive logic is in receiveChunksUDPIFCLoop()
+	 */
+	PG_TRY();
+	{
+		AddWaitEventToSet(waitset, WL_LATCH_SET, PGINVALID_SOCKET, &ic_control_info.latch, NULL);
+		AddWaitEventToSet(waitset, WL_POSTMASTER_DEATH, PGINVALID_SOCKET, NULL, NULL);
+		for (int i = 0; i < nFds; i++)
+		{
+			AddWaitEventToSet(waitset, WL_SOCKET_READABLE, waitFds[i], NULL, NULL);
+		}
+
+		tcItem = receiveChunksUDPIFCLoop(pTransportStates, pEntry, srcRoute, conn, waitset, nevent);
+	}
+	PG_CATCH();
+	{
+		FreeWaitEventSet(waitset);
+		if (waitFds != NULL)
+			pfree(waitFds);
+
+		PG_RE_THROW();
+	}
+	PG_END_TRY();
+
+	FreeWaitEventSet(waitset);
+	if (waitFds != NULL)
+		pfree(waitFds);
+
+	return tcItem;
+}
+
+static TupleChunkListItem
+receiveChunksUDPIFCLoop(ChunkTransportState *pTransportStates, ChunkTransportStateEntry *pEntry,
+						int16 *srcRoute, MotionConn *conn, WaitEventSet *waitset, int nevent)
+{
+	TupleChunkListItem	tcItem = NULL;
+	MotionConn 	*rxconn = NULL;
+	int			retries = 0;
+	bool		directed = false;
+	WaitEvent	*rEvents = NULL;
+
+	if (conn != NULL)
+		directed = true;
+
+	rEvents = palloc(nevent * sizeof(WaitEvent)); /* returned events */
 	/* we didn't have any data, so we've got to read it from the network. */
 	for (;;)
 	{
@@ -3784,7 +3782,7 @@ receiveChunksUDPIFC(ChunkTransportState *pTransportStates, ChunkTransportStateEn
 
 			if (!directed)
 				*srcRoute = rxconn->route;
-
+			pfree(rEvents);
 			return tcItem;
 		}
 
@@ -3798,38 +3796,22 @@ receiveChunksUDPIFC(ChunkTransportState *pTransportStates, ChunkTransportStateEn
 		ResetLatch(&ic_control_info.latch);
 		pthread_mutex_unlock(&ic_control_info.lock);
 
-		/*
-		 * Wait for data to become ready.
-		 *
-		 * In the QD, also wake up immediately if one of the QEs report an
-		 * error through the main QD-QE libpq connection. For that, ask
-		 * the dispatcher for a file descriptor to wait on for that.
-		 *
-		 * GPDB_12_MERGE_FIXME:
-		 * XXX: We currently only get a single FD to wait on. That catches
-		 * the common case that *all* the QEs report the same error more or
-		 * less at the same time. WaitLatchOrSocket doesn't allow waiting for
-		 * more than one socket at a time. PostgreSQL 9.6 introduces a more
-		 * flexible "wait event" API for the latches, so once we merge with
-		 * that, we could improve this.
-		 */
-		int			wakeEvents = WL_LATCH_SET | WL_TIMEOUT | WL_POSTMASTER_DEATH;
-		int			waitFd = PGINVALID_SOCKET;
-
-		if (Gp_role == GP_ROLE_DISPATCH)
-			waitFd = cdbdisp_getWaitSocketFd(pTransportStates->estate->dispatcherState);
-		if (waitFd != PGINVALID_SOCKET)
-			wakeEvents |= WL_SOCKET_READABLE;
-
 		if (gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG)
 		{
 			elog(DEBUG5, "waiting (timed) on route %d %s", rx_control_info.mainWaitingState.waitingRoute,
 				 (rx_control_info.mainWaitingState.waitingRoute == ANY_ROUTE ? "(any route)" : ""));
 		}
-		(void) WaitLatchOrSocket(&ic_control_info.latch,
-								 wakeEvents, waitFd,
-								 MAIN_THREAD_COND_TIMEOUT_MS,
-								 WAIT_EVENT_INTERCONNECT);
+
+		/*
+		 * Wait for data to become ready.
+		 *
+		 * In the QD, also wake up immediately if any QE reports an
+		 * error through the main QD-QE libpq connection. For that, ask
+		 * the dispatcher for a file descriptor to wait on for that.
+		 */
+		int rc = WaitEventSetWait(waitset, MAIN_THREAD_COND_TIMEOUT_MS, rEvents, nevent, WAIT_EVENT_INTERCONNECT);
+		if (gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG && rc == 0)
+			elog(DEBUG2, "receiveChunksUDPIFC(): WaitEventSetWait timeout after %d ms", MAIN_THREAD_COND_TIMEOUT_MS);
 
 		/* check the potential errors in rx thread. */
 		checkRxThreadError();
@@ -3837,10 +3819,18 @@ receiveChunksUDPIFC(ChunkTransportState *pTransportStates, ChunkTransportStateEn
 		/* do not check interrupts when holding the lock */
 		ML_CHECK_FOR_INTERRUPTS(pTransportStates->teardownActive);
 
-		/* check to see if the dispatcher should cancel */
+		/*
+		 * check to see if the dispatcher should cancel
+		 */
 		if (Gp_role == GP_ROLE_DISPATCH)
 		{
-			checkForCancelFromQD(pTransportStates);
+			for (int i = 0; i < rc; i++)
+				if (rEvents[i].events & WL_SOCKET_READABLE)
+				{
+					/* event happened on wait fds, need to check cancel */
+					checkForCancelFromQD(pTransportStates);
+					break;
+				}
 		}
 
 		/*
@@ -3859,8 +3849,7 @@ receiveChunksUDPIFC(ChunkTransportState *pTransportStates, ChunkTransportStateEn
 		}
 
 		pthread_mutex_lock(&ic_control_info.lock);
-
-	}							/* for (;;) */
+	} /* for (;;) */
 
 	/* We either got data, or get cancelled. We never make it out to here. */
 	return NULL;				/* make GCC behave */
@@ -4547,27 +4536,25 @@ prepareXmit(MotionConn *conn)
 }
 
 /*
- * sendOnce
- * 		Send a packet.
+ * sendtoWithRetry
+ * 		Retry sendto logic and send the packets.
  */
-static void
-sendOnce(ChunkTransportState *transportStates, ChunkTransportStateEntry *pEntry, ICBuffer *buf, MotionConn *conn)
+static ssize_t
+sendtoWithRetry(int socket, const void *message, size_t length,
+           int flags, const struct sockaddr *dest_addr,
+           socklen_t dest_len, int retry, const char *errDetail)
 {
 	int32		n;
-
-#ifdef USE_ASSERT_CHECKING
-	if (testmode_inject_fault(gp_udpic_dropxmit_percent))
-	{
-#ifdef AMS_VERBOSE_LOGGING
-		write_log("THROW PKT with seq %d srcpid %d despid %d", buf->pkt->seq, buf->pkt->srcPid, buf->pkt->dstPid);
-#endif
-		return;
-	}
-#endif
+	int count = 0;
 
 xmit_retry:
-	n = sendto(pEntry->txfd, buf->pkt, buf->pkt->len, 0,
-			   (struct sockaddr *) &conn->peer, conn->peer_len);
+	/*
+	 * If given retry count is positive, retry up to the limited times.
+	 * Otherwise, retry for unlimited times until succeed. 
+	 */
+	if (retry > 0 && ++count > retry)
+		return n;
+	n = sendto(socket, message, length, flags, dest_addr, dest_len);
 	if (n < 0)
 	{
 		int			save_errno = errno;
@@ -4575,8 +4562,15 @@ xmit_retry:
 		if (errno == EINTR)
 			goto xmit_retry;
 
-		if (errno == EAGAIN)	/* no space ? not an error. */
-			return;
+		/* 
+		 * EAGAIN: no space ? not an error.
+		 * 
+		 * EFAULT: In Linux system call, it only happens when copying a socket 
+		 * address into kernel space failed, which is less likely to happen, 
+		 * but mocked heavily by our fault injection in regression tests. 
+		 */
+		if (errno == EAGAIN || errno == EFAULT)
+			return n;
 
 		/*
 		 * If Linux iptables (nf_conntrack?) drops an outgoing packet, it may
@@ -4588,20 +4582,45 @@ xmit_retry:
 			ereport(LOG,
 					(errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
 					 errmsg("Interconnect error writing an outgoing packet: %m"),
-					 errdetail("error during sendto() for Remote Connection: contentId=%d at %s",
-							   conn->remoteContentId, conn->remoteHostAndPort)));
-			return;
+					 errdetail("error during sendto() %s", errDetail)));
+			return n;
 		}
 
 		ereport(ERROR, (errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
 						errmsg("Interconnect error writing an outgoing packet: %m"),
 						errdetail("error during sendto() call (error:%d).\n"
-								  "For Remote Connection: contentId=%d at %s",
-								  save_errno, conn->remoteContentId,
-								  conn->remoteHostAndPort)));
+								  "%s", save_errno, errDetail)));
 		/* not reached */
 	}
 
+	return n;
+}
+
+/*
+ * sendOnce
+ * 		Send a packet.
+ */
+static void
+sendOnce(ChunkTransportState *transportStates, ChunkTransportStateEntry *pEntry, ICBuffer *buf, MotionConn *conn)
+{
+	int32 n;
+
+#ifdef USE_ASSERT_CHECKING
+	if (testmode_inject_fault(gp_udpic_dropxmit_percent))
+	{
+#ifdef AMS_VERBOSE_LOGGING
+		write_log("THROW PKT with seq %d srcpid %d despid %d", buf->pkt->seq, buf->pkt->srcPid, buf->pkt->dstPid);
+#endif
+		return;
+	}
+#endif
+
+	char errDetail[100];
+	snprintf(errDetail, sizeof(errDetail), "For Remote Connection: contentId=%d at %s",
+					  conn->remoteContentId,
+					  conn->remoteHostAndPort);
+	n = sendtoWithRetry(pEntry->txfd, buf->pkt, buf->pkt->len, 0,
+                          (struct sockaddr *) &conn->peer, conn->peer_len, -1, errDetail);
 	if (n != buf->pkt->len)
 	{
 		if (DEBUG1 >= log_min_messages)
@@ -4613,7 +4632,6 @@ xmit_retry:
 		logPkt("PKT DETAILS ", buf->pkt);
 #endif
 	}
-
 	return;
 }
 
@@ -5075,7 +5093,7 @@ checkNetworkTimeout(ICBuffer *buf, uint64 now, bool *networkTimeoutIsLogged)
 		ereport(ERROR,
 				(errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
 				 errmsg("interconnect encountered a network error, please check your network"),
-				 errdetail("Failed to send packet (seq %d) to %s (pid %d cid %d) after %d retries in %d seconds.",
+				 errdetail("Failed to send packet (seq %u) to %s (pid %d cid %d) after %u retries in %d seconds.",
 						   buf->pkt->seq, buf->conn->remoteHostAndPort,
 						   buf->pkt->dstPid, buf->pkt->dstContentId,
 						   buf->nRetry, Gp_interconnect_transmit_timeout)));
@@ -5096,7 +5114,7 @@ checkNetworkTimeout(ICBuffer *buf, uint64 now, bool *networkTimeoutIsLogged)
 	{
 		ereport(WARNING,
 				(errmsg("interconnect may encountered a network error, please check your network"),
-				 errdetail("Failed to send packet (seq %d) to %s (pid %d cid %d) after %d retries.",
+				 errdetail("Failing to send packet (seq %u) to %s (pid %d cid %d) after %u retries.",
 						   buf->pkt->seq, buf->conn->remoteHostAndPort,
 						   buf->pkt->dstPid, buf->pkt->dstContentId,
 						   buf->nRetry)));
@@ -5802,16 +5820,12 @@ dispatcherAYT(void)
 static void
 checkQDConnectionAlive(void)
 {
-	if (!dispatcherAYT())
+	if (Gp_role == GP_ROLE_EXECUTE)
 	{
-		if (Gp_role == GP_ROLE_EXECUTE)
+		if (!dispatcherAYT())
 			ereport(ERROR,
 					(errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
-					 errmsg("interconnect error segment lost contact with master (recv)")));
-		else
-			ereport(ERROR,
-					(errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
-					 errmsg("interconnect error master lost contact with client (recv)")));
+					 errmsg("interconnect error segment lost contact with master (recv): %m")));
 	}
 }
 
@@ -6955,7 +6969,7 @@ SendDummyPacket(void)
 
 	if (counter >= 10)
 	{
-		elog(LOG, "send dummy packet failed, sendto failed: %m");
+		elog(LOG, "send dummy packet failed, sendto failed with 10 times: %m");
 		goto send_error;
 	}
 

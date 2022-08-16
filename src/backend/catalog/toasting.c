@@ -194,24 +194,17 @@ create_toast_table(Relation rel, Oid toastOid, Oid toastIndexOid,
 		 * If we tried to create a TOAST table anyway, we would have the
 		 * problem that it might take up an OID that will conflict with some
 		 * old-cluster table we haven't seen yet.
-		 *
-		 * Starting GPDB7 don't create TOAST table for CO tables. Prior
-		 * versions created but never inserted any data to these
-		 * tables. Hence, even if binary upgrade provides TOAST table oid
-		 * ignore and avoid creating toast table. Regular code TOAST table
-		 * creation for CO table is avoided by consulting table AM API
-		 * table_relation_needs_toast_table().
 		 */
-		if (RelationIsAoCols(rel))
-			return false;
-
-		Assert(toastOid == InvalidOid);
-		toastOid = GetPreassignedOidForRelation(namespaceid, toast_relname);
-		if (!OidIsValid(toastOid))
-			return false;
-		toast_typid = GetPreassignedOidForType(namespaceid, toast_relname);
-		if (!OidIsValid(toast_typid))
-			return false;
+		if (IsBinaryUpgrade)
+		{
+			Assert(toastOid == InvalidOid);
+			toastOid = GetPreassignedOidForRelation(namespaceid, toast_relname);
+			if (!OidIsValid(toastOid))
+				return false;
+			toast_typid = GetPreassignedOidForType(namespaceid, toast_relname);
+			if (!OidIsValid(toast_typid))
+				return false;
+		}
 	}
 
 	/*

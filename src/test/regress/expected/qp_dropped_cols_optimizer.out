@@ -14703,18 +14703,15 @@ ALTER TABLE table_with_leaf_partition_containing_dropped_column ALTER PARTITION 
 ERROR:  table "prttab_leaf_containing_dropped_col_part1" is not partitioned
 CREATE INDEX table_with_leaf_partition_containing_dropped_column_index ON table_with_leaf_partition_containing_dropped_column(a, b);
 EXPLAIN SELECT * FROM table_with_leaf_partition_containing_dropped_column WHERE a>42 and z<42;
-                                                                          QUERY PLAN                                                                          
---------------------------------------------------------------------------------------------------------------------------------------------------------------
+                                                                                   QUERY PLAN                                                                                    
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..6.00 rows=1 width=12)
-   ->  Append  (cost=0.00..6.00 rows=1 width=12)
-         ->  Index Scan using prttab_leaf_containing_dropped_col_part1_a_b_idx on prttab_leaf_containing_dropped_col_part1  (cost=0.00..6.00 rows=1 width=12)
-               Index Cond: (a > 42)
-               Filter: ((a > 42) AND (z < 42))
-         ->  Index Scan using prttab_leaf_containing_dropped_col_part2_a_b_idx on prttab_leaf_containing_dropped_col_part2  (cost=0.00..6.00 rows=1 width=12)
-               Index Cond: (a > 42)
-               Filter: ((a > 42) AND (z < 42))
+   ->  Dynamic Index Scan on table_with_leaf_partition_containing_dropped_column_index on table_with_leaf_partition_containing_dropped_column  (cost=0.00..6.00 rows=1 width=12)
+         Index Cond: (a > 42)
+         Filter: ((a > 42) AND (z < 42))
+         Number of partitions to scan: 2 
  Optimizer: Pivotal Optimizer (GPORCA)
-(9 rows)
+(6 rows)
 
 SELECT * FROM table_with_leaf_partition_containing_dropped_column WHERE a>42 and z<42;
  a | b | z 
@@ -14771,18 +14768,15 @@ ALTER TABLE leaf_containing_dropped_column_between_index_columns DROP COLUMN d1;
 ALTER TABLE table_with_leaf_containing_dropped_column_between_index_columns EXCHANGE PARTITION FOR ('2021-04-11'::date) WITH TABLE leaf_containing_dropped_column_between_index_columns;
 CREATE INDEX table_with_leaf_partition_dropped_col_between_index_cols_index ON table_with_leaf_containing_dropped_column_between_index_columns(a, b);
 EXPLAIN SELECT * FROM table_with_leaf_containing_dropped_column_between_index_columns WHERE a>42 and z<42;
-                                                                         QUERY PLAN                                                                         
-------------------------------------------------------------------------------------------------------------------------------------------------------------
+                                                                                            QUERY PLAN                                                                                            
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..6.00 rows=1 width=12)
-   ->  Append  (cost=0.00..6.00 rows=1 width=12)
-         ->  Index Scan using leaf_containing_dropped_col_index_part1_a_b_idx on leaf_containing_dropped_col_index_part1  (cost=0.00..6.00 rows=1 width=12)
-               Index Cond: (a > 42)
-               Filter: ((a > 42) AND (z < 42))
-         ->  Index Scan using leaf_containing_dropped_col_index_part2_a_b_idx on leaf_containing_dropped_col_index_part2  (cost=0.00..6.00 rows=1 width=12)
-               Index Cond: (a > 42)
-               Filter: ((a > 42) AND (z < 42))
+   ->  Dynamic Index Scan on table_with_leaf_partition_dropped_col_between_index_cols_index on table_with_leaf_containing_dropped_column_between_index_columns  (cost=0.00..6.00 rows=1 width=12)
+         Index Cond: (a > 42)
+         Filter: ((a > 42) AND (z < 42))
+         Number of partitions to scan: 2 
  Optimizer: Pivotal Optimizer (GPORCA)
-(9 rows)
+(6 rows)
 
 SELECT * FROM table_with_leaf_containing_dropped_column_between_index_columns WHERE a>42 and z<42;
  a | b | z 
@@ -14839,18 +14833,15 @@ ALTER TABLE table_with_root_containing_dropped_columns DROP COLUMN d1;
 ALTER TABLE table_with_root_containing_dropped_columns EXCHANGE PARTITION FOR ('2021-04-11'::date) WITH TABLE leaf_containing_no_dropped_columns;
 CREATE INDEX table_with_root_containing_dropped_columns_index ON table_with_root_containing_dropped_columns(a, b);
 EXPLAIN SELECT * FROM table_with_root_containing_dropped_columns WHERE a>42 and z<42;
-                                                                                 QUERY PLAN                                                                                 
-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+                                                                          QUERY PLAN                                                                           
+---------------------------------------------------------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..6.00 rows=1 width=12)
-   ->  Append  (cost=0.00..6.00 rows=1 width=12)
-         ->  Index Scan using leaf_with_root_containing_dropped_columns_part1_a_b_idx on leaf_with_root_containing_dropped_columns_part1  (cost=0.00..6.00 rows=1 width=12)
-               Index Cond: (a > 42)
-               Filter: ((a > 42) AND (z < 42))
-         ->  Index Scan using leaf_with_root_containing_dropped_columns_part2_a_b_idx on leaf_with_root_containing_dropped_columns_part2  (cost=0.00..6.00 rows=1 width=12)
-               Index Cond: (a > 42)
-               Filter: ((a > 42) AND (z < 42))
+   ->  Dynamic Index Scan on table_with_root_containing_dropped_columns_index on table_with_root_containing_dropped_columns  (cost=0.00..6.00 rows=1 width=12)
+         Index Cond: (a > 42)
+         Filter: ((a > 42) AND (z < 42))
+         Number of partitions to scan: 2 
  Optimizer: Pivotal Optimizer (GPORCA)
-(9 rows)
+(6 rows)
 
 SELECT * FROM table_with_root_containing_dropped_columns WHERE a>42 and z<42;
  a | b | z 
@@ -14908,18 +14899,15 @@ ALTER TABLE leaf_containing_dropped_columns_between_index_columns DROP COLUMN d1
 ALTER TABLE table_with_both_containing_dropped_column EXCHANGE PARTITION FOR ('2021-04-11'::date) WITH TABLE leaf_containing_dropped_columns_between_index_columns;
 CREATE INDEX table_with_both_containing_dropped_column_index ON table_with_both_containing_dropped_column(a, b);
 EXPLAIN SELECT * FROM table_with_both_containing_dropped_column WHERE a>42 and z<42;
-                                                                    QUERY PLAN                                                                    
---------------------------------------------------------------------------------------------------------------------------------------------------
+                                                                         QUERY PLAN                                                                          
+-------------------------------------------------------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..6.00 rows=1 width=12)
-   ->  Append  (cost=0.00..6.00 rows=1 width=12)
-         ->  Index Scan using leaf_with_dropped_cols_index_part1_a_b_idx on leaf_with_dropped_cols_index_part1  (cost=0.00..6.00 rows=1 width=12)
-               Index Cond: (a > 42)
-               Filter: ((a > 42) AND (z < 42))
-         ->  Index Scan using leaf_with_dropped_cols_index_part2_a_b_idx on leaf_with_dropped_cols_index_part2  (cost=0.00..6.00 rows=1 width=12)
-               Index Cond: (a > 42)
-               Filter: ((a > 42) AND (z < 42))
+   ->  Dynamic Index Scan on table_with_both_containing_dropped_column_index on table_with_both_containing_dropped_column  (cost=0.00..6.00 rows=1 width=12)
+         Index Cond: (a > 42)
+         Filter: ((a > 42) AND (z < 42))
+         Number of partitions to scan: 2 
  Optimizer: Pivotal Optimizer (GPORCA)
-(9 rows)
+(6 rows)
 
 SELECT * FROM table_with_both_containing_dropped_column WHERE a>42 and z<42;
  a | b | z 

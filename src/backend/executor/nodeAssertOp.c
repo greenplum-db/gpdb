@@ -30,9 +30,6 @@ CheckForAssertViolations(AssertOpState* node, TupleTableSlot* slot)
 	AssertOp* plannode = (AssertOp*) node->ps.plan;
 	ExprContext* econtext = node->ps.ps_ExprContext;
 	ResetExprContext(econtext);
-	// GPDB_12_MERGE_FIXME: Is this really always a list? Even after the merge of all
-	// the JIT stuff?
-	List *predicates = (List *) node->ps.qual;
 	/* Arrange for econtext's scan tuple to be the tuple under test */
 	econtext->ecxt_outertuple = slot;
 	/*
@@ -42,40 +39,25 @@ CheckForAssertViolations(AssertOpState* node, TupleTableSlot* slot)
 	StringInfoData errorString;
 	initStringInfo(&errorString);
 
-	ListCell *l = NULL;
-	Assert(list_length(predicates) == list_length(plannode->errmessage));
+	ExprState *clause = node->ps.qual;
+	bool isNull = false;
+	Datum expr_value = ExecEvalExpr(clause, econtext, &isNull);
 
-	int violationCount = 0;
-	int listIndex = 0;
-	foreach(l, predicates)
+	if (!isNull && !DatumGetBool(expr_value))
 	{
-		ExprState *clause = (ExprState *) lfirst(l);
-		bool isNull = false;
-		Datum expr_value = ExecEvalExpr(clause, econtext, &isNull);
+		Value *valErrorMessage = (Value*) list_nth(plannode->errmessage, 0);
 
-		if (!isNull && !DatumGetBool(expr_value))
-		{
-			Value *valErrorMessage = (Value*) list_nth(plannode->errmessage,
-					listIndex);
+		Assert(NULL != valErrorMessage && IsA(valErrorMessage, String) &&
+				0 < strlen(strVal(valErrorMessage)));
 
-			Assert(NULL != valErrorMessage && IsA(valErrorMessage, String) &&
-					0 < strlen(strVal(valErrorMessage)));
+		appendStringInfo(&errorString, "%s\n", strVal(valErrorMessage));
 
-			appendStringInfo(&errorString, "%s\n", strVal(valErrorMessage));
-			violationCount++;
-		}
-
-		listIndex++;
-	}
-
-	if (0 < violationCount)
-	{
 		ereport(ERROR,
 				(errcode(plannode->errcode),
 				 errmsg("one or more assertions failed"),
 				 errdetail("%s", errorString.data)));
-
 	}
+
 	pfree(errorString.data);
 	MemoryContextSwitchTo(oldContext);
 	ResetExprContext(econtext);
@@ -84,16 +66,18 @@ CheckForAssertViolations(AssertOpState* node, TupleTableSlot* slot)
 /*
  * Evaluate Constraints (in node->ps.qual) and project output TupleTableSlot.
  * */
-TupleTableSlot*
-ExecAssertOp(AssertOpState *node)
+static TupleTableSlot*
+ExecAssertOp(PlanState *pstate)
 {
-	PlanState *outerNode = outerPlanState(node);
+	PlanState *outerNode = outerPlanState(pstate);
 	TupleTableSlot *slot = ExecProcNode(outerNode);
 
 	if (TupIsNull(slot))
 	{
 		return NULL;
 	}
+
+	AssertOpState *node = castNode(AssertOpState, pstate);
 
 	CheckForAssertViolations(node, slot);
 
@@ -116,6 +100,7 @@ ExecInitAssertOp(AssertOp *node, EState *estate, int eflags)
 	assertOpState = makeNode(AssertOpState);
 	assertOpState->ps.plan = (Plan *)node;
 	assertOpState->ps.state = estate;
+	assertOpState->ps.ExecProcNode = ExecAssertOp;
 
 	/* Create expression evaluation context */
 	ExecAssignExprContext(estate, &assertOpState->ps);
@@ -129,7 +114,8 @@ ExecInitAssertOp(AssertOp *node, EState *estate, int eflags)
 	/*
 	 * Initialize result type and projection.
 	 */
-	ExecInitResultTypeTL(&assertOpState->ps);
+	ExecInitResultTupleSlotTL(&assertOpState->ps, &TTSOpsMinimalTuple);
+
 	ExecAssignProjectionInfo(&assertOpState->ps, NULL);
 
 	assertOpState->ps.qual =

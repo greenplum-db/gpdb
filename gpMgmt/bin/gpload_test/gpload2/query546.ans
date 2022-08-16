@@ -1,0 +1,26 @@
+2022-03-02 15:44:52|INFO|gpload session started 2022-03-02 15:44:52
+2022-03-02 15:44:52|INFO|setting schema 'public' for table 'testheaderreuse'
+2022-03-02 15:44:52|INFO|started gpfdist -p 8081 -P 8082 -f "/home/gpadmin/workspace/gpdb/gpMgmt/bin/gpload_test/gpload2/data_file.txt" -t 30
+2022-03-02 15:44:52|INFO|running time: 0.05 seconds
+2022-03-02 15:44:52|INFO|rows Inserted          = 2
+2022-03-02 15:44:52|INFO|rows Updated           = 0
+2022-03-02 15:44:52|INFO|data formatting errors = 0
+2022-03-02 15:44:52|INFO|gpload succeeded
+2022-03-02 15:44:52|INFO|gpload session started 2022-03-02 15:44:52
+2022-03-02 15:44:52|INFO|setting schema 'public' for table 'testheaderreuse'
+2022-03-02 15:44:52|INFO|started gpfdist -p 8081 -P 8082 -f "/home/gpadmin/workspace/gpdb/gpMgmt/bin/gpload_test/gpload2/data_file1.txt" -t 30
+2022-03-02 15:44:52|INFO|did not find a staging table to reuse. creating staging_gpload_reusable_4f59b8233d181e082cf8dd2510e09cb6
+2022-03-02 15:44:52|INFO|did not find an external table to reuse. creating ext_gpload_reusable_a56de244_99fc_11ec_ae78_0050569e2380
+2022-03-02 15:44:52|INFO|running time: 0.08 seconds
+2022-03-02 15:44:52|INFO|rows Inserted          = 1
+2022-03-02 15:44:52|INFO|rows Updated           = 2
+2022-03-02 15:44:52|INFO|data formatting errors = 0
+2022-03-02 15:44:52|INFO|gpload succeeded
+Table "public.staging_gpload_reusable_4f59b8233d181e082cf8dd2510e09cb6"
+ Column |  Type   | Collation | Nullable | Default 
+--------+---------+-----------+----------+---------
+ field1 | integer |           |          | 
+ field2 | text    |           |          | 
+ field3 | text    |           |          | 
+Distributed by: (field1)
+

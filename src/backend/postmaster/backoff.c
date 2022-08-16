@@ -201,12 +201,10 @@ static volatile bool isSweeperProcess = false;
 
 /* Resource queue related routines */
 static int	BackoffPriorityValueToInt(const char *priorityVal);
-static char *BackoffPriorityIntToValue(int weight);
 extern List *GetResqueueCapabilityEntry(Oid queueid);
 
 static int BackoffDefaultWeight(void);
 static int BackoffSuperuserStatementWeight(void);
-static int ResourceQueueGetPriorityWeight(Oid queueId);
 
 /*
  * Helper method that verifies setting of default priority guc.
@@ -1392,7 +1390,7 @@ BackoffDefaultWeight(void)
  * GetResqueueCapabilityEntry will always  do a catalog lookup. In such cases
  * use the default weight.
  */
-static int
+int
 ResourceQueueGetPriorityWeight(Oid queueId)
 {
 	List	   *capabilitiesList = NULL;
@@ -1486,7 +1484,7 @@ BackoffPriorityValueToInt(const char *priorityVal)
  * method maps it to a text value corresponding to this weight. Caller is
  * responsible for deallocating the return pointer.
  */
-static char *
+char *
 BackoffPriorityIntToValue(int weight)
 {
 	const PriorityMapping *p = priority_map;

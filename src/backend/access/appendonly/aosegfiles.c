@@ -110,10 +110,6 @@ InsertInitialSegnoEntry(Relation parentrel, int segno)
 
 	GetAppendOnlyEntryAuxOids(parentrel->rd_id, NULL, &segrelid, NULL, NULL, NULL, NULL);
 
-	InsertFastSequenceEntry(segrelid,
-							(int64) segno,
-							0);
-
 	pg_aoseg_rel = heap_open(segrelid, RowExclusiveLock);
 
 	pg_aoseg_dsc = RelationGetDescr(pg_aoseg_rel);
@@ -348,7 +344,8 @@ GetFileSegInfo(Relation parentrel, Snapshot appendOnlyMetaDataSnapshot, int segn
 FileSegInfo **
 GetAllFileSegInfo(Relation parentrel,
 				  Snapshot appendOnlyMetaDataSnapshot,
-				  int *totalsegs)
+				  int *totalsegs,
+				  Oid *segrelidptr)
 {
 	Relation	pg_aoseg_rel;
 	FileSegInfo **result;
@@ -361,6 +358,9 @@ GetAllFileSegInfo(Relation parentrel,
 			 RelationGetRelationName(parentrel));
 
 	Assert(RelationIsAoRows(parentrel));
+
+	if (segrelidptr != NULL)
+		*segrelidptr = segrelid;
 
 	pg_aoseg_rel = table_open(segrelid, AccessShareLock);
 

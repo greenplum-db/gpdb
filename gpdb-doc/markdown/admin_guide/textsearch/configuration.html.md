@@ -86,5 +86,5 @@ SHOW default_text_search_config;
  public.pg
 ```
 
-**Parent topic:**[Using Full Text Search](../textsearch/full-text-search.html)
+**Parent topic:** [Using Full Text Search](../textsearch/full-text-search.html)
 

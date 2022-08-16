@@ -40,7 +40,7 @@ HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sur
 2021-01-04 15:50:37|INFO|gpload session started 2021-01-04 15:50:37
 2021-01-04 15:50:37|INFO|setting schema 'public' for table 'texttable'
 2021-01-04 15:50:37|INFO|started gpfdist -p 8081 -P 8082 -f "/home/cc/repo/gpdb/gpMgmt/bin/gpload_test/gpload2/data/column_match_target.txt" -t 30
-2021-01-04 15:50:37|INFO|did not find a staging table to reuse. creating staging_gpload_reusable_3ae2a9f2be92595cba0cbb17b5858cd4
+2021-01-04 15:50:37|INFO|reusing staging table STAGING_GPLOAD_REUSABLE
 2021-01-04 15:50:37|INFO|reusing external table ext_gpload_reusable_881585e0_4e61_11eb_a8c6_7085c2381836
 2021-01-04 15:50:37|INFO|running time: 0.21 seconds
 2021-01-04 15:50:37|INFO|rows Inserted          = 0
@@ -67,7 +67,7 @@ HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sur
 2021-01-04 16:04:50|INFO|gpload session started 2021-01-04 16:04:50
 2021-01-04 16:04:50|INFO|setting schema 'public' for table 'texttable'
 2021-01-04 16:04:50|INFO|started gpfdist -p 8081 -P 8082 -f "/home/cc/repo/gpdb/gpMgmt/bin/gpload_test/gpload2/data/column_match_target.txt" -t 30
-2021-01-04 16:04:50|INFO|did not find a staging table to reuse. creating staging_gpload_reusable_2e83e0aacc17c6dd2601ee75a637dcc6
+2021-01-04 16:04:50|INFO|reusing staging table STAGING_GPLOAD_REUSABLE
 2021-01-04 16:04:50|INFO|reusing external table ext_gpload_reusable_8407f940_4e63_11eb_a1f4_7085c2381836
 2021-01-04 16:04:50|INFO|running time: 0.23 seconds
 2021-01-04 16:04:50|INFO|rows Inserted          = 0
@@ -94,7 +94,7 @@ HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sur
 2021-01-04 15:50:38|INFO|gpload session started 2021-01-04 15:50:38
 2021-01-04 15:50:38|INFO|setting schema 'public' for table 'texttable'
 2021-01-04 15:50:38|INFO|started gpfdist -p 8081 -P 8082 -f "/home/cc/repo/gpdb/gpMgmt/bin/gpload_test/gpload2/data/column_match_target.txt" -t 30
-2021-01-04 15:50:38|INFO|did not find a staging table to reuse. creating staging_gpload_reusable_507418e61988c1d20da1e83f9f6814c3
+2021-01-04 15:50:38|INFO|reusing staging table STAGING_GPLOAD_REUSABLE
 2021-01-04 15:50:38|INFO|reusing external table ext_gpload_reusable_881585e0_4e61_11eb_a8c6_7085c2381836
 2021-01-04 15:50:38|INFO|running time: 0.22 seconds
 2021-01-04 15:50:38|INFO|rows Inserted          = 0
@@ -121,7 +121,7 @@ HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sur
 2021-01-04 15:50:39|INFO|gpload session started 2021-01-04 15:50:39
 2021-01-04 15:50:39|INFO|setting schema 'public' for table 'texttable'
 2021-01-04 15:50:39|INFO|started gpfdist -p 8081 -P 8082 -f "/home/cc/repo/gpdb/gpMgmt/bin/gpload_test/gpload2/data/column_match_target.txt" -t 30
-2021-01-04 15:50:39|INFO|did not find a staging table to reuse. creating staging_gpload_reusable_7c4c8357d428226c0fb3e0e5abaddd17
+2021-01-04 15:50:39|INFO|reusing staging table STAGING_GPLOAD_REUSABLE
 2021-01-04 15:50:39|INFO|reusing external table ext_gpload_reusable_881585e0_4e61_11eb_a8c6_7085c2381836
 2021-01-04 15:50:39|INFO|running time: 0.20 seconds
 2021-01-04 15:50:39|INFO|rows Inserted          = 0
@@ -148,7 +148,7 @@ HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sur
 2021-01-04 15:50:39|INFO|gpload session started 2021-01-04 15:50:39
 2021-01-04 15:50:40|INFO|setting schema 'public' for table 'texttable'
 2021-01-04 15:50:40|INFO|started gpfdist -p 8081 -P 8082 -f "/home/cc/repo/gpdb/gpMgmt/bin/gpload_test/gpload2/data/column_match_target.txt" -t 30
-2021-01-04 15:50:40|INFO|did not find a staging table to reuse. creating staging_gpload_reusable_9e368b870de03019826de2219fb29f98
+2021-01-04 15:50:40|INFO|reusing staging table STAGING_GPLOAD_REUSABLE
 2021-01-04 15:50:40|INFO|reusing external table ext_gpload_reusable_881585e0_4e61_11eb_a8c6_7085c2381836
 2021-01-04 15:50:40|INFO|running time: 0.21 seconds
 2021-01-04 15:50:40|INFO|rows Inserted          = 0
@@ -175,7 +175,7 @@ HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sur
 2021-01-04 15:50:40|INFO|gpload session started 2021-01-04 15:50:40
 2021-01-04 15:50:40|INFO|setting schema 'public' for table 'texttable'
 2021-01-04 15:50:40|INFO|started gpfdist -p 8081 -P 8082 -f "/home/cc/repo/gpdb/gpMgmt/bin/gpload_test/gpload2/data/column_match_target.txt" -t 30
-2021-01-04 15:50:40|INFO|did not find a staging table to reuse. creating staging_gpload_reusable_3741945344fc4b31add2fb0738ec8581
+2021-01-04 15:50:40|INFO|reusing staging table STAGING_GPLOAD_REUSABLE
 2021-01-04 15:50:40|INFO|reusing external table ext_gpload_reusable_881585e0_4e61_11eb_a8c6_7085c2381836
 2021-01-04 15:50:40|INFO|running time: 0.21 seconds
 2021-01-04 15:50:40|INFO|rows Inserted          = 0
@@ -202,7 +202,7 @@ HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sur
 2021-01-04 15:50:41|INFO|gpload session started 2021-01-04 15:50:41
 2021-01-04 15:50:41|INFO|setting schema 'public' for table 'texttable'
 2021-01-04 15:50:41|INFO|started gpfdist -p 8081 -P 8082 -f "/home/cc/repo/gpdb/gpMgmt/bin/gpload_test/gpload2/data/column_match_target.txt" -t 30
-2021-01-04 15:50:41|INFO|did not find a staging table to reuse. creating staging_gpload_reusable_ba2d378b509828b502fce7fe1ddc6fbc
+2021-01-04 15:50:41|INFO|reusing staging table STAGING_GPLOAD_REUSABLE
 2021-01-04 15:50:41|INFO|reusing external table ext_gpload_reusable_881585e0_4e61_11eb_a8c6_7085c2381836
 2021-01-04 15:50:41|INFO|running time: 0.20 seconds
 2021-01-04 15:50:41|INFO|rows Inserted          = 0

@@ -27,8 +27,7 @@
 1: select age(relfrozenxid), regexp_replace(replace(relname, 'ao_@amname@_vacuum_cleanup2'::regclass::oid::text, '<oid>'), 'ao.*seg', '<seg>') from gp_dist_random('pg_class') where relkind in ('r','t','o','b','M') and (relname like '%' || 'ao_@amname@_vacuum_cleanup2'::regclass::oid || '%') and gp_segment_id = 0;
 2: end;
 
--- Check that drop phase is skipped, but still the cleanup phase is performed
--- when there are concurrent serializable transactions
+-- Check that drop phase is not skipped, when there are concurrent serializable transactions.
 1: create table ao_@amname@_vacuum_cleanup3(a int, b int) using @amname@;
 1: insert into ao_@amname@_vacuum_cleanup3 select i, i from generate_series(1, 100) i;
 1: delete from ao_@amname@_vacuum_cleanup3;
@@ -41,9 +40,9 @@
 
 -- Wait till compaction phase is completed and only then start the serializable
 -- transaction to ensure that only drop phase runs after the serializable
--- transaction started. Because the transaction is holding a lock on the table,
--- the drop phase cannot upgrade to AccessExclusiveLock and so recycling the
--- segfiles is skipped.
+-- transaction started. For the new VACUUM strategy, because no need to upgrade
+-- to AccessExclusiveLock for drop phase, and the transaction would not access
+-- AWAITING_DROP segfiles, dropping the dead segfiles could proceed accordingly.
 2: select gp_wait_until_triggered_fault('vacuum_relation_open_relation_during_drop_phase', 1, 1);
 2: begin isolation level serializable;
 2: select * from ao_@amname@_vacuum_cleanup3;
@@ -52,10 +51,145 @@
 1<:
 1: select age(relfrozenxid), regexp_replace(replace(relname, 'ao_@amname@_vacuum_cleanup3'::regclass::oid::text, '<oid>'), 'ao.*seg', '<seg>') from gp_dist_random('pg_class') where relkind in ('r','t','o','b','M') and (relname like '%' || 'ao_@amname@_vacuum_cleanup3'::regclass::oid || '%') and gp_segment_id = 0;
 
--- Validate that the drop phase was skipped. segfile 1 should be in state 2
--- (AWAITING_DROP)
+-- Validate that the drop phase wasn't skipped in the new VACUUM strategy,
+-- segfile 1 should be in state 1 (AWAITING_DEFAULT). This is because
+-- no need to acquire AccessExclusiveLock at dead segments recycling hence
+-- the cleanup routine could be performed as is.
 -- This result is related to data distribution.
 -- Current hash algorithm is jump-consistent-hash.
 1: SELECT * FROM gp_ao_or_aocs_seg('ao_@amname@_vacuum_cleanup3');
 
 2: commit;
+
+1q:
+2q:
+
+-- Test VACUUM with concurrent readers:
+-- a) if reader transaction started before VACUUM, VACUUM should not drop the AWAITING_DROP segment
+--    which was accessing by the reader;
+-- b) if reader transaction started after VACUUM, VACUUM should drop the AWAITING_DROP segments.
+
+create or replace function show_aoseg(tabname text) returns table
+    (segno int, tupcount bigint, modcount bigint, formatversion smallint, state smallint) as $$
+declare
+    tabrelid oid; /* in func */
+    tabsegrelid oid; /* in func */
+    tabsegrelname text; /* in func */
+begin
+    select tabname::regclass::oid into tabrelid; /* in func */
+    select segrelid from pg_appendonly where relid = tabrelid into tabsegrelid; /* in func */
+    select relname from pg_class where oid = tabsegrelid into tabsegrelname; /* in func */
+
+    return query execute 'select segno,tupcount,modcount,formatversion,state from pg_aoseg.' || tabsegrelname; /* in func */
+end; /* in func */
+$$ language plpgsql;
+
+create table vacuum_concurrent_test_@amname@ (a int, b int, c int) using @amname@;
+insert into vacuum_concurrent_test_@amname@ select 2, b, b from generate_series(1, 11) b;
+create index i_b_vacuum_concurrent_reader_@amname@ on vacuum_concurrent_test_@amname@(b);
+update vacuum_concurrent_test_@amname@ set b = b + 1;
+
+-- expect segment state is DEFAULT (state == 1)
+0U: select * from show_aoseg('vacuum_concurrent_test_@amname@') order by segno;
+
+-- start a reader before VACUUM
+1: begin;
+1: select * from vacuum_concurrent_test_@amname@ where b = 10;
+
+vacuum vacuum_concurrent_test_@amname@;
+
+-- expect to see AWAITING_DROP(state == 2) tuple
+0U: select * from show_aoseg('vacuum_concurrent_test_@amname@') order by segno;
+
+1: select * from vacuum_concurrent_test_@amname@ where b = 5;
+1: select * from vacuum_concurrent_test_@amname@ order by c;
+1: end;
+
+-- start another reader after VACUUM
+2: begin;
+2: select * from vacuum_concurrent_test_@amname@ where c = 2;
+
+-- expect to see AWAITING_DROP(state == 2) tuple for unable to drop the dead segment by the first VACUUM
+0U: select * from show_aoseg('vacuum_concurrent_test_@amname@') order by segno;
+
+vacuum vacuum_concurrent_test_@amname@;
+
+-- expect no AWAITING_DROP(state == 2) tuple because it was dropped by the last VACUUM
+0U: select * from show_aoseg('vacuum_concurrent_test_@amname@') order by segno;
+
+2: select * from vacuum_concurrent_test_@amname@ where b = 7;
+2: select * from vacuum_concurrent_test_@amname@ order by c;
+2: end;
+
+1q:
+2q:
+
+-- Test VACUUM with concurrent writer.
+-- There was a concurrent insert transaction started prior to VACUUM, VACUUM should not mark
+-- the target segment which was also writting by the concurrent writer to AWAITING_DROP, and
+-- the corresponding index entries should not be deleted.
+
+truncate table vacuum_concurrent_test_@amname@;
+insert into vacuum_concurrent_test_@amname@ select 2, b, b from generate_series(1, 5) b;
+delete from vacuum_concurrent_test_@amname@;
+
+1: begin;
+1: insert into vacuum_concurrent_test_@amname@ select 2, b, b from generate_series(6, 10) b;
+
+2: vacuum vacuum_concurrent_test_@amname@;
+
+1: commit;
+
+set enable_seqscan = on;
+-- start_ignore
+explain (costs off) select * from vacuum_concurrent_test_@amname@ order by b;
+-- end_ignore
+select * from vacuum_concurrent_test_@amname@ order by b;
+
+-- expect all bitmapindexscan results are consistent with above seqscan
+set enable_seqscan = off;
+-- start_ignore
+explain (costs off) select * from vacuum_concurrent_test_@amname@ where b = b order by b;
+-- end_ignore
+select * from vacuum_concurrent_test_@amname@ where b = b order by b;
+
+-- expose dead tuples
+set gp_select_invisible = true;
+
+set enable_seqscan = on;
+-- start_ignore
+explain (costs off) select * from vacuum_concurrent_test_@amname@ order by b;
+-- end_ignore
+select * from vacuum_concurrent_test_@amname@ order by b;
+
+-- expect all bitmapindexscan results are same as above seqscan
+set enable_seqscan = off;
+-- start_ignore
+explain (costs off) select * from vacuum_concurrent_test_@amname@ where b = b order by b;
+-- end_ignore
+select * from vacuum_concurrent_test_@amname@ where b = b order by b;
+
+-- vacuum again without concurrent reader/writer, expect above dead tuples could be removed
+2: vacuum vacuum_concurrent_test_@amname@;
+
+set enable_seqscan = on;
+-- start_ignore
+explain (costs off) select * from vacuum_concurrent_test_@amname@ order by b;
+-- end_ignore
+select * from vacuum_concurrent_test_@amname@ order by b;
+
+-- expect all bitmapindexscan results are same as seqscan
+set enable_seqscan = off;
+-- start_ignore
+explain (costs off) select * from vacuum_concurrent_test_@amname@ where b = b order by b;
+-- end_ignore
+select * from vacuum_concurrent_test_@amname@ where b = b order by b;
+
+1q:
+2q:
+
+reset enable_seqscan;
+reset gp_select_invisible;
+
+drop table vacuum_concurrent_test_@amname@;
+drop function show_aoseg;

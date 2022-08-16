@@ -6,7 +6,7 @@ A Greenplum Database system is a single instance of Greenplum Database. There ca
 
 There can be multiple databases in a Greenplum Database system. This is different from some database management systems \(such as Oracle\) where the database instance *is* the database. Although you can create many databases in a Greenplum system, client programs can connect to and access only one database at a time — you cannot cross-query between databases.
 
-**Parent topic:**[Defining Database Objects](../ddl/ddl.html)
+**Parent topic:** [Defining Database Objects](../ddl/ddl.html)
 
 ## <a id="topic3"></a>About Template and Default Databases 
 

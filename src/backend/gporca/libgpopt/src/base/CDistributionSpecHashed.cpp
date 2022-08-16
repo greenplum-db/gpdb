@@ -417,10 +417,21 @@ CDistributionSpecHashed::AppendEnforcers(CMemoryPool *mp,
 	}
 
 	// add a hashed distribution enforcer
-	AddRef();
+	// if the distribution spec request isn't met, always enforce nulls colocation
+
+	CDistributionSpecHashed *this_copy = this;
+	if (this->FNullsColocated())
+	{
+		this_copy->AddRef();
+	}
+	else
+	{
+		this_copy = this->Copy(mp, true);
+	}
+
 	pexpr->AddRef();
 	CExpression *pexprMotion = GPOS_NEW(mp) CExpression(
-		mp, GPOS_NEW(mp) CPhysicalMotionHashDistribute(mp, this), pexpr);
+		mp, GPOS_NEW(mp) CPhysicalMotionHashDistribute(mp, this_copy), pexpr);
 	pdrgpexpr->Append(pexprMotion);
 }
 
@@ -438,7 +449,9 @@ CDistributionSpecHashed::HashValue() const
 {
 	CDistributionSpecHashed *equiv_spec = this->PdshashedEquiv();
 	if (nullptr != equiv_spec)
+	{
 		return equiv_spec->HashValue();
+	}
 
 	ULONG ulHash = (ULONG) Edt();
 
@@ -525,7 +538,9 @@ CDistributionSpecHashed::FMatchHashedDistribution(
 		CExpressionArrays *all_equiv_exprs = pdshashed->HashSpecEquivExprs();
 		CExpressionArray *equiv_distribution_exprs = nullptr;
 		if (nullptr != all_equiv_exprs && all_equiv_exprs->Size() > 0)
+		{
 			equiv_distribution_exprs = (*all_equiv_exprs)[ul];
+		}
 		CExpression *pexprLeft = (*(pdshashed->m_pdrgpexpr))[ul];
 		CExpression *pexprRight = (*m_pdrgpexpr)[ul];
 		BOOL fSuccess = CUtils::Equals(pexprLeft, pexprRight);
@@ -586,7 +601,9 @@ CDistributionSpecHashed::Equals(const CDistributionSpec *input_spec) const
 	GPOS_CHECK_STACK_SIZE;
 
 	if (input_spec->Edt() != Edt())
+	{
 		return false;
+	}
 
 	const CDistributionSpecHashed *other_spec =
 		CDistributionSpecHashed::PdsConvert(input_spec);
@@ -596,7 +613,9 @@ CDistributionSpecHashed::Equals(const CDistributionSpec *input_spec) const
 	// if one of the spec has equivalent spec and other doesn't, they are not equal
 	if ((spec_equiv != nullptr && other_spec_equiv == nullptr) ||
 		(spec_equiv == nullptr && other_spec_equiv != nullptr))
+	{
 		return false;
+	}
 
 	BOOL equals = true;
 	// if both the specs has equivalent specs, compare them
@@ -606,7 +625,9 @@ CDistributionSpecHashed::Equals(const CDistributionSpec *input_spec) const
 	}
 	// if the equivalent spec are not equal, the spec objects are not equal
 	if (!equals)
+	{
 		return false;
+	}
 
 	if (!CUtils::Equals(m_opfamilies, other_spec->m_opfamilies))
 	{
@@ -620,7 +641,9 @@ CDistributionSpecHashed::Equals(const CDistributionSpec *input_spec) const
 		CUtils::Equals(m_pdrgpexpr, other_spec->m_pdrgpexpr);
 
 	if (!matches)
+	{
 		return false;
+	}
 
 	// compare the equivalent expression arrays
 	CExpressionArrays *spec_equiv_exprs = m_equiv_hash_exprs;
@@ -795,37 +818,49 @@ CDistributionSpecHashed::ComputeEquivHashExprs(
 CDistributionSpecHashed *
 CDistributionSpecHashed::Copy(CMemoryPool *mp)
 {
-	CExpressionArray *distribution_exprs = this->Pdrgpexpr();
-	CExpressionArrays *equiv_distribution_exprs =
-		GPOS_NEW(mp) CExpressionArrays(mp);
-	CDistributionSpecHashed *pds = this;
-	while (pds)
+	if (nullptr != m_pdrgpexpr)
 	{
-		CExpressionArray *distribution_exprs = pds->Pdrgpexpr();
-		distribution_exprs->AddRef();
-		equiv_distribution_exprs->Append(distribution_exprs);
-		pds = pds->PdshashedEquiv();
+		m_pdrgpexpr->AddRef();
 	}
 
-	CDistributionSpecHashed *spec = nullptr;
-	for (ULONG ul = 1; ul < equiv_distribution_exprs->Size(); ul++)
-	{
-		CExpressionArray *distribution_exprs = (*equiv_distribution_exprs)[ul];
-		distribution_exprs->AddRef();
-		spec = GPOS_NEW(mp) CDistributionSpecHashed(
-			distribution_exprs, this->FNullsColocated(), spec);
-	}
-
-	distribution_exprs->AddRef();
 	if (nullptr != m_opfamilies)
 	{
 		m_opfamilies->AddRef();
 	}
-	CDistributionSpecHashed *spec_copy = GPOS_NEW(mp) CDistributionSpecHashed(
-		distribution_exprs, this->FNullsColocated(), spec, m_opfamilies);
-	equiv_distribution_exprs->Release();
-	GPOS_ASSERT(nullptr != spec_copy);
-	return spec_copy;
+
+	CDistributionSpecHashed *result = GPOS_NEW(mp)
+		CDistributionSpecHashed(m_pdrgpexpr, m_fNullsColocated, m_opfamilies);
+
+	if (nullptr != m_pdshashedEquiv)
+	{
+		result->m_pdshashedEquiv = m_pdshashedEquiv->Copy(mp);
+	}
+
+	return result;
+}
+
+CDistributionSpecHashed *
+CDistributionSpecHashed::Copy(CMemoryPool *mp, BOOL fNullsColocated)
+{
+	if (nullptr != m_pdrgpexpr)
+	{
+		m_pdrgpexpr->AddRef();
+	}
+
+	if (nullptr != m_opfamilies)
+	{
+		m_opfamilies->AddRef();
+	}
+
+	CDistributionSpecHashed *result = GPOS_NEW(mp)
+		CDistributionSpecHashed(m_pdrgpexpr, fNullsColocated, m_opfamilies);
+
+	if (nullptr != m_pdshashedEquiv)
+	{
+		result->m_pdshashedEquiv = m_pdshashedEquiv->Copy(mp, fNullsColocated);
+	}
+
+	return result;
 }
 //---------------------------------------------------------------------------
 //	@function:
@@ -946,34 +981,23 @@ CDistributionSpecHashed *
 CDistributionSpecHashed::Combine(CMemoryPool *mp,
 								 CDistributionSpecHashed *other_spec)
 {
-	CExpressionArrays *distribution_exprs = this->GetAllDistributionExprs(mp);
-	CExpressionArrays *other_distribution_exprs =
-		other_spec->GetAllDistributionExprs(mp);
-	CExpressionArrays *all_distribution_exprs =
-		CUtils::GetCombinedExpressionArrays(mp, distribution_exprs,
-											other_distribution_exprs);
-
-	CDistributionSpecHashed *combined_hashed_spec = nullptr;
-	for (ULONG ul = 0; ul < all_distribution_exprs->Size(); ul++)
+	if (nullptr == other_spec)
 	{
-		CExpressionArray *exprs = (*all_distribution_exprs)[ul];
-#ifdef GPOS_DEBUG
-		// ensure that all the spec has the same size
-		GPOS_ASSERT(this->Pdrgpexpr()->Size() == exprs->Size());
-#endif
-		exprs->AddRef();
-		if (nullptr != m_opfamilies)
-		{
-			m_opfamilies->AddRef();
-		}
-		combined_hashed_spec = GPOS_NEW(mp) CDistributionSpecHashed(
-			exprs, this->FNullsColocated(), combined_hashed_spec, m_opfamilies);
+		return this;
 	}
-	all_distribution_exprs->Release();
-	distribution_exprs->Release();
-	other_distribution_exprs->Release();
-	GPOS_ASSERT(nullptr != combined_hashed_spec);
-	return combined_hashed_spec;
+
+	CDistributionSpecHashed *combined_spec = this->Copy(mp);
+	other_spec->AddRef();
+	CDistributionSpecHashed *temp_spec = combined_spec;
+
+	while (nullptr != temp_spec->m_pdshashedEquiv)
+	{
+		temp_spec = temp_spec->m_pdshashedEquiv;
+	}
+
+	temp_spec->m_pdshashedEquiv = other_spec;
+
+	return combined_spec;
 }
 
 // check if the equivalent spec (if any) has no matching columns with the main spec

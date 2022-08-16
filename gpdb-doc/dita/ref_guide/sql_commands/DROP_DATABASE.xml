@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
-<topic id="topic1"><title id="cr20941">DROP DATABASE</title><body><p id="sql_command_desc">Removes a database.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">DROP DATABASE [IF EXISTS] <varname>name</varname></codeblock></section><section id="section3"><title>Description</title><p><codeph>DROP DATABASE</codeph> drops a database. It removes the catalog entries for the database
+<topic id="topic1"><title id="cr20941">DROP DATABASE</title><body><p id="sql_command_desc">Removes a database.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">DROP DATABASE [IF EXISTS] &lt;name></codeblock></section><section id="section3"><title>Description</title><p><codeph>DROP DATABASE</codeph> drops a database. It removes the catalog entries for the database
         and deletes the directory containing the data. It can only be run by the database
         owner. Also, it cannot be run while you or anyone else are connected to the target
         database. (Connect to <codeph>postgres</codeph> or any other database to issue this
@@ -10,6 +10,6 @@ issued in this case. </pd></plentry><plentry><pt><varname>name</varname></pt><pd
 block.</p><p>This command cannot be run while connected to the target database.
 Thus, it might be more convenient to use the program <codeph>dropdb</codeph>
 instead, which is a wrapper around this command.</p></section><section id="section6"><title>Examples</title><p>Drop the database named <codeph>testdb</codeph>: </p><codeblock>DROP DATABASE testdb;</codeblock></section><section id="section7"><title>Compatibility</title><p>There is no <codeph>DROP DATABASE</codeph> statement in the SQL standard.
-</p></section><section id="section8"><title>See Also</title><p><codeph><xref href="ALTER_DATABASE.xml#topic1" type="topic" format="dita"/></codeph>,
-            <codeph><xref href="CREATE_DATABASE.xml#topic1" type="topic" format="dita"
-        /></codeph></p></section></body></topic>
+</p></section><section id="section8"><title>See Also</title><p><xref href="ALTER_DATABASE.xml#topic1" type="topic" format="dita"/>,
+            <xref href="CREATE_DATABASE.xml#topic1" type="topic" format="dita"
+        /></p></section></body></topic>

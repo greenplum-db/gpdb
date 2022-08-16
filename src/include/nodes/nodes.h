@@ -69,11 +69,15 @@ typedef enum NodeTag
 	T_BitmapAnd,
 	T_BitmapOr,
 	T_SeqScan,
+	T_DynamicSeqScan,
 	T_SampleScan,
 	T_IndexScan,
+	T_DynamicIndexScan,
 	T_IndexOnlyScan,
 	T_BitmapIndexScan,
+	T_DynamicBitmapIndexScan,
 	T_BitmapHeapScan,
+	T_DynamicBitmapHeapScan,
 	T_TidScan,
 	T_SubqueryScan,
 	T_FunctionScan,
@@ -137,11 +141,15 @@ typedef enum NodeTag
 	T_BitmapAndState,
 	T_BitmapOrState,
 	T_SeqScanState,
+	T_DynamicSeqScanState,
 	T_SampleScanState,
 	T_IndexScanState,
+	T_DynamicIndexScanState,
 	T_IndexOnlyScanState,
 	T_BitmapIndexScanState,
+	T_DynamicBitmapIndexScanState,
 	T_BitmapHeapScanState,
+	T_DynamicBitmapHeapScanState,
 	T_TidScanState,
 	T_SubqueryScanState,
 	T_FunctionScanState,
@@ -931,6 +939,8 @@ typedef enum AggSplit
 	 * stripped away from Aggs in setrefs.c.
 	 */
 	AGGSPLIT_DEDUPLICATED = AGGSPLITOP_DEDUPLICATED,
+
+	AGGSPLIT_INTERNMEDIATE = AGGSPLITOP_SKIPFINAL | AGGSPLITOP_SERIALIZE | AGGSPLITOP_COMBINE | AGGSPLITOP_DESERIALIZE,
 } AggSplit;
 
 /* Test whether an AggSplit value selects each primitive option: */

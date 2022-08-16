@@ -62,6 +62,19 @@ explain analyze select d, count(*) from smallt group by d;
  Execution Time: 2.695 ms
 (17 rows)
 
+select * from
+  test_util.extract_plan_stats($$
+select d, count(*) from smallt group by d;
+  $$, false)
+where stats_name = 'executor_mem_lines'
+or stats_name = 'workmem_wanted_lines'
+order by stats_name;
+      stats_name      | stats_value 
+----------------------+-------------
+ executor_mem_lines   |           0
+ workmem_wanted_lines |           0
+(2 rows)
+
 set statement_mem=2560;
 select count(*) from (select i, t, d, count(*) from bigt group by i, t, d) tmp;
  count  
@@ -207,6 +220,21 @@ where t1.d = t2.d;
  Execution Time: 3.142 ms
 (31 rows)
 
+select * from
+  test_util.extract_plan_stats($$
+select t1.*, t2.* from
+(select d, count(*) from smallt group by d) as t1, (select d, sum(i) from smallt group by d) as t2
+where t1.d = t2.d;
+  $$, false)
+where stats_name = 'executor_mem_lines'
+or stats_name = 'workmem_wanted_lines'
+order by stats_name;
+      stats_name      | stats_value 
+----------------------+-------------
+ executor_mem_lines   |           0
+ workmem_wanted_lines |           0
+(2 rows)
+
 set enable_nestloop=off;
 set enable_hashjoin=on;
 -- Rescan on Agg (with Material in the inner side of nestloop)
@@ -258,6 +286,21 @@ where t1.i = t2.i;
  Execution Time: 1.119 ms
 (19 rows)
 
+select * from
+  test_util.extract_plan_stats($$
+select t1.*, t2.* from
+(select i, count(*) from smallt group by i) as t1, (select i, sum(i) from smallt group by i) as t2
+where t1.i = t2.i;
+  $$, false)
+where stats_name = 'executor_mem_lines'
+or stats_name = 'workmem_wanted_lines'
+order by stats_name;
+      stats_name      | stats_value 
+----------------------+-------------
+ executor_mem_lines   |           0
+ workmem_wanted_lines |           0
+(2 rows)
+
 set enable_nestloop=off;
 set enable_hashjoin=on;
 -- Limit on Agg
@@ -293,6 +336,19 @@ explain analyze select d, count(*) from smallt group by d limit 5;
  Optimizer: Postgres query optimizer
  Execution time: 1.363 ms
 (18 rows)
+
+select * from
+  test_util.extract_plan_stats($$
+select d, count(*) from smallt group by d limit 5;
+  $$, false)
+where stats_name = 'executor_mem_lines'
+or stats_name = 'workmem_wanted_lines'
+order by stats_name;
+      stats_name      | stats_value 
+----------------------+-------------
+ executor_mem_lines   |           1
+ workmem_wanted_lines |           0
+(2 rows)
 
 -- HashJoin
 select t1.* from smallt as t1, smallt as t2 where t1.i = t2.i order by 1,2,3;
@@ -1925,6 +1981,42 @@ and i = 0 order by 1,2,3; --order 1,2,3
  0 | text 5 | 01-06-2011
 (3 rows)
 
+-- Test Subplan with Agg
+with my_group_sum(d, total) as (select d, sum(i) from smallt group by d)
+select count(*) from smallt2
+where 0 < all (select total from my_group_sum, smallt2 as tmp where my_group_sum.d = smallt2.d);
+ count 
+-------
+    43
+(1 row)
+
+--start_ignore
+explain with my_group_sum(d, total) as (select d, sum(i) from smallt group by d)
+select count(*) from smallt2
+where 0 < all (select total from my_group_sum, smallt2 as tmp where my_group_sum.d = smallt2.d);
+                                                            QUERY PLAN
+-----------------------------------------------------------------------------------------------------------------------------------
+ Finalize Aggregate  (cost=1.41..1.42 rows=1 width=8)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=1.19..1.40 rows=3 width=8)
+         ->  Partial Aggregate  (cost=1.19..1.20 rows=1 width=8)
+               ->  Seq Scan on smallt2  (cost=0.00..1.17 rows=8 width=0)
+                     Filter: (SubPlan 1)
+                     SubPlan 1
+                       ->  Nested Loop  (cost=10000000009.00..10000000027.17 rows=1050 width=8)
+                             ->  Result  (cost=9.00..9.42 rows=21 width=12)
+                                   Filter: (smallt.d = smallt2.d)
+                                   ->  HashAggregate  (cost=9.00..9.21 rows=21 width=12)
+                                         Group Key: smallt.d
+                                         ->  Materialize  (cost=0.00..8.50 rows=100 width=8)
+                                               ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..8.00 rows=100 width=8)
+                                                     ->  Seq Scan on smallt  (cost=0.00..1.33 rows=33 width=8)
+                             ->  Materialize  (cost=0.00..4.75 rows=50 width=0)
+                                   ->  Broadcast Motion 3:3  (slice3; segments: 3)  (cost=0.00..4.50 rows=50 width=0)
+                                         ->  Seq Scan on smallt2 tmp  (cost=0.00..1.17 rows=17 width=0)
+ Optimizer: Postgres query optimizer
+(18 rows)
+
+--end_ignore
 -- Nested Subplan
 create table eager_free_r (r1 int, r2 int, r3 int);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'r1' as the Greenplum Database data distribution key for this table.

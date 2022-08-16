@@ -65,7 +65,7 @@ $$
     delete from table_for_function where i <= 200;
   end
 $$
-language plpgsql volatile execute on master;
+language plpgsql volatile;
 select update_table_for_function();
 select pg_sleep(0.77); -- Force pgstat_report_stat() to send tabstat.
 select n_tup_ins, n_tup_upd, n_tup_del, n_tup_hot_upd, n_live_tup, n_dead_tup, n_mod_since_analyze from pg_stat_all_tables_internal where relid = 'table_for_function'::regclass;

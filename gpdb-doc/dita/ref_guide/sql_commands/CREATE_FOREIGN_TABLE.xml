@@ -7,17 +7,17 @@
         <p id="sql_command_desc">Defines a new foreign table.</p>
         <section id="section2">
             <title>Synopsis</title>
-            <codeblock id="sql_command_synopsis">CREATE FOREIGN TABLE [ IF NOT EXISTS ] <varname>table_name</varname> ( [
-    <varname>column_name</varname> <varname>data_type</varname> [ OPTIONS ( <varname>option</varname> '<varname>value</varname>' [, ... ] ) ] [ COLLATE <varname>collation</varname> ] [ <varname>column_constraint</varname> [ ... ] ]
+            <codeblock id="sql_command_synopsis">CREATE FOREIGN TABLE [ IF NOT EXISTS ] &lt;table_name> ( [
+    &lt;column_name> &lt;data_type> [ OPTIONS ( &lt;option> '&lt;value>' [, ... ] ) ] [ COLLATE &lt;collation> ] [ &lt;column_constraint> [ ... ] ]
       [, ... ]
 ] )
-    SERVER <varname>server_name</varname>
-  [ OPTIONS ( [ mpp_execute { 'master' | 'any' | 'all segments' } [, ] ] <varname>option</varname> '<varname>value</varname>' [, ... ] ) ]</codeblock>
+    SERVER &lt;server_name>
+  [ OPTIONS ( [ mpp_execute { 'master' | 'any' | 'all segments' } [, ] ] &lt;option> '&lt;value>' [, ... ] ) ]</codeblock>
         <p>where <varname>column_constraint</varname> is:</p><codeblock>
-[ CONSTRAINT <varname>constraint_name</varname> ]
+[ CONSTRAINT &lt;constraint_name> ]
 { NOT NULL |
   NULL |
-  DEFAULT <varname>default_expr</varname> }</codeblock>
+  DEFAULT &lt;default_expr> }</codeblock>
         </section>
         <section id="section3">
             <title>Description</title>
@@ -85,8 +85,8 @@
                     <pt><varname>server_name</varname></pt>
                     <pd>
                         <p>The name of an existing server to use for the foreign table.
-                          For details on defining a server, see <codeph><xref href="CREATE_SERVER.xml#topic1">CREATE
-                    SERVER</xref></codeph>.</p>
+                          For details on defining a server, see <xref href="CREATE_SERVER.xml#topic1">CREATE
+                    SERVER</xref>.</p>
                     </pd>
                 </plentry>
                 <plentry>
@@ -141,20 +141,20 @@ SERVER film_server;</codeblock>
         </section>
         <section id="section7">
             <title>Compatibility</title>
-            <p><codeph>CREATE FOREIGN TABLE</codeph> largely conforms to the SQL standard; however, much as with <codeph><xref href="CREATE_TABLE.xml#topic1">CREATE
-                    TABLE</xref></codeph>, Greenplum Database permits <codeph>NULL</codeph> constraints and zero-column foreign tables.
+            <p><codeph>CREATE FOREIGN TABLE</codeph> largely conforms to the SQL standard; however, much as with <xref href="CREATE_TABLE.xml#topic1">CREATE
+                    TABLE</xref>, Greenplum Database permits <codeph>NULL</codeph> constraints and zero-column foreign tables.
                The ability to specify a default value is a Greenplum Database extension,
                as is the <codeph>mpp_execute</codeph> option.</p>
         </section>
         <section id="section8">
             <title>See Also</title>
-            <p><codeph><xref href="ALTER_FOREIGN_TABLE.xml#topic1">ALTER FOREIGN TABLE</xref></codeph>,
-                        <codeph><xref href="DROP_FOREIGN_TABLE.xml#topic1">DROP
-                    FOREIGN TABLE</xref></codeph>,
-                        <codeph><xref href="CREATE_TABLE.xml#topic1">CREATE
-                    TABLE</xref></codeph>,
-                        <codeph><xref href="CREATE_SERVER.xml#topic1">CREATE
-                    SERVER</xref></codeph></p>
+            <p><xref href="ALTER_FOREIGN_TABLE.xml#topic1">ALTER FOREIGN TABLE</xref>,
+                        <xref href="DROP_FOREIGN_TABLE.xml#topic1">DROP
+                    FOREIGN TABLE</xref>,
+                        <xref href="CREATE_TABLE.xml#topic1">CREATE
+                    TABLE</xref>,
+                        <xref href="CREATE_SERVER.xml#topic1">CREATE
+                    SERVER</xref></p>
         </section>
     </body>
 </topic>

@@ -10,6 +10,7 @@
 #include "postgres_fe.h"
 
 #include "pg_upgrade.h"
+#include "greenplum/pg_upgrade_greenplum.h"
 
 static void get_tablespace_paths(void);
 static void set_tablespace_directory_suffix(ClusterInfo *cluster);
@@ -21,12 +22,16 @@ init_tablespaces(void)
 	get_tablespace_paths();
 
 	set_tablespace_directory_suffix(&old_cluster);
-	set_tablespace_directory_suffix(&new_cluster);
 
-	if (os_info.num_old_tablespaces > 0 &&
-		strcmp(old_cluster.tablespace_suffix, new_cluster.tablespace_suffix) == 0)
-		pg_fatal("Cannot upgrade to/from the same system catalog version when\n"
-				 "using tablespaces.\n");
+	if(!is_skip_target_check())
+	{
+		set_tablespace_directory_suffix(&new_cluster);
+
+		if (os_info.num_old_tablespaces > 0 &&
+		  strcmp(old_cluster.tablespace_suffix, new_cluster.tablespace_suffix) == 0)
+			pg_fatal("Cannot upgrade to/from the same system catalog version when\n"
+					"using tablespaces.\n");
+	}
 }
 
 
@@ -54,7 +59,7 @@ get_tablespace_paths(void)
 	 * 9.2 removed the spclocation column in upstream postgres, in GPDB it was
 	 * removed in 6.0.0 during the 8.4 merge
 	 */
-			 (GET_MAJOR_VERSION(old_cluster.major_version) <= 803) ?
+			 (GET_MAJOR_VERSION(old_cluster.major_version) == 803) ?
 			 "spclocation" : "pg_catalog.pg_tablespace_location(oid) AS spclocation");
 
 	res = executeQueryOrDie(conn, "%s", query);

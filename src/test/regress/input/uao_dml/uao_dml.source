@@ -481,7 +481,6 @@ vacuum mytab_@amname@;
 SELECT reltuples FROM pg_class WHERE relname = 'mytab_@amname@';
 SELECT reltuples FROM pg_class WHERE relname = 'mytab_int_idx1_@amname@';
 
-
 -- @Description Checks that deleting works with many AO blocks.
 -- 
 DROP TABLE IF EXISTS foo;

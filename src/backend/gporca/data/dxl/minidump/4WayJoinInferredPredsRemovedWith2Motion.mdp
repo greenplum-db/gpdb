@@ -55,7 +55,7 @@ explain select * from cs catalog_sales, it item, sr store_returns, ss store_sale
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
       <dxl:RelationStatistics Mdid="2.81923.1.0" Name="ss" Rows="270.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.81923.1.0" Name="ss" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0,1" Keys="9,3" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="0.81923.1.0" Name="ss" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0,1" Keys="9,3" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="ss_item_sk" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -93,7 +93,7 @@ explain select * from cs catalog_sales, it item, sr store_returns, ss store_sale
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:RelationStatistics Mdid="2.81920.1.0" Name="cs" Rows="13000.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.81920.1.0" Name="cs" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0,1" Keys="9,3" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="0.81920.1.0" Name="cs" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0,1" Keys="9,3" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="cs_item_sk" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -131,7 +131,7 @@ explain select * from cs catalog_sales, it item, sr store_returns, ss store_sale
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:RelationStatistics Mdid="2.81926.1.0" Name="it" Rows="100.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.81926.1.0" Name="it" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="0.81926.1.0" Name="it" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="i_item_sk" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -166,7 +166,7 @@ explain select * from cs catalog_sales, it item, sr store_returns, ss store_sale
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:RelationStatistics Mdid="2.81929.1.0" Name="sr" Rows="10200.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.81929.1.0" Name="sr" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0,1" Keys="9,3" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="0.81929.1.0" Name="sr" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0,1" Keys="9,3" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="sr_item_sk" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -4649,7 +4649,7 @@ explain select * from cs catalog_sales, it item, sr store_returns, ss store_sale
         </dxl:And>
       </dxl:LogicalJoin>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="104185">
+    <dxl:Plan Id="0" SpaceSize="134775">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="1725.989618" Rows="129.961520" Width="44"/>

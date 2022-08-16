@@ -144,7 +144,7 @@ $$
     delete from table_for_function where i <= 200;
   end
 $$
-language plpgsql volatile execute on master;
+language plpgsql volatile;
 select update_table_for_function();
  update_table_for_function 
 ---------------------------

@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
-<topic id="topic1"><title id="bx20941">CREATE OPERATOR CLASS</title><body><p id="sql_command_desc">Defines a new operator class.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">CREATE OPERATOR CLASS <varname>name</varname> [DEFAULT] FOR TYPE <varname>data_type</varname>  
-  USING <varname>index_method</varname> [ FAMILY <varname>family_name</varname> ] AS 
-  { OPERATOR <varname>strategy_number</varname> <varname>operator_name</varname> [ ( <varname>op_type</varname>, <varname>op_type</varname> ) ] [ FOR SEARCH | FOR ORDER BY <varname>sort_family_name</varname> ]
-  | FUNCTION <varname>support_number</varname> <varname>funcname</varname> (<varname>argument_type</varname> [, ...] )
-  | STORAGE <varname>storage_type</varname>
+<topic id="topic1"><title id="bx20941">CREATE OPERATOR CLASS</title><body><p id="sql_command_desc">Defines a new operator class.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">CREATE OPERATOR CLASS &lt;name> [DEFAULT] FOR TYPE &lt;data_type>  
+  USING &lt;index_method> [ FAMILY &lt;family_name> ] AS 
+  { OPERATOR &lt;strategy_number> &lt;operator_name> [ ( &lt;op_type>, &lt;op_type> ) ] [ FOR SEARCH | FOR ORDER BY &lt;sort_family_name> ]
+  | FUNCTION &lt;support_number> &lt;funcname> (&lt;argument_type> [, ...] )
+  | STORAGE &lt;storage_type>
   } [, ... ]</codeblock></section><section id="section3"><title>Description</title><p><codeph>CREATE OPERATOR CLASS</codeph> creates a new operator class.
 An operator class defines how a particular data type can be used with
 an index. The operator class specifies that certain operators will fill
@@ -312,7 +312,7 @@ as <codeph>IMMUTABLE</codeph>.</p>
         FUNCTION 6 g_int_picksplit (internal, internal),
         FUNCTION 7 g_int_same (_int4, _int4, internal);</codeblock></section><section id="section7"><title>Compatibility</title><p><codeph>CREATE OPERATOR CLASS</codeph> is a Greenplum Database extension.
 There is no <codeph>CREATE OPERATOR CLASS</codeph> statement in the SQL
-standard.</p></section><section id="section8"><title>See Also</title><p><codeph><xref href="ALTER_OPERATOR_CLASS.xml#topic1" type="topic" format="dita"/></codeph>,
-                        <codeph><xref href="./DROP_OPERATOR_CLASS.xml#topic1" type="topic"
-                        format="dita"/></codeph>, <codeph><xref href="CREATE_FUNCTION.xml#topic1"
-                        type="topic" format="dita"/></codeph></p></section></body></topic>
+standard.</p></section><section id="section8"><title>See Also</title><p><xref href="ALTER_OPERATOR_CLASS.xml#topic1" type="topic" format="dita"/>,
+                        <xref href="./DROP_OPERATOR_CLASS.xml#topic1" type="topic"
+                        format="dita"/>, <xref href="CREATE_FUNCTION.xml#topic1"
+                        type="topic" format="dita"/></p></section></body></topic>

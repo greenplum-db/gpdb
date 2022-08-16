@@ -27,6 +27,7 @@
 #include "nodes/nodeFuncs.h"
 #include "utils/builtins.h"
 #include "utils/date.h"
+#include "utils/guc.h"
 #include "utils/datetime.h"
 #include "utils/memutils.h"
 #include "utils/tzparser.h"
@@ -2868,6 +2869,8 @@ DecodeNumberField(int len, char *str, int fmask,
 			tm->tm_year = atoi(str);
 			if ((len - 4) == 2)
 				*is2digits = true;
+			else if (((len - 4 ) == 3) && !gp_allow_date_field_width_5digits)
+				return DTERR_BAD_FORMAT;
 
 			return DTK_DATE;
 		}

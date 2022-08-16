@@ -891,7 +891,7 @@ makePartitionCreateStmt(Relation parentrel, char *partname, PartitionBoundSpec *
 	childstmt->ofTypename = NULL;
 	childstmt->constraints = NIL;
 	childstmt->options = elem->options ? copyObject(elem->options) : NIL;
-	childstmt->oncommit = ONCOMMIT_NOOP;  // FIXME: copy from parent stmt?
+	childstmt->oncommit = ONCOMMIT_NOOP;
 	childstmt->tablespacename = elem->tablespacename ? pstrdup(elem->tablespacename) : NULL;
 	childstmt->accessMethod = elem->accessMethod ? pstrdup(elem->accessMethod) : NULL;
 	childstmt->if_not_exists = false;
@@ -942,10 +942,12 @@ generateRangePartitions(ParseState *pstate,
 	partkey = RelationGetPartitionKey(parentrel);
 
 	/*
-	 * GPDB_12_MERGE_FIXME: We currently disabled support for multi column
-	 * range partitioned tables. PostgreSQL doesn't support that. Not sure
-	 * what to do about that.  Add support for it to PostgreSQL? Simplify the
-	 * grammar to not allow that?
+	 * GPDB_12_MERGE_FEATURE_NOT_SUPPORTED: We currently disabled support for multi-column
+	 * range partitioned tables. If user want to define partition table with multi-column
+	 * range, can use PostgreSQL's grammar:
+	 *
+	 * create table z (a int, b int, c int) partition by range(b, c);
+	 * create table z1 partition of z for values from (10, 10) TO (20, 20);
 	 */
 	if (partkey->partnatts != 1)
 		ereport(ERROR,
@@ -1085,10 +1087,12 @@ generateListPartition(ParseState *pstate,
 	boundspec->is_default = false;
 
 	/*
-	 * GPDB_12_MERGE_FIXME: Greenplum historically does not support multi column
-	 * List partitions. Upstream Postgres allows it. Keep this restriction for
-	 * now and most likely we will get the functionality for free from the merge
-	 * and we should remove this restriction once we verifies that.
+	 * GPDB_12_MERGE_FEATURE_NOT_SUPPORTED: We currently disabled support for multi-column
+	 * range partitioned tables. If user want to define partition table with multi-column
+	 * range, can use PostgreSQL's grammar:
+	 *
+	 * create table z (a int, b int, c int) partition by range(b, c);
+	 * create table z1 partition of z for values from (10, 10) TO (20, 20);
 	 */
 
 	listdatums = NIL;

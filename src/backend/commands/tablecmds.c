@@ -37,7 +37,6 @@
 #include "catalog/namespace.h"
 #include "catalog/objectaccess.h"
 #include "catalog/partition.h"
-#include "catalog/pg_am.h"
 #include "catalog/pg_appendonly.h"
 #include "catalog/pg_attribute_encoding.h"
 #include "catalog/pg_collation.h"
@@ -55,6 +54,7 @@
 #include "catalog/storage.h"
 #include "catalog/storage_xlog.h"
 #include "catalog/toasting.h"
+#include "catalog/gp_fastsequence.h"
 #include "cdb/cdbappendonlyam.h"
 #include "cdb/cdbappendonlyxlog.h"
 #include "cdb/cdbaocsam.h"
@@ -233,12 +233,18 @@ static const struct dropmsgstrings dropmsgstringarray[] = {
 	{'\0', 0, NULL, NULL, NULL, NULL}
 };
 
+/* communication between RemoveRelations and RangeVarCallbackForDropRelation */
 struct DropRelationCallbackState
 {
-	char		relkind;
+	/* These fields are set by RemoveRelations: */
+	char		expected_relkind;
+	LOCKMODE	heap_lockmode;
+	/* These fields are state to track which subsidiary locks are held: */
 	Oid			heapOid;
 	Oid			partParentOid;
-	bool		concurrent;
+	/* These fields are passed back by RangeVarCallbackForDropRelation: */
+	char		actual_relkind;
+	char		actual_relpersistence;
 };
 
 /* Alter table target-type flags for ATSimplePermissions */
@@ -442,6 +448,7 @@ static void change_owner_recurse_to_sequences(Oid relationOid,
 static ObjectAddress ATExecClusterOn(Relation rel, const char *indexName,
 									 LOCKMODE lockmode);
 static void ATExecDropCluster(Relation rel, LOCKMODE lockmode);
+static void ATPrepSetAccessMethod(AlteredTableInfo *tab, Relation rel, const char *amname);
 static bool ATPrepChangePersistence(Relation rel, bool toLogged);
 static void ATPrepSetTableSpace(AlteredTableInfo *tab, Relation rel,
 								const char *tablespacename, LOCKMODE lockmode);
@@ -449,6 +456,8 @@ static void ATExecSetTableSpace(Oid tableOid, Oid newTableSpace, LOCKMODE lockmo
 static void ATExecSetTableSpaceNoStorage(Relation rel, Oid newTableSpace);
 static void ATExecSetRelOptions(Relation rel, List *defList,
 								AlterTableType operation,
+								bool *aoopt_changed,
+								bool am_change_heap_ao,
 								LOCKMODE lockmode);
 static void ATExecEnableDisableTrigger(Relation rel, const char *trigname,
 									   char fires_when, bool skip_system, LOCKMODE lockmode);
@@ -509,6 +518,7 @@ static bool prebuild_temp_table(Relation rel, RangeVar *tmpname, DistributedBy *
 
 static void prepare_AlterTableStmt_for_dispatch(AlterTableStmt *stmt);
 static List *strip_gpdb_part_commands(List *cmds);
+static void populate_rel_col_encodings(Relation rel, List *stenc, List *withOptions);
 
 
 /* ----------------------------------------------------------------
@@ -1431,14 +1441,6 @@ DefineRelation(CreateStmt *stmt, char relkind, Oid ownerId,
 	}
 
 	/* MPP-6929: metadata tracking */
-	/* GPDB_12_MERGE_FIXME: We reported new partitions with "ALTER INHERIT"
-	 * in previous versions, but I think it was mostly an implementation
-	 * artifact when PostgreSQL didn't have native partitioning support and
-	 * GPDB partitioning was a special case of table inheritance. Take a
-	 * holistic look on how all the partition commands are reported in
-	 * pg_stat_last_operation. Including new upstream commands
-	 * CREATE TABLE PARTITITION OF, ATTACH PARTITION etc.
-	 */
 	if (stmt->partbound && Gp_role == GP_ROLE_DISPATCH)
 	{
 		MetaTrackUpdObject(RelationRelationId,
@@ -1653,10 +1655,13 @@ RemoveRelations(DropStmt *drop)
 		AcceptInvalidationMessages();
 
 		/* Look up the appropriate relation using namespace search. */
-		state.relkind = relkind;
+		state.expected_relkind = relkind;
+		state.heap_lockmode = drop->concurrent ?
+			ShareUpdateExclusiveLock : AccessExclusiveLock;
+		/* We must initialize these fields to show that no locks are held: */
 		state.heapOid = InvalidOid;
 		state.partParentOid = InvalidOid;
-		state.concurrent = drop->concurrent;
+
 		relOid = RangeVarGetRelidExtended(rel, lockmode, RVR_MISSING_OK,
 										  RangeVarCallbackForDropRelation,
 										  (void *) &state);
@@ -1667,6 +1672,18 @@ RemoveRelations(DropStmt *drop)
 			DropErrorMsgNonExistent(rel, relkind, drop->missing_ok);
 			continue;
 		}
+
+		/*
+		 * If we're told to drop a partitioned index, we must acquire lock on
+		 * all the children of its parent partitioned table before proceeding.
+		 * Otherwise we'd try to lock the child index partitions before their
+		 * tables, leading to potential deadlock against other sessions that
+		 * will lock those objects in the other order.
+		 */
+		if (state.actual_relkind == RELKIND_PARTITIONED_INDEX)
+			(void) find_all_inheritors(state.heapOid,
+									   state.heap_lockmode,
+									   NULL);
 
 		/* OK, we're ready to delete this one */
 		obj.classId = RelationRelationId;
@@ -1713,6 +1730,14 @@ ao_aux_tables_safe_truncate(Relation rel)
 	relid_set_new_relfilenode(aoseg_relid);
 	relid_set_new_relfilenode(aoblkdir_relid);
 	relid_set_new_relfilenode(aovisimap_relid);
+
+	/*
+	 * Reset existing gp_fastsequence entries for the segrel to an initial entry.
+	 * This mimics the state of the gp_fastsequence row when an empty AO/AOCS
+	 * table is created.
+	 */
+	RemoveFastSequenceEntry(aoseg_relid);
+	InsertInitialFastSequenceEntries(aoseg_relid);
 }
 
 /*
@@ -1727,7 +1752,6 @@ RangeVarCallbackForDropRelation(const RangeVar *rel, Oid relOid, Oid oldRelOid,
 {
 	HeapTuple	tuple;
 	struct DropRelationCallbackState *state;
-	char		relkind;
 	char		expected_relkind;
 	bool		is_partition;
 	Form_pg_class classform;
@@ -1735,9 +1759,7 @@ RangeVarCallbackForDropRelation(const RangeVar *rel, Oid relOid, Oid oldRelOid,
 	bool		invalid_system_index = false;
 
 	state = (struct DropRelationCallbackState *) arg;
-	relkind = state->relkind;
-	heap_lockmode = state->concurrent ?
-		ShareUpdateExclusiveLock : AccessExclusiveLock;
+	heap_lockmode = state->heap_lockmode;
 
 	/*
 	 * If we previously locked some other index's heap, and the name we're
@@ -1771,6 +1793,10 @@ RangeVarCallbackForDropRelation(const RangeVar *rel, Oid relOid, Oid oldRelOid,
 	classform = (Form_pg_class) GETSTRUCT(tuple);
 	is_partition = classform->relispartition;
 
+	/* Pass back some data to save lookups in RemoveRelations */
+	state->actual_relkind = classform->relkind;
+	state->actual_relpersistence = classform->relpersistence;
+
 	/*
 	 * Both RELKIND_RELATION and RELKIND_PARTITIONED_TABLE are OBJECT_TABLE,
 	 * but RemoveRelations() can only pass one relkind for a given relation.
@@ -1786,13 +1812,15 @@ RangeVarCallbackForDropRelation(const RangeVar *rel, Oid relOid, Oid oldRelOid,
 	else
 		expected_relkind = classform->relkind;
 
-	if (relkind != expected_relkind)
-		DropErrorMsgWrongType(rel->relname, classform->relkind, relkind);
+	if (state->expected_relkind != expected_relkind)
+		DropErrorMsgWrongType(rel->relname, classform->relkind,
+							  state->expected_relkind);
 
 	/* Allow DROP to either table owner or schema owner */
 	if (!pg_class_ownercheck(relOid, GetUserId()) &&
 		!pg_namespace_ownercheck(classform->relnamespace, GetUserId()))
-		aclcheck_error(ACLCHECK_NOT_OWNER, get_relkind_objtype(get_rel_relkind(relOid)),
+		aclcheck_error(ACLCHECK_NOT_OWNER,
+					   get_relkind_objtype(classform->relkind),
 					   rel->relname);
 
 	/*
@@ -1801,7 +1829,7 @@ RangeVarCallbackForDropRelation(const RangeVar *rel, Oid relOid, Oid oldRelOid,
 	 * only concerns indexes of toast relations that became invalid during a
 	 * REINDEX CONCURRENTLY process.
 	 */
-	if (IsSystemClass(relOid, classform) && relkind == RELKIND_INDEX)
+	if (IsSystemClass(relOid, classform) && classform->relkind == RELKIND_INDEX)
 	{
 		HeapTuple	locTuple;
 		Form_pg_index indexform;
@@ -1837,9 +1865,10 @@ RangeVarCallbackForDropRelation(const RangeVar *rel, Oid relOid, Oid oldRelOid,
 	 * locking the index.  index_drop() will need this anyway, and since
 	 * regular queries lock tables before their indexes, we risk deadlock if
 	 * we do it the other way around.  No error if we don't find a pg_index
-	 * entry, though --- the relation may have been dropped.
+	 * entry, though --- the relation may have been dropped.  Note that this
+	 * code will execute for either plain or partitioned indexes.
 	 */
-	if ((relkind == RELKIND_INDEX || relkind == RELKIND_PARTITIONED_INDEX) &&
+	if (expected_relkind == RELKIND_INDEX &&
 		relOid != oldRelOid)
 	{
 		state->heapOid = IndexGetRelation(relOid, true);
@@ -1850,7 +1879,7 @@ RangeVarCallbackForDropRelation(const RangeVar *rel, Oid relOid, Oid oldRelOid,
 	/*
 	 * Similarly, if the relation is a partition, we must acquire lock on its
 	 * parent before locking the partition.  That's because queries lock the
-	 * parent before its partitions, so we risk deadlock it we do it the other
+	 * parent before its partitions, so we risk deadlock if we do it the other
 	 * way around.
 	 */
 	if (is_partition && relOid != oldRelOid)
@@ -4138,6 +4167,35 @@ strip_gpdb_part_commands(List *cmds)
 	return newcmds;
 }
 
+/* 
+ * Populate the column encoding option for each column in the relation. 
+ */
+static void populate_rel_col_encodings(Relation rel, List *stenc, List *withOptions)
+{
+	int 		attno;
+	List 		*colDefs = NIL;
+	TupleDesc 	tupdesc = RelationGetDescr(rel);
+
+	/* Figure out the column definition list. */
+	for (attno = 0; attno < tupdesc->natts; attno++)
+	{
+		Form_pg_attribute 	att = TupleDescAttr(tupdesc, attno);
+		ColumnDef 		*cd = makeColumnDef(NameStr(att->attname),
+								att->atttypid, 
+								att->atttypmod,
+								0);
+		colDefs = lappend(colDefs, cd);
+	}
+
+	List *attr_encodings = transformColumnEncoding(rel,
+							colDefs /*column clauses*/,
+							stenc /*encoding clauses*/,
+							withOptions /*withOptions*/,
+							rel->rd_rel->relkind == RELKIND_PARTITIONED_TABLE /*rootpartition*/,
+							false /*errorOnEncodingClause*/);
+	AddRelationAttributeEncodings(rel, attr_encodings);
+}
+
 /*
  * AlterTableInternal
  *
@@ -4221,6 +4279,7 @@ AlterTableGetLockLevel(List *cmds)
 				 */
 			case AT_AddColumn:	/* may rewrite heap, in some cases and visible
 								 * to SELECT */
+			case AT_SetAccessMethod:	/* must rewrite heap */
 			case AT_SetTableSpace:	/* must rewrite heap */
 			case AT_AlterColumnType:	/* must rewrite heap */
 				cmd_lockmode = AccessExclusiveLock;
@@ -4755,6 +4814,24 @@ ATPrepCmd(List **wqueue, Relation rel, AlterTableCmd *cmd,
 			ATSimplePermissions(rel, ATT_TABLE | ATT_FOREIGN_TABLE);
 			pass = AT_PASS_DROP;
 			break;
+		case AT_SetAccessMethod:	/* SET ACCESS METHOD */
+			ATSimplePermissions(rel, ATT_TABLE | ATT_MATVIEW);
+
+			/* partitioned tables don't have an access method */
+			if (rel->rd_rel->relkind == RELKIND_PARTITIONED_TABLE)
+				ereport(ERROR,
+						(errcode(ERRCODE_WRONG_OBJECT_TYPE),
+						 errmsg("cannot change access method of a partitioned table")));
+
+			/* check if another access method change was already requested */
+			if (OidIsValid(tab->newAccessMethod))
+				ereport(ERROR,
+						(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+						 errmsg("cannot have multiple SET ACCESS METHOD subcommands")));
+
+			ATPrepSetAccessMethod(tab, rel, cmd->name);
+			pass = AT_PASS_MISC;	/* does not matter; no work in Phase 2 */
+			break;
 		case AT_SetTableSpace:	/* SET TABLESPACE */
 			ATSimplePermissions(rel, ATT_TABLE | ATT_MATVIEW | ATT_INDEX |
 								ATT_PARTITIONED_INDEX);
@@ -5240,6 +5317,31 @@ ATExecCmd(List **wqueue, AlteredTableInfo *tab, Relation rel,
 		case AT_DropOids:		/* SET WITHOUT OIDS */
 			/* nothing to do here, oid columns don't exist anymore */
 			break;
+		case AT_SetAccessMethod:	/* SET ACCESS METHOD */
+			/* Set reloptions if specified any. Otherwise handled specially in Phase 3. */
+			if (cmd->def)
+			{
+				bool aoopt_changed = false;
+				bool am_change_heap_ao = OidIsValid(tab->newAccessMethod) && 
+						((IsAccessMethodAO(tab->newAccessMethod) && !RelationIsAppendOptimized(rel)) ||
+						(!IsAccessMethodAO(tab->newAccessMethod) && RelationIsAppendOptimized(rel)));
+
+				ATExecSetRelOptions(rel, (List *) cmd->def, cmd->subtype, &aoopt_changed, am_change_heap_ao, lockmode);
+
+				/* 
+				 * When user sets the same access method as the existing one, the
+				 * rewrite flag won't be set. But it's possible that the storage
+				 * option changed, in which case we'll still have to rewrite.
+				 */
+				if (aoopt_changed)
+					tab->rewrite |= AT_REWRITE_ALTER_RELOPTS;
+			}
+
+			/* If we are changing AM to AOCO, add pg_attribute_encoding entries for each column. */
+			if (tab->newAccessMethod == AO_COLUMN_TABLE_AM_OID) 
+				populate_rel_col_encodings(rel, NULL, (List*)cmd->def);
+
+			break;
 		case AT_SetTableSpace:	/* SET TABLESPACE */
 
 			/*
@@ -5255,7 +5357,15 @@ ATExecCmd(List **wqueue, AlteredTableInfo *tab, Relation rel,
 		case AT_SetRelOptions:	/* SET (...) */
 		case AT_ResetRelOptions:	/* RESET (...) */
 		case AT_ReplaceRelOptions:	/* replace entire option list */
-			ATExecSetRelOptions(rel, (List *) cmd->def, cmd->subtype, lockmode);
+			{
+				bool 		aoopt_changed = false;
+
+				ATExecSetRelOptions(rel, (List *) cmd->def, cmd->subtype, &aoopt_changed, false, lockmode);
+
+				/* Will rewrite table if there's a change to the AO reloptions. */
+				if (aoopt_changed)
+					tab->rewrite |= AT_REWRITE_ALTER_RELOPTS;
+			}
 			break;
 		case AT_EnableTrig:		/* ENABLE TRIGGER name */
 			ATExecEnableDisableTrigger(rel, cmd->name,
@@ -5547,7 +5657,7 @@ ATRewriteTables(AlterTableStmt *parsetree, List **wqueue, LOCKMODE lockmode)
 		/*
 		 * We only need to rewrite the table if at least one column needs to
 		 * be recomputed, we are adding/removing the OID column, or we are
-		 * changing its persistence.
+		 * changing its persistence or access method.
 		 *
 		 * There are two reasons for requiring a rewrite when changing
 		 * persistence: on one hand, we need to ensure that the buffers
@@ -5560,8 +5670,10 @@ ATRewriteTables(AlterTableStmt *parsetree, List **wqueue, LOCKMODE lockmode)
 		{
 			/* Build a temporary relation and copy data */
 			Oid			OIDNewHeap;
+			Oid			NewAccessMethod;
 			Oid			NewTableSpace;
 			char		persistence;
+			TransactionId relfrozenxid;
 
 			OldHeap = table_open(tab->relid, NoLock);
 
@@ -5599,6 +5711,15 @@ ATRewriteTables(AlterTableStmt *parsetree, List **wqueue, LOCKMODE lockmode)
 				NewTableSpace = tab->newTableSpace;
 			else
 				NewTableSpace = oldTableSpace;
+
+			/*
+			 * Select destination access method (same as original unless user
+			 * requested a change)
+			 */
+			if (OidIsValid(tab->newAccessMethod))
+				NewAccessMethod = tab->newAccessMethod;
+			else
+				NewAccessMethod = OldHeap->rd_rel->relam;
 
 			/*
 			 * Select persistence of transient table (same as original unless
@@ -5639,8 +5760,8 @@ ATRewriteTables(AlterTableStmt *parsetree, List **wqueue, LOCKMODE lockmode)
 			 * persistence. That wouldn't work for pg_class, but that can't be
 			 * unlogged anyway.
 			 */
-			OIDNewHeap = make_new_heap(tab->relid, NewTableSpace, persistence,
-									   lockmode, hasIndexes, false);
+			OIDNewHeap = make_new_heap(tab->relid, NewTableSpace, NewAccessMethod,
+									   persistence, lockmode, hasIndexes, false);
 
 			/*
 			 * Copy the heap data into the new table with the desired
@@ -5662,13 +5783,36 @@ ATRewriteTables(AlterTableStmt *parsetree, List **wqueue, LOCKMODE lockmode)
 			 * over to our original pg_class tuple. We do not want to do this
 			 * in the case of ALTER TABLE rewrites as the temp relfile will
 			 * not have correct stats.
+			 *
+			 * GPDB: Since pg_class.relfrozenxid doesn't mean anything for
+			 * AO/AOCO tables, and should not be set, pass in
+			 * InvalidTransactionId instead of RecentXmin.
 			 */
+
+			/*
+			 * Example workflow of changing access method from a
+			 * Heap table (Oid:a) to an AO table:
+			 * - Create transient AO table (Oid:b) and its AO aux tables in
+			 * 	 make_new_heap
+			 * - Copy table data into the transient table
+			 * - Swap Oids in the pg_appendonly entry so that newly generated
+			 * 	 aux tables are mapped to Oid a in ATAOEntries
+			 * - Swap attributes in pg_class entry between the two tables
+			 * 	 (such as relfilenode, relam, ...)
+			 * - Now dropping the transient table will use the heap AM and
+			 *   delete the original heap relation file.
+			 */
+
+			if (NewAccessMethod == AO_ROW_TABLE_AM_OID || NewAccessMethod == AO_COLUMN_TABLE_AM_OID)
+				relfrozenxid = InvalidTransactionId;
+			else
+				relfrozenxid = RecentXmin;
 			finish_heap_swap(tab->relid, OIDNewHeap,
 							 false, false,
 							 false /* swap_stats */,
 							 true,
 							 !OidIsValid(tab->newTableSpace),
-							 RecentXmin,
+							 relfrozenxid,
 							 ReadNextMultiXactId(),
 							 persistence);
 		}
@@ -5954,10 +6098,28 @@ ATAocsWriteNewColumns(AlteredTableInfo *tab)
 	rel = heap_open(tab->relid, NoLock);
 	Assert(RelationIsAoCols(rel));
 
-	/* Try to recycle any old segfiles first. */
-	AppendOnlyRecycleDeadSegments(rel);
+	/*
+     * There might be AWAITING_DROP segments occupying spaces for failing
+     * to drop at VACUUM in the case of cleaning up happened concurrently
+     * with earlier readers which was accessing the dead segment files.
+     *
+     * We used to call AppendOptimizedRecycleDeadSegments() (current name is
+     * ao_vacuum_rel_recycle_dead_segments) to recycle those segfiles to save
+     * spaces in this scenario. But it didn't do corresponding index tuples
+     * cleanup for unknown reason.
+     *
+     * After optimizing VACUUM AO strategy, we did refactor for
+     * AppendOptimizedRecycleDeadSegments() a little bit and combine
+     * dead segfiles cleanup with corresponding indexes cleanup together.
+     * While it seems to be impossible to pass index vacuuming parameter in
+     * this scenario, so we removed AppendOptimizedRecycleDeadSegments() out
+     * of this function and dedicated it to be called only in VACUUM scenario.
+     *
+     * We are supposed to be fine without recycling spaces here, or find
+     * another way to fix it if that does become a real problem.
+     */
 
-	segInfos = GetAllAOCSFileSegInfo(rel, snapshot, &nseg);
+	segInfos = GetAllAOCSFileSegInfo(rel, snapshot, &nseg, NULL);
 	basepath = relpathbackend(rel->rd_node, rel->rd_backend, MAIN_FORKNUM);
 	if (nseg > 0)
 	{
@@ -6248,16 +6410,9 @@ ATRewriteTable(AlteredTableInfo *tab, Oid OIDNewHeap, LOCKMODE lockmode)
 		scan = table_beginscan(oldrel, snapshot, 0, NULL);
 
 		if (newrel && RelationIsAoRows(newrel))
-		{
-			/* Table access method is not permitted to change */
-			Assert(RelationIsAoRows(oldrel));
 			appendonly_dml_init(newrel, CMD_INSERT);
-		}
 		else if (newrel && RelationIsAoCols(newrel))
-		{
-			Assert(RelationIsAoCols(oldrel));
 			aoco_dml_init(newrel, CMD_INSERT);
-		}
 
 		/*
 		 * Switch to per-tuple memory context and reset it for each tuple
@@ -6456,6 +6611,8 @@ ATGetQueueEntry(List **wqueue, Relation rel)
 	tab->relid = relid;
 	tab->relkind = rel->rd_rel->relkind;
 	tab->oldDesc = CreateTupleDescCopyConstr(RelationGetDescr(rel));
+	tab->newAccessMethod = InvalidOid;
+	tab->newTableSpace = InvalidOid;
 	tab->newrelpersistence = RELPERSISTENCE_PERMANENT;
 	tab->chgPersistence = false;
 
@@ -14001,6 +14158,41 @@ ATExecDropCluster(Relation rel, LOCKMODE lockmode)
 }
 
 /*
+ * Preparation phase for SET ACCESS METHOD
+ *
+ * Check that access method exists.  If it is the same as the table's current
+ * access method, it is a no-op.  Otherwise, a table rewrite is necessary.
+ */
+static void
+ATPrepSetAccessMethod(AlteredTableInfo *tab, Relation rel, const char *amname)
+{
+	Oid			amoid;
+
+	/* Check that the table access method exists */
+	amoid = get_table_am_oid(amname, false);
+
+	if (rel->rd_rel->relam == amoid)
+		return;
+
+	/*
+	 * Since we don't support unique indexes for AO/AOCO tables, ban
+	 * heap->AO/AOCO in case the heap table has a unique index.
+	 */
+	if (rel->rd_rel->relam == HEAP_TABLE_AM_OID &&
+		(amoid == AO_ROW_TABLE_AM_OID || amoid == AO_COLUMN_TABLE_AM_OID))
+	{
+		if (relationHasUniqueIndex(rel))
+				ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+					errmsg("append-only tables do not support unique indexes"),
+					errdetail("heap table \"%s\" being altered contains unique index", RelationGetRelationName(rel))));
+	}
+
+	/* Save info for Phase 3 to do the real work */
+	tab->rewrite |= AT_REWRITE_ACCESS_METHOD;
+	tab->newAccessMethod = amoid;
+}
+
+/*
  * ALTER TABLE SET TABLESPACE
  */
 static void
@@ -14032,10 +14224,14 @@ ATPrepSetTableSpace(AlteredTableInfo *tab, Relation rel, const char *tablespacen
 
 /*
  * Set, reset, or replace reloptions.
+ *
+ * GPDB specific arguments: 
+ * 	aoopt_changed: whether any AO storage options have been changed in this function.
+ * 	am_change_heap_ao: whether we are changing the AM from heap->AO/CO or vice-versa.
  */
 static void
 ATExecSetRelOptions(Relation rel, List *defList, AlterTableType operation,
-					LOCKMODE lockmode)
+					bool *aoopt_changed, bool am_change_heap_ao, LOCKMODE lockmode)
 {
 	Oid			relid;
 	Relation	pgclass;
@@ -14060,11 +14256,13 @@ ATExecSetRelOptions(Relation rel, List *defList, AlterTableType operation,
 	if (!HeapTupleIsValid(tuple))
 		elog(ERROR, "cache lookup failed for relation %u", relid);
 
-	if (operation == AT_ReplaceRelOptions)
+	if (operation == AT_ReplaceRelOptions || am_change_heap_ao)
 	{
 		/*
-		 * If we're supposed to replace the reloptions list, we just pretend
-		 * there were none before.
+		 * If we're supposed to replace the reloptions list, or if we're
+		 * changing AM between heap and AO/CO so the old reloptions won't 
+		 * apply to the new table anymore, we just pretend there were
+		 * none before.
 		 */
 		datum = (Datum) 0;
 		isnull = true;
@@ -14076,21 +14274,6 @@ ATExecSetRelOptions(Relation rel, List *defList, AlterTableType operation,
 								&isnull);
 	}
 
-	/*
-	 * Disallow all AO options.  ALTER TABLE SET ... command does not rewrite a
-	 * table.  Setting AO options (e.g. setting appendonly=true when it's
-	 * currently unset) involves rewrite of the table and is handled using the
-	 * SET WITH variant of ALTER TABLE.
-	 *
-	 * GPDP_91_MERGE_FIXME: Is it possible to use the new reloptions format to
-	 * avoid replicating each AO reloption here?  How about introducing new
-	 * RELOPT_KIND_AO and RELOPT_KIND_AOCO to relopt_kind?  As of PostgreSQL v12,
-	 * RELOPT_KIND_APPENDOPTIMIZED is introduced and can be leveraged when
-	 * addressing this fixme.
-	 *
-	 * Future work: could convert from SET to SET WITH codepath which
-	 * can support additional reloption types
-	 */
 	if (defList != NIL)
 	{
 		ListCell   *cell;
@@ -14098,17 +14281,7 @@ ATExecSetRelOptions(Relation rel, List *defList, AlterTableType operation,
 		foreach(cell, defList)
 		{
 			DefElem    *def = lfirst(cell);
-			int			kw_len = strlen(def->defname);
 
-			if (pg_strncasecmp(SOPT_APPENDONLY, def->defname, kw_len) == 0 ||
-				pg_strncasecmp(SOPT_BLOCKSIZE, def->defname, kw_len) == 0 ||
-				pg_strncasecmp(SOPT_COMPTYPE, def->defname, kw_len) == 0 ||
-				pg_strncasecmp(SOPT_COMPLEVEL, def->defname, kw_len) == 0 ||
-				pg_strncasecmp(SOPT_CHECKSUM, def->defname, kw_len) == 0)
-				ereport(ERROR,
-						(errcode(ERRCODE_WRONG_OBJECT_TYPE),
-						 errmsg("cannot SET reloption \"%s\"",
-								def->defname)));
 			/*
 			 * Autovacuum on user tables is not enabled in Greenplum.  Move on
 			 * with a warning.  The decision to not error out is in favor of
@@ -14138,13 +14311,29 @@ ATExecSetRelOptions(Relation rel, List *defList, AlterTableType operation,
 		case RELKIND_AOSEGMENTS:
 		case RELKIND_AOBLOCKDIR:
 		case RELKIND_AOVISIMAP:
-			if (RelationIsAppendOptimized(rel))
-				ereport(ERROR,
-						(errcode(ERRCODE_WRONG_OBJECT_TYPE),
-						 errmsg("altering reloptions for append only tables"
-								" is not permitted")));
+			/*
+			 * Validate the reloptions as for AO/CO table if (1) we'll change AM to 
+			 * AO/CO, or (2) we are not changing AM but the relation is just AO/CO.
+			 */
+			if ((RelationIsAppendOptimized(rel) && !am_change_heap_ao) || 
+					(!RelationIsAppendOptimized(rel) && am_change_heap_ao))
+			{
+				StdRdOptions *stdRdOptions = (StdRdOptions *) default_reloptions(newOptions,
+																				 true,
+																				 RELOPT_KIND_APPENDOPTIMIZED);
+				validateAppendOnlyRelOptions(stdRdOptions->blocksize,
+											 gp_safefswritesize,
+											 stdRdOptions->compresslevel,
+											 stdRdOptions->compresstype,
+											 stdRdOptions->checksum,
+											 (rel->rd_amhandler == AO_COLUMN_TABLE_AM_HANDLER_OID));
+				/* If reloptions will be changed, indicate so. */
+				if (aoopt_changed != NULL)
+					*aoopt_changed = !relOptionsEquals(datum, newOptions);
 
-			(void) heap_reloptions(rel->rd_rel->relkind, newOptions, true);
+			}
+			else
+				(void) heap_reloptions(rel->rd_rel->relkind, newOptions, true);
 			break;
 		case RELKIND_VIEW:
 			(void) view_reloptions(newOptions, true);
@@ -14775,7 +14964,7 @@ index_copy_data(Relation rel, RelFileNode newrnode)
 			if (rel->rd_rel->relpersistence == RELPERSISTENCE_PERMANENT ||
 				(rel->rd_rel->relpersistence == RELPERSISTENCE_UNLOGGED &&
 				 forkNum == INIT_FORKNUM))
-				log_smgrcreate(&newrnode, forkNum);
+				log_smgrcreate(&newrnode, forkNum, smgr_which);
 			RelationCopyStorage(rel->rd_smgr, dstrel, forkNum,
 								rel->rd_rel->relpersistence);
 		}
@@ -15774,6 +15963,19 @@ build_ctas_with_dist(Relation rel, DistributedBy *dist_clause,
 		into->options = storage_opts;
 		into->tableSpaceName = get_tablespace_name(tblspc);
 		into->distributedBy = (Node *)dist_clause;
+		if (RelationIsAoRows(rel))
+		{
+			/*
+			 * In order to avoid being affected by the GUC of gp_default_storage_options,
+			 * we should re-build storage options from original table.
+			 *
+			 * The reason is that when we use the default parameters to create a table,
+			 * the configuration will not be written to pg_class.reloptions, and then if
+			 * gp_default_storage_options is modified, the newly created table will be
+			 * inconsistent with the original table.
+			 */
+			into->options = build_ao_rel_storage_opts(into->options, rel);
+		}
 		s->intoClause = into;
 
 		RawStmt *rawstmt = makeNode(RawStmt);
@@ -15959,28 +16161,24 @@ prebuild_temp_table(Relation rel, RangeVar *tmpname, DistributedBy *distro,
 			rel->rd_rel->relhasindex)
 			cs->buildAoBlkdir = true;
 
-		/* 
-		 * For AO/CO tables, need to remove table level compression settings 
-		 * for the AO_COLUMN case since they're set at the column level.
-		 */
-		if (RelationIsAoCols(rel))
+		cs->options = opts;
+
+		if (RelationIsAoRows(rel))
 		{
-			ListCell *lc;
-
-			foreach(lc, opts)
-			{
-				DefElem *de = lfirst(lc);
-
-				if (!useExistingColumnAttributes || 
-						!de->defname || 
-						!is_storage_encoding_directive(de->defname))
-					cs->options = lappend(cs->options, de);
-			}
-			if (useExistingColumnAttributes)
-				col_encs = RelationGetUntransformedAttributeOptions(rel);
+			/*
+			* In order to avoid being affected by the GUC of gp_default_storage_options,
+			* we should re-build storage options from original table.
+			*
+			* The reason is that when we use the default parameters to create a table,
+			* the configuration will not be written to pg_class.reloptions, and then if
+			* gp_default_storage_options is modified, the newly created table will be
+			* inconsistent with the original table.
+			*/
+			cs->options = build_ao_rel_storage_opts(cs->options, rel);
 		}
-		else
-			cs->options = opts;
+
+		if (RelationIsAoCols(rel) && useExistingColumnAttributes)
+			col_encs = RelationGetUntransformedAttributeOptions(rel);
 
 		for (attno = 0; attno < tupdesc->natts; attno++)
 		{

@@ -107,6 +107,7 @@ CREATE TABLE keo3 ( sky_per character varying(24), bky_per character varying(24)
 INSERT INTO keo3 VALUES ('1', '1');
 CREATE TABLE keo4 ( keo_para_required_period character varying(6), keo_para_budget_date character varying(24)) DISTRIBUTED RANDOMLY;
 INSERT INTO keo4 VALUES ('1', '1');
+ANALYZE keo1, keo2, keo3, keo4;
 -- Explicit Redistribution motion should be added in case of GPDB Planner (test case not applicable for ORCA)
 EXPLAIN (COSTS OFF) UPDATE keo1 SET user_vie_act_cntr_marg_cum = 234.682 FROM
     ( SELECT a.user_vie_project_code_pk FROM keo1 a INNER JOIN keo2 b
@@ -117,39 +118,41 @@ EXPLAIN (COSTS OFF) UPDATE keo1 SET user_vie_act_cntr_marg_cum = 234.682 FROM
                 (SELECT min (keo4.keo_para_budget_date) FROM keo4)))
     ) t1
 WHERE t1.user_vie_project_code_pk = keo1.user_vie_project_code_pk;
-                                                       QUERY PLAN                                                        
--------------------------------------------------------------------------------------------------------------------------
+                                                 QUERY PLAN                                                  
+-------------------------------------------------------------------------------------------------------------
  Update on keo1
    InitPlan 3 (returns $2)  (slice1)
-     ->  Finalize Aggregate
+     ->  Aggregate
            InitPlan 2 (returns $1)  (slice3)
              ->  Gather Motion 3:1  (slice4; segments: 3)
                    InitPlan 1 (returns $0)  (slice5)
-                     ->  Finalize Aggregate
+                     ->  Aggregate
                            ->  Gather Motion 3:1  (slice6; segments: 3)
-                                 ->  Partial Aggregate
-                                       ->  Seq Scan on keo4
+                                 ->  Seq Scan on keo4
                    ->  Seq Scan on keo4 keo4_1
                          Filter: ((keo_para_budget_date)::text = $0)
            ->  Gather Motion 3:1  (slice2; segments: 3)
-                 ->  Partial Aggregate
-                       ->  Seq Scan on keo3
-                             Filter: ((bky_per)::text = ($1)::text)
+                 ->  Seq Scan on keo3
+                       Filter: ((bky_per)::text = ($1)::text)
    ->  Explicit Redistribute Motion 3:3  (slice7; segments: 3)
          ->  Hash Join
-               Hash Cond: ((b.projects_pk)::text = (a.user_vie_project_code_pk)::text)
-               ->  Seq Scan on keo2 b
-               ->  Hash
-                     ->  Broadcast Motion 3:3  (slice8; segments: 3)
-                           ->  Hash Join
-                                 Hash Cond: ((keo1.user_vie_project_code_pk)::text = (a.user_vie_project_code_pk)::text)
+               Hash Cond: ((a.user_vie_project_code_pk)::text = (b.projects_pk)::text)
+               ->  Hash Join
+                     Hash Cond: ((a.user_vie_project_code_pk)::text = (keo1.user_vie_project_code_pk)::text)
+                     ->  Redistribute Motion 3:3  (slice8; segments: 3)
+                           Hash Key: a.user_vie_project_code_pk
+                           ->  Seq Scan on keo1 a
+                                 Filter: ((user_vie_fiscal_year_period_sk)::text = $2)
+                     ->  Hash
+                           ->  Redistribute Motion 3:3  (slice9; segments: 3)
+                                 Hash Key: keo1.user_vie_project_code_pk
                                  ->  Seq Scan on keo1
-                                 ->  Hash
-                                       ->  Broadcast Motion 3:3  (slice9; segments: 3)
-                                             ->  Seq Scan on keo1 a
-                                                   Filter: ((user_vie_fiscal_year_period_sk)::text = $2)
+               ->  Hash
+                     ->  Redistribute Motion 3:3  (slice10; segments: 3)
+                           Hash Key: b.projects_pk
+                           ->  Seq Scan on keo2 b
  Optimizer: Postgres query optimizer
-(30 rows)
+(32 rows)
 
 UPDATE keo1 SET user_vie_act_cntr_marg_cum = 234.682 FROM
     ( SELECT a.user_vie_project_code_pk FROM keo1 a INNER JOIN keo2 b
@@ -800,6 +803,46 @@ SELECT tableoid::regclass, * FROM update_gp_rangep WHERE b = 1;
  update_gp_rangep_10_to_20 | 11 | 1 |      4
 (3 rows)
 
+-- Test for update with LASJ_NOTIN
+-- See Issue: https://github.com/greenplum-db/gpdb/issues/13265
+-- Actually master branch does not have the above issue even master
+-- does have the same problematic code (other parts of code are
+-- refactored). Also cherry-pick the case to master and keep it
+-- since more test cases do no harm.
+create table t1_13265(a int, b int, c int, d int) distributed by (a);
+create table t2_13265(a int, b int, c int, d int) distributed by (a);
+insert into t1_13265 values (1, null, 1, 1);
+insert into t2_13265 values (2, null, 2, 2);
+explain (verbose, costs off)
+update t1_13265 set b = 2 where
+(c, d) not in (select c, d from t2_13265 where a = 2);
+                                                 QUERY PLAN                                                  
+-------------------------------------------------------------------------------------------------------------
+ Update on public.t1_13265
+   ->  Nested Loop Left Anti Semi (Not-In) Join
+         Output: t1_13265.a, 2, t1_13265.c, t1_13265.d, t1_13265.ctid, t1_13265.gp_segment_id, t2_13265.ctid
+         Join Filter: ((t1_13265.c = t2_13265.c) AND (t1_13265.d = t2_13265.d))
+         ->  Seq Scan on public.t1_13265
+               Output: t1_13265.a, t1_13265.c, t1_13265.d, t1_13265.ctid, t1_13265.gp_segment_id
+         ->  Materialize
+               Output: t2_13265.ctid, t2_13265.c, t2_13265.d
+               ->  Broadcast Motion 1:3  (slice1; segments: 1)
+                     Output: t2_13265.ctid, t2_13265.c, t2_13265.d
+                     ->  Seq Scan on public.t2_13265
+                           Output: t2_13265.ctid, t2_13265.c, t2_13265.d
+                           Filter: (t2_13265.a = 2)
+ Optimizer: Postgres query optimizer
+ Settings: optimizer=off
+(15 rows)
+
+update t1_13265 set b = 2 where
+(c, d) not in (select c, d from t2_13265 where a = 2);
+select * from t1_13265;
+ a | b | c | d 
+---+---+---+---
+ 1 | 2 | 1 | 1
+(1 row)
+
 -- start_ignore
 drop table r;
 drop table s;
@@ -808,4 +851,6 @@ drop table update_ao_table;
 drop table update_aoco_table;
 drop table nosplitupdate;
 drop table tsplit_entry;
+drop table t1_13265;
+drop table t2_13265;
 -- end_ignore

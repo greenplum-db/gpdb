@@ -7,10 +7,10 @@
     <p id="sql_command_desc">Creates new rows in a table.</p>
     <section id="section2">
       <title>Synopsis</title>
-      <codeblock id="sql_command_synopsis">[ WITH [ RECURSIVE ] <varname>with_query</varname> [, ...] ]
-INSERT INTO <varname>table</varname> [( <varname>column</varname> [, ...] )]
-   {DEFAULT VALUES | VALUES ( {<varname>expression</varname> | DEFAULT} [, ...] ) [, ...] | <varname>query</varname>}
-   [RETURNING * | <varname>output_expression</varname> [[AS] <varname>output_name</varname>] [, ...]]</codeblock>
+      <codeblock id="sql_command_synopsis">[ WITH [ RECURSIVE ] &lt;with_query> [, ...] ]
+INSERT INTO &lt;table> [( &lt;column> [, ...] )]
+   {DEFAULT VALUES | VALUES ( {&lt;expression> | DEFAULT} [, ...] ) [, ...] | &lt;query>}
+   [RETURNING * | &lt;output_expression> [[AS] &lt;output_name>] [, ...]]</codeblock>
     </section>
     <section id="section3">
       <title>Description</title>
@@ -40,7 +40,7 @@ INSERT INTO <varname>table</varname> [( <varname>column</varname> [, ...] )]
       <sectiondiv id="section4">
         <b>Outputs</b>
         <p>On successful completion, an <codeph>INSERT</codeph> command returns a command tag of the
-          form:</p><codeblock>INSERT <varname>oid</varname> <varname>count</varname></codeblock><p>The
+          form:</p><codeblock>INSERT &lt;oid> &lt;count></codeblock><p>The
             <varname>count</varname> is the number of rows inserted. If count is exactly one, and
           the target table has OIDs, then <varname>oid</varname> is the OID assigned to the inserted
           row. Otherwise <varname>oid</varname> is zero.</p>
@@ -61,8 +61,9 @@ INSERT INTO <varname>table</varname> [( <varname>column</varname> [, ...] )]
               <codeph>WITH</codeph> clause. In such a case both sets of
               <varname>with_query</varname> can be referenced within the <codeph>INSERT</codeph>
             query, but the second one takes precedence since it is more closely nested.</pd>
-          <pd>See <xref href="../../admin_guide/query/topics/CTE-query.xml#topic_zhs_r1s_w1b"/> and
-                <codeph><xref href="SELECT.xml#topic1"/></codeph> for details. </pd>
+          <pd>See <xref href="../../admin_guide/query/topics/CTE-query.html#topic_zhs_r1s_w1b" format="html" scope="external">WITH Queries (Common Table Expressions)
+</xref> and
+                <xref href="SELECT.xml#topic1"/> for details. </pd>
         </plentry>
         <plentry>
           <pt>
@@ -123,12 +124,12 @@ INSERT INTO <varname>table</varname> [( <varname>column</varname> [, ...] )]
       all the child tables are locked during the <codeph>INSERT</codeph> operation when the Global
       Deadlock Detector is not enabled (the default). Only some of the leaf child tables are locked
       when the Global Deadlock Detector is enabled. For information about the Global Deadlock
-      Detector, see <xref href="../../admin_guide/dml.xml#topic_gdd"/>.<p>For append-optimized
+      Detector, see <xref href="../../admin_guide/dml.html#topic_gdd" format="html" scope="external">Global Deadlock Detector</xref>.<p>For append-optimized
         tables, Greenplum Database supports a maximum of 127 concurrent <codeph>INSERT</codeph>
         transactions into a single append-optimized table. </p><p>For writable S3 external tables,
         the <codeph>INSERT</codeph> operation uploads to one or more files in the configured S3
-        bucket, as described in <xref href="../../admin_guide/external/g-s3-protocol.xml#amazon-emr"
-        />. Pressing <codeph>Ctrl-c</codeph> cancels the <codeph>INSERT</codeph> and stops uploading
+        bucket, as described in <xref href="../../admin_guide/external/g-s3-protocol.html#amazon-emr"
+        format="html" scope="external">s3:// Protocol</xref>. Pressing <codeph>Ctrl-c</codeph> cancels the <codeph>INSERT</codeph> and stops uploading
         to S3. </p></section>
     <section id="section7">
       <title>Examples</title>
@@ -168,10 +169,10 @@ INSERT INTO <varname>table</varname> [( <varname>column</varname> [, ...] )]
     </section>
     <section id="section9">
       <title>See Also</title>
-      <p><codeph><xref href="COPY.xml#topic1" type="topic" format="dita"/></codeph>, <codeph><xref
-            href="./SELECT.xml#topic1" type="topic" format="dita"/></codeph>, <codeph><xref
-            href="CREATE_EXTERNAL_TABLE.xml#topic1" type="topic" format="dita"/></codeph>, <xref
-          href="../../admin_guide/external/g-s3-protocol.xml#amazon-emr"/></p>
+      <p><xref href="COPY.xml#topic1" type="topic" format="dita"/>, <xref
+            href="./SELECT.xml#topic1" type="topic" format="dita"/>, <xref
+            href="CREATE_EXTERNAL_TABLE.xml#topic1" type="topic" format="dita"/>, <xref
+          href="../../admin_guide/external/g-s3-protocol.html#amazon-emr" format="html" scope="external">s3:// Protocol</xref></p>
     </section>
   </body>
 </topic>

@@ -58,9 +58,6 @@ private:
 	// segmentid column
 	CColRef *m_pcrSegmentId;
 
-	// tuple oid column
-	CColRef *m_pcrTupleOid;
-
 	// target table distribution spec
 	CDistributionSpec *m_pds;
 
@@ -72,6 +69,9 @@ private:
 
 	// needs the data to be sorted or not
 	BOOL m_input_sort_req;
+
+	// Split Update
+	BOOL m_fSplit;
 
 	// do we need to sort on insert
 	BOOL FInsertSortOnRows(COptimizerConfig *optimizer_config);
@@ -89,7 +89,7 @@ public:
 	CPhysicalDML(CMemoryPool *mp, CLogicalDML::EDMLOperator edmlop,
 				 CTableDescriptor *ptabdesc, CColRefArray *pdrgpcrSource,
 				 CBitSet *pbsModified, CColRef *pcrAction, CColRef *pcrTableOid,
-				 CColRef *pcrCtid, CColRef *pcrSegmentId, CColRef *pcrTupleOid);
+				 CColRef *pcrCtid, CColRef *pcrSegmentId, BOOL fSplit);
 
 	// dtor
 	~CPhysicalDML() override;
@@ -150,18 +150,18 @@ public:
 		return m_pcrSegmentId;
 	}
 
-	// tuple oid column
-	CColRef *
-	PcrTupleOid() const
-	{
-		return m_pcrTupleOid;
-	}
-
 	// source columns
 	virtual CColRefArray *
 	PdrgpcrSource() const
 	{
 		return m_pdrgpcrSource;
+	}
+
+	// Is update using split
+	BOOL
+	FSplit() const
+	{
+		return m_fSplit;
 	}
 
 	// match function

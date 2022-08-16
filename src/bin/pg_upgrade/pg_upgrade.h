@@ -322,6 +322,7 @@ typedef struct
 	uint32		chkpnt_nxtmulti;
 	uint32		chkpnt_nxtmxoff;
 	uint32		chkpnt_oldstMulti;
+	uint32		chkpnt_oldstxid;
 	uint32		align;
 	uint32		blocksz;
 	uint32		largesz;
@@ -556,6 +557,7 @@ void		check_ok(void);
 unsigned int str2uint(const char *str);
 uint64		str2uint64(const char *str);
 void		pg_putenv(const char *var, const char *val);
+void 		gp_fatal_log(const char *fmt,...) pg_attribute_printf(1, 2);
 
 
 /* version.c */

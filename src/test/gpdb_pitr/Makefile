@@ -14,6 +14,7 @@ sql_isolation_testcase.py:
 
 install: sql_isolation_testcase.py setup
 	$(MAKE) -C $(top_builddir)/src/test/isolation2 install
+	$(MAKE) -C $(top_builddir)/src/test/regress install
 
 installcheck: install
 	./test_gpdb_pitr.sh

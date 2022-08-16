@@ -128,7 +128,7 @@
       <dxl:ColumnStatistics Mdid="1.1077075.1.1.5" Name="xmax" Width="4.000000"/>
       <dxl:ColumnStatistics Mdid="1.1077075.1.1.4" Name="cmin" Width="4.000000"/>
       <dxl:RelationStatistics Mdid="2.1077075.1.1" Name="r" Rows="0.000000"/>
-      <dxl:Relation Mdid="0.1077075.1.1" Name="r" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
+      <dxl:Relation Mdid="0.1077075.1.1" Name="r" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -165,7 +165,7 @@
       <dxl:ColumnStatistics Mdid="1.1119916.1.1.7" Name="tableoid" Width="4.000000"/>
       <dxl:ColumnStatistics Mdid="1.1119916.1.1.6" Name="cmax" Width="4.000000"/>
       <dxl:RelationStatistics Mdid="2.1119916.1.1" Name="t" Rows="0.000000"/>
-      <dxl:Relation Mdid="0.1119916.1.1" Name="t" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
+      <dxl:Relation Mdid="0.1119916.1.1" Name="t" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -260,7 +260,7 @@
         </dxl:And>
       </dxl:LogicalJoin>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="24">
+    <dxl:Plan Id="0" SpaceSize="34">
       <dxl:HashJoin JoinType="Inner">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="437.001095" Rows="1.000000" Width="32"/>
@@ -320,6 +320,7 @@
                 <dxl:ConstValue TypeMdid="0.23.1.0" Value="1"/>
               </dxl:Comparison>
             </dxl:IndexCondList>
+	<dxl:Partitions/>
             <dxl:IndexDescriptor Mdid="0.1119939.1.0" IndexName="t_a"/>
             <dxl:TableDescriptor Mdid="0.1119916.1.1" TableName="t">
               <dxl:Columns>

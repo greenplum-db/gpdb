@@ -55,7 +55,7 @@ explain analyze insert into t1 select t2.a,t3.b from t2, t3 where t2.a = t3.a;
         <dxl:SumAgg Mdid="0.2108.1.0"/>
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
-      <dxl:Relation Mdid="0.16533.1.0" Name="t1" IsTemporary="false" HasOids="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="4,2">
+      <dxl:Relation Mdid="0.16533.1.0" Name="t1" IsTemporary="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="4,2">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -93,7 +93,7 @@ explain analyze insert into t1 select t2.a,t3.b from t2, t3 where t2.a = t3.a;
         <dxl:SumAgg Mdid="0.0.0.0"/>
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
-      <dxl:Relation Mdid="0.16538.1.0" Name="t2" IsTemporary="false" HasOids="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="4,2" ConvertHashToRandom="true">
+      <dxl:Relation Mdid="0.16538.1.0" Name="t2" IsTemporary="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="4,2" ConvertHashToRandom="true">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -146,7 +146,7 @@ explain analyze insert into t1 select t2.a,t3.b from t2, t3 where t2.a = t3.a;
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
       <dxl:RelationStatistics Mdid="2.16543.1.0" Name="t3" Rows="1000.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.16543.1.0" Name="t3" IsTemporary="false" HasOids="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="4,2" ConvertHashToRandom="true">
+      <dxl:Relation Mdid="0.16543.1.0" Name="t3" IsTemporary="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="4,2" ConvertHashToRandom="true">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -642,7 +642,7 @@ explain analyze insert into t1 select t2.a,t3.b from t2, t3 where t2.a = t3.a;
         </dxl:LogicalJoin>
       </dxl:LogicalInsert>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="18">
+    <dxl:Plan Id="0" SpaceSize="30">
       <dxl:DMLInsert Columns="0,6" ActionCol="10" OidCol="0" CtidCol="0" SegmentIdCol="0" InputSorted="false">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="877.746838" Rows="1000.000000" Width="7"/>

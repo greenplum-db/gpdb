@@ -10,6 +10,18 @@
 -- s/Buckets: \d+/Buckets: ###/
 -- m/Batches: \d+/
 -- s/Batches: \d+/Batches: ###/
+-- m/Extra Text: \(seg\d+\)/
+-- s/Extra Text: \(seg\d+\)/Extra Text: ###/
+-- m/Segments: \d+/
+-- s/Segments: \d+/Segments: ###/
+-- m/Max: \d+kB/
+-- s/Max: \d+kB/Max: ###kB/
+-- m/segment \d+/
+-- s/segment \d+/segment ###/
+-- m/Hash chain length \d+\.\d+ avg, \d+ max/
+-- s/Hash chain length \d+\.\d+ avg, \d+ max/Hash chain length ###/
+-- m/using \d+ of \d+ buckets/
+-- s/using \d+ of \d+ buckets/using ## of ### buckets/
 -- end_matchsubs
 
 drop schema if exists dpe_single cascade;
@@ -23,9 +35,9 @@ drop table if exists pt1;
 drop table if exists t;
 drop table if exists t1;
 
-create table pt(dist int, pt1 text, pt2 text, pt3 text, ptid int) 
+create table pt(dist int, pt1 text, pt2 text, pt3 text, ptid int)
 DISTRIBUTED BY (dist)
-PARTITION BY RANGE(ptid) 
+PARTITION BY RANGE(ptid)
           (
           START (0) END (5) EVERY (1),
           DEFAULT PARTITION junk_data
@@ -40,9 +52,9 @@ PARTITION BY RANGE(ptid)
 -- loading all the data, changing policy to randomly without
 -- data movement. Thus every time we will have a static
 -- data distribution plus randomly policy.
-create table pt1(dist int, pt1 text, pt2 text, pt3 text, ptid int) 
+create table pt1(dist int, pt1 text, pt2 text, pt3 text, ptid int)
 DISTRIBUTED BY (dist)
-PARTITION BY RANGE(ptid) 
+PARTITION BY RANGE(ptid)
           (
           START (0) END (5) EVERY (1),
           DEFAULT PARTITION junk_data
@@ -338,7 +350,7 @@ analyze dim1;
 create table fact1(dist int, pid int, code text, u int)
 partition by range(pid)
 subpartition by list(code)
-subpartition template 
+subpartition template
 (
  subpartition ca values('CA'),
  subpartition oh values('OH'),
@@ -346,7 +358,7 @@ subpartition template
 )
 (
  start (0)
- end (4) 
+ end (4)
  every (1)
 );
 
@@ -433,8 +445,8 @@ set optimizer_segments=2;
 
 create type malp_key as (i int, j int);
 
-create table malp (i int, j int, t text) 
-distributed by (i) 
+create table malp (i int, j int, t text)
+distributed by (i)
 partition by list ((row(i, j)::malp_key));
 
 create table malp_p1 partition of malp for values in (row(1, 10));
@@ -507,7 +519,7 @@ set gp_segments_for_planner=2;
 set optimizer_segments=2;
 
 create table pat(a int, b date) partition by range (b) (start ('2010-01-01') end ('2010-01-05') every (1), default partition other);
-insert into pat select i,date '2010-01-01' + i from generate_series(1, 10)i;  
+insert into pat select i,date '2010-01-01' + i from generate_series(1, 10)i;
 create table jpat(a int, b date);
 insert into jpat values(1, '2010-01-02');
 analyze jpat;

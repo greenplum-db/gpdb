@@ -12,7 +12,7 @@ You can restore the primary and standby master instances on the original hosts. 
 
 For information about the Greenplum Database utilities, see the *Greenplum Database Utility Guide*.
 
-**Parent topic:**[Recovering a Failed Master](../../highavail/topics/g-recovering-a-failed-master.html)
+**Parent topic:** [Recovering a Failed Master](../../highavail/topics/g-recovering-a-failed-master.html)
 
 ## <a id="topic_us3_md4_npb"></a>To restore the master mirroring after a recovery 
 

@@ -6,11 +6,11 @@
   <body>
     <p>Reloads Greenplum Database table data sorting the data based on specified columns. </p>
     <section id="section2"
-      ><title>Synopsis</title><codeblock><b>gpreload</b> <b>-d</b> <varname>database</varname> [<b>-p</b> <varname>port</varname>] {<b>-t</b> | <b>--table-file</b>} <varname>path_to_file</varname> [<b>-a</b>]
+      ><title>Synopsis</title><codeblock>gpreload -d &lt;database> [-p &lt;port>] {-t | --table-file} &lt;path_to_file> [-a]
 
-<b>gpreload</b> <b>-h</b> 
+gpreload -h 
 
-<b>gpreload</b> <b>--version</b></codeblock></section>
+gpreload --version</codeblock></section>
     <section id="section3"><title>Description</title><p>The <codeph>gpreload</codeph> utility reloads table data with column data sorted. For tables that
         were created with the table storage option <codeph>appendoptimized=TRUE</codeph> and compression
         enabled, reloading the data with sorted data can improve table compression. You specify a

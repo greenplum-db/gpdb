@@ -29,7 +29,7 @@
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
       <dxl:RelationStatistics Mdid="2.16384.1.0" Name="t1" Rows="0.000000" RelPages="0" RelAllVisible="0" EmptyRelation="true"/>
-      <dxl:Relation Mdid="0.16384.1.0" Name="t1" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="0.16384.1.0" Name="t1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="id" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -67,7 +67,7 @@
         </dxl:DistrOpfamilies>
       </dxl:Relation>
       <dxl:RelationStatistics Mdid="2.16390.1.0" Name="t2" Rows="0.000000" RelPages="0" RelAllVisible="0" EmptyRelation="true"/>
-      <dxl:Relation Mdid="0.16390.1.0" Name="t2" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="0.16390.1.0" Name="t2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="id" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -111,7 +111,7 @@
         <dxl:ResultType Mdid="0.25.1.0"/>
         <dxl:OpFunc Mdid="0.1258.1.0"/>
       </dxl:GPDBScalarOp>
-      <dxl:Relation Mdid="0.16396.1.0" Name="t3" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="0.16396.1.0" Name="t3" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="id" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -373,7 +373,7 @@
     <dxl:Plan Id="0" SpaceSize="104">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="1293.001317" Rows="1.000000" Width="24"/>
+          <dxl:Cost StartupCost="0" TotalCost="1293.001033" Rows="1.000000" Width="24"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="id">
@@ -393,7 +393,7 @@
         <dxl:SortingColumnList/>
         <dxl:HashJoin JoinType="Inner">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="1293.001227" Rows="1.000000" Width="24"/>
+            <dxl:Cost StartupCost="0" TotalCost="1293.000943" Rows="1.000000" Width="24"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="id">
@@ -413,13 +413,45 @@
           <dxl:JoinFilter/>
           <dxl:HashCondList>
             <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
-              <dxl:Ident ColId="9" ColName="id" TypeMdid="0.23.1.0"/>
               <dxl:Ident ColId="0" ColName="id" TypeMdid="0.23.1.0"/>
+              <dxl:Ident ColId="9" ColName="id" TypeMdid="0.23.1.0"/>
             </dxl:Comparison>
           </dxl:HashCondList>
+          <dxl:TableScan>
+            <dxl:Properties>
+              <dxl:Cost StartupCost="0" TotalCost="431.000078" Rows="1.000000" Width="12"/>
+            </dxl:Properties>
+            <dxl:ProjList>
+              <dxl:ProjElem ColId="0" Alias="id">
+                <dxl:Ident ColId="0" ColName="id" TypeMdid="0.23.1.0"/>
+              </dxl:ProjElem>
+              <dxl:ProjElem ColId="1" Alias="name">
+                <dxl:Ident ColId="1" ColName="name" TypeMdid="0.25.1.0"/>
+              </dxl:ProjElem>
+            </dxl:ProjList>
+            <dxl:Filter>
+              <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
+                <dxl:Ident ColId="0" ColName="id" TypeMdid="0.23.1.0"/>
+                <dxl:ConstValue TypeMdid="0.23.1.0" Value="10"/>
+              </dxl:Comparison>
+            </dxl:Filter>
+            <dxl:TableDescriptor Mdid="0.16384.1.0" TableName="t1">
+              <dxl:Columns>
+                <dxl:Column ColId="0" Attno="1" ColName="id" TypeMdid="0.23.1.0" ColWidth="4"/>
+                <dxl:Column ColId="1" Attno="2" ColName="name" TypeMdid="0.25.1.0" ColWidth="8"/>
+                <dxl:Column ColId="2" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
+                <dxl:Column ColId="3" Attno="-2" ColName="xmin" TypeMdid="0.28.1.0" ColWidth="4"/>
+                <dxl:Column ColId="4" Attno="-3" ColName="cmin" TypeMdid="0.29.1.0" ColWidth="4"/>
+                <dxl:Column ColId="5" Attno="-4" ColName="xmax" TypeMdid="0.28.1.0" ColWidth="4"/>
+                <dxl:Column ColId="6" Attno="-5" ColName="cmax" TypeMdid="0.29.1.0" ColWidth="4"/>
+                <dxl:Column ColId="7" Attno="-6" ColName="tableoid" TypeMdid="0.26.1.0" ColWidth="4"/>
+                <dxl:Column ColId="8" Attno="-7" ColName="gp_segment_id" TypeMdid="0.23.1.0" ColWidth="4"/>
+              </dxl:Columns>
+            </dxl:TableDescriptor>
+          </dxl:TableScan>
           <dxl:Result>
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="862.000568" Rows="1.000000" Width="12"/>
+              <dxl:Cost StartupCost="0" TotalCost="862.000532" Rows="1.000000" Width="12"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="27" Alias="name">
@@ -436,7 +468,7 @@
             <dxl:OneTimeFilter/>
             <dxl:HashJoin JoinType="Inner">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="862.000556" Rows="1.000000" Width="12"/>
+                <dxl:Cost StartupCost="0" TotalCost="862.000528" Rows="1.000000" Width="12"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="9" Alias="id">
@@ -516,38 +548,6 @@
               </dxl:TableScan>
             </dxl:HashJoin>
           </dxl:Result>
-          <dxl:TableScan>
-            <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="431.000078" Rows="1.000000" Width="12"/>
-            </dxl:Properties>
-            <dxl:ProjList>
-              <dxl:ProjElem ColId="0" Alias="id">
-                <dxl:Ident ColId="0" ColName="id" TypeMdid="0.23.1.0"/>
-              </dxl:ProjElem>
-              <dxl:ProjElem ColId="1" Alias="name">
-                <dxl:Ident ColId="1" ColName="name" TypeMdid="0.25.1.0"/>
-              </dxl:ProjElem>
-            </dxl:ProjList>
-            <dxl:Filter>
-              <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
-                <dxl:Ident ColId="0" ColName="id" TypeMdid="0.23.1.0"/>
-                <dxl:ConstValue TypeMdid="0.23.1.0" Value="10"/>
-              </dxl:Comparison>
-            </dxl:Filter>
-            <dxl:TableDescriptor Mdid="0.16384.1.0" TableName="t1">
-              <dxl:Columns>
-                <dxl:Column ColId="0" Attno="1" ColName="id" TypeMdid="0.23.1.0" ColWidth="4"/>
-                <dxl:Column ColId="1" Attno="2" ColName="name" TypeMdid="0.25.1.0" ColWidth="8"/>
-                <dxl:Column ColId="2" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
-                <dxl:Column ColId="3" Attno="-2" ColName="xmin" TypeMdid="0.28.1.0" ColWidth="4"/>
-                <dxl:Column ColId="4" Attno="-3" ColName="cmin" TypeMdid="0.29.1.0" ColWidth="4"/>
-                <dxl:Column ColId="5" Attno="-4" ColName="xmax" TypeMdid="0.28.1.0" ColWidth="4"/>
-                <dxl:Column ColId="6" Attno="-5" ColName="cmax" TypeMdid="0.29.1.0" ColWidth="4"/>
-                <dxl:Column ColId="7" Attno="-6" ColName="tableoid" TypeMdid="0.26.1.0" ColWidth="4"/>
-                <dxl:Column ColId="8" Attno="-7" ColName="gp_segment_id" TypeMdid="0.23.1.0" ColWidth="4"/>
-              </dxl:Columns>
-            </dxl:TableDescriptor>
-          </dxl:TableScan>
         </dxl:HashJoin>
       </dxl:GatherMotion>
     </dxl:Plan>

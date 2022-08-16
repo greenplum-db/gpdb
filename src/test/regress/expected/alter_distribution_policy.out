@@ -171,12 +171,12 @@ ERROR:  permission denied: "pg_class" is a system catalog
 create table atsdb (i int, j text) distributed by (j);
 insert into atsdb select i, i::text from generate_series(1, 10) i;
 alter table atsdb set with(appendonly = true);
-ERROR:  option "appendonly" not supported
 select relname, segrelid != 0, reloptions from pg_class, pg_appendonly where pg_class.oid =
 'atsdb'::regclass and relid = pg_class.oid;
  relname | ?column? | reloptions 
 ---------+----------+------------
-(0 rows)
+ atsdb   | t        | 
+(1 row)
 
 select * from atsdb;
  i  | j  
@@ -316,12 +316,12 @@ select * from distcheck where rel = 'atsdb';
 
 alter table atsdb drop column n;
 alter table atsdb set with(appendonly = true, compresslevel = 3);
-ERROR:  cannot specify more than one option in WITH clause
 select relname, segrelid != 0, reloptions from pg_class, pg_appendonly where pg_class.oid =
 'atsdb'::regclass and relid = pg_class.oid;
- relname | ?column? | reloptions 
----------+----------+------------
-(0 rows)
+ relname | ?column? |    reloptions     
+---------+----------+-------------------
+ atsdb   | t        | {compresslevel=3}
+(1 row)
 
 select * from distcheck where rel = 'atsdb';
   rel  | attname 
@@ -443,9 +443,10 @@ select * from distcheck where rel = 'atsdb';
 
 select relname, segrelid != 0, reloptions from pg_class, pg_appendonly where pg_class.oid =
 'atsdb'::regclass and relid = pg_class.oid;
- relname | ?column? | reloptions 
----------+----------+------------
-(0 rows)
+ relname | ?column? |    reloptions     
+---------+----------+-------------------
+ atsdb   | t        | {compresslevel=3}
+(1 row)
 
 select * from atsdb;
   j  |  t  
@@ -554,10 +555,12 @@ select * from atsdb;
 
 -- validate parameters
 alter table atsdb set with (appendonly = ff);
-ERROR:  option "appendonly" not supported
+ERROR:  appendonly requires a Boolean value
 alter table atsdb set with (reorganize = true);
 alter table atsdb set with (fgdfgef = asds);
-ERROR:  option "fgdfgef" not supported
+ERROR:  invalid storage type
+LINE 1: alter table atsdb set with (fgdfgef = asds);
+                                   ^
 alter table atsdb set with(reorganize = true, reorganize = false) distributed
 randomly;
 ERROR:  cannot specify more than one option in WITH clause
@@ -648,7 +651,7 @@ select * from atsdb order by 1, 2, 3;
 (9 rows)
 
 alter table atsdb set with(appendonly = true);
-ERROR:  option "appendonly" not supported
+ERROR:  cannot change access method of a partitioned table
 select relname, a.blocksize, compresslevel, compresstype, checksum from pg_class c, pg_appendonly a where
 relname  like 'atsdb%' and c.oid = a.relid order by 1;
  relname | blocksize | compresslevel | compresstype | checksum 
@@ -762,7 +765,7 @@ NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'c' as
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 insert into mpp5746 select array[i], i from generate_series(1, 100) i;
 alter table mpp5746 set with (reorganize=true, appendonly = true);
-ERROR:  cannot specify more than one option in WITH clause
+ERROR:  reorganize isn't supported with other options in SET WITH
 select * from mpp5746 order by 1;
    c   |  t  
 -------+-----
@@ -975,7 +978,7 @@ select * from mpp5746 order by 1;
 (100 rows)
 
 alter table mpp5746 set with (reorganize=true, appendonly = false);
-ERROR:  cannot specify more than one option in WITH clause
+ERROR:  reorganize isn't supported with other options in SET WITH
 select * from mpp5746 order by 1;
    c   
 -------
@@ -1104,7 +1107,7 @@ select * from mpp5738;
 (10 rows)
 
 alter table mpp5738 alter partition for (1) set with (appendonly=true);
-ERROR:  option "appendonly" not supported
+ERROR:  table "mpp5738_1_prt_1" is not partitioned
 select * from mpp5738;
  a  | b  | c  | d  
 ----+----+----+----
@@ -1233,15 +1236,11 @@ Alter table abc set with (reorganize=false) distributed randomly;
 WARNING:  distribution policy of relation "abc" already set to DISTRIBUTED RANDOMLY
 HINT:  Use ALTER TABLE "abc" SET WITH (REORGANIZE=TRUE) DISTRIBUTED RANDOMLY to force a random redistribution.
 drop table abc;
--- disallow, so fails
-create table atsdb (i int, j text) distributed by (j);
-alter table atsdb set with(appendonly = true);
-ERROR:  option "appendonly" not supported
-drop table atsdb;
 -- MPP-18660: duplicate entry in gp_distribution_policy
 set enable_indexscan=on;
 set enable_seqscan=off;
 drop table if exists distrib_index_test;
+NOTICE:  table "distrib_index_test" does not exist, skipping
 create table distrib_index_test (a int, b text) distributed by (a);
 select count(*) from gp_distribution_policy
 	where localoid in (select oid from pg_class where relname='distrib_index_test');

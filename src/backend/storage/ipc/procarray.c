@@ -1461,11 +1461,6 @@ GetLocalOldestXmin(Relation rel, int flags)
 		PGPROC	   *proc = &allProcs[pgprocno];
 		PGXACT	   *pgxact = &allPgXact[pgprocno];
 
-		/* GPDB_12_MERGE_FIXME: We used to ignore PROC_IN_VACUUM flag in GPDB.
-		 * Do we still need to? If so, refactor the ignorance to use the
-		 * new 'flags' bitmask.
-		 * See comment in vacuumStatement_Relation()
-		 */
 		if (pgxact->vacuumFlags & (flags & PROCARRAY_PROC_FLAGS_MASK))
 			continue;
 
@@ -2297,11 +2292,6 @@ GetSnapshotData(Snapshot snapshot, DtxContext distributedTransactionContext)
 			/*
 			 * Skip over backends doing logical decoding which manages xmin
 			 * separately (check below) and ones running LAZY VACUUM.
-			 */
-			/* GPDB_12_MERGE_FIXME: We used to ignore PROC_IN_VACUUM flag in GPDB.
-			 * Do we still need to? If so, refactor the ignorance to use the
-			 * new 'flags' bitmask.
-			 * See comment in vacuumStatement_Relation()
 			 */
 			if (pgxact->vacuumFlags &
 				(PROC_IN_LOGICAL_DECODING | PROC_IN_VACUUM))

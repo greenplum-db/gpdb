@@ -25,5 +25,5 @@ Additional documentation resources:
 -   [Using Resource Groups](../../workload_mgmt_resgroups.html) describes memory and spill considerations when resource group-based resource management is active.
 -   [Using Resource Queues](../../workload_mgmt.html) describes memory and spill considerations when resource queue-based resource management is active.
 
-**Parent topic:**[Querying Data](../../query/topics/query.html)
+**Parent topic:** [Querying Data](../../query/topics/query.html)
 

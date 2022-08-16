@@ -214,6 +214,9 @@ installcheck-icudp: all tablespace-setup
 	$(pg_regress_installcheck) $(REGRESS_OPTS) --schedule=$(srcdir)/icudp_schedule --dbname=regression_icudp $(EXTRA_TESTS)
 endif
 
+installcheck-mirrorless: all tablespace-setup
+	$(pg_regress_installcheck) $(REGRESS_OPTS) --schedule=$(srcdir)/mirrorless_schedule --dbname=regress-mirrorless $(EXTRA_TESTS)
+
 standbycheck: all
 	$(pg_regress_installcheck) $(REGRESS_OPTS) --schedule=$(srcdir)/standby_schedule  $(EXTRA_TESTS)
 

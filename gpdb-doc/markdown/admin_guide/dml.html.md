@@ -15,7 +15,7 @@ This topic includes the following subtopics:
 -   [Vacuuming the Database](#topic9)
 -   [Running Out of Locks](#topic11)
 
-**Parent topic:**[Greenplum Database Administrator Guide](admin_guide.html)
+**Parent topic:** [Greenplum Database Administrator Guide](admin_guide.html)
 
 ## <a id="topic2"></a>About Concurrency Control in Greenplum Database 
 

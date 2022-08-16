@@ -226,7 +226,7 @@
       <dxl:ColumnStatistics Mdid="1.1159322.1.1.5" Name="xmax" Width="4.000000"/>
       <dxl:ColumnStatistics Mdid="1.1159322.1.1.4" Name="cmin" Width="4.000000"/>
       <dxl:RelationStatistics Mdid="2.1159299.1.1" Name="b" Rows="1.000000"/>
-      <dxl:Relation Mdid="0.1159299.1.1" Name="b" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
+      <dxl:Relation Mdid="0.1159299.1.1" Name="b" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
         <dxl:Columns>
           <dxl:Column Name="i" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -268,7 +268,7 @@
       <dxl:ColumnStatistics Mdid="1.1159322.1.1.6" Name="cmax" Width="4.000000"/>
       <dxl:RelationStatistics Mdid="2.1159276.1.1" Name="a" Rows="1.000000"/>
       <dxl:RelationStatistics Mdid="2.1159322.1.1" Name="c" Rows="1.000000"/>
-      <dxl:Relation Mdid="0.1159276.1.1" Name="a" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
+      <dxl:Relation Mdid="0.1159276.1.1" Name="a" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
         <dxl:Columns>
           <dxl:Column Name="i" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -302,7 +302,7 @@
         <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.1159322.1.1" Name="c" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
+      <dxl:Relation Mdid="0.1159322.1.1" Name="c" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
         <dxl:Columns>
           <dxl:Column Name="i" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -431,7 +431,7 @@
         </dxl:LogicalGet>
       </dxl:LogicalSelect>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="150026">
+    <dxl:Plan Id="0" SpaceSize="357461">
       <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="12930.008073" Rows="1.000000" Width="8"/>

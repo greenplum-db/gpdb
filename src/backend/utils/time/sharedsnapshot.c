@@ -159,6 +159,7 @@
 #include "storage/proc.h"
 #include "storage/procarray.h"
 #include "utils/builtins.h"
+#include "utils/faultinjector.h"
 #include "utils/guc.h"
 #include "utils/memutils.h"
 #include "utils/resowner.h"
@@ -672,6 +673,7 @@ readSharedLocalSnapshot_forCursor(Snapshot snapshot, DtxContext distributedTrans
 	Assert(SharedLocalSnapshotSlot != NULL);
 	Assert(snapshot->xip != NULL);
 
+	SIMPLE_FAULT_INJECTOR("before_read_shared_snapshot_for_cursor");
 
 	if (dumpHtab == NULL)
 	{

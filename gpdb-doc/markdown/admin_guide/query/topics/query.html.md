@@ -31,5 +31,5 @@ Greenplum Database creates spill files, also known as workfiles, on disk if it d
 -   **[Query Profiling](../../query/topics/query-profiling.html)**  
 Examine the query plans of poorly performing queries to identify possible performance tuning opportunities.
 
-**Parent topic:**[Greenplum Database Administrator Guide](../../admin_guide.html)
+**Parent topic:** [Greenplum Database Administrator Guide](../../admin_guide.html)
 

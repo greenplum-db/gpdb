@@ -27,6 +27,7 @@ typedef enum SMgrImplementation
 	SMGR_AO = 1
 } SMgrImpl;
 
+
 /*
  * smgr.c maintains a table of SMgrRelation objects, which are essentially
  * cached file handles.  An SMgrRelation is created (if not already present)
@@ -45,6 +46,10 @@ typedef enum SMgrImplementation
  * SMgrRelations that do not have an "owner" are considered to be transient,
  * and are deleted at end of transaction.
  */
+
+struct f_smgr;
+
+
 typedef struct SMgrRelationData
 {
 	/* rnode is the hashtable lookup key, so it must be first! */
@@ -70,7 +75,9 @@ typedef struct SMgrRelationData
 	 * Fields below here are intended to be private to smgr.c and its
 	 * submodules.  Do not touch them from elsewhere.
 	 */
-	SMgrImpl	smgr_which;		/* storage manager selector */
+
+	const struct f_smgr * storageManager;
+	SMgrImpl smgr_which;
 
 	/*
 	 * for md.c; per-fork arrays of the number of open segments
@@ -85,12 +92,53 @@ typedef struct SMgrRelationData
 
 typedef SMgrRelationData *SMgrRelation;
 
+
+typedef struct f_smgr
+{
+	void		(*smgr_init) (void);	/* may be NULL */
+	void		(*smgr_shutdown) (void);	/* may be NULL */
+	void		(*smgr_close) (SMgrRelation reln, ForkNumber forknum);
+	void		(*smgr_create) (SMgrRelation reln, ForkNumber forknum,
+								bool isRedo);
+	bool		(*smgr_exists) (SMgrRelation reln, ForkNumber forknum);
+	void		(*smgr_unlink) (RelFileNodeBackend rnode, ForkNumber forknum,
+								bool isRedo);
+	void		(*smgr_extend) (SMgrRelation reln, ForkNumber forknum,
+								BlockNumber blocknum, char *buffer, bool skipFsync);
+	void		(*smgr_prefetch) (SMgrRelation reln, ForkNumber forknum,
+								  BlockNumber blocknum);
+	void		(*smgr_read) (SMgrRelation reln, ForkNumber forknum,
+							  BlockNumber blocknum, char *buffer);
+	void		(*smgr_write) (SMgrRelation reln, ForkNumber forknum,
+							   BlockNumber blocknum, char *buffer, bool skipFsync);
+	void		(*smgr_writeback) (SMgrRelation reln, ForkNumber forknum,
+								   BlockNumber blocknum, BlockNumber nblocks);
+	BlockNumber (*smgr_nblocks) (SMgrRelation reln, ForkNumber forknum);
+	void		(*smgr_truncate) (SMgrRelation reln, ForkNumber forknum,
+								  BlockNumber nblocks);
+	void		(*smgr_immedsync) (SMgrRelation reln, ForkNumber forknum);
+} f_smgr;
+
 #define SmgrIsTemp(smgr) \
 	RelFileNodeBackendIsTemp((smgr)->smgr_rnode)
 
+typedef void (*smgr_init_hook_type) (void);
+typedef void (*smgr_shutdown_hook_type) (void);
+extern PGDLLIMPORT smgr_init_hook_type smgr_init_hook;
+extern PGDLLIMPORT smgr_shutdown_hook_type smgr_shutdown_hook;
+extern void smgr_init_standard(void);
+extern void smgr_shutdown_standard(void);
+
+
+typedef const f_smgr *(*smgr_hook_type) (BackendId backend, RelFileNode rnode, SMgrImpl which);
+extern PGDLLIMPORT smgr_hook_type smgr_hook;
+extern const f_smgr *smgr_standard(BackendId backend, RelFileNode rnode, SMgrImpl which);
+
+extern const f_smgr *smgr(BackendId backend, RelFileNode rnode, SMgrImpl which);
+
 extern void smgrinit(void);
 extern SMgrRelation smgropen(RelFileNode rnode, BackendId backend,
-							 SMgrImpl smgr_which);
+							  SMgrImpl which);
 extern bool smgrexists(SMgrRelation reln, ForkNumber forknum);
 extern void smgrsetowner(SMgrRelation *owner, SMgrRelation reln);
 extern void smgrclearowner(SMgrRelation *owner, SMgrRelation reln);

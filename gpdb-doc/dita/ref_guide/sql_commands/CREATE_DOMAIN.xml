@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
-<topic id="topic1"><title id="bq20941">CREATE DOMAIN</title><body><p id="sql_command_desc">Defines a new domain.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">CREATE DOMAIN <varname>name</varname> [AS] <varname>data_type</varname> [DEFAULT <varname>expression</varname>]
-       [ COLLATE <varname>collation</varname> ] 
-       [ CONSTRAINT <varname>constraint_name</varname>
+<topic id="topic1"><title id="bq20941">CREATE DOMAIN</title><body><p id="sql_command_desc">Defines a new domain.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">CREATE DOMAIN &lt;name> [AS] &lt;data_type> [DEFAULT &lt;expression>]
+       [ COLLATE &lt;collation> ] 
+       [ CONSTRAINT &lt;constraint_name>
        | NOT NULL | NULL 
-       | CHECK (<varname>expression</varname>) [...]]</codeblock></section><section id="section3"><title>Description</title>
+       | CHECK (&lt;expression>) [...]]</codeblock></section><section id="section3"><title>Description</title>
       <p><codeph>CREATE DOMAIN</codeph> creates a new domain. A domain is essentially a data type
         with optional constraints (restrictions on the allowed set of values). The user who defines
         a domain becomes its owner. The domain name must be unique among the data types and domains
@@ -77,5 +77,5 @@ email column.</p>
         </plentry>
       </parml></section><section id="section5"><title>Examples</title><p>Create the <codeph>us_zip_code</codeph> data type. A regular expression test is used to verify
         that the value looks like a valid US zip code. </p><codeblock>CREATE DOMAIN us_zip_code AS TEXT CHECK 
-       ( VALUE ~ '^\d{5}$' OR VALUE ~ '^\d{5}-\d{4}$' );</codeblock></section><section id="section6"><title>Compatibility</title><p><codeph>CREATE DOMAIN</codeph> conforms to the SQL standard. </p></section><section id="section7"><title>See Also</title><p><codeph><xref href="ALTER_DOMAIN.xml#topic1" type="topic" format="dita"/></codeph>, <codeph><xref
-            href="./DROP_DOMAIN.xml#topic1" type="topic" format="dita"/></codeph></p></section></body></topic>
+       ( VALUE ~ '^\d{5}$' OR VALUE ~ '^\d{5}-\d{4}$' );</codeblock></section><section id="section6"><title>Compatibility</title><p><codeph>CREATE DOMAIN</codeph> conforms to the SQL standard. </p></section><section id="section7"><title>See Also</title><p><xref href="ALTER_DOMAIN.xml#topic1" type="topic" format="dita"/>, <xref
+            href="./DROP_DOMAIN.xml#topic1" type="topic" format="dita"/></p></section></body></topic>

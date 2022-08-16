@@ -2,19 +2,19 @@
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
 <topic id="topic1"><title id="bb137420">ALTER TYPE</title><body><p id="sql_command_desc">Changes the definition of a data type.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">
-ALTER TYPE <varname>name</varname> <varname>action</varname> [, ... ]
-ALTER TYPE <varname>name</varname> OWNER TO <varname>new_owner</varname>
-ALTER TYPE <varname>name</varname> RENAME ATTRIBUTE <varname>attribute_name</varname> TO <varname>new_attribute_name</varname> [ CASCADE | RESTRICT ]
-ALTER TYPE <varname>name</varname> RENAME TO <varname>new_name</varname>
-ALTER TYPE <varname>name</varname> SET SCHEMA <varname>new_schema</varname>
-ALTER TYPE <varname>name</varname> ADD VALUE [ IF NOT EXISTS ] <varname>new_enum_value</varname> [ { BEFORE | AFTER } <varname>existing_enum_value</varname> ]
-ALTER TYPE <varname>name</varname> SET DEFAULT ENCODING ( <varname>storage_directive</varname> )
+ALTER TYPE &lt;name> &lt;action> [, ... ]
+ALTER TYPE &lt;name> OWNER TO &lt;new_owner>
+ALTER TYPE &lt;name> RENAME ATTRIBUTE &lt;attribute_name> TO &lt;new_attribute_name> [ CASCADE | RESTRICT ]
+ALTER TYPE &lt;name> RENAME TO &lt;new_name>
+ALTER TYPE &lt;name> SET SCHEMA &lt;new_schema>
+ALTER TYPE &lt;name> ADD VALUE [ IF NOT EXISTS ] &lt;new_enum_value> [ { BEFORE | AFTER } &lt;existing_enum_value> ]
+ALTER TYPE &lt;name> SET DEFAULT ENCODING ( &lt;storage_directive> )
 
-where <varname>action</varname> is one of:
+where &lt;action> is one of:
   
-  ADD ATTRIBUTE <varname>attribute_name</varname> <varname>data_type</varname> [ COLLATE <varname>collation</varname> ] [ CASCADE | RESTRICT ]
-  DROP ATTRIBUTE [ IF EXISTS ] <varname>attribute_name</varname> [ CASCADE | RESTRICT ]
-  ALTER ATTRIBUTE <varname>attribute_name</varname> [ SET DATA ] TYPE <varname>data_type</varname> [ COLLATE <varname>collation</varname> ] [ CASCADE | RESTRICT ]
+  ADD ATTRIBUTE &lt;attribute_name> &lt;data_type> [ COLLATE &lt;collation> ] [ CASCADE | RESTRICT ]
+  DROP ATTRIBUTE [ IF EXISTS ] &lt;attribute_name> [ CASCADE | RESTRICT ]
+  ALTER ATTRIBUTE &lt;attribute_name> [ SET DATA ] TYPE &lt;data_type> [ COLLATE &lt;collation> ] [ CASCADE | RESTRICT ]
 </codeblock>
 <p>where <varname>storage_directive</varname> is:</p>
       <codeblock>   COMPRESSTYPE={ZLIB | ZSTD | QUICKLZ | RLE_TYPE | NONE}
@@ -132,5 +132,5 @@ where <varname>action</varname> is one of:
       <codeblock>ALTER TYPE compfoo ADD ATTRIBUTE f3 int;</codeblock>
       <p> To add a new value to an enum type in a particular sort position:</p>
       <codeblock>ALTER TYPE colors ADD VALUE 'orange' AFTER 'red';</codeblock>
-    </section><section id="section6"><title>Compatibility</title><p>The variants to add and drop attributes are part of the SQL standard; the other variants are Greenplum Database extensions.</p></section><section id="section7"><title>See Also</title><p><codeph><xref href="./CREATE_TYPE.xml#topic1" type="topic" format="dita"/></codeph>,
-            <codeph><xref href="./DROP_TYPE.xml#topic1" type="topic" format="dita"/></codeph></p></section></body></topic>
+    </section><section id="section6"><title>Compatibility</title><p>The variants to add and drop attributes are part of the SQL standard; the other variants are Greenplum Database extensions.</p></section><section id="section7"><title>See Also</title><p><xref href="./CREATE_TYPE.xml#topic1" type="topic" format="dita"/>,
+            <xref href="./DROP_TYPE.xml#topic1" type="topic" format="dita"/></p></section></body></topic>

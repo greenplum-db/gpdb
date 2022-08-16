@@ -147,7 +147,7 @@ SELECT z.*,x.* FROM x,y,z WHERE x.i=y.i AND x.i=z.i;
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
       <dxl:RelationStatistics Mdid="2.15210462.1.1" Name="x" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="0.15210462.1.1" Name="x" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
+      <dxl:Relation Mdid="0.15210462.1.1" Name="x" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
         <dxl:Columns>
           <dxl:Column Name="i" Attno="1" Mdid="0.21.1.0" Nullable="true" ColWidth="8">
             <dxl:DefaultValue/>
@@ -184,7 +184,7 @@ SELECT z.*,x.* FROM x,y,z WHERE x.i=y.i AND x.i=z.i;
       <dxl:ColumnStatistics Mdid="1.15210488.1.1.7" Name="tableoid" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000"/>
       <dxl:ColumnStatistics Mdid="1.15210488.1.1.6" Name="cmax" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000"/>
       <dxl:RelationStatistics Mdid="2.15210488.1.1" Name="y" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="0.15210488.1.1" Name="y" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
+      <dxl:Relation Mdid="0.15210488.1.1" Name="y" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
         <dxl:Columns>
           <dxl:Column Name="i" Attno="1" Mdid="0.21.1.0" Nullable="true" ColWidth="8">
             <dxl:DefaultValue/>
@@ -228,7 +228,7 @@ SELECT z.*,x.* FROM x,y,z WHERE x.i=y.i AND x.i=z.i;
       <dxl:ColumnStatistics Mdid="1.15210488.1.1.1" Name="j" Width="8.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000"/>
       <dxl:ColumnStatistics Mdid="1.15210488.1.1.0" Name="i" Width="8.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000"/>
       <dxl:RelationStatistics Mdid="2.15210514.1.1" Name="z" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="0.15210514.1.1" Name="z" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3">
+      <dxl:Relation Mdid="0.15210514.1.1" Name="z" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3">
         <dxl:Columns>
           <dxl:Column Name="i" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -356,10 +356,10 @@ SELECT z.*,x.* FROM x,y,z WHERE x.i=y.i AND x.i=z.i;
         </dxl:And>
       </dxl:LogicalJoin>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="354">
+    <dxl:Plan Id="0" SpaceSize="410">
       <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="1293.001398" Rows="1.000000" Width="32"/>
+          <dxl:Cost StartupCost="0" TotalCost="1293.001468" Rows="1.000000" Width="32"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="18" Alias="i">
@@ -382,7 +382,7 @@ SELECT z.*,x.* FROM x,y,z WHERE x.i=y.i AND x.i=z.i;
         <dxl:SortingColumnList/>
         <dxl:HashJoin JoinType="Inner">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="1293.001255" Rows="1.000000" Width="32"/>
+            <dxl:Cost StartupCost="0" TotalCost="1293.001325" Rows="1.000000" Width="32"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="18" Alias="i">
@@ -444,7 +444,7 @@ SELECT z.*,x.* FROM x,y,z WHERE x.i=y.i AND x.i=z.i;
           </dxl:TableScan>
           <dxl:RedistributeMotion InputSegments="0,1" OutputSegments="0,1">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="862.000640" Rows="1.000000" Width="24"/>
+              <dxl:Cost StartupCost="0" TotalCost="862.000710" Rows="1.000000" Width="24"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="0" Alias="i">
@@ -468,7 +468,7 @@ SELECT z.*,x.* FROM x,y,z WHERE x.i=y.i AND x.i=z.i;
             </dxl:HashExprList>
             <dxl:HashJoin JoinType="Inner">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="862.000602" Rows="1.000000" Width="24"/>
+                <dxl:Cost StartupCost="0" TotalCost="862.000644" Rows="1.000000" Width="24"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="0" Alias="i">

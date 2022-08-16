@@ -6,21 +6,21 @@
     <body>
         <p id="sql_command_desc">Defines a new function.</p>
         <section id="section2"
-            ><title>Synopsis</title><codeblock id="sql_command_synopsis">CREATE [OR REPLACE] FUNCTION <varname>name</varname>    
-    ( [ [<varname>argmode</varname>] [<varname>argname</varname>] <varname>argtype</varname> [ { DEFAULT | = } <varname>default_expr</varname> ] [, ...] ] )
-      [ RETURNS <varname>rettype</varname> 
-        | RETURNS TABLE ( <varname>column_name</varname> <varname>column_type</varname> [, ...] ) ]
-    { LANGUAGE <varname>langname</varname>
+            ><title>Synopsis</title><codeblock id="sql_command_synopsis">CREATE [OR REPLACE] FUNCTION &lt;name>    
+    ( [ [&lt;argmode>] [&lt;argname>] &lt;argtype> [ { DEFAULT | = } &lt;default_expr> ] [, ...] ] )
+      [ RETURNS &lt;rettype> 
+        | RETURNS TABLE ( &lt;column_name> &lt;column_type> [, ...] ) ]
+    { LANGUAGE &lt;langname>
     | WINDOW
     | IMMUTABLE | STABLE | VOLATILE | [NOT] LEAKPROOF
     | CALLED ON NULL INPUT | RETURNS NULL ON NULL INPUT | STRICT
     | NO SQL | CONTAINS SQL | READS SQL DATA | MODIFIES SQL
     | [EXTERNAL] SECURITY INVOKER | [EXTERNAL] SECURITY DEFINER
     | EXECUTE ON { ANY | MASTER | ALL SEGMENTS | INITPLAN }
-    | COST <varname>execution_cost</varname>
-    | SET <varname>configuration_parameter</varname> { TO <varname>value</varname> | = <varname>value</varname> | FROM CURRENT }
-    | AS '<varname>definition</varname>'
-    | AS '<varname>obj_file</varname>', '<varname>link_symbol</varname>' } ...
+    | COST &lt;execution_cost>
+    | SET &lt;configuration_parameter> { TO &lt;value> | = &lt;value> | FROM CURRENT }
+    | AS '&lt;definition>'
+    | AS '&lt;obj_file>', '&lt;link_symbol>' } ...
     [ WITH ({ DESCRIBE = describe_function
            } [, ...] ) ]</codeblock>
         </section>
@@ -84,7 +84,7 @@ SELECT foo();</codeblock><p>In
                         MASTER</codeph> attribute is run only on the master segment and a
                     function with the <codeph>EXECUTE ON ALL SEGMENTS</codeph> attribute is run 
                     on all primary segment instances (not the master).</p><p>See <xref
-                        href="../../admin_guide/query/topics/functions-operators.xml#topic26/in151167"
+                        href="../../admin_guide/query/topics/functions-operators.html#topic26/in151167" format="html" scope="external"
                         >Using Functions and Operators</xref> in the <cite>Greenplum Database
                         Administrator Guide</cite>.</p></sectiondiv>
             <sectiondiv><b>Functions And Replicated Tables</b><p>A user-defined function that
@@ -176,9 +176,9 @@ SELECT foo();</codeblock><p>In
                     <pt><varname>langname</varname></pt>
                     <pd>The name of the language that the function is implemented in. May be
                             <codeph>SQL</codeph>, <codeph>C</codeph>, <codeph>internal</codeph>, or
-                        the name of a user-defined procedural language. See <codeph><xref
+                        the name of a user-defined procedural language. See <xref
                                 href="./CREATE_LANGUAGE.xml#topic1" type="topic" format="dita"
-                            /></codeph> for the procedural languages supported in Greenplum
+                            /> for the procedural languages supported in Greenplum
                         Database. For backward compatibility, the name may be enclosed by single
                         quotes. </pd>
                 </plentry>
@@ -627,10 +627,10 @@ $$ LANGUAGE plpgsql;</codeblock>If
                 the <codeph>DEFAULT</codeph> key word. The syntax
                 with <codeph>=</codeph> is used in T-SQL and Firebird.</p>
         </section>
-        <section id="section10"><title>See Also</title><p><codeph><xref
-                        href="ALTER_FUNCTION.xml#topic1" type="topic" format="dita"/></codeph>,
-                        <codeph><xref href="./DROP_FUNCTION.xml#topic1" type="topic" format="dita"
-                    /></codeph>, <codeph><xref href="./LOAD.xml#topic1" type="topic" format="dita"
-                    /></codeph></p></section>
+        <section id="section10"><title>See Also</title><p><xref
+                        href="ALTER_FUNCTION.xml#topic1" type="topic" format="dita"/>,
+                        <xref href="./DROP_FUNCTION.xml#topic1" type="topic" format="dita"
+                    />, <xref href="./LOAD.xml#topic1" type="topic" format="dita"
+                    /></p></section>
     </body>
 </topic>

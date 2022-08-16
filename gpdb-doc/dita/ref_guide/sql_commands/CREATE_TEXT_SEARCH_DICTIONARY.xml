@@ -2,9 +2,9 @@
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
 <topic id="topic1"><title id="az137232">CREATE TEXT SEARCH DICTIONARY</title><body><p id="sql_command_desc">Defines a new text search dictionary.</p><section id="section2"><title>Synopsis</title></section>
-    <codeblock id="sql_command_synopsis">CREATE TEXT SEARCH DICTIONARY <varname>name</varname> (
-    TEMPLATE = <varname>template</varname>
-    [, <varname>option</varname> = <varname>value</varname> [, ... ]]
+    <codeblock id="sql_command_synopsis">CREATE TEXT SEARCH DICTIONARY &lt;name> (
+    TEMPLATE = &lt;template>
+    [, &lt;option> = &lt;value> [, ... ]]
 )</codeblock><section id="section3"><title>Description</title>
       <p><varname>CREATE TEXT SEARCH DICTIONARY</varname> creates a new text search dictionary. A
         text search dictionary specifies a way of recognizing interesting or uninteresting words for
@@ -14,7 +14,7 @@
       <p>If a schema name is given then the text search dictionary is created in the specified
         schema. Otherwise it is created in the current schema.</p>
       <p>The user who defines a text search dictionary becomes its owner.</p>
-      <p>Refer to <xref href="../../admin_guide/textsearch/full-text-search.xml#full-text-search"/>
+      <p>Refer to <xref href="../../admin_guide/textsearch/full-text-search.html#full-text-search" format="html" scope="external">Using Full Text Search</xref>
         for further information.</p></section><section id="section4"><title>Parameters</title>
       <parml>
         <plentry>
@@ -51,6 +51,6 @@
     </section><section
           id="section6"><title>Compatibility</title><p>There is no <codeph>CREATE TEXT SEARCH
             DICTIONARY</codeph> statement in the SQL standard.</p></section><section
-              id="section7"><title>See Also</title><p><codeph><xref href="ALTER_TEXT_SEARCH_DICTIONARY.xml#topic1" type="topic" format="dita"
-          /></codeph>, <codeph><xref href="./DROP_TEXT_SEARCH_DICTIONARY.xml#topic1" type="topic"
-            format="dita"/></codeph></p></section></body></topic>
+              id="section7"><title>See Also</title><p><xref href="ALTER_TEXT_SEARCH_DICTIONARY.xml#topic1" type="topic" format="dita"
+          />, <xref href="./DROP_TEXT_SEARCH_DICTIONARY.xml#topic1" type="topic"
+            format="dita"/></p></section></body></topic>

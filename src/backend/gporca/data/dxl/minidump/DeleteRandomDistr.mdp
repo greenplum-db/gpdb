@@ -125,7 +125,7 @@
       <dxl:ColumnStatistics Mdid="1.17027.1.1.5" Name="xmax" Width="4.000000"/>
       <dxl:ColumnStatistics Mdid="1.17027.1.1.4" Name="cmin" Width="4.000000"/>
       <dxl:RelationStatistics Mdid="2.17027.1.1" Name="rr" Rows="1.000000"/>
-      <dxl:Relation Mdid="0.17027.1.1" Name="rr" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Random">
+      <dxl:Relation Mdid="0.17027.1.1" Name="rr" IsTemporary="false" StorageType="Heap" DistributionPolicy="Random">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>

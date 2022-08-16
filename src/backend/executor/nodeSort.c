@@ -123,28 +123,12 @@ ExecSort(PlanState *pstate)
 		node->tuplesortstate = (void *) tuplesortstate;
 
 		/* CDB */
-		/* GPDB_12_MERGE_FIXME: these optimizations are currently broken */
-#if 0
-		{
-			int 		unique = 0;
-			int 		sort_flags = gp_sort_flags; /* get the guc */
-			int         maxdistinct = gp_sort_max_distinct; /* get the guc */
-
-			if (node->noduplicates)
-				unique = 1;
-			
-			cdb_tuplesort_init(tuplesortstate, unique, sort_flags, maxdistinct);
-		}
-#endif
 
 		/* If EXPLAIN ANALYZE, share our Instrumentation object with sort. */
-		/* GPDB_12_MERGE_FIXME: broken */
-#if 0
 		if (node->ss.ps.instrument && node->ss.ps.instrument->need_cdb)
 			tuplesort_set_instrument(tuplesortstate,
 									 node->ss.ps.instrument,
 									 node->ss.ps.cdbexplainbuf);
-#endif
 	}
 
 	/*
@@ -236,6 +220,16 @@ ExecInitSort(Sort *node, EState *estate, int eflags)
 
 	SO1_printf("ExecInitSort: %s\n",
 			   "initializing sort node");
+
+	/*
+	 * GPDB
+	 */
+#ifdef FAULT_INJECTOR
+	if (SIMPLE_FAULT_INJECTOR("rg_qmem_qd_qe") == FaultInjectorTypeSkip)
+	{
+		elog(NOTICE, "op_mem=%d", (int) (((Plan *) node)->operatorMemKB));
+	}
+#endif
 
 	/*
 	 * create state structure
@@ -467,13 +461,14 @@ ExecSortExplainEnd(PlanState *planstate, struct StringInfoData *buf)
 
 	if (sortstate->tuplesortstate)
 	{
-		tuplesort_get_stats(sortstate->tuplesortstate,
-							&sortstate->sortstats);
+		tuplesort_finalize_stats(sortstate->tuplesortstate,
+								 &sortstate->sortstats);
 
 		if (planstate->instrument)
 		{
 			planstate->instrument->workfileCreated = (sortstate->sortstats.spaceType == SORT_SPACE_TYPE_DISK);
 			planstate->instrument->workmemused = sortstate->sortstats.workmemused;
+			planstate->instrument->execmemused = sortstate->sortstats.execmemused;
 		}
 	}
 }                               /* ExecSortExplainEnd */
@@ -493,12 +488,13 @@ ExecEagerFreeSort(SortState *node)
 		 * Save stats like in ExecSortExplainEnd, so that we can display
 		 * them later in EXPLAIN ANALYZE.
 		 */
-		tuplesort_get_stats(node->tuplesortstate,
-							&node->sortstats);
+		tuplesort_finalize_stats(node->tuplesortstate,
+								 &node->sortstats);
 		if (node->ss.ps.instrument)
 		{
 			node->ss.ps.instrument->workfileCreated = (node->sortstats.spaceType == SORT_SPACE_TYPE_DISK);
 			node->ss.ps.instrument->workmemused = node->sortstats.workmemused;
+			node->ss.ps.instrument->execmemused = node->sortstats.execmemused;
 		}
 
 		tuplesort_end((Tuplesortstate *) node->tuplesortstate);

@@ -46,6 +46,7 @@ extern int	postmaster_alive_fds[2];
 #endif
 
 #define POSTMASTER_IN_STARTUP_MSG "the database system is starting up"
+#define POSTMASTER_IN_RESET_MSG "the database system is resetting"
 #define POSTMASTER_IN_RECOVERY_MSG "the database system is in recovery mode"
 #define POSTMASTER_IN_RECOVERY_DETAIL_MSG "last replayed record at"
 /* gpstate must be updated if this message changes */

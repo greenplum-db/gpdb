@@ -273,27 +273,6 @@ SetNextFileSegForRead(AppendOnlyScanDesc scan)
 			/* Initialize the block directory for inserts if needed. */
 			if (scan->blockDirectory)
 			{
-				Oid segrelid;
-
-				GetAppendOnlyEntryAuxOids(reln->rd_id, NULL,
-						&segrelid, NULL, NULL, NULL, NULL);
-
-				/*
-				 * if building the block directory, we need to make sure the
-				 * sequence starts higher than our highest tuple's rownum.  In
-				 * the case of upgraded blocks, the highest tuple will have
-				 * tupCount as its row num for non-upgrade cases, which use
-				 * the sequence, it will be enough to start off the end of the
-				 * sequence; note that this is not ideal -- if we are at least
-				 * curSegInfo->tupcount + 1 then we don't even need to update
-				 * the sequence value.
-				 */
-				int64		firstSequence =
-				GetFastSequences(segrelid,
-								 segno,
-								 fsinfo->total_tupcount + 1,
-								 NUM_FAST_SEQUENCES);
-
 				AppendOnlyBlockDirectory_Init_forInsert(scan->blockDirectory,
 														scan->appendOnlyMetaDataSnapshot,
 														fsinfo,
@@ -302,10 +281,6 @@ SetNextFileSegForRead(AppendOnlyScanDesc scan)
 														segno,	/* segno */
 														1,	/* columnGroupNo */
 														false);
-
-				InsertFastSequenceEntry(segrelid,
-										segno,
-										firstSequence);
 			}
 
 			finished_all_files = false;
@@ -1678,7 +1653,7 @@ appendonly_beginscan(Relation relation,
 	 * Get the pg_appendonly information for this table
 	 */
 	seginfo = GetAllFileSegInfo(relation,
-								appendOnlyMetaDataSnapshot, &segfile_count);
+								appendOnlyMetaDataSnapshot, &segfile_count, NULL);
 
 	aoscan = appendonly_beginrangescan_internal(relation,
 												snapshot,
@@ -1897,7 +1872,7 @@ fetchNextBlock(AppendOnlyFetchDesc aoFetchDesc)
 	/*
 	 * Unpack information into member variables.
 	 */
-	aoFetchDesc->currentBlock.have = true;
+	aoFetchDesc->currentBlock.valid = true;
 	aoFetchDesc->currentBlock.fileOffset =
 		executorReadBlock->headerOffsetInFile;
 	aoFetchDesc->currentBlock.overallBlockLen =
@@ -1924,7 +1899,7 @@ fetchFromCurrentBlock(AppendOnlyFetchDesc aoFetchDesc,
 					  int64 rowNum,
 					  TupleTableSlot *slot)
 {
-	Assert(aoFetchDesc->currentBlock.have);
+	Assert(aoFetchDesc->currentBlock.valid);
 	Assert(rowNum >= aoFetchDesc->currentBlock.firstRowNum);
 	Assert(rowNum <= aoFetchDesc->currentBlock.lastRowNum);
 
@@ -2072,9 +2047,9 @@ scanToFetchTuple(AppendOnlyFetchDesc aoFetchDesc,
 }
 
 static void
-resetCurrentBlockInfo(CurrentBlock * currentBlock)
+resetCurrentBlockInfo(AOFetchBlockMetadata * currentBlock)
 {
-	currentBlock->have = false;
+	currentBlock->valid = false;
 	currentBlock->firstRowNum = 0;
 	currentBlock->lastRowNum = 0;
 }
@@ -2154,9 +2129,20 @@ appendonly_fetch_init(Relation relation,
 		GetAllFileSegInfo(
 						  relation,
 						  appendOnlyMetaDataSnapshot,
-						  &aoFetchDesc->totalSegfiles);
-	for (segno = 0; segno < AOTupleId_MultiplierSegmentFileNum; ++segno)
+						  &aoFetchDesc->totalSegfiles,
+						  NULL);
+
+	/* 
+	 * Initialize lastSequence only for segments which we got above is sufficient,
+	 * rather than all AOTupleId_MultiplierSegmentFileNum ones that introducing
+	 * too many unnecessary calls in most cases.
+	 */
+	memset(aoFetchDesc->lastSequence, -1, sizeof(aoFetchDesc->lastSequence));
+	for (int i = -1; i < aoFetchDesc->totalSegfiles; i++)
 	{
+		/* always initailize segment 0 */
+		segno = (i < 0 ? 0 : aoFetchDesc->segmentFileInfo[i]->segno);
+		/* set corresponding bit for target segment */
 		aoFetchDesc->lastSequence[segno] = ReadLastSequence(aoFormData.segrelid, segno);
 	}
 
@@ -2232,6 +2218,14 @@ appendonly_fetch(AppendOnlyFetchDesc aoFetchDesc,
 	int64		rowNum = AOTupleIdGet_rowNum(aoTupleId);
 	bool		isSnapshotAny = (aoFetchDesc->snapshot == SnapshotAny);
 
+	Assert(segmentFileNum >= 0);
+
+	if (aoFetchDesc->lastSequence[segmentFileNum] == InvalidAORowNum)
+		ereport(ERROR,
+				(errcode(ERRCODE_INTERNAL_ERROR),
+				 errmsg("Row No. %ld in segment file No. %d is out of scanning scope for target relfilenode %u.",
+				 		rowNum, segmentFileNum, aoFetchDesc->relation->rd_node.relNode)));
+
 	/*
 	 * This is an improvement for brin. BRIN index stores ranges of TIDs in
 	 * terms of block numbers and not specific TIDs, so it's possible that the
@@ -2255,7 +2249,7 @@ appendonly_fetch(AppendOnlyFetchDesc aoFetchDesc,
 	 * Do we have a current block?  If it has the requested tuple, that would
 	 * be a great performance optimization.
 	 */
-	if (aoFetchDesc->currentBlock.have)
+	if (aoFetchDesc->currentBlock.valid)
 	{
 		if (aoFetchDesc->currentSegmentFile.isOpen &&
 			segmentFileNum == aoFetchDesc->currentSegmentFile.num &&
@@ -2745,7 +2739,6 @@ appendonly_insert_init(Relation rel, int segno)
 	firstSequence =
 		GetFastSequences(segrelid,
 						 segno,
-						 aoInsertDesc->rowCount + 1,
 						 NUM_FAST_SEQUENCES);
 	aoInsertDesc->numSequences = NUM_FAST_SEQUENCES;
 
@@ -2985,7 +2978,6 @@ appendonly_insert(AppendOnlyInsertDesc aoInsertDesc,
 		firstSequence =
 			GetFastSequences(segrelid,
 							 aoInsertDesc->cur_segno,
-							 aoInsertDesc->lastSequence + 1,
 							 NUM_FAST_SEQUENCES);
 
 		Assert(firstSequence == aoInsertDesc->lastSequence + 1);

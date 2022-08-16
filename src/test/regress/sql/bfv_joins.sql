@@ -347,6 +347,17 @@ EXPLAIN SELECT a, b FROM gp_float1 JOIN gp_float2 ON a = c AND b = float8 '3.0';
 -- redistribute based on the compatible constant.
 EXPLAIN SELECT a, b FROM gp_float1 JOIN gp_float2 ON a = c AND b = float8 '3.0' AND b = float4 '3.0';
 
+-- Testing optimizer_enable_nljoin
+SET optimizer_enable_hashjoin=off;
+SET optimizer_enable_nljoin=off;
+EXPLAIN SELECT * FROM t1 JOIN t2 ON t1.a=t2.a;
+
+SET optimizer_enable_nljoin=on;
+EXPLAIN SELECT * FROM t1 JOIN t2 ON t1.a=t2.a;
+
+RESET optimizer_enable_hashjoin;
+RESET optimizer_enable_nljoin;
+
 -- Clean up. None of the objects we create are very interesting to keep around.
 reset search_path;
 set client_min_messages='warning';

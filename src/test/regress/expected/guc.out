@@ -823,13 +823,6 @@ END;
 $$ LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = n1, pg_temp;
--- Destroy the QD-QE libpq connections.
-select cleanupAllGangs();
- cleanupallgangs 
------------------
- t
-(1 row)
-
 select n1.drop_table('public','t1');
 NOTICE:  table "t1" does not exist, skipping
  drop_table 

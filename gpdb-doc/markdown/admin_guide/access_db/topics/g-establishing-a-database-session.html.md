@@ -16,5 +16,5 @@ In order to establish a connection to the Greenplum Database master, you will ne
 
 [Connecting with psql](g-connecting-with-psql.html) provides example commands for connecting to Greenplum Database.
 
-**Parent topic:**[Accessing the Database](../../access_db/topics/g-accessing-the-database.html)
+**Parent topic:** [Accessing the Database](../../access_db/topics/g-accessing-the-database.html)
 

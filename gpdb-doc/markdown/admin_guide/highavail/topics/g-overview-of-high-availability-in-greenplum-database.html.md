@@ -80,7 +80,7 @@ To maintain a dual cluster with the backup/restore method, create backups of the
 
 Making regular backups of the databases is recommended except in cases where the database can be easily regenerated from the source data. Backups should be taken to protect from operational, software, and hardware errors.
 
-Use the [gpbackup](../../../utility_guide/ref/gpbackup.html) utility to backup Greenplum databases. `gpbackup` performs the backup in parallel across segments, so backup performance scales up as hardware is added to the cluster.
+Use the [gpbackup](https://docs.vmware.com/en/VMware-Tanzu-Greenplum-Backup-and-Restore/index.html) utility to backup Greenplum databases. `gpbackup` performs the backup in parallel across segments, so backup performance scales up as hardware is added to the cluster.
 
 When designing a backup strategy, a primary concern is where to store the backup data. The data each segment manages can be backed up on the segment's local storage, but should not be stored there permanently—the backup reduces disk space available to the segment and, more importantly, a hardware failure could simultaneously destroy the segment's live data and the backup. After performing a backup, the backup files should be moved from the primary cluster to separate, safe storage. Alternatively, the backup can be made directly to separate storage.
 
@@ -88,12 +88,12 @@ Using a Greenplum Database storage plugin with the `gpbackup` and `gprestore` ut
 
 Using the Backup/Restore Storage Plugin API you can create a custom plugin that the `gpbackup` and `gprestore` utilities can use to integrate a custom backup storage system with the Greenplum Database.
 
-For information about using `gpbackup` and `gprestore`, see [Parallel Backup with gpbackup and gprestore](../../managing/backup-gpbackup.html).
+For information about using `gpbackup` and `gprestore`, see [VMware Tanzu Greenplum Backup and Restore Documentation](https://docs.vmware.com/en/VMware-Tanzu-Greenplum-Backup-and-Restore/index.html).
 
 -   **[Overview of Segment Mirroring](../../highavail/topics/g-overview-of-segment-mirroring.html)**  
 
 -   **[Overview of Master Mirroring](../../highavail/topics/g-overview-of-master-mirroring.html)**  
 
 
-**Parent topic:**[Enabling High Availability and Data Consistency Features](../../highavail/topics/g-enabling-high-availability-features.html)
+**Parent topic:** [Enabling High Availability and Data Consistency Features](../../highavail/topics/g-enabling-high-availability-features.html)
 

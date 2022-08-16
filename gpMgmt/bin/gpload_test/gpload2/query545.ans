@@ -1,0 +1,26 @@
+2022-03-02 15:30:02|INFO|gpload session started 2022-03-02 15:30:02
+2022-03-02 15:30:02|INFO|setting schema 'public' for table 'testtruncate'
+2022-03-02 15:30:02|INFO|started gpfdist -p 8081 -P 8082 -f "/home/gpadmin/workspace/gpdb/gpMgmt/bin/gpload_test/gpload2/data_file.txt" -t 30
+2022-03-02 15:30:02|INFO|did not find a staging table to reuse. creating staging_gpload_reusable_42f43ceb6be068ef6d5b75a3203d6a72
+2022-03-02 15:30:02|INFO|did not find an external table to reuse. creating ext_gpload_reusable_93057aa6_99fa_11ec_a6c8_0050569e2380
+2022-03-02 15:30:03|INFO|running time: 0.09 seconds
+2022-03-02 15:30:03|INFO|rows Inserted          = 15
+2022-03-02 15:30:03|INFO|rows Updated           = 1
+2022-03-02 15:30:03|INFO|data formatting errors = 0
+2022-03-02 15:30:03|INFO|gpload succeeded
+Table "public.staging_gpload_reusable_42f43ceb6be068ef6d5b75a3203d6a72"
+ Column |            Type             | Collation | Nullable | Default 
+--------+-----------------------------+-----------+----------+---------
+ s1     | text                        |           |          | 
+ s2     | text                        |           |          | 
+ s3     | text                        |           |          | 
+ dt     | timestamp without time zone |           |          | 
+ n1     | smallint                    |           |          | 
+ n2     | integer                     |           |          | 
+ n3     | bigint                      |           |          | 
+ n4     | numeric                     |           |          | 
+ n5     | numeric                     |           |          | 
+ n6     | real                        |           |          | 
+ n7     | double precision            |           |          | 
+Distributed by: (n1)
+

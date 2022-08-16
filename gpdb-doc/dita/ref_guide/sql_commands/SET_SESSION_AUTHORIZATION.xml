@@ -2,7 +2,7 @@
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
 <topic id="topic1"><title id="ek156485">SET SESSION AUTHORIZATION</title><body><p id="sql_command_desc">Sets the session role identifier and the current role identifier of
-the current session.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">SET [SESSION | LOCAL] SESSION AUTHORIZATION <varname>rolename</varname>
+the current session.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">SET [SESSION | LOCAL] SESSION AUTHORIZATION &lt;rolename>
 
 SET [SESSION | LOCAL] SESSION AUTHORIZATION DEFAULT
 
@@ -13,8 +13,8 @@ command, it is possible, for example, to temporarily become an unprivileged
 user and later switch back to being a superuser. </p><p>The session role identifier is initially set to be the (possibly authenticated) role name
     provided by the client. The current role identifier is normally equal to the session user
     identifier, but may change temporarily in the context of <codeph>setuid</codeph> functions and
-    similar mechanisms; it can also be changed by <codeph><xref href="SET_ROLE.xml#topic1"
-      type="topic" format="dita"/></codeph>. The current user identifier is relevant for permission
+    similar mechanisms; it can also be changed by <xref href="SET_ROLE.xml#topic1"
+      type="topic" format="dita"/>. The current user identifier is relevant for permission
     checking. </p><p>The session user identifier may be changed only if the initial session
 user (the authenticated user) had the superuser privilege. Otherwise,
 the command is accepted only if it specifies the authenticated user name.
@@ -40,4 +40,4 @@ SELECT SESSION_USER, CURRENT_USER;
      (<varname>rolename</varname>), which SQL does not. SQL does not allow this command during a transaction;
     Greenplum Database does not make this restriction. The <codeph>SESSION</codeph> and
      <codeph>LOCAL</codeph> modifiers are a Greenplum Database extension, as is the
-     <codeph>RESET</codeph> syntax.</p></section><section id="section7"><title>See Also</title><p><codeph><xref href="SET_ROLE.xml#topic1" type="topic" format="dita"/></codeph></p></section></body></topic>
+     <codeph>RESET</codeph> syntax.</p></section><section id="section7"><title>See Also</title><p><xref href="SET_ROLE.xml#topic1" type="topic" format="dita"/></p></section></body></topic>

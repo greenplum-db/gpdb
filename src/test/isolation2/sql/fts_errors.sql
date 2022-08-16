@@ -98,7 +98,6 @@ select gp_inject_fault('get_dns_cached_address', 'reset', 1);
 2:END;
 -- session 3: in transaction and has a cursor, cann't update
 --            cdb_component_dbs, following query should fail 
-3:FETCH ALL FROM c1;
 3:END;
 -- session 4: not in transaction but has temp table, cann't update
 --            cdb_component_dbs, following query should fail and session

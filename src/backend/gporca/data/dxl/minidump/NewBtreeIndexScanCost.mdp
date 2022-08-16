@@ -2345,7 +2345,7 @@ explain select *  from oip oip  join ria a on ip=cidr and oip.oid=194073;
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
       <dxl:RelationStatistics Mdid="2.36716.1.0" Name="oip" Rows="4106050.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.36716.1.0" Name="oip" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="15,9" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="0.36716.1.0" Name="oip" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="15,9" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="id" Attno="1" Mdid="0.20.1.0" Nullable="false" ColWidth="8">
             <dxl:DefaultValue/>
@@ -3994,7 +3994,7 @@ explain select *  from oip oip  join ria a on ip=cidr and oip.oid=194073;
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
       <dxl:RelationStatistics Mdid="2.36722.1.0" Name="ria" Rows="248710000.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.36722.1.0" Name="ria" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="19,20,14" PartitionColumns="11" PartitionTypes="r" NumberLeafPartitions="579">
+      <dxl:Relation Mdid="0.36722.1.0" Name="ria" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="19,20,14" PartitionColumns="11" PartitionTypes="r" NumberLeafPartitions="579">
         <dxl:Columns>
           <dxl:Column Name="id" Attno="1" Mdid="0.20.1.0" Nullable="false" ColWidth="8">
             <dxl:DefaultValue/>
@@ -4549,6 +4549,7 @@ explain select *  from oip oip  join ria a on ip=cidr and oip.oid=194073;
                   <dxl:Ident ColId="2" ColName="cidr" TypeMdid="0.869.1.0"/>
                 </dxl:Comparison>
               </dxl:IndexCondList>
+	<dxl:Partitions/>
               <dxl:IndexDescriptor Mdid="0.48950.1.0" IndexName="ssm_ria_ip_1_prt_1"/>
               <dxl:TableDescriptor Mdid="0.36722.1.0" TableName="ria">
                 <dxl:Columns>

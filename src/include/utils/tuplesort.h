@@ -89,6 +89,7 @@ typedef struct TuplesortInstrumentation
 	long		spaceUsed;		/* space consumption, in kB */
 
 	Size		workmemused;
+	Size		execmemused;
 } TuplesortInstrumentation;
 
 
@@ -248,6 +249,8 @@ extern void tuplesort_end(Tuplesortstate *state);
 
 extern void tuplesort_get_stats(Tuplesortstate *state,
 								TuplesortInstrumentation *stats);
+extern void tuplesort_finalize_stats(Tuplesortstate *state,
+								TuplesortInstrumentation *stats);
 extern const char *tuplesort_method_name(TuplesortMethod m);
 extern const char *tuplesort_space_type_name(TuplesortSpaceType t);
 
@@ -257,6 +260,10 @@ extern Size tuplesort_estimate_shared(int nworkers);
 extern void tuplesort_initialize_shared(Sharedsort *shared, int nWorkers,
 										dsm_segment *seg);
 extern void tuplesort_attach_shared(Sharedsort *shared, dsm_segment *seg);
+
+extern void tuplesort_set_instrument(Tuplesortstate            *state,
+									 struct Instrumentation    *instrument,
+									 struct StringInfoData     *explainbuf);
 
 /*
  * These routines may only be called if randomAccess was specified 'true'.

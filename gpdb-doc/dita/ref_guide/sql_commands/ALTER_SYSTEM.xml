@@ -60,7 +60,7 @@ ALTER SYSTEM RESET ALL</codeblock>
         <codeph>data_directory</codeph>, nor parameters that are not allowed in
         <codeph>postgresql.conf</codeph> (e.g., preset options that are determined when Greenplum
       Database is compiled or when it is installed). <p> See <xref
-          href="../../admin_guide/topics/g-configuring-the-greenplum-system.xml#topic1"/> for other
+          href="../../admin_guide/topics/g-configuring-the-greenplum-system.html#topic1" format="html" scope="external">Configuring the Greenplum Database System</xref> for other
         ways to set the parameters. </p></section>
     <section id="section6">
       <title>Examples</title>  <p> Set the <codeph>max_connections</codeph>:  </p>
@@ -76,7 +76,7 @@ ALTER SYSTEM RESET ALL</codeblock>
     </p>
     </section>
     <section id="section8"><title>See Also</title>
-      <p><codeph><xref href="./SET.xml#topic1" type="topic" format="dita"/></codeph>, <codeph><xref
-            href="./SHOW.xml#topic1" type="topic" format="dita"/></codeph></p></section>
+      <p><xref href="./SET.xml#topic1" type="topic" format="dita"/>, <xref
+            href="./SHOW.xml#topic1" type="topic" format="dita"/></p></section>
   </body>
 </topic>

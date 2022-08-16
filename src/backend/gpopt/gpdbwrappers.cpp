@@ -473,7 +473,9 @@ gpdb::TypeCollation(Oid type)
 		if (OidIsValid(typcollation))
 		{
 			if (type == NAMEOID)
+			{
 				return typcollation;  // As of v12, this is C_COLLATION_OID
+			}
 			return DEFAULT_COLLATION_OID;
 		}
 		return collation;
@@ -1661,7 +1663,9 @@ gpdb::GpdbEreportImpl(int xerrcode, int severitylevel, const char *xerrmsg,
 			errcode(xerrcode);
 			errmsg("%s", xerrmsg);
 			if (xerrhint)
+			{
 				errhint("%s", xerrhint);
+			}
 			errfinish(filename, lineno, funcname);
 		}
 	}
@@ -2422,19 +2426,6 @@ gpdb::EvaluateExpr(Expr *expr, Oid result_type, int32 typmod)
 	return nullptr;
 }
 
-// interpret the value of "With oids" option from a list of defelems
-// GPDB_12_MERGE_FIXME: this leaves dead code in CMDRelationGPDB
-bool
-gpdb::InterpretOidsOption(List *options, bool allowOids)
-{
-	GP_WRAP_START;
-	{
-		return false;
-	}
-	GP_WRAP_END;
-	return false;
-}
-
 char *
 gpdb::DefGetString(DefElem *defelem)
 {
@@ -2633,7 +2624,9 @@ gpdb::MDCacheNeedsReset(void)
 			mdcache_invalidation_counter_registered = true;
 		}
 		if (last_mdcache_invalidation_counter == mdcache_invalidation_counter)
+		{
 			return false;
+		}
 		else
 		{
 			last_mdcache_invalidation_counter = mdcache_invalidation_counter;
@@ -2820,13 +2813,20 @@ gpdb::GetRelChildIndexes(Oid reloid)
 	return partoids;
 }
 
+// Locks on partition leafs and indexes are held during optimizer (after
+// parse-analyze stage). ORCA need this function to lock relation. Here
+// we do not need to consider lock-upgrade issue, reasons are:
+//   1. Only UPDATE|DELETE statement may upgrade lock level
+//   2. ORCA currently does not support DML on partition tables
+//   3. If not partition table, then parser should have already locked
+//   4. Even later ORCA support DML on partition tables, the lock mode
+//      of leafs should be the same as the mode in root's RTE's rellockmode
+//   5. Index does not have lock-upgrade problem.
 void
 gpdb::GPDBLockRelationOid(Oid reloid, LOCKMODE lockmode)
 {
 	GP_WRAP_START;
 	{
-		bool lockUpgraded;
-		lockmode = UpgradeRelLockIfNecessary(reloid, lockmode, &lockUpgraded);
 		LockRelationOid(reloid, lockmode);
 	}
 	GP_WRAP_END;

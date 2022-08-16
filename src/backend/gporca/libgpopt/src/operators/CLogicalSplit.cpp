@@ -34,8 +34,7 @@ CLogicalSplit::CLogicalSplit(CMemoryPool *mp)
 	  m_pdrgpcrInsert(nullptr),
 	  m_pcrCtid(nullptr),
 	  m_pcrSegmentId(nullptr),
-	  m_pcrAction(nullptr),
-	  m_pcrTupleOid(nullptr)
+	  m_pcrAction(nullptr)
 {
 	m_fPattern = true;
 }
@@ -50,15 +49,13 @@ CLogicalSplit::CLogicalSplit(CMemoryPool *mp)
 //---------------------------------------------------------------------------
 CLogicalSplit::CLogicalSplit(CMemoryPool *mp, CColRefArray *pdrgpcrDelete,
 							 CColRefArray *pdrgpcrInsert, CColRef *pcrCtid,
-							 CColRef *pcrSegmentId, CColRef *pcrAction,
-							 CColRef *pcrTupleOid)
+							 CColRef *pcrSegmentId, CColRef *pcrAction)
 	: CLogical(mp),
 	  m_pdrgpcrDelete(pdrgpcrDelete),
 	  m_pdrgpcrInsert(pdrgpcrInsert),
 	  m_pcrCtid(pcrCtid),
 	  m_pcrSegmentId(pcrSegmentId),
-	  m_pcrAction(pcrAction),
-	  m_pcrTupleOid(pcrTupleOid)
+	  m_pcrAction(pcrAction)
 
 {
 	GPOS_ASSERT(nullptr != pdrgpcrDelete);
@@ -107,7 +104,6 @@ CLogicalSplit::Matches(COperator *pop) const
 		return m_pcrCtid == popSplit->PcrCtid() &&
 			   m_pcrSegmentId == popSplit->PcrSegmentId() &&
 			   m_pcrAction == popSplit->PcrAction() &&
-			   m_pcrTupleOid == popSplit->PcrTupleOid() &&
 			   m_pdrgpcrDelete->Equals(popSplit->PdrgpcrDelete()) &&
 			   m_pdrgpcrInsert->Equals(popSplit->PdrgpcrInsert());
 	}
@@ -159,15 +155,8 @@ CLogicalSplit::PopCopyWithRemappedColumns(CMemoryPool *mp,
 	CColRef *pcrAction =
 		CUtils::PcrRemap(m_pcrAction, colref_mapping, must_exist);
 
-	CColRef *pcrTupleOid = nullptr;
-	if (nullptr != m_pcrTupleOid)
-	{
-		pcrTupleOid =
-			CUtils::PcrRemap(m_pcrTupleOid, colref_mapping, must_exist);
-	}
-
 	return GPOS_NEW(mp) CLogicalSplit(mp, pdrgpcrDelete, pdrgpcrInsert, pcrCtid,
-									  pcrSegmentId, pcrAction, pcrTupleOid);
+									  pcrSegmentId, pcrAction);
 }
 
 //---------------------------------------------------------------------------
@@ -186,11 +175,6 @@ CLogicalSplit::DeriveOutputColumns(CMemoryPool *mp, CExpressionHandle &exprhdl)
 	CColRefSet *pcrs = GPOS_NEW(mp) CColRefSet(mp);
 	pcrs->Union(exprhdl.DeriveOutputColumns(0));
 	pcrs->Include(m_pcrAction);
-
-	if (nullptr != m_pcrTupleOid)
-	{
-		pcrs->Include(m_pcrTupleOid);
-	}
 
 	return pcrs;
 }

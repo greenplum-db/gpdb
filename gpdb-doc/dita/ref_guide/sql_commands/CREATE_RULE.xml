@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
-<topic id="topic1"><title id="ca20941">CREATE RULE</title><body><p id="sql_command_desc">Defines a new rewrite rule.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">CREATE [OR REPLACE] RULE <varname>name</varname> AS ON <varname>event</varname>
-  TO <varname>table_name</varname> [WHERE <varname>condition</varname>] 
-  DO [ALSO | INSTEAD] { NOTHING | <varname>command</varname> | (<varname>command</varname>; <varname>command</varname> 
+<topic id="topic1"><title id="ca20941">CREATE RULE</title><body><p id="sql_command_desc">Defines a new rewrite rule.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">CREATE [OR REPLACE] RULE &lt;name> AS ON &lt;event>
+  TO &lt;table_name> [WHERE &lt;condition>] 
+  DO [ALSO | INSTEAD] { NOTHING | &lt;command> | (&lt;command>; &lt;command> 
   ...) }</codeblock></section><section id="section3"><title>Description</title><p><codeph>CREATE RULE</codeph> defines a new rule applying to a specified
 table or view. <codeph>CREATE OR REPLACE RULE</codeph> will either create
 a new rule, or replace an existing rule of the same name for the same
@@ -38,8 +38,8 @@ in the cases where they are applied, they add to the default <codeph>INSTEAD
 NOTHING</codeph> action. (This method does not currently work to support
 <codeph>RETURNING</codeph> queries, however.)</p>
       <note>
-        <p> A view that is simple enough to be automatically updatable (see <codeph><xref
-              href="CREATE_VIEW.xml#topic1">CREATE VIEW</xref></codeph>) does not require a
+        <p> A view that is simple enough to be automatically updatable (see <xref
+              href="CREATE_VIEW.xml#topic1">CREATE VIEW</xref>) does not require a
           user-created rule in order to be updatable. While you can create an explicit rule anyway,
           the automatic update transformation will generally outperform an explicit rule. </p>
       </note></section><section id="section4"><title>Parameters</title><parml><plentry><pt><varname>name</varname></pt><pd>The name of a rule to create. This must be distinct from the name
@@ -71,7 +71,7 @@ at execution time.</p></section><section id="section6"><title>Examples</title><p
         insert into the partitioned parent table <codeph>rank</codeph>:</p><codeblock>CREATE RULE b2001 AS ON INSERT TO rank WHERE gender='M' and 
 year='2001' DO INSTEAD INSERT INTO b2001 VALUES (NEW.id, 
 NEW.rank, NEW.year, NEW.gender, NEW.count);</codeblock></section><section id="section7"><title>Compatibility</title><p><codeph>CREATE RULE</codeph> is a Greenplum Database language extension,
-as is the entire query rewrite system.</p></section><section id="section8"><title>See Also</title><p><codeph><xref href="ALTER_RULE.xml#topic1"/></codeph><codeph><xref href="./DROP_RULE.xml#topic1"
-            type="topic" format="dita"/></codeph>, <codeph><xref href="./CREATE_TABLE.xml#topic1"
-            type="topic" format="dita"/></codeph>, <codeph><xref href="./CREATE_VIEW.xml#topic1"
-            type="topic" format="dita"/></codeph></p></section></body></topic>
+as is the entire query rewrite system.</p></section><section id="section8"><title>See Also</title><p><xref href="ALTER_RULE.xml#topic1"/><xref href="./DROP_RULE.xml#topic1"
+            type="topic" format="dita"/>, <xref href="./CREATE_TABLE.xml#topic1"
+            type="topic" format="dita"/>, <xref href="./CREATE_VIEW.xml#topic1"
+            type="topic" format="dita"/></p></section></body></topic>

@@ -2,7 +2,7 @@
 title: Example Custom Data Access Protocol 
 ---
 
-The following is the API for the Greenplum Database custom data access protocol. The example protocol implementation [gpextprotocal.c](g-gpextprotocal.c.html) is written in C and shows how the API can be used. For information about accessing a custom data access protocol, see [Using a Custom Protocol](g-using-a-custom-protocol.html).
+The following is the API for the Greenplum Database custom data access protocol. The example protocol implementation [gpextprotocal.c](g-gpextprotocalc.html) is written in C and shows how the API can be used. For information about accessing a custom data access protocol, see [Using a Custom Protocol](g-using-a-custom-protocol.html).
 
 ```
 /* ---- Read/Write function API ------*/
@@ -43,10 +43,10 @@ The protocol has the following properties:
     These functions are referenced in the `CREATE PROTOCOL` statement when the protocol is created and declared in the database.
 
 
-The example implementation [gpextprotocal.c](g-gpextprotocal.c.html) uses `fopen()` and `fread()` to simulate a simple protocol that reads local files. In practice, however, the protocol would implement functionality such as a remote connection to some process over the network.
+The example implementation [gpextprotocal.c](g-gpextprotocalc.html) uses `fopen()` and `fread()` to simulate a simple protocol that reads local files. In practice, however, the protocol would implement functionality such as a remote connection to some process over the network.
 
 -   **[Installing the External Table Protocol](../../load/topics/g-installing-the-external-table-protocol.html)**  
 
 
-**Parent topic:**[Loading and Unloading Data](../../load/topics/g-loading-and-unloading-data.html)
+**Parent topic:** [Loading and Unloading Data](../../load/topics/g-loading-and-unloading-data.html)
 

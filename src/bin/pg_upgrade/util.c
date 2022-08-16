@@ -179,6 +179,38 @@ check_ok(void)
 
 
 /*
+ *  Wrapper around pg_fatal to continue check when running in check mode
+ *  with --continue-check-on-fatal
+ *
+ *	Note that there are certain checks that cannot be ignored in spite of
+ *  the flag being passed - they may be critical to the check process
+ *  itself. One such example is check_proper_datallowconn(), which ensures
+ *  that we can connect to user databases to perform the checks themselves.
+ *  Certain checks are multi-step, like the check to ensure that only the
+ *  install user is the sole user in the target database. If we get the
+ *  fatal: "could not determine the number of users", we can't really
+ *  proceed with the check. Thus, in these cases the flag will not be
+ *  respected.
+ */
+void
+gp_fatal_log(const char *fmt,...)
+{
+	va_list		args;
+	eLogType error_type = PG_FATAL;
+
+	if(is_continue_check_on_fatal())
+	{
+		set_check_fatal_occured();
+		error_type = PG_WARNING;
+	}
+
+	va_start(args, fmt);
+	pg_log_v(error_type, fmt, args);
+	va_end(args);
+}
+
+
+/*
  * quote_identifier()
  *		Properly double-quote a SQL identifier.
  *

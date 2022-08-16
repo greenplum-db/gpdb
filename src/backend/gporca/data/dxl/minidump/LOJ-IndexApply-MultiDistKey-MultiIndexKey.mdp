@@ -222,7 +222,7 @@
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
       <dxl:RelationStatistics Mdid="2.90067.1.0" Name="foo" Rows="5.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.90067.1.0" Name="foo" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0,1" Keys="9,3" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="0.90067.1.0" Name="foo" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0,1" Keys="9,3" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -260,7 +260,7 @@
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:RelationStatistics Mdid="2.90070.1.0" Name="bar" Rows="5.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.90070.1.0" Name="bar" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0,1" Keys="9,3" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="0.90070.1.0" Name="bar" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0,1" Keys="9,3" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="d" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -374,7 +374,7 @@
         </dxl:And>
       </dxl:LogicalJoin>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="14">
+    <dxl:Plan Id="0" SpaceSize="15">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="461.001661" Rows="5.000000" Width="24"/>
@@ -517,6 +517,7 @@
                 <dxl:Ident ColId="2" ColName="c" TypeMdid="0.23.1.0"/>
               </dxl:Comparison>
             </dxl:IndexCondList>
+	<dxl:Partitions/>
             <dxl:IndexDescriptor Mdid="0.93456.1.0" IndexName="idx_bar_de"/>
             <dxl:TableDescriptor Mdid="0.90070.1.0" TableName="bar">
               <dxl:Columns>

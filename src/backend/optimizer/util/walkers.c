@@ -232,7 +232,9 @@ plan_tree_walker(Node *node,
 
 		case T_SeqScan:
 		case T_SampleScan:
+		case T_DynamicSeqScan:
 		case T_BitmapHeapScan:
+		case T_DynamicBitmapHeapScan:
 		case T_WorkTableScan:
 		case T_NamedTuplestoreScan:
 			if (walk_scan_node_fields((Scan *) node, walker, context))
@@ -290,6 +292,7 @@ plan_tree_walker(Node *node,
 			break;
 
 		case T_IndexScan:
+		case T_DynamicIndexScan:
 			if (walk_scan_node_fields((Scan *) node, walker, context))
 				return true;
 			if (walker((Node *) ((IndexScan *) node)->indexqual, context))
@@ -305,11 +308,11 @@ plan_tree_walker(Node *node,
 			break;
 
 		case T_BitmapIndexScan:
+		case T_DynamicBitmapIndexScan:
 			if (walk_scan_node_fields((Scan *) node, walker, context))
 				return true;
 			if (walker((Node *) ((BitmapIndexScan *) node)->indexqual, context))
 				return true;
-
 			/* Other fields are lists of basic items, nothing to walk. */
 			break;
 
@@ -884,9 +887,11 @@ check_collation_walker(Node *node, check_collation_context *context)
 	switch (nodeTag(node))
 	{
 		case T_Var:
-			type = (castNode(Var, node))->vartype;
+		case T_Const:
+		case T_OpExpr:
+			type = exprType((node));
 			collation = exprCollation(node);
-			if (type == NAMEOID)
+			if (type == NAMEOID || type == NAMEARRAYOID)
 			{
 				if (collation != C_COLLATION_OID)
 					context->foundNonDefaultCollation = 1;
@@ -896,8 +901,6 @@ check_collation_walker(Node *node, check_collation_context *context)
 				context->foundNonDefaultCollation = 1;
 			}
 			break;
-		case T_Const:
-		case T_OpExpr:
 		case T_ScalarArrayOpExpr:
 		case T_DistinctExpr:
 		case T_BoolExpr:

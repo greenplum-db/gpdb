@@ -33,9 +33,13 @@ CXformJoin2IndexApplyGeneric::FCanLeftOuterIndexApply(
 	IMDRelation::Ereldistrpolicy ereldist = ptabDesc->GetRelDistribution();
 
 	if (ereldist == IMDRelation::EreldistrRandom)
+	{
 		return false;
+	}
 	else if (ereldist == IMDRelation::EreldistrMasterOnly)
+	{
 		return true;
+	}
 
 	// now consider hash distributed table
 	CColRefSet *pcrsInnerOutput = pexprInner->DeriveOutputColumns();

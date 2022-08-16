@@ -123,6 +123,7 @@
 #include "access/xact.h"
 #include "catalog/pg_database.h"
 #include "commands/async.h"
+#include "common/hashfn.h"
 #include "funcapi.h"
 #include "libpq/libpq.h"
 #include "libpq/pqformat.h"
@@ -139,8 +140,6 @@
 #include "utils/ps_status.h"
 #include "utils/snapmgr.h"
 #include "utils/timestamp.h"
-
-#include "tcop/idle_resource_cleaner.h"
 
 
 /*
@@ -2056,7 +2055,6 @@ asyncQueueAdvanceTail(void)
 static void
 ProcessIncomingNotify(void)
 {
-	bool		client_wait_timeout_enabled;
 
 	/* We *must* reset the flag */
 	notifyInterruptPending = false;
@@ -2064,8 +2062,6 @@ ProcessIncomingNotify(void)
 	/* Do nothing else if we aren't actively listening */
 	if (listenChannels == NIL)
 		return;
-
-	client_wait_timeout_enabled = DisableClientWaitTimeoutInterrupt();
 
 	if (Trace_notify)
 		elog(DEBUG1, "ProcessIncomingNotify");
@@ -2092,8 +2088,6 @@ ProcessIncomingNotify(void)
 	if (Trace_notify)
 		elog(DEBUG1, "ProcessIncomingNotify: done");
 
-	if (client_wait_timeout_enabled)
-		EnableClientWaitTimeoutInterrupt();
 }
 
 /*

@@ -149,6 +149,8 @@ extern void GetTempNamespaceState(Oid *tempNamespaceId,
 								  Oid *tempToastNamespaceId);
 extern void SetTempNamespaceState(Oid tempNamespaceId,
 								  Oid tempToastNamespaceId);
+extern void SetTempNamespaceStateAfterBoot(Oid tempNamespaceId,
+								  Oid tempToastNamespaceId); /* GPDB only */
 extern void ResetTempTableNamespace(void);
 
 extern OverrideSearchPath *GetOverrideSearchPath(MemoryContext context);

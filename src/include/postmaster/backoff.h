@@ -29,5 +29,10 @@ extern Datum gp_list_backend_priorities(PG_FUNCTION_ARGS);
 extern void BackoffSweeperMain(Datum main_arg);
 extern bool BackoffSweeperStartRule(Datum main_arg);
 
+/* needed by metrics_collector */
+extern char *BackoffPriorityIntToValue(int weight);
+/* needed by metrics_collector */
+extern int ResourceQueueGetPriorityWeight(Oid queueId);
+
 
 #endif /* BACKOFF_H_ */

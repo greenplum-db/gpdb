@@ -16,7 +16,7 @@ This section contains the following information.
 
 These topics assume that the Greenplum Database system is configured to authenticate with Kerberos. For information about configuring Greenplum Database with Kerberos authentication, refer to [Using Kerberos Authentication](kerberos.html).
 
-**Parent topic:**[Configuring Client Authentication](client_auth.html)
+**Parent topic:** [Configuring Client Authentication](client_auth.html)
 
 ## <a id="topic_win_kerberos_install"></a>Installing and Configuring Kerberos on a Windows System 
 

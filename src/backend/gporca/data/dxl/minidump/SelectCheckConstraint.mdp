@@ -145,7 +145,7 @@
           <dxl:ConstValue TypeMdid="0.23.1.0" Value="20"/>
         </dxl:Comparison>
       </dxl:CheckConstraint>
-      <dxl:Relation Mdid="0.601994.1.0" Name="x" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3">
+      <dxl:Relation Mdid="0.601994.1.0" Name="x" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -192,7 +192,7 @@
           <dxl:Ident ColId="2" ColName="b" TypeMdid="0.23.1.0"/>
         </dxl:Comparison>
       </dxl:CheckConstraint>
-      <dxl:Relation Mdid="0.601994.1.1" Name="x" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3">
+      <dxl:Relation Mdid="0.601994.1.1" Name="x" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>

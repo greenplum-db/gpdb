@@ -7,11 +7,11 @@
         <p id="sql_command_desc">Defines a new procedural language.</p>
         <section id="section2">
             <title>Synopsis</title>
-            <codeblock id="sql_command_synopsis">CREATE [ OR REPLACE ] [ PROCEDURAL ] LANGUAGE <varname>name</varname>
+            <codeblock id="sql_command_synopsis">CREATE [ OR REPLACE ] [ PROCEDURAL ] LANGUAGE &lt;name>
 
-CREATE [ OR REPLACE ] [ TRUSTED ] [ PROCEDURAL ] LANGUAGE <varname>name</varname>
-    HANDLER <varname>call_handler</varname> [ INLINE <varname>inline_handler</varname> ] 
-   [ VALIDATOR <varname>valfunction</varname> ]
+CREATE [ OR REPLACE ] [ TRUSTED ] [ PROCEDURAL ] LANGUAGE &lt;name>
+    HANDLER &lt;call_handler> [ INLINE &lt;inline_handler> ] 
+   [ VALIDATOR &lt;valfunction> ]
             </codeblock>
         </section>
         <section id="section3">
@@ -124,12 +124,12 @@ CREATE [ OR REPLACE ] [ TRUSTED ] [ PROCEDURAL ] LANGUAGE <varname>name</varname
                 <plentry>
                     <pt>INLINE <varname>inline_handler</varname></pt>
                     <pd>The name of a previously registered function that is called to run an
-                        anonymous code block in this language that is created with the <codeph><xref
-                                href="DO.xml#topic1"/></codeph> command. If an
+                        anonymous code block in this language that is created with the <xref
+                                href="DO.xml#topic1"/> command. If an
                             <codeph>inline_handler</codeph> function is not specified, the language
                         does not support anonymous code blocks. The handler function must take one
-                        argument of type <codeph>internal</codeph>, which is the <codeph><xref
-                                href="DO.xml#topic1"/></codeph> command internal representation. The
+                        argument of type <codeph>internal</codeph>, which is the <xref
+                                href="DO.xml#topic1"/> command internal representation. The
                         function typically return <codeph>void</codeph>. The return value of the
                         handler is ignored. </pd>
                 </plentry>
@@ -186,15 +186,15 @@ CREATE LANGUAGE plsample
         </section>
         <section id="section8">
             <title>See Also</title>
-            <p><codeph><xref href="ALTER_LANGUAGE.xml#topic1" type="topic" format="dita"/></codeph>,
-                        <codeph><xref href="CREATE_EXTENSION.xml" type="topic" format="dita"
-                    /></codeph>, <codeph><xref href="CREATE_FUNCTION.xml#topic1" type="topic"
-                        format="dita"/></codeph>, <codeph><xref href="./DROP_EXTENSION.xml#topic1"
-                        type="topic" format="dita"/></codeph>, <codeph><xref
-                        href="./DROP_LANGUAGE.xml#topic1" type="topic" format="dita"/></codeph>,
-                        <codeph><xref href="./GRANT.xml#topic1" type="topic" format="dita"
-                    /></codeph>
-                <codeph><xref href="DO.xml#topic1"/></codeph></p>
+            <p><xref href="ALTER_LANGUAGE.xml#topic1" type="topic" format="dita"/>,
+                        <xref href="CREATE_EXTENSION.xml" type="topic" format="dita"
+                    />, <xref href="CREATE_FUNCTION.xml#topic1" type="topic"
+                        format="dita"/>, <xref href="./DROP_EXTENSION.xml#topic1"
+                        type="topic" format="dita"/>, <xref
+                        href="./DROP_LANGUAGE.xml#topic1" type="topic" format="dita"/>,
+                        <xref href="./GRANT.xml#topic1" type="topic" format="dita"
+                    />
+                <xref href="DO.xml#topic1"/></p>
         </section>
     </body>
 </topic>

@@ -12,7 +12,7 @@ subdir = src/test
 top_builddir = ../..
 include $(top_builddir)/src/Makefile.global
 
-# GPDB_12_MERGE_FIXME Since logical replication doesn't work for GPDB,
+# GPDB_12_MERGE_FEATURE_NOT_SUPPORTED Since logical replication doesn't work for GPDB,
 # removed "subscription" test from below list.
 SUBDIRS = perl regress isolation modules authentication recovery
 

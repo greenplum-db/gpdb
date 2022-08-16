@@ -3348,6 +3348,8 @@ GetTempToastNamespace(void)
  *
  * This is used for conveying state to a parallel worker, and is not meant
  * for general-purpose access.
+ *
+ * GPDB: also used when dispatch MPP query
  */
 void
 GetTempNamespaceState(Oid *tempNamespaceId, Oid *tempToastNamespaceId)
@@ -3385,6 +3387,30 @@ SetTempNamespaceState(Oid tempNamespaceId, Oid tempToastNamespaceId)
 	 */
 
 	baseSearchPathValid = false;	/* may need to rebuild list */
+}
+
+/*
+ * like SetTempNamespaceState, but the process running normally
+ *
+ * GPDB: used to set session level temporary namespace after reader gang launched.
+ */
+void
+SetTempNamespaceStateAfterBoot(Oid tempNamespaceId, Oid tempToastNamespaceId)
+{
+	Assert(Gp_role == GP_ROLE_EXECUTE);
+
+	/* writer gang will do InitTempTableNamespace(), ignore the dispatch on writer gang */
+	if (Gp_is_writer)
+		return;
+
+	/* skip rebuild search path if search path is correct and valid */
+	if (tempNamespaceId == myTempNamespace && myTempToastNamespace == tempToastNamespaceId)
+		return;
+
+	myTempNamespace = tempNamespaceId;
+	myTempToastNamespace = tempToastNamespaceId;
+
+	baseSearchPathValid = false;	/* need to rebuild list */
 }
 
 
@@ -4211,6 +4237,7 @@ ResetTempNamespace(void)
 	cancel_before_shmem_exit(RemoveTempRelationsCallback, 0);
 
 	myTempNamespace = InvalidOid;
+	myTempToastNamespace = InvalidOid;
 	myTempNamespaceSubID = InvalidSubTransactionId;
 	baseSearchPathValid = false;	/* need to rebuild list */
 
@@ -4555,7 +4582,8 @@ TempNamespaceValid(bool error_if_removed)
 		if (SearchSysCacheExists1(NAMESPACEOID,
 								  ObjectIdGetDatum(myTempNamespace)))
 			return true;
-		else if (Gp_role != GP_ROLE_EXECUTE && error_if_removed) 
+		else if (Gp_role != GP_ROLE_EXECUTE && error_if_removed)
+		{
 			/*
 			 * We might call this on QEs if we're dropping our own
 			 * session's temp table schema. However, we want the
@@ -4566,6 +4594,7 @@ TempNamespaceValid(bool error_if_removed)
 					(errcode(ERRCODE_UNDEFINED_SCHEMA),
 					 errmsg("temporary table schema removed while session "
 							"still in progress")));
+		}
 	}
 	return false;
 }

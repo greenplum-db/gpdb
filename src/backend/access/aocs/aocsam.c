@@ -370,29 +370,6 @@ open_next_scan_seg(AOCSScanDesc scan)
 				 */
 				if (scan->blockDirectory)
 				{
-					/*
-					 * if building the block directory, we need to make sure
-					 * the sequence starts higher than our highest tuple's
-					 * rownum.  In the case of upgraded blocks, the highest
-					 * tuple will have tupCount as its row num for non-upgrade
-					 * cases, which use the sequence, it will be enough to
-					 * start off the end of the sequence; note that this is
-					 * not ideal -- if we are at least curSegInfo->tupcount +
-					 * 1 then we don't even need to update the sequence value
-					 */
-					int64		firstSequence;
-					Oid         segrelid;
-					GetAppendOnlyEntryAuxOids(RelationGetRelid(scan->rs_base.rs_rd),
-                                              scan->appendOnlyMetaDataSnapshot,
-                                              &segrelid, NULL, NULL,
-                                              NULL, NULL);
-
-					firstSequence =
-						GetFastSequences(segrelid,
-										 curSegInfo->segno,
-										 curSegInfo->total_tupcount + 1,
-										 NUM_FAST_SEQUENCES);
-
 					AppendOnlyBlockDirectory_Init_forInsert(scan->blockDirectory,
 															scan->appendOnlyMetaDataSnapshot,
 															(FileSegInfo *) curSegInfo,
@@ -401,10 +378,6 @@ open_next_scan_seg(AOCSScanDesc scan)
 															curSegInfo->segno,
 															scan->columnScanInfo.relationTupleDesc->natts,
 															true);
-
-					InsertFastSequenceEntry(segrelid,
-											curSegInfo->segno,
-											firstSequence);
 				}
 
 				open_all_datumstreamread_segfiles(scan->rs_base.rs_rd,
@@ -502,7 +475,7 @@ aocs_beginscan(Relation relation,
 	else
 		aocsMetaDataSnapshot = SnapshotSelf;
 
-	seginfo = GetAllAOCSFileSegInfo(relation, aocsMetaDataSnapshot, &total_seg);
+	seginfo = GetAllAOCSFileSegInfo(relation, aocsMetaDataSnapshot, &total_seg, NULL);
 	return aocs_beginscan_internal(relation,
 								   seginfo,
 								   total_seg,
@@ -966,7 +939,6 @@ aocs_insert_init(Relation rel, int segno)
 	firstSequence =
 		GetFastSequences(desc->segrelid,
 						 segno,
-						 desc->rowCount + 1,
 						 NUM_FAST_SEQUENCES);
 	desc->numSequences = NUM_FAST_SEQUENCES;
 
@@ -1085,7 +1057,6 @@ aocs_insert_values(AOCSInsertDesc idesc, Datum *d, bool *null, AOTupleId *aoTupl
 		firstSequence =
 			GetFastSequences(idesc->segrelid,
 							 idesc->cur_segno,
-							 idesc->lastSequence + 1,
 							 NUM_FAST_SEQUENCES);
 
 		Assert(firstSequence == idesc->lastSequence + 1);
@@ -1287,9 +1258,9 @@ openFetchSegmentFile(AOCSFetchDesc aocsFetchDesc,
 }
 
 static void
-resetCurrentBlockInfo(CurrentBlock *currentBlock)
+resetCurrentBlockInfo(AOFetchBlockMetadata *currentBlock)
 {
-	currentBlock->have = false;
+	currentBlock->valid = false;
 	currentBlock->firstRowNum = 0;
 	currentBlock->lastRowNum = 0;
 }
@@ -1352,13 +1323,20 @@ aocs_fetch_init(Relation relation,
                                  NULL);
 
 	aocsFetchDesc->segmentFileInfo =
-		GetAllAOCSFileSegInfo(relation, appendOnlyMetaDataSnapshot, &aocsFetchDesc->totalSegfiles);
+		GetAllAOCSFileSegInfo(relation, appendOnlyMetaDataSnapshot, &aocsFetchDesc->totalSegfiles, NULL);
 
-	/* Init the biggest row number of each aoseg */
-	for (segno = 0; segno < AOTupleId_MultiplierSegmentFileNum; ++segno)
+	/* 
+	 * Initialize lastSequence only for segments which we got above is sufficient,
+	 * rather than all AOTupleId_MultiplierSegmentFileNum ones that introducing
+	 * too many unnecessary calls in most cases.
+	 */
+	memset(aocsFetchDesc->lastSequence, -1, sizeof(aocsFetchDesc->lastSequence));
+	for (int i = -1; i < aocsFetchDesc->totalSegfiles; i++)
 	{
-		aocsFetchDesc->lastSequence[segno] =
-			ReadLastSequence(aocsFetchDesc->segrelid, segno);
+		/* always initailize segment 0 */
+		segno = (i < 0 ? 0 : aocsFetchDesc->segmentFileInfo[i]->segno);
+		/* set corresponding bit for target segment */
+		aocsFetchDesc->lastSequence[segno] = ReadLastSequence(aocsFetchDesc->segrelid, segno);
 	}
 
 	AppendOnlyBlockDirectory_Init_forSearch(
@@ -1456,6 +1434,14 @@ aocs_fetch(AOCSFetchDesc aocsFetchDesc,
 
 	Assert(numCols > 0);
 
+	Assert(segmentFileNum >= 0);
+
+	if (aocsFetchDesc->lastSequence[segmentFileNum] == InvalidAORowNum)
+		ereport(ERROR,
+				(errcode(ERRCODE_INTERNAL_ERROR),
+				 errmsg("Row No. %ld in segment file No. %d is out of scanning scope for target relfilenode %u.",
+				 		rowNum, segmentFileNum, aocsFetchDesc->relation->rd_node.relNode)));
+
 	/*
 	 * if the rowNum is bigger than lastsequence, skip it.
 	 */
@@ -1494,7 +1480,7 @@ aocs_fetch(AOCSFetchDesc aocsFetchDesc,
 		if (datumStreamFetchDesc->currentSegmentFile.isOpen &&
 			datumStreamFetchDesc->currentSegmentFile.num == segmentFileNum &&
 			aocsFetchDesc->blockDirectory.currentSegmentFileNum == segmentFileNum &&
-			datumStreamFetchDesc->currentBlock.have)
+			datumStreamFetchDesc->currentBlock.valid)
 		{
 			if (rowNum >= datumStreamFetchDesc->currentBlock.firstRowNum &&
 				rowNum <= datumStreamFetchDesc->currentBlock.lastRowNum)

@@ -96,29 +96,31 @@ class RecoveryTripletRequest:
 # TODO: Note that gparray is mutated for all triplets, even if we skip recovery for them(if they are unreachable)
 class RecoveryTripletsFactory:
     @staticmethod
-    def instance(gpArray, config_file=None, new_hosts=[]):
+    def instance(gpArray, config_file=None, new_hosts=[], paralleldegree=1):
         """
         :param gpArray: The variable gpArray may get mutated when the getMirrorTriples function is called on this instance.
         :param config_file: user passed in config file, if any
         :param new_hosts: user passed in new hosts, if any
+        :param paralleldegree: number of max parallel threads to run, default is 1
         :return:
         """
         if config_file:
-            return RecoveryTripletsUserConfigFile(gpArray, config_file)
+            return RecoveryTripletsUserConfigFile(gpArray, config_file, paralleldegree)
         else:
             if not new_hosts:
-                return RecoveryTripletsInplace(gpArray)
+                return RecoveryTripletsInplace(gpArray, paralleldegree)
             else:
-                return RecoveryTripletsNewHosts(gpArray, new_hosts)
+                return RecoveryTripletsNewHosts(gpArray, new_hosts, paralleldegree)
 
 
 class RecoveryTriplets(abc.ABC):
-    def __init__(self, gpArray):
+    def __init__(self, gpArray, paralleldegree=1):
         """
         :param gpArray: Needs to be a shallow copy since we may return a mutated gpArray
         """
         self.gpArray = gpArray
         self.interfaceHostnameWarnings = []
+        self.paralleldegree = paralleldegree
 
     @abc.abstractmethod
     def getTriplets(self) -> List[RecoveryTriplet]:
@@ -128,6 +130,10 @@ class RecoveryTriplets(abc.ABC):
         be marked as down whereas for gprecoverseg the segment to be recovered needs to marked as down.
         """
         pass
+
+    def _get_unreachable_failover_hosts(self, requests) -> List[str]:
+        hostlist = {req.failover_host for req in requests if req.failover_host}
+        return get_unreachable_segment_hosts(hostlist, min(self.paralleldegree, len(hostlist)))
 
     def getInterfaceHostnameWarnings(self):
         return self.interfaceHostnameWarnings
@@ -140,6 +146,8 @@ class RecoveryTriplets(abc.ABC):
     # the state as if that recovery had already completed.
     def _convert_requests_to_triplets(self, requests: List[RecoveryTripletRequest]) -> List[RecoveryTriplet]:
         triplets = []
+        # Get list of hosts unreachable from the request
+        unreachable_failover_hosts = self._get_unreachable_failover_hosts(requests)
 
         dbIdToPeerMap = self.gpArray.getDbIdToPeerMap()
         for req in requests:
@@ -148,7 +156,6 @@ class RecoveryTriplets(abc.ABC):
             # "<failed_address>|<failed_port>|<failed_data_dir>" does incremental recovery
             failover = None
             if req.failover_host:
-
                 # these two lines make it so that failover points to the object that is registered in gparray
                 #   as the failed segment(!).
                 failover = req.failed
@@ -159,12 +166,12 @@ class RecoveryTriplets(abc.ABC):
                 failover.setSegmentHostName(req.failover_host)
                 failover.setSegmentPort(int(req.failover_port))
                 failover.setSegmentDataDirectory(req.failover_datadir)
-                failover.unreachable = False if req.failover_to_new_host else failover.unreachable
-
-            # this must come AFTER the if check above because failedSegment can be adjusted to
-            #   point to a different object
-            if req.failed.unreachable and not req.failover_to_new_host:
-                continue
+                failover.unreachable = failover.getSegmentHostName() in unreachable_failover_hosts
+            else:
+                # recovery in place, check for host reachable
+                if(req.failed.unreachable):
+                    # skip the recovery
+                    continue
 
             peer = dbIdToPeerMap.get(req.failed.getSegmentDbId())
 
@@ -174,8 +181,8 @@ class RecoveryTriplets(abc.ABC):
 
 
 class RecoveryTripletsInplace(RecoveryTriplets):
-    def __init__(self, gpArray):
-        super().__init__(gpArray)
+    def __init__(self, gpArray, paralleldegree):
+        super().__init__(gpArray, paralleldegree)
 
     def getTriplets(self):
         requests = []
@@ -191,8 +198,8 @@ class RecoveryTripletsInplace(RecoveryTriplets):
 
 
 class RecoveryTripletsNewHosts(RecoveryTriplets):
-    def __init__(self, gpArray, newHosts):
-        super().__init__(gpArray)
+    def __init__(self, gpArray, newHosts, paralleldegree):
+        super().__init__(gpArray, paralleldegree)
         self.newHosts = [] if not newHosts else newHosts[:]
         self.portAssigner = self._PortAssigner(gpArray)
 
@@ -276,8 +283,8 @@ class RecoveryTripletsNewHosts(RecoveryTriplets):
 
 
 class RecoveryTripletsUserConfigFile(RecoveryTriplets):
-    def __init__(self, gpArray, config_file):
-        super().__init__(gpArray)
+    def __init__(self, gpArray, config_file, paralleldegree):
+        super().__init__(gpArray, paralleldegree)
         self.config_file = config_file
         self.rows = self._parseConfigFile(self.config_file)
 

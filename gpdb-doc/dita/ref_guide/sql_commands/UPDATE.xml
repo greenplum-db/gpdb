@@ -7,12 +7,12 @@
     <p id="sql_command_desc">Updates rows of a table.</p>
     <section id="section2">
       <title>Synopsis</title>
-      <codeblock id="sql_command_synopsis">[ WITH [ RECURSIVE ] <varname>with_query</varname> [, ...] ]
-UPDATE [ONLY] <varname>table</varname> [[AS] <varname>alias</varname>]
-   SET {<varname>column</varname> = {<varname>expression</varname> | DEFAULT} |
-   (<varname>column</varname> [, ...]) = ({<varname>expression</varname> | DEFAULT} [, ...])} [, ...]
-   [FROM <varname>fromlist</varname>]
-   [WHERE <varname>condition </varname>| WHERE CURRENT OF <varname>cursor_name</varname> ]</codeblock>
+      <codeblock id="sql_command_synopsis">[ WITH [ RECURSIVE ] &lt;with_query> [, ...] ]
+UPDATE [ONLY] &lt;table> [[AS] &lt;alias>]
+   SET {&lt;column> = {&lt;expression> | DEFAULT} |
+   (&lt;column> [, ...]) = ({&lt;expression> | DEFAULT} [, ...])} [, ...]
+   [FROM &lt;fromlist>]
+   [WHERE &lt;condition >| WHERE CURRENT OF &lt;cursor_name> ]</codeblock>
     </section>
     <section id="section3">
       <title>Description</title>
@@ -36,13 +36,13 @@ UPDATE [ONLY] <varname>table</varname> [[AS] <varname>alias</varname>]
       <note>As the default, Greenplum Database acquires an <codeph>EXCLUSIVE</codeph> lock on tables
         for <codeph>UPDATE</codeph> operations on heap tables. When the Global Deadlock Detector is
         enabled, the lock mode for <codeph>UPDATE</codeph> operations on heap tables is <codeph>ROW
-          EXCLUSIVE</codeph>. See <xref href="../../admin_guide/dml.xml#topic_gdd" format="dita"
-        />.</note>
+          EXCLUSIVE</codeph>. See <xref href="../../admin_guide/dml.html#topic_gdd" format="html" scope="external"
+        >Global Deadlock Detector</xref>.</note>
       <sectiondiv id="section4">
         <b>Outputs</b>
         <p>On successful completion, an <codeph>UPDATE</codeph> command returns a command tag of the
           form:</p>
-        <codeblock>UPDATE <varname>count</varname></codeblock>
+        <codeblock>UPDATE &lt;count></codeblock>
         <p>where <varname>count</varname> is the number of rows updated. If <varname>count</varname>
           is 0, no rows matched the condition (this is not considered an error). </p>
       </sectiondiv>
@@ -62,8 +62,8 @@ UPDATE [ONLY] <varname>table</varname> [[AS] <varname>alias</varname>]
               <codeph>WITH</codeph> clause. In such a case both sets of
               <varname>with_query</varname> can be referenced within the <codeph>UPDATE</codeph>
             query, but the second one takes precedence since it is more closely nested.</pd>
-          <pd>See <xref href="../../admin_guide/query/topics/CTE-query.xml#topic_zhs_r1s_w1b"/> and
-                <codeph><xref href="SELECT.xml#topic1"/></codeph> for details. </pd>
+          <pd>See <xref href="../../admin_guide/query/topics/CTE-query.html#topic_zhs_r1s_w1b" format="html" scope="external">WITH Queries (Common Table Expressions)</xref> and
+                <xref href="SELECT.xml#topic1"/> for details. </pd>
         </plentry>
         <plentry>
           <pt>ONLY</pt>
@@ -130,7 +130,7 @@ UPDATE [ONLY] <varname>table</varname> [[AS] <varname>alias</varname>]
           <pd>The name of the cursor to use in a <codeph>WHERE CURRENT OF</codeph> condition. The
             row to be updated is the one most recently fetched from the cursor. The cursor must be a
             non-grouping query on the <codeph>UPDATE</codeph> command target table. See
-                <codeph><xref href="DECLARE.xml#topic1" type="topic" format="dita"/></codeph> for
+                <xref href="DECLARE.xml#topic1" type="topic" format="dita"/> for
             more information about creating cursors. </pd>
           <pd><codeph>WHERE CURRENT OF</codeph> cannot be specified together with a Boolean
             condition. </pd>
@@ -138,7 +138,7 @@ UPDATE [ONLY] <varname>table</varname> [[AS] <varname>alias</varname>]
             Boolean condition. The <codeph>UPDATE...WHERE CURRENT OF</codeph> statement can only be
             run on the server, for example in an interactive psql session or a script. Language
             extensions such as PL/pgSQL do not have support for updatable cursors.</pd>
-          <pd>See <codeph><xref href="DECLARE.xml#topic1" type="topic" format="dita"/></codeph> for
+          <pd>See <xref href="DECLARE.xml#topic1" type="topic" format="dita"/> for
             more information about creating cursors.</pd>
         </plentry>
         <plentry>
@@ -177,8 +177,8 @@ UPDATE [ONLY] <varname>table</varname> [[AS] <varname>alias</varname>]
       <p>For a partitioned table, all the child tables are locked during the <codeph>UPDATE</codeph>
         operation when the Global Deadlock Detector is not enabled (the default). Only some of the
         leaf child tables are locked when the Global Deadlock Detector is enabled. For information
-        about the Global Deadlock Detector, see <xref href="../../admin_guide/dml.xml#topic_gdd"
-        />.</p>
+        about the Global Deadlock Detector, see <xref href="../../admin_guide/dml.html#topic_gdd"
+        format="html" scope="external">Global Deadlock Detector</xref>.</p>
     </section>
     <section id="section7">
       <title>Examples</title>
@@ -237,10 +237,10 @@ COMMIT;</codeblock>
     </section>
     <section id="section9">
       <title>See Also</title>
-      <p><codeph><xref href="DECLARE.xml#topic1" type="topic" format="dita"/></codeph>,
-            <codeph><xref href="DELETE.xml#topic1" type="topic" format="dita"/></codeph>,
-            <codeph><xref href="SELECT.xml#topic1" type="topic" format="dita"/></codeph>,
-            <codeph><xref href="INSERT.xml#topic1" type="topic" format="dita"/></codeph></p>
+      <p><xref href="DECLARE.xml#topic1" type="topic" format="dita"/>,
+            <xref href="DELETE.xml#topic1" type="topic" format="dita"/>,
+            <xref href="SELECT.xml#topic1" type="topic" format="dita"/>,
+            <xref href="INSERT.xml#topic1" type="topic" format="dita"/></p>
     </section>
   </body>
 </topic>

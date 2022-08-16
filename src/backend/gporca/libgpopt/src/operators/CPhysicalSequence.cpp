@@ -228,6 +228,37 @@ CPhysicalSequence::PdsRequired(CMemoryPool *mp,
 		return GPOS_NEW(mp) CDistributionSpecAny(this->Eopid());
 	}
 
+	//	When the producer is not a singleton/Universal, we do request a non-singleton
+	//	on all the children. But when the producer is replicated still we were requesting
+	//	non-singleton which will possibly generate a risky plan and could cause a possible
+	//	hang too.For example in the following plan the slice 1 and slice 2 are executed on
+	//	a single segment but the producer is skewed on all the segments. So in this case the
+	//	producer on the other two segments undergoes starvation which causes the query to hang.
+	//
+	//	Gather Motion 3:1 (slice4; segments: 3)
+	//	  -> Sequence
+	//	    -> Shared Scan (share slice:id 4:0)
+	//		   ...
+	//		-> Random Redistribute Motion 1:3 (slice3)
+	//		  -> Hash Join
+	//		    -> Gather Motion 1:1 (slice1; segments: 1)
+	//			  -> Shared Scan (share slice:id 1:0)
+	//			-> Hash
+	//			  -> Aggregate
+	//			    -> Gather Motion 1:1 (slice2; segments: 1)
+	//				  -> Shared Scan (share slice:id 2:0)
+	//
+	//
+	// So adding a check if the producer is replicated, request a non-singleton spec that is not
+	// allowed to be enforced, to avoid potential hang issues.
+
+	if (CDistributionSpec::EdtTaintedReplicated == pds->Edt() ||
+		CDistributionSpec::EdtStrictReplicated == pds->Edt())
+	{
+		return GPOS_NEW(mp) CDistributionSpecNonSingleton(
+			true /* fAllowReplicated */, false /* fAllowEnforced */);
+	}
+
 	// first child is non-singleton, request a non-singleton distribution on second child
 	return GPOS_NEW(mp) CDistributionSpecNonSingleton();
 }

@@ -51,5 +51,5 @@ When the `EXPLAIN ANALYZE` command uses GPORCA, the `EXPLAIN` plan shows only th
 SET gp_log_dynamic_partition_pruning = on;
 ```
 
-**Parent topic:**[About GPORCA](../../query/topics/query-piv-optimizer.html)
+**Parent topic:** [About GPORCA](../../query/topics/query-piv-optimizer.html)
 

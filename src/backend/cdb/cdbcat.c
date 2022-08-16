@@ -41,6 +41,7 @@
 #include "utils/memutils.h"
 #include "utils/regproc.h"
 #include "utils/syscache.h"
+#include "utils/uri.h"
 
 static int errdetails_index_policy(char *attname,
 								   Oid policy_indclass,
@@ -338,16 +339,34 @@ GpPolicyFetch(Oid tbloid)
 		 * regular tables. Readable external tables are implicitly randomly
 		 * distributed, except for "EXECUTE ... ON MASTER" ones.
 		 */
-		if (e && !e->iswritable)
+		if (e)
 		{
 			char	   *on_clause = (char *) strVal(linitial(e->execlocations));
 
-			if (strcmp(on_clause, "COORDINATOR_ONLY") == 0)
+			if (!e->iswritable)
 			{
-				return makeGpPolicy(POLICYTYPE_ENTRY, 0, -1);
+				if (strcmp(on_clause, "COORDINATOR_ONLY") == 0)
+				{
+					return makeGpPolicy(POLICYTYPE_ENTRY, 0, -1);
+				}
+				return createRandomPartitionedPolicy(getgpsegmentCount());
 			}
+			else if (strcmp(on_clause, "COORDINATOR_ONLY") == 0)
+			{
+				ListCell   *cell;
+				Assert(e->urilocations != NIL);
 
-			return createRandomPartitionedPolicy(getgpsegmentCount());
+				/* set policy for writable s3 on master external table */
+				foreach(cell, e->urilocations)
+				{
+					const char *uri_str = (char *) strVal(lfirst(cell));
+					Uri	*uri = ParseExternalTableUri(uri_str);
+					if (uri->protocol == URI_CUSTOM && 0 == pg_strncasecmp(uri->customprotocol, "s3", 2))
+					{
+						return makeGpPolicy(POLICYTYPE_ENTRY, 0, -1);
+					}
+				}
+			}
 		}
 	}
 	else if (get_rel_relkind(tbloid) == RELKIND_FOREIGN_TABLE)

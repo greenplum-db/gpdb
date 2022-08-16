@@ -7,56 +7,56 @@
     <p id="sql_command_desc">Retrieves rows from a table or view.</p>
     <section id="section2">
       <title>Synopsis</title>
-      <codeblock id="sql_command_synopsis">[ WITH [ RECURSIVE ] <varname>with_query</varname> [, ...] ]
-SELECT [ALL | DISTINCT [ON (<varname>expression</varname> [, ...])]]
-  * | <varname>expression </varname>[[AS] <varname>output_name</varname>] [, ...]
-  [FROM <varname>from_item</varname> [, ...]]
-  [WHERE <varname>condition</varname>]
-  [GROUP BY <varname>grouping_element</varname> [, ...]]
-  [HAVING <varname>condition</varname> [, ...]]
-  [WINDOW <varname>window_name</varname> AS (<varname>window_definition</varname>) [, ...] ]
-  [{UNION | INTERSECT | EXCEPT} [ALL | DISTINCT] <varname>select</varname>]
-  [ORDER BY <varname>expression</varname> [ASC | DESC | USING <varname>operator</varname>] [NULLS {FIRST | LAST}] [, ...]]
-  [LIMIT {<varname>count</varname> | ALL}]
-  [OFFSET <varname>start</varname> [ ROW | ROWS ] ]
-  [FETCH { FIRST | NEXT } [ <varname>count</varname> ] { ROW | ROWS } ONLY]
-  [FOR<sup>2</sup> {UPDATE | NO KEY UPDATE | SHARE | KEY SHARE} [OF <varname>table_name</varname> [, ...]] [NOWAIT] [...]]
+      <codeblock id="sql_command_synopsis">[ WITH [ RECURSIVE ] &lt;with_query> [, ...] ]
+SELECT [ALL | DISTINCT [ON (&lt;expression> [, ...])]]
+  * | &lt;expression >[[AS] &lt;output_name>] [, ...]
+  [FROM &lt;from_item> [, ...]]
+  [WHERE &lt;condition>]
+  [GROUP BY &lt;grouping_element> [, ...]]
+  [HAVING &lt;condition> [, ...]]
+  [WINDOW &lt;window_name> AS (&lt;window_definition>) [, ...] ]
+  [{UNION | INTERSECT | EXCEPT} [ALL | DISTINCT] &lt;select>]
+  [ORDER BY &lt;expression> [ASC | DESC | USING &lt;operator>] [NULLS {FIRST | LAST}] [, ...]]
+  [LIMIT {&lt;count> | ALL}]
+  [OFFSET &lt;start> [ ROW | ROWS ] ]
+  [FETCH { FIRST | NEXT } [ &lt;count> ] { ROW | ROWS } ONLY]
+  [FOR<sup>2</sup> {UPDATE | NO KEY UPDATE | SHARE | KEY SHARE} [OF &lt;table_name> [, ...]] [NOWAIT] [...]]
 
-TABLE { [ ONLY ] <varname>table_name</varname> [ * ] | <varname>with_query_name</varname> }
+TABLE { [ ONLY ] &lt;table_name> [ * ] | &lt;with_query_name> }
 </codeblock>
       <p>where <varname>with_query:</varname> is:</p>
-      <codeblock>  <varname>with_query_name</varname> [( <varname>column_name</varname> [, ...] )] AS ( <varname>select</varname> | <varname>values</varname> | <varname>insert</varname> | <varname>update</varname> | <varname >delete</varname> )</codeblock>
+      <codeblock>  &lt;with_query_name> [( &lt;column_name> [, ...] )] AS ( &lt;select> | &lt;values> | &lt;insert> | &lt;update> | <varname >delete</varname> )</codeblock>
       <p>where <varname>from_item</varname> can be one of:</p>
-      <codeblock>[ONLY] <varname>table_name</varname> [ * ] [ [ AS ] <varname>alias</varname> [ ( <varname>column_alias</varname> [, ...] ) ] ]
-( <varname>select</varname> ) [ AS ] <varname>alias</varname> [( <varname>column_alias</varname> [, ...] ) ]<varname>
-with_query_name</varname> [ [ AS ] <varname>alias</varname> [ ( <varname>column_alias</varname> [, ...] ) ] ]
-<varname>function_name</varname> ( [ <varname>argument</varname> [, ...] ] )
-            [ WITH ORDINALITY ] [ [ AS ] <varname>alias</varname> [ ( <varname>column_alias</varname> [, ...] ) ] ]
-<varname>function_name</varname> ( [ <varname>argument</varname> [, ...] ] ) [ AS ] <varname>alias</varname> ( <varname>column_definition</varname> [, ...] )
-<varname>function_name</varname> ( [ <varname>argument</varname> [, ...] ] ) AS ( <varname>column_definition</varname> [, ...] )
+      <codeblock>[ONLY] &lt;table_name> [ * ] [ [ AS ] &lt;alias> [ ( &lt;column_alias> [, ...] ) ] ]
+( &lt;select> ) [ AS ] &lt;alias> [( &lt;column_alias> [, ...] ) ]<varname>
+with_query_name</varname> [ [ AS ] &lt;alias> [ ( &lt;column_alias> [, ...] ) ] ]
+&lt;function_name> ( [ &lt;argument> [, ...] ] )
+            [ WITH ORDINALITY ] [ [ AS ] &lt;alias> [ ( &lt;column_alias> [, ...] ) ] ]
+&lt;function_name> ( [ &lt;argument> [, ...] ] ) [ AS ] &lt;alias> ( &lt;column_definition> [, ...] )
+&lt;function_name> ( [ &lt;argument> [, ...] ] ) AS ( &lt;column_definition> [, ...] )
 ROWS FROM( function_name ( [ argument [, ...] ] ) [ AS ( column_definition [, ...] ) ] [, ...] )
-            [ WITH ORDINALITY ] [ [ AS ] <varname>alias</varname> [ ( <varname>column_alias</varname> [, ...] ) ] ]
-<varname>from_item</varname> [ NATURAL ] <varname>join_type</varname> <varname>from_item</varname>
-          [ ON <varname>join_condition</varname> | USING ( <varname>join_column</varname> [, ...] ) ]</codeblock>
+            [ WITH ORDINALITY ] [ [ AS ] &lt;alias> [ ( &lt;column_alias> [, ...] ) ] ]
+&lt;from_item> [ NATURAL ] &lt;join_type> &lt;from_item>
+          [ ON &lt;join_condition> | USING ( &lt;join_column> [, ...] ) ]</codeblock>
       <p>where <varname>grouping_element</varname> can be one of:</p>
       <codeblock>  ()
-  <varname>expression</varname>
-  ROLLUP (<varname>expression</varname> [,...])
-  CUBE (<varname>expression</varname> [,...])
-  GROUPING SETS ((<varname>grouping_element</varname> [, ...]))</codeblock>
+  &lt;expression>
+  ROLLUP (&lt;expression> [,...])
+  CUBE (&lt;expression> [,...])
+  GROUPING SETS ((&lt;grouping_element> [, ...]))</codeblock>
       <p>where <varname>window_definition</varname> is:</p>
-      <codeblock>  [<varname>existing_window_name</varname>]
-  [PARTITION BY <varname>expression</varname> [, ...]]
-  [ORDER BY <varname>expression</varname> [ASC | DESC | USING <varname>operator</varname>] 
+      <codeblock>  [&lt;existing_window_name>]
+  [PARTITION BY &lt;expression> [, ...]]
+  [ORDER BY &lt;expression> [ASC | DESC | USING &lt;operator>] 
     [NULLS {FIRST | LAST}] [, ...]]
-  [{ RANGE | ROWS} <varname>frame_start</varname> 
-     | {RANGE | ROWS} BETWEEN <varname>frame_start</varname> AND <varname>frame_end</varname>
+  [{ RANGE | ROWS} &lt;frame_start> 
+     | {RANGE | ROWS} BETWEEN &lt;frame_start> AND &lt;frame_end>
 </codeblock>
       <p>where <varname>frame_start</varname> and <varname>frame_end</varname> can be one of:
         <codeblock>  UNBOUNDED PRECEDING
-  <varname>value</varname> PRECEDING
+  &lt;value> PRECEDING
   CURRENT ROW
-  <varname>value</varname> FOLLOWING
+  &lt;value> FOLLOWING
   UNBOUNDED FOLLOWING
 </codeblock></p>
       <p>
@@ -151,7 +151,7 @@ ROWS FROM( function_name ( [ argument [, ...] ] ) [ AS ( column_definition [, ..
           run at the same time. </p><p>If <codeph>RECURSIVE</codeph> is specified, it
           allows a <codeph>SELECT</codeph> subquery to reference itself by name. Such a subquery has
           the general
-          form</p><codeblock><varname>non_recursive_term</varname> UNION [ALL | DISTINCT] <varname>recursive_term</varname></codeblock><p>where
+          form</p><codeblock>&lt;non_recursive_term> UNION [ALL | DISTINCT] &lt;recursive_term></codeblock><p>where
           the recursive self-reference appears on the right-hand side of the <codeph>UNION</codeph>.
           Only one recursive self-reference is permitted per query. Recursive data-modifying
           statements are not supported, but you can use the results of a recursive
@@ -200,7 +200,8 @@ SELECT * FROM foo LIMIT 5;</codeblock></p>
           reading its <codeph>RETURNING</codeph> output. If two such data-modifying statements
           attempt to modify the same row, the results are unspecified. </p>
         <p>See <xref
-            href="../../admin_guide/query/topics/CTE-query.xml"/><ph
+            href="../../admin_guide/query/topics/CTE-query.html" format="html" scope="external">WITH Queries (Common Table Expressions)
+</xref><ph
             otherprops="pivotal"> in the <cite>Greenplum Database Administrator Guide</cite></ph>
           for additional information.</p>
       </sectiondiv>
@@ -292,8 +293,8 @@ SELECT DISTINCT ON (location) location, time, report
             <pd>A sub-<codeph>SELECT</codeph> can appear in the <codeph>FROM</codeph> clause. This
               acts as though its output were created as a temporary table for the duration of this
               single <codeph>SELECT</codeph> command. Note that the sub-<codeph>SELECT</codeph> must
-              be surrounded by parentheses, and an alias must be provided for it. A <codeph><xref
-                  href="VALUES.xml#topic1">VALUES</xref></codeph> command can also be used here. See
+              be surrounded by parentheses, and an alias must be provided for it. A <xref
+                  href="VALUES.xml#topic1">VALUES</xref> command can also be used here. See
               "Non-standard Clauses" in the <xref href="#topic1/section19" format="dita"/> section
               for limitations of using correlated sub-selects in Greenplum Database.</pd>
           </plentry>
@@ -389,20 +390,20 @@ SELECT DISTINCT ON (location) location, time, report
           </plentry>
         </parml></sectiondiv>
       <sectiondiv id="section7"><b>The WHERE Clause</b><p>The optional <codeph>WHERE</codeph> clause
-          has the general form:</p><codeblock>WHERE <varname>condition</varname></codeblock><p>where
+          has the general form:</p><codeblock>WHERE &lt;condition></codeblock><p>where
             <varname>condition</varname> is any expression that evaluates to a result of type
             <codeph>boolean</codeph>. Any row that does not satisfy this condition will be
           eliminated from the output. A row satisfies the condition if it returns true when the
           actual row values are substituted for any variable references. </p></sectiondiv>
       <sectiondiv id="section8"><b>The GROUP BY Clause</b><p>The optional <codeph>GROUP BY</codeph>
           clause has the general
-          form:</p><codeblock>GROUP BY <varname>grouping_element </varname>[, ...]</codeblock><p>where
+          form:</p><codeblock>GROUP BY &lt;grouping_element >[, ...]</codeblock><p>where
             <varname>grouping_element</varname> can be one
             of:</p><codeblock>()
-<varname>expression</varname>
-ROLLUP (<varname>expression</varname> [,...])
-CUBE (<varname>expression</varname> [,...])
-GROUPING SETS ((<varname>grouping_element</varname> [, ...]))</codeblock><p><codeph>GROUP
+&lt;expression>
+ROLLUP (&lt;expression> [,...])
+CUBE (&lt;expression> [,...])
+GROUPING SETS ((&lt;grouping_element> [, ...]))</codeblock><p><codeph>GROUP
             BY</codeph> will condense into a single row all selected rows that share the same values
           for the grouped expressions. <varname>expression</varname> can be an input column name, or
           the name or ordinal number of an output column (<codeph>SELECT</codeph> list item), or an
@@ -415,7 +416,7 @@ GROUPING SETS ((<varname>grouping_element</varname> [, ...]))</codeblock><p><cod
           aggregate function can be further filtered by attaching a <codeph>FILTER</codeph> clause
           to the aggregate function call. When a <codeph>FILTER</codeph> clause is present, only
           those rows matching it are included in the input to that aggregate function. See <xref
-            href="../../admin_guide/query/topics/defining-queries.xml#topic11"/>.</p><p>When
+            href="../../admin_guide/query/topics/defining-queries.html#topic11" format="html" scope="external">Aggregate Expressions</xref>.</p><p>When
             <codeph>GROUP BY</codeph> is present, or any aggregate functions are present, it is not
           valid for the <codeph>SELECT</codeph> list expressions to refer to ungrouped columns
           except within aggregate functions or when the ungrouped column is functionally dependent
@@ -426,7 +427,7 @@ GROUPING SETS ((<varname>grouping_element</varname> [, ...]))</codeblock><p><cod
           expressions in the <codeph>HAVING</codeph> clause or <codeph>SELECT</codeph> list. This
           means that, for example, a <codeph>CASE</codeph> expression cannot be used to skip
           evaluation of an aggregate function; see <xref
-            href="../../admin_guide/query/topics/defining-queries.xml#topic25"/>. </p><p>Greenplum
+            href="../../admin_guide/query/topics/defining-queries.html#topic25" format="html" scope="external">Expression Evaluation Rules</xref>. </p><p>Greenplum
           Database has the following additional OLAP grouping extensions (often referred to as
             <i>supergroups</i>):</p><parml>
           <plentry>
@@ -524,10 +525,10 @@ GROUPING SETS ((<varname>grouping_element</varname> [, ...]))</codeblock><p><cod
 GROUP BY vendor
 WINDOW mywindow AS (ORDER BY sum(prc*qty));</codeblock><p>A
             <codeph>WINDOW</codeph> clause has this general
-  form:</p><codeblock>WINDOW <varname>window_name</varname> AS (<varname>window_definition</varname>)</codeblock><p>where <varname>window_name</varname> is a name that can be referenced from <codeph>OVER</codeph> clauses or subsequent window definitions, and <varname>window_definition</varname> is:</p><codeblock>[<varname>existing_window_name</varname>]
-[PARTITION BY <varname>expression</varname> [, ...]]
-[ORDER BY <varname>expression</varname> [ASC | DESC | USING <varname>operator</varname>] [NULLS {FIRST | LAST}] [, ...] ]
-[<varname>frame_clause</varname>] </codeblock><parml>
+  form:</p><codeblock>WINDOW &lt;window_name> AS (&lt;window_definition>)</codeblock><p>where <varname>window_name</varname> is a name that can be referenced from <codeph>OVER</codeph> clauses or subsequent window definitions, and <varname>window_definition</varname> is:</p><codeblock>[&lt;existing_window_name>]
+[PARTITION BY &lt;expression> [, ...]]
+[ORDER BY &lt;expression> [ASC | DESC | USING &lt;operator>] [NULLS {FIRST | LAST}] [, ...] ]
+[&lt;frame_clause>] </codeblock><parml>
           <plentry>
             <pt><varname>existing_window_name</varname></pt>
             <pd>If an <codeph><varname>existing_window_name</varname></codeph> is specified it must
@@ -575,8 +576,8 @@ WINDOW mywindow AS (ORDER BY sum(prc*qty));</codeblock><p>A
                 frame</i> for window functions that depend on the frame (not all do). The window
               frame is a set of related rows for each row of the query (called the <i>current
                 row</i>). The <codeph><varname>frame_clause</varname></codeph> can be one of
-              <codeblock>{ RANGE | ROWS } <varname>frame_start</varname>
-{ RANGE | ROWS } BETWEEN <varname>frame_start</varname> AND <varname>frame_end</varname></codeblock>where
+              <codeblock>{ RANGE | ROWS } &lt;frame_start>
+{ RANGE | ROWS } BETWEEN &lt;frame_start> AND &lt;frame_end></codeblock>where
                   <codeph><varname>frame_start</varname></codeph> and
                   <codeph><varname>frame_end</varname></codeph> can be one of<ul id="ul_ehq_kws_1gb">
                 <li><codeph>UNBOUNDED PRECEDING</codeph></li>
@@ -671,7 +672,7 @@ WINDOW mywindow AS (ORDER BY sum(prc*qty));</codeblock><p>A
         </parml></sectiondiv>
       <sectiondiv id="section10"><b>The HAVING Clause</b><p>The optional <codeph>HAVING</codeph>
           clause has the general
-          form:</p><codeblock>HAVING <varname>condition</varname></codeblock><p>where
+          form:</p><codeblock>HAVING &lt;condition></codeblock><p>where
             <varname>condition</varname> is the same as specified for the <codeph>WHERE</codeph>
           clause. <codeph>HAVING</codeph> eliminates group rows that do not satisfy the condition.
             <codeph>HAVING</codeph> is different from <codeph>WHERE</codeph>: <codeph>WHERE</codeph>
@@ -689,7 +690,7 @@ WINDOW mywindow AS (ORDER BY sum(prc*qty));</codeblock><p>A
           true, zero rows if it is not true. </p></sectiondiv>
       <sectiondiv id="section11"><b>The UNION Clause</b><p>The <codeph>UNION</codeph> clause has
           this general
-          form:</p><codeblock><varname>select_statement</varname> UNION [ALL | DISTINCT] <varname>select_statement</varname></codeblock><p>where
+          form:</p><codeblock>&lt;select_statement> UNION [ALL | DISTINCT] &lt;select_statement></codeblock><p>where
             <varname>select_statement</varname> is any <codeph>SELECT</codeph> statement without an
             <codeph>ORDER BY</codeph>, <codeph>LIMIT</codeph>, <codeph>FOR NO KEY UPDATE</codeph>,
             <codeph>FOR UPDATE</codeph>, <codeph>FOR SHARE</codeph>, or <codeph>FOR KEY
@@ -715,7 +716,7 @@ WINDOW mywindow AS (ORDER BY sum(prc*qty));</codeblock><p>A
         </p></sectiondiv>
       <sectiondiv id="section12"><b>The INTERSECT Clause</b><p>The <codeph>INTERSECT</codeph> clause
           has this general
-          form:</p><codeblock><varname>select_statement</varname> INTERSECT [ALL | DISTINCT] <varname>select_statement</varname></codeblock><p>where
+          form:</p><codeblock>&lt;select_statement> INTERSECT [ALL | DISTINCT] &lt;select_statement></codeblock><p>where
             <varname>select_statement</varname> is any SELECT statement without an <codeph>ORDER
             BY</codeph>, <codeph>LIMIT</codeph>, <codeph>FOR NO KEY UPDATE</codeph>, <codeph>FOR
             UPDATE</codeph>, <codeph>FOR SHARE</codeph>, or <codeph>FOR KEY SHARE</codeph> clause.
@@ -738,7 +739,7 @@ WINDOW mywindow AS (ORDER BY sum(prc*qty));</codeblock><p>A
         </p></sectiondiv>
       <sectiondiv id="section13"><b>The EXCEPT Clause</b><p>The <codeph>EXCEPT</codeph> clause has
           this general
-          form:</p><codeblock><varname>select_statement</varname> EXCEPT [ALL | DISTINCT] <varname>select_statement</varname></codeblock><p>where
+          form:</p><codeblock>&lt;select_statement> EXCEPT [ALL | DISTINCT] &lt;select_statement></codeblock><p>where
             <varname>select_statement</varname> is any <codeph>SELECT</codeph> statement without an
             <codeph>ORDER BY</codeph>, <codeph>LIMIT</codeph>, <codeph>FOR NO KEY UPDATE</codeph>,
             <codeph>FOR UPDATE</codeph>, <codeph>FOR SHARE</codeph>, or <codeph>FOR KEY
@@ -759,7 +760,7 @@ WINDOW mywindow AS (ORDER BY sum(prc*qty));</codeblock><p>A
             <codeph>EXCEPT</codeph>. </p></sectiondiv>
       <sectiondiv id="section14"><b>The ORDER BY Clause</b><p>The optional <codeph>ORDER BY</codeph>
           clause has this general
-          form:</p><codeblock>ORDER BY <varname>expression</varname> [ASC | DESC | USING <varname>operator</varname>] [NULLS {FIRST | LAST}] [,...]</codeblock><p>where
+          form:</p><codeblock>ORDER BY &lt;expression> [ASC | DESC | USING &lt;operator>] [NULLS {FIRST | LAST}] [,...]</codeblock><p>where
             <varname>expression</varname> can be the name or ordinal number of an output column
             (<codeph>SELECT</codeph> list item), or it can be an arbitrary expression formed from
           input-column values. </p><p>The <codeph>ORDER BY</codeph> clause causes the result rows to
@@ -803,13 +804,13 @@ WINDOW mywindow AS (ORDER BY sum(prc*qty));</codeblock><p>A
           according to the collation that applies to the column being sorted. That can be overridden
           as needed by including a <codeph>COLLATE</codeph> clause in the
             <varname>expression</varname>, for example <codeph>ORDER BY mycolumn COLLATE
-            "en_US"</codeph>. For information about defining collations, see <codeph><xref
+            "en_US"</codeph>. For information about defining collations, see <xref
               href="./CREATE_COLLATION.xml">CREATE
-            COLLATION</xref></codeph>.</p></sectiondiv>
+            COLLATION</xref>.</p></sectiondiv>
       <sectiondiv><b>The LIMIT Clause</b><p>The <codeph>LIMIT</codeph> clause consists of two
           independent
-          sub-clauses:</p><codeblock>LIMIT {<varname>count</varname> | ALL}
-OFFSET <varname>start</varname></codeblock><p>where
+          sub-clauses:</p><codeblock>LIMIT {&lt;count> | ALL}
+OFFSET &lt;start></codeblock><p>where
             <varname>count</varname> specifies the maximum number of rows to return, while
             <varname>start</varname> specifies the number of rows to skip before starting to return
           rows. When both are specified, start rows are skipped before starting to count the
@@ -818,8 +819,8 @@ OFFSET <varname>start</varname></codeblock><p>where
           limit. If <codeph>start</codeph> evaluates to NULL, it is treated the same as
             <codeph>OFFSET 0</codeph>.</p><p>SQL:2008 introduced a different syntax to achieve the
           same result, which Greenplum Database also supports. It is:
-          <codeblock>OFFSET <varname>start</varname> [ ROW | ROWS ]
-            FETCH { FIRST | NEXT } [ <varname>count</varname> ] { ROW | ROWS } ONLY</codeblock></p><p>In this syntax, the <varname>start</varname>
+          <codeblock>OFFSET &lt;start> [ ROW | ROWS ]
+            FETCH { FIRST | NEXT } [ &lt;count> ] { ROW | ROWS } ONLY</codeblock></p><p>In this syntax, the <varname>start</varname>
               or <varname>count</varname> value is required by
               the standard to be a literal constant, a parameter, or a variable name;
               as a Greenplum Database extension, other expressions
@@ -852,10 +853,10 @@ OFFSET <varname>start</varname></codeblock><p>where
               <varname>lock_strength</varname></codeph>). The Global Deadlock Detector is enabled by
           setting the <xref href="../config_params/guc-list.xml#gp_enable_global_deadlock_detector"
             >gp_enable_global_deadlock_detector</xref> configuration parameter to
-            <codeph>on</codeph>. See <xref href="../../admin_guide/dml.xml#topic_gdd"> Global
+            <codeph>on</codeph>. See <xref href="../../admin_guide/dml.html#topic_gdd" format="html" scope="external"> Global
             Deadlock Detector</xref> in the <cite>Greenplum Database Administrator Guide</cite> for
           information about the Global Deadlock Detector.</p><p>The locking clause has the general
-          form</p><codeblock>FOR <varname>lock_strength</varname> [OF <varname>table_name</varname> [ , ... ] ] [ NOWAIT ]</codeblock><p>The
+          form</p><codeblock>FOR &lt;lock_strength> [OF &lt;table_name> [ , ... ] ] [ NOWAIT ]</codeblock><p>The
             <varname>lock_strength</varname> can be one of these values. <ul id="ol_m3x_p54_n3b">
             <li><codeph>UPDATE</codeph> - Locks the table with an <codeph>EXCLUSIVE</codeph>
               lock.</li>
@@ -947,9 +948,9 @@ OFFSET <varname>start</varname></codeblock><p>where
     <section id="table-command">
       <title>The TABLE Command</title>
       <p>The command</p>
-      <codeblock>TABLE <varname>name</varname></codeblock>
+      <codeblock>TABLE &lt;name></codeblock>
       <p>is completely equivalent to</p>
-      <codeblock>SELECT * FROM <varname>name</varname></codeblock>
+      <codeblock>SELECT * FROM &lt;name></codeblock>
       <p>It can be used as a top-level command or as a space-saving syntax variant in parts of
         complex queries.</p>
     </section>
@@ -1041,7 +1042,8 @@ SELECT distance, employee_name FROM employee_recursive;</codeblock>
           [ALL]</codeph>, followed by the recursive part of the query. Be sure that the recursive
         part of the query will eventually return no tuples, or else the query will loop
         indefinitely. See <xref
-          href="../../admin_guide/query/topics/CTE-query.xml#topic_zhs_r1s_w1b"/><ph
+          href="../../admin_guide/query/topics/CTE-query.html#topic_zhs_r1s_w1b" format="html" scope="external">WITH Queries (Common Table Expressions)
+</xref><ph
           otherprops="pivotal"> in the <cite>Greenplum Database Administrator Guide</cite></ph> for
         more examples.</p>
     </section>
@@ -1114,12 +1116,12 @@ SELECT distance, employee_name FROM employee_recursive;</codeblock>
           of STABLE and VOLATILE Functions</b><p>To prevent data from becoming out-of-sync across
           the segments in Greenplum Database, any function classified as <codeph>STABLE</codeph> or
             <codeph>VOLATILE</codeph> cannot be run at the segment database level if it
-          contains SQL or modifies the database in any way. See <codeph><xref
-              href="CREATE_FUNCTION.xml#topic1" type="topic" format="dita"/></codeph> for more
+          contains SQL or modifies the database in any way. See <xref
+              href="CREATE_FUNCTION.xml#topic1" type="topic" format="dita"/> for more
           information.</p></sectiondiv></section>
     <section id="section25">
       <title>See Also</title>
-      <p><codeph><xref href="EXPLAIN.xml#topic1" type="topic" format="dita"/></codeph></p>
+      <p><xref href="EXPLAIN.xml#topic1" type="topic" format="dita"/></p>
     </section>
   </body>
 </topic>

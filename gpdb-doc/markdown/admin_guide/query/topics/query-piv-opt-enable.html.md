@@ -12,7 +12,7 @@ Although GPORCA is on by default, you can configure GPORCA usage at the system, 
 
 **Note:** You can disable the ability to enable or disable GPORCA with the server configuration parameter optimizer\_control. For information about the server configuration parameters, see the *Greenplum Database Reference Guide*.
 
-**Parent topic:**[About GPORCA](../../query/topics/query-piv-optimizer.html)
+**Parent topic:** [About GPORCA](../../query/topics/query-piv-optimizer.html)
 
 ## <a id="topic_byp_lqk_br"></a>Enabling GPORCA for a System 
 

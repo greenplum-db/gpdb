@@ -243,7 +243,7 @@
       <dxl:ColumnStatistics Mdid="1.734133.1.1.3" Name="ctid" Width="6.000000"/>
       <dxl:ColumnStatistics Mdid="1.734133.1.1.2" Name="f3" Width="8.000000"/>
       <dxl:RelationStatistics Mdid="2.734133.1.1" Name="subselect_tbl" Rows="1.000000"/>
-      <dxl:Relation Mdid="0.734133.1.1" Name="subselect_tbl" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3">
+      <dxl:Relation Mdid="0.734133.1.1" Name="subselect_tbl" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3">
         <dxl:Columns>
           <dxl:Column Name="f1" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>

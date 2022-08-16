@@ -882,14 +882,9 @@ ExecGetRangeTableRelation(EState *estate, Index rti)
 			 * seems sufficient to check this only when rellockmode is higher
 			 * than the minimum.
 			 */
-			/* GPDB_12_MERGE_FIXME: if GDD is not enabled, we acquire a stronger
-			 * lock earlier. What would be a good way to formulate this check?
-			 * For now, just pass orstronger=true.
-			 */
 			rel = table_open(rte->relid, NoLock);
 			Assert(rte->rellockmode == AccessShareLock ||
-				   CheckRelationLockedByMe(rel, rte->rellockmode,
-										   true /* orstronger */));
+				   CheckRelationLockedByMe(rel, rte->rellockmode, false));
 		}
 		else
 		{
@@ -2319,4 +2314,65 @@ ExecGetReturningSlot(EState *estate, ResultRelInfo *relInfo)
 	}
 
 	return relInfo->ri_ReturningSlot;
+}
+
+/*
+ * During attribute re-mapping for heterogeneous partitions, we use
+ * this struct to identify which varno's attributes will be re-mapped.
+ * Using this struct as a *context* during expression tree walking, we
+ * can skip varattnos that do not belong to a given varno.
+ */
+typedef struct AttrMapContext
+{
+	const AttrNumber *newattno; /* The mapping table to remap the varattno */
+	Index		varno;			/* Which rte's varattno to re-map */
+} AttrMapContext;
+
+/*
+ * Remaps the varattno of a varattno in a Var node using an attribute map.
+ */
+static bool
+change_varattnos_varno_walker(Node *node, const AttrMapContext *attrMapCxt)
+{
+	if (node == NULL)
+		return false;
+	if (IsA(node, Var))
+	{
+		Var		   *var = (Var *) node;
+
+		if (var->varlevelsup == 0 && (var->varno == attrMapCxt->varno) &&
+			var->varattno > 0)
+		{
+			/*
+			 * ??? the following may be a problem when the node is multiply
+			 * referenced though stringToNode() doesn't create such a node
+			 * currently.
+			 */
+			Assert(attrMapCxt->newattno[var->varattno - 1] > 0);
+			var->varattno = var->varoattno = attrMapCxt->newattno[var->varattno - 1];
+		}
+		return false;
+	}
+	return expression_tree_walker(node, change_varattnos_varno_walker,
+								  (void *) attrMapCxt);
+}
+
+/*
+ * Replace varattno values for a given varno RTE index in an expression
+ * tree according to the given map array, that is, varattno N is replaced
+ * by newattno[N-1].  It is caller's responsibility to ensure that the array
+ * is long enough to define values for all user varattnos present in the tree.
+ * System column attnos remain unchanged.
+ *
+ * Note that the passed node tree is modified in-place!
+ */
+void
+change_varattnos_of_a_varno(Node *node, const AttrNumber *newattno, Index varno)
+{
+	AttrMapContext attrMapCxt;
+
+	attrMapCxt.newattno = newattno;
+	attrMapCxt.varno = varno;
+
+	(void) change_varattnos_varno_walker(node, &attrMapCxt);
 }

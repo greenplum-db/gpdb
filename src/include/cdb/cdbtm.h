@@ -289,6 +289,8 @@ extern void dtxFormGid(char *gid, DistributedTransactionId gxid);
 extern DistributedTransactionId getDistributedTransactionId(void);
 extern bool getDistributedTransactionIdentifier(char *id);
 
+extern void setDistributedTransactionContext(DtxContext context);
+
 extern void resetTmGxact(void);
 extern void	prepareDtxTransaction(void);
 extern bool isPreparedDtxTransaction(void);

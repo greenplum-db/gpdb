@@ -798,7 +798,7 @@ ORDER BY s_name;
         <dxl:SumAgg Mdid="0.0.0.0"/>
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
-      <dxl:Relation Mdid="0.11778196.1.1" Name="nation_ao_column_none_level0" IsTemporary="false" HasOids="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="6,4">
+      <dxl:Relation Mdid="0.11778196.1.1" Name="nation_ao_column_none_level0" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="6,4">
         <dxl:Columns>
           <dxl:Column Name="n_nationkey" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -1916,7 +1916,7 @@ ORDER BY s_name;
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
       <dxl:RelationStatistics Mdid="2.11778349.1.1" Name="supplier_ao_column_none_level0" Rows="128000000.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.11778349.1.1" Name="supplier_ao_column_none_level0" IsTemporary="false" HasOids="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,7">
+      <dxl:Relation Mdid="0.11778349.1.1" Name="supplier_ao_column_none_level0" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,7">
         <dxl:Columns>
           <dxl:Column Name="s_suppkey" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -3252,7 +3252,7 @@ ORDER BY s_name;
         <dxl:ResultType Mdid="0.1700.1.0"/>
       </dxl:GPDBFunc>
       <dxl:RelationStatistics Mdid="2.11778256.1.1" Name="part_ao_column_none_level0" Rows="2559980032.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.11778256.1.1" Name="part_ao_column_none_level0" IsTemporary="false" HasOids="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="11,9">
+      <dxl:Relation Mdid="0.11778256.1.1" Name="part_ao_column_none_level0" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="11,9">
         <dxl:Columns>
           <dxl:Column Name="p_partkey" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -4802,7 +4802,7 @@ ORDER BY s_name;
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
       <dxl:RelationStatistics Mdid="2.11778286.1.1" Name="partsupp_ao_column_none_level0" Rows="10239899648.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.11778286.1.1" Name="partsupp_ao_column_none_level0" IsTemporary="false" HasOids="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,5">
+      <dxl:Relation Mdid="0.11778286.1.1" Name="partsupp_ao_column_none_level0" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,5">
         <dxl:Columns>
           <dxl:Column Name="ps_partkey" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -4838,7 +4838,7 @@ ORDER BY s_name;
         <dxl:ResultType Mdid="0.20.1.0"/>
         <dxl:IntermediateResultType Mdid="0.20.1.0"/>
       </dxl:GPDBAgg>
-      <dxl:Relation Mdid="0.11778166.1.1" Name="lineitem_ao_column_none_level0" IsTemporary="false" HasOids="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="18,16">
+      <dxl:Relation Mdid="0.11778166.1.1" Name="lineitem_ao_column_none_level0" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="18,16">
         <dxl:Columns>
           <dxl:Column Name="l_orderkey" Attno="1" Mdid="0.20.1.0" Nullable="false" ColWidth="8">
             <dxl:DefaultValue/>
@@ -6367,7 +6367,7 @@ ORDER BY s_name;
         </dxl:LogicalJoin>
       </dxl:LogicalLimit>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="1863552">
+    <dxl:Plan Id="0" SpaceSize="3270672">
       <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="24583535.993774" Rows="49.989277" Width="65"/>

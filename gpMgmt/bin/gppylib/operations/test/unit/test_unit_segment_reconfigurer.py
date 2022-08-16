@@ -21,7 +21,7 @@ class SegmentReconfiguerTestCase(GpTestCase):
     port = 15432
     user = 'postgres'
     passwd = 'passwd'
-    timeout = 30
+    timeout = 600
 
     def setUp(self):
         self.conn = Mock(name='conn')
@@ -63,21 +63,21 @@ class SegmentReconfiguerTestCase(GpTestCase):
         self.conn.close.assert_any_call()
 
     @patch('time.time')
-    def test_it_gives_up_after_30_seconds(self, now_mock):
+    def test_it_gives_up_after_600_seconds(self, now_mock):
         start_datetime = datetime.datetime(2018, 5, 9, 16, 0, 0)
         start_time = time.mktime(start_datetime.timetuple())
         now_mock.configure_mock(return_value=start_time)
 
-        def fail_for_half_a_minute():
+        def fail_for_five_minutes():
             new_time = start_time
             for i in range(2):
-                # leap forward 15 seconds
+                # leap forward 300 seconds
                 new_time += self.timeout / 2
                 now_mock.configure_mock(return_value=new_time)
                 yield pgdb.DatabaseError
 
 
-        self.connect.configure_mock(side_effect=fail_for_half_a_minute())
+        self.connect.configure_mock(side_effect=fail_for_five_minutes())
 
         reconfigurer = SegmentReconfigurer(logger=self.logger,
                 worker_pool=self.worker_pool, timeout=self.timeout)

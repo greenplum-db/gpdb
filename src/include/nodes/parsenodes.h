@@ -1959,6 +1959,7 @@ typedef enum AlterTableType
 	AT_SetLogged,				/* SET LOGGED */
 	AT_SetUnLogged,				/* SET UNLOGGED */
 	AT_DropOids,				/* SET WITHOUT OIDS */
+	AT_SetAccessMethod,			/* SET ACCESS METHOD */
 	AT_SetTableSpace,			/* SET TABLESPACE */
 	AT_SetRelOptions,			/* SET (...) -- AM specific parameters */
 	AT_ResetRelOptions,			/* RESET (...) -- AM specific parameters */
@@ -3789,6 +3790,7 @@ typedef struct LockStmt
 	List	   *relations;		/* relations to lock */
 	int			mode;			/* lock mode */
 	bool		nowait;			/* no wait mode */
+	bool		coordinatoronly;		/* GPDB: lock only on master */
 } LockStmt;
 
 /* ----------------------

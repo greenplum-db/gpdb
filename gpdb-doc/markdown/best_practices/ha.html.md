@@ -4,7 +4,7 @@ title: High Availability
 
 Greenplum Database supports highly available, fault-tolerant database services when you enable and properly configure Greenplum high availability features. To guarantee a required level of service, each component must have a standby ready to take its place if it should fail.
 
-**Parent topic:**[Greenplum Database Best Practices](intro.html)
+**Parent topic:** [Greenplum Database Best Practices](intro.html)
 
 ## <a id="topic_vrb_sxc_54"></a>Disk Storage 
 
@@ -99,7 +99,7 @@ Finally, through native API integration, Greenplum Database can stream backups d
 
 -   Back up Greenplum databases regularly unless the data is easily restored from sources.
 
--   Use the `gpbackup` command to specify only the schema and tables that you want backed up. See the [gpbackup](https://gpdb.docs.pivotal.io/latest/utility_guide/ref/gpbackup.html) reference for more information.
+-   Use the `gpbackup` command to specify only the schema and tables that you want backed up. See the [gpbackup](https://docs.vmware.com/en/VMware-Tanzu-Greenplum-Backup-and-Restore/index.html) reference for more information.
 
 -   `gpbackup` places `SHARED ACCESS` locks on the set of tables to back up. Backups with fewer tables are more efficient for selectively restoring schemas and tables, since `gprestore` does not have to search through the entire database.
 
@@ -131,11 +131,11 @@ The Greenplum Database server `ftsprobe` subprocess handles fault detection. `ft
 -   [gprecoverseg](../utility_guide/ref/gprecoverseg.html) - recover a failed segment
 -   [gpactivatestandby](../utility_guide/ref/gpactivatestandby.html) - make the standby master the active master
 
-[RDBMS MIB Specification](http://tools.ietf.org/html/rfc1697)
+[RDBMS MIB Specification](https://datatracker.ietf.org/doc/html/rfc1697)
 
 ## <a id="topic_ngz_qf4_tt"></a>Segment Mirroring Configurations 
 
-Segment mirroring allows database queries to fail over to a backup segment if the primary segment fails or becomes unavailable. Pivotal requires mirroring for supported production Greenplum Database systems.
+Segment mirroring allows database queries to fail over to a backup segment if the primary segment fails or becomes unavailable. VMware requires mirroring for supported production Greenplum Database systems.
 
 A primary segment and its mirror must be on different hosts to ensure high availability. Each host in a Greenplum Database system has the same number of primary segments and mirror segments. Multi-homed hosts should have the same numbers of primary and mirror segments on each interface. This ensures that segment hosts and network resources are equally loaded when all primary segments are operational and brings the most resources to bear on query processing.
 
@@ -200,7 +200,7 @@ Because each host in a block has multiple mirror instances for each other host i
 
 Block mirroring is not one of the automatic options Greenplum Database offers when you set up or expand a cluster. To use it, you must create your own configuration.
 
-For a new Greenplum system, you can initialize the cluster without mirrors, and then run `gpaddmirrors -i mirror\_config\_file` with a custom mirror configuration file to create the mirrors for each block. You must create the file system locations for the mirror segments before you run `gpaddmirrors`. See the `gpaddmirrors` reference page in the *Greenplum Database Management Utility Guide* for details.
+For a new Greenplum system, you can initialize the cluster without mirrors, and then run `gpaddmirrors -i mirror_config_file` with a custom mirror configuration file to create the mirrors for each block. You must create the file system locations for the mirror segments before you run `gpaddmirrors`. See the `gpaddmirrors` reference page in the *Greenplum Database Management Utility Guide* for details.
 
 If you expand a system that has block mirroring or you want to implement block mirroring at the same time you expand a cluster, it is recommended that you complete the expansion first, using the default grouping mirror configuration, and then use the `gpmovemirrors` utility to move mirrors into the block configuration.
 
@@ -220,10 +220,10 @@ To implement block mirroring with an existing system that has a different mirror
     The `gpmovemirrors` input file has the following format:
 
     ```
-    old\_address|port|data\_dir new\_address|port|data\_dir
+    old_address|port|data_dir new_address|port|data_dir
     ```
 
-    Where old\_address is the host name or IP address of the segment host, port is the communication port, and `data_dir` is the segment instance data directory.
+    Where `old_address` is the host name or IP address of the segment host, port is the communication port, and `data_dir` is the segment instance data directory.
 
     The following example `gpmovemirrors` input file specifies three mirror segments to move.
 
@@ -237,7 +237,7 @@ To implement block mirroring with an existing system that has a different mirror
 4.  Run `gpmovemirrors` with a command like the following:
 
     ```
-    gpmovemirrors -i mirror\_config\_file
+    gpmovemirrors -i mirror_config_file
     ```
 
 

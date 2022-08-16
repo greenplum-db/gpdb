@@ -8,38 +8,38 @@
             privilege by default.</p>
         <section id="section2">
             <title>Synopsis</title>
-            <codeblock id="sql_command_synopsis">CREATE USER <varname>name</varname> [[WITH] <varname>option</varname> [ ... ]]</codeblock>
+            <codeblock id="sql_command_synopsis">CREATE USER &lt;name> [[WITH] &lt;option> [ ... ]]</codeblock>
             <p>where <varname>option</varname> can be:</p>
             <codeblock>      SUPERUSER | NOSUPERUSER
     | CREATEDB | NOCREATEDB
     | CREATEROLE | NOCREATEROLE
     | CREATEUSER | NOCREATEUSER
     | CREATEEXTTABLE | NOCREATEEXTTABLE 
-      [ ( <varname>attribute</varname>='<varname>value</varname>'[, ...] ) ]
-           where <varname>attributes</varname> and <varname>value</varname> are:
+      [ ( &lt;attribute>='&lt;value>'[, ...] ) ]
+           where &lt;attributes> and &lt;value> are:
            type='readable'|'writable'
            protocol='gpfdist'|'http'
     | INHERIT | NOINHERIT
     | LOGIN | NOLOGIN
     | REPLICATION | NOREPLICATION
-    | CONNECTION LIMIT <varname>connlimit</varname>
-    | [ ENCRYPTED | UNENCRYPTED ] PASSWORD '<varname>password</varname>'
-    | VALID UNTIL '<varname>timestamp</varname>'
-    | IN ROLE <varname>role_name</varname> [, ...]
-    | IN GROUP <varname>role_name</varname>
-    | ROLE <varname>role_name</varname> [, ...]
-    | ADMIN <varname>role_name</varname> [, ...]
-    | USER <varname>role_name</varname> [, ...]
-    | SYSID <varname>uid</varname>
-    | RESOURCE QUEUE <varname>queue_name</varname>
-    | RESOURCE GROUP <varname>group_name</varname>
-    | [ DENY <varname>deny_point</varname> ]
-    | [ DENY BETWEEN <varname>deny_point</varname> AND <varname>deny_point</varname>]</codeblock>
+    | CONNECTION LIMIT &lt;connlimit>
+    | [ ENCRYPTED | UNENCRYPTED ] PASSWORD '&lt;password>'
+    | VALID UNTIL '&lt;timestamp>'
+    | IN ROLE &lt;role_name> [, ...]
+    | IN GROUP &lt;role_name>
+    | ROLE &lt;role_name> [, ...]
+    | ADMIN &lt;role_name> [, ...]
+    | USER &lt;role_name> [, ...]
+    | SYSID &lt;uid>
+    | RESOURCE QUEUE &lt;queue_name>
+    | RESOURCE GROUP &lt;group_name>
+    | [ DENY &lt;deny_point> ]
+    | [ DENY BETWEEN &lt;deny_point> AND &lt;deny_point>]</codeblock>
         </section>
         <section id="section3">
             <title>Description</title>
-            <p><codeph>CREATE USER</codeph> is an alias for <codeph><xref
-                        href="CREATE_ROLE.xml#topic1" type="topic" format="dita"/></codeph>.</p>
+            <p><codeph>CREATE USER</codeph> is an alias for <xref
+                        href="CREATE_ROLE.xml#topic1" type="topic" format="dita"/>.</p>
             <p>The only difference between <codeph>CREATE ROLE</codeph> and <codeph>CREATE
                     USER</codeph> is that <codeph>LOGIN</codeph> is assumed by default with
                     <codeph>CREATE USER</codeph>, whereas <codeph>NOLOGIN</codeph> is assumed by
@@ -51,7 +51,7 @@
         </section>
         <section id="section5">
             <title>See Also</title>
-            <p><codeph><xref href="CREATE_ROLE.xml#topic1" type="topic" format="dita"/></codeph></p>
+            <p><xref href="CREATE_ROLE.xml#topic1" type="topic" format="dita"/></p>
         </section>
     </body>
 </topic>

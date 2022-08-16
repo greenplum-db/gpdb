@@ -2,9 +2,9 @@
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
 <topic id="topic1"><title id="az137232">CREATE TEXT SEARCH CONFIGURATION</title><body><p id="sql_command_desc">Defines a new text search configuration.</p><section id="section2"><title>Synopsis</title>
-      <codeblock id="sql_command_synopsis">CREATE TEXT SEARCH CONFIGURATION <varname>name</varname> (
-    PARSER = <varname>parser_name</varname> |
-    COPY = <varname>source_config</varname>
+      <codeblock id="sql_command_synopsis">CREATE TEXT SEARCH CONFIGURATION &lt;name> (
+    PARSER = &lt;parser_name> |
+    COPY = &lt;source_config>
 )</codeblock></section><section id="section3"><title>Description</title>
       <p><codeph>CREATE TEXT SEARCH CONFIGURATION</codeph> creates a new text search configuration.
         A text search configuration specifies a text search parser that can divide a string into
@@ -18,7 +18,7 @@
       <p>If a schema name is given then the text search configuration is created in the specified
         schema. Otherwise it is created in the current schema.</p>
       <p>The user who defines a text search configuration becomes its owner.</p>
-      <p>Refer to  <xref href="../../admin_guide/textsearch/full-text-search.xml#full-text-search"/>
+      <p>Refer to  <xref href="../../admin_guide/textsearch/full-text-search.html#full-text-search" format="html" scope="external">Using Full Text Search</xref>
         for further information.</p></section><section id="section4"><title>Parameters</title>
       <parml>
         <plentry>
@@ -40,6 +40,6 @@
     <title>Notes</title>
     <p>The <codeph>PARSER</codeph> and <codeph>COPY</codeph> options are mutually exclusive, because when an existing configuration is copied, its parser selection is copied too.</p> 
   </section>
-  <section id="section6"><title>Compatibility</title><p>There is no <codeph>CREATE TEXT SEARCH CONFIGURATION</codeph> statement in the SQL standard.</p></section><section id="section7"><title>See Also</title><p><codeph id="codeph_qcn_twd_mfb"><xref href="ALTER_TEXT_SEARCH_CONFIGURATION.xml#topic1"
-          /></codeph>, <codeph id="codeph_e3b_xwd_mfb"><xref
-            href="DROP_TEXT_SEARCH_CONFIGURATION.xml#topic1"/></codeph></p></section></body></topic>
+  <section id="section6"><title>Compatibility</title><p>There is no <codeph>CREATE TEXT SEARCH CONFIGURATION</codeph> statement in the SQL standard.</p></section><section id="section7"><title>See Also</title><p><xref href="ALTER_TEXT_SEARCH_CONFIGURATION.xml#topic1"
+          />, <xref
+            href="DROP_TEXT_SEARCH_CONFIGURATION.xml#topic1"/></p></section></body></topic>

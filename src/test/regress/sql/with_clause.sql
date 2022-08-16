@@ -368,6 +368,37 @@ WITH RECURSIVE r1 AS (
 )
 SELECT * FROM r1 LIMIT 1;
 
+-- GPDB
+-- Greenplum does not support window functions in recursive part's target list
+-- See issue https://github.com/greenplum-db/gpdb/issues/13299 for details.
+-- Previously the following SQL will PANIC or Assert Fail if compiled with assert.
+create table t_window_ordered_set_agg_rte(a bigint, b bigint, c bigint);
+
+insert into t_window_ordered_set_agg_rte select i,i,i from generate_series(1, 10)i;
+
+-- should error out during parse-analyze
+with recursive rcte(x,y) as
+(
+  select a, b from t_window_ordered_set_agg_rte
+  union all
+  select (first_value(c) over (partition by b))::int, a+x
+  from rcte,
+       t_window_ordered_set_agg_rte as t
+  where t.b = x
+)
+select * from rcte limit 10;
+
+-- should error out during parse-analyze
+with recursive rcte(x,y) as
+(
+  select a, b from t_window_ordered_set_agg_rte
+  union all
+  select first_value(c) over (partition by b), a+x
+  from rcte,
+       t_window_ordered_set_agg_rte as t
+  where t.b = x
+)
+select * from rcte limit 10;
 
 -- This used to deadlock, before the IPC between ShareInputScans across
 -- slices was rewritten.

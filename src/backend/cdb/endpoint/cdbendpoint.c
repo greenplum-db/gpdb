@@ -64,6 +64,7 @@
 #include "access/tupdesc.h"
 #include "access/xact.h"
 #include "commands/async.h"
+#include "common/hashfn.h"
 #include "libpq-fe.h"
 #include "libpq/libpq.h"
 #include "libpq/pqformat.h"
@@ -74,6 +75,7 @@
 #include "utils/backend_cancel.h"
 #include "utils/builtins.h"
 #include "utils/faultinjector.h"
+#include "utils/guc.h"
 #include "cdb/cdbdisp_query.h"
 #include "cdb/cdbdispatchresult.h"
 #include "cdb/cdbendpoint.h"
@@ -494,8 +496,7 @@ create_and_connect_mq(TupleDesc tupleDesc, dsm_segment **mqSeg /* out */ ,
 	char		*tupdescSpace;
 	TupleDescNode *node = makeNode(TupleDescNode);
 
-	elog(DEBUG3,
-		 "CDB_ENDPOINTS: create and setup the shared memory message queue");
+	elogif(gp_log_endpoints, LOG, "CDB_ENDPOINT: create and setup the shared memory message queue");
 
 	/* Serialize TupleDesc */
 	node->natts = tupleDesc->natts;
@@ -554,7 +555,7 @@ setup_endpoint_token_entry()
 
 	LWLockAcquire(ParallelCursorEndpointLock, LW_EXCLUSIVE);
 	infoEntry = (EndpointTokenEntry *) hash_search(EndpointTokenHash, &tag, HASH_ENTER, &found);
-	elog(DEBUG3, "CDB_ENDPOINT: Finish endpoint init. Found EndpointTokenEntry? %d", found);
+	elogif(gp_log_endpoints, LOG, "CDB_ENDPOINT: Finish endpoint init. Found EndpointTokenEntry? %d", found);
 
 	/*
 	 * Save the token if it is the first time we create endpoint in current
@@ -624,7 +625,7 @@ wait_receiver(void)
 {
 	EndpointExecState * state = CurrentEndpointExecState;
 
-	elog(DEBUG3, "CDB_ENDPOINTS: wait receiver");
+	elogif(gp_log_endpoints, LOG, "CDB_ENDPOINT: wait receiver");
 	while (true)
 	{
 		int			wr = 0;
@@ -634,7 +635,7 @@ wait_receiver(void)
 		if (QueryFinishPending)
 			break;
 
-		elog(DEBUG5, "CDB_ENDPOINT: sender wait latch in wait_receiver()");
+		elogif(gp_log_endpoints, LOG, "CDB_ENDPOINT: sender wait latch in wait_receiver()");
 		wr = WaitLatchOrSocket(&state->endpoint->ackDone,
 							   WL_LATCH_SET | WL_POSTMASTER_DEATH | WL_TIMEOUT | WL_SOCKET_READABLE,
 							   MyProcPort->sock,
@@ -646,7 +647,7 @@ wait_receiver(void)
 			if (!checkQDConnectionAlive())
 			{
 				ereport(LOG,
-						(errmsg("CDB_ENDPOINT: sender found that the connection to QD is broken")));
+						(errmsg("CDB_ENDPOINT: sender found that the connection to QD is broken: %m")));
 				abort_endpoint();
 				proc_exit(0);
 			}
@@ -662,7 +663,7 @@ wait_receiver(void)
 
 		if (wr & WL_LATCH_SET)
 		{
-			elog(DEBUG3, "CDB_ENDPOINT:sender reset latch in wait_receiver()");
+			elogif(gp_log_endpoints, LOG, "CDB_ENDPOINT: sender reset latch in wait_receiver()");
 			ResetLatch(&state->endpoint->ackDone);
 			break;
 		}
@@ -677,7 +678,7 @@ wait_receiver(void)
 static void
 detach_mq(dsm_segment *dsmSeg)
 {
-	elog(DEBUG3, "CDB_ENDPOINT: Sender message queue detaching. '%p'",
+	elogif(gp_log_endpoints, LOG, "CDB_ENDPOINT: sender message queue detaching. '%p'",
 		 (void *) dsmSeg);
 
 	Assert(dsmSeg);
@@ -697,7 +698,7 @@ unset_endpoint_sender_pid(Endpoint *endpoint)
 	Assert(endpoint);
 	Assert(!endpoint->empty);
 
-	elog(DEBUG3, "CDB_ENDPOINT: unset endpoint sender pid");
+	elogif(gp_log_endpoints, LOG, "CDB_ENDPOINT: unset endpoint sender pid");
 
 	/*
 	 * Only the endpoint QE/entry DB execute this unset sender pid function.
@@ -783,7 +784,7 @@ wait_parallel_retrieve_close(void)
 		if (QueryFinishPending || QueryCancelPending)
 			break;
 
-		elog(DEBUG3, "CDB_ENDPOINT: wait for parallel retrieve cursor close");
+		elogif(gp_log_endpoints, LOG, "CDB_ENDPOINT: wait for parallel retrieve cursor close");
 		wr = WaitLatchOrSocket(&MyProc->procLatch,
 							   WL_LATCH_SET | WL_POSTMASTER_DEATH | WL_TIMEOUT | WL_SOCKET_READABLE,
 							   MyProcPort->sock,
@@ -802,7 +803,7 @@ wait_parallel_retrieve_close(void)
 			if (!checkQDConnectionAlive())
 			{
 				ereport(LOG,
-						(errmsg("CDB_ENDPOINT: sender found that the connection to QD is broken")));
+						(errmsg("CDB_ENDPOINT: sender found that the connection to QD is broken: %m")));
 				proc_exit(0);
 			}
 		}
@@ -827,7 +828,7 @@ free_endpoint(Endpoint *endpoint)
 	Assert(endpoint);
 	Assert(!endpoint->empty);
 
-	elog(DEBUG3, "CDB_ENDPOINTS: Free endpoint '%s'.", endpoint->name);
+	elogif(gp_log_endpoints, LOG, "CDB_ENDPOINT: free endpoint '%s'", endpoint->name);
 
 	endpoint->databaseID = InvalidOid;
 	endpoint->mqDsmHandle = DSM_HANDLE_INVALID;

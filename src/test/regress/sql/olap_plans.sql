@@ -61,17 +61,8 @@ set gp_motion_cost_per_row=1.0;
 
 -- If the query produces a relatively small number of groups in comparison to
 -- the number of input rows, two-stage aggregation will be picked.
-
--- GPDB_12_MERGE_FIXME: We support hashing for GROUPING SETS now. The planner
--- considers that cheaper than the two-stage grouping agg that was chosen
--- before. Disable hashagg to force the same plan as before. We should
--- implement two-stage Hash Agg for grouping sets; that would probably be
--- the real optimal plan here, and what the planner would choose, if it
--- was supported.
-set enable_hashagg=off;
 explain select a, b, c, sum(d) from olap_test group by grouping sets((a, b), (a), (b, c));
 select a, b, c, sum(d) from olap_test group by grouping sets((a, b), (a), (b, c));
-reset enable_hashagg;
 
 -- If the query produces a relatively large number of groups in comparison to
 -- the number of input rows, one-stage aggregation will be picked.

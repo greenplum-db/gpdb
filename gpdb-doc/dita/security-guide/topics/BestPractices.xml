@@ -66,7 +66,7 @@
         object has different privileges that may be granted. Use the <codeph>GRANT</codeph>
         statement to add a permission to a role and the <codeph>REVOKE</codeph> statement to remove
         the permission.</p>
-      <p>You can change the owner of an object using the <codeph>REASIGN OWNED BY</codeph>
+      <p>You can change the owner of an object using the <codeph>REASSIGN OWNED BY</codeph>
         statement. For example, to prepare to drop a role, change the owner of the objects that
         belong to the role. Use the <codeph>DROP OWNED BY</codeph> to drop objects, including
         dependent objects, that are owned by a role.</p>

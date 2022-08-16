@@ -2755,7 +2755,7 @@
         <dxl:SumAgg Mdid="0.0.0.0"/>
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
-      <dxl:Relation Mdid="0.641613.1.0" Name="web_sales" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="3,17" Keys="3,17;40,34">
+      <dxl:Relation Mdid="0.641613.1.0" Name="web_sales" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="3,17" Keys="3,17;40,34">
         <dxl:Columns>
           <dxl:Column Name="ws_sold_date_sk" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -2887,7 +2887,7 @@
         <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.641665.1.0" Name="web_site" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0;32,26">
+      <dxl:Relation Mdid="0.641665.1.0" Name="web_site" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0;32,26">
         <dxl:Columns>
           <dxl:Column Name="web_site_sk" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -8647,7 +8647,7 @@
       </dxl:ColumnStatistics>
       <dxl:RelationStatistics Mdid="2.641665.1.1" Name="web_site" Rows="44.000000" EmptyRelation="false"/>
       <dxl:RelationStatistics Mdid="2.641613.1.1" Name="web_sales" Rows="184296000.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.641665.1.1" Name="web_site" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0;32,26">
+      <dxl:Relation Mdid="0.641665.1.1" Name="web_site" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0;32,26">
         <dxl:Columns>
           <dxl:Column Name="web_site_sk" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -8755,7 +8755,7 @@
         <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.641613.1.1" Name="web_sales" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="3,17" Keys="3,17;40,34">
+      <dxl:Relation Mdid="0.641613.1.1" Name="web_sales" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="3,17" Keys="3,17;40,34">
         <dxl:Columns>
           <dxl:Column Name="ws_sold_date_sk" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -11699,7 +11699,7 @@
         </dxl:And>
       </dxl:LogicalJoin>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="10">
+    <dxl:Plan Id="0" SpaceSize="11">
       <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="97948.947313" Rows="4424643.209483" Width="856"/>

@@ -30,5 +30,5 @@ ESCAPE 'OFF'
 
 This is useful for input data that contains many backslash characters, such as web log data.
 
-**Parent topic:**[Escaping](../../load/topics/g-escaping.html)
+**Parent topic:** [Escaping](../../load/topics/g-escaping.html)
 

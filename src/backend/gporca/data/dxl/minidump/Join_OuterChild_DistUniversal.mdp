@@ -197,7 +197,7 @@
       <dxl:ColumnStatistics Mdid="1.509062.1.1.7" Name="gp_segment_id" Width="4.000000"/>
       <dxl:ColumnStatistics Mdid="1.509062.1.1.6" Name="tableoid" Width="4.000000"/>
       <dxl:RelationStatistics Mdid="2.509062.1.1" Name="mrs_t1" Rows="10.000000"/>
-      <dxl:Relation Mdid="0.509062.1.1" Name="mrs_t1" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,1">
+      <dxl:Relation Mdid="0.509062.1.1" Name="mrs_t1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,1">
         <dxl:Columns>
           <dxl:Column Name="x" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -271,7 +271,7 @@
         </dxl:LogicalSelect>
       </dxl:LogicalProject>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="235">
+    <dxl:Plan Id="0" SpaceSize="229">
       <dxl:Result>
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="862.000327" Rows="3.000000" Width="4"/>

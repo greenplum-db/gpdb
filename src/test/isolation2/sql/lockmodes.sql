@@ -318,20 +318,23 @@ create table t_lockmods_ao1 (c int) with (appendonly=true) distributed randomly;
 --   * DML on one specific leaf
 -- For detailed behavior and notes, please refer below
 -- cases's comments.
--- GPDB_12_MERGE_FIXME: DML lockmodes on partition table
--- is a bit in disorder, we shoule correct them.
 -- Details: https://groups.google.com/a/greenplum.org/g/gpdb-dev/c/wAPKpJzhbpM
--- start_ignore
-1:DROP TABLE IF EXISTS t_lockmods_part_tbl_upd_del;
--- end_ignore
+-- Issue: https://github.com/greenplum-db/gpdb/issues/13652
+1:DROP TABLE IF EXISTS t_lockmods_part_tbl_dml;
 
-1:CREATE TABLE t_lockmods_part_tbl_upd_del (a int, b int, c int) PARTITION BY RANGE(b) (START(1) END(3) EVERY(1));
-1:INSERT INTO t_lockmods_part_tbl_upd_del SELECT i, 1, i FROM generate_series(1,10)i;
+1:CREATE TABLE t_lockmods_part_tbl_dml (a int, b int, c int) PARTITION BY RANGE(b) (START(1) END(3) EVERY(1));
+1:INSERT INTO t_lockmods_part_tbl_dml SELECT i, 1, i FROM generate_series(1,10)i;
 
 -- 
 1: BEGIN;
-1: DELETE FROM t_lockmods_part_tbl_upd_del;
+1: DELETE FROM t_lockmods_part_tbl_dml;
 -- on QD, there's a lock on the root and the target partition
+1: select * from show_locks_lockmodes;
+1: ROLLBACK;
+
+1: BEGIN;
+1: INSERT INTO t_lockmods_part_tbl_dml SELECT i, 1, i FROM generate_series(1,10)i;
+-- without GDD, it will lock all leaf partitions on QD
 1: select * from show_locks_lockmodes;
 1: ROLLBACK;
 
@@ -359,21 +362,21 @@ create table t_lockmods_ao1 (c int) with (appendonly=true) distributed randomly;
 1q:
 
 1: BEGIN;
-1: UPDATE t_lockmods_part_tbl_upd_del SET c = 1 WHERE c = 1;
+1: UPDATE t_lockmods_part_tbl_dml SET c = 1 WHERE c = 1;
 -- on QD, there's a lock on the root and the target partition
 1: select * from show_locks_lockmodes;
 1: ROLLBACK;
 1q:
 
 1: BEGIN;
-1: DELETE FROM t_lockmods_part_tbl_upd_del_1_prt_1;
+1: DELETE FROM t_lockmods_part_tbl_dml_1_prt_1;
 -- since the delete operation is on leaf part, there will be a lock on QD
 1: select * from show_locks_lockmodes;
 1: ROLLBACK;
 1q:
 
 1: BEGIN;
-1: UPDATE t_lockmods_part_tbl_upd_del_1_prt_1 SET c = 1 WHERE c = 1;
+1: UPDATE t_lockmods_part_tbl_dml_1_prt_1 SET c = 1 WHERE c = 1;
 -- since the update operation is on leaf part, there will be a lock on QD
 1: select * from show_locks_lockmodes;
 1: ROLLBACK;
@@ -679,29 +682,36 @@ ALTER SYSTEM SET gp_enable_global_deadlock_detector TO on;
 -- cases's comments.
 
 1: BEGIN;
-1: DELETE FROM t_lockmods_part_tbl_upd_del;
+1: DELETE FROM t_lockmods_part_tbl_dml;
 -- on QD, there's a lock on the root and the target partition
 1: select * from show_locks_lockmodes;
 1: ROLLBACK;
 1q:
 
 1: BEGIN;
-1: UPDATE t_lockmods_part_tbl_upd_del SET c = 1 WHERE c = 1;
+1: UPDATE t_lockmods_part_tbl_dml SET c = 1 WHERE c = 1;
 -- on QD, there's a lock on the root and the target partition
 1: select * from show_locks_lockmodes;
 1: ROLLBACK;
 1q:
 
 1: BEGIN;
-1: DELETE FROM t_lockmods_part_tbl_upd_del_1_prt_1;
+1: DELETE FROM t_lockmods_part_tbl_dml_1_prt_1;
 -- since the delete operation is on leaf part, there will be a lock on QD
 1: select * from show_locks_lockmodes;
 1: ROLLBACK;
 1q:
 
 1: BEGIN;
-1: UPDATE t_lockmods_part_tbl_upd_del_1_prt_1 SET c = 1 WHERE c = 1;
+1: UPDATE t_lockmods_part_tbl_dml_1_prt_1 SET c = 1 WHERE c = 1;
 -- since the update operation is on leaf part, there will be a lock on QD
+1: select * from show_locks_lockmodes;
+1: ROLLBACK;
+1q:
+
+1: BEGIN;
+1: INSERT INTO t_lockmods_part_tbl_dml SELECT i, 1, i FROM generate_series(1,10)i;
+-- With GDD enabled, QD will only hold lock on root for insert
 1: select * from show_locks_lockmodes;
 1: ROLLBACK;
 1q:

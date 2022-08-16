@@ -396,7 +396,7 @@
       </dxl:ColumnStatistics>
       <dxl:RelationStatistics Mdid="2.1260.1.1" Name="pg_authid" Rows="1.000000"/>
       <dxl:RelationStatistics Mdid="2.1262.1.1" Name="pg_database" Rows="3.000000"/>
-      <dxl:Relation Mdid="0.1260.1.1" Name="pg_authid" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="MasterOnly" Keys="24,17">
+      <dxl:Relation Mdid="0.1260.1.1" Name="pg_authid" IsTemporary="false" StorageType="Heap" DistributionPolicy="MasterOnly" Keys="24,17">
         <dxl:Columns>
           <dxl:Column Name="rolname" Attno="1" Mdid="0.19.1.0" Nullable="false" ColWidth="64">
             <dxl:DefaultValue/>
@@ -480,7 +480,7 @@
         </dxl:Triggers>
         <dxl:CheckConstraints/>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.1262.1.1" Name="pg_database" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="MasterOnly" Keys="18,11">
+      <dxl:Relation Mdid="0.1262.1.1" Name="pg_database" IsTemporary="false" StorageType="Heap" DistributionPolicy="MasterOnly" Keys="18,11">
         <dxl:Columns>
           <dxl:Column Name="datname" Attno="1" Mdid="0.19.1.0" Nullable="false" ColWidth="64">
             <dxl:DefaultValue/>
@@ -596,7 +596,7 @@
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
       <dxl:RelationStatistics Mdid="2.1213.1.1" Name="pg_tablespace" Rows="2.000000"/>
-      <dxl:Relation Mdid="0.1213.1.1" Name="pg_tablespace" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="MasterOnly" Keys="14,7">
+      <dxl:Relation Mdid="0.1213.1.1" Name="pg_tablespace" IsTemporary="false" StorageType="Heap" DistributionPolicy="MasterOnly" Keys="14,7">
         <dxl:Columns>
           <dxl:Column Name="spcname" Attno="1" Mdid="0.19.1.0" Nullable="false" ColWidth="64">
             <dxl:DefaultValue/>
@@ -855,7 +855,7 @@
     <dxl:Plan Id="0" SpaceSize="2856">
       <dxl:Result>
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="38915.797885" Rows="4.000000" Width="269"/>
+          <dxl:Cost StartupCost="0" TotalCost="38915.798285" Rows="4.000000" Width="269"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="datname">
@@ -1227,6 +1227,7 @@
                           <dxl:ConstValue TypeMdid="0.19.1.0" Value="dGVtcGxhdGUwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA&#xA;AAAAAAAAAAAAAAAAAAAAAAAAAA=="/>
                         </dxl:Comparison>
                       </dxl:IndexCondList>
+	<dxl:Partitions/>
                       <dxl:IndexDescriptor Mdid="0.2671.1.0" IndexName="pg_database_datname_index"/>
                       <dxl:TableDescriptor Mdid="0.1262.1.1" TableName="pg_database">
                         <dxl:Columns>

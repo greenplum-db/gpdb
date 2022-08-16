@@ -41,31 +41,21 @@ FOREIGN_KEY(objid REFERENCES pg_class(oid));
 typedef FormData_gp_fastsequence *Form_gp_fastsequence;
 
 #define NUM_FAST_SEQUENCES					 100
-
-/*
- * Insert a new light-weight fast sequence entry for a given object.
- */
-extern void InsertFastSequenceEntry(Oid objid, int64 objmod,
-									int64 lastSequence);
-
-
 extern void InsertInitialFastSequenceEntries(Oid objid);
 
 /*
  * GetFastSequences
  *
  * Get a list of consecutive sequence numbers. The starting sequence
- * number is the maximal value between 'lastsequence' + 1 and minSequence.
- * The length of the list is given.
+ * number is the current stored value in the table plus 1.
  *
  * If there is not such an entry for objid in the table, create
- * one here.
+ * one here and starting value as 1 is returned.
  *
  * The existing entry for objid in the table is updated with a new
  * lastsequence value.
  */
-extern int64 GetFastSequences(Oid objid, int64 objmod,
-							  int64 minSequence, int64 numSequences);
+extern int64 GetFastSequences(Oid objid, int64 objmod, int64 numSequences);
 
 extern int64 ReadLastSequence(Oid objid, int64 objmod);
 

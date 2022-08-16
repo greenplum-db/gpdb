@@ -130,7 +130,9 @@ CPhysicalInnerNLJoin::Ped(CMemoryPool *mp, CExpressionHandle &exprhdl,
 				CPhysicalJoin::PedInnerHashedFromOuterHashed(
 					mp, exprhdl, dmatch, (*pdrgpdpCtxt)[0]);
 			if (pEnfdHashedDistribution)
+			{
 				return pEnfdHashedDistribution;
+			}
 		}
 		return CPhysicalJoin::Ped(mp, exprhdl, prppInput, child_index,
 								  pdrgpdpCtxt, ulOptReq);

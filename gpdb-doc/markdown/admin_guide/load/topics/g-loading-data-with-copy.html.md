@@ -8,7 +8,7 @@ The `COPY` source file must be accessible to the `postgres` process on the maste
 
 Greenplum copies data from `STDIN` or `STDOUT` using the connection between the client and the master server.
 
-**Parent topic:**[Loading and Unloading Data](../../load/topics/g-loading-and-unloading-data.html)
+**Parent topic:** [Loading and Unloading Data](../../load/topics/g-loading-and-unloading-data.html)
 
 ## <a id="topic1"></a>Loading From a File 
 

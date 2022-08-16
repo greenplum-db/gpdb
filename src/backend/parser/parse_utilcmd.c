@@ -2596,6 +2596,12 @@ transformDistributedBy(ParseState *pstate,
 				ColumnDef  *column = (ColumnDef *) lfirst(columns);
 				Oid			typeOid;
 
+				if (column->generated == ATTRIBUTE_GENERATED_STORED)
+				{
+					/* generated columns can't in distribution key, skip */
+					continue;
+				}
+
 				typeOid = typenameTypeId(NULL, column->typeName);
 
 				/*
@@ -2708,6 +2714,20 @@ transformDistributedBy(ParseState *pstate,
 
 					if (strcmp(column->colname, colname) == 0)
 					{
+						if (column->generated == ATTRIBUTE_GENERATED_STORED)
+						{
+							/* The generated columns are computed after distribution.
+							 * If generated columns are used as distribution key, they
+							 * will always use null values to compute the distribution
+							 * key value, and it will cause wrong query results.
+							 */
+							ereport(ERROR,
+									(errcode(ERRCODE_INVALID_OBJECT_DEFINITION),
+									 errmsg("cannot use generated column in distribution key"),
+									 errdetail("Column \"%s\" is a generated column.",
+												column->colname),
+									 parser_errposition(pstate, column->location)));
+						}
 						found = true;
 						break;
 					}

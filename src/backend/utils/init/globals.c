@@ -33,8 +33,10 @@ volatile sig_atomic_t QueryCancelPending = false;
 volatile sig_atomic_t QueryCancelCleanup = false;
 volatile sig_atomic_t QueryFinishPending = false;
 volatile sig_atomic_t ProcDiePending = false;
+volatile sig_atomic_t CheckClientConnectionPending = false;
 volatile sig_atomic_t ClientConnectionLost = false;
 volatile sig_atomic_t IdleInTransactionSessionTimeoutPending = false;
+volatile sig_atomic_t IdleGangTimeoutPending = false;
 volatile sig_atomic_t ConfigReloadPending = false;
 /*
  * GPDB: Make these signed integers (instead of uint32) to detect garbage

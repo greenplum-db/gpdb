@@ -9,6 +9,18 @@
 -- s/Buckets: \d+/Buckets: ###/
 -- m/Batches: \d+/
 -- s/Batches: \d+/Batches: ###/
+-- m/Extra Text: \(seg\d+\)/
+-- s/Extra Text: \(seg\d+\)/Extra Text: ###/
+-- m/Segments: \d+/
+-- s/Segments: \d+/Segments: ###/
+-- m/Max: \d+kB/
+-- s/Max: \d+kB/Max: ###kB/
+-- m/segment \d+/
+-- s/segment \d+/segment ###/
+-- m/Hash chain length \d+\.\d+ avg, \d+ max/
+-- s/Hash chain length \d+\.\d+ avg, \d+ max/Hash chain length ###/
+-- m/using \d+ of \d+ buckets/
+-- s/using \d+ of \d+ buckets/using ## of ### buckets/
 -- end_matchsubs
 drop schema if exists dpe_single cascade;
 NOTICE:  schema "dpe_single" does not exist, skipping
@@ -24,9 +36,9 @@ drop table if exists t;
 NOTICE:  table "t" does not exist, skipping
 drop table if exists t1;
 NOTICE:  table "t1" does not exist, skipping
-create table pt(dist int, pt1 text, pt2 text, pt3 text, ptid int) 
+create table pt(dist int, pt1 text, pt2 text, pt3 text, ptid int)
 DISTRIBUTED BY (dist)
-PARTITION BY RANGE(ptid) 
+PARTITION BY RANGE(ptid)
           (
           START (0) END (5) EVERY (1),
           DEFAULT PARTITION junk_data
@@ -40,9 +52,9 @@ PARTITION BY RANGE(ptid)
 -- loading all the data, changing policy to randomly without
 -- data movement. Thus every time we will have a static
 -- data distribution plus randomly policy.
-create table pt1(dist int, pt1 text, pt2 text, pt3 text, ptid int) 
+create table pt1(dist int, pt1 text, pt2 text, pt3 text, ptid int)
 DISTRIBUTED BY (dist)
-PARTITION BY RANGE(ptid) 
+PARTITION BY RANGE(ptid)
           (
           START (0) END (5) EVERY (1),
           DEFAULT PARTITION junk_data
@@ -75,6 +87,7 @@ explain (costs off, timing off, summary off, analyze) select * from t, pt where 
  Gather Motion 3:1  (slice1; segments: 3) (actual rows=18 loops=1)
    ->  Hash Join (actual rows=8 loops=1)
          Hash Cond: (pt_1_prt_2.ptid = t.tid)
+         Extra Text: (seg1)   Hash chain length 1.0 avg, 1 max, using 2 of 262144 buckets.
          ->  Append (actual rows=8 loops=1)
                Partition Selectors: $0
                ->  Seq Scan on pt_1_prt_2 (actual rows=5 loops=1)
@@ -84,7 +97,7 @@ explain (costs off, timing off, summary off, analyze) select * from t, pt where 
                ->  Seq Scan on pt_1_prt_6 (never executed)
                ->  Seq Scan on pt_1_prt_junk_data (never executed)
          ->  Hash (actual rows=2 loops=1)
-               Buckets: 524288  Batches: 1  Memory Usage: 4097kB
+               Buckets: 262144  Batches: 1  Memory Usage: 2049kB
                ->  Partition Selector (selector id: $0) (actual rows=2 loops=1)
                      ->  Broadcast Motion 3:3  (slice2; segments: 3) (actual rows=2 loops=1)
                            ->  Seq Scan on t (actual rows=2 loops=1)
@@ -120,6 +133,7 @@ explain (costs off, timing off, summary off, analyze) select * from t, pt where 
  Gather Motion 3:1  (slice1; segments: 3) (actual rows=18 loops=1)
    ->  Hash Join (actual rows=8 loops=1)
          Hash Cond: (pt_1_prt_2.ptid = (t.tid + 1))
+         Extra Text: (seg1)   Hash chain length 1.0 avg, 1 max, using 2 of 262144 buckets.
          ->  Append (actual rows=8 loops=1)
                Partition Selectors: $0
                ->  Seq Scan on pt_1_prt_2 (never executed)
@@ -129,7 +143,7 @@ explain (costs off, timing off, summary off, analyze) select * from t, pt where 
                ->  Seq Scan on pt_1_prt_6 (never executed)
                ->  Seq Scan on pt_1_prt_junk_data (never executed)
          ->  Hash (actual rows=2 loops=1)
-               Buckets: 524288  Batches: 1  Memory Usage: 4097kB
+               Buckets: 262144  Batches: 1  Memory Usage: 2049kB
                ->  Partition Selector (selector id: $0) (actual rows=2 loops=1)
                      ->  Broadcast Motion 3:3  (slice2; segments: 3) (actual rows=2 loops=1)
                            ->  Seq Scan on t (actual rows=2 loops=1)
@@ -165,6 +179,7 @@ explain (costs off, timing off, summary off, analyze) select * from t, pt where 
  Gather Motion 3:1  (slice1; segments: 3) (actual rows=18 loops=1)
    ->  Hash Join (actual rows=8 loops=1)
          Hash Cond: (pt_1_prt_2.ptid = t.tid)
+         Extra Text: (seg1)   Hash chain length 1.0 avg, 1 max, using 2 of 262144 buckets.
          ->  Append (actual rows=8 loops=1)
                Partition Selectors: $0
                ->  Seq Scan on pt_1_prt_2 (actual rows=5 loops=1)
@@ -174,7 +189,7 @@ explain (costs off, timing off, summary off, analyze) select * from t, pt where 
                ->  Seq Scan on pt_1_prt_6 (never executed)
                ->  Seq Scan on pt_1_prt_junk_data (never executed)
          ->  Hash (actual rows=2 loops=1)
-               Buckets: 524288  Batches: 1  Memory Usage: 4097kB
+               Buckets: 262144  Batches: 1  Memory Usage: 2049kB
                ->  Partition Selector (selector id: $0) (actual rows=2 loops=1)
                      ->  Broadcast Motion 3:3  (slice2; segments: 3) (actual rows=2 loops=1)
                            ->  Seq Scan on t (actual rows=2 loops=1)
@@ -211,6 +226,7 @@ explain (costs off, timing off, summary off, analyze) select * from t, pt where 
  Gather Motion 3:1  (slice1; segments: 3) (actual rows=2 loops=1)
    ->  Hash Join (actual rows=2 loops=1)
          Hash Cond: ((pt_1_prt_2.pt1 = t.t1) AND (pt_1_prt_2.ptid = t.tid))
+         Extra Text: (seg1)   Hash chain length 1.0 avg, 1 max, using 2 of 262144 buckets.
          ->  Append (actual rows=8 loops=1)
                Partition Selectors: $0
                ->  Seq Scan on pt_1_prt_2 (actual rows=5 loops=1)
@@ -220,7 +236,7 @@ explain (costs off, timing off, summary off, analyze) select * from t, pt where 
                ->  Seq Scan on pt_1_prt_6 (never executed)
                ->  Seq Scan on pt_1_prt_junk_data (never executed)
          ->  Hash (actual rows=2 loops=1)
-               Buckets: 524288  Batches: 1  Memory Usage: 4097kB
+               Buckets: 262144  Batches: 1  Memory Usage: 2049kB
                ->  Partition Selector (selector id: $0) (actual rows=2 loops=1)
                      ->  Broadcast Motion 3:3  (slice2; segments: 3) (actual rows=2 loops=1)
                            ->  Seq Scan on t (actual rows=2 loops=1)
@@ -243,6 +259,7 @@ explain (costs off, timing off, summary off, analyze) select * from pt where pti
  Gather Motion 3:1  (slice1; segments: 3) (actual rows=18 loops=1)
    ->  Hash Semi Join (actual rows=8 loops=1)
          Hash Cond: (pt_1_prt_2.ptid = t.tid)
+         Extra Text: (seg1)   Hash chain length 1.0 avg, 1 max, using 2 of 524288 buckets.
          ->  Append (actual rows=8 loops=1)
                Partition Selectors: $0
                ->  Seq Scan on pt_1_prt_2 (actual rows=5 loops=1)
@@ -292,6 +309,7 @@ explain (costs off, timing off, summary off, analyze) select * from pt where exi
  Gather Motion 3:1  (slice1; segments: 3) (actual rows=18 loops=1)
    ->  Hash Semi Join (actual rows=8 loops=1)
          Hash Cond: (pt_1_prt_2.ptid = t.tid)
+         Extra Text: (seg1)   Hash chain length 1.0 avg, 1 max, using 2 of 524288 buckets.
          ->  Append (actual rows=8 loops=1)
                Partition Selectors: $0
                ->  Seq Scan on pt_1_prt_2 (actual rows=5 loops=1)
@@ -343,6 +361,7 @@ explain (costs off, timing off, summary off, analyze) select count(*) from t, pt
          ->  Partial Aggregate (actual rows=1 loops=1)
                ->  Hash Join (actual rows=8 loops=1)
                      Hash Cond: (pt_1_prt_2.ptid = t.tid)
+                     Extra Text: (seg1)   Hash chain length 1.0 avg, 1 max, using 2 of 524288 buckets.
                      ->  Append (actual rows=8 loops=1)
                            Partition Selectors: $0
                            ->  Seq Scan on pt_1_prt_2 (actual rows=5 loops=1)
@@ -377,9 +396,11 @@ explain (costs off, timing off, summary off, analyze) select *, rank() over (ord
          Merge Key: pt_1_prt_2.ptid, pt_1_prt_2.pt1
          ->  Sort (actual rows=8 loops=1)
                Sort Key: pt_1_prt_2.ptid, pt_1_prt_2.pt1
-               Sort Method:  quicksort  Memory: 152kB
+               Sort Method:  quicksort  Memory: 76kB
+               Executor Memory: 85kB  Segments: 3  Max: 29kB (segment 1)
                ->  Hash Join (actual rows=8 loops=1)
                      Hash Cond: (pt_1_prt_2.ptid = t.tid)
+                     Extra Text: (seg1)   Hash chain length 1.0 avg, 1 max, using 2 of 131072 buckets.
                      ->  Append (actual rows=8 loops=1)
                            Partition Selectors: $0
                            ->  Seq Scan on pt_1_prt_2 (actual rows=5 loops=1)
@@ -389,7 +410,7 @@ explain (costs off, timing off, summary off, analyze) select *, rank() over (ord
                            ->  Seq Scan on pt_1_prt_6 (never executed)
                            ->  Seq Scan on pt_1_prt_junk_data (never executed)
                      ->  Hash (actual rows=2 loops=1)
-                           Buckets: 262144  Batches: 1  Memory Usage: 2049kB
+                           Buckets: 131072  Batches: 1  Memory Usage: 1025kB
                            ->  Partition Selector (selector id: $0) (actual rows=2 loops=1)
                                  ->  Broadcast Motion 3:3  (slice2; segments: 3) (actual rows=2 loops=1)
                                        ->  Seq Scan on t (actual rows=2 loops=1)
@@ -431,6 +452,7 @@ explain (costs off, timing off, summary off, analyze) select * from t, pt where 
    ->  Append (actual rows=14 loops=1)
          ->  Hash Join (actual rows=8 loops=1)
                Hash Cond: (pt_1_prt_2.ptid = t.tid)
+               Extra Text: (seg1)   Hash chain length 1.0 avg, 1 max, using 2 of 131072 buckets.
                ->  Append (actual rows=8 loops=1)
                      Partition Selectors: $0
                      ->  Seq Scan on pt_1_prt_2 (actual rows=5 loops=1)
@@ -440,12 +462,13 @@ explain (costs off, timing off, summary off, analyze) select * from t, pt where 
                      ->  Seq Scan on pt_1_prt_6 (never executed)
                      ->  Seq Scan on pt_1_prt_junk_data (never executed)
                ->  Hash (actual rows=2 loops=1)
-                     Buckets: 262144  Batches: 1  Memory Usage: 2049kB
+                     Buckets: 131072  Batches: 1  Memory Usage: 1025kB
                      ->  Partition Selector (selector id: $0) (actual rows=2 loops=1)
                            ->  Broadcast Motion 3:3  (slice2; segments: 3) (actual rows=2 loops=1)
                                  ->  Seq Scan on t (actual rows=2 loops=1)
          ->  Hash Join (actual rows=7 loops=1)
                Hash Cond: (pt_1_prt_2_1.ptid = (t_1.tid + 2))
+               Extra Text: (seg0)   Hash chain length 1.0 avg, 1 max, using 2 of 131072 buckets.
                ->  Append (actual rows=7 loops=1)
                      Partition Selectors: $1
                      ->  Seq Scan on pt_1_prt_2 pt_1_prt_2_1 (never executed)
@@ -455,7 +478,7 @@ explain (costs off, timing off, summary off, analyze) select * from t, pt where 
                      ->  Seq Scan on pt_1_prt_6 pt_1_prt_6_1 (never executed)
                      ->  Seq Scan on pt_1_prt_junk_data pt_1_prt_junk_data_1 (never executed)
                ->  Hash (actual rows=2 loops=1)
-                     Buckets: 262144  Batches: 1  Memory Usage: 2049kB
+                     Buckets: 131072  Batches: 1  Memory Usage: 1025kB
                      ->  Partition Selector (selector id: $1) (actual rows=2 loops=1)
                            ->  Broadcast Motion 3:3  (slice3; segments: 3) (actual rows=2 loops=1)
                                  ->  Seq Scan on t t_1 (actual rows=2 loops=1)
@@ -522,6 +545,7 @@ explain (costs off, timing off, summary off, analyze) select count(*) from
                      ->  Subquery Scan on "*SELECT* 1" (actual rows=8 loops=1)
                            ->  Hash Join (actual rows=8 loops=1)
                                  Hash Cond: (pt_1_prt_2.ptid = t.tid)
+                                 Extra Text: (seg1)   Hash chain length 1.0 avg, 1 max, using 2 of 262144 buckets.
                                  ->  Append (actual rows=8 loops=1)
                                        Partition Selectors: $0
                                        ->  Seq Scan on pt_1_prt_2 (actual rows=5 loops=1)
@@ -538,6 +562,7 @@ explain (costs off, timing off, summary off, analyze) select count(*) from
                      ->  Subquery Scan on "*SELECT* 2" (actual rows=7 loops=1)
                            ->  Hash Join (actual rows=7 loops=1)
                                  Hash Cond: (pt_1_prt_2_1.ptid = (t_1.tid + 2))
+                                 Extra Text: (seg0)   Hash chain length 1.0 avg, 1 max, using 2 of 262144 buckets.
                                  ->  Append (actual rows=7 loops=1)
                                        Partition Selectors: $1
                                        ->  Seq Scan on pt_1_prt_2 pt_1_prt_2_1 (never executed)
@@ -719,6 +744,7 @@ explain (costs off, timing off, summary off, analyze) select * from t, pt where 
  Gather Motion 3:1  (slice1; segments: 3) (actual rows=2 loops=1)
    ->  Hash Join (actual rows=2 loops=1)
          Hash Cond: (pt_1_prt_2.pt1 = t.t1)
+         Extra Text: (seg1)   Hash chain length 1.0 avg, 1 max, using 2 of 262144 buckets.
          ->  Append (actual rows=20 loops=1)
                ->  Seq Scan on pt_1_prt_2 (actual rows=5 loops=1)
                ->  Seq Scan on pt_1_prt_3 (actual rows=3 loops=1)
@@ -727,7 +753,7 @@ explain (costs off, timing off, summary off, analyze) select * from t, pt where 
                ->  Seq Scan on pt_1_prt_6 (actual rows=4 loops=1)
                ->  Seq Scan on pt_1_prt_junk_data (actual rows=3 loops=1)
          ->  Hash (actual rows=2 loops=1)
-               Buckets: 524288  Batches: 1  Memory Usage: 4097kB
+               Buckets: 262144  Batches: 1  Memory Usage: 2049kB
                ->  Broadcast Motion 3:3  (slice2; segments: 3) (actual rows=2 loops=1)
                      ->  Seq Scan on t (actual rows=2 loops=1)
  Optimizer: Postgres query optimizer
@@ -860,8 +886,10 @@ explain (costs off, timing off, summary off, analyze) select * from t, t1, pt wh
  Gather Motion 3:1  (slice1; segments: 3) (actual rows=36 loops=1)
    ->  Hash Join (actual rows=16 loops=1)
          Hash Cond: (t1.t2 = t.t2)
+         Extra Text: (seg1)   Hash chain length 2.0 avg, 2 max, using 1 of 131072 buckets.
          ->  Hash Join (actual rows=8 loops=1)
                Hash Cond: (pt_1_prt_2.ptid = t1.tid)
+               Extra Text: (seg1)   Hash chain length 1.0 avg, 1 max, using 2 of 131072 buckets.
                ->  Append (actual rows=8 loops=1)
                      Partition Selectors: $0
                      ->  Seq Scan on pt_1_prt_2 (never executed)
@@ -937,8 +965,10 @@ explain (costs off, timing off, summary off, analyze) select * from t, t1, pt wh
  Gather Motion 3:1  (slice1; segments: 3) (actual rows=9 loops=1)
    ->  Hash Join (actual rows=3 loops=1)
          Hash Cond: (pt_1_prt_2.ptid = t1.tid)
+         Extra Text: (seg0)   Hash chain length 4.0 avg, 10 max, using 3 of 131072 buckets.
          ->  Hash Join (actual rows=3 loops=1)
                Hash Cond: (pt_1_prt_2.ptid = t.tid)
+               Extra Text: (seg0)   Hash chain length 4.0 avg, 10 max, using 3 of 131072 buckets.
                ->  Append (actual rows=6 loops=1)
                      Partition Selectors: $0, $1
                      ->  Seq Scan on pt_1_prt_2 (never executed)
@@ -989,9 +1019,11 @@ explain (costs off, timing off, summary off, analyze) select * from t1 inner joi
    ->  Hash Join (actual rows=1 loops=1)
          Hash Cond: ((pt1.dist = t1.dist) AND (pt1.ptid = t1.tid))
          Join Filter: ((t1.tid <= pt2.ptid) AND (pt1.ptid <= t1.tid))
+         Extra Text: (seg1)   Hash chain length 1.0 avg, 1 max, using 1 of 131072 buckets.
          ->  Hash Join (actual rows=3 loops=1)
                Hash Cond: ((pt1.dist = pt2.dist) AND (pt1.ptid = pt2.ptid))
                Join Filter: (pt1.ptid <= pt2.ptid)
+               Extra Text: (seg1)   Hash chain length 1.0 avg, 1 max, using 14 of 262144 buckets.
                ->  Append (actual rows=3 loops=1)
                      Partition Selectors: $0, $1
                      ->  Seq Scan on pt_1_prt_2 pt1 (never executed)
@@ -1012,7 +1044,7 @@ explain (costs off, timing off, summary off, analyze) select * from t1 inner joi
                                  ->  Seq Scan on pt_1_prt_6 pt2_4 (actual rows=4 loops=1)
                                  ->  Seq Scan on pt_1_prt_junk_data pt2_5 (actual rows=3 loops=1)
          ->  Hash (actual rows=1 loops=1)
-               Buckets: 262144  Batches: 1  Memory Usage: 2049kB
+               Buckets: 131072  Batches: 1  Memory Usage: 1025kB
                ->  Partition Selector (selector id: $2) (actual rows=1 loops=1)
                      ->  Partition Selector (selector id: $1) (actual rows=1 loops=1)
                            ->  Seq Scan on t1 (actual rows=1 loops=1)
@@ -1031,9 +1063,11 @@ explain (costs off, timing off, summary off, analyze) select * from pt, pt1 wher
    Merge Key: pt1_1_prt_2.dist
    ->  Sort (actual rows=5 loops=1)
          Sort Key: pt1_1_prt_2.dist
-         Sort Method:  quicksort  Memory: 150kB
+         Sort Method:  quicksort  Memory: 75kB
+         Executor Memory: 77kB  Segments: 3  Max: 26kB (segment 1)
          ->  Hash Join (actual rows=5 loops=1)
                Hash Cond: (pt1_1_prt_2.ptid = pt_1_prt_2.ptid)
+               Extra Text: (seg1)   Hash chain length 1.0 avg, 1 max, using 1 of 131072 buckets.
                ->  Append (actual rows=5 loops=1)
                      Partition Selectors: $0
                      ->  Seq Scan on pt1_1_prt_2 (actual rows=5 loops=1)
@@ -1085,6 +1119,7 @@ explain (costs off, timing off, summary off, analyze) select count(*) from pt, p
          ->  Partial Aggregate (actual rows=1 loops=1)
                ->  Hash Join (actual rows=5 loops=1)
                      Hash Cond: (pt1_1_prt_2.ptid = pt_1_prt_2.ptid)
+                     Extra Text: (seg1)   Hash chain length 1.0 avg, 1 max, using 1 of 524288 buckets.
                      ->  Append (actual rows=5 loops=1)
                            Partition Selectors: $0
                            ->  Seq Scan on pt1_1_prt_2 (actual rows=5 loops=1)
@@ -1235,7 +1270,7 @@ analyze dim1;
 create table fact1(dist int, pid int, code text, u int)
 partition by range(pid)
 subpartition by list(code)
-subpartition template 
+subpartition template
 (
  subpartition ca values('CA'),
  subpartition oh values('OH'),
@@ -1243,7 +1278,7 @@ subpartition template
 )
 (
  start (0)
- end (4) 
+ end (4)
  every (1)
 );
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'dist' as the Greenplum Database data distribution key for this table.
@@ -1261,9 +1296,11 @@ explain (costs off, timing off, summary off, analyze) select * from dim1 inner j
    Merge Key: fact1_1_prt_1_2_prt_ca.u
    ->  Sort (actual rows=50 loops=1)
          Sort Key: fact1_1_prt_1_2_prt_ca.u
-         Sort Method:  quicksort  Memory: 158kB
+         Sort Method:  quicksort  Memory: 79kB
+         Executor Memory: 79kB  Segments: 3  Max: 29kB (segment 1)
          ->  Hash Join (actual rows=50 loops=1)
                Hash Cond: ((fact1_1_prt_1_2_prt_ca.pid = dim1.pid) AND (fact1_1_prt_1_2_prt_ca.code = dim1.code))
+               Extra Text: (seg1)   Hash chain length 1.0 avg, 1 max, using 3 of 131072 buckets.
                ->  Append (actual rows=200 loops=1)
                      ->  Seq Scan on fact1_1_prt_1_2_prt_ca (actual rows=25 loops=1)
                      ->  Seq Scan on fact1_1_prt_1_2_prt_oh (actual rows=25 loops=1)
@@ -1278,7 +1315,7 @@ explain (costs off, timing off, summary off, analyze) select * from dim1 inner j
                      ->  Seq Scan on fact1_1_prt_4_2_prt_oh (actual rows=25 loops=1)
                      ->  Seq Scan on fact1_1_prt_4_2_prt_wa (never executed)
                ->  Hash (actual rows=3 loops=1)
-                     Buckets: 262144  Batches: 1  Memory Usage: 2049kB
+                     Buckets: 131072  Batches: 1  Memory Usage: 1025kB
                      ->  Broadcast Motion 3:3  (slice2; segments: 3) (actual rows=3 loops=1)
                            ->  Seq Scan on dim1 (actual rows=3 loops=1)
  Optimizer: Postgres query optimizer
@@ -1347,9 +1384,11 @@ explain (costs off, timing off, summary off, analyze) select * from dim1 inner j
    Merge Key: fact1_1_prt_1_2_prt_ca.u
    ->  Sort (actual rows=50 loops=1)
          Sort Key: fact1_1_prt_1_2_prt_ca.u
-         Sort Method:  quicksort  Memory: 158kB
+         Sort Method:  quicksort  Memory: 79kB
+         Executor Memory: 79kB  Segments: 3  Max: 29kB (segment 1)
          ->  Hash Join (actual rows=50 loops=1)
                Hash Cond: ((fact1_1_prt_1_2_prt_ca.pid = dim1.pid) AND (fact1_1_prt_1_2_prt_ca.code = dim1.code))
+               Extra Text: (seg1)   Hash chain length 1.0 avg, 1 max, using 3 of 131072 buckets.
                ->  Append (actual rows=50 loops=1)
                      Partition Selectors: $0
                      ->  Seq Scan on fact1_1_prt_1_2_prt_ca (never executed)
@@ -1365,7 +1404,7 @@ explain (costs off, timing off, summary off, analyze) select * from dim1 inner j
                      ->  Seq Scan on fact1_1_prt_4_2_prt_oh (never executed)
                      ->  Seq Scan on fact1_1_prt_4_2_prt_wa (never executed)
                ->  Hash (actual rows=3 loops=1)
-                     Buckets: 262144  Batches: 1  Memory Usage: 2049kB
+                     Buckets: 131072  Batches: 1  Memory Usage: 1025kB
                      ->  Partition Selector (selector id: $0) (actual rows=3 loops=1)
                            ->  Broadcast Motion 3:3  (slice2; segments: 3) (actual rows=3 loops=1)
                                  ->  Seq Scan on dim1 (actual rows=3 loops=1)
@@ -1438,9 +1477,11 @@ explain (costs off, timing off, summary off, analyze) select * from dim1 inner j
    Merge Key: fact1_1_prt_1_2_prt_ca.u
    ->  Sort (actual rows=100 loops=1)
          Sort Key: fact1_1_prt_1_2_prt_ca.u
-         Sort Method:  quicksort  Memory: 166kB
+         Sort Method:  quicksort  Memory: 83kB
+         Executor Memory: 82kB  Segments: 3  Max: 32kB (segment 1)
          ->  Hash Join (actual rows=100 loops=1)
                Hash Cond: (fact1_1_prt_1_2_prt_ca.pid = dim1.pid)
+               Extra Text: (seg1)   Hash chain length 1.0 avg, 1 max, using 3 of 131072 buckets.
                ->  Append (actual rows=200 loops=1)
                      ->  Seq Scan on fact1_1_prt_1_2_prt_ca (actual rows=25 loops=1)
                      ->  Seq Scan on fact1_1_prt_1_2_prt_oh (actual rows=25 loops=1)
@@ -1455,7 +1496,7 @@ explain (costs off, timing off, summary off, analyze) select * from dim1 inner j
                      ->  Seq Scan on fact1_1_prt_4_2_prt_oh (actual rows=25 loops=1)
                      ->  Seq Scan on fact1_1_prt_4_2_prt_wa (never executed)
                ->  Hash (actual rows=3 loops=1)
-                     Buckets: 262144  Batches: 1  Memory Usage: 2049kB
+                     Buckets: 131072  Batches: 1  Memory Usage: 1025kB
                      ->  Broadcast Motion 3:3  (slice2; segments: 3) (actual rows=3 loops=1)
                            ->  Seq Scan on dim1 (actual rows=3 loops=1)
  Optimizer: Postgres query optimizer
@@ -1574,9 +1615,11 @@ explain (costs off, timing off, summary off, analyze) select * from dim1 inner j
    Merge Key: fact1_1_prt_1_2_prt_ca.u
    ->  Sort (actual rows=100 loops=1)
          Sort Key: fact1_1_prt_1_2_prt_ca.u
-         Sort Method:  quicksort  Memory: 166kB
+         Sort Method:  quicksort  Memory: 83kB
+         Executor Memory: 82kB  Segments: 3  Max: 32kB (segment 1)
          ->  Hash Join (actual rows=100 loops=1)
                Hash Cond: (fact1_1_prt_1_2_prt_ca.pid = dim1.pid)
+               Extra Text: (seg1)   Hash chain length 1.0 avg, 1 max, using 3 of 131072 buckets.
                ->  Append (actual rows=100 loops=1)
                      Partition Selectors: $0
                      ->  Seq Scan on fact1_1_prt_1_2_prt_ca (actual rows=25 loops=1)
@@ -1592,7 +1635,7 @@ explain (costs off, timing off, summary off, analyze) select * from dim1 inner j
                      ->  Seq Scan on fact1_1_prt_4_2_prt_oh (never executed)
                      ->  Seq Scan on fact1_1_prt_4_2_prt_wa (never executed)
                ->  Hash (actual rows=3 loops=1)
-                     Buckets: 262144  Batches: 1  Memory Usage: 2049kB
+                     Buckets: 131072  Batches: 1  Memory Usage: 1025kB
                      ->  Partition Selector (selector id: $0) (actual rows=3 loops=1)
                            ->  Broadcast Motion 3:3  (slice2; segments: 3) (actual rows=3 loops=1)
                                  ->  Seq Scan on dim1 (actual rows=3 loops=1)
@@ -1715,6 +1758,7 @@ select * from dim1 inner join fact1 on (dim1.dist = fact1.dist and dim1.code=fac
  Gather Motion 3:1  (slice1; segments: 3) (actual rows=200 loops=1)
    ->  Hash Join (actual rows=200 loops=1)
          Hash Cond: ((fact1_1_prt_1_2_prt_ca.dist = dim1.dist) AND (fact1_1_prt_1_2_prt_ca.code = dim1.code))
+         Extra Text: (seg1)   Hash chain length 1.5 avg, 2 max, using 2 of 262144 buckets.
          ->  Append (actual rows=200 loops=1)
                ->  Seq Scan on fact1_1_prt_1_2_prt_ca (actual rows=25 loops=1)
                ->  Seq Scan on fact1_1_prt_1_2_prt_oh (actual rows=25 loops=1)
@@ -1729,7 +1773,7 @@ select * from dim1 inner join fact1 on (dim1.dist = fact1.dist and dim1.code=fac
                ->  Seq Scan on fact1_1_prt_4_2_prt_oh (actual rows=25 loops=1)
                ->  Seq Scan on fact1_1_prt_4_2_prt_wa (never executed)
          ->  Hash (actual rows=3 loops=1)
-               Buckets: 524288  Batches: 1  Memory Usage: 4097kB
+               Buckets: 262144  Batches: 1  Memory Usage: 2049kB
                ->  Seq Scan on dim1 (actual rows=3 loops=1)
  Optimizer: Postgres query optimizer
 (20 rows)
@@ -1947,6 +1991,7 @@ select * from dim1 inner join fact1 on (dim1.dist = fact1.dist and dim1.code=fac
  Gather Motion 3:1  (slice1; segments: 3) (actual rows=200 loops=1)
    ->  Hash Join (actual rows=200 loops=1)
          Hash Cond: ((fact1_1_prt_1_2_prt_ca.dist = dim1.dist) AND (fact1_1_prt_1_2_prt_ca.code = dim1.code))
+         Extra Text: (seg1)   Hash chain length 1.5 avg, 2 max, using 2 of 262144 buckets.
          ->  Append (actual rows=100 loops=1)
                Partition Selectors: $0
                ->  Seq Scan on fact1_1_prt_1_2_prt_ca (never executed)
@@ -1962,7 +2007,7 @@ select * from dim1 inner join fact1 on (dim1.dist = fact1.dist and dim1.code=fac
                ->  Seq Scan on fact1_1_prt_4_2_prt_oh (actual rows=25 loops=1)
                ->  Seq Scan on fact1_1_prt_4_2_prt_wa (never executed)
          ->  Hash (actual rows=3 loops=1)
-               Buckets: 524288  Batches: 1  Memory Usage: 4097kB
+               Buckets: 262144  Batches: 1  Memory Usage: 2049kB
                ->  Partition Selector (selector id: $0) (actual rows=3 loops=1)
                      ->  Seq Scan on dim1 (actual rows=3 loops=1)
  Optimizer: Postgres query optimizer
@@ -2184,9 +2229,11 @@ explain (costs off, timing off, summary off, analyze) select * from dim1 inner j
    Merge Key: fact1_1_prt_1_2_prt_oh.u
    ->  Sort (actual rows=50 loops=1)
          Sort Key: fact1_1_prt_1_2_prt_oh.u
-         Sort Method:  quicksort  Memory: 158kB
+         Sort Method:  quicksort  Memory: 79kB
+         Executor Memory: 79kB  Segments: 3  Max: 29kB (segment 1)
          ->  Hash Join (actual rows=50 loops=1)
                Hash Cond: (fact1_1_prt_1_2_prt_oh.pid = dim1.pid)
+               Extra Text: (seg1)   Hash chain length 1.0 avg, 1 max, using 3 of 131072 buckets.
                ->  Append (actual rows=100 loops=1)
                      ->  Seq Scan on fact1_1_prt_1_2_prt_oh (actual rows=25 loops=1)
                            Filter: (code = 'OH'::text)
@@ -2197,7 +2244,7 @@ explain (costs off, timing off, summary off, analyze) select * from dim1 inner j
                      ->  Seq Scan on fact1_1_prt_4_2_prt_oh (actual rows=25 loops=1)
                            Filter: (code = 'OH'::text)
                ->  Hash (actual rows=3 loops=1)
-                     Buckets: 262144  Batches: 1  Memory Usage: 2049kB
+                     Buckets: 131072  Batches: 1  Memory Usage: 1025kB
                      ->  Broadcast Motion 3:3  (slice2; segments: 3) (actual rows=3 loops=1)
                            ->  Seq Scan on dim1 (actual rows=3 loops=1)
  Optimizer: Postgres query optimizer
@@ -2266,9 +2313,11 @@ explain (costs off, timing off, summary off, analyze) select * from dim1 inner j
    Merge Key: fact1_1_prt_1_2_prt_oh.u
    ->  Sort (actual rows=50 loops=1)
          Sort Key: fact1_1_prt_1_2_prt_oh.u
-         Sort Method:  quicksort  Memory: 158kB
+         Sort Method:  quicksort  Memory: 79kB
+         Executor Memory: 79kB  Segments: 3  Max: 29kB (segment 1)
          ->  Hash Join (actual rows=50 loops=1)
                Hash Cond: (fact1_1_prt_1_2_prt_oh.pid = dim1.pid)
+               Extra Text: (seg1)   Hash chain length 1.0 avg, 1 max, using 3 of 131072 buckets.
                ->  Append (actual rows=50 loops=1)
                      Partition Selectors: $0
                      ->  Seq Scan on fact1_1_prt_1_2_prt_oh (actual rows=25 loops=1)
@@ -2280,7 +2329,7 @@ explain (costs off, timing off, summary off, analyze) select * from dim1 inner j
                      ->  Seq Scan on fact1_1_prt_4_2_prt_oh (never executed)
                            Filter: (code = 'OH'::text)
                ->  Hash (actual rows=3 loops=1)
-                     Buckets: 262144  Batches: 1  Memory Usage: 2049kB
+                     Buckets: 131072  Batches: 1  Memory Usage: 1025kB
                      ->  Partition Selector (selector id: $0) (actual rows=3 loops=1)
                            ->  Broadcast Motion 3:3  (slice2; segments: 3) (actual rows=3 loops=1)
                                  ->  Seq Scan on dim1 (actual rows=3 loops=1)
@@ -2355,11 +2404,13 @@ explain (costs off, timing off, summary off, analyze) select fact1.code, count(*
          Group Key: fact1_1_prt_1_2_prt_ca.code
          ->  Sort (actual rows=100 loops=1)
                Sort Key: fact1_1_prt_1_2_prt_ca.code
-               Sort Method:  quicksort  Memory: 160kB
+               Sort Method:  quicksort  Memory: 80kB
+               Executor Memory: 86kB  Segments: 3  Max: 31kB (segment 1)
                ->  Redistribute Motion 3:3  (slice2; segments: 3) (actual rows=100 loops=1)
                      Hash Key: fact1_1_prt_1_2_prt_ca.code
                      ->  Hash Join (actual rows=100 loops=1)
                            Hash Cond: (fact1_1_prt_1_2_prt_ca.pid = dim1.pid)
+                           Extra Text: (seg1)   Hash chain length 1.0 avg, 1 max, using 3 of 262144 buckets.
                            ->  Append (actual rows=200 loops=1)
                                  ->  Seq Scan on fact1_1_prt_1_2_prt_ca (actual rows=25 loops=1)
                                  ->  Seq Scan on fact1_1_prt_1_2_prt_oh (actual rows=25 loops=1)
@@ -2397,11 +2448,13 @@ explain (costs off, timing off, summary off, analyze) select fact1.code, count(*
          Group Key: fact1_1_prt_1_2_prt_ca.code
          ->  Sort (actual rows=100 loops=1)
                Sort Key: fact1_1_prt_1_2_prt_ca.code
-               Sort Method:  quicksort  Memory: 160kB
+               Sort Method:  quicksort  Memory: 80kB
+               Executor Memory: 86kB  Segments: 3  Max: 31kB (segment 1)
                ->  Redistribute Motion 3:3  (slice2; segments: 3) (actual rows=100 loops=1)
                      Hash Key: fact1_1_prt_1_2_prt_ca.code
                      ->  Hash Join (actual rows=100 loops=1)
                            Hash Cond: (fact1_1_prt_1_2_prt_ca.pid = dim1.pid)
+                           Extra Text: (seg1)   Hash chain length 1.0 avg, 1 max, using 3 of 262144 buckets.
                            ->  Append (actual rows=100 loops=1)
                                  Partition Selectors: $0
                                  ->  Seq Scan on fact1_1_prt_1_2_prt_ca (actual rows=25 loops=1)
@@ -2447,8 +2500,8 @@ set search_path='dpe_malp';
 set gp_segments_for_planner=2;
 set optimizer_segments=2;
 create type malp_key as (i int, j int);
-create table malp (i int, j int, t text) 
-distributed by (i) 
+create table malp (i int, j int, t text)
+distributed by (i)
 partition by list ((row(i, j)::malp_key));
 create table malp_p1 partition of malp for values in (row(1, 10));
 NOTICE:  table has parent, setting distribution columns to match parent table
@@ -2475,6 +2528,7 @@ explain (costs off, timing off, summary off, analyze) select * from dim inner jo
  Gather Motion 3:1  (slice1; segments: 3) (actual rows=3 loops=1)
    ->  Hash Join (actual rows=3 loops=1)
          Hash Cond: (malp_p1.i = dim.i)
+         Extra Text: (seg1)   Hash chain length 1.0 avg, 1 max, using 1 of 524288 buckets.
          ->  Append (actual rows=3 loops=1)
                ->  Seq Scan on malp_p1 (actual rows=3 loops=1)
                ->  Seq Scan on malp_p2 (never executed)
@@ -2541,8 +2595,10 @@ explain (costs off, timing off, summary off, analyze) select * from apart as a, 
  Gather Motion 3:1  (slice1; segments: 3) (actual rows=5 loops=1)
    ->  Hash Join (actual rows=3 loops=1)
          Hash Cond: (a.id = c.id)
+         Extra Text: (seg0)   Hash chain length 1.0 avg, 1 max, using 8 of 262144 buckets.
          ->  Hash Join (actual rows=3 loops=1)
                Hash Cond: (a.t = b.t)
+               Extra Text: (seg0)   Hash chain length 1.0 avg, 1 max, using 5 of 262144 buckets.
                ->  Append (actual rows=340 loops=1)
                      ->  Seq Scan on apart_1_prt_1 a (actual rows=70 loops=1)
                      ->  Seq Scan on apart_1_prt_2 a_1 (actual rows=68 loops=1)
@@ -2576,8 +2632,10 @@ explain (costs off, timing off, summary off, analyze) select * from apart as a, 
  Gather Motion 3:1  (slice1; segments: 3) (actual rows=5 loops=1)
    ->  Hash Join (actual rows=3 loops=1)
          Hash Cond: (a.id = c.id)
+         Extra Text: (seg0)   Hash chain length 1.0 avg, 1 max, using 8 of 262144 buckets.
          ->  Hash Join (actual rows=3 loops=1)
                Hash Cond: (a.t = b.t)
+               Extra Text: (seg0)   Hash chain length 1.0 avg, 1 max, using 5 of 262144 buckets.
                ->  Append (actual rows=70 loops=1)
                      Partition Selectors: $0
                      ->  Seq Scan on apart_1_prt_1 a (actual rows=70 loops=1)
@@ -2618,7 +2676,7 @@ set optimizer_segments=2;
 create table pat(a int, b date) partition by range (b) (start ('2010-01-01') end ('2010-01-05') every (1), default partition other);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-insert into pat select i,date '2010-01-01' + i from generate_series(1, 10)i;  
+insert into pat select i,date '2010-01-01' + i from generate_series(1, 10)i;
 create table jpat(a int, b date);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
@@ -2633,6 +2691,7 @@ explain (costs off, timing off, summary off, analyze) select * from (select coun
  Gather Motion 3:1  (slice1; segments: 3) (actual rows=1 loops=1)
    ->  Hash Join (actual rows=1 loops=1)
          Hash Cond: (pat_1_prt_2.b = jpat.b)
+         Extra Text: (seg1)   Hash chain length 1.0 avg, 1 max, using 1 of 131072 buckets.
          ->  Append (actual rows=1 loops=1)
                Partition Selectors: $0
                ->  Seq Scan on pat_1_prt_2 (never executed)
@@ -2651,7 +2710,8 @@ explain (costs off, timing off, summary off, analyze) select * from (select coun
                                              Merge Key: jpat_1.a
                                              ->  Sort (actual rows=1 loops=1)
                                                    Sort Key: jpat_1.a
-                                                   Sort Method:  quicksort  Memory: 150kB
+                                                   Sort Method:  quicksort  Memory: 75kB
+                                                   Executor Memory: 178kB  Segments: 3  Max: 60kB (segment 0)
                                                    ->  Seq Scan on jpat jpat_1 (actual rows=1 loops=1)
  Optimizer: Postgres query optimizer
 (24 rows)
@@ -2702,6 +2762,7 @@ select * from pt, t where t.id = pt.id;
  Gather Motion 3:1  (slice1; segments: 3) (actual rows=2 loops=1)
    ->  Hash Join (actual rows=1 loops=1)
          Hash Cond: (pt1.id = t.id)
+         Extra Text: (seg0)   Hash chain length 1.0 avg, 1 max, using 1 of 524288 buckets.
          ->  Append (actual rows=1 loops=1)
                Partition Selectors: $0
                ->  Seq Scan on pt1 (actual rows=1 loops=1)
@@ -2724,6 +2785,7 @@ select * from pt, t where t.id = pt.id;
  Gather Motion 3:1  (slice1; segments: 3) (actual rows=4 loops=1)
    ->  Hash Join (actual rows=2 loops=1)
          Hash Cond: (pt1.id = t.id)
+         Extra Text: (seg0)   Hash chain length 1.0 avg, 1 max, using 3 of 524288 buckets.
          ->  Append (actual rows=3 loops=1)
                Partition Selectors: $0
                ->  Seq Scan on pt1 (actual rows=1 loops=1)
@@ -2747,6 +2809,7 @@ select * from pt, t where pt.id = 4 and t.id = 4 and (t.b % 2) = (pt.b % 2);
  Gather Motion 1:1  (slice1; segments: 1) (actual rows=1 loops=1)
    ->  Hash Join (actual rows=1 loops=1)
          Hash Cond: ((ptx_even.b % 2) = (t.b % 2))
+         Extra Text: Hash chain length 1.0 avg, 1 max, using 1 of 524288 buckets.
          ->  Append (actual rows=1 loops=1)
                Partition Selectors: $0
                ->  Seq Scan on ptx_even (actual rows=1 loops=1)
@@ -2771,6 +2834,7 @@ select * from pt, t where t.id = pt.id and (t.b % 2) = (pt.b % 2);
  Gather Motion 3:1  (slice1; segments: 3) (actual rows=4 loops=1)
    ->  Hash Join (actual rows=2 loops=1)
          Hash Cond: ((pt1.id = t.id) AND ((pt1.b % 2) = (t.b % 2)))
+         Extra Text: (seg0)   Hash chain length 1.0 avg, 1 max, using 3 of 524288 buckets.
          ->  Append (actual rows=2 loops=1)
                Partition Selectors: $0
                ->  Seq Scan on pt1 (actual rows=1 loops=1)
@@ -2818,6 +2882,7 @@ select * from pt, t where t.dist = pt.dist and t.tid < pt.ptid;
          Hash Cond: (pt1.dist = t.dist)
          Join Filter: (t.tid < pt1.ptid)
          Rows Removed by Join Filter: 3
+         Extra Text: (seg1)   Hash chain length 2.0 avg, 2 max, using 1 of 524288 buckets.
          ->  Append (actual rows=7 loops=1)
                Partition Selectors: $0
                ->  Seq Scan on pt1 (never executed)
@@ -2872,6 +2937,7 @@ select * from pt, t where t.dist = pt.dist and t.tid = pt.ptid order by t.tid, t
    ->  Sort  (cost=14.20..14.21 rows=3 width=24) (actual rows=2 loops=1)
          Sort Key: pt1.ptid, t.sk
          Sort Method:  quicksort  Memory: 150kB
+         Executor Memory: 76kB  Segments: 3  Max: 26kB (segment 0)
          ->  Merge Join  (cost=8.08..14.10 rows=3 width=24) (actual rows=2 loops=1)
                Merge Cond: (pt1.ptid = t.tid)
                Join Filter: (pt1.dist = t.dist)

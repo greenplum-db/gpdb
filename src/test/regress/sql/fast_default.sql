@@ -2,20 +2,6 @@
 -- ALTER TABLE ADD COLUMN DEFAULT test
 --
 
--- start_ignore
-
--- GPDB currently prints a "Settings: " line in the EXPLAIN output, if
--- there any GUCs are set. gpdiff masks them out, but it does not mask
--- out the differences in "(xx rows)" lines that happens if there is
--- no Settings line at all. The expected output does include some Settings.
--- To make those "(xx rows)" lines stable, set a GUC. Doesn't matter which
--- one, as long as it's printed in the Settings lines. The value doesn't
--- matter either, so use the default value, making it a no-op except for
--- the printing of the Settings lines.
-set seq_page_cost=1;
-
--- end_ignore
-
 SET search_path = fast_default;
 CREATE SCHEMA fast_default;
 CREATE TABLE m(id OID);

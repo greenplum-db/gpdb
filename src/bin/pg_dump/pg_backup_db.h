@@ -10,7 +10,6 @@
 
 #include "pg_backup.h"
 
-
 extern int	ExecuteSqlCommandBuf(Archive *AHX, const char *buf, size_t bufLen);
 
 extern void ExecuteSqlStatement(Archive *AHX, const char *query);

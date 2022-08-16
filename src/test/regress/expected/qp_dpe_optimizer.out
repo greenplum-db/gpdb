@@ -56,13 +56,13 @@ analyze foo2;
 select count_operator('select count(*) from foo1,foo2 where foo1.j = foo2.j;', 'Append') > 0;
  ?column? 
 ----------
- t
+ f
 (1 row)
 
 select count_operator('select count(*) from foo1,foo2 where foo1.j = foo2.j;', 'Dynamic Seq Scan') > 0;
  ?column? 
 ----------
- f
+ t
 (1 row)
 
 select count(*) from foo1,foo2 where foo1.j = foo2.j;
@@ -93,13 +93,13 @@ analyze foo2;
 select count_operator('select count(*) from foo1,foo2 where foo1.j = foo2.j;', 'Append') > 0;
  ?column? 
 ----------
- t
+ f
 (1 row)
 
 select count_operator('select count(*) from foo1,foo2 where foo1.j = foo2.j;', 'Dynamic Seq Scan') > 0;
  ?column? 
 ----------
- f
+ t
 (1 row)
 
 select count(*) from foo1,foo2 where foo1.j = foo2.j;
@@ -130,13 +130,13 @@ analyze foo2;
 select count_operator('select count(*) from foo1,foo2 where foo1.j = foo2.j;', 'Append') > 0;
  ?column? 
 ----------
- t
+ f
 (1 row)
 
 select count_operator('select count(*) from foo1,foo2 where foo1.j = foo2.j;', 'Dynamic Seq Scan') > 0;
  ?column? 
 ----------
- f
+ t
 (1 row)
 
 select count(*) from foo1,foo2 where foo1.j = foo2.j;
@@ -167,13 +167,13 @@ analyze foo2;
 select count_operator('select count(*) from foo1,foo2 where foo1.j = foo2.j;', 'Append') > 0;
  ?column? 
 ----------
- t
+ f
 (1 row)
 
 select count_operator('select count(*) from foo1,foo2 where foo1.j = foo2.j;', 'Dynamic Seq Scan') > 0;
  ?column? 
 ----------
- f
+ t
 (1 row)
 
 select count(*) from foo1,foo2 where foo1.j = foo2.j;
@@ -204,13 +204,13 @@ analyze foo2;
 select count_operator('select count(*) from foo1,foo2 where foo1.j = foo2.j;', 'Append') > 0;
  ?column? 
 ----------
- t
+ f
 (1 row)
 
 select count_operator('select count(*) from foo1,foo2 where foo1.j = foo2.j;', 'Dynamic Seq Scan') > 0;
  ?column? 
 ----------
- f
+ t
 (1 row)
 
 select count(*) from foo1,foo2 where foo1.j = foo2.j;
@@ -242,19 +242,19 @@ analyze foo2;
 select count_operator('select count(*) from foo1,foo2 where foo1.j =foo2.j;', 'Append') > 0;
  ?column? 
 ----------
- t
+ f
 (1 row)
 
 select count_operator('select count(*) from foo1,foo2 where foo1.j =foo2.j;', 'Dynamic Seq Scan') > 0;
  ?column? 
 ----------
- f
+ t
 (1 row)
 
 select count_operator('select count(*) from foo1,foo2 where foo1.j =foo2.j and foo2.i <= ALL(select 1 UNION select 2);', 'Dynamic Seq Scan') > 0;
  ?column? 
 ----------
- f
+ t
 (1 row)
 
 select count(*) from foo1,foo2 where foo1.j =foo2.j and foo2.i <= ALL(select 1 UNION select 2);

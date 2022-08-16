@@ -74,6 +74,7 @@ extern int	pq_peekbyte(void);
 extern int	pq_getbyte_if_available(unsigned char *c);
 extern int	pq_putbytes(const char *s, size_t len);
 extern bool pq_waitForDataUsingSelect(void);                /* GPDB only */
+extern bool pq_check_connection(void);
 
 /*
  * prototypes for functions in be-secure.c

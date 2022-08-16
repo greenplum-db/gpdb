@@ -309,6 +309,8 @@ extern LOCKMODE AlterTableGetRelOptionsLockLevel(List *defList);
 /* in reloptions_gp.c */
 extern Datum transformAOStdRdOptions(StdRdOptions *opts, Datum withOpts);
 
+extern bool relOptionsEquals(Datum oldOptions, Datum newOptions);
+
 extern void validateAppendOnlyRelOptions(int blocksize, int writesize,
 										 int complevel, char* comptype,
 										 bool checksum, bool co);
@@ -326,6 +328,9 @@ extern void validate_and_refill_options(StdRdOptions *result, relopt_value *opti
 							int numoptions, relopt_kind kind, bool validate);
 extern void validate_and_adjust_options(StdRdOptions *result, relopt_value *options,
 										int num_options, relopt_kind kind, bool validate);
+
+extern bool reloptions_has_opt(List *opts, const char *name);
+extern List *build_ao_rel_storage_opts(List *opts, Relation rel);
 
 /* attribute enconding specific functions */
 extern List *transformColumnEncoding(Relation rel, List *colDefs,

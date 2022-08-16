@@ -637,7 +637,8 @@ SELECT COUNT(*) FROM dml_union_r;
 (1 row)
 
 INSERT INTO dml_union_r SELECT (SELECT dml_union_r.d::int FROM dml_union_r INTERSECT SELECT dml_union_s.d FROM dml_union_s ORDER BY 1),1,'newval',1.000;
-ERROR:  more than one row returned by a subquery used as an expression
+ERROR:  one or more assertions failed  (seg0 slice1 10.138.0.30:7002 pid=2878957)
+DETAIL:  Expected no more than one row to be returned by expression
 SELECT COUNT(*) FROM dml_union_r;
  count 
 -------
@@ -1725,6 +1726,7 @@ DETAIL:  Failing row contains (1, null, s, 1).
 --
 -- To make the output stable, arbitrarily fix optimizer_segments to 2, to get the latter.
 set optimizer_segments=2;
+ANALYZE dml_union_r, dml_union_s;
 SELECT COUNT(DISTINCT(a)) FROM dml_union_r;
  count 
 -------
@@ -1732,12 +1734,13 @@ SELECT COUNT(DISTINCT(a)) FROM dml_union_r;
 (1 row)
 
 UPDATE dml_union_r SET a = ( SELECT a FROM dml_union_r UNION ALL SELECT a FROM dml_union_s);
-ERROR:  more than one row returned by a subquery used as an expression
+ERROR:  more than one row returned by a subquery used as an expression  (seg2 slice1 10.138.0.30:7004 pid=3108610)
 reset optimizer_segments;
 --SELECT COUNT(DISTINCT(a)) FROM dml_union_r;
 -- @description union_update_test31: Negative Tests  more than one row returned by a sub-query used as an expression
 UPDATE dml_union_r SET b = ( SELECT a FROM dml_union_r EXCEPT ALL SELECT a FROM dml_union_s);
-ERROR:  more than one row returned by a subquery used as an expression
+ERROR:  one or more assertions failed  (seg2 10.138.0.30:7004 pid=2878859)
+DETAIL:  Expected no more than one row to be returned by expression
 --
 -- Test mixing a set-returning function, which can be evaluated anywhere,
 -- (it has General locus) and a diststributed table, in an Append.
@@ -1991,18 +1994,16 @@ order by 1,2;
    ->  Sort
          Sort Key: mergeappend_test.a, mergeappend_test.b
          ->  Append
-               ->  GroupAggregate
+               ->  HashAggregate
                      Group Key: mergeappend_test.a, mergeappend_test.b
-                     ->  Sort
-                           Sort Key: mergeappend_test.a, mergeappend_test.b
-                           ->  Seq Scan on mergeappend_test
+                     ->  Seq Scan on mergeappend_test
                ->  Result
                      ->  Redistribute Motion 1:3  (slice2)
                            ->  Aggregate
                                  ->  Gather Motion 3:1  (slice3; segments: 3)
                                        ->  Seq Scan on mergeappend_test mergeappend_test_1
- Optimizer: Pivotal Optimizer (GPORCA) version 3.83.0
-(16 rows)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(14 rows)
 
 -- This used to trip an assertion in MotionStateFinderWalker(), when we were
 -- missing support for MergeAppend in planstate_walk_kids().
@@ -2029,32 +2030,47 @@ select null, null, array_dims(array_agg(x)) FROM mergeappend_test r
 order by 1,2;
                                                                                  QUERY PLAN                                                                                  
 -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..862.11 rows=22 width=16) (actual time=3.610..3.617 rows=7 loops=1)
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..862.06 rows=22 width=16) (actual time=2.289..2.291 rows=7 loops=1)
    Merge Key: mergeappend_test.a, mergeappend_test.b
-   ->  Sort  (cost=0.00..862.11 rows=8 width=16) (actual time=2.861..2.875 rows=5 loops=1)
+   ->  Sort  (cost=0.00..862.06 rows=8 width=16) (actual time=1.633..1.637 rows=5 loops=1)
          Sort Key: mergeappend_test.a, mergeappend_test.b
-         Sort Method:  quicksort  Memory: 99kB
-         ->  Append  (cost=0.00..862.11 rows=8 width=16) (actual time=0.924..2.791 rows=5 loops=1)
-               ->  GroupAggregate  (cost=0.00..431.09 rows=7 width=16) (actual time=0.922..1.457 rows=4 loops=1)
+         Sort Method:  quicksort  Memory: 150kB
+         Executor Memory: 76kB  Segments: 3  Max: 26kB (segment 0)
+         ->  Append  (cost=0.00..862.06 rows=8 width=16) (actual time=0.482..1.625 rows=5 loops=1)
+               ->  HashAggregate  (cost=0.00..431.05 rows=7 width=16) (actual time=0.482..0.489 rows=4 loops=1)
                      Group Key: mergeappend_test.a, mergeappend_test.b
-                     ->  Sort  (cost=0.00..431.09 rows=167 width=12) (actual time=0.662..0.826 rows=301 loops=1)
-                           Sort Key: mergeappend_test.a, mergeappend_test.b
-                           Sort Method:  quicksort  Memory: 115kB
-                           ->  Seq Scan on mergeappend_test  (cost=0.00..431.00 rows=167 width=12) (actual time=0.049..0.146 rows=301 loops=1)
-               ->  Result  (cost=0.00..431.01 rows=1 width=16) (actual time=1.324..1.326 rows=1 loops=1)
-                     ->  Redistribute Motion 1:3  (slice2)  (cost=0.00..431.01 rows=1 width=8) (actual time=1.307..1.309 rows=1 loops=1)
-                           ->  Aggregate  (cost=0.00..431.01 rows=1 width=8) (actual time=2.641..2.641 rows=1 loops=1)
-                                 ->  Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..431.01 rows=500 width=4) (actual time=1.813..2.298 rows=500 loops=1)
-                                       ->  Seq Scan on mergeappend_test mergeappend_test_1  (cost=0.00..431.00 rows=167 width=4) (actual time=0.052..0.329 rows=301 loops=1)
- Planning time: 70.602 ms
-   (slice0)    Executor memory: 127K bytes.
-   (slice1)    Executor memory: 213K bytes avg x 3 workers, 232K bytes max (seg0).  Work_mem: 49K bytes max.
-   (slice2)    Executor memory: 215K bytes (entry db).
-   (slice3)    Executor memory: 60K bytes avg x 3 workers, 60K bytes max (seg0).
+                     Peak Memory Usage: 0 kB
+                     ->  Seq Scan on mergeappend_test  (cost=0.00..431.00 rows=167 width=12) (actual time=0.251..0.289 rows=301 loops=1)
+               ->  Result  (cost=0.00..431.01 rows=1 width=16) (actual time=1.133..1.134 rows=1 loops=1)
+                     ->  Redistribute Motion 1:3  (slice2)  (cost=0.00..431.01 rows=1 width=8) (actual time=1.129..1.130 rows=1 loops=1)
+                           ->  Aggregate  (cost=0.00..431.01 rows=1 width=8) (actual time=1.193..1.194 rows=1 loops=1)
+                                 ->  Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..431.01 rows=500 width=4) (actual time=0.311..1.098 rows=500 loops=1)
+                                       ->  Seq Scan on mergeappend_test mergeappend_test_1  (cost=0.00..431.00 rows=167 width=4) (actual time=0.071..0.146 rows=301 loops=1)
+ Planning Time: 51.388 ms
+   (slice0)    Executor memory: 56K bytes.
+   (slice1)    Executor memory: 41K bytes avg x 3 workers, 42K bytes max (seg0).  Work_mem: 26K bytes max.
+   (slice2)    Executor memory: 58K bytes (entry db).
+   (slice3)    Executor memory: 37K bytes avg x 3 workers, 37K bytes max (seg0).
  Memory used:  128000kB
- Optimizer: Pivotal Optimizer (GPORCA) version 3.83.0
- Execution time: 5.553 ms
-(25 rows)
+ Optimizer: Pivotal Optimizer (GPORCA)
+ Execution Time: 2.977 ms
+(24 rows)
+
+select * from
+  test_util.extract_plan_stats($$
+select a, b, array_dims(array_agg(x)) from mergeappend_test r group by a, b
+union all
+select null, null, array_dims(array_agg(x)) FROM mergeappend_test r
+order by 1,2;
+  $$, false)
+where stats_name = 'executor_mem_lines'
+or stats_name = 'workmem_wanted_lines'
+order by stats_name;
+      stats_name      | stats_value 
+----------------------+-------------
+ executor_mem_lines   |           1
+ workmem_wanted_lines |           0
+(2 rows)
 
 CREATE TABLE t1(c1 int, c2 int, c3 int);
 CREATE TABLE t2(c1 int, c2 int, c3 int);

@@ -118,24 +118,24 @@ test__RedZoneHandler_ShmemInit__InitializesGlobalVarsWhenPostmaster(void **state
 	fakeIsRunawayDetector = 1234;
 	isRunawayDetector = NULL;
 
-	expect_any_count(ShmemInitStruct, name, 2);
-	expect_any_count(ShmemInitStruct, size, 2);
-	expect_any_count(ShmemInitStruct, foundPtr, 2);
+	expect_any_count(ShmemInitStruct, name, 3);
+	expect_any_count(ShmemInitStruct, size, 3);
+	expect_any_count(ShmemInitStruct, foundPtr, 3);
 	will_assign_value(ShmemInitStruct, foundPtr, (bool) false);
 	will_assign_value(ShmemInitStruct, foundPtr, (bool) false);
-	will_return_count(ShmemInitStruct, &fakeIsRunawayDetector, 2);
+	will_assign_value(ShmemInitStruct, foundPtr, (bool) false);
+	will_return_count(ShmemInitStruct, &fakeIsRunawayDetector, 3);
 
-	/*
-	 * When vmem limit is not activated or runaway_detector_activation_percent is
-	 * set to 0,, red zone should be very high (i.e., red-zone will be disabled).
-	 * Note, it doesn't matter what runaway_detector_activation_percent is set for
-	 * this test, as the VmemTracker_ConvertVmemMBToChunks is returning 0.
-	 */
+
 	will_return(VmemTracker_ConvertVmemMBToChunks, 0);
 	expect_any(VmemTracker_ConvertVmemMBToChunks, mb);
 
+	/*
+	 * When vmem limit is not activated or runaway_detector_activation_percent is
+	 * set to 0, red zone should be very high (i.e., red-zone will be disabled).
+	 */
+	runaway_detector_activation_percent = 0;
 	RedZoneHandler_ShmemInit();
-
 	assert_true(isRunawayDetector == &fakeIsRunawayDetector);
 	assert_true(redZoneChunks == INT32_MAX);
 	assert_true(*isRunawayDetector == 0);
@@ -149,6 +149,9 @@ test__RedZoneHandler_ShmemInit__InitializesGlobalVarsWhenPostmaster(void **state
 	redZoneChunks = 0;
 	RedZoneHandler_ShmemInit();
 	assert_true(redZoneChunks == INT32_MAX);
+
+	runaway_detector_activation_percent = 80;
+	RedZoneHandler_ShmemInit();
 }
 
 /*

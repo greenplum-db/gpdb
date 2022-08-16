@@ -7,14 +7,14 @@
     <p>Serves data files to or writes data files out from Greenplum Database segments.</p>
     <section id="section2">
       <title>Synopsis</title>
-      <codeblock><b>gpfdist</b> [<b>-d</b> <varname>directory</varname>] [<b>-p</b> <varname>http_port</varname>] [<b>-P</b> <varname>last_http_port</varname>] [<b>-l</b> <varname>log_file</varname>]
-   [<b>-t</b> <varname>timeout</varname>] [<b>-S</b>] [<b>-w</b> <varname>time</varname>] [<b>-v</b> | <b>-V</b>] [<b>-s</b>] [<b>-m</b> <varname>max_length</varname>]
-   [<b>--ssl</b> <varname>certificate_path</varname> [<b>--sslclean</b> <varname>wait_time</varname>] ]
-   [<b>-c</b> <varname>config.yml</varname>]
+      <codeblock>gpfdist [-d &lt;directory>] [-p &lt;http_port>] [-P &lt;last_http_port>] [-l &lt;log_file>]
+   [-t &lt;timeout>] [-S] [-w &lt;time>] [-v | -V] [-s] [-m &lt;max_length>]
+   [--ssl &lt;certificate_path> [--sslclean &lt;wait_time>] ]
+   [-c &lt;config.yml>]
 
-<b>gpfdist -?</b> | <b>--help</b> 
+gpfdist -? | --help 
 
-<b>gpfdist --version</b></codeblock>
+gpfdist --version</codeblock>
     </section>
     <section id="section3">
       <title>Description</title>
@@ -170,10 +170,10 @@
             loading or extracting data. The <codeph>gpfdist</codeph> configuration file is a YAML
             1.1 document. </pd>
           <pd>For information about the file format, see <xref
-              href="../../admin_guide/load/topics/transforming-xml-data.xml#topic83"/> in the
+              href="../../admin_guide/load/topics/transforming-xml-data.html#topic83" format="html" scope="external">Configuration File Format</xref> in the
               <cite>Greenplum Database Administrator Guide</cite>. For information about configuring
             data transformation with <codeph>gpfdist</codeph>, see <xref
-              href="../../admin_guide/load/topics/transforming-xml-data.xml#topic75"/> in the
+              href="../../admin_guide/load/topics/transforming-xml-data.html#topic75" format="html" scope="external">Transforming External Data with gpfdist and gpload</xref> in the
               <cite>Greenplum Database Administrator Guide</cite>.</pd>
           <pd>This option is not available on Windows platforms.</pd>
         </plentry>
@@ -197,15 +197,15 @@
     </section>
     <section>
       <title>Notes</title>
-      <p>The server configuration parameter <codeph><xref
-            href="../../ref_guide/config_params/guc-list.xml#verify_gpfdists_cert"
-            >verify_gpfdists_cert</xref></codeph> controls whether SSL certificate authentication is
-        enabled when Greenplum Database communicates with the <codeph>gpfdist</codeph> utility to
-        either read data from or write data to an external data source. You can set the parameter
-        value to <codeph>false</codeph> to disable authentication when testing the communication
-        between the Greenplum Database external table and the <codeph>gpfdist</codeph> utility that
-        is serving the external data. If the value is <codeph>false</codeph>, these SSL exceptions
-        are ignored:<ul id="ul_vvb_5lj_mdb">
+      <p>The server configuration parameter <xref
+          href="../../ref_guide/config_params/guc-list.xml#verify_gpfdists_cert"
+          >verify_gpfdists_cert</xref> controls whether SSL certificate authentication is enabled
+        when Greenplum Database communicates with the <codeph>gpfdist</codeph> utility to either
+        read data from or write data to an external data source. You can set the parameter value to
+          <codeph>false</codeph> to disable authentication when testing the communication between
+        the Greenplum Database external table and the <codeph>gpfdist</codeph> utility that is
+        serving the external data. If the value is <codeph>false</codeph>, these SSL exceptions are
+          ignored:<ul id="ul_vvb_5lj_mdb">
           <li>The self-signed SSL certificate that is used by <codeph>gpfdist</codeph> is not
             trusted by Greenplum Database.</li>
           <li>The host name contained in the SSL certificate does not match the host name that is
@@ -213,11 +213,11 @@
         </ul>
         <note type="warning">Disabling SSL certificate authentication exposes a security risk by not
           validating the <codeph>gpfdists</codeph> SSL certificate. </note></p>
-      <p>You can set the server configuration parameter <codeph><xref
-            href="../../ref_guide/config_params/guc-list.xml#gpfdist_retry_timeout"/></codeph> to
-        control the time that Greenplum Database waits before returning an error when a
-          <codeph>gpfdist</codeph> server does not respond while Greenplum Database is attempting to
-        write data to <codeph>gpfdist</codeph>. The default is 300 seconds (5 minutes).</p>
+      <p>You can set the server configuration parameter <xref
+          href="../../ref_guide/config_params/guc-list.xml#gpfdist_retry_timeout"/> to control the
+        time that Greenplum Database waits before returning an error when a <codeph>gpfdist</codeph>
+        server does not respond while Greenplum Database is attempting to write data to
+          <codeph>gpfdist</codeph>. The default is 300 seconds (5 minutes).</p>
       <p>If the <codeph>gpfdist</codeph> utility hangs with no read or write activity occurring, you
         can generate a core dump the next time a hang occurs to help debug the issue. Set the
         environment variable <codeph>GPFDIST_WATCHDOG_TIMER</codeph> to the number of seconds of no
@@ -245,9 +245,8 @@
     </section>
     <section id="section7">
       <title>See Also</title>
-      <p><codeph><xref href="./gpload.xml#topic1" type="topic" format="dita"/></codeph>,
-          <codeph>CREATE EXTERNAL TABLE</codeph><ph> in the <i>Greenplum Database Reference
-            Guide</i></ph></p>
+      <p><xref href="./gpload.xml#topic1" type="topic" format="dita"/>, <codeph>CREATE EXTERNAL
+          TABLE</codeph><ph> in the <i>Greenplum Database Reference Guide</i></ph></p>
     </section>
   </body>
 </topic>

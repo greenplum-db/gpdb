@@ -7,11 +7,11 @@
         <p id="sql_command_desc">Deletes rows from a table.</p>
         <section id="section2">
             <title>Synopsis</title>
-            <codeblock id="sql_command_synopsis">[ WITH [ RECURSIVE ] <varname>with_query</varname> [, ...] ]
-DELETE FROM [ONLY] <varname>table</varname> [[AS] <varname>alias</varname>]
-      [USING <varname>usinglist</varname>]
-      [WHERE <varname>condition</varname> | WHERE CURRENT OF <varname>cursor_name</varname>]
-      [RETURNING * | <varname>output_expression</varname> [[AS] <varname>output_name</varname>] [, …]]</codeblock>
+            <codeblock id="sql_command_synopsis">[ WITH [ RECURSIVE ] &lt;with_query> [, ...] ]
+DELETE FROM [ONLY] &lt;table> [[AS] &lt;alias>]
+      [USING &lt;usinglist>]
+      [WHERE &lt;condition> | WHERE CURRENT OF &lt;cursor_name>]
+      [RETURNING * | &lt;output_expression> [[AS] &lt;output_name>] [, …]]</codeblock>
         </section>
         <section id="section3">
             <title>Description</title>
@@ -41,12 +41,12 @@ DELETE FROM [ONLY] <varname>table</varname> [[AS] <varname>alias</varname>]
                 tables for <codeph>DELETE</codeph> operations on heap tables. When the Global
                 Deadlock Detector is enabled, the lock mode for <codeph>DELETE</codeph> operations
                 on heap tables is <codeph>ROW EXCLUSIVE</codeph>. See <xref
-                    href="../../admin_guide/dml.xml#topic_gdd" format="dita"/>.</note>
+                    href="../../admin_guide/dml.html#topic_gdd" format="html" scope="external">Global Deadlock Detector</xref>.</note>
             <sectiondiv id="section4">
                 <b>Outputs</b>
                 <p>On successful completion, a <codeph>DELETE</codeph> command returns a command tag
                     of the form</p>
-                <codeblock>DELETE <varname>count</varname></codeblock>
+                <codeblock>DELETE &lt;count></codeblock>
                 <p>The <varname>count</varname> is the number of rows deleted. If <varname>count</varname> is 0, no
                     rows were deleted by the query (this is not considered an error).</p><p>If the
                         <codeph>DELETE</codeph> command contains a <codeph>RETURNING</codeph>
@@ -70,8 +70,9 @@ DELETE FROM [ONLY] <varname>table</varname> [[AS] <varname>alias</varname>]
                             (<codeph>INSERT</codeph>, <codeph>UPDATE</codeph>, or
                             <codeph>DELETE</codeph>). </pd>
                     <pd>See <xref
-                            href="../../admin_guide/query/topics/CTE-query.xml#topic_zhs_r1s_w1b"/>
-                        and <codeph><xref href="SELECT.xml#topic1"/></codeph> for details. </pd>
+                            href="../../admin_guide/query/topics/CTE-query.html#topic_zhs_r1s_w1b" format="html" scope="external">WITH Queries (Common Table Expressions)
+</xref>
+                        and <xref href="SELECT.xml#topic1"/> for details. </pd>
                 </plentry>
                 <plentry>
                     <pt>ONLY</pt>
@@ -100,8 +101,8 @@ DELETE FROM [ONLY] <varname>table</varname> [[AS] <varname>alias</varname>]
                     </pt>
                     <pd>A list of table expressions, allowing columns from other tables to appear in
                         the <codeph>WHERE</codeph> condition. This is similar to the list of tables
-                        that can be specified in the <codeph>FROM</codeph> Clause of a <codeph><xref
-                                href="./SELECT.xml#topic1" type="topic" format="dita"/></codeph>
+                        that can be specified in the <codeph>FROM</codeph> Clause of a <xref
+                                href="./SELECT.xml#topic1" type="topic" format="dita"/>
                         statement; for example, an alias for the table name can be specified. Do not
                         repeat the target table in the <codeph>usinglist</codeph>, unless you wish
                         to set up a self-join. </pd>
@@ -127,8 +128,8 @@ DELETE FROM [ONLY] <varname>table</varname> [[AS] <varname>alias</varname>]
                         run on the server, for example in an interactive psql session or a
                         script. Language extensions such as PL/pgSQL do not have support for
                         updatable cursors. </pd>
-                    <pd>See <codeph><xref href="DECLARE.xml#topic1" type="topic" format="dita"
-                            /></codeph> for more information about creating cursors.</pd>
+                    <pd>See <xref href="DECLARE.xml#topic1" type="topic" format="dita"
+                            /> for more information about creating cursors.</pd>
                 </plentry>
                 <plentry>
                     <pt><varname>output_expression</varname></pt>
@@ -165,7 +166,7 @@ name = 'Hannah';</codeblock>
                     <codeph>DELETE</codeph> operation when the Global Deadlock Detector is not
                 enabled (the default). Only some of the leaf child tables are locked when the Global
                 Deadlock Detector is enabled. For information about the Global Deadlock Detector,
-                see <xref href="../../admin_guide/dml.xml#topic_gdd"/>.</p>
+                see <xref href="../../admin_guide/dml.html#topic_gdd" format="html" scope="external">Global Deadlock Detector</xref>.</p>
         </section>
         <section id="section7">
             <title>Examples</title>
@@ -187,9 +188,9 @@ name = 'Hannah';</codeblock>
         </section>
         <section id="section9">
             <title>See Also</title>
-            <p><codeph><xref href="DECLARE.xml#topic1" type="topic" format="dita"/></codeph>,
-                        <codeph><xref href="./TRUNCATE.xml#topic1" type="topic" format="dita"
-                    /></codeph></p>
+            <p><xref href="DECLARE.xml#topic1" type="topic" format="dita"/>,
+                        <xref href="./TRUNCATE.xml#topic1" type="topic" format="dita"
+                    /></p>
         </section>
     </body>
 </topic>

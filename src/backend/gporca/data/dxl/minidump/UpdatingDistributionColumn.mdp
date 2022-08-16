@@ -29,7 +29,7 @@
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
       <dxl:RelationStatistics Mdid="2.32769.1.0" Name="s" Rows="100.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.32769.1.0" Name="s" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="0.32769.1.0" Name="s" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.1043.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -213,7 +213,7 @@
         <dxl:Ident ColId="10" ColName="a" TypeMdid="0.1043.1.0"/>
       </dxl:OutputColumns>
       <dxl:CTEList/>
-      <dxl:LogicalUpdate DeleteColumns="1,2" InsertColumns="10,2" CtidCol="3" SegmentIdCol="9" PreserveOids="false">
+      <dxl:LogicalUpdate DeleteColumns="1,2" InsertColumns="10,2" CtidCol="3" SegmentIdCol="9">
         <dxl:TableDescriptor Mdid="0.32769.1.0" TableName="s">
           <dxl:Columns>
             <dxl:Column ColId="11" Attno="1" ColName="a" TypeMdid="0.1043.1.0" ColWidth="4"/>
@@ -270,7 +270,7 @@
       </dxl:LogicalUpdate>
     </dxl:Query>
     <dxl:Plan Id="0" SpaceSize="2">
-      <dxl:DMLUpdate Columns="0,1" ActionCol="10" OidCol="11" CtidCol="2" SegmentIdCol="8" InputSorted="false" PreserveOids="false">
+      <dxl:DMLUpdate Columns="0,1" ActionCol="10" OidCol="11" CtidCol="2" SegmentIdCol="8" InputSorted="false">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="434.548570" Rows="40.000000" Width="1"/>
         </dxl:Properties>
@@ -350,7 +350,7 @@
                 <dxl:Ident ColId="0" ColName="a" TypeMdid="0.1043.1.0"/>
               </dxl:HashExpr>
             </dxl:HashExprList>
-            <dxl:Split DeleteColumns="0,1" InsertColumns="9,1" ActionCol="10" CtidCol="2" SegmentIdCol="8" PreserveOids="false">
+            <dxl:Split DeleteColumns="0,1" InsertColumns="9,1" ActionCol="10" CtidCol="2" SegmentIdCol="8">
               <dxl:Properties>
                 <dxl:Cost StartupCost="0" TotalCost="431.003493" Rows="80.000000" Width="30"/>
               </dxl:Properties>

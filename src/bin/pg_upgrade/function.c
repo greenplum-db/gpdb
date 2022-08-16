@@ -57,20 +57,9 @@ get_loadable_libraries(void)
 	int			totaltups;
 	int			dbnum;
 	bool		found_public_plpython_handler = false;
-	char	   *pg83_str;
 
 	ress = (PGresult **) pg_malloc(old_cluster.dbarr.ndbs * sizeof(PGresult *));
 	totaltups = 0;
-
-	/*
-	 * gpoptutils was removed during the 5.0 development cycle and the
-	 * functionality is now in backend, skip when checking for loadable
-	 * libraries in 4.3-> upgrades.
-	 */
-	if (GET_MAJOR_VERSION(old_cluster.major_version) == 802)
-		pg83_str = "probin NOT IN ('$libdir/gpoptutils') AND ";
-	else
-		pg83_str = "";
 
 	/* Fetch all library names, removing duplicates within each DB */
 	for (dbnum = 0; dbnum < old_cluster.dbarr.ndbs; dbnum++)
@@ -86,10 +75,8 @@ get_loadable_libraries(void)
 										"FROM pg_catalog.pg_proc "
 										"WHERE prolang = %u AND "
 										"probin IS NOT NULL AND "
-										" %s "
 										"oid >= %u;",
 										ClanguageId,
-										pg83_str,
 										FirstNormalObjectId);
 		totaltups += PQntuples(ress[dbnum]);
 
@@ -278,11 +265,12 @@ check_loadable_libraries(void)
 	{
 		fclose(script);
 		pg_log(PG_REPORT, "fatal\n");
-		pg_fatal("Your installation references loadable libraries that are missing from the\n"
-				 "new installation.  You can add these libraries to the new installation,\n"
-				 "or remove the functions using them from the old installation.  A list of\n"
-				 "problem libraries is in the file:\n"
-				 "    %s\n\n", output_path);
+		gp_fatal_log(
+				"| Your installation references loadable libraries that are missing from the\n"
+				"| new installation.  You can add these libraries to the new installation,\n"
+				"| or remove the functions using them from the old installation.  A list of\n"
+				"| problem libraries is in the file:\n"
+				"|     %s\n\n", output_path);
 	}
 	else
 		check_ok();

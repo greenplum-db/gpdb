@@ -8,6 +8,7 @@ SET standard_conforming_strings = off;
 SET check_function_bodies = false;
 SET client_min_messages = warning;
 SET escape_string_warning = off;
+SET optimizer_trace_fallback = on;
 
 SET default_with_oids = false;
 
@@ -9364,6 +9365,8 @@ group by
 f1,f2,f3
 ) Q ) P;
 -- JoinCoreNonJoinNonEquiJoin_p1
+-- FIXME: ORCA CXformUtils.cpp:163: Failed assertion: !FJoinPredOnSingleChild(amp.Pmp(), exprhdl) && "join predicates are not pushed down"
+SET optimizer_trace_fallback = off;
 select 'JoinCoreNonJoinNonEquiJoin_p1' test_name_part, case when c = 1 then 1 else 0 end pass_ind from (
 select count(distinct c) c from (
 select f1,f2,f3, count(*) c  from (
@@ -9378,6 +9381,7 @@ select tjoin1.rnum, tjoin1.c1,tjoin2.c2 from tjoin1 left outer join tjoin2 on tj
 group by
 f1,f2,f3
 ) Q ) P;
+SET optimizer_trace_fallback = on;
 -- JoinCoreNotPredicate_p1
 select 'JoinCoreNotPredicate_p1' test_name_part, case when c = 1 then 1 else 0 end pass_ind from (
 select count(distinct c) c from (
@@ -15603,3 +15607,10 @@ WITH cte_coll AS
 SELECT *
 FROM   cte_coll
 WHERE  tkn_arr <> '{nullout}' ;
+-- Test paramcollid is correctly set
+SET optimizer_enable_hashjoin=false;
+CREATE TABLE tparam (a varchar(100) PRIMARY KEY);
+INSERT INTO tparam VALUES ('a_value');
+
+SELECT * FROM tparam t1 JOIN tparam t2 ON UPPER(t1.a) = t2.a;
+RESET optimizer_enable_hashjoin;

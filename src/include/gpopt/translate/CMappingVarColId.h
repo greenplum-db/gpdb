@@ -80,14 +80,15 @@ private:
 	CMemoryPool *m_mp;
 
 	// hash map structure to store gpdb att -> opt col information
-	typedef CHashMap<CGPDBAttInfo, CGPDBAttOptCol, HashGPDBAttInfo,
-					 EqualGPDBAttInfo, CleanupRelease, CleanupRelease>
-		GPDBAttOptColHashMap;
+	using GPDBAttOptColHashMap =
+		CHashMap<CGPDBAttInfo, CGPDBAttOptCol, HashGPDBAttInfo,
+				 EqualGPDBAttInfo, CleanupRelease, CleanupRelease>;
 
 	// iterator
-	typedef CHashMapIter<CGPDBAttInfo, CGPDBAttOptCol, HashGPDBAttInfo,
-						 EqualGPDBAttInfo, CleanupRelease, CleanupRelease>
-		GPDBAttOptColHashMapIter;
+	using GPDBAttOptColHashMapIter =
+		CHashMapIter<CGPDBAttInfo, CGPDBAttOptCol, HashGPDBAttInfo,
+					 EqualGPDBAttInfo, CleanupRelease, CleanupRelease>;
+
 
 	// map from gpdb att to optimizer col
 	GPDBAttOptColHashMap *m_gpdb_att_opt_col_mapping;

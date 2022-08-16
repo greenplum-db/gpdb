@@ -533,7 +533,23 @@ def impl(context, content):
             with open(context.mirror_context.input_file_path(), 'a') as fd:
                 fd.write('{}\n'.format(valid_config))
             break
+@given("edit the input file to recover with content id {content_id} to host {recovery_host}")
+def impl(context, content_id, recovery_host):
+    content_id = int(content_id)
+    segments = GpArray.initFromCatalog(dbconn.DbURL()).getSegmentList()
+    for seg in segments:
 
+        if seg.mirrorDB.getSegmentContentId() == content_id :
+            mirror = seg.mirrorDB
+            valid_config = '{}|{}|{} {}|{}|{}'.format(mirror.getSegmentHostName(),
+                                             mirror.getSegmentPort(),
+                                             mirror.getSegmentDataDirectory(),
+                                             recovery_host,
+                                             mirror.getSegmentPort(),
+                                             mirror.getSegmentDataDirectory())
+            with open(context.mirror_context.input_file_path(), 'a') as fd:
+                fd.write('{}\n'.format(valid_config))
+            break
 
 @given("{num} {utility} directory under '{parent_dir}' with mode '{mode}' is created")
 @when("{num} {utility} directory under '{parent_dir}' with mode '{mode}' is created")

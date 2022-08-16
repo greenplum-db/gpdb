@@ -78,33 +78,27 @@ partition by range (y) ( start (0) end (4) every (1))
 insert into csq_t1 select * from csq_t1_base;
 insert into csq_t2 select * from csq_t2_base;
 explain select * from csq_t1 where csq_t1.x >ALL (select csq_t2.x from csq_t2 where csq_t2.y=csq_t1.y) order by 1;
-                                                                                                                                                                                                      QUERY PLAN                                                                                                                                                                                                       
------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+                                                                                                                                                                              QUERY PLAN                                                                                                                                                                               
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
  Result  (cost=0.00..1293.00 rows=1 width=8)
    Filter: (SubPlan 1)
    ->  Sort  (cost=0.00..431.00 rows=1 width=8)
-         Sort Key: csq_t1_1_prt_1.x
+         Sort Key: csq_t1.x
          ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
-               ->  Append  (cost=0.00..431.00 rows=1 width=8)
-                     ->  Seq Scan on csq_t1_1_prt_1  (cost=0.00..431.00 rows=1 width=8)
-                     ->  Seq Scan on csq_t1_1_prt_2  (cost=0.00..431.00 rows=1 width=8)
-                     ->  Seq Scan on csq_t1_1_prt_3  (cost=0.00..431.00 rows=1 width=8)
-                     ->  Seq Scan on csq_t1_1_prt_4  (cost=0.00..431.00 rows=1 width=8)
+               ->  Dynamic Seq Scan on csq_t1  (cost=0.00..431.00 rows=1 width=8)
+                     Number of partitions to scan: 4 
    SubPlan 1
      ->  Result  (cost=0.00..431.00 rows=1 width=1)
-           Filter: ((CASE WHEN (sum((CASE WHEN (csq_t1_1_prt_1.x <= csq_t2_1_prt_1.x) THEN 1 ELSE 0 END)) IS NULL) THEN true WHEN (sum((CASE WHEN (csq_t2_1_prt_1.x IS NULL) THEN 1 ELSE 0 END)) > '0'::bigint) THEN NULL::boolean WHEN (csq_t1_1_prt_1.x IS NULL) THEN NULL::boolean WHEN (sum((CASE WHEN (csq_t1_1_prt_1.x <= csq_t2_1_prt_1.x) THEN 1 ELSE 0 END)) = '0'::bigint) THEN true ELSE false END) = true)
+           Filter: ((CASE WHEN (sum((CASE WHEN (csq_t1.x <= csq_t2.x) THEN 1 ELSE 0 END)) IS NULL) THEN true WHEN (sum((CASE WHEN (csq_t2.x IS NULL) THEN 1 ELSE 0 END)) > '0'::bigint) THEN NULL::boolean WHEN (csq_t1.x IS NULL) THEN NULL::boolean WHEN (sum((CASE WHEN (csq_t1.x <= csq_t2.x) THEN 1 ELSE 0 END)) = '0'::bigint) THEN true ELSE false END) = true)
            ->  Aggregate  (cost=0.00..431.00 rows=1 width=16)
                  ->  Result  (cost=0.00..431.00 rows=1 width=4)
-                       Filter: (csq_t2_1_prt_1.y = csq_t1_1_prt_1.y)
+                       Filter: (csq_t2.y = csq_t1.y)
                        ->  Materialize  (cost=0.00..431.00 rows=1 width=8)
                              ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
-                                   ->  Append  (cost=0.00..431.00 rows=1 width=8)
-                                         ->  Seq Scan on csq_t2_1_prt_1  (cost=0.00..431.00 rows=1 width=8)
-                                         ->  Seq Scan on csq_t2_1_prt_2  (cost=0.00..431.00 rows=1 width=8)
-                                         ->  Seq Scan on csq_t2_1_prt_3  (cost=0.00..431.00 rows=1 width=8)
-                                         ->  Seq Scan on csq_t2_1_prt_4  (cost=0.00..431.00 rows=1 width=8)
+                                   ->  Dynamic Seq Scan on csq_t2  (cost=0.00..431.00 rows=1 width=8)
+                                         Number of partitions to scan: 4 
  Optimizer: Pivotal Optimizer (GPORCA)
-(24 rows)
+(18 rows)
 
 select * from csq_t1 where csq_t1.x >ALL (select csq_t2.x from csq_t2 where csq_t2.y=csq_t1.y) order by 1; -- expected (4,2)
  x | y 
@@ -1265,29 +1259,27 @@ CASE
 	ELSE 'Q2'::text END  AS  cc,  1 AS nn
 FROM t_mpp_20470 b;
 explain SELECT  cc, sum(nn) over() FROM v1_mpp_20470;
-                                                              QUERY PLAN                                                              
---------------------------------------------------------------------------------------------------------------------------------------
+                                                          QUERY PLAN                                                          
+------------------------------------------------------------------------------------------------------------------------------
  WindowAgg  (cost=0.00..862.00 rows=2 width=16)
    ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..862.00 rows=2 width=12)
          ->  Hash Left Join  (cost=0.00..862.00 rows=1 width=16)
-               Hash Cond: ((t_mpp_20470_ptr1.col_name)::text = (t_mpp_20470_ptr1_1.col_name)::text)
+               Hash Cond: ((t_mpp_20470.col_name)::text = (t_mpp_20470_1.col_name)::text)
                ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
-                     Hash Key: t_mpp_20470_ptr1.col_name
-                     ->  Append  (cost=0.00..431.00 rows=1 width=8)
-                           ->  Seq Scan on t_mpp_20470_ptr1  (cost=0.00..431.00 rows=1 width=8)
-                           ->  Seq Scan on t_mpp_20470_ptr2  (cost=0.00..431.00 rows=1 width=8)
+                     Hash Key: t_mpp_20470.col_name
+                     ->  Dynamic Seq Scan on t_mpp_20470  (cost=0.00..431.00 rows=1 width=8)
+                           Number of partitions to scan: 2 
                ->  Hash  (cost=431.00..431.00 rows=1 width=16)
                      ->  GroupAggregate  (cost=0.00..431.00 rows=1 width=16)
-                           Group Key: t_mpp_20470_ptr1_1.col_name
+                           Group Key: t_mpp_20470_1.col_name
                            ->  Sort  (cost=0.00..431.00 rows=1 width=12)
-                                 Sort Key: t_mpp_20470_ptr1_1.col_name
+                                 Sort Key: t_mpp_20470_1.col_name
                                  ->  Redistribute Motion 3:3  (slice3; segments: 3)  (cost=0.00..431.00 rows=1 width=12)
-                                       Hash Key: t_mpp_20470_ptr1_1.col_name
-                                       ->  Append  (cost=0.00..431.00 rows=1 width=12)
-                                             ->  Seq Scan on t_mpp_20470_ptr1 t_mpp_20470_ptr1_1  (cost=0.00..431.00 rows=1 width=12)
-                                             ->  Seq Scan on t_mpp_20470_ptr2 t_mpp_20470_ptr2_1  (cost=0.00..431.00 rows=1 width=12)
+                                       Hash Key: t_mpp_20470_1.col_name
+                                       ->  Dynamic Seq Scan on t_mpp_20470 t_mpp_20470_1  (cost=0.00..431.00 rows=1 width=12)
+                                             Number of partitions to scan: 2 
  Optimizer: Pivotal Optimizer (GPORCA)
-(20 rows)
+(18 rows)
 
 drop view v1_mpp_20470;
 drop table t_mpp_20470;
@@ -1426,7 +1418,7 @@ explain SELECT bar_s.c FROM bar_s, foo_s WHERE foo_s.b = (SELECT max(i) FROM baz
 -----------------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1356273068.35 rows=1 width=4)
    ->  Hash Join  (cost=0.00..1356273068.35 rows=1 width=4)
-         Hash Cond: ((((SubPlan 1)) = foo_s_1_prt_sub_one.b) AND (((SubPlan 2)) = foo_s_1_prt_sub_one.b))
+         Hash Cond: ((((SubPlan 1)) = foo_s.b) AND (((SubPlan 2)) = foo_s.b))
          ->  Seq Scan on bar_s  (cost=0.00..1324053.98 rows=334 width=16)
                SubPlan 1
                  ->  Aggregate  (cost=0.00..431.00 rows=1 width=4)
@@ -1440,11 +1432,10 @@ explain SELECT bar_s.c FROM bar_s, foo_s WHERE foo_s.b = (SELECT max(i) FROM baz
                        ->  Result  (cost=0.00..0.00 rows=1 width=1)
          ->  Hash  (cost=431.00..431.00 rows=1 width=4)
                ->  Broadcast Motion 3:3  (slice3; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
-                     ->  Append  (cost=0.00..431.00 rows=1 width=4)
-                           ->  Seq Scan on foo_s_1_prt_sub_one  (cost=0.00..431.00 rows=1 width=4)
-                           ->  Seq Scan on foo_s_1_prt_sub_two  (cost=0.00..431.00 rows=1 width=4)
+                     ->  Dynamic Seq Scan on foo_s  (cost=0.00..431.00 rows=1 width=4)
+                           Number of partitions to scan: 2 
  Optimizer: Pivotal Optimizer (GPORCA)
-(20 rows)
+(19 rows)
 
 SELECT bar_s.c FROM bar_s, foo_s WHERE foo_s.b = (SELECT max(i) FROM baz_s WHERE bar_s.c = 9) AND foo_s.b = (select bar_s.d::int4);
  c 
@@ -1814,28 +1805,28 @@ ANALYZE dedup_test3;
 EXPLAIN SELECT * FROM dedup_test1 INNER JOIN dedup_test2 ON dedup_test1.a= dedup_test2.e WHERE (a) IN (SELECT a FROM dedup_test3);
                                                                    QUERY PLAN                                                                   
 ------------------------------------------------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1293.00 rows=2 width=16)
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1293.00 rows=1 width=16)
    ->  Hash Join  (cost=0.00..1293.00 rows=1 width=16)
          Hash Cond: (dedup_test2.e = dedup_test1.a)
          ->  Seq Scan on dedup_test2  (cost=0.00..431.00 rows=2 width=8)
          ->  Hash  (cost=862.00..862.00 rows=1 width=8)
                ->  Hash Join  (cost=0.00..862.00 rows=1 width=8)
-                     Hash Cond: (dedup_test1.a = dedup_test3_1_prt_1.a)
+                     Hash Cond: (dedup_test1.a = dedup_test3.a)
                      ->  Seq Scan on dedup_test1  (cost=0.00..431.00 rows=2 width=8)
                      ->  Hash  (cost=431.00..431.00 rows=1 width=4)
                            ->  GroupAggregate  (cost=0.00..431.00 rows=1 width=4)
-                                 Group Key: dedup_test3_1_prt_1.a
+                                 Group Key: dedup_test3.a
                                  ->  Sort  (cost=0.00..431.00 rows=1 width=4)
-                                       Sort Key: dedup_test3_1_prt_1.a
+                                       Sort Key: dedup_test3.a
                                        ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
-                                             Hash Key: dedup_test3_1_prt_1.a
+                                             Hash Key: dedup_test3.a
                                              ->  GroupAggregate  (cost=0.00..431.00 rows=1 width=4)
-                                                   Group Key: dedup_test3_1_prt_1.a
+                                                   Group Key: dedup_test3.a
                                                    ->  Sort  (cost=0.00..431.00 rows=4 width=4)
-                                                         Sort Key: dedup_test3_1_prt_1.a
+                                                         Sort Key: dedup_test3.a
                                                          ->  Redistribute Motion 3:3  (slice3; segments: 3)  (cost=0.00..431.00 rows=4 width=4)
-                                                               ->  Append  (cost=0.00..431.00 rows=4 width=4)
-                                                                     ->  Seq Scan on dedup_test3_1_prt_1  (cost=0.00..431.00 rows=4 width=4)
+                                                               ->  Dynamic Seq Scan on dedup_test3  (cost=0.00..431.00 rows=4 width=4)
+                                                                     Number of partitions to scan: 1 
  Optimizer: Pivotal Optimizer (GPORCA)
 (23 rows)
 

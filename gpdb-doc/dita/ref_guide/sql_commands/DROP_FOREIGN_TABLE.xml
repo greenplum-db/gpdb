@@ -7,7 +7,7 @@
         <p id="sql_command_desc">Removes a foreign table.</p>
         <section id="section2">
             <title>Synopsis</title>
-            <codeblock id="sql_command_synopsis">DROP FOREIGN TABLE [ IF EXISTS ] <varname>name</varname> [, ...] [ CASCADE | RESTRICT ]</codeblock>
+            <codeblock id="sql_command_synopsis">DROP FOREIGN TABLE [ IF EXISTS ] &lt;name> [, ...] [ CASCADE | RESTRICT ]</codeblock>
         </section>
         <section id="section3">
             <title>Description</title>
@@ -53,9 +53,9 @@
         </section>
         <section id="section8">
             <title>See Also</title>
-            <p><codeph><xref href="ALTER_FOREIGN_TABLE.xml#topic1">ALTER FOREIGN TABLE</xref></codeph>,
-                        <codeph><xref href="CREATE_FOREIGN_TABLE.xml#topic1">CREATE
-                    FOREIGN TABLE</xref></codeph></p>
+            <p><xref href="ALTER_FOREIGN_TABLE.xml#topic1">ALTER FOREIGN TABLE</xref>,
+                        <xref href="CREATE_FOREIGN_TABLE.xml#topic1">CREATE
+                    FOREIGN TABLE</xref></p>
         </section>
     </body>
 </topic>

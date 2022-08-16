@@ -10,5 +10,5 @@ TO '/home/gpadmin/a_list_countries.out';
 
 ```
 
-**Parent topic:**[Unloading Data from Greenplum Database](../../load/topics/g-unloading-data-from-greenplum-database.html)
+**Parent topic:** [Unloading Data from Greenplum Database](../../load/topics/g-unloading-data-from-greenplum-database.html)
 

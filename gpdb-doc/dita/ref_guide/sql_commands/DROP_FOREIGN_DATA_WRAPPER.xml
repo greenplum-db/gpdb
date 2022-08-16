@@ -7,7 +7,7 @@
         <p id="sql_command_desc">Removes a foreign-data wrapper.</p>
         <section id="section2">
             <title>Synopsis</title>
-            <codeblock id="sql_command_synopsis">DROP FOREIGN DATA WRAPPER [ IF EXISTS ] <varname>name</varname> [ CASCADE | RESTRICT ]</codeblock>
+            <codeblock id="sql_command_synopsis">DROP FOREIGN DATA WRAPPER [ IF EXISTS ] &lt;name> [ CASCADE | RESTRICT ]</codeblock>
         </section>
         <section id="section3">
             <title>Description</title>
@@ -54,9 +54,9 @@
         </section>
         <section id="section8">
             <title>See Also</title>
-            <p><codeph><xref href="CREATE_FOREIGN_DATA_WRAPPER.xml#topic1">CREATE FOREIGN DATA WRAPPER</xref></codeph>,
-                        <codeph><xref href="ALTER_FOREIGN_DATA_WRAPPER.xml#topic1">ALTER
-                    FOREIGN DATA WRAPPER</xref></codeph></p>
+            <p><xref href="CREATE_FOREIGN_DATA_WRAPPER.xml#topic1">CREATE FOREIGN DATA WRAPPER</xref>,
+                        <xref href="ALTER_FOREIGN_DATA_WRAPPER.xml#topic1">ALTER
+                    FOREIGN DATA WRAPPER</xref></p>
         </section>
     </body>
 </topic>

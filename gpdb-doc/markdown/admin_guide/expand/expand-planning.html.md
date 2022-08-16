@@ -20,7 +20,7 @@ gpstop -u
 
 For information about Greenplum interconnect proxies, see [Configuring Proxies for the Greenplum Interconnect](../managing/proxy-ic.html).
 
-**Parent topic:**[Expanding a Greenplum System](../expand/expand-main.html)
+**Parent topic:** [Expanding a Greenplum System](../expand/expand-main.html)
 
 ## <a id="topic4"></a>System Expansion Checklist 
 

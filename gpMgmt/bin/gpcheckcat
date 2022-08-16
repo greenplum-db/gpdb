@@ -97,6 +97,9 @@ def setError(level):
     '''
     GV.retcode = max(level, GV.retcode)
 
+def setScriptRetCode(level):
+    GV.script_retcode = max(level,GV.script_retcode)
+
 
 ###############################
 class Global():
@@ -148,6 +151,7 @@ class Global():
         self.catalog = None
         self.max_content = 0
         self.report_cfg = {}
+        self.script_retcode = SUCCESS
 
     def reset_stmt_queues(self):
 
@@ -3289,9 +3293,12 @@ def check_gpexpand():
 
 def check_test_subset_parameter_count():
     test_option_count = 0
-    test_option_count = test_option_count + 1 if GV.opt['-R'] else test_option_count
-    test_option_count = test_option_count + 1 if GV.opt['-s'] else test_option_count
-    test_option_count = test_option_count + 1 if GV.opt['-C'] else test_option_count
+    if GV.opt['-R']:
+        test_option_count += 1
+    if GV.opt['-s']:
+        test_option_count += 1
+    if GV.opt['-C']:
+        test_option_count += 1
     if test_option_count > 1:
         myprint("Error: multiple test subset options are selected. Please pass only one of [-R, -s, -C] if necessary.\n")
         setError(ERROR_NOREPAIR)
@@ -3346,6 +3353,7 @@ def main():
     for dbname in GV.alldb:
 
         # Reset global variables
+        GV.retcode=SUCCESS
         GV.reset_stmt_queues()
         GPObjects.clear()
         GPObjectGraph.clear()
@@ -3382,12 +3390,13 @@ def main():
             runAllChecks(run_tests)
 
         checkcatReport()
+        setScriptRetCode(GV.retcode)
 
         # skip shared tables on subsequent passes
         if not GV.opt['-S']:
             GV.opt['-S'] = "none"
 
-    sys.exit(GV.retcode)
+    sys.exit(GV.script_retcode)
 
 #############
 if __name__ == '__main__':

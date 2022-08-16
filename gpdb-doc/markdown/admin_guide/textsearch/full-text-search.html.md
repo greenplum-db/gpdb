@@ -27,5 +27,5 @@ The psql command-line utility provides a meta-command to display information abo
 -   **[Limitations](../textsearch/limitations.html)**  
 This topic lists limitations and maximums for Greenplum Database full text search objects.
 
-**Parent topic:**[Querying Data](../query/topics/query.html)
+**Parent topic:** [Querying Data](../query/topics/query.html)
 

@@ -13,7 +13,7 @@ HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sur
 2021-01-07 17:38:26|INFO|did not find a staging table to reuse. creating staging_gpload_reusable_edcb757d70ae1c70cdd2f7d15496f54b
 2021-01-07 17:38:26|INFO|did not find an external table to reuse. creating ext_gpload_reusable_1777c5e2_50cc_11eb_bb05_7085c2381836
 2021-01-07 17:38:26|ERROR|ERROR:  column "s4" is of type integer but expression is of type text
-LINE 1: ...c70cdd2f7d15496f54b ("s1","s2","s4") SELECT c1,c3,c2 FROM ex...
+LINE 1: ...5c64da950cfbc41ff55 ("s1","s2","s4") SELECT c1,c3,c2 FROM ex...
                                                              ^
 HINT:  You will need to rewrite or cast the expression.
  encountered while running INSERT INTO staging_gpload_reusable_edcb757d70ae1c70cdd2f7d15496f54b ("s1","s2","s4") SELECT c1,c3,c2 FROM ext_gpload_reusable_1777c5e2_50cc_11eb_bb05_7085c2381836

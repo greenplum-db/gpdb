@@ -535,18 +535,23 @@ external_insert_init(Relation rel)
 	ExtTableEntry *extentry;
 	List	   *copyFmtOpts;
 	List	   *custom_formatter_params = NIL;
+	char       *on_clause;
 
 	/*
 	 * Get the ExtTableEntry information for this table
 	 */
 	extentry = GetExtTableEntry(RelationGetRelid(rel));
+	on_clause = (char *) strVal(linitial(extentry->execlocations));
 
 	/*
 	 * allocate and initialize the insert descriptor
 	 */
 	extInsertDesc = (ExternalInsertDesc) palloc0(sizeof(ExternalInsertDescData));
 	extInsertDesc->ext_rel = rel;
-	extInsertDesc->ext_noop = (Gp_role == GP_ROLE_DISPATCH);
+	if (strcmp(on_clause, "COORDINATOR_ONLY") == 0)
+		extInsertDesc->ext_noop = false;
+	else
+		extInsertDesc->ext_noop = (Gp_role == GP_ROLE_DISPATCH);
 	extInsertDesc->ext_formatter_data = NULL;
 
 	if (extentry->command)

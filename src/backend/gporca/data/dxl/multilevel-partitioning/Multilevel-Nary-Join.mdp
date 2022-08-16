@@ -428,7 +428,7 @@ select * from pt, foo, bar where pt.k=foo.a and pt.j = bar.a;
         <dxl:CountAgg Mdid="0.2147.15827.15828"/>
       </dxl:Type>
       <dxl:RelationStatistics Mdid="2.208131.15777.15778" Name="foo" Rows="30.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.208131.15777.15778" Name="foo" IsTemporary="false" HasOids="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="4,2">
+      <dxl:Relation Mdid="0.208131.15777.15778" Name="foo" IsTemporary="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="4,2">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -451,7 +451,7 @@ select * from pt, foo, bar where pt.k=foo.a and pt.j = bar.a;
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:RelationStatistics Mdid="2.208136.15779.15780" Name="bar" Rows="30.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.208136.15779.15780" Name="bar" IsTemporary="false" HasOids="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="4,2">
+      <dxl:Relation Mdid="0.208136.15779.15780" Name="bar" IsTemporary="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="4,2">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -1032,7 +1032,7 @@ select * from pt, foo, bar where pt.k=foo.a and pt.j = bar.a;
       <dxl:ColumnStatistics Mdid="1.208131.15777.15778.4" Name="gp_segment_id" Width="4.000000" NullFreq="0.000000" NdvRemain="2.000000" FreqRemain="1.000000" ColStatsMissing="false"/>
       <dxl:MDCast Mdid="3.23.1.0;23.1.0" Name="int4" BinaryCoercible="true" SourceTypeId="0.23.1.0" DestinationTypeId="0.23.1.0" CastFuncId="0.0.0.0"/>
       <dxl:RelationStatistics Mdid="2.312123.14887.14888" Name="pt" Rows="90.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.312123.14887.14888" Name="pt" IsTemporary="false" HasOids="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="4,5,3" PartitionColumns="2,1" PartitionTypes="r,r">
+      <dxl:Relation Mdid="0.312123.14887.14888" Name="pt" IsTemporary="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="4,5,3" PartitionColumns="2,1" PartitionTypes="r,r">
         <dxl:Columns>
           <dxl:Column Name="i" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>

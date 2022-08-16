@@ -43,8 +43,7 @@ CParseHandlerPhysicalCTAS::CParseHandlerPhysicalCTAS(
 	  m_mdname(nullptr),
 	  m_distr_column_pos_array(nullptr),
 	  m_src_colids_array(nullptr),
-	  m_is_temp_table(false),
-	  m_has_oids(false)
+	  m_is_temp_table(false)
 {
 }
 
@@ -123,9 +122,6 @@ CParseHandlerPhysicalCTAS::StartElement(const XMLCh *const,	 // element_uri,
 	m_is_temp_table = CDXLOperatorFactory::ExtractConvertAttrValueToBool(
 		m_parse_handler_mgr->GetDXLMemoryManager(), attrs,
 		EdxltokenRelTemporary, EdxltokenPhysicalCTAS);
-	m_has_oids = CDXLOperatorFactory::ExtractConvertAttrValueToBool(
-		m_parse_handler_mgr->GetDXLMemoryManager(), attrs, EdxltokenRelHasOids,
-		EdxltokenPhysicalCTAS);
 
 	// create child node parsers
 
@@ -243,8 +239,8 @@ CParseHandlerPhysicalCTAS::EndElement(const XMLCh *const,  // element_uri,
 		m_mp, GPOS_NEW(m_mp) CDXLPhysicalCTAS(
 				  m_mp, m_mdname_schema, m_mdname, dxl_col_descr_array,
 				  ctas_options, m_rel_distr_policy, m_distr_column_pos_array,
-				  opclasses_array, m_is_temp_table, m_has_oids,
-				  m_rel_storage_type, m_src_colids_array, m_vartypemod_array));
+				  opclasses_array, m_is_temp_table, m_rel_storage_type,
+				  m_src_colids_array, m_vartypemod_array));
 	// set statistics and physical properties
 	CParseHandlerUtils::SetProperties(m_dxl_node, prop_parse_handler);
 

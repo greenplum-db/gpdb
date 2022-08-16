@@ -322,8 +322,6 @@ gp_dist_wait_status(PG_FUNCTION_ARGS)
 	}
 
 	cdbdisp_clearCdbPgResults(&ctx->cdb_pgresults);
-	if (Gp_role == GP_ROLE_DISPATCH)
-		DisconnectAndDestroyAllGangs(false);
 
 	SRF_RETURN_DONE(funcctx);
 }

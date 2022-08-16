@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE topic
-  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
-<topic id="topic1" xml:lang="en">
-  <title id="nn173529">Managing a Greenplum System</title>
-  <shortdesc>This section describes basic system administration tasks performed by a Greenplum
-    Database system administrator. </shortdesc>
-  <body/>
-</topic>

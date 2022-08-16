@@ -70,6 +70,8 @@ IMDRelation::GetStorageTypeStr(IMDRelation::Erelstoragetype rel_storage_type)
 		case ErelstorageMixedPartitioned:
 			return CDXLTokens::GetDXLTokenStr(
 				EdxltokenRelStorageMixedPartitioned);
+		case ErelstorageCompositeType:
+			return CDXLTokens::GetDXLTokenStr(EdxltokenRelStorageCompositeType);
 		default:
 			return nullptr;
 	}

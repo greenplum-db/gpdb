@@ -180,7 +180,7 @@ CTranslatorExprToDXLUtils::PdxlnListFilterPartKey(CMemoryPool *mp,
 				"Unsupported part filter operator for list partitions : %ls"),
 			pexprPartKey->Pop()->SzId());
 		GPOS_THROW_EXCEPTION(gpopt::ExmaGPOPT, gpopt::ExmiUnsupportedOp,
-							 CException::ExsevDebug1, str->GetBuffer());
+							 str->GetBuffer());
 	}
 
 	GPOS_ASSERT(nullptr != pdxlnPartKey);
@@ -1805,7 +1805,9 @@ CTranslatorExprToDXLUtils::FMotionHazard(CMemoryPool *mp, CDXLNode *dxlnode,
 	// non-streaming operator/Gather motion neutralizes any motion hazard that its subtree imposes
 	// hence stop recursing further
 	if (FMotionHazardSafeOp(dxlnode))
+	{
 		return false;
+	}
 
 	if (FDXLOpExists(dxlnode->GetOperator(), peopid, ulOps))
 	{
@@ -1866,7 +1868,9 @@ CTranslatorExprToDXLUtils::FMotionHazardSafeOp(CDXLNode *dxlnode)
 			CDXLPhysicalAgg *pdxlnPhysicalAgg =
 				CDXLPhysicalAgg::Cast(dxlnode->GetOperator());
 			if (pdxlnPhysicalAgg->GetAggStrategy() == EdxlaggstrategyHashed)
+			{
 				fMotionHazardSafeOp = true;
+			}
 		}
 		break;
 

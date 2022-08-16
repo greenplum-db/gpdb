@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
-<topic id="topic1"><title id="bw20941">CREATE OPERATOR</title><body><p id="sql_command_desc">Defines a new operator.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">CREATE OPERATOR <varname>name</varname> ( 
-       PROCEDURE = <varname>funcname</varname>
-       [, LEFTARG = <varname>lefttype</varname>] [, RIGHTARG = <varname>righttype</varname>]
-       [, COMMUTATOR = <varname>com_op</varname>] [, NEGATOR = <varname>neg_op</varname>]
-       [, RESTRICT = <varname>res_proc</varname>] [, JOIN = <varname>join_proc</varname>]
+<topic id="topic1"><title id="bw20941">CREATE OPERATOR</title><body><p id="sql_command_desc">Defines a new operator.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">CREATE OPERATOR &lt;name> ( 
+       PROCEDURE = &lt;funcname>
+       [, LEFTARG = &lt;lefttype>] [, RIGHTARG = &lt;righttype>]
+       [, COMMUTATOR = &lt;com_op>] [, NEGATOR = &lt;neg_op>]
+       [, RESTRICT = &lt;res_proc>] [, JOIN = &lt;join_proc>]
        [, HASHES] [, MERGES] )</codeblock></section><section id="section3"><title>Description</title><p><codeph>CREATE OPERATOR</codeph> defines a new operator. The user who
 defines an operator becomes its owner. </p><p>The operator name is a sequence of up to <codeph>NAMEDATALEN</codeph>-1
 (63 by default) characters from the following list: <codeph>+ - * / &lt;
@@ -164,10 +164,10 @@ must represent equality for some data type or pair of data types. </pd>
                          is hard-wired. See <xref href="https://www.postgresql.org/docs/9.4/sql-syntax-lexical.html#SQL-PRECEDENCE" 
                              scope="external" format="html">Operator Precedence</xref> in the PostgreSQL 
                          documentation for precedence details.</p>
-                      <p>Use <codeph><xref href="DROP_OPERATOR.xml#topic1">DROP
-                    OPERATOR</xref></codeph> to delete user-defined operators from a database. Use
-                        <codeph><xref href="ALTER_OPERATOR.xml#topic1">ALTER
-                    OPERATOR</xref></codeph> to modify operators in a database.</p></section>
+                      <p>Use <xref href="DROP_OPERATOR.xml#topic1">DROP
+                    OPERATOR</xref> to delete user-defined operators from a database. Use
+                        <xref href="ALTER_OPERATOR.xml#topic1">ALTER
+                    OPERATOR</xref> to modify operators in a database.</p></section>
     <section id="section6"><title>Examples</title><p>Here is an example of creating an operator for adding two complex numbers,
 assuming we have already created the definition of type <codeph>complex</codeph>.
 First define the function that does the work, then define the operator:
@@ -181,8 +181,8 @@ CREATE OPERATOR + (
     procedure = complex_add,
     commutator = +
 );</codeblock><p>To use this operator in a query: </p><codeblock>SELECT (a + b) AS c FROM test_complex;</codeblock></section><section id="section7"><title>Compatibility</title><p><codeph>CREATE OPERATOR</codeph> is a Greenplum Database language extension.
-The SQL standard does not provide for user-defined operators.</p></section><section id="section8"><title>See Also</title><p><codeph><xref href="CREATE_FUNCTION.xml#topic1" type="topic" format="dita"/></codeph>,
-                        <codeph><xref href="./CREATE_TYPE.xml#topic1" type="topic" format="dita"
-                    /></codeph>, <codeph><xref href="ALTER_OPERATOR.xml#topic1" type="topic"
-                        format="dita"/></codeph>, <codeph><xref href="./DROP_OPERATOR.xml#topic1"
-                        type="topic" format="dita"/></codeph></p></section></body></topic>
+The SQL standard does not provide for user-defined operators.</p></section><section id="section8"><title>See Also</title><p><xref href="CREATE_FUNCTION.xml#topic1" type="topic" format="dita"/>,
+                        <xref href="./CREATE_TYPE.xml#topic1" type="topic" format="dita"
+                    />, <xref href="ALTER_OPERATOR.xml#topic1" type="topic"
+                        format="dita"/>, <xref href="./DROP_OPERATOR.xml#topic1"
+                        type="topic" format="dita"/></p></section></body></topic>

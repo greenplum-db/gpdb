@@ -461,7 +461,7 @@ SELECT foo();
         object contains duplicate keys. For duplicate keys, JSON processing functions consider the
         last value as the operative one. For the <codeph>jsonb</codeph> data type, duplicate object
         keys are not kept. If the input includes duplicate keys, only the last value is kept. See
-          <xref href="../admin_guide/query/topics/json-data.xml#topic_upc_tcs_fz" format="dita"/><ph
+          <xref href="../admin_guide/query/topics/json-data.html#topic_upc_tcs_fz" format="html" scope="external">About JSON Data</xref><ph
           otherprops="op-print"> in the <cite>Greenplum Database Administrator
         Guide</cite></ph>.</note>
     </body>
@@ -591,11 +591,11 @@ SELECT foo();
           described in the following table. Many of these operators can be indexed by
             <codeph>jsonb</codeph> operator classes. For a full description of
             <codeph>jsonb</codeph> containment and existence semantics, see <xref
-            href="../admin_guide/query/topics/json-data.xml#topic_isx_2tw_mq" format="dita"/><ph
+            href="../admin_guide/query/topics/json-data.html#topic_isx_2tw_mq" format="html" scope="external">jsonb Containment and Existence</xref><ph
             otherprops="op-print"> in the <cite>Greenplum Database Administrator Guide</cite></ph>.
           For information about how these operators can be used to effectively index
             <codeph>jsonb</codeph> data, see <xref
-            href="../admin_guide/query/topics/json-data.xml#topic_aqt_1tw_mq" format="dita"/><ph
+            href="../admin_guide/query/topics/json-data.html#topic_aqt_1tw_mq" format="html" scope="external">jsonb Indexing</xref><ph
             otherprops="op-print"> in the <cite>Greenplum Database Administrator
           Guide</cite></ph>.</p>
         <table id="table_dcb_y3w_mq">
@@ -680,7 +680,7 @@ SELECT foo();
         <p>The standard comparison operators in the following table are available only for the
             <codeph>jsonb</codeph> data type, not for the <codeph>json</codeph> data type. They
           follow the ordering rules for B-tree operations described in <xref
-            href="../admin_guide/query/topics/json-data.xml#topic_aqt_1tw_mq" format="dita"/><ph
+            href="../admin_guide/query/topics/json-data.html#topic_aqt_1tw_mq" format="html" scope="external">jsonb Indexing</xref><ph
             otherprops="op-print"> in the <cite>Greenplum Database Administrator
           Guide</cite></ph>.</p>
         <table id="table_j4w_z5n_vq">
@@ -934,7 +934,7 @@ SELECT foo();
           to the appropriate single character. This is a not an issue if the input data type is
             <codeph>jsonb</codeph>, because the conversion was already done. However, for
             <codeph>json</codeph> data type input, this might result in an error being thrown. See
-            <xref href="../admin_guide/query/topics/json-data.xml#topic_upc_tcs_fz"/><ph
+            <xref href="../admin_guide/query/topics/json-data.html#topic_upc_tcs_fz" format="html" scope="external">About JSON Data</xref><ph
             otherprops="op-print"> in the <cite>Greenplum Database Administrator
           Guide</cite></ph>.</p>
         <table id="table_wfc_y3w_mb">
@@ -1416,7 +1416,7 @@ SELECT foo();
         PostgreSQL database. Analytic functions are <i>immutable</i>.</p>
       <note>The Greenplum MADlib Extension for Analytics provides additional advanced functions to
         perform statistical analysis and machine learning with Greenplum Database data. See <xref
-          href="../analytics/madlib.xml#topic1" scope="peer">MADlib Extension for
+          href="../analytics/madlib.html#topic1" scope="external" format="html">MADlib Extension for
         Analytics</xref>.</note>
       <table id="in2073121">
         <title>Advanced Aggregate Functions</title>
@@ -1558,7 +1558,7 @@ SELECT sum(myvalue) FROM mymatrix;
     <title>Text Search Functions and Operators</title>
     <body>
       <p>The following tables summarize the functions and operators that are provided for full text
-        searching. See <xref href="../admin_guide/textsearch/full-text-search.xml"/> for a detailed
+        searching. See <xref href="../admin_guide/textsearch/full-text-search.html" format="html" scope="external">Using Full Text Search</xref> for a detailed
         explanation of Greenplum Database's text search facility.</p>
       <table id="table_t3f_vs1_lfb">
         <title>Text Search Operators</title>

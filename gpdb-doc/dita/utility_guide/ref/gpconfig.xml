@@ -7,14 +7,14 @@
     <p>Sets server configuration parameters on all segments within a Greenplum Database system.</p>
     <section id="section2">
       <title>Synopsis</title>
-      <codeblock><b>gpconfig</b> <b>-c</b> <varname>param_name</varname> <b>-v</b> <varname>value</varname> [<b>-m</b> <varname>coordinator_value</varname> | <b>--masteronly</b>]
-       | <b>-r</b> <varname>param_name</varname> [<b>--masteronly</b>]
-       | <b>-l</b>
-       [<b>--skipvalidation</b>] [<b>--verbose</b>] [<b>--debug</b>]
+      <codeblock>gpconfig -c &lt;param_name> -v &lt;value> [-m &lt;coordinator_value> | --masteronly]
+       | -r &lt;param_name> [--masteronly]
+       | -l
+       [--skipvalidation] [--verbose] [--debug]
 
-<b>gpconfig</b> <b>-s</b> <varname>param_name</varname> [<b>--file</b> | <b>--file-compare</b>] [<b>--verbose</b>] [<b>--debug</b>]
+gpconfig -s &lt;param_name> [--file | --file-compare] [--verbose] [--debug]
 
-<b>gpconfig</b> <b>--help</b></codeblock>
+gpconfig --help</codeblock>
     </section>
     <section id="section3">
       <title>Description</title>
@@ -188,9 +188,7 @@ dynamic_library_path='$libdir'</codeblock>
     <section id="section6">
       <title>See Also</title>
       <p>
-        <codeph>
-          <xref href="./gpstop.xml#topic1" type="topic" format="dita"/>
-        </codeph>
+        <xref href="./gpstop.xml#topic1" type="topic" format="dita"/>
       </p>
     </section>
   </body>

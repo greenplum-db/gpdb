@@ -2329,12 +2329,23 @@ expression_tree_walker(Node *node,
 			}
 			break;
 
-		case T_PartitionSelector:
+		case T_PartitionedRelPruneInfo:
 			{
-				//PartitionSelector *pselector = (PartitionSelector *) node;
+				PartitionedRelPruneInfo *prpinfo= (PartitionedRelPruneInfo *) node;
 
-				/* GPDB_12_MERGE_FIXME: need to walk prune info? We don't do that
-				 * in Append either.. */
+				if (walker((Node *)prpinfo->initial_pruning_steps, context))
+					return true;
+				if (walker((Node *)prpinfo->exec_pruning_steps, context))
+					return true;
+			}
+			break;
+
+		case T_PartitionPruneInfo:
+			{
+				PartitionPruneInfo *ppinfo = (PartitionPruneInfo *)node;
+
+				if (walker((Node *) ppinfo->prune_infos, context))
+					return true;
 			}
 			break;
 

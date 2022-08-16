@@ -76,6 +76,7 @@
 #include "postgres.h"
 
 #include "cdb/cdbvars.h"
+#include "common/hashfn.h"
 #include "funcapi.h"
 #include "lib/ilist.h"
 #include "storage/buffile.h"

@@ -8,6 +8,7 @@
 --
 -- To work around that, create a new datatype that is just like the built-in
 -- 'bit' type, but doesn't have the hash opclass.
+set optimizer_trace_fallback = on;
 create type unhashable_bit;
 create function unhashable_bit_out (unhashable_bit) returns cstring immutable
 language internal as 'bit_out';
@@ -1873,3 +1874,4 @@ group by rollup (a,b) order by a;
 (8 rows)
 
 -- end
+reset optimizer_trace_fallback;

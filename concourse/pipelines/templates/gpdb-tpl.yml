@@ -129,10 +129,10 @@ anchors:
         run:
           path: 'ccp_src/google/ccp_failed_test.sh'
         params:
-          GOOGLE_CREDENTIALS: ((google-service-account-key))
+          GOOGLE_CREDENTIALS: ((google-service-account-key/[[ variables_type ]]))
           GOOGLE_PROJECT_ID: ((google-project-id))
           GOOGLE_ZONE: ((google-zone))
-          GOOGLE_SERVICE_ACCOUNT: ((google-service-account))
+          GOOGLE_SERVICE_ACCOUNT: ((google-service-account/[[ variables_type ]]))
           AWS_ACCESS_KEY_ID: ((tf-machine-access-key-id))
           AWS_SECRET_ACCESS_KEY: ((tf-machine-secret-access-key))
           AWS_DEFAULT_REGION: ((tf-machine-region))
@@ -149,10 +149,10 @@ anchors:
   run:
     path: 'ccp_src/google/ccp_failed_test.sh'
   params:
-    GOOGLE_CREDENTIALS: ((google-service-account-key))
+    GOOGLE_CREDENTIALS: ((google-service-account-key/[[ variables_type ]]))
     GOOGLE_PROJECT_ID: ((google-project-id))
     GOOGLE_ZONE: ((google-zone))
-    GOOGLE_SERVICE_ACCOUNT: ((google-service-account))
+    GOOGLE_SERVICE_ACCOUNT: ((google-service-account/[[ variables_type ]]))
     AWS_ACCESS_KEY_ID: ((tf-machine-access-key-id))
     AWS_SECRET_ACCESS_KEY: ((tf-machine-secret-access-key))
     AWS_DEFAULT_REGION: ((tf-machine-region))
@@ -165,7 +165,7 @@ anchors:
     env:
       AWS_ACCESS_KEY_ID: ((tf-machine-access-key-id))
       AWS_SECRET_ACCESS_KEY: ((tf-machine-secret-access-key))
-      GOOGLE_CREDENTIALS: ((google-service-account-key))
+      GOOGLE_CREDENTIALS: ((google-service-account-key/[[ variables_type ]]))
     vars:
       project_id: ((google-project-id))
     storage:
@@ -226,7 +226,9 @@ groups:
   - icw_gporca_icproxy_centos7
   - icw_planner_icproxy_centos7
   - icw_gporca_ictcp_centos7
+  - icw_mirrorless_centos7
   - unit_tests_gporca_centos7
+  - gpdb_pitr_centos7
 {% endif %}
 {% if "rhel8" in os_types %}
   - icw_gporca_rhel8
@@ -234,6 +236,7 @@ groups:
   - icw_gporca_icproxy_rhel8
   - icw_planner_icproxy_rhel8
   - icw_gporca_ictcp_rhel8
+  - icw_mirrorless_rhel8
   - unit_tests_gporca_rhel8
 {% endif %}
 {% if "centos7" in os_types and "CLI" in test_sections %}
@@ -245,6 +248,7 @@ groups:
   - icw_planner_ubuntu18.04
   - icw_gporca_icproxy_ubuntu18.04
   - icw_planner_icproxy_ubuntu18.04
+  - icw_mirrorless_ubuntu18.04
 {% endif %}
   - gate_icw_end
 {% endif %}
@@ -349,6 +353,7 @@ groups:
   - icw_gporca_icproxy_centos7
   - icw_planner_icproxy_centos7
   - icw_gporca_ictcp_centos7
+  - icw_mirrorless_centos7
   - compile_gpdb_centos7
 {% endif %}
 {% if "centos7" in os_types and "CLI" in test_sections %}
@@ -360,6 +365,7 @@ groups:
   - icw_gporca_icproxy_rhel8
   - icw_planner_icproxy_rhel8
   - icw_gporca_ictcp_rhel8
+  - icw_mirrorless_rhel8
   - compile_gpdb_rhel8
 {% endif %}
 {% if "ubuntu18.04" in os_types %}
@@ -367,6 +373,7 @@ groups:
   - icw_planner_ubuntu18.04
   - icw_gporca_icproxy_ubuntu18.04
   - icw_planner_icproxy_ubuntu18.04
+  - icw_mirrorless_ubuntu18.04
   - compile_gpdb_ubuntu18.04
 {% endif %}
   - gate_icw_end
@@ -383,6 +390,7 @@ groups:
 {% endif %}
 
 {% endif %}
+
 {% if "Interconnect" in test_sections %}
 ## ======================================================================
 
@@ -490,9 +498,9 @@ resources:
 - name: ccp_src
   type: git
   source:
-    branch: ((ccp-git-branch))
-    private_key: ((ccp-git-key))
-    uri: ((ccp-git-remote))
+    branch: ((gp-concourse-cluster-provisioner-git-branch))
+    private_key: ((gp-concourse-cluster-provisioner-git-key))
+    uri: ((gp-concourse-cluster-provisioner-git-remote))
 
 {% if "centos7" in os_types or
       "ICW"     in test_sections %}
@@ -507,10 +515,10 @@ resources:
 
 - name: terraform.d
   source:
-    access_key_id: ((bucket-access-key-id))
+    access_key_id: ((aws-bucket-access-key-id))
     bucket: ccp-terraform-provider-plugins
     region_name: ((aws-region))
-    secret_access_key: ((bucket-secret-access-key))
+    secret_access_key: ((aws-bucket-secret-access-key))
     versioned_file: plugin-cache.tgz
   type: s3
 
@@ -578,7 +586,7 @@ resources:
     repository: gcr.io/data-gpdb-private-images/gpdb7-rhel8-build
     tag: latest
     username: _json_key
-    password: ((container-registry-readonly-service-account-key))
+    password: ((data-gpdb-private-images-container-registry-readonly-service-account-key))
 
 - name: gpdb7-rhel8-test
   type: registry-image
@@ -586,7 +594,7 @@ resources:
     repository: gcr.io/data-gpdb-private-images/gpdb7-rhel8-test
     tag: latest
     username: _json_key
-    password: ((container-registry-readonly-service-account-key))
+    password: ((data-gpdb-private-images-container-registry-readonly-service-account-key))
 {% endif %}
 
 {% if "ubuntu18.04" in os_types %}
@@ -609,10 +617,10 @@ resources:
 - name: bin_gpdb_centos7_icw_green
   type: s3
   source:
-    access_key_id: ((bucket-access-key-id))
-    bucket: ((bucket-name))
+    access_key_id: ((aws-bucket-access-key-id))
+    bucket: ((aws-bucket))
     region_name: ((aws-region))
-    secret_access_key: ((bucket-secret-access-key))
+    secret_access_key: ((aws-bucket-secret-access-key))
     versioned_file: bin_gpdb_centos7/gpdb_branch_master/icw_green/bin_gpdb.tar.gz
 
 - name: bin_gpdb_centos7_rc
@@ -1059,6 +1067,7 @@ jobs:
     {% endif %}
     file: gpdb_src/concourse/tasks/ic_gpdb.yml
     image: gpdb7-centos7-test
+    timeout: 24h
     params:
       MAKE_TEST_COMMAND: -k PGOPTIONS='-c optimizer=on' installcheck-world
       TEST_OS: centos
@@ -1081,6 +1090,7 @@ jobs:
     {% endif %}
     file: gpdb_src/concourse/tasks/ic_gpdb.yml
     image: gpdb7-centos7-test
+    timeout: 24h
     params:
       MAKE_TEST_COMMAND: -k PGOPTIONS='-c optimizer=off' installcheck-world
       TEST_OS: centos
@@ -1108,6 +1118,7 @@ jobs:
     {% endif %}
     file: gpdb_src/concourse/tasks/ic_gpdb.yml
     image: gpdb7-centos7-test
+    timeout: 24h
     params:
       MAKE_TEST_COMMAND: -k PGOPTIONS='-c gp_interconnect_type=proxy -c optimizer=on' installcheck-world
       TEST_OS: centos
@@ -1130,6 +1141,7 @@ jobs:
     {% endif %}
     file: gpdb_src/concourse/tasks/ic_gpdb.yml
     image: gpdb7-centos7-test
+    timeout: 24h
     params:
       MAKE_TEST_COMMAND: -k PGOPTIONS='-c gp_interconnect_type=proxy -c optimizer=off' installcheck-world
       TEST_OS: centos
@@ -1152,9 +1164,42 @@ jobs:
     {% endif %}
     file: gpdb_src/concourse/tasks/ic_gpdb.yml
     image: gpdb7-centos7-test
+    timeout: 24h
     params:
       MAKE_TEST_COMMAND: -k PGOPTIONS='-c gp_interconnect_type=tcp -c optimizer=on' installcheck-world
       TEST_OS: centos
+
+- name: icw_mirrorless_centos7
+  plan:
+  - in_parallel:
+      steps:
+      - get: gpdb_src
+        passed: [compile_gpdb_centos7]
+      - get: bin_gpdb
+        passed: [compile_gpdb_centos7]
+        resource: bin_gpdb_centos7
+        trigger: [[ test_trigger ]]
+      - get: gpdb7-centos7-test
+  - task: ic_gpdb
+    {% if use_ICW_workers %}
+    tags: [icw-centos7]
+    {% endif %}
+    file: gpdb_src/concourse/tasks/ic_gpdb.yml
+    image: gpdb7-centos7-test
+    timeout: 24h
+    params:
+      MAKE_TEST_COMMAND: -k PGOPTIONS='-c optimizer=on' installcheck-mirrorless
+      TEST_OS: centos
+      CONFIGURE_FLAGS: ((configure_flags))
+      WITH_MIRRORS: false
+      BLDWRAP_POSTGRES_CONF_ADDONS:
+        - wal_level=minimal
+        - max_wal_senders=0
+        - max_replication_slots=0
+        - wal_keep_segments=0
+        - gp_dispatch_keepalives_idle=30
+        - gp_dispatch_keepalives_interval=10
+        - gp_dispatch_keepalives_count=4
 
 - name: unit_tests_gporca_centos7
   plan:
@@ -1167,6 +1212,25 @@ jobs:
   - task: unit_tests_gporca
     file: gpdb_src/concourse/tasks/unit_tests_gporca.yml
     image: gpdb7-centos7-build
+
+- name: gpdb_pitr_centos7
+  plan:
+    - in_parallel:
+        steps:
+          - get: gpdb_src
+            passed: [compile_gpdb_centos7]
+          - get: bin_gpdb
+            passed: [compile_gpdb_centos7]
+            resource: bin_gpdb_centos7
+            trigger: [[ test_trigger ]]
+          - get: gpdb7-centos7-test
+    - task: gpdb_pitr
+      file: gpdb_src/concourse/tasks/gpdb_pitr.yml
+      image: gpdb7-centos7-test
+      params:
+        WITH_MIRRORS: true
+        TEST_OS: centos
+        CONFIGURE_FLAGS: ((configure_flags))
 
 {% endif %}
 {% if "rhel8" in os_types %}
@@ -1187,6 +1251,7 @@ jobs:
     {% endif %}
     file: gpdb_src/concourse/tasks/ic_gpdb.yml
     image: gpdb7-rhel8-test
+    timeout: 24h
     params:
       MAKE_TEST_COMMAND: -k PGOPTIONS='-c optimizer=on' installcheck-world
       TEST_OS: centos
@@ -1209,6 +1274,7 @@ jobs:
     {% endif %}
     file: gpdb_src/concourse/tasks/ic_gpdb.yml
     image: gpdb7-rhel8-test
+    timeout: 24h
     params:
       MAKE_TEST_COMMAND: -k PGOPTIONS='-c optimizer=off' installcheck-world
       TEST_OS: centos
@@ -1236,6 +1302,7 @@ jobs:
     {% endif %}
     file: gpdb_src/concourse/tasks/ic_gpdb.yml
     image: gpdb7-rhel8-test
+    timeout: 24h
     params:
       MAKE_TEST_COMMAND: -k PGOPTIONS='-c gp_interconnect_type=proxy -c optimizer=on' installcheck-world
       TEST_OS: centos
@@ -1258,6 +1325,7 @@ jobs:
     {% endif %}
     file: gpdb_src/concourse/tasks/ic_gpdb.yml
     image: gpdb7-rhel8-test
+    timeout: 24h
     params:
       MAKE_TEST_COMMAND: -k PGOPTIONS='-c gp_interconnect_type=proxy -c optimizer=off' installcheck-world
       TEST_OS: centos
@@ -1280,9 +1348,40 @@ jobs:
     {% endif %}
     file: gpdb_src/concourse/tasks/ic_gpdb.yml
     image: gpdb7-rhel8-test
+    timeout: 24h
     params:
       MAKE_TEST_COMMAND: -k PGOPTIONS='-c gp_interconnect_type=tcp -c optimizer=on' installcheck-world
       TEST_OS: centos
+
+- name: icw_mirrorless_rhel8
+  plan:
+  - in_parallel:
+      steps:
+      - get: gpdb_src
+        passed: [compile_gpdb_rhel8]
+      - get: bin_gpdb
+        passed: [compile_gpdb_rhel8]
+        resource: bin_gpdb_rhel8
+        trigger: [[ test_trigger ]]
+      - get: gpdb7-rhel8-test
+  - task: ic_gpdb
+    tags: [icw-rhel8]
+    file: gpdb_src/concourse/tasks/ic_gpdb.yml
+    image: gpdb7-rhel8-test
+    timeout: 24h
+    params:
+      MAKE_TEST_COMMAND: -k PGOPTIONS='-c optimizer=on' installcheck-mirrorless
+      TEST_OS: centos
+      CONFIGURE_FLAGS: ((configure_flags))
+      WITH_MIRRORS: false
+      BLDWRAP_POSTGRES_CONF_ADDONS:
+        - wal_level=minimal
+        - max_wal_senders=0
+        - max_replication_slots=0
+        - wal_keep_segments=0
+        - gp_dispatch_keepalives_idle=30
+        - gp_dispatch_keepalives_interval=10
+        - gp_dispatch_keepalives_count=4
 
 - name: unit_tests_gporca_rhel8
   plan:
@@ -1314,6 +1413,7 @@ jobs:
       {% endif %}
       file: gpdb_src/concourse/tasks/ic_gpdb.yml
       image: gpdb7-ubuntu18.04-test
+      timeout: 24h
       params:
         MAKE_TEST_COMMAND: -k PGOPTIONS='-c optimizer=on' installcheck-world
         TEST_OS: ubuntu
@@ -1336,6 +1436,7 @@ jobs:
       {% endif %}
       file: gpdb_src/concourse/tasks/ic_gpdb.yml
       image: gpdb7-ubuntu18.04-test
+      timeout: 24h
       params:
         MAKE_TEST_COMMAND: -k PGOPTIONS='-c optimizer=off' installcheck-world
         TEST_OS: ubuntu
@@ -1358,6 +1459,7 @@ jobs:
       {% endif %}
       file: gpdb_src/concourse/tasks/ic_gpdb.yml
       image: gpdb7-ubuntu18.04-test
+      timeout: 24h
       params:
         MAKE_TEST_COMMAND: -k PGOPTIONS='-c gp_interconnect_type=proxy -c optimizer=on' installcheck-world
         TEST_OS: ubuntu
@@ -1380,10 +1482,43 @@ jobs:
       {% endif %}
       file: gpdb_src/concourse/tasks/ic_gpdb.yml
       image: gpdb7-ubuntu18.04-test
+      timeout: 24h
       params:
         MAKE_TEST_COMMAND: -k PGOPTIONS='-c gp_interconnect_type=proxy -c optimizer=off' installcheck-world
         TEST_OS: ubuntu
         CONFIGURE_FLAGS: ((configure_flags))
+
+- name: icw_mirrorless_ubuntu18.04
+  plan:
+  - in_parallel:
+      steps:
+      - get: gpdb_src
+        passed: [compile_gpdb_ubuntu18.04]
+      - get: bin_gpdb
+        passed: [compile_gpdb_ubuntu18.04]
+        resource: bin_gpdb_ubuntu18.04
+        trigger: [[ test_trigger ]]
+      - get: gpdb7-ubuntu18.04-test
+  - task: ic_gpdb
+    {% if use_ICW_workers %}
+    tags: [icw-ubuntu18.04]
+    {% endif %}
+    file: gpdb_src/concourse/tasks/ic_gpdb.yml
+    image: gpdb7-ubuntu18.04-test
+    timeout: 24h
+    params:
+      MAKE_TEST_COMMAND: -k PGOPTIONS='-c optimizer=on' installcheck-mirrorless
+      TEST_OS: centos
+      CONFIGURE_FLAGS: ((configure_flags))
+      WITH_MIRRORS: false
+      BLDWRAP_POSTGRES_CONF_ADDONS:
+        - wal_level=minimal
+        - max_wal_senders=0
+        - max_replication_slots=0
+        - wal_keep_segments=0
+        - gp_dispatch_keepalives_idle=30
+        - gp_dispatch_keepalives_interval=10
+        - gp_dispatch_keepalives_count=4
 
 {% endif %}
 - name: gate_icw_end
@@ -1398,6 +1533,7 @@ jobs:
         - icw_gporca_icproxy_centos7
         - icw_planner_icproxy_centos7
         - icw_gporca_ictcp_centos7
+        - icw_mirrorless_centos7
 {% if "Extensions" in test_sections %}
         - icw_extensions_gpcloud_centos7
 {% endif %}
@@ -1413,6 +1549,7 @@ jobs:
         - icw_gporca_icproxy_rhel8
         - icw_planner_icproxy_rhel8
         - icw_gporca_ictcp_rhel8
+        - icw_mirrorless_rhel8
       - get: icw_planner_rhel8_dump
         passed:
         - icw_planner_rhel8
@@ -1425,7 +1562,9 @@ jobs:
         - icw_gporca_icproxy_centos7
         - icw_planner_icproxy_centos7
         - icw_gporca_ictcp_centos7
+        - icw_mirrorless_centos7
         - unit_tests_gporca_centos7
+        - gpdb_pitr_centos7
 {% if "Extensions" in test_sections %}
         - icw_extensions_gpcloud_centos7
 {% endif %}
@@ -1436,6 +1575,7 @@ jobs:
         - icw_gporca_icproxy_rhel8
         - icw_planner_icproxy_rhel8
         - icw_gporca_ictcp_rhel8
+        - icw_mirrorless_rhel8
 {% endif %}
         trigger: true
 {% if pipeline_configuration == "prod" and "centos7" in os_types %}
@@ -1445,6 +1585,7 @@ jobs:
 {% endif %}
 
 {% endif %}
+
 {% if "Interconnect" in test_sections %}
 ## ======================================================================
 ##  ___ _   _ _____ _____ ____   ____ ___  _   _ _   _ _____ ____ _____
@@ -1662,7 +1803,7 @@ jobs:
         - name: coverage
       run:
         path: gpdb_src/concourse/scripts/gsutil_sync
-        args: [ "./coverage/", "gs://((coverage-bucket-name))/((pipeline-name))/" ]
+        args: [ "./coverage/", "gs://((gcs-bucket-coverage))/((pipeline-name))/" ]
       params:
         JSON_KEY: ((concourse-gcs-resources-service-account-key))
       caches:
@@ -1750,7 +1891,7 @@ jobs:
                 - name: ccp-coverage
               run:
                 path: gpdb_src/concourse/scripts/gsutil_sync
-                args: [ "./ccp-coverage/", "gs://((coverage-bucket-name))/((pipeline-name))/" ]
+                args: [ "./ccp-coverage/", "gs://((gcs-bucket-coverage))/((pipeline-name))/" ]
               params:
                 JSON_KEY: ((concourse-gcs-resources-service-account-key))
               caches:
@@ -1779,7 +1920,7 @@ jobs:
                 - name: demo-coverage
               run:
                 path: gpdb_src/concourse/scripts/gsutil_sync
-                args: [ "./demo-coverage/", "gs://((coverage-bucket-name))/((pipeline-name))/" ]
+                args: [ "./demo-coverage/", "gs://((gcs-bucket-coverage))/((pipeline-name))/" ]
               params:
                 JSON_KEY: ((concourse-gcs-resources-service-account-key))
               caches:
@@ -2130,7 +2271,7 @@ jobs:
           - name: bin_gpdb
         run:
           path: gpdb_src/concourse/scripts/combine_cli_coverage.bash
-          args: [ "gs://((coverage-bucket-name))/((pipeline-name))/", "((coverage-bucket-name))/((pipeline-name))" ]
+          args: [ "gs://((gcs-bucket-coverage))/((pipeline-name))/", "((gcs-bucket-coverage))/((pipeline-name))" ]
         params:
           JSON_KEY: ((concourse-gcs-resources-service-account-key))
         caches:
@@ -2360,6 +2501,7 @@ jobs:
         - icw_gporca_icproxy_centos7
         - icw_planner_icproxy_centos7
         - icw_gporca_ictcp_centos7
+        - icw_mirrorless_centos7
         - icw_extensions_gpcloud_centos7
         - resource_group_centos7
         - interconnect_centos7
@@ -2368,13 +2510,16 @@ jobs:
         - icw_gporca_icproxy_rhel8
         - icw_planner_icproxy_rhel8
         - icw_gporca_ictcp_rhel8
+        - icw_mirrorless_rhel8
         - icw_gporca_ubuntu18.04
         - icw_planner_ubuntu18.04
         - icw_gporca_icproxy_ubuntu18.04
         - icw_planner_icproxy_ubuntu18.04
+        - icw_mirrorless_ubuntu18.04
         - cli_cross_subnet
         - unit_tests_gporca_centos7
         - unit_tests_gporca_rhel8
+        - gpdb_pitr_centos7
         - test_gpdb_clients_rhel8
         - test_gpdb_clients_ubuntu18.04
 {% for test in CLI_BEHAVE_TESTS %}
@@ -2403,6 +2548,7 @@ jobs:
         - icw_gporca_icproxy_centos7
         - icw_planner_icproxy_centos7
         - icw_gporca_ictcp_centos7
+        - icw_mirrorless_centos7
         - icw_extensions_gpcloud_centos7
         - resource_group_centos7
         - cli_cross_subnet
@@ -2426,6 +2572,7 @@ jobs:
         - icw_gporca_icproxy_rhel8
         - icw_planner_icproxy_rhel8
         - icw_gporca_ictcp_rhel8
+        - icw_mirrorless_rhel8
         - resource_group_rhel8
         - interconnect_rhel8
   {% for test in CLI_BEHAVE_TESTS %}
@@ -2442,6 +2589,7 @@ jobs:
         - icw_planner_ubuntu18.04
         - icw_gporca_icproxy_ubuntu18.04
         - icw_planner_icproxy_ubuntu18.04
+        - icw_mirrorless_ubuntu18.04
 {% for test in CLI_BEHAVE_TESTS %}
         - [[ test.name ]]_ubuntu18
 {% endfor %}

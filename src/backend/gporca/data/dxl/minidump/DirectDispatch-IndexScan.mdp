@@ -264,7 +264,7 @@ where a=1 and b=0;
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
       <dxl:RelationStatistics Mdid="2.1962900.1.1" Name="dd_singlecol_idx" Rows="101.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.1962900.1.0" Name="dd_singlecol_idx" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3">
+      <dxl:Relation Mdid="0.1962900.1.0" Name="dd_singlecol_idx" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -304,7 +304,7 @@ where a=1 and b=0;
         <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.1962900.1.1" Name="dd_singlecol_idx" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3">
+      <dxl:Relation Mdid="0.1962900.1.1" Name="dd_singlecol_idx" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -466,6 +466,7 @@ where a=1 and b=0;
               <dxl:ConstValue TypeMdid="0.23.1.0" Value="3"/>
             </dxl:Comparison>
           </dxl:IndexCondList>
+	<dxl:Partitions/>
           <dxl:IndexDescriptor Mdid="0.1962926.1.0" IndexName="sc_idx_b"/>
           <dxl:TableDescriptor Mdid="0.1962900.1.1" TableName="dd_singlecol_idx">
             <dxl:Columns>

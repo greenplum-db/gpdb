@@ -82,6 +82,7 @@ INSERT INTO keo3 VALUES ('1', '1');
 
 CREATE TABLE keo4 ( keo_para_required_period character varying(6), keo_para_budget_date character varying(24)) DISTRIBUTED RANDOMLY;
 INSERT INTO keo4 VALUES ('1', '1');
+ANALYZE keo1, keo2, keo3, keo4;
 -- Explicit Redistribution motion should be added in case of GPDB Planner (test case not applicable for ORCA)
 EXPLAIN (COSTS OFF) UPDATE keo1 SET user_vie_act_cntr_marg_cum = 234.682 FROM
     ( SELECT a.user_vie_project_code_pk FROM keo1 a INNER JOIN keo2 b
@@ -369,6 +370,27 @@ SELECT tableoid::regclass, * FROM update_gp_rangep ORDER BY orig_a;
 -- that direct dispatch is effective.
 SELECT tableoid::regclass, * FROM update_gp_rangep WHERE b = 1;
 
+-- Test for update with LASJ_NOTIN
+-- See Issue: https://github.com/greenplum-db/gpdb/issues/13265
+-- Actually master branch does not have the above issue even master
+-- does have the same problematic code (other parts of code are
+-- refactored). Also cherry-pick the case to master and keep it
+-- since more test cases do no harm.
+create table t1_13265(a int, b int, c int, d int) distributed by (a);
+create table t2_13265(a int, b int, c int, d int) distributed by (a);
+
+insert into t1_13265 values (1, null, 1, 1);
+insert into t2_13265 values (2, null, 2, 2);
+
+explain (verbose, costs off)
+update t1_13265 set b = 2 where
+(c, d) not in (select c, d from t2_13265 where a = 2);
+
+update t1_13265 set b = 2 where
+(c, d) not in (select c, d from t2_13265 where a = 2);
+
+select * from t1_13265;
+
 -- start_ignore
 drop table r;
 drop table s;
@@ -377,4 +399,6 @@ drop table update_ao_table;
 drop table update_aoco_table;
 drop table nosplitupdate;
 drop table tsplit_entry;
+drop table t1_13265;
+drop table t2_13265;
 -- end_ignore

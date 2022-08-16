@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
-<topic id="topic1"><title id="co20941">DROP AGGREGATE</title><body><p id="sql_command_desc">Removes an aggregate function.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">DROP AGGREGATE [IF EXISTS] <varname>name</varname> ( <varname>aggregate_signature</varname> ) [CASCADE | RESTRICT]</codeblock>
+<topic id="topic1"><title id="co20941">DROP AGGREGATE</title><body><p id="sql_command_desc">Removes an aggregate function.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">DROP AGGREGATE [IF EXISTS] &lt;name> ( &lt;aggregate_signature> ) [CASCADE | RESTRICT]</codeblock>
   <p>where <varname>aggregate_signature</varname> is:</p>
   <codeblock>* |
-[ <varname>argmode</varname> ] [ <varname>argname</varname> ] <varname>argtype</varname> [ , ... ] |
-[ [ <varname>argmode</varname> ] [ <varname>argname</varname> ] <varname>argtype</varname> [ , ... ] ] ORDER BY [ <varname>argmode</varname> ] [ <varname>argname</varname> ] <varname>argtype</varname> [ , ... ]</codeblock>
+[ &lt;argmode> ] [ &lt;argname> ] &lt;argtype> [ , ... ] |
+[ [ &lt;argmode> ] [ &lt;argname> ] &lt;argtype> [ , ... ] ] ORDER BY [ &lt;argmode> ] [ &lt;argname> ] &lt;argtype> [ , ... ]</codeblock>
 </section><section id="section3"><title>Description</title><p><codeph>DROP AGGREGATE</codeph> will delete an existing aggregate function.
 To run this command the current user must be the owner of the aggregate
 function.</p></section><section id="section4"><title>Parameters</title><parml><plentry><pt>IF EXISTS</pt><pd>Do not throw an error if the aggregate does not exist. A notice is
@@ -47,6 +47,6 @@ This is the default. </pd></plentry></parml></section>
     arguments:</p>
   <codeblock>DROP AGGREGATE myrank(VARIADIC "any" ORDER BY VARIADIC "any");</codeblock>
 </section><section id="section6"><title>Compatibility</title><p>There is no <codeph>DROP AGGREGATE</codeph> statement in the SQL standard.
-</p></section><section id="section7"><title>See Also</title><p><codeph><xref href="ALTER_AGGREGATE.xml#topic1" type="topic" format="dita"/></codeph>,
-            <codeph><xref href="CREATE_AGGREGATE.xml#topic1" type="topic" format="dita"
-        /></codeph></p></section></body></topic>
+</p></section><section id="section7"><title>See Also</title><p><xref href="ALTER_AGGREGATE.xml#topic1" type="topic" format="dita"/>,
+            <xref href="CREATE_AGGREGATE.xml#topic1" type="topic" format="dita"
+        /></p></section></body></topic>

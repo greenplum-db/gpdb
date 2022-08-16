@@ -344,6 +344,13 @@ CConfigParamMapping::PackConfigParamInBitset(
 		}
 	}
 
+	if (!optimizer_enable_nljoin)
+	{
+		CBitSet *nl_join_bitset = CXform::PbsNLJoinXforms(mp);
+		traceflag_bitset->Union(nl_join_bitset);
+		nl_join_bitset->Release();
+	}
+
 	if (!optimizer_enable_indexjoin)
 	{
 		CBitSet *index_join_bitset = CXform::PbsIndexJoinXforms(mp);

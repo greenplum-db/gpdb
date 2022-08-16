@@ -185,32 +185,21 @@ select sum(distinct d) from olap_test_single;
 set gp_motion_cost_per_row=1.0;
 -- If the query produces a relatively small number of groups in comparison to
 -- the number of input rows, two-stage aggregation will be picked.
--- GPDB_12_MERGE_FIXME: We support hashing for GROUPING SETS now. The planner
--- considers that cheaper than the two-stage grouping agg that was chosen
--- before. Disable hashagg to force the same plan as before. We should
--- implement two-stage Hash Agg for grouping sets; that would probably be
--- the real optimal plan here, and what the planner would choose, if it
--- was supported.
-set enable_hashagg=off;
 explain select a, b, c, sum(d) from olap_test group by grouping sets((a, b), (a), (b, c));
                                          QUERY PLAN                                         
---------------------------------------------------------------------------------------------
- Finalize GroupAggregate  (cost=509.52..1056.87 rows=267 width=20)
-   Group Key: (GROUPINGSET_ID()), a, b, c
-   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=509.52..1044.19 rows=801 width=20)
-         Merge Key: (GROUPINGSET_ID()), a, b, c
-         ->  Sort  (cost=509.52..510.19 rows=267 width=20)
-               Sort Key: (GROUPINGSET_ID()), a, b, c
-               ->  Partial GroupAggregate  (cost=234.38..498.76 rows=267 width=20)
-                     Group Key: a, b
-                     Group Key: a
-                     Sort Key: b, c
-                       Group Key: b, c
-                     ->  Sort  (cost=234.38..242.71 rows=3333 width=16)
-                           Sort Key: a, b
+----------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=379.01..557.90 rows=267 width=20)
+   ->  Finalize HashAggregate  (cost=379.01..379.90 rows=89 width=20)
+         Group Key: a, b, c, (GROUPINGSET_ID())
+         ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=64.33..375.67 rows=267 width=20)
+               Hash Key: a, b, c, (GROUPINGSET_ID())
+               ->  Partial HashAggregate  (cost=64.33..108.67 rows=267 width=20)
+                     Hash Key: a, b
+                     Hash Key: a
+                     Hash Key: b, c
                            ->  Seq Scan on olap_test  (cost=0.00..39.33 rows=3333 width=16)
  Optimizer: Postgres query optimizer
-(15 rows)
+(11 rows)
 
 select a, b, c, sum(d) from olap_test group by grouping sets((a, b), (a), (b, c));
  a | b  | c  |   sum    
@@ -252,7 +241,6 @@ select a, b, c, sum(d) from olap_test group by grouping sets((a, b), (a), (b, c)
    | 10 | 20 |    10000
 (35 rows)
 
-reset enable_hashagg;
 -- If the query produces a relatively large number of groups in comparison to
 -- the number of input rows, one-stage aggregation will be picked.
 explain select a, b, d, sum(d) from olap_test group by grouping sets((a, b), (a), (b, d));

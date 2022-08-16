@@ -38,10 +38,10 @@ namespace gpdxl
 // fwd decl
 class CDXLTranslateContext;
 
-typedef CHashMap<ULONG, CDXLTranslateContext, gpos::HashValue<ULONG>,
-				 gpos::Equals<ULONG>, CleanupDelete<ULONG>,
-				 CleanupDelete<CDXLTranslateContext> >
-	HMUlDxltrctx;
+using HMUlDxltrctx =
+	CHashMap<ULONG, CDXLTranslateContext, gpos::HashValue<ULONG>,
+			 gpos::Equals<ULONG>, CleanupDelete<ULONG>,
+			 CleanupDelete<CDXLTranslateContext>>;
 
 //---------------------------------------------------------------------------
 //	@class:
@@ -82,10 +82,10 @@ private:
 	};
 
 	// hash maps mapping ULONG -> SCTEConsumerInfo
-	typedef CHashMap<ULONG, SCTEConsumerInfo, gpos::HashValue<ULONG>,
-					 gpos::Equals<ULONG>, CleanupDelete<ULONG>,
-					 CleanupDelete<SCTEConsumerInfo> >
-		HMUlCTEConsumerInfo;
+	using HMUlCTEConsumerInfo =
+		CHashMap<ULONG, SCTEConsumerInfo, gpos::HashValue<ULONG>,
+				 gpos::Equals<ULONG>, CleanupDelete<ULONG>,
+				 CleanupDelete<SCTEConsumerInfo>>;
 
 	CMemoryPool *m_mp;
 

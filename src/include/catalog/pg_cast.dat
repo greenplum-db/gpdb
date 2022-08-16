@@ -527,7 +527,7 @@
   castcontext => 'e', castmethod => 'b' },
 { castsource => 'complex', casttarget => 'point', castfunc => '0',
   castcontext => 'e', castmethod => 'b' },
-{ castsource => 'numeric', casttarget => 'complex', castfunc => 'numeric2point(numeric)',
+{ castsource => 'numeric', casttarget => 'complex', castfunc => 'numeric2complex(numeric)',
   castcontext => 'i', castmethod => 'f' },
 
 ]

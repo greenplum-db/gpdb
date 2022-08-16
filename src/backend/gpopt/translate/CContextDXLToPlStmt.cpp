@@ -524,8 +524,10 @@ CContextDXLToPlStmt::GetStaticPruneResult(ULONG scanId)
 	// GPDB_12_MERGE_FIXME: we haven't seen the scan id yet, this scan id is likely for dynamic pruning.
 	// When we can, remove this check
 	if ((scanId - 1) >= m_static_prune_results.size())
+	{
 		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiDXL2PlStmtConversion,
 				   GPOS_WSZ_LIT("dynamic pruning"));
+	}
 	return m_static_prune_results[scanId - 1];
 }
 void

@@ -107,6 +107,8 @@ CDXLTokens::Init(CMemoryPool *mp)
 
 		{EdxltokenPhysicalTableScan, GPOS_WSZ_LIT("TableScan")},
 		{EdxltokenPhysicalBitmapTableScan, GPOS_WSZ_LIT("BitmapTableScan")},
+		{EdxltokenPhysicalDynamicBitmapTableScan,
+		 GPOS_WSZ_LIT("DynamicBitmapTableScan")},
 		{EdxltokenPhysicalExternalScan, GPOS_WSZ_LIT("ExternalScan")},
 		{EdxltokenPhysicalIndexScan, GPOS_WSZ_LIT("IndexScan")},
 		{EdxltokenPhysicalIndexOnlyScan, GPOS_WSZ_LIT("IndexOnlyScan")},
@@ -131,6 +133,8 @@ CDXLTokens::Init(CMemoryPool *mp)
 		{EdxltokenPhysicalAppend, GPOS_WSZ_LIT("Append")},
 		{EdxltokenPhysicalMaterialize, GPOS_WSZ_LIT("Materialize")},
 		{EdxltokenPhysicalSequence, GPOS_WSZ_LIT("Sequence")},
+		{EdxltokenPhysicalDynamicTableScan, GPOS_WSZ_LIT("DynamicTableScan")},
+		{EdxltokenPhysicalDynamicIndexScan, GPOS_WSZ_LIT("DynamicIndexScan")},
 		{EdxltokenPhysicalTVF, GPOS_WSZ_LIT("TableValuedFunction")},
 		{EdxltokenPhysicalWindow, GPOS_WSZ_LIT("Window")},
 		{EdxltokenPhysicalDMLInsert, GPOS_WSZ_LIT("DMLInsert")},
@@ -411,8 +415,8 @@ CDXLTokens::Init(CMemoryPool *mp)
 		{EdxltokenCtidColId, GPOS_WSZ_LIT("CtidCol")},
 		{EdxltokenGpSegmentIdColId, GPOS_WSZ_LIT("SegmentIdCol")},
 		{EdxltokenTupleOidColId, GPOS_WSZ_LIT("TupleOidCol")},
-		{EdxltokenUpdatePreservesOids, GPOS_WSZ_LIT("PreserveOids")},
 		{EdxltokenInputSorted, GPOS_WSZ_LIT("InputSorted")},
+		{EdxltokenSplitUpdate, GPOS_WSZ_LIT("IsSplitUpdate")},
 
 		{EdxltokenInputSegments, GPOS_WSZ_LIT("InputSegments")},
 		{EdxltokenOutputSegments, GPOS_WSZ_LIT("OutputSegments")},
@@ -507,7 +511,6 @@ CDXLTokens::Init(CMemoryPool *mp)
 		{EdxltokenDoubleValue, GPOS_WSZ_LIT("DoubleValue")},
 
 		{EdxltokenRelTemporary, GPOS_WSZ_LIT("IsTemporary")},
-		{EdxltokenRelHasOids, GPOS_WSZ_LIT("HasOids")},
 
 		{EdxltokenEntireRow, GPOS_WSZ_LIT("*")},
 
@@ -519,6 +522,7 @@ CDXLTokens::Init(CMemoryPool *mp)
 		 GPOS_WSZ_LIT("AppendOnly, Row-oriented")},
 		{EdxltokenRelStorageMixedPartitioned, GPOS_WSZ_LIT("MixedPartitioned")},
 		{EdxltokenRelStorageExternal, GPOS_WSZ_LIT("External")},
+		{EdxltokenRelStorageCompositeType, GPOS_WSZ_LIT("Composite")},
 
 		{EdxltokenRelDistrPolicy, GPOS_WSZ_LIT("DistributionPolicy")},
 		{EdxltokenRelDistrMasterOnly, GPOS_WSZ_LIT("MasterOnly")},

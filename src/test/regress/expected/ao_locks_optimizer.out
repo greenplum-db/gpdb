@@ -82,11 +82,10 @@ SELECT * FROM locktest_segments where coalesce = 'ao_locks_table' or
  coalesce like 'aovisimap%' or coalesce like 'aoseg%';
     coalesce     |       mode       | locktype |    node    
 -----------------+------------------+----------+------------
- ao_locks_table  | AccessShareLock  | relation | n segments
- ao_locks_table  | RowExclusiveLock | relation | n segments
+ ao_locks_table  | ExclusiveLock    | relation | n segments
  aovisimap table | RowExclusiveLock | relation | 1 segment
  aovisimap index | RowExclusiveLock | relation | 1 segment
-(4 rows)
+(3 rows)
 
 COMMIT;
 BEGIN;
@@ -102,10 +101,9 @@ SELECT * FROM locktest_segments where coalesce = 'ao_locks_table' or
  coalesce like 'aovisimap%' or coalesce like 'aoseg%';
     coalesce     |       mode       | locktype |    node    
 -----------------+------------------+----------+------------
- ao_locks_table  | AccessShareLock  | relation | n segments
+ ao_locks_table  | ExclusiveLock    | relation | n segments
  aovisimap table | RowExclusiveLock | relation | 1 segment
  aovisimap index | RowExclusiveLock | relation | 1 segment
- ao_locks_table  | RowExclusiveLock | relation | n segments
-(4 rows)
+(3 rows)
 
 COMMIT;

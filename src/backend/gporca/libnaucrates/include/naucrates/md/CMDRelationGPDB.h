@@ -106,9 +106,6 @@ private:
 	// partition constraint
 	CDXLNode *m_mdpart_constraint;
 
-	// does this table have oids
-	BOOL m_has_oids;
-
 	// number of system columns
 	ULONG m_system_columns;
 
@@ -129,19 +126,16 @@ public:
 	CMDRelationGPDB(const CMDRelationGPDB &) = delete;
 
 	// ctor
-	CMDRelationGPDB(CMemoryPool *mp, IMDId *mdid, CMDName *mdname,
-					BOOL is_temp_table, Erelstoragetype rel_storage_type,
-					Ereldistrpolicy rel_distr_policy,
-					CMDColumnArray *mdcol_array, ULongPtrArray *distr_col_array,
-					IMdIdArray *distr_opfamilies,
-					ULongPtrArray *partition_cols_array,
-					CharPtrArray *str_part_types_array, ULONG num_of_partitions,
-					IMdIdArray *partition_oids, BOOL convert_hash_to_random,
-					ULongPtr2dArray *keyset_array,
-					CMDIndexInfoArray *md_index_info_array,
-					IMdIdArray *mdid_triggers_array,
-					IMdIdArray *mdid_check_constraint_array,
-					CDXLNode *mdpart_constraint, BOOL has_oids);
+	CMDRelationGPDB(
+		CMemoryPool *mp, IMDId *mdid, CMDName *mdname, BOOL is_temp_table,
+		Erelstoragetype rel_storage_type, Ereldistrpolicy rel_distr_policy,
+		CMDColumnArray *mdcol_array, ULongPtrArray *distr_col_array,
+		IMdIdArray *distr_opfamilies, ULongPtrArray *partition_cols_array,
+		CharPtrArray *str_part_types_array, ULONG num_of_partitions,
+		IMdIdArray *partition_oids, BOOL convert_hash_to_random,
+		ULongPtr2dArray *keyset_array, CMDIndexInfoArray *md_index_info_array,
+		IMdIdArray *mdid_triggers_array,
+		IMdIdArray *mdid_check_constraint_array, CDXLNode *mdpart_constraint);
 
 	// dtor
 	~CMDRelationGPDB() override;
@@ -211,9 +205,6 @@ public:
 
 	// return true if a hash distributed table needs to be considered as random
 	BOOL ConvertHashToRandom() const override;
-
-	// does this table have oids
-	BOOL HasOids() const override;
 
 	// is this a partitioned table
 	BOOL IsPartitioned() const override;

@@ -45,32 +45,6 @@ file_extend_hook_type file_extend_hook = NULL;
 file_truncate_hook_type file_truncate_hook = NULL;
 file_unlink_hook_type file_unlink_hook = NULL;
 
-typedef struct f_smgr
-{
-	void		(*smgr_init) (void);	/* may be NULL */
-	void		(*smgr_shutdown) (void);	/* may be NULL */
-	void		(*smgr_close) (SMgrRelation reln, ForkNumber forknum);
-	void		(*smgr_create) (SMgrRelation reln, ForkNumber forknum,
-								bool isRedo);
-	bool		(*smgr_exists) (SMgrRelation reln, ForkNumber forknum);
-	void		(*smgr_unlink) (RelFileNodeBackend rnode, ForkNumber forknum,
-								bool isRedo);
-	void		(*smgr_extend) (SMgrRelation reln, ForkNumber forknum,
-								BlockNumber blocknum, char *buffer, bool skipFsync);
-	void		(*smgr_prefetch) (SMgrRelation reln, ForkNumber forknum,
-								  BlockNumber blocknum);
-	void		(*smgr_read) (SMgrRelation reln, ForkNumber forknum,
-							  BlockNumber blocknum, char *buffer);
-	void		(*smgr_write) (SMgrRelation reln, ForkNumber forknum,
-							   BlockNumber blocknum, char *buffer, bool skipFsync);
-	void		(*smgr_writeback) (SMgrRelation reln, ForkNumber forknum,
-								   BlockNumber blocknum, BlockNumber nblocks);
-	BlockNumber (*smgr_nblocks) (SMgrRelation reln, ForkNumber forknum);
-	void		(*smgr_truncate) (SMgrRelation reln, ForkNumber forknum,
-								  BlockNumber nblocks);
-	void		(*smgr_immedsync) (SMgrRelation reln, ForkNumber forknum);
-} f_smgr;
-
 static const f_smgr smgrsw[] = {
 	/* magnetic disk */
 	{
@@ -136,16 +110,27 @@ static void smgrshutdown(int code, Datum arg);
  * case), *not* during postmaster start.  Therefore, any resources created
  * here or destroyed in smgrshutdown are backend-local.
  */
-void
-smgrinit(void)
-{
-	int			i;
 
+void
+smgr_init_standard(void)
+{
+	int i;
 	for (i = 0; i < NSmgr; i++)
 	{
 		if (smgrsw[i].smgr_init)
 			smgrsw[i].smgr_init();
 	}
+	mdinit();
+}
+
+
+void
+smgrinit(void)
+{
+	if (smgr_init_hook)
+		(*smgr_init_hook)();
+
+	smgr_init_standard();
 
 	/* register the shutdown proc */
 	on_proc_exit(smgrshutdown, 0);
@@ -154,16 +139,51 @@ smgrinit(void)
 /*
  * on_proc_exit hook for smgr cleanup during backend shutdown
  */
-static void
-smgrshutdown(int code, Datum arg)
-{
-	int			i;
 
+
+void smgr_shutdown_standard() {
+	int			i;
 	for (i = 0; i < NSmgr; i++)
 	{
 		if (smgrsw[i].smgr_shutdown)
 			smgrsw[i].smgr_shutdown();
 	}
+}
+
+static void
+smgrshutdown(int code, Datum arg)
+{
+	if (smgr_shutdown_hook)
+		(*smgr_shutdown_hook)();
+
+	smgr_shutdown_standard();
+}
+
+/* Hooks for plugins to get control in smgr */
+smgr_hook_type smgr_hook = NULL;
+smgr_init_hook_type smgr_init_hook = NULL;
+smgr_shutdown_hook_type smgr_shutdown_hook = NULL;
+
+const f_smgr *
+smgr_standard(BackendId backend, RelFileNode rnode, SMgrImpl which)
+{
+	// for md.c 
+	return &smgrsw[which];
+}
+
+const f_smgr *
+smgr(BackendId backend, RelFileNode rnode, SMgrImpl which)
+{
+	const f_smgr *result;
+
+	if (smgr_hook)
+ 	{
+		result = (*smgr_hook)(backend, rnode, which);
+ 	}
+	else
+		result = smgr_standard(backend, rnode, which);
+
+	return result;
 }
 
 /*
@@ -212,6 +232,7 @@ smgropen(RelFileNode rnode, BackendId backend, SMgrImpl which)
 		reln->smgr_fsm_nblocks = InvalidBlockNumber;
 		reln->smgr_vm_nblocks = InvalidBlockNumber;
 		reln->smgr_which = which;
+		reln->storageManager = smgr(backend, rnode, which);
 
 		/* mark it not open */
 		for (forknum = 0; forknum <= MAX_FORKNUM; forknum++)
@@ -219,20 +240,6 @@ smgropen(RelFileNode rnode, BackendId backend, SMgrImpl which)
 
 		/* it has no owner yet */
 		dlist_push_tail(&unowned_relns, &reln->node);
-	}
-	else if (reln->smgr_which != which)
-	{
-		/*
-		 * GPDB_12_MERGE_FIXME: SMGR WAL record does not have a way to
-		 * identify a specific SMGR implementation.  If the SMGR
-		 * implementation that the caller expects does not match the
-		 * implementation we already have in the hash table, it is most likely
-		 * due to calling smgropen when replaying a SMGR WAL record.  Fix the
-		 * expectation as a workaround for now.  A proper fix should include
-		 * the implementation identifier (smgr_which) in the SMGR WAL record.
-		 */
-		Assert(reln->smgr_which == 0);
-		reln->smgr_which = which;
 	}
 
 	return reln;
@@ -296,7 +303,7 @@ smgrclearowner(SMgrRelation *owner, SMgrRelation reln)
 bool
 smgrexists(SMgrRelation reln, ForkNumber forknum)
 {
-	return smgrsw[reln->smgr_which].smgr_exists(reln, forknum);
+	return (*reln->storageManager).smgr_exists(reln, forknum);
 }
 
 /*
@@ -309,7 +316,7 @@ smgrclose(SMgrRelation reln)
 	ForkNumber	forknum;
 
 	for (forknum = 0; forknum <= MAX_FORKNUM; forknum++)
-		smgrsw[reln->smgr_which].smgr_close(reln, forknum);
+		(*reln->storageManager).smgr_close(reln, forknum);
 
 	owner = reln->smgr_owner;
 
@@ -405,7 +412,7 @@ smgrcreate(SMgrRelation reln, ForkNumber forknum, bool isRedo)
 							reln->smgr_rnode.node.dbNode,
 							isRedo);
 
-    smgrsw[reln->smgr_which].smgr_create(reln, forknum, isRedo);
+    (*reln->storageManager).smgr_create(reln, forknum, isRedo);
 
 	if (file_create_hook)
 		(*file_create_hook)(reln->smgr_rnode);
@@ -455,13 +462,12 @@ smgrdounlinkall(SMgrRelation *rels, int nrels, bool isRedo)
 	for (i = 0; i < nrels; i++)
 	{
 		RelFileNodeBackend rnode = rels[i]->smgr_rnode;
-		int			which = rels[i]->smgr_which;
 
 		rnodes[i] = rnode;
 
 		/* Close the forks at smgr level */
 		for (forknum = 0; forknum <= MAX_FORKNUM; forknum++)
-			smgrsw[which].smgr_close(rels[i], forknum);
+			 (*rels[i]->storageManager).smgr_close(rels[i], forknum);
 	}
 
 	/*
@@ -496,10 +502,8 @@ smgrdounlinkall(SMgrRelation *rels, int nrels, bool isRedo)
 
 	for (i = 0; i < nrels; i++)
 	{
-        int                which = rels[i]->smgr_which;
-
 		for (forknum = 0; forknum <= MAX_FORKNUM; forknum++)
-			smgrsw[which].smgr_unlink(rnodes[i], forknum, isRedo);
+			(*rels[i]->storageManager).smgr_unlink(rnodes[i], forknum, isRedo);
 	}
 
 	if (file_unlink_hook)
@@ -523,10 +527,9 @@ void
 smgrdounlinkfork(SMgrRelation reln, ForkNumber forknum, bool isRedo)
 {
 	RelFileNodeBackend rnode = reln->smgr_rnode;
-	int			which = reln->smgr_which;
 
 	/* Close the fork at smgr level */
-	smgrsw[which].smgr_close(reln, forknum);
+	(*reln->storageManager).smgr_close(reln, forknum);
 
 	/*
 	 * Get rid of any remaining buffers for the fork.  bufmgr will just drop
@@ -558,7 +561,7 @@ smgrdounlinkfork(SMgrRelation reln, ForkNumber forknum, bool isRedo)
 	 * ERROR, because we've already decided to commit or abort the current
 	 * xact.
 	 */
-	smgrsw[which].smgr_unlink(rnode, forknum, isRedo);
+	(*reln->storageManager).smgr_unlink(rnode, forknum, isRedo);
 }
 
 /*
@@ -575,7 +578,7 @@ void
 smgrextend(SMgrRelation reln, ForkNumber forknum, BlockNumber blocknum,
 		   char *buffer, bool skipFsync)
 {
-	smgrsw[reln->smgr_which].smgr_extend(reln, forknum, blocknum,
+	(*reln->storageManager).smgr_extend(reln, forknum, blocknum,
 										 buffer, skipFsync);
     if (file_extend_hook)
         (*file_extend_hook)(reln->smgr_rnode);
@@ -587,7 +590,7 @@ smgrextend(SMgrRelation reln, ForkNumber forknum, BlockNumber blocknum,
 void
 smgrprefetch(SMgrRelation reln, ForkNumber forknum, BlockNumber blocknum)
 {
-	smgrsw[reln->smgr_which].smgr_prefetch(reln, forknum, blocknum);
+	(*reln->storageManager).smgr_prefetch(reln, forknum, blocknum);
 }
 
 /*
@@ -602,7 +605,7 @@ void
 smgrread(SMgrRelation reln, ForkNumber forknum, BlockNumber blocknum,
 		 char *buffer)
 {
-	smgrsw[reln->smgr_which].smgr_read(reln, forknum, blocknum, buffer);
+	(*reln->storageManager).smgr_read(reln, forknum, blocknum, buffer);
 }
 
 /*
@@ -624,7 +627,7 @@ void
 smgrwrite(SMgrRelation reln, ForkNumber forknum, BlockNumber blocknum,
 		  char *buffer, bool skipFsync)
 {
-	smgrsw[reln->smgr_which].smgr_write(reln, forknum, blocknum,
+	(*reln->storageManager).smgr_write(reln, forknum, blocknum,
 										buffer, skipFsync);
 }
 
@@ -637,7 +640,7 @@ void
 smgrwriteback(SMgrRelation reln, ForkNumber forknum, BlockNumber blocknum,
 			  BlockNumber nblocks)
 {
-	smgrsw[reln->smgr_which].smgr_writeback(reln, forknum, blocknum,
+	(*reln->storageManager).smgr_writeback(reln, forknum, blocknum,
 											nblocks);
 }
 
@@ -648,7 +651,7 @@ smgrwriteback(SMgrRelation reln, ForkNumber forknum, BlockNumber blocknum,
 BlockNumber
 smgrnblocks(SMgrRelation reln, ForkNumber forknum)
 {
-	return smgrsw[reln->smgr_which].smgr_nblocks(reln, forknum);
+	return (*reln->storageManager).smgr_nblocks(reln, forknum);
 }
 
 /*
@@ -681,7 +684,7 @@ smgrtruncate(SMgrRelation reln, ForkNumber forknum, BlockNumber nblocks)
 	/*
 	 * Do the truncation.
 	 */
-	smgrsw[reln->smgr_which].smgr_truncate(reln, forknum, nblocks);
+	(*reln->storageManager).smgr_truncate(reln, forknum, nblocks);
 
 	if (file_truncate_hook)
 		(*file_truncate_hook)(reln->smgr_rnode);
@@ -713,7 +716,7 @@ smgrtruncate(SMgrRelation reln, ForkNumber forknum, BlockNumber nblocks)
 void
 smgrimmedsync(SMgrRelation reln, ForkNumber forknum)
 {
-	smgrsw[reln->smgr_which].smgr_immedsync(reln, forknum);
+	(*reln->storageManager).smgr_immedsync(reln, forknum);
 }
 
 /*

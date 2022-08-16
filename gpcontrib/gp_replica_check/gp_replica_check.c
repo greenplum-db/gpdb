@@ -6,6 +6,7 @@
 #include "access/gistxlog.h"
 #include "access/ginxlog.h"
 #include "commands/sequence.h"
+#include "common/hashfn.h"
 #include "postmaster/bgwriter.h"
 #include "replication/walsender_private.h"
 #include "replication/walsender.h"
@@ -15,7 +16,6 @@
 #include "storage/fd.h"
 #include "storage/lwlock.h"
 #include "utils/builtins.h"
-#include "utils/hsearch.h"
 #include "utils/relmapper.h"
 #include "utils/varlena.h"
 

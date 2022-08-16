@@ -16,7 +16,7 @@ These methods are described in the following sections. The `VACUUM ANALYZE` comm
 
 Calculating statistics consumes time and resources, so Greenplum Database produces estimates by calculating statistics on samples of large tables. In most cases, the default settings provide the information needed to generate correct execution plans for queries. If the statistics produced are not producing optimal query execution plans, the administrator can tune configuration parameters to produce more accurate statistics by increasing the sample size or the granularity of statistics saved in the system catalog. Producing more accurate statistics has CPU and storage costs and may not produce better plans, so it is important to view explain plans and test query performance to ensure that the additional statistics-related costs result in better query performance.
 
-**Parent topic:**[Greenplum Database Concepts](../intro/partI.html)
+**Parent topic:** [Greenplum Database Concepts](../intro/partI.html)
 
 ## <a id="topic_oq3_qxj_3s"></a>System Statistics 
 

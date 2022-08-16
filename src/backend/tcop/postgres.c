@@ -43,6 +43,7 @@
 #include "access/xact.h"
 #include "catalog/oid_dispatch.h"
 #include "catalog/pg_type.h"
+#include "catalog/namespace.h"
 #include "commands/async.h"
 #include "commands/prepare.h"
 #include "commands/extension.h"
@@ -104,7 +105,6 @@
 
 #include "utils/session_state.h"
 #include "utils/vmem_tracker.h"
-#include "tcop/idle_resource_cleaner.h"
 
 /* ----------------
  *		global variables
@@ -125,6 +125,9 @@ int			max_stack_depth = 100;
 
 /* wait N seconds to allow attach from a debugger */
 int			PostAuthDelay = 0;
+
+/* Time between checks that the client is still connected. */
+int         client_connection_check_interval = 0;
 
 
 /*
@@ -236,7 +239,7 @@ static int	InteractiveBackend(StringInfo inBuf);
 static int	interactive_getc(void);
 static int	SocketBackend(StringInfo inBuf);
 static int	ReadCommand(StringInfo inBuf);
-static void forbidden_in_wal_sender(char firstchar);
+static void forbidden_in_wal_sender(int firstchar);
 static List *pg_rewrite_query(Query *query);
 static bool check_log_statement(List *stmt_list);
 static int	errdetail_execute(List *raw_parsetree_list);
@@ -411,11 +414,7 @@ interactive_getc(void)
 	 */
 	CHECK_FOR_INTERRUPTS();
 
-	enable_client_wait_timeout_interrupt();
-
 	c = getc(stdin);
-
-	disable_client_wait_timeout_interrupt();
 
 	ProcessClientReadInterrupt(false);
 
@@ -1143,6 +1142,8 @@ exec_mpp_query(const char *query_string,
 	ExecSlice  *slice = NULL;
 	ParamListInfo paramLI = NULL;
 
+	SIMPLE_FAULT_INJECTOR("exec_mpp_query_start");
+
 	Assert(Gp_role == GP_ROLE_EXECUTE);
 	/*
 	 * If we didn't get passed a query string, dummy something up for ps display and pg_stat_activity
@@ -1399,8 +1400,11 @@ exec_mpp_query(const char *query_string,
 		PortalDefineQuery(portal,
 						  NULL,
 						  query_string,
-						  /* GPDB_12_MERGE_FIXME: T_Query is probably not right for utility stmts */
-						  T_Query, /* not a parsed statement, so not T_SelectStmt */
+						  /*
+						   * sourceTag is stored in parsetree, but the original parsetree isn't
+						   * dispatched to QE, so set a generic T_Query here.
+						   */
+						  T_Query,
 						  commandTag,
 						  list_make1(plan),
 						  NULL);
@@ -3340,6 +3344,16 @@ start_xact_command(void)
 	 * not desired, the timeout has to be disabled explicitly.
 	 */
 	enable_statement_timeout();
+
+	/* Start timeout for checking if the client has gone away if necessary. */
+	if (client_connection_check_interval > 0 &&
+		/* doesn't operate on segments in case of distributed queries */
+		Gp_role != GP_ROLE_EXECUTE &&
+		IsUnderPostmaster &&
+		MyProcPort &&
+		!get_timeout_active(CLIENT_CONNECTION_CHECK_TIMEOUT))
+		enable_timeout_after(CLIENT_CONNECTION_CHECK_TIMEOUT,
+							 client_connection_check_interval);
 }
 
 static void
@@ -3867,6 +3881,27 @@ ProcessInterrupts(const char* filename, int lineno)
 						 errmsg("terminating connection due to administrator command")));
 		}
 	}
+
+	if (CheckClientConnectionPending)
+	{
+		CheckClientConnectionPending = false;
+
+		/*
+		 * Check for lost connection and re-arm, if still configured, but not
+		 * if we've arrived back at DoingCommandRead state.  We don't want to
+		 * wake up idle sessions, and they already know how to detect lost
+		 * connections.
+		 */
+		if (!DoingCommandRead && client_connection_check_interval > 0)
+		{
+			if (!pq_check_connection())
+				ClientConnectionLost = true;
+			else
+				enable_timeout_after(CLIENT_CONNECTION_CHECK_TIMEOUT,
+									 client_connection_check_interval);
+		}
+	}
+
 	if (ClientConnectionLost)
 	{
 		QueryCancelPending = false; /* lost connection trumps QueryCancel */
@@ -4004,14 +4039,26 @@ ProcessInterrupts(const char* filename, int lineno)
 
 	if (IdleInTransactionSessionTimeoutPending)
 	{
-		/* Has the timeout setting changed since last we looked? */
+		/*
+		 * If the GUC has been reset to zero, ignore the signal.  This is
+		 * important because the GUC update itself won't disable any pending
+		 * interrupt.
+		 */
 		if (IdleInTransactionSessionTimeout > 0)
 			ereport(FATAL,
 					(errcode(ERRCODE_IDLE_IN_TRANSACTION_SESSION_TIMEOUT),
 					 errmsg("terminating connection due to idle-in-transaction timeout")));
 		else
 			IdleInTransactionSessionTimeoutPending = false;
+	}
 
+	if (IdleGangTimeoutPending)
+	{
+		/* As above, ignore the signal if the GUC has been reset to zero. */
+		if (IdleSessionGangTimeout > 0)
+			DisconnectAndDestroyUnusedQEs();
+
+		IdleGangTimeoutPending = false;
 	}
 
 	if (ParallelMessagePending)
@@ -4598,7 +4645,7 @@ process_postgres_switches(int argc, char *argv[], GucContext ctx,
  * received, and is used to construct the error message.
  */
 static void
-check_forbidden_in_gpdb_handlers(char firstchar)
+check_forbidden_in_gpdb_handlers(int firstchar)
 {
 	if (am_ftshandler || am_faulthandler)
 	{
@@ -4618,7 +4665,7 @@ check_forbidden_in_gpdb_handlers(char firstchar)
 }
 
 static void
-forbidden_in_retrieve_handler(char firstchar)
+forbidden_in_retrieve_handler(int firstchar)
 {
 	if (am_cursor_retrieve_handler)
 		ereport(ERROR,
@@ -4647,7 +4694,8 @@ PostgresMain(int argc, char *argv[],
 	StringInfoData input_message;
 	sigjmp_buf	local_sigjmp_buf;
 	volatile bool send_ready_for_query = true;
-	bool		disable_idle_in_transaction_timeout = false;
+	bool		idle_in_transaction_timeout_enabled = false;
+	bool		idle_gang_timeout_enabled = false;
 
 	/*
 	 * CDB: Catch program error signals.
@@ -4979,7 +5027,6 @@ PostgresMain(int argc, char *argv[],
 
 		/* Not reading from the client anymore. */
 		DoingCommandRead = false;
-		DisableClientWaitTimeoutInterrupt();
 
 		/* Make sure libpq is in a good state */
 		pq_comm_reset();
@@ -5126,6 +5173,8 @@ PostgresMain(int argc, char *argv[],
 		 * processing of batched messages, and because we don't want to report
 		 * uncommitted updates (that confuses autovacuum).  The notification
 		 * processor wants a call too, if we are not in a transaction block.
+		 *
+		 * Also, if an idle timeout is enabled, start the timer for that.
 		 */
 		if (send_ready_for_query)
 		{
@@ -5145,9 +5194,9 @@ PostgresMain(int argc, char *argv[],
 				pgstat_report_activity(STATE_IDLEINTRANSACTION_ABORTED, NULL);
 
 				/* Start the idle-in-transaction timer */
-				if (IdleInTransactionSessionTimeout > 0)
+				if (IdleInTransactionSessionTimeout > 0 && Gp_role != GP_ROLE_EXECUTE)
 				{
-					disable_idle_in_transaction_timeout = true;
+					idle_in_transaction_timeout_enabled = true;
 					enable_timeout_after(IDLE_IN_TRANSACTION_SESSION_TIMEOUT,
 										 IdleInTransactionSessionTimeout);
 				}
@@ -5159,9 +5208,9 @@ PostgresMain(int argc, char *argv[],
 				pgstat_report_activity(STATE_IDLEINTRANSACTION, NULL);
 
 				/* Start the idle-in-transaction timer */
-				if (IdleInTransactionSessionTimeout > 0)
+				if (IdleInTransactionSessionTimeout > 0 && Gp_role != GP_ROLE_EXECUTE)
 				{
-					disable_idle_in_transaction_timeout = true;
+					idle_in_transaction_timeout_enabled = true;
 					enable_timeout_after(IDLE_IN_TRANSACTION_SESSION_TIMEOUT,
 										 IdleInTransactionSessionTimeout);
 				}
@@ -5175,6 +5224,14 @@ PostgresMain(int argc, char *argv[],
 				strncat(activity, "idle", remain);
 				set_ps_display(activity, false);
 				pgstat_report_activity(STATE_IDLE, NULL);
+			}
+
+			/* Start the idle-gang timer */
+			if (Gp_role == GP_ROLE_DISPATCH && IdleSessionGangTimeout > 0 && cdbcomponent_qesExist())
+			{
+				idle_gang_timeout_enabled = true;
+				enable_timeout_after(IDLE_GANG_TIMEOUT,
+									 IdleSessionGangTimeout);
 			}
 
 			ReadyForQuery(whereToSendOutput);
@@ -5191,21 +5248,14 @@ PostgresMain(int argc, char *argv[],
 
 		/*
 		 * (2b) Check for temp table delete reset session work.
-		 * Also clean up idle resources.
 		 */
 		if (Gp_role == GP_ROLE_DISPATCH)
-		{
 			GpDropTempTables();
-			StartIdleResourceCleanupTimers();
-		}
 
 		/*
 		 * (3) read a command (loop blocks here)
 		 */
 		firstchar = ReadCommand(&input_message);
-
-		if (Gp_role == GP_ROLE_DISPATCH)
-			CancelIdleResourceCleanupTimers();
 
 		/*
 		 * Reset QueryFinishPending flag, so that if we received a delayed
@@ -5230,12 +5280,21 @@ PostgresMain(int argc, char *argv[],
 		DoingCommandRead = false;
 
 		/*
-		 * (5) turn off the idle-in-transaction timeout
+		 * (5) turn off the idle-in-transaction and idle-session timeouts, if
+		 * active.
+		 *
+		 * At most one of these two will be active, so there's no need to
+		 * worry about combining the timeout.c calls into one.
 		 */
-		if (disable_idle_in_transaction_timeout)
+		if (idle_in_transaction_timeout_enabled)
 		{
 			disable_timeout(IDLE_IN_TRANSACTION_SESSION_TIMEOUT, false);
-			disable_idle_in_transaction_timeout = false;
+			idle_in_transaction_timeout_enabled = false;
+		}
+		if (idle_gang_timeout_enabled)
+		{
+			disable_timeout(IDLE_GANG_TIMEOUT, false);
+			idle_gang_timeout_enabled = false;
 		}
 
 		/*
@@ -5400,6 +5459,15 @@ PostgresMain(int argc, char *argv[],
 					if (resgroupInfoLen > 0)
 						resgroupInfoBuf = pq_getmsgbytes(&input_message, resgroupInfoLen);
 
+					/* process local variables for temporary namespace */
+					{
+						Oid			tempNamespaceId, tempToastNamespaceId;
+
+						tempNamespaceId = pq_getmsgint(&input_message, sizeof(tempNamespaceId));
+						tempToastNamespaceId = pq_getmsgint(&input_message, sizeof(tempToastNamespaceId));
+						SetTempNamespaceStateAfterBoot(tempNamespaceId, tempToastNamespaceId);
+					}
+
 					pq_getmsgend(&input_message);
 
 					elog((Debug_print_full_dtm ? LOG : DEBUG5), "MPP dispatched stmt from QD: %s.",query_string);
@@ -5458,6 +5526,7 @@ PostgresMain(int argc, char *argv[],
 
 					SetUserIdAndSecContext(GetOuterUserId(), 0);
 
+					SIMPLE_FAULT_INJECTOR("qe_exec_finished");
 					send_ready_for_query = true;
 				}
 				break;
@@ -5767,7 +5836,7 @@ PostgresMain(int argc, char *argv[],
  * message was received, and is used to construct the error message.
  */
 static void
-forbidden_in_wal_sender(char firstchar)
+forbidden_in_wal_sender(int firstchar)
 {
 	if (am_walsender)
 	{
@@ -5972,16 +6041,11 @@ log_disconnections(int code, Datum arg pg_attribute_unused())
 static void
 enable_statement_timeout(void)
 {
-	/*
-	 * GPDB_12_MERGE_FIXME: Postgres commit f8e5f156b30 changed
-	 * statement_timeout logic. GPDB had logic to ignore timeout on QE
-	 * (GPDB-historical commit 4e4abaed4c5). Does that logic need to be
-	 * reapplied here?
-	 */
 	/* must be within an xact */
 	Assert(xact_started);
 
-	if (StatementTimeout > 0)
+	/* always disable statement timeout in QE */
+	if (StatementTimeout > 0 && Gp_role != GP_ROLE_EXECUTE)
 	{
 		if (!stmt_timeout_active)
 		{
@@ -6007,32 +6071,3 @@ disable_statement_timeout(void)
 	}
 }
 
-/*
- * GPDB: Enable the IdleGangTimeoutHandler to disconnect and destroy idle
- * cdbgang processes.
- */
-void
-enable_client_wait_timeout_interrupt(void)
-{
-	if (DoingCommandRead)
-		EnableClientWaitTimeoutInterrupt();
-}
-
-/*
- * GPDB: Disable the IdleGangTimeoutHandler to prevent disconnecting and
- * destroying idle cdbgang processes.
- */
-void
-disable_client_wait_timeout_interrupt(void)
-{
-	if (DoingCommandRead)
-		DisableClientWaitTimeoutInterrupt();
-}
-
-/*
- * Whether request on cancel or termination have arrived?
- */
-inline bool
-CancelRequested() {
-	return InterruptPending && (ProcDiePending || QueryCancelPending);
-}

@@ -1,4 +1,3 @@
-set optimizer=off;
 set allow_system_table_mods = true;
 create temp table random_2_0 (a int, b int, c int, d int) distributed randomly;
 update gp_distribution_policy set numsegments = 2 where localoid = 'random_2_0'::regclass;

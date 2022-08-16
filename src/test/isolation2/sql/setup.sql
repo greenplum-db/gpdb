@@ -245,6 +245,10 @@ $$ language plpgsql;
 
 create or replace function wait_until_all_segments_synchronized() returns text as $$
 begin
+	/* no-op for a mirrorless cluster */
+	if (select count(*) = 0 from gp_segment_configuration where role = 'm') then
+		return 'OK'; /* in func */
+	end if; /* in func */
 	for i in 1..1200 loop
 		if (select count(*) = 0 from gp_segment_configuration where content != -1 and mode != 's') then
 			return 'OK'; /* in func */
@@ -255,6 +259,18 @@ begin
 	return 'Fail'; /* in func */
 end; /* in func */
 $$ language plpgsql;
+
+CREATE OR REPLACE FUNCTION is_query_waiting_for_syncrep(iterations int, check_query text) RETURNS bool AS $$
+    for i in range(iterations):
+        results = plpy.execute("SELECT gp_execution_segment() AS content, query, wait_event\
+                                FROM gp_dist_random('pg_stat_activity')\
+                                WHERE gp_execution_segment() = 1 AND\
+                                query = '%s' AND\
+                                wait_event = 'SyncRep'" % check_query )
+        if results:
+            return True
+    return False
+$$ LANGUAGE plpython3u VOLATILE;
 
 create or replace function wait_for_replication_replay (segid int, retries int) returns bool as
 $$

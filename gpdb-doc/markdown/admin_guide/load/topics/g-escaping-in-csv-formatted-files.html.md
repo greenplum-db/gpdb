@@ -26,5 +26,5 @@ Embedding the entire field inside a set of double quotes guarantees preservation
 
 **Note:** In CSV mode, all characters are significant. A quoted value surrounded by white space, or any characters other than `DELIMITER`, includes those characters. This can cause errors if you import data from a system that pads CSV lines with white space to some fixed width. In this case, preprocess the CSV file to remove the trailing white space before importing the data into Greenplum Database.
 
-**Parent topic:**[Escaping](../../load/topics/g-escaping.html)
+**Parent topic:** [Escaping](../../load/topics/g-escaping.html)
 

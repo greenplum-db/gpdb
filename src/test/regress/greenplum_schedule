@@ -15,6 +15,9 @@
 #   hitting max_connections limit on segments.
 #
 
+# required setup steps
+test: test_setup
+
 test: gp_dispatch_keepalives
 
 # copy command
@@ -37,8 +40,9 @@ test: instr_in_shmem_setup
 test: instr_in_shmem
 
 test: createdb
-test: gp_aggregates gp_aggregates_costs gp_metadata variadic_parameters default_parameters function_extensions spi gp_xml shared_scan update_gp triggers_gp returning_gp resource_queue_with_rule gp_types gp_index cluster_gp combocid_gp gp_sort gp_prepared_xacts
+test: gp_aggregates gp_aggregates_costs gp_metadata variadic_parameters default_parameters function_extensions spi gp_xml shared_scan update_gp triggers_gp returning_gp resource_queue_with_rule gp_types gp_index cluster_gp combocid_gp gp_sort gp_prepared_xacts gp_backend_info
 test: spi_processed64bit
+test: gp_lock
 test: gp_tablespace_with_faults
 # below test(s) inject faults so each of them need to be in a separate group
 test: gp_tablespace
@@ -57,6 +61,7 @@ test: guc_gp
 test: toast
 test: misc_jiras
 test: statement_mem_for_windowagg
+test: write_gang_idle_in_transaction_session_timeout
 
 # namespace_gp test will show diff if concurrent tests use temporary tables.
 # So run it separately.
@@ -96,7 +101,7 @@ test: cursor
 # so it needs to be in a group by itself
 test: query_finish_pending
 
-test: gpdiffcheck gptokencheck gp_hashagg sequence_gp tidscan_gp co_nestloop_idxscan dml_in_udf gpdtm_plpgsql
+test: gpdiffcheck gptokencheck gp_hashagg sequence_gp tidscan_gp co_nestloop_idxscan dml_in_udf gpdtm_plpgsql gp_array_agg
 
 # The test must be run by itself as it injects a fault on QE to fail
 # at the 2nd phase of 2PC.
@@ -130,7 +135,7 @@ test: db_size_functions
 
 ignore: gp_portal_error
 test: external_table external_table_union_all external_table_create_privs external_table_persistent_error_log column_compression eagerfree alter_table_aocs alter_table_aocs2 alter_distribution_policy aoco_privileges
-test: alter_table_set alter_table_gp alter_table_ao subtransaction_visibility oid_consistency udf_exception_blocks
+test: alter_table_set alter_table_gp alter_table_ao alter_table_set_am subtransaction_visibility oid_consistency udf_exception_blocks
 # below test(s) inject faults so each of them need to be in a separate group
 test: aocs
 test: ic
@@ -225,7 +230,7 @@ test: uao_ddl/alter_ao_table_owner_row uao_ddl/alter_ao_table_setstorage_row uao
 test: uao_ddl/alter_ao_table_setstorage_column uao_ddl/alter_ao_table_col_ddl_row uao_ddl/compresstype_row uao_ddl/alter_ao_table_col_ddl_column uao_ddl/alter_ao_part_tables_splitpartition_row uao_ddl/alter_ao_part_tables_splitpartition_column uao_ddl/create_ao_tables_row uao_ddl/create_ao_table_500cols_row uao_ddl/create_ao_tables_column uao_ddl/alter_ao_part_exch_row
 test: uao_ddl/alter_ao_part_exch_column uao_ddl/alter_ao_part_tables_row uao_ddl/create_ao_table_500cols_column uao_ddl/alter_ao_part_tables_column
 
-test: uao_ddl/alter_drop_allcol_row uao_ddl/alter_drop_allcol_column uao_ddl/alter_rollback_row uao_ddl/alter_rollback_column uao_ddl/uao_allalter_row uao_ddl/uao_allalter_column
+test: uao_ddl/alter_drop_allcol_row uao_ddl/alter_drop_allcol_column uao_ddl/alter_rollback_row uao_ddl/alter_rollback_column uao_ddl/uao_allalter_row uao_ddl/uao_allalter_column uao_ddl/alter_table_reloptions_row uao_ddl/alter_table_reloptions_column
 
 # These tests use gp_select_invisible and VACUUM, and will get confused if there are
 # concurrent transactions holding back the global xmin.
@@ -292,5 +297,8 @@ test: run_utility_gpexpand_phase1
 
 # check correct error message when create extension error on segment
 test: create_extension_fail
+
+# test if motion sockets are created with the gp_segment_configuration.address
+test: motion_socket
 
 # end of tests

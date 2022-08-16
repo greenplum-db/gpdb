@@ -244,6 +244,8 @@ CREATE_QES_MIRROR () {
     START_QE "-w"
     RETVAL=$?
     PARA_EXIT $RETVAL "pg_basebackup of segment data directory from ${PRIMARY_HOSTADDRESS} to ${GP_HOSTADDRESS}"
+    SED_PG_CONF ${GP_DIR}/$PG_CONF "port" port=$GP_PORT 0 $GP_HOSTADDRESS
+    PARA_EXIT $RETVAL "Update port number to $GP_PORT"
     LOG_MSG "[INFO][$INST_COUNT]:-End Function $FUNCNAME"
 }
 

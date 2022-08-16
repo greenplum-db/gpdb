@@ -28,7 +28,7 @@
  * The 48 bits available in the struct are divided as follow:
  *
  * - the 7 most significant bits stand for which segment file the tuple is in
- *   (Limit: 128 (2^8)). This also makes up part of the "block number" when
+ *   (Limit: 128 (2^7)). This also makes up part of the "block number" when
  *   interpreted as a heap TID.
  *
  * - The next 25 bits come from the 25 most significant bits of the row
