@@ -2367,6 +2367,10 @@ waitOnOutbound(ChunkTransportStateEntry *pEntry)
 		n = select(maxfd + 1, (fd_set *) &curset, NULL, NULL, &timeout);
 		if (n == 0 || (n < 0 && errno == EINTR))
 		{
+			mpp_fd_set	emptyset;
+			MPP_FD_ZERO(&emptyset);
+			if (!memcmp(&curset, &emptyset, sizeof(curset)))
+				break;
 			continue;
 		}
 		else if (n < 0)
@@ -2587,7 +2591,14 @@ RecvTupleChunkFromAnyTCP(ChunkTransportState *transportStates,
 					 errmsg("interconnect error receiving an incoming packet"),
 					 errdetail("%s: %m", "select")));
 		}
-		else if (n > 0 && waitFd != PGINVALID_SOCKET && MPP_FD_ISSET(waitFd, &rset))
+		else if (waitFd == PGINVALID_SOCKET || !MPP_FD_ISSET(waitFd, &rset))
+		{
+			ereport(ERROR,
+					(errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
+					 errmsg("interconnect error invalid socket descriptor"),
+					 errdetail("%s: %m", "select")));
+		}
+		else if (n > 0)
 		{
 			/* handle events on dispatch connection */
 			checkForCancelFromQD(transportStates);
