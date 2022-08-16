@@ -206,9 +206,9 @@ Subtransaction overflow arises when a Greenplum Database backend creates more th
 
 Greenplum Database includes an extension -- `gp_subtransaction_overflow` -- and a view -- `gp_suboverflowed_backend` -- that's run over a user-defined function to help users query for suboverflowed backends. Users can use segment id and process id information reported in the view to terminate the offending backends, thereby preventing degradation of performance.
 
-### <a id="check_backends"></a>Checking for and Terminating Overflowed Backends
+### <a id="check_backends"></a>Steps
 
-Follow these steps below to identify overflowed backends.
+Follow these steps below to identify and terminate overflowed backends.
 
 1. Create the extension:
 
