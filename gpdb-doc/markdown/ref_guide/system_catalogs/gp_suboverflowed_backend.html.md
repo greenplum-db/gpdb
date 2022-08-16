@@ -1,7 +1,7 @@
 # gp_suboverflowed_backend 
 
-The `gp_suboveflowed_backend` view allows administrators to identify sessions in which a backend has subtransaction overflows coupled 
-with long running queries -- including queries on catalog tables -- which can cause query performance degradation in the system.  
+The `gp_suboveflowed_backend` view allows administrators to identify sessions in which a backend has subtransaction overflows, 
+which can cause query performance degradation in the system, including catalog queries.
 
 |column|type|description|
 |------|----|----------|
