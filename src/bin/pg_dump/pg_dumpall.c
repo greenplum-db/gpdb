@@ -1604,9 +1604,8 @@ dumpTablespaces(PGconn *conn)
 							  fspcname, spcoptions);
 
 		if (!skip_acls &&
-			!buildACLCommands(fspcname, NULL, NULL, "TABLESPACE",
-							  spcacl, spcowner,
-							  "", server_version, buf))
+			!buildACLCommands(fspcname, NULL, NULL, "TABLESPACE", spcacl, "",
+							  spcowner, "", server_version, buf))
 		{
 			fprintf(stderr, _("%s: could not parse ACL list (%s) for tablespace \"%s\"\n"),
 					progname, spcacl, spcname);
@@ -1898,7 +1897,7 @@ dumpCreateDB(PGconn *conn)
 		appendPQExpBuffer(buf, "RESET allow_system_table_mods;\n");
 
 		if (!skip_acls &&
-			!buildACLCommands(fdbname, NULL, NULL, "DATABASE", dbacl, dbowner,
+			!buildACLCommands(fdbname, NULL, NULL, "DATABASE", dbacl, "", dbowner,
 							  "", server_version, buf))
 		{
 			fprintf(stderr, _("%s: could not parse ACL list (%s) for database \"%s\"\n"),
