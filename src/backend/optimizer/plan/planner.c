@@ -7319,18 +7319,16 @@ add_paths_to_grouping_rel(PlannerInfo *root, RelOptInfo *input_rel,
 			{
 				Path	   *path = (Path *) lfirst(lc);
 				double		dNumGroups;
-				bool		is_sorted = true;
+				bool		is_sorted;
+
+				is_sorted = pathkeys_contained_in(root->group_pathkeys, path->pathkeys);
 
 				/*
-				 * Insert a Sort node, if required.  But there's no point in
+				 * Insert a Sort node, if required. But there's no point in
 				 * sorting anything but the cheapest path.
 				 */
-				if (!pathkeys_contained_in(root->group_pathkeys, path->pathkeys))
-				{
-					if (path != partially_grouped_rel->cheapest_total_path)
-						continue;
-					is_sorted = false;
-				}
+				if (!is_sorted && path != partially_grouped_rel->cheapest_total_path)
+					continue;
 
 				path = cdb_prepare_path_for_sorted_agg(root,
 													   is_sorted,
@@ -7368,7 +7366,7 @@ add_paths_to_grouping_rel(PlannerInfo *root, RelOptInfo *input_rel,
 											 agg_final_costs,
 											 dNumGroups));
 				}
-						/* Group nodes are not used in GPDB */
+				/* Group nodes are not used in GPDB */
 #if 0
 				else
 					add_path(grouped_rel, (Path *)
