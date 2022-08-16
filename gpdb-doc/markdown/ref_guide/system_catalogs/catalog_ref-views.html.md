@@ -15,6 +15,7 @@ Greenplum Database provides the following system views not available in PostgreS
 -   [gp\_resqueue\_status](gp_resqueue_status.html)
 -   [gp\_segment\_endpoints](gp_segment_endpoints.html)
 -   [gp\_session\_endpoints](gp_session_endpoints.html)
+-   [gp_stat_archiver](gp_stat_archiver.html)
 -   [gp\_transaction\_log](gp_transaction_log.html)
 -   [gpexpand.expansion\_progress](gpexpand_expansion_progress.html)
 -   [pg\_cursors](pg_cursors.html)

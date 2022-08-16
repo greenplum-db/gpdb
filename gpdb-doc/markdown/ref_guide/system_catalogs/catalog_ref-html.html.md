@@ -54,6 +54,8 @@ System catalog table and view definitions in alphabetical order.
 
 -   [gp\_session\_endpoints](../system_catalogs/gp_session_endpoints.html)  
 
+-   [gp_stat_archiver](../system_catalogs/gp_stat_archiver.html)
+
 -   [gp\_stat\_replication](../system_catalogs/gp_stat_replication.html)  
 
 -   [gp\_transaction\_log](../system_catalogs/gp_transaction_log.html)  
