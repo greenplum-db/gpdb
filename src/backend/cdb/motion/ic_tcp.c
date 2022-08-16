@@ -2382,6 +2382,10 @@ waitOnOutbound(ChunkTransportStateEntry *pEntry)
 		n = select(maxfd + 1, (fd_set *) &curset, NULL, NULL, &timeout);
 		if (n == 0 || (n < 0 && errno == EINTR))
 		{
+			mpp_fd_set	emptyset;
+			MPP_FD_ZERO(&emptyset);
+			if (!memcmp(&curset, &emptyset, sizeof(curset)))
+				break;
 			continue;
 		}
 		else if (n < 0)
@@ -2622,6 +2626,12 @@ RecvTupleChunkFromAnyTCP(ChunkTransportState *transportStates,
 			/* handle events on dispatch connection */
 			if (need_check)
 				checkForCancelFromQD(transportStates);
+		}
+		else {
+			mpp_fd_set	emptyset;
+			MPP_FD_ZERO(&emptyset);
+			if (!memcmp(&rset, &emptyset, sizeof(rset)))
+				break;
 		}
 
 		if (waitFds)
