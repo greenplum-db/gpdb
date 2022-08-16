@@ -1644,9 +1644,8 @@ simple_string_list_append(SimpleStringList *list, const char *val)
 {
 	SimpleStringListCell *cell;
 
-	/* this calculation correctly accounts for the null trailing byte */
 	cell = (SimpleStringListCell *)
-		pg_malloc(sizeof(SimpleStringListCell) + strlen(val));
+		pg_malloc(offsetof(SimpleStringListCell, val) +strlen(val) + 1);
 
 	cell->next = NULL;
 	cell->touched = false;
