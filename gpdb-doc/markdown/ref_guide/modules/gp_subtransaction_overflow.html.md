@@ -13,4 +13,4 @@ The `gp_subtransaction_overflow` module is installed when you install Greenplum 
 CREATE EXTENSION gp_subtransaction_overflow;
 ```
 
-For more information on how to use this module, see [Monitoring a Greenplum System](../../admin_guide/managing/monitor.html).
+For more information on how to use this module, see its discussion in [Monitoring a Greenplum System](../../admin_guide/managing/monitor.html#checking-for-and-terminating-overflowed-backends).
