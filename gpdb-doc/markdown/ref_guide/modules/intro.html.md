@@ -15,6 +15,7 @@ The following Greenplum Database and PostgreSQL `contrib` modules are installed;
 -   [fuzzystrmatch](fuzzystrmatch.html) - Determines similarities and differences between strings.
 -   [gp\_legacy\_string\_agg](gp_legacy_string_agg.html) - Implements a legacy, single-argument `string_agg()` aggregate function that was present in Greenplum Database 5.
 -   [gp\_sparse\_vector](gp_sparse_vector.html) - Implements a Greenplum Database data type that uses compressed storage of zeros to make vector computations on floating point numbers faster.
+-   [gp_subtransaction_overflow](gp_subtransaction_overflow.html) - Provides a view and user defined function for querying for suboverflowed backends.
 -   [hstore](hstore.html) - Provides a data type for storing sets of key/value pairs within a single PostgreSQL value.
 -   [orafce](orafce_ref.html) - Provides Greenplum Database-specific Oracle SQL compatibility functions.
 -   [pageinspect](pageinspect.html) - Provides functions for low level inspection of the contents of database pages; available to superusers only.
