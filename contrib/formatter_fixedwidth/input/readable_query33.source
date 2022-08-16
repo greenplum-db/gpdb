@@ -1,0 +1,25 @@
+set datestyle = 'ISO, DMY';
+
+-- Generate a multi field large dataset for testing
+DROP EXTERNAL WEB TABLE IF EXISTS tbl_dataset_gen;
+CREATE EXTERNAL WEB TABLE tbl_dataset_gen (
+  s1 char(25))
+EXECUTE '$(SHELL) @abs_srcdir@/scripts/multi_fields_generator.sh | tee @abs_srcdir@/data/fixedwidth_large_multi_fields.tbl' ON HOST
+FORMAT 'TEXT';
+
+\d tbl_dataset_gen;
+
+select * from tbl_dataset_gen ORDER BY s1 desc limit 10;
+
+-- Loading a multi field large dataset for testing
+DROP EXTERNAL TABLE IF EXISTS tbl_ext_fixedwidth;
+CREATE EXTERNAL TABLE tbl_ext_fixedwidth (
+  s1 char(10), s2 real, s3 double precision, s4 integer)
+LOCATION(
+  'file://@hostname@@abs_srcdir@/data/fixedwidth_large_multi_fields.tbl'
+)
+FORMAT 'CUSTOM' (formatter='fixedwidth_in', s1='10', s2='5', s3='9', s4='1');
+
+\d tbl_ext_fixedwidth;
+
+SELECT * FROM tbl_ext_fixedwidth ORDER BY s1 desc limit 10;

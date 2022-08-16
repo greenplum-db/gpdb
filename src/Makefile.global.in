@@ -200,7 +200,7 @@ with_libbz2	= @with_libbz2@
 with_apr_config	= @with_apr_config@
 with_apu_config	= @with_apu_config@
 with_libsigar	= @with_libsigar@
-enable_shared	= @enable_shared@
+with_gssapi	= @with_gssapi@
 enable_rpath	= @enable_rpath@
 # NLS is not supported in Greenplum, see comment documenting
 # this in configure.in
@@ -271,6 +271,7 @@ CC = @CC@
 GCC = @GCC@
 SUN_STUDIO_CC = @SUN_STUDIO_CC@
 CFLAGS = @CFLAGS@
+CFLAGS_SL = @CFLAGS_SL@
 CFLAGS_VECTOR = @CFLAGS_VECTOR@
 CFLAGS_SSE42 = @CFLAGS_SSE42@
 
@@ -400,12 +401,12 @@ endef
 ifeq ($(enable_tap_tests),yes)
 define prove_installcheck
 rm -rf $(CURDIR)/tmp_check/log
-cd $(srcdir) && TESTDIR='$(CURDIR)' PATH="$(bindir):$$PATH" top_builddir='$(CURDIR)/$(top_builddir)' PG_REGRESS='$(CURDIR)/$(top_builddir)/src/test/regress/pg_regress' $(PROVE) $(PG_PROVE_FLAGS) $(PROVE_FLAGS) $(if $(PROVE_TESTS),$(PROVE_TESTS),t/*.pl)
+cd $(srcdir) && TESTDIR='$(CURDIR)' PATH="$(bindir):$$PATH" top_builddir='$(CURDIR)/$(top_builddir)' PG_REGRESS='$(CURDIR)/$(top_builddir)/src/test/regress/pg_regress' REGRESS_SHLIB='$(abs_top_builddir)/src/test/regress/regress$(DLSUFFIX)' $(PROVE) $(PG_PROVE_FLAGS) $(PROVE_FLAGS) $(if $(PROVE_TESTS),$(PROVE_TESTS),t/*.pl)
 endef
 
 define prove_check
 rm -rf $(CURDIR)/tmp_check/log
-cd $(srcdir) && TESTDIR='$(CURDIR)' $(with_temp_install) top_builddir='$(CURDIR)/$(top_builddir)' PG_REGRESS='$(CURDIR)/$(top_builddir)/src/test/regress/pg_regress' $(PROVE) $(PG_PROVE_FLAGS) $(PROVE_FLAGS) $(if $(PROVE_TESTS),$(PROVE_TESTS),t/*.pl)
+cd $(srcdir) && TESTDIR='$(CURDIR)' $(with_temp_install) top_builddir='$(CURDIR)/$(top_builddir)' PG_REGRESS='$(CURDIR)/$(top_builddir)/src/test/regress/pg_regress' REGRESS_SHLIB='$(abs_top_builddir)/src/test/regress/regress$(DLSUFFIX)' $(PROVE) $(PG_PROVE_FLAGS) $(PROVE_FLAGS) $(if $(PROVE_TESTS),$(PROVE_TESTS),t/*.pl)
 endef
 
 else

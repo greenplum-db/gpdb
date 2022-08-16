@@ -961,6 +961,12 @@
 		<p conref="sql_commands/RESET.xml#topic1/sql_command_desc"/>
 		<codeblock conref="sql_commands/RESET.xml#topic1/sql_command_synopsis"/>
 		<p otherprops="op-html">See <xref href="sql_commands/RESET.xml"/> for more information.</p>
+		<section id="retrieve">
+			<title>RETRIEVE</title>
+		</section>
+		<p conref="sql_commands/RETRIEVE.xml#topic1/sql_command_desc"/>
+		<codeblock conref="sql_commands/RETRIEVE.xml#topic1/sql_command_synopsis"/>
+		<p otherprops="op-html">See <xref href="sql_commands/RETRIEVE.xml"/> for more information.</p>
 		<section id="ae1905153">
 			<title>REVOKE</title>
 		</section>

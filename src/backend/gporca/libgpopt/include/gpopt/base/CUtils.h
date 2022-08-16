@@ -22,6 +22,7 @@
 #include "gpopt/operators/CScalarArrayCmp.h"
 #include "gpopt/operators/CScalarBoolOp.h"
 #include "gpopt/operators/CScalarConst.h"
+#include "gpopt/operators/CScalarProjectElement.h"
 #include "gpopt/xforms/CXform.h"
 
 // fwd declarations
@@ -240,15 +241,19 @@ public:
 	static CScalarAggFunc *PopAggFunc(
 		CMemoryPool *mp, IMDId *pmdidAggFunc, const CWStringConst *pstrAggFunc,
 		BOOL is_distinct, EAggfuncStage eaggfuncstage, BOOL fSplit,
-		IMDId *pmdidResolvedReturnType =
-			NULL  // return type to be used if original return type is ambiguous
-	);
+		IMDId *
+			pmdidResolvedReturnType,  // return type to be used if original return type is ambiguous
+		EAggfuncKind aggkind);
 
 	// generate an aggregate function
 	static CExpression *PexprAggFunc(CMemoryPool *mp, IMDId *pmdidAggFunc,
 									 const CWStringConst *pstrAggFunc,
 									 const CColRef *colref, BOOL is_distinct,
 									 EAggfuncStage eaggfuncstage, BOOL fSplit);
+
+	// generate arguments of an aggregate function
+	static CExpressionArray *PexprAggFuncArgs(CMemoryPool *mp,
+											  CExpressionArray *pdrgpexprArgs);
 
 	// generate a count(*) expression
 	static CExpression *PexprCountStar(CMemoryPool *mp);
@@ -687,11 +692,17 @@ public:
 	// returns if the scalar array has all constant elements or children
 	static BOOL FScalarConstArray(CExpression *pexpr);
 
+	// returns if the scalar constant is an array
+	static BOOL FIsConstArray(CExpression *pexpr);
+
 	// returns if the scalar constant array has already been collapased
 	static BOOL FScalarArrayCollapsed(CExpression *pexprArray);
 
 	// returns true if the subquery is a ScalarSubqueryAny
 	static BOOL FAnySubquery(COperator *pop);
+
+	static CScalarProjectElement *PNthProjectElement(CExpression *pexpr,
+													 ULONG ul);
 
 	// returns the expression under the Nth project element of a CLogicalProject
 	static CExpression *PNthProjectElementExpr(CExpression *pexpr, ULONG ul);
@@ -956,8 +967,17 @@ public:
 	// return true if given expression contains window aggregate function
 	static BOOL FHasAggWindowFunc(CExpression *pexpr);
 
+	// return true if given mdid is a supported ordered aggregate function
+	static BOOL FIsInbuiltOrderedAgg(IMDId *mdid);
+
+	// return true if given expression contains ordered aggregate function
+	static BOOL FHasOrderedAggToSplit(CExpression *pexpr);
+
 	// return true if the given expression is a cross join
 	static BOOL FCrossJoin(CExpression *pexpr);
+
+	// return true if can create hash join for the expression
+	static BOOL IsHashJoinPossible(CMemoryPool *mp, CExpression *pexpr);
 
 	// is this scalar expression an NDV-preserving function (used for join stats derivation)
 	static BOOL IsExprNDVPreserving(CExpression *pexpr,

@@ -71,7 +71,6 @@ void		px_free(void *p);
 #define PXE_CIPHER_INIT				-8
 #define PXE_HASH_UNUSABLE_FOR_HMAC	-9
 #define PXE_DEV_READ_ERROR			-10
-#define PXE_OSSL_RAND_ERROR			-11
 #define PXE_BUG						-12
 #define PXE_ARGUMENT_ERROR			-13
 #define PXE_UNKNOWN_SALT_ALGO		-14
@@ -189,11 +188,7 @@ int			px_find_hmac(const char *name, PX_HMAC **res);
 int			px_find_cipher(const char *name, PX_Cipher **res);
 int			px_find_combo(const char *name, PX_Combo **res);
 
-int			px_get_random_bytes(uint8 *dst, unsigned count);
-int			px_add_entropy(const uint8 *data, unsigned count);
-
-unsigned	px_acquire_system_randomness(uint8 *dst);
-
+void		px_THROW_ERROR(int err) pg_attribute_noreturn();
 const char *px_strerror(int err);
 
 const char *px_resolve_alias(const PX_Alias *aliases, const char *name);
@@ -201,7 +196,9 @@ const char *px_resolve_alias(const PX_Alias *aliases, const char *name);
 void		px_set_debug_handler(void (*handler) (const char *));
 void		px_memset(void *ptr, int c, size_t len);
 
-void		px_memset(void *ptr, int c, size_t len);
+void		px_enable_fipsmode(void);
+void		px_disable_fipsmode(void);
+void		px_check_fipsmode(void);
 
 #ifdef PX_DEBUG
 void

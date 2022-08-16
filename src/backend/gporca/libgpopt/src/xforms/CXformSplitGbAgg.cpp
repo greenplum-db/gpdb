@@ -203,8 +203,8 @@ CXformSplitGbAgg::PopulateLocalGlobalProjectList(
 			GPOS_NEW(mp)
 				CWStringConst(mp, popScAggFunc->PstrAggFunc()->GetBuffer()),
 			popScAggFunc->IsDistinct(), EaggfuncstageLocal, /* fGlobal */
-			true											/* fSplit */
-		);
+			true /* fSplit */, NULL /* pmdidResolvedReturnType */,
+			EaggfunckindNormal);
 
 		popScAggFunc->MDId()->AddRef();
 		CScalarAggFunc *popScAggFuncGlobal = CUtils::PopAggFunc(
@@ -212,8 +212,8 @@ CXformSplitGbAgg::PopulateLocalGlobalProjectList(
 			GPOS_NEW(mp)
 				CWStringConst(mp, popScAggFunc->PstrAggFunc()->GetBuffer()),
 			false /* is_distinct */, EaggfuncstageGlobal, /* fGlobal */
-			true										  /* fSplit */
-		);
+			true /* fSplit */, NULL /* pmdidResolvedReturnType */,
+			EaggfunckindNormal);
 
 		// determine column reference for the new project element
 		const IMDAggregate *pmdagg =
@@ -237,11 +237,11 @@ CXformSplitGbAgg::PopulateLocalGlobalProjectList(
 		// create a new global aggregate function adding the column reference of the
 		// intermediate result to the arguments of the global aggregate function
 		CExpressionArray *pdrgpexprGlobal = GPOS_NEW(mp) CExpressionArray(mp);
-		CExpression *pexprArg = CUtils::PexprScalarIdent(mp, pcrLocal);
-		pdrgpexprGlobal->Append(pexprArg);
+		pdrgpexprGlobal->Append(CUtils::PexprScalarIdent(mp, pcrLocal));
 
-		CExpression *pexprAggFuncGlobal =
-			GPOS_NEW(mp) CExpression(mp, popScAggFuncGlobal, pdrgpexprGlobal);
+		CExpression *pexprAggFuncGlobal = GPOS_NEW(mp)
+			CExpression(mp, popScAggFuncGlobal,
+						CUtils::PexprAggFuncArgs(mp, pdrgpexprGlobal));
 
 		// create new project elements for the aggregate functions
 		CExpression *pexprProjElemLocal =

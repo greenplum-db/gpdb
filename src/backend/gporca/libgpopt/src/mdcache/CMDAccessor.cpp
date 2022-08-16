@@ -1116,7 +1116,8 @@ CMDAccessor::Pstats(CMemoryPool *mp, IMDId *rel_mdid, CColRefSet *pcrsHist,
 
 	return GPOS_NEW(mp) CStatistics(
 		mp, col_histogram_mapping, colid_width_mapping, rows, fEmptyTable,
-		pmdRelStats->RelPages(), pmdRelStats->RelAllVisible());
+		pmdRelStats->RelPages(), pmdRelStats->RelAllVisible(),
+		1.0 /* default rebinds */, 0 /* default predicates*/);
 }
 
 

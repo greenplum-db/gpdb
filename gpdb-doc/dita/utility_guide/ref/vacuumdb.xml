@@ -7,16 +7,16 @@
     <p id="client_util_desc">Garbage-collects and analyzes a database.</p>
     <section id="section2">
       <title>Synopsis</title>
-      <codeblock id="client_util_synopsis"><b>vacuumdb</b> [<varname>connection-option</varname>...] [--full | -f] [<b>--freeze</b> | <b>-F</b>] [<b>--verbose</b> | <b>-v</b>]
-    [<b>--analyze</b> | <b>-z</b>] [<b>--analyze-only</b> | <b>-Z</b>] [<b>--table</b> | <b>-t</b> <varname>table</varname> [( <varname>column</varname> [,...] )] ] [<varname>dbname</varname>]
+      <codeblock id="client_util_synopsis">vacuumdb [&lt;connection-option>...] [--full | -f] [--freeze | -F] [--verbose | -v]
+    [--analyze | -z] [--analyze-only | -Z] [--table | -t &lt;table> [( &lt;column> [,...] )] ] [&lt;dbname>]
 
-<b>vacuumdb</b> [<varname>connection-option</varname>...] [<b>--all</b> | <b>-a</b>] [--full | -f] [<b>-F</b>] 
-    [<b>--verbose</b> | <b>-v</b>] [<b>--analyze</b> | <b>-z</b>]
-    [<b>--analyze-only</b> | <b>-Z</b>]
+vacuumdb [&lt;connection-option>...] [--all | -a] [--full | -f] [-F] 
+    [--verbose | -v] [--analyze | -z]
+    [--analyze-only | -Z]
 
-<b>vacuumdb</b> <b>-? | --help</b>
+vacuumdb -? | --help
 
-<b>vacuumdb</b> <b>-V | --version</b></codeblock>
+vacuumdb -V | --version</codeblock>
     </section>
     <section id="section3">
       <title>Description</title>
@@ -152,8 +152,8 @@
       <p>
         <ph><codeph>VACUUM</codeph> and <codeph>ANALYZE</codeph> in the <i>Greenplum Database
             Reference Guide</i></ph>
-        <ph><codeph><xref href="../../ref_guide/sql_commands/VACUUM.xml#topic1"/></codeph>,
-              <codeph><xref href="../../ref_guide/sql_commands/ANALYZE.xml#topic1"/></codeph></ph>
+        <ph><xref href="../../ref_guide/sql_commands/VACUUM.xml#topic1"/>, <xref
+            href="../../ref_guide/sql_commands/ANALYZE.xml#topic1"/></ph>
       </p>
     </section>
   </body>

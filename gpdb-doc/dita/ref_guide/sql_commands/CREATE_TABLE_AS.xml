@@ -114,8 +114,8 @@
               values in consecutive rows and is designed to improve compression when data is loaded
               in sorted order or the compression is applied to column data that is in sorted
               order.</p><p>For information about using table compression, see
-              <xref href="../../admin_guide/ddl/ddl-storage.xml#topic1" type="topic"
-                format="dita">Choosing the Table Storage Model</xref>
+              <xref href="../../admin_guide/ddl/ddl-storage.html#topic1" format="html"
+                scope="external">Choosing the Table Storage Model</xref>
               in the <cite>Greenplum Database Administrator Guide</cite>.</p></pd>
           <pd><b>compresslevel</b> — For Zstd compression of append-optimized tables, set to an
             integer value from 1 (fastest compression) to 19 (highest compression ratio). For
@@ -196,7 +196,7 @@
               href="../config_params/guc-list.xml#gp_create_table_random_default_distribution"
                 ><codeph>gp_create_table_random_default_distribution</codeph></xref>. For
             information about the Postgres Planner and GPORCA, see <xref
-              href="../../admin_guide/query/topics/query.xml#topic1">Querying Data</xref> in the
+              href="../../admin_guide/query/topics/query.html#topic1" format="html" scope="external">Querying Data</xref> in the
               <cite>Greenplum Database Administrator Guide</cite>.</pd>
         </plentry>
       </parml>

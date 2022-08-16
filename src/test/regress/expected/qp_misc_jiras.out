@@ -1326,6 +1326,28 @@ select * from qp_misc_jiras.tbl_694_1 join qp_misc_jiras.tbl_694_2 on qp_misc_ji
 
 drop table qp_misc_jiras.tbl_694_1;
 drop table qp_misc_jiras.tbl_694_2;
+-- Postgres timestamp
+select '20081225 130000'::timestamp;
+      timestamp      
+---------------------
+ 2008-12-25 13:00:00
+(1 row)
+
+-- Teradata timestamp
+select '20081225130000'::timestamp;
+ERROR:  date/time field value out of range: "20081225130000"
+LINE 1: select '20081225130000'::timestamp;
+               ^
+HINT:  Perhaps you need a different "datestyle" setting.
+-- Teradata timestamp
+SET enable_implicit_timeformat_YYYYMMDDHH24MISS=on;
+select '20081225130000'::timestamp;
+      timestamp      
+---------------------
+ 2008-12-25 13:00:00
+(1 row)
+
+RESET enable_implicit_timeformat_YYYYMMDDHH24MISS;
 select * from ( select 'a' as a) x join (select 'a' as b) y on a=b;
  a | b 
 ---+---

@@ -35,6 +35,7 @@
 #include "utils/lsyscache.h"
 #include "utils/memutils.h"
 #include "utils/syscache.h"
+#include "utils/uri.h"
 
 /*
  * The default numsegments when creating tables.  The value can be an integer
@@ -198,6 +199,39 @@ GpPolicyEqual(const GpPolicy *lft, const GpPolicy *rgt)
 	return true;
 }								/* GpPolicyEqual */
 
+
+bool
+GpPolicyEqualByName(const TupleDesc ltd, const GpPolicy *lpol,
+					const TupleDesc rtd, const GpPolicy *rpol)
+{
+	int			i;
+
+	if (!lpol || !rpol)
+		return false;
+
+	if (lpol->ptype != rpol->ptype)
+		return false;
+
+	if (lpol->numsegments != rpol->numsegments)
+		return false;
+
+	if (lpol->nattrs != rpol->nattrs)
+		return false;
+
+	for (i = 0; i < lpol->nattrs; i++)
+	{
+		Form_pg_attribute latt = TupleDescAttr(ltd, lpol->attrs[i] - 1);
+		Form_pg_attribute ratt = TupleDescAttr(rtd, rpol->attrs[i] - 1);
+
+		if (strcmp(NameStr(latt->attname), NameStr(ratt->attname)) != 0)
+			return false;
+		if (lpol->opclasses[i] != rpol->opclasses[i])
+			return false;
+	}
+
+	return true;
+}
+
 bool
 IsReplicatedTable(Oid relid)
 {
@@ -293,17 +327,36 @@ GpPolicyFetch(Oid tbloid)
 		 * regular tables. Readable external tables are implicitly randomly
 		 * distributed, except for "EXECUTE ... ON MASTER" ones.
 		 */
-		if (e && !e->iswritable)
+		if (e)
 		{
 			char	   *on_clause = (char *) strVal(linitial(e->execlocations));
 
-			if (strcmp(on_clause, "MASTER_ONLY") == 0)
+			if (!e->iswritable)
 			{
-				return makeGpPolicy(POLICYTYPE_ENTRY,
+				if (strcmp(on_clause, "MASTER_ONLY") == 0)
+				{
+					return makeGpPolicy(POLICYTYPE_ENTRY,
 									0, getgpsegmentCount());
+				}
+				return createRandomPartitionedPolicy(getgpsegmentCount());
 			}
+			else if (strcmp(on_clause, "MASTER_ONLY") == 0)
+			{
+				ListCell   *cell;
+				Assert(e->urilocations != NIL);
 
-			return createRandomPartitionedPolicy(getgpsegmentCount());
+				/* set policy for writable s3 on master external table */
+				foreach(cell, e->urilocations)
+				{
+					const char *uri_str = (char *) strVal(lfirst(cell));
+					Uri	*uri = ParseExternalTableUri(uri_str);
+					if (uri->protocol == URI_CUSTOM && 0 == pg_strncasecmp(uri->customprotocol, "s3", 2))
+					{
+						return makeGpPolicy(POLICYTYPE_ENTRY,
+									0, getgpsegmentCount());
+					}
+				}
+			}
 		}
 	}
 	else if (get_rel_relstorage(tbloid) == RELSTORAGE_FOREIGN)

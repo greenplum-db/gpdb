@@ -43,7 +43,6 @@ public:
 	static GPOS_RESULT EresUnittest_Subquery2Apply();
 	static GPOS_RESULT EresUnittest_Subquery2OrTree();
 	static GPOS_RESULT EresUnittest_Subquery2AndTree();
-	static GPOS_RESULT EresUnittest_SubqueryWithConstSubqueries();
 	static GPOS_RESULT EresUnittest_SubqueryWithDisjunction();
 	static GPOS_RESULT EresUnittest_RunMinidumpTests();
 

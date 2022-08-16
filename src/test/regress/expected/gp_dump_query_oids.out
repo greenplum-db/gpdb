@@ -141,6 +141,16 @@ SELECT array['pg_class'::regclass::oid::text] <@  (string_to_array((SELECT info-
  t
 (1 row)
 
+CREATE TABLE unknown_to_text_dump (pid varchar(1), dummy varchar(1)) DISTRIBUTED BY (pid);
+CREATE VIEW unknown_view AS SELECT 'D' as dummy;
+WARNING:  column "dummy" has type "unknown"
+DETAIL:  Proceeding with relation creation anyway.
+SELECT count(*) from (SELECT pg_catalog.gp_dump_query_oids('select * from unknown_to_text_dump join unknown_view on unknown_to_text_dump.dummy = unknown_view.dummy')) x;
+ count 
+-------
+     1
+(1 row)
+
 DROP TABLE foo;
 DROP TABLE cctable;
 DROP TABLE ctable;
@@ -148,3 +158,5 @@ DROP TABLE ptable;
 DROP TABLE minirepro_partition_test;
 DROP FUNCTION dumptestfunc(text);
 DROP FUNCTION dumptestfunc2(text);
+DROP TABLE unknown_to_text_dump;
+DROP VIEW unknown_view;

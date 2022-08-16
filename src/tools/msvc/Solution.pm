@@ -133,8 +133,9 @@ sub GetOpenSSLVersion
 
 	# Attempt to get OpenSSL version and location.  This assumes that
 	# openssl.exe is in the specified directory.
+	# Quote the .exe name in case it has spaces
 	my $opensslcmd =
-	  $self->{options}->{openssl} . "\\bin\\openssl.exe version 2>&1";
+	  qq("$self->{options}->{openssl}\\bin\\openssl.exe" version 2>&1);
 	my $sslout = `$opensslcmd`;
 
 	$? >> 8 == 0
@@ -269,7 +270,7 @@ s{PG_VERSION_STR "[^"]+"}{__STRINGIFY(x) #x\n#define __STRINGIFY2(z) __STRINGIFY
 		}
 		if ($self->{options}->{openssl})
 		{
-			print O "#define USE_SSL 1\n";
+			print O "#define USE_OPENSSL 1\n";
 
 			my ($digit1, $digit2, $digit3) = $self->GetOpenSSLVersion();
 
@@ -762,7 +763,7 @@ sub GetFakeConfigure
 	$cfg .= ' --enable-tap-tests' if ($self->{options}->{tap_tests});
 	$cfg .= ' --with-ldap'  if ($self->{options}->{ldap});
 	$cfg .= ' --without-zlib' unless ($self->{options}->{zlib});
-	$cfg .= ' --with-openssl'   if ($self->{options}->{ssl});
+	$cfg .= ' --with-openssl'   if ($self->{options}->{openssl});
 	$cfg .= ' --with-ossp-uuid' if ($self->{options}->{uuid});
 	$cfg .= ' --with-libxml'    if ($self->{options}->{xml});
 	$cfg .= ' --with-libxslt'   if ($self->{options}->{xslt});

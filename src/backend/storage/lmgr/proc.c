@@ -320,7 +320,7 @@ InitProcess(void)
 	 * such as mppSessionId being valid and mppIsWriter set to true.
 	 */
 	if (IsAutoVacuumWorkerProcess() || am_walsender || am_ftshandler ||
-		IsFaultHandler)
+		am_faulthandler)
 		Gp_role = GP_ROLE_UTILITY;
 
 	/*
@@ -945,6 +945,8 @@ ProcKill(int code, Datum arg)
 	PGPROC	   *proc;
 
 	Assert(MyProc != NULL);
+
+	SIMPLE_FAULT_INJECTOR("proc_kill");
 
 	/* Make sure we're out of the sync rep lists */
 	SyncRepCleanupAtProcExit();
@@ -1811,15 +1813,22 @@ CheckDeadLock(void)
 		if (Gp_role == GP_ROLE_DISPATCH && IsResQueueEnabled() &&
 			LOCK_LOCKMETHOD(*(MyProc->waitLock)) == RESOURCE_LOCKMETHOD)
 		{
-			ResRemoveFromWaitQueue(MyProc, 
-								   LockTagHashCode(&(MyProc->waitLock->tag)));
 			/*
-			 * lockAwaited's lock/proclock pointers are dangling after the call
-			 * to ResRemoveFromWaitQueue(). So clean up the locallock as well,
-			 * to avoid de-referencing them in the eventual ResLockRelease() in
-			 * ResLockPortal/ResLockUtilityPortal.
+			 * If there are no other locked portals resident in this backend
+			 * (i.e. nLocks == 0), lockAwaited's lock/proclock pointers are dangling
+			 * after the following call to ResRemoveFromWaitQueue(). So clean up the
+			 * locallock as well, to avoid de-referencing them in the eventual
+			 * ResLockRelease() in ResLockPortal()/ResLockUtilityPortal().
+			 *
+			 * If there are other locked portals resident in this backend
+			 * (i.e. nLocks > 0), as always, the lock and proclock cannot be cleaned
+			 * up now. Thus, defer the cleanup of the locallock.
 			 */
-			RemoveLocalLock(lockAwaited);
+			if (MyProc->waitProcLock->nLocks == 0)
+				RemoveLocalLock(lockAwaited);
+
+			ResRemoveFromWaitQueue(MyProc,
+								   LockTagHashCode(&(MyProc->waitLock->tag)));
 		}
 		else
 		{
@@ -2040,9 +2049,30 @@ ResLockWaitCancel(void)
 
 	if (lockAwaited != NULL)
 	{
+		/*
+		 * Disable the timers, if they are still running.  As in LockErrorCleanup,
+		 * we must preserve the LOCK_TIMEOUT indicator flag: if a lock timeout has
+		 * already caused QueryCancelPending to become set, we want the cancel to
+		 * be reported as a lock timeout, not a user cancel.
+		 */
+		if (LockTimeout > 0)
+		{
+			DisableTimeoutParams timeouts[2];
+
+			timeouts[0].id = DEADLOCK_TIMEOUT;
+			timeouts[0].keep_indicator = false;
+			timeouts[1].id = LOCK_TIMEOUT;
+			timeouts[1].keep_indicator = true;
+			disable_timeouts(timeouts, 2);
+		}
+		else
+			disable_timeout(DEADLOCK_TIMEOUT, false);
+
 		/* Unlink myself from the wait queue, if on it  */
 		partitionLock = LockHashPartitionLock(lockAwaited->hashcode);
 		LWLockAcquire(partitionLock, LW_EXCLUSIVE);
+
+		SIMPLE_FAULT_INJECTOR("reslock_wait_cancel_after_acquire_partition_lock");
 
 		if (MyProc->links.next != NULL)
 		{
@@ -2052,14 +2082,21 @@ ResLockWaitCancel(void)
 			/* We should only be trying to cancel resource locks. */
 			Assert(LOCALLOCK_LOCKMETHOD(*lockAwaited) == RESOURCE_LOCKMETHOD);
 
-			ResRemoveFromWaitQueue(MyProc, lockAwaited->hashcode);
 			/*
-			 * lockAwaited's lock/proclock pointers are dangling after the call
-			 * to ResRemoveFromWaitQueue(). So clean up the locallock as well,
-			 * to avoid de-referencing them in the eventual ResLockRelease() in
-			 * ResLockPortal/ResLockUtilityPortal.
+			 * If there are no other locked portals resident in this backend
+			 * (i.e. nLocks == 0), lockAwaited's lock/proclock pointers are dangling
+			 * after the following call to ResRemoveFromWaitQueue(). So clean up the
+			 * locallock as well, to avoid de-referencing them in the eventual
+			 * ResLockRelease() in ResLockPortal()/ResLockUtilityPortal().
+			 *
+			 * If there are other locked portals resident in this backend
+			 * (i.e. nLocks > 0), as always, the lock and proclock cannot be cleaned
+			 * up now. Thus, defer the cleanup of the locallock.
 			 */
-			RemoveLocalLock(lockAwaited);
+			if (MyProc->waitProcLock->nLocks == 0)
+				RemoveLocalLock(lockAwaited);
+
+			ResRemoveFromWaitQueue(MyProc, lockAwaited->hashcode);
 		}
 
 		lockAwaited = NULL;

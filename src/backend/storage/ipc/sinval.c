@@ -360,12 +360,12 @@ ProcessCatchupEvent(void)
 		 * Save distributed transaction context first.
 		 */
 		saveDistributedTransactionContext = DistributedTransactionContext;
-		DistributedTransactionContext = DTX_CONTEXT_LOCAL_ONLY;
+		setDistributedTransactionContext(DTX_CONTEXT_LOCAL_ONLY);
 
 		StartTransactionCommand();
 		CommitTransactionCommand();
 
-		DistributedTransactionContext = saveDistributedTransactionContext;
+		setDistributedTransactionContext(saveDistributedTransactionContext);
 	}
 
 	if (notify_enabled)

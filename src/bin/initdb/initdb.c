@@ -81,7 +81,9 @@ extern const char *select_default_timezone(const char *share_path);
 /* version string we expect back from postgres */
 #define PG_VERSIONSTR "postgres (Greenplum Database) " PG_VERSION "\n"
 
-static const char *auth_methods_host[] = {"trust", "reject", "md5", "password", "ident", "radius",
+
+static const char *auth_methods_host[] = {
+	"trust", "reject", "scram-sha-256", "md5", "password", "ident", "radius",
 #ifdef ENABLE_GSS
 	"gss",
 #endif
@@ -97,8 +99,10 @@ static const char *auth_methods_host[] = {"trust", "reject", "md5", "password", 
 #ifdef USE_SSL
 	"cert",
 #endif
-NULL};
-static const char *auth_methods_local[] = {"trust", "reject", "md5", "password", "peer", "radius",
+	NULL
+};
+static const char *auth_methods_local[] = {
+	"trust", "reject", "scram-sha-256", "md5", "password", "peer", "radius",
 #ifdef USE_PAM
 	"pam", "pam ",
 #endif
@@ -1419,6 +1423,15 @@ setup_config(void)
 	conflines = add_assignment(conflines, "include", "'%s'",
 							   GP_INTERNAL_AUTO_CONF_FILE_NAME);
 
+	if (strcmp(authmethodlocal, "scram-sha-256") == 0 ||
+		strcmp(authmethodhost, "scram-sha-256") == 0)
+	{
+		conflines = replace_token(conflines,
+								  "#password_encryption = on",
+								  "password_encryption = on");
+		conflines = add_assignment(conflines, "password_hash_algorithm", "scram-sha-256");
+	}
+
 	snprintf(path, sizeof(path), "%s/postgresql.conf", pg_data);
 
 	writefile(path, conflines);
@@ -1472,7 +1485,7 @@ setup_config(void)
 	 * have to run on a machine without.
 	 */
 	{
-		struct addrinfo *gai_result;
+		struct addrinfo *gai_result = NULL;
 		struct addrinfo hints;
 		int			err = 0;
 
@@ -1495,14 +1508,24 @@ setup_config(void)
 
 		if (err != 0 ||
 			getaddrinfo("::1", NULL, &hints, &gai_result) != 0)
+		{
 			conflines = replace_token(conflines,
 							   "host    all             all             ::1",
 							 "#host    all             all             ::1");
+			if (gai_result != NULL)
+				freeaddrinfo(gai_result);
+			gai_result = NULL;
+		}
 		if (err != 0 ||
 			getaddrinfo("fe80::1", NULL, &hints, &gai_result) != 0)
+		{
 			conflines = replace_token(conflines,
 							   "host    all             all             fe80::1",
 							 "#host    all             all             fe80::1");
+			if (gai_result != NULL)
+				freeaddrinfo(gai_result);
+			gai_result = NULL;
+		}
 	}
 #else							/* !HAVE_IPV6 */
 	/* If we didn't compile IPV6 support at all, always comment it out */
@@ -2308,6 +2331,7 @@ setup_cdb_schema(void)
 		sprintf(path, "%s/cdb_init.d/%s", share_path, scriptnames[i]);
 
 		lines = readfile(path);
+		pg_free(path);
 
 		/*
 		 * We use -j here to avoid backslashing stuff in
@@ -3102,14 +3126,17 @@ static void
 check_need_password(const char *authmethodlocal, const char *authmethodhost)
 {
 	if ((strcmp(authmethodlocal, "md5") == 0 ||
-		 strcmp(authmethodlocal, "password") == 0) &&
+		 strcmp(authmethodlocal, "password") == 0 ||
+		 strcmp(authmethodlocal, "scram-sha-256") == 0) &&
 		(strcmp(authmethodhost, "md5") == 0 ||
-		 strcmp(authmethodhost, "password") == 0) &&
+		 strcmp(authmethodhost, "password") == 0 ||
+		 strcmp(authmethodhost, "scram-sha-256") == 0) &&
 		!(pwprompt || pwfilename))
 	{
 		fprintf(stderr, _("%s: must specify a password for the superuser to enable %s authentication\n"), progname,
 				(strcmp(authmethodlocal, "md5") == 0 ||
-				 strcmp(authmethodlocal, "password") == 0)
+				 strcmp(authmethodlocal, "password") == 0 ||
+				 strcmp(authmethodlocal, "scram-sha-256") == 0)
 				? authmethodlocal
 				: authmethodhost);
 		exit(1);

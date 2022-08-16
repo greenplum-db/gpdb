@@ -32,6 +32,7 @@
 #include "gpopt/operators/CPredicateUtils.h"
 #include "gpopt/operators/CScalarBitmapIndexProbe.h"
 #include "gpopt/optimizer/COptimizerConfig.h"
+#include "naucrates/md/CMDIndexGPDB.h"
 #include "naucrates/statistics/CStatisticsUtils.h"
 
 using namespace gpos;
@@ -206,6 +207,52 @@ CCostModelGPDB::CostScanOutput(CMemoryPool *,  // mp
 	GPOS_ASSERT(0 < dOutputTupCostUnit);
 
 	return CCost(num_rebinds * (rows * width * dOutputTupCostUnit));
+}
+
+
+//---------------------------------------------------------------------------
+//	@function:
+//		CCostModelGPDB::CostComputeScalar
+//
+//	@doc:
+//		Helper function to return cost of a plan containing compute scalar
+//		operator
+//
+//---------------------------------------------------------------------------
+CCost
+CCostModelGPDB::CostComputeScalar(CMemoryPool *mp, CExpressionHandle &exprhdl,
+								  const SCostingInfo *pci,
+								  ICostModelParams *pcp,
+								  const CCostModelGPDB *pcmgpdb)
+{
+	GPOS_ASSERT(NULL != pci);
+	GPOS_ASSERT(NULL != pcp);
+	GPOS_ASSERT(NULL != pcmgpdb);
+
+	DOUBLE rows = pci->Rows();
+	DOUBLE width = pci->Width();
+	DOUBLE num_rebinds = pci->NumRebinds();
+
+	CCost costLocal =
+		CCost(num_rebinds * CostTupleProcessing(rows, width, pcp).Get());
+	CCost costChild = CostChildren(mp, exprhdl, pci, pcp);
+
+	CCost costCompute(0);
+
+	if (exprhdl.DeriveHasScalarFuncProject(1))
+	{
+		// If the compute scalar operator has a scalar func operator in the
+		// project list then aggregate that cost of the scalar func. The number
+		// of times the scalar func is run is proportional to the number of
+		// rows.
+		costCompute =
+			CCost(pcmgpdb->GetCostModelParams()
+					  ->PcpLookup(CCostModelParamsGPDB::EcpScalarFuncCost)
+					  ->Get() *
+				  rows);
+	}
+
+	return costLocal + costChild + costCompute;
 }
 
 
@@ -1803,7 +1850,16 @@ CCostModelGPDB::CostBitmapTableScan(CMemoryPool *mp, CExpressionHandle &exprhdl,
 			CDouble bitmap_union_cost_per_distinct_value(0.000027);
 			CDouble init_cost_advantage_for_bitmap_scan(0.9);
 
-			if (IMDIndex::EmdindBtree == indexType)
+			IMDIndex::EmdindexType indexPhysicalType =
+				((CMDIndexGPDB *) COptCtxt::PoctxtFromTLS()
+					 ->Pmda()
+					 ->RetrieveIndex(CScalarBitmapIndexProbe::PopConvert(
+										 pexprIndexCond->Pop())
+										 ->Pindexdesc()
+										 ->MDId()))
+					->IndexPhysicalType();
+
+			if (IMDIndex::EmdindBtree == indexPhysicalType)
 			{
 				// btree indexes are not sensitive to the NDV, since they don't have any bitmaps
 				c3_dBitmapPageCost = 0.0;
@@ -2010,6 +2066,10 @@ CCostModelGPDB::Cost(
 	GPOS_ASSERT(NULL != pci);
 
 	COperator::EOperatorId op_id = exprhdl.Pop()->Eopid();
+	if (op_id == COperator::EopPhysicalComputeScalar)
+	{
+		return CostComputeScalar(m_mp, exprhdl, pci, m_cost_model_params, this);
+	}
 	if (FUnary(op_id))
 	{
 		return CostUnary(m_mp, exprhdl, pci, m_cost_model_params);

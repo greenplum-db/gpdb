@@ -417,13 +417,18 @@ get_first_col_type(Plan *plan, Oid *coltype, int32 *coltypmod,
 /**
  * Returns true if query refers to a distributed table.
  */
-bool QueryHasDistributedRelation(Query *q)
+bool QueryHasDistributedRelation(Query *q, bool recursive)
 {
 	ListCell   *rt = NULL;
 
 	foreach(rt, q->rtable)
 	{
 		RangeTblEntry *rte = (RangeTblEntry *) lfirst(rt);
+
+		if (rte->rtekind == RTE_SUBQUERY
+				&& recursive
+				&& QueryHasDistributedRelation(rte->subquery, true))
+			return true;
 
 		if (rte->relid != InvalidOid
 				&& rte->rtekind == RTE_RELATION)
@@ -590,7 +595,7 @@ make_subplan(PlannerInfo *root, Query *orig_subquery, SubLinkType subLinkType,
 
 	if ((Gp_role == GP_ROLE_DISPATCH)
 			&& IsSubqueryMultiLevelCorrelated(subquery)
-			&& QueryHasDistributedRelation(subquery))
+			&& QueryHasDistributedRelation(subquery, root->is_correlated_subplan))
 	{
 		ereport(ERROR,
 				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
@@ -1399,9 +1404,6 @@ convert_ANY_sublink_to_join(PlannerInfo *root, SubLink *sublink,
 
 	Assert(sublink->subLinkType == ANY_SUBLINK);
 	Assert(IsA(subselect, Query));
-
-	cdbsubselect_drop_orderby(subselect);
-	cdbsubselect_drop_distinct(subselect);
 
 	/*
 	 * If deeply correlated, then don't pull it up

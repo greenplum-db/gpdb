@@ -1471,7 +1471,17 @@ SPI_cursor_open_internal(const char *name, SPIPlanPtr plan,
 Portal
 SPI_cursor_find(const char *name)
 {
-	return GetPortalByName(name);
+	Portal portal = GetPortalByName(name);
+
+	if (portal != NULL && PortalIsParallelRetrieveCursor(portal))
+	{
+		ereport(ERROR,
+				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+				 errmsg("The PARALLEL RETRIEVE CURSOR is not supported in SPI."),
+				 errhint("Use normal cursor statement instead.")));
+	}
+
+	return portal;
 }
 
 

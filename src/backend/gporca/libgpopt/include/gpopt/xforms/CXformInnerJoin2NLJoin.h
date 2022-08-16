@@ -25,6 +25,7 @@ using namespace gpos;
 //
 //	@doc:
 //		Transform inner join to inner NLJ
+//		Deprecated in favor of CXformImplementInnerJoin.
 //
 //---------------------------------------------------------------------------
 class CXformInnerJoin2NLJoin : public CXformImplementation

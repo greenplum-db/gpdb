@@ -38,6 +38,7 @@
 #include "libpq/auth.h"
 #include "libpq/hba.h"
 #include "libpq/libpq-be.h"
+#include "cdb/cdbendpoint.h"
 #include "cdb/cdbtm.h"
 #include "cdb/cdbvars.h"
 #include "cdb/cdbutil.h"
@@ -90,6 +91,7 @@ static void InitCommunication(void);
 static void ShutdownPostgres(int code, Datum arg);
 static void StatementTimeoutHandler(void);
 static void LockTimeoutHandler(void);
+static void ClientCheckTimeoutHandler(void);
 static bool ThereIsAtLeastOneRole(void);
 static void process_startup_options(Port *port, bool am_superuser);
 static void process_settings(Oid databaseid, Oid roleid);
@@ -686,6 +688,7 @@ InitPostgres(const char *in_dbname, Oid dboid, const char *username,
 		RegisterTimeout(STATEMENT_TIMEOUT, StatementTimeoutHandler);
 		RegisterTimeout(LOCK_TIMEOUT, LockTimeoutHandler);
 		RegisterTimeout(GANG_TIMEOUT, IdleGangTimeoutHandler);
+		RegisterTimeout(CLIENT_CONNECTION_CHECK_TIMEOUT, ClientCheckTimeoutHandler);
 	}
 
 	/*
@@ -822,7 +825,7 @@ InitPostgres(const char *in_dbname, Oid dboid, const char *username,
 	}
 	else if (am_mirror)
 	{
-		Assert(am_ftshandler || IsFaultHandler);
+		Assert(am_ftshandler || am_faulthandler);
 		/*
 		 * A mirror must receive and act upon FTS messages.  Performing proper
 		 * authentication involves reading pg_authid.  Heap access is not
@@ -912,7 +915,7 @@ InitPostgres(const char *in_dbname, Oid dboid, const char *username,
 					 errmsg("must be superuser or replication role to start walsender")));
 	}
 
-	if ((am_ftshandler || IsFaultHandler) && !am_superuser)
+	if ((am_ftshandler || am_faulthandler) && !am_superuser)
 		ereport(FATAL,
 				(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
 				 errmsg("must be superuser role to handle FTS request")));
@@ -923,7 +926,7 @@ InitPostgres(const char *in_dbname, Oid dboid, const char *username,
 	 * backend startup by processing any options from the startup packet, and
 	 * we're done.
 	 */
-	if ((am_walsender && !am_db_walsender) || am_ftshandler || IsFaultHandler)
+	if ((am_walsender && !am_db_walsender) || am_ftshandler || am_faulthandler)
 	{
 		/* process any options passed in the startup packet */
 		if (MyProcPort != NULL)
@@ -1129,6 +1132,23 @@ InitPostgres(const char *in_dbname, Oid dboid, const char *username,
 	 */
 	if (MyProcPort != NULL)
 		process_startup_options(MyProcPort, am_superuser);
+
+	/*
+	 * am_cursor_retrieve_handler is set by GUC so need to judge after calling
+	 * process_startup_options().
+	 */
+	if (am_cursor_retrieve_handler)
+	{
+		Gp_role = GP_ROLE_UTILITY;
+		Gp_session_role = GP_ROLE_UTILITY;
+
+		/* Sanity check for security: This should not happen but in case ... */
+		if (!retrieve_conn_authenticated)
+			ereport(FATAL,
+					(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
+					 errmsg("retrieve connection was not authenticated for unknown reason")));
+		InitRetrieveCtl();
+	}
 
 	/*
 	 * Maintenance Mode: allow superuser to connect when
@@ -1435,6 +1455,13 @@ LockTimeoutHandler(void)
 	kill(MyProcPid, SIGINT);
 }
 
+static void
+ClientCheckTimeoutHandler(void)
+{
+	CheckClientConnectionPending = true;
+	InterruptPending = true;
+	SetLatch(&MyProc->procLatch);
+}
 
 /*
  * Returns true if at least one role is defined in this database cluster.

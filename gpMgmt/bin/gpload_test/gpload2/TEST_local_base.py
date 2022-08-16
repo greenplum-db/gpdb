@@ -60,15 +60,10 @@ def get_ip(hostname=None):
     hostinfo = socket.getaddrinfo(hostname, None)
     ipaddrlist = list(set([(ai[4][0]) for ai in hostinfo]))
     for myip in ipaddrlist:
-        '''
         if myip.find(":") > 0:
             ipv6 = myip
             return ipv6
         elif myip.find(".") > 0:
-            ipv4 = myip
-            return ipv4
-        '''
-        if myip.find(".") > 0:
             ipv4 = myip
             return ipv4
 
@@ -201,7 +196,7 @@ masterPort = getPortMasterOnly()
 def write_config_file(version='1.0.0.1', database='reuse_gptest', user=os.environ.get('USER'), host=hostNameAddrs, port=masterPort, config='config/config_file', local_host=[hostNameAddrs], file='data/external_file_01.txt', input_port='8081', port_range=None,
     ssl=None,columns=None, format='text', force_not_null=[], log_errors=None, error_limit=None, delimiter="'|'", encoding=None, escape=None, null_as=None, fill_missing_fields=None, quote=None, header=None, transform=None, transform_config=None, max_line_length=None, 
     table='texttable', mode='insert', update_columns=['n2'], update_condition=None, match_columns=['n1','s1','s2'], staging_table=None, mapping=None, externalSchema=None, preload=True, truncate=False, reuse_tables=True, fast_match=None,
-    sql=False, before=None, after=None, error_table=None):
+    sql=False, before=None, after=None, error_table=None, newline=None):
 
     f = open(config,'w')
     f.write("VERSION: "+version)
@@ -243,7 +238,10 @@ def write_config_file(version='1.0.0.1', database='reuse_gptest', user=os.enviro
         f.write("\n    - ERROR_LIMIT: "+str(error_limit))
     if error_table:
         f.write("\n    - ERROR_TABLE: "+error_table)
-    f.write("\n    - DELIMITER: "+delimiter)
+    if delimiter:
+        f.write("\n    - DELIMITER: "+delimiter)
+    if newline:
+        f.write("\n    - NEWLINE: "+ str(newline))
     if encoding:
         f.write("\n    - ENCODING: "+encoding)
     if escape:
@@ -440,8 +438,10 @@ def modify_sql_file(num):
 def copy_data(source='',target=''):
     cmd = 'cp '+ mkpath('data/' + source) + ' ' + mkpath(target)
     p = subprocess.Popen(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
-    return p.communicate()
-
+    _, err = p.communicate()
+    if err != '':
+        sys.stderr.write(str(err))
+        sys.exit(2)
 
 def get_table_name():
     try:
@@ -505,6 +505,15 @@ class AnsFile():
     def __eq__(self, other):
         return isFileEqual(self.path, other.path, '-U3', outputPath="")
 
+
+def do_assert(f1, f2, num, ifile):
+    # this will help print the diff message in the screen if case fail
+    assert f1 == f2 , read_diff(ifile, "")
+    if num==54:
+        assert f1==AnsFile(mkpath('54tmp.log'))
+    return True
+
+
 def check_result(ifile,  optionalFlags = "-U3", outputPath = "", num=None):
     """
     PURPOSE: compare the actual and expected output files and report an
@@ -523,10 +532,7 @@ def check_result(ifile,  optionalFlags = "-U3", outputPath = "", num=None):
     f1 = AnsFile(f1)
     f2 = outFile(ifile, outputPath=outputPath)
     f2 = AnsFile(f2)
-    assert f1 == f2 #, read_diff(ifile, "")
-    if num==54:
-        assert f1==AnsFile(mkpath('54tmp.log'))
-    return True
+    do_assert(f1, f2, num, ifile)
 
 
 def ModifyOutFile(file,old_str,new_str):
@@ -539,7 +545,7 @@ def ModifyOutFile(file,old_str,new_str):
     os.remove(file)
     os.rename("%s.bak" % file, file)
 
-Modify_Output_Case = [44,46,51,57,65,219]
+Modify_Output_Case = [44,46,51,57,65,219,260,259]
 
 
 def doTest(num):
@@ -562,8 +568,9 @@ def doTest(num):
         newpat4='ext_gpload_table'
         pat5 = r'[a-zA-Z0-9/\_-]*/gpload.py'  # file location
         newpat5 = 'pathto/gpload.py'
-        ModifyOutFile(str(num), [pat1,pat2,pat3,pat4,pat5], [newpat1,newpat2,newpat3,newpat4,newpat5])  # some strings in outfile are different each time, such as host and file location
+        # some strings in outfile are different each time, such as host and file location
         # we modify the out file here to make it match the ans file
+        ModifyOutFile(str(num), [pat1,pat2,pat3,pat4,pat5], [newpat1,newpat2,newpat3,newpat4,newpat5])
 
     check_result(file,num=num)
 

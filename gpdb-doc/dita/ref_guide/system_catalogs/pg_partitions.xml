@@ -39,6 +39,12 @@
             <entry colname="col4">The name of the top-level parent table.</entry>
           </row>
           <row>
+            <entry><codeph>partitionschemaname</codeph></entry>
+            <entry>name</entry>
+            <entry/>
+            <entry>The namespace of the partition table.</entry>
+          </row>
+          <row>
             <entry colname="col1">
               <codeph>partitiontablename</codeph>
             </entry>
@@ -177,6 +183,18 @@
             <entry colname="col2">text</entry>
             <entry colname="col3"/>
             <entry colname="col4">The entire partition specification for this partition.</entry>
+          </row>
+          <row>
+            <entry><codeph>parenttablespace</codeph></entry>
+            <entry>text</entry>
+            <entry/>
+            <entry>The tablespace of the parent table one level up from this partition.</entry>
+          </row>
+          <row>
+            <entry><codeph>partitiontablespace</codeph></entry>
+            <entry>text</entry>
+            <entry/>
+            <entry>The tablespace of this partition.</entry>
           </row>
         </tbody>
       </tgroup>

@@ -26,6 +26,8 @@ test: udf_exception_blocks_panic_scenarios
 test: ao_same_trans_truncate_crash
 test: ao_fsync_panic
 
+test: prevent_ao_wal
+
 # Tests for packcore, will use the coredumps generated in crash_recovery_dtm,
 # so must be scheduled after that one.
 test: packcore
@@ -64,6 +66,10 @@ test: misc
 test: starve_case pg_views_concurrent_drop alter_blocks_for_update_and_viceversa drop_rename reader_waits_for_lock resource_queue
 test: vacuum_drop_phase_ao
 
+# Test simple cancellation for resource queues and cancellation/deadlocks for
+# sessions with multiple portals.
+test: resource_queue_cancel resource_queue_multi_portal
+
 # below test(s) inject faults so each of them need to be in a separate group
 test: pg_terminate_backend
 
@@ -77,6 +83,7 @@ test: gpexpand_catalog_lock
 test: reindex
 test: reindex_gpfastsequence
 test: checkpoint_prepare
+test: checkpoint_memleak
 test: commit_transaction_block_checkpoint
 test: instr_in_shmem_setup
 test: instr_in_shmem_terminate
@@ -88,6 +95,10 @@ test: gp_collation
 test: ao_upgrade
 test: bitmap_update_words_backup_block
 test: bitmap_index_crash
+test: bitmap_index_concurrent
+test: bitmap_union
+test: bitmap_index_inspect
+
 # below test utilizes fault injectors so it needs to be in a group by itself
 test: external_table
 
@@ -96,6 +107,7 @@ test: fsync_ao
 
 # Test deadlock situation when waiting on a resource queue lock
 test: resource_queue_deadlock
+test: resource_queue_query_cancel_deadlock_timeout
 
 # Tests on Append-Optimized tables (row-oriented).
 test: concurrent_index_creation_should_not_deadlock
@@ -136,6 +148,7 @@ test: uao/selectinsert_while_vacuum_row
 test: uao/selectinsertupdate_while_vacuum_row
 test: uao/selectupdate_while_vacuum_row
 test: uao/snapshot_eof_row
+test: uao/snapshot_index_corruption_row
 test: uao/update_while_vacuum_row
 test: uao/vacuum_self_serializable_row
 test: uao/vacuum_self_serializable2_row
@@ -143,11 +156,13 @@ test: uao/vacuum_self_serializable3_row
 test: uao/vacuum_while_insert_row
 test: uao/vacuum_while_vacuum_row
 test: uao/vacuum_cleanup_row
+test: uao/vacuum_index_stats_row
 test: uao/insert_should_not_use_awaiting_drop_row
 test: uao/bitmapindex_rescan_row
 test: reorganize_after_ao_vacuum_skip_drop truncate_after_ao_vacuum_skip_drop mark_all_aoseg_await_drop
 # below test(s) inject faults so each of them need to be in a separate group
 test: segwalrep/master_xlog_switch
+test: idle_gang_cleaner
 
 # Tests on Append-Optimized tables (column-oriented).
 test: uao/alter_while_vacuum_column uao/alter_while_vacuum2_column
@@ -187,6 +202,7 @@ test: uao/selectinsert_while_vacuum_column
 test: uao/selectinsertupdate_while_vacuum_column
 test: uao/selectupdate_while_vacuum_column
 test: uao/snapshot_eof_column
+test: uao/snapshot_index_corruption_column
 test: uao/update_while_vacuum_column
 test: uao/vacuum_self_serializable_column
 test: uao/vacuum_self_serializable2_column
@@ -194,6 +210,7 @@ test: uao/vacuum_self_serializable3_column
 test: uao/vacuum_while_insert_column
 test: uao/vacuum_while_vacuum_column
 test: uao/vacuum_cleanup_column
+test: uao/vacuum_index_stats_column
 test: uao/insert_should_not_use_awaiting_drop_column
 test: uao/bitmapindex_rescan_column
 test: add_column_after_vacuum_skip_drop_column
@@ -224,6 +241,7 @@ test: pg_basebackup
 test: pg_basebackup_with_tablespaces
 test: fts_manual_probe
 test: fts_session_reset
+test: fts_segment_reset
 
 # Reindex tests
 test: reindex/abort_reindex
@@ -248,6 +266,7 @@ test: workfile_mgr_test
 
 # Cancel test
 test: cancel_plpython
+test: cancel_query
 
 # Tests for getting numsegments in utility mode
 test: upgrade_numsegments
@@ -282,3 +301,16 @@ test: concurrent_vacuum_with_delete
 
 # test if GUC is synchronized from the QD to QEs.
 test: sync_guc
+
+# test pg_export_snapshot with distributed snapshot functionality
+test: export_distributed_snapshot
+
+# test if motion sockets are created with gp_segment_configuration.address when
+# gp_interconnect_address_type='unicast'
+test: motion_socket
+
+# test alter owner of partition table in utility mode
+test: alter_partition_table_owner
+
+# test copy/insert in utility mode on partition/inheritance hierarchies
+test: copy_insert_utility_mode_hierarchies

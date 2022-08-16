@@ -34,6 +34,7 @@ SET role = test2;
 SET client_min_messages=WARNING;
 REINDEX DATABASE  reindexdb2;
 
+-- Any index functions are run as the table owner's userid.
 select usename as user_for_reindex_heap from pg_stat_operations where objname = 'idx_mytab1_heap' and subtype = 'REINDEX' ;
 select usename as user_for_reindex_ao from pg_stat_operations where objname = 'idx_mytab1_ao' and subtype = 'REINDEX' ;
 select usename as user_for_reindex_aoco from pg_stat_operations where objname = 'idx_mytab1_aoco' and subtype = 'REINDEX' ;

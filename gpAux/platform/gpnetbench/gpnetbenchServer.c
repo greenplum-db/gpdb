@@ -151,12 +151,19 @@ static int setupListen(char hostname[], char port[], int protocol) {
 		if (clientPid < 0)
 		{
 			perror("error forking process for incoming connection");
+			close(clientFd);
 			exit(1);
 		}
 
 		if (clientPid == 0)
 		{
+			// child
 			handleIncomingConnection(clientFd);
+		}
+		else
+		{
+			// father
+			close(clientFd);
 		}
 	}
 
@@ -176,6 +183,7 @@ handleIncomingConnection(int fd)
 		{
 			// error from rev, assuming client disconnection
 			// this is the end of the child process used for handling 1 client connection
+			close(fd);
 			exit(0);
 		}
 	}

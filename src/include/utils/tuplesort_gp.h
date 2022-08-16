@@ -64,6 +64,8 @@ extern bool tuplesort_gettupleslot_pos(struct Tuplesortstate *state, TuplesortPo
 
 extern void tuplesort_flush(struct Tuplesortstate *state);
 extern void tuplesort_finalize_stats(struct Tuplesortstate *state);
+extern void tuplesort_get_stats(struct Tuplesortstate *state, const char **sortMethod,
+								const char **spaceType, long *spaceUsed);
 
 /*
  * These routines may only be called if randomAccess was specified 'true'.

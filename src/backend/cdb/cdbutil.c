@@ -48,11 +48,13 @@
 #include "libpq-fe.h"
 #include "libpq-int.h"
 #include "libpq/ip.h"
+#include "miscadmin.h"		/* MyProcPort */
 #include "cdb/cdbconn.h"
 #include "cdb/cdbfts.h"
 #include "storage/ipc.h"
 #include "storage/proc.h"
 #include "postmaster/fts.h"
+#include "postmaster/postmaster.h"
 #include "catalog/namespace.h"
 #include "utils/gpexpand.h"
 #include "access/xact.h"
@@ -104,7 +106,7 @@ typedef struct SegIpEntry
 
 typedef struct HostSegsEntry
 {
-	char		hostip[INET6_ADDRSTRLEN];
+	char		hostname[MAXHOSTNAMELEN];
 	int			segmentCount;
 } HostSegsEntry;
 
@@ -373,6 +375,19 @@ getCdbComponentInfo(void)
 		CdbComponentDatabaseInfo	*pRow;
 		GpSegConfigEntry	*config = &configs[i];
 
+		if (config->hostname == NULL || strlen(config->hostname) > MAXHOSTNAMELEN)
+		{
+			/*
+			 * We should never reach here, but add sanity check
+			 * The reason we check length is we find MAXHOSTNAMELEN might be
+			 * smaller than the ones defined in /etc/hosts. Those are rare cases.
+			 */
+			elog(ERROR,
+				 "Invalid length (%d) of hostname (%s)",
+				 config->hostname == NULL ? 0 : (int) strlen(config->hostname),
+				 config->hostname == NULL ? "" : config->hostname);
+		}
+
 		/* lookup hostip/hostaddrs cache */
 		config->hostip= NULL;
 		getAddressesForDBid(config, !am_ftsprobe? ERROR : LOG);
@@ -412,10 +427,10 @@ getCdbComponentInfo(void)
 		pRow->numIdleQEs = 0;
 		pRow->numActiveQEs = 0;
 
-		if (config->role != GP_SEGMENT_CONFIGURATION_ROLE_PRIMARY || config->hostip == NULL)
+		if (config->role != GP_SEGMENT_CONFIGURATION_ROLE_PRIMARY)
 			continue;
 
-		hsEntry = (HostSegsEntry *) hash_search(hostSegsHash, config->hostip, HASH_ENTER, &found);
+		hsEntry = (HostSegsEntry *) hash_search(hostSegsHash, config->hostname, HASH_ENTER, &found);
 		if (found)
 			hsEntry->segmentCount++;
 		else
@@ -526,10 +541,10 @@ getCdbComponentInfo(void)
 	{
 		cdbInfo = &component_databases->segment_db_info[i];
 
-		if (cdbInfo->config->role != GP_SEGMENT_CONFIGURATION_ROLE_PRIMARY || cdbInfo->config->hostip == NULL)
+		if (cdbInfo->config->role != GP_SEGMENT_CONFIGURATION_ROLE_PRIMARY)
 			continue;
 
-		hsEntry = (HostSegsEntry *) hash_search(hostSegsHash, cdbInfo->config->hostip, HASH_FIND, &found);
+		hsEntry = (HostSegsEntry *) hash_search(hostSegsHash, cdbInfo->config->hostname, HASH_FIND, &found);
 		Assert(found);
 		cdbInfo->hostSegs = hsEntry->segmentCount;
 	}
@@ -538,10 +553,10 @@ getCdbComponentInfo(void)
 	{
 		cdbInfo = &component_databases->entry_db_info[i];
 
-		if (cdbInfo->config->role != GP_SEGMENT_CONFIGURATION_ROLE_PRIMARY || cdbInfo->config->hostip == NULL)
+		if (cdbInfo->config->role != GP_SEGMENT_CONFIGURATION_ROLE_PRIMARY)
 			continue;
 
-		hsEntry = (HostSegsEntry *) hash_search(hostSegsHash, cdbInfo->config->hostip, HASH_FIND, &found);
+		hsEntry = (HostSegsEntry *) hash_search(hostSegsHash, cdbInfo->config->hostname, HASH_FIND, &found);
 		Assert(found);
 		cdbInfo->hostSegs = hsEntry->segmentCount;
 	}
@@ -1010,6 +1025,68 @@ cdbcomponent_getComponentInfo(int contentId)
 	return cdbInfo;
 }
 
+static void
+ensureInterconnectAddress(void)
+{
+	/*
+	 * If the address type is wildcard, there is no need to populate an unicast
+	 * address in interconnect_address.
+	 */
+	if (Gp_interconnect_address_type == INTERCONNECT_ADDRESS_TYPE_WILDCARD)
+	{
+		interconnect_address = NULL;
+		return;
+	}
+
+	Assert(Gp_interconnect_address_type == INTERCONNECT_ADDRESS_TYPE_UNICAST);
+
+	/* If the unicast address has already been assigned, exit early. */
+	if (interconnect_address)
+		return;
+
+	/*
+	 * Retrieve the segment's gp_segment_configuration.address value, in order
+	 * to setup interconnect_address
+	 */
+
+	if (GpIdentity.segindex >= 0)
+	{
+		Assert(Gp_role == GP_ROLE_EXECUTE);
+		Assert(MyProcPort->laddr.addr.ss_family == AF_INET
+				|| MyProcPort->laddr.addr.ss_family == AF_INET6);
+		/*
+		 * We assume that the QD, using the address in gp_segment_configuration
+		 * as its destination IP address, connects to the segment/QE.
+		 * So, the local address in the PORT can be used for interconnect.
+		 */
+		char local_addr[NI_MAXHOST];
+		getnameinfo((const struct sockaddr *)&MyProcPort->laddr.addr,
+					MyProcPort->laddr.salen,
+					local_addr, sizeof(local_addr),
+					NULL, 0, NI_NUMERICHOST);
+		interconnect_address = MemoryContextStrdup(TopMemoryContext, local_addr);
+	}
+	else if (Gp_role == GP_ROLE_DISPATCH)
+	{
+		/*
+		 * Here, we can only retrieve the ADDRESS in gp_segment_configuration
+		 * from `cdbcomponent*`. We couldn't get it in a way as the QEs.
+		 */
+		CdbComponentDatabaseInfo *qdInfo;
+		qdInfo = cdbcomponent_getComponentInfo(MASTER_CONTENT_ID);
+		interconnect_address = MemoryContextStrdup(TopMemoryContext, qdInfo->config->hostip);
+	}
+	else if (qdHostname && qdHostname[0] != '\0')
+	{
+		Assert(Gp_role == GP_ROLE_EXECUTE);
+		/*
+		 * QE on the master can't get its interconnect address like that on the primary.
+		 * The QD connects to its postmaster via the unix domain socket.
+		 */
+		interconnect_address = qdHostname;
+	}
+	Assert(interconnect_address && strlen(interconnect_address) > 0);
+}
 /*
  * performs all necessary setup required for Greenplum Database mode.
  *
@@ -1023,6 +1100,7 @@ cdb_setup(void)
 	/* If gp_role is UTILITY, skip this call. */
 	if (Gp_role != GP_ROLE_UTILITY)
 	{
+		ensureInterconnectAddress();
 		/* Initialize the Motion Layer IPC subsystem. */
 		InitMotionLayerIPC();
 	}
@@ -1357,7 +1435,7 @@ hostSegsHashTableInit(void)
 
 	/* Set key and entry sizes. */
 	MemSet(&info, 0, sizeof(info));
-	info.keysize = INET6_ADDRSTRLEN;
+	info.keysize = MAXHOSTNAMELEN;
 	info.entrysize = sizeof(HostSegsEntry);
 
 	return hash_create("HostSegs", 32, &info, HASH_ELEM);

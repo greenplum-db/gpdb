@@ -220,6 +220,7 @@ CDXLTokens::Init(CMemoryPool *mp)
 		{EdxltokenScalarSortCol, GPOS_WSZ_LIT("SortingColumn")},
 		{EdxltokenScalarSortColList, GPOS_WSZ_LIT("SortingColumnList")},
 		{EdxltokenScalarGroupingColList, GPOS_WSZ_LIT("GroupingColumns")},
+		{EdxltokenScalarSortGroupClause, GPOS_WSZ_LIT("SortGroupClause")},
 
 		{EdxltokenScalarBitmapAnd, GPOS_WSZ_LIT("BitmapAnd")},
 		{EdxltokenScalarBitmapOr, GPOS_WSZ_LIT("BitmapOr")},
@@ -354,12 +355,17 @@ CDXLTokens::Init(CMemoryPool *mp)
 
 		{EdxltokenAggrefOid, GPOS_WSZ_LIT("AggMdid")},
 		{EdxltokenAggrefDistinct, GPOS_WSZ_LIT("AggDistinct")},
+		{EdxltokenAggrefKind, GPOS_WSZ_LIT("AggKind")},
+		{EdxltokenAggrefGpAggOid, GPOS_WSZ_LIT("GpAggMdid")},
 		{EdxltokenAggrefStage, GPOS_WSZ_LIT("AggStage")},
 		{EdxltokenAggrefLookups, GPOS_WSZ_LIT("AggLookups")},
 		{EdxltokenAggrefStageNormal, GPOS_WSZ_LIT("Normal")},
 		{EdxltokenAggrefStagePartial, GPOS_WSZ_LIT("Partial")},
 		{EdxltokenAggrefStageIntermediate, GPOS_WSZ_LIT("Intermediate")},
 		{EdxltokenAggrefStageFinal, GPOS_WSZ_LIT("Final")},
+		{EdxltokenAggrefKindNormal, GPOS_WSZ_LIT("n")},
+		{EdxltokenAggrefKindOrderedSet, GPOS_WSZ_LIT("o")},
+		{EdxltokenAggrefKindHypothetical, GPOS_WSZ_LIT("h")},
 
 		{EdxltokenArrayType, GPOS_WSZ_LIT("ArrayType")},
 		{EdxltokenArrayElementType, GPOS_WSZ_LIT("ElementType")},
@@ -565,6 +571,7 @@ CDXLTokens::Init(CMemoryPool *mp)
 		{EdxltokenIndexClustered, GPOS_WSZ_LIT("IsClustered")},
 		{EdxltokenIndexPartial, GPOS_WSZ_LIT("IsPartial")},
 		{EdxltokenIndexType, GPOS_WSZ_LIT("IndexType")},
+		{EdxltokenIndexPhysicalType, GPOS_WSZ_LIT("PhysicalIndexType")},
 		{EdxltokenIndexTypeBtree, GPOS_WSZ_LIT("B-tree")},
 		{EdxltokenIndexTypeBitmap, GPOS_WSZ_LIT("Bitmap")},
 		{EdxltokenIndexTypeGist, GPOS_WSZ_LIT("Gist")},

@@ -258,6 +258,7 @@ static Node *makeIsNotDistinctFromNode(Node *expr, int position);
 		DropOwnedStmt ReassignOwnedStmt
 		AlterTSConfigurationStmt AlterTSDictionaryStmt
 		CreateMatViewStmt RefreshMatViewStmt
+		RetrieveStmt
 
 /* GPDB-specific commands */
 %type <node>	AlterTypeStmt AlterQueueStmt AlterResourceGroupStmt
@@ -303,7 +304,7 @@ static Node *makeIsNotDistinctFromNode(Node *expr, int position);
 %type <ival>	vacuum_option_list vacuum_option_elem
 %type <boolean>	opt_force opt_or_replace
 				opt_grant_grant_option opt_grant_admin_option
-				opt_nowait opt_if_exists opt_with_data
+				opt_nowait opt_if_exists opt_with_data opt_masteronly
 
 %type <list>	OptRoleList AlterOptRoleList
 %type <defelt>	CreateOptRoleElem AlterOptRoleElem
@@ -629,7 +630,7 @@ static Node *makeIsNotDistinctFromNode(Node *expr, int position);
 	DEFERRABLE DEFERRED DEFINER DELETE_P DELIMITER DELIMITERS DESC
 	DICTIONARY DISABLE_P DISCARD DISTINCT DO DOCUMENT_P DOMAIN_P DOUBLE_P DROP
 
-	EACH ELSE ENABLE_P ENCODING ENCRYPTED END_P ENUM_P ESCAPE EVENT EXCEPT
+	EACH ELSE ENABLE_P ENCODING ENCRYPTED END_P ENDPOINT ENUM_P ESCAPE EVENT EXCEPT
 	EXCLUDE EXCLUDING EXCLUSIVE EXECUTE EXISTS EXPLAIN
 	EXTENSION EXTERNAL EXTRACT
 
@@ -729,6 +730,8 @@ static Node *makeIsNotDistinctFromNode(Node *expr, int position);
 	NEWLINE NOCREATEEXTTABLE NOOVERCOMMIT
 
 	ORDERED OTHERS OVERCOMMIT
+
+	PARALLEL RETRIEVE
 
 	PARTITIONS PERCENT PERSISTENTLY PROTOCOL
 
@@ -864,6 +867,7 @@ static Node *makeIsNotDistinctFromNode(Node *expr, int position);
 			%nonassoc ENCODING
 			%nonassoc ENCRYPTED
 			%nonassoc END_P
+			%nonassoc ENDPOINT
 			%nonassoc ENUM_P
 			%nonassoc ERRORS
 			%nonassoc EVERY
@@ -951,6 +955,7 @@ static Node *makeIsNotDistinctFromNode(Node *expr, int position);
 			%nonassoc OVERCOMMIT
 			%nonassoc OWNED
 			%nonassoc OWNER
+			%nonassoc PARALLEL
 			%nonassoc PARTIAL
 			%nonassoc PARTITIONS
 			%nonassoc PASSWORD
@@ -983,6 +988,7 @@ static Node *makeIsNotDistinctFromNode(Node *expr, int position);
 			%nonassoc RESOURCE
 			%nonassoc RESTART
 			%nonassoc RESTRICT
+			%nonassoc RETRIEVE
 			%nonassoc RETURNS
 			%nonassoc REVOKE
 			%nonassoc ROLE
@@ -1281,6 +1287,7 @@ stmt :
 			| VariableSetStmt
 			| VariableShowStmt
 			| ViewStmt
+			| RetrieveStmt
 			| /*EMPTY*/
 				{ $$ = NULL; }
 		;
@@ -3021,6 +3028,13 @@ alter_table_cmd:
 				{
 					AlterTableCmd *n = makeNode(AlterTableCmd);
 					n->subtype = AT_ExpandTable;
+					$$ = (Node *)n;
+				}
+			/* ALTER TABLE <name> EXPAND PARTITION PREPARE*/
+			| EXPAND PARTITION PREPARE
+				{
+					AlterTableCmd *n = makeNode(AlterTableCmd);
+					n->subtype = AT_ExpandPartitionTablePrepare;
 					$$ = (Node *)n;
 				}
 			/* ALTER TABLE <name> OF <type_name> */
@@ -11741,13 +11755,22 @@ using_clause:
  *
  *****************************************************************************/
 
-LockStmt:	LOCK_P opt_table relation_expr_list opt_lock opt_nowait
+LockStmt:	LOCK_P opt_table relation_expr_list opt_lock opt_nowait opt_masteronly
 				{
 					LockStmt *n = makeNode(LockStmt);
 
 					n->relations = $3;
 					n->mode = $4;
 					n->nowait = $5;
+					n->masteronly = $6;
+					if (n->masteronly && n->mode != AccessShareLock)
+					{
+						ereport(ERROR,
+								(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+								errmsg("provided lock mode is not supported for MASTER ONLY"),
+							 	errhint("Only ACCESS SHARE mode is supported for MASTER ONLY."),
+								parser_errposition(@4)));
+					}
 					$$ = (Node *)n;
 				}
 		;
@@ -11770,6 +11793,9 @@ opt_nowait:	NOWAIT							{ $$ = TRUE; }
 			| /*EMPTY*/						{ $$ = FALSE; }
 		;
 
+opt_masteronly: MASTER ONLY					{ $$ = true; }
+			| /*EMPTY*/						{ $$ = false; }
+		;
 
 /*****************************************************************************
  *
@@ -11883,6 +11909,7 @@ cursor_options: /*EMPTY*/					{ $$ = 0; }
 			| cursor_options SCROLL			{ $$ = $1 | CURSOR_OPT_SCROLL; }
 			| cursor_options BINARY			{ $$ = $1 | CURSOR_OPT_BINARY; }
 			| cursor_options INSENSITIVE	{ $$ = $1 | CURSOR_OPT_INSENSITIVE; }
+			| cursor_options PARALLEL RETRIEVE	{ $$ = $1 | CURSOR_OPT_PARALLEL_RETRIEVE; }
 		;
 
 opt_hold: /* EMPTY */						{ $$ = 0; }
@@ -11937,6 +11964,24 @@ opt_hold: /* EMPTY */						{ $$ = 0; }
 
 SelectStmt: select_no_parens			%prec UMINUS
 			| select_with_parens		%prec UMINUS
+		;
+
+RetrieveStmt:
+			RETRIEVE SignedIconst FROM ENDPOINT name
+				{
+					RetrieveStmt *n = makeNode(RetrieveStmt);
+					n->endpoint_name = $5;
+					n->count = $2;
+					$$ = (Node *)n;
+				}
+			| RETRIEVE ALL FROM ENDPOINT name
+				{
+					RetrieveStmt *n = makeNode(RetrieveStmt);
+					n->endpoint_name = $5;
+					n->count = -1;
+					n->is_all = true;
+					$$ = (Node *)n;
+				}
 		;
 
 select_with_parens:
@@ -15682,6 +15727,7 @@ unreserved_keyword:
 			| ENABLE_P
 			| ENCODING
 			| ENCRYPTED
+			| ENDPOINT
 			| ENUM_P
 			| ERRORS
 			| ESCAPE
@@ -15790,6 +15836,7 @@ unreserved_keyword:
 			| OVERCOMMIT
 			| OWNED
 			| OWNER
+			| PARALLEL
 			| PARSER
 			| PARTIAL
 			| PARTITIONS
@@ -15832,6 +15879,7 @@ unreserved_keyword:
 			| RESOURCE
 			| RESTART
 			| RESTRICT
+			| RETRIEVE
 			| RETURNS
 			| REVOKE
 			| ROLE
@@ -16002,6 +16050,7 @@ PartitionIdentKeyword: ABORT_P
 			| ENABLE_P
 			| ENCODING
 			| ENCRYPTED
+			| ENDPOINT
 			| ERRORS
 			| ENUM_P
 			| ESCAPE
@@ -16085,6 +16134,7 @@ PartitionIdentKeyword: ABORT_P
 			| OVERCOMMIT
 			| OWNED
 			| OWNER
+			| PARALLEL
 			| PARTIAL
 			| PARTITIONS
 			| PASSWORD

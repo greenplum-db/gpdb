@@ -746,7 +746,7 @@ ginRedoDeletePage(XLogRecPtr lsn, XLogRecord *record)
 				Assert(GinPageIsData(page));
 				if (record->xl_len == sizeof(ginxlogDeletePage))
 					GinPageSetDeleteXid(page, data->deleteXid);
-				GinPageGetOpaque(page)->flags = GIN_DELETED;
+				GinPageSetDeleted(page);
 				PageSetLSN(page, lsn);
 				MarkBufferDirty(dbuffer);
 			}

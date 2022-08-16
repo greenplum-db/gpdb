@@ -103,6 +103,7 @@ test: collate
 test: lock
 test: replica_identity
 test: alter_generic
+test: password
 test: misc
 test: psql
 test: async

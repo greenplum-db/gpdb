@@ -818,6 +818,70 @@ INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
              2 |     2
 (3 rows)
 
+-- test direct dispatch via gp_segment_id qual on distributed randomly table
+alter table t_test_dd_via_segid set distributed randomly;
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
+explain (costs off) select gp_segment_id, id from t_test_dd_via_segid where gp_segment_id=0;
+                 QUERY PLAN                  
+---------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Result
+         ->  Seq Scan on t_test_dd_via_segid
+               Filter: (gp_segment_id = 0)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(5 rows)
+
+explain (costs off) select gp_segment_id, id from t_test_dd_via_segid where gp_segment_id=1;
+                 QUERY PLAN                  
+---------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Result
+         ->  Seq Scan on t_test_dd_via_segid
+               Filter: (gp_segment_id = 1)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(5 rows)
+
+explain (costs off) select gp_segment_id, id from t_test_dd_via_segid where gp_segment_id=2;
+                 QUERY PLAN                  
+---------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Result
+         ->  Seq Scan on t_test_dd_via_segid
+               Filter: (gp_segment_id = 2)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(5 rows)
+
+explain (costs off) select gp_segment_id, id from t_test_dd_via_segid where gp_segment_id=1 or gp_segment_id=2;
+                             QUERY PLAN                             
+--------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Result
+         ->  Seq Scan on t_test_dd_via_segid
+               Filter: ((gp_segment_id = 1) OR (gp_segment_id = 2))
+ Optimizer: Pivotal Optimizer (GPORCA)
+(5 rows)
+
+explain (costs off) select gp_segment_id, id from t_test_dd_via_segid where gp_segment_id=1 or gp_segment_id=2;
+                             QUERY PLAN                             
+--------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Result
+         ->  Seq Scan on t_test_dd_via_segid
+               Filter: ((gp_segment_id = 1) OR (gp_segment_id = 2))
+ Optimizer: Pivotal Optimizer (GPORCA)
+(5 rows)
+
+explain (costs off) select gp_segment_id, id from t_test_dd_via_segid where gp_segment_id=1 or gp_segment_id=2 or gp_segment_id=3;
+                                        QUERY PLAN                                         
+-------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Result
+         ->  Seq Scan on t_test_dd_via_segid
+               Filter: ((gp_segment_id = 1) OR (gp_segment_id = 2) OR (gp_segment_id = 3))
+ Optimizer: Pivotal Optimizer (GPORCA)
+(5 rows)
+
 -- cleanup
 set test_print_direct_dispatch_info=off;
 begin;

@@ -15,7 +15,7 @@
        | ('gpfdists://<varname>filehost</varname>[:<varname>port</varname>]/<varname>file_pattern</varname>[#transform=<varname>trans_name</varname>]'
            [, ...])
        | ('pxf://<varname>path-to-data</varname>?PROFILE=<varname>profile_name</varname>[&amp;SERVER=<varname>server_name</varname>][&amp;<varname>custom-option</varname>=<varname>value</varname>[...]]'))
-       | ('s3://<varname>S3_endpoint</varname>[:<varname>port</varname>]/<varname>bucket_name</varname>/[<varname>S3_prefix</varname>] [region=<varname>S3-region</varname>] [config=<varname>config_file</varname>]')
+       | ('s3://<varname>S3_endpoint</varname>[:<varname>port</varname>]/<varname>bucket_name</varname>/[<varname>S3_prefix</varname>] [region=<varname>S3-region</varname>] [config=<varname>config_file</varname> | config_server=<varname>url</varname>]')
      [ON MASTER]
      FORMAT 'TEXT' 
            [( [HEADER]
@@ -90,7 +90,7 @@ CREATE WRITABLE EXTERNAL [TEMPORARY | TEMP] TABLE <varname>table_name</varname>
 
 CREATE WRITABLE EXTERNAL [TEMPORARY | TEMP] TABLE <varname>table_name</varname>
     ( <varname>column_name</varname> <varname>data_type</varname> [, ...] | LIKE <varname>other_table </varname>)
-     LOCATION('s3://<varname>S3_endpoint</varname>[:<varname>port</varname>]/<varname>bucket_name</varname>/[<varname>S3_prefix</varname>] [region=<varname>S3-region</varname>] [config=<varname>config_file</varname>]')
+     LOCATION('s3://<varname>S3_endpoint</varname>[:<varname>port</varname>]/<varname>bucket_name</varname>/[<varname>S3_prefix</varname>] [region=<varname>S3-region</varname>] [config=<varname>config_file</varname> | config_server=<varname>url</varname>]')
       [ON MASTER]
       FORMAT 'TEXT' 
                [( [DELIMITER [AS] '<varname>delimiter</varname>']
@@ -144,7 +144,7 @@ CREATE WRITABLE EXTERNAL WEB [TEMPORARY | TEMP] TABLE <varname>table_name</varna
         sources. Regular readable external tables access static flat files, whereas external web
         tables access dynamic data sources – either on a web server or by running OS commands or
         scripts. </p>
-      <p>See <xref href="../../admin_guide/external/g-working-with-file-based-ext-tables.xml"/> for
+      <p>See <xref href="../../admin_guide/external/g-working-with-file-based-ext-tables.html" format="html" scope="external">Working with External Data</xref> for
         detailed information about working with external tables.</p>
     </section>
     <section id="section4">
@@ -208,10 +208,10 @@ CREATE WRITABLE EXTERNAL WEB [TEMPORARY | TEMP] TABLE <varname>table_name</varna
         <plentry>
           <pt>LOCATION <varname>('protocol://[host[:port]]/path/file' [, ...])</varname></pt>
           <pd>If you use the <codeph>pxf</codeph> protocol to access an external data source,
-          refer to <xref href="../../admin_guide/external/g-pxf-protocol.xml"></xref> for
+          refer to <xref href="../../admin_guide/external/g-pxf-protocol.html" format="html" scope="external">pxf:// Protocol</xref> for
           information about the <codeph>pxf</codeph> protocol.</pd>
           <pd>If you use the <codeph>s3</codeph> protocol to read or write to S3, refer to <xref
-              href="../../admin_guide/external/g-s3-protocol.xml#amazon-emr/section_stk_c2r_kx"/>
+              href="../../admin_guide/external/g-s3-protocol.html#amazon-emr/section_stk_c2r_kx" format="html" scope="external">s3:// Protocol</xref>
             for additional information about the <codeph>s3</codeph> protocol
               <codeph>LOCATION</codeph> clause syntax.</pd>
           <pd>For readable external tables, specifies the URI of the external data source(s) to be
@@ -317,7 +317,7 @@ CREATE WRITABLE EXTERNAL WEB [TEMPORARY | TEMP] TABLE <varname>table_name</varna
         using a custom format, see "Loading and Unloading Data" in the <cite>Greenplum Database
           Administrator Guide</cite>.</pd>
           <pd>If you use the <codeph>pxf</codeph> protocol to access an external data source,
-          refer to <xref href="../../admin_guide/external/pxf-overview.xml"></xref>
+          refer to <xref href="../../admin_guide/external/pxf-overview.html" format="html" scope="external">Accessing External Data with PXF</xref>
           for information about using PXF.</pd>
         </plentry>
         <plentry>
@@ -327,7 +327,7 @@ CREATE WRITABLE EXTERNAL WEB [TEMPORARY | TEMP] TABLE <varname>table_name</varna
             to the formatter function. The length of the formatter specification, the string
             including <codeph>Formatter=</codeph>, can be up to approximately 50K bytes.</pd>
           <pd>If you use the <codeph>pxf</codeph> protocol to access an external data source,
-          refer to <xref href="../../admin_guide/external/pxf-overview.xml"></xref>
+          refer to <xref href="../../admin_guide/external/pxf-overview.html" format="html" scope="external">Accessing External Data with PXF</xref>
           for information about using PXF.</pd>
           <pd>For general information about using a custom format, see "Loading and Unloading Data" in the
               <cite>Greenplum Database Administrator Guide</cite>.</pd>
@@ -421,7 +421,7 @@ CREATE WRITABLE EXTERNAL WEB [TEMPORARY | TEMP] TABLE <varname>table_name</varna
           <pt>ENCODING <varname>'encoding'</varname></pt>
           <pd>Character set encoding to use for the external table. Specify a string constant (such
             as <codeph>'SQL_ASCII'</codeph>), an integer encoding number, or
-              <codeph>DEFAULT</codeph> to use the default client encoding. See <xref
+              <codeph>DEFAULT</codeph> to use the default server encoding. See <xref
               href="../character_sets.xml" type="topic" format="dita"/>.</pd>
         </plentry>
         <plentry>
@@ -545,7 +545,7 @@ customer_id=123;</codeblock>
       <p>When you specify the <codeph>LOG ERRORS</codeph> clause, Greenplum Database captures errors
         that occur while reading the external table data. For information about the error log
         format, see <xref
-              href="../../admin_guide/load/topics/g-viewing-bad-rows-in-the-error-table-or-error-log.xml#topic58"
+              href="../../admin_guide/load/topics/g-viewing-bad-rows-in-the-error-table-or-error-log.html#topic58" format="html" scope="external"
           >Viewing Bad Rows in the Error Log</xref>.</p>
       <p>You can view and manage the captured error log data. The functions to manage log data
         depend on whether the data is persistent (the <codeph>PERSISTENTLY</codeph> keyword is used

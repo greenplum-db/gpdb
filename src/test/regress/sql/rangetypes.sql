@@ -121,6 +121,8 @@ select numrange(1.0, 2.0) * numrange(1.5, 3.0);
 select numrange(1.0, 2.0) * numrange(2.5, 3.0);
 
 create table numrange_test2(nr numrange);
+-- GPDB_94_MERGE_FIXME: why GPDB 6 doesn't support hash index?
+-- create index numrange_test2_hash_idx on numrange_test2 using hash (nr);
 create index numrange_test2_hash_idx on numrange_test2 (nr);
 
 INSERT INTO numrange_test2 VALUES('[, 5)');
@@ -150,8 +152,36 @@ set enable_nestloop to default;
 set enable_hashjoin to default;
 set enable_mergejoin to default;
 
-DROP TABLE numrange_test;
+-- keep numrange_test around to help exercise dump/reload
 DROP TABLE numrange_test2;
+
+--
+-- Apply a subset of the above tests on a collatable type, too
+--
+
+CREATE TABLE textrange_test (tr textrange);
+create index textrange_test_btree on textrange_test(tr);
+
+INSERT INTO textrange_test VALUES('[,)');
+INSERT INTO textrange_test VALUES('["a",]');
+INSERT INTO textrange_test VALUES('[,"q")');
+INSERT INTO textrange_test VALUES(textrange('b', 'g'));
+INSERT INTO textrange_test VALUES('empty');
+INSERT INTO textrange_test VALUES(textrange('d', 'd', '[]'));
+
+SELECT tr, isempty(tr), lower(tr), upper(tr) FROM textrange_test;
+SELECT tr, lower_inc(tr), lower_inf(tr), upper_inc(tr), upper_inf(tr) FROM textrange_test;
+
+SELECT * FROM textrange_test WHERE range_contains(tr, textrange('f', 'fx'));
+SELECT * FROM textrange_test WHERE tr @> textrange('a', 'z');
+SELECT * FROM textrange_test WHERE range_contained_by(textrange('0','9'), tr);
+SELECT * FROM textrange_test WHERE 'e'::text <@ tr;
+
+select * from textrange_test where tr = 'empty';
+select * from textrange_test where tr = '("b","g")';
+select * from textrange_test where tr = '["b","g")';
+select * from textrange_test where tr < 'empty';
+
 
 -- test canonical form for int4range
 select int4range(1, 10, '[]');
@@ -454,6 +484,22 @@ select array[1,3] <@ arrayrange(array[1,2], array[2,1]);
 
 -- start_ignore
 -- GPDB_94_MERGE_FIXME: orca can not run the test green.
+
+--
+-- Ranges of composites
+--
+
+create type two_ints as (a int, b int);
+create type two_ints_range as range (subtype = two_ints);
+
+select *, row_to_json(upper(t)) as u from
+  (values (two_ints_range(row(1,2), row(3,4))),
+          (two_ints_range(row(5,6), row(7,8)))) v(t);
+
+-- this must be rejected to avoid self-inclusion issues:
+alter type two_ints add attribute c two_ints_range;
+
+drop type two_ints cascade;
 
 --
 -- Check behavior when subtype lacks a hash function

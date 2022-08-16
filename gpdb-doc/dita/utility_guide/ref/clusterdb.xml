@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
-<topic id="topic1"><title id="oy139586">clusterdb</title><body><p id="client_util_desc">Reclusters tables that were previously clustered with <codeph>CLUSTER</codeph>.</p><section id="section2"><title>Synopsis</title><codeblock id="client_util_synopsis"><b>clusterdb</b> [<varname>connection-option</varname> ...] [<b>--verbose | -v</b>] [<b>--table | -t</b> <varname>table</varname>] [[<b>--dbname | -d</b>] <varname>dbname</varname>]
+<topic id="topic1"><title id="oy139586">clusterdb</title><body><p id="client_util_desc">Reclusters tables that were previously clustered with <codeph>CLUSTER</codeph>.</p><section id="section2"><title>Synopsis</title><codeblock id="client_util_synopsis">clusterdb [&lt;connection-option> ...] [--verbose | -v] [--table | -t &lt;table>] [[--dbname | -d] &lt;dbname]
 
-<b>clusterdb</b> [<varname>connection-option</varname> ...] [<b>--all | -a</b>] [<b>--verbose | -v</b>]
+clusterdb [&lt;connection-option> ...] [--all | -a] [--verbose | -v]
 
-<b>clusterdb</b> <b>-? | --help</b>
+clusterdb -? | --help
 
-<b>clusterdb</b> <b>-V | --version</b></codeblock></section><section id="section3"><title>Description</title><p>To cluster a table means to physically reorder a table on disk according
+clusterdb -V | --version</codeblock></section><section id="section3"><title>Description</title><p>To cluster a table means to physically reorder a table on disk according
 to an index so that index scan operations can access data on disk in
 a somewhat sequential order, thereby improving index seek performance
 for queries that use that index. </p><p>The <codeph>clusterdb</codeph> utility will find any tables in a database
@@ -48,6 +48,5 @@ batch jobs and scripts where no user is present to enter a password.</pd></plent
             <pd> Specifies the name of the database to connect to discover what other databases
               should be clustered. If not specified, the <codeph>postgres</codeph> database will
               be used, and if that does not exist, <codeph>template1</codeph> will be used. </pd>
-          </plentry></parml></sectiondiv></section><section id="section6"><title>Examples</title><p>To cluster the database <codeph>test</codeph>:</p><codeblock>clusterdb test</codeblock><p>To cluster a single table <codeph>foo</codeph> in a database named <codeph>xyzzy</codeph>:</p><codeblock>clusterdb --table foo xyzzyb</codeblock></section><section id="section7"><title>See Also</title><p><ph><codeph>CLUSTER</codeph> in the <i>Greenplum Database Reference
-              Guide</i></ph><ph><codeph><xref href="../../ref_guide/sql_commands/CLUSTER.xml#topic1"
-            /></codeph></ph></p></section></body></topic>
+          </plentry></parml></sectiondiv></section><section id="section6"><title>Examples</title><p>To cluster the database <codeph>test</codeph>:</p><codeblock>clusterdb test</codeblock><p>To cluster a single table <codeph>foo</codeph> in a database named <codeph>xyzzy</codeph>:</p><codeblock>clusterdb --table foo xyzzyb</codeblock></section><section id="section7"><title>See Also</title><p><ph><codeph>CLUSTER</codeph> in the <i>Greenplum Database Reference Guide</i></ph><ph><xref
+            href="../../ref_guide/sql_commands/CLUSTER.xml#topic1"/></ph></p></section></body></topic>

@@ -65,6 +65,23 @@ typedef ULONG OID;
 #define GPDB_COUNT_ANY OID(2147)   // count(Any)
 #define GPDB_UUID OID(2950)
 #define GPDB_ANY OID(2283)
+#define GPDB_PERCENTILE_DISC \
+	OID(3972)  // percentile_disc(fraction) group within(ANYELEMENT)
+#define GPDB_PERCENTILE_CONT_FLOAT8 \
+	OID(3974)  // percentile_cont(fraction) group within(FLOAT8)
+#define GPDB_PERCENTILE_CONT_INTERVAL \
+	OID(3976)  // percentile_cont(fraction) group within(INTERVAL)
+#define GPDB_PERCENTILE_CONT_TIMESTAMP \
+	OID(6119)  // percentile_cont(fraction) group within(timestamp)
+#define GPDB_PERCENTILE_CONT_TIMESTAMPTZ \
+	OID(6123)  // percentile_cont(fraction) group within(timestamptz)
+#define GPDB_MEDIAN_FLOAT8 OID(6127)  // median(fraction) group within(FLOAT8)
+#define GPDB_MEDIAN_INTERVAL \
+	OID(6128)  // median(fraction) group within(INTERVAL)
+#define GPDB_MEDIAN_TIMESTAMP \
+	OID(6129)  // median(fraction) group within(timestamp)
+#define GPDB_MEDIAN_TIMESTAMPTZ \
+	OID(6130)  // median(fraction) group within(timestamptz)
 
 #endif	// !GPDXL_gpdb_types_H
 

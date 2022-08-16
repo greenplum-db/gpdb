@@ -13,6 +13,8 @@ subdir = src/test/ssl
 top_builddir = ../../..
 include $(top_builddir)/src/Makefile.global
 
+export with_openssl
+
 CERTIFICATES := server_ca server-cn-and-alt-names \
 	server-cn-only server-single-alt-name server-multiple-alt-names \
 	server-no-names server-revoked server-ss \
@@ -36,7 +38,7 @@ ssl/new_certs_dir:
 
 # Rule for creating private/public key pairs.
 ssl/%.key:
-	openssl genrsa -out $@ 1024
+	openssl genrsa -out $@ 2048
 	chmod 0600 $@
 
 # Root CA certificate
@@ -136,3 +138,11 @@ ifeq ($(with_openssl),yes)
 else
 	@echo "SSL is disabled for this build"
 endif
+
+install:
+	./configure_ssl.sh
+
+HOSTNAME=$(shell hostname)
+installcheck: install
+	$(top_builddir)/src/test/regress/pg_regress $(EXTRA_REGRESS_OPTS) --init-file=$(top_builddir)/src/test/regress/init_file --init-file=./init_file_ssl_connection --psqldir='$(PSQLDIR)' --inputdir=$(srcdir) --dbname=test_sslconnection --schedule=$(srcdir)/ssl_connection_schedule --user=ssltestuser --host=$(HOSTNAME) --sslmode=verify-full
+	./clear_ssl.sh

@@ -99,27 +99,19 @@ our @EXPORT = qw(
   get_new_node
 );
 
-our ($test_localhost, $test_pghost, $last_port_assigned, @all_nodes);
-
-# Windows path to virtual file system root
-
-our $vfs_path = '';
-if ($Config{osname} eq 'msys')
-{
-	$vfs_path = `cd / && pwd -W`;
-	chomp $vfs_path;
-}
+our ($use_tcp, $test_localhost, $test_pghost, $last_host_assigned, $last_port_assigned, @all_nodes);
 
 INIT
 {
 
-	# PGHOST is set once and for all through a single series of tests when
-	# this module is loaded.
-	$test_localhost = "127.0.0.1";
-	$test_pghost =
-	  $TestLib::windows_os ? $test_localhost : TestLib::tempdir_short;
-	$ENV{PGHOST}     = $test_pghost;
-	$ENV{PGDATABASE} = 'postgres';
+	# Set PGHOST for backward compatibility.  This doesn't work for own_host
+	# nodes, so prefer to not rely on this when writing new tests.
+	$use_tcp            = $TestLib::windows_os;
+	$test_localhost     = "127.0.0.1";
+	$last_host_assigned = 1;
+	$test_pghost        = $use_tcp ? $test_localhost : TestLib::tempdir_short;
+	$ENV{PGHOST}        = $test_pghost;
+	$ENV{PGDATABASE}    = 'postgres';
 
 	# Tracking of last port value assigned to accelerate free port lookup.
 	$last_port_assigned = int(rand() * 16384) + 49152;
@@ -148,9 +140,14 @@ sub new
 	my $self = {
 		_port    => $pgport,
 		_host    => $pghost,
+		# GPDB needs dbid for a node for certain operations
+		_dbid    => int(rand(10)),
 		_basedir => TestLib::tempdir("data_" . $name),
 		_name    => $name,
-		_logfile => "$TestLib::log_path/${testname}_${name}.log" };
+		_logfile_generation => 0,
+		_logfile_base       => "$TestLib::log_path/${testname}_${name}",
+		_logfile            => "$TestLib::log_path/${testname}_${name}.log"
+	};
 
 	bless $self, $class;
 	$self->dump_info;
@@ -189,6 +186,20 @@ sub host
 {
 	my ($self) = @_;
 	return $self->{_host};
+}
+
+=pod
+
+=item $node->dbid()
+
+Return the dbid for this instance.
+
+=cut
+
+sub dbid
+{
+	my ($self) = @_;
+	return $self->{_dbid};
 }
 
 =pod
@@ -376,9 +387,6 @@ a directory that's only accessible to the current user to ensure that.
 On Windows, we use SSPI authentication to ensure the same (by pg_regress
 --config-auth).
 
-pg_hba.conf is configured to allow replication connections. Pass the keyword
-parameter hba_permit_replication => 0 to disable this.
-
 WAL archiving can be enabled on this node by passing the keyword parameter
 has_archiving => 1. This is disabled by default.
 
@@ -396,9 +404,8 @@ sub init
 	my $port   = $self->port;
 	my $pgdata = $self->data_dir;
 	my $host   = $self->host;
+	my $dbid   = $self->dbid;
 
-	$params{hba_permit_replication} = 1
-	  unless defined $params{hba_permit_replication};
 	$params{allows_streaming} = 0 unless defined $params{allows_streaming};
 	$params{has_archiving}    = 0 unless defined $params{has_archiving};
 
@@ -417,20 +424,28 @@ sub init
 	# print $conf "wal_retrieve_retry_interval = '500ms'\n";
 	print $conf "port = $port\n";
 
+	# In GPDB, logging_collector is enabled by default. Disable it, so that
+	# upstream tests behave the same as in PostgreSQL. In particular, the
+	# issues_sql_like() doesn't work if logging_collector is enabled.
+	# Individual tests can override this.
+	print $conf "logging_collector = off\n";
+
 	if ($params{allows_streaming})
 	{
-		print $conf "wal_level = replica\n";
+		print $conf "wal_level = hot_standby\n";
 		print $conf "max_wal_senders = 5\n";
 		print $conf "wal_keep_segments = 20\n";
-		print $conf "max_wal_size = 128MB\n";
+		# GPDB: this GUC is not yet supported
+		# print $conf "max_wal_size = 128MB\n";
 		print $conf "shared_buffers = 1MB\n";
 		print $conf "wal_log_hints = on\n";
 		print $conf "hot_standby = on\n";
-		print $conf "max_connections = 10\n";
+		print $conf "max_connections = 20\n";
 	}
 
-	if ($TestLib::windows_os)
+	if ($use_tcp)
 	{
+		print $conf "unix_socket_directories = ''\n";
 		print $conf "listen_addresses = '$host'\n";
 	}
 	else
@@ -440,8 +455,16 @@ sub init
 	}
 	close $conf;
 
-	$self->set_replication_conf if $params{hba_permit_replication};
+	$self->set_replication_conf if $params{allows_streaming};
 	$self->enable_archiving     if $params{has_archiving};
+
+	# We have to specify the master's dbid explicitly because initdb
+	# only creates an empty file. gpconfigurenewseg is tasked with
+	# populating the master's dbid.
+	open $conf, '>>', "$pgdata/internal.auto.conf";
+	print $conf "\n# Added by PostgresNode.pm\n";
+	print $conf "gp_dbid=$dbid\n";
+	close $conf;
 }
 
 =pod
@@ -483,12 +506,11 @@ sub backup
 {
 	my ($self, $backup_name) = @_;
 	my $backup_path = $self->backup_dir . '/' . $backup_name;
-	my $port        = $self->port;
 	my $name        = $self->name;
 
 	print "# Taking pg_basebackup $backup_name from node \"$name\"\n";
-	TestLib::system_or_bail('pg_basebackup', '-D', $backup_path, '-p', $port,
-		'-x');
+	TestLib::system_or_bail('pg_basebackup', '-D', $backup_path, '--target-gp-dbid', '100', '-h',
+		$self->host, '-p', $self->port, '-x');
 	print "# Backup finished\n";
 }
 
@@ -580,9 +602,6 @@ Does not start the node after initializing it.
 
 A recovery.conf is not created.
 
-pg_hba.conf is configured to allow replication connections. Pass the keyword
-parameter hba_permit_replication => 0 to disable this.
-
 Streaming replication can be enabled on this node by passing the keyword
 parameter has_streaming => 1. This is disabled by default.
 
@@ -599,13 +618,12 @@ sub init_from_backup
 {
 	my ($self, $root_node, $backup_name, %params) = @_;
 	my $backup_path = $root_node->backup_dir . '/' . $backup_name;
+	my $host        = $self->host;
 	my $port        = $self->port;
 	my $node_name   = $self->name;
 	my $root_name   = $root_node->name;
 
 	$params{has_streaming} = 0 unless defined $params{has_streaming};
-	$params{hba_permit_replication} = 1
-	  unless defined $params{hba_permit_replication};
 	$params{has_restoring} = 0 unless defined $params{has_restoring};
 
 	print
@@ -627,41 +645,102 @@ sub init_from_backup
 		qq(
 port = $port
 ));
-	$self->set_replication_conf         if $params{hba_permit_replication};
+	if ($use_tcp)
+	{
+		$self->append_conf('postgresql.conf', "listen_addresses = '$host'");
+	}
+	else
+	{
+		$self->append_conf('postgresql.conf',
+			"unix_socket_directories = '$host'");
+	}
 	$self->enable_streaming($root_node) if $params{has_streaming};
 	$self->enable_restoring($root_node) if $params{has_restoring};
 }
 
 =pod
 
-=item $node->start()
+=item $node->rotate_logfile()
+
+Switch to a new PostgreSQL log file.  This does not alter any running
+PostgreSQL process.  Subsequent method calls, including pg_ctl invocations,
+will use the new name.  Return the new name.
+
+=cut
+
+sub rotate_logfile
+{
+	my ($self) = @_;
+	$self->{_logfile} = sprintf('%s_%d.log',
+		$self->{_logfile_base},
+		++$self->{_logfile_generation});
+	return $self->{_logfile};
+}
+
+=pod
+
+=item $node->start(%params) => success_or_failure
 
 Wrapper for pg_ctl -w start
 
 Start the node and wait until it is ready to accept connections.
 
+=over
+
+=item fail_ok => 1
+
+By default, failure terminates the entire F<prove> invocation.  If given,
+instead return a true or false value to indicate success or failure.
+
+=back
+
 =cut
 
 sub start
 {
-	my ($self) = @_;
+	my ($self, %params) = @_;
 	my $port   = $self->port;
 	my $pgdata = $self->data_dir;
 	my $name   = $self->name;
 	BAIL_OUT("node \"$name\" is already running") if defined $self->{_pid};
 	print("### Starting node \"$name\"\n");
 	my $ret = TestLib::system_log('pg_ctl', '-w', '-D', $self->data_dir, '-l',
-		$self->logfile, '-o', "-c gp_role=utility --gp_dbid=-1 --gp_contentid=-1 --logging-collector=off",
+		$self->logfile, '-o', "-c gp_role=utility --gp_dbid=$self->{_dbid} --gp_contentid=0",
 		'start');
 
 	if ($ret != 0)
 	{
 		print "# pg_ctl start failed; logfile:\n";
 		print TestLib::slurp_file($self->logfile);
-		BAIL_OUT("pg_ctl start failed");
+		BAIL_OUT("pg_ctl start failed") unless $params{fail_ok};
+		return 0;
 	}
 
 	$self->_update_pid(1);
+	return 1;
+}
+
+=pod
+
+=item $node->kill9()
+
+Send SIGKILL (signal 9) to the postmaster.
+
+Note: if the node is already known stopped, this does nothing.
+However, if we think it's running and it's not, it's important for
+this to fail.  Otherwise, tests might fail to detect server crashes.
+
+=cut
+
+sub kill9
+{
+	my ($self) = @_;
+	my $name = $self->name;
+	return unless defined $self->{_pid};
+	print "### Killing node \"$name\" using signal 9\n";
+	kill(9, $self->{_pid}) or BAIL_OUT("kill(9, $self->{_pid}) failed");
+	$self->{_pid} = undef;
+	return;
 }
 
 =pod
@@ -746,6 +825,10 @@ sub promote
 	print "### Promoting node \"$name\"\n";
 	TestLib::system_or_bail('pg_ctl', '-D', $pgdata, '-l', $logfile,
 							'promote');
+	# GPDB: In 6X_STABLE, pg_ctl promote does not wait until promotion is finished
+	# so we need to manually check in a loop.
+	$self->poll_query_until('postgres', "SELECT NOT pg_is_in_recovery()")
+		or die "Timed out while waiting for standby to promote";
 }
 
 # Internal routine to enable streaming replication on a standby node.
@@ -767,7 +850,7 @@ standby_mode=on
 sub enable_restoring
 {
 	my ($self, $root_node) = @_;
-	my $path = $vfs_path . $root_node->archive_dir;
+	my $path = TestLib::perl2host($root_node->archive_dir);
 	my $name = $self->name;
 
 	print "### Enabling WAL restore for node \"$name\"\n";
@@ -795,7 +878,7 @@ standby_mode = on
 sub enable_archiving
 {
 	my ($self) = @_;
-	my $path   = $vfs_path. $self->archive_dir;
+	my $path   = TestLib::perl2host($self->archive_dir);
 	my $name   = $self->name;
 
 	print "### Enabling WAL archiving for node \"$name\"\n";
@@ -847,7 +930,7 @@ sub _update_pid
 
 =pod
 
-=item PostgresNode->get_new_node(node_name)
+=item PostgresNode->get_new_node(node_name, %params)
 
 Build a new object of class C<PostgresNode> (or of a subclass, if you have
 one), assigning a free port number.  Remembers the node, to prevent its port
@@ -855,6 +938,22 @@ number from being reused for another node, and to ensure that it gets
 shut down when the test script exits.
 
 You should generally use this instead of C<PostgresNode::new(...)>.
+
+=over
+
+=item port => [1,65535]
+
+By default, this function assigns a port number to each node.  Specify this to
+force a particular port number.  The caller is responsible for evaluating
+potential conflicts and privilege requirements.
+
+=item own_host => 1
+
+By default, all nodes use the same PGHOST value.  If specified, generate a
+PGHOST specific to this node.  This allows multiple nodes to use the same
+port.
+
+=back
 
 For backwards compatibility, it is also exported as a standalone function,
 which can only create objects of class C<PostgresNode>.
@@ -864,10 +963,11 @@ which can only create objects of class C<PostgresNode>.
 sub get_new_node
 {
 	my $class = 'PostgresNode';
-	$class = shift if 1 < scalar @_;
-	my $name  = shift;
-	my $found = 0;
-	my $port  = $last_port_assigned;
+	$class = shift if scalar(@_) % 2 != 1;
+	my ($name, %params) = @_;
+	my $port_is_forced = defined $params{port};
+	my $found          = $port_is_forced;
+	my $port = $port_is_forced ? $params{port} : $last_port_assigned;
 
 	while ($found == 0)
 	{
@@ -884,13 +984,15 @@ sub get_new_node
 			$found = 0 if ($node->port == $port);
 		}
 
-		# Check to see if anything else is listening on this TCP port.
-		# This is *necessary* on Windows, and seems like a good idea
-		# on Unixen as well, even though we don't ask the postmaster
-		# to open a TCP port on Unix.
+		# Check to see if anything else is listening on this TCP port.  Accept
+		# only ports available for all possible listen_addresses values, so
+		# the caller can harness this port for the widest range of purposes.
+		# This is *necessary* on Windows, and seems like a good idea on Unixen
+		# as well, even though we don't ask the postmaster to open a TCP port
+		# on Unix.
 		if ($found == 1)
 		{
-			my $iaddr = inet_aton($test_localhost);
+			my $iaddr = inet_aton('0.0.0.0');
 			my $paddr = sockaddr_in($port, $iaddr);
 			my $proto = getprotobyname("tcp");
 
@@ -906,16 +1008,35 @@ sub get_new_node
 		}
 	}
 
-	print "# Found free port $port\n";
+	print "# Found port $port\n";
+
+	# Select a host.
+	my $host = $test_pghost;
+	if ($params{own_host})
+	{
+		if ($use_tcp)
+		{
+			# This assumes $use_tcp platforms treat every address in
+			# 127.0.0.1/24, not just 127.0.0.1, as a usable loopback.
+			$last_host_assigned++;
+			$last_host_assigned > 254 and BAIL_OUT("too many own_host nodes");
+			$host = '127.0.0.' . $last_host_assigned;
+		}
+		else
+		{
+			$host = "$test_pghost/$name"; # Assume $name =~ /^[-_a-zA-Z0-9]+$/
+			mkdir $host;
+		}
+	}
 
 	# Lock port number found by creating a new node
-	my $node = $class->new($name, $test_pghost, $port);
+	my $node = $class->new($name, $host, $port);
 
 	# Add node to list of nodes
 	push(@all_nodes, $node);
 
 	# And update port for next time
-	$last_port_assigned = $port;
+	$port_is_forced or $last_port_assigned = $port;
 
 	return $node;
 }
@@ -1142,7 +1263,6 @@ sub psql
 		my $exc_save = $@;
 		if ($exc_save)
 		{
-
 			# IPC::Run::run threw an exception. re-throw unless it's a
 			# timeout, which we'll handle by testing is_expired
 			die $exc_save
@@ -1194,7 +1314,7 @@ sub psql
 		  if $ret == 1;
 		die "connection error: '$$stderr'\nwhile running '@psql_params'"
 		  if $ret == 2;
-		die "error running SQL: '$$stderr'\nwhile running '@psql_params'"
+		die "error running SQL: '$$stderr'\nwhile running '@psql_params' with sql '$sql'"
 		  if $ret == 3;
 		die "psql returns $ret: '$$stderr'\nwhile running '@psql_params'";
 	}
@@ -1211,36 +1331,45 @@ sub psql
 
 =pod
 
-=item $node->poll_query_until(dbname, query)
+=item $node->poll_query_until($dbname, $query [, $expected ])
 
-Run a query once a second, until it returns 't' (i.e. SQL boolean true).
-Continues polling if psql returns an error result. Times out after 180 seconds.
+Run B<$query> repeatedly, until it returns the B<$expected> result
+('t', or SQL boolean true, by default).
+Continues polling if B<psql> returns an error result.
+Times out after 180 seconds.
+Returns 1 if successful, 0 if timed out.
 
 =cut
 
 sub poll_query_until
 {
-	my ($self, $dbname, $query) = @_;
+	my ($self, $dbname, $query, $expected) = @_;
 
-	my $max_attempts = 180;
-	my $attempts     = 0;
+	$expected = 't' unless defined($expected);	# default value
+
+	my $cmd =
+		[ 'psql', '-XAt', '-c', $query, '-d', $self->connstr($dbname) ];
 	my ($stdout, $stderr);
+	my $max_attempts = 180 * 10;
+	my $attempts     = 0;
+
+	local $ENV{PGOPTIONS} = '-c gp_session_role=utility';
 
 	while ($attempts < $max_attempts)
 	{
-		my $cmd =
-		  [ 'psql', '-XAt', '-c', $query, '-d', $self->connstr($dbname) ];
 		my $result = IPC::Run::run $cmd, '>', \$stdout, '2>', \$stderr;
 
 		chomp($stdout);
 		$stdout =~ s/\r//g if $TestLib::windows_os;
-		if ($stdout eq "t")
+
+		if ($stdout eq $expected)
 		{
 			return 1;
 		}
 
-		# Wait a second before retrying.
-		sleep 1;
+		# Wait 0.1 second before retrying.
+		select undef, undef, undef, 0.1;
+
 		$attempts++;
 	}
 
@@ -1251,7 +1380,7 @@ sub poll_query_until
 	diag qq(poll_query_until timed out executing this query:
 $query
 expecting this output:
-t
+$expected
 last actual query output:
 $stdout
 with stderr:
@@ -1263,9 +1392,8 @@ $stderr);
 
 =item $node->command_ok(...)
 
-Runs a shell command like TestLib::command_ok, but with PGPORT
-set so that the command will default to connecting to this
-PostgresNode.
+Runs a shell command like TestLib::command_ok, but with PGHOST and PGPORT set
+so that the command will default to connecting to this PostgresNode.
 
 =cut
 
@@ -1273,6 +1401,7 @@ sub command_ok
 {
 	my $self = shift;
 
+	local $ENV{PGHOST} = $self->host;
 	local $ENV{PGPORT} = $self->port;
 
 	TestLib::command_ok(@_);
@@ -1282,7 +1411,7 @@ sub command_ok
 
 =item $node->command_fails(...) - TestLib::command_fails with our PGPORT
 
-See command_ok(...)
+TestLib::command_fails with our connection parameters. See command_ok(...)
 
 =cut
 
@@ -1290,6 +1419,7 @@ sub command_fails
 {
 	my $self = shift;
 
+	local $ENV{PGHOST} = $self->host;
 	local $ENV{PGPORT} = $self->port;
 
 	TestLib::command_fails(@_);
@@ -1299,7 +1429,7 @@ sub command_fails
 
 =item $node->command_like(...)
 
-TestLib::command_like with our PGPORT. See command_ok(...)
+TestLib::command_like with our connection parameters. See command_ok(...)
 
 =cut
 
@@ -1307,6 +1437,7 @@ sub command_like
 {
 	my $self = shift;
 
+	local $ENV{PGHOST} = $self->host;
 	local $ENV{PGPORT} = $self->port;
 
 	TestLib::command_like(@_);
@@ -1328,6 +1459,7 @@ sub issues_sql_like
 {
 	my ($self, $cmd, $expected_sql, $test_name) = @_;
 
+	local $ENV{PGHOST} = $self->host;
 	local $ENV{PGPORT} = $self->port;
 
 	truncate $self->logfile, 0;
@@ -1335,6 +1467,197 @@ sub issues_sql_like
 	ok($result, "@$cmd exit code 0");
 	my $log = TestLib::slurp_file($self->logfile);
 	like($log, $expected_sql, "$test_name: SQL found in server log");
+}
+
+=pod
+
+=item $node->lsn(mode)
+
+Look up WAL locations on the server:
+
+ * insert location (master only, error on replica)
+ * write location (master only, error on replica)
+ * flush location (master only, error on replica)
+ * receive location (always undef on master)
+ * replay location (always undef on master)
+ 
+mode must be specified.
+
+=cut
+
+sub lsn
+{
+	my ($self, $mode) = @_;
+	my %modes = ('insert' => 'pg_current_xlog_insert_location()',
+		'flush' => 'pg_current_xlog_flush_location()',
+		'write' => 'pg_current_xlog_location()',
+		'receive' => 'pg_last_xlog_receive_location()',
+		'replay' => 'pg_last_xlog_replay_location()');
+
+	$mode = '<undef>' if !defined($mode);
+	die "unknown mode for 'lsn': '$mode', valid modes are " . join(', ', keys %modes)
+		if !defined($modes{$mode});
+
+	my $result = $self->safe_psql('postgres', "SELECT $modes{$mode}");
+	chomp($result);
+	if ($result eq '')
+	{
+		return undef;
+	}
+	else
+	{
+		return $result;
+	}
+}
+
+=pod
+
+=item $node->run_log(...)
+
+Runs a shell command like TestLib::run_log, but with connection parameters set 
+so that the command will default to connecting to this PostgresNode.
+
+=cut
+
+sub run_log
+{
+	my $self = shift;
+
+	local $ENV{PGHOST} = $self->host;
+	local $ENV{PGPORT} = $self->port;
+
+	TestLib::run_log(@_);
+	return;
+}
+
+=pod $node->wait_for_catchup(standby_name, mode, target_lsn)
+
+Wait for the node with application_name standby_name (usually from node->name)
+until its replication position in pg_stat_replication equals or passes the
+upstream's xlog insert point at the time this function is called. By default
+the replay_location is waited for, but 'mode' may be specified to wait for any
+of sent|write|flush|replay.
+
+If there is no active replication connection from this peer, waits until
+poll_query_until timeout.
+
+Requires that the 'postgres' db exists and is accessible.
+
+target_lsn may be any arbitrary lsn, but is typically $master_node->lsn('insert').
+
+This is not a test. It die()s on failure.
+
+=cut
+
+sub wait_for_catchup
+{
+	my ($self, $standby_name, $mode, $target_lsn) = @_;
+	$mode = defined($mode) ? $mode : 'replay';
+	my %valid_modes = ( 'sent' => 1, 'write' => 1, 'flush' => 1, 'replay' => 1 );
+	die "unknown mode $mode for 'wait_for_catchup', valid modes are " . join(', ', keys(%valid_modes)) unless exists($valid_modes{$mode});
+	# Allow passing of a PostgresNode instance as shorthand
+	if ( blessed( $standby_name ) && $standby_name->isa("PostgresNode") )
+	{
+		$standby_name = $standby_name->name;
+	}
+	die 'target_lsn must be specified' unless defined($target_lsn);
+	print "Waiting for replication conn " . $standby_name . "'s " . $mode . "_location to pass " . $target_lsn . " on " . $self->name . "\n";
+	my $query = qq[SELECT '$target_lsn' <= ${mode}_location FROM pg_catalog.pg_stat_replication WHERE application_name = '$standby_name';];
+	$self->poll_query_until('postgres', $query)
+		or die "timed out waiting for catchup, current position is " . ($self->safe_psql('postgres', $query) || '(unknown)');
+	print "done\n";
+}
+
+=pod $node->wait_for_slot_catchup(slot_name, mode, target_lsn)
+
+Wait for the named replication slot to equal or pass the supplied target_lsn.
+The position used is the restart_lsn unless mode is given, in which case it may
+be 'restart' or 'confirmed_flush'.
+
+Requires that the 'postgres' db exists and is accessible.
+
+This is not a test. It die()s on failure.
+
+If the slot is not active, will time out after poll_query_until's timeout.
+
+target_lsn may be any arbitrary lsn, but is typically $master_node->lsn('insert').
+
+Note that for logical slots, restart_lsn is held down by the oldest in-progress tx.
+
+=cut
+
+sub wait_for_slot_catchup
+{
+	my ($self, $slot_name, $mode, $target_lsn) = @_;
+	$mode = defined($mode) ? $mode : 'restart';
+	if (!($mode eq 'restart' || $mode eq 'confirmed_flush'))
+	{
+		die "valid modes are restart, confirmed_flush";
+	}
+	die 'target lsn must be specified' unless defined($target_lsn);
+	print "Waiting for replication slot " . $slot_name . "'s " . $mode . "_lsn to pass " . $target_lsn . " on " . $self->name . "\n";
+	my $query = qq[SELECT '$target_lsn' <= ${mode}_lsn FROM pg_catalog.pg_replication_slots WHERE slot_name = '$slot_name';];
+	$self->poll_query_until('postgres', $query)
+		or die "timed out waiting for catchup, current position is " . ($self->safe_psql('postgres', $query) || '(unknown)');
+	print "done\n";
+}
+
+=pod $node->query_hash($dbname, $query, @columns)
+
+Execute $query on $dbname, replacing any appearance of the string __COLUMNS__
+within the query with a comma-separated list of @columns.
+
+If __COLUMNS__ does not appear in the query, its result columns must EXACTLY
+match the order and number (but not necessarily alias) of supplied @columns.
+
+The query must return zero or one rows.
+
+Return a hash-ref representation of the results of the query, with any empty
+or null results as defined keys with an empty-string value. There is no way
+to differentiate between null and empty-string result fields.
+
+If the query returns zero rows, return a hash with all columns empty. There
+is no way to differentiate between zero rows returned and a row with only
+null columns.
+
+=cut
+
+sub query_hash
+{
+	my ($self, $dbname, $query, @columns) = @_;
+	die 'calls in array context for multi-row results not supported yet' if (wantarray);
+	# Replace __COLUMNS__ if found
+	substr($query, index($query, '__COLUMNS__'), length('__COLUMNS__')) = join(', ', @columns)
+		if index($query, '__COLUMNS__') >= 0;
+	my $result = $self->safe_psql($dbname, $query);
+	# hash slice, see http://stackoverflow.com/a/16755894/398670 .
+	#
+	# Fills the hash with empty strings produced by x-operator element
+	# duplication if result is an empty row
+	#
+	my %val;
+	@val{@columns} = $result ne '' ? split(qr/\|/, $result) : ('',) x scalar(@columns);
+	return \%val;
+}
+
+=pod $node->slot(slot_name)
+
+Return hash-ref of replication slot data for the named slot, or a hash-ref with
+all values '' if not found. Does not differentiate between null and empty string
+for fields, no field is ever undef.
+
+The restart_lsn and confirmed_flush_lsn fields are returned verbatim, and also
+as a 2-list of [highword, lowword] integer. Since we rely on Perl 5.8.8 we can't
+"use bigint", it's from 5.20, and we can't assume we have Math::Bigint from CPAN
+either.
+
+=cut
+
+sub slot
+{
+	my ($self, $slot_name) = @_;
+	my @columns = ('plugin', 'slot_type', 'datoid', 'database', 'active', 'active_pid', 'xmin', 'catalog_xmin', 'restart_lsn');
+	return $self->query_hash('postgres', "SELECT __COLUMNS__ FROM pg_catalog.pg_replication_slots WHERE slot_name = '$slot_name'", @columns);
 }
 
 =pod

@@ -33,6 +33,7 @@ enum GangType;
 typedef enum DispatchWaitMode
 {
 	DISPATCH_WAIT_NONE = 0,			/* wait until QE fully completes */
+	DISPATCH_WAIT_ACK_ROOT,			/* wait until root slice QE send acknowledge message */
 	DISPATCH_WAIT_FINISH,			/* send query finish */
 	DISPATCH_WAIT_CANCEL			/* send query cancel */
 } DispatchWaitMode;
@@ -43,6 +44,7 @@ typedef struct CdbDispatcherState
 	struct CdbDispatchResults *primaryResults;
 	void *dispatchParams;
 	int	largestGangSize;
+	int rootGangSize;
 	bool forceDestroyGang;
 	bool isExtendedQuery;
 #ifdef USE_ASSERT_CHECKING
@@ -55,6 +57,7 @@ typedef struct DispatcherInternalFuncs
 	bool (*checkForCancel)(struct CdbDispatcherState *ds);
 	int (*getWaitSocketFd)(struct CdbDispatcherState *ds);
 	void* (*makeDispatchParams)(int maxSlices, int largestGangSize, char *queryText, int queryTextLen);
+	bool (*checkAckMessage)(struct CdbDispatcherState *ds, const char* message, int timeout_sec);
 	void (*checkResults)(struct CdbDispatcherState *ds, DispatchWaitMode waitMode);
 	void (*dispatchToGang)(struct CdbDispatcherState *ds, struct Gang *gp, int sliceIndex);
 	void (*waitDispatchFinish)(struct CdbDispatcherState *ds);
@@ -114,6 +117,25 @@ cdbdisp_dispatchToGang(struct CdbDispatcherState *ds,
  */
 void
 cdbdisp_waitDispatchFinish(struct CdbDispatcherState *ds);
+
+/*
+ * cdbdisp_checkDispatchAckMessage:
+ *
+ * On QD, check if any expected acknowledge messages from QEs have arrived.
+ * In some cases, QD needs to check or wait the expected acknowledge messages
+ * from QEs, e.g. when define a parallel retrieve cursor. So that QD can
+ * know if QEs run as expected.
+ *
+ * message: specifies the expected ACK message to check.
+ * timeout_sec: the second that the dispatcher waits for the ack messages at most.
+ *       0 means checking immediately, and -1 means waiting until all ack
+ *       messages are received.
+ *
+ * QEs should call EndpointNotifyQD to send acknowledge messages to QD.
+ */
+bool
+cdbdisp_checkDispatchAckMessage(struct CdbDispatcherState *ds, const char *message,
+								int timeout_sec);
 
 /*
  * CdbCheckDispatchResult:

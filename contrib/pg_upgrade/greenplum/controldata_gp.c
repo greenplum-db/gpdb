@@ -3,6 +3,34 @@
 #include "postgres_fe.h"
 
 /*
+ * Copies of backend xid comparison utilities
+ */
+#define InvalidTransactionId		((TransactionId) 0)
+#define FirstNormalTransactionId	((TransactionId) 3)
+
+#define TransactionIdIsValid(xid)		((xid) != InvalidTransactionId)
+#define TransactionIdIsNormal(xid)	((xid) >= FirstNormalTransactionId)
+
+/*
+ * TransactionIdPrecedes --- is id1 logically < id2?
+ */
+static bool
+TransactionIdPrecedes(TransactionId id1, TransactionId id2)
+{
+	/*
+	 * If either ID is a permanent XID then we can just do unsigned
+	 * comparison.  If both are normal, do a modulo-2^32 comparison.
+	 */
+	int32		diff;
+
+	if (!TransactionIdIsNormal(id1) || !TransactionIdIsNormal(id2))
+		return (id1 < id2);
+
+	diff = (int32) (id1 - id2);
+	return (diff < 0);
+}
+
+/*
  * Called for GPDB segments only -- since we have copied the master's
  * pg_control file, we need to assign a new system identifier to each segment.
  */
@@ -42,19 +70,11 @@ reset_system_identifier(void)
  * schema has been restored to allow the data to be visible on the segments.
  * All databases need to be frozen including those where datallowconn is false.
  *
- * On master and segments, vacuuming will also update the checkpoint's oldestXID and
- * checkpoint's oldestXID's DB which was set to default (triggering autovacuum)
- * when pg_resetxlog was executed to update the checkpoint's NextXID,
- * otherwise vacuuming the tables will generate warnings requesting the user to
- * vacuum the tables.
- *
- * Note:
- * In postgres autovacuum is enabled and will be automatically triggered
- * once the checkpoint's oldestXID is updated by pg_resetxlog, but in GPDB vacuum
- * has to be triggered manually.
+ * Note: No further updates should occur after freezing the master data
+ * directory.
  */
 void
-freeze_all_databases(void)
+freeze_master_data(void)
 {
        PGconn                  *conn;
        PGconn                  *conn_template1;
@@ -69,7 +89,7 @@ freeze_all_databases(void)
        TransactionId   txid_after;
        int32                   txns_from_freeze;
 
-       prep_status("Freezing all rows in all databases");
+       prep_status("Freezing all rows in new master after object restore");
 
        /* Temporarily allow connections to all databases for vacuum freeze */
        conn_template1 = connectToServer(&new_cluster, "template1");
@@ -162,4 +182,24 @@ freeze_all_databases(void)
        PQfinish(conn_template1);
 
        check_ok();
+}
+
+/*
+ * GPDB5: Calculate the oldest xid in the old cluster by taking the minimum
+ * datfrozenxid across all databases in the old cluster.
+ */
+void
+set_old_cluster_chkpnt_oldstxid()
+{
+	TransactionId	oldestXid = InvalidTransactionId;
+
+	for (int dbnum = 0; dbnum < old_cluster.dbarr.ndbs; dbnum++)
+	{
+		DbInfo *active_db = &old_cluster.dbarr.dbs[dbnum];
+		if (!TransactionIdIsValid(oldestXid) ||
+			TransactionIdPrecedes(active_db->datfrozenxid, oldestXid))
+			oldestXid = active_db->datfrozenxid;
+	}
+
+	old_cluster.controldata.chkpnt_oldstxid = oldestXid;
 }

@@ -410,12 +410,22 @@ hostnossl  <replaceable>database</replaceable>  <replaceable>user</replaceable> 
        </varlistentry>
 
        <varlistentry>
+        <term><literal>scram-sha-256</></term>
+        <listitem>
+         <para>
+          Perform SCRAM-SHA-256 authentication to verify the user's
+          password. See <xref linkend="auth-password"> for details.
+         </para>
+        </listitem>
+       </varlistentry>
+
+       <varlistentry>
         <term><literal>md5</></term>
         <listitem>
          <para>
-          Require the client to supply a double-MD5-hashed password for
-          authentication.
-          See <xref linkend="auth-password"> for details.
+          Perform SCRAM-SHA-256 or MD5 authentication to verify the
+          user's password. See <xref linkend="auth-password">
+          for details.
          </para>
         </listitem>
        </varlistentry>
@@ -635,13 +645,18 @@ host    postgres        all             192.168.93.0/24         ident
 # "postgres" if the user's password is correctly supplied.
 #
 # TYPE  DATABASE        USER            ADDRESS                 METHOD
-host    postgres        all             192.168.12.10/32        md5
+host    postgres        all             192.168.12.10/32        scram-sha-256
 
 # Allow any user from hosts in the example.com domain to connect to
 # any database if the user's password is correctly supplied.
 #
+# Require SCRAM authentication for most users, but make an exception
+# for user 'mike', who uses an older client that doesn't support SCRAM
+# authentication.
+#
 # TYPE  DATABASE        USER            ADDRESS                 METHOD
-host    all             all             .example.com            md5
+host    all             mike            .example.com            md5
+host    all             all             .example.com            scram-sha-256
 
 # In the absence of preceding "host" lines, these two lines will
 # reject all connections from 192.168.54.1 (since that entry will be
@@ -870,21 +885,39 @@ omicron         bryanh                  guest1
    </indexterm>
 
    <para>
-    The password-based authentication methods are <literal>md5</>
-    and <literal>password</>. These methods operate
+    The password-based authentication methods are <literal>scram-sha-256</>,
+    <literal>md5</>, and <literal>password</>. These methods operate
     similarly except for the way that the password is sent across the
-    connection, namely MD5-hashed and clear-text respectively.
+    connection.
    </para>
 
    <para>
-    If you are at all concerned about password
-    <quote>sniffing</> attacks then <literal>md5</> is preferred.
-    Plain <literal>password</> should always be avoided if possible.
-    However, <literal>md5</> cannot be used with the <xref
-    linkend="guc-db-user-namespace"> feature.  If the connection is
-    protected by SSL encryption then <literal>password</> can be used
-    safely (though SSL certificate authentication might be a better
-    choice if one is depending on using SSL).
+    Plain <literal>password</> sends the password in clear-text, and is
+    therefore vulnerable to password <quote>sniffing</> attacks. It should
+    always be avoided if possible. If the connection is protected by SSL
+    encryption then <literal>password</> can be used safely, though.
+    (Though SSL certificate authentication might be a better choice if one
+    is depending on using SSL).
+   </para>
+
+
+   <para>
+    <literal>scram-sha-256</> performs SCRAM-SHA-256 authentication, as
+    described in
+    <ulink url="https://tools.ietf.org/html/rfc5802">RFC5802</ulink>. It
+    is a challenge-response scheme, that prevents password sniffing on
+    untrusted connections. It is more secure than the <literal>md5</>
+    method, but might not be supported by older clients.
+   </para>
+
+   <para>
+    <literal>md5</> allows falling back to a less secure challenge-response
+    mechanism for those users with an MD5 hashed password.
+    The fallback mechanism also prevents password sniffing, but provides no
+    protection if an attacker manages to steal the password hash from the
+    server, and it cannot be used with the <xref
+    linkend="guc-db-user-namespace"> feature. For all other users,
+    <literal>md5</> works the same as <literal>scram-sha-256</>.
    </para>
 
    <para>

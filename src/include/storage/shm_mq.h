@@ -30,7 +30,8 @@ typedef enum
 {
 	SHM_MQ_SUCCESS,				/* Sent or received a message. */
 	SHM_MQ_WOULD_BLOCK,			/* Not completed; retry later. */
-	SHM_MQ_DETACHED				/* Other process has detached queue. */
+	SHM_MQ_DETACHED,			/* Other process has detached queue. */
+	SHM_MQ_QUERY_FINISH			/* Receive query finish signal */
 } shm_mq_result;
 
 /*
@@ -52,8 +53,11 @@ extern PGPROC *shm_mq_get_sender(shm_mq *);
 extern shm_mq_handle *shm_mq_attach(shm_mq *mq, dsm_segment *seg,
 			  BackgroundWorkerHandle *handle);
 
-/* Break connection. */
-extern void shm_mq_detach(shm_mq *);
+/* Break connection, release handle resources. */
+extern void shm_mq_detach(shm_mq_handle *mqh);
+
+/* Get the shm_mq from handle. */
+extern shm_mq *shm_mq_get_queue(shm_mq_handle *mqh);
 
 /* Send or receive messages. */
 extern shm_mq_result shm_mq_send(shm_mq_handle *mqh,

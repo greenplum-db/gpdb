@@ -615,9 +615,10 @@ apply_motion(PlannerInfo *root, Plan *plan, Query *query)
 			}
 			else
 			{
-				if (plan->flow->flotype == FLOW_PARTITIONED ||
+				if ((plan->flow->flotype == FLOW_PARTITIONED ||
 					(plan->flow->flotype == FLOW_SINGLETON &&
-					 plan->flow->locustype == CdbLocusType_SegmentGeneral))
+					 plan->flow->locustype == CdbLocusType_SegmentGeneral)) &&
+					 !root->glob->is_parallel_cursor)
 					bringResultToDispatcher = true;
 
 				needToAssignDirectDispatchContentIds = root->config->gp_enable_direct_dispatch;

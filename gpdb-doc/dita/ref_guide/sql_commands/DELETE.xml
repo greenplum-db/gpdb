@@ -41,7 +41,7 @@ DELETE FROM [ONLY] <varname>table</varname> [[AS] <varname>alias</varname>]
                 tables for <codeph>DELETE</codeph> operations on heap tables. When the Global
                 Deadlock Detector is enabled, the lock mode for <codeph>DELETE</codeph> operations
                 on heap tables is <codeph>ROW EXCLUSIVE</codeph>. See <xref
-                    href="../../admin_guide/dml.xml#topic_gdd" format="dita"/>.</note>
+                    href="../../admin_guide/dml.html#topic_gdd" format="html" scope="external">Global Deadlock Detector</xref>.</note>
             <sectiondiv id="section4">
                 <b>Outputs</b>
                 <p>On successful completion, a <codeph>DELETE</codeph> command returns a command tag
@@ -70,7 +70,8 @@ DELETE FROM [ONLY] <varname>table</varname> [[AS] <varname>alias</varname>]
                             (<codeph>INSERT</codeph>, <codeph>UPDATE</codeph>, or
                             <codeph>DELETE</codeph>). </pd>
                     <pd>See <xref
-                            href="../../admin_guide/query/topics/CTE-query.xml#topic_zhs_r1s_w1b"/>
+                            href="../../admin_guide/query/topics/CTE-query.html#topic_zhs_r1s_w1b" format="html" scope="external">WITH Queries (Common Table Expressions)
+</xref>
                         and <codeph><xref href="SELECT.xml#topic1"/></codeph> for details. </pd>
                 </plentry>
                 <plentry>
@@ -165,7 +166,7 @@ name = 'Hannah';</codeblock>
                     <codeph>DELETE</codeph> operation when the Global Deadlock Detector is not
                 enabled (the default). Only some of the leaf child tables are locked when the Global
                 Deadlock Detector is enabled. For information about the Global Deadlock Detector,
-                see <xref href="../../admin_guide/dml.xml#topic_gdd"/>.</p>
+                see <xref href="../../admin_guide/dml.html#topic_gdd" format="html" scope="external">Global Deadlock Detector</xref>.</p>
         </section>
         <section id="section7">
             <title>Examples</title>

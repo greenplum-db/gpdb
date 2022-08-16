@@ -339,6 +339,8 @@ gatherRMInDoubtTransactions(int prepared_seconds, bool raiseError)
 		}
 	}
 
+	cdbdisp_clearCdbPgResults(&cdb_pgresults);
+
 	return htab;
 }
 

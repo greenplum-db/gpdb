@@ -42,7 +42,7 @@ REPLICA_PRIMARY2_DBID=12
 REPLICA_PRIMARY3_DBID=13
 
 # The options for pg_regress and pg_isolation2_regress.
-REGRESS_OPTS="--dbname=gpdb_pitr_database --use-existing --init-file=../regress/init_file --load-extension=gp_inject_fault"
+REGRESS_OPTS="--dbname=gpdb_pitr_database --use-existing --init-file=../regress/init_file --init-file=init_file --load-extension=gp_inject_fault"
 ISOLATION2_REGRESS_OPTS="${REGRESS_OPTS} --init-file=../isolation2/init_file_isolation2"
 
 # Run test via pg_regress with given test name.
@@ -109,12 +109,15 @@ gpstop -a -q
 # need to empty out the postgresql.auto.conf file to disable
 # synchronous replication on the PITR cluster since it won't have
 # mirrors to replicate to.
+# Also touch a recovery_finished file in the datadirs to demonstrate
+# that the recovery_end_command GUC is functional.
 echo "Creating recovery.conf files in the replicas and starting them up..."
 for segment_role in MASTER PRIMARY1 PRIMARY2 PRIMARY3; do
   REPLICA_VAR=REPLICA_$segment_role
   echo "standby_mode = 'on'
 restore_command = 'cp ${ARCHIVE_PREFIX}%c/%f %p'
 recovery_target_name = 'test_restore_point'
+recovery_end_command = 'touch ${!REPLICA_VAR}/recovery_finished'
 primary_conninfo = ''" > ${!REPLICA_VAR}/recovery.conf
   echo "" > ${!REPLICA_VAR}/postgresql.auto.conf
   pg_ctl start -D ${!REPLICA_VAR} -l /dev/null
@@ -155,6 +158,16 @@ gpstop -ar -q
 
 # Run validation test to confirm we have gone back in time.
 run_test gpdb_pitr_validate
+
+# Validate that recovery_end_command GUC was run.
+echo "Checking that recovery_end_command GUC was run..."
+for segment_role in MASTER PRIMARY1 PRIMARY2 PRIMARY3; do
+  REPLICA_VAR=REPLICA_$segment_role
+  if [ ! -f ${!REPLICA_VAR}/recovery_finished ]; then
+    echo "FAIL: recovery_end_command GUC did not create file ${!REPLICA_VAR}/recovery_finished"
+    exit 1
+  fi
+done
 
 # Print unnecessary success output.
 echo "============================================="

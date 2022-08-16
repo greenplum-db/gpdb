@@ -135,6 +135,16 @@ static HANDLE threadHandle = 0;
 static CRITICAL_SECTION sysloggerSection;
 #endif
 
+/* GPDB: wrapper function to write to log file */
+static inline void
+syslogger_write_to_logfile(bool amsyslogger, const char *data, int len)
+{
+	if (amsyslogger)
+		write_syslogger_file_binary(data, len, LOG_DESTINATION_STDERR);
+	else
+		write(fileno(stderr), data, len);
+}
+
 static bool chunk_is_postgres_chunk(PipeProtoHeader *hdr)
 {
     return hdr->zero == 0 && hdr->pid != 0 && hdr->thid != 0 &&
@@ -1293,29 +1303,54 @@ syslogger_append_current_timestamp(bool amsyslogger)
  */
 int syslogger_write_str(const char *data, int len, bool amsyslogger, bool csv)
 {
-    int cnt = 0;
+	int cnt = 0, start = 0;
 
     /* avoid confusing an empty string with NULL */
     if (data == NULL)
         return 0;
 
+	/*   
+	 * We need to process the string by two kind of modifications:
+	 *
+	 * 1. When terminate char ('\0') is found, finish the writing and ignore
+	 *    the rest.
+	 * 2. When it is CSV format and '"' is found, write an additional '"' to
+	 *    implement the escape.
+	 *
+	 * To achieve #2, use "start" to remember the start position of previous
+	 * valid substring. When it is CSV format and '"' is found, write the
+	 * substring from start to current position plus an additional '"', and
+	 * advance start to next position for next substring.
+	 */
     while (cnt < len && data[cnt] != '\0')
     {
-        if (csv && data[cnt] == '"')
+		if (csv && data[cnt] == '"')
 		{
-			if (amsyslogger)
-				write_syslogger_file_binary("\"", 1, LOG_DESTINATION_STDERR);
-			else
-				write(fileno(stderr), "\"", 1);
-		}
-		
-		if (amsyslogger)
-			write_syslogger_file_binary(data+cnt, 1, LOG_DESTINATION_STDERR);
-		else
-			write(fileno(stderr), data+cnt, 1);
+			/* Write the substring from "start" to current position */
+			if (start <= cnt)
+			{
+				syslogger_write_to_logfile(amsyslogger, data + start, cnt - start + 1);
+			}
 
-        cnt+=1;
-    }
+			/* Write an additional double quote */
+			syslogger_write_to_logfile(amsyslogger, "\"", 1);
+
+			/* Set new start of next substring to next position */
+			start = cnt + 1;
+		}
+		cnt++;
+	}
+
+	/*
+	 * Write latest substring (if any)
+	 *
+	 * Note that cnt now points to the terminating null character. So use
+	 * (cnt - start) instead of (cnt - start - 1) to exclude it.
+	 */
+	if(start < cnt)
+	{
+		syslogger_write_to_logfile(amsyslogger, data + start, cnt - start);
+	}
 
     return cnt;
 }

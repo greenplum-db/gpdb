@@ -370,10 +370,9 @@ struct pg_conn
 	char	   *sslrootcert;	/* root certificate filename */
 	char	   *sslcrl;			/* certificate revocation list filename */
 	char	   *requirepeer;	/* required peer credentials for local sockets */
-
-#if defined(ENABLE_GSS) || defined(ENABLE_SSPI)
 	char	   *krbsrvname;		/* Kerberos service name */
-#endif
+	char	   *gsslib;			/* What GSS library to use ("gssapi" or
+								 * "sspi") */
     char       *gpconntype; /* type of connection */
     char       *gpqeid;        /* MPP: session id & startup info for qExec */
 
@@ -435,8 +434,6 @@ struct pg_conn
 	int			be_key;			/* key of backend --- needed for cancels */
 
     int64      mop_high_watermark;   /* highwater mark for mop */
-
-	char		md5Salt[4];		/* password salt received from backend */
 	pgParameterStatus *pstatus; /* ParameterStatus data */
 	int			client_encoding;	/* encoding id */
 	bool		std_strings;	/* standard_conforming_strings */
@@ -472,8 +469,8 @@ struct pg_conn
 	PGresult   *next_result;	/* next result (used in single-row mode) */
 
 	char		wrote_xlog;
-
-	/* Assorted state for SSL, GSS, etc */
+	/* Assorted state for SASL, SSL, GSS, etc */
+	void	   *sasl_state;
 
 #ifdef USE_SSL
 	bool		allow_ssl_try;	/* Allowed to try SSL negotiation */
@@ -487,7 +484,7 @@ struct pg_conn
 	void	   *engine;			/* dummy field to keep struct the same if
 								 * OpenSSL version changes */
 #endif
-#endif   /* USE_SSL */
+#endif							/* USE_SSL */
 
 #ifdef ENABLE_GSS
 	gss_ctx_id_t gctx;			/* GSS context */
@@ -499,9 +496,6 @@ struct pg_conn
 #ifdef ENABLE_SSPI
 #ifndef ENABLE_GSS
 	gss_buffer_desc ginbuf;		/* GSS input token */
-#else
-	char	   *gsslib;			/* What GSS librart to use ("gssapi" or
-								 * "sspi") */
 #endif
 	CredHandle *sspicred;		/* SSPI credentials handle */
 	CtxtHandle *sspictx;		/* SSPI context */
@@ -667,6 +661,32 @@ extern ssize_t pqsecure_write(PGconn *, const void *ptr, size_t len);
 extern int	pq_block_sigpipe(sigset_t *osigset, bool *sigpipe_pending);
 extern void pq_reset_sigpipe(sigset_t *osigset, bool sigpipe_pending,
 				 bool got_epipe);
+#endif
+
+/*
+ * The SSL implementation provides these functions (fe-secure-openssl.c)
+ */
+extern void pgtls_init_library(bool do_ssl, int do_crypto);
+extern int	pgtls_init(PGconn *conn);
+extern PostgresPollingStatusType pgtls_open_client(PGconn *conn);
+extern void pgtls_close(PGconn *conn);
+extern ssize_t pgtls_read(PGconn *conn, void *ptr, size_t len);
+extern bool pgtls_read_pending(PGconn *conn);
+extern ssize_t pgtls_write(PGconn *conn, const void *ptr, size_t len);
+
+/*
+ * Get the hash of the server certificate, for SCRAM channel binding type
+ * tls-server-end-point.
+ *
+ * NULL is sent back to the caller in the event of an error, with an
+ * error message for the caller to consume.
+ *
+ * This is not supported with old versions of OpenSSL that don't have
+ * the X509_get_signature_nid() function.
+ */
+#if defined(USE_OPENSSL) && defined(HAVE_X509_GET_SIGNATURE_NID)
+#define HAVE_PGTLS_GET_PEER_CERTIFICATE_HASH
+extern char *pgtls_get_peer_certificate_hash(PGconn *conn, size_t *len);
 #endif
 
 /*

@@ -1,0 +1,4 @@
+.deps
+results
+*.so
+*.o

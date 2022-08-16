@@ -50,3 +50,52 @@ reset role;
 drop table temp_nspnames;
 drop function public.sec_definer_create_test();
 drop role sec_definer_role;
+
+-- Check if myTempNamespace is correct in N-Gang query.
+create table tn_a(id int) distributed by (id);
+create temp table tn_a_tmp(a int) distributed replicated;
+
+insert into tn_a values (1), (2);
+insert into tn_a_tmp values(1);
+
+create or replace function fun(sql text, a oid) returns bigint AS 'return plpy.execute(sql).nrows() + a' language plpythonu stable;
+
+create table tn_a_new as with c as (select fun('select * from tn_a_tmp', s.id) from tn_a s) select 1 from c;
+
+drop table tn_a;
+drop table tn_a_tmp;
+drop table tn_a_new;
+
+-- Check if old gang can accept new temp schema, after temp schema changed on coordinator
+\c
+create table tn_b_a(id int) distributed by (id);
+create table tn_b_b(id int, a_id int) distributed by (id);
+
+insert into tn_b_a values (1), (2);
+insert into tn_b_b values (3, 1), (4, 2);
+select a.id, b.id from tn_b_a a, tn_b_b b where a.id = b.a_id order by 1, 2;
+
+create temp table tn_b_temp(a int) distributed replicated;
+insert into tn_b_temp values(1);
+
+create table tn_b_new as with c as (select fun('select * from tn_b_temp', s.id) from tn_b_b s) select 1 from c;
+
+drop table tn_b_a;
+drop table tn_b_b;
+drop table tn_b_temp;
+drop table tn_b_new;
+drop function fun(sql text, a oid);
+
+-- Chek if error out inside UDF, myTempNamespace will roll back
+\c
+create or replace function errored_udf() returns int[] as 'BEGIN RAISE EXCEPTION ''AAA''; END' language plpgsql;
+
+create table n as select from generate_series(1, 10);
+select count(*) from n n1, n n2; -- boot reader gang
+
+create temp table nn as select errored_udf() from n;
+create temp table nnn as select * from generate_series(1, 10); -- check if reader do the rollback. should OK
+select count(*) from nnn n1, nnn n2; -- check if reader can read temp table. should OK
+
+drop table n;
+drop function errored_udf();

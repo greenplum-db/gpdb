@@ -47,6 +47,7 @@ extern int	pq_getmessage(StringInfo s, int maxlen);
 extern int	pq_getbyte(void);
 extern int	pq_peekbyte(void);
 extern int	pq_getbyte_if_available(unsigned char *c);
+extern bool pq_buffer_has_data(void);
 extern int	pq_putbytes(const char *s, size_t len);
 extern int	pq_flush(void);
 extern int	pq_flush_if_writable(void);
@@ -56,6 +57,7 @@ extern void pq_putmessage_noblock(char msgtype, const char *s, size_t len);
 extern void pq_startcopyout(void);
 extern void pq_endcopyout(bool errorAbort);
 extern bool pq_waitForDataUsingSelect(void);                /* GPDB only */
+extern bool pq_check_connection(void);
 
 /*
  * prototypes for functions in be-secure.c

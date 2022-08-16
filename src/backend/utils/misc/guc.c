@@ -22,6 +22,9 @@
 #include <float.h>
 #include <math.h>
 #include <limits.h>
+#ifdef HAVE_POLL_H
+#include <poll.h>
+#endif
 #include <unistd.h>
 #include <sys/stat.h>
 #ifdef HAVE_SYSLOG
@@ -205,6 +208,7 @@ static bool check_max_worker_processes(int *newval, void **extra, GucSource sour
 static bool check_autovacuum_max_workers(int *newval, void **extra, GucSource source);
 static bool check_autovacuum_work_mem(int *newval, void **extra, GucSource source);
 static bool check_effective_io_concurrency(int *newval, void **extra, GucSource source);
+static bool check_client_connection_check_interval(int *newval, void **extra, GucSource source);
 static void assign_effective_io_concurrency(int newval, void *extra);
 static void assign_pgstat_temp_directory(const char *newval, void *extra);
 static bool check_application_name(char **newval, void **extra, GucSource source);
@@ -2157,7 +2161,7 @@ static struct config_int ConfigureNamesInt[] =
 		{"checkpoint_timeout", PGC_SIGHUP, WAL_CHECKPOINTS,
 			gettext_noop("Sets the maximum time between automatic WAL checkpoints."),
 			NULL,
-			GUC_UNIT_S | GUC_NOT_IN_SAMPLE | GUC_NO_SHOW_ALL | GUC_DISALLOW_USER_SET
+			GUC_UNIT_S | GUC_NOT_IN_SAMPLE | GUC_DISALLOW_USER_SET
 		},
 		&CheckPointTimeout,
 		300, 30, 3600,
@@ -2209,13 +2213,12 @@ static struct config_int ConfigureNamesInt[] =
 		},
 		&max_wal_senders,
 		/*
-		 * GPDB doesn't support 1:n replication yet.  In normal operation,
-		 * when primary and mirror are streaming WAL, only 1 WalSnd should be
-		 * active.  We need 2 during base backup, 1 WalSnd to serve backup
+		 * For cluster with mirrors we need 2 WalSnds during base backup, 1 WalSnd to serve backup
 		 * request and 1 WalSnd to serve the log streamer process started by
-		 * pg_basebackup.
+		 * pg_basebackup. For mirrorless cluster replication is disabled, and in this case
+		 * max_wal_senders=0 should be specified.
 		 */
-		10, 2, MAX_BACKENDS,
+		10, 0, MAX_BACKENDS,
 		NULL, NULL, NULL
 	},
 
@@ -2227,7 +2230,7 @@ static struct config_int ConfigureNamesInt[] =
 			GUC_NOT_IN_SAMPLE | GUC_NO_SHOW_ALL
 		},
 		&max_replication_slots,
-		10, 1, MAX_BACKENDS /* XXX? */ ,
+		10, 0, MAX_BACKENDS /* XXX? */ ,
 		NULL, NULL, NULL
 	},
 
@@ -2639,6 +2642,17 @@ static struct config_int ConfigureNamesInt[] =
 		NULL, NULL, NULL
 	},
 
+	{
+		{"client_connection_check_interval", PGC_USERSET, CLIENT_CONN_OTHER,
+			gettext_noop("Sets the time interval between checks for disconnection while running queries."),
+			NULL,
+			GUC_UNIT_MS
+		},
+		&client_connection_check_interval,
+		0, 0, INT_MAX,
+		check_client_connection_check_interval, NULL, NULL
+	},
+
 	/* End-of-list marker */
 	{
 		{NULL, 0, 0, NULL, NULL}, NULL, 0, 0, 0, NULL, NULL, NULL
@@ -2796,7 +2810,7 @@ static struct config_string ConfigureNamesString[] =
 		{"archive_command", PGC_SIGHUP, WAL_ARCHIVING,
 			gettext_noop("Sets the shell command that will be called to archive a WAL file."),
 			NULL,
-			GUC_NOT_IN_SAMPLE | GUC_NO_SHOW_ALL
+			GUC_NOT_IN_SAMPLE
 		},
 		&XLogArchiveCommand,
 		"",
@@ -3193,7 +3207,7 @@ static struct config_string ConfigureNamesString[] =
 		{"data_directory", PGC_POSTMASTER, FILE_LOCATIONS,
 			gettext_noop("Sets the server's data directory."),
 			NULL,
-			GUC_SUPERUSER_ONLY | GUC_DISALLOW_IN_AUTO_FILE | GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+			GUC_SUPERUSER_ONLY | GUC_DISALLOW_IN_AUTO_FILE | GUC_NOT_IN_SAMPLE
 		},
 		&data_directory,
 		NULL,
@@ -6967,40 +6981,37 @@ replace_auto_config_value(ConfigVariable **head_p, ConfigVariable **tail_p,
 						  const char *name, const char *value)
 {
 	ConfigVariable *item,
+			   *next,
 			   *prev = NULL;
 
-	/* Search the list for an existing match (we assume there's only one) */
-	for (item = *head_p; item != NULL; item = item->next)
+	/*
+	 * Remove any existing match(es) for "name".  Normally there'd be at most
+	 * one, but if external tools have modified the config file, there could
+	 * be more.
+	 */
+	for (item = *head_p; item != NULL; item = next)
 	{
-		if (strcmp(item->name, name) == 0)
+		next = item->next;
+		if (guc_name_compare(item->name, name) == 0)
 		{
-			/* found a match, replace it */
-			pfree(item->value);
-			if (value != NULL)
-			{
-				/* update the parameter value */
-				item->value = pstrdup(value);
-			}
+			/* found a match, delete it */
+			if (prev)
+				prev->next = next;
 			else
-			{
-				/* delete the configuration parameter from list */
-				if (*head_p == item)
-					*head_p = item->next;
-				else
-					prev->next = item->next;
-				if (*tail_p == item)
-					*tail_p = prev;
+				*head_p = next;
+			if (next == NULL)
+				*tail_p = prev;
 
-				pfree(item->name);
-				pfree(item->filename);
-				pfree(item);
-			}
-			return;
+			pfree(item->name);
+			pfree(item->value);
+			pfree(item->filename);
+			pfree(item);
 		}
-		prev = item;
+		else
+			prev = item;
 	}
 
-	/* Not there; no work if we're trying to delete it */
+	/* Done if we're trying to delete it */
 	if (value == NULL)
 		return;
 
@@ -7523,10 +7534,7 @@ DispatchSetPGVariable(const char *name, List *args, bool is_local)
 						 * Plain string literal or identifier. Quote it.
 						 */
 
-						if (val[0] != '\'')
-							appendStringInfo(&buffer, "%s", quote_literal_cstr(val));
-						else
-							appendStringInfo(&buffer, "%s",val);
+						appendStringInfo(&buffer, "%s", quote_literal_cstr(val));
 
 
 						break;
@@ -10084,6 +10092,20 @@ assign_effective_io_concurrency(int newval, void *extra)
 #ifdef USE_PREFETCH
 	target_prefetch_pages = *((int *) extra);
 #endif   /* USE_PREFETCH */
+}
+
+static bool
+check_client_connection_check_interval(int *newval, void **extra, GucSource source)
+{
+#if !(defined(POLLRDHUP) || defined(__darwin__))
+	/* Linux and OSX only, for now.  See pq_check_connection(). */
+	if (*newval != 0)
+	{
+		GUC_check_errdetail("client_connection_check_interval must be set to 0 on platforms that lack POLLRDHUP and not OSX.";
+		return false;
+	}
+#endif
+	return true;
 }
 
 static void

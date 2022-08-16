@@ -39,7 +39,7 @@
       <dxl:Triggers/>
       <dxl:CheckConstraints/>
     </dxl:Relation>
-    <dxl:Index Mdid="0.2345.2.1" Name="T_a" IsClustered="false" IndexType="B-tree" KeyColumns="1" IncludedColumns="1">
+    <dxl:Index Mdid="0.2345.2.1" Name="T_a" IsClustered="false" IndexType="B-tree" PhysicalIndexType="B-tree" KeyColumns="1" IncludedColumns="1">
       <dxl:Opfamilies/>
     </dxl:Index>
     <dxl:Relation Mdid="0.1258.5.1" Name="S" IsTemporary="true" HasOids="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="0,1" Keys="0;0,1" PartitionColumns="1" NumberLeafPartitions="0">
@@ -59,7 +59,7 @@
       <dxl:Triggers/>
       <dxl:CheckConstraints/>
     </dxl:Relation>
-    <dxl:Index Mdid="0.812178.1.0" Name="date_dim_1_prt_p1_1_pkey" IsClustered="false" IndexType="B-tree" KeyColumns="0,6" IncludedColumns="0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34">
+    <dxl:Index Mdid="0.812178.1.0" Name="date_dim_1_prt_p1_1_pkey" IsClustered="false" IndexType="B-tree" PhysicalIndexType="B-tree" KeyColumns="0,6" IncludedColumns="0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34">
       <dxl:Opfamilies>
         <dxl:Opfamily Mdid="0.3027.1.0"/>
         <dxl:Opfamily Mdid="0.3027.1.0"/>
@@ -203,7 +203,7 @@
         <dxl:Ident ColId="2" ColName="B" TypeMdid="0.23.1.0"/>
       </dxl:Comparison>
     </dxl:CheckConstraint>
-    <dxl:Index Mdid="0.17027.1.0" Name="r_ind" IsClustered="false" IndexType="Bitmap" IndexItemType="0.2283.1.0" KeyColumns="0" IncludedColumns="0,1,2,3,4,5,6,7,8">
+    <dxl:Index Mdid="0.17027.1.0" Name="r_ind" IsClustered="false" IndexType="Bitmap" PhysicalIndexType="Bitmap" IndexItemType="0.2283.1.0" KeyColumns="0" IncludedColumns="0,1,2,3,4,5,6,7,8">
       <dxl:Opfamilies/>
       <dxl:PartConstraint DefaultPartition="0" Unbounded="false">
         <dxl:And>

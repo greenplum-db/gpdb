@@ -340,10 +340,10 @@ WHERE relname='tenk_ao2'));
 -- TRUNCATE
 TRUNCATE tenk_ao2;
 
--- Truncate changes relfilnode, as a result old pg_aoseg table is truncated but
--- gp_fastsequence remains intact.
+-- Truncate changes relfilnode, as a result old pg_aoseg table is truncated, and
+-- gp_fastsequence entries are also reinitialized
 SELECT CASE WHEN xmin = 2 THEN 'FrozenXid' ELSE 'NormalXid' END, objmod,
-last_sequence > 0, gp_segment_id from gp_dist_random('gp_fastsequence') WHERE objid
+last_sequence = 0, gp_segment_id from gp_dist_random('gp_fastsequence') WHERE objid
 IN (SELECT segrelid FROM pg_appendonly WHERE relid IN (SELECT oid FROM pg_class
 WHERE relname='tenk_ao2'));
 
@@ -771,3 +771,36 @@ select * from ao_inh_p4;
 --------------------------------------------------------------------------------
 SELECT objid FROM gp_fastsequence AS gfs LEFT OUTER JOIN (SELECT oid FROM
 pg_class) AS pgc ON (gfs.objid = pgc.oid) WHERE pgc.oid IS NULL;
+
+
+-- test truncate ao table in current transaction and sub-transaction
+-- more details can look at https://github.com/greenplum-db/gpdb/issues/13699
+
+-- should success, create and truncate ao table in the same transaction;
+begin;
+create table fix_ao_truncate_last_sequence(a int, b int) with (appendonly = true);
+create index index_fix_ao_truncate_last_sequence on fix_ao_truncate_last_sequence(b);
+insert into fix_ao_truncate_last_sequence select i, i from generate_series(1, 5) i;
+select count(*) from fix_ao_truncate_last_sequence;
+truncate table fix_ao_truncate_last_sequence;
+select count(*) from fix_ao_truncate_last_sequence;
+abort;
+
+-- should success, create and truncate ao table in the different transaction,
+-- and create index for it.
+begin;
+create table fix_ao_truncate_last_sequence(a int, b int) with (appendonly = true);
+create index index_fix_ao_truncate_last_sequence on fix_ao_truncate_last_sequence(b);
+insert into fix_ao_truncate_last_sequence select i, i from generate_series(1, 5) i;
+select count(*) from fix_ao_truncate_last_sequence;
+savepoint s1;
+truncate table fix_ao_truncate_last_sequence;
+insert into fix_ao_truncate_last_sequence select 1, 1 from generate_series(1, 10);
+select count(*) from fix_ao_truncate_last_sequence;
+rollback to s1;
+select count(*) from fix_ao_truncate_last_sequence;
+truncate table fix_ao_truncate_last_sequence;
+insert into fix_ao_truncate_last_sequence select 1, 1 from generate_series(1, 5);
+select count(*) from fix_ao_truncate_last_sequence;
+abort;
+

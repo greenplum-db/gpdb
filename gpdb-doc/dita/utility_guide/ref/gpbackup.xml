@@ -6,33 +6,33 @@
     <p>Create a Greenplum Database backup for use with the <codeph>gprestore</codeph> utility. </p>
     <section>
       <title>Synopsis</title>
-      <codeblock><b>gpbackup --dbname</b> <varname>database_name</varname>
-   [<b>--backup-dir</b> <varname>directory</varname>]
-   [<b>--compression-level</b> <varname>level</varname>]
-   [<b>--data-only</b>]
-   [<b>--debug</b>]
-   [<b>--exclude-schema</b> <varname>schema_name</varname> [<b>--exclude-schema</b> <varname>schema_name</varname> ...]]
-   [<b>--exclude-table</b> <varname>schema.table</varname> [<b>--exclude-table</b> <varname>schema.table</varname> ...]]
-   [<b>--exclude-schema-file</b> <varname>file_name</varname>]
-   [<b>--exclude-table-file</b> <varname>file_name</varname>]
-   [<b>--include-schema</b> <varname>schema_name</varname> [<b>--include-schema</b> <varname>schema_name</varname> ...]]
-   [<b>--include-table</b> <varname>schema.table</varname> [<b>--include-table</b> <varname>schema.table</varname> ...]]
-   [<b>--include-schema-file</b> <varname>file_name</varname>]
-   [<b>--include-table-file</b> <varname>file_name</varname>]
-   [<b>--incremental</b> [<b>--from-timestamp</b> <varname>backup-timestamp</varname>]]
-   [<b>--jobs</b> <varname>int</varname>]
-   [<b>--leaf-partition-data</b>]
-   [<b>--metadata-only</b>]
-   [<b>--no-compression</b>]
-   [<b>--plugin-config</b> <varname>config_file_location</varname>]
-   [<b>--quiet</b>]
-   [<b>--single-data-file]</b>
-   [<b>--verbose</b>]
-   [<b>--version</b>]
-   [<b>--with-stats</b>]
-   [<b>--without-globals</b>]
+      <codeblock>gpbackup --dbname &lt;database_name>
+   [--backup-dir &lt;directory>]
+   [--compression-level &lt;level>]
+   [--data-only]
+   [--debug]
+   [--exclude-schema &lt;schema_name> [--exclude-schema &lt;schema_name> ...]]
+   [--exclude-table &lt;schema.table> [--exclude-table &lt;schema.table> ...]]
+   [--exclude-schema-file &lt;file_name>]
+   [--exclude-table-file &lt;file_name>]
+   [--include-schema &lt;schema_name> [--include-schema &lt;schema_name> ...]]
+   [--include-table &lt;schema.table> [--include-table &lt;schema.table> ...]]
+   [--include-schema-file &lt;file_name>]
+   [--include-table-file &lt;file_name>]
+   [--incremental [--from-timestamp &lt;backup-timestamp>]]
+   [--jobs &lt;int>]
+   [--leaf-partition-data]
+   [--metadata-only]
+   [--no-compression]
+   [--plugin-config &lt;config_file_location>]
+   [--quiet]
+   [--single-data-file]
+   [--verbose]
+   [--version]
+   [--with-stats]
+   [--without-globals]
 
-<b>gpbackup --help</b> </codeblock>
+gpbackup --help </codeblock>
     </section>
     <section>
       <title>Description</title>
@@ -46,7 +46,7 @@
         global Greenplum Database system objects. Use <codeph>--without-globals</codeph> to omit
         global objects. <codeph>gprestore</codeph> does not restore global objects by default; use
           <codeph>--with-globals</codeph> to restore them. See <xref
-          href="../../admin_guide/managing/backup-gpbackup.xml#topic_x3s_lqj_tbb"/> for additional
+          href="../../admin_guide/managing/backup-gpbackup.html#topic_x3s_lqj_tbb" format="html" scope="external">Objects Included in a Backup or Restore</xref> for additional
         information.</p>
       <p>For materialized views, data is not backed up, only the materialized view definition is
         backed up.</p>
@@ -54,18 +54,19 @@
         the Greenplum Database master data directory by default. Greenplum Database segments use the
           <codeph>COPY ... ON SEGMENT</codeph> command to store their data for backed-up tables in
         compressed CSV data files, located in each segment's data directory. See <xref
-          href="../../admin_guide/managing/backup-gpbackup.xml#topic_xnj_b4c_tbb"/> for additional
+          href="../../admin_guide/managing/backup-gpbackup.html#topic_xnj_b4c_tbb" format="html" scope="external">Understanding Backup Files</xref> for additional
         information.</p>
       <p>You can add the <codeph>--backup-dir</codeph> option to copy all backup files from the
         Greenplum Database master and segment hosts to an absolute path for later use. Additional
         options are provided to filter the backup set in order to include or exclude specific
         tables.</p>
-      <p>You can create an incremental backup with the <codeph><xref href="#topic1/incremental"
-            format="dita">--incremental</xref></codeph> option. Incremental backups are efficient
-        when the total amount of data in append-optimized tables or table partitions that changed is
-        small compared to the data has not changed. See <xref
-          href="../../admin_guide/managing/backup-gpbackup-incremental.xml"/> for information about
-        incremental backups. </p>
+      <p>You can create an incremental backup with the <xref href="#topic1/incremental"
+          format="dita">--incremental</xref> option. Incremental backups are efficient when the
+        total amount of data in append-optimized tables or table partitions that changed is small
+        compared to the data has not changed. See <xref
+          href="../../admin_guide/managing/backup-gpbackup-incremental.html" format="html"
+          scope="external">Creating and Using Incremental Backups with gpbackup and gprestore</xref>
+        for information about incremental backups. </p>
       <p>With the default <codeph>--jobs</codeph> option (1 job), each <codeph>gpbackup</codeph>
         operation uses a single transaction on the Greenplum Database master host. The <codeph>COPY
           ... ON SEGMENT</codeph> command performs the backup task in parallel on each segment host.
@@ -80,8 +81,7 @@
       <p><codeph>gpbackup</codeph> can send status email notifications after a back up operation
         completes. You specify when the utility sends the mail and the email recipients in a
         configuration file. See <xref
-          href="../../admin_guide/managing/backup-gpbackup.xml#topic_qwd_d5d_tbb" format="dita"
-        />.</p>
+          href="../../admin_guide/managing/backup-gpbackup.html#topic_qwd_d5d_tbb" format="html" scope="external">Configuring Email Notifications</xref>.</p>
       <note>This utility uses secure shell (SSH) connections between systems to perform its tasks.
         In large Greenplum Database deployments, cloud deployments, or deployments with a large
         number of segments per host, this utility may exceed the host's maximum threshold for
@@ -102,8 +102,8 @@
           <pt><b>--backup-dir</b>
             <varname>directory</varname></pt>
           <pd>Optional. Copies all required backup files (metadata files and data files) to the
-            specified directory. You must specify <varname>directory</varname> as an absolute path
-            (not relative). If you do not supply this option, metadata files are created on the
+            specified directory. You must specify <b><varname>directory</varname></b> as an absolute
+            path (not relative). If you do not supply this option, metadata files are created on the
             Greenplum Database master host in the
               <filepath>$MASTER_DATA_DIRECTORY/backups/YYYYMMDD/YYYYMMDDhhmmss/</filepath>
             directory. Segment hosts create CSV data files in the
@@ -135,9 +135,9 @@
             option multiple times to exclude multiple schemas. You cannot combine this option with
             the option <codeph>--include-schema</codeph>, <codeph>--include-schema-file</codeph>, or
             a table filtering option such as <codeph>--include-table</codeph>. </pd>
-          <pd>See <xref href="../../admin_guide/managing/backup-gpbackup.xml#topic_et4_b5d_tbb"/>
+          <pd>See <xref href="../../admin_guide/managing/backup-gpbackup.html#topic_et4_b5d_tbb" format="html" scope="external">Filtering the Contents of a Backup or Restore</xref>
             for more information. </pd>
-          <pd>See <xref href="../../admin_guide/managing/backup-gpbackup.xml#topic_vh5_1hd_tbb"/>
+          <pd>See <xref href="../../admin_guide/managing/backup-gpbackup.html#topic_vh5_1hd_tbb" format="html" scope="external">Requirements and Limitations</xref>
             for limitations when leaf partitions of a partitioned table are in different schemas
             from the root partition.</pd>
         </plentry>
@@ -151,9 +151,9 @@
             quotes. You cannot combine this option with the option <codeph>--include-schema</codeph>
             or <codeph>--include-schema-file</codeph>, or a table filtering option such as
               <codeph>--include-table</codeph>. </pd>
-          <pd>See <xref href="../../admin_guide/managing/backup-gpbackup.xml#topic_et4_b5d_tbb"/>
+          <pd>See <xref href="../../admin_guide/managing/backup-gpbackup.html#topic_et4_b5d_tbb" format="html" scope="external">Filtering the Contents of a Backup or Restore</xref>
             for more information. </pd>
-          <pd>See <xref href="../../admin_guide/managing/backup-gpbackup.xml#topic_vh5_1hd_tbb"/>
+          <pd>See <xref href="../../admin_guide/managing/backup-gpbackup.html#topic_vh5_1hd_tbb" format="html" scope="external">Requirements and Limitations</xref>
             for limitations when leaf partitions of a partitioned table are in different schemas
             from the root partition.</pd>
         </plentry>
@@ -169,7 +169,7 @@
               <codeph>--include-table</codeph>. </pd>
           <pd>If you specify a leaf partition name, <codeph>gpbackup</codeph> ignores the partition
             names. The leaf partition is not excluded.</pd>
-          <pd>See <xref href="../../admin_guide/managing/backup-gpbackup.xml#topic_et4_b5d_tbb"/>
+          <pd>See <xref href="../../admin_guide/managing/backup-gpbackup.html#topic_et4_b5d_tbb" format="html" scope="external">Filtering the Contents of a Backup or Restore</xref>
             for more information.</pd>
         </plentry>
         <plentry>
@@ -186,7 +186,7 @@
           <pd>If you specify leaf partition names in a file that is used with
               <codeph>--exclude-table-file</codeph>, <codeph>gpbackup</codeph> ignores the partition
             names. The leaf partitions are not excluded.</pd>
-          <pd>See <xref href="../../admin_guide/managing/backup-gpbackup.xml#topic_et4_b5d_tbb"/>
+          <pd>See <xref href="../../admin_guide/managing/backup-gpbackup.html#topic_et4_b5d_tbb" format="html" scope="external">Filtering the Contents of a Backup or Restore</xref>
             for more information.</pd>
         </plentry>
         <plentry>
@@ -199,22 +199,20 @@
               <codeph>--exclude-schema</codeph>, <codeph>--exclude-schema-file</codeph>,
               <codeph>--exclude-schema-file</codeph>, <codeph>--include-table</codeph>, or
               <codeph>--include-table-file</codeph>. See <xref
-              href="../../admin_guide/managing/backup-gpbackup.xml#topic_et4_b5d_tbb"/> for more
+              href="../../admin_guide/managing/backup-gpbackup.html#topic_et4_b5d_tbb" format="html" scope="external">Filtering the Contents of a Backup or Restore</xref> for more
             information.</pd>
         </plentry>
         <plentry>
-          <pt><b>--include-schema-file</b>
-            <varname>file_name</varname></pt>
+          <pt><b>--include-schema-file</b> &lt;file_name></pt>
           <pd>Optional. Specifies a text file containing a list of schemas to back up. Each line in
             the text file must define a single schema. The file must not include trailing lines. If
             a schema name uses any character other than a lowercase letter, number, or an underscore
             character, then you must include that name in double quotes. See <xref
-              href="../../admin_guide/managing/backup-gpbackup.xml#topic_et4_b5d_tbb"/> for more
+              href="../../admin_guide/managing/backup-gpbackup.html#topic_et4_b5d_tbb" format="html" scope="external">Filtering the Contents of a Backup or Restore</xref> for more
             information.</pd>
         </plentry>
         <plentry>
-          <pt><b>--include-table</b>
-            <varname>schema.table</varname></pt>
+          <pt><b>--include-table</b> &lt;schema.table></pt>
           <pd>Optional. Specifies a table to include in the backup. The table must be in the format
               <codeph>&lt;schema-name>.&lt;table-name></codeph>. For information on specifying
             special characters in schema and table names, see <xref
@@ -233,7 +231,7 @@
             include only specific leaf partitions in a backup with the
               <codeph>--leaf-partition-data</codeph> option. When a leaf partition is backed up, the
             leaf partition data is backed up along with the metadata for the partitioned table.</pd>
-          <pd>See <xref href="../../admin_guide/managing/backup-gpbackup.xml#topic_et4_b5d_tbb"/>
+          <pd>See <xref href="../../admin_guide/managing/backup-gpbackup.html#topic_et4_b5d_tbb" format="html" scope="external">Filtering the Contents of a Backup or Restore</xref>
             for more information.</pd>
         </plentry>
         <plentry>
@@ -257,7 +255,7 @@
             include only specific leaf partitions in a backup with the
               <codeph>--leaf-partition-data</codeph> option. When a leaf partition is backed up, the
             leaf partition data is backed up along with the metadata for the partitioned table.</pd>
-          <pd>See <xref href="../../admin_guide/managing/backup-gpbackup.xml#topic_et4_b5d_tbb"/>
+          <pd>See <xref href="../../admin_guide/managing/backup-gpbackup.html#topic_et4_b5d_tbb" format="html" scope="external">Filtering the Contents of a Backup or Restore</xref>
             for more information.</pd>
         </plentry>
         <plentry id="incremental">
@@ -292,7 +290,7 @@
             backup to an existing incremental backup set or cannot use the backup to create a backup
             set.</pd>
           <pd>For information about creating and using incremental backups, see <xref
-              href="../../admin_guide/managing/backup-gpbackup-incremental.xml"/>.</pd>
+              href="../../admin_guide/managing/backup-gpbackup-incremental.html" format="html" scope="external">backup-gpbackup-incremental.html</xref>.</pd>
         </plentry>
         <plentry>
           <pt><b>--jobs</b>
@@ -359,7 +357,7 @@
             corresponding plugin application when you restore the database from the backup.</pd>
           <pd>You cannot combine this option with the option <codeph>--backup-dir</codeph>.</pd>
           <pd>For information about using storage plugin applications, see <xref
-              href="../../admin_guide/managing/backup-plugins.xml">Using gpbackup Storage
+              href="../../admin_guide/managing/backup-plugins.html" format="html" scope="external">Using gpbackup Storage
               Plugins</xref>.</pd>
         </plentry>
         <plentry>
@@ -456,9 +454,11 @@ my#1schema.my_$590_Table</codeblock></p>
     <section id="section9">
       <title>See Also</title>
       <p>
-        <codeph><xref href="./gprestore.xml" type="topic" format="dita"/></codeph>, <xref
-          href="../../admin_guide/managing/backup-gpbackup.xml" format="dita"/> and <xref
-          href="../../admin_guide/managing/backup-s3-plugin.xml"/></p>
+        <xref href="./gprestore.xml" type="topic" format="dita"/>, <xref
+          href="../../admin_guide/managing/backup-gpbackup.html" format="html" scope="external"
+          >Parallel Backup with gpbackup and gprestore</xref> and <xref
+          href="../../admin_guide/managing/backup-s3-plugin.html" format="html" scope="external"
+          >Using the S3 Storage Plugin with gpbackup and gprestore</xref></p>
     </section>
   </body>
 </topic>

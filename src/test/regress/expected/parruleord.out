@@ -191,7 +191,7 @@ select parchildrelid::regclass, parname, parruleord
  pt_range_1_prt_foo7 | foo7    |          7
 (5 rows)
 
--- create two holes, make sure that the new partiton plugs the hole
+-- create two holes, make sure that the new partition plugs the hole
 -- that is closest to the end.
 alter table pt_range drop partition foo2;
 select parchildrelid::regclass, parname, parruleord

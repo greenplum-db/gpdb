@@ -9,6 +9,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+#include <curl/curl.h>
 
 #include "ini.h"
 
@@ -151,6 +152,111 @@ static void split_data(ini_t *ini) {
         break;
     }
   }
+}
+
+#define S3MAXPGPATH 1024
+const static int extssl_protocol  = CURL_SSLVERSION_TLSv1;
+static const char* extssl_cert = "gpfdists/client.crt";
+static const char* extssl_key = "gpfdists/client.key";
+static const char* extssl_ca = "gpfdists/root.crt";
+#define INICURL_EASY_SETOPT(h, opt, val) \
+    do { \
+        int			e; \
+        if ((e = curl_easy_setopt(h, opt, val)) != CURLE_OK){  \
+            curl_easy_cleanup(curl);  \
+            return NULL; \
+        } \
+    } while(0)
+
+static CURL *create_curl_from_url(const char *url, const char *datadir) {
+    char extssl_key_full[S3MAXPGPATH] = {0};
+    char extssl_cer_full[S3MAXPGPATH] = {0};
+    char extssl_cas_full[S3MAXPGPATH] = {0};
+    CURL *curl = NULL;
+
+    curl = curl_easy_init();
+    INICURL_EASY_SETOPT(curl, CURLOPT_URL, url);
+    // Add https support
+    if (strncmp(url, "https", 5) == 0) {
+        snprintf(extssl_cer_full, S3MAXPGPATH, "%s/%s", datadir, extssl_cert);
+        /* set the cert for client authentication */
+        INICURL_EASY_SETOPT(curl, CURLOPT_SSLCERT, extssl_cer_full);
+        INICURL_EASY_SETOPT(curl, CURLOPT_SSLKEYTYPE,"PEM");
+        snprintf(extssl_key_full, S3MAXPGPATH, "%s/%s", datadir, extssl_key);
+        /* set the private key (file or ID in engine) */
+        INICURL_EASY_SETOPT(curl, CURLOPT_SSLKEY, extssl_key_full);
+        snprintf(extssl_cas_full, S3MAXPGPATH, "%s/%s", datadir, extssl_ca);
+        /* set the file with the CA certificates, for validating the server */
+        INICURL_EASY_SETOPT(curl, CURLOPT_CAINFO, extssl_cas_full);
+        /* set cert verification */
+        INICURL_EASY_SETOPT(curl, CURLOPT_SSL_VERIFYPEER, 1);
+        /* set host verification */
+        INICURL_EASY_SETOPT(curl, CURLOPT_SSL_VERIFYHOST, 2);
+        /* set protocol */
+        INICURL_EASY_SETOPT(curl, CURLOPT_SSLVERSION, extssl_protocol);
+    }
+    return curl;
+}
+static size_t
+get_s3_param(char *buffer, size_t size, size_t nitems, void *userp)
+{
+    ini_t *ini = (ini_t *)userp;
+    int nbytes = size * nitems;
+    ini->data = (char*) malloc(nbytes+1);
+    if (ini->data == NULL) {
+        return 0;
+    }
+    ini->data[nbytes] = '\0';
+    ini->end = ini->data  + nbytes;
+    memcpy(ini->data, buffer, nbytes);
+
+    return nbytes;
+}
+ini_t* ini_load_from_url(const char *url, const char *datadir) {
+    ini_t *ini = NULL;
+    CURL *curl = NULL;
+    curl_slist *headers = NULL;
+    CURLcode e;
+
+    curl_global_init(CURL_GLOBAL_ALL);
+    /* Init ini struct */
+    ini = (ini_t*) malloc(sizeof(*ini));
+    if (!ini) {
+        goto fail;
+    }
+    memset(ini, 0, sizeof(*ini));
+    /* Curl param */
+    curl = create_curl_from_url(url, datadir);
+    if (curl == NULL) {
+        goto fail;
+    }
+    // Add header "S3_Param_Req"
+    headers = curl_slist_append(NULL, "S3_Param_Req: true");
+    if (headers == NULL) {
+        goto fail;
+    }
+    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, get_s3_param);
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, ini);
+    /* Load file content into memory, null terminate, init end var */
+    e = curl_easy_perform(curl);
+    if (e != CURLE_OK) {
+        goto fail;
+    }
+    /* Prepare data */
+    split_data(ini);
+    /* Clean up and return */
+    curl_slist_free_all(headers);
+    curl_easy_cleanup(curl);
+    curl_global_cleanup();
+    return ini;
+
+fail:
+    if (ini) ini_free(ini);
+    curl_slist_free_all(headers);
+    curl_easy_cleanup(curl);
+    curl_global_cleanup();
+    return NULL;
 }
 
 ini_t* ini_load(const char *filename) {

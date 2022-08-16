@@ -38,7 +38,6 @@
 #include "sha1.h"
 #include "blf.h"
 #include "rijndael.h"
-#include "fortuna.h"
 
 /*
  * System reseeds should be separated at least this much.
@@ -616,64 +615,23 @@ px_find_cipher(const char *name, PX_Cipher **res)
 	return 0;
 }
 
-/*
- * Randomness provider
- */
-
-static time_t seed_time = 0;
-static time_t check_time = 0;
-
-static void
-system_reseed(void)
+void
+px_disable_fipsmode(void)
 {
-	uint8		buf[1024];
-	int			n;
-	time_t		t;
-	int			skip = 1;
-
-	t = time(NULL);
-
-	if (seed_time == 0)
-		skip = 0;
-	else if ((t - seed_time) < SYSTEM_RESEED_MIN)
-		skip = 1;
-	else if ((t - seed_time) > SYSTEM_RESEED_MAX)
-		skip = 0;
-	else if (check_time == 0 ||
-			 (t - check_time) > SYSTEM_RESEED_CHECK_TIME)
-	{
-		check_time = t;
-
-		/* roll dice */
-		(void) px_get_random_bytes(buf, 1);
-		skip = buf[0] >= SYSTEM_RESEED_CHANCE;
-	}
-	/* clear 1 byte */
-	px_memset(buf, 0, sizeof(buf));
-
-	if (skip)
-		return;
-
-	n = px_acquire_system_randomness(buf);
-	if (n > 0)
-		fortuna_add_entropy(buf, n);
-
-	seed_time = t;
-	px_memset(buf, 0, sizeof(buf));
+	ereport(ERROR,
+			(errmsg("pgcrypto FIPS mode is only supported in OpenSSL enabled builds")));
 }
 
-int
-px_get_random_bytes(uint8 *dst, unsigned count)
+void
+px_enable_fipsmode(void)
 {
-	system_reseed();
-	fortuna_get_bytes(count, dst);
-	return 0;
+	ereport(ERROR,
+			(errmsg("pgcrypto FIPS mode is only supported in OpenSSL enabled builds")));
 }
 
-int
-px_add_entropy(const uint8 *data, unsigned count)
+void
+px_check_fipsmode(void)
 {
-	system_reseed();
-	fortuna_add_entropy(data, count);
-	return 0;
+	ereport(ERROR,
+			(errmsg("pgcrypto FIPS mode is only supported in OpenSSL enabled builds")));
 }

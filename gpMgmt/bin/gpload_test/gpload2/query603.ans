@@ -9,7 +9,7 @@
 2021-01-17 18:25:59|INFO|gpload session started 2021-01-17 18:25:59
 2021-01-17 18:25:59|INFO|setting schema 'public' for table 'texttable'
 2021-01-17 18:25:59|INFO|started gpfdist -p 8081 -P 8082 -f "/home/gpadmin/temp/gpdb/gpMgmt/bin/gpload_test/gpload2/data_file.txt" -t 30
-2021-01-17 18:25:59|INFO|reusing external staging table staging_test
+2021-01-17 18:25:59|INFO|reusing external staging table "STAGING_test"
 2021-01-17 18:25:59|INFO|running time: 0.12 seconds
 2021-01-17 18:25:59|INFO|rows Inserted          = 16
 2021-01-17 18:25:59|INFO|rows Updated           = 0

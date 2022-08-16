@@ -26,3 +26,4 @@ select gp_inject_fault('heap_insert', 'reset', dbid)
 
 -- the table should be empty if insert was terminated
 select * from terminate_backend_t;
+1q:

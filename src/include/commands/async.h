@@ -55,5 +55,6 @@ extern void HandleNotifyInterrupt(void);
  */
 extern void EnableNotifyInterrupt(void);
 extern bool DisableNotifyInterrupt(void);
+extern void NotifyMyFrontEnd(const char *channel, const char *payload, int32 srcPid);
 
 #endif   /* ASYNC_H */

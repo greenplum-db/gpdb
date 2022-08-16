@@ -1107,7 +1107,7 @@
         </dxl:LogicalJoin>
       </dxl:LogicalCTEAnchor>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="70">
+    <dxl:Plan Id="0" SpaceSize="52">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="1293.488056" Rows="1000.000000" Width="26"/>

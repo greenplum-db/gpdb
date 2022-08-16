@@ -19,6 +19,8 @@ DROP TABLE IF EXISTS countrylanguage cascade;
 
 --end_ignore
 
+SET optimizer_trace_fallback=on;
+
 BEGIN;
 
 --SET client_encoding = 'LATIN1';
@@ -10365,3 +10367,5 @@ SELECT * FROM c as c1, zoo WHERE zoo.c = c1.b;
 -- start_ignore
 drop schema qp_with_clause cascade;
 -- end_ignore
+
+RESET optimizer_trace_fallback;

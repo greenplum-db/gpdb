@@ -22,6 +22,7 @@
 #include "gpopt/operators/CExpression.h"
 #include "gpopt/operators/CScalarBoolOp.h"
 #include "gpopt/operators/CScalarCmp.h"
+#include "gpopt/operators/CScalarSortGroupClause.h"
 #include "gpopt/operators/CScalarWindowFunc.h"
 #include "gpopt/translate/CTranslatorDXLToExprUtils.h"
 #include "naucrates/dxl/operators/CDXLColDescr.h"
@@ -291,6 +292,8 @@ private:
 	// translate a DXL scalar arrayref
 	CExpression *PexprArrayRef(const CDXLNode *dxlnode);
 
+	CExpression *PexprValuesList(const CDXLNode *dxlnode);
+
 	// translate a DXL scalar arrayref index list
 	CExpression *PexprArrayRefIndexList(const CDXLNode *dxlnode);
 
@@ -332,6 +335,8 @@ private:
 	// translate a DXL scalar const value into a
 	// scalar constant representation in optimizer
 	CExpression *PexprScalarConst(const CDXLNode *pdxlnConst);
+
+	CExpression *PexprSortGroupClause(const CDXLNode *pdxlnSortGroupClause);
 
 	// translate a DXL project list node into a project list expression
 	CExpression *PexprScalarProjList(const CDXLNode *proj_list_dxlnode);

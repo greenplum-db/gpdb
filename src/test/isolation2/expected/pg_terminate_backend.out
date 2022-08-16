@@ -43,3 +43,4 @@ select * from terminate_backend_t;
  a 
 ---
 (0 rows)
+1q: ... <quitting>

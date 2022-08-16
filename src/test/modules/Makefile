@@ -5,5 +5,6 @@ top_builddir = ../../..
 include $(top_builddir)/src/Makefile.global
 
 SUBDIRS = test_planner
+SUBDIRS += connection 
 
 $(recurse)

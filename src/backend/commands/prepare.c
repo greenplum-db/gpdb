@@ -706,7 +706,7 @@ ExplainExecuteQuery(ExecuteStmt *execstmt, IntoClause *into, ExplainState *es,
 		PlannedStmt *pstmt = (PlannedStmt *) lfirst(p);
 
 		if (IsA(pstmt, PlannedStmt))
-			ExplainOnePlan(pstmt, into, es, query_string, paramLI, NULL);
+			ExplainOnePlan(pstmt, into, es, query_string, paramLI, NULL, 0);
 		else
 			ExplainOneUtility((Node *) pstmt, into, es, query_string, paramLI);
 

@@ -627,13 +627,17 @@ index_getnext(IndexScanDesc scan, ScanDirection direction)
  *		returned; a TIDBitmap otherwise. Note that an index am's getmulti
  *		function can assume that the bitmap that it's given as argument is of
  *		the same type as what the function constructs itself.
+ *
+ *		Returns the number of matching tuples found.  (Note: this might be only
+ *		approximate, so it should only be used for statistical purposes.)
  * ----------------
  */
-Node *
-index_getbitmap(IndexScanDesc scan, Node *bitmap)
+int64
+index_getbitmap(IndexScanDesc scan, Node **bitmapP)
 {
 	FmgrInfo   *procedure;
-	Node		*bm;
+	int64		ntids;
+	Datum		d;
 
 	SCAN_CHECKS;
 	GET_SCAN_PROCEDURE(amgetbitmap);
@@ -644,11 +648,20 @@ index_getbitmap(IndexScanDesc scan, Node *bitmap)
 	/*
 	 * have the am's getbitmap proc do all the work.
 	 */
-	bm = (Node *) DatumGetPointer(FunctionCall2(procedure,
-									  PointerGetDatum(scan),
-									  PointerGetDatum(bitmap)));
+	d = FunctionCall2(procedure,
+					  PointerGetDatum(scan),
+					  PointerGetDatum(bitmapP));
 
-	return bm;
+	ntids = DatumGetInt64(d);
+
+	/* If int8 is pass-by-ref, must free the result to avoid memory leak */
+#ifndef USE_FLOAT8_BYVAL
+	pfree(DatumGetPointer(d));
+#endif
+
+	pgstat_count_index_tuples(scan->indexRelation, ntids);
+
+	return ntids;
 }
 
 /* ----------------

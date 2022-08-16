@@ -1,6 +1,6 @@
 -- Test that pg_partitions view does not lock a table.
 -- 6X used to acquire lock on partition tables when query
--- gp_partitons view. See `expr_has_vars` in ruleutils.c
+-- gp_partitions view. See `expr_has_vars` in ruleutils.c
 -- for more details.
 create table pg_partitions_ddl_tab(a int, b int)
 distributed by (a) partition by range (b)

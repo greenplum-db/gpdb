@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE map PUBLIC "-//OASIS//DTD DITA Map//EN" "map.dtd">
 <map>
-    <topicref href="../../6-18/homenav.html" scope="external"
-        navtitle="Greenplum Database 6.18 Documentation" format="html" otherprops="oss-only"/>
-    <topicref href="../../6-18/homenav.html" scope="external"
-        navtitle="Tanzu Greenplum 6.18 Documentation" format="html" otherprops="pivotal"/>
+    <topicref href="../../6-20/homenav.html" scope="external"
+        navtitle="Greenplum Database 6.20 Documentation" format="html" otherprops="oss-only"/>
+    <topicref href="../../6-20/homenav.html" scope="external"
+        navtitle="Tanzu Greenplum 6.20 Documentation" format="html" otherprops="pivotal"/>
     <topicref href="utility_guide.xml" navtitle="Utility Guide">
         <topicref href="about-utils.xml"/>
         <topicref href="utility-programs.xml" linking="targetonly">
@@ -18,7 +18,7 @@
             <topicref href="ref/dropuser.xml"/>
             <topicref href="ref/gpactivatestandby.xml"/>
             <topicref href="ref/gpaddmirrors.xml"/>
-            <topicref href="ref/gpbackup_manager.xml" otherprops="pivotal"/>
+            <topicref href="ref/gpbackup_manager.xml"/>
             <topicref href="ref/gpbackup.xml"/>
             <topicref href="ref/gpcheckcat.xml"/>
             <topicref href="ref/gpcheckperf.xml"/>
@@ -36,6 +36,8 @@
             <topicref href="ref/gplogfilter.xml"/>
             <topicref href="ref/gpmapreduce.xml"/>
             <topicref href="ref/gpmapreduce-yaml.xml"/>
+            <topicref href="ref/gpmemreport.xml"/>
+            <topicref href="ref/gpmemwatcher.xml"/>
             <topicref href="ref/gpmovemirrors.xml"/>
             <topicref href="ref/gpmt.xml" otherprops="pivotal"/>
 <!-- hidden until testing is complete -msk
@@ -64,8 +66,8 @@
             <topicref href="ref/plcontainer.xml"/>
             <topicref href="ref/plcontainer-configuration.xml"/>
             <topicref href="ref/psql.xml"/>
-            <topicref href="../../pxf/5-15/ref/pxf.html" scope="external" navtitle="pxf"/>
-            <topicref href="../../pxf/5-15/ref/pxf-cluster.html" scope="external" navtitle="pxf cluster"/>
+            <topicref href="../../pxf/latest/ref/pxf.html" scope="external" navtitle="pxf"/>
+            <topicref href="../../pxf/latest/ref/pxf-cluster.html" scope="external" navtitle="pxf cluster"/>
             <topicref href="ref/reindexdb.xml"/>
             <topicref href="ref/vacuumdb.xml"/>
         </topicref>

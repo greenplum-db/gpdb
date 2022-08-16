@@ -420,6 +420,14 @@ ConstructTupleDescriptor(Relation heapRelation,
 			memcpy(to, from, ATTRIBUTE_FIXED_PART_SIZE);
 
 			/*
+			 * Set the attribute name as specified by caller.
+			 */
+			if (colnames_item == NULL)		/* shouldn't happen */
+				elog(ERROR, "too few entries in colnames list");
+			namestrcpy(&to->attname, (const char *) lfirst(colnames_item));
+			colnames_item = lnext(colnames_item);
+
+			/*
 			 * Fix the stuff that should not be the same as the underlying
 			 * attr
 			 */
@@ -439,6 +447,14 @@ ConstructTupleDescriptor(Relation heapRelation,
 			Node	   *indexkey;
 
 			MemSet(to, 0, ATTRIBUTE_FIXED_PART_SIZE);
+
+			/*
+			 * Set the attribute name as specified by caller.
+			 */
+			if (colnames_item == NULL)		/* shouldn't happen */
+				elog(ERROR, "too few entries in colnames list");
+			namestrcpy(&to->attname, (const char *) lfirst(colnames_item));
+			colnames_item = lnext(colnames_item);
 
 			if (indexpr_item == NULL)	/* shouldn't happen */
 				elog(ERROR, "too few entries in indexprs list");
@@ -491,14 +507,6 @@ ConstructTupleDescriptor(Relation heapRelation,
 		 * later.
 		 */
 		to->attrelid = InvalidOid;
-
-		/*
-		 * Set the attribute name as specified by caller.
-		 */
-		if (colnames_item == NULL)		/* shouldn't happen */
-			elog(ERROR, "too few entries in colnames list");
-		namestrcpy(&to->attname, (const char *) lfirst(colnames_item));
-		colnames_item = lnext(colnames_item);
 
 		/*
 		 * Check the opclass and index AM to see if either provides a keytype
@@ -1520,6 +1528,15 @@ index_drop(Oid indexId, bool concurrent)
 	LOCKMODE	lockmode;
 
 	/*
+	 * A temporary relation uses a non-concurrent DROP.  Other backends can't
+	 * access a temporary relation, so there's no harm in grabbing a stronger
+	 * lock (see comments in RemoveRelations), and a non-concurrent DROP is
+	 * more efficient.
+	 */
+	Assert(get_rel_persistence(indexId) != RELPERSISTENCE_TEMP ||
+		   !concurrent);
+
+	/*
 	 * To drop an index safely, we must grab exclusive lock on its parent
 	 * table.  Exclusive lock on the index alone is insufficient because
 	 * another backend might be about to execute a query on the parent table.
@@ -1972,6 +1989,61 @@ CompareIndexInfo(IndexInfo *info1, IndexInfo *info2,
 		return false;
 
 	return true;
+}
+
+/* ----------------
+ *		BuildDummyIndexInfo
+ *			Construct a dummy IndexInfo record for an open index
+ *
+ * This differs from the real BuildIndexInfo in that it will never run any
+ * user-defined code that might exist in index expressions or predicates.
+ * Instead of the real index expressions, we return null constants that have
+ * the right types/typmods/collations.  Predicates and exclusion clauses are
+ * just ignored.  This is sufficient for the purpose of truncating an index,
+ * since we will not need to actually evaluate the expressions or predicates;
+ * the only thing that's likely to be done with the data is construction of
+ * a tupdesc describing the index's rowtype.
+ * ----------------
+ */
+IndexInfo *
+BuildDummyIndexInfo(Relation index)
+{
+	IndexInfo  *ii = makeNode(IndexInfo);
+	Form_pg_index indexStruct = index->rd_index;
+	int			i;
+	int			numKeys;
+
+	/* check the number of keys, and copy attr numbers into the IndexInfo */
+	numKeys = indexStruct->indnatts;
+	if (numKeys < 1 || numKeys > INDEX_MAX_KEYS)
+		elog(ERROR, "invalid indnatts %d for index %u",
+			 numKeys, RelationGetRelid(index));
+	ii->ii_NumIndexAttrs = numKeys;
+	for (i = 0; i < numKeys; i++)
+		ii->ii_KeyAttrNumbers[i] = indexStruct->indkey.values[i];
+
+	/* fetch dummy expressions for expressional indexes */
+	ii->ii_Expressions = RelationGetDummyIndexExpressions(index);
+	ii->ii_ExpressionsState = NIL;
+
+	/* pretend there is no predicate */
+	ii->ii_Predicate = NIL;
+	ii->ii_PredicateState = NULL;
+
+	/* We ignore the exclusion constraint if any */
+	ii->ii_ExclusionOps = NULL;
+	ii->ii_ExclusionProcs = NULL;
+	ii->ii_ExclusionStrats = NULL;
+
+	/* other info */
+	ii->ii_Unique = indexStruct->indisunique;
+	ii->ii_ReadyForInserts = IndexIsReady(indexStruct);
+
+	/* initialize index-build state to default */
+	ii->ii_Concurrent = false;
+	ii->ii_BrokenHotChain = false;
+
+	return ii;
 }
 
 /* ----------------
@@ -2457,11 +2529,13 @@ IndexBuildScan(Relation parentRelation,
 	 * concurrent build, or during bootstrap, we take a regular MVCC snapshot
 	 * and index whatever's live according to that.
 	 *
-	 * If the relation is an append-only table, we also use a regular MVCC
-	 * snapshot.
+	 * Like for heap tables, if the relation is an append-only table, we use
+	 * SnapshotAny to access data. RECENTLY_DEAD tuples, used, for example, by
+	 * "repeatable read" transaction, should be indexed to avoid inconsistent
+	 * results caused by index access. We use another snapshot to access
+	 * metadata - see AO-specific scan functions implementation below.
 	 */
-	if (IsBootstrapProcessingMode() || indexInfo->ii_Concurrent ||
-			 RelationIsAppendOptimized(parentRelation))
+	if (IsBootstrapProcessingMode() || indexInfo->ii_Concurrent)
 	{
 		snapshot = RegisterSnapshot(GetTransactionSnapshot());
 		registered_snapshot = true;
@@ -2470,8 +2544,15 @@ IndexBuildScan(Relation parentRelation,
 	else
 	{
 		snapshot = SnapshotAny;
-		/* okay to ignore lazy VACUUMs here */
-		OldestXmin = GetOldestXmin(parentRelation, true);
+		/*
+		 * TODO: add support to cut off definitely dead rows using OldestXmin
+		 * for AO tables
+		 */
+		if (!RelationIsAppendOptimized(parentRelation))
+			/* okay to ignore lazy VACUUMs here */
+			OldestXmin = GetOldestXmin(parentRelation, true);
+		else
+			OldestXmin = InvalidTransactionId;
 	}
 
 	if (RelationIsHeap(parentRelation))
@@ -2927,9 +3008,16 @@ IndexBuildAppendOnlyRowScan(Relation parentRelation,
 	predicate = (List *)
 		ExecPrepareExpr((Expr *)indexInfo->ii_Predicate, estate);
 	
+	/*
+	 * Regular MVCC snapshot, which may be taken in IndexBuildScan function,
+	 * can hide newly globally inserted tuples from global index build process,
+	 * because it's outdated in such case (see dispatching part of DefineIndex
+	 * for more). Since this, we need to use SnapshotSelf to get the actual
+	 * metadata (pg_aoseg, in particular)".
+	 */
 	aoscan = appendonly_beginscan(parentRelation,
 								  snapshot,
-								  snapshot,
+								  SnapshotSelf,
 								  0,
 								  NULL);
 
@@ -3069,7 +3157,18 @@ IndexBuildAppendOnlyColScan(Relation parentRelation,
 			proj[attno] = true;
 	}
 	
-	aocsscan = aocs_beginscan(parentRelation, snapshot, snapshot, NULL /* relationTupleDesc */, proj);
+	/*
+	 * Regular MVCC snapshot, which may be taken in IndexBuildScan function,
+	 * can hide newly globally inserted tuples from global index build process,
+	 * because it's outdated in such case (see dispatching part of DefineIndex
+	 * for more). Since this, we need to use SnapshotSelf to get the actual
+	 * metadata (pg_aoseg, in particular).
+	 */
+	aocsscan = aocs_beginscan(parentRelation,
+							  snapshot,
+							  SnapshotSelf,
+							  NULL /* relationTupleDesc */,
+							  proj);
 
 	if (!OidIsValid(blkdirrelid) || !OidIsValid(blkdiridxid))
 	{
@@ -3316,7 +3415,17 @@ validate_index(Oid heapId, Oid indexId, Snapshot snapshot)
 
 	/* Open and lock the parent heap relation */
 	heapRelation = heap_open(heapId, ShareUpdateExclusiveLock);
-	/* And the target index relation */
+
+	/*
+	 * Switch to the table owner's userid, so that any index functions are run
+	 * as that user.  Also lock down security-restricted operations and
+	 * arrange to make GUC variable changes local to this command.
+	 */
+	GetUserIdAndSecContext(&save_userid, &save_sec_context);
+	SetUserIdAndSecContext(heapRelation->rd_rel->relowner,
+						   save_sec_context | SECURITY_RESTRICTED_OPERATION);
+	save_nestlevel = NewGUCNestLevel();
+
 	indexRelation = index_open(indexId, RowExclusiveLock);
 
 	/*
@@ -3328,16 +3437,6 @@ validate_index(Oid heapId, Oid indexId, Snapshot snapshot)
 
 	/* mark build is concurrent just for consistency */
 	indexInfo->ii_Concurrent = true;
-
-	/*
-	 * Switch to the table owner's userid, so that any index functions are run
-	 * as that user.  Also lock down security-restricted operations and
-	 * arrange to make GUC variable changes local to this command.
-	 */
-	GetUserIdAndSecContext(&save_userid, &save_sec_context);
-	SetUserIdAndSecContext(heapRelation->rd_rel->relowner,
-						   save_sec_context | SECURITY_RESTRICTED_OPERATION);
-	save_nestlevel = NewGUCNestLevel();
 
 	/*
 	 * Scan the index and gather up all the TIDs into a tuplesort object.
@@ -3752,6 +3851,9 @@ reindex_index(Oid indexId, bool skip_constraint_checks)
 	Relation	iRel,
 				heapRelation;
 	Oid			heapId;
+	Oid			save_userid;
+	int			save_sec_context;
+	int			save_nestlevel;
 	IndexInfo  *indexInfo;
 	Oid			namespaceId;
 	volatile bool skipped_constraint = false;
@@ -3766,6 +3868,16 @@ reindex_index(Oid indexId, bool skip_constraint_checks)
 	heapRelation = heap_open(heapId, ShareLock);
 
 	namespaceId = RelationGetNamespace(heapRelation);
+
+	/*
+	 * Switch to the table owner's userid, so that any index functions are run
+	 * as that user.  Also lock down security-restricted operations and
+	 * arrange to make GUC variable changes local to this command.
+	 */
+	GetUserIdAndSecContext(&save_userid, &save_sec_context);
+	SetUserIdAndSecContext(heapRelation->rd_rel->relowner,
+						   save_sec_context | SECURITY_RESTRICTED_OPERATION);
+	save_nestlevel = NewGUCNestLevel();
 
 	/*
 	 * Open the target index relation and get an exclusive lock on it, to
@@ -3950,6 +4062,12 @@ reindex_index(Oid indexId, bool skip_constraint_checks)
 							   "VACUUM", subtyp
 					);
 	}
+
+	/* Roll back any GUC changes executed by index functions */
+	AtEOXact_GUC(false, save_nestlevel);
+
+	/* Restore userid and security context */
+	SetUserIdAndSecContext(save_userid, save_sec_context);
 
 	/* Close rels, but keep locks */
 	index_close(iRel, NoLock);

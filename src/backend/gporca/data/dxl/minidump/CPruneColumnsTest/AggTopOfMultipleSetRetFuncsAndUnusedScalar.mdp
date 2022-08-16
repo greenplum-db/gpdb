@@ -110,7 +110,12 @@ select count(*) from (select unnest(arr) i, 1 j from (select string_to_array('aa
         <dxl:GroupingColumns/>
         <dxl:ProjList>
           <dxl:ProjElem ColId="5" Alias="count">
-            <dxl:AggFunc AggMdid="0.2803.1.0" AggDistinct="false" AggStage="Normal"/>
+            <dxl:AggFunc AggMdid="0.2803.1.0" AggDistinct="false" AggStage="Normal" AggKind="n" >
+              <dxl:ValuesList ParamType="aggargs"/>
+              <dxl:ValuesList ParamType="aggdirectargs"/>
+              <dxl:ValuesList ParamType="aggorder"/>
+              <dxl:ValuesList ParamType="aggdistinct"/>
+            </dxl:AggFunc>
           </dxl:ProjElem>
         </dxl:ProjList>
         <dxl:LogicalProject>
@@ -145,31 +150,41 @@ select count(*) from (select unnest(arr) i, 1 j from (select string_to_array('aa
     <dxl:Plan Id="0" SpaceSize="2">
       <dxl:Aggregate AggregationStrategy="Plain" StreamSafe="false">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="0.000011" Rows="1.000000" Width="8"/>
+          <dxl:Cost StartupCost="0" TotalCost="0.000111" Rows="1.000000" Width="8"/>
         </dxl:Properties>
         <dxl:GroupingColumns/>
         <dxl:ProjList>
           <dxl:ProjElem ColId="4" Alias="count">
-            <dxl:AggFunc AggMdid="0.2803.1.0" AggDistinct="false" AggStage="Final">
-              <dxl:Ident ColId="5" ColName="ColRef_0005" TypeMdid="0.20.1.0"/>
+            <dxl:AggFunc AggMdid="0.2803.1.0" AggDistinct="false" AggStage="Final" AggKind="n" >
+              <dxl:ValuesList ParamType="aggargs">
+                <dxl:Ident ColId="5" ColName="ColRef_0005" TypeMdid="0.20.1.0"/>
+              </dxl:ValuesList>
+              <dxl:ValuesList ParamType="aggdirectargs"/>
+              <dxl:ValuesList ParamType="aggorder"/>
+              <dxl:ValuesList ParamType="aggdistinct"/>
             </dxl:AggFunc>
           </dxl:ProjElem>
         </dxl:ProjList>
         <dxl:Filter/>
         <dxl:Aggregate AggregationStrategy="Plain" StreamSafe="false">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="0.000010" Rows="1.000000" Width="8"/>
+            <dxl:Cost StartupCost="0" TotalCost="0.000110" Rows="1.000000" Width="8"/>
           </dxl:Properties>
           <dxl:GroupingColumns/>
           <dxl:ProjList>
             <dxl:ProjElem ColId="5" Alias="ColRef_0005">
-              <dxl:AggFunc AggMdid="0.2803.1.0" AggDistinct="false" AggStage="Partial"/>
+              <dxl:AggFunc AggMdid="0.2803.1.0" AggDistinct="false" AggStage="Partial" AggKind="n" >
+                <dxl:ValuesList ParamType="aggargs"/>
+                <dxl:ValuesList ParamType="aggdirectargs"/>
+                <dxl:ValuesList ParamType="aggorder"/>
+                <dxl:ValuesList ParamType="aggdistinct"/>
+              </dxl:AggFunc>
             </dxl:ProjElem>
           </dxl:ProjList>
           <dxl:Filter/>
           <dxl:Result>
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="0.000010" Rows="1.000000" Width="8"/>
+              <dxl:Cost StartupCost="0" TotalCost="0.000110" Rows="1.000000" Width="8"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="2" Alias="i">

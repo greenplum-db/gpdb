@@ -8434,8 +8434,7 @@ ALTER TABLE table_with_leaf_containing_dropped_column_between_index_columns EXCH
 CREATE INDEX table_with_leaf_partition_dropped_col_between_index_cols_index ON table_with_leaf_containing_dropped_column_between_index_columns(a, b);
 
 EXPLAIN SELECT * FROM table_with_leaf_containing_dropped_column_between_index_columns WHERE a>42 and z<42;
--- FIXME: Test fails on ORCA
--- SELECT * FROM table_with_leaf_containing_dropped_column_between_index_columns WHERE a>42 and z<42;
+SELECT * FROM table_with_leaf_containing_dropped_column_between_index_columns WHERE a>42 and z<42;
 EXPLAIN SELECT * FROM leaf_containing_dropped_col_index_part1 WHERE a>42 and z<42;
 SELECT * FROM leaf_containing_dropped_col_index_part1 WHERE a>42 and z<42;
 EXPLAIN SELECT * FROM leaf_containing_dropped_col_index_part2 WHERE a>42 and z<42;
@@ -8459,8 +8458,7 @@ ALTER TABLE table_with_root_containing_dropped_columns EXCHANGE PARTITION FOR ('
 CREATE INDEX table_with_root_containing_dropped_columns_index ON table_with_root_containing_dropped_columns(a, b);
 
 EXPLAIN SELECT * FROM table_with_root_containing_dropped_columns WHERE a>42 and z<42;
--- FIXME: Test fails on ORCA
--- SELECT * FROM table_with_root_containing_dropped_columns WHERE a>42 and z<42;
+SELECT * FROM table_with_root_containing_dropped_columns WHERE a>42 and z<42;
 EXPLAIN SELECT * FROM leaf_with_root_containing_dropped_columns_part1 WHERE a>42 and z<42;
 SELECT * FROM leaf_with_root_containing_dropped_columns_part1 WHERE a>42 and z<42;
 EXPLAIN SELECT * FROM leaf_with_root_containing_dropped_columns_part2 WHERE a>42 and z<42;
@@ -8485,12 +8483,146 @@ ALTER TABLE table_with_both_containing_dropped_column EXCHANGE PARTITION FOR ('2
 CREATE INDEX table_with_both_containing_dropped_column_index ON table_with_both_containing_dropped_column(a, b);
 
 EXPLAIN SELECT * FROM table_with_both_containing_dropped_column WHERE a>42 and z<42;
--- FIXME: Test fails on ORCA
--- SELECT * FROM table_with_both_containing_dropped_column WHERE a>42 and z<42;
+SELECT * FROM table_with_both_containing_dropped_column WHERE a>42 and z<42;
 EXPLAIN SELECT * FROM leaf_with_dropped_cols_index_part1 WHERE a>42 and z<42;
 SELECT * FROM leaf_with_dropped_cols_index_part1 WHERE a>42 and z<42;
 EXPLAIN SELECT * FROM leaf_with_dropped_cols_index_part2 WHERE a>42 and z<42;
 SELECT * FROM leaf_with_dropped_cols_index_part2 WHERE a>42 and z<42;
+
+-- multi-level-partition with dropped root cols and exchanged partition
+drop table if exists multi_dropped_cols_root;
+CREATE TABLE multi_dropped_cols_root (trans_id int, to_be_dropped1 int, date date, amount 
+decimal(9,2), to_be_dropped2 int, region text) 
+DISTRIBUTED BY (trans_id)
+PARTITION BY RANGE (date)
+SUBPARTITION BY LIST (region)
+SUBPARTITION TEMPLATE
+( SUBPARTITION usa VALUES ('usa'), 
+  SUBPARTITION asia VALUES ('asia'))
+  (START (date '2011-01-01') INCLUSIVE
+   END (date '2011-04-01') EXCLUSIVE
+   EVERY (INTERVAL '3 month'));
+
+alter table multi_dropped_cols_root drop column to_be_dropped1;
+alter table multi_dropped_cols_root drop column to_be_dropped2;
+
+drop table if exists multi_dropped_cols_root_exchange_part;
+create table multi_dropped_cols_root_exchange_part (trans_id int, date date, amount 
+decimal(9,2), region text);
+
+ALTER TABLE multi_dropped_cols_root 
+ALTER PARTITION FOR (RANK(1))
+EXCHANGE PARTITION FOR ('usa') WITH TABLE multi_dropped_cols_root_exchange_part ;
+
+create index idx_sales_date on multi_dropped_cols_root(date);
+
+explain select * from multi_dropped_cols_root where date = '2011-01-01' and region = 'usa';
+select * from multi_dropped_cols_root where date = '2011-01-01' and region = 'usa';
+
+-- multi-level-partition with dropped leaf cols and exchanged partition
+CREATE TABLE multi_dropped_cols_leaf (trans_id int, date date, amount 
+decimal(9,2), region text) 
+DISTRIBUTED BY (trans_id)
+PARTITION BY RANGE (date)
+SUBPARTITION BY LIST (region)
+SUBPARTITION TEMPLATE
+( SUBPARTITION usa VALUES ('usa'), 
+  SUBPARTITION asia VALUES ('asia'))
+  (START (date '2011-01-01') INCLUSIVE
+   END (date '2011-04-01') EXCLUSIVE
+   EVERY (INTERVAL '3 month'));
+
+drop table if exists multi_dropped_cols_leaf_exchange_part;
+create table multi_dropped_cols_leaf_exchange_part (trans_id int, to_be_dropped1, date date, amount 
+decimal(9,2), to_be_dropped2, region text);
+alter table multi_dropped_cols_leaf_exchange_part drop column to_be_dropped1;
+alter table multi_dropped_cols_leaf_exchange_part drop column to_be_dropped2;
+
+
+ALTER TABLE multi_dropped_cols_leaf 
+ALTER PARTITION FOR (RANK(1))
+EXCHANGE PARTITION FOR ('usa') WITH TABLE sales_exchange_part ;
+
+create index idx_multi_dropped_cols_leaf_date on multi_dropped_cols_leaf(date);
+
+explain select * from multi_dropped_cols_leaf where date = '2011-01-01' and region = 'usa';
+select * from multi_dropped_cols_leaf where date = '2011-01-01' and region = 'usa';
+
+-- multi-level-partition with btree index with mid level not having dropped column for added partition
+CREATE TABLE multi_part_mid_btree (trans_id int, to_be_dropped1 int, date date, amount 
+decimal(9,2), to_be_dropped2 int, region text) 
+DISTRIBUTED BY (trans_id)
+PARTITION BY RANGE (date)
+SUBPARTITION BY LIST (region)
+SUBPARTITION TEMPLATE
+( SUBPARTITION usa VALUES ('usa'), 
+  SUBPARTITION asia VALUES ('asia'))
+  (START (date '2011-01-01') INCLUSIVE
+   END (date '2011-04-01') EXCLUSIVE
+   EVERY (INTERVAL '3 month'));
+
+alter table multi_part_mid_btree drop column to_be_dropped1;
+alter table multi_part_mid_btree drop column to_be_dropped2;
+
+-- Create the exchange candidate without dropped columns
+drop table if exists multi_part_mid_btree_exchange_part;
+create table multi_part_mid_btree_exchange_part (trans_id int, date date, amount 
+decimal(9,2), region text);
+
+-- Exchange
+ALTER TABLE multi_part_mid_btree 
+ALTER PARTITION FOR (RANK(1))
+EXCHANGE PARTITION FOR ('usa') WITH TABLE multi_part_mid_btree_exchange_part ;
+
+ALTER TABLE multi_part_mid_btree ADD PARTITION 
+            START (date '2017-02-01') INCLUSIVE 
+            END (date '2017-03-01') EXCLUSIVE;
+
+create index idx_multi_part_mid_btree on multi_part_mid_btree(date);
+
+-- Since we have arbitrarily named partitions here, we can't match the plan
+-- output for planner. It should still generate a dynamic bitmap scan for Orca.
+-- start_ignore
+explain select * from multi_part_mid_btree where date = '2017-02-05' and region = 'usa';
+-- end_ignore
+select * from multi_part_mid_btree where date = '2017-02-05' and region = 'usa';
+
+-- multi-level-partition with bitmap index with mid level not having dropped column for added partition
+CREATE TABLE multi_part_mid_bitmap (trans_id int, to_be_dropped1 int, date date, amount 
+decimal(9,2), to_be_dropped2 int, region text) 
+DISTRIBUTED BY (trans_id)
+PARTITION BY RANGE (date)
+SUBPARTITION BY LIST (region)
+SUBPARTITION TEMPLATE
+( SUBPARTITION usa VALUES ('usa'), 
+  SUBPARTITION asia VALUES ('asia'))
+  (START (date '2011-01-01') INCLUSIVE
+   END (date '2011-04-01') EXCLUSIVE
+   EVERY (INTERVAL '3 month'));
+
+alter table multi_part_mid_bitmap drop column to_be_dropped1;
+alter table multi_part_mid_bitmap drop column to_be_dropped2;
+
+drop table if exists multi_part_mid_bitmap_exchange_part;
+create table multi_part_mid_bitmap_exchange_part (trans_id int, date date, amount 
+decimal(9,2), region text);
+
+ALTER TABLE multi_part_mid_bitmap 
+ALTER PARTITION FOR (RANK(1))
+EXCHANGE PARTITION FOR ('usa') WITH TABLE multi_part_mid_bitmap_exchange_part ;
+
+ALTER TABLE multi_part_mid_bitmap ADD PARTITION 
+            START (date '2017-02-01') INCLUSIVE 
+            END (date '2017-03-01') EXCLUSIVE;
+
+create index idx_multi_part_mid_bitmap on multi_part_mid_bitmap using bitmap(date);
+
+-- Since we have arbitrarily named partitions here, we can't match the plan
+-- output for planner. It should still generate a dynamic bitmap scan for Orca.
+-- start_ignore
+explain select * from multi_part_mid_bitmap where date = '2017-02-05' and region = 'usa';
+-- end_ignore
+select * from multi_part_mid_bitmap where date = '2017-02-05' and region = 'usa';
 
 -- As of this writing, pg_dump creates an invalid dump for some of the tables
 -- here. See https://github.com/greenplum-db/gpdb/issues/3598. So we must drop

@@ -1,0 +1,43 @@
+---
+# usage: fly set-pipeline -p 6X_STABLE -l common_prod.yml
+# Originally from gp-continuous-integration/secrets/gpdb_common-ci-secrets.yml
+########## AWS #############
+aws-region: us-west-2
+aws-bucket: gpdb5-assert-concourse-builds
+tf-machine-region: us-west-2
+tf-bucket-name: gpdb5-pipeline-dynamic-terraform
+########## GOOGLE #############
+google-project-id: data-gpdb-ci
+google-zone: us-central1-a
+google-region: us-central1
+gp-concourse-cluster-provisioner-git-branch: master
+gp-concourse-cluster-provisioner-git-remote: git@github.com:pivotal/gp-concourse-cluster-provisioner.git
+gcs-bucket: pivotal-gpdb-concourse-resources-prod
+gcs-bucket-intermediates: pivotal-gpdb-concourse-resources-intermediates-prod
+gcs-bucket-for-oss: greenplum-database-concourse-resources-prod
+########## MADLIB #############
+madlib-git-branch: master
+madlib-git-tag-filter: rel/*
+madlib-git-remote: https://github.com/apache/madlib.git
+madlib-ci-git-remote: git@github.com:Pivotal-DataFabric/madlib-ci.git
+madlib-ci-git-branch: master
+madlib-ci-tag-filter: rel/v*
+# Originally from gp-continuous-integration/secrets/gpdb_6X_STABLE-ci-secrets.prod.yml
+gpdb-git-branch: 6X_STABLE
+gpdb-git-remote: https://github.com/greenplum-db/gpdb.git
+rc-build-type: debug
+rc-build-type-gcs: ".debug"
+reduced-frequency-trigger-start: 1:00 AM
+reduced-frequency-trigger-stop: 0:59 AM
+reduced-frequency-trigger-flag: false
+gpdb_src-trigger-flag: true
+configure_flags: "--enable-cassert --enable-tap-tests"
+configure_flags_with_extensions: "--enable-cassert --enable-tap-tests --enable-debug-extensions"
+########## Compile gpdb clients on windows #############
+remote_win_host_build: 10.0.42.5
+remote_win_user_build: buildbot
+remote_win_port_build: 22
+remote_win_user_test: buildbot
+remote_win_port_test: 22
+test-binary-swap: true
+pivotal-gpdb-pivnet-product-version: ^6\.3\.0$

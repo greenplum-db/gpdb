@@ -37,6 +37,7 @@
 #ifndef PRIO_MAX
 #define PRIO_MAX 20
 #endif
+
 /*
  * Parameters gp_session_role and gp_role
  *
@@ -316,6 +317,15 @@ extern int  gp_dtx_recovery_prepared_period;
 extern int gp_gang_creation_retry_count; /* How many retries ? */
 extern int gp_gang_creation_retry_timer; /* How long between retries */
 
+/* GUCs to control TCP keepalive settings for dispatch libpq connections */
+extern int 			gp_dispatch_keepalives_idle;
+extern int			gp_dispatch_keepalives_interval;
+extern int			gp_dispatch_keepalives_count;
+
+#define MAX_GP_DISPATCH_KEEPALIVES_IDLE 32767 /* Linux MAX_TCP_KEEPIDLE */
+#define MAX_GP_DISPATCH_KEEPALIVES_INTERVAL 32767 /* Linux MAX_TCP_KEEPINTVL */
+#define MAX_GP_DISPATCH_KEEPALIVES_COUNT 127 /* Linux MAX_TCP_KEEPCNT */
+
 /*
  * Parameter Gp_max_packet_size
  *
@@ -347,6 +357,33 @@ typedef enum GpVars_Interconnect_Type
 } GpVars_Interconnect_Type;
 
 extern int Gp_interconnect_type;
+
+/*
+ * We support different strategies for address binding for sockets used for
+ * motion communication over the interconnect.
+ *
+ * One approach is to use an unicast address, specifically the segment's
+ * gp_segment_configuration.address field to perform the address binding. This
+ * has the benefits of reducing port usage on a segment host and ensures that
+ * the NIC backed by the address field is the only one used for communication
+ * (and not an externally facing slower NIC, like the ones that typically back
+ * the gp_segment_configuration.hostname field)
+ *
+ * In some cases, inter-segment communication using the unicast address
+ * mentioned above, may not be possible. One such example is if the source
+ * segment's address field and the destination segment's address field are on
+ * different subnets and/or existing routing rules don't allow for such
+ * communication. In these cases, using a wildcard address for address binding
+ * is the only available fallback, enabling the use of any network interface
+ * compliant with routing rules.
+ */
+typedef enum GpVars_Interconnect_Address_Type
+{
+	INTERCONNECT_ADDRESS_TYPE_UNICAST = 0,
+	INTERCONNECT_ADDRESS_TYPE_WILDCARD
+} GpVars_Interconnect_Address_Type;
+
+extern int Gp_interconnect_address_type;
 
 extern char *gp_interconnect_proxy_addresses;
 
@@ -805,6 +842,9 @@ extern int gp_workfile_bytes_to_checksum;
 
 extern bool coredump_on_memerror;
 
+/* Greenplum resource group query_mem re-calculate on QE */
+extern bool gp_resource_group_enable_recalculate_query_mem;
+
 /*
  * Autostats feature, whether or not to to automatically run ANALYZE after 
  * insert/delete/update/ctas or after ctas/copy/insert in case the target
@@ -888,5 +928,14 @@ extern bool gp_create_table_random_default_distribution;
 /* Functions in guc_gp.c to lookup values in enum GUCs */
 extern GpperfmonLogAlertLevel lookup_loglevel_by_name(const char *name);
 extern const char * lookup_autostats_mode_by_value(GpAutoStatsModeValue val);
+
+/* notification condition name of next value, used in PGnotify */
+#define CDB_NOTIFY_NEXTVAL "nextval"
+
+/*
+ * notification condition name of endpoint ack information. Used in PGnotify
+ * for parallel retrieve cursor.
+ */
+#define CDB_NOTIFY_ENDPOINT_ACK "ack_notify"
 
 #endif   /* CDBVARS_H */

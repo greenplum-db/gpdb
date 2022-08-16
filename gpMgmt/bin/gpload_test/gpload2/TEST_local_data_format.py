@@ -326,3 +326,156 @@ def test_252_gpload_eol_LF_in_quote_csv():
     runfile(file)
     copy_data('external_file_252.csv','data_file.csv')
     write_config_file(reuse_tables=True,format='csv',file='data_file.csv',table='texttable2')
+
+@pytest.mark.order(253)
+@prepare_before_test(num=253)
+def test_253_gpload_eol_CRLF_txt():
+    "253 gpload loads text file with CR and LF in data and CRLF as end of line"
+    file = mkpath('setup.sql')
+    runfile(file)
+    copy_data('external_file_253.txt','data_file.txt')
+    write_config_file(reuse_tables=True,
+                      format='text',
+                      file='data_file.txt',
+                      table='texttable2',
+                      newline='CRLF')
+
+@pytest.mark.order(254)
+@prepare_before_test(num=254)
+def test_254_gpload_eol_CRLF_csv():
+    "254 gpload loads csv file with CR and LF in data and CRLF as end of line"
+    file = mkpath('setup.sql')
+    runfile(file)
+    copy_data('external_file_254.csv','data_file.csv')
+    write_config_file(reuse_tables=True,
+                      format='csv',
+                      file='data_file.csv',
+                      table='texttable2',
+                      delimiter=None,
+                      newline='CRLF')
+
+@pytest.mark.order(255)
+@prepare_before_test(num=255)
+def test_255_gpload_eol_LF_txt():
+    "255 gpload loads text file with CR in data and LF as end of line"
+    file = mkpath('setup.sql')
+    runfile(file)
+    copy_data('external_file_255.txt','data_file.txt')
+    write_config_file(reuse_tables=True,
+                      format='text',
+                      file='data_file.txt',
+                      table='texttable2',
+                      newline='LF')
+
+@pytest.mark.order(256)
+@prepare_before_test(num=256)
+def test_256_gpload_eol_LF_csv():
+    "256 gpload loads csv file with CR in data and LF as end of line"
+    file = mkpath('setup.sql')
+    runfile(file)
+    copy_data('external_file_256.csv','data_file.csv')
+    write_config_file(reuse_tables=True,
+                      format='csv',
+                      file='data_file.csv',
+                      table='texttable2',
+                      delimiter=None,
+                      newline='LF')
+
+@pytest.mark.order(257)
+@prepare_before_test(num=257)
+def test_257_gpload_eol_CR_txt():
+    "257 gpload loads text file with CR as end of line"
+    file = mkpath('setup.sql')
+    runfile(file)
+    copy_data('external_file_257.txt','data_file.txt')
+    write_config_file(reuse_tables=True,
+                      format='text',
+                      file='data_file.txt',
+                      table='texttable2',
+                      newline='CR')
+
+@pytest.mark.order(258)
+@prepare_before_test(num=258)
+def test_258_gpload_eol_CR_csv():
+    "258 gpload loads csv file with CR as end of line"
+    file = mkpath('setup.sql')
+    runfile(file)
+    copy_data('external_file_258.csv','data_file.csv')
+    write_config_file(reuse_tables=True,
+                      format='csv',
+                      file='data_file.csv',
+                      table='texttable2',
+                      delimiter=None,
+                      newline='CR')
+
+@pytest.mark.order(259)
+@prepare_before_test(num=259,times=1)
+def test_259_gpload_eol_CRLF_txt():
+    "259 gpload text file load error with invalid NEWLINE value"
+    file = mkpath('setup.sql')
+    runfile(file)
+    copy_data('external_file_259.txt','data_file.txt')
+    write_config_file(reuse_tables=True,
+                      format='text',
+                      file='data_file.txt',
+                      table='texttable2',
+                      newline='LFCR')
+
+@pytest.mark.order(260)
+@prepare_before_test(num=260,times=1)
+def test_260_gpload_eol_CRLF_csv():
+    "260 gpload csv file load error with invalid NEWLINE value"
+    file = mkpath('setup.sql')
+    runfile(file)
+    copy_data('external_file_260.csv','data_file.csv')
+    write_config_file(reuse_tables=True,
+                      format='csv',
+                      file='data_file.csv',
+                      table='texttable2',
+                      delimiter=None,
+                      newline='LFCR')
+
+@pytest.mark.order(261)
+@prepare_before_test(num=261)
+def test_261_gpload_custom_format():
+    "261 gpload loads text file without customer format"
+    file = mkpath('setup.sql')
+    runfile(file)
+    copy_data('external_file_261.txt','data_file.txt')
+    write_config_file(reuse_tables=True,log_errors=True,error_limit=2,sql=True,before='set dataflow.prefer_custom_text = false;',file='data_file.txt',table='texttable2')
+
+
+@pytest.mark.order(262)
+@prepare_before_test(num=262)
+def test_262_gpload_tabel_distributed_key():
+    "262 test gpload create staging table distributed by the target table columns"
+    copy_data('external_file_262.txt','data_file.txt')
+    match_col = ["c1"]
+    update_col = ["'\"C#3\"'"]
+    write_config_file(mode='merge', 
+                      match_columns=match_col, 
+                      update_columns=update_col, 
+                      file='data_file.txt', 
+                      table='testdk1')
+    f = open(mkpath('query262.sql'),'a')
+    f.write("""\\! psql -d reuse_gptest -c '\d staging_gpload_*'""")
+    f.close()
+
+
+@pytest.mark.order(263)
+@prepare_before_test(num=263)
+def test_263_gpload_tabel_distributed_key():
+    "263 test gpload create staging table distributed by the match columns"
+    file = mkpath('setup.sql')
+    runfile(file)
+    copy_data('external_file_262.txt','data_file.txt')
+    match_col = ["c1"]
+    update_col = ["'\"C#3\"'"]
+    write_config_file(mode='merge', 
+                      match_columns=match_col, 
+                      update_columns=update_col, 
+                      file='data_file.txt', 
+                      table='testdk2')
+    f = open(mkpath('query263.sql'),'a')
+    f.write("""\\! psql -d reuse_gptest -c '\d staging_gpload_*'""")
+    f.close()

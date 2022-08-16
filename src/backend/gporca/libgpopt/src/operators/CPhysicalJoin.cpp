@@ -445,6 +445,7 @@ CPhysicalJoin::PdsDerive(CMemoryPool *mp, CExpressionHandle &exprhdl) const
 	CDistributionSpec *pds;
 
 	if (CDistributionSpec::EdtStrictReplicated == pdsOuter->Edt() ||
+		CDistributionSpec::EdtTaintedReplicated == pdsOuter->Edt() ||
 		CDistributionSpec::EdtUniversal == pdsOuter->Edt())
 	{
 		// if outer is replicated/universal, return inner distribution
@@ -466,9 +467,15 @@ CPhysicalJoin::PdsDerive(CMemoryPool *mp, CExpressionHandle &exprhdl) const
 		if (!pdsHashed->HasCompleteEquivSpec(mp))
 		{
 			CExpressionArray *pdrgpexpr = pdsHashed->Pdrgpexpr();
+			IMdIdArray *opfamilies = pdsHashed->Opfamilies();
+
+			if (NULL != opfamilies)
+			{
+				opfamilies->AddRef();
+			}
 			pdrgpexpr->AddRef();
 			return GPOS_NEW(mp) CDistributionSpecHashed(
-				pdrgpexpr, pdsHashed->FNullsColocated());
+				pdrgpexpr, pdsHashed->FNullsColocated(), opfamilies);
 		}
 	}
 

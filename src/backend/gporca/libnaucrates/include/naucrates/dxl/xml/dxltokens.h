@@ -176,6 +176,7 @@ enum Edxltoken
 	EdxltokenScalarSortCol,
 	EdxltokenScalarSortColList,
 	EdxltokenScalarGroupingColList,
+	EdxltokenScalarSortGroupClause,
 
 	EdxltokenScalarBitmapAnd,
 	EdxltokenScalarBitmapOr,
@@ -302,12 +303,17 @@ enum Edxltoken
 
 	EdxltokenAggrefOid,
 	EdxltokenAggrefDistinct,
+	EdxltokenAggrefKind,
+	EdxltokenAggrefGpAggOid,
 	EdxltokenAggrefStage,
 	EdxltokenAggrefLookups,
 	EdxltokenAggrefStageNormal,
 	EdxltokenAggrefStagePartial,
 	EdxltokenAggrefStageIntermediate,
 	EdxltokenAggrefStageFinal,
+	EdxltokenAggrefKindNormal,
+	EdxltokenAggrefKindOrderedSet,
+	EdxltokenAggrefKindHypothetical,
 
 	EdxltokenArrayType,
 	EdxltokenArrayElementType,
@@ -504,6 +510,7 @@ enum Edxltoken
 	EdxltokenIndexIncludedCols,
 	EdxltokenIndexClustered,
 	EdxltokenIndexPartial,
+	EdxltokenIndexPhysicalType,
 	EdxltokenIndexType,
 	EdxltokenIndexTypeBtree,
 	EdxltokenIndexTypeBitmap,

@@ -1,6 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE map PUBLIC "-//OASIS//DTD DITA Map//EN" "map.dtd">
-<map>
- <title>DRAFT: GPDB Monitoring and Maintenance Recommendations</title>
- <topicref href="monitoring.dita"/>
-</map>

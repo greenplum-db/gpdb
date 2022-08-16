@@ -34,6 +34,7 @@ using namespace gpmd;
 //---------------------------------------------------------------------------
 CMDIndexGPDB::CMDIndexGPDB(CMemoryPool *mp, IMDId *mdid, CMDName *mdname,
 						   BOOL is_clustered, IMDIndex::EmdindexType index_type,
+						   IMDIndex::EmdindexType index_physical_type,
 						   IMDId *mdid_item_type,
 						   ULongPtrArray *index_key_cols_array,
 						   ULongPtrArray *included_cols_array,
@@ -44,6 +45,7 @@ CMDIndexGPDB::CMDIndexGPDB(CMemoryPool *mp, IMDId *mdid, CMDName *mdname,
 	  m_mdname(mdname),
 	  m_clustered(is_clustered),
 	  m_index_type(index_type),
+	  m_index_physical_type(index_physical_type),
 	  m_mdid_item_type(mdid_item_type),
 	  m_index_key_cols_array(index_key_cols_array),
 	  m_included_cols_array(included_cols_array),
@@ -142,6 +144,20 @@ IMDIndex::EmdindexType
 CMDIndexGPDB::IndexType() const
 {
 	return m_index_type;
+}
+
+//---------------------------------------------------------------------------
+//	@function:
+//		CMDIndexGPDB::IndexPhysicalType
+//
+//	@doc:
+//		Index physical type
+//
+//---------------------------------------------------------------------------
+IMDIndex::EmdindexType
+CMDIndexGPDB::IndexPhysicalType() const
+{
+	return m_index_physical_type;
 }
 
 //---------------------------------------------------------------------------
@@ -288,6 +304,9 @@ CMDIndexGPDB::Serialize(CXMLSerializer *xml_serializer) const
 
 	xml_serializer->AddAttribute(CDXLTokens::GetDXLTokenStr(EdxltokenIndexType),
 								 GetDXLStr(m_index_type));
+	xml_serializer->AddAttribute(
+		CDXLTokens::GetDXLTokenStr(EdxltokenIndexPhysicalType),
+		GetDXLStr(m_index_physical_type));
 	if (NULL != m_mdid_item_type)
 	{
 		m_mdid_item_type->Serialize(
@@ -341,6 +360,8 @@ CMDIndexGPDB::DebugPrint(IOstream &os) const
 
 	os << "Index name: " << (Mdname()).GetMDName()->GetBuffer() << std::endl;
 	os << "Index type: " << GetDXLStr(m_index_type)->GetBuffer() << std::endl;
+	os << "Physical Index type: "
+	   << GetDXLStr(m_index_physical_type)->GetBuffer() << std::endl;
 
 	os << "Index keys: ";
 	for (ULONG ul = 0; ul < Keys(); ul++)

@@ -262,7 +262,8 @@ where dispatch_test_t1.c2 = dispatch_test_t2.c2 and dispatch_test_t2.c3 = dispat
 select cleanupAllGangs();
 
 -- segment 0 report an error when get a request 
-select gp_inject_fault('send_qe_details_init_backend', 'error', 2);
+-- the fault may be triggered by other backend process, such as dtx recovery process, specify a session id.
+select gp_inject_fault('send_qe_details_init_backend', 'error', 2, current_setting('gp_session_id')::int);
 select cleanupAllGangs();
 
 -- expect failure
@@ -280,7 +281,8 @@ select cleanupAllGangs();
 
 select gp_inject_fault('send_qe_details_init_backend', 'reset', 2);
 -- segment 0 report an error when get the second request (reader gang creation request)
-select gp_inject_fault('send_qe_details_init_backend', 'error', '', '', '', 3, 3, 0, 2::smallint);
+-- the fault may be triggered by other backend process, such as dtx recovery process, specify a session id.
+select gp_inject_fault('send_qe_details_init_backend', 'error', '', '', '', 3, 3, 0, 2::smallint, current_setting('gp_session_id')::int);
 select cleanupAllGangs();
 
 -- expect failure
@@ -526,5 +528,64 @@ returning
          as pg_lsn),
       cast(pg_catalog.pg_last_xlog_receive_location() as pg_lsn)), cast(null as "numeric")) as "numeric") as c24;
 
+--
+-- Test executor double fault
+-- check PG_TRY/PG_CATCH - we should always return an original error
+-- (for a query and its explain analyze)
+--
+drop table if exists double_fault;
+create table double_fault(a int) distributed by (a);
+insert into double_fault select generate_series(1, 10);
+create or replace function fault_exec_plan(explain_analyze bool default true) returns void as $_$
+declare
+    query text;
+begin
+    perform gp_inject_fault('executor_pre_tuple_processed', 'reset', dbid) from gp_segment_configuration;
+    perform gp_inject_fault('send_exec_stats', 'reset', dbid) from gp_segment_configuration;
+
+    perform gp_inject_fault('executor_pre_tuple_processed', 'error', dbid)
+    from gp_segment_configuration where role = 'p' and content > -1;
+    perform gp_inject_fault('send_exec_stats', 'error', dbid)
+    from gp_segment_configuration where role = 'p' and content > -1;
+
+    if explain_analyze then
+        query := 'explain analyze select count(*) from double_fault';
+    else
+        query := 'select count(*) from double_fault';
+    end if;
+    execute query;
+
+    perform gp_inject_fault('executor_pre_tuple_processed', 'reset', dbid) from gp_segment_configuration;
+    perform gp_inject_fault('send_exec_stats', 'reset', dbid) from gp_segment_configuration;
+exception when fault_inject then
+    perform gp_inject_fault('executor_pre_tuple_processed', 'reset', dbid) from gp_segment_configuration;
+    perform gp_inject_fault('send_exec_stats', 'reset', dbid) from gp_segment_configuration;
+
+    raise exception $$'%' fault triggered$$, case
+        when coalesce(substring(sqlerrm from 'send_exec_stats'), '') != '' then 'send_exec_stats'
+        when coalesce(substring(sqlerrm from 'executor_pre_tuple_processed'), '') != '' then 'executor_pre_tuple_processed'
+    end;
+end;
+$_$ language plpgsql;
+-- Query raising 'executor_pre_tuple_processed' error
+select fault_exec_plan(false);
+-- Same query with explain analyze (should raise
+-- 'executor_pre_tuple_processed' not 'send_exec_stats')
+select fault_exec_plan(true);
+
 \c regression
 DROP DATABASE dispatch_test_db;
+
+-- issue: https://github.com/greenplum-db/gpdb/issues/13393
+-- We should avoid a double free and resultant PANIC if the
+-- process of recycling the gang is interrupted by a signal
+CREATE EXTENSION if not exists gp_inject_fault;
+create table t13393(tc1 int);
+insert into t13393 select generate_series(1,10000);
+analyze gp_segment_configuration;
+SELECT gp_inject_fault('cdbcomponent_recycle_idle_qe_error', 'interrupt', dbid, current_setting('gp_session_id')::int)
+ from gp_segment_configuration where content=-1 and role='p';
+select * from gp_segment_configuration a, t13393 ,gp_segment_configuration b where a.dbid = t13393.tc1 limit 0;
+SELECT gp_inject_fault('cdbcomponent_recycle_idle_qe_error', 'reset', dbid, current_setting('gp_session_id')::int)
+ from gp_segment_configuration where content=-1 and role='p';
+drop table t13393;

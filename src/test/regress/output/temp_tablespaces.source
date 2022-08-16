@@ -217,6 +217,9 @@ select count(*) from (select i, count(*) from tts_aggspill group by i,j,t having
  10000
 (1 row)
 
+--start_ignore
+-- ignore the output, we only need the following query to spill on Sort
+--end_ignore
 set optimizer = off;
 set statement_mem='3MB';
 select count(*) from (with ctesisc as
@@ -262,6 +265,22 @@ select gp_tablespace_watch_match(gp_execution_dbid(), 'default', '_SIRW_') > 0 a
 (3 rows)
 
 select gp_tablespace_watch_match(gp_execution_dbid(), 'temp', '_SIRW_') > 0 as "exist";
+ exist 
+-------
+ t
+ t
+ t
+(3 rows)
+
+select gp_tablespace_watch_match(gp_execution_dbid(), 'default', '_Sort_') > 0 as "exist";
+ exist 
+-------
+ f
+ f
+ f
+(3 rows)
+
+select gp_tablespace_watch_match(gp_execution_dbid(), 'temp', '_Sort_') > 0 as "exist";
  exist 
 -------
  t
@@ -388,6 +407,9 @@ select count(*) from (select i, count(*) from tts_aggspill group by i,j,t having
  10000
 (1 row)
 
+--start_ignore
+-- ignore the output, we only need the following query to spill on Sort
+--end_ignore
 set optimizer = off;
 set statement_mem='3MB';
 select count(*) from (with ctesisc as
@@ -433,9 +455,42 @@ select gp_tablespace_watch_match(gp_execution_dbid(), 'default', '_HashAggregate
  t
 (3 rows)
 
+select gp_tablespace_watch_match(gp_execution_dbid(), 'default', '_Sort_') > 0 as "exist";
+ exist 
+-------
+ t
+ t
+ t
+(3 rows)
+
 drop table tts_foo, tts_bar, tts_jazz, tts_aggspill, tts_testsiscm;
 drop tablespace mytempsp0;
 drop tablespace mytempsp1;
 drop tablespace mytempsp2;
 drop tablespace mytempsp3;
 drop tablespace mytempsp4;
+-- test for Github Issue 12871
+create tablespace space_12871 location '@testtablespace@_space_12871';
+set temp_tablespaces = space_12871;
+DO
+$$
+    DECLARE l_rec RECORD;
+    BEGIN
+        CREATE TEMPORARY TABLE tmp_table_12871
+        (
+            key VARCHAR NOT NULL,
+            value   VARCHAR NOT NULL
+        )   DISTRIBUTED RANDOMLY;
+        INSERT INTO tmp_table_12871  VALUES ('a',1),('b',2);
+        FOR l_rec IN ( SELECT key, value
+                       FROM tmp_table_12871
+                       )
+            LOOP
+                RAISE NOTICE 'ok';
+            END LOOP;
+    END;
+$$;
+NOTICE:  ok
+NOTICE:  ok
+drop table tmp_table_12871;
+drop tablespace space_12871;

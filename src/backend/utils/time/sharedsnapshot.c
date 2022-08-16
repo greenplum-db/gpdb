@@ -366,7 +366,10 @@ retry:
 		SharedSnapshotSlot *testSlot = &arrayP->slots[i];
 
 		if (testSlot->slotindex > arrayP->maxSlots)
+		{
+			LWLockRelease(SharedSnapshotLock);
 			elog(ERROR, "Shared Local Snapshots Array appears corrupted: %s", SharedSnapshotDump());
+		}
 
 		if (testSlot->slotid == slotId)
 		{
@@ -390,8 +393,10 @@ retry:
 		}
 		else
 		{
+			char *slot_dump = SharedSnapshotDump();
+			LWLockRelease(SharedSnapshotLock);
 			elog(ERROR, "writer segworker group shared snapshot collision on id %d. Slot array dump: %s",
-				 slotId, SharedSnapshotDump());
+				 slotId, slot_dump);
 		}
 	}
 
@@ -644,9 +649,14 @@ dumpSharedLocalSnapshot_forCursor(void)
 	oldowner = CurrentResourceOwner;
 	CurrentResourceOwner = TopTransactionResourceOwner;
 	oldcontext = MemoryContextSwitchTo(TopTransactionContext);
-	f = BufFileCreateNamedTemp(fname,
-							   false /* interXact */,
-							   NULL /* work_set */);
+
+	/*
+	 * Force using default tablespace instead of any temp tablespaces,
+	 * Refer to Issue: https://github.com/greenplum-db/gpdb/issues/12871.
+	 */
+	f = BufFileCreateNamedTemp_ForceDefaultSpace(fname,
+												 false /* interXact */,
+												 NULL /* work_set */);
 
 	/*
 	 * Remember our file, so that we can close it at end of transaction.
@@ -741,8 +751,11 @@ readSharedLocalSnapshot_forCursor(Snapshot snapshot, DtxContext distributedTrans
 	 */
 	fname = sharedLocalSnapshot_filename(QEDtxContextInfo.distributedXid, QEDtxContextInfo.segmateSync);
 
-	f = BufFileOpenNamedTemp(fname,
-							 false /* interXact */);
+	/*
+	 * Refer to the similar comments in function dumpSharedLocalSnapshot_forCursor().
+	 */
+	f = BufFileOpenNamedTemp_ForceDefaultSpace(fname,
+											   false /* interXact */);
 	/* we have our file. */
 
 #define FileReadOK(file, ptr, size) (BufFileRead(file, ptr, size) == size)
@@ -833,6 +846,16 @@ readSharedLocalSnapshot_forCursor(Snapshot snapshot, DtxContext distributedTrans
 		localXid,
 		snapshot->curcid,
 		distributedTransactionContext);
+
+	/*
+	 * After SetSharedTransactionId_reader is called, we need to
+	 * invalidate catalog snapshot so that next time it will get
+	 * a new catalog snapshot containing the correct command id.
+	 *
+	 * See Issue https://github.com/greenplum-db/gpdb/issues/12871#issuecomment-982627753
+	 * for details.
+	 */
+	InvalidateCatalogSnapshot();
 
 	return;
 }

@@ -52,6 +52,11 @@ private:
 	// index type
 	EmdindexType m_index_type;
 
+	// index physical type represents the format structure on disk. Indexes on
+	// partitioned tables are stored as "logical" indexes in m_index_type. A
+	// "logical" index may be different than the physical index.
+	EmdindexType m_index_physical_type;
+
 	// type of items returned by index
 	IMDId *m_mdid_item_type;
 
@@ -77,7 +82,8 @@ public:
 	// ctor
 	CMDIndexGPDB(CMemoryPool *mp, IMDId *mdid, CMDName *mdname,
 				 BOOL is_clustered, EmdindexType index_type,
-				 IMDId *mdid_item_type, ULongPtrArray *index_key_cols_array,
+				 EmdindexType index_physical_type, IMDId *mdid_item_type,
+				 ULongPtrArray *index_key_cols_array,
 				 ULongPtrArray *included_cols_array,
 				 IMdIdArray *mdid_opfamilies_array,
 				 IMDPartConstraint *mdpart_constraint);
@@ -96,6 +102,9 @@ public:
 
 	// index type
 	virtual EmdindexType IndexType() const;
+
+	// index physical type
+	virtual EmdindexType IndexPhysicalType() const;
 
 	// number of keys
 	virtual ULONG Keys() const;

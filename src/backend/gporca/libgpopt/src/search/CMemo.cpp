@@ -399,7 +399,6 @@ CMemo::PexprExtractPlan(CMemoryPool *mp, CGroup *pgroupRoot,
 }
 
 
-#ifdef GPOS_DEBUG
 //---------------------------------------------------------------------------
 //	@function:
 //		CMemo::Pgroup
@@ -424,7 +423,6 @@ CMemo::Pgroup(ULONG id)
 
 	return NULL;
 }
-#endif	// GPOS_DEBUG
 
 
 //---------------------------------------------------------------------------

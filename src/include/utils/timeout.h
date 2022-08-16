@@ -30,6 +30,7 @@ typedef enum TimeoutId
 	STANDBY_DEADLOCK_TIMEOUT,
 	STANDBY_TIMEOUT,
 	GANG_TIMEOUT,
+	CLIENT_CONNECTION_CHECK_TIMEOUT,
 	/* First user-definable timeout reason */
 	USER_TIMEOUT,
 	/* Maximum number of timeout reasons */
@@ -79,6 +80,7 @@ extern void disable_timeouts(const DisableTimeoutParams *timeouts, int count);
 extern void disable_all_timeouts(bool keep_indicators);
 
 /* accessors */
+extern bool get_timeout_active(TimeoutId id);
 extern bool get_timeout_indicator(TimeoutId id, bool reset_indicator);
 extern TimestampTz get_timeout_start_time(TimeoutId id);
 extern TimestampTz get_timeout_finish_time(TimeoutId id);

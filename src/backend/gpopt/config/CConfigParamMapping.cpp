@@ -265,6 +265,10 @@ CConfigParamMapping::SConfigMappingElem CConfigParamMapping::m_elements[] = {
 	 GPOS_WSZ_LIT(
 		 "Enable Eager Agg transform for pushing aggregate below an innerjoin.")},
 
+	{EopttraceEnableOrderedAgg, &optimizer_enable_orderedagg,
+	 false,	 // m_negate_param
+	 GPOS_WSZ_LIT("Enable ordered aggregate plans.")},
+
 	{EopttraceExpandFullJoin, &optimizer_expand_fulljoin,
 	 false,	 // m_negate_param
 	 GPOS_WSZ_LIT(
@@ -286,6 +290,11 @@ CConfigParamMapping::SConfigMappingElem CConfigParamMapping::m_elements[] = {
 	 false,	 // m_negate_param
 	 GPOS_WSZ_LIT(
 		 "Enable plan alternatives where NLJ's inner child is redistributed")},
+	{EopttraceForceComprehensiveJoinImplementation,
+	 &optimizer_force_comprehensive_join_implementation,
+	 false,	 // m_negate_param
+	 GPOS_WSZ_LIT(
+		 "Explore a nested loop join even if a hash join is possible")},
 
 };
 

@@ -50,4 +50,5 @@ dropdb_check_shared_buffer_cache.out
 createdb.out
 /autovacuum-template0-segment.out
 /default_tablespace.out
+/gp_dispatch_keepalives.out
 /external_table_persistent_error_log.out

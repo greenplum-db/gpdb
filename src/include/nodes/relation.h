@@ -140,6 +140,8 @@ typedef struct PlannerGlobal
 	bool		oneoffPlan;		/* redo plan on every execution? */
 	bool		simplyUpdatable; /* can be used with CURRENT OF? */
 
+	bool		is_parallel_cursor;	/* is the query a parallel retrieve cursor? */
+
 	ApplyShareInputContext share;	/* workspace for GPDB plan sharing */
 
 } PlannerGlobal;

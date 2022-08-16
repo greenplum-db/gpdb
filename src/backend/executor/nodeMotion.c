@@ -1015,7 +1015,10 @@ ExecInitMotion(Motion *node, EState *estate, int eflags)
 			if (recvSlice->sliceIndex == recvSlice->rootIndex)
 			{
 				motionstate->mstype = MOTIONSTATE_RECV;
+				/* For parallel retrieve cursor, the motion's gang type could be set as
+				 * GANGTYPE_ENTRYDB_READER explicitly*/
 				Assert(recvSlice->gangType == GANGTYPE_UNALLOCATED ||
+					   recvSlice->gangType == GANGTYPE_ENTRYDB_READER ||
 					   recvSlice->gangType == GANGTYPE_PRIMARY_WRITER);
 			}
 			else

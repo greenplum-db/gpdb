@@ -53,6 +53,7 @@
 #include "gpopt/operators/CScalarSubqueryNotExists.h"
 #include "gpopt/operators/CScalarSwitch.h"
 #include "gpopt/operators/CScalarSwitchCase.h"
+#include "gpopt/operators/CScalarValuesList.h"
 #include "gpopt/operators/CScalarWindowFunc.h"
 
 // logical ops

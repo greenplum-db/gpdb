@@ -9,25 +9,25 @@
     <p>The utility is in <codeph>$GPHOME/bin/lib</codeph>.</p>
     <section id="section2">
       <title>Synopsis</title>
-      <codeblock><b>gpcheckcat</b> [ <varname>options</varname>] [ <varname>dbname</varname>] 
+      <codeblock>gpcheckcat [ &lt;options&lt;] [ &lt;dbname>] 
 
-  <b>Options:</b>
-     <b>-g</b> <varname>dir</varname>
-     <b>-p</b> <varname>port</varname>
-     <b>-s</b> <varname>test_name | 'test_name1, test_name2 [, ...]'</varname>  
-     <b>-P</b> <varname>password</varname>
-     <b>-U</b> <varname>user_name</varname>
-     <b>-S</b> {none | only}
-     <b>-O</b>
-     <b>-R</b> <varname>test_name | 'test_name1, test_name2 [, ...]'</varname>
-     <b>-C</b> <varname>catalog_name</varname>
-     <b>-B</b> <varname>parallel_processes</varname>
-     <b>-v</b>
-     <b>-A</b>
+  Options:
+     -g &lt;dir>
+     -p &lt;port>
+     -s &lt;test_name | 'test_name1, test_name2 [, ...]'>  
+     -P &lt;password>
+     -U &lt;user_name>
+     -S {none | only}
+     -O
+     -R &lt;test_name | 'test_name1, test_name2 [, ...]'>
+     -C &lt;catalog_name>
+     -B &lt;parallel_processes>
+     -v
+     -A
 
-<b>gpcheckcat</b>  <b>-l</b> 
+gpcheckcat  -l 
 
-<b>gpcheckcat</b> <b>-? | --help</b> 
+gpcheckcat -? | --help 
 </codeblock>
     </section>
     <section id="section3">
@@ -67,7 +67,7 @@
             installation.</pd>
         </plentry>
         <plentry>
-          <pt>-B <varname>parallel_processes</varname></pt>
+          <pt>-B &lt;parallel_processes></pt>
           <pd>The number of processes to run in parallel. </pd>
           <pd>
             <p>The <codeph>gpcheckcat</codeph> utility attempts to determine the number of
@@ -183,13 +183,13 @@
     </section>
     <section><title>Notes</title>The utility identifies tables with missing attributes and displays
       them in various locations in the output and in a non-standardized format. The utility also
-      displays a summary list of tables with missing attributes in the format
-          <codeph><varname>database</varname>.<varname>schema</varname>.<varname>table</varname>.<varname>segment_id</varname></codeph>
-      after the output information is displayed.<p>If <codeph>gpcheckcat</codeph> detects
-        inconsistent OID (Object ID) information, it generates one or more verification files that
-        contain an SQL query. You can run the SQL query to see details about the OID inconsistencies
-        and investigate the inconsistencies. The files are generated in the directory where
-          <codeph>gpcheckcat</codeph> is invoked. </p><p>This is the format of the
+      displays a summary list of tables with missing attributes in the format <codeph>&lt;database>.
+        &lt;schema>. &lt;table>. &lt;segment_id></codeph> after the output information is
+        displayed.<p>If <codeph>gpcheckcat</codeph> detects inconsistent OID (Object ID)
+        information, it generates one or more verification files that contain an SQL query. You can
+        run the SQL query to see details about the OID inconsistencies and investigate the
+        inconsistencies. The files are generated in the directory where <codeph>gpcheckcat</codeph>
+        is invoked. </p><p>This is the format of the
         file:</p><pre>gpcheckcat.verify.<varname>dbname</varname>.<varname>catalog_table_name</varname>.<varname>test_name</varname>.<varname>TIMESTAMP</varname>.sql</pre><p>This
         is an example verification filename created by <codeph>gpcheckcat</codeph> when it detects
         inconsistent OID (Object ID) information in the catalog table <i>pg_type</i> in the database

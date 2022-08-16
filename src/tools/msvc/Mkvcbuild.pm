@@ -71,15 +71,25 @@ sub mkvcbuild
 	  chklocale.c crypt.c fls.c fseeko.c getrusage.c inet_aton.c random.c
 	  srandom.c getaddrinfo.c gettimeofday.c inet_net_ntop.c kill.c open.c
 	  erand48.c snprintf.c strlcat.c strlcpy.c dirmod.c noblock.c path.c
-	  pgcheckdir.c pg_crc.c pgmkdirp.c pgsleep.c pgstrcasecmp.c pqsignal.c
-	  mkdtemp.c qsort.c qsort_arg.c quotes.c system.c
+	  pg_strong_random.c pgcheckdir.c pg_crc.c pgmkdirp.c pgsleep.c pgstrcasecmp.c
+	  pqsignal.c mkdtemp.c qsort.c qsort_arg.c quotes.c system.c
 	  sprompt.c tar.c thread.c getopt.c getopt_long.c dirent.c
 	  win32env.c win32error.c win32setlocale.c);
 
 	push(@pgportfiles, 'rint.c') if ($vsVersion < '12.00');
 
 	our @pgcommonallfiles = qw(
-	  exec.c pgfnames.c psprintf.c relpath.c rmtree.c string.c username.c wait_error.c);
+	  base64.c exec.c pgfnames.c psprintf.c relpath.c rmtree.c
+	  saslprep.c scram-common.c string.c unicode_norm.c username.c wait_error.c);
+
+    if ($solution->{options}->{openssl})
+    {
+        push(@pgcommonallfiles, 'sha2_openssl.c');
+    }
+    else
+    {
+        push(@pgcommonallfiles, 'sha2.c');
+    }
 
 	our @pgcommonfrontendfiles = (@pgcommonallfiles, qw(fe_memutils.c));
 
@@ -429,6 +439,18 @@ sub mkvcbuild
 		'src\interfaces\libpq\libpq.rc');
 	$libpq->AddReference($libpgport);
 
+   # The OBJS scraper doesn't know about ifdefs, so remove fe-secure-openssl.c
+   # and sha2_openssl.c if building without OpenSSL, and remove sha2.c if
+   # building with OpenSSL.
+	if (!$solution->{options}->{openssl})
+	{
+		$libpq->RemoveFile('src\common\sha2_openssl.c');
+	}
+	else
+	{
+		$libpq->RemoveFile('src\common\sha2.c');
+	}
+
 	if (!$buildclient)
 	{
 	my $libpqwalreceiver =
@@ -655,13 +677,13 @@ sub mkvcbuild
 	{
 		$pgcrypto->AddFiles(
 			'contrib\pgcrypto',   'md5.c',
-			'sha1.c',             'sha2.c',
-			'internal.c',         'internal-sha2.c',
-			'blf.c',              'rijndael.c',
-			'fortuna.c',          'random.c',
-			'pgp-mpi-internal.c', 'imath.c');
+			'sha1.c',             'internal.c',
+			'internal-sha2.c',    'blf.c',
+			'rijndael.c',         'pgp-mpi-internal.c',
+			'imath.c');
 	}
 	$pgcrypto->AddReference($postgres);
+	$pgcrypto->AddReference($libpgcommon);
 	$pgcrypto->AddLibrary('wsock32.lib');
 	$mf = Project::read_file('contrib/pgcrypto/Makefile');
 	GenerateContribSqlFiles('pgcrypto', $mf);

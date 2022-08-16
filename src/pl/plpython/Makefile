@@ -87,7 +87,8 @@ SHLIB_LINK = $(python_libspec) $(python_additional_libs) $(filter -lintl,$(LIBS)
 
 REGRESS_OPTS = --dbname=$(PL_TESTDB) --init-file=$(srcdir)/init_file
 # Only load plpythonu with Python 2.  The test files themselves load
-# the versioned language plpython(2|3)u.
+# for plpython3 extension name is the same as language name.
+# we do not need to load again.
 ifeq ($(python_majorversion),2)
 REGRESS_OPTS += --load-extension=plpythonu
 endif
@@ -157,18 +158,23 @@ REGRESS := $(foreach test,$(REGRESS),$(if $(filter $(test),$(REGRESS_PLPYTHON3_M
 .PHONY: pgregress-python3-mangle
 pgregress-python3-mangle:
 	$(MKDIR_P) sql/python3 expected/python3 results/python3
+	# for python and python3 types and returns test are not the same.
+	cp expected/plpython_types_3.out expected/python3/plpython_types.out
+	cp expected/plpython_returns_3.out expected/python3/plpython_returns.out
 	for file in $(patsubst %,$(srcdir)/sql/%.sql,$(REGRESS_PLPYTHON3_MANGLE)) $(patsubst %,$(srcdir)/expected/%*.out,$(REGRESS_PLPYTHON3_MANGLE)); do \
 	  sed -e 's/except \([[:alpha:]][[:alpha:].]*\), *\([[:alpha:]][[:alpha:]]*\):/except \1 as \2:/g' \
 	      -e "s/<type 'exceptions\.\([[:alpha:]]*\)'>/<class '\1'>/g" \
 	      -e "s/<type 'long'>/<class 'int'>/g" \
+	      -e "s/<type 'list'>/<class 'list'>/g" \
+	      -e "s/<type 'NoneType'>/<class 'NoneType'>/g" \
 	      -e "s/\([0-9][0-9]*\)L/\1/g" \
 	      -e 's/\([ [{]\)u"/\1"/g' \
 	      -e "s/\([ [{]\)u'/\1'/g" \
 	      -e "s/def next/def __next__/g" \
-	      -e "s/LANGUAGE plpythonu/LANGUAGE plpython3u/g" \
-	      -e "s/LANGUAGE plpython2u/LANGUAGE plpython3u/g" \
-	      -e "s/EXTENSION plpythonu/EXTENSION plpython3u/g" \
-	      -e "s/EXTENSION plpython2u/EXTENSION plpython3u/g" \
+	      -e "s/LANGUAGE plpythonu/LANGUAGE plpython3u/Ig" \
+	      -e "s/LANGUAGE plpython2u/LANGUAGE plpython3u/Ig" \
+	      -e "s/EXTENSION plpythonu/EXTENSION plpython3u/Ig" \
+	      -e "s/EXTENSION plpython2u/EXTENSION plpython3u/Ig" \
 	    $$file >`echo $$file | sed 's,^.*/\([^/][^/]*/\)\([^/][^/]*\)$$,\1python3/\2,'` || exit; \
 	done
 

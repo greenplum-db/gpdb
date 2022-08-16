@@ -1,0 +1,127 @@
+-- Ensure that pg_dump --binary-upgrade correctly suppresses the ALTER
+-- TABLE DROP COLUMN DDL ouptut when a GPDB partition table with a
+-- dropped column reference on the root partition exists whereas the
+-- same dropped column reference does not exist on all of its child
+-- partitions. If the same dropped column reference exists on its
+-- child partitions, the ALTER TABLE DROP COLUMN DDL should be
+-- outputted. Refer to function check_heterogeneous_partition() in
+-- pg_upgrade's check_gp.c for more details on homogeneous and
+-- heterogeneous partitions.
+CREATE SCHEMA dump_this_schema;
+-- Scenario 1: Create homogeneous partition table where the root
+-- partition and ALL of its child partitions have the dropped column
+-- reference.
+CREATE TABLE dump_this_schema.dropped_column_homogeneous_partition_table (
+    a int,
+    b char,
+    c varchar(50)
+) DISTRIBUTED BY (b)
+PARTITION BY RANGE (a)
+(
+    PARTITION p1 START(1) END(5),
+    PARTITION p2 START(5)
+);
+ALTER TABLE dump_this_schema.dropped_column_homogeneous_partition_table DROP COLUMN c;
+-- All of the partition hierarchy members have the same dropped column reference
+SELECT relname, relnatts FROM pg_class WHERE relname LIKE 'dropped_column_homogeneous_partition_table%';
+                       relname                       | relnatts 
+-----------------------------------------------------+----------
+ dropped_column_homogeneous_partition_table          |        3
+ dropped_column_homogeneous_partition_table_1_prt_p1 |        3
+ dropped_column_homogeneous_partition_table_1_prt_p2 |        3
+(3 rows)
+
+SELECT c.relname, a.attname
+FROM pg_class c JOIN pg_attribute a ON c.oid = a.attrelid
+WHERE a.attisdropped = true AND relname LIKE 'dropped_column_homogeneous_partition_table%';
+                       relname                       |           attname            
+-----------------------------------------------------+------------------------------
+ dropped_column_homogeneous_partition_table_1_prt_p1 | ........pg.dropped.3........
+ dropped_column_homogeneous_partition_table_1_prt_p2 | ........pg.dropped.3........
+ dropped_column_homogeneous_partition_table          | ........pg.dropped.3........
+(3 rows)
+
+-- Scenario 2: Create homogeneous partition table where only the root
+-- partition has the dropped column reference (as defined by
+-- pg_upgrade heterogeneous partition check function).
+CREATE TABLE dump_this_schema.dropped_column_special_homogeneous_partition_table (
+    a int,
+    b char,
+    c varchar(50)
+) DISTRIBUTED BY (b)
+PARTITION BY RANGE (a)
+(
+    PARTITION p1 START(1) END(5)
+);
+ALTER TABLE dump_this_schema.dropped_column_special_homogeneous_partition_table DROP COLUMN c;
+CREATE TABLE dump_this_schema.staging_table_for_exchange_partition
+       AS SELECT * FROM dump_this_schema.dropped_column_special_homogeneous_partition_table_1_prt_p1 DISTRIBUTED BY (b);
+ALTER TABLE dump_this_schema.dropped_column_special_homogeneous_partition_table
+      EXCHANGE PARTITION p1 WITH TABLE dump_this_schema.staging_table_for_exchange_partition;
+DROP TABLE dump_this_schema.staging_table_for_exchange_partition;
+-- All of the partition hierarchy members DO NOT have the same dropped column reference
+SELECT relname, relnatts FROM pg_class WHERE relname LIKE 'dropped_column_special_homogeneous_partition_table%';
+                           relname                           | relnatts 
+-------------------------------------------------------------+----------
+ dropped_column_special_homogeneous_partition_table          |        3
+ dropped_column_special_homogeneous_partition_table_1_prt_p1 |        2
+(2 rows)
+
+SELECT c.relname, a.attname
+FROM pg_class c JOIN pg_attribute a ON c.oid = a.attrelid
+WHERE a.attisdropped = true AND relname LIKE 'dropped_column_special_homogeneous_partition_table%';
+                      relname                       |           attname            
+----------------------------------------------------+------------------------------
+ dropped_column_special_homogeneous_partition_table | ........pg.dropped.3........
+(1 row)
+
+-- Scenario 3: Create homogeneous partition table where only the root
+-- and subroot partition has the dropped column reference (as defined
+-- by pg_upgrade heterogeneous partition check function).
+CREATE TABLE dump_this_schema.dropped_column_special_homogeneous_partition_with_subpart (
+    a int,
+    b char,
+    c varchar(50)
+) DISTRIBUTED BY (b)
+PARTITION BY RANGE (a)
+SUBPARTITION BY RANGE (b)
+(
+    PARTITION sp1 START(1) END(5)
+    (
+	SUBPARTITION p1 START(1) END(3)
+    )
+);
+NOTICE:  CREATE TABLE will create partition "dropped_column_special_homogeneous_partition_with_sub_1_prt_sp1" for table "dropped_column_special_homogeneous_partition_with_subpart"
+NOTICE:  CREATE TABLE will create partition "dropped_column_special_homogeneous_partition_with_sub__2_prt_p1" for table "dropped_column_special_homogeneous_partition_with_sub_1_prt_sp1"
+ALTER TABLE dump_this_schema.dropped_column_special_homogeneous_partition_with_subpart DROP COLUMN c;
+CREATE TABLE dump_this_schema.staging_table_for_exchange_partition
+       AS SELECT * FROM dump_this_schema.dropped_column_special_homogeneous_partition_with_sub_1_prt_sp1 DISTRIBUTED BY (b);
+ALTER TABLE dump_this_schema.dropped_column_special_homogeneous_partition_with_subpart
+      ALTER PARTITION sp1 EXCHANGE PARTITION p1 WITH TABLE dump_this_schema.staging_table_for_exchange_partition;
+NOTICE:  exchanged partition "p1" of partition "sp1" of relation "dropped_column_special_homogeneous_partition_with_subpart" with relation "staging_table_for_exchange_partition"
+DROP TABLE dump_this_schema.staging_table_for_exchange_partition;
+-- All of the partition hierarchy members DO NOT have the same dropped column reference
+SELECT relname, relnatts FROM pg_class WHERE relname LIKE 'dropped_column_special_homogeneous_partition_with_subpart%';
+                          relname                          | relnatts 
+-----------------------------------------------------------+----------
+ dropped_column_special_homogeneous_partition_with_subpart |        3
+(1 row)
+
+SELECT c.relname, a.attname
+FROM pg_class c JOIN pg_attribute a ON c.oid = a.attrelid
+WHERE a.attisdropped = true AND relname LIKE 'dropped_column_special_homogeneous_partition_with_subpart%';
+                          relname                          |           attname            
+-----------------------------------------------------------+------------------------------
+ dropped_column_special_homogeneous_partition_with_subpart | ........pg.dropped.3........
+(1 row)
+
+-- Run pg_dump and expect to see an ALTER TABLE DROP COLUMN output
+-- only for the homogeneous partition table where the entire partition
+-- table has the same dropped column reference.
+\! pg_dump --binary-upgrade --schema dump_this_schema regression | grep " DROP COLUMN "
+ALTER TABLE dump_this_schema.dropped_column_homogeneous_partition_table DROP COLUMN "........pg.dropped.3........";
+DROP SCHEMA dump_this_schema CASCADE;
+NOTICE:  drop cascades to 3 other objects
+DETAIL:  drop cascades to table dump_this_schema.dropped_column_homogeneous_partition_table
+drop cascades to table dump_this_schema.dropped_column_special_homogeneous_partition_table
+drop cascades to table dump_this_schema.dropped_column_special_homogeneous_partition_with_subpart

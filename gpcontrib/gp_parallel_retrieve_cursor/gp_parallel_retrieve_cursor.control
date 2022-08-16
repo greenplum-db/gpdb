@@ -1,0 +1,5 @@
+comment = 'Retrieve results of cursor in parallel'
+default_version = '1.0'
+module_pathname = '$libdir/gp_parallel_retrieve_cursor'
+schema = pg_catalog
+relocatable = false

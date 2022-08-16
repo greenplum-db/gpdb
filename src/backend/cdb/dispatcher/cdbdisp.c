@@ -24,6 +24,8 @@
 #include "executor/execUtils.h"
 #include "libpq-fe.h"
 #include "libpq-int.h"
+#include "libpq/libpq.h"
+#include "libpq/pqformat.h"
 #include "cdb/cdbfts.h"
 #include "cdb/cdbgang.h"
 #include "cdb/cdbsreh.h"
@@ -91,6 +93,29 @@ cdbdisp_waitDispatchFinish(struct CdbDispatcherState *ds)
 {
 	if (pDispatchFuncs->waitDispatchFinish != NULL)
 		(pDispatchFuncs->waitDispatchFinish) (ds);
+}
+
+/*
+ * cdbdisp_checkDispatchAckMessage:
+ *
+ * On QD, check if any expected acknowledge messages from QEs have arrived.
+ * In some cases, QD needs to check or wait the expected acknowledge messages
+ * from QEs, e.g. when defining a parallel retrieve cursor, so that QD can
+ * know if QEs run as expected.
+ *
+ * message: specifies the expected ACK message to check.
+ * timeout_sec: the second that the dispatcher waits for the ack messages at most.
+ *       0 means checking immediately, and -1 means waiting until all ack
+ *       messages are received.
+ */
+bool
+cdbdisp_checkDispatchAckMessage(struct CdbDispatcherState *ds,
+							   const char *message, int timeout_sec)
+{
+	if (pDispatchFuncs == NULL || pDispatchFuncs->checkAckMessage == NULL)
+		return false;
+
+	return (pDispatchFuncs->checkAckMessage) (ds, message, timeout_sec);
 }
 
 /*
@@ -301,6 +326,7 @@ cdbdisp_makeDispatcherState(bool isExtendedQuery)
 #endif
 	handle->dispatcherState->allocatedGangs = NIL;
 	handle->dispatcherState->largestGangSize = 0;
+	handle->dispatcherState->rootGangSize = 0;
 
 	return handle->dispatcherState;
 }
@@ -380,7 +406,8 @@ cdbdisp_destroyDispatcherState(CdbDispatcherState *ds)
 	ds->allocatedGangs = NIL;
 	ds->dispatchParams = NULL;
 	ds->primaryResults = NULL;
-	ds->largestGangSize= 0;
+	ds->largestGangSize = 0;
+	ds->rootGangSize = 0;
 
 	if (h != NULL)
 		destroy_dispatcher_handle(h);

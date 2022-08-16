@@ -62,6 +62,7 @@ extern bool optimizer_enable_ctas;
 extern bool optimizer_enable_dml;
 extern bool optimizer_enable_dml_triggers;
 extern bool optimizer_enable_dml_constraints;
+extern bool optimizer_enable_replicated_table;
 extern bool optimizer_enable_multiple_distinct_aggs;
 
 // OIDs of variants of LEAD window function
@@ -2029,6 +2030,41 @@ CTranslatorQueryToDXL::AddSortingGroupingColumn(
 	}
 }
 
+static BOOL
+ExpressionContainsMissingVars(const Expr *expr, CBitSet *grpby_cols_bitset)
+{
+	if (IsA(expr, Var) && !grpby_cols_bitset->Get(((Var *) expr)->varattno))
+	{
+		return true;
+	}
+	if (IsA(expr, SubLink) && IsA(((SubLink *) expr)->subselect, Query))
+	{
+		ListCell *lc = NULL;
+		ForEach(lc, ((Query *) ((SubLink *) expr)->subselect)->targetList)
+		{
+			if (ExpressionContainsMissingVars(
+					((TargetEntry *) lfirst(lc))->expr, grpby_cols_bitset))
+			{
+				return true;
+			}
+		}
+	}
+	else if (IsA(expr, OpExpr))
+	{
+		ListCell *lc = NULL;
+		ForEach(lc, ((OpExpr *) expr)->args)
+		{
+			if (ExpressionContainsMissingVars((Expr *) lfirst(lc),
+											  grpby_cols_bitset))
+			{
+				return true;
+			}
+		}
+	}
+
+	return false;
+}
+
 //---------------------------------------------------------------------------
 //	@function:
 //		CTranslatorQueryToDXL::CreateSimpleGroupBy
@@ -2111,6 +2147,37 @@ CTranslatorQueryToDXL::CreateSimpleGroupBy(
 				dqa_list = gpdb::LAppend(dqa_list,
 										 gpdb::CopyObject(target_entry->expr));
 				num_dqa++;
+			}
+
+			if (has_grouping_sets)
+			{
+				// If the grouping set is an ordered aggregate with direct
+				// args, then we need to ensure that every direct arg exists in
+				// the group by columns bitset. This is important when a ROLLUP
+				// uses direct args. For example, consider the followinng
+				// query:
+				//
+				// ```
+				// SELECT a, rank(a) WITHIN GROUP (order by b nulls last)
+				// FROM (values (1,1),(1,4),(1,5),(3,1),(3,2)) v(a,b)
+				// GROUP BY ROLLUP (a) ORDER BY a;
+				// ```
+				//
+				// ROLLUP (a) on values produces sets: (1), (3), ().
+				//
+				// In this case we need to ensure that () set will fetch direct
+				// arg "a" as NULL. Whereas (1) and (3) will fetch "a" off of
+				// any tuple in their respective sets.
+				ListCell *ilc = NULL;
+				ForEach(ilc, ((Aggref *) target_entry->expr)->aggdirectargs)
+				{
+					if (ExpressionContainsMissingVars((Expr *) lfirst(ilc),
+													  grpby_cols_bitset))
+					{
+						((Aggref *) target_entry->expr)->aggdirectargs = NIL;
+						break;
+					}
+				}
 			}
 
 			// create a project element for aggregate
@@ -2365,10 +2432,12 @@ CTranslatorQueryToDXL::CreateDXLUnionAllForGroupingSets(
 			CDXLNode(m_mp, GPOS_NEW(m_mp) CDXLLogicalCTEConsumer(
 							   m_mp, cte_id, colid_array_cte_consumer));
 
+		List *target_list_copy = (List *) gpdb::CopyObject(target_list);
+
 		IntToUlongMap *groupby_attno_to_colid_mapping =
 			GPOS_NEW(m_mp) IntToUlongMap(m_mp);
 		CDXLNode *groupby_dxlnode = CreateSimpleGroupBy(
-			target_list, group_clause, grouping_set_bitset, has_aggs,
+			target_list_copy, group_clause, grouping_set_bitset, has_aggs,
 			true,  // has_grouping_sets
 			cte_consumer_dxlnode, phmiulSortgrouprefColIdConsumer,
 			spj_consumer_output_attno_to_colid_mapping,
@@ -2376,19 +2445,19 @@ CTranslatorQueryToDXL::CreateDXLUnionAllForGroupingSets(
 
 		// add a project list for the NULL values
 		CDXLNode *project_dxlnode = CreateDXLProjectNullsForGroupingSets(
-			target_list, groupby_dxlnode, grouping_set_bitset,
+			target_list_copy, groupby_dxlnode, grouping_set_bitset,
 			phmiulSortgrouprefColIdConsumer, groupby_attno_to_colid_mapping,
 			grpcol_index_to_colid_mapping);
 
 		ULongPtrArray *colids_outer_array =
 			CTranslatorUtils::GetOutputColIdsArray(
-				m_mp, target_list, groupby_attno_to_colid_mapping);
+				m_mp, target_list_copy, groupby_attno_to_colid_mapping);
 		if (NULL != unionall_dxlnode)
 		{
 			GPOS_ASSERT(NULL != colid_array_inner);
 			CDXLColDescrArray *dxl_col_descr_array =
 				CTranslatorUtils::GetDXLColumnDescrArray(
-					m_mp, target_list, colids_outer_array,
+					m_mp, target_list_copy, colids_outer_array,
 					true /* keep_res_junked */);
 
 			colids_outer_array->AddRef();
@@ -2416,7 +2485,7 @@ CTranslatorQueryToDXL::CreateDXLUnionAllForGroupingSets(
 			// add the sortgroup columns to output map of the last column
 			ULONG te_pos = 0;
 			ListCell *lc = NULL;
-			ForEach(lc, target_list)
+			ForEach(lc, target_list_copy)
 			{
 				TargetEntry *target_entry = (TargetEntry *) lfirst(lc);
 
@@ -2806,6 +2875,38 @@ CTranslatorQueryToDXL::TranslateSetOpChild(Node *child_node,
 	GPOS_ASSERT(NULL != colids);
 	GPOS_ASSERT(NULL != input_col_mdids);
 
+	// We have to fallback here because otherwise we trip the following assert in ORCA:
+	//
+	// INFO:  GPORCA failed to produce a plan, falling back to planner
+	// DETAIL:  CKeyCollection.cpp:84: Failed assertion: __null != colref_array && 0 < colref_array->Size()
+	// Stack trace:
+	// 1    0x000055c239243b8a gpos::CException::Raise + 278
+	// 2    0x000055c2393ab075 gpopt::CKeyCollection::CKeyCollection + 221
+	// 3    0x000055c239449ab6 gpopt::CLogicalSetOp::DeriveKeyCollection + 98
+	// 4    0x000055c2393a5a67 gpopt::CDrvdPropRelational::DeriveKeyCollection + 135
+	// 5    0x000055c2393a4937 gpopt::CDrvdPropRelational::Derive + 197
+	// 6    0x000055c239405d9f gpopt::CExpression::PdpDerive + 703
+	// 7    0x000055c2394d1e14 gpopt::CMemo::PgroupInsert + 512
+	// 8    0x000055c2393dd734 gpopt::CEngine::PgroupInsert + 632
+	// 9    0x000055c2393dcd73 gpopt::CEngine::InitLogicalExpression + 225
+	// 10   0x000055c2393dd106 gpopt::CEngine::Init + 884
+	// 11   0x000055c23949da9f gpopt::COptimizer::PexprOptimize + 103
+	// 12   0x000055c23949d3d8 gpopt::COptimizer::PdxlnOptimize + 1414
+	// 13   0x000055c23960e55e COptTasks::OptimizeTask + 1530
+	// 14   0x000055c2392572b6 gpos::CTask::Execute + 196
+	// 15   0x000055c239259dbf gpos::CWorker::Execute + 191
+	// 16   0x000055c2392556b5 gpos::CAutoTaskProxy::Execute + 221
+	// 17   0x000055c23925c0c0 gpos_exec + 876
+	//
+	// Currently there are a lot of asserts on NULL != target_list in the
+	// translator, but most of them are unnecessary. We should instead fix ORCA
+	// to handle empty target list.
+	if (NIL == target_list)
+	{
+		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature,
+				   GPOS_WSZ_LIT("Empty target list"));
+	}
+
 	if (IsA(child_node, RangeTblRef))
 	{
 		RangeTblRef *range_tbl_ref = (RangeTblRef *) child_node;
@@ -3190,6 +3291,15 @@ CTranslatorQueryToDXL::NoteDistributionPolicyOpclasses(const RangeTblEntry *rte)
 			return;
 		}
 
+		if (!optimizer_enable_replicated_table &&
+			policy->ptype == POLICYTYPE_REPLICATED)
+		{
+			GPOS_RAISE(
+				gpdxl::ExmaMD, gpdxl::ExmiMDObjUnsupported,
+				GPOS_WSZ_LIT(
+					"Use optimizer_enable_replicated_table to enable replicated tables"));
+		}
+
 		int policy_nattrs = policy->nattrs;
 		TupleDesc desc = rel->rd_att;
 		bool contains_default_hashops = false;
@@ -3545,20 +3655,20 @@ CTranslatorQueryToDXL::TranslateTVFToDXL(const RangeTblEntry *rte,
 				   GPOS_WSZ_LIT("Multi-argument UNNEST() or TABLE()"));
 	}
 	RangeTblFunction *rtfunc = (RangeTblFunction *) linitial(rte->functions);
-	FuncExpr *funcexpr = (FuncExpr *) rtfunc->funcexpr;
-	GPOS_ASSERT(funcexpr);
+	BOOL is_composite_const =
+		CTranslatorUtils::IsCompositeConst(m_mp, m_md_accessor, rtfunc);
 
 	// if this is a folded function expression, generate a project over a CTG
-	if (!IsA(funcexpr, FuncExpr))
+	if (!IsA(rtfunc->funcexpr, FuncExpr) && !is_composite_const)
 	{
 		CDXLNode *const_tbl_get_dxlnode = DXLDummyConstTableGet();
 
 		CDXLNode *project_list_dxlnode = GPOS_NEW(m_mp)
 			CDXLNode(m_mp, GPOS_NEW(m_mp) CDXLScalarProjList(m_mp));
 
-		CDXLNode *project_elem_dxlnode =
-			TranslateExprToDXLProject((Expr *) funcexpr, rte->eref->aliasname,
-									  true /* insist_new_colids */);
+		CDXLNode *project_elem_dxlnode = TranslateExprToDXLProject(
+			(Expr *) rtfunc->funcexpr, rte->eref->aliasname,
+			true /* insist_new_colids */);
 		project_list_dxlnode->AddChild(project_elem_dxlnode);
 
 		CDXLNode *project_dxlnode = GPOS_NEW(m_mp)
@@ -3581,6 +3691,19 @@ CTranslatorQueryToDXL::TranslateTVFToDXL(const RangeTblEntry *rte,
 									tvf_dxlop->GetDXLColumnDescrArray());
 
 	BOOL is_subquery_in_args = false;
+
+	// funcexpr evaluates to const and returns composite type
+	if (IsA(rtfunc->funcexpr, Const))
+	{
+		CDXLNode *constValue = m_scalar_translator->TranslateScalarToDXL(
+			(Expr *) (rtfunc->funcexpr), m_var_to_colid_map);
+		tvf_dxlnode->AddChild(constValue);
+		return tvf_dxlnode;
+	}
+
+	GPOS_ASSERT(IsA(rtfunc->funcexpr, FuncExpr));
+
+	FuncExpr *funcexpr = (FuncExpr *) rtfunc->funcexpr;
 
 	// check if arguments contain SIRV functions
 	if (NIL != funcexpr->args && HasSirvFunctions((Node *) funcexpr->args))
@@ -3644,8 +3767,14 @@ CTranslatorQueryToDXL::TranslateCTEToDXL(const RangeTblEntry *rte,
 	const List *cte_producer_target_list =
 		cte_list_entry->GetCTEProducerTargetList(rte->ctename);
 
-	GPOS_ASSERT(NULL != cte_producer_dxlnode &&
-				NULL != cte_producer_target_list);
+	// fallback to Postgres optimizer in case of empty target list
+	if (NIL == cte_producer_target_list)
+	{
+		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature,
+				   GPOS_WSZ_LIT("Empty target list"));
+	}
+
+	GPOS_ASSERT(NULL != cte_producer_dxlnode);
 
 	CDXLLogicalCTEProducer *cte_producer_dxlop =
 		CDXLLogicalCTEProducer::Cast(cte_producer_dxlnode->GetOperator());

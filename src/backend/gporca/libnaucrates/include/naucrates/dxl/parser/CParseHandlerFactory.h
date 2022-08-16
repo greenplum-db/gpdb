@@ -943,6 +943,11 @@ private:
 		CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
 		CParseHandlerBase *parse_handler_root);
 
+	// construct a scalar sort group clause parse handler
+	static CParseHandlerBase *CreateScSortGroupClauseParseHandler(
+		CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
+		CParseHandlerBase *parse_handler_root);
+
 	// construct a values scan parse handler
 	static CParseHandlerBase *CreateValuesScanParseHandler(
 		CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,

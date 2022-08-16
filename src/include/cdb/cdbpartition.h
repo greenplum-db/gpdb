@@ -223,6 +223,7 @@ extern LogicalIndexes * BuildLogicalIndexInfo(Oid relid);
 extern Oid getPhysicalIndexRelid(Relation partRel, LogicalIndexInfo *iInfo);
 
 extern LogicalIndexInfo *logicalIndexInfoForIndexOid(Oid rootOid, Oid indexOid);
+extern LogicalIndexType logicalIndexTypeForIndexOid(Oid indexOid);
 
 extern void InsertPidIntoDynamicTableScanInfo(EState *estate, int32 index, Oid partOid, int32 selectorId);
 

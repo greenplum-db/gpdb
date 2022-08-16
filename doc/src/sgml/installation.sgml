@@ -277,10 +277,19 @@ su - postgres
 
     <listitem>
      <para>
-      You need <application>Kerberos</>, <productname>OpenSSL</>,
-      <productname>OpenLDAP</>, and/or
-      <application>PAM</>, if you want to support authentication or
-      encryption using those services.
+      You need <productname>OpenSSL</productname>, if you want to support
+      encrypted client connections.  <productname>OpenSSL</productname> is
+      also required for random number generation on platforms that do not
+      have <filename>/dev/urandom</filename> (except Windows).  The minimum
+      version required is 0.9.8.
+     </para>
+    </listitem>
+
+    <listitem>
+     <para>
+      You need <application>Kerberos</application>, <productname>OpenLDAP</productname>,
+      and/or <application>PAM</application>, if you want to support authentication
+      using those services.
      </para>
     </listitem>
 
@@ -1438,7 +1447,8 @@ su - postgres
          <![%standalone-include[the <application>PL/Python</>
          documentation]]>
          <![%standalone-ignore[<xref linkend="plpython-python23">]]>
-         for more information.
+         for more information.  If this is not set, the following are probed
+         in this order: <literal>python python3 python2</literal>.
         </para>
        </listitem>
       </varlistentry>

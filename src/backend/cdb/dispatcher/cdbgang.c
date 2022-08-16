@@ -73,8 +73,6 @@ CreateGangFunc pCreateGangFunc = cdbgang_createGang_async;
 static bool NeedResetSession = false;
 static Oid	OldTempNamespace = InvalidOid;
 
-static void resetSessionForPrimaryGangLoss(void);
-
 /*
  * cdbgang_createGang:
  *
@@ -181,6 +179,10 @@ segment_failure_due_to_recovery(const char *error_message)
 	ptr = strstr(error_message, fatal);
 	if ((ptr != NULL) && ptr[fatal_len] == ':')
 	{
+		if (strstr(error_message, _(POSTMASTER_IN_RESET_MSG)))
+		{
+			return true;
+		}
 		if (strstr(error_message, _(POSTMASTER_IN_STARTUP_MSG)))
 		{
 			return true;
@@ -669,10 +671,10 @@ getCdbProcessesForQD(int isPrimary)
 	proc = makeNode(CdbProcess);
 
 	/*
-	 * Set QD listener address to NULL. This will be filled during starting up
-	 * outgoing interconnect connection.
+	 * Set QD listener address to the ADDRESS of the master, so the motions that connect to
+	 * the master knows what the interconnect address of the peer is.
 	 */
-	proc->listenerAddr = NULL;
+	proc->listenerAddr = pstrdup(qdinfo->config->hostip);
 
 	if (Gp_interconnect_type == INTERCONNECT_TYPE_UDPIFC)
 		proc->listenerPort = (Gp_listener_port >> 16) & 0x0ffff;
@@ -688,6 +690,11 @@ getCdbProcessesForQD(int isPrimary)
 	return list;
 }
 
+/*
+ * This function should not be used in the context of named portals
+ * as it destroys the CdbComponentsContext, which is accessed later
+ * during named portal cleanup.
+ */
 void
 DisconnectAndDestroyAllGangs(bool resetSession)
 {
@@ -719,40 +726,25 @@ DisconnectAndDestroyAllGangs(bool resetSession)
  * Destroy all idle (i.e available) QEs.
  * It is always safe to get rid of the reader QEs.
  *
- * If we are not in a transaction and we do not have a TempNamespace, destroy
- * writer QEs as well.
- *
  * call only from an idle session.
  */
 void DisconnectAndDestroyUnusedQEs(void)
 {
-	if (IsTransactionOrTransactionBlock() || TempNamespaceOidIsValid())
-	{
-		/*
-		 * If we are in a transaction, we can't release the writer gang,
-		 * as this will abort the transaction.
-		 *
-		 * If we have a TempNameSpace, we can't release the writer gang, as this
-		 * would drop any temp tables we own.
-		 *
-		 * Since we are idle, any reader gangs will be available but not allocated.
-		 */
-		cdbcomponent_cleanupIdleQEs(false);
-	}
-	else
-	{
-		/*
-		 * Get rid of ALL gangs... Readers and primary writer.
-		 * After this, we have no resources being consumed on the segDBs at all.
-		 *
-		 * Our session wasn't destroyed due to an fatal error or FTS action, so
-		 * we don't need to do anything special.  Specifically, we DON'T want
-		 * to act like we are now in a new session, since that would be confusing
-		 * in the log.
-		 *
-		 */
-		cdbcomponent_cleanupIdleQEs(true);
-	}
+	/*
+	 * Only release reader gangs, never writer gang. This helps to avoid the
+	 * shared snapshot collision error on next gang creation from hitting if
+	 * QE processes are slow to exit due to this cleanup.
+	 *
+	 * If we are in a transaction, we can't release the writer gang also, as
+	 * this will abort the transaction.
+	 *
+	 * If we have a TempNameSpace, we can't release the writer gang also, as
+	 * this would drop any temp tables we own.
+	 *
+	 * Since we are idle, any reader gangs will be available but not
+	 * allocated.
+	 */
+	cdbcomponent_cleanupIdleQEs(false);
 }
 
 /*
@@ -826,7 +818,7 @@ CheckForResetSession(void)
 	}
 }
 
-static void
+void
 resetSessionForPrimaryGangLoss(void)
 {
 	if (ProcCanSetMppSessionId())
@@ -928,12 +920,40 @@ RecycleGang(Gang *gp, bool forceDestroy)
 
 	if (!gp)
 		return;
-
+	/*
+	 *
+	 * Callers of RecycleGang should not throw ERRORs by design. This is
+	 * because RecycleGang is not re-entrant: For example, an ERROR could be
+	 * thrown whilst the gang's segdbDesc is already freed. This would cause
+	 * RecycleGang to be called again during abort processing, giving rise to
+	 * potential double freeing of the gang's segdbDesc.
+	 *
+	 * Thus, we hold off interrupts until the gang is fully cleaned here to prevent
+	 * throwing an ERROR here.
+	 *
+	 * details See github issue: https://github.com/greenplum-db/gpdb/issues/13393
+	 */
+	HOLD_INTERRUPTS();
 	/*
 	 * Loop through the segment_database_descriptors array and, for each
 	 * SegmentDatabaseDescriptor: 1) discard the query results (if any), 2)
 	 * disconnect the session, and 3) discard any connection error message.
 	 */
+#ifdef FAULT_INJECTOR
+	/*
+	 * select * from gp_segment_configuration a, t13393,
+	 * gp_segment_configuration b where a.dbid = t13393.tc1 limit 0;
+	 *
+	 * above sql has 3 gangs, the first and second gangtype is ENTRYDB_READER
+	 * and the third gang is PRIMARY_READER, the second gang will be destroyed.
+	 * inject an interrupt fault during RecycleGang PRIMARY_READER gang.
+	 */
+	if (gp->size >= 3)
+	{
+		SIMPLE_FAULT_INJECTOR("cdbcomponent_recycle_idle_qe_error");
+		CHECK_FOR_INTERRUPTS();
+	}
+#endif
 	for (i = 0; i < gp->size; i++)
 	{
 		SegmentDatabaseDescriptor *segdbDesc = gp->db_descriptors[i];
@@ -942,4 +962,5 @@ RecycleGang(Gang *gp, bool forceDestroy)
 
 		cdbcomponent_recycleIdleQE(segdbDesc, forceDestroy);
 	}
+	RESUME_INTERRUPTS();
 }

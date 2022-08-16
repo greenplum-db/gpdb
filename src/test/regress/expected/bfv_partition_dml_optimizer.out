@@ -1,0 +1,60 @@
+-- The failure case with AOCS partition
+-- Create partitioned table with one range and default partitions
+create table p_ao(a int) with (appendonly=true)
+PARTITION BY range(a) (start(1) end(2) every(1), default partition extra);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+NOTICE:  CREATE TABLE will create partition "p_ao_1_prt_extra" for table "p_ao"
+NOTICE:  CREATE TABLE will create partition "p_ao_1_prt_2" for table "p_ao"
+insert into p_ao_1_prt_2 values(1);
+analyze p_ao;
+-- create table for exchange with one value suitable to range partition with one row
+create table t_ao_exchanged(a int) with (appendonly=true);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into t_ao_exchanged values (1);
+analyze t_ao_exchanged;
+-- exchange default partition with `t_exchanged` table
+set gp_enable_exchange_default_partition to on;
+alter table p_ao exchange default partition with table t_ao_exchanged without validation;
+WARNING:  Exchanging default partition may result in unexpected query results if the data being exchanged should have been inserted into a different partition
+NOTICE:  exchanged partition "extra" of relation "p_ao" with relation "t_ao_exchanged"
+select tableoid::regclass, ctid, a from p_ao;
+     tableoid     |     ctid     | a 
+------------------+--------------+---
+ p_ao_1_prt_2     | (33554432,2) | 1
+ p_ao_1_prt_extra | (33554432,2) | 1
+(2 rows)
+
+-- remove row from range partition - mark it as deleted
+delete from p_ao_1_prt_2;
+-- check whether partitioned table has a single row in default partition
+-- whose partitioning key value corresponds to neighbor range partition
+-- and tupleid is the same as previously deleted row had
+select tableoid::regclass, ctid, a from p_ao;
+     tableoid     |     ctid     | a 
+------------------+--------------+---
+ p_ao_1_prt_extra | (33554432,2) | 1
+(1 row)
+
+-- perform deletion from default partition
+-- before fix in case of ORCA it generated SIGSEGV
+explain (costs off, verbose)
+delete from p_ao_1_prt_extra where a = 1;
+                                           QUERY PLAN                                            
+-------------------------------------------------------------------------------------------------
+ Delete
+   Output: p_ao_1_prt_extra.a, "outer".ColRef_0004, p_ao_1_prt_extra.ctid
+   ->  Result
+         Output: p_ao_1_prt_extra.a, p_ao_1_prt_extra.ctid, p_ao_1_prt_extra.gp_segment_id, 0
+         ->  Seq Scan on public.p_ao_1_prt_extra
+               Output: p_ao_1_prt_extra.a, p_ao_1_prt_extra.ctid, p_ao_1_prt_extra.gp_segment_id
+               Filter: (p_ao_1_prt_extra.a = 1)
+ Optimizer: Pivotal Optimizer (GPORCA)
+ Settings: optimizer=on
+(9 rows)
+
+delete from p_ao_1_prt_extra where a = 1;
+ERROR:  tuple to be deleted was already removed  (seg1 127.0.1.1:6033 pid=281892)
+DETAIL:  for AO/AOCS table this scenario is impossible
+HINT:  perhaps, modification is occuring on wrong partition

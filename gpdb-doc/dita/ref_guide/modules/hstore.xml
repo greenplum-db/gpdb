@@ -17,8 +17,8 @@
         Greenplum Database. Before you can use any of the data types or functions
         defined in the module, you must register the <codeph>hstore</codeph> extension
         in each database in which you want to use the objects.
-        <ph otherprops="pivotal">Refer to <xref href="../../install_guide/install_modules.xml"
-          format="dita" scope="peer">Installing Additional Supplied Modules</xref>
+        <ph otherprops="pivotal">Refer to <xref href="../../install_guide/install_modules.html"
+          format="html" scope="external">Installing Additional Supplied Modules</xref>
         for more information.</ph></p>
     </body>
   </topic>

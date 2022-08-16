@@ -9,36 +9,35 @@
         only if the statistics are not current.</ph></p>
     <section>
       <title>Synopsis</title>
-      <codeblock><b>analyzedb</b> <b>-d</b> <varname>dbname</varname>
-   { <b>-s</b> <varname>schema</varname>  | 
-   { <b>-t</b> <varname>schema</varname>.<varname>table</varname> 
-     [ <b>-i</b> <varname>col1</varname>[,<varname>col2</varname>, ...] | 
-       <b>-x</b> <varname>col1</varname>[,<varname>col2</varname>, ...] ] } |
-     { <b>-f</b> | <b>--file</b>} <varname>config-file</varname> }
-   [ <b>-l</b> | <b>--list</b> ]
-   [ <b>--gen_profile_only</b> ]   
-   [ <b>-p</b> <varname>parallel-level</varname> ]
-   [ <b>--full</b> ]
-   [ <b>--skip_orca_root_stats</b> ]
-   [ <b>-v</b> | <b>--verbose</b> ]
-   [ <b>--debug</b> ]
-   [ <b>-a</b> ]
+      <codeblock>analyzedb -d &lt;dbname>
+   { -s &lt;schema>  | 
+   { -t &lt;schema>.&lt;table> 
+     [ -i &lt;col1>[,&lt;col2>, ...] | 
+       -x &lt;col1>[,&lt;col2>, ...] ] } |
+     { -f | --file} &lt;config-file> }
+   [ -l | --list ]
+   [ --gen_profile_only ]   
+   [ -p &lt;parallel-level> ]
+   [ --full ]
+   [ --skip_root_stats ]
+   [ --skip_orca_root_stats ]
+   [ -v | --verbose ]
+   [ -a ]
 
-<b>analyzedb</b> { <b>--clean_last</b> | <b>--clean_all</b> }
-<b>analyzedb</b> <b>--version</b>
-<b>analyzedb</b> { <b>-?</b> | <b>-h</b> | <b>--help</b> }</codeblock>
+analyzedb { --clean_last | --clean_all }
+analyzedb --version
+analyzedb { -? | -h | --help }</codeblock>
     </section>
     <section>
       <title>Description</title>
       <p>The <cmdname>analyzedb</cmdname> utility updates statistics on table data for the specified
         tables in a Greenplum database incrementally and concurrently. </p>
-      <p>While performing <codeph><xref href="../../ref_guide/sql_commands/ANALYZE.xml"
-            >ANALYZE</xref></codeph> operations, <cmdname>analyzedb</cmdname> creates a snapshot of
-        the table metadata and stores it on disk on the master host. An <codeph>ANALYZE</codeph>
-        operation is performed only if the table has been modified. If a table or partition has not
-        been modified since the last time it was analyzed, <cmdname>analyzedb</cmdname>
-        automatically skips the table or partition because it already contains up-to-date
-        statistics.</p>
+      <p>While performing <xref href="../../ref_guide/sql_commands/ANALYZE.xml">ANALYZE</xref>
+        operations, <cmdname>analyzedb</cmdname> creates a snapshot of the table metadata and stores
+        it on disk on the master host. An <codeph>ANALYZE</codeph> operation is performed only
+        if the table has been modified. If a table or partition has not been modified since the last
+        time it was analyzed, <cmdname>analyzedb</cmdname> automatically skips the table or
+        partition because it already contains up-to-date statistics.</p>
       <ul id="ul_vgw_25c_3r">
         <li>For append optimized tables, <cmdname>analyzedb</cmdname> updates statistics
           incrementally, if the statistics are not current. For example, if table data is changed
@@ -56,14 +55,17 @@
         <b>Partitioned Append-Optimized Tables</b>
         <p>For a partitioned, append-optimized table, <cmdname>analyzedb</cmdname> checks the
           partitioned table root partition and leaf partitions. If needed, the utility updates
-          statistics for non-current partitions and the root partition. </p>
-        <p dir="ltr">The root partition statistics is required by GPORCA. The
-            <cmdname>analyzedb</cmdname> utility collects statistics on the root partition of a
-          partitioned table if the statistics do not exist. If any of the leaf partitions have stale
-          statistics, <cmdname>analyzedb</cmdname> also refreshes the root partition statistics. The
-          cost of refreshing the root level statistics is comparable to analyzing one leaf
-          partition.</p>
-      </sectiondiv>
+          statistics for non-current partitions and the root partition. For information about how
+          statistics are collected for partitioned tables, see <codeph><xref
+              href="../../ref_guide/sql_commands/ANALYZE.xml"
+        >ANALYZE</xref></codeph>.</p>
+        <p><codeph>analyzedb</codeph> must sample additional partitions within a partitioned
+          table when it encounters a stale partition, even when statistics are already
+          collected. Consider it a best practice to run <codeph>analyzedb</codeph> on the
+          root partition any time that you add a new partition(s) to a partitioned table.
+          This operation both analyzes the child leaf partitions in parallel and merges
+          any updated statistics into the root partition.</p>
+    </sectiondiv>
     </section>
     <section><title>Notes</title><p>The <cmdname>analyzedb</cmdname> utility updates append
         optimized table statistics if the table has been modified by DML or DDL commands, including
@@ -72,9 +74,8 @@
           <cmdname>TRUNCATE</cmdname>. The utility determines if a table has been modified by
         comparing catalog metadata of tables with the previous snapshot of metadata taken during a
         previous <cmdname>analyzedb</cmdname> operation. The snapshots of table metadata are stored
-        as state files in the directory
-            <codeph>db_analyze/&lt;<varname>db_name</varname>>/&lt;<varname>timestamp</varname>></codeph>
-        in the Greenplum Database master data directory. </p>The utility preserves old snapshot
+        as state files in the directory <codeph>db_analyze/&lt;db_name>/&lt;timestamp></codeph> in
+        the Greenplum Database master data directory. </p>The utility preserves old snapshot
       information from the past 8 days, and the 3 most recent state directories regardless of age,
       while all other directories are automatically removed. You can also specify the
         <codeph>--clean_last</codeph> or <codeph>--clean_all</codeph> option to remove state files
@@ -105,13 +106,6 @@
             option is not specified, the database name is read from the environment variable
               <codeph>PGDATABASE</codeph>. If <codeph>PGDATABASE</codeph> is not set, the user name
             specified for the connection is used.</pd>
-        </plentry>
-        <plentry>
-          <pt> --debug</pt>
-          <pd>If specified, sets the logging level to debug. During command execution, debug level
-            information is written to the log file and to the command line. The information includes
-            the commands run by the utility and the duration of each <codeph>ANALYZE</codeph>
-            operation.</pd>
         </plentry>
         <plentry>
           <pt>-f <varname>config-file</varname> | --file <varname>config-file</varname></pt>
@@ -167,7 +161,11 @@ public.lineitem -i l_shipdate,l_receiptdate </codeblock></pd>
             can be an integer between 1 and 10, inclusive. Default value is 5. </pd>
         </plentry>
         <plentry>
-          <pt>--skip_orca_root_stats</pt>
+          <pt>--skip_root_stats</pt>
+          <pd>This option is no longer used, you may remove it from your scripts.</pd>
+        </plentry>
+        <plentry>
+          <pt><codeph>--skip_orca_root_stats</codeph></pt>
           <pd>
             <note>Do not use this option if GPORCA is enabled.</note>
           </pd>
@@ -283,9 +281,7 @@ LANGUAGE plpythonu VOLATILE;</codeblock></p>
         <ph otherprops="op-print"><cmdname>ANALYZE</cmdname> in the <cite>Greenplum Database
             Reference Guide</cite></ph>
         <ph>
-          <codeph>
-            <xref href="../../ref_guide/sql_commands/ANALYZE.xml#topic1"/>
-          </codeph>
+          <xref href="../../ref_guide/sql_commands/ANALYZE.xml#topic1"/>
         </ph>
       </p>
     </section>

@@ -223,6 +223,7 @@ public:
 		ExfExpandDynamicGetWithExternalPartitions,
 		ExfLeftJoin2RightJoin,
 		ExfRightOuterJoin2HashJoin,
+		ExfImplementInnerJoin,
 		ExfInvalid,
 		ExfSentinel = ExfInvalid
 	};

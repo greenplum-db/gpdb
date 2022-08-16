@@ -29,7 +29,7 @@
       <p>You must be a superuser to use <codeph>CREATE TEXT SEARCH PARSER</codeph>. (This
         restriction is made because an erroneous text search parser definition could confuse or even
         crash the server.)</p>
-      <p>Refer to <xref href="../../admin_guide/textsearch/full-text-search.xml#full-text-search"/>
+      <p>Refer to <xref href="../../admin_guide/textsearch/full-text-search.html#full-text-search" format="html" scope="external">Using Full Text Search</xref>
         for further information.</p>
     </section>
     <section id="section4">

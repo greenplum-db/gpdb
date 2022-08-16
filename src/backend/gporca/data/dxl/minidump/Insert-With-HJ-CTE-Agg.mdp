@@ -398,7 +398,12 @@
             </dxl:GroupingColumns>
             <dxl:ProjList>
               <dxl:ProjElem ColId="19" Alias="lang_count">
-                <dxl:AggFunc AggMdid="0.2803.1.0" AggDistinct="false" AggStage="Normal"/>
+                <dxl:AggFunc AggMdid="0.2803.1.0" AggDistinct="false" AggStage="Normal" AggKind="n" >
+                  <dxl:ValuesList ParamType="aggargs"/>
+                  <dxl:ValuesList ParamType="aggdirectargs"/>
+                  <dxl:ValuesList ParamType="aggorder"/>
+                  <dxl:ValuesList ParamType="aggdistinct"/>
+                </dxl:AggFunc>
               </dxl:ProjElem>
             </dxl:ProjList>
             <dxl:LogicalJoin JoinType="Inner">
@@ -503,12 +508,12 @@
         </dxl:LogicalProject>
       </dxl:LogicalInsert>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="1180">
+    <dxl:Plan Id="0" SpaceSize="1110">
       <dxl:DMLInsert Columns="38,39,42,43,44" ActionCol="48" OidCol="0" CtidCol="0" SegmentIdCol="0" InputSorted="false">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="867.119333" Rows="96.000000" Width="36"/>
+          <dxl:Cost StartupCost="0" TotalCost="867.122533" Rows="96.000000" Width="36"/>
         </dxl:Properties>
-	<dxl:DirectDispatchInfo/>
+        <dxl:DirectDispatchInfo/>
         <dxl:ProjList>
           <dxl:ProjElem ColId="38" Alias="?column?">
             <dxl:Ident ColId="38" ColName="?column?" TypeMdid="0.25.1.0"/>
@@ -544,7 +549,7 @@
         </dxl:TableDescriptor>
         <dxl:Result>
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="862.119333" Rows="96.000000" Width="40"/>
+            <dxl:Cost StartupCost="0" TotalCost="862.122533" Rows="96.000000" Width="40"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="38" Alias="?column?">
@@ -658,7 +663,12 @@
                   </dxl:GroupingColumns>
                   <dxl:ProjList>
                     <dxl:ProjElem ColId="19" Alias="lang_count">
-                      <dxl:AggFunc AggMdid="0.2803.1.0" AggDistinct="false" AggStage="Normal"/>
+                      <dxl:AggFunc AggMdid="0.2803.1.0" AggDistinct="false" AggStage="Normal" AggKind="n" >
+                        <dxl:ValuesList ParamType="aggargs"/>
+                        <dxl:ValuesList ParamType="aggdirectargs"/>
+                        <dxl:ValuesList ParamType="aggorder"/>
+                        <dxl:ValuesList ParamType="aggdistinct"/>
+                      </dxl:AggFunc>
                     </dxl:ProjElem>
                     <dxl:ProjElem ColId="20" Alias="code">
                       <dxl:Ident ColId="20" ColName="code" TypeMdid="0.1042.1.0" TypeModifier="7"/>

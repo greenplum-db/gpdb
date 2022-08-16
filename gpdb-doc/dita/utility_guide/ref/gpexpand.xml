@@ -7,20 +7,20 @@
     <p>Expands an existing Greenplum Database across new hosts in the system.</p>
     <section id="section2">
       <title>Synopsis</title>
-      <codeblock><b>gpexpand</b> [{<b>-f</b>|<b>--hosts-file</b>} <varname>hosts_file</varname>]
-        | {<b>-i</b>|<b>--input</b>} <varname>input_file</varname> [<b>-B</b> <varname>batch_size</varname>]
-        | [{<b>-d</b> | <b>--duration</b>} <varname>hh:mm:ss</varname> | {<b>-e</b>|<b>--end</b>} '<varname>YYYY-MM-DD hh:mm:ss</varname>'] 
-          [<b>-a</b>|<b>-analyze</b>] 
-          [<b>-n </b> <varname>parallel_processes</varname>]
-        | {<b>-r</b>|<b>--rollback</b>}
-        | {<b>-c</b>|<b>--clean</b>}
-        [<b>-v</b>|<b>--verbose</b>] [<b>-s</b>|<b>--silent</b>]
-        [{<b>-t</b>|<b>--tardir</b>} <varname>directory </varname>]
-        [<b>-S</b>|<b>--simple-progress </b>]
+      <codeblock>gpexpand [{-f|--hosts-file} &lt;hosts_file>]
+        | {-i|--input} &lt;input_file> [-B &lt;batch_size>]
+        | [{-d | --duration} &lt;hh:mm:ss> | {-e|--end} '&lt;YYYY-MM-DD hh:mm:ss>'] 
+          [-a|-analyze] 
+          [-n  &lt;parallel_processes>]
+        | {-r|--rollback}
+        | {-c|--clean}
+        [-v|--verbose] [-s|--silent]
+        [{-t|--tardir} &lt;directory> ]
+        [-S|--simple-progress ]
 
-<b>gpexpand -?</b> | <b>-h</b> | <b>--help</b> 
+gpexpand -? | -h | --help 
 
-<b>gpexpand --version</b></codeblock>
+gpexpand --version</codeblock>
     </section>
     <section id="section3">
       <title>Prerequisites</title>
@@ -54,9 +54,9 @@
         must update the <codeph>gp_interconnect_proxy_addresses</codeph> parameter with the
         newly-added segment instances before you re-enable interconnect proxies. For information
         about Greenplum interconnect proxies, see <xref
-          href="../../admin_guide/managing/proxy-ic.xml"/>.</note>
+          href="../../admin_guide/managing/proxy-ic.html" format="html" scope="external">Configuring Proxies for the Greenplum Interconnect</xref>.</note>
       <p>For information about preparing a system for expansion, see <xref
-          href="../../admin_guide/expand/expand-main.xml" scope="peer">Expanding a Greenplum
+          href="../../admin_guide/expand/expand-main.html" format="html" scope="external">Expanding a Greenplum
           System</xref><ph otherprops="op-print"> in the <cite>Greenplum Database Administrator
             Guide</cite></ph>.</p>
     </section>
@@ -222,10 +222,10 @@
             reason, you should use a hostname when expanding a Greenplum Database system unless you
             have a specific requirement to use IP addresses.</li>
         </ul></p>
-      <p>When expanding a Greenplum system, <codeph>gpexpand</codeph> populates <codeph><xref
-            href="../../ref_guide/system_catalogs/gp_segment_configuration.xml"
-            >gp_segment_configuration</xref></codeph> catalog table with the new segment instance
-        information. Greenplum Database uses the <codeph>address</codeph> value of the
+      <p>When expanding a Greenplum system, <codeph>gpexpand</codeph> populates <xref
+          href="../../ref_guide/system_catalogs/gp_segment_configuration.xml"
+          >gp_segment_configuration</xref> catalog table with the new segment instance information.
+        Greenplum Database uses the <codeph>address</codeph> value of the
           <codeph>gp_segment_configuration</codeph> catalog table when looking up host systems for
         Greenplum interconnect (internal) communication between the master and segment instances and
         between segment instances, and for other internal communication.</p>
@@ -238,7 +238,7 @@
         host. Also, if you enable segment mirroring, you must ensure that the expanded Greenplum
         system configuration supports failover if a host system fails. For information about
         Greenplum Database mirroring schemes, see <xref
-          href="../../best_practices/ha.xml#topic_ngz_qf4_tt"/>.</p>
+          href="../../best_practices/ha.html#topic_ngz_qf4_tt" format="html" scope="external"/>.</p>
       <p>For example, this is a <codeph>gpexpand</codeph> configuration file for a simple Greenplum
         system. The segment host <codeph>gp6s1</codeph> and <codeph>gp6s2</codeph> are configured
         with two NICs, <codeph>-s1</codeph> and <codeph>-s2</codeph>, where the Greenplum Database
@@ -260,9 +260,9 @@ gp6s1-s2|gp6s1-s2|50001|/data/mirror1/gpseg3|8|3|m</codeblock>
     <section id="section7">
       <title>See Also</title>
       <p>
-        <codeph><xref href="gpssh-exkeys.xml#topic1"/></codeph>, <xref
-          href="../../admin_guide/expand/expand-main.xml" scope="peer">Expanding a Greenplum
-          System</xref>
+        <xref href="gpssh-exkeys.xml#topic1"/>, <xref
+          href="../../admin_guide/expand/expand-main.html" format="html" scope="external">Expanding
+          a Greenplum System</xref>
         <ph otherprops="op-print">in the <cite>Greenplum Database Administrator
         Guide</cite></ph></p>
     </section>

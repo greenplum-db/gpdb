@@ -5,6 +5,24 @@ m/ \(plpy_exec\.c:\d+\)/
 s/ \(plpy_exec\.c:\d+\)//
 m/ \(plpython\.c:\d+\)/
 s/ \(plpython\.c:\d+\)//
+
+# TODO: Move these to init_file_python3
+m/"subtransaction_exit_subtransaction_in_with", line \d+/
+s/"subtransaction_exit_subtransaction_in_with", line \d+//
+m/with plpy\.subtransaction\(\) as s:/
+s/with plpy\.subtransaction\(\) as s:/s.__exit__(None, None, None)/
+
+# new add for plpython3
+m/ERROR:  invalid input syntax for integer:.*/
+s/ERROR:  invalid input syntax for integer:.*//
+m/ERROR:  length of returned sequence did not match number of columns in row.*/
+s/ERROR:  length of returned sequence did not match number of columns in row.*//
+m/(seg\d+.*)/
+s/(seg\d+.*)//
+# for python3 different version have different SyntaxError so we ignore it.
+m/ERROR:  SyntaxError:.*/
+s/ERROR:  SyntaxError:.*/SyntaxError/
+
 -- end_matchsubs
 
 # Copied from src/test/regress/init_file:

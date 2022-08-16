@@ -66,7 +66,7 @@
         object has different privileges that may be granted. Use the <codeph>GRANT</codeph>
         statement to add a permission to a role and the <codeph>REVOKE</codeph> statement to remove
         the permission.</p>
-      <p>You can change the owner of an object using the <codeph>REASIGN OWNED BY</codeph>
+      <p>You can change the owner of an object using the <codeph>REASSIGN OWNED BY</codeph>
         statement. For example, to prepare to drop a role, change the owner of the objects that
         belong to the role. Use the <codeph>DROP OWNED BY</codeph> to drop objects, including
         dependent objects, that are owned by a role.</p>
@@ -107,7 +107,8 @@
         password should be at least 12 characters long and include a mix of capitalized letters,
         lowercase letters, special characters, and numbers. It should not be based on any dictionary
         word. </p>
-      <p> Password expiration parameters should be configured. </p>
+      <p> Password expiration parameters should be configured. The following commands must be run as
+          <codeph>root</codeph> or using <codeph>sudo</codeph>.</p>
       <p> Ensure the following line exists within the file <codeph>/etc/libuser.conf</codeph> under
         the <codeph>[import]</codeph> section. </p>
       <codeblock>login_defs = /etc/login.defs

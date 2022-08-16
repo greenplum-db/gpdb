@@ -1,0 +1,17 @@
+-- start_matchsubs
+
+m/^ERROR: .* (seg\d+ [0-9.]+:\d+ pid=\d+)/
+s/seg\d+ [0-9.]+:\d+ pid=\d+/SEG IP:PORT pid=PID/
+
+# Ignore session id in fatal error message
+m/for session id -?[0-9]+/
+s/for session id -?[0-9]+/for session id xxx/
+
+# skip specific PID in: ERROR:  end point token_id3 already attached by receiver(pid: 50938)
+m/^ERROR:.*\(pid: \d+\)/
+s/\(pid: \d+\)/\(pid: PID\)/
+
+m/\(cdbendpointretrieve\.c\:\d+\)/
+s/\(cdbendpointretrieve\.c:\d+\)/\(cdbendpointretrieve\.c:LINE_NUM\)/
+
+-- end_matchsubs

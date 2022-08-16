@@ -153,7 +153,7 @@
                             operations on heap tables. When the Global Deadlock Detector is enabled
                             the lock mode for <codeph>UPDATE</codeph> and <codeph>DELETE</codeph>
                             operations on heap tables is <codeph>ROW EXCLUSIVE</codeph>. See <xref
-                                href="../../admin_guide/dml.xml#topic_gdd">Global Deadlock
+                                href="../../admin_guide/dml.html#topic_gdd" format="html" scope="external">Global Deadlock
                                 Detector</xref>. Greenplum always holds a table-level lock with
                                 <codeph>SELECT...FOR UPDATE</codeph> statements. </note></pd>
                 </plentry>

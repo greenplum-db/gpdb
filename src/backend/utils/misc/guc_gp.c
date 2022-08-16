@@ -24,6 +24,7 @@
 #include "access/url.h"
 #include "access/xlog_internal.h"
 #include "cdb/cdbappendonlyam.h"
+#include "cdb/cdbendpoint.h"
 #include "cdb/cdbdisp.h"
 #include "cdb/cdbdisp_query.h"
 #include "cdb/cdbhash.h"
@@ -32,7 +33,7 @@
 #include "cdb/memquota.h"
 #include "commands/vacuum.h"
 #include "miscadmin.h"
-#include "libpq/password_hash.h"
+#include "libpq/crypt.h"
 #include "optimizer/cost.h"
 #include "optimizer/planmain.h"
 #include "pgstat.h"
@@ -218,6 +219,7 @@ int			gp_resqueue_priority_grouping_timeout;
 double		gp_resqueue_priority_cpucores_per_segment;
 char	   *gp_resqueue_priority_default_value;
 bool		gp_debug_resqueue_priority = false;
+bool		gp_log_resqueue_priority_sleep_time = false;
 
 /* Resource group GUCs */
 int			gp_resource_group_cpu_priority;
@@ -225,6 +227,7 @@ double		gp_resource_group_cpu_limit;
 bool		gp_resource_group_cpu_ceiling_enforcement;
 double		gp_resource_group_memory_limit;
 bool		gp_resource_group_bypass;
+bool		gp_resource_group_enable_recalculate_query_mem;
 
 /* Perfmon segment GUCs */
 int			gp_perfmon_segment_interval;
@@ -244,6 +247,7 @@ bool		gp_maintenance_mode;
 bool		gp_maintenance_conn;
 bool		allow_segment_DML;
 bool		gp_allow_rename_relation_without_lock = false;
+bool		enable_implicit_timeformat_YYYYMMDDHH24MISS;
 
 /* ignore EXCLUDE clauses in window spec for backwards compatibility */
 bool		gp_ignore_window_exclude = false;
@@ -252,7 +256,7 @@ bool		gp_ignore_window_exclude = false;
 char	   *gp_auth_time_override_str = NULL;
 
 /* Password hashing */
-int			password_hash_algorithm = PASSWORD_HASH_MD5;
+int			password_hash_algorithm = PASSWORD_TYPE_MD5;
 
 /* include file/line information to stack traces */
 bool		gp_log_stack_trace_lines;
@@ -357,7 +361,8 @@ bool		optimizer_expand_fulljoin;
 bool		optimizer_enable_mergejoin;
 bool		optimizer_prune_unused_columns;
 bool		optimizer_enable_redistribute_nestloop_loj_inner_child;
-
+bool		optimizer_force_comprehensive_join_implementation;
+bool		optimizer_enable_replicated_table;
 
 /* Optimizer plan enumeration related GUCs */
 bool		optimizer_enumerate_plans;
@@ -409,6 +414,7 @@ bool		optimizer_enable_space_pruning;
 bool		optimizer_enable_associativity;
 bool		optimizer_enable_eageragg;
 bool		optimizer_enable_range_predicate_dpe;
+bool		optimizer_enable_orderedagg;
 
 /* Analyze related GUCs for Optimizer */
 bool		optimizer_analyze_root_partition;
@@ -452,6 +458,11 @@ bool		gp_enable_motion_mk_sort = true;
 
 /* Enable GDD */
 bool		gp_enable_global_deadlock_detector = false;
+
+bool		gp_log_endpoints = false;
+
+/* optional reject to  parse ambigous 5-digits date in YYYMMDD format */
+bool		gp_allow_date_field_width_5digits = false;
 
 static const struct config_enum_entry gp_log_format_options[] = {
 	{"text", 0},
@@ -544,6 +555,12 @@ static const struct config_enum_entry gp_interconnect_types[] = {
 	{NULL, 0}
 };
 
+static const struct config_enum_entry gp_interconnect_address_types[] = {
+	{"wildcard", INTERCONNECT_ADDRESS_TYPE_WILDCARD},
+	{"unicast", INTERCONNECT_ADDRESS_TYPE_UNICAST},
+	{NULL, 0}
+};
+
 static const struct config_enum_entry gp_log_verbosity[] = {
 	{"terse", GPVARS_VERBOSITY_TERSE},
 	{"off", GPVARS_VERBOSITY_OFF},
@@ -570,8 +587,9 @@ static const struct config_enum_entry gp_gpperfmon_log_alert_level[] = {
 
 static const struct config_enum_entry password_hash_algorithm_options[] = {
 	/* {"none", PASSWORD_HASH_NONE}, * this option is not exposed */
-	{"MD5", PASSWORD_HASH_MD5},
-	{"SHA-256", PASSWORD_HASH_SHA_256},
+	{"MD5", PASSWORD_TYPE_MD5},
+	{"SHA-256", PASSWORD_TYPE_SHA256},
+	{"SCRAM-SHA-256", PASSWORD_TYPE_SCRAM_SHA_256},
 	{NULL, 0}
 };
 
@@ -1067,6 +1085,18 @@ struct config_bool ConfigureNamesBool_gp[] =
 		false,
 		NULL, NULL, NULL
 	},
+
+	{
+		{"gp_retrieve_conn", PGC_BACKEND, GP_WORKER_IDENTITY,
+			gettext_noop("Specify this is a connection for parallel cursor retrieve"),
+			NULL,
+			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE | GUC_DISALLOW_IN_FILE | GUC_NO_RESET_ALL
+		},
+		&am_cursor_retrieve_handler,
+		false,
+		NULL, NULL, NULL
+	},
+
 
 	{
 		{"gp_cost_hashjoin_chainwalk", PGC_USERSET, QUERY_TUNING_COST,
@@ -3023,6 +3053,16 @@ struct config_bool ConfigureNamesBool_gp[] =
 	},
 
 	{
+		{"gp_resource_group_enable_recalculate_query_mem", PGC_USERSET, RESOURCES,
+			 gettext_noop("Enable resource group re-calculate the query_mem on QE"),
+			 NULL
+		},
+		&gp_resource_group_enable_recalculate_query_mem,
+		false,
+		NULL, NULL, NULL
+	},
+
+	{
 		{"stats_queue_level", PGC_SUSET, STATS_COLLECTOR,
 			gettext_noop("Collects resource queue-level statistics on database activity."),
 			NULL
@@ -3050,12 +3090,43 @@ struct config_bool ConfigureNamesBool_gp[] =
     },
 
 	{
+		{"gp_log_endpoints", PGC_SUSET, LOGGING_WHAT,
+			gettext_noop("Prints endpoints information to server log."),
+			NULL,
+			GUC_SUPERUSER_ONLY | GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+		},
+		&gp_log_endpoints,
+		false,
+		NULL, NULL, NULL
+	},
+
+	{
+		{"gp_allow_date_field_width_5digits", PGC_USERSET, COMPAT_OPTIONS_PREVIOUS,
+			gettext_noop("Allow parsing input date field with exactly continous 5 digits in non-standard YYYMMDD timeformat (follow pg12+ behave)"),
+			NULL,
+			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+		},
+		&gp_allow_date_field_width_5digits,
+		false,
+		NULL, NULL, NULL
+	},
+	{
 		{"optimizer_enable_eageragg", PGC_USERSET, DEVELOPER_OPTIONS,
 			gettext_noop("Enable Eager Agg transform for pushing aggregate below an innerjoin."),
 			NULL,
 			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
 		},
 		&optimizer_enable_eageragg,
+		false,
+		NULL, NULL, NULL
+	},
+
+	{
+		{"optimizer_enable_orderedagg", PGC_USERSET, DEVELOPER_OPTIONS,
+			gettext_noop("Enable ordered aggregate plans."),
+			NULL
+		},
+		&optimizer_enable_orderedagg,
 		false,
 		NULL, NULL, NULL
 	},
@@ -3109,6 +3180,49 @@ struct config_bool ConfigureNamesBool_gp[] =
 		 },
 		 &optimizer_enable_redistribute_nestloop_loj_inner_child,
 		 true,
+		 NULL, NULL, NULL
+	},
+
+	{
+		{"optimizer_force_comprehensive_join_implementation", PGC_USERSET, QUERY_TUNING_METHOD,
+		 gettext_noop("Explore a nested loop join even if a hash join is possible"),
+		 NULL,
+		 GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+		 },
+		 &optimizer_force_comprehensive_join_implementation,
+		 false,
+		 NULL, NULL, NULL
+	},
+
+	{
+		{"enable_implicit_timeformat_YYYYMMDDHH24MISS", PGC_USERSET, COMPAT_OPTIONS_PREVIOUS,
+			gettext_noop("If set, implicitly converts strings to timestamps using YYYYMMDDHH24MISS format"),
+			NULL,
+			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+		},
+		&enable_implicit_timeformat_YYYYMMDDHH24MISS,
+		false,
+		NULL, NULL, NULL
+	},
+	{
+		{"optimizer_enable_replicated_table", PGC_USERSET, DEVELOPER_OPTIONS,
+		 gettext_noop("Enable replicated tables."),
+		 NULL,
+		 GUC_NOT_IN_SAMPLE
+		 },
+		 &optimizer_enable_replicated_table,
+		 true,
+		 NULL, NULL, NULL
+	},
+
+
+	{
+		{"gp_log_resqueue_priority_sleep_time", PGC_USERSET, RESOURCES_MGM,
+		 gettext_noop("If set, log the duration for which the statement was put to sleep in resource queue"),
+		 NULL,
+		 },
+		 &gp_log_resqueue_priority_sleep_time,
+		 false,
 		 NULL, NULL, NULL
 	},
 
@@ -3985,7 +4099,7 @@ struct config_int ConfigureNamesInt_gp[] =
 
 	{
 		{"runaway_detector_activation_percent", PGC_POSTMASTER, RESOURCES_MEM,
-			gettext_noop("The runaway detector activates if the used vmem exceeds this percentage of the vmem quota. Set to 100 to disable runaway detection."),
+			gettext_noop("The runaway detector activates if the used vmem exceeds this percentage of the vmem quota. Set to 0 or 100 to disable runaway detection."),
 			NULL,
 		},
 		&runaway_detector_activation_percent,
@@ -4384,6 +4498,41 @@ struct config_int ConfigureNamesInt_gp[] =
 		},
 		&gp_max_slices,
 		0, 0, INT_MAX, NULL, NULL
+	},
+
+	{
+		{"gp_dispatch_keepalives_idle", PGC_POSTMASTER, GP_ARRAY_TUNING,
+			gettext_noop("Time between issuing TCP keepalives from GPDB QD to its QEs."),
+			gettext_noop("A value of 0 uses the system default."),
+			GUC_UNIT_S | GUC_NOT_IN_SAMPLE
+		},
+		&gp_dispatch_keepalives_idle,
+		0, 0, MAX_GP_DISPATCH_KEEPALIVES_IDLE,
+		NULL, NULL, NULL
+	},
+
+	{
+		{"gp_dispatch_keepalives_interval", PGC_POSTMASTER, GP_ARRAY_TUNING,
+			gettext_noop("Time between TCP keepalive retransmits from GPDB QD to its QEs."),
+			gettext_noop("A value of 0 uses the system default."),
+			GUC_UNIT_S | GUC_NOT_IN_SAMPLE
+		},
+		&gp_dispatch_keepalives_interval,
+		0, 0, MAX_GP_DISPATCH_KEEPALIVES_INTERVAL,
+		NULL, NULL, NULL
+	},
+
+	{
+		{"gp_dispatch_keepalives_count", PGC_POSTMASTER, GP_ARRAY_TUNING,
+			gettext_noop("Maximum number of TCP keepalive retransmits from GPDB QD to its QEs."),
+			gettext_noop("This controls the number of consecutive keepalive retransmits that can be "
+						 "lost before a QD/QE connection is considered dead. A value of 0 uses the "
+						 "system default."),
+			GUC_NOT_IN_SAMPLE
+		},
+		&gp_dispatch_keepalives_count,
+		0, 0, MAX_GP_DISPATCH_KEEPALIVES_COUNT,
+		NULL, NULL, NULL
 	},
 
 	/* End-of-list marker */
@@ -4795,7 +4944,7 @@ struct config_enum ConfigureNamesEnum_gp[] =
 			GUC_SUPERUSER_ONLY
 		},
 		&password_hash_algorithm,
-		PASSWORD_HASH_MD5, password_hash_algorithm_options,
+		PASSWORD_TYPE_MD5, password_hash_algorithm_options,
 		NULL, NULL, NULL
 	},
 
@@ -4883,6 +5032,16 @@ struct config_enum ConfigureNamesEnum_gp[] =
 		},
 		&Gp_interconnect_type,
 		INTERCONNECT_TYPE_UDPIFC, gp_interconnect_types,
+		NULL, NULL, NULL
+	},
+
+	{
+		{"gp_interconnect_address_type", PGC_BACKEND, GP_ARRAY_TUNING,
+		 gettext_noop("Sets the interconnect address type used for inter-node communication."),
+		 gettext_noop("Valid values are \"unicast\" and \"wildcard\"")
+		},
+		&Gp_interconnect_address_type,
+		INTERCONNECT_ADDRESS_TYPE_WILDCARD, gp_interconnect_address_types,
 		NULL, NULL, NULL
 	},
 
@@ -5403,16 +5562,39 @@ DispatchSyncPGVariable(struct config_generic * gconfig)
 		{
 			struct config_string *sguc = (struct config_string *) gconfig;
 			const char *str = *sguc->variable;
-			int			i;
 
 			appendStringInfo(&buffer, "%s TO ", gconfig->name);
 
 			/*
-			 * All whitespace characters must be escaped. See
-			 * pg_split_opts() in the backend.
+			 * If it's a list, we need to split the list into elements and
+			 * quote the elements individually.
+			 * else if it's empty or not a list, we should quote the whole src.
+			 *
+			 * This is the copied from pg_get_functiondef()'s handling of
+			 * proconfig options.
 			 */
-			for (i = 0; str[i] != '\0'; i++)
-				appendStringInfoChar(&buffer, str[i]);
+			if (sguc->gen.flags & GUC_LIST_QUOTE && str[0] != '\0')
+			{
+				List       *namelist;
+				ListCell   *lc;
+
+				/* Parse string into list of identifiers */
+				if (!SplitGUCList((char *) pstrdup(str), ',', &namelist))
+				{
+					/* this shouldn't fail really */
+					elog(ERROR, "invalid list syntax in proconfig item");
+				}
+				foreach(lc, namelist)
+				{
+					char       *curname = (char *) lfirst(lc);
+
+					appendStringInfoString(&buffer, quote_literal_cstr(curname));
+					if (lnext(lc))
+						appendStringInfoString(&buffer, ", ");
+				}
+			}
+			else
+				appendStringInfoString(&buffer, quote_literal_cstr(str));
 
 			break;
 		}

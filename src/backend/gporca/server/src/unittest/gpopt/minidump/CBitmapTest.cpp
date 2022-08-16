@@ -58,6 +58,7 @@ const CHAR *rgszBitmapFileNames[] = {
 	"../data/dxl/minidump/PredicateWithLongConjunction.mdp",
 	"../data/dxl/minidump/MultipleIndexPredicate.mdp",
 	"../data/dxl/minidump/BitmapIndexScanChooseIndex.mdp",
+	"../data/dxl/minidump/DynamicBitmapTableScan-PartAO-SemiJoin.mdp",
 };
 
 //---------------------------------------------------------------------------

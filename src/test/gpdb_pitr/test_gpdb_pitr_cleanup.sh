@@ -37,3 +37,4 @@ done
 # Start back up the gpdemo cluster.
 echo "Starting back up the gpdemo cluster..."
 gpstart -a
+dropdb gpdb_pitr_database

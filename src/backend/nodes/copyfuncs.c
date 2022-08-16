@@ -135,6 +135,9 @@ _copyPlannedStmt(const PlannedStmt *from)
 	COPY_NODE_FIELD(refreshClause);
 	COPY_SCALAR_FIELD(metricsQueryType);
 
+	COPY_SCALAR_FIELD(total_memory_master);
+	COPY_SCALAR_FIELD(nsegments_master);
+
 	return newnode;
 }
 
@@ -3852,6 +3855,18 @@ _copyFetchStmt(const FetchStmt *from)
 	return newnode;
 }
 
+static RetrieveStmt*
+_copyRetrieveStmt(const RetrieveStmt *from)
+{
+	RetrieveStmt *newnode = makeNode(RetrieveStmt);
+
+	COPY_STRING_FIELD(endpoint_name);
+	COPY_SCALAR_FIELD(count);
+	COPY_SCALAR_FIELD(is_all);
+
+	return newnode;
+}
+
 static IndexStmt *
 _copyIndexStmt(const IndexStmt *from)
 {
@@ -4687,6 +4702,7 @@ _copyLockStmt(const LockStmt *from)
 	COPY_NODE_FIELD(relations);
 	COPY_SCALAR_FIELD(mode);
 	COPY_SCALAR_FIELD(nowait);
+	COPY_SCALAR_FIELD(masteronly);
 
 	return newnode;
 }
@@ -5630,6 +5646,9 @@ copyObject(const void *from)
 			break;
 		case T_FetchStmt:
 			retval = _copyFetchStmt(from);
+			break;
+		case T_RetrieveStmt:
+			retval = _copyRetrieveStmt(from);
 			break;
 		case T_IndexStmt:
 			retval = _copyIndexStmt(from);

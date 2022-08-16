@@ -146,7 +146,8 @@ public:
 
 	CStatistics(CMemoryPool *mp, UlongToHistogramMap *col_histogram_mapping,
 				UlongToDoubleMap *colid_width_mapping, CDouble rows,
-				BOOL is_empty, ULONG relpages, ULONG relallvisible);
+				BOOL is_empty, ULONG relpages, ULONG relallvisible,
+				CDouble rebinds, ULONG num_predicates);
 
 
 	// dtor

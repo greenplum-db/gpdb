@@ -1085,12 +1085,12 @@ CExpression::PrintProperties(IOstream &os, CPrintPrefix &pfx) const
 {
 	GPOS_CHECK_ABORT;
 
-	if (NULL != m_pdprel)
+	if (NULL != m_pdprel && m_pdprel->IsComplete())
 	{
 		os << pfx << "DrvdRelProps:{" << *m_pdprel << "}" << std::endl;
 	}
 
-	if (NULL != m_pdpscalar)
+	if (NULL != m_pdpscalar && m_pdpscalar->IsComplete())
 	{
 		os << pfx << "DrvdScalarProps:{" << *m_pdpscalar << "}" << std::endl;
 	}
@@ -1616,5 +1616,19 @@ CExpression::DeriveHasScalarArrayCmp()
 	CExpressionHandle exprhdl(m_mp);
 	exprhdl.Attach(this);
 	return m_pdpscalar->DeriveHasScalarArrayCmp(exprhdl);
+}
+BOOL
+CExpression::DeriveHasScalarFuncProject()
+{
+	CExpressionHandle exprhdl(m_mp);
+	exprhdl.Attach(this);
+	return m_pdpscalar->DeriveHasScalarFuncProject(exprhdl);
+}
+ULONG
+CExpression::DeriveTotalOrderedAggs()
+{
+	CExpressionHandle exprhdl(m_mp);
+	exprhdl.Attach(this);
+	return m_pdpscalar->DeriveTotalOrderedAggs(exprhdl);
 }
 // EOF

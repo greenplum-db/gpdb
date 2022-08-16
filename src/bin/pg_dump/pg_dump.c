@@ -5623,7 +5623,7 @@ getTables(Archive *fout, int *numTables)
 		else
 			selectDumpableTable(&tblinfo[i]);
 		tblinfo[i].interesting = tblinfo[i].dobj.dump;
-
+		tblinfo[i].dummy_view = false;	/* might get set during sort */
 		tblinfo[i].postponed_def = false;		/* might get set during sort */
 
 		/*
@@ -6298,16 +6298,6 @@ getRules(Archive *fout, int *numRules)
 		}
 		else
 			ruleinfo[i].separate = true;
-
-		/*
-		 * If we're forced to break a dependency loop by dumping a view as a
-		 * table and separate _RETURN rule, we'll move the view's reloptions
-		 * to the rule.  (This is necessary because tables and views have
-		 * different valid reloptions, so we can't apply the options until the
-		 * backend knows it's a view.)  Otherwise the rule's reloptions stay
-		 * NULL.
-		 */
-		ruleinfo[i].reloptions = NULL;
 	}
 
 	PQclear(res);
@@ -6878,6 +6868,7 @@ getTableAttrs(Archive *fout, TableInfo *tblinfo, int numTables)
 	for (i = 0; i < numTables; i++)
 	{
 		TableInfo  *tbinfo = &tblinfo[i];
+		bool rootPartHasDroppedAttr = false;
 
 		/* Don't bother to collect info for sequences */
 		if (tbinfo->relkind == RELKIND_SEQUENCE)
@@ -7111,6 +7102,13 @@ getTableAttrs(Archive *fout, TableInfo *tblinfo, int numTables)
 			 */
 			if (tbinfo->relstorage == RELSTORAGE_EXTERNAL && tbinfo->attislocal[j])
 				tbinfo->attislocal[j] = false;
+
+			/*
+			 * GPDB: If root partition table has dropped column, we must do an
+			 * extra check later.
+			 */
+			if (binary_upgrade && tbinfo->parparent && tbinfo->attisdropped[j])
+				rootPartHasDroppedAttr = true;
 		}
 
 		PQclear(res);
@@ -7339,6 +7337,78 @@ getTableAttrs(Archive *fout, TableInfo *tblinfo, int numTables)
 			}
 			PQclear(res);
 		}
+
+		/*
+		 * GPDB: If root partition has a dropped attribute, check if its child
+		 * partitions do too. If all the child partitions have the same
+		 * dropped attribute then continue as normal. If none of the child
+		 * partitions have a dropped attribute, we will suppress the dropped
+		 * attribute from being dumped later in the CREATE TABLE PARTITION BY
+		 * DDL along with the respective ALTER TABLE DROP COLUMN. Child and
+		 * subroot partitions do not have their own DDL; they are completely
+		 * delegated by the root partition DDL.
+		 *
+		 * Note: This assumes that the dropped column reference is the same
+		 * between the root partition and its child partitions which should
+		 * have been confirmed by `pg_upgrade --check` heterogeneous partition
+		 * table check.
+		 */
+		if (binary_upgrade && rootPartHasDroppedAttr)
+		{
+			int numDistinctNatts;
+			int childPartNumNatts;
+
+			if (g_verbose)
+				write_msg(NULL, "checking if root partition table \"%s\" with dropped column(s) is synchronized with its child partitions.\n",
+						  tbinfo->dobj.name);
+
+			resetPQExpBuffer(q);
+			appendPQExpBuffer(q, "SELECT DISTINCT relnatts "
+							  "FROM pg_catalog.pg_class "
+							  "WHERE NOT relhassubclass AND "
+							  "oid IN (SELECT parchildrelid "
+							  "    FROM pg_catalog.pg_partition par "
+							  "    JOIN pg_catalog.pg_partition_rule rule ON par.oid=rule.paroid "
+							  "        AND NOT par.paristemplate "
+							  "        AND par.parrelid = '%u'::pg_catalog.oid)",
+							  tbinfo->dobj.catId.oid);
+
+			res = ExecuteSqlQuery(fout, q->data, PGRES_TUPLES_OK);
+			numDistinctNatts = PQntuples(res);
+			Assert(numDistinctNatts > 0);
+
+			/*
+			 * We encountered a heterogeneous partition table where all the
+			 * child partitions are not synchronized with the number of
+			 * attributes (e.g. one has a dropped column while the others do
+			 * not). This should have been fixed manually by the user before
+			 * running pg_dump --binary-upgrade (most likely as part of
+			 * addressing issues reported by `pg_upgrade --check`).
+			 */
+			if (numDistinctNatts != 1)
+			{
+				write_msg(NULL, "invalid heterogeneous partition table detected with root partition table \"%s\".\n",
+						  tbinfo->dobj.name);
+				exit_nicely(1);
+			}
+
+			/*
+			 * If the number of attributes from the child partitions match the
+			 * root partition then keep the dropped column reference. If they
+			 * do not match, then ignore the dropped column reference when
+			 * dumping the partition table DDL.
+			 */
+			childPartNumNatts = atoi(PQgetvalue(res, 0, 0));
+			if (childPartNumNatts != ntups)
+			{
+				if (g_verbose)
+					write_msg(NULL, "suppressing dropped column(s) for root partition table \"%s\".\n",
+							  tbinfo->dobj.name);
+				tbinfo->ignoreRootPartDroppedAttr = true;
+			}
+
+			PQclear(res);
+		}
 	}
 
 	destroyPQExpBuffer(q);
@@ -7357,11 +7427,16 @@ getTableAttrs(Archive *fout, TableInfo *tblinfo, int numTables)
  *
  * This function exists because there are scattered nonobvious places that
  * must be kept in sync with this decision.
+ *
+ * GPDB: For GPDB partition tables during binary_upgrade mode, dropped columns
+ * may or may not be printed depending on whether all the child partitions
+ * have the dropped column reference OR all the child partitions do not have
+ * the dropped column reference.
  */
 bool
 shouldPrintColumn(TableInfo *tbinfo, int colno)
 {
-	if (binary_upgrade)
+	if (binary_upgrade && !tbinfo->ignoreRootPartDroppedAttr)
 		return true;
 	return ((tbinfo->attislocal[colno] || tbinfo->relstorage == RELSTORAGE_EXTERNAL) &&
 	        !tbinfo->attisdropped[colno]);
@@ -14066,6 +14141,50 @@ createViewAsClause(Archive *fout, TableInfo *tbinfo)
 }
 
 /*
+ * Create a dummy AS clause for a view.  This is used when the real view
+ * definition has to be postponed because of circular dependencies.
+ * We must duplicate the view's external properties -- column names and types
+ * (including collation) -- so that it works for subsequent references.
+ *
+ * This returns a new buffer which must be freed by the caller.
+ */
+static PQExpBuffer
+createDummyViewAsClause(Archive *fout, TableInfo *tbinfo)
+{
+	PQExpBuffer result = createPQExpBuffer();
+	int			j;
+
+	appendPQExpBufferStr(result, "SELECT");
+
+	for (j = 0; j < tbinfo->numatts; j++)
+	{
+		if (j > 0)
+			appendPQExpBufferChar(result, ',');
+		appendPQExpBufferStr(result, "\n    ");
+
+		appendPQExpBuffer(result, "NULL::%s", tbinfo->atttypnames[j]);
+
+		/*
+		 * Must add collation if not default for the type, because CREATE OR
+		 * REPLACE VIEW won't change it
+		 */
+		if (OidIsValid(tbinfo->attcollation[j]))
+		{
+			CollInfo   *coll;
+
+			coll = findCollationByOid(tbinfo->attcollation[j]);
+			if (coll)
+				appendPQExpBuffer(result, " COLLATE %s",
+								  fmtQualifiedDumpable(coll));
+		}
+
+		appendPQExpBuffer(result, " AS %s", fmtId(tbinfo->attnames[j]));
+	}
+
+	return result;
+}
+
+/*
  * dumpTableSchema
  *	  write the declaration (not data) of one user-defined table or view
  */
@@ -14099,6 +14218,10 @@ dumpTableSchema(Archive *fout, TableInfo *tbinfo)
 	{
 		PQExpBuffer result;
 
+		/*
+		 * Note: keep this code in sync with the is_view case in dumpRule()
+		 */
+
 		reltypename = "VIEW";
 
 		appendPQExpBuffer(delq, "DROP VIEW %s;\n", qualrelname);
@@ -14109,17 +14232,22 @@ dumpTableSchema(Archive *fout, TableInfo *tbinfo)
 
 		appendPQExpBuffer(q, "CREATE VIEW %s", qualrelname);
 
-		if (nonemptyReloptions(tbinfo->reloptions))
+		if (tbinfo->dummy_view)
+			result = createDummyViewAsClause(fout, tbinfo);
+		else
 		{
-			appendPQExpBufferStr(q, " WITH (");
-			fmtReloptionsArray(fout, q, tbinfo->reloptions, "");
-			appendPQExpBufferChar(q, ')');
+			if (nonemptyReloptions(tbinfo->reloptions))
+			{
+				appendPQExpBufferStr(q, " WITH (");
+				fmtReloptionsArray(fout, q, tbinfo->reloptions, "");
+				appendPQExpBufferChar(q, ')');
+			}
+			result = createViewAsClause(fout, tbinfo);
 		}
-		result = createViewAsClause(fout, tbinfo);
 		appendPQExpBuffer(q, " AS\n%s", result->data);
 		destroyPQExpBuffer(result);
 
-		if (tbinfo->checkoption != NULL)
+		if (tbinfo->checkoption != NULL && !tbinfo->dummy_view)
 			appendPQExpBuffer(q, "\n  WITH %s CHECK OPTION", tbinfo->checkoption);
 		appendPQExpBufferStr(q, ";\n");
 	}
@@ -14649,6 +14777,11 @@ dumpTableSchema(Archive *fout, TableInfo *tbinfo)
 		 * exclude indexes, toast tables, sequences and matviews, even though
 		 * they have storage, because we don't support altering or dropping
 		 * columns in them, nor can they be part of inheritance trees.
+		 *
+		 * GPDB: We ignore dropped columns for partition table DDL. We assume
+		 * here that all child partitions will NOT have dropped columns
+		 * (manual user intervention should have been done after heterogeneous
+		 * partition tables were flagged via pg_upgrade --check).
 		 */
 		if (binary_upgrade && (tbinfo->relkind == RELKIND_RELATION ||
 							   tbinfo->relkind == RELKIND_FOREIGN_TABLE))
@@ -14661,7 +14794,7 @@ dumpTableSchema(Archive *fout, TableInfo *tbinfo)
 
 			for (j = 0; j < tbinfo->numatts; j++)
 			{
-				if (tbinfo->attisdropped[j])
+				if (tbinfo->attisdropped[j] && !tbinfo->ignoreRootPartDroppedAttr)
 				{
 					appendPQExpBufferStr(q, "\n-- For binary upgrade, recreate dropped column.\n");
 					appendPQExpBuffer(q, "UPDATE pg_catalog.pg_attribute\n"
@@ -16017,6 +16150,7 @@ static void
 dumpRule(Archive *fout, RuleInfo *rinfo)
 {
 	TableInfo  *tbinfo = rinfo->ruletable;
+	bool		is_view;
 	PQExpBuffer query;
 	PQExpBuffer cmd;
 	PQExpBuffer delcmd;
@@ -16036,6 +16170,12 @@ dumpRule(Archive *fout, RuleInfo *rinfo)
 	if (!rinfo->separate)
 		return;
 
+	/*
+	 * If it's an ON SELECT rule, we want to print it as a view definition,
+	 * instead of a rule.
+	 */
+	is_view = (rinfo->ev_type == '1' && rinfo->is_instead);
+
 	query = createPQExpBuffer();
 	cmd = createPQExpBuffer();
 	delcmd = createPQExpBuffer();
@@ -16043,27 +16183,57 @@ dumpRule(Archive *fout, RuleInfo *rinfo)
 
 	qtabname = pg_strdup(fmtId(tbinfo->dobj.name));
 
-	if (fout->remoteVersion >= 70300)
+	if (is_view)
 	{
-		appendPQExpBuffer(query,
-						  "SELECT pg_catalog.pg_get_ruledef('%u'::pg_catalog.oid) AS definition",
-						  rinfo->dobj.catId.oid);
+		PQExpBuffer result;
+
+		/*
+		 * We need OR REPLACE here because we'll be replacing a dummy view.
+		 * Otherwise this should look largely like the regular view dump code.
+		 */
+		appendPQExpBuffer(cmd, "CREATE OR REPLACE VIEW %s",
+						  fmtQualifiedDumpable(tbinfo));
+		if (nonemptyReloptions(tbinfo->reloptions))
+		{
+			appendPQExpBufferStr(cmd, " WITH (");
+			fmtReloptionsArray(fout, cmd, tbinfo->reloptions, "");
+			appendPQExpBufferChar(cmd, ')');
+		}
+		result = createViewAsClause(fout, tbinfo);
+		appendPQExpBuffer(cmd, " AS\n%s", result->data);
+		destroyPQExpBuffer(result);
+		if (tbinfo->checkoption != NULL)
+			appendPQExpBuffer(cmd, "\n  WITH %s CHECK OPTION",
+							  tbinfo->checkoption);
+		appendPQExpBufferStr(cmd, ";\n");
 	}
 	else
 	{
-		error_unsupported_server_version(fout);
+		/* In the rule case, just print pg_get_ruledef's result verbatim */
+		if (fout->remoteVersion >= 70300)
+		{
+			appendPQExpBuffer(query,
+							  "SELECT pg_catalog.pg_get_ruledef('%u'::pg_catalog.oid) AS definition",
+							  rinfo->dobj.catId.oid);
+		}
+		else
+		{
+			error_unsupported_server_version(fout);
+		}
+
+		res = ExecuteSqlQuery(fout, query->data, PGRES_TUPLES_OK);
+
+		if (PQntuples(res) != 1)
+		{
+			write_msg(NULL, "query to get rule \"%s\" for table \"%s\" failed: wrong number of rows returned\n",
+					  rinfo->dobj.name, tbinfo->dobj.name);
+			exit_nicely(1);
+		}
+
+		printfPQExpBuffer(cmd, "%s\n", PQgetvalue(res, 0, 0));
+
+		PQclear(res);
 	}
-
-	res = ExecuteSqlQuery(fout, query->data, PGRES_TUPLES_OK);
-
-	if (PQntuples(res) != 1)
-	{
-		write_msg(NULL, "query to get rule \"%s\" for table \"%s\" failed: wrong number of rows returned\n",
-				  rinfo->dobj.name, tbinfo->dobj.name);
-		exit_nicely(1);
-	}
-
-	printfPQExpBuffer(cmd, "%s\n", PQgetvalue(res, 0, 0));
 
 	/*
 	 * Add the command to alter the rules replication firing semantics if it
@@ -16089,21 +16259,28 @@ dumpRule(Archive *fout, RuleInfo *rinfo)
 		}
 	}
 
-	/*
-	 * Apply view's reloptions when its ON SELECT rule is separate.
-	 */
-	if (nonemptyReloptions(rinfo->reloptions))
+	if (is_view)
 	{
-		appendPQExpBuffer(cmd, "ALTER VIEW %s SET (",
-						  fmtQualifiedDumpable(tbinfo));
-		fmtReloptionsArray(fout, cmd, rinfo->reloptions, "");
-		appendPQExpBufferStr(cmd, ");\n");
-	}
+		/*
+		 * We can't DROP a view's ON SELECT rule.  Instead, use CREATE OR
+		 * REPLACE VIEW to replace the rule with something with minimal
+		 * dependencies.
+		 */
+		PQExpBuffer result;
 
-	appendPQExpBuffer(delcmd, "DROP RULE %s ",
-					  fmtId(rinfo->dobj.name));
-	appendPQExpBuffer(delcmd, "ON %s;\n",
-					  fmtQualifiedDumpable(tbinfo));
+		appendPQExpBuffer(delcmd, "CREATE OR REPLACE VIEW %s",
+						  fmtQualifiedDumpable(tbinfo));
+		result = createDummyViewAsClause(fout, tbinfo);
+		appendPQExpBuffer(delcmd, " AS\n%s;\n", result->data);
+		destroyPQExpBuffer(result);
+	}
+	else
+	{
+		appendPQExpBuffer(delcmd, "DROP RULE %s ",
+						  fmtId(rinfo->dobj.name));
+		appendPQExpBuffer(delcmd, "ON %s;\n",
+						  fmtQualifiedDumpable(tbinfo));
+	}
 
 	appendPQExpBuffer(ruleprefix, "RULE %s ON",
 					  fmtId(rinfo->dobj.name));
@@ -16125,8 +16302,6 @@ dumpRule(Archive *fout, RuleInfo *rinfo)
 				tbinfo->dobj.namespace->dobj.name,
 				tbinfo->rolname,
 				rinfo->dobj.catId, 0, rinfo->dobj.dumpId);
-
-	PQclear(res);
 
 	free(tag);
 	destroyPQExpBuffer(query);
@@ -16479,21 +16654,28 @@ getDependencies(Archive *fout)
 	 * entries will have dependencies on their parent opfamily, which we
 	 * should drop since they'd likewise become useless self-dependencies.
 	 * (But be sure to keep deps on *other* opfamilies; see amopsortfamily.)
+	 *
+	 * Skip this for pre-8.3 source servers: pg_opfamily doesn't exist there,
+	 * and the (known) cases where it would matter to have these dependencies
+	 * can't arise anyway.
 	 */
-	appendPQExpBufferStr(query, "UNION ALL\n"
-						 "SELECT 'pg_opfamily'::regclass AS classid, amopfamily AS objid, refclassid, refobjid, deptype "
-						 "FROM pg_depend d, pg_amop o "
-						 "WHERE deptype NOT IN ('p', 'e', 'i') AND "
-						 "classid = 'pg_amop'::regclass AND objid = o.oid "
-						 "AND NOT (refclassid = 'pg_opfamily'::regclass AND amopfamily = refobjid)\n");
+	if (fout->remoteVersion >= 80300)
+	{
+		appendPQExpBufferStr(query, "UNION ALL\n"
+							 "SELECT 'pg_opfamily'::regclass AS classid, amopfamily AS objid, refclassid, refobjid, deptype "
+							 "FROM pg_depend d, pg_amop o "
+							 "WHERE deptype NOT IN ('p', 'e', 'i') AND "
+							 "classid = 'pg_amop'::regclass AND objid = o.oid "
+							 "AND NOT (refclassid = 'pg_opfamily'::regclass AND amopfamily = refobjid)\n");
 
-	/* Likewise for pg_amproc entries */
-	appendPQExpBufferStr(query, "UNION ALL\n"
-						 "SELECT 'pg_opfamily'::regclass AS classid, amprocfamily AS objid, refclassid, refobjid, deptype "
-						 "FROM pg_depend d, pg_amproc p "
-						 "WHERE deptype NOT IN ('p', 'e', 'i') AND "
-						 "classid = 'pg_amproc'::regclass AND objid = p.oid "
-						 "AND NOT (refclassid = 'pg_opfamily'::regclass AND amprocfamily = refobjid)\n");
+		/* Likewise for pg_amproc entries */
+		appendPQExpBufferStr(query, "UNION ALL\n"
+							 "SELECT 'pg_opfamily'::regclass AS classid, amprocfamily AS objid, refclassid, refobjid, deptype "
+							 "FROM pg_depend d, pg_amproc p "
+							 "WHERE deptype NOT IN ('p', 'e', 'i') AND "
+							 "classid = 'pg_amproc'::regclass AND objid = p.oid "
+							 "AND NOT (refclassid = 'pg_opfamily'::regclass AND amprocfamily = refobjid)\n");
+	}
 
 	/* Sort the output for efficiency below */
 	appendPQExpBufferStr(query, "ORDER BY 1,2");

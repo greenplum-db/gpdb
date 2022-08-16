@@ -363,7 +363,7 @@ NOTICE:  CREATE TABLE will create partition "pt_1_prt_2_2_prt_1" for table "pt_1
 NOTICE:  CREATE TABLE will create partition "pt_1_prt_2_2_prt_2" for table "pt_1_prt_2"
 alter table only pt set distributed randomly;
 ERROR:  can't set the distribution policy of ONLY "pt"
-HINT:  Distribution policy may be set for an entire partitioned table or one of its leaf parts.
+HINT:  Distribution policy can be set for an entire partitioned table, not for one of its leaf parts or an interior branch.
 insert into pt values(35, 35, 35, 'A');
 insert into pt values(36, 35, 35, 'A');
 insert into pt values(37, 35, 35, 'A');
@@ -381,7 +381,7 @@ select gp_segment_id, * from pt_1;
 
 alter table only pt_1_prt_2 set distributed by (j);
 ERROR:  can't set the distribution policy of ONLY "pt_1_prt_2"
-HINT:  Distribution policy may be set for an entire partitioned table or one of its leaf parts.
+HINT:  Distribution policy can be set for an entire partitioned table, not for one of its leaf parts or an interior branch.
 insert into pt values(45, 45, 45, 'B');
 insert into pt values(45, 46, 46, 'B');
 insert into pt values(45, 47, 47, 'B');
@@ -595,8 +595,7 @@ select a from ctas_x group by a;
 create temporary table ctas_y as
   select even.j, even.i as a, odd.i as b
   from even full outer join odd on (even.i = odd.i);
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'j' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause. Creating a NULL policy entry.
 select a from ctas_y group by a;
  a  
 ----
@@ -659,7 +658,7 @@ explain (costs off) select even.i from even left outer join odd on (even.i = odd
 
 -- But this does.
 explain (costs off) select even.i from even right outer join odd on (even.i = odd.i) group by (even.i);
-                            QUERY PLAN                            
+                            QUERY PLAN
 ------------------------------------------------------------------
  Gather Motion 3:1  (slice2; segments: 3)
    ->  GroupAggregate

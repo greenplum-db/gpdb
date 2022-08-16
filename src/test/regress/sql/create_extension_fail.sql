@@ -46,3 +46,14 @@ create table t_12713(a int);
 \c
 drop table t_12713;
 drop role user_12713;
+
+--
+-- Another Test from Issue: https://github.com/greenplum-db/gpdb/issues/6716
+--
+drop extension if exists gp_inject_fault;
+create schema issue6716;
+create extension gp_inject_fault with schema issue6716;
+select issue6716.gp_inject_fault('issue6716', 'skip', 1);
+select issue6716.gp_inject_fault('issue6716', 'reset', 1);
+drop extension gp_inject_fault;
+drop schema issue6716;

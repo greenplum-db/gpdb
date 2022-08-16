@@ -1453,7 +1453,8 @@ CGroup::PstatsRecursiveDerive(CMemoryPool *pmpLocal, CMemoryPool *pmpGlobal,
 	}
 
 	IStatistics *stats = NULL;
-	// if this is a duplicate group, return stats from the duplicate
+	// if a duplicate group is found, the stats is derived of the duplicate
+	// group and returned, no stats will be derived of the group itself
 	if (FDuplicateGroup())
 	{
 		// call stat derivation on the duplicate group
@@ -1907,6 +1908,14 @@ CGroup::FResetStats()
 		return true;
 	}
 
+	// if a duplicate group is found, the duplicate group stats will be
+	// reset, whereas the group's own stats (most likely NULL) won't be
+	// reset
+	if (FDuplicateGroup())
+	{
+		return PgroupDuplicate()->FResetStats();
+	}
+
 	BOOL fResetStats = false;
 	if (FHasNewLogicalOperators())
 	{
@@ -1929,7 +1938,13 @@ CGroup::FResetStats()
 			GPOS_CHECK_ABORT;
 
 			CGroup *pgroupChild = (*pgexprCurrent)[ul];
-			if (!pgroupChild->FScalar() && pgroupChild->FResetStats())
+			if (!pgroupChild->FScalar() &&
+				// FIXME: Scenario exists where this group is child's duplicate
+				//        group. When the case arises, the child's children
+				//        won’t be reset. Otherwise we can hit infinite loop
+				//        that resets child->this->child.
+				(this == pgroupChild->PgroupDuplicate() ||
+				 pgroupChild->FResetStats()))
 			{
 				fResetStats = true;
 				// we cannot break here since we must visit all child groups

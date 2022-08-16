@@ -64,7 +64,7 @@ BITMAP_SCAN_PATTERN = r"Bitmap Heap Scan"
 BITMAP_SCAN_PATTERN_V5 = r"Bitmap Table Scan"
 
 HASH_JOIN = "hash_join"
-HASH_JOIN_PATTERN = r"Hash Join"
+HASH_JOIN_PATTERN = r"Hash .*Join"
 HASH_JOIN_PATTERN_V5 = r"Hash Join"
 
 NL_JOIN = "nl_join"
@@ -1183,6 +1183,16 @@ def run_one_bitmap_join_test(conn, testTitle, paramValueLow, paramValueHigh, set
                                                    execute_n_times)
     print_results(testTitle, explainDict, execDict, errors, plan_ids, execute_n_times)
 
+def run_one_index_join_test(conn, testTitle, paramValueLow, paramValueHigh, setup, parameterizeMethod,
+                             execute_n_times):
+    log_output("Running index join test " + testTitle)
+    plan_ids = [INDEX_SCAN, TABLE_SCAN]
+    force_methods = [force_index_join, force_hash_join]
+    explainDict, execDict, errors = find_crossover(conn, paramValueLow, paramValueHigh, setup, parameterizeMethod,
+                                                   explain_join_scan, reset_index_join, plan_ids, force_methods,
+                                                   execute_n_times)
+    print_results(testTitle, explainDict, execDict, errors, plan_ids, execute_n_times)
+
 def run_one_index_scan_test(conn, testTitle, paramValueLow, paramValueHigh, setup, parameterizeMethod,
                              execute_n_times):
     log_output("Running index scan test " + testTitle)
@@ -1389,7 +1399,7 @@ def run_index_join_tests(conn, execute_n_times):
                              parameterize_bitmap_join_wide,
                              execute_n_times)
 
-    run_one_bitmap_join_test(conn,
+    run_one_index_join_test(conn,
                              "Btree Join Test; NDV=10000; selectivity_pct=0.01*parameter_value; count(*)",
                              0,
                              500,
@@ -1397,7 +1407,7 @@ def run_index_join_tests(conn, execute_n_times):
                              parameterize_btree_join_narrow,
                              execute_n_times)
 
-    run_one_bitmap_join_test(conn,
+    run_one_index_join_test(conn,
                              "Btree Join Test; NDV=10000; selectivity_pct=0.01*parameter_value; max(txt)",
                              0,
                              400,

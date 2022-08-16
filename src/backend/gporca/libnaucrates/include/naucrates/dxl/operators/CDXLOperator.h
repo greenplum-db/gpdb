@@ -124,6 +124,7 @@ enum Edxlopid
 	EdxlopScalarPartListValues,
 	EdxlopScalarPartListNullTest,
 	EdxlopScalarValuesList,
+	EdxlopScalarSortGroupClause,
 
 	EdxlopPhysicalResult,
 	EdxlopPhysicalValuesScan,

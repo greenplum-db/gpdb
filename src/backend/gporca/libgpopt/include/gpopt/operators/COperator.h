@@ -169,10 +169,12 @@ public:
 		EopScalarArrayCmp,
 		EopScalarArrayRef,
 		EopScalarArrayRefIndexList,
+		EopScalarValuesList,
 
 		EopScalarAssertConstraintList,
 		EopScalarAssertConstraint,
 
+		EopScalarSortGroupClause,
 		EopScalarSubquery,
 		EopScalarSubqueryAny,
 		EopScalarSubqueryAll,

@@ -659,12 +659,12 @@ gpdb::IsAggPartialCapable(Oid aggid)
 }
 
 Oid
-gpdb::GetAggregate(const char *agg, Oid type_oid)
+gpdb::GetAggregate(const char *agg, Oid type_oid, int nargs)
 {
 	GP_WRAP_START;
 	{
 		/* catalog tables: pg_aggregate */
-		return get_aggregate(agg, type_oid);
+		return get_aggregate(agg, type_oid, nargs);
 	}
 	GP_WRAP_END;
 	return 0;
@@ -2059,6 +2059,18 @@ gpdb::GetLogicalIndexInfo(Oid root_oid, Oid index_oid)
 	}
 	GP_WRAP_END;
 	return NULL;
+}
+
+LogicalIndexType
+gpdb::GetLogicalIndexType(Oid index_oid)
+{
+	GP_WRAP_START;
+	{
+		/* catalog tables: pg_index */
+		return logicalIndexTypeForIndexOid(index_oid);
+	}
+	GP_WRAP_END;
+	return INDTYPE_BTREE;
 }
 
 void

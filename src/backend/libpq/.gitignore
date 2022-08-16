@@ -7,3 +7,4 @@ fe-protocol3.c
 fe-secure.c
 getpeereid.c
 pqexpbuffer.c
+fe-auth-scram.c

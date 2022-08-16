@@ -783,6 +783,8 @@ PLyObject_AsString(PyObject *plrv)
 	char	   *plrv_sc;
 	size_t		plen;
 	size_t		slen;
+	const char *err_msg =
+		"could not create string representation of Python object";
 
 	if (PyUnicode_Check(plrv))
 		plrv_bo = PLyUnicode_Bytes(plrv);
@@ -791,6 +793,8 @@ PLyObject_AsString(PyObject *plrv)
 		/* use repr() for floats, str() is lossy */
 #if PY_MAJOR_VERSION >= 3
 		PyObject   *s = PyObject_Repr(plrv);
+		if (!s)
+			PLy_elog(ERROR, "%s", err_msg);
 
 		plrv_bo = PLyUnicode_Bytes(s);
 		Py_XDECREF(s);
@@ -802,6 +806,8 @@ PLyObject_AsString(PyObject *plrv)
 	{
 #if PY_MAJOR_VERSION >= 3
 		PyObject   *s = PyObject_Str(plrv);
+		if (!s)
+			PLy_elog(ERROR, "%s", err_msg);
 
 		plrv_bo = PLyUnicode_Bytes(s);
 		Py_XDECREF(s);
@@ -810,7 +816,7 @@ PLyObject_AsString(PyObject *plrv)
 #endif
 	}
 	if (!plrv_bo)
-		PLy_elog(ERROR, "could not create string representation of Python object");
+		PLy_elog(ERROR, "%s", err_msg);
 
 	plrv_sc = pstrdup(PyBytes_AsString(plrv_bo));
 	plen = PyBytes_Size(plrv_bo);

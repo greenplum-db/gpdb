@@ -1,0 +1,61 @@
+-- @Description Tests retrieve session functionality restriction for security.
+-- 
+DROP TABLE IF EXISTS t1;
+CREATE TABLE t1 (a INT) DISTRIBUTED by (a);
+insert into t1 select generate_series(1,100);
+
+CREATE OR REPLACE FUNCTION myappend(anyarray, anyelement) RETURNS anyarray AS $$
+SELECT $1 || $2
+$$ LANGUAGE SQL;
+
+-- Test: Retrieve login without valid token.
+1: @pre_run 'export RETRIEVE_TOKEN="123" ; echo $RAW_STR' : SELECT 1;
+0R: SELECT 1;
+0Rq:
+
+-- Test: Declare a cursor
+1: BEGIN;
+1: DECLARE c1 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
+1: @post_run 'parse_endpoint_info 1 1 2 3 4' : SELECT endpointname,auth_token,hostname,port,state FROM gp_get_endpoints() WHERE cursorname='c1';
+
+-- Test: Should not change gp_role in retrieve mode
+0R: set gp_role to 'utility';
+
+-- Test: limit all statement which is supported in retrieve session
+0R: show gp_role;
+
+0R: begin;
+0R: declare c1 cursor for select * from t1;
+0R: fetch 5 from c1;
+0R: rollback;
+
+0R: delete FROM t1;
+0R: insert into t1 select generate_series(100,110);
+0R: update t1 set a=a+100 where a<10;
+0R: truncate table t1;
+0R: select * from t1;
+
+0R: CREATE TABLE t10 (a INT) DISTRIBUTED by (a);
+0R: DROP TABLE t1;
+
+-- copy ... on program ... is also disallowed by this retrieve session.
+0R: COPY t1 to '/tmp/1.cvs';
+
+-- Test: builtin function can not be allowed
+0R: select '12'::int;
+-- Test: UDF can not be allowed
+0R: SELECT myappend(ARRAY[42,6], 21);
+-- Test: Create UDF can not allowed
+0R: CREATE OR REPLACE FUNCTION myappend1(anyarray, anyelement) RETURNS anyarray AS $$
+SELECT $1 || $2
+$$ LANGUAGE SQL;
+
+-- Test: Different illegal endpoints always lead to an error
+---- invalid endpoints
+1R: RETRIEVE ALL FROM ENDPOINT abc;
+1R: RETRIEVE ALL FROM ENDPOINT 123;
+1R: RETRIEVE ALL FROM ENDPOINT tk1122;
+1R: RETRIEVE ALL FROM ENDPOINT tktt223344556677889900112233445566;
+
+-- Retrieve data.
+*R: @pre_run 'set_endpoint_variable @ENDPOINT1': RETRIEVE 10 FROM ENDPOINT "@ENDPOINT1";

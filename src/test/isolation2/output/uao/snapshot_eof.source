@@ -53,7 +53,7 @@ ROLLBACK
 COPY 10
 -- Resume VACUUM.
 -- start_ignore
-3:SELECT gp_inject_fault('ao_column_truncate_to_eof', 'resume', dbid) FROM gp_segment_configuration WHERE role = 'p' AND content > -1;
+3:SELECT gp_inject_fault('ao_@orientation@_truncate_to_eof', 'resume', dbid) FROM gp_segment_configuration WHERE role = 'p' AND content > -1;
  gp_inject_fault 
 -----------------
  Success:        
@@ -73,7 +73,7 @@ VACUUM
 (1 row)
 -- Cleanup.
 -- start_ignore
-3:SELECT gp_inject_fault('ao_column_truncate_to_eof', 'reset', dbid) FROM gp_segment_configuration WHERE role = 'p' AND content > -1;
+3:SELECT gp_inject_fault('ao_@orientation@_truncate_to_eof', 'reset', dbid) FROM gp_segment_configuration WHERE role = 'p' AND content > -1;
  gp_inject_fault 
 -----------------
  Success:        
@@ -407,4 +407,96 @@ INSERT 10
 1:DROP TABLE insert_eof;
 DROP
 1:RESET gp_default_storage_options;
+RESET
+
+--
+-- Check that VACUUM truncate uses the latest committed segment eof, verify AO header CRC,
+-- to assert taking a proper snapshot under VACUUM and concurrent insert request. There
+-- should be no error message such like:
+-- ERROR:  header checksum does not match, expected 0x00000000 and found 0xD49F4AA2  (seg0 slice1 ::1:6002 pid=25179)
+-- DETAIL:  Append-Only storage header kind 0 unknown
+-- CONTEXT:  Scan of Append-Only Row-Oriented relation 'truncate_eof'. Append-Only segment file 'base/17751/16959.2', block header offset in file = 16, bufferCount 2
+--
+-- Configure fault injection.
+-- start_ignore
+1:SELECT gp_inject_fault('ao_@orientation@_truncate_to_eof', 'reset', dbid) FROM gp_segment_configuration WHERE role = 'p' AND content > -1;
+ gp_inject_fault 
+-----------------
+ Success:        
+ Success:        
+ Success:        
+(3 rows)
+1:SELECT gp_inject_fault('ao_@orientation@_truncate_to_eof', 'suspend', dbid) FROM gp_segment_configuration WHERE role = 'p' AND content > -1;
+ gp_inject_fault 
+-----------------
+ Success:        
+ Success:        
+ Success:        
+(3 rows)
+-- end_ignore
+-- Create segment file that requires eof truncate.
+1:SET gp_default_storage_options = "appendonly=true, orientation=@orientation@";
+SET
+1:CREATE TABLE truncate_eof (a int) DISTRIBUTED BY (a);
+CREATE
+1:BEGIN;
+BEGIN
+1:INSERT INTO truncate_eof SELECT generate_series(1, 10);
+INSERT 10
+1:ROLLBACK;
+ROLLBACK
+-- Pause VACUUM after an appendonly metadata snapshot has been acquired
+-- but before segment file has been locked.
+2&:VACUUM truncate_eof;  <waiting ...>
+-- Commit new data in two parallel sessions and move eof.
+-- start_ignore
+1&:COPY truncate_eof FROM PROGRAM 'printf "1\n2\n3\n4\n5\n6\n7\n8\n9\n10"';  <waiting ...>
+-- end_ignore
+3:COPY truncate_eof FROM PROGRAM 'printf "1\n2\n3\n4\n5\n6\n7\n8\n9\n10"';
+COPY 10
+-- Resume VACUUM.
+-- start_ignore
+3:SELECT gp_inject_fault('ao_@orientation@_truncate_to_eof', 'resume', dbid) FROM gp_segment_configuration WHERE role = 'p' AND content > -1;
+ gp_inject_fault 
+-----------------
+ Success:        
+ Success:        
+ Success:        
+(3 rows)
+1<:  <... completed>
+COPY 10
+-- end_ignore
+2<:  <... completed>
+VACUUM
+1:BEGIN;
+BEGIN
+2:BEGIN;
+BEGIN
+1:INSERT INTO truncate_eof SELECT generate_series(1, 1);
+INSERT 1
+2:INSERT INTO truncate_eof SELECT generate_series(1, 10);
+INSERT 10
+1:COMMIT;
+COMMIT
+2:COMMIT;
+COMMIT
+-- Validate that segment file is not corrupted.
+3:SELECT count(*) FROM truncate_eof;
+ count 
+-------
+ 31    
+(1 row)
+-- Cleanup.
+-- start_ignore
+3:SELECT gp_inject_fault('ao_@orientation@_truncate_to_eof', 'reset', dbid) FROM gp_segment_configuration WHERE role = 'p' AND content > -1;
+ gp_inject_fault 
+-----------------
+ Success:        
+ Success:        
+ Success:        
+(3 rows)
+-- end_ignore
+3:DROP TABLE truncate_eof;
+DROP
+3:RESET gp_default_storage_options;
 RESET

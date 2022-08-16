@@ -50,4 +50,5 @@ createdb.sql
 /alter_db_set_tablespace.sql
 /autovacuum-template0-segment.sql
 /default_tablespace.sql
+/gp_dispatch_keepalives.sql
 /external_table_persistent_error_log.sql

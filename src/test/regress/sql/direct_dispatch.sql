@@ -314,6 +314,21 @@ select t1.gp_segment_id, t2.gp_segment_id, * from t_test_dd_via_segid t1, t_test
 explain (costs off) select gp_segment_id, count(*) from t_test_dd_via_segid group by gp_segment_id;
 select gp_segment_id, count(*) from t_test_dd_via_segid group by gp_segment_id;
 
+-- test direct dispatch via gp_segment_id qual on distributed randomly table
+alter table t_test_dd_via_segid set distributed randomly;
+
+explain (costs off) select gp_segment_id, id from t_test_dd_via_segid where gp_segment_id=0;
+
+explain (costs off) select gp_segment_id, id from t_test_dd_via_segid where gp_segment_id=1;
+
+explain (costs off) select gp_segment_id, id from t_test_dd_via_segid where gp_segment_id=2;
+
+explain (costs off) select gp_segment_id, id from t_test_dd_via_segid where gp_segment_id=1 or gp_segment_id=2;
+
+explain (costs off) select gp_segment_id, id from t_test_dd_via_segid where gp_segment_id=1 or gp_segment_id=2;
+
+explain (costs off) select gp_segment_id, id from t_test_dd_via_segid where gp_segment_id=1 or gp_segment_id=2 or gp_segment_id=3;
+
 -- cleanup
 set test_print_direct_dispatch_info=off;
 

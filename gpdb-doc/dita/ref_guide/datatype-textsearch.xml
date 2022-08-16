@@ -9,7 +9,7 @@
         to locate those that best match a <i>query</i>. The <codeph>tsvector</codeph> type
         represents a document in a form optimized for text search; the <codeph>tsquery</codeph> type
         similarly represents a text query. <xref
-          href="../admin_guide/textsearch/full-text-search.xml"/> provides a detailed explanation of
+          href="../admin_guide/textsearch/full-text-search.html" format="html" scope="external">Using Full Text Search</xref> provides a detailed explanation of
         this facility, and <xref href="function-summary.xml#topic_vpj_ss1_lfb"/> summarizes the
         related functions and operators.</p>
       <p>The <codeph>tsvector</codeph> and <codeph>tsquery</codeph> types cannot be part of the
@@ -20,7 +20,7 @@
       <body>
         <p>A <codeph>tsvector</codeph> value is a sorted list of distinct <i>lexemes</i>, which are
           words that have been <i>normalized</i> to merge different variants of the same word (see
-            <xref href="../admin_guide/textsearch/full-text-search.xml"/> for details). Sorting and
+            <xref href="../admin_guide/textsearch/full-text-search.html" format="html" scope="external">Using Full Text Search</xref> for details). Sorting and
           duplicate-elimination are done automatically during input, as shown in this example:</p>
         <codeblock>SELECT 'a fat cat sat on a mat and ate a fat rat'::tsvector;
                       tsvector

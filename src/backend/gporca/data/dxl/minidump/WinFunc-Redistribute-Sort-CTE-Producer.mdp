@@ -455,7 +455,7 @@ with v as (select * from t1) select  row_number() over(partition by v1.b), rank(
         </dxl:LogicalWindow>
       </dxl:LogicalCTEAnchor>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="11376">
+    <dxl:Plan Id="0" SpaceSize="13616">
       <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="3141.988407" Rows="333333.333333" Width="24"/>
@@ -846,8 +846,13 @@ with v as (select * from t1) select  row_number() over(partition by v1.b), rank(
                     <dxl:GroupingColumns/>
                     <dxl:ProjList>
                       <dxl:ProjElem ColId="29" Alias="count">
-                        <dxl:AggFunc AggMdid="0.2147.1.0" AggDistinct="false" AggStage="Final">
+                        <dxl:AggFunc AggMdid="0.2147.1.0" AggDistinct="false" AggStage="Final" AggKind="n" >
+                          <dxl:ValuesList ParamType="aggargs">
                           <dxl:Ident ColId="98" ColName="ColRef_0098" TypeMdid="0.20.1.0"/>
+                          </dxl:ValuesList>
+                          <dxl:ValuesList ParamType="aggdirectargs"/>
+                          <dxl:ValuesList ParamType="aggorder"/>
+                          <dxl:ValuesList ParamType="aggdistinct"/>
                         </dxl:AggFunc>
                       </dxl:ProjElem>
                     </dxl:ProjList>
@@ -870,8 +875,13 @@ with v as (select * from t1) select  row_number() over(partition by v1.b), rank(
                         <dxl:GroupingColumns/>
                         <dxl:ProjList>
                           <dxl:ProjElem ColId="98" Alias="ColRef_0098">
-                            <dxl:AggFunc AggMdid="0.2147.1.0" AggDistinct="true" AggStage="Partial">
+                            <dxl:AggFunc AggMdid="0.2147.1.0" AggDistinct="true" AggStage="Partial" AggKind="n" >
+                              <dxl:ValuesList ParamType="aggargs">
                               <dxl:Ident ColId="52" ColName="a" TypeMdid="0.23.1.0"/>
+                              </dxl:ValuesList>
+                              <dxl:ValuesList ParamType="aggdirectargs"/>
+                              <dxl:ValuesList ParamType="aggorder"/>
+                              <dxl:ValuesList ParamType="aggdistinct"/>
                             </dxl:AggFunc>
                           </dxl:ProjElem>
                         </dxl:ProjList>

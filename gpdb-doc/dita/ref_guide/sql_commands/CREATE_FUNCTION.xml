@@ -84,7 +84,7 @@ SELECT foo();</codeblock><p>In
                         MASTER</codeph> attribute is run only on the master segment and a
                     function with the <codeph>EXECUTE ON ALL SEGMENTS</codeph> attribute is run 
                     on all primary segment instances (not the master).</p><p>See <xref
-                        href="../../admin_guide/query/topics/functions-operators.xml#topic26/in151167"
+                        href="../../admin_guide/query/topics/functions-operators.html#topic26/in151167" format="html" scope="external"
                         >Using Functions and Operators</xref> in the <cite>Greenplum Database
                         Administrator Guide</cite>.</p></sectiondiv>
             <sectiondiv><b>Functions And Replicated Tables</b><p>A user-defined function that

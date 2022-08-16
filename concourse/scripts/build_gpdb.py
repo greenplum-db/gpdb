@@ -1,5 +1,6 @@
 #!/usr/bin/python2
 
+import glob
 import optparse
 import os
 import shutil
@@ -16,6 +17,14 @@ def create_gpadmin_user():
     os.chmod('/bin/ping', os.stat('/bin/ping').st_mode | stat.S_ISUID)
     if status:
         return status
+
+def extract_explain_test_suite():
+    tarfiles = glob.glob('explain_test_suite/*.tar.gz')
+    if len(tarfiles) != 1:
+        print("Expected to find 1 tar file.")
+        return 1
+    status = subprocess.call(["tar", "xvf", tarfiles[0]])
+    return status
 
 def tar_explain_output():
     status = subprocess.call(["tar", "czvf", "output/explain_ouput.tar.gz", "out/"])
@@ -42,8 +51,12 @@ def main():
     status = gpBuild.install_dependency("bin_gpdb", INSTALL_DIR)
     fail_on_error(status)
 
-    status = create_gpadmin_user()
-    fail_on_error(status)
+    if not options.dbexists:
+        status = create_gpadmin_user()
+        fail_on_error(status)
+    else:
+        status = extract_explain_test_suite()
+        fail_on_error(status)
     status = gpBuild.run_explain_test_suite(options.dbexists)
     fail_on_error(status)
     status = tar_explain_output()

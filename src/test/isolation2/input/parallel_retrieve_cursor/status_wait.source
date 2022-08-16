@@ -1,0 +1,290 @@
+-- @Description Tests the state for pg_endpoints AND gp_get_segment_endpoints(), focus in wait mode
+--
+DROP TABLE IF EXISTS t1;
+CREATE TABLE t1 (a INT) DISTRIBUTED by (a);
+insert into t1 select generate_series(1,100);
+
+--------- Test1: Basic test for parallel retrieve interface & close cursor
+1: BEGIN;
+1: DECLARE c1 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
+1: @post_run 'parse_endpoint_info 1 1 2 3 4' : SELECT endpointname,auth_token,hostname,port,state FROM gp_get_endpoints() WHERE cursorname='c1';
+1&: SELECT * FROM gp_wait_parallel_retrieve_cursor('c1', -1);
+
+*U: @pre_run 'set_endpoint_variable @ENDPOINT1': SELECT state FROM gp_get_segment_endpoints() WHERE endpointname='@ENDPOINT1';
+*R: @pre_run 'set_endpoint_variable @ENDPOINT1': RETRIEVE ALL FROM ENDPOINT "@ENDPOINT1";
+
+1<:
+1: CLOSE c1;
+-- check no endpoint info
+1: SELECT auth_token,state FROM gp_get_endpoints() WHERE cursorname='c1';
+-- check no token info on QE after close PARALLEL RETRIEVE CURSOR
+*U: SELECT * FROM gp_get_segment_endpoints() WHERE cursorname='c1';
+
+-- error out for closed cursor
+1: SELECT * FROM gp_wait_parallel_retrieve_cursor('c1', 0);
+1: ROLLBACK;
+
+---------- Test2: enhanced test for parallel retrieve interface state & cursor auto closed when transaction closed
+1: BEGIN;
+1: DECLARE c2 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
+1: @post_run 'parse_endpoint_info 2 1 2 3 4' : SELECT endpointname,auth_token,hostname,port,state FROM gp_get_endpoints() WHERE cursorname='c2';
+-- test RETRIEVE success on seg1
+0R: @pre_run 'set_endpoint_variable @ENDPOINT2': RETRIEVE 10 FROM ENDPOINT "@ENDPOINT2";
+1&: SELECT * FROM gp_wait_parallel_retrieve_cursor('c2', -1);
+
+-- check initial state after "CHECK PARALLEL RETRIEVE CURSOR"
+2: SELECT state FROM gp_get_endpoints() WHERE cursorname='c2';
+*U: SELECT senderpid<>-1, receiverpid<>-1, state FROM gp_get_segment_endpoints() WHERE cursorname='c2';
+-- check state if some endpoint retrieve partial results, some endpoint finished retrieving, some endpoint not start retrieving
+0R: @pre_run 'set_endpoint_variable @ENDPOINT2': RETRIEVE 10 FROM ENDPOINT "@ENDPOINT2";
+1R: @pre_run 'set_endpoint_variable @ENDPOINT2': RETRIEVE ALL FROM ENDPOINT "@ENDPOINT2";
+2: SELECT state FROM gp_get_endpoints() WHERE cursorname='c2';
+*U: SELECT senderpid<>-1, receiverpid<>-1, state FROM gp_get_segment_endpoints() WHERE cursorname='c2';
+-- return 0 row instead of reporting error if finished retrieving data from this endpoint, while other endpoint have not finished retrieving.
+1R: @pre_run 'set_endpoint_variable @ENDPOINT2': RETRIEVE ALL FROM ENDPOINT "@ENDPOINT2";
+-- finished retrieving all endpoints and check state
+*R: @pre_run 'set_endpoint_variable @ENDPOINT2': RETRIEVE ALL FROM ENDPOINT "@ENDPOINT2";
+2: SELECT state FROM gp_get_endpoints() WHERE cursorname='c2';
+*U: SELECT senderpid<>-1, receiverpid<>-1, state FROM gp_get_segment_endpoints() WHERE cursorname='c2';
+
+1<:
+1: COMMIT;
+-- check the cursor auto closed when transaction closed
+-- check no endpoint info
+1: SELECT state FROM gp_get_endpoints() WHERE cursorname='c2';
+-- check no token info on QE after close PARALLEL RETRIEVE CURSOR
+*U: SELECT * FROM gp_get_segment_endpoints() WHERE cursorname='c2';
+
+-- error out for closed cursor
+1: SELECT * FROM gp_wait_parallel_retrieve_cursor('c2', 0);
+1: ROLLBACK;
+
+---------- Test3: 2 retrieving sessions connect to the same endpoint report error & cancel QE exec backend
+1: BEGIN;
+1: DECLARE c3 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
+1: @post_run 'parse_endpoint_info 3 1 2 3 4' : SELECT endpointname,auth_token,hostname,port,state FROM gp_get_endpoints() WHERE cursorname='c3';
+1&: SELECT * FROM gp_wait_parallel_retrieve_cursor('c3', -1);
+0R: @pre_run 'set_endpoint_variable @ENDPOINT3': RETRIEVE 10 FROM ENDPOINT "@ENDPOINT3";
+-- a new retrieve session should report error
+3R: @pre_run 'set_endpoint_variable @ENDPOINT3': RETRIEVE 10 FROM ENDPOINT "@ENDPOINT3";
+-- quit this new retrieve session
+3Rq:
+-- some endpoint retrieve partial results, some endpoint finished retrieving, some endpoint not start retrieving
+1R: @pre_run 'set_endpoint_variable @ENDPOINT3': RETRIEVE ALL FROM ENDPOINT "@ENDPOINT3";
+-- get senderpid which is endpoint execution backend
+0U: @post_run 'get_tuple_cell PID31 1 1 ; create_sub "$PID31[ \t]*" senderpid31': SELECT senderpid, receiverpid<>-1, state FROM gp_get_segment_endpoints();
+-- run 'kill -s INT senderpid' to cancel the endpoint execution backend, retrieve session still can work
+42: @pre_run 'kill -s INT ${PID31} && echo "${RAW_STR}" ': SELECT 1;
+-- check it can cancel the "gp_wait_parallel_retrieve_cursor"
+1<:
+-- check no endpoint info left
+2: SELECT state FROM gp_get_endpoints() WHERE cursorname='c3';
+*U: SELECT senderpid<>-1, receiverpid<>-1, state FROM gp_get_segment_endpoints() WHERE cursorname='c3';
+-- report error for EXECUTE canceled PARALLEL RETRIEVE CURSOR
+1: SELECT * FROM gp_wait_parallel_retrieve_cursor('c3', -1);
+1: ROLLBACK;
+-- check no endpoint info
+2: SELECT state FROM gp_get_endpoints() WHERE cursorname='c3';
+*U: SELECT senderpid<>-1, receiverpid<>-1, state FROM gp_get_segment_endpoints() WHERE cursorname='c3';
+
+---------- Test4: terminate (using signal QUIT) QE exec backend
+1: BEGIN;
+1: DECLARE c4 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
+1: @post_run 'parse_endpoint_info 4 1 2 3 4' : SELECT endpointname,auth_token,hostname,port,state FROM gp_get_endpoints() WHERE cursorname='c4';
+1&: SELECT * FROM gp_wait_parallel_retrieve_cursor('c4', -1);
+-- some endpoint retrieve partial results, some endpoint finished retrieving, some endpoint not start retrieving
+0R: @pre_run 'set_endpoint_variable @ENDPOINT4': RETRIEVE 10 FROM ENDPOINT "@ENDPOINT4";
+1R: @pre_run 'set_endpoint_variable @ENDPOINT4': RETRIEVE ALL FROM ENDPOINT "@ENDPOINT4";
+-- get senderpid which is endpoint execution backend
+0U: @post_run 'get_tuple_cell PID41 1 1 ; create_sub "${PID41}[ \t]*" senderpid41': SELECT senderpid, receiverpid<>-1, state FROM gp_get_segment_endpoints();
+-- run 'kill -s QUIT senderpid' to cancel the endpoint execution backend, retrieve session still can work
+42: @pre_run 'kill -s QUIT ${PID41} && echo "${RAW_STR}" ': SELECT 1;
+-- exit this session because the connection closed, so that it will re-connect next time use this session.
+0Rq:
+0Uq:
+-- check it can cancel the "gp_wait_parallel_retrieve_cursor"
+1<:
+-- check no endpoint info left
+2q:
+2: SELECT state FROM gp_get_endpoints() WHERE cursorname='c4';
+*U: SELECT senderpid<>-1, receiverpid<>-1, state FROM gp_get_segment_endpoints() WHERE cursorname='c4';
+-- report error for EXECUTE canceled PARALLEL RETRIEVE CURSOR
+1: SELECT * FROM gp_wait_parallel_retrieve_cursor('c4', -1);
+1: ROLLBACK;
+-- check no endpoint info
+2: SELECT state FROM gp_get_endpoints() WHERE cursorname='c4';
+*U: SELECT senderpid<>-1, receiverpid<>-1, state FROM gp_get_segment_endpoints() WHERE cursorname='c4';
+2Rq:
+
+---------- Test5: terminate (using signal TERM) QE exec backend
+1: BEGIN;
+1: DECLARE c5 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
+1: @post_run 'parse_endpoint_info 5 1 2 3 4' : SELECT endpointname,auth_token,hostname,port,state FROM gp_get_endpoints() WHERE cursorname='c5';
+1&: SELECT * FROM gp_wait_parallel_retrieve_cursor('c5', -1);
+-- some endpoint retrieve partial results, some endpoint finished retrieving, some endpoint not start retrieving
+0R: @pre_run 'set_endpoint_variable @ENDPOINT5': RETRIEVE 10 FROM ENDPOINT "@ENDPOINT5";
+-- 1R still bind to Test4 session, so can not retrieve from current endpoint.
+1R: @pre_run 'set_endpoint_variable @ENDPOINT5': RETRIEVE ALL FROM ENDPOINT "@ENDPOINT5";
+-- Since seg1 retrieve session is bind to Test4 session. And Test4 session get killed. We need to restart it.
+1Rq:
+1R: @pre_run 'set_endpoint_variable @ENDPOINT5': RETRIEVE ALL FROM ENDPOINT "@ENDPOINT5";
+-- get senderpid which is endpoint execution backend
+0U: @post_run 'get_tuple_cell PID51 1 1 ; create_sub "${PID51}[ \t]*" senderpid51': SELECT senderpid, receiverpid<>-1, state FROM gp_get_segment_endpoints();
+-- run 'kill -s TERM senderpid' to cancel the endpoint execution backend, retrieve session still can work
+42: @pre_run 'kill -s TERM ${PID51} && echo "${RAW_STR}" ': SELECT 1;
+-- check it can cancel the "gp_wait_parallel_retrieve_cursor"
+1<:
+-- check no endpoint info left
+2: SELECT state FROM gp_get_endpoints() WHERE cursorname='c5';
+*U: SELECT senderpid<>-1, receiverpid<>-1, state FROM gp_get_segment_endpoints() WHERE cursorname='c5';
+-- report error for EXECUTE canceled PARALLEL RETRIEVE CURSOR
+1: SELECT * FROM gp_wait_parallel_retrieve_cursor('c5', -1);
+1: ROLLBACK;
+-- check no endpoint info
+2: SELECT state FROM gp_get_endpoints() WHERE cursorname='c5';
+*U: SELECT senderpid<>-1, receiverpid<>-1, state FROM gp_get_segment_endpoints() WHERE cursorname='c5';
+
+---------- Test6: Cancel (using signal INT) the process of 'CHECK PARALLEL RETRIEVE CURSOR'
+1: BEGIN;
+1: DECLARE c6 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
+1: @post_run 'parse_endpoint_info 6 1 2 3 4' : SELECT endpointname,auth_token,hostname,port,state FROM gp_get_endpoints() WHERE cursorname='c6';
+-- get backend pid of this session which run 'gp_wait_parallel_retrieve_cursor'
+1: @post_run 'get_tuple_cell PID61 1 1 ; create_sub "${PID61}[ \t]*" QDPid61': select pg_backend_pid();
+1&: SELECT * FROM gp_wait_parallel_retrieve_cursor('c6', -1);
+-- some endpoint retrieve partial results, some endpoint finished retrieving, some endpoint not start retrieving
+0R: @pre_run 'set_endpoint_variable @ENDPOINT6': RETRIEVE 10 FROM ENDPOINT "@ENDPOINT6";
+1R: @pre_run 'set_endpoint_variable @ENDPOINT6': RETRIEVE ALL FROM ENDPOINT "@ENDPOINT6";
+-- run 'kill -s INT QDPid' to cancel the endpoint execution backend, retrieve session still can work
+42: @pre_run 'kill -s INT ${PID61} && echo "${RAW_STR}" ': SELECT 1;
+-- check it can cancel the "gp_wait_parallel_retrieve_cursor"
+1<:
+-- check no endpoint info left
+2: SELECT state FROM gp_get_endpoints() WHERE cursorname='c6';
+*U: SELECT senderpid<>-1, receiverpid<>-1, state FROM gp_get_segment_endpoints() WHERE cursorname='c6';
+-- report error for EXECUTE canceled PARALLEL RETRIEVE CURSOR
+1: SELECT * FROM gp_wait_parallel_retrieve_cursor('c6', -1);
+1: ROLLBACK;
+-- check no endpoint info
+2: SELECT state FROM gp_get_endpoints() WHERE cursorname='c6';
+*U: SELECT senderpid<>-1, receiverpid<>-1, state FROM gp_get_segment_endpoints() WHERE cursorname='c6';
+
+---------- Test6.1: Cancel (using signal INT) the process of 'CHECK PARALLEL RETRIEVE CURSOR' without rollback
+1: BEGIN;
+1: DECLARE c61 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
+1: @post_run 'parse_endpoint_info 61 1 2 3 4' : SELECT endpointname,auth_token,hostname,port,state FROM gp_get_endpoints() WHERE cursorname='c61';
+-- get backend pid of this session which run 'gp_wait_parallel_retrieve_cursor'
+1: @post_run 'get_tuple_cell PID611 1 1 ; create_sub "${PID611}[ \t]*" QDPid611': select pg_backend_pid();
+1&: SELECT * FROM gp_wait_parallel_retrieve_cursor('c61', -1);
+-- some endpoint retrieve partial results, some endpoint finished retrieving, some endpoint not start retrieving
+0R: @pre_run 'set_endpoint_variable @ENDPOINT61': RETRIEVE 10 FROM ENDPOINT "@ENDPOINT61";
+1R: @pre_run 'set_endpoint_variable @ENDPOINT61': RETRIEVE ALL FROM ENDPOINT "@ENDPOINT61";
+-- run 'kill -s INT QDPid' to cancel the endpoint execution backend, retrieve session still can work
+42: @pre_run 'kill -s INT ${PID611} && echo "${RAW_STR}" ': SELECT 1;
+-- check it can cancel the "gp_wait_parallel_retrieve_cursor"
+1<:
+-- check no endpoint info left
+2: SELECT state FROM gp_get_endpoints() WHERE cursorname='c61';
+*U: SELECT senderpid<>-1, receiverpid<>-1, state FROM gp_get_segment_endpoints() WHERE cursorname='c61';
+-- quit the session of 'CHECK PARALLEL RETRIEVE CURSOR' and keep other session connected
+1q:
+-- check no endpoint info
+2: SELECT state FROM gp_get_endpoints() WHERE cursorname='c61';
+*U: SELECT senderpid<>-1, receiverpid<>-1, state FROM gp_get_segment_endpoints() WHERE cursorname='c61';
+0Rq:
+1Rq:
+
+---------- Test7: terminate (using signal QUIT) the process of 'CHECK PARALLEL RETRIEVE CURSOR'
+1: BEGIN;
+1: DECLARE c7 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
+1: @post_run 'parse_endpoint_info 7 1 2 3 4' : SELECT endpointname,auth_token,hostname,port,state FROM gp_get_endpoints() WHERE cursorname='c7';
+-- get backend pid of this session which run 'gp_wait_parallel_retrieve_cursor'
+1: @post_run 'get_tuple_cell PID71 1 1 ; create_sub "${PID71}[ \t]*" QDPid71': select pg_backend_pid();
+1&: SELECT * FROM gp_wait_parallel_retrieve_cursor('c7', -1);
+-- some endpoint retrieve partial results, some endpoint finished retrieving, some endpoint not start retrieving
+0R: @pre_run 'set_endpoint_variable @ENDPOINT7': RETRIEVE 10 FROM ENDPOINT "@ENDPOINT7";
+1R: @pre_run 'set_endpoint_variable @ENDPOINT7': RETRIEVE ALL FROM ENDPOINT "@ENDPOINT7";
+2U: SELECT senderpid<>-1, receiverpid<>-1, state FROM gp_get_segment_endpoints() WHERE cursorname='c7';
+-- run 'kill -s QUIT QDPid' to cancel the endpoint execution backend, retrieve session still can work
+-- here need to sleep sometime to wait for endpoint QE backend to detect QD connection lost.
+0U: @pre_run 'kill -s QUIT ${PID71}&& sleep 5 && echo "${RAW_STR}" ': SELECT 1;
+-- check it can cancel the "gp_wait_parallel_retrieve_cursor"
+1<:
+-- quit all sessions on the master, because connect lost
+1q:
+2q:
+-1Uq:
+-- check no endpoint info left
+2: SELECT state FROM gp_get_endpoints() WHERE cursorname='c7';
+*U: SELECT senderpid<>-1, receiverpid<>-1, state FROM gp_get_segment_endpoints() WHERE cursorname='c7';
+-- report error for EXECUTE canceled PARALLEL RETRIEVE CURSOR
+1: SELECT * FROM gp_wait_parallel_retrieve_cursor('c7', -1);
+1: ROLLBACK;
+-- check no endpoint info
+2: SELECT state FROM gp_get_endpoints() WHERE cursorname='c7';
+*U: SELECT senderpid<>-1, receiverpid<>-1, state FROM gp_get_segment_endpoints() WHERE cursorname='c7';
+
+---------- Test8: Status visibilities for different sessions
+1: BEGIN;
+1: DECLARE c8 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
+1: @post_run 'get_tuple_cell SESSION81 1 1 ; create_match_sub_with_spaces $SESSION81 session81': SELECT sessionid,state FROM gp_get_session_endpoints() WHERE cursorname='c8';
+-- Session 2 can only see its own cursors by default.
+2: BEGIN;
+2: DECLARE c8 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
+2: @post_run 'get_tuple_cell SESSION82 1 1 ; create_match_sub_with_spaces $SESSION82 session82': SELECT sessionid,state FROM gp_get_session_endpoints() WHERE cursorname='c8';
+-- Session 2 can see all cursors with gp_get_endpoints().
+2: SELECT sessionid,state FROM gp_get_endpoints() WHERE cursorname='c8' order by sessionid;
+
+1: CLOSE c8;
+1: END;
+2: CLOSE c8;
+2: END;
+
+---------- Test9: Cancel (using pg_cancel_backend(pid)) the process of 'CHECK PARALLEL RETRIEVE CURSOR'
+1: BEGIN;
+1: DECLARE c9 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
+1: @post_run 'parse_endpoint_info 9 1 2 3 4' : SELECT endpointname,auth_token,hostname,port,state FROM gp_get_endpoints() WHERE cursorname='c9';
+
+1&: SELECT * FROM gp_wait_parallel_retrieve_cursor('c9', -1);
+-- some endpoint retrieve partial results, some endpoint finished retrieving, some endpoint not start retrieving
+0R: @pre_run 'set_endpoint_variable @ENDPOINT9': RETRIEVE 10 FROM ENDPOINT "@ENDPOINT9";
+1R: @pre_run 'set_endpoint_variable @ENDPOINT9': RETRIEVE ALL FROM ENDPOINT "@ENDPOINT9";
+-- run pg_cancel_backend(pid) to cancel the endpoint execution backend, retrieve session still can work
+2: select pg_cancel_backend(pid) from pg_stat_activity where query like 'SELECT * FROM gp_wait_parallel_retrieve_cursor(''c9'', -1);';
+-- check it can cancel the "gp_wait_parallel_retrieve_cursor"
+1<:
+-- check no endpoint info left
+2: SELECT state FROM gp_get_endpoints() WHERE cursorname='c9';
+*U: SELECT senderpid<>-1, receiverpid<>-1, state FROM gp_get_segment_endpoints() WHERE cursorname='c9';
+-- report error for EXECUTE canceled PARALLEL RETRIEVE CURSOR
+1: SELECT * FROM gp_wait_parallel_retrieve_cursor('c9', -1);
+1: ROLLBACK;
+-- check no endpoint info
+2: SELECT state FROM gp_get_endpoints() WHERE cursorname='c9';
+
+---------- Test10: terminate (using pg_terminate_backend(pid)) the process of 'CHECK PARALLEL RETRIEVE CURSOR'
+1: BEGIN;
+1: DECLARE c10 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
+1: @post_run 'parse_endpoint_info 10 1 2 3 4' : SELECT endpointname,auth_token,hostname,port,state FROM gp_get_endpoints() WHERE cursorname='c10';
+1&: SELECT * FROM gp_wait_parallel_retrieve_cursor('c10', -1);
+-- some endpoint retrieve partial results, some endpoint finished retrieving, some endpoint not start retrieving
+0R: @pre_run 'set_endpoint_variable @ENDPOINT10': RETRIEVE 10 FROM ENDPOINT "@ENDPOINT10";
+1R: @pre_run 'set_endpoint_variable @ENDPOINT10': RETRIEVE ALL FROM ENDPOINT "@ENDPOINT10";
+2U: SELECT senderpid<>-1, receiverpid<>-1, state FROM gp_get_segment_endpoints() WHERE cursorname='c10';
+-- run ' pg_terminate_backend(pid)' to cancel the endpoint execution backend, retrieve session still can work
+-- here need to sleep sometime to wait for endpoint QE backend to detect QD connection lost.
+2: select pg_terminate_backend(pid) from pg_stat_activity where query like 'SELECT * FROM gp_wait_parallel_retrieve_cursor(''c10'', -1);';
+-- check it can cancel the "gp_wait_parallel_retrieve_cursor"
+1<:
+-- quit all sessions on the master, because connect lost
+1q:
+2q:
+-1Uq:
+-- check no endpoint info left
+2: SELECT state FROM gp_get_endpoints() WHERE cursorname='c10';
+*U: SELECT senderpid<>-1, receiverpid<>-1, state FROM gp_get_segment_endpoints() WHERE cursorname='c10';
+-- report error for EXECUTE canceled PARALLEL RETRIEVE CURSOR
+1: SELECT * FROM gp_wait_parallel_retrieve_cursor('c10', -1);
+1: ROLLBACK;
+-- check no endpoint info
+2: SELECT state FROM gp_get_endpoints() WHERE cursorname='c10';
+*U: SELECT senderpid<>-1, receiverpid<>-1, state FROM gp_get_segment_endpoints() WHERE cursorname='c10';

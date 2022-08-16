@@ -2903,6 +2903,8 @@ static char pg_notices__doc__[] =
 static void 
 notice_processor(void *arg, const char *message)
 {
+	/* require a GIL to avoid multi threads access this code */
+	PyGILState_STATE gstate = PyGILState_Ensure();
 	pgobject *self = (pgobject *) arg;
 	PyObject *pymsg;
 
@@ -2920,6 +2922,7 @@ notice_processor(void *arg, const char *message)
 	/* If we are at capacity, remove the head element */
 	if (PyList_Size(self->notices) > MAX_BUFFERED_NOTICES)
 		PySequence_DelItem(self->notices, 0);
+	PyGILState_Release(gstate);
 }
  
 static PyObject *

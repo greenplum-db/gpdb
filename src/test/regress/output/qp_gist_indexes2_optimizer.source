@@ -1290,15 +1290,14 @@ EXPLAIN (COSTS OFF) SELECT id FROM GistTable1
 ------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    Merge Key: id
-   ->  Result
-         ->  Sort
-               Sort Key: id
-               ->  Bitmap Heap Scan on gisttable1
-                     Recheck Cond: (property ~= '(3,4),(1,2)'::box)
-                     ->  Bitmap Index Scan on propertyboxindex
-                           Index Cond: (property ~= '(3,4),(1,2)'::box)
- Optimizer: Pivotal Optimizer (GPORCA) version 2.74.0
-(10 rows)
+   ->  Sort
+         Sort Key: id
+         ->  Bitmap Heap Scan on gisttable1
+               Recheck Cond: (property ~= '(3,4),(1,2)'::box)
+               ->  Bitmap Index Scan on propertyboxindex
+                     Index Cond: (property ~= '(3,4),(1,2)'::box)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(9 rows)
 
 REINDEX INDEX propertyBoxIndex;
 SELECT id FROM GistTable1 
@@ -1318,15 +1317,14 @@ EXPLAIN (COSTS OFF) SELECT id FROM GistTable1
 ------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    Merge Key: id
-   ->  Result
-         ->  Sort
-               Sort Key: id
-               ->  Bitmap Heap Scan on gisttable1
-                     Recheck Cond: (property ~= '(3,4),(1,2)'::box)
-                     ->  Bitmap Index Scan on propertyboxindex
-                           Index Cond: (property ~= '(3,4),(1,2)'::box)
- Optimizer: Pivotal Optimizer (GPORCA) version 2.74.0
-(10 rows)
+   ->  Sort
+         Sort Key: id
+         ->  Bitmap Heap Scan on gisttable1
+               Recheck Cond: (property ~= '(3,4),(1,2)'::box)
+               ->  Bitmap Index Scan on propertyboxindex
+                     Index Cond: (property ~= '(3,4),(1,2)'::box)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(9 rows)
 
 DROP INDEX propertyBoxIndex;
 -- Obviously, this shouldn't use the index now that the index is gone.
@@ -1916,15 +1914,14 @@ EXPLAIN (COSTS OFF) SELECT id FROM GistTable1
 ------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    Merge Key: id
-   ->  Result
-         ->  Sort
-               Sort Key: id
-               ->  Bitmap Heap Scan on gisttable1
-                     Recheck Cond: (property ~= '(3,4),(1,2)'::box)
-                     ->  Bitmap Index Scan on propertyboxindex
-                           Index Cond: (property ~= '(3,4),(1,2)'::box)
- Optimizer: Pivotal Optimizer (GPORCA) version 2.74.0
-(10 rows)
+   ->  Sort
+         Sort Key: id
+         ->  Bitmap Heap Scan on gisttable1
+               Recheck Cond: (property ~= '(3,4),(1,2)'::box)
+               ->  Bitmap Index Scan on propertyboxindex
+                     Index Cond: (property ~= '(3,4),(1,2)'::box)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(9 rows)
 
 REINDEX INDEX propertyBoxIndex;
 SELECT id FROM GistTable1 
@@ -1944,15 +1941,14 @@ EXPLAIN (COSTS OFF) SELECT id FROM GistTable1
 ------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    Merge Key: id
-   ->  Result
-         ->  Sort
-               Sort Key: id
-               ->  Bitmap Heap Scan on gisttable1
-                     Recheck Cond: (property ~= '(3,4),(1,2)'::box)
-                     ->  Bitmap Index Scan on propertyboxindex
-                           Index Cond: (property ~= '(3,4),(1,2)'::box)
- Optimizer: Pivotal Optimizer (GPORCA) version 2.74.0
-(10 rows)
+   ->  Sort
+         Sort Key: id
+         ->  Bitmap Heap Scan on gisttable1
+               Recheck Cond: (property ~= '(3,4),(1,2)'::box)
+               ->  Bitmap Index Scan on propertyboxindex
+                     Index Cond: (property ~= '(3,4),(1,2)'::box)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(9 rows)
 
 DROP INDEX propertyBoxIndex;
 -- Obviously, this shouldn't use the index now that the index is gone.
@@ -2542,15 +2538,14 @@ EXPLAIN (COSTS OFF) SELECT id FROM GistTable1
 ------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    Merge Key: id
-   ->  Result
-         ->  Sort
-               Sort Key: id
-               ->  Bitmap Heap Scan on gisttable1
-                     Recheck Cond: (property ~= '(3,4),(1,2)'::box)
-                     ->  Bitmap Index Scan on propertyboxindex
-                           Index Cond: (property ~= '(3,4),(1,2)'::box)
- Optimizer: Pivotal Optimizer (GPORCA) version 2.74.0
-(10 rows)
+   ->  Sort
+         Sort Key: id
+         ->  Bitmap Heap Scan on gisttable1
+               Recheck Cond: (property ~= '(3,4),(1,2)'::box)
+               ->  Bitmap Index Scan on propertyboxindex
+                     Index Cond: (property ~= '(3,4),(1,2)'::box)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(9 rows)
 
 REINDEX INDEX propertyBoxIndex;
 SELECT id FROM GistTable1 
@@ -2570,15 +2565,14 @@ EXPLAIN (COSTS OFF) SELECT id FROM GistTable1
 ------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    Merge Key: id
-   ->  Result
-         ->  Sort
-               Sort Key: id
-               ->  Bitmap Heap Scan on gisttable1
-                     Recheck Cond: (property ~= '(3,4),(1,2)'::box)
-                     ->  Bitmap Index Scan on propertyboxindex
-                           Index Cond: (property ~= '(3,4),(1,2)'::box)
- Optimizer: Pivotal Optimizer (GPORCA) version 2.74.0
-(10 rows)
+   ->  Sort
+         Sort Key: id
+         ->  Bitmap Heap Scan on gisttable1
+               Recheck Cond: (property ~= '(3,4),(1,2)'::box)
+               ->  Bitmap Index Scan on propertyboxindex
+                     Index Cond: (property ~= '(3,4),(1,2)'::box)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(9 rows)
 
 DROP INDEX propertyBoxIndex;
 -- Obviously, this shouldn't use the index now that the index is gone.
@@ -3168,15 +3162,14 @@ EXPLAIN (COSTS OFF) SELECT id FROM GistTable1
 ----------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    Merge Key: id
-   ->  Result
-         ->  Sort
-               Sort Key: id
-               ->  Bitmap Heap Scan on gisttable1
-                     Recheck Cond: (property ~= '(3,4),(1,2)'::box)
-                     ->  Bitmap Index Scan on propertyboxindex
-                           Index Cond: (property ~= '(3,4),(1,2)'::box)
- Optimizer: Pivotal Optimizer (GPORCA) version 2.74.0
-(10 rows)
+   ->  Sort
+         Sort Key: id
+         ->  Bitmap Heap Scan on gisttable1
+               Recheck Cond: (property ~= '(3,4),(1,2)'::box)
+               ->  Bitmap Index Scan on propertyboxindex
+                     Index Cond: (property ~= '(3,4),(1,2)'::box)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(9 rows)
 
 REINDEX INDEX propertyBoxIndex;
 SELECT id FROM GistTable1 
@@ -3196,15 +3189,14 @@ EXPLAIN (COSTS OFF) SELECT id FROM GistTable1
 ------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    Merge Key: id
-   ->  Result
-         ->  Sort
-               Sort Key: id
-               ->  Bitmap Heap Scan on gisttable1
-                     Recheck Cond: (property ~= '(3,4),(1,2)'::box)
-                     ->  Bitmap Index Scan on propertyboxindex
-                           Index Cond: (property ~= '(3,4),(1,2)'::box)
- Optimizer: Pivotal Optimizer (GPORCA) version 2.74.0
-(10 rows)
+   ->  Sort
+         Sort Key: id
+         ->  Bitmap Heap Scan on gisttable1
+               Recheck Cond: (property ~= '(3,4),(1,2)'::box)
+               ->  Bitmap Index Scan on propertyboxindex
+                     Index Cond: (property ~= '(3,4),(1,2)'::box)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(9 rows)
 
 DROP INDEX propertyBoxIndex;
 -- Obviously, this shouldn't use the index now that the index is gone.

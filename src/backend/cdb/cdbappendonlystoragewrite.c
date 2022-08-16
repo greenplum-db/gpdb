@@ -503,6 +503,8 @@ AppendOnlyStorageWrite_FlushAndCloseFile(
 						storageWrite->segmentFileName,
 						storageWrite->relationName)));
 
+	FileClose(storageWrite->file);
+
 	storageWrite->file = -1;
 	storageWrite->formatVersion = -1;
 

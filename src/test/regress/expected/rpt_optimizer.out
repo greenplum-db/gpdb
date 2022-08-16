@@ -1,0 +1,1350 @@
+--
+-- Basic tests for replicated table
+--
+create schema rpt;
+set search_path to rpt;
+-- If the producer is replicated, request a non-singleton spec
+-- that is not allowed to be enforced, to avoid potential CTE hang issue
+drop table if exists with_test1 cascade;
+NOTICE:  table "with_test1" does not exist, skipping
+create table with_test1 (i character varying(10)) DISTRIBUTED REPLICATED;
+explain
+WITH cte1 AS ( SELECT *,ROW_NUMBER() OVER ( PARTITION BY i) AS RANK_DESC FROM with_test1),
+ cte2 AS ( SELECT 'COL1' TBLNM,COUNT(*) DIFFCNT FROM ( SELECT * FROM cte1) X)
+select * FROM ( SELECT 'COL1' TBLNM FROM cte1) A LEFT JOIN cte2 C ON A.TBLNM=C.TBLNM;
+                                             QUERY PLAN                                             
+----------------------------------------------------------------------------------------------------
+ Sequence  (cost=0.00..1293.00 rows=1 width=24)
+   ->  Shared Scan (share slice:id 0:0)  (cost=0.00..431.00 rows=1 width=1)
+         ->  Materialize  (cost=0.00..431.00 rows=1 width=1)
+               ->  Gather Motion 1:1  (slice1; segments: 1)  (cost=0.00..431.00 rows=1 width=16)
+                     ->  WindowAgg  (cost=0.00..431.00 rows=1 width=16)
+                           Partition By: with_test1.i
+                           ->  Sort  (cost=0.00..431.00 rows=1 width=10)
+                                 Sort Key: with_test1.i
+                                 ->  Seq Scan on with_test1  (cost=0.00..431.00 rows=1 width=10)
+   ->  Hash Left Join  (cost=0.00..862.00 rows=1 width=24)
+         Hash Cond: ("outer".tblnm = pg_catalog.textin(unknownout("outer".tblnm), ''::void, (-1)))
+         ->  Result  (cost=0.00..431.00 rows=1 width=8)
+               ->  Shared Scan (share slice:id 0:0)  (cost=0.00..431.00 rows=1 width=1)
+         ->  Hash  (cost=431.00..431.00 rows=1 width=16)
+               ->  Result  (cost=0.00..431.00 rows=1 width=16)
+                     ->  Aggregate  (cost=0.00..431.00 rows=1 width=8)
+                           ->  Shared Scan (share slice:id 0:0)  (cost=0.00..431.00 rows=1 width=1)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(18 rows)
+
+WITH cte1 AS ( SELECT *,ROW_NUMBER() OVER ( PARTITION BY i) AS RANK_DESC FROM with_test1),
+     cte2 AS ( SELECT 'COL1' TBLNM,COUNT(*) DIFFCNT FROM ( SELECT * FROM cte1) X)
+select * FROM ( SELECT 'COL1' TBLNM FROM cte1) A LEFT JOIN cte2 C ON A.TBLNM=C.TBLNM;
+ tblnm | tblnm | diffcnt 
+-------+-------+---------
+(0 rows)
+
+-- This is expected to fall back to planner.
+drop table if exists with_test2 cascade;
+NOTICE:  table "with_test2" does not exist, skipping
+drop table if exists with_test3 cascade;
+NOTICE:  table "with_test3" does not exist, skipping
+create table with_test2 (id bigserial NOT NULL, isc varchar(15) NOT NULL,iscd varchar(15) NULL) DISTRIBUTED REPLICATED;
+create table with_test3 (id numeric NULL, rc varchar(255) NULL,ri numeric NULL) DISTRIBUTED REPLICATED;
+insert into with_test2 (isc,iscd) values ('CMN_BIN_YES', 'CMN_BIN_YES');
+insert into with_test3 (id,rc,ri) values (113551,'CMN_BIN_YES',101991), (113552,'CMN_BIN_NO',101991), (113553,'CMN_BIN_ERR',101991), (113554,'CMN_BIN_NULL',101991);
+explain
+WITH
+      t1 AS (SELECT * FROM with_test2),
+      t2 AS (SELECT id, rc FROM with_test3 WHERE ri = 101991)
+SELECT p.*FROM t1 p JOIN t2 r ON p.isc = r.rc JOIN t2 r1 ON p.iscd = r1.rc LIMIT 1;
+                                              QUERY PLAN                                              
+------------------------------------------------------------------------------------------------------
+ Limit  (cost=0.16..0.23 rows=1 width=104)
+   ->  Gather Motion 1:1  (slice1; segments: 1)  (cost=0.16..0.40 rows=4 width=104)
+         ->  Hash Join  (cost=0.16..0.34 rows=4 width=104)
+               Hash Cond: ((with_test2.iscd)::text = (r1.rc)::text)
+               ->  Hash Join  (cost=0.03..0.16 rows=4 width=104)
+                     Hash Cond: ((r.rc)::text = (with_test2.isc)::text)
+                     ->  Subquery Scan on r  (cost=0.00..0.08 rows=4 width=516)
+                           ->  Seq Scan on with_test3  (cost=0.00..1.05 rows=4 width=19)
+                                 Filter: (ri = 101991::numeric)
+                     ->  Hash  (cost=0.02..0.02 rows=1 width=104)
+                           ->  Seq Scan on with_test2  (cost=0.00..1.01 rows=1 width=32)
+               ->  Hash  (cost=0.08..0.08 rows=2 width=516)
+                     ->  Subquery Scan on r1  (cost=0.00..0.08 rows=4 width=516)
+                           ->  Seq Scan on with_test3 with_test3_1  (cost=0.00..1.05 rows=4 width=19)
+                                 Filter: (ri = 101991::numeric)
+ Optimizer: Postgres query optimizer
+(16 rows)
+
+WITH
+    t1 AS (SELECT * FROM with_test2),
+    t2 AS (SELECT id, rc FROM with_test3 WHERE ri = 101991)
+SELECT p.*FROM t1 p JOIN t2 r ON p.isc = r.rc JOIN t2 r1 ON p.iscd = r1.rc LIMIT 1;
+ id |     isc     |    iscd     
+----+-------------+-------------
+  1 | CMN_BIN_YES | CMN_BIN_YES
+(1 row)
+
+---------
+-- INSERT
+---------
+create table foo (x int, y int) distributed replicated;
+create table foo1(like foo) distributed replicated;
+create table bar (like foo) distributed randomly;
+create table bar1 (like foo) distributed by (x);
+-- values --> replicated table 
+-- random partitioned table --> replicated table
+-- hash partitioned table --> replicated table
+-- singleQE --> replicated table
+-- replicated --> replicated table
+insert into bar values (1, 1), (3, 1);
+insert into bar1 values (1, 1), (3, 1);
+insert into foo1 values (1, 1), (3, 1);
+insert into foo select * from bar;
+insert into foo select * from bar1;
+insert into foo select * from bar order by x limit 1;
+insert into foo select * from foo;
+select * from foo order by x;
+ x | y 
+---+---
+ 1 | 1
+ 1 | 1
+ 1 | 1
+ 1 | 1
+ 1 | 1
+ 1 | 1
+ 3 | 1
+ 3 | 1
+ 3 | 1
+ 3 | 1
+(10 rows)
+
+select bar.x, bar.y from bar, (select * from foo) as t1 order by 1,2;
+ x | y 
+---+---
+ 1 | 1
+ 1 | 1
+ 1 | 1
+ 1 | 1
+ 1 | 1
+ 1 | 1
+ 1 | 1
+ 1 | 1
+ 1 | 1
+ 1 | 1
+ 3 | 1
+ 3 | 1
+ 3 | 1
+ 3 | 1
+ 3 | 1
+ 3 | 1
+ 3 | 1
+ 3 | 1
+ 3 | 1
+ 3 | 1
+(20 rows)
+
+select bar.x, bar.y from bar, (select * from foo order by x limit 1) as t1 order by 1,2;
+ x | y 
+---+---
+ 1 | 1
+ 3 | 1
+(2 rows)
+
+truncate foo;
+truncate foo1;
+truncate bar;
+truncate bar1;
+-- replicated table --> random partitioned table
+-- replicated table --> hash partitioned table
+insert into foo values (1, 1), (3, 1);
+insert into bar select * from foo order by x limit 1;
+insert into bar1 select * from foo order by x limit 1;
+select * from foo order by x;
+ x | y 
+---+---
+ 1 | 1
+ 3 | 1
+(2 rows)
+
+select * from bar order by x;
+ x | y 
+---+---
+ 1 | 1
+(1 row)
+
+select * from bar1 order by x;
+ x | y 
+---+---
+ 1 | 1
+(1 row)
+
+drop table if exists foo;
+drop table if exists foo1;
+drop table if exists bar;
+drop table if exists bar1;
+--
+-- CREATE UNIQUE INDEX
+--
+-- create unique index on non-distributed key.
+create table foo (x int, y int) distributed replicated;
+create table bar (x int, y int) distributed randomly;
+-- success
+create unique index foo_idx on foo (y);
+-- should fail
+create unique index bar_idx on bar (y);
+ERROR:  UNIQUE and DISTRIBUTED RANDOMLY are incompatible
+drop table if exists foo;
+drop table if exists bar;
+--
+-- CREATE TABLE with both PRIMARY KEY and UNIQUE constraints
+--
+create table foo (id int primary key, name text unique) distributed replicated;
+-- success
+insert into foo values (1,'aaa');
+insert into foo values (2,'bbb');
+-- fail
+insert into foo values (1,'ccc');
+ERROR:  duplicate key value violates unique constraint "foo_pkey"  (seg0 127.0.1.1:6002 pid=287620)
+DETAIL:  Key (id)=(1) already exists.
+insert into foo values (3,'aaa');
+ERROR:  duplicate key value violates unique constraint "foo_name_key"  (seg0 127.0.1.1:6002 pid=287620)
+DETAIL:  Key (name)=(aaa) already exists.
+drop table if exists foo;
+--
+-- CREATE TABLE
+--
+--
+-- Like
+CREATE TABLE parent (
+        name            text,
+        age                     int4,
+        location        point
+) distributed replicated;
+CREATE TABLE child (like parent) distributed replicated;
+CREATE TABLE child1 (like parent) DISTRIBUTED BY (name);
+CREATE TABLE child2 (like parent);
+NOTICE:  table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
+-- should be replicated table
+\d child
+       Table "rpt.child"
+  Column  |  Type   | Modifiers 
+----------+---------+-----------
+ name     | text    | 
+ age      | integer | 
+ location | point   | 
+Distributed Replicated
+
+-- should distributed by name
+\d child1
+       Table "rpt.child1"
+  Column  |  Type   | Modifiers 
+----------+---------+-----------
+ name     | text    | 
+ age      | integer | 
+ location | point   | 
+Distributed by: (name)
+
+-- should be replicated table
+\d child2
+       Table "rpt.child2"
+  Column  |  Type   | Modifiers 
+----------+---------+-----------
+ name     | text    | 
+ age      | integer | 
+ location | point   | 
+Distributed Replicated
+
+drop table if exists parent;
+drop table if exists child;
+drop table if exists child1;
+drop table if exists child2;
+-- Inherits
+CREATE TABLE parent_rep (
+        name            text,
+        age                     int4,
+        location        point
+) distributed replicated;
+CREATE TABLE parent_part (
+        name            text,
+        age                     int4,
+        location        point
+) distributed by (name);
+-- inherits from a replicated table, should fail
+CREATE TABLE child (
+        salary          int4,
+        manager         name
+) INHERITS (parent_rep) WITH OIDS;
+ERROR:  cannot inherit from replicated table "parent_rep" to create table "child"
+DETAIL:  An inheritance hierarchy cannot contain a mixture of distributed and non-distributed tables.
+-- replicated table can not have parents, should fail
+CREATE TABLE child (
+        salary          int4,
+        manager         name
+) INHERITS (parent_part) WITH OIDS DISTRIBUTED REPLICATED;
+ERROR:  INHERITS clause cannot be used with DISTRIBUTED REPLICATED clause
+drop table if exists parent_rep;
+drop table if exists parent_part;
+drop table if exists child;
+NOTICE:  table "child" does not exist, skipping
+--
+-- CTAS
+--
+-- CTAS from generate_series
+create table foo as select i as c1, i as c2
+from generate_series(1,3) i distributed replicated;
+-- CTAS from replicated table 
+create table bar as select * from foo distributed replicated;
+select * from bar;
+ c1 | c2 
+----+----
+  1 |  1
+  2 |  2
+  3 |  3
+(3 rows)
+
+drop table if exists foo;
+drop table if exists bar;
+-- CTAS from partition table table
+create table foo as select i as c1, i as c2
+from generate_series(1,3) i;
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause. Creating a NULL policy entry.
+create table bar as select * from foo distributed replicated;
+select * from bar;
+ c1 | c2 
+----+----
+  1 |  1
+  3 |  3
+  2 |  2
+(3 rows)
+
+drop table if exists foo;
+drop table if exists bar;
+-- CTAS from singleQE 
+create table foo as select i as c1, i as c2
+from generate_series(1,3) i;
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause. Creating a NULL policy entry.
+select * from foo;
+ c1 | c2 
+----+----
+  1 |  1
+  2 |  2
+  3 |  3
+(3 rows)
+
+create table bar as select * from foo order by c1 limit 1 distributed replicated;
+select * from bar;
+ c1 | c2 
+----+----
+  1 |  1
+(1 row)
+
+drop table if exists foo;
+drop table if exists bar;
+-- Create view can work
+create table foo(x int, y int) distributed replicated;
+insert into foo values(1,1);
+create view v_foo as select * from foo;
+select * from v_foo;
+ x | y 
+---+---
+ 1 | 1
+(1 row)
+
+drop view v_foo;
+drop table if exists foo;
+---------
+-- Alter
+--------
+-- Drop distributed key column
+create table foo(x int, y int) distributed replicated;
+create table bar(like foo) distributed by (x);
+insert into foo values(1,1);
+insert into bar values(1,1);
+-- success
+alter table foo drop column x;
+-- fail
+alter table bar drop column x;
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+drop table if exists foo;
+drop table if exists foo1;
+NOTICE:  table "foo1" does not exist, skipping
+drop table if exists bar;
+drop table if exists bar1;
+NOTICE:  table "bar1" does not exist, skipping
+-- Alter gp_distribution_policy
+create table foo(x int, y int) distributed replicated;
+create table foo1(x int, y int) distributed replicated;
+create table bar(x int, y int) distributed by (x);
+create table bar1(x int, y int) distributed randomly;
+insert into foo select i,i from generate_series(1,10) i;
+insert into foo1 select i,i from generate_series(1,10) i;
+insert into bar select i,i from generate_series(1,10) i;
+insert into bar1 select i,i from generate_series(1,10) i;
+-- alter distribution policy of replicated table
+alter table foo set distributed by (x);
+alter table foo1 set distributed randomly;
+-- alter a partitioned table to replicated table
+alter table bar set distributed replicated;
+alter table bar1 set distributed replicated;
+-- verify the new policies
+\d foo
+       Table "rpt.foo"
+ Column |  Type   | Modifiers 
+--------+---------+-----------
+ x      | integer | 
+ y      | integer | 
+Distributed by: (x)
+
+\d foo1
+       Table "rpt.foo1"
+ Column |  Type   | Modifiers 
+--------+---------+-----------
+ x      | integer | 
+ y      | integer | 
+Distributed randomly
+
+\d bar
+       Table "rpt.bar"
+ Column |  Type   | Modifiers 
+--------+---------+-----------
+ x      | integer | 
+ y      | integer | 
+Distributed Replicated
+
+\d bar1
+       Table "rpt.bar1"
+ Column |  Type   | Modifiers 
+--------+---------+-----------
+ x      | integer | 
+ y      | integer | 
+Distributed Replicated
+
+-- verify the reorganized data
+select * from foo;
+ x  | y  
+----+----
+  2 |  2
+  3 |  3
+  4 |  4
+  7 |  7
+  8 |  8
+  1 |  1
+  5 |  5
+  6 |  6
+  9 |  9
+ 10 | 10
+(10 rows)
+
+select * from foo1;
+ x  | y  
+----+----
+  6 |  6
+  8 |  8
+  9 |  9
+ 10 | 10
+  1 |  1
+  3 |  3
+  4 |  4
+  5 |  5
+  2 |  2
+  7 |  7
+(10 rows)
+
+select * from bar;
+ x  | y  
+----+----
+  2 |  2
+  3 |  3
+  4 |  4
+  7 |  7
+  8 |  8
+  5 |  5
+  6 |  6
+  9 |  9
+ 10 | 10
+  1 |  1
+(10 rows)
+
+select * from bar1;
+ x  | y  
+----+----
+  6 |  6
+  1 |  1
+  4 |  4
+  7 |  7
+  8 |  8
+  9 |  9
+ 10 | 10
+  2 |  2
+  3 |  3
+  5 |  5
+(10 rows)
+
+-- alter back
+alter table foo set distributed replicated;
+alter table foo1 set distributed replicated;
+alter table bar set distributed by (x);
+alter table bar1 set distributed randomly;
+-- verify the policies again
+\d foo
+       Table "rpt.foo"
+ Column |  Type   | Modifiers 
+--------+---------+-----------
+ x      | integer | 
+ y      | integer | 
+Distributed Replicated
+
+\d foo1
+       Table "rpt.foo1"
+ Column |  Type   | Modifiers 
+--------+---------+-----------
+ x      | integer | 
+ y      | integer | 
+Distributed Replicated
+
+\d bar
+       Table "rpt.bar"
+ Column |  Type   | Modifiers 
+--------+---------+-----------
+ x      | integer | 
+ y      | integer | 
+Distributed by: (x)
+
+\d bar1
+       Table "rpt.bar1"
+ Column |  Type   | Modifiers 
+--------+---------+-----------
+ x      | integer | 
+ y      | integer | 
+Distributed randomly
+
+-- verify the reorganized data again
+select * from foo;
+ x  | y  
+----+----
+  1 |  1
+  5 |  5
+  6 |  6
+  9 |  9
+ 10 | 10
+  2 |  2
+  3 |  3
+  4 |  4
+  7 |  7
+  8 |  8
+(10 rows)
+
+select * from foo1;
+ x  | y  
+----+----
+  2 |  2
+  7 |  7
+  6 |  6
+  8 |  8
+  9 |  9
+ 10 | 10
+  1 |  1
+  3 |  3
+  4 |  4
+  5 |  5
+(10 rows)
+
+select * from bar;
+ x  | y  
+----+----
+  1 |  1
+  5 |  5
+  6 |  6
+  9 |  9
+ 10 | 10
+  2 |  2
+  3 |  3
+  4 |  4
+  7 |  7
+  8 |  8
+(10 rows)
+
+select * from bar1;
+ x  | y  
+----+----
+  6 |  6
+  8 |  8
+  3 |  3
+  1 |  1
+  9 |  9
+  4 |  4
+  7 |  7
+ 10 | 10
+  2 |  2
+  5 |  5
+(10 rows)
+
+drop table if exists foo;
+drop table if exists foo1;
+drop table if exists bar;
+drop table if exists bar1;
+---------
+-- UPDATE / DELETE
+---------
+create table foo(x int, y int) distributed replicated;
+create table bar(x int, y int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'x' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into foo values (1, 1), (2, 1);
+insert into bar values (1, 2), (2, 2);
+update foo set y = 2 where y = 1;
+select * from foo;
+ x | y 
+---+---
+ 1 | 2
+ 2 | 2
+(2 rows)
+
+update foo set y = 1 from bar where bar.y = foo.y;
+select * from foo;
+ x | y 
+---+---
+ 2 | 1
+ 1 | 1
+(2 rows)
+
+delete from foo where y = 1;
+select * from foo;
+ x | y 
+---+---
+(0 rows)
+
+-- Test replicate table within init plan
+insert into foo values (1, 1), (2, 1);
+select * from bar where exists (select * from foo);
+ x | y 
+---+---
+ 2 | 2
+ 1 | 2
+(2 rows)
+
+------
+-- Test Current Of is disabled for replicated table
+------
+begin;
+declare c1 cursor for select * from foo;
+fetch 1 from c1;
+ x | y 
+---+---
+ 1 | 1
+(1 row)
+
+delete from foo where current of c1;
+ERROR:  "foo" is not simply updatable
+abort;
+begin;
+declare c1 cursor for select * from foo;
+fetch 1 from c1;
+ x | y 
+---+---
+ 1 | 1
+(1 row)
+
+update foo set y = 1 where current of c1;
+ERROR:  "foo" is not simply updatable
+abort;
+-----
+-- Test updatable view works for replicated table
+----
+truncate foo;
+truncate bar;
+insert into foo values (1, 1);
+insert into foo values (2, 2);
+insert into bar values (1, 1);
+create view v_foo as select * from foo where y = 1;
+begin;
+update v_foo set y = 2; 
+select * from gp_dist_random('foo');
+ x | y 
+---+---
+ 2 | 2
+ 1 | 2
+ 2 | 2
+ 1 | 2
+ 2 | 2
+ 1 | 2
+(6 rows)
+
+abort;
+update v_foo set y = 3 from bar where bar.y = v_foo.y; 
+select * from gp_dist_random('foo');
+ x | y 
+---+---
+ 2 | 2
+ 1 | 3
+ 2 | 2
+ 1 | 3
+ 2 | 2
+ 1 | 3
+(6 rows)
+
+-- Test gp_segment_id for replicated table
+-- gp_segment_id is ambiguous for replicated table, it's been disabled now.
+create table baz (c1 int, c2 int) distributed replicated;
+create table qux (c1 int, c2 int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'c1' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+select gp_segment_id from baz;
+ERROR:  column "gp_segment_id" does not exist
+LINE 1: select gp_segment_id from baz;
+               ^
+select xmin from baz;
+ERROR:  column "xmin" does not exist
+LINE 1: select xmin from baz;
+               ^
+select xmax from baz;
+ERROR:  column "xmax" does not exist
+LINE 1: select xmax from baz;
+               ^
+select ctid from baz;
+ERROR:  column "ctid" does not exist
+LINE 1: select ctid from baz;
+               ^
+select * from baz where c2 = gp_segment_id;
+ERROR:  column "gp_segment_id" does not exist
+LINE 1: select * from baz where c2 = gp_segment_id;
+                                     ^
+select * from baz, qux where baz.c1 = gp_segment_id;
+ c1 | c2 | c1 | c2 
+----+----+----+----
+(0 rows)
+
+update baz set c2 = gp_segment_id;
+ERROR:  column "gp_segment_id" does not exist
+LINE 1: update baz set c2 = gp_segment_id;
+                            ^
+update baz set c2 = 1 where gp_segment_id = 1;
+ERROR:  column "gp_segment_id" does not exist
+LINE 1: update baz set c2 = 1 where gp_segment_id = 1;
+                                    ^
+update baz set c2 = 1 from qux where gp_segment_id = baz.c1;
+insert into baz select i, i from generate_series(1, 1000) i;
+vacuum baz;
+vacuum full baz;
+analyze baz;
+-- Test dependencies check when alter table to replicated table
+create view v_qux as select ctid from qux;
+alter table qux set distributed replicated;
+ERROR:  cannot set distributed replicated because other object depend on its system columns
+DETAIL:  view v_qux depends on table qux column ctid
+HINT:  system columns of replicated table will be exposed to users after altering, resolve dependencies first
+drop view v_qux;
+alter table qux set distributed replicated;
+-- Test cursor for update also works for replicated table
+create table cursor_update (c1 int, c2 int) distributed replicated;
+insert into cursor_update select i, i from generate_series(1, 10) i;
+begin;
+declare c1 cursor for select * from cursor_update order by c2 for update;
+fetch next from c1;
+ c1 | c2 
+----+----
+  1 |  1
+(1 row)
+
+end;
+-- Test MinMax path on replicated table
+create table minmaxtest (x int, y int) distributed replicated;
+create index on minmaxtest (x);
+insert into minmaxtest select generate_series(1, 10);
+set enable_seqscan=off;
+select min(x) from minmaxtest;
+ min 
+-----
+   1
+(1 row)
+
+-- Test replicated on partition table
+-- should fail
+CREATE TABLE foopart (a int4, b int4) DISTRIBUTED REPLICATED PARTITION BY RANGE (a) (START (1) END (10));
+ERROR:  PARTITION BY clause cannot be used with DISTRIBUTED REPLICATED clause
+CREATE TABLE foopart (a int4, b int4) PARTITION BY RANGE (a) (START (1) END (10)) ;
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+NOTICE:  CREATE TABLE will create partition "foopart_1_prt_1" for table "foopart"
+-- should fail
+ALTER TABLE foopart SET DISTRIBUTED REPLICATED;
+ERROR:  can't set the distribution policy of a partition table to REPLICATED
+ALTER TABLE foopart_1_prt_1 SET DISTRIBUTED REPLICATED;
+ERROR:  can't set the distribution policy of "foopart_1_prt_1"
+HINT:  Distribution policy of a partition can only be the same as its parent's.
+DROP TABLE foopart;
+-- volatile replicated
+-- General and segmentGeneral locus imply that if the corresponding
+-- slice is executed in many different segments should provide the
+-- same result data set. Thus, in some cases, General and segmentGeneral
+-- can be treated like broadcast. But if the segmentGeneral and general
+-- locus path contain volatile functions, they lose the property and
+-- can only be treated as singleQE. The following cases are to check that
+-- we correctly handle all these cases.
+-- FIXME: ORCA does not consider this, we need to fix the cases when ORCA
+-- consider this.
+set optimizer = off;
+set enable_bitmapscan = off;
+create table t_hashdist(a int, b int, c int) distributed by (a);
+create table t_replicate_volatile(a int, b int, c int) distributed replicated;
+---- pushed down filter
+explain (costs off) select * from t_replicate_volatile, t_hashdist where t_replicate_volatile.a > random();
+                                 QUERY PLAN                                 
+----------------------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)
+   ->  Nested Loop
+         ->  Seq Scan on t_hashdist
+         ->  Materialize
+               ->  Broadcast Motion 1:3  (slice1; segments: 1)
+                     ->  Result
+                           ->  Seq Scan on t_replicate_volatile
+                                 Filter: ((a)::double precision > random())
+ Optimizer: Postgres query optimizer
+(9 rows)
+
+-- join qual
+explain (costs off) select * from t_hashdist, t_replicate_volatile x, t_replicate_volatile y where x.a + y.a > random();
+                                  QUERY PLAN                                   
+-------------------------------------------------------------------------------
+ Nested Loop
+   ->  Result
+         ->  Gather Motion 1:1  (slice1; segments: 1)
+               ->  Nested Loop
+                     Join Filter: (((x.a + y.a))::double precision > random())
+                     ->  Seq Scan on t_replicate_volatile x
+                     ->  Materialize
+                           ->  Seq Scan on t_replicate_volatile y
+   ->  Materialize
+         ->  Gather Motion 3:1  (slice2; segments: 3)
+               ->  Seq Scan on t_hashdist
+ Optimizer: Postgres query optimizer
+(12 rows)
+
+-- sublink & subquery
+explain (costs off) select * from t_hashdist where a > All (select random() from t_replicate_volatile);
+                                     QUERY PLAN                                     
+------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)
+   ->  Nested Loop Left Anti Semi (Not-In) Join
+         Join Filter: ((t_hashdist.a)::double precision <= "NotIn_SUBQUERY".random)
+         ->  Seq Scan on t_hashdist
+         ->  Materialize
+               ->  Broadcast Motion 1:3  (slice1; segments: 1)
+                     ->  Subquery Scan on "NotIn_SUBQUERY"
+                           ->  Seq Scan on t_replicate_volatile
+ Optimizer: Postgres query optimizer
+(9 rows)
+
+explain (costs off) select * from t_hashdist where a in (select random()::int from t_replicate_volatile);
+                            QUERY PLAN                            
+------------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)
+   ->  Hash Semi Join
+         Hash Cond: (t_hashdist.a = ((random())::integer))
+         ->  Seq Scan on t_hashdist
+         ->  Hash
+               ->  Redistribute Motion 1:3  (slice1; segments: 1)
+                     Hash Key: ((random())::integer)
+                     ->  Seq Scan on t_replicate_volatile
+ Optimizer: Postgres query optimizer
+(9 rows)
+
+-- subplan
+explain (costs off, verbose) select * from t_hashdist left join t_replicate_volatile on t_hashdist.a > any (select random() from t_replicate_volatile);
+                                                            QUERY PLAN                                                            
+----------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)
+   Output: t_hashdist.a, t_hashdist.b, t_hashdist.c, t_replicate_volatile.a, t_replicate_volatile.b, t_replicate_volatile.c
+   ->  Nested Loop Left Join
+         Output: t_hashdist.a, t_hashdist.b, t_hashdist.c, t_replicate_volatile.a, t_replicate_volatile.b, t_replicate_volatile.c
+         Join Filter: (SubPlan 1)
+         ->  Seq Scan on rpt.t_hashdist
+               Output: t_hashdist.a, t_hashdist.b, t_hashdist.c
+         ->  Materialize
+               Output: t_replicate_volatile.a, t_replicate_volatile.b, t_replicate_volatile.c
+               ->  Seq Scan on rpt.t_replicate_volatile
+                     Output: t_replicate_volatile.a, t_replicate_volatile.b, t_replicate_volatile.c
+         SubPlan 1  (slice2; segments: 3)
+           ->  Materialize
+                 Output: random()
+                 ->  Broadcast Motion 1:3  (slice1; segments: 1)
+                       Output: (random())
+                       ->  Seq Scan on rpt.t_replicate_volatile t_replicate_volatile_1
+                             Output: random()
+ Optimizer: Postgres query optimizer
+ Settings: enable_bitmapscan=off, enable_seqscan=off, optimizer=off
+(20 rows)
+
+-- targetlist
+explain (costs off) select * from t_hashdist cross join (select random () from t_replicate_volatile)x;
+                          QUERY PLAN                           
+---------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)
+   ->  Nested Loop
+         ->  Seq Scan on t_hashdist
+         ->  Materialize
+               ->  Broadcast Motion 1:3  (slice1; segments: 1)
+                     ->  Seq Scan on t_replicate_volatile
+ Optimizer: Postgres query optimizer
+(7 rows)
+
+explain (costs off) select * from t_hashdist cross join (select a, sum(random()) from t_replicate_volatile group by a) x;
+                           QUERY PLAN                           
+----------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)
+   ->  Nested Loop
+         ->  Seq Scan on t_hashdist
+         ->  Materialize
+               ->  Broadcast Motion 1:3  (slice1; segments: 1)
+                     ->  HashAggregate
+                           Group Key: t_replicate_volatile.a
+                           ->  Seq Scan on t_replicate_volatile
+ Optimizer: Postgres query optimizer
+(9 rows)
+
+explain (costs off) select * from t_hashdist cross join (select random() as k, sum(a) from t_replicate_volatile group by k) x;
+                        QUERY PLAN                        
+----------------------------------------------------------
+ Nested Loop
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         ->  Seq Scan on t_hashdist
+   ->  Materialize
+         ->  Gather Motion 1:1  (slice2; segments: 1)
+               ->  HashAggregate
+                     Group Key: random()
+                     ->  Seq Scan on t_replicate_volatile
+ Optimizer: Postgres query optimizer
+(9 rows)
+
+explain (costs off) select * from t_hashdist cross join (select a, sum(b) as s from t_replicate_volatile group by a having sum(b) > random() order by a) x ;
+                                              QUERY PLAN                                              
+------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)
+   ->  Nested Loop
+         ->  Seq Scan on t_hashdist
+         ->  Materialize
+               ->  Broadcast Motion 1:3  (slice1; segments: 1)
+                     ->  Sort
+                           Sort Key: t_replicate_volatile.a
+                           ->  HashAggregate
+                                 Group Key: t_replicate_volatile.a
+                                 Filter: ((sum(t_replicate_volatile.b))::double precision > random())
+                                 ->  Seq Scan on t_replicate_volatile
+ Optimizer: Postgres query optimizer
+(12 rows)
+
+-- insert
+explain (costs off) insert into t_replicate_volatile select random() from t_replicate_volatile;
+                                QUERY PLAN                                 
+---------------------------------------------------------------------------
+ Insert on t_replicate_volatile
+   ->  Broadcast Motion 1:3  (slice1; segments: 1)
+         ->  Subquery Scan on "*SELECT*"
+               ->  Seq Scan on t_replicate_volatile t_replicate_volatile_1
+ Optimizer: Postgres query optimizer
+(5 rows)
+
+explain (costs off) insert into t_replicate_volatile select random(), a, a from generate_series(1, 10) a;
+                      QUERY PLAN                      
+------------------------------------------------------
+ Insert on t_replicate_volatile
+   ->  Broadcast Motion 1:3  (slice1; segments: 1)
+         ->  Subquery Scan on "*SELECT*"
+               ->  Function Scan on generate_series a
+ Optimizer: Postgres query optimizer
+(5 rows)
+
+create sequence seq_for_insert_replicated_table;
+explain (costs off) insert into t_replicate_volatile select nextval('seq_for_insert_replicated_table');
+                    QUERY PLAN                     
+---------------------------------------------------
+ Insert on t_replicate_volatile
+   ->  Broadcast Motion 1:3  (slice1; segments: 1)
+         ->  Subquery Scan on "*SELECT*"
+               ->  Result
+ Optimizer: Postgres query optimizer
+(5 rows)
+
+explain (costs off) select a from t_replicate_volatile union all select * from nextval('seq_for_insert_replicated_table');
+                     QUERY PLAN                     
+----------------------------------------------------
+ Append
+   ->  Gather Motion 1:1  (slice1; segments: 1)
+         ->  Subquery Scan on "*SELECT* 1"
+               ->  Seq Scan on t_replicate_volatile
+   ->  Function Scan on nextval
+ Optimizer: Postgres query optimizer
+(6 rows)
+
+-- update & delete
+explain (costs off) update t_replicate_volatile set a = 1 where b > random();
+ERROR:  could not devise a plan (cdbpath.c:2089)
+explain (costs off) update t_replicate_volatile set a = 1 from t_replicate_volatile x where x.a + random() = t_replicate_volatile.b;
+ERROR:  could not devise a plan (cdbpath.c:2089)
+explain (costs off) update t_replicate_volatile set a = 1 from t_hashdist x where x.a + random() = t_replicate_volatile.b;
+ERROR:  could not devise a plan (cdbpath.c:2089)
+explain (costs off) delete from t_replicate_volatile where a < random();
+ERROR:  could not devise a plan (cdbpath.c:2089)
+explain (costs off) delete from t_replicate_volatile using t_replicate_volatile x where t_replicate_volatile.a + x.b < random();
+ERROR:  could not devise a plan (cdbpath.c:2089)
+explain (costs off) update t_replicate_volatile set a = random();
+ERROR:  could not devise a plan (createplan.c:6507)
+-- limit
+explain (costs off) insert into t_replicate_volatile select * from t_replicate_volatile limit 1;
+                                QUERY PLAN                                 
+---------------------------------------------------------------------------
+ Insert on t_replicate_volatile
+   ->  Broadcast Motion 1:3  (slice1; segments: 1)
+         ->  Limit
+               ->  Seq Scan on t_replicate_volatile t_replicate_volatile_1
+ Optimizer: Postgres query optimizer
+(5 rows)
+
+explain (costs off) select * from t_hashdist cross join (select * from t_replicate_volatile limit 1) x;
+                           QUERY PLAN                           
+----------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)
+   ->  Nested Loop
+         ->  Seq Scan on t_hashdist
+         ->  Materialize
+               ->  Broadcast Motion 1:3  (slice1; segments: 1)
+                     ->  Limit
+                           ->  Seq Scan on t_replicate_volatile
+ Optimizer: Postgres query optimizer
+(8 rows)
+
+create table rtbl (a int, b int, c int, t text) distributed replicated;
+insert into t_hashdist values (1, 1, 1);
+insert into rtbl values (1, 1, 1, 'rtbl');
+-- The below tests used to do replicated table scan on entry db which contains empty data.
+-- So a motion node is needed to gather replicated table on entry db.
+-- See issue: https://github.com/greenplum-db/gpdb/issues/11945
+-- 1. CTAS when join replicated table with catalog table
+explain (costs off) create temp table tmp as select * from pg_class c join rtbl on c.relname = rtbl.t;
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'relname' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+                         QUERY PLAN                         
+------------------------------------------------------------
+ Redistribute Motion 1:3  (slice2)
+   Hash Key: c.relname
+   ->  Hash Join
+         Hash Cond: ((c.relname)::text = rtbl.t)
+         ->  Seq Scan on pg_class c
+         ->  Hash
+               ->  Gather Motion 1:1  (slice1; segments: 1)
+                     ->  Seq Scan on rtbl
+ Optimizer: Postgres query optimizer
+(9 rows)
+
+create temp table tmp as select * from pg_class c join rtbl on c.relname = rtbl.t;
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'relname' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+select count(*) from tmp; -- should contain 1 row
+ count 
+-------
+     1
+(1 row)
+
+-- 2. Join hashed table with (replicated table join catalog) should return 1 row
+explain (costs off) select relname from t_hashdist, (select * from pg_class c join rtbl on c.relname = rtbl.t) vtest where t_hashdist.a = vtest.a;
+                                       QUERY PLAN                                       
+----------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice3; segments: 3)
+   ->  Hash Join
+         Hash Cond: (rtbl.a = t_hashdist.a)
+         ->  Redistribute Motion 1:3  (slice2)
+               Hash Key: rtbl.a
+               ->  Hash Join
+                     Hash Cond: ((c.relname)::text = rtbl.t)
+                     ->  Index Only Scan using pg_class_relname_nsp_index on pg_class c
+                     ->  Hash
+                           ->  Gather Motion 1:1  (slice1; segments: 1)
+                                 ->  Seq Scan on rtbl
+         ->  Hash
+               ->  Seq Scan on t_hashdist
+ Optimizer: Postgres query optimizer
+(14 rows)
+
+select relname from t_hashdist, (select * from pg_class c join rtbl on c.relname = rtbl.t) vtest where t_hashdist.a = vtest.a;
+ relname 
+---------
+ rtbl
+(1 row)
+
+-- 3. Join hashed table with (set operation on catalog and replicated table)
+explain (costs off) select a from t_hashdist, (select oid from pg_class union all select a from rtbl) vtest;
+                                     QUERY PLAN                                     
+------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice3; segments: 3)
+   ->  Nested Loop
+         ->  Broadcast Motion 1:3  (slice2)
+               ->  Subquery Scan on vtest
+                     ->  Append
+                           ->  Index Only Scan using pg_class_oid_index on pg_class
+                           ->  Gather Motion 1:1  (slice1; segments: 1)
+                                 ->  Subquery Scan on "*SELECT* 2"
+                                       ->  Seq Scan on rtbl
+         ->  Materialize
+               ->  Seq Scan on t_hashdist
+ Optimizer: Postgres query optimizer
+(12 rows)
+
+reset optimizer;
+reset enable_bitmapscan;
+-- Github Issue 13532
+create table t1_13532(a int, b int) distributed replicated;
+create table t2_13532(a int, b int) distributed replicated;
+create index idx_t2_13532 on t2_13532(b);
+explain (costs off) select * from t1_13532 x, t2_13532 y where y.a < random() and x.b = y.b;
+                        QUERY PLAN                        
+----------------------------------------------------------
+ Gather Motion 1:1  (slice1; segments: 1)
+   ->  Nested Loop
+         Join Filter: true
+         ->  Seq Scan on t1_13532
+         ->  Index Scan using idx_t2_13532 on t2_13532
+               Index Cond: (b = t1_13532.b)
+               Filter: ((a)::double precision < random())
+ Optimizer: Pivotal Optimizer (GPORCA)
+(8 rows)
+
+set enable_bitmapscan = off;
+explain (costs off) select * from t1_13532 x, t2_13532 y where y.a < random() and x.b = y.b;
+                        QUERY PLAN                        
+----------------------------------------------------------
+ Gather Motion 1:1  (slice1; segments: 1)
+   ->  Nested Loop
+         Join Filter: true
+         ->  Seq Scan on t1_13532
+         ->  Index Scan using idx_t2_13532 on t2_13532
+               Index Cond: (b = t1_13532.b)
+               Filter: ((a)::double precision < random())
+ Optimizer: Pivotal Optimizer (GPORCA)
+(8 rows)
+
+-- ORCA
+-- verify that JOIN derives the inner child distribution if the outer is tainted replicated (in this
+-- case, the inner child is the hash distributed table, but the distribution is random because the
+-- hash distribution key is not the JOIN key. we want to return the inner distribution because the
+-- JOIN key determines the distribution of the JOIN output).
+create table dist_tab (a integer, b integer) distributed by (a);
+create table rep_tab (c integer) distributed replicated;
+create index idx on dist_tab (b);
+insert into dist_tab values (1, 2), (2, 2), (2, 1), (1, 1);
+insert into rep_tab values (1), (2);
+analyze dist_tab;
+analyze rep_tab;
+set optimizer_enable_hashjoin=off;
+set enable_hashjoin=off;
+set enable_nestloop=on;
+explain select b from dist_tab where b in (select distinct c from rep_tab);
+                                   QUERY PLAN                                    
+---------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..443.00 rows=4 width=4)
+   ->  Nested Loop  (cost=0.00..443.00 rows=2 width=4)
+         Join Filter: true
+         ->  GroupAggregate  (cost=0.00..431.00 rows=2 width=4)
+               Group Key: rep_tab.c
+               ->  Sort  (cost=0.00..431.00 rows=2 width=4)
+                     Sort Key: rep_tab.c
+                     ->  Seq Scan on rep_tab  (cost=0.00..431.00 rows=2 width=4)
+         ->  Index Scan using idx on dist_tab  (cost=0.00..12.00 rows=1 width=4)
+               Index Cond: (b = rep_tab.c)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(11 rows)
+
+select b from dist_tab where b in (select distinct c from rep_tab);
+ b 
+---
+ 1
+ 2
+ 1
+ 2
+(4 rows)
+
+reset optimizer_enable_hashjoin;
+reset enable_hashjoin;
+reset enable_nestloop;
+create table rand_tab (d integer) distributed randomly;
+insert into rand_tab values (1), (2);
+analyze rand_tab;
+-- Table	Side		Derives
+-- rep_tab	pdsOuter	EdtTaintedReplicated
+-- rep_tab	pdsInner	EdtHashed
+--
+-- join derives EdtHashed
+explain select c from rep_tab where c in (select distinct c from rep_tab);
+                                              QUERY PLAN                                               
+-------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..862.00 rows=2 width=4)
+   ->  Hash Semi Join  (cost=0.00..862.00 rows=1 width=4)
+         Hash Cond: (rep_tab.c = rep_tab_1.c)
+         ->  Result  (cost=0.00..431.00 rows=1 width=4)
+               ->  Seq Scan on rep_tab  (cost=0.00..431.00 rows=2 width=4)
+         ->  Hash  (cost=431.00..431.00 rows=1 width=4)
+               ->  Redistribute Motion 1:3  (slice1; segments: 1)  (cost=0.00..431.00 rows=2 width=4)
+                     Hash Key: rep_tab_1.c
+                     ->  GroupAggregate  (cost=0.00..431.00 rows=2 width=4)
+                           Group Key: rep_tab_1.c
+                           ->  Sort  (cost=0.00..431.00 rows=2 width=4)
+                                 Sort Key: rep_tab_1.c
+                                 ->  Seq Scan on rep_tab rep_tab_1  (cost=0.00..431.00 rows=2 width=4)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(14 rows)
+
+select c from rep_tab where c in (select distinct c from rep_tab);
+ c 
+---
+ 2
+ 1
+(2 rows)
+
+-- Table	Side		Derives
+-- dist_tab	pdsOuter	EdtHashed
+-- rep_tab	pdsInner	EdtTaintedReplicated 
+--
+-- join derives EdtHashed
+explain select a from dist_tab where a in (select distinct c from rep_tab);
+                                  QUERY PLAN                                  
+------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..862.00 rows=4 width=4)
+   ->  Hash Semi Join  (cost=0.00..862.00 rows=2 width=4)
+         Hash Cond: (dist_tab.a = rep_tab.c)
+         ->  Seq Scan on dist_tab  (cost=0.00..431.00 rows=2 width=4)
+         ->  Hash  (cost=431.00..431.00 rows=2 width=4)
+               ->  Seq Scan on rep_tab  (cost=0.00..431.00 rows=2 width=4)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(7 rows)
+
+select a from dist_tab where a in (select distinct c from rep_tab);
+ a 
+---
+ 2
+ 2
+ 1
+ 1
+(4 rows)
+
+-- Table	Side		Derives
+-- rand_tab	pdsOuter	EdtRandom
+-- rep_tab	pdsInner	EdtTaintedReplicated
+--
+-- join derives EdtRandom
+explain select d from rand_tab where d in (select distinct c from rep_tab);
+                                  QUERY PLAN                                  
+------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..862.00 rows=2 width=4)
+   ->  Hash Semi Join  (cost=0.00..862.00 rows=1 width=4)
+         Hash Cond: (rand_tab.d = rep_tab.c)
+         ->  Seq Scan on rand_tab  (cost=0.00..431.00 rows=1 width=4)
+         ->  Hash  (cost=431.00..431.00 rows=2 width=4)
+               ->  Seq Scan on rep_tab  (cost=0.00..431.00 rows=2 width=4)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(7 rows)
+
+select d from rand_tab where d in (select distinct c from rep_tab);
+ d 
+---
+ 1
+ 2
+(2 rows)
+
+-- Table	Side		Derives
+-- rep_tab	pdsOuter	EdtTaintedReplicated
+-- dist_tab	pdsInner	EdtHashed
+--
+-- join derives EdtHashed
+explain select c from rep_tab where c in (select distinct a from dist_tab);
+                                    QUERY PLAN                                    
+----------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..862.00 rows=2 width=4)
+   ->  Hash Join  (cost=0.00..862.00 rows=1 width=4)
+         Hash Cond: (dist_tab.a = rep_tab.c)
+         ->  GroupAggregate  (cost=0.00..431.00 rows=1 width=4)
+               Group Key: dist_tab.a
+               ->  Sort  (cost=0.00..431.00 rows=2 width=4)
+                     Sort Key: dist_tab.a
+                     ->  Seq Scan on dist_tab  (cost=0.00..431.00 rows=2 width=4)
+         ->  Hash  (cost=431.00..431.00 rows=2 width=4)
+               ->  Seq Scan on rep_tab  (cost=0.00..431.00 rows=2 width=4)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(11 rows)
+
+select c from rep_tab where c in (select distinct a from dist_tab);
+ c 
+---
+ 2
+ 1
+(2 rows)
+
+-- Table	Side		Derives
+-- rep_tab	pdsOuter	EdtTaintedReplicated
+-- rand_tab	pdsInner	EdtHashed
+--
+-- join derives EdtHashed
+explain select c from rep_tab where c in (select distinct d from rand_tab);
+                                                 QUERY PLAN                                                 
+------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..862.00 rows=2 width=4)
+   ->  Hash Join  (cost=0.00..862.00 rows=1 width=4)
+         Hash Cond: (rand_tab.d = rep_tab.c)
+         ->  GroupAggregate  (cost=0.00..431.00 rows=1 width=4)
+               Group Key: rand_tab.d
+               ->  Sort  (cost=0.00..431.00 rows=1 width=4)
+                     Sort Key: rand_tab.d
+                     ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
+                           Hash Key: rand_tab.d
+                           ->  Seq Scan on rand_tab  (cost=0.00..431.00 rows=1 width=4)
+         ->  Hash  (cost=431.00..431.00 rows=2 width=4)
+               ->  Seq Scan on rep_tab  (cost=0.00..431.00 rows=2 width=4)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(13 rows)
+
+select c from rep_tab where c in (select distinct d from rand_tab);
+ c 
+---
+ 1
+ 2
+(2 rows)
+
+-- test for optimizer_enable_replicated_table
+explain (costs off) select * from rep_tab;
+                QUERY PLAN
+------------------------------------------
+ Gather Motion 1:1  (slice1; segments: 1)
+   ->  Seq Scan on rep_tab
+ Optimizer: Pivotal Optimizer (GPORCA)
+(3 rows)
+
+set optimizer_enable_replicated_table=off;
+set optimizer_trace_fallback=on;
+explain (costs off) select * from rep_tab;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Use optimizer_enable_replicated_table to enable replicated tables
+WARNING:  relcache reference leak: relation "rep_tab" not closed
+                QUERY PLAN
+------------------------------------------
+ Gather Motion 1:1  (slice1; segments: 1)
+   ->  Seq Scan on rep_tab
+ Optimizer: Postgres query optimizer
+(3 rows)
+
+reset optimizer_trace_fallback;
+reset optimizer_enable_replicated_table;
+-- start_ignore
+drop schema rpt cascade;
+NOTICE:  drop cascades to 13 other objects
+DETAIL:  drop cascades to table foo
+drop cascades to table bar
+drop cascades to view v_foo
+drop cascades to table baz
+drop cascades to table qux
+drop cascades to table cursor_update
+drop cascades to table minmaxtest
+drop cascades to table t_hashdist
+drop cascades to table t_replicate_volatile
+drop cascades to sequence seq_for_insert_replicated_table
+drop cascades to table rtbl
+drop cascades to table t1_13532
+drop cascades to table t2_13532
+-- end_ignore

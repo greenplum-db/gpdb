@@ -419,7 +419,7 @@
         </dxl:LogicalJoin>
       </dxl:LogicalProject>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="429">
+    <dxl:Plan Id="0" SpaceSize="175">
       <dxl:Result>
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="1324463.605600" Rows="8.000001" Width="4"/>

@@ -200,6 +200,10 @@ cdbparallelize(PlannerInfo *root, Plan *plan, Query *query)
 	 */
 	prescan(plan, context);
 
+	if (root->glob->is_parallel_cursor)
+	{
+		context->dispatchParallel = true;
+	}
 	if (context->dispatchParallel || context->initPlanParallel)
 	{
 		/*
@@ -994,7 +998,6 @@ makeFlow(FlowType flotype, int numsegments)
 
 	return flow;
 }
-
 
 /*
  * Create a flow for the given Plan node based on the flow in its

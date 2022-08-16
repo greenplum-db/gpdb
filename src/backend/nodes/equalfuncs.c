@@ -1370,6 +1370,16 @@ _equalFetchStmt(const FetchStmt *a, const FetchStmt *b)
 }
 
 static bool
+_equalRetrieveStmt(const RetrieveStmt *a, const RetrieveStmt *b)
+{
+	COMPARE_STRING_FIELD(endpoint_name);
+	COMPARE_SCALAR_FIELD(count);
+	COMPARE_SCALAR_FIELD(is_all);
+
+	return true;
+}
+
+static bool
 _equalIndexStmt(const IndexStmt *a, const IndexStmt *b)
 {
 	COMPARE_STRING_FIELD(idxname);
@@ -2071,6 +2081,7 @@ _equalLockStmt(const LockStmt *a, const LockStmt *b)
 	COMPARE_NODE_FIELD(relations);
 	COMPARE_SCALAR_FIELD(mode);
 	COMPARE_SCALAR_FIELD(nowait);
+	COMPARE_SCALAR_FIELD(masteronly);
 
 	return true;
 }
@@ -3135,6 +3146,9 @@ equal(const void *a, const void *b)
 			break;
 		case T_FetchStmt:
 			retval = _equalFetchStmt(a, b);
+			break;
+		case T_RetrieveStmt:
+			retval = _equalRetrieveStmt(a, b);
 			break;
 		case T_IndexStmt:
 			retval = _equalIndexStmt(a, b);

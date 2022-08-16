@@ -420,7 +420,7 @@ ExplainOneQuery(Query *query, IntoClause *into, ExplainState *es,
 			plan->intoClause = copyObject(into);
 
 		/* run it (if needed) and produce output */
-		ExplainOnePlan(plan, into, es, queryString, params, &planduration);
+		ExplainOnePlan(plan, into, es, queryString, params, &planduration, 0);
 	}
 }
 
@@ -498,7 +498,7 @@ ExplainOneUtility(Node *utilityStmt, IntoClause *into, ExplainState *es,
 void
 ExplainOnePlan(PlannedStmt *plannedstmt, IntoClause *into, ExplainState *es,
 			   const char *queryString, ParamListInfo params,
-			   const instr_time *planduration)
+			   const instr_time *planduration, int cursorOptions)
 {
 	DestReceiver *dest;
 	QueryDesc  *queryDesc;
@@ -614,6 +614,9 @@ ExplainOnePlan(PlannedStmt *plannedstmt, IntoClause *into, ExplainState *es,
 
 	/* Create textual dump of plan tree */
 	ExplainPrintPlan(es, queryDesc);
+
+	if (cursorOptions & CURSOR_OPT_PARALLEL_RETRIEVE)
+		ExplainParallelRetrieveCursor(es, queryDesc);
 
 	if (es->summary && planduration)
 	{

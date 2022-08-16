@@ -61,6 +61,8 @@
 #include "catalog/storage.h"
 #include "commands/trigger.h"
 #include "miscadmin.h"
+#include "nodes/makefuncs.h"
+#include "nodes/nodeFuncs.h"
 #include "optimizer/clauses.h"
 #include "optimizer/planmain.h"
 #include "optimizer/prep.h"
@@ -3449,7 +3451,7 @@ RelationCacheInitializePhase3(void)
 	 * Relation cache initialization or any sort of heap access is
 	 * dangerous before recovery is finished.
 	 */
-	if (!IsBootstrapProcessingMode() && RecoveryInProgress())
+	if (!EnableHotStandby && !IsBootstrapProcessingMode() && RecoveryInProgress())
 		elog(ERROR, "relation cache initialization during recovery or non-bootstrap processes.");
 
 	/*
@@ -4278,6 +4280,57 @@ RelationGetIndexExpressions(Relation relation)
 	oldcxt = MemoryContextSwitchTo(relation->rd_indexcxt);
 	relation->rd_indexprs = (List *) copyObject(result);
 	MemoryContextSwitchTo(oldcxt);
+
+	return result;
+}
+
+/*
+ * RelationGetDummyIndexExpressions -- get dummy expressions for an index
+ *
+ * Return a list of dummy expressions (just Const nodes) with the same
+ * types/typmods/collations as the index's real expressions.  This is
+ * useful in situations where we don't want to run any user-defined code.
+ */
+List *
+RelationGetDummyIndexExpressions(Relation relation)
+{
+	List	   *result;
+	Datum		exprsDatum;
+	bool		isnull;
+	char	   *exprsString;
+	List	   *rawExprs;
+	ListCell   *lc;
+
+	/* Quick exit if there is nothing to do. */
+	if (relation->rd_indextuple == NULL ||
+		heap_attisnull(relation->rd_indextuple, Anum_pg_index_indexprs))
+		return NIL;
+
+	/* Extract raw node tree(s) from index tuple. */
+	exprsDatum = heap_getattr(relation->rd_indextuple,
+							  Anum_pg_index_indexprs,
+							  GetPgIndexDescriptor(),
+							  &isnull);
+	Assert(!isnull);
+	exprsString = TextDatumGetCString(exprsDatum);
+	rawExprs = (List *) stringToNode(exprsString);
+	pfree(exprsString);
+
+	/* Construct null Consts; the typlen and typbyval are arbitrary. */
+	result = NIL;
+	foreach(lc, rawExprs)
+	{
+		Node	   *rawExpr = (Node *) lfirst(lc);
+
+		result = lappend(result,
+						 makeConst(exprType(rawExpr),
+								   exprTypmod(rawExpr),
+								   exprCollation(rawExpr),
+								   1,
+								   (Datum) 0,
+								   true,
+								   true));
+	}
 
 	return result;
 }

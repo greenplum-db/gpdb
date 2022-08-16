@@ -103,7 +103,7 @@ GRANT { SELECT | INSERT | ALL [PRIVILEGES] }
           below.) The owner implicitly has all grant options for the object, too.</p><p>Greenplum
           Database grants default privileges on some types of objects to <codeph>PUBLIC</codeph>. No
           privileges are granted to <codeph>PUBLIC</codeph> by default on tables, table columns,
-          sequences, foreign data wrappers, foreign servers, large objects, schemas, or tablespaces.
+          sequences, foreign-data wrappers, foreign servers, large objects, schemas, or tablespaces.
           For other types of objects, the default privileges granted to <codeph>PUBLIC</codeph> are
           as follows:</p><ul>
           <li><codeph>CONNECT</codeph> and <codeph>TEMPORARY</codeph> (create temporary tables)

@@ -1,0 +1,146 @@
+include: helpers/server_helpers.sql;
+CREATE
+
+-- Try to verify that a session fatal due to OOM should have no effect on other sessions.
+-- Report on https://github.com/greenplum-db/gpdb/issues/12399
+
+-- Because the number of errors reported to master can depend on ic types (i.e. ic-tcp and ic-proxy have one
+-- additional error from the backend on seg0 which is trying to tear down TCP connection), we have to ignore
+-- all of them.
+-- start_matchignore
+-- m/ERROR:  Error on receive from seg0.*\n/
+-- m/\tbefore or while.*\n/
+-- m/\tThis probably means.*\n/
+-- end_matchignore
+
+create extension if not exists gp_inject_fault;
+CREATE
+
+1: set gp_debug_linger = '1s';
+SET
+1: select gp_inject_fault('make_dispatch_result_error', 'skip', dbid) from gp_segment_configuration where role = 'p' and content = -1;
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+2: begin;
+BEGIN
+
+-- session1 will fatal
+1: select count(*) > 0 from gp_dist_random('pg_class');
+FATAL:  could not allocate resources for segworker communication (cdbdisp_async.c:301)
+HINT:  Process 98844 will wait for gp_debug_linger=1 seconds before termination.
+Note that its locks and other resources will not be released until then.
+server closed the connection unexpectedly
+
+-- session 2 should be ok
+2: select count(*) > 0 from gp_dist_random('pg_class');
+ ?column? 
+----------
+ t        
+(1 row)
+2: commit;
+COMMIT
+1q: ... <quitting>
+2q: ... <quitting>
+
+select gp_inject_fault('make_dispatch_result_error', 'reset', dbid) from gp_segment_configuration where role = 'p' and content = -1;
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+
+--
+-- Test for issue https://github.com/greenplum-db/gpdb/issues/12703
+--
+
+-- Case for cdbgang_createGang_async
+1: create table t_12703(a int);
+CREATE
+
+1:begin;
+BEGIN
+-- make a cursor so that we have a named portal
+1: declare cur12703 cursor for select * from t_12703;
+DECLARE
+
+-- next, trigger a segment down so the existing session will be reset
+2: select gp_inject_fault('start_prepare', 'panic', dbid) from gp_segment_configuration where role = 'p' AND content = 0;
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+2: create table t_12703_2(a int);
+ERROR:  fault triggered, fault name:'start_prepare' fault type:'panic'  (seg0 127.0.1.1:7002 pid=18359)
+
+-- this will go to cdbgang_createGang_async's code path
+-- for some segments are DOWN. It should not PANIC even
+-- with a named portal existing.
+1: select * from t_12703;
+1: abort;
+ABORT
+
+1q: ... <quitting>
+2q: ... <quitting>
+
+-- Case for cdbCopyEndInternal
+-- Provide some data to copy in
+3:insert into t_12703 select * from generate_series(1, 10)i;
+INSERT 10
+3:copy t_12703 to '/tmp/t_12703';
+COPY 10
+-- make copy in statement hang at the entry point of cdbCopyEndInternal
+3:select gp_inject_fault('cdb_copy_end_internal_start', 'suspend', dbid) from gp_segment_configuration where role = 'p' and content = -1;
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+1&: copy t_12703 from '/tmp/t_12703';  <waiting ...>
+select gp_wait_until_triggered_fault('cdb_copy_end_internal_start', 1, dbid) from gp_segment_configuration where role = 'p' and content = -1;
+ gp_wait_until_triggered_fault 
+-------------------------------
+ Success:                      
+(1 row)
+-- make Gang connection is BAD
+4: select gp_inject_fault('start_prepare', 'panic', dbid) from gp_segment_configuration where role = 'p' AND content = 1;
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+4: create table t_12703_2(a int);
+ERROR:  fault triggered, fault name:'start_prepare' fault type:'panic'  (seg0 127.0.1.1:7002 pid=18412)
+2: begin;
+BEGIN
+select gp_inject_fault('cdb_copy_end_internal_start', 'reset', dbid) from gp_segment_configuration where role = 'p' and content = -1;
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+-- continue copy it should not PANIC
+1<:  <... completed>
+ERROR:  MPP detected 1 segment failures, system is reconnected
+1q: ... <quitting>
+-- session 2 still alive (means not PANIC happens)
+2: select 1;
+ ?column? 
+----------
+ 1        
+(1 row)
+2: end;
+END
+2q: ... <quitting>
+
+
+-- loop while segments come in sync
+select wait_until_all_segments_synchronized();
+ wait_until_all_segments_synchronized 
+--------------------------------------
+ OK                                   
+(1 row)
+
+-- verify no segment is down after recovery
+select count(*) from gp_segment_configuration where status = 'd';
+ count 
+-------
+ 0     
+(1 row)

@@ -320,13 +320,13 @@ CREATE AGGREGATE median_inmemory (float8) (
 );
 
 -- Comparisons based on L2 Norm
-CREATE OR REPLACE FUNCTION svec_l2_lt(svec,svec) RETURNS bool AS 'gp_svec.so', 'svec_l2_lt' LANGUAGE C IMMUTABLE;
-CREATE OR REPLACE FUNCTION svec_l2_le(svec,svec) RETURNS bool AS 'gp_svec.so', 'svec_l2_le' LANGUAGE C IMMUTABLE;
-CREATE OR REPLACE FUNCTION svec_l2_eq(svec,svec) RETURNS bool AS 'gp_svec.so', 'svec_l2_eq' LANGUAGE C IMMUTABLE;
-CREATE OR REPLACE FUNCTION svec_l2_ne(svec,svec) RETURNS bool AS 'gp_svec.so', 'svec_l2_ne' LANGUAGE C IMMUTABLE;
-CREATE OR REPLACE FUNCTION svec_l2_gt(svec,svec) RETURNS bool AS 'gp_svec.so', 'svec_l2_gt' LANGUAGE C IMMUTABLE;
-CREATE OR REPLACE FUNCTION svec_l2_ge(svec,svec) RETURNS bool AS 'gp_svec.so', 'svec_l2_ge' LANGUAGE C IMMUTABLE;
-CREATE OR REPLACE FUNCTION svec_l2_cmp(svec,svec) RETURNS integer AS 'gp_svec.so', 'svec_l2_cmp' LANGUAGE C IMMUTABLE;
+CREATE OR REPLACE FUNCTION svec_l2_lt(svec,svec) RETURNS bool AS 'gp_svec.so', 'svec_l2_lt' STRICT LANGUAGE C IMMUTABLE;
+CREATE OR REPLACE FUNCTION svec_l2_le(svec,svec) RETURNS bool AS 'gp_svec.so', 'svec_l2_le' STRICT LANGUAGE C IMMUTABLE;
+CREATE OR REPLACE FUNCTION svec_l2_eq(svec,svec) RETURNS bool AS 'gp_svec.so', 'svec_l2_eq' STRICT LANGUAGE C IMMUTABLE;
+CREATE OR REPLACE FUNCTION svec_l2_ne(svec,svec) RETURNS bool AS 'gp_svec.so', 'svec_l2_ne' STRICT LANGUAGE C IMMUTABLE;
+CREATE OR REPLACE FUNCTION svec_l2_gt(svec,svec) RETURNS bool AS 'gp_svec.so', 'svec_l2_gt' STRICT LANGUAGE C IMMUTABLE;
+CREATE OR REPLACE FUNCTION svec_l2_ge(svec,svec) RETURNS bool AS 'gp_svec.so', 'svec_l2_ge' STRICT LANGUAGE C IMMUTABLE;
+CREATE OR REPLACE FUNCTION svec_l2_cmp(svec,svec) RETURNS integer AS 'gp_svec.so', 'svec_l2_cmp' STRICT LANGUAGE C IMMUTABLE;
 
 CREATE OPERATOR < (
 	leftarg = svec, rightarg = svec, procedure = svec_l2_lt,

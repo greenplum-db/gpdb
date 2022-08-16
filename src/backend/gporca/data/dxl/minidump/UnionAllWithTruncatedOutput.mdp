@@ -321,7 +321,7 @@
         </dxl:LogicalJoin>
       </dxl:UnionAll>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="72">
+    <dxl:Plan Id="0" SpaceSize="24">
       <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="2155.001254" Rows="3.333333" Width="8"/>

@@ -14,16 +14,18 @@ CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
 (1 row)
 
 \dx+ gp_inject*
-                       Objects in extension "gp_inject_fault"
-                                 Object Description                                 
-------------------------------------------------------------------------------------
+                           Objects in extension "gp_inject_fault"
+                                     Object Description                                     
+--------------------------------------------------------------------------------------------
  function force_mirrors_to_catch_up()
  function gp_inject_fault(text,text,integer)
+ function gp_inject_fault(text,text,integer,integer)
  function gp_inject_fault(text,text,text,text,text,integer,integer,integer,integer)
+ function gp_inject_fault(text,text,text,text,text,integer,integer,integer,integer,integer)
  function gp_inject_fault_infinite(text,text,integer)
  function gp_wait_until_triggered_fault(text,integer,integer)
  function insert_noop_xlog_record()
-(6 rows)
+(8 rows)
 
 --
 -- Test extended \du flags

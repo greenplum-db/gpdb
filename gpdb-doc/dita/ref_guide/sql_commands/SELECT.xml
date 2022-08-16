@@ -196,7 +196,8 @@ SELECT * FROM foo LIMIT 5;</codeblock></p>
           reading its <codeph>RETURNING</codeph> output. If two such data-modifying statements
           attempt to modify the same row, the results are unspecified. </p>
         <p>See <xref
-            href="../../admin_guide/query/topics/CTE-query.xml"/><ph
+            href="../../admin_guide/query/topics/CTE-query.html" format="html" scope="external">WITH Queries (Common Table Expressions)
+</xref><ph
             otherprops="pivotal"> in the <cite>Greenplum Database Administrator Guide</cite></ph>
           for additional information.</p>
       </sectiondiv>
@@ -411,7 +412,7 @@ GROUPING SETS ((<varname>grouping_element</varname> [, ...]))</codeblock><p><cod
           aggregate function can be further filtered by attaching a <codeph>FILTER</codeph> clause
           to the aggregate function call. When a <codeph>FILTER</codeph> clause is present, only
           those rows matching it are included in the input to that aggregate function. See <xref
-            href="../../admin_guide/query/topics/defining-queries.xml#topic11"/>.</p><p>When
+            href="../../admin_guide/query/topics/defining-queries.html#topic11" format="html" scope="external">Aggregate Expressions</xref>.</p><p>When
             <codeph>GROUP BY</codeph> is present, or any aggregate functions are present, it is not
           valid for the <codeph>SELECT</codeph> list expressions to refer to ungrouped columns
           except within aggregate functions or when the ungrouped column is functionally dependent
@@ -422,7 +423,7 @@ GROUPING SETS ((<varname>grouping_element</varname> [, ...]))</codeblock><p><cod
           expressions in the <codeph>HAVING</codeph> clause or <codeph>SELECT</codeph> list. This
           means that, for example, a <codeph>CASE</codeph> expression cannot be used to skip
           evaluation of an aggregate function; see <xref
-            href="../../admin_guide/query/topics/defining-queries.xml#topic25"/>. </p><p>Greenplum
+            href="../../admin_guide/query/topics/defining-queries.html#topic25" format="html" scope="external">Expression Evaluation Rules</xref>. </p><p>Greenplum
           Database has the following additional OLAP grouping extensions (often referred to as
             <i>supergroups</i>):</p><parml>
           <plentry>
@@ -1021,7 +1022,8 @@ SELECT distance, employee_name FROM employee_recursive;</codeblock>
           [ALL]</codeph>, followed by the recursive part of the query. Be sure that the recursive
         part of the query will eventually return no tuples, or else the query will loop
         indefinitely. See <xref
-          href="../../admin_guide/query/topics/CTE-query.xml#topic_zhs_r1s_w1b"/><ph
+          href="../../admin_guide/query/topics/CTE-query.html#topic_zhs_r1s_w1b" format="html" scope="external">WITH Queries (Common Table Expressions)
+</xref><ph
           otherprops="pivotal"> in the <cite>Greenplum Database Administrator Guide</cite></ph> for
         more examples.</p>
     </section>

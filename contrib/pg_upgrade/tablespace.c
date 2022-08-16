@@ -24,12 +24,15 @@ init_tablespaces(void)
 	get_tablespace_paths();
 
 	set_tablespace_directory_suffix(&old_cluster);
-	set_tablespace_directory_suffix(&new_cluster);
+	if(!is_skip_target_check())
+	{
+		set_tablespace_directory_suffix(&new_cluster);
 
-	if (os_info.num_old_tablespaces > 0 &&
-	strcmp(old_cluster.tablespace_suffix, new_cluster.tablespace_suffix) == 0)
-		pg_fatal("Cannot upgrade to/from the same system catalog version when\n"
-				 "using tablespaces.\n");
+		if (os_info.num_old_tablespaces > 0 &&
+		strcmp(old_cluster.tablespace_suffix, new_cluster.tablespace_suffix) == 0)
+			pg_fatal("Cannot upgrade to/from the same system catalog version when\n"
+					 "using tablespaces.\n");
+	}
 }
 
 static void

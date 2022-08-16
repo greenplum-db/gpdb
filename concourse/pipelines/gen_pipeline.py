@@ -50,7 +50,7 @@ TEMPLATE_ENVIRONMENT = Environment(
 
 BASE_BRANCH = "6X_STABLE"  # when branching gpdb update to 7X_STABLE, 6X_STABLE, etc.
 
-SECRETS_PATH = os.path.expanduser('~/workspace/gp-continuous-integration/secrets')
+CI_VARS_PATH = os.path.join(os.getcwd(), '..', 'vars')
 
 # Variables that govern pipeline validation
 RELEASE_VALIDATOR_JOB = ['Release_Candidate', 'Build_Release_Candidate_RPMs']
@@ -151,19 +151,17 @@ def validate_pipeline_release_jobs(raw_pipeline_yml):
     return True
 
 
-def validate_target(target):
-    expected_secrets_file = "%s/ccp_ci_secrets_%s.yml" % (SECRETS_PATH, target)
-
-    if not os.path.exists(expected_secrets_file):
-        raise Exception('Invalid target "%s"; no secrets file found.  Please ensure your secrets files in %s are up to date.' % (target, SECRETS_PATH))
-
-
 def create_pipeline(args, git_remote, git_branch):
     """Generate OS specific pipeline sections"""
     if args.test_trigger_false:
         test_trigger = "true"
     else:
         test_trigger = "false"
+
+    if args.pipeline_target == 'prod':
+        variables_type = "prod"
+    else:
+        variables_type = "dev"
 
     context = {
         'template_filename': args.template_filename,
@@ -177,7 +175,8 @@ def create_pipeline(args, git_remote, git_branch):
         'build_test_rc_rpm': args.build_test_rc_rpm,
         'directed_release': args.directed_release,
         'git_username': git_remote.split('/')[-2],
-        'git_branch': git_branch
+        'git_branch': git_branch,
+        'variables_type': variables_type
     }
 
     pipeline_yml = render_template(args.template_filename, context)
@@ -195,17 +194,16 @@ def create_pipeline(args, git_remote, git_branch):
     return True
 
 
-def gen_pipeline(args, pipeline_name, secret_files, git_remote, git_branch):
-    secrets = ""
-    for secret in secret_files:
-        secrets += "-l %s/%s " % (SECRETS_PATH, secret)
+def gen_pipeline(args, pipeline_name, variable_files, git_remote, git_branch):
+    variables = ""
+    for variable in variable_files:
+        variables += "-l %s/%s " % (CI_VARS_PATH, variable)
 
     format_args = {
         'target': args.pipeline_target,
         'name': pipeline_name,
         'output_path': args.output_filepath,
-        'secrets_path': SECRETS_PATH,
-        'secrets': secrets,
+        'variables': variables,
         'remote': git_remote,
         'branch': git_branch,
     }
@@ -214,8 +212,7 @@ def gen_pipeline(args, pipeline_name, secret_files, git_remote, git_branch):
 set-pipeline \
 -p {name} \
 -c {output_path} \
--l {secrets_path}/gpdb_common-ci-secrets.yml \
-{secrets} \
+{variables} \
 -v gpdb-git-remote={remote} \
 -v gpdb-git-branch={branch} \
 -v pipeline-name={name} \
@@ -254,22 +251,21 @@ def print_fly_commands(args, git_remote, git_branch):
     print(header(args))
     if args.directed_release:
         print('NOTE: You can set the directed release pipeline with the following:\n')
-        print(gen_pipeline(args, pipeline_name, ["gpdb_%s_without_asserts-ci-secrets.prod.yml" % BASE_BRANCH],
+        print(gen_pipeline(args, pipeline_name, ["common_prod.yml", "without_asserts_common_prod.yml"],
                            suggested_git_remote(), git_branch))
         return
 
     if args.pipeline_target == 'prod':
         print('NOTE: You can set the production pipelines with the following:\n')
         pipeline_name = "gpdb_%s" % BASE_BRANCH if BASE_BRANCH == "master" else BASE_BRANCH
-        print(gen_pipeline(args, pipeline_name, ["gpdb_%s-ci-secrets.prod.yml" % BASE_BRANCH],
+        print(gen_pipeline(args, pipeline_name, ["common_prod.yml"],
                            "https://github.com/greenplum-db/gpdb.git", BASE_BRANCH))
-        print(gen_pipeline(args, "%s_without_asserts" % pipeline_name, ["gpdb_%s_without_asserts-ci-secrets.prod.yml" % BASE_BRANCH],
+        print(gen_pipeline(args, "%s_without_asserts" % pipeline_name, ["common_prod.yml", "without_asserts_common_prod.yml"],
                            "https://github.com/greenplum-db/gpdb.git", BASE_BRANCH))
         return
 
     print('NOTE: You can set the developer pipeline with the following:\n')
-    print(gen_pipeline(args, pipeline_name, ["gpdb_%s-ci-secrets.dev.yml" % BASE_BRANCH,
-                                             "ccp_ci_secrets_%s.yml" % args.pipeline_target], git_remote, git_branch))
+    print(gen_pipeline(args, pipeline_name, ["common_prod.yml", "common_dev.yml"], git_remote, git_branch))
 
 
 def main():
@@ -403,8 +399,6 @@ def main():
 
     if args.pipeline_target != 'prod' and args.directed_release:
         raise Exception('--directed flag can be used only with prod target')
-
-    validate_target(args.pipeline_target)
 
     output_path_is_set = os.path.basename(args.output_filepath) != default_output_filename
     if (args.user != os.getlogin() and output_path_is_set):

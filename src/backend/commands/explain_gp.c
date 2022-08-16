@@ -25,6 +25,7 @@
 #include "cdb/cdbpathlocus.h"
 #include "cdb/cdbutil.h"
 #include "cdb/cdbvars.h"		/* GpIdentity.segindex */
+#include "cdb/cdbendpoint.h"
 #include "cdb/memquota.h"
 #include "libpq/pqformat.h"		/* pq_beginmessage() etc. */
 #include "miscadmin.h"
@@ -586,6 +587,11 @@ cdbexplain_sendExecStats(QueryDesc *queryDesc)
 	 */
 	memcpy(ctx.buf.data + hoff, (char *) &ctx.hdr, sizeof(ctx.hdr) - sizeof(ctx.hdr.inst));
 
+#ifdef FAULT_INJECTOR
+	/* Inject a fault before sending a message to qDisp process */
+	SIMPLE_FAULT_INJECTOR("send_exec_stats");
+#endif /* FAULT_INJECTOR */
+
 	/* Send message to qDisp process. */
 	pq_endmessage(&ctx.buf);
 }								/* cdbexplain_sendExecStats */
@@ -734,7 +740,7 @@ cdbexplain_recvExecStats(struct PlanState *planstate,
 			ctx.nStatInst = hdr->nInst;
 		else
 		{
-			/* MPP-2140: what causes this ? */
+			/* Check for stats corruption */
 			if (ctx.nStatInst != hdr->nInst)
 				ereport(ERROR, (errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
 								errmsg("Invalid execution statistics "
@@ -2425,4 +2431,65 @@ explain_partition_selector(PartitionSelector *ps, PlanState *parentstate,
 
 		ExplainPropertyStringInfo("Partitions selected", es, "%d (out of %d)", nPartsSelected, nPartsTotal);
 	}
+}
+
+/*
+ * Explain a parallel retrieve cursor,
+ * indicate the endpoints exist on entry DB, or on some segments,
+ * or on all segments.
+ */
+void ExplainParallelRetrieveCursor(ExplainState *es, QueryDesc* queryDesc)
+{
+	PlannedStmt *plan = queryDesc->plannedstmt;
+	SliceTable *sliceTable = queryDesc->estate->es_sliceTable;
+	StringInfoData            endpointInfoStr;
+	enum EndPointExecPosition endPointExecPosition;
+
+	initStringInfo(&endpointInfoStr);
+
+	endPointExecPosition = GetParallelCursorEndpointPosition(plan);
+	ExplainOpenGroup("Cursor", "Cursor", true, es);
+	switch(endPointExecPosition)
+	{
+		case ENDPOINT_ON_ENTRY_DB:
+		{
+			appendStringInfo(&endpointInfoStr, "\"on coordinator\"");
+			break;
+		}
+		case ENDPOINT_ON_SINGLE_QE:
+		{
+			appendStringInfo(
+							 &endpointInfoStr, "\"on segment: contentid [%d]\"",
+							 gp_session_id % plan->planTree->flow->numsegments);
+			break;
+		}
+		case ENDPOINT_ON_SOME_QE:
+		{
+			ListCell * cell;
+			bool isFirst = true;
+			appendStringInfo(&endpointInfoStr, "on segments: contentid [");
+
+			Slice *slice = (Slice *) list_nth(sliceTable->slices, 0);
+			foreach(cell, slice->segments)
+			{
+				int contentid = lfirst_int(cell);
+				appendStringInfo(&endpointInfoStr, (isFirst)?"%d":", %d", contentid);
+				isFirst = false;
+			}
+			appendStringInfo(&endpointInfoStr, "]");
+			break;
+		}
+		case ENDPOINT_ON_ALL_QE:
+		{
+			appendStringInfo(&endpointInfoStr, "on all %d segments", getgpsegmentCount());
+			break;
+		}
+		default:
+		{
+			elog(ERROR, "invalid endpoint position : %d", endPointExecPosition);
+			break;
+		}
+	}
+	ExplainPropertyText("Endpoint", endpointInfoStr.data, es);
+	ExplainCloseGroup("Cursor", "Cursor", true, es);
 }

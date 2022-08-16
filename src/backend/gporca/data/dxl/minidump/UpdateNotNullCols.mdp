@@ -327,7 +327,7 @@
         </dxl:LogicalProject>
       </dxl:LogicalUpdate>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="28">
+    <dxl:Plan Id="0" SpaceSize="12">
       <dxl:DMLUpdate Columns="0,1" ActionCol="19" OidCol="20" CtidCol="2" SegmentIdCol="8" InputSorted="false" PreserveOids="false">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="862.815480" Rows="8.000000" Width="1"/>

@@ -8,10 +8,13 @@
 
 -- start_matchsubs
 --
--- m/DETAIL:  Per-query VM protect limit reached: current limit is \d+ kB, requested \d+ bytes, available \d+ MB/
+-- m/DETAIL:  Per-query memory limit reached: current limit is \d+ kB, requested \d+ bytes, has \d+ MB available for this query/
 -- s/\d+/XXX/g
 --
--- m/DETAIL:  VM Protect failed to allocate \d+ bytes, \d+ MB available/
+-- m/DETAIL:  Vmem limit reached, failed to allocate \d+ bytes from tracker, which has \d+ MB available/
+-- s/\d+/XXX/g
+--
+-- m/DETAIL:  System memory limit reached, failed to allocate \d+ bytes from system/
 -- s/\d+/XXX/g
 --
 -- m/(seg\d+ \d+.\d+.\d+.\d+:\d+)/

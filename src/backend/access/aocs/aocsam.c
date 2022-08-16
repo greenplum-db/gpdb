@@ -149,7 +149,10 @@ open_ds_write(Relation rel, DatumStreamWrite **ds, TupleDesc relationTupleDesc,
 		 * column of a column oriented table.  Note: checksum is a table level
 		 * attribute.
 		 */
-		Assert(opts[i]);
+		if (opts[i] == NULL || opts[i]->blocksize == 0)
+			elog(ERROR, "No relation attribute options for '%s', column #%d  in pg_attribute_encoding",
+							RelationGetRelationName(rel),
+							i + 1);
 		ct = opts[i]->compresstype;
 		clvl = opts[i]->compresslevel;
 		blksz = opts[i]->blocksize;
@@ -164,7 +167,7 @@ open_ds_write(Relation rel, DatumStreamWrite **ds, TupleDesc relationTupleDesc,
 										attr,
 										RelationGetRelationName(rel),
 										/* title */ titleBuf.data,
-										RelationNeedsWAL(rel));
+										XLogIsNeeded() && RelationNeedsWAL(rel));
 
 	}
 }
@@ -200,7 +203,10 @@ open_ds_read(Relation rel, DatumStreamRead **ds, TupleDesc relationTupleDesc,
 		 * column of a column oriented table.  Note: checksum is a table level
 		 * attribute.
 		 */
-		Assert(opts[attno]);
+		if (opts[attno] == NULL || opts[attno]->blocksize == 0)
+			elog(ERROR, "No relation attribute options for '%s', column #%d  in pg_attribute_encoding",
+							RelationGetRelationName(rel),
+							attno + 1);
 
 		ct = opts[attno]->compresstype;
 		clvl = opts[attno]->compresslevel;
@@ -1837,7 +1843,7 @@ aocs_addcol_init(Relation rel,
 		desc->dsw[i] = create_datumstreamwrite(ct, clvl, rel->rd_appendonly->checksum, 0, blksz /* safeFSWriteSize */ ,
 											   attr, RelationGetRelationName(rel),
 											   titleBuf.data,
-											   RelationNeedsWAL(rel));
+											   XLogIsNeeded() && RelationNeedsWAL(rel));
 	}
 	return desc;
 }

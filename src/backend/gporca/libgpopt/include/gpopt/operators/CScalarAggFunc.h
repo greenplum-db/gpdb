@@ -31,6 +31,22 @@ enum EAggfuncStage
 	EaggfuncstageSentinel
 };
 
+enum EAggfuncKind
+{
+	EaggfunckindNormal = 0,
+	EaggfunckindOrderedSet,
+	EaggfunckindHypothetical
+};
+
+enum EAggfuncChildIndices
+{
+	EaggfuncIndexArgs = 0,
+	EaggfuncIndexDirectArgs,
+	EaggfuncIndexOrder,
+	EaggfuncIndexDistinct,
+	EaggfuncIndexSentinel
+};
+
 //---------------------------------------------------------------------------
 //	@class:
 //		CScalarAggFunc
@@ -60,11 +76,16 @@ private:
 	// distinct aggregate computation
 	BOOL m_is_distinct;
 
+	EAggfuncKind m_aggkind;
+
 	// stage of the aggregate function
 	EAggfuncStage m_eaggfuncstage;
 
 	// is result of splitting aggregates
 	BOOL m_fSplit;
+
+	// corresponding gp_agg mdid for supported ordered aggs
+	IMDId *m_gp_agg_mdid;
 
 	// private copy ctor
 	CScalarAggFunc(const CScalarAggFunc &);
@@ -73,7 +94,8 @@ public:
 	// ctor
 	CScalarAggFunc(CMemoryPool *mp, IMDId *pmdidAggFunc,
 				   IMDId *resolved_rettype, const CWStringConst *pstrAggFunc,
-				   BOOL is_distinct, EAggfuncStage eaggfuncstage, BOOL fSplit);
+				   BOOL is_distinct, EAggfuncStage eaggfuncstage, BOOL fSplit,
+				   EAggfuncKind aggkind, IMDId *gp_agg_mdid = NULL);
 
 	// dtor
 	virtual ~CScalarAggFunc()
@@ -81,6 +103,7 @@ public:
 		m_pmdidAggFunc->Release();
 		CRefCount::SafeRelease(m_pmdidResolvedRetType);
 		CRefCount::SafeRelease(m_return_type_mdid);
+		CRefCount::SafeRelease(m_gp_agg_mdid);
 		GPOS_DELETE(m_pstrAggFunc);
 	}
 
@@ -153,6 +176,12 @@ public:
 		m_is_distinct = val;
 	}
 
+	EAggfuncKind
+	AggKind() const
+	{
+		return m_aggkind;
+	}
+
 	// stage of the aggregate function
 	EAggfuncStage
 	Eaggfuncstage() const
@@ -191,6 +220,20 @@ public:
 	FHasAmbiguousReturnType() const
 	{
 		return (NULL != m_pmdidResolvedRetType);
+	}
+
+	// set gp_agg MDId
+	void
+	SetGpAggMDId(IMDId *mdid)
+	{
+		m_gp_agg_mdid = mdid;
+	}
+
+	// return gp_agg MDId. Valid only for supported ordered aggs, else NULL
+	IMDId *
+	GetGpAggMDId() const
+	{
+		return m_gp_agg_mdid;
 	}
 
 	// is function count(*)?

@@ -117,6 +117,7 @@ static int	port = -1;
 static bool port_specified_by_user = false;
 static char *dlpath = PKGLIBDIR;
 static char *user = NULL;
+static char *sslmode = NULL;
 static _stringlist *extraroles = NULL;
 static _stringlist *extra_install = NULL;
 static char *config_auth_datadir = NULL;
@@ -1333,6 +1334,8 @@ initialize_environment(void)
 		}
 		if (user != NULL)
 			doputenv("PGUSER", user);
+		if (sslmode != NULL)
+			doputenv("PGSSLMODE", sslmode);
 
 		/*
 		 * Report what we're connecting to
@@ -1909,9 +1912,11 @@ results_differ(const char *testname, const char *resultsfile, const char *defaul
     char		diff_opts[MAXPGPATH];
 	char	   *diff_opts_st = diff_opts;
 	char	   *diff_opts_en = diff_opts + sizeof(diff_opts);
-    char		m_pretty_diff_opts[MAXPGPATH];
-    char	   *pretty_diff_opts_st = m_pretty_diff_opts;
-    char	   *pretty_diff_opts_en = m_pretty_diff_opts + sizeof(m_pretty_diff_opts);
+	char		m_pretty_diff_opts[MAXPGPATH];
+	char		generated_initfile[MAXPGPATH];
+	char	   *pretty_diff_opts_st = m_pretty_diff_opts;
+	char	   *pretty_diff_opts_en = m_pretty_diff_opts + sizeof(m_pretty_diff_opts);
+	char		buf[MAXPGPATH];
 	FILE	   *difffile;
 	int			best_line_count;
 	int			i;
@@ -1959,10 +1964,22 @@ results_differ(const char *testname, const char *resultsfile, const char *defaul
 										" --gpd_init %s", sl->str);
 	}
 
+	/* Add auto generated init file if it is generated */
+	snprintf(buf, sizeof(buf), "%s.ini", resultsfile);
+	if (file_exists(buf))
+	{
+		snprintf(generated_initfile, sizeof(generated_initfile),
+				 "--gpd_init %s", buf);
+	}
+	else
+	{
+		memset(generated_initfile, '\0', sizeof(generated_initfile));
+	}
+
 	/* OK, run the diff */
 	snprintf(cmd, sizeof(cmd),
-			 "%s %s \"%s\" \"%s\" > \"%s\"",
-			 gpdiffprog, diff_opts, expectfile, resultsfile, diff);
+			 "%s %s %s \"%s\" \"%s\" > \"%s\"",
+			 gpdiffprog, diff_opts, generated_initfile, expectfile, resultsfile, diff);
 
 	/* Is the diff file empty? */
 	if (run_diff(cmd, diff) == 0)
@@ -1994,8 +2011,8 @@ results_differ(const char *testname, const char *resultsfile, const char *defaul
 		}
 
 		snprintf(cmd, sizeof(cmd),
-				 "%s %s \"%s\" \"%s\" > \"%s\"",
-				 gpdiffprog, diff_opts, alt_expectfile, resultsfile, diff);
+				 "%s %s %s \"%s\" \"%s\" > \"%s\"",
+				 gpdiffprog, diff_opts, generated_initfile, alt_expectfile, resultsfile, diff);
 
 		if (run_diff(cmd, diff) == 0)
 		{
@@ -2030,8 +2047,8 @@ results_differ(const char *testname, const char *resultsfile, const char *defaul
 	if (platform_expectfile)
 	{
 		snprintf(cmd, sizeof(cmd),
-				 "%s %s \"%s\" \"%s\" > \"%s\"",
-				 gpdiffprog, diff_opts, default_expectfile, resultsfile, diff);
+				 "%s %s %s \"%s\" \"%s\" > \"%s\"",
+				 gpdiffprog, diff_opts, generated_initfile, default_expectfile, resultsfile, diff);
 
 		if (run_diff(cmd, diff) == 0)
 		{
@@ -2054,8 +2071,8 @@ results_differ(const char *testname, const char *resultsfile, const char *defaul
 	 * append to the diffs summary file.
 	 */
 	snprintf(cmd, sizeof(cmd),
-			 "%s %s \"%s\" \"%s\" >> \"%s\"",
-			 gpdiffprog, m_pretty_diff_opts, best_expect_file, resultsfile, difffilename);
+			 "%s %s %s \"%s\" \"%s\" >> \"%s\"",
+			 gpdiffprog, m_pretty_diff_opts, generated_initfile, best_expect_file, resultsfile, difffilename);
 	run_diff(cmd, difffilename);
 
 	/* And append a separator */
@@ -2784,6 +2801,7 @@ help(void)
 	printf(_("  --host=HOST               use postmaster running on HOST\n"));
 	printf(_("  --port=PORT               use postmaster running at PORT\n"));
 	printf(_("  --user=USER               connect as USER\n"));
+	printf(_("  --sslmode=SSLMODE         connect with SSLMODE\n"));
 	printf(_("  --psqldir=DIR             use psql in DIR (default: configured bindir)\n"));
 	printf(_("\n"));
 	printf(_("The exit status is 0 if all tests passed, 1 if some tests failed, and 2\n"));
@@ -2826,6 +2844,7 @@ regression_main(int argc, char *argv[], init_function ifunc, test_function tfunc
 		{"ignore-plans", no_argument, NULL, 27},
 		{"prehook", required_argument, NULL, 28},
 		{"print-failure-diffs", no_argument, NULL, 29},
+		{"sslmode", required_argument, NULL, 30},
 
 		/* GDPB specific arguments for upgrade testing */
 		{"old-port", required_argument, NULL, 128},
@@ -2961,6 +2980,9 @@ regression_main(int argc, char *argv[], init_function ifunc, test_function tfunc
 				break;
 			case 29:
 				print_failure_diffs_is_enabled = true;
+				break;
+			case 30:
+				sslmode = strdup(optarg);
 				break;
 			default:
 				/* getopt_long already emitted a complaint */

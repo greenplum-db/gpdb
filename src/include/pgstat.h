@@ -763,6 +763,20 @@ typedef enum BackendState
 } BackendState;
 
 /* ----------
+ * Command type for progress reporting purposes
+ * ----------
+ */
+typedef enum ProgressCommandType
+{
+	PROGRESS_COMMAND_INVALID,
+	PROGRESS_COMMAND_VACUUM,
+	PROGRESS_COMMAND_CLUSTER,
+	PROGRESS_COMMAND_CREATE_INDEX
+} ProgressCommandType;
+
+#define PGSTAT_NUM_PROGRESS_PARAM	20
+
+/* ----------
  * Shared-memory data structures
  * ----------
  */
@@ -877,9 +891,9 @@ typedef struct PgStat_FunctionCallUsage
  * GUC parameters
  * ----------
  */
-extern bool pgstat_track_activities;
-extern bool pgstat_track_counts;
-extern int	pgstat_track_functions;
+extern PGDLLIMPORT bool pgstat_track_activities;
+extern PGDLLIMPORT bool pgstat_track_counts;
+extern PGDLLIMPORT int pgstat_track_functions;
 extern PGDLLIMPORT int pgstat_track_activity_query_size;
 extern char *pgstat_stat_directory;
 extern char *pgstat_stat_tmpname;

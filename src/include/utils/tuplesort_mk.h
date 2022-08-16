@@ -81,6 +81,8 @@ extern bool tuplesort_skiptuples_mk(Tuplesortstate_mk *state, int64 ntuples, boo
 extern void tuplesort_end_mk(Tuplesortstate_mk *state);
 extern void tuplesort_flush_mk(Tuplesortstate_mk *state);
 extern void tuplesort_finalize_stats_mk(Tuplesortstate_mk *state);
+extern void tuplesort_get_stats_mk(Tuplesortstate_mk *state, const char **sortMethod,
+									const char **spaceType, long *spaceUsed);
 
 
 extern void tuplesort_rescan_mk(Tuplesortstate_mk *state);

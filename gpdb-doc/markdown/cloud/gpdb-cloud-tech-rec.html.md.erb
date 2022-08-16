@@ -24,7 +24,7 @@ The disk settings for cloud deployments are the same as on-premise with a few mo
    ```
    rw,noatime,nobarrier,nodev,inode64
    ```
-    <br/>**Note:** The `nobarrier` option is not supported on Ubuntu nodes.
+    <br/>**Note:** The `nobarrier` option is not supported on RHEL 8 or Ubuntu nodes.
 -  Use mq-deadline instead of the deadline scheduler for the R5 series instance type in AWS
 -  Use a swap disk per VM (32GB size works well)
 

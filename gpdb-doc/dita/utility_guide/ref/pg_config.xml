@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
-<topic id="topic1"><title id="pf137116">pg_config</title><body><p id="client_util_desc">Retrieves information about the installed version of Greenplum Database.</p><section id="section2"><title>Synopsis</title><codeblock id="client_util_synopsis"><b>pg_config</b> [<varname>option</varname> ...]
+<topic id="topic1"><title id="pf137116">pg_config</title><body><p id="client_util_desc">Retrieves information about the installed version of Greenplum Database.</p><section id="section2"><title>Synopsis</title><codeblock id="client_util_synopsis">pg_config [&lt;option> ...]
 
-<b>pg_config</b> <b>-? | --help</b>
+pg_config -? | --help
 
-<b>pg_config</b> <b>--version</b></codeblock></section><section id="section3"><title>Description</title><p>The <codeph>pg_config</codeph> utility prints configuration parameters
+pg_config --version</codeblock></section><section id="section3"><title>Description</title><p>The <codeph>pg_config</codeph> utility prints configuration parameters
 of the currently installed version of Greenplum Database. It is intended,
 for example, to be used by software packages that want to interface to
 Greenplum Database to facilitate finding the required header files and

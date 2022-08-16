@@ -558,12 +558,14 @@ SELECT id, property AS "ProperTee" FROM GistTable13
 EXPLAIN (COSTS OFF) SELECT id, property AS "ProperTee" FROM GistTable13 
  WHERE property ~= '( (999,999), (998,998) )';
                           QUERY PLAN                          
---------------------------------------------------------------
+--------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  Index Scan using gistindex13 on gisttable13
-         Index Cond: (property ~= '(999,999),(998,998)'::box)
+   ->  Bitmap Heap Scan on gisttable13
+         Recheck Cond: (property ~= '(999,999),(998,998)'::box)
+         ->  Bitmap Index Scan on gistindex13
+               Index Cond: (property ~= '(999,999),(998,998)'::box)
  Optimizer: Postgres query optimizer
-(4 rows)
+(6 rows)
 
 VACUUM GistTable13;
 ANALYZE GistTable13;
@@ -577,12 +579,14 @@ SELECT id, property AS "ProperTee" FROM GistTable13
 EXPLAIN (COSTS OFF) SELECT id, property AS "ProperTee" FROM GistTable13 
  WHERE property ~= '( (999,999), (998,998) )';
                           QUERY PLAN                          
---------------------------------------------------------------
+--------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  Index Scan using gistindex13 on gisttable13
-         Index Cond: (property ~= '(999,999),(998,998)'::box)
+   ->  Bitmap Heap Scan on gisttable13
+         Recheck Cond: (property ~= '(999,999),(998,998)'::box)
+         ->  Bitmap Index Scan on gistindex13
+               Index Cond: (property ~= '(999,999),(998,998)'::box)
  Optimizer: Postgres query optimizer
-(4 rows)
+(6 rows)
 
 TRUNCATE TABLE GistTable13;
 -- Add some rows.

@@ -180,7 +180,7 @@ dsm_postmaster_startup(PGShmemHeader *shim)
 		Assert(dsm_control_address == NULL);
 		Assert(dsm_control_mapped_size == 0);
 		dsm_control_handle = random();
-		if (dsm_control_handle == 0)
+		if (dsm_control_handle == DSM_HANDLE_INVALID)
 			continue;
 		if (dsm_impl_op(DSM_OP_CREATE, dsm_control_handle, segsize,
 						&dsm_control_impl_private, &dsm_control_address,
@@ -471,6 +471,8 @@ dsm_create(Size size)
 	{
 		Assert(seg->mapped_address == NULL && seg->mapped_size == 0);
 		seg->handle = random();
+		if (seg->handle == DSM_HANDLE_INVALID)	/* Reserve sentinel */
+			continue;
 		if (dsm_impl_op(DSM_OP_CREATE, seg->handle, size, &seg->impl_private,
 						&seg->mapped_address, &seg->mapped_size, ERROR))
 			break;
@@ -496,9 +498,18 @@ dsm_create(Size size)
 
 	/* Verify that we can support an additional mapping. */
 	if (nitems >= dsm_control->maxitems)
+	{
+		LWLockRelease(DynamicSharedMemoryControlLock);
+		dsm_impl_op(DSM_OP_DESTROY, seg->handle, 0, &seg->impl_private,
+					&seg->mapped_address, &seg->mapped_size, WARNING);
+		if (seg->resowner != NULL)
+			ResourceOwnerForgetDSM(seg->resowner, seg);
+		dlist_delete(&seg->node);
+		pfree(seg);
 		ereport(ERROR,
 				(errcode(ERRCODE_INSUFFICIENT_RESOURCES),
 				 errmsg("too many dynamic shared memory segments")));
+	}
 
 	/* Enter the handle into a new array slot. */
 	dsm_control->item[nitems].handle = seg->handle;

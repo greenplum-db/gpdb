@@ -470,8 +470,9 @@ get_actual_line_size(FormatConfig *format_in_config, char *line_start, int cur_s
 	if ( 1 == format_in_config->line_delimiter_length )
 	{
 		char delim = format_in_config->line_delimiter[0];
-				
-		if ( *expected_delim_loc == delim )
+
+		// Check the remaining buffer size.
+		if ( *expected_delim_loc == delim && tot_size - cur_size > format_in_config->fields_tot_size)
 			line_end = expected_delim_loc;
 		else
 			line_end = strchr(line_start, delim);
@@ -512,9 +513,11 @@ get_actual_line_size(FormatConfig *format_in_config, char *line_start, int cur_s
 		
 		/*
 		 * this is the case where the last line in the buffer is incomplete, that's why the end of line was not found.
-		 * the rest of the line is in the next buffer
+		 * the rest of the line is in the next buffer.
+		 * When the remaining buffer include a complete line, but no line delimiter.
+		 * The remaining buffer size is equal with field total size.
 		 */  
-		if ( (tot_size - cur_size) < format_in_config->fields_tot_size )
+		if ( (tot_size - cur_size) <= format_in_config->fields_tot_size )
 		{
 			return tot_size - cur_size;
 		}
@@ -702,7 +705,7 @@ fixedwidth_in(PG_FUNCTION_ARGS)
 		FORMATTER_SET_BAD_ROW_DATA(fcinfo, data_buf + data_cur, row_size);
 		FORMATTER_SET_BYTE_NUMBER(fcinfo, row_size);
 	}
-	else 
+	else
 	{
 		/*
 		 * This line is not finish. Next buffer will bring the remaining of the line.
@@ -743,7 +746,7 @@ fixedwidth_in(PG_FUNCTION_ARGS)
 		nullval = format_in_config.null_value;		
 		remaining = data_len - data_cur;
 		
-		if (remaining < field_size)
+		if (remaining <= field_size)
 		{
 			/*
 			 * we will get here only in the case we are working without a line delimiter. Because "remaining smaller then fieldsize"

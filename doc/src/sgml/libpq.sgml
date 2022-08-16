@@ -1133,6 +1133,64 @@ postgresql://%2Fvar%2Flib%2Fpostgresql/dbname
       </listitem>
      </varlistentry>
 
+     <varlistentry id="libpq-connect-replication" xreflabel="replication">
+      <term><literal>replication</literal></term>
+      <listitem>
+      <para>
+       This option determines whether the connection should use the
+       replication protocol instead of the normal protocol.  This is what
+       PostgreSQL replication connections as well as tools such as
+       <application>pg_basebackup</application> use internally, but it can
+       also be used by third-party applications.  For a description of the
+       replication protocol, consult <xref linkend="protocol-replication"/>.
+      </para>
+
+      <para>
+       The following values, which are case-insensitive, are supported:
+       <variablelist>
+        <varlistentry>
+         <term>
+          <literal>true</literal>, <literal>on</literal>,
+          <literal>yes</literal>, <literal>1</literal>
+         </term>
+         <listitem>
+          <para>
+           The connection goes into physical replication mode.
+          </para>
+         </listitem>
+        </varlistentry>
+
+        <varlistentry>
+         <term><literal>database</literal></term>
+         <listitem>
+          <para>
+           The connection goes into logical replication mode, connecting to
+           the database specified in the <literal>dbname</literal> parameter.
+          </para>
+         </listitem>
+        </varlistentry>
+
+        <varlistentry>
+         <term>
+          <literal>false</literal>, <literal>off</literal>,
+          <literal>no</literal>, <literal>0</literal>
+         </term>
+         <listitem>
+          <para>
+           The connection is a regular one, which is the default behavior.
+          </para>
+         </listitem>
+        </varlistentry>
+       </variablelist>
+      </para>
+
+      <para>
+       In physical or logical replication mode, only the simple query protocol
+       can be used.
+      </para>
+      </listitem>
+     </varlistentry>
+
      <varlistentry id="libpq-connect-sslmode" xreflabel="sslmode">
       <term><literal>sslmode</literal></term>
       <listitem>
@@ -1363,8 +1421,10 @@ postgresql://%2Fvar%2Flib%2Fpostgresql/dbname
       <term><literal>gsslib</literal></term>
       <listitem>
        <para>
-        GSS library to use for GSSAPI authentication. Only used on Windows.
-        Set to <literal>gssapi</literal> to force libpq to use the GSSAPI
+        GSS library to use for GSSAPI authentication.
+        Currently this is disregarded except on Windows builds that include
+        both GSSAPI and SSPI support.  In that case, set
+        this to <literal>gssapi</literal> to cause libpq to use the GSSAPI
         library for authentication instead of the default SSPI.
        </para>
       </listitem>
@@ -5333,7 +5393,7 @@ int PQendcopy(PGconn *conn);
        It should either be issued when the  last  string  has  been sent
        to  the  server using <function>PQputline</function> or when the
        last string has been  received  from  the  server using
-       <function>PGgetline</function>.  It must be issued or the server
+       <function>PQgetline</function>.  It must be issued or the server
        will get <quote>out of sync</quote> with  the client.   Upon return
        from this function, the server is ready to receive the next SQL
        command.  The return value is 0  on  successful  completion,
@@ -5583,6 +5643,58 @@ void PQconninfoFree(PQconninfoOption *connOptions);
     </listitem>
    </varlistentry>
 
+   <varlistentry id="libpq-pqencryptpasswordconn">
+    <term>
+     <function>PQencryptPasswordConn</function>
+     <indexterm>
+      <primary>PQencryptPasswordConn</primary>
+     </indexterm>
+    </term>
+
+    <listitem>
+     <para>
+      Prepares the encrypted form of a <productname>PostgreSQL</> password.
+<synopsis>
+char *PQencryptPasswordConn(PGconn *conn, const char *passwd, const char *user, const char *algorithm);
+</synopsis>
+      This function is intended to be used by client applications that
+      wish to send commands like <literal>ALTER USER joe PASSWORD
+      'pwd'</>.  It is good practice not to send the original cleartext
+      password in such a command, because it might be exposed in command
+      logs, activity displays, and so on.  Instead, use this function to
+      convert the password to encrypted form before it is sent.
+     </para>
+
+     <para>
+      The <parameter>passwd</> and <parameter>user</> arguments
+      are the cleartext password, and the SQL name of the user it is for.
+      <parameter>algorithm</> specifies the encryption algorithm
+      to use to encrypt the password. Currently supported algorithms are
+      <literal>md5</>, <literal>scram-sha-256</> and <literal>plain</>.
+      <literal>scram-sha-256</> was introduced in <productname>PostgreSQL</>
+      version 10, and will not work correctly with older server versions. If
+      <parameter>algorithm</> is <symbol>NULL</>, this function will query
+      the server for the current value of the
+      <xref linkend="guc-password-encryption"> setting. That can block, and
+      will fail if the current transaction is aborted, or if the connection
+      is busy executing another query. If you wish to use the default
+      algorithm for the server but want to avoid blocking, query
+      <varname>password_encryption</> yourself before calling
+      <function>PQencryptPasswordConn</>, and pass that value as the
+      <parameter>algorithm</>.
+     </para>
+
+     <para>
+      The return value is a string allocated by <function>malloc</>.
+      The caller can assume the string doesn't contain any special characters
+      that would require escaping.  Use <function>PQfreemem</> to free the
+      result when done with it. On error, returns <symbol>NULL</>, and
+      a suitable message is stored in the connection object.
+     </para>
+
+    </listitem>
+   </varlistentry>
+
    <varlistentry id="libpq-pqencryptpassword">
     <term>
      <function>PQencryptPassword</function>
@@ -5593,22 +5705,15 @@ void PQconninfoFree(PQconninfoOption *connOptions);
 
     <listitem>
      <para>
-      Prepares the encrypted form of a <productname>PostgreSQL</> password.
-<synopsis>
-char * PQencryptPassword(const char *passwd, const char *user);
-</synopsis>
-      This function is intended to be used by client applications that
-      wish to send commands like <literal>ALTER USER joe PASSWORD
-      'pwd'</>.  It is good practice not to send the original cleartext
-      password in such a command, because it might be exposed in command
-      logs, activity displays, and so on.  Instead, use this function to
-      convert the password to encrypted form before it is sent.  The
-      arguments are the cleartext password, and the SQL name of the user
-      it is for.  The return value is a string allocated by
-      <function>malloc</function>, or <symbol>NULL</symbol> if out of
-      memory.  The caller can assume the string doesn't contain any
-      special characters that would require escaping.  Use
-      <function>PQfreemem</> to free the result when done with it.
+      Prepares the md5-encrypted form of a <productname>PostgreSQL</> password.
+ <synopsis>
+char *PQencryptPassword(const char *passwd, const char *user);
+ </synopsis>
+      <function>PQencryptPassword</> is an older, deprecated version of 
+      <function>PQencryptPasswodConn</>. The difference is that
+      <function>PQencryptPassword</> does not 
+      require a connection object, and <literal>md5</> is always used as the
+      encryption algorithm.
      </para>
     </listitem>
    </varlistentry>
@@ -7357,7 +7462,7 @@ ldap://ldap.acme.com/cn=dbserver,cn=hosts?pgconnectinfo?base?(objectclass=*)
      <row>
       <entry><literal>verify-ca</></entry>
       <entry>Yes</entry>
-      <entry><literal>Depends on CA</>-policy</entry>
+      <entry>Depends on CA policy</entry>
       <entry>I want my data encrypted, and I accept the overhead. I want to be
        sure that I connect to a server that I trust.
       </entry>

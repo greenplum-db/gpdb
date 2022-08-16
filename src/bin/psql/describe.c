@@ -1870,13 +1870,14 @@ describeOneTableDetails(const char *schemaname,
 				 * If there are no entries, we go to the pre-4.1 values stored in the pg_appendonly table.
 				 */
 				char *attributeOptions;
+				char emptyOptions = '\0';
 				if (isGE42 == true)
 				{
-				   attributeOptions = PQgetvalue(res, i, firstvcol + 2); /* pg_catalog.pg_attribute_storage(attoptions) */
-				   includeAOCS = 1;
+					attributeOptions = PQgetvalue(res, i, firstvcol + 2); /* pg_catalog.pg_attribute_storage(attoptions) */
+					includeAOCS = 1;
 				}
 				else
-					 attributeOptions = pg_malloc0(1);  /* Make an empty options string so the reset of the code works correctly. */
+					attributeOptions = &emptyOptions;  /* Make an empty options string so the reset of the code works correctly. */
 				char *key = strtok(attributeOptions, ",=");
 				char *value = NULL;
 				char *compressionType = NULL;

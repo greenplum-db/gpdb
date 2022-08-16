@@ -77,6 +77,33 @@ static const ULONG cmp_type_mappings[][2] = {
 
 //---------------------------------------------------------------------------
 //	@function:
+//		GetIndexTypeFromOid
+//
+//	@doc:
+//		Retrieve the type of physical index structure
+//
+//---------------------------------------------------------------------------
+static IMDIndex::EmdindexType
+GetIndexTypeFromOid(OID index_oid)
+{
+	LogicalIndexType indexType = gpdb::GetLogicalIndexType(index_oid);
+	switch (indexType)
+	{
+		case INDTYPE_BTREE:
+			return IMDIndex::EmdindBtree;
+		case INDTYPE_BITMAP:
+			return IMDIndex::EmdindBitmap;
+		case INDTYPE_GIST:
+			return IMDIndex::EmdindGist;
+		case INDTYPE_GIN:
+			return IMDIndex::EmdindGin;
+	}
+	GPOS_RAISE(gpdxl::ExmaMD, gpdxl::ExmiMDObjUnsupported,
+			   GPOS_WSZ_LIT("Query references unknown index type"));
+}
+
+//---------------------------------------------------------------------------
+//	@function:
 //		CTranslatorRelcacheToDXL::RetrieveObject
 //
 //	@doc:
@@ -1144,11 +1171,12 @@ CTranslatorRelcacheToDXL::RetrieveIndex(CMemoryPool *mp,
 	mdid_index->AddRef();
 	IMdIdArray *op_families_mdids = RetrieveIndexOpFamilies(mp, mdid_index);
 
-	CMDIndexGPDB *index = GPOS_NEW(mp) CMDIndexGPDB(
-		mp, mdid_index, mdname, index_clustered, index_type, mdid_item_type,
-		index_key_cols_array, included_cols, op_families_mdids,
-		NULL  // mdpart_constraint
-	);
+	CMDIndexGPDB *index = GPOS_NEW(mp)
+		CMDIndexGPDB(mp, mdid_index, mdname, index_clustered, index_type,
+					 GetIndexTypeFromOid(index_oid), mdid_item_type,
+					 index_key_cols_array, included_cols, op_families_mdids,
+					 NULL  // mdpart_constraint
+		);
 
 	GPOS_DELETE_ARRAY(attno_mapping);
 	return index;
@@ -1199,15 +1227,46 @@ CTranslatorRelcacheToDXL::LookupLogicalIndexById(
 				0 <= logical_indexes->numLogicalIndexes);
 
 	const ULONG num_index = logical_indexes->numLogicalIndexes;
-
+	LogicalIndexInfo *bitmapInfo = NULL;
+	LogicalIndexInfo *otherIndexInfo = NULL;
 	for (ULONG ul = 0; ul < num_index; ul++)
 	{
 		LogicalIndexInfo *index_info = (logical_indexes->logicalIndexInfo)[ul];
 
+		//  if both btree and bitmap index exist for a given index OID
+		//  (implying that this is a btree index on a homogenous heap
+		//  partitioned table), use the full bitmap index only if a full btree
+		//  index does not exist
+		// When considering an index by the OID, we give preference as follows:
+		// 1. full btree index
+		// 2. full bitmap index
+		// 3. any other index (the first instance, to preserve existing behavior)
+
+		BOOL isFullIndex =
+			(index_info->partCons == NULL && index_info->defaultLevels == NIL);
 		if (oid == index_info->logicalIndexOid)
 		{
-			return index_info;
+			if (index_info->indType == INDTYPE_BTREE && isFullIndex)
+			{
+				return index_info;
+			}
+			else if (index_info->indType == INDTYPE_BITMAP && isFullIndex)
+			{
+				bitmapInfo = index_info;
+			}
+			else if (otherIndexInfo == NULL)
+			{
+				otherIndexInfo = index_info;
+			}
 		}
+	}
+	if (bitmapInfo != NULL)
+	{
+		return bitmapInfo;
+	}
+	else if (otherIndexInfo != NULL)
+	{
+		return otherIndexInfo;
 	}
 
 	return NULL;
@@ -1376,10 +1435,10 @@ CTranslatorRelcacheToDXL::RetrievePartTableIndex(CMemoryPool *mp,
 
 	IMdIdArray *pdrgpmdidOpFamilies = RetrieveIndexOpFamilies(mp, mdid_index);
 
-	CMDIndexGPDB *index = GPOS_NEW(mp)
-		CMDIndexGPDB(mp, mdid_index, mdname, form_pg_index->indisclustered,
-					 index_type, mdid_item_type, index_key_cols_array,
-					 included_cols, pdrgpmdidOpFamilies, mdpart_constraint);
+	CMDIndexGPDB *index = GPOS_NEW(mp) CMDIndexGPDB(
+		mp, mdid_index, mdname, form_pg_index->indisclustered, index_type,
+		GetIndexTypeFromOid(index_oid), mdid_item_type, index_key_cols_array,
+		included_cols, pdrgpmdidOpFamilies, mdpart_constraint);
 
 	GPOS_DELETE_ARRAY(attno_mapping);
 
@@ -1575,13 +1634,13 @@ CTranslatorRelcacheToDXL::RetrieveType(CMemoryPool *mp, IMDId *mdid)
 
 	// get standard aggregates
 	CMDIdGPDB *mdid_min =
-		GPOS_NEW(mp) CMDIdGPDB(gpdb::GetAggregate("min", oid_type));
+		GPOS_NEW(mp) CMDIdGPDB(gpdb::GetAggregate("min", oid_type, 1));
 	CMDIdGPDB *mdid_max =
-		GPOS_NEW(mp) CMDIdGPDB(gpdb::GetAggregate("max", oid_type));
+		GPOS_NEW(mp) CMDIdGPDB(gpdb::GetAggregate("max", oid_type, 1));
 	CMDIdGPDB *mdid_avg =
-		GPOS_NEW(mp) CMDIdGPDB(gpdb::GetAggregate("avg", oid_type));
+		GPOS_NEW(mp) CMDIdGPDB(gpdb::GetAggregate("avg", oid_type, 1));
 	CMDIdGPDB *mdid_sum =
-		GPOS_NEW(mp) CMDIdGPDB(gpdb::GetAggregate("sum", oid_type));
+		GPOS_NEW(mp) CMDIdGPDB(gpdb::GetAggregate("sum", oid_type, 1));
 
 	// count aggregate is the same for all types
 	CMDIdGPDB *mdid_count = GPOS_NEW(mp) CMDIdGPDB(COUNT_ANY_OID);

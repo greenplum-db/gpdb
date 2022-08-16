@@ -208,7 +208,7 @@ SELECT *, pg_typeof(f1) FROM
 
 -- ... unless there's context to suggest differently
 explain verbose select '42' union all select '43';
-                      QUERY PLAN                      
+                      QUERY PLAN
 ------------------------------------------------------
  Append  (cost=0.00..0.00 rows=1 width=8)
    ->  Result  (cost=0.00..0.00 rows=1 width=8)
@@ -224,7 +224,7 @@ explain verbose select '42' union all select '43';
 (11 rows)
 
 explain verbose select '42' union all select 43;
-                      QUERY PLAN                      
+                      QUERY PLAN
 ------------------------------------------------------
  Append  (cost=0.00..0.00 rows=1 width=4)
    ->  Result  (cost=0.00..0.00 rows=1 width=4)
@@ -707,7 +707,7 @@ reset optimizer;
 explain (verbose, costs off)
   select x, x from
     (select (select current_database()) as x from (values(1),(2)) v(y)) ss;
-                   QUERY PLAN                   
+                   QUERY PLAN
 ------------------------------------------------
  Result
    Output: current_database, current_database
@@ -744,7 +744,7 @@ explain (verbose, costs off)
 explain (verbose, costs off)
   select x, x from
     (select (select current_database() where y=y) as x from (values(1),(2)) v(y)) ss;
-                            QUERY PLAN                            
+                            QUERY PLAN
 ------------------------------------------------------------------
  Result
    Output: current_database, current_database
@@ -820,6 +820,47 @@ where s.i < 10 and (select val.x) < 110;
   10
 (17 rows)
 
+-- another variant of that (bug #16213)
+explain (verbose, costs off)
+select * from
+(values
+  (3 not in (select * from (values (1), (2)) ss1)),
+  (false)
+) ss;
+                                                                                                                                                                  QUERY PLAN                                                                                                                                                                  
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Append
+   ->  Result
+         Output: ((CASE WHEN ((sum((CASE WHEN (3 = column1) THEN 1 ELSE 0 END))) IS NULL) THEN true WHEN ((sum((CASE WHEN (column1 IS NULL) THEN 1 ELSE 0 END))) > 0::bigint) THEN NULL::boolean WHEN (3 IS NULL) THEN NULL::boolean WHEN ((sum((CASE WHEN (3 = column1) THEN 1 ELSE 0 END))) = 0::bigint) THEN true ELSE false END) = true)
+         ->  Nested Loop Left Join
+               Output: (CASE WHEN ((sum((CASE WHEN (3 = column1) THEN 1 ELSE 0 END))) IS NULL) THEN true WHEN ((sum((CASE WHEN (column1 IS NULL) THEN 1 ELSE 0 END))) > 0::bigint) THEN NULL::boolean WHEN (3 IS NULL) THEN NULL::boolean WHEN ((sum((CASE WHEN (3 = column1) THEN 1 ELSE 0 END))) = 0::bigint) THEN true ELSE false END)
+               Join Filter: true
+               ->  Result
+                     Output: true
+               ->  Result
+                     Output: CASE WHEN ((sum((CASE WHEN (3 = column1) THEN 1 ELSE 0 END))) IS NULL) THEN true WHEN ((sum((CASE WHEN (column1 IS NULL) THEN 1 ELSE 0 END))) > 0::bigint) THEN NULL::boolean WHEN (3 IS NULL) THEN NULL::boolean WHEN ((sum((CASE WHEN (3 = column1) THEN 1 ELSE 0 END))) = 0::bigint) THEN true ELSE false END
+                     ->  Aggregate
+                           Output: sum((CASE WHEN (3 = column1) THEN 1 ELSE 0 END)), sum((CASE WHEN (column1 IS NULL) THEN 1 ELSE 0 END))
+                           ->  Result
+                                 Output: CASE WHEN (3 = column1) THEN 1 ELSE 0 END, CASE WHEN (column1 IS NULL) THEN 1 ELSE 0 END
+                                 ->  Values Scan on "Values"
+                                       Output: column1
+   ->  Result
+         Output: false
+ Optimizer: Pivotal Optimizer (GPORCA)
+(19 rows)
+
+select * from
+(values
+  (3 not in (select * from (values (1), (2)) ss1)),
+  (false)
+) ss;
+ column1 
+---------
+ t
+ f
+(2 rows)
+
 --
 -- Check sane behavior with nested IN SubLinks
 -- GPDB_94_MERGE_FIXME: ORCA plan is correct but very pricy. Should we fallback to planner?
@@ -828,7 +869,7 @@ explain (verbose, costs off)
 select * from int4_tbl where
   (case when f1 in (select unique1 from tenk1 a) then f1 else null end) in
   (select ten from tenk1 b);
-                             QUERY PLAN                             
+                             QUERY PLAN
 --------------------------------------------------------------------
  Result
    Output: int4_tbl.f1
@@ -873,7 +914,7 @@ select * from int4_tbl where
 explain (verbose, costs off)
 select * from int4_tbl o where (f1, f1) in
   (select f1, generate_series(1,2) / 10 g from int4_tbl i group by f1);
-                              QUERY PLAN                              
+                              QUERY PLAN
 ----------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    Output: o.f1
@@ -887,12 +928,13 @@ select * from int4_tbl o where (f1, f1) in
                ->  Subquery Scan on "ANY_subquery"
                      Output: "ANY_subquery".f1, "ANY_subquery".g
                      Filter: ("ANY_subquery".f1 = "ANY_subquery".g)
-                     ->  Result
+                     ->  HashAggregate
                            Output: i.f1, (generate_series(1, 2) / 10)
+                           Group Key: i.f1
                            ->  Seq Scan on public.int4_tbl i
                                  Output: i.f1
  Optimizer: Postgres query optimizer
-(17 rows)
+(18 rows)
 
 select * from int4_tbl o where (f1, f1) in
   (select f1, generate_series(1,2) / 10 g from int4_tbl i group by f1);

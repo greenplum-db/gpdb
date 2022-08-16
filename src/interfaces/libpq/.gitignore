@@ -1,6 +1,7 @@
 /exports.list
 /libpq.rc
 # .c files that are symlinked in from elsewhere
+/base64.c
 /chklocale.c
 /crypt.c
 /getaddrinfo.c
@@ -9,13 +10,19 @@
 /inet_net_ntop.c
 /noblock.c
 /open.c
+/pg_strong_random.c
 /pgstrcasecmp.c
 /pqsignal.c
+/saslprep.c
+/scram-common.c
+/sha2.c
+/sha2_openssl.c
 /snprintf.c
 /strerror.c
 /strlcpy.c
 /system.c
 /thread.c
+/unicode_norm.c
 /win32error.c
 /win32setlocale.c
 /pgsleep.c
@@ -23,4 +30,4 @@
 /ip.c
 /encnames.c
 /wchar.c
-/libpq.rc
+/pg_sha2.c

@@ -26,6 +26,7 @@
 #include "access/aomd.h"
 #include "access/aosegfiles.h"
 #include "access/appendonly_compaction.h"
+#include "access/aocs_compaction.h"
 #include "access/genam.h"
 #include "access/heapam.h"
 #include "access/transam.h"
@@ -73,7 +74,7 @@ AppendOnlyCompaction_DropSegmentFile(Relation aorel, int segno)
 	/* Open and truncate the relation segfile */
 	MakeAOSegmentFileName(aorel, segno, -1, &fileSegNo, filenamepath);
 
-	fd = OpenAOSegmentFile(aorel, filenamepath, 0);
+	fd = OpenAOSegmentFile(filenamepath, 0);
 	if (fd >= 0)
 	{
 		TruncateAOSegmentFile(fd, aorel, fileSegNo, 0);
@@ -239,7 +240,7 @@ AppendOnlySegmentFileTruncateToEOF(Relation aorel,
 		   segno,
 		   segeof);
 
-	fd = OpenAOSegmentFile(aorel, filenamepath, segeof);
+	fd = OpenAOSegmentFile(filenamepath, segeof);
 	if (fd >= 0)
 	{
 		TruncateAOSegmentFile(fd, aorel, fileSegNo, segeof);
@@ -504,66 +505,34 @@ HasLockForSegmentFileDrop(Relation aorel)
 }
 
 /*
- * Performs a compaction of an append-only relation.
- *
- * In non-utility mode, all compaction segment files should be
- * marked as in-use/in-compaction in the appendonlywriter.c code.
- *
+ * Performs dead segments collection for an ao_row relation.
  */
-void
-AppendOnlyDrop(Relation aorel, List *compaction_segno)
+Bitmapset *
+AppendOnlyCollectDeadSegments(Relation aorel, List *compaction_segno)
 {
-	const char *relname;
-	int			total_segfiles;
+	int total_segfiles;
 	FileSegInfo **segfile_array;
-	int			i,
-				segno;
-	FileSegInfo *fsinfo;
-	Snapshot	appendOnlyMetaDataSnapshot = SnapshotSelf;
+	Snapshot appendOnlyMetaDataSnapshot = SnapshotSelf;
+	Bitmapset *dead_segs = NULL;
+
 
 	Assert(Gp_role == GP_ROLE_EXECUTE || Gp_role == GP_ROLE_UTILITY);
 	Assert(RelationIsAoRows(aorel));
 
-	relname = RelationGetRelationName(aorel);
-
 	elogif(Debug_appendonly_print_compaction, LOG,
-		   "Drop AO relation %s", relname);
+		   "Collect AO relation %s", RelationGetRelationName(aorel));
 
 	/* Get information about all the file segments we need to scan */
 	segfile_array = GetAllFileSegInfo(aorel, appendOnlyMetaDataSnapshot, &total_segfiles);
 
-	for (i = 0; i < total_segfiles; i++)
+	for (int i = 0; i < total_segfiles; i++)
 	{
-		segno = segfile_array[i]->segno;
-		if (!list_member_int(compaction_segno, segno))
-		{
-			continue;
-		}
+		int segno = segfile_array[i]->segno;
 
-		/*
-		 * Try to get the transaction write-lock for the Append-Only segment
-		 * file.
-		 *
-		 * NOTE: This is a transaction scope lock that must be held until
-		 * commit / abort.
-		 */
-		LockRelationAppendOnlySegmentFile(
-										  &aorel->rd_node,
-										  segfile_array[i]->segno,
-										  AccessExclusiveLock,
-										  false);
-
-		/* Re-fetch under the write lock to get latest committed eof. */
-		fsinfo = GetFileSegInfo(aorel, appendOnlyMetaDataSnapshot, segno);
-
+		FileSegInfo *fsinfo = GetFileSegInfo(aorel, appendOnlyMetaDataSnapshot, segno);
 		if (fsinfo->state == AOSEG_STATE_AWAITING_DROP)
-		{
-			Assert(HasLockForSegmentFileDrop(aorel));
-			Assert(!HasSerializableBackends(false));
-			AppendOnlyCompaction_DropSegmentFile(aorel, segno);
-			ClearFileSegInfo(aorel, segno,
-							 AOSEG_STATE_DEFAULT);
-		}
+			dead_segs = bms_add_member(dead_segs, segno);
+
 		pfree(fsinfo);
 	}
 
@@ -572,6 +541,50 @@ AppendOnlyDrop(Relation aorel, List *compaction_segno)
 		FreeAllSegFileInfo(segfile_array, total_segfiles);
 		pfree(segfile_array);
 	}
+
+	return dead_segs;
+}
+
+/*
+ * Reset AWAITING_DROP segments.
+ * 
+ * Callers should guarantee that the segfile is no longer needed by any
+ * running transaction. It is not necessary to hold a lock on the segfile
+ * row, though.
+ */
+static inline void
+AppendOptimizedDropDeadSegment(Relation aorel, int segno)
+{
+	/*
+	 * Get the transaction write-lock for the Append-Only segment file.
+	 *
+	 * NOTE: This is a transaction scope lock that must be held until
+	 * commit / abort.
+	 */
+	LockRelationAppendOnlySegmentFile(&aorel->rd_node,
+									  segno,
+									  AccessExclusiveLock,
+									  false);
+	if (RelationIsAoRows(aorel))
+	{
+		AppendOnlyCompaction_DropSegmentFile(aorel, segno);
+		ClearFileSegInfo(aorel, segno, AOSEG_STATE_DEFAULT);
+	}
+	else
+	{
+		AOCSCompaction_DropSegmentFile(aorel, segno);
+		ClearAOCSFileSegInfo(aorel, segno, AOSEG_STATE_DEFAULT);
+	}
+}
+
+void
+AppendOptimizedDropDeadSegments(Relation aorel, Bitmapset *segnos)
+{
+	int segno;
+
+	segno = -1;
+	while ((segno = bms_next_member(segnos, segno)) >= 0)
+		AppendOptimizedDropDeadSegment(aorel, segno);
 }
 
 /*
@@ -713,8 +726,7 @@ AppendOnlyCompact(Relation aorel,
 		}
 
 		/*
-		 * Try to get the transaction write-lock for the Append-Only segment
-		 * file.
+		 * Get the transaction write-lock for the Append-Only segment file.
 		 *
 		 * NOTE: This is a transaction scope lock that must be held until
 		 * commit / abort.

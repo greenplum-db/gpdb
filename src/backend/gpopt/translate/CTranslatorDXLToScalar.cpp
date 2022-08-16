@@ -22,6 +22,9 @@ extern "C" {
 #include "nodes/primnodes.h"
 #include "utils/datum.h"
 }
+
+#include <vector>
+
 #include "gpos/base.h"
 
 #include "gpopt/base/COptCtxt.h"
@@ -143,6 +146,10 @@ CTranslatorDXLToScalar::TranslateDXLToScalar(const CDXLNode *dxlnode,
 		 &CTranslatorDXLToScalar::TranslateDXLScalarPartListValuesToScalar},
 		{EdxlopScalarPartListNullTest,
 		 &CTranslatorDXLToScalar::TranslateDXLScalarPartListNullTestToScalar},
+		{EdxlopScalarValuesList,
+		 &CTranslatorDXLToScalar::TranslateDXLScalarValuesListToScalar},
+		{EdxlopScalarSortGroupClause,
+		 &CTranslatorDXLToScalar::TranslateDXLScalarSortGroupClauseToScalar},
 	};
 
 	const ULONG num_translators = GPOS_ARRAY_SIZE(translators);
@@ -526,43 +533,78 @@ CTranslatorDXLToScalar::TranslateDXLScalarAggrefToScalar(
 	}
 
 	// translate each DXL argument
-	List *exprs = TranslateScalarChildren(aggref->args, aggref_node, colid_var);
+	List *args = TranslateScalarListChildren(
+		(*aggref_node)[EdxlscalaraggrefIndexArgs], colid_var);
+	aggref->aggdirectargs = TranslateScalarListChildren(
+		(*aggref_node)[EdxlscalaraggrefIndexDirectArgs], colid_var);
+	aggref->aggorder = TranslateScalarListChildren(
+		(*aggref_node)[EdxlscalaraggrefIndexAggOrder], colid_var);
+
+	aggref->aggkind = CTranslatorUtils::GetAggKind(dxlop->GetAggKind());
+
+	// 'indexes' stores the position of the TargetEntry which is referenced by
+	// a SortGroupClause.
+	std::vector<int> indexes(gpdb::ListLength(args) + 1, -1);
+
+	{
+		int i;
+		ListCell *lc;
+		ForEachWithCount(lc, aggref->aggorder, i)
+		{
+			SortGroupClause *gc = (SortGroupClause *) lfirst(lc);
+			indexes[gc->tleSortGroupRef] = gc->tleSortGroupRef;
+
+			// 'indexes' values are zero-based, but zero means TargetEntry
+			// doesn't have corresponding SortGroupClause. So convert back to
+			// one-based.
+			gc->tleSortGroupRef += 1;
+		}
+	}
+	if (dxlop->IsDistinct())
+	{
+		List *aggdistinct = TranslateScalarListChildren(
+			(*aggref_node)[EdxlscalaraggrefIndexAggDistinct], colid_var);
+
+		ULONG i;
+		ListCell *lc;
+		ForEachWithCount(lc, aggdistinct, i)
+		{
+			if (i >= gpdb::ListLength(args))
+			{
+				break;
+			}
+
+			SortGroupClause *gc = (SortGroupClause *) lfirst(lc);
+			indexes[gc->tleSortGroupRef] = gc->tleSortGroupRef;
+
+			// 'indexes' values are zero-based, but zero means TargetEntry
+			// doesn't have corresponding SortGroupClause. So convert back to
+			// one-based.
+			gc->tleSortGroupRef += 1;
+
+			aggref->aggdistinct = gpdb::LAppend(aggref->aggdistinct, gc);
+		}
+	}
 
 	int attno;
 	aggref->args = NIL;
 	ListCell *lc;
-	int sortgrpindex = 1;
-	ForEachWithCount(lc, exprs, attno)
+	ForEachWithCount(lc, args, attno)
 	{
 		TargetEntry *new_target_entry =
 			gpdb::MakeTargetEntry((Expr *) lfirst(lc), attno + 1, NULL, false);
-		/*
-		 * Translate the aggdistinct bool set to true (in ORCA),
-		 * to a List of SortGroupClause in the PLNSTMT
-		 */
-		if (dxlop->IsDistinct())
-		{
-			new_target_entry->ressortgroupref = sortgrpindex;
-			SortGroupClause *gc = makeNode(SortGroupClause);
-			gc->tleSortGroupRef = sortgrpindex;
-			gc->eqop = gpdb::GetEqualityOp(
-				gpdb::ExprType((Node *) new_target_entry->expr));
-			gc->sortop = gpdb::GetOrderingOpForEqualityOp(gc->eqop, NULL);
-			/*
-			 * Since ORCA doesn't yet support ordered aggregates, we are
-			 * setting nulls_first to false. This is also the default behavior
-			 * when no order by clause is provided so it is OK to set it to
-			 * false.
-			 */
-			gc->nulls_first = false;
-			aggref->aggdistinct = gpdb::LAppend(aggref->aggdistinct, gc);
-			sortgrpindex++;
-		}
+
 		aggref->args = gpdb::LAppend(aggref->args, new_target_entry);
+		if (gpdb::ListLength(aggref->aggorder) > 0 ||
+			gpdb::ListLength(aggref->aggdistinct) > 0)
+		{
+			new_target_entry->ressortgroupref =
+				indexes[attno] == -1 ? 0 : (indexes[attno] + 1);
+		}
 	}
 
 	// GPDB_91_MERGE_FIXME: collation
-	aggref->inputcollid = gpdb::ExprCollation((Node *) exprs);
+	aggref->inputcollid = gpdb::ExprCollation((Node *) args);
 	aggref->aggcollid = gpdb::TypeCollation(aggref->aggtype);
 
 	return (Expr *) aggref;
@@ -668,7 +710,8 @@ CTranslatorDXLToScalar::TranslateDXLScalarSubplanToScalar(
 	SubLinkType slink = CTranslatorUtils::MapDXLSubplanToSublinkType(
 		dxlop->GetDxlSubplanType());
 	Expr *test_expr = TranslateDXLSubplanTestExprToScalar(
-		dxlop->GetDxlTestExpr(), slink, colid_var, &param_ids);
+		dxlop->GetDxlTestExpr(), slink, colid_var, dxlop->FOuterParam(),
+		&param_ids);
 
 	const CDXLColRefArray *outer_refs = dxlop->GetDxlOuterColRefsArray();
 
@@ -744,6 +787,58 @@ CTranslatorDXLToScalar::TranslateDXLScalarSubplanToScalar(
 
 //---------------------------------------------------------------------------
 //      @function:
+//              CTranslatorDXLToScalar::TranslateDXLTestExprScalarIdentToExpr
+//
+//      @doc:
+//              Translate subplan test expression parameter
+//
+//---------------------------------------------------------------------------
+void
+CTranslatorDXLToScalar::TranslateDXLTestExprScalarIdentToExpr(
+	CDXLNode *child_node, Param *param, CDXLScalarIdent **ident, Expr **expr)
+{
+	if (EdxlopScalarIdent == child_node->GetOperator()->GetDXLOperator())
+	{
+		// Ident
+		*ident = CDXLScalarIdent::Cast(child_node->GetOperator());
+		*expr = (Expr *) param;
+	}
+	else if (EdxlopScalarCast == child_node->GetOperator()->GetDXLOperator() &&
+			 child_node->Arity() > 0 &&
+			 EdxlopScalarIdent ==
+				 (*child_node)[0]->GetOperator()->GetDXLOperator())
+	{
+		// Casted Ident
+		*ident = CDXLScalarIdent::Cast((*child_node)[0]->GetOperator());
+		CDXLScalarCast *scalar_cast =
+			CDXLScalarCast::Cast(child_node->GetOperator());
+		*expr =
+			TranslateDXLScalarCastWithChildExpr(scalar_cast, (Expr *) param);
+	}
+	else if (EdxlopScalarCoerceViaIO ==
+				 child_node->GetOperator()->GetDXLOperator() &&
+			 child_node->Arity() > 0 &&
+			 EdxlopScalarIdent ==
+				 (*child_node)[0]->GetOperator()->GetDXLOperator())
+	{
+		// CoerceViaIO over Ident
+		*ident = CDXLScalarIdent::Cast((*child_node)[0]->GetOperator());
+		CDXLScalarCoerceViaIO *coerce =
+			CDXLScalarCoerceViaIO::Cast(child_node->GetOperator());
+		*expr =
+			TranslateDXLScalarCoerceViaIOWithChildExpr(coerce, (Expr *) param);
+	}
+	else
+	{
+		// ORCA currently only supports PARAMs of the form id or cast(id)
+		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiDXL2PlStmtConversion,
+				   GPOS_WSZ_LIT("Unsupported subplan test expression"));
+	}
+}
+
+
+//---------------------------------------------------------------------------
+//      @function:
 //              CTranslatorDXLToScalar::TranslateDXLSubplanTestExprToScalar
 //
 //      @doc:
@@ -753,7 +848,7 @@ CTranslatorDXLToScalar::TranslateDXLScalarSubplanToScalar(
 Expr *
 CTranslatorDXLToScalar::TranslateDXLSubplanTestExprToScalar(
 	CDXLNode *test_expr_node, SubLinkType slink, CMappingColIdVar *colid_var,
-	List **param_ids)
+	BOOL has_outer_refs, List **param_ids)
 {
 	if (EXPR_SUBLINK == slink || EXISTS_SUBLINK == slink ||
 		NOT_EXISTS_SUBLINK == slink)
@@ -785,62 +880,55 @@ CTranslatorDXLToScalar::TranslateDXLSubplanTestExprToScalar(
 	CDXLNode *outer_child_node = (*test_expr_node)[0];
 	CDXLNode *inner_child_node = (*test_expr_node)[1];
 
+	CContextDXLToPlStmt *dxl_to_plstmt_ctxt =
+		(dynamic_cast<CMappingColIdVarPlStmt *>(colid_var))
+			->GetDXLToPlStmtContext();
+
 	// translate outer expression (can be a deep scalar tree)
-	Expr *outer_arg_expr = TranslateDXLToScalar(outer_child_node, colid_var);
-	args = gpdb::LAppend(args, outer_arg_expr);
+	Expr *outer_arg_expr = NULL;
+	if (has_outer_refs)
+	{
+		Param *param1 = MakeNode(Param);
+		param1->paramkind = PARAM_EXEC;
+
+		CDXLScalarIdent *outer_ident = NULL;
+		Expr *outer_expr = NULL;
+
+		TranslateDXLTestExprScalarIdentToExpr(outer_child_node, param1,
+											  &outer_ident, &outer_expr);
+		GPOS_ASSERT(NULL != outer_ident);
+		GPOS_ASSERT(NULL != outer_expr);
+
+		// finalize outer expression
+		param1->paramtype = CMDIdGPDB::CastMdid(outer_ident->MdidType())->Oid();
+		param1->paramtypmod = outer_ident->TypeModifier();
+		param1->paramid = dxl_to_plstmt_ctxt->GetNextParamId();
+
+		// test expression is used for non-scalar subplan,
+		// first arg of test expression must be an EXEC param1 referring to subplan output
+		args = gpdb::LAppend(args, outer_expr);
+
+		// also, add this param1 to subplan param1 ids before translating other params
+		*param_ids = gpdb::LAppendInt(*param_ids, param1->paramid);
+	}
+	else
+	{
+		outer_arg_expr = TranslateDXLToScalar(outer_child_node, colid_var);
+		args = gpdb::LAppend(args, outer_arg_expr);
+	}
 
 	// translate inner expression (only certain forms supported)
 	// second arg must be an EXEC param which is replaced during query execution with subplan output
 	Param *param = MakeNode(Param);
 	param->paramkind = PARAM_EXEC;
-	CContextDXLToPlStmt *dxl_to_plstmt_ctxt =
-		(dynamic_cast<CMappingColIdVarPlStmt *>(colid_var))
-			->GetDXLToPlStmtContext();
 	param->paramid = dxl_to_plstmt_ctxt->GetNextParamId();
 
 	CDXLScalarIdent *inner_ident = NULL;
 	Expr *inner_expr = NULL;
-	if (EdxlopScalarIdent == inner_child_node->GetOperator()->GetDXLOperator())
-	{
-		// Ident
-		inner_ident = CDXLScalarIdent::Cast(inner_child_node->GetOperator());
-		inner_expr = (Expr *) param;
-	}
-	else if (EdxlopScalarCast ==
-				 inner_child_node->GetOperator()->GetDXLOperator() &&
-			 inner_child_node->Arity() > 0 &&
-			 EdxlopScalarIdent ==
-				 (*inner_child_node)[0]->GetOperator()->GetDXLOperator())
-	{
-		// Casted Ident
-		inner_ident =
-			CDXLScalarIdent::Cast((*inner_child_node)[0]->GetOperator());
-		CDXLScalarCast *scalar_cast =
-			CDXLScalarCast::Cast(inner_child_node->GetOperator());
-		inner_expr =
-			TranslateDXLScalarCastWithChildExpr(scalar_cast, (Expr *) param);
-	}
-	else if (EdxlopScalarCoerceViaIO ==
-				 inner_child_node->GetOperator()->GetDXLOperator() &&
-			 inner_child_node->Arity() > 0 &&
-			 EdxlopScalarIdent ==
-				 (*inner_child_node)[0]->GetOperator()->GetDXLOperator())
-	{
-		// CoerceViaIO over Ident
-		inner_ident =
-			CDXLScalarIdent::Cast((*inner_child_node)[0]->GetOperator());
-		CDXLScalarCoerceViaIO *coerce =
-			CDXLScalarCoerceViaIO::Cast(inner_child_node->GetOperator());
-		inner_expr =
-			TranslateDXLScalarCoerceViaIOWithChildExpr(coerce, (Expr *) param);
-	}
-	else
-	{
-		// ORCA currently only supports PARAMs on the inner side of the form id or cast(id)
-		// The outer side may be any non-param thing.
-		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiDXL2PlStmtConversion,
-				   GPOS_WSZ_LIT("Unsupported subplan test expression"));
-	}
+
+	TranslateDXLTestExprScalarIdentToExpr(inner_child_node, param, &inner_ident,
+										  &inner_expr);
+
 	GPOS_ASSERT(NULL != inner_ident);
 	GPOS_ASSERT(NULL != inner_expr);
 
@@ -1223,7 +1311,7 @@ CTranslatorDXLToScalar::TranslateDXLScalarCastWithChildExpr(
 	relabel_type->location = -1;
 	relabel_type->relabelformat = COERCE_IMPLICIT_CAST;
 	// GPDB_91_MERGE_FIXME: collation
-	relabel_type->resultcollid = gpdb::TypeCollation(relabel_type->resulttype);
+	relabel_type->resultcollid = gpdb::ExprCollation((Node *) child_expr);
 
 	return (Expr *) relabel_type;
 }
@@ -1438,6 +1526,23 @@ CTranslatorDXLToScalar::TranslateScalarChildren(List *list,
 												CMappingColIdVar *colid_var)
 {
 	List *new_list = list;
+
+	const ULONG arity = dxlnode->Arity();
+	for (ULONG ul = 0; ul < arity; ul++)
+	{
+		CDXLNode *child_dxl = (*dxlnode)[ul];
+		Expr *child_expr = TranslateDXLToScalar(child_dxl, colid_var);
+		new_list = gpdb::LAppend(new_list, child_expr);
+	}
+
+	return new_list;
+}
+
+List *
+CTranslatorDXLToScalar::TranslateScalarListChildren(const CDXLNode *dxlnode,
+													CMappingColIdVar *colid_var)
+{
+	List *new_list = NULL;
 
 	const ULONG arity = dxlnode->Arity();
 	for (ULONG ul = 0; ul < arity; ul++)
@@ -2015,6 +2120,18 @@ CTranslatorDXLToScalar::TranslateDXLScalarArrayToScalar(
 	return (Expr *) gpdb::EvalConstExpressions((Node *) expr);
 }
 
+Expr *
+CTranslatorDXLToScalar::TranslateDXLScalarValuesListToScalar(
+	const CDXLNode *scalar_array_node, CMappingColIdVar *colid_var)
+{
+	GPOS_ASSERT(NULL != scalar_array_node);
+
+	List *values = NULL;
+	values = TranslateScalarChildren(values, scalar_array_node, colid_var);
+
+	return (Expr *) values;
+}
+
 //---------------------------------------------------------------------------
 //	@function:
 //		CTranslatorDXLToScalar::TranslateDXLScalarArrayRefToScalar
@@ -2118,6 +2235,25 @@ CTranslatorDXLToScalar::TranslateDXLScalarDMLActionToScalar(
 	return (Expr *) expr;
 }
 
+
+Expr *
+CTranslatorDXLToScalar::TranslateDXLScalarSortGroupClauseToScalar(
+	const CDXLNode *node,
+	CMappingColIdVar *	//colid_var
+)
+{
+	CDXLScalarSortGroupClause *dxlop =
+		CDXLScalarSortGroupClause::Cast(node->GetOperator());
+
+	SortGroupClause *expr = MakeNode(SortGroupClause);
+	expr->tleSortGroupRef = dxlop->Index();
+	expr->eqop = dxlop->EqOp();
+	expr->sortop = dxlop->SortOp();
+	expr->nulls_first = dxlop->NullsFirst();
+	expr->hashable = dxlop->IsHashable();
+
+	return (Expr *) expr;
+}
 
 
 //---------------------------------------------------------------------------

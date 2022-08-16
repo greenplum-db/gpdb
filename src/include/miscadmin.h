@@ -87,6 +87,7 @@ extern PGDLLIMPORT volatile bool QueryFinishPending;
 extern PGDLLIMPORT volatile bool ProcDiePending;
 extern PGDLLIMPORT volatile sig_atomic_t ConfigReloadPending;
 
+extern PGDLLIMPORT volatile sig_atomic_t CheckClientConnectionPending;
 extern volatile bool ClientConnectionLost;
 
 /* these are marked volatile because they are examined by signal handlers: */
@@ -118,6 +119,15 @@ extern int backoffTickCounter;
 extern int gp_resqueue_priority_local_interval;
 
 extern void BackoffBackendTickExpired(void);
+
+/*
+ * Whether request on cancel or termination have arrived?
+ */
+static inline bool
+CancelRequested()
+{
+	return InterruptPending && (ProcDiePending || QueryCancelPending);
+}
 
 static inline void
 BackoffBackendTick(void)
@@ -229,7 +239,7 @@ extern int gp_workfile_max_entries;
 extern PGDLLIMPORT int MyProcPid;
 extern PGDLLIMPORT pg_time_t MyStartTime;
 extern PGDLLIMPORT struct Port *MyProcPort;
-extern long MyCancelKey;
+extern int32 MyCancelKey;
 extern int	MyPMChildSlot;
 
 extern char OutputFileName[];

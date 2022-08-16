@@ -42,14 +42,16 @@ CPhysicalTVF::CPhysicalTVF(CMemoryPool *mp, IMDId *mdid_func,
 	  m_pdrgpcoldesc(pdrgpcoldesc),
 	  m_pcrsOutput(pcrsOutput)
 {
-	GPOS_ASSERT(m_func_mdid->IsValid());
 	GPOS_ASSERT(m_return_type_mdid->IsValid());
 	GPOS_ASSERT(NULL != m_pstr);
 	GPOS_ASSERT(NULL != m_pdrgpcoldesc);
 	GPOS_ASSERT(NULL != m_pcrsOutput);
 
 	CMDAccessor *md_accessor = COptCtxt::PoctxtFromTLS()->Pmda();
-	m_pmdfunc = md_accessor->RetrieveFunc(m_func_mdid);
+	if (m_func_mdid->IsValid())
+		m_pmdfunc = md_accessor->RetrieveFunc(m_func_mdid);
+	else
+		m_pmdfunc = NULL;
 }
 
 

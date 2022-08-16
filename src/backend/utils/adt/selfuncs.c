@@ -132,6 +132,7 @@
 #include "utils/bytea.h"
 #include "utils/date.h"
 #include "utils/datum.h"
+#include "utils/faultinjector.h"
 #include "utils/fmgroids.h"
 #include "utils/lsyscache.h"
 #include "utils/nabstime.h"
@@ -4689,12 +4690,22 @@ examine_simple_variable(PlannerInfo *root, Var *var,
 			if (childrel)
 			{
 				RangeTblEntry *child_rte = NULL;
+				AttrNumber child_attno = InvalidAttrNumber;
 
 				child_rte = root->simple_rte_array[childrel->relid];
 
 				Assert(child_rte != NULL);
-				const char *attname = get_relid_attribute_name(rte->relid, var->varattno);
-				AttrNumber child_attno = get_attnum(child_rte->relid, attname);
+				/*
+				 * GPDB: #13467
+				 * If var->varattno is 0 (e.g.,SELECT DISTINCT <Table_name> FROM <Table_name>),
+				 * we will get an ERROR when we invoke get_relid_attribute_name, so just set
+				 * child_attno to zero directly.
+				 */
+				if (var->varattno != 0)
+				{
+					const char *attname = get_relid_attribute_name(rte->relid, var->varattno);
+					child_attno = get_attnum(child_rte->relid, attname);
+				}
 
 				/*
 				 * Get statistics from the child partition.
@@ -7789,6 +7800,16 @@ bmcostestimate(PG_FUNCTION_ARGS)
 
 	*indexStartupCost = costs.indexStartupCost;
 	*indexTotalCost = costs.indexTotalCost;
+	#ifdef FAULT_INJECTOR
+		/* Simulate an bitmapAnd plan by changing bitmap cost. */
+		if (FaultInjector_InjectFaultIfSet("simulate_bitmap_heap_and",
+									DDLNotSpecified,
+									"",
+									"") == FaultInjectorTypeSkip)
+		{
+			*indexTotalCost = 0;
+		}
+	#endif
 	*indexSelectivity = costs.indexSelectivity;
 	*indexCorrelation = costs.indexCorrelation;
 

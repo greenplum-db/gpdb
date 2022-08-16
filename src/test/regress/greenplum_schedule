@@ -15,6 +15,10 @@
 #   hitting max_connections limit on segments.
 #
 
+test: pg_dump_binary_upgrade
+
+test: gp_dispatch_keepalives
+
 # copy command
 # copy form a file with different EOL
 test: copy_eol
@@ -35,7 +39,8 @@ test: instr_in_shmem_setup
 test: instr_in_shmem
 
 test: createdb
-test: gp_aggregates gp_metadata variadic_parameters default_parameters function_extensions spi gp_xml shared_scan update_gp returning_gp resource_queue_with_rule gp_types gp_index
+test: gp_aggregates gp_metadata variadic_parameters default_parameters function_extensions spi gp_xml update_gp returning_gp resource_queue_with_rule gp_types gp_index gp_lock
+test: shared_scan
 test: spi_processed64bit
 test: python_processed64bit
 test: gp_tablespace_with_faults
@@ -46,13 +51,20 @@ test: temp_tablespaces
 test: default_tablespace
 
 test: leastsquares opr_sanity_gp decode_expr bitmapscan bitmapscan_ao case_gp limit_gp notin percentile join_gp union_gp
-test: gpcopy_encoding gp_create_table gp_create_view window_views create_table_like_gp matview_ao prepare_lockmode gpcopy_dispatch gp_copy_dtx
+test: gpcopy_encoding gp_create_table gp_create_view window_views create_table_like_gp prepare_lockmode gpcopy_dispatch gp_copy_dtx
 # below test(s) inject faults so each of them need to be in a separate group
 test: gpcopy
 
-test: filter gp_combocid gpctas gpdist gpdist_opclasses gpdist_legacy_opclasses matrix toast sublink table_functions olap_setup complex opclass_ddl information_schema guc_env_var gp_explain distributed_transactions explain_format misc_jiras direct_dispatch_explain_analyze
+# this test fiddles with relfrozenxid, so run independently as any
+# parallel test running vacuum could have trouble
+test: matview_ao
+
+test: filter gp_combocid gpctas gpdist gpdist_opclasses gpdist_legacy_opclasses matrix toast sublink table_functions olap_setup complex opclass_ddl information_schema guc_env_var gp_explain distributed_transactions explain_format direct_dispatch_explain_analyze
+
 # below test(s) inject faults so each of them need to be in a separate group
 test: guc_gp
+test: misc_jiras
+test: statement_mem_for_windowagg
 # namespace_gp test will show diff if concurrent tests use temporary tables.
 # So run it separately.
 test: namespace_gp
@@ -185,7 +197,7 @@ test: qp_olap_mdqa qp_misc gp_recursive_cte qp_dml_joins qp_dml_oids trigger_set
 test: qp_misc_jiras qp_with_clause qp_executor qp_olap_windowerr qp_olap_window qp_derived_table qp_bitmapscan qp_dropped_cols
 test: qp_with_functional_inlining qp_with_functional_noinlining
 test: qp_functions_in_contexts_setup
-test: qp_misc_rio_join_small qp_misc_rio qp_correlated_query qp_targeted_dispatch qp_gist_indexes2 qp_gist_indexes3 qp_gist_indexes4 qp_query_execution qp_functions_in_from qp_functions_in_select qp_functions_in_subquery qp_functions_in_subquery_column qp_functions_in_subquery_constant qp_functions_in_with
+test: qp_misc_rio_join_small qp_misc_rio qp_correlated_query qp_targeted_dispatch qp_gist_indexes2 qp_gist_indexes3 qp_gist_indexes4 qp_query_execution qp_functions_in_from qp_functions_in_select qp_functions_in_subquery qp_functions_in_subquery_column qp_functions_in_subquery_constant qp_functions_in_with correlated_subquery
 
 test: dpe qp_dpe qp_subquery qp_left_anti_semi_join qp_union_intersect qp_functions qp_functions_idf qp_regexp qp_resource_queue qp_orca_fallback
 
@@ -285,5 +297,8 @@ test: run_utility_gpexpand_phase1
 
 # check correct error message when create extension error on segment
 test: create_extension_fail
+
+# check syslogger (since GP syslogger code is divergent from upstream)
+test: syslogger_gp
 
 # end of tests

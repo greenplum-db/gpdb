@@ -2,23 +2,22 @@
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
 <topic id="topic1">
-    <!-- install_guide/refs/gpactivatestandby.xml has a conref to this topic. -->
     <title id="jq20941">gpcheckperf</title>
     <body>
         <p>Verifies the baseline hardware performance of the specified hosts.</p>
         <section id="section2">
             <title>Synopsis</title>
-            <codeblock><b>gpcheckperf</b> <b>-d</b> <varname>test_directory</varname> [<b>-d</b> <varname>test_directory</varname> ...] 
-    {<b>-f</b> <varname>hostfile_gpcheckperf</varname> | <b>- h</b> <varname>hostname</varname> [<b>-h</b> <varname>hostname</varname> ...]} 
-    [<b>-r</b> ds] [<b>-B</b> <varname>block_size</varname>] [<b>-S</b> <varname>file_size</varname>] [<b>-D</b>] [<b>-v</b>|<b>-V</b>]
+            <codeblock>gpcheckperf -d &lt;test_directory> [-d &lt;test_directory> ...] 
+    {-f &lt;hostfile_gpcheckperf> | - h &lt;hostname> [-h hostname ...]} 
+    [-r ds] [-B &lt;block_size>] [-S &lt;file_size>] [-D] [-v|-V]
 
-<b>gpcheckperf</b> <b>-d</b> <varname>temp_directory</varname>
-    {<b>-f</b> <varname>hostfile_gpchecknet</varname> | <b>- h</b> <varname>hostname</varname> [<b>-h</b> <varname>hostname</varname> ...]} 
-    [ <b>-r</b> n|N|M [<b>--duration</b> <varname>time</varname>] [<b>--netperf</b>] ] [<b>-D</b>] [<b>-v</b> | <b>-V</b>]
+gpcheckperf -d &lt;temp_directory>
+    {-f &lt;hostfile_gpchecknet> | - h &lt;hostname> [-h&lt; hostname> ...]} 
+    [ -r n|N|M [--duration &lt;time>] [--netperf] ] [-D] [-v | -V]
 
-<b>gpcheckperf</b> <b>-?</b>
+gpcheckperf -?
 
-<b>gpcheckperf</b> <b>--version</b></codeblock>
+gpcheckperf --version</codeblock>
         </section>
         <section id="section3">
             <title>Description</title>
@@ -117,7 +116,7 @@
                         user name and/or SSH port number per host. The syntax of the host file is
                         one host per line as follows:</pd>
                     <pd>
-                        <codeblock>[<varname>username</varname>@]<varname>hostname</varname>[:<varname>ssh_port</varname>]</codeblock>
+                        <codeblock>[&lt;username>@]&lt;hostname>[:&lt;ssh_port>]</codeblock>
                     </pd>
                 </plentry>
                 <plentry>
@@ -144,7 +143,7 @@ sdw3-1</codeblock>
                     <pd>Specifies that the <codeph>netperf</codeph> binary should be used to perform
                         the network test instead of the Greenplum network test. To use this option,
                         you must download <codeph>netperf</codeph> from <xref
-                            href="http://www.netperf.org" format="html" scope="external"/> and
+                            href="https://github.com/HewlettPackard/netperf" format="html" scope="external"/> and
                         install it into <codeph>$GPHOME/bin/lib</codeph> on all Greenplum hosts
                         (master and segments).</pd>
                 </plentry>
@@ -162,7 +161,7 @@ sdw3-1</codeblock>
                                     (<codeph>N</codeph>) mode, you must run the test on an
                                     <varname>even</varname> number of hosts.<p>If you would rather
                                     use <codeph>netperf</codeph> (<xref
-                                        href="http://www.netperf.org" format="html" scope="external"
+                                        href="https://github.com/HewlettPackard/netperf" format="html" scope="external"
                                     />) instead of the Greenplum network test, you can download it
                                     and install it into <codeph>$GPHOME/bin/lib</codeph> on all
                                     Greenplum hosts (master and segments). You would then specify
@@ -220,9 +219,8 @@ $ gpcheckperf -f hostfile_gpchecknet_ic2 -r N --netperf -d /tmp</codeblock>
         </section>
         <section id="section6">
             <title>See Also</title>
-            <p><codeph><xref href="./gpssh.xml#topic1" type="topic" format="dita"/></codeph>,
-                        <codeph><xref href="./gpscp.xml#topic1" type="topic" format="dita"
-                    /></codeph></p>
+            <p><xref href="./gpssh.xml#topic1" type="topic" format="dita"/>, <xref
+                    href="./gpscp.xml#topic1" type="topic" format="dita"/></p>
         </section>
     </body>
 </topic>

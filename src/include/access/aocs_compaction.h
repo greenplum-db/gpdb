@@ -17,10 +17,13 @@
 #include "utils/rel.h"
 
 extern void AOCSDrop(Relation aorel,
-		 List *compaction_segno);
+			List *compaction_segno);
+extern Bitmapset *AOCSCollectDeadSegments(Relation aorel,
+			List *compaction_segno);
 extern void AOCSCompact(Relation aorel,
 			List *compaction_segno_list,
 			int insert_segno,
 			bool isFull);
 extern void AOCSTruncateToEOF(Relation aorel);
+extern void AOCSCompaction_DropSegmentFile(Relation aorel, int segno);
 #endif

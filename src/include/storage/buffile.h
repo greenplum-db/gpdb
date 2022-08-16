@@ -64,4 +64,11 @@ extern bool gp_workfile_compression;
 extern void BufFilePledgeSequential(BufFile *buffile);
 extern void BufFileSetIsTempFile(BufFile *file, bool isTempFile);
 
+extern void SetForceDefaultTableSpaceVal(bool val);
+extern bool GetForceDefaultTableSpaceVal(void);
+extern BufFile *BufFileCreateNamedTemp_ForceDefaultSpace(const char *fileName, bool interXact,
+														 struct workfile_set *work_set);
+extern BufFile *BufFileOpenNamedTemp_ForceDefaultSpace(const char *fileName,
+													   bool interXact);
+
 #endif   /* BUFFILE_H */

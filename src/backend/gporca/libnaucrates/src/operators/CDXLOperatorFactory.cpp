@@ -1014,6 +1014,9 @@ CDXLOperatorFactory::MakeDXLAggFunc(CDXLMemoryManager *dxl_memory_manager,
 													 EdxltokenAggrefDistinct,
 													 EdxltokenScalarAggref);
 
+	const XMLCh *agg_kind_xml =
+		ExtractAttrValue(attrs, EdxltokenAggrefKind, EdxltokenScalarAggref);
+
 	EdxlAggrefStage agg_stage = EdxlaggstageFinal;
 
 	if (0 ==
@@ -1049,6 +1052,34 @@ CDXLOperatorFactory::MakeDXLAggFunc(CDXLMemoryManager *dxl_memory_manager,
 			CDXLTokens::GetDXLTokenStr(EdxltokenScalarAggref)->GetBuffer());
 	}
 
+	EdxlAggrefKind agg_kind = EdxlaggkindNormal;
+	if (0 ==
+		XMLString::compareString(
+			CDXLTokens::XmlstrToken(EdxltokenAggrefKindNormal), agg_kind_xml))
+	{
+		agg_kind = EdxlaggkindNormal;
+	}
+	else if (0 == XMLString::compareString(
+					  CDXLTokens::XmlstrToken(EdxltokenAggrefKindOrderedSet),
+					  agg_kind_xml))
+	{
+		agg_kind = EdxlaggkindOrderedSet;
+	}
+	else if (0 == XMLString::compareString(
+					  CDXLTokens::XmlstrToken(EdxltokenAggrefKindHypothetical),
+					  agg_kind_xml))
+	{
+		agg_kind = EdxlaggkindHypothetical;
+	}
+	else
+	{
+		// turn Xerces exception in optimizer exception
+		GPOS_RAISE(
+			gpdxl::ExmaDXL, gpdxl::ExmiDXLInvalidAttributeValue,
+			CDXLTokens::GetDXLTokenStr(EdxltokenAggrefKind)->GetBuffer(),
+			CDXLTokens::GetDXLTokenStr(EdxltokenScalarAggref)->GetBuffer());
+	}
+
 	IMDId *resolved_rettype = NULL;
 	const XMLCh *return_type_xml =
 		attrs.getValue(CDXLTokens::XmlstrToken(EdxltokenTypeId));
@@ -1057,9 +1088,19 @@ CDXLOperatorFactory::MakeDXLAggFunc(CDXLMemoryManager *dxl_memory_manager,
 		resolved_rettype = ExtractConvertAttrValueToMdId(
 			dxl_memory_manager, attrs, EdxltokenTypeId, EdxltokenScalarAggref);
 	}
+	IMDId *gp_agg_oid = ExtractConvertAttrValueToMdId(
+		dxl_memory_manager, attrs, EdxltokenAggrefGpAggOid,
+		EdxltokenScalarAggref, true);
+
+	if (NULL != gp_agg_oid)
+	{
+		return GPOS_NEW(mp)
+			CDXLScalarAggref(mp, agg_mdid, resolved_rettype, is_distinct,
+							 agg_stage, agg_kind, gp_agg_oid);
+	}
 
 	return GPOS_NEW(mp) CDXLScalarAggref(mp, agg_mdid, resolved_rettype,
-										 is_distinct, agg_stage);
+										 is_distinct, agg_stage, agg_kind);
 }
 
 //---------------------------------------------------------------------------
@@ -3543,16 +3584,20 @@ CDXLOperatorFactory::ParseOnCommitActionSpec(const Attributes &attrs)
 //
 //---------------------------------------------------------------------------
 IMDIndex::EmdindexType
-CDXLOperatorFactory::ParseIndexType(const Attributes &attrs)
+CDXLOperatorFactory::ParseIndexType(const Attributes &attrs,
+									enum Edxltoken token,
+									IMDIndex::EmdindexType defaultType)
 {
-	const XMLCh *xml_val =
-		attrs.getValue(CDXLTokens::XmlstrToken(EdxltokenIndexType));
+	const XMLCh *xml_val = attrs.getValue(CDXLTokens::XmlstrToken(token));
 
-	if (NULL == xml_val ||
-		0 == XMLString::compareString(
+	if (NULL == xml_val)
+	{
+		return defaultType;
+	}
+
+	if (0 == XMLString::compareString(
 				 xml_val, CDXLTokens::XmlstrToken(EdxltokenIndexTypeBtree)))
 	{
-		// default_val is btree
 		return IMDIndex::EmdindBtree;
 	}
 

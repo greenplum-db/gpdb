@@ -27,6 +27,7 @@
 #include "nodes/nodeFuncs.h"
 #include "utils/builtins.h"
 #include "utils/date.h"
+#include "utils/guc.h"
 #include "utils/datetime.h"
 #include "utils/memutils.h"
 #include "utils/tzparser.h"
@@ -2352,6 +2353,9 @@ DecodeTimeOnly(char **field, int *ftype, int nf,
 			GetCurrentDateTime(tmp);
 		else
 		{
+			/* a date has to be specified */
+			if ((fmask & DTK_DATE_M) != DTK_DATE_M)
+				return DTERR_BAD_FORMAT;
 			tmp->tm_year = tm->tm_year;
 			tmp->tm_mon = tm->tm_mon;
 			tmp->tm_mday = tm->tm_mday;
@@ -2379,6 +2383,9 @@ DecodeTimeOnly(char **field, int *ftype, int nf,
 			GetCurrentDateTime(tmp);
 		else
 		{
+			/* a date has to be specified */
+			if ((fmask & DTK_DATE_M) != DTK_DATE_M)
+				return DTERR_BAD_FORMAT;
 			tmp->tm_year = tm->tm_year;
 			tmp->tm_mon = tm->tm_mon;
 			tmp->tm_mday = tm->tm_mday;
@@ -2896,7 +2903,7 @@ DecodeNumberField(int len, char *str, int fmask,
 	/* No decimal point and no complete date yet? */
 	else if ((fmask & DTK_DATE_M) != DTK_DATE_M)
 	{
-		if (len >= 6)
+		if (len >= 6 && (!enable_implicit_timeformat_YYYYMMDDHH24MISS || len != 14))
 		{
 			*tmask = DTK_DATE_M;
 
@@ -2911,7 +2918,36 @@ DecodeNumberField(int len, char *str, int fmask,
 			tm->tm_year = atoi(str);
 			if ((len - 4) == 2)
 				*is2digits = TRUE;
+			else if (((len - 4 ) == 3) && !gp_allow_date_field_width_5digits)
+				return DTERR_BAD_FORMAT;
 
+			return DTK_DATE;
+		}
+	}
+	if ((fmask & DTK_DATE_M) != DTK_DATE_M &&
+		 (fmask & DTK_TIME_M) != DTK_TIME_M && enable_implicit_timeformat_YYYYMMDDHH24MISS)
+	{
+		/*
+		 * GPDB 5X had a special case for implicitly assuming a default
+		 * timestamp format YYYMMDDHH24MISS.
+		 *
+		 * yyyymmddhhmmss?
+		 */
+		if (len == 14)
+		{
+			*tmask = DTK_DATE_M | DTK_TIME_M;
+
+			tm->tm_sec = atoi(str + 12);
+			*(str + 12) = '\0';
+			tm->tm_min = atoi(str + 10);
+			*(str + 10) = '\0';
+			tm->tm_hour = atoi(str + 8);
+			*(str + 8) = '\0';
+			tm->tm_mday = atoi(str + 6);
+			*(str + 6) = '\0';
+			tm->tm_mon = atoi(str + 4);
+			*(str + 4) = '\0';
+			tm->tm_year = atoi(str + 0);
 			return DTK_DATE;
 		}
 	}

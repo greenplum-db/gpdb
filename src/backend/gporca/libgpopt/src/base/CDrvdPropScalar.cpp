@@ -40,6 +40,7 @@ CDrvdPropScalar::CDrvdPropScalar(CMemoryPool *mp)
 	  m_fHasNonScalarFunction(false),
 	  m_ulDistinctAggs(0),
 	  m_fHasMultipleDistinctAggs(false),
+	  m_ulOrderedAggs(0),
 	  m_fHasScalarArrayCmp(false),
 	  m_is_complete(false)
 {
@@ -97,6 +98,8 @@ CDrvdPropScalar::Derive(CMemoryPool *, CExpressionHandle &exprhdl,
 	DeriveHasNonScalarFunction(exprhdl);
 
 	DeriveTotalDistinctAggs(exprhdl);
+
+	DeriveHasScalarFuncProject(exprhdl);
 
 	DeriveHasMultipleDistinctAggs(exprhdl);
 
@@ -355,6 +358,26 @@ CDrvdPropScalar::DeriveTotalDistinctAggs(CExpressionHandle &exprhdl)
 	return m_ulDistinctAggs;
 }
 
+BOOL
+CDrvdPropScalar::HasScalarFuncProject() const
+{
+	GPOS_RTL_ASSERT(IsComplete());
+	return m_fHasScalarFunc;
+}
+
+BOOL
+CDrvdPropScalar::DeriveHasScalarFuncProject(CExpressionHandle &exprhdl)
+{
+	if (!m_is_prop_derived->ExchangeSet(EdptFHasScalarFuncProject))
+	{
+		if (COperator::EopScalarProjectList == exprhdl.Pop()->Eopid())
+		{
+			m_fHasScalarFunc = CScalarProjectList::FHasScalarFunc(exprhdl);
+		}
+	}
+	return m_fHasScalarFunc;
+}
+
 // does operator define Distinct Aggs on different arguments, only applicable to project lists
 BOOL
 CDrvdPropScalar::HasMultipleDistinctAggs() const
@@ -395,6 +418,16 @@ CDrvdPropScalar::DeriveHasScalarArrayCmp(CExpressionHandle &exprhdl)
 	return m_fHasScalarArrayCmp;
 }
 
+ULONG
+CDrvdPropScalar::DeriveTotalOrderedAggs(CExpressionHandle &exprhdl)
+{
+	if (COperator::EopScalarProjectList == exprhdl.Pop()->Eopid() &&
+		!m_is_prop_derived->ExchangeSet(EdptUlOrderedAggs))
+	{
+		m_ulOrderedAggs = CScalarProjectList::UlOrderedAggs(exprhdl);
+	}
+	return m_ulOrderedAggs;
+}
 
 //---------------------------------------------------------------------------
 //	@function:
@@ -407,12 +440,12 @@ CDrvdPropScalar::DeriveHasScalarArrayCmp(CExpressionHandle &exprhdl)
 IOstream &
 CDrvdPropScalar::OsPrint(IOstream &os) const
 {
-	os << "Defined Columns: [" << GetDefinedColumns() << "], "
-	   << "Used Columns: [" << GetUsedColumns() << "], "
+	os << "Defined Columns: [" << *GetDefinedColumns() << "], "
+	   << "Used Columns: [" << *GetUsedColumns() << "], "
 	   << "Set Returning Function Columns: ["
-	   << GetSetReturningFunctionColumns() << "], "
+	   << *GetSetReturningFunctionColumns() << "], "
 	   << "Has Subqs: [" << HasSubquery() << "], "
-	   << "Function Properties: [" << GetFunctionProperties() << "], "
+	   << "Function Properties: [" << *GetFunctionProperties() << "], "
 	   << "Has Non-scalar Funcs: [" << HasNonScalarFunction() << "], ";
 
 	if (0 < m_ulDistinctAggs)

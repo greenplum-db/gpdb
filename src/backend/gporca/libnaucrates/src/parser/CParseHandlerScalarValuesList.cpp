@@ -44,9 +44,7 @@ CParseHandlerScalarValuesList::StartElement(
 			GPOS_NEW(m_mp) CDXLScalarValuesList(m_mp);
 		m_dxl_node = GPOS_NEW(m_mp) CDXLNode(m_mp, dxl_op);
 	}
-	else if (0 == XMLString::compareString(
-					  CDXLTokens::XmlstrToken(EdxltokenScalarConstValue),
-					  element_local_name))
+	else
 	{
 		CParseHandlerBase *parse_handler_const_value =
 			CParseHandlerFactory::GetParseHandler(m_mp, element_local_name,
@@ -57,13 +55,6 @@ CParseHandlerScalarValuesList::StartElement(
 
 		parse_handler_const_value->startElement(element_uri, element_local_name,
 												element_qname, attrs);
-	}
-	else
-	{
-		CWStringDynamic *str = CDXLUtils::CreateDynamicStringFromXMLChArray(
-			m_parse_handler_mgr->GetDXLMemoryManager(), element_local_name);
-		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiDXLUnexpectedTag,
-				   str->GetBuffer());
 	}
 }
 

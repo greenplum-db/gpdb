@@ -5,7 +5,6 @@
 
 import unittest
 from gppylib.commands.base import Command, WorkerPool, RemoteExecutionContext, GPHOME, LocalExecutionContext
-from mock import patch
 
 
 class WorkerPoolTestCase(unittest.TestCase):

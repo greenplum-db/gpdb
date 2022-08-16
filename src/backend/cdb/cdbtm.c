@@ -133,19 +133,12 @@ static void sendWaitGxidsToQD(List *waitGxids);
 
 extern void CheckForResetSession(void);
 
-/**
- * All assignments of the global DistributedTransactionContext should go through this function
- *   (so we can add logging here to see all assignments)
- *
- * @param context the new value for DistributedTransactionContext
- */
-static void
+void
 setDistributedTransactionContext(DtxContext context)
 {
-	/*
-	 * elog(INFO, "Setting DistributedTransactionContext to '%s'",
-	 * DtxContextToString(context));
-	 */
+	elog((Debug_print_full_dtm ? LOG : DEBUG5),
+		  "Setting DistributedTransactionContext to '%s'",
+		  DtxContextToString(context));
 	DistributedTransactionContext = context;
 }
 
@@ -525,7 +518,12 @@ ClearTransactionState(TransactionId latestXid)
 	 * To fix this, transactions require two-phase commit should defer clear 
 	 * proc->xid here with ProcArryLock held.
 	 */
-	SIMPLE_FAULT_INJECTOR("before_xact_end_procarray");
+#ifdef FAULT_INJECTOR
+	FaultInjector_InjectFaultIfSet("before_xact_end_procarray",
+			DDLNotSpecified,
+			MyProcPort ? MyProcPort->database_name : "",  // databaseName
+			""); // tableName
+#endif
 	LWLockAcquire(ProcArrayLock, LW_EXCLUSIVE);
 	ProcArrayEndTransaction(MyProc, latestXid, true);
 	ProcArrayEndGxact();

@@ -15,6 +15,10 @@ s/cdbdisp_async.c:[0-9]+/cdbdisp_async.c:xxx/
 m/^\d+.*gpconfig.*-\[INFO\]:-/
 s/^\d+.*gpconfig.*-\[INFO\]:-//
 
+# line number in error message
+m/\(cdbgang_async\.c\:\d+\)/
+s/\(cdbgang_async\.c:\d+\)/\(cdbgang_async\.c:LINE_NUM\)/
+
 # ignore OID and file/line number diffs for invalid toast indexes
 m/^ERROR:  no valid index found for toast relation/
 s/with Oid \d+ \(.*\)/with Oid OID/
@@ -50,8 +54,8 @@ m/^Process \d+ waits for ShareLock on transaction \d+; blocked by process \d+./
 s/^Process \d+ waits for ShareLock on transaction \d+; blocked by process \d+./Process PID waits for ShareLock on transaction XID; blocked by process PID./
 
 # For resource queue deadlock
-m/^DETAIL:  Process \d+ waits for ExclusiveLock on resource queue \d+; blocked by process \d+./
-s/^DETAIL:  Process \d+ waits for ExclusiveLock on resource queue \d+; blocked by process \d+./DETAIL:  Process PID waits for ExclusiveLock on resource queue OID; blocked by process PID./
+m/.*Process \d+ waits for ExclusiveLock on resource queue \d+; blocked by process \d+./
+s/.*Process \d+ waits for ExclusiveLock on resource queue \d+; blocked by process \d+./Process PID waits for ExclusiveLock on resource queue OID; blocked by process PID./
 
 # For resource queue deadlock
 m/^Process \d+ waits for ShareUpdateExclusiveLock on relation \d+ of database \d+; blocked by process \d+./
@@ -59,5 +63,8 @@ s/^Process \d+ waits for ShareUpdateExclusiveLock on relation \d+ of database \d
 
 m/available \d+ MB/
 s/available \d+ MB//
+
+m/\(cdbdisp_async\.c\:\d+\)/
+s/\(cdbdisp_async\.c:\d+\)/\(cdbdisp_async\.c:LINE_NUM\)/
 
 -- end_matchsubs

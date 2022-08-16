@@ -738,6 +738,7 @@ with_uuid
 with_selinux
 with_openssl
 krb_srvtab
+with_gssapi
 with_python
 with_perl
 with_tcl
@@ -752,6 +753,7 @@ autodepend
 TAS
 GCC
 CPP
+CFLAGS_SL
 CFLAGS_VECTOR
 PG_CRC32C_OBJS
 CFLAGS_SSE42
@@ -2785,7 +2787,7 @@ ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $
 ac_compiler_gnu=$ac_cv_c_compiler_gnu
 
 
-PG_PACKAGE_VERSION=9.4.24
+PG_PACKAGE_VERSION=9.4.26
 
 
 
@@ -3279,6 +3281,8 @@ fi
 
 
 #
+
+#
 # gpfdist
 #
 
@@ -3302,8 +3306,6 @@ else
   enable_gpfdist=yes
 
 fi
-
-
 
 
 #
@@ -5877,7 +5879,6 @@ fi
 
 fi
 
-CFLAGS_VECTOR=$CFLAGS_VECTOR
 
 
 # supply -g if --enable-debug
@@ -5937,6 +5938,9 @@ fi
 # user-specified flags (if any) at the end.  This lets users override
 # the automatic additions.
 CFLAGS="$CFLAGS $user_CFLAGS"
+
+# The template file must set up CFLAGS_SL; we don't support user override
+
 
 # Check if the compiler still works with the final flag settings
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether the C compiler still works" >&5
@@ -7368,6 +7372,7 @@ $as_echo "$with_gssapi" >&6; }
 
 
 
+
 #
 # Kerberos configuration parameters
 #
@@ -7520,7 +7525,7 @@ if test "${with_openssl+set}" = set; then :
   case $withval in
     yes)
 
-$as_echo "#define USE_SSL 1" >>confdefs.h
+$as_echo "#define USE_OPENSSL 1" >>confdefs.h
 
       ;;
     no)
@@ -12607,12 +12612,13 @@ else
 fi
 
   fi
-  for ac_func in SSL_get_current_compression
+  for ac_func in SSL_get_current_compression X509_get_signature_nid
 do :
-  ac_fn_c_check_func "$LINENO" "SSL_get_current_compression" "ac_cv_func_SSL_get_current_compression"
-if test "x$ac_cv_func_SSL_get_current_compression" = xyes; then :
+  as_ac_var=`$as_echo "ac_cv_func_$ac_func" | $as_tr_sh`
+ac_fn_c_check_func "$LINENO" "$ac_func" "$as_ac_var"
+if eval test \"x\$"$as_ac_var"\" = x"yes"; then :
   cat >>confdefs.h <<_ACEOF
-#define HAVE_SSL_GET_CURRENT_COMPRESSION 1
+#define `$as_echo "HAVE_$ac_func" | $as_tr_cpp` 1
 _ACEOF
 
 fi
@@ -13951,6 +13957,7 @@ fi
 
 fi
 
+# Check for GSSAPI
 if test "$with_gssapi" = yes ; then
   for ac_header in gssapi/gssapi.h
 do :
@@ -13978,6 +13985,27 @@ done
 fi
 
 done
+
+  ac_fn_c_check_decl "$LINENO" "gss_store_cred_into" "ac_cv_have_decl_gss_store_cred_into" "#include <gssapi/gssapi_ext.h>
+"
+if test "x$ac_cv_have_decl_gss_store_cred_into" = xyes; then :
+  ac_have_decl=1
+else
+  ac_have_decl=0
+fi
+
+cat >>confdefs.h <<_ACEOF
+#define HAVE_DECL_GSS_STORE_CRED_INTO $ac_have_decl
+_ACEOF
+if test $ac_have_decl = 1; then :
+
+$as_echo "#define HAVE_GSSAPI_PROXY 1" >>confdefs.h
+
+else
+
+$as_echo "#define HAVE_GSSAPI_PROXY 0" >>confdefs.h
+
+fi
 
 fi
 
@@ -18559,6 +18587,73 @@ $as_echo "#define USE_WIN32_SHARED_MEMORY 1" >>confdefs.h
   SHMEM_IMPLEMENTATION="src/backend/port/win32_shmem.c"
 fi
 
+# Select random number source
+#
+# You can override this logic by setting the appropriate USE_*RANDOM flag to 1
+# in the template or configure command line.
+
+# If not selected manually, try to select a source automatically.
+if test x"$USE_OPENSSL_RANDOM" = x"" && test x"$USE_WIN32_RANDOM" = x"" && test x"$USE_DEV_URANDOM" = x"" ; then
+  if test x"$with_openssl" = x"yes" ; then
+    USE_OPENSSL_RANDOM=1
+  elif test "$PORTNAME" = "win32" ; then
+    USE_WIN32_RANDOM=1
+  else
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for /dev/urandom" >&5
+$as_echo_n "checking for /dev/urandom... " >&6; }
+if ${ac_cv_file__dev_urandom+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  test "$cross_compiling" = yes &&
+  as_fn_error $? "cannot check for file existence when cross compiling" "$LINENO" 5
+if test -r "/dev/urandom"; then
+  ac_cv_file__dev_urandom=yes
+else
+  ac_cv_file__dev_urandom=no
+fi
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_file__dev_urandom" >&5
+$as_echo "$ac_cv_file__dev_urandom" >&6; }
+if test "x$ac_cv_file__dev_urandom" = xyes; then :
+
+fi
+
+
+    if test x"$ac_cv_file__dev_urandom" = x"yes" ; then
+      USE_DEV_URANDOM=1
+    fi
+  fi
+fi
+
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking which random number source to use" >&5
+$as_echo_n "checking which random number source to use... " >&6; }
+
+
+
+if test x"$USE_OPENSSL_RANDOM" = x"1" ; then
+
+$as_echo "#define USE_OPENSSL_RANDOM 1" >>confdefs.h
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: OpenSSL" >&5
+$as_echo "OpenSSL" >&6; }
+elif test x"$USE_WIN32_RANDOM" = x"1" ; then
+
+$as_echo "#define USE_WIN32_RANDOM 1" >>confdefs.h
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: Windows native" >&5
+$as_echo "Windows native" >&6; }
+elif test x"$USE_DEV_URANDOM" = x"1" ; then
+
+$as_echo "#define USE_DEV_URANDOM 1" >>confdefs.h
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: /dev/urandom" >&5
+$as_echo "/dev/urandom" >&6; }
+else
+  as_fn_error $? "
+no source of strong random numbers was found
+PostgreSQL can use OpenSSL or /dev/urandom as a source of random numbers." "$LINENO" 5
+fi
+
 # Select latch implementation type.
 if test "$PORTNAME" != "win32"; then
   LATCH_IMPLEMENTATION="src/backend/port/unix_latch.c"
@@ -18917,6 +19012,10 @@ fi
   # On most platforms, if perl.h is there then libperl.so will be too, but at
   # this writing Debian packages them separately.  There is no known reason to
   # waste cycles on separate probes for the Tcl or Python libraries, though.
+  # On some Red Hat platforms, the link attempt can fail if we don't use
+  # CFLAGS_SL while building the test program.
+  ac_save_CFLAGS=$CFLAGS
+  CFLAGS="$CFLAGS $CFLAGS_SL"
   pgac_save_LIBS=$LIBS
   LIBS="$perl_embed_ldflags"
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking for libperl" >&5
@@ -18946,6 +19045,7 @@ fi
 rm -f core conftest.err conftest.$ac_objext \
     conftest$ac_exeext conftest.$ac_ext
   LIBS=$pgac_save_LIBS
+  CFLAGS=$ac_save_CFLAGS
   CPPFLAGS=$ac_save_CPPFLAGS
 fi
 

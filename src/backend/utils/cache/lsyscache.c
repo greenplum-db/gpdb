@@ -2453,6 +2453,29 @@ get_rel_relstorage(Oid relid)
 		return '\0';
 }
 
+/*
+ * get_rel_persistence
+ *
+ *		Returns the relpersistence associated with a given relation.
+ */
+char
+get_rel_persistence(Oid relid)
+{
+	HeapTuple   tp;
+	Form_pg_class reltup;
+	char        result;
+
+	tp = SearchSysCache1(RELOID, ObjectIdGetDatum(relid));
+	if (!HeapTupleIsValid(tp))
+		elog(ERROR, "cache lookup failed for relation %u", relid);
+	reltup = (Form_pg_class) GETSTRUCT(tp);
+	result = reltup->relpersistence;
+	ReleaseSysCache(tp);
+
+	return result;
+}
+
+
 /*				---------- TYPE CACHE ----------						 */
 
 /*
@@ -3673,6 +3696,32 @@ get_range_subtype(Oid rangeOid)
 }
 
 /*
+ * get_range_collation
+ *		Returns the collation of a given range type
+ *
+ * Returns InvalidOid if the type is not a range type,
+ * or if its subtype is not collatable.
+ */
+Oid
+get_range_collation(Oid rangeOid)
+{
+	HeapTuple	tp;
+
+	tp = SearchSysCache1(RANGETYPE, ObjectIdGetDatum(rangeOid));
+	if (HeapTupleIsValid(tp))
+	{
+		Form_pg_range rngtup = (Form_pg_range) GETSTRUCT(tp);
+		Oid			result;
+
+		result = rngtup->rngcollation;
+		ReleaseSysCache(tp);
+		return result;
+	}
+	else
+		return InvalidOid;
+}
+
+/*
  * relation_exists
  *	  Is there a relation with the given oid
  */
@@ -3734,7 +3783,7 @@ aggregate_exists(Oid oid)
 
 // Get oid of aggregate with given name and argument type
 Oid
-get_aggregate(const char *aggname, Oid oidType)
+get_aggregate(const char *aggname, Oid oidType, int nargs)
 {
 	CatCList   *catlist;
 	int			i;
@@ -3752,7 +3801,7 @@ get_aggregate(const char *aggname, Oid oidType)
 		Form_pg_proc proctuple = (Form_pg_proc) GETSTRUCT(htup);
 
 		// skip functions with the wrong number of type of arguments
-		if (1 != proctuple->pronargs || oidType != proctuple->proargtypes.values[0])
+		if (nargs != (int) proctuple->pronargs || oidType != proctuple->proargtypes.values[0])
 		{
 			continue;
 		}

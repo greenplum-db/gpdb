@@ -232,12 +232,12 @@ explain select c1 from t1,
    Hash Cond: (t2.c2 = t3.c3)
    ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..862.00 rows=1 width=8)
          ->  Hash Join  (cost=0.00..862.00 rows=1 width=8)
-               Hash Cond: (t2.c2 = t1.c1)
-               ->  Seq Scan on t2  (cost=0.00..431.00 rows=1 width=4)
-                     Filter: (c2 > 4)
-               ->  Hash  (cost=431.00..431.00 rows=2 width=4)
+               Hash Cond: (t1.c1 = t2.c2)
                      ->  Seq Scan on t1  (cost=0.00..431.00 rows=2 width=4)
                            Filter: (c1 > 4)
+               ->  Hash  (cost=431.00..431.00 rows=1 width=4)
+                     ->  Seq Scan on t2  (cost=0.00..431.00 rows=1 width=4)
+                           Filter: (c2 > 4)
    ->  Hash  (cost=431.00..431.00 rows=1 width=4)
          ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..431.00 rows=3 width=4)
                ->  Seq Scan on t3  (cost=0.00..431.00 rows=1 width=4)
@@ -400,28 +400,38 @@ select a,b from g1 where (a,b) not in
 --
 explain select x,y from l1 where (x,y) not in
 	(select distinct y, sum(x) from l1 group by y having y < 4 order by y) order by 1,2;
-                                                         QUERY PLAN                                                          
+                                                         QUERY PLAN
 -----------------------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice3; segments: 3)  (cost=10000000008.02..10000000008.03 rows=4 width=8)
    Merge Key: l1.x, l1.y
    ->  Sort  (cost=10000000008.02..10000000008.03 rows=2 width=8)
          Sort Key: l1.x, l1.y
-         ->  Nested Loop Left Anti Semi (Not-In) Join  (cost=10000000003.25..10000000007.99 rows=2 width=8)
-               Join Filter: l1.x = "NotIn_SUBQUERY".y AND l1.y = "NotIn_SUBQUERY".sum
+         ->  Nested Loop Left Anti Semi (Not-In) Join  (cost=10000000001.07..10000000002.34 rows=1 width=8)
+               Join Filter: ((l1.x = "NotIn_SUBQUERY".y) AND (l1.y = "NotIn_SUBQUERY".sum))
                ->  Seq Scan on l1  (cost=0.00..3.10 rows=4 width=8)
-               ->  Materialize  (cost=3.25..3.47 rows=3 width=12)
-                     ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=3.25..3.43 rows=3 width=12)
-                           ->  Subquery Scan on "NotIn_SUBQUERY"  (cost=3.25..3.31 rows=1 width=12)
-                                 ->  HashAggregate  (cost=3.25..3.28 rows=1 width=16)
-                                       Group Key: l1_1.y
-                                       ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=3.14..3.20 rows=1 width=12)
-                                             Hash Key: l1_1.y
-                                             ->  HashAggregate  (cost=3.14..3.14 rows=1 width=12)
-                                                   Group Key: l1_1.y
-                                                   ->  Seq Scan on l1 l1_1  (cost=0.00..3.12 rows=2 width=8)
-                                                         Filter: y < 4
+               ->  Materialize  (cost=3.35..3.56 rows=3 width=12)
+                     ->  Broadcast Motion 3:3  (slice3; segments: 3)  (cost=3.35..3.51 rows=3 width=12)
+                           ->  Subquery Scan on "NotIn_SUBQUERY"  (cost=3.35..3.39 rows=1 width=12)
+                                 ->  Unique  (cost=3.35..3.36 rows=1 width=16)
+                                       Group Key: l1_1.y, (pg_catalog.sum((sum(l1_1.x))))
+                                       ->  Sort  (cost=3.35..3.36 rows=1 width=16)
+                                             Sort Key (Distinct): l1_1.y, (pg_catalog.sum((sum(l1_1.x))))
+                                             ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=3.30..3.34 rows=1 width=16)
+                                                   Hash Key: l1_1.y, (pg_catalog.sum((sum(l1_1.x))))
+                                                   ->  Unique  (cost=3.30..3.32 rows=1 width=16)
+                                                         Group Key: l1_1.y, (pg_catalog.sum((sum(l1_1.x))))
+                                                         ->  Sort  (cost=3.30..3.31 rows=1 width=16)
+                                                               Sort Key (Distinct): l1_1.y
+                                                               ->  HashAggregate  (cost=3.25..3.28 rows=1 width=16)
+                                                                     Group Key: l1_1.y
+                                                                     ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=3.14..3.20 rows=1 width=12)
+                                                                           Hash Key: l1_1.y
+                                                                           ->  HashAggregate  (cost=3.14..3.14 rows=1 width=12)
+                                                                                 Group Key: l1_1.y
+                                                                                 ->  Seq Scan on l1 l1_1  (cost=0.00..3.12 rows=2 width=8)
+                                                                                       Filter: (y < 4)
  Optimizer: Postgres query optimizer
-(19 rows)
+(29 rows)
 
 select x,y from l1 where (x,y) not in
 	(select distinct y, sum(x) from l1 group by y having y < 4 order by y) order by 1,2;
@@ -470,7 +480,7 @@ select * from g1 where (a,b,c) not in
 --
 explain select c1 from t1, t2 where c1 not in 
 	(select c3 from t3 where c3 = c1) and c1 = c2;
-                                                                                                                                                                  QUERY PLAN                                                                                                                                                                  
+                                                                                                                                                                  QUERY PLAN
 ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..1324465.54 rows=6 width=4)
    ->  Hash Join  (cost=0.00..1324465.54 rows=2 width=4)
@@ -556,7 +566,7 @@ explain select c1 from t1 where c1 not in
                ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=2 width=8)
                      ->  Result  (cost=0.00..431.00 rows=1 width=8)
                            ->  GroupAggregate  (cost=0.00..431.00 rows=1 width=8)
-                                 Group By: t2.c2
+                                 Group Key: t2.c2
                                  ->  Sort  (cost=0.00..431.00 rows=1 width=4)
                                        Sort Key: t2.c2
                                        ->  Seq Scan on t2  (cost=0.00..431.00 rows=1 width=4)
@@ -654,7 +664,7 @@ select c1 from t1 where c1 not in
 explain select (case when c1%2 = 0 
  then (select sum(c2) from t2 where c2 not in (select c3 from t3)) 
  else (select sum(c3) from t3 where c3 not in (select c4 from t4)) end) as foo from t1;
-                                                                    QUERY PLAN                                                                     
+                                                                    QUERY PLAN
 ---------------------------------------------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice7; segments: 3)  (cost=0.00..1809071284.19 rows=10 width=8)
    ->  Result  (cost=0.00..1809071284.19 rows=4 width=8)
@@ -709,7 +719,7 @@ select (case when c1%2 = 0
 --q27
 --
 explain select c1 from t1 where not c1 >= some (select c2 from t2);
-                                                                                                                                                             QUERY PLAN                                                                                                                                                             
+                                                                                                                                                             QUERY PLAN
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
  Result  (cost=0.00..1324032.88 rows=2 width=4)
    Filter: (subplan)
@@ -764,7 +774,7 @@ select c2 from t2 where not c2 < all (select c2 from t2);
 --q29
 --
 explain select c3 from t3 where not c3 <> any (select c4 from t4);
-                                                                                                                                                             QUERY PLAN                                                                                                                                                             
+                                                                                                                                                             QUERY PLAN
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
  Result  (cost=0.00..1324032.31 rows=1 width=4)
    Filter: (subplan)
@@ -832,7 +842,7 @@ select c1 from t1 where c1 not in (select c2 from t2 order by c2 limit 3) order 
 --q32
 --
 explain select c1 from t1 where c1 =all (select c2 from t2 where c2 > -1 and c2 <= 1);
-                                                                                                                                                                            QUERY PLAN                                                                                                                                                                             
+                                                                                                                                                                            QUERY PLAN
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..1324032.79 rows=4 width=4)
    ->  Seq Scan on t1  (cost=0.00..1324032.79 rows=2 width=4)
@@ -888,7 +898,7 @@ select c1 from t1 where c1 <>all (select c2 from t2);
 --q34
 --
 explain select c1 from t1 where c1 <=all (select c2 from t2 where c2 not in (select c1n from t1n));
-                                                                                                                                                               QUERY PLAN                                                                                                                                                               
+                                                                                                                                                               QUERY PLAN
 ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..1765379.01 rows=4 width=4)
    ->  Seq Scan on t1  (cost=0.00..1765379.01 rows=2 width=4)
@@ -968,7 +978,7 @@ select c1 from t1 where not c1 =all (select c2 from t2 where not c2 >all (select
 --q36
 --
 explain select c1 from t1 where not c1 <>all (select c1n from t1n where c1n <all (select c3 from t3 where c3 = c1n));
-                                                                                                                                                                      QUERY PLAN                                                                                                                                                                      
+                                                                                                                                                                      QUERY PLAN
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..1324464.88 rows=8 width=4)
    ->  Hash Semi Join  (cost=0.00..1324464.88 rows=3 width=4)
@@ -1209,7 +1219,7 @@ create or replace function abseq (absint, absint) returns bool as $$ select isze
 create operator = (PROCEDURE = abseq, leftarg=absint, rightarg=absint);
 explain select c1 from t1 where c1::absint not in
 	(select c1n::absint from t1n);
-                                                                                                                            QUERY PLAN                                                                                                                             
+                                                                                                                            QUERY PLAN
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..1324035.89 rows=10 width=4)
    ->  Result  (cost=0.00..1324035.89 rows=4 width=4)
@@ -1330,9 +1340,382 @@ select * from table_source4 where c3 = 'INC' and c4 = '0000000001' and c2 not in
  000181202006010000003158 | a  | INC | 0000000001
 (1 row)
 
+-- Test notin with outerrefs in the subquery
+--
+-- q47
+--
+create table outerref (a int, b text, c int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into outerref (a,b,c) values(1,'1',1);
+insert into outerref (a,b,c) values(1,'1',2);
+-- For a cluster with only 1 segment, this test doesn't crash without the fix.
+-- We can disable_xform('CXformSimplifySelectWithSubquery'); for testing for a
+-- cluster with only 1 segment. Not adding here as it changes the default plan
+-- that ORCA picks
+explain select b from outerref where b not in (select distinct b where c>1);
+                                                                                                                                                                                                QUERY PLAN                                                                                                                                                                                                 
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..882688.11 rows=1 width=2)
+   ->  Result  (cost=0.00..882688.11 rows=1 width=2)
+         ->  Seq Scan on outerref  (cost=0.00..882688.11 rows=1 width=2)
+               Filter: (SubPlan 1)
+               SubPlan 1  (slice1; segments: 3)
+                 ->  Result  (cost=0.00..0.00 rows=1 width=1)
+                       ->  Result  (cost=0.00..0.00 rows=1 width=1)
+                             Filter: ((CASE WHEN ((sum((CASE WHEN (outerref.b = (outerref.b)) THEN 1 ELSE 0 END))) IS NULL) THEN true WHEN ((sum((CASE WHEN ((outerref.b) IS NULL) THEN 1 ELSE 0 END))) > 0::bigint) THEN NULL::boolean WHEN (outerref.b IS NULL) THEN NULL::boolean WHEN ((sum((CASE WHEN (outerref.b = (outerref.b)) THEN 1 ELSE 0 END))) = 0::bigint) THEN true ELSE false END) = true)
+                             ->  Result  (cost=0.00..0.00 rows=1 width=1)
+                                   ->  Aggregate  (cost=0.00..0.00 rows=1 width=16)
+                                         ->  Result  (cost=0.00..0.00 rows=1 width=8)
+                                               ->  Result  (cost=0.00..0.00 rows=1 width=8)
+                                                     ->  Result  (cost=0.00..0.00 rows=1 width=1)
+                                                           One-Time Filter: (outerref.c > 1)
+                                                           ->  Result  (cost=0.00..0.00 rows=1 width=1)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(16 rows)
+
+select b from outerref where b not in (select distinct b where c>1);
+ b 
+---
+ 1
+(1 row)
+
+create table outerref_int (a int, b int, c int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into outerref_int (a,b,c) values(1,2,1);
+insert into outerref_int (a,b,c) values(1,2,2);
+explain select b from outerref_int where b not in (select distinct b where c>1);
+                                                                                                                                                                                                            QUERY PLAN                                                                                                                                                                                                             
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..882688.11 rows=1 width=4)
+   ->  Result  (cost=0.00..882688.11 rows=1 width=4)
+         ->  Seq Scan on outerref_int  (cost=0.00..882688.11 rows=1 width=4)
+               Filter: (SubPlan 1)
+               SubPlan 1  (slice1; segments: 3)
+                 ->  Result  (cost=0.00..0.00 rows=1 width=1)
+                       ->  Result  (cost=0.00..0.00 rows=1 width=1)
+                             Filter: ((CASE WHEN ((sum((CASE WHEN (outerref_int.b = (outerref_int.b)) THEN 1 ELSE 0 END))) IS NULL) THEN true WHEN ((sum((CASE WHEN ((outerref_int.b) IS NULL) THEN 1 ELSE 0 END))) > 0::bigint) THEN NULL::boolean WHEN (outerref_int.b IS NULL) THEN NULL::boolean WHEN ((sum((CASE WHEN (outerref_int.b = (outerref_int.b)) THEN 1 ELSE 0 END))) = 0::bigint) THEN true ELSE false END) = true)
+                             ->  Result  (cost=0.00..0.00 rows=1 width=1)
+                                   ->  Aggregate  (cost=0.00..0.00 rows=1 width=16)
+                                         ->  Result  (cost=0.00..0.00 rows=1 width=8)
+                                               ->  Result  (cost=0.00..0.00 rows=1 width=4)
+                                                     ->  Result  (cost=0.00..0.00 rows=1 width=1)
+                                                           One-Time Filter: (outerref_int.c > 1)
+                                                           ->  Result  (cost=0.00..0.00 rows=1 width=1)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(16 rows)
+
+select b from outerref_int where b not in (select distinct b where c>1);
+ b 
+---
+ 2
+(1 row)
+
+--
+-- Multi Column NOT-IN
+-- Please refer to https://github.com/greenplum-db/gpdb/issues/12930
+--
+create table t1_12930(a int not null, b int not null);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+create table t2_12930(a int not null, b int not null);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+-- non-nullable: t1.a, t1.b, t2.a, t2.b
+insert into t1_12930 values (1, 1), (2, 2);
+insert into t2_12930 values (1, 1), (2, 3), (3,3);
+explain select * from t1_12930 where (a, b) not in (select a, b from t2_12930);
+                                     QUERY PLAN                                     
+------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=751.50..207138.77 rows=16 width=8)
+   ->  Hash Left Anti Semi (Not-In) Join  (cost=751.50..207138.55 rows=5 width=8)
+         Hash Cond: ((t1_12930.a = t2_12930.a) AND (t1_12930.b = t2_12930.b))
+         ->  Seq Scan on t1_12930  (cost=0.00..321.00 rows=28700 width=8)
+         ->  Hash  (cost=321.00..321.00 rows=28700 width=8)
+               ->  Seq Scan on t2_12930  (cost=0.00..321.00 rows=28700 width=8)
+ Optimizer: Postgres query optimizer
+(7 rows)
+
+select * from t1_12930 where (a, b) not in (select a, b from t2_12930);
+ a | b 
+---+---
+ 2 | 2
+(1 row)
+
+explain select * from t1_12930 where (a+1, b+1) not in (select a, b from t2_12930);
+                                             QUERY PLAN                                             
+----------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=751.50..413635.27 rows=16 width=8)
+   ->  Hash Left Anti Semi (Not-In) Join  (cost=751.50..413635.05 rows=5 width=8)
+         Hash Cond: (((t1_12930.a + 1) = t2_12930.a) AND ((t1_12930.b + 1) = t2_12930.b))
+         ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..895.00 rows=28700 width=8)
+               Hash Key: (t1_12930.a + 1)
+               ->  Seq Scan on t1_12930  (cost=0.00..321.00 rows=28700 width=8)
+         ->  Hash  (cost=321.00..321.00 rows=28700 width=8)
+               ->  Seq Scan on t2_12930  (cost=0.00..321.00 rows=28700 width=8)
+ Optimizer: Postgres query optimizer
+(9 rows)
+
+select * from t1_12930 where (a+1, b+1) not in (select a, b from t2_12930);
+ a | b 
+---+---
+ 1 | 1
+(1 row)
+
+explain select * from t1_12930 where (a,b) <> ALL (select a, b from t2_12930);
+                                     QUERY PLAN                                     
+------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=751.50..207138.77 rows=16 width=8)
+   ->  Hash Left Anti Semi (Not-In) Join  (cost=751.50..207138.55 rows=5 width=8)
+         Hash Cond: ((t1_12930.a = t2_12930.a) AND (t1_12930.b = t2_12930.b))
+         ->  Seq Scan on t1_12930  (cost=0.00..321.00 rows=28700 width=8)
+         ->  Hash  (cost=321.00..321.00 rows=28700 width=8)
+               ->  Seq Scan on t2_12930  (cost=0.00..321.00 rows=28700 width=8)
+ Optimizer: Postgres query optimizer
+(7 rows)
+
+select * from t1_12930 where (a,b) <> ALL (select a, b from t2_12930);
+ a | b 
+---+---
+ 2 | 2
+(1 row)
+
+-- non-nullable: t1.a, t2.a, t2.b
+-- nullable: t1.b
+truncate t1_12930;
+truncate t2_12930;
+alter table t2_12930 alter column b set not null;
+alter table t1_12930 alter column b drop not null;
+insert into t1_12930 values (1, null);
+insert into t2_12930 values (1, 1);
+explain select * from t1_12930 where (a, b) <>ALL (select a, b from t2_12930);
+                                               QUERY PLAN                                               
+--------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=10000000000.00..10079226671.22 rows=16 width=8)
+   ->  Nested Loop Left Anti Semi (Not-In) Join  (cost=10000000000.00..10079226671.00 rows=5 width=8)
+         Join Filter: ((t1_12930.a = t2_12930.a) AND (t1_12930.b = t2_12930.b))
+         ->  Seq Scan on t1_12930  (cost=0.00..321.00 rows=28700 width=8)
+         ->  Materialize  (cost=0.00..1899.50 rows=86100 width=8)
+               ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..1469.00 rows=86100 width=8)
+                     ->  Seq Scan on t2_12930  (cost=0.00..321.00 rows=28700 width=8)
+ Optimizer: Postgres query optimizer
+(8 rows)
+
+select * from t1_12930 where (a, b) <>ALL (select a, b from t2_12930);
+ a | b 
+---+---
+(0 rows)
+
+-- non-nullable: t1.a, t1.b, t2.a
+-- nullable: t2.b
+truncate t1_12930;
+truncate t2_12930;
+alter table t2_12930 alter column b drop not null;
+insert into t1_12930 values (1, 1);
+insert into t2_12930 values (1, null);
+explain select * from t1_12930 where (a, b) not in (select a, b from t2_12930);
+                                               QUERY PLAN                                               
+--------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=10000000000.00..10079226671.22 rows=16 width=8)
+   ->  Nested Loop Left Anti Semi (Not-In) Join  (cost=10000000000.00..10079226671.00 rows=5 width=8)
+         Join Filter: ((t1_12930.a = t2_12930.a) AND (t1_12930.b = t2_12930.b))
+         ->  Seq Scan on t1_12930  (cost=0.00..321.00 rows=28700 width=8)
+         ->  Materialize  (cost=0.00..1899.50 rows=86100 width=8)
+               ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..1469.00 rows=86100 width=8)
+                     ->  Seq Scan on t2_12930  (cost=0.00..321.00 rows=28700 width=8)
+ Optimizer: Postgres query optimizer
+(8 rows)
+
+select * from t1_12930 where (a, b) not in (select a, b from t2_12930);
+ a | b 
+---+---
+(0 rows)
+
+-- non-nullable: t1.a, t2.a, t2.b
+-- nullable: t1.b
+truncate t1_12930;
+truncate t2_12930;
+alter table t2_12930 alter column b set not null;
+alter table t1_12930 alter column b drop not null;
+insert into t1_12930 values (1, null);
+insert into t2_12930 values (1, 1);
+explain select * from t1_12930 where (a, b) not in (select a, b from t2_12930);
+                                               QUERY PLAN                                               
+--------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=10000000000.00..10079226671.22 rows=16 width=8)
+   ->  Nested Loop Left Anti Semi (Not-In) Join  (cost=10000000000.00..10079226671.00 rows=5 width=8)
+         Join Filter: ((t1_12930.a = t2_12930.a) AND (t1_12930.b = t2_12930.b))
+         ->  Seq Scan on t1_12930  (cost=0.00..321.00 rows=28700 width=8)
+         ->  Materialize  (cost=0.00..1899.50 rows=86100 width=8)
+               ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..1469.00 rows=86100 width=8)
+                     ->  Seq Scan on t2_12930  (cost=0.00..321.00 rows=28700 width=8)
+ Optimizer: Postgres query optimizer
+(8 rows)
+
+select * from t1_12930 where (a, b) not in (select a, b from t2_12930);
+ a | b 
+---+---
+(0 rows)
+
+explain select * from t1_12930 where (a, b) not in (select a, b from t2_12930) and b is not null;
+                                     QUERY PLAN                                     
+------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=751.50..206932.71 rows=16 width=8)
+   ->  Hash Left Anti Semi (Not-In) Join  (cost=751.50..206932.49 rows=5 width=8)
+         Hash Cond: ((t1_12930.a = t2_12930.a) AND (t1_12930.b = t2_12930.b))
+         ->  Seq Scan on t1_12930  (cost=0.00..321.00 rows=28671 width=8)
+               Filter: (b IS NOT NULL)
+         ->  Hash  (cost=321.00..321.00 rows=28700 width=8)
+               ->  Seq Scan on t2_12930  (cost=0.00..321.00 rows=28700 width=8)
+ Optimizer: Postgres query optimizer
+(8 rows)
+
+select * from t1_12930 where (a, b) not in (select a, b from t2_12930) and b is not null;
+ a | b 
+---+---
+(0 rows)
+
+-- outer plan's target list does not contain the columns in qual
+-- non-nullable: t1.a, t1.b, t2.a, t2.b
+truncate t1_12930;
+truncate t2_12930;
+alter table t1_12930 alter column b set not null;
+insert into t1_12930 values (1, 1);
+insert into t2_12930 values (1, 1);
+explain select 1 from t1_12930 where (a, b) not in (select a, b from t2_12930);
+                                     QUERY PLAN                                     
+------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=751.50..207138.77 rows=16 width=4)
+   ->  Hash Left Anti Semi (Not-In) Join  (cost=751.50..207138.55 rows=5 width=4)
+         Hash Cond: ((t1_12930.a = t2_12930.a) AND (t1_12930.b = t2_12930.b))
+         ->  Seq Scan on t1_12930  (cost=0.00..321.00 rows=28700 width=8)
+         ->  Hash  (cost=321.00..321.00 rows=28700 width=8)
+               ->  Seq Scan on t2_12930  (cost=0.00..321.00 rows=28700 width=8)
+ Optimizer: Postgres query optimizer
+(7 rows)
+
+select 1 from t1_12930 where (a, b) not in (select a, b from t2_12930);
+ ?column? 
+----------
+(0 rows)
+
+-- RTE contains view 
+-- non-nullable: t1.a, t1.b, t2.a, t2.b
+create view v_12930 as select a,b from t1_12930;
+explain select * from t2_12930 where (a,b) not in (select a,b from v_12930);
+                                     QUERY PLAN                                     
+------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=751.50..207138.77 rows=16 width=8)
+   ->  Hash Left Anti Semi (Not-In) Join  (cost=751.50..207138.55 rows=5 width=8)
+         Hash Cond: ((t2_12930.a = t1_12930.a) AND (t2_12930.b = t1_12930.b))
+         ->  Seq Scan on t2_12930  (cost=0.00..321.00 rows=28700 width=8)
+         ->  Hash  (cost=321.00..321.00 rows=28700 width=8)
+               ->  Seq Scan on t1_12930  (cost=0.00..321.00 rows=28700 width=8)
+ Optimizer: Postgres query optimizer
+(7 rows)
+
+select * from t2_12930 where (a,b) not in (select a,b from v_12930);
+ a | b 
+---+---
+(0 rows)
+
+explain select * from v_12930 where (a,b) not in (select a,b from t2_12930);
+                                     QUERY PLAN                                     
+------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=751.50..207138.77 rows=16 width=8)
+   ->  Hash Left Anti Semi (Not-In) Join  (cost=751.50..207138.55 rows=5 width=8)
+         Hash Cond: ((t1_12930.a = t2_12930.a) AND (t1_12930.b = t2_12930.b))
+         ->  Seq Scan on t1_12930  (cost=0.00..321.00 rows=28700 width=8)
+         ->  Hash  (cost=321.00..321.00 rows=28700 width=8)
+               ->  Seq Scan on t2_12930  (cost=0.00..321.00 rows=28700 width=8)
+ Optimizer: Postgres query optimizer
+(7 rows)
+
+select * from v_12930 where (a,b) not in (select a,b from t2_12930);
+ a | b 
+---+---
+(0 rows)
+
+-- var from RTE_JOIN
+-- non-nullable: t1.a, t1.b, t2.a, t2.b, r1.x, r1.y
+truncate t1_12930;
+truncate t2_12930;
+create table r1_12930(x int not null, y int not null);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'x' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into t1_12930 values (1, 2), (1, 3);
+insert into t2_12930 values (1, 3), (1, 4);
+insert into r1_12930 values (1, 2), (1, 5);
+explain select * from r1_12930
+inner join t1_12930 on a = x
+where (x, b) not in (select a,b from t2_12930);
+                                       QUERY PLAN                                       
+----------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=1431.25..17871778.93 rows=23 width=16)
+   ->  Hash Left Anti Semi (Not-In) Join  (cost=1431.25..17871778.63 rows=8 width=16)
+         Hash Cond: ((r1_12930.x = t2_12930.a) AND (t1_12930.b = t2_12930.b))
+         ->  Hash Join  (cost=679.75..128744.45 rows=2471070 width=16)
+               Hash Cond: (r1_12930.x = t1_12930.a)
+               ->  Seq Scan on r1_12930  (cost=0.00..321.00 rows=28700 width=8)
+               ->  Hash  (cost=321.00..321.00 rows=28700 width=8)
+                     ->  Seq Scan on t1_12930  (cost=0.00..321.00 rows=28700 width=8)
+         ->  Hash  (cost=321.00..321.00 rows=28700 width=8)
+               ->  Seq Scan on t2_12930  (cost=0.00..321.00 rows=28700 width=8)
+ Optimizer: Postgres query optimizer
+(11 rows)
+
+select * from r1_12930
+inner join t1_12930 on a = x
+where (x, b) not in (select a,b from t2_12930);
+ x | y | a | b 
+---+---+---+---
+ 1 | 2 | 1 | 2
+ 1 | 5 | 1 | 2
+(2 rows)
+
+-- test for issue https://github.com/greenplum-db/gpdb/issues/13212
+create table t1_13212(a int not null, b int not null);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+create table t2_13212(a int not null, b int not null);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+explain (costs off)  select 1 from t1_13212 where (NULL, b) not in (select a, b from t2_13212);
+                             QUERY PLAN                             
+--------------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)
+   ->  Nested Loop Left Anti Semi (Not-In) Join
+         Join Filter: ((t1_13212.b = t2_13212.b) AND NULL::boolean)
+         ->  Seq Scan on t1_13212
+         ->  Materialize
+               ->  Broadcast Motion 3:3  (slice1; segments: 3)
+                     ->  Seq Scan on t2_13212
+ Optimizer: Postgres query optimizer
+(8 rows)
+
+select 1 from t1_13212 where (NULL, b) not in (select a, b from t2_13212);
+ ?column? 
+----------
+(0 rows)
+
+insert into t1_13212 values (1, 1);
+insert into t2_13212 values (1, 1);
+select 1 from t1_13212 where (NULL, b) not in (select a, b from t2_13212);
+ ?column? 
+----------
+(0 rows)
+
+update t2_13212 set b = 2;
+select 1 from t1_13212 where (NULL, b) not in (select a, b from t2_13212);
+ ?column? 
+----------
+        1
+(1 row)
+
 reset search_path;
 drop schema notin cascade;
-NOTICE:  drop cascades to 16 other objects
+NOTICE:  drop cascades to 24 other objects
 DETAIL:  drop cascades to table notin.t1
 drop cascades to table notin.t2
 drop cascades to table notin.t3
@@ -1349,3 +1732,11 @@ drop cascades to table notin.table_source2
 drop cascades to table notin.table_source3
 drop cascades to table notin.table_source4
 drop cascades to table notin.table_config
+drop cascades to table notin.outerref
+drop cascades to table notin.outerref_int
+drop cascades to table notin.t1_12930
+drop cascades to table notin.t2_12930
+drop cascades to view notin.v_12930
+drop cascades to table notin.r1_12930
+drop cascades to table notin.t1_13212
+drop cascades to table notin.t2_13212

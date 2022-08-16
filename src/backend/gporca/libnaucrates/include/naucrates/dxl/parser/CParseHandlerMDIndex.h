@@ -52,6 +52,9 @@ private:
 	// index type
 	IMDIndex::EmdindexType m_index_type;
 
+	// index physical type
+	IMDIndex::EmdindexType m_index_physical_type;
+
 	// type id of index items
 	// for instance, for bitmap indexes, this is the type id of the bitmap
 	IMDId *m_mdid_item_type;

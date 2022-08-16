@@ -114,6 +114,8 @@ m/ERROR:  Cannot run ANALYZE MERGE since not all non-empty leaf partitions have 
 s/ERROR:  Cannot run ANALYZE MERGE since not all non-empty leaf partitions have available statistics for the merge.*/ERROR:  Cannot run ANALYZE MERGE since not all non-empty leaf partitions have available statistics for the merge (analyze.c:XXX)/
 m/ERROR:  invalid partition constraint on "[^"]+".*/
 s/ERROR:  invalid partition constraint on "[^"]+".*/ERROR:  invalid partition constraint on "[^"]+".*(cdbpartition.c:XXX)/
+m/ERROR:  FIPS enabled OpenSSL is required for strict FIPS mode .*/
+s/ERROR:  FIPS enabled OpenSSL is required for strict FIPS mode .*/ERROR:  FIPS enabled OpenSSL is required for strict FIPS mode (openssl.c:XXX)/
 
 # Mask out gp_execution_segment()
 m/One-Time Filter: \(gp_execution_segment\(\) = \d+/

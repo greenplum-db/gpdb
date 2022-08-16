@@ -1,0 +1,174 @@
+-- @Description Tests the PARALLEL RETRIEVE CURSOR for select replcated table
+--
+DROP TABLE IF EXISTS rt1;
+CREATE TABLE rt1 (a INT) DISTRIBUTED REPLICATED;
+insert into rt1 select generate_series(1,100);
+
+--------- Test1: Basic test for PARALLEL RETRIEVE CURSOR on replicated table
+
+-- Replicated table will execute on seg id: session_id % segment_number
+-- Declare a cursor and check gp_get_endpoints(), we can find out the real
+-- segment id by joining gp_segment_configuration. This should equal to
+-- session_id % 3 (size of demo cluster).
+1: BEGIN;
+1: DECLARE c1 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM rt1;
+1: SELECT sc.content = current_setting('gp_session_id')::int % 3 AS diff FROM gp_get_endpoints() ep, gp_segment_configuration sc WHERE ep.gp_segment_id = sc.content;
+1: ROLLBACK;
+1q:
+
+--------- Test2: Basic test for PARALLEL RETRIEVE CURSOR on replicated table
+1: BEGIN;
+1: DECLARE c1 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM rt1 ORDER BY a;
+2: BEGIN;
+2: DECLARE c2 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM rt1 ORDER BY a;
+3: BEGIN;
+3: DECLARE c3 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM rt1 ORDER BY a;
+4: BEGIN;
+4: DECLARE c4 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM rt1 ORDER BY a;
+5: BEGIN;
+5: DECLARE c5 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM rt1 ORDER BY a;
+6: BEGIN;
+6: DECLARE c6 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM rt1 ORDER BY a;
+
+-- Here because replicated table will execute on seg id: session_id % segment_number
+-- Just declare & CHECK PARALLEL RETRIEVE CURSORs in all segment_number (i.e. 3) sessions,
+-- so that there should have specific session: MOD(sessionid,3)=1;
+-- Get token only in specific session id and retrieve this token.
+7: @post_run 'parse_endpoint_info 2 1 2 3 4': SELECT endpointname,auth_token,hostname,port,state FROM gp_get_endpoints() WHERE MOD(sessionid,3)=1 LIMIT 1;
+1&: SELECT * FROM gp_wait_parallel_retrieve_cursor('c1', -1);
+2&: SELECT * FROM gp_wait_parallel_retrieve_cursor('c2', -1);
+3&: SELECT * FROM gp_wait_parallel_retrieve_cursor('c3', -1);
+4&: SELECT * FROM gp_wait_parallel_retrieve_cursor('c4', -1);
+5&: SELECT * FROM gp_wait_parallel_retrieve_cursor('c5', -1);
+6&: SELECT * FROM gp_wait_parallel_retrieve_cursor('c6', -1);
+*U: @pre_run 'set_endpoint_variable @ENDPOINT2': SELECT state FROM gp_get_segment_endpoints() WHERE endpointname='@ENDPOINT2';
+*R: @pre_run 'set_endpoint_variable @ENDPOINT2': RETRIEVE 10 FROM ENDPOINT "@ENDPOINT2";
+-- cancel all 6 sessions
+7: select pg_cancel_backend(pid) from pg_stat_activity, gp_get_endpoints() where sess_id = sessionid AND (cursorname ='c1' or cursorname='c2' or cursorname='c3' or cursorname ='c4' or cursorname='c5' or cursorname='c6');
+1<:
+2<:
+3<:
+4<:
+5<:
+6<:
+
+1: ROLLBACK;
+2: ROLLBACK;
+3: ROLLBACK;
+4: ROLLBACK;
+5: ROLLBACK;
+6: ROLLBACK;
+
+1q:
+2q:
+3q:
+4q:
+5q:
+6q:
+-1Rq:
+1Rq:
+2Rq:
+3Rq:
+4Rq:
+5Rq:
+6Rq:
+
+--------- Test3: Basic test for PARALLEL RETRIEVE CURSOR on replicated table
+1: BEGIN;
+1: DECLARE c1 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM rt1 WHERE MOD(a,3)=1;
+2: BEGIN;
+2: DECLARE c2 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM rt1 WHERE MOD(a,3)=1;
+3: BEGIN;
+3: DECLARE c3 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM rt1 WHERE MOD(a,3)=1;
+4: BEGIN;
+4: DECLARE c4 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM rt1 WHERE MOD(a,3)=1;
+5: BEGIN;
+5: DECLARE c5 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM rt1 WHERE MOD(a,3)=1;
+6: BEGIN;
+6: DECLARE c6 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM rt1 WHERE MOD(a,3)=1;
+
+-- Here because replicated table will execute on seg id: session_id % segment_number
+-- Just declare & CHECK PARALLEL RETRIEVE CURSORs in all segment_number (i.e. 3) sessions,
+-- so that there should have specific session: MOD(sessionid,3)=1;
+-- Get token only in specific session id and retrieve this token.
+7: @post_run 'parse_endpoint_info 3 1 2 3 4': SELECT endpointname,auth_token,hostname,port,state FROM gp_get_endpoints() WHERE MOD(sessionid,3)=1 LIMIT 1;
+1&: SELECT * FROM gp_wait_parallel_retrieve_cursor('c1', -1);
+2&: SELECT * FROM gp_wait_parallel_retrieve_cursor('c2', -1);
+3&: SELECT * FROM gp_wait_parallel_retrieve_cursor('c3', -1);
+4&: SELECT * FROM gp_wait_parallel_retrieve_cursor('c4', -1);
+5&: SELECT * FROM gp_wait_parallel_retrieve_cursor('c5', -1);
+6&: SELECT * FROM gp_wait_parallel_retrieve_cursor('c6', -1);
+*U: @pre_run 'set_endpoint_variable @ENDPOINT3': SELECT state FROM gp_get_segment_endpoints() WHERE endpointname='@ENDPOINT3';
+*R: @pre_run 'set_endpoint_variable @ENDPOINT3': RETRIEVE 10 FROM ENDPOINT "@ENDPOINT3";
+-- cancel all 6 sessions
+7: select pg_cancel_backend(pid) from pg_stat_activity, gp_get_endpoints() where sess_id = sessionid AND (cursorname ='c1' or cursorname='c2' or cursorname='c3' or cursorname ='c4' or cursorname='c5' or cursorname='c6');
+1<:
+2<:
+3<:
+4<:
+5<:
+6<:
+
+1: ROLLBACK;
+2: ROLLBACK;
+3: ROLLBACK;
+4: ROLLBACK;
+5: ROLLBACK;
+6: ROLLBACK;
+
+1q:
+2q:
+3q:
+4q:
+5q:
+6q:
+-1Rq:
+1Rq:
+2Rq:
+3Rq:
+4Rq:
+5Rq:
+6Rq:
+
+--------- Test4: Basic test for PARALLEL RETRIEVE CURSOR on replicated table
+1: BEGIN;
+1: DECLARE c1 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM rt1 WHERE MOD(a,3)=1 OR MOD(a,3)=2;
+2: BEGIN;
+2: DECLARE c2 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM rt1 WHERE MOD(a,3)=1 OR MOD(a,3)=2;
+3: BEGIN;
+3: DECLARE c3 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM rt1 WHERE MOD(a,3)=1 OR MOD(a,3)=2;
+4: BEGIN;
+4: DECLARE c4 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM rt1 WHERE MOD(a,3)=1 OR MOD(a,3)=2;
+5: BEGIN;
+5: DECLARE c5 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM rt1 WHERE MOD(a,3)=1 OR MOD(a,3)=2;
+6: BEGIN;
+6: DECLARE c6 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM rt1 WHERE MOD(a,3)=1 OR MOD(a,3)=2;
+
+-- Here because replicated table will execute on seg id: session_id % segment_number
+-- Just declare & CHECK PARALLEL RETRIEVE CURSORs in all segment_number (i.e. 3) sessions,
+-- so that there should have specific session: MOD(sessionid,3)=1;
+-- Get token only in specific session id and retrieve this token.
+7: @post_run 'parse_endpoint_info 4 1 2 3 4': SELECT endpointname,auth_token,hostname,port,state FROM gp_get_endpoints() WHERE MOD(sessionid,3)=1 LIMIT 1;
+1&: SELECT * FROM gp_wait_parallel_retrieve_cursor('c1', -1);
+2&: SELECT * FROM gp_wait_parallel_retrieve_cursor('c2', -1);
+3&: SELECT * FROM gp_wait_parallel_retrieve_cursor('c3', -1);
+4&: SELECT * FROM gp_wait_parallel_retrieve_cursor('c4', -1);
+5&: SELECT * FROM gp_wait_parallel_retrieve_cursor('c5', -1);
+6&: SELECT * FROM gp_wait_parallel_retrieve_cursor('c6', -1);
+*U: @pre_run 'set_endpoint_variable @ENDPOINT4': SELECT state FROM gp_get_segment_endpoints() WHERE endpointname='@ENDPOINT4';
+*R: @pre_run 'set_endpoint_variable @ENDPOINT4': RETRIEVE 10 FROM ENDPOINT "@ENDPOINT4";
+-- cancel all 6 sessions
+7: select pg_cancel_backend(pid) from pg_stat_activity, gp_get_endpoints() where sess_id = sessionid AND (cursorname ='c1' or cursorname='c2' or cursorname='c3' or cursorname ='c4' or cursorname='c5' or cursorname='c6');
+1<:
+2<:
+3<:
+4<:
+5<:
+6<:
+
+1: ROLLBACK;
+2: ROLLBACK;
+3: ROLLBACK;
+4: ROLLBACK;
+5: ROLLBACK;
+6: ROLLBACK;

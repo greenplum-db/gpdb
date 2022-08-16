@@ -8,12 +8,18 @@
       required by VMware Support.</p>
     <section>
       <title>Synopsis</title>
-      <codeblock><b>gpmt</b> tool [<varname>tool_options</varname> ...] 
-[<varname>-hostfile FILE</varname>] [<varname>-help</varname>] [<varname>-verbose</varname>]
+      <codeblock>gpmt &lt;tool> [&lt;tool_options> ...] 
+
+gpmt -hostfile &lt;FILE>
+
+gpmt -help
+
+gpmt -verbose
 </codeblock>
     </section>
     <section>
       <title>Tools</title>
+      <sectiondiv><b>Greenplum</b></sectiondiv>
       <parml>
         <plentry>
           <pt><xref href="gpmt-analyze_session.xml" type="topic" format="dita">analyze_session</xref></pt>
@@ -55,9 +61,7 @@
             RCA.</pd>
         </plentry>
       </parml>
-    </section>
-    <section>
-      <title>Options</title>
+      <sectiondiv><b>Miscellaneous</b></sectiondiv>
       <parml>
         <plentry>
           <pt><varname>hostfile</varname></pt>
@@ -76,6 +80,11 @@
           <pt><varname>version</varname></pt>
           <pd>Display the GPMT version.</pd>
         </plentry>
+      </parml>
+    </section>
+    <section>
+      <title>Global Options</title>
+      <parml>
         <plentry>
           <pt><varname>-hostfile</varname></pt>
           <pd>Limit the hosts where the tool will be run.</pd>
@@ -89,6 +98,15 @@
           <pd>Print verbose log messages.</pd>
         </plentry>
       </parml>
+    </section>
+    <section>
+      <title>Examples</title>
+      <p><b>Display gpmt version</b></p>
+      <codeblock>gpmt version</codeblock>
+      <p><b>Collect a core file</b></p>
+      <codeblock>gpmt packcore -cmd collect -core core.1234</codeblock>
+      <p><b>Show help for a specific tool</b></p>
+      <codeblock>gpmt gp_log_collector -help</codeblock>
     </section>
   </body>
 </topic>

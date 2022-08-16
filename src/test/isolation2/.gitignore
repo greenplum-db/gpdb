@@ -7,6 +7,12 @@ expected/ao_upgrade.out
 expected/ao_upgrade_optimizer.out
 sql/external_table.sql
 expected/external_table.out
+sql/fts_manual_probe.sql
+expected/fts_manual_probe.out
+sql/workfile_mgr_test.sql
+expected/workfile_mgr_test.out
+expected/idle_gang_cleaner.out
+sql/idle_gang_cleaner.sql
 
 -- ignore generated pg_basebackup tests
 /sql/pg_basebackup*.sql
@@ -14,6 +20,8 @@ expected/external_table.out
 
 # Local binaries and symbolic links
 /pg_isolation2_regress
+/test_parallel_retrieve_cursor_extended_query
+/test_parallel_retrieve_cursor_extended_query_error
 /atmsort.pm
 /explain.pm
 /GPTest.pm

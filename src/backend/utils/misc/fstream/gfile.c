@@ -331,7 +331,8 @@ gz_file_read(gfile_t* fd, void* ptr, size_t len)
 		if (e == Z_STREAM_END && z->s.avail_in == 0)
 		{
 			/* we're done decompressing all we have */
-			z->eof = 1;
+			if (flush == Z_FINISH)
+				z->eof = 1;
 		}
 		else if(e == Z_STREAM_END && z->s.avail_in > 0)
 		{
@@ -372,7 +373,11 @@ gz_file_write_one_chunk(gfile_t *fd, int do_flush)
 		z->s.avail_out = COMPRESSION_BUFFER_SIZE;
 		z->s.next_out = z->out;
 		ret1 = deflate(&(z->s), do_flush);    /* no bad return value */
-		assert(ret1 != Z_STREAM_ERROR);  /* state not clobbered */
+		if (ret1 == Z_STREAM_ERROR)
+		{
+			gfile_printf_then_putc_newline("the gz file is unrepaired, stop writing");
+			return -1;
+		}
 		have = COMPRESSION_BUFFER_SIZE - z->s.avail_out;
 		
 		if ( write_and_retry(fd, z->out, have) != have ) 
@@ -381,6 +386,7 @@ gz_file_write_one_chunk(gfile_t *fd, int do_flush)
 			 * presently gfile_close calls gz_file_close only for the on_write case so we don't need
 			 * to handle inflateEnd here
 			 */
+			gfile_printf_then_putc_newline("failed to write, the stream ends");
 			(void)deflateEnd(&(z->s));
 			ret = -1;
 			break;

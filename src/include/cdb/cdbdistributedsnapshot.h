@@ -74,6 +74,8 @@ typedef enum
 	DISTRIBUTEDSNAPSHOT_COMMITTED_IGNORE
 } DistributedSnapshotCommitted;
 
+extern int GetMaxSnapshotDistributedXidCount(void);
+
 extern DistributedSnapshotCommitted DistributedSnapshotWithLocalMapping_CommittedTest(
 	DistributedSnapshotWithLocalMapping		*dslm,
 	TransactionId 							localXid,

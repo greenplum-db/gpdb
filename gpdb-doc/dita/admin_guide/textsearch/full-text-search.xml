@@ -1,7 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Topic//EN" "topic.dtd">
-<topic id="full-text-search">
-  <title>Using Full Text Search</title>
-  <shortdesc>Greenplum Database provides data types, functions, operators, index types, and
-    configurations for querying natural language documents.</shortdesc>
-</topic>

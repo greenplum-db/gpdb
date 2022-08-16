@@ -1,0 +1,38 @@
+CREATE EXTERNAL WEB TABLE dummyHttpsServerstart (x text)
+execute E'((python @abs_srcdir@/dummyHTTPServer.py -p 8553 -f @config_file@ -t Parameter_Server -s >/dev/null 2>&1 &);for i in `seq 1 30`; do curl http://127.0.0.1:8553 >/dev/null 2>&1 && break; sleep 1; done; echo "starting...") '
+on SEGMENT 0
+FORMAT 'text' (delimiter '|');
+
+CREATE EXTERNAL WEB TABLE dummyHttpsServerstop (x text)
+execute E'(ps aux | grep dummyHTTPServer | grep -v grep |  awk \'{print $2;}\' | xargs kill) > /dev/null 2>&1; echo "stopping..."'
+on SEGMENT 0
+FORMAT 'text' (delimiter '|');
+
+-- start_ignore
+select * from dummyHttpsServerstop;
+select * from dummyHttpsServerstart;
+-- end_ignore
+
+-- test http protocol: get config from http server
+drop external table if exists s3regress_normal1;
+CREATE READABLE EXTERNAL TABLE s3regress_normal1 (date text, time text, open float, high float,
+        low float, volume int) LOCATION('s3://s3-us-east-2.amazonaws.com/us-east-2.@read_prefix@/small17/data0000 config_server=https://127.0.0.1:8553') FORMAT 'csv';
+
+SELECT count(*) FROM s3regress_normal1;
+
+DROP EXTERNAL TABLE s3regress_normal1;
+
+drop external table if exists s3regress_normal_onmaster1;
+CREATE READABLE EXTERNAL TABLE s3regress_normal_onmaster1 (date text, time text, open float, high float,
+        low float, volume int) LOCATION('s3://s3-us-east-2.amazonaws.com/us-east-2.@read_prefix@/small17/data0000 config_server=https://127.0.0.1:8553') ON MASTER FORMAT 'csv';
+
+SELECT count(*) FROM s3regress_normal_onmaster1;
+
+DROP EXTERNAL TABLE s3regress_normal_onmaster1;
+
+-- start_ignore
+select * from dummyHttpsServerstop;
+drop external table dummyHttpsServerstop;
+drop external table dummyHttpsServerstart;
+-- end_ignore
+

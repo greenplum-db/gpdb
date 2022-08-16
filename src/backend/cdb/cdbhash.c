@@ -392,9 +392,30 @@ cdb_default_distribution_opclass_for_type(Oid typeoid)
 
 /*
  * Look up the hash function, for given datatype, in given op family.
+ * It will throw an error if not found.
  */
 Oid
 cdb_hashproc_in_opfamily(Oid opfamily, Oid typeoid)
+{
+	Oid    hashfunc;
+
+	hashfunc = cdb_hashproc_in_opfamily_no_error(opfamily, typeoid);
+
+	if (!OidIsValid(hashfunc))
+	{
+		 elog(ERROR, "could not find hash function for type %u in operator family %u",
+			   typeoid, opfamily);
+	}
+
+	return hashfunc;
+}
+
+/*
+ * Look up the hash function, for given datatype, in given op family.
+ * Return InvalidOid instead of throwing error if not found.
+ */
+Oid
+cdb_hashproc_in_opfamily_no_error(Oid opfamily, Oid typeoid)
 {
 	Oid			hashfunc;
 	CatCList   *catlist;
@@ -432,10 +453,6 @@ cdb_hashproc_in_opfamily(Oid opfamily, Oid typeoid)
 	}
 
 	ReleaseSysCacheList(catlist);
-
-	if (!hashfunc)
-		elog(ERROR, "could not find hash function for type %u in operator family %u",
-			 typeoid, opfamily);
 
 	return hashfunc;
 }

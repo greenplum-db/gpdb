@@ -135,11 +135,9 @@ CPhysicalHashJoin::CreateHashRedistributeRequests(CMemoryPool *mp)
 
 			// add a separate request for each hash join key
 
-			// TODO:  - Dec 30, 2011; change fNullsColocated to false when our
-			// distribution matching can handle differences in NULL colocation
 			CDistributionSpecHashed *pdshashedCurrent =
 				GPOS_NEW(mp) CDistributionSpecHashed(
-					pdrgpexprCurrent, true /* fNullsCollocated */, opfamilies);
+					pdrgpexprCurrent, false /* fNullsCollocated */, opfamilies);
 			m_pdrgpdsRedistributeRequests->Append(pdshashedCurrent);
 		}
 	}
@@ -151,7 +149,7 @@ CPhysicalHashJoin::CreateHashRedistributeRequests(CMemoryPool *mp)
 		m_hash_opfamilies->AddRef();
 	}
 	CDistributionSpecHashed *pdshashed = GPOS_NEW(mp) CDistributionSpecHashed(
-		pdrgpexpr, true /* fNullsCollocated */, m_hash_opfamilies);
+		pdrgpexpr, false /* fNullsCollocated */, m_hash_opfamilies);
 	m_pdrgpdsRedistributeRequests->Append(pdshashed);
 }
 
@@ -394,7 +392,7 @@ CPhysicalHashJoin::PdshashedMatching(
 	}
 
 	return GPOS_NEW(mp) CDistributionSpecHashed(
-		pdrgpexpr, true /* fNullsCollocated */, opfamilies);
+		pdrgpexpr, false /* fNullsCollocated */, opfamilies);
 }
 
 

@@ -1,0 +1,15 @@
+test: parallel_retrieve_cursor/set
+test: parallel_retrieve_cursor/extended_query
+test: parallel_retrieve_cursor/corner
+test: parallel_retrieve_cursor/explain
+test: parallel_retrieve_cursor/replicated_table
+test: parallel_retrieve_cursor/special_query
+test: parallel_retrieve_cursor/status_check
+test: parallel_retrieve_cursor/status_wait
+test: parallel_retrieve_cursor/syntax
+test: parallel_retrieve_cursor/retrieve_quit_check
+test: parallel_retrieve_cursor/retrieve_quit_wait
+test: parallel_retrieve_cursor/fault_inject
+test: parallel_retrieve_cursor/security
+test: parallel_retrieve_cursor/privilege
+test: parallel_retrieve_cursor/unset

@@ -144,6 +144,7 @@
 #include "cdb/cdbgang.h"                /* cdbgang_parse_gpqeid_params */
 #include "cdb/cdbtm.h"
 #include "cdb/cdbvars.h"
+#include "cdb/cdbendpoint.h"
 #include "cdb/ic_proxy_bgworker.h"
 
 /*
@@ -187,7 +188,7 @@ volatile bool *pm_launch_walreceiver = NULL;
 typedef struct bkend
 {
 	pid_t		pid;			/* process id of backend */
-	long		cancel_key;		/* cancel key for cancels for this backend */
+	int32		cancel_key;		/* cancel key for cancels for this backend */
 	int			child_slot;		/* PMChildSlot for this backend, if any */
 
 	/*
@@ -217,6 +218,12 @@ char	   *Unix_socket_directories;
 
 /* The TCP listen address(es) */
 char	   *ListenAddresses;
+
+/*
+ * The interconnect address. We assume the interconnect is the address
+ * in gp_segment_configuration. And it's never changed at runtime.
+ */
+char	   *interconnect_address = NULL;
 
 /*
  * ReservedBackends is the number of backends reserved for superuser use.
@@ -443,14 +450,6 @@ static volatile sig_atomic_t WalReceiverRequested = false;
 static volatile bool StartWorkerNeeded = true;
 static volatile bool HaveCrashedWorker = false;
 
-/*
- * State for assigning random salts and cancel keys.
- * Also, the global MyCancelKey passes the cancel key assigned to a given
- * backend from the postmaster to that backend (via fork).
- */
-static unsigned int random_seed = 0;
-static struct timeval random_start_time;
-
 /* some GUC values used in fetching status from status transition */
 extern char	   *locale_monetary;
 extern char	   *locale_numeric;
@@ -499,8 +498,7 @@ static void processCancelRequest(Port *port, void *pkt, MsgType code);
 static int	initMasks(fd_set *rmask);
 static void report_fork_failure_to_client(Port *port, int errnum);
 static CAC_state canAcceptConnections(void);
-static long PostmasterRandom(void);
-static void RandomSalt(char *md5Salt);
+static bool RandomCancelKey(int32 *cancel_key);
 static void signal_child(pid_t pid, int signal);
 static bool SignalSomeChildren(int signal, int targets);
 static bool SignalUnconnectedWorkers(int signal);
@@ -564,7 +562,7 @@ typedef struct
 	InheritableSocket portsocket;
 	char		DataDir[MAXPGPATH];
 	pgsocket	ListenSocket[MAXLISTEN];
-	long		MyCancelKey;
+	int32		MyCancelKey;
 	int			MyPMChildSlot;
 #ifndef WIN32
 	unsigned long UsedShmemSegID;
@@ -1501,8 +1499,6 @@ PostmasterMain(int argc, char *argv[])
 	 * Remember postmaster startup time
 	 */
 	PgStartTime = GetCurrentTimestamp();
-	/* PostmasterRandom wants its own copy */
-	gettimeofday(&random_start_time, NULL);
 
 	/*
 	 * We're ready to rock and roll...
@@ -2051,6 +2047,19 @@ ServerLoop(void)
 			AbortStartTime != 0 &&
 			(now - AbortStartTime) >= SIGKILL_CHILDREN_AFTER_SECS)
 		{
+#ifdef FAULT_INJECTOR
+			if (SIMPLE_FAULT_INJECTOR("postmaster_server_loop_no_sigkill") == FaultInjectorTypeSkip)
+			{
+				/* 
+				 * This prevents sending SIGKILL to child processes for testing purpose.
+				 * Since each time hitting this fault will print a log, let's wait 0.1s just 
+				 * not to overwhelm the logs. Reaching here means we are shutting down so 
+				 * making postmaster slower should be OK (only for testing anyway).
+				 */
+				pg_usleep(100000L); 
+				continue;
+			}
+#endif
 			/* We were gentle with them before. Not anymore */
 			TerminateChildren(SIGKILL);
 			/* reset flag so we don't SIGKILL again */
@@ -2256,6 +2265,19 @@ retry1:
 		if (SSLok == 'S' && secure_open_server(port) == -1)
 			return STATUS_ERROR;
 #endif
+
+		/*
+		 * At this point we should have no data already buffered.  If we do,
+		 * it was received before we performed the SSL handshake, so it wasn't
+		 * encrypted and indeed may have been injected by a man-in-the-middle.
+		 * We report this case to the client.
+		 */
+		if (pq_buffer_has_data())
+			ereport(FATAL,
+					(errcode(ERRCODE_PROTOCOL_VIOLATION),
+					 errmsg("received unencrypted data after SSL request"),
+					 errdetail("This could be either a client-software bug or evidence of an attempted man-in-the-middle attack.")));
+
 		/* regular startup packet, cancel, etc packet should follow... */
 		/* but not another SSL negotiation request */
 		return ProcessStartupPacket(port, true);
@@ -2509,7 +2531,7 @@ retry1:
 	 * can make sense to first make a basebackup and then stream changes
 	 * starting from that.
 	 */
-	if ((am_walsender && !am_db_walsender) || am_ftshandler || IsFaultHandler)
+	if ((am_walsender && !am_db_walsender) || am_ftshandler || am_faulthandler)
 		port->database_name[0] = '\0';
 
 	/*
@@ -2531,7 +2553,7 @@ retry1:
 	switch (port->canAcceptConnections)
 	{
 		case CAC_STARTUP:
-			if ((am_ftshandler || IsFaultHandler) && am_mirror)
+			if ((am_ftshandler || am_faulthandler) && am_mirror)
 				break;
 
 			recptr = last_xlog_replay_location();
@@ -2556,6 +2578,11 @@ retry1:
 					 errdetail(POSTMASTER_IN_RECOVERY_DETAIL_MSG " %X/%X",
 						   (uint32) (recptr >> 32), (uint32) recptr)));
 			break;
+		case CAC_RESET:
+			ereport(FATAL,
+					(errcode(ERRCODE_CANNOT_CONNECT_NOW),
+					 errmsg(POSTMASTER_IN_RESET_MSG)));
+			break;
 		case CAC_TOOMANY:
 			ereport(FATAL,
 					(errcode(ERRCODE_TOO_MANY_CONNECTIONS),
@@ -2566,7 +2593,7 @@ retry1:
 			Assert(port->canAcceptConnections != CAC_WAITBACKUP);
 			break;
 		case CAC_MIRROR_READY:
-			if (am_ftshandler || IsFaultHandler)
+			if (am_ftshandler || am_faulthandler)
 			{
 				/* Even if the connection state is MIRROR_READY, the role
 				 * may change to primary during promoting. Hence, we need
@@ -2579,6 +2606,20 @@ retry1:
 							(errmsg("mirror is being promoted.")));
 				break;
 			}
+
+			/*
+			 * Allow connections if hot_standby is on and our postmaster is
+			 * acting as a standby.
+			 *
+			 * GPDB_XX_MERGE_FIXME: This is backported from master (GPDB 7)
+			 * strictly for developer testing usage only and should not be
+			 * used in production systems. Checking the GUC here is generally
+			 * not a good idea. In upstream, postmaster allows hot-standby
+			 * connections based on pmState in canAcceptConnections.
+			 * We should revert to that logic.
+			 */
+			if (EnableHotStandby)
+				break;
 
 			recptr = last_xlog_replay_location();
 			ereport(FATAL,
@@ -2594,7 +2635,7 @@ retry1:
 	}
 
 #ifdef FAULT_INJECTOR
-	if (!am_ftshandler && !IsFaultHandler && !am_walsender &&
+	if (!am_ftshandler && !am_faulthandler && !am_walsender &&
 		FaultInjector_InjectFaultIfSet("process_startup_packet",
 									   DDLNotSpecified,
 									   port->database_name /* databaseName */,
@@ -2649,7 +2690,7 @@ processCancelRequest(Port *port, void *pkt, MsgType code)
 {
 	CancelRequestPacket *canc = (CancelRequestPacket *) pkt;
 	int			backendPID;
-	long		cancelAuthCode;
+	int32		cancelAuthCode;
 	Backend    *bp;
 
 #ifndef EXEC_BACKEND
@@ -2659,7 +2700,7 @@ processCancelRequest(Port *port, void *pkt, MsgType code)
 #endif
 
 	backendPID = (int) ntohl(canc->backendPID);
-	cancelAuthCode = (long) ntohl(canc->cancelAuthCode);
+	cancelAuthCode = (int32) ntohl(canc->cancelAuthCode);
 
 	/*
 	 * See if we have a matching backend.  In the EXEC_BACKEND case, we can no
@@ -2748,8 +2789,14 @@ canAcceptConnections(void)
 		else if (!FatalError &&
 				 pmState == PM_HOT_STANDBY)
 			result = CAC_OK;	/* connection OK during hot standby */
-		else
+		else if (pmState == PM_STARTUP || pmState == PM_RECOVERY)
 			return CAC_RECOVERY;	/* else must be crash recovery */
+		else
+			/* 
+			 * otherwise must be resetting: could be PM_WAIT_BACKENDS, 
+			 * PM_WAIT_DEAD_END or PM_NO_CHILDREN.
+			 */
+			return CAC_RESET;
 	}
 
 	/*
@@ -2796,15 +2843,6 @@ ConnCreate(int serverFd)
 		ConnFree(port);
 		return NULL;
 	}
-
-	/*
-	 * Precompute password salt values to use for this connection. It's
-	 * slightly annoying to do this long in advance of knowing whether we'll
-	 * need 'em or not, but we must do the random() calls before we fork, not
-	 * after.  Else the postmaster's random sequence won't get advanced, and
-	 * all backends would end up using the same salt...
-	 */
-	RandomSalt(port->md5Salt);
 
 	/*
 	 * Allocate GSSAPI specific state struct
@@ -4421,13 +4459,21 @@ BackendStartup(Port *port)
 	 * backend will have its own copy in the forked-off process' value of
 	 * MyCancelKey, so that it can transmit the key to the frontend.
 	 */
-	MyCancelKey = PostmasterRandom();
+	if (!RandomCancelKey(&MyCancelKey))
+	{
+		ereport(LOG,
+				(errcode(ERRCODE_OUT_OF_MEMORY),
+				 errmsg("could not acquire random number")));
+		return STATUS_ERROR;
+	}
+
 	bn->cancel_key = MyCancelKey;
 
 	/* Pass down canAcceptConnections state */
 	port->canAcceptConnections = canAcceptConnections();
 	bn->dead_end = (port->canAcceptConnections != CAC_OK &&
-					port->canAcceptConnections != CAC_WAITBACKUP);
+					port->canAcceptConnections != CAC_WAITBACKUP &&
+					port->canAcceptConnections != CAC_MIRROR_READY);
 
 	/*
 	 * Unless it's a dead_end child, assign it a child slot number
@@ -4724,7 +4770,7 @@ BackendInitialize(Port *port)
 	else if (am_ftshandler)
 		init_ps_display("fts handler process", port->user_name, remote_ps_data,
 						update_process_title ? "authentication" : "");
-	else if (IsFaultHandler)
+	else if (am_faulthandler)
 		init_ps_display("fault handler process", port->user_name, remote_ps_data,
 						update_process_title ? "authentication" : "");
 	else
@@ -4756,13 +4802,6 @@ BackendRun(Port *port)
 	int			usecs;
 	int			i;
 
-	/*
-	 * Don't want backend to be able to see the postmaster random number
-	 * generator state.  We have to clobber the static random_seed *and* start
-	 * a new random sequence in the random() library function.
-	 */
-	random_seed = 0;
-	random_start_time.tv_usec = 0;
 	/* slightly hacky way to convert timestamptz into integers */
 	TimestampDifference(0, port->SessionStartTime, &secs, &usecs);
 	srandom((unsigned int) (MyProcPid ^ (usecs << 12) ^ secs));
@@ -5656,65 +5695,12 @@ StartupPacketTimeoutHandler(void)
 
 
 /*
- * RandomSalt
+ * Generate a random cancel key.
  */
-static void
-RandomSalt(char *md5Salt)
+static bool
+RandomCancelKey(int32 *cancel_key)
 {
-	long		rand;
-
-	/*
-	 * We use % 255, sacrificing one possible byte value, so as to ensure that
-	 * all bits of the random() value participate in the result. While at it,
-	 * add one to avoid generating any null bytes.
-	 */
-	rand = PostmasterRandom();
-	md5Salt[0] = (rand % 255) + 1;
-	rand = PostmasterRandom();
-	md5Salt[1] = (rand % 255) + 1;
-	rand = PostmasterRandom();
-	md5Salt[2] = (rand % 255) + 1;
-	rand = PostmasterRandom();
-	md5Salt[3] = (rand % 255) + 1;
-}
-
-/*
- * PostmasterRandom
- *
- * Caution: use this only for values needed during connection-request
- * processing.  Otherwise, the intended property of having an unpredictable
- * delay between random_start_time and random_stop_time will be broken.
- */
-static long
-PostmasterRandom(void)
-{
-	/*
-	 * Select a random seed at the time of first receiving a request.
-	 */
-	if (random_seed == 0)
-	{
-		do
-		{
-			struct timeval random_stop_time;
-
-			gettimeofday(&random_stop_time, NULL);
-
-			/*
-			 * We are not sure how much precision is in tv_usec, so we swap
-			 * the high and low 16 bits of 'random_stop_time' and XOR them
-			 * with 'random_start_time'. On the off chance that the result is
-			 * 0, we loop until it isn't.
-			 */
-			random_seed = random_start_time.tv_usec ^
-				((random_stop_time.tv_usec << 16) |
-				 ((random_stop_time.tv_usec >> 16) & 0xffff));
-		}
-		while (random_seed == 0);
-
-		srandom(random_seed);
-	}
-
-	return random();
+	return pg_strong_random(cancel_key, sizeof(int32));
 }
 
 /*
@@ -5915,16 +5901,23 @@ StartAutovacuumWorker(void)
 	 */
 	if (canAcceptConnections() == CAC_OK)
 	{
+		/*
+		 * Compute the cancel key that will be assigned to this session.
+		 * We probably don't need cancel keys for autovac workers, but
+		 * we'd better have something random in the field to prevent
+		 * unfriendly people from sending cancels to them.
+		 */
+		if (!RandomCancelKey(&MyCancelKey))
+		{
+			ereport(LOG,
+					(errcode(ERRCODE_INTERNAL_ERROR),
+					 errmsg("could not acquire random number")));
+			return;
+		}
+
 		bn = (Backend *) malloc(sizeof(Backend));
 		if (bn)
 		{
-			/*
-			 * Compute the cancel key that will be assigned to this session.
-			 * We probably don't need cancel keys for autovac workers, but
-			 * we'd better have something random in the field to prevent
-			 * unfriendly people from sending cancels to them.
-			 */
-			MyCancelKey = PostmasterRandom();
 			bn->cancel_key = MyCancelKey;
 
 			/* Autovac workers are not dead_end and need a child slot */
@@ -6290,8 +6283,25 @@ bgworker_should_start_mpp(BackgroundWorker *worker)
 static bool
 assign_backendlist_entry(RegisteredBgWorker *rw)
 {
-	Backend    *bn = malloc(sizeof(Backend));
+	Backend    *bn;
 
+	/*
+	 * Compute the cancel key that will be assigned to this session. We
+	 * probably don't need cancel keys for background workers, but we'd better
+	 * have something random in the field to prevent unfriendly people from
+	 * sending cancels to them.
+	 */
+	if (!RandomCancelKey(&MyCancelKey))
+	{
+		ereport(LOG,
+				(errcode(ERRCODE_INTERNAL_ERROR),
+				 errmsg("could not acquire random number")));
+
+		rw->rw_crashed_at = GetCurrentTimestamp();
+		return false;
+	}
+
+	bn = malloc(sizeof(Backend));
 	if (bn == NULL)
 	{
 		ereport(LOG,
@@ -6300,15 +6310,7 @@ assign_backendlist_entry(RegisteredBgWorker *rw)
 		return false;
 	}
 
-	/*
-	 * Compute the cancel key that will be assigned to this session. We
-	 * probably don't need cancel keys for background workers, but we'd better
-	 * have something random in the field to prevent unfriendly people from
-	 * sending cancels to them.
-	 */
-	MyCancelKey = PostmasterRandom();
 	bn->cancel_key = MyCancelKey;
-
 	bn->child_slot = MyPMChildSlot = AssignPostmasterChildSlot();
 	bn->bkend_type = BACKEND_TYPE_BGWORKER;
 	bn->dead_end = false;

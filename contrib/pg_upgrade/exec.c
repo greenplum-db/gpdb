@@ -10,6 +10,7 @@
 #include "postgres_fe.h"
 
 #include "pg_upgrade.h"
+#include "greenplum/pg_upgrade_greenplum.h"
 
 #include <fcntl.h>
 #include <sys/types.h>
@@ -217,8 +218,12 @@ verify_directories(void)
 
 	check_bin_dir(&old_cluster);
 	check_data_dir(old_cluster.pgdata);
-	check_bin_dir(&new_cluster);
-	check_data_dir(new_cluster.pgdata);
+
+	if(!is_skip_target_check())
+	{
+	  check_bin_dir(&new_cluster);
+	  check_data_dir(new_cluster.pgdata);
+	}
 }
 
 

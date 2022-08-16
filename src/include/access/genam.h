@@ -112,6 +112,13 @@ typedef enum IndexUniqueCheck
 } IndexUniqueCheck;
 
 
+/* Nullable "ORDER BY col op const" distance */
+typedef struct IndexOrderByDistance
+{
+	double		value;
+	bool		isnull;
+} IndexOrderByDistance;
+
 /*
  * generalized index_ interface routines (in indexam.c)
  */
@@ -148,7 +155,7 @@ extern ItemPointer index_getnext_tid(IndexScanDesc scan,
 				  ScanDirection direction);
 extern HeapTuple index_fetch_heap(IndexScanDesc scan);
 extern HeapTuple index_getnext(IndexScanDesc scan, ScanDirection direction);
-extern Node *index_getbitmap(IndexScanDesc scan, Node *bitmap);
+extern int64 index_getbitmap(IndexScanDesc scan, Node **bitmapP);
 
 extern IndexBulkDeleteResult *index_bulk_delete(IndexVacuumInfo *info,
 				  IndexBulkDeleteResult *stats,

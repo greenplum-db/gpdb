@@ -260,7 +260,7 @@
         </dxl:And>
       </dxl:LogicalJoin>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="40">
+    <dxl:Plan Id="0" SpaceSize="24">
       <dxl:HashJoin JoinType="Inner">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="437.001095" Rows="1.000000" Width="32"/>

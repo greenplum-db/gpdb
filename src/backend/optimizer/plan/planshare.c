@@ -27,7 +27,7 @@ int get_plan_share_id(Plan *p)
 {
 	if(IsA(p, Material))
 		return ((Material *) p)->share_id;
-	
+
 	if(IsA(p, Sort))
 		return ((Sort *) p)->share_id;
 
@@ -52,7 +52,7 @@ ShareType get_plan_share_type(Plan *p)
 {
 	if(IsA(p, Material))
 		return ((Material *) p)->share_type;
-	
+
 	if(IsA(p, Sort))
 		return ((Sort *) p)->share_type ;
 
@@ -127,7 +127,7 @@ void incr_plan_nsharer_xslice(Plan *p)
 	}
 }
 
-static ShareInputScan *make_shareinputscan(PlannerInfo *root, Plan *inputplan) 
+static ShareInputScan *make_shareinputscan(PlannerInfo *root, Plan *inputplan)
 {
 	ShareInputScan *sisc = NULL;
 	Path sipath;
@@ -153,6 +153,7 @@ static ShareInputScan *make_shareinputscan(PlannerInfo *root, Plan *inputplan)
 	set_plan_share_type((Plan *) sisc, get_plan_share_type(inputplan));
 	set_plan_share_id((Plan *) sisc, get_plan_share_id(inputplan));
 	sisc->driver_slice = -1;
+    sisc->discard_output = false;
 
 	sisc->scan.plan.qual = NIL;
 	sisc->scan.plan.righttree = NULL;
@@ -185,7 +186,7 @@ prepare_plan_for_sharing(PlannerInfo *root, Plan *common)
 	{
 		shared = common->lefttree;
 	}
-	
+
 	else if(IsA(common, Material))
 	{
 		Material *m = (Material *) common;
@@ -220,7 +221,7 @@ prepare_plan_for_sharing(PlannerInfo *root, Plan *common)
 		shared->plan_rows = common->plan_rows;
 		shared->plan_width = common->plan_width;
 		shared->dispatch = common->dispatch;
-		shared->flow = copyObject(common->flow); 
+		shared->flow = copyObject(common->flow);
 		shared->extParam = bms_copy(common->extParam);
 		shared->allParam = bms_copy(common->allParam);
 
@@ -275,7 +276,7 @@ share_plan(PlannerInfo *root, Plan *common, int numpartners)
 /*
  * Return the total cost of sharing common numpartner times.
  * If the planner need to make a decision whether the common subplan should be shared
- * or should be duplicated, planner should compare the cost returned by this function 
+ * or should be duplicated, planner should compare the cost returned by this function
  * against common->total_cost * numpartners.
  */
 Cost cost_share_plan(Plan *common, PlannerInfo *root, int numpartners)

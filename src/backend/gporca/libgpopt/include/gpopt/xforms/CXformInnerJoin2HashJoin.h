@@ -25,6 +25,7 @@ using namespace gpos;
 //
 //	@doc:
 //		Transform inner join to inner Hash Join
+//		Deprecated in favor of CXformImplementInnerJoin.
 //
 //---------------------------------------------------------------------------
 class CXformInnerJoin2HashJoin : public CXformImplementation

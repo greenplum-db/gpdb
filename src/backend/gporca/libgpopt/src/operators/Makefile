@@ -150,6 +150,7 @@ OBJS        = CExpression.o \
               CScalarArrayCoerceExpr.o \
               CScalarArrayRef.o \
               CScalarArrayRefIndexList.o \
+              CScalarValuesList.o \
               CScalarAssertConstraint.o \
               CScalarAssertConstraintList.o \
               CScalarBitmapBoolOp.o \
@@ -176,6 +177,7 @@ OBJS        = CExpression.o \
               CScalarOp.o \
               CScalarProjectElement.o \
               CScalarProjectList.o \
+              CScalarSortGroupClause.o \
               CScalarSubquery.o \
               CScalarSubqueryAll.o \
               CScalarSubqueryAny.o \
@@ -185,7 +187,8 @@ OBJS        = CExpression.o \
               CScalarSwitchCase.o \
               CScalarWindowFunc.o \
               CStrictHashedDistributions.o \
-              CWindowPreprocessor.o
+              CWindowPreprocessor.o \
+              COrderedAggPreprocessor.o
 
 include $(top_srcdir)/src/backend/common.mk
 

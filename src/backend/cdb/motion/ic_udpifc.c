@@ -36,6 +36,7 @@
 #include "libpq/ip.h"
 #include "port/atomics.h"
 #include "port/pg_crc32c.h"
+#include "postmaster/postmaster.h"
 #include "storage/latch.h"
 #include "storage/pmsignal.h"
 #include "utils/builtins.h"
@@ -279,13 +280,6 @@ struct ReceiveControlInfo
 
 	/* Cursor history table. */
 	CursorICHistoryTable cursorHistoryTable;
-
-	/*
-	 * Last distributed transaction id when SetupUDPInterconnect is called.
-	 * Coupled with cursorHistoryTable, it is used to handle multiple
-	 * concurrent cursor cases.
-	 */
-	DistributedTransactionId lastDXatId;
 };
 
 /*
@@ -671,7 +665,6 @@ static ChunkTransportStateEntry *startOutgoingUDPConnections(ChunkTransportState
 							int *pOutgoingCount);
 static void setupOutgoingUDPConnection(ChunkTransportState *transportStates,
 						   ChunkTransportStateEntry *pEntry, MotionConn *conn);
-static char *formatSockAddr(struct sockaddr *sa, char *buf, int bufsize);
 
 /* Connection hash table functions. */
 static bool initConnHashTable(ConnHashTable *ht, MemoryContext ctx);
@@ -1191,7 +1184,6 @@ setupUDPListeningSocket(int *listenerSocketFd, uint16 *listenerPort, int *txFami
 	memset(&hints, 0, sizeof(struct addrinfo));
 	hints.ai_family = AF_UNSPEC;	/* Allow IPv4 or IPv6 */
 	hints.ai_socktype = SOCK_DGRAM; /* Datagram socket */
-	hints.ai_flags = AI_PASSIVE;	/* For wildcard IP address */
 	hints.ai_protocol = 0;		/* Any protocol */
 
 #ifdef USE_ASSERT_CHECKING
@@ -1200,7 +1192,23 @@ setupUDPListeningSocket(int *listenerSocketFd, uint16 *listenerPort, int *txFami
 #endif
 
 	fun = "getaddrinfo";
-	s = getaddrinfo(NULL, service, &hints, &addrs);
+	if (Gp_interconnect_address_type == INTERCONNECT_ADDRESS_TYPE_UNICAST)
+	{
+		Assert(interconnect_address && strlen(interconnect_address) > 0);
+		hints.ai_flags |= AI_NUMERICHOST;
+		ereportif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG3,
+				  (errmsg("getaddrinfo called with unicast address: %s",
+						  interconnect_address)));
+	}
+	else
+	{
+		Assert(interconnect_address == NULL);
+		hints.ai_flags |= AI_PASSIVE;
+		ereportif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG3,
+				  (errmsg("getaddrinfo called with wildcard address")));
+	}
+
+	s = getaddrinfo(interconnect_address, service, &hints, &addrs);
 	if (s != 0)
 		elog(ERROR, "getaddrinfo says %s", gai_strerror(s));
 
@@ -1438,7 +1446,6 @@ InitMotionUDPIFC(int *listenerSocketFd, uint16 *listenerPort)
 
 	/* allocate a buffer for sending disorder messages */
 	rx_control_info.disorderBuffer = palloc0(MIN_PACKET_SIZE);
-	rx_control_info.lastDXatId = InvalidTransactionId;
 	rx_control_info.lastTornIcId = 0;
 	initCursorICHistoryTable(&rx_control_info.cursorHistoryTable);
 
@@ -2648,12 +2655,6 @@ startOutgoingUDPConnections(ChunkTransportState *transportStates,
 
 	recvSlice = (Slice *) list_nth(transportStates->sliceTable->slices, sendSlice->parentIndex);
 
-	/*
-	 * Potentially introduce a Bug (MPP-17186). The workaround is to turn off
-	 * log_hostname guc.
-	 */
-	adjustMasterRouting(recvSlice);
-
 	if (gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG)
 		elog(DEBUG1, "Interconnect seg%d slice%d setting up sending motion node",
 			 GpIdentity.segindex, sendSlice->sliceIndex);
@@ -2808,7 +2809,7 @@ setupOutgoingUDPConnection(ChunkTransportState *transportStates, ChunkTransportS
 	getSockAddr(&conn->peer, &conn->peer_len, cdbProc->listenerAddr, cdbProc->listenerPort);
 
 	/* Save the destination IP address */
-	formatSockAddr((struct sockaddr *) &conn->peer, conn->remoteHostAndPort,
+	format_sockaddr(&conn->peer, conn->remoteHostAndPort,
 				   sizeof(conn->remoteHostAndPort));
 
 	Assert(conn->peer.ss_family == AF_INET || conn->peer.ss_family == AF_INET6);
@@ -3078,29 +3079,32 @@ SetupUDPIFCInterconnect_Internal(SliceTable *sliceTable)
 
 	if (Gp_role == GP_ROLE_DISPATCH)
 	{
-		DistributedTransactionId distTransId = 0;
-		TransactionId localTransId = 0;
-		TransactionId subtransId = 0;
-
-		GetAllTransactionXids(&(distTransId),
-							  &(localTransId),
-							  &(subtransId));
-
-		/*
-		 * Prune only when we are not in the save transaction and there is a
-		 * large number of entries in the table
+		/* 
+		 * Prune the history table if it is too large
+		 * 
+		 * We only keep history of constant length so that
+		 * - The history table takes only constant amount of memory.
+		 * - It is long enough so that it is almost impossible to receive 
+		 *   packets from an IC instance that is older than the first one 
+		 *   in the history.
 		 */
-		if (distTransId != rx_control_info.lastDXatId && rx_control_info.cursorHistoryTable.count > (2 * CURSOR_IC_TABLE_SIZE))
+		if (rx_control_info.cursorHistoryTable.count > (2 * CURSOR_IC_TABLE_SIZE))
 		{
-			if (gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG)
-				elog(DEBUG1, "prune cursor history table (count %d), icid %d", rx_control_info.cursorHistoryTable.count, sliceTable->ic_instance_id);
-			pruneCursorIcEntry(&rx_control_info.cursorHistoryTable, sliceTable->ic_instance_id);
+			uint32 prune_id = sliceTable->ic_instance_id - CURSOR_IC_TABLE_SIZE;
+
+			/* 
+			 * Only prune if we didn't underflow -- also we want the prune id
+			 * to be newer than the limit (hysteresis)
+			 */
+			if (prune_id < sliceTable->ic_instance_id)
+			{
+				if (gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG)
+					elog(DEBUG1, "prune cursor history table (count %d), icid %d", rx_control_info.cursorHistoryTable.count, sliceTable->ic_instance_id);
+				pruneCursorIcEntry(&rx_control_info.cursorHistoryTable, prune_id);
+			}
 		}
 
 		addCursorIcEntry(&rx_control_info.cursorHistoryTable, sliceTable->ic_instance_id, gp_command_count);
-
-		/* save the latest transaction id. */
-		rx_control_info.lastDXatId = distTransId;
 	}
 
 	/* now we'll do some setup for each of our Receiving Motion Nodes. */
@@ -5744,96 +5748,6 @@ doSendStopMessageUDPIFC(ChunkTransportState *transportStates, int16 motNodeID)
 }
 
 /*
- * formatSockAddr
- * 		Format sockaddr.
- *
- * NOTE: Because this function can be called in a thread (rxThreadFunc),
- * it must not use services such as elog, ereport, palloc/pfree and StringInfo.
- * elog is NOT thread-safe.  Developers should instead use something like:
- *
- *	if (DEBUG3 >= log_min_messages)
- *		write_log("my brilliant log statement here.");
- */
-char *
-formatSockAddr(struct sockaddr *sa, char *buf, int bufsize)
-{
-	/* Save remote host:port string for error messages. */
-	if (sa->sa_family == AF_INET)
-	{
-		struct sockaddr_in *sin = (struct sockaddr_in *) sa;
-		uint32		saddr = ntohl(sin->sin_addr.s_addr);
-
-		snprintf(buf, bufsize, "%d.%d.%d.%d:%d",
-				 (saddr >> 24) & 0xff,
-				 (saddr >> 16) & 0xff,
-				 (saddr >> 8) & 0xff,
-				 saddr & 0xff,
-				 ntohs(sin->sin_port));
-	}
-#ifdef HAVE_IPV6
-	else if (sa->sa_family == AF_INET6)
-	{
-		char		remote_port[32];
-
-		remote_port[0] = '\0';
-		buf[0] = '\0';
-
-		if (bufsize > 10)
-		{
-			buf[0] = '[';
-			buf[1] = '\0';		/* in case getnameinfo fails */
-
-			/*
-			 * inet_ntop isn't portable. //inet_ntop(AF_INET6,
-			 * &sin6->sin6_addr, buf, bufsize - 8);
-			 *
-			 * postgres has a standard routine for converting addresses to
-			 * printable format, which works for IPv6, IPv4, and Unix domain
-			 * sockets.  I've changed this routine to use that, but I think
-			 * the entire formatSockAddr routine could be replaced with it.
-			 */
-			int			ret = pg_getnameinfo_all((const struct sockaddr_storage *) sa, sizeof(struct sockaddr_in6),
-												 buf + 1, bufsize - 10,
-												 remote_port, sizeof(remote_port),
-												 NI_NUMERICHOST | NI_NUMERICSERV);
-
-			if (ret != 0)
-			{
-				write_log("getnameinfo returned %d: %s, and says %s port %s",
-						  ret, gai_strerror(ret), buf, remote_port);
-
-				/*
-				 * Fall back to using our internal inet_ntop routine, which
-				 * really is for inet datatype This is because of a bug in
-				 * solaris, where getnameinfo sometimes fails Once we find out
-				 * why, we can remove this
-				 */
-				snprintf(remote_port, sizeof(remote_port), "%d", ((struct sockaddr_in6 *) sa)->sin6_port);
-
-				/*
-				 * This is nasty: our internal inet_net_ntop takes
-				 * PGSQL_AF_INET6, not AF_INET6, which is very odd... They are
-				 * NOT the same value (even though PGSQL_AF_INET == AF_INET
-				 */
-#define PGSQL_AF_INET6	(AF_INET + 1)
-				inet_net_ntop(PGSQL_AF_INET6, sa, sizeof(struct sockaddr_in6), buf + 1, bufsize - 10);
-				write_log("Our alternative method says %s]:%s", buf, remote_port);
-
-			}
-			buf += strlen(buf);
-			strcat(buf, "]");
-			buf++;
-		}
-		snprintf(buf, 8, ":%s", remote_port);
-	}
-#endif
-	else
-		snprintf(buf, bufsize, "?host?:?port?");
-
-	return buf;
-}								/* formatSockAddr */
-
-/*
  * dispatcherAYT
  * 		Check the connection from the dispatcher to verify that it is still there.
  *
@@ -5888,16 +5802,12 @@ dispatcherAYT(void)
 static void
 checkQDConnectionAlive(void)
 {
-	if (!dispatcherAYT())
+	if (Gp_role == GP_ROLE_EXECUTE)
 	{
-		if (Gp_role == GP_ROLE_EXECUTE)
+		if (!dispatcherAYT())
 			ereport(ERROR,
 					(errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
-					 errmsg("interconnect error segment lost contact with master (recv)")));
-		else
-			ereport(ERROR,
-					(errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
-					 errmsg("interconnect error master lost contact with client (recv)")));
+					 errmsg("interconnect error segment lost contact with master (recv): %m")));
 	}
 }
 
@@ -6606,7 +6516,7 @@ handleMismatch(icpkthdr *pkt, struct sockaddr_storage *peer, int peer_len)
 				write_log("ACKING PACKET WITH FLAGS: pkt->seq %d 0x%x [pkt->icId %d last-teardown %d interconnect_id %d]",
 						  pkt->seq, dummyconn.conn_info.flags, pkt->icId, rx_control_info.lastTornIcId, ic_control_info.ic_instance_id);
 
-			formatSockAddr((struct sockaddr *) &dummyconn.peer, buf, sizeof(buf));
+			format_sockaddr(&dummyconn.peer, buf, sizeof(buf));
 
 			if (DEBUG1 >= log_min_messages)
 				write_log("ACKING PACKET TO %s", buf);
@@ -6986,7 +6896,7 @@ SendDummyPacket(void)
 	hint.ai_flags = AI_NUMERICHOST;
 #endif
 
-	ret = pg_getaddrinfo_all(NULL, port_str, &hint, &addrs);
+	ret = pg_getaddrinfo_all(interconnect_address, port_str, &hint, &addrs);
 	if (ret || !addrs)
 	{
 		elog(LOG, "send dummy packet failed, pg_getaddrinfo_all(): %m");

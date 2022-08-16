@@ -56,6 +56,15 @@ typedef enum
 								*/
 } FtsMessageState;
 
+/* States indicating what status PM is in restarting. */
+typedef enum PMRestartState
+{
+	PM_NOT_IN_RESTART, /* PM is not restarting */
+	PM_IN_RESETTING, /* PM is in resetting */
+	PM_IN_RECOVERY_MAKING_PROGRESS, /* PM is in recovery and is making progress */
+	PM_IN_RECOVERY_NOT_MAKING_PROGRESS /* PM is in recovery but not making progress*/
+} PMRestartState;
+
 #define IsFtsMessageStateSuccess(state) (state == FTS_PROBE_SUCCESS || \
 		state == FTS_SYNCREP_OFF_SUCCESS || state == FTS_PROMOTE_SUCCESS)
 #define IsFtsMessageStateFailed(state) (state == FTS_PROBE_FAILED || \
@@ -83,7 +92,7 @@ typedef struct
 	struct pg_conn *conn;         /* libpq connection object */
 	int retry_count;
 	XLogRecPtr xlogrecptr;
-	bool recovery_making_progress;
+	PMRestartState restart_state;
 } fts_segment_info;
 
 typedef struct

@@ -52,6 +52,7 @@
 #include "utils/acl.h"
 #include "utils/faultinjector.h"
 #include "utils/fmgroids.h"
+#include "utils/guc.h"
 #include "utils/inval.h"
 #include "utils/lsyscache.h"
 #include "utils/memutils.h"
@@ -304,6 +305,9 @@ bool
 cluster_rel(Oid tableOid, Oid indexOid, bool recheck, bool verbose, bool printError)
 {
 	Relation	OldHeap;
+	Oid			save_userid;
+	int			save_sec_context;
+	int			save_nestlevel;
 
 	/* Check for user-requested abort. */
 	CHECK_FOR_INTERRUPTS();
@@ -336,6 +340,16 @@ cluster_rel(Oid tableOid, Oid indexOid, bool recheck, bool verbose, bool printEr
 	}
 	
 	/*
+	 * Switch to the table owner's userid, so that any index functions are run
+	 * as that user.  Also lock down security-restricted operations and
+	 * arrange to make GUC variable changes local to this command.
+	 */
+	GetUserIdAndSecContext(&save_userid, &save_sec_context);
+	SetUserIdAndSecContext(OldHeap->rd_rel->relowner,
+						   save_sec_context | SECURITY_RESTRICTED_OPERATION);
+	save_nestlevel = NewGUCNestLevel();
+
+	/*
 	 * Since we may open a new transaction for each relation, we have to check
 	 * that the relation still is what we think it is.
 	 *
@@ -349,10 +363,10 @@ cluster_rel(Oid tableOid, Oid indexOid, bool recheck, bool verbose, bool printEr
 		Form_pg_index indexForm;
 
 		/* Check that the user still owns the relation */
-		if (!pg_class_ownercheck(tableOid, GetUserId()))
+		if (!pg_class_ownercheck(tableOid, save_userid))
 		{
 			relation_close(OldHeap, AccessExclusiveLock);
-			return false;
+			goto out;
 		}
 
 		/*
@@ -366,7 +380,7 @@ cluster_rel(Oid tableOid, Oid indexOid, bool recheck, bool verbose, bool printEr
 		if (RELATION_IS_OTHER_TEMP(OldHeap))
 		{
 			relation_close(OldHeap, AccessExclusiveLock);
-			return false;		
+			goto out;
 		}
 
 		if (OidIsValid(indexOid))
@@ -377,7 +391,7 @@ cluster_rel(Oid tableOid, Oid indexOid, bool recheck, bool verbose, bool printEr
 			if (!SearchSysCacheExists1(RELOID, ObjectIdGetDatum(indexOid)))
 			{
 				relation_close(OldHeap, AccessExclusiveLock);
-				return false;
+				goto out;
 			}
 
 			/*
@@ -387,14 +401,14 @@ cluster_rel(Oid tableOid, Oid indexOid, bool recheck, bool verbose, bool printEr
 			if (!HeapTupleIsValid(tuple))		/* probably can't happen */
 			{
 				relation_close(OldHeap, AccessExclusiveLock);
-				return false;
+				goto out;
 			}
 			indexForm = (Form_pg_index) GETSTRUCT(tuple);
 			if (!indexForm->indisclustered)
 			{
 				ReleaseSysCache(tuple);
 				relation_close(OldHeap, AccessExclusiveLock);
-				return false;
+				goto out;
 			}
 			ReleaseSysCache(tuple);
 		}
@@ -448,7 +462,7 @@ cluster_rel(Oid tableOid, Oid indexOid, bool recheck, bool verbose, bool printEr
 		!RelationIsPopulated(OldHeap))
 	{
 		relation_close(OldHeap, AccessExclusiveLock);
-		return false;
+		goto out;
 	}
 
 	/*
@@ -462,8 +476,23 @@ cluster_rel(Oid tableOid, Oid indexOid, bool recheck, bool verbose, bool printEr
 	/* rebuild_relation does all the dirty work */
 	rebuild_relation(OldHeap, indexOid, verbose);
 
+	/* Roll back any GUC changes executed by index functions */
+	AtEOXact_GUC(false, save_nestlevel);
+
+	/* Restore userid and security context */
+	SetUserIdAndSecContext(save_userid, save_sec_context);
+
 	/* NB: rebuild_relation does heap_close() on OldHeap */
 	return true;
+
+out:
+	/* Roll back any GUC changes executed by index functions */
+	AtEOXact_GUC(false, save_nestlevel);
+
+	/* Restore userid and security context */
+	SetUserIdAndSecContext(save_userid, save_sec_context);
+
+	return false;
 }
 
 /*
@@ -1496,12 +1525,26 @@ swap_relation_files(Oid r1, Oid r2, bool target_is_pg_class,
 		relform1->relfrozenxid = frozenXid;
 		Assert(MultiXactIdIsValid(cutoffMulti));
 		relform1->relminmxid = cutoffMulti;
-		/*
-		 * Don't know partition parent or not here but passing false is perfect
-		 * for assertion, as valid relfrozenxid means it shouldn't be parent.
-		 */
-		Assert(should_have_valid_relfrozenxid(relform1->relkind,
-											  relform1->relstorage, false));
+
+		if (relform1->relkind == RELKIND_MATVIEW &&
+			(relform1->relstorage == RELSTORAGE_EXTERNAL ||
+			 relform1->relstorage == RELSTORAGE_FOREIGN  ||
+			 relform1->relstorage == RELSTORAGE_VIRTUAL ||
+			 relform1->relstorage == RELSTORAGE_AOROWS ||
+			 relform1->relstorage == RELSTORAGE_AOCOLS))
+		{
+			relform1->relfrozenxid = InvalidTransactionId;
+			relform1->relminmxid = InvalidTransactionId;
+		}
+		else
+		{
+			/*
+			 * Don't know partition parent or not here but passing false is perfect
+			 * for assertion, as valid relfrozenxid means it shouldn't be parent.
+			 */
+			Assert(should_have_valid_relfrozenxid(relform1->relkind,
+												  relform1->relstorage, false));
+		}
 	}
 
 	/*

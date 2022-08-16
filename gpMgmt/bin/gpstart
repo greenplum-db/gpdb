@@ -398,7 +398,10 @@ class GpStart:
 
     ######
     def _startMaster(self):
-        logger.info("Starting Master instance in admin mode")
+        if self.restricted:
+            logger.info("Starting Master instance in admin and RESTRICTED mode")
+        else:
+            logger.info("Starting Master instance in admin mode")
 
         cmd = gp.MasterStart('master in utility mode with restricted set to {0}'.format(self.restricted),
                              self.master_datadir, self.port, self.era, wrapper=self.wrapper,
@@ -408,7 +411,10 @@ class GpStart:
         cmd.run()
 
         if cmd.get_results().rc != 0:
-            logger.fatal("Failed to start Master instance in admin mode")
+            if self.restricted:
+                logger.fatal("Failed to start Master instance in admin and RESTRICTED mode")
+            else:
+                logger.fatal("Failed to start Master instance in admin mode")
             cmd.validate()
 
         logger.info("Obtaining Greenplum Master catalog information")

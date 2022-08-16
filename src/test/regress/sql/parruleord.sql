@@ -103,7 +103,7 @@ select parchildrelid::regclass, parname, parruleord
    on p.oid = r.paroid where p.parrelid = 'pt_range'::regclass
    order by parruleord;
 
--- create two holes, make sure that the new partiton plugs the hole
+-- create two holes, make sure that the new partition plugs the hole
 -- that is closest to the end.
 alter table pt_range drop partition foo2;
 

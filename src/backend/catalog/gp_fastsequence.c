@@ -44,8 +44,8 @@ static void insert_or_update_fastsequence(
  * only exist for lifespan of the corresponding table.
  *
  * Given those special needs, this function inserts 2 initial rows to
- * fastsequence for segfile 0 (used for special cases like CTAS and ALTER) and
- * segfile 1. Only segfile 0 or segfile 1 can be used to insert tuples within
+ * fastsequence for segfile 0 (used for special cases like CTAS and ALTER, TRUNCATE) 
+ * and segfile 1. Only segfile 0 or segfile 1 can be used to insert tuples within
  * same transaction creating the table hence initial entry is only created for
  * these. Entries for rest of segfiles will get created with frozenXids during
  * inserts. These entries are inserted while creating the AO/CO table to

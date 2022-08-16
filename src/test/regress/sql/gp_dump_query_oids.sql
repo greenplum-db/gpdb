@@ -74,6 +74,11 @@ SELECT array['ptable'::regclass::oid::text,
              'ctable'::regclass::oid::text,
              'cctable'::regclass::oid::text] <@  (string_to_array((SELECT info->>'relids' FROM minirepro_partition_test WHERE id = 2),','));
 SELECT array['pg_class'::regclass::oid::text] <@  (string_to_array((SELECT info->>'relids' FROM minirepro_partition_test WHERE id = 3),','));
+
+CREATE TABLE unknown_to_text_dump (pid varchar(1), dummy varchar(1)) DISTRIBUTED BY (pid);
+CREATE VIEW unknown_view AS SELECT 'D' as dummy;
+SELECT count(*) from (SELECT pg_catalog.gp_dump_query_oids('select * from unknown_to_text_dump join unknown_view on unknown_to_text_dump.dummy = unknown_view.dummy')) x;
+
 DROP TABLE foo;
 DROP TABLE cctable;
 DROP TABLE ctable;
@@ -81,3 +86,5 @@ DROP TABLE ptable;
 DROP TABLE minirepro_partition_test;
 DROP FUNCTION dumptestfunc(text);
 DROP FUNCTION dumptestfunc2(text);
+DROP TABLE unknown_to_text_dump;
+DROP VIEW unknown_view;

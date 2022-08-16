@@ -83,10 +83,12 @@ extern void ExplainOneUtility(Node *utilityStmt, IntoClause *into,
 
 extern void ExplainOnePlan(PlannedStmt *plannedstmt, IntoClause *into,
 			   ExplainState *es, const char *queryString,
-			   ParamListInfo params, const instr_time *planduration);
+			   ParamListInfo params, const instr_time *planduration,
+			   int cursorOptions);
 
 extern void ExplainPrintPlan(ExplainState *es, QueryDesc *queryDesc);
 extern void ExplainPrintTriggers(ExplainState *es, QueryDesc *queryDesc);
+extern void ExplainParallelRetrieveCursor(ExplainState *es, QueryDesc* queryDesc);
 
 extern void ExplainQueryText(ExplainState *es, QueryDesc *queryDesc);
 

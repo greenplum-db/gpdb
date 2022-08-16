@@ -28,7 +28,7 @@
         tables referencing files in a Hadoop file system. If the Hadoop cluster is secured with
         Kerberos ("Kerberized"), you must configure Greenplum Database and PXF to allow users
         accessing external tables to authenticate with Kerberos. Refer to <xref
-          href="../../../pxf/5-15/using/pxf_kerbhdfs.html" scope="external" format="html"
+          href="../../../pxf/latest/using/pxf_kerbhdfs.html" scope="external" format="html"
           >Configuring PXF for Secure HDFS</xref> for the procedure to perform this setup. </p>
     </section>
     <section>

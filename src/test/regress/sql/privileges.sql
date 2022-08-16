@@ -732,6 +732,91 @@ SELECT has_table_privilege('regressuser3', 'atest4', 'SELECT'); -- false
 SELECT has_table_privilege('regressuser1', 'atest4', 'SELECT WITH GRANT OPTION'); -- true
 
 
+-- security-restricted operations
+\c -
+CREATE ROLE regress_sro_user;
+
+-- Check that index expressions and predicates are run as the table's owner
+
+-- A dummy index function checking current_user
+CREATE FUNCTION sro_ifun(int) RETURNS int AS $$
+BEGIN
+	-- Below we set the table's owner to regress_sro_user
+	IF current_user <> 'regress_sro_user'
+	THEN RAISE EXCEPTION 'sro_ifun(%s) called by %s', $1, current_user;
+      END IF;
+	RETURN $1;
+END;
+$$ LANGUAGE plpgsql IMMUTABLE;
+-- Create a table owned by regress_sro_user
+CREATE TABLE sro_tab (a int);
+ALTER TABLE sro_tab OWNER TO regress_sro_user;
+INSERT INTO sro_tab VALUES (1), (2), (3);
+-- Create an expression index with a predicate
+CREATE INDEX sro_idx ON sro_tab ((sro_ifun(a) + sro_ifun(0)))
+	WHERE sro_ifun(a + 10) > sro_ifun(10);
+DROP INDEX sro_idx;
+CREATE INDEX sro_idx ON sro_tab ((sro_ifun(a) + sro_ifun(0)))
+	WHERE sro_ifun(a + 10) > sro_ifun(10);
+-- REINDEX
+REINDEX TABLE sro_tab;
+REINDEX INDEX sro_idx;
+DROP INDEX sro_idx;
+-- CLUSTER
+CREATE INDEX sro_cluster_idx ON sro_tab ((sro_ifun(a) + sro_ifun(0)));
+CLUSTER sro_tab USING sro_cluster_idx;
+DROP INDEX sro_cluster_idx;
+-- Check with a partitioned table
+CREATE TABLE sro_ptab (a int) PARTITION BY RANGE (a) (START (1) END (3) EVERY (1), DEFAULT PARTITION extra);
+ALTER TABLE sro_ptab OWNER TO regress_sro_user;
+INSERT INTO sro_ptab VALUES (1), (2), (3);
+CREATE INDEX sro_pidx ON sro_ptab ((sro_ifun(a) + sro_ifun(0)))
+	WHERE sro_ifun(a + 10) > sro_ifun(10);
+REINDEX TABLE sro_ptab;
+
+SET SESSION AUTHORIZATION regress_sro_user;
+CREATE FUNCTION unwanted_grant() RETURNS void LANGUAGE sql AS
+	'GRANT regress_group2 TO regress_sro_user';
+CREATE FUNCTION mv_action() RETURNS bool LANGUAGE sql AS
+	'DECLARE c CURSOR WITH HOLD FOR SELECT unwanted_grant(); SELECT true';
+-- REFRESH of this MV will queue a GRANT at end of transaction
+CREATE MATERIALIZED VIEW sro_mv AS SELECT mv_action() WITH NO DATA;
+REFRESH MATERIALIZED VIEW sro_mv;
+\c -
+REFRESH MATERIALIZED VIEW sro_mv;
+
+SET SESSION AUTHORIZATION regress_sro_user;
+-- INSERT to this table will queue a GRANT at end of transaction
+CREATE TABLE sro_trojan_table ();
+CREATE FUNCTION sro_trojan() RETURNS trigger LANGUAGE plpgsql AS
+	'BEGIN PERFORM unwanted_grant(); RETURN NULL; END';
+CREATE CONSTRAINT TRIGGER t AFTER INSERT ON sro_trojan_table
+    INITIALLY DEFERRED FOR EACH ROW EXECUTE PROCEDURE sro_trojan();
+-- Now, REFRESH will issue such an INSERT, queueing the GRANT
+CREATE OR REPLACE FUNCTION mv_action() RETURNS bool LANGUAGE sql AS
+	'INSERT INTO sro_trojan_table DEFAULT VALUES; SELECT true';
+REFRESH MATERIALIZED VIEW sro_mv;
+\c -
+REFRESH MATERIALIZED VIEW sro_mv;
+
+SET SESSION AUTHORIZATION regress_sro_user;
+CREATE FUNCTION unwanted_grant_nofail(int) RETURNS int
+	IMMUTABLE LANGUAGE plpgsql AS $$
+BEGIN
+	PERFORM unwanted_grant();
+	RAISE WARNING 'owned';
+	RETURN 1;
+EXCEPTION WHEN OTHERS THEN
+	RETURN 2;
+END$$;
+CREATE MATERIALIZED VIEW sro_index_mv AS SELECT 1 AS c;
+\c -
+REFRESH MATERIALIZED VIEW sro_index_mv;
+
+DROP OWNED BY regress_sro_user;
+DROP ROLE regress_sro_user;
+
+
 -- Admin options
 
 SET SESSION AUTHORIZATION regressuser4;

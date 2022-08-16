@@ -54,11 +54,11 @@
           </row>
           <row>
             <entry colname="col1">
-              <codeph>root_partition_name</codeph>
+              <codeph>root_partition_oid</codeph>
             </entry>
             <entry colname="col2">text</entry>
             <entry colname="col3"/>
-            <entry colname="col4">For a partitioned table, the name of the root partition.
+            <entry colname="col4">For a partitioned table, the OID of the root partition.
               Otherwise, <codeph>None</codeph>.</entry>
           </row>
           <row>
@@ -118,6 +118,14 @@
               not expected that the final number of bytes will equal the source number. This
               information is tracked to help provide progress measurement to aid in duration
               estimation for the end-to-end expansion operation.</entry>
+          </row>
+          <row>
+            <entry colname="col1">
+              <codeph>rel_storage</codeph>
+            </entry>
+            <entry colname="col2">text</entry>
+            <entry colname="col3"/>
+            <entry colname="col4">Storage type of a relation</entry>
           </row>
         </tbody>
       </tgroup>

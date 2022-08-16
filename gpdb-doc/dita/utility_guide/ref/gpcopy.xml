@@ -2,7 +2,6 @@
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
 <topic id="topic1" otherprops="pivotal">
-    <!--install_guide has a link to this topic. -->
     <title id="pk138417">gpcopy</title>
     <body>
         <p>The <codeph>gpcopy</codeph> utility copies objects from databases in a source Greenplum

@@ -164,22 +164,22 @@ CREATE_QES_PRIMARY () {
         fi
     
         # Add all local IPV4 addresses
-        SEGMENT_IPV4_LOCAL_ADDRESS_ALL=(`$TRUSTED_SHELL $GP_HOSTADDRESS "$IPV4_ADDR_LIST_CMD | $GREP inet | $GREP -v \"127.0.0\" | $AWK '{print \\$2}' | $CUT -d'/' -f1"`)
+        SEGMENT_IPV4_LOCAL_ADDRESS_ALL=( $( REMOTE_EXECUTE_AND_GET_OUTPUT $GP_HOSTADDRESS "$IPV4_ADDR_LIST_CMD | $GREP inet | $GREP -v \"127.0.0\" | $AWK '{print \$2}' | $CUT -d'/' -f1" ))
         ADD_PG_HBA_ENTRIES "${SEGMENT_IPV4_LOCAL_ADDRESS_ALL[@]}"
     
         if [ x"" != x"$MIRROR_HOSTADDRESS" ]; then
           # Add all mirror segments local IPV4 addresses
-          MIRROR_SEGMENT_IPV4_LOCAL_ADDRESS_ALL=(`$TRUSTED_SHELL $MIRROR_HOSTADDRESS "$IPV4_ADDR_LIST_CMD | $GREP inet | $GREP -v \"127.0.0\" | $AWK '{print \\$2}' | $CUT -d'/' -f1"`)
+          MIRROR_SEGMENT_IPV4_LOCAL_ADDRESS_ALL=( $( REMOTE_EXECUTE_AND_GET_OUTPUT $MIRROR_HOSTADDRESS "$IPV4_ADDR_LIST_CMD | $GREP inet | $GREP -v \"127.0.0\" | $AWK '{print \$2}' | $CUT -d'/' -f1" ))
           ADD_PG_HBA_ENTRIES "${MIRROR_SEGMENT_IPV4_LOCAL_ADDRESS_ALL[@]}"
         fi
     
         # Add all local IPV6 addresses
-        SEGMENT_IPV6_LOCAL_ADDRESS_ALL=(`$TRUSTED_SHELL $GP_HOSTADDRESS "$IPV6_ADDR_LIST_CMD | $GREP inet6 | $AWK '{print \\$2}' | $CUT -d'/' -f1"`)
+        SEGMENT_IPV6_LOCAL_ADDRESS_ALL=( $( REMOTE_EXECUTE_AND_GET_OUTPUT $GP_HOSTADDRESS "$IPV6_ADDR_LIST_CMD | $GREP inet6 | $AWK '{print \$2}' | $CUT -d'/' -f1" ))
         ADD_PG_HBA_ENTRIES "${SEGMENT_IPV6_LOCAL_ADDRESS_ALL[@]}"
     
         if [ x"" != x"$MIRROR_HOSTADDRESS" ]; then
           # Add all mirror segments local IPV6 addresses
-          MIRROR_SEGMENT_IPV6_LOCAL_ADDRESS_ALL=(`$TRUSTED_SHELL $MIRROR_HOSTADDRESS "$IPV6_ADDR_LIST_CMD | $GREP inet6 | $AWK '{print \\$2}' | $CUT -d'/' -f1"`)
+          MIRROR_SEGMENT_IPV6_LOCAL_ADDRESS_ALL=( $( REMOTE_EXECUTE_AND_GET_OUTPUT $MIRROR_HOSTADDRESS "$IPV6_ADDR_LIST_CMD | $GREP inet6 | $AWK '{print \$2}' | $CUT -d'/' -f1" ))
           ADD_PG_HBA_ENTRIES "${MIRROR_SEGMENT_IPV6_LOCAL_ADDRESS_ALL[@]}"
         fi
     else # use hostnames in pg_hba.conf
@@ -209,8 +209,8 @@ CREATE_QES_MIRROR () {
     # Add the samehost replication entry to support single-host development
     local PG_HBA_ENTRIES="${PG_HBA_ENTRIES}"$'\n'"host replication ${GP_USER} samehost trust"
     if [ $HBA_HOSTNAMES -eq 0 ];then
-        local MIRROR_ADDRESSES=($($TRUSTED_SHELL ${GP_HOSTADDRESS} "${GPHOME}"/libexec/ifaddrs --no-loopback))
-        local PRIMARY_ADDRESSES=($($TRUSTED_SHELL ${PRIMARY_HOSTADDRESS} "${GPHOME}"/libexec/ifaddrs --no-loopback))
+        local MIRROR_ADDRESSES=($( REMOTE_EXECUTE_AND_GET_OUTPUT ${GP_HOSTADDRESS} "'${GPHOME}'/libexec/ifaddrs --no-loopback" ))
+        local PRIMARY_ADDRESSES=($( REMOTE_EXECUTE_AND_GET_OUTPUT ${PRIMARY_HOSTADDRESS} "'${GPHOME}'/libexec/ifaddrs --no-loopback"))
         for ADDR in "${MIRROR_ADDRESSES[@]}" "${PRIMARY_ADDRESSES[@]}"
         do
             CIDR_ADDR=$(GET_CIDRADDR $ADDR)
@@ -227,6 +227,8 @@ CREATE_QES_MIRROR () {
     START_QE "-w"
     RETVAL=$?
     PARA_EXIT $RETVAL "pg_basebackup of segment data directory from ${PRIMARY_HOSTADDRESS} to ${GP_HOSTADDRESS}"
+    SED_PG_CONF ${GP_DIR}/$PG_CONF "port" port=$GP_PORT 0 $GP_HOSTADDRESS
+    PARA_EXIT $RETVAL "Update port number to $GP_PORT"
     LOG_MSG "[INFO][$INST_COUNT]:-End Function $FUNCNAME"
 }
 

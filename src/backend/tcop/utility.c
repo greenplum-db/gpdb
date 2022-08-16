@@ -73,6 +73,7 @@
 #include "catalog/oid_dispatch.h"
 #include "catalog/pg_attribute_encoding.h"
 #include "cdb/cdbdisp_query.h"
+#include "cdb/cdbendpoint.h"
 #include "cdb/cdbpartition.h"
 #include "cdb/cdbvars.h"
 
@@ -1039,6 +1040,10 @@ standard_ProcessUtility(Node *parsetree,
 			}
 			break;
 
+		case T_RetrieveStmt:
+			ExecRetrieveStmt((RetrieveStmt *) parsetree, dest);
+			break;
+
 		default:
 			/* All other statement types have event trigger support */
 			ProcessUtilitySlow(parsetree, queryString,
@@ -1168,9 +1173,10 @@ ProcessUtilitySlow(Node *parsetree,
 							CommandCounterIncrement();
 
 							/* Add column encoding entries based on the WITH clauses */
-							if (cstmt->isCtas && cstmt->options)
+							if (cstmt->isCtas)
 							{
 								Relation rel = heap_open(relOid, AccessExclusiveLock);
+								/* Noop for non-AOCS */
 								AddDefaultRelationAttributeOptions(rel, cstmt->options);
 								heap_close(rel, NoLock);
 							}
@@ -1877,6 +1883,9 @@ UtilityReturnsTuples(Node *parsetree)
 		case T_VariableShowStmt:
 			return true;
 
+		case T_RetrieveStmt:
+			return true;
+
 		default:
 			return false;
 	}
@@ -1927,6 +1936,13 @@ UtilityTupleDescriptor(Node *parsetree)
 				VariableShowStmt *n = (VariableShowStmt *) parsetree;
 
 				return GetPGVariableResultDesc(n->name);
+			}
+
+		case T_RetrieveStmt:
+			{
+				RetrieveStmt *n = (RetrieveStmt *) parsetree;
+
+				return CreateTupleDescCopy(GetRetrieveStmtTupleDesc(n));
 			}
 
 		default:
@@ -2231,7 +2247,14 @@ CreateCommandTag(Node *parsetree)
 			break;
 
 		case T_DeclareCursorStmt:
-			tag = "DECLARE CURSOR";
+			{
+				DeclareCursorStmt *stmt = (DeclareCursorStmt *) parsetree;
+
+				if (stmt->options & CURSOR_OPT_PARALLEL_RETRIEVE)
+					tag = "DECLARE PARALLEL RETRIEVE CURSOR";
+				else
+					tag = "DECLARE CURSOR";
+			}
 			break;
 
 		case T_ClosePortalStmt:
@@ -2943,6 +2966,10 @@ CreateCommandTag(Node *parsetree)
 
 		case T_AlterTypeStmt:
 			tag = "ALTER TYPE";
+			break;
+
+		case T_RetrieveStmt:
+			tag = "RETRIEVE";
 			break;
 
 		default:

@@ -215,7 +215,7 @@ shm_toc_insert(shm_toc *toc, uint64 key, void *address)
  * right around the same time, there seems to be some value in avoiding it.
  */
 void *
-shm_toc_lookup(shm_toc *toc, uint64 key)
+shm_toc_lookup(shm_toc *toc, uint64 key, bool noError)
 {
 	uint64		nentry;
 	uint64		i;
@@ -226,10 +226,16 @@ shm_toc_lookup(shm_toc *toc, uint64 key)
 
 	/* Now search for a matching entry. */
 	for (i = 0; i < nentry; ++i)
+	{
 		if (toc->toc_entry[i].key == key)
 			return ((char *) toc) + toc->toc_entry[i].offset;
+	}
 
 	/* No matching entry was found. */
+	if (!noError)
+		elog(ERROR, "could not find key " UINT64_FORMAT " in shm TOC at %p",
+			 key, toc);
+
 	return NULL;
 }
 

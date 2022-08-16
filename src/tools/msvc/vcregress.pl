@@ -188,12 +188,13 @@ sub tap_check
 	my $dir = shift;
 	chdir $dir;
 
-	my @args = ("prove", @flags, "t/*.pl");
+	my @args = ("prove", @flags, glob("t/*.pl"));
 
 	# adjust the environment for just this test
 	local %ENV = %ENV;
 	$ENV{PERL5LIB} = "$topdir/src/test/perl;$ENV{PERL5LIB}";
 	$ENV{PG_REGRESS} = "$topdir/$Config/pg_regress/pg_regress";
+	$ENV{REGRESS_SHLIB} = "$topdir/src/test/regress/regress.dll";
 
 	$ENV{TESTDIR} = "$dir";
 

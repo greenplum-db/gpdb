@@ -1,0 +1,63 @@
+-- @Description Tests retrieve quit
+-- Test quitting retrieve sessions interfering with multiple endpoints when calling
+-- gp_wait_parallel_retrieve_cursor.
+DROP TABLE IF EXISTS t1;
+CREATE TABLE t1 (a INT) DISTRIBUTED by (a);
+insert into t1 select generate_series(1,100);
+
+--------- Test1: test for quit retrieve will cancel all unfinished QE backend
+1: BEGIN;
+1: DECLARE c1 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
+1: DECLARE c2 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
+1: DECLARE c3 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
+1: @post_run 'parse_endpoint_info 1 1 2 3 4' : SELECT endpointname,auth_token,hostname,port,state FROM gp_get_endpoints() WHERE cursorname='c1';
+1: @post_run 'parse_endpoint_info 2 1 2 3 4' : SELECT endpointname,auth_token,hostname,port,state FROM gp_get_endpoints() WHERE cursorname='c2';
+1: @post_run 'parse_endpoint_info 3 1 2 3 4' : SELECT endpointname,auth_token,hostname,port,state FROM gp_get_endpoints() WHERE cursorname='c3';
+
+-- in one retrieve session, retrieve multiple tokens (begin retrieving, finished retrieving, not yet retrieve)
+0R: @pre_run 'set_endpoint_variable @ENDPOINT1' : RETRIEVE 10 FROM ENDPOINT "@ENDPOINT1";
+0R: @pre_run 'set_endpoint_variable @ENDPOINT2' : RETRIEVE ALL FROM ENDPOINT "@ENDPOINT2";
+-- skip TOKEN3 in this session
+
+-- a new retrieve session. c1 & c2 cannot be retrieved since an existing retrieve session has
+-- retrieved them at least once.
+3R: @pre_run 'set_endpoint_variable @ENDPOINT1' : RETRIEVE 10 FROM ENDPOINT "@ENDPOINT1";
+3R: @pre_run 'set_endpoint_variable @ENDPOINT2' : RETRIEVE ALL FROM ENDPOINT "@ENDPOINT2";
+3R: @pre_run 'set_endpoint_variable @ENDPOINT3' : RETRIEVE 10 FROM ENDPOINT "@ENDPOINT3";
+
+2: SELECT cursorname, state FROM gp_get_endpoints();
+-- verify endpoints on seg0 for c2 has been finishied
+0U: SELECT cursorname,senderpid<>-1, receiverpid<>-1, state FROM gp_get_segment_endpoints();
+-- quit the first retrieve session
+0Rq:
+
+-- Check quiting retrieve session won't impact on finished endpoint.
+-- Now the interrupt is checked using WaitLatch() for time: WAIT_NORMAL_TIMEOUT,
+-- so here the sleep time should be greater than WAIT_NORMAL_TIMEOUT.
+1: SELECT pg_sleep(0.4);
+-- make sure no error for c2
+1: SELECT * FROM gp_wait_parallel_retrieve_cursor('c2', 0);
+-- When the retrieve session was terminated, the endpoint has not been fully retrieved
+-- by this retrieve process should be cancelled.
+-- The endpoint on seg0 for c1 should firstly become to RELEASED (the retrieve process set it),
+-- and then was removed (during the endpoint QE cancelled)
+2: SELECT cursorname, state FROM gp_get_endpoints();
+
+-- verify endpoints for c1 is gone
+0U: SELECT cursorname, senderpid<>-1, receiverpid<>-1, state FROM gp_get_segment_endpoints();
+
+-- Now check on c1 will trigger the error, all endpoints should be aborted since the transaction
+-- will be terminated.
+1: SELECT * FROM gp_wait_parallel_retrieve_cursor('c1', 0);
+1: SELECT * FROM gp_wait_parallel_retrieve_cursor('c2', 0);
+1: SELECT * FROM gp_wait_parallel_retrieve_cursor('c3', 0);
+2: SELECT cursorname, state FROM gp_get_endpoints();
+
+1: END;
+
+2: SELECT cursorname, state FROM gp_get_endpoints();
+
+-- quit all sessions
+1q:
+2q:
+0Uq:

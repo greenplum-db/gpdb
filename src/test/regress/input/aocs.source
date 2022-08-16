@@ -614,3 +614,35 @@ select count(*) from aocs_small_and_dense_content;
 
 select gp_inject_fault('appendonly_skip_compression', 'reset', dbid)
 from gp_segment_configuration where role = 'p' and content = 0;
+
+
+-- test truncate ao table in current transaction and sub-transaction
+-- more details can look at https://github.com/greenplum-db/gpdb/issues/13699
+
+-- should success, create and truncate ao table in the same transaction;
+begin;
+create table fix_aoco_truncate_last_sequence(a int, b int) with (appendonly = true, orientation = column);
+create index index_fix_aoco_truncate_last_sequence on fix_aoco_truncate_last_sequence(b);
+insert into fix_aoco_truncate_last_sequence select i, i from generate_series(1, 5) i;
+select count(*) from fix_aoco_truncate_last_sequence;
+truncate table fix_aoco_truncate_last_sequence;
+select count(*) from fix_aoco_truncate_last_sequence;
+abort;
+
+-- should success, create and truncate ao table in the different transaction,
+-- and create index for it. 
+begin;
+create table fix_aoco_truncate_last_sequence(a int, b int) with (appendonly = true, orientation = column);
+create index index_fix_aoco_truncate_last_sequence on fix_aoco_truncate_last_sequence(b);
+insert into fix_aoco_truncate_last_sequence select i, i from generate_series(1, 5) i;
+select count(*) from fix_aoco_truncate_last_sequence;
+savepoint s1; 
+truncate table fix_aoco_truncate_last_sequence;
+insert into fix_aoco_truncate_last_sequence select 1, 1 from generate_series(1, 10);
+select count(*) from fix_aoco_truncate_last_sequence;
+rollback to s1; 
+select count(*) from fix_aoco_truncate_last_sequence;
+truncate table fix_aoco_truncate_last_sequence;
+insert into fix_aoco_truncate_last_sequence select 1, 1 from generate_series(1, 5); 
+select count(*) from fix_aoco_truncate_last_sequence;
+abort;

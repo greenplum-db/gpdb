@@ -2604,7 +2604,7 @@ acquire_sample_rows_dispatcher(Relation onerel, bool inh, int elevel,
 	 * Execute it.
 	 */
 	elog(elevel, "Executing SQL: %s", str.data);
-	CdbDispatchCommand(str.data, DF_WITH_SNAPSHOT, &cdb_pgresults);
+	CdbDispatchCommand(str.data, DF_WITH_SNAPSHOT | DF_CANCEL_ON_ERROR, &cdb_pgresults);
 
 	/*
 	 * Build a modified tuple descriptor for the table.
@@ -3085,7 +3085,7 @@ std_typanalyze(VacAttrStats *stats)
 	List *va_cols = list_make1_int(stats->attr->attnum);
 	if (rel_part_status(attr->attrelid) == PART_STATUS_ROOT &&
 		leaf_parts_analyzed(stats->attr->attrelid, InvalidOid, va_cols, stats->elevel) &&
-		op_hashjoinable(eqopr, stats->attrtypid))
+		((!OidIsValid(eqopr)) || op_hashjoinable(eqopr, stats->attrtypid)))
 	{
 		stats->merge_stats = true;
 		stats->compute_stats = merge_leaf_stats;
@@ -3551,9 +3551,7 @@ compute_very_minimal_stats(VacAttrStatsP stats,
 			stats->stawidth = total_width / (double) nonnull_cnt;
 		else
 			stats->stawidth = stats->attrtype->typlen;
-
-		/* Assume it's a unique column */
-		stats->stadistinct = -1.0;
+		stats->stadistinct = 0.0;	/* "unknown" */
 	}
 	else if (null_cnt > 0)
 	{
@@ -4149,14 +4147,19 @@ compute_scalar_stats(VacAttrStatsP stats,
 /*
  *	merge_leaf_stats() -- merge leaf stats for the root
  *
- *	We use this when we can find "=" and "<" operators for the datatype.
- *
  *	This is only used when the relation is the root partition and merges
  *	the statistics available in pg_statistic for the leaf partitions.
  *
- *	We determine the fraction of non-null rows, the average width, the
- *	most common values, the (estimated) number of distinct values, the
- *	distribution histogram.
+ *	We use this for two scenarios:
+ *
+ *	1. When we can find "=" and "<" operators for the datatype, and the
+ *	"=" operator is hashjoinable. In this case, we determine the fraction
+ *	of non-null rows, the average width, the most common values, the
+ *	(estimated) number of distinct values, the distribution histogram.
+ *
+ *	2. When we can find neither "=" nor "<" operator for the data type. In
+ *	this case, we only determine the fraction of non-null rows and the
+ *	average width.
  */
 static void
 merge_leaf_stats(VacAttrStatsP stats,
@@ -4509,10 +4512,15 @@ merge_leaf_stats(VacAttrStatsP stats,
 	pfree(nDistincts);
 	pfree(nMultiples);
 
-	if (allDistinct || (!OidIsValid(eqopr) && !OidIsValid(ltopr)))
+	if (allDistinct)
 	{
 		/* If we found no repeated values, assume it's a unique column */
 		ndistinct = -1.0;
+	}
+	else if (!OidIsValid(eqopr) && !OidIsValid(ltopr))
+	{
+		/* If operators are not available, NDV is unknown. */
+		ndistinct = 0;
 	}
 	else if ((int) nmultiple >= (int) ndistinct)
 	{

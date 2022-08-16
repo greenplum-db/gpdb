@@ -120,14 +120,22 @@ beginCurrentBitmapIndexScan(DynamicBitmapIndexScanState *node, EState *estate,
 	oldCxt = MemoryContextSwitchTo(node->partitionMemoryContext);
 
 	/*
-	 * Re-map the index columns, per the new partition, and find the correct
-	 * index.
+	 * find the root of the partition table
 	 */
 	if (!OidIsValid(node->columnLayoutOid))
 	{
-		/* Very first partition */
-		node->columnLayoutOid = rel_partition_get_root(tableOid);
+		Oid parentOid = rel_partition_get_root(tableOid);
+		while (parentOid != InvalidOid)
+		{
+			node->columnLayoutOid = parentOid;
+			parentOid = rel_partition_get_root(node->columnLayoutOid);
+		}
 	}
+
+	/*
+	 * Re-map the index columns, per the new partition, and find the correct
+	 * index.
+	 */
 	BitmapIndexScan_ReMapColumns(dbiScan, node->columnLayoutOid, tableOid);
 	node->columnLayoutOid = tableOid;
 

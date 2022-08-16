@@ -2947,6 +2947,29 @@ from material_test2
 where first_id in (select first_id from mat_w)
 and first_id in (select first_id from mat_w);
 
+-- Test to ensure bitmapscan doesn't project recheck/scalar filter columns
+create table material_bitmapscan(i int, j int, k timestamp, l timestamp) with(appendonly=true) distributed replicated;
+create index material_bitmapscan_idx on material_bitmapscan using btree(k);
+insert into material_bitmapscan
+select i, mod(i, 10),
+	timestamp '2021-06-01' + interval '1' day * mod(i, 30),
+	timestamp '2021-06-01' + interval '1' day * mod(i, 30)
+from generate_series(1, 10000) i;
+
+explain verbose with mat as(
+    select i, j from material_bitmapscan where i = 2 and j = 2
+    and k = timestamp '2021-06-03' and l = timestamp '2021-06-03'
+)
+select m1.i
+from mat m1 join mat m2 on m1.j = m2.j;
+
+with mat as(
+    select i, j from material_bitmapscan where i = 2 and j = 2
+    and k = timestamp '2021-06-03' and l = timestamp '2021-06-03'
+)
+select m1.i
+from mat m1 join mat m2 on m1.j = m2.j;
+
 create table tt_varchar(
 	data character varying
 ) distributed by (data);
@@ -3130,6 +3153,151 @@ select * from (select trim(regexp_split_to_table((a)::text, ','::text)) from nes
 select count(*) from (select trim(regexp_split_to_table((a)::text, ','::text)) from nested_srf)a;
 
 reset optimizer_trace_fallback;
+
+--- Test if orca can produce the correct plan for CTAS
+CREATE TABLE dist_tab_a (a varchar(15)) DISTRIBUTED BY(a);
+INSERT INTO dist_tab_a VALUES('1 '), ('2  '), ('3    ');
+CREATE TABLE dist_tab_b (a char(15), b bigint) DISTRIBUTED BY(a);
+INSERT INTO dist_tab_b VALUES('1 ', 1), ('2  ', 2), ('3    ', 3);
+EXPLAIN CREATE TABLE result_tab AS
+	(SELECT a.a, b.b FROM dist_tab_a a LEFT JOIN dist_tab_b b ON a.a=b.a) DISTRIBUTED BY(a);
+CREATE TABLE result_tab AS
+	(SELECT a.a, b.b FROM dist_tab_a a LEFT JOIN dist_tab_b b ON a.a=b.a) DISTRIBUTED BY(a);
+SELECT gp_segment_id, * FROM result_tab;
+DROP TABLE IF EXISTS dist_tab_a;
+DROP TABLE IF EXISTS dist_tab_b;
+DROP TABLE IF EXISTS result_tab;
+
+-- Test if orca produces bitmap scan on mixed partitions
+create table mixed_part( a int) distributed randomly
+partition by range (a)
+( partition a1 start (1) end (100) with (appendonly='true'),
+partition a2 start (100) end (200) with (appendonly='false'));
+create index idx_mixed_part on mixed_part using btree(a);
+
+insert into mixed_part select i from generate_series(1,199)i;
+insert into mixed_part select 12 from generate_series(1,100)i;
+analyze mixed_part;
+
+explain select * from mixed_part where a=3;
+select * from mixed_part where a=3;
+
+-- Test that orca still produces index scan on heap partitions
+create table heap_part( a int) distributed randomly
+partition by range (a)
+( partition a1 start (1) end (100) with (appendonly='false'),
+partition a2 start (100) end (200) with (appendonly='false'));
+create index idx_heap_part on heap_part using btree(a);
+
+insert into heap_part select i from generate_series(1,199)i;
+insert into heap_part select 12 from generate_series(1,100)i;
+analyze heap_part;
+
+explain select * from heap_part where a=3;
+select * from heap_part where a=3;
+
+-- Generate bitmap scan for mixed index types
+create table part_table13(a int, b int, c int)
+partition by range(b)
+(
+partition p1 start(1) end(10),
+partition p2 start(10) end (20) with (appendonly=true),
+partition p3 start(20) end (30) with (appendonly=true,orientation=column),
+partition p4 start(30) end (40)
+);
+
+create index part_table13_1_idx on part_table13_1_prt_p1 using btree(c);
+create index part_table13_2_idx on part_table13_1_prt_p2 using btree(c);
+create index part_table13_3_idx on part_table13_1_prt_p3 using bitmap(c);
+create index part_table13_4_idx on part_table13_1_prt_p4 using bitmap(c);
+
+explain select * from part_table13 where c=7;
+select * from part_table13 where c=7;
+
+-- Test ORCA not falling back to Postgres planner during
+-- SimplifySelectOnOuterJoin stage. Previously, we could get assertion error
+-- trying to EberEvaluate() strict function with zero arguments.
+-- Postgres planner will fold our function, because it has additional
+-- eval_const_expressions() call for subplan. ORCA has only one call to
+-- fold_constants() at the very beginning and doesn't perform folding later.
+CREATE TABLE join_null_rej1(i int);
+CREATE TABLE join_null_rej2(i int);
+
+INSERT INTO join_null_rej1(i) VALUES (1), (2), (3);
+INSERT INTO join_null_rej2 SELECT i FROM join_null_rej1;
+
+CREATE OR REPLACE FUNCTION join_null_rej_func() RETURNS int AS $$
+BEGIN
+    RETURN 5;
+END;
+$$ LANGUAGE plpgsql STABLE STRICT;
+
+EXPLAIN (COSTS OFF) SELECT (
+    SELECT count(*) cnt
+    FROM join_null_rej1 t1
+    LEFT JOIN join_null_rej2 t2 ON t1.i = t2.i
+    WHERE t2.i < join_null_rej_func()
+);
+-- Optional, but let's check we get same result for both, folded and
+-- not folded join_null_rej_func() function.
+SELECT (
+    SELECT count(*) cnt
+    FROM join_null_rej1 t1
+    LEFT JOIN join_null_rej2 t2 ON t1.i = t2.i
+    WHERE t2.i < join_null_rej_func()
+);
+
+-- Check Sort node placed under GatherMerge in case we use Update from Select
+-- with window function. Placing Sort node upper and executing it on one
+-- segment can lead to slow query execution and can consume all spills for
+-- heavy datasets. Sort node should be on it's place for both, Postgres
+-- optimizer and ORCA.
+create table window_agg_test(i int, j int) distributed randomly;
+explain
+update window_agg_test t
+set i = tt.i 
+from (select (min(i) over (order by j)) as i, j from window_agg_test) tt
+where t.j = tt.j;
+
+----------------------------------
+-- Test ORCA support for const TVF
+----------------------------------
+create type complex_t as (r float8, i float8);
+-- Nested composite
+create type quad as (c1 complex_t, c2 complex_t);
+create function quad_func_cast() returns quad immutable as $$ select ((1.1,null),(2.2,null))::quad $$ language sql;
+explain select c1 from quad_func_cast();
+explain select c2 from quad_func_cast();
+explain select (c1).r from quad_func_cast();
+explain select (c2).i from quad_func_cast();
+select c1 from quad_func_cast();
+select c2 from quad_func_cast();
+select (c1).r from quad_func_cast();
+select (c2).i from quad_func_cast();
+
+create type mix_type as (a text, b integer, c bool);
+create function mix_func_cast() returns mix_type immutable as $$ select ('column1', 1, true)::mix_type $$ language sql;
+explain select a from mix_func_cast();
+explain select b from mix_func_cast();
+explain select c from mix_func_cast();
+select a from mix_func_cast();
+select b from mix_func_cast();
+select c from mix_func_cast();
+
+-- the query with empty CTE producer target list should fall back to Postgres
+-- optimizer without any error on build without asserts
+drop table if exists empty_cte_tl_test;
+create table empty_cte_tl_test(id int);
+
+set optimizer_trace_fallback = on;
+with cte as (
+  select from empty_cte_tl_test
+)
+select * 
+from empty_cte_tl_test
+where id in(select id from cte);
+reset optimizer_trace_fallback;
+
 -- start_ignore
 DROP SCHEMA orca CASCADE;
 -- end_ignore

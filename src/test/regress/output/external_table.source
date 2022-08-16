@@ -342,6 +342,26 @@ ERROR:  must be superuser to create an external protocol
 CREATE TRUSTED PROTOCOL demoprot_non_superuser (readfunc = 'read_from_file', writefunc = 'write_to_file');
 ERROR:  must be superuser to create an external protocol
 RESET ROLE;
+-- Test pg_exttable's encoding: QE's encoding should be consistent with QD
+-- GitHub Issue #9727: https://github.com/greenplum-db/gpdb/issues/9727
+SET client_encoding = 'ISO-8859-1';
+CREATE EXTERNAL TABLE issue_9727 (d varchar(20)) location ('gpfdist://9727/d.dat') format 'csv' (DELIMITER '|');
+SELECT encoding from pg_exttable where urilocation='{gpfdist://9727:8080/d.dat}';
+ encoding 
+----------
+        6
+(1 row)
+
+SELECT encoding from gp_dist_random('pg_exttable') where urilocation='{gpfdist://9727:8080/d.dat}';
+ encoding 
+----------
+        6
+        6
+        6
+(3 rows)
+
+DROP EXTERNAL TABLE issue_9727;
+RESET client_encoding;
 --
 -- WET tests
 --

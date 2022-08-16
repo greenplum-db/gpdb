@@ -1,0 +1,161 @@
+-- @Description Tests the privileges related with endpoints
+--
+DROP TABLE IF EXISTS t1;
+DROP USER IF EXISTS adminuser;
+DROP USER IF EXISTS u1;
+DROP USER IF EXISTS uu1;
+DROP USER IF EXISTS u2;
+CREATE USER adminuser;
+ALTER USER adminuser WITH SUPERUSER;
+CREATE USER u1 with CREATEROLE;
+CREATE USER u2;
+
+SET SESSION AUTHORIZATION u1;
+CREATE TABLE t1 (a INT) DISTRIBUTED by (a);
+insert into t1 select generate_series(1,10);
+CREATE USER uu1;
+GRANT ALL PRIVILEGES ON t1 TO uu1;
+GRANT uu1 TO u1;
+RESET SESSION AUTHORIZATION;
+
+
+--------- Test1: Admin should be able to see other user's endpoint, retrieve role auth should check token and user
+--- c1 is declared by superuser
+1: SET SESSION AUTHORIZATION adminuser;
+1: SELECT SESSION_USER, CURRENT_USER;
+1: BEGIN;
+1: DECLARE c1 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
+1: @post_run 'parse_endpoint_info 1 1 2 3 4' : SELECT endpointname,auth_token,hostname,port,state FROM gp_get_endpoints() WHERE cursorname='c1';
+1: SET SESSION AUTHORIZATION u1;
+1: SELECT SESSION_USER, CURRENT_USER;
+--- c2 is declared by u1
+1: DECLARE c2 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
+--- c12 is declared by u1 on entry db
+1: DECLARE c12 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM generate_series(1,10);
+--- u1 is able to see all endpoints created by himself.
+1: SELECT DISTINCT(cursorname), username FROM gp_get_endpoints();
+
+--- adminuser should be able to see all the endpoints declared by u1 with state READY
+2: SET SESSION AUTHORIZATION adminuser;
+2: SELECT SESSION_USER, CURRENT_USER;
+2: @post_run 'parse_endpoint_info 2 1 2 3 4' : SELECT endpointname,auth_token,hostname,port,state FROM gp_get_endpoints() WHERE cursorname='c2';
+2: @post_run 'parse_endpoint_info 12 1 2 3 4' : SELECT endpointname,auth_token,hostname,port,state FROM gp_get_endpoints() WHERE cursorname='c12';
+2: SELECT DISTINCT(cursorname), username FROM gp_get_endpoints();
+
+--- adminuser should be able to see the cursor state change to READY
+2: SELECT auth_token, username, state FROM gp_get_endpoints() endpoints order by username;
+
+--- adminuser should be able to see all endpoints declared by u1 in utility mode
+3: @pre_run 'export CURRENT_ENDPOINT_POSTFIX=1 ; export RETRIEVE_USER="adminuser"; echo $RAW_STR ' : SELECT 1;
+0R: SELECT SESSION_USER, CURRENT_USER;
+0U: SELECT auth_token, username FROM gp_get_segment_endpoints();
+0R: @pre_run 'set_endpoint_variable @ENDPOINT1': RETRIEVE ALL FROM ENDPOINT "@ENDPOINT1";
+0Rq:
+3: @pre_run 'export CURRENT_ENDPOINT_POSTFIX=2 ; export RETRIEVE_USER="u1"; echo $RAW_STR ' : SELECT 1;
+--- Login as u1 and retrieve all to finish the test
+0R: SELECT SESSION_USER, CURRENT_USER;
+0R: @pre_run 'set_endpoint_variable @ENDPOINT2': RETRIEVE ALL FROM ENDPOINT "@ENDPOINT2";
+
+1: SET ROLE uu1;
+1: SELECT SESSION_USER, CURRENT_USER;
+1: DECLARE c3 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
+2: @post_run 'parse_endpoint_info 3 1 2 3 4' : SELECT endpointname,auth_token,hostname,port,state FROM gp_get_endpoints() WHERE cursorname='c3';
+--- uu1 can not see u1's endpoints.
+1: SELECT DISTINCT(cursorname), username FROM gp_get_endpoints();
+2: SELECT DISTINCT(cursorname), username FROM gp_get_endpoints();
+
+3: @pre_run 'export RETRIEVE_USER="uu1"; echo $RAW_STR ' : SELECT 1;
+--- Login as uu1 and retrieve, only u1 can retrieve
+3R: SELECT SESSION_USER, CURRENT_USER;
+3R: @pre_run 'set_endpoint_variable @ENDPOINT3': RETRIEVE ALL FROM ENDPOINT "@ENDPOINT3";
+
+--- Retrieve c2(which belongs to u1) but current user is uu1.
+3R: @pre_run 'set_endpoint_variable @ENDPOINT2': RETRIEVE ALL FROM ENDPOINT "@ENDPOINT2";
+0Rq:
+3Rq:
+1<:
+1: END;
+2q:
+3: @pre_run 'unset RETRIEVE_USER; echo $RAW_STR ' : SELECT 1;
+3q:
+
+
+--------- Test2: Admin should NOT be able to retrieve from other's PARALLEL RETRIEVE CURSOR
+1: SET SESSION AUTHORIZATION adminuser;
+1: SELECT SESSION_USER, CURRENT_USER;
+1: BEGIN;
+-- Used to let super login to retrieve session so then it can change user in session.
+1: DECLARE c0 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
+1: SET SESSION AUTHORIZATION u1;
+--- c1 is declared and executed by u1
+1: DECLARE c1 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
+1&: SELECT * FROM gp_wait_parallel_retrieve_cursor('c1', -1);
+
+2: @post_run 'parse_endpoint_info 40 1 2 3 4' : SELECT endpointname,auth_token,hostname,port,state FROM gp_get_endpoints() WHERE cursorname='c0';
+
+2: @post_run 'parse_endpoint_info 4 1 2 3 4' : SELECT endpointname,auth_token,hostname,port,state FROM gp_get_endpoints() WHERE cursorname='c1';
+
+--- adminuser should NOT be able to retrieve from other's PARALLEL RETRIEVE CURSOR
+3: @pre_run 'export CURRENT_ENDPOINT_POSTFIX=40 ; export RETRIEVE_USER="adminuser"; echo $RAW_STR ' : SELECT 1;
+*R: SET SESSION AUTHORIZATION adminuser;
+*R: SELECT SESSION_USER, CURRENT_USER;
+*R: @pre_run 'set_endpoint_variable @ENDPOINT4': RETRIEVE ALL FROM ENDPOINT "@ENDPOINT4";
+-- cancel the no privilege retrieving endpoints, otherwise it will wait until statement_timeout
+42: select pg_cancel_backend(pid) from pg_stat_activity where query like 'SELECT * FROM gp_wait_parallel_retrieve_cursor(''c1'', -1);';
+
+1<:
+1: CLOSE c1;
+1: END;
+1q:
+3q:
+0Rq:
+1Rq:
+2Rq:
+
+
+--------- Test3: Admin should be able to close PARALLEL RETRIEVE CURSOR
+--- c1 is declared and executed by u1
+1: SET SESSION AUTHORIZATION u1;
+1: BEGIN;
+1: DECLARE c1 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
+--- Close c1 by adminuser
+1: SET SESSION AUTHORIZATION adminuser;
+1: CLOSE c1;
+1: END;
+
+
+--------- Test4: u2 should NOT be able to see or retrieve from u1's endpoints
+1: SET SESSION AUTHORIZATION adminuser;
+1: SELECT SESSION_USER, CURRENT_USER;
+1: BEGIN;
+-- Used to let super login to retrieve session so then it can change user in session.
+1: DECLARE c0 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
+1: @post_run 'parse_endpoint_info 50 1 2 3 4' : SELECT endpointname,auth_token,hostname,port,state FROM gp_get_endpoints() WHERE cursorname='c0';
+1: SET SESSION AUTHORIZATION u1;
+--- c4 is declared and executed by u1
+1: DECLARE c4 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
+1: @post_run 'parse_endpoint_info 5 1 2 3 4' : SELECT endpointname,auth_token,hostname,port,state FROM gp_get_endpoints() WHERE cursorname='c4';
+
+--- u2 is not able to see u1's endpoints on master
+1: SET SESSION AUTHORIZATION u2;
+1: SELECT * from gp_get_endpoints();
+
+--- execute the cursor by u1
+1: SET SESSION AUTHORIZATION u1;
+1&: SELECT * FROM gp_wait_parallel_retrieve_cursor('c4', -1);
+
+--- u2 is not able to see u1's endpoints in RETRIEVE mode
+*R: @pre_run 'export CURRENT_ENDPOINT_POSTFIX=50 ; export RETRIEVE_USER="adminuser" ; echo $RAW_STR' : SET SESSION AUTHORIZATION u2;
+*U: SELECT auth_token, username FROM gp_get_segment_endpoints();
+
+--- u2 is not able to retrieve from u1's endpoints in RETRIEVE mode
+*R: @pre_run 'set_endpoint_variable @ENDPOINT5': RETRIEVE ALL FROM ENDPOINT "@ENDPOINT5";
+-- cancel the no privilege retrieving endpoints, otherwise it will wait until statement_timeout
+42: select pg_cancel_backend(pid) from pg_stat_activity where query like 'SELECT * FROM gp_wait_parallel_retrieve_cursor(''c4'', -1);';
+
+1<:
+1: CLOSE c4;
+1: END;
+0Rq:
+1Rq:
+2Rq:

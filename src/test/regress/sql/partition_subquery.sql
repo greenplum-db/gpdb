@@ -18,3 +18,25 @@ SELECT id FROM (
 --start_ignore
 DROP TABLE IF EXISTS pt1;
 --end_ignore
+
+
+-- When a query had a partitioned table and a correlated subquery, it 
+-- failed with Query Optimizer. There was implemented a fix which
+-- fixes this problem.
+DROP TABLE IF EXISTS t1, t2;
+
+CREATE TABLE t1 (a INT) PARTITION BY RANGE (a) (START (1) END (3) EVERY (1));
+CREATE TABLE t2 (b INT8) DISTRIBUTED BY (b);
+
+INSERT INTO t1 VALUES (1), (2);
+INSERT INTO t2 VALUES (2), (3);
+
+EXPLAIN SELECT * FROM t1 WHERE a <= (
+    SELECT * FROM t2
+    WHERE t2.b <= (SELECT * FROM t2 AS t3 WHERE t3.b = t2.b)
+    AND t1.a = t2.b);
+
+SELECT * FROM t1 WHERE a <= (
+    SELECT * FROM t2
+    WHERE t2.b <= (SELECT * FROM t2 AS t3 WHERE t3.b = t2.b)
+    AND t1.a = t2.b);

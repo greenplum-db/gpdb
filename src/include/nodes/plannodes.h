@@ -150,6 +150,9 @@ typedef struct PlannedStmt
  	 * GPDB: whether a query is a SPI inner query for extension usage 
  	 */
 	int8		metricsQueryType;
+
+	int			total_memory_master;	/* GPDB: The total usable virtual memory on master node in MB */
+	int			nsegments_master;		/* GPDB: The number of primary segments on master node  */
 } PlannedStmt;
 
 /*
@@ -979,6 +982,9 @@ typedef struct ShareInputScan
 	ShareType 	share_type;
 	int 		share_id;
 	int 		driver_slice;   	/* slice id that will execute the underlying material/sort */
+
+    /* Discard the scan output? True for ORCA CTE producer, false otherwise. */
+    bool        discard_output;
 } ShareInputScan;
 
 /* ----------------

@@ -21,3 +21,5 @@ tst_standby_dir/standby_file1
 tst_standby_dir/standby_file2
 tst_standby_dir/standby_subdir
 tst_standby_dir/standby_subdir/standby_file3
+backups
+backups/master_backup_file

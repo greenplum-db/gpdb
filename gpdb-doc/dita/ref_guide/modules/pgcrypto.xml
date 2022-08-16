@@ -22,7 +22,7 @@
           Before you can use any of the functions defined in the module, you must register the
             <codeph>pgcrypto</codeph> extension in each database in which you want to use the
           functions. <ph otherprops="pivotal">Refer to <xref
-              href="../../install_guide/install_modules.xml" format="dita" scope="peer">Installing
+              href="../../install_guide/install_modules.html" format="html" scope="external">Installing
               Additional Supplied Modules</xref> for more information.</ph></p>
       </body>
     </topic>

@@ -76,7 +76,7 @@ typedef struct
 typedef enum CAC_state
 {
 	CAC_OK, CAC_STARTUP, CAC_SHUTDOWN, CAC_RECOVERY, CAC_TOOMANY,
-	CAC_WAITBACKUP, CAC_MIRROR_READY
+	CAC_WAITBACKUP, CAC_MIRROR_READY, CAC_RESET
 } CAC_state;
 
 
@@ -147,7 +147,6 @@ typedef struct Port
 	 * Information that needs to be held during the authentication cycle.
 	 */
 	HbaLine    *hba;
-	char		md5Salt[4];		/* Password salt */
 
 	/*
 	 * Information that really has no business at all being in struct Port,
@@ -194,6 +193,42 @@ typedef struct Port
 	char	   *diff_options;
 } Port;
 
+
+#ifdef USE_SSL
+
+/*
+ * These functions are implemented by the glue code specific to each
+ * SSL implementation (e.g. be-secure-openssl.c)
+ */
+extern int	be_tls_init(bool isServerStart);
+extern void be_tls_destroy(void);
+extern int	be_tls_open_server(Port *port);
+extern void be_tls_close(Port *port);
+extern ssize_t be_tls_read(Port *port, void *ptr, size_t len, int *waitfor);
+extern ssize_t be_tls_write(Port *port, void *ptr, size_t len, int *waitfor);
+
+extern int	be_tls_get_cipher_bits(Port *port);
+extern bool be_tls_get_compression(Port *port);
+extern void be_tls_get_version(Port *port, char *ptr, size_t len);
+extern void be_tls_get_cipher(Port *port, char *ptr, size_t len);
+extern void be_tls_get_peerdn_name(Port *port, char *ptr, size_t len);
+
+/*
+ * Get the server certificate hash for SCRAM channel binding type
+ * tls-server-end-point.
+ *
+ * The result is a palloc'd hash of the server certificate with its
+ * size, and NULL if there is no certificate available.
+ *
+ * This is not supported with old versions of OpenSSL that don't have
+ * the X509_get_signature_nid() function.
+ */
+#if defined(USE_OPENSSL) && defined(HAVE_X509_GET_SIGNATURE_NID)
+#define HAVE_BE_TLS_GET_CERTIFICATE_HASH
+extern char *be_tls_get_certificate_hash(Port *port, size_t *len);
+#endif
+
+#endif	/* USE_SSL */
 
 extern ProtocolVersion FrontendProtocol;
 

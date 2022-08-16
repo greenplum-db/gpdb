@@ -132,7 +132,7 @@ optimize_query(Query *parse, ParamListInfo boundParams)
 	 * glob->invalItems, for any functions that are inlined or eliminated
 	 * away. (We will find dependencies to other objects later, after planning).
 	 */
-	pqueryCopy = preprocess_query_optimizer(root, pqueryCopy, boundParams);
+	pqueryCopy = fold_constants(root, pqueryCopy, boundParams, GPOPT_MAX_FOLDED_CONSTANT_SIZE);
 
 	/* Ok, invoke ORCA. */
 	result = GPOPTOptimizedPlan(pqueryCopy, &fUnexpectedFailure);

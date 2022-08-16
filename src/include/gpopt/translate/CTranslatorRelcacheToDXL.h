@@ -297,7 +297,7 @@ private:
 	static CMDIndexInfoArray *RetrieveRelIndexInfo(CMemoryPool *mp,
 												   Relation rel);
 
-	// return index info list of indexes defined on a partitoned table
+	// return index info list of indexes defined on a partitioned table
 	static CMDIndexInfoArray *RetrieveRelIndexInfoForPartTable(
 		CMemoryPool *mp, Relation root_rel);
 

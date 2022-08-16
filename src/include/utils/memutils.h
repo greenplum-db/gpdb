@@ -263,6 +263,8 @@ extern MemoryContext AllocSetContextCreate(MemoryContext parent,
 					  Size initBlockSize,
 					  Size maxBlockSize);
 
+extern bool AllocSetContains(MemoryContext context, void *pointer);
+
 /* mpool.c */
 typedef struct MPool MPool;
 extern MPool *mpool_create(MemoryContext parent,

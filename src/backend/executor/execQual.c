@@ -42,6 +42,8 @@
 #include "access/tupconvert.h"
 #include "catalog/objectaccess.h"
 #include "catalog/pg_type.h"
+#include "catalog/pg_proc.h"
+#include "catalog/pg_namespace.h"
 #include "cdb/cdbpartition.h"
 #include "cdb/cdbhash.h"
 #include "cdb/cdbvars.h"
@@ -65,6 +67,7 @@
 #include "utils/memutils.h"
 #include "utils/typcache.h"
 #include "utils/xml.h"
+#include "utils/syscache.h"
 
 
 /* static function decls */
@@ -1438,6 +1441,52 @@ GetAttributeByName(HeapTupleHeader tuple, const char *attname, bool *isNull)
 }
 
 /*
+ * List of function which not allowed on entrydb:
+ * They are peculiar in that they do their own dispatching.
+ * So they do not work on entrydb since we do not support dispatching
+ * from entry-db currently.
+ *
+ * Checked by oid first (better performance), if it has a fixed oid.
+ * Otherwise checked by its name: bacause these functions are defined in
+ * auxiliary sql file (e.g. gp_tablespace_segment_location), not like catalog
+ * functions, they don't have fixed oid.
+ */
+static bool
+function_not_run_entrydb(Oid foid)
+{
+	/* check by oid (if it has a fixed oid) */
+	switch (foid)
+	{
+		case 2332: /* pg_relation_size */
+		case 2997: /* pg_table_size */
+		case 2998: /* pg_indexes_size */
+		case 2286: /* pg_total_relation_size */
+		case 2324: /* pg_database_size_oid */
+		case 2168: /* pg_database_size_name */
+		case 2322: /* pg_tablespace_size_oid */
+		case 2323: /* pg_tablespace_size_name */
+			return true;
+	}
+
+	/* check by func name */
+	bool retvalue = false;
+	HeapTuple proctup = SearchSysCache1(PROCOID, ObjectIdGetDatum(foid));
+	if (!HeapTupleIsValid(proctup))
+		elog(ERROR, "cache lookup failed for function %u", foid);
+	Form_pg_proc procform = (Form_pg_proc) GETSTRUCT(proctup);
+	if (procform->pronamespace == PG_CATALOG_NAMESPACE)
+	{
+		const char *proname = NameStr(procform->proname);;
+
+		if (!strcmp(proname, "gp_tablespace_segment_location"))
+			retvalue = true;
+	}
+	ReleaseSysCache(proctup);
+
+	return retvalue;
+}
+
+/*
  * init_fcache - initialize a FuncExprState node during first use
  */
 void
@@ -1451,6 +1500,15 @@ init_fcache(Oid foid, Oid input_collation, FuncExprState *fcache,
 	if (aclresult != ACLCHECK_OK)
 		aclcheck_error(aclresult, ACL_KIND_PROC, get_func_name(foid));
 	InvokeFunctionExecuteHook(foid);
+
+	/* Prevent some functions (need to do their own dispatching) from running on entrydb */
+	if (Gp_role == GP_ROLE_EXECUTE && GpIdentity.segindex == MASTER_CONTENT_ID)
+	{
+		if (function_not_run_entrydb(foid))
+			ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+					errmsg("This query is not currently supported by GPDB."),
+					errdetail("Function %s cannot run on entrydb.", get_func_name(foid))));
+	}
 
 	/*
 	 * Safety check on nargs.  Under normal circumstances this should never

@@ -154,17 +154,20 @@ BroadcastSkewedHashjoin OrderByNullsFirst ConvertHashToRandomSelect ConvertHashT
 CTAS-random-distributed-from-replicated-distributed-table
 ProjectRepeatedColumn1 ProjectRepeatedColumn2 NLJ-BC-Outer-Spool-Inner Self-Comparison Self-Comparison-Nullable
 SelectCheckConstraint ExpandJoinOrder SelectOnBpchar EqualityJoin EffectsOfJoinFilter InnerJoin-With-OuterRefs
-UDA-AnyElement-1 UDA-AnyElement-2 Project-With-NonScalar-Func SixWayDPv2 Join-Varchar-Equality;
+UDA-AnyElement-1 UDA-AnyElement-2 Project-With-NonScalar-Func SixWayDPv2 Join-Varchar-Equality NLJ-Rewindability
+NLJ-Rewindability-CTAS;
 
 CJoinPredTest:
 MultipleDampedPredJoinCardinality MultipleIndependentPredJoinCardinality MultiDistKeyJoinCardinality
-MultiDistKeyWithOtherPredsJoinCardinality NoDistKeyMultiPredJoinCardinality OneDistKeyMultiPredJoinCardinality;
+MultiDistKeyWithOtherPredsJoinCardinality NoDistKeyMultiPredJoinCardinality OneDistKeyMultiPredJoinCardinality
+JoinOnViewWithCastedColumn JoinOnViewWithCastedColumnAndSubqueryInPredicate JoinOnViewWithVolatileColumn
+JoinOnViewWithMixOfPushableAndNonpushablePredicates JoinOnViewWithSetReturningColumn OuterJoinOnViewWithCastedColumn;
 
 CArrayCmpTest:
 ArrayConcat ArrayRef FoldedArrayCmp IN-ArrayCmp NOT-IN-ArrayCmp ArrayCmpAll
 UDA-AnyArray InClauseWithMCV CastedInClauseWithMCV FilterScalarCast
 IN-Nulls-ArrayCmpAny ArrayCmp-IN-ManyElements ArrayCmpAnyEmpty ArrayCmpAllEmpty
-ArrayCmpAnyEmptyLessThan;
+ArrayCmpAnyEmptyLessThan ArrayCmpAll-Disjunct ArrayCmpAll-Disjunct-2;
 
 CCTEPropertiesTest:
 CTE-PushProperties CTE-NoPushProperties;
@@ -258,7 +261,7 @@ COuterJoin1Test:
 ExpandNAryJoinGreedyWithLOJOnly NaryWithLojAndNonLojChilds LOJ_bb_mpph LOJ-Condition-False
 LeftJoin-With-Pred-On-Inner LeftJoin-With-Pred-On-Inner2
 LeftJoin-With-Col-Const-Pred LeftJoin-With-Coalesce LOJWithFalsePred LeftJoin-DPv2-With-Select
-DPv2GreedyOnly DPv2MinCardOnly DPv2QueryOnly LOJ-PushDown;
+DPv2GreedyOnly DPv2MinCardOnly DPv2QueryOnly LOJ-PushDown LeftJoinDPv2JoinOrder LeftJoinNullsNotColocated;
 
 COuterJoin2Test:
 LOJ-IsNullPred Select-Proj-OuterJoin OuterJoin-With-OuterRefs Join-Disj-Subqs
@@ -273,7 +276,8 @@ LOJ_dont_convert_to_inner_with_outer_predicate_INDF_const LOJ-With-Agg
 LOJReorderWithComplexPredicate LOJReorderComplexNestedLOJs LOJReorderWithIDF
 LOJReorderWithNestedLOJAndFilter LOJReorderWithSimplePredicate LOJReorderWithOneSidedFilter
 LOJ-HashJoin-MultiDistKeys-WithComplexPreds LOJ_convert_to_inner_with_and_predicate
-LOJ_convert_to_inner_with_or_predicate LOJNonNullRejectingPredicates LOJNullRejectingPredicates;
+LOJ_convert_to_inner_with_or_predicate LOJNonNullRejectingPredicates LOJNullRejectingPredicates
+LOJNullRejectingZeroPlacePredicates;
 
 CFullJoinTest:
 FOJ-Condition-False ExpandFullOuterJoin ExpandFullOuterJoin2 FullOuterJoin-NullRejectingLHS1 FullOuterJoin-NullRejectingLHS2
@@ -323,10 +327,10 @@ ReplicatedTableInClause ReplicatedTableSequenceInsert;
 
 CTaintedReplicatedTest:
 InsertNonSingleton NonSingleton TaintedReplicatedAgg TaintedReplicatedWindowAgg TaintedReplicatedLimit TaintedReplicatedFilter
-InsertReplicatedIntoSerialHashDistributedTable;
+InsertReplicatedIntoSerialHashDistributedTable TaintedReplicatedTablesCTE;
 
 CDqaTest:
-NonSplittableAgg DqaHavingMax DqaMax DqaMin DqaSubqueryMax DqaNoRedistribute;
+NonSplittableAgg DqaHavingMax DqaMax DqaMin DqaSubqueryMax DqaNoRedistribute DqaAddRef;
 
 CMCVCardinalityTest:
 BpCharMCVCardinalityEquals BpCharMCVCardinalityGreaterThan
@@ -351,7 +355,15 @@ CRightJoinTest:
 RightJoinHashed RightJoinRedistribute RightJoinReplicated RightJoinBothReplicated RightJoinDPS RightJoinNoDPSNonDistKey RightJoinTVF;
 
 CSqlFunctionTest:
-SqlFuncNullReject SqlFuncPredFactorize SqlFuncDmlScalar SqlFuncDmlTvf
+SqlFuncNullReject SqlFuncPredFactorize SqlFuncDmlScalar SqlFuncDmlTvf;
+
+CScalarFuncPushDownTest:
+ScalarFuncPushedBelowGather ConstScalarFuncNotPushedBelowGather;
+
+COrderedAggTest:
+CTAS_OrderedAgg_multiple_cols OrderedAgg_multiple_diffcol OrderedAgg_with_groupby OrderedAgg_computed_col
+OrderedAggUsingGroupColumnInDirectArg OrderedAgg_multiple_samecol OrderedAgg_with_nonOrderedAgg OrderedAgg_single
+OrderedAgg_array_fraction OrderedAgg_multiple_samecol_difforderespec OrderedAgg_with_nonconst_fraction
 ")
 
 set(mdp_dir "../data/dxl/minidump/")
@@ -492,11 +504,13 @@ add_orca_test(CConstTblGetTest)
 add_orca_test(CScalarIsDistinctFromTest)
 
 add_orca_test(CSubqueryHandlerTest)
+add_orca_test(CXformRightOuterJoin2HashJoinTest)
 
 add_orca_test(CBindingTest)
 add_orca_test(CEngineTest)
 add_orca_test(CEquivalenceClassesTest)
 add_orca_test(CExpressionTest)
+add_orca_test(CGroupTest)
 add_orca_test(CJoinOrderTest)
 add_orca_test(CKeyCollectionTest)
 add_orca_test(CMaxCardTest)

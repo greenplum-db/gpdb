@@ -14,7 +14,7 @@
       <p>If a schema name is given then the text search dictionary is created in the specified
         schema. Otherwise it is created in the current schema.</p>
       <p>The user who defines a text search dictionary becomes its owner.</p>
-      <p>Refer to <xref href="../../admin_guide/textsearch/full-text-search.xml#full-text-search"/>
+      <p>Refer to <xref href="../../admin_guide/textsearch/full-text-search.html#full-text-search" format="html" scope="external">Using Full Text Search</xref>
         for further information.</p></section><section id="section4"><title>Parameters</title>
       <parml>
         <plentry>

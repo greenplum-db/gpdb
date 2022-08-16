@@ -2,19 +2,18 @@
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
 <topic id="topic1">
-    <!-- install_guide/refs/gpactivatestandby.xml has a conref to this topic. -->
     <title id="jo20941">gpactivatestandby</title>
     <body>
         <p>Activates a standby master host and makes it the active master for the Greenplum Database
             system.</p>
         <section id="section2">
             <title>Synopsis</title>
-            <codeblock><b>gpactivatestandby</b> [<b>-d</b> <varname>standby_master_datadir</varname>] [<b>-f</b>] [<b>-a</b>] [<b>-q</b>] 
-    [<b>-l</b> <varname>logfile_directory</varname>]
+            <codeblock>gpactivatestandby [-d &lt;standby_master_datadir>] [-f] [-a] [-q] 
+    [-l &lt;logfile_directory>]
 
-<b>gpactivatestandby</b> <b>-v</b> 
+gpactivatestandby -v 
 
-<b>gpactivatestandby</b> <b>-?</b> | <b>-h</b> | <b>--help</b></codeblock>
+gpactivatestandby -? | -h | --help</codeblock>
         </section>
         <section id="section3">
             <title>Description</title>
@@ -23,14 +22,13 @@
                 Database system. The activated standby master effectively becomes the Greenplum
                 Database master, accepting client connections on the master port. </p>
             <p>When you initialize a standby master, the default is to use the same port as the
-                active master. For information about the master port for the standby master, see
-                        <codeph><xref href="./gpinitstandby.xml#topic1" type="topic" format="dita"
-                    /></codeph>. </p>
-            <p>You must run this utility from the master host you are activating, not the failed
-                master host you are disabling. Running this utility assumes you have a standby
-                master host configured for the system (see <codeph><xref
-                        href="./gpinitstandby.xml#topic1" type="topic" format="dita"
-                /></codeph>).</p>
+                active master. For information about the master port for the standby
+                master, see <xref href="./gpinitstandby.xml#topic1" type="topic" format="dita"
+                />. </p>
+            <p>You must run this utility from the master host you are activating, not the
+                failed master host you are disabling. Running this utility assumes you have a
+                standby master host configured for the system (see <xref
+                    href="./gpinitstandby.xml#topic1" type="topic" format="dita"/>).</p>
             <p>The utility will perform the following steps:</p>
             <ul>
                 <li id="jo140686">Stops the synchronization process (<codeph>walreceiver</codeph>)
@@ -63,11 +61,11 @@
                 disabled master host process was terminated unexpectedly).</p>
             <p>After activating a standby master, run <codeph>ANALYZE</codeph> to update the
                 database query statistics. For example:</p>
-            <codeblock>psql <varname>dbname</varname> -c 'ANALYZE;'</codeblock>
-            <p>After you activate the standby master as the primary master, the Greenplum Database
-                system no longer has a standby master configured. You might want to specify another
-                host to be the new standby with the <codeph><xref href="./gpinitstandby.xml#topic1"
-                        type="topic" format="dita"/></codeph> utility. </p>
+            <codeblock>psql &lt;dbname> -c 'ANALYZE;'</codeblock>
+            <p>After you activate the standby master as the primary master, the Greenplum
+                Database system no longer has a standby master configured. You might want to
+                specify another host to be the new standby with the <xref
+                    href="./gpinitstandby.xml#topic1" type="topic" format="dita"/> utility. </p>
         </section>
         <section id="section4">
             <title>Options</title>
@@ -121,9 +119,8 @@
         </section>
         <section id="section6">
             <title>See Also</title>
-            <p><codeph><xref href="./gpinitsystem.xml#topic1" type="topic" format="dita"/></codeph>,
-                        <codeph><xref href="./gpinitstandby.xml#topic1" type="topic" format="dita"
-                    /></codeph></p>
+            <p><xref href="./gpinitsystem.xml#topic1" type="topic" format="dita"/>, <xref
+                    href="./gpinitstandby.xml#topic1" type="topic" format="dita"/></p>
         </section>
     </body>
 </topic>

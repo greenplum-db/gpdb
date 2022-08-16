@@ -50,16 +50,6 @@
 
 static int64 calculate_total_relation_size(Relation rel);
 
-/**
- * Some functions are peculiar in that they do their own dispatching.
- * They do not work on entry db since we do not support dispatching
- * from entry-db currently.
- */
-#define ERROR_ON_ENTRY_DB()	\
-	if (Gp_role == GP_ROLE_EXECUTE && IS_QUERY_DISPATCHER())	\
-		ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED),	\
-						errmsg("This query is not currently supported by GPDB.")))
-
 /*
  * Helper function to dispatch a size-returning command.
  *
@@ -210,8 +200,6 @@ pg_database_size_oid(PG_FUNCTION_ARGS)
 	Oid			dbOid = PG_GETARG_OID(0);
 	int64		size;
 
-	ERROR_ON_ENTRY_DB();
-
 	size = calculate_database_size(dbOid);
 
 	if (Gp_role == GP_ROLE_DISPATCH)
@@ -235,8 +223,6 @@ pg_database_size_name(PG_FUNCTION_ARGS)
 	Name		dbName = PG_GETARG_NAME(0);
 	Oid			dbOid = get_database_oid(NameStr(*dbName), false);
 	int64		size;
-
-	ERROR_ON_ENTRY_DB();
 
 	size = calculate_database_size(dbOid);
 
@@ -336,8 +322,6 @@ pg_tablespace_size_oid(PG_FUNCTION_ARGS)
 	Oid			tblspcOid = PG_GETARG_OID(0);
 	int64		size;
 
-	ERROR_ON_ENTRY_DB();
-
 	size = calculate_tablespace_size(tblspcOid);
 
 	if (Gp_role == GP_ROLE_DISPATCH)
@@ -361,8 +345,6 @@ pg_tablespace_size_name(PG_FUNCTION_ARGS)
 	Name		tblspcName = PG_GETARG_NAME(0);
 	Oid			tblspcOid = get_tablespace_oid(NameStr(*tblspcName), false);
 	int64		size;
-
-	ERROR_ON_ENTRY_DB();
 
 	size = calculate_tablespace_size(tblspcOid);
 
@@ -461,8 +443,6 @@ pg_relation_size(PG_FUNCTION_ARGS)
 	ForkNumber	forkNumber;
 	Relation	rel;
 	int64		size = 0;
-
-	ERROR_ON_ENTRY_DB();
 
 	rel = try_relation_open(relOid, AccessShareLock, false);
 
@@ -646,8 +626,6 @@ pg_table_size(PG_FUNCTION_ARGS)
 	Relation	rel;
 	int64		size;
 
-	ERROR_ON_ENTRY_DB();
-
 	rel = try_relation_open(relOid, AccessShareLock, false);
 
 	if (rel == NULL)
@@ -675,8 +653,6 @@ pg_indexes_size(PG_FUNCTION_ARGS)
 	Oid			relOid = PG_GETARG_OID(0);
 	Relation	rel;
 	int64		size;
-
-	ERROR_ON_ENTRY_DB();
 
 	rel = try_relation_open(relOid, AccessShareLock, false);
 
@@ -728,8 +704,6 @@ pg_total_relation_size(PG_FUNCTION_ARGS)
 	Oid			relOid = PG_GETARG_OID(0);
 	Relation	rel;
 	int64		size;
-
-	ERROR_ON_ENTRY_DB();
 
 	/*
 	 * While we scan pg_class with an MVCC snapshot,

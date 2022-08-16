@@ -8,20 +8,20 @@
         <codeph>pg_dump</codeph>.</p>
     <section id="section2">
       <title>Synopsis</title>
-      <codeblock id="client_util_synopsis"><b>pg_restore</b> [<varname>connection-option</varname> ...] [<varname>restore_option</varname> ...] <varname>filename</varname>
+      <codeblock id="client_util_synopsis">pg_restore [&lt;connection-option> ...] [&lt;restore_option> ...] &lt;filename>
 
-<b>pg_restore</b> <b>-? | --help</b>
+pg_restore -? | --help
 
-<b>pg_restore</b> <b>-V | --version</b></codeblock>
+pg_restore -V | --version</codeblock>
     </section>
     <section id="section3">
       <title>Description</title>
       <p><codeph>pg_restore</codeph> is a utility for restoring a database from an archive created
-        by <codeph><xref href="pg_dump.xml#topic1" type="topic" format="dita"/></codeph> in one of
-        the non-plain-text formats. It will issue the commands necessary to reconstruct the database
-        to the state it was in at the time it was saved. The archive files also allow
-          <codeph>pg_restore</codeph> to be selective about what is restored, or even to reorder the
-        items prior to being restored.</p>
+        by <xref href="pg_dump.xml#topic1" type="topic" format="dita"/> in one of the non-plain-text
+        formats. It will issue the commands necessary to reconstruct the database to the state it
+        was in at the time it was saved. The archive files also allow <codeph>pg_restore</codeph> to
+        be selective about what is restored, or even to reorder the items prior to being
+        restored.</p>
       <p><codeph>pg_restore</codeph> can operate in two modes. If a database name is specified, the
         archive is restored directly into the database. Otherwise, a script containing the SQL
         commands necessary to rebuild the database is created and written to a file or standard
@@ -90,10 +90,10 @@
           </plentry>
           <plentry>
             <pt>-F c|d|t | --format={custom | directory | tar}</pt>
-            <pd>The format of the archive produced by <codeph><xref href="pg_dump.xml#topic1"
-                  type="topic" format="dita"/></codeph>. It is not necessary to specify the format,
-              since <codeph>pg_restore</codeph> will determine the format automatically. Format can
-              be <codeph>custom</codeph>, <codeph>directory</codeph>, or <codeph>tar</codeph>.</pd>
+            <pd>The format of the archive produced by <xref href="pg_dump.xml#topic1" type="topic"
+                format="dita"/>. It is not necessary to specify the format, since
+                <codeph>pg_restore</codeph> will determine the format automatically. Format can be
+                <codeph>custom</codeph>, <codeph>directory</codeph>, or <codeph>tar</codeph>.</pd>
           </plentry>
           <plentry>
             <pt>-I <varname>index</varname> | --index=<varname>index</varname></pt>
@@ -366,9 +366,7 @@ pg_restore -d newdb db.dump</codeblock>
     <section id="section8">
       <title>See Also</title>
       <p>
-        <codeph>
-          <xref href="pg_dump.xml#topic1" type="topic" format="dita"/>
-        </codeph>
+        <xref href="pg_dump.xml#topic1" type="topic" format="dita"/>
       </p>
     </section>
   </body>

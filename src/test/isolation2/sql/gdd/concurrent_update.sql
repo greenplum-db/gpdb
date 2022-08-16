@@ -28,20 +28,20 @@ DROP TABLE t_concurrent_update;
 2: UPDATE t_concurrent_update SET b=b+10 WHERE a=1;
 3: BEGIN;
 3: SET optimizer=off;
--- transaction 3 will wait transaction 1 on the segment
+-- transaction 3 will wait transaction 2 on the segment
 3&: UPDATE t_concurrent_update SET b=b+10 WHERE a=1;
 
 -- transaction 2 suspend before commit, but it will wake up transaction 3 on segment
-2: select gp_inject_fault('before_xact_end_procarray', 'suspend', dbid) FROM gp_segment_configuration WHERE role='p' AND content=-1;
+2: select gp_inject_fault('before_xact_end_procarray', 'suspend', '', 'isolation2test', '', 1, 1, 0, dbid) FROM gp_segment_configuration WHERE role='p' AND content=-1;
 2&: END;
 1: select gp_wait_until_triggered_fault('before_xact_end_procarray', 1, dbid) FROM gp_segment_configuration WHERE role='p' AND content=-1;
 -- transaction 3 should wait transaction 2 commit on master
 3<:
 3&: END;
-1: select gp_inject_fault('before_xact_end_procarray', 'reset', dbid) FROM gp_segment_configuration WHERE role='p' AND content=-1;
 -- the query should not get the incorrect distributed snapshot: transaction 1 in-progress
 -- and transaction 2 finished
 1: SELECT * FROM t_concurrent_update;
+1: select gp_inject_fault('before_xact_end_procarray', 'reset', dbid) FROM gp_segment_configuration WHERE role='p' AND content=-1;
 2<:
 3<:
 2q:
@@ -132,6 +132,28 @@ DROP TABLE t_concurrent_update;
 0: drop table tab_update_epq1;
 0: drop table tab_update_epq2;
 0q:
+1q:
+2q:
+
+-- Currently the DML node (modification variant in ORCA) doesn't support EPQ
+-- routine so concurrent modification is not possible in this case. User have
+-- to be informed to fallback to postgres optimizer.
+-- This test makes sense just for ORCA
+create table test as select 0 as i distributed randomly;
+-- in session 1, turn off the optimizer so it will invoke heap_update
+1: set optimizer = off;
+1: begin;
+1: update test set i = i + 1;
+-- in session 2, in case of ORCA DML invokes EPQ
+-- the following SQL will hang due to XID lock
+2&: delete from test where i = 0;
+-- commit session1's transaction so the above session2 will continue and emit
+-- error about serialization failure in case of ORCA
+1: end;
+2<:
+drop table test;
+1q:
+2q:
 
 -- split update is to implement updating on hash keys,
 -- it deletes the tuple and insert a new tuple in a
@@ -173,3 +195,28 @@ DROP TABLE t_concurrent_update;
 2q:
 
 0:drop table t_splitupdate_raise_error;
+
+-- test eval planqual with initPlan
+-- EvalPlanQualStart will init all subplans even if it does
+-- not use it. If such subplan contains Motion nodes, we should
+-- error out just like the behavior in EvalPlanQual.
+-- See Issue: https://github.com/greenplum-db/gpdb/issues/12902
+-- for details.
+1: create table t_epq_subplans(a int, b int);
+1: insert into t_epq_subplans values (1, 1);
+1: begin;
+1: update t_epq_subplans set b = b + 1;
+
+-- make sure planner will contain InitPlan
+-- NOTE: orca does not generate InitPlan.
+2: explain update t_epq_subplans set b = b + 1 where a > -1.5 * (select max(a) from t_epq_subplans);
+2&: update t_epq_subplans set b = b + 1 where a > -1.5 * (select max(a) from t_epq_subplans);
+
+1: end;
+-- session 2 should throw error and not PANIC
+2<:
+
+1: drop table t_epq_subplans;
+
+1q:
+2q:

@@ -295,6 +295,9 @@
 /* Define to 1 if you have the <gssapi.h> header file. */
 #undef HAVE_GSSAPI_H
 
+/* Define to 1 if you have the <gssapi_ext.h> header file */
+#undef HAVE_GSSAPI_PROXY
+
 /* Define to 1 if you have the <history.h> header file. */
 #undef HAVE_HISTORY_H
 
@@ -774,6 +777,15 @@
 /* Define to 1 if you have the <winsock2.h> header file. */
 #undef HAVE_WINSOCK2_H
 
+/* Define to 1 if you have the `X509_get_signature_nid' function. */
+#undef HAVE_X509_GET_SIGNATURE_NID
+
+/* Define to 1 if your compiler understands __builtin_bswap16. */
+#undef HAVE__BUILTIN_BSWAP16
+
+/* Define to 1 if your compiler understands __builtin_bswap32. */
+#undef HAVE__BUILTIN_BSWAP32
+
 /* Define to 1 if you have the <yaml.h> header file. */
 #undef HAVE_YAML_H
 
@@ -917,6 +929,9 @@
 /* Define to 1 to build with Bonjour support. (--with-bonjour) */
 #undef USE_BONJOUR
 
+/* Define to use /dev/urandom for random number generation */
+#undef USE_DEV_URANDOM
+
 /* Define to 1 to build with libcurl support. (--with-libcurl) */
 #undef USE_CURL
 
@@ -926,6 +941,9 @@
 /* Define to 1 if you want float4 values to be passed by value. (Always
    defined in GPDB) */
 #undef USE_FLOAT4_BYVAL
+
+/* Define to use /dev/urandom for random number generation */
+#undef USE_DEV_URANDOM
 
 /* Define to 1 if you want float8, int8, etc values to be passed by value.
    (Always defined in GPDB) */
@@ -957,6 +975,12 @@
 /* Define to 1 to build with Greenplum ORCA optimizer. (--enable-orca) */
 #undef USE_ORCA
 
+/* Define to build with OpenSSL support. (--with-openssl) */
+#undef USE_OPENSSL
+
+/* Define to use OpenSSL for random number generation */
+#undef USE_OPENSSL_RANDOM
+
 /* Define to 1 to build with PAM support. (--with-pam) */
 #undef USE_PAM
 
@@ -972,9 +996,6 @@
 /* Define to 1 to use Intel SSSE 4.2 CRC instructions with a runtime check. */
 #undef USE_SSE42_CRC32C_WITH_RUNTIME_CHECK
 
-/* Define to build with (Open)SSL support. (--with-openssl) */
-#undef USE_SSL
-
 /* Define to select SysV-style semaphores. */
 #undef USE_SYSV_SEMAPHORES
 
@@ -983,6 +1004,9 @@
 
 /* Define to select unnamed POSIX semaphores. */
 #undef USE_UNNAMED_POSIX_SEMAPHORES
+
+/* Define to use native Windows API for random number generation */
+#undef USE_WIN32_RANDOM
 
 /* Define to select Win32-style semaphores. */
 #undef USE_WIN32_SEMAPHORES

@@ -155,3 +155,154 @@ explain SELECT * from information_schema.key_column_usage;
 set gp_enable_explain_allstat=on;
 explain analyze SELECT * FROM explaintest;
 set gp_enable_explain_allstat=DEFAULT;
+
+--
+-- Test output of EXPLAIN ANALYZE for Bitmap index scan's actual rows.
+--
+
+-- Return EXPLAIN ANALYZE result as xml to manipulate it further.
+create or replace function get_explain_analyze_xml_output(explain_query text)
+returns xml as
+$$
+declare
+  x xml;
+begin
+  execute 'EXPLAIN (ANALYZE, VERBOSE, FORMAT XML) ' || explain_query
+  into x;
+  return x;
+end;
+$$ language plpgsql;
+
+-- force (Dynamic) Bitmap Index Scan
+set optimizer_enable_dynamictablescan=off;
+set enable_seqscan=off;
+
+-- Each test case below creates partitioned table with index atop of it.
+-- Each test case covers its own index type supported by GPDB and shows actual
+-- number of rows processed. This number should be more than 1 after fix
+-- (except bitmap, see below).
+-- The final call to get_explain_analyze_xml_output finds xml node with
+-- "Bitmap Index Scan" value, then goes to parent node (..), and finally
+-- extracts "Node-Type" and "Actual-Rows" nodes values. Additionally,
+-- "Optimizer" value extracted.
+
+-- btree index test case
+create table bitmap_btree_test(dist_col int, idx_col int)
+with (appendonly=true, compresslevel=5, compresstype=zlib)
+distributed by (dist_col)
+partition by range(idx_col) 
+(start (0) inclusive end (999) inclusive every (500));
+
+insert into bitmap_btree_test
+select i, i % 1000
+from generate_series(0,10000) i;
+
+create index bitmap_btree_test_idx on bitmap_btree_test
+using btree(idx_col);
+
+--both optimizers should show more than 1 row actually processed
+select xpath('//*[contains(text(), "Bitmap Index Scan")]/..
+              /*[local-name()="Node-Type" or local-name()="Actual-Rows"]
+              /text()', x) type_n_rows,
+       xpath('//*[local-name()="Optimizer"]/text()', x) opt
+from get_explain_analyze_xml_output($$
+    select * from bitmap_btree_test where idx_col = 900;
+    $$) as x;
+
+-- bitmap index test case
+create table bitmap_bitmap_test(dist_col int, idx_col int)
+with (appendonly=true, compresslevel=5, compresstype=zlib)
+distributed by (dist_col)
+partition by range(idx_col)
+(start (0) inclusive end (999) inclusive every (500));
+
+insert into bitmap_bitmap_test
+select i, i % 1000
+from generate_series(0,10000) i;
+
+create index bitmap_bitmap_test_idx on bitmap_bitmap_test
+using bitmap(idx_col);
+
+--both optimizers should show 1 row actually processed, because bitmap index
+--doesn't have a precise idea of the number of heap tuples involved
+select xpath('//*[contains(text(), "Bitmap Index Scan")]/..
+              /*[local-name()="Node-Type" or local-name()="Actual-Rows"]
+              /text()', x) type_n_rows,
+       xpath('//*[local-name()="Optimizer"]/text()', x) opt
+from get_explain_analyze_xml_output($$
+    select * from bitmap_bitmap_test where idx_col = 900;
+    $$) as x;
+
+-- gist index test case
+create table bitmap_gist_test(dist_col int, part_col int, idx_col int4range)
+with (appendonly=true, compresslevel=5, compresstype=zlib)
+distributed by (dist_col)
+partition by range(part_col)
+(start (0) inclusive end (999) inclusive every (500));
+
+insert into bitmap_gist_test
+select i, i % 1000, int4range(i % 1000, i % 1000, '[]')
+from generate_series(0,10000) i;
+
+create index bitmap_gist_test_idx on bitmap_gist_test
+using gist(idx_col);
+
+--both optimizers should show more than 1 row actually processed
+select xpath('//*[contains(text(), "Bitmap Index Scan")]/..
+              /*[local-name()="Node-Type" or local-name()="Actual-Rows"]
+              /text()', x) type_n_rows,
+       xpath('//*[local-name()="Optimizer"]/text()', x) opt
+from get_explain_analyze_xml_output($$
+    select * from bitmap_gist_test where idx_col @> 900;
+    $$) as x;
+
+-- spgist index test case
+create table bitmap_spgist_test(dist_col int, part_col int, idx_col int4range)
+with (appendonly=true, compresslevel=5, compresstype=zlib)
+distributed by (dist_col)
+partition by range(part_col)
+(start (0) inclusive end (999) inclusive every (500));
+
+insert into bitmap_spgist_test
+select i, i % 1000, int4range(i % 1000, i % 1000, '[]')
+from generate_series(0,10000) i;
+
+create index bitmap_spgist_test_idx on bitmap_spgist_test
+using spgist(idx_col);
+
+--both optimizers should show more than 1 row actually processed
+--spgist index is not supported by ORCA, falling back to Postgres optimizer
+select xpath('//*[contains(text(), "Bitmap Index Scan")]/..
+              /*[local-name()="Node-Type" or local-name()="Actual-Rows"]
+              /text()', x) type_n_rows,
+       xpath('//*[local-name()="Optimizer"]/text()', x) opt
+from get_explain_analyze_xml_output($$
+    select * from bitmap_spgist_test where idx_col @> 900;
+    $$) as x;
+
+-- gin index test case
+
+create table bitmap_gin_test(dist_col int, part_col int, idx_col int[])
+with (appendonly=true, compresslevel=5, compresstype=zlib)
+distributed by (dist_col)
+partition by range(part_col)
+(start (0) inclusive end (999) inclusive every (500));
+
+insert into bitmap_gin_test
+select i, i % 1000, array[(i % 1000)]
+from generate_series(0,10000) i;
+
+create index bitmap_gin_test_idx on bitmap_gin_test
+using gin(idx_col);
+
+--both optimizers should show more than 1 row actually processed
+select xpath('//*[contains(text(), "Bitmap Index Scan")]/..
+              /*[local-name()="Node-Type" or local-name()="Actual-Rows"]
+              /text()', x) type_n_rows,
+       xpath('//*[local-name()="Optimizer"]/text()', x) opt
+from get_explain_analyze_xml_output($$
+    select * from bitmap_gin_test where idx_col @> array[900];
+    $$) as x;
+
+reset optimizer_enable_dynamictablescan;
+reset enable_seqscan;

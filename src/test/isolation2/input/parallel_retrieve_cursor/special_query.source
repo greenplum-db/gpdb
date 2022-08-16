@@ -1,0 +1,55 @@
+-- @Description Tests create parallel for some special query
+--
+
+--------- Test1: test for PARALLEL RETRIEVE CURSOR on select transient record types
+DROP TABLE IF EXISTS t1;
+CREATE TABLE t1 AS SELECT generate_series(1, 10) AS x DISTRIBUTED by (x);
+
+CREATE OR REPLACE FUNCTION make_record(n int) RETURNS RECORD LANGUAGE plpgsql AS ' BEGIN RETURN CASE n WHEN 1 THEN ROW(1) WHEN 2 THEN ROW(1, 2) WHEN 3 THEN ROW(1, 2, 3) WHEN 4 THEN ROW(1, 2, 3, 4) ELSE ROW(1, 2, 3, 4, 5) END; END; ';
+
+SELECT make_record(x) FROM t1;
+
+1: BEGIN;
+1: DECLARE c1 PARALLEL RETRIEVE CURSOR FOR SELECT make_record(x) FROM t1;
+1: @post_run 'parse_endpoint_info 1 1 2 3 4': SELECT endpointname,auth_token,hostname,port,state FROM gp_get_endpoints() WHERE cursorname='c1';
+
+1: SELECT * FROM gp_wait_parallel_retrieve_cursor('c1', 0);
+1&: SELECT * FROM gp_wait_parallel_retrieve_cursor('c1', -1);
+
+*U: @pre_run 'set_endpoint_variable @ENDPOINT1': SELECT state FROM gp_get_segment_endpoints() WHERE endpointname='@ENDPOINT1';
+*R: @pre_run 'set_endpoint_variable @ENDPOINT1': RETRIEVE ALL FROM ENDPOINT "@ENDPOINT1";
+
+1<:
+1: CLOSE c1;
+
+--------- Test2: test for PARALLEL RETRIEVE CURSOR on select with join statement.
+-- there was a hang issue when declaring PARALLEL RETRIEVE CURSOR with join clause.
+-- for example: DECLARE c2 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t2 join t2 t12 on true;
+-- the root cause is if there are more than one slices for a big table, cdbdisp_checkDispatchAckMessage()
+-- will block due to non-root slice is always running in a while loop to wait for motion buffer.
+-- this test case is used to verify the hang issue has been fixed.
+
+-- gp_max_packet_size must be set out of the test session
+!\retcode gpconfig -c gp_max_packet_size -v 512;
+!\retcode  gpstop -u;
+
+DROP TABLE IF EXISTS t2;
+CREATE TABLE t2 (a BIGINT) DISTRIBUTED by (a);
+
+insert into t2 select generate_series(1,2000);
+
+SET gp_interconnect_snd_queue_depth=1;
+SET gp_interconnect_queue_depth=1;
+
+-- start a new session to make sure gp_max_packet_size is reconfigured.
+2: BEGIN;
+2: SHOW gp_max_packet_size;
+2: DECLARE c2 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t2 join t2 t12 on true;
+2: SELECT state FROM gp_get_endpoints() WHERE cursorname='c2';
+2: CLOSE c2;
+2: END;
+
+-- cleanup
+DROP TABLE t2;
+!\retcode gpconfig -r gp_max_packet_size;
+!\retcode  gpstop -u;

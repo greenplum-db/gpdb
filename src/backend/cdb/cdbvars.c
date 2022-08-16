@@ -161,6 +161,14 @@ int			gp_gang_creation_retry_count = 5;	/* disable by default */
 int			gp_gang_creation_retry_timer = 2000;	/* 2000ms */
 
 /*
+ * These are GUCs to tune the TCP_KEEPALIVE parameters
+ * for QD/QE libpq connections
+ */
+int			gp_dispatch_keepalives_idle = 0;
+int			gp_dispatch_keepalives_interval = 0;
+int			gp_dispatch_keepalives_count = 0;
+
+/*
  * gp_enable_slow_writer_testmode
  *
  * In order facilitate testing of reader-gang/writer-gang synchronization,
@@ -201,6 +209,7 @@ int			Gp_interconnect_debug_retry_interval = 10;
 int			interconnect_setup_timeout = 7200;
 
 int			Gp_interconnect_type = INTERCONNECT_TYPE_UDPIFC;
+int 		Gp_interconnect_address_type = INTERCONNECT_ADDRESS_TYPE_UNICAST;
 
 bool		gp_interconnect_aggressive_retry = true;	/* fast-track app-level
 														 * retry */

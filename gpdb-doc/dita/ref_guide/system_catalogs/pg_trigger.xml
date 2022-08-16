@@ -70,6 +70,20 @@
               constraint.</entry>
           </row>
           <row>
+            <entry><codeph>tgconstrindid</codeph></entry>
+            <entry>oid</entry>
+            <entry><i>pg_class.oid</i></entry>
+            <entry>The index supporting a unique, primary key, or referential integrity
+              constraint.</entry>
+          </row>
+          <row>
+            <entry><codeph>tgconstraint</codeph></entry>
+            <entry>oid</entry>
+            <entry><i>pg_constraint.oid</i></entry>
+            <entry>The <codeph>pg_constraint</codeph> entry associated with the trigger, if
+              any.</entry>
+          </row>
+          <row>
             <entry colname="col1"><codeph>tgdeferrable</codeph></entry>
             <entry colname="col2">boolean</entry>
             <entry colname="col3"/>
@@ -98,6 +112,13 @@
             <entry colname="col2">bytea</entry>
             <entry colname="col3"/>
             <entry colname="col4">Argument strings to pass to trigger, each NULL-terminated.</entry>
+          </row>
+          <row>
+            <entry><codeph>tgqual</codeph></entry>
+            <entry>pg_node_tree</entry>
+            <entry/>
+            <entry>Expression tree (in <codeph>nodeToString()</codeph> representation) for the
+              trigger's <codeph>WHEN</codeph> condition, or null if none.</entry>
           </row>
         </tbody>
       </tgroup>

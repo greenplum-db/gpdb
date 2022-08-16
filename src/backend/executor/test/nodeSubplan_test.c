@@ -101,21 +101,8 @@ test__ExecSetParamPlan__Check_Dispatch_Results(void **state)
 	/* Force SetupInterconnect to fail */
 	will_be_called_with_sideeffect(SetupInterconnect, &setupinterconnect_fail, NULL);
 
-	expect_any(cdbexplain_localExecStats,planstate);
-	expect_any(cdbexplain_localExecStats,showstatctx);
-	will_be_called(cdbexplain_localExecStats);
-
-	expect_any(cdbdisp_cancelDispatch,ds);
-	will_be_called(cdbdisp_cancelDispatch);
-
 	expect_any(CdbDispatchHandleError, ds);
 	will_be_called(CdbDispatchHandleError);
-
-	expect_any(cdbexplain_recvExecStats,planstate);
-	expect_any(cdbexplain_recvExecStats,dispatchResults);
-	expect_any(cdbexplain_recvExecStats,sliceIndex);
-	expect_any(cdbexplain_recvExecStats,showstatctx);
-	will_be_called(cdbexplain_recvExecStats);
 
 	/* Catch PG_RE_THROW(); after cleaning with CdbCheckDispatchResult */
 	PG_TRY();

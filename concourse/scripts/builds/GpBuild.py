@@ -42,7 +42,6 @@ class GpBuild:
             cwd="gpdb_src/gpAux/gpdemo", shell=True)
 
     def _run_gpdb_command(self, command, stdout=None, stderr=None, source_env_cmd='', print_command=True):
-        cmd = "source {0}/greenplum_path.sh && source gpdb_src/gpAux/gpdemo/gpdemo-env.sh".format(INSTALL_DIR)
         if len(source_env_cmd) != 0:
             #over ride the command if requested
             cmd = source_env_cmd
@@ -59,27 +58,28 @@ class GpBuild:
         if dbexists:
             source_env_cmd='source {0}/greenplum_path.sh && source ~/.bash_profile '.format(INSTALL_DIR)
         else:
+            source_env_cmd = "source {0}/greenplum_path.sh && source gpdb_src/gpAux/gpdemo/gpdemo-env.sh".format(INSTALL_DIR)
             status = self.create_demo_cluster(INSTALL_DIR, True)
             fail_on_error(status)
-            status = self._run_gpdb_command("createdb")
+            status = self._run_gpdb_command("createdb", source_env_cmd=source_env_cmd)
             fail_on_error(status)
-            status = self._run_gpdb_command("psql -f schema.sql")
+            status = self._run_gpdb_command("psql -f schema.sql", source_env_cmd=source_env_cmd)
             fail_on_error(status)
 
             with open("load_stats.txt", "w") as f:
-                status = self._run_gpdb_command("psql -q -f stats.sql", stdout=f)
+                status = self._run_gpdb_command("psql -q -f stats.sql", stdout=f, source_env_cmd=source_env_cmd)
             if status:
                 with open("load_stats.txt", "r") as f:
                     print f.read()
                 fail_on_error(status)
 
         # set gucs if any were specified
-        self._run_cmd("source gpdb_src/gpAux/gpdemo/gpdemo-env.sh && cat gporca-commits-to-test/optional_gucs.txt >> $MASTER_DATA_DIRECTORY/postgresql.conf", None)
+        status = self._run_cmd("{0} && cat gporca-commits-to-test/optional_gucs.txt >> $MASTER_DATA_DIRECTORY/postgresql.conf".format(source_env_cmd), None)
         fail_on_error(status)
         # use 32 segments for explain tests (this number is fairly arbitrary, it might be better to make this dependent on the workload?)
-        self._run_cmd("source gpdb_src/gpAux/gpdemo/gpdemo-env.sh && echo 'optimizer_segments=32\ngp_segments_for_planner=32' >> $MASTER_DATA_DIRECTORY/postgresql.conf", None)
+        status = self._run_cmd("{0} && echo 'optimizer_segments=32\ngp_segments_for_planner=32' >> $MASTER_DATA_DIRECTORY/postgresql.conf".format(source_env_cmd), None)
         fail_on_error(status)
-        self._run_gpdb_command("gpstop -ar")
+        status = self._run_gpdb_command("gpstop -ar", source_env_cmd=source_env_cmd)
         fail_on_error(status)
 
         # Now run the queries !!

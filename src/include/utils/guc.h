@@ -271,6 +271,7 @@ extern bool gp_local_distributed_cache_stats;
 extern bool gp_appendonly_verify_block_checksums;
 extern bool gp_appendonly_verify_write_block;
 extern bool gp_appendonly_compaction;
+extern bool enable_implicit_timeformat_YYYYMMDDHH24MISS;
 
 /*
  * Threshold of the ratio of dirty data in a segment file
@@ -485,12 +486,15 @@ extern bool optimizer_enable_indexscan;
 extern bool optimizer_enable_indexonlyscan;
 extern bool optimizer_enable_tablescan;
 extern bool optimizer_enable_eageragg;
+extern bool optimizer_enable_orderedagg;
 extern bool optimizer_expand_fulljoin;
 extern bool optimizer_enable_hashagg;
 extern bool optimizer_enable_groupagg;
 extern bool optimizer_enable_mergejoin;
 extern bool optimizer_prune_unused_columns;
 extern bool optimizer_enable_redistribute_nestloop_loj_inner_child;
+extern bool optimizer_force_comprehensive_join_implementation;
+extern bool optimizer_enable_replicated_table;
 
 /* Optimizer plan enumeration related GUCs */
 extern bool optimizer_enumerate_plans;
@@ -581,6 +585,10 @@ extern bool gp_external_enable_filter_pushdown;
 
 /* Enable the Global Deadlock Detector */
 extern bool gp_enable_global_deadlock_detector;
+
+extern bool gp_log_endpoints;
+
+extern bool gp_allow_date_field_width_5digits;
 
 typedef enum
 {

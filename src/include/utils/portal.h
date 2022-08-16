@@ -214,6 +214,7 @@ typedef struct PortalData
 #define PortalGetHeapMemory(portal) ((portal)->heap)
 #define PortalGetPrimaryStmt(portal) PortalListGetPrimaryStmt((portal)->stmts)
 
+#define PortalIsParallelRetrieveCursor(portal) ((portal)->cursorOptions & CURSOR_OPT_PARALLEL_RETRIEVE)
 
 /* Prototypes for functions in utils/mmgr/portalmem.c */
 extern void EnablePortalManager(void);

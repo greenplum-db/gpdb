@@ -92,7 +92,6 @@ static MemoryContext parsed_hba_context = NULL;
 static List *parsed_ident_lines = NIL;
 static MemoryContext parsed_ident_context = NULL;
 
-
 static MemoryContext tokenize_file(const char *filename, FILE *file,
 			  List **lines, List **line_nums, List **raw_lines);
 static List *tokenize_inc_file(List *tokens, const char *outer_filename,
@@ -1176,6 +1175,8 @@ parse_hba_line(List *line, int line_num, char *raw_line)
 		}
 		parsedline->auth_method = uaMD5;
 	}
+	else if (strcmp(token->string, "scram-sha-256") == 0)
+		parsedline->auth_method = uaSCRAM;
 	else if (strcmp(token->string, "pam") == 0)
 #ifdef USE_PAM
 		parsedline->auth_method = uaPAM;

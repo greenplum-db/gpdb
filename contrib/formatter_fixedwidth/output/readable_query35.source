@@ -1,0 +1,16 @@
+set datestyle = 'ISO, DMY';
+-- Incomplete line at end of test file
+DROP EXTERNAL TABLE IF EXISTS tbl_ext_fixedwidth;
+CREATE EXTERNAL TABLE tbl_ext_fixedwidth (
+  s1 char(10), s2 varchar(10), s3 text, dt timestamp,
+  n1 smallint, n2 integer, n3 bigint, n4 decimal,
+  n5 numeric, n6 real, n7 double precision)
+LOCATION (
+  'file://@hostname@@abs_srcdir@/data/fixedwidth_small_incomplete_at_end_of_file.tbl'
+)
+FORMAT 'CUSTOM' (formatter='fixedwidth_in', s1='10',
+  s2='10', s3='10', dt='20',n1='5', n2='10',
+  n3='10', n4='10', n5='10', n6='10', n7='15');
+SELECT * FROM tbl_ext_fixedwidth ORDER BY s1;
+ERROR:  Expected line size from the formatting string: 120, but the actual size is: 108  (seg0 slice1 127.0.0.1:7000 pid=18977)
+CONTEXT:  External table tbl_ext_fixedwidth

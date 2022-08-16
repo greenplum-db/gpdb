@@ -55,6 +55,7 @@
 #include "pg_trace.h"
 
 extern bool gp_debug_resqueue_priority;
+extern bool gp_log_resqueue_priority_sleep_time;
 
 /* Enable for more debug info to be logged */
 /* #define BACKOFF_DEBUG */
@@ -69,6 +70,9 @@ extern bool gp_debug_resqueue_priority;
 
 /* In ms */
 #define DEFAULT_SLEEP_TIME 100.0
+
+/* In ms */
+#define DEFAULT_SLEEP_TIME_LOGGING_INTERVAL 120000.0
 
 /**
  * A statement id consists of a session id and command count.
@@ -98,6 +102,10 @@ typedef struct BackoffBackendLocalEntry
 								 * prevent nested calls */
 	bool		groupingTimeExpired;	/* Should backend try to find better
 										 * leader? */
+	double		totalSleepTime; /* Total duration (micro sec) pg_usleep was invoked
+								 * by BackOffBackend() for this statement */
+	double		lastLoggedSleepTime;	/* track last logged sleep time */
+
 }	BackoffBackendLocalEntry;
 
 /**
@@ -453,6 +461,8 @@ BackoffBackendEntryInit(int sessionid, int commandcount, Oid queueId)
 	myLocalEntry->processId = MyProcPid;
 	myLocalEntry->lastSleepTime = DEFAULT_SLEEP_TIME;
 	myLocalEntry->groupingTimeExpired = false;
+	myLocalEntry->totalSleepTime = 0.0;
+	myLocalEntry->lastLoggedSleepTime = 0.0;
 	if (getrusage(RUSAGE_SELF, &myLocalEntry->lastUsage) < 0)
 	{
 		elog(ERROR, "Unable to execute getrusage(). Please disable query prioritization.");
@@ -567,6 +577,7 @@ BackoffBackend()
 			{
 				/* Sleep a chunk */
 				pg_usleep(sleepInterval);
+				le->totalSleepTime += sleepInterval;
 				/* Check for early backoff exit */
 				if (se->earlyBackoffExit)
 				{
@@ -578,7 +589,20 @@ BackoffBackend()
 				}
 			}
 			if (j == numIterations)
+			{
 				pg_usleep(leftOver);
+				le->totalSleepTime += leftOver;
+			}
+
+			/* log after every 2 minute of sleeping if enabled*/
+			if (gp_log_resqueue_priority_sleep_time &&
+					((le->totalSleepTime - le->lastLoggedSleepTime) / 1000) >= DEFAULT_SLEEP_TIME_LOGGING_INTERVAL)
+			{
+				ereport(LOG,
+						(errmsg("until now sleep time spent in resource queue: %.3f ms",
+								le->totalSleepTime / 1000)));
+				le->lastLoggedSleepTime = le->totalSleepTime;
+			}
 		}
 	}
 	else
@@ -1004,8 +1028,18 @@ BackoffBackendEntryExit()
 		&& (Gp_role == GP_ROLE_DISPATCH || Gp_role == GP_ROLE_EXECUTE))
 	{
 		BackoffBackendSharedEntry *se = myBackoffSharedEntry();
-
 		Assert(se);
+
+		if (gp_log_resqueue_priority_sleep_time)
+		{
+			BackoffBackendLocalEntry *le = myBackoffLocalEntry();
+			Assert(le);
+
+			if (isValid(&se->statementId) && le->totalSleepTime > 0)
+				ereport(LOG,
+						(errmsg("Total sleep time in resource queue: %.3f ms", le->totalSleepTime / 1000)));
+		}
+
 		setInvalid(&se->statementId);
 	}
 	return;

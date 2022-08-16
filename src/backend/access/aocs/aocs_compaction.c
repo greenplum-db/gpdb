@@ -49,7 +49,7 @@
  * the relation is dropped later, the code in mdunlink() will remove all
  * segments, including any empty ones we've left behind.
  */
-static void
+void
 AOCSCompaction_DropSegmentFile(Relation aorel,
 							   int segno)
 {
@@ -71,7 +71,7 @@ AOCSCompaction_DropSegmentFile(Relation aorel,
 			   "segno %d",
 			   pseudoSegNo);
 
-		fd = OpenAOSegmentFile(aorel, filenamepath, 0);
+		fd = OpenAOSegmentFile(filenamepath, 0);
 		if (fd >= 0)
 		{
 			TruncateAOSegmentFile(fd, aorel, pseudoSegNo, 0);
@@ -134,7 +134,7 @@ AOCSSegmentFileTruncateToEOF(Relation aorel,
 			   fileSegNo,
 			   segeof);
 
-		fd = OpenAOSegmentFile(aorel, filenamepath, segeof);
+		fd = OpenAOSegmentFile(filenamepath, segeof);
 		if (fd >= 0)
 		{
 			TruncateAOSegmentFile(fd, aorel, fileSegNo, segeof);
@@ -422,9 +422,8 @@ AOCSSegmentFileFullCompaction(Relation aorel,
 	return true;
 }
 
-
 /*
- * Performs a compaction of an append-only AOCS relation.
+ * Performs a compaction drop of an append-only AOCS relation.
  *
  * In non-utility mode, all compaction segment files should be
  * marked as in-use/in-compaction in the appendonlywriter.c code.
@@ -492,6 +491,46 @@ AOCSDrop(Relation aorel,
 	}
 }
 
+/*
+ * Performs dead segments collection for an ao_column relation.
+ */
+Bitmapset *
+AOCSCollectDeadSegments(Relation aorel,
+						List *compaction_segno)
+{
+	int	total_segfiles;
+	AOCSFileSegInfo **segfile_array;
+	Snapshot appendOnlyMetaDataSnapshot = SnapshotSelf;
+	Bitmapset *dead_segs = NULL;
+
+	Assert(Gp_role == GP_ROLE_EXECUTE || Gp_role == GP_ROLE_UTILITY);
+	Assert(RelationIsAoCols(aorel));
+
+	elogif(Debug_appendonly_print_compaction, LOG,
+		   "Collect AOCS relation %s", RelationGetRelationName(aorel));
+
+	/* Get information about all the file segments we need to scan */
+	segfile_array = GetAllAOCSFileSegInfo(aorel, appendOnlyMetaDataSnapshot, &total_segfiles);
+
+	for (int i = 0; i < total_segfiles; i++)
+	{
+		int segno = segfile_array[i]->segno;
+
+		AOCSFileSegInfo *fsinfo = GetAOCSFileSegInfo(aorel, appendOnlyMetaDataSnapshot, segno);
+		if (fsinfo->state == AOSEG_STATE_AWAITING_DROP)
+			dead_segs = bms_add_member(dead_segs, segno);
+
+		pfree(fsinfo);
+	}
+
+	if (segfile_array)
+	{
+		FreeAllAOCSSegFileInfo(segfile_array, total_segfiles);
+		pfree(segfile_array);
+	}
+
+	return dead_segs;
+}
 
 /*
  * Performs a compaction of an append-only relation in column-orientation.

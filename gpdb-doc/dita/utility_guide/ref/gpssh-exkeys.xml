@@ -2,19 +2,18 @@
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
 <topic id="topic1">
-    <!--install_guide/refs/gpssh-exkeys.xml has a conref to this topic. -->
     <title id="jw137116">gpssh-exkeys</title>
     <body>
         <p>Exchanges SSH public keys between hosts.</p>
         <section id="section2">
             <title>Synopsis</title>
-            <codeblock><b>gpssh-exkeys</b> <b>-f</b> <varname>hostfile_exkeys</varname> | <b>-h</b> <varname>hostname</varname> [<b>-h</b> <varname>hostname</varname> ...]
+            <codeblock>gpssh-exkeys -f &lt;hostfile_exkeys> | -h &lt;hostname> [-h &lt;hostname> ...]
 
-<b>gpssh-exkeys</b> <b>-e</b> <varname>hostfile_exkeys</varname> <b>-x</b> <varname>hostfile_gpexpand</varname>
+gpssh-exkeys -e &lt;hostfile_exkeys> -x &lt;hostfile_gpexpand>
 
-<b>gpssh-exkeys</b> <b>-?</b> 
+gpssh-exkeys -? 
 
-<b>gpssh-exkeys</b> <b>--version</b></codeblock>
+gpssh-exkeys --version</codeblock>
         </section>
         <section id="section3">
             <title>Description</title>
@@ -158,8 +157,8 @@ $ gpssh-exkeys -e hostfile_exkeys -x hostfile_gpexpand</codeblock>
         </section>
         <section id="section6">
             <title>See Also</title>
-            <p><codeph><xref href="gpssh.xml#topic1">gpssh</xref></codeph>, <codeph><xref
-                        href="gpscp.xml#topic1">gpscp</xref></codeph></p>
+            <p><xref href="gpssh.xml#topic1">gpssh</xref>, <xref href="gpscp.xml#topic1"
+                    >gpscp</xref></p>
         </section>
     </body>
 </topic>

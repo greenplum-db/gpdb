@@ -390,11 +390,10 @@ cdblegacyhash_numeric(PG_FUNCTION_ARGS)
 	void	   *buf;		/* pointer to the data */
 	size_t		len;		/* length for the data buffer */
 	uint32		hash;
+	uint32		nanbuf = NAN_VAL;
 
 	if (numeric_is_nan(num))
 	{
-		uint32		nanbuf = NAN_VAL;
-
 		buf = &nanbuf;
 		len = sizeof(nanbuf);
 	}

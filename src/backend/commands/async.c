@@ -394,9 +394,6 @@ static bool asyncQueueProcessPageEntries(volatile QueuePosition *current,
 							 Snapshot snapshot);
 static void asyncQueueAdvanceTail(void);
 static void ProcessIncomingNotify(void);
-static void NotifyMyFrontEnd(const char *channel,
-				 const char *payload,
-				 int32 srcPid);
 static bool AsyncExistsPendingNotify(const char *channel, const char *payload);
 static void ClearPendingActionsAndNotifies(void);
 
@@ -2195,8 +2192,12 @@ ProcessIncomingNotify(void)
 
 /*
  * Send NOTIFY message to my front end.
+ *
+ * GPDB: We have exposed this function globally for our dispatch-notify
+ * mechanism. We overload the srcPid field to pass in the gp_session_id
+ * from GPDB specific callsites.
  */
-static void
+void
 NotifyMyFrontEnd(const char *channel, const char *payload, int32 srcPid)
 {
 	if (whereToSendOutput == DestRemote)

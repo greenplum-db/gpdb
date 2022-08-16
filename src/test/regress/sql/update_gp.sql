@@ -282,6 +282,23 @@ FROM   update_gp_foo1;
 
 SELECT * from update_gp_foo;
 
+-- Test for update with LASJ_NOTIN
+-- See Issue: https://github.com/greenplum-db/gpdb/issues/13265
+create table t1_13265(a int, b int, c int, d int) distributed by (a);
+create table t2_13265(a int, b int, c int, d int) distributed by (a);
+
+insert into t1_13265 values (1, null, 1, 1);
+insert into t2_13265 values (2, null, 2, 2);
+
+explain (verbose, costs off)
+update t1_13265 set b = 2 where
+(c, d) not in (select c, d from t2_13265 where a = 2);
+
+update t1_13265 set b = 2 where
+(c, d) not in (select c, d from t2_13265 where a = 2);
+
+select * from t1_13265;
+
 -- start_ignore
 drop table r;
 drop table s;
@@ -290,4 +307,6 @@ drop table ao_table;
 drop table aoco_table;
 drop table nosplitupdate;
 drop table tsplit_entry;
+drop table t1_13265;
+drop table t2_13265;
 -- end_ignore

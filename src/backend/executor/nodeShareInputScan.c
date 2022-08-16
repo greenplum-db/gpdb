@@ -26,6 +26,13 @@
 
 #include "postgres.h"
 
+#ifdef HAVE_POLL_H
+#include <poll.h>
+#endif
+#ifdef HAVE_SYS_POLL_H
+#include <sys/poll.h>
+#endif
+
 #include "access/xact.h"
 #include "cdb/cdbvars.h"
 #include "commands/tablespace.h"
@@ -61,7 +68,7 @@ static void
 init_tuplestore_state(ShareInputScanState *node)
 {
 	Assert(node->ts_state == NULL);
-	
+
 	EState *estate = node->ss.ps.state;
 	ShareInputScan *sisc = (ShareInputScan *)node->ss.ps.plan;
 	ShareNodeEntry *snEntry = ExecGetShareNodeEntry(estate, sisc->share_id, false);
@@ -75,7 +82,7 @@ init_tuplestore_state(ShareInputScanState *node)
 		{
 			ExecProcNode(snState);
 		}
-		
+
 		else
 		{
 			Assert(share_type == SHARE_MATERIAL_XSLICE || share_type == SHARE_SORT_XSLICE);
@@ -116,7 +123,7 @@ init_tuplestore_state(ShareInputScanState *node)
 		tuplesort_begin_pos(node->ts_state->sortstore, (TuplesortPos **)(&node->ts_pos));
 		tuplesort_rescan_pos(node->ts_state->sortstore, (TuplesortPos *)node->ts_pos);
 	}
-	else 
+	else
 	{
 		Assert(sisc->share_type == SHARE_SORT);
 		Assert(snState != NULL);
@@ -149,7 +156,7 @@ ExecShareInputScan(ShareInputScanState *node)
 
 	ShareType share_type = sisc->share_type;
 
-	/* 
+	/*
 	 * get state info from node
 	 */
 	estate = node->ss.ps.state;
@@ -165,13 +172,22 @@ ExecShareInputScan(ShareInputScanState *node)
 		init_tuplestore_state(node);
 	}
 
+	/*
+	 * Return NULL when necessary.
+	 * This could help improve performance, especially when tuplestore is huge, because ShareInputScan
+	 * do not need to read tuple from tuplestore when discard_output is true, which means current
+	 * ShareInputScan is one but not the last one of Sequence's subplans.
+	 */
+	if (sisc->discard_output)
+		return NULL;
+
 	slot = node->ss.ps.ps_ResultTupleSlot;
 
 	while(1)
 	{
 		bool gotOK = false;
 
-		if(share_type == SHARE_MATERIAL || share_type == SHARE_MATERIAL_XSLICE) 
+		if(share_type == SHARE_MATERIAL || share_type == SHARE_MATERIAL_XSLICE)
 		{
 			ntuplestore_acc_advance((NTupleStoreAccessor *) node->ts_pos, forward ? 1 : -1);
 			gotOK = ntuplestore_acc_current_tupleslot((NTupleStoreAccessor *) node->ts_pos, slot);
@@ -194,7 +210,7 @@ ExecShareInputScan(ShareInputScanState *node)
 }
 
 /*  ------------------------------------------------------------------
- * 	ExecInitShareInputScan 
+ * 	ExecInitShareInputScan
  * ------------------------------------------------------------------
  */
 ShareInputScanState *
@@ -205,12 +221,12 @@ ExecInitShareInputScan(ShareInputScan *node, EState *estate, int eflags)
 	TupleDesc tupDesc;
 
 	Assert(innerPlan(node) == NULL);
-	
+
 	/* create state data structure */
 	sisstate = makeNode(ShareInputScanState);
 	sisstate->ss.ps.plan = (Plan *) node;
 	sisstate->ss.ps.state = estate;
-	
+
 	sisstate->ts_state = NULL;
 	sisstate->ts_pos = NULL;
 	sisstate->ts_markpos = NULL;
@@ -224,15 +240,15 @@ ExecInitShareInputScan(ShareInputScan *node, EState *estate, int eflags)
 		sisstate->share_lk_ctxt = shareinput_init_lk_ctxt(node->share_id);
 	}
 
-	/* 
-	 * init child node.  
-	 * if outerPlan is NULL, this is no-op (so that the ShareInput node will be 
+	/*
+	 * init child node.
+	 * if outerPlan is NULL, this is no-op (so that the ShareInput node will be
 	 * only init-ed once).
 	 */
 	outerPlan = outerPlan(node);
 	outerPlanState(sisstate) = ExecInitNode(outerPlan, estate, eflags);
 
-	sisstate->ss.ps.targetlist = (List *) 
+	sisstate->ss.ps.targetlist = (List *)
 		ExecInitExpr((Expr *) node->scan.plan.targetlist, (PlanState *) sisstate);
 	Assert(node->scan.plan.qual == NULL);
 	sisstate->ss.ps.qual = NULL;
@@ -247,7 +263,7 @@ ExecInitShareInputScan(ShareInputScan *node, EState *estate, int eflags)
 	ExecInitResultTupleSlot(estate, &sisstate->ss.ps);
 	sisstate->ss.ss_ScanTupleSlot = ExecInitExtraTupleSlot(estate);
 
-	/* 
+	/*
 	 * init tuple type.
 	 */
 	ExecAssignResultTypeFromTL(&sisstate->ss.ps);
@@ -259,7 +275,7 @@ ExecInitShareInputScan(ShareInputScan *node, EState *estate, int eflags)
 
 		tupDesc = ExecTypeFromTL(node->scan.plan.targetlist, hasoid);
 	}
-		
+
 	ExecAssignScanType(&sisstate->ss, tupDesc);
 
 	sisstate->ss.ps.ps_ProjInfo = NULL;
@@ -283,13 +299,13 @@ ExecInitShareInputScan(ShareInputScan *node, EState *estate, int eflags)
 	 * ExecSliceDependencyShareInputScan() which is called at the begining of ExecutePlan().
 	 * The shareinput-writer will open/create the named pipe file when data is ready.
 	 * The READER and the WRITER share the pipe file for communication, so the pipe file
-	 * must be in the same tablespace. 
+	 * must be in the same tablespace.
 	 *
 	 * We can't call PrepareTempTablespaces() under ExecShareInputScan()/ExecProcNode()
 	 * like other callers, because it's too late for the READER.
 	 */
 	PrepareTempTablespaces();
-	
+
 	return sisstate;
 }
 
@@ -326,7 +342,7 @@ void ExecEndShareInputScan(ShareInputScanState *node)
 
 	ExecEagerFreeShareInputScan(node);
 
-	/* 
+	/*
 	 * shutdown subplan.  First scanner of underlying share input will
 	 * do the shutdown, all other scanners are no-op because outerPlanState
 	 * is NULL
@@ -371,7 +387,7 @@ ExecReScanShareInputScan(ShareInputScanState *node)
 }
 
 /*************************************************************************
- * XXX 
+ * XXX
  * we need some IPC mechanism for shareinput_read_wait/writer_notify.  Semaphore is
  * the first thing come to mind but it turns out postgres is very picky about
  * how to use semaphore and we do not want to mess up with it.
@@ -386,12 +402,12 @@ ExecReScanShareInputScan(ShareInputScanState *node)
  * At first, I used postgres File to manage the FIFO.  It turns out this is not
  * correct because when postgres run out of file descriptors, it will try to close
  * some file descriptors using an LRU algorithm.  Later when the File is used again,
- * postgres will reopen it. The FIFO here is used for synchronization so it is simply 
+ * postgres will reopen it. The FIFO here is used for synchronization so it is simply
  * wrong.  Here we use the file descriptor directly, and use a XCallBack to cleanup
  * the resource at the end of transaction (commit or abort).
- * 
+ *
  * XXX However, it is always better to have this kind of stuff abstracted out
- * by the system.  
+ * by the system.
  **************************************************************************/
 
 #include "fcntl.h"
@@ -406,7 +422,7 @@ char *shareinput_create_bufname_prefix(int share_id)
 	return psprintf("SIRW_%d_%d_%d", gp_session_id, gp_command_count, share_id);
 }
 
-/* Here we use the absolute path name as the lock name.  See fd.c 
+/* Here we use the absolute path name as the lock name.  See fd.c
  * for how the name is created (GP_TEMP_FILE_DIR and make_database_relative).
  */
 static void
@@ -419,6 +435,8 @@ sisc_lockname(char *p, int size, int share_id, const char* name)
 			 "gpcdb2.sisc_%d_%d_%d_%d_%s",
 			 GpIdentity.segindex, gp_session_id, gp_command_count, share_id, name);
 
+	/* Ensure that temp tablespaces are set up to build temporary path. */
+	PrepareTempTablespaces();
 	path = GetTempFilePath(filename, true);
 	if (strlen(path) >= size)
 		elog(ERROR, "path to temporary file too long: %s", path);
@@ -490,7 +508,7 @@ static void shareinput_clean_lk_ctxt(ShareInput_Lk_Context *lk_ctxt)
 
 static void XCallBack_ShareInput_FIFO(XactEvent ev, void* vp)
 {
-	ShareInput_Lk_Context *lk_ctxt = (ShareInput_Lk_Context *) vp; 
+	ShareInput_Lk_Context *lk_ctxt = (ShareInput_Lk_Context *) vp;
 	shareinput_clean_lk_ctxt(lk_ctxt);
 }
 
@@ -506,7 +524,7 @@ create_tmp_fifo(const char *fifoname)
 #endif
 }
 
-/* 
+/*
  * As all other read/write in postgres, we may be interrupted so retry is needed.
  */
 static int retry_read(int fd, char *buf, int rsize)
@@ -545,7 +563,40 @@ write_retry:
 	return 0;
 }
 
-/* 
+#ifdef FAULT_INJECTOR
+/**
+ * create and open many tmp files, so the next fd number is bigger.
+ **/
+static void fi_create_many_fds(int *fds, char *file_prefix, int num)
+{
+	for (int i = 0; i < num; i++)
+	{
+		char filepath[1024];
+		snprintf(filepath, sizeof(filepath), "%s/si_%d", file_prefix, i);
+		fds[i] = open(filepath, O_RDWR | O_CREAT, 0666);
+	}
+	if (fds[num-1] > 0)
+		Assert(fds[num-1] > num);
+}
+
+/**
+ * close opened fds and delete the tmp files
+ **/
+static void fi_close_created_fds(int *fds, char *file_prefix, int num)
+{
+	for (int i = 0; i < num; i++)
+	{
+		char filepath[1024];
+		snprintf(filepath, sizeof(filepath), "%s/si_%d", file_prefix, i);
+		if (fds[i] > 0) {
+			close(fds[i]);
+			unlink(filepath);
+		}
+	}
+}
+#endif
+
+/*
  * Readiness (a) synchronization.
  *
  * For readiness, the shared node will write xslice of 'a' into the pipe.
@@ -553,15 +604,15 @@ write_retry:
  * it need to write all xslice copies of 'a', even if we are interrupted, that
  * is, we should not call CHECK_FOR_INTERRUPTS.
  *
- * For sharer, it need to check for ready to read (using select), because read 
+ * For sharer, it need to check for ready to read (using select), because read
  * is blocking.  Otherwise if shared is cancelled before write, then we will be
  * blocked here forever.  Once shared has write at least one 'a', it will write
  * all xslice of 'a', so once select succeed, read will eventually succeed.  Once
  * sharer got 'a', it write 'b' back to shared.
  *
  * Done (b and z) synchronization.
- * For done, the shared is the only reader.  sharer will not block for writing, 
- * but shared may block for read, therefore, we much call select before shared 
+ * For done, the shared is the only reader.  sharer will not block for writing,
+ * but shared may block for read, therefore, we much call select before shared
  * calling read.  Because there is only one shared, nobody can steal char from
  * the pipe, therefore, if select succeed, read will not block forever.
  *
@@ -584,36 +635,60 @@ write_retry:
 void
 shareinput_reader_waitready(void *ctxt, int share_id, PlanGenerator planGen)
 {
-	mpp_fd_set rset;
-	struct timeval tval;
-	int n;
+	struct pollfd fds[1];
+	int nfds = 0;
 	char a;
 	ShareInput_Lk_Context *pctxt = (ShareInput_Lk_Context *) ctxt;
 	RegisterXactCallbackOnce(XCallBack_ShareInput_FIFO, pctxt);
 
+#ifdef FAULT_INJECTOR
+	/**
+	 * In preivous code, use MPP_FD_SET(call select() internally) to operate FIFO,
+	 * so the FIFO's fd number cannot exceed 65536.
+	 *
+	 * After using poll() instead of select(), it can overcome this limit.
+	 * Using FAULT_INJECTOR here to test whether it works normally in this
+	 * scenario (already opened many fds).
+	 **/
+	// we should use 70000(>65536) to test here, but the test env (docker)'s open files
+	// is not very big, so only using a smaller value instead.
+	// const int num = 70000;
+	const int num = 40000;
+	int tmp_fds[num];
+	memset(tmp_fds, 0, sizeof(tmp_fds));
+	char tmpfile_prefix[] = "/tmp/_gpdb_fault_inject_tmp_dir/"; // need create the dir first
+	if (SIMPLE_FAULT_INJECTOR("inject_many_fds_for_shareinputscan") == FaultInjectorTypeSkip)
+		fi_create_many_fds(tmp_fds, tmpfile_prefix, num);
+#endif
+
 	create_tmp_fifo(pctxt->lkname_ready);
-	pctxt->readyfd = open(pctxt->lkname_ready, O_RDWR, 0600); 
+	pctxt->readyfd = open(pctxt->lkname_ready, O_RDWR, 0600);
 	if(pctxt->readyfd < 0)
 		elog(ERROR, "could not open fifo \"%s\": %m", pctxt->lkname_ready);
-	
+
 	create_tmp_fifo(pctxt->lkname_done);
 	pctxt->donefd = open(pctxt->lkname_done, O_RDWR, 0600);
 	if(pctxt->donefd < 0)
 		elog(ERROR, "could not open fifo \"%s\": %m", pctxt->lkname_done);
 
+#ifdef FAULT_INJECTOR
+	/* close opened fds */
+	fi_close_created_fds(tmp_fds, tmpfile_prefix, num);
+#endif
+
+	fds[0].fd = pctxt->readyfd;
+	fds[0].events = POLLIN;
+	nfds++;
 	while(1)
 	{
 		CHECK_FOR_INTERRUPTS();
 
-		MPP_FD_ZERO(&rset);
-		MPP_FD_SET(pctxt->readyfd, &rset);
+		int nready = 0;
+		int poll_timeout = 1000; // unit: ms
 
-		tval.tv_sec = 1;
-		tval.tv_usec = 0;
+		nready = poll(fds, nfds, poll_timeout);
 
-		n = select(pctxt->readyfd+1, (fd_set *) &rset, NULL, NULL, &tval);
-
-		if(n==1)
+		if (nready == 1)
 		{
 #if USE_ASSERT_CHECKING
 			int rwsize =
@@ -639,7 +714,7 @@ shareinput_reader_waitready(void *ctxt, int share_id, PlanGenerator planGen)
 
 			break;
 		}
-		else if(n==0)
+		else if (nready == 0)
 		{
 			elog(DEBUG1, "SISC READER (shareid=%d, slice=%d): Wait ready time out once",
 					share_id, currentSliceId);
@@ -675,7 +750,7 @@ shareinput_writer_notifyready(void *ctxt, int share_id, int xslice, PlanGenerato
 
 	create_tmp_fifo(pctxt->lkname_ready);
 	pctxt->del_ready = true;
-	pctxt->readyfd = open(pctxt->lkname_ready, O_RDWR, 0600); 
+	pctxt->readyfd = open(pctxt->lkname_ready, O_RDWR, 0600);
 	if(pctxt->readyfd < 0)
 		elog(ERROR, "could not open fifo \"%s\": %m", pctxt->lkname_ready);
 
@@ -695,7 +770,7 @@ shareinput_writer_notifyready(void *ctxt, int share_id, int xslice, PlanGenerato
 	}
 	elog(DEBUG1, "SISC WRITER (shareid=%d, slice=%d): wrote notify_ready to %d xslice readers",
 						share_id, currentSliceId, xslice);
-	
+
 	if (planGen == PLANGEN_PLANNER)
 	{
 		/* For planner-generated plans, we wait for acks from all the readers */
@@ -715,22 +790,23 @@ static void
 writer_wait_for_acks(ShareInput_Lk_Context *pctxt, int share_id, int xslice)
 {
 	int ack_needed = xslice;
-	mpp_fd_set rset;
-	struct timeval tval;
+	struct pollfd fds[1];
+	int nfds = 0;
 	char b;
 
+	fds[0].fd = pctxt->donefd;
+	fds[0].events = POLLIN;
+	nfds++;
 	while(ack_needed > 0)
 	{
 		CHECK_FOR_INTERRUPTS();
 
-		MPP_FD_ZERO(&rset);
-		MPP_FD_SET(pctxt->donefd, &rset);
+		int nready = 0;
+		int poll_timeout = 1000; // unit: ms
 
-		tval.tv_sec = 1;
-		tval.tv_usec = 0;
-		int numReady = select(pctxt->donefd+1, (fd_set *) &rset, NULL, NULL, &tval);
+		nready = poll(fds, nfds, poll_timeout);
 
-		if(numReady==1)
+		if (nready == 1)
 		{
 #if USE_ASSERT_CHECKING
 			int rwsize =
@@ -750,7 +826,7 @@ writer_wait_for_acks(ShareInput_Lk_Context *pctxt, int share_id, int xslice)
 						share_id, currentSliceId, ack_needed);
 			}
 		}
-		else if(numReady==0)
+		else if (nready == 0)
 		{
 			elog(DEBUG1, "SISC WRITER (shareid=%d, slice=%d): Notify ready time out once ... ",
 					share_id, currentSliceId);
@@ -802,31 +878,31 @@ void
 shareinput_writer_waitdone(void *ctxt, int share_id, int nsharer_xslice)
 {
 	ShareInput_Lk_Context *pctxt = (ShareInput_Lk_Context *) ctxt;
+	struct pollfd fds[1];
+	int nfds = 0;
 
 	if (pctxt->donefd < 0)
 		return;
 
-	mpp_fd_set rset;
-	struct timeval tval;
-	int numReady;
 	char z;
 	int ack_needed = nsharer_xslice - pctxt->zcnt;
 
 	elog(DEBUG1, "SISC WRITER (shareid=%d, slice=%d): waiting for DONE message from %d readers",
 							share_id, currentSliceId, ack_needed);
 
+	fds[0].fd = pctxt->donefd;
+	fds[0].events = POLLIN;
+	nfds++;
 	while(ack_needed > 0)
 	{
 		CHECK_FOR_INTERRUPTS();
-	
-		MPP_FD_ZERO(&rset);
-		MPP_FD_SET(pctxt->donefd, &rset);
 
-		tval.tv_sec = 1;
-		tval.tv_usec = 0;
-		numReady = select(pctxt->donefd+1, (fd_set *) &rset, NULL, NULL, &tval);
-	
-		if(numReady==1)
+		int nready = 0;
+		int poll_timeout = 1000; // unit: ms
+
+		nready = poll(fds, nfds, poll_timeout);
+
+		if (nready == 1)
 		{
 #if USE_ASSERT_CHECKING
 			int rwsize =
@@ -838,12 +914,12 @@ shareinput_writer_waitdone(void *ctxt, int share_id, int nsharer_xslice)
 					share_id, currentSliceId);
 			--ack_needed;
 		}
-		else if(numReady==0)
+		else if (nready == 0)
 		{
 			elog(DEBUG1, "SISC WRITER (shareid=%d, slice=%d): wait done timeout once",
 					share_id, currentSliceId);
 		}
-		else 
+		else
 		{
 			int save_errno = errno;
 			elog(LOG, "SISC WRITER (shareid=%d, slice=%d): wait done time out once, errno %d",
@@ -906,11 +982,11 @@ ExecEagerFreeShareInputScan(ShareInputScanState *node)
 		}
 	}
 
-	/* 
+	/*
 	 * Reset our copy of the pointer to the ts_state. The tuplestore can still be accessed by
 	 * the other consumers, but we don't have a pointer to it anymore
-	 */ 
-	node->ts_state = NULL; 
+	 */
+	node->ts_state = NULL;
 	node->ts_pos = NULL;
 	node->ts_markpos = NULL;
 

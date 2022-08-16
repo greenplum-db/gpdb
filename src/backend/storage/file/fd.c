@@ -75,6 +75,7 @@
 #include "catalog/pg_tablespace.h"
 #include "cdb/cdbvars.h"
 #include "pgstat.h"
+#include "storage/buffile.h"
 #include "storage/fd.h"
 #include "storage/ipc.h"
 #include "utils/guc.h"
@@ -1255,7 +1256,7 @@ OpenNamedTemporaryFile(const char *fileName,
 	 * force it into the database's default tablespace, so that it will not
 	 * pose a threat to possible tablespace drop attempts.
 	 */
-	if (numTempTableSpaces > 0 && !interXact)
+	if (numTempTableSpaces > 0 && !interXact && !GetForceDefaultTableSpaceVal())
 	{
 		Oid            tblspcOid = GetNextTempTableSpace();
 

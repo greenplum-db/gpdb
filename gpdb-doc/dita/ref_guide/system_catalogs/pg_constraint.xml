@@ -69,6 +69,13 @@
             <entry colname="col4">Is the constraint deferred by default?</entry>
           </row>
           <row>
+            <entry><codeph>convalidated</codeph></entry>
+            <entry>boolean</entry>
+            <entry/>
+            <entry>Has the constraint been validated? Currently, can only be false for foreign
+              keys</entry>
+          </row>
+          <row>
             <entry colname="col1">
               <codeph>conrelid</codeph>
             </entry>
@@ -85,6 +92,13 @@
             <entry colname="col3">pg_type.oid</entry>
             <entry colname="col4">The domain this constraint is on; 0 if not a domain
               constraint.</entry>
+          </row>
+          <row>
+            <entry><codeph>conindid</codeph></entry>
+            <entry>oid</entry>
+            <entry>pg_class.oid</entry>
+            <entry>The index supporting this constraint, if it's a unique, primary key, foreign key,
+              or exclusion constraint; else 0</entry>
           </row>
           <row>
             <entry colname="col1">
@@ -119,6 +133,20 @@
             <entry colname="col4">Foreign key match type.</entry>
           </row>
           <row>
+            <entry><codeph>conislocal</codeph></entry>
+            <entry>boolean</entry>
+            <entry/>
+            <entry>This constraint is defined locally for the relation. Note that a constraint can
+              be locally defined and inherited simultaneously.</entry>
+          </row>
+          <row>
+            <entry><codeph>coninhcount</codeph></entry>
+            <entry>int4</entry>
+            <entry/>
+            <entry>The number of direct inheritance ancestors this constraint has. A constraint with
+              a nonzero number of ancestors cannot be dropped nor renamed.</entry>
+          </row>
+          <row>
             <entry colname="col1">
               <codeph>conkey</codeph>
             </entry>
@@ -134,6 +162,30 @@
             <entry colname="col2">int2[]</entry>
             <entry colname="col3">pg_attribute.attnum</entry>
             <entry colname="col4">If a foreign key, list of the referenced columns.</entry>
+          </row>
+          <row>
+            <entry><codeph>conpfeqop</codeph></entry>
+            <entry>oid[]</entry>
+            <entry>pg_operator.oid</entry>
+            <entry>If a foreign key, list of the equality operators for PK = FK comparisons.</entry>
+          </row>
+          <row>
+            <entry><codeph>conppeqop</codeph></entry>
+            <entry>oid[]</entry>
+            <entry>pg_operator.oid</entry>
+            <entry>If a foreign key, list of the equality operators for PK = PK comparisons.</entry>
+          </row>
+          <row>
+            <entry><codeph>conffeqop</codeph></entry>
+            <entry>oid[]</entry>
+            <entry>pg_operator.oid</entry>
+            <entry>If a foreign key, list of the equality operators for PK = PK comparisons.</entry>
+          </row>
+          <row>
+            <entry><codeph>conexclop</codeph></entry>
+            <entry>oid[]</entry>
+            <entry>pg_operator.oid</entry>
+            <entry>If an exclusion constraint, list of the per-column exclusion operators.</entry>
           </row>
           <row>
             <entry colname="col1">
