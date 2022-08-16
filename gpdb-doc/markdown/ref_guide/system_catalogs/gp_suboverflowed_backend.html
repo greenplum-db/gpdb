@@ -1,0 +1,14 @@
+# gp_suboverflowed_backend 
+
+The `gp_suboveflowed_backend` view allows administrators to identify sessions in which a backend has subtransaction overflows coupled 
+with long running queries -- including queries on catalog tables -- which can cause query performance degradation in the system.  
+
+|column|type|description|
+|------|----|----------|
+|`segid`|integer|The id of the segment containing the suboverflowed backend.|
+|`pids`|interger[]|A list of the pids of all suboverflowed backends on this segment.|
+
+For more information on handling suboverflowed backends o prevent performance issues, see  
+
+**Parent topic:** [System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
+
