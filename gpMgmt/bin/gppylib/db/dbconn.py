@@ -210,7 +210,16 @@ def connect(dburl, utility=False, verbose=False,
         'password': dburl.pgpass,
         'host': dburl.pghost,
         'port': dburl.pgport,
-        'database': dburl.pgdb,
+        # dbname is very subtle, Package pgdb contains a bug it will only escape the string when
+        #   1. a space in the dbname, and
+        #   2. there are other keyword arguments of pgdb.connect method
+        # See issue https://github.com/PyGreSQL/PyGreSQL/issues/77 for details
+        # The code here is test if there is space, if so, we know pgdb will escape, let's not do here
+        # if not, let's do escape here since pgdb forget to do.
+        #
+        # NB: we always provide port keyword argument to connect method of pgdb, thus
+        # we will always enter the code path of pgdb.connect of the above escape logic.
+        'database': dburl.pgdb if ' ' in dburl.pgdb else dburl.pgdb.replace('\\', '\\\\').replace("'", "\\'"),
     }
 
     # building options

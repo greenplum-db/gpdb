@@ -49,6 +49,9 @@ reset client_min_messages;
 CREATE DATABASE "funny""db'with\\quotes";
 ALTER DATABASE "funny""db'with\\quotes" SET search_path="funny""schema'with\\quotes";
 
+-- test if we can connect using dbconn
+\! python3 test_dbconn.py 0
+
 -- Leave the database in place, to also test gpcheckcat and pg_upgrade after
 -- all the regression tests have completed.
 
