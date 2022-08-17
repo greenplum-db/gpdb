@@ -6,7 +6,7 @@ which can cause query performance degradation in the system, including catalog q
 |column|type|description|
 |------|----|----------|
 |`segid`|integer|The id of the segment containing the suboverflowed backend.|
-|`pids`|interger[]|A list of the pids of all suboverflowed backends on this segment.|
+|`pids`|integer[]|A list of the pids of all suboverflowed backends on this segment.|
 
 For more information on handling suboverflowed backends to prevent performance issues, see [Checking for and Terminating Overflowed Backends](../../admin_guide/managing/monitor.html#overflowed_backends).
 
