@@ -14,8 +14,6 @@ which can cause query performance degradation in the system, including catalog q
 CREATE EXTENSION gp_subtransaction_overflow;
 ```
 
- and that the user must run CREATE EXTENSION gp_pitr; before the view is available for use.
-
 For more information on handling suboverflowed backends to prevent performance issues, see [Checking for and Terminating Overflowed Backends](../../admin_guide/managing/monitor.html#overflowed_backends).
 
 **Parent topic:** [System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
