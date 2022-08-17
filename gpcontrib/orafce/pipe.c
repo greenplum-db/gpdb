@@ -93,7 +93,7 @@ typedef struct {
 	int16 count;
 	int16 limit;
 	int size;
-} pipe;
+} orafce_pipe;
 
 typedef struct {
 	int32 size;
@@ -132,7 +132,7 @@ typedef struct
 
 #endif
 
-	pipe *pipes;
+	orafce_pipe *pipes;
 	alert_event *events;
 	alert_lock *locks;
 	size_t size;
@@ -145,7 +145,7 @@ typedef struct
 message_buffer *output_buffer = NULL;
 message_buffer *input_buffer = NULL;
 
-pipe* pipes = NULL;
+orafce_pipe* pipes = NULL;
 
 #if PG_VERSION_NUM >= 90400
 
@@ -284,7 +284,7 @@ ora_lock_shmem(size_t size, int max_pipes, int max_events, int max_locks, bool r
 
 			sh_mem->size = size - sh_memory_size;
 			ora_sinit(sh_mem->data, size, true);
-			pipes = sh_mem->pipes = ora_salloc(max_pipes*sizeof(pipe));
+			pipes = sh_mem->pipes = ora_salloc(max_pipes*sizeof(orafce_pipe));
 			sid = sh_mem->sid = 1;
 			for (i = 0; i < max_pipes; i++)
 				pipes[i].is_valid = false;
@@ -357,11 +357,11 @@ ora_lock_shmem(size_t size, int max_pipes, int max_events, int max_locks, bool r
  * can be enhanced access/hash.h
  */
 
-static pipe*
+static orafce_pipe*
 find_pipe(text* pipe_name, bool* created, bool only_check)
 {
 	int i;
-	pipe *result = NULL;
+	orafce_pipe *result = NULL;
 
 	*created = false;
 	for (i = 0; i < MAX_PIPES; i++)
@@ -411,7 +411,7 @@ find_pipe(text* pipe_name, bool* created, bool only_check)
 
 
 static bool
-new_last(pipe *p, void *ptr)
+new_last(orafce_pipe *p, void *ptr)
 {
 	queue_item *q, *aux_q;
 
@@ -446,7 +446,7 @@ new_last(pipe *p, void *ptr)
 
 
 static void*
-remove_first(pipe *p, bool *found)
+remove_first(orafce_pipe *p, bool *found)
 {
 	struct _queue_item *q;
 	void *ptr = NULL;
@@ -478,7 +478,7 @@ remove_first(pipe *p, bool *found)
 static message_buffer*
 get_from_pipe(text *pipe_name, bool *found)
 {
-	pipe *p;
+	orafce_pipe *p;
 	bool created;
 	message_buffer *shm_msg;
 	message_buffer *result = NULL;
@@ -514,7 +514,7 @@ get_from_pipe(text *pipe_name, bool *found)
 static bool
 add_to_pipe(text *pipe_name, message_buffer *ptr, int limit, bool limit_is_valid)
 {
-	pipe *p;
+	orafce_pipe *p;
 	bool created;
 	bool result = false;
 	message_buffer *sh_ptr;
@@ -566,7 +566,7 @@ add_to_pipe(text *pipe_name, message_buffer *ptr, int limit, bool limit_is_valid
 static void
 remove_pipe(text *pipe_name, bool purge)
 {
-	pipe *p;
+	orafce_pipe *p;
 	bool created;
 
 	if (NULL != (p = find_pipe(pipe_name, &created, true)))
@@ -1134,7 +1134,7 @@ dbms_pipe_create_pipe (PG_FUNCTION_ARGS)
 	WATCH_PRE(timeout, endtime, cycle);
 	if (ora_lock_shmem(SHMEMMSGSZ, MAX_PIPES,MAX_EVENTS,MAX_LOCKS,false))
 	{
-		pipe *p;
+		orafce_pipe *p;
 		if (NULL != (p = find_pipe(pipe_name, &created, false)))
 		{
 			if (!created)
