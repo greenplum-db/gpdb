@@ -356,7 +356,7 @@ static void expand_oid_patterns(SimpleStringList *patterns,
 						   SimpleOidList *oids);
 
 static bool is_returns_table_function(int nallargs, char **argmodes);
-static bool testGPbackend(Archive *fout);
+static void testGPbackend(Archive *fout);
 
 static char *nextToken(register char **stringp, register const char *delim);
 static void addDistributedBy(Archive *fout, PQExpBuffer q, const TableInfo *tbinfo, int actual_atts);
@@ -899,7 +899,7 @@ main(int argc, char **argv)
 	/*
 	 * Determine whether or not we're interacting with a GP backend.
 	 */
-	testGPbackend(fout, &dopt);
+	testGPbackend(fout);
 
 	/*
 	 * Now that the type of backend is known, determine the gp-syntax option
@@ -19722,8 +19722,9 @@ findDumpableDependencies(ArchiveHandle *AH, const DumpableObject *dobj,
  * isGPbackend - returns true if the connected backend is a GreenPlum DB backend.
  */
 static void
-testGPbackend(Archive *fout, DumpOptions *dopt)
+testGPbackend(Archive *fout)
 {
+	DumpOptions *dopt = fout->dopt;
 	PQExpBuffer query = createPQExpBuffer();
 	PGresult   *res;
 
