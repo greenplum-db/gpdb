@@ -143,7 +143,7 @@ exit_nicely(int code)
 	int			i;
 
 	for (i = on_exit_nicely_index - 1; i >= 0; i--)
-		(*on_exit_nicely_list[i].function) (code,
+		on_exit_nicely_list[i].function(code,
 											on_exit_nicely_list[i].arg);
 
 #ifdef WIN32
