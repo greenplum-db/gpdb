@@ -457,7 +457,7 @@ static void ATExecSetTableSpaceNoStorage(Relation rel, Oid newTableSpace);
 static void ATExecSetRelOptions(Relation rel, List *defList,
 								AlterTableType operation,
 								bool *aoopt_changed,
-								bool valid_as_ao,
+								Oid newam,
 								LOCKMODE lockmode);
 static void ATExecEnableDisableTrigger(Relation rel, const char *trigname,
 									   char fires_when, bool skip_system, LOCKMODE lockmode);
@@ -5322,14 +5322,12 @@ ATExecCmd(List **wqueue, AlteredTableInfo *tab, Relation rel,
 			/* Set reloptions if specified any. Otherwise handled specially in Phase 3. */
 			{
 				bool aoopt_changed = false;
-				bool valid_as_ao = (OidIsValid(tab->newAccessMethod) && IsAccessMethodAO(tab->newAccessMethod)) 
-							|| (!OidIsValid(tab->newAccessMethod) && RelationIsAppendOptimized(rel));
 
 				/* If we are changing access method, simply remove all the existing ones. */
 				if (OidIsValid(tab->newAccessMethod))
 					clear_rel_opts(rel);
 
-				ATExecSetRelOptions(rel, (List *) cmd->def, cmd->subtype, &aoopt_changed, valid_as_ao, lockmode);
+				ATExecSetRelOptions(rel, (List *) cmd->def, cmd->subtype, &aoopt_changed, tab->newAccessMethod, lockmode);
 
 				/* 
 				 * When user sets the same access method as the existing one, the
@@ -5362,9 +5360,8 @@ ATExecCmd(List **wqueue, AlteredTableInfo *tab, Relation rel,
 		case AT_ReplaceRelOptions:	/* replace entire option list */
 			{
 				bool 		aoopt_changed = false;
-				bool 		valid_as_ao = RelationIsAppendOptimized(rel);
 
-				ATExecSetRelOptions(rel, (List *) cmd->def, cmd->subtype, &aoopt_changed, valid_as_ao, lockmode);
+				ATExecSetRelOptions(rel, (List *) cmd->def, cmd->subtype, &aoopt_changed, InvalidOid, lockmode);
 
 				/* Will rewrite table if there's a change to the AO reloptions. */
 				if (aoopt_changed)
@@ -14231,11 +14228,11 @@ ATPrepSetTableSpace(AlteredTableInfo *tab, Relation rel, const char *tablespacen
  *
  * GPDB specific arguments: 
  * 	aoopt_changed: whether any AO storage options have been changed in this function.
- * 	valid_as_ao: whether we validate teh reloptions as AO tables.
+ * 	newam: the new AM if we will change the table AM. It's InvalidOid if no change is needed.
  */
 static void
 ATExecSetRelOptions(Relation rel, List *defList, AlterTableType operation,
-					bool *aoopt_changed, bool valid_as_ao, LOCKMODE lockmode)
+					bool *aoopt_changed, Oid newam, LOCKMODE lockmode)
 {
 	Oid			relid;
 	Relation	pgclass;
@@ -14248,6 +14245,10 @@ ATExecSetRelOptions(Relation rel, List *defList, AlterTableType operation,
 	bool		repl_null[Natts_pg_class];
 	bool		repl_repl[Natts_pg_class];
 	static char *validnsps[] = HEAP_RELOPT_NAMESPACES;
+	Oid 		tableam;
+
+	/* Get the new table AM if applicable. Otherwise get the one from the reltion. */
+	tableam = (newam != InvalidOid) ? newam : rel->rd_rel->relam;
 
 	if (defList == NIL && operation != AT_ReplaceRelOptions)
 		return;					/* nothing to do */
@@ -14313,7 +14314,7 @@ ATExecSetRelOptions(Relation rel, List *defList, AlterTableType operation,
 		case RELKIND_AOSEGMENTS:
 		case RELKIND_AOBLOCKDIR:
 		case RELKIND_AOVISIMAP:
-			if (valid_as_ao)
+			if (IsAccessMethodAO(tableam))
 			{
 				StdRdOptions *stdRdOptions = (StdRdOptions *) default_reloptions(newOptions,
 																				 true,
@@ -14323,7 +14324,7 @@ ATExecSetRelOptions(Relation rel, List *defList, AlterTableType operation,
 											 stdRdOptions->compresslevel,
 											 stdRdOptions->compresstype,
 											 stdRdOptions->checksum,
-											 (rel->rd_amhandler == AO_COLUMN_TABLE_AM_HANDLER_OID));
+											 tableam == AO_COLUMN_TABLE_AM_OID);
 				/* If reloptions will be changed, indicate so. */
 				if (aoopt_changed != NULL)
 					*aoopt_changed = !relOptionsEquals(datum, newOptions);

@@ -668,8 +668,8 @@ SELECT c.relname, a.amname, c.reloptions FROM pg_class c JOIN pg_am a ON c.relam
 -- Altering AO to AOCO with various syntaxes, reloptions:
 ALTER TABLE ao2co SET ACCESS METHOD ao_column;
 ALTER TABLE ao2co2 SET WITH (appendoptimized=true, orientation=column);
-ALTER TABLE ao2co3 SET ACCESS METHOD ao_column WITH (blocksize=32768, compresslevel=3);
-ALTER TABLE ao2co4 SET WITH (appendoptimized=true, orientation=column, blocksize=32768, compresslevel=3);
+ALTER TABLE ao2co3 SET ACCESS METHOD ao_column WITH (blocksize=32768, compresstype=rle_type, compresslevel=3);
+ALTER TABLE ao2co4 SET WITH (appendoptimized=true, orientation=column, blocksize=32768, compresstype=rle_type, compresslevel=3);
 -- The tables are rewritten
 CREATE TEMP TABLE relfileafterao AS
     SELECT -1 segid, relname, relfilenode FROM pg_class WHERE relname LIKE 'ao2co%'
@@ -748,26 +748,26 @@ SELECT * FROM gp_toolkit.__gp_aoblkdir('ao2co3');
 
 -- pg_attribute_encoding should have columns for the AOCO table
 SELECT c.relname, a.attnum, a.attoptions FROM pg_attribute_encoding a, pg_class c WHERE a.attrelid = c.oid AND c.relname LIKE 'ao2co%';
- relname | attnum |                     attoptions                      
----------+--------+-----------------------------------------------------
+ relname | attnum |                       attoptions                        
+---------+--------+---------------------------------------------------------
  ao2co   |      1 | {compresstype=zlib,blocksize=65536,compresslevel=5}
  ao2co   |      2 | {compresstype=zlib,blocksize=65536,compresslevel=5}
  ao2co2  |      1 | {compresstype=zlib,blocksize=65536,compresslevel=5}
  ao2co2  |      2 | {compresstype=zlib,blocksize=65536,compresslevel=5}
- ao2co3  |      1 | {blocksize=32768,compresslevel=3,compresstype=zlib}
- ao2co3  |      2 | {blocksize=32768,compresslevel=3,compresstype=zlib}
- ao2co4  |      1 | {blocksize=32768,compresslevel=3,compresstype=zlib}
- ao2co4  |      2 | {blocksize=32768,compresslevel=3,compresstype=zlib}
+ ao2co3  |      1 | {blocksize=32768,compresstype=rle_type,compresslevel=3}
+ ao2co3  |      2 | {blocksize=32768,compresstype=rle_type,compresslevel=3}
+ ao2co4  |      1 | {blocksize=32768,compresstype=rle_type,compresslevel=3}
+ ao2co4  |      2 | {blocksize=32768,compresstype=rle_type,compresslevel=3}
 (8 rows)
 
 -- AM and reloptions changed accordingly
 SELECT c.relname, a.amname, c.reloptions FROM pg_class c JOIN pg_am a ON c.relam = a.oid WHERE c.relname LIKE 'ao2co%';
- relname |  amname   |            reloptions             
----------+-----------+-----------------------------------
+ relname |  amname   |                       reloptions                        
+---------+-----------+---------------------------------------------------------
  ao2co   | ao_column | 
  ao2co2  | ao_column | 
- ao2co3  | ao_column | {blocksize=32768,compresslevel=3}
- ao2co4  | ao_column | {blocksize=32768,compresslevel=3}
+ ao2co3  | ao_column | {blocksize=32768,compresstype=rle_type,compresslevel=3}
+ ao2co4  | ao_column | {blocksize=32768,compresstype=rle_type,compresslevel=3}
 (4 rows)
 
 -- pg_appendonly should reflect the changes in reloptions
@@ -777,8 +777,8 @@ FROM pg_appendonly a, pg_class c WHERE a.relid = c.oid AND relname like ('ao2co%
 ---------+-----------+---------------+----------+--------------+-------------
  ao2co   |     32768 |             0 | t        |              | t
  ao2co2  |     32768 |             0 | t        |              | t
- ao2co3  |     32768 |             3 | t        | zlib         | t
- ao2co4  |     32768 |             3 | t        | zlib         | t
+ ao2co3  |     32768 |             3 | t        | rle_type     | t
+ ao2co4  |     32768 |             3 | t        | rle_type     | t
 (4 rows)
 
 DROP TABLE ao2co;

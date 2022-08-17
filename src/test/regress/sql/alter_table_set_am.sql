@@ -381,8 +381,8 @@ SELECT c.relname, a.amname, c.reloptions FROM pg_class c JOIN pg_am a ON c.relam
 -- Altering AO to AOCO with various syntaxes, reloptions:
 ALTER TABLE ao2co SET ACCESS METHOD ao_column;
 ALTER TABLE ao2co2 SET WITH (appendoptimized=true, orientation=column);
-ALTER TABLE ao2co3 SET ACCESS METHOD ao_column WITH (blocksize=32768, compresslevel=3);
-ALTER TABLE ao2co4 SET WITH (appendoptimized=true, orientation=column, blocksize=32768, compresslevel=3);
+ALTER TABLE ao2co3 SET ACCESS METHOD ao_column WITH (blocksize=32768, compresstype=rle_type, compresslevel=3);
+ALTER TABLE ao2co4 SET WITH (appendoptimized=true, orientation=column, blocksize=32768, compresstype=rle_type, compresslevel=3);
 
 -- The tables are rewritten
 CREATE TEMP TABLE relfileafterao AS
