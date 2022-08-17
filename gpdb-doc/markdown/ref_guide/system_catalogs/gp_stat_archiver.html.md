@@ -15,5 +15,11 @@ The `gp_stat_archiver` view contains data about the WAL archiver process of the 
 |`stats_reset`|timestamp with time zone|Time at which these statistics were last reset.|
 |`gp_segment_id`|int|The id of the segment to which the data being archived belongs.|
 
+**NOTE**: As this is not a `pg_catalog` view, you must run the following command to make this view available:
+
+```
+CREATE EXTENSION gp_pitr;
+```
+
 **Parent topic:** [System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
 
