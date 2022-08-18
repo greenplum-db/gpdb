@@ -1641,6 +1641,8 @@ CExpressionPreprocessor::PexprFromConstraintsScalar(
 		//    +--CScalarIdent "c" (9)
 
 		CExpressionArray *childrenArray = GPOS_NEW(mp) CExpressionArray(mp);
+		CExpressionArray *childrenRedunduntArray =
+			GPOS_NEW(mp) CExpressionArray(mp);
 		if (COperator::EopScalarBoolOp == pexpr->Pop()->Eopid() &&
 			CScalarBoolOp::EboolopNot !=
 				CScalarBoolOp::PopConvert(pexpr->Pop())->Eboolop())
@@ -1682,6 +1684,11 @@ CExpressionPreprocessor::PexprFromConstraintsScalar(
 						pexprChildOfBool->AddRef();
 						childrenArray->Append(pexprChildOfBool);
 					}
+					else
+					{
+						pexprChildOfBool->AddRef();
+						childrenRedunduntArray->Append(pexprChildOfBool);
+					}
 					columnsToCheck->Release();
 				}
 				else
@@ -1690,12 +1697,43 @@ CExpressionPreprocessor::PexprFromConstraintsScalar(
 					childrenArray->Append(pexprChildOfBool);
 				}
 			}
-			if (0 == childrenArray->Size())
+
+			if (0 == childrenArray->Size() &&
+				0 != childrenRedunduntArray->Size())
 			{
-				CExpression *pexprConstTrue =
-					CUtils::PexprScalarConstBool(mp, true /*value*/);
-				pexprConstTrue->AddRef();
-				return pexprConstTrue;
+				const ULONG size = childrenRedunduntArray->Size();
+				CExpression *pexprNew = nullptr;
+				for (ULONG ul = size - 1; ul >= 0; ul--)
+				{
+					CExpression *pexprRedChild = (*childrenRedunduntArray)[ul];
+					CColRefSet *columnsToCheckDist =
+						GPOS_NEW(mp) CColRefSet(mp);
+
+					columnsToCheckDist->Include(
+						pexprRedChild->DeriveUsedColumns());
+					CColRefSetIter iterator(*columnsToCheckDist);
+					while (iterator.Advance())
+					{
+						CColRef *columnRef = iterator.Pcr();
+						if (columnRef->IsDistCol())
+						{
+							pexprNew = pexprRedChild;
+							break;
+						}
+					}
+					columnsToCheckDist->Release();
+					if (pexprNew != nullptr)
+					{
+						break;
+					}
+				}
+				if (pexprNew == nullptr)
+				{
+					pexprNew = (*childrenRedunduntArray)[0];
+					pexprNew->AddRef();
+					return pexprNew;
+				}
+				return pexprNew;
 			}
 
 			else if (1 == childrenArray->Size())
@@ -1709,50 +1747,6 @@ CExpressionPreprocessor::PexprFromConstraintsScalar(
 				COperator *pop = pexpr->Pop();
 				pop->AddRef();
 				return GPOS_NEW(mp) CExpression(mp, pop, childrenArray);
-			}
-		}
-
-
-		else if (COperator::EopScalarCmp == pexpr->Pop()->Eopid())
-		{
-			CColRefSet *columnsToCheck = GPOS_NEW(mp) CColRefSet(mp);
-			columnsToCheck->Include(pexpr->DeriveUsedColumns());
-			CColRefSetIter iterator(*columnsToCheck);
-			BOOL canBeRemoved = false;
-			while (iterator.Advance())
-			{
-				CColRef *columnRef = iterator.Pcr();
-				CExpression *pexprScalar =
-					constraintsForOuterRefs->PexprScalarMappedFromEquivCols(
-						mp, columnRef, nullptr);
-				if (nullptr != pexprScalar &&
-					COperator::EopScalarCmp == pexprScalar->Pop()->Eopid() &&
-					IMDType::EcmptEq ==
-						CScalarCmp::PopConvert(pexprScalar->Pop())
-							->ParseCmpType())
-				{
-					canBeRemoved = true;
-				}
-			}
-			if (!canBeRemoved)
-			{
-				pexpr->AddRef();
-				childrenArray->Append(pexpr);
-			}
-			columnsToCheck->Release();
-
-			if (0 == childrenArray->Size())
-			{
-				CExpression *pexprConstTrue =
-					CUtils::PexprScalarConstBool(mp, true /*value*/);
-				pexprConstTrue->AddRef();
-				return pexprConstTrue;
-			}
-			else
-			{
-				CExpression *pexprNew = (*childrenArray)[0];
-				pexprNew->AddRef();
-				return pexprNew;
 			}
 		}
 
