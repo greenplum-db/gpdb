@@ -383,7 +383,7 @@ main(int argc, char *argv[])
 	/* Make sure the user hasn't specified a mix of globals-only options */
 	if (globals_only && roles_only)
 	{
-		fprintf(stderr, _("%s: options -g/--globals-only and -r/--roles-only cannot be used together\n"),
+		fprintf(stderr, _("%s: options -g/--globals-only and --roles-only cannot be used together\n"),
 				progname);
 		fprintf(stderr, _("Try \"%s --help\" for more information.\n"),
 				progname);
@@ -408,7 +408,7 @@ main(int argc, char *argv[])
 
 	if (roles_only && tablespaces_only)
 	{
-		fprintf(stderr, _("%s: options -r/--roles-only and -t/--tablespaces-only cannot be used together\n"),
+		fprintf(stderr, _("%s: options --roles-only and -t/--tablespaces-only cannot be used together\n"),
 				progname);
 		fprintf(stderr, _("Try \"%s --help\" for more information.\n"),
 				progname);
