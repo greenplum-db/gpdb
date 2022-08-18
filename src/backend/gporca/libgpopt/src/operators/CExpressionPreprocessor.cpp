@@ -1608,41 +1608,12 @@ CExpressionPreprocessor::PexprFromConstraintsScalar(
 	GPOS_ASSERT(pexpr->Pop()->FScalar());
 	if (!CUtils::FHasSubquery(pexpr))
 	{
-		//	Input:
-		// +--CLogicalNAryJoin
-		// |--CLogicalGet "foo" ("foo"), Columns: ["a" (0), "b" (1), "ctid" (2), "xmin" (3), "cmin" (4), "xmax" (5), "cmax" (6), "tableoid" (7), "gp_segment_id" (8)] Key sets: {[2,8]}
-		// |--CLogicalSelect
-		// |  |--CLogicalGet "bar" ("bar"), Columns: ["c" (9), "d" (10), "ctid" (11), "xmin" (12), "cmin" (13), "xmax" (14), "cmax" (15), "tableoid" (16), "gp_segment_id" (17)] Key sets: {[2,8]}
-		// |  +--CScalarCmp (=)
-		// |     |--CScalarIdent "d" (10)
-		// |     +--CScalarConst (1098678817.000)
-		// +--CScalarBoolOp (EboolopAnd)
-		//   |--CScalarCmp (=)
-		//   |  |--CScalarIdent "a" (0)
-		//   |  +--CScalarIdent "c" (9)
-		//   +--CScalarCmp (=)
-		//	  |--CScalarIdent "b" (1)
-		//	  +--CScalarIdent "d" (10)
-		//
-		// Output:
-		// +--CLogicalNAryJoin
-		// |--CLogicalSelect
-		// |  |--CLogicalGet "foo" ("foo"), Columns: ["a" (0), "b" (1), "ctid" (2), "xmin" (3), "cmin" (4), "xmax" (5), "cmax" (6), "tableoid" (7), "gp_segment_id" (8)] Key sets: {[2,8]}
-		// |  +--CScalarCmp (=)
-		// |     |--CScalarIdent "b" (1)
-		// |     +--CScalarConst (1098678817.000)
-		// |--CLogicalSelect
-		// |  |--CLogicalGet "bar" ("bar"), Columns: ["c" (9), "d" (10), "ctid" (11), "xmin" (12), "cmin" (13), "xmax" (14), "cmax" (15), "tableoid" (16), "gp_segment_id" (17)] Key sets: {[2,8]}
-		// |  +--CScalarCmp (=)
-		// |     |--CScalarIdent "d" (10)
-		// |     +--CScalarConst (1098678817.000)
-		// +--CScalarCmp (=)
-		//    |--CScalarIdent "a" (0)
-		//    +--CScalarIdent "c" (9)
-
 		CExpressionArray *childrenArray = GPOS_NEW(mp) CExpressionArray(mp);
-		CExpressionArray *childrenRedunduntArray =
+		CExpressionArray *childrenRedundantArray =
 			GPOS_NEW(mp) CExpressionArray(mp);
+
+		// If the child of the join is a EopScalarBoolOp we need to check
+		// for redundant predicates
 		if (COperator::EopScalarBoolOp == pexpr->Pop()->Eopid() &&
 			CScalarBoolOp::EboolopNot !=
 				CScalarBoolOp::PopConvert(pexpr->Pop())->Eboolop())
@@ -1651,6 +1622,7 @@ CExpressionPreprocessor::PexprFromConstraintsScalar(
 			for (ULONG ul = 0; ul < childrenCount; ul++)
 			{
 				CExpression *pexprChildOfBool = (*pexpr)[ul];
+
 				if (COperator::EopScalarCmp ==
 						pexprChildOfBool->Pop()->Eopid() &&
 					IMDType::EcmptEq ==
@@ -1669,6 +1641,10 @@ CExpressionPreprocessor::PexprFromConstraintsScalar(
 							constraintsForOuterRefs
 								->PexprScalarMappedFromEquivCols(mp, columnRef,
 																 nullptr);
+
+						// If the column is resolved to EopScalarCmp with Equality type,
+						// it means it is a constant.So we need to remove it as it's already
+						// been pushed down in the previous normalization step
 						if (nullptr != pexprScalar &&
 							COperator::EopScalarCmp ==
 								pexprScalar->Pop()->Eopid() &&
@@ -1679,18 +1655,26 @@ CExpressionPreprocessor::PexprFromConstraintsScalar(
 							canBeRemoved = true;
 						}
 					}
+					// If the column attribute is not resolved to a constant value ,
+					// it means it's not redundant, so we can't remove it.
 					if (!canBeRemoved)
 					{
 						pexprChildOfBool->AddRef();
 						childrenArray->Append(pexprChildOfBool);
 					}
+
+					// If the column value is resolved to a constant ,it means it's redundant.
+					// There might be a case that we are not left with any child due to redundancy
+					// for the Hash join condition.So we can decide the hash condition based on the
+					// distribution of the redundant column atrributes.
 					else
 					{
 						pexprChildOfBool->AddRef();
-						childrenRedunduntArray->Append(pexprChildOfBool);
+						childrenRedundantArray->Append(pexprChildOfBool);
 					}
 					columnsToCheck->Release();
 				}
+
 				else
 				{
 					pexprChildOfBool->AddRef();
@@ -1698,14 +1682,16 @@ CExpressionPreprocessor::PexprFromConstraintsScalar(
 				}
 			}
 
-			if (0 == childrenArray->Size() &&
-				0 != childrenRedunduntArray->Size())
+			// If all the predicates are redundant , we need to figure out which column attribute to keep for the hash join
+			// condition based on the distribution of the columns.
+			if (0 == childrenArray->Size())
 			{
-				const ULONG size = childrenRedunduntArray->Size();
+				const ULONG size = childrenRedundantArray->Size();
 				CExpression *pexprNew = nullptr;
-				for (ULONG ul = size - 1; ul >= 0; ul--)
+				for (ULONG ul = 0; ul < size; ul++)
 				{
-					CExpression *pexprRedChild = (*childrenRedunduntArray)[ul];
+					ULONG numDistributedCol = 0;
+					CExpression *pexprRedChild = (*childrenRedundantArray)[ul];
 					CColRefSet *columnsToCheckDist =
 						GPOS_NEW(mp) CColRefSet(mp);
 
@@ -1717,31 +1703,35 @@ CExpressionPreprocessor::PexprFromConstraintsScalar(
 						CColRef *columnRef = iterator.Pcr();
 						if (columnRef->IsDistCol())
 						{
+							numDistributedCol++;
 							pexprNew = pexprRedChild;
-							break;
 						}
 					}
 					columnsToCheckDist->Release();
-					if (pexprNew != nullptr)
+					if (2 == numDistributedCol)
 					{
 						break;
 					}
 				}
 				if (pexprNew == nullptr)
 				{
-					pexprNew = (*childrenRedunduntArray)[0];
+					pexprNew = (*childrenRedundantArray)[0];
 					pexprNew->AddRef();
 					return pexprNew;
 				}
 				return pexprNew;
 			}
 
+			// If after removing the redundant predicates we are left with one child
 			else if (1 == childrenArray->Size())
 			{
 				CExpression *pexprNew = (*childrenArray)[0];
 				pexprNew->AddRef();
 				return pexprNew;
 			}
+
+			// If after removing the redundant predicates we are left with two or more childs, we
+			// need to add the EopScalarBoolOp operator on top
 			else
 			{
 				COperator *pop = pexpr->Pop();
