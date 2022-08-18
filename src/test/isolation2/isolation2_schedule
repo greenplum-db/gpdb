@@ -239,6 +239,7 @@ test: segwalrep/max_slot_wal_keep_size
 test: segwalrep/dtx_recovery_wait_lsn
 test: pg_basebackup
 test: pg_basebackup_with_tablespaces
+test: segwalrep/select_throttle
 test: fts_manual_probe
 test: fts_session_reset
 test: fts_segment_reset
