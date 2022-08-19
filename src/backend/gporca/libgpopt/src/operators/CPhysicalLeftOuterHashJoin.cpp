@@ -137,11 +137,6 @@ CPhysicalLeftOuterHashJoin::PdsDerive(CMemoryPool *mp,
 		pds = pdsOuter;
 	}
 
-	// TODO: Similar to the case where both outer and inner relations
-	// are hash distributed, when only the outer relation is hash
-	// distributed, we can also return a combined hash distribution spec.
-	// The combined spec contains nulls colocated outer relation, and
-	// nulls not colocated inner relation.
 	if (CDistributionSpec::EdtHashed == pds->Edt())
 	{
 		CDistributionSpecHashed *pdsHashed =
