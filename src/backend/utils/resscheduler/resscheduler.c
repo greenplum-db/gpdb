@@ -279,7 +279,6 @@ bool
 ResCreateQueue(Oid queueid, Cost limits[NUM_RES_LIMIT_TYPES], bool overcommit,
 			   float4 ignorelimit)
 {
-
 	ResQueue		queue;
 	int				i;
 
@@ -289,10 +288,7 @@ ResCreateQueue(Oid queueid, Cost limits[NUM_RES_LIMIT_TYPES], bool overcommit,
 	if (ResScheduler->num_queues >= MaxResourceQueues)
 		return false;
 
-	/**
-	 * Has an entry for this 
-	 */
-	
+	/* Create an entry for this */
 	queue = ResQueueHashNew(queueid);
 	if (!queue)
 		ereport(ERROR,
@@ -313,31 +309,13 @@ ResCreateQueue(Oid queueid, Cost limits[NUM_RES_LIMIT_TYPES], bool overcommit,
 	queue->ignorecostlimit = ignorelimit;
 
 	/* Now run through all the possible limit types.*/
-	for (i = 0 ; i < NUM_RES_LIMIT_TYPES; i++)
+	for (i = 0; i < NUM_RES_LIMIT_TYPES; i++)
 	{
-		/*
-		 * Specific initializations for the limit types (the current two are
-		 * in fact the same).
-		 */
-		switch (i)
-		{
-			case RES_COUNT_LIMIT:
-			case RES_COST_LIMIT:
-			case RES_MEMORY_LIMIT:
-				{
-					queue->num_limits++;
-					queue->limits[i].type = i;
-					queue->limits[i].threshold_value = limits[i];
-					queue->limits[i].current_value = 0;
-					queue->limits[i].threshold_is_max = true;
-					break;
-				}
-			default:
-				elog(ERROR, "unknown resource limit type %d", i);
-			break;
-		}
-
-
+		queue->num_limits++;
+		queue->limits[i].type = i;
+		queue->limits[i].threshold_value = limits[i];
+		queue->limits[i].current_value = 0;
+		queue->limits[i].threshold_is_max = true;
 	}
 	ResScheduler->num_queues++;
 	return true;
@@ -355,105 +333,59 @@ ResAlterQueueResult
 ResAlterQueue(Oid queueid, Cost limits[NUM_RES_LIMIT_TYPES], bool overcommit,
 			  float4 ignorelimit)
 {
-
 	ResQueue		queue = ResQueueHashFind(queueid);
-	bool			result = ALTERQUEUE_OK;
 	int				i;
-	
 
 	/* Handed an Oid for something other than a queue, bail out! */
 	if (queue == NULL)
 		return ALTERQUEUE_ERROR;
 
-
-	/* 
-	 * Now run through all the possible limit types, checking all the
-	 * intended changes are ok.
+	/*
+	 * MPP-4340:
+	 * The goal of the resource queues is to allow us to throttle work
+	 * onto the cluster: a key requirement is that given a queue we be able to
+	 * change the limit values -- especially in a situation where we're already
+	 * overloading the system, we'd like to be able to drop the queue limit.
+	 *
+	 * The original sanity checks here disallowed modifications which might
+	 * reduce the threshold. To throttle the system for better performance,
+	 * work had to get cancelled. That's an unacceptable limitation; so
+	 * now we allow the queues to be changed.
+	 *
+	 * Overcommit is a much more serious type of change.
+	 *
+	 * For overcommitable limits we need to ensure the queue is not in
+	 * an overcommited state if we about to turn overcommit off.
 	 */
-	for (i = 0 ; i < NUM_RES_LIMIT_TYPES; i++)
-	{
-		/* Don't sanity check thresholds if that are about to be disabled. */
-		if (limits[i] == INVALID_RES_LIMIT_THRESHOLD)
-			continue;
-
-		/*
-		 * MPP-4340:
-		 * The goal of the resource queues is to allow us to throttle work
-		 * onto the cluster: a key requirement is that given a queue we be able to
-		 * change the limit values -- especially in a situation where we're already
-		 * overloading the system, we'd like to be able to drop the queue limit.
-		 *
-		 * The original sanity checks here disallowed modifications which might
-		 * reduce the threshold. To throttle the system for better performance,
-		 * work had to get cancelled. That's an unacceptable limitation; so
-		 * now we allow the queues to be changed.
-		 *
-		 * Overcommit is a much more serious type of change.
-		 *
-		 * For overcommitable limits we need to ensure the queue is not in 
-		 * an overcommited state if we about to turn overcommit off.
-		 */
-		switch (i)
-		{
-			case RES_COUNT_LIMIT:
-				break;
-
-			case RES_COST_LIMIT:
-			{
-				/* 
-				 * Don't turn overcommit off if queue could be overcommitted.
-				 * We err on the side of caution in this case and demand that
-				 * the queue is idle - we don't want to leave a query waiting 
-				 * forever in the wait queue. We use the same roundoff limit
-				 * value (0.1) as ResLockCheckLimit does.
-				 */
-				if (!overcommit && queue->overcommit && 
-					(queue->limits[i].current_value > 0.1))
-					result = ALTERQUEUE_OVERCOMMITTED;
-			}
-			
-			break;
-			
-			case RES_MEMORY_LIMIT:
-				break;
-		}
-	}
 
 	/*
-	 * If threshold and overcommit alterations are all ok, do the changes.
+	 * Don't turn overcommit off if queue could be overcommitted.
+	 * We err on the side of caution in this case and demand that
+	 * the queue is idle - we don't want to leave a query waiting
+	 * forever in the wait queue. We use the same roundoff limit
+	 * value (0.1) as ResLockCheckLimit does.
 	 */
-	if (result == ALTERQUEUE_OK)
+	if (limits[RES_COST_LIMIT] != INVALID_RES_LIMIT_THRESHOLD &&
+		!overcommit && queue->overcommit &&
+		(queue->limits[RES_COST_LIMIT].current_value > 0.1))
+		return ALTERQUEUE_OVERCOMMITTED;
+
+	/* Assign the new thresholds. */
+	for (i = 0; i < NUM_RES_LIMIT_TYPES; i++)
 	{
-		for (i = 0 ; i < NUM_RES_LIMIT_TYPES; i++)
-		{
-			/*
-			 * Assign the new thresholds.
-			 */
-			switch (i)
-			{
-				case RES_COUNT_LIMIT:
-				case RES_COST_LIMIT:
-				case RES_MEMORY_LIMIT:
-				{
-					
-					if (queue->limits[i].threshold_value != limits[i])
-						queue->limits[i].threshold_value = limits[i];
-				}
-				break;
-			}
-	
-		}
-
-		/* Set overcommit if that has changed. */
-		if (queue->overcommit != overcommit)
-			queue->overcommit = overcommit;
-
-		/* Set ignore cost limit if that has changed. */
-		if (queue->ignorecostlimit != ignorelimit)
-			queue->ignorecostlimit = ignorelimit;
+		if (queue->limits[i].threshold_value != limits[i])
+			queue->limits[i].threshold_value = limits[i];
 	}
+
+	/* Set overcommit if that has changed. */
+	if (queue->overcommit != overcommit)
+		queue->overcommit = overcommit;
+
+	/* Set ignore cost limit if that has changed. */
+	if (queue->ignorecostlimit != ignorelimit)
+		queue->ignorecostlimit = ignorelimit;
 	
-	return result;
+	return ALTERQUEUE_OK;
 }
 
 
@@ -469,40 +401,24 @@ ResDestroyQueue(Oid queueid)
 {
 
 	ResQueue		queue = ResQueueHashFind(queueid);
-	bool			allzero = true;
 	bool			result;
 	int				i;
-	
 
 	/* Handed an Oid for something other than a queue, bail out! */
 	if (queue == NULL)
 		return false;
 
-
 	/* 
 	 * Now run through all the possible limit types, checking all the
 	 * current counters are zero.
 	 */
-	for (i = 0 ; i < NUM_RES_LIMIT_TYPES; i++)
+	for (i = 0; i < NUM_RES_LIMIT_TYPES; i++)
 	{
-		/*
-		 * Specific checks for the limit types (the current two are
-		 * in fact the same).
-		 */
-		switch (i)
+		if (queue->limits[i].current_value != 0)
 		{
-			case RES_COUNT_LIMIT:
-			case RES_COST_LIMIT:
-			case RES_MEMORY_LIMIT:
-			{
-				
-				if (queue->limits[i].current_value != 0)
-					allzero = false;
-			}
-			break;
+			/* If any current value not zero, can not destroy it. */
+			return false;
 		}
-
-
 	}
 
 	/*
@@ -513,19 +429,11 @@ ResDestroyQueue(Oid queueid)
 	 * he is connected. However this is no worse than being able to DROP a 
 	 * ROLE that is corrently connected!
 	 */
-	if (allzero)
-	{
-		result = ResQueueHashRemove(queueid);
-		if (result)
-			ResScheduler->num_queues--;
+	result = ResQueueHashRemove(queueid);
+	if (result)
+		ResScheduler->num_queues--;
 
-		return result;
-	}
-	else
-	{
-		return false;
-	}
-	
+	return result;
 }
 
 /*
@@ -602,14 +510,14 @@ ResLockPortal(Portal portal, QueryDesc *qDesc)
 					if (LogResManagerMemory())
 					{
 						elog(GP_RESMANAGER_MEMORY_LOG_LEVEL, "query requested %.0fKB", (double) queryMemory / 1024.0);
-					}					
+					}
 					
 					incData.increments[RES_MEMORY_LIMIT] = (Cost) queryMemory;
 				}
-				else 
+				else
 				{
 					Assert(IsResManagerMemoryPolicyNone());
-					incData.increments[RES_MEMORY_LIMIT] = (Cost) 0.0;				
+					incData.increments[RES_MEMORY_LIMIT] = (Cost) 0.0;
 				}
 				takeLock = true;
 				shouldReleaseLock = true;
@@ -648,7 +556,7 @@ ResLockPortal(Portal portal, QueryDesc *qDesc)
 				else 
 				{
 					Assert(IsResManagerMemoryPolicyNone());
-					incData.increments[RES_MEMORY_LIMIT] = (Cost) 0.0;				
+					incData.increments[RES_MEMORY_LIMIT] = (Cost) 0.0;
 				}
 
 				takeLock = true;
@@ -661,7 +569,6 @@ ResLockPortal(Portal portal, QueryDesc *qDesc)
 			 */
 			default:
 			{
-	
 				takeLock = false;
 				shouldReleaseLock = false;
 			}
@@ -856,7 +763,7 @@ ResUnLockPortal(Portal portal)
  *	This could be called for each of ResLockPortal and ResUnLockPortal, but we 
  *	can eliminate a relation open and lock if it is cached.
  */
-Oid	
+Oid
 GetResQueueForRole(Oid roleid)
 {
 	HeapTuple	tuple;
@@ -876,7 +783,6 @@ GetResQueueForRole(Oid roleid)
 	ReleaseSysCache(tuple);
 
 	return queueid;
-	
 }
 
 

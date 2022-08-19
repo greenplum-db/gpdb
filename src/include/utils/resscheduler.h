@@ -49,13 +49,15 @@ extern bool	ResourceCleanupIdleGangs;
 
 /* Resource Limits */
 #define INVALID_RES_LIMIT_THRESHOLD		(-1)
-#define NUM_RES_LIMIT_TYPES				3
 
 typedef enum ResLimitType
 {
 	RES_COUNT_LIMIT,					/* Limit total # */
 	RES_COST_LIMIT,						/* Limit total cost */
-	RES_MEMORY_LIMIT
+	RES_MEMORY_LIMIT,
+
+	NUM_RES_LIMIT_TYPES					/* Number of the above resource limits.
+										   NB: keep it the last value */
 } ResLimitType;
 
 
