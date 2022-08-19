@@ -15700,7 +15700,7 @@ dumpTableSchema(Archive *fout, TableInfo *tbinfo)
 			PQExpBuffer result;
 
 			result = createViewAsClause(fout, tbinfo);
-			appendPQExpBuffer(q, " AS\n%s\n  WITH NO DATA\n",
+			appendPQExpBuffer(q, " AS\n%s\n  WITH NO DATA",
 							  result->data);
 			destroyPQExpBuffer(result);
 		}
@@ -16365,7 +16365,7 @@ dumpAttrDef(Archive *fout, AttrDefInfo *adinfo)
 	 * constraint must be applied to all children as well.
 	 */
 	appendPQExpBuffer(q, "ALTER TABLE %s %s ",
-					  tbinfo->parparent ? "" : "ONLY",
+					  tbinfo->parparent ? "" : "ONLY ",
 					  qualrelname);
 	appendPQExpBuffer(q, "ALTER COLUMN %s SET DEFAULT %s;\n",
 					  fmtId(tbinfo->attnames[adnum - 1]),
@@ -18337,6 +18337,7 @@ addDistributedBy(Archive *fout, PQExpBuffer q, TableInfo *tbinfo, int actual_att
 	{
 		PQExpBuffer query = createPQExpBuffer();
 		PGresult   *res;
+		char *dby;
 
 		appendPQExpBuffer(query,
 						  "SELECT pg_catalog.pg_get_table_distributedby(%u)",
@@ -18344,7 +18345,9 @@ addDistributedBy(Archive *fout, PQExpBuffer q, TableInfo *tbinfo, int actual_att
 
 		res = ExecuteSqlQueryForSingleRow(fout, query->data);
 
-		appendPQExpBuffer(q, " %s", PQgetvalue(res, 0, 0));
+		dby = PQgetvalue(res, 0, 0);
+		if (strcmp(dby, "") != 0)
+			appendPQExpBuffer(q, " %s", PQgetvalue(res, 0, 0));
 
 		PQclear(res);
 		destroyPQExpBuffer(query);
