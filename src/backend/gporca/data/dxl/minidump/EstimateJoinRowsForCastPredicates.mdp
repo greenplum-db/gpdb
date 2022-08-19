@@ -515,7 +515,7 @@ explain select * from A,B where A.j=B.j;
         </dxl:Comparison>
       </dxl:LogicalJoin>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="17">
+    <dxl:Plan Id="0" SpaceSize="12">
       <dxl:HashJoin JoinType="Inner">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="862.541395" Rows="10000.000000" Width="14"/>
