@@ -20,6 +20,7 @@ brew install libevent # gpfdist
 brew install apr # gpfdist
 brew install apr-util # gpfdist
 brew install zstd
+brew install lz4
 brew install pkg-config
 brew install perl
 brew link --force apr

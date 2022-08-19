@@ -953,6 +953,27 @@ validate_and_adjust_options(StdRdOptions *result,
 		}
 
 		if (result->compresstype[0] &&
+			(pg_strcasecmp(result->compresstype, "lz4") == 0))
+		{
+#ifndef USE_LZ4
+			ereport(ERROR,
+					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+					 errmsg("LZ4 library is not supported by this build"),
+					 errhint("Compile with --with-lz4 to use LZ4 compression.")));
+#endif
+			if (result->compresslevel > 12)
+			{
+				if (validate)
+					ereport(ERROR,
+							(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+							 errmsg("compresslevel=%d is out of range for lz4 (should be in the range 1 to 12)",
+									result->compresslevel)));
+
+				result->compresslevel = setDefaultCompressionLevel(result->compresstype);
+			}
+		}
+
+		if (result->compresstype[0] &&
 			(pg_strcasecmp(result->compresstype, "rle_type") == 0) &&
 			(result->compresslevel > 4))
 		{
@@ -1039,7 +1060,8 @@ validateAppendOnlyRelOptions(int blocksize,
 		(pg_strcasecmp(comptype, "quicklz") == 0 ||
 		 pg_strcasecmp(comptype, "zlib") == 0 ||
 		 pg_strcasecmp(comptype, "rle_type") == 0 ||
-		 pg_strcasecmp(comptype, "zstd") == 0))
+		 pg_strcasecmp(comptype, "zstd") == 0 ||
+		 pg_strcasecmp(comptype, "lz4") == 0))
 	{
 		if (!co &&
 			pg_strcasecmp(comptype, "rle_type") == 0)
@@ -1084,6 +1106,21 @@ validateAppendOnlyRelOptions(int blocksize,
 				ereport(ERROR,
 						(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
 						 errmsg("compresslevel=%d is out of range for zstd (should be in the range 1 to 19)",
+								complevel)));
+		}
+
+		if (comptype && (pg_strcasecmp(comptype, "lz4") == 0))
+		{
+#ifndef USE_LZ4
+			ereport(ERROR,
+					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+					 errmsg("LZ4 library is not supported by this build"),
+					 errhint("Compile without --without-lz4 to use LZ4 compression.")));
+#endif
+			if (complevel < 0 || complevel > 12)
+				ereport(ERROR,
+						(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+						 errmsg("compresslevel=%d is out of range for lz4 (should be in the range 1 to 12)",
 								complevel)));
 		}
 
@@ -1133,7 +1170,7 @@ validateAppendOnlyRelOptions(int blocksize,
 
 /*
  * if no compressor type was specified, we set to no compression (level 0)
- * otherwise default for both zlib, quicklz, zstd and RLE to level 1.
+ * otherwise default for all zlib, quicklz, zstd, lz4 and RLE to level 1.
  */
 static int
 setDefaultCompressionLevel(char *compresstype)

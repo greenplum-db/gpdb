@@ -1062,6 +1062,9 @@
 /* Define to build with zstd support. (--with-zstd) */
 #undef USE_ZSTD
 
+/* Define to build with lz4 support. (--with-lz4) */
+#undef USE_LZ4
+
 /* Define to 1 if `wcstombs_l' requires <xlocale.h>. */
 #undef WCSTOMBS_L_IN_XLOCALE
 

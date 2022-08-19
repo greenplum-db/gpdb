@@ -17,6 +17,7 @@ sudo yum install -y \
     libyaml-devel \
     libxml2-devel \
     libzstd-devel \
+    liblz4-devel \
     openssl-devel \
     perl-ExtUtils-Embed \
     python3-devel \

@@ -267,6 +267,7 @@ with_zstd 		= @with_zstd@
 ZSTD_CFLAGS		= @ZSTD_CFLAGS@
 ZSTD_LIBS		= @ZSTD_LIBS@
 with_quicklz		= @with_quicklz@
+with_lz4		= @with_lz4@
 EVENT_LIBS		= @EVENT_LIBS@
 
 ##########################################################################

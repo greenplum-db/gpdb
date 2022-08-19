@@ -719,6 +719,7 @@ with_apr_config
 with_libcurl
 with_rt
 with_quicklz
+with_lz4
 ZSTD_LIBS
 ZSTD_CFLAGS
 with_zstd
@@ -908,6 +909,7 @@ with_system_tzdata
 with_zlib
 with_libbz2
 with_zstd
+with_lz4
 with_quicklz
 with_rt
 with_libcurl
@@ -1629,6 +1631,7 @@ Optional Packages:
   --without-zlib          do not use Zlib
   --without-libbz2        do not use bzip2
   --without-zstd          do not build with Zstandard
+  --without-lz4           do not build with LZ4
   --with-quicklz          build with QuickLZ support (requires quicklz
                           library)
   --without-rt            do not use Realtime Library
@@ -9479,6 +9482,43 @@ $as_echo "yes" >&6; }
 
 fi
 fi
+
+#
+# lz4
+#
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking whether to build with LZ4 support" >&5
+$as_echo_n "checking whether to build with LZ4 support... " >&6; }
+
+
+
+# Check whether --with-lz4 was given.
+if test "${with_lz4+set}" = set; then :
+  withval=$with_lz4;
+  case $withval in
+    yes)
+
+$as_echo "#define USE_LZ4 1" >>confdefs.h
+
+      ;;
+    no)
+      :
+      ;;
+    *)
+      as_fn_error $? "no argument expected for --with-lz4 option" "$LINENO" 5
+      ;;
+  esac
+
+else
+  with_lz4=yes
+
+$as_echo "#define USE_LZ4 1" >>confdefs.h
+
+fi
+
+
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $with_lz4" >&5
+$as_echo "$with_lz4" >&6; }
+
 
 #
 # quicklz

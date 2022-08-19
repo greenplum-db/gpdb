@@ -1127,6 +1127,15 @@ if test "$with_zstd" = yes; then
 fi
 
 #
+# lz4
+#
+AC_MSG_CHECKING([whether to build with LZ4 support])
+PGAC_ARG_BOOL(with, lz4, yes, [do not build with LZ4],
+              [AC_DEFINE([USE_LZ4], 1, [Define to build with lz4 support. (--with-lz4)])])
+AC_MSG_RESULT($[with_lz4])
+AC_SUBST(with_lz4)
+
+#
 # quicklz
 #
 PGAC_ARG_BOOL(with, quicklz, no,
