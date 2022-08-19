@@ -1282,7 +1282,7 @@ WHERE
         </dxl:And>
       </dxl:LogicalJoin>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="51358">
+    <dxl:Plan Id="0" SpaceSize="51614">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="1306.824501" Rows="199.680000" Width="148"/>
