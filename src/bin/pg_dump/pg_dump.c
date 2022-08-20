@@ -4464,7 +4464,7 @@ getTypes(Archive *fout, int *numTypes)
 						  "ELSE (SELECT relkind FROM pg_class WHERE oid = t.typrelid) END AS typrelkind, "
 						  "t.typtype, t.typisdefined, "
 						  "t.typname[0] = '_' AND t.typelem != 0 AND "
-						  "(SELECT typarray FROM pg_type te WHERE oid = pg_type.typelem) = oid AS isarray, "
+						  "(SELECT typarray FROM pg_type te WHERE oid = t.typelem) = t.oid AS isarray, "
 							"coalesce(array_to_string(e.typoptions, ', '), '') AS typstorage "
 						  "FROM pg_type t "
 							"LEFT JOIN pg_type_encoding e ON t.oid = e.typid ",
