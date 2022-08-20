@@ -4860,9 +4860,6 @@ ATPrepCmd(List **wqueue, Relation rel, AlterTableCmd *cmd,
 				DistributedBy *ldistro;
 				GpPolicy   *policy;
 
-				// GPDB_12_MERGE_FIXME: is this still needed?
-				//ATExternalPartitionCheck(cmd->subtype, rel, recursing);
-
 				Assert(IsA(cmd->def, List));
 				/* The distributeby clause is the second element of cmd->def */
 				ldistro = (DistributedBy *) lsecond((List *)cmd->def);
