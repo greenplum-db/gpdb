@@ -1284,7 +1284,7 @@ select * from (select * from p1 intersect select * from p2) as p, tt where p.b=t
         </dxl:Comparison>
       </dxl:LogicalJoin>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="1277">
+    <dxl:Plan Id="0" SpaceSize="1619">
       <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="1301.575209" Rows="10000.000000" Width="16"/>
