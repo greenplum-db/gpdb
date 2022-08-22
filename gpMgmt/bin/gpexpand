@@ -48,6 +48,9 @@ except ImportError, e:
 MAX_PARALLEL_EXPANDS = 96
 MAX_BATCH_SIZE = 128
 
+FIRST_NORMAL_OID = 16384
+RELSTORAGE_EXTERNAL = 'x'
+
 SEGMENT_CONFIGURATION_BACKUP_FILE = "gpexpand.gp_segment_configuration"
 
 DBNAME = 'postgres'
@@ -1580,38 +1583,89 @@ class gpexpand:
         # including new segments has been started once before so finalize
         self.finalize_prepare()
 
+    def generate_sql_to_populate_table_size(self, sql):
+        # This function generate a SQL that can compute table size
+        # taking the advantage of MPP. Previous code put pg_relation_size
+        # in target list of a query involving only catalog, thus each
+        # tuple will lead to a dispatch to compute pg_relation_size
+        # thus bad performance. Now we let pg_relation_size compute
+        # at each segment and then group by the table oid and sum
+        # together to get each table's size. pg_relation_size is
+        # volatile function, so the following CTE sql's subquery
+        # x will never be pulled up which means the pg_relation_size
+        # will always be evaluated before later motion to gurantee
+        # correctness no matter single stage or multi stage agg.
+        #
+        # Also note, we filter out those relations with relkind is
+        # RELKIND_FOREIGN_TABLE, because we only expand those
+        # are external writable, and even for external writable ones
+        # we simple modify the numsegments and do not move data.
+        # Refer to C code: ATExecExpandTable and ATExecExpandPartitionTablePrepare.
+        cte_sql = """with table_size_cte(table_oid, size) as
+        (
+           select table_oid, sum(size)
+           from (
+             select oid as table_oid,
+                    pg_relation_size(oid) as size
+             from gp_dist_random('pg_class')
+             where oid >= %d and relstorage <> '%s'
+           ) x(table_oid, size)
+           group by table_oid
+        )
+        """ % (FIRST_NORMAL_OID, RELSTORAGE_EXTERNAL)
+
+        final_sql = """{cte_sql}
+        select
+          s1.dbname,
+          s1.fq_name,
+          s1.table_oid,
+          s1.root_partition_oid,
+          s1.rank,
+          s1.external_writable,
+          s1.undone_status,
+          s1.expansion_started,
+          s1.expansion_finished,
+          coalesce(table_size_cte.size, 0) as source_bytes,
+          s1.rel_storage as rel_storage
+        from ({orig_sql})s1 left join table_size_cte
+        on s1.table_oid = table_size_cte.table_oid
+        """
+        return final_sql.format(cte_sql=cte_sql,
+                                orig_sql=sql)
+
     def _populate_regular_tables(self, dbname):
         """ we don't do 3.2+ style partitioned tables here, but we do
             all other table types.
         """
-
-        src_bytes_str = "0" if self.options.simple_progress else "pg_relation_size(quote_ident(n.nspname) || '.' || quote_ident(c.relname))"
         sql = """SELECT
-    current_database(),
-    quote_ident(n.nspname) || '.' || quote_ident(c.relname) as fq_name,
-    c.oid as tableoid,
-    NULL as root_partition_oid,
-    2 as rank,
-    pe.writable is not null as external_writable,
-    '%s' as undone_status,
-    NULL as expansion_started,
-    NULL as expansion_finished,
-    %s as source_bytes,
-    c.relstorage as rel_storage
-FROM
-    pg_class c
-    JOIN pg_namespace n ON (c.relnamespace=n.oid)
-    JOIN pg_catalog.gp_distribution_policy p on (c.oid = p.localoid)
-    LEFT JOIN pg_partition pp on (c.oid=pp.parrelid)
-    LEFT JOIN pg_partition_rule pr on (c.oid=pr.parchildrelid)
-    LEFT JOIN pg_exttable pe on (c.oid=pe.reloid and pe.writable)
-WHERE
-    pp.parrelid is NULL
-    AND pr.parchildrelid is NULL
-    AND n.nspname != 'gpexpand'
-    AND n.nspname != 'pg_bitmapindex'
-    AND c.relpersistence != 't'
-                  """ % (undone_status, src_bytes_str)
+                   current_database() dbname,
+                   quote_ident(n.nspname) || '.' || quote_ident(c.relname) as fq_name,
+                   c.oid as table_oid,
+                   NULL as root_partition_oid,
+                   2 as rank,
+                   pe.writable is not null as external_writable,
+                   '%s' as undone_status,
+                   NULL as expansion_started,
+                   NULL as expansion_finished,
+                   0 as source_bytes,
+                   c.relstorage as rel_storage
+                FROM
+                     pg_class c
+                JOIN pg_namespace n ON (c.relnamespace=n.oid)
+                JOIN pg_catalog.gp_distribution_policy p on (c.oid = p.localoid)
+           LEFT JOIN pg_partition pp on (c.oid=pp.parrelid)
+           LEFT JOIN pg_partition_rule pr on (c.oid=pr.parchildrelid)
+           LEFT JOIN pg_exttable pe on (c.oid=pe.reloid and pe.writable)
+                WHERE
+                   pp.parrelid is NULL
+               AND pr.parchildrelid is NULL
+               AND n.nspname != 'gpexpand'
+               AND n.nspname != 'pg_bitmapindex'
+               AND c.relpersistence != 't'
+                  """ % undone_status
+
+        if not self.options.simple_progress:
+            sql = self.generate_sql_to_populate_table_size(sql)
         self.logger.debug(sql)
         table_conn = self.connect_database(dbname)
 
@@ -1674,21 +1728,19 @@ WHERE
             dbconn.execSQL(table_conn, prepare_cmd)
             table_conn.commit()
 
-        src_bytes_str = "0" if self.options.simple_progress else "pg_relation_size(quote_ident(n.nspname) || '.' || quote_ident(c.relname))"
-
         # We need populate all leaf table to gpexpand.status_detail
         get_status_detail_cmd = """
              SELECT
-                current_database(),
+                current_database() as dbname,
                 quote_ident(n.nspname) || '.' || quote_ident(c.relname) as fq_name,
-                c.oid as tableoid,
+                c.oid as table_oid,
                 d.oid as root_partition_oid,
                 2 as rank,
                 pe.writable is not null as external_writable,
                 '%s' as undone_status,
                 NULL as expansion_started,
                 NULL as expansion_finished,
-                %s as source_bytes,
+                0 as source_bytes,
                 c.relstorage as rel_storage
             FROM
                 pg_class c
@@ -1699,7 +1751,10 @@ WHERE
                 LEFT JOIN pg_exttable pe on (c.oid=pe.reloid and pe.writable)
             where
                 c.relhassubclass = false
-        """ % (undone_status, src_bytes_str)
+        """ % undone_status
+
+        if not self.options.simple_progress:
+            get_status_detail_cmd = self.generate_sql_to_populate_table_size(get_status_detail_cmd)
         self.logger.debug(get_status_detail_cmd)
 
         try:

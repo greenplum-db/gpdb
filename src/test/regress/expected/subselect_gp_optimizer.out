@@ -2819,3 +2819,120 @@ select * from issue_12656 where (i, j) in (select distinct on (i) i, j from issu
  1 | 10002
 (1 row)
 
+-- A guard test case for gpexpand's populate SQL
+-- Some simple notes and background is: we want to compute
+-- table size efficiently, it is better to avoid invoke
+-- pg_relation_size() in serial on QD, since this function
+-- will dispatch for each tuple. The bad pattern SQL is like
+--   select pg_relation_size(oid) from pg_class where xxx
+-- The idea is force pg_relations_size is evaluated on each
+-- segment and the sum the result together to get the final
+-- result. To make sure correctness, we have to evaluate
+-- pg_relation_size before any motion. The skill here is
+-- to wrap this in a subquery, due to volatile of pg_relation_size,
+-- this subquery won't be pulled up. Plus the skill of
+-- gp_dist_random('pg_class') we can achieve this goal.
+-- the below test is to verify the plan, we should see pg_relation_size
+-- is evaludated on each segment and then motion then sum together. The
+-- SQL pattern is a catalog join a table size "dict".
+set gp_enable_multiphase_agg = on;
+-- force nestloop join to make test stable since we
+-- are testing plan and do not care about where we
+-- put hash table.
+set enable_hashjoin = off;
+set enable_nestloop = on;
+set enable_indexscan = off;
+set enable_bitmapscan = off;
+explain (verbose on, costs off)
+with cte(table_oid, size) as
+(
+   select
+     table_oid,
+     sum(size) size
+   from (
+     select oid,
+          pg_relation_size(oid)
+     from gp_dist_random('pg_class')
+   ) x(table_oid, size)
+  group by table_oid
+)
+select pc.relname, ts.size
+from pg_class pc, cte ts
+where pc.oid = ts.table_oid;
+                                                                QUERY PLAN                                                                 
+-------------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice3; segments: 3)
+   Output: pc.relname, (pg_catalog.sum((sum((pg_relation_size((pg_class.oid)::regclass, 'main'::text))))))
+   ->  Nested Loop
+         Output: pc.relname, (pg_catalog.sum((sum((pg_relation_size((pg_class.oid)::regclass, 'main'::text))))))
+         Join Filter: (pc.oid = pg_class.oid)
+         ->  HashAggregate
+               Output: pg_class.oid, pg_catalog.sum((sum((pg_relation_size((pg_class.oid)::regclass, 'main'::text)))))
+               Group Key: pg_class.oid
+               ->  Redistribute Motion 3:3  (slice1; segments: 3)
+                     Output: pg_class.oid, (sum((pg_relation_size((pg_class.oid)::regclass, 'main'::text))))
+                     Hash Key: pg_class.oid
+                     ->  HashAggregate
+                           Output: pg_class.oid, sum((pg_relation_size((pg_class.oid)::regclass, 'main'::text)))
+                           Group Key: pg_class.oid
+                           ->  Seq Scan on pg_catalog.pg_class
+                                 Output: pg_class.oid, pg_relation_size((pg_class.oid)::regclass, 'main'::text)
+         ->  Materialize
+               Output: pc.relname, pc.oid
+               ->  Redistribute Motion 1:3  (slice2)
+                     Output: pc.relname, pc.oid
+                     Hash Key: pc.oid
+                     ->  Seq Scan on pg_catalog.pg_class pc
+                           Output: pc.relname, pc.oid
+ Optimizer: Postgres query optimizer
+ Settings: enable_bitmapscan=off, enable_hashjoin=off, enable_indexscan=off, enable_nestloop=on, gp_enable_multiphase_agg=on, optimizer=on
+(25 rows)
+
+set gp_enable_multiphase_agg = off;
+explain (verbose on, costs off)
+with cte(table_oid, size) as
+(
+   select
+     table_oid,
+     sum(size) size
+   from (
+     select oid,
+          pg_relation_size(oid)
+     from gp_dist_random('pg_class')
+   ) x(table_oid, size)
+  group by table_oid
+)
+select pc.relname, ts.size
+from pg_class pc, cte ts
+where pc.oid = ts.table_oid;
+                                                                 QUERY PLAN                                                                 
+--------------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice3; segments: 3)
+   Output: pc.relname, (sum((pg_relation_size((pg_class.oid)::regclass, 'main'::text))))
+   ->  Nested Loop
+         Output: pc.relname, (sum((pg_relation_size((pg_class.oid)::regclass, 'main'::text))))
+         Join Filter: (pc.oid = pg_class.oid)
+         ->  HashAggregate
+               Output: pg_class.oid, sum((pg_relation_size((pg_class.oid)::regclass, 'main'::text)))
+               Group Key: pg_class.oid
+               ->  Redistribute Motion 3:3  (slice1; segments: 3)
+                     Output: pg_class.oid, (pg_relation_size((pg_class.oid)::regclass, 'main'::text))
+                     Hash Key: pg_class.oid
+                     ->  Seq Scan on pg_catalog.pg_class
+                           Output: pg_class.oid, pg_relation_size((pg_class.oid)::regclass, 'main'::text)
+         ->  Materialize
+               Output: pc.relname, pc.oid
+               ->  Redistribute Motion 1:3  (slice2)
+                     Output: pc.relname, pc.oid
+                     Hash Key: pc.oid
+                     ->  Seq Scan on pg_catalog.pg_class pc
+                           Output: pc.relname, pc.oid
+ Optimizer: Postgres query optimizer
+ Settings: enable_bitmapscan=off, enable_hashjoin=off, enable_indexscan=off, enable_nestloop=on, gp_enable_multiphase_agg=off, optimizer=on
+(22 rows)
+
+reset gp_enable_multiphase_agg;
+reset enable_hashjoin;
+reset enable_nestloop;
+reset enable_indexscan;
+reset enable_bitmapscan;
