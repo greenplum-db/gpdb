@@ -554,9 +554,9 @@ CREATE
 1U: begin;
 BEGIN
 1U: select test_consume_xids((131070 - (cur % 131072))::int) from txid_current() cur;
- test_consume_xids 
+ test_consume_xids
 -------------------
-                   
+
 (1 row)
 1U: end;
 END
@@ -570,25 +570,25 @@ INSERT 1
 -- when we do DistributedLog_AdvanceOldestXmin() again in the next query, we
 -- would successfully truncate the current working segment.
 select pg_ctl(datadir, 'restart') from gp_segment_configuration where role = 'p' and content = 1;
- pg_ctl 
+ pg_ctl
 --------
- OK     
+ OK
 (1 row)
 
 -- Do a SELECT. This assigns distributed snapshot but it won't assign new xid.
 -- Since we'll advance to the next future xid which is the first xid of the next segment,
 -- this will get all DLOG segments truncated.
 1: select * from distributed_snapshot_fix1;
- a 
+ a
 ---
- 1 
+ 1
 (1 row)
 
 -- Checking the DLOG segments we have right now, which is none.
 1U: select count(*) from gp_distributed_log;
- count 
+ count
 -------
- 0     
+ 0
 (1 row)
 
 1Uq: ... <quitting>
@@ -597,16 +597,49 @@ select pg_ctl(datadir, 'restart') from gp_segment_configuration where role = 'p'
 -- Restart server again. Previously DistributedLogShared->oldestXmin is initialized to
 -- latestCompletedXid.
 select pg_ctl(datadir, 'restart') from gp_segment_configuration where role = 'p' and content = 1;
- pg_ctl 
+ pg_ctl
 --------
- OK     
+ OK
 (1 row)
 
 -- Do a SELECT. Previously this would complain about missing segment file because we've
 -- truncated the segment that latestCompletedXid is on. Now we don't, because we will
 -- be advancing from latestCompletedXid + 1.
 1: select * from distributed_snapshot_fix1;
- a 
+ a
 ---
- 1 
+ 1
 (1 row)
+
+
+-- test the distributed snapshot in the situation of direct dispatch
+create or replace language plpython3u;
+CREATE
+
+create table direct_dispatch_snapshot_alpha(a int, b int);
+CREATE
+insert into direct_dispatch_snapshot_alpha select i, i from generate_series(1, 10) i;
+INSERT 10
+
+create function distributed_snapshot_test(is_direct_dispatch boolean) returns boolean as $$ import re from pg import DB from copy import deepcopy
+dbname = plpy.execute("select current_database() db")[0]["db"] db = DB(dbname=dbname)
+info_results = [] db.set_notice_receiver(lambda n: info_results.append(deepcopy(n.message)))
+db.query("set Debug_print_full_dtm = on") db.query("set client_min_messages = log")
+if is_direct_dispatch: # should not create distributed snapshot db.query("select * from direct_dispatch_snapshot_alpha where a = 6") else: # should create distributed snapshot db.query("select * from direct_dispatch_snapshot_alpha where b = 6")
+info_string = ", ".join(info_results) res = re.findall(r"Got distributed snapshot from CreateDistributedSnapshot", info_string)
+if (is_direct_dispatch and len(res) == 1) or (not is_direct_dispatch and len(res) == 2): return True
+return False
+$$ language plpython3u;
+CREATE
+
+select distributed_snapshot_test(true);
+ distributed_snapshot_test
+---------------------------
+ t
+(1 row)
+select distributed_snapshot_test(false);
+ distributed_snapshot_test
+---------------------------
+ t
+(1 row)
+
