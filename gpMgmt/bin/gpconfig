@@ -411,6 +411,9 @@ def validate_change_options(options, conn, guc):
         LOGGER.fatal(msg)
         raise Exception(msg)
 
+    if '.' in options.entry:
+        return
+
     if not guc:
         # Hidden gucs: a guc is considered hidden if both:
         #     1. It is not present with normal gucs in pg_settings
