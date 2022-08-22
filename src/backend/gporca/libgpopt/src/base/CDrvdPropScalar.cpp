@@ -105,6 +105,8 @@ CDrvdPropScalar::Derive(CMemoryPool *, CExpressionHandle &exprhdl,
 
 	DeriveHasScalarArrayCmp(exprhdl);
 
+	DeriveHasReplicationSafeAggFunc(exprhdl);
+
 	m_is_complete = true;
 }
 
@@ -428,6 +430,28 @@ CDrvdPropScalar::DeriveTotalOrderedAggs(CExpressionHandle &exprhdl)
 	}
 	return m_ulOrderedAggs;
 }
+
+BOOL
+CDrvdPropScalar::HasReplicationSafeAggFunc() const
+{
+	GPOS_RTL_ASSERT(IsComplete());
+	return m_fHasReplicationSafeAggFunc;
+}
+// CHRIS
+BOOL
+CDrvdPropScalar::DeriveHasReplicationSafeAggFunc(CExpressionHandle &exprhdl)
+{
+	if (!m_is_prop_derived->ExchangeSet(EdptFHasReplicationSafeAggFunc))
+	{
+		if (COperator::EopScalarProjectList == exprhdl.Pop()->Eopid())
+		{
+			m_fHasReplicationSafeAggFunc =
+				CScalarProjectList::FHasReplicationSafeAggFunc(exprhdl);
+		}
+	}
+	return m_fHasReplicationSafeAggFunc;
+}
+
 
 //---------------------------------------------------------------------------
 //	@function:

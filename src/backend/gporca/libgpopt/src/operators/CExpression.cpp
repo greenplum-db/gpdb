@@ -1548,4 +1548,11 @@ CExpression::DeriveTotalOrderedAggs()
 	exprhdl.Attach(this);
 	return m_pdpscalar->DeriveTotalOrderedAggs(exprhdl);
 }
+BOOL
+CExpression::DeriveHasReplicationSafeAggFunc()
+{
+	CExpressionHandle exprhdl(m_mp);
+	exprhdl.Attach(this);
+	return m_pdpscalar->DeriveHasReplicationSafeAggFunc(exprhdl);
+}
 // EOF

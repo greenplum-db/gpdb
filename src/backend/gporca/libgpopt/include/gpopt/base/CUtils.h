@@ -359,6 +359,10 @@ public:
 	// check if the aggregate is local or global
 	static BOOL FHasGlobalAggFunc(const CExpression *pexprProjList);
 
+	// check if given project list has only aggregate functions
+	// that can be safely executed on replicated slices
+	static BOOL FHasReplicationSafeAggFunc(const CExpression *pexprProjList);
+
 	// generate a bool expression
 	static CExpression *PexprScalarConstBool(CMemoryPool *mp, BOOL value,
 											 BOOL is_null = false);
