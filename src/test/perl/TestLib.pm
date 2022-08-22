@@ -29,6 +29,7 @@ our @EXPORT = qw(
   start_test_server
   restart_test_server
   psql
+  generate_ascii_string
   slurp_dir
   slurp_file
   system_or_bail
