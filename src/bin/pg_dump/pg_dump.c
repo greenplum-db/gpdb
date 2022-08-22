@@ -5785,14 +5785,15 @@ getInherits(Archive *fout, int *numInherits)
 void
 getIndexes(Archive *fout, TableInfo tblinfo[], int numTables)
 {
-	int			i,
-				j;
 	PQExpBuffer query = createPQExpBuffer();
+	PQExpBuffer tbloids = createPQExpBuffer();
 	PGresult   *res;
+	int			ntups;
+	int			curtblindx;
 	IndxInfo   *indxinfo;
-	ConstraintInfo *constrinfo;
 	int			i_tableoid,
 				i_oid,
+				i_indrelid,
 				i_indexname,
 				i_indexdef,
 				i_indnkeys,
@@ -5809,163 +5810,164 @@ getIndexes(Archive *fout, TableInfo tblinfo[], int numTables)
 				i_tablespace,
 				i_indreloptions,
 				i_relpages;
-	int			ntups;
 
-	for (i = 0; i < numTables; i++)
+	/*
+	 * We want to perform just one query against pg_index.  However, we
+	 * mustn't try to select every row of the catalog and then sort it out on
+	 * the client side, because some of the server-side functions we need
+	 * would be unsafe to apply to tables we don't have lock on.  Hence, we
+	 * build an array of the OIDs of tables we care about (and now have lock
+	 * on!), and use a WHERE clause to constrain which rows are selected.
+	 */
+	appendPQExpBufferChar(tbloids, '{');
+	for (int i = 0; i < numTables; i++)
 	{
 		TableInfo  *tbinfo = &tblinfo[i];
 
-		/* Only plain tables and materialized views have indexes. */
-		if (tbinfo->relkind != RELKIND_RELATION &&
-			tbinfo->relkind != RELKIND_MATVIEW)
-			continue;
 		if (!tbinfo->hasindex)
 			continue;
 
-		/* Ignore indexes of tables not to be dumped */
-		if (!tbinfo->dobj.dump)
+		/*
+		 * We can ignore indexes of uninteresting tables.
+		 */
+		if (!tbinfo->interesting)
 			continue;
 
-		if (g_verbose)
-			write_msg(NULL, "reading indexes for table \"%s\"\n",
-					  tbinfo->dobj.name);
+		/* OK, we need info for this table */
+		if (tbloids->len > 1)	/* do we have more than the '{'? */
+			appendPQExpBufferChar(tbloids, ',');
+		appendPQExpBuffer(tbloids, "%u", tbinfo->dobj.catId.oid);
+	}
+	appendPQExpBufferChar(tbloids, '}');
+
+	resetPQExpBuffer(query);
+
+	appendPQExpBuffer(query,
+					  "SELECT t.tableoid, t.oid, i.indrelid, "
+					  "t.relname AS indexname, "
+					  "pg_catalog.pg_get_indexdef(i.indexrelid) AS indexdef, "
+					  "t.relnatts AS indnkeys, "
+					  "i.indkey, i.indisclustered, "
+					  "c.contype, c.conname, "
+					  "c.condeferrable, c.condeferred, "
+					  "c.tableoid AS contableoid, "
+					  "c.oid AS conoid, t.relpages, "
+					  "pg_catalog.pg_get_constraintdef(c.oid, false) AS condef, "
+					  "(SELECT spcname FROM pg_catalog.pg_tablespace s WHERE s.oid = t.reltablespace) AS tablespace, "
+					  "t.reloptions AS indreloptions, ");
+
+	if (fout->remoteVersion >= 90400)
+		appendPQExpBuffer(query,
+						  "i.indisreplident ");
+	else
+		appendPQExpBuffer(query,
+						  "false AS indisreplident ");
+
+	appendPQExpBuffer(query,
+							"FROM unnest('%s'::pg_catalog.oid[]) AS src(tbloid)\n"
+							"JOIN pg_catalog.pg_index i ON (src.tbloid = i.indrelid) "
+							"JOIN pg_catalog.pg_class t ON (t.oid = i.indexrelid) ",
+							tbloids->data);
+	/*
+	 * The point of the messy-looking outer join is to find a constraint that
+	 * is related by an internal dependency link to the index. If we find one,
+	 * create a CONSTRAINT entry linked to the INDEX entry.  We assume an
+	 * index won't have more than one internal dependency.
+	 *
+	 * As of 9.0 we don't need to look at pg_depend but can check for a match
+	 * to pg_constraint.conindid.  The check on conrelid is redundant but
+	 * useful because that column is indexed while conindid is not.
+	 */
+
+	if (fout->remoteVersion >= 90400)
+	{
+		/*
+		 * the test on indisready is necessary in 9.2, and harmless in
+		 * earlier/later versions
+		 */
+		appendPQExpBuffer(query,
+						  "LEFT JOIN pg_catalog.pg_constraint c "
+						  "ON (i.indrelid = c.conrelid AND "
+						  "i.indexrelid = c.conindid AND "
+						  "c.contype IN ('p','u','x')) "
+						  "WHERE i.indisvalid AND i.indisready "
+						  "ORDER BY i.indrelid, indexname");
+	}
+	else
+	{
+		appendPQExpBuffer(query,
+						  "LEFT JOIN pg_catalog.pg_depend d "
+						  "ON (d.classid = t.tableoid "
+						  "AND d.objid = t.oid "
+						  "AND d.deptype = 'i') "
+						  "LEFT JOIN pg_catalog.pg_constraint c "
+						  "ON (d.refclassid = c.tableoid "
+						  "AND d.refobjid = c.oid) "
+						  "WHERE i.indisvalid "
+						  "ORDER BY i.indrelid, indexname");
+	}
+
+	res = ExecuteSqlQuery(fout, query->data, PGRES_TUPLES_OK);
+
+	ntups = PQntuples(res);
+
+	i_tableoid = PQfnumber(res, "tableoid");
+	i_oid = PQfnumber(res, "oid");
+	i_indrelid = PQfnumber(res, "indrelid");
+	i_indexname = PQfnumber(res, "indexname");
+	i_indexdef = PQfnumber(res, "indexdef");
+	i_indnkeys = PQfnumber(res, "indnkeys");
+	i_indkey = PQfnumber(res, "indkey");
+	i_indisclustered = PQfnumber(res, "indisclustered");
+	i_indisreplident = PQfnumber(res, "indisreplident");
+	i_relpages = PQfnumber(res, "relpages");
+	i_contype = PQfnumber(res, "contype");
+	i_conname = PQfnumber(res, "conname");
+	i_condeferrable = PQfnumber(res, "condeferrable");
+	i_condeferred = PQfnumber(res, "condeferred");
+	i_contableoid = PQfnumber(res, "contableoid");
+	i_conoid = PQfnumber(res, "conoid");
+	i_condef = PQfnumber(res, "condef");
+	i_tablespace = PQfnumber(res, "tablespace");
+	i_indreloptions = PQfnumber(res, "indreloptions");
+
+	indxinfo = (IndxInfo *) pg_malloc(ntups * sizeof(IndxInfo));
+
+	/*
+	 * Outer loop iterates once per table, not once per row.  Incrementing of
+	 * j is handled by the inner loop.
+	 */
+	curtblindx = -1;
+	for (int j = 0; j < ntups;)
+	{
+		Oid			indrelid = atooid(PQgetvalue(res, j, i_indrelid));
+		TableInfo  *tbinfo = NULL;
+		int			numinds;
+
+		/* Count rows for this table */
+		for (numinds = 1; numinds < ntups - j; numinds++)
+			if (atooid(PQgetvalue(res, j + numinds, i_indrelid)) != indrelid)
+				break;
 
 		/*
-		 * The point of the messy-looking outer join is to find a constraint
-		 * that is related by an internal dependency link to the index. If we
-		 * find one, create a CONSTRAINT entry linked to the INDEX entry.  We
-		 * assume an index won't have more than one internal dependency.
-		 *
-		 * As of 9.0 we don't need to look at pg_depend but can check for a
-		 * match to pg_constraint.conindid.  The check on conrelid is
-		 * redundant but useful because that column is indexed while conindid
-		 * is not.
+		 * Locate the associated TableInfo; we rely on tblinfo[] being in OID
+		 * order.
 		 */
-		resetPQExpBuffer(query);
-		if (fout->remoteVersion >= 90400)
+		while (++curtblindx < numTables)
 		{
-			/*
-			 * the test on indisready is necessary in 9.2, and harmless in
-			 * earlier/later versions
-			 */
-			appendPQExpBuffer(query,
-							  "SELECT t.tableoid, t.oid, "
-							  "t.relname AS indexname, "
-					 "pg_catalog.pg_get_indexdef(i.indexrelid) AS indexdef, "
-							  "t.relnatts AS indnkeys, "
-							  "i.indkey, i.indisclustered, "
-							  "i.indisreplident, t.relpages, "
-							  "c.contype, c.conname, "
-							  "c.condeferrable, c.condeferred, "
-							  "c.tableoid AS contableoid, "
-							  "c.oid AS conoid, "
-				  "pg_catalog.pg_get_constraintdef(c.oid, false) AS condef, "
-							  "(SELECT spcname FROM pg_catalog.pg_tablespace s WHERE s.oid = t.reltablespace) AS tablespace, "
-							  "t.reloptions AS indreloptions "
-							  "FROM pg_catalog.pg_index i "
-					  "JOIN pg_catalog.pg_class t ON (t.oid = i.indexrelid) "
-							  "LEFT JOIN pg_catalog.pg_constraint c "
-							  "ON (i.indrelid = c.conrelid AND "
-							  "i.indexrelid = c.conindid AND "
-							  "c.contype IN ('p','u','x')) "
-							  "WHERE i.indrelid = '%u'::pg_catalog.oid "
-							  "AND i.indisvalid AND i.indisready "
-							  "ORDER BY indexname",
-							  tbinfo->dobj.catId.oid);
+			tbinfo = &tblinfo[curtblindx];
+			if (tbinfo->dobj.catId.oid == indrelid)
+				break;
 		}
-		else if (fout->remoteVersion >= 90000)
-		{
-			/*
-			 * the test on indisready is necessary in 9.2, and harmless in
-			 * earlier/later versions
-			 */
-			appendPQExpBuffer(query,
-							  "SELECT t.tableoid, t.oid, "
-							  "t.relname AS indexname, "
-					 "pg_catalog.pg_get_indexdef(i.indexrelid) AS indexdef, "
-							  "t.relnatts AS indnkeys, "
-							  "i.indkey, i.indisclustered, "
-							  "false AS indisreplident, t.relpages, "
-							  "c.contype, c.conname, "
-							  "c.condeferrable, c.condeferred, "
-							  "c.tableoid AS contableoid, "
-							  "c.oid AS conoid, "
-				  "pg_catalog.pg_get_constraintdef(c.oid, false) AS condef, "
-							  "(SELECT spcname FROM pg_catalog.pg_tablespace s WHERE s.oid = t.reltablespace) AS tablespace, "
-							  "t.reloptions AS indreloptions "
-							  "FROM pg_catalog.pg_index i "
-					  "JOIN pg_catalog.pg_class t ON (t.oid = i.indexrelid) "
-							  "LEFT JOIN pg_catalog.pg_constraint c "
-							  "ON (i.indrelid = c.conrelid AND "
-							  "i.indexrelid = c.conindid AND "
-							  "c.contype IN ('p','u','x')) "
-							  "WHERE i.indrelid = '%u'::pg_catalog.oid "
-							  "AND i.indisvalid AND i.indisready "
-							  "ORDER BY indexname",
-							  tbinfo->dobj.catId.oid);
-		}
-		else if (fout->remoteVersion >= 80200)
-		{
-			appendPQExpBuffer(query,
-							  "SELECT t.tableoid, t.oid, "
-							  "t.relname AS indexname, "
-					 "pg_catalog.pg_get_indexdef(i.indexrelid) AS indexdef, "
-							  "t.relnatts AS indnkeys, "
-							  "i.indkey, i.indisclustered, "
-							  "false AS indisreplident, t.relpages, "
-							  "c.contype, c.conname, "
-							  "c.condeferrable, c.condeferred, "
-							  "c.tableoid AS contableoid, "
-							  "c.oid AS conoid, "
-							  "null AS condef, "
-							  "(SELECT spcname FROM pg_catalog.pg_tablespace s WHERE s.oid = t.reltablespace) AS tablespace, "
-							  "t.reloptions AS indreloptions "
-							  "FROM pg_catalog.pg_index i "
-					  "JOIN pg_catalog.pg_class t ON (t.oid = i.indexrelid) "
-							  "LEFT JOIN pg_catalog.pg_depend d "
-							  "ON (d.classid = t.tableoid "
-							  "AND d.objid = t.oid "
-							  "AND d.deptype = 'i') "
-							  "LEFT JOIN pg_catalog.pg_constraint c "
-							  "ON (d.refclassid = c.tableoid "
-							  "AND d.refobjid = c.oid) "
-							  "WHERE i.indrelid = '%u'::pg_catalog.oid "
-							  "AND i.indisvalid "
-							  "ORDER BY indexname",
-							  tbinfo->dobj.catId.oid);
-		}
-		else
-		{
-			error_unsupported_server_version(fout);
-		}
+		if (curtblindx >= numTables)
+			exit_horribly(NULL, "unrecognized table OID %u\n", indrelid);
+		/* cross-check that we only got requested tables */
+		if (!tbinfo->hasindex ||
+			!tbinfo->interesting)
+			exit_horribly(NULL, "unexpected index data for table \"%s\"\n",
+				  tbinfo->dobj.name);
 
-		res = ExecuteSqlQuery(fout, query->data, PGRES_TUPLES_OK);
-
-		ntups = PQntuples(res);
-
-		i_tableoid = PQfnumber(res, "tableoid");
-		i_oid = PQfnumber(res, "oid");
-		i_indexname = PQfnumber(res, "indexname");
-		i_indexdef = PQfnumber(res, "indexdef");
-		i_indnkeys = PQfnumber(res, "indnkeys");
-		i_indkey = PQfnumber(res, "indkey");
-		i_indisclustered = PQfnumber(res, "indisclustered");
-		i_indisreplident = PQfnumber(res, "indisreplident");
-		i_relpages = PQfnumber(res, "relpages");
-		i_contype = PQfnumber(res, "contype");
-		i_conname = PQfnumber(res, "conname");
-		i_condeferrable = PQfnumber(res, "condeferrable");
-		i_condeferred = PQfnumber(res, "condeferred");
-		i_contableoid = PQfnumber(res, "contableoid");
-		i_conoid = PQfnumber(res, "conoid");
-		i_condef = PQfnumber(res, "condef");
-		i_tablespace = PQfnumber(res, "tablespace");
-		i_indreloptions = PQfnumber(res, "indreloptions");
-
-		indxinfo = (IndxInfo *) pg_malloc(ntups * sizeof(IndxInfo));
-		constrinfo = (ConstraintInfo *) pg_malloc(ntups * sizeof(ConstraintInfo));
-
-		for (j = 0; j < ntups; j++)
+		for (int c = 0; c < numinds; c++, j++)
 		{
 			char		contype;
 
@@ -5973,6 +5975,7 @@ getIndexes(Archive *fout, TableInfo tblinfo[], int numTables)
 			indxinfo[j].dobj.catId.tableoid = atooid(PQgetvalue(res, j, i_tableoid));
 			indxinfo[j].dobj.catId.oid = atooid(PQgetvalue(res, j, i_oid));
 			AssignDumpId(&indxinfo[j].dobj);
+			indxinfo[j].dobj.dump = tbinfo->dobj.dump;
 			indxinfo[j].dobj.name = pg_strdup(PQgetvalue(res, j, i_indexname));
 			indxinfo[j].dobj.namespace = tbinfo->dobj.namespace;
 			indxinfo[j].indextable = tbinfo;
@@ -6003,35 +6006,32 @@ getIndexes(Archive *fout, TableInfo tblinfo[], int numTables)
 				/*
 				 * If we found a constraint matching the index, create an
 				 * entry for it.
-				 *
-				 * In a pre-7.3 database, we take this path iff the index was
-				 * marked indisprimary.
 				 */
-				constrinfo[j].dobj.objType = DO_CONSTRAINT;
-				constrinfo[j].dobj.catId.tableoid = atooid(PQgetvalue(res, j, i_contableoid));
-				constrinfo[j].dobj.catId.oid = atooid(PQgetvalue(res, j, i_conoid));
-				AssignDumpId(&constrinfo[j].dobj);
-				constrinfo[j].dobj.name = pg_strdup(PQgetvalue(res, j, i_conname));
-				constrinfo[j].dobj.namespace = tbinfo->dobj.namespace;
-				constrinfo[j].contable = tbinfo;
-				constrinfo[j].condomain = NULL;
-				constrinfo[j].contype = contype;
+				ConstraintInfo *constrinfo;
+
+				constrinfo = (ConstraintInfo *) pg_malloc(sizeof(ConstraintInfo));
+				constrinfo->dobj.objType = DO_CONSTRAINT;
+				constrinfo->dobj.catId.tableoid = atooid(PQgetvalue(res, j, i_contableoid));
+				constrinfo->dobj.catId.oid = atooid(PQgetvalue(res, j, i_conoid));
+				AssignDumpId(&constrinfo->dobj);
+				constrinfo->dobj.dump = tbinfo->dobj.dump;
+				constrinfo->dobj.name = pg_strdup(PQgetvalue(res, j, i_conname));
+				constrinfo->dobj.namespace = tbinfo->dobj.namespace;
+				constrinfo->contable = tbinfo;
+				constrinfo->condomain = NULL;
+				constrinfo->contype = contype;
 				if (contype == 'x')
-					constrinfo[j].condef = pg_strdup(PQgetvalue(res, j, i_condef));
+					constrinfo->condef = pg_strdup(PQgetvalue(res, j, i_condef));
 				else
-					constrinfo[j].condef = NULL;
-				constrinfo[j].confrelid = InvalidOid;
-				constrinfo[j].conindex = indxinfo[j].dobj.dumpId;
-				constrinfo[j].condeferrable = *(PQgetvalue(res, j, i_condeferrable)) == 't';
-				constrinfo[j].condeferred = *(PQgetvalue(res, j, i_condeferred)) == 't';
-				constrinfo[j].conislocal = true;
-				constrinfo[j].separate = true;
+					constrinfo->condef = NULL;
+				constrinfo->confrelid = InvalidOid;
+				constrinfo->conindex = indxinfo[j].dobj.dumpId;
+				constrinfo->condeferrable = *(PQgetvalue(res, j, i_condeferrable)) == 't';
+				constrinfo->condeferred = *(PQgetvalue(res, j, i_condeferred)) == 't';
+				constrinfo->conislocal = true;
+				constrinfo->separate = true;
 
-				indxinfo[j].indexconstraint = constrinfo[j].dobj.dumpId;
-
-				/* If pre-7.3 DB, better make sure table comes first */
-				addObjectDependency(&constrinfo[j].dobj,
-									tbinfo->dobj.dumpId);
+				indxinfo[j].indexconstraint = constrinfo->dobj.dumpId;
 			}
 			else
 			{
@@ -6041,11 +6041,12 @@ getIndexes(Archive *fout, TableInfo tblinfo[], int numTables)
 			/* Bitmap index metadata is collected in getBMIndxInfo */
 			indxinfo[j].bmidx = NULL;
 		}
-
-		PQclear(res);
 	}
 
+	PQclear(res);
+
 	destroyPQExpBuffer(query);
+	destroyPQExpBuffer(tbloids);
 }
 
 /*
