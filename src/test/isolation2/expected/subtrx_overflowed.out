@@ -1,0 +1,58 @@
+-- It will occur subtransaction overflow when insert data to segments 1000 times.
+-- All segments occur overflow.
+DROP TABLE IF EXISTS t_zjpedu_1;
+DROP
+CREATE TABLE t_zjpedu_1(c1 int) DISTRIBUTED BY (c1);
+CREATE
+CREATE OR REPLACE FUNCTION transaction_test0() /*in func*/ RETURNS void AS $$ /*in func*/ DECLARE /*in func*/ i int; /*in func*/ BEGIN /*in func*/ FOR i in 0..1000 /*in func*/ LOOP /*in func*/ BEGIN /*in func*/ INSERT INTO t_zjpedu_1 VALUES(i); /*in func*/ EXCEPTION /*in func*/ WHEN UNIQUE_VIOLATION THEN /*in func*/ NULL; /*in func*/ END; /*in func*/ END LOOP; /*in func*/ END; /*in func*/ $$ /*in func*/ LANGUAGE plpgsql;
+CREATE
+
+1: BEGIN;
+BEGIN
+1: SELECT transaction_test0();
+ transaction_test0 
+-------------------
+                   
+(1 row)
+1: SELECT count(*) FROM (SELECT (i).segid, (i).query, (i).subxact_overflowed, (i).sess_id, (i).pid FROM (SELECT gp_suboverflowed_backends())a(i) ORDER BY (i).segid) AS test;
+ count 
+-------
+ 3     
+(1 row)
+2: SELECT count(*) FROM (SELECT (i).segid, (i).query, (i).subxact_overflowed, (i).sess_id, (i).pid FROM (SELECT gp_suboverflowed_backends())a(i) ORDER BY (i).segid) AS test;
+ count 
+-------
+ 3     
+(1 row)
+1: ABORT;
+ABORT
+2: SELECT count(*) FROM (SELECT (i).segid, (i).query, (i).subxact_overflowed, (i).sess_id, (i).pid FROM (SELECT gp_suboverflowed_backends())a(i) ORDER BY (i).segid) AS test;
+ count 
+-------
+ 0     
+(1 row)
+
+1: BEGIN;
+BEGIN
+1: SELECT transaction_test0();
+ transaction_test0 
+-------------------
+                   
+(1 row)
+1: SELECT count(*) FROM (SELECT (i).segid, (i).query, (i).subxact_overflowed, (i).sess_id, (i).pid FROM (SELECT gp_suboverflowed_backends())a(i) ORDER BY (i).segid) AS test;
+ count 
+-------
+ 3     
+(1 row)
+2: SELECT count(*) FROM (SELECT (i).segid, (i).query, (i).subxact_overflowed, (i).sess_id, (i).pid FROM (SELECT gp_suboverflowed_backends())a(i) ORDER BY (i).segid) AS test;
+ count 
+-------
+ 3     
+(1 row)
+1: COMMIT;
+COMMIT
+2: SELECT count(*) FROM (SELECT (i).segid, (i).query, (i).subxact_overflowed, (i).sess_id, (i).pid FROM (SELECT gp_suboverflowed_backends())a(i) ORDER BY (i).segid) AS test;
+ count 
+-------
+ 0     
+(1 row)

@@ -538,6 +538,7 @@ GXactLoadSubxactData(GlobalTransaction gxact, int nsubxacts,
 	if (nsubxacts > PGPROC_MAX_CACHED_SUBXIDS)
 	{
 		pgxact->overflowed = true;
+		pgstat_report_suboverflowed(true);
 		nsubxacts = PGPROC_MAX_CACHED_SUBXIDS;
 	}
 	if (nsubxacts > 0)

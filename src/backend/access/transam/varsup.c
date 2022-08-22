@@ -30,7 +30,9 @@
 
 #include "access/distributedlog.h"
 #include "cdb/cdbvars.h"
+#include "pgstat.h"
 
+extern char* debug_query_string;
 
 /* Number of OIDs to prefetch (preallocate) per XLOG write */
 #define VAR_OID_PREFETCH		8192
@@ -279,7 +281,12 @@ GetNewTransactionId(bool isSubXact)
 			MyPgXact->nxids = nxids + 1;
 		}
 		else
+		{
 			MyPgXact->overflowed = true;
+			pgstat_report_suboverflowed(true);
+			ereportif (gp_log_suboverflow_statement, LOG,
+						(errmsg("Statement caused suboverflow: %s", debug_query_string)));
+		}
 	}
 
 	LWLockRelease(XidGenLock);

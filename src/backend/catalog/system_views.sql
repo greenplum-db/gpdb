@@ -865,10 +865,21 @@ CREATE VIEW pg_stat_activity AS
             S.backend_type,
 
             S.rsgid,
-            S.rsgname
+            S.rsgname,
+
+            S.subxact_overflowed
     FROM pg_stat_get_activity(NULL) AS S
         LEFT JOIN pg_database AS D ON (S.datid = D.oid)
         LEFT JOIN pg_authid AS U ON (S.usesysid = U.oid);
+
+-- Dispatch and Aggregate the informaction of subtransactions overflowed
+CREATE OR REPLACE function gp_suboverflowed_backends (OUT segid int4, OUT query text, OUT subxact_overflowed bool, OUT sess_id int4, OUT pid int4) returns setof record as
+$$
+  select -1 as gp_segment_id, query, subxact_overflowed, sess_id, pid from pg_stat_activity where subxact_overflowed = true
+  UNION ALL
+  select gp_execution_segment() as gp_segment_id, query, subxact_overflowed, sess_id, pid from gp_dist_random('pg_stat_activity') where subxact_overflowed=true; -- dispatch segment
+$$
+LANGUAGE SQL EXECUTE ON COORDINATOR;
 
 CREATE VIEW pg_stat_replication AS
     SELECT

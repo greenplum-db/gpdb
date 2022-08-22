@@ -1182,6 +1182,11 @@ typedef struct PgBackendStatus
 	ProgressCommandType st_progress_command;
 	Oid			st_progress_command_target;
 	int64		st_progress_param[PGSTAT_NUM_PROGRESS_PARAM];
+
+	/*
+	 * Whether subtransaction overflowed in the current session.
+	 */
+	bool subxact_overflowed;
 } PgBackendStatus;
 
 /*
@@ -1628,5 +1633,5 @@ extern PgStat_StatFuncEntry *pgstat_fetch_stat_funcentry(Oid funcid);
 extern int	pgstat_fetch_stat_numbackends(void);
 extern PgStat_ArchiverStats *pgstat_fetch_stat_archiver(void);
 extern PgStat_GlobalStats *pgstat_fetch_global(void);
-
+extern void  pgstat_report_suboverflowed(bool);
 #endif							/* PGSTAT_H */

@@ -3560,7 +3560,8 @@ pgstat_read_current_status(void)
 		{
 			BackendIdGetTransactionIds(i,
 									   &localentry->backend_xid,
-									   &localentry->backend_xmin);
+									   &localentry->backend_xmin,
+									   &localentry->backendStatus.subxact_overflowed);
 
 			localentry++;
 			localappname += NAMEDATALEN;
@@ -7236,4 +7237,20 @@ pgstat_clip_activity(const char *raw_activity)
 	activity[cliplen] = '\0';
 
 	return activity;
+}
+
+
+/* --------
+ * pgstat_report_suboverflowed(bool) -
+ * Called to report subtransaction overflowed.
+ * --------
+*/
+void
+pgstat_report_suboverflowed(bool overflowed)
+{
+	volatile PgBackendStatus *beentry = MyBEEntry;
+
+	PGSTAT_BEGIN_WRITE_ACTIVITY(beentry);
+	beentry->subxact_overflowed = overflowed;
+	PGSTAT_END_WRITE_ACTIVITY(beentry);
 }

@@ -401,12 +401,13 @@ BackendIdGetProc(int backendID)
  *		information is used.
  */
 void
-BackendIdGetTransactionIds(int backendID, TransactionId *xid, TransactionId *xmin)
+BackendIdGetTransactionIds(int backendID, TransactionId *xid, TransactionId *xmin, bool *overflowed)
 {
 	SISeg	   *segP = shmInvalBuffer;
 
 	*xid = InvalidTransactionId;
 	*xmin = InvalidTransactionId;
+	*overflowed = false;
 
 	/* Need to lock out additions/removals of backends */
 	LWLockAcquire(SInvalWriteLock, LW_SHARED);
@@ -422,6 +423,7 @@ BackendIdGetTransactionIds(int backendID, TransactionId *xid, TransactionId *xmi
 
 			*xid = xact->xid;
 			*xmin = xact->xmin;
+			*overflowed = xact->overflowed;
 		}
 	}
 

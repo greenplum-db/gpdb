@@ -3335,7 +3335,6 @@ PrepareTransaction(void)
 	AtEOXact_Snapshot(true, true);
 	AtEOXact_WorkFile();
 	pgstat_report_xact_timestamp(0);
-
 	CurrentResourceOwner = NULL;
 	ResourceOwnerDelete(TopTransactionResourceOwner);
 	s->curTransactionOwner = NULL;

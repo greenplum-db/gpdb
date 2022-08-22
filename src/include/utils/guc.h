@@ -376,6 +376,7 @@ extern bool execute_pruned_plan;
 
 extern bool gp_enable_relsize_collection;
 
+extern bool gp_log_suboverflow_statement;
 /* Debug DTM Action */
 typedef enum
 {

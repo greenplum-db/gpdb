@@ -219,6 +219,7 @@
 		"gp_log_fts",
 		"gp_log_gang",
 		"gp_log_optimization_time",
+		"gp_log_suboverflow_statement",
 		"gp_maintenance_conn",
 		"gp_max_local_distributed_cache",
 		"gp_max_plan_size",
