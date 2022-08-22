@@ -1394,9 +1394,9 @@ SELECT c.relname, a.amname, c.reloptions FROM pg_class c JOIN pg_am a ON c.relam
  atsetam_part_1   | heap   | 
  atsetam_part_2   | heap   | 
  atsetam_part_2_1 | heap   | 
- atsetam_part_3   | ao_row | {blocksize=65536,compresslevel=5}
- atsetam_part_4   | ao_row | {blocksize=65536,compresslevel=5}
- atsetam_part_4_1 | ao_row | {blocksize=65536,compresslevel=5}
+ atsetam_part_3   | ao_row | {blocksize=65536,compresslevel=7}
+ atsetam_part_4   | ao_row | {blocksize=65536,compresslevel=7}
+ atsetam_part_4_1 | ao_row | {blocksize=65536,compresslevel=7}
 (7 rows)
 
 DROP TABLE atsetam_part;

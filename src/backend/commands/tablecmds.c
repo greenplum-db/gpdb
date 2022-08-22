@@ -521,6 +521,7 @@ static bool prebuild_temp_table(Relation rel, RangeVar *tmpname, DistributedBy *
 static void prepare_AlterTableStmt_for_dispatch(AlterTableStmt *stmt);
 static List *strip_gpdb_part_commands(List *cmds);
 static void populate_rel_col_encodings(Relation rel, List *stenc, List *withOptions);
+static Datum get_rel_opts(Relation rel);
 static void clear_rel_opts(Relation rel);
 
 
@@ -564,6 +565,7 @@ DefineRelation(CreateStmt *stmt, char relkind, Oid ownerId,
 	List	   *rawDefaults;
 	List	   *cookedDefaults;
 	Datum		reloptions;
+	Datum		oldoptions = (Datum) 0;
 	ListCell   *listptr;
 	AttrNumber	attnum;
 	bool		partitioned;
@@ -788,10 +790,29 @@ DefineRelation(CreateStmt *stmt, char relkind, Oid ownerId,
 			 relkind == RELKIND_MATVIEW)
 		accessMethodId = get_table_am_oid(default_table_access_method, false);
 
+	/* GPDB: for partitioned tables, inherit reloptions from the parent. */
+	if (stmt->partbound && (relkind == RELKIND_RELATION || relkind == RELKIND_PARTITIONED_TABLE))
+	{
+		Oid			relid;
+		Relation 		rel;
+
+		/*
+		 * For partitioned children, when no reloptions is specified, we
+		 * default to the parent table's reloptions.
+		 */
+		Assert(list_length(inheritOids) == 1);
+		relid = linitial_oid(inheritOids);
+		rel = table_open(relid, AccessShareLock);
+
+		oldoptions = get_rel_opts(rel);
+
+		table_close(rel, AccessExclusiveLock);
+	}
+
 	/*
 	 * Parse and validate reloptions, if any.
 	 */
-	reloptions = transformRelOptions((Datum) 0, stmt->options, NULL, validnsps,
+	reloptions = transformRelOptions((Datum) oldoptions, stmt->options, NULL, validnsps,
 									 true, false);
 
 	/*
@@ -4849,7 +4870,9 @@ ATPrepCmd(List **wqueue, Relation rel, AlterTableCmd *cmd,
 		case AT_ResetRelOptions:	/* RESET (...) */
 		case AT_ReplaceRelOptions:	/* reset them all, then set just these */
 			ATSimplePermissions(rel, ATT_TABLE | ATT_VIEW | ATT_MATVIEW | ATT_INDEX);
-			/* This command never recurses */
+			/* GPDB: recurse when setting reloptions of root partition w/o 'ONLY' keyword. */
+			if (rel->rd_rel->relkind == RELKIND_PARTITIONED_TABLE)
+				ATSimpleRecursion(wqueue, rel, cmd, recurse, lockmode);
 			/* No command-specific prep needed */
 			pass = AT_PASS_MISC;
 			break;
@@ -6798,6 +6821,22 @@ ATSimpleRecursion(List **wqueue, Relation rel,
 				continue;
 			/* find_all_inheritors already got lock */
 			childrel = relation_open(childrelid, NoLock);
+
+			/*
+			 * GPDB: for now we disallow setting reloptions of the entire partition
+			 * hierarchy, if some child tables have different access method than the
+			 * root. We check it here so that we can print pretty error message.
+			 */
+			if ((cmd->subtype == AT_SetRelOptions || cmd->subtype == AT_ReplaceRelOptions) 
+					&& rel->rd_rel->relam != childrel->rd_rel->relam)
+				ereport(ERROR,
+						(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
+						 errmsg("cannot alter reloptions for \"%s\" because one of the "
+						        "child tables \"%s\" has different access method",
+								RelationGetRelationName(rel),
+								RelationGetRelationName(childrel)),
+						 errhint("Alter tables individually or change the child's AM to be same as parent.")));
+			
 			CheckTableNotInUse(childrel, "ALTER TABLE");
 			ATPrepCmd(wqueue, childrel, cmd, false, true, lockmode);
 			relation_close(childrel, NoLock);

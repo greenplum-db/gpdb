@@ -1527,12 +1527,11 @@ heap_reloptions(char relkind, Datum reloptions, bool validate)
 										  RELOPT_KIND_HEAP);
 		case RELKIND_PARTITIONED_TABLE:
 			/*
-			 * GPDB_12_AFTER_MERGE_FIXME: should we accept AO-related options for
-			 * partitioned tables? A partitioned table has no data, but the options
-			 * might be inherited by partitions.
+			 * GPDB: we maintain reloptions for partition roots to support reloption
+			 * inheritance and hierarchy wide ALTER TABLE SET().
 			 */
 			return default_reloptions(reloptions, validate,
-									  RELOPT_KIND_PARTITIONED);
+									  RELOPT_KIND_HEAP);
 		default:
 			/* other relkinds are not supported */
 			return NULL;
