@@ -5008,6 +5008,7 @@ getTables(Archive *fout, int *numTables)
 	int			i_toast_type_oid;
 	int			i_toast_index_oid;
 	int			i_reltype;
+	int     i_distclause;
 
 	/*
 	 * Find all the tables and table-like objects.
@@ -5056,6 +5057,7 @@ getTables(Archive *fout, int *numTables)
 						  "tc.reloptions AS toast_reloptions, "
 						  "p.parrelid as parrelid, "
 						  "pl.parlevel as parlevel, "
+							"pg_catalog.pg_get_table_distributedby(c.oid) as distclause, "
 						  "tc.reltype AS toast_type_oid, "
 						  "i.indexrelid as toast_index_oid "
 						  "FROM pg_class c "
@@ -5106,6 +5108,8 @@ getTables(Archive *fout, int *numTables)
 						  "tc.reloptions AS toast_reloptions, "
 						  "p.parrelid as parrelid, "
 						  "pl.parlevel as parlevel, "
+							"(SELECT attrnums FROM pg_catalog.gp_distribution_policy p "
+						  "WHERE p.localoid = c.oid) as distclause, "
 						  "tc.reltype AS toast_type_oid, "
 						  "i.indexrelid as toast_index_oid "
 						  "FROM pg_class c "
@@ -5154,6 +5158,8 @@ getTables(Archive *fout, int *numTables)
 						  "tc.reloptions AS toast_reloptions, "
 						  "p.parrelid as parrelid, "
 						  "pl.parlevel as parlevel, "
+							"(SELECT attrnums FROM pg_catalog.gp_distribution_policy p "
+						  "WHERE p.localoid = c.oid) as distclause, "
 						  "tc.reltype AS toast_type_oid, "
 						  "i.indexrelid as toast_index_oid "
 						  "FROM pg_class c "
@@ -5202,6 +5208,8 @@ getTables(Archive *fout, int *numTables)
 						  "tc.reloptions AS toast_reloptions, "
 						  "p.parrelid as parrelid, "
 						  "pl.parlevel as parlevel, "
+							"(SELECT attrnums FROM pg_catalog.gp_distribution_policy p "
+						  "WHERE p.localoid = c.oid) as distclause, "
 						  "tc.reltype AS toast_type_oid, "
 						  "i.indexrelid as toast_index_oid "
 						  "FROM pg_class c "
@@ -5249,6 +5257,8 @@ getTables(Archive *fout, int *numTables)
 						  "tc.reloptions AS toast_reloptions, "
 						  "p.parrelid as parrelid, "
 						  "pl.parlevel as parlevel, "
+							"(SELECT attrnums FROM pg_catalog.gp_distribution_policy p "
+						  "WHERE p.localoid = c.oid) as distclause, "
 						  "tc.reltype AS toast_type_oid, "
 						  "i.indexrelid as toast_index_oid "
 						  "FROM pg_class c "
@@ -5296,6 +5306,8 @@ getTables(Archive *fout, int *numTables)
 						  "NULL AS toast_reloptions, "
 						  "p.parrelid as parrelid, "
 						  "pl.parlevel as parlevel, "
+							"(SELECT attrnums FROM pg_catalog.gp_distribution_policy p "
+						  "WHERE p.localoid = c.oid) as distclause, "
 						  "NULL AS toast_reloptions, "
 						  "tc.reltype AS toast_type_oid, "
 						  "i.indexrelid as toast_index_oid "
@@ -5375,6 +5387,7 @@ getTables(Archive *fout, int *numTables)
 	i_toast_type_oid = PQfnumber(res, "toast_type_oid");
 	i_toast_index_oid = PQfnumber(res, "toast_index_oid");
 	i_reltype = PQfnumber(res, "reltype");
+	i_distclause = PQfnumber(res, "distclause");
 
 	if (lockWaitTimeout && fout->remoteVersion >= 70300)
 	{
@@ -5464,6 +5477,8 @@ getTables(Archive *fout, int *numTables)
 			tblinfo[i].dobj.name = pg_strdup(tmpStr);
 		}
 	
+		tblinfo[i].distclause = pg_strdup(PQgetvalue(res, i, i_distclause));
+
 		if (binary_upgrade)
 		{
 			/* AO table metadata will be set in getAOTableInfo() */
@@ -17056,19 +17071,8 @@ addDistributedBy(Archive *fout, PQExpBuffer q, TableInfo *tbinfo, int actual_att
 {
 	if (isGPDB6000OrLater(fout))
 	{
-		PQExpBuffer query = createPQExpBuffer();
-		PGresult   *res;
-
-		appendPQExpBuffer(query,
-						  "SELECT pg_catalog.pg_get_table_distributedby(%u)",
-						  tbinfo->dobj.catId.oid);
-
-		res = ExecuteSqlQueryForSingleRow(fout, query->data);
-
-		appendPQExpBuffer(q, " %s", PQgetvalue(res, 0, 0));
-
-		PQclear(res);
-		destroyPQExpBuffer(query);
+		if (strcmp(tbinfo->distclause, "") != 0)
+			appendPQExpBuffer(q, " %s", tbinfo->distclause);
 	}
 	else
 		addDistributedByOld(fout, q, tbinfo, actual_atts);
@@ -17081,19 +17085,10 @@ addDistributedBy(Archive *fout, PQExpBuffer q, TableInfo *tbinfo, int actual_att
 static void
 addDistributedByOld(Archive *fout, PQExpBuffer q, TableInfo *tbinfo, int actual_atts)
 {
-	PQExpBuffer query = createPQExpBuffer();
-	PGresult   *res;
-	char	   *policydef;
+	char	   *policydef = tbinfo->distclause;
 	char	   *policycol;
 
-	appendPQExpBuffer(query,
-					  "SELECT attrnums FROM pg_catalog.gp_distribution_policy as p "
-					  "WHERE p.localoid = %u",
-					  tbinfo->dobj.catId.oid);
-
-	res = ExecuteSqlQuery(fout, query->data, PGRES_TUPLES_OK);
-
-	if (PQntuples(res) != 1)
+	if (strcmp(policydef, "") == 0)
 	{
 		/*
 		 * There is no entry in the policy table for this table. Report an
@@ -17102,26 +17097,15 @@ addDistributedByOld(Archive *fout, PQExpBuffer q, TableInfo *tbinfo, int actual_
 		 * In binary_upgrade mode, we run directly against segments, and there
 		 * are no gp_distribution_policy rows in segments.
 		 */
-		if (PQntuples(res) < 1 && actual_atts > 0 && !binary_upgrade)
+		if (actual_atts > 0 && !binary_upgrade)
 		{
 			/* if this is a catalog table we allow dumping it, skip the error */
 			if (strncmp(tbinfo->dobj.namespace->dobj.name, "pg_", 3) != 0)
 			{
 				write_msg(NULL, "query to obtain distribution policy of table \"%s\" returned no data\n",
-						  tbinfo->dobj.name);
+							   tbinfo->dobj.name);
 				exit_nicely(1);
 			}
-		}
-
-		/*
-		 * There is more than 1 entry in the policy table for this table.
-		 * Report an error.
-		 */
-		if (PQntuples(res) > 1)
-		{
-			write_msg(NULL, "query to obtain distribution policy of table \"%s\" returned more than one policy\n",
-					  tbinfo->dobj.name);
-			exit_nicely(1);
 		}
 	}
 	else
@@ -17130,7 +17114,7 @@ addDistributedByOld(Archive *fout, PQExpBuffer q, TableInfo *tbinfo, int actual_
 		 * There is exactly 1 policy entry for this table (either a concrete
 		 * one or NULL).
 		 */
-		policydef = PQgetvalue(res, 0, 0);
+		policydef = tbinfo->distclause;
 
 		if (strlen(policydef) > 0)
 		{
@@ -17161,9 +17145,6 @@ addDistributedByOld(Archive *fout, PQExpBuffer q, TableInfo *tbinfo, int actual_
 			appendPQExpBufferStr(q, " DISTRIBUTED RANDOMLY");
 		}
 	}
-
-	PQclear(res);
-	destroyPQExpBuffer(query);
 }
 
 /*

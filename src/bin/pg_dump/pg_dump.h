@@ -345,6 +345,7 @@ typedef struct _tableInfo
 	Oid		toast_type;					/* OID of toast table's composite type */
 	struct _aotableInfo	*aotbl; /* AO auxilliary table metadata */
 	Oid			reltype;		/* OID of table's composite type, if any */
+	char	*distclause; /* distributed by clause */
 } TableInfo;
 
 /* AO auxilliary table metadata */
