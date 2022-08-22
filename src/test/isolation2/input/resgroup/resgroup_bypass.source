@@ -120,10 +120,6 @@ DROP FUNCTION func_resgroup_bypass_test(int);
 --
 -- memory limit in bypass mode, on qd
 --
--- orca will allocate 10M memory error buffer before optimization, and release
--- it after that, so if optimizer is set to on, it will fail when the memory
--- usage reaches 24M
---
 
 61: SET ROLE role_bypass_test;
 61: SET gp_resource_group_bypass to on;

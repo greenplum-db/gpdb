@@ -90,7 +90,7 @@ run_resgroup_test() {
         scp /home/gpadmin/gpdb_src/src/test/regress/regress.so \
             gpadmin@sdw1:/home/gpadmin/gpdb_src/src/test/regress/
 
-        make installcheck-resgroup || (
+        make PGOPTIONS="-c optimizer=off" installcheck-resgroup || (
             errcode=\$?
             find src/test/isolation2 -name regression.diffs \
             | while read diff; do
