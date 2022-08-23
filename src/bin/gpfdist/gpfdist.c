@@ -27,6 +27,8 @@
 #include <gpfxdist.h>
 #endif
 #include <fstream/fstream.h>
+#include <utils/pg_lzcompress.h>
+#include <zstd.h>
 
 #ifndef WIN32
 #include <unistd.h>
@@ -254,6 +256,12 @@ struct request_t
 	const char* 	path; 		/* path to file */
 	const char* 	tid; 		/* transaction id */
 	const char* 	csvopt; 	/* options for csv file */
+	char*           srcbuf;
+	size_t          srclen;
+	ZSTD_CCtx*      zstd_cxt;
+	pthread_t       threadid;
+	int             threadrunning;
+	int             zstd;
 
 #ifdef GPFXDIST
 	struct
@@ -358,6 +366,8 @@ static void handle_post_request(request_t *r, int header_end);
 static void handle_get_request(request_t *r);
 
 static int gpfdist_socket_send(const request_t *r, const void *buf, const size_t buflen);
+static int gpfdist_socket_send_zstd(request_t *r, void *buf, size_t buflen);
+static void * compress_zstd_thread(request_t *r);
 static int (*gpfdist_send)(const request_t *r, const void *buf, const size_t buflen); /* function pointer */
 static int gpfdist_socket_receive(const request_t *r, void *buf, const size_t buflen);
 static int (*gpfdist_receive)(const request_t *r, void *buf, const size_t buflen); /* function pointer */
@@ -370,6 +380,7 @@ static void setup_flush_ssl_buffer(request_t* r);
 static void request_cleanup_and_free_SSL_resources(request_t* r);
 #endif
 static int local_send(request_t *r, const char* buf, int buflen);
+static int local_send_zstd(request_t *r, char* buf, int buflen);
 
 static int get_unsent_bytes(request_t* r);
 
@@ -855,7 +866,7 @@ static void http_empty(request_t* r)
 {
 	static const char buf[] = "HTTP/1.0 200 ok\r\n"
 		"Content-type: text/plain\r\n"
-		"Content-length: 0\r\n"
+//FOR ZSTD              "Content-length: 0\r\n"
 		"Expires: 0\r\n"
 		"X-GPFDIST-VERSION: " GP_VERSION "\r\n"
 		"Cache-Control: no-cache\r\n"
@@ -1193,6 +1204,38 @@ static int local_send(request_t *r, const char* buf, int buflen)
 	return n;
 }
 
+static int local_send_zstd(request_t *r, char* buf, int buflen)
+{
+        int n = gpfdist_socket_send_zstd(r, buf, buflen);
+
+        if (n < 0)
+        {
+#ifdef WIN32
+                int e = WSAGetLastError();
+                int ok = (e == WSAEINTR || e == WSAEWOULDBLOCK);
+#else
+                int e = errno;
+                int ok = (e == EINTR || e == EAGAIN);
+#endif
+                if ( e == EPIPE || e == ECONNRESET )
+                {
+                        gwarning(r, "gpfdist_send failed - the connection was terminated by the client (%d: %s)", e, strerror(e));
+                        /* close stream and release fd & flock on pipe file*/
+                        if (r->session)
+                                session_end(r->session, 0);
+                } else {
+                        if (!ok) {
+                                gwarning(r, "gpfdist_send failed - due to (%d: %s)", e, strerror(e));
+                        } else {
+                                gdebug(r, "gpfdist_send failed - due to (%d: %s), should try again", e, strerror(e));
+                        }
+                }
+                return ok ? 0 : -1;
+        }
+
+        return n;
+}
+
 static int local_sendall(request_t* r, const char* buf, int buflen)
 {
 	int oldlen = buflen;
@@ -1298,8 +1341,13 @@ static void gp1_send_errfile(request_t* r, apr_file_t* errfile)
  * header (metadata for client such as filename, etc) and the data itself.
  */
 static const char*
-session_get_block(const request_t* r, block_t* retblock, char* line_delim_str, int line_delim_length)
+session_get_block(request_t* r, block_t* retblock, char* line_delim_str, int line_delim_length)
 {
+	if (r->threadrunning)
+	{
+		pthread_join(r->threadid,NULL);
+		r->threadrunning = 0;
+	}
 	int 		size;
 	const int 	whole_rows = 1; /* gpfdist must not read data with partial rows */
 	struct fstream_filename_and_offset fos;
@@ -1762,7 +1810,9 @@ static void do_write(int fd, short event, void* arg)
 					  "and socket (%d)", fd, r->sock);
 
 	/* Loop at most 3 blocks or until we choke on the socket */
-	for (i = 0; i < 3; i++)
+//	for (i = 0; i < 3; i++)
+//FOR ZSTD
+	for (i = 0; i < 1; i++)
 	{
 		/* get a block (or find a remaining block) */
 		if (r->outblock.top == r->outblock.bot)
@@ -1820,7 +1870,10 @@ static void do_write(int fd, short event, void* arg)
 		 * write out the block data
 		 */
 		n = datablock->top - datablock->bot;
-		n = local_send(r, datablock->data + datablock->bot, n);
+		if (r->zstd)
+			n = local_send_zstd(r, datablock->data + datablock->bot, n);
+		else
+			n = local_send(r, datablock->data + datablock->bot, n);
 		if (n < 0)
 		{
 			/*
@@ -2118,7 +2171,9 @@ static void do_accept(int fd, short event, void* arg)
 		ioctlsocket(sock, FIONBIO, &nonblocking);
 	}
 #else
-	if (fcntl(sock, F_SETFL, O_NONBLOCK) == -1)
+//FOR ZSTD
+//	if (fcntl(sock, F_SETFL, O_NONBLOCK) == -1)
+	if (fcntl(sock, F_SETFL, 0) == -1)
 	{
 		gwarning(NULL, "fcntl(F_SETFL, O_NONBLOCK) failed");
 #ifdef USE_SSL
@@ -3372,6 +3427,8 @@ static int request_parse_gp_headers(request_t *r, int opt_g)
 			r->totalsegs = atoi(r->in.req->hvalue[i]);
 		else if (0 == strcasecmp("X-GP-SEGMENT-ID", r->in.req->hname[i]))
 			r->segid = atoi(r->in.req->hvalue[i]);
+		else if (0 == strcasecmp("X-GP-ZSTD", r->in.req->hname[i]))
+			r->zstd = atoi(r->in.req->hvalue[i]);
 		else if (0 == strcasecmp("X-GP-LINE-DELIM-STR", r->in.req->hname[i]))
 		{
 			if (NULL == r->in.req->hvalue[i] ||  ((int)strlen(r->in.req->hvalue[i])) % 2 == 1 || !base16_decode(r->in.req->hvalue[i]))
@@ -3402,7 +3459,14 @@ static int request_parse_gp_headers(request_t *r, int opt_g)
 			}
 		}
 	}
-
+	if (r->zstd)
+	{
+		r->zstd_cxt = ZSTD_createCCtx();
+		if (!r->zstd_cxt)
+			fprintf(stderr, "out of memory");
+		r->threadid = 0;
+		r->threadrunning = 0;
+	}
 	if (r->line_delim_length > 0)
 	{
 		if (NULL == r->line_delim_str || (((int)strlen(r->line_delim_str)) != r->line_delim_length))
@@ -4128,6 +4192,63 @@ static int gpfdist_socket_send(const request_t *r, const void *buf, const size_t
 	return send(r->sock, buf, buflen, 0);
 }
 
+static int gpfdist_socket_send_zstd(request_t *r, void *buf, size_t buflen)
+{
+	if (r->threadrunning)
+	{
+		size_t send_size;
+		pthread_join(r->threadid, &send_size);
+		r->threadrunning = 0;
+		r->threadid = 0;
+		if (send_size == -1)
+			return -1;
+	}
+	r->srcbuf = buf;
+	r->srclen = buflen;
+	if (buflen)
+	{
+		pthread_t send_thread;
+		r->threadrunning = 1;
+		pthread_create(&send_thread, 0, compress_zstd_thread, r);
+		r->threadid = send_thread;
+	}
+	else
+	{
+		size_t send_size = compress_zstd_thread(r);
+		r->threadrunning = 0;
+		r->threadid = 0;
+		if (send_size == -1)
+			return -1;
+	}
+	return buflen;
+}
+
+static void * compress_zstd_thread(request_t *r)
+{
+	size_t       srclen     = r->srclen;
+	char         *srcbuf    = r->srcbuf;
+	size_t        boundsize = ZSTD_compressBound(srclen);
+	char*         combuf    = palloc(boundsize);
+	if (!combuf)
+		fprintf(stderr, "out of memory for palloc zstd compress buf");
+	size_t        comlen;
+	comlen = ZSTD_compressCCtx(r->zstd_cxt, combuf, boundsize, srcbuf, srclen, r->zstd);
+	size_t send_size = 0;
+	size_t curr_send = 0;
+	while (send_size < comlen)
+	{
+		curr_send = send(r->sock, combuf + send_size, comlen - send_size, 0);
+		if (curr_send == -1)
+		{
+			free(combuf);
+			return -1;
+		}
+		send_size += curr_send;
+	}
+	free(combuf);
+	return send_size;
+}
+
 #ifdef USE_SSL
 /*
  * gpfdist_SSL_send
@@ -4194,6 +4315,11 @@ static int gpfdist_socket_receive(const request_t *r, void *buf, const size_t bu
  */
 static void request_shutdown_sock(const request_t* r)
 {
+	if (r->zstd)
+	{
+		local_send_zstd(r,0,0);
+		ZSTD_freeCCtx(r->zstd_cxt);
+	}
 	int ret = shutdown(r->sock, SHUT_WR);
 	if (ret == 0)
 	{
