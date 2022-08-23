@@ -103,7 +103,7 @@ CREATE USER MAPPING FOR PUBLIC SERVER gpc1_testdb
 
 The remote user must have the appropriate privileges to access any table\(s\) of interest in the database identified by the specified `SERVER`. 
 
-If the mapping is used to access a foreign-data wrapper on a multiple Greenplum clusters, then the remote user also requires `select` access to the `pg_catalog.gp_endpoints` view. For example:
+If the mapping is used to access a foreign-data wrapper across multiple Greenplum clusters, then the remote user also requires `select` access to the `pg_catalog.gp_endpoints` view. For example:
 
 ```
 GRANT SELECT ON TABLE pg_catalog.gp_endpoints TO bill;
