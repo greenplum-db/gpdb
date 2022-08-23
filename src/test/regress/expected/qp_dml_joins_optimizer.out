@@ -2617,7 +2617,8 @@ SELECT COUNT(*) FROM dml_heap_pt_s;
 (1 row)
 
 DELETE FROM dml_heap_pt_s WHERE a = (SELECT dml_heap_pt_r.a FROM dml_heap_pt_r,dml_heap_pt_s WHERE dml_heap_pt_r.a = dml_heap_pt_s.a);
-ERROR:  more than one row returned by a subquery used as an expression
+ERROR:  one or more assertions failed  (seg1 10.138.0.30:7003 pid=706789)
+DETAIL:  Expected no more than one row to be returned by expression
 SELECT COUNT(*) FROM dml_heap_pt_s;
  count 
 -------
