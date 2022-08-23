@@ -1884,11 +1884,6 @@ fetchNextBlock(AppendOnlyFetchDesc aoFetchDesc)
 		executorReadBlock->blockFirstRowNum +
 		executorReadBlock->rowCount - 1;
 
-	aoFetchDesc->currentBlock.isCompressed =
-		executorReadBlock->isCompressed;
-	aoFetchDesc->currentBlock.isLargeContent =
-		executorReadBlock->isLarge;
-
 	aoFetchDesc->currentBlock.gotContents = false;
 
 	return true;

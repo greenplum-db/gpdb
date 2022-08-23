@@ -1466,9 +1466,6 @@ datumstreamread_find_block(DatumStreamRead * datumStream,
 			(!isOldBlockFormat) ? datumStream->getBlockInfo.firstRow : datumStreamFetchDesc->scanNextRowNum;
 		datumStreamFetchDesc->currentBlock.lastRowNum =
 			datumStreamFetchDesc->currentBlock.firstRowNum + datumStream->getBlockInfo.rowCnt - 1;
-		datumStreamFetchDesc->currentBlock.isCompressed =
-			datumStream->getBlockInfo.isCompressed;
-		datumStreamFetchDesc->currentBlock.isLargeContent = datumStream->getBlockInfo.isLarge;
 		datumStreamFetchDesc->currentBlock.gotContents = false;
 
 		if (Debug_appendonly_print_datumstream)

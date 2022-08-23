@@ -142,9 +142,6 @@ typedef struct AOFetchBlockMetadata
 	int64 firstRowNum;
 	int64 lastRowNum;
 	
-	bool isCompressed;
-	bool isLargeContent;
-	
 	bool		gotContents;
 } AOFetchBlockMetadata;
 
