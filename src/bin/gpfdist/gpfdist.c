@@ -256,12 +256,12 @@ struct request_t
 	const char* 	path; 		/* path to file */
 	const char* 	tid; 		/* transaction id */
 	const char* 	csvopt; 	/* options for csv file */
-	char*           srcbuf;
-	size_t          srclen;
-	ZSTD_CCtx*      zstd_cxt;
-	pthread_t       threadid;
-	int             threadrunning;
-	int             zstd;
+	char*           srcbuf;		/* buffer of source file */
+	size_t          srclen;		/* buffer size of source file */
+	ZSTD_CCtx*      zstd_cxt;	/* zstd context */
+	pthread_t       threadid;	/* child thread for zstd compress and send data */
+	int             threadrunning;	/* child thread running? */
+	int             zstd;		/* request use zstd compress? */
 
 #ifdef GPFXDIST
 	struct
@@ -4191,7 +4191,13 @@ static int gpfdist_socket_send(const request_t *r, const void *buf, const size_t
 {
 	return send(r->sock, buf, buflen, 0);
 }
-
+/*
+ * gpfdist_socket_send_zstd
+ *
+ * like gpfdist_socket_send
+ * Sends the requested buf, of size buflen to the network, with zstd compression
+ * via appropriate socket
+ */
 static int gpfdist_socket_send_zstd(request_t *r, void *buf, size_t buflen)
 {
 	if (r->threadrunning)
@@ -4222,7 +4228,11 @@ static int gpfdist_socket_send_zstd(request_t *r, void *buf, size_t buflen)
 	}
 	return buflen;
 }
-
+/*
+ * compress_zstd_thread
+ *
+ * child thread method to compress source file block and send compressed data to request
+ */
 static void * compress_zstd_thread(request_t *r)
 {
 	size_t       srclen     = r->srclen;
