@@ -2505,7 +2505,7 @@ ExecHashTableExplainEnd(PlanState *planstate, struct StringInfoData *buf)
 
     /* Report hash chain statistics. */
     total_buckets = stats->nonemptybatches * hashtable->nbuckets;
-    if (total_buckets > 0)
+    if (total_buckets > 0 && stats->chainlength.vmax > 0)
     {
         appendStringInfo(buf,
                          "Hash chain length"
