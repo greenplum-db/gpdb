@@ -31,7 +31,7 @@ endif
 
 OBJS=	pg_backup_archiver.o pg_backup_db.o pg_backup_custom.o \
 	pg_backup_null.o pg_backup_tar.o pg_backup_directory.o \
-	pg_backup_utils.o parallel.o compress_io.o dumputils.o $(WIN32RES)
+	pg_backup_utils.o parallel.o compress_io.o dumputils.o hashfn.o $(WIN32RES)
 
 KEYWRDOBJS = keywords.o kwlookup.o
 
