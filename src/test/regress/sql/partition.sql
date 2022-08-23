@@ -3846,3 +3846,10 @@ ALTER TABLE unexpanded_parent ATTACH PARTITION expanded_attach FOR VALUES FROM (
 ALTER TABLE expanded_attach2 EXPAND TABLE;
 ALTER TABLE expanded_parent2 ATTACH PARTITION expanded_attach2 FOR VALUES FROM (6) TO (9);
 ALTER TABLE expanded_parent ATTACH PARTITION expanded_attach FOR VALUES FROM (6) TO (9);
+
+-- cleanup
+DROP TABLE expanded_parent;
+DROP TABLE expanded_parent2;
+DROP TABLE unexpanded_parent;
+DROP TABLE unexpanded_attach;
+DROP TABLE unexpanded_attach2;
