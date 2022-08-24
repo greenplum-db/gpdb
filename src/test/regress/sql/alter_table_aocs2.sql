@@ -613,23 +613,23 @@ SELECT * FROM subpartition_aoco_leaf;
 :chk_co_opt_qry;
 
 -- Check if add column doesn't rewrite the table
-CREATE TABLE addcol(i int) WITH (appendonly=true, orientation=column);
-INSERT INTO addcol SELECT generate_series(1, 5);
+CREATE TABLE testaddcol(i int) WITH (appendonly=true, orientation=column);
+INSERT INTO testaddcol SELECT generate_series(1, 5);
 
-CREATE TEMP TABLE relfilebeforeaddcol AS
-    SELECT -1 segid, relname, relfilenode FROM pg_class WHERE relname LIKE 'addcol%'
+CREATE TEMP TABLE relfilebeforetestaddcol AS
+    SELECT -1 segid, relname, relfilenode FROM pg_class WHERE relname LIKE 'testaddcol%'
     UNION SELECT gp_segment_id segid, relname, relfilenode FROM gp_dist_random('pg_class')
-    WHERE relname LIKE 'addcol%' ORDER BY segid;
+    WHERE relname LIKE 'testaddcol%' ORDER BY segid;
 
-ALTER TABLE addcol ADD COLUMN j int DEFAULT 5;
+ALTER TABLE testaddcol ADD COLUMN j int DEFAULT 5;
 
-CREATE TEMP TABLE relfileafteraddcol AS
-    SELECT -1 segid, relname, relfilenode FROM pg_class WHERE relname LIKE 'addcol%'
+CREATE TEMP TABLE relfileaftertestaddcol AS
+    SELECT -1 segid, relname, relfilenode FROM pg_class WHERE relname LIKE 'testaddcol%'
     UNION SELECT gp_segment_id segid, relname, relfilenode FROM gp_dist_random('pg_class')
-    WHERE relname LIKE 'addcol%' ORDER BY segid;
+    WHERE relname LIKE 'testaddcol%' ORDER BY segid;
 
 -- table shouldn't be rewritten
-SELECT count(*) FROM (SELECT * FROM relfilebeforeaddcol UNION SELECT * FROM relfileafteraddcol)a;
+SELECT count(*) FROM (SELECT * FROM relfilebeforetestaddcol UNION SELECT * FROM relfileaftertestaddcol)a;
 
 -- data is intact
-SELECT * FROM addcol;
+SELECT * FROM testaddcol;
