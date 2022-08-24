@@ -1,6 +1,6 @@
 # gp_pitr
 
-The `gp_pitr` module supports implementing Point-in-Time Recovery for Greenplum Database 6X. In service of this it creates a new view -- `gp_stat_archiver` -- as well as two user-defined functions that are called internally.
+The `gp_pitr` module supports implementing Point-in-Time Recovery for Greenplum Database 6. In service of this it creates a new view -- `gp_stat_archiver` -- as well as two user-defined functions that are called internally.
 
 The `gp_pitr` module is a Greenplum Database extension.
 
