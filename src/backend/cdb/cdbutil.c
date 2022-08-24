@@ -93,7 +93,7 @@ static HTAB *hostPrimaryCountHashTableInit(void);
 
 static int nextQEIdentifer(CdbComponentDatabases *cdbs);
 
-Datum gp_find_subtx_overflowed_pids(PG_FUNCTION_ARGS);
+Datum gp_get_suboverflowed_backends(PG_FUNCTION_ARGS);
 
 static HTAB *segment_ip_cache_htab = NULL;
 
@@ -1803,31 +1803,29 @@ AvoidCorefileGeneration()
 #endif
 }
 
+PG_FUNCTION_INFO_V1(gp_get_suboverflowed_backends);
 /*
- * Find the pids when subtransaction overflowed.
+ * Find the backends where subtransaction overflowed.
  */
 Datum
-gp_find_subtx_overflowed_pids(PG_FUNCTION_ARGS)
+gp_get_suboverflowed_backends(PG_FUNCTION_ARGS)
 {
-	int				i;
-	StringInfoData 	buf;
-	bool 			traverse = false;
+	int 			i;
+	ArrayBuildState *astate = NULL;
 
-	initStringInfo(&buf);
-
-	appendStringInfoChar(&buf, '{');
 	LWLockAcquire(ProcArrayLock, LW_SHARED);
 	for (i = 0; i < ProcGlobal->allProcCount; i++)
 	{
 		if (ProcGlobal->allPgXact[i].overflowed)
-		{
-			if (traverse)
-				appendStringInfoString(&buf, ",");
-			appendStringInfo(&buf, "%d", ProcGlobal->allProcs[i].pid);
-			traverse = true;
-		}
+			astate = accumArrayResult(astate,
+									  Int32GetDatum(ProcGlobal->allProcs[i].pid),
+									  false, INT4OID, CurrentMemoryContext);
 	}
 	LWLockRelease(ProcArrayLock);
-	appendStringInfoChar(&buf, '}');
-	PG_RETURN_TEXT_P(cstring_to_text(buf.data));
+
+	if (astate)
+		PG_RETURN_DATUM(makeArrayResult(astate,
+											CurrentMemoryContext));
+	else
+		PG_RETURN_NULL();
 }

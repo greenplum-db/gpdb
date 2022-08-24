@@ -1777,11 +1777,8 @@ CREATE VIEW pg_catalog.gp_segment_endpoints AS
 CREATE VIEW pg_catalog.gp_session_endpoints AS
     SELECT * FROM pg_catalog.gp_get_session_endpoints();
 
--- Dispatch and Aggregate the pids of subtransactions overflowed
-CREATE OR REPLACE function gp_find_subtx_overflowed(OUT segid int4, OUT pids text) returns setof record as
-$$
-  select -1, gp_find_subtx_overflowed_pids()
-  UNION ALL
-  select gp_segment_id, gp_find_subtx_overflowed_pids() from gp_dist_random('gp_id');
-$$
-LANGUAGE SQL EXECUTE ON COORDINATOR;
+-- Dispatch and Aggregate the backends of subtransactions overflowed
+CREATE VIEW gp_suboverflowed_backend(segid, pids) AS
+  SELECT -1, gp_get_suboverflowed_backends()
+UNION ALL
+  SELECT gp_segment_id, gp_get_suboverflowed_backends() FROM gp_dist_random('gp_id') order by 1;
