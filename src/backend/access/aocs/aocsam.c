@@ -2161,6 +2161,7 @@ aocs_addcol_finish(AOCSAddColumnDesc desc)
 	for (i = 0; i < desc->num_newcols; ++i)
 		destroy_datumstreamwrite(desc->dsw[i]);
 	pfree(desc->dsw);
+	desc->dsw = NULL;
 
 	pfree(desc);
 }
