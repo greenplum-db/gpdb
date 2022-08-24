@@ -1042,8 +1042,8 @@ DELETE 10
 1: select * from show_locks_lockmodes;
  locktype | mode            | granted | relation                        
 ----------+-----------------+---------+---------------------------------
- relation | ExclusiveLock   | t       | t_lockmods_part_tbl_dml_1_prt_1 
- relation | ExclusiveLock   | t       | t_lockmods_part_tbl_dml_1_prt_2 
+ relation | AccessShareLock | t       | t_lockmods_part_tbl_dml_1_prt_2 
+ relation | AccessShareLock | t       | t_lockmods_part_tbl_dml_1_prt_1 
  relation | AccessShareLock | t       | t_lockmods_part_tbl_dml         
  relation | ExclusiveLock   | t       | t_lockmods_part_tbl_dml         
 (4 rows)
@@ -1096,8 +1096,8 @@ UPDATE 1
 1: select * from show_locks_lockmodes;
  locktype | mode            | granted | relation                        
 ----------+-----------------+---------+---------------------------------
- relation | ExclusiveLock   | t       | t_lockmods_part_tbl_dml_1_prt_1 
- relation | ExclusiveLock   | t       | t_lockmods_part_tbl_dml_1_prt_2 
+ relation | AccessShareLock | t       | t_lockmods_part_tbl_dml_1_prt_2 
+ relation | AccessShareLock | t       | t_lockmods_part_tbl_dml_1_prt_1 
  relation | AccessShareLock | t       | t_lockmods_part_tbl_dml         
  relation | ExclusiveLock   | t       | t_lockmods_part_tbl_dml         
 (4 rows)
@@ -2147,8 +2147,8 @@ DELETE 10
 1: select * from show_locks_lockmodes;
  locktype | mode             | granted | relation                        
 ----------+------------------+---------+---------------------------------
- relation | RowExclusiveLock | t       | t_lockmods_part_tbl_dml_1_prt_2 
- relation | RowExclusiveLock | t       | t_lockmods_part_tbl_dml_1_prt_1 
+ relation | AccessShareLock  | t       | t_lockmods_part_tbl_dml_1_prt_2 
+ relation | AccessShareLock  | t       | t_lockmods_part_tbl_dml_1_prt_1 
  relation | AccessShareLock  | t       | t_lockmods_part_tbl_dml         
  relation | RowExclusiveLock | t       | t_lockmods_part_tbl_dml         
 (4 rows)
@@ -2164,8 +2164,8 @@ UPDATE 1
 1: select * from show_locks_lockmodes;
  locktype | mode             | granted | relation                        
 ----------+------------------+---------+---------------------------------
- relation | RowExclusiveLock | t       | t_lockmods_part_tbl_dml_1_prt_2 
- relation | RowExclusiveLock | t       | t_lockmods_part_tbl_dml_1_prt_1 
+ relation | AccessShareLock  | t       | t_lockmods_part_tbl_dml_1_prt_2 
+ relation | AccessShareLock  | t       | t_lockmods_part_tbl_dml_1_prt_1 
  relation | AccessShareLock  | t       | t_lockmods_part_tbl_dml         
  relation | RowExclusiveLock | t       | t_lockmods_part_tbl_dml         
 (4 rows)
