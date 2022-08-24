@@ -4912,3 +4912,17 @@ SELECT * FROM test_part_integrity;
  2 | 3
 (4 rows)
 
+DROP TABLE test_part_integrity;
+-- Test external partition error out on changing root distribution policy
+CREATE TABLE part_root(a int) PARTITION BY RANGE(a);
+CREATE TABLE part_child (LIKE part_root);
+CREATE WRITABLE EXTERNAL WEB TABLE part_ext_w(a int) EXECUTE 'cat > @abs_srcdir@/data/part_ext.tbl' FORMAT 'TEXT' (DELIMITER AS '|' NULL AS 'null' ESCAPE AS ' ');;
+ALTER TABLE part_root ATTACH PARTITION part_child FOR VALUES FROM (0) TO (10);
+ALTER TABLE part_root ATTACH PARTITION part_ext_w FOR VALUES FROM (10) TO (20);
+-- Adding column should work fine
+ALTER TABLE part_root ADD COLUMN b int;
+INSERT INTO part_root SELECT i,i FROM generate_series(1,19)i;
+-- altering distribution policy should fail
+ALTER TABLE part_root SET DISTRIBUTED BY (b);
+ERROR:  "part_ext_w" is not a table
+DROP TABLE part_root;

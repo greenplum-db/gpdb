@@ -4860,9 +4860,6 @@ ATPrepCmd(List **wqueue, Relation rel, AlterTableCmd *cmd,
 				DistributedBy *ldistro;
 				GpPolicy   *policy;
 
-				// GPDB_12_MERGE_FIXME: is this still needed?
-				//ATExternalPartitionCheck(cmd->subtype, rel, recursing);
-
 				Assert(IsA(cmd->def, List));
 				/* The distributeby clause is the second element of cmd->def */
 				ldistro = (DistributedBy *) lsecond((List *)cmd->def);
@@ -4928,7 +4925,6 @@ ATPrepCmd(List **wqueue, Relation rel, AlterTableCmd *cmd,
 		case AT_ExpandTable:
 			ATSimplePermissions(rel, ATT_TABLE | ATT_FOREIGN_TABLE | ATT_MATVIEW);
 
-			/* GPDB_12_MERGE_FIXME: do we have these checks on ATTACH? */
 			if (!recursing)
 			{
 				if (Gp_role == GP_ROLE_DISPATCH &&
@@ -4957,7 +4953,6 @@ ATPrepCmd(List **wqueue, Relation rel, AlterTableCmd *cmd,
 		case AT_ExpandPartitionTablePrepare:
 			ATSimplePermissions(rel, ATT_TABLE | ATT_FOREIGN_TABLE | ATT_MATVIEW);
 
-			/* GPDB_12_MERGE_FIXME: do we have these checks on ATTACH? */
 			if (!recursing)
 			{
 				if (Gp_role == GP_ROLE_DISPATCH &&
@@ -7566,13 +7561,11 @@ ATExecAddColumn(List **wqueue, AlteredTableInfo *tab, Relation rel,
 	 * We have to do it while processing the root partition because that's the
 	 * only level where the `ADD COLUMN` subcommands are populated.
 	 *
-	 * GPDB_12_MERGE_FIXME: Given now wqueue gets dispatched from QD to QE, no
-	 * need to perform this step on QE. Only need to execute this block of
-	 * code on QD and QE will get the information to perform optimized rewrite
-	 * for CO or not. Leaving fixme here as CO code is not working currently,
-	 * hence hard to validate if works correctly or not.
+	 * QD will dispatch wqueue and the QE will get all the info
+	 * to perform the column optimized rewrite.
+	 * So, we only need to execute this block on QD.
 	 */
-	if (!recursing && (tab->relkind == RELKIND_PARTITIONED_TABLE || tab->relkind == RELKIND_RELATION))
+	if (!recursing && (tab->relkind == RELKIND_PARTITIONED_TABLE || tab->relkind == RELKIND_RELATION) && Gp_role != GP_ROLE_EXECUTE)
 	{
 		bool	aocs_write_new_columns_only;
 		/*

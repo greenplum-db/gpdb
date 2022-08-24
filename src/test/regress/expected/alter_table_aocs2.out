@@ -969,3 +969,33 @@ SELECT * FROM subpartition_aoco_leaf;
      0 | subpartition_aoco_leaf_1_prt_intermediate_2_prt_leaf | ao_column | full table rewritten
 (6 rows)
 
+-- Check if add column doesn't rewrite the table
+CREATE TABLE addcol(i int) WITH (appendonly=true, orientation=column);
+INSERT INTO addcol SELECT generate_series(1, 5);
+CREATE TEMP TABLE relfilebeforeaddcol AS
+    SELECT -1 segid, relname, relfilenode FROM pg_class WHERE relname LIKE 'addcol%'
+    UNION SELECT gp_segment_id segid, relname, relfilenode FROM gp_dist_random('pg_class')
+    WHERE relname LIKE 'addcol%' ORDER BY segid;
+ALTER TABLE addcol ADD COLUMN j int DEFAULT 5;
+CREATE TEMP TABLE relfileafteraddcol AS
+    SELECT -1 segid, relname, relfilenode FROM pg_class WHERE relname LIKE 'addcol%'
+    UNION SELECT gp_segment_id segid, relname, relfilenode FROM gp_dist_random('pg_class')
+    WHERE relname LIKE 'addcol%' ORDER BY segid;
+-- table shouldn't be rewritten
+SELECT count(*) FROM (SELECT * FROM relfilebeforeaddcol UNION SELECT * FROM relfileafteraddcol)a;
+ count 
+-------
+     4
+(1 row)
+
+-- data is intact
+SELECT * FROM addcol;
+ i | j 
+---+---
+ 2 | 5
+ 3 | 5
+ 4 | 5
+ 5 | 5
+ 1 | 5
+(5 rows)
+

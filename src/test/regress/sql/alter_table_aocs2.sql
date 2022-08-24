@@ -611,3 +611,25 @@ ALTER TABLE subpartition_aoco_leaf ADD COLUMN new_col2 int DEFAULT 1, ALTER COLU
 SELECT * FROM subpartition_aoco_leaf;
 
 :chk_co_opt_qry;
+
+-- Check if add column doesn't rewrite the table
+CREATE TABLE addcol(i int) WITH (appendonly=true, orientation=column);
+INSERT INTO addcol SELECT generate_series(1, 5);
+
+CREATE TEMP TABLE relfilebeforeaddcol AS
+    SELECT -1 segid, relname, relfilenode FROM pg_class WHERE relname LIKE 'addcol%'
+    UNION SELECT gp_segment_id segid, relname, relfilenode FROM gp_dist_random('pg_class')
+    WHERE relname LIKE 'addcol%' ORDER BY segid;
+
+ALTER TABLE addcol ADD COLUMN j int DEFAULT 5;
+
+CREATE TEMP TABLE relfileafteraddcol AS
+    SELECT -1 segid, relname, relfilenode FROM pg_class WHERE relname LIKE 'addcol%'
+    UNION SELECT gp_segment_id segid, relname, relfilenode FROM gp_dist_random('pg_class')
+    WHERE relname LIKE 'addcol%' ORDER BY segid;
+
+-- table shouldn't be rewritten
+SELECT count(*) FROM (SELECT * FROM relfilebeforeaddcol UNION SELECT * FROM relfileafteraddcol)a;
+
+-- data is intact
+SELECT * FROM addcol;
