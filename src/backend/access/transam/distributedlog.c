@@ -275,9 +275,9 @@ DistributedLog_AdvanceOldestXmin(TransactionId oldestLocalXmin,
 			if (TransactionIdPrecedesOrEquals(oldestXmin, expected))
 			{
 				/*
-				* If we got here, other process must have updated the oldestXmin.
-				* Return the more accurate value.
-				*/
+				 * If we got here, other processes must have updated the oldestXmin.
+				 * Return the more accurate value.
+				 */
 				oldestXmin = expected;
 				break;
 			}

@@ -417,7 +417,6 @@ ProcArrayEndGxact(TMGXACT *tmGxact)
 	AssertImply(Gp_role == GP_ROLE_DISPATCH && gxid != InvalidDistributedTransactionId,
 				LWLockHeldByMe(ProcArrayLock));
 	tmGxact->gxid = InvalidDistributedTransactionId;
-	pg_atomic_init_u64(&(tmGxact->atomic_gxid), InvalidDistributedTransactionId);
 	tmGxact->xminDistributedSnapshot = InvalidDistributedTransactionId;
 	tmGxact->includeInCkpt = false;
 	tmGxact->sessionId = 0;
@@ -2002,8 +2001,13 @@ CreateDistributedSnapshot(DistributedSnapshot *ds)
 		if (dxid != InvalidDistributedTransactionId && dxid < globalXminDistributedSnapshots)
 			globalXminDistributedSnapshots = dxid;
 
-		/* Atomic fetch gxid */
-		gxid = pg_atomic_read_u64(&gxact_candidate->atomic_gxid);
+		/*
+		 * Just fetch once
+		 *
+		 * Partial reading is possible on a 32 bit system, however we decided
+		 * not to take it serious currently.
+		 */
+		gxid = gxact_candidate->gxid;
 
 		/*
 		* Skip further gxid to avoid enlarging inProgressXidArray

@@ -86,11 +86,12 @@ DistributedSnapshotWithLocalMapping_CommittedTest(
 
 	/*
 	 * Is this local xid in a process-local cache we maintain?
+	 *
 	 * If we found xact in cache, the distribXid must be a valid gxid.
-	 * We add it to cache in LocalDistribXactCache_AddCommitted()
+	 * We added it to cache in LocalDistribXactCache_AddCommitted()
 	 * and there is nowhere to update distribXid to InvalidDistributedTransactionId.
 	 * So that distribXid in cache must be valid or we don't find it
-	 * in cache(never added or removed by cache LRU).
+	 * in cache (never added or removed by cache LRU).
 	 */
 	if (!LocalDistribXactCache_CommittedFind(localXid,
 											&distribXid))
