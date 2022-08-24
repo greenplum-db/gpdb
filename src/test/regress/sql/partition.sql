@@ -4163,3 +4163,13 @@ reset optimizer_enable_materialize;
 
 drop table t1_12533;
 drop table t2_12533;
+
+-- test echange partition without distribution (with deleted column won't produce SEGFAULT for gpdb builded with --enable-cassert)
+CREATE TABLE tbl_default_distribution( a int, b int, c int) partition by range(c)( start(1) end (10) every (2), default partition deflt);
+create table tbl_default_distribution_dropped_field(a1 int, a int, b int, c int);
+alter table tbl_default_distribution_dropped_field drop column a1;
+alter table tbl_default_distribution exchange partition for (rank(2)) with table tbl_default_distribution_dropped_field;
+
+create table rnd_distribution(a1 int, a int, b int, c int) distributed randomly;
+alter table rnd_distribution drop column a1;
+alter table tbl_default_distribution exchange partition for (rank(2)) with table rnd_distribution;

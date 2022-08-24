@@ -7872,7 +7872,6 @@ is_exchangeable(Relation rel, Relation oldrel, Relation newrel, bool throw)
 			for (i = 0; i < adjpol->nattrs; i++)
 			{
 				adjpol->attrs[i] = attrMap(map_new, parpol->attrs[i]);
-				Assert(newpol->attrs[i] > 0);	/* check new part */
 			}
 		}
 		else
