@@ -226,11 +226,13 @@ AppendOnlyStorageWrite_FinishSession(AppendOnlyStorageWrite *storageWrite)
 		if (storageWrite->compressionState != NULL)
 		{
 			pfree(storageWrite->compressionState);
+			storageWrite->compressionState = NULL;
 		}
 
 		if (storageWrite->verifyWriteCompressionState != NULL)
 		{
 			callCompressionDestructor(storageWrite->compression_functions[COMPRESSION_DESTRUCTOR], storageWrite->verifyWriteCompressionState);
+			storageWrite->verifyWriteCompressionState = NULL;
 		}
 	}
 

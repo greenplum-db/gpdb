@@ -764,6 +764,7 @@ destroy_datumstreamwrite(DatumStreamWrite * ds)
 	if (ds->title)
 	{
 		pfree(ds->title);
+		ds->title = NULL;
 	}
 	pfree(ds);
 }
