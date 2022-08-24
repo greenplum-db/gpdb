@@ -582,6 +582,7 @@ aocs_endscan(AOCSScanDesc scan)
 
 		close_ds_read(scan->columnScanInfo.ds, scan->columnScanInfo.relationTupleDesc->natts);
 		pfree(scan->columnScanInfo.ds);
+		scan->columnScanInfo.ds = NULL;
 	}
 
 	if (scan->columnScanInfo.relationTupleDesc)
@@ -1637,7 +1638,9 @@ aocs_fetch_finish(AOCSFetchDesc aocsFetchDesc)
 			Assert(datumStreamFetchDesc->datumStream != NULL);
 			datumstreamread_close_file(datumStreamFetchDesc->datumStream);
 			destroy_datumstreamread(datumStreamFetchDesc->datumStream);
+			datumStreamFetchDesc->datumStream = NULL;
 			pfree(datumStreamFetchDesc);
+			aocsFetchDesc->datumStreamFetchDesc[colno] = NULL;
 		}
 	}
 	pfree(aocsFetchDesc->datumStreamFetchDesc);
