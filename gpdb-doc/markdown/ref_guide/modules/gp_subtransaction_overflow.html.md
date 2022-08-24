@@ -1,6 +1,6 @@
 # gp_subtransaction_overflow
 
-The `gp_subtransaction_overflow` module implements a Greenplum Database view and user defined function for querying for backends experiencing 
+The `gp_subtransaction_overflow` module implements a Greenplum Database view and user-defined function for querying for backends experiencing 
 subtransaction overflow; these are backends that have created more than 64 subtransactions, resulting in a high lookup cost for visibility checks.
 
 The `gp_subtransaction_overflow` module is a Greenplum Database extension.
@@ -13,4 +13,4 @@ The `gp_subtransaction_overflow` module is installed when you install Greenplum 
 CREATE EXTENSION gp_subtransaction_overflow;
 ```
 
-For more information on how to use this module, see its discussion in [Monitoring a Greenplum System](../../admin_guide/managing/monitor.html#checking-for-and-terminating-overflowed-backends).
+For more information on how to use this module, see [Monitoring a Greenplum System](../../admin_guide/managing/monitor.html#checking-for-and-terminating-overflowed-backends).
