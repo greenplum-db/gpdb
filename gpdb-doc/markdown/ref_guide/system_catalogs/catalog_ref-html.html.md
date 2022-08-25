@@ -54,6 +54,8 @@ System catalog table and view definitions in alphabetical order.
 
 -   [gp\_stat\_replication](../system_catalogs/catalog_ref-views.html#gp_stat_replication)
 
+-   [gp_suboverflowed_backend](../system_catalogs/gp_suboverflowed_backend.html)
+
 -   [gp\_transaction\_log](../system_catalogs/catalog_ref-views.html#gp_transaction_log)  
 
 -   [gp\_version\_at\_initdb](../system_catalogs/gp_version_at_initdb.html)  
