@@ -3323,7 +3323,7 @@ alter_table_cmd:
 					if (witham) 
 					{
 						if (strlen(witham) != strlen(n->name) || 
-							strncmp(n->name, witham, strlen(n->name) != 0))
+							strncmp(n->name, witham, strlen(n->name)) != 0)
 							ereport(ERROR,
 									(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
 									 errmsg("ACCESS METHOD is specified as \"%s\" but "
