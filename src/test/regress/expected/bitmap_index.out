@@ -965,8 +965,8 @@ HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sur
 insert into bmunion
   select (r%53), (r%59)
   from generate_series(1,70000) r;
-create index i_bmtest2_a on bmunion using bitmap(a);
-create index i_bmtest2_b on bmunion using bitmap(b);
+create index bmu_i_bmtest2_a on bmunion using bitmap(a);
+create index bmu_i_bmtest2_b on bmunion using bitmap(b);
 insert into bmunion select 53, 1 from generate_series(1, 1000);
 set optimizer_enable_tablescan=off;
 set optimizer_enable_dynamictablescan=off;
@@ -979,16 +979,16 @@ select gp_inject_fault('simulate_bitmap_and', 'skip', dbid) from gp_segment_conf
 
 explain (costs off) select count(*) from bmunion where a = 53 and b < 3;
                            QUERY PLAN                           
-----------------------------------------------------------------
+--------------------------------------------------------------------
  Finalize Aggregate
    ->  Gather Motion 3:1  (slice1; segments: 3)
          ->  Partial Aggregate
                ->  Bitmap Heap Scan on bmunion
                      Recheck Cond: ((b < 3) AND (a = 53))
                      ->  BitmapAnd
-                           ->  Bitmap Index Scan on i_bmtest2_b
+                           ->  Bitmap Index Scan on bmu_i_bmtest2_b
                                  Index Cond: (b < 3)
-                           ->  Bitmap Index Scan on i_bmtest2_a
+                           ->  Bitmap Index Scan on bmu_i_bmtest2_a
                                  Index Cond: (a = 53)
  Optimizer: Postgres query optimizer
 (11 rows)

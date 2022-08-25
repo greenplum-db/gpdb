@@ -420,8 +420,8 @@ create table bmunion (a int, b int);
 insert into bmunion
   select (r%53), (r%59)
   from generate_series(1,70000) r;
-create index i_bmtest2_a on bmunion using bitmap(a);
-create index i_bmtest2_b on bmunion using bitmap(b);
+create index bmu_i_bmtest2_a on bmunion using bitmap(a);
+create index bmu_i_bmtest2_b on bmunion using bitmap(b);
 insert into bmunion select 53, 1 from generate_series(1, 1000);
 
 set optimizer_enable_tablescan=off;
