@@ -2041,9 +2041,11 @@ Sets the maximum number of resource queues that can be created in a Greenplum Da
 
 ## <a id="max_slot_wal_keep_size"></a>max\_slot\_wal\_keep\_size 
 
-Sets the maximum size in megabytes of Write-Ahead Logging \(WAL\) files on disk per segment instance that can be reserved when Greenplum streams data to the mirror segment instance or standby master to keep it synchronized with the corresponding primary segment instance or master. The default is -1, Greenplum can retain an unlimited amount of WAL files on disk.
+Sets the maximum size in megabytes of Write-Ahead Logging (WAL) files on disk per segment instance that can be reserved when Greenplum streams data to the mirror segment instance or standby master to keep it synchronized with the corresponding primary segment instance or master. The default is -1, Greenplum can retain an unlimited amount of WAL files on disk.
 
 If the file size exceeds the maximum size, the files are released and are available for deletion. A mirror or standby may no longer be able to continue replication due to removal of required WAL files.
+
+**WARNING**: If `max_slot_wal_keep_size` is set to a non-default value for acting primaries, full and incremental recovery of their mirrors may not be possible. Depending on the workload on the primary running concurrently with a full recovery, the recovery may fail with a missing WAL error. Therefore, you must ensure that `max_slot_wal_keep_size` is set to the default of `-1` or a high enough value before running full recovery. Similarly, depending on how behind the downed mirror is, an incremental recovery of it may fail with a missing WAL complaint. In this case, full recovery would be the only recourse.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|

@@ -53,7 +53,7 @@ int thread_cleanup(void) {
     for (int i = 0; i < CRYPTO_num_locks(); i++) {
         MUTEX_CLEANUP(mutex_buf[i]);
     }
-    delete mutex_buf;
+    delete[] mutex_buf;
     mutex_buf = NULL;
     return 1;
 }
@@ -109,17 +109,13 @@ GPReader* reader_init(const char* url_with_options) {
         reader->open(params);
         return reader;
     } catch (S3Exception& e) {
-        if (reader != NULL) {
-            delete reader;
-        }
+        delete reader;
         s3extErrorMessage =
             "reader_init caught a " + e.getType() + " exception: " + e.getFullMessage();
         S3ERROR("reader_init caught %s: %s", e.getType().c_str(), s3extErrorMessage.c_str());
         return NULL;
     } catch (...) {
-        if (reader != NULL) {
-            delete reader;
-        }
+        delete reader;
         S3ERROR("Caught an unexpected exception.");
         s3extErrorMessage = "Caught an unexpected exception.";
         return NULL;

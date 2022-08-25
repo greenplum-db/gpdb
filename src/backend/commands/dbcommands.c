@@ -57,6 +57,7 @@
 #include "storage/copydir.h"
 #include "storage/fd.h"
 #include "storage/lmgr.h"
+#include "storage/md.h"
 #include "storage/ipc.h"
 #include "storage/procarray.h"
 #include "storage/smgr.h"

@@ -144,6 +144,8 @@ static int	success_count = 0;
 static int	fail_count = 0;
 static int	fail_ignore_count = 0;
 
+static bool halt_work = false;
+
 static bool directory_exists(const char *dir);
 static void make_directory(const char *dir);
 
@@ -184,6 +186,7 @@ static bool detectCgroupMountPoint(char *cgdir, int len);
 
 static char *content_zero_hostname = NULL;
 static char *get_host_name(int16 contentid, char role);
+static bool cluster_healthy(void);
 
 /*
  * allow core files if possible.
@@ -2321,6 +2324,9 @@ run_schedule(const char *schedule, test_function tfunc)
 			exit(2);
 		}
 
+		if (!cluster_healthy())
+			break;
+
 		gettimeofday(&start_time, NULL);
 		if (num_tests == 1)
 		{
@@ -2465,7 +2471,11 @@ run_single_test(const char *test, test_function tfunc)
 			   *tl;
 	bool		differ = false;
 
+	if (!cluster_healthy())
+		return;
+
 	status(_("test %-24s ... "), test);
+
 	pid = (tfunc) (test, &resultfiles, &expectfiles, &tags);
 	wait_for_tests(&pid, &exit_status, NULL, NULL, 1);
 
@@ -3361,12 +3371,12 @@ regression_main(int argc, char *argv[], init_function ifunc, test_function tfunc
 	 */
 	header(_("running regression test queries"));
 
-	for (sl = schedulelist; sl != NULL; sl = sl->next)
+	for (sl = schedulelist; sl != NULL && !halt_work; sl = sl->next)
 	{
 		run_schedule(sl->str, tfunc);
 	}
 
-	for (sl = extra_tests; sl != NULL; sl = sl->next)
+	for (sl = extra_tests; sl != NULL && !halt_work; sl = sl->next)
 	{
 		run_single_test(sl->str, tfunc);
 	}
@@ -3452,21 +3462,44 @@ regression_main(int argc, char *argv[], init_function ifunc, test_function tfunc
 	return 0;
 }
 
-static char *
-get_host_name(int16 contentid, char role)
+/*
+ * Issue a command via psql, connecting to the specified database
+ *
+ */
+static void
+psql_command_output(const char *database, char *buffer, int buf_len, const char *query,...)
 {
-	char psql_cmd[MAXPGPATH];
-	FILE       *fp;
-	char line[1024];
+	char		query_formatted[1024];
+	char		query_escaped[2048];
+	char		psql_cmd[MAXPGPATH + 2048];
+	va_list		args;
+	char	   *s;
+	char	   *d;
+	FILE *fp;
 	int len;
-	char *hostname = NULL;
 
+	/* Generate the query with insertion of sprintf arguments */
+	va_start(args, query);
+	vsnprintf(query_formatted, sizeof(query_formatted), query, args);
+	va_end(args);
+
+	/* Now escape any shell double-quote metacharacters */
+	d = query_escaped;
+	for (s = query_formatted; *s; s++)
+	{
+		if (strchr("\\\"$`", *s))
+			*d++ = '\\';
+		*d++ = *s;
+	}
+	*d = '\0';
+
+	/* And now we can build and execute the shell command */
 	len = snprintf(psql_cmd, sizeof(psql_cmd),
-			"\"%s%spsql\" -X -t -c \"select hostname from gp_segment_configuration where role=\'%c\' and content = %d;\" -d \"postgres\"",
+				   "\"%s%spsql\" -X -t -c \"%s\" \"%s\"",
 				   bindir ? bindir : "",
 				   bindir ? "/" : "",
-				   role,
-				   contentid);
+				   query_escaped,
+				   database);
 
 	if (len >= sizeof(psql_cmd))
 		exit_nicely(2);
@@ -3478,7 +3511,7 @@ get_host_name(int16 contentid, char role)
 		exit_nicely(2);
 	}
 
-	if (fgets(line, sizeof(line), fp) == NULL)
+	if (fgets(buffer, buf_len, fp) == NULL)
 	{
 		fprintf(stderr, "%s: cannot read the result\n", progname);
 		(void) pclose(fp);
@@ -3490,6 +3523,37 @@ get_host_name(int16 contentid, char role)
 		fprintf(stderr, "%s: cannot close shell command\n", progname);
 		exit_nicely(2);
 	}
+}
+
+static bool
+cluster_healthy(void)
+{
+	char line[1024];
+	psql_command_output("postgres", line, 1024,
+						"SELECT * FROM gp_segment_configuration WHERE status = 'd' OR preferred_role != role;");
+
+	halt_work = false;
+	if (strcmp(line, "\n") != 0)
+	{
+		fprintf(stderr, _("\n==================================\n"));
+		fprintf(stderr, _(" Cluster validation failed:\n%s"), line);
+		fprintf(stderr, _("==================================\n"));
+		halt_work = true;
+	}
+
+	return !halt_work;
+}
+
+static char *
+get_host_name(int16 contentid, char role)
+{
+	char line[1024];
+	char *hostname = NULL;
+
+	psql_command_output("postgres", line, 1024,
+						"SELECT hostname FROM gp_segment_configuration WHERE role=\'%c\' AND content = %d;",
+						role,
+						contentid);
 
 	hostname = psprintf("%s", trim_white_space(line));
 

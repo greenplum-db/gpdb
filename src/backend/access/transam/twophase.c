@@ -73,6 +73,7 @@
 #include "storage/procarray.h"
 #include "storage/sinvaladt.h"
 #include "storage/smgr.h"
+#include "storage/md.h"
 #include "utils/builtins.h"
 #include "utils/faultinjector.h"
 #include "utils/guc.h"

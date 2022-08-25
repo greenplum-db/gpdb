@@ -74,6 +74,7 @@
 #include "postmaster/postmaster.h"
 #include "replication/syncrep.h"
 #include "storage/sinvaladt.h"
+#include "storage/md.h"
 #include "utils/faultinjector.h"
 #include "utils/resscheduler.h"
 #include "utils/snapmgr.h"
