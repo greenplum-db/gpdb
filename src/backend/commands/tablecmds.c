@@ -4313,12 +4313,40 @@ AlterTable(Oid relid, LOCKMODE lockmode, AlterTableStmt *stmt)
  * executed and dispatched those subcommands, so remove them from command
  * we'll dispatch now.
  *
- * GPDB_12_MERGE_FIXME: This is a bit bogus, because if you have multiple
- * ALTER TABLE subcommands in one command, the commands might be executed
- * in different order in the QEs than in the QD. I think it would be better
- * to expand the commands in the ATPrepCmd() phase, and included them in
- * the working queues for dispatching, instead of dispatching them
- * separately in the ATExecCmd() phase.
+ * This is not ideal, because the partition subcommands and other ALTER 
+ * TABLE subcommands could be executed in different order on QD and QE. 
+ * For example, for the following statement:
+ *     ALTER TABLE ... ADD PARTITION ..., ALTER COLUMN ...;
+ * On QD, the ALTER COLUMN would be executed first, while on QE, ADD 
+ * PARTITION would be executed first.
+ *
+ * However, we cannot simply expand those commands in the ATPrepCmd() 
+ * phase and include them in the working queues for dispatching,
+ * mainly because the partition commands generate many non-ALTER TABLE 
+ * commands like CREATE TABLE. 
+ *
+ * The upstream deals with this issue by simply disallowing doing
+ * the partition subcommands and other ALTER TABLE subcommands in the
+ * same statement. Unfortunately GPDB couldn't do that because we
+ * need to be backward compatible as we have been supporting such
+ * usage all along.
+ *
+ * A possible easier workaround is to completely split the partition 
+ * subcommands off the list of ALTER TABLE subcommands, and execute them 
+ * separately. But after all, it is unclear whether it is really 
+ * needed. Consider the example above, the new partition created by 
+ * ADD PARTITION will always carry the changes made by ALTER COLUMN, 
+ * both on QD and QE:
+ *   1. On QD, ALTER COLUMN is executed first, so new partition will 
+ *     inherit the change it made;
+ *   2. On QE, ALTER COLUMN is executed later, so it recurses into 
+ *     the new partition that is already created by ADD PARTITION.
+ *
+ * Similar things apply to other ALTER TABLE subcommands. Also consider 
+ * the fact that GPDB has been doing this for a long time, the 
+ * out-of-order execution doesn't seem to cause an issue.
+ * So remain things as is for now. But if it turns out to be a problem 
+ * in future, we should try one of the workarounds mentioned above.
  */
 static void
 prepare_AlterTableStmt_for_dispatch(AlterTableStmt *stmt)
