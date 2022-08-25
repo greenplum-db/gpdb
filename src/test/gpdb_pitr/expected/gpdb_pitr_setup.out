@@ -146,8 +146,16 @@ SELECT * FROM gpdb_two_phase_commit_after_restore_point ORDER BY num;
  10  
 (10 rows)
 
-CREATE TEMP TABLE gp_current_wal_lsn AS SELECT -1 AS content_id, pg_current_wal_lsn() AS current_lsn UNION SELECT gp_segment_id AS content_id, pg_current_wal_lsn() FROM gp_dist_random('gp_id');
+-- Get the current WAL segment filenames from each segment. The
+-- pg_walfile_name() for content -1 runs on a primary segment due to a
+-- redistribute motion so fix the timeline id for it as a workaround for
+-- now as its been consistently observed that it can run on content 1
+-- which has a different timeline id. We can do this workaround because
+-- of the test requirement of a fresh gpdemo cluster.
+CREATE TEMP TABLE gp_current_walfile_name AS SELECT -1 AS content_id, pg_walfile_name(pg_current_wal_lsn()) AS walfilename UNION SELECT gp_segment_id AS content_id, pg_walfile_name(pg_current_wal_lsn()) AS walfilename FROM gp_dist_random('gp_id');
 CREATE 4
+UPDATE gp_current_walfile_name SET walfilename = replace(walfilename, '00000003', '00000001') WHERE content_id = -1;
+UPDATE 1
 
 -- Run gp_switch_wal() so that the WAL segment files with the restore
 -- points are eligible for archival to the WAL Archive directories.
@@ -163,7 +171,7 @@ SELECT true FROM gp_switch_wal();
 -- Ensure that the last WAL segment file for each GP segment was archived.
 -- This function loops until the archival is complete. It times out after
 -- approximately 10mins.
-CREATE OR REPLACE FUNCTION check_archival() RETURNS BOOLEAN AS $$ DECLARE archived BOOLEAN; /*in func*/ DECLARE archived_count INTEGER; /*in func*/ BEGIN /*in func*/ FOR i in 1..3000 LOOP SELECT bool_and(seg_archived), count(*) FROM (SELECT last_archived_wal = pg_walfile_name(current_lsn) AS seg_archived FROM gp_current_wal_lsn l INNER JOIN gp_stat_archiver a ON l.content_id = a.gp_segment_id) s INTO archived, archived_count; /*in func*/ IF archived AND archived_count = 4 THEN RETURN archived; /*in func*/ END IF; /*in func*/ PERFORM pg_sleep(0.2); /*in func*/ END LOOP; /*in func*/ END $$ LANGUAGE plpgsql;
+CREATE OR REPLACE FUNCTION check_archival() RETURNS BOOLEAN AS $$ DECLARE archived BOOLEAN; /*in func*/ DECLARE archived_count INTEGER; /*in func*/ BEGIN /*in func*/ FOR i in 1..3000 LOOP SELECT bool_and(seg_archived), count(*) FROM (SELECT last_archived_wal = l.walfilename AS seg_archived FROM gp_current_walfile_name l INNER JOIN gp_stat_archiver a ON l.content_id = a.gp_segment_id) s INTO archived, archived_count; /*in func*/ IF archived AND archived_count = 4 THEN RETURN archived; /*in func*/ END IF; /*in func*/ PERFORM pg_sleep(0.2); /*in func*/ END LOOP; /*in func*/ END $$ LANGUAGE plpgsql;
 CREATE
 
 SELECT check_archival();

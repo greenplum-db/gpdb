@@ -60,10 +60,17 @@ SELECT * FROM gpdb_two_phase_commit_after_acquire_share_lock;
 SELECT * FROM gpdb_one_phase_commit;
 SELECT * FROM gpdb_two_phase_commit_after_restore_point ORDER BY num;
 
-CREATE TEMP TABLE gp_current_wal_lsn AS
-    SELECT -1 AS content_id, pg_current_wal_lsn() AS current_lsn
+-- Get the current WAL segment filenames from each segment. The
+-- pg_walfile_name() for content -1 runs on a primary segment due to a
+-- redistribute motion so fix the timeline id for it as a workaround for
+-- now as its been consistently observed that it can run on content 1
+-- which has a different timeline id. We can do this workaround because
+-- of the test requirement of a fresh gpdemo cluster.
+CREATE TEMP TABLE gp_current_walfile_name AS
+    SELECT -1 AS content_id, pg_walfile_name(pg_current_wal_lsn()) AS walfilename
     UNION
-    SELECT gp_segment_id AS content_id, pg_current_wal_lsn() FROM gp_dist_random('gp_id');
+    SELECT gp_segment_id AS content_id, pg_walfile_name(pg_current_wal_lsn()) AS walfilename FROM gp_dist_random('gp_id');
+UPDATE gp_current_walfile_name SET walfilename = replace(walfilename, '00000003', '00000001') WHERE content_id = -1;
 
 -- Run gp_switch_wal() so that the WAL segment files with the restore
 -- points are eligible for archival to the WAL Archive directories.
@@ -80,8 +87,8 @@ BEGIN /*in func*/
         SELECT bool_and(seg_archived), count(*)
         FROM
             (SELECT last_archived_wal =
-            pg_walfile_name(current_lsn) AS seg_archived
-            FROM gp_current_wal_lsn l
+            l.walfilename AS seg_archived
+            FROM gp_current_walfile_name l
             INNER JOIN gp_stat_archiver a
             ON l.content_id = a.gp_segment_id) s
         INTO archived, archived_count; /*in func*/
