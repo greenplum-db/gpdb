@@ -5058,7 +5058,7 @@ getTables(Archive *fout, int *numTables)
 						  "tc.reloptions AS toast_reloptions, "
 						  "p.parrelid as parrelid, "
 						  "pl.parlevel as parlevel, "
-							"pg_catalog.pg_get_table_distributedby(c.oid) as distclause, "
+						  "pg_catalog.pg_get_table_distributedby(c.oid) as distclause, "
 						  "tc.reltype AS toast_type_oid, "
 						  "i.indexrelid as toast_index_oid "
 						  "FROM pg_class c "
@@ -5109,8 +5109,7 @@ getTables(Archive *fout, int *numTables)
 						  "tc.reloptions AS toast_reloptions, "
 						  "p.parrelid as parrelid, "
 						  "pl.parlevel as parlevel, "
-							"(SELECT attrnums FROM pg_catalog.gp_distribution_policy p "
-						  "WHERE p.localoid = c.oid) as distclause, "
+						  "CASE WHEN dp.localoid <> 0 then dp.attrnums::text else 'f' END as distclause, "
 						  "tc.reltype AS toast_type_oid, "
 						  "i.indexrelid as toast_index_oid "
 						  "FROM pg_class c "
@@ -5125,6 +5124,7 @@ getTables(Archive *fout, int *numTables)
 						  "LEFT JOIN pg_partition pl ON (c.oid = pl.parrelid AND pl.parlevel = 0) "
 						  "LEFT JOIN pg_catalog.pg_index i ON (c.reltoastrelid = i.indrelid AND i.indisvalid)\n"
 						  "LEFT JOIN pg_catalog.pg_class ti ON (i.indexrelid = ti.oid)\n"
+						  "LEFT JOIN pg_catalog.gp_distribution_policy dp ON (dp.localoid = c.oid)\n"
 				   "WHERE c.relkind in ('%c', '%c', '%c', '%c', '%c', '%c') "
 						  "AND c.relnamespace <> 7012 " /* BM_BITMAPINDEX_NAMESPACE */
 						  "ORDER BY c.oid",
@@ -5159,8 +5159,7 @@ getTables(Archive *fout, int *numTables)
 						  "tc.reloptions AS toast_reloptions, "
 						  "p.parrelid as parrelid, "
 						  "pl.parlevel as parlevel, "
-							"(SELECT attrnums FROM pg_catalog.gp_distribution_policy p "
-						  "WHERE p.localoid = c.oid) as distclause, "
+						  "CASE WHEN dp.localoid <> 0 then dp.attrnums::text else 'f' END as distclause, "
 						  "tc.reltype AS toast_type_oid, "
 						  "i.indexrelid as toast_index_oid "
 						  "FROM pg_class c "
@@ -5175,6 +5174,7 @@ getTables(Archive *fout, int *numTables)
 						  "LEFT JOIN pg_partition pl ON (c.oid = pl.parrelid AND pl.parlevel = 0) "
 						  "LEFT JOIN pg_catalog.pg_index i ON (c.reltoastrelid = i.indrelid AND i.indisvalid)\n"
 						  "LEFT JOIN pg_catalog.pg_class ti ON (i.indexrelid = ti.oid)\n"
+						  "LEFT JOIN pg_catalog.gp_distribution_policy dp ON (dp.localoid = c.oid)\n"
 				   "WHERE c.relkind in ('%c', '%c', '%c', '%c', '%c', '%c') "
 						  "AND c.relnamespace <> 7012 " /* BM_BITMAPINDEX_NAMESPACE */
 						  "ORDER BY c.oid",
@@ -5209,8 +5209,7 @@ getTables(Archive *fout, int *numTables)
 						  "tc.reloptions AS toast_reloptions, "
 						  "p.parrelid as parrelid, "
 						  "pl.parlevel as parlevel, "
-							"(SELECT attrnums FROM pg_catalog.gp_distribution_policy p "
-						  "WHERE p.localoid = c.oid) as distclause, "
+						  "CASE WHEN dp.localoid <> 0 then dp.attrnums::text else 'f' END as distclause, "
 						  "tc.reltype AS toast_type_oid, "
 						  "i.indexrelid as toast_index_oid "
 						  "FROM pg_class c "
@@ -5225,6 +5224,7 @@ getTables(Archive *fout, int *numTables)
 						  "LEFT JOIN pg_partition pl ON (c.oid = pl.parrelid AND pl.parlevel = 0) "
 						  "LEFT JOIN pg_catalog.pg_index i ON (c.reltoastrelid = i.indrelid AND i.indisvalid)\n"
 						  "LEFT JOIN pg_catalog.pg_class ti ON (i.indexrelid = ti.oid)\n"
+						  "LEFT JOIN pg_catalog.gp_distribution_policy dp ON (dp.localoid = c.oid)\n"
 						  "WHERE c.relkind in ('%c', '%c', '%c', '%c') "
 						  "AND c.relnamespace <> 7012 " /* BM_BITMAPINDEX_NAMESPACE */
 						  "ORDER BY c.oid",
@@ -5258,8 +5258,7 @@ getTables(Archive *fout, int *numTables)
 						  "tc.reloptions AS toast_reloptions, "
 						  "p.parrelid as parrelid, "
 						  "pl.parlevel as parlevel, "
-							"(SELECT attrnums FROM pg_catalog.gp_distribution_policy p "
-						  "WHERE p.localoid = c.oid) as distclause, "
+						  "CASE WHEN dp.localoid <> 0 then dp.attrnums::text else 'f' END as distclause, "
 						  "tc.reltype AS toast_type_oid, "
 						  "i.indexrelid as toast_index_oid "
 						  "FROM pg_class c "
@@ -5274,6 +5273,7 @@ getTables(Archive *fout, int *numTables)
 						  "LEFT JOIN pg_partition pl ON (c.oid = pl.parrelid AND pl.parlevel = 0) "
 						  "LEFT JOIN pg_catalog.pg_index i ON (c.reltoastrelid = i.indrelid AND i.indisvalid)\n"
 						  "LEFT JOIN pg_catalog.pg_class ti ON (i.indexrelid = ti.oid)\n"
+						  "LEFT JOIN pg_catalog.gp_distribution_policy dp ON (dp.localoid = c.oid)\n"
 						  "WHERE c.relkind in ('%c', '%c', '%c', '%c') "
 						  "AND c.relnamespace <> 7012 " /* BM_BITMAPINDEX_NAMESPACE */
 						  "ORDER BY c.oid",
@@ -5307,8 +5307,7 @@ getTables(Archive *fout, int *numTables)
 						  "NULL AS toast_reloptions, "
 						  "p.parrelid as parrelid, "
 						  "pl.parlevel as parlevel, "
-							"(SELECT attrnums FROM pg_catalog.gp_distribution_policy p "
-						  "WHERE p.localoid = c.oid) as distclause, "
+						  "CASE WHEN dp.localoid <> 0 then dp.attrnums::text else 'f' END as distclause, "
 						  "NULL AS toast_reloptions, "
 						  "tc.reltype AS toast_type_oid, "
 						  "i.indexrelid as toast_index_oid "
@@ -5324,6 +5323,7 @@ getTables(Archive *fout, int *numTables)
 						  "LEFT JOIN pg_partition pl ON (c.oid = pl.parrelid AND pl.parlevel = 0) "
 						  "LEFT JOIN pg_catalog.pg_index i ON (c.reltoastrelid = i.indrelid AND i.indisvalid)\n"
 						  "LEFT JOIN pg_catalog.pg_class ti ON (i.indexrelid = ti.oid)\n"
+						  "LEFT JOIN pg_catalog.gp_distribution_policy dp ON (dp.localoid = c.oid)\n"
 						  "WHERE c.relkind in ('%c', '%c', '%c', '%c') "
 						  "AND c.relnamespace <> 3012 " /* BM_BITMAPINDEX_NAMESPACE in GPDB 5 and below */
 						  "ORDER BY c.oid",
@@ -17108,7 +17108,7 @@ addDistributedByOld(Archive *fout, PQExpBuffer q, TableInfo *tbinfo, int actual_
 	char	   *policydef = tbinfo->distclause;
 	char	   *policycol;
 
-	if (strcmp(policydef, "") == 0)
+	if (strcmp(policydef, "f") == 0)
 	{
 		/*
 		 * There is no entry in the policy table for this table. Report an
