@@ -16,5 +16,5 @@ Refer to [Installing Additional Supplied Modules](../../install_guide/install_mo
 
 ## <a id="topic_info"></a>Module Documentation 
 
-The `ip4r` module was developed by `RhodiumToad`.  Refer the [RhodiumToad/ip4r](https://github.com/RhodiumToad/ip4r) documentation on `github` for detailed information about using the module.
+The `ip4r` module was developed by `RhodiumToad`.  Refer to the [RhodiumToad/ip4r](https://github.com/RhodiumToad/ip4r) documentation on `github` for detailed information about using the module.
 
