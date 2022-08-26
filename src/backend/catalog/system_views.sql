@@ -1777,7 +1777,7 @@ CREATE VIEW pg_catalog.gp_segment_endpoints AS
 CREATE VIEW pg_catalog.gp_session_endpoints AS
     SELECT * FROM pg_catalog.gp_get_session_endpoints();
 
--- Dispatch and Aggregate the backends of subtransactions overflowed
+-- Dispatch and Aggregate the backends information of subtransactions overflowed
 CREATE VIEW gp_suboverflowed_backend(segid, pids) AS
   SELECT -1, gp_get_suboverflowed_backends()
 UNION ALL
