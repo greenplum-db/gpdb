@@ -113,6 +113,7 @@
 #include "utils/rel.h"
 #include "utils/sortsupport.h"
 #include "utils/tuplesort.h"
+#include "utils/dynahash.h"
 
 #include "utils/faultinjector.h"
 
@@ -298,6 +299,7 @@ struct Tuplesortstate
 	int			memtupcount;	/* number of tuples currently present */
 	int			memtupsize;		/* allocated length of memtuples array */
 	bool		growmemtuples;	/* memtuples' growth still underway? */
+	int64		totalNumTuples; /* count of all input tuples */ /*CDB*/
 
 	/*
 	 * Memory for tuples is sometimes allocated using a simple slab allocator,
@@ -459,6 +461,13 @@ struct Tuplesortstate
 	Oid			datumType;
 	/* we need typelen in order to know how to copy the Datums. */
 	int			datumTypeLen;
+
+	/*
+	 * CDB: EXPLAIN ANALYZE reporting interface and statistics.
+	 */
+	struct Instrumentation *instrument;
+	struct StringInfoData  *explainbuf;
+	uint64 spilledBytes;
 
 	/*
 	 * Resource snapshot for time of sort start.
@@ -755,6 +764,7 @@ tuplesort_begin_common(int workMem, SortCoordinate coordinate,
 							ALLOCSET_SEPARATE_THRESHOLD / sizeof(SortTuple) + 1);
 
 	state->growmemtuples = true;
+	state->totalNumTuples  = 0; /*CDB*/
 	state->slabAllocatorUsed = false;
 	state->memtuples = (SortTuple *) palloc(state->memtupsize * sizeof(SortTuple));
 
@@ -1641,6 +1651,8 @@ puttuple_common(Tuplesortstate *state, SortTuple *tuple)
 {
 	Assert(!LEADER(state));
 
+	state->totalNumTuples++;
+
 	switch (state->status)
 	{
 		case TSS_INITIAL:
@@ -1865,6 +1877,24 @@ tuplesort_performsort(Tuplesortstate *state)
 			 * Note that mergeruns sets the correct state->status.
 			 */
 			dumptuples(state, true);
+
+			/* CDB: How much work_mem would be enough for in-memory sort? */
+			if (state->instrument && state->instrument->need_cdb)
+			{
+				/*
+				 * The workmemwanted is summed up of the following:
+				 * (1) metadata: Tuplesortstate, tuple array
+				 * (2) the total bytes for all tuples.
+				 */
+				int64   workmemwanted =
+					sizeof(Tuplesortstate) +
+					((uint64)(1 << my_log2(state->totalNumTuples))) * sizeof(SortTuple) +
+					state->spilledBytes;
+
+				state->instrument->workmemwanted =
+					Max(state->instrument->workmemwanted, workmemwanted);
+			}
+
 			mergeruns(state);
 			state->eof_reached = false;
 			state->markpos_block = 0L;
@@ -2971,6 +3001,7 @@ dumptuples(Tuplesortstate *state, bool alltuples)
 {
 	int			memtupwrite;
 	int			i;
+	long		prevAvailMem = state->availMem;
 
 	/*
 	 * Nothing to do if we still fit in available memory and have array slots,
@@ -3079,6 +3110,12 @@ dumptuples(Tuplesortstate *state, bool alltuples)
 			 state->worker, state->currentRun, state->destTape,
 			 pg_rusage_show(&state->ru_start));
 #endif
+
+	/* CDB: Accumulate total size of spilled tuples. */
+	if (state->availMem > prevAvailMem)
+	{
+		state->spilledBytes += state->availMem - prevAvailMem;
+	}
 
 	if (!alltuples)
 		selectnewtape(state);
@@ -3214,7 +3251,11 @@ tuplesort_get_stats(Tuplesortstate *state,
 		stats->spaceType = SORT_SPACE_TYPE_MEMORY;
 		stats->spaceUsed = (state->allowedMem - state->availMem + 1023) / 1024;
 	}
-	stats->workmemused = MemoryContextGetPeakSpace(state->sortcontext);
+	if (state->instrument)
+	{
+		stats->workmemused = state->instrument->workmemused;
+		stats->execmemused = state->instrument->execmemused;
+	}
 
 	switch (state->status)
 	{
@@ -4673,4 +4714,46 @@ free_sort_tuple(Tuplesortstate *state, SortTuple *stup)
 {
 	FREEMEM(state, GetMemoryChunkSpace(stup->tuple));
 	pfree(stup->tuple);
+}
+
+/*
+ * tuplesort_set_instrument
+ *
+ * May be called after tuplesort_begin_xxx() to enable reporting of
+ * statistics and events for EXPLAIN ANALYZE.
+ *
+ * The 'instr' and 'explainbuf' ptrs are retained in the 'state' object for
+ * possible use anytime during the sort, up to and including tuplesort_end().
+ * The caller must ensure that the referenced objects remain allocated and
+ * valid for the life of the Tuplesortstate object; or if they are to be
+ * freed early, disconnect them by calling again with NULL pointers.
+ */
+void
+tuplesort_set_instrument(Tuplesortstate            *state,
+						 struct Instrumentation    *instrument,
+						 struct StringInfoData     *explainbuf)
+{
+	state->instrument = instrument;
+	state->explainbuf = explainbuf;
+}
+
+/*
+ * tuplesort_finalize_stats
+ *
+ * Finalize the EXPLAIN ANALYZE stats.
+ */
+void
+tuplesort_finalize_stats(Tuplesortstate *state,
+					TuplesortInstrumentation *stats)
+{
+	if (state->instrument)
+	{
+		double  workmemused;
+
+		workmemused = MemoryContextGetPeakSpace(state->sortcontext);
+		if (state->instrument->workmemused < workmemused)
+			state->instrument->workmemused = workmemused;
+		state->instrument->execmemused += MemoryContextGetPeakSpace(state->sortcontext);
+	}
+	tuplesort_get_stats(state, stats);
 }

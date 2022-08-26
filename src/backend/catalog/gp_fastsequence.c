@@ -44,8 +44,8 @@ static void insert_or_update_fastsequence(
  * only exist for lifespan of the corresponding table.
  *
  * Given those special needs, this function inserts one initial row to
- * fastsequence for segfile 0 (used for special cases like CTAS, ALTER and
- * same transaction create and insert).  Only segfile 0 can be used to insert
+ * fastsequence for segfile 0 (used for special cases like CTAS, ALTER, TRUNCATE,
+ * and same transaction create and insert).  Only segfile 0 can be used to insert
  * tuples within same transaction creating the table hence initial entry is
  * only created for these. Entries for rest of segfiles will get created with
  * frozenXids during inserts. These entries are inserted while creating the
@@ -80,63 +80,6 @@ InsertInitialFastSequenceEntries(Oid objid)
 	CatalogTupleInsert(gp_fastsequence_rel, tuple);
 	heap_freetuple(tuple);
 
-	table_close(gp_fastsequence_rel, RowExclusiveLock);
-}
-
-/*
- * InsertFastSequenceEntry
- *
- * Insert a new fast sequence entry for a given object. If the given
- * object already exists in the table, this function replaces the old
- * entry with a fresh initial value.
- */
-void
-InsertFastSequenceEntry(Oid objid, int64 objmod, int64 lastSequence)
-{
-	Relation gp_fastsequence_rel;
-	ScanKeyData scankey[2];
-	SysScanDesc scan;
-	TupleDesc tupleDesc;
-	HeapTuple tuple = NULL;
-	
-	/*
-	 * Open and lock the gp_fastsequence catalog table.
-	 */
-	gp_fastsequence_rel = table_open(FastSequenceRelationId, RowExclusiveLock);
-	tupleDesc = RelationGetDescr(gp_fastsequence_rel);
-	
-	/* SELECT * FROM gp_fastsequence WHERE objid = :1 AND objmod = :2 FOR UPDATE */
-	ScanKeyInit(&scankey[0],
-				Anum_gp_fastsequence_objid,
-				BTEqualStrategyNumber, F_OIDEQ,
-				ObjectIdGetDatum(objid));
-	ScanKeyInit(&scankey[1],
-				Anum_gp_fastsequence_objmod,
-				BTEqualStrategyNumber, F_INT8EQ,
-				Int64GetDatum(objmod));
-	scan = systable_beginscan(gp_fastsequence_rel, FastSequenceObjidObjmodIndexId, true,
-							  NULL, 2, scankey);
-
-	tuple = systable_getnext(scan);
-	insert_or_update_fastsequence(gp_fastsequence_rel,
-						tuple,
-						tupleDesc,
-						objid,
-						objmod,
-						lastSequence);
-	systable_endscan(scan);
-
-	/*
-	 * gp_fastsequence table locking for AO inserts uses bottom up approach
-	 * meaning the locks are first acquired on the segments and later on the
-	 * master.
-	 * Hence, it is essential that we release the lock here to avoid
-	 * any form of master-segment resource deadlock. E.g. A transaction
-	 * trying to reindex gp_fastsequence has acquired a lock on it on the
-	 * master but is blocked on the segment as another transaction which
-	 * is an insert operation has acquired a lock first on segment and is
-	 * trying to acquire a lock on the Master. Deadlock!
-	 */
 	table_close(gp_fastsequence_rel, RowExclusiveLock);
 }
 
@@ -179,10 +122,11 @@ insert_or_update_fastsequence(Relation gp_fastsequence_rel,
 	}
 	else
 	{
+		bool isNull;
+		int64 currentLastSequence;
 #ifdef USE_ASSERT_CHECKING
 		Oid oldObjid;
 		int64 oldObjmod;
-		bool isNull;
 		
 		oldObjid = heap_getattr(oldTuple, Anum_gp_fastsequence_objid, tupleDesc, &isNull);
 		Assert(!isNull);
@@ -190,6 +134,14 @@ insert_or_update_fastsequence(Relation gp_fastsequence_rel,
 		Assert(!isNull);
 		Assert(oldObjid == objid && oldObjmod == objmod);
 #endif
+
+		currentLastSequence = heap_getattr(oldTuple, Anum_gp_fastsequence_last_sequence, tupleDesc, &isNull);
+		if (newLastSequence < currentLastSequence)
+			ereport(ERROR,
+					(errcode(ERRCODE_INTERNAL_ERROR),
+					 errmsg("gp_fastsequence value shouldn't go backwards for AO table"),
+					 errdetail("current value:" INT64_FORMAT " new value:" INT64_FORMAT,
+							   currentLastSequence, newLastSequence)));
 
 		values[Anum_gp_fastsequence_objid - 1] = ObjectIdGetDatum(objid);
 		values[Anum_gp_fastsequence_objmod - 1] = Int64GetDatum(objmod);
@@ -211,24 +163,22 @@ insert_or_update_fastsequence(Relation gp_fastsequence_rel,
  * GetFastSequences
  *
  * Get a list of consecutive sequence numbers. The starting sequence
- * number is the maximal value between 'lastsequence' + 1 and minSequence.
- * The length of the list is given.
+ * number is the current stored value in the table plus 1.
  *
  * If there is not such an entry for objid in the table, create
- * one here.
+ * one here and starting value as 1 is returned.
  *
  * The existing entry for objid in the table is updated with a new
  * lastsequence value.
  */
-int64 GetFastSequences(Oid objid, int64 objmod,
-					   int64 minSequence, int64 numSequences)
+int64 GetFastSequences(Oid objid, int64 objmod, int64 numSequences)
 {
 	Relation gp_fastsequence_rel;
 	ScanKeyData scankey[2];
 	SysScanDesc scan;
 	TupleDesc tupleDesc;
 	HeapTuple tuple;
-	int64 firstSequence = minSequence;
+	int64 firstSequence;
 	Datum lastSequenceDatum;
 	int64 newLastSequence;
 
@@ -254,7 +204,8 @@ int64 GetFastSequences(Oid objid, int64 objmod,
 	tuple = systable_getnext(scan);
 	if (!HeapTupleIsValid(tuple))
 	{
-		newLastSequence = firstSequence + numSequences - 1;
+		firstSequence = 1;
+		newLastSequence = numSequences;
 	}
 	else
 	{
@@ -268,8 +219,7 @@ int64 GetFastSequences(Oid objid, int64 objmod,
 					(errcode(ERRCODE_UNDEFINED_OBJECT),
 					 errmsg("got an invalid lastsequence number: NULL")));
 		
-		if (DatumGetInt64(lastSequenceDatum) + 1 > firstSequence)
-			firstSequence = DatumGetInt64(lastSequenceDatum) + 1;
+		firstSequence = DatumGetInt64(lastSequenceDatum) + 1;
 		newLastSequence = firstSequence + numSequences - 1;
 	}
 
@@ -278,7 +228,17 @@ int64 GetFastSequences(Oid objid, int64 objmod,
 
 	systable_endscan(scan);
 		
-	/* Refer to the comment at the end of InsertFastSequenceEntry. */
+	/*
+	 * gp_fastsequence table locking for AO inserts uses bottom up approach
+	 * meaning the locks are first acquired on the segments and later on the
+	 * master.
+	 * Hence, it is essential that we release the lock here to avoid
+	 * any form of master-segment resource deadlock. E.g. A transaction
+	 * trying to reindex gp_fastsequence has acquired a lock on it on the
+	 * master but is blocked on the segment as another transaction which
+	 * is an insert operation has acquired a lock first on segment and is
+	 * trying to acquire a lock on the Master. Deadlock!
+	 */
 	table_close(gp_fastsequence_rel, RowExclusiveLock);
 
 	return firstSequence;
@@ -339,7 +299,17 @@ int64 ReadLastSequence(Oid objid, int64 objmod)
 
 	systable_endscan(scan);
 
-	/* Refer to the comment at the end of InsertFastSequenceEntry. */
+	/*
+	 * gp_fastsequence table locking for AO inserts uses bottom up approach
+	 * meaning the locks are first acquired on the segments and later on the
+	 * master.
+	 * Hence, it is essential that we release the lock here to avoid
+	 * any form of master-segment resource deadlock. E.g. A transaction
+	 * trying to reindex gp_fastsequence has acquired a lock on it on the
+	 * master but is blocked on the segment as another transaction which
+	 * is an insert operation has acquired a lock first on segment and is
+	 * trying to acquire a lock on the Master. Deadlock!
+	 */
 	heap_close(gp_fastsequence_rel, AccessShareLock);
 
 	return lastSequence;

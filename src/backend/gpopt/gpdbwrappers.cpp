@@ -473,7 +473,9 @@ gpdb::TypeCollation(Oid type)
 		if (OidIsValid(typcollation))
 		{
 			if (type == NAMEOID)
+			{
 				return typcollation;  // As of v12, this is C_COLLATION_OID
+			}
 			return DEFAULT_COLLATION_OID;
 		}
 		return collation;
@@ -1661,7 +1663,9 @@ gpdb::GpdbEreportImpl(int xerrcode, int severitylevel, const char *xerrmsg,
 			errcode(xerrcode);
 			errmsg("%s", xerrmsg);
 			if (xerrhint)
+			{
 				errhint("%s", xerrhint);
+			}
 			errfinish(filename, lineno, funcname);
 		}
 	}
@@ -2422,19 +2426,6 @@ gpdb::EvaluateExpr(Expr *expr, Oid result_type, int32 typmod)
 	return nullptr;
 }
 
-// interpret the value of "With oids" option from a list of defelems
-// GPDB_12_MERGE_FIXME: this leaves dead code in CMDRelationGPDB
-bool
-gpdb::InterpretOidsOption(List *options, bool allowOids)
-{
-	GP_WRAP_START;
-	{
-		return false;
-	}
-	GP_WRAP_END;
-	return false;
-}
-
 char *
 gpdb::DefGetString(DefElem *defelem)
 {
@@ -2633,7 +2624,9 @@ gpdb::MDCacheNeedsReset(void)
 			mdcache_invalidation_counter_registered = true;
 		}
 		if (last_mdcache_invalidation_counter == mdcache_invalidation_counter)
+		{
 			return false;
+		}
 		else
 		{
 			last_mdcache_invalidation_counter = mdcache_invalidation_counter;

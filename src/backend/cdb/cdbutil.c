@@ -1034,8 +1034,26 @@ cdbcomponent_getComponentInfo(int contentId)
 static void
 ensureInterconnectAddress(void)
 {
+	/*
+	 * If the address type is wildcard, there is no need to populate an unicast
+	 * address in interconnect_address.
+	 */
+	if (Gp_interconnect_address_type == INTERCONNECT_ADDRESS_TYPE_WILDCARD)
+	{
+		interconnect_address = NULL;
+		return;
+	}
+
+	Assert(Gp_interconnect_address_type == INTERCONNECT_ADDRESS_TYPE_UNICAST);
+
+	/* If the unicast address has already been assigned, exit early. */
 	if (interconnect_address)
 		return;
+
+	/*
+	 * Retrieve the segment's gp_segment_configuration.address value, in order
+	 * to setup interconnect_address
+	 */
 
 	if (GpIdentity.segindex >= 0)
 	{

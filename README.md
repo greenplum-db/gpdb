@@ -1,6 +1,5 @@
 **Concourse Pipeline** [![Concourse Build Status](https://prod.ci.gpdb.pivotal.io/api/v1/teams/main/pipelines/gpdb_master/badge)](https://prod.ci.gpdb.pivotal.io/teams/main/pipelines/gpdb_master) |
 **Travis Build** [![Travis Build Status](https://travis-ci.org/greenplum-db/gpdb.svg?branch=master)](https://travis-ci.org/greenplum-db/gpdb) |
-**Zuul Regression Test On Arm** [![Zuul Regression Test Status](http://openlabtesting.org:15000/badge?project=greenplum-db%2Fgpdb)](https://status.openlabtesting.org/builds/builds?project=greenplum-db%2Fgpdb&job_name=gpdb-installcheck-world-tests-on-arm64)
 
 ----------------------------------------------------------------------
 
@@ -46,6 +45,9 @@ Follow [appropriate linux steps](README.Linux.md) for getting your system ready 
 ### Build the database
 
 ```
+# Initialize and update submodules in the repository
+git submodule update --init
+
 # Configure build environment to install at /usr/local/gpdb
 ./configure --with-perl --with-python --with-libxml --with-gssapi --prefix=/usr/local/gpdb
 
@@ -62,11 +64,13 @@ make create-demo-cluster
 source gpAux/gpdemo/gpdemo-env.sh
 ```
 
-The directory and the TCP ports for the demo cluster can be changed on the fly.
-Instead of `make cluster`, consider:
+The directory, the TCP ports, the number of segments, and the existence of
+standbys for segments and coordinator for the demo cluster can be changed
+on the fly.
+Instead of `make create-demo-cluster`, consider:
 
 ```
-DATADIRS=/tmp/gpdb-cluster PORT_BASE=5555 make cluster
+DATADIRS=/tmp/gpdb-cluster PORT_BASE=5555 NUM_PRIMARY_MIRROR_PAIRS=1 WITH_MIRRORS=false make create-demo-cluster
 ```
 
 The TCP port for the regression test can be changed on the fly:

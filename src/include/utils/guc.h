@@ -247,7 +247,7 @@ typedef enum
 #define GUC_GPDB_NEED_SYNC     0x00400000  /* guc value is synced between master and primary */
 #define GUC_GPDB_NO_SYNC       0x00800000  /* guc value is not synced between master and primary */
 
-/* GUC lists for gp_guc_list_show().  (List of struct config_generic) */
+/* GUC lists for gp_guc_list_init().  (List of struct config_generic) */
 extern List    *gp_guc_list_for_explain;
 extern List    *gp_guc_list_for_no_plan;
 
@@ -509,6 +509,7 @@ extern bool optimizer_enable_mergejoin;
 extern bool optimizer_prune_unused_columns;
 extern bool optimizer_enable_redistribute_nestloop_loj_inner_child;
 extern bool optimizer_force_comprehensive_join_implementation;
+extern bool optimizer_enable_replicated_table;
 
 /* Optimizer plan enumeration related GUCs */
 extern bool optimizer_enumerate_plans;
@@ -601,6 +602,8 @@ extern bool gp_enable_global_deadlock_detector;
 
 extern bool gp_log_endpoints;
 
+extern bool gp_allow_date_field_width_5digits;
+
 typedef enum
 {
 	INDEX_CHECK_NONE,
@@ -611,7 +614,6 @@ typedef enum
 extern IndexCheckType gp_indexcheck_insert;
 
 /* Storage option names */
-#define SOPT_APPENDONLY    "appendonly"
 #define SOPT_FILLFACTOR    "fillfactor"
 #define SOPT_BLOCKSIZE     "blocksize"
 #define SOPT_COMPTYPE      "compresstype"
@@ -733,8 +735,6 @@ extern ArrayType *GUCArrayDelete(ArrayType *array, const char *name);
 extern ArrayType *GUCArrayReset(ArrayType *array);
 
 extern void pg_timezone_abbrev_initialize(void);
-
-extern List *gp_guc_list_show(GucSource excluding, List *guclist);
 
 extern struct config_generic *find_option(const char *name,
 				bool create_placeholders, int elevel);

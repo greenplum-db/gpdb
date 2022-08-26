@@ -91,7 +91,7 @@ jobs:
       file: gpdb_pr/concourse/tasks/compile_gpdb.yml
       image: gpdb7-centos7-build
       params:
-        CONFIGURE_FLAGS: ((configure_flags_with_extensions))
+        CONFIGURE_FLAGS: "--enable-cassert --enable-tap-tests --enable-debug-extensions"
         BLD_TARGETS: "clients loaders"
       timeout: 30m
 
@@ -106,7 +106,7 @@ jobs:
         params:
           MAKE_TEST_COMMAND: PGOPTIONS='-c optimizer=off' installcheck-world
           TEST_OS: centos
-          CONFIGURE_FLAGS: ((configure_flags))
+          CONFIGURE_FLAGS: "--enable-cassert --enable-tap-tests"
         timeout: 3h
 
       - task: icw_gporca_centos7
@@ -119,7 +119,7 @@ jobs:
         params:
           MAKE_TEST_COMMAND: PGOPTIONS='-c optimizer=on' installcheck-world
           TEST_OS: centos
-          CONFIGURE_FLAGS: ((configure_flags))
+          CONFIGURE_FLAGS: "--enable-cassert --enable-tap-tests"
         timeout: 5h
 
       - task: unit_tests_gporca_centos7

@@ -144,7 +144,7 @@ SELECT * FROM information_schema.tables;
         <dxl:SumAgg Mdid="0.0.0.0"/>
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
-      <dxl:Relation Mdid="0.6040.1.1" Name="pg_exttable" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="MasterOnly" Keys="16,10">
+      <dxl:Relation Mdid="0.6040.1.1" Name="pg_exttable" IsTemporary="false" StorageType="Heap" DistributionPolicy="MasterOnly" Keys="16,10">
         <dxl:Columns>
           <dxl:Column Name="reloid" Attno="1" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -421,7 +421,7 @@ SELECT * FROM information_schema.tables;
       <dxl:ColumnStatistics Mdid="1.6040.1.1.5" Name="rejectlimit" Width="8.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000"/>
       <dxl:ColumnStatistics Mdid="1.6040.1.1.4" Name="command" Width="8.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000"/>
       <dxl:RelationStatistics Mdid="2.2615.1.1" Name="pg_namespace" Rows="7.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.2615.1.0" Name="pg_namespace" IsTemporary="false" HasOids="true" StorageType="Heap" DistributionPolicy="MasterOnly" Keys="10,3">
+      <dxl:Relation Mdid="0.2615.1.0" Name="pg_namespace" IsTemporary="false" StorageType="Heap" DistributionPolicy="MasterOnly" Keys="10,3">
         <dxl:Columns>
           <dxl:Column Name="nspname" Attno="1" Mdid="0.19.1.0" Nullable="false" ColWidth="64">
             <dxl:DefaultValue/>
@@ -471,7 +471,7 @@ SELECT * FROM information_schema.tables;
         <dxl:OpFunc Mdid="0.858.1.0"/>
         <dxl:InverseOp Mdid="0.1208.1.0"/>
       </dxl:GPDBScalarOp>
-      <dxl:Relation Mdid="0.2615.1.1" Name="pg_namespace" IsTemporary="false" HasOids="true" StorageType="Heap" DistributionPolicy="MasterOnly" Keys="10,3">
+      <dxl:Relation Mdid="0.2615.1.1" Name="pg_namespace" IsTemporary="false" StorageType="Heap" DistributionPolicy="MasterOnly" Keys="10,3">
         <dxl:Columns>
           <dxl:Column Name="nspname" Attno="1" Mdid="0.19.1.0" Nullable="false" ColWidth="64">
             <dxl:DefaultValue/>
@@ -972,7 +972,7 @@ SELECT * FROM information_schema.tables;
       <dxl:ColumnStatistics Mdid="1.6040.1.1.1" Name="location" Width="8.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000"/>
       <dxl:ColumnStatistics Mdid="1.6040.1.1.0" Name="reloid" Width="8.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000"/>
       <dxl:RelationStatistics Mdid="2.1259.1.1" Name="pg_class" Rows="337.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.1259.1.0" Name="pg_class" IsTemporary="false" HasOids="true" StorageType="Heap" DistributionPolicy="MasterOnly" Keys="37,30">
+      <dxl:Relation Mdid="0.1259.1.0" Name="pg_class" IsTemporary="false" StorageType="Heap" DistributionPolicy="MasterOnly" Keys="37,30">
         <dxl:Columns>
           <dxl:Column Name="relname" Attno="1" Mdid="0.19.1.0" Nullable="false" ColWidth="64">
             <dxl:DefaultValue/>
@@ -1096,7 +1096,7 @@ SELECT * FROM information_schema.tables;
         <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.1259.1.1" Name="pg_class" IsTemporary="false" HasOids="true" StorageType="Heap" DistributionPolicy="MasterOnly" Keys="37,30">
+      <dxl:Relation Mdid="0.1259.1.1" Name="pg_class" IsTemporary="false" StorageType="Heap" DistributionPolicy="MasterOnly" Keys="37,30">
         <dxl:Columns>
           <dxl:Column Name="relname" Attno="1" Mdid="0.19.1.0" Nullable="false" ColWidth="64">
             <dxl:DefaultValue/>

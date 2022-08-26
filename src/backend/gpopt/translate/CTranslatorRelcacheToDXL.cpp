@@ -358,7 +358,6 @@ CTranslatorRelcacheToDXL::RetrieveRel(CMemoryPool *mp, CMDAccessor *md_accessor,
 	ULongPtr2dArray *keyset_array = nullptr;
 	IMdIdArray *check_constraint_mdids = nullptr;
 	BOOL is_temporary = false;
-	BOOL has_oids = false;
 	BOOL is_partitioned = false;
 	IMDRelation *md_rel = nullptr;
 	IMdIdArray *partition_oids = nullptr;
@@ -435,7 +434,6 @@ CTranslatorRelcacheToDXL::RetrieveRel(CMemoryPool *mp, CMDAccessor *md_accessor,
 	check_constraint_mdids = RetrieveRelCheckConstraints(mp, oid);
 
 	is_temporary = (rel->rd_rel->relpersistence == RELPERSISTENCE_TEMP);
-	has_oids = false;
 
 	GPOS_DELETE_ARRAY(attno_mapping);
 
@@ -476,7 +474,7 @@ CTranslatorRelcacheToDXL::RetrieveRel(CMemoryPool *mp, CMDAccessor *md_accessor,
 			distr_cols, distr_op_families, part_keys, part_types,
 			num_leaf_partitions, partition_oids, convert_hash_to_random,
 			keyset_array, md_index_info_array, mdid_triggers_array,
-			check_constraint_mdids, mdpart_constraint, has_oids);
+			check_constraint_mdids, mdpart_constraint);
 	}
 
 	return md_rel;
@@ -503,8 +501,10 @@ CTranslatorRelcacheToDXL::RetrieveRelColumns(CMemoryPool *mp,
 		// FIXME: XXX in hindsight, we can fallback less often.
 		//  We _really_ should only fallback on DML, not *all the time*
 		if (rel->rd_att->attrs[ul].attgenerated)
+		{
 			GPOS_RAISE(gpdxl::ExmaMD, gpdxl::ExmiMDObjUnsupported,
 					   GPOS_WSZ_LIT("column has GENERATED default value"));
+		}
 	}
 
 	for (ULONG ul = 0; ul < (ULONG) rel->rd_att->natts; ul++)
@@ -1278,8 +1278,10 @@ CTranslatorRelcacheToDXL::LookupFuncProps(
 	*access = GetEFuncDataAccess(gpdb::FuncDataAccess(func_oid));
 
 	if (gpdb::FuncExecLocation(func_oid) != PROEXECLOCATION_ANY)
+	{
 		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature,
 				   GPOS_WSZ_LIT("unsupported exec location"));
+	}
 
 	*returns_set = gpdb::GetFuncRetset(func_oid);
 	*is_strict = gpdb::FuncStrict(func_oid);
@@ -1620,7 +1622,9 @@ CTranslatorRelcacheToDXL::RetrieveAggIntermediateResultType(CMemoryPool *mp,
 	 * right datatype.
 	 */
 	if (intermediate_type_oid == INTERNALOID)
+	{
 		intermediate_type_oid = BYTEAOID;
+	}
 
 	return GPOS_NEW(mp) CMDIdGPDB(intermediate_type_oid);
 }
@@ -2445,9 +2449,13 @@ CTranslatorRelcacheToDXL::RetrieveRelStorageType(Relation rel)
 				rel_storage_type = IMDRelation::ErelstorageCompositeType;
 			}
 			else if (rel->rd_rel->relkind == RELKIND_PARTITIONED_TABLE)
+			{
 				rel_storage_type = RetrieveStorageTypeForPartitionedTable(rel);
+			}
 			else if (gpdb::RelIsExternalTable(rel->rd_id))
+			{
 				rel_storage_type = IMDRelation::ErelstorageExternal;
+			}
 			else
 			{
 				// GPORCA does not support foreign data wrappers
@@ -2682,7 +2690,9 @@ CTranslatorRelcacheToDXL::IsIndexSupported(Relation index_rel)
 
 	// covering index -- it has INCLUDE (...) columns
 	if (index_rel->rd_index->indnatts > index_rel->rd_index->indnkeyatts)
+	{
 		return false;
+	}
 
 	// index expressions and index constraints not supported
 	return gpdb::HeapAttIsNull(tup, Anum_pg_index_indexprs) &&

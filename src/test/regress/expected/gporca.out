@@ -14409,3 +14409,22 @@ select c from mix_func_cast();
  t
 (1 row)
 
+-- the query with empty CTE producer target list should fall back to Postgres
+-- optimizer without any error on build without asserts
+drop table if exists empty_cte_tl_test;
+NOTICE:  table "empty_cte_tl_test" does not exist, skipping
+create table empty_cte_tl_test(id int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'id' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+set optimizer_trace_fallback = on;
+with cte as (
+  select from empty_cte_tl_test
+)
+select * 
+from empty_cte_tl_test
+where id in(select id from cte);
+ id 
+----
+(0 rows)
+
+reset optimizer_trace_fallback;

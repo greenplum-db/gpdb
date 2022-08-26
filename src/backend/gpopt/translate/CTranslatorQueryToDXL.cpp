@@ -86,6 +86,7 @@ using namespace gpmd;
 extern bool optimizer_enable_ctas;
 extern bool optimizer_enable_dml;
 extern bool optimizer_enable_dml_constraints;
+extern bool optimizer_enable_replicated_table;
 extern bool optimizer_enable_multiple_distinct_aggs;
 
 // OIDs of variants of LEAD window function
@@ -155,9 +156,13 @@ CTranslatorQueryToDXL::CTranslatorQueryToDXL(
 	// If this is a subquery, make a copy of the parent's mapping, otherwise
 	// initialize a new, empty, mapping.
 	if (var_colid_mapping)
+	{
 		m_var_to_colid_map = var_colid_mapping->CopyMapColId(m_mp);
+	}
 	else
+	{
 		m_var_to_colid_map = GPOS_NEW(m_mp) CMappingVarColId(m_mp);
+	}
 
 	m_query_level_to_cte_map = GPOS_NEW(m_mp) HMUlCTEListEntry(m_mp);
 	m_dxl_cte_producers = GPOS_NEW(m_mp) CDXLNodeArray(m_mp);
@@ -266,7 +271,9 @@ CTranslatorQueryToDXL::~CTranslatorQueryToDXL()
 	CRefCount::SafeRelease(m_dxl_query_output_cols);
 
 	if (m_query_level == 0)
+	{
 		GPOS_DELETE(m_context);
+	}
 }
 
 //---------------------------------------------------------------------------
@@ -521,13 +528,17 @@ CTranslatorQueryToDXL::TranslateSelectQueryToDXL()
 
 	// RETURNING is not supported yet.
 	if (m_query->returningList)
+	{
 		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature,
 				   GPOS_WSZ_LIT("RETURNING clause"));
+	}
 
 	// ON CONFLICT is not supported yet.
 	if (m_query->onConflict)
+	{
 		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature,
 				   GPOS_WSZ_LIT("ON CONFLICT clause"));
+	}
 
 	CDXLNode *child_dxlnode = nullptr;
 	IntToUlongMap *sort_group_attno_to_colid_mapping =
@@ -982,15 +993,13 @@ CTranslatorQueryToDXL::TranslateCTASToDXL()
 	CDXLCtasStorageOptions::CDXLCtasOptionArray *ctas_storage_options =
 		GetDXLCtasOptionArray(NIL, &rel_storage_type);
 
-	//	BOOL has_oids = gpdb::InterpretOidsOption(into_clause->options);
-	BOOL has_oids = false;
 	BOOL fTempTable = true;
 	CDXLLogicalCTAS *ctas_dxlop = GPOS_NEW(m_mp) CDXLLogicalCTAS(
 		m_mp, mdid, md_schema_name, md_relname, dxl_col_descr_array,
 		GPOS_NEW(m_mp) CDXLCtasStorageOptions(
 			md_tablespace_name, ctas_commit_action, ctas_storage_options),
 		rel_distr_policy, distribution_colids, distr_opfamilies,
-		distr_opclasses, fTempTable, has_oids, rel_storage_type, source_array,
+		distr_opclasses, fTempTable, rel_storage_type, source_array,
 		var_typmods);
 
 	return GPOS_NEW(m_mp) CDXLNode(m_mp, ctas_dxlop, query_dxlnode);
@@ -1249,12 +1258,6 @@ CTranslatorQueryToDXL::TranslateUpdateQueryToDXL()
 	ULONG segmentid_colid = 0;
 	GetCtidAndSegmentId(&ctid_colid, &segmentid_colid);
 
-	ULONG tuple_oid_colid = 0;
-
-
-	// GPDB_12_MERGE_FIXME: Dead code, this needs to be removed from Orca too
-	BOOL has_oids = false;
-
 	// get (resno -> colId) mapping of columns to be updated
 	IntToUlongMap *update_column_map = UpdatedColumnMapping();
 
@@ -1292,9 +1295,9 @@ CTranslatorQueryToDXL::TranslateUpdateQueryToDXL()
 	}
 
 	update_column_map->Release();
-	CDXLLogicalUpdate *pdxlopupdate = GPOS_NEW(m_mp) CDXLLogicalUpdate(
-		m_mp, table_descr, ctid_colid, segmentid_colid, delete_colid_array,
-		insert_colid_array, has_oids, tuple_oid_colid);
+	CDXLLogicalUpdate *pdxlopupdate = GPOS_NEW(m_mp)
+		CDXLLogicalUpdate(m_mp, table_descr, ctid_colid, segmentid_colid,
+						  delete_colid_array, insert_colid_array);
 
 	return GPOS_NEW(m_mp) CDXLNode(m_mp, pdxlopupdate, query_dxlnode);
 }
@@ -3294,6 +3297,15 @@ CTranslatorQueryToDXL::NoteDistributionPolicyOpclasses(const RangeTblEntry *rte)
 			return;
 		}
 
+		if (!optimizer_enable_replicated_table &&
+			policy->ptype == POLICYTYPE_REPLICATED)
+		{
+			GPOS_RAISE(
+				gpdxl::ExmaMD, gpdxl::ExmiMDObjUnsupported,
+				GPOS_WSZ_LIT(
+					"Use optimizer_enable_replicated_table to enable replicated tables"));
+		}
+
 		int policy_nattrs = policy->nattrs;
 		TupleDesc desc = rel->rd_att;
 		bool contains_default_hashops = false;
@@ -3321,9 +3333,13 @@ CTranslatorQueryToDXL::NoteDistributionPolicyOpclasses(const RangeTblEntry *rte)
 					gpdb::GetDefaultDistributionOpclassForType(typeoid);
 
 				if (opclasses[i] == default_opclass)
+				{
 					contains_default_hashops = true;
+				}
 				else
+				{
 					contains_nondefault_hashops = true;
+				}
 			}
 		}
 
@@ -3340,10 +3356,12 @@ CTranslatorQueryToDXL::NoteDistributionPolicyOpclasses(const RangeTblEntry *rte)
 		{
 			if (m_context->m_distribution_hashops !=
 				DistrHashOpsNotDeterminedYet)
+			{
 				GPOS_RAISE(
 					gpdxl::ExmaMD, gpdxl::ExmiMDObjUnsupported,
 					GPOS_WSZ_LIT(
 						"Query contains relations with a mix of default and legacy hash opclasses"));
+			}
 			m_context->m_distribution_hashops = DistrUseDefaultHashOps;
 		}
 		if (contains_legacy_hashops &&
@@ -3351,10 +3369,12 @@ CTranslatorQueryToDXL::NoteDistributionPolicyOpclasses(const RangeTblEntry *rte)
 		{
 			if (m_context->m_distribution_hashops !=
 				DistrHashOpsNotDeterminedYet)
+			{
 				GPOS_RAISE(
 					gpdxl::ExmaMD, gpdxl::ExmiMDObjUnsupported,
 					GPOS_WSZ_LIT(
 						"Query contains relations with a mix of default and legacy hash opclasses"));
+			}
 			m_context->m_distribution_hashops = DistrUseLegacyHashOps;
 		}
 	}
@@ -3760,8 +3780,14 @@ CTranslatorQueryToDXL::TranslateCTEToDXL(const RangeTblEntry *rte,
 	const List *cte_producer_target_list =
 		cte_list_entry->GetCTEProducerTargetList(rte->ctename);
 
-	GPOS_ASSERT(nullptr != cte_producer_dxlnode &&
-				nullptr != cte_producer_target_list);
+	// fallback to Postgres optimizer in case of empty target list
+	if (NIL == cte_producer_target_list)
+	{
+		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature,
+				   GPOS_WSZ_LIT("Empty target list"));
+	}
+
+	GPOS_ASSERT(nullptr != cte_producer_dxlnode);
 
 	CDXLLogicalCTEProducer *cte_producer_dxlop =
 		CDXLLogicalCTEProducer::Cast(cte_producer_dxlnode->GetOperator());
@@ -3912,7 +3938,9 @@ CTranslatorQueryToDXL::TranslateJoinExprInFromToDXL(JoinExpr *join_expr)
 		Node *join_alias_node = (Node *) lfirst(lc_node);
 		// rte->joinaliasvars may contain NULL ptrs which indicates dropped columns
 		if (!join_alias_node)
+		{
 			continue;
+		}
 		GPOS_ASSERT(IsA(join_alias_node, Var) ||
 					IsA(join_alias_node, CoalesceExpr));
 		Value *value = (Value *) lfirst(lc_col_name);

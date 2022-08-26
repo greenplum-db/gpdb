@@ -433,7 +433,7 @@ CREATE WRITABLE EXTERNAL WEB [TEMPORARY | TEMP] TABLE &lt;table_name>
           <pt>ENCODING <varname>'encoding'</varname></pt>
           <pd>Character set encoding to use for the external table. Specify a string constant (such
             as <codeph>'SQL_ASCII'</codeph>), an integer encoding number, or
-              <codeph>DEFAULT</codeph> to use the default client encoding. See <xref
+              <codeph>DEFAULT</codeph> to use the default server encoding. See <xref
               href="../character_sets.xml" type="topic" format="dita"/>.</pd>
         </plentry>
         <plentry>

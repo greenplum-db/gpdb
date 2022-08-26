@@ -68,7 +68,6 @@ typedef struct toast_compress_header
 #define TOAST_COMPRESS_SET_RAWSIZE(ptr, len) \
 	(((toast_compress_header *) (ptr))->rawsize = (len))
 
-static void toast_delete_datum(Relation rel, Datum value, bool is_speculative);
 static Datum toast_save_datum(Relation rel, Datum value,
 							  struct varlena *oldexternal, bool isFrozen, int options);
 static bool toastrel_valueid_exists(Relation toastrel, Oid valueid);
@@ -879,10 +878,8 @@ toast_insert_or_update_generic(Relation rel, void *newtup, void *oldtup,
 	}
 	else
 	{
-		/* Since reloptions for AO table is not permitted, so using TOAST_TUPLE_TARGET */
-		hoff = sizeof(MemTupleData);
-		hoff = MAXALIGN(hoff);
-		maxDataLen = TOAST_TUPLE_TARGET - hoff;
+		maxDataLen = toast_tuple_target;
+		hoff = -1; /* keep compiler quiet about using 'hoff' uninitialized */
 	}
 
 	/*
@@ -1095,7 +1092,15 @@ toast_insert_or_update_generic(Relation rel, void *newtup, void *oldtup,
 	 * increase the target tuple size, so that 'm' attributes aren't stored
 	 * externally unless really necessary.
 	 */
-	maxDataLen = TOAST_TUPLE_TARGET_MAIN - hoff;
+	/*
+	 * FIXME: Should we do something like this with memtuples on
+	 * AO tables too? Currently we do not increase the target tuple size for AO
+	 * table, so there are occasions when columns of type 'm' will be stored
+	 * out-of-line but they could otherwise be accommodated in-block
+	 * c.f. upstream Postgres commit ca7c8168de76459380577eda56a3ed09b4f6195c
+	 */
+	if (!ismemtuple)
+		maxDataLen = TOAST_TUPLE_TARGET_MAIN - hoff;
 
 	while (compute_dest_tuplen(tupleDesc, pbind, has_nulls,
 							   toast_values, toast_isnull) > maxDataLen &&
@@ -1960,7 +1965,7 @@ toast_save_datum(Relation rel, Datum value,
  *	Delete a single external stored value.
  * ----------
  */
-static void
+void
 toast_delete_datum(Relation rel, Datum value, bool is_speculative)
 {
 	struct varlena *attr = (struct varlena *) DatumGetPointer(value);

@@ -284,7 +284,6 @@ CTranslatorUtils::ConvertToCDXLLogicalTVF(CMemoryPool *mp,
 
 		CMDName *func_name =
 			CDXLUtils::CreateMDNameFromCharArray(mp, rte->eref->aliasname);
-		mdid_return_type->AddRef();
 
 		// if TVF evaluates to const, pass invalid key as funcid
 		CDXLLogicalTVF *tvf_dxl = GPOS_NEW(mp)
@@ -2501,13 +2500,17 @@ CTranslatorUtils::IsCompositeConst(CMemoryPool *mp, CMDAccessor *md_accessor,
 								   const RangeTblFunction *rtfunc)
 {
 	if (!IsA(rtfunc->funcexpr, Const))
+	{
 		return false;
+	}
 
 	Const *constExpr = (Const *) rtfunc->funcexpr;
 
 	CMDIdGPDB *mdid_return_type = GPOS_NEW(mp) CMDIdGPDB(constExpr->consttype);
 
 	const IMDType *type = md_accessor->RetrieveType(mdid_return_type);
+
+	mdid_return_type->Release();
 
 	return type->IsComposite();
 }

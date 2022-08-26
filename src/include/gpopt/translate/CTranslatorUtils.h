@@ -48,7 +48,7 @@ namespace gpopt
 class CMDAccessor;
 
 // dynamic array of bitsets
-typedef CDynamicPtrArray<CBitSet, CleanupRelease> CBitSetArray;
+using CBitSetArray = CDynamicPtrArray<CBitSet, CleanupRelease>;
 }  // namespace gpopt
 
 namespace gpdxl

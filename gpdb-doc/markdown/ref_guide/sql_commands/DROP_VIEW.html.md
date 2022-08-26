@@ -28,7 +28,7 @@ RESTRICT
 
 ## <a id="section5"></a>Examples 
 
-Remove the view `topten`;
+Remove the view `topten`:
 
 ```
 DROP VIEW topten;

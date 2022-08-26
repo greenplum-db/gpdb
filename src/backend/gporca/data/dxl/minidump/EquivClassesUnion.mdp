@@ -128,7 +128,7 @@
       <dxl:ColumnStatistics Mdid="1.969810.1.1.3" Name="ctid" Width="6.000000"/>
       <dxl:ColumnStatistics Mdid="1.969810.1.1.2" Name="c" Width="8.000000"/>
       <dxl:RelationStatistics Mdid="2.969810.1.1" Name="foo" Rows="0.000000"/>
-      <dxl:Relation Mdid="0.969810.1.1" Name="foo" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3">
+      <dxl:Relation Mdid="0.969810.1.1" Name="foo" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -174,7 +174,7 @@
       <dxl:ColumnStatistics Mdid="1.969810.1.1.1" Name="b" Width="8.000000"/>
       <dxl:ColumnStatistics Mdid="1.969810.1.1.0" Name="a" Width="8.000000"/>
       <dxl:RelationStatistics Mdid="2.969833.1.1" Name="bar" Rows="0.000000"/>
-      <dxl:Relation Mdid="0.969833.1.1" Name="bar" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3">
+      <dxl:Relation Mdid="0.969833.1.1" Name="bar" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3">
         <dxl:Columns>
           <dxl:Column Name="x" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>

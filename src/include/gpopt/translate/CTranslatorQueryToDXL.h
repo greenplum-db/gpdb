@@ -44,13 +44,13 @@ namespace gpdxl
 using namespace gpos;
 using namespace gpopt;
 
-typedef CHashMap<ULONG, BOOL, gpos::HashValue<ULONG>, gpos::Equals<ULONG>,
-				 CleanupDelete<ULONG>, CleanupDelete<BOOL> >
-	UlongBoolHashMap;
+using UlongBoolHashMap =
+	CHashMap<ULONG, BOOL, gpos::HashValue<ULONG>, gpos::Equals<ULONG>,
+			 CleanupDelete<ULONG>, CleanupDelete<BOOL>>;
 
-typedef CHashMapIter<INT, ULONG, gpos::HashValue<INT>, gpos::Equals<INT>,
-					 CleanupDelete<INT>, CleanupDelete<ULONG> >
-	IntUlongHashmapIter;
+using IntUlongHashmapIter =
+	CHashMapIter<INT, ULONG, gpos::HashValue<INT>, gpos::Equals<INT>,
+				 CleanupDelete<INT>, CleanupDelete<ULONG>>;
 
 //---------------------------------------------------------------------------
 //	@class:

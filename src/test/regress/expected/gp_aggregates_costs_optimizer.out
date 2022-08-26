@@ -37,14 +37,18 @@ explain select avg(b) from cost_agg_t1 group by c;
 explain select avg(b) from cost_agg_t2 group by c;
                                              QUERY PLAN                                              
 -----------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..501.88 rows=305691 width=8)
-   ->  HashAggregate  (cost=0.00..492.76 rows=101897 width=8)
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..510.02 rows=290794 width=8)
+   ->  Finalize HashAggregate  (cost=0.00..501.35 rows=96932 width=8)
          Group Key: c
-         ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..452.01 rows=333334 width=8)
+         Planned Partitions: 8
+         ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..489.20 rows=96932 width=12)
                Hash Key: c
-               ->  Seq Scan on cost_agg_t2  (cost=0.00..438.70 rows=333334 width=8)
+               ->  Streaming Partial HashAggregate  (cost=0.00..485.56 rows=96932 width=12)
+                     Group Key: c
+                     Planned Partitions: 8
+                     ->  Seq Scan on cost_agg_t2  (cost=0.00..438.70 rows=333334 width=8)
  Optimizer: Pivotal Optimizer (GPORCA)
-(7 rows)
+(11 rows)
 
 -- But if there are a lot more duplicate values, the two-stage plan becomes
 -- cheaper again, even though it doesn't git in memory and has to spill.
@@ -53,16 +57,18 @@ analyze cost_agg_t2;
 explain select avg(b) from cost_agg_t2 group by c;
                                              QUERY PLAN                                              
 -----------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..504.85 rows=102902 width=8)
-   ->  Finalize HashAggregate  (cost=0.00..501.78 rows=34301 width=8)
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..504.94 rows=104001 width=8)
+   ->  Finalize HashAggregate  (cost=0.00..501.84 rows=34667 width=8)
          Group Key: c
-         ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..497.48 rows=34301 width=12)
+         Planned Partitions: 8
+         ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..497.49 rows=34667 width=12)
                Hash Key: c
-               ->  Streaming Partial HashAggregate  (cost=0.00..496.19 rows=34301 width=12)
+               ->  Streaming Partial HashAggregate  (cost=0.00..496.19 rows=34667 width=12)
                      Group Key: c
+                     Planned Partitions: 8
                      ->  Seq Scan on cost_agg_t2  (cost=0.00..440.24 rows=400000 width=8)
  Optimizer: Pivotal Optimizer (GPORCA)
-(9 rows)
+(11 rows)
 
 drop table cost_agg_t1;
 drop table cost_agg_t2;
@@ -83,15 +89,19 @@ explain (costs off) select b, sum(a) from t_planner_force_multi_stage group by b
                             QUERY PLAN                            
 ------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  GroupAggregate
+   ->  Finalize GroupAggregate
          Group Key: b
          ->  Sort
                Sort Key: b
                ->  Redistribute Motion 3:3  (slice2; segments: 3)
                      Hash Key: b
-                     ->  Seq Scan on t_planner_force_multi_stage
+                     ->  Partial GroupAggregate
+                           Group Key: b
+                           ->  Sort
+                                 Sort Key: b
+                                 ->  Seq Scan on t_planner_force_multi_stage
  Optimizer: Pivotal Optimizer (GPORCA)
-(9 rows)
+(13 rows)
 
 set gp_eager_two_phase_agg = on;
 -- when forcing two stage, it should generate two stage agg plan.
@@ -99,15 +109,19 @@ explain (costs off) select b, sum(a) from t_planner_force_multi_stage group by b
                             QUERY PLAN                            
 ------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  GroupAggregate
+   ->  Finalize GroupAggregate
          Group Key: b
          ->  Sort
                Sort Key: b
                ->  Redistribute Motion 3:3  (slice2; segments: 3)
                      Hash Key: b
-                     ->  Seq Scan on t_planner_force_multi_stage
+                     ->  Partial GroupAggregate
+                           Group Key: b
+                           ->  Sort
+                                 Sort Key: b
+                                 ->  Seq Scan on t_planner_force_multi_stage
  Optimizer: Pivotal Optimizer (GPORCA)
-(9 rows)
+(13 rows)
 
 reset gp_eager_two_phase_agg;
 drop table t_planner_force_multi_stage;

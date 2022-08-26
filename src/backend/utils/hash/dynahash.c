@@ -86,6 +86,7 @@
 #include <limits.h>
 
 #include "access/xact.h"
+#include "common/hashfn.h"
 #include "storage/shmem.h"
 #include "storage/spin.h"
 #include "utils/dynahash.h"

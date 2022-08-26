@@ -265,11 +265,10 @@ ConnectDatabase(Archive *AHX,
 	 * Start the connection.  Loop until we have a password if requested by
 	 * backend.
 	 */
+	const char *keywords[8];
+	const char *values[8];
 	do
 	{
-		const char *keywords[8];
-		const char *values[8];
-
 		keywords[0] = "host";
 		values[0] = pghost;
 		keywords[1] = "port";
@@ -282,18 +281,8 @@ ConnectDatabase(Archive *AHX,
 		values[4] = dbname;
 		keywords[5] = "fallback_application_name";
 		values[5] = progname;
-		if (binary_upgrade)
-		{
-			keywords[6] = "options";
-			values[6] = "-c gp_role=utility";
-			keywords[7] = NULL;
-			values[7] = NULL;
-		}
-		else
-		{
-			keywords[6] = NULL;
-			values[6] = NULL;
-		}
+		keywords[6] = NULL;
+		values[6] = NULL;
 
 		new_pass = false;
 		AH->connection = PQconnectdbParams(keywords, values, true);
@@ -337,6 +326,21 @@ ConnectDatabase(Archive *AHX,
 	/* check for version mismatch */
 	_check_database_version(AH);
 
+	/* GPDB: If binary upgrade, we need to use the correct
+	 * session GUC to connect in utility mode, which depends on
+	 * the server version. We don't know the server version until
+	 * we connect for the first time, so set the correct GUC and
+	 * reconnect.
+	 */
+	if (binary_upgrade)
+	{
+		keywords[6] = "options";
+		values[6] = AH->public.remoteVersion < 12000 ?
+								"-c gp_session_role=utility" : "-c gp_role=utility";
+		keywords[7] = NULL;
+		values[7] = NULL;
+		AH->connection = PQconnectdbParams(keywords, values, true);
+	}
 	PQsetNoticeProcessor(AH->connection, notice_processor, NULL);
 
 	/* arrange for SIGINT to issue a query cancel on this connection */

@@ -817,13 +817,7 @@ get_index_paths(PlannerInfo *root, RelOptInfo *rel,
 			add_path(rel, (Path *) ipath);
 
 		if (index->amhasgetbitmap &&
-			/* GPDB: Give a chance of bitmap index path if seqscan is disabled.
-			 * GPDB_92_MERGE_FIXME: Maybe we should remove this check to follow
-			 * pg upstream? test co_nestloop_idxscan output will diff with and
-			 * without this line.
-			 */
-			(!enable_seqscan ||
-			 ipath->path.pathkeys == NIL ||
+			(ipath->path.pathkeys == NIL ||
 			 ipath->indexselectivity < 1.0))
 			*bitindexpaths = lappend(*bitindexpaths, ipath);
 	}

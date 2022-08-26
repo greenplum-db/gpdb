@@ -136,7 +136,7 @@
       <dxl:ColumnStatistics Mdid="1.46649.1.1.7" Name="tableoid" Width="4.000000"/>
       <dxl:ColumnStatistics Mdid="1.46649.1.1.6" Name="cmax" Width="4.000000"/>
       <dxl:RelationStatistics Mdid="2.46649.1.1" Name="m" Rows="10.000000"/>
-      <dxl:Relation Mdid="0.46649.1.1" Name="m" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="MasterOnly">
+      <dxl:Relation Mdid="0.46649.1.1" Name="m" IsTemporary="false" StorageType="Heap" DistributionPolicy="MasterOnly">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>

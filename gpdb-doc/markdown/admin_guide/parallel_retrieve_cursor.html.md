@@ -1,5 +1,5 @@
 ---
-title: Retrieving Query Results with a Parallel Retrieve Cursor (Beta)</title>
+title: Retrieving Query Results with a Parallel Retrieve Cursor</title>
 ---
 
 A *parallel retrieve cursor* is an enhanced cursor implementation that you can use to create a special kind of cursor on the Greenplum Database coordinator node, and retrieve query results, on demand and in parallel, directly from the Greenplum segments.
@@ -506,7 +506,7 @@ Refer to the [gp_segment_endpoints](../ref_guide/system_catalogs/gp_segment_endp
 
 The parallel retrieve cursor implementation has the following limitations:
 
-- The Pivotal Query Optimizer (GPORCA) does not support queries on a parallel retrieve cursor.
+- The Tanzu Greenplum Query Optimizer (GPORCA) does not support queries on a parallel retrieve cursor.
 - Greenplum Database ignores the `BINARY` clause when you declare a parallel retrieve cursor.
 - Parallel retrieve cursors cannot be declared `WITH HOLD`.
 - Parallel retrieve cursors do not support the `FETCH` and `MOVE` cursor operations.

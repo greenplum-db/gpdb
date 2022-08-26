@@ -18,20 +18,20 @@ teardown
 # SELECT will take AccessShare lock first on the table and then on its index.
 # We can simulate the case where DROP INDEX starts between those steps
 # by manually taking the table lock beforehand.
-session s1
-step s1begin    { BEGIN; }
-step s1lock     { LOCK TABLE part_drop_index_locking_subpart_child IN ACCESS SHARE MODE; }
-step s1select   { SELECT * FROM part_drop_index_locking_subpart_child; }
-step s1commit   { COMMIT; }
+session "s1"
+step "s1begin"    { BEGIN; }
+step "s1lock"     { LOCK TABLE part_drop_index_locking_subpart_child IN ACCESS SHARE MODE; }
+step "s1select"   { SELECT * FROM part_drop_index_locking_subpart_child; }
+step "s1commit"   { COMMIT; }
 
-session s2
-step s2begin    { BEGIN; }
-step s2drop     { DROP INDEX part_drop_index_locking_idx; }
-step s2dropsub  { DROP INDEX part_drop_index_locking_subpart_idx; }
-step s2commit   { COMMIT; }
+session "s2"
+step "s2begin"    { BEGIN; }
+step "s2drop"     { DROP INDEX part_drop_index_locking_idx; }
+step "s2dropsub"  { DROP INDEX part_drop_index_locking_subpart_idx; }
+step "s2commit"   { COMMIT; }
 
-session s3
-step s3getlocks {
+session "s3"
+step "s3getlocks" {
         SELECT s.query, c.relname, l.mode, l.granted
         FROM pg_locks l
                 JOIN pg_class c ON l.relation = c.oid
@@ -41,7 +41,7 @@ step s3getlocks {
 }
 
 # Run DROP INDEX on top partitioned table
-permutation s1begin s1lock s2begin s2drop(s1commit) s1select s3getlocks s1commit s3getlocks s2commit
+permutation "s1begin" "s1lock" "s2begin" "s2drop"("s1commit") "s1select" "s3getlocks" "s1commit" "s3getlocks" "s2commit"
 
 # Run DROP INDEX on top sub-partition table
-permutation s1begin s1lock s2begin s2dropsub(s1commit) s1select s3getlocks s1commit s3getlocks s2commit
+permutation "s1begin" "s1lock" "s2begin" "s2dropsub"("s1commit") "s1select" "s3getlocks" "s1commit" "s3getlocks" "s2commit"

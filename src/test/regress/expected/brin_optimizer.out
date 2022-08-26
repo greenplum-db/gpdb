@@ -406,11 +406,6 @@ WARNING:  ORCA did not produce a bitmap indexscan plan for (inetcol,>,inet,0.0.0
 WARNING:  ORCA did not produce a bitmap indexscan plan for (inetcol,>=,inet,0.0.0.0,125)
 WARNING:  ORCA did not produce a bitmap indexscan plan for (lsncol,IS,pg_lsn,,25)
 WARNING:  ORCA did not produce a bitmap indexscan plan for (lsncol,"IS NOT",pg_lsn,,100)
-WARNING:  ORCA did not produce a bitmap indexscan plan for (namecol,<,name,ZZAAAA,100)
-WARNING:  ORCA did not produce a bitmap indexscan plan for (namecol,<=,name,ZZAAAA,100)
-WARNING:  ORCA did not produce a bitmap indexscan plan for (namecol,=,name,MAAAAA,2)
-WARNING:  ORCA did not produce a bitmap indexscan plan for (namecol,>,name,AAAAAA,100)
-WARNING:  ORCA did not produce a bitmap indexscan plan for (namecol,>=,name,AAAAAA,100)
 -- Note: ORCA does not support all of the above operators:
 --       - standard comparison operators on inet and cidr columns
 --         because ORCA does not look at the second occurrence of a column in an index,
@@ -464,10 +459,10 @@ SELECT brin_summarize_new_values('brintest'); -- error, not an index
 ERROR:  "brintest" is not an index
 SELECT brin_summarize_new_values('tenk1_unique1'); -- error, not a BRIN index
 ERROR:  "tenk1_unique1" is not a BRIN index
-SELECT brin_summarize_new_values('brinidx'); -- ok, no change expected (except for ORCA, which uses split updates)
+SELECT brin_summarize_new_values('brinidx'); -- ok, no change expected
  brin_summarize_new_values 
 ---------------------------
-                        29
+                         0
 (1 row)
 
 -- Tests for brin_desummarize_range

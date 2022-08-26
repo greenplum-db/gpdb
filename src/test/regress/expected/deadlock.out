@@ -56,3 +56,12 @@ NOTICE:  drop cascades to 3 other objects
 DETAIL:  drop cascades to table l
 drop cascades to table r
 drop cascades to table sanity_check_distribution
+-- Check gp_dist_wait_status not failing within a transaction
+-- Github issue: https://github.com/greenplum-db/gpdb/issues/13795
+BEGIN;
+	select * from gp_dist_wait_status();
+ segid | waiter_dxid | holder_dxid | holdTillEndXact | waiter_lpid | holder_lpid | waiter_lockmode | waiter_locktype | waiter_sessionid | holder_sessionid 
+-------+-------------+-------------+-----------------+-------------+-------------+-----------------+-----------------+------------------+------------------
+(0 rows)
+
+COMMIT;

@@ -33,6 +33,7 @@
 
 #include "access/session.h"
 #include "access/xact.h"
+#include "common/hashfn.h"
 #include "storage/ipc.h"
 #include "utils/backend_cancel.h"
 #include "utils/dynahash.h"

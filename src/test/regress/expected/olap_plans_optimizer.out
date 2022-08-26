@@ -142,16 +142,21 @@ select sum(distinct a) from olap_test_single;
 
 -- Otherwise, need a more complicated plans
 explain select sum(distinct b) from olap_test_single;
-                                               QUERY PLAN                                                
----------------------------------------------------------------------------------------------------------
- Finalize Aggregate  (cost=0.00..431.15 rows=1 width=8)
-   ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..431.15 rows=1 width=8)
-         ->  Partial Aggregate  (cost=0.00..431.15 rows=1 width=8)
-               ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.15 rows=3334 width=4)
-                     Hash Key: b
-                     ->  Seq Scan on olap_test_single  (cost=0.00..431.08 rows=3334 width=4)
- Optimizer: Pivotal Optimizer (GPORCA) version 3.79.1
-(7 rows)
+                                                 QUERY PLAN
+------------------------------------------------------------------------------------------------------------
+ Aggregate  (cost=0.00..431.51 rows=1 width=8)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.51 rows=11 width=4)
+         ->  GroupAggregate  (cost=0.00..431.51 rows=4 width=4)
+               Group Key: b
+               ->  Sort  (cost=0.00..431.51 rows=4 width=4)
+                     Sort Key: b
+                     ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.51 rows=4 width=4)
+                           Hash Key: b
+                           ->  Streaming HashAggregate  (cost=0.00..431.51 rows=4 width=4)
+                                 Group Key: b
+                                 ->  Seq Scan on olap_test_single  (cost=0.00..431.08 rows=3334 width=4)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(12 rows)
 
 select sum(distinct b) from olap_test_single;
  sum 
@@ -165,14 +170,17 @@ select sum(distinct b) from olap_test_single;
 explain select sum(distinct d) from olap_test_single;
                                                QUERY PLAN                                                
 ---------------------------------------------------------------------------------------------------------
- Finalize Aggregate  (cost=0.00..431.15 rows=1 width=8)
-   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.15 rows=1 width=8)
-         ->  Partial Aggregate  (cost=0.00..431.15 rows=1 width=8)
-               ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.15 rows=3334 width=4)
+ Aggregate  (cost=0.00..432.12 rows=1 width=8)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..432.12 rows=10000 width=4)
+         ->  HashAggregate  (cost=0.00..431.97 rows=3334 width=4)
+               Group Key: d
+               ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.56 rows=3334 width=4)
                      Hash Key: d
-                     ->  Seq Scan on olap_test_single  (cost=0.00..431.08 rows=3334 width=4)
- Optimizer: Pivotal Optimizer (GPORCA) version 3.88.0
-(7 rows)
+                     ->  Streaming HashAggregate  (cost=0.00..431.52 rows=3334 width=4)
+                           Group Key: d
+                           ->  Seq Scan on olap_test_single  (cost=0.00..431.08 rows=3334 width=4)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(10 rows)
 
 select sum(distinct d) from olap_test_single;
    sum    
@@ -261,16 +269,17 @@ select a, b, c, sum(d) from olap_test group by grouping sets((a, b), (a), (b, c)
 explain select a, b, d, sum(d) from olap_test group by grouping sets((a, b), (a), (b, d));
                                                     QUERY PLAN                                                     
 -------------------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1727.49 rows=10022 width=20)
-   ->  Sequence  (cost=0.00..1726.74 rows=3341 width=20)
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1728.41 rows=10022 width=20)
+   ->  Sequence  (cost=0.00..1727.67 rows=3341 width=20)
          ->  Shared Scan (share slice:id 1:0)  (cost=0.00..431.16 rows=3334 width=1)
                ->  Seq Scan on olap_test  (cost=0.00..431.08 rows=3334 width=12)
-         ->  Append  (cost=0.00..1295.51 rows=3341 width=20)
-               ->  HashAggregate  (cost=0.00..431.99 rows=3334 width=16)
+         ->  Append  (cost=0.00..1296.44 rows=3341 width=20)
+               ->  Finalize HashAggregate  (cost=0.00..432.91 rows=3334 width=16)
                      Group Key: share0_ref2.b, share0_ref2.d
-                     ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.15 rows=3334 width=8)
+                     ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..432.07 rows=3334 width=16)
                            Hash Key: share0_ref2.b, share0_ref2.d
-                           ->  Result  (cost=0.00..431.06 rows=3334 width=8)
+                           ->  Streaming Partial HashAggregate  (cost=0.00..431.91 rows=3334 width=16)
+                                 Group Key: share0_ref2.b, share0_ref2.d
                                  ->  Shared Scan (share slice:id 2:0)  (cost=0.00..431.06 rows=3334 width=8)
                ->  Finalize GroupAggregate  (cost=0.00..431.48 rows=1 width=12)
                      Group Key: share0_ref3.a

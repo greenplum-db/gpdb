@@ -590,6 +590,19 @@ _copySeqScan(const SeqScan *from)
 	return newnode;
 }
 
+static DynamicSeqScan *
+_copyDynamicSeqScan(const DynamicSeqScan *from)
+{
+	DynamicSeqScan *newnode = makeNode(DynamicSeqScan);
+
+	CopyScanFields((Scan *) from, (Scan *) newnode);
+	COPY_NODE_FIELD(partOids);
+	COPY_NODE_FIELD(part_prune_info);
+	COPY_NODE_FIELD(join_prune_paramids);
+
+	return newnode;
+}
+
 /*
  * _copyExternalScanInfo
  */
@@ -663,6 +676,23 @@ _copyIndexScan(const IndexScan *from)
 }
 
 /*
+ * _copyDynamicIndexScan
+ */
+static DynamicIndexScan *
+_copyDynamicIndexScan(const DynamicIndexScan *from)
+{
+	DynamicIndexScan  *newnode = makeNode(DynamicIndexScan);
+
+	/* DynamicIndexScan has some content from IndexScan */
+	CopyIndexScanFields(&from->indexscan, &newnode->indexscan);
+	COPY_NODE_FIELD(partOids);
+	COPY_NODE_FIELD(part_prune_info);
+	COPY_NODE_FIELD(join_prune_paramids);
+
+	return newnode;
+}
+
+/*
  * _copyIndexOnlyScan
  */
 static IndexOnlyScan *
@@ -712,6 +742,19 @@ _copyBitmapIndexScan(const BitmapIndexScan *from)
 	return newnode;
 }
 
+/*
+ * _copyDynamicBitmapIndexScan
+ */
+static DynamicBitmapIndexScan *
+_copyDynamicBitmapIndexScan(const DynamicBitmapIndexScan *from)
+{
+	DynamicBitmapIndexScan *newnode = makeNode(DynamicBitmapIndexScan);
+
+	CopyBitmapIndexScanFields(&from->biscan, &newnode->biscan);
+
+	return newnode;
+}
+
 static void
 CopyBitmapHeapScanFields(const BitmapHeapScan *from, BitmapHeapScan *newnode)
 {
@@ -735,6 +778,22 @@ _copyBitmapHeapScan(const BitmapHeapScan *from)
 	BitmapHeapScan *newnode = makeNode(BitmapHeapScan);
 
 	CopyBitmapHeapScanFields(from, newnode);
+
+	return newnode;
+}
+
+/*
+ * _copyDynamicBitmapHeapScan
+ */
+static DynamicBitmapHeapScan *
+_copyDynamicBitmapHeapScan(const DynamicBitmapHeapScan *from)
+{
+	DynamicBitmapHeapScan *newnode = makeNode(DynamicBitmapHeapScan);
+
+	CopyBitmapHeapScanFields(&from->bitmapheapscan, &newnode->bitmapheapscan);
+	COPY_NODE_FIELD(partOids);
+	COPY_NODE_FIELD(part_prune_info);
+	COPY_NODE_FIELD(join_prune_paramids);
 
 	return newnode;
 }
@@ -1555,7 +1614,6 @@ _copySplitUpdate(const SplitUpdate *from)
 	CopyPlanFields((Plan *) from, (Plan *) newnode);
 
 	COPY_SCALAR_FIELD(actionColIdx);
-	COPY_SCALAR_FIELD(tupleoidColIdx);
 	COPY_NODE_FIELD(insertColIdx);
 	COPY_NODE_FIELD(deleteColIdx);
 
@@ -5801,6 +5859,9 @@ copyObjectImpl(const void *from)
 		case T_SeqScan:
 			retval = _copySeqScan(from);
 			break;
+		case T_DynamicSeqScan:
+			retval = _copyDynamicSeqScan(from);
+			break;
 		case T_ExternalScanInfo:
 			retval = _copyExternalScanInfo(from);
 			break;
@@ -5810,14 +5871,23 @@ copyObjectImpl(const void *from)
 		case T_IndexScan:
 			retval = _copyIndexScan(from);
 			break;
+		case T_DynamicIndexScan:
+			retval = _copyDynamicIndexScan(from);
+			break;
 		case T_IndexOnlyScan:
 			retval = _copyIndexOnlyScan(from);
 			break;
 		case T_BitmapIndexScan:
 			retval = _copyBitmapIndexScan(from);
 			break;
+		case T_DynamicBitmapIndexScan:
+			retval = _copyDynamicBitmapIndexScan(from);
+			break;
 		case T_BitmapHeapScan:
 			retval = _copyBitmapHeapScan(from);
+			break;
+		case T_DynamicBitmapHeapScan:
+			retval = _copyDynamicBitmapHeapScan(from);
 			break;
 		case T_TidScan:
 			retval = _copyTidScan(from);

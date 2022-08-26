@@ -3504,6 +3504,20 @@ select a from mix_func_cast();
 select b from mix_func_cast();
 select c from mix_func_cast();
 
+-- the query with empty CTE producer target list should fall back to Postgres
+-- optimizer without any error on build without asserts
+drop table if exists empty_cte_tl_test;
+create table empty_cte_tl_test(id int);
+
+set optimizer_trace_fallback = on;
+with cte as (
+  select from empty_cte_tl_test
+)
+select * 
+from empty_cte_tl_test
+where id in(select id from cte);
+reset optimizer_trace_fallback;
+
 -- start_ignore
 DROP SCHEMA orca CASCADE;
 -- end_ignore

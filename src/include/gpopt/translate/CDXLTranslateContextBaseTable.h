@@ -45,10 +45,9 @@ using namespace gpos;
 class CDXLTranslateContextBaseTable
 {
 	// hash maps mapping ULONG -> INT
-	typedef CHashMap<ULONG, INT, gpos::HashValue<ULONG>, gpos::Equals<ULONG>,
-					 CleanupDelete<ULONG>, CleanupDelete<INT> >
-		UlongToIntMap;
-
+	using UlongToIntMap =
+		CHashMap<ULONG, INT, gpos::HashValue<ULONG>, gpos::Equals<ULONG>,
+				 CleanupDelete<ULONG>, CleanupDelete<INT>>;
 
 private:
 	CMemoryPool *m_mp;

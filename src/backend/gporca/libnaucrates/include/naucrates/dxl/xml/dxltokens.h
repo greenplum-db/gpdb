@@ -86,6 +86,7 @@ enum Edxltoken
 
 	EdxltokenPhysicalTableScan,
 	EdxltokenPhysicalBitmapTableScan,
+	EdxltokenPhysicalDynamicBitmapTableScan,
 	EdxltokenPhysicalExternalScan,
 	EdxltokenPhysicalIndexScan,
 	EdxltokenPhysicalIndexOnlyScan,
@@ -106,6 +107,8 @@ enum Edxltoken
 	EdxltokenPhysicalAppend,
 	EdxltokenPhysicalMaterialize,
 	EdxltokenPhysicalSequence,
+	EdxltokenPhysicalDynamicTableScan,
+	EdxltokenPhysicalDynamicIndexScan,
 	EdxltokenPhysicalTVF,
 	EdxltokenPhysicalWindow,
 	EdxltokenPhysicalPartitionSelector,
@@ -362,8 +365,8 @@ enum Edxltoken
 	EdxltokenCtidColId,
 	EdxltokenGpSegmentIdColId,
 	EdxltokenTupleOidColId,
-	EdxltokenUpdatePreservesOids,
 	EdxltokenInputSorted,
+	EdxltokenSplitUpdate,
 
 	EdxltokenInputSegments,
 	EdxltokenOutputSegments,
@@ -460,7 +463,6 @@ enum Edxltoken
 	EdxltokenDoubleValue,
 
 	EdxltokenRelTemporary,
-	EdxltokenRelHasOids,
 
 	EdxltokenRelStorageType,
 	EdxltokenRelStorageHeap,

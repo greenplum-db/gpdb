@@ -339,7 +339,9 @@ CPhysicalHashJoin::PdshashedMatching(
 		CExpression *pexprDlvrd = (*pdrgpexprDist)[ulDlvrdIdx];
 		CExpressionArray *equiv_distribution_exprs = nullptr;
 		if (nullptr != all_equiv_exprs && all_equiv_exprs->Size() > 0)
+		{
 			equiv_distribution_exprs = (*all_equiv_exprs)[ulDlvrdIdx];
+		}
 		for (ULONG idx = 0; idx < ulSourceSize; idx++)
 		{
 			BOOL fSuccess = false;

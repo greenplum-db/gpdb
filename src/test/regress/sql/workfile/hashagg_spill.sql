@@ -52,34 +52,8 @@ select * from (select max(i1) from testhagg group by i2) foo order by 1 limit 10
 select * from hashagg_spill.is_workfile_created('explain (analyze, verbose) select max(i1) from testhagg group by i2;');
 select * from hashagg_spill.is_workfile_created('explain (analyze, verbose) select max(i1) from testhagg group by i2 limit 90000;');
 
-
--- Test HashAgg with increasing amount of overflows
-
 reset all;
 set search_path to hashagg_spill;
-
--- Returns the number of overflows from EXPLAIN ANALYZE output
--- GPDB_12_MERGE_FIXME we don't have hhashtable and num_overflows now, drop it?
-/*
- * create or replace function hashagg_spill.num_hashagg_overflows(explain_query text)
- * returns setof int as
- * $$
- * import re
- * query = "select count(*) as nsegments from gp_segment_configuration where role='p' and content >= 0;"
- * rv = plpy.execute(query)
- * rv = plpy.execute(explain_query)
- * result = []
- * for i in range(len(rv)):
- *     cur_line = rv[i]['QUERY PLAN']
- *     p = re.compile('.+\((seg\d+).+ (\d+) overflows;')
- *     m = p.match(cur_line)
- *     if m:
- *       overflows = int(m.group(2))
- *       result.append(overflows)
- * return result
- * $$
- * language plpython3u;
- */
 
 -- Test agg spilling scenarios
 create table aggspill (i int, j int, t text) distributed by (i);
@@ -97,17 +71,6 @@ set statement_mem = '10MB';
 select * from hashagg_spill.is_workfile_created('explain (analyze, verbose)
 select count(*) from (select i, count(*) from aggspill group by i,j having count(*) = 2) g');
 select count(*) from (select i, count(*) from aggspill group by i,j having count(*) = 2) g;
-
--- Reduce the statement memory, nbatches and entrysize even further to cause multiple overflows
-set gp_hashagg_default_nbatches = 4;
-set statement_mem = '5MB';
-
-/*
- * select overflows > 1 from hashagg_spill.num_hashagg_overflows('explain analyze
- * select count(*) from (select i, count(*) from aggspill group by i,j,t having count(*) = 3) g') overflows;
- */
-
-select count(*) from (select i, count(*) from aggspill group by i,j,t having count(*) = 3) g;
 
 reset optimizer_force_multistage_agg;
 

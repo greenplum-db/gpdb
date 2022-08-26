@@ -89,17 +89,13 @@ GPWriter* writer_init(const char* url_with_options, const char* format) {
         writer->open(params);
         return writer;
     } catch (S3Exception& e) {
-        if (writer != NULL) {
-            delete writer;
-        }
+        delete writer;
         s3extErrorMessage =
             "writer_init caught a " + e.getType() + " exception: " + e.getFullMessage();
         S3ERROR("writer_init caught %s: %s", e.getType().c_str(), s3extErrorMessage.c_str());
         return NULL;
     } catch (...) {
-        if (writer != NULL) {
-            delete writer;
-        }
+        delete writer;
         S3ERROR("Caught an unexpected exception.");
         s3extErrorMessage = "Caught an unexpected exception.";
         return NULL;

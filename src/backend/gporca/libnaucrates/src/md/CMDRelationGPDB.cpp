@@ -38,7 +38,7 @@ CMDRelationGPDB::CMDRelationGPDB(
 	IMdIdArray *partition_oids, BOOL convert_hash_to_random,
 	ULongPtr2dArray *keyset_array, CMDIndexInfoArray *md_index_info_array,
 	IMdIdArray *mdid_triggers_array, IMdIdArray *mdid_check_constraint_array,
-	CDXLNode *mdpart_constraint, BOOL has_oids)
+	CDXLNode *mdpart_constraint)
 	: m_mp(mp),
 	  m_mdid(mdid),
 	  m_mdname(mdname),
@@ -59,7 +59,6 @@ CMDRelationGPDB::CMDRelationGPDB(
 	  m_mdid_trigger_array(mdid_triggers_array),
 	  m_mdid_check_constraint_array(mdid_check_constraint_array),
 	  m_mdpart_constraint(mdpart_constraint),
-	  m_has_oids(has_oids),
 	  m_system_columns(0),
 	  m_colpos_nondrop_colpos_map(nullptr),
 	  m_attrno_nondrop_col_pos_map(nullptr),
@@ -385,20 +384,6 @@ CMDRelationGPDB::DistrColumnCount() const
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CMDRelationGPDB::HasOids
-//
-//	@doc:
-//		Does this table have oids
-//
-//---------------------------------------------------------------------------
-BOOL
-CMDRelationGPDB::HasOids() const
-{
-	return m_has_oids;
-}
-
-//---------------------------------------------------------------------------
-//	@function:
 //		CMDRelationGPDB::IsPartitioned
 //
 //	@doc:
@@ -654,8 +639,6 @@ CMDRelationGPDB::Serialize(CXMLSerializer *xml_serializer) const
 	xml_serializer->AddAttribute(
 		CDXLTokens::GetDXLTokenStr(EdxltokenRelTemporary), m_is_temp_table);
 	xml_serializer->AddAttribute(
-		CDXLTokens::GetDXLTokenStr(EdxltokenRelHasOids), m_has_oids);
-	xml_serializer->AddAttribute(
 		CDXLTokens::GetDXLTokenStr(EdxltokenRelStorageType),
 		IMDRelation::GetStorageTypeStr(m_rel_storage_type));
 	xml_serializer->AddAttribute(
@@ -784,7 +767,9 @@ CMDRelationGPDB::Serialize(CXMLSerializer *xml_serializer) const
 
 		// serialize the scalar expression
 		if (nullptr != m_mdpart_constraint)
+		{
 			m_mdpart_constraint->SerializeToDXL(xml_serializer);
+		}
 
 		xml_serializer->CloseElement(
 			CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix),

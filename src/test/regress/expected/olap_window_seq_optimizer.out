@@ -7671,16 +7671,18 @@ order by 1,2,3;
 -- Once upon a time, there was a bug in deparsing a WindowAgg node with EXPLAIN
 -- that this query triggered (MPP-4840)
 explain select n from ( select row_number() over () from (values (0)) as t(x) ) as r(n) group by n;
-                         QUERY PLAN                         
-------------------------------------------------------------
+                            QUERY PLAN                            
+------------------------------------------------------------------
  GroupAggregate  (cost=0.00..0.00 rows=1 width=8)
    Group Key: (row_number() OVER (?))
-   ->  Sort  (cost=0.00..0.00 rows=1 width=8)
-         Sort Key: (row_number() OVER (?))
-         ->  WindowAgg  (cost=0.00..0.00 rows=1 width=8)
-               ->  Result  (cost=0.00..0.00 rows=1 width=1)
+   ->  GroupAggregate  (cost=0.00..0.00 rows=1 width=8)
+         Group Key: (row_number() OVER (?))
+         ->  Sort  (cost=0.00..0.00 rows=1 width=8)
+               Sort Key: (row_number() OVER (?))
+               ->  WindowAgg  (cost=0.00..0.00 rows=1 width=8)
+                     ->  Result  (cost=0.00..0.00 rows=1 width=1)
  Optimizer: Pivotal Optimizer (GPORCA)
-(7 rows)
+(9 rows)
 
 -- Test for MPP-11645
 create table olap_window_r (a int, b int, x int,  y int,  z int ) distributed by (b);

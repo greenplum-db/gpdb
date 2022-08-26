@@ -46,9 +46,6 @@ private:
 	// action column
 	CColRef *m_pcrAction;
 
-	// tuple oid column
-	CColRef *m_pcrTupleOid;
-
 	// required columns by local members
 	CColRefSet *m_pcrsRequiredLocal;
 
@@ -58,8 +55,7 @@ public:
 	// ctor
 	CPhysicalSplit(CMemoryPool *mp, CColRefArray *pdrgpcrDelete,
 				   CColRefArray *pdrgpcrInsert, CColRef *pcrCtid,
-				   CColRef *pcrSegmentId, CColRef *pcrAction,
-				   CColRef *pcrTupleOid);
+				   CColRef *pcrSegmentId, CColRef *pcrAction);
 
 	// dtor
 	~CPhysicalSplit() override;
@@ -111,13 +107,6 @@ public:
 	PdrgpcrInsert() const
 	{
 		return m_pdrgpcrInsert;
-	}
-
-	// tuple oid column
-	CColRef *
-	PcrTupleOid() const
-	{
-		return m_pcrTupleOid;
 	}
 
 	// match function

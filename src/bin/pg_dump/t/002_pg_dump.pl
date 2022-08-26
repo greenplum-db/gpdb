@@ -421,6 +421,25 @@ my %tests = (
 		},
 	},
 
+	'ALTER DEFAULT PRIVILEGES FOR ROLE regress_dump_test_role GRANT EXECUTE ON FUNCTIONS'
+	  => {
+		create_order => 15,
+		create_sql   => 'ALTER DEFAULT PRIVILEGES
+					   FOR ROLE regress_dump_test_role IN SCHEMA dump_test
+					   GRANT EXECUTE ON FUNCTIONS TO regress_dump_test_role;',
+		regexp => qr/^
+			\QALTER DEFAULT PRIVILEGES \E
+			\QFOR ROLE regress_dump_test_role IN SCHEMA dump_test \E
+			\QGRANT ALL ON FUNCTIONS  TO regress_dump_test_role;\E
+			/xm,
+		like =>
+		  { %full_runs, %dump_test_schema_runs, section_post_data => 1, },
+		unlike => {
+			exclude_dump_test_schema => 1,
+			no_privs                 => 1,
+		},
+	  },
+
 	'ALTER DEFAULT PRIVILEGES FOR ROLE regress_dump_test_role REVOKE' => {
 		create_order => 55,
 		create_sql   => 'ALTER DEFAULT PRIVILEGES
@@ -1494,6 +1513,77 @@ my %tests = (
 		unlike => { exclude_dump_test_schema => 1, },
 	},
 
+	'CREATE FUNCTION dump_test.write_to_file_stable' => {
+		create_order => 17,
+		create_sql   => 'CREATE FUNCTION dump_test.write_to_file_stable()
+					   RETURNS integer AS \'$libdir/gpextprotocol.so\',
+					   \'demoprot_export\' LANGUAGE C STABLE;',
+		regexp => qr/^
+			\QCREATE FUNCTION dump_test.write_to_file_stable() \E
+			\QRETURNS integer\E
+			\n\s+\QLANGUAGE c STABLE NO SQL\E
+			\n\s+AS\ \'\$
+			\Qlibdir\/gpextprotocol.so', 'demoprot_export';\E
+			/xm,
+		like =>
+		  { %full_runs, %dump_test_schema_runs, section_pre_data => 1, },
+		unlike => { exclude_dump_test_schema => 1, },
+	},
+
+	'CREATE FUNCTION dump_test.read_from_file_stable' => {
+		create_order => 17,
+		create_sql   => 'CREATE FUNCTION dump_test.read_from_file_stable()
+					   RETURNS integer AS \'$libdir/gpextprotocol.so\',
+					   \'demoprot_export\' LANGUAGE C STABLE;',
+		regexp => qr/^
+			\QCREATE FUNCTION dump_test.read_from_file_stable() \E
+			\QRETURNS integer\E
+			\n\s+\QLANGUAGE c STABLE NO SQL\E
+			\n\s+AS\ \'\$
+			\Qlibdir\/gpextprotocol.so', 'demoprot_export';\E
+			/xm,
+		like =>
+		  { %full_runs, %dump_test_schema_runs, section_pre_data => 1, },
+		unlike => { exclude_dump_test_schema => 1, },
+	},
+
+	'CREATE PROTOCOL demoprot' => {
+		create_order => 18,
+		create_sql   => 'CREATE PROTOCOL demoprot ( readfunc = dump_test.read_from_file_stable, writefunc = dump_test.write_to_file_stable);',
+		regexp => qr/^
+		\QCREATE  PROTOCOL demoprot ( readfunc = 'read_from_file_stable', writefunc = 'write_to_file_stable');\E
+		/xm,
+		like =>
+		  { %full_runs, %dump_test_schema_runs, section_pre_data => 1, },
+			unlike => { only_dump_test_schema => 1, test_schema_plus_blobs => 1 },
+	},
+
+	'CREATE EXTERNAL WEB TABLE dump_test.dummy_ext_tab' => {
+		create_order => 19,
+		create_sql   => 'CREATE EXTERNAL WEB TABLE dump_test.dummy_ext_tab (x text) EXECUTE \'echo foo\' FORMAT \'text\';',
+		regexp => qr/^
+		\QCREATE FOREIGN TABLE dump_test.dummy_ext_tab (\E
+		\n\s+\Qx text\E
+		\n\Q)\E
+		\n\QSERVER gp_exttable_server\E
+		\n\QOPTIONS (\E
+		\n\s+\Qcommand 'echo foo',\E
+		\n\s+\Qdelimiter '\E\s+\Q',\E
+		\n\s+\Qencoding '\E\d\Q',\E
+		\n\s+\Qescape E'\\',\E
+		\n\s+\Qexecute_on 'ALL_SEGMENTS',\E
+		\n\s+\Qformat 'text',\E
+		\n\s+\Qformat_type 't',\E
+		\n\s+\Qis_writable 'false',\E
+		\n\s+\Qlog_errors 'f',\E
+		\n\s+\Q"null" E'\\N'\E
+		\n\Q);\E
+		/xm,
+		like =>
+		  { %full_runs, %dump_test_schema_runs, section_pre_data => 1, },
+			unlike => { exclude_dump_test_schema => 1, },
+	},
+
 	'CREATE FUNCTION dump_test.trigger_func' => {
 		create_order => 30,
 		create_sql   => 'CREATE FUNCTION dump_test.trigger_func()
@@ -1561,6 +1651,35 @@ my %tests = (
 			\QFUNCTION 1 (bigint, bigint) btint8cmp(bigint,bigint) ,\E\n\s+
 			\QFUNCTION 2 (bigint, bigint) btint8sortsupport(internal);\E
 			/xm,
+		like =>
+		  { %full_runs, %dump_test_schema_runs, section_pre_data => 1, },
+		unlike => { exclude_dump_test_schema => 1, },
+	},
+
+    # verify that a custom operator/opclass/range type is dumped in right order
+	'CREATE OPERATOR CLASS dump_test.op_class_custom' => {
+		create_order => 74,
+		create_sql   => 'CREATE OPERATOR dump_test.~~ (
+							 PROCEDURE = int4eq,
+							 LEFTARG = int,
+							 RIGHTARG = int);
+						 CREATE OPERATOR CLASS dump_test.op_class_custom
+							 FOR TYPE int USING btree AS
+							 OPERATOR 3 dump_test.~~;
+						 CREATE TYPE dump_test.range_type_custom AS RANGE (
+							 subtype = int,
+							 subtype_opclass = dump_test.op_class_custom);',
+		regexp => qr/^
+			\QCREATE OPERATOR dump_test.~~ (\E\n.+
+			\QCREATE OPERATOR FAMILY dump_test.op_class_custom USING btree;\E\n.+
+			\QCREATE OPERATOR CLASS dump_test.op_class_custom\E\n\s+
+			\QFOR TYPE integer USING btree FAMILY dump_test.op_class_custom AS\E\n\s+
+			\QOPERATOR 3 dump_test.~~(integer,integer);\E\n.+
+			\QCREATE TYPE dump_test.range_type_custom AS RANGE (\E\n\s+
+			\Qsubtype = integer,\E\n\s+
+			\Qsubtype_opclass = dump_test.op_class_custom\E\n
+			\Q);\E
+			/xms,
 		like =>
 		  { %full_runs, %dump_test_schema_runs, section_pre_data => 1, },
 		unlike => { exclude_dump_test_schema => 1, },
@@ -1894,6 +2013,16 @@ my %tests = (
 		regexp       => qr/^\QCREATE TYPE dump_test.undefined;\E/m,
 		like =>
 		  { %full_runs, %dump_test_schema_runs, section_pre_data => 1, },
+		unlike => { exclude_dump_test_schema => 1, },
+	},
+
+	'ALTER TYPE dump_test.int42 SET DEFAULT ENCODING' => {
+		create_order => 43,
+		create_sql => 'ALTER TYPE dump_test.int42 SET DEFAULT ENCODING
+		(compresstype=rle_type, blocksize=8192, compresslevel=4);',
+		regexp => qr/^\QALTER TYPE dump_test.int42 SET DEFAULT ENCODING (compresstype=rle_type, blocksize=8192, compresslevel=4);\E/m,
+		like =>
+			{ %full_runs, %dump_test_schema_runs, section_pre_data => 1, },
 		unlike => { exclude_dump_test_schema => 1, },
 	},
 
@@ -2423,6 +2552,52 @@ my %tests = (
 		like =>
 		  { %full_runs, %dump_test_schema_runs, section_pre_data => 1, },
 		unlike => { exclude_dump_test_schema => 1, },
+	},
+
+	'CREATE TABLE test_table_generated_child1 (without local columns)' => {
+		create_order => 4,
+		create_sql   => 'CREATE TABLE dump_test.test_table_generated_child1 ()
+						 INHERITS (dump_test.test_table_generated);',
+		regexp => qr/^
+			\QCREATE TABLE dump_test.test_table_generated_child1 (\E\n
+			\)\n
+			\QINHERITS (dump_test.test_table_generated);\E\n
+			/xms,
+		like =>
+		  { %full_runs, %dump_test_schema_runs, section_pre_data => 1, },
+		unlike => {
+			binary_upgrade           => 1,
+			exclude_dump_test_schema => 1,
+		},
+	},
+
+	'ALTER TABLE test_table_generated_child1' => {
+		regexp =>
+		  qr/^\QALTER TABLE ONLY dump_test.test_table_generated_child1 ALTER COLUMN col2 \E/m,
+
+		# should not get emitted
+		like => {},
+	},
+
+	'CREATE TABLE test_table_generated_child2 (with local columns)' => {
+		create_order => 4,
+		create_sql   => 'CREATE TABLE dump_test.test_table_generated_child2 (
+						   col1 int,
+						   col2 int
+						 ) INHERITS (dump_test.test_table_generated);',
+		regexp => qr/^
+			\QCREATE TABLE dump_test.test_table_generated_child2 (\E\n
+			\s+\Qcol1 integer,\E\n
+			\s+\Qcol2 integer\E\n
+			\)\n
+			\QINHERITS (dump_test.test_table_generated);\E\n
+			/xms,
+		like =>
+		  { %full_runs, %dump_test_schema_runs, section_pre_data => 1, },
+		unlike => {
+			binary_upgrade           => 1,
+			exclude_dump_test_schema => 1,
+		},
 	},
 
 	'CREATE TABLE table_with_stats' => {

@@ -1584,20 +1584,20 @@ parse_hba_line(TokenizedLine *tok_line, int elevel)
 			return NULL;
 		}
 
-		/* GPDB_12_MERGE_FIXME: Is this still relevant? Is there some additional GPDB 
-		 * features in LDAP authentication, or has PostgreSQL gotten them all by now? */
-#if 0
-		if ((parsedline->ldaptls || parsedline->ldapport != 0) && strncmp(parsedline->ldapserver, "ldaps://", 8) == 0)
+		/* Can't set LDAPS and StartTLS at the same time. Set ldaptls to 1 to
+		 * make the connection between database and the LDAP server use TLS
+		 * encryption. The scheme 'ldaps' makes LDAP connections over SSL.
+		 */
+		if (parsedline->ldaptls && strcmp(parsedline->ldapscheme, "ldaps") == 0)
 		{
 			ereport(LOG,
 					(errcode(ERRCODE_CONFIG_FILE_ERROR),
-					 errmsg("cannot use 'ldaptls' or 'ldapport' with 'ldapserver' start with 'ldaps://'"),
+					 errmsg("cannot use 'ldaptls' with 'ldaps' scheme or 'ldapurl' start with 'ldaps://'"),
 					 errcontext("line %d of configuration file \"%s\"",
 								line_num, HbaFileName)));
 			return NULL;
 
 		}
-#endif
 	}
 
 	if (parsedline->auth_method == uaRADIUS)

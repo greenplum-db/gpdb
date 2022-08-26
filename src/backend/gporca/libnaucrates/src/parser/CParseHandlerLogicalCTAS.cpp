@@ -128,9 +128,6 @@ CParseHandlerLogicalCTAS::StartElement(
 	m_is_temp_table = CDXLOperatorFactory::ExtractConvertAttrValueToBool(
 		m_parse_handler_mgr->GetDXLMemoryManager(), attrs,
 		EdxltokenRelTemporary, EdxltokenLogicalCTAS);
-	m_has_oids = CDXLOperatorFactory::ExtractConvertAttrValueToBool(
-		m_parse_handler_mgr->GetDXLMemoryManager(), attrs, EdxltokenRelHasOids,
-		EdxltokenLogicalCTAS);
 
 	// create child node parsers
 
@@ -246,7 +243,7 @@ CParseHandlerLogicalCTAS::EndElement(const XMLCh *const,  // element_uri,
 		GPOS_NEW(m_mp) CDXLLogicalCTAS(
 			m_mp, m_mdid, m_mdname_schema, m_mdname, dxl_column_descr_array,
 			dxl_ctas_storage_opt, m_rel_distr_policy, m_distr_column_pos_array,
-			distr_opfamilies, distr_opclasses, m_is_temp_table, m_has_oids,
+			distr_opfamilies, distr_opclasses, m_is_temp_table,
 			m_rel_storage_type, m_src_colids_array, m_vartypemod_array));
 
 	AddChildFromParseHandler(child_parse_handler);

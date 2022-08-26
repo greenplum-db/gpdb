@@ -218,7 +218,7 @@ Install the Docker images that PL/Container will use to create language-specific
 
 -   Download the files that contain the Docker images from the [VMware Tanzu Network](https://network.pivotal.io). For example, for Greenplum 6.5, click on "PL/Container Docker Image for Python 2.1.1" which downloads **plcontainer-python-image-2.1.1-gp6.tar.gz** with Python 2.7.12 and the *Python Data Science Module Package*.
 
-    If you require different images from the ones provided by Pivotal Greenplum, you can create custom Docker images, install the image and add the image to the PL/ Container configuration.
+    If you require different images from the ones provided by Tanzu Greenplum, you can create custom Docker images, install the image and add the image to the PL/ Container configuration.
 
 -   If you are using PL/Container 3 Beta, note that this Beta version is compatible only with the associated `plcontainer-r-image-3.0.0-beta-gp6.tar.gz` image.
 -   Follow the instructions in [Verifying the Greenplum Database Software Download](../install_guide/verify_sw.html) to verify the integrity of the **Greenplum Procedural Languages PL/Container Image** software.

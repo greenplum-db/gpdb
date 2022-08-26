@@ -4643,14 +4643,9 @@ BeginTransactionBlock(void)
 		case TBLOCK_SUBINPROGRESS:
 		case TBLOCK_ABORT:
 		case TBLOCK_SUBABORT:
-			if (Gp_role == GP_ROLE_EXECUTE)
-				ereport(DEBUG1,
-						(errcode(ERRCODE_ACTIVE_SQL_TRANSACTION),
-						 errmsg("there is already a transaction in progress")));
-			else
-				ereport(WARNING,
-						(errcode(ERRCODE_ACTIVE_SQL_TRANSACTION),
-						 errmsg("there is already a transaction in progress")));
+			ereport(Gp_role == GP_ROLE_EXECUTE ? DEBUG1 : WARNING,
+					(errcode(ERRCODE_ACTIVE_SQL_TRANSACTION),
+					 errmsg("there is already a transaction in progress")));
 			break;
 
 			/* These cases are invalid. */

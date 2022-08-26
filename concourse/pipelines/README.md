@@ -84,22 +84,21 @@ all jobs accounted for
 
 NOTE: You can set the production pipelines with the following:
 
-fly -t gpdb-prod \
+fly -t prod \
     set-pipeline \
     -p gpdb_master \
     -c gpdb_master-generated.yml \
-    -l ~/workspace/gp-continuous-integration/secrets/gpdb_common-ci-secrets.yml \
-    -l ~/workspace/gp-continuous-integration/secrets/gpdb_master-ci-secrets.prod.yml \
+    -l ~/workspace/gpdb/concourse/vars/common_prod.yml \
     -v gpdb-git-remote=https://github.com/greenplum-db/gpdb.git \
     -v gpdb-git-branch=master \
     -v pipeline-name=gpdb_master
 
-fly -t gpdb-prod \
+fly -t prod \
     set-pipeline \
     -p gpdb_master_without_asserts \
     -c gpdb_master-generated.yml \
-    -l ~/workspace/gp-continuous-integration/secrets/gpdb_common-ci-secrets.yml \
-    -l ~/workspace/gp-continuous-integration/secrets/gpdb_master_without_asserts-ci-secrets.yml \
+    -l ~/workspace/gpdb/concourse/vars/common_prod.yml \
+    -l ~/workspace/gpdb/concourse/vars/without_asserts_common_prod.yml \
     -v gpdb-git-remote=https://github.com/greenplum-db/gpdb.git \
     -v gpdb-git-branch=master \
     -v pipeline-name=gpdb_master_without_asserts
@@ -136,13 +135,12 @@ $ ./gen_pipeline.py -t dpm -u curry -a CLI
 
 NOTE: You can set the developer pipeline with the following:
 
-fly -t gpdb-dev \
+fly -t dev \
     set-pipeline \
     -p gpdb-dpm-curry \
     -c gpdb-dpm-curry.yml \
-    -l ~/workspace/gp-continuous-integration/secrets/gpdb_common-ci-secrets.yml \
-    -l ~/workspace/gp-continuous-integration/secrets/gpdb_master-ci-secrets.dev.yml \
-    -l ~/workspace/gp-continuous-integration/secrets/ccp_ci_secrets_gpdb-dev.yml \
+    -l ~/workspace/gpdb/concourse/vars/common_prod.yml \
+    -l ~/workspace/gpdb/concourse/vars/common_dev.yml \
     -v gpdb-git-remote=<https://github.com/<github-user>/gpdb> \
     -v gpdb-git-branch=<branch-name>
 ```
@@ -164,13 +162,12 @@ $ ./gen_pipeline.py -t cs -u durant -O {centos7,ubuntu18.04} -a {ICW,CS}
 
 NOTE: You can set the developer pipeline with the following:
 
-fly -t gpdb-dev \
+fly -t dev \
     set-pipeline \
     -p gpdb-cs-durant \
     -c gpdb-cs-durant.yml \
-    -l ~/workspace/gp-continuous-integration/secrets/gpdb_common-ci-secrets.yml \
-    -l ~/workspace/gp-continuous-integration/secrets/gpdb_master-ci-secrets.dev.yml \
-    -l ~/workspace/gp-continuous-integration/secrets/ccp_ci_secrets_gpdb-dev.yml \
+    -l ~/workspace/gpdb/concourse/vars/common_prod.yml \
+    -l ~/workspace/gpdb/concourse/vars/common_dev.yml \
     -v gpdb-git-remote=<https://github.com/<github-user>/gpdb> \
     -v gpdb-git-branch=<branch-name>
 ```

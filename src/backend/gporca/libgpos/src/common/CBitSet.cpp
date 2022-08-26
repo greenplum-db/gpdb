@@ -351,7 +351,7 @@ CBitSet::Union(const CBitSet *pbsOther)
 	CBitSetLink *bsl_other = nullptr;
 
 	// dynamic array of CBitSetLink
-	typedef CDynamicPtrArray<CBitSetLink, CleanupNULL> CBitSetLinkArray;
+	using CBitSetLinkArray = CDynamicPtrArray<CBitSetLink, CleanupNULL>;
 
 	CAutoRef<CBitSetLinkArray> a_drgpbsl;
 	a_drgpbsl = GPOS_NEW(m_mp) CBitSetLinkArray(m_mp);

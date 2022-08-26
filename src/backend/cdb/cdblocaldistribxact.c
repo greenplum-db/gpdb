@@ -25,11 +25,11 @@
 #include "access/twophase.h"
 #include "cdb/cdblocaldistribxact.h"
 #include "cdb/cdbvars.h"
+#include "common/hashfn.h"
 #include "lib/ilist.h"
 #include "miscadmin.h"
 #include "storage/proc.h"
 #include "utils/guc.h"
-#include "utils/hsearch.h"
 #include "utils/memutils.h"
 
 /*  ***************************************************************************** */

@@ -1282,7 +1282,7 @@ WHERE
         </dxl:And>
       </dxl:LogicalJoin>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="52727">
+    <dxl:Plan Id="0" SpaceSize="51614">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="1306.824501" Rows="199.680000" Width="148"/>
@@ -1557,6 +1557,7 @@ WHERE
                           <dxl:Ident ColId="26" ColName="oid" TypeMdid="0.26.1.0"/>
                         </dxl:Comparison>
                       </dxl:IndexCondList>
+	<dxl:Partitions/>
                       <dxl:IndexDescriptor Mdid="0.2686.1.0" IndexName="pg_opclass_am_name_nsp_index"/>
                       <dxl:TableDescriptor Mdid="0.2616.1.1" TableName="pg_opclass">
                         <dxl:Columns>

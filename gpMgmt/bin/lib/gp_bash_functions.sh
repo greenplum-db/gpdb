@@ -294,11 +294,9 @@ ERROR_EXIT () {
 ERROR_CHK () {
 	LOG_MSG "[INFO]:-Start Function $FUNCNAME"
 	if [ $# -ne 3 ];then
-		INITIAL_LEVEL=$DEBUG_LEVEL
-		DEBUG_LEVEL=1
-		LOG_MSG "[WARN]:-Incorrect # parameters supplied to $FUNCNAME"
-		DEBUG_LEVEL=$INITIAL_LEVEL
-		return;fi
+		LOG_MSG "[WARN]:-Incorrect # parameters supplied to $FUNCNAME" 1
+		return;
+	fi
 	RETVAL=$1;shift
 	MSG_TXT=$1;shift
 	ACTION=$1 #1=issue warn, 2=fatal
@@ -306,10 +304,7 @@ ERROR_CHK () {
 		LOG_MSG "[INFO]:-Successfully completed $MSG_TXT"
 	else
 		if [ $ACTION -eq 1 ];then
-			INITIAL_LEVEL=$DEBUG_LEVEL
-			DEBUG_LEVEL=1
-			LOG_MSG "[WARN]:-Issue with $MSG_TXT"
-			DEBUG_LEVEL=$INITIAL_LEVEL
+			LOG_MSG "[WARN]:-Issue with $MSG_TXT" 1
 		else
 			LOG_MSG "[INFO]:-End Function $FUNCNAME"
 			ERROR_EXIT "[FATAL]:-Failed to complete $MSG_TXT "

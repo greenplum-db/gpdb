@@ -1880,6 +1880,16 @@ AS '$libdir/gp_ao_co_diagnostics' , 'gp_aocsseg_history_wrapper'
 LANGUAGE C STRICT EXECUTE ON ALL SEGMENTS;
 GRANT EXECUTE ON FUNCTION gp_toolkit.__gp_aocsseg_history(regclass) TO public;
 
+CREATE FUNCTION gp_toolkit.__gp_aoblkdir(regclass)
+RETURNS TABLE (tupleid tid,
+    segno integer,
+    columngroup_no integer,
+    entry_no integer,
+    first_row_no bigint,
+    file_offset bigint,
+    row_count bigint)
+AS '$libdir/gp_ao_co_diagnostics.so', 'gp_aoblkdir_wrapper' LANGUAGE C STRICT;
+
 CREATE FUNCTION gp_toolkit.__gp_aovisimap(regclass)
 RETURNS TABLE (tid tid,
     segno int,

@@ -459,7 +459,7 @@ where d.msisdn=f.subscriberaddress and f.sessioncreationtimestamp >= d.start_dtm
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
       <dxl:RelationStatistics Mdid="2.1279380.1.1" Name="stg_xdr_crce_cdr" Rows="766993024.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.1279380.1.1" Name="stg_xdr_crce_cdr" IsTemporary="false" HasOids="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="58,59,57" PartitionColumns="9" PartitionTypes="r">
+      <dxl:Relation Mdid="0.1279380.1.1" Name="stg_xdr_crce_cdr" IsTemporary="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="58,59,57" PartitionColumns="9" PartitionTypes="r">
         <dxl:Columns>
           <dxl:Column Name="id" Attno="1" Mdid="0.20.1.0" Nullable="true" ColWidth="8">
             <dxl:DefaultValue/>
@@ -4823,7 +4823,7 @@ where d.msisdn=f.subscriberaddress and f.sessioncreationtimestamp >= d.start_dtm
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
       <dxl:RelationStatistics Mdid="2.1277041.1.1" Name="dim_customer_device" Rows="2221810.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.1277041.1.1" Name="dim_customer_device" IsTemporary="false" HasOids="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="21,19">
+      <dxl:Relation Mdid="0.1277041.1.1" Name="dim_customer_device" IsTemporary="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="21,19">
         <dxl:Columns>
           <dxl:Column Name="customer_device_key" Attno="1" Mdid="0.20.1.0" Nullable="false" ColWidth="8">
             <dxl:DefaultValue/>

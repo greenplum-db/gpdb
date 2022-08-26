@@ -81,6 +81,7 @@ ALTER TABLE name
     CLUSTER ON <replaceable class="parameter">index_name</replaceable>
     SET WITHOUT CLUSTER
     SET WITHOUT OIDS
+    SET ACCESS METHOD <replaceable class="parameter">new_access_method</replaceable>
     SET TABLESPACE <replaceable class="parameter">new_tablespace</replaceable>
     SET { LOGGED | UNLOGGED }
     SET ( <replaceable class="parameter">storage_parameter</replaceable> = <replaceable class="parameter">value</replaceable> [, ... ] )
@@ -700,6 +701,16 @@ Where column_reference_storage_directive is:
    </varlistentry>
 
    <varlistentry>
+    <term><literal>SET ACCESS METHOD</literal></term>
+    <listitem>
+     <para>
+      This form changes the access method of the table by rewriting it. See
+      <xref linkend="tableam"/> for more information.
+     </para>
+    </listitem>
+   </varlistentry>
+
+   <varlistentry>
     <term><literal>SET TABLESPACE</literal></term>
     <listitem>
      <para>
@@ -1204,6 +1215,15 @@ Where column_reference_storage_directive is:
       <listitem>
        <para>
         The user name of the new owner of the table.
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry>
+      <term><replaceable class="parameter">new_access_method</replaceable></term>
+      <listitem>
+       <para>
+        The name of the access method to which the table will be converted.
        </para>
       </listitem>
      </varlistentry>

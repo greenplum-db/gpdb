@@ -508,7 +508,9 @@ sub init
 		}
 		print $conf "max_wal_senders = 5\n";
 		print $conf "max_replication_slots = 5\n";
-		print $conf "max_wal_size = 128MB\n";
+		# PG sets this to 128MB but that makes checkpoint too frequent for GPDB. 
+		# 512MB corresponds to the ratio of GPDB seg size (64) over PG seg size (16).
+		print $conf "max_wal_size = 512MB\n";
 		print $conf "shared_buffers = 1MB\n";
 		print $conf "wal_log_hints = on\n";
 		print $conf "hot_standby = on\n";

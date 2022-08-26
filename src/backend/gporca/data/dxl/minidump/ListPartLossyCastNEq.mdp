@@ -162,7 +162,7 @@ Optimizer: Pivotal Optimizer (GPORCA)
         <dxl:ResultType Mdid="0.23.1.0"/>
       </dxl:GPDBFunc>
       <dxl:RelationStatistics Mdid="2.77262.1.0" Name="multi" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="0.77262.1.0" Name="multi" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,8,2" PartitionColumns="0,1" PartitionTypes="l,r" NumberLeafPartitions="8">
+      <dxl:Relation Mdid="0.77262.1.0" Name="multi" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,8,2" PartitionColumns="0,1" PartitionTypes="l,r" NumberLeafPartitions="8">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.701.1.0" Nullable="true" ColWidth="8">
             <dxl:DefaultValue/>

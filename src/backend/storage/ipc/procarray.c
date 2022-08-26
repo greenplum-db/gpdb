@@ -1461,11 +1461,6 @@ GetLocalOldestXmin(Relation rel, int flags)
 		PGPROC	   *proc = &allProcs[pgprocno];
 		PGXACT	   *pgxact = &allPgXact[pgprocno];
 
-		/* GPDB_12_MERGE_FIXME: We used to ignore PROC_IN_VACUUM flag in GPDB.
-		 * Do we still need to? If so, refactor the ignorance to use the
-		 * new 'flags' bitmask.
-		 * See comment in vacuumStatement_Relation()
-		 */
 		if (pgxact->vacuumFlags & (flags & PROCARRAY_PROC_FLAGS_MASK))
 			continue;
 
@@ -2005,9 +2000,20 @@ CreateDistributedSnapshot(DistributedSnapshot *ds)
 		if (dxid != InvalidDistributedTransactionId && dxid < globalXminDistributedSnapshots)
 			globalXminDistributedSnapshots = dxid;
 
-		/* just fetch once */
+		/*
+		 * Just fetch once
+		 *
+		 * Partial reading is possible on a 32 bit system, however we decided
+		 * not to take it serious currently.
+		 */
 		gxid = gxact_candidate->gxid;
-		if (gxid == InvalidDistributedTransactionId)
+
+		/*
+		* Skip further gxid to avoid enlarging inProgressXidArray
+		* as we already have held ProcArrayLock and latestCompletedGxid
+		* can not be changed.
+		*/
+		if (gxid == InvalidDistributedTransactionId || gxid >= xmax)
 			continue;
 
 		/*
@@ -2017,10 +2023,6 @@ CreateDistributedSnapshot(DistributedSnapshot *ds)
 		if (gxid < xmin)
 		{
 			xmin = gxid;
-		}
-		if (gxid > xmax)
-		{
-			xmax = gxid;
 		}
 
 		if (gxact_candidate == MyTmGxact)
@@ -2297,11 +2299,6 @@ GetSnapshotData(Snapshot snapshot, DtxContext distributedTransactionContext)
 			/*
 			 * Skip over backends doing logical decoding which manages xmin
 			 * separately (check below) and ones running LAZY VACUUM.
-			 */
-			/* GPDB_12_MERGE_FIXME: We used to ignore PROC_IN_VACUUM flag in GPDB.
-			 * Do we still need to? If so, refactor the ignorance to use the
-			 * new 'flags' bitmask.
-			 * See comment in vacuumStatement_Relation()
 			 */
 			if (pgxact->vacuumFlags &
 				(PROC_IN_LOGICAL_DECODING | PROC_IN_VACUUM))

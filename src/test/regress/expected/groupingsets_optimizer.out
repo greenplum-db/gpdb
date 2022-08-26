@@ -610,8 +610,6 @@ DETAIL:  Feature not supported: Grouping function with multiple arguments
 (3 rows)
 
 select(select (select grouping(c) from (values (1)) v2(c) GROUP BY c) from (values (1,2)) v1(a,b) group by (a,b)) from (values(6,7)) v3(e,f) GROUP BY ROLLUP(e,f);
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  DXL-to-PlStmt Translation: Assert not supported
  grouping 
 ----------
         0
@@ -770,16 +768,20 @@ select * from gstest1 group by grouping sets((a,b,v),(v)) order by v,b,a;
          ->  Append
                ->  GroupAggregate
                      Group Key: share0_ref2.column3
-                     ->  Sort
-                           Sort Key: share0_ref2.column3
-                           ->  Shared Scan (share slice:id 0:0)
+                     ->  GroupAggregate
+                           Group Key: share0_ref2.column3
+                           ->  Sort
+                                 Sort Key: share0_ref2.column3
+                                 ->  Shared Scan (share slice:id 0:0)
                ->  GroupAggregate
                      Group Key: share0_ref3.column3, share0_ref3.column2, share0_ref3.column1
-                     ->  Sort
-                           Sort Key: share0_ref3.column3, share0_ref3.column2, share0_ref3.column1
-                           ->  Shared Scan (share slice:id 0:0)
+                     ->  GroupAggregate
+                           Group Key: share0_ref3.column3, share0_ref3.column2, share0_ref3.column1
+                           ->  Sort
+                                 Sort Key: share0_ref3.column3, share0_ref3.column2, share0_ref3.column1
+                                 ->  Shared Scan (share slice:id 0:0)
  Optimizer: Pivotal Optimizer (GPORCA)
-(17 rows)
+(21 rows)
 
 -- Agg level check. This query should error out.
 select (select grouping(a,b) from gstest2) from gstest2 group by a,b;
@@ -1818,17 +1820,18 @@ explain (costs off)
                            ->  Streaming Partial HashAggregate
                                  Group Key: share0_ref6.thousand
                                  ->  Shared Scan (share slice:id 6:0)
-               ->  HashAggregate
+               ->  Finalize HashAggregate
                      Group Key: share0_ref7.twothousand
                      ->  Redistribute Motion 3:3  (slice7; segments: 3)
                            Hash Key: share0_ref7.twothousand
-                           ->  Result
+                           ->  Streaming Partial HashAggregate
+                                 Group Key: share0_ref7.twothousand
                                  ->  Shared Scan (share slice:id 7:0)
                ->  HashAggregate
                      Group Key: share0_ref8.unique1
                      ->  Shared Scan (share slice:id 1:0)
  Optimizer: Pivotal Optimizer (GPORCA)
-(52 rows)
+(53 rows)
 
 explain (costs off)
   select unique1,
@@ -1931,17 +1934,18 @@ explain (costs off)
                            ->  Streaming Partial HashAggregate
                                  Group Key: share0_ref6.thousand
                                  ->  Shared Scan (share slice:id 6:0)
-               ->  HashAggregate
+               ->  Finalize HashAggregate
                      Group Key: share0_ref7.twothousand
                      ->  Redistribute Motion 3:3  (slice7; segments: 3)
                            Hash Key: share0_ref7.twothousand
-                           ->  Result
+                           ->  Streaming Partial HashAggregate
+                                 Group Key: share0_ref7.twothousand
                                  ->  Shared Scan (share slice:id 7:0)
                ->  HashAggregate
                      Group Key: share0_ref8.unique1
                      ->  Shared Scan (share slice:id 1:0)
  Optimizer: Pivotal Optimizer (GPORCA)
-(52 rows)
+(53 rows)
 
 -- check collation-sensitive matching between grouping expressions
 -- (similar to a check for aggregates, but there are additional code

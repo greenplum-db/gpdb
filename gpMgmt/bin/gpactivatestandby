@@ -316,28 +316,26 @@ def promote_standby(coordinator_data_dir):
     """Promote standby"""
 
     logger.info('Promoting standby...')
+    # Keeping the timeout here consistent with
+    # MIRROR_PROMOTION_TIMEOUT which is defined as 10 mins
     cmd = gp.Command('pg_ctl promote',
-                     'pg_ctl promote -D %s' % coordinator_data_dir)
+                     'pg_ctl promote -D %s -t 600' % coordinator_data_dir)
     cmd.run(validateAfter=True)
+    logger.info('Standby coordinator is promoted')
 
-    logger.debug('Waiting for connection...')
-    for i in range(50):
-        try:
-            dburl = dbconn.DbURL()
-            conn = dbconn.connect(dburl, utility=True, logConn=False)
-            # When the new coordinator is available for connections, we should
-            # run a CHECKPOINT to force the new TimeLineID to be written to
-            # the pg_control file.
-            dbconn.execSQL(conn, 'CHECKPOINT')
-            logger.info('Standby coordinator is promoted')
-            conn.close()
-            return True
-        except pygresql.InternalError as e:
-            pass
-        time.sleep(1)
-
-    return False
-
+    # After promotion run CHECKPOINT to force the new TimeLineID to be
+    # written to the pg_control file. This happens in async way in
+    # server since pg_ctl promote uses fast_promote. Given gpstart
+    # depends on TLI to be reflect after right after promotion mainly
+    # for testing we force CHECKPOINT here.
+    logger.debug('forcing CHECKPOINT to reflect new TimeLineID...')
+    try:
+        dburl = dbconn.DbURL()
+        conn = dbconn.connect(dburl, utility=True, logConn=False)
+        dbconn.execSQL(conn, 'CHECKPOINT')
+        conn.close()
+    except pygresql.InternalError as e:
+        pass
 
 #-------------------------------------------------------------------------
 # Main
@@ -369,10 +367,7 @@ try:
 
     # promote standby, only if the standby is running in recovery
     if not requires_restart:
-        res = promote_standby(options_.coordinator_data_dir)
-        if not res:
-            raise GpActivateStandbyException('Either the set port is incorrect or '
-                                             'the postmaster could not come up.')
+        promote_standby(options_.coordinator_data_dir)
 
     # now we can access the catalog.  promote action has already updated
     # catalog, so array.coordinator is the old (promoted) standby at this point.

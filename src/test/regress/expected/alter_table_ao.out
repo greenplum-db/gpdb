@@ -93,11 +93,6 @@ select attname, attstorage from pg_attribute where attrelid='ao1'::regclass and 
  col3    | x
 (1 row)
 
--- cannot set reloption appendonly
-alter table ao1 set (appendonly=true, compresslevel=5, fillfactor=50);
-ERROR:  cannot SET reloption "appendonly"
-alter table ao1 reset (appendonly, compresslevel, fillfactor);
-ERROR:  cannot SET reloption "appendonly"
 ---
 --- check catalog contents after alter table on AO tables 
 ---

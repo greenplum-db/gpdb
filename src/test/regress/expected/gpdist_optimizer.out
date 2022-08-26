@@ -659,13 +659,17 @@ explain (costs off) select even.i from even right outer join odd on (even.i = od
                Sort Key: even.i
                ->  Redistribute Motion 3:3  (slice2; segments: 3)
                      Hash Key: even.i
-                     ->  Hash Left Join
-                           Hash Cond: (odd.i = even.i)
-                           ->  Seq Scan on odd
-                           ->  Hash
-                                 ->  Seq Scan on even
+                     ->  GroupAggregate
+                           Group Key: even.i
+                           ->  Sort
+                                 Sort Key: even.i
+                                 ->  Hash Left Join
+                                       Hash Cond: (odd.i = even.i)
+                                       ->  Seq Scan on odd
+                                       ->  Hash
+                                             ->  Seq Scan on even
  Optimizer: Pivotal Optimizer (GPORCA)
-(13 rows)
+(17 rows)
 
 -- Check that we can track the distribution through multiple FULL OUTER JOINs.
 -- This query should not need Redistribute Motion.

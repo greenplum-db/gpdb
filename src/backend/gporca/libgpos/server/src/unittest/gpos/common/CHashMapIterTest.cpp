@@ -57,13 +57,12 @@ CHashMapIterTest::EresUnittest_Basic()
 	ULONG rgul[] = {1, 2, 3, 4, 5, 6, 7, 8, 9};
 	const ULONG ulCnt = GPOS_ARRAY_SIZE(rgul);
 
-	typedef CHashMap<ULONG, ULONG, HashPtr<ULONG>, gpos::Equals<ULONG>,
-					 CleanupNULL<ULONG>, CleanupNULL<ULONG> >
-		Map;
+	using Map = CHashMap<ULONG, ULONG, HashPtr<ULONG>, gpos::Equals<ULONG>,
+						 CleanupNULL<ULONG>, CleanupNULL<ULONG>>;
 
-	typedef CHashMapIter<ULONG, ULONG, HashPtr<ULONG>, gpos::Equals<ULONG>,
-						 CleanupNULL<ULONG>, CleanupNULL<ULONG> >
-		MapIter;
+	using MapIter =
+		CHashMapIter<ULONG, ULONG, HashPtr<ULONG>, gpos::Equals<ULONG>,
+					 CleanupNULL<ULONG>, CleanupNULL<ULONG>>;
 
 
 	// using N - 2 slots guarantees collisions
@@ -77,7 +76,7 @@ CHashMapIterTest::EresUnittest_Basic()
 
 #endif	// GPOS_DEBUG
 
-	typedef CDynamicPtrArray<const ULONG, CleanupNULL> ULongPtrArray;
+	using ULongPtrArray = CDynamicPtrArray<const ULONG, CleanupNULL>;
 	CAutoRef<ULongPtrArray> pdrgpulKeys(GPOS_NEW(mp) ULongPtrArray(mp)),
 		pdrgpulValues(GPOS_NEW(mp) ULongPtrArray(mp));
 	// load map and iterate over it after each step

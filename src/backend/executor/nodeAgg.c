@@ -839,14 +839,6 @@ advance_transition_function(AggState *aggstate,
  *
  * When called, CurrentMemoryContext should be the per-query context.
  */
-/*
- * GPDB_12_MERGE_FIXME: diff added in the following commits need to be
- * incorporated into aggstate->phase->evaltrans (most likely in
- * ExecBuildAggTrans)
- *
- * - commit 652e34adaf2e00e8 (Make use of serial/deserial functions to enable
- *   2-phase aggregates.)
- */
 static void
 advance_aggregates(AggState *aggstate)
 {
@@ -3815,8 +3807,6 @@ ExecInitAgg(Agg *node, EState *estate, int eflags)
 
 		/* Planner should have assigned aggregate to correct level */
 		Assert(aggref->agglevelsup == 0);
-		/* ... and the split mode should match */
-		Assert(aggref->aggsplit == aggstate->aggsplit);
 
 		/* 1. Check for already processed aggs which can be re-used */
 		existing_aggno = find_compatible_peragg(aggref, aggstate, aggno,
@@ -3860,7 +3850,7 @@ ExecInitAgg(Agg *node, EState *estate, int eflags)
 		 * If this aggregation is performing state combines, then instead of
 		 * using the transition function, we'll use the combine function
 		 */
-		if (DO_AGGSPLIT_COMBINE(aggstate->aggsplit))
+		if (DO_AGGSPLIT_COMBINE(aggref->aggsplit))
 		{
 			transfn_oid = aggform->aggcombinefn;
 
@@ -3872,7 +3862,7 @@ ExecInitAgg(Agg *node, EState *estate, int eflags)
 			transfn_oid = aggform->aggtransfn;
 
 		/* Final function only required if we're finalizing the aggregates */
-		if (DO_AGGSPLIT_SKIPFINAL(aggstate->aggsplit))
+		if (DO_AGGSPLIT_SKIPFINAL(aggref->aggsplit))
 			peragg->finalfn_oid = finalfn_oid = InvalidOid;
 		else
 			peragg->finalfn_oid = finalfn_oid = aggform->aggfinalfn;
@@ -3900,10 +3890,10 @@ ExecInitAgg(Agg *node, EState *estate, int eflags)
 			 * every aggregate with an INTERNAL state has a serialization
 			 * function.  Verify that.
 			 */
-			if (DO_AGGSPLIT_SERIALIZE(aggstate->aggsplit))
+			if (DO_AGGSPLIT_SERIALIZE(aggref->aggsplit))
 			{
 				/* serialization only valid when not running finalfn */
-				Assert(DO_AGGSPLIT_SKIPFINAL(aggstate->aggsplit));
+				Assert(DO_AGGSPLIT_SKIPFINAL(aggref->aggsplit));
 
 				if (!OidIsValid(aggform->aggserialfn))
 					elog(ERROR, "serialfunc not provided for serialization aggregation");
@@ -3911,10 +3901,10 @@ ExecInitAgg(Agg *node, EState *estate, int eflags)
 			}
 
 			/* Likewise for deserialization functions */
-			if (DO_AGGSPLIT_DESERIALIZE(aggstate->aggsplit))
+			if (DO_AGGSPLIT_DESERIALIZE(aggref->aggsplit))
 			{
 				/* deserialization only valid when combining states */
-				Assert(DO_AGGSPLIT_COMBINE(aggstate->aggsplit));
+				Assert(DO_AGGSPLIT_COMBINE(aggref->aggsplit));
 
 				if (!OidIsValid(aggform->aggdeserialfn))
 					elog(ERROR, "deserialfunc not provided for deserialization aggregation");
@@ -4648,7 +4638,6 @@ ExecReScanAgg(AggState *node)
 {
 	ExprContext *econtext = node->ss.ps.ps_ExprContext;
 	PlanState  *outerPlan = outerPlanState(node);
-	Agg		   *aggnode = (Agg *) node->ss.ps.plan;
 	int			transno;
 	int			numGroupingSets = Max(node->maxsets, 1);
 	int			setno;
@@ -4673,8 +4662,7 @@ ExecReScanAgg(AggState *node)
 		 * we can just rescan the existing hash table; no need to build it
 		 * again.
 		 */
-		if (outerPlan->chgParam == NULL && !node->hash_ever_spilled &&
-			!bms_overlap(node->ss.ps.chgParam, aggnode->aggParams))
+		if (ReuseHashTable(node))
 		{
 			ResetTupleHashIterator(node->perhash[0].hashtable,
 								   &node->perhash[0].hashiter);
@@ -5022,25 +5010,26 @@ void
 ExecSquelchAgg(AggState *node)
 {
 	/*
-	 * GPDB_12_MERGE_FIXME: Sometimes, ExecSquelchAgg() is called, but then
-	 * the node is rescanned anyway. If we destroy the hash table here,
-	 * then we need to rebuild it later. I saw this happen with this test
-	 * query from the 'eagerfree' test:
-	 *
-	 *   with my_group_sum(d, total) as (select d, sum(i) from smallt group by d)
-	 *   select smallt2.* from smallt2
-	 *   where 0 < all (select total from my_group_sum, smallt, smallt2 as tmp where my_group_sum.d = smallt.d and smallt.d = tmp.d and my_group_sum.d = smallt2.d)
-	 *   and i = 0 ;
-	 *
-	 * That was broken, because ExecEagerFreeAgg() currently doesn't set
-	 * table_filled=false, even though it destroys the 'hashcontext'.
-	 * But it also doesn't destroy the hash table itself (or does go away
-	 * along with 'hashcontext'?) Freeing stuff aggressively here seems like
-	 * a premature optimization to me, so instead of trying to fix all that
-	 * I just disabled this attempt at eagerly freeing stuff. Revisit later?
-	 * I've got a feeling that Squelch is being called when it shouldn't, in
-	 * queries like above that involve a SubPlan.
+	 * Sometimes, ExecSquelchAgg() is called, but the node is rescanned anyway.
+	 * If we destroy the hash table here, then we need to rebuild it later.
+	 * ExecReScanAgg() will try to reuse the hash table if params is not changing
+	 * or affect input expressions, it will rescan the existing hash table.
+	 * Therefore, don't destroy the hash table if reusing hashtable during rescan.
 	 */
-	//ExecEagerFreeAgg(node);
+
+	if (!ReuseHashTable(node))
+	{
+		ExecEagerFreeAgg(node);
+	}
+
 	ExecSquelchNode(outerPlanState(node));
+}
+
+bool
+ReuseHashTable(AggState *node)
+{
+	PlanState  *outerPlan = outerPlanState(node);
+	Agg     *aggnode = (Agg *) node->ss.ps.plan;
+	return (outerPlan->chgParam == NULL && !node->hash_ever_spilled &&
+			!bms_overlap(node->ss.ps.chgParam, aggnode->aggParams));
 }

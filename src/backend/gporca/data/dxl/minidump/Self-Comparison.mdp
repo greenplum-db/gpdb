@@ -123,7 +123,7 @@
       <dxl:ColumnStatistics Mdid="1.711616.1.1.1" Name="j" Width="8.000000"/>
       <dxl:ColumnStatistics Mdid="1.711616.1.1.0" Name="i" Width="8.000000"/>
       <dxl:RelationStatistics Mdid="2.711616.1.1" Name="x" Rows="0.000000"/>
-      <dxl:Relation Mdid="0.711616.1.1" Name="x" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
+      <dxl:Relation Mdid="0.711616.1.1" Name="x" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
         <dxl:Columns>
           <dxl:Column Name="i" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>

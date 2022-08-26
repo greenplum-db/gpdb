@@ -82,7 +82,7 @@ create table customer
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
       <dxl:RelationStatistics Mdid="2.16385.1.0" Name="customer" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="0.16385.1.0" Name="customer" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0;9,3" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="0.16385.1.0" Name="customer" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0;9,3" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="cn" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -165,7 +165,7 @@ create table customer
         <dxl:SumAgg Mdid="0.2107.1.0"/>
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
-      <dxl:Relation Mdid="0.16406.1.0" Name="product" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0;9,3" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="0.16406.1.0" Name="product" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0;9,3" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="pn" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>
@@ -329,7 +329,7 @@ create table customer
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
       <dxl:RelationStatistics Mdid="2.16427.1.0" Name="sale" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="0.16427.1.0" Name="sale" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0,1,2" Keys="0,1,2;12,6" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="0.16427.1.0" Name="sale" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0,1,2" Keys="0,1,2;12,6" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="cn" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
             <dxl:DefaultValue/>

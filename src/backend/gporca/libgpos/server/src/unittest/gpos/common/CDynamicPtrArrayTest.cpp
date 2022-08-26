@@ -64,8 +64,8 @@ CDynamicPtrArrayTest::EresUnittest_Basic()
 					  "wert", "dfg", "xcv", "zxc"};
 	const CHAR *szMissingElem = "missing";
 
-	CDynamicPtrArray<CHAR, CleanupNULL<CHAR> > *pdrg =
-		GPOS_NEW(mp) CDynamicPtrArray<CHAR, CleanupNULL<CHAR> >(mp, 2);
+	CDynamicPtrArray<CHAR, CleanupNULL<CHAR>> *pdrg =
+		GPOS_NEW(mp) CDynamicPtrArray<CHAR, CleanupNULL<CHAR>>(mp, 2);
 
 	// add elements incl trigger resize of array
 	for (ULONG i = 0; i < 9; i++)
@@ -101,7 +101,7 @@ CDynamicPtrArrayTest::EresUnittest_Basic()
 
 	// test with ULONG array
 
-	typedef CDynamicPtrArray<ULONG, CleanupNULL<ULONG> > UlongArray;
+	using UlongArray = CDynamicPtrArray<ULONG, CleanupNULL<ULONG>>;
 	UlongArray *pdrgULONG = GPOS_NEW(mp) UlongArray(mp, 1);
 	ULONG c = 256;
 
@@ -149,7 +149,7 @@ CDynamicPtrArrayTest::EresUnittest_Ownership()
 
 	// test with ULONGs
 
-	typedef CDynamicPtrArray<ULONG, CleanupDelete<ULONG> > UlongArray;
+	using UlongArray = CDynamicPtrArray<ULONG, CleanupDelete<ULONG>>;
 	UlongArray *pdrgULONG = GPOS_NEW(mp) UlongArray(mp, 1);
 
 	// add elements incl trigger resize of array
@@ -164,7 +164,7 @@ CDynamicPtrArrayTest::EresUnittest_Ownership()
 
 	// test with CHAR array
 
-	typedef CDynamicPtrArray<CHAR, CleanupDeleteArray<CHAR> > CharArray;
+	using CharArray = CDynamicPtrArray<CHAR, CleanupDeleteArray<CHAR>>;
 	CharArray *pdrgCHAR = GPOS_NEW(mp) CharArray(mp, 2);
 
 	// add elements incl trigger resize of array
@@ -200,7 +200,7 @@ CDynamicPtrArrayTest::EresUnittest_ArrayAppend()
 	CAutoMemoryPool amp;
 	CMemoryPool *mp = amp.Pmp();
 
-	typedef CDynamicPtrArray<ULONG, CleanupNULL<ULONG> > UlongArray;
+	using UlongArray = CDynamicPtrArray<ULONG, CleanupNULL<ULONG>>;
 
 	ULONG cVal = 0;
 
@@ -249,7 +249,7 @@ CDynamicPtrArrayTest::EresUnittest_ArrayAppendExactFit()
 	CAutoMemoryPool amp;
 	CMemoryPool *mp = amp.Pmp();
 
-	typedef CDynamicPtrArray<ULONG, CleanupNULL<ULONG> > UlongArray;
+	using UlongArray = CDynamicPtrArray<ULONG, CleanupNULL<ULONG>>;
 
 	ULONG cVal = 0;
 
@@ -298,7 +298,7 @@ CDynamicPtrArrayTest::EresUnittest_ArrayAppendExactFit()
 GPOS_RESULT
 CDynamicPtrArrayTest::EresUnittest_PdrgpulSubsequenceIndexes()
 {
-	typedef CDynamicPtrArray<ULONG, CleanupNULL<ULONG> > UlongArray;
+	using UlongArray = CDynamicPtrArray<ULONG, CleanupNULL<ULONG>>;
 
 	CAutoMemoryPool amp;
 	CMemoryPool *mp = amp.Pmp();

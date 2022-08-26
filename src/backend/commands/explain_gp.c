@@ -816,8 +816,15 @@ cdbexplain_collectStatsFromNode(PlanState *planstate, CdbExplain_SendStatCtx *ct
 	if (si->bnotes < si->enotes)
 		appendStringInfoChar(ctx->notebuf, '\0');
 
-	if (planstate->node_context)
+	/* Use the instrument's memory record if exists, or query the memory context. */
+	if (instr->execmemused)
+	{
+		si->execmemused = instr->execmemused;
+	}
+	else if (planstate->node_context)
+	{
 		si->execmemused = (double) MemoryContextGetPeakSpace(planstate->node_context);
+	}
 
 	/* Transfer this node's statistics from Instrumentation into StatInst. */
 	si->starttime = instr->starttime;
@@ -998,13 +1005,8 @@ cdbexplain_depositStatsToNode(PlanState *planstate, CdbExplain_RecvStatCtx *ctx)
 	cdbexplain_depStatAcc_init0(&totalWorkfileCreated);
 	cdbexplain_depStatAcc_init0(&totalPartTableScanned);
 	for (int i = 0; i < NUM_SORT_METHOD; i++)
-	{
 		for (int j = 0; j < NUM_SORT_SPACE_TYPE; j++)
-		{
 			cdbexplain_depStatAcc_init0(&sortSpaceUsed[j][i]);
-			cdbexplain_depStatAcc_init0(&sortSpaceUsed[j][i]);
-		}
-	}
 
 	/* Initialize per-slice accumulators. */
 	cdbexplain_depStatAcc_init0(&peakmemused);
@@ -1050,14 +1052,6 @@ cdbexplain_depositStatsToNode(PlanState *planstate, CdbExplain_RecvStatCtx *ctx)
 									  (double) rsi->sortstats.spaceUsed, rsh, rsi, nsi);
 		}
 
-		Assert(rsi->sortstats.sortMethod < NUM_SORT_METHOD);
-		Assert(rsi->sortstats.spaceType < NUM_SORT_SPACE_TYPE);
-		if (rsi->sortstats.sortMethod != SORT_TYPE_STILL_IN_PROGRESS)
-		{
-			cdbexplain_depStatAcc_upd(&sortSpaceUsed[rsi->sortstats.spaceType][rsi->sortstats.sortMethod],
-									  (double) rsi->sortstats.spaceUsed, rsh, rsi, nsi);
-		}
-
 		/* Update per-slice accumulators. */
 		cdbexplain_depStatAcc_upd(&peakmemused, rsh->worker.peakmemused, rsh, rsi, nsi);
 		cdbexplain_depStatAcc_upd(&vmem_reserved, rsh->worker.vmem_reserved, rsh, rsi, nsi);
@@ -1071,13 +1065,8 @@ cdbexplain_depositStatsToNode(PlanState *planstate, CdbExplain_RecvStatCtx *ctx)
 	ns->totalWorkfileCreated = totalWorkfileCreated.agg;
 	ns->totalPartTableScanned = totalPartTableScanned.agg;
 	for (int i = 0; i < NUM_SORT_METHOD; i++)
-	{
 		for (int j = 0; j < NUM_SORT_SPACE_TYPE; j++)
-		{
 			ns->sortSpaceUsed[j][i] = sortSpaceUsed[j][i].agg;
-			ns->sortSpaceUsed[j][i] = sortSpaceUsed[j][i].agg;
-		}
-	}
 
 	/* Roll up summary over all nodes of slice into RecvStatCtx. */
 	ctx->workmemused_max = Max(ctx->workmemused_max, workmemused.agg.vmax);
@@ -1536,6 +1525,91 @@ cdbexplain_showExecStats(struct PlanState *planstate, ExplainState *es)
 			}
 
 			ExplainCloseGroup("work_mem", "work_mem", true, es);
+		}
+	}
+
+	/*
+	 * Print number of partitioned tables scanned for dynamic scans.
+	 */
+	if (0 <= ns->totalPartTableScanned.vcnt && (T_DynamicSeqScanState == planstate->type
+												|| T_DynamicIndexScanState == planstate->type
+												|| T_DynamicBitmapHeapScanState == planstate->type))
+	{
+		/*
+		 * FIXME: Only displayed in TEXT format
+		 * [#159443692]
+		 */
+		if (es->format == EXPLAIN_FORMAT_TEXT)
+		{
+			double		nPartTableScanned_avg = cdbexplain_agg_avg(&ns->totalPartTableScanned);
+
+			if (0 == nPartTableScanned_avg)
+			{
+				if (T_DynamicBitmapHeapScanState == planstate->type)
+				{
+					appendStringInfoSpaces(es->str, es->indent * 2);
+					appendStringInfo(es->str,
+									 "Partitions scanned:  0 .\n");
+				}
+			}
+			else
+			{
+				cdbexplain_formatSeg(segbuf, sizeof(segbuf), ns->totalPartTableScanned.imax, ns->ninst);
+
+				appendStringInfoSpaces(es->str, es->indent * 2);
+
+				/* only 1 segment scans partitions */
+				if (1 == ns->totalPartTableScanned.vcnt)
+				{
+					/* rescan */
+					if (1 < instr->nloops)
+					{
+						double		totalPartTableScannedPerRescan = ns->totalPartTableScanned.vmax / instr->nloops;
+
+						appendStringInfo(es->str,
+										 "Partitions scanned:  %.0f %s of %ld scans.\n",
+										 totalPartTableScannedPerRescan,
+										 segbuf,
+										 instr->nloops);
+					}
+					else
+					{
+						appendStringInfo(es->str,
+										 "Partitions scanned:  %.0f %s.\n",
+										 ns->totalPartTableScanned.vmax,
+										 segbuf);
+					}
+				}
+				else
+				{
+					/* rescan */
+					if (1 < instr->nloops)
+					{
+						double		totalPartTableScannedPerRescan = nPartTableScanned_avg / instr->nloops;
+						double		maxPartTableScannedPerRescan = ns->totalPartTableScanned.vmax / instr->nloops;
+
+						appendStringInfo(es->str,
+										 "Partitions scanned:  Avg %.1f x %d workers of %ld scans."
+										 "  Max %.0f parts%s.\n",
+										 totalPartTableScannedPerRescan,
+										 ns->totalPartTableScanned.vcnt,
+										 instr->nloops,
+										 maxPartTableScannedPerRescan,
+										 segbuf
+							);
+					}
+					else
+					{
+						appendStringInfo(es->str,
+										 "Partitions scanned:  Avg %.1f x %d workers."
+										 "  Max %.0f parts%s.\n",
+										 nPartTableScanned_avg,
+										 ns->totalPartTableScanned.vcnt,
+										 ns->totalPartTableScanned.vmax,
+										 segbuf);
+					}
+				}
+			}
 		}
 	}
 

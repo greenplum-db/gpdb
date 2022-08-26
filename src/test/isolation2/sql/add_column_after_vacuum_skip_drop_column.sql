@@ -1,5 +1,7 @@
 -- @Description Ensures that an ALTER TABLE ADD COLUMN will drop segfiles in
---              AOSEG_STATE_AWAITING_DROP state left over by a previous vacuum
+--              AOSEG_STATE_AWAITING_DROP state left over by a previous vacuum.
+--              We removed recycling dead segfiles from ADD COLUMN workflow, so
+--              the test expected result were adjusted accordingly.
 --
 CREATE TABLE aoco_add_column_after_vacuum_skip_drop (a INT, b INT) WITH (appendonly=true, orientation=column);
 INSERT INTO aoco_add_column_after_vacuum_skip_drop SELECT i as a, i as b FROM generate_series(1, 10) AS i;

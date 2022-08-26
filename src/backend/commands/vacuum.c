@@ -2323,10 +2323,7 @@ vacuum_rel(Oid relid, RangeVar *relation, VacuumParams *params,
 			LockRelation(onerel, ShareLock);
 	}
 
-	if (is_appendoptimized)
-		/* entrance of vacuuming Append-Optimized table */
-		ao_vacuum_rel(onerel, params, vac_strategy);
-	else if ((params->options & VACOPT_FULL))
+	if (!is_appendoptimized && (params->options & VACOPT_FULL))
 	{
 		int			cluster_options = 0;
 
@@ -2340,7 +2337,7 @@ vacuum_rel(Oid relid, RangeVar *relation, VacuumParams *params,
 		/* VACUUM FULL is now a variant of CLUSTER; see cluster.c */
 		cluster_rel(relid, InvalidOid, cluster_options, true);
 	}
-	else
+	else /* Heap vacuum or AO/CO vacuum in specific phase */
 		table_relation_vacuum(onerel, params, vac_strategy);
 
 	/* Roll back any GUC changes executed by index functions */
@@ -2359,10 +2356,13 @@ vacuum_rel(Oid relid, RangeVar *relation, VacuumParams *params,
 	PopActiveSnapshot();
 	CommitTransactionCommand();
 
+	/* entrance of Append-Optimized table vacuum */
 	if (is_appendoptimized && ao_vacuum_phase == 0)
 	{
-		int orig_options = params->options;	
+		int orig_options = params->options;
+
 		/* orchestrate the AO vacuum phases */
+
 		/*
 		 * Do cleanup first, to reclaim as much space as possible that
 		 * was left behind from previous VACUUMs. This runs under local
@@ -2375,7 +2375,8 @@ vacuum_rel(Oid relid, RangeVar *relation, VacuumParams *params,
 		params->options = orig_options | VACOPT_AO_COMPACT_PHASE;
 		vacuum_rel(relid, this_rangevar, params, false);
 
-		/* Do a final round of cleanup. Hopefully, this can drop the segments
+		/* 
+		 * Do a final round of cleanup. Hopefully, this can drop the segments
 		 * that were compacted in the previous phase.
 		 */
 		params->options = orig_options | VACOPT_AO_POST_CLEANUP_PHASE;
@@ -2405,18 +2406,12 @@ vacuum_rel(Oid relid, RangeVar *relation, VacuumParams *params,
 	 * "analyze" will not get done on the toast table.  This is good, because
 	 * the toaster always uses hardcoded index access and statistics are
 	 * totally unimportant for toast relations.
+	 * 
+	 * Note, for GPDB, set recursing to true for auxilary tables to avoid
+	 * being dispatched vacuum separately.
 	 */
 	if (toast_relid != InvalidOid)
-		vacuum_rel(toast_relid, NULL, params, false);
-
-	/*
-	 * If an AO/CO table is empty on a segment,
-	 *
-	 * Similar to toast, a VacuumStmt object for each AO auxiliary relation is
-	 * constructed and dispatched separately by the QD, when vacuuming the
-	 * base AO relation.  A backend executing dispatched VacuumStmt
-	 * (GP_ROLE_EXECUTE), therefore, should not execute this block of code.
-	 */
+		vacuum_rel(toast_relid, NULL, params, true);
 
 	/* do the same for an AO segments table, if any */
 	if (aoseg_relid != InvalidOid)
@@ -2712,7 +2707,8 @@ vacuum_params_to_options_list(VacuumParams *params)
 		elog(ERROR, "unrecognized vacuum option %x", optmask);
 
 	/*
-	 * GPDB_12_MERGE_FIXME:
+	 * NOTE:
+	 *
 	 * User-invoked vacuum will never have special values for VacuumParams's
 	 * freeze_min_age, freeze_table_age, multixact_freeze_min_age,
 	 * multixact_freeze_table_age, is_wraparound and log_min_duration. So no need
@@ -2726,7 +2722,12 @@ vacuum_params_to_options_list(VacuumParams *params)
 	 *
 	 * We should consider dispatch these values only if we do vacuum
 	 * as how we do analyze through autovacuum on coordinator.
-	 */
+	 *
+	 * GPDB has no plan to support distributed auto vacuum (do vacuum as how we do
+	 * analyze, i.e. to trigger auto vacuum on QD, and QD manages to dispatch the
+	 * vacuum request to QEs as distributed transaction) for GPDB7.
+	 * See more details in the head comments of autovacuum.c.
+	*/
 	if (params->truncate == VACOPT_TERNARY_DISABLED)
 		options = lappend(options, makeDefElem("truncate", (Node *) makeInteger(0), -1));
 	else if (params->truncate == VACOPT_TERNARY_ENABLED)

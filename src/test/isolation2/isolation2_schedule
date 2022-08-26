@@ -31,8 +31,10 @@ test: prevent_ao_wal
 # so must be scheduled after that one.
 test: packcore
 
+test: insert_root_partition_truncate_deadlock_without_gdd
 # Tests on global deadlock detector
 test: gdd/prepare
+test: gdd/insert_root_partition_truncate_deadlock
 test: gdd/concurrent_update
 test: gdd/dist-deadlock-01 gdd/dist-deadlock-04 gdd/dist-deadlock-05 gdd/dist-deadlock-06 gdd/dist-deadlock-07 gdd/dist-deadlock-102 gdd/dist-deadlock-103 gdd/dist-deadlock-104 gdd/dist-deadlock-106 gdd/non-lock-105
 test: gdd/dist-deadlock-upsert
@@ -93,7 +95,6 @@ test: ao_upgrade
 test: bitmap_index_concurrent
 test: bitmap_index_crash
 test: bitmap_update_words_backup_block
-test: bitmap_union
 test: bitmap_index_inspect
 
 # below test utilizes fault injectors so it needs to be in a group by itself
@@ -151,6 +152,7 @@ test: uao/vacuum_self_function_row
 test: uao/vacuum_while_insert_row
 test: uao/vacuum_while_vacuum_row
 test: uao/vacuum_cleanup_row
+test: uao/vacuum_index_stats_row
 test: uao/bitmapindex_rescan_row
 test: uao/limit_indexscan_inits_row
 test: reorganize_after_ao_vacuum_skip_drop truncate_after_ao_vacuum_skip_drop mark_all_aoseg_await_drop
@@ -203,6 +205,7 @@ test: uao/vacuum_self_function_column
 test: uao/vacuum_while_insert_column
 test: uao/vacuum_while_vacuum_column
 test: uao/vacuum_cleanup_column
+test: uao/vacuum_index_stats_column
 test: uao/bitmapindex_rescan_column
 test: uao/limit_indexscan_inits_column
 
@@ -218,6 +221,7 @@ test: pg_basebackup_with_tablespaces
 test: pg_basebackup_large_database_oid
 test: enable_autovacuum
 test: idle_gang_cleaner
+# test idle_in_transaction_session_timeout
 
 test: segwalrep/die_commit_pending_replication
 
@@ -234,6 +238,7 @@ test: segwalrep/failover_with_many_records
 test: segwalrep/dtm_recovery_on_standby
 test: segwalrep/commit_blocking_on_standby
 test: segwalrep/dtx_recovery_wait_lsn
+test: segwalrep/select_throttle
 test: fts_manual_probe
 test: fts_session_reset
 test: fts_segment_reset

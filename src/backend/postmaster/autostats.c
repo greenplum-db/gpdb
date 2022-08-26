@@ -67,7 +67,7 @@ autostats_issue_analyze(Oid relationOid)
 				elog(LOG, "Auto-stats did not issue ANALYZE on tableoid %d since the user does not have table-owner level permissions.",
 				relationOid);
 
-				return;
+			return;
 		}
 	}
 

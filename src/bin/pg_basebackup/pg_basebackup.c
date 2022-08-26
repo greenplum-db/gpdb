@@ -1798,7 +1798,7 @@ build_exclude_list(void)
 
 	if (PQExpBufferDataBroken(buf))
 	{
-		pg_log_error("out of memory\n");
+		pg_log_error("out of memory");
 		exit(1);
 	}
 
@@ -1986,7 +1986,7 @@ BaseBackup(void)
 			char	   *path = unconstify(char *, get_tablespace_mapping(PQgetvalue(res, i, 1)));
 			char path_with_subdir[MAXPGPATH];
 
-			sprintf(path_with_subdir, "%s/%d/%s", path, target_gp_dbid, GP_TABLESPACE_VERSION_DIRECTORY);
+			snprintf(path_with_subdir, MAXPGPATH, "%s/%d/%s", path, target_gp_dbid, GP_TABLESPACE_VERSION_DIRECTORY);
 
 			verify_dir_is_empty_or_create(path_with_subdir, &made_tablespace_dirs, &found_tablespace_dirs);
 		}
@@ -2293,7 +2293,7 @@ main(int argc, char **argv)
 					format = 't';
 				else
 				{
-					pg_log_error("invalid output format \"%s\", must be \"plain\" or \"tar\"\n",
+					pg_log_error("invalid output format \"%s\", must be \"plain\" or \"tar\"",
 								 optarg);
 					exit(1);
 				}
@@ -2365,7 +2365,7 @@ main(int argc, char **argv)
 				compresslevel = atoi(optarg);
 				if (compresslevel < 0 || compresslevel > 9)
 				{
-					pg_log_error("invalid compression level \"%s\"\n", optarg);
+					pg_log_error("invalid compression level \"%s\"", optarg);
 					exit(1);
 				}
 				break;

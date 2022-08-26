@@ -1190,16 +1190,10 @@ set optimizer to off;
 -- Test that LIMIT can be pushed to SORT through a subquery that just projects
 -- columns.  We check for that having happened by looking to see if EXPLAIN
 -- ANALYZE shows that a top-N sort was used.  We must suppress or filter away
--- all the non-invariant parts of the EXPLAIN ANALYZE output.
+-- all the non-invariant parts of the EXPLAIN ANALYZE output. Use a replicated
+-- table to genarate a plan like: Limit -> Subquery -> Sort
 --
--- GPDB_12_MERGE_FIXME: we need to revisit the following test because it is not
--- testing what it advertized in the above comment. Specificly, we don't
--- execute top-N sort for the planner plan. Orca on the other hand never honors
--- ORDER BY in a subquery, as permitted by the SQL spec.  Consider rewriting
--- the test using a replicated table so that we get the plan stucture like
--- this: Limit -> Subquery -> Sort
---
-create table sq_limit (pk int primary key, c1 int, c2 int);
+create table sq_limit (pk int primary key, c1 int, c2 int) distributed replicated;
 insert into sq_limit values
     (1, 1, 1),
     (2, 2, 2),
@@ -1220,6 +1214,7 @@ begin
         ln := regexp_replace(ln, 'Memory: \S*',  'Memory: xxx');
         -- this case might occur if force_parallel_mode is on:
         ln := regexp_replace(ln, 'Worker 0:  Sort Method',  'Sort Method');
+        ln := regexp_replace(ln, 'Segments: \S*  Max: \S*kB \(segment \S*\)',  'Segments: x  Max: xxkB (segment x)');
         return next ln;
     end loop;
 end;
@@ -1227,17 +1222,22 @@ $$;
 select * from explain_sq_limit();
                                explain_sq_limit                               
 ------------------------------------------------------------------------------
- Limit (actual rows=3 loops=1)
-   ->  Subquery Scan on x (actual rows=3 loops=1)
-         ->  Gather Motion 3:1  (slice1; segments: 3) (actual rows=3 loops=1)
-               Merge Key: sq_limit.c1, sq_limit.pk
-               ->  Sort (actual rows=5 loops=1)
+ Gather Motion 1:1  (slice1; segments: 1) (actual rows=3 loops=1)
+   ->  Limit (actual rows=3 loops=1)
+         ->  Subquery Scan on x (actual rows=3 loops=1)
+               ->  Sort (actual rows=3 loops=1)
                      Sort Key: sq_limit.c1, sq_limit.pk
-                     Sort Method:  quicksort  Memory: xxx
-                     ->  Seq Scan on sq_limit (actual rows=5 loops=1)
+                     Sort Method:  top-N heapsort  Memory: xxx
+                     Executor Memory: xxx  Segments: x  Max: xxkB (segment x)
+                     ->  Seq Scan on sq_limit (actual rows=8 loops=1)
  Optimizer: Postgres query optimizer
 (9 rows)
 
+-- a subpath is sorted under a subqueryscan. however, the subqueryscan is not.
+-- whether the order of subpath can applied to the subqueryscan is up-to-implement.
+-- now we do not guarantee the order of subpath can apply to the subqueryscan.
+-- so the results of bellow is not stable, so we ignore the results
+--start_ignore
 select * from (select pk,c2 from sq_limit order by c1,pk) as x limit 3;
  pk | c2 
 ----+----
@@ -1246,6 +1246,7 @@ select * from (select pk,c2 from sq_limit order by c1,pk) as x limit 3;
   2 |  2
 (3 rows)
 
+--end_ignore
 reset optimizer;
 drop function explain_sq_limit();
 drop table sq_limit;
@@ -1313,39 +1314,65 @@ select * from x where f1 = 1;
 (7 rows)
 
 -- Volatile functions prevent inlining
--- GPDB_12_MERGE_FIXME: inlining happens on GPDB: But the plan seems OK
--- nevertheless. Is the GPDB planner smart, and notices that this is
--- ok to inline, or is it doing something that would be unsafe in more
--- complicated queries? Investigte
+-- Prevent inlining happens on GPDB, inlining may cause wrong results.
+-- For example, nextval() function.
 explain (verbose, costs off)
 with x as (select * from (select f1, random() from subselect_tbl) ss)
 select * from x where f1 = 1;
-                         QUERY PLAN                         
-------------------------------------------------------------
- Sequence
+                           QUERY PLAN                           
+----------------------------------------------------------------
+ Gather Motion 1:1  (slice1; segments: 1)
    Output: share0_ref2.f1, share0_ref2.random
-   ->  Shared Scan (share slice:id 0:0)
-         Output: share0_ref1.f1, share0_ref1.random
-         ->  Result
-               Output: subselect_tbl.f1, random()
-               ->  Gather Motion 1:1  (slice1; segments: 1)
-                     Output: subselect_tbl.f1
-                     ->  Seq Scan on public.subselect_tbl
-                           Output: subselect_tbl.f1
-                           Filter: (subselect_tbl.f1 = 1)
-   ->  Result
+   ->  Sequence
          Output: share0_ref2.f1, share0_ref2.random
-         Filter: (share0_ref2.f1 = 1)
-         ->  Shared Scan (share slice:id 0:0)
+         ->  Shared Scan (share slice:id 1:0)
+               Output: share0_ref1.f1, share0_ref1.random
+               ->  Seq Scan on public.subselect_tbl
+                     Output: subselect_tbl.f1, random()
+                     Filter: (subselect_tbl.f1 = 1)
+         ->  Result
                Output: share0_ref2.f1, share0_ref2.random
+               Filter: (share0_ref2.f1 = 1)
+               ->  Shared Scan (share slice:id 1:0)
+                     Output: share0_ref2.f1, share0_ref2.random
  Optimizer: Pivotal Optimizer (GPORCA)
  Settings: gp_cte_sharing=on, optimizer=on
-(18 rows)
+(16 rows)
 
+create temporary sequence ts;
+create table vol_test(a int, b int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+explain (verbose, costs off)
+with x as (select * from (select a, nextval('ts') from vol_test) ss)
+select * from x where a = 1;
+                           QUERY PLAN                            
+-----------------------------------------------------------------
+ Gather Motion 1:1  (slice1; segments: 1)
+   Output: share0_ref2.a, share0_ref2.nextval
+   ->  Sequence
+         Output: share0_ref2.a, share0_ref2.nextval
+         ->  Shared Scan (share slice:id 1:0)
+               Output: share0_ref1.a, share0_ref1.nextval
+               ->  Seq Scan on public.vol_test
+                     Output: vol_test.a, nextval('ts'::regclass)
+                     Filter: (vol_test.a = 1)
+         ->  Result
+               Output: share0_ref2.a, share0_ref2.nextval
+               Filter: (share0_ref2.a = 1)
+               ->  Shared Scan (share slice:id 1:0)
+                     Output: share0_ref2.a, share0_ref2.nextval
+ Optimizer: Pivotal Optimizer (GPORCA)
+ Settings: gp_cte_sharing=on, optimizer=on
+(16 rows)
+
+drop sequence ts;
+drop table vol_test;
 -- SELECT FOR UPDATE cannot be inlined
--- GPDB_12_MERGE_FIXME: Without GDD, we don't do row locking, so it can be
--- inlined. However at the moment, we seem to inline this even when GDD is
--- enabled, losing the LockRows node altogether. That ought to be fixed.
+-- GPDB: select statement with locking clause is not easy to fully supported
+-- in greenplum. The following case even with GDD enabled greenplum will still
+-- lock the table in Exclusive Lock and not generate LockRows plan node.
+-- For detail, please refer to checkCanOptSelectLockingClause.
 explain (verbose, costs off)
 with x as (select * from (select f1 from subselect_tbl for update) ss)
 select * from x where f1 = 1;

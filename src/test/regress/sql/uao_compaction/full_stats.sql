@@ -13,4 +13,6 @@ SELECT relname, reltuples FROM pg_class WHERE relname = 'uao_full_stats_index';
 DELETE FROM uao_full_stats WHERE a < 16;
 VACUUM FULL uao_full_stats;
 SELECT relname, reltuples FROM pg_class WHERE relname = 'uao_full_stats';
+-- Compaction is always triggered in VACUUM FULL, expecting
+-- reltuples of both table and index are equal.
 SELECT relname, reltuples FROM pg_class WHERE relname = 'uao_full_stats_index';

@@ -952,7 +952,7 @@ shareinput_writer_notifyready(shareinput_Xslice_reference *ref)
 {
 	shareinput_Xslice_state *state = ref->xslice_state;
 
-	uint32 old_ready = pg_atomic_exchange_u32(&state->ready, 1);
+	uint32 old_ready PG_USED_FOR_ASSERTS_ONLY = pg_atomic_exchange_u32(&state->ready, 1);
 	Assert(old_ready == 0);
 
 #ifdef FAULT_INJECTOR

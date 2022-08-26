@@ -153,7 +153,7 @@ explain select * from foo left join bar on foo.a = bar.a and foo.b = bar.b left 
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
       <dxl:RelationStatistics Mdid="2.65571.1.0" Name="foo" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="0.65571.1.0" Name="foo" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0,1" Keys="9,3" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="0.65571.1.0" Name="foo" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0,1" Keys="9,3" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.1043.1.0" Nullable="true" ColWidth="8">
             <dxl:DefaultValue/>
@@ -191,7 +191,7 @@ explain select * from foo left join bar on foo.a = bar.a and foo.b = bar.b left 
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:RelationStatistics Mdid="2.65577.1.0" Name="bar" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="0.65577.1.0" Name="bar" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0,1" Keys="9,3" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="0.65577.1.0" Name="bar" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0,1" Keys="9,3" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.1043.1.0" Nullable="true" ColWidth="8">
             <dxl:DefaultValue/>
@@ -238,7 +238,7 @@ explain select * from foo left join bar on foo.a = bar.a and foo.b = bar.b left 
           <dxl:Opfamily Mdid="0.1994.1.0"/>
         </dxl:Opfamilies>
       </dxl:Index>
-      <dxl:Relation Mdid="0.65603.1.0" Name="zoo" IsTemporary="false" HasOids="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0,1" Keys="5,3" NumberLeafPartitions="0">
+      <dxl:Relation Mdid="0.65603.1.0" Name="zoo" IsTemporary="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0,1" Keys="5,3" NumberLeafPartitions="0">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.1043.1.0" Nullable="true" ColWidth="8">
             <dxl:DefaultValue/>
@@ -555,6 +555,7 @@ explain select * from foo left join bar on foo.a = bar.a and foo.b = bar.b left 
                   <dxl:Ident ColId="1" ColName="b" TypeMdid="0.23.1.0"/>
                 </dxl:Comparison>
               </dxl:IndexCondList>
+	      <dxl:Partitions/>
               <dxl:IndexDescriptor Mdid="0.65602.1.0" IndexName="bar_idx_ab"/>
               <dxl:TableDescriptor Mdid="0.65577.1.0" TableName="bar">
                 <dxl:Columns>

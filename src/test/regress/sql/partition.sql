@@ -3793,3 +3793,63 @@ RESET ROLE;
 DROP TABLE public.t_part_acl;
 ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE SELECT ON TABLES FROM user_prt_acl;
 DROP ROLE user_prt_acl;
+
+
+-- test on commit behavior used on partition table
+
+-- test on commit delete rows
+begin;
+create temp table temp_parent (a int) partition by range(a) (start(1) end(10) every(10)) on commit delete rows;
+insert into temp_parent select i from generate_series(1, 5) i;
+select count(*) from temp_parent;
+commit;
+-- DELETE ROWS will not cascaded to its partitions when we use DELETE ROWS behavior
+select count(*) from temp_parent;
+drop table temp_parent;
+
+-- test on commit drop
+begin;
+create temp table temp_parent (a int) partition by range(a) (start(1) end(10) every(1)) on commit drop;
+insert into temp_parent select i from generate_series(1, 5) i;
+select count(*) from pg_class where relname like 'temp_parent_%';
+commit;
+-- no relations remain in this case.
+select count(*) from pg_class where relname like 'temp_parent_%';
+
+-- check ATTACH PARTITION on parent table with different distribution policy
+CREATE EXTENSION IF NOT EXISTS gp_debug_numsegments;
+SELECT gp_debug_set_create_table_default_numsegments(1);
+
+CREATE TABLE expanded_parent(a int, b int) PARTITION BY RANGE(b) (START (0) END (6) EVERY (3));
+CREATE TABLE expanded_parent2(a int, b int) PARTITION BY RANGE(b) (START (0) END (6) EVERY (3));
+CREATE TABLE unexpanded_parent(a int, b int) PARTITION BY RANGE(b) (START (0) END (6) EVERY (3));
+CREATE TABLE unexpanded_attach(a int, b int);
+CREATE TABLE unexpanded_attach2(a int, b int);
+CREATE TABLE expanded_attach(a int, b int);
+CREATE TABLE expanded_attach2(a int, b int);
+
+SELECT gp_debug_reset_create_table_default_numsegments();
+
+-- attaching unexpanded partition to expanded table should fail
+ALTER TABLE expanded_parent EXPAND TABLE;
+ALTER TABLE expanded_parent ATTACH PARTITION unexpanded_attach FOR VALUES FROM (6) TO (9);
+
+-- attaching unexpanded partition to expanded table with partition prepare should fail
+ALTER TABLE expanded_parent2 EXPAND PARTITION PREPARE;
+ALTER TABLE expanded_parent2 ATTACH PARTITION unexpanded_attach2 FOR VALUES FROM (6) TO (9);
+
+-- attaching expanded partition to unexpanded table should fail
+ALTER TABLE expanded_attach EXPAND TABLE;
+ALTER TABLE unexpanded_parent ATTACH PARTITION expanded_attach FOR VALUES FROM (6) TO (9);
+
+-- attaching expanded partition to expanded table should succeed
+ALTER TABLE expanded_attach2 EXPAND TABLE;
+ALTER TABLE expanded_parent2 ATTACH PARTITION expanded_attach2 FOR VALUES FROM (6) TO (9);
+ALTER TABLE expanded_parent ATTACH PARTITION expanded_attach FOR VALUES FROM (6) TO (9);
+
+-- cleanup
+DROP TABLE expanded_parent;
+DROP TABLE expanded_parent2;
+DROP TABLE unexpanded_parent;
+DROP TABLE unexpanded_attach;
+DROP TABLE unexpanded_attach2;

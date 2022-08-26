@@ -424,10 +424,13 @@ explain (costs off) select distinct test_array from try_distinct_array;
 ------------------------------------------------------
  GroupAggregate
    Group Key: test_array
-   ->  Sort
-         Sort Key: test_array
-         ->  Gather Motion 3:1  (slice1; segments: 3)
-               ->  Seq Scan on try_distinct_array
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: test_array
+         ->  GroupAggregate
+               Group Key: test_array
+               ->  Sort
+                     Sort Key: test_array
+                     ->  Seq Scan on try_distinct_array
  Optimizer: Pivotal Optimizer (GPORCA)
 (7 rows)
 

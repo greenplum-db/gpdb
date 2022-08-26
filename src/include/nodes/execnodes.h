@@ -668,6 +668,10 @@ typedef struct EState
 
 	/* Should the executor skip past the alien plan nodes */
 	bool eliminateAliens;
+
+	/* partition oid that is being scanned, used by DynamicBitmapHeapScan/IndexScan */
+	int			partitionOid;
+
 } EState;
 
 struct PlanState;
@@ -1534,6 +1538,37 @@ typedef struct IndexScanState
 	Oid			tableOid;
 } IndexScanState;
 
+/*
+ * DynamicIndexScanState
+ */
+typedef struct DynamicIndexScanState
+{
+	ScanState	ss;
+
+	int			scan_state; /* the stage of scanning */
+
+	int			eflags;
+	IndexScanState *indexScanState;
+	List	   *tuptable;
+	ExprContext *outer_exprContext;
+
+	/*
+	 * This memory context will be reset per-partition to free
+	 * up previous partition's memory
+	 */
+	MemoryContext partitionMemoryContext;
+
+	int			nOids; /* number of oids to scan in partitioned table */
+	Oid		   *partOids; /* list of oids to scan in partitioned table */
+	int			whichPart; /* index of current partition in partOids */
+	/* The partition oid for which the current varnos are mapped */
+	Oid columnLayoutOid;
+
+	struct PartitionPruneState *as_prune_state; /* partition dynamic pruning state */
+	Bitmapset  *as_valid_subplans; /* used to determine partitions during dynamic pruning*/
+	bool 		did_pruning; /* flag that is set when */
+} DynamicIndexScanState;
+
 /* ----------------
  *	 IndexOnlyScanState information
  *
@@ -1603,6 +1638,31 @@ typedef struct BitmapIndexScanState
 	Relation	biss_RelationDesc;
 	struct IndexScanDescData *biss_ScanDesc;
 } BitmapIndexScanState;
+
+/*
+ * DynamicBitmapIndexScanState
+ */
+typedef struct DynamicBitmapIndexScanState
+{
+	ScanState	ss;
+
+	int			scan_state; /* the stage of scanning */
+
+	int			eflags;
+	BitmapIndexScanState *bitmapIndexScanState;
+	ExprContext *outer_exprContext;
+
+	/*
+	 * This memory context will be reset per-partition to free
+	 * up previous partition's memory
+	 */
+	MemoryContext partitionMemoryContext;
+
+	/* The partition oid for which the current varnos are mapped */
+	Oid columnLayoutOid;
+
+	List	   *tuptable;
+} DynamicBitmapIndexScanState;
 
 /* ----------------
  *	 SharedBitmapState information
@@ -1696,6 +1756,50 @@ typedef struct BitmapHeapScanState
 	TBMSharedIterator *shared_prefetch_iterator;
 	ParallelBitmapHeapState *pstate;
 } BitmapHeapScanState;
+
+typedef struct DynamicBitmapHeapScanState
+{
+	ScanState	ss;				/* its first field is NodeTag */
+
+	int			scan_state; /* the stage of scanning */
+
+	int			eflags;
+	BitmapHeapScanState *bhsState;
+
+	/*
+	 * The first partition requires initialization of expression states,
+	 * such as qual, regardless of whether we need to re-map varattno
+	 */
+	bool		firstPartition;
+	/*
+	 * lastRelOid is the last relation that corresponds to the
+	 * varattno mapping of qual and target list. Each time we open a new partition, we will
+	 * compare the last relation with current relation by using varattnos_map()
+	 * and then convert the varattno to the new varattno
+	 */
+	Oid			lastRelOid;
+
+	/*
+	 * scanrelid is the RTE index for this scan node. It will be used to select
+	 * varno whose varattno will be remapped, if necessary
+	 */
+	Index		scanrelid;
+
+	/*
+	 * This memory context will be reset per-partition to free
+	 * up previous partition's memory
+	 */
+	MemoryContext partitionMemoryContext;
+
+
+	int			nOids; /* number of oids to scan in partitioned table */
+	Oid		   *partOids; /* list of oids to scan in partitioned table */
+	int			whichPart; /* index of current partition in partOids */
+
+	struct PartitionPruneState *as_prune_state; /* partition dynamic pruning state */
+	Bitmapset  *as_valid_subplans; /* used to determine partitions during dynamic pruning*/
+	bool 		did_pruning; /* flag that is set when */
+} DynamicBitmapHeapScanState;
 
 /* ----------------
  *	 TidScanState information
@@ -1918,6 +2022,52 @@ typedef struct ForeignScanState
 	struct FdwRoutine *fdwroutine;
 	void	   *fdw_state;		/* foreign-data wrapper can keep state here */
 } ForeignScanState;
+
+/*
+ * DynamicSeqScanState
+ */
+typedef struct DynamicSeqScanState
+{
+	ScanState	ss;
+
+	int			scan_state; /* the stage of scanning */
+
+	int			eflags;
+	SeqScanState *seqScanState;
+
+	/*
+	 * The first partition requires initialization of expression states,
+	 * such as qual and targetlist, regardless of whether we need to re-map varattno
+	 */
+	bool		firstPartition;
+	/*
+	 * lastRelOid is the last relation that corresponds to the
+	 * varattno mapping of qual and target list. Each time we open a new partition, we will
+	 * compare the last relation with current relation by using varattnos_map()
+	 * and then convert the varattno to the new varattno
+	 */
+	Oid			lastRelOid;
+
+	/*
+	 * scanrelid is the RTE index for this scan node. It will be used to select
+	 * varno whose varattno will be remapped, if necessary
+	 */
+	Index		scanrelid;
+
+	/*
+	 * This memory context will be reset per-partition to free
+	 * up previous partition's memory
+	 */
+	MemoryContext partitionMemoryContext;
+
+	int			nOids; /* number of oids to scan in partitioned table */
+	Oid		   *partOids; /* list of oids to scan in partitioned table */
+	int			whichPart; /* index of current partition in partOids */
+
+	struct PartitionPruneState *as_prune_state; /* partition dynamic pruning state */
+	Bitmapset  *as_valid_subplans; /* used to determine partitions during dynamic pruning*/
+	bool 		did_pruning; /* flag that is set when */
+} DynamicSeqScanState;
 
 /* ----------------
  *	 CustomScanState information

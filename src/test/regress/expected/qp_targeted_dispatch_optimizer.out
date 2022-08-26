@@ -496,32 +496,16 @@ INFO:  (slice 1) Dispatch command to SINGLE content
 (1 row)
 
 explain select count(*) from mpp7638 where a =1;
-                                       QUERY PLAN                                        
------------------------------------------------------------------------------------------
- Aggregate  (cost=0.00..431.00 rows=1 width=8)
-   ->  Gather Motion 1:1  (slice1; segments: 1)  (cost=0.00..431.00 rows=1 width=1)
-         ->  Result  (cost=0.00..431.00 rows=1 width=1)
-               ->  Append  (cost=0.00..431.00 rows=1 width=4)
-                     ->  Seq Scan on mpp7638_1_prt_1  (cost=0.00..431.00 rows=1 width=4)
-                           Filter: (a = 1)
-                     ->  Seq Scan on mpp7638_1_prt_2  (cost=0.00..431.00 rows=1 width=4)
-                           Filter: (a = 1)
-                     ->  Seq Scan on mpp7638_1_prt_3  (cost=0.00..431.00 rows=1 width=4)
-                           Filter: (a = 1)
-                     ->  Seq Scan on mpp7638_1_prt_4  (cost=0.00..431.00 rows=1 width=4)
-                           Filter: (a = 1)
-                     ->  Seq Scan on mpp7638_1_prt_5  (cost=0.00..431.00 rows=1 width=4)
-                           Filter: (a = 1)
-                     ->  Seq Scan on mpp7638_1_prt_6  (cost=0.00..431.00 rows=1 width=4)
-                           Filter: (a = 1)
-                     ->  Seq Scan on mpp7638_1_prt_7  (cost=0.00..431.00 rows=1 width=4)
-                           Filter: (a = 1)
-                     ->  Seq Scan on mpp7638_1_prt_8  (cost=0.00..431.00 rows=1 width=4)
-                           Filter: (a = 1)
-                     ->  Seq Scan on mpp7638_1_prt_9  (cost=0.00..431.00 rows=1 width=4)
-                           Filter: (a = 1)
+                                     QUERY PLAN                                     
+------------------------------------------------------------------------------------
+ Finalize Aggregate  (cost=0.00..431.00 rows=1 width=8)
+   ->  Gather Motion 1:1  (slice1; segments: 1)  (cost=0.00..431.00 rows=1 width=8)
+         ->  Partial Aggregate  (cost=0.00..431.00 rows=1 width=8)
+               ->  Dynamic Seq Scan on mpp7638  (cost=0.00..431.00 rows=1 width=4)
+                     Number of partitions to scan: 9 
+                     Filter: (a = 1)
  Optimizer: Pivotal Optimizer (GPORCA)
-(23 rows)
+(7 rows)
 
 alter table mpp7638 set distributed by (a, b, c);
 INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
@@ -682,12 +666,11 @@ INFO:  (slice 1) Dispatch command to SINGLE content
 explain select * from (select * from mpp7620 where key=200) ss where key =200; 
                                   QUERY PLAN                                   
 -------------------------------------------------------------------------------
- Gather Motion 1:1  (slice1; segments: 1)  (cost=0.00..431.00 rows=1 width=10)
-   ->  Seq Scan on mpp7620  (cost=0.00..431.00 rows=1 width=10)
-         Filter: key = 200
- Settings:  optimizer=on
- Optimizer status: Pivotal Optimizer (GPORCA) version 1.624
-(5 rows)
+ Gather Motion 1:1  (slice1; segments: 1)  (cost=0.00..431.00 rows=1 width=54)
+   ->  Seq Scan on mpp7620  (cost=0.00..431.00 rows=1 width=54)
+         Filter: (key = 200)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(4 rows)
 
 explain insert into zoompp7620(key) select key from mpp7620 where mpp7620.key=200;
                                            QUERY PLAN                                           
@@ -705,10 +688,9 @@ explain select key from mpp7620 where mpp7620.key=200;
 ------------------------------------------------------------------------------
  Gather Motion 1:1  (slice1; segments: 1)  (cost=0.00..431.00 rows=1 width=4)
    ->  Seq Scan on mpp7620  (cost=0.00..431.00 rows=1 width=4)
-         Filter: key = 200
- Settings:  optimizer=on
- Optimizer status: Pivotal Optimizer (GPORCA) version 1.624
-(5 rows)
+         Filter: (key = 200)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(4 rows)
 
 reset test_print_direct_dispatch_info;
 -- ----------------------------------------------------------------------
@@ -744,26 +726,26 @@ explain select * from table_a where a0=3;
 -------------------------------------------------------------------------------
  Gather Motion 1:1  (slice1; segments: 1)  (cost=0.00..431.00 rows=1 width=16)
    ->  Seq Scan on table_a  (cost=0.00..431.00 rows=1 width=16)
-         Filter: a0 = 3
- Settings:  optimizer=on
- Optimizer status: Pivotal Optimizer (GPORCA) version 1.624
-(5 rows)
+         Filter: (a0 = 3)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(4 rows)
 
 explain select a0 from table_a where a0 in (select max(a1) from table_a);
                                               QUERY PLAN                                              
 ------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..862.00 rows=1 width=4)
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..862.00 rows=1 width=4)
    ->  Hash Join  (cost=0.00..862.00 rows=1 width=4)
          Hash Cond: ((max(table_a.a1)) = table_a_1.a0)
          ->  Redistribute Motion 1:3  (slice2)  (cost=0.00..431.00 rows=1 width=4)
                Hash Key: (max(table_a.a1))
-               ->  Aggregate  (cost=0.00..431.00 rows=1 width=4)
-                     ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
-                           ->  Seq Scan on table_a  (cost=0.00..431.00 rows=1 width=4)
+               ->  Finalize Aggregate  (cost=0.00..431.00 rows=1 width=4)
+                     ->  Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
+                           ->  Partial Aggregate  (cost=0.00..431.00 rows=1 width=4)
+                                 ->  Seq Scan on table_a  (cost=0.00..431.00 rows=1 width=4)
          ->  Hash  (cost=431.00..431.00 rows=1 width=4)
                ->  Seq Scan on table_a table_a_1  (cost=0.00..431.00 rows=1 width=4)
- Optimizer: Pivotal Optimizer (GPORCA) version 3.64.0
-(11 rows)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(12 rows)
 
 select a0 from table_a where a0 in (select max(a1) from table_a);
 INFO:  (slice 3) Dispatch command to ALL contents: 0 1 2
@@ -790,19 +772,20 @@ INFO:  (slice 1) Dispatch command to SINGLE content
 explain select a0 from table_a where a0 in (select max(a1) from table_a where a0=1);
                                               QUERY PLAN                                              
 ------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..862.00 rows=1 width=4)
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..862.00 rows=1 width=4)
    ->  Hash Join  (cost=0.00..862.00 rows=1 width=4)
          Hash Cond: ((max(table_a.a1)) = table_a_1.a0)
          ->  Redistribute Motion 1:3  (slice2)  (cost=0.00..431.00 rows=1 width=4)
                Hash Key: (max(table_a.a1))
-               ->  Aggregate  (cost=0.00..431.00 rows=1 width=4)
-                     ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
-                           ->  Seq Scan on table_a  (cost=0.00..431.00 rows=1 width=4)
-                                 Filter: (a0 = 1)
+               ->  Finalize Aggregate  (cost=0.00..431.00 rows=1 width=4)
+                     ->  Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
+                           ->  Partial Aggregate  (cost=0.00..431.00 rows=1 width=4)
+                                 ->  Seq Scan on table_a  (cost=0.00..431.00 rows=1 width=4)
+                                       Filter: (a0 = 1)
          ->  Hash  (cost=431.00..431.00 rows=1 width=4)
                ->  Seq Scan on table_a table_a_1  (cost=0.00..431.00 rows=1 width=4)
- Optimizer: Pivotal Optimizer (GPORCA) version 3.64.0
-(12 rows)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(13 rows)
 
 reset test_print_direct_dispatch_info;
 -- the filter is over a window, do not direct dispatch

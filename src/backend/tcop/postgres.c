@@ -1400,8 +1400,11 @@ exec_mpp_query(const char *query_string,
 		PortalDefineQuery(portal,
 						  NULL,
 						  query_string,
-						  /* GPDB_12_MERGE_FIXME: T_Query is probably not right for utility stmts */
-						  T_Query, /* not a parsed statement, so not T_SelectStmt */
+						  /*
+						   * sourceTag is stored in parsetree, but the original parsetree isn't
+						   * dispatched to QE, so set a generic T_Query here.
+						   */
+						  T_Query,
 						  commandTag,
 						  list_make1(plan),
 						  NULL);
@@ -5191,7 +5194,7 @@ PostgresMain(int argc, char *argv[],
 				pgstat_report_activity(STATE_IDLEINTRANSACTION_ABORTED, NULL);
 
 				/* Start the idle-in-transaction timer */
-				if (IdleInTransactionSessionTimeout > 0)
+				if (IdleInTransactionSessionTimeout > 0 && Gp_role != GP_ROLE_EXECUTE)
 				{
 					idle_in_transaction_timeout_enabled = true;
 					enable_timeout_after(IDLE_IN_TRANSACTION_SESSION_TIMEOUT,
@@ -5205,7 +5208,7 @@ PostgresMain(int argc, char *argv[],
 				pgstat_report_activity(STATE_IDLEINTRANSACTION, NULL);
 
 				/* Start the idle-in-transaction timer */
-				if (IdleInTransactionSessionTimeout > 0)
+				if (IdleInTransactionSessionTimeout > 0 && Gp_role != GP_ROLE_EXECUTE)
 				{
 					idle_in_transaction_timeout_enabled = true;
 					enable_timeout_after(IDLE_IN_TRANSACTION_SESSION_TIMEOUT,
@@ -6038,16 +6041,11 @@ log_disconnections(int code, Datum arg pg_attribute_unused())
 static void
 enable_statement_timeout(void)
 {
-	/*
-	 * GPDB_12_MERGE_FIXME: Postgres commit f8e5f156b30 changed
-	 * statement_timeout logic. GPDB had logic to ignore timeout on QE
-	 * (GPDB-historical commit 4e4abaed4c5). Does that logic need to be
-	 * reapplied here?
-	 */
 	/* must be within an xact */
 	Assert(xact_started);
 
-	if (StatementTimeout > 0)
+	/* always disable statement timeout in QE */
+	if (StatementTimeout > 0 && Gp_role != GP_ROLE_EXECUTE)
 	{
 		if (!stmt_timeout_active)
 		{
@@ -6073,10 +6071,3 @@ disable_statement_timeout(void)
 	}
 }
 
-/*
- * Whether request on cancel or termination have arrived?
- */
-inline bool
-CancelRequested() {
-	return InterruptPending && (ProcDiePending || QueryCancelPending);
-}

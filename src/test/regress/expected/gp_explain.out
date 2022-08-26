@@ -27,7 +27,7 @@ end;
 $$ language plpgsql;
 --
 -- Test explain_memory_verbosity option
--- 
+--
 CREATE TABLE explaintest (id int4);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'id' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
@@ -82,8 +82,8 @@ SELECT
 (1 row)
 
 reset explain_memory_verbosity;
-EXPLAIN ANALYZE SELECT id FROM 
-( SELECT id 
+EXPLAIN ANALYZE SELECT id FROM
+( SELECT id
 	FROM explaintest
 	WHERE id > (
 		SELECT avg(id)
@@ -106,8 +106,10 @@ LIMIT 1;
                ->  Sort  (cost=3.17..3.17 rows=2 width=4) (actual time=0.594..0.594 rows=1 loops=1)
                      Sort Key: explaintest.id
                      Sort Method:  top-N heapsort  Memory: 51kB
+                     Executor Memory: 76kB  Segments: 3  Max: 26kB (segment 2)
                      ->  Seq Scan on explaintest  (cost=0.00..3.15 rows=2 width=4) (actual time=0.035..0.040 rows=3 loops=1)
                            Filter: ((id)::numeric > $0)
+                           Rows Removed by Filter: 1
  Planning time: 1.607 ms
    (slice0)    Executor memory: 156K bytes.
  * (slice1)    Executor memory: 94K bytes avg x 3 workers, 100K bytes max (seg1).  Work_mem: 65K bytes max, 1K bytes wanted.
@@ -118,7 +120,29 @@ LIMIT 1;
  Memory wanted:  800kB
  Optimizer: Postgres query optimizer
  Execution time: 25.040 ms
-(24 rows)
+(26 rows)
+
+select * from
+  test_util.extract_plan_stats($$
+SELECT id FROM
+( SELECT id
+    FROM explaintest
+    WHERE id > (
+        SELECT avg(id)
+        FROM explaintest
+    )
+) as foo
+ORDER BY id
+LIMIT 1;
+  $$, false)
+where stats_name = 'executor_mem_lines'
+or stats_name = 'workmem_wanted_lines'
+order by stats_name;
+      stats_name      | stats_value 
+----------------------+-------------
+ executor_mem_lines   |           1
+ workmem_wanted_lines |           0
+(2 rows)
 
 -- Verify that the column references are OK. This tests for an old ORCA bug,
 -- where the Filter clause in the IndexScan of this query was incorrectly
@@ -139,12 +163,11 @@ CREATE TABLE mpp22263 (
         tenthous        int4,
         odd                     int4,
         even            int4,
-        stringu1        name,
-        stringu2        name,
-        string4         name
+        stringu1        name    COLLATE pg_catalog."default",
+        stringu2        name    COLLATE pg_catalog."default",
+        string4         name    COLLATE pg_catalog."default"
 ) distributed by (unique1);
 create index mpp22263_idx1 on mpp22263 using btree(unique1);
--- GPDB_12_MERGE_FIXME: Non default collation
 explain select * from mpp22263, (values(147, 'RFAAAA'), (931, 'VJAAAA')) as v (i, j)
 WHERE mpp22263.unique1 = v.i and mpp22263.stringu1 = v.j;
                                                     QUERY PLAN                                                     
@@ -161,7 +184,6 @@ WHERE mpp22263.unique1 = v.i and mpp22263.stringu1 = v.j;
 -- atmsort.pm masks out differences in the Filter line, so just memorizing
 -- the output of the above EXPLAIN isn't enough to catch a faulty Filter line.
 -- Extract the Filter explicitly.
--- GPDB_12_MERGE_FIXME: Non default collation
 SELECT * from
   get_explain_output($$
 select * from mpp22263, (values(147, 'RFAAAA'), (931, 'VJAAAA')) as v (i, j)
@@ -179,7 +201,7 @@ WHERE et like '%Filter: %';
 create table foo (a int) distributed randomly;
 -- "outer", "inner" prefix must also be prefixed to variable name as length of rtable > 1
 SELECT trim(et) et from
-get_explain_output($$ 
+get_explain_output($$
 	select * from (values (1),(2)) as f(a) join (values(1),(2)) b(b) on a = b join foo on true join foo as foo2 on true $$) as et
 WHERE et like '%Join Filter:%' or et like '%Hash Cond:%';
                            et                           
@@ -223,35 +245,33 @@ CREATE EXTERNAL WEB TABLE dummy_ext_tab (x text) EXECUTE 'echo foo' FORMAT 'text
 -- External Table Scan
 explain (format json, costs off) SELECT * FROM dummy_ext_tab;
                   QUERY PLAN                   
------------------------------------------------
- [                                            +
-   {                                          +
-     "Plan": {                                +
-       "Node Type": "Gather Motion",          +
-       "Senders": 3,                          +
-       "Receivers": 1,                        +
-       "Slice": 1,                            +
-       "Segments": 3,                         +
-       "Gang Type": "primary reader",         +
-       "Parallel Aware": false,               +
-       "Plans": [                             +
-         {                                    +
-           "Node Type": "Foreign Scan",       +
-           "Operation": "Select",             +
-           "Parent Relationship": "Outer",    +
-           "Slice": 1,                        +
-           "Segments": 3,                     +
-           "Gang Type": "primary reader",     +
-           "Parallel Aware": false,           +
-           "Relation Name": "dummy_ext_tab",  +
-           "Alias": "dummy_ext_tab"           +
-         }                                    +
-       ]                                      +
-     },                                       +
-     "Settings": {                            +
-       "Optimizer": "Postgres query optimizer"+
-     }                                        +
-   }                                          +
+---------------------------------------------
+ [                                          +
+   {                                        +
+     "Plan": {                              +
+       "Node Type": "Gather Motion",        +
+       "Senders": 3,                        +
+       "Receivers": 1,                      +
+       "Slice": 1,                          +
+       "Segments": 3,                       +
+       "Gang Type": "primary reader",       +
+       "Parallel Aware": false,             +
+       "Plans": [                           +
+         {                                  +
+           "Node Type": "Foreign Scan",     +
+           "Operation": "Select",           +
+           "Parent Relationship": "Outer",  +
+           "Slice": 1,                      +
+           "Segments": 3,                   +
+           "Gang Type": "primary reader",   +
+           "Parallel Aware": false,         +
+           "Relation Name": "dummy_ext_tab",+
+           "Alias": "dummy_ext_tab"         +
+         }                                  +
+       ]                                    +
+     },                                     +
+     "Optimizer": "Postgres query optimizer"+
+   }                                        +
  ]
 (1 row)
 
@@ -261,26 +281,25 @@ NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'x' as
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 explain (format yaml, costs off) SELECT * FROM dummy_aotab;
                 QUERY PLAN                 
--------------------------------------------
- - Plan:                                  +
-     Node Type: "Gather Motion"           +
-     Senders: 3                           +
-     Receivers: 1                         +
-     Slice: 1                             +
-     Segments: 3                          +
-     Gang Type: "primary reader"          +
-     Parallel Aware: false                +
-     Plans:                               +
-       - Node Type: "Seq Scan"            +
-         Parent Relationship: "Outer"     +
-         Slice: 1                         +
-         Segments: 3                      +
-         Gang Type: "primary reader"      +
-         Parallel Aware: false            +
-         Relation Name: "dummy_aotab"     +
-         Alias: "dummy_aotab"             +
-   Settings:                              +
-     Optimizer: "Postgres query optimizer"
+-----------------------------------------
+ - Plan:                                +
+     Node Type: "Gather Motion"         +
+     Senders: 3                         +
+     Receivers: 1                       +
+     Slice: 1                           +
+     Segments: 3                        +
+     Gang Type: "primary reader"        +
+     Parallel Aware: false              +
+     Plans:                             +
+       - Node Type: "Seq Scan"          +
+         Parent Relationship: "Outer"   +
+         Slice: 1                       +
+         Segments: 3                    +
+         Gang Type: "primary reader"    +
+         Parallel Aware: false          +
+         Relation Name: "dummy_aotab"   +
+         Alias: "dummy_aotab"           +
+   Optimizer: "Postgres query optimizer"
 (1 row)
 
 -- DML node (with ORCA)
@@ -309,9 +328,7 @@ explain (format xml, costs off) insert into dummy_aotab values (1);
          </Plan>                                            +
        </Plans>                                             +
      </Plan>                                                +
-     <Settings>                                             +
-       <Optimizer>Postgres query optimizer</Optimizer>      +
-     </Settings>                                            +
+     <Optimizer>Postgres query optimizer</Optimizer>        +
    </Query>                                                 +
  </explain>
 (1 row)
@@ -381,50 +398,48 @@ explain (slicetable, costs off) SELECT * FROM explaintest;
 -- same in JSON format
 explain (slicetable, costs off, format json) SELECT * FROM explaintest;
                   QUERY PLAN                   
------------------------------------------------
- [                                            +
-   {                                          +
-     "Plan": {                                +
-       "Node Type": "Gather Motion",          +
-       "Senders": 3,                          +
-       "Receivers": 1,                        +
-       "Slice": 1,                            +
-       "Segments": 3,                         +
-       "Gang Type": "primary reader",         +
-       "Parallel Aware": false,               +
-       "Plans": [                             +
-         {                                    +
-           "Node Type": "Seq Scan",           +
-           "Parent Relationship": "Outer",    +
-           "Slice": 1,                        +
-           "Segments": 3,                     +
-           "Gang Type": "primary reader",     +
-           "Parallel Aware": false,           +
-           "Relation Name": "explaintest",    +
-           "Alias": "explaintest"             +
-         }                                    +
-       ]                                      +
-     },                                       +
-     "Slice Table": [                         +
-       {                                      +
-         "Slice ID": 0,                       +
-         "Gang Type": "Dispatcher",           +
-         "Root": 0,                           +
-         "Parent": -1,                        +
-         "Gang Size": 0                       +
-       },                                     +
-       {                                      +
-         "Slice ID": 1,                       +
-         "Gang Type": "Reader",               +
-         "Root": 0,                           +
-         "Parent": 0,                         +
-         "Gang Size": 3                       +
-       }                                      +
-     ],                                       +
-     "Settings": {                            +
-       "Optimizer": "Postgres query optimizer"+
-     }                                        +
-   }                                          +
+----------------------------------------------
+ [                                           +
+   {                                         +
+     "Plan": {                               +
+       "Node Type": "Gather Motion",         +
+       "Senders": 3,                         +
+       "Receivers": 1,                       +
+       "Slice": 1,                           +
+       "Segments": 3,                        +
+       "Gang Type": "primary reader",        +
+       "Parallel Aware": false,              +
+       "Plans": [                            +
+         {                                   +
+           "Node Type": "Seq Scan",          +
+           "Parent Relationship": "Outer",   +
+           "Slice": 1,                       +
+           "Segments": 3,                    +
+           "Gang Type": "primary reader",    +
+           "Parallel Aware": false,          +
+           "Relation Name": "explaintest",   +
+           "Alias": "explaintest"            +
+         }                                   +
+       ]                                     +
+     },                                      +
+     "Optimizer": "Postgres query optimizer",+
+     "Slice Table": [                        +
+       {                                     +
+         "Slice ID": 0,                      +
+         "Gang Type": "Dispatcher",          +
+         "Root": 0,                          +
+         "Parent": -1,                       +
+         "Gang Size": 0                      +
+       },                                    +
+       {                                     +
+         "Slice ID": 1,                      +
+         "Gang Type": "Reader",              +
+         "Root": 0,                          +
+         "Parent": 0,                        +
+         "Gang Size": 3                      +
+       }                                     +
+     ]                                       +
+   }                                         +
  ]
 (1 row)
 

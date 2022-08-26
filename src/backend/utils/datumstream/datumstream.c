@@ -765,6 +765,7 @@ destroy_datumstreamwrite(DatumStreamWrite * ds)
 	if (ds->title)
 	{
 		pfree(ds->title);
+		ds->title = NULL;
 	}
 	pfree(ds);
 }
@@ -775,9 +776,15 @@ destroy_datumstreamread(DatumStreamRead * ds)
 	DatumStreamBlockRead_Finish(&ds->blockRead);
 
 	if (ds->large_object_buffer)
+	{
 		pfree(ds->large_object_buffer);
+		ds->large_object_buffer = NULL;
+	}
 	if (ds->datum_upgrade_buffer)
+	{
 		pfree(ds->datum_upgrade_buffer);
+		ds->datum_upgrade_buffer = NULL;
+	}
 
 	AppendOnlyStorageRead_FinishSession(&ds->ao_read);
 
@@ -1456,7 +1463,7 @@ datumstreamread_find_block(DatumStreamRead * datumStream,
 		 */
 		const bool	isOldBlockFormat = (datumStream->getBlockInfo.firstRow == -1);
 
-		datumStreamFetchDesc->currentBlock.have = true;
+		datumStreamFetchDesc->currentBlock.valid = true;
 		datumStreamFetchDesc->currentBlock.fileOffset =
 			AppendOnlyStorageRead_CurrentHeaderOffsetInFile(
 													  &datumStream->ao_read);
@@ -1466,9 +1473,6 @@ datumstreamread_find_block(DatumStreamRead * datumStream,
 			(!isOldBlockFormat) ? datumStream->getBlockInfo.firstRow : datumStreamFetchDesc->scanNextRowNum;
 		datumStreamFetchDesc->currentBlock.lastRowNum =
 			datumStreamFetchDesc->currentBlock.firstRowNum + datumStream->getBlockInfo.rowCnt - 1;
-		datumStreamFetchDesc->currentBlock.isCompressed =
-			datumStream->getBlockInfo.isCompressed;
-		datumStreamFetchDesc->currentBlock.isLargeContent = datumStream->getBlockInfo.isLarge;
 		datumStreamFetchDesc->currentBlock.gotContents = false;
 
 		if (Debug_appendonly_print_datumstream)

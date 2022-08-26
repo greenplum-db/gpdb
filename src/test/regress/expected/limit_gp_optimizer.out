@@ -126,37 +126,45 @@ explain select distinct(a), sum(b) from t_volatile_limit_1 group by a order by a
                                                     QUERY PLAN                                                    
 ------------------------------------------------------------------------------------------------------------------
  Limit  (cost=0.00..431.00 rows=1 width=12)
-   ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=12)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=12)
          Merge Key: a, (sum(b))
          ->  Sort  (cost=0.00..431.00 rows=1 width=12)
                Sort Key: a, (sum(b))
-               ->  GroupAggregate  (cost=0.00..431.00 rows=1 width=12)
+               ->  Finalize GroupAggregate  (cost=0.00..431.00 rows=1 width=12)
                      Group Key: a
-                     ->  Sort  (cost=0.00..431.00 rows=1 width=8)
+                     ->  Sort  (cost=0.00..431.00 rows=1 width=12)
                            Sort Key: a
-                           ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
+                           ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=12)
                                  Hash Key: a
-                                 ->  Seq Scan on t_volatile_limit_1  (cost=0.00..431.00 rows=1 width=8)
- Optimizer: Pivotal Optimizer (GPORCA) version 3.80.0
-(13 rows)
+                                 ->  Partial GroupAggregate  (cost=0.00..431.00 rows=1 width=12)
+                                       Group Key: a
+                                       ->  Sort  (cost=0.00..431.00 rows=1 width=8)
+                                             Sort Key: a
+                                             ->  Seq Scan on t_volatile_limit_1  (cost=0.00..431.00 rows=1 width=8)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(17 rows)
 
 explain select distinct(a), sum(b) from t_volatile_limit_1 group by a order by a, sum(b) limit 2 offset (random()*2);
                                                     QUERY PLAN                                                    
 ------------------------------------------------------------------------------------------------------------------
  Limit  (cost=0.00..431.00 rows=1 width=12)
-   ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=12)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=12)
          Merge Key: a, (sum(b))
          ->  Sort  (cost=0.00..431.00 rows=1 width=12)
                Sort Key: a, (sum(b))
-               ->  GroupAggregate  (cost=0.00..431.00 rows=1 width=12)
+               ->  Finalize GroupAggregate  (cost=0.00..431.00 rows=1 width=12)
                      Group Key: a
-                     ->  Sort  (cost=0.00..431.00 rows=1 width=8)
+                     ->  Sort  (cost=0.00..431.00 rows=1 width=12)
                            Sort Key: a
-                           ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
+                           ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=12)
                                  Hash Key: a
-                                 ->  Seq Scan on t_volatile_limit_1  (cost=0.00..431.00 rows=1 width=8)
- Optimizer: Pivotal Optimizer (GPORCA) version 3.80.0
-(13 rows)
+                                 ->  Partial GroupAggregate  (cost=0.00..431.00 rows=1 width=12)
+                                       Group Key: a
+                                       ->  Sort  (cost=0.00..431.00 rows=1 width=8)
+                                             Sort Key: a
+                                             ->  Seq Scan on t_volatile_limit_1  (cost=0.00..431.00 rows=1 width=8)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(17 rows)
 
 drop table t_volatile_limit;
 drop table t_volatile_limit_1;

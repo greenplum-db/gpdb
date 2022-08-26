@@ -1423,6 +1423,16 @@ formIdleSegmentIdList(void)
 		}
 	}
 
+	if (cdbs->entry_db_info != NULL)
+	{
+		for (i = 0; i < cdbs->total_entry_dbs; i++)
+		{
+			CdbComponentDatabaseInfo *cdi = &cdbs->entry_db_info[i];
+			for (j = 0; j < cdi->numIdleQEs; j++)
+				segments = lappend_int(segments, cdi->config->segindex);
+		}
+	}
+
 	return segments;
 }
 

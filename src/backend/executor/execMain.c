@@ -304,20 +304,29 @@ standard_ExecutorStart(QueryDesc *queryDesc, int eflags)
 
 		if (!should_skip_operator_memory_assign)
 		{
-			switch(*gp_resmanager_memory_policy)
+			PG_TRY();
 			{
-				case RESMANAGER_MEMORY_POLICY_AUTO:
-					PolicyAutoAssignOperatorMemoryKB(queryDesc->plannedstmt,
+				switch(*gp_resmanager_memory_policy)
+				{
+					case RESMANAGER_MEMORY_POLICY_AUTO:
+						PolicyAutoAssignOperatorMemoryKB(queryDesc->plannedstmt,
 													 queryDesc->plannedstmt->query_mem);
-					break;
-				case RESMANAGER_MEMORY_POLICY_EAGER_FREE:
-					PolicyEagerFreeAssignOperatorMemoryKB(queryDesc->plannedstmt,
+						break;
+					case RESMANAGER_MEMORY_POLICY_EAGER_FREE:
+						PolicyEagerFreeAssignOperatorMemoryKB(queryDesc->plannedstmt,
 														  queryDesc->plannedstmt->query_mem);
-					break;
-				default:
-					Assert(IsResManagerMemoryPolicyNone());
-					break;
+						break;
+					default:
+						Assert(IsResManagerMemoryPolicyNone());
+						break;
+				}
 			}
+			PG_CATCH();
+			{
+				mppExecutorCleanup(queryDesc);
+				PG_RE_THROW();
+			}
+			PG_END_TRY();
 		}
 	}
 
@@ -548,7 +557,7 @@ standard_ExecutorStart(QueryDesc *queryDesc, int eflags)
 	 *
 	 * TODO: eliminate aliens even on master, if not EXPLAIN ANALYZE
 	 */
-	estate->eliminateAliens = execute_pruned_plan && estate->es_sliceTable && estate->es_sliceTable->hasMotions && !IS_QUERY_DISPATCHER();
+	estate->eliminateAliens = execute_pruned_plan && estate->es_sliceTable && estate->es_sliceTable->hasMotions && (Gp_role == GP_ROLE_EXECUTE);
 
 	/*
 	 * Set up an AFTER-trigger statement context, unless told not to, or
@@ -1191,10 +1200,10 @@ standard_ExecutorEnd(QueryDesc *queryDesc)
      * If EXPLAIN ANALYZE, qExec returns stats to qDisp now.
      */
     if (estate->es_sliceTable &&
-        estate->es_sliceTable->instrument_options &&
-        (estate->es_sliceTable->instrument_options & INSTRUMENT_CDB) &&
-        Gp_role == GP_ROLE_EXECUTE)
-        cdbexplain_sendExecStats(queryDesc);
+		estate->es_sliceTable->instrument_options &&
+		(estate->es_sliceTable->instrument_options & INSTRUMENT_CDB) &&
+			Gp_role == GP_ROLE_EXECUTE)
+		cdbexplain_sendExecStats(queryDesc);
 
 	/*
 	 * if needed, collect mpp dispatch results and tear down
@@ -2041,6 +2050,8 @@ InitPlan(QueryDesc *queryDesc, int eflags)
 						break;
 				}
 			}
+
+	SIMPLE_FAULT_INJECTOR("func_init_plan_end");
 }
 
 /*

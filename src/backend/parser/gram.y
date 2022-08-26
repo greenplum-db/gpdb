@@ -198,6 +198,7 @@ static Node *makeRecursiveViewSelect(char *relname, List *aliases, Node *query);
 
 static Node *makeIsNotDistinctFromNode(Node *expr, int position);
 
+static bool isSetWithReorganize(List **options);
 static char *greenplumLegacyAOoptions(const char *accessMethod, List **options);
 static void check_expressions_in_partition_key(PartitionSpec *spec, core_yyscan_t yyscanner);
 
@@ -3242,12 +3243,26 @@ alter_table_cmd:
 					n->def = (Node *) list_make2($3, $4);
 					$$ = (Node *)n;
 				}
-			/* storage only */
+			/* table storage type  or reorganize only */
 			| SET WITH definition
 				{
 					AlterTableCmd *n = makeNode(AlterTableCmd);
-					n->subtype = AT_SetDistributedBy;
-					n->def = (Node *) list_make2($3, NULL);
+					if (isSetWithReorganize(&$3))
+					{
+						n->subtype = AT_SetDistributedBy;
+						n->def = (Node *) list_make2($3, NULL);
+					}
+					else
+					{
+						n->subtype = AT_SetAccessMethod;
+						n->name = greenplumLegacyAOoptions(n->name, &$3);
+						if (!n->name)
+							ereport(ERROR,
+								(errcode(ERRCODE_SYNTAX_ERROR),
+								 errmsg("invalid storage type"),
+								 parser_errposition(@3)));
+						n->def = (Node *) $3;
+					}
 					$$ = (Node *)n;
 				}
 			| alter_table_partition_cmd
@@ -3291,6 +3306,38 @@ alter_table_cmd:
 					AlterTableCmd *n = makeNode(AlterTableCmd);
 					n->subtype = AT_ChangeOwner;
 					n->newowner = $3;
+					$$ = (Node *)n;
+				}
+			/* ALTER TABLE <name> SET ACCESS METHOD <amname> WITH (<reloptions>) */
+			| SET ACCESS METHOD name OptWith
+				{
+					AlterTableCmd *n = makeNode(AlterTableCmd);
+					char *witham = greenplumLegacyAOoptions(n->name, &$5);
+					n->subtype = AT_SetAccessMethod;
+					n->name = $4;
+					/*
+					 * If there's any legacy AO options specified in the WITH
+					 * clause such as 'appendonly' or 'appendoptimized', it has
+					 * to match with the AM name.
+					 */
+					if (witham) 
+					{
+						if (strlen(witham) != strlen(n->name) || 
+							strncmp(n->name, witham, strlen(n->name) != 0))
+							ereport(ERROR,
+									(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+									 errmsg("ACCESS METHOD is specified as \"%s\" but "
+										"the WITH option indicates it to be \"%s\"",
+										n->name, witham),
+									 parser_errposition(@5)));
+						else
+							ereport(NOTICE,
+									(errcode(ERRCODE_SYNTAX_ERROR),
+									 errmsg("Redundant clauses are used to indicate the access method."),
+									 errhint("Only one of these is needed to indicate access method: the "
+										"SET ACCESS METHOD clause or the options in the WITH clause.")));
+					}
+					n->def = (Node *) $5;
 					$$ = (Node *)n;
 				}
 			/* ALTER TABLE <name> SET TABLESPACE <tablespacename> */
@@ -19629,6 +19676,28 @@ makeRecursiveViewSelect(char *relname, List *aliases, Node *query)
 
 	return (Node *) s;
 }
+
+static bool
+isSetWithReorganize(List **options)
+{
+	ListCell *lc;
+	foreach (lc, *options)
+	{
+		DefElem *elem = lfirst(lc);
+
+		if (strcmp(elem->defname, "reorganize") == 0)
+		{
+			if (list_length(*options) == 1)
+				return true;
+			else
+				ereport(ERROR,
+					(errcode(ERRCODE_SYNTAX_ERROR),
+					errmsg("reorganize isn't supported with other options in SET WITH")));
+		}
+	}
+	return false;
+}
+
 
 /*
  * Greenplum: a thin wax off layer to keep compatibility with the legacy syntax

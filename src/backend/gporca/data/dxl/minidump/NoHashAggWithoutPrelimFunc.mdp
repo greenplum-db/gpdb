@@ -960,7 +960,7 @@ select product_id,concat('#attribute_'||attribute_id::varchar||':'||attribute) a
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
       <dxl:RelationStatistics Mdid="2.1553603.1.1" Name="attribute_table" Rows="94.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.1553603.1.1" Name="attribute_table" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0,1" Keys="16,10">
+      <dxl:Relation Mdid="0.1553603.1.1" Name="attribute_table" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0,1" Keys="16,10">
         <dxl:Columns>
           <dxl:Column Name="product_id" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>

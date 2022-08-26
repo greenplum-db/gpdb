@@ -4,6 +4,38 @@
 create schema rpt;
 set search_path to rpt;
 
+-- If the producer is replicated, request a non-singleton spec
+-- that is not allowed to be enforced, to avoid potential CTE hang issue
+drop table if exists with_test1 cascade;
+create table with_test1 (i character varying(10)) DISTRIBUTED REPLICATED;
+
+explain
+WITH cte1 AS ( SELECT *,ROW_NUMBER() OVER ( PARTITION BY i) AS RANK_DESC FROM with_test1),
+cte2 AS ( SELECT 'COL1' TBLNM,COUNT(*) DIFFCNT FROM ( SELECT * FROM cte1) X)
+select * FROM ( SELECT 'COL1' TBLNM FROM cte1) A LEFT JOIN cte2 C ON A.TBLNM=C.TBLNM;
+
+WITH cte1 AS ( SELECT *,ROW_NUMBER() OVER ( PARTITION BY i) AS RANK_DESC FROM with_test1),
+     cte2 AS ( SELECT 'COL1' TBLNM,COUNT(*) DIFFCNT FROM ( SELECT * FROM cte1) X)
+select * FROM ( SELECT 'COL1' TBLNM FROM cte1) A LEFT JOIN cte2 C ON A.TBLNM=C.TBLNM;
+
+-- This is expected to fall back to planner.
+drop table if exists with_test2 cascade;
+drop table if exists with_test3 cascade;
+create table with_test2 (id bigserial NOT NULL, isc varchar(15) NOT NULL,iscd varchar(15) NULL) DISTRIBUTED REPLICATED;
+create table with_test3 (id numeric NULL, rc varchar(255) NULL,ri numeric NULL) DISTRIBUTED REPLICATED;
+insert into with_test2 (isc,iscd) values ('CMN_BIN_YES', 'CMN_BIN_YES');
+insert into with_test3 (id,rc,ri) values (113551,'CMN_BIN_YES',101991), (113552,'CMN_BIN_NO',101991), (113553,'CMN_BIN_ERR',101991), (113554,'CMN_BIN_NULL',101991);
+explain
+WITH
+    t1 AS (SELECT * FROM with_test2),
+    t2 AS (SELECT id, rc FROM with_test3 WHERE ri = 101991)
+SELECT p.*FROM t1 p JOIN t2 r ON p.isc = r.rc JOIN t2 r1 ON p.iscd = r1.rc LIMIT 1;
+
+WITH
+    t1 AS (SELECT * FROM with_test2),
+    t2 AS (SELECT id, rc FROM with_test3 WHERE ri = 101991)
+SELECT p.*FROM t1 p JOIN t2 r ON p.isc = r.rc JOIN t2 r1 ON p.iscd = r1.rc LIMIT 1;
+
 ---------
 -- INSERT
 ---------
@@ -497,6 +529,22 @@ select c from rep_tab where c in (select distinct a from dist_tab);
 -- join derives EdtHashed
 explain select c from rep_tab where c in (select distinct d from rand_tab);
 select c from rep_tab where c in (select distinct d from rand_tab);
+
+-- Github Issue 13532
+create table t1_13532(a int, b int) distributed replicated;
+create table t2_13532(a int, b int) distributed replicated;
+create index idx_t2_13532 on t2_13532(b);
+explain (costs off) select * from t1_13532 x, t2_13532 y where y.a < random() and x.b = y.b;
+set enable_bitmapscan = off;
+explain (costs off) select * from t1_13532 x, t2_13532 y where y.a < random() and x.b = y.b;
+
+-- test for optimizer_enable_replicated_table
+explain (costs off) select * from rep_tab;
+set optimizer_enable_replicated_table=off;
+set optimizer_trace_fallback=on;
+explain (costs off) select * from rep_tab;
+reset optimizer_trace_fallback;
+reset optimizer_enable_replicated_table;
 
 -- start_ignore
 drop schema rpt cascade;

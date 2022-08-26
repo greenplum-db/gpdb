@@ -49,9 +49,6 @@ protected:
 	// is this a temporary relation
 	BOOL m_is_temp_table;
 
-	// does this relation have oids
-	BOOL m_has_oids;
-
 	// storage type
 	IMDRelation::Erelstoragetype m_rel_storage_type;
 

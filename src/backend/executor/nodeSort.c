@@ -125,13 +125,10 @@ ExecSort(PlanState *pstate)
 		/* CDB */
 
 		/* If EXPLAIN ANALYZE, share our Instrumentation object with sort. */
-		/* GPDB_12_MERGE_FIXME: broken */
-#if 0
 		if (node->ss.ps.instrument && node->ss.ps.instrument->need_cdb)
 			tuplesort_set_instrument(tuplesortstate,
 									 node->ss.ps.instrument,
 									 node->ss.ps.cdbexplainbuf);
-#endif
 	}
 
 	/*
@@ -464,13 +461,14 @@ ExecSortExplainEnd(PlanState *planstate, struct StringInfoData *buf)
 
 	if (sortstate->tuplesortstate)
 	{
-		tuplesort_get_stats(sortstate->tuplesortstate,
-							&sortstate->sortstats);
+		tuplesort_finalize_stats(sortstate->tuplesortstate,
+								 &sortstate->sortstats);
 
 		if (planstate->instrument)
 		{
 			planstate->instrument->workfileCreated = (sortstate->sortstats.spaceType == SORT_SPACE_TYPE_DISK);
 			planstate->instrument->workmemused = sortstate->sortstats.workmemused;
+			planstate->instrument->execmemused = sortstate->sortstats.execmemused;
 		}
 	}
 }                               /* ExecSortExplainEnd */
@@ -490,12 +488,13 @@ ExecEagerFreeSort(SortState *node)
 		 * Save stats like in ExecSortExplainEnd, so that we can display
 		 * them later in EXPLAIN ANALYZE.
 		 */
-		tuplesort_get_stats(node->tuplesortstate,
-							&node->sortstats);
+		tuplesort_finalize_stats(node->tuplesortstate,
+								 &node->sortstats);
 		if (node->ss.ps.instrument)
 		{
 			node->ss.ps.instrument->workfileCreated = (node->sortstats.spaceType == SORT_SPACE_TYPE_DISK);
 			node->ss.ps.instrument->workmemused = node->sortstats.workmemused;
+			node->ss.ps.instrument->execmemused = node->sortstats.execmemused;
 		}
 
 		tuplesort_end((Tuplesortstate *) node->tuplesortstate);

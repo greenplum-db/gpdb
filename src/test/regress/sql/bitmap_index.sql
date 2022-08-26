@@ -1,3 +1,5 @@
+create extension if not exists gp_inject_fault;
+
 SET enable_seqscan = OFF;
 SET enable_indexscan = ON;
 SET enable_bitmapscan = ON;
@@ -391,3 +393,49 @@ SET enable_bitmapscan = OFF;
 explain (analyze, verbose) select * from test_bmsparse where type > 500;
 
 DROP TABLE test_bmsparse;
+
+
+-- test the scenario that we need read the same batch words many times
+-- more detials can be found at https://github.com/greenplum-db/gpdb/issues/13446
+SET enable_seqscan = OFF;
+SET enable_bitmapscan = OFF;
+
+create table foo_13446(a int, b int);
+create index idx_13446 on foo_13446 using bitmap(b);
+insert into foo_13446 select 1, 1 from generate_series(0, 16384);
+-- At current implementation, BMIterateResult can only store 16*1024=16384 TIDs,
+-- if we have 13685 TIDs to read, it must scan same batch words twice, that's what we want
+select count(*) from foo_13446 where b = 1;
+
+drop table foo_13446;
+
+SET enable_seqscan = ON;
+SET enable_bitmapscan = ON;
+
+--
+-- test union bitmap batch words for multivalues index scan like where x in (x1, x2) or x > v
+-- which creates bitmapand plan on two bitmap indexs that match multiple keys by using in in where clause
+--
+create table bmunion (a int, b int);
+insert into bmunion
+  select (r%53), (r%59)
+  from generate_series(1,70000) r;
+create index i_bmtest2_a on bmunion using bitmap(a);
+create index i_bmtest2_b on bmunion using bitmap(b);
+insert into bmunion select 53, 1 from generate_series(1, 1000);
+
+set optimizer_enable_tablescan=off;
+set optimizer_enable_dynamictablescan=off;
+-- inject fault for planner so that it could produce bitmapand plan node.
+select gp_inject_fault('simulate_bitmap_and', 'skip', dbid) from gp_segment_configuration where role = 'p' and content = -1;
+explain (costs off) select count(*) from bmunion where a = 53 and b < 3;
+select gp_inject_fault('simulate_bitmap_and', 'reset', dbid) from gp_segment_configuration where role = 'p' and content = -1;
+
+select gp_inject_fault('simulate_bitmap_and', 'skip', dbid) from gp_segment_configuration where role = 'p' and content = -1;
+select count(*) from bmunion where a = 53 and b < 3;
+select gp_inject_fault('simulate_bitmap_and', 'reset', dbid) from gp_segment_configuration where role = 'p' and content = -1;
+
+reset optimizer_enable_tablescan;
+reset optimizer_enable_dynamictablescan;
+
+drop table bmunion;

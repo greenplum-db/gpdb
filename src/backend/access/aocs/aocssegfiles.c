@@ -88,10 +88,6 @@ InsertInitialAOCSFileSegInfo(Relation prel, int32 segno, int32 nvp, Oid segrelid
 
 	segrel = heap_open(segrelid, RowExclusiveLock);
 
-	InsertFastSequenceEntry(segrelid,
-							(int64) segno,
-							0);
-
 	values[Anum_pg_aocs_segno - 1] = Int32GetDatum(segno);
 	values[Anum_pg_aocs_vpinfo - 1] = PointerGetDatum(vpinfo);
 	values[Anum_pg_aocs_tupcount - 1] = Int64GetDatum(0);
@@ -387,8 +383,7 @@ GetAllAOCSFileSegInfo_pg_aocsseg_rel(int numOfColumns,
 			aocs_seginfo->modcount = DatumGetInt64(d[Anum_pg_aocs_modcount - 1]);
 
 		Assert(!null[Anum_pg_aocs_formatversion - 1]);
-		if (!null[Anum_pg_aocs_formatversion - 1])
-			aocs_seginfo->formatversion = DatumGetInt16(d[Anum_pg_aocs_formatversion - 1]);
+		aocs_seginfo->formatversion = DatumGetInt16(d[Anum_pg_aocs_formatversion - 1]);
 
 		Assert(!null[Anum_pg_aocs_state - 1] || snapshot == SnapshotAny);
 		if (!null[Anum_pg_aocs_state - 1])

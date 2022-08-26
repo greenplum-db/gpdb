@@ -297,7 +297,7 @@ AC_SUBST(enable_tap_tests)
 # Block size
 #
 AC_MSG_CHECKING([for block size])
-PGAC_ARG_REQ(with, blocksize, [BLOCKSIZE], [set table block size in kB [8]],
+PGAC_ARG_REQ(with, blocksize, [BLOCKSIZE], [set table block size in kB [32]],
              [blocksize=$withval],
              [blocksize=32])
 case ${blocksize} in
@@ -361,7 +361,7 @@ AC_DEFINE_UNQUOTED([RELSEG_SIZE], ${RELSEG_SIZE}, [
 # WAL block size
 #
 AC_MSG_CHECKING([for WAL block size])
-PGAC_ARG_REQ(with, wal-blocksize, [BLOCKSIZE], [set WAL block size in kB [8]],
+PGAC_ARG_REQ(with, wal-blocksize, [BLOCKSIZE], [set WAL block size in kB [32]],
              [wal_blocksize=$withval],
              [wal_blocksize=32])
 case ${wal_blocksize} in

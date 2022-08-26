@@ -40,13 +40,9 @@
 # has additional issue where GPDB does not support creating unique indexes on
 # mutated columns via lower().
 #
-# GPDB_12_MERGE_FIXME: tuplelock-upgrade-no-deadlock, freeze-the-dead
+# GPDB_12_MERGE_FEATURE_NOT_SUPPORTED: tuplelock-upgrade-no-deadlock, freeze-the-dead
 # don't pass in normal mode for GPDB as SELECT..FOR SHARE/UPDATE can
 # block each other in gpdb if GDD does not open.
-# insert-conflict-specconflict, In this case, three sessions using
-# advisory lock to control INSERT...ON CONFLICT in a small critical
-# region so that test txn will successful abort. GPDB lock managed in
-# master node, it is hard to test this feature by the case.
 #
 #############################################################
 #
@@ -137,14 +133,11 @@ test: vacuum-skip-locked
 #test: predicate-gist
 #test: predicate-gin
 
-# GPDB_12_MERGE_FIXME: partition-drop-index-locking test disabled due
-# to missing isolation test framework feature. Enable this test back
-# when https://github.com/postgres/postgres/commit/f228c401b86bd68570c
-# has been merged into GPDB.
-#test: partition-drop-index-locking
+test: partition-drop-index-locking
 
-# GPDB_12_MERGE_FIXME: disabled test partition-key-update-1. Need to
-# investigate why failing in utility mode single node.
+# GPDB_12_MERGE_FEATURE_NOT_SUPPORTED: Disabled test partition-key-update-1
+# because it fails when test errors from ExecLockRows. The reason is that
+# GPDB disabled triggers for foreign keys.
 #test: partition-key-update-1
 test: partition-key-update-2
 test: partition-key-update-3

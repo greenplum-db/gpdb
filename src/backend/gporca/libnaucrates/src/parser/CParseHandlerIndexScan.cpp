@@ -18,11 +18,13 @@
 #include "naucrates/dxl/parser/CParseHandlerIndexScan.h"
 
 #include "naucrates/dxl/operators/CDXLOperatorFactory.h"
+#include "naucrates/dxl/operators/CDXLPhysicalDynamicIndexScan.h"
 #include "naucrates/dxl/operators/CDXLPhysicalIndexOnlyScan.h"
 #include "naucrates/dxl/parser/CParseHandlerFactory.h"
 #include "naucrates/dxl/parser/CParseHandlerFilter.h"
 #include "naucrates/dxl/parser/CParseHandlerIndexCondList.h"
 #include "naucrates/dxl/parser/CParseHandlerIndexDescr.h"
+#include "naucrates/dxl/parser/CParseHandlerMetadataIdList.h"
 #include "naucrates/dxl/parser/CParseHandlerProjList.h"
 #include "naucrates/dxl/parser/CParseHandlerProperties.h"
 #include "naucrates/dxl/parser/CParseHandlerScalarOp.h"
@@ -128,6 +130,12 @@ CParseHandlerIndexScan::StartElementHelper(
 			m_parse_handler_mgr, this);
 	m_parse_handler_mgr->ActivateParseHandler(index_descr_parse_handler);
 
+	CParseHandlerBase *partition_mdids_parse_handler =
+		CParseHandlerFactory::GetParseHandler(
+			m_mp, CDXLTokens::XmlstrToken(EdxltokenMetadataIdList),
+			m_parse_handler_mgr, this);
+	m_parse_handler_mgr->ActivateParseHandler(partition_mdids_parse_handler);
+
 	// parse handler for the index condition list
 	CParseHandlerBase *index_condition_list_parse_handler =
 		CParseHandlerFactory::GetParseHandler(
@@ -162,6 +170,7 @@ CParseHandlerIndexScan::StartElementHelper(
 	this->Append(proj_list_parse_handler);
 	this->Append(filter_parse_handler);
 	this->Append(index_condition_list_parse_handler);
+	this->Append(partition_mdids_parse_handler);
 	this->Append(index_descr_parse_handler);
 	this->Append(table_descr_parse_handler);
 }
@@ -176,7 +185,8 @@ CParseHandlerIndexScan::StartElementHelper(
 //---------------------------------------------------------------------------
 void
 CParseHandlerIndexScan::EndElementHelper(const XMLCh *const element_local_name,
-										 Edxltoken token_type)
+										 Edxltoken token_type,
+										 ULongPtrArray *selector_ids)
 {
 	if (0 != XMLString::compareString(CDXLTokens::XmlstrToken(token_type),
 									  element_local_name))
@@ -196,10 +206,12 @@ CParseHandlerIndexScan::EndElementHelper(const XMLCh *const element_local_name,
 		dynamic_cast<CParseHandlerFilter *>((*this)[2]);
 	CParseHandlerIndexCondList *index_condition_list_parse_handler =
 		dynamic_cast<CParseHandlerIndexCondList *>((*this)[3]);
+	CParseHandlerMetadataIdList *partition_mdids_parse_handler =
+		dynamic_cast<CParseHandlerMetadataIdList *>((*this)[4]);
 	CParseHandlerIndexDescr *index_descr_parse_handler =
-		dynamic_cast<CParseHandlerIndexDescr *>((*this)[4]);
+		dynamic_cast<CParseHandlerIndexDescr *>((*this)[5]);
 	CParseHandlerTableDescr *table_descr_parse_handler =
-		dynamic_cast<CParseHandlerTableDescr *>((*this)[5]);
+		dynamic_cast<CParseHandlerTableDescr *>((*this)[6]);
 
 	CDXLTableDescr *dxl_table_descr =
 		table_descr_parse_handler->GetDXLTableDescr();
@@ -216,14 +228,24 @@ CParseHandlerIndexScan::EndElementHelper(const XMLCh *const element_local_name,
 			m_mp, dxl_table_descr, dxl_index_descr, m_index_scan_dir);
 		m_dxl_node = GPOS_NEW(m_mp) CDXLNode(m_mp, dxl_op);
 	}
-	else
+	else if (EdxltokenPhysicalIndexScan == token_type)
 	{
-		GPOS_ASSERT(EdxltokenPhysicalIndexScan == token_type);
 		dxl_op = GPOS_NEW(m_mp) CDXLPhysicalIndexScan(
 			m_mp, dxl_table_descr, dxl_index_descr, m_index_scan_dir);
 		m_dxl_node = GPOS_NEW(m_mp) CDXLNode(m_mp, dxl_op);
 	}
+	else
+	{
+		GPOS_ASSERT(EdxltokenPhysicalDynamicIndexScan == token_type);
 
+		IMdIdArray *mdid_partitions_array =
+			partition_mdids_parse_handler->GetMdIdArray();
+		mdid_partitions_array->AddRef();
+		dxl_op = GPOS_NEW(m_mp) CDXLPhysicalDynamicIndexScan(
+			m_mp, dxl_table_descr, dxl_index_descr, m_index_scan_dir,
+			mdid_partitions_array, selector_ids);
+		m_dxl_node = GPOS_NEW(m_mp) CDXLNode(m_mp, dxl_op);
+	}
 
 	// set statistics and physical properties
 	CParseHandlerUtils::SetProperties(m_dxl_node, prop_parse_handler);

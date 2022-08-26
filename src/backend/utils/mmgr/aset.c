@@ -1699,9 +1699,10 @@ AllocSetSetPeakUsage(MemoryContext context, Size nbytes)
 void
 AllocSetTransferAccounting(MemoryContext context, MemoryContext new_parent)
 {
-	/* GPDB_12_MERGE_FIXME: If you mix AllocSetContexts and other contexts,
-	 * what happens to accounting? */
-	if (!IsA(context, AllocSetContext))
+	/*
+	 * Mixing AllocSetContexts and other contexts will lose the accounting info.
+	 */
+	if (!IsA(context, AllocSetContext) || (new_parent != NULL && !IsA(new_parent, AllocSetContext)))
 		return;
 
 	AllocSet set = (AllocSet)context;

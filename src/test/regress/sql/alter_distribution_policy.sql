@@ -308,11 +308,6 @@ Alter table abc set distributed randomly;
 Alter table abc set with (reorganize=false) distributed randomly;
 drop table abc;
 
--- disallow, so fails
-create table atsdb (i int, j text) distributed by (j);
-alter table atsdb set with(appendonly = true);
-drop table atsdb;
-
 -- MPP-18660: duplicate entry in gp_distribution_policy
 set enable_indexscan=on;
 set enable_seqscan=off;

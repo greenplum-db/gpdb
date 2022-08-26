@@ -256,9 +256,9 @@ static NestLoop *make_nestloop(List *tlist,
 							   JoinType jointype, bool inner_unique);
 static HashJoin *make_hashjoin(List *tlist,
 							   List *joinclauses, List *otherclauses,
-							   List *hashclauses, List *hashqualclauses,
-							   Plan *lefttree, Plan *righttree,
-							   JoinType jointype, bool inner_unique);
+							   List *hashclauses, Plan *lefttree,
+							   Plan *righttree, JoinType jointype,
+							   bool inner_unique);
 static Hash *make_hash(Plan *lefttree,
 					   Oid skewTable,
 					   AttrNumber skewColumn,
@@ -1103,9 +1103,6 @@ create_join_plan(PlannerInfo *root, JoinPath *best_path)
 	/* CDB: if the join's locus is bottleneck which means the
 	 * join gang only contains one process, so there is no
 	 * risk for motion deadlock.
-	 *
-	 * GPDB_12_MERGE_FIXME: this overwrites the prefetch_inner flag that may
-	 * have been set for Partition Selectors. That's not cool, right?
 	 */
 	if (CdbPathLocus_IsBottleneck(best_path->path.locus))
 	{
@@ -2085,13 +2082,6 @@ create_projection_plan(PlannerInfo *root, ProjectionPath *best_path, int flags)
 		{
 			List	   *all_clauses = best_path->cdb_restrict_clauses;
 
-			/* Replace any outer-relation variables with nestloop params */
-			if (best_path->path.param_info)
-			{
-				all_clauses = (List *)
-					replace_nestloop_params(root, (Node *) all_clauses);
-			}
-
 			/* Sort clauses into best execution order */
 			all_clauses = order_qual_clauses(root, all_clauses);
 
@@ -2100,6 +2090,13 @@ create_projection_plan(PlannerInfo *root, ProjectionPath *best_path, int flags)
 
 			/* but we actually also want the pseudoconstants */
 			pseudoconstants = extract_actual_clauses(all_clauses, true);
+
+			/* Replace any outer-relation variables with nestloop params */
+			if (best_path->path.param_info)
+			{
+				scan_clauses = (List *)
+					replace_nestloop_params(root, (Node *) scan_clauses);
+			}
 		}
 
 		/* We need a Result node */
@@ -3601,7 +3598,7 @@ create_bitmap_scan_plan(PlannerInfo *root,
 	bitmapqualplan = create_bitmap_subplan(root, best_path->bitmapqual,
 										   &bitmapqualorig, &indexquals,
 										   &indexECs);
-	/* GPDB_12_MERGE_FIXME the parallel StreamBitmap scan is not implemented */
+	/* GPDB_12_MERGE_FEATURE_NOT_SUPPORTED: the parallel StreamBitmap scan is not implemented */
 	/*
 	 * if (best_path->path.parallel_aware)
 	 *     bitmap_subplan_mark_shared(bitmapqualplan);
@@ -5534,7 +5531,6 @@ create_hashjoin_plan(PlannerInfo *root,
 							  joinclauses,
 							  otherclauses,
 							  hashclauses,
-							  NIL, /* hashqualclauses */
 							  outer_plan,
 							  (Plan *) hash_plan,
 							  best_path->jpath.jointype,
@@ -6655,7 +6651,6 @@ make_hashjoin(List *tlist,
 			  List *joinclauses,
 			  List *otherclauses,
 			  List *hashclauses,
-			  List *hashqualclauses, /* GPDB_12_MERGE_FIXME: Does it need to rid of ? */
 			  Plan *lefttree,
 			  Plan *righttree,
 			  JoinType jointype,
@@ -6669,7 +6664,7 @@ make_hashjoin(List *tlist,
 	plan->lefttree = lefttree;
 	plan->righttree = righttree;
 	node->hashclauses = hashclauses;
-	node->hashqualclauses = hashqualclauses;
+	node->hashqualclauses = NIL;
 	node->join.jointype = jointype;
 	node->join.inner_unique = inner_unique;
 	node->join.joinqual = joinclauses;

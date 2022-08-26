@@ -2950,14 +2950,13 @@ drop table qp_misc_jiras.tbl6448;
 create table qp_misc_jiras.tbl6833_anl(a int, b int, c int) distributed by (a) partition by range (b) (partition bb start (0) end (2) every (1));
 analyze qp_misc_jiras.tbl6833_anl;
 explain select * from qp_misc_jiras.tbl6833_anl; -- should not hit cdbRelSize();
-                                              QUERY PLAN                                               
--------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=10000000000.00..20000000002.05 rows=2 width=12)
-   ->  Append  (cost=10000000000.00..20000000002.01 rows=1 width=12)
-         ->  Seq Scan on tbl6833_anl_1_prt_bb_1  (cost=10000000000.00..10000000001.00 rows=1 width=12)
-         ->  Seq Scan on tbl6833_anl_1_prt_bb_2  (cost=10000000000.00..10000000001.00 rows=1 width=12)
- Optimizer: Postgres query optimizer
-(5 rows)
+                                  QUERY PLAN                                   
+-------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=12)
+   ->  Dynamic Seq Scan on tbl6833_anl  (cost=0.00..431.00 rows=1 width=12)
+         Number of partitions to scan: 2 
+ Optimizer: Pivotal Optimizer (GPORCA)
+(4 rows)
 
 select relname, reltuples, relpages from pg_class where relname like 'tbl6833_anl%'; -- should show relpages = 1.0
         relname         | reltuples | relpages 
@@ -2970,14 +2969,13 @@ select relname, reltuples, relpages from pg_class where relname like 'tbl6833_an
 create table qp_misc_jiras.tbl6833_vac(a int, b int, c int) distributed by (a) partition by range (b) (partition bb start (0) end (2) every (1));
 vacuum qp_misc_jiras.tbl6833_vac;
 explain select * from qp_misc_jiras.tbl6833_vac; -- should not hit cdbRelSize();
-                                              QUERY PLAN                                               
--------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=10000000000.00..20000000002.05 rows=2 width=12)
-   ->  Append  (cost=10000000000.00..20000000002.01 rows=1 width=12)
-         ->  Seq Scan on tbl6833_vac_1_prt_bb_1  (cost=10000000000.00..10000000001.00 rows=1 width=12)
-         ->  Seq Scan on tbl6833_vac_1_prt_bb_2  (cost=10000000000.00..10000000001.00 rows=1 width=12)
- Optimizer: Postgres query optimizer
-(5 rows)
+                                  QUERY PLAN                                   
+-------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=12)
+   ->  Dynamic Seq Scan on tbl6833_vac  (cost=0.00..431.00 rows=1 width=12)
+         Number of partitions to scan: 2 
+ Optimizer: Pivotal Optimizer (GPORCA)
+(4 rows)
 
 select relname, reltuples, relpages from pg_class where relname like 'tbl6833_vac%'; -- should show relpages = 1.0
         relname         | reltuples | relpages 
@@ -4227,81 +4225,89 @@ reset gp_enable_agg_distinct;
 reset gp_enable_agg_distinct_pruning;
 -- both queries should use hashagg
 explain select count(distinct j) from (select t1.* from qp_misc_jiras.tbl5994_test t1, qp_misc_jiras.tbl5994_test t2 where t1.j = t2.j) tmp group by j;
-                                                      QUERY PLAN                                                       
------------------------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..862.00 rows=1 width=8)
+                                                         QUERY PLAN                                                          
+-----------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..862.00 rows=1 width=8)
    ->  GroupAggregate  (cost=0.00..862.00 rows=1 width=8)
          Group Key: tbl5994_test.j
-         ->  Sort  (cost=0.00..862.00 rows=1 width=4)
-               Sort Key: tbl5994_test.j
-               ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..862.00 rows=1 width=4)
-                     Hash Key: tbl5994_test.j
-                     ->  Hash Join  (cost=0.00..862.00 rows=1 width=4)
-                           Hash Cond: (tbl5994_test.j = tbl5994_test_1.j)
-                           ->  Seq Scan on tbl5994_test  (cost=0.00..431.00 rows=1 width=4)
-                           ->  Hash  (cost=431.00..431.00 rows=1 width=4)
-                                 ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
-                                       ->  Seq Scan on tbl5994_test tbl5994_test_1  (cost=0.00..431.00 rows=1 width=4)
- Optimizer: Pivotal Optimizer (GPORCA) version 3.83.0
-(14 rows)
+         ->  GroupAggregate  (cost=0.00..862.00 rows=1 width=4)
+               Group Key: tbl5994_test.j
+               ->  Sort  (cost=0.00..862.00 rows=1 width=4)
+                     Sort Key: tbl5994_test.j
+                     ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..862.00 rows=1 width=4)
+                           Hash Key: tbl5994_test.j
+                           ->  Hash Join  (cost=0.00..862.00 rows=1 width=4)
+                                 Hash Cond: (tbl5994_test.j = tbl5994_test_1.j)
+                                 ->  Seq Scan on tbl5994_test  (cost=0.00..431.00 rows=1 width=4)
+                                 ->  Hash  (cost=431.00..431.00 rows=1 width=4)
+                                       ->  Broadcast Motion 3:3  (slice3; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
+                                             ->  Seq Scan on tbl5994_test tbl5994_test_1  (cost=0.00..431.00 rows=1 width=4)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(16 rows)
 
 explain select count(distinct j) from (select t1.* from qp_misc_jiras.tbl5994_test t1, qp_misc_jiras.tbl5994_test t2 where t1.i = t2.i) tmp group by j;
-                                                   QUERY PLAN                                                    
------------------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..862.00 rows=1 width=8)
+                                                      QUERY PLAN                                                       
+-----------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..862.00 rows=1 width=8)
    ->  GroupAggregate  (cost=0.00..862.00 rows=1 width=8)
          Group Key: tbl5994_test.j
-         ->  Sort  (cost=0.00..862.00 rows=1 width=4)
-               Sort Key: tbl5994_test.j
-               ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..862.00 rows=1 width=4)
-                     Hash Key: tbl5994_test.j
-                     ->  Hash Join  (cost=0.00..862.00 rows=1 width=4)
-                           Hash Cond: (tbl5994_test.i = tbl5994_test_1.i)
-                           ->  Seq Scan on tbl5994_test  (cost=0.00..431.00 rows=1 width=8)
-                           ->  Hash  (cost=431.00..431.00 rows=1 width=4)
-                                 ->  Seq Scan on tbl5994_test tbl5994_test_1  (cost=0.00..431.00 rows=1 width=4)
- Optimizer: Pivotal Optimizer (GPORCA) version 3.83.0
-(13 rows)
+         ->  GroupAggregate  (cost=0.00..862.00 rows=1 width=4)
+               Group Key: tbl5994_test.j
+               ->  Sort  (cost=0.00..862.00 rows=1 width=4)
+                     Sort Key: tbl5994_test.j
+                     ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..862.00 rows=1 width=4)
+                           Hash Key: tbl5994_test.j
+                           ->  Hash Join  (cost=0.00..862.00 rows=1 width=4)
+                                 Hash Cond: (tbl5994_test.i = tbl5994_test_1.i)
+                                 ->  Seq Scan on tbl5994_test  (cost=0.00..431.00 rows=1 width=8)
+                                 ->  Hash  (cost=431.00..431.00 rows=1 width=4)
+                                       ->  Seq Scan on tbl5994_test tbl5994_test_1  (cost=0.00..431.00 rows=1 width=4)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(15 rows)
 
 -- Try same two queries, with group agg.
 set enable_groupagg=on;
 set enable_hashagg=off;
 explain select count(distinct j) from (select t1.* from qp_misc_jiras.tbl5994_test t1, qp_misc_jiras.tbl5994_test t2 where t1.j = t2.j) tmp group by j;
-                                                      QUERY PLAN                                                       
------------------------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..862.00 rows=1 width=8)
+                                                         QUERY PLAN                                                          
+-----------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..862.00 rows=1 width=8)
    ->  GroupAggregate  (cost=0.00..862.00 rows=1 width=8)
          Group Key: tbl5994_test.j
-         ->  Sort  (cost=0.00..862.00 rows=1 width=4)
-               Sort Key: tbl5994_test.j
-               ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..862.00 rows=1 width=4)
-                     Hash Key: tbl5994_test.j
-                     ->  Hash Join  (cost=0.00..862.00 rows=1 width=4)
-                           Hash Cond: (tbl5994_test.j = tbl5994_test_1.j)
-                           ->  Seq Scan on tbl5994_test  (cost=0.00..431.00 rows=1 width=4)
-                           ->  Hash  (cost=431.00..431.00 rows=1 width=4)
-                                 ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
-                                       ->  Seq Scan on tbl5994_test tbl5994_test_1  (cost=0.00..431.00 rows=1 width=4)
- Optimizer: Pivotal Optimizer (GPORCA) version 3.83.0
-(14 rows)
+         ->  GroupAggregate  (cost=0.00..862.00 rows=1 width=4)
+               Group Key: tbl5994_test.j
+               ->  Sort  (cost=0.00..862.00 rows=1 width=4)
+                     Sort Key: tbl5994_test.j
+                     ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..862.00 rows=1 width=4)
+                           Hash Key: tbl5994_test.j
+                           ->  Hash Join  (cost=0.00..862.00 rows=1 width=4)
+                                 Hash Cond: (tbl5994_test.j = tbl5994_test_1.j)
+                                 ->  Seq Scan on tbl5994_test  (cost=0.00..431.00 rows=1 width=4)
+                                 ->  Hash  (cost=431.00..431.00 rows=1 width=4)
+                                       ->  Broadcast Motion 3:3  (slice3; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
+                                             ->  Seq Scan on tbl5994_test tbl5994_test_1  (cost=0.00..431.00 rows=1 width=4)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(16 rows)
 
 explain select count(distinct j) from (select t1.* from qp_misc_jiras.tbl5994_test t1, qp_misc_jiras.tbl5994_test t2 where t1.i = t2.i) tmp group by j;
-                                                   QUERY PLAN                                                    
------------------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..862.00 rows=1 width=8)
+                                                      QUERY PLAN                                                       
+-----------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..862.00 rows=1 width=8)
    ->  GroupAggregate  (cost=0.00..862.00 rows=1 width=8)
          Group Key: tbl5994_test.j
-         ->  Sort  (cost=0.00..862.00 rows=1 width=4)
-               Sort Key: tbl5994_test.j
-               ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..862.00 rows=1 width=4)
-                     Hash Key: tbl5994_test.j
-                     ->  Hash Join  (cost=0.00..862.00 rows=1 width=4)
-                           Hash Cond: (tbl5994_test.i = tbl5994_test_1.i)
-                           ->  Seq Scan on tbl5994_test  (cost=0.00..431.00 rows=1 width=8)
-                           ->  Hash  (cost=431.00..431.00 rows=1 width=4)
-                                 ->  Seq Scan on tbl5994_test tbl5994_test_1  (cost=0.00..431.00 rows=1 width=4)
- Optimizer: Pivotal Optimizer (GPORCA) version 3.83.0
-(13 rows)
+         ->  GroupAggregate  (cost=0.00..862.00 rows=1 width=4)
+               Group Key: tbl5994_test.j
+               ->  Sort  (cost=0.00..862.00 rows=1 width=4)
+                     Sort Key: tbl5994_test.j
+                     ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..862.00 rows=1 width=4)
+                           Hash Key: tbl5994_test.j
+                           ->  Hash Join  (cost=0.00..862.00 rows=1 width=4)
+                                 Hash Cond: (tbl5994_test.i = tbl5994_test_1.i)
+                                 ->  Seq Scan on tbl5994_test  (cost=0.00..431.00 rows=1 width=8)
+                                 ->  Hash  (cost=431.00..431.00 rows=1 width=4)
+                                       ->  Seq Scan on tbl5994_test tbl5994_test_1  (cost=0.00..431.00 rows=1 width=4)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(15 rows)
 
 reset enable_groupagg;
 reset enable_hashagg;
@@ -4711,11 +4717,15 @@ else 'Unidentify' end
          Group Key: (CASE WHEN (ir_call_supplementary_svc_code = ANY ('{S20,S21}'::bpchar[])) THEN 'MO'::text ELSE 'foo'::text END), (CASE WHEN ((ir_call_type_group_code)::text = ANY ('{H,VH,PCB}'::text[])) THEN 'Thailland'::text ELSE 'Unidentify'::text END)
          ->  Sort  (cost=0.00..431.00 rows=1 width=16)
                Sort Key: (CASE WHEN (ir_call_supplementary_svc_code = ANY ('{S20,S21}'::bpchar[])) THEN 'MO'::text ELSE 'foo'::text END), (CASE WHEN ((ir_call_type_group_code)::text = ANY ('{H,VH,PCB}'::text[])) THEN 'Thailland'::text ELSE 'Unidentify'::text END)
-               ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=16)
+               ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=16)
                      Hash Key: (CASE WHEN (ir_call_supplementary_svc_code = ANY ('{S20,S21}'::bpchar[])) THEN 'MO'::text ELSE 'foo'::text END), (CASE WHEN ((ir_call_type_group_code)::text = ANY ('{H,VH,PCB}'::text[])) THEN 'Thailland'::text ELSE 'Unidentify'::text END)
-                     ->  Seq Scan on ir_voice_sms_and_data  (cost=0.00..431.00 rows=1 width=16)
- Optimizer: Pivotal Optimizer (GPORCA) version 3.83.0
-(9 rows)
+                     ->  GroupAggregate  (cost=0.00..431.00 rows=1 width=16)
+                           Group Key: (CASE WHEN (ir_call_supplementary_svc_code = ANY ('{S20,S21}'::bpchar[])) THEN 'MO'::text ELSE 'foo'::text END), (CASE WHEN ((ir_call_type_group_code)::text = ANY ('{H,VH,PCB}'::text[])) THEN 'Thailland'::text ELSE 'Unidentify'::text END)
+                           ->  Sort  (cost=0.00..431.00 rows=1 width=16)
+                                 Sort Key: (CASE WHEN (ir_call_supplementary_svc_code = ANY ('{S20,S21}'::bpchar[])) THEN 'MO'::text ELSE 'foo'::text END), (CASE WHEN ((ir_call_type_group_code)::text = ANY ('{H,VH,PCB}'::text[])) THEN 'Thailland'::text ELSE 'Unidentify'::text END)
+                                 ->  Seq Scan on ir_voice_sms_and_data  (cost=0.00..431.00 rows=1 width=16)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(13 rows)
 
 DROP TABLE qp_misc_jiras.ir_voice_sms_and_data;
 reset gp_motion_cost_per_row;
@@ -4951,15 +4961,18 @@ select  * from qp_misc_jiras.test_co where ctid='(33554432,2)' and gp_segment_id
 set gp_enable_explain_allstat=on;
 insert into qp_misc_jiras.test_heap select i, i from generate_series(0, 99999) i;
 explain analyze select count(*) from qp_misc_jiras.test_heap;
-                                                                   QUERY PLAN                                                                    
--------------------------------------------------------------------------------------------------------------------------------------------------
- Aggregate  (cost=0.00..431.00 rows=1 width=8) (actual time=55.789..55.790 rows=1 loops=1)
-   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=1) (actual time=2.020..42.516 rows=100001 loops=1)
-         ->  Seq Scan on test_heap  (cost=0.00..431.00 rows=1 width=1) (actual time=0.075..9.629 rows=33462 loops=1)
-               allstat: seg_firststart_total_ntuples/seg0_0.564 ms_9.629 ms_33462/seg1_0.542 ms_8.289 ms_33329/seg2_0.544 ms_9.122 ms_33210//end
- Planning Time: 16.477 ms
-   (slice0)    Executor memory: 111K bytes.
-   (slice1)    Executor memory: 36K bytes avg x 3 workers, 36K bytes max (seg0).
+                                                                      QUERY PLAN                                                                       
+-------------------------------------------------------------------------------------------------------------------------------------------------------
+ Finalize Aggregate  (cost=0.00..431.00 rows=1 width=8) (actual time=12.631..12.631 rows=1 loops=1)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=8) (actual time=11.165..12.618 rows=3 loops=1)
+         ->  Partial Aggregate  (cost=0.00..431.00 rows=1 width=8) (actual time=11.309..11.309 rows=1 loops=1)
+               allstat: seg_firststart_total_ntuples/seg0_0.616 ms_11 ms_1/seg1_0.566 ms_12 ms_1/seg2_0.573 ms_11 ms_1//end
+               ->  Seq Scan on test_heap  (cost=0.00..431.00 rows=1 width=1) (actual time=0.177..7.124 rows=33462 loops=1)
+                     allstat: seg_firststart_total_ntuples/seg0_0.616 ms_7.124 ms_33462/seg1_0.566 ms_7.874 ms_33329/seg2_0.573 ms_6.812 ms_33210//end
+ Optimizer: Pivotal Optimizer (GPORCA)
+ Planning Time: 4.655 ms
+   (slice0)    Executor memory: 39K bytes.
+   (slice1)    Executor memory: 37K bytes avg x 3 workers, 37K bytes max (seg0).
  Memory used:  128000kB
  Optimizer: Pivotal Optimizer (GPORCA) version 3.64.0
  Execution time: 16.835 ms
@@ -5001,32 +5014,31 @@ explain select * from qp_misc_jiras.r;
 (4 rows)
 
 explain analyze select * from qp_misc_jiras.r,qp_misc_jiras.s where r.a=s.b;
-                                                                     QUERY PLAN                                                                     
-----------------------------------------------------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..862.26 rows=1000 width=16) (actual time=2.877..3.466 rows=1000 loops=1)
-   ->  Hash Join  (cost=0.00..862.20 rows=334 width=16) (actual time=1.944..2.717 rows=340 loops=1)
+                                                                      QUERY PLAN                                                                      
+------------------------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..862.26 rows=1000 width=16) (actual time=30.021..31.766 rows=1000 loops=1)
+   ->  Hash Join  (cost=0.00..862.20 rows=334 width=16) (actual time=29.310..31.236 rows=340 loops=1)
          Hash Cond: (r.a = s.b)
-         allstat: seg_firststart_total_ntuples/seg0_10 ms_2.565 ms_338/seg1_10 ms_2.644 ms_322/seg2_10 ms_2.717 ms_340//end
-         ->  Seq Scan on r  (cost=0.00..431.01 rows=334 width=8) (actual time=0.047..0.129 rows=340 loops=1)
-               allstat: seg_firststart_total_ntuples/seg0_12 ms_0.124 ms_338/seg1_12 ms_0.133 ms_322/seg2_12 ms_0.129 ms_340//end
-         ->  Hash  (cost=431.02..431.02 rows=334 width=8) (actual time=1.527..1.528 rows=340 loops=1)
+         Extra Text: (seg2)   Hash chain length 1.0 avg, 1 max, using 340 of 524288 buckets.
+         allstat: seg_firststart_total_ntuples/seg0_24 ms_31 ms_338/seg1_24 ms_31 ms_322/seg2_24 ms_31 ms_340//end
+         ->  Seq Scan on r  (cost=0.00..431.01 rows=334 width=8) (actual time=4.611..4.661 rows=340 loops=1)
+               allstat: seg_firststart_total_ntuples/seg0_49 ms_4.869 ms_338/seg1_49 ms_4.874 ms_322/seg2_49 ms_4.661 ms_340//end
+         ->  Hash  (cost=431.02..431.02 rows=334 width=8) (actual time=24.278..24.278 rows=340 loops=1)
                Buckets: 524288  Batches: 1  Memory Usage: 4110kB
-               allstat: seg_firststart_total_ntuples/seg0_11 ms_1.561 ms_338/seg1_11 ms_1.614 ms_322/seg2_11 ms_1.528 ms_340//end
-               ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.02 rows=334 width=8) (actual time=1.300..1.387 rows=340 loops=1)
+               allstat: seg_firststart_total_ntuples/seg0_26 ms_23 ms_338/seg1_26 ms_23 ms_322/seg2_25 ms_24 ms_340//end
+               ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.02 rows=334 width=8) (actual time=24.130..24.183 rows=340 loops=1)
                      Hash Key: s.b
-                     allstat: seg_firststart_total_ntuples/seg0_61 ms_0.076 ms_321/seg1_60 ms_0.081 ms_342/seg2_61 ms_0.117 ms_337//end
-                     ->  Seq Scan on s  (cost=0.00..431.01 rows=334 width=8)
-                           allstat: seg_firststart_total_ntuples/seg0_2.222 ms_2.232 ms_321/seg1_2.265 ms_2.069 ms_342/seg2_2.286 ms_1.974 ms_337//end
- Slice statistics:
-   (slice0)    Executor memory: 267K bytes.
-   (slice1)    Executor memory: 193K bytes avg x 3 workers, 193K bytes max (seg0).
-   (slice2)    Executor memory: 131378K bytes avg x 3 workers, 131399K bytes max (seg1).  Work_mem: 11K bytes max.
- Statement statistics:
-   Memory used: 1945600K bytes
- Settings:  enable_bitmapscan=off; enable_groupagg=on; enable_indexscan=on; enable_seqscan=off; optimizer=on; optimizer_segments=3
- Optimizer status: Pivotal Optimizer (GPORCA) version 1.624
- Total runtime: 87.064 ms
-(31 rows)
+                     allstat: seg_firststart_total_ntuples/seg0_26 ms_23 ms_338/seg1_26 ms_23 ms_322/seg2_25 ms_24 ms_340//end
+                     ->  Seq Scan on s  (cost=0.00..431.01 rows=334 width=8) (actual time=13.746..13.791 rows=340 loops=1)
+                           allstat: seg_firststart_total_ntuples/seg0_28 ms_6.694 ms_338/seg1_28 ms_6.607 ms_322/seg2_35 ms_14 ms_340//end
+ Optimizer: Pivotal Optimizer (GPORCA)
+ Planning Time: 107.557 ms
+   (slice0)    Executor memory: 46K bytes.
+   (slice1)    Executor memory: 4164K bytes avg x 3 workers, 4164K bytes max (seg2).  Work_mem: 4110K bytes max.
+   (slice2)    Executor memory: 37K bytes avg x 3 workers, 37K bytes max (seg0).
+ Memory used:  128000kB
+ Execution Time: 56.696 ms
+(22 rows)
 
 drop table qp_misc_jiras.r;
 drop table qp_misc_jiras.s;
@@ -5559,16 +5571,17 @@ insert into tbl_z select i from generate_series(1,100) i;
 explain select 1 as t1 where 1 <= ALL (select x from tbl_z);
                                                                                                                                                        QUERY PLAN                                                                                                                                                        
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
- Nested Loop  (cost=0.00..882688.11 rows=1 width=1)
+ Nested Loop  (cost=0.00..882688.14 rows=1 width=1)
    Join Filter: true
    ->  Result  (cost=0.00..431.00 rows=1 width=1)
          Filter: ((CASE WHEN (sum((CASE WHEN (1 > x) THEN 1 ELSE 0 END)) IS NULL) THEN true WHEN (sum((CASE WHEN (x IS NULL) THEN 1 ELSE 0 END)) > '0'::bigint) THEN NULL::boolean WHEN (1 IS NULL) THEN NULL::boolean WHEN (sum((CASE WHEN (1 > x) THEN 1 ELSE 0 END)) = '0'::bigint) THEN true ELSE false END) = true)
-         ->  Aggregate  (cost=0.00..431.00 rows=1 width=16)
-               ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
-                     ->  Seq Scan on tbl_z  (cost=0.00..431.00 rows=1 width=4)
+         ->  Finalize Aggregate  (cost=0.00..431.00 rows=1 width=16)
+               ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=16)
+                     ->  Partial Aggregate  (cost=0.00..431.00 rows=1 width=16)
+                           ->  Seq Scan on tbl_z  (cost=0.00..431.00 rows=1 width=4)
    ->  Result  (cost=0.00..0.00 rows=1 width=1)
  Optimizer: Pivotal Optimizer (GPORCA)
-(9 rows)
+(10 rows)
 
 set gp_enable_relsize_collection = on;
 -- plan with relsize collection

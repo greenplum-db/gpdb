@@ -20,7 +20,7 @@ The `gpinitstandby` utility adds a backup, standby coordinator instance to your 
 
 Before running this utility, make sure that the Greenplum Database software is installed on the standby coordinator host and that you have exchanged SSH keys between the hosts. It is recommended that the coordinator port is set to the same port number on the coordinator host and the standby coordinator host.
 
-This utility should be run on the currently active *primary* coordinator host.See the *Greenplum Database Installation Guide* for instructions.
+This utility should be run on the currently active *primary* master host. See the *Greenplum Database Installation Guide* for instructions.
 
 The utility performs the following steps:
 

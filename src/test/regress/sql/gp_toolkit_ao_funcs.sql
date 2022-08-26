@@ -12,6 +12,7 @@
 DROP TABLE IF EXISTS toolkit_ao_test;
 CREATE TABLE toolkit_ao_test (a INT, b INT, c INT)
   WITH (appendonly=true) DISTRIBUTED BY (c);
+CREATE INDEX ON toolkit_ao_test(a);
 INSERT INTO toolkit_ao_test SELECT i as a, i as b, 1 FROM generate_series(1,20) AS i;
 UPDATE toolkit_ao_test SET b = 0 WHERE a = 1;
 DELETE FROM toolkit_ao_test WHERE a = 2;
@@ -19,6 +20,7 @@ DELETE FROM toolkit_ao_test WHERE a = 2;
 DROP TABLE IF EXISTS toolkit_aocs_test;
 CREATE TABLE toolkit_aocs_test (a INT, b INT, C INT)
   WITH (appendonly=true, orientation=column) DISTRIBUTED BY (c);
+CREATE INDEX ON toolkit_aocs_test(a);
 INSERT INTO toolkit_aocs_test SELECT i as a, i as b FROM generate_series(1,20) AS i;
 UPDATE toolkit_aocs_test SET b = 0 WHERE a = 1;
 DELETE FROM toolkit_aocs_test WHERE a = 2;
@@ -32,6 +34,8 @@ SELECT * FROM gp_toolkit.__gp_aovisimap('toolkit_ao_test');
 SELECT count(*) FROM gp_toolkit.__gp_aovisimap_hidden_info('toolkit_ao_test');
 SELECT * FROM gp_toolkit.__gp_aovisimap_entry('toolkit_ao_test');
 SELECT count(*) FROM gp_toolkit.__gp_aoseg('toolkit_ao_test');
+SELECT * FROM gp_toolkit.__gp_aoblkdir('toolkit_ao_test');
+SELECT * FROM gp_toolkit.__gp_aoblkdir('toolkit_aocs_test');
 
 -- The same, but on the segments.
 SELECT (t).* FROM (
@@ -39,4 +43,10 @@ SELECT (t).* FROM (
 ) AS x;
 SELECT (t).segno, (t).first_row_num, (t).hidden_tupcount >= 1 as hidden_tupcount_nonzero, (t).bitmap like '01%' as bitmap_starts_with_01 FROM (
   SELECT gp_toolkit.__gp_aovisimap_entry('toolkit_ao_test') AS t FROM gp_dist_random('gp_id')
+) AS x;
+SELECT (t).* FROM (
+  SELECT gp_toolkit.__gp_aoblkdir('toolkit_ao_test') AS t FROM gp_dist_random('gp_id')
+) AS x;
+SELECT (t).* FROM (
+  SELECT gp_toolkit.__gp_aoblkdir('toolkit_aocs_test') AS t FROM gp_dist_random('gp_id')
 ) AS x;

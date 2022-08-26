@@ -55,9 +55,7 @@ For a partitioned table, you can reload the data of a leaf child partition. Howe
 
 :   Each line specifies a table name and the list of columns to sort. This is the format of each line in the file:
 
-:   ```
-schema.table_name: column [desc] [, column2 [desc] ... ]
-```
+:   `schema.table_name: column [desc] [, column2 [desc] ... ]`
 
 :   The table name is followed by a colon \( : \) and then at least one column name. If you specify more than one column, separate the column names with a comma. The columns are sorted in ascending order. Specify the keyword `desc` after the column name to sort the column in descending order.
 

@@ -58,6 +58,9 @@ OBJS        = CDXLColDescr.o \
               CDXLPhysicalCTEConsumer.o \
               CDXLPhysicalCTEProducer.o \
               CDXLPhysicalDML.o \
+              CDXLPhysicalDynamicBitmapTableScan.o \
+              CDXLPhysicalDynamicIndexScan.o \
+              CDXLPhysicalDynamicTableScan.o \
               CDXLPhysicalExternalScan.o \
               CDXLPhysicalGatherMotion.o \
               CDXLPhysicalHashJoin.o \

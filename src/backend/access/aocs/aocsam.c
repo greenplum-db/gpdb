@@ -370,29 +370,6 @@ open_next_scan_seg(AOCSScanDesc scan)
 				 */
 				if (scan->blockDirectory)
 				{
-					/*
-					 * if building the block directory, we need to make sure
-					 * the sequence starts higher than our highest tuple's
-					 * rownum.  In the case of upgraded blocks, the highest
-					 * tuple will have tupCount as its row num for non-upgrade
-					 * cases, which use the sequence, it will be enough to
-					 * start off the end of the sequence; note that this is
-					 * not ideal -- if we are at least curSegInfo->tupcount +
-					 * 1 then we don't even need to update the sequence value
-					 */
-					int64		firstSequence;
-					Oid         segrelid;
-					GetAppendOnlyEntryAuxOids(RelationGetRelid(scan->rs_base.rs_rd),
-                                              scan->appendOnlyMetaDataSnapshot,
-                                              &segrelid, NULL, NULL,
-                                              NULL, NULL);
-
-					firstSequence =
-						GetFastSequences(segrelid,
-										 curSegInfo->segno,
-										 curSegInfo->total_tupcount + 1,
-										 NUM_FAST_SEQUENCES);
-
 					AppendOnlyBlockDirectory_Init_forInsert(scan->blockDirectory,
 															scan->appendOnlyMetaDataSnapshot,
 															(FileSegInfo *) curSegInfo,
@@ -401,10 +378,6 @@ open_next_scan_seg(AOCSScanDesc scan)
 															curSegInfo->segno,
 															scan->columnScanInfo.relationTupleDesc->natts,
 															true);
-
-					InsertFastSequenceEntry(segrelid,
-											curSegInfo->segno,
-											firstSequence);
 				}
 
 				open_all_datumstreamread_segfiles(scan->rs_base.rs_rd,
@@ -609,6 +582,7 @@ aocs_endscan(AOCSScanDesc scan)
 
 		close_ds_read(scan->columnScanInfo.ds, scan->columnScanInfo.relationTupleDesc->natts);
 		pfree(scan->columnScanInfo.ds);
+		scan->columnScanInfo.ds = NULL;
 	}
 
 	if (scan->columnScanInfo.relationTupleDesc)
@@ -966,7 +940,6 @@ aocs_insert_init(Relation rel, int segno)
 	firstSequence =
 		GetFastSequences(desc->segrelid,
 						 segno,
-						 desc->rowCount + 1,
 						 NUM_FAST_SEQUENCES);
 	desc->numSequences = NUM_FAST_SEQUENCES;
 
@@ -1085,7 +1058,6 @@ aocs_insert_values(AOCSInsertDesc idesc, Datum *d, bool *null, AOTupleId *aoTupl
 		firstSequence =
 			GetFastSequences(idesc->segrelid,
 							 idesc->cur_segno,
-							 idesc->lastSequence + 1,
 							 NUM_FAST_SEQUENCES);
 
 		Assert(firstSequence == idesc->lastSequence + 1);
@@ -1287,9 +1259,9 @@ openFetchSegmentFile(AOCSFetchDesc aocsFetchDesc,
 }
 
 static void
-resetCurrentBlockInfo(CurrentBlock *currentBlock)
+resetCurrentBlockInfo(AOFetchBlockMetadata *currentBlock)
 {
-	currentBlock->have = false;
+	currentBlock->valid = false;
 	currentBlock->firstRowNum = 0;
 	currentBlock->lastRowNum = 0;
 }
@@ -1509,7 +1481,7 @@ aocs_fetch(AOCSFetchDesc aocsFetchDesc,
 		if (datumStreamFetchDesc->currentSegmentFile.isOpen &&
 			datumStreamFetchDesc->currentSegmentFile.num == segmentFileNum &&
 			aocsFetchDesc->blockDirectory.currentSegmentFileNum == segmentFileNum &&
-			datumStreamFetchDesc->currentBlock.have)
+			datumStreamFetchDesc->currentBlock.valid)
 		{
 			if (rowNum >= datumStreamFetchDesc->currentBlock.firstRowNum &&
 				rowNum <= datumStreamFetchDesc->currentBlock.lastRowNum)
@@ -1666,7 +1638,9 @@ aocs_fetch_finish(AOCSFetchDesc aocsFetchDesc)
 			Assert(datumStreamFetchDesc->datumStream != NULL);
 			datumstreamread_close_file(datumStreamFetchDesc->datumStream);
 			destroy_datumstreamread(datumStreamFetchDesc->datumStream);
+			datumStreamFetchDesc->datumStream = NULL;
 			pfree(datumStreamFetchDesc);
+			aocsFetchDesc->datumStreamFetchDesc[colno] = NULL;
 		}
 	}
 	pfree(aocsFetchDesc->datumStreamFetchDesc);
@@ -2190,6 +2164,7 @@ aocs_addcol_finish(AOCSAddColumnDesc desc)
 	for (i = 0; i < desc->num_newcols; ++i)
 		destroy_datumstreamwrite(desc->dsw[i]);
 	pfree(desc->dsw);
+	desc->dsw = NULL;
 
 	pfree(desc);
 }

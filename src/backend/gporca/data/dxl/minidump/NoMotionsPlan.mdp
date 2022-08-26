@@ -1667,7 +1667,7 @@
       </dxl:ColumnStatistics>
       <dxl:RelationStatistics Mdid="2.1247.1.1" Name="pg_type" Rows="322.000000" EmptyRelation="false"/>
       <dxl:RelationStatistics Mdid="2.1259.1.1" Name="pg_class" Rows="337.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="0.1247.1.1" Name="pg_type" IsTemporary="false" HasOids="true" StorageType="Heap" DistributionPolicy="MasterOnly" Keys="30,23">
+      <dxl:Relation Mdid="0.1247.1.1" Name="pg_type" IsTemporary="false" StorageType="Heap" DistributionPolicy="MasterOnly" Keys="30,23">
         <dxl:Columns>
           <dxl:Column Name="typname" Attno="1" Mdid="0.19.1.0" Nullable="false" ColWidth="64">
             <dxl:DefaultValue/>
@@ -1767,7 +1767,7 @@
         <dxl:Triggers/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
-      <dxl:Relation Mdid="0.1259.1.1" Name="pg_class" IsTemporary="false" HasOids="true" StorageType="Heap" DistributionPolicy="MasterOnly" Keys="37,30">
+      <dxl:Relation Mdid="0.1259.1.1" Name="pg_class" IsTemporary="false" StorageType="Heap" DistributionPolicy="MasterOnly" Keys="37,30">
         <dxl:Columns>
           <dxl:Column Name="relname" Attno="1" Mdid="0.19.1.0" Nullable="false" ColWidth="64">
             <dxl:DefaultValue/>

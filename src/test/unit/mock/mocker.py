@@ -36,7 +36,7 @@ class CFile(object):
     # Currently this requires static keyword at the beginning of line.
     ###staticvar_pat = re.compile(r'^static.+?;', re.MULTILINE | re.DOTALL)
     def __init__(self, path, options):
-        self.path = os.path.abspath(path)
+        self.path = os.path.join(os.path.realpath(os.path.dirname(path)), os.path.basename(path))
         self.options = options
         #with open(self.make_i()) as f:
         with open(self.path) as f:

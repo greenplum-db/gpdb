@@ -29,6 +29,12 @@ SELECT relname, reltuples FROM pg_class WHERE relname = 'uaocs_drop';
  uaocs_drop |         7
 (1 row)
 
+-- New strategy of VACUUM AO/CO was introduced by PR #13255 for performance enhancement.
+-- Index dead tuples will not always be cleaned up completely after VACUUM, leading to
+-- index->reltuples not always equal to table->reltuples, it depends on the GUC
+-- gp_appendonly_compaction_threshold. In this case, the ratio of dead tuples is about 30%
+-- which is greater than default value (10%) of the compaction threshold, so compaction
+-- should be triggered and reltuples of both table and index should be equal.
 SELECT relname, reltuples FROM pg_class WHERE relname = 'uaocs_drop_index';
      relname      | reltuples 
 ------------------+-----------

@@ -29,13 +29,6 @@
 int			gp_blockdirectory_entry_min_range = 0;
 int			gp_blockdirectory_minipage_size = NUM_MINIPAGE_ENTRIES;
 
-static inline uint32
-minipage_size(uint32 nEntry)
-{
-	return offsetof(Minipage, entry) +
-		sizeof(MinipageEntry) * nEntry;
-}
-
 static void load_last_minipage(
 				   AppendOnlyBlockDirectory *blockDirectory,
 				   int64 lastSequence,
@@ -918,35 +911,6 @@ init_scankeys(TupleDesc tupleDesc,
 	}
 }
 
-/*
- * copy_out_minipage
- *
- * Copy out the minipage content from a deformed tuple.
- */
-static inline void
-copy_out_minipage(MinipagePerColumnGroup *minipageInfo,
-				  Datum minipage_value,
-				  bool minipage_isnull)
-{
-	struct varlena *value;
-	struct varlena *detoast_value;
-
-	Assert(!minipage_isnull);
-
-	value = (struct varlena *)
-		DatumGetPointer(minipage_value);
-	detoast_value = pg_detoast_datum(value);
-	Assert(VARSIZE(detoast_value) <= minipage_size(NUM_MINIPAGE_ENTRIES));
-
-	memcpy(minipageInfo->minipage, detoast_value, VARSIZE(detoast_value));
-	if (detoast_value != value)
-		pfree(detoast_value);
-
-	Assert(minipageInfo->minipage->nEntry <= NUM_MINIPAGE_ENTRIES);
-
-	minipageInfo->numMinipageEntries = minipageInfo->minipage->nEntry;
-}
-
 
 /*
  * extract_minipage
@@ -1229,8 +1193,6 @@ write_minipage(AppendOnlyBlockDirectory *blockDirectory,
 	MemoryContextSwitchTo(oldcxt);
 }
 
-
-
 void
 AppendOnlyBlockDirectory_End_forInsert(
 									   AppendOnlyBlockDirectory *blockDirectory)
@@ -1284,8 +1246,7 @@ AppendOnlyBlockDirectory_End_forSearch(
 {
 	int			groupNo;
 
-	if (blockDirectory->blkdirRel == NULL ||
-		blockDirectory->blkdirIdx == NULL)
+	if (blockDirectory->blkdirRel == NULL)
 		return;
 
 	for (groupNo = 0; groupNo < blockDirectory->numColumnGroups; groupNo++)
@@ -1308,7 +1269,8 @@ AppendOnlyBlockDirectory_End_forSearch(
 	pfree(blockDirectory->scanKeys);
 	pfree(blockDirectory->strategyNumbers);
 
-	index_close(blockDirectory->blkdirIdx, AccessShareLock);
+	if (blockDirectory->blkdirIdx)
+		index_close(blockDirectory->blkdirIdx, AccessShareLock);
 	heap_close(blockDirectory->blkdirRel, AccessShareLock);
 
 	MemoryContextDelete(blockDirectory->memoryContext);

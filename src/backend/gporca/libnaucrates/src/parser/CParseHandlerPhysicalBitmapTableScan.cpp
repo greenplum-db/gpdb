@@ -49,5 +49,6 @@ CParseHandlerPhysicalBitmapTableScan::EndElement(
 	const XMLCh *const	// element_qname
 )
 {
-	EndElementHelper(element_local_name, EdxltokenPhysicalBitmapTableScan);
+	EndElementHelper(element_local_name, EdxltokenPhysicalBitmapTableScan,
+					 nullptr);
 }

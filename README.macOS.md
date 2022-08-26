@@ -7,7 +7,7 @@ Execute the following, this script will start by caching the `sudo` password:
 
 ```bash
 ./README.macOS.bash
-source ~/.bash_profile
+source ~/.bashrc
 ```
 
 Note: This will install Homebrew if missing

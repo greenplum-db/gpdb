@@ -1,3 +1,6 @@
+# required setup steps
+test: test_setup
+
 # Test relevant to gp_dispatch_keepalives_* GUCs 
 test: gp_dispatch_keepalives
 

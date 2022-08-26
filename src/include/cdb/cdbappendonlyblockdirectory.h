@@ -124,11 +124,16 @@ typedef struct AppendOnlyBlockDirectory
 }	AppendOnlyBlockDirectory;
 
 
-typedef struct CurrentBlock
+typedef struct AOFetchBlockMetadata
 {
 	AppendOnlyBlockDirectoryEntry blockDirectoryEntry;
 
-	bool have;
+	/*
+	 * Since we have opted to embed this struct inside AppendOnlyFetchDescData
+	 * (as opposed to allocating/deallocating it separately), keep a valid flag
+	 * to indicate whether the metadata stored here is junk or not.
+	 */
+	bool valid;
 
 	int64 fileOffset;
 	
@@ -137,20 +142,22 @@ typedef struct CurrentBlock
 	int64 firstRowNum;
 	int64 lastRowNum;
 	
-	bool isCompressed;
-	bool isLargeContent;
-	
 	bool		gotContents;
-} CurrentBlock;
+} AOFetchBlockMetadata;
 
-typedef struct CurrentSegmentFile
+typedef struct AOFetchSegmentFile
 {
 	bool isOpen;
 	
 	int num;
 	
 	int64 logicalEof;
-} CurrentSegmentFile;
+} AOFetchSegmentFile;
+
+typedef struct AppendOnlyBlockDirectorySeqScan {
+	AppendOnlyBlockDirectory blkdir;
+	SysScanDesc sysScan;
+} AppendOnlyBlockDirectorySeqScan;
 
 extern void AppendOnlyBlockDirectoryEntry_GetBeginRange(
 	AppendOnlyBlockDirectoryEntry	*directoryEntry,
@@ -201,19 +208,6 @@ extern bool AppendOnlyBlockDirectory_InsertEntry(
 	int64 fileOffset,
 	int64 rowCount,
 	bool addColAction);
-extern bool AppendOnlyBlockDirectory_addCol_InsertEntry(
-	AppendOnlyBlockDirectory *blockDirectory,
-	int columnGroupNo,
-	int64 firstRowNum,
-	int64 fileOffset,
-	int64 rowCount);
-extern bool AppendOnlyBlockDirectory_DeleteEntry(
-	AppendOnlyBlockDirectory *blockDirectory,
-	AOTupleId *aoTupleId);
-extern bool AppendOnlyBlockDirectory_DeleteEntryForUpdate(
-	AppendOnlyBlockDirectory *visibilityBlockDirectory,
-	AppendOnlyBlockDirectory *insertBlockDirectory,
-	AOTupleId* aoTupleId);
 extern void AppendOnlyBlockDirectory_End_forInsert(
 	AppendOnlyBlockDirectory *blockDirectory);
 extern void AppendOnlyBlockDirectory_End_forSearch(
@@ -225,4 +219,40 @@ extern void AppendOnlyBlockDirectory_DeleteSegmentFile(
 		Snapshot snapshot,
 		int segno,
 		int columnGroupNo);
+
+static inline uint32
+minipage_size(uint32 nEntry)
+{
+	return offsetof(Minipage, entry) + sizeof(MinipageEntry) * nEntry;
+}
+
+/*
+ * copy_out_minipage
+ *
+ * Copy out the minipage content from a deformed tuple.
+ */
+static inline void
+copy_out_minipage(MinipagePerColumnGroup *minipageInfo,
+				  Datum minipage_value,
+				  bool minipage_isnull)
+{
+	struct varlena *value;
+	struct varlena *detoast_value;
+
+	Assert(!minipage_isnull);
+
+	value = (struct varlena *)
+		DatumGetPointer(minipage_value);
+	detoast_value = pg_detoast_datum(value);
+	Assert(VARSIZE(detoast_value) <= minipage_size(NUM_MINIPAGE_ENTRIES));
+
+	memcpy(minipageInfo->minipage, detoast_value, VARSIZE(detoast_value));
+	if (detoast_value != value)
+		pfree(detoast_value);
+
+	Assert(minipageInfo->minipage->nEntry <= NUM_MINIPAGE_ENTRIES);
+
+	minipageInfo->numMinipageEntries = minipageInfo->minipage->nEntry;
+}
+
 #endif

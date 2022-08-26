@@ -811,6 +811,37 @@ is_begin_state(const Node *stmt)
 #endif
 
 /*
+ * Set up the search path to contain the target schema, then the schemas
+ * of any prerequisite extensions, and nothing else.  In particular this
+ * makes the target schema be the default creation target namespace.
+ *
+ * Note: it might look tempting to use PushOverrideSearchPath for this,
+ * but we cannot do that.  We have to actually set the search_path GUC in
+ * case the extension script examines or changes it.  In any case, the
+ * GUC_ACTION_SAVE method is just as convenient.
+ */
+static void
+set_serach_path_for_extension(List *requiredSchemas, const char *schemaName)
+{
+	StringInfoData pathbuf;
+	ListCell *lc;
+	initStringInfo(&pathbuf);
+	appendStringInfoString(&pathbuf, quote_identifier(schemaName));
+	foreach(lc, requiredSchemas)
+	{
+		Oid			reqschema = lfirst_oid(lc);
+		char	   *reqname = get_namespace_name(reqschema);
+
+		if (reqname)
+			appendStringInfo(&pathbuf, ", %s", quote_identifier(reqname));
+	}
+
+	(void) set_config_option("search_path", pathbuf.data,
+							 PGC_USERSET, PGC_S_SESSION,
+							 GUC_ACTION_SAVE, true, 0, false);
+}
+
+/*
  * Execute the appropriate script file for installing or updating the extension
  *
  * If from_version isn't NULL, it's an update
@@ -823,13 +854,10 @@ execute_extension_script(Node *stmt,
 						 Oid extensionOid, ExtensionControlFile *control,
 						 const char *from_version,
 						 const char *version,
-						 List *requiredSchemas,
 						 const char *schemaName, Oid schemaOid)
 {
 	char	   *filename;
 	int			save_nestlevel;
-	StringInfoData pathbuf;
-	ListCell   *lc;
 
 	AssertState(Gp_role != GP_ROLE_EXECUTE);
 	AssertImply(Gp_role == GP_ROLE_DISPATCH, stmt != NULL &&
@@ -878,31 +906,6 @@ execute_extension_script(Node *stmt,
 		(void) set_config_option("log_min_messages", "warning",
 								 PGC_SUSET, PGC_S_SESSION,
 								 GUC_ACTION_SAVE, true, 0, false);
-
-	/*
-	 * Set up the search path to contain the target schema, then the schemas
-	 * of any prerequisite extensions, and nothing else.  In particular this
-	 * makes the target schema be the default creation target namespace.
-	 *
-	 * Note: it might look tempting to use PushOverrideSearchPath for this,
-	 * but we cannot do that.  We have to actually set the search_path GUC in
-	 * case the extension script examines or changes it.  In any case, the
-	 * GUC_ACTION_SAVE method is just as convenient.
-	 */
-	initStringInfo(&pathbuf);
-	appendStringInfoString(&pathbuf, quote_identifier(schemaName));
-	foreach(lc, requiredSchemas)
-	{
-		Oid			reqschema = lfirst_oid(lc);
-		char	   *reqname = get_namespace_name(reqschema);
-
-		if (reqname)
-			appendStringInfo(&pathbuf, ", %s", quote_identifier(reqname));
-	}
-
-	(void) set_config_option("search_path", pathbuf.data,
-							 PGC_USERSET, PGC_S_SESSION,
-							 GUC_ACTION_SAVE, true, 0, false);
 
 	/*
 	 * Set creating_extension and related variables so that
@@ -1641,11 +1644,12 @@ CreateExtensionInternal(char *extensionName,
 		stmt = NULL;
 	}
 
+	set_serach_path_for_extension(requiredSchemas, schemaName);
+
 	if (Gp_role != GP_ROLE_EXECUTE)
 	{
 		execute_extension_script((Node *) stmt, extensionOid, control,
 							 oldVersionName, versionName,
-							 requiredSchemas,
 							 schemaName, schemaOid);
 
 		/*
@@ -3320,6 +3324,8 @@ ApplyExtensionUpdates(Oid extensionOid,
 
 		InvokeObjectPostAlterHook(ExtensionRelationId, extensionOid, 0);
 
+		set_serach_path_for_extension(requiredSchemas, schemaName);
+
 		if (Gp_role != GP_ROLE_EXECUTE)
 		{
 			Node *stmt = NULL;
@@ -3345,7 +3351,6 @@ ApplyExtensionUpdates(Oid extensionOid,
 			 */
 			execute_extension_script(stmt, extensionOid, control,
 									 oldVersionName, versionName,
-									 requiredSchemas,
 									 schemaName, schemaOid);
 		}
 		else

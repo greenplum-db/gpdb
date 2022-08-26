@@ -77,7 +77,7 @@ AppendOnlyCompaction_DropSegmentFile(Relation aorel, int segno)
 	/* Open and truncate the relation segfile */
 	MakeAOSegmentFileName(aorel, segno, -1, &fileSegNo, filenamepath);
 
-	fd = OpenAOSegmentFile(aorel, filenamepath, 0);
+	fd = OpenAOSegmentFile(filenamepath, 0);
 	if (fd >= 0)
 	{
 		TruncateAOSegmentFile(fd, aorel, fileSegNo, 0);
@@ -242,7 +242,7 @@ AppendOnlySegmentFileTruncateToEOF(Relation aorel, int segno, int64 segeof)
 		   segno,
 		   segeof);
 
-	fd = OpenAOSegmentFile(aorel, filenamepath, segeof);
+	fd = OpenAOSegmentFile(filenamepath, segeof);
 	if (fd >= 0)
 	{
 		TruncateAOSegmentFile(fd, aorel, fileSegNo, segeof);
@@ -278,7 +278,6 @@ AppendOnlyMoveTuple(TupleTableSlot *slot,
 					EState *estate)
 {
 	MemTuple	tuple;
-	bool		shouldFree;
 	AOTupleId  *oldAoTupleId;
 	AOTupleId	newAoTupleId;
 
@@ -291,7 +290,7 @@ AppendOnlyMoveTuple(TupleTableSlot *slot,
 	/* Extract all the values of the tuple */
 	slot_getallattrs(slot);
 
-	tuple = ExecFetchSlotMemTuple(slot, &shouldFree, mt_bind);
+	tuple = appendonly_form_memtuple(slot, mt_bind);
 	appendonly_insert(insertDesc,
 					  tuple,
 					  &newAoTupleId);
@@ -308,8 +307,7 @@ AppendOnlyMoveTuple(TupleTableSlot *slot,
 		ResetPerTupleExprContext(estate);
 	}
 
-	if (shouldFree)
-		pfree(tuple);
+	appendonly_free_memtuple(tuple);
 
 	if (Debug_appendonly_print_compaction)
 		ereport(DEBUG5,
@@ -319,31 +317,51 @@ AppendOnlyMoveTuple(TupleTableSlot *slot,
 }
 
 void
-AppendOnlyThrowAwayTuple(Relation rel, TupleTableSlot *slot)
+AppendOnlyThrowAwayTuple(Relation rel, TupleTableSlot *slot, MemTupleBinding *mt_bind)
 {
-	AOTupleId  *oldAoTupleId;
+	int			i;
+	int			numAttrs;
+	MemTuple	tuple;
+	TupleDesc	tupleDesc;
+	AOTupleId  *aoTupleId;
+	Datum		toast_values[MaxHeapAttributeNumber];
+	bool		toast_isnull[MaxHeapAttributeNumber];
 
 	Assert(slot);
 
-	oldAoTupleId = (AOTupleId *) &slot->tts_tid;
+	aoTupleId = (AOTupleId *) &slot->tts_tid;
 	/* Extract all the values of the tuple */
 	slot_getallattrs(slot);
 
-	/* GPDB_12_MERGE_FIXME: loop through all attributes, call toast_delete_datum()
-	 * on any toasted datums, like toast_delete does for heap tuples */
-#if 0
-	tuple = TupGetMemTuple(slot);
-	if (MemTupleHasExternal(tuple, mt_bind))
+	tuple = appendonly_form_memtuple(slot, mt_bind);
+	tupleDesc = rel->rd_att;
+	numAttrs = tupleDesc->natts;
+
+	Assert(numAttrs <= MaxHeapAttributeNumber);
+
+	memtuple_deform((MemTuple) tuple, mt_bind, toast_values, toast_isnull);
+
+	/* loop through all attributes, delete external stored values */
+	for (i = 0; i < numAttrs; i++)
 	{
-		toast_delete_memtup(rel, tuple, mt_bind);
+		if (TupleDescAttr(tupleDesc, i)->attlen == -1)
+		{
+			Datum		value = toast_values[i];
+
+			if (toast_isnull[i])
+				continue;
+			else if (VARATT_IS_EXTERNAL_ONDISK(PointerGetDatum(value)))
+				toast_delete_datum(rel, value, false);
+		}
 	}
-#endif
+
+	appendonly_free_memtuple(tuple);
 	
 	if (Debug_appendonly_print_compaction)
 		ereport(DEBUG5,
 				(errmsg("Compaction: Throw away tuple (%d," INT64_FORMAT ")",
-						AOTupleIdGet_segmentFileNum(oldAoTupleId),
-						AOTupleIdGet_rowNum(oldAoTupleId))));
+						AOTupleIdGet_segmentFileNum(aoTupleId),
+						AOTupleIdGet_rowNum(aoTupleId))));
 }
 
 /*
@@ -449,7 +467,7 @@ AppendOnlySegmentFileFullCompaction(Relation aorel,
 		else
 		{
 			/* Tuple is invisible and needs to be dropped */
-			AppendOnlyThrowAwayTuple(aorel, slot);
+			AppendOnlyThrowAwayTuple(aorel, slot, mt_bind);
 		}
 
 		/*
@@ -491,39 +509,28 @@ AppendOnlySegmentFileFullCompaction(Relation aorel,
 }
 
 /*
- * Recycle AWAITING_DROP segments.
- *
- * This tries to acquire an AccessExclusiveLock on the table, if it's
- * available. If it's not, no segments are dropped.
+ * Collect AWAITING_DROP segments.
+ * 
+ * Acquire AccessShareLock with cutoff_xid to scan and collect dead
+ * segments.
  */
-void
-AppendOptimizedRecycleDeadSegments(Relation aorel)
+Bitmapset *
+AppendOptimizedCollectDeadSegments(Relation aorel)
 {
 	Relation	pg_aoseg_rel;
 	TupleDesc	pg_aoseg_dsc;
 	SysScanDesc aoscan;
 	HeapTuple	tuple;
 	Snapshot	appendOnlyMetaDataSnapshot = RegisterSnapshot(GetCatalogSnapshot(InvalidOid));
-	bool		got_accessexclusive_lock = false;
 	TransactionId cutoff_xid = InvalidTransactionId;
 	Oid			segrelid;
+	Bitmapset	*dead_segs = NULL;
 
 	Assert(RelationIsAppendOptimized(aorel));
 
-	/*
-	 * The algorithm below for choosing a target segment is not concurrent-safe.
-	 * Grab a lock to serialize.
-	 *
-	 * INterlocks with SetSegnoInternal()
-	 */
-	LockRelationForExtension(aorel, ExclusiveLock);
-
 	GetAppendOnlyEntryAuxOids(aorel->rd_id, appendOnlyMetaDataSnapshot,
 							  &segrelid, NULL, NULL, NULL, NULL);
-	/*
-	 * Now pick a segment that is not in use, and is not over the allowed
-	 * size threshold (90% full).
-	 */
+	
 	pg_aoseg_rel = heap_open(segrelid, AccessShareLock);
 	pg_aoseg_dsc = RelationGetDescr(pg_aoseg_rel);
 
@@ -543,7 +550,9 @@ AppendOptimizedRecycleDeadSegments(Relation aorel)
 											  pg_aoseg_dsc, &isNull));
 			Assert(!isNull);
 
-			state = fastgetattr(tuple, Anum_pg_aoseg_state, pg_aoseg_dsc, &isNull);
+			state = DatumGetInt16(fastgetattr(tuple,
+											  Anum_pg_aoseg_state,
+											  pg_aoseg_dsc, &isNull));
 			Assert(!isNull);
 		}
 		else
@@ -563,24 +572,8 @@ AppendOptimizedRecycleDeadSegments(Relation aorel)
 			continue;
 
 		/*
-		 * Upgrade our lock to AccessExclusiveLock for the drop. Upgrading a
-		 * lock poses a deadlock risk, so give up if we cannot acquire the
-		 * lock immediately. We'll retry dropping the segment on the next
-		 * VACUUM.
-		 */
-		if (!got_accessexclusive_lock)
-		{
-			if (!ConditionalLockRelation(aorel, AccessExclusiveLock))
-			{
-				if (Debug_appendonly_print_compaction)
-					elog(LOG, "could not acquire AccessExclusiveLock lock on %s to recycle segno %d",
-						 RelationGetRelationName(aorel), segno);
-				break;
-			}
-			got_accessexclusive_lock = true;
-		}
-
-		/*
+		 * Cutoff XID Screening
+		 * 
 		 * It's in awaiting-drop state, but does everyone see it that way?
 		 *
 		 * Compare the tuple's xmin with the oldest-xmin horizon. We don't bother
@@ -588,6 +581,22 @@ AppendOptimizedRecycleDeadSegments(Relation aorel)
 		 * should not be set. Even if the tuple was update, presumably an AO
 		 * segment that's in awaiting-drop state won't be resurrected, so even if
 		 * someone updates or locks the tuple, it's still safe to drop.
+		 * 
+		 * We don't need to acquire AccessExclusiveLock any longer because we only
+		 * scan pg_aoseg to collect dead segments but no truncaste happens here.
+		 * Considering the following two cases:
+		 * 
+		 * a) When there was a reader accessing a segment file which was changed to
+		 * AWAITING_DROP in later VACUUM compaction, the reader's xid should be earlier
+		 * than this tuple's xmin hence would set visible_to_all to false. Then the
+		 * AWAITING_DROP segment file wouldn't be dropped in this VACUUM cleanup and
+		 * the earlier reader could still be able to access old tuples.
+		 * 
+		 * b) Continue above, so there was a segment file in AWAITING_DROP state, the
+		 * subsequent transactions can't see that hence it wouldn't be touched until
+		 * next VACUUM is arrived. Therefore no later transaction's xid could be earlier
+		 * than this dead segment tuple's xmin hence it would be true on visible_to_all.
+		 * Then the corresponding dead segment file could be dropped later at that time.
 		 */
 		xmin = HeapTupleHeaderGetXmin(tuple->t_data);
 		if (xmin == FrozenTransactionId)
@@ -595,32 +604,62 @@ AppendOptimizedRecycleDeadSegments(Relation aorel)
 		else
 		{
 			if (cutoff_xid == InvalidTransactionId)
-				cutoff_xid = GetOldestXmin(NULL, true);
+				cutoff_xid = GetOldestXmin(NULL, PROCARRAY_FLAGS_VACUUM);
 
 			visible_to_all = TransactionIdPrecedes(xmin, cutoff_xid);
 		}
 		if (!visible_to_all)
 			continue;
 
-		/* all set! */
-		if (RelationIsAoRows(aorel))
-		{
-			AppendOnlyCompaction_DropSegmentFile(aorel, segno);
-			ClearFileSegInfo(aorel, segno);
-		}
-		else
-		{
-			AOCSCompaction_DropSegmentFile(aorel, segno);
-			ClearAOCSFileSegInfo(aorel, segno);
-		}
+		/* collect dead segnos for dropping */
+		dead_segs = bms_add_member(dead_segs, segno);
 	}
 	systable_endscan(aoscan);
-
-	UnlockRelationForExtension(aorel, ExclusiveLock);
 
 	heap_close(pg_aoseg_rel, AccessShareLock);
 
 	UnregisterSnapshot(appendOnlyMetaDataSnapshot);
+
+	return dead_segs;
+}
+
+/*
+ * Drop AWAITING_DROP segments.
+ * 
+ * Callers should guarantee that the segfile is no longer needed by any
+ * running transaction. It is not necessary to hold a lock on the segfile
+ * row, though.
+ */
+static inline void
+AppendOptimizedDropDeadSegment(Relation aorel, int segno)
+{
+	if (RelationIsAoRows(aorel))
+	{
+		AppendOnlyCompaction_DropSegmentFile(aorel, segno);
+		ClearFileSegInfo(aorel, segno);
+	}
+	else
+	{
+		AOCSCompaction_DropSegmentFile(aorel, segno);
+		ClearAOCSFileSegInfo(aorel, segno);
+	}
+}
+
+void
+AppendOptimizedDropDeadSegments(Relation aorel, Bitmapset *segnos)
+{
+	int segno;
+
+	/*
+	 * drop segments in batch with concurrent-safety
+	 */
+	LockRelationForExtension(aorel, ExclusiveLock);
+
+	segno = -1;
+	while ((segno = bms_next_member(segnos, segno)) >= 0)
+		AppendOptimizedDropDeadSegment(aorel, segno);
+	
+	UnlockRelationForExtension(aorel, ExclusiveLock);
 }
 
 /*
@@ -652,10 +691,6 @@ AppendOptimizedTruncateToEOF(Relation aorel)
 	GetAppendOnlyEntryAuxOids(aorel->rd_id, appendOnlyMetaDataSnapshot,
 							  &segrelid, NULL, NULL, NULL, NULL);
 
-	/*
-	 * Now pick a segment that is not in use, and is not over the allowed
-	 * size threshold (90% full).
-	 */
 	pg_aoseg_rel = heap_open(segrelid, AccessShareLock);
 	pg_aoseg_dsc = RelationGetDescr(pg_aoseg_rel);
 

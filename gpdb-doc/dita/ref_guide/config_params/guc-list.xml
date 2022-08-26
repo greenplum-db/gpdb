@@ -9123,7 +9123,7 @@ statement_mem = rg_perseg_mem / max_expected_concurrent_queries</codeblock></li>
           <tbody>
             <row>
               <entry colname="col1">integer &lt; <i>max_connections</i></entry>
-              <entry colname="col2">3</entry>
+              <entry colname="col2">10</entry>
               <entry colname="col3">local<p>system</p><p>restart</p></entry>
             </row>
           </tbody>

@@ -2569,12 +2569,21 @@ CreateTransform(CreateTransformStmt *stmt)
 									DF_NEED_TWO_PHASE,
 									GetAssignedOidsForDispatch(),
 									NULL);
-
-		/* MPP-6929: metadata tracking */
-		MetaTrackAddObject(TransformRelationId,
-						   myself.objectId,
-						   GetUserId(),
-						   "CREATE", "TRANSFORM");
+		if (is_replace)
+		{
+			MetaTrackUpdObject(TransformRelationId,
+							   myself.objectId,
+							   GetUserId(),
+							   "ALTER", "TRANSFORM");
+		}
+		else
+		{
+			/* MPP-6929: metadata tracking */
+			MetaTrackAddObject(TransformRelationId,
+							   myself.objectId,
+							   GetUserId(),
+							   "CREATE", "TRANSFORM");
+		}
 	}
 
 	return myself;
@@ -2626,6 +2635,11 @@ DropTransformById(Oid transformOid)
 	if (!HeapTupleIsValid(tuple))
 		elog(ERROR, "could not find tuple for transform %u", transformOid);
 	CatalogTupleDelete(relation, &tuple->t_self);
+
+	if (Gp_role == GP_ROLE_DISPATCH)
+	{
+		MetaTrackDropObject(TransformRelationId, transformOid);
+	}
 
 	systable_endscan(scan);
 	table_close(relation, RowExclusiveLock);

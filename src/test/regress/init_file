@@ -139,4 +139,8 @@ s/.//gs
 m/\(dbsize\.c\:\d+\)/
 s/\(dbsize\.c:\d+\)/\(dbsize\.c:XXX\)/
 
+# remove the cdbdisp_async suffix of some ERROR messages
+m/ \(cdbdisp_async\.c.*\)/
+s/ \(cdbdisp_async\.c.*\)//
+
 -- end_matchsubs

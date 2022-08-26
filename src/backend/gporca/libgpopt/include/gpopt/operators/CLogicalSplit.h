@@ -47,9 +47,6 @@ private:
 	// action column
 	CColRef *m_pcrAction;
 
-	// tuple oid column
-	CColRef *m_pcrTupleOid;
-
 public:
 	CLogicalSplit(const CLogicalSplit &) = delete;
 
@@ -59,8 +56,7 @@ public:
 	// ctor
 	CLogicalSplit(CMemoryPool *mp, CColRefArray *pdrgpcrDelete,
 				  CColRefArray *pdrgpcrInsert, CColRef *pcrCtid,
-				  CColRef *pcrSegmentId, CColRef *pcrAction,
-				  CColRef *pcrTupleOid);
+				  CColRef *pcrSegmentId, CColRef *pcrAction);
 
 	// dtor
 	~CLogicalSplit() override;
@@ -112,13 +108,6 @@ public:
 	PcrAction() const
 	{
 		return m_pcrAction;
-	}
-
-	// tuple oid column
-	CColRef *
-	PcrTupleOid() const
-	{
-		return m_pcrTupleOid;
 	}
 
 	// operator specific hash function

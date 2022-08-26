@@ -72,25 +72,27 @@ SELECT DISTINCT (i || '/' || j)::pg_lsn f
        generate_series(1, 5) k
   WHERE i <= 10 AND j > 0 AND j <= 10
   ORDER BY f;
-                                                              QUERY PLAN                                                              
---------------------------------------------------------------------------------------------------------------------------------------
- Sort
-   Sort Key: (((((generate_series_2.generate_series)::text || '/'::text) || (generate_series_1.generate_series)::text))::pg_lsn)
-   ->  HashAggregate
-         Group Key: ((((generate_series_2.generate_series)::text || '/'::text) || (generate_series_1.generate_series)::text))::pg_lsn
-         ->  Nested Loop
-               Join Filter: true
+                                                                 QUERY PLAN                                                                 
+--------------------------------------------------------------------------------------------------------------------------------------------
+ GroupAggregate
+   Group Key: (((((generate_series_2.generate_series)::text || '/'::text) || (generate_series_1.generate_series)::text))::pg_lsn)
+   ->  Sort
+         Sort Key: (((((generate_series_2.generate_series)::text || '/'::text) || (generate_series_1.generate_series)::text))::pg_lsn)
+         ->  Streaming HashAggregate
+               Group Key: ((((generate_series_2.generate_series)::text || '/'::text) || (generate_series_1.generate_series)::text))::pg_lsn
                ->  Nested Loop
                      Join Filter: true
-                     ->  Result
-                           Filter: (generate_series_2.generate_series <= 10)
-                           ->  Function Scan on generate_series generate_series_2
-                     ->  Result
-                           Filter: ((generate_series_1.generate_series > 0) AND (generate_series_1.generate_series <= 10))
-                           ->  Function Scan on generate_series generate_series_1
-               ->  Function Scan on generate_series
- Optimizer: Pivotal Optimizer (GPORCA) version 3.83.0
-(16 rows)
+                     ->  Nested Loop
+                           Join Filter: true
+                           ->  Result
+                                 Filter: (generate_series_2.generate_series <= 10)
+                                 ->  Function Scan on generate_series generate_series_2
+                           ->  Result
+                                 Filter: ((generate_series_1.generate_series > 0) AND (generate_series_1.generate_series <= 10))
+                                 ->  Function Scan on generate_series generate_series_1
+                     ->  Function Scan on generate_series
+ Optimizer: Pivotal Optimizer (GPORCA)
+(18 rows)
 
 SELECT DISTINCT (i || '/' || j)::pg_lsn f
   FROM generate_series(1, 10) i,

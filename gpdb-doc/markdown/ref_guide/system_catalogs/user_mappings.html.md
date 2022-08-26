@@ -1,6 +1,6 @@
 # user_mappings 
 
-The `user_mappings` view contains all of the user mappgins defined in the current database. Greenplum Database displays only those user mappings to which the current user has access \(by way of being the owner or having some privilege\).
+The `user_mappings` view contains all of the user mappings defined in the current database. Greenplum Database displays only those user mappings to which the current user has access \(by way of being the owner or having some privilege\).
 
 |column|type|references|description|
 |------|----|----------|-----------|

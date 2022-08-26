@@ -49,9 +49,13 @@ CPhysicalTVF::CPhysicalTVF(CMemoryPool *mp, IMDId *mdid_func,
 
 	CMDAccessor *md_accessor = COptCtxt::PoctxtFromTLS()->Pmda();
 	if (m_func_mdid->IsValid())
+	{
 		m_pmdfunc = md_accessor->RetrieveFunc(m_func_mdid);
+	}
 	else
+	{
 		m_pmdfunc = nullptr;
+	}
 }
 
 

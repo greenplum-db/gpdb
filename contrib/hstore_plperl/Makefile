@@ -37,3 +37,5 @@ endif
 
 # As with plperl we need to include the perl_includespec directory last.
 override CPPFLAGS := $(CPPFLAGS) $(perl_embed_ccflags) $(perl_includespec)
+
+REGRESS_OPTS = --init-file=init_file

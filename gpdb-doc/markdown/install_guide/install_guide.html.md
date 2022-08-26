@@ -6,8 +6,6 @@ Information about installing, configuring, and upgrading Greenplum Database soft
 
 -   **[Platform Requirements](platform-requirements.html)**  
 This topic describes the Greenplum Database 6 platform and operating system software requirements.
--   **[Introduction to Greenplum](preinstall_concepts.html)**  
-High-level overview of the Greenplum Database system architecture.
 -   **[Estimating Storage Capacity](capacity_planning.html)**  
 To estimate how much data your Greenplum Database system can accommodate, use these measurements as guidelines. Also keep in mind that you may want to have extra space for landing backup files and data load files on each segment host.
 -   **[Configuring Your Systems](prep_os.html)**  

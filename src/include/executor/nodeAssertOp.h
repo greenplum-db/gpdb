@@ -16,7 +16,6 @@
 #ifndef NODEASSERTOP_H
 #define NODEASSERTOP_H
 
-extern TupleTableSlot* ExecAssertOp(AssertOpState *node);
 extern AssertOpState* ExecInitAssertOp(AssertOp *node, EState *estate, int eflags);
 extern void ExecEndAssertOp(AssertOpState *node);
 extern void ExecReScanAssertOp(AssertOpState *node);
