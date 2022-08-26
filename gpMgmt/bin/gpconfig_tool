@@ -1,0 +1,136 @@
+#!/usr/bin/perl
+use File::Basename;
+use FindBin qw($Bin);
+use Getopt::Long qw(:config bundling no_ignore_case no_autoabbrev passthrough);
+use POSIX;
+use strict;
+
+my $MAIN_PID = substr("000000".$$,-6);
+my $log_file_date = strftime("%Y%m%d",localtime);
+my $log_file_date = strftime("%Y%m%d",localtime);
+my $LOG_FILE = "gpconfig_tool_$log_file_date.log";
+my $LOG_PATH = $ENV{HOME}."/gpAdminLogs";
+my $GPCONFIG_PATH = $ENV{HOME}."/gpconfigs";
+my ($LOG_FILE_HANDLE, $GPCONFIG_FILE,);
+(my $CMD_NAME = $0) =~ s!.*/(.*)!$1!;
+my $ssh = "ssh -o NumberOfPasswordPrompts=1 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null";
+my $scp = "scp -o NumberOfPasswordPrompts=1 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null";
+
+sub printMessage{
+    my ($flag,$message) = @_;
+    my $time_flag = strftime("%Y%m%d:%H:%M:%S.",localtime).$MAIN_PID;
+    $message = "$time_flag-[$flag]-:$message\n";
+    if($flag eq "ERROR"){
+        print STDOUT $message;
+        print STDERR $message;
+    }else{
+        print STDOUT $message;
+    }
+    return $message;
+}
+
+sub logMessage{
+    my ($flag,$message) = @_;
+    my $log_message = printMessage($flag,$message);
+    if($LOG_FILE_HANDLE eq ""){
+        open($LOG_FILE_HANDLE,">>","$LOG_PATH/$LOG_FILE");
+    }
+    print $LOG_FILE_HANDLE $log_message;
+}
+
+sub errorMessage{
+    my ($message) = @_;
+    logMessage("ERROR",$message);
+    exit 1;
+}
+
+sub readLineFromFile{
+    my ($file_path) = @_;
+    if(!-e $file_path){
+        errorMessage("No file exists named: $file_path");
+    }
+    if(!open(FILE,"<",$file_path)){
+        errorMessage("Can't open file: $file_path");
+    }
+    my @line_list = ();
+    while(my $line = <FILE>){
+        $line = trim($line);
+        if(!($line =~ /^#/) && $line ne ""){
+            push @line_list,$line;
+        }
+    }
+    close FILE;
+    return @line_list;
+}
+
+sub trim{
+    if(wantarray()){
+        my @arr = ();
+        for my $str(@_){
+            $str =~ s/(^\s+|\s+$)//g;
+            push @arr,$str;
+        }
+        return @arr;
+    }else{
+        my ($string) = @_;
+        $string =~ s/(^\s+|\s+$)//g;
+        return $string;
+    }
+}
+
+sub main{
+    GetOptions(
+        'gpconfig-file|f:s' => \$GPCONFIG_FILE,
+    );
+    if(@ARGV != 0){
+        errorMessage("Some parameters unknown: [@ARGV]");
+    }
+    my %gp_config_hash = ();
+    if($GPCONFIG_FILE ne ""){
+        my $gpconfig_file_path = "$GPCONFIG_PATH/$GPCONFIG_FILE";
+        if(!-e $gpconfig_file_path){
+            logMessage("INFO","gpconfig config file not exists: $gpconfig_file_path, skip to gpconfig");
+            return
+        }
+        my @parameter_list = readLineFromFile($gpconfig_file_path);
+        if (@parameter_list > 0){
+            for my $line(@parameter_list){
+                my ($name,$value) = split(/=/,$line,2);
+                ($name,$value) = (lc(trim($name)),trim($value));
+                $gp_config_hash{$name} = $value;
+            }
+        }
+    }else{
+        errorMessage("--gpconfig-file|-f not specified: $GPCONFIG_FILE, skip to gpconfig");
+    }
+
+    readpipe(qq{psql -d postgres -c 'select 1;'});
+    my $exit_code = $? >> 8;
+    if($exit_code != 0){
+        errorMessage("Failed to connect database postgres");
+    }
+
+    for my $key(keys %gp_config_hash){
+        my $gpconfig_command;
+        my $value = $gp_config_hash{$key};
+        $value =~ s/\'/\\\'/g;
+        if($value =~ 'skipvalidation'){
+            $gpconfig_command = qq{gpconfig -c $key $value};
+        }else{
+            $gpconfig_command = qq{gpconfig -c $key $value --skipvalidation};
+        }
+        logMessage("INFO", "gpconfig command: $gpconfig_command");
+        system(qq{$gpconfig_command 2>&1 | tee -a $LOG_PATH/$LOG_FILE});
+        my $exit_code = $? >> 8;
+        if($exit_code != 0){
+            errorMessage("Failed to excute $gpconfig_command");
+        }
+        else{
+            logMessage("INFO","excute $gpconfig_command success");
+        }
+    }
+}
+
+my $command_string = $0." ".join(" ",@ARGV);
+$| = 1;
+main($command_string);
