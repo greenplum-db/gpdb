@@ -7597,17 +7597,12 @@ ATExecAddColumn(List **wqueue, AlteredTableInfo *tab, Relation rel,
 			 * We have acquired lockmode on the root and first-level partitions
 			 * already. This leaves the deeper subpartitions unlocked, but no
 			 * operations can drop (or alter) those relations without locking
-			 * through the root. Note that find_all_inheritors() also includes
-			 * the root partition in the returned list.
-			 *
-			 * GPDB_12_MERGE_FIXME: we used to have NoLock here, but that caused
-			 * assertion failures in the regression tests:
-			 *
-			 * FATAL:  Unexpected internal error (relation.c:74)
-			 * DETAIL:  FailedAssertion("!(lockmode != 0 || (Mode == BootstrapProcessing) || CheckRelationLockedByMe(r, 1, 1))", File: "relation.c", Line: 74)
-			 *
-			 * so use AccessShareLock instead. Was it important that we used
-			 * NoLock here?
+			 * through the root. But we still lock them to meet the upstream 
+			 * expecation in relation_open that all callers should have acquired
+			 * a lock on the table except in bootstrap mode.
+
+			 * Note that find_all_inheritors() also includes the root partition 
+			 * in the returned list.
 			 */
 			List *all_inheritors = find_all_inheritors(tab->relid, AccessShareLock, NULL);
 			ListCell *lc;
