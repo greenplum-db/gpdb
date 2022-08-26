@@ -4,11 +4,11 @@ title: Creating and Managing Tables
 
 Greenplum Database tables are similar to tables in any relational database, except that table rows are distributed across the different segments in the system. When you create a table, you specify the table's distribution policy.
 
-## <a id="topic26"></a>Creating a Table 
+## <a id="topic26"></a>Creating a Table
 
 The `CREATE TABLE` command creates a table and defines its structure. When you create a table, you define:
 
--   The columns of the table and their associated data types. See [Choosing Column Data Types](#topic27).
+-   The columns of the table and their associated [data types](https://docs.vmware.com/en/VMware-Tanzu-Greenplum/6/greenplum-database/GUID-ref_guide-data_types.html?hWord=N4IghgNiBcIHZgC4EsBuBTABAEyWTiAngA7oDOIAvkA). See [Choosing Column Data Types](#topic27).
 -   Any table or column constraints to limit the data that a column or table can contain. See [Setting Table and Column Constraints](#topic28).
 -   The distribution policy of the table, which determines how Greenplum Database divides data across the segments. See [Choosing the Table Distribution Policy](#topic34).
 -   The way the table is stored on disk. See [Choosing the Table Storage Model](ddl-storage.html).

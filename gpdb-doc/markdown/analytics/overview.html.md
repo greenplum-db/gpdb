@@ -41,7 +41,7 @@ Greenplum Database advanced analytics can be used to address a wide variety of p
 
 The Greenplum analytics capabilities allow you to:
 
--   Analyze a multitude of data types – structured, text, geospatial, and graph – in a single environment, which can scale to petabytes and run algorithms designed for parallelism.
+-   Analyze a multitude of [data types](https://docs.vmware.com/en/VMware-Tanzu-Greenplum/6/greenplum-database/GUID-ref_guide-data_types.html?hWord=N4IghgNiBcIHZgC4EsBuBTABAEyWTiAngA7oDOIAvkA) – structured, text, geospatial, and graph – in a single environment, which can scale to petabytes and run algorithms designed for parallelism.
 -   Leverage existing SQL knowledge: Tanzu Greenplum can run dozens of statistical, machine learning, and graph methods, via SQL.
 -   Train more models in less time by taking advantage of the parallelism in the MPP architecture and in-database analytics.
 -   Access the data where it lives, therefore integrate data and analytics in one place. Tanzu Greenplum is infrastructure-agnostic and runs on bare metal, private cloud, and public cloud deployments.

@@ -2,7 +2,7 @@
 title: CREATE TYPE 
 ---
 
-Defines a new data type.
+Defines a new [data type](https://docs.vmware.com/en/VMware-Tanzu-Greenplum/6/greenplum-database/GUID-ref_guide-data_types.html?hWord=N4IghgNiBcIHZgC4EsBuBTABAEyWTiAngA7oDOIAvkA).
 
 ## <a id="section2"></a>Synopsis 
 

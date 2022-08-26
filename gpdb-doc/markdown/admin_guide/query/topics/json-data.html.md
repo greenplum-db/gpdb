@@ -2,7 +2,7 @@
 title: Working with JSON Data 
 ---
 
-Greenplum Database supports the `json` and `jsonb` data types that store JSON \(JavaScript Object Notation\) data.
+Greenplum Database supports the `json` and `jsonb` [data types](https://docs.vmware.com/en/VMware-Tanzu-Greenplum/6/greenplum-database/GUID-ref_guide-data_types.html?hWord=N4IghgNiBcIHZgC4EsBuBTABAEyWTiAngA7oDOIAvkA) that store JSON \(JavaScript Object Notation\) data.
 
 Greenplum Database supports JSON as specified in the [RFC 7159](https://tools.ietf.org/html/rfc7159) document and enforces data validity according to the JSON rules. There are also JSON-specific functions and operators available for the `json` and `jsonb` data types. See [JSON Functions and Operators](#topic_gn4_x3w_mq).
 
