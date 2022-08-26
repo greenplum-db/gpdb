@@ -181,6 +181,7 @@ Doc Index
         - [pg\_trgm](./modules/pg_trgm.md)
         - [pgcrypto](./modules/pgcrypto.md)
         - [postgres\_fdw](./modules/postgres_fdw.md)
+        - [postgresql-hll](./modules/postgresql-hll.md)
         - [sslinfo](./modules/sslinfo.md)
     - [Character Set Support](./character_sets.md)
     - [Server Configuration Parameters](./config_params/guc_config.md)
