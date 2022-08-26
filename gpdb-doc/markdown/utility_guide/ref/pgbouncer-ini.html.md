@@ -167,7 +167,7 @@ auth\_file
     Default: not set
 
 auth\_hba\_file
-:   HBA configuration file to use when `auth_type` is `hba`. Refer to the [Configuring HBA-based Authentication for PgBouncer](../../admin_guide/access_db/topics/pgbouncer.html#pgb_hba) for more information.
+:   HBA configuration file to use when `auth_type` is `hba`. Refer to the [Configuring HBA-based Authentication for PgBouncer](../../admin_guide/access_db/topics/pgbouncer.html#pgb_hba) and [Configuring LDAP-based Authentication for PgBouncer](../../admin_guide/access_db/topics/pgbouncer.html#pgb_ldap) for more information.
 
     Default: not set
 

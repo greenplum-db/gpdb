@@ -58,7 +58,7 @@ When you migrate to a new Greenplum Database version, you must migrate your PgBo
 
 -   **If you are migrating to a Greenplum Database version 5.9.0 or later**, you must shut down the PgBouncer instance in your old installation and reconfigure and restart PgBouncer in your new installation.
 -   If you used stunnel to secure PgBouncer connections in your old installation, you must configure SSL/TLS in your new installation using the built-in TLS capabilities of PgBouncer 1.8.1 and later.
--   If you used LDAP authentication in your old installation, you must configure LDAP in your new installation using the built-in PAM integration capabilities of PgBouncer 1.8.1 and later. You must also remove or replace any `ldap://`-prefixed password strings in the `auth_file`.
+-   If you currently use the built-in PAM LDAP integration, you may choose to migrate to the new native LDAP PgBouncer integration introduced in Greenplum Database version 6.22; refer to [Configuring LDAP-based Authentication for PgBouncer](#pgb_ldap) for configuration information.
 
 ## <a id="pgb_config"></a>Configuring PgBouncer 
 
@@ -158,6 +158,40 @@ auth_hba_file = hba_bouncer.conf
 ```
 
 Refer to the [HBA file format](https://pgbouncer.github.io/config.html#hba-file-format) discussion in the PgBouncer documentation for information about PgBouncer support of the HBA authentication file format.
+
+### <a id="pgb_ldap"></a>Configuring LDAP-based Authentication for PgBouncer 
+
+Starting in Greenplum Database version 6.22, PgBouncer supports native LDAP authentication between the `psql` client and the `pgbouncer` process. Configuring this LDAP-based authentication is similar to configuring HBA-based authentication for PgBouncer:
+
+- Specify `auth-type=hba` in the `pgbouncer.ini` configuration file.
+- Provide the file name of an HBA-format file in the `auth_hba_file` parameter of the `pgbouncer.ini` file, and specify the LDAP parameters (server address, base DN, bind DN, bind password, search attribute, etc.) in the file.
+
+**Note:** You may, but are not required to, specify LDAP user names and passwords in the `auth-file`. When you do *not* specify these strings in the `auth-file`, LDAP user password changes require no PgBouncer configuration changes.
+
+If you enable LDAP authentication between `psql` and `pgbouncer` and you use `md5`, `password`, or `scram-sha-256` for authentication between PgBouncer and Greenplum Database, ensure that you configure the latter password independently.
+
+Excerpt of an example PgBouncer HBA file named `hba_bouncer_for_ldap.conf` that specifies LDAP authentication follows:
+
+``` pre
+host all user1 0.0.0.0/0 ldap ldapserver=<ldap-server-address> ldapbasedn="CN=Users,DC=greenplum,DC=org" ldapbinddn="CN=Administrator,CN=Users,DC=greenplum,DC=org" ldapbindpasswd="ChangeMe1!!" ldapsearchattribute="SomeAttrName"
+```
+
+Refer to the Greenplum Database [LDAP Authentication](../../../security-guide/topics/Authenticate.html#ldap_auth) discussion for more information on configuring an HBA file for LDAP.
+
+Example excerpt from the related `pgbouncer.ini` configuration file:
+
+``` pre
+[databases]
+* = port = 6000 host=127.0.0.1
+
+[pgbouncer]
+listen_addr = 0.0.0.0
+listen_port = 6432
+
+auth_type = hba
+auth_hba_file = hba_bouncer_for_ldap.conf
+...
+```
 
 ## <a id="pgb_start"></a>Starting PgBouncer 
 
