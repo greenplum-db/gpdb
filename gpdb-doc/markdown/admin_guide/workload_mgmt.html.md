@@ -220,9 +220,9 @@ This means that for all roles assigned to the *adhoc* resource queue, only three
 
 ### <a id="topic12"></a>Creating Queues with Memory Limits 
 
-Resource queues with a `MEMORY_LIMIT`setting control the amount of memory for all the queries submitted through the queue. The total memory should not exceed the physical memory available per-segment. Set`MEMORY_LIMIT` to 90% of memory available on a per-segment basis. For example, if a host has 48 GB of physical memory and 6 segment instances, then the memory available per segment instance is 8 GB. You can calculate the recommended `MEMORY_LIMIT` for a single queue as 0.90\*8=7.2 GB. If there are multiple queues created on the system, their total memory limits must also add up to 7.2 GB.
+Resource queues with a `MEMORY_LIMIT` setting control the amount of memory for all the queries submitted through the queue. The total memory should not exceed the physical memory available per-segment. Set `MEMORY_LIMIT` to 90% of memory available on a per-segment basis. For example, if a host has 48 GB of physical memory and 6 segment instances, then the memory available per segment instance is 8 GB. You can calculate the recommended `MEMORY_LIMIT` for a single queue as 0.90\*8=7.2 GB. If there are multiple queues created on the system, their total memory limits must also add up to 7.2 GB.
 
-When used in conjunction with `ACTIVE_STATEMENTS`, the default amount of memory allotted per query is: `MEMORY_LIMIT``/``ACTIVE_STATEMENTS`. When used in conjunction with `MAX_COST`, the default amount of memory allotted per query is: `MEMORY_LIMIT * (query_cost `/`MAX_COST)`. Use `MEMORY_LIMIT` in conjunction with `ACTIVE_STATEMENTS` rather than with `MAX_COST`.
+When used in conjunction with `ACTIVE_STATEMENTS`, the default amount of memory allotted per query is: `MEMORY_LIMIT / ACTIVE_STATEMENTS`. When used in conjunction with `MAX_COST`, the default amount of memory allotted per query is: `MEMORY_LIMIT * (query_cost / MAX_COST)`. Use `MEMORY_LIMIT` in conjunction with `ACTIVE_STATEMENTS` rather than with `MAX_COST`.
 
 For example, to create a resource queue with an active query limit of 10 and a total memory limit of 2000MB \(each query will be allocated 200MB of segment host memory at execution time\):
 
