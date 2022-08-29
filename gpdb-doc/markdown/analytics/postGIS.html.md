@@ -225,7 +225,7 @@ SELECT short_name, long_name FROM ST_GDALDrivers();
 
 After installing PostGIS, the default setting `POSTGIS_ENABLE_OUTDB_RASTERS=0` in the `greenplum_path.sh` file deactivates support for out-of-database rasters. To enable this feature, you can set the value to true \(a non-zero value\) on all hosts and restart the Greenplum Database system.
 
-You can also activate or disactivate this feature for a Greenplum Database session. For example, this `SET` command enables the feature for the current session.
+You can also activate or deactivate this feature for a Greenplum Database session. For example, this `SET` command enables the feature for the current session.
 
 ```
 SET postgis.enable_outdb_rasters = true;				

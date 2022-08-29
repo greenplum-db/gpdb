@@ -25,7 +25,7 @@ newname
 
 ## <a id="section5"></a>Notes 
 
-The ability to temporarily activate or disactivate a trigger is provided by [ALTER TABLE](ALTER_TABLE.html), not by `ALTER TRIGGER`, because `ALTER TRIGGER` has no convenient way to express the option of activating or disactivating all of a table's triggers at once.
+The ability to temporarily activate or deactivate a trigger is provided by [ALTER TABLE](ALTER_TABLE.html), not by `ALTER TRIGGER`, because `ALTER TRIGGER` has no convenient way to express the option of activating or disactivating all of a table's triggers at once.
 
 Note that Greenplum Database has limited support of triggers in this release. See [CREATE TRIGGER](CREATE_TRIGGER.html) for more information.
 
