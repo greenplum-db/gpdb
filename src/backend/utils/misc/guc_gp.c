@@ -156,6 +156,8 @@ bool		gp_create_table_random_default_distribution = true;
 bool		gp_allow_non_uniform_partitioning_ddl = true;
 int			dtx_phase2_retry_second = 0;
 
+bool gp_log_suboverflow_statement = false;
+
 bool		log_dispatch_stats = false;
 
 int			explain_memory_verbosity = 0;
@@ -2922,6 +2924,15 @@ struct config_bool ConfigureNamesBool_gp[] =
 		 NULL, NULL, NULL
 	},
 
+	{
+		{"gp_log_suboverflow_statement", PGC_SUSET, LOGGING_WHAT,
+		 gettext_noop("Enable logging of statements that cause subtransaction overflow."),
+		 NULL,
+		 },
+		 &gp_log_suboverflow_statement,
+		 false,
+		 NULL, NULL, NULL
+	},
 
 	/* End-of-list marker */
 	{

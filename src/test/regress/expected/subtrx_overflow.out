@@ -60,6 +60,7 @@ BEGIN
 END;
 $$
 LANGUAGE plpgsql;
+set gp_log_suboverflow_statement = on;
 BEGIN;
 SELECT transaction_test0();
  transaction_test0 
@@ -76,6 +77,16 @@ ORDER BY segid;
      0 |                 1
      1 |                 1
      2 |                 1
+(3 rows)
+
+SELECT DISTINCT logsegment, logmessage FROM gp_toolkit.gp_log_system
+	WHERE logdebug = 'INSERT INTO t_1352_1 VALUES(i)'
+	ORDER BY logsegment, logmessage;
+ logsegment |                          logmessage                          
+------------+--------------------------------------------------------------
+ seg0       | Statement caused suboverflow: INSERT INTO t_1352_1 VALUES(i)
+ seg1       | Statement caused suboverflow: INSERT INTO t_1352_1 VALUES(i)
+ seg2       | Statement caused suboverflow: INSERT INTO t_1352_1 VALUES(i)
 (3 rows)
 
 COMMIT;
@@ -97,6 +108,16 @@ ORDER BY segid;
      2 |                 1
 (3 rows)
 
+SELECT DISTINCT logsegment, logmessage FROM gp_toolkit.gp_log_system
+	WHERE logdebug = 'INSERT INTO t_1352_2 VALUES(i)'
+	ORDER BY logsegment, logmessage;
+ logsegment |                          logmessage                          
+------------+--------------------------------------------------------------
+ seg0       | Statement caused suboverflow: INSERT INTO t_1352_2 VALUES(i)
+ seg1       | Statement caused suboverflow: INSERT INTO t_1352_2 VALUES(i)
+ seg2       | Statement caused suboverflow: INSERT INTO t_1352_2 VALUES(i)
+(3 rows)
+
 COMMIT;
 BEGIN;
 SELECT transaction_test2();
@@ -115,6 +136,17 @@ ORDER BY segid;
      0 |                 1
      1 |                 1
      2 |                 1
+(4 rows)
+
+SELECT DISTINCT logsegment, logmessage FROM gp_toolkit.gp_log_system
+	WHERE logmessage = 'Statement caused suboverflow: SELECT transaction_test2();'
+	ORDER BY logsegment;
+ logsegment |                        logmessage                         
+------------+-----------------------------------------------------------
+ seg-1      | Statement caused suboverflow: SELECT transaction_test2();
+ seg0       | Statement caused suboverflow: SELECT transaction_test2();
+ seg1       | Statement caused suboverflow: SELECT transaction_test2();
+ seg2       | Statement caused suboverflow: SELECT transaction_test2();
 (4 rows)
 
 COMMIT;
@@ -139,3 +171,4 @@ ORDER BY segid;
 (3 rows)
 
 COMMIT;
+set gp_log_suboverflow_statement = off;
