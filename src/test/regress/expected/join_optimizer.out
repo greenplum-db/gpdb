@@ -3339,37 +3339,36 @@ where t1.unique2 < 42 and t1.stringu1 > t2.stringu2;
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Hash Join
          Hash Cond: (tenk1.unique1 = (3))
-         Join Filter: (tenk1_1.stringu1 > tenk1.stringu2)
-         ->  Seq Scan on tenk1
+         ->  Nested Loop
+               Join Filter: (tenk1_1.stringu1 > tenk1.stringu2)
+               ->  Broadcast Motion 3:3  (slice2; segments: 3)
+                     ->  Index Scan using tenk1_unique2 on tenk1 tenk1_1
+                           Index Cond: ((unique2 < 42) AND (unique2 = 11))
+               ->  Seq Scan on tenk1
          ->  Hash
-               ->  Redistribute Motion 3:3  (slice2; segments: 3)
-                     Hash Key: (3)
-                     ->  Hash Join
-                           Hash Cond: ((0) = int4_tbl.f1)
-                           ->  Hash Join
-                                 Hash Cond: (tenk1_1.unique2 = (11))
-                                 ->  Index Scan using tenk1_unique2 on tenk1 tenk1_1
-                                       Index Cond: ((unique2 < 42) AND (unique2 = 11))
+               ->  Broadcast Motion 3:3  (slice3; segments: 3)
+                     ->  Nested Loop
+                           Join Filter: true
+                           ->  Hash Left Join
+                                 Hash Cond: ((1) = (1))
+                                 ->  Redistribute Motion 3:3  (slice5; segments: 3)
+                                       Hash Key: (1)
+                                       ->  Result
+                                             Filter: ((0) = 0)
+                                             ->  Seq Scan on onerow
+                                                   Filter: ((11 < 42) AND (11 = 11))
                                  ->  Hash
-                                       ->  Broadcast Motion 3:3  (slice3; segments: 3)
+                                       ->  Redistribute Motion 3:3  (slice6; segments: 3)
+                                             Hash Key: (1)
                                              ->  Result
-                                                   Filter: (((11) < 42) AND ((11) = 11))
-                                                   ->  Hash Left Join
-                                                         Hash Cond: ((1) = (1))
-                                                         ->  Result
-                                                               Filter: ((0) = 0)
-                                                               ->  Seq Scan on onerow
-                                                         ->  Hash
-                                                               ->  Broadcast Motion 3:3  (slice4; segments: 3)
-                                                                     ->  Result
-                                                                           Filter: ((1) = 1)
-                                                                           ->  Seq Scan on onerow onerow_1
-                           ->  Hash
-                                 ->  Broadcast Motion 3:3  (slice5; segments: 3)
+                                                   Filter: ((1) = 1)
+                                                   ->  Seq Scan on onerow onerow_1
+                           ->  Materialize
+                                 ->  Broadcast Motion 3:3  (slice4; segments: 3)
                                        ->  Seq Scan on int4_tbl
                                              Filter: (f1 = 0)
  Optimizer: Pivotal Optimizer (GPORCA)
-(33 rows)
+(32 rows)
 
 --end_ignore
 select t1.unique2, t1.stringu1, t2.unique1, t2.stringu2 from
@@ -3423,35 +3422,33 @@ select t1.unique2, t1.stringu1, t2.unique1, t2.stringu2 from
   left join tenk1 t2
   on (subq1.y1 = t2.unique1)
 where t1.unique2 < 42 and t1.stringu1 > t2.stringu2;
-                             QUERY PLAN                              
----------------------------------------------------------------------
- Hash Join
-   Hash Cond: ((11) = tenk1_1.unique2)
-   Join Filter: (tenk1_1.stringu1 > tenk1.stringu2)
-   ->  Gather Motion 3:1  (slice1; segments: 3)
+                                      QUERY PLAN                                       
+---------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Hash Join
+         Hash Cond: ((0) = int4_tbl.f1)
          ->  Hash Join
-               Hash Cond: ((0) = int4_tbl.f1)
-               ->  Nested Loop
-                     Join Filter: true
-                     ->  Result
-                           ->  Hash Left Join
-                                 Hash Cond: ((1) = (1))
-                                 ->  Result
-                                       One-Time Filter: (11 < 42)
-                                       ->  Result
-                                 ->  Hash
-                                       ->  Result
-                     ->  Index Scan using tenk1_unique1 on tenk1
-                           Index Cond: (unique1 = (3))
+               Hash Cond: (tenk1.unique1 = (3))
+               Join Filter: (tenk1_1.stringu1 > tenk1.stringu2)
+               ->  Seq Scan on tenk1
                ->  Hash
                      ->  Broadcast Motion 3:3  (slice2; segments: 3)
-                           ->  Seq Scan on int4_tbl
-   ->  Hash
-         ->  Gather Motion 3:1  (slice3; segments: 3)
-               ->  Index Scan using tenk1_unique2 on tenk1 tenk1_1
-                     Index Cond: ((unique2 < 42) AND (unique2 = 11))
+                           ->  Nested Loop
+                                 Join Filter: true
+                                 ->  Index Scan using tenk1_unique2 on tenk1 tenk1_1
+                                       Index Cond: ((unique2 < 42) AND (unique2 = 11))
+                                 ->  Hash Left Join
+                                       Hash Cond: ((1) = (1))
+                                       ->  Result
+                                             One-Time Filter: (11 < 42)
+                                             ->  Result
+                                       ->  Hash
+                                             ->  Result
+         ->  Hash
+               ->  Broadcast Motion 3:3  (slice3; segments: 3)
+                     ->  Seq Scan on int4_tbl
  Optimizer: Pivotal Optimizer (GPORCA)
-(26 rows)
+(24 rows)
 
 select t1.unique2, t1.stringu1, t2.unique1, t2.stringu2 from
   tenk1 t1

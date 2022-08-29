@@ -153,20 +153,18 @@ select * from t1,t2 where t1.x = 100 and t2.x >= t1.x;
 --
 set optimizer_segments=2;
 explain select * from t1,t2 where t1.x = 100 and t1.x = t2.y and t1.x <= t2.x;
-                                        QUERY PLAN                                         
--------------------------------------------------------------------------------------------
- Hash Join  (cost=0.00..862.01 rows=1 width=24)
-   Hash Cond: (t1.x = t2.y)
-   Join Filter: (t1.x <= t2.x)
-   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=12)
-         ->  Seq Scan on t1  (cost=0.00..431.00 rows=1 width=12)
-               Filter: (x = 100)
-   ->  Hash  (cost=431.00..431.00 rows=1 width=12)
-         ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=12)
-               ->  Seq Scan on t2  (cost=0.00..431.00 rows=1 width=12)
-                     Filter: (y = 100)
- Optimizer: Pivotal Optimizer (GPORCA) version 3.64.0
-(11 rows)
+                                          QUERY PLAN                                          
+----------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1324038.40 rows=1 width=24)
+   ->  Nested Loop  (cost=0.00..1324038.40 rows=1 width=24)
+         Join Filter: (t1.x <= t2.x)
+         ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=12)
+               ->  Seq Scan on t1  (cost=0.00..431.00 rows=1 width=12)
+                     Filter: (x = 100)
+         ->  Seq Scan on t2  (cost=0.00..431.00 rows=1 width=12)
+               Filter: (y = 100)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(9 rows)
 
 reset optimizer_segments;
 select * from t1,t2 where t1.x = 100 and t1.x = t2.y and t1.x <= t2.x;
