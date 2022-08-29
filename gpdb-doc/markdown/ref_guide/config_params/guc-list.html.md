@@ -2138,9 +2138,9 @@ For information about GPORCA, see [About GPORCA](../../admin_guide/query/topics/
 
 ## <a id="optimizer_enable_replicated_table"></a>optimizer\_enable\_replicated\_table 
 
-When GPORCA is enabled \(the default\), this parameter controls GPORCA's behavior when it encounters DML operations on a distributed replicated table.
+When GPORCA is enabled \(the default\), this parameter controls GPORCA's behavior when it encounters DML operations on a replicated table.
 
-The default value is `on`, GPORCA attempts to plan and execute operations on a distributed replicated table. When `off`, GPORCA immediately falls back to the Postgres Planner when it detects distributed replicated table operations.
+The default value is `on`, GPORCA attempts to plan and execute operations on a replicated tables. When `off`, GPORCA immediately falls back to the Postgres Planner when it detects replicated table operations.
 
 The parameter can be set for a database system, an individual database, or a session or query.
 
