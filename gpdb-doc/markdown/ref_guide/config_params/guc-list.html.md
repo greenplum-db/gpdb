@@ -2136,6 +2136,20 @@ For information about GPORCA, see [About GPORCA](../../admin_guide/query/topics/
 |-----------|-------|-------------------|
 |Boolean|off|master, session, reload|
 
+## <a id="optimizer_enable_replicated_table"></a>optimizer\_enable\_replicated\_table 
+
+When GPORCA is enabled \(the default\), this parameter controls GPORCA's behavior when it encounters DML operations on a distributed replicated table.
+
+The default value is `on`, GPORCA attempts to plan and execute operations on a distributed replicated table. When `off`, GPORCA immediately falls back to the Postgres Planner when it detects distributed replicated table operations.
+
+The parameter can be set for a database system, an individual database, or a session or query.
+
+For information about GPORCA, see [About GPORCA](../../admin_guide/query/topics/query-piv-optimizer.html) in the *Greenplum Database Administrator Guide*.
+
+|Value Range|Default|Set Classifications|
+|-----------|-------|-------------------|
+|Boolean|on|master, session, reload|
+
 ## <a id="optimizer_force_agg_skew_avoidance"></a>optimizer\_force\_agg\_skew\_avoidance 
 
 When GPORCA is enabled \(the default\), this parameter affects the query plan alternatives that GPORCA considers when 3 stage aggregate plans are generated. When the value is `true`, the default, GPORCA considers only 3 stage aggregate plans where the intermediate aggregation uses the `GROUP BY` and `DISTINCT` columns for distribution to reduce the effects of processing skew.

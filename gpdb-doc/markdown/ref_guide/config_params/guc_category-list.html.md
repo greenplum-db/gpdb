@@ -112,6 +112,7 @@ These parameters control the usage of GPORCA by Greenplum Database. For informat
 - [optimizer_enable_indexonlyscan](guc-list.html#optimizer_enable_indexonlyscan)
 - [optimizer_enable_master_only_queries](guc-list.html#optimizer_enable_master_only_queries)
 - [optimizer_enable_multiple_distinct_aggs](guc-list.html#optimizer_enable_multiple_distinct_aggs)
+- [optimizer_enable_replicated_table](guc-list.html#optimizer_enable_replicated_table)
 - [optimizer_force_agg_skew_avoidance](guc-list.html#optimizer_force_agg_skew_avoidance)
 - [optimizer_force_comprehensive_join_implementation](guc-list.html#optimizer_force_comprehensive_join_implementation)
 - [optimizer_force_multistage_agg](guc-list.html#optimizer_force_multistage_agg)
