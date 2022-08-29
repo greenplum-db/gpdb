@@ -321,7 +321,7 @@ def promote_standby(master_data_dir):
     cmd.run(validateAfter=True)
 
     logger.debug('Waiting for connection...')
-    for i in xrange(50):
+    for i in xrange(600):
         try:
             dburl = dbconn.DbURL()
             with dbconn.connect(dburl, utility=True, logConn=False) as conn:
