@@ -2140,7 +2140,7 @@ For information about GPORCA, see [About GPORCA](../../admin_guide/query/topics/
 
 When GPORCA is enabled \(the default\), this parameter controls GPORCA's behavior when it encounters DML operations on a replicated table.
 
-The default value is `on`, GPORCA attempts to plan and execute operations on a replicated tables. When `off`, GPORCA immediately falls back to the Postgres Planner when it detects replicated table operations.
+The default value is `on`, GPORCA attempts to plan and execute operations on replicated tables. When `off`, GPORCA immediately falls back to the Postgres Planner when it detects replicated table operations.
 
 The parameter can be set for a database system, an individual database, or a session or query.
 
