@@ -10,7 +10,7 @@ If your JDBC application on Red Hat Enterprise Linux uses Kerberos authenticatio
 -   [Setting Up Client System with Kerberos Authentication](#topic17)
 -   [Running a Java Application](#topic18)
 
-For information about activating Kerberos authentication with Greenplum Database, see the chapter "Setting Up Kerberos Authentication" in the *Greenplum Database Administrator Guide*.
+For information about enabling Kerberos authentication with Greenplum Database, see the chapter "Setting Up Kerberos Authentication" in the *Greenplum Database Administrator Guide*.
 
 **Parent topic:** [Configuring Client Authentication](client_auth.html)
 

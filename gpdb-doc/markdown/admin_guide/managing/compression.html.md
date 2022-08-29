@@ -1,5 +1,5 @@
 ---
-title: Activating Compression 
+title: Enabling Compression 
 ---
 
 You can configure Greenplum Database to use data compression with some database features and with some utilities.Compression reduces disk usage and improves I/O across the system, however, it adds some performance overhead when compressing and decompressing data.

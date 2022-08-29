@@ -226,7 +226,7 @@ The `gp_toolkit` schema includes views that allow you to see information about a
 
 See the *Greenplum Database Reference Guide* for descriptions of the columns in these views.
 
-The `gp_workfile_compression` configuration parameter specifies whether the spill files are compressed. It is `off` by default. Activating compression can improve performance when spill files are used.
+The `gp_workfile_compression` configuration parameter specifies whether the spill files are compressed. It is `off` by default. Enabling compression can improve performance when spill files are used.
 
 **Parent topic:** [Greenplum Database Best Practices](intro.html)
 

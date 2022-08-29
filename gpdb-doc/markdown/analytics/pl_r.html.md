@@ -8,7 +8,7 @@ This chapter contains the following information:
 -   [Installing R](#topic_irz_m3l_v3b)
 -   [Installing PL/R](#topic3)
 -   [Uninstalling PL/R](#topic6)
--   [Activating PL/R Language Support](#topic5)
+-   [Enabling PL/R Language Support](#topic5)
 -   [Examples](#topic9)
 -   [Downloading and Installing R Packages](#topic13)
 -   [Displaying R Library Information](#topic14)
@@ -85,7 +85,7 @@ Before you install the PL/R extension, make sure that your Greenplum Database is
     ```
 
 
-### <a id="topic5"></a>Activating PL/R Language Support 
+### <a id="topic5"></a>Enabling PL/R Language Support 
 
 For each database that requires its use, register the PL/R language with the SQL command `CREATE EXTENSION`. Because PL/R is an untrusted language, only superusers can register PL/R with a database. For example, run this command as the `gpadmin` user to register the language with the database named `testdb`:
 

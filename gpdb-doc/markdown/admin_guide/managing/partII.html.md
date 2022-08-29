@@ -12,11 +12,11 @@ In a Greenplum Database DBMS, the database server instances \(the master and all
 This topic describes the various client tools you can use to connect to Greenplum Database, and how to establish a database session.
 -   **[Configuring the Greenplum Database System](../topics/g-configuring-the-greenplum-system.html)**  
 Server configuration parameters affect the behavior of Greenplum Database.
--   **[Activating Compression](../managing/compression.html)**  
+-   **[Enabling Compression](../managing/compression.html)**  
 You can configure Greenplum Database to use data compression with some database features and with some utilities.
 -   **[Configuring Proxies for the Greenplum Interconnect](../managing/proxy-ic.html)**  
 You can configure a Greenplum system to use proxies for interconnect communication to reduce the use of connections and ports during query processing.
--   **[Activating High Availability and Data Consistency Features](../highavail/topics/g-enabling-high-availability-features.html)**  
+-   **[Enabling High Availability and Data Consistency Features](../highavail/topics/g-enabling-high-availability-features.html)**  
 The fault tolerance and the high-availability features of Greenplum Database can be configured.
 -   **[Backing Up and Restoring Databases](../managing/backup-main.html)**  
 This topic describes how to use Greenplum backup and restore features.

@@ -13,7 +13,7 @@ If no protocol is specified, Greenplum Database communicates with the LDAP serve
 
 To use LDAP authentication, the Greenplum Database master host must be configured as an LDAP client. See your LDAP documentation for information about configuring LDAP clients.
 
-## <a id="enldap"></a>Activating LDAP Authentication with STARTTLS and TLS 
+## <a id="enldap"></a>Enabling LDAP Authentication with STARTTLS and TLS 
 
 To enable STARTTLS with the TLS protocol, in the pg\_hba.conf file, add an `ldap` line and specify the `ldaptls` parameter with the value 1. The default port is 389. In this example, the authentication method parameters include the `ldaptls` parameter.
 
@@ -27,7 +27,7 @@ Specify a non-default port with the `ldapport` parameter. In this example, the a
 ldap ldapserver=myldap.com ldaptls=1 ldapport=500 ldapprefix="uid=" ldapsuffix=",ou=People,dc=example,dc=com"
 ```
 
-## <a id="enldapauth"></a>Activating LDAP Authentication with a Secure Connection and TLS/SSL 
+## <a id="enldapauth"></a>Enabling LDAP Authentication with a Secure Connection and TLS/SSL 
 
 To enable a secure connection with TLS/SSL, add `ldaps://` as the prefix to the LDAP server name specified in the `ldapserver` parameter. The default port is 636.
 
@@ -90,7 +90,7 @@ Greenplum Database logs an error if the following are specified in an pg\_hba.co
 -   If both the `ldaps://` prefix and the `ldaptls=1` parameter are specified.
 -   If both the `ldaps://` prefix and the `ldapport` parameter are specified.
 
-Activating encrypted communication for LDAP authentication only encrypts the communication between Greenplum Database and the LDAP server.
+Enabling encrypted communication for LDAP authentication only encrypts the communication between Greenplum Database and the LDAP server.
 
 See [Encrypting Client/Server Connections](client_auth.html) for information about encrypting client connections.
 

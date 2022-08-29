@@ -37,7 +37,7 @@ The PL/Perl untrusted language is named `plperlu`. You cannot restrict the opera
 
 PL/Perl has limitations with respect to communication between interpreters and the number of interpreters running in a single process. Refer to the PostgreSQL [Trusted and Untrusted PL/Perl](https://www.postgresql.org/docs/9.4/plperl-trusted.html) documentation for additional information.
 
-## <a id="topic6"></a>Activating and Removing PL/Perl Support 
+## <a id="topic6"></a>Enabling and Removing PL/Perl Support 
 
 You must register the PL/Perl language with a database before you can create and run a PL/Perl user-defined function within that database. To remove PL/Perl support, you must explicitly remove the extension from each database in which it was registered. You must be a database superuser or owner to register or remove trusted languages in Greenplum databases.
 
@@ -49,7 +49,7 @@ Before you enable or remove PL/Perl support in a database, ensure that:
 -   You have sourced `greenplum_path.sh`.
 -   You have set the `$MASTER_DATA_DIRECTORY` and `$GPHOME` environment variables.
 
-### <a id="topic61"></a>Activating PL/Perl Support 
+### <a id="topic61"></a>Enabling PL/Perl Support 
 
 For each database in which you want to enable PL/Perl, register the language using the SQL [CREATE EXTENSION](../ref_guide/sql_commands/CREATE_EXTENSION.html) command. For example, run the following command as the `gpadmin` user to register the trusted PL/Perl language for the database named `testdb`:
 

@@ -19,7 +19,7 @@ Consider the following points when you create indexes.
 -   **Avoid indexes on frequently updated columns.** Creating an index on a column that is frequently updated increases the number of writes required when the column is updated.
 -   **Create selective B-tree indexes.** Index selectivity is a ratio of the number of distinct values a column has divided by the number of rows in a table. For example, if a table has 1000 rows and a column has 800 distinct values, the selectivity of the index is 0.8, which is considered good. Unique indexes always have a selectivity ratio of 1.0, which is the best possible. Greenplum Database allows unique indexes only on distribution key columns.
 -   **Use Bitmap indexes for low selectivity columns.**The Greenplum Database Bitmap index type is not available in regular PostgreSQL. See [About Bitmap Indexes](#topic93).
--   **Index columns used in joins.** An index on a column used for frequent joins \(such as a foreign key column\) can improve join performance by activating more join methods for the query optimizer to use.
+-   **Index columns used in joins.** An index on a column used for frequent joins \(such as a foreign key column\) can improve join performance by enabling more join methods for the query optimizer to use.
 -   **Index columns frequently used in predicates.** Columns that are frequently referenced in `WHERE` clauses are good candidates for indexes.
 -   **Avoid overlapping indexes.** Indexes that have the same leading column are redundant.
 -   **Drop indexes for bulk loads.** For mass loads of data into a table, consider dropping the indexes and re-creating them after the load completes. This is often faster than updating the indexes.

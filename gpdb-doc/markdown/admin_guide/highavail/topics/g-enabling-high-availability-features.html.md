@@ -1,5 +1,5 @@
 ---
-title: Activating High Availability and Data Consistency Features 
+title: Enabling High Availability and Data Consistency Features 
 ---
 
 The fault tolerance and the high-availability features of Greenplum Database can be configured.
@@ -12,7 +12,7 @@ For information about the utilities that are used to enable high availability, s
 
 -   **[Overview of Greenplum Database High Availability](../../highavail/topics/g-overview-of-high-availability-in-greenplum-database.html)**  
 
--   **[Activating Mirroring in Greenplum Database](../../highavail/topics/g-enabling-mirroring-in-greenplum-database.html)**  
+-   **[Enabling Mirroring in Greenplum Database](../../highavail/topics/g-enabling-mirroring-in-greenplum-database.html)**  
 
 -   **[How Greenplum Database Detects a Failed Segment](../../highavail/topics/g-detecting-a-failed-segment.html)**  
 

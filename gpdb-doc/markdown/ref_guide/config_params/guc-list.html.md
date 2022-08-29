@@ -721,7 +721,7 @@ If the Global Deadlock Detector is enabled, concurrent updates are permitted and
 
 ## <a id="gp_enable_groupext_distinct_pruning"></a>gp\_enable\_groupext\_distinct\_pruning 
 
- Activates or deactivates  three-phase aggregation and join to compute distinct-qualified aggregates on grouping extension queries. Usually, activating this parameter generates a cheaper query plan that the Postgres Planner will use in preference to existing plan.
+ Activates or deactivates  three-phase aggregation and join to compute distinct-qualified aggregates on grouping extension queries. Usually, enabling this parameter generates a cheaper query plan that the Postgres Planner will use in preference to existing plan.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
@@ -956,7 +956,7 @@ Specifies the type of address binding strategy Greenplum Database uses for commu
 
 - When this parameter is set to `unicast`, Greenplum Database  uses the `gp_segment_configuration.address` field to perform address binding. This reduces port usage on segment hosts and prevents interconnect traffic from being routed through unintended (and possibly slower) network interfaces. 
 
-- When this parameter is set to `wildcard`, Greenplum Database uses a wildcard address for binding, activating the use of any network interface compliant with routing rules.
+- When this parameter is set to `wildcard`, Greenplum Database uses a wildcard address for binding, enabling the use of any network interface compliant with routing rules.
 
 **NOTE**: In some cases, inter-segment communication using the unicast strategy may not be possible. One example is if the source segment's address field and the destination segment's address field are on different subnets and/or existing routing rules do not allow for such
 communication. In these cases, you must configure this parameter to use a wildcard address for address binding.
@@ -1492,7 +1492,7 @@ If a query executor process consumes more than this configured amount, then the 
 
 Specifies whether the temporary files created, when a hash aggregation or hash join operation spills to disk, are compressed.
 
-If your Greenplum Database installation uses serial ATA \(SATA\) disk drives, activating compression might help to avoid overloading the disk subsystem with IO operations.
+If your Greenplum Database installation uses serial ATA \(SATA\) disk drives, enabling compression might help to avoid overloading the disk subsystem with IO operations.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
@@ -1744,7 +1744,7 @@ By default, connection log messages only show the IP address of the connecting h
 
 ## <a id="log_min_duration_statement"></a>log\_min\_duration\_statement 
 
-Logs the statement and its duration on a single log line if its duration is greater than or equal to the specified number of milliseconds. Setting this to 0 will print all statements and their durations. -1 deactivates the feature. For example, if you set it to 250 then all SQL statements that run 250ms or longer will be logged. Activating this option can be useful in tracking down unoptimized queries in your applications.
+Logs the statement and its duration on a single log line if its duration is greater than or equal to the specified number of milliseconds. Setting this to 0 will print all statements and their durations. -1 deactivates the feature. For example, if you set it to 250 then all SQL statements that run 250ms or longer will be logged. Enabling this option can be useful in tracking down unoptimized queries in your applications.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
@@ -2116,7 +2116,7 @@ When GPORCA is enabled \(the default\), this parameter allows GPORCA to run cata
 
 The parameter can be set for a database system, an individual database, or a session or query.
 
-**Note:** Activating this parameter decreases performance of short running catalog queries. To avoid this issue, set this parameter only for a session or a query.
+**Note:** Enabling this parameter decreases performance of short running catalog queries. To avoid this issue, set this parameter only for a session or a query.
 
 For information about GPORCA, see [About GPORCA](../../admin_guide/query/topics/query-piv-optimizer.html) in the *Greenplum Database Administrator Guide*.
 
@@ -2405,7 +2405,7 @@ If [pljava\_classpath\_insecure](#pljava_classpath_insecure) is `false`, setting
 
 Controls whether the server configuration parameter [pljava\_classpath](#pljava_classpath) can be set by a user without Greenplum Database superuser privileges. When `true`, `pljava_classpath` can be set by a regular user. Otherwise, [pljava\_classpath](#pljava_classpath) can be set only by a database superuser. The default is `false`.
 
-**Warning:** Activating this parameter exposes a security risk by giving non-administrator database users the ability to run unauthorized Java methods.
+**Warning:** Enabling this parameter exposes a security risk by giving non-administrator database users the ability to run unauthorized Java methods.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|

@@ -5,7 +5,7 @@ title: PL/Python Language
 This section contains an overview of the Greenplum Database PL/Python Language.
 
 -   [About Greenplum PL/Python](#topic2)
--   [Activating and Removing PL/Python support](#topic4)
+-   [Enabling and Removing PL/Python support](#topic4)
 -   [Developing Functions with PL/Python](#topic7)
 -   [Installing Python Modules](#topic10)
 -   [Examples](#topic11)
@@ -29,11 +29,11 @@ $GPHOME/ext/python/
 -   PL/Python is available only as a Greenplum Database untrusted language.
 -   Updatable cursors \(`UPDATE...WHERE CURRENT OF` and `DELETE...WHERE CURRENT OF`\) are not supported.
 
-## <a id="topic4"></a>Activating and Removing PL/Python support 
+## <a id="topic4"></a>Enabling and Removing PL/Python support 
 
 The PL/Python language is installed with Greenplum Database. To create and run a PL/Python user-defined function \(UDF\) in a database, you must register the PL/Python language with the database.
 
-### <a id="topic5"></a>Activating PL/Python Support 
+### <a id="topic5"></a>Enabling PL/Python Support 
 
 For each database that requires its use, register the PL/Python language with the SQL command `CREATE EXTENSION`. Because PL/Python is an untrusted language, only superusers can register PL/Python with a database. For example, running this command as the `gpadmin` user registers PL/Python with the database named `testdb`:
 

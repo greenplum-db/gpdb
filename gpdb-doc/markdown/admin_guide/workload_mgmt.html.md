@@ -136,7 +136,7 @@ For more information about commands to set priorities, see [Setting Priority Lev
 
 ## <a id="topic8"></a>Steps to Enable Resource Management 
 
-Activating and using resource management in Greenplum Database involves the following high-level tasks:
+Enabling and using resource management in Greenplum Database involves the following high-level tasks:
 
 1.  Configure resource management. See [Configuring Resource Management](#topic9).
 2.  Create the resource queues and set limits on them. See [Creating Resource Queues](#topic10) and [Modifying Resource Queues](#topic19).
@@ -358,7 +358,7 @@ stats_queue_level = on
 
 ```
 
-Once this is enabled, you can use the `pg_stat_resqueues` system view to see the statistics collected on resource queue usage. Note that activating this feature does incur slight performance overhead, as each query submitted through a resource queue must be tracked. It may be useful to enable statistics collecting on resource queues for initial diagnostics and administrative planning, and then deactivate the feature for continued use.
+Once this is enabled, you can use the `pg_stat_resqueues` system view to see the statistics collected on resource queue usage. Note that enabling this feature does incur slight performance overhead, as each query submitted through a resource queue must be tracked. It may be useful to enable statistics collecting on resource queues for initial diagnostics and administrative planning, and then deactivate the feature for continued use.
 
 See the Statistics Collector section in the PostgreSQL documentation for more information about collecting statistics in Greenplum Database.
 

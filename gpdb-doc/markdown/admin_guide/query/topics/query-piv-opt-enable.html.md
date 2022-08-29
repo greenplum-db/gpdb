@@ -6,15 +6,15 @@ By default, Greenplum Database uses GPORCA instead of the Postgres Planner. Serv
 
 Although GPORCA is on by default, you can configure GPORCA usage at the system, database, session, or query level using the optimizer parameter. Refer to one of the following sections if you want to change the default behavior:
 
--   [Activating GPORCA for a System](#topic_byp_lqk_br)
--   [Activating GPORCA for a Database](#topic_pzr_3db_3r)
--   [Activating GPORCA for a Session or a Query](#topic_lx4_vqk_br)
+-   [Enabling GPORCA for a System](#topic_byp_lqk_br)
+-   [Enabling GPORCA for a Database](#topic_pzr_3db_3r)
+-   [Enabling GPORCA for a Session or a Query](#topic_lx4_vqk_br)
 
 **Note:** You can deactivate the ability to activate or deactivate GPORCA with the server configuration parameter optimizer\_control. For information about the server configuration parameters, see the *Greenplum Database Reference Guide*.
 
 **Parent topic:** [About GPORCA](../../query/topics/query-piv-optimizer.html)
 
-## <a id="topic_byp_lqk_br"></a>Activating GPORCA for a System 
+## <a id="topic_byp_lqk_br"></a>Enabling GPORCA for a System 
 
 Set the server configuration parameter optimizer for the Greenplum Database system.
 
@@ -32,7 +32,7 @@ Set the server configuration parameter optimizer for the Greenplum Database syst
     ```
 
 
-## <a id="topic_pzr_3db_3r"></a>Activating GPORCA for a Database 
+## <a id="topic_pzr_3db_3r"></a>Enabling GPORCA for a Database 
 
 Set the server configuration parameter optimizer for individual Greenplum databases with the ALTER DATABASE command. For example, this command enables GPORCA for the database *test\_db*.
 
@@ -40,7 +40,7 @@ Set the server configuration parameter optimizer for individual Greenplum databa
 > ALTER DATABASE test_db SET OPTIMIZER = ON ;
 ```
 
-## <a id="topic_lx4_vqk_br"></a>Activating GPORCA for a Session or a Query 
+## <a id="topic_lx4_vqk_br"></a>Enabling GPORCA for a Session or a Query 
 
 You can use the SET command to set optimizer server configuration parameter for a session. For example, after you use the psql utility to connect to Greenplum Database, this SET command enables GPORCA:
 

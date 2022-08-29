@@ -11,7 +11,7 @@ Perform the following tasks in order:
     - [Verify the Greenplum Database Software](#topic_verify_sha) (VMware Tanzu Greenplum)
     - [Install the Greenplum Database Software](#topic_install) 
     - [(Optional) Install to a Non-Default Directory](#topic_dj4_ssr_cmb)
-2.  [Activating Passwordless SSH](#topic_xmb_gb5_vhb)
+2.  [Enabling Passwordless SSH](#topic_xmb_gb5_vhb)
 3.  [Confirm the software installation.](#topic10)
 4.  [Next Steps](#topic_cwj_hzb_vhb)
 
@@ -110,7 +110,7 @@ Follow these instructions to install Greenplum Database to a specific directory.
 
 If you install to a non-default directory using `rpm`, you will need to continue using `rpm` \(and of `yum`\) to perform minor version upgrades; these changes are covered in the upgrade documentation.
 
-## <a id="topic_xmb_gb5_vhb"></a>Activating Passwordless SSH 
+## <a id="topic_xmb_gb5_vhb"></a>Enabling Passwordless SSH 
 
 The `gpadmin` user on each Greenplum host must be able to SSH from any host in the cluster to any other host in the cluster without entering a password or passphrase \(called "passwordless SSH"\). If you enable passwordless SSH from the coordinator host to every other host in the cluster \("1-*n* passwordless SSH"\), you can use the Greenplum Database `gpssh-exkeys` command-line utility to enable passwordless SSH from every host to every other host \("*n*-*n* passwordless SSH"\).
 

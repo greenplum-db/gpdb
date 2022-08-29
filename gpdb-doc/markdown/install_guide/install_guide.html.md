@@ -26,7 +26,7 @@ The Greenplum Database distribution includes several PostgreSQL- and Greenplum-s
 Describes the available timezone and localization features of Greenplum Database.
 -   **[Upgrading to Greenplum 6](upgrade_intro.html)**  
 This topic identifies the upgrade paths for upgrading a Greenplum Database 6.x release to a newer 6.x release. The topic also describes the migration paths for migrating Tanzu Greenplum Database 4.x or 5.x data to Greenplum Database 6.x.
--   **[Activating iptables \(Optional\)](enable_iptables.html)**  
+-   **[Enabling iptables \(Optional\)](enable_iptables.html)**  
 On Linux systems, you can configure and enable the `iptables` firewall to work with Greenplum Database.
 -   **[Installation Management Utilities](apx_mgmt_utils.html)**  
 References for the command-line management utilities used to install and initialize a Greenplum Database system.

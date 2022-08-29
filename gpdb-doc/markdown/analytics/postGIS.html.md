@@ -6,7 +6,7 @@ This chapter contains the following information:
 
 -   [About PostGIS](#topic2)
 -   [Greenplum PostGIS Extension](#topic3)
--   [Activating and Removing PostGIS Support](#topic_b2l_hzw_q1b)
+-   [Enabling and Removing PostGIS Support](#topic_b2l_hzw_q1b)
 -   [Usage](#topic7)
 -   [PostGIS Extension Support and Limitations](#postgis_support)
 
@@ -110,18 +110,18 @@ For information about the PostGIS extensions, see the [PostGIS 2.5 documentation
 
 For information about Greenplum PostGIS feature support, see [PostGIS Extension Support and Limitations](#postgis_support).
 
-## <a id="topic_b2l_hzw_q1b"></a>Activating and Removing PostGIS Support 
+## <a id="topic_b2l_hzw_q1b"></a>Enabling and Removing PostGIS Support 
 
 This section describes how to enable and remove PostGIS and the supported PostGIS extensions, and how to configure PostGIS Raster.
 
--   [Activating PostGIS Support](#topic_ln5_xcl_r1b)
--   [Activating GDAL Raster Drivers](#topic_ydr_q5l_ybb)
--   [Activating Out-of-Database Rasters](#topic_fx2_fpx_llb)
+-   [Enabling PostGIS Support](#topic_ln5_xcl_r1b)
+-   [Enabling GDAL Raster Drivers](#topic_ydr_q5l_ybb)
+-   [Enabling Out-of-Database Rasters](#topic_fx2_fpx_llb)
 -   [Removing PostGIS Support](#topic_bgz_vcl_r1b)
 
 For information about upgrading PostGIS on Greenplum Database 6 systems, see [Upgrading PostGIS 2.1.5 or 2.5.4](postgis-upgrade.html)
 
-### <a id="topic_ln5_xcl_r1b"></a>Activating PostGIS Support 
+### <a id="topic_ln5_xcl_r1b"></a>Enabling PostGIS Support 
 
 To enable PostGIS support, install the Greenplum PostGIS extension package into the Greenplum Database system, and then use the `CREATE EXTENSION` command to enable PostGIS support for an individual database.
 
@@ -166,11 +166,11 @@ These steps enable the PostGIS extension and the extensions that are used with P
     CREATE EXTENSION postgis WITH SCHEMA <schema_name> ;
     ```
 
-    After activating the extension, reset the `search_path` and include the PostGIS schema in the `search_path` if needed.
+    After enabling the extension, reset the `search_path` and include the PostGIS schema in the `search_path` if needed.
 
-2.  If needed, enable the PostGIS TIGER geocoder after activating the `postgis` extension.
+2.  If needed, enable the PostGIS TIGER geocoder after enabling the `postgis` extension.
 
-    To enable the PostGIS TIGER geocoder, you must enable the `fuzzystrmatch` extension before activating `postgis_tiger_geocoder`. These two commands enable the extensions.
+    To enable the PostGIS TIGER geocoder, you must enable the `fuzzystrmatch` extension before enabling `postgis_tiger_geocoder`. These two commands enable the extensions.
 
     ```
     CREATE EXTENSION fuzzystrmatch ;
@@ -185,7 +185,7 @@ These steps enable the PostGIS extension and the extensions that are used with P
     ```
 
 
-### <a id="topic_ydr_q5l_ybb"></a>Activating GDAL Raster Drivers 
+### <a id="topic_ydr_q5l_ybb"></a>Enabling GDAL Raster Drivers 
 
 PostGIS uses GDAL raster drivers when processing raster data with commands such as `ST_AsJPEG()`. As the default, PostGIS deactivates all raster drivers. You enable raster drivers by setting the value of the `POSTGIS_GDAL_ENABLED_DRIVERS` environment variable in the `greenplum_path.sh` file on all Greenplum Database hosts.
 
@@ -221,7 +221,7 @@ After you have updated the `greenplum_path.sh` file on all hosts, and have resta
 SELECT short_name, long_name FROM ST_GDALDrivers();
 ```
 
-### <a id="topic_fx2_fpx_llb"></a>Activating Out-of-Database Rasters 
+### <a id="topic_fx2_fpx_llb"></a>Enabling Out-of-Database Rasters 
 
 After installing PostGIS, the default setting `POSTGIS_ENABLE_OUTDB_RASTERS=0` in the `greenplum_path.sh` file deactivates support for out-of-database rasters. To enable this feature, you can set the value to true \(a non-zero value\) on all hosts and restart the Greenplum Database system.
 

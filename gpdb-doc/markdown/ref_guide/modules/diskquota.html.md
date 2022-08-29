@@ -519,7 +519,7 @@ This example demonstrates how to configure a schema quota and then observe `disk
     ```
 
 
-### <a id="enablehardlimit"></a>Activating Hard Limit Disk Usage Enforcement and Exceeding Quota 
+### <a id="enablehardlimit"></a>Enabling Hard Limit Disk Usage Enforcement and Exceeding Quota 
 
 In this example, we enable hard limit enforcement of disk usage, and re-run commands from the previous example.
 

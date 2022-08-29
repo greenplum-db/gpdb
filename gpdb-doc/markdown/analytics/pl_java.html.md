@@ -8,7 +8,7 @@ This section contains an overview of the Greenplum Database PL/Java language.
 -   [About Greenplum Database PL/Java](#topic10)
 -   [Installing Java](#topic_qx1_xcp_w3b)
 -   [Installing PL/Java](#topic4)
--   [Activating PL/Java and Installing JAR Files](#topic6)
+-   [Enabling PL/Java and Installing JAR Files](#topic6)
 -   [Uninstalling PL/Java](#topic7)
 -   [Writing PL/Java functions](#topic13)
 -   [Using JDBC](#topic24)
@@ -38,7 +38,7 @@ Greenplum Database PL/Java package is based on the open source PL/Java 1.5.0. Gr
 -   Two separate Greenplum Database languages:
     -   pljava, TRUSTED PL/Java language
     -   pljavau, UNTRUSTED PL/Java language
--   Transaction and Savepoint listeners activating code execution when a transaction or savepoint is committed or rolled back.
+-   Transaction and Savepoint listeners enabling code execution when a transaction or savepoint is committed or rolled back.
 -   Integration with GNU GCJ on selected platforms.
 
 A function in SQL will appoint a static method in a Java class. In order for the function to run, the appointed class must available on the class path specified by the Greenplum Database server configuration parameter `pljava_classpath`. The PL/Java extension adds a set of functions that helps installing and maintaining the java classes. Classes are stored in normal Java archives, JAR files. A JAR file can optionally contain a deployment descriptor that in turn contains SQL commands to be run when the JAR is deployed or undeployed. The functions are modeled after the standards proposed for SQL 2003.
@@ -77,7 +77,7 @@ The following server configuration parameters are used by PL/Java in Greenplum D
 
     The server configuration parameter `pljava_classpath_insecure` controls whether the server configuration parameter `pljava_classpath` can be set by a user without Greenplum Database superuser privileges. When `pljava_classpath_insecure` is enabled, Greenplum Database developers who are working on PL/Java functions do not have to be database superusers to change `pljava_classpath`.
 
-    **Warning:** Activating `pljava_classpath_insecure` exposes a security risk by giving non-administrator database users the ability to run unauthorized Java methods.
+    **Warning:** Enabling `pljava_classpath_insecure` exposes a security risk by giving non-administrator database users the ability to run unauthorized Java methods.
 
 -   `pljava_statement_cache_size`
 
@@ -204,7 +204,7 @@ Before you install the PL/Java extension, make sure that your Greenplum database
     ```
 
 
-## <a id="topic6"></a>Activating PL/Java and Installing JAR Files 
+## <a id="topic6"></a>Enabling PL/Java and Installing JAR Files 
 
 Perform the following steps as the Greenplum Database administrator `gpadmin`.
 
@@ -275,7 +275,7 @@ If no databases have PL/Java as a registered language, remove the Java JAR files
     $ gpconfig -r pljava_classpath
     ```
 
-2.  Remove the JAR files from the directories where they were installed on all Greenplum Database hosts. For information about JAR file installation directories, see [Activating PL/Java and Installing JAR Files](#topic6).
+2.  Remove the JAR files from the directories where they were installed on all Greenplum Database hosts. For information about JAR file installation directories, see [Enabling PL/Java and Installing JAR Files](#topic6).
 3.  Use the Greenplum `gppkg` utility with the `-r` option to uninstall the PL/Java extension. This example uninstalls the PL/Java extension on a Linux system:
 
     ```
@@ -669,9 +669,9 @@ PL/Java is a *trusted* language. The trusted PL/Java language has no access to t
 
 PL/Java also installs a language handler for the language `javau`. This version is *not trusted* and only a superuser can create new functions that use it. Any user can call the functions.
 
-To install both the trusted and untrusted languages, register the extension by running the `'CREATE EXTENSION pljava'` command when [Activating PL/Java and Installing JAR Files](#topic6).
+To install both the trusted and untrusted languages, register the extension by running the `'CREATE EXTENSION pljava'` command when [Enabling PL/Java and Installing JAR Files](#topic6).
 
-To install only the trusted language, register the extension by running the `'CREATE EXTENSION pljavat'` command when [Activating PL/Java and Installing JAR Files](#topic6).
+To install only the trusted language, register the extension by running the `'CREATE EXTENSION pljavat'` command when [Enabling PL/Java and Installing JAR Files](#topic6).
 
 ## <a id="topic33"></a>Some PL/Java Issues and Solutions 
 

@@ -108,7 +108,7 @@ To deactivate `iptables`:
     ```
 
 
-If you decide to enable `iptables` with Greenplum Database for security purposes, see [Activating iptables \(Optional\)](enable_iptables.html) for important considerations and example configurations.
+If you decide to enable `iptables` with Greenplum Database for security purposes, see [Enabling iptables \(Optional\)](enable_iptables.html) for important considerations and example configurations.
 
 See the documentation for the firewall or your operating system for additional information.
 

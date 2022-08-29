@@ -4,7 +4,7 @@ title: Recovering a Failed Master
 
 If the primary master fails, the Greenplum Database system is not accessible and WAL replication stops. Use [gpactivatestandby](../../../utility_guide/ref/gpactivatestandby.html) to activate the standby master. Upon activation of the standby master, Greenplum Database reconstructs the master host state at the time of the last successfully committed transaction.
 
-These steps assume a standby master host is configured for the system. See [Activating Master Mirroring](g-enabling-master-mirroring.html).
+These steps assume a standby master host is configured for the system. See [Enabling Master Mirroring](g-enabling-master-mirroring.html).
 
 ## <a id="ki181117"></a>To activate the standby master 
 
@@ -37,5 +37,5 @@ These steps assume a standby master host is configured for the system. See [Acti
 -   **[Restoring Master Mirroring After a Recovery](../../highavail/topics/g-restoring-master-mirroring-after-a-recovery.html)**  
 
 
-**Parent topic:** [Activating High Availability and Data Consistency Features](../../highavail/topics/g-enabling-high-availability-features.html)
+**Parent topic:** [Enabling High Availability and Data Consistency Features](../../highavail/topics/g-enabling-high-availability-features.html)
 
