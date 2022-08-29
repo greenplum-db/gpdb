@@ -289,7 +289,7 @@ Install the Docker images that PL/Container will use to create language-specific
           python -s resource_group_id=16391
     ```
 
-    For more information about enabling, configuring, and using Greenplum Database resource groups with PL/Container, see [PL/Container Resource Management](pl_container_using.html).
+    For more information about activating, configuring, and using Greenplum Database resource groups with PL/Container, see [PL/Container Resource Management](pl_container_using.html).
 
 
 You can now create a simple function to test your PL/Container installation.

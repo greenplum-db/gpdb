@@ -18,7 +18,7 @@ This topic includes the following subtopics:
     -   [Memory Limits](#topic8339717)
 -   [Using VMware Tanzu Greenplum Command Center to Manage Resource Groups](#topic999)
 -   [Configuring and Using Resource Groups](#topic71717999)
-    -   [Enabling Resource Groups](#topic8)
+    -   [Activating Resource Groups](#topic8)
     -   [Creating Resource Groups](#topic10)
     -   [Configuring Automatic Query Termination Based on Memory Usage](#topic_jlz_hzg_pkb)
     -   [Assigning a Resource Group to a Role](#topic17)
@@ -272,7 +272,7 @@ Refer to the [Greenplum Command Center documentation](http://docs.vmware.com/en/
 
 ## <a id="topic71717999"></a>Configuring and Using Resource Groups 
 
-**Important:** Significant Greenplum Database performance degradation has been observed when enabling resource group-based workload management on RedHat 6.x and CentOS 6.x systems. This issue is caused by a Linux cgroup kernel bug. This kernel bug has been fixed in CentOS 7.x and Red Hat 7.x/8.x systems.
+**Important:** Significant Greenplum Database performance degradation has been observed when activating resource group-based workload management on RedHat 6.x and CentOS 6.x systems. This issue is caused by a Linux cgroup kernel bug. This kernel bug has been fixed in CentOS 7.x and Red Hat 7.x/8.x systems.
 
 If you use RedHat 6 and the performance with resource groups is acceptable for your use case, upgrade your kernel to version 2.6.32-696 or higher to benefit from other fixes to the cgroups implementation.
 
@@ -390,7 +390,7 @@ To use resource groups in your Greenplum Database cluster, you:
 3.  [Assign the resource groups to one or more roles](#topic17).
 4.  [Use resource management system views to monitor and manage the resource groups](#topic22).
 
-## <a id="topic8"></a>Enabling Resource Groups 
+## <a id="topic8"></a>Activating Resource Groups 
 
 When you install Greenplum Database, resource queues are enabled by default. To use resource groups instead of resource queues, you must set the [gp\_resource\_manager](../ref_guide/config_params/guc-list.html) server configuration parameter.
 

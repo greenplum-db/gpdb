@@ -1,5 +1,5 @@
 ---
-title: Enabling Master Mirroring 
+title: Activating Master Mirroring 
 ---
 
 You can configure a new Greenplum Database system with a standby master using `gpinitsystem` or enable it later using `gpinitstandby`. This topic assumes you are adding a standby master to an existing system that was initialized without one.
@@ -32,5 +32,5 @@ The standby master status should be passive, and the WAL sender state should be 
 
 For information about the [gpstate](../../../utility_guide/ref/gpstate.html) utility, see the *Greenplum Database Utility Guide*.
 
-**Parent topic:** [Enabling Mirroring in Greenplum Database](../../highavail/topics/g-enabling-mirroring-in-greenplum-database.html)
+**Parent topic:** [Activating Mirroring in Greenplum Database](../../highavail/topics/g-enabling-mirroring-in-greenplum-database.html)
 

@@ -1,5 +1,5 @@
 ---
-title: Enabling iptables (Optional)
+title: Activating iptables (Optional)
 ---
 
 On Linux systems, you can configure and enable the `iptables` firewall to work with Greenplum Database.
@@ -32,7 +32,7 @@ For more information about `iptables` see the `iptables` and firewall documentat
     ```
 
 
-**Warning:** After enabling `iptables`, this error in the `/var/log/messages` file indicates that the setting for the `iptables` table is too low and needs to be increased.
+**Warning:** After activating `iptables`, this error in the `/var/log/messages` file indicates that the setting for the `iptables` table is too low and needs to be increased.
 
 ```
 ip_conntrack: table full, dropping packet.

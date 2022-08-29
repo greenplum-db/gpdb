@@ -2,7 +2,7 @@
 title: Overview of Greenplum Database High Availability 
 ---
 
-A Greenplum Database system can be made highly available by providing a fault-tolerant hardware platform, by enabling Greenplum Database high-availability features, and by performing regular monitoring and maintenance procedures to ensure the health of all system components.
+A Greenplum Database system can be made highly available by providing a fault-tolerant hardware platform, by activating Greenplum Database high-availability features, and by performing regular monitoring and maintenance procedures to ensure the health of all system components.
 
 Hardware components will eventually fail, whether due to normal wear or an unexpected circumstance. Loss of power can lead to temporarily unavailable components. A system can be made highly available by providing redundant standbys for components that can fail so that services can continue uninterrupted when a failure does occur. In some cases, the cost of redundancy is higher than users' tolerance for interruption in service. When this is the case, the goal is to ensure that full service is able to be restored, and can be restored within an expected timeframe.
 
@@ -95,5 +95,5 @@ For information about using `gpbackup` and `gprestore`, see [VMware Tanzu Greenp
 -   **[Overview of Master Mirroring](../../highavail/topics/g-overview-of-master-mirroring.html)**  
 
 
-**Parent topic:** [Enabling High Availability and Data Consistency Features](../../highavail/topics/g-enabling-high-availability-features.html)
+**Parent topic:** [Activating High Availability and Data Consistency Features](../../highavail/topics/g-enabling-high-availability-features.html)
 

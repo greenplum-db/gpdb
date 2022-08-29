@@ -255,7 +255,7 @@ Enable SSL for client connections to Greenplum Database to encrypt the data pass
 
 Greenplum Database has native support for SSL connections between the client and the master server. SSL connections prevent third parties from snooping on the packets, and also prevent man-in-the-middle attacks. SSL should be used whenever the client connection goes through an insecure link, and must be used whenever client certificate authentication is used.
 
-Enabling Greenplum Database in SSL mode requires the following items.
+Activating Greenplum Database in SSL mode requires the following items.
 
 -   OpenSSL installed on both the client and the master server hosts \(master and standby master\).
 -   The SSL files server.key \(server private key\) and server.crt \(server certificate\) should be correctly generated for the master host and standby master host.

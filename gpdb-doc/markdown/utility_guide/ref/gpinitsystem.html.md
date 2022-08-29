@@ -233,7 +233,7 @@ QD\_PRIMARY\_ARRAY, PRIMARY\_ARRAY, MIRROR\_ARRAY
 :   To re-create a cluster using a known Greenplum Database system configuration, you can edit the segment and content IDs to match the values of the system.
 
 HEAP\_CHECKSUM
-:   **Optional.** This parameter specifies if checksums are enabled for heap data. When enabled, checksums are calculated for heap storage in all databases, enabling Greenplum Database to detect corruption in the I/O system. This option is set when the system is initialized and cannot be changed later.
+:   **Optional.** This parameter specifies if checksums are enabled for heap data. When enabled, checksums are calculated for heap storage in all databases, activating Greenplum Database to detect corruption in the I/O system. This option is set when the system is initialized and cannot be changed later.
 
 :   The `HEAP_CHECKSUM` option is on by default and turning it off is strongly discouraged. If you set this option to off, data corruption in storage can go undetected and make recovery much more difficult.
 

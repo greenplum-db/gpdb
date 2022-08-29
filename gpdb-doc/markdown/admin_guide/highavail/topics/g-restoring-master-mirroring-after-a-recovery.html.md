@@ -4,7 +4,7 @@ title: Restoring Master Mirroring After a Recovery
 
 After you activate a standby master for recovery, the standby master becomes the primary master. You can continue running that instance as the primary master if it has the same capabilities and dependability as the original master host.
 
-You must initialize a new standby master to continue providing master mirroring unless you have already done so while activating the prior standby master. Run [gpinitstandby](../../../utility_guide/ref/gpinitstandby.html) on the active master host to configure a new standby master. See [Enabling Master Mirroring](g-enabling-master-mirroring.html).
+You must initialize a new standby master to continue providing master mirroring unless you have already done so while activating the prior standby master. Run [gpinitstandby](../../../utility_guide/ref/gpinitstandby.html) on the active master host to configure a new standby master. See [Activating Master Mirroring](g-enabling-master-mirroring.html).
 
 You can restore the primary and standby master instances on the original hosts. This process swaps the roles of the primary and standby master hosts, and it should be performed only if you strongly prefer to run the master instances on the same hosts they occupied prior to the recovery scenario.
 

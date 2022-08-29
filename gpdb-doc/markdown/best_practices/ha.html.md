@@ -35,7 +35,7 @@ Master mirroring uses two processes, a sender on the active master host and a re
 
 The mirror is a *warm standby*. If the primary master fails, switching to the standby requires an administrative user to run the `gpactivatestandby` utility on the standby host so that it begins to accept client connections. Clients must reconnect to the new master and will lose any work that was not committed when the primary failed.
 
-See "Enabling High Availability Features" in the *Greenplum Database Administrator Guide* for more information.
+See "Activating High Availability Features" in the *Greenplum Database Administrator Guide* for more information.
 
 ### <a id="bp2"></a>Best Practices 
 
