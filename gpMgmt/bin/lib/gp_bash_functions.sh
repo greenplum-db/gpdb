@@ -250,6 +250,9 @@ LOG_MSG () {
 # Limitation: If the token used for separating command output from banner appears in the begining
 # of the line in command output/banner output, in that case only partial command output will be returned
 REMOTE_EXECUTE_AND_GET_OUTPUT () {
+  INITIAL_DEBUG_LEVEL=$DEBUG_LEVEL
+  DEBUG_LEVEL=0
+
   LOG_MSG "[INFO]:-Start Function $FUNCNAME"
   HOST="$1"
   CMD="echo 'GP_DELIMITER_FOR_IGNORING_BASH_BANNER';$2"
@@ -262,6 +265,8 @@ REMOTE_EXECUTE_AND_GET_OUTPUT () {
      LOG_MSG "[INFO]:-Completed $TRUSTED_SHELL $HOST $CMD"
   fi
   LOG_MSG "[INFO]:-End Function $FUNCNAME"
+
+  DEBUG_LEVEL=$INITIAL_DEBUG_LEVEL
   #Return output
   echo "$OUTPUT"
 }
