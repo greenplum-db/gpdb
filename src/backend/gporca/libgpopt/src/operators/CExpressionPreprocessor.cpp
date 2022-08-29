@@ -1654,7 +1654,9 @@ CExpressionPreprocessor::PexprFromConstraintsScalar(
 						{
 							canBeRemoved = true;
 						}
+						CRefCount::SafeRelease(pexprScalar);
 					}
+
 					// If the column attribute is not resolved to a constant value ,
 					// it means it's not redundant, so we can't remove it.
 					if (!canBeRemoved)
@@ -1717,8 +1719,13 @@ CExpressionPreprocessor::PexprFromConstraintsScalar(
 				{
 					pexprNew = (*childrenRedundantArray)[0];
 					pexprNew->AddRef();
+					CRefCount::SafeRelease(childrenArray);
+					CRefCount::SafeRelease(childrenRedundantArray);
 					return pexprNew;
 				}
+				pexprNew->AddRef();
+				CRefCount::SafeRelease(childrenArray);
+				CRefCount::SafeRelease(childrenRedundantArray);
 				return pexprNew;
 			}
 
@@ -1727,6 +1734,8 @@ CExpressionPreprocessor::PexprFromConstraintsScalar(
 			{
 				CExpression *pexprNew = (*childrenArray)[0];
 				pexprNew->AddRef();
+				CRefCount::SafeRelease(childrenArray);
+				CRefCount::SafeRelease(childrenRedundantArray);
 				return pexprNew;
 			}
 
@@ -1736,10 +1745,12 @@ CExpressionPreprocessor::PexprFromConstraintsScalar(
 			{
 				COperator *pop = pexpr->Pop();
 				pop->AddRef();
+				CRefCount::SafeRelease(childrenRedundantArray);
 				return GPOS_NEW(mp) CExpression(mp, pop, childrenArray);
 			}
 		}
-
+		CRefCount::SafeRelease(childrenArray);
+		CRefCount::SafeRelease(childrenRedundantArray);
 		pexpr->AddRef();
 		return pexpr;
 	}
