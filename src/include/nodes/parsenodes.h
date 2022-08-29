@@ -2331,6 +2331,7 @@ typedef struct CreateStmt
 	char	   *tablespacename; /* table space to use, or NULL */
 	char	   *accessMethod;	/* table access method */
 	bool		if_not_exists;	/* just do nothing if it already exists? */
+	bool 		gp_style_alter_part; /* is this due to a GP-style ALTER on partition tables? */
 
 	DistributedBy *distributedBy;   /* what columns we distribute the data by */
 	Node       *partitionBy;     /* what columns we partition the data by */

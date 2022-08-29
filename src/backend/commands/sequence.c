@@ -246,6 +246,7 @@ DefineSequence(ParseState *pstate, CreateSeqStmt *seq)
 	stmt->if_not_exists = seq->if_not_exists;
 	stmt->relKind = RELKIND_SEQUENCE;
 	stmt->ownerid = GetUserId();
+	stmt->gp_style_alter_part = false;
 
 	address = DefineRelation(stmt, RELKIND_SEQUENCE, seq->ownerId, NULL, NULL,
 							 false, /* dispatch */

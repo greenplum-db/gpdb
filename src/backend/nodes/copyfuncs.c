@@ -3946,6 +3946,7 @@ CopyCreateStmtFields(const CreateStmt *from, CreateStmt *newnode)
 	COPY_STRING_FIELD(tablespacename);
 	COPY_STRING_FIELD(accessMethod);
 	COPY_SCALAR_FIELD(if_not_exists);
+	COPY_SCALAR_FIELD(gp_style_alter_part);
 
 	COPY_NODE_FIELD(distributedBy);
 	COPY_NODE_FIELD(partitionBy);

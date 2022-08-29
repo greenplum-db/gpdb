@@ -130,6 +130,7 @@ create_ctas_internal(List *attrList, IntoClause *into, QueryDesc *queryDesc, boo
 	create->oncommit = into->onCommit;
 	create->tablespacename = into->tableSpaceName;
 	create->if_not_exists = false;
+	create->gp_style_alter_part = false;
 
 	create->distributedBy = NULL; /* We will pass a pre-made intoPolicy instead */
 	create->partitionBy = NULL; /* CTAS does not not support partition. */

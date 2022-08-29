@@ -254,6 +254,7 @@ DefineVirtualRelation(RangeVar *relation, List *tlist, bool replace,
 		createStmt->tablespacename = NULL;
 		createStmt->relKind = RELKIND_VIEW;
 		createStmt->if_not_exists = false;
+		createStmt->gp_style_alter_part = false;
 
 		/*
 		 * Create the relation (this will error out if there's an existing

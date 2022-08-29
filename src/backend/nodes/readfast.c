@@ -737,6 +737,7 @@ _readCreateStmt_common(CreateStmt *local_node)
 	READ_STRING_FIELD(tablespacename);
 	READ_STRING_FIELD(accessMethod);
 	READ_BOOL_FIELD(if_not_exists);
+	READ_BOOL_FIELD(gp_style_alter_part);
 
 	READ_NODE_FIELD(distributedBy);
 	READ_NODE_FIELD(partitionBy);
