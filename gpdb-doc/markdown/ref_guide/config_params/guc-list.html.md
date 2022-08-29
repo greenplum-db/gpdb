@@ -52,7 +52,7 @@ Specifies the Bonjour broadcast name. By default, the computer name is used, spe
 
 ## <a id="check_function_bodies"></a>check\_function\_bodies 
 
-When set to off, deactivates validation of the function body string during `CREATE FUNCTION`. Disabling validation is occasionally useful to avoid problems such as forward references when restoring function definitions from a dump.
+When set to off, deactivates validation of the function body string during `CREATE FUNCTION`. Deactivating validation is occasionally useful to avoid problems such as forward references when restoring function definitions from a dump.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
@@ -2948,7 +2948,7 @@ The value `false` deactivates SSL certificate authentication. These SSL exceptio
 
 You can set the value to `false` to deactivate authentication when testing the communication between the Greenplum Database external table and the `gpfdist` utility that is serving the external data.
 
-**Warning:** Disabling SSL certificate authentication exposes a security risk by not validating the `gpfdists` SSL certificate.
+**Warning:** Deactivating SSL certificate authentication exposes a security risk by not validating the `gpfdists` SSL certificate.
 
 For information about the `gpfdists` protocol, see [gpfdists:// Protocol](../../admin_guide/external/g-gpfdists-protocol.html). For information about running the `gpfdist` utility, see [gpfdist](../../utility_guide/ref/gpfdist.html).
 

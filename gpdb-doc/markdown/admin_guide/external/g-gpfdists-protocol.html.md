@@ -41,7 +41,7 @@ The server configuration parameter [verify\_gpfdists\_cert](../../ref_guide/conf
 -   The self-signed SSL certificate that is used by `gpfdist` is not trusted by Greenplum Database.
 -   The host name contained in the SSL certificate does not match the host name that is running `gpfdist`.
 
-**Warning:** Disabling SSL certificate authentication exposes a security risk by not validating the `gpfdists` SSL certificate.
+**Warning:** Deactivating SSL certificate authentication exposes a security risk by not validating the `gpfdists` SSL certificate.
 
 **Parent topic:** [Defining External Tables](../external/g-external-tables.html)
 
