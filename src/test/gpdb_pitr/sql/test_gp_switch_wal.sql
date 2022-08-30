@@ -2,14 +2,6 @@
 -- constructed on the individual segments so that their timeline ids are
 -- used instead of each result having the same timeline id.
 
--- start_matchsubs
---
--- # remove line number and entrydb in error message
--- m/\(xlogfuncs_gp\.c\:\d+.*/
--- s/\(xlogfuncs_gp\.c:\d+.*/\(xlogfuncs_gp\.c:LINE_NUM\)/
---
--- end_matchsubs
-
 include: helpers/server_helpers.sql;
 
 -- Prepare PITR extension

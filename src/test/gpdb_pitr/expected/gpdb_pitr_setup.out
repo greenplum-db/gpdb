@@ -55,7 +55,7 @@ DELETE 10
 BEGIN
 4: INSERT INTO gpdb_two_phase_commit_after_restore_point SELECT generate_series(1, 10);
 INSERT 10
-4&: SELECT segment_id, count(*) FROM gp_create_restore_point('test_restore_point') AS r(segment_id smallint, restore_lsn pg_lsn) GROUP BY segment_id ORDER BY segment_id;  <waiting ...>
+4&: SELECT gp_segment_id, count(*) FROM gp_create_restore_point('test_restore_point') GROUP BY gp_segment_id ORDER BY gp_segment_id;  <waiting ...>
 1: SELECT gp_wait_until_triggered_fault('gp_create_restore_point_acquired_lock', 1, 1);
  gp_wait_until_triggered_fault 
 -------------------------------
@@ -101,12 +101,12 @@ INSERT 1
  Success:        
 (1 row)
 4<:  <... completed>
- segment_id | count 
-------------+-------
- -1         | 1     
- 0          | 1     
- 1          | 1     
- 2          | 1     
+ gp_segment_id | count 
+---------------+-------
+ -1            | 1     
+ 0             | 1     
+ 1             | 1     
+ 2             | 1     
 (4 rows)
 4: COMMIT;
 COMMIT
