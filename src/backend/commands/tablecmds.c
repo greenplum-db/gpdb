@@ -9005,13 +9005,6 @@ ATExecAddIndex(AlteredTableInfo *tab, Relation rel,
 	/* The IndexStmt has already been through transformIndexStmt */
 	Assert(stmt->transformed);
 
-	/* The index should already be built if we are a QE */
-	/* GPDB_12_MERGE_FIXME: it doesn't seem to work that way anymore. */
-#if 0
-	if (Gp_role == GP_ROLE_EXECUTE)
-		return InvalidObjectAddress;
-#endif
-
 	/* suppress schema rights check when rebuilding existing index */
 	check_rights = !is_rebuild;
 	/* skip index build if phase 3 will do it or we're reusing an old one */
