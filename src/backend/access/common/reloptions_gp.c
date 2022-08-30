@@ -141,8 +141,8 @@ initialize_reloptions_gp(void)
 		add_bool_reloption(boolRelOpts_gp[i].gen.kinds,
 						   (char *) boolRelOpts_gp[i].gen.name,
 						   (char *) boolRelOpts_gp[i].gen.desc,
-						   boolRelOpts_gp[i].default_val);
-		set_reloption_lockmode(boolRelOpts_gp[i].gen.name, boolRelOpts_gp[i].gen.lockmode);
+						   boolRelOpts_gp[i].default_val,
+						   boolRelOpts_gp[i].gen.lockmode);
 	}
 
 	for (i = 0; intRelOpts_gp[i].gen.name; i++)
@@ -152,8 +152,8 @@ initialize_reloptions_gp(void)
 						  (char *) intRelOpts_gp[i].gen.desc,
 						  intRelOpts_gp[i].default_val,
 						  intRelOpts_gp[i].min,
-						  intRelOpts_gp[i].max);
-		set_reloption_lockmode(intRelOpts_gp[i].gen.name, intRelOpts_gp[i].gen.lockmode);
+						  intRelOpts_gp[i].max,
+						  intRelOpts_gp[i].gen.lockmode);
 	}
 
 	for (i = 0; realRelOpts_gp[i].gen.name; i++)
@@ -162,8 +162,8 @@ initialize_reloptions_gp(void)
 						   (char *) realRelOpts_gp[i].gen.name,
 						   (char *) realRelOpts_gp[i].gen.desc,
 						   realRelOpts_gp[i].default_val,
-						   realRelOpts_gp[i].min, realRelOpts_gp[i].max);
-		set_reloption_lockmode(realRelOpts_gp[i].gen.name, realRelOpts_gp[i].gen.lockmode);
+						   realRelOpts_gp[i].min, realRelOpts_gp[i].max,
+						   realRelOpts_gp[i].gen.lockmode);
 	}
 
 	for (i = 0; stringRelOpts_gp[i].gen.name; i++)
@@ -172,8 +172,8 @@ initialize_reloptions_gp(void)
 							 (char *) stringRelOpts_gp[i].gen.name,
 							 (char *) stringRelOpts_gp[i].gen.desc,
 							 NULL,
-							 stringRelOpts_gp[i].validate_cb);
-		set_reloption_lockmode(stringRelOpts_gp[i].gen.name, stringRelOpts_gp[i].gen.lockmode);
+							 stringRelOpts_gp[i].validate_cb,
+							 stringRelOpts_gp[i].gen.lockmode);
 	}
 }
 
