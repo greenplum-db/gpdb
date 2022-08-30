@@ -7084,9 +7084,9 @@
         in the query predicate contains more than the number elements specified by parameter, GPORCA
         disables the transformation of the predicate into its disjunctive normal form during query
         optimization. </p>
-      <p>The default value is 100. </p>
+      <p>The default value is 20. </p>
       <p>For example, when GPORCA is running a query that contains an <codeph>IN</codeph> clause
-        with more than 100 elements, GPORCA does not transform the predicate into its disjunctive
+        with more than 20 elements, GPORCA does not transform the predicate into its disjunctive
         normal form during query optimization to reduce optimization time consume less memory. The
         difference in query processing can be seen in the filter condition for the
           <codeph>IN</codeph> clause of the query <codeph>EXPLAIN</codeph> plan.</p>
@@ -7110,7 +7110,7 @@
           <tbody>
             <row>
               <entry colname="col1">Integer > 0</entry>
-              <entry colname="col2">25</entry>
+              <entry colname="col2">20</entry>
               <entry colname="col3">master<p>session</p><p>reload</p></entry>
             </row>
           </tbody>

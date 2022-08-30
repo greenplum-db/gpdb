@@ -3950,7 +3950,7 @@ struct config_int ConfigureNamesInt_gp[] =
 			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
 		},
 		&optimizer_array_expansion_threshold,
-		100, 0, INT_MAX,
+		20, 0, INT_MAX,
 		NULL, NULL, NULL
 	},
 
