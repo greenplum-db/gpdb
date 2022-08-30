@@ -243,6 +243,47 @@ QUERY PLAN
 (1 row)
 SET random_page_cost = 1;
 SET cpu_index_tuple_cost = 0.1;
+EXPLAIN (FORMAT YAML, VERBOSE) SELECT * from boxes;
+QUERY PLAN
+- Plan: 
+    Node Type: "Gather Motion"
+    Senders: 3
+    Receivers: 1
+    Slice: 1
+    Segments: 3
+    Gang Type: "primary reader"
+    Parallel Aware: false
+    Startup Cost: 0.00
+    Total Cost: 431.00
+    Plan Rows: 1
+    Plan Width: 12
+    Output: 
+      - "id"
+      - "apple_id"
+      - "location_id"
+    Plans: 
+      - Node Type: "Seq Scan"
+        Parent Relationship: "Outer"
+        Slice: 1
+        Segments: 3
+        Gang Type: "primary reader"
+        Parallel Aware: false
+        Relation Name: "boxes"
+        Schema: "public"
+        Alias: "boxes"
+        Startup Cost: 0.00
+        Total Cost: 431.00
+        Plan Rows: 1
+        Plan Width: 12
+        Output: 
+          - "id"
+          - "apple_id"
+          - "location_id"
+  Optimizer: "Pivotal Optimizer (GPORCA)"
+  Settings: 
+    cpu_index_tuple_cost: "0.1"
+    random_page_cost: "1"
+(1 row)
 EXPLAIN (FORMAT YAML, VERBOSE, SETTINGS ON) SELECT * from boxes;
 QUERY PLAN
 - Plan: 
@@ -284,8 +325,6 @@ QUERY PLAN
     cpu_index_tuple_cost: "0.1"
     random_page_cost: "1"
 (1 row)
-RESET random_page_cost;
-RESET cpu_index_tuple_cost;
 --- Check Explain Analyze YAML output that include the slices information
 -- explain_processing_off
 EXPLAIN (ANALYZE, FORMAT YAML) SELECT * from boxes LEFT JOIN apples ON apples.id = boxes.apple_id LEFT JOIN box_locations ON box_locations.id = boxes.location_id;
@@ -481,12 +520,15 @@ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=12) (a
         ->  Seq Scan on public.boxes  (cost=0.00..431.00 rows=1 width=12) (never executed)
               Output: id, apple_id, location_id
 Optimizer: Pivotal Optimizer (GPORCA)
+Settings: cpu_index_tuple_cost = '0.1', random_page_cost = '1'
 Planning Time: 4.622 ms
   (slice0)    Executor memory: 40K bytes.
   (slice1)    Executor memory: 59K bytes avg x 3 workers, 59K bytes max (seg0).  Work_mem: 59K bytes max.
 Memory used:  128000kB
 Execution Time: 0.846 ms
-(17 rows)
+(18 rows)
+RESET random_page_cost;
+RESET cpu_index_tuple_cost;
 -- explain_processing_on
 --
 -- Test a simple case with JSON and XML output, too.

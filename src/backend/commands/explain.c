@@ -774,8 +774,8 @@ ExplainPrintSettings(ExplainState *es)
 				continue;
 
 			/* Note the non-default GP GUCs */
-			if (gconf->source > PGC_S_DEFAULT)
-				lappend(gp_gucs, cell);
+			if (is_guc_modified(gconf))
+				gp_gucs = lappend(gp_gucs, lfirst(cell));
 		}
 
 		if (list_length(gp_gucs) > 0)
