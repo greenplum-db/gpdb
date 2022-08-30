@@ -295,6 +295,9 @@
 /* Define to 1 if you have the <gssapi.h> header file. */
 #undef HAVE_GSSAPI_H
 
+/* Define to 1 if zstd is too old. */
+#undef OLD_ZSTD_VERSION
+
 /* Define to 1 if you have the <gssapi_ext.h> header file */
 #undef HAVE_GSSAPI_PROXY
 

@@ -1695,6 +1695,10 @@ fi
 if test "$with_zstd" = yes; then
   AC_CHECK_HEADER(zstd.h, [], [AC_MSG_ERROR([header file <zstd.h> is required for zstd support])])
   AC_CHECK_HEADER(zstd_errors.h, [], [AC_MSG_ERROR([header file <zstd_errors.h> is required for zstd support])])
+  AC_CHECK_DECLS(ZSTD_compressStream2,
+      [AC_DEFINE(OLD_ZSTD_VERSION, 0, [NEW_ZSTD_VERSION])],
+      [AC_DEFINE(OLD_ZSTD_VERSION, 1, [OLD_ZSTD_VERSION])],
+      [#include <zstd.h>])
 fi
 
 # Check for quicklz.h

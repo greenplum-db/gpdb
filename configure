@@ -13943,6 +13943,29 @@ else
 fi
 
 
+# wdf
+
+ac_fn_c_check_decl "$LINENO" "ZSTD_compressStream2" "ac_cv_have_ZSTD_compressStream2" "#include <zstd.h>"
+
+if test "x$ac_cv_have_ZSTD_compressStream2" = xyes; then :
+  ac_have_decl=1
+else
+  ac_have_decl=0
+fi
+
+cat >>confdefs.h <<_ACEOF
+#define HAVE_ZSTD_COMPRESSSTREAM2 $ac_have_decl
+_ACEOF
+if test $ac_have_decl = 1; then :
+
+$as_echo "#define OLD_ZSTD_VERSION 0" >>confdefs.h
+
+else
+
+$as_echo "#define OLD_ZSTD_VERSION 1" >>confdefs.h
+
+fi
+
 fi
 
 # Check for quicklz.h

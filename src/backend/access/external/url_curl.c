@@ -30,6 +30,7 @@
 #include "utils/guc.h"
 #include "utils/resowner.h"
 #include "utils/uri.h"
+#include <zstd.h>
 
 /*
  * This struct encapsulates the libcurl resources that need to be explicitly
@@ -88,6 +89,10 @@ typedef struct
 	int			error,
 				eof;			/* error & eof flags */
 	int			gp_proto;
+	int 		zstd;
+	ZSTD_DCtx*  zstd_ctx;
+	int 		lastpos;
+	int 		lastsize;
 	char	   *http_response;
 
 	struct
@@ -284,6 +289,8 @@ header_callback(void *ptr_, size_t size, size_t nmemb, void *userp)
 	int 		i;
 	char 		buf[20];
 
+	int proto_len = strlen("X-GP-PROTO"), zstd_len = strlen("X-GP-ZSTD");
+
 	Assert(size == 1);
 
 	/*
@@ -317,10 +324,10 @@ header_callback(void *ptr_, size_t size, size_t nmemb, void *userp)
 	/*
 	 * extract the GP-PROTO value from the HTTP header.
 	 */
-	if (len > 10 && *ptr == 'X' && 0 == strncmp("X-GP-PROTO", ptr, 10))
+	if (len > proto_len && *ptr == 'X' && 0 == strncmp("X-GP-PROTO", ptr, proto_len))
 	{
-		ptr += 10;
-		len -= 10;
+		ptr += proto_len;
+		len -= proto_len;
 
 		while (len > 0 && (*ptr == ' ' || *ptr == '\t'))
 		{
@@ -344,6 +351,39 @@ header_callback(void *ptr_, size_t size, size_t nmemb, void *userp)
 
 			buf[i] = 0;
 			url->gp_proto = strtol(buf, 0, 0);
+		}
+	}
+
+	if (len > zstd_len && *ptr == 'X' && 0 == strncmp("X-GP-ZSTD", ptr, zstd_len))
+	{
+		ptr += zstd_len;
+		len -= zstd_len;
+
+		while (len > 0 && (*ptr == ' ' || *ptr == '\t'))
+		{
+			ptr++;
+			len--;
+		}
+
+		if (len > 0 && *ptr == ':')
+		{
+			ptr++;
+			len--;
+
+			while (len > 0 && (*ptr == ' ' || *ptr == '\t'))
+			{
+				ptr++;
+				len--;
+			}
+
+			for (i = 0; i < sizeof(buf) - 1 && i < len; i++)
+				buf[i] = ptr[i];
+
+			buf[i] = 0;
+			url->zstd = strtol(buf, 0, 0);
+			url->lastpos = 0;
+			url->lastsize = 0;
+			url->zstd_ctx = ZSTD_createDCtx();
 		}
 	}
 
@@ -1253,6 +1293,7 @@ url_curl_fopen(char *url, bool forwrite, extvar_t *ev, CopyState pstate)
 	{
 		/* read specific - (TODO: unclear why some of these are needed) */
 		set_httpheader(file, "X-GP-PROTO", "1");
+		set_httpheader(file, "X-GP-ZSTD", "1");
 		set_httpheader(file, "X-GP-MASTER_HOST", ev->GP_MASTER_HOST);
 		set_httpheader(file, "X-GP-MASTER_PORT", ev->GP_MASTER_PORT);
 		set_httpheader(file, "X-GP-CSVOPT", ev->GP_CSVOPT);
@@ -1463,6 +1504,7 @@ url_curl_fclose(URL_FILE *fileg, bool failOnError, const char *relname)
 	memset(&file->block, 0, sizeof(file->block));
 
 	pfree(file->common.url);
+	ZSTD_freeDCtx(file->zstd_ctx);
 
 	pfree(file);
 }
@@ -1514,6 +1556,31 @@ gp_proto0_read(char *buf, int bufsz, URL_CURL_FILE *file)
 	return n;
 }
 
+
+int 
+decompress_zstd_data(ZSTD_DCtx* ctx, ZSTD_inBuffer* bin, ZSTD_outBuffer* bout)
+{
+	
+	int ret;
+	/* The return code is zero if the frame is complete, but there may
+		* be multiple frames concatenated together. Zstd will automatically
+		* reset the context when a frame is complete. Still, calling
+		* ZSTD_DCtx_reset() can be useful to reset the context to a clean
+		* state, for instance if the last decompression call returned an
+		* error.
+		*/
+		 
+	ret = ZSTD_decompressStream(ctx, bout, bin);
+	size_t const err = ret;                          
+	if(ZSTD_isError(err)){
+		elog(ERROR, "zstd decompression error, error is %s", ZSTD_getErrorName(err));
+		ZSTD_freeDCtx(ctx);
+		ctx = ZSTD_createDCtx(); 
+		return 0;
+	}
+	return bout->pos;
+}
+
 /*
  * gp_proto1_read
  *
@@ -1527,14 +1594,15 @@ static size_t
 gp_proto1_read(char *buf, int bufsz, URL_CURL_FILE *file, CopyState pstate, char *buf2)
 {
 	char type;
-	int  n, len;
+	int  n = 0, len = 0;
+	int obufsz = bufsz;
 
 	/*
 	 * Loop through and get all types of messages, until we get actual data,
 	 * or until there's no more data. Then quit the loop to process it and
 	 * return it.
 	 */
-	while (file->block.datalen == 0 && !file->eof)
+	while (file->block.datalen == 0 && !file->eof && !file->lastpos)
 	{
 		/* need 5 bytes, 1 byte type + 4 bytes length */
 		fill_buffer(file, 5);
@@ -1678,11 +1746,15 @@ gp_proto1_read(char *buf, int bufsz, URL_CURL_FILE *file, CopyState pstate, char
 	if (bufsz > file->block.datalen)
 		bufsz = file->block.datalen;
 
-	fill_buffer(file, bufsz);
-	n = file->in.top - file->in.bot;
+		
+	if(!file->lastpos){
+		fill_buffer(file, bufsz);
+		n = file->in.top - file->in.bot;
+		file->lastsize = file->block.datalen;
+	}
 
 	/* if gpfdist closed connection prematurely or died catch it here */
-	if (n == 0 && !file->eof)
+	if (n == 0 && !file->eof && !file->lastpos)
 	{
 		file->error = 1;
 		
@@ -1698,13 +1770,22 @@ gp_proto1_read(char *buf, int bufsz, URL_CURL_FILE *file, CopyState pstate, char
 	if (n > bufsz)
 		n = bufsz;
 
-	memcpy(buf, file->in.ptr + file->in.bot, n);
-
-	file->in.bot += n;
 	file->block.datalen -= n;
+
+	if(file->zstd && file->zstd_ctx){	
+		ZSTD_inBuffer bin = {file->in.ptr + file->in.bot, file->lastsize, file->lastpos};
+		ZSTD_outBuffer bout = {buf, obufsz, 0};
+		n = decompress_zstd_data(file->zstd_ctx, &bin, &bout);
+		file->lastpos = bin.pos == bin.size ? 0 : bin.pos;
+		file->in.bot = !file->lastpos ? (file->in.bot + bin.size) : file->in.bot;
+	}
+	else{
+		memcpy(buf, file->in.ptr + file->in.bot, n);
+		file->in.bot += n;
+	}
+
 	return n;
 }
-
 /*
  * gp_proto0_write
  *
@@ -1855,6 +1936,18 @@ void
 url_curl_fflush(URL_FILE *file, CopyState pstate)
 {
 	gp_proto0_write((URL_CURL_FILE *) file, pstate);
+}
+
+size_t
+decompress_data(char* bufin, int len){
+	unsigned long long const rSize = ZSTD_getFrameContentSize(bufin, len);
+	void* const rBuff = palloc(rSize);
+    if (!rBuff) {
+		elog(ERROR, "decompress_data error: there is no enough space, required size is %llu Bytes", rSize);
+		return 0;
+	}
+	size_t const dSize = ZSTD_decompress(rBuff, rSize, bufin, len);
+	return dSize;
 }
 
 #else /* USE_CURL */

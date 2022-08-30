@@ -77,6 +77,7 @@ struct block_t
 	blockhdr_t 	hdr;
 	int 		bot, top;
 	char*      	data;
+	char*		cdata;
 };
 
 /*  Get session id for this request */
@@ -172,7 +173,8 @@ static struct
 	struct transform* trlist; /* transforms from config file */
 	const char* ssl; /* path to certificates in case we use gpfdist with ssl */
 	int			w; /* The time used for session timeout in seconds */
-} opt = { 8080, 8080, 0, 0, 0, ".", 0, 0, -1, 5, 0, 32768, 0, 256, 0, 0, 0, 0 };
+	int			compress;
+} opt = { 8080, 8080, 0, 0, 0, ".", 0, 0, -1, 5, 0, 32768, 0, 256, 0, 0, 0, 0, 0};
 
 
 typedef union address
@@ -287,6 +289,9 @@ struct request_t
 	char*           line_delim_str;
 	int             line_delim_length;
 
+	ZSTD_CCtx*      zstd_ctx;	/* zstd context */
+	int             zstd;		/* request use zstd compress? */
+
 #ifdef USE_SSL
 	/* SSL related */
 	BIO			*io;		/* for the i.o. */
@@ -347,6 +352,9 @@ static int session_active_segs_isempty(session_t* session);
 static int request_validate(request_t *r);
 static int request_set_path(request_t *r, const char* d, char* p, char* pp, char* path);
 static int request_path_validate(request_t *r, const char* path);
+static int compress_zstd(request_t *r, block_t* block, int buflen);
+static int local_send_zstd(request_t *r, char* buf, int buflen);
+static int gpfdist_socket_send_zstd(request_t *r, void *buf, size_t buflen);
 static int request_parse_gp_headers(request_t *r, int opt_g);
 static void free_session_cb(int fd, short event, void* arg);
 #ifdef GPFXDIST
@@ -385,6 +393,31 @@ static void delay_watchdog_timer(void);
 static apr_time_t shutdown_time;
 static void* watchdog_thread(void*);
 #endif
+
+static const char *EMPTY_HTTP_RES = "HTTP/1.0 200 ok\r\n"
+		"Content-type: text/plain\r\n"
+		"Content-length: 0\r\n"
+		"Expires: 0\r\n"
+		"X-GPFDIST-VERSION: " GP_VERSION "\r\n"
+		"Cache-Control: no-cache\r\n"
+		"Connection: close\r\n\r\n";
+
+static const char *HTTP_RESPONSE_ZSTD = "HTTP/1.0 200 ok\r\n"
+		"Content-type: text/plain\r\n"
+		"Expires: 0\r\n"
+		"X-GPFDIST-VERSION: " GP_VERSION "\r\n"
+		"X-GP-PROTO: %d\r\n"
+		"Cache-Control: no-cache\r\n"
+		"Connection: close\r\n"
+		"X-GP-ZSTD: %d\r\n\r\n";
+
+static const char *HTTP_RESPONSE = "HTTP/1.0 200 ok\r\n"
+		"Content-type: text/plain\r\n"
+		"Expires: 0\r\n"
+		"X-GPFDIST-VERSION: " GP_VERSION "\r\n"
+		"X-GP-PROTO: %d\r\n"
+		"Cache-Control: no-cache\r\n"
+		"Connection: close\r\n\r\n";
 
 /*
  * block_fill_header
@@ -590,6 +623,7 @@ static void parse_command_line(int argc, const char* const argv[],
 #endif
 	{ "version", 256, 0, "print version number" },
 	{ NULL, 'w', 1, "wait for session timeout in seconds" },
+	{"ec", 258, 0, "turn on compressed transmission"},
 	{ 0 } };
 
 	status = apr_getopt_init(&os, pool, argc, argv);
@@ -673,6 +707,9 @@ static void parse_command_line(int argc, const char* const argv[],
 			break;
 		case 'w':
 			opt.w = atoi(arg);
+			break;
+		case 258:
+			opt.compress = 1;
 			break;
 		}
 	}
@@ -851,15 +888,8 @@ static void http_error(request_t* r, int code, const char* msg)
 /* send an empty response */
 static void http_empty(request_t* r)
 {
-	static const char buf[] = "HTTP/1.0 200 ok\r\n"
-		"Content-type: text/plain\r\n"
-		"Content-length: 0\r\n"
-		"Expires: 0\r\n"
-		"X-GPFDIST-VERSION: " GP_VERSION "\r\n"
-		"Cache-Control: no-cache\r\n"
-		"Connection: close\r\n\r\n";
 	gprintln(r, "HTTP EMPTY: %s %s %s - OK", r->peer, r->in.req->argv[0], r->in.req->argv[1]);
-	local_send(r, buf, sizeof buf -1);
+	local_send(r, EMPTY_HTTP_RES, sizeof (EMPTY_HTTP_RES) - 1);
 }
 
 /* send a Continue response */
@@ -876,17 +906,20 @@ static void http_continue(request_t* r)
 /* send an OK response */
 static apr_status_t http_ok(request_t* r)
 {
-	const char* fmt = "HTTP/1.0 200 ok\r\n"
-		"Content-type: text/plain\r\n"
-		"Expires: 0\r\n"
-		"X-GPFDIST-VERSION: " GP_VERSION "\r\n"
-		"X-GP-PROTO: %d\r\n"
-		"Cache-Control: no-cache\r\n"
-		"Connection: close\r\n\r\n";
+
+	const char* fmt = "";
 	char buf[1024];
 	int m, n;
+	if(r->zstd && opt.compress){
+		fmt = HTTP_RESPONSE_ZSTD;
+		n = apr_snprintf(buf, sizeof(buf), fmt, r->gp_proto, r->zstd);
+	}
+	else{
+		fmt = HTTP_RESPONSE;
+		n = apr_snprintf(buf, sizeof(buf), fmt, r->gp_proto);
+	}
 
-	n = apr_snprintf(buf, sizeof(buf), fmt, r->gp_proto);
+	
 	if (n >= sizeof(buf) - 1)
 		gfatal(r, "internal error - buffer overflow during http_ok");
 
@@ -1345,7 +1378,12 @@ session_get_block(const request_t* r, block_t* retblock, char* line_delim_str, i
 		return ferror;
 	}
 
-	retblock->top = size;
+	if(r->zstd && opt.compress){
+		retblock->top = compress_zstd(r, retblock, size);
+	}
+	else{
+		retblock->top = size;
+	}
 
 	/* fill the block header with meta data for the client to parse and use */
 	block_fill_header(r, retblock, &fos);
@@ -1824,7 +1862,12 @@ static void do_write(int fd, short event, void* arg)
 		 * write out the block data
 		 */
 		n = datablock->top - datablock->bot;
-		n = local_send(r, datablock->data + datablock->bot, n);
+		if(r->zstd && opt.compress){
+			n = local_send(r, datablock->cdata + datablock->bot, n);
+		}
+		else{
+			n = local_send(r, datablock->data + datablock->bot, n);
+		}
 		if (n < 0)
 		{
 			/*
@@ -3376,6 +3419,10 @@ static int request_parse_gp_headers(request_t *r, int opt_g)
 			r->totalsegs = atoi(r->in.req->hvalue[i]);
 		else if (0 == strcmp("X-GP-SEGMENT-ID", r->in.req->hname[i]))
 			r->segid = atoi(r->in.req->hvalue[i]);
+		else if (0 == strcasecmp("X-GP-ZSTD", r->in.req->hname[i])){
+			r->zstd = atoi(r->in.req->hvalue[i]);
+			r->zstd = r->zstd && opt.compress ? r->zstd : 0;
+		}
 		else if (0 == strcmp("X-GP-LINE-DELIM-STR", r->in.req->hname[i]))
 		{
 			if (NULL == r->in.req->hvalue[i] ||  ((int)strlen(r->in.req->hvalue[i])) % 2 == 1 || !base16_decode(r->in.req->hvalue[i]))
@@ -3405,6 +3452,14 @@ static int request_parse_gp_headers(request_t *r, int opt_g)
 				return -1;
 			}
 		}
+	}
+
+	if (r->zstd)
+	{
+		r->outblock.cdata = palloc_safe(r, r->pool, opt.m, "out of memory when allocating buffer for compressed data: %d bytes", opt.m);
+		r->zstd_ctx = ZSTD_createCCtx();
+		if (!r->zstd_ctx)
+			fprintf(stderr, "out of memory");
 	}
 
 	if (r->line_delim_length > 0)
@@ -4500,6 +4555,21 @@ static void delay_watchdog_timer()
 		shutdown_time = apr_time_now() + gcb.wdtimer * APR_USEC_PER_SEC;
 	}
 }
+
+
+/*
+ * compress_zstd
+ *
+ * child thread method to compress source file block and send compressed data to request
+ */
+static int compress_zstd(request_t *r, block_t* block, int buflen)
+{
+	size_t boundsize = ZSTD_compressBound(buflen);
+	size_t comlen = ZSTD_compressCCtx(r->zstd_ctx, block->cdata, boundsize, block->data, buflen, r->zstd);
+	
+	return (int)comlen;
+}
+
 #else
 static void delay_watchdog_timer()
 {
