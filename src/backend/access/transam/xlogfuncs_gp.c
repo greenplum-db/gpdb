@@ -61,7 +61,7 @@ gp_create_restore_point(PG_FUNCTION_ARGS)
 
 		/* create tupdesc for result */
 		tupdesc = CreateTemplateTupleDesc(2);
-		TupleDescInitEntry(tupdesc, (AttrNumber) 1, "segment_id",
+		TupleDescInitEntry(tupdesc, (AttrNumber) 1, "gp_segment_id",
 						   INT2OID, -1, 0);
 		TupleDescInitEntry(tupdesc, (AttrNumber) 2, "restore_lsn",
 						   LSNOID, -1, 0);
@@ -74,7 +74,7 @@ gp_create_restore_point(PG_FUNCTION_ARGS)
 		context->index = 0;
 		funcctx->user_fctx = (void *) context;
 
-		if (!IS_QUERY_DISPATCHER())
+		if (!IS_QUERY_DISPATCHER() || Gp_role != GP_ROLE_DISPATCH)
 			elog(ERROR,
 				 "cannot use gp_create_restore_point() when not in QD mode");
 
@@ -107,7 +107,7 @@ gp_create_restore_point(PG_FUNCTION_ARGS)
 
 	/*
 	 * Using SRF to return all the segment LSN information of the form
-	 * {segment_id, restore_lsn}
+	 * {gp_segment_id, restore_lsn}
 	 */
 	funcctx = SRF_PERCALL_SETUP();
 	context = (Context *) funcctx->user_fctx;

@@ -11530,7 +11530,8 @@
    proname => 'cdblegacyhash_anyenum', prorettype => 'int4', proargtypes => 'anyenum', prosrc => 'cdblegacyhash_anyenum' },
 
 { oid => 6998, descr => 'Create a named restore point on all segments',
-   proname => 'gp_create_restore_point', prorows => '1000', proretset => 't', proparallel => 'u', provolatile => 'v', prorettype => 'record', proargtypes => 'text', prosrc => 'gp_create_restore_point' },
+   proname => 'gp_create_restore_point', prorows => '1000', proretset => 't', proparallel => 'u', provolatile => 'v', prorettype => 'record', proargtypes => 'text', proexeclocation => 'c',
+   proallargtypes => '{text,int2,pg_lsn}', proargmodes => '{i,o,o}', proargnames => '{restore_point_name,gp_segment_id,restore_lsn}', prosrc => 'gp_create_restore_point' },
 
 { oid => 7001, descr => 'Switch WAL segment files on all segments',
    proname => 'gp_switch_wal', prorows => '1000', proretset => 't', proparallel => 'u', provolatile => 'v', prorettype => 'record', proargtypes => '', proexeclocation => 'c',

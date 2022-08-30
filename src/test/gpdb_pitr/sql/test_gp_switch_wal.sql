@@ -2,14 +2,6 @@
 -- constructed on the individual segments so that their timeline ids are
 -- used instead of each result having the same timeline id.
 
--- start_matchsubs
---
--- # remove line number and entrydb in error message
--- m/\(xlogfuncs_gp\.c\:\d+.*/
--- s/\(xlogfuncs_gp\.c:\d+.*/\(xlogfuncs_gp\.c:LINE_NUM\)/
---
--- end_matchsubs
-
 -- timeline ids prior to failover/failback should all be 1 due to the
 -- test requirement of having a fresh gpdemo cluster with mirrors
 SELECT gp_segment_id, substring(pg_walfile_name, 1, 8) FROM gp_switch_wal() ORDER BY gp_segment_id;
