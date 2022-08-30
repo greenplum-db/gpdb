@@ -7,6 +7,13 @@
 -- Hence, we better have extra tests for those things.
 --
 
+-- start_matchsubs
+--
+-- # remove line number and entrydb in error message
+-- m/\(xlogfuncs_gp\.c\:\d+.*/
+-- s/\(xlogfuncs_gp\.c:\d+.*/\(xlogfuncs_gp\.c:LINE_NUM\)/
+--
+-- end_matchsubs
 
 -- The total depends on the number of segments, and will also change whenever
 -- the built-in objects change, so be lenient.

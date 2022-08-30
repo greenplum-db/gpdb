@@ -6,6 +6,13 @@
 -- to collect the totals across segments, and to support AO / AOCS tables.
 -- Hence, we better have extra tests for those things.
 --
+-- start_matchsubs
+--
+-- # remove line number and entrydb in error message
+-- m/\(xlogfuncs_gp\.c\:\d+.*/
+-- s/\(xlogfuncs_gp\.c:\d+.*/\(xlogfuncs_gp\.c:LINE_NUM\)/
+--
+-- end_matchsubs
 -- The total depends on the number of segments, and will also change whenever
 -- the built-in objects change, so be lenient.
 -- As of this writing, the total size of template0 database, across three segments,
@@ -118,9 +125,7 @@ ERROR:  Cannot execute in entrydb, this query is not currently supported by GPDB
 CONTEXT:  PL/pgSQL function gp_tablespace_segment_location(oid) line 8 at RAISE
 SQL function "gp_tablespace_location" statement 1
 create temp table t1 as select gp_segment_id as seg_id from gp_switch_wal();
-ERROR:  Cannot execute in entrydb, this query is not currently supported by GPDB.
-CONTEXT:  PL/pgSQL function gp_switch_wal_on_all_segments() line 8 at RAISE
-SQL function "gp_switch_wal" statement 1
+ERROR:  cannot use gp_switch_wal() when not in QD mode (xlogfuncs_gp.c:LINE_NUM)
 --
 -- Tests on the table and index size variants.
 --
