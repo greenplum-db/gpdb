@@ -376,6 +376,18 @@ select count(*) from foo_13446 where b = 1;
 
 drop table foo_13446;
 
+-- test bitmap index scan when using NULL array-condition as index key
+create table foo(a int);
+create index foo_i on foo using bitmap(a);
+explain (verbose on, costs off) select * from foo where a = any(null::int[]);
+select * from foo where a = any(null::int[]);
+
+insert into foo values(1);
+select * from foo where a = 1 and a = any(null::int[]);
+select * from foo where a = 1 or a = any(null::int[]);
+
+drop table foo;
+
 SET enable_seqscan = ON;
 SET enable_bitmapscan = ON;
 

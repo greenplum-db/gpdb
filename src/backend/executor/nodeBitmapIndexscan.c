@@ -83,6 +83,10 @@ MultiExecBitmapIndexScan(BitmapIndexScanState *node)
 	{
 		ExecReScan((PlanState *) node);
 		doscan = node->biss_RuntimeKeysReady;
+
+        /* Return an empty bitmap if biss_RuntimeKeysReady still false.*/
+        if (!doscan)
+            index_initbitmap(scandesc, &bitmap);
 	}
 	else
 		doscan = true;

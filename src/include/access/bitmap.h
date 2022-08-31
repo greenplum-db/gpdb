@@ -749,6 +749,7 @@ extern Datum bmvacuumcleanup(PG_FUNCTION_ARGS);
 extern Datum bmoptions(PG_FUNCTION_ARGS);
 
 extern void GetBitmapIndexAuxOids(Relation index, Oid *heapId, Oid *indexId);
+extern void GetInitBitmapIndex(Node **bmNodeP);
 
 /* bitmappages.c */
 extern Buffer _bitmap_getbuf(Relation rel, BlockNumber blkno, int access);

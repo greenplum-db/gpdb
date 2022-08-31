@@ -24,6 +24,7 @@
  *		index_fetch_heap		- get the scan's next heap tuple
  *		index_getnext	- get the next heap tuple from a scan
  *		index_getbitmap - get all tuples from a scan
+ *      index_initbitmap - get an empty bitmap
  *		index_bulk_delete	- bulk deletion of index tuples
  *		index_vacuum_cleanup	- post-deletion cleanup of an index
  *		index_can_return	- does index support index-only scans?
@@ -68,6 +69,7 @@
 #include "access/relscan.h"
 #include "access/transam.h"
 #include "access/xlog.h"
+#include "access/bitmap.h"
 
 #include "catalog/index.h"
 #include "catalog/catalog.h"
@@ -77,7 +79,7 @@
 #include "storage/predicate.h"
 #include "utils/snapmgr.h"
 #include "utils/tqual.h"
-
+#include "utils/fmgroids.h"
 
 /* ----------------------------------------------------------------
  *					macros used in index_ routines
@@ -617,6 +619,31 @@ index_getnext(IndexScanDesc scan, ScanDirection direction)
 	}
 
 	return NULL;				/* failure exit */
+}
+
+/*
+ * index_initbitmap -- get an empty bitmap
+ * */
+void
+index_initbitmap(IndexScanDesc scan, Node **bitmapP)
+{
+    Relation relation = scan->indexRelation;
+
+    if (relation->rd_am->ambuildempty == F_BMBUILDEMPTY)
+    {
+        GetInitBitmapIndex(bitmapP);
+    }
+    else if (relation->rd_am->ambuildempty == F_BTBUILDEMPTY)
+    {
+        *bitmapP = (Node *)tbm_create(work_mem * 1024L);
+    }
+    else
+    {
+        elog(ERROR, "Not support access method \"%s\" to initbitmap under bitmapscan",
+            NameStr(relation->rd_am->amname));
+    }
+
+    return;
 }
 
 /* ----------------

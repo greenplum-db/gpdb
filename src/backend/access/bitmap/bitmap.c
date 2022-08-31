@@ -1063,3 +1063,23 @@ GetBitmapIndexAuxOids(Relation index, Oid *heapId, Oid *indexId)
 
 	_bitmap_relbuf(metabuf);
 }
+
+/*
+ * GetInitBitmapIndex() -- return an empty bitmap.
+ * */
+void
+GetInitBitmapIndex(Node **bmNodeP)
+{
+    IndexStream  *is;
+
+    is = (IndexStream *)palloc0(sizeof(IndexStream));
+    is->type = BMS_INDEX;
+    is->begin_iterate = stream_begin_iterate;
+    is->free = indexstream_free;
+
+    StreamBitmap *sb = makeNode(StreamBitmap);
+    sb->streamNode = is;
+    *bmNodeP = (Node *) sb;
+
+    return;
+}
