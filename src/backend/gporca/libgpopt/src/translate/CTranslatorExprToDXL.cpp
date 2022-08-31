@@ -5208,7 +5208,8 @@ CTranslatorExprToDXL::GetDXLDirectDispatchInfo(CExpression *pexprDML)
 	CTableDescriptor *ptabdesc = popDML->Ptabdesc();
 	const CColumnDescriptorArray *pdrgpcoldescDist =
 		ptabdesc->PdrgpcoldescDist();
-	if ((CLogicalDML::EdmlUpdate == popDML->Edmlop()) ||
+	if ((CLogicalDML::EdmlInsert != popDML->Edmlop() &&
+		 CLogicalDML::EdmlDelete != popDML->Edmlop()) ||
 		IMDRelation::EreldistrHash != ptabdesc->GetRelDistribution() ||
 		1 < pdrgpcoldescDist->Size())
 	{
