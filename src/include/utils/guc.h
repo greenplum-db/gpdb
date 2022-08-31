@@ -491,7 +491,6 @@ extern bool optimizer_enable_constant_expression_evaluation;
 extern bool optimizer_enable_bitmapscan;
 extern bool optimizer_enable_outerjoin_to_unionall_rewrite;
 extern bool optimizer_enable_ctas;
-extern bool optimizer_enable_partial_index;
 extern bool optimizer_enable_dml;
 extern bool	optimizer_enable_dml_constraints;
 extern bool optimizer_enable_direct_dispatch;

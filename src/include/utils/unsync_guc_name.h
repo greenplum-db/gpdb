@@ -395,7 +395,6 @@
 		"optimizer_enable_multiple_distinct_aggs",
 		"optimizer_enable_outerjoin_rewrite",
 		"optimizer_enable_outerjoin_to_unionall_rewrite",
-		"optimizer_enable_partial_index",
 		"optimizer_enable_partition_propagation",
 		"optimizer_enable_partition_selection",
 		"optimizer_enable_range_predicate_dpe",

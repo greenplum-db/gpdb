@@ -319,7 +319,6 @@ bool		optimizer_enable_constant_expression_evaluation;
 bool		optimizer_enable_bitmapscan;
 bool		optimizer_enable_outerjoin_to_unionall_rewrite;
 bool		optimizer_enable_ctas;
-bool		optimizer_enable_partial_index;
 bool		optimizer_enable_dml;
 bool		optimizer_enable_dml_constraints;
 bool		optimizer_enable_master_only_queries;
@@ -2567,17 +2566,6 @@ struct config_bool ConfigureNamesBool_gp[] =
 		},
 		&optimizer_remove_order_below_dml,
 		false,
-		NULL, NULL, NULL
-	},
-
-	{
-		{"optimizer_enable_partial_index", PGC_USERSET, QUERY_TUNING_METHOD,
-			gettext_noop("Enable heterogeneous index plans."),
-			NULL,
-			GUC_NOT_IN_SAMPLE
-		},
-		&optimizer_enable_partial_index,
-		true,
 		NULL, NULL, NULL
 	},
 
