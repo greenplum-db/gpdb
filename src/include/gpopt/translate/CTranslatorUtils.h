@@ -131,18 +131,9 @@ public:
 	// get the opfamily for index key
 	static OID GetOpFamilyForIndexQual(INT attno, OID oid_index);
 
-	// return the type for the system column with the given number
-	static CMDIdGPDB *GetSystemColType(CMemoryPool *mp, AttrNumber attno);
-
 	// find the n-th column descriptor in the table descriptor
 	static const CDXLColDescr *GetColumnDescrAt(
 		const CDXLTableDescr *table_descr, ULONG pos);
-
-	// return the name for the system column with given number
-	static const CWStringConst *GetSystemColName(AttrNumber attno);
-
-	// returns the length for the system column with given attno number
-	static const ULONG GetSystemColLength(AttrNumber attno);
 
 	// translate the join type from its GPDB representation into the DXL one
 	static EdxlJoinType ConvertToDXLJoinType(JoinType jt);

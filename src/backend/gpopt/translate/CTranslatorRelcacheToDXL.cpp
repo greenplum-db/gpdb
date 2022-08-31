@@ -18,6 +18,7 @@ extern "C" {
 
 #include "access/external.h"
 #include "access/heapam.h"
+#include "catalog/heap.h"
 #include "catalog/namespace.h"
 #include "catalog/pg_am.h"
 #include "catalog/pg_proc.h"
@@ -749,21 +750,25 @@ CTranslatorRelcacheToDXL::AddSystemColumns(CMemoryPool *mp,
 		AttrNumber attno = AttrNumber(i);
 		GPOS_ASSERT(0 != attno);
 
+		const FormData_pg_attribute *att_tup = SystemAttributeDefinition(attno);
+
 		// get system name for that attribute
-		const CWStringConst *sys_colname =
-			CTranslatorUtils::GetSystemColName(attno);
+		const CWStringConst *sys_colname = GPOS_NEW(mp)
+			CWStringConst(CDXLUtils::CreateDynamicStringFromCharArray(
+							  mp, NameStr(att_tup->attname))
+							  ->GetBuffer());
 		GPOS_ASSERT(nullptr != sys_colname);
 
 		// copy string into column name
 		CMDName *md_colname = GPOS_NEW(mp) CMDName(mp, sys_colname);
 
 		CMDColumn *md_col = GPOS_NEW(mp) CMDColumn(
-			md_colname, attno, CTranslatorUtils::GetSystemColType(mp, attno),
+			md_colname, attno, GPOS_NEW(mp) CMDIdGPDB(att_tup->atttypid),
 			default_type_modifier,
 			false,	  // is_nullable
 			false,	  // is_dropped
 			nullptr,  // default value
-			CTranslatorUtils::GetSystemColLength(attno));
+			att_tup->attlen);
 
 		mdcol_array->Append(md_col);
 	}

@@ -18,6 +18,7 @@ extern "C" {
 #include "postgres.h"
 
 #include "access/sysattr.h"
+#include "catalog/heap.h"
 #include "catalog/pg_class.h"
 #include "nodes/makefuncs.h"
 #include "nodes/parsenodes.h"
@@ -1125,16 +1126,21 @@ CTranslatorQueryToDXL::ExtractStorageOptionStr(DefElem *def_elem)
 void
 CTranslatorQueryToDXL::GetCtidAndSegmentId(ULONG *ctid, ULONG *segment_id)
 {
+	const FormData_pg_attribute *att_tup_tupid =
+		SystemAttributeDefinition(SelfItemPointerAttributeNumber);
+	const FormData_pg_attribute *att_tup_segid =
+		SystemAttributeDefinition(GpSegmentIdAttributeNumber);
+
+
 	// ctid column id
-	IMDId *mdid = CTranslatorUtils::GetSystemColType(
-		m_mp, SelfItemPointerAttributeNumber);
+	IMDId *mdid = GPOS_NEW(m_mp) CMDIdGPDB(att_tup_tupid->atttypid);
 	*ctid = CTranslatorUtils::GetColId(m_query_level, m_query->resultRelation,
 									   SelfItemPointerAttributeNumber, mdid,
 									   m_var_to_colid_map);
 	mdid->Release();
 
 	// segmentid column id
-	mdid = CTranslatorUtils::GetSystemColType(m_mp, GpSegmentIdAttributeNumber);
+	mdid = GPOS_NEW(m_mp) CMDIdGPDB(att_tup_segid->atttypid);
 	*segment_id = CTranslatorUtils::GetColId(
 		m_query_level, m_query->resultRelation, GpSegmentIdAttributeNumber,
 		mdid, m_var_to_colid_map);
