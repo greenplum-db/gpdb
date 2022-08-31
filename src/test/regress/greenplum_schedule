@@ -226,4 +226,6 @@ test: autovacuum-template0
 
 test: freegang_initplan
 
+test: checkpoint_xlog
+
 # end of tests

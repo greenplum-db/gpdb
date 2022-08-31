@@ -1,6 +1,6 @@
 -- start_matchsubs
 -- m/PostgreSQL stand-alone backend .*/
--- s/PostgreSQL stand-alone backend .*/PostgreSQL stand-alone backend ###/ 
+-- s/PostgreSQL stand-alone backend .*/PostgreSQL stand-alone backend ###/
 -- end_matchsubs
 
 \!gpstop -M fast -aq;
