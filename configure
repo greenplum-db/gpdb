@@ -737,6 +737,7 @@ with_ldap
 with_krb_srvnam
 krb_srvtab
 with_gssapi
+with_pythonsrc_ext
 with_python
 with_perl
 with_tcl
@@ -887,6 +888,7 @@ with_tcl
 with_tclconfig
 with_perl
 with_python
+with_pythonsrc_ext
 with_gssapi
 with_krb_srvnam
 with_pam
@@ -1604,6 +1606,7 @@ Optional Packages:
   --with-tclconfig=DIR    tclConfig.sh is in DIR
   --with-perl             build Perl modules (PL/Perl)
   --without-python        build Python modules (PL/Python)
+  --with-pythonsrc-ext    build Python modules for gpMgmt
   --with-gssapi           build with GSSAPI support
   --with-krb-srvnam=NAME  default service principal name in Kerberos (GSSAPI)
                           [postgres]
@@ -8620,6 +8623,40 @@ fi
 
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: $with_python" >&5
 $as_echo "$with_python" >&6; }
+
+
+#
+# Optionally build Python modules for gpMgmt
+#
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking whether to build Python modules for gpMgmt" >&5
+$as_echo_n "checking whether to build Python modules for gpMgmt... " >&6; }
+
+
+
+# Check whether --with-pythonsrc-ext was given.
+if test "${with_pythonsrc_ext+set}" = set; then :
+  withval=$with_pythonsrc_ext;
+  case $withval in
+    yes)
+      :
+      ;;
+    no)
+      :
+      ;;
+    *)
+      as_fn_error $? "no argument expected for --with-pythonsrc-ext option" "$LINENO" 5
+      ;;
+  esac
+
+else
+  with_pythonsrc_ext=no
+
+fi
+
+
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $with_pythonsrc_ext" >&5
+$as_echo "$with_pythonsrc_ext" >&6; }
+
 
 
 #

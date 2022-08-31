@@ -896,6 +896,15 @@ AC_MSG_RESULT([$with_python])
 AC_SUBST(with_python)
 
 #
+# Optionally build Python modules for gpMgmt
+#
+AC_MSG_CHECKING([whether to build Python modules for gpMgmt])
+PGAC_ARG_BOOL(with, pythonsrc-ext, no, [build Python modules for gpMgmt])
+AC_MSG_RESULT([$with_pythonsrc_ext])
+AC_SUBST(with_pythonsrc_ext)
+
+
+#
 # GSSAPI
 #
 AC_MSG_CHECKING([whether to build with GSSAPI support])
