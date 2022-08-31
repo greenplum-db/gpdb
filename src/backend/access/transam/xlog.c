@@ -9085,11 +9085,32 @@ CreateCheckPoint(int flags)
 
 	getTwoPhasePreparedTransactionData(&p, "CreateCheckPoint");
 	elog(PersistentRecovery_DebugPrintLevel(), "CreateCheckPoint: prepared transactions = %d", p->count);
-	*pnext = &rdata[5];
-	rdata[5].data = (char*)p;
-	rdata[5].buffer = InvalidBuffer;
-	rdata[5].len = PREPARED_TRANSACTION_CHECKPOINT_BYTES(p->count);
-	rdata[5].next = NULL;
+
+	/*
+	 * Note the master mirror checkpoint (mmxlog) and prepared transaction
+	 * aggregate state (ptas) will be skipped when gp_before_filespace_setup
+	 * is ON. See comments inside UnpackCheckPointRecord(). For the case,
+	 * mmxlog_append_checkpoint_data() will return earlier.
+	 *
+	 * The pointer pnext is supposed to advance inside
+	 * mmxlog_append_checkpoint_data(). If pnext == &rdata[1].next after the
+	 * calling, it means pnext did not advance due to returning earlier, and
+	 * the rdata chain stops here. If not, go ahead and link to rdata[5].
+	 */
+	if (pnext != &rdata[1].next)
+	{
+		/*
+		 * If pnext has advanced, gp_before_filespace_setup must be false.
+		 */
+		Assert(!gp_before_filespace_setup);
+
+		*pnext = &rdata[5];
+		rdata[5].data = (char*)p;
+		rdata[5].buffer = InvalidBuffer;
+		rdata[5].len = PREPARED_TRANSACTION_CHECKPOINT_BYTES(p->count);
+		rdata[5].next = NULL;
+	}
+
 	/*
 	 * Save the data pointers that need to be pfreed after XLogInsert.
 	 * This is essential because rdata[x].data may be changed in XLogInsert.
