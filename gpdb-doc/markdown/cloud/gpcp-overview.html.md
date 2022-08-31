@@ -1,105 +1,132 @@
 ---
-title: Overview of Greenplum Public Cloud Platform 
+title: Overview of Greenplum Cloud Platform 
 ---
 
-Greenplum Public Cloud Platform was developed and maintained by the field engineering team, but in February of 2021, the field engineer who was responsible for this offering left VMware.  The Greenplum R&D team took over the Greenplum cloud offering, and it was rebranded internally as Greenplum Cloud Platform. 
+VMware Greenplum Public Cloud Platform was developed and maintained by the field engineering team. But in February of 2021, the field engineer who was responsible for this offering left VMware.  
 
-This is the only cloud offering from Greenplum at the moment. Please refer to this [blog](https://greenplum.org/deploying-in-the-cloud/) to learn more about VMware Greenplum Public Cloud Platform.
+The Greenplum R&D team took over the Greenplum cloud offering, and it was rebranded internally as Greenplum Cloud Platform. It is currently the only cloud offering from Greenplum. 
 
-## <a id="gpcp_deployment"></a>Deploying Greenplum on the Cloud
+To learn more about Greenplum Cloud Platform, see the [blog](https://greenplum.org/deploying-in-the-cloud/).
 
-Customers using this offering on the Amazon Web Services, Microsoft Azure, or Google cloud platforms are accruing considerable revenue. Customers can deploy Greenplum on the cloud in two ways.
+## <a id="gpcp_deployment"></a>Deploying Greenplum Cloud Platform
 
--   Standard marketplace offering: 
-        Deploy a Greenplum cluster via the cloud marketplace that is developed and maintained by the R&D team.
+Customers using this offering on the Amazon Web Services, Microsoft Azure, or Google cloud platforms are accruing considerable revenue. They deploy VMware Greenplum Cloud Platform in one of two ways.
+   
+### <a id="standard_deployment"></a>Standard Marketplace Deployment
+Customers can deploy a Greenplum cluster by using the cloud marketplace, which was developed by and is maintained by the R&D team.
 
--   Custom deployment: 
-        Deploy the Greenplum cluster with assistance from the field engineering team
+### <a id="custom_deployment"></a>Custom Deployment
+Customers can deploy the Greenplum cluster with assistance from the field engineering team.
 
-VMware Greenplum on Cloud supports three types of listing as a part of the standard marketplace offering.
+## <a id="gpcp_offerings"></a>Greenplum Cloud Platform Offerings
 
--   Bring Your Own License (BYOL)
-        -   AWS BYOL listing
-        -   Azure BYOL listing
-        -   GCP BYOL listing
+Greenplum Cloud Platform supports the three public cloud platforms through licensing, hourly usage, or subscription.
 
--   Pay-as-you-go (PAYG / Hourly / metered)
-        -   AWS Hourly listing
-        -   Azure Hourly listing
-        -   GCP Hourly listing
+### <a id="BYOL"></a>Bring Your Own License (BYOL)
 
--   Subscription (Only available on AWS)
+-  [AWS BYOL listing](https://aws.amazon.com/marketplace/pp/prodview-piiukzn26stas)
 
-Existing Documentation: 
+-  [Azure BYOL listing](https://azuremarketplace.microsoft.com/en-us/marketplace/apps/pivotal.pivotal-greenplum-azure-byol?tab=Overview)
 
-On the landing page of both BYOL and PAYG listings on different clouds, there is some documentation provided. This is applicable also to custom deployments / non-marketplace deployments.
+-  [GCP BYOL listing](https://console.cloud.google.com/marketplace/product/pivotal-public/pivotal-greenplum-byol?project=pivotal-public)
 
-PDF Format:
+### <a id="Hourly usage"></a>Pay-as-you-go (PAYG / Hourly / metered)
 
-AWS
+-   [AWS Hourly listing](https://aws.amazon.com/marketplace/pp/prodview-sbg6yvoyllr46?sr=0-1&ref_=beagle&applicationId=AWSMPContessa)
+-   [Azure Hourly listing](https://azuremarketplace.microsoft.com/en-us/marketplace/apps/pivotal.pivotal-greenplum-azure-hourly?tab=Overview)
+-   [GCP Hourly listing](https://console.cloud.google.com/marketplace/product/pivotal-public/pivotal-greenplum-metered?project=pivotal-public)
+
+### <a id="Subscription"></a>Subscription
+
+-   [Subscription](https://aws.amazon.com/marketplace/pp/prodview-k4snnsc2cznxk?sr=0-3&ref_=beagle&applicationId=AWSMPContessa) (Available only on AWS)
+
+## <a id="gpcp_documentation"></a>Greenplum Cloud Platform Documentation 
+
+The development team created the documentation for each public cloud platform. Before each full or soft release, they edited the original Microsoft Word documents, saved PDFs, and uploaded them into each public cloud platform's object storage (S3 for AWS, Blob Storage for Azure, and Google Cloud Storage for GCP). 
+
+They planned a consistent user experience for documentation by locating it under VMware docs and linking to the landing pages of each listing on the public clouds, which contain information on the  the BYOL and PAYG listings, and the custom and non-marketplace deployments. 
+
+### <a id="PDF_docs"></a> Greenplum Cloud Platform PDF Documentation
+
+The original source documents are is in Microsoft Word. (The documntation team needs a link)
+
+#### <a id="AWS PDFs"></a>Amazon Web Services PDFs
+
 [Overview](https://vmware-tanzu-greenplum-docs.s3.amazonaws.com/VMware+Tanzu+Greenplum+on+AWS+Marketplace+Overview+v6.7.pdf)
+
 [Release Notes](https://vmware-tanzu-greenplum-docs.s3.amazonaws.com/VMware+Tanzu+Greenplum+on+AWS+Marketplace+Release+Notes+v6.7.pdf)
+
 [Troubleshooting Guide](https://vmware-tanzu-greenplum-docs.s3.amazonaws.com/VMware+Tanzu+Greenplum+on+AWS+Marketplace+Troubleshooting+Guide+v6.7.pdf)
-Azure
+
+#### <a id="Azure PDFs"></a>Microsoft Azure PDFs
+
 [Overview](https://greenplum.blob.core.windows.net/vmware-tanzu-greenplum-docs/VMware%20Tanzu%20Greenplum%20on%20Azure%20Marketplace%20Overview%20v6.6.pdf)
-[Release Notes](https://greenplum.blob.core.windows.net/vmware-tanzu-greenplum-docs/)VMware%20Tanzu%20Greenplum%20on%20Azure%20Marketplace%20Release%20Notes%20v6.6.pdf
-GCP
+
+[Release Notes](https://greenplum.blob.core.windows.net/vmware-tanzu-greenplum-docs/VMware%20Tanzu%20Greenplum%20on%20Azure%20Marketplace%20Release%20Notes%20v6.6.pdf)
+
+#### <a id="GCP PDFs"></a>Google Cloud Platform PDFs
+
 [Overview](https://storage.cloud.google.com/vmware-tanzu-docs/VMware%20Tanzu%20Greenplum%20on%20GCP%20Marketplace%20Overview%20v6.5.1.pdf?_ga=2.103586560.-1634467729.1653031118&_gac=1.220981994.1656485649.CjwKCAjwzeqVBhAoEiwAOrEmzbZvtpG98ZAd1OLxRSYxxLXAhUAF8B1gv8PIYDQtGEza88xaC_N8gRoCl3sQAvD_BwE)
+
 [Release Notes](https://storage.cloud.google.com/vmware-tanzu-docs/VMware%20Tanzu%20Greenplum%20on%20GCP%20Marketplace%20Release%20Notes%20v6.5.1.pdf?_ga=2.103586560.-1634467729.1653031118&_gac=1.220981994.1656485649.CjwKCAjwzeqVBhAoEiwAOrEmzbZvtpG98ZAd1OLxRSYxxLXAhUAF8B1gv8PIYDQtGEza88xaC_N8gRoCl3sQAvD_BwE)
 
-Original Source Format (MS word document):
+### <a id="Word_docs"></a> Greenplum Cloud Platform Microsoft Word Source Documentation
 
-AWS
+#### <a id="AWS Word Docs"></a>Amazon Web Services Word Documents
+
 [Overview](https://onevmw.sharepoint.com/:w:/r/teams/tanzudataservices/Shared%20Documents/Tanzu%20[…]x?d=wda432acb0b3b4cc5805d81b1e43796c4&csf=1&web=1&e=LcTEsD)
+
 [Release Notes](https://onevmw.sharepoint.com/:w:/r/teams/tanzudataservices/Shared%20Documents/Tanzu%20[…]x?d=w4a3e34edc59f47aca4b71d05c5dd962c&csf=1&web=1&e=oOWZxR)
+
 [Troubleshooting Guide](https://onevmw.sharepoint.com/:w:/r/teams/tanzudataservices/Shared%20Documents/Tanzu%20[…]x?d=w6f3e8ccabea947d6a9694cb775e4dd28&csf=1&web=1&e=mNkOwt)
+
+#### <a id="Azure Word Docs"></a>Azure Word Documents
+
 Azure
+
 [Overview](https://onevmw.sharepoint.com/:w:/r/teams/tanzudataservices/Shared%20Documents/Tanzu%20[…]x?d=wdfef2bed99224816ad4f1fee5dfe29e2&csf=1&web=1&e=KVOduW)
+
 [Release Notes](https://onevmw.sharepoint.com/:w:/r/teams/tanzudataservices/Shared%20Documents/Tanzu%20[…]x?d=w5587740ab17f4a21a1da1ccc250bc135&csf=1&web=1&e=UGHVrn)
-GCP
+
+#### <a id="GCP Word Docs"></a>Google Cloud Platform Word Documents
+
 [Overview](https://onevmw.sharepoint.com/:w:/r/teams/tanzudataservices/Shared%20Documents/Tanzu%20[…]x?d=w553e0504f6064b4fba8f2c4e128afaf4&csf=1&web=1&e=tcVaiT)
+
 [Release Notes](https://onevmw.sharepoint.com/:w:/r/teams/tanzudataservices/Shared%20Documents/Tanzu%20[…]x?d=w363b8511d4b74106b37bc5faf238e886&csf=1&web=1&e=TGFPZf)
 
-Greenplum on Cloud Versioning:
+## <a id="gpcp_versioning"></a>Greenplum Cloud Platform Versioning
 
-Currently, Greenplum on Cloud follows a different version on each cloud (AWS, Azure and GCP) from the actual Greenplum Datawarehouse version.
+Each of the three public cloud platforms has a version that is different from the current Greenplum data warehouse version.
 
-Current versions:
+|Public Cloud Platform | Version |
+|------|---------------|
+|Greenplum Cloud Platform on AWS|6.7.0|
+|Greenplum Cloud Platform on Azure|6.6.0|
+|Greenplum Cloud Platform on GCP|6.5.0|
 
-Greenplum on AWS is 6.7.0
-Greenplum on Azure is 6.6.0
-Greenplum on GCP is 6.5.0
+## <a id="gpcp_releases"></a>Greenplum Cloud Platform Releases
 
-Releases:
+There are two types of release for Greenplum Cloud Platform.
 
-There are two types of release that we currently follow in Greenplum on Cloud.
+### Soft Release
 
-Soft Release
+The soft release includes the latest Greenplum Server version, the latest compatible Greenplum optional components, and the cloud utility upgrades / patches without undergoing an approval process by the public cloud provider. 
 
-This includes only the latest Greenplum Server version + the latest compatible Greenplum optional components +  cloud utility upgrades/patches without undergoing an approval process by the public cloud provider. This is made available to the customers by using the gprelease command and will not be available as a separate image in the cloud marketplace. Externally, we do not increment the version of Greenplum on Cloud in the release notes if there is a soft release. We have a tag associated with soft releases, for internal version tracking purposes.
+The soft release is made available to customers by using the `gprelease` command, and will not be available as a separate image in the cloud marketplace. 
 
-Full Release
+For external soft releases, the version of Greenplum Cloud Platform is not incremented in the release notes. For internal soft releases, there is an associated tag for version tracking purposes.
 
-This includes the latest Greenplum Server version+ the latest compatible Greenplum optional components + cloud utility upgrades/patches. This release undergoes a rigorous approval process by the public cloud provider before being made available to the user on the marketplace. A full release is targeted only if there is a change required on the deployment template (or) on the virtual image. Externally, we increment the version of Greenplum on Cloud in the release notes if there is only a full release.
-Greenplum on Cloud does not currently have any release cadence. But, it is safe to assume that we do a full release every quarter at the moment.
+### Full Release
 
-Current Process:
+The full release includes the latest Greenplum Server version, the latest compatible Greenplum optional components, and cloud utility upgrades/patches. 
 
-Currently, the documentation for each cloud is maintained by the development team. As mentioned above, whenever we make a soft release or a full release, we edit the previous word document, convert it into a PDF and then upload it into the respective cloud's object storage - S3, Blob Storage and Google Cloud Storage.
+The full release undergoes a rigorous approval process by the public cloud provider before being made available to customers on the marketplace. It is targeted only if there is a change required on the deployment template (or) on the virtual image. 
 
-Why are we doing this?
+For external full releases, the version of Greenplum Cloud Platform is incremented in the release notes. 
 
-We want a consistent user experience for documentation across all VMware products.
+NOTE: Greenplum on Cloud does not currently have any release cadence, but a full release is planned for every quarter.
 
-However, now that we are a part of VMware, it will be better to bring all the documentation related to Greenplum under one umbrella i.e. under VMware docs and then link the VMware docs pages to the landing page of each listing on different clouds so that all customers use VMware docs as a single point for all VMware products.
-
-Alignment:
-
-VMware Docs is the recommended documentation site for all VMware products and almost all Greenplum components have their documentation in VMware Docs
-
-Estimations
-
-Estimations of:
+### Estimations
 
 -   Time	
 -   Customer Impact	
