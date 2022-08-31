@@ -467,8 +467,6 @@ CTranslatorRelcacheToDXL::RetrieveRel(CMemoryPool *mp, CMDAccessor *md_accessor,
 		mdpart_constraint = RetrievePartConstraintForRel(
 			mp, md_accessor, rel.get(), mdcol_array);
 
-		// GPDB_12_MERGE_FIXME: this leaves dead code in CMDRelationGPDB. We
-		// should gut it all the way
 		md_rel = GPOS_NEW(mp) CMDRelationGPDB(
 			mp, mdid, mdname, is_temporary, rel_storage_type, dist, mdcol_array,
 			distr_cols, distr_op_families, part_keys, part_types,
