@@ -1,0 +1,20 @@
+-- start_matchsubs
+-- m/PostgreSQL stand-alone backend .*/ 
+-- s/PostgreSQL stand-alone backend .*/PostgreSQL stand-alone backend ###/ 
+-- end_matchsubs
+\!gpstop -M fast -aq;
+\! echo "select 1" | postgres  --single --gp_num_contents_in_cluster=1 -O -c gp_session_role=utility -c gp_debug_linger=0 -c gp_before_filespace_setup=true -D $MASTER_DATA_DIRECTORY template1;
+
+PostgreSQL stand-alone backend ###
+backend> 	 1: ?column?	(typeid = 23, len = 4, typmod = -1, byval = t)
+	----
+	 1: ?column? = "1"	(typeid = 23, len = 4, typmod = -1, byval = t)
+	----
+backend> \! echo "select 1" | postgres  --single --gp_num_contents_in_cluster=1 -O -c gp_session_role=utility -c gp_debug_linger=0 -D $MASTER_DATA_DIRECTORY template1;
+
+PostgreSQL stand-alone backend ###
+backend> 	 1: ?column?	(typeid = 23, len = 4, typmod = -1, byval = t)
+	----
+	 1: ?column? = "1"	(typeid = 23, len = 4, typmod = -1, byval = t)
+	----
+backend> \!gpstart -aq;
