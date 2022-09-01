@@ -81,6 +81,7 @@ ExecDML(DMLState *node)
 	/* Prepare cleaned-up tuple by projecting it and filtering junk columns */
 	econtext->ecxt_outertuple = slot;
 	TupleTableSlot *projectedSlot = ExecProject(node->ps.ps_ProjInfo, NULL);
+	EvalPlanQualSetSlot(&node->dml_epqstate, projectedSlot);
 
 	/* remove 'junk' columns from tuple */
 	node->cleanedUpSlot = ExecFilterJunk(node->junkfilter, projectedSlot);
@@ -145,7 +146,7 @@ ExecDML(DMLState *node)
 				   segid,
 				   NULL, /* GPDB_91_MERGE_FIXME: oldTuple? */
 				   node->cleanedUpSlot,
-				   NULL /* DestReceiver */,
+				   &node->dml_epqstate,
 				   node->ps.state,
 				   !isUpdate, /* GPDB_91_MERGE_FIXME: where to get canSetTag? */
 				   PLANGEN_OPTIMIZER /* Plan origin */,
@@ -177,6 +178,8 @@ ExecInitDML(DML *node, EState *estate, int eflags)
 	CmdType operation = estate->es_plannedstmt->commandType;
 	ResultRelInfo *resultRelInfo = estate->es_result_relation_info;
 
+	EvalPlanQualInit(&dmlstate->dml_epqstate, NULL, NULL, NIL, node->epqParam);
+
 	ExecInitResultTupleSlot(estate, &dmlstate->ps);
 
 	dmlstate->ps.targetlist = (List *)
@@ -184,6 +187,7 @@ ExecInitDML(DML *node, EState *estate, int eflags)
 						(PlanState *) dmlstate);
 
 	Plan *outerPlan  = outerPlan(node);
+	EvalPlanQualSetPlan(&dmlstate->dml_epqstate, outerPlan, NULL);
 	outerPlanState(dmlstate) = ExecInitNode(outerPlan, estate, eflags);
 
 	/*
@@ -279,6 +283,7 @@ ExecEndDML(DMLState *node)
 	ExecFreeExprContext(&node->ps);
 	ExecClearTuple(node->ps.ps_ResultTupleSlot);
 	ExecClearTuple(node->cleanedUpSlot);
+	EvalPlanQualEnd(&node->dml_epqstate);
 	ExecEndNode(outerPlanState(node));
 	EndPlanStateGpmonPkt(&node->ps);
 }

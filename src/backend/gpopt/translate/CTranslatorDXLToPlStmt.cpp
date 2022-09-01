@@ -4201,6 +4201,7 @@ CTranslatorDXLToPlStmt::TranslateDXLDml(
 	plan->lefttree = child_plan;
 	plan->nMotionNodes = child_plan->nMotionNodes;
 	plan->plan_node_id = m_dxl_to_plstmt_context->GetNextPlanId();
+	dml->epqParam = m_dxl_to_plstmt_context->GetNextParamId();
 
 	if (CMD_INSERT == m_cmd_type && 0 == plan->nMotionNodes)
 	{

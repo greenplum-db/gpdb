@@ -961,17 +961,6 @@ ldelete:;
 				{
 					TupleTableSlot *epqslot;
 
-					/*
-					 * TODO: DML node doesn't initialize `epqstate` parameter so
-					 * we exclude EPQ routine for this type of modification and
-					 * act as in RR and upper isolation levels.
-					 */
-					if (!epqstate)
-						ereport(ERROR,
-								(errcode(ERRCODE_T_R_SERIALIZATION_FAILURE),
-								 errmsg("could not serialize access due to concurrent update"),
-								 errhint("Use PostgreSQL Planner instead of Optimizer for this query via optimizer=off GUC setting")));
-
 					epqslot = EvalPlanQual(estate,
 										   epqstate,
 										   resultRelationDesc,

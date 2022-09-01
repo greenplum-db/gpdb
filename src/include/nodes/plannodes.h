@@ -1328,7 +1328,7 @@ typedef struct DML
 	AttrNumber	actionColIdx;	/* index of action column into the target list */
 	AttrNumber	ctidColIdx;		/* index of ctid column into the target list */
 	AttrNumber	tupleoidColIdx;	/* index of tuple oid column into the target list */
-
+	int			epqParam;		/* ID of Param for EvalPlanQual re-eval */
 } DML;
 
 /*

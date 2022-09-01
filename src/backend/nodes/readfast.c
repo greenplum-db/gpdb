@@ -2237,6 +2237,7 @@ _readDML(void)
 	READ_INT_FIELD(actionColIdx);
 	READ_INT_FIELD(ctidColIdx);
 	READ_INT_FIELD(tupleoidColIdx);
+	READ_INT_FIELD(epqParam);
 
 	readPlanInfo((Plan *)local_node);
 
