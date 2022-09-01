@@ -84,7 +84,7 @@ CREATE OR REPLACE FUNCTION pybool_func(a int) RETURNS boolean AS $$
         return True
     else:
         return False
-$$ LANGUAGE plcontainer;
+$$ LANGUAGE plpythonu;
 
 SELECT pybool_func(-1);
 
