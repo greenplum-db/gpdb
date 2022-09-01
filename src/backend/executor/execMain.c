@@ -1672,6 +1672,7 @@ InitPlan(QueryDesc *queryDesc, int eflags)
 	Plan	   *plan = plannedstmt->planTree;
 	List	   *rangeTable = plannedstmt->rtable;
 	EState	   *estate = queryDesc->estate;
+	bool        is_reader_qe = (Gp_role == GP_ROLE_EXECUTE && !Gp_is_writer);
 	PlanState  *planstate;
 	TupleDesc	tupType;
 	ListCell   *l;
@@ -1717,7 +1718,7 @@ InitPlan(QueryDesc *queryDesc, int eflags)
 	 * the actual updating, since it's where we learn things, such as if the row needs to
 	 * contain OIDs or not.
 	 */
-	if (plannedstmt->resultRelations)
+	if (plannedstmt->resultRelations && !is_reader_qe)
 	{
 		List	   *resultRelations = plannedstmt->resultRelations;
 		int			numResultRelations = list_length(resultRelations);
