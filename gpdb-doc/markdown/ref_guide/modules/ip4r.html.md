@@ -2,7 +2,7 @@
 
 The `ip4r` module provides IPv4 and IPv6 data types, IPv4 and IPv6 range index data types, and related functions and operators.
 
-The Greenplum Database `ip4r` module is equivalent to the `ip4r` module used with PostgreSQL. There are no Greenplum Database or MPP-specific considerations for the module.
+The Greenplum Database `ip4r` module is equivalent to version 2.4.1 of the `ip4r` module used with PostgreSQL. There are no Greenplum Database or MPP-specific considerations for the module.
 
 ## <a id="topic_reg"></a>Installing and Registering the Module 
 
@@ -16,5 +16,5 @@ Refer to [Installing Additional Supplied Modules](../../install_guide/install_mo
 
 ## <a id="topic_info"></a>Module Documentation 
 
-The `ip4r` module was developed by `RhodiumToad`.  Refer to the [RhodiumToad/ip4r](https://github.com/RhodiumToad/ip4r) documentation on `github` for detailed information about using the module.
+Refer to the [ip4r github documentation](https://github.com/RhodiumToad/ip4r) for detailed information about using the module.
 
