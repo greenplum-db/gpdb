@@ -1,6 +1,18 @@
 -- start_matchsubs
 -- m/((Mon|Tue|Wed|Thu|Fri|Sat|Sun) (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) (0[1-9]|[12][0-9]|3[01]) ([01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9](.[0-9]+)? (?!0000)[0-9]{4}.*)+(['"])/
 -- s/((Mon|Tue|Wed|Thu|Fri|Sat|Sun) (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) (0[1-9]|[12][0-9]|3[01]) ([01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9](.[0-9]+)? (?!0000)[0-9]{4}.*)+(['"])/xxx xx xx xx:xx:xx xxxx"/
+-- m/Memory Usage: \d+\w?B/
+-- s/Memory Usage: \d+\w?B/Memory Usage: ###B/
+-- m/Memory: \d+kB/
+-- s/Memory: \d+kB/Memory: ###kB/
+-- m/Max: \d+kB/
+-- s/Max: \d+kB/Max: ###kB/
+-- m/Buckets: \d+/
+-- s/Buckets: \d+/Buckets: ###/
+-- m/Batches: \d+/
+-- s/Batches: \d+/Batches: ###/
+-- m/using \d+ of \d+ buckets/
+-- s/using \d+ of \d+ buckets/using ## of ### buckets/
 -- end_matchsubs
 
 create schema bfv_partition_plans;
@@ -582,6 +594,33 @@ select count_operator('delete from mpp6247_foo using mpp6247_bar where mpp6247_f
 
 drop table mpp6247_bar;
 drop table mpp6247_foo;
+
+-- Validate that basic DELETE on partition table with index functions properly
+SET optimizer_trace_fallback=on;
+
+CREATE TABLE delete_from_indexed_pt (a int, b int) PARTITION BY RANGE(b) (START (0) END (7) EVERY (3));
+CREATE INDEX index_delete_from_indexed_pt ON delete_from_indexed_pt USING bitmap(b);
+
+INSERT INTO delete_from_indexed_pt SELECT i, i%6 FROM generate_series(1, 10)i;
+
+EXPLAIN (COSTS OFF) DELETE FROM delete_from_indexed_pt WHERE b=1;
+DELETE FROM delete_from_indexed_pt WHERE b=1;
+
+SELECT * FROM delete_from_indexed_pt;
+
+-- Validate that basic DELETE on partition table using DPE functions properly
+CREATE TABLE delete_from_pt (a int, b int) PARTITION BY RANGE(b) (START (0) END (7) EVERY (3));
+CREATE TABLE t(a int);
+
+INSERT INTO delete_from_pt SELECT i, i%6 FROM generate_series(1, 10)i;
+INSERT INTO t VALUES (1);
+
+ANALYZE delete_from_pt, t;
+EXPLAIN (COSTS OFF, TIMING OFF, SUMMARY OFF, ANALYZE) DELETE FROM delete_from_pt WHERE b IN (SELECT b FROM delete_from_pt, t WHERE t.a=delete_from_pt.b);
+
+SELECT * FROM delete_from_pt order by a;
+
+RESET optimizer_trace_fallback;
 
 -- CLEANUP
 -- start_ignore
