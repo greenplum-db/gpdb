@@ -9100,9 +9100,11 @@ CreateCheckPoint(int flags)
 	if (pnext != &rdata[1].next)
 	{
 		/*
-		 * If pnext has advanced, gp_before_filespace_setup must be false.
+		 * If pnext has advanced, gp_before_filespace_setup must be false,
+		 * and pnext must point to rdata[4].next.
 		 */
 		Assert(!gp_before_filespace_setup);
+		Assert(pnext == &rdata[4].next);
 
 		*pnext = &rdata[5];
 		rdata[5].data = (char*)p;
