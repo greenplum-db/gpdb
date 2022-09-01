@@ -8,7 +8,7 @@ The [gpfdist](../../utility_guide/ref/gpfdist.html) utility serves external data
 
 `gpfdist` is located in the `$GPHOME/bin` directory on your Greenplum Database master host and on each segment host.
 
-Run `gpfdist` on the host where the external data files reside. For readable external tables, `gpfdist` uncompresses `gzip` \(`.gz`\) and `bzip2` \(.`bz2`\) files automatically. For writable external tables, data is compressed using `gzip` if the target file has a `.gz` extension. You can use the wildcard character \(\*\) or other C-style pattern matching to denote multiple files to read. The files specified are assumed to be relative to the directory that you specified when you started the `gpfdist` instance.
+Run `gpfdist` on the host where the external data files reside. For readable external tables, `gpfdist` uncompresses `gzip` \(`.gz`\), `bzip2` \(.`bz2`\), and `zstd` \(`.zst`\) files automatically. For writable external tables, data is compressed using `gzip` if the target file has a `.gz` extension, `bzip` if the target file has a `.bz2` extension, or `zstd` if the target file has a `.zst` extension. You can use the wildcard character \(\*\) or other C-style pattern matching to denote multiple files to read. The files specified are assumed to be relative to the directory that you specified when you started the `gpfdist` instance.
 
 **Note:** Compression is not supported for readable and writeable external tables when the `gpfdist` utility runs on Windows platforms.
 

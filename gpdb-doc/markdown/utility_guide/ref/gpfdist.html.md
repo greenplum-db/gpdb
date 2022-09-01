@@ -31,7 +31,7 @@ For readable external tables, `gpfdist` parses and serves data files evenly to a
 
 **Note:** When `gpfdist` reads data and encounters a data formatting error, the error message includes a row number indicating the location of the formatting error. `gpfdist` attempts to capture the row that contains the error. However, `gpfdist` might not capture the exact row for some formatting errors.
 
-For readable external tables, if load files are compressed using `gzip` or `bzip2` \(have a `.gz` or `.bz2` file extension\), `gpfdist` uncompresses the data while loading the data \(on the fly\). For writable external tables, `gpfdist` compresses the data using `gzip` if the target file has a `.gz` extension.
+For readable external tables, if load files are compressed using `gzip`, `bzip2`, or `zstd` \(have a `.gz`, `.bz2`, or `.zst` file extension\), `gpfdist` uncompresses the data while loading the data \(on the fly\). For writable external tables, `gpfdist` compresses the data using `gzip` if the target file has a `.gz` extension, `bzip` if the target file has a `.bz2` extension, or `zstd` if the target file has a `.zst` extension.
 
 **Note:** Compression is not supported for readable and writeable external tables when the `gpfdist` utility runs on Windows platforms.
 

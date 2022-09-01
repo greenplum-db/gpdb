@@ -27,7 +27,8 @@ The `CREATE EXTERNAL TABLE` command `LOCATION` clause connects an external table
 
 External data files can contain rows in CSV format or any delimited text format supported by the `FORMAT` clause of the `CREATE EXTERNAL TABLE` command. In addition, `gpfdist` can be configured with a YAML-formatted file to transform external data files between a supported text format and another format, for example XML or JSON. See <ref\> for an example that shows how to use `gpfdist` to read external XML files into a Greenplum Database readable external table.
 
-For readable external tables, `gpfdist` uncompresses `gzip` \(`.gz`\) and `bzip2` \(.`bz2`\) files automatically. You can use the wildcard character \(\*\) or other C-style pattern matching to denote multiple files to read. External files are assumed to be relative to the directory specified when you started the `gpfdist` instance.
+For readable external tables, `gpfdist` uncompresses `gzip` \(`.gz`\), `bzip2` \(.`bz2`\), and `zstd` \(`.zst`\)  files automatically. You can use the wildcard character \(\*\) or other C-style pattern matching to denote multiple files to read. External files are assumed to be relative to the directory specified when you started the `gpfdist` instance.
+
 
 ## <a id="topic14"></a>About gpfdist Setup and Performance 
 
