@@ -3553,7 +3553,20 @@ AbortTransaction(void)
 		AtEOXact_ComboCid_Dsm_Detach();
 		AtEOXact_Buffers(false);
 		AtEOXact_RelationCache(false);
-		AtEOXact_Inval(false);
+		/*
+		 * Greenplum specific behavior:
+		 *   We pass is_commit to true even we are here Aborting Transaction.
+		 *   Greenplum has writer gang and reader gangs, only writer gang can
+		 *   modify database (like catalog ...), and gang can be reused in
+		 *   Greenplum in the same session. Thus when we abort a transaction,
+		 *   we still have to tell other reader gangs to abort those catcaches.
+		 *   EntryDB is reader gang in coordinator, we also want to tell them
+		 *   to invalidate catcache when QD abort.
+		 *   Discussion: https://groups.google.com/a/greenplum.org/g/gpdb-dev/c/u3-D7isdvmM
+		 */
+		bool need_inval_even_for_abort = ((Gp_role == GP_ROLE_EXECUTE && Gp_is_writer) ||
+										  Gp_role == GP_ROLE_DISPATCH); /* test QD to invalidate entryDB's catcache */
+		AtEOXact_Inval(need_inval_even_for_abort);
 		AtEOXact_MultiXact();
 
 		ResourceOwnerRelease(TopTransactionResourceOwner,

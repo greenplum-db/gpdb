@@ -170,7 +170,7 @@ test: gp_toolkit_ao_funcs trig auth_constraint role portals_updatable plpgsql_ca
 # direct dispatch tests
 test: direct_dispatch bfv_dd bfv_dd_multicolumn bfv_dd_types
 
-test: bfv_catalog bfv_index bfv_olap bfv_aggregate bfv_partition_plans DML_over_joins bfv_statistic nested_case_null sort bb_mpph aggregate_with_groupingsets gporca gpsd
+test: bfv_catalog bfv_index bfv_olap bfv_aggregate bfv_partition_plans DML_over_joins bfv_statistic nested_case_null sort bb_mpph aggregate_with_groupingsets gporca gpsd catcache
 # Run minirepro separately to avoid concurrent deletes erroring out the internal pg_dump call
 test: minirepro
 
