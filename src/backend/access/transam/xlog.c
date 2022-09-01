@@ -9158,6 +9158,8 @@ CreateCheckPoint(int flags)
 	XLogRecPtr *ptrd_oldest_ptr = NULL;
 	XLogRecPtr ptrd_oldest;
 
+	memset(&ptrd_oldest, 0, sizeof(ptrd_oldest));
+
 	if (p != NULL)
 	{
 		ptrd_oldest_ptr = getTwoPhaseOldestPreparedTransactionXLogRecPtr(p);
@@ -9171,10 +9173,7 @@ CreateCheckPoint(int flags)
 
 
 	if (ptrd_oldest_ptr != NULL)
-	{
-		memset(&ptrd_oldest, 0, sizeof(ptrd_oldest));
 		memcpy(&ptrd_oldest, ptrd_oldest_ptr, sizeof(ptrd_oldest));
-	}
 
 	recptr = XLogInsert(RM_XLOG_ID,
 			            shutdown ? XLOG_CHECKPOINT_SHUTDOWN : XLOG_CHECKPOINT_ONLINE,
