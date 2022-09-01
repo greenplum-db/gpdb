@@ -390,6 +390,8 @@ CreateSharedMemoryAndSemaphores(int port)
 	/* Initialize shared memory for parallel retrieve cursor */
 	if (!IsUnderPostmaster)
 		EndpointShmemInit();
+	
+	ParallelCursorCountInit();
 
 	/*
 	 * Now give loadable modules a chance to set up their shmem allocations

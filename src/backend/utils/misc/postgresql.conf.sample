@@ -764,6 +764,7 @@ gp_interconnect_type=udpifc
 # - Resource limits -
 gp_vmem_protect_limit = 8192  #Virtual memory limit (in MB).
 #gp_vmem_idle_resource_timeout = 18000 # idle-time before gang-release, in milliseconds (zero disables release).
+gp_parallel_cursor_concurrency = -1
 
 #------------------------------------------------------------------------------
 # ERROR HANDLING

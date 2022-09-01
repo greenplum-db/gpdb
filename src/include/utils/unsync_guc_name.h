@@ -223,6 +223,7 @@
 		"gp_max_local_distributed_cache",
 		"gp_max_plan_size",
 		"gp_motion_cost_per_row",
+		"gp_parallel_cursor_concurrency",
 		"gp_qd_hostname",
 		"gp_qd_port",
 		"gp_recursive_cte",

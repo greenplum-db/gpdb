@@ -42,6 +42,8 @@
 #include "postmaster/backoff.h"
 #include "utils/resscheduler.h"
 
+extern volatile int32 *parallelCursorCount;
+extern int gp_parallel_cursor_concurrency;
 
 /*
  * PerformCursorOpen
@@ -186,6 +188,18 @@ PerformCursorOpen(DeclareCursorStmt *cstmt, ParamListInfo params,
 			portal->cursorOptions |= CURSOR_OPT_NO_SCROLL;
 	}
 #endif
+
+	if (PortalIsParallelRetrieveCursor(portal))
+	{
+		(*parallelCursorCount)++;
+		if (gp_parallel_cursor_concurrency != -1 && *parallelCursorCount > gp_parallel_cursor_concurrency)
+		{
+			(*parallelCursorCount)--;
+			ereport(ERROR,
+				(errcode(ERRCODE_CONFIGURATION_LIMIT_EXCEEDED),
+				 errmsg("Opened parallel cursor number exceeded allowed concurrency: %d", gp_parallel_cursor_concurrency)));
+		}
+	}
 
 	/*
 	 * Start execution, inserting parameters if any.
@@ -375,6 +389,11 @@ PortalCleanup(Portal portal)
 
 			CurrentResourceOwner = saveResourceOwner;
 		}
+	}
+
+	if (PortalIsParallelRetrieveCursor(portal) && *parallelCursorCount > 0)
+	{
+		(*parallelCursorCount)--;
 	}
 
 	/* 

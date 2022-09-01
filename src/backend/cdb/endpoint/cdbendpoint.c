@@ -93,6 +93,7 @@
 
 #define SHMEM_ENDPOINTS_ENTRIES			"SharedMemoryEndpointEntries"
 #define SHMEM_ENPOINTS_SESSION_INFO		"EndpointsSessionInfosHashtable"
+#define SHMEM_PARALLEL_CURSOR_COUNT		"ParallelCursorCount"
 
 #ifdef FAULT_INJECTOR
 #define DUMMY_ENDPOINT_NAME "DUMMYENDPOINTNAME"
@@ -128,6 +129,8 @@ static HTAB *EndpointTokenHash = NULL;
 
 /* Point to Endpoint entries in shared memory */
 static struct EndpointData *sharedEndpoints = NULL;
+/* Point to parallel cursors count in shared memory */
+volatile int32 *parallelCursorCount = NULL;
 
 /* Init helper functions */
 static void InitSharedEndpoints(void);
@@ -191,6 +194,19 @@ EndpointShmemInit(void)
 	EndpointTokenHash =
 		ShmemInitHash(SHMEM_ENPOINTS_SESSION_INFO, MAX_ENDPOINT_SIZE,
 					  MAX_ENDPOINT_SIZE, &hctl, HASH_ELEM | HASH_FUNCTION);
+}
+
+void
+ParallelCursorCountInit(void)
+{
+	bool	found = false;
+	parallelCursorCount = (int32 *) ShmemInitStruct(SHMEM_PARALLEL_CURSOR_COUNT, sizeof(int32), &found);
+	Assert(NULL != parallelCursorCount);
+
+	if (!found)
+	{
+		*parallelCursorCount = 0;
+	}
 }
 
 /*

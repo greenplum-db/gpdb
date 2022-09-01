@@ -4159,6 +4159,16 @@ struct config_int ConfigureNamesInt_gp[] =
 		NULL, NULL, NULL
 	},
 
+	{
+		{"gp_parallel_cursor_concurrency",PGC_POSTMASTER, QUERY_TUNING_OTHER,
+			gettext_noop("Parallel cursor concurrency, -1 means no limit, which is the default"),
+			NULL
+		},
+		&gp_parallel_cursor_concurrency,
+		-1, -1, 1024,
+		NULL, NULL, NULL
+	},
+
 	/* End-of-list marker */
 	{
 		{NULL, 0, 0, NULL, NULL}, NULL, 0, 0, 0, NULL, NULL
