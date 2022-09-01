@@ -9083,9 +9083,6 @@ CreateCheckPoint(int flags)
 
 	prepared_transaction_agg_state *p = NULL;
 
-	getTwoPhasePreparedTransactionData(&p, "CreateCheckPoint");
-	elog(PersistentRecovery_DebugPrintLevel(), "CreateCheckPoint: prepared transactions = %d", p->count);
-
 	/*
 	 * Note the master mirror checkpoint (mmxlog) and prepared transaction
 	 * aggregate state (ptas) will be skipped when gp_before_filespace_setup
@@ -9095,7 +9092,8 @@ CreateCheckPoint(int flags)
 	 * The pointer pnext is supposed to advance inside
 	 * mmxlog_append_checkpoint_data(). If pnext == &rdata[1].next after the
 	 * calling, it means pnext did not advance due to returning earlier, and
-	 * the rdata chain stops here. If not, go ahead and link to rdata[5].
+	 * the rdata chain stops here. If not, go ahead, collect ptas data and
+	 * link to rdata[5].
 	 */
 	if (pnext != &rdata[1].next)
 	{
@@ -9105,6 +9103,10 @@ CreateCheckPoint(int flags)
 		 */
 		Assert(!gp_before_filespace_setup);
 		Assert(pnext == &rdata[4].next);
+
+		getTwoPhasePreparedTransactionData(&p, "CreateCheckPoint");
+		elog(PersistentRecovery_DebugPrintLevel(),
+			 "CreateCheckPoint: prepared transactions = %d", p->count);
 
 		*pnext = &rdata[5];
 		rdata[5].data = (char*)p;
@@ -9156,9 +9158,10 @@ CreateCheckPoint(int flags)
 	XLogRecPtr *ptrd_oldest_ptr = NULL;
 	XLogRecPtr ptrd_oldest;
 
-	memset(&ptrd_oldest, 0, sizeof(ptrd_oldest));
-
-	ptrd_oldest_ptr = getTwoPhaseOldestPreparedTransactionXLogRecPtr(p);
+	if (p != NULL)
+	{
+		ptrd_oldest_ptr = getTwoPhaseOldestPreparedTransactionXLogRecPtr(p);
+	}
 
 	if (Debug_persistent_recovery_print)
 	{
@@ -9168,7 +9171,10 @@ CreateCheckPoint(int flags)
 
 
 	if (ptrd_oldest_ptr != NULL)
+	{
+		memset(&ptrd_oldest, 0, sizeof(ptrd_oldest));
 		memcpy(&ptrd_oldest, ptrd_oldest_ptr, sizeof(ptrd_oldest));
+	}
 
 	recptr = XLogInsert(RM_XLOG_ID,
 			            shutdown ? XLOG_CHECKPOINT_SHUTDOWN : XLOG_CHECKPOINT_ONLINE,
