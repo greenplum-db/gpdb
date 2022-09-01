@@ -583,6 +583,21 @@ select count_operator('delete from mpp6247_foo using mpp6247_bar where mpp6247_f
 drop table mpp6247_bar;
 drop table mpp6247_foo;
 
+-- Validate that basic DELETE on partition table with index functions properly
+SET optimizer_trace_fallback=on;
+
+CREATE TABLE delete_from_indexed_pt (a int, b int) PARTITION BY RANGE(b) (START (0) END (7) EVERY (3));
+CREATE INDEX index_delete_from_indexed_pt ON delete_from_indexed_pt USING bitmap(b);
+
+INSERT INTO delete_from_indexed_pt SELECT i, i%6 FROM generate_series(1, 10)i;
+
+EXPLAIN (COSTS OFF) DELETE FROM delete_from_indexed_pt WHERE b=1;
+DELETE FROM delete_from_indexed_pt WHERE b=1;
+
+SELECT * FROM delete_from_indexed_pt;
+
+RESET optimizer_trace_fallback;
+
 -- CLEANUP
 -- start_ignore
 drop schema if exists bfv_partition_plans cascade;

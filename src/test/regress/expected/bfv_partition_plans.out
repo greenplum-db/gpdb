@@ -1153,6 +1153,40 @@ select count_operator('delete from mpp6247_foo using mpp6247_bar where mpp6247_f
 
 drop table mpp6247_bar;
 drop table mpp6247_foo;
+-- Validate that basic DELETE on partition table with index functions properly
+SET optimizer_trace_fallback=on;
+CREATE TABLE delete_from_indexed_pt (a int, b int) PARTITION BY RANGE(b) (START (0) END (7) EVERY (3));
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE INDEX index_delete_from_indexed_pt ON delete_from_indexed_pt USING bitmap(b);
+INSERT INTO delete_from_indexed_pt SELECT i, i%6 FROM generate_series(1, 10)i;
+EXPLAIN (COSTS OFF) DELETE FROM delete_from_indexed_pt WHERE b=1;
+                              QUERY PLAN                               
+-----------------------------------------------------------------------
+ Delete on delete_from_indexed_pt
+   Delete on delete_from_indexed_pt_1_prt_1
+   ->  Bitmap Heap Scan on delete_from_indexed_pt_1_prt_1
+         Recheck Cond: (b = 1)
+         ->  Bitmap Index Scan on delete_from_indexed_pt_1_prt_1_b_idx
+               Index Cond: (b = 1)
+ Optimizer: Postgres query optimizer
+(7 rows)
+
+DELETE FROM delete_from_indexed_pt WHERE b=1;
+SELECT * FROM delete_from_indexed_pt;
+ a  | b 
+----+---
+  2 | 2
+  8 | 2
+  3 | 3
+  4 | 4
+  6 | 0
+  5 | 5
+  9 | 3
+ 10 | 4
+(8 rows)
+
+RESET optimizer_trace_fallback;
 -- CLEANUP
 -- start_ignore
 drop schema if exists bfv_partition_plans cascade;
