@@ -118,6 +118,12 @@ s/ERROR:  invalid partition constraint on "[^"]+".*/ERROR:  invalid partition co
 m/ERROR:  FIPS enabled OpenSSL is required for strict FIPS mode .*/
 s/ERROR:  FIPS enabled OpenSSL is required for strict FIPS mode .*/ERROR:  FIPS enabled OpenSSL is required for strict FIPS mode (openssl.c:XXX)/
 
+# Mask out OpenSSL behavior change in different version
+m/ERROR:  Cannot use "md5": No such hash algorithm/
+s/ERROR:  Cannot use "md5": No such hash algorithm/ERROR:  Cannot use "md5": /
+m/ERROR: Cannot use "md5": Some PX error \(not specified\)/
+s/ERROR: Cannot use "md5": Some PX error \(not specified\)/ERROR:  Cannot use "md5": /
+
 # Mask out gp_execution_segment()
 m/One-Time Filter: \(gp_execution_segment\(\) = \d+/
 s/One-Time Filter: \(gp_execution_segment\(\) = \d+/One-Time Filter: \(gp_execution_segment\(\) = ###/
