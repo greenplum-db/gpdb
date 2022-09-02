@@ -1646,6 +1646,188 @@ CExpressionPreprocessor::PexprFromConstraintsScalar(
 
 	if (!CUtils::FHasSubquery(pexpr))
 	{
+		CExpressionArray *childrenArray = GPOS_NEW(mp) CExpressionArray(mp);
+		CExpressionArray *childrenRedundantArray =
+			GPOS_NEW(mp) CExpressionArray(mp);
+		BOOL hashConditionPresent = false;
+
+		// If the child of the join is a EopScalarBoolOp we need to check
+		// for redundant predicates
+		if (COperator::EopScalarBoolOp == pexpr->Pop()->Eopid() &&
+			CScalarBoolOp::EboolopNot !=
+				CScalarBoolOp::PopConvert(pexpr->Pop())->Eboolop())
+		{
+			const ULONG childrenCount = pexpr->Arity();
+			for (ULONG ul = 0; ul < childrenCount; ul++)
+			{
+				CExpression *pexprChildOfBool = (*pexpr)[ul];
+
+				if (COperator::EopScalarCmp ==
+						pexprChildOfBool->Pop()->Eopid() &&
+					IMDType::EcmptEq ==
+						CScalarCmp::PopConvert(pexprChildOfBool->Pop())
+							->ParseCmpType())
+				{
+					CColRefSet *columnsToCheck = GPOS_NEW(mp) CColRefSet(mp);
+					columnsToCheck->Include(
+						pexprChildOfBool->DeriveUsedColumns());
+					CColRefSetIter iterator(*columnsToCheck);
+					BOOL canBeRemoved = false;
+					while (iterator.Advance())
+					{
+						CColRef *columnRef = iterator.Pcr();
+						CExpression *pexprScalar =
+							constraintsForOuterRefs
+								->PexprScalarMappedFromEquivCols(mp, columnRef,
+																 nullptr);
+
+						// If the column is resolved to EopScalarCmp with Equality type,
+						// it means it is a constant.So we need to remove it as it's already
+						// been pushed down in the previous normalization step
+						if (nullptr != pexprScalar &&
+							COperator::EopScalarCmp ==
+								pexprScalar->Pop()->Eopid() &&
+							IMDType::EcmptEq ==
+								CScalarCmp::PopConvert(pexprScalar->Pop())
+									->ParseCmpType())
+						{
+							canBeRemoved = true;
+						}
+						CRefCount::SafeRelease(pexprScalar);
+					}
+
+					// If the column attribute is not resolved to a constant value ,
+					// it means it's not redundant, so we can't remove it. And since
+					// it will be EopScalarCmp it can be used as a hash condition.
+					if (!canBeRemoved)
+					{
+						hashConditionPresent = true;
+						pexprChildOfBool->AddRef();
+						childrenArray->Append(pexprChildOfBool);
+					}
+
+					// If the column value is resolved to a constant ,it means it's redundant.
+					// There might be a case that we are not left with any child due to redundancy
+					// for the Hash join condition.So we can decide the hash condition based on the
+					// distribution of the redundant column atrributes.
+					else
+					{
+						pexprChildOfBool->AddRef();
+						childrenRedundantArray->Append(pexprChildOfBool);
+					}
+					columnsToCheck->Release();
+				}
+
+				else
+				{
+					pexprChildOfBool->AddRef();
+					childrenArray->Append(pexprChildOfBool);
+				}
+			}
+
+			const ULONG childrenRedundantArraySize =
+				childrenRedundantArray->Size();
+			CExpression *pexprNew = nullptr;
+			for (ULONG ul = 0; ul < childrenRedundantArraySize; ul++)
+			{
+				ULONG numDistributedCol = 0;
+				CExpression *pexprRedChild = (*childrenRedundantArray)[ul];
+				CColRefSet *columnsToCheckDist = GPOS_NEW(mp) CColRefSet(mp);
+
+				columnsToCheckDist->Include(pexprRedChild->DeriveUsedColumns());
+				CColRefSetIter iterator(*columnsToCheckDist);
+				while (iterator.Advance())
+				{
+					CColRef *columnRef = iterator.Pcr();
+					if (columnRef->IsDistCol())
+					{
+						numDistributedCol++;
+						pexprNew = pexprRedChild;
+					}
+				}
+				columnsToCheckDist->Release();
+				if (2 == numDistributedCol)
+				{
+					break;
+				}
+			}
+
+			// If all the predicates are redundant , we need to figure out which column attribute to keep for the hash join
+			// condition based on the distribution of the columns.
+			if (0 == childrenArray->Size())
+			{
+				if (pexprNew == nullptr)
+				{
+					pexprNew = (*childrenRedundantArray)[0];
+					pexprNew->AddRef();
+					CRefCount::SafeRelease(childrenArray);
+					CRefCount::SafeRelease(childrenRedundantArray);
+					return pexprNew;
+				}
+				else
+				{
+					pexprNew->AddRef();
+					CRefCount::SafeRelease(childrenArray);
+					CRefCount::SafeRelease(childrenRedundantArray);
+					return pexprNew;
+				}
+			}
+			else if (0 == childrenRedundantArray->Size())
+			{
+				if (1 == childrenArray->Size())
+				{
+					CExpression *pexprNewChild = (*childrenArray)[0];
+					pexprNewChild->AddRef();
+					CRefCount::SafeRelease(childrenArray);
+					CRefCount::SafeRelease(childrenRedundantArray);
+					return pexprNewChild;
+				}
+				else
+				{
+					COperator *pop = pexpr->Pop();
+					pop->AddRef();
+					CRefCount::SafeRelease(childrenRedundantArray);
+					return GPOS_NEW(mp) CExpression(mp, pop, childrenArray);
+				}
+			}
+
+			else
+			{
+				if (hashConditionPresent)
+				{
+					if (1 == childrenArray->Size())
+					{
+						CExpression *pexprNewChild = (*childrenArray)[0];
+						pexprNewChild->AddRef();
+						CRefCount::SafeRelease(childrenArray);
+						CRefCount::SafeRelease(childrenRedundantArray);
+						return pexprNewChild;
+					}
+					else
+					{
+						COperator *pop = pexpr->Pop();
+						pop->AddRef();
+						CRefCount::SafeRelease(childrenRedundantArray);
+						return GPOS_NEW(mp) CExpression(mp, pop, childrenArray);
+					}
+				}
+				else
+				{
+					if (pexprNew == nullptr)
+					{
+						pexprNew = (*childrenRedundantArray)[0];
+					}
+					pexprNew->AddRef();
+					childrenArray->Append(pexprNew);
+					COperator *pop = pexpr->Pop();
+					pop->AddRef();
+					CRefCount::SafeRelease(childrenRedundantArray);
+					return GPOS_NEW(mp) CExpression(mp, pop, childrenArray);
+				}
+			}
+		}
+		CRefCount::SafeRelease(childrenArray);
+		CRefCount::SafeRelease(childrenRedundantArray);
 		pexpr->AddRef();
 		return pexpr;
 	}
