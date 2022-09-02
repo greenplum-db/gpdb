@@ -22,7 +22,7 @@ COMMENT ON FUNCTION gp_switch_wal() IS 'Switch WAL segment files on all segments
 
 REVOKE EXECUTE ON FUNCTION gp_switch_wal() FROM public;
 
-CREATE OR REPLACE VIEW gp_stat_archiver AS
+CREATE VIEW gp_stat_archiver AS
 SELECT -1 AS gp_segment_id, * FROM pg_stat_archiver
 UNION
 SELECT gp_execution_segment() AS gp_segment_id, * FROM gp_dist_random('pg_stat_archiver');
