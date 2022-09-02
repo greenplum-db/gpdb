@@ -660,41 +660,38 @@ The required permissions in the policy include:
 
 ### <a id="vpc"></a>Version History
 
--	GP5 to 5.29.4 support using gprelease. 
-     - VMware Tanzu Greenplum Database version 5.29.4
--	GP6 to 6.19.2 support using gprelease. 
-    -VMware Tanzu Greenplum Database version 6.19.2 
+- GP5 to 5.29.4 support using `gprelease`.
+  - [VMware Tanzu Greenplum Database version 5.29.4](https://docs.vmware.com/en/VMware-Tanzu-Greenplum/5/greenplum-database/GUID-relnotes-release-notes.html)
+- GP6 to 6.19.2 support using `gprelease`.
+  - [VMware Tanzu Greenplum Database version 6.19.2](https://gpdb.docs.pivotal.io/6-19/relnotes/release-notes.html) 
 
 Fixes
-- Included option for displaying ASG status.
+-	Included option for displaying ASG status.
 
 Enhancements
 -	Upgraded GP6 to version 6.19.2 and GP5 to version 5.29.4. 
 -	Upgraded PXF version to 6.2.3 for GP6 and GP5. 
--	Upgraded pivotal_greenplum_backup_restore version to 1.24.0 for GP6 and GP5. 
--	Upgraded plcontainer version to 2.1.5 for GP6.
+-	Upgraded `pivotal_greenplum_backup_restore` version to 1.24.0 for GP6 and GP5. 
+-	Upgraded `plcontainer` version to 2.1.5 for GP6.
 
 #### <a id="ami"></a>GPDB Version Update
-
-
 
 #### <a id="vpc"></a>Version 6.7
 
 Fixes
-- Re-installation / upgrade of Greenplum Command Center using gpoptional will no longer drop the
-  database gpperfmon.
+-	Reinstallation / upgrade of Greenplum Command Center using `gpoptional` will no longer drop the database `gpperfmon`.
 
 Enhancements
-- Upgraded GP6 to version 6.19.0 and GP5 to version 5.29.2.
+-	Upgraded GP6 to version 6.19.0 and GP5 to version 5.29.2.
 -	Upgraded Command Center versions to 6.6.0 and 4.14.0 for GP6 and GP5 respectively.
 -	Upgraded GPCopy version to 2.3.1 for GP6 and GP5.
--	Upgraded pivotal_greenplum_backup_restore version to 1.23.0 for GP6 and GP5.
--	Upgraded PostGIS version to postgis-2.5.4_pivotal.5.build.1 and postgis-2.1.5_pivotal.3.build.3 for GP6 and GP5 respectively.
+-	Upgraded `pivotal_greenplum_backup_restore` version to 1.23.0 for GP6 and GP5.
+-	Upgraded PostGIS version to `postgis-2.5.4_pivotal.5.build.1` and `postgis-2.1.5_pivotal.3.build.3` for GP6 and GP5 respectively.
 -	Upgraded PXF version to 6.2.0 for GP6.
--	Upgraded plcontainer version to plcontainer-2.1.4 for GP6
--	Upgraded plr version to plr-3.0.4 for GP6
--	Upgraded madlib version to madlib-1.18.0 for GP6 and GP5
--	Upgraded DataScience to version DataSciencePython-2.0.4 for GP6
+-	Upgraded plcontainer version to `plcontainer-2.1.4` for GP6
+-	Upgraded plr version to `plr-3.0.4` for GP6
+-	Upgraded madlib version to `madlib-1.18.0` for GP6 and GP5
+-	Upgraded DataScience to version `DataSciencePython-2.0.4` for GP6
 -	Updated operating system to the latest version.
 - Upgraded CentOS 7.9 kernel to 3.10.0-1160.49.1.el7.x86_64.
 
@@ -742,69 +739,353 @@ Enhancements
 
 #### <a id="vpc"></a>Version 6.4
 
-
-#### <a id="vpc"></a>Version 6.3
-
 Fixes
 -	During a self-healing event of the Master node (mdw) or the first segment node (sdw1), the standby-master is activated. Under rare circumstances, the timeout may be reached which causes the self-healing to stop. If this scenario happens, self-healing will now wait until the standby is activated before proceeding which prevents this problem from happening.
 -	The EBS timeout setting was erroneously removed from the kernel setting and went back to the default of 30 seconds. It has been restored to 255 seconds as recommended by AWS.
-
 
 Enhancements
 -	Added Support for AWS Outpost
 -	Upgraded GP6 to 6.12.0 and GP5 to 5.28.2.
 -	Added GP2 disk option specifically for OLTP and Outpost workloads. There are now three options of SC1 (best price to performance), ST1 (best performance), and GP2 (OLTP and Outpost workloads only).
 
+#### <a id="vpc"></a>Version 6.3
+
+Fixes
+-	Fixed "Stack" resource filtering during the deployment and for cloud utilities gppower, gpcompute, and gpgrow. There could be problems if there were multiple Stacks in your AWS account with the same prefix and delimited with a dash. For example, resources for "test" and "test-01" would get merged. Explicit filtering is now in place to prevent this problem.
+
+Enhancements
+-	Upgraded GP6 to 6.10.1 and GP5 to 5.28.0.
+-	Added Greenplum version GP4 (version 4.3.33) as a parameter.
+-	Added xfs_defrag to gpmaintain.
+-	Changed memory management by using STATEMENT_MEM instead of spill_ratio in Resource Groups.
+-	Patched PHP for phpPgAdmin to the latest stable version.
+-	Added TimeZone parameter.
+-	Many improvements for gprelease to handle various edge cases.
+-	PXF is now installed via gpoptional.
+
 #### <a id="ami"></a>Version 6.2
 
+Fixes
+-	Fixed condition where gpmaintain might fail due to a catalog lock.
+-	If a self-healing event happened after changing the disk size with gpgrow and/or changing the segment instance type with gpcompute, the original disk size and/or instance type would be used for the new node. This potential problem has been resolved with modifications to gpgrow, gpcompute, and the IAM Role permissions.
+
+Enhancements
+-	Updated documentation to reflect VMware Tanzu instead of Pivotal Software.
+-	Upgraded VMware Tanzu Greenplum GP6 to version 6.8.1 and GP5 to 5.27.1.
+-	Changed default database version to GP6.
+-	Upgraded Command Center versions to 6.2 and 4.10 for GP6 and GP5 respectively.
+-	Upgraded PostGIS version to 2.5.4 build 3 for GP6.
+-	Upgraded PL/Container to version 2.1.2 for GP6.
+-	Upgraded MADlib to version 1.17 for GP5 and GP6.
+-	Upgraded Cloud gpoptional to now install Backup/Restore utility.
+-	Added operating system tools for debugging any problems that might happen (gdb, strace, pstack, sysstat, lsof, dstat, iotop and atop).
+-	Updated operating system to the latest version.
+-	Updated the default NVME timeout from 30 seconds to 255 seconds. This can help prevent timeout issues in AWS EBS storage.
 
 #### <a id="vpc"></a>Version 6.1
 
+Fixes
+-	Installation of PL/Container during the initial deployment of a cluster could cause a timeout because of the time it takes to install all of the docker images. To prevent this, PL/Container can only be installed with the command line utility gpoptional rather than as a parameter in the template.
+-	Some web browsers prevent the use of self-signed SSL certificates so phpPgAdmin has switched to http rather than https. It is recommended that you install your own certificate and use SSL post- installation.
+-	The bouncer utility was displaying the wrong program name in the INFO messages. This issue has been resolved.
+-	The URL output for Command Center would be blank when deploying a cluster without a public Internet address. This issue has been resolved.
+-	The wrong database version would be displayed in the message of the day after a database upgrade with gprelease. This issue has been resolved.
+
+Enhancements
+-	Upgraded Pivotal Greenplum GP6 to version 6.6.0 and GP5 to 5.26.
+-	Deployments now rely on the private IP addresses only rather than using the internal DNS names. This prevents a potential deployment problem when deploying to an existing VPC that doesn't have DNS.
+-	Updated kernel to latest version available.
+-	Command Center is now installed by default.
+
 #### <a id="ami"></a>Version 6.0
+
+Enhancements
+-	Added gpcompute utility which allows customers to scale compute independently from storage either up or down (r5.2xlarge, r5.4xlarge, and r5.8xlarge). This required IAM_User privileges changes and is not compatible with earlier versions in AWS.
+-	Upgraded Pivotal Greenplum GP6 to version 6.4.0 and GP5 to 5.25.
+-	Added Database Name parameter so customers can specify the default database name.
+-	Added core file generation to make it easier to debug issues with Support.
+-	Removed PlacementGroup and Tenancy parameters to simplify deployment and increase the likelihood that AWS would have enough resources to resume a paused cluster.
 
 #### <a id="vpc"></a>Version 5.1
 
+Fixes
+-	Updated the check_disk.sh script so that calculates the size of the file to test by looking at the size of the segment instance rather than relying on the master.
+-	Self-healing now restores the Command Center binaries on segment instances.
+
+Enhancements
+-	Added PL/Container optional install.
+-	Added Disk Type parameter of SC1 or ST1 for the data volumes in the cluster. SC1 is the recommended disk type.
+-	Added ability to specify the disk type when restoring a snapshot.
+-	Simplified the disk formatting process during deployment.
+-	Snapshot restores will now reset the gpadmin password of the database. This is useful when restoring a snapshot from a different cluster and the password won't match.
+-	Ran a yum update to update for new security patches.
+
+-	Upgraded Pivotal Greenplum GP6 to version 6.3.0 and GP5 to 5.24.
+-	Changed the count of segment instances from a multiple of 4 to 2.
+
 #### <a id="vpc"></a>Version 5.0
+
+Fixes
+-	Updated logic for scheduled maintenance to ensure it doesn't execute while it is already running.
+-	The gpcronsnap crontab entry was missing.
+-	The gpsnap utility restore functionality wasn't working correctly for r5 instance types.
+-	Changed when the gpmon password is set during Command Center installation so that it prevents fatal login messages in the GUI.
+-	Updated pg_hba.conf file settings automatically during deployment and recovery so that it always has hostnames and not ip addresses. This makes snapshot restoration much more reliable.
+
+Enhancements
+-	Added DatabaseVersion parameter to indicate either GP5 or GP6 major version to install.
+-	Added Pivotal Greenplum version 6.1.0 and upgraded GP5 to 5.23.
+-	Added status parameters to both gpgrow and gppower.
 
 #### <a id="ami"></a>Version 4.3
 
+Version 4.3
+
+Fixes
+-	During a deployment into an existing VPC where a non-default DNS suffix is used, the assignment of instances to roles did not work properly.
+-	"set-hostname" was executed twice during a deployment for each instance.
+-	A CLI command during a deployment incorrectly used an "or" operator instead of "and" for a query with multiple filters.
+-	Added "create extension" when initializing PXF.
+
+Enhancements
+-	Added ability to grow storage independently from compute with gpgrow.
+-	Added ability to pause / resume a cluster with gppower.
+-	Reduced storage costs by 44% with the same performance.
+-	Added encryption to swap volume.
+-	Updated template to use "AWS::EC2::LaunchTemplate" rather than "AWS::AutoScaling::LaunchConfiguration". This makes it easier to update the template to update the Block Device Mapping and use an existing KMS Key ID.
+-	Ran yum update to update to CentOS 7.7.
+-	Added S3 endpoint to reduce S3 costs.
+-	Enhanced deployment scripting to throttle CLI commands to prevent issues with deploying large clusters.
+-	Removed analyzedb when Master Instance is recovered as this is no longer recommended.
+-	Disabled gpperfmon for Command Center as starting with version 4.8, it is recommended to not use gpperfmon_install.
+-	Updated operating system limits settings.
+-	Removed anlayzedb on master self-healing event.
+-	Changed device mapping in fstab file to UUID.
+
 #### <a id="vpc"></a>Version 4.2
+
+Enhancements
+-	Upgraded to Pivotal Greenplum 5.20.1 and Command Center 4.7.0.
+-	Upgraded CentOS kernel to 7.6.
+-	Added ability to deploy in an existing VPC.
+-	The Segment nodes no longer have a public IP address assigned which further enhances security of Pivotal Greenplum on AWS.
+-	Master node instance type is now parameterized so that a different and less expensive instance type can be used for the Master node.
+-	Master node disk size is now parameterized so that a smaller and less expensive size can be used on the Master node.
+-	Added deployment parameter to specify if the Master node will have a public ip address or not.
+-	Removed D2 series instance types so that all instances uses persistent, EBS volumes.
+-	Optimized number of disks and segments for each instance type.
+-	Timezone on VMs are now set based on where the cluster is deployed.
+-	The gpoptional tool now displays which database packages will be installed.
+-	Tag enhancements for snapshot backups so that snapshots will be filtered by the database version (GP5 vs GP6).
 
 #### <a id="vpc"></a>Version 4.1
 
+Fixes
+-	gpcrondelete maintains n snapshots determined in the gpcronsnap.conf file. The delete process would delete snapshots from other clusters to maintain the determined number of snapshots.
+Starting with 4.1, gpcronsnap will only delete snapshots that exceed the number and have been created by the currently running cluster.
+-	gpsnap restore for R5 series could sometimes mount volumes in the incorrect order.
+-	Rebooting machines could change the mount order for R5 series instances.
+
+Enhancements
+-	Created a new binary installer for the greenplum-cloud utilities. This makes it easier to upgrade these utilities via gprelease.
+-	GP Browser renamed back to phpPgAdmin. It has enhancements for a Pivotal template and handling of partitioned tables. Installation is done via an RPM.
+-	Add caching of ssh keys between the segments back to the master
+-	Added SSL to pgBouncer
+-	gprelease now updates cloud utilities
+-	Added new sysctl.conf entries for better memory management
+-	Added disk size parameter
+-	Added disk encryption parameter
+-	Added tenancy parameter
+-	Changed drop down list of Subnet CIDRs to a text box to give more flexibility
+-	Reboots now reset the blockdev read ahead for data disks
+-	Enable Resource Groups by default instead of Resource Queues
+-	Automated maintenance with gpmaintain and gpcronmaintain
+
 #### <a id="ami"></a>Version 4.0
+
+Fixes
+-	Enhanced the SSM delete action to better handle removal of old Pivotal Greenplum related keys without removing non-Greenplum keys.
+
+Enhancements
+-	Upgraded Greenplum to 5.17.0 and Greenplum Command Center to 4.6.0.
+-	Added support for PXF and included OpenJDK.
+-	Enhanced Greenplum Command Center installer to better handle future upgrades.
+-	Added ClusterSubnet parameter.
+-	Improved check_disk and check_network scripts in
+/opt/pivotal/greenplum/validation/performance
 
 #### <a id="vpc"></a>Version 3.2
 
+Fixes
+-	Fixed issue with self-healing on the Master where a script could hang.
+
+Enhancements
+-	Upgraded Greenplum to 5.16.0 and Greenplum Command Center to 4.5.1.
+-	Enhanced gprelease/gpoptional to migrate existing packages that are installed and upgrade packages if needed.
+-	Improved database initializing performance so deployments are completed faster
+
 #### <a id="ami"></a>Version 3.1
+
+Fixes
+-	Resolved issue where gprelease failed if a package directory exists but no packages are installed.
+
+Enhancements
+-	Upgraded Greenplum to 5.13.0
+-	Removed standby-master host and process now runs on first segment host
+-	Added GP Browser SQL utility
+-	Added R5 Series instance types which has enhanced the performance of Greenplum on AWS
 
 #### <a id="vpc"></a>Version 3.0
 
+Enhancements
+-	Upgraded Greenplum to 5.12.0
+-	Upgraded Greenplum Command Center to 4.4.0
+-	Disaster Recovery with gpsnap (create, copy, and restore)
+-	Restore snapshot from a different cluster (same configuration)
+-	Upgrade CloudFormation by using gpsnap
+
+-	Standardized hostnames (mdw1, mdw2, sdw1, sdw2, etc)
+
 #### <a id="vpc"></a>Version 2.4
+
+Enhancements
+-	Upgraded Greenplum to 5.10.2.
+-	Upgraded Greenplum Command Center to 4.3.1
+-	Added bouncer pause and resume functions
+-	Added Self-Healing
+-	Renamed gpupgrade and gpcronupgrade to gprelease and gpcronrelease
+-	gprelease and gpcronrelease enhanced for better integration to optionally installed components
+-	gpoptional tool created to make it easier to install optional components and also upgrade existing components.
+
+Fixes
+-	Fixed loop during Message of the Day creation on the Master during a self-healing event.
 
 #### <a id="ami"></a>Version 2.3.1
 
+Enhancements
+-	Upgraded Greenplum Command Center to version 4.2.0
+
 #### <a id="vpc"></a>Version 2.3
+
+Fixes
+-	Corrected the number of segments per host for r4.16xlarge and EBS Encrypted drives
+-	Updated a script for a slight change in behavior from "aws ec2 describe-instances" CLI command that initially returns "None" for the Stack name.
+
+Enhancements
+-	Upgraded Pivotal Greenplum database to version 5.9
+-	Upgraded Operating System to CentOS 7.5
+-	Increased root volume size from 8GB to 32GB
+-	Wrapped message of the day on ssh login to 80 characters wide
+-	Revised pgBouncer default settings and added "bouncer" utility
+-	Upgraded Greenplum Command Center to version 4.1.1
+-	Added Data Science Python and R packages as optional installs
+-	Improved gpsnap performance
+-	Pause pgBouncer on self-healing segment recovery so that active queries won't be cancelled
 
 #### <a id="vpc"></a>Version 2.2
 
+Fixes
+-	Patched the operating system for the Meltdown and Spectre vulnerabilities.
+
+
+-	When a single node install had the node replaced because of failure, the auto-healing feature wouldn't re-initialize the database and left the single node in an unusable state.
+-	Increased the MaxStartups sshd configuration to prevent unwanted failed ssh attempts from preventing the cluster from initializing.
+
+Enhancements
+-	Manage EBS Snapshots with two new tools; gpsnap and gpcronsnap
+-	Manage Greenplum Database upgrades with two new tools; gpupgrade and gpcronupgrade
+-	Optional installs are now available as parameters to the Cloud Formation Template and visible in the Marketplace. Optional installs are still available post-installation.
+-	Added Postgis as an optional install.
+-	Removed csv files used during the installation that contained the public and private keys.
+-	Updated the temporary gpadmin password to a more secure value. Password authentication is only temporarily enabled during the installation process.
+-	Store the randomly generated admin password in the AWS Parameter Store so that it can be retrieved in case the Master fails.
+-	Updated the ip_local_port_range to start at 10,000 so the database interconnect doesn't interfere with gpfdist ports.
+
 #### <a id="ami"></a>Version 2.1
+
+Fixes
+-	r4.xlarge, r4.2xlarge, and r4.4xlarge encrypted disk options did not properly set encryption on.
+-	Resolved installation issue for optional Command Center where excessive log files were created in the gpadmin home directory.
+
+Enhancements
+-	Upgraded to GPDB 5.2.
+-	Stack is now self-healing. If the Auto Scaling Group replaces a bad node, the node will automatically be replaced and added back into the Greenplum cluster properly. An Elastic IP address keeps the IP address the same if the Master were to fail.
+-	Configured pgBouncer load balancer to be the default connection mechanism for clients.
+-	Upgraded optional installs of Command Center, Madlib, and PL/R to the latest versions.
+-	Dynamically set swap size based on the instance type chosen.
+-	Removed /data[2-4] volumes from the Master and Standby.
+-	Snapshot permissions added to the IAM permissions list to make it easier to automate taking EBS snapshots for a backup.
+-	Yum update performed.
 
 #### <a id="vpc"></a>Version 2.0
 
+Fixes
+-	Fixed MOTD calculation for available disk space for single node installs.
+-	Fixed issue where /etc/rc.local was restarting the network after CloudFormation script finished. This sometimes caused status checks to fail in AWS for a single node in a Stack and then the node would get terminated.
+
+Enhancements
+-	Upgraded to GPDB 5.
+-	Enhanced Stack Output to have more detailed information including username, password, Master node, ssh location, instance type, instance count, ssh key name, availability zone, additional installs path, validation scripts path, and the Pivotal API token value.
+-	Modified wait in deploying nodes to make sure both AWS checks pass for each node before assigning roles and installing the database.
+-	Added d2.xlarge, d2.2xlarge, r4.xlarge, r4.2xlarge, and r4.4xlarge instance types.
+-	Dynamically set instance tenancy based on instance type. 8xlarge and 16xlarge large nodes are deployed in dedicated tenancy while the others are in shared.
+-	Removed API Token parameter.
+-	Enhanced optional installer to use local copies of the install files rather than dynamically downloading it.
+
 #### <a id="ami"></a>Version 1.3
+
+Enhancements
+-	Upgraded to CentOS 6.9.
+-	Updated Greenplum version to 4.3.14.0.
+-	Added support for Enhanced Networking that uses the ENA driver. Now both Enhanced Networking drivers are installed and will AWS will automatically use the correct driver.
+-	Added support for r4.8xlarge and r4.16xlarge instance types.
+-	Added RaiseError condition to make debugging errors easier.
+-	Changed API Token to be optional per Amazon request.
+-	Changed root and swap partitions from 500GB and 50GB respectively to 8GB each. This reduces the cost to customers using AWS as it was determined Greenplum doesn't need that much space for root and swap disks.
+-	Added build_ami directory with scripts used to prepare a minimal install image of CentOS 6.9.
 
 #### <a id="vpc"></a>Version 1.2
 
+Enhancements
+-	Upgraded to CentOS 6.9.
+-	Updated Greenplum version to 4.3.14.0.
+-	Added support for Enhanced Networking that uses the ENA driver. Now both Enhanced Networking drivers are installed and will AWS will automatically use the correct driver.
+-	Added support for r4.8xlarge and r4.16xlarge instance types.
+-	Added RaiseError condition to make debugging errors easier.
+-	Changed API Token to be optional per Amazon request.
+-	Changed root and swap partitions from 500GB and 50GB respectively to 8GB each. This reduces the cost to customers using AWS as it was determined Greenplum doesn't need that much space for root and swap disks.
+-	Added build_ami directory with scripts used to prepare a minimal install image of CentOS 6.9.
+
 #### <a id="vpc"></a>Version 1.1
+
+Fixes
+-	Created default database.
+-	Set gpadmin password.
+-	Added entry to pg_hba.conf file to allow encrypted password connection from remote nodes.
+-	Removed Command Center reference on Segment nodes.
+-	Removed ephemeral disks when EBS is chosen.
+-	Fixed disk sizes. data1 is smaller than data2-4.
+-	Fixed permissions for /usr/local and /usr/local/greenplum-db/*. World writable permissions set for most all files.
+
+Enhancements
+-	Uses st1 disks instead of gp2 for better performance.
+-	Allows for 18 nodes so this is equivalent to a full rack.
+-	Made Command Center an optional install.
+-	Added API Token as a parameter to be able to track customers and allow them to automatically download optional installs.
+-	Removed redundant parameters for ClusterName and using Stack Name instead.
+-	Removed i2.8xlarge instance type because it is more expensive than d2.8xlarge and not as fast.
+-	Added d2.4xlarge for Dev/Test purposes.
+-	Simplified scripting to a single execution of a script stored in the AMI. This script then calls all scripts to complete the install. Scripts are also numbered 001, 002, 003, etc to make the execution order obvious.
+-	Enhanced the xfs mounting options for better performance.
+-	Changed the number of Segments per node from 8 to 12 for d2.8xlarge while keeping 8 for d2.4xlarge.
+-	Simplified template for easier maintenance.
+-	AMI can dynamically download scripts from S3 to make development easier.
+-	AMI can disable execution of the scripts to make development and debugging easier.
+-	Added Encrypted EBS option.
+-	Added Message of the Day on the Master node that explains how to use the database.
+-	Updated gp_vmem_protect_limit based on instance type
+-	Updated sysctl.conf vm.overcommit_ratio from the default of 50 to 95.
 
 #### <a id="ami"></a>Version 1.0
 
-# <a id="deploying gp on aws"></a>Deploying Greenplum on AWS
-
-## <a id="vpc"></a>Stack 
-
-#### <a id="ami"></a>AMI
-
-#### <a id="vpc"></a>VPC
-
+Initial release.
