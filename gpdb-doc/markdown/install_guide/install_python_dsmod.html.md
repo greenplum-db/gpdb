@@ -240,7 +240,7 @@ The following table lists the modules that are provided in the Data Science Pack
 | tempora | Objects and routines pertaining to date and time |
 | tensorboard | TensorBoard lets you watch Tensors Flow |
 | tensorboard-data-server | Fast data loading for TensorBoard |
-| tensorboard-plugin-wit |  |
+| tensorboard-plugin-wit | What-If Tool TensorBoard plugin |
 | tensorflow | Numerical computation using data flow graphs |
 | tensorflow-estimator | What-If Tool TensorBoard plugin |
 | tensorflow-io-gcs-filesystem | TensorFlow IO |
