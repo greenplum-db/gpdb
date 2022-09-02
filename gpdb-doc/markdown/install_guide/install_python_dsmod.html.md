@@ -243,7 +243,7 @@ The following table lists the modules that are provided in the Data Science Pack
 | tensorboard-plugin-wit |  |
 | tensorflow | Numerical computation using data flow graphs |
 | tensorflow-estimator | What-If Tool TensorBoard plugin |
-| tensorflow-io-gcs-filesystem |  |
+| tensorflow-io-gcs-filesystem | TensorFlow IO |
 | termcolor | simple termcolor wrapper |
 | Theano-PyMC | Theano-PyMC |
 | thinc | Practical Machine Learning for NLP |
