@@ -1433,6 +1433,32 @@ CUtils::PdrgpexprDedup(CMemoryPool *mp, CExpressionArray *pdrgpexpr)
 		{
 			pexpr->Release();
 		}
+
+		// Here we also take into account cast equality expressions. This
+		// allows us to consider the following 2 expressions as duplicates.
+		//
+		//  1)
+		//     +--CScalarCmp (=)
+		//        |--CScalarIdent "d" (1)
+		//        +--CScalarIdent "d" (10)
+		//  2)
+		//     +--CScalarCmp (=)
+		//        |--CScalarCast
+		//        |  +--CScalarIdent "d" (1)
+		//        +--CScalarIdent "d" (10)
+		if (pexpr->Pop()->Eopid() == COperator::EopScalarCmp)
+		{
+			CExpressionArray *pdexpr =
+				CCastUtils::PdrgpexprCastEquality(mp, pexpr);
+			for (ULONG ulInner = 0; ulInner < pdexpr->Size(); ulInner++)
+			{
+				if (phsexpr->Insert((*pdexpr)[ulInner]))
+				{
+					(*pdexpr)[ulInner]->AddRef();
+				}
+			}
+			pdexpr->Release();
+		}
 	}
 
 	phsexpr->Release();
