@@ -467,6 +467,7 @@ If you use this option, keep in mind that the `PYTHONPATH` environment variable 
 
 ```
 $ psql -d testdb
+testdb=# load 'plpython3';
 testdb=# SET plpython3.python_path='/home/gpadmin/my_python';
 ```
 
@@ -478,12 +479,15 @@ Greenplum uses the value of `plpython3.python_path` to set `PLPYTHONPATH` in the
 ERROR: SET PYTHONPATH failed, the GUC value can only be changed before initializing the python interpreter.
 ```
 
+**Note:** `plpython3.python_path` is provided as part of the `plpython3u` extension, so you _must_ load the extension (with `load 'plpython3';`) before you can set this configuration parameter in a session.
+
 To set a default value for the configuration parameter, use `gpconfig` instead:
 
 ```
 gpconfig -c plpython3.python_path \
     -v "'/home/gpadmin/my_python'" \
     --skipvalidation
+gpstop -u
 ```
 
 ### <a id="topic_j53_5jq_rt"></a>Building and Installing Python Modules Locally 
