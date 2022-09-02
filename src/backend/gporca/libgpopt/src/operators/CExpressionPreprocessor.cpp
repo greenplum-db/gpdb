@@ -1679,12 +1679,12 @@ CExpressionPreprocessor::PexprFromConstraintsScalar(
 						CExpression *pexprScalar =
 							constraintsForOuterRefs
 								->PexprScalarMappedFromEquivCols(mp, columnRef,
-																 nullptr);
+																 NULL);
 
 						// If the column is resolved to EopScalarCmp with Equality type,
 						// it means it is a constant.So we need to remove it as it's already
 						// been pushed down in the previous normalization step
-						if (nullptr != pexprScalar &&
+						if (NULL != pexprScalar &&
 							COperator::EopScalarCmp ==
 								pexprScalar->Pop()->Eopid() &&
 							IMDType::EcmptEq ==
@@ -1727,7 +1727,7 @@ CExpressionPreprocessor::PexprFromConstraintsScalar(
 
 			const ULONG childrenRedundantArraySize =
 				childrenRedundantArray->Size();
-			CExpression *pexprNew = nullptr;
+			CExpression *pexprNew = ;
 			for (ULONG ul = 0; ul < childrenRedundantArraySize; ul++)
 			{
 				ULONG numDistributedCol = 0;
@@ -1756,7 +1756,7 @@ CExpressionPreprocessor::PexprFromConstraintsScalar(
 			// condition based on the distribution of the columns.
 			if (0 == childrenArray->Size())
 			{
-				if (pexprNew == nullptr)
+				if (pexprNew == NULL)
 				{
 					pexprNew = (*childrenRedundantArray)[0];
 					pexprNew->AddRef();
@@ -1813,7 +1813,7 @@ CExpressionPreprocessor::PexprFromConstraintsScalar(
 				}
 				else
 				{
-					if (pexprNew == nullptr)
+					if (pexprNew == NULL)
 					{
 						pexprNew = (*childrenRedundantArray)[0];
 					}
