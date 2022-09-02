@@ -13,21 +13,21 @@ This section contains an overview of the Greenplum Database PL/Python Language.
 
 ## <a id="topic2"></a>About Greenplum PL/Python 
 
-PL/Python is a loadable procedural language. With the Greenplum Database PL/Python extension, you can write a Greenplum Database user-defined functions in Python that take advantage of Python features and modules to quickly build robust database applications.
+PL/Python is a loadable procedural language. With the Greenplum Database PL/Python extensions, you can write Greenplum Database user-defined functions in Python that take advantage of Python features and modules to quickly build robust database applications.
 
 You can run PL/Python code blocks as anonymous code blocks. See the [DO](../ref_guide/sql_commands/DO.html) command in the *Greenplum Database Reference Guide*.
 
-The Greenplum Database PL/Python extension is installed by default with Greenplum Database. Greenplum Database installs a version of Python and PL/Python. This is location of the Python installation that Greenplum Database uses:
+The Greenplum Database PL/Python extensions are installed by default with Greenplum Database. Two extensions are provided:
 
-```
-$GPHOME/ext/python/
-```
+- `plpythonu` supports developing functions using Python 2.7. Greenplum Database installs a version of Python 2.7 for for `plpythonu` at `$GPHOME/ext/python`.
+- `plpython3u`, introduced with Greenplum 6.22, supports developing functions using Python 3.9. For RHEL7 and Ubuntu installations, Greenplum Database installs a compatible python at `$GPHOME/ext/python3.9`. On RHEL8 systems you must install Python 3.9 to your system.
 
 ### <a id="topic3"></a>Greenplum Database PL/Python Limitations 
 
 -   Greenplum Database does not support PL/Python triggers.
 -   PL/Python is available only as a Greenplum Database untrusted language.
 -   Updatable cursors \(`UPDATE...WHERE CURRENT OF` and `DELETE...WHERE CURRENT OF`\) are not supported.
+-   Within a single Greenplum session, all PL/Python functions must be called using either `plpythonu` or `plpython3u`. You must start a new session before you can call a function created with different PL/Python version (for example, in order to call a `plpythonu` function after calling a `plpython3u` function, or vice versa).
 
 ## <a id="topic4"></a>Enabling and Removing PL/Python support 
 
@@ -35,20 +35,44 @@ The PL/Python language is installed with Greenplum Database. To create and run a
 
 ### <a id="topic5"></a>Enabling PL/Python Support 
 
-For each database that requires its use, register the PL/Python language with the SQL command `CREATE EXTENSION`. Because PL/Python is an untrusted language, only superusers can register PL/Python with a database. For example, running this command as the `gpadmin` user registers PL/Python with the database named `testdb`:
+For RHEL8 systems only, if you intend to create functions using `plpython3u` then you must install Python 3.9 to your system:
+
+```
+dnf install -y python39 python39-devel
+```
+
+For all other operating systems, Greenplum installs compatible versions of Python 2.7 and 3.9 in `$GPHOME/ext`.
+
+For each database that requires its use, register the PL/Python language with the SQL command `CREATE EXTENSION`. Separate extensions are provided for Python 2.7 and Python 3.9 support, and you can install either or both extensions to a database. 
+
+Because PL/Python is an untrusted language, only superusers can register PL/Python with a database. 
+
+For example, run this command as the `gpadmin` user to register PL/Python with Python 2.7 support in the database named `testdb`:
 
 ```
 $ psql -d testdb -c 'CREATE EXTENSION plpythonu;'
+```
+
+Run this command as the `gpadmin` user to register PL/Python with Python 3.9 support:
+
+```
+$ psql -d testdb -c 'CREATE EXTENSION plpython3u;'
 ```
 
 PL/Python is registered as an untrusted language.
 
 ### <a id="topic6"></a>Removing PL/Python Support 
 
-For a database that no longer requires the PL/Python language, remove support for PL/Python with the SQL command `DROP EXTENSION`. Because PL/Python is an untrusted language, only superusers can remove support for the PL/Python language from a database. For example, running this command as the `gpadmin` user removes support for PL/Python from the database named `testdb`:
+For a database that no longer requires the PL/Python language, remove support for PL/Python with the SQL command `DROP EXTENSION`. Because PL/Python is an untrusted language, only superusers can remove support for the PL/Python language from a database. For example, running this command as the `gpadmin` user removes support for PL/Python for Python 2.7 from the database named `testdb`:
 
 ```
 $ psql -d testdb -c 'DROP EXTENSION plpythonu;'
+```
+
+Run this command as the `gpadmin` user to remove support for PL/Python for Python 3.9:
+
+```
+$ psql -d testdb -c 'DROP EXTENSION plpython3u;'
 ```
 
 The default command fails if any existing objects \(such as functions\) depend on the language. Specify the `CASCADE` option to also drop all dependent objects, including functions that you created with PL/Python.
@@ -295,41 +319,48 @@ $$;
 
 ## <a id="topic10"></a>Installing Python Modules 
 
-When you install a Python module on Greenplum Database, the Greenplum Database Python environment must have the module added to it across all segment hosts and mirror hosts in the cluster. When expanding Greenplum Database, you must add the Python modules to the new segment hosts. You can use the Greenplum Database utilities `gpssh` and `gpscp` run commands on Greenplum Database hosts and copy files to the hosts. For information about the utilities, see the *Greenplum Database Utility Guide*.
+When you install a Python module for development with PL/Python, the Greenplum Database Python environment must have the module added to it across all segment hosts and mirror hosts in the cluster. When expanding Greenplum Database, you must add the Python modules to the new segment hosts. 
 
-As part of the Greenplum Database installation, the `gpadmin` user environment is configured to use Python that is installed with Greenplum Database.
+Greenplum Database provides a collection of data science-related Python modules that you can use to easily develop PL/Python functions in Greenplum. The modules are provided as two `.gppkg` format files that can be installed into a Greenplum cluster using the `gppkg` utility, with one package supporting development with Python 2.7 and the other supporting development with Python 3.9. See [Python Data Science Module Packages](/oss/install_guide/install_python_dsmod.html) for installation instructions and descriptions of the provided modules.
 
-To check the Python environment, you can use the `which` command:
+To develop with modules that are not part of th Python Data Science Module packages, you can use Greenplum utilities such as `gpssh` and `gpscp` to run commands or copy files to all hosts in the Greenplum cluster. These sections describe how to use those utilities to install and use additional Python modules:
+
+-   [Verifying the Python Environment](#about_python_env)
+-   [Installing Python pip](#topic_yx3_yjq_rt)
+-   [Installing Python Packages for Python 2.7](#topic_g4j_hmt_ycb)
+-   [Installing Python Packages for Python 3.9](#pip39)
+-   [Building and Installing Python Modules Locally](#topic_j53_5jq_rt)
+-   [Testing Installed Python Modules](#topic_e4p_gcw_vt)
+
+### <a id="about_python_env"></a>Verifying the Python Environment
+
+As part of the Greenplum Database installation, the `gpadmin` user environment is configured to use Python that is installed with Greenplum Database. To check the Python environment, you can use the `which` command:
 
 ```
 which python
 ```
 
-The command returns the location of the Python installation. The Python installed with Greenplum Database is in the Greenplum Database `ext/python` directory.
+The command returns the location of the Python installation. All Greenplum installations include Python 2.7 installed as `$GPHOME/ext/python`. RHEL7 and Ubuntu installations also include a Python 3.9 environment instaled as `$GPHOME/ext/python3.9`:
 
 ```
-/<path_to_greenplum-db>/ext/python/bin/python
+which python3.9
 ```
 
-When running shell commands on remote hosts with `gpssh`, you can specify the `-s` option. When the option is specified, `gpssh` sources the `greenplum_path.sh` file before running commands on the remote hosts. For example, this command should display the Python installed with Greenplum Database on each host.
+**Note:** On RHEL8 systems you must install Python 3.9 using the instructions in [Enabling PL/Python Support](#topic5).
 
-```
-gpssh -f gpdb_hosts which python
-```
-
-If it does not, you can add the `-s` to source `greenplum_path.sh` on the remote hosts before running the command.
+When running shell commands on remote hosts with `gpssh`, specify the `-s` option to source the `greenplum_path.sh` file before running commands on the remote hosts. For example, this command should display the Python installed with Greenplum Database on each host specified in the `gpdb_hosts` file.
 
 ```
 gpssh -s -f gpdb_hosts which python
 ```
 
-To display the list of currently installed Python modules, run this command.
+To display the list of currently installed Python 2.7 modules, run this command.
 
 ```
 python -c "help('modules')"
 ```
 
-Run `gpssh` in interactive mode to display Python modules on remote hosts. This example starts `gpssh` in interactive mode and lists the Python modules on the Greenplum Database host `sdw1`.
+You can optionally run `gpssh` in interactive mode to display Python modules on remote hosts. This example starts `gpssh` in interactive mode and lists the Python modules on the Greenplum Database host `sdw1`.
 
 ```
 $ gpssh -s -h sdw1
@@ -339,23 +370,19 @@ $ gpssh -s -h sdw1
 $
 ```
 
-Greenplum Database provides a collection of data science-related Python libraries that can be used with the Greenplum Database PL/Python language. You can download these libraries in `.gppkg` format from [VMware Tanzu Network](https://network.pivotal.io/products/pivotal-gpdb). For information about the libraries, see [Python Data Science Module Package](../install_guide/install_python_dsmod.html#topic1).
-
-These sections describe installing and testing Python modules:
-
--   [Installing Python pip](#topic_yx3_yjq_rt)
--   [Installing Python Packages with pip](#topic_g4j_hmt_ycb)
--   [Building and Installing Python Modules Locally](#topic_j53_5jq_rt)
--   [Testing Installed Python Modules](#topic_e4p_gcw_vt)
-
 ### <a id="topic_yx3_yjq_rt"></a>Installing Python pip 
 
 The Python utility `pip` installs Python packages that contain Python modules and other resource files from versioned archive files.
 
-Run this command to install `pip`.
+Run this command to install `pip` for Python 2.7:
 
 ```
 python -m ensurepip --default-pip
+```
+
+For Python 3.9, use:
+```
+python3.9 -m ensurepip --default-pip
 ```
 
 The command runs the `ensurepip` module to bootstrap \(install and configure\) the `pip` utility from the local Python installation.
@@ -397,12 +424,17 @@ The utility displays the output from each host.
 
 For more information about installing Python packages, see [https://packaging.python.org/tutorials/installing-packages/](https://packaging.python.org/tutorials/installing-packages/).
 
-### <a id="topic_g4j_hmt_ycb"></a>Installing Python Packages with pip 
+### <a id="topic_g4j_hmt_ycb"></a>Installing Python Packages for Python 2.7 
 
-After installing `pip`, you can install Python packages. This command installs the `numpy` and `scipy` packages.
+After installing `pip`, you can install Python packages. This command installs the `numpy` and `scipy` packages for Python 2.7:
 
 ```
 python -m pip install --user numpy scipy
+```
+
+For Python 3.9, use the `python3.9` application instead:
+```
+python3.9 -m pip install --user numpy scipy
 ```
 
 The `--user` option attempts to avoid conflicts when installing Python packages.
@@ -410,6 +442,49 @@ The `--user` option attempts to avoid conflicts when installing Python packages.
 You can use `gpssh` to run the command on the Greenplum Database hosts.
 
 For information about these and other Python packages, see [References](#topic12).
+
+### <a id="pip39"></a>Installing Python Packages for Python 3.9
+
+By default, `greenplum_path.sh` changes the `PYTHONPATH` and `PYTHONHOME` environment variables for use with the installed Python 2.7 environment. In order to install modules using `pip` with Python 3.9, you must first unset those parameters. For example to install `numpy` and `scipy` for Python 3.9:
+
+```
+gpssh -s -f gpdb_hosts
+=> unset PYTHONHOME
+=> unset PYTHONPATH
+=> $GPHOME/ext/python3.9 -m pip install numpy scipy
+```
+
+You can optionally install Python 3.9 modules to a non-standard location by using the `--prefix` option with `pip`. For example:
+
+```
+gpssh -s -f gpdb_hosts
+=> unset PYTHONHOME
+=> unset PYTHONPATH
+=> $GPHOME/ext/python3.9 -m pip install --prefix=/home/gpadmin/my_python numpy scipy
+```
+
+If you use this option, keep in mind that the `PYTHONPATH` environment variable setting is cleared before initializing or executing functions using `plpython3u`. If you want to use modules installed to a custom location, you must configure the paths to those modules using the Greenplum configuration parameter `plpython3.python_path` instead of  `PYTHONPATH`. For example:
+
+```
+$ psql -d testdb
+testdb=# SET plpython3.python_path='/home/gpadmin/my_python';
+```
+
+Greenplum uses the value of `plpython3.python_path` to set `PLPYTHONPATH` in the environment used to create or call `plpython3u` functions.
+
+**Note:** Ensure that you configure `plpython3.python_path` _before_ you create or call `plpython3` functions in a session. If you set or change the parameter after `plpython3u` is initialized you receive the error:
+
+```
+ERROR: SET PYTHONPATH failed, the GUC value can only be changed before initializing the python interpreter.
+```
+
+To set a default value for the configuration parameter, use `gpconfig` instead:
+
+```
+gpconfig -c plpython3.python_path \
+    -v "'/home/gpadmin/my_python'" \
+    --skipvalidation
+```
 
 ### <a id="topic_j53_5jq_rt"></a>Building and Installing Python Modules Locally 
 
@@ -436,6 +511,8 @@ as $$
       return 'FAILURE'
 $$ language plpythonu;
 ```
+
+(If you are using Python 3.9, replace `plpythonu` with `plpython3u` in the above command.)
 
 Create a table that contains data on each Greenplum Database segment instance. Depending on the size of your Greenplum Database installation, you might need to generate more data to ensure data is distributed to all segment instances.
 
@@ -472,6 +549,27 @@ If `FAILURE` is returned, these are some possible causes:
 -   If the Python `import` command does not return an error, environment variables might not be configured in the Greenplum Database environment. For example, the Greenplum Database might not have been restarted after installing the Python Package on the host system.
 
 ## <a id="topic11"></a>Examples 
+
+This PL/Python function example uses Python 3.9 and returns the value of pi using the `numpy` module:
+
+```
+CREATE OR REPLACE FUNCTION testpi()
+  RETURNS float
+AS $$
+  import numpy
+  return numpy.pi
+$$ LANGUAGE plpython3u;
+```
+
+Use `SELECT` to call the function:
+
+```
+SELECT testpi();
+       testpi
+------------------
+ 3.14159265358979
+(1 row)
+```
 
 This PL/Python UDF returns the maximum of two integers:
 
