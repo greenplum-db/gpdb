@@ -1727,7 +1727,7 @@ CExpressionPreprocessor::PexprFromConstraintsScalar(
 
 			const ULONG childrenRedundantArraySize =
 				childrenRedundantArray->Size();
-			CExpression *pexprNew = ;
+			CExpression *pexprNew = NULL;
 			for (ULONG ul = 0; ul < childrenRedundantArraySize; ul++)
 			{
 				ULONG numDistributedCol = 0;
