@@ -401,19 +401,6 @@ cdb_create_multistage_grouping_paths(PlannerInfo *root,
 		List	   *gcls;
 		List	   *tlist;
 
-		/* GPDB_12_MERGE_FIXME: For now, bail out if there are any unsortable
-		 * refs. PostgreSQL supports hashing with grouping sets nowadays, but
-		 * the code in this file hasn't been updated to deal with it yet.
-		 */
-		ListCell   *lc;
-		foreach(lc, parse->groupClause)
-		{
-			SortGroupClause *gc = lfirst_node(SortGroupClause, lc);
-
-			if (!OidIsValid(gc->sortop))
-				return;
-		}
-
 		gsetid = makeNode(GroupingSetId);
 		grouping_sets_tlist = copyObject(root->processed_tlist);
 		ctx.gsetid_sortref = add_gsetid_tlist(grouping_sets_tlist);
