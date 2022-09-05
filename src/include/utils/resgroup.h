@@ -32,6 +32,11 @@
 #define MaxCpuSetLength 1024
 
 /*
+ * The max length of cpuset array
+ */
+#define CpuSetArrayLength 2
+
+/*
  * Default value of cpuset
  */
 #define DefaultCpuset "-1"
@@ -85,8 +90,9 @@ typedef struct ResGroupCaps
 } ResGroupCaps;
 
 /* Set 'cpuset' to an empty string, and reset all other fields to zero */
-#define ClearResGroupCaps(caps) \
-	MemSet((caps), 0, offsetof(ResGroupCaps, cpuset) + 1)
+#define ClearResGroupCaps(caps) do { \
+	MemSet((caps), 0, offsetof(ResGroupCaps, cpuset) + 1); \
+} while(0)
 
 
 /*
@@ -229,6 +235,8 @@ extern void ResGroupMoveQuery(int sessionId, Oid groupId, const char *groupName)
 extern int32 ResGroupGetSessionMemUsage(int sessionId);
 extern int32 ResGroupGetGroupAvailableMem(Oid groupId);
 extern Oid ResGroupGetGroupIdBySessionId(int sessionId);
+extern char *getCpuSetByRole(const char *cpuset);
+extern void checkCpuSetByRole(const char *cpuset);
 
 #define LOG_RESGROUP_DEBUG(...) \
 	do {if (Debug_resource_group) elog(__VA_ARGS__); } while(false);
