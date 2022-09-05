@@ -1,5 +1,5 @@
 -- start_ignore
-! gpconfig -c gp_parallel_cursor_concurrency -v 3
+! gpconfig -c gp_max_parallel_cursors -v 3
 ! gpstop -rai;
 -- end_ignore
 
@@ -35,6 +35,6 @@ COMMIT;
 1: COMMIT;
 
 -- start_ignore
-! gpconfig -c gp_parallel_cursor_concurrency -v -1
+! gpconfig -c gp_max_parallel_cursors -v -1
 ! gpstop -rai;
 -- end_ignore

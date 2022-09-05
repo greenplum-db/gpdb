@@ -348,7 +348,7 @@ extern double vacuum_cleanup_index_scale_factor;
 
 extern int gp_vmem_protect_limit;
 extern int gp_vmem_protect_gang_cache_limit;
-extern int gp_parallel_cursor_concurrency;
+extern int gp_max_parallel_cursors;
 
 /* in tcop/postgres.c */
 

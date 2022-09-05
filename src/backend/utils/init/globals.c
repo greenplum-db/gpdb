@@ -185,4 +185,4 @@ bool	pljava_classpath_insecure = false;
 /* Memory protection GUCs*/
 int gp_vmem_protect_limit = 8192;
 int gp_vmem_protect_gang_cache_limit = 500;
-int	gp_parallel_cursor_concurrency = -1;
+int	gp_max_parallel_cursors = -1;

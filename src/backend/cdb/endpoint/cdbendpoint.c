@@ -69,6 +69,7 @@
 #include "libpq/libpq.h"
 #include "libpq/pqformat.h"
 #include "pgstat.h"
+#include "port/atomics.h"
 #include "storage/ipc.h"
 #include "storage/latch.h"
 #include "storage/procsignal.h"
@@ -130,7 +131,7 @@ static HTAB *EndpointTokenHash = NULL;
 /* Point to Endpoint entries in shared memory */
 static struct EndpointData *sharedEndpoints = NULL;
 /* Point to parallel cursors count in shared memory */
-volatile int32 *parallelCursorCount = NULL;
+volatile uint32 *parallelCursorCount = NULL;
 
 /* Init helper functions */
 static void InitSharedEndpoints(void);
@@ -196,16 +197,25 @@ EndpointShmemInit(void)
 					  MAX_ENDPOINT_SIZE, &hctl, HASH_ELEM | HASH_FUNCTION);
 }
 
+/*
+ * Calculate the shared memory size for PARALLEL RETRIEVE CURSOR count.
+ */
+Size
+ParallelCursorCountSize(void)
+{
+	return sizeof(*parallelCursorCount);
+}
+
 void
 ParallelCursorCountInit(void)
 {
 	bool	found = false;
-	parallelCursorCount = (int32 *) ShmemInitStruct(SHMEM_PARALLEL_CURSOR_COUNT, sizeof(int32), &found);
+	parallelCursorCount = (uint32 *) ShmemInitStruct(SHMEM_PARALLEL_CURSOR_COUNT, ParallelCursorCountSize(), &found);
 	Assert(NULL != parallelCursorCount);
 
 	if (!found)
 	{
-		*parallelCursorCount = 0;
+		pg_atomic_init_u32((pg_atomic_uint32 *) parallelCursorCount, 0);
 	}
 }
 

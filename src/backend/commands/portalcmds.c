@@ -31,6 +31,7 @@
 #include "executor/tstoreReceiver.h"
 #include "rewrite/rewriteHandler.h"
 #include "miscadmin.h"
+#include "port/atomics.h"
 #include "tcop/pquery.h"
 #include "tcop/tcopprot.h"
 #include "utils/memutils.h"
@@ -42,8 +43,8 @@
 #include "postmaster/backoff.h"
 #include "utils/resscheduler.h"
 
-extern volatile int32 *parallelCursorCount;
-extern int gp_parallel_cursor_concurrency;
+extern volatile uint32 *parallelCursorCount;
+extern int gp_max_parallel_cursors;
 
 /*
  * PerformCursorOpen
@@ -191,13 +192,13 @@ PerformCursorOpen(DeclareCursorStmt *cstmt, ParamListInfo params,
 
 	if (PortalIsParallelRetrieveCursor(portal))
 	{
-		(*parallelCursorCount)++;
-		if (gp_parallel_cursor_concurrency != -1 && *parallelCursorCount > gp_parallel_cursor_concurrency)
+		pg_atomic_add_fetch_u32((pg_atomic_uint32 *) parallelCursorCount, 1);
+		if (gp_max_parallel_cursors != -1 && pg_atomic_read_u32((pg_atomic_uint32 *) parallelCursorCount) > gp_max_parallel_cursors)
 		{
-			(*parallelCursorCount)--;
+			pg_atomic_sub_fetch_u32((pg_atomic_uint32 *) parallelCursorCount, 1);
 			ereport(ERROR,
 				(errcode(ERRCODE_CONFIGURATION_LIMIT_EXCEEDED),
-				 errmsg("Opened parallel cursor number exceeded allowed concurrency: %d", gp_parallel_cursor_concurrency)));
+				 errmsg("Opened parallel cursor number exceeded allowed concurrency: %d", gp_max_parallel_cursors)));
 		}
 	}
 
@@ -391,9 +392,9 @@ PortalCleanup(Portal portal)
 		}
 	}
 
-	if (PortalIsParallelRetrieveCursor(portal) && *parallelCursorCount > 0)
+	if (PortalIsParallelRetrieveCursor(portal) && pg_atomic_read_u32((pg_atomic_uint32 *) parallelCursorCount) > 0)
 	{
-		(*parallelCursorCount)--;
+		pg_atomic_sub_fetch_u32((pg_atomic_uint32 *) parallelCursorCount, 1);
 	}
 
 	/* 
