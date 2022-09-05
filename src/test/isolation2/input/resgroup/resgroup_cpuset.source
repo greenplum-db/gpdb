@@ -293,6 +293,25 @@ SELECT gp_inject_fault('create_resource_group_fail', 'reset', 1);
 DROP RESOURCE GROUP rg1_test_group;
 -- end_ignore
 
+-- test segment/master cpuset
+CREATE RESOURCE GROUP rg_multi_cpuset1 WITH (concurrency=2, cpuset='0;1-2');
+
+CREATE RESOURCE GROUP rg_multi_cpuset WITH (concurrency=2, cpuset='0;1-2');
+CREATE RESOURCE GROUP rg_multi_cpuset WITH (concurrency=2, cpuset='0');
+
+CREATE RESOURCE GROUP rg_multi_cpuset2 WITH (concurrency=2, cpuset='3;4-5');
+
+ALTER RESOURCE GROUP rg_multi_cpuset2 set CPUSET '0;1-3';
+ALTER RESOURCE GROUP rg_multi_cpuset2 set CPUSET '6';
+ALTER RESOURCE GROUP rg_multi_cpuset1 set CPUSET '3;4-5';
+ALTER RESOURCE GROUP rg_multi_cpuset2 set CPUSET '0;1-2';
+
+select groupname,cpuset from gp_toolkit.gp_resgroup_config where groupname='rg_multi_cpuset1';
+select groupname,cpuset from gp_toolkit.gp_resgroup_config where groupname='rg_multi_cpuset2';
+
+DROP RESOURCE GROUP rg_multi_cpuset1;
+DROP RESOURCE GROUP rg_multi_cpuset2;
+
 REVOKE ALL ON busy FROM role1_cpuset_test;
 DROP ROLE role1_cpuset_test;
 DROP RESOURCE GROUP rg1_cpuset_test;

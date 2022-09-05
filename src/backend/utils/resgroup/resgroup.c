@@ -612,8 +612,9 @@ InitResGroups(void)
 	{
 		ResGroupData	*group;
 		int cpuRateLimit;
-		Oid groupId = HeapTupleGetOid(tuple);
+		Bitmapset *bmsCurrent;
 
+        Oid groupId = HeapTupleGetOid(tuple);
 		GetResGroupCapabilities(relResGroupCapability, groupId, &caps);
 		cpuRateLimit = caps.cpuRateLimit;
 
@@ -629,8 +630,9 @@ InitResGroups(void)
 		}
 		else
 		{
-			Bitmapset *bmsCurrent = CpusetToBitset(caps.cpuset,
-												   MaxCpuSetLength);
+			char *cpuset = getCpuSetByRole(caps.cpuset);
+			bmsCurrent = CpusetToBitset(cpuset, MaxCpuSetLength);
+
 			Bitmapset *bmsCommon = bms_intersect(bmsCurrent, bmsUnused);
 			Bitmapset *bmsMissing = bms_difference(bmsCurrent, bmsCommon);
 
@@ -655,7 +657,8 @@ InitResGroups(void)
 				 * write cpus to corresponding file
 				 * if all the cores are available
 				 */
-				ResGroupOps_SetCpuSet(groupId, caps.cpuset);
+				char *cpuset= getCpuSetByRole(caps.cpuset);
+				ResGroupOps_SetCpuSet(groupId, cpuset);
 				bmsUnused = bms_del_members(bmsUnused, bmsCurrent);
 			}
 			else
@@ -907,8 +910,10 @@ ResGroupAlterOnCommit(const ResourceGroupCallbackContext *callbackCtx)
 		else if (callbackCtx->limittype == RESGROUP_LIMIT_TYPE_CPUSET)
 		{
 			if (gp_resource_group_enable_cgroup_cpuset)
-				ResGroupOps_SetCpuSet(callbackCtx->groupid,
-									  callbackCtx->caps.cpuset);
+			{
+				char *cpuset = getCpuSetByRole(callbackCtx->caps.cpuset);
+				ResGroupOps_SetCpuSet(callbackCtx->groupid, cpuset);
+			}
 		}
 		else if (callbackCtx->limittype != RESGROUP_LIMIT_TYPE_MEMORY_SPILL_RATIO)
 		{
@@ -933,12 +938,15 @@ ResGroupAlterOnCommit(const ResourceGroupCallbackContext *callbackCtx)
 								  MaxCpuSetLength);
 			/* Add old value to default group
 			 * sub new value from default group */
+			char *cpuset= getCpuSetByRole(callbackCtx->caps.cpuset);
+			char *oldcpuset = getCpuSetByRole(callbackCtx->oldCaps.cpuset);
 			CpusetUnion(defaultCpusetGroup,
-							callbackCtx->oldCaps.cpuset,
-							MaxCpuSetLength);
+						oldcpuset,
+						MaxCpuSetLength);
 			CpusetDifference(defaultCpusetGroup,
-							callbackCtx->caps.cpuset,
-							MaxCpuSetLength);
+						cpuset,
+						MaxCpuSetLength);
+
 			ResGroupOps_SetCpuSet(DEFAULT_CPUSET_GROUP_ID, defaultCpusetGroup);
 		}
 	}

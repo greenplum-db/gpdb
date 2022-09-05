@@ -93,7 +93,7 @@ static void createResgroupCallback(XactEvent event, void *arg);
 static void dropResgroupCallback(XactEvent event, void *arg);
 static void alterResgroupCallback(XactEvent event, void *arg);
 static int getResGroupMemAuditor(char *name);
-static bool checkCpusetSyntax(const char *cpuset);
+static void checkCpusetSyntax(const char *cpuset);
 
 /*
  * CREATE RESOURCE GROUP
@@ -242,13 +242,16 @@ CreateResourceGroup(CreateResourceGroupStmt *stmt)
 		{
 			EnsureCpusetIsAvailable(ERROR);
 
-			ResGroupOps_SetCpuSet(groupid, caps.cpuset);
 			/* reset default group, subtract new group cpu cores */
 			char defaultGroupCpuset[MaxCpuSetLength];
 			ResGroupOps_GetCpuSet(DEFAULT_CPUSET_GROUP_ID,
 								  defaultGroupCpuset,
 								  MaxCpuSetLength);
-			CpusetDifference(defaultGroupCpuset, caps.cpuset, MaxCpuSetLength);
+
+			char *cpuset = getCpuSetByRole(caps.cpuset);
+			ResGroupOps_SetCpuSet(groupid, cpuset);
+			CpusetDifference(defaultGroupCpuset, cpuset, MaxCpuSetLength);
+
 			ResGroupOps_SetCpuSet(DEFAULT_CPUSET_GROUP_ID, defaultGroupCpuset);
 		}
 		SIMPLE_FAULT_INJECTOR("create_resource_group_fail");
@@ -394,9 +397,8 @@ AlterResourceGroup(AlterResourceGroupStmt *stmt)
 	else if (limitType == RESGROUP_LIMIT_TYPE_CPUSET)
 	{
 		EnsureCpusetIsAvailable(ERROR);
-
 		cpuset = defGetString(defel);
-		checkCpusetSyntax(cpuset);
+		checkCpuSetByRole(cpuset);
 	}
 	else
 	{
@@ -1030,8 +1032,8 @@ parseStmtOptions(CreateResourceGroupStmt *stmt, ResGroupCaps *caps)
 		if (type == RESGROUP_LIMIT_TYPE_CPUSET) 
 		{
 			const char *cpuset = defGetString(defel);
-			checkCpusetSyntax(cpuset);
 			StrNCpy(caps->cpuset, cpuset, sizeof(caps->cpuset));
+			checkCpuSetByRole(cpuset);
 			caps->cpuRateLimit = CPU_RATE_LIMIT_DISABLED;
 		}
 		else 
@@ -1312,18 +1314,20 @@ validateCapabilities(Relation rel,
 		gp_resource_group_enable_cgroup_cpuset)
 	{
 		Bitmapset *bmsAll = NULL;
+		Bitmapset *bmsMissing = NULL;
 
 		/* Get all available cores */
 		ResGroupOps_GetCpuSet(RESGROUP_ROOT_ID,
 							  cpusetAll,
 							  MaxCpuSetLength);
 		bmsAll = CpusetToBitset(cpusetAll, MaxCpuSetLength);
+
 		/* Check whether the cores in this group are available */
 		if (!CpusetIsEmpty(caps->cpuset))
 		{
-			Bitmapset *bmsMissing = NULL;
+			char *cpuset = getCpuSetByRole(caps->cpuset);
+			bmsCurrent = CpusetToBitset(cpuset, MaxCpuSetLength);
 
-			bmsCurrent = CpusetToBitset(caps->cpuset, MaxCpuSetLength);
 			bmsCommon = bms_intersect(bmsCurrent, bmsAll);
 			bmsMissing = bms_difference(bmsCurrent, bmsCommon);
 
@@ -1333,8 +1337,8 @@ validateCapabilities(Relation rel,
 
 				ereport(ERROR,
 						(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-						 errmsg("cpu cores %s are unavailable on the system",
-								cpusetMissing)));
+						errmsg("cpu cores %s are unavailable on the system",
+						cpusetMissing)));
 			}
 		}
 	}
@@ -1416,7 +1420,8 @@ validateCapabilities(Relation rel,
 
 					Assert(!bms_is_empty(bmsCurrent));
 
-					bmsOther = CpusetToBitset(valueStr, MaxCpuSetLength);
+					char *cpuset = getCpuSetByRole(valueStr);
+					bmsOther = CpusetToBitset(cpuset, MaxCpuSetLength);
 					bmsCommon = bms_intersect(bmsCurrent, bmsOther);
 
 					if (!bms_is_empty(bmsCommon))
@@ -1568,16 +1573,22 @@ getResGroupMemAuditor(char *name)
 /*
  * check whether the cpuset value is syntactically right
  */
-static bool
+static void
 checkCpusetSyntax(const char *cpuset)
 {
+	if (cpuset == NULL)
+	{
+		ereport(ERROR,
+				(errcode(ERRCODE_SYNTAX_ERROR),
+				 errmsg("cpuset invalid")));
+	}
+
 	if (strlen(cpuset) >= MaxCpuSetLength)
 	{
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
 				 errmsg("the length of cpuset reached the upper limit %d",
 						MaxCpuSetLength)));
-		return false;
 	}
 	if (!CpusetToBitset(cpuset,
 						 strlen(cpuset)))
@@ -1585,7 +1596,81 @@ checkCpusetSyntax(const char *cpuset)
 		ereport(ERROR,
 				(errcode(ERRCODE_SYNTAX_ERROR),
 				 errmsg("cpuset invalid")));
-		return false;
 	}
-	return true;
+
+	return;
+}
+
+/*
+ * Check Cpuset by coordinator and segment
+ */
+extern void
+checkCpuSetByRole(const char *cpuset)
+{
+	char **arraycpuset = (char **)palloc0(sizeof(char *) * CpuSetArrayLength);
+	char *copycpuset = (char *)palloc0(sizeof(char) * MaxCpuSetLength);
+	strcpy(copycpuset, cpuset);
+
+	int cnt = 0;
+	for (int i = 0; i < sizeof(cpuset); i++)
+	{
+		if (cpuset[i] == ';')
+			cnt++;
+	}
+
+	if (cnt == 0)
+	{
+		checkCpusetSyntax(copycpuset);
+		arraycpuset[0] = copycpuset;
+	}
+	else if (cnt == 1)
+	{
+		int iter = 0;
+		char *nextcpuset = strtok(copycpuset, ";");
+		while (nextcpuset != NULL)
+		{
+			arraycpuset[iter++] = nextcpuset;
+			nextcpuset = strtok(NULL, ";");
+		}
+		checkCpusetSyntax(arraycpuset[0]);
+		checkCpusetSyntax(arraycpuset[1]);
+	}
+	else
+		ereport(ERROR,
+				(errcode(ERRCODE_SYNTAX_ERROR),
+				errmsg("cpuset invalid")));
+
+	pfree(copycpuset);
+	pfree(arraycpuset);
+	return;
+}
+
+/*
+ * Seperate cpuset by coordinator and segment
+ * Return as splitcpuset
+ */
+extern char *
+getCpuSetByRole(const char *cpuset)
+{
+	int iter = 0;
+	char *splitcpuset = NULL;
+
+	char **arraycpuset = (char **)palloc0(sizeof(char *) * CpuSetArrayLength);
+	char *copycpuset = (char *)palloc0(sizeof(char) * MaxCpuSetLength);
+	strcpy(copycpuset, cpuset);
+
+	char *nextcpuset = strtok(copycpuset, ";");
+	while (nextcpuset != NULL)
+	{
+		arraycpuset[iter++] = nextcpuset;
+		nextcpuset = strtok(NULL, ";");
+	}
+
+	/* Get result cpuset by gprole, on master or segment */
+	if (Gp_role == GP_ROLE_EXECUTE && arraycpuset[1] != NULL)
+		splitcpuset = arraycpuset[1];
+	else
+		splitcpuset = arraycpuset[0];
+
+	return splitcpuset;
 }

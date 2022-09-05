@@ -77,6 +77,12 @@ CREATE RESOURCE GROUP rg_test_group WITH (cpuset='0-,', memory_limit=5);
 CREATE RESOURCE GROUP rg_test_group WITH (cpuset='-1', memory_limit=5);
 CREATE RESOURCE GROUP rg_test_group WITH (cpuset='3-1', memory_limit=5);
 CREATE RESOURCE GROUP rg_test_group WITH (cpuset=' 0 ', memory_limit=5);
+CREATE RESOURCE GROUP rg_test_group WITH (cpuset='0;3-1', memory_limit=5);
+CREATE RESOURCE GROUP rg_test_group WITH (cpuset='4;a', memory_limit=5);
+CREATE RESOURCE GROUP rg_test_group WITH (cpuset='-;4', memory_limit=5);
+CREATE RESOURCE GROUP rg_test_group WITH (cpuset=';5', memory_limit=5);
+CREATE RESOURCE GROUP rg_test_group WITH (cpuset='5;', memory_limit=5);
+
 ---- suppose the core numbered 1024 is not exist
 CREATE RESOURCE GROUP rg_test_group WITH (cpuset='1024', memory_limit=5);
 CREATE RESOURCE GROUP rg_test_group WITH (cpuset='0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,', memory_limit=5);
@@ -91,6 +97,14 @@ ALTER RESOURCE GROUP rg_test_group set CPUSET '0-';
 ALTER RESOURCE GROUP rg_test_group set CPUSET '-1';
 ALTER RESOURCE GROUP rg_test_group set CPUSET '3-1';
 ALTER RESOURCE GROUP rg_test_group set CPUSET ' 0 ';
+ALTER RESOURCE GROUP rg_test_group set CPUSET '5;3-1';
+ALTER RESOURCE GROUP rg_test_group set CPUSET '4;a';
+ALTER RESOURCE GROUP rg_test_group set CPUSET '-;4';
+ALTER RESOURCE GROUP rg_test_group set CPUSET ';5';
+ALTER RESOURCE GROUP rg_test_group set CPUSET '5;';
+ALTER RESOURCE GROUP rg_test_group set CPUSET ';';
+ALTER RESOURCE GROUP rg_test_group set CPUSET '1;2;';
+ALTER RESOURCE GROUP rg_test_group set CPUSET '1;2;3';
 ---- suppose the core numbered 1024 is not exist
 ALTER RESOURCE GROUP rg_test_group set CPUSET '1024';
 ALTER RESOURCE GROUP rg_test_group set CPUSET '0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,';
@@ -115,7 +129,10 @@ DROP RESOURCE GROUP rg_test_group;
 CREATE RESOURCE GROUP rg_test_group WITH (cpuset='0');
 SELECT groupname,concurrency,cpu_rate_limit,memory_limit,memory_shared_quota,memory_spill_ratio FROM gp_toolkit.gp_resgroup_config WHERE groupname='rg_test_group';
 DROP RESOURCE GROUP rg_test_group;
-
+CREATE RESOURCE GROUP rg_test_group WITH (cpuset='1;4-5');
+SELECT groupname,concurrency,cpu_rate_limit,memory_limit,memory_shared_quota,memory_spill_ratio
+FROM gp_toolkit.gp_resgroup_config WHERE groupname='rg_test_group';
+DROP RESOURCE GROUP rg_test_group;
 -- ----------------------------------------------------------------------
 -- Test: boundary check in create resource group syntax
 -- ----------------------------------------------------------------------
@@ -318,4 +335,10 @@ DROP RESOURCE GROUP rg_test_group;
 -- negative: memory_limit must be limited if memory_spill_ratio > 0
 CREATE RESOURCE GROUP rg_test_group WITH (cpu_rate_limit=10, memory_limit=10, memory_spill_ratio=10);
 ALTER RESOURCE GROUP rg_test_group SET memory_limit 0;
+DROP RESOURCE GROUP rg_test_group;
+
+-- positive: test master/segment cpuset
+CREATE RESOURCE GROUP rg_test_group WITH (cpuset='1;4-5');
+ALTER RESOURCE GROUP rg_test_group SET CPUSET '2;4-5';
+ALTER RESOURCE GROUP rg_test_group SET CPUSET '3;4-5';
 DROP RESOURCE GROUP rg_test_group;
