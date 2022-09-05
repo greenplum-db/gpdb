@@ -9088,9 +9088,7 @@ CreateCheckPoint(int flags)
 	 * aggregate state (ptas) will be skipped when gp_before_filespace_setup
 	 * is ON. See comments inside UnpackCheckPointRecord(). For the case,
 	 * mmxlog_append_checkpoint_data() will return earlier.
-	 */
-
-	/*
+	 *
 	 * Note that we need to collect ptas data even when we don't need to write
 	 * it to check point xlog record.
 	 * When gp_before_filespace_setup is ON, we will not link mmxlog and ptas
