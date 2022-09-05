@@ -2293,6 +2293,18 @@ describeOneTableDetails(const char *schemaname,
 				printfPQExpBuffer(&title, _("Partitioned table \"%s.%s\""),
 								  schemaname, relationname);
 			break;
+		case RELKIND_AOSEGMENTS:
+			printfPQExpBuffer(&title, _("Appendonly segment entry table: \"%s.%s\""),
+							  schemaname, relationname);
+			break;
+		case RELKIND_AOVISIMAP:
+			printfPQExpBuffer(&title, _("Appendonly visibility map table: \"%s.%s\""),
+							  schemaname, relationname);
+			break;
+		case RELKIND_AOBLOCKDIR:
+			printfPQExpBuffer(&title, _("Appendonly block directory table: \"%s.%s\""),
+							  schemaname, relationname);
+			break;
 		default:
 			/* untranslated unknown relkind */
 			printfPQExpBuffer(&title, "?%c? \"%s.%s\"",
@@ -2637,7 +2649,10 @@ describeOneTableDetails(const char *schemaname,
 	else if (tableinfo.relkind == RELKIND_RELATION ||
 			 tableinfo.relkind == RELKIND_MATVIEW ||
 			 tableinfo.relkind == RELKIND_FOREIGN_TABLE ||
-			 tableinfo.relkind == RELKIND_PARTITIONED_TABLE)
+			 tableinfo.relkind == RELKIND_PARTITIONED_TABLE ||
+			 tableinfo.relkind == RELKIND_AOSEGMENTS ||
+			 tableinfo.relkind == RELKIND_AOBLOCKDIR ||
+			 tableinfo.relkind == RELKIND_AOVISIMAP)
 	{
 		/* Footer information about a table */
 		PGresult   *result = NULL;
