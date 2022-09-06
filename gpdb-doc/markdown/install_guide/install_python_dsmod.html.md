@@ -2,7 +2,7 @@
 title: Data Science Package for Python 
 ---
 
-Greenplum Database provides a collection of data science-related Python modules that can be used with the Greenplum Database PL/Python language. You can download these modules in `.gppkg` format from [VMware Tanzu Network](https://network.pivotal.io/products/pivotal-gpdb). Separate modules are provide for Python 2.7 and Python 3.9 development on RHEL7, RHEL8, and Ubuntu platforms.
+Greenplum Database provides a collection of data science-related Python modules that can be used with the Greenplum Database PL/Python language. You can download these modules in `.gppkg` format from [VMware Tanzu Network](https://network.pivotal.io/products/pivotal-gpdb). Separate modules are provided for Python 2.7 and Python 3.9 development on RHEL7, RHEL8, and Ubuntu platforms.
 
 This section contains the following information:
 
@@ -280,7 +280,7 @@ $ sudo yum install tk
 
 1.  Locate the Data Science Package for Python that you built or downloaded.
 
-    The file name format of the package is `DataSciencePython<pythonversion>-gp6-rhel<n>-x86_64.gppkg`.  For example, the Data Science Package for Python 2.7 for Redhat 8 file is `DataSciencePython2.7-2.0.4-gp6-rhel8_x86_64.gppkg`, and the Python 3.7 package is `DataSciencePython3.9-3.0.0-gp6-rhel8_x86_64.gppkg`.
+    The file name format of the package is `DataSciencePython<pythonversion>-gp6-rhel<n>-x86_64.gppkg`.  For example, the Data Science Package for Python 2.7 for Redhat 8 file is `DataSciencePython2.7-2.0.4-gp6-rhel8_x86_64.gppkg`, and the Python 3.9 package is `DataSciencePython3.9-3.0.0-gp6-rhel8_x86_64.gppkg`.
 
 2.  Copy the package to the Greenplum Database coordinator host.
 3.  Follow the instructions in [Verifying the Greenplum Database Software Download](../install_guide/verify_sw.html) to verify the integrity of the *Greenplum Procedural Languages Python Data Science Package* software.
