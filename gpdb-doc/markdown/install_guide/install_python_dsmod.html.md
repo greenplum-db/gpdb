@@ -203,8 +203,10 @@ The following table lists the modules that are provided in the Data Science Pack
 | Pattern | Web mining module for Python |
 | pdfminer.six | PDF parser and analyzer |
 | Pillow | Python Imaging Library |
+| pmdarima | Python's forecast::auto.arima equivalent |
 | portend | TCP port monitoring and discovery |
 | preshed | Cython hash table that trusts the keys are pre-hashed |
+| prophet | Automatic Forecasting Procedure |
 | protobuf | Protocol buffers |
 | psycopg2 | PostgreSQL database adapter for Python |
 | psycopg2-binary | psycopg2 - Python-PostgreSQL Database Adapter |
@@ -218,6 +220,7 @@ The following table lists the modules that are provided in the Data Science Pack
 | pyparsing | Python parsing |
 | python-dateutil | Extensions to the standard Python datetime module |
 | python-docx | Create and update Microsoft Word .docx files |
+| PyTorch | Tensors and Dynamic neural networks in Python with strong GPU acceleration |
 | pytz | World timezone definitions, modern and historical |
 | regex | Alternative regular expression module, to replace re |
 | requests | HTTP library |
@@ -234,6 +237,7 @@ The following table lists the modules that are provided in the Data Science Pack
 | spacy | Large scale natural language processing |
 | spacy-legacy | Legacy registered functions for spaCy backwards compatibility |
 | spacy-loggers | Logging utilities for SpaCy |
+| spectrum | Spectrum Analysis Tools |
 | SQLAlchemy | Database Abstraction Library |
 | srsly | Modern high-performance serialization utilities for Python |
 | statsmodels | Statistical modeling |
