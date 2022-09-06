@@ -1868,7 +1868,7 @@ results_differ(const char *testname, const char *resultsfile, const char *defaul
 	}
 
 	/* Add auto generated init file if it is generated */
-	snprintf(buf, sizeof(buf), "%s.ini", resultsfile);
+	snprintf(buf, sizeof(buf), "%s.initfile", resultsfile);
 	if (file_exists(buf))
 	{
 		snprintf(generated_initfile, sizeof(generated_initfile),
