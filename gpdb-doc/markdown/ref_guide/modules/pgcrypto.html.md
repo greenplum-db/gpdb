@@ -17,7 +17,7 @@ Before enabling this parameter, ensure that FIPS is enabled on all Greenplum Dat
 When this parameter is enabled, these changes occur:
 
 -   FIPS mode is initialized in the OpenSSL library
--   The functions digest\(\) and hmac\(\) allow only the SHA encryption algorithm \(MD5 is not allowed\)
+-   The functions `digest()` and `hmac()` allow only the SHA encryption algorithm \(MD5 is not allowed\)
 -   The functions for the crypt and gen\_salt algorithms are disabled
 -   PGP encryption and decryption functions support only AES and 3DES encryption algorithms \(other algorithms such as blowfish are not allowed\)
 -   RAW encryption and decryption functions support only AES and 3DES \(other algorithms such as blowfish are not allowed\)
@@ -30,7 +30,7 @@ When this parameter is enabled, these changes occur:
     psql -d testdb -c 'CREATE EXTENSION pgcrypto'
     ```
 
-2.  Configure the Greenplum Database server configuration parameter `shared_preload_libraries` to load the `pgrcypto` library. This example uses the `gpconfig` utility to update the parameter in the Greenplum Database `postgresql.conf` files.
+2.  Configure the Greenplum Database server configuration parameter `shared_preload_libraries` to load the `pgcrypto` library. This example uses the `gpconfig` utility to update the parameter in the Greenplum Database `postgresql.conf` files.
 
     ```
     gpconfig -c shared_preload_libraries -v '\$libdir/pgcrypto'
@@ -48,8 +48,11 @@ When this parameter is enabled, these changes occur:
     gpstop -ra 
     ```
 
-4.  Set the `pgcrypto.fips` server configuration parameter to `on` for each database that uses FIPS encryption. For example, this command sets the parameter to `on` for the database `testdb`.
+4.  Set the `pgcrypto.fips` server configuration parameter to `on` for each database that uses FIPS encryption. For example, these commands set the parameter to `on` for the database `testdb`.
 
+    ```
+    psql -d postgres
+    ```
     ```
     ALTER DATABASE testdb SET pgcrypto.fips TO on;
     ```
@@ -65,7 +68,7 @@ When this parameter is enabled, these changes occur:
 
 **To disable `pgcrypto.fips`**
 
-1.  If the database does not use `pgcrypto` functions, disable the `pgcrypto` extension. See [pgcrypto Cryptographic Functions](/vmware/install_guide/install_pgcrypto.html).This example `psql` command drops the `pgcrypto` extension in the database `testdb`.
+1.  If the database does not use `pgcrypto` functions, disable the `pgcrypto` extension. See [pgcrypto Cryptographic Functions](/vmware/install_guide/install_pgcrypto.html). This example `psql` command drops the `pgcrypto` extension in the database `testdb`.
 
     ```
     psql -d testdb -c 'DROP EXTENSION pgcrypto'
