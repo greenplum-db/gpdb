@@ -228,15 +228,16 @@ CScalarProjectList::FHasScalarFunc(CExpressionHandle &exprhdl)
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CScalarProjectList::FHasReplicationSafeAggFunc
+//		CScalarProjectList::FContainsOnlyReplicationSafeAggFuncs
 //
 //	@doc:
-//		Check if given project list has a replication safe agg func that allows
-//			it to be executed safely on replicated slices.
+//		Check if given project list contains only replication safe agg funcs,
+//      which allows it to be executed safely on replicated slices.
 //
 //---------------------------------------------------------------------------
 BOOL
-CScalarProjectList::FHasReplicationSafeAggFunc(CExpressionHandle &exprhdl)
+CScalarProjectList::FContainsOnlyReplicationSafeAggFuncs(
+	CExpressionHandle &exprhdl)
 {
 	// We make do with an inexact representative expression returned by exprhdl.PexprScalarRep(),
 	// knowing that at this time, aggregate functions are accurately contained in it. What's not

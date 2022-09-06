@@ -338,7 +338,7 @@ public:
 	BOOL DeriveHasMultipleDistinctAggs(ULONG child_index) const;
 	BOOL DeriveHasScalarArrayCmp(ULONG child_index) const;
 	BOOL DeriveHasScalarFuncProject(ULONG child_index) const;
-	BOOL DeriveHasReplicationSafeAggFunc(ULONG child_index) const;
+	BOOL DeriveContainsOnlyReplicationSafeAggFuncs(ULONG child_index) const;
 
 };	// class CExpressionHandle
 

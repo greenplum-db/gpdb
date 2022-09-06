@@ -361,7 +361,8 @@ public:
 
 	// check if given project list has only aggregate functions
 	// that can be safely executed on replicated slices
-	static BOOL FHasReplicationSafeAggFunc(const CExpression *pexprProjList);
+	static BOOL FContainsOnlyReplicationSafeAggFuncs(
+		const CExpression *pexprProjList);
 
 	// generate a bool expression
 	static CExpression *PexprScalarConstBool(CMemoryPool *mp, BOOL value,

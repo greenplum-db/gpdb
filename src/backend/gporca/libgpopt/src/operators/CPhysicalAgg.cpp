@@ -481,7 +481,7 @@ CPhysicalAgg::PdsDerive(CMemoryPool *mp, CExpressionHandle &exprhdl) const
 		// Aggregate functions that are not sensitive to the order of data (eg: sum, avg, min, max, count)
 		// can be executed safely on replicated slices and do not need to be broadcasted/gathered, allowing
 		// for more performant plans in some cases
-		if (exprhdl.DeriveHasReplicationSafeAggFunc(1))
+		if (exprhdl.DeriveContainsOnlyReplicationSafeAggFuncs(1))
 		{
 			return GPOS_NEW(mp) CDistributionSpecReplicated(
 				CDistributionSpec::EdtStrictReplicated);

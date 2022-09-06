@@ -1549,10 +1549,10 @@ CExpression::DeriveTotalOrderedAggs()
 	return m_pdpscalar->DeriveTotalOrderedAggs(exprhdl);
 }
 BOOL
-CExpression::DeriveHasReplicationSafeAggFunc()
+CExpression::DeriveContainsOnlyReplicationSafeAggFuncs()
 {
 	CExpressionHandle exprhdl(m_mp);
 	exprhdl.Attach(this);
-	return m_pdpscalar->DeriveHasReplicationSafeAggFunc(exprhdl);
+	return m_pdpscalar->DeriveContainsOnlyReplicationSafeAggFuncs(exprhdl);
 }
 // EOF

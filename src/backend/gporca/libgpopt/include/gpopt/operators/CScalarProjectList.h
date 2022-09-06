@@ -100,7 +100,8 @@ public:
 	static BOOL FHasScalarFunc(CExpressionHandle &exprhdl);
 
 	// check if a project list has only replication safe agg funcs
-	static BOOL FHasReplicationSafeAggFunc(CExpressionHandle &exprhdl);
+	static BOOL FContainsOnlyReplicationSafeAggFuncs(
+		CExpressionHandle &exprhdl);
 };	// class CScalarProjectList
 
 }  // namespace gpopt
