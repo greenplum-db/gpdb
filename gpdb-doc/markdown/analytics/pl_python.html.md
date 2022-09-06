@@ -19,8 +19,8 @@ You can run PL/Python code blocks as anonymous code blocks. See the [DO](../ref_
 
 The Greenplum Database PL/Python extensions are installed by default with Greenplum Database. Two extensions are provided:
 
-- `plpythonu` supports developing functions using Python 2.7. Greenplum Database installs a version of Python 2.7 for for `plpythonu` at `$GPHOME/ext/python`.
-- `plpython3u`, introduced with Greenplum 6.22, supports developing functions using Python 3.9. For RHEL7 and Ubuntu installations, Greenplum Database installs a compatible python at `$GPHOME/ext/python3.9`. On RHEL8 systems you must install Python 3.9 to your system.
+- `plpythonu` supports developing functions using Python 2.7. Greenplum Database installs a version of Python 2.7 for `plpythonu` at `$GPHOME/ext/python`.
+- `plpython3u`, introduced with Greenplum 6.22, supports developing functions using Python 3.9. Greenplum Database installs a compatible Python at `$GPHOME/ext/python3.9`.
 
 ### <a id="topic3"></a>Greenplum Database PL/Python Limitations 
 
@@ -35,13 +35,7 @@ The PL/Python language is installed with Greenplum Database. To create and run a
 
 ### <a id="topic5"></a>Enabling PL/Python Support 
 
-For RHEL8 systems only, if you intend to create functions using `plpython3u` then you must install Python 3.9 to your system:
-
-```
-dnf install -y python39 python39-devel
-```
-
-For all other operating systems, Greenplum installs compatible versions of Python 2.7 and 3.9 in `$GPHOME/ext`.
+Greenplum installs compatible versions of Python 2.7 and 3.9 in `$GPHOME/ext`.
 
 For each database that requires its use, register the PL/Python language with the SQL command `CREATE EXTENSION`. Separate extensions are provided for Python 2.7 and Python 3.9 support, and you can install either or both extensions to a database. 
 
@@ -340,13 +334,11 @@ As part of the Greenplum Database installation, the `gpadmin` user environment i
 which python
 ```
 
-The command returns the location of the Python installation. All Greenplum installations include Python 2.7 installed as `$GPHOME/ext/python`. RHEL7 and Ubuntu installations also include a Python 3.9 environment instaled as `$GPHOME/ext/python3.9`:
+The command returns the location of the Python installation. All Greenplum installations include Python 2.7 installed as `$GPHOME/ext/python` and Python 3.9 installed as `$GPHOME/ext/python3.9`:
 
 ```
 which python3.9
 ```
-
-**Note:** On RHEL8 systems you must install Python 3.9 using the instructions in [Enabling PL/Python Support](#topic5).
 
 When running shell commands on remote hosts with `gpssh`, specify the `-s` option to source the `greenplum_path.sh` file before running commands on the remote hosts. For example, this command should display the Python installed with Greenplum Database on each host specified in the `gpdb_hosts` file.
 
