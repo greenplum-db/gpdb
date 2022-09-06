@@ -134,7 +134,7 @@ When you assign CPU cores to `CPUSET` groups, consider the following:
 
 Resource groups that you configure with `CPUSET` have a higher priority on CPU resources. The maximum CPU resource usage percentage for all resource groups configured with `CPUSET` on a segment host is the number of CPU cores reserved divided by the number of all CPU cores, multiplied by 100.
 
-When you configure `CPUSET` for a resource group, Greenplum Database disables `CPU_RATE_LIMIT` for the group and sets the value to -1.
+When you configure `CPUSET` for a resource group, Greenplum Database deactivates `CPU_RATE_LIMIT` for the group and sets the value to -1.
 
 **Note:** You must configure `CPUSET` for a resource group *after* you have enabled resource group-based resource management for your Greenplum Database cluster.
 
@@ -151,7 +151,7 @@ The maximum CPU resource usage for all resource groups configured with a `CPU_RA
 -   The number of non-reserved CPU cores divided by the number of all CPU cores, multiplied by 100, and
 -   The `gp_resource_group_cpu_limit` value.
 
-When you configure `CPU_RATE_LIMIT` for a resource group, Greenplum Database disables `CPUSET` for the group and sets the value to -1.
+When you configure `CPU_RATE_LIMIT` for a resource group, Greenplum Database deactivates `CPUSET` for the group and sets the value to -1.
 
 There are two different ways of assigning CPU resources by percentage, determined by the value of the configuration parameter `gp_resource_group_cpu_ceiling_enforcement`:
 

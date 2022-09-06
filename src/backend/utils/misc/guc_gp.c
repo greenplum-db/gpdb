@@ -156,6 +156,7 @@ bool		gp_create_table_random_default_distribution = true;
 bool		gp_allow_non_uniform_partitioning_ddl = true;
 bool		gp_enable_exchange_default_partition = false;
 int			dtx_phase2_retry_count = 0;
+bool		gp_log_suboverflow_statement = false;
 
 bool		log_dispatch_stats = false;
 
@@ -1644,10 +1645,16 @@ struct config_bool ConfigureNamesBool_gp[] =
 
 	{
 		{"gp_disable_tuple_hints", PGC_USERSET, DEVELOPER_OPTIONS,
-			gettext_noop("Specify if reader should set hint bits on tuples."),
+			gettext_noop("Specify if hint bits on tuples should be deferred."),
 			NULL,
 			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
 		},
+		/*
+		 * If gp_disable_tuple_hints is off, always mark buffer dirty.
+		 * If gp_disable_tuple_hints is on, defer marking the buffer dirty
+		 * until after transaction is identified as old.
+		 * (unless it is a catalog table) See: markDirty
+		 */
 		&gp_disable_tuple_hints,
 		true,
 		NULL, NULL, NULL
@@ -3222,6 +3229,16 @@ struct config_bool ConfigureNamesBool_gp[] =
 		 NULL,
 		 },
 		 &gp_log_resqueue_priority_sleep_time,
+		 false,
+		 NULL, NULL, NULL
+	},
+
+	{
+		{"gp_log_suboverflow_statement", PGC_SUSET, LOGGING_WHAT,
+		 gettext_noop("Enable logging of statements that cause subtransaction overflow."),
+		 NULL,
+		 },
+		 &gp_log_suboverflow_statement,
 		 false,
 		 NULL, NULL, NULL
 	},

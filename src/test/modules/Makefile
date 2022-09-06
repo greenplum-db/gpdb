@@ -6,5 +6,6 @@ include $(top_builddir)/src/Makefile.global
 
 SUBDIRS = test_planner
 SUBDIRS += connection 
+SUBDIRS += test_extensions 
 
 $(recurse)

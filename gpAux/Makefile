@@ -531,7 +531,7 @@ ifeq "$(shell uname -s)" "Darwin"
 	echo "pgbouncer can't build on Mac"
 else
 	@if [ ! -f extensions/pgbouncer/source/configure ]; then cd extensions/pgbouncer/source && ./autogen.sh ;fi
-	@cd extensions/pgbouncer/source && ./configure --with-libevent=$(BLD_TOP)/ext/$(BLD_ARCH) --prefix=$(INSTLOC) --enable-evdns --with-pam
+	@cd extensions/pgbouncer/source && ./configure --with-libevent=$(BLD_TOP)/ext/$(BLD_ARCH) --prefix=$(INSTLOC) --enable-evdns --with-pam --with-ldap
 	$(MAKE) -C extensions/pgbouncer/source install
 endif
 

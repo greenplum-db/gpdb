@@ -187,7 +187,7 @@ These steps enable the PostGIS extension and the extensions that are used with P
 
 ### <a id="topic_ydr_q5l_ybb"></a>Enabling GDAL Raster Drivers 
 
-PostGIS uses GDAL raster drivers when processing raster data with commands such as `ST_AsJPEG()`. As the default, PostGIS disables all raster drivers. You enable raster drivers by setting the value of the `POSTGIS_GDAL_ENABLED_DRIVERS` environment variable in the `greenplum_path.sh` file on all Greenplum Database hosts.
+PostGIS uses GDAL raster drivers when processing raster data with commands such as `ST_AsJPEG()`. As the default, PostGIS deactivates all raster drivers. You enable raster drivers by setting the value of the `POSTGIS_GDAL_ENABLED_DRIVERS` environment variable in the `greenplum_path.sh` file on all Greenplum Database hosts.
 
 Alternatively, you can do it at the session level by setting `postgis.gdal_enabled_drivers`. For a Greenplum Database session, this example `SET` command enables three GDAL raster drivers.
 
@@ -223,9 +223,9 @@ SELECT short_name, long_name FROM ST_GDALDrivers();
 
 ### <a id="topic_fx2_fpx_llb"></a>Enabling Out-of-Database Rasters 
 
-After installing PostGIS, the default setting `POSTGIS_ENABLE_OUTDB_RASTERS=0` in the `greenplum_path.sh` file disables support for out-of-database rasters. To enable this feature, you can set the value to true \(a non-zero value\) on all hosts and restart the Greenplum Database system.
+After installing PostGIS, the default setting `POSTGIS_ENABLE_OUTDB_RASTERS=0` in the `greenplum_path.sh` file deactivates support for out-of-database rasters. To enable this feature, you can set the value to true \(a non-zero value\) on all hosts and restart the Greenplum Database system.
 
-You can also enable or disable this feature for a Greenplum Database session. For example, this `SET` command enables the feature for the current session.
+You can also activate or deactivate this feature for a Greenplum Database session. For example, this `SET` command enables the feature for the current session.
 
 ```
 SET postgis.enable_outdb_rasters = true;				

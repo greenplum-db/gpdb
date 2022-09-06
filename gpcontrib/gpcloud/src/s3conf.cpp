@@ -45,23 +45,25 @@ S3Params InitConfig(const string& urlWithOptions) {
         s3ext_segnum = 1;
     }
 
-    string sourceUrl = TruncateOptions(urlWithOptions);
+    string urlWithOptionsProcessed = ReplaceNewlineWithSpace(urlWithOptions);
+
+    string sourceUrl = TruncateOptions(urlWithOptionsProcessed);
     S3_CHECK_OR_DIE(!sourceUrl.empty(), S3RuntimeError, "URL not found from location string");
 
-    string httpUrl = GetOptS3(urlWithOptions, "config_server");
-    string configPath = GetOptS3(urlWithOptions, "config");
+    string httpUrl = GetOptS3(urlWithOptionsProcessed, "config_server");
+    string configPath = GetOptS3(urlWithOptionsProcessed, "config");
     if (configPath.empty()) {
         S3WARN("The 'config' parameter is not provided, use default value 's3/s3.conf'.");
         configPath = "s3/s3.conf";
     }
 
-    string configSection = GetOptS3(urlWithOptions, "section");
+    string configSection = GetOptS3(urlWithOptionsProcessed, "section");
     if (configSection.empty()) {
         configSection = "default";
     }
 
     // region could be empty
-    string urlRegion = GetOptS3(urlWithOptions, "region");
+    string urlRegion = GetOptS3(urlWithOptionsProcessed, "region");
 
     // read configurations from file
 

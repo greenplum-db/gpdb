@@ -9,6 +9,7 @@ from gppylib.db import catalog
 from gppylib.gplog import *
 from gppylib.system.configurationInterface import GpConfigurationProvider
 from gppylib.system.environment import GpMasterEnvironment
+from gppylib.db import dbconn
 import io
 import sys
 
@@ -71,8 +72,8 @@ class GpExpand(GpTestCase):
         sys.argv = self.old_sys_argv
         super(GpExpand, self).tearDown()
 
-    # @patch('gpexpand.PgControlData.return_value.get_value', side_effect=[1, 1, 0])
-    def test_validate_heap_checksums_aborts_when_cluster_inconsistent(self):
+    @patch('gpexpand.is_cluster_up_and_balanced', return_value=True)
+    def test_validate_heap_checksums_aborts_when_cluster_inconsistent(self, mock1):
         self.options.filename = '/tmp/doesnotexist' # Replacement of the sys.argv
 
         self.mock_heap_checksum.return_value.get_segments_checksum_settings.return_value = ([1], [0])
@@ -94,8 +95,8 @@ class GpExpand(GpTestCase):
 
     @patch('gpexpand.FileDirExists.return_value.filedir_exists', return_value=True)
     @patch('gpexpand.FileDirExists', return_value=Mock())
-    # @patch('gpexpand.HeapChecksum.PgControlData.return_value.get_value', side_effect=[1, 1, 1])
-    def test_validate_heap_checksums_completes_when_cluster_consistent(self, mock1, mock2):
+    @patch('gpexpand.is_cluster_up_and_balanced', return_value=True)
+    def test_validate_heap_checksums_completes_when_cluster_consistent(self, mock1, mock2, mock3):
         """
         If all the segment checksums match the checksum at the master, then the cluster is consistent.
         This is essentially making sure that the validate_heap_checksums() internal method has not detected any
@@ -127,6 +128,33 @@ class GpExpand(GpTestCase):
             self.assertIn('The current system appears to be non-standard.', mock_stdout.getvalue())
 
         self.subject.logger.info.assert_any_call("User Aborted. Exiting...")
+
+    @patch('gppylib.db.dbconn.execSQLForSingleton', return_value=0)
+    def test_unit_cluster_up_and_balanced_true(self, mock1):
+        expected = True
+        actual = self.subject.is_cluster_up_and_balanced(dbconn.DbURL())
+        self.assertEqual(actual, expected)
+
+    @patch('gppylib.db.dbconn.execSQLForSingleton', return_value=2)
+    def test_unit_cluster_up_and_balanced_false(self, mock):
+        expected = False
+        actual = self.subject.is_cluster_up_and_balanced(dbconn.DbURL())
+        self.assertEqual(actual, expected)
+
+    @patch('gppylib.db.dbconn.execSQLForSingleton', side_effect=Exception())
+    def test_unit_cluster_up_and_balanced_exception(self, mock1):
+        with self.assertRaises(Exception) as ex:
+            self.subject.is_cluster_up_and_balanced(dbconn.DbURL())
+
+        self.assertTrue('failed to query cluster role check' in str(ex.exception))
+
+    @patch('gppylib.db.dbconn.connect', side_effect=Exception())
+    def test_unit_cluster_up_and_balanced_conn_exception(self, mock1):
+        with self.assertRaises(Exception) as ex:
+            self.subject.is_cluster_up_and_balanced(dbconn.DbURL())
+
+        self.assertTrue('failed to query cluster role check' in str(ex.exception))
+
     #
     # end tests for interview_setup()
     #

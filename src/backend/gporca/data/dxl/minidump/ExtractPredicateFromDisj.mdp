@@ -14562,7 +14562,7 @@ WHERE ((sale_type = 's'::text AND dyear = 2001 AND year_total &gt; 0::numeric) O
         </dxl:LogicalProject>
       </dxl:LogicalSelect>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="2486">
+    <dxl:Plan Id="0" SpaceSize="2542">
       <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="5944.261371" Rows="20169.272000" Width="76"/>

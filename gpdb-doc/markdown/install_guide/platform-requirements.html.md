@@ -107,7 +107,7 @@ Greenplum Database 6 uses Python 2.7.12, which is included with the product inst
 
 **Important:** SSL is supported only on the Greenplum Database master host system. It cannot be used on the segment host systems.
 
-**Important:** For all Greenplum Database host systems, if SELinux is enabled in `Enforcing` mode then the Greenplum process and users can operate successfully in the default `Unconfined` context. If increased confinement is required, then you must configure SELinux contexts, policies, and domains based on your security requirements, and test your configuration to ensure there is no functionality or performance impact to Greenplum Database. Similarly, you should either disable or configure firewall software as needed to allow communication between Greenplum hosts. See [Disable or Configure SELinux](prep_os.html).
+**Important:** For all Greenplum Database host systems, if SELinux is enabled in `Enforcing` mode then the Greenplum process and users can operate successfully in the default `Unconfined` context. If increased confinement is required, then you must configure SELinux contexts, policies, and domains based on your security requirements, and test your configuration to ensure there is no functionality or performance impact to Greenplum Database. Similarly, you should either deactivate or configure firewall software as needed to allow communication between Greenplum hosts. See [Deactivate or Configure SELinux](prep_os.html).
 
 ### <a id="topic_xbl_mkx_zgb"></a>Java 
 

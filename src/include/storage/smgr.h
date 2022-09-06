@@ -22,6 +22,7 @@
 #include "storage/relfilenode.h"
 #include "storage/dbdirnode.h"
 
+struct f_smgr;
 
 /*
  * smgr.c maintains a table of SMgrRelation objects, which are essentially
@@ -66,19 +67,80 @@ typedef struct SMgrRelationData
 	 * Fields below here are intended to be private to smgr.c and its
 	 * submodules.  Do not touch them from elsewhere.
 	 */
-	int			smgr_which;		/* storage manager selector */
+	/* Obsolete storage manager selector, should not be used for any particular purpose */
+	int			smgr_which;
 
 	/* for md.c; NULL for forks that are not open */
 	struct _MdfdVec *md_fd[MAX_FORKNUM + 1];
 
 	/* if unowned, list link in list of all unowned SMgrRelations */
 	dlist_node	node;
+	
+	const struct f_smgr *smgr; /* storage manager selector */
 } SMgrRelationData;
 
 typedef SMgrRelationData *SMgrRelation;
 
 #define SmgrIsTemp(smgr) \
 	RelFileNodeBackendIsTemp((smgr)->smgr_rnode)
+
+
+/*
+ * This struct of function pointers defines the API between smgr.c and
+ * any individual storage manager module.  Note that smgr subfunctions are
+ * generally expected to report problems via elog(ERROR).  An exception is
+ * that smgr_unlink should use elog(WARNING), rather than erroring out,
+ * because we normally unlink relations during post-commit/abort cleanup,
+ * and so it's too late to raise an error.  Also, various conditions that
+ * would normally be errors should be allowed during bootstrap and/or WAL
+ * recovery --- see comments in md.c for details.
+ */
+typedef struct f_smgr
+{
+	void		(*smgr_init) (void);	/* may be NULL */
+	void		(*smgr_shutdown) (void);	/* may be NULL */
+	void		(*smgr_close) (SMgrRelation reln, ForkNumber forknum);
+	void		(*smgr_create) (SMgrRelation reln, ForkNumber forknum,
+								bool isRedo);
+
+	void		(*smgr_create_ao) (RelFileNodeBackend rnode, int32 segmentFileNum, bool isRedo);
+
+	bool		(*smgr_exists) (SMgrRelation reln, ForkNumber forknum);
+	void		(*smgr_unlink) (RelFileNodeBackend rnode, ForkNumber forknum,
+								bool isRedo, char relstorage);
+	void		(*smgr_extend) (SMgrRelation reln, ForkNumber forknum,
+								BlockNumber blocknum, char *buffer, bool skipFsync);
+	void		(*smgr_prefetch) (SMgrRelation reln, ForkNumber forknum,
+								  BlockNumber blocknum);
+	void		(*smgr_read) (SMgrRelation reln, ForkNumber forknum,
+							  BlockNumber blocknum, char *buffer);
+	void		(*smgr_write) (SMgrRelation reln, ForkNumber forknum,
+							   BlockNumber blocknum, char *buffer, bool skipFsync);
+	void		(*smgr_writeback) (SMgrRelation reln, ForkNumber forknum,
+								   BlockNumber blocknum, BlockNumber nblocks);
+	BlockNumber (*smgr_nblocks) (SMgrRelation reln, ForkNumber forknum);
+	void		(*smgr_truncate) (SMgrRelation reln, ForkNumber forknum,
+								  BlockNumber nblocks);
+	void		(*smgr_immedsync) (SMgrRelation reln, ForkNumber forknum);
+	void		(*smgr_pre_ckpt) (void);		/* may be NULL */
+	void		(*smgr_sync) (void);	/* may be NULL */
+	void		(*smgr_post_ckpt) (void);		/* may be NULL */
+} f_smgr;
+
+
+typedef void (*smgr_init_hook_type) (void);
+typedef void (*smgr_shutdown_hook_type) (void);
+extern PGDLLIMPORT smgr_init_hook_type smgr_init_hook;
+extern PGDLLIMPORT smgr_shutdown_hook_type smgr_shutdown_hook;
+extern void smgr_init_standard(void);
+extern void smgr_shutdown_standard(void);
+
+
+typedef const f_smgr *(*smgr_hook_type) (BackendId backend, RelFileNode rnode);
+extern PGDLLIMPORT smgr_hook_type smgr_hook;
+extern const f_smgr *smgr_standard(BackendId backend, RelFileNode rnode);
+
+extern const f_smgr *smgr(BackendId backend, RelFileNode rnode);
 
 extern void smgrinit(void);
 extern SMgrRelation smgropen(RelFileNode rnode, BackendId backend);
@@ -89,7 +151,7 @@ extern void smgrclose(SMgrRelation reln);
 extern void smgrcloseall(void);
 extern void smgrclosenode(RelFileNodeBackend rnode);
 extern void smgrcreate(SMgrRelation reln, ForkNumber forknum, bool isRedo);
-extern void smgrcreate_ao(RelFileNodeBackend rnode, int32 segmentFileNum, bool isRedo);
+extern void smgrcreate_ao(SMgrRelation reln, int32 segmentFileNum, bool isRedo);
 extern void smgrdounlink(SMgrRelation reln, bool isRedo, char relstorage);
 extern void smgrdounlinkall(SMgrRelation *rels, int nrels, bool isRedo, char *relstorages);
 extern void smgrextend(SMgrRelation reln, ForkNumber forknum,
@@ -108,39 +170,6 @@ extern void smgrpreckpt(void);
 extern void smgrsync(void);
 extern void smgrpostckpt(void);
 extern void AtEOXact_SMgr(void);
-
-
-/* internals: move me elsewhere -- ay 7/94 */
-
-/* in md.c */
-extern void mdinit(void);
-extern void mdclose(SMgrRelation reln, ForkNumber forknum);
-extern void mdcreate(SMgrRelation reln, ForkNumber forknum, bool isRedo);
-extern void mdcreate_ao(RelFileNodeBackend rnode, int32 segmentFileNum, bool isRedo);
-extern bool mdexists(SMgrRelation reln, ForkNumber forknum);
-extern void mdunlink(RelFileNodeBackend rnode, ForkNumber forknum, bool isRedo, char relstorage);
-extern void mdextend(SMgrRelation reln, ForkNumber forknum,
-		 BlockNumber blocknum, char *buffer, bool skipFsync);
-extern void mdprefetch(SMgrRelation reln, ForkNumber forknum,
-		   BlockNumber blocknum);
-extern void mdread(SMgrRelation reln, ForkNumber forknum, BlockNumber blocknum,
-	   char *buffer);
-extern void mdwrite(SMgrRelation reln, ForkNumber forknum,
-		BlockNumber blocknum, char *buffer, bool skipFsync);
-extern BlockNumber mdnblocks(SMgrRelation reln, ForkNumber forknum);
-extern void mdtruncate(SMgrRelation reln, ForkNumber forknum,
-					   BlockNumber nblocks);
-extern void mdimmedsync(SMgrRelation reln, ForkNumber forknum);
-extern void mdpreckpt(void);
-extern void mdsync(void);
-extern void mdpostckpt(void);
-
-extern void SetForwardFsyncRequests(void);
-extern void RememberFsyncRequest(RelFileNode rnode, ForkNumber forknum,
-					 BlockNumber segno, bool is_ao_segno);
-extern void ForgetRelationFsyncRequests(RelFileNode rnode, ForkNumber forknum);
-extern void ForgetDatabaseFsyncRequests(Oid dbid);
-extern void DropRelationFiles(RelFileNodePendingDelete *delrels, int ndelrels, bool isRedo);
 
 /* smgrtype.c */
 extern Datum smgrout(PG_FUNCTION_ARGS);

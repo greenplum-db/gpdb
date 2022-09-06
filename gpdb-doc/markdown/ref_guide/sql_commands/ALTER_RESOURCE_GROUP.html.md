@@ -50,14 +50,14 @@ CONCURRENCY integer
 CPU\_RATE\_LIMIT integer
 :   The percentage of CPU resources to allocate to this resource group. The minimum CPU percentage for a resource group is 1. The maximum is 100. The sum of the `CPU_RATE_LIMIT`s of all resource groups defined in the Greenplum Database cluster must not exceed 100.
 
-:   If you alter the `CPU_RATE_LIMIT` of a resource group in which you previously configured a `CPUSET`, `CPUSET` is disabled, the reserved CPU cores are returned to Greenplum Database, and `CPUSET` is set to -1.
+:   If you alter the `CPU_RATE_LIMIT` of a resource group in which you previously configured a `CPUSET`, `CPUSET` is deactivated, the reserved CPU cores are returned to Greenplum Database, and `CPUSET` is set to -1.
 
 CPUSET tuple
 :   The CPU cores to reserve for this resource group. The CPU cores that you specify in tuple must be available in the system and cannot overlap with any CPU cores that you specify for other resource groups.
 
 :   tuple is a comma-separated list of single core numbers or core intervals. You must enclose tuple in single quotes, for example, '1,3-4'.
 
-:   If you alter the `CPUSET` value of a resource group for which you previously configured a `CPU_RATE_LIMIT`, `CPU_RATE_LIMIT` is disabled, the reserved CPU resources are returned to Greenplum Database, and `CPU_RATE_LIMIT` is set to -1.
+:   If you alter the `CPUSET` value of a resource group for which you previously configured a `CPU_RATE_LIMIT`, `CPU_RATE_LIMIT` is deactivated, the reserved CPU resources are returned to Greenplum Database, and `CPU_RATE_LIMIT` is set to -1.
 
 :   You can alter `CPUSET` for a resource group only after you have enabled resource group-based resource management for your Greenplum Database cluster.
 

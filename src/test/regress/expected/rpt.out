@@ -985,6 +985,30 @@ explain (costs off) select a from t_replicate_volatile union all select * from n
  Optimizer: Postgres query optimizer
 (6 rows)
 
+-- insert into table with serial column
+create table t_replicate_dst(id serial, i integer) distributed replicated;
+create table t_replicate_src(i integer) distributed replicated;
+insert into t_replicate_src select i from generate_series(1, 5) i;
+explain (costs off) insert into t_replicate_dst (i) select i from t_replicate_src;
+                    QUERY PLAN                     
+---------------------------------------------------
+ Insert on t_replicate_dst
+   ->  Broadcast Motion 1:3  (slice1; segments: 1)
+         ->  Seq Scan on t_replicate_src
+ Optimizer: Postgres query optimizer
+(4 rows)
+
+insert into t_replicate_dst (i) select i from t_replicate_src;
+select distinct id from gp_dist_random('t_replicate_dst') order by id;
+ id 
+----
+  1
+  2
+  3
+  4
+  5
+(5 rows)
+
 -- update & delete
 explain (costs off) update t_replicate_volatile set a = 1 where b > random();
 ERROR:  could not devise a plan (cdbpath.c:2074)
@@ -1363,6 +1387,8 @@ drop cascades to table minmaxtest
 drop cascades to table t_hashdist
 drop cascades to table t_replicate_volatile
 drop cascades to sequence seq_for_insert_replicated_table
+drop cascades to table t_replicate_dst
+drop cascades to table t_replicate_src
 drop cascades to table rtbl
 drop cascades to table t1_13532
 drop cascades to table t2_13532

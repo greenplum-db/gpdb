@@ -326,3 +326,10 @@ Feature: gpinitsystem tests
         And gpinitsystem should return a return code of 0
         Then gpstate should return a return code of 0
         And check segment conf: postgresql.conf
+
+    Scenario: gpinitsystem creates a cluster successfully when run with -D option
+        Given create demo cluster config
+        When the user runs command "gpinitsystem -a -c ../gpAux/gpdemo/clusterConfigFile -D"
+        Then gpinitsystem should return a return code of 0
+        And gpinitsystem should not print "Start Function REMOTE_EXECUTE_AND_GET_OUTPUT" to stdout
+        And gpinitsystem should not print "End Function REMOTE_EXECUTE_AND_GET_OUTPUT" to stdout

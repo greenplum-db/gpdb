@@ -56,6 +56,7 @@
 #include "storage/procarray.h"
 #include "storage/sinvaladt.h"
 #include "storage/smgr.h"
+#include "storage/md.h"
 #include "utils/catcache.h"
 #include "utils/combocid.h"
 #include "utils/faultinjector.h"

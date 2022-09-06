@@ -642,7 +642,7 @@ explain analyze insert into t1 select t2.a,t3.b from t2, t3 where t2.a = t3.a;
         </dxl:LogicalJoin>
       </dxl:LogicalInsert>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="28">
+    <dxl:Plan Id="0" SpaceSize="18">
       <dxl:DMLInsert Columns="0,6" ActionCol="10" OidCol="0" CtidCol="0" SegmentIdCol="0" InputSorted="false">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="877.746838" Rows="1000.000000" Width="7"/>

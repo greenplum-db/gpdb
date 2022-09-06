@@ -1,3 +1,5 @@
+CREATE OR REPLACE LANGUAGE plpythonu;
+
 -- Helper function, to call either __gp_aoseg, or gp_aocsseg, depending
 -- on whether the table is row- or column-oriented. This allows us to
 -- run the same test queries on both.
@@ -106,3 +108,16 @@ begin /* in func */
   end loop; /* in func */
 end; /* in func */
 $$ language plpgsql;
+
+CREATE OR REPLACE FUNCTION is_query_waiting_for_syncrep(iterations int, check_query text) RETURNS bool AS $$
+    for i in range(iterations):
+        results = plpy.execute("SELECT * FROM\
+                                (SELECT gp_execution_segment() AS gp_segment_id, query, waiting_reason\
+                                FROM gp_dist_random('pg_stat_activity')) s\
+                                WHERE gp_segment_id = 1 AND\
+                                query = '%s' AND\
+                                waiting_reason = 'replication'" % check_query )
+        if results:
+            return True
+    return False
+$$ LANGUAGE plpythonu VOLATILE;

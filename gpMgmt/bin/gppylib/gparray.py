@@ -1254,54 +1254,66 @@ class GpArray:
         return len(self.segmentPairs)
 
     # --------------------------------------------------------------------
+    def get_primary_port_list(self):
+        primary_ports = []
+        for segPair in self.segmentPairs:
+            primary = segPair.primaryDB
+            mirror = segPair.mirrorDB
+
+            if primary.preferred_role == primary.role:
+                primary_ports.append(primary.port)
+            else:
+                primary_ports.append(mirror.port)
+
+        if len(primary_ports) == 0:
+            raise Exception("No primary ports found in array.")
+
+        return primary_ports
+    # --------------------------------------------------------------------
+
+    def get_mirror_port_list(self):
+
+        if self.get_mirroring_enabled() is False:
+            raise Exception('Mirroring is not enabled')
+
+        mirror_ports = []
+        for segPair in self.segmentPairs:
+            primary = segPair.primaryDB
+            mirror = segPair.mirrorDB
+
+            if mirror.preferred_role == mirror.role:
+                mirror_ports.append(mirror.port)
+            else:
+                mirror_ports.append(primary.port)
+
+        if len(mirror_ports) == 0:
+            raise Exception("No mirror ports found in array.")
+
+        return mirror_ports
+
+    # --------------------------------------------------------------------
     def get_min_primary_port(self):
         """Returns the minimum primary segment db port"""
-        min_primary_port = self.segmentPairs[0].primaryDB.port
-        for segPair in self.segmentPairs:
-            if segPair.primaryDB.port < min_primary_port:
-                min_primary_port = segPair.primaryDB.port
-
-        return min_primary_port
+        primary_ports = self.get_primary_port_list()
+        return min(primary_ports)
 
     # --------------------------------------------------------------------
     def get_max_primary_port(self):
         """Returns the maximum primary segment db port"""
-        max_primary_port = self.segmentPairs[0].primaryDB.port
-        for segPair in self.segmentPairs:
-            if segPair.primaryDB.port > max_primary_port:
-                max_primary_port = segPair.primaryDB.port
-
-        return max_primary_port
+        primary_ports = self.get_primary_port_list()
+        return max(primary_ports)
 
     # --------------------------------------------------------------------
     def get_min_mirror_port(self):
         """Returns the minimum mirror segment db port"""
-        if self.get_mirroring_enabled() is False:
-            raise Exception('Mirroring is not enabled')
-
-        min_mirror_port = self.segmentPairs[0].mirrorDB.port
-
-        for segPair in self.segmentPairs:
-            mirror = segPair.mirrorDB
-            if mirror and mirror.port < min_mirror_port:
-                min_mirror_port = mirror.port
-
-        return min_mirror_port
+        mirror_ports = self.get_mirror_port_list()
+        return min(mirror_ports)
 
     # --------------------------------------------------------------------
     def get_max_mirror_port(self):
         """Returns the maximum mirror segment db port"""
-        if self.get_mirroring_enabled() is False:
-            raise Exception('Mirroring is not enabled')
-
-        max_mirror_port = self.segmentPairs[0].mirrorDB.port
-
-        for segPair in self.segmentPairs:
-            mirror = segPair.mirrorDB
-            if mirror and mirror.port > max_mirror_port:
-                max_mirror_port = mirror.port
-
-        return max_mirror_port
+        mirror_ports = self.get_mirror_port_list()
+        return max(mirror_ports)
 
     # --------------------------------------------------------------------
     def get_interface_numbers(self):

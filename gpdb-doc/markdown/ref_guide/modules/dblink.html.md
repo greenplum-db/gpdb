@@ -25,7 +25,7 @@ gpadmin=# INSERT INTO testdbllocal select * FROM dblink('dbname=postgres', 'SELE
 INSERT 0 2
 ```
 
-The Greenplum Database version of `dblink` disables the following asynchronous functions:
+The Greenplum Database version of `dblink` deactivates the following asynchronous functions:
 
 -   `dblink_send_query()`
 -   `dblink_is_busy()`

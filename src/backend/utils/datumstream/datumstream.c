@@ -764,6 +764,7 @@ destroy_datumstreamwrite(DatumStreamWrite * ds)
 	if (ds->title)
 	{
 		pfree(ds->title);
+		ds->title = NULL;
 	}
 	pfree(ds);
 }
@@ -774,9 +775,15 @@ destroy_datumstreamread(DatumStreamRead * ds)
 	DatumStreamBlockRead_Finish(&ds->blockRead);
 
 	if (ds->large_object_buffer)
+	{
 		pfree(ds->large_object_buffer);
+		ds->large_object_buffer = NULL;
+	}
 	if (ds->datum_upgrade_buffer)
+	{
 		pfree(ds->datum_upgrade_buffer);
+		ds->datum_upgrade_buffer = NULL;
+	}
 
 	AppendOnlyStorageRead_FinishSession(&ds->ao_read);
 

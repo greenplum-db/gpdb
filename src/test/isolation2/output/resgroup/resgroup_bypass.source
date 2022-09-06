@@ -181,12 +181,11 @@ SELECT * FROM memory_result;
 ABORT
 61: BEGIN;
 BEGIN
-SELECT * FROM memory_result;
- rsgname        | ismaster | avg_mem 
-----------------+----------+---------
- rg_bypass_test | 0        | 0.0     
- rg_bypass_test | 1        | 30.0    
-(2 rows)
+SELECT 1 FROM memory_result where avg_mem > 10 and ismaster = 1;
+ ?column? 
+----------
+ 1        
+(1 row)
 61q: ... <quitting>
 
 --
@@ -235,11 +234,12 @@ SELECT * FROM memory_result;
 ABORT
 61: BEGIN;
 BEGIN
-SELECT 1 FROM memory_result where avg_mem > 10 and ismaster = 1;
- ?column? 
-----------
- 1        
-(1 row)
+SELECT * FROM memory_result;
+ rsgname        | ismaster | avg_mem 
+----------------+----------+---------
+ rg_bypass_test | 0        | 0.0     
+ rg_bypass_test | 1        | 0.0     
+(2 rows)
 61q: ... <quitting>
 
 --

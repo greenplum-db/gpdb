@@ -6,7 +6,7 @@ Greenplum Database dynamically eliminates irrelevant partitions in a table and o
 
 -   Dynamic Partition Elimination
 
-    In Greenplum Database, values available only when a query runs are used to dynamically prune partitions, which improves query processing speed. Enable or disable dynamic partition elimination by setting the server configuration parameter `gp_dynamic_partition_pruning` to `ON` or `OFF`; it is `ON` by default.
+    In Greenplum Database, values available only when a query runs are used to dynamically prune partitions, which improves query processing speed. Enable or deactivate dynamic partition elimination by setting the server configuration parameter `gp_dynamic_partition_pruning` to `ON` or `OFF`; it is `ON` by default.
 
 -   Memory Optimizations
 

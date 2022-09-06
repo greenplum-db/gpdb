@@ -13,7 +13,7 @@ See [Data-Modifying Statements in a WITH clause](#topic_zg3_bgh_5gb), for inform
 -   For a `SELECT` command that includes a `WITH` clause, the clause can contain at most a single clause that modifies table data \(`INSERT`, `UPDATE`, or `DELETE` command\).
 -   For a data-modifying command \(`INSERT`, `UPDATE`, or `DELETE`\) that includes a `WITH` clause, the clause can only contain a `SELECT` command, the `WITH` clause cannot contain a data-modifying command.
 
-By default, the `RECURSIVE` keyword for the `WITH` clause is enabled. `RECURSIVE` can be disabled by setting the server configuration parameter [gp\_recursive\_cte](../../../ref_guide/config_params/guc-list.html) to `false`.
+By default, the `RECURSIVE` keyword for the `WITH` clause is enabled. `RECURSIVE` can be deactivated by setting the server configuration parameter [gp\_recursive\_cte](../../../ref_guide/config_params/guc-list.html) to `false`.
 
 **Parent topic:** [Querying Data](../../query/topics/query.html)
 

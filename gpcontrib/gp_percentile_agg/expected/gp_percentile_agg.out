@@ -1208,22 +1208,18 @@ explain select median(a) from perct group by grouping sets((), (b));
  Append  (cost=13.69..29.54 rows=12 width=24)
    ->  GroupAggregate  (cost=13.69..14.83 rows=11 width=24)
          Group Key: share0_ref1.b
-         ->  Sort  (cost=13.69..13.94 rows=100 width=8)
-               Sort Key: share0_ref1.b
-               ->  Shared Scan (share slice:id 0:0)  (cost=10.07..10.37 rows=100 width=8)
-                     ->  Materialize  (cost=7.32..10.07 rows=100 width=8)
-                           ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=7.32..9.57 rows=100 width=8)
-                                 Merge Key: perct.b
-                                 ->  Sort  (cost=7.32..7.57 rows=34 width=8)
-                                       Sort Key: perct.b
-                                       ->  Seq Scan on perct  (cost=0.00..4.00 rows=34 width=8)
-   ->  GroupAggregate  (cost=13.69..14.71 rows=1 width=24)
+         ->  Shared Scan (share slice:id 0:0)  (cost=10.07..10.37 rows=100 width=8)
+               ->  Materialize  (cost=7.32..10.07 rows=100 width=8)
+                     ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=7.32..9.57 rows=100 width=8)
+                           Merge Key: perct.b
+                           ->  Sort  (cost=7.32..7.57 rows=34 width=8)
+                                 Sort Key: perct.b
+                                 ->  Seq Scan on perct  (cost=0.00..4.00 rows=34 width=8)
+   ->  GroupAggregate  (cost=10.07..11.13 rows=1 width=24)
          Group Key: share0_ref2.b
-         ->  Sort  (cost=13.69..13.94 rows=100 width=8)
-               Sort Key: share0_ref2.b
-               ->  Shared Scan (share slice:id 0:0)  (cost=10.07..10.37 rows=100 width=8)
+         ->  Shared Scan (share slice:id 0:0)  (cost=10.07..10.37 rows=100 width=8)
  Optimizer: Postgres query optimizer
-(18 rows)
+(14 rows)
 
 select median(a) from perct group by grouping sets((), (b));
  median 

@@ -23,6 +23,7 @@ As a Greenplum Database administrator, you must monitor the system for problem e
 -   [Checking System State](#topic12)
 -   [Checking Disk Space Usage](#topic15)
 -   [Checking for Data Distribution Skew](#topic20)
+-   [Checking for and Terminating Overflowed Backends](#overflowed_backends)
 -   [Viewing Metadata Information about Database Objects](#topic24)
 -   [Viewing Session Memory Usage Information](#topic_slt_ddv_1q)
 -   [Viewing Query Workfile Usage Information](#topic27)
@@ -198,6 +199,76 @@ This occurs when the input to a hash join operator is skewed. It does not preven
     -   If the skew occurs while joining a single fact table that is relatively small \(less than 5000 rows\), set the `gp_segments_for_planner` server configuration parameter to 1 and retest the query.
 4.  Check whether the filters applied in the query match distribution keys of the base tables. If the filters and distribution keys are the same, consider redistributing some of the base tables with different distribution keys.
 5.  Check the cardinality of the join keys. If they have low cardinality, try to rewrite the query with different joining columns or additional filters on the tables to reduce the number of rows. These changes could change the query semantics.
+
+## <a id="overflowed_backends"></a>Checking for and Terminating Overflowed Backends
+
+Subtransaction overflow arises when a Greenplum Database backend creates more than 64 subtransactions, resulting in a high lookup cost for visibility checks. This slows query performance, but even more so when it occurs in combination with long-running transactions, which result in still more lookups. Terminating suboverflowed backends and/or backends with long-running transactions can help prevent and alleviate performance problems. 
+
+Greenplum Database includes an extension -- `gp_subtransaction_overflow` -- and a view -- `gp_suboverflowed_backend` -- that is run over a user-defined function to help users query for suboverflowed backends. Users can use segment id and process id information reported in the view to terminate the offending backends, thereby preventing degradation of performance.
+
+### <a id="check_backends"></a>Steps
+
+Follow these steps below to identify and terminate overflowed backends.
+
+1. Create the extension:
+
+    ```
+    CREATE EXTENSION gp_subtransaction_overflow;
+    ```
+
+2. Select all from the view the extension created:
+
+    ```
+    select * from gp_suboverflowed_backend`;
+    ```
+
+    This returns output similar to the following:
+    
+    ```
+   segid |   pids    
+   -------+-----------
+    -1 | 
+     0 | {1731513}
+     1 | {1731514}
+     2 | {1731515}
+   (4 rows)
+    ```
+
+3. Connect to the database in utility mode and query `pg_stat_activity` to return the session id for the process id in the output for a segment. For example: 
+
+    ```
+    select sess_id from pg_stat_activity where pid=1731513;
+    ```
+
+    ```
+    sess_id 
+    ---------
+      10
+    (1 row)
+    ```
+
+4. Terminate the session, which will terminate all associated backends on all segments:
+
+    ```
+    select pg_terminate_backend(pid) from pg_stat_activity where sess_id=10;
+    ``` 
+
+5. Verify that there are no more suboverflowed backends:
+
+    ```
+    select * from gp_suboverflowed_backend`;
+    ```
+
+    
+    ```
+   segid |   pids    
+   -------+-----------
+    -1 | 
+     0 |
+     1 | 
+     2 | 
+   (4 rows)
+    ```
 
 ## <a id="topic24"></a>Viewing Metadata Information about Database Objects 
 

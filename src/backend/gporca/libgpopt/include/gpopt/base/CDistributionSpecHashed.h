@@ -227,9 +227,6 @@ public:
 	// create a copy of the distribution spec
 	CDistributionSpecHashed *Copy(CMemoryPool *mp);
 
-	// create a copy of the distribution spec with given nulls colocated value
-	CDistributionSpecHashed *Copy(CMemoryPool *mp, BOOL fNullsColocated);
-
 	// get distribution expr array from the current and its equivalent spec
 	CExpressionArrays *GetAllDistributionExprs(CMemoryPool *mp);
 

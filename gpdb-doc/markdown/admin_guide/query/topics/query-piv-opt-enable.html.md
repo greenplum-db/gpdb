@@ -1,8 +1,8 @@
 ---
-title: Enabling and Disabling GPORCA 
+title: Activating and Deactivating GPORCA 
 ---
 
-By default, Greenplum Database uses GPORCA instead of the Postgres Planner. Server configuration parameters enable or disable GPORCA.
+By default, Greenplum Database uses GPORCA instead of the Postgres Planner. Server configuration parameters activate or deactivate GPORCA.
 
 Although GPORCA is on by default, you can configure GPORCA usage at the system, database, session, or query level using the optimizer parameter. Refer to one of the following sections if you want to change the default behavior:
 
@@ -10,7 +10,7 @@ Although GPORCA is on by default, you can configure GPORCA usage at the system, 
 -   [Enabling GPORCA for a Database](#topic_pzr_3db_3r)
 -   [Enabling GPORCA for a Session or a Query](#topic_lx4_vqk_br)
 
-**Note:** You can disable the ability to enable or disable GPORCA with the server configuration parameter optimizer\_control. For information about the server configuration parameters, see the *Greenplum Database Reference Guide*.
+**Note:** You can deactivate the ability to activate or deactivate GPORCA with the server configuration parameter optimizer\_control. For information about the server configuration parameters, see the *Greenplum Database Reference Guide*.
 
 **Parent topic:** [About GPORCA](../../query/topics/query-piv-optimizer.html)
 

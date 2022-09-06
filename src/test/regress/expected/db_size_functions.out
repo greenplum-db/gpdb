@@ -309,3 +309,33 @@ select pg_total_relation_size('aocssizetest') = pg_table_size('aocssizetest');
  t
 (1 row)
 
+-- Test MPP compute relation size is
+-- the same as QD dispatch method (directly call).
+create table heapsizetest_size(a bigint);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+copy (select pg_relation_size(oid) from pg_class where relname = 'heapsizetest') to '/tmp/t_heapsizetest_size_xxx';
+copy heapsizetest_size from '/tmp/t_heapsizetest_size_xxx';
+select count(distinct a) from heapsizetest_size;
+ count 
+-------
+     1
+(1 row)
+
+\! rm /tmp/t_heapsizetest_size_xxx
+insert into heapsizetest_size
+select sum(size)
+from
+(
+  select pg_relation_size(oid)
+  from gp_dist_random('pg_class')
+  where relname = 'heapsizetest'
+) x(size);
+-- both method should compute the same result
+select count(distinct a) from heapsizetest_size;
+ count 
+-------
+     1
+(1 row)
+
+drop table heapsizetest_size;

@@ -18,7 +18,7 @@ The `pg_attribute` table stores information about table columns. There will be e
 |`attbyval`|boolean| |A copy of `pg_type.typbyval` of this column's type.|
 |`attstorage`|char| |Normally a copy of `pg_type.typstorage` of this column's type. For TOAST-able data types, this can be altered after column creation to control storage policy.|
 |`attalign`|char| |A copy of `pg_type.typalign` of this column's type.|
-|`attnotnull`|boolean| |This represents a not-null constraint. It is possible to change this column to enable or disable the constraint.|
+|`attnotnull`|boolean| |This represents a not-null constraint. It is possible to change this column to activate or deactivate the constraint.|
 |`atthasdef`|boolean| |This column has a default value, in which case there will be a corresponding entry in the `pg_attrdef` catalog that actually defines the value.|
 |`attisdropped`|boolean| |This column has been dropped and is no longer valid. A dropped column is still physically present in the table, but is ignored by the parser and so cannot be accessed via SQL.|
 |`attislocal`|boolean| |This column is defined locally in the relation. Note that a column may be locally defined and inherited simultaneously.|

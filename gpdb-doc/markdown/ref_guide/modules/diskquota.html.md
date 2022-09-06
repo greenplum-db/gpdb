@@ -85,7 +85,7 @@ Diskquota can enforce both *soft limits* and *hard limits* for disk usage:
 -   By default, `diskquota` always enforces soft limits. `diskquota` checks quotas before a query runs. If quotas are not exceeded when a query is initiated, `diskquota` allows the query to run, even if it were to eventually cause a quota to be exceeded.
 -   When hard limit enforcement of disk usage is enabled, `diskquota` also monitors disk usage during query execution. If a query exceeds a disk quota during execution, `diskquota` terminates the query.
 
-    Administrators can enable enforcement of a disk usage hard limit by setting the `diskquota.hard_limit` server configuration parameter as described in [Enabling/Disabling Hard Limit Disk Usage Enforcement](#hardlimit).
+    Administrators can enable enforcement of a disk usage hard limit by setting the `diskquota.hard_limit` server configuration parameter as described in [Activating/Deactivating Hard Limit Disk Usage Enforcement](#hardlimit).
 
 
 There is some delay after a quota has been reached before the schema or role is added to the denylist. Other queries could add more data during the delay. The delay occurs because `diskquota` processes that calculate the disk space used by each table run periodically with a pause between executions \(two seconds by default\). The delay also occurs when disk usage falls beneath a quota, due to operations such as `DROP`, `TRUNCATE`, or `VACUUM FULL` that remove data. Administrators can change the amount of time between disk space checks by setting the `diskquota.naptime` server configuration parameter as described in [Setting the Delay Between Disk Usage Updates](#naptime).
@@ -131,7 +131,7 @@ Views available in the `diskquota` module include:
 
 -   [diskquota.naptime](#naptime) - Controls how frequently \(in seconds\) that `diskquota` recalculates the table sizes.
 -   [diskquota.max\_active\_tables](#shmem) - Identifies the maximum number of relations \(including tables, indexes, etc.\) that the `diskquota` module can monitor at the same time.
--   [diskquota.hard\_limit](#hardlimit) - Enables or disables the hard limit enforcement of disk usage.
+-   [diskquota.hard\_limit](#hardlimit) -  Activates or deactivates  the hard limit enforcement of disk usage.
 
 You use the `gpconfig` command to set these parameters in the same way that you would set any Greenplum Database server configuration parameter.
 
@@ -154,11 +154,11 @@ Active table shared memory holds up to one million of active tables by default. 
 
 The `diskquota.max_active_tables` server configuration parameter identifies the maximum number of relations \(including tables, indexes, etc.\) that the `diskquota` module can monitor at the same time. The default value is `1 * 1024 * 1024`. This value should be sufficient for most Greenplum Database installations. Should you change the value of this configuration parameter, you must restart the Greenplum Database server.
 
-### <a id="hardlimit"></a>Enabling/Disabling Hard Limit Disk Usage Enforcement 
+### <a id="hardlimit"></a>Activating/Deactivating Hard Limit Disk Usage Enforcement 
 
 When you enable enforcement of a hard limit of disk usage, `diskquota` checks the quota during query execution. If at any point a currently running query exceeds a quota limit, `diskquota` terminates the query.
 
-By default, hard limit disk usage enforcement is disabled for all databases. To enable hard limit enforcement for all databases, set the `diskquota.hard_limit` server configuration parameter to `'on'`, and then reload the Greenplum Database configuration:
+By default, hard limit disk usage enforcement is deactivated for all databases. To activate hard limit enforcement for all databases, set the `diskquota.hard_limit` server configuration parameter to `'on'`, and then reload the Greenplum Database configuration:
 
 ```
 $ gpconfig -c diskquota.hard_limit -v 'on'
@@ -181,7 +181,7 @@ You can perform the following tasks with the `diskquota` module:
 -   [Set a Tablespace Disk Quota for a Schema or Role](#tablespace_quota)
 -   [Set a Per-Segment Tablespace Disk Quota](#per_seg_tblsp_quota)
 -   [Display Disk Quotas and Disk Usage](#quotas_usage)
--   [Temporarily Disable Disk Quota Monitoring](#temp_disable)
+-   [Temporarily Deactivate Disk Quota Monitoring](#temp_deactivate)
 
 ### <a id="status"></a>Viewing the diskquota Status 
 
@@ -193,7 +193,7 @@ SELECT diskquota.status();
 ------------------------+--------- 
  soft limits            | on 
  hard limits            | on 
- current binary version | 2.0.0 
+ current binary version | 2.0.1 
  current schema version | 2.0 
 ```
 
@@ -342,9 +342,9 @@ SELECT schema_name, tablespace_name, quota_in_mb, nspsize_tablespace_in_bytes
 
 ```
 
-### <a id="temp_disable"></a>About Temporarily Disabling diskquota 
+### <a id="temp_deactivate"></a>About Temporarily Deactivating diskquota 
 
-You can temporarily disable the `diskquota` module by removing the shared library from `shared_preload_libraries`. For example::
+You can temporarily deactivate the `diskquota` module by removing the shared library from `shared_preload_libraries`. For example::
 
 ```
 $ gpconfig -s shared_preload_libraries
@@ -356,7 +356,7 @@ $ gpconfig -c shared_preload_libraries -v 'auto_explain'
 $ gpstop -ar
 ```
 
-**Note:** When you disable the `diskquota` module in this manner, disk quota monitoring ceases. To re-initiate disk quota monitoring in this scenario, you must:
+**Note:** When you deactivate the `diskquota` module in this manner, disk quota monitoring ceases. To re-initiate disk quota monitoring in this scenario, you must:
 
 1.  Re-add the library to `shared_preload_libraries`.
 2.  Restart Greenplum Database.
@@ -403,7 +403,7 @@ The `diskquota` module has the following limitations and known issues:
     -   If you `VACUUM FULL` all tables, set the quota to be no smaller than the size of the largest table in the database.
 -   The size of uncommitted tables are not counted in quota views. Even though the `diskquota.show_fast_role_quota_view` view may display a smaller used quota than the quota limit, a new query may trigger a quota exceeded condition in the following circumstance:
 
-    -   Hard limit enforcement of disk usage is disabled.
+    -   Hard limit enforcement of disk usage is deactivated.
     -   A long-running query in a session has consumed the full disk quota.
     `diskquota` does update the denylist in this scenario, but the `diskquota.show_fast_role_quota_view` may not represent the actual used quota because the long-running query is not yet committed. If you execute a new query while the original is still running, the new query will trigger a quota exceeded error.
 

@@ -83,7 +83,7 @@ CREATE SERVER gpc1_testdb FOREIGN DATA WRAPPER greenplum_fdw
 
 ### <a id="user_mapping"></a>Creating a User Mapping 
 
-After you identify which users you will allow to access the remote Greenplum Database cluster, you must create one or more mapping between a source Greenplum user and a user on the remote Greenplum cluster. You create these mappings with the [CREATE USER MAPPING](../sql_commands/CREATE_USER_MAPPING.html) command.
+After you identify which users you will allow to access the remote Greenplum Database cluster, you must create one or more mappings between a source Greenplum user and a user on the remote Greenplum cluster. You create these mappings with the [CREATE USER MAPPING](../sql_commands/CREATE_USER_MAPPING.html) command.
 
 User mappings that you create may include the following `OPTIONS`:
 
@@ -101,7 +101,13 @@ CREATE USER MAPPING FOR PUBLIC SERVER gpc1_testdb
     OPTIONS (user 'bill', password 'changeme');
 ```
 
-The remote user must have the appropriate privileges to access any table\(s\) of interest in the database identified by the specified `SERVER`.
+The remote user must have the appropriate privileges to access any table\(s\) of interest in the database identified by the specified `SERVER`. 
+
+If the mapping is used to access a foreign-data wrapper across multiple Greenplum clusters, then the remote user also requires `SELECT` access to the `pg_catalog.gp_endpoints` view. For example:
+
+```
+GRANT SELECT ON TABLE pg_catalog.gp_endpoints TO bill;
+```
 
 ### <a id="create_ftable"></a>Creating a Foreign Table 
 

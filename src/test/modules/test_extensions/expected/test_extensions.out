@@ -1,0 +1,119 @@
+-- CVE-2022-2625
+-- https://github.com/postgres/postgres/commit/5919bb5a5989cda232ac3d1f8b9d90f337be2077
+--
+-- It's generally bad style to use CREATE OR REPLACE unnecessarily.
+-- Test what happens if an extension does it anyway.
+-- Replacing a shell type or operator is sort of like CREATE OR REPLACE;
+-- check that too.
+CREATE FUNCTION ext_cor_func() RETURNS text
+  AS $$ SELECT 'ext_cor_func: original'::text $$ LANGUAGE sql;
+CREATE EXTENSION test_ext_cor;  -- fail
+ERROR:  function ext_cor_func() is not a member of extension "test_ext_cor"
+DETAIL:  An extension is not allowed to replace an object that it does not own.
+SELECT ext_cor_func();
+      ext_cor_func      
+------------------------
+ ext_cor_func: original
+(1 row)
+
+DROP FUNCTION ext_cor_func();
+CREATE VIEW ext_cor_view AS
+  SELECT 'ext_cor_view: original'::text AS col;
+CREATE EXTENSION test_ext_cor;  -- fail
+ERROR:  view ext_cor_view is not a member of extension "test_ext_cor"
+DETAIL:  An extension is not allowed to replace an object that it does not own.
+SELECT ext_cor_func();
+ERROR:  function ext_cor_func() does not exist
+LINE 1: SELECT ext_cor_func();
+               ^
+HINT:  No function matches the given name and argument types. You might need to add explicit type casts.
+SELECT * FROM ext_cor_view;
+          col           
+------------------------
+ ext_cor_view: original
+(1 row)
+
+DROP VIEW ext_cor_view;
+CREATE TYPE test_ext_type;
+CREATE EXTENSION test_ext_cor;  -- fail
+ERROR:  type test_ext_type is not a member of extension "test_ext_cor"
+DETAIL:  An extension is not allowed to replace an object that it does not own.
+DROP TYPE test_ext_type;
+-- this makes a shell "point <<@@ polygon" operator too
+CREATE OPERATOR @@>> ( PROCEDURE = poly_contain_pt,
+  LEFTARG = polygon, RIGHTARG = point,
+  COMMUTATOR = <<@@ );
+CREATE EXTENSION test_ext_cor;  -- fail
+ERROR:  operator <<@@(point,polygon) is not a member of extension "test_ext_cor"
+DETAIL:  An extension is not allowed to replace an object that it does not own.
+DROP OPERATOR <<@@ (point, polygon);
+CREATE EXTENSION test_ext_cor;  -- now it should work
+SELECT ext_cor_func();
+         ext_cor_func         
+------------------------------
+ ext_cor_func: from extension
+(1 row)
+
+SELECT * FROM ext_cor_view;
+             col              
+------------------------------
+ ext_cor_view: from extension
+(1 row)
+
+SELECT 'x'::test_ext_type;
+ test_ext_type 
+---------------
+ x
+(1 row)
+
+SELECT point(0,0) <<@@ polygon(circle(point(0,0),1));
+ ?column? 
+----------
+ t
+(1 row)
+
+\dx+ test_ext_cor
+Objects in extension "test_ext_cor"
+      Object Description      
+------------------------------
+ function ext_cor_func()
+ operator <<@@(point,polygon)
+ type test_ext_type
+ view ext_cor_view
+(4 rows)
+
+--
+-- CREATE IF NOT EXISTS is an entirely unsound thing for an extension
+-- to be doing, but let's at least plug the major security hole in it.
+--
+CREATE SCHEMA ext_cine_schema;
+CREATE EXTENSION test_ext_cine;  -- fail
+ERROR:  schema ext_cine_schema is not a member of extension "test_ext_cine"
+DETAIL:  An extension may only use CREATE ... IF NOT EXISTS to skip object creation if the conflicting object is one that it already owns.
+DROP SCHEMA ext_cine_schema;
+CREATE TABLE ext_cine_tab1 (x int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'x' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE EXTENSION test_ext_cine;  -- fail
+ERROR:  table ext_cine_tab1 is not a member of extension "test_ext_cine"
+DETAIL:  An extension may only use CREATE ... IF NOT EXISTS to skip object creation if the conflicting object is one that it already owns.
+DROP TABLE ext_cine_tab1;
+CREATE EXTENSION test_ext_cine;
+\dx+ test_ext_cine
+Objects in extension "test_ext_cine"
+   Object Description   
+------------------------
+ schema ext_cine_schema
+ table ext_cine_tab1
+(2 rows)
+
+ALTER EXTENSION test_ext_cine UPDATE TO '1.1';
+\dx+ test_ext_cine
+Objects in extension "test_ext_cine"
+   Object Description   
+------------------------
+ schema ext_cine_schema
+ table ext_cine_tab1
+ table ext_cine_tab3
+(3 rows)
+

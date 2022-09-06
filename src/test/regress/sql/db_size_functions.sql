@@ -94,3 +94,28 @@ select pg_table_size('aocssizetest') between 1500000 and 3000000; -- 1884456
 select pg_table_size('aocssizetest') > pg_relation_size('aocssizetest');
 select pg_total_relation_size('aocssizetest') between 1500000 and 3000000; -- 1884456
 select pg_total_relation_size('aocssizetest') = pg_table_size('aocssizetest');
+
+-- Test MPP compute relation size is
+-- the same as QD dispatch method (directly call).
+create table heapsizetest_size(a bigint);
+
+copy (select pg_relation_size(oid) from pg_class where relname = 'heapsizetest') to '/tmp/t_heapsizetest_size_xxx';
+copy heapsizetest_size from '/tmp/t_heapsizetest_size_xxx';
+
+select count(distinct a) from heapsizetest_size;
+
+\! rm /tmp/t_heapsizetest_size_xxx
+
+insert into heapsizetest_size
+select sum(size)
+from
+(
+  select pg_relation_size(oid)
+  from gp_dist_random('pg_class')
+  where relname = 'heapsizetest'
+) x(size);
+
+-- both method should compute the same result
+select count(distinct a) from heapsizetest_size;
+
+drop table heapsizetest_size;

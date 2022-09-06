@@ -112,13 +112,13 @@ RESTRICT
 :   Refuse to drop the column if there are any dependent objects. This is the default behavior.
 
 trigger\_name
-:   Name of a single trigger to disable or enable.
+:   Name of a single trigger to deactivate or enable.
 
 ALL
-:   Disable or enable all triggers belonging to the foreign table. \(This requires superuser privilege if any of the triggers are internally generated triggers. The core system does not add such triggers to foreign tables, but add-on code could do so.\)
+:   Deactivate or activate all triggers belonging to the foreign table. \(This requires superuser privilege if any of the triggers are internally generated triggers. The core system does not add such triggers to foreign tables, but add-on code could do so.\)
 
 USER
-:   Disable or enable all triggers belonging to the foreign table except for internally generated triggers.
+:   Deactivate or activate all triggers belonging to the foreign table except for internally generated triggers.
 
 new\_owner
 :   The user name of the new owner of the foreign table.

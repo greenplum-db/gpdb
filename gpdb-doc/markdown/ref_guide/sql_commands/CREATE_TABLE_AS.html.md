@@ -62,7 +62,7 @@ WITH \( storage\_parameter=value \)
 
 :   **orientation** — Set to `column` for column-oriented storage, or `row` \(the default\) for row-oriented storage. This option is only valid if `appendoptimized=TRUE`. Heap-storage tables can only be row-oriented.
 
-:   **compresstype** — Set to `ZLIB` \(the default\), `ZSTD`, `RLE_TYPE`, or `QUICKLZ`<sup>1</sup> to specify the type of compression used. The value `NONE` disables compression. Zstd provides for both speed or a good compression ratio, tunable with the `compresslevel` option. QuickLZ and zlib are provided for backwards-compatibility. Zstd outperforms these compression types on usual workloads. The `compresstype` option is valid only if `appendoptimized=TRUE`.
+:   **compresstype** — Set to `ZLIB` \(the default\), `ZSTD`, `RLE_TYPE`, or `QUICKLZ`<sup>1</sup> to specify the type of compression used. The value `NONE` deactivates compression. Zstd provides for both speed or a good compression ratio, tunable with the `compresslevel` option. QuickLZ and zlib are provided for backwards-compatibility. Zstd outperforms these compression types on usual workloads. The `compresstype` option is valid only if `appendoptimized=TRUE`.
 
     **Note:** <sup>1</sup>QuickLZ compression is available only in the commercial release of Tanzu Greenplum.
 

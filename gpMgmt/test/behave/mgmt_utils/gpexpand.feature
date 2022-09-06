@@ -548,3 +548,43 @@ Feature: expand the cluster by adding more segments
         When the user runs gpexpand to redistribute
         Then the numsegments of table "partition_test" is 4
         Then distribution information from table "partition_test" with data in "gptest" is verified against saved data
+
+    @gpexpand_segment
+    Scenario: on expand check if one or more cluster is down
+        Given the database is not running
+        And a working directory of the test as '/data/gpdata/gpexpand'
+        And a temporary directory under "/data/gpdata/gpexpand/expandedData" to expand into
+        And a cluster is created with mirrors on "mdw" and "sdw1"
+        And the user runs gpinitstandby with options " "
+        And database "gptest" exists
+        And there are no gpexpand_inputfiles
+        And the cluster is setup for an expansion on hosts "mdw,sdw1"
+        And the primary on content 0 is stopped
+        And user can start transactions
+        And an FTS probe is triggered
+        And the status of the primary on content 0 should be "d"
+        When the user runs gpexpand with a static inputfile for a single-node cluster with mirrors without ret code check
+        Then gpexpand should return a return code of 0
+        Then gpexpand should print "One or more segments are either down or not in preferred role." to stdout
+
+    @gpexpand_segment
+    Scenario: on expand check if one or more cluster is not in their preferred role
+        Given the database is not running
+        And a working directory of the test as '/data/gpdata/gpexpand'
+        And a temporary directory under "/data/gpdata/gpexpand/expandedData" to expand into
+        And a cluster is created with mirrors on "mdw" and "sdw1"
+        And the user runs gpinitstandby with options " "
+        And database "gptest" exists
+        And there are no gpexpand_inputfiles
+        And the cluster is setup for an expansion on hosts "mdw,sdw1"
+        And the primary on content 0 is stopped
+        And user can start transactions
+        And an FTS probe is triggered
+        And the status of the primary on content 0 should be "d"
+        When the user runs "gprecoverseg -a"
+        Then gprecoverseg should return a return code of 0
+        And all the segments are running
+        And the segments are synchronized
+        When the user runs gpexpand with a static inputfile for a single-node cluster with mirrors without ret code check
+        Then gpexpand should return a return code of 0
+        And gpexpand should print "One or more segments are either down or not in preferred role." to stdout

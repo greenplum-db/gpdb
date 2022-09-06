@@ -254,24 +254,22 @@ CPhysicalFullMergeJoin::PdsDerive(CMemoryPool *mp,
 
 		// Create a hash spec similar to the outer spec, but with fNullsColocated = false because
 		// nulls appear as the results get computed, so we cannot verify that they will be colocated.
-		CDistributionSpecHashed *pdsDeriveOuter =
-			pdshashedOuter->Copy(mp, false /* fNullsCollocated*/);
+		pdshashedOuter->Pdrgpexpr()->AddRef();
+		CDistributionSpecHashed *pds = GPOS_NEW(mp) CDistributionSpecHashed(
+			pdshashedOuter->Pdrgpexpr(), false /* fNullsCollocated */);
 
 		// NB: Logic is similar to CPhysicalInnerHashJoin::PdsDeriveFromHashedChildren()
 		if (pdshashedOuter->IsCoveredBy(m_outer_merge_clauses) &&
 			pdshashedInner->IsCoveredBy(m_inner_merge_clauses))
 		{
-			CDistributionSpecHashed *pdsDeriveInner =
-				pdshashedInner->Copy(mp, false /* fNullsCollocated*/);
 			CDistributionSpecHashed *pdsCombined =
-				pdsDeriveOuter->Combine(mp, pdsDeriveInner);
-			pdsDeriveOuter->Release();
-			pdsDeriveInner->Release();
+				pds->Combine(mp, pdshashedInner);
+			pds->Release();
 			return pdsCombined;
 		}
 		else
 		{
-			return pdsDeriveOuter;
+			return pds;
 		}
 	}
 

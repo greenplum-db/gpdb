@@ -74,6 +74,7 @@
 #include "postmaster/postmaster.h"
 #include "replication/syncrep.h"
 #include "storage/sinvaladt.h"
+#include "storage/md.h"
 #include "utils/faultinjector.h"
 #include "utils/resscheduler.h"
 #include "utils/snapmgr.h"
@@ -9981,6 +9982,8 @@ XLogSaveBufferForHint(Buffer buffer, bool buffer_std)
 		rdata[1].next = NULL;
 
 		recptr = XLogInsert(RM_XLOG_ID, XLOG_FPI, rdata);
+
+		wait_to_avoid_large_repl_lag();
 	}
 
 	return recptr;
