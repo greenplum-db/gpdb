@@ -54,4 +54,11 @@ ORDER BY w.gp_segment_id;
 
 -- test simple gp_create_restore_point() error scenarios
 SELECT gp_create_restore_point('this_should_fail') FROM gp_dist_random('gp_id');
+
 CREATE TABLE this_ctas_should_fail AS SELECT gp_segment_id AS contentid, restore_lsn FROM gp_create_restore_point('this_should_fail');
+
+CREATE ROLE create_rp_error_role;
+SET ROLE TO create_rp_error_role;
+SELECT * FROM gp_create_restore_point('this_should_fail_too');
+RESET ROLE;
+DROP ROLE create_rp_error_role;

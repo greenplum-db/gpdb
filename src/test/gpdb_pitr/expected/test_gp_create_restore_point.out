@@ -75,3 +75,9 @@ SELECT gp_create_restore_point('this_should_fail') FROM gp_dist_random('gp_id');
 ERROR:  function with EXECUTE ON restrictions cannot be used in the SELECT list of a query with FROM
 CREATE TABLE this_ctas_should_fail AS SELECT gp_segment_id AS contentid, restore_lsn FROM gp_create_restore_point('this_should_fail');
 ERROR:  cannot use gp_create_restore_point() when not in QD mode (xlogfuncs_gp.c:LINE_NUM)
+CREATE ROLE create_rp_error_role;
+SET ROLE TO create_rp_error_role;
+SELECT * FROM gp_create_restore_point('this_should_fail_too');
+ERROR:  permission denied for function gp_create_restore_point
+RESET ROLE;
+DROP ROLE create_rp_error_role;

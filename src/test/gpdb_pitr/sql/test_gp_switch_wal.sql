@@ -32,4 +32,11 @@ SELECT gp_segment_id, substring(pg_walfile_name, 1, 8) FROM gp_switch_wal() ORDE
 
 -- test simple gp_switch_wal() error scenarios
 SELECT gp_switch_wal() FROM gp_dist_random('gp_id');
+
 CREATE TABLE this_ctas_should_fail AS SELECT gp_segment_id AS contentid, pg_switch_wal, pg_walfile_name FROM gp_switch_wal();
+
+CREATE ROLE switch_wal_error_role;
+SET ROLE TO switch_wal_error_role;
+SELECT * FROM gp_switch_wal();
+RESET ROLE;
+DROP ROLE switch_wal_error_role;

@@ -1724,6 +1724,13 @@ REVOKE EXECUTE ON FUNCTION pg_ls_dir(text) FROM public;
 REVOKE EXECUTE ON FUNCTION pg_ls_dir(text,boolean,boolean) FROM public;
 
 --
+-- GPDB: These GPDB-specific catalog functions need to have their
+-- default permissions changed as well.
+--
+REVOKE EXECUTE ON FUNCTION gp_create_restore_point(text) FROM public;
+REVOKE EXECUTE ON FUNCTION gp_switch_wal() FROM public;
+
+--
 -- We also set up some things as accessible to standard roles.
 --
 GRANT EXECUTE ON FUNCTION pg_ls_logdir() TO pg_monitor;
