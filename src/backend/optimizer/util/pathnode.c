@@ -1578,6 +1578,7 @@ create_merge_append_path(PlannerInfo *root,
  * Set the locus of an Append or MergeAppend path.
  *
  * This modifies the 'subpaths', costs fields, and locus of 'pathnode'.
+ * It will return false if fails to create motion for parameterized path.
  */
 static bool
 set_append_path_locus(PlannerInfo *root, Path *pathnode, RelOptInfo *rel,
@@ -1910,7 +1911,6 @@ set_append_path_locus(PlannerInfo *root, Path *pathnode, RelOptInfo *rel,
 			if (subpath == NULL)
 				return false;
 		}
-
 
 		pathnode->sameslice_relids = bms_union(pathnode->sameslice_relids, subpath->sameslice_relids);
 
