@@ -82,7 +82,7 @@ class ConnectionInfo(object):
 
 
 class GlobalShellExecutor(object):
-    BASH_PS1 = 'test_sh$>'
+    BASH_PS1 = 'GlobalShellExecutor>'
 
     class ExecutionError(Exception):
         ""
@@ -98,6 +98,7 @@ class GlobalShellExecutor(object):
                                         stdin=self.slave_fd,
                                         stdout=self.slave_fd,
                                         stderr=self.slave_fd,
+                                        start_new_session=True,
                                         universal_newlines=True)
         self.bash_log_file = open("%s.log" % self.initfile_prefix, "w+")
         self.__run_command("export PS1='%s'" % GlobalShellExecutor.BASH_PS1)
@@ -119,34 +120,34 @@ class GlobalShellExecutor(object):
         try:
             self.sh_proc.terminate()
         except OSError as e:
-            # Ignore the exception if the process doesn't exist.
+            # Log then ignore the exception if the process doesn't exist.
+            print("Failed to terminate bash process: %s" % e)
             pass
         self.sh_proc = None
 
     def __run_command(self, sh_cmd):
-        # Strip the newlines at the end. It will be added later.
+        # Strip extra new lines
         sh_cmd = sh_cmd.rstrip()
-        bytes_written = os.write(self.master_fd, sh_cmd.encode())
-        bytes_written += os.write(self.master_fd, b'\n')
+        os.write(self.master_fd, sh_cmd.encode()+b'\n')
 
         output = ""
         while self.sh_proc.poll() is None:
-            # If not returns in 10 seconds, consider it as an fatal error.
-            r, w, e = select.select([self.master_fd], [], [self.master_fd], 30)
+            # If times out, consider it as an fatal error.
+            r, _, e = select.select([self.master_fd], [], [self.master_fd], 30)
             if e:
                 # Terminate the shell when we get any output from stderr
                 o = os.read(self.master_fd, 10240)
                 self.bash_log_file.write(o)
                 self.bash_log_file.flush()
                 self.terminate(True)
-                raise GlobalShellExecutor.ExecutionError("Error happened to the bash daemon, see %s for details." % self.bash_log_file.name)
+                raise GlobalShellExecutor.ExecutionError("Error happened to the bash process, see %s for details." % self.bash_log_file.name)
 
             if r:
                 o = os.read(self.master_fd, 10240).decode()
                 self.bash_log_file.write(o)
                 self.bash_log_file.flush()
                 output += o
-                if o.endswith(GlobalShellExecutor.BASH_PS1):
+                if output.endswith(GlobalShellExecutor.BASH_PS1):
                     lines = output.splitlines()
                     return lines[len(sh_cmd.splitlines()):len(lines) - 1]
 
