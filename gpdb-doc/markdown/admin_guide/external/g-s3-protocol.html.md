@@ -111,7 +111,7 @@ Follow these basic steps to use the `s3` protocol with Greenplum Database extern
 When you use the `s3` protocol, you specify an S3 file location and optional configuration file location and region parameters in the `LOCATION` clause of the `CREATE EXTERNAL TABLE` command. The syntax follows:
 
 ```
-'s3://<S3_endpoint>[:<port>]/<bucket_name>/[<S3_prefix>] [region=<S3_region>] [config=<config_file_location> | config_server=<url>]'
+'s3://<S3_endpoint>[:<port>]/<bucket_name>/[<S3_prefix>] [region=<S3_region>] [config=<config_file_location> | config_server=<url>] [section=<section_name>]'
 ```
 
 The `s3` protocol requires that you specify the S3 endpoint and S3 bucket name. Each Greenplum Database segment host must have access to the S3 location. The optional S3\_prefix value is used to select files for read-only S3 tables, or as a filename prefix to use when uploading files for s3 writable tables.
@@ -147,6 +147,8 @@ All of the files selected by the S3 URL \(S3\_endpoint/bucket\_name/S3\_prefix\)
 For information about the Amazon S3 endpoints see [http://docs.aws.amazon.com/general/latest/gr/rande.html\#s3\_region](http://docs.aws.amazon.com/general/latest/gr/rande.html#s3_region). For information about S3 buckets and folders, see the Amazon S3 documentation [https://aws.amazon.com/documentation/s3/](https://aws.amazon.com/documentation/s3/). For information about the S3 file prefix, see the Amazon S3 documentation [Listing Keys Hierarchically Using a Prefix and Delimiter](http://docs.aws.amazon.com/AmazonS3/latest/dev/ListingKeysHierarchy.html).
 
 You use the `config` or `config_server` parameter to specify the location of the required `s3` protocol configuration file that contains AWS connection credentials and communication parameters as described in [About Specifying the Configuration File Location](#s3_config_param).
+
+Use the `section` parameter to specify the name of the configuration file section from which the `s3` protocol reads configuration parameters. The default `section` is named `default`. When you specify the section name in the configuration file, enclose it in brackets (for example, `[default]`).
 
 ## <a id="section_c2f_zvs_3x"></a>About Reading and Writing S3 Data Files 
 
@@ -219,14 +221,14 @@ For information about the configuration parameter `proxy`, see [About the s3 Pro
 
 The `s3` protocol obtains the S3 authentication credentials as follows:
 
-- You specify the S3 `accessid` and `secret` parameters and their values in the `[default]` section of an [s3 protocol configuration file](#s3_config_file).
-- If you do not specify the `accessid` and `secret`, or these parameter values are empty, the `s3` protocol attempts to obtain the S3 authentication credentials from the `aws_access_key_id` and `aws_secret_access_key` parameters specified in the `[default]` profile section of the user's AWS credential file. The default location of this file is `~/.aws/credentials`.
+- You specify the S3 `accessid` and `secret` parameters and their values in a named `section` of an [s3 protocol configuration file](#s3_config_file). The default section from which the `s3` protocol obtains this information is named `[default]`.
+- If you do not specify the `accessid` and `secret`, or these parameter values are empty, the `s3` protocol attempts to obtain the S3 authentication credentials from the `aws_access_key_id` and `aws_secret_access_key` parameters specified in a named `section` of the user's AWS credential file. The default location of this file is `~/.aws/credentials`, and the default section is named `[default]`.
 
 ## <a id="s3_config_file"></a>About the s3 Protocol Configuration File 
 
 An `s3` protocol configuration file contains Amazon Web Services \(AWS\) connection credentials and communication parameters.
 
-The `s3` protocol configuration file is a text file that contains a `[default]` section and parameters. An example configuration file follows:
+The `s3` protocol configuration file is a text file that contains named sections and parameters. The default section is named `[default]`. An example configuration file follows:
 
 ```
 [default]
