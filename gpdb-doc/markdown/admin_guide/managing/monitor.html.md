@@ -206,9 +206,7 @@ Subtransaction overflow arises when a Greenplum Database backend creates more th
 
 Greenplum Database includes an extension -- `gp_subtransaction_overflow` -- and a view -- `gp_suboverflowed_backend` -- that is run over a user-defined function to help users query for suboverflowed backends. Users can use segment id and process id information reported in the view to terminate the offending backends, thereby preventing degradation of performance.
 
-### <a id="check_backends"></a>Steps
-
-Follow these steps below to identify and terminate overflowed backends.
+Follow these steps to identify and terminate overflowed backends.
 
 1. Create the extension:
 
@@ -269,6 +267,31 @@ Follow these steps below to identify and terminate overflowed backends.
      2 | 
    (4 rows)
     ```
+
+### Logging Statements that Cause Overflowed Subtransactions
+
+You can optionally set a Greenplum configuration parameter, `gp_log_suboverflow_statement`, to record SQL statements that cause overflowed subtransactions. When this parameter is active, statements that cause overflow are recorded in `gp_toolkit.gp_log_system` with the `logmessage` value, `Statement caused suboverflow: <statement>`.  
+
+For example, after activating the setting:
+
+```
+SET set gp_log_suboverflow_statement = ON;
+```
+
+you can find statements that caused overflow with a query such as:
+
+```
+SELECT DISTINCT logsegment, logmessage FROM gp_toolkit.gp_log_system
+	WHERE logmessage LIKE 'Statement caused suboverflow%';
+```
+```
+ logsegment |                          logmessage                          
+------------+--------------------------------------------------------------
+ seg0       | Statement caused suboverflow: INSERT INTO t_1352_1 VALUES(i)
+ seg1       | Statement caused suboverflow: INSERT INTO t_1352_1 VALUES(i)
+ seg2       | Statement caused suboverflow: INSERT INTO t_1352_1 VALUES(i)
+(3 rows)
+```
 
 ## <a id="topic24"></a>Viewing Metadata Information about Database Objects 
 

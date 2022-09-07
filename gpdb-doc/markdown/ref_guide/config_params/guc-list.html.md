@@ -972,6 +972,14 @@ The information is written to the server log.
 |-----------|-------|-------------------|
 |Boolean|false|master, session, reload|
 
+## <a id="gp_log_suboverflow_statements"></a>gp\_log\_suboverflowed\_statements
+
+Controls whether Greenplum logs statements that cause subtransaction overflow to the `gp_toolkit.gp_log_system` table. See [Checking for and Terminating Overflowed Backends](/oss/admin_guide/managing/monitor.html).
+
+|Value Range|Default|Set Classifications|
+|-----------|-------|-------------------|
+|Boolean|off|master, session, reload, superuser|
+
 ## <a id="gp_gpperfmon_send_interval"></a>gp\_gpperfmon\_send\_interval 
 
 Sets the frequency that the Greenplum Database server processes send query execution updates to the data collection agent processes used to populate the `gpperfmon` database. Query operations executed during this interval are sent through UDP to the segment monitor agents. If you find that an excessive number of UDP packets are dropped during long-running, complex queries, you may consider increasing this value.
