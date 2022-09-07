@@ -17,7 +17,7 @@ SELECT 'Test digest md5: EXPECTED ERROR FAIL FIPS' as comment;
 (1 row)
 
 SELECT digest('santa claus', 'md5');
-ERROR:  Cannot use "md5": No such hash algorithm
+ERROR:  Cannot use "md5": 
 SELECT 'Test digest sha256: EXPECTED PASS' as comment;
               comment              
 -----------------------------------
@@ -37,7 +37,7 @@ SELECT 'Test hmac md5: EXPECTED ERROR FAIL FIPS' as comment;
 (1 row)
 
 SELECT hmac('santa claus', 'aaa', 'md5');
-ERROR:  Cannot use "md5": No such hash algorithm
+ERROR:  Cannot use "md5": 
 SELECT 'Test hmac sha256: EXPECTED PASS' as comment;
              comment             
 ---------------------------------
@@ -57,7 +57,7 @@ SELECT 'Test gen_salt : EXPECTED FAIL FIPS' as comment;
 (1 row)
 
 UPDATE fipstest SET salt = gen_salt('md5');
-ERROR:  requested functionality not allowed in FIPS mode (pgcrypto.c:201)
+ERROR:  requested functionality not allowed in FIPS mode (pgcrypto.c:213)  (seg2 127.0.0.1:6004 pid=4140) (pgcrypto.c:213)
 SELECT 'Test crypt : EXPECTED FAIL FIPS' as comment;
              comment             
 ---------------------------------
@@ -65,9 +65,9 @@ SELECT 'Test crypt : EXPECTED FAIL FIPS' as comment;
 (1 row)
 
 UPDATE fipstest SET res = crypt(data, salt);
-ERROR:  requested functionality not allowed in FIPS mode (pgcrypto.c:254)
+ERROR:  requested functionality not allowed in FIPS mode (pgcrypto.c:266)  (seg2 127.0.0.1:6004 pid=4140) (pgcrypto.c:266)
 SELECT res = crypt(data, res) AS "worked" FROM fipstest;
-ERROR:  requested functionality not allowed in FIPS mode (pgcrypto.c:254)
+ERROR:  requested functionality not allowed in FIPS mode (pgcrypto.c:266)  (seg2 slice1 127.0.0.1:6004 pid=4140) (pgcrypto.c:266)
 SELECT 'Test pgp : EXPECTED PASS' as comment;
          comment          
 --------------------------
@@ -75,7 +75,7 @@ SELECT 'Test pgp : EXPECTED PASS' as comment;
 (1 row)
 
 select pgp_sym_decrypt(pgp_sym_encrypt('santa clause', 'mypass', 'cipher-algo=aes256'), 'mypass');
-ERROR:  requested functionality not allowed in FIPS mode (openssl.c:1055)
+ERROR:  requested functionality not allowed in FIPS mode (openssl.c:1057)
 SELECT 'Test pgp : EXPECTED FAIL FIPS' as comment;
             comment            
 -------------------------------
@@ -91,7 +91,7 @@ SELECT 'Test raw encrypt : EXPECTED PASS' as comment;
 (1 row)
 
 SELECT encrypt('santa claus', 'mypass', 'aes') as raw_aes;
-ERROR:  requested functionality not allowed in FIPS mode (openssl.c:1055)
+ERROR:  requested functionality not allowed in FIPS mode (openssl.c:1057)
 SELECT 'Test raw encrypt : EXPECTED FAIL FIPS' as comment;
                 comment                
 ---------------------------------------
@@ -99,5 +99,5 @@ SELECT 'Test raw encrypt : EXPECTED FAIL FIPS' as comment;
 (1 row)
 
 SELECT encrypt('santa claus', 'mypass', 'bf') as raw_blowfish;
-ERROR:  requested functionality not allowed in FIPS mode (openssl.c:1055)
+ERROR:  requested functionality not allowed in FIPS mode (openssl.c:1057)
 DROP TABLE fipstest;

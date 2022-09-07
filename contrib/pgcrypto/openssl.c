@@ -1164,7 +1164,7 @@ px_check_fipsmode(void)
 #else
 
 	/* Make sure that we are linked against a FIPS enabled OpenSSL */
-	if (!FIPS_mode_set || FIPS_mode() == 0)
+	if (!FIPS_mode_set)
 	{
 		ereport(ERROR,
 				(errmsg("FIPS enabled OpenSSL is required for strict FIPS mode"),
