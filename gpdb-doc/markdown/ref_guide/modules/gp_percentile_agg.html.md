@@ -22,6 +22,18 @@ CREATE EXTENSION gp_percentile_agg;
 
 Refer to [Installing Additional Supplied Modules](../../install_guide/install_modules.html) for more information.
 
+
+## <a id="topic_upgrade"></a>Upgrading the Module
+
+If you are already using the `gp_percentile_agg` module in your Greenplum Database installation, you must upgrade the module to obtain improvements and bug fixes.
+
+To upgrade, drop and recreate the `gp_percentile_agg` extension in each database in which you are using the module:
+
+```
+DROP EXTENSION gp_percentile_agg;
+CREATE EXTENSION gp_percentile_agg;
+```
+
 ## <a id="topic_use"></a>About Using the Module 
 
 To realize the GPORCA performance benefits when using ordered-set aggregate functions, in addition to registering the extension you must also enable the [optimizer_enable_orderedagg](../config_params/guc-list.html#optimizer_enable_orderedagg) server configuration parameter before you run the query. For example, to enable this parameter in a `psql` session:
