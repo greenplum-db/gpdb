@@ -246,6 +246,11 @@ public:
 											 CColRefSetArray **ppdrgpcrs,
 											 BOOL infer_nulls_as = false);
 
+	// create constraint from EXISTS/ANY scalar subquery
+	static CConstraint *PcnstrFromExistsAnySubquery(CMemoryPool *mp,
+													CExpression *pexpr,
+													CColRefSetArray **ppdrgpcrs);
+
 	// create conjunction from array of constraints
 	static CConstraint *PcnstrConjunction(CMemoryPool *mp,
 										  CConstraintArray *pdrgpcnstr);

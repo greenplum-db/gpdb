@@ -4436,6 +4436,15 @@ CUtils::FAnySubquery(COperator *pop)
 	return COperator::EopScalarSubqueryAny == pop->Eopid();
 }
 
+// check if a given operator is an EXISTS subquery
+BOOL
+CUtils::FExistsSubquery(COperator *pop)
+{
+	GPOS_ASSERT(nullptr != pop);
+
+	return COperator::EopScalarSubqueryExists == pop->Eopid();
+}
+
 CScalarProjectElement *
 CUtils::PNthProjectElement(CExpression *pexpr, ULONG ul)
 {

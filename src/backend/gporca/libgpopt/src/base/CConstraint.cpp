@@ -259,6 +259,10 @@ CConstraint::PcnstrFromScalarExpr(
 			return PcnstrFromScalarExpr(mp, (*pexpr)[0], ppdrgpcrs,
 										infer_nulls_as);
 
+		case COperator::EopScalarSubqueryAny:
+		case COperator::EopScalarSubqueryExists:
+			return PcnstrFromExistsAnySubquery(mp, pexpr, ppdrgpcrs);
+
 		default:
 			return nullptr;
 	}
@@ -594,6 +598,73 @@ CConstraint::PcnstrFromScalarBoolOp(
 	}
 
 	return nullptr;
+}
+
+// create constraint from EXISTS/ANY scalar subquery
+CConstraint *
+CConstraint::PcnstrFromExistsAnySubquery(CMemoryPool *mp,
+										 CExpression *pexpr,
+										 CColRefSetArray **ppdrgpcrs)
+{
+	GPOS_ASSERT(nullptr != pexpr);
+
+	if (!CUtils::FAnySubquery(pexpr->Pop()) &&
+		!CUtils::FExistsSubquery(pexpr->Pop()))
+	{
+		return nullptr;
+	}
+
+	CExpression *pexprRel = (*pexpr)[0];
+	GPOS_ASSERT(pexprRel->Pop()->FLogical());
+	if (!pexprRel->HasOuterRefs())
+	{
+		return nullptr;
+	}
+
+	CPropConstraint *ppc = pexprRel->DerivePropertyConstraint();
+	CColRefSet *outRefs = pexprRel->DeriveOuterReferences();
+
+	if (ppc == nullptr)
+	{
+		return nullptr;
+	}
+
+	*ppdrgpcrs = GPOS_NEW(mp) CColRefSetArray(mp);
+	CConstraintArray *pdrgpcnstr = GPOS_NEW(mp) CConstraintArray(mp);
+	CColRefSetIter crsi(*outRefs);
+	while (crsi.Advance())
+	{
+		CColRef *colref = crsi.Pcr();
+		CColRefSet *equivOutRefs = ppc->PcrsEquivClass(colref);
+		if (equivOutRefs == nullptr || equivOutRefs->Size() == 0)
+		{
+			CRefCount::SafeRelease(equivOutRefs);
+			continue;
+		}
+		CConstraint *cnstr4Outer = ppc->Pcnstr()->Pcnstr(mp, equivOutRefs);
+		if (cnstr4Outer == nullptr || cnstr4Outer->IsConstraintUnbounded())
+		{
+			CRefCount::SafeRelease(equivOutRefs);
+			CRefCount::SafeRelease(cnstr4Outer);
+			continue;
+		}
+
+		CConstraint *cnstrCol = cnstr4Outer->PcnstrRemapForColumn(mp, colref);
+		pdrgpcnstr->Append(cnstrCol);
+		cnstr4Outer->Release();
+
+		CColRefSet *crs = GPOS_NEW(mp) CColRefSet(mp);
+		crs->Include(colref);
+
+		CColRefSetArray *pdrgpcrsMerged =
+			CUtils::AddEquivClassToArray(mp, crs, *ppdrgpcrs);
+
+		crs->Release();
+		(*ppdrgpcrs)->Release();
+		*ppdrgpcrs = pdrgpcrsMerged;
+	}
+
+	return CConstraint::PcnstrConjunction(mp, pdrgpcnstr);
 }
 
 //---------------------------------------------------------------------------

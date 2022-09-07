@@ -168,47 +168,24 @@ CLogicalSelect::DerivePropertyConstraint(CMemoryPool *mp,
 				}
 				CRefCount::SafeRelease(pdrgpcrsChild);
 			}
-			else if (CUtils::FAnySubquery(pexprScalar->Pop()))
+			else if (CUtils::FAnySubquery(pexprScalar->Pop()) ||
+					 CUtils::FExistsSubquery(pexprScalar->Pop()))
 			{
-				CExpression *pexprRel = (*pexprScalar)[0];
-				GPOS_ASSERT(pexprRel->Pop()->FLogical());
-				if (pexprRel->HasOuterRefs())
+				// TODO: move to CLogical::PpcDeriveConstraintFromPredicates
+				CColRefSetArray *pdrgpcrsChild = nullptr;
+				CConstraint *pcnstr = CConstraint::PcnstrFromExistsAnySubquery(
+					mp, pexprScalar, &pdrgpcrsChild);
+				if (nullptr != pcnstr)
 				{
-					CPropConstraint *ppc = pexprRel->DerivePropertyConstraint();
-					CColRefSet *outRefs = pexprRel->DeriveOuterReferences();
-
-					CColRefSetIter crsi(*outRefs);
-					while (ppc != nullptr && crsi.Advance())
-					{
-						CColRef *colref = crsi.Pcr();
-						CColRefSet *equivOutRefs = ppc->PcrsEquivClass(colref);
-						if (equivOutRefs == nullptr || equivOutRefs->Size() == 0)
-						{
-							CRefCount::SafeRelease(equivOutRefs);
-							continue;
-						}
-						CConstraint *cnstr4Outer = ppc->Pcnstr()->Pcnstr(mp, equivOutRefs);
-						if (cnstr4Outer == nullptr || cnstr4Outer->IsConstraintUnbounded())
-						{
-							CRefCount::SafeRelease(equivOutRefs);
-							CRefCount::SafeRelease(cnstr4Outer);
-							continue;
-						}
-
-						CConstraint *cnstrCol = cnstr4Outer->PcnstrRemapForColumn(mp, colref);
-						pdrgpcnstr->Append(cnstrCol);
-						cnstr4Outer->Release();
-
-						CColRefSet *crs = GPOS_NEW(mp) CColRefSet(mp);
-						crs->Include(colref);
-
-						CColRefSetArray *pdrgpcrsMerged =
-							CUtils::AddEquivClassToArray(mp, crs, pdrgpcrs);
-						pdrgpcrs->Release();
-						crs->Release();
-						pdrgpcrs = pdrgpcrsMerged;
-					}
+					pdrgpcnstr->Append(pcnstr);
+					// merge with the equivalence classes we have so far
+					CColRefSetArray *pdrgpcrsMerged =
+						CUtils::PdrgpcrsMergeEquivClasses(mp, pdrgpcrs,
+														  pdrgpcrsChild);
+					pdrgpcrs->Release();
+					pdrgpcrs = pdrgpcrsMerged;
 				}
+				CRefCount::SafeRelease(pdrgpcrsChild);
 			}
 		}
 		else // for relational child

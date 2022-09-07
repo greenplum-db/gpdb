@@ -1566,30 +1566,28 @@ CExpressionPreprocessor::PexprScalarPredicates(
 	while (crsi.Advance())
 	{
 		CColRef *colref = crsi.Pcr();
+		CColRefSet *crs;
 
-		if (!equivOnly)
+		if (!equivOnly && (crs = ppc->PcrsEquivClass(colref)) != nullptr)
 		{
-			// add predicates that are inferred from subquery,
-			// instead of equiv classes
-			CColRefSet *crs = ppc->PcrsEquivClass(colref);
-			if (crs != nullptr)
+			// add predicates that are inferred from subquery
+			CConstraint *pcnstr = ppc->Pcnstr()->Pcnstr(mp, crs);
+			CConstraint *pcnstrCol = pcnstr->PcnstrRemapForColumn(mp, colref);
+			CExpression *pexprScalar = pcnstrCol->PexprScalar(mp);
+
+			// do not add a NOT NULL predicate if column is not nullable or if it
+			// already has another predicate on it
+			if (!(CUtils::FScalarNotNull(pexprScalar) &&
+				  (pcrsNotNull->FMember(colref) ||
+				   ppc->Pcnstr()->FConstraint(colref))))
 			{
-				CConstraint *pcnstr = ppc->Pcnstr()->Pcnstr(mp, crs);
-				CConstraint *pcnstrCol = pcnstr->PcnstrRemapForColumn(mp, colref);
-				CExpression *pexprScalar = pcnstrCol->PexprScalar(mp);
-
-//				if (!CUtils::FScalarNotNull(pexprScalar))
-				if (!(CUtils::FScalarNotNull(pexprScalar) &&
-					  pcrsNotNull->FMember(colref)))
-				{
-					pexprScalar->AddRef();
-					pdrgpexpr->Append(pexprScalar);
-				}
-
-				pcrsProcessed->Include(colref);
-				pcnstr->Release();
-				pcnstrCol->Release();
+				pexprScalar->AddRef();
+				pdrgpexpr->Append(pexprScalar);
 			}
+
+			pcrsProcessed->Include(colref);
+			pcnstr->Release();
+			pcnstrCol->Release();
 		}
 
 		CExpression *pexprScalar = ppc->PexprScalarMappedFromEquivCols(

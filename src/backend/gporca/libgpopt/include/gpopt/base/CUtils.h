@@ -706,6 +706,9 @@ public:
 	// returns true if the subquery is a ScalarSubqueryAny
 	static BOOL FAnySubquery(COperator *pop);
 
+	// returns true if the subquery is a ScalarSubqueryExists
+	static BOOL FExistsSubquery(COperator *pop);
+
 	static CScalarProjectElement *PNthProjectElement(CExpression *pexpr,
 													 ULONG ul);
 

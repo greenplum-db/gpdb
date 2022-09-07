@@ -66,7 +66,7 @@ private:
 	static CExpression *PexprScalarPredicates(
 		CMemoryPool *mp, CPropConstraint *ppc,
 		CPropConstraint *constraintsForOuterRefs, CColRefSet *pcrsNotNull,
-		CColRefSet *pcrs, CColRefSet *pcrsProcessed, BOOL equivOnly);
+		CColRefSet *pcrs, CColRefSet *pcrsProcessed, BOOL deriveFromSubquery);
 
 	// eliminate self comparisons
 	static CExpression *PexprEliminateSelfComparison(CMemoryPool *mp,
