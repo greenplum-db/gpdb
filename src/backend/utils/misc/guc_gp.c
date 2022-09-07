@@ -4160,9 +4160,9 @@ struct config_int ConfigureNamesInt_gp[] =
 	},
 
 	{
-		{"gp_max_parallel_cursors",PGC_POSTMASTER, RESOURCES,
+		{"gp_max_parallel_cursors", PGC_SUSET, RESOURCES,
 			gettext_noop("Parallel cursor concurrency control from the source cluster side, -1 means no limit, which is the default"),
-			NULL, GUC_NOT_IN_SAMPLE
+			NULL, GUC_SUPERUSER_ONLY | GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
 		},
 		&gp_max_parallel_cursors,
 		-1, -1, 1024,

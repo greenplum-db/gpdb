@@ -1,7 +1,5 @@
--- start_ignore
-! gpconfig -c gp_max_parallel_cursors -v 3
-! gpstop -rai;
--- end_ignore
+ALTER SYSTEM SET gp_max_parallel_cursors TO 3;
+SELECT pg_reload_conf();
 
 -- @Description Tests concurrency for the PARALLEL RETRIEVE CURSOR statement
 --
@@ -34,7 +32,5 @@ COMMIT;
 1: DECLARE c3 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
 1: COMMIT;
 
--- start_ignore
-! gpconfig -c gp_max_parallel_cursors -v -1
-! gpstop -rai;
--- end_ignore
+ALTER SYSTEM SET gp_max_parallel_cursors TO -1;
+SELECT pg_reload_conf();
