@@ -386,7 +386,7 @@ typedef struct _tableInfo
 	 */
 	int			numParents;		/* number of (immediate) parent tables */
 	struct _tableInfo **parents;	/* TableInfos of immediate parents */
-	Oid			parrelid;			/* external partition's parent oid */
+	Oid			parrelid;			/* partition's parent oid */
 	bool		parparent;		/* true if the table is partition parent */
 	int			numIndexes;		/* number of indexes */
 	struct _indxInfo *indexes;	/* indexes */
