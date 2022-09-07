@@ -465,13 +465,13 @@ testdb=# SET plpython3.python_path='/home/gpadmin/my_python';
 
 Greenplum uses the value of `plpython3.python_path` to set `PLPYTHONPATH` in the environment used to create or call `plpython3u` functions.
 
-**Note:** Ensure that you configure `plpython3.python_path` _before_ you create or call `plpython3` functions in a session. If you set or change the parameter after `plpython3u` is initialized you receive the error:
+**Note:** `plpython3.python_path` is provided as part of the `plpython3u` extension, so you _must_ load the extension (with `load 'plpython3';`) before you can set this configuration parameter in a session.
+
+Ensure that you configure `plpython3.python_path` _before_ you create or call `plpython3` functions in a session. If you set or change the parameter after `plpython3u` is initialized you receive the error:
 
 ```
 ERROR: SET PYTHONPATH failed, the GUC value can only be changed before initializing the python interpreter.
 ```
-
-**Note:** `plpython3.python_path` is provided as part of the `plpython3u` extension, so you _must_ load the extension (with `load 'plpython3';`) before you can set this configuration parameter in a session.
 
 To set a default value for the configuration parameter, use `gpconfig` instead:
 
