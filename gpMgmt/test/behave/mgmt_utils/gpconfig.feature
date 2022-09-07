@@ -240,6 +240,22 @@ Feature: gpconfig integration tests
         And verify that the file "postgresql.conf" in the coordinator data directory has "some" line starting with "gp_resqueue_priority_cpucores_per_segment"
         And verify that the file "postgresql.conf" in each segment data directory has "some" line starting with "gp_resqueue_priority_cpucores_per_segment"
 
+    @concourse_cluster
+    @demo_cluster
+    Scenario: gpconfig custom guc validation works
+      Given the user runs "gpstop -u"
+        And gpstop should return a return code of 0
+        And the gpconfig context is setup
+
+        When the user runs "gpconfig -c custom.option -v 'value'"
+        Then gpconfig should return a return code of 0
+        And verify that the file "postgresql.conf" in the coordinator data directory has "some" line starting with "custom.option"
+        And verify that the file "postgresql.conf" in each segment data directory has "some" line starting with "custom.option"
+
+        When the user runs "gpconfig -c custom.option.invalid -v 'value'"
+        Then gpconfig should return a return code of 1
+
+       
     @demo_cluster
     Scenario: gpconfig checks liveness of correct number of hosts
       Given the database is running
