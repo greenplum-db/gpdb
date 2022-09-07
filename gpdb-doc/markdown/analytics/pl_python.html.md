@@ -437,12 +437,12 @@ For information about these and other Python packages, see [References](#topic12
 
 ### <a id="pip39"></a>Installing Python Packages for Python 3.9
 
-By default, `greenplum_path.sh` changes the `PYTHONPATH` and `PYTHONHOME` environment variables for use with the installed Python 2.7 environment. In order to install modules using `pip` with Python 3.9, you must first `UNSET` those parameters. For example to install `numpy` and `scipy` for Python 3.9:
+By default, `greenplum_path.sh` changes the `PYTHONPATH` and `PYTHONHOME` environment variables for use with the installed Python 2.7 environment. In order to install modules using `pip` with Python 3.9, you must first `unset` those parameters. For example to install `numpy` and `scipy` for Python 3.9:
 
 ```
 gpssh -s -f gpdb_hosts
-=> UNSET PYTHONHOME
-=> UNSET PYTHONPATH
+=> unset PYTHONHOME
+=> unset PYTHONPATH
 => $GPHOME/ext/python3.9 -m pip install numpy scipy
 ```
 
@@ -450,8 +450,8 @@ You can optionally install Python 3.9 modules to a non-standard location by usin
 
 ```
 gpssh -s -f gpdb_hosts
-=> UNSET PYTHONHOME
-=> UNSET PYTHONPATH
+=> unset PYTHONHOME
+=> unset PYTHONPATH
 => $GPHOME/ext/python3.9 -m pip install --prefix=/home/gpadmin/my_python numpy scipy
 ```
 
