@@ -4665,6 +4665,9 @@ binary_upgrade_set_type_oids_by_type_oid(Archive *fout,
 		 *
 		 * Note: local state here is kind of ugly, but we must have some,
 		 * since we mustn't choose the same unused OID more than once.
+		 *
+		 * GPDB: We also must check the preassigned OID list to ensure we don't
+		 * choose a value for next_possible_free_oid that has already been used.
 		 */
 		static Oid	next_possible_free_oid = FirstNormalObjectId;
 		bool		is_dup;
@@ -4678,7 +4681,8 @@ binary_upgrade_set_type_oids_by_type_oid(Archive *fout,
 							  "WHERE oid = '%u'::pg_catalog.oid);",
 							  next_possible_free_oid);
 			res = ExecuteSqlQueryForSingleRow(fout, upgrade_query->data);
-			is_dup = (PQgetvalue(res, 0, 0)[0] == 't');
+			is_dup = (PQgetvalue(res, 0, 0)[0] == 't'	||
+							simple_oid_list_member(&preassigned_oids, next_possible_free_oid));
 			PQclear(res);
 		} while (is_dup);
 
@@ -4692,9 +4696,9 @@ binary_upgrade_set_type_oids_by_type_oid(Archive *fout,
 							 "\n-- For binary upgrade, must preserve pg_type array oid\n");
 		appendPQExpBuffer(upgrade_buffer,
 						  "SELECT pg_catalog.binary_upgrade_set_next_array_pg_type_oid('%u'::pg_catalog.oid, "
-						  "'%u'::pg_catalog.oid, $$%s$$::text);\n\n",
-						  pg_type_array_oid, tyinfo->typarrayns,
-						  tyinfo->typarrayname);
+						  "'%u'::pg_catalog.oid, $$_%s$$::text);\n\n",
+						  pg_type_array_oid, tyinfo->dobj.namespace->dobj.catId.oid,
+						  tyinfo->dobj.name);
 	}
 
 	destroyPQExpBuffer(upgrade_query);
