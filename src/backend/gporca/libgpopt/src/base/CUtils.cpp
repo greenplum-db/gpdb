@@ -4445,6 +4445,17 @@ CUtils::FExistsSubquery(COperator *pop)
 	return COperator::EopScalarSubqueryExists == pop->Eopid();
 }
 
+// check if the expression is a correlated EXISTS/ANY subquery
+BOOL
+CUtils::FCorrelatedExistsAnySubquery(CExpression *pexpr)
+{
+	GPOS_ASSERT(nullptr != pexpr);
+
+	return (CUtils::FAnySubquery(pexpr->Pop()) ||
+			CUtils::FExistsSubquery(pexpr->Pop())) &&
+		   (*pexpr)[0]->HasOuterRefs();
+}
+
 CScalarProjectElement *
 CUtils::PNthProjectElement(CExpression *pexpr, ULONG ul)
 {

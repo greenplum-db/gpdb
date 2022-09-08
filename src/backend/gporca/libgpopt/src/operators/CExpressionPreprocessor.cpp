@@ -1557,8 +1557,10 @@ CExpressionPreprocessor::PexprAddEqualityPreds(CMemoryPool *mp,
 CExpression *
 CExpressionPreprocessor::PexprScalarPredicates(
 	CMemoryPool *mp, CPropConstraint *ppc,
-	CPropConstraint *constraintsForOuterRefs, CColRefSet *pcrsNotNull,
-	CColRefSet *pcrs, CColRefSet *pcrsProcessed, BOOL equivOnly)
+	CPropConstraint *constraintsForOuterRefs,
+	CPropConstraint *ppcFromFilterSubquery,
+	CColRefSet *pcrsNotNull,
+	CColRefSet *pcrs, CColRefSet *pcrsProcessed)
 {
 	CExpressionArray *pdrgpexpr = GPOS_NEW(mp) CExpressionArray(mp);
 
@@ -1566,12 +1568,13 @@ CExpressionPreprocessor::PexprScalarPredicates(
 	while (crsi.Advance())
 	{
 		CColRef *colref = crsi.Pcr();
-		CColRefSet *crs;
+		CColRefSet *crs; // equiv class column refset
 
-		if (!equivOnly && (crs = ppc->PcrsEquivClass(colref)) != nullptr)
+		if (ppcFromFilterSubquery != nullptr &&
+			(crs = ppcFromFilterSubquery->PcrsEquivClass(colref)) != nullptr)
 		{
 			// add predicates that are inferred from subquery
-			CConstraint *pcnstr = ppc->Pcnstr()->Pcnstr(mp, crs);
+			CConstraint *pcnstr = ppcFromFilterSubquery->Pcnstr()->Pcnstr(mp, crs);
 			CConstraint *pcnstrCol = pcnstr->PcnstrRemapForColumn(mp, colref);
 			CExpression *pexprScalar = pcnstrCol->PexprScalar(mp);
 
@@ -1579,7 +1582,7 @@ CExpressionPreprocessor::PexprScalarPredicates(
 			// already has another predicate on it
 			if (!(CUtils::FScalarNotNull(pexprScalar) &&
 				  (pcrsNotNull->FMember(colref) ||
-				   ppc->Pcnstr()->FConstraint(colref))))
+				   (ppc->Pcnstr() != nullptr && ppc->Pcnstr()->FConstraint(colref)))))
 			{
 				pexprScalar->AddRef();
 				pdrgpexpr->Append(pexprScalar);
@@ -1696,7 +1699,8 @@ CExpressionPreprocessor::PexprWithImpliedPredsOnLOJInnerChild(
 	CColRefSet *pcrsProcessed = GPOS_NEW(mp) CColRefSet(mp);
 	CExpression *pexprPred =
 		PexprScalarPredicates(mp, ppc, nullptr /*no outer refs*/,
-							  pcrsInnerNotNull, pcrsInnerOutput, pcrsProcessed, true);
+							  nullptr /*no constraints from subquery*/,
+							  pcrsInnerNotNull, pcrsInnerOutput, pcrsProcessed);
 	pcrsProcessed->Release();
 	ppc->Release();
 
@@ -1817,11 +1821,9 @@ CExpressionPreprocessor::PexprFromConstraints(
 	const ULONG ulChildren = pexpr->Arity();
 	CPropConstraint *ppc = pexpr->DerivePropertyConstraint();
 	CColRefSet *pcrsNotNull = pexpr->DeriveNotNullColumns();
-
+	CPropConstraint *ppcFromFilterSubquery =
+		CExpressionUtils::GetPropConstraintFromSubquery(mp, pexpr);
 	CExpressionArray *pdrgpexprChildren = GPOS_NEW(mp) CExpressionArray(mp);
-
-	BOOL anySubquery = pexpr->Pop()->Eopid() == COperator::EopLogicalSelect &&
-					   CUtils::FAnySubquery((*pexpr)[1]->Pop());
 
 	for (ULONG ul = 0; ul < ulChildren; ul++)
 	{
@@ -1851,8 +1853,9 @@ CExpressionPreprocessor::PexprFromConstraints(
 
 		// generate predicates for the output columns of child
 		CExpression *pexprPred =
-			PexprScalarPredicates(mp, ppc, constraintsForOuterRefs, pcrsNotNull,
-								  pcrsOutChild, pcrsProcessed, !anySubquery);
+			PexprScalarPredicates(mp, ppc, constraintsForOuterRefs,
+								  ppcFromFilterSubquery, pcrsNotNull,
+								  pcrsOutChild, pcrsProcessed);
 		pcrsOutChild->Release();
 
 		if (nullptr != pexprPred)
@@ -1870,11 +1873,12 @@ CExpressionPreprocessor::PexprFromConstraints(
 	pop->AddRef();
 
 	CExpression *pexprPred = GPOS_NEW(mp) CExpression(mp, pop, pdrgpexprChildren);
-	if (constraintsForOuterRefs != nullptr)
+	if (ppcFromFilterSubquery != nullptr)
 	{
 		CExpression *pexprNormalized =
 			CNormalizer::PexprNormalize(mp, pexprPred);
 		pexprPred->Release();
+		ppcFromFilterSubquery->Release();
 		return pexprNormalized;
 	}
 	return pexprPred;

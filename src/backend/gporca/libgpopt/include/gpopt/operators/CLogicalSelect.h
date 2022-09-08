@@ -89,7 +89,10 @@ public:
 	// derive constraint property
 	CPropConstraint *
 	DerivePropertyConstraint(CMemoryPool *mp,
-							 CExpressionHandle &exprhdl) const override;
+							 CExpressionHandle &exprhdl) const override
+	{
+		return PpcDeriveConstraintFromPredicates(mp, exprhdl);
+	}
 
 	// derive table descriptor
 	CTableDescriptor *

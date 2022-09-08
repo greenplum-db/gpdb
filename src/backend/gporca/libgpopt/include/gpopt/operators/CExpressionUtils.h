@@ -63,6 +63,9 @@ public:
 
 	// unnest AND/OR/NOT predicates
 	static CExpression *PexprUnnest(CMemoryPool *mp, CExpression *pexpr);
+
+	// get constraints property from LogicalSelect operator with EXISTS/ANY subquery
+	static CPropConstraint *GetPropConstraintFromSubquery(CMemoryPool *mp, CExpression *pexpr);
 };
 }  // namespace gpopt
 
