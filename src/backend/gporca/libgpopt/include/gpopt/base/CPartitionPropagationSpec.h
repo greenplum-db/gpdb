@@ -86,11 +86,18 @@ private:
 		static INT CmpFunc(const void *val1, const void *val2);
 	};
 
-	using SPartPropSpecInfoArray =
-		CDynamicPtrArray<SPartPropSpecInfo, CleanupRelease>;
-
 	// partition required/derived info, sorted by scanid
-	SPartPropSpecInfoArray *m_part_prop_spec_infos = nullptr;
+	using UlongToSPartPropSpecInfoMap =
+		CHashMap<ULONG, SPartPropSpecInfo, gpos::HashValue<ULONG>,
+				 gpos::Equals<ULONG>, CleanupDelete<ULONG>,
+				 CleanupRelease<SPartPropSpecInfo>>;
+
+	using UlongToSPartPropSpecInfoMapIter =
+		CHashMapIter<ULONG, SPartPropSpecInfo, gpos::HashValue<ULONG>,
+					 gpos::Equals<ULONG>, CleanupDelete<ULONG>,
+					 CleanupRelease<SPartPropSpecInfo>>;
+
+	UlongToSPartPropSpecInfoMap *m_part_prop_spec_infos = nullptr;
 
 	// Present scanids (for easy lookup)
 	CBitSet *m_scan_ids = nullptr;
