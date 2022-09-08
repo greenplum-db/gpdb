@@ -1118,6 +1118,10 @@ positionSkipCurrentBlock(DatumStreamFetchDesc datumStreamFetchDesc)
 		datumStreamFetchDesc->currentBlock.lastRowNum + 1;
 }
 
+/*
+ * Fetch the tuple's datum from the block indicated by the block directory entry
+ * that covers the tuple, given the colno.
+ */
 static void
 fetchFromCurrentBlock(AOCSFetchDesc aocsFetchDesc,
 					  int64 rowNum,
@@ -1177,14 +1181,49 @@ scanToFetchValue(AOCSFetchDesc aocsFetchDesc,
 				 TupleTableSlot *slot,
 				 int colno)
 {
-	DatumStreamFetchDesc datumStreamFetchDesc = aocsFetchDesc->datumStreamFetchDesc[colno];
-	DatumStreamRead *datumStream = datumStreamFetchDesc->datumStream;
-	bool		found;
+	DatumStreamFetchDesc 			datumStreamFetchDesc = aocsFetchDesc->datumStreamFetchDesc[colno];
+	DatumStreamRead 				*datumStream = datumStreamFetchDesc->datumStream;
+	AOFetchBlockMetadata 			*currentBlock = &datumStreamFetchDesc->currentBlock;
+	AppendOnlyBlockDirectoryEntry 	*entry = &currentBlock->blockDirectoryEntry;
+	bool							found;
 
 	found = datumstreamread_find_block(datumStream,
 									   datumStreamFetchDesc,
 									   rowNum);
-	if (found)
+	if (!found)
+	{
+		if (AppendOnlyBlockDirectoryEntry_RangeHasRow(entry, rowNum))
+		{
+			/*
+			 * We fell into a hole inside the resolved block directory entry
+			 * we obtained from AppendOnlyBlockDirectory_GetEntry().
+			 * This should not be happening for versions >= PG12. Scream
+			 * appropriately. See AppendOnlyBlockDirectoryEntry for details.
+			 */
+			ereportif(datumStream->ao_read.formatVersion >= AORelationVersion_PG12,
+					  ERROR,
+					  (errcode(ERRCODE_INTERNAL_ERROR),
+					   errmsg("datum with row number %ld and col no %d not found in block directory entry range", rowNum, colno),
+					   errdetail("block directory entry: (fileOffset = %ld, firstRowNum = %ld, "
+								 "afterFileOffset = %ld, lastRowNum = %ld)",
+								 entry->range.fileOffset,
+								 entry->range.firstRowNum,
+								 entry->range.afterFileOffset,
+								 entry->range.lastRowNum)));
+		}
+		else
+		{
+			/*
+			 * The resolved block directory entry we obtained from
+			 * AppendOnlyBlockDirectory_GetEntry() has range s.t.
+			 * firstRowNum < lastRowNum < rowNum
+			 * This can happen when rowNum maps to an aborted transaction, and
+			 * we find an earlier committed block directory row due to the
+			 * <= scan condition in AppendOnlyBlockDirectory_GetEntry().
+			 */
+		}
+	}
+	else
 		fetchFromCurrentBlock(aocsFetchDesc, rowNum, slot, colno);
 
 	return found;
@@ -1258,6 +1297,11 @@ openFetchSegmentFile(AOCSFetchDesc aocsFetchDesc,
 	return true;
 }
 
+/*
+ * Note: we don't reset the block directory entry here. This is crucial, so we
+ * can use the block directory entry later on. See comment in AOFetchBlockMetadata
+ * FIXME: reset other fields here.
+ */
 static void
 resetCurrentBlockInfo(AOFetchBlockMetadata *currentBlock)
 {
