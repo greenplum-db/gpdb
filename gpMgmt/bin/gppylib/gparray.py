@@ -189,7 +189,7 @@ class Segment:
         """
         Factory method, initializes a Segment object from string representation.
           - Used when importing from file format.
-          - TODO: Should be compatable with repr() formatting.
+          - Should be compatible with repr() formatting.
         """
         tup = s.strip().split('|')
 
