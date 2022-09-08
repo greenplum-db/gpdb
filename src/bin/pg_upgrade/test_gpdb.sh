@@ -172,7 +172,7 @@ upgrade_qd()
 
 	# Run pg_upgrade
 	pushd $1
-	time ${NEW_BINDIR}/pg_upgrade --mode=dispatcher --old-bindir=${OLD_BINDIR} --old-datadir=$2 --new-bindir=${NEW_BINDIR} --new-datadir=$3 ${PGUPGRADE_OPTS}
+	time ${NEW_BINDIR}/pg_upgrade --mode=dispatcher --progress --old-bindir=${OLD_BINDIR} --old-datadir=$2 --new-bindir=${NEW_BINDIR} --new-datadir=$3 ${PGUPGRADE_OPTS}
 	if (( $? )) ; then
 		echo "ERROR: Failure encountered in upgrading qd node"
 		exit 1
