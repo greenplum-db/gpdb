@@ -397,7 +397,6 @@ get_db_infos(ClusterInfo *cluster)
 	/* we don't preserve pg_database.oid so we sort by name */
 			 "ORDER BY 2",
 	/* 9.2 removed the spclocation column */
-	/* GPDB_XX_MERGE_FIXME: spclocation was removed in 6.0 cycle */
 			 (GET_MAJOR_VERSION(cluster->major_version) == 803) ?
 			 "t.spclocation" : "pg_catalog.pg_tablespace_location(t.oid)");
 
