@@ -3830,11 +3830,17 @@ merge_leaf_stats(VacAttrStatsP stats,
 			(errmsg("Merging leaf partition stats to calculate root partition stats : column %s",
 					get_attname(stats->attr->attrelid, stats->attr->attnum, false))));
 
-	/* GPDB_12_MERGE_FIXME: what's the appropriate lock level? AccessShareLock
-	 * is enough to scan the table, but are we updating them, too? If not,
-	 * NoLock might be enough?
+	/* 
+	 * Since we have acquired ShareUpdateExclusiveLock on the parent table when
+	 * ANALYZE'ing it, we don't need extra lock to guard against concurrent DROP
+	 * of either the parent or the child (which requries AccessExclusiveLock on
+	 * the parent).
+	 * Concurrent UPDATE is possible but because we are not updating the table
+	 * ourselves, NoLock is sufficient here.
 	 */
-	all_children_list = find_all_inheritors(stats->attr->attrelid, AccessShareLock, NULL);
+	all_children_list = find_all_inheritors(stats->attr->attrelid, NoLock, NULL);
+	SIMPLE_FAULT_INJECTOR("merge_leaf_stats_after_find_children");
+
 	oid_list = NIL;
 	foreach (lc, all_children_list)
 	{

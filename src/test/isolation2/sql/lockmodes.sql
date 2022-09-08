@@ -796,3 +796,30 @@ ALTER SYSTEM SET gp_enable_global_deadlock_detector TO on;
 1: drop table lockmodes_datadir;
 1q:
 2q:
+
+-- Check that concurrent DROP on leaf partition won't impact analyze on the
+-- parent since analyze will hold a ShareUpdateExclusiveLock and DROP will 
+-- require an AccessExclusiveLock.
+-- Case 1. The analyze result is expected when there's concurrent drop on child.
+1:create table analyzedrop(a int) partition by range(a);
+1:create table analyzedrop_1 partition of analyzedrop for values from (0) to (10);
+1:create table analyzedrop_2 partition of analyzedrop for values from (10) to (20);
+1:insert into analyzedrop select * from generate_series(0,19);
+1:select gp_inject_fault_infinite('merge_leaf_stats_after_find_children', 'suspend', dbid) from gp_segment_configuration where content = -1 and role = 'p';
+1&: analyze analyzedrop; 
+2&: drop table analyzedrop_1;
+3:select gp_inject_fault_infinite('merge_leaf_stats_after_find_children', 'reset', dbid) from gp_segment_configuration where content = -1 and role = 'p';
+1<:
+2<:
+3:select * from pg_stats where tablename like 'analyzedrop%';
+-- Case 2. No failure should happen when there's concurrent drop on parent as well.
+1:select gp_inject_fault_infinite('merge_leaf_stats_after_find_children', 'suspend', dbid) from gp_segment_configuration where content = -1 and role = 'p';
+1&: analyze analyzedrop; 
+2&: drop table analyzedrop_2;
+3&: drop table analyzedrop;
+4:select gp_inject_fault_infinite('merge_leaf_stats_after_find_children', 'reset', dbid) from gp_segment_configuration where content = -1 and role = 'p';
+1<:
+2<:
+3<:
+--empty as table is dropped
+4:select * from pg_stats where tablename like 'analyzedrop%';
