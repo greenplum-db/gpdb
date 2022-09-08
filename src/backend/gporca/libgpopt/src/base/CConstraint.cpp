@@ -608,22 +608,15 @@ CConstraint::PcnstrFromExistsAnySubquery(CMemoryPool *mp,
 {
 	GPOS_ASSERT(nullptr != pexpr);
 
-	if (!CUtils::FAnySubquery(pexpr->Pop()) &&
-		!CUtils::FExistsSubquery(pexpr->Pop()))
+	if (!CUtils::FCorrelatedExistsAnySubquery(pexpr))
 	{
 		return nullptr;
 	}
 
 	CExpression *pexprRel = (*pexpr)[0];
 	GPOS_ASSERT(pexprRel->Pop()->FLogical());
-	if (!pexprRel->HasOuterRefs())
-	{
-		return nullptr;
-	}
 
 	CPropConstraint *ppc = pexprRel->DerivePropertyConstraint();
-	CColRefSet *outRefs = pexprRel->DeriveOuterReferences();
-
 	if (ppc == nullptr)
 	{
 		return nullptr;
@@ -631,7 +624,9 @@ CConstraint::PcnstrFromExistsAnySubquery(CMemoryPool *mp,
 
 	*ppdrgpcrs = GPOS_NEW(mp) CColRefSetArray(mp);
 	CConstraintArray *pdrgpcnstr = GPOS_NEW(mp) CConstraintArray(mp);
+	CColRefSet *outRefs = pexprRel->DeriveOuterReferences();
 	CColRefSetIter crsi(*outRefs);
+
 	while (crsi.Advance())
 	{
 		CColRef *colref = crsi.Pcr();
