@@ -7,7 +7,7 @@ This tool collects Greenplum and system log files, along with the relevant confi
 ```
 gpmt gp_log_collector [-failed-segs | -c <ID1,ID2,...>| -hostfile <file> | -h <host1, host2,...>]
 [ -start <YYYY-MM-DD> ] [ -end <YYYY-MM-DD> ]
-[ -dir <path> ] [ -segdir <path> ] [ -a ] [-skip-master] [-with-gptext] [-with-gptext-only] [-with-pxf] [-with-pxf-only] [-with-gpupgrade]
+[ -dir <path> ] [ -segdir <path> ] [ -a ] [-skip-master] [-with-gpbackup] [-with-gptext] [-with-gptext-only] [-with-pxf] [-with-pxf-only] [-with-gpupgrade]
 ```
 
 ## <a id="opts"></a>Options 
@@ -44,6 +44,27 @@ gpmt gp_log_collector [-failed-segs | -c <ID1,ID2,...>| -hostfile <file> | -h <h
 
 -skip-master
 :   When running `gp_log_collector`, the generated tarball can be very large. Use this option to skip Greenplum Master log collection when only Greenplum Segment logs are required.
+
+-with-gpbackup 
+:   Beginning with Greenplum 6.22, this option enables you to collect logs related to backup and restore. 
+
+With this option, `gpmt` collects these log files from `$GPADMIN_HOME/gpAdminLogs`:
+
+- `gpbackup_.log`
+- `gpbackup_helper_.log`
+- `gpbackup_ plugin .log`
+- `gprestore_.log`
+
+These are collected from the provided `--backup-dir` or default backup directory:
+
+- `gpbackup__config.yaml`
+- `gpbackup__metadata.sql`
+- `gpbackup__report`
+- `gpbackup__toc.yaml`
+- `gprestore___report`
+- `gpbackup___report`
+
+Also, the `pg_log` file is collected from the master and segment hosts.
 
 -with-gptext
 :   Collect all GPText logs along with Greenplum logs.
