@@ -283,7 +283,7 @@ def execSQL(conn, sql, autocommit=True):
     transaction.
     For SQL that captures some expected output, use "query()"
 
-    Using with `dbconn.connect() as conn` syntax will override autocommit and complete
+    Using `with dbconn.connect() as conn` syntax will override autocommit and complete
     queries in a transaction followed by a commit on context close
     """
     conn.autocommit = autocommit
@@ -294,7 +294,7 @@ def query(conn, sql):
     """
     Run SQL that is expected to return some rows of output
 
-    returns a cursor, which can then be used to itirate through all rows
+    returns a cursor, which can then be used to iterate through all rows
     or return them in an array.
     """
     cursor=conn.cursor()
