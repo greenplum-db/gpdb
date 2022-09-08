@@ -4648,8 +4648,11 @@ binary_upgrade_set_type_oids_by_type_oid(Archive *fout,
 	PQExpBuffer upgrade_query = createPQExpBuffer();
 	PGresult   *res;
 	Oid			pg_type_array_oid = tyinfo->typarrayoid;
+	Oid			pg_type_array_ns_oid = tyinfo->typarrayns;
+	char	*pg_type_array_name = tyinfo->typarrayname;
 
-	simple_oid_list_append(&preassigned_oids, pg_type_array_oid);
+
+	simple_oid_list_append(&preassigned_oids, tyinfo->dobj.catId.oid);
 	appendPQExpBufferStr(upgrade_buffer, "\n-- For binary upgrade, must preserve pg_type oid\n");
 	appendPQExpBuffer(upgrade_buffer,
 						"SELECT pg_catalog.binary_upgrade_set_next_pg_type_oid('%u'::pg_catalog.oid, "
@@ -4683,6 +4686,8 @@ binary_upgrade_set_type_oids_by_type_oid(Archive *fout,
 		} while (is_dup);
 
 		pg_type_array_oid = next_possible_free_oid;
+		pg_type_array_ns_oid = tyinfo->dobj.namespace->dobj.catId.oid;
+		pg_type_array_name = psprintf("_%s", tyinfo->dobj.name);
 	}
 
 	if (OidIsValid(pg_type_array_oid))
@@ -4693,8 +4698,8 @@ binary_upgrade_set_type_oids_by_type_oid(Archive *fout,
 		appendPQExpBuffer(upgrade_buffer,
 						  "SELECT pg_catalog.binary_upgrade_set_next_array_pg_type_oid('%u'::pg_catalog.oid, "
 						  "'%u'::pg_catalog.oid, $$%s$$::text);\n\n",
-						  pg_type_array_oid, tyinfo->typarrayns,
-						  tyinfo->typarrayname);
+						  pg_type_array_oid, pg_type_array_ns_oid,
+						  pg_type_array_name);
 	}
 
 	destroyPQExpBuffer(upgrade_query);
