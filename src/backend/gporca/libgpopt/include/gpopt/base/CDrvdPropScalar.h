@@ -55,6 +55,7 @@ class CDrvdPropScalar : public CDrvdProp
 		EdptFHasMultipleDistinctAggs,
 		EdptFHasScalarArrayCmp,
 		EdptFHasScalarFuncProject,
+		EdptFContainsOnlyReplicationSafeAggFuncs,
 		EdptSentinel
 	};
 
@@ -99,8 +100,8 @@ private:
 	// does expression contain ScalarArrayCmp generated for "scalar op ANY/ALL (array)" construct
 	BOOL m_fHasScalarArrayCmp;
 
-	// private copy ctor
-	CDrvdPropScalar(const CDrvdPropScalar &);
+	// does expression contain only replication safe agg funcs
+	BOOL m_fContainsOnlyReplicationSafeAggFuncs;
 
 	// Have all the properties been derived?
 	//
@@ -135,6 +136,8 @@ protected:
 	BOOL DeriveHasScalarFuncProject(CExpressionHandle &);
 
 	BOOL DeriveHasMultipleDistinctAggs(CExpressionHandle &);
+
+	BOOL DeriveContainsOnlyReplicationSafeAggFuncs(CExpressionHandle &);
 
 	BOOL DeriveHasScalarArrayCmp(CExpressionHandle &);
 	ULONG DeriveTotalOrderedAggs(CExpressionHandle &);
@@ -196,6 +199,8 @@ public:
 	BOOL HasMultipleDistinctAggs() const;
 
 	BOOL HasScalarArrayCmp() const;
+
+	BOOL ContainsOnlyReplicationSafeAggFuncs() const;
 
 	// short hand for conversion
 	static CDrvdPropScalar *GetDrvdScalarProps(CDrvdProp *pdp);

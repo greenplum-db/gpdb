@@ -1198,23 +1198,16 @@ analyze rand_tab;
 --
 -- join derives EdtHashed
 explain select c from rep_tab where c in (select distinct c from rep_tab);
-                                              QUERY PLAN                                               
--------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..862.00 rows=2 width=4)
-   ->  Hash Semi Join  (cost=0.00..862.00 rows=1 width=4)
+                                     QUERY PLAN                                      
+-------------------------------------------------------------------------------------
+ Gather Motion 1:1  (slice1; segments: 1)  (cost=0.00..862.00 rows=2 width=4)
+   ->  Hash Semi Join  (cost=0.00..862.00 rows=6 width=4)
          Hash Cond: (rep_tab.c = rep_tab_1.c)
-         ->  Result  (cost=0.00..431.00 rows=1 width=4)
-               ->  Seq Scan on rep_tab  (cost=0.00..431.00 rows=2 width=4)
-         ->  Hash  (cost=431.00..431.00 rows=1 width=4)
-               ->  Redistribute Motion 1:3  (slice1; segments: 1)  (cost=0.00..431.00 rows=2 width=4)
-                     Hash Key: rep_tab_1.c
-                     ->  GroupAggregate  (cost=0.00..431.00 rows=2 width=4)
-                           Group Key: rep_tab_1.c
-                           ->  Sort  (cost=0.00..431.00 rows=2 width=4)
-                                 Sort Key: rep_tab_1.c
-                                 ->  Seq Scan on rep_tab rep_tab_1  (cost=0.00..431.00 rows=2 width=4)
+         ->  Seq Scan on rep_tab  (cost=0.00..431.00 rows=6 width=4)
+         ->  Hash  (cost=431.00..431.00 rows=6 width=4)
+               ->  Seq Scan on rep_tab rep_tab_1  (cost=0.00..431.00 rows=6 width=4)
  Optimizer: Pivotal Optimizer (GPORCA)
-(14 rows)
+(7 rows)
 
 select c from rep_tab where c in (select distinct c from rep_tab);
  c 

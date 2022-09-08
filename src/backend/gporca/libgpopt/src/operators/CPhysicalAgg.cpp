@@ -505,6 +505,15 @@ CPhysicalAgg::PdsDerive(CMemoryPool *mp, CExpressionHandle &exprhdl) const
 	}
 	else if (CDistributionSpec::EdtStrictReplicated == pds->Edt())
 	{
+		// Aggregate functions that are not sensitive to the order of data (eg: sum, avg, min, max, count)
+		// can be executed safely on replicated slices and do not need to be broadcasted/gathered, allowing
+		// for more performant plans in some cases
+		if (exprhdl.DeriveContainsOnlyReplicationSafeAggFuncs(1))
+		{
+			return GPOS_NEW(mp) CDistributionSpecReplicated(
+				CDistributionSpec::EdtStrictReplicated);
+		}
+
 		// Aggregate functions which are not trivial and which are sensitive to
 		// the order of their input cannot guarantee replicated data. If the child
 		// was replicated, we can no longer guarantee that property. Therefore
