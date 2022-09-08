@@ -974,7 +974,7 @@ The information is written to the server log.
 
 ## <a id="gp_log_suboverflow_statements"></a>gp\_log\_suboverflowed\_statements
 
-Controls whether Greenplum logs statements that cause subtransaction overflow to the `gp_toolkit.gp_log_system` table. See [Checking for and Terminating Overflowed Backends](/oss/admin_guide/managing/monitor.html).
+Controls whether Greenplum logs statements that cause subtransaction overflow. See [Checking for and Terminating Overflowed Backends](/oss/admin_guide/managing/monitor.html).
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|

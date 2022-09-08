@@ -270,9 +270,9 @@ Follow these steps to identify and terminate overflowed backends.
 
 ### Logging Statements that Cause Overflowed Subtransactions
 
-You can optionally set a Greenplum configuration parameter, `gp_log_suboverflow_statement`, to record SQL statements that cause overflowed subtransactions. When this parameter is active, statements that cause overflow are recorded in `gp_toolkit.gp_log_system` with the `logmessage` value, `Statement caused suboverflow: <statement>`.  
+You can optionally set a Greenplum configuration parameter, `gp_log_suboverflow_statement`, to record SQL statements that cause overflowed subtransactions. When this parameter is active, statements that cause overflow are recorded in server logs on the master host and segment hosts with the text: `Statement caused suboverflow: <statement>`.  
 
-For example, after activating the setting:
+One way to find these statements is to query the `gp_toolkit.gp_log_system` table. For example, after activating the setting:
 
 ```
 SET set gp_log_suboverflow_statement = ON;
