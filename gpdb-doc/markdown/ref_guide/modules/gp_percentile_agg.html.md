@@ -25,7 +25,7 @@ Refer to [Installing Additional Supplied Modules](../../install_guide/install_mo
 
 ## <a id="topic_upgrade"></a>Upgrading the Module
 
-If you upgraded from and used the `gp_percentile_agg` module in Greenplum Database version 6.21.x, you must upgrade the module to obtain the improvements introduced in Greenplum Database version 6.22.0.
+If you upgraded from and used the `gp_percentile_agg` module in Greenplum Database version 6.21.x, you must upgrade the module to obtain the bug fix and improvements introduced in Greenplum Database version 6.22.0.
 
 To upgrade, drop and recreate the `gp_percentile_agg` extension in each database in which you are using the module:
 
