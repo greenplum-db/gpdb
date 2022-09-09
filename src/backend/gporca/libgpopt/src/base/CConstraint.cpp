@@ -243,8 +243,7 @@ CConstraint::PcnstrFromScalarExpr(
 			else
 			{
 				(*ppdrgpcrs)->Release();
-				pcnstr =
-					PcnstrFromExistsAnySubquery(mp, pexpr, ppdrgpcrs);
+				pcnstr = PcnstrFromExistsAnySubquery(mp, pexpr, ppdrgpcrs);
 			}
 		}
 
@@ -611,8 +610,7 @@ CConstraint::PcnstrFromScalarBoolOp(
 
 // create constraint from EXISTS/ANY scalar subquery
 CConstraint *
-CConstraint::PcnstrFromExistsAnySubquery(CMemoryPool *mp,
-										 CExpression *pexpr,
+CConstraint::PcnstrFromExistsAnySubquery(CMemoryPool *mp, CExpression *pexpr,
 										 CColRefSetArray **ppdrgpcrs)
 {
 	GPOS_ASSERT(nullptr != pexpr);

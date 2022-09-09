@@ -743,9 +743,8 @@ CUtils::PexprScalarArrayCmp(CMemoryPool *mp,
 	if (pexprScalarChildren->Size() == 1)
 	{
 		(*pexprScalarChildren)[0]->AddRef();
-		CExpression *scalarCmp = CUtils::PexprScalarCmp(mp, colref,
-									  (*pexprScalarChildren)[0],
-									  strOp,pmdidCmpOp);
+		CExpression *scalarCmp = CUtils::PexprScalarCmp(
+			mp, colref, (*pexprScalarChildren)[0], strOp, pmdidCmpOp);
 		pexprScalarChildren->Release();
 		return scalarCmp;
 	}

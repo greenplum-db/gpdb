@@ -295,7 +295,8 @@ CExpressionUtils::PexprDedupChildren(CMemoryPool *mp, CExpression *pexpr)
 // this is useful when we try to infer and propagate predicates from subquery to outer
 // relation. returns null if the expression doesn't satisfy aforementioned requirements.
 CPropConstraint *
-CExpressionUtils::GetPropConstraintFromSubquery(CMemoryPool *mp, CExpression *pexpr)
+CExpressionUtils::GetPropConstraintFromSubquery(CMemoryPool *mp,
+												CExpression *pexpr)
 {
 	GPOS_ASSERT(nullptr != pexpr);
 	if (pexpr->Pop()->Eopid() != COperator::EopLogicalSelect)
@@ -330,10 +331,11 @@ CExpressionUtils::GetPropConstraintFromSubquery(CMemoryPool *mp, CExpression *pe
 		return nullptr;
 	}
 
-	CExpression *exprSubquery = CPredicateUtils::PexprConjunction(mp, subqueries);
+	CExpression *exprSubquery =
+		CPredicateUtils::PexprConjunction(mp, subqueries);
 	CColRefSetArray *colRefSetArray = nullptr;
-	CConstraint *pcnstr = CConstraint::PcnstrFromScalarExpr(
-		mp, exprSubquery, &colRefSetArray);
+	CConstraint *pcnstr =
+		CConstraint::PcnstrFromScalarExpr(mp, exprSubquery, &colRefSetArray);
 	exprSubquery->Release();
 
 	if (nullptr == pcnstr)
