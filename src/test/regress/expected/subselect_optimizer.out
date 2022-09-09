@@ -291,10 +291,11 @@ select * from int4_tbl o where exists
    ->  Hash Semi Join
          Hash Cond: (int4_tbl.f1 = int4_tbl_1.f1)
          ->  Seq Scan on int4_tbl
+               Filter: (NOT (f1 IS NULL))
          ->  Hash
                ->  Seq Scan on int4_tbl int4_tbl_1
  Optimizer: Pivotal Optimizer (GPORCA) version 3.83.0
-(7 rows)
+(8 rows)
 
 explain (costs off)
 select * from int4_tbl o where not exists
@@ -325,11 +326,12 @@ select * from int4_tbl o where exists
    ->  Nested Loop Semi Join
          Join Filter: true
          ->  Seq Scan on int4_tbl
+               Filter: (NOT (f1 IS NULL))
          ->  Limit
                ->  Result
                      One-Time Filter: false
  Optimizer: Pivotal Optimizer (GPORCA) version 3.83.0
-(8 rows)
+(9 rows)
 
 --
 -- Test cases to catch unpleasant interactions between IN-join processing
