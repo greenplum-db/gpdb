@@ -1568,7 +1568,7 @@ CExpressionPreprocessor::PexprScalarPredicates(
 	while (crsi.Advance())
 	{
 		CColRef *colref = crsi.Pcr();
-		CColRefSet *crs; // equiv class column refset
+		CColRefSet *crs = nullptr; // equiv class column refset
 
 		if (ppcFromFilterSubquery != nullptr &&
 			(crs = ppcFromFilterSubquery->PcrsEquivClass(colref)) != nullptr)

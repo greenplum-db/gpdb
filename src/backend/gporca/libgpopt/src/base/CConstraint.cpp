@@ -231,12 +231,21 @@ CConstraint::PcnstrFromScalarExpr(
 		// first, try creating a single interval constraint from the expression
 		pcnstr = CConstraintInterval::PciIntervalFromScalarExpr(
 			mp, pexpr, colref, infer_nulls_as);
-		if (nullptr == pcnstr && CUtils::FScalarArrayCmp(pexpr))
+		if (nullptr == pcnstr)
 		{
 			// if the interval creation failed, try creating a disjunction or conjunction
 			// of several interval constraints in the array case
-			pcnstr =
-				PcnstrFromScalarArrayCmp(mp, pexpr, colref, infer_nulls_as);
+			if (CUtils::FScalarArrayCmp(pexpr))
+			{
+				pcnstr =
+					PcnstrFromScalarArrayCmp(mp, pexpr, colref, infer_nulls_as);
+			}
+			else
+			{
+				(*ppdrgpcrs)->Release();
+				pcnstr =
+					PcnstrFromExistsAnySubquery(mp, pexpr, ppdrgpcrs);
+			}
 		}
 
 		if (nullptr != pcnstr)
