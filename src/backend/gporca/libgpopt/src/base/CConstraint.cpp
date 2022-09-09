@@ -656,16 +656,7 @@ CConstraint::PcnstrFromExistsAnySubquery(CMemoryPool *mp,
 		CConstraint *cnstrCol = cnstr4Outer->PcnstrRemapForColumn(mp, colref);
 		pdrgpcnstr->Append(cnstrCol);
 		cnstr4Outer->Release();
-
-		CColRefSet *crs = GPOS_NEW(mp) CColRefSet(mp);
-		crs->Include(colref);
-
-		CColRefSetArray *pdrgpcrsMerged =
-			CUtils::AddEquivClassToArray(mp, crs, *ppdrgpcrs);
-
-		crs->Release();
-		(*ppdrgpcrs)->Release();
-		*ppdrgpcrs = pdrgpcrsMerged;
+		AddColumnToEquivClasses(mp, colref, *ppdrgpcrs);
 	}
 
 	return CConstraint::PcnstrConjunction(mp, pdrgpcnstr);
