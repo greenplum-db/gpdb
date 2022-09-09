@@ -209,16 +209,13 @@ private:
 	static CExpression *ConvertSplitUpdateToInPlaceUpdate(CMemoryPool *mp,
 														  CExpression *expr);
 
-	// private ctor
-	CExpressionPreprocessor();
-
-	// private dtor
-	virtual ~CExpressionPreprocessor();
-
-	// private copy ctor
-	CExpressionPreprocessor(const CExpressionPreprocessor &);
-
 public:
+	CExpressionPreprocessor() = delete;
+
+	virtual ~CExpressionPreprocessor() = delete;
+
+	CExpressionPreprocessor(const CExpressionPreprocessor &) = delete;
+
 	// main driver
 	static CExpression *PexprPreprocess(
 		CMemoryPool *mp, CExpression *pexpr,
