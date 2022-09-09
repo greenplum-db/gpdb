@@ -226,7 +226,6 @@ CConstraint::PcnstrFromScalarExpr(
 		}
 
 		CConstraint *pcnstr = nullptr;
-		*ppdrgpcrs = GPOS_NEW(mp) CColRefSetArray(mp);
 
 		// first, try creating a single interval constraint from the expression
 		pcnstr = CConstraintInterval::PciIntervalFromScalarExpr(
@@ -242,13 +241,16 @@ CConstraint::PcnstrFromScalarExpr(
 			}
 			else
 			{
-				(*ppdrgpcrs)->Release();
 				pcnstr = PcnstrFromExistsAnySubquery(mp, pexpr, ppdrgpcrs);
 			}
 		}
 
 		if (nullptr != pcnstr)
 		{
+			if (nullptr == *ppdrgpcrs)
+			{
+				*ppdrgpcrs = GPOS_NEW(mp) CColRefSetArray(mp);
+			}
 			AddColumnToEquivClasses(mp, colref, *ppdrgpcrs);
 		}
 		return pcnstr;
