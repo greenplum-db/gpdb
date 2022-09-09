@@ -241,7 +241,7 @@ CConstraint::PcnstrFromScalarExpr(
 			}
 			else
 			{
-				pcnstr = PcnstrFromExistsAnySubquery(mp, pexpr, ppdrgpcrs);
+				return PcnstrFromExistsAnySubquery(mp, pexpr, ppdrgpcrs);
 			}
 		}
 
