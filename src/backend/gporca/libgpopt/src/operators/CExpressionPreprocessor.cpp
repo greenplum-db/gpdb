@@ -1869,11 +1869,20 @@ CExpressionPreprocessor::PexprFromConstraints(
 		}
 	}
 
-	CRefCount::SafeRelease(ppcFromFilterSubquery);
 	COperator *pop = pexpr->Pop();
 	pop->AddRef();
 
-	return GPOS_NEW(mp) CExpression(mp, pop, pdrgpexprChildren);
+	CExpression *pexprPred = GPOS_NEW(mp) CExpression(mp, pop, pdrgpexprChildren);
+	if (ppcFromFilterSubquery != nullptr)
+	{
+		CExpression *pexprNormalized =
+			CNormalizer::PexprNormalize(mp, pexprPred);
+		pexprPred->Release();
+		pexprPred = pexprNormalized;
+		ppcFromFilterSubquery->Release();
+	}
+
+	return pexprPred;
 }
 
 // eliminate subtrees that have a zero output cardinality, replacing them
