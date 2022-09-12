@@ -399,6 +399,8 @@ typedef struct _tableInfo
 	Oid		toast_type;					/* OID of toast table's composite type */
 	struct _aotableInfo	*aotbl; /* AO auxilliary table metadata */
 	char	*distclause; /* distributed by clause */
+	char	*partclause;	/* partition definition, if table is partition parent */
+	char	*parttemplate;	/* subpartition template */
 } TableInfo;
 
 /* AO auxilliary table metadata */

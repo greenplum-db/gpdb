@@ -6360,6 +6360,8 @@ getTables(Archive *fout, int *numTables)
 	int			i_toast_type_oid;
 	int			i_toast_index_oid;
 	int			i_distclause;
+	int			i_partclause;
+	int			i_parttemplate;
 
 	/*
 	 * Find all the tables and table-like objects.
@@ -6532,12 +6534,18 @@ getTables(Archive *fout, int *numTables)
 		appendPQExpBufferStr(query,
 						  "pg_get_partkeydef(c.oid) AS partkeydef, "
 						  "c.relispartition AS ispartition, "
-						  "pg_get_expr(c.relpartbound, c.oid) AS partbound ");
+						  "pg_get_expr(c.relpartbound, c.oid) AS partbound, "
+							"NULL as partclause, "
+							"NULL as parttemplate");
 	else
 		appendPQExpBufferStr(query,
 						  "NULL AS partkeydef, "
-						  "false AS ispartition, "
-						  "NULL AS partbound ");
+						  "0 AS ispartition,"
+						  "NULL AS partbound, "
+							"CASE WHEN pl.parlevel = 0 THEN "
+							"(SELECT pg_get_partition_def(c.oid, true, true)) END AS partclause, "
+							"CASE WHEN pl.parlevel = 0 THEN "
+							"(SELECT pg_get_partition_template_def(c.oid, true, true)) END as parttemplate ");
 
 	/*
 	 * Left join to pg_depend to pick up dependency info linking sequences to
@@ -6674,6 +6682,8 @@ getTables(Archive *fout, int *numTables)
 	i_toast_type_oid = PQfnumber(res, "toast_type_oid");
 	i_toast_index_oid = PQfnumber(res, "toast_index_oid");
 	i_distclause = PQfnumber(res, "distclause");
+	i_partclause = PQfnumber(res, "partclause");
+	i_parttemplate = PQfnumber(res, "parttemplate");
 
 	if (dopt->lockWaitTimeout)
 	{
@@ -6758,7 +6768,17 @@ getTables(Archive *fout, int *numTables)
 		tblinfo[i].relstorage = *(PQgetvalue(res, i, i_relstorage));
 		tblinfo[i].distclause = pg_strdup(PQgetvalue(res, i, i_distclause));
 
-		if (tblinfo[i].parparent && tblinfo[i].parrelid != 0 && tblinfo[i].relstorage == 'x')
+		if (PQgetisnull(res, i, i_parlevel) ||
+			atoi(PQgetvalue(res, i, i_parlevel)) > 0)
+			tblinfo[i].parparent = false;
+		else
+		{
+			tblinfo[i].parparent = true;
+			tblinfo[i].partclause = pg_strdup(PQgetvalue(res, i, i_partclause));
+			tblinfo[i].parttemplate = pg_strdup(PQgetvalue(res, i, i_parttemplate));
+		}
+
+		if (!tblinfo[i].parparent && tblinfo[i].parrelid != 0 && tblinfo[i].relstorage == 'x')
 		{
 			/*
 			 * Length of tmpStr is bigger than the sum of NAMEDATALEN
@@ -6768,11 +6788,6 @@ getTables(Archive *fout, int *numTables)
 			snprintf(tmpStr, sizeof(tmpStr), "%s%s", tblinfo[i].dobj.name, EXT_PARTITION_NAME_POSTFIX);
 			tblinfo[i].dobj.name = pg_strdup(tmpStr);
 		}
-		if (PQgetisnull(res, i, i_parlevel) ||
-			atoi(PQgetvalue(res, i, i_parlevel)) > 0)
-			tblinfo[i].parparent = false;
-		else
-			tblinfo[i].parparent = true;
 
 		if (dopt->binary_upgrade)
 		{
@@ -6836,7 +6851,7 @@ getTables(Archive *fout, int *numTables)
 		 *
 		 * We only need to lock the table for certain components; see
 		 * pg_dump.h
-		 * 
+		 *
 		 * GPDB: Build a single LOCK TABLE statement to lock all interesting tables.
 		 * This is more performant than issuing a separate LOCK TABLE statement for each table,
 		 * with considerable savings in FE/BE overhead. It does come at the cost of some increased
@@ -16657,6 +16672,9 @@ dumpTableSchema(Archive *fout, const TableInfo *tbinfo)
 						Oid part_oid = atooid(PQgetvalue(partres, i, 0));
 						TableInfo *tbinfo = findTableByOid(part_oid);
 
+						if (tbinfo->relstorage == 'x')
+							hasExternalPartitions = true;
+
 						binary_upgrade_set_pg_class_oids(fout, q, part_oid, false);
 						binary_upgrade_set_type_oids_by_rel(fout, q, tbinfo);
 					}
@@ -16921,107 +16939,18 @@ dumpTableSchema(Archive *fout, const TableInfo *tbinfo)
 			addDistributedBy(fout, q, tbinfo, actual_atts);
 
 		/*
-		 * Add the partitioning constraints to the table definition. This
-		 * check used to look for existence of pg_partition table to make the
-		 * decision, instead seems better to decide based on version. GPDB6
-		 * and below have pg_get_partition_def functions.
+		 * Add the GPDB partitioning constraints to the table definition.
+		 * These do not exist on GPDB7, so first check if we are dumping
+		 * from <= GPDB6.
 		 */
-		if (fout->remoteVersion <= 90400 && tbinfo->parparent)
+		if (fout->remoteVersion <= 90400 &&
+				(*tbinfo->partclause && *tbinfo->partclause != '\0'))
 		{
-			bool		isPartitioned = false;
-			PQExpBuffer query = createPQExpBuffer();
-			PGresult   *res;
-
-			/* does support GP partitioning. */
-			resetPQExpBuffer(query);
-			appendPQExpBuffer(query, "SELECT "
-				  "pg_get_partition_def('%u'::pg_catalog.oid, true, true) ",
-								tbinfo->dobj.catId.oid);
-
-			res = ExecuteSqlQuery(fout, query->data, PGRES_TUPLES_OK);
-
-			if (PQntuples(res) != 1)
-			{
-				if (PQntuples(res) < 1)
-					pg_log_warning("query to obtain definition of table \"%s\" returned no data",
-								   tbinfo->dobj.name);
-				else
-					pg_log_warning("query to obtain definition of table \"%s\" returned more than one definition",
-								   tbinfo->dobj.name);
-				exit_nicely(1);
-			}
-			isPartitioned = !PQgetisnull(res, 0, 0);
-			if (isPartitioned)
-				appendPQExpBuffer(q, " %s", PQgetvalue(res, 0, 0));
-
-			PQclear(res);
-
-		 /*
-			* MPP-6095: dump ALTER TABLE statements for subpartition
-			* templates
-			*/
-			resetPQExpBuffer(query);
-
-			appendPQExpBuffer(
-								query, "SELECT "
-								"pg_get_partition_template_def('%u'::pg_catalog.oid, true, true) ",
-								tbinfo->dobj.catId.oid);
-
-			res = ExecuteSqlQuery(fout, query->data, PGRES_TUPLES_OK);
-
-			if (PQntuples(res) != 1)
-			{
-				if (PQntuples(res) < 1)
-					pg_log_warning("query to obtain definition of table \"%s\" returned no data",
-										tbinfo->dobj.name);
-				else
-					pg_log_warning("query to obtain definition of table \"%s\" returned more than one definition",
-										tbinfo->dobj.name);
-				exit_nicely(1);
-			}
-
-			/*
-				* MPP-9537: terminate (with semicolon) the previous
-				* statement, and dump the template definitions
-				*/
-			if (!PQgetisnull(res, 0, 0) &&
-				PQgetlength(res, 0, 0))
-				appendPQExpBuffer(q, ";\n %s", PQgetvalue(res, 0, 0));
-
-			PQclear(res);
-		
-		/*
-		 * If GP partitioning is supported and table is a parent partition
-		 * add the partitioning constraints to the table definition.
-		 */
-			if (isPartitioned && tbinfo->parparent)
-			{
-				/*
-				 * Find out if there are any external partitions.
-				 *
-				 * In GPDB 6.X and below, external tables have
-				 * relkind=RELKIND_RELATION and relstorage=RELSTORAGE_EXTERNAL.
-				 * In later versions, they are just foreign tables. This query
-				 * works on all server versions.
-				 */
-				resetPQExpBuffer(query);
-				appendPQExpBuffer(query, "SELECT EXISTS (SELECT 1 "
-										 "  FROM pg_class part "
-										 "  JOIN pg_partition_rule pr ON (part.oid = pr.parchildrelid) "
-										 "  JOIN pg_partition p ON (pr.paroid = p.oid) "
-										 "WHERE p.parrelid = '%u'::pg_catalog.oid "
-										 "  AND (part.relstorage = '%c' OR part.relkind = '%c')) "
-										 "AS has_external_partitions;",
-								  tbinfo->dobj.catId.oid,
-								  RELSTORAGE_EXTERNAL,
-								  RELKIND_FOREIGN_TABLE);
-
-				res = ExecuteSqlQueryForSingleRow(fout, query->data);
-				hasExternalPartitions = (PQgetvalue(res, 0, 0)[0] == 't');
-				PQclear(res);
-			}
-
-			destroyPQExpBuffer(query);
+			/* partition by clause */
+			appendPQExpBuffer(q, " %s", tbinfo->partclause);
+			/* subpartition template */
+			if (tbinfo->parttemplate)
+				appendPQExpBuffer(q, ";\n %s", tbinfo->parttemplate);
 		} /* END MPP ADDITION */
 
 		/* Dump generic options if any */
