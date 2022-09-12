@@ -1676,6 +1676,15 @@ CExpressionPreprocessor::PexprFromConstraintsScalar(
 					while (iterator.Advance())
 					{
 						CColRef *columnRef = iterator.Pcr();
+
+						// If the column is a distribution key then even if it's
+						// redundant we will not remove it.
+						if (columnRef->IsDistCol())
+						{
+							canBeRemoved = false;
+							break;
+						}
+
 						CExpression *pexprScalar =
 							constraintsForOuterRefs
 								->PexprScalarMappedFromEquivCols(mp, columnRef,
@@ -1725,52 +1734,15 @@ CExpressionPreprocessor::PexprFromConstraintsScalar(
 				}
 			}
 
-			const ULONG childrenRedundantArraySize =
-				childrenRedundantArray->Size();
-			CExpression *pexprNew = NULL;
-			for (ULONG ul = 0; ul < childrenRedundantArraySize; ul++)
-			{
-				ULONG numDistributedCol = 0;
-				CExpression *pexprRedChild = (*childrenRedundantArray)[ul];
-				CColRefSet *columnsToCheckDist = GPOS_NEW(mp) CColRefSet(mp);
-
-				columnsToCheckDist->Include(pexprRedChild->DeriveUsedColumns());
-				CColRefSetIter iterator(*columnsToCheckDist);
-				while (iterator.Advance())
-				{
-					CColRef *columnRef = iterator.Pcr();
-					if (columnRef->IsDistCol())
-					{
-						numDistributedCol++;
-						pexprNew = pexprRedChild;
-					}
-				}
-				columnsToCheckDist->Release();
-				if (2 == numDistributedCol)
-				{
-					break;
-				}
-			}
-
-			// If all the predicates are redundant , we need to figure out which column attribute to keep for the hash join
-			// condition based on the distribution of the columns.
+			// If all the predicates are redundant we take a equality condition from the
+			// redundant array to perform a hash join.
 			if (0 == childrenArray->Size())
 			{
-				if (pexprNew == NULL)
-				{
-					pexprNew = (*childrenRedundantArray)[0];
-					pexprNew->AddRef();
-					CRefCount::SafeRelease(childrenArray);
-					CRefCount::SafeRelease(childrenRedundantArray);
-					return pexprNew;
-				}
-				else
-				{
-					pexprNew->AddRef();
-					CRefCount::SafeRelease(childrenArray);
-					CRefCount::SafeRelease(childrenRedundantArray);
-					return pexprNew;
-				}
+				CExpression *pexprNewChild = (*childrenRedundantArray)[0];
+				pexprNewChild->AddRef();
+				CRefCount::SafeRelease(childrenArray);
+				CRefCount::SafeRelease(childrenRedundantArray);
+				return pexprNewChild;
 			}
 			else if (0 == childrenRedundantArray->Size())
 			{
@@ -1813,12 +1785,9 @@ CExpressionPreprocessor::PexprFromConstraintsScalar(
 				}
 				else
 				{
-					if (pexprNew == NULL)
-					{
-						pexprNew = (*childrenRedundantArray)[0];
-					}
-					pexprNew->AddRef();
-					childrenArray->Append(pexprNew);
+					CExpression *pexprNewChild = (*childrenRedundantArray)[0];
+					pexprNewChild->AddRef();
+					childrenArray->Append(pexprNewChild);
 					COperator *pop = pexpr->Pop();
 					pop->AddRef();
 					CRefCount::SafeRelease(childrenRedundantArray);

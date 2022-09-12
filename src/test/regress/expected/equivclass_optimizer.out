@@ -109,7 +109,7 @@ explain (costs off)
  Gather Motion 1:1  (slice1; segments: 1)
    ->  Index Scan using ec0_pkey on ec0
          Index Cond: (ff = 42::bigint)
-         Filter: (f1 = 42::bigint)
+         Filter: ((f1 = 42::bigint) AND (ff = f1))
  Optimizer: Pivotal Optimizer (GPORCA)
 (5 rows)
 
