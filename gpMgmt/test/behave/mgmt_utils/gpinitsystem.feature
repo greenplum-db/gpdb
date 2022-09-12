@@ -24,6 +24,7 @@ Feature: gpinitsystem tests
         Then gpinitsystem should return a return code of 0
         Given the user runs "gpstate"
         Then gpstate should return a return code of 0
+        And "LC_ALL" environment variable should be restored
 
     Scenario: gpinitsystem creates a cluster when the user set -n or --locale parameter
         Given create demo cluster config
@@ -39,6 +40,7 @@ Feature: gpinitsystem tests
         Then gpinitsystem should return a return code of 0
         Given the user runs "gpstate"
         Then gpstate should return a return code of 0
+        And "LC_MONETARY" environment variable should be restored
 
     Scenario: gpinitsystem exits with status 0 when the user set locale parameters
         Given create demo cluster config
@@ -213,6 +215,7 @@ Feature: gpinitsystem tests
         And the database timezone matches "HST"
         And the startup timezone is saved
         And the startup timezone matches "HST"
+        And "TZ" environment variable should be restored
 
     Scenario: gpinitsystem should print FQDN in pg_hba.conf when HBA_HOSTNAMES=1
         Given the cluster config is generated with HBA_HOSTNAMES "1"
@@ -284,6 +287,8 @@ Feature: gpinitsystem tests
         And the database locales "lc_collate" match the locale "C"
         And the database locales "lc_ctype" match the installed UTF locale
         And the database locales "lc_messages,lc_monetary,lc_numeric,lc_time" match the system locale
+        And "LC_COLLATE" environment variable should be restored
+        And "LC_CTYPE" environment variable should be restored
 
     @backup_restore_bashrc
     Scenario: gpinitsystem succeeds if there is banner on host

@@ -341,7 +341,7 @@ def impl(context, dbname):
     drop_database(context, dbname)
 
 
-@given('{env_var} environment variable is not set')
+@given('"{env_var}" environment variable is not set')
 def impl(context, env_var):
     if not hasattr(context, 'orig_env'):
         context.orig_env = dict()
@@ -350,7 +350,15 @@ def impl(context, env_var):
     if env_var in os.environ:
         del os.environ[env_var]
 
-@then('{env_var} environment variable should be restored')
+@given('the environment variable "{env_var}" is set to "{val}"')
+def impl(context, env_var, val):
+    if not hasattr(context, 'orig_env'):
+        context.orig_env = dict()
+
+    context.orig_env[env_var] = os.environ.get(env_var)
+    os.environ[env_var] = val
+
+@then('"{env_var}" environment variable should be restored')
 def impl(context, env_var):
     if not hasattr(context, 'orig_env'):
         raise Exception('%s can not be reset' % env_var)
@@ -358,7 +366,10 @@ def impl(context, env_var):
     if env_var not in context.orig_env:
         raise Exception('%s can not be reset.' % env_var)
 
-    os.environ[env_var] = context.orig_env[env_var]
+    if context.orig_env[env_var] is None:
+        del os.environ[env_var]
+    else:
+        os.environ[env_var] = context.orig_env[env_var]
 
     del context.orig_env[env_var]
 
@@ -1426,13 +1437,6 @@ def stop_segments_immediate(context, where_clause):
 @then('user can start transactions')
 def impl(context):
     wait_for_unblocked_transactions(context)
-
-
-@given('the environment variable "{var}" is set to "{val}"')
-def impl(context, var, val):
-    context.env_var = os.environ.get(var)
-    os.environ[var] = val
-
 
 @given('below sql is executed in "{dbname}" db')
 @when('below sql is executed in "{dbname}" db')
