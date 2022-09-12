@@ -4684,6 +4684,9 @@ getTables(Archive *fout, int *numTables)
 	int			i_toast_type_oid;
 	int			i_toast_index_oid;
 	int			i_distclause;
+	int			i_partclause;
+	int			i_parttemplate;
+
 	/*
 	 * Find all the tables and table-like objects.
 	 *
@@ -4717,7 +4720,11 @@ getTables(Archive *fout, int *numTables)
 						"tc.oid AS toid, "
 						"c.relstorage, "
 						"p.parrelid as parrelid, "
-						"pl.parlevel as parlevel, ");
+						"pl.parlevel as parlevel, "
+						"CASE WHEN pl.parlevel = 0 THEN "
+						"(SELECT pg_get_partition_def(c.oid, true, true)) END AS partclause, "
+						"CASE WHEN pl.parlevel = 0 THEN "
+						"(SELECT pg_get_partition_template_def(c.oid, true, true)) END as parttemplate, ");
 
 	if (binary_upgrade)
 		appendPQExpBufferStr(query,
@@ -4908,6 +4915,8 @@ getTables(Archive *fout, int *numTables)
 	i_toast_index_oid = PQfnumber(res, "toast_index_oid");
 	i_reltype = PQfnumber(res, "reltype");
 	i_distclause = PQfnumber(res, "distclause");
+	i_partclause = PQfnumber(res, "partclause");
+	i_parttemplate = PQfnumber(res, "parttemplate");
 
 	if (lockWaitTimeout)
 	{
@@ -4978,6 +4987,8 @@ getTables(Archive *fout, int *numTables)
 			tblinfo[i].checkoption = pg_strdup(PQgetvalue(res, i, i_checkoption));
 		tblinfo[i].toast_reloptions = pg_strdup(PQgetvalue(res, i, i_toastreloptions));
 		tblinfo[i].parrelid = atooid(PQgetvalue(res, i, i_parrelid));
+		tblinfo[i].partclause = pg_strdup(PQgetvalue(res, i, i_partclause));
+		tblinfo[i].parttemplate = pg_strdup(PQgetvalue(res, i, i_parttemplate));
 		if (PQgetisnull(res, i, i_parlevel))
 			tblinfo[i].parlevel = -1;
 		else
@@ -13530,6 +13541,9 @@ dumpTableSchema(Archive *fout, TableInfo *tbinfo)
 						Oid part_oid = atooid(PQgetvalue(partres, i, 0));
 						TableInfo *tbinfo = findTableByOid(part_oid);
 
+						if (tbinfo->relstorage == 'x')
+							hasExternalPartitions = true;
+
 						binary_upgrade_set_pg_class_oids(fout, q, part_oid, false);
 						binary_upgrade_set_type_oids_by_rel(fout, q, tbinfo);
 					}
@@ -13745,75 +13759,19 @@ dumpTableSchema(Archive *fout, TableInfo *tbinfo)
 			addDistributedBy(fout, q, tbinfo, actual_atts);
 
 		/*
-		 * Add the partitioning constraints to the table definition. This
-		 * check used to look for existence of pg_partition table to make the
-		 * decision, instead seems better to decide based on version. GPDB6
-		 * and below have pg_get_partition_def functions.
+		 * Add the GPDB partitioning constraints to the table definition.
 		 */
-		if (fout->remoteVersion <= 90426 && tbinfo->parparent)
+		if (tbinfo->parparent)
 		{
 			PQExpBuffer query = createPQExpBuffer();
 			PGresult   *res;
 
-			resetPQExpBuffer(query);
-			/* MPP-6297: dump by tablename */
-			appendPQExpBuffer(query, "SELECT "
-					"pg_get_partition_def('%u'::pg_catalog.oid, true, true) ",
-								tbinfo->dobj.catId.oid);
+			/* partition by clause */
+			appendPQExpBuffer(q, " %s", tbinfo->partclause);
 
-			res = ExecuteSqlQuery(fout, query->data, PGRES_TUPLES_OK);
-
-			if (PQntuples(res) != 1)
-			{
-				if (PQntuples(res) < 1)
-					write_msg(NULL, "query to obtain definition of table \"%s\" returned no data\n",
-							  tbinfo->dobj.name);
-				else
-					write_msg(NULL, "query to obtain definition of table \"%s\" returned more than one definition\n",
-							  tbinfo->dobj.name);
-				exit_nicely(1);
-			}
-
-			appendPQExpBuffer(q, " %s", PQgetvalue(res, 0, 0));
-			PQclear(res);
-
-			/*
-			 * MPP-6095: dump ALTER TABLE statements for subpartition
-			 * templates
-			 */
-			resetPQExpBuffer(query);
-
-			appendPQExpBuffer(
-								query, "SELECT "
-								"pg_get_partition_template_def('%u'::pg_catalog.oid, true, true) ",
-								tbinfo->dobj.catId.oid);
-
-			res = ExecuteSqlQuery(fout, query->data, PGRES_TUPLES_OK);
-
-			if (PQntuples(res) != 1)
-			{
-				if (PQntuples(res) < 1)
-					write_msg(
-								NULL,
-								"query to obtain definition of table \"%s\" returned no data\n",
-								tbinfo->dobj.name);
-				else
-					write_msg(
-								NULL,
-								"query to obtain definition of table \"%s\" returned more than one definition\n",
-								tbinfo->dobj.name);
-				exit_nicely(1);
-			}
-
-			/*
-				* MPP-9537: terminate (with semicolon) the previous
-				* statement, and dump the template definitions
-				*/
-			if (!PQgetisnull(res, 0, 0) &&
-				PQgetlength(res, 0, 0))
-				appendPQExpBuffer(q, ";\n %s", PQgetvalue(res, 0, 0));
-
-			PQclear(res);
+			/* subpartition template */
+			if (tbinfo->parttemplate)
+				appendPQExpBuffer(q, ";\n %s", tbinfo->parttemplate);
 
 			/* Find out if there are any external partitions. */
 			resetPQExpBuffer(query);
