@@ -2071,7 +2071,6 @@ gpdb::CreateForeignScanForExternalTable(Oid rel_oid, Index scanrelid,
 	return nullptr;
 }
 
-// GPDB_12_MERGE_FIXME: Change signature to take in Expr instead of Node
 TargetEntry *
 gpdb::FindFirstMatchingMemberInTargetList(Node *node, List *targetlist)
 {
