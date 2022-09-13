@@ -2544,7 +2544,7 @@ ExecModifyTable(PlanState *pstate)
 				break;
 			case CMD_DELETE:
 				if (proute)
-					slot = ExecPrepareTupleRouting(node, estate, proute,
+					planSlot = ExecPrepareTupleRouting(node, estate, proute,
 												   resultRelInfo, slot);
 				slot = ExecDelete(node, tupleid, segid, oldtuple, planSlot,
 								  &node->mt_epqstate, estate,
