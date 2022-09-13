@@ -280,6 +280,31 @@ The input argument is the name or the oid of an append-optimized table.
 |hidden\_tupcount|The number of hidden tuples in the entry.|
 |bitmap|A text representation of the visibility bitmap.|
 
+### <a id="topic_aoblkdir"></a>\_\_gp\_aoblkdir\(regclass\)
+
+For a given AO/AOCO table that had or has an index, this function returns a row for each block directory entry recorded in the block directory relation; it flattens the `minipage` column of block directory relations and returns a row for each `minipage` entry.
+
+The input argument is the name or the oid of an append-optimized table.
+
+You must execute this function in utility mode against every segment, or with `gp_dist_random()` as shown here:
+
+``` sql
+SELECT (t).* FROM (
+  SELECT gp_toolkit.__gp_aoblkdir('<table_name>') AS t FROM gp_dist_random('gp_id')
+) AS x;
+```
+
+
+|Column|Description|
+|------|-----------|
+|tupleid|The tuple id of the block directory row containing this block directory entry.|
+|segno|The physical segment file number.|
+|columngroup\_no|The `attnum` of the column described by this `minipage` entry (always `0` for row-oriented tables).|
+|entry\_no|The entry serial number inside this `minipage` containing this block directory entry.|
+|first\_row\_no|The first row number of the rows covered by this block directory entry.|
+|file\_offset|The starting file offset of the rows covered by this block directory entry.|
+|row\_count|The count of rows covered by this block directory entry.|
+
 ## <a id="topic16"></a>Viewing Greenplum Database Server Log Files 
 
 Each component of a Greenplum Database system \(master, standby master, primary segments, and mirror segments\) keeps its own server log files. The `gp_log_*` family of views allows you to issue SQL queries against the server log files to find particular entries of interest. The use of these views require superuser permissions.

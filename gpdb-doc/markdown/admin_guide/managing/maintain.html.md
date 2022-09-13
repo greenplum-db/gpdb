@@ -18,7 +18,7 @@ If the ratio of hidden rows to total rows in a segment file is less than a thres
 
 You can use the `__gp_aovisimap_compaction_info()` function in the *gp\_toolkit* schema to investigate the effectiveness of a VACUUM operation on append-optimized tables.
 
-For information about the `__gp_aovisimap_compaction_info()` function see, "Checking Append-Optimized Tables" in the *Greenplum Database Reference Guide*.
+For information about the `__gp_aovisimap_compaction_info()` function, see [Checking Append-Optimized Tables](../../ref_guide/gp_toolkit.html#topic8) in the *Greenplum Database Reference Guide*.
 
 `VACUUM` can be deactivated for append-optimized tables using the `gp_appendonly_compaction` server configuration parameter.
 
