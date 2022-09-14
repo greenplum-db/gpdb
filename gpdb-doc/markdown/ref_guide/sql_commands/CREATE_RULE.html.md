@@ -10,6 +10,11 @@ CREATE [OR REPLACE] RULE <name> AS ON <event>
   DO [ALSO | INSTEAD] { NOTHING | <command> | (<command>; <command> 
   ...) }
 ```
+where `<event>` can be one of:
+
+```
+  SELECT | INSERT | UPDATE | DELETE
+```
 
 ## <a id="section3"></a>Description 
 
@@ -19,9 +24,9 @@ The Greenplum Database rule system allows one to define an alternate action to b
 
 `ON SELECT` rules must be unconditional `INSTEAD` rules and must have actions that consist of a single `SELECT` command. Thus, an `ON SELECT` rule effectively turns the table into a view, whose visible contents are the rows returned by the rule's `SELECT` command rather than whatever had been stored in the table \(if anything\). It is considered better style to write a `CREATE VIEW` command than to create a real table and define an `ON SELECT` rule for it.
 
-You can create the illusion of an updatable view by defining `ON INSERT`, `ON UPDATE`, and `ON DELETE` rules to replace update actions on the view with appropriate updates on other tables. If you want to support `INSERT RETURNING` and so on, be sure to put a suitable `RETURNING` clause into each of these rules.
+You can create the illusion of an updatable view by defining `ON INSERT`, `ON UPDATE`, and `ON DELETE` rules (or any subset of those that is sufficient for your purposes) to replace update actions on the view with appropriate updates on other tables. If you want to support `INSERT RETURNING` and so on, be sure to put a suitable `RETURNING` clause into each of these rules.
 
-There is a catch if you try to use conditional rules for view updates: there must be an unconditional `INSTEAD` rule for each action you wish to allow on the view. If the rule is conditional, or is not `INSTEAD`, then the system will still reject attempts to perform the update action, because it thinks it might end up trying to perform the action on the dummy table of the view in some cases. If you want to handle all the useful cases in conditional rules, add an unconditional `DO INSTEAD NOTHING` rule to ensure that the system understands it will never be called on to update the dummy table. Then make the conditional rules non-`INSTEAD`; in the cases where they are applied, they add to the default `INSTEAD NOTHING` action. \(This method does not currently work to support `RETURNING` queries, however.\)
+There is a catch if you try to use conditional rules for complex view updates: there *must* be an unconditional `INSTEAD` rule for each action you wish to allow on the view. If the rule is conditional, or is not `INSTEAD`, then the system will still reject attempts to perform the update action, because it thinks it might end up trying to perform the action on the dummy table of the view in some cases. If you want to handle all of the useful cases in conditional rules, add an unconditional `DO INSTEAD NOTHING` rule to ensure that the system understands it will never be called on to update the dummy table. Then make the conditional rules non-`INSTEAD`; in the cases where they are applied, they add to the default `INSTEAD NOTHING` action. \(This method does not currently work to support `RETURNING` queries, however.\)
 
 **Note:** A view that is simple enough to be automatically updatable \(see [CREATE VIEW](CREATE_VIEW.html)\) does not require a user-created rule in order to be updatable. While you can create an explicit rule anyway, the automatic update transformation will generally outperform an explicit rule.
 
@@ -31,38 +36,55 @@ name
 :   The name of a rule to create. This must be distinct from the name of any other rule for the same table. Multiple rules on the same table and same event type are applied in alphabetical name order.
 
 event
-:   The event is one of `SELECT`, `INSERT`, `UPDATE`, or `DELETE`.
+:   The event is one of `SELECT`, `INSERT`, `UPDATE`, or `DELETE`. Note that an `INSERT` containing an `ON CONFLICT` clause cannot be used on tables that have either `INSERT` or `UPDATE` rules. Consider using an updatable view instead.
 
 table\_name
 :   The name \(optionally schema-qualified\) of the table or view the rule applies to.
 
 condition
-:   Any SQL conditional expression \(returning boolean\). The condition expression may not refer to any tables except `NEW` and `OLD`, and may not contain aggregate functions. `NEW` and `OLD` refer to values in the referenced table. `NEW` is valid in `ON INSERT` and `ON UPDATE` rules to refer to the new row being inserted or updated. `OLD` is valid in `ON UPDATE` and `ON DELETE` rules to refer to the existing row being updated or deleted.
+:   Any SQL conditional expression \(returning `boolean`\). The condition expression can not refer to any tables except `NEW` and `OLD`, and can not contain aggregate functions.
 
 INSTEAD
-:   `INSTEAD NOTHING` indicates that the commands should be run instead of the original command.
+:   `INSTEAD NOTHING` indicates that the commands should be run *instead of* the original command.
 
 ALSO
-:   `ALSO` indicates that the commands should be run in addition to the original command. If neither `ALSO` nor `INSTEAD` is specified, `ALSO` is the default.
+:   `ALSO` indicates that the commands should be run *in addition* to the original command. If neither `ALSO` nor `INSTEAD` is specified, `ALSO` is the default.
 
 command
-:   The command or commands that make up the rule action. Valid commands are `SELECT`, `INSERT`, `UPDATE`, or `DELETE`. The special table names `NEW` and `OLD` may be used to refer to values in the referenced table. `NEW` is valid in `ON INSERT` and `ON``UPDATE` rules to refer to the new row being inserted or updated. `OLD` is valid in `ON UPDATE` and `ON DELETE` rules to refer to the existing row being updated or deleted.
+:   The command or commands that make up the rule action. Valid commands are `SELECT`, `INSERT`, `UPDATE`, `DELETE`, or `NOTIFY`.
 
 ## <a id="section5"></a>Notes 
 
 You must be the owner of a table to create or change rules for it.
 
-It is very important to take care to avoid circular rules. Recursive rules are not validated at rule create time, but will report an error at execution time.
+In a rule for `INSERT`, `UPDATE`, or `DELETE` on a view, you can add a `RETURNING` clause that emits the view's columns. This clause will be used to compute the outputs if the rule is triggered by an `INSERT RETURNING`, `UPDATE RETURNING`, or `DELETE RETURNING` command respectively. When the rule is triggered by a command without `RETURNING`, the rule's `RETURNING` clause will be ignored. The current implementation allows only unconditional `INSTEAD` rules to contain `RETURNING`; furthermore there can be at most one `RETURNING` clause among all the rules for the same event. (This ensures that there is only one candidate `RETURNING` clause to be used to compute the results.) `RETURNING` queries on the view will be rejected if there is no `RETURNING` clause in any available rule.
 
-## <a id="section6"></a>Examples 
-
-Create a rule that inserts rows into the child table `b2001` when a user tries to insert into the partitioned parent table `rank`:
+It is very important to take care to avoid circular rules. For example, though each of the following two rule definitions are accepted by Greenplum Database, the `SELECT` command would cause Greenplum to report an error because of recursive expansion of a rule:
 
 ```
-CREATE RULE b2001 AS ON INSERT TO rank WHERE gender='M' and 
-year='2001' DO INSTEAD INSERT INTO b2001 VALUES (NEW.id, 
-NEW.rank, NEW.year, NEW.gender, NEW.count);
+CREATE RULE "_RETURN" AS
+    ON SELECT TO t1
+    DO INSTEAD
+        SELECT * FROM t2;
+
+CREATE RULE "_RETURN" AS
+    ON SELECT TO t2
+    DO INSTEAD
+        SELECT * FROM t1;
+
+SELECT * FROM t1;
 ```
+
+Presently, if a rule action contains a `NOTIFY` command, the `NOTIFY` command will be executed unconditionally, that is, the `NOTIFY` will be issued even if there are not any rows that the rule should apply to. For example, in:
+
+```
+CREATE RULE notify_me AS ON UPDATE TO mytable DO ALSO NOTIFY mytable;
+
+UPDATE mytable SET name = 'foo' WHERE id = 42;
+```
+
+one `NOTIFY` event will be sent during the `UPDATE`, whether or not there are any rows that match the condition id = 42. This is an implementation restriction that might be fixed in future releases.
+
 
 ## <a id="section7"></a>Compatibility 
 
@@ -70,7 +92,7 @@ NEW.rank, NEW.year, NEW.gender, NEW.count);
 
 ## <a id="section8"></a>See Also 
 
-[ALTER RULE](ALTER_RULE.html), [DROP RULE](DROP_RULE.html), [CREATE TABLE](CREATE_TABLE.html), [CREATE VIEW](CREATE_VIEW.html)
+[ALTER RULE](ALTER_RULE.html), [DROP RULE](DROP_RULE.html)
 
 **Parent topic:** [SQL Commands](../sql_commands/sql_ref.html)
 
