@@ -5615,75 +5615,109 @@ getIndexes(Archive *fout, TableInfo tblinfo[], int numTables)
 void
 getConstraints(Archive *fout, TableInfo tblinfo[], int numTables)
 {
-	int			i,
-				j;
-	ConstraintInfo *constrinfo;
-	PQExpBuffer query;
+	PQExpBuffer query = createPQExpBuffer();
+	PQExpBuffer tbloids = createPQExpBuffer();
 	PGresult   *res;
+	int			ntups;
+	int			curtblindx;
+	TableInfo  *tbinfo = NULL;
+	ConstraintInfo *constrinfo;
 	int			i_contableoid,
 				i_conoid,
+				i_conrelid,
 				i_conname,
 				i_confrelid,
 				i_condef;
-	int			ntups;
 
-	query = createPQExpBuffer();
-
-	for (i = 0; i < numTables; i++)
+	/*
+	 * We want to perform just one query against pg_constraint.  However, we
+	 * mustn't try to select every row of the catalog and then sort it out on
+	 * the client side, because some of the server-side functions we need
+	 * would be unsafe to apply to tables we don't have lock on.  Hence, we
+	 * build an array of the OIDs of tables we care about (and now have lock
+	 * on!), and use a WHERE clause to constrain which rows are selected.
+	 */
+	appendPQExpBufferChar(tbloids, '{');
+	for (int i = 0; i < numTables; i++)
 	{
 		TableInfo  *tbinfo = &tblinfo[i];
 
 		if (!tbinfo->hastriggers || !tbinfo->dobj.dump)
 			continue;
 
-		if (g_verbose)
-			write_msg(NULL, "reading foreign key constraints for table \"%s\"\n",
-					  tbinfo->dobj.name);
+		/* OK, we need info for this table */
+		if (tbloids->len > 1)	/* do we have more than the '{'? */
+			appendPQExpBufferChar(tbloids, ',');
+		appendPQExpBuffer(tbloids, "%u", tbinfo->dobj.catId.oid);
+	}
+	appendPQExpBufferChar(tbloids, '}');
 
-		resetPQExpBuffer(query);
-		appendPQExpBuffer(query,
-						  "SELECT tableoid, oid, conname, confrelid, "
-						  "pg_catalog.pg_get_constraintdef(oid) AS condef "
-						  "FROM pg_catalog.pg_constraint "
-						  "WHERE conrelid = '%u'::pg_catalog.oid "
-						  "AND contype = 'f'",
-						  tbinfo->dobj.catId.oid);
-		res = ExecuteSqlQuery(fout, query->data, PGRES_TUPLES_OK);
+	appendPQExpBuffer(query,
+						"SELECT c.tableoid, c.oid, c.conrelid, conname, confrelid, "
+						"pg_catalog.pg_get_constraintdef(c.oid) AS condef "
+					  "FROM unnest('%s'::pg_catalog.oid[]) AS src(tbloid)\n"
+					  "JOIN pg_catalog.pg_constraint c ON (src.tbloid = c.conrelid)\n"
+						"AND contype = 'f'",
+						tbloids->data);
 
-		ntups = PQntuples(res);
+	appendPQExpBufferStr(query,
+						 "ORDER BY conrelid, conname");
 
-		i_contableoid = PQfnumber(res, "tableoid");
-		i_conoid = PQfnumber(res, "oid");
-		i_conname = PQfnumber(res, "conname");
-		i_confrelid = PQfnumber(res, "confrelid");
-		i_condef = PQfnumber(res, "condef");
+	res = ExecuteSqlQuery(fout, query->data, PGRES_TUPLES_OK);
 
-		constrinfo = (ConstraintInfo *) pg_malloc(ntups * sizeof(ConstraintInfo));
+	ntups = PQntuples(res);
 
-		for (j = 0; j < ntups; j++)
+	i_contableoid = PQfnumber(res, "tableoid");
+	i_conoid = PQfnumber(res, "oid");
+	i_conrelid = PQfnumber(res, "conrelid");
+	i_conname = PQfnumber(res, "conname");
+	i_confrelid = PQfnumber(res, "confrelid");
+	i_condef = PQfnumber(res, "condef");
+
+	constrinfo = (ConstraintInfo *) pg_malloc(ntups * sizeof(ConstraintInfo));
+
+	curtblindx = -1;
+	for (int j = 0; j < ntups; j++)
+	{
+		Oid			conrelid = atooid(PQgetvalue(res, j, i_conrelid));
+		/*
+		 * Locate the associated TableInfo; we rely on tblinfo[] being in OID
+		 * order.
+		 */
+		if (tbinfo == NULL || tbinfo->dobj.catId.oid != conrelid)
 		{
-			constrinfo[j].dobj.objType = DO_FK_CONSTRAINT;
-			constrinfo[j].dobj.catId.tableoid = atooid(PQgetvalue(res, j, i_contableoid));
-			constrinfo[j].dobj.catId.oid = atooid(PQgetvalue(res, j, i_conoid));
-			AssignDumpId(&constrinfo[j].dobj);
-			constrinfo[j].dobj.name = pg_strdup(PQgetvalue(res, j, i_conname));
-			constrinfo[j].dobj.namespace = tbinfo->dobj.namespace;
-			constrinfo[j].contable = tbinfo;
-			constrinfo[j].condomain = NULL;
-			constrinfo[j].contype = 'f';
-			constrinfo[j].condef = pg_strdup(PQgetvalue(res, j, i_condef));
-			constrinfo[j].confrelid = atooid(PQgetvalue(res, j, i_confrelid));
-			constrinfo[j].conindex = 0;
-			constrinfo[j].condeferrable = false;
-			constrinfo[j].condeferred = false;
-			constrinfo[j].conislocal = true;
-			constrinfo[j].separate = true;
+			while (++curtblindx < numTables)
+			{
+				tbinfo = &tblinfo[curtblindx];
+				if (tbinfo->dobj.catId.oid == conrelid)
+					break;
+			}
+			if (curtblindx >= numTables)
+				exit_horribly(NULL, "unrecognized table OID %u\n", conrelid);
 		}
 
-		PQclear(res);
+		constrinfo[j].dobj.objType = DO_FK_CONSTRAINT;
+		constrinfo[j].dobj.catId.tableoid = atooid(PQgetvalue(res, j, i_contableoid));
+		constrinfo[j].dobj.catId.oid = atooid(PQgetvalue(res, j, i_conoid));
+		AssignDumpId(&constrinfo[j].dobj);
+		constrinfo[j].dobj.name = pg_strdup(PQgetvalue(res, j, i_conname));
+		constrinfo[j].dobj.namespace = tbinfo->dobj.namespace;
+		constrinfo[j].contable = tbinfo;
+		constrinfo[j].condomain = NULL;
+		constrinfo[j].contype = 'f';
+		constrinfo[j].condef = pg_strdup(PQgetvalue(res, j, i_condef));
+		constrinfo[j].confrelid = atooid(PQgetvalue(res, j, i_confrelid));
+		constrinfo[j].conindex = 0;
+		constrinfo[j].condeferrable = false;
+		constrinfo[j].condeferred = false;
+		constrinfo[j].conislocal = true;
+		constrinfo[j].separate = true;
 	}
 
+	PQclear(res);
+
 	destroyPQExpBuffer(query);
+	destroyPQExpBuffer(tbloids);
 }
 
 /*
