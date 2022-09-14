@@ -9,8 +9,8 @@
 -- s/Work_mem: \d+\w bytes max\. */Work_mem: ###K bytes max./
 -- m/Memory: \d+kB  Max Memory: \d+kB  Peak Memory: \d+kB  Avg Memory: \d+kB \(3 segments\)/
 -- s/Memory: \d+kB  Max Memory: \d+kB  Peak Memory: \d+kB  Avg Memory: \d+kB \(3 segments\)/Memory: ###kB  Max Memory: ###kB  Peak Memory: ###kB  Avg Memory: ###kB \(3 segments\)/
--- m/work_mem: \d+kB  Segments: 3  Max: \d+kB \(segment \d+\)  Workfile: \(0 spilling\)/
--- s/work_mem: \d+kB  Segments: 3  Max: \d+kB \(segment \d+\)  Workfile: \(0 spilling\)/work_mem: ###kB  Segments: 3  Max: ###kB \(segment ##\)  Workfile: \(0 spilling\)/
+-- m/work_mem: \d+kB  Segments: 3  Max: \d+kB \(segment \d+\)  Workfile: \(\d+ spilling\)/
+-- s/work_mem: \d+kB  Segments: 3  Max: \d+kB \(segment \d+\)  Workfile: \(\d+ spilling\)/work_mem: ###kB  Segments: 3  Max: ###kB \(segment ##\)  Workfile: \(# spilling\)/
 -- m/Execution Time: \d+\.\d+ ms/
 -- s/Execution Time: \d+\.\d+ ms/Execution Time: ##.### ms/
 -- m/Planning Time: \d+\.\d+ ms/
@@ -27,6 +27,8 @@
 -- s/Buckets: \d+/Buckets: ###/
 -- m/Batches: \d+/
 -- s/Batches: \d+/Batches: ###/
+-- m/Hash chain length \d+\.\d+ avg, \d+ max, using \d+ of \d+ buckets./
+-- s/Hash chain length \d+\.\d+ avg, \d+ max, using \d+ of \d+ buckets./Hash chain length ###, using ### of ### buckets./
 -- end_matchsubs
 --
 -- DEFAULT syntax
@@ -63,17 +65,17 @@ EXPLAIN SELECT * from boxes LEFT JOIN apples ON apples.id = boxes.apple_id LEFT 
 -- explain_processing_off
 EXPLAIN (ANALYZE) SELECT * from boxes LEFT JOIN apples ON apples.id = boxes.apple_id LEFT JOIN box_locations ON box_locations.id = boxes.location_id;
                                                             QUERY PLAN                                                            
-----------------------------------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..449.00 rows=3 width=36) (actual time=2.753..2.753 rows=0 loops=1)
-   ->  Nested Loop Left Join  (cost=0.00..449.00 rows=1 width=36) (never executed)
+-------------------------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..449.00 rows=3 width=36) (actual time=1.894..1.894 rows=0 loops=1)
+   ->  Nested Loop Left Join  (cost=0.00..449.00 rows=1 width=36) (actual time=1.391..1.391 rows=0 loops=1)
          Join Filter: true
-         ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..437.00 rows=1 width=24) (never executed)
+         ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..437.00 rows=1 width=24) (actual time=1.362..1.362 rows=0 loops=1)
                Hash Key: boxes.apple_id
-               ->  Nested Loop Left Join  (cost=0.00..437.00 rows=1 width=24) (never executed)
+               ->  Nested Loop Left Join  (cost=0.00..437.00 rows=1 width=24) (actual time=0.384..0.384 rows=0 loops=1)
                      Join Filter: true
-                     ->  Redistribute Motion 3:3  (slice3; segments: 3)  (cost=0.00..431.00 rows=1 width=12) (never executed)
+                     ->  Redistribute Motion 3:3  (slice3; segments: 3)  (cost=0.00..431.00 rows=1 width=12) (actual time=0.380..0.380 rows=0 loops=1)
                            Hash Key: boxes.location_id
-                           ->  Seq Scan on boxes  (cost=0.00..431.00 rows=1 width=12) (never executed)
+                           ->  Seq Scan on boxes  (cost=0.00..431.00 rows=1 width=12) (actual time=0.006..0.006 rows=0 loops=1)
                      ->  Index Scan using box_locations_pkey on box_locations  (cost=0.00..6.00 rows=1 width=12) (never executed)
                            Index Cond: (id = boxes.location_id)
          ->  Index Scan using apples_pkey on apples  (cost=0.00..12.00 rows=1 width=12) (never executed)
@@ -511,13 +513,13 @@ QUERY PLAN
 Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=12) (actual time=0.388..0.388 rows=0 loops=1)
   Output: id, apple_id, location_id
   Merge Key: apple_id
-  ->  Sort  (cost=0.00..431.00 rows=1 width=12) (never executed)
+  ->  Sort  (cost=0.00..431.00 rows=1 width=12) (actual time=0.065..0.065 rows=0 loops=1)
         Output: id, apple_id, location_id
         Sort Key: boxes.apple_id
         Sort Method:  quicksort  Memory: 75kB  Max Memory: 25kB  Avg Memory: 25kB (3 segments)
         Executor Memory: 177kB  Segments: 3  Max: 59kB (segment 0)
-        work_mem: 177kB  Segments: 3  Max: 59kB (segment 0)  Workfile: (0 spilling)
-        ->  Seq Scan on public.boxes  (cost=0.00..431.00 rows=1 width=12) (never executed)
+        work_mem: 177kB  Segments: 3  Max: 59kB (segment 0)  Workfile: (3 spilling)
+        ->  Seq Scan on public.boxes  (cost=0.00..431.00 rows=1 width=12) (actual time=0.011..0.011 rows=0 loops=1)
               Output: id, apple_id, location_id
 Optimizer: Pivotal Optimizer (GPORCA)
 Settings: cpu_index_tuple_cost = '0.1', random_page_cost = '1'

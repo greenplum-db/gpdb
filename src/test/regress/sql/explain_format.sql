@@ -9,8 +9,8 @@
 -- s/Work_mem: \d+\w bytes max\. */Work_mem: ###K bytes max./
 -- m/Memory: \d+kB  Max Memory: \d+kB  Peak Memory: \d+kB  Avg Memory: \d+kB \(3 segments\)/
 -- s/Memory: \d+kB  Max Memory: \d+kB  Peak Memory: \d+kB  Avg Memory: \d+kB \(3 segments\)/Memory: ###kB  Max Memory: ###kB  Peak Memory: ###kB  Avg Memory: ###kB \(3 segments\)/
--- m/work_mem: \d+kB  Segments: 3  Max: \d+kB \(segment \d+\)  Workfile: \(0 spilling\)/
--- s/work_mem: \d+kB  Segments: 3  Max: \d+kB \(segment \d+\)  Workfile: \(0 spilling\)/work_mem: ###kB  Segments: 3  Max: ###kB \(segment ##\)  Workfile: \(0 spilling\)/
+-- m/work_mem: \d+kB  Segments: 3  Max: \d+kB \(segment \d+\)  Workfile: \(\d+ spilling\)/
+-- s/work_mem: \d+kB  Segments: 3  Max: \d+kB \(segment \d+\)  Workfile: \(\d+ spilling\)/work_mem: ###kB  Segments: 3  Max: ###kB \(segment ##\)  Workfile: \(# spilling\)/
 -- m/Execution Time: \d+\.\d+ ms/
 -- s/Execution Time: \d+\.\d+ ms/Execution Time: ##.### ms/
 -- m/Planning Time: \d+\.\d+ ms/
@@ -27,6 +27,8 @@
 -- s/Buckets: \d+/Buckets: ###/
 -- m/Batches: \d+/
 -- s/Batches: \d+/Batches: ###/
+-- m/Hash chain length \d+\.\d+ avg, \d+ max, using \d+ of \d+ buckets./
+-- s/Hash chain length \d+\.\d+ avg, \d+ max, using \d+ of \d+ buckets./Hash chain length ###, using ### of ### buckets./
 -- end_matchsubs
 --
 -- DEFAULT syntax
