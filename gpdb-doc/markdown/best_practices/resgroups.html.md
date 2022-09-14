@@ -30,6 +30,14 @@ The following operating system and Greenplum Database memory settings are signif
 
     The percentage of system memory to allocate to Greenplum Database. The default value is .7 \(70%\).
 
+-   **gp_resource_group_enable_recalculate_query_mem**
+
+    By default, Greenplum Database calculates the maximum per-query memory allotment for all hosts using the memory configuration of, and the number of primary segments configured on, the master host.
+
+    **Note:** The default behavior may lead to out of memory issues and underutilization of resources when the hardware configuration of the master and segment hosts differ.
+
+    If the hardware configuration of your master and segment hosts differ, set the `gp_resource_group_enable_recalculate_query_mem` server configuration parameter to `true`; this prompts Greenplum Database to recalculate the maximum per-query memory allotment on each segment host based on the memory and the number of primary segments configured on that segment host.
+
 -   **gp_workfile_limit_files_per_query**
 
     Set `gp_workfile_limit_files_per_query` to limit the maximum number of temporary spill files \(workfiles\) allowed per query. Spill files are created when a query requires more memory than it is allocated. When the limit is exceeded the query is terminated. The default is zero, which allows an unlimited number of spill files and may fill up the file system.

@@ -235,9 +235,12 @@ query_mem = (rg_perseg_mem * memory_limit) * memory_spill_ratio / concurrency
 
 Where `memory_limit`, `memory_spill_ratio`, and `concurrency` are specified by the resource group under which the transaction runs.
 
-By default, Greenplum Database calculates the maximum amount of segment host memory allocated to a transaction based on the `rg_perseg_mem` and the number of primary segments on the *master host*.
+By default, Greenplum Database calculates the maximum amount of segment host memory allocated to a transaction based on the `rg_perseg_mem` and the number of primary segments configured on the *master host*.
 
-If the memory configuration on your Greenplum Database master and segment hosts differ, you may prefer that the maximum per-transaction memory calculation be based on the segment host configuration. To instruct Greenplum Database to recalculate the maximum memory allocation per-transaction based on the `rg_perseg_mem` and the number of primary segments *on the segment host*, set the [gp_resource_group_enable_recalculate_query_mem](../ref_guide/config_params/guc-list.html#gp_resource_group_enable_recalculate_query_mem) server configuration parameter to `true`.
+**Note:** If the memory configuration on your Greenplum Database master and segment hosts differ, you may encounter out-of-memory conditions or underutilization of resources with the default configuration.
+
+If the hardware configuration of your master and segment hosts differ, set the [gp_resource_group_enable_recalculate_query_mem](../ref_guide/config_params/guc-list.html#gp_resource_group_enable_recalculate_query_mem) server configuration parameter to `true`; this prompts Greenplum Database to recalculate the maximum per-query memory allotment on each segment host based on the `rg_perseg_mem` and the number of primary segments configured on *that segment host*.
+
 
 ##### <a id="topic833low"></a>memory\_spill\_ratio and Low Memory Queries 
 
