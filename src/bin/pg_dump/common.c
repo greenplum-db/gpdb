@@ -180,12 +180,9 @@ getSchemaData(Archive *fout, int *numTablesPtr, int binary_upgrade)
 		write_msg(NULL, "reading user-defined operators\n");
 	(void) getOperators(fout, &numOperators);
 
-	if (testExtProtocolSupport(fout))
-	{
-		if (g_verbose)
-			write_msg(NULL, "reading user-defined external protocols\n");
-		getExtProtocols(fout, &numExtProtocols);
-	}
+	if (g_verbose)
+		write_msg(NULL, "reading user-defined external protocols\n");
+	getExtProtocols(fout, &numExtProtocols);
 
 	if (g_verbose)
 		write_msg(NULL, "reading user-defined operator classes\n");

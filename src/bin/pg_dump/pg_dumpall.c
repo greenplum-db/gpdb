@@ -68,8 +68,6 @@ static char *constructConnStr(const char **keywords, const char **values);
 static PGresult *executeQuery(PGconn *conn, const char *query);
 static void executeCommand(PGconn *conn, const char *query);
 
-static void error_unsupported_server_version(PGconn *conn) pg_attribute_noreturn();
-
 static char pg_dump_bin[MAXPGPATH];
 static const char *progname;
 static PQExpBuffer pgdumpopts;
@@ -493,7 +491,7 @@ main(int argc, char *argv[])
 		std_strings = "off";
 
 	/* Set the role if requested */
-	if (use_role && server_version >= 80100)
+	if (use_role)
 	{
 		PQExpBuffer query = createPQExpBuffer();
 
@@ -503,7 +501,7 @@ main(int argc, char *argv[])
 	}
 
 	/* Force quoting of all identifiers if requested. */
-	if (quote_all_identifiers && server_version >= 80300)
+	if (quote_all_identifiers)
 		executeCommand(conn, "SET quote_all_identifiers = true");
 
 	fprintf(OPF,"--\n-- Greenplum Database cluster dump\n--\n\n");
@@ -553,8 +551,7 @@ main(int argc, char *argv[])
 
 			if (!roles_only && !no_tablespaces)
 			{
-				if (server_version >= 80000)
-					dropTablespaces(conn);
+				dropTablespaces(conn);
 			}
 
 			if (!tablespaces_only)
@@ -680,7 +677,7 @@ help(void)
 /*
  * Build the WITH clause for resource queue dump
  */
-static void 
+static void
 buildWithClause(const char *resname, const char *ressetting, PQExpBuffer buf)
 {
 	if (0 == strncmp("memory_limit", resname, 12) && (strncmp(ressetting, "-1", 2) != 0))
@@ -874,22 +871,15 @@ dumpResQueues(PGconn *conn)
 					  "3 as ord FROM pg_resqueue "
 					  "UNION "
 					  "SELECT oid, rsqname, 'ignorecostlimit' as resname, "
-					  "%s as ressetting, "
+					  "rsqignorecostlimit::text as ressetting, "
 					  "4 as ord FROM pg_resqueue "
-					  "%s"
-					  "order by rsqname,  ord",
-					  (server_version >= 80205 ?
-					   "rsqignorecostlimit::text"
-					   : "0 AS"),
-					  (server_version >= 80214 ?
 					   "UNION "
 					   "SELECT rq.oid, rq.rsqname, rt.resname, rc.ressetting, "
 					   "rt.restypid as ord FROM "
 					   "pg_resqueue rq,  pg_resourcetype rt, "
 					   "pg_resqueuecapability rc WHERE "
 					   "rq.oid=rc.resqueueid and rc.restypid = rt.restypid "
-					   : "")
-		);
+					  "order by rsqname,  ord");
 
 	res = executeQuery(conn, buf->data);
 
@@ -1034,19 +1024,10 @@ dropRoles(PGconn *conn)
 	int			i_rolname;
 	int			i;
 
-	if (server_version >= 80100)
-		res = executeQuery(conn,
-						   "SELECT rolname "
-						   "FROM pg_authid "
-						   "ORDER BY 1");
-	else
-		res = executeQuery(conn,
-						   "SELECT usename as rolname "
-						   "FROM pg_shadow "
-						   "UNION "
-						   "SELECT groname as rolname "
-						   "FROM pg_group "
-						   "ORDER BY 1");
+	res = executeQuery(conn,
+							"SELECT rolname "
+							"FROM pg_authid "
+							"ORDER BY 1");
 
 	i_rolname = PQfnumber(res, "rolname");
 
@@ -1091,57 +1072,55 @@ dumpRoles(PGconn *conn)
 				i_rolcomment,
 				i_rolqueuename = -1,	/* keep compiler quiet */
 				i_rolgroupname = -1,	/* keep compiler quiet */
-				i_rolcreaterextgpfd = -1,
-				i_rolcreaterexthttp = -1,
-				i_rolcreatewextgpfd = -1,
-				i_rolcreaterexthdfs = -1,
-				i_rolcreatewexthdfs = -1,
+				i_rolcreaterextgpfd,
+				i_rolcreaterexthttp,
+				i_rolcreatewextgpfd,
+				i_rolcreaterexthdfs,
+				i_rolcreatewexthdfs,
 				i_is_current_user;
 	int			i;
-	bool		exttab_auth = (server_version >= 80214);
-	/*
-	 * Support for gphdfs was removed in Greenplum 6
-	 */
-	bool		hdfs_auth = (server_version >= 80215 && server_version < 80400);
-	char	   *resq_col = resource_queues ? ", (SELECT rsqname FROM pg_resqueue WHERE "
-	"  pg_resqueue.oid = rolresqueue) AS rolqueuename " : "";
-	char	   *resgroup_col = resource_groups ? ", (SELECT rsgname FROM pg_resgroup WHERE "
-	"  pg_resgroup.oid = rolresgroup) AS rolgroupname " : "";
-	char	   *extauth_col = exttab_auth ? ", rolcreaterextgpfd, rolcreaterexthttp, rolcreatewextgpfd" : "";
-	char	   *hdfs_col = hdfs_auth ? ", rolcreaterexthdfs, rolcreatewexthdfs " : "";
+
+	char	   *resq_col = resource_queues ? "(SELECT rsqname FROM pg_resqueue WHERE "
+	"  pg_resqueue.oid = rolresqueue) AS rolqueuename, " : "";
+	char	   *resgroup_col = resource_groups ? "(SELECT rsgname FROM pg_resgroup WHERE "
+	"  pg_resgroup.oid = rolresgroup) AS rolgroupname, " : "";
 
 	/*
 	 * Query to select role info get resqueue if version support it get
 	 * external table auth on gpfdist, gpfdists and http if version support it get
+	 *
+	 * Support for gphdfs was removed in Greenplum 6
 	 */
 
 	/* note: rolconfig is dumped later */
-	if (server_version >= 90100)
+	if (server_version >= 90400)
 		printfPQExpBuffer(buf,
 						  "SELECT oid, rolname, rolsuper, rolinherit, "
 						  "rolcreaterole, rolcreatedb, rolcatupdate, "
 						  "rolcanlogin, rolconnlimit, rolpassword, "
 						  "rolvaliduntil, rolreplication, "
-			 "pg_catalog.shobj_description(oid, 'pg_authid') as rolcomment, "
-						  "rolname = current_user AS is_current_user "
-						  " %s %s %s %s"
+						  "pg_catalog.shobj_description(oid, 'pg_authid') as rolcomment, "
+						  "rolname = current_user AS is_current_user, "
+						  "%s %s"
+							"'f' AS rolcreaterexthdfs, 'f' AS rolcreatewexthdfs, "
+						  "rolcreaterextgpfd, rolcreaterexthttp, rolcreatewextgpfd "
 						  "FROM pg_authid "
 						  "ORDER BY 2",
-						  resq_col, resgroup_col, extauth_col, hdfs_col);
-	else if (server_version >= 80200)
+						  resq_col, resgroup_col);
+	else
 		printfPQExpBuffer(buf,
 						  "SELECT oid, rolname, rolsuper, rolinherit, "
 						  "rolcreaterole, rolcreatedb, rolcatupdate, "
 						  "rolcanlogin, rolconnlimit, rolpassword, "
 						  "rolvaliduntil, false as rolreplication, "
-			 "pg_catalog.shobj_description(oid, 'pg_authid') as rolcomment, "
-						  "rolname = current_user AS is_current_user "
-						  " %s %s %s %s"
+						  "pg_catalog.shobj_description(oid, 'pg_authid') as rolcomment, "
+						  "rolname = current_user AS is_current_user, "
+						  "%s %s"
+						  "rolcreaterexthdfs, rolcreatewexthdfs, "
+						  "rolcreaterextgpfd, rolcreaterexthttp, rolcreatewextgpfd "
 						  "FROM pg_authid "
 						  "ORDER BY 2",
-						  resq_col, resgroup_col, extauth_col, hdfs_col);
-	else
-		error_unsupported_server_version(conn);
+						  resq_col, resgroup_col);
 
 	res = executeQuery(conn, buf->data);
 
@@ -1165,17 +1144,13 @@ dumpRoles(PGconn *conn)
 	if (resource_groups)
 		i_rolgroupname = PQfnumber(res, "rolgroupname");
 
-	if (exttab_auth)
-	{
-		i_rolcreaterextgpfd = PQfnumber(res, "rolcreaterextgpfd");
-		i_rolcreaterexthttp = PQfnumber(res, "rolcreaterexthttp");
-		i_rolcreatewextgpfd = PQfnumber(res, "rolcreatewextgpfd");
-		if (hdfs_auth)
-		{
-			i_rolcreaterexthdfs = PQfnumber(res, "rolcreaterexthdfs");
-			i_rolcreatewexthdfs = PQfnumber(res, "rolcreatewexthdfs");
-		}
-	}
+	i_rolcreaterextgpfd = PQfnumber(res, "rolcreaterextgpfd");
+	i_rolcreaterexthttp = PQfnumber(res, "rolcreaterexthttp");
+	i_rolcreatewextgpfd = PQfnumber(res, "rolcreatewextgpfd");
+
+	i_rolcreaterexthdfs = PQfnumber(res, "rolcreaterexthdfs");
+	i_rolcreatewexthdfs = PQfnumber(res, "rolcreatewexthdfs");
+
 
 	if (PQntuples(res) > 0)
 		fprintf(OPF, "--\n-- Roles\n--\n\n");
@@ -1269,32 +1244,26 @@ dumpRoles(PGconn *conn)
 								  PQgetvalue(res, i, i_rolgroupname));
 		}
 
-		if (exttab_auth)
-		{
-			/* we use the same privilege for gpfdist and gpfdists */
-			if (!PQgetisnull(res, i, i_rolcreaterextgpfd) &&
-				strcmp(PQgetvalue(res, i, i_rolcreaterextgpfd), "t") == 0)
-				appendPQExpBufferStr(buf, " CREATEEXTTABLE (protocol='gpfdist', type='readable')");
+		/* we use the same privilege for gpfdist and gpfdists */
+		if (!PQgetisnull(res, i, i_rolcreaterextgpfd) &&
+			strcmp(PQgetvalue(res, i, i_rolcreaterextgpfd), "t") == 0)
+			appendPQExpBufferStr(buf, " CREATEEXTTABLE (protocol='gpfdist', type='readable')");
 
-			if (!PQgetisnull(res, i, i_rolcreatewextgpfd) &&
-				strcmp(PQgetvalue(res, i, i_rolcreatewextgpfd), "t") == 0)
-				appendPQExpBufferStr(buf, " CREATEEXTTABLE (protocol='gpfdist', type='writable')");
+		if (!PQgetisnull(res, i, i_rolcreatewextgpfd) &&
+			strcmp(PQgetvalue(res, i, i_rolcreatewextgpfd), "t") == 0)
+			appendPQExpBufferStr(buf, " CREATEEXTTABLE (protocol='gpfdist', type='writable')");
 
-			if (!PQgetisnull(res, i, i_rolcreaterexthttp) &&
-				strcmp(PQgetvalue(res, i, i_rolcreaterexthttp), "t") == 0)
-				appendPQExpBufferStr(buf, " CREATEEXTTABLE (protocol='http')");
+		if (!PQgetisnull(res, i, i_rolcreaterexthttp) &&
+			strcmp(PQgetvalue(res, i, i_rolcreaterexthttp), "t") == 0)
+			appendPQExpBufferStr(buf, " CREATEEXTTABLE (protocol='http')");
 
-			if (hdfs_auth)
-			{
-				if (!PQgetisnull(res, i, i_rolcreaterexthdfs) &&
-					strcmp(PQgetvalue(res, i, i_rolcreaterexthdfs), "t") == 0)
-					appendPQExpBufferStr(buf, " CREATEEXTTABLE (protocol='gphdfs', type='readable')");
+		if (!PQgetisnull(res, i, i_rolcreaterexthdfs) &&
+			strcmp(PQgetvalue(res, i, i_rolcreaterexthdfs), "t") == 0)
+			appendPQExpBufferStr(buf, " CREATEEXTTABLE (protocol='gphdfs', type='readable')");
 
-				if (!PQgetisnull(res, i, i_rolcreatewexthdfs) &&
-					strcmp(PQgetvalue(res, i, i_rolcreatewexthdfs), "t") == 0)
-					appendPQExpBufferStr(buf, " CREATEEXTTABLE (protocol='gphdfs', type='writable')");
-			}
-		}
+		if (!PQgetisnull(res, i, i_rolcreatewexthdfs) &&
+			strcmp(PQgetvalue(res, i, i_rolcreatewexthdfs), "t") == 0)
+			appendPQExpBufferStr(buf, " CREATEEXTTABLE (protocol='gphdfs', type='writable')");
 
 		appendPQExpBufferStr(buf, ";\n");
 
@@ -1384,7 +1353,7 @@ dumpRoleMembership(PGconn *conn)
 }
 
 /*
- * Dump role time constraints. 
+ * Dump role time constraints.
  *
  * Note: we expect dumpRoles already created all the roles, but there are
  * no time constraints yet.
@@ -1411,7 +1380,7 @@ dumpRoleConstraints(PGconn *conn)
 		char		*end_day 	= PQgetvalue(res, i, 3);
 		char 		*end_time 	= PQgetvalue(res, i, 4);
 
-		fprintf(OPF, "ALTER ROLE %s DENY BETWEEN DAY %s TIME '%s' AND DAY %s TIME '%s';\n", 
+		fprintf(OPF, "ALTER ROLE %s DENY BETWEEN DAY %s TIME '%s' AND DAY %s TIME '%s';\n",
 				fmtId(rolname), start_day, start_time, end_day, end_time);
 	}
 
@@ -1474,7 +1443,7 @@ dumpTablespaces(PGconn *conn)
 	PGresult   *res;
 	int			i;
 	bool        filespace_to_tablespace = false;
-	
+
 	/*
 	 * Get all tablespaces execpt built-in ones (named pg_xxx)
 	 *
@@ -1483,7 +1452,7 @@ dumpTablespaces(PGconn *conn)
 	 * --gp-syntax or --no-gp-syntax.
 	 */
 	if (server_version <= 80323)
-	{							
+	{
 		filespace_to_tablespace = true;
 		/*
 		 * Filespaces imply that there will be multiple rows in the result set
@@ -1535,7 +1504,7 @@ dumpTablespaces(PGconn *conn)
 						   "FROM pg_catalog.pg_tablespace "
 						   "WHERE spcname !~ '^pg_' "
 						   "ORDER BY 1");
-	else if (server_version >= 80200)
+	else
 		res = executeQuery(conn, "SELECT oid, spcname, "
 						 "pg_catalog.pg_get_userbyid(spcowner) AS spcowner, "
 						   "spclocation, spcacl, null, "
@@ -1543,10 +1512,6 @@ dumpTablespaces(PGconn *conn)
 						   "FROM pg_catalog.pg_tablespace "
 						   "WHERE spcname !~ '^pg_' "
 						   "ORDER BY 1");
-	else
-	{
-		error_unsupported_server_version(conn);
-	}
 
 	if (PQntuples(res) > 0)
 		fprintf(OPF, "--\n-- Tablespaces\n--\n\n");
@@ -1655,16 +1620,10 @@ dropDBs(PGconn *conn)
 	PGresult   *res;
 	int			i;
 
-	if (server_version >= 70100)
-		res = executeQuery(conn,
-						   "SELECT datname "
-						   "FROM pg_database d "
-						   "WHERE datallowconn ORDER BY 1");
-	else
-		res = executeQuery(conn,
-						   "SELECT datname "
-						   "FROM pg_database d "
-						   "ORDER BY 1");
+	res = executeQuery(conn,
+							"SELECT datname "
+							"FROM pg_database d "
+							"WHERE datallowconn ORDER BY 1");
 
 	if (PQntuples(res) > 0)
 		fprintf(OPF, "--\n-- Drop databases\n--\n\n");
@@ -1733,18 +1692,12 @@ dumpCreateDB(PGconn *conn)
 						   "datcollate, datctype "
 						   "FROM pg_database "
 						   "WHERE datname = 'template0'");
-	else if (server_version >= 70100)
-		res = executeQuery(conn,
-						   "SELECT pg_encoding_to_char(encoding), "
-						   "null::text AS datcollate, null::text AS datctype "
-						   "FROM pg_database "
-						   "WHERE datname = 'template0'");
 	else
 		res = executeQuery(conn,
 						   "SELECT pg_encoding_to_char(encoding), "
 						   "null::text AS datcollate, null::text AS datctype "
 						   "FROM pg_database "
-						   "WHERE datname = 'template1'");
+						   "WHERE datname = 'template0'");
 
 	/* If for some reason the template DB isn't there, treat as unknown */
 	if (PQntuples(res) > 0)
@@ -1780,7 +1733,7 @@ dumpCreateDB(PGconn *conn)
 						   "(SELECT spcname FROM pg_tablespace t WHERE t.oid = d.dattablespace) AS dattablespace "
 			  "FROM pg_database d LEFT JOIN pg_authid u ON (datdba = u.oid) "
 						   "WHERE datallowconn ORDER BY 1");
-	else if (server_version >= 80100)
+	else
 		res = executeQuery(conn,
 						   "SELECT datname, "
 						   "coalesce(rolname, (select rolname from pg_authid where oid=(select datdba from pg_database where datname='template0'))), "
@@ -1790,8 +1743,6 @@ dumpCreateDB(PGconn *conn)
 						   "(SELECT spcname FROM pg_tablespace t WHERE t.oid = d.dattablespace) AS dattablespace "
 			  "FROM pg_database d LEFT JOIN pg_authid u ON (datdba = u.oid) "
 						   "WHERE datallowconn ORDER BY 1");
-	else
-		error_unsupported_server_version(conn);
 
 	for (i = 0; i < PQntuples(res); i++)
 	{
@@ -2004,10 +1955,9 @@ dumpUserConfig(PGconn *conn, const char *username)
 			printfPQExpBuffer(buf, "SELECT setconfig[%d] FROM pg_db_role_setting WHERE "
 							  "setdatabase = 0 AND setrole = "
 					   "(SELECT oid FROM pg_authid WHERE rolname = ", count);
-		else if (server_version >= 80100)
-			printfPQExpBuffer(buf, "SELECT rolconfig[%d] FROM pg_authid WHERE rolname = ", count);
 		else
-			printfPQExpBuffer(buf, "SELECT useconfig[%d] FROM pg_shadow WHERE usename = ", count);
+			printfPQExpBuffer(buf, "SELECT rolconfig[%d] FROM pg_authid WHERE rolname = ", count);
+
 		appendStringLiteralConn(buf, username, conn);
 		if (server_version >= 90000)
 			appendPQExpBufferChar(buf, ')');
@@ -2468,11 +2418,11 @@ connectDatabase(const char *dbname, const char *connection_string,
 	my_version = PG_VERSION_NUM;
 
 	/*
-	 * We allow the server to be back to 7.0, and up to any minor release of
+	 * We allow the server to be back to 8.3, and up to any minor release of
 	 * our own major version.  (See also version check in pg_dump.c.)
 	 */
 	if (my_version != server_version
-		&& (server_version < 80200 ||		/* we can handle back to 8.2 */
+		&& (server_version < 80300 ||		/* we can handle back to 8.3 */
 			(server_version / 100) > (my_version / 100)))
 	{
 		fprintf(stderr, _("server version: %s; %s version: %s\n"),
@@ -2604,28 +2554,4 @@ dumpTimestamp(char *msg)
 #endif
 				 localtime(&now)) != 0)
 		fprintf(OPF, "-- %s %s\n\n", msg, buf);
-}
-
-/*
- * This GPDB-specific function is copied (in spirit) from pg_dump.c.
- *
- * PostgreSQL's pg_dumpall supports very old server versions, but in GPDB, we
- * only need to go back to 8.2-derived GPDB versions (4.something?). A lot of
- * that code to deal with old versions has been removed. But in order to not
- * change the formatting of the surrounding code, and to make it more clear
- * when reading a diff against the corresponding PostgreSQL version of
- * pg_dumpall, calls to this function has been left in place of the removed
- * code.
- *
- * This function should never actually be used, because check that the server
- * version is new enough at the beginning of pg_dumpall. This is just for
- * documentation purposes, to show were upstream code has been removed, and
- * to avoid those diffs or merge conflicts with upstream.
- */
-static void
-error_unsupported_server_version(PGconn *conn)
-{
-	fprintf(stderr, _("unexpected server version %d\n"), server_version);
-	PQfinish(conn);
-	exit(1);
 }

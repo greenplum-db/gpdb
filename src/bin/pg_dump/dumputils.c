@@ -25,8 +25,6 @@
 extern const ScanKeyword FEScanKeywords[];
 extern const int NumFEScanKeywords;
 
-#define supports_grant_options(version) ((version) >= 70400)
-
 static bool parseAclItem(const char *item, const char *type,
 			 const char *name, const char *subname, int remoteVersion,
 			 PQExpBuffer grantee, PQExpBuffer grantor,
@@ -163,8 +161,8 @@ fmtQualifiedId(int remoteVersion, const char *schema, const char *id)
 	PQExpBuffer id_return;
 	PQExpBuffer lcl_pqexp = createPQExpBuffer();
 
-	/* Suppress schema name if fetching from pre-7.3 DB */
-	if (remoteVersion >= 70300 && schema && *schema)
+	/* Some callers might fail to provide a schema name */
+	if (schema && *schema)
 	{
 		appendPQExpBuffer(lcl_pqexp, "%s.", fmtId(schema));
 	}
@@ -797,20 +795,6 @@ buildACLCommands(const char *name, const char *subname, const char *nspname,
 		appendPQExpBuffer(firstsql, "%s.", fmtId(nspname));
 	appendPQExpBuffer(firstsql, "%s FROM PUBLIC;\n", name);
 
-	/*
-	 * We still need some hacking though to cover the case where new default
-	 * public privileges are added in new versions: the REVOKE ALL will revoke
-	 * them, leading to behavior different from what the old version had,
-	 * which is generally not what's wanted.  So add back default privs if the
-	 * source database is too old to have had that particular priv.
-	 */
-	if (remoteVersion < 80200 && strcmp(type, "DATABASE") == 0)
-	{
-		/* database CONNECT priv didn't exist before 8.2 */
-		appendPQExpBuffer(firstsql, "%sGRANT CONNECT ON %s %s TO PUBLIC;\n",
-						  prefix, type, name);
-	}
-
 	/* Scan individual ACL items */
 	for (i = 0; i < naclitems; i++)
 	{
@@ -836,9 +820,7 @@ buildACLCommands(const char *name, const char *subname, const char *nspname,
 				 * For the owner, the default privilege level is ALL WITH
 				 * GRANT OPTION (only ALL prior to 7.4).
 				 */
-				if (supports_grant_options(remoteVersion)
-					? strcmp(privswgo->data, "ALL") != 0
-					: strcmp(privs->data, "ALL") != 0)
+				if (strcmp(privswgo->data, "ALL") != 0)
 				{
 					appendPQExpBuffer(firstsql, "%sREVOKE ALL", prefix);
 					if (subname)
@@ -1089,16 +1071,12 @@ do { \
 		{
 			/* table only */
 			CONVERT_PRIV('a', "INSERT");
-			if (remoteVersion >= 70200)
-				CONVERT_PRIV('x', "REFERENCES");
+			CONVERT_PRIV('x', "REFERENCES");
 			/* rest are not applicable to columns */
 			if (subname == NULL)
 			{
-				if (remoteVersion >= 70200)
-				{
-					CONVERT_PRIV('d', "DELETE");
-					CONVERT_PRIV('t', "TRIGGER");
-				}
+				CONVERT_PRIV('d', "DELETE");
+				CONVERT_PRIV('t', "TRIGGER");
 				if (remoteVersion >= 80400)
 					CONVERT_PRIV('D', "TRUNCATE");
 			}
