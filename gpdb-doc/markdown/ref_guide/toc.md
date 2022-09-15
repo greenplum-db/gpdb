@@ -2,7 +2,6 @@ Doc Index
 
 - [Reference Guide](./ref_guide.md)
     - [SQL Commands](./sql_commands/sql_ref.md)
-        - [SQL Syntax Summary](./GPReferenceSQLSummaryLOP.md)
         - [ABORT](./sql_commands/ABORT.md)
         - [ALTER AGGREGATE](./sql_commands/ALTER_AGGREGATE.md)
         - [ALTER COLLATION](./sql_commands/ALTER_COLLATION.md)

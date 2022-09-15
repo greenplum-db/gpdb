@@ -155,8 +155,6 @@ The following SQL commands are available in Greenplum Database:
 
 \* *Not implemented in 5.0*
 
--   **[SQL Syntax Summary](../GPReferenceSQLSummaryLOP.html)**  
-
 -   **[ABORT](../sql_commands/ABORT.html)**  
 
 -   **[ALTER AGGREGATE](../sql_commands/ALTER_AGGREGATE.html)**  
