@@ -540,6 +540,15 @@ explain (analyze, costs off, summary off, timing off)
 select * from (select * from ab where a = 1 union all select * from ab) ab where b = (select 1);
 
 -- A case containing a UNION ALL with a non-partitioned child.
+-- GPDB:
+-- The one-time filter for values(10,5) can be executed on either one of the two segments,
+-- depending on random choice by the planner. Accept either plan.
+-- start_matchsubs
+-- m/ Result \(never executed\)/
+-- s/ Result \(never executed\)/ Result XXX/
+-- m/ Result \(actual rows=0 loops=1\)/
+-- s/ Result \(actual rows=0 loops=1\)/ Result XXX/
+-- end_matchsubs
 explain (analyze, costs off, summary off, timing off)
 select * from (select * from ab where a = 1 union all (values(10,5)) union all select * from ab) ab where b = (select 1);
 
