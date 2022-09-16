@@ -880,3 +880,28 @@ truncate foo_1_prt_20210201;
 insert into foo select a, '20210101'::date+a from (select generate_series(31,40) a) t1;
 analyze verbose foo_1_prt_20210201;
 rollback;
+
+create table hll_part (i int, j int) distributed by (i)
+partition by range(j)
+(start(1) end(10) every(1));
+
+insert into hll_part select i, i%9+1 from generate_series(1,10)i;
+analyze hll_part;
+
+create table hll_regular (i int, j int) distributed by (i);
+insert into hll_regular values (777777,6);
+analyze hll_regular;
+-- hll stats should not be collected in non-partition table by default
+select 1 from pg_statistic where starelid='hll_regular'::regclass and stavalues5 is not null;
+
+set optimizer_analyze_always_collect_hll to on;
+analyze hll_regular;
+reset optimizer_analyze_always_collect_hll;
+
+-- hll stats should be collected when guc is set
+select 1 from pg_statistic where starelid='hll_regular'::regclass and stavalues5 is not null;
+
+alter table hll_part exchange partition for (6)  with table hll_regular;
+
+-- hll stats should be present after partition exchange
+select 1 from pg_statistic where starelid='hll_part_1_prt_6'::regclass and stavalues5 is not null;

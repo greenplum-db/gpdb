@@ -390,6 +390,7 @@ bool		optimizer_enable_range_predicate_dpe;
 /* Analyze related GUCs for Optimizer */
 bool		optimizer_analyze_root_partition;
 bool		optimizer_analyze_midlevel_partition;
+bool		optimizer_analyze_always_collect_hll;
 
 /* GUCs for replicated table */
 bool		optimizer_replicated_table_insert;
@@ -2488,6 +2489,17 @@ struct config_bool ConfigureNamesBool_gp[] =
 			GUC_NOT_IN_SAMPLE
 		},
 		&optimizer_analyze_midlevel_partition,
+		false,
+		NULL, NULL, NULL
+	},
+
+	{
+		{"optimizer_analyze_always_collect_hll", PGC_USERSET, STATS_ANALYZE,
+			gettext_noop("Enable HLL statistics collection on both partition leaves and ordinary tables during ANALYZE"),
+			NULL,
+			GUC_NOT_IN_SAMPLE
+		},
+		&optimizer_analyze_always_collect_hll,
 		false,
 		NULL, NULL, NULL
 	},
