@@ -1081,8 +1081,6 @@ cdbexplain_depositStatsToNode(PlanState *planstate, CdbExplain_RecvStatCtx *ctx)
 	/*
 	 * Put winner's stats into qDisp PlanState's Instrument node.
 	 */
-	if (nloops.agg.vcnt > 0)
-		instr->nloops = nloops.nsimax->nloops;
 	if (ntuples.agg.vcnt > 0)
 	{
 		instr->starttime = ntuples.nsimax->starttime;
@@ -1092,6 +1090,7 @@ cdbexplain_depositStatsToNode(PlanState *planstate, CdbExplain_RecvStatCtx *ctx)
 		instr->total = ntuples.nsimax->total;
 		instr->ntuples = ntuples.nsimax->ntuples;
 		instr->ntuples2 = ntuples.nsimax->ntuples2;
+		instr->nloops = ntuples.nsimax->nloops;
 		instr->nfiltered1 = ntuples.nsimax->nfiltered1;
 		instr->nfiltered2 = ntuples.nsimax->nfiltered2;
 		instr->execmemused = ntuples.nsimax->execmemused;
@@ -1100,6 +1099,9 @@ cdbexplain_depositStatsToNode(PlanState *planstate, CdbExplain_RecvStatCtx *ctx)
 		instr->workfileCreated = ntuples.nsimax->workfileCreated;
 		instr->firststart = ntuples.nsimax->firststart;
 	}
+	/* Save non-zero nloops even when 0 tuple is returned */
+	else if (nloops.agg.vcnt > 0)
+		instr->nloops = nloops.nsimax->nloops;
 
 	/* Save extra message text for the most interesting winning qExecs. */
 	if (ctx->extratextbuf)
