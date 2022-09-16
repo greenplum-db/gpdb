@@ -1,0 +1,16 @@
+CREATE TEMP TABLE empty_table(a int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+-- We used to incorrectly report "never executed" for a node that returns 0 rows
+-- from every segment. This was misleading because "never executed" should
+-- indicate that the node was never executed by its parent.
+-- explain_processing_off
+EXPLAIN (ANALYZE, TIMING OFF, COSTS OFF, SUMMARY OFF) SELECT a FROM empty_table;
+                                   QUERY PLAN                                    
+------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3) (actual rows=0 loops=1)
+   ->  Seq Scan on empty_table (actual rows=0 loops=1)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(3 rows)
+
+-- explain_processing_on

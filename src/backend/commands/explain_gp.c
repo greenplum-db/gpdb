@@ -973,6 +973,7 @@ cdbexplain_depositStatsToNode(PlanState *planstate, CdbExplain_RecvStatCtx *ctx)
 	 */
 	CdbExplain_NodeSummary *ns;
 	CdbExplain_DepStatAcc ntuples;
+	CdbExplain_DepStatAcc nloops;
 	CdbExplain_DepStatAcc execmemused;
 	CdbExplain_DepStatAcc workmemused;
 	CdbExplain_DepStatAcc workmemwanted;
@@ -999,6 +1000,7 @@ cdbexplain_depositStatsToNode(PlanState *planstate, CdbExplain_RecvStatCtx *ctx)
 
 	/* Initialize per-node accumulators. */
 	cdbexplain_depStatAcc_init0(&ntuples);
+	cdbexplain_depStatAcc_init0(&nloops);
 	cdbexplain_depStatAcc_init0(&execmemused);
 	cdbexplain_depStatAcc_init0(&workmemused);
 	cdbexplain_depStatAcc_init0(&workmemwanted);
@@ -1039,6 +1041,7 @@ cdbexplain_depositStatsToNode(PlanState *planstate, CdbExplain_RecvStatCtx *ctx)
 
 		/* Update per-node accumulators. */
 		cdbexplain_depStatAcc_upd(&ntuples, rsi->ntuples, rsh, rsi, nsi);
+		cdbexplain_depStatAcc_upd(&nloops, rsi->nloops, rsh, rsi, nsi);
 		cdbexplain_depStatAcc_upd(&execmemused, rsi->execmemused, rsh, rsi, nsi);
 		cdbexplain_depStatAcc_upd(&workmemused, rsi->workmemused, rsh, rsi, nsi);
 		cdbexplain_depStatAcc_upd(&workmemwanted, rsi->workmemwanted, rsh, rsi, nsi);
@@ -1078,6 +1081,8 @@ cdbexplain_depositStatsToNode(PlanState *planstate, CdbExplain_RecvStatCtx *ctx)
 	/*
 	 * Put winner's stats into qDisp PlanState's Instrument node.
 	 */
+	if (nloops.agg.vcnt > 0)
+		instr->nloops = nloops.nsimax->nloops;
 	if (ntuples.agg.vcnt > 0)
 	{
 		instr->starttime = ntuples.nsimax->starttime;
@@ -1087,7 +1092,6 @@ cdbexplain_depositStatsToNode(PlanState *planstate, CdbExplain_RecvStatCtx *ctx)
 		instr->total = ntuples.nsimax->total;
 		instr->ntuples = ntuples.nsimax->ntuples;
 		instr->ntuples2 = ntuples.nsimax->ntuples2;
-		instr->nloops = ntuples.nsimax->nloops;
 		instr->nfiltered1 = ntuples.nsimax->nfiltered1;
 		instr->nfiltered2 = ntuples.nsimax->nfiltered2;
 		instr->execmemused = ntuples.nsimax->execmemused;
