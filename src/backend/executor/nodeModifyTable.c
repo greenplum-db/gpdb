@@ -731,7 +731,6 @@ ExecDelete(ModifyTableState *mtstate,
 		   bool *tupleDeleted,
 		   TupleTableSlot **epqreturnslot)
 {
-	/* PlanGenerator planGen = estate->es_plannedstmt->planGen; */
 	ResultRelInfo *resultRelInfo;
 	Relation	resultRelationDesc;
 	TM_Result	result;
@@ -759,34 +758,7 @@ ExecDelete(ModifyTableState *mtstate,
 	/*
 	 * get information on the (current) result relation
 	 */
-	// GPDB_12_MERGE_FIXME: How to do this in new partitioning implementation?
-	// Can we change the way ORCA deletion plans work?
-#if 0
-	if (estate->es_result_partitions && planGen == PLANGEN_OPTIMIZER)
-	{
-		Assert(estate->es_result_partitions->part->parrelid);
-
-#ifdef USE_ASSERT_CHECKING
-		Oid parent = estate->es_result_partitions->part->parrelid;
-#endif
-
-		/* Obtain part for current tuple. */
-		resultRelInfo = slot_get_partition(planSlot, estate, true);
-		estate->es_result_relation_info = resultRelInfo;
-
-#ifdef USE_ASSERT_CHECKING
-		Oid part = RelationGetRelid(resultRelInfo->ri_RelationDesc);
-#endif
-
-		Assert(parent != part);
-	}
-	else
-	{
-		resultRelInfo = estate->es_result_relation_info;
-	}
-#else
 	resultRelInfo = estate->es_result_relation_info;
-#endif
 	resultRelationDesc = resultRelInfo->ri_RelationDesc;
 
 	/* BEFORE ROW DELETE Triggers */

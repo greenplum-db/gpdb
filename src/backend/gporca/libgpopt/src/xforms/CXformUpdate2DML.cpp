@@ -152,28 +152,17 @@ CXformUpdate2DML::Transform(CXformContext *pxfctxt, CXformResult *pxfres,
 	// generate oid column and project operator
 	CExpression *pexprProject = nullptr;
 	CColRef *pcrTableOid = nullptr;
-	if (ptabdesc->IsPartitioned())
-	{
-		// generate a partition selector
-		pexprProject = CXformUtils::PexprLogicalPartitionSelector(
-			mp, ptabdesc, pdrgpcrInsert, pexprAssertConstraints);
-		pcrTableOid = CLogicalPartitionSelector::PopConvert(pexprProject->Pop())
-						  ->PcrOid();
-	}
-	else
-	{
-		// generate a project operator
-		IMDId *pmdidTable = ptabdesc->MDId();
+	// generate a project operator
+	IMDId *pmdidTable = ptabdesc->MDId();
 
-		OID oidTable = CMDIdGPDB::CastMdid(pmdidTable)->Oid();
-		CExpression *pexprOid = CUtils::PexprScalarConstOid(mp, oidTable);
+	OID oidTable = CMDIdGPDB::CastMdid(pmdidTable)->Oid();
+	CExpression *pexprOid = CUtils::PexprScalarConstOid(mp, oidTable);
 
-		pexprProject =
-			CUtils::PexprAddProjection(mp, pexprAssertConstraints, pexprOid);
+	pexprProject =
+		CUtils::PexprAddProjection(mp, pexprAssertConstraints, pexprOid);
 
-		CExpression *pexprPrL = (*pexprProject)[1];
-		pcrTableOid = CUtils::PcrFromProjElem((*pexprPrL)[0]);
-	}
+	CExpression *pexprPrL = (*pexprProject)[1];
+	pcrTableOid = CUtils::PcrFromProjElem((*pexprPrL)[0]);
 
 	GPOS_ASSERT(nullptr != pcrTableOid);
 
