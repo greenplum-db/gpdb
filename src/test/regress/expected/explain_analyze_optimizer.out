@@ -20,7 +20,7 @@ EXPLAIN (ANALYZE, TIMING OFF, COSTS OFF, SUMMARY OFF) SELECT a FROM empty_table;
 ------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3) (actual rows=0 loops=1)
    ->  Seq Scan on empty_table (actual rows=0 loops=1)
- Optimizer: Postgres query optimizer
+ Optimizer: Pivotal Optimizer (GPORCA)
 (3 rows)
 
 -- explain_processing_on
@@ -28,15 +28,16 @@ EXPLAIN (ANALYZE, TIMING OFF, COSTS OFF, SUMMARY OFF) SELECT a FROM empty_table;
 -- be reported
 -- explain_processing_off
 EXPLAIN (ANALYZE, TIMING OFF, COSTS OFF, SUMMARY OFF) SELECT t1.a FROM empty_table t1 join empty_table t2 on t1.a = t2.a;
-                            QUERY PLAN                            
-------------------------------------------------------------------
+                                   QUERY PLAN                                    
+---------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3) (actual rows=0 loops=1)
    ->  Hash Join (actual rows=0 loops=1)
-         Hash Cond: (t1.a = t2.a)
-         ->  Seq Scan on empty_table t1 (actual rows=0 loops=1)
-         ->  Hash (never executed)
-               ->  Seq Scan on empty_table t2 (never executed)
- Optimizer: Postgres query optimizer
-(7 rows)
+         Hash Cond: (empty_table.a = empty_table_1.a)
+         ->  Seq Scan on empty_table (never executed)
+         ->  Hash (actual rows=0 loops=1)
+               Buckets: 524288  Batches: 1  Memory Usage: 4096kB
+               ->  Seq Scan on empty_table empty_table_1 (actual rows=0 loops=1)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(8 rows)
 
 -- explain_processing_on
