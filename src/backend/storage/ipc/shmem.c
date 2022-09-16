@@ -444,6 +444,7 @@ ShmemInitStruct(const char *name, Size size, bool *foundPtr)
 		return structPtr;
 	}
 
+	Assert(strlen(name) < SHMEM_INDEX_KEYSIZE);
 	/* look it up in the shmem index */
 	result = (ShmemIndexEnt *)
 		hash_search(ShmemIndex, name, HASH_ENTER_NULL, foundPtr);
