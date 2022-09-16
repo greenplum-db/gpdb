@@ -2449,7 +2449,8 @@ ExecModifyTable(PlanState *pstate)
 				bool		isNull;
 
 				relkind = resultRelInfo->ri_RelationDesc->rd_rel->relkind;
-				if (relkind == RELKIND_RELATION || relkind == RELKIND_MATVIEW)
+				if (relkind == RELKIND_RELATION || relkind == RELKIND_MATVIEW ||
+					relkind == RELKIND_PARTITIONED_TABLE)
 				{
 					datum = ExecGetJunkAttribute(slot,
 												 junkfilter->jf_junkAttNo,
@@ -2547,6 +2548,10 @@ ExecModifyTable(PlanState *pstate)
 					estate->es_result_relation_info = resultRelInfo;
 				break;
 			case CMD_UPDATE:
+				/* Prepare for tuple routing if needed. */
+				if (castNode(ModifyTable, node->ps.plan)->forceTupleRouting)
+					slot = ExecPrepareTupleRouting(node, estate, proute,
+												   resultRelInfo, slot);
 				if (!AttributeNumberIsValid(action_attno))
 				{
 					/* normal non-split UPDATE */
@@ -2569,14 +2574,22 @@ ExecModifyTable(PlanState *pstate)
 									  true /* splitUpdate */ ,
 									  NULL, NULL);
 				}
+				/* Revert ExecPrepareTupleRouting's state change. */
+				if (castNode(ModifyTable, node->ps.plan)->forceTupleRouting)
+					estate->es_result_relation_info = resultRelInfo;
 				break;
 			case CMD_DELETE:
+				if (castNode(ModifyTable, node->ps.plan)->forceTupleRouting)
+					planSlot = ExecPrepareTupleRouting(node, estate, proute,
+												   resultRelInfo, slot);
 				slot = ExecDelete(node, tupleid, segid, oldtuple, planSlot,
 								  &node->mt_epqstate, estate,
 								  true, node->canSetTag,
 								  false /* changingPart */ ,
 								  false /* splitUpdate */ ,
 								  NULL, NULL);
+				if (castNode(ModifyTable, node->ps.plan)->forceTupleRouting)
+					estate->es_result_relation_info = resultRelInfo;
 				break;
 			default:
 				elog(ERROR, "unknown operation");
@@ -2770,6 +2783,25 @@ ExecInitModifyTable(ModifyTable *node, EState *estate, int eflags)
 
 	/* Get the target relation */
 	rel = (getTargetResultRelInfo(mtstate))->ri_RelationDesc;
+
+	/*
+	 * GPDB dynamic scan nodes optimize memory usage by avoiding the need to
+	 * maintain a data structure for every partition node. In the plan tree
+	 * this is represented as a single dynamic scan node as opposed to an
+	 * append over many leaf partitions. The different plan representations
+	 * require different execution paths in modify table.
+	 *
+	 * In the case of append, a basic scan on a leaf partition requires no
+	 * tuple routing unless an update to the partition key causes the tuple to
+	 * be routed to another relation.
+	 *
+	 * In the case of dynamic scan, the node hierarchy always requires tuple
+	 * routing to find the corresponding relation. If update to a partition key
+	 * causes the tuple to be routed, then we must perform tuple routing a
+	 * second time.
+	 */
+	if (node->forceTupleRouting)
+		update_tuple_routing_needed = true;
 
 	/*
 	 * If it's not a partitioned table after all, UPDATE tuple routing should

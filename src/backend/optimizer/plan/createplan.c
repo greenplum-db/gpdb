@@ -7868,6 +7868,7 @@ make_modifytable(PlannerInfo *root,
 	node->epqParam = epqParam;
 
 	node->isSplitUpdates = is_split_updates;
+	node->forceTupleRouting = false;
 
 	/*
 	 * For each result relation that is a foreign table, allow the FDW to
