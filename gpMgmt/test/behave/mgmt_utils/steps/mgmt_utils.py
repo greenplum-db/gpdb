@@ -432,6 +432,12 @@ def impl(context, content):
     dburl = dbconn.DbURL(hostname=host, port=port, dbname='template1')
     wait_for_desired_query_result(dburl, query, desired_result, utility=True)
 
+    # Wait for replication state to be in 'sync'
+    query = "SELECT sync_state FROM pg_stat_replication;"
+    desired_result = 'sync'
+    dburl = dbconn.DbURL(hostname=host, port=port, dbname='template1')
+    wait_for_desired_query_result(dburl, query, desired_result, utility=True)
+
 @then('the user waits until recovery_progress.file is created in {logdir} and verifies its format')
 def impl(context, logdir):
     attempt = 0
