@@ -1748,6 +1748,11 @@ simplify_EXISTS_query(PlannerInfo *root, Query *query)
 		query->rowMarks)
 		return false;
 
+	/*
+	 * If the whereClause contains some Vars of the parent query or the rest of
+	 * the sub-select refers to any Vars of the parent, this EXISTS sublink is
+	 * a correlated sublink.
+	 */
 	bool is_correlated = contain_vars_of_level(query->jointree->quals, 1) ||
 						 contain_vars_of_level((Node *) query, 1);
 
@@ -1836,6 +1841,10 @@ simplify_EXISTS_query(PlannerInfo *root, Query *query)
 	/*
 	 * Those clauses could be throwed in correlated and uncorrelated sublinks,
 	 * it will not change the correctness of the results, except windowClause.
+	 *
+	 * Because Greenplum will try to simplify the EXISTS sublink that has Window
+	 * Function Node, if we just drop windowClause but not drop WindowFunc node
+	 * for a window agg, it'll cause inconsistent and error will happend.
 	 */
 	if (is_correlated)
 		query->windowClause = NIL;
