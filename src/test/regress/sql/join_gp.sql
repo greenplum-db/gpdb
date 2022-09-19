@@ -7,6 +7,18 @@
 -- m/ERROR:  workfile compresssion is not supported by this build/
 -- end_matchignore
 
+-- Remove Redundant Predicates
+create table redPred1(a int , b int, c int);
+create table redPred2(p int , q int, r int);
+explain select * from redPred1,redPred2 where redPred1.b=redPred2.q and redPred1.b=100;
+
+explain select * from redPred1,redPred2 where redPred1.a=redPred2.p and redPred1.b=redPred2.q and redPred1.b=100;
+
+explain select * from redPred1,redPred2 where redPred1.a=redPred2.p and redPred1.b=redPred2.q and redPred1.a=100;
+
+explain select * from redPred1,redPred2 where (redPred1.c < 500) and redPred1.b=redPred2.q and redPred1.b=100;
+
+explain select * from redPred1,redPred2 where redPred1.a=redPred2.q and redPred1.b=redPred2.r and redPred1.a=100 and redPred2.r=200;
 
 
 --
@@ -714,17 +726,3 @@ where x.a + 1 in (select b from t2_dedupsemi_indexonly);
 
 drop table t1_dedupsemi_indexonly;
 drop table t2_dedupsemi_indexonly;
-
--- Remove Redundant Predicates
-create table redPred1(a int , b int, c int);
-create table redPred2(p int , q int, r int);
-explain select * from redPred1,redPred2 where redPred1.b=redPred2.q and redPred1.b=100;
-
-explain select * from redPred1,redPred2 where redPred1.a=redPred2.p and redPred1.b=redPred2.q and redPred1.b=100;
-
-explain select * from redPred1,redPred2 where redPred1.a=redPred2.p and redPred1.b=redPred2.q and redPred1.a=100;
-
-explain select * from redPred1,redPred2 where (redPred1.c < 500) and redPred1.b=redPred2.q and redPred1.b=100;
-
-explain select * from redPred1,redPred2 where redPred1.a=redPred2.q and redPred1.b=redPred2.r and redPred1.a=100 and redPred2.r=200;
-
