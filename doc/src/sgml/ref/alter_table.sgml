@@ -111,7 +111,7 @@ where partition_element is:
     VALUES (list_value [,...] )
   | START ([datatype] 'start_value') [INCLUSIVE | EXCLUSIVE]
      [ END ([datatype] 'end_value') [INCLUSIVE | EXCLUSIVE] ]
-  | END ([datatype] 'end_value') [INCLUSIVE | EXCLUSIVE]
+     [ EVERY ( [number | datatype] 'interval_value') ]
 [ WITH ( partition_storage_parameter=value [, ... ] ) ]
 [ TABLESPACE tablespace ]
 
