@@ -2724,7 +2724,7 @@ Determines the number of connection slots that are reserved for Greenplum Databa
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|integer < *max\_connections*|3|local, system, restart|
+|integer < *max\_connections*|10|local, system, restart|
 
 ## <a id="tcp_keepalives_count"></a>tcp\_keepalives\_count 
 
