@@ -2321,3 +2321,167 @@ select count(distinct a), sum(b), sum(c) from dqa_f1;
     17 | 2000 | 1000
 (1 row)
 
+-- multi DQA with type conversions
+create table dqa_f3(a character varying, b bigint) distributed by (a);
+insert into dqa_f3 values ('123', 2), ('213', 0), ('231', 2), ('312', 0), ('321', 2), ('132', 1), ('4', 0);
+-- Case 1: When converting the type of column 'a' from 'VARCHAR' to 'TEXT' in DQA expression, instead of generating a new column '(a)::text'
+-- by TupleSplit, we can reference the column 'a' as part of hash-key in Redistribute-Motion directly, since the conversion is binary-compatible.
+-- ->  Redistribute Motion 3:3  (slice2; segments: 3)
+--       Output: b, a, ((b)::text), (AggExprId)
+--       Hash Key: ((b)::text), a, (AggExprId)
+--     ...
+--     ->  TupleSplit
+--           Output: b, a, ((b)::text), AggExprId
+--           Split by Col: (((dqa_f3.b)::text)), (dqa_f3.a)
+--           ->  Seq Scan on public.dqa_f3
+--                 Output: b, a, (b)::text
+select count(distinct (b)::text) as b, count(distinct (a)::text) as a from dqa_f3;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Multiple Distinct Qualified Aggregates are disabled in the optimizer
+ b | a 
+---+---
+ 3 | 7
+(1 row)
+
+explain (verbose, costs off) select count(distinct (b)::text) as b, count(distinct (a)::text) as a from dqa_f3;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Multiple Distinct Qualified Aggregates are disabled in the optimizer
+                                           QUERY PLAN
+------------------------------------------------------------------------------------------------
+ Finalize Aggregate
+   Output: count(DISTINCT ((b)::text)), count(DISTINCT (a)::text)
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Output: (PARTIAL count(DISTINCT ((b)::text))), (PARTIAL count(DISTINCT (a)::text))
+         ->  Partial Aggregate
+               Output: PARTIAL count(DISTINCT ((b)::text)), PARTIAL count(DISTINCT (a)::text)
+               ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                     Output: b, a, ((b)::text), (AggExprId)
+                     Hash Key: ((b)::text), a, (AggExprId)
+                     ->  Streaming HashAggregate
+                           Output: b, a, ((b)::text), (AggExprId)
+                           Group Key: AggExprId, ((dqa_f3.b)::text), dqa_f3.a
+                           ->  TupleSplit
+                                 Output: b, a, ((b)::text), AggExprId
+                                 Split by Col: (((dqa_f3.b)::text)), (dqa_f3.a)
+                                 ->  Seq Scan on public.dqa_f3
+                                       Output: b, a, (b)::text
+ Optimizer: Postgres query optimizer
+ Settings: enable_groupagg = 'off', gp_motion_cost_per_row = '1'
+(19 rows)
+
+-- Case 2: Same as the above one, but convert the type of column 'a' to 'varchar' via binary-compatible types.
+select count(distinct (b)::text) as b, count(distinct (a)::text::varchar) as a from dqa_f3;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Multiple Distinct Qualified Aggregates are disabled in the optimizer
+ b | a 
+---+---
+ 3 | 7
+(1 row)
+
+explain (verbose, costs off) select count(distinct (b)::text) as b, count(distinct (a)::text::varchar) as a from dqa_f3;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Multiple Distinct Qualified Aggregates are disabled in the optimizer
+                                                 QUERY PLAN
+-------------------------------------------------------------------------------------------------------------
+ Finalize Aggregate
+   Output: count(DISTINCT ((b)::text)), count(DISTINCT (a)::character varying)
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Output: (PARTIAL count(DISTINCT ((b)::text))), (PARTIAL count(DISTINCT (a)::character varying))
+         ->  Partial Aggregate
+               Output: PARTIAL count(DISTINCT ((b)::text)), PARTIAL count(DISTINCT (a)::character varying)
+               ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                     Output: b, a, ((b)::text), (AggExprId)
+                     Hash Key: ((b)::text), a, (AggExprId)
+                     ->  Streaming HashAggregate
+                           Output: b, a, ((b)::text), (AggExprId)
+                           Group Key: AggExprId, ((dqa_f3.b)::text), dqa_f3.a
+                           ->  TupleSplit
+                                 Output: b, a, ((b)::text), AggExprId
+                                 Split by Col: (((dqa_f3.b)::text)), (dqa_f3.a)
+                                 ->  Seq Scan on public.dqa_f3
+                                       Output: b, a, (b)::text
+ Optimizer: Postgres query optimizer
+ Settings: enable_groupagg = 'off', gp_motion_cost_per_row = '1'
+(19 rows)
+
+-- Case 3: When converting the type of column 'a' from 'varchar' to 'int' in DQA expression, TupleSplit should generate an additional
+-- column '(a)::integer' as part of hash-key in Redistribute-Motion, since the conversion is not binary-compatible.
+-- ->  Redistribute Motion 3:3  (slice2; segments: 3)
+--       Output: b, a, ((b)::text), ((a)::integer), (AggExprId)
+--       Hash Key: ((b)::text), ((a)::integer), (AggExprId)
+--     ...
+--     ->  TupleSplit
+--           Output: b, a, ((b)::text), ((a)::integer), AggExprId
+--           Split by Col: (((dqa_f3.b)::text)), (((dqa_f3.a)::integer))
+--           ->  Seq Scan on public.dqa_f3
+--                 Output: b, a, (b)::text, (a)::integer
+select count(distinct (b)::text) as b, count(distinct (a)::int) as a from dqa_f3;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Multiple Distinct Qualified Aggregates are disabled in the optimizer
+ b | a 
+---+---
+ 3 | 7
+(1 row)
+
+explain (verbose, costs off) select count(distinct (b)::text) as b, count(distinct (a)::int) as a from dqa_f3;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Multiple Distinct Qualified Aggregates are disabled in the optimizer
+                                            QUERY PLAN
+---------------------------------------------------------------------------------------------------
+ Finalize Aggregate
+   Output: count(DISTINCT ((b)::text)), count(DISTINCT ((a)::integer))
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Output: (PARTIAL count(DISTINCT ((b)::text))), (PARTIAL count(DISTINCT ((a)::integer)))
+         ->  Partial Aggregate
+               Output: PARTIAL count(DISTINCT ((b)::text)), PARTIAL count(DISTINCT ((a)::integer))
+               ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                     Output: b, a, ((b)::text), ((a)::integer), (AggExprId)
+                     Hash Key: ((b)::text), ((a)::integer), (AggExprId)
+                     ->  Streaming HashAggregate
+                           Output: b, a, ((b)::text), ((a)::integer), (AggExprId)
+                           Group Key: AggExprId, ((dqa_f3.b)::text), ((dqa_f3.a)::integer)
+                           ->  TupleSplit
+                                 Output: b, a, ((b)::text), ((a)::integer), AggExprId
+                                 Split by Col: (((dqa_f3.b)::text)), (((dqa_f3.a)::integer))
+                                 ->  Seq Scan on public.dqa_f3
+                                       Output: b, a, (b)::text, (a)::integer
+ Optimizer: Postgres query optimizer
+ Settings: enable_groupagg = 'off', gp_motion_cost_per_row = '1'
+(19 rows)
+
+-- Case 4: When converting the type of column 'a' from 'varchar' to 'int' to 'varchar', TupleSplit should generate an additional
+-- column '(a)::integer::varchar' as part of hash-key in Redistribute-Motion.
+select count(distinct (b)::text) as b, count(distinct (a)::int::varchar) as a from dqa_f3;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Multiple Distinct Qualified Aggregates are disabled in the optimizer
+ b | a 
+---+---
+ 3 | 7
+(1 row)
+
+explain (verbose, costs off) select count(distinct (b)::text) as b, count(distinct (a)::int::varchar) as a from dqa_f3;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Multiple Distinct Qualified Aggregates are disabled in the optimizer
+                                                       QUERY PLAN
+------------------------------------------------------------------------------------------------------------------------
+ Finalize Aggregate
+   Output: count(DISTINCT ((b)::text)), count(DISTINCT (((a)::integer)::character varying))
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Output: (PARTIAL count(DISTINCT ((b)::text))), (PARTIAL count(DISTINCT (((a)::integer)::character varying)))
+         ->  Partial Aggregate
+               Output: PARTIAL count(DISTINCT ((b)::text)), PARTIAL count(DISTINCT (((a)::integer)::character varying))
+               ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                     Output: b, a, ((b)::text), (((a)::integer)::character varying), (AggExprId)
+                     Hash Key: ((b)::text), (((a)::integer)::character varying), (AggExprId)
+                     ->  Streaming HashAggregate
+                           Output: b, a, ((b)::text), (((a)::integer)::character varying), (AggExprId)
+                           Group Key: AggExprId, ((dqa_f3.b)::text), (((dqa_f3.a)::integer)::character varying)
+                           ->  TupleSplit
+                                 Output: b, a, ((b)::text), (((a)::integer)::character varying), AggExprId
+                                 Split by Col: (((dqa_f3.b)::text)), ((((dqa_f3.a)::integer)::character varying))
+                                 ->  Seq Scan on public.dqa_f3
+                                       Output: b, a, (b)::text, ((a)::integer)::character varying
+ Optimizer: Postgres query optimizer
+ Settings: enable_groupagg = 'off', gp_motion_cost_per_row = '1'
+(19 rows)
+
