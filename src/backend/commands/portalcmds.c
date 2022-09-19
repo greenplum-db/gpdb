@@ -192,8 +192,8 @@ PerformCursorOpen(DeclareCursorStmt *cstmt, ParamListInfo params,
 
 	if (PortalIsParallelRetrieveCursor(portal))
 	{
-		pg_atomic_add_fetch_u32((pg_atomic_uint32 *) parallelCursorCount, 1);
-		if (gp_max_parallel_cursors != -1 && pg_atomic_read_u32((pg_atomic_uint32 *) parallelCursorCount) > gp_max_parallel_cursors)
+		if (gp_max_parallel_cursors != -1 && 
+		pg_atomic_add_fetch_u32((pg_atomic_uint32 *) parallelCursorCount, 1) > gp_max_parallel_cursors)
 		{
 			pg_atomic_sub_fetch_u32((pg_atomic_uint32 *) parallelCursorCount, 1);
 			ereport(ERROR,
