@@ -1,6 +1,8 @@
 set optimizer_trace_fallback=on;
 -- sanity check of system catalog
 SELECT attrelid, attname, attgenerated FROM pg_attribute WHERE attgenerated NOT IN ('', 's');
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Queries on master-only tables
  attrelid | attname | attgenerated 
 ----------+---------+--------------
 (0 rows)
@@ -8,6 +10,8 @@ SELECT attrelid, attname, attgenerated FROM pg_attribute WHERE attgenerated NOT 
 CREATE TABLE gtest0 (a int PRIMARY KEY, b int GENERATED ALWAYS AS (55) STORED);
 CREATE TABLE gtest1 (a int PRIMARY KEY, b int GENERATED ALWAYS AS (a * 2) STORED);
 SELECT table_name, column_name, column_default, is_nullable, is_generated, generation_expression FROM information_schema.columns WHERE table_name LIKE 'gtest_' ORDER BY 1, 2;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Non-default collation
  table_name | column_name | column_default | is_nullable | is_generated | generation_expression 
 ------------+-------------+----------------+-------------+--------------+-----------------------
  gtest0     | a           |                | NO          | NEVER        | 
@@ -17,12 +21,36 @@ SELECT table_name, column_name, column_default, is_nullable, is_generated, gener
 (4 rows)
 
 SELECT table_name, column_name, dependent_column FROM information_schema.column_column_usage ORDER BY 1, 2, 3;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Non-default collation
  table_name | column_name | dependent_column 
 ------------+-------------+------------------
  gtest1     | a           | b
 (1 row)
 
 \d gtest1
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Non-default collation
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Queries on master-only tables
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Non-default collation
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Non-default collation
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Non-default collation
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Non-default collation
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Non-default collation
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Non-default collation
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Non-default collation
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Queries on master-only tables
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Non-default collation
                             Table "public.gtest1"
  Column |  Type   | Collation | Nullable |              Default               
 --------+---------+-----------+----------+------------------------------------
@@ -208,6 +236,26 @@ SELECT * FROM gtest1_1;
 (0 rows)
 
 \d gtest1_1
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Non-default collation
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Queries on master-only tables
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Non-default collation
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Non-default collation
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Non-default collation
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Non-default collation
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Non-default collation
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Non-default collation
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Queries on master-only tables
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Non-default collation
                            Table "public.gtest1_1"
  Column |  Type   | Collation | Nullable |              Default               
 --------+---------+-----------+----------+------------------------------------
@@ -223,6 +271,8 @@ SELECT * FROM gtest1_1;
 (1 row)
 
 SELECT * FROM gtest1;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Inherited tables
  a | b 
 ---+---
  3 | 6
@@ -281,6 +331,8 @@ SELECT * FROM gtest3a ORDER BY a;
 -- COPY
 TRUNCATE gtest1;
 INSERT INTO gtest1 (a) VALUES (1), (2);
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Inherited tables
 COPY gtest1 TO stdout;
 1
 2
@@ -292,6 +344,8 @@ COPY gtest1 (a, b) FROM stdin;
 ERROR:  column "b" is a generated column
 DETAIL:  Generated columns cannot be used in COPY.
 SELECT * FROM gtest1 ORDER BY a;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Inherited tables
  a | b 
 ---+---
  1 | 2
@@ -363,6 +417,28 @@ SELECT * FROM gtest_tableoid;
 CREATE TABLE gtest10 (a int PRIMARY KEY, b int, c int GENERATED ALWAYS AS (b * 2) STORED);
 ALTER TABLE gtest10 DROP COLUMN b;
 \d gtest10
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Non-default collation
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Queries on master-only tables
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Non-default collation
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Non-default collation
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Non-default collation
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Non-default collation
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Non-default collation
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Non-default collation
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Non-default collation
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Queries on master-only tables
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Non-default collation
               Table "public.gtest10"
  Column |  Type   | Collation | Nullable | Default 
 --------+---------+-----------+----------+---------
@@ -455,6 +531,28 @@ CREATE INDEX gtest22c_b_idx ON gtest22c (b);
 CREATE INDEX gtest22c_expr_idx ON gtest22c ((b * 3));
 CREATE INDEX gtest22c_pred_idx ON gtest22c (a) WHERE b > 0;
 \d gtest22c
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Non-default collation
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Queries on master-only tables
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Non-default collation
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Non-default collation
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Non-default collation
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Non-default collation
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Non-default collation
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Non-default collation
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Non-default collation
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Queries on master-only tables
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Non-default collation
                            Table "public.gtest22c"
  Column |  Type   | Collation | Nullable |              Default               
 --------+---------+-----------+----------+------------------------------------
@@ -474,7 +572,7 @@ EXPLAIN (COSTS OFF) SELECT * FROM gtest22c WHERE b = 4;
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Index Scan using gtest22c_b_idx on gtest22c
          Index Cond: (b = 4)
- Optimizer: Postgres query optimizer
+ Optimizer: Pivotal Optimizer (GPORCA)
 (4 rows)
 
 SELECT * FROM gtest22c WHERE b = 4;
@@ -484,12 +582,12 @@ SELECT * FROM gtest22c WHERE b = 4;
 (1 row)
 
 EXPLAIN (COSTS OFF) SELECT * FROM gtest22c WHERE b * 3 = 6;
-                      QUERY PLAN                      
-------------------------------------------------------
+                QUERY PLAN                
+------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  Index Scan using gtest22c_expr_idx on gtest22c
-         Index Cond: ((b * 3) = 6)
- Optimizer: Postgres query optimizer
+   ->  Seq Scan on gtest22c
+         Filter: ((b * 3) = 6)
+ Optimizer: Pivotal Optimizer (GPORCA)
 (4 rows)
 
 SELECT * FROM gtest22c WHERE b * 3 = 6;
@@ -499,13 +597,14 @@ SELECT * FROM gtest22c WHERE b * 3 = 6;
 (1 row)
 
 EXPLAIN (COSTS OFF) SELECT * FROM gtest22c WHERE a = 1 AND b > 0;
-                      QUERY PLAN                      
-------------------------------------------------------
+                    QUERY PLAN                     
+---------------------------------------------------
  Gather Motion 1:1  (slice1; segments: 1)
-   ->  Index Scan using gtest22c_pred_idx on gtest22c
-         Index Cond: (a = 1)
- Optimizer: Postgres query optimizer
-(4 rows)
+   ->  Index Scan using gtest22c_b_idx on gtest22c
+         Index Cond: (b > 0)
+         Filter: (a = 1)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(5 rows)
 
 SELECT * FROM gtest22c WHERE a = 1 AND b > 0;
  a | b 
@@ -524,6 +623,34 @@ CREATE TABLE gtest23x (a int PRIMARY KEY, b int GENERATED ALWAYS AS (a * 2) STOR
 ERROR:  invalid ON DELETE action for foreign key constraint containing generated column
 CREATE TABLE gtest23b (a int PRIMARY KEY, b int GENERATED ALWAYS AS (a * 2) STORED REFERENCES gtest23a (x));
 \d gtest23b
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Non-default collation
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Queries on master-only tables
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Non-default collation
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Non-default collation
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Non-default collation
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Non-default collation
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Queries on master-only tables
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Queries on master-only tables
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Non-default collation
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Non-default collation
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Non-default collation
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Queries on master-only tables
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Queries on master-only tables
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Non-default collation
                            Table "public.gtest23b"
  Column |  Type   | Collation | Nullable |              Default               
 --------+---------+-----------+----------+------------------------------------
@@ -619,6 +746,26 @@ ERROR:  cannot alter type of a column used by a generated column
 DETAIL:  Column "a" is used by generated column "b".
 ALTER TABLE gtest27 ALTER COLUMN b TYPE numeric;
 \d gtest27
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Non-default collation
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Queries on master-only tables
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Non-default collation
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Non-default collation
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Non-default collation
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Non-default collation
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Non-default collation
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Non-default collation
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Queries on master-only tables
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Non-default collation
                              Table "public.gtest27"
  Column |  Type   | Collation | Nullable |               Default                
 --------+---------+-----------+----------+--------------------------------------
@@ -637,6 +784,26 @@ ERROR:  generation expression for column "b" cannot be cast automatically to typ
 ALTER TABLE gtest27 ALTER COLUMN b DROP DEFAULT;  -- error
 ERROR:  column "b" of relation "gtest27" is a generated column
 \d gtest27
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Non-default collation
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Queries on master-only tables
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Non-default collation
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Non-default collation
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Non-default collation
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Non-default collation
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Non-default collation
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Non-default collation
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Queries on master-only tables
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Non-default collation
                              Table "public.gtest27"
  Column |  Type   | Collation | Nullable |               Default                
 --------+---------+-----------+----------+--------------------------------------
@@ -728,6 +895,8 @@ INFO:  gtest4: AFTER: new = (-2,-4,)  (seg0 127.0.1.1:7002 pid=179471)
 alter table gtest26 drop column distkey;
 NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
 UPDATE gtest26 SET a = a * -2;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: UPDATE on a table with UPDATE triggers
 INFO:  gtest1: BEFORE: old = (-2,-4)  (seg0 127.0.1.1:7002 pid=179471)
 INFO:  gtest1: BEFORE: new = (4,)  (seg0 127.0.1.1:7002 pid=179471)
 INFO:  gtest3: AFTER: old = (-2,-4)  (seg0 127.0.1.1:7002 pid=179471)
@@ -769,6 +938,8 @@ CREATE TRIGGER gtest11 BEFORE UPDATE OF b ON gtest26
   FOR EACH ROW
   EXECUTE PROCEDURE gtest_trigger_func3();
 UPDATE gtest26 SET a = 1 WHERE a = 0;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: UPDATE on a table with UPDATE triggers
 NOTICE:  OK
 DROP TRIGGER gtest11 ON gtest26;
 TRUNCATE gtest26;
@@ -794,6 +965,8 @@ CREATE TRIGGER gtest12_03 BEFORE UPDATE ON gtest26
   EXECUTE PROCEDURE gtest_trigger_func();
 INSERT INTO gtest26 (a) VALUES (1);
 UPDATE gtest26 SET a = 11 WHERE a = 1;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: UPDATE on a table with UPDATE triggers
 INFO:  gtest12_01: BEFORE: old = (1,2)
 INFO:  gtest12_01: BEFORE: new = (11,)
 INFO:  gtest12_03: BEFORE: old = (1,2)
@@ -814,6 +987,26 @@ CREATE TABLE gtest28a (
 ALTER TABLE gtest28a DROP COLUMN a;
 CREATE TABLE gtest28b (LIKE gtest28a INCLUDING GENERATED);
 \d gtest28*
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Non-default collation
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Queries on master-only tables
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Non-default collation
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Non-default collation
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Non-default collation
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Non-default collation
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Non-default collation
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Non-default collation
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Queries on master-only tables
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Non-default collation
                            Table "public.gtest28a"
  Column |  Type   | Collation | Nullable |              Default               
 --------+---------+-----------+----------+------------------------------------
@@ -822,6 +1015,24 @@ CREATE TABLE gtest28b (LIKE gtest28a INCLUDING GENERATED);
  x      | integer |           |          | generated always as (b * 2) stored
 Distributed randomly
 
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Queries on master-only tables
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Non-default collation
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Non-default collation
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Non-default collation
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Non-default collation
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Non-default collation
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Non-default collation
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Queries on master-only tables
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Non-default collation
                            Table "public.gtest28b"
  Column |  Type   | Collation | Nullable |              Default               
 --------+---------+-----------+----------+------------------------------------
