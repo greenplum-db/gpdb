@@ -3231,7 +3231,6 @@ static void handle_post_request(request_t *r, int header_end)
 		memcpy(r->in.dbuf, data_start, data_bytes_in_req);
 		r->in.dbuftop += data_bytes_in_req;
 
-
 		r->in.davailable -= data_bytes_in_req;
 
 		/* only write it out if no more data is expected */
@@ -3264,11 +3263,14 @@ static void handle_post_request(request_t *r, int header_end)
 	 * we've consumed all data that came in the first buffer (with the request)
 	 * if we're still expecting more data, get it from socket now and process it.
 	 */
-	while(r->in.davailable > 0)
+	while(r->in.davailable > 0 || r->in.cflag != 0)
 	{
 		size_t want;
 		ssize_t n = 0;
 		size_t buf_space_left = r->in.dbufmax - r->in.dbuftop;
+		if(r->zstd){
+			buf_space_left = r->in.dbufmax - r->in.cbuftop;
+		}
 
 		if (r->in.davailable > buf_space_left)
 			want = buf_space_left;
@@ -3276,7 +3278,14 @@ static void handle_post_request(request_t *r, int header_end)
 			want = r->in.davailable;
 
 		/* read from socket into data buf */
-		n = gpfdist_receive(r, r->in.dbuf + r->in.dbuftop, want);
+		if (r->zstd && !r->in.cflag)
+		{
+			n = gpfdist_receive(r, r->in.cbuf + r->in.cbuftop, want);
+		}
+		else
+		{
+			n = gpfdist_receive(r, r->in.dbuf + r->in.dbuftop, want);
+		}
 
 		if (n < 0)
 		{
@@ -3309,7 +3318,15 @@ static void handle_post_request(request_t *r, int header_end)
 			r->bytes += n;
 			r->last = apr_time_now();
 			r->in.davailable -= n;
-			r->in.dbuftop += n;
+			if (!r->zstd) 
+			{
+				r->in.dbuftop += n;
+			}
+			else
+			{
+				r->in.cbuftop += n;
+			}
+			
 
 			/* success is a flag to check whether data is written into file successfully.
 			 * There is no need to do anything when success is less than 0, since all
@@ -3318,7 +3335,8 @@ static void handle_post_request(request_t *r, int header_end)
 			int success = 0;
 
 			/* if filled our buffer or no more data expected, write it */
-			if (r->in.dbufmax == r->in.dbuftop || r->in.davailable == 0)
+			if (r->in.dbufmax == r->in.dbuftop || r->in.davailable == 0 || 
+				(r->zstd && r->in.dbufmax == r->in.cbuftop))
 			{
 #ifdef USE_ZSTD
 				/* only write up to end of last row */

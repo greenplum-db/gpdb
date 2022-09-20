@@ -61,7 +61,8 @@ typedef struct curlhandle_t
 #ifdef USE_ZSTD
 typedef struct zstdcontext_t
 {
-	ZSTD_DCtx	   *zstd_dctx;		/* The zstd context */
+	ZSTD_DCtx	   *zstd_dctx;		/* The zstd decompression context */
+	ZSTD_CCtx	   *zstd_cctx;		/* The zstd decompression context */
 
 	ResourceOwner owner;			/* owner of this handle */
 	struct zstdcontext_t *next;
@@ -1319,6 +1320,9 @@ url_curl_fopen(char *url, bool forwrite, extvar_t *ev, CopyState pstate)
 		set_httpheader(file, "X-GP-PROTO", "0");
 		set_httpheader(file, "X-GP-SEQ", "1");
 		set_httpheader(file, "Content-Type", "text/xml");
+#ifdef USE_ZSTD
+		set_httpheader(file, "X-GP-ZSTD", "1");
+#endif
 	}
 	else
 	{
@@ -1458,6 +1462,7 @@ url_curl_fopen(char *url, bool forwrite, extvar_t *ev, CopyState pstate)
 		int			bufsize = writable_external_table_bufsize * 1024;
 
 		file->out.ptr = (char *) palloc(bufsize);
+		file->out.cptr = (char *) palloc(bufsize);
 		file->out.max = bufsize;
 		file->out.bot = file->out.top = 0;
 	}
@@ -1546,10 +1551,6 @@ url_curl_fclose(URL_FILE *fileg, bool failOnError, const char *relname)
 	memset(&file->block, 0, sizeof(file->block));
 
 	pfree(file->common.url);
-#ifdef USE_ZSTD
-	if(file->zstd && !file->for_write)
-		destroy_zstdcontext(file->zstd_ctx);
-#endif
 
 	pfree(file);
 }
@@ -1896,6 +1897,7 @@ gp_proto0_write(URL_CURL_FILE *file, CopyState pstate)
 {	
 	char*		buf;
 	int		nbytes;
+<<<<<<< HEAD
 #ifdef USE_ZSTD
 	if(file->zstd){
 		nbytes = compress_zstd_data(file);
@@ -1907,6 +1909,19 @@ gp_proto0_write(URL_CURL_FILE *file, CopyState pstate)
 		buf = file->out.ptr;
 	 	nbytes = file->out.top;
 	}
+=======
+	if(file->zstd){
+#ifdef USE_ZSTD
+		nbytes = compress_zstd_data(file);
+		buf = file->out.cptr;
+#endif
+	}
+	else{
+		buf = file->out.ptr;
+	 	nbytes = file->out.top;
+	}
+	
+>>>>>>> add_gpdb7_to_gpfdist_compress
 
 	if (nbytes == 0)
 		return;
@@ -2006,6 +2021,7 @@ curl_fwrite(char *buf, int nbytes, URL_CURL_FILE *file, CopyState pstate)
 			if (!newbuf)
 				elog(ERROR, "out of memory (curl_fwrite)");
 			file->out.ptr = newbuf;
+<<<<<<< HEAD
 			
 			if (file->zstd) 
 			{
@@ -2014,6 +2030,13 @@ curl_fwrite(char *buf, int nbytes, URL_CURL_FILE *file, CopyState pstate)
 					elog(ERROR, "out of compress memory (curl_fwrite)");
 				file->out.cptr = newbuf;
 			}
+=======
+
+			newbuf = repalloc(file->out.cptr, n);
+			if (!newbuf)
+				elog(ERROR, "out of compress memory (curl_fwrite)");
+			file->out.cptr = newbuf;
+>>>>>>> add_gpdb7_to_gpfdist_compress
 
 			file->out.max = n;
 
