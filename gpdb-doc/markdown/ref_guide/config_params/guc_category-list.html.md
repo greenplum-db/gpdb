@@ -158,7 +158,6 @@ The following parameters control the types of plan operations the Postgres Plann
 - [gp_enable_predicate_propagation](guc-list.html#gp_enable_predicate_propagation)
 - [gp_enable_preunique](guc-list.html#gp_enable_preunique)
 - [gp_enable_relsize_collection](guc-list.html#gp_enable_relsize_collection)
-- [gp_enable_sort_distinct](guc-list.html#gp_enable_sort_distinct)
 - [gp_enable_sort_limit](guc-list.html#gp_enable_sort_limit)
 
 ### <a id="topic23"></a>Postgres Planner Costing Parameters 
@@ -183,7 +182,6 @@ These parameters adjust the amount of data sampled by an `ANALYZE` operation. Ad
 
 ### <a id="topic25"></a>Sort Operator Configuration Parameters 
 
-- [gp_enable_sort_distinct](guc-list.html#gp_enable_sort_distinct)
 - [gp_enable_sort_limit](guc-list.html#gp_enable_sort_limit)
 
 ### <a id="topic26"></a>Aggregate Operator Configuration Parameters 

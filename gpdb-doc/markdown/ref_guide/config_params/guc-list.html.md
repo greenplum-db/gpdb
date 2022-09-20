@@ -787,14 +787,6 @@ The parameter can be set for a database system or a session. The parameter canno
 |-----------|-------|-------------------|
 |Boolean|true|master, session, reload|
 
-## <a id="gp_enable_sort_distinct"></a>gp\_enable\_sort\_distinct 
-
-Enable duplicates to be removed while sorting.
-
-|Value Range|Default|Set Classifications|
-|-----------|-------|-------------------|
-|Boolean|on|master, session, reload|
-
 ## <a id="gp_enable_sort_limit"></a>gp\_enable\_sort\_limit 
 
 Enable `LIMIT` operation to be performed while sorting. Sorts more efficiently when the plan requires the first *limit\_number* of rows at most.
