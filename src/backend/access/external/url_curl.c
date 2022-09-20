@@ -46,7 +46,8 @@ typedef struct curlhandle_t
 {
 	CURL			*handle;		/* The curl handle */
 #ifdef USE_ZSTD
-	ZSTD_DCtx		*zstd_dctx;		/* The zstd context */
+	ZSTD_DCtx		*zstd_dctx;		/* The zstd decompression context */
+	ZSTD_CCtx		*zstd_cctx;		/* The zstd compression context */
 #endif
 	struct curl_slist *x_httpheader;	/* list of headers */
 	bool		in_multi_handle;	/* T, if the handle is in global
@@ -60,7 +61,8 @@ typedef struct curlhandle_t
 #ifdef USE_ZSTD
 typedef struct zstdcontext_t
 {
-	ZSTD_DCtx	   *zstd_dctx;		/* The zstd context */
+	ZSTD_DCtx	   *zstd_dctx;		/* The zstd decompression context */
+	ZSTD_CCtx	   *zstd_cctx;		/* The zstd decompression context */
 
 	ResourceOwner owner;			/* owner of this handle */
 	struct zstdcontext_t *next;
@@ -96,7 +98,8 @@ typedef struct
 
 	struct
 	{
-		char	   *ptr;		/* palloc-ed buffer */
+		char	   	*ptr;		/* palloc-ed buffer */
+		char		*cptr;
 		int			max;
 		int			bot,
 					top;
@@ -129,6 +132,7 @@ typedef struct
 #define HOST_NAME_SIZE 100
 #define FDIST_TIMEOUT  408
 #define MAX_TRY_WAIT_TIME 64
+#define MIN_BUFFER_SIZE 64
 
 /*
  * SSL support GUCs - should be added soon. Until then we will use stubs
@@ -203,6 +207,14 @@ static bool url_curl_resowner_callback_registered;
 static zstdcontext_t *open_zstd_context;
 static bool zstd_resowner_callback_registered;
 
+static int
+compress_zstd_data(URL_CURL_FILE *file)
+{
+	int comlen = ZSTD_compressCCtx(file->curl->zstd_cctx, file->out.cptr, file->out.top, file->out.ptr, file->out.top, file->zstd);
+
+	return comlen;
+}
+
 static zstdcontext_t *
 create_zstdcontext(void)
 {
@@ -210,6 +222,7 @@ create_zstdcontext(void)
 
 	ctx = MemoryContextAlloc(TopMemoryContext, sizeof(zstdcontext_t));
 	ctx->zstd_dctx = NULL;
+	ctx->zstd_cctx = NULL;
 
 	ctx->owner = CurrentResourceOwner;
 	ctx->prev = NULL;
@@ -238,6 +251,14 @@ destroy_zstdcontext(zstdcontext_t *ctx)
 		ZSTD_freeDCtx(ctx->zstd_dctx);
 		ctx->zstd_dctx = NULL;
 	}
+
+	if (ctx->zstd_cctx)
+	{
+		/* cleanup */
+		ZSTD_freeCCtx(ctx->zstd_cctx);
+		ctx->zstd_cctx = NULL;
+	}
+
 
 	pfree(ctx);
 }
@@ -333,6 +354,11 @@ destroy_curlhandle(curlhandle_t *h)
 	{
 		ZSTD_freeDCtx(h->zstd_dctx);
 		h->zstd_dctx = NULL;
+	}
+	if (h->zstd_cctx) 
+	{
+		ZSTD_freeCCtx(h->zstd_cctx);
+		h->zstd_cctx = NULL;
 	}
 #endif
 	pfree(h);
@@ -483,7 +509,13 @@ header_callback(void *ptr_, size_t size, size_t nmemb, void *userp)
 			buf[i] = 0;
 #ifdef USE_ZSTD
 			url->zstd = strtol(buf, 0, 0);
-			if (!url->for_write && url->zstd)
+
+			if (url->for_write && url->zstd)
+			{	
+				url->curl->zstd_cctx = ZSTD_createCCtx();
+				url->lastsize = 0;
+			}
+			else if (url->zstd)
 			{
 				url->curl->zstd_dctx = ZSTD_createDCtx();
 				url->lastsize = ZSTD_initDStream(url->curl->zstd_dctx);
@@ -1364,6 +1396,9 @@ url_curl_fopen(char *url, bool forwrite, extvar_t *ev, CopyState pstate)
 		set_httpheader(file, "X-GP-PROTO", "0");
 		set_httpheader(file, "X-GP-SEQ", "1");
 		set_httpheader(file, "Content-Type", "text/xml");
+#ifdef USE_ZSTD
+		set_httpheader(file, "X-GP-ZSTD", "1");
+#endif
 	}
 	else
 	{
@@ -1501,6 +1536,7 @@ url_curl_fopen(char *url, bool forwrite, extvar_t *ev, CopyState pstate)
 		int			bufsize = writable_external_table_bufsize * 1024;
 
 		file->out.ptr = (char *) palloc(bufsize);
+		file->out.cptr = (char *) palloc(bufsize);
 		file->out.max = bufsize;
 		file->out.bot = file->out.top = 0;
 	}
@@ -1576,16 +1612,19 @@ url_curl_fclose(URL_FILE *fileg, bool failOnError, const char *relname)
 		file->out.ptr = NULL;
 	}
 
+	if (file->out.cptr)
+	{
+		Assert(file->for_write);
+		pfree(file->out.cptr);
+		file->out.cptr = NULL;
+	}
+
 	file->gp_proto = 0;
 	file->error = file->eof = 0;
 	memset(&file->in, 0, sizeof(file->in));
 	memset(&file->block, 0, sizeof(file->block));
 
 	pfree(file->common.url);
-#ifdef USE_ZSTD
-	if(file->zstd && !file->for_write)
-		destroy_zstdcontext(file->zstd_ctx);
-#endif
 
 	pfree(file);
 }
@@ -1914,6 +1953,7 @@ gp_proto1_read(char *buf, int bufsz, URL_CURL_FILE *file, CopyState pstate, char
 
 	return n;
 }
+
 /*
  * gp_proto0_write
  *
@@ -1922,9 +1962,20 @@ gp_proto1_read(char *buf, int bufsz, URL_CURL_FILE *file, CopyState pstate, char
  */
 static void
 gp_proto0_write(URL_CURL_FILE *file, CopyState pstate)
-{
-	char*		buf = file->out.ptr;
-	int		nbytes = file->out.top;
+{	
+	char*		buf;
+	int		nbytes;
+	if(file->zstd){
+#ifdef USE_ZSTD
+		nbytes = compress_zstd_data(file);
+		buf = file->out.cptr;
+#endif
+	}
+	else{
+		buf = file->out.ptr;
+	 	nbytes = file->out.top;
+	}
+	
 
 	if (nbytes == 0)
 		return;
@@ -2021,11 +2072,15 @@ curl_fwrite(char *buf, int nbytes, URL_CURL_FILE *file, CopyState pstate)
 			char*	newbuf;
 
 			newbuf = repalloc(file->out.ptr, n);
-
 			if (!newbuf)
 				elog(ERROR, "out of memory (curl_fwrite)");
-
 			file->out.ptr = newbuf;
+
+			newbuf = repalloc(file->out.cptr, n);
+			if (!newbuf)
+				elog(ERROR, "out of compress memory (curl_fwrite)");
+			file->out.cptr = newbuf;
+
 			file->out.max = n;
 
 			Assert(nbytes < file->out.max);
