@@ -148,6 +148,7 @@ The following parameters control the types of plan operations the Postgres Plann
 - [enable_seqscan](guc-list.html#enable_seqscan)
 - [enable_sort](guc-list.html#enable_sort)
 - [enable_tidscan](guc-list.html#enable_tidscan)
+- [gp_eager_two_phase_agg](guc-list.html#gp_eager_two_phase_agg)
 - [gp_enable_agg_distinct](guc-list.html#gp_enable_agg_distinct)
 - [gp_enable_agg_distinct_pruning](guc-list.html#gp_enable_agg_distinct_pruning)
 - [gp_enable_direct_dispatch](guc-list.html#gp_enable_direct_dispatch)

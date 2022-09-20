@@ -655,6 +655,16 @@ Enables plans that can dynamically eliminate the scanning of partitions.
 |-----------|-------|-------------------|
 |Boolean|on|master, session, reload|
 
+## <a id="gp_eager_two_phase_agg"></a>gp\_eager\_two\_phase\_agg
+
+Activates or deactivates two-phase aggregation for the Postgres Planner.
+
+The default value is `off`; the Planner chooses the best aggregate path for a query based on the cost. When set to `on`, the Planner adds a disable cost to each of the first stage aggregate paths, which in turn forces the Planner to generate and choose a multi-stage aggregate path.
+
+|Value Range|Default|Set Classifications|
+|-----------|-------|-------------------|
+|Boolean|off|master, session, reload|
+
 ## <a id="gp_enable_agg_distinct"></a>gp\_enable\_agg\_distinct 
 
  Activates or deactivates  two-phase aggregation to compute a single distinct-qualified aggregate. This applies only to subqueries that include a single distinct-qualified aggregate function.
