@@ -135,10 +135,7 @@ DROP TABLE t_concurrent_update;
 1q:
 2q:
 
--- Currently the DML node (modification variant in ORCA) doesn't support EPQ
--- routine so concurrent modification is not possible in this case. User have
--- to be informed to fallback to postgres optimizer.
--- This test makes sense just for ORCA
+-- check that orca concurrent delete transaction won't delete tuple, updated in other transaction (which doesn't match predicate anymore)
 create table test as select 0 as i distributed randomly;
 -- in session 1, turn off the optimizer so it will invoke heap_update
 1: set optimizer = off;
@@ -147,8 +144,21 @@ create table test as select 0 as i distributed randomly;
 -- in session 2, in case of ORCA DML invokes EPQ
 -- the following SQL will hang due to XID lock
 2&: delete from test where i = 0;
--- commit session1's transaction so the above session2 will continue and emit
--- error about serialization failure in case of ORCA
+1: end;
+2<:
+drop table test;
+1q:
+2q:
+
+-- check that orca concurrent delete transaction will delete tuple, updated in other transaction (which still matches predicate)
+create table test as select 0 as i distributed randomly;
+-- in session 1, turn off the optimizer so it will invoke heap_update
+1: set optimizer = off;
+1: begin;
+1: update test set i = i;
+-- in session 2, in case of ORCA DML invokes EPQ
+-- the following SQL will hang due to XID lock
+2&: delete from test where i = 0;
 1: end;
 2<:
 drop table test;
