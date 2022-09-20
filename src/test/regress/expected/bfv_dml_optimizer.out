@@ -671,11 +671,11 @@ explain delete from foo using (select a from foo union all select b from bar) v;
    ->  Result  (cost=0.00..1765380.23 rows=67 width=18)
          ->  Nested Loop  (cost=0.00..1765380.23 rows=67 width=14)
                Join Filter: true
-               ->  Seq Scan on foo foo_1  (cost=0.00..431.00 rows=4 width=14)
+               ->  Seq Scan on foo  (cost=0.00..431.00 rows=4 width=14)
                ->  Materialize  (cost=0.00..862.00 rows=20 width=1)
                      ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..862.00 rows=20 width=1)
                            ->  Append  (cost=0.00..862.00 rows=7 width=1)
-                                 ->  Seq Scan on foo  (cost=0.00..431.00 rows=4 width=1)
+                                 ->  Seq Scan on foo foo_1  (cost=0.00..431.00 rows=4 width=1)
                                  ->  Seq Scan on bar  (cost=0.00..431.00 rows=4 width=1)
  Optimizer: Pivotal Optimizer (GPORCA)
 (11 rows)

@@ -369,7 +369,7 @@ EXPLAIN (costs off) UPDATE rw_view1 SET a=6 WHERE a=5;
          ->  Sort
                Sort Key: (DMLAction)
                ->  Redistribute Motion 3:3  (slice1; segments: 3)
-                     Hash Key: base_tbl.a
+                     Hash Key: a
                      ->  Split
                            ->  Result
                                  ->  Index Scan using base_tbl_pkey on base_tbl
@@ -449,7 +449,7 @@ EXPLAIN (costs off) UPDATE rw_view2 SET aaa=5 WHERE aaa=4;
          ->  Sort
                Sort Key: (DMLAction)
                ->  Redistribute Motion 3:3  (slice1; segments: 3)
-                     Hash Key: base_tbl.a
+                     Hash Key: a
                      ->  Split
                            ->  Result
                                  ->  Index Scan using base_tbl_pkey on base_tbl
@@ -2079,7 +2079,7 @@ EXPLAIN (costs off) INSERT INTO rw_view1 VALUES (2, 'New row 2');
                ->  Result
                      ->  Nested Loop Semi Join
                            Join Filter: true
-                           ->  Index Scan using base_tbl_pkey on base_tbl base_tbl_1
+                           ->  Index Scan using base_tbl_pkey on base_tbl
                                  Index Cond: (id = 2)
                            ->  Materialize
                                  ->  Broadcast Motion 1:3  (slice2; segments: 1)
@@ -2087,7 +2087,7 @@ EXPLAIN (costs off) INSERT INTO rw_view1 VALUES (2, 'New row 2');
                                              ->  Result
                                                    ->  Limit
                                                          ->  Gather Motion 3:1  (slice1; segments: 3)
-                                                               ->  Index Scan using base_tbl_pkey on base_tbl
+                                                               ->  Index Scan using base_tbl_pkey on base_tbl base_tbl_1
                                                                      Index Cond: (id = 2)
  Optimizer: Pivotal Optimizer (GPORCA) version 3.11.0
 (38 rows)
