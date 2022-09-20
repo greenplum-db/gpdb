@@ -78,9 +78,8 @@ SELECT * FROM locktest_master where coalesce = 'ao_locks_table' or
     coalesce    |        mode         |         locktype         |  node  
 ----------------+---------------------+--------------------------+--------
  ao_locks_table | AccessExclusiveLock | append-only segment file | master
- ao_locks_table | AccessShareLock     | relation                 | master
  ao_locks_table | ExclusiveLock       | relation                 | master
-(3 rows)
+(2 rows)
 
 SELECT * FROM locktest_segments where coalesce = 'ao_locks_table' or
  coalesce like 'aovisimap%' or coalesce like 'aoseg%';
@@ -88,9 +87,8 @@ SELECT * FROM locktest_segments where coalesce = 'ao_locks_table' or
 -----------------+------------------+----------+------------
  aovisimap index | RowExclusiveLock | relation | 1 segment
  ao_locks_table  | RowExclusiveLock | relation | n segments
- ao_locks_table  | AccessShareLock  | relation | n segments
  aovisimap table | RowExclusiveLock | relation | 1 segment
-(4 rows)
+(3 rows)
 
 COMMIT;
 BEGIN;
@@ -100,19 +98,17 @@ SELECT * FROM locktest_master where coalesce = 'ao_locks_table' or
     coalesce    |        mode         |         locktype         |  node  
 ----------------+---------------------+--------------------------+--------
  ao_locks_table | AccessExclusiveLock | append-only segment file | master
- ao_locks_table | AccessShareLock     | relation                 | master
  ao_locks_table | ExclusiveLock       | relation                 | master
-(3 rows)
+(2 rows)
 
 SELECT * FROM locktest_segments where coalesce = 'ao_locks_table' or
  coalesce like 'aovisimap%' or coalesce like 'aoseg%';
     coalesce     |        mode         |         locktype         |    node    
 -----------------+---------------------+--------------------------+------------
- ao_locks_table  | AccessShareLock     | relation                 | n segments
  aovisimap table | RowExclusiveLock    | relation                 | 1 segment
  ao_locks_table  | AccessExclusiveLock | append-only segment file | 1 segment
  aovisimap index | RowExclusiveLock    | relation                 | 1 segment
  ao_locks_table  | RowExclusiveLock    | relation                 | n segments
-(5 rows)
+(4 rows)
 
 COMMIT;
