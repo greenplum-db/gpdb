@@ -56,11 +56,17 @@
 #include <pg_config.h>
 #include <pg_config_manual.h>
 #include "gpfdist_helper.h"
+#ifdef USE_ZSTD
+#include <zstd.h>
+#endif
 #ifdef USE_SSL
 #include <openssl/ssl.h>
 #include <openssl/rand.h>
 #include <openssl/err.h>
 #endif
+
+#define DEFAULT_COMPRESS_LEVEL 1
+#define MAX_FRAME_SIZE 65536
 
 /*  A data block */
 typedef struct blockhdr_t blockhdr_t;
@@ -79,6 +85,7 @@ struct block_t
 	blockhdr_t 	hdr;
 	int 		bot, top;
 	char*      	data;
+	char*		cdata;
 };
 
 /*  Get session id for this request */
@@ -86,6 +93,7 @@ struct block_t
 
 static long REQUEST_SEQ = 0;		/*  sequence number for request */
 static long SESSION_SEQ = 0;		/*  sequence number for session */
+static long OUT_BUFFER_SIZE = 0;    /* zstd out buffer size */
 
 static bool base16_decode(char* data);
 
@@ -174,7 +182,8 @@ static struct
 	struct transform* trlist; /* transforms from config file */
 	const char* ssl; /* path to certificates in case we use gpfdist with ssl */
 	int			w; /* The time used for session timeout in seconds */
-} opt = { 8080, 8080, 0, 0, 0, ".", 0, 0, -1, 5, 0, 32768, 0, 256, 0, 0, 0, 0 };
+	int			compress;
+} opt = { 8080, 8080, 0, 0, 0, ".", 0, 0, -1, 5, 0, 32768, 0, 256, 0, 0, 0, 0, 0};
 
 
 typedef union address
@@ -288,7 +297,12 @@ struct request_t
 	block_t	outblock;	/* next block to send out */
 	char*           line_delim_str;
 	int             line_delim_length;
-
+#ifdef USE_ZSTD
+	ZSTD_CCtx*		zstd_cctx;	/* zstd context */
+#endif	
+	int				zstd;		/* request use zstd compress */
+	int				zstd_err_len; /* space allocate for zstd_error string */
+	char*			zstd_error;	  /* string contains zstd error*/
 #ifdef USE_SSL
 	/* SSL related */
 	BIO			*io;		/* for the i.o. */
@@ -349,6 +363,7 @@ static int session_active_segs_isempty(session_t* session);
 static int request_validate(request_t *r);
 static int request_set_path(request_t *r, const char* d, char* p, char* pp, char* path);
 static int request_path_validate(request_t *r, const char* path);
+static int compress_zstd(request_t *r, block_t *blk, int buflen);
 static int request_parse_gp_headers(request_t *r, int opt_g);
 static void free_session_cb(int fd, short event, void* arg);
 #ifdef GPFXDIST
@@ -387,6 +402,31 @@ static void delay_watchdog_timer(void);
 static apr_time_t shutdown_time;
 static void* watchdog_thread(void*);
 #endif
+
+static const char *EMPTY_HTTP_RES = "HTTP/1.0 200 ok\r\n"
+		"Content-type: text/plain\r\n"
+		"Content-length: 0\r\n"
+		"Expires: 0\r\n"
+		"X-GPFDIST-VERSION: " GP_VERSION "\r\n"
+		"Cache-Control: no-cache\r\n"
+		"Connection: close\r\n\r\n";
+
+static const char *HTTP_RESPONSE_ZSTD = "HTTP/1.0 200 ok\r\n"
+		"Content-type: text/plain\r\n"
+		"Expires: 0\r\n"
+		"X-GPFDIST-VERSION: " GP_VERSION "\r\n"
+		"X-GP-PROTO: %d\r\n"
+		"Cache-Control: no-cache\r\n"
+		"Connection: close\r\n"
+		"X-GP-ZSTD: %d\r\n\r\n";
+
+static const char *HTTP_RESPONSE = "HTTP/1.0 200 ok\r\n"
+		"Content-type: text/plain\r\n"
+		"Expires: 0\r\n"
+		"X-GPFDIST-VERSION: " GP_VERSION "\r\n"
+		"X-GP-PROTO: %d\r\n"
+		"Cache-Control: no-cache\r\n"
+		"Connection: close\r\n\r\n";
 
 /*
  * block_fill_header
@@ -592,6 +632,7 @@ static void parse_command_line(int argc, const char* const argv[],
 #endif
 	{ "version", 256, 0, "print version number" },
 	{ NULL, 'w', 1, "wait for session timeout in seconds" },
+	{"compress", 258, 0, "turn on compressed transmission"},
 	{ 0 } };
 
 	status = apr_getopt_init(&os, pool, argc, argv);
@@ -676,6 +717,15 @@ static void parse_command_line(int argc, const char* const argv[],
 		case 'w':
 			opt.w = atoi(arg);
 			break;
+#ifdef USE_ZSTD
+		case 258:
+			opt.compress = 1;
+			break;
+#else
+		case 258:
+			usage_error("ZSTD is not supported by this build", 0);
+			break;
+#endif
 		}
 	}
 
@@ -853,15 +903,8 @@ static void http_error(request_t* r, int code, const char* msg)
 /* send an empty response */
 static void http_empty(request_t* r)
 {
-	static const char buf[] = "HTTP/1.0 200 ok\r\n"
-		"Content-type: text/plain\r\n"
-		"Content-length: 0\r\n"
-		"Expires: 0\r\n"
-		"X-GPFDIST-VERSION: " GP_VERSION "\r\n"
-		"Cache-Control: no-cache\r\n"
-		"Connection: close\r\n\r\n";
 	gprintln(r, "HTTP EMPTY: %s %s %s - OK", r->peer, r->in.req->argv[0], r->in.req->argv[1]);
-	local_send(r, buf, sizeof buf -1);
+	local_send(r, EMPTY_HTTP_RES, strlen (EMPTY_HTTP_RES) - 1);
 }
 
 /* send a Continue response */
@@ -878,17 +921,20 @@ static void http_continue(request_t* r)
 /* send an OK response */
 static apr_status_t http_ok(request_t* r)
 {
-	const char* fmt = "HTTP/1.0 200 ok\r\n"
-		"Content-type: text/plain\r\n"
-		"Expires: 0\r\n"
-		"X-GPFDIST-VERSION: " GP_VERSION "\r\n"
-		"X-GP-PROTO: %d\r\n"
-		"Cache-Control: no-cache\r\n"
-		"Connection: close\r\n\r\n";
+
+	const char* fmt = NULL;
 	char buf[1024];
 	int m, n;
+	if(r->zstd){
+		fmt = HTTP_RESPONSE_ZSTD;
+		n = apr_snprintf(buf, sizeof(buf), fmt, r->gp_proto, r->zstd);
+	}
+	else{
+		fmt = HTTP_RESPONSE;
+		n = apr_snprintf(buf, sizeof(buf), fmt, r->gp_proto);
+	}
 
-	n = apr_snprintf(buf, sizeof(buf), fmt, r->gp_proto);
+	
 	if (n >= sizeof(buf) - 1)
 		gfatal(r, "internal error - buffer overflow during http_ok");
 
@@ -1348,9 +1394,21 @@ session_get_block(const request_t* r, block_t* retblock, char* line_delim_str, i
 	}
 
 	retblock->top = size;
-
 	/* fill the block header with meta data for the client to parse and use */
 	block_fill_header(r, retblock, &fos);
+
+#ifdef USE_ZSTD
+	if(r->zstd){
+		int res = compress_zstd(r, retblock, size);
+		
+		if (res < 0)
+		{
+			return r->zstd_error;
+		}
+
+		retblock->top = res;
+	}
+#endif
 
 	return 0;
 }
@@ -1826,7 +1884,12 @@ static void do_write(int fd, short event, void* arg)
 		 * write out the block data
 		 */
 		n = datablock->top - datablock->bot;
-		n = local_send(r, datablock->data + datablock->bot, n);
+		if(r->zstd){
+			n = local_send(r, datablock->cdata + datablock->bot, n);
+		}
+		else{
+			n = local_send(r, datablock->data + datablock->bot, n);
+		}
 		if (n < 0)
 		{
 			/*
@@ -3378,6 +3441,10 @@ static int request_parse_gp_headers(request_t *r, int opt_g)
 			r->totalsegs = atoi(r->in.req->hvalue[i]);
 		else if (0 == strcasecmp("X-GP-SEGMENT-ID", r->in.req->hname[i]))
 			r->segid = atoi(r->in.req->hvalue[i]);
+		else if (0 == strcasecmp("X-GP-ZSTD", r->in.req->hname[i])){
+			r->zstd = atoi(r->in.req->hvalue[i]);
+			r->zstd = opt.compress ? r->zstd : 0;
+		}
 		else if (0 == strcasecmp("X-GP-LINE-DELIM-STR", r->in.req->hname[i]))
 		{
 			if (NULL == r->in.req->hvalue[i] ||  ((int)strlen(r->in.req->hvalue[i])) % 2 == 1 || !base16_decode(r->in.req->hvalue[i]))
@@ -3408,6 +3475,18 @@ static int request_parse_gp_headers(request_t *r, int opt_g)
 			}
 		}
 	}
+
+#ifdef USE_ZSTD
+	if (r->zstd)
+	{
+		OUT_BUFFER_SIZE = ZSTD_CStreamOutSize();
+		r->zstd_err_len = 1024;
+		r->outblock.cdata = palloc_safe(r, r->pool, opt.m, "out of memory when allocating buffer for compressed data: %d bytes", opt.m);
+		r->zstd_error = palloc_safe(r, r->pool, r->zstd_err_len, "out of memory when allocating error buffer for compressed data: %d bytes", r->zstd_err_len);
+		if	(r->is_get)
+			r->zstd_cctx = ZSTD_createCStream();
+	}
+#endif
 
 	if (r->line_delim_length > 0)
 	{
@@ -4394,6 +4473,12 @@ static void request_cleanup(request_t *r)
 {
 	request_shutdown_sock(r);
 	setup_do_close(r);
+#ifdef USE_ZSTD
+	if ( r->zstd && r->is_get )
+	{
+		ZSTD_freeCCtx(r->zstd_cctx);
+	}
+#endif
 }
 
 static void setup_do_close(request_t* r)
@@ -4505,5 +4590,64 @@ static void delay_watchdog_timer()
 #else
 static void delay_watchdog_timer()
 {
+}
+#endif
+
+#ifdef USE_ZSTD
+/*
+ * compress_zstd
+ * It is for compress data in buffer. Return is the length of data after compression.
+ */
+
+static int compress_zstd(request_t *r, block_t *blk, int buflen)
+{
+	char *buf = blk->data;
+	int offset = 0;
+	int cursor = 0;
+
+	if (!r->zstd_cctx)
+	{
+		snprintf(r->zstd_error, r->zstd_err_len, "Creating compression context failed, out of memory.");
+		gprintln(NULL, r->zstd_error);
+		return -1;
+	}
+
+	size_t init_result = ZSTD_initCStream(r->zstd_cctx, DEFAULT_COMPRESS_LEVEL);
+	if (ZSTD_isError(init_result)) 
+	{
+		snprintf(r->zstd_error, r->zstd_err_len, "Creating compression context initialization failed, error is %s.", ZSTD_getErrorName(init_result));
+		gprintln(NULL, r->zstd_error);
+		return -1;
+	}
+
+	while(cursor < buflen){
+		int in_size = (buflen - cursor) > MAX_FRAME_SIZE ? MAX_FRAME_SIZE : (buflen - cursor);
+		ZSTD_inBuffer bin = {buf + cursor, in_size, 0};
+		while(bin.pos < bin.size){
+			ZSTD_outBuffer bout = {blk->cdata + offset, OUT_BUFFER_SIZE, 0};
+			size_t res = ZSTD_compressStream(r->zstd_cctx, &bout, &bin);
+
+			if (ZSTD_isError(res))
+			{
+				snprintf(r->zstd_error, r->zstd_err_len, "Compression failed, error is %s.", ZSTD_getErrorName(res));
+				gprintln(NULL, r->zstd_error);
+				return -1;
+			}
+			offset += bout.pos;
+		}
+		cursor += in_size;
+	}
+
+	ZSTD_outBuffer output = { r->outblock.cdata + offset, OUT_BUFFER_SIZE, 0 };
+	size_t const remainingToFlush = ZSTD_endStream(r->zstd_cctx, &output);   /* close frame */
+	if (remainingToFlush)
+	{
+		snprintf(r->zstd_error, r->zstd_err_len, "Compression failed, error is not fully flushed.");
+		gprintln(NULL, r->zstd_error);
+		return -1;
+	}
+	offset += output.pos;
+
+	return offset;
 }
 #endif
