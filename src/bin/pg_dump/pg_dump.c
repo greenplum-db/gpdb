@@ -69,6 +69,11 @@
 #include "fe_utils/connect.h"
 #include "parallel.h"
 
+typedef struct
+{
+	Oid			roleoid;		/* role's OID */
+	const char *rolename;		/* role's name */
+} RoleNameItem;
 
 typedef struct
 {
@@ -103,9 +108,6 @@ bool		dumpPolicy;
 bool		isGPbackend;
 
 /* END MPP ADDITION */
-
-/* subquery used to convert user ID (eg, datdba) to user name */
-static const char *username_subquery;
 
 /*
  * Object inclusion/exclusion lists
@@ -143,6 +145,10 @@ char		g_comment_end[10];
 static const CatalogId nilCatalogId = {0, 0};
 
 const char *EXT_PARTITION_NAME_POSTFIX = "_external_partition__";
+
+/* sorted table of role names */
+static RoleNameItem *rolenames = NULL;
+static int	nrolenames = 0;
 
 /* flags for various command-line long options */
 static int	binary_upgrade = 0;
@@ -182,6 +188,8 @@ static void guessConstraintInheritance(TableInfo *tblinfo, int numTables);
 static void dumpComment(Archive *fout, const char *type, const char *name,
 			const char *namespace, const char *owner,
 			CatalogId catalogId, int subid, DumpId dumpId);
+static const char *getRoleName(const char *roleoid_str);
+static void collectRoleNames(Archive *fout);
 static int findComments(Archive *fout, Oid classoid, Oid objoid,
 			 CommentItem **items);
 static int	collectComments(Archive *fout, CommentItem **items);
@@ -867,8 +875,6 @@ main(int argc, char **argv)
 		PQclear(res);
 	}
 
-	username_subquery = "SELECT rolname FROM pg_catalog.pg_roles WHERE oid =";
-
 	/* check the version for the synchronized snapshots feature */
 	if (numWorkers > 1 && fout->remoteVersion < 90200
 		&& !no_synchronized_snapshots)
@@ -915,6 +921,11 @@ main(int argc, char **argv)
 	 */
 	if (include_everything && !schemaOnly)
 		outputBlobs = true;
+
+	/*
+	 * Collect role names so we can map object owner OIDs to names.
+	 */
+	collectRoleNames(fout);
 
 	/*
 	 * Now scan the database and create DumpableObject structs for all the
@@ -2573,7 +2584,7 @@ dumpDatabase(Archive *fout)
 	PGresult   *res;
 	int			i_tableoid,
 				i_oid,
-				i_dba,
+				i_datdba,
 				i_encoding,
 				i_collate,
 				i_ctype,
@@ -2602,51 +2613,45 @@ dumpDatabase(Archive *fout)
 	if (fout->remoteVersion >= 90300)
 	{
 		appendPQExpBuffer(dbQry, "SELECT tableoid, oid, "
-						  "(%s datdba) AS dba, "
+						  "datdba, "
 						  "pg_encoding_to_char(encoding) AS encoding, "
 						  "datcollate, datctype, datfrozenxid, datminmxid, "
 						  "(SELECT spcname FROM pg_tablespace t WHERE t.oid = dattablespace) AS tablespace, "
-					  "shobj_description(oid, 'pg_database') AS description "
+						  "shobj_description(oid, 'pg_database') AS description "
 
 						  "FROM pg_database "
-						  "WHERE datname = ",
-						  username_subquery);
-		appendStringLiteralAH(dbQry, datname, fout);
+						  "WHERE datname = current_database()");
 	}
 	else if (fout->remoteVersion >= 80400)
 	{
 		appendPQExpBuffer(dbQry, "SELECT tableoid, oid, "
-						  "(%s datdba) AS dba, "
+						  "datdba, "
 						  "pg_encoding_to_char(encoding) AS encoding, "
 						  "datcollate, datctype, datfrozenxid, 0 AS datminmxid, "
 						  "(SELECT spcname FROM pg_tablespace t WHERE t.oid = dattablespace) AS tablespace, "
 					  "shobj_description(oid, 'pg_database') AS description "
 
 						  "FROM pg_database "
-						  "WHERE datname = ",
-						  username_subquery);
-		appendStringLiteralAH(dbQry, datname, fout);
+						  "WHERE datname = current_database()");
 	}
 	else
 	{
 		appendPQExpBuffer(dbQry, "SELECT tableoid, oid, "
-						  "(%s datdba) AS dba, "
+						  "datdba, "
 						  "pg_encoding_to_char(encoding) AS encoding, "
 					   "NULL AS datcollate, NULL AS datctype, datfrozenxid, 0 AS datminmxid, "
 						  "(SELECT spcname FROM pg_tablespace t WHERE t.oid = dattablespace) AS tablespace, "
 					  "shobj_description(oid, 'pg_database') AS description "
 
 						  "FROM pg_database "
-						  "WHERE datname = ",
-						  username_subquery);
-		appendStringLiteralAH(dbQry, datname, fout);
+						  "WHERE datname = current_database()");
 	}
 
 	res = ExecuteSqlQueryForSingleRow(fout, dbQry->data);
 
 	i_tableoid = PQfnumber(res, "tableoid");
 	i_oid = PQfnumber(res, "oid");
-	i_dba = PQfnumber(res, "dba");
+	i_datdba = PQfnumber(res, "datdba");
 	i_encoding = PQfnumber(res, "encoding");
 	i_collate = PQfnumber(res, "datcollate");
 	i_ctype = PQfnumber(res, "datctype");
@@ -2656,7 +2661,7 @@ dumpDatabase(Archive *fout)
 
 	dbCatId.tableoid = atooid(PQgetvalue(res, 0, i_tableoid));
 	dbCatId.oid = atooid(PQgetvalue(res, 0, i_oid));
-	dba = PQgetvalue(res, 0, i_dba);
+	dba = PQgetvalue(res, 0, i_datdba);
 	encoding = PQgetvalue(res, 0, i_encoding);
 	collate = PQgetvalue(res, 0, i_collate);
 	ctype = PQgetvalue(res, 0, i_ctype);
@@ -3010,6 +3015,9 @@ getBlobs(Archive *fout)
 	PGresult   *res;
 	int			ntups;
 	int			i;
+	int			i_oid;
+	int			i_lomowner;
+	int			i_lomacl;
 
 	/* Verbose message */
 	if (g_verbose)
@@ -3018,15 +3026,19 @@ getBlobs(Archive *fout)
 	/* Fetch BLOB OIDs, and owner/ACL data if >= 9.0 */
 	if (fout->remoteVersion >= 90000)
 		appendPQExpBuffer(blobQry,
-						  "SELECT oid, (%s lomowner) AS rolname, lomacl"
-						  " FROM pg_largeobject_metadata",
-						  username_subquery);
+						  "SELECT oid, lomowner, lomacl"
+						  " FROM pg_largeobject_metadata");
 	else
 		appendPQExpBufferStr(blobQry,
-							 "SELECT DISTINCT loid, NULL::oid, NULL::oid"
-							 " FROM pg_largeobject");
+							 "SELECT DISTINCT loid AS oid, "
+							 "NULL::name AS rolname, NULL::oid AS lomacl "
+							 "FROM pg_largeobject");
 
 	res = ExecuteSqlQuery(fout, blobQry->data, PGRES_TUPLES_OK);
+
+	i_oid = PQfnumber(res, "oid");
+	i_lomowner = PQfnumber(res, "lomowner");
+	i_lomacl = PQfnumber(res, "lomacl");
 
 	ntups = PQntuples(res);
 	if (ntups > 0)
@@ -3040,18 +3052,10 @@ getBlobs(Archive *fout)
 		{
 			binfo[i].dobj.objType = DO_BLOB;
 			binfo[i].dobj.catId.tableoid = LargeObjectRelationId;
-			binfo[i].dobj.catId.oid = atooid(PQgetvalue(res, i, 0));
+			binfo[i].dobj.catId.oid = atooid(PQgetvalue(res, i, i_oid));
 			AssignDumpId(&binfo[i].dobj);
-
-			binfo[i].dobj.name = pg_strdup(PQgetvalue(res, i, 0));
-			if (!PQgetisnull(res, i, 1))
-				binfo[i].rolname = pg_strdup(PQgetvalue(res, i, 1));
-			else
-				binfo[i].rolname = "";
-			if (!PQgetisnull(res, i, 2))
-				binfo[i].blobacl = pg_strdup(PQgetvalue(res, i, 2));
-			else
-				binfo[i].blobacl = NULL;
+			binfo[i].dobj.name = pg_strdup(PQgetvalue(res, i, i_oid));
+			binfo[i].rolname = getRoleName(PQgetvalue(res, i, i_lomowner));
 		}
 
 		/*
@@ -3550,7 +3554,7 @@ getNamespaces(Archive *fout, int *numNamespaces)
 	int			i_tableoid;
 	int			i_oid;
 	int			i_nspname;
-	int			i_rolname;
+	int			i_nspowner;
 	int			i_nspacl;
 
 	query = createPQExpBuffer();
@@ -3560,9 +3564,8 @@ getNamespaces(Archive *fout, int *numNamespaces)
 	 * read in can be linked to a containing namespace.
 	 */
 	appendPQExpBuffer(query, "SELECT tableoid, oid, nspname, "
-					  "(%s nspowner) AS rolname, "
-					  "nspacl FROM pg_namespace",
-					  username_subquery);
+					  "nspowner, "
+					  "nspacl FROM pg_namespace");
 
 	res = ExecuteSqlQuery(fout, query->data, PGRES_TUPLES_OK);
 
@@ -3573,25 +3576,25 @@ getNamespaces(Archive *fout, int *numNamespaces)
 	i_tableoid = PQfnumber(res, "tableoid");
 	i_oid = PQfnumber(res, "oid");
 	i_nspname = PQfnumber(res, "nspname");
-	i_rolname = PQfnumber(res, "rolname");
+	i_nspowner = PQfnumber(res, "nspowner");
 	i_nspacl = PQfnumber(res, "nspacl");
 
 	for (i = 0; i < ntups; i++)
 	{
+		const char *nspowner;
+	
 		nsinfo[i].dobj.objType = DO_NAMESPACE;
 		nsinfo[i].dobj.catId.tableoid = atooid(PQgetvalue(res, i, i_tableoid));
 		nsinfo[i].dobj.catId.oid = atooid(PQgetvalue(res, i, i_oid));
 		AssignDumpId(&nsinfo[i].dobj);
 		nsinfo[i].dobj.name = pg_strdup(PQgetvalue(res, i, i_nspname));
-		nsinfo[i].rolname = pg_strdup(PQgetvalue(res, i, i_rolname));
+		nspowner = PQgetvalue(res, i, i_nspowner);
+		nsinfo[i].nspowner = atooid(nspowner);
+		nsinfo[i].rolname = getRoleName(nspowner);
 		nsinfo[i].nspacl = pg_strdup(PQgetvalue(res, i, i_nspacl));
 
 		/* Decide whether to dump this namespace */
 		selectDumpableNamespace(&nsinfo[i]);
-
-		if (strlen(nsinfo[i].rolname) == 0)
-			write_msg(NULL, "WARNING: owner of schema \"%s\" appears to be invalid\n",
-					  nsinfo[i].dobj.name);
 	}
 
 	PQclear(res);
@@ -3737,7 +3740,7 @@ getTypes(Archive *fout, int *numTypes)
 	int			i_typname;
 	int			i_typnamespace;
 	int			i_typacl;
-	int			i_rolname;
+	int			i_typowner;
 	int			i_typinput;
 	int			i_typoutput;
 	int			i_typelem;
@@ -3771,7 +3774,7 @@ getTypes(Archive *fout, int *numTypes)
 	{
 		appendPQExpBuffer(query, "SELECT t.tableoid, t.oid, t.typname, "
 						  "t.typnamespace, t.typacl, "
-						  "(%s t.typowner) AS rolname, "
+						  "t.typowner, "
 						  "t.typinput::oid AS typinput, "
 						  "t.typoutput::oid AS typoutput, t.typelem, t.typrelid, "
 						  "CASE WHEN t.typrelid = 0 THEN ' '::\"char\" "
@@ -3779,8 +3782,7 @@ getTypes(Archive *fout, int *numTypes)
 						  "t.typtype, t.typisdefined, "
 						  "t.typname[0] = '_' AND t.typelem != 0 AND "
 						  "(SELECT typarray FROM pg_type te WHERE oid = t.typelem) = t.oid AS isarray, "
-							"coalesce(array_to_string(e.typoptions, ', '), '') AS typstorage ",
-						  username_subquery);
+							"coalesce(array_to_string(e.typoptions, ', '), '') AS typstorage ");
 
 			if (binary_upgrade)
 				appendPQExpBuffer(query,
@@ -3799,7 +3801,7 @@ getTypes(Archive *fout, int *numTypes)
 	{
 		appendPQExpBuffer(query, "SELECT t.tableoid, t.oid, t.typname, "
 						  "t.typnamespace, NULL AS typacl, "
-						  "(%s t.typowner) AS rolname, "
+						  "t.typowner, "
 						  "t.typinput::oid AS typinput, "
 						  "t.typoutput::oid AS typoutput, t.typelem, t.typrelid, "
 						  "CASE WHEN t.typrelid = 0 THEN ' '::\"char\" "
@@ -3807,8 +3809,7 @@ getTypes(Archive *fout, int *numTypes)
 						  "t.typtype, t.typisdefined, "
 						  "t.typname[0] = '_' AND t.typelem != 0 AND "
 						  "(SELECT typarray FROM pg_type te WHERE oid = t.typelem) = t.oid AS isarray, "
-							"coalesce(array_to_string(e.typoptions, ', '), '') AS typstorage ",
-						  username_subquery);
+							"coalesce(array_to_string(e.typoptions, ', '), '') AS typstorage ");
 
 			if (binary_upgrade)
 				appendPQExpBuffer(query,
@@ -3835,7 +3836,7 @@ getTypes(Archive *fout, int *numTypes)
 	i_typname = PQfnumber(res, "typname");
 	i_typnamespace = PQfnumber(res, "typnamespace");
 	i_typacl = PQfnumber(res, "typacl");
-	i_rolname = PQfnumber(res, "rolname");
+	i_typowner = PQfnumber(res, "typowner");
 	i_typinput = PQfnumber(res, "typinput");
 	i_typoutput = PQfnumber(res, "typoutput");
 	i_typelem = PQfnumber(res, "typelem");
@@ -3861,7 +3862,7 @@ getTypes(Archive *fout, int *numTypes)
 						  atooid(PQgetvalue(res, i, i_typnamespace)),
 						  tyinfo[i].dobj.catId.oid);
 		tyinfo[i].ftypname = NULL;	/* may get filled later */
-		tyinfo[i].rolname = pg_strdup(PQgetvalue(res, i, i_rolname));
+		tyinfo[i].rolname = getRoleName(PQgetvalue(res, i, i_typowner));
 		tyinfo[i].typacl = pg_strdup(PQgetvalue(res, i, i_typacl));
 		tyinfo[i].typelem = atooid(PQgetvalue(res, i, i_typelem));
 		tyinfo[i].typrelid = atooid(PQgetvalue(res, i, i_typrelid));
@@ -3928,11 +3929,6 @@ getTypes(Archive *fout, int *numTypes)
 			 */
 			stinfo->dobj.dump = false;
 		}
-
-		if (strlen(tyinfo[i].rolname) == 0)
-			write_msg(NULL, "WARNING: owner of data type \"%s\" appears to be invalid\n",
-					  tyinfo[i].dobj.name);
-
 	}
 
 	*numTypes = ntups;
@@ -3963,7 +3959,7 @@ getOperators(Archive *fout, int *numOprs)
 	int			i_oid;
 	int			i_oprname;
 	int			i_oprnamespace;
-	int			i_rolname;
+	int			i_oprowner;
 	int			i_oprkind;
 	int			i_oprcode;
 
@@ -3973,11 +3969,10 @@ getOperators(Archive *fout, int *numOprs)
 	 */
 	appendPQExpBuffer(query, "SELECT tableoid, oid, oprname, "
 						"oprnamespace, "
-						"(%s oprowner) AS rolname, "
+						"oprowner, "
 						"oprkind, "
 						"oprcode::oid AS oprcode "
-						"FROM pg_operator",
-						username_subquery);
+						"FROM pg_operator");
 
 	res = ExecuteSqlQuery(fout, query->data, PGRES_TUPLES_OK);
 
@@ -3990,7 +3985,7 @@ getOperators(Archive *fout, int *numOprs)
 	i_oid = PQfnumber(res, "oid");
 	i_oprname = PQfnumber(res, "oprname");
 	i_oprnamespace = PQfnumber(res, "oprnamespace");
-	i_rolname = PQfnumber(res, "rolname");
+	i_oprowner = PQfnumber(res, "oprowner");
 	i_oprkind = PQfnumber(res, "oprkind");
 	i_oprcode = PQfnumber(res, "oprcode");
 
@@ -4005,16 +4000,12 @@ getOperators(Archive *fout, int *numOprs)
 			findNamespace(fout,
 						  atooid(PQgetvalue(res, i, i_oprnamespace)),
 						  oprinfo[i].dobj.catId.oid);
-		oprinfo[i].rolname = pg_strdup(PQgetvalue(res, i, i_rolname));
+		oprinfo[i].rolname = getRoleName(PQgetvalue(res, i, i_oprowner));
 		oprinfo[i].oprkind = (PQgetvalue(res, i, i_oprkind))[0];
 		oprinfo[i].oprcode = atooid(PQgetvalue(res, i, i_oprcode));
 
 		/* Decide whether we want to dump it */
 		selectDumpableObject(&(oprinfo[i].dobj));
-
-		if (strlen(oprinfo[i].rolname) == 0)
-			write_msg(NULL, "WARNING: owner of operator \"%s\" appears to be invalid\n",
-					  oprinfo[i].dobj.name);
 	}
 
 	PQclear(res);
@@ -4043,7 +4034,7 @@ getCollations(Archive *fout, int *numCollations)
 	int			i_oid;
 	int			i_collname;
 	int			i_collnamespace;
-	int			i_rolname;
+	int			i_collowner;
 
 	/* Collations didn't exist pre-9.1 */
 	if (fout->remoteVersion < 90100)
@@ -4061,9 +4052,8 @@ getCollations(Archive *fout, int *numCollations)
 
 	appendPQExpBuffer(query, "SELECT tableoid, oid, collname, "
 					  "collnamespace, "
-					  "(%s collowner) AS rolname "
-					  "FROM pg_collation",
-					  username_subquery);
+					  "collowner "
+					  "FROM pg_collation");
 
 	res = ExecuteSqlQuery(fout, query->data, PGRES_TUPLES_OK);
 
@@ -4076,7 +4066,7 @@ getCollations(Archive *fout, int *numCollations)
 	i_oid = PQfnumber(res, "oid");
 	i_collname = PQfnumber(res, "collname");
 	i_collnamespace = PQfnumber(res, "collnamespace");
-	i_rolname = PQfnumber(res, "rolname");
+	i_collowner = PQfnumber(res, "collowner");
 
 	for (i = 0; i < ntups; i++)
 	{
@@ -4089,7 +4079,7 @@ getCollations(Archive *fout, int *numCollations)
 			findNamespace(fout,
 						  atooid(PQgetvalue(res, i, i_collnamespace)),
 						  collinfo[i].dobj.catId.oid);
-		collinfo[i].rolname = pg_strdup(PQgetvalue(res, i, i_rolname));
+		collinfo[i].rolname = getRoleName(PQgetvalue(res, i, i_collowner));
 
 		/* Decide whether we want to dump it */
 		selectDumpableObject(&(collinfo[i].dobj));
@@ -4121,7 +4111,7 @@ getConversions(Archive *fout, int *numConversions)
 	int			i_oid;
 	int			i_conname;
 	int			i_connamespace;
-	int			i_rolname;
+	int			i_conowner;
 
 	query = createPQExpBuffer();
 
@@ -4132,9 +4122,8 @@ getConversions(Archive *fout, int *numConversions)
 
 	appendPQExpBuffer(query, "SELECT tableoid, oid, conname, "
 					  "connamespace, "
-					  "(%s conowner) AS rolname "
-					  "FROM pg_conversion",
-					  username_subquery);
+					  "conowner "
+					  "FROM pg_conversion");
 
 	res = ExecuteSqlQuery(fout, query->data, PGRES_TUPLES_OK);
 
@@ -4147,7 +4136,7 @@ getConversions(Archive *fout, int *numConversions)
 	i_oid = PQfnumber(res, "oid");
 	i_conname = PQfnumber(res, "conname");
 	i_connamespace = PQfnumber(res, "connamespace");
-	i_rolname = PQfnumber(res, "rolname");
+	i_conowner = PQfnumber(res, "conowner");
 
 	for (i = 0; i < ntups; i++)
 	{
@@ -4160,7 +4149,7 @@ getConversions(Archive *fout, int *numConversions)
 			findNamespace(fout,
 						  atooid(PQgetvalue(res, i, i_connamespace)),
 						  convinfo[i].dobj.catId.oid);
-		convinfo[i].rolname = pg_strdup(PQgetvalue(res, i, i_rolname));
+		convinfo[i].rolname = getRoleName(PQgetvalue(res, i, i_conowner));
 
 		/* Decide whether we want to dump it */
 		selectDumpableObject(&(convinfo[i].dobj));
@@ -4192,7 +4181,7 @@ getOpclasses(Archive *fout, int *numOpclasses)
 	int			i_oid;
 	int			i_opcname;
 	int			i_opcnamespace;
-	int			i_rolname;
+	int			i_opcowner;
 
 	/*
 	 * find all opclasses, including builtin opclasses; we filter out
@@ -4200,9 +4189,8 @@ getOpclasses(Archive *fout, int *numOpclasses)
 	 */
 	appendPQExpBuffer(query, "SELECT tableoid, oid, opcname, "
 						"opcnamespace, "
-						"(%s opcowner) AS rolname "
-						"FROM pg_opclass",
-						username_subquery);
+						"opcowner "
+						"FROM pg_opclass");
 
 	res = ExecuteSqlQuery(fout, query->data, PGRES_TUPLES_OK);
 
@@ -4215,7 +4203,7 @@ getOpclasses(Archive *fout, int *numOpclasses)
 	i_oid = PQfnumber(res, "oid");
 	i_opcname = PQfnumber(res, "opcname");
 	i_opcnamespace = PQfnumber(res, "opcnamespace");
-	i_rolname = PQfnumber(res, "rolname");
+	i_opcowner = PQfnumber(res, "opcowner");
 
 	for (i = 0; i < ntups; i++)
 	{
@@ -4228,14 +4216,10 @@ getOpclasses(Archive *fout, int *numOpclasses)
 			findNamespace(fout,
 						  atooid(PQgetvalue(res, i, i_opcnamespace)),
 						  opcinfo[i].dobj.catId.oid);
-		opcinfo[i].rolname = pg_strdup(PQgetvalue(res, i, i_rolname));
+		opcinfo[i].rolname = getRoleName(PQgetvalue(res, i, i_opcowner));
 
 		/* Decide whether we want to dump it */
 		selectDumpableObject(&(opcinfo[i].dobj));
-
-		if (strlen(opcinfo[i].rolname) == 0)
-			write_msg(NULL, "WARNING: owner of operator class \"%s\" appears to be invalid\n",
-						opcinfo[i].dobj.name);
 	}
 
 	PQclear(res);
@@ -4264,7 +4248,7 @@ getOpfamilies(Archive *fout, int *numOpfamilies)
 	int			i_oid;
 	int			i_opfname;
 	int			i_opfnamespace;
-	int			i_rolname;
+	int			i_opfowner;
 
 	query = createPQExpBuffer();
 
@@ -4275,9 +4259,8 @@ getOpfamilies(Archive *fout, int *numOpfamilies)
 
 	appendPQExpBuffer(query, "SELECT tableoid, oid, opfname, "
 					  "opfnamespace, "
-					  "(%s opfowner) AS rolname "
-					  "FROM pg_opfamily",
-					  username_subquery);
+					  "opfowner "
+					  "FROM pg_opfamily");
 
 	res = ExecuteSqlQuery(fout, query->data, PGRES_TUPLES_OK);
 
@@ -4290,7 +4273,7 @@ getOpfamilies(Archive *fout, int *numOpfamilies)
 	i_oid = PQfnumber(res, "oid");
 	i_opfname = PQfnumber(res, "opfname");
 	i_opfnamespace = PQfnumber(res, "opfnamespace");
-	i_rolname = PQfnumber(res, "rolname");
+	i_opfowner = PQfnumber(res, "opfowner");
 
 	for (i = 0; i < ntups; i++)
 	{
@@ -4303,14 +4286,10 @@ getOpfamilies(Archive *fout, int *numOpfamilies)
 			findNamespace(fout,
 						  atooid(PQgetvalue(res, i, i_opfnamespace)),
 						  opfinfo[i].dobj.catId.oid);
-		opfinfo[i].rolname = pg_strdup(PQgetvalue(res, i, i_rolname));
+		opfinfo[i].rolname = getRoleName(PQgetvalue(res, i, i_opfowner));
 
 		/* Decide whether we want to dump it */
 		selectDumpableObject(&(opfinfo[i].dobj));
-
-		if (strlen(opfinfo[i].rolname) == 0)
-			write_msg(NULL, "WARNING: owner of operator family \"%s\" appears to be invalid\n",
-						opfinfo[i].dobj.name);
 	}
 
 	PQclear(res);
@@ -4341,7 +4320,7 @@ getAggregates(Archive *fout, int *numAggs)
 	int			i_aggnamespace;
 	int			i_pronargs;
 	int			i_proargtypes;
-	int			i_rolname;
+	int			i_proowner;
 	int			i_aggacl;
 
 	/*
@@ -4352,14 +4331,13 @@ getAggregates(Archive *fout, int *numAggs)
 	appendPQExpBuffer(query, "SELECT tableoid, oid, proname AS aggname, "
 						"pronamespace AS aggnamespace, "
 						"pronargs, proargtypes, "
-						"(%s proowner) AS rolname, "
+						"proowner, "
 						"proacl AS aggacl "
 						"FROM pg_proc p "
 						"WHERE proisagg AND ("
 						"pronamespace != "
 						"(SELECT oid FROM pg_namespace "
-						"WHERE nspname = 'pg_catalog')",
-						username_subquery);
+						"WHERE nspname = 'pg_catalog')");
 
 	if (binary_upgrade && fout->remoteVersion >= 90100)
 		appendPQExpBufferStr(query,
@@ -4384,7 +4362,7 @@ getAggregates(Archive *fout, int *numAggs)
 	i_aggnamespace = PQfnumber(res, "aggnamespace");
 	i_pronargs = PQfnumber(res, "pronargs");
 	i_proargtypes = PQfnumber(res, "proargtypes");
-	i_rolname = PQfnumber(res, "rolname");
+	i_proowner = PQfnumber(res, "proowner");
 	i_aggacl = PQfnumber(res, "aggacl");
 
 	for (i = 0; i < ntups; i++)
@@ -4398,10 +4376,7 @@ getAggregates(Archive *fout, int *numAggs)
 			findNamespace(fout,
 						  atooid(PQgetvalue(res, i, i_aggnamespace)),
 						  agginfo[i].aggfn.dobj.catId.oid);
-		agginfo[i].aggfn.rolname = pg_strdup(PQgetvalue(res, i, i_rolname));
-		if (strlen(agginfo[i].aggfn.rolname) == 0)
-			write_msg(NULL, "WARNING: owner of aggregate function \"%s\" appears to be invalid\n",
-					  agginfo[i].aggfn.dobj.name);
+		agginfo[i].aggfn.rolname = getRoleName(PQgetvalue(res, i, i_proowner));
 		agginfo[i].aggfn.lang = InvalidOid;		/* not currently interesting */
 		agginfo[i].aggfn.prorettype = InvalidOid;		/* not saved */
 		agginfo[i].aggfn.proacl = pg_strdup(PQgetvalue(res, i, i_aggacl));
@@ -4446,7 +4421,7 @@ getExtProtocols(Archive *fout, int *numExtProtocols)
 	int			i_oid;
 	int			i_tableoid;
 	int			i_ptcname;
-	int			i_rolname;
+	int			i_ptcowner;
 	int			i_ptcacl;
 	int			i_ptctrusted;
 	int 		i_ptcreadid;
@@ -4461,11 +4436,10 @@ getExtProtocols(Archive *fout, int *numExtProtocols)
 							 "       ptcreadfn as ptcreadoid, "
 							 "       ptcwritefn as ptcwriteoid, "
 							 "		 ptcvalidatorfn as ptcvaloid, "
-							 "       (%s ptc.ptcowner) as rolname, "
+							 "       ptcowner, "
 							 "       ptc.ptctrusted as ptctrusted, "
 							 "       ptc.ptcacl as ptcacl "
-							 "FROM   pg_extprotocol ptc",
-									 username_subquery);
+							 "FROM   pg_extprotocol ptc");
 
 	res = ExecuteSqlQuery(fout, query->data, PGRES_TUPLES_OK);
 
@@ -4477,7 +4451,7 @@ getExtProtocols(Archive *fout, int *numExtProtocols)
 	i_tableoid = PQfnumber(res, "tableoid");
 	i_oid = PQfnumber(res, "oid");
 	i_ptcname = PQfnumber(res, "ptcname");
-	i_rolname = PQfnumber(res, "rolname");
+	i_ptcowner = PQfnumber(res, "ptcowner");
 	i_ptcacl = PQfnumber(res, "ptcacl");
 	i_ptctrusted = PQfnumber(res, "ptctrusted");
 	i_ptcreadid = PQfnumber(res, "ptcreadoid");
@@ -4492,11 +4466,7 @@ getExtProtocols(Archive *fout, int *numExtProtocols)
 		AssignDumpId(&ptcinfo[i].dobj);
 		ptcinfo[i].dobj.name = pg_strdup(PQgetvalue(res, i, i_ptcname));
 		ptcinfo[i].dobj.namespace = NULL;
-		ptcinfo[i].ptcowner = pg_strdup(PQgetvalue(res, i, i_rolname));
-		if (strlen(ptcinfo[i].ptcowner) == 0)
-			write_msg(NULL, "WARNING: owner of external protocol \"%s\" appears to be invalid\n",
-						ptcinfo[i].dobj.name);
-
+		ptcinfo[i].rolname = getRoleName(PQgetvalue(res, i,  i_ptcowner));
 		if (PQgetisnull(res, i, i_ptcreadid))
 			ptcinfo[i].ptcreadid = InvalidOid;
 		else
@@ -4545,7 +4515,7 @@ getFuncs(Archive *fout, int *numFuncs)
 	int			i_oid;
 	int			i_proname;
 	int			i_pronamespace;
-	int			i_rolname;
+	int			i_proowner;
 	int			i_prolang;
 	int			i_pronargs;
 	int			i_proargtypes;
@@ -4577,10 +4547,9 @@ getFuncs(Archive *fout, int *numFuncs)
 						"SELECT tableoid, oid, proname, prolang, "
 						"pronargs, proargtypes, prorettype, proacl, "
 						"pronamespace, "
-						"(%s proowner) AS rolname "
+						"proowner "
 						"FROM pg_proc p "
-						"WHERE NOT proisagg",
-						username_subquery);
+						"WHERE NOT proisagg");
 
 	if (fout->remoteVersion >= 90200)
 		appendPQExpBufferStr(query,
@@ -4620,7 +4589,7 @@ getFuncs(Archive *fout, int *numFuncs)
 	i_oid = PQfnumber(res, "oid");
 	i_proname = PQfnumber(res, "proname");
 	i_pronamespace = PQfnumber(res, "pronamespace");
-	i_rolname = PQfnumber(res, "rolname");
+	i_proowner = PQfnumber(res, "proowner");
 	i_prolang = PQfnumber(res, "prolang");
 	i_pronargs = PQfnumber(res, "pronargs");
 	i_proargtypes = PQfnumber(res, "proargtypes");
@@ -4638,7 +4607,7 @@ getFuncs(Archive *fout, int *numFuncs)
 			findNamespace(fout,
 						  atooid(PQgetvalue(res, i, i_pronamespace)),
 						  finfo[i].dobj.catId.oid);
-		finfo[i].rolname = pg_strdup(PQgetvalue(res, i, i_rolname));
+		finfo[i].rolname = getRoleName(PQgetvalue(res, i, i_proowner));
 		finfo[i].lang = atooid(PQgetvalue(res, i, i_prolang));
 		finfo[i].prorettype = atooid(PQgetvalue(res, i, i_prorettype));
 		finfo[i].proacl = pg_strdup(PQgetvalue(res, i, i_proacl));
@@ -4655,11 +4624,6 @@ getFuncs(Archive *fout, int *numFuncs)
 		/* Decide whether we want to dump it */
 		selectDumpableFunction(&finfo[i]);
 		selectDumpableObject(&(finfo[i].dobj));
-
-		if (strlen(finfo[i].rolname) == 0)
-			write_msg(NULL,
-				 "WARNING: owner of function \"%s\" appears to be invalid\n",
-					  finfo[i].dobj.name);
 	}
 
 	PQclear(res);
@@ -4692,7 +4656,7 @@ getTables(Archive *fout, int *numTables)
 	int			i_relkind;
 	int			i_reltype;
 	int			i_relacl;
-	int			i_rolname;
+	int			i_relowner;
 	int			i_relchecks;
 	int			i_relhastriggers;
 	int			i_relhasindex;
@@ -4743,7 +4707,7 @@ getTables(Archive *fout, int *numTables)
 	appendPQExpBuffer(query,
 					  "SELECT c.tableoid, c.oid, c.relname, "
 					  "c.relacl, c.relnamespace, c.relkind, c.reltype, "
-					  "(%s c.relowner) AS rolname, "
+					  "c.relowner, "
 					  "c.relchecks, c.relhasoids, "
 					  "c.relhasindex, c.relhasrules, c.relpages, "
 					  "d.refobjid AS owning_tab, "
@@ -4753,8 +4717,7 @@ getTables(Archive *fout, int *numTables)
 						"tc.oid AS toid, "
 						"c.relstorage, "
 						"p.parrelid as parrelid, "
-						"pl.parlevel as parlevel, ",
-					  username_subquery);
+						"pl.parlevel as parlevel, ");
 
 	if (binary_upgrade)
 		appendPQExpBufferStr(query,
@@ -4916,7 +4879,7 @@ getTables(Archive *fout, int *numTables)
 	i_relnamespace = PQfnumber(res, "relnamespace");
 	i_relacl = PQfnumber(res, "relacl");
 	i_relkind = PQfnumber(res, "relkind");
-	i_rolname = PQfnumber(res, "rolname");
+	i_relowner = PQfnumber(res, "relowner");
 	i_relchecks = PQfnumber(res, "relchecks");
 	i_relhasindex = PQfnumber(res, "relhasindex");
 	i_relhasrules = PQfnumber(res, "relhasrules");
@@ -4974,7 +4937,7 @@ getTables(Archive *fout, int *numTables)
 			findNamespace(fout,
 						  atooid(PQgetvalue(res, i, i_relnamespace)),
 						  tblinfo[i].dobj.catId.oid);
-		tblinfo[i].rolname = pg_strdup(PQgetvalue(res, i, i_rolname));
+		tblinfo[i].rolname = getRoleName(PQgetvalue(res, i, i_relowner));
 		tblinfo[i].relacl = pg_strdup(PQgetvalue(res, i, i_relacl));
 		tblinfo[i].relkind = *(PQgetvalue(res, i, i_relkind));
 		tblinfo[i].reltype = atooid(PQgetvalue(res, i, i_reltype));
@@ -5096,11 +5059,6 @@ getTables(Archive *fout, int *numTables)
 						fmtQualifiedDumpable(&tblinfo[i]));
 			lockTableDumped = true;
 		}
-
-		/* Emit notice if join for owner failed */
-		if (strlen(tblinfo[i].rolname) == 0)
-			write_msg(NULL, "WARNING: owner of table \"%s\" appears to be invalid\n",
-					  tblinfo[i].dobj.name);
 	}
 	/* Are there any tables to lock? */
 	if (lockTableDumped)
@@ -6176,14 +6134,13 @@ getEventTriggers(Archive *fout, int *numEventTriggers)
 
 	appendPQExpBuffer(query,
 					  "SELECT e.tableoid, e.oid, evtname, evtenabled, "
-					  "evtevent, (%s evtowner) AS evtowner, "
+					  "evtevent, evtowner, "
 					  "array_to_string(array("
 					  "select quote_literal(x) "
 					  " from unnest(evttags) as t(x)), ', ') as evttags, "
 					  "e.evtfoid::regproc as evtfname "
 					  "FROM pg_event_trigger e "
-					  "ORDER BY e.oid",
-					  username_subquery);
+					  "ORDER BY e.oid");
 
 	res = ExecuteSqlQuery(fout, query->data, PGRES_TUPLES_OK);
 
@@ -6211,7 +6168,7 @@ getEventTriggers(Archive *fout, int *numEventTriggers)
 		evtinfo[i].dobj.name = pg_strdup(PQgetvalue(res, i, i_evtname));
 		evtinfo[i].evtname = pg_strdup(PQgetvalue(res, i, i_evtname));
 		evtinfo[i].evtevent = pg_strdup(PQgetvalue(res, i, i_evtevent));
-		evtinfo[i].evtowner = pg_strdup(PQgetvalue(res, i, i_evtowner));
+		evtinfo[i].evtowner = getRoleName(PQgetvalue(res, i, i_evtowner));
 		evtinfo[i].evttags = pg_strdup(PQgetvalue(res, i, i_evttags));
 		evtinfo[i].evtfname = pg_strdup(PQgetvalue(res, i, i_evtfname));
 		evtinfo[i].evtenabled = *(PQgetvalue(res, i, i_evtenabled));
@@ -6264,11 +6221,10 @@ getProcLangs(Archive *fout, int *numProcLangs)
 		appendPQExpBuffer(query, "SELECT tableoid, oid, "
 						  "lanname, lanpltrusted, lanplcallfoid, "
 						  "laninline, lanvalidator, lanacl, "
-						  "(%s lanowner) AS lanowner "
+						  "lanowner "
 						  "FROM pg_language "
 						  "WHERE lanispl "
-						  "ORDER BY oid",
-						  username_subquery);
+						  "ORDER BY oid");
 	}
 	else
 	{
@@ -6277,11 +6233,10 @@ getProcLangs(Archive *fout, int *numProcLangs)
 		appendPQExpBuffer(query, "SELECT tableoid, oid, "
 						  "lanname, lanpltrusted, lanplcallfoid, "
 						  "laninline, lanvalidator, lanacl, "
-						  "(%s lanowner) AS lanowner "
+						  "lanowner "
 						  "FROM pg_language "
 						  "WHERE lanispl "
-						  "ORDER BY oid",
-						  username_subquery);
+						  "ORDER BY oid");
 	}
 
 	res = ExecuteSqlQuery(fout, query->data, PGRES_TUPLES_OK);
@@ -6315,7 +6270,7 @@ getProcLangs(Archive *fout, int *numProcLangs)
 		planginfo[i].laninline = atooid(PQgetvalue(res, i, i_laninline));
 		planginfo[i].lanvalidator = atooid(PQgetvalue(res, i, i_lanvalidator));
 		planginfo[i].lanacl = pg_strdup(PQgetvalue(res, i, i_lanacl));
-		planginfo[i].lanowner = pg_strdup(PQgetvalue(res, i, i_lanowner));
+		planginfo[i].lanowner = getRoleName(PQgetvalue(res, i, i_lanowner));
 
 		/* Decide whether we want to dump it */
 		selectDumpableProcLang(&(planginfo[i]));
@@ -7185,17 +7140,16 @@ getTSDictionaries(Archive *fout, int *numTSDicts)
 	int			i_oid;
 	int			i_dictname;
 	int			i_dictnamespace;
-	int			i_rolname;
+	int			i_dictowner;
 	int			i_dicttemplate;
 	int			i_dictinitoption;
 
 	query = createPQExpBuffer();
 
 	appendPQExpBuffer(query, "SELECT tableoid, oid, dictname, "
-					  "dictnamespace, (%s dictowner) AS rolname, "
+					  "dictnamespace, dictowner, "
 					  "dicttemplate, dictinitoption "
-					  "FROM pg_ts_dict",
-					  username_subquery);
+					  "FROM pg_ts_dict");
 
 	res = ExecuteSqlQuery(fout, query->data, PGRES_TUPLES_OK);
 
@@ -7208,7 +7162,7 @@ getTSDictionaries(Archive *fout, int *numTSDicts)
 	i_oid = PQfnumber(res, "oid");
 	i_dictname = PQfnumber(res, "dictname");
 	i_dictnamespace = PQfnumber(res, "dictnamespace");
-	i_rolname = PQfnumber(res, "rolname");
+	i_dictowner = PQfnumber(res, "dictowner");
 	i_dictinitoption = PQfnumber(res, "dictinitoption");
 	i_dicttemplate = PQfnumber(res, "dicttemplate");
 
@@ -7223,7 +7177,7 @@ getTSDictionaries(Archive *fout, int *numTSDicts)
 			findNamespace(fout,
 						  atooid(PQgetvalue(res, i, i_dictnamespace)),
 						  dictinfo[i].dobj.catId.oid);
-		dictinfo[i].rolname = pg_strdup(PQgetvalue(res, i, i_rolname));
+		dictinfo[i].rolname = getRoleName(PQgetvalue(res, i, i_dictowner));
 		dictinfo[i].dicttemplate = atooid(PQgetvalue(res, i, i_dicttemplate));
 		if (PQgetisnull(res, i, i_dictinitoption))
 			dictinfo[i].dictinitoption = NULL;
@@ -7327,15 +7281,14 @@ getTSConfigurations(Archive *fout, int *numTSConfigs)
 	int			i_oid;
 	int			i_cfgname;
 	int			i_cfgnamespace;
-	int			i_rolname;
+	int			i_cfgowner;
 	int			i_cfgparser;
 
 	query = createPQExpBuffer();
 
 	appendPQExpBuffer(query, "SELECT tableoid, oid, cfgname, "
-					  "cfgnamespace, (%s cfgowner) AS rolname, cfgparser "
-					  "FROM pg_ts_config",
-					  username_subquery);
+					  "cfgnamespace, cfgowner, cfgparser "
+					  "FROM pg_ts_config");
 
 	res = ExecuteSqlQuery(fout, query->data, PGRES_TUPLES_OK);
 
@@ -7348,7 +7301,7 @@ getTSConfigurations(Archive *fout, int *numTSConfigs)
 	i_oid = PQfnumber(res, "oid");
 	i_cfgname = PQfnumber(res, "cfgname");
 	i_cfgnamespace = PQfnumber(res, "cfgnamespace");
-	i_rolname = PQfnumber(res, "rolname");
+	i_cfgowner = PQfnumber(res, "cfgowner");
 	i_cfgparser = PQfnumber(res, "cfgparser");
 
 	for (i = 0; i < ntups; i++)
@@ -7362,7 +7315,7 @@ getTSConfigurations(Archive *fout, int *numTSConfigs)
 			findNamespace(fout,
 						  atooid(PQgetvalue(res, i, i_cfgnamespace)),
 						  cfginfo[i].dobj.catId.oid);
-		cfginfo[i].rolname = pg_strdup(PQgetvalue(res, i, i_rolname));
+		cfginfo[i].rolname = getRoleName(PQgetvalue(res, i, i_cfgowner));
 		cfginfo[i].cfgparser = atooid(PQgetvalue(res, i, i_cfgparser));
 
 		/* Decide whether we want to dump it */
@@ -7394,7 +7347,7 @@ getForeignDataWrappers(Archive *fout, int *numForeignDataWrappers)
 	int			i_tableoid;
 	int			i_oid;
 	int			i_fdwname;
-	int			i_rolname;
+	int			i_fdwowner;
 	int			i_fdwhandler;
 	int			i_fdwvalidator;
 	int			i_fdwacl;
@@ -7412,7 +7365,7 @@ getForeignDataWrappers(Archive *fout, int *numForeignDataWrappers)
 	if (fout->remoteVersion >= 90100)
 	{
 		appendPQExpBuffer(query, "SELECT tableoid, oid, fdwname, "
-						  "(%s fdwowner) AS rolname, "
+						  "fdwowner, "
 						  "fdwhandler::pg_catalog.regproc, "
 						  "fdwvalidator::pg_catalog.regproc, fdwacl, "
 						  "array_to_string(ARRAY("
@@ -7421,13 +7374,12 @@ getForeignDataWrappers(Archive *fout, int *numForeignDataWrappers)
 						  "FROM pg_options_to_table(fdwoptions) "
 						  "ORDER BY option_name"
 						  "), E',\n    ') AS fdwoptions "
-						  "FROM pg_foreign_data_wrapper",
-						  username_subquery);
+						  "FROM pg_foreign_data_wrapper");
 	}
 	else
 	{
 		appendPQExpBuffer(query, "SELECT tableoid, oid, fdwname, "
-						  "(%s fdwowner) AS rolname, "
+						  "fdwowner, "
 						  "'-' AS fdwhandler, "
 						  "fdwvalidator::pg_catalog.regproc, fdwacl, "
 						  "array_to_string(ARRAY("
@@ -7436,8 +7388,7 @@ getForeignDataWrappers(Archive *fout, int *numForeignDataWrappers)
 						  "FROM pg_options_to_table(fdwoptions) "
 						  "ORDER BY option_name"
 						  "), E',\n    ') AS fdwoptions "
-						  "FROM pg_foreign_data_wrapper",
-						  username_subquery);
+						  "FROM pg_foreign_data_wrapper");
 	}
 
 	res = ExecuteSqlQuery(fout, query->data, PGRES_TUPLES_OK);
@@ -7450,7 +7401,7 @@ getForeignDataWrappers(Archive *fout, int *numForeignDataWrappers)
 	i_tableoid = PQfnumber(res, "tableoid");
 	i_oid = PQfnumber(res, "oid");
 	i_fdwname = PQfnumber(res, "fdwname");
-	i_rolname = PQfnumber(res, "rolname");
+	i_fdwowner = PQfnumber(res, "fdwowner");
 	i_fdwhandler = PQfnumber(res, "fdwhandler");
 	i_fdwvalidator = PQfnumber(res, "fdwvalidator");
 	i_fdwacl = PQfnumber(res, "fdwacl");
@@ -7464,7 +7415,7 @@ getForeignDataWrappers(Archive *fout, int *numForeignDataWrappers)
 		AssignDumpId(&fdwinfo[i].dobj);
 		fdwinfo[i].dobj.name = pg_strdup(PQgetvalue(res, i, i_fdwname));
 		fdwinfo[i].dobj.namespace = NULL;
-		fdwinfo[i].rolname = pg_strdup(PQgetvalue(res, i, i_rolname));
+		fdwinfo[i].rolname = getRoleName(PQgetvalue(res, i, i_fdwowner));
 		fdwinfo[i].fdwhandler = pg_strdup(PQgetvalue(res, i, i_fdwhandler));
 		fdwinfo[i].fdwvalidator = pg_strdup(PQgetvalue(res, i, i_fdwvalidator));
 		fdwinfo[i].fdwoptions = pg_strdup(PQgetvalue(res, i, i_fdwoptions));
@@ -7499,7 +7450,7 @@ getForeignServers(Archive *fout, int *numForeignServers)
 	int			i_tableoid;
 	int			i_oid;
 	int			i_srvname;
-	int			i_rolname;
+	int			i_srvowner;
 	int			i_srvfdw;
 	int			i_srvtype;
 	int			i_srvversion;
@@ -7516,7 +7467,7 @@ getForeignServers(Archive *fout, int *numForeignServers)
 	query = createPQExpBuffer();
 
 	appendPQExpBuffer(query, "SELECT tableoid, oid, srvname, "
-					  "(%s srvowner) AS rolname, "
+					  "srvowner, "
 					  "srvfdw, srvtype, srvversion, srvacl,"
 					  "array_to_string(ARRAY("
 					  "SELECT quote_ident(option_name) || ' ' || "
@@ -7524,8 +7475,7 @@ getForeignServers(Archive *fout, int *numForeignServers)
 					  "FROM pg_options_to_table(srvoptions) "
 					  "ORDER BY option_name"
 					  "), E',\n    ') AS srvoptions "
-					  "FROM pg_foreign_server",
-					  username_subquery);
+					  "FROM pg_foreign_server");
 
 	res = ExecuteSqlQuery(fout, query->data, PGRES_TUPLES_OK);
 
@@ -7537,7 +7487,7 @@ getForeignServers(Archive *fout, int *numForeignServers)
 	i_tableoid = PQfnumber(res, "tableoid");
 	i_oid = PQfnumber(res, "oid");
 	i_srvname = PQfnumber(res, "srvname");
-	i_rolname = PQfnumber(res, "rolname");
+	i_srvowner = PQfnumber(res, "srvowner");
 	i_srvfdw = PQfnumber(res, "srvfdw");
 	i_srvtype = PQfnumber(res, "srvtype");
 	i_srvversion = PQfnumber(res, "srvversion");
@@ -7552,7 +7502,7 @@ getForeignServers(Archive *fout, int *numForeignServers)
 		AssignDumpId(&srvinfo[i].dobj);
 		srvinfo[i].dobj.name = pg_strdup(PQgetvalue(res, i, i_srvname));
 		srvinfo[i].dobj.namespace = NULL;
-		srvinfo[i].rolname = pg_strdup(PQgetvalue(res, i, i_rolname));
+		srvinfo[i].rolname = getRoleName(PQgetvalue(res, i, i_srvowner));
 		srvinfo[i].srvfdw = atooid(PQgetvalue(res, i, i_srvfdw));
 		srvinfo[i].srvtype = pg_strdup(PQgetvalue(res, i, i_srvtype));
 		srvinfo[i].srvversion = pg_strdup(PQgetvalue(res, i, i_srvversion));
@@ -7601,12 +7551,11 @@ getDefaultACLs(Archive *fout, int *numDefaultACLs)
 	query = createPQExpBuffer();
 
 	appendPQExpBuffer(query, "SELECT oid, tableoid, "
-					  "(%s defaclrole) AS defaclrole, "
+					  "defaclrole, "
 					  "defaclnamespace, "
 					  "defaclobjtype, "
 					  "defaclacl "
-					  "FROM pg_default_acl",
-					  username_subquery);
+					  "FROM pg_default_acl");
 
 	res = ExecuteSqlQuery(fout, query->data, PGRES_TUPLES_OK);
 
@@ -7639,7 +7588,7 @@ getDefaultACLs(Archive *fout, int *numDefaultACLs)
 		else
 			daclinfo[i].dobj.namespace = NULL;
 
-		daclinfo[i].defaclrole = pg_strdup(PQgetvalue(res, i, i_defaclrole));
+		daclinfo[i].defaclrole = getRoleName(PQgetvalue(res, i, i_defaclrole));
 		daclinfo[i].defaclobjtype = *(PQgetvalue(res, i, i_defaclobjtype));
 		daclinfo[i].defaclacl = pg_strdup(PQgetvalue(res, i, i_defaclacl));
 
@@ -7652,6 +7601,71 @@ getDefaultACLs(Archive *fout, int *numDefaultACLs)
 	destroyPQExpBuffer(query);
 
 	return daclinfo;
+}
+
+/*
+ * getRoleName -- look up the name of a role, given its OID
+ *
+ * In current usage, we don't expect failures, so error out for a bad OID.
+ */
+static const char *
+getRoleName(const char *roleoid_str)
+{
+	Oid			roleoid = atooid(roleoid_str);
+
+	/*
+	 * Do binary search to find the appropriate item.
+	 */
+	if (nrolenames > 0)
+	{
+		RoleNameItem *low = &rolenames[0];
+		RoleNameItem *high = &rolenames[nrolenames - 1];
+
+		while (low <= high)
+		{
+			RoleNameItem *middle = low + (high - low) / 2;
+
+			if (roleoid < middle->roleoid)
+				high = middle - 1;
+			else if (roleoid > middle->roleoid)
+				low = middle + 1;
+			else
+				return middle->rolename;	/* found a match */
+		}
+	}
+
+	exit_horribly(NULL, "role with OID %u does not exist\n", roleoid);
+	return NULL;				/* keep compiler quiet */
+}
+
+/*
+ * collectRoleNames --
+ *
+ * Construct a table of all known roles.
+ * The table is sorted by OID for speed in lookup.
+ */
+static void
+collectRoleNames(Archive *fout)
+{
+	PGresult   *res;
+	const char *query;
+	int			i;
+
+	query = "SELECT oid, rolname FROM pg_catalog.pg_roles ORDER BY 1";
+
+	res = ExecuteSqlQuery(fout, query, PGRES_TUPLES_OK);
+
+	nrolenames = PQntuples(res);
+
+	rolenames = (RoleNameItem *) pg_malloc(nrolenames * sizeof(RoleNameItem));
+
+	for (i = 0; i < nrolenames; i++)
+	{
+		rolenames[i].roleoid = atooid(PQgetvalue(res, i, 0));
+		rolenames[i].rolename = pg_strdup(PQgetvalue(res, i, 1));
+	}
+
+	PQclear(res);
 }
 
 /*
@@ -11828,7 +11842,7 @@ dumpExtProtocol(Archive *fout, ExtProtInfo *ptcinfo)
 				 ptcinfo->dobj.name,
 				 NULL,
 				 NULL,
-				 ptcinfo->ptcowner,
+				 ptcinfo->rolname,
 				 false, "PROTOCOL", SECTION_PRE_DATA,
 				 q->data, delq->data, NULL,
 				 ptcinfo->dobj.dependencies, ptcinfo->dobj.nDeps,
@@ -11839,7 +11853,7 @@ dumpExtProtocol(Archive *fout, ExtProtInfo *ptcinfo)
 	dumpACL(fout, ptcinfo->dobj.catId, ptcinfo->dobj.dumpId,
 			"PROTOCOL",
 			namecopy, NULL,
-			NULL, ptcinfo->ptcowner,
+			NULL, ptcinfo->rolname,
 			ptcinfo->ptcacl);
 	free(namecopy);
 
