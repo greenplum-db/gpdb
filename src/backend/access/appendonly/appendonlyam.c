@@ -94,25 +94,6 @@ typedef struct AppendOnlyDeleteDescData
 
 }			AppendOnlyDeleteDescData;
 
-/*
- * AppendOnlyUpdateDescData is used to update data from append-only
- * relations. It serves an equivalent purpose as AppendOnlyScanDescData
- * (relscan.h) only that the later is used for scanning append-only
- * relations.
- */
-typedef struct AppendOnlyUpdateDescData
-{
-	AppendOnlyInsertDesc aoInsertDesc;
-
-	AppendOnlyVisimap visibilityMap;
-
-	/*
-	 * Visimap delete support structure. Used to handle out-of-order deletes
-	 */
-	AppendOnlyVisimapDelete visiMapDelete;
-
-}			AppendOnlyUpdateDescData;
-
 typedef enum AoExecutorBlockKind
 {
 	AoExecutorBlockKind_None = 0,
