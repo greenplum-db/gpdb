@@ -1491,6 +1491,10 @@ url_curl_fclose(URL_FILE *fileg, bool failOnError, const char *relname)
 	memset(&file->block, 0, sizeof(file->block));
 
 	pfree(file->common.url);
+#ifdef USE_ZSTD
+	if (file->zstd)
+		ZSTD_freeDCtx(file->zstd_dctx);
+#endif
 
 	pfree(file);
 }
