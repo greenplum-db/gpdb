@@ -1,7 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE topic
-  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
-<topic id="topic1" xml:lang="en"><title id="ft142834">gp_version_at_initdb</title><body><p>The <codeph>gp_version_at_initdb</codeph> table is populated on the master and each segment in
-      the Greenplum Database system. It identifies the version of Greenplum Database used when the system was first initialized. This table is defined in
-      the <codeph>pg_global</codeph> tablespace, meaning it is globally shared across all databases
-      in the system.</p><table id="ft142845"><title>pg_catalog.gp_version_at_initdb</title><tgroup cols="4"><colspec colnum="1" colname="col1" colwidth="131pt"/><colspec colnum="2" colname="col2" colwidth="86pt"/><colspec colnum="3" colname="col3" colwidth="85pt"/><colspec colnum="4" colname="col4" colwidth="147pt"/><thead><row><entry colname="col1">column</entry><entry colname="col2">type</entry><entry colname="col3">references</entry><entry colname="col4">description</entry></row></thead><tbody><row><entry colname="col1"><codeph>schemaversion</codeph></entry><entry colname="col2">integer</entry><entry colname="col3"/><entry colname="col4">Schema version number.</entry></row><row><entry colname="col1"><codeph>productversion</codeph></entry><entry colname="col2">text</entry><entry colname="col3"/><entry colname="col4">Product version number.</entry></row></tbody></tgroup></table></body></topic>
