@@ -83,7 +83,7 @@ typedef struct block_t block_t;
 struct block_t
 {
 	blockhdr_t 	hdr;
-	int 		bot, top;
+	int 		bot, top, lastsize;
 	char*      	data;
 	char*		cdata;
 };
@@ -191,8 +191,9 @@ static struct
 	struct transform* trlist; /* transforms from config file */
 	const char* ssl; /* path to certificates in case we use gpfdist with ssl */
 	int			w; /* The time used for session timeout in seconds */
-	int			compress; /* The flag to indicate whether comopression transmission is open */
-} opt = { 8080, 8080, 0, 0, 0, ".", 0, 0, -1, 5, 0, 32768, 0, 256, 0, 0, 0, 0, 0};
+	int			compress;
+	int			multi_thread;
+} opt = { 8080, 8080, 0, 0, 0, ".", 0, 0, -1, 5, 0, 32768, 0, 256, 0, 0, 0, 0, 0, 0};
 
 
 typedef union address
@@ -315,9 +316,15 @@ struct request_t
 	ZSTD_CCtx*		zstd_cctx;	/* zstd compression context */
 	ZSTD_DCtx*		zstd_dctx;	/* zstd decompression context */
 #endif	
-	int		zstd;			/* request use zstd compress */
-	int		zstd_err_len;	/* space allocate for zstd_error string */
-	char*		zstd_error;	/* string contains zstd error*/
+	int				zstd;			/* request use zstd compress */
+	int				zstd_err_len;	/* space allocate for zstd_error string */
+	char*			zstd_error;		/* string contains zstd error*/
+	bool			multi_thread;	/* If multi_thread equals true, multi-thread transmission begins. */	
+	bool			is_running;		/* If is_running equals true, the thread for this request not end. 
+									 * Wait it ends and then startup new thread to transfer data. 
+									 */
+	pthread_t		thread_id;		/* recording the thread ID of thread created */
+
 #ifdef USE_SSL
 	/* SSL related */
 	BIO			*io;		/* for the i.o. */
@@ -383,6 +390,8 @@ static int compress_zstd(const request_t *r, block_t* block, int buflen);
 static int decompress_data(request_t *r, zstd_buffer *in, zstd_buffer *out);
 static int decompress_zstd(request_t* r, ZSTD_inBuffer* bin, ZSTD_outBuffer* bout);
 static int decompress_write_loop(request_t *r);
+static int local_send_with_zstd(request_t *r);
+static void wait_for_thread_join(request_t *r, int *send_size);
 #endif
 static int request_parse_gp_headers(request_t *r, int opt_g);
 static void free_session_cb(int fd, short event, void* arg);
@@ -653,6 +662,7 @@ static void parse_command_line(int argc, const char* const argv[],
 	{ "version", 256, 0, "print version number" },
 	{ NULL, 'w', 1, "wait for session timeout in seconds" },
 	{"compress", 258, 0, "turn on compressed transmission"},
+	{"mthread", 259, 0, "turn on multi-thread and compressed transmission"},
 	{ 0 } };
 
 	status = apr_getopt_init(&os, pool, argc, argv);
@@ -746,6 +756,9 @@ static void parse_command_line(int argc, const char* const argv[],
 			usage_error("ZSTD is not supported by this build", 0);
 			break;
 #endif
+		case 259:
+			opt.multi_thread = 1;
+			break;
 		}
 	}
 
@@ -1268,6 +1281,64 @@ static int local_send(request_t *r, const char* buf, int buflen)
 	return n;
 }
 
+#ifdef USE_ZSTD
+
+static void
+wait_for_thread_join(request_t *r, int *send_size)
+{
+	if (!r->thread_id || !r->is_running)
+		return 0;
+	pthread_join(r->thread_id, send_size);
+	gdebug(NULL, "%s", "thread is blocking.");
+	r->is_running = 0;
+	r->thread_id = 0;
+	if (r->outblock.lastsize != *send_size)
+		*send_size = -1;
+}
+
+static int 
+send_compression_data (request_t *r)
+{
+	int osize = r->outblock.top;
+	block_t *outblock = &r->outblock;
+
+	int res = compress_zstd(r, outblock, osize);
+	
+	if (res < 0)
+	{
+		return -2;  /* If the error come from compression, '-2' is returned */
+	}
+	int sendbytes = 0;
+	while (sendbytes != res)
+	{
+		int send = local_send(r, outblock->cdata, res);
+		if(send < 0)
+			return send;
+		sendbytes += send;
+	}
+	
+	return osize;
+}
+
+static int 
+local_send_with_zstd(request_t *r)
+{
+	size_t send_size = 0;
+	if(r->multi_thread){
+		r->is_running = 1;
+		pthread_create(&r->thread_id, 0, send_compression_data, r);
+		send_size = r->outblock.top;
+		r->outblock.lastsize = r->outblock.top;
+	}
+	else
+	{
+		send_size = send_compression_data(r);
+	}
+
+	return send_size;
+}
+#endif
+
 static int local_sendall(request_t* r, const char* buf, int buflen)
 {
 	int oldlen = buflen;
@@ -1418,20 +1489,6 @@ session_get_block(const request_t* r, block_t* retblock, char* line_delim_str, i
 	retblock->top = size;
 	/* fill the block header with meta data for the client to parse and use */
 	block_fill_header(r, retblock, &fos);
-
-#ifdef USE_ZSTD
-	if (r->zstd)
-	{
-		int res = compress_zstd(r, retblock, size);
-		
-		if (res < 0)
-		{
-			return r->zstd_error;
-		}
-
-		retblock->top = res;
-	}
-#endif
 
 	return 0;
 }
@@ -1848,8 +1905,24 @@ static void do_write(int fd, short event, void* arg)
 		gfatal(r, "internal error - non matching fd (%d) "
 					  "and socket (%d)", fd, r->sock);
 
+	int last_send = 0;
+	if (r->is_running)
+	{
+		wait_for_thread_join(r, &last_send);
+	}
+	if(last_send < 0) {
+		request_end(r, 1, "gpfdist send data failure");
+		
+		/* zstd error occurs */
+		if (last_send == -2) {
+			request_end(r, 1, r->zstd_error);
+		}
+		return;
+	}
+		
+
 	/* Loop at most 3 blocks or until we choke on the socket */
-	for (i = 0; i < 3; i++)
+	for (i = 0; i < 1; i++)
 	{
 		/* get a block (or find a remaining block) */
 		if (r->outblock.top == r->outblock.bot)
@@ -1907,15 +1980,14 @@ static void do_write(int fd, short event, void* arg)
 		 * write out the block data
 		 */
 		n = datablock->top - datablock->bot;
-		if (r->zstd)
+		if(r->zstd)
 		{
-			n = local_send(r, datablock->cdata + datablock->bot, n);
+			n = local_send_with_zstd(r);
 		}
 		else
 		{
 			n = local_send(r, datablock->data + datablock->bot, n);
 		}
-
 		if (n < 0)
 		{
 			/*
@@ -1930,6 +2002,11 @@ static void do_write(int fd, short event, void* arg)
 			if (errno == EPIPE || errno == ECONNRESET)
 				r->outblock.bot = r->outblock.top;
 			request_end(r, 1, "gpfdist send data failure");
+			
+			/* zstd error occurs */
+			if (n == -2) {
+				request_end(r, 1, r->zstd_error);
+			}
 			return;
 		}
 
@@ -3309,6 +3386,7 @@ static void handle_post_request(request_t *r, int header_end)
 			r->last = apr_time_now();
 			r->in.davailable -= n;
 			r->in.dbuftop += n;
+			
 
 			/* success is a flag to check whether data is written into file successfully.
 			 * There is no need to do anything when success is less than 0, since all
@@ -3580,8 +3658,14 @@ static int request_parse_gp_headers(request_t *r, int opt_g)
 		r->zstd_err_len = 1024;
 		r->outblock.cdata = palloc_safe(r, r->pool, opt.m, "out of memory when allocating buffer for compressed data: %d bytes", opt.m);
 		r->zstd_error = palloc_safe(r, r->pool, r->zstd_err_len, "out of memory when allocating error buffer for compressed data: %d bytes", r->zstd_err_len);
+		r->is_running = 0;
+		r->thread_id = 0;
 		if (r->is_get)
 			r->zstd_cctx = ZSTD_createCStream();
+		else
+			r->zstd_dctx = ZSTD_createDCtx();
+		
+		r->multi_thread = opt.multi_thread;
 	}
 #endif
 
@@ -4571,9 +4655,18 @@ static void request_cleanup(request_t *r)
 	request_shutdown_sock(r);
 	setup_do_close(r);
 #ifdef USE_ZSTD
+	int tmp = 0;
+	if(r->is_running)
+		wait_for_thread_join(r, &tmp);
 	if ( r->zstd && r->is_get )
-	{
+	{	
 		ZSTD_freeCCtx(r->zstd_cctx);
+		r->zstd_cctx = NULL;
+	}
+	if ( r->zstd && !r->is_get )
+	{
+		ZSTD_freeDCtx(r->zstd_cctx);
+		r->zstd_cctx = NULL;
 	}
 	if ( r->zstd && !r->is_get )
 	{
