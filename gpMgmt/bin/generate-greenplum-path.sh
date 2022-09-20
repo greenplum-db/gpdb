@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+SET_PYTHONHOME="${1:-no}"
+
 cat <<"EOF"
 if test -n "${ZSH_VERSION:-}"; then
     # zsh
@@ -23,6 +25,16 @@ else
     GPHOME=$(readlink "${SCRIPT_DIR}")
 fi
 EOF
+
+if [ "${SET_PYTHONHOME}" = "yes" ]; then
+	cat <<-"EOF"
+	PYTHONHOME="${GPHOME}/ext/python"
+	export PYTHONHOME
+
+	PATH="${PYTHONHOME}/bin:${PATH}"
+	LD_LIBRARY_PATH="${PYTHONHOME}/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+	EOF
+fi
 
 cat <<"EOF"
 PYTHONPATH="${GPHOME}/lib/python"
