@@ -68,6 +68,12 @@
 #define DEFAULT_COMPRESS_LEVEL 1
 #define MAX_FRAME_SIZE 65536
 
+#define SAFE_FSTREAM_READ(mutex, fs, outblock, line_delim_str, line_delim_length) \
+	pthread_mutex_lock(mutex);\
+	ferror = session_get_block(fs, outblock, line_delim_str, line_delim_length); \
+	pthread_mutex_unlock(mutex);\
+	
+
 /*  A data block */
 typedef struct blockhdr_t blockhdr_t;
 struct blockhdr_t
@@ -152,7 +158,7 @@ static char* gstring_trim(char* s);
 static void percent_encoding_to_char(char* p, char* pp, char* path);
 
 /* CR-2723 */
-#define GPFDIST_MAX_LINE_LOWER_LIMIT (32*1024)
+#define GPFDIST_MAX_LINE_LOWER_LIMIT (64*1024)
 #ifdef GPFXDIST
 #define GPFDIST_MAX_LINE_UPPER_LIMIT (256*1024*1024)
 #define GPFDIST_MAX_LINE_MESSAGE     "Error: -m max row length must be between 32KB and 256MB"
@@ -183,8 +189,9 @@ static struct
 	struct transform* trlist; /* transforms from config file */
 	const char* ssl; /* path to certificates in case we use gpfdist with ssl */
 	int			w; /* The time used for session timeout in seconds */
-	int			compress; /* The flag to indicate whether comopression transmission is open */
-} opt = { 8080, 8080, 0, 0, 0, ".", 0, 0, -1, 5, 0, 32768, 0, 256, 0, 0, 0, 0, 0};
+	int			compress;	/* The flag to indicate whether comopression transmission is open */
+	bool 		use_multi_thread;	/* The switch for using multi-thread compression and sending for data*/
+} opt = { 8080, 8080, 0, 0, 0, ".", 0, 0, -1, 5, 0, 64*1024, 0, 256, 0, 0, 0, 0, 0, 0};
 
 
 typedef union address
@@ -243,6 +250,7 @@ struct session_t
 	struct timeval 	tm;             /* timeout for struct event */
 	struct event   	ev;             /* event we are watching for this session*/
 	apr_hash_t		*requests;
+	pthread_mutex_t mutex;
 };
 
 /*  An http request */
@@ -307,9 +315,12 @@ struct request_t
 	ZSTD_CCtx*		zstd_cctx;	/* zstd compression context */
 	ZSTD_DCtx*		zstd_dctx;	/* zstd decompression context */
 #endif	
-	int				zstd;		/* request use zstd compress */
-	int				zstd_err_len; 	/* space allocate for zstd_error string */
-	char*				zstd_error;	/* string contains zstd error*/
+	int             zstd;		/* request use zstd compress */
+	int				zstd_err_len; /* space allocate for zstd_error string */
+	char*			zstd_error;	  /* string contains zstd error*/
+
+	int				thread_id;
+
 #ifdef USE_SSL
 	/* SSL related */
 	BIO			*io;		/* for the i.o. */
@@ -378,6 +389,7 @@ static void decompress_write_loop(request_t *r);
 #endif
 static int request_parse_gp_headers(request_t *r, int opt_g);
 static void free_session_cb(int fd, short event, void* arg);
+static void process_do_write(request_t *r);
 #ifdef GPFXDIST
 static int request_set_transform(request_t *r);
 #endif
@@ -645,6 +657,7 @@ static void parse_command_line(int argc, const char* const argv[],
 	{ "version", 256, 0, "print version number" },
 	{ NULL, 'w', 1, "wait for session timeout in seconds" },
 	{"compress", 258, 0, "turn on compressed transmission"},
+	{"mthread", 259, 0, "turn on multi-thread compression transmission"},
 	{ 0 } };
 
 	status = apr_getopt_init(&os, pool, argc, argv);
@@ -738,6 +751,9 @@ static void parse_command_line(int argc, const char* const argv[],
 			usage_error("ZSTD is not supported by this build", 0);
 			break;
 #endif
+		case 259:
+			opt.use_multi_thread = 1;
+			break;
 		}
 	}
 
@@ -1415,12 +1431,10 @@ session_get_block(const request_t* r, block_t* retblock, char* line_delim_str, i
 	if (r->zstd)
 	{
 		int res = compress_zstd(r, retblock, size);
-		
 		if (res < 0)
 		{
 			return r->zstd_error;
 		}
-
 		retblock->top = res;
 	}
 #endif
@@ -1724,6 +1738,7 @@ static int session_attach(request_t* r)
 		session->active_segids[r->segid] = 1; /* mark this segid as active */
 		session->maxsegs = r->totalsegs;
 		session->requests = apr_hash_make(pool);
+		if(opt.use_multi_thread) pthread_mutex_init(&session->mutex, NULL);
 		event_set(&session->ev, 0, 0, 0, 0);
 
 		if (session->tid == 0 || session->path == 0 || session->key == 0)
@@ -1833,115 +1848,18 @@ pg_attribute_printf(1, 2);
 static void do_write(int fd, short event, void* arg)
 {
 	request_t* 	r = (request_t*) arg;
-	int 		n, i;
-	block_t* 	datablock;
 
 	if (fd != r->sock)
 		gfatal(r, "internal error - non matching fd (%d) "
 					  "and socket (%d)", fd, r->sock);
 
-	/* Loop at most 3 blocks or until we choke on the socket */
-	for (i = 0; i < 3; i++)
-	{
-		/* get a block (or find a remaining block) */
-		if (r->outblock.top == r->outblock.bot)
-		{
-			const char* ferror = session_get_block(r, &r->outblock, r->line_delim_str, r->line_delim_length);
-
-			if (ferror)
-			{
-				request_end(r, 1, ferror);
-				gfile_printf_then_putc_newline("ERROR: %s", ferror);
-				return;
-			}
-			if (!r->outblock.top)
-			{
-				request_end(r, 0, 0);
-				return;
-			}
-		}
-
-		datablock = &r->outblock;
-
-		/*
-		 * If PROTO-1: first write out the block header (metadata).
-		 */
-		if (r->gp_proto == 1)
-		{
-			n = datablock->hdr.htop - datablock->hdr.hbot;
-
-			if (n > 0)
-			{
-				n = local_send(r, datablock->hdr.hbyte + datablock->hdr.hbot, n);
-				if (n < 0)
-				{
-					/*
-					 * TODO: It is not safe to check errno here, should check and
-					 * return special value in local_send()
-					 */
-					if (errno == EPIPE || errno == ECONNRESET)
-						r->outblock.bot = r->outblock.top;
-					request_end(r, 1, "gpfdist send block header failure");
-					return;
-				}
-
-				gdebug(r, "send header bytes %d .. %d (top %d)",
-					datablock->hdr.hbot, datablock->hdr.hbot + n, datablock->hdr.htop);
-
-				datablock->hdr.hbot += n;
-				n = datablock->hdr.htop - datablock->hdr.hbot;
-				if (n > 0)
-					break; /* network chocked */
-			}
-		}
-
-		/*
-		 * write out the block data
-		 */
-		n = datablock->top - datablock->bot;
-		if (r->zstd)
-		{
-			n = local_send(r, datablock->cdata + datablock->bot, n);
-		}
-		else
-		{
-			n = local_send(r, datablock->data + datablock->bot, n);
-		}
-
-		if (n < 0)
-		{
-			/*
-			 * EPIPE (or ECONNRESET some computers) indicates remote socket
-			 * intentionally shut down half of the pipe.  If this was because
-			 * of something like "select ... limit 10;", then it is fine that
-			 * we couldn't transmit all the data--the segment didn't want it
-			 * anyway.  If it is because the segment crashed or something like
-			 * that, hopefully we would find out about that in some other way
-			 * anyway, so it is okay if we don't poison the session.
-			 */
-			if (errno == EPIPE || errno == ECONNRESET)
-				r->outblock.bot = r->outblock.top;
-			request_end(r, 1, "gpfdist send data failure");
-			return;
-		}
-
-		gdebug(r, "send data bytes off buf %d .. %d (top %d)",
-			   datablock->bot, datablock->bot + n, datablock->top);
-
-		r->bytes += n;
-		r->last = apr_time_now();
-		datablock->bot += n;
-
-		if (datablock->top != datablock->bot)
-		{ /* network chocked */
-			gdebug(r, "network full");
-			break;
-		}
+	if(opt.use_multi_thread){
+		//pthread_join(r->thread_id, NULL);
+		pthread_create(&r->thread_id, NULL, process_do_write, (void*)r);
+	}else{
+		process_do_write(r);
 	}
 
-	/* Set up for this routine to be called again */
-	if (setup_write(r))
-		request_end(r, 1, 0);
 }
 
 /*
@@ -3284,7 +3202,7 @@ static void handle_post_request(request_t *r, int header_end)
 			r->last = apr_time_now();
 			r->in.davailable -= n;
 			r->in.dbuftop += n;
-
+			
 			/* if filled our buffer or no more data expected, write it */
 			if (r->in.dbufmax == r->in.dbuftop || r->in.davailable == 0)
 			{
@@ -4368,7 +4286,7 @@ static int gpfdist_SSL_receive(const request_t *r, void *buf, const size_t bufle
 	/* todo: add error checks here */
 }
 
-/*
+/*ƒ
  * free_SSL_resources
  *
  * Frees all SSL resources that were allocated per request r
@@ -4703,8 +4621,9 @@ static int decompress_zstd(request_t* r, ZSTD_inBuffer* bin, ZSTD_outBuffer* bou
 		 
 	ret = ZSTD_decompressStream(r->zstd_dctx, bout, bin);
 	size_t const err = ret;                          
-	if(ZSTD_isError(err)){
-		snprintf(r->zstd_error, r->zstd_err_len, "zstd decompression error, error is %s", ZSTD_getErrorName(err));
+	if (ZSTD_isError(err)) 
+	{
+		snprintf(r->zstd_error,r->zstd_err_len, "zstd decompression error, error is %s", ZSTD_getErrorName(err));
 		gwarning(NULL, r->zstd_error);
 		return -1;
 	}
@@ -4751,50 +4670,156 @@ static int compress_zstd(const request_t *r, block_t *blk, int buflen)
 	if (!r->zstd_cctx)
 	{
 		snprintf(r->zstd_error, r->zstd_err_len, "Creating compression context failed, out of memory.");
-		gprintln(NULL, "%s", r->zstd_error);
+		gprintln(NULL, r->zstd_error);
 		return -1;
 	}
 
-	size_t init_result = ZSTD_initCStream(r->zstd_cctx, DEFAULT_COMPRESS_LEVEL);
-	if (ZSTD_isError(init_result)) 
+	size_t initResult = ZSTD_initCStream(r->zstd_cctx, DEFAULT_COMPRESS_LEVEL);
+	if (ZSTD_isError(initResult)) 
 	{
-		snprintf(r->zstd_error, r->zstd_err_len, "Creating compression context initialization failed, error is %s.", ZSTD_getErrorName(init_result));
-		gprintln(NULL, "%s", r->zstd_error);
+		snprintf(r->zstd_error, r->zstd_err_len, "Creating compression context initialization failed, error is %s.", ZSTD_getErrorName(initResult));
+		gprintln(NULL, r->zstd_error);
 		return -1;
 	}
 
-	while(cursor < buflen){
+	while (cursor < buflen)
+	{
 		int in_size = (buflen - cursor) > MAX_FRAME_SIZE ? MAX_FRAME_SIZE : (buflen - cursor);
 		ZSTD_inBuffer bin = {buf + cursor, in_size, 0};
-		int outpos = 0;
-		while(bin.pos < bin.size){
-			ZSTD_outBuffer bout = {blk->cdata + offset, OUT_BUFFER_SIZE - outpos, 0};
+		while (bin.pos < bin.size)
+		{
+			ZSTD_outBuffer bout = {blk->cdata + offset, OUT_BUFFER_SIZE, 0};
 			size_t res = ZSTD_compressStream(r->zstd_cctx, &bout, &bin);
 
-			if (ZSTD_isError(res))
-			{
+			if (ZSTD_isError(res)){
 				snprintf(r->zstd_error, r->zstd_err_len, "Compression failed, error is %s.", ZSTD_getErrorName(res));
-				gprintln(NULL, "%s", r->zstd_error);
+				gprintln(NULL, r->zstd_error);
 				return -1;
 			}
 			offset += bout.pos;
-			outpos = bout.pos; 
 		}
 		cursor += in_size;
 	}
 
 	ZSTD_outBuffer output = { r->outblock.cdata + offset, OUT_BUFFER_SIZE, 0 };
 	size_t const remainingToFlush = ZSTD_endStream(r->zstd_cctx, &output);   /* close frame */
-	if (remainingToFlush)
-	{
-		snprintf(r->zstd_error, r->zstd_err_len, "Compression failed, error is not fully flushed.");
-		gprintln(NULL, "%s", r->zstd_error);
-		return -1;
-	}
 	offset += output.pos;
 
 	gdebug(NULL, "compress_zstd finished, input size = %d, output size = %d.", buflen, offset);
 
 	return offset;
 }
+
+
+static void process_do_write(request_t *r){
+	int 		n, i;
+	block_t* 	datablock;
+
+	/* Loop at most 3 blocks or until we choke on the socket */
+	for (i = 0; i < 3; i++)
+	{
+		/* get a block (or find a remaining block) */
+		if (r->outblock.top == r->outblock.bot)
+		{
+			const char* ferror;
+			if(opt.use_multi_thread){
+				SAFE_FSTREAM_READ(&r->session->mutex, r, &r->outblock, r->line_delim_str, r->line_delim_length)
+			}
+			else{
+				ferror = session_get_block(r, &r->outblock, r->line_delim_str, r->line_delim_length);
+			}
+
+			if (ferror)
+			{
+				request_end(r, 1, ferror);
+				gfile_printf_then_putc_newline("ERROR: %s", ferror);
+				return;
+			}
+			if (!r->outblock.top)
+			{
+				request_end(r, 0, 0);
+				return;
+			}
+		}
+
+		datablock = &r->outblock;
+
+		/*
+		 * If PROTO-1: first write out the block header (metadata).
+		 */
+		if (r->gp_proto == 1)
+		{
+			n = datablock->hdr.htop - datablock->hdr.hbot;
+
+			if (n > 0)
+			{
+				n = local_send(r, datablock->hdr.hbyte + datablock->hdr.hbot, n);
+				if (n < 0)
+				{
+					/*
+					 * TODO: It is not safe to check errno here, should check and
+					 * return special value in local_send()
+					 */
+					if (errno == EPIPE || errno == ECONNRESET)
+						r->outblock.bot = r->outblock.top;
+					request_end(r, 1, "gpfdist send block header failure");
+					return;
+				}
+
+				gdebug(r, "send header bytes %d .. %d (top %d)",
+					datablock->hdr.hbot, datablock->hdr.hbot + n, datablock->hdr.htop);
+
+				datablock->hdr.hbot += n;
+				n = datablock->hdr.htop - datablock->hdr.hbot;
+				if (n > 0)
+					break; /* network chocked */
+			}
+		}
+
+		/*
+		 * write out the block data
+		 */
+		n = datablock->top - datablock->bot;
+		if(r->zstd){
+			n = local_send(r, datablock->cdata + datablock->bot, n);
+		}
+		else{
+			n = local_send(r, datablock->data + datablock->bot, n);
+		}
+		if (n < 0)
+		{
+			/*
+			 * EPIPE (or ECONNRESET some computers) indicates remote socket
+			 * intentionally shut down half of the pipe.  If this was because
+			 * of something like "select ... limit 10;", then it is fine that
+			 * we couldn't transmit all the data--the segment didn't want it
+			 * anyway.  If it is because the segment crashed or something like
+			 * that, hopefully we would find out about that in some other way
+			 * anyway, so it is okay if we don't poison the session.
+			 */
+			if (errno == EPIPE || errno == ECONNRESET)
+				r->outblock.bot = r->outblock.top;
+			request_end(r, 1, "gpfdist send data failure");
+			return;
+		}
+
+		gdebug(r, "send data bytes off buf %d .. %d (top %d)",
+			   datablock->bot, datablock->bot + n, datablock->top);
+
+		r->bytes += n;
+		r->last = apr_time_now();
+		datablock->bot += n;
+
+		if (datablock->top != datablock->bot)
+		{ /* network chocked */
+			gdebug(r, "network full");
+			break;
+		}
+	}
+
+	/* Set up for this routine to be called again */
+	if (setup_write(r))
+		request_end(r, 1, 0);
+}
+
 #endif

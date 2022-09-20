@@ -313,6 +313,7 @@ header_callback(void *ptr_, size_t size, size_t nmemb, void *userp)
 	char*		ptr = ptr_;
 	int 		len = size * nmemb;
 	int 		i;
+	int 		zstd_len = strlen("X-GP-ZSTD"), proto_len = strlen("X-GP-PROTO");
 	char 		buf[20];
 
 	int proto_len = strlen("X-GP-PROTO"), zstd_len = strlen("X-GP-ZSTD");
@@ -1292,6 +1293,7 @@ url_curl_fopen(char *url, bool forwrite, extvar_t *ev, CopyState pstate)
 		set_httpheader(file, "X-GP-PROTO", "0");
 		set_httpheader(file, "X-GP-SEQ", "1");
 		set_httpheader(file, "Content-Type", "text/xml");
+		set_httpheader(file, "X-GP-ZSTD", "1");
 	}
 	else
 	{
@@ -1426,6 +1428,7 @@ url_curl_fopen(char *url, bool forwrite, extvar_t *ev, CopyState pstate)
 		int			bufsize = writable_external_table_bufsize * 1024;
 
 		file->out.ptr = (char *) palloc(bufsize);
+		file->out.cptr = (char *) palloc(bufsize);
 		file->out.max = bufsize;
 		file->out.bot = file->out.top = 0;
 	}
@@ -1514,6 +1517,10 @@ url_curl_fclose(URL_FILE *fileg, bool failOnError, const char *relname)
 	memset(&file->block, 0, sizeof(file->block));
 
 	pfree(file->common.url);
+#ifdef USE_ZSTD
+	ZSTD_freeDCtx(file->curl->zstd_dctx);
+	ZSTD_freeCCtx(file->curl->zstd_cctx);
+#endif
 
 	pfree(file);
 }
@@ -1817,7 +1824,6 @@ gp_proto1_read(char *buf, int bufsz, URL_CURL_FILE *file, CopyState pstate, char
 		 * However, even thought there is no data in bout, the call of 
 		 * decompress_zstd_data is neccersary for following decompression.
 		 * If a empty buf is returned to gpdb, the error will occur. 
-		 * So the loop ensures that we push forward the decompression until there 
 		 * is data in bout.
 		 */
 		do
@@ -1835,8 +1841,7 @@ gp_proto1_read(char *buf, int bufsz, URL_CURL_FILE *file, CopyState pstate, char
 			}		
 		} while (n == 0);
 	}
-	else
-	{
+	else{
 		memcpy(buf, file->in.ptr + file->in.bot, n);
 		file->in.bot += n;
 	}
