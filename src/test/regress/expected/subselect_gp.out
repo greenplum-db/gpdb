@@ -1855,7 +1855,7 @@ select * from dedup_reptab r where r.a in (select t.a/10 from dedup_tab t);
          ->  Unique
                Group Key: (RowIdExpr)
                ->  Sort
-                     Sort Key (Distinct): (RowIdExpr)
+                     Sort Key: (RowIdExpr)
                      ->  Redistribute Motion 3:3  (slice2; segments: 3)
                            Hash Key: (RowIdExpr)
                            ->  Hash Join
@@ -1907,7 +1907,7 @@ select * from dedup_srf() r(a) where r.a in (select t.a/10 from dedup_tab t);
          ->  Unique
                Group Key: (RowIdExpr)
                ->  Sort
-                     Sort Key (Distinct): (RowIdExpr)
+                     Sort Key: (RowIdExpr)
                      ->  Redistribute Motion 3:3  (slice2; segments: 3)
                            Hash Key: (RowIdExpr)
                            ->  Hash Join
@@ -1936,7 +1936,7 @@ select * from dedup_srf_stable() r(a) where r.a in (select t.a/10 from dedup_tab
          ->  Unique
                Group Key: (RowIdExpr)
                ->  Sort
-                     Sort Key (Distinct): (RowIdExpr)
+                     Sort Key: (RowIdExpr)
                      ->  Redistribute Motion 3:3  (slice2; segments: 3)
                            Hash Key: (RowIdExpr)
                            ->  Hash Join
@@ -1965,7 +1965,7 @@ select * from dedup_srf_volatile() r(a) where r.a in (select t.a/10 from dedup_t
          ->  Unique
                Group Key: (RowIdExpr)
                ->  Sort
-                     Sort Key (Distinct): (RowIdExpr)
+                     Sort Key: (RowIdExpr)
                      ->  Redistribute Motion 3:3  (slice2; segments: 3)
                            Hash Key: (RowIdExpr)
                            ->  Hash Join
@@ -2007,7 +2007,7 @@ select * from dedup_func() r(a) where r.a in (select t.a/10 from dedup_tab t);
          ->  Unique
                Group Key: (RowIdExpr)
                ->  Sort
-                     Sort Key (Distinct): (RowIdExpr)
+                     Sort Key: (RowIdExpr)
                      ->  Redistribute Motion 3:3  (slice2; segments: 3)
                            Hash Key: (RowIdExpr)
                            ->  Hash Join
@@ -2034,7 +2034,7 @@ select * from dedup_func_stable() r(a) where r.a in (select t.a/10 from dedup_ta
          ->  Unique
                Group Key: (RowIdExpr)
                ->  Sort
-                     Sort Key (Distinct): (RowIdExpr)
+                     Sort Key: (RowIdExpr)
                      ->  Redistribute Motion 3:3  (slice2; segments: 3)
                            Hash Key: (RowIdExpr)
                            ->  Hash Join
@@ -2061,7 +2061,7 @@ select * from dedup_func_volatile() r(a) where r.a in (select t.a/10 from dedup_
          ->  Unique
                Group Key: (RowIdExpr)
                ->  Sort
-                     Sort Key (Distinct): (RowIdExpr)
+                     Sort Key: (RowIdExpr)
                      ->  Redistribute Motion 3:3  (slice2; segments: 3)
                            Hash Key: (RowIdExpr)
                            ->  Hash Join

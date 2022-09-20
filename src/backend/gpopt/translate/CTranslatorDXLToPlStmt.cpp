@@ -2997,14 +2997,16 @@ CTranslatorDXLToPlStmt::TranslateDXLSort(
 	const CDXLNode *sort_dxlnode, CDXLTranslateContext *output_context,
 	CDXLTranslationContextArray *ctxt_translation_prev_siblings)
 {
+	// Ensure operator of sort_dxlnode exists and is EdxlopPhysicalSort
+	CDXLOperator *sort_dxlop = sort_dxlnode->GetOperator();
+	GPOS_ASSERT(nullptr != sort_dxlop);
+	GPOS_ASSERT(EdxlopPhysicalSort == sort_dxlop->GetDXLOperator());
+
 	// create sort plan node
 	Sort *sort = MakeNode(Sort);
 
 	Plan *plan = &(sort->plan);
 	plan->plan_node_id = m_dxl_to_plstmt_context->GetNextPlanId();
-
-	CDXLPhysicalSort *sort_dxlop =
-		CDXLPhysicalSort::Cast(sort_dxlnode->GetOperator());
 
 	// translate operator costs
 	TranslatePlanCosts(sort_dxlnode, plan);
@@ -3031,9 +3033,6 @@ CTranslatorDXLToPlStmt::TranslateDXLSort(
 							   output_context);
 
 	plan->lefttree = child_plan;
-
-	// set sorting info
-	sort->noduplicates = sort_dxlop->FDiscardDuplicates();
 
 	// translate sorting columns
 

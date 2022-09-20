@@ -1721,14 +1721,6 @@ CTranslatorRelcacheToDXL::RetrieveColStats(CMemoryPool *mp,
 
 	CDXLBucketArray *dxl_stats_bucket_array = GPOS_NEW(mp) CDXLBucketArray(mp);
 
-	if (0 > attno)
-	{
-		mdid_col_stats->AddRef();
-		return GenerateStatsForSystemCols(mp, rel_oid, mdid_col_stats,
-										  md_colname, att_type, attno,
-										  dxl_stats_bucket_array, num_rows);
-	}
-
 	// extract out histogram and mcv information from pg_statistic
 	HeapTuple stats_tup = gpdb::GetAttStats(rel_oid, attno);
 
@@ -1916,114 +1908,6 @@ CTranslatorRelcacheToDXL::RetrieveColStats(CMemoryPool *mp,
 	);
 
 	return dxl_col_stats;
-}
-
-
-//---------------------------------------------------------------------------
-//      @function:
-//              CTranslatorRelcacheToDXL::GenerateStatsForSystemCols
-//
-//      @doc:
-//              Generate statistics for the system level columns
-//
-//---------------------------------------------------------------------------
-CDXLColStats *
-CTranslatorRelcacheToDXL::GenerateStatsForSystemCols(
-	CMemoryPool *mp, OID rel_oid, CMDIdColStats *mdid_col_stats,
-	CMDName *md_colname, OID att_type, AttrNumber attno,
-	CDXLBucketArray *dxl_stats_bucket_array, CDouble num_rows)
-{
-	GPOS_ASSERT(nullptr != mdid_col_stats);
-	GPOS_ASSERT(nullptr != md_colname);
-	GPOS_ASSERT(InvalidOid != att_type);
-	GPOS_ASSERT(0 > attno);
-	GPOS_ASSERT(nullptr != dxl_stats_bucket_array);
-
-	CMDIdGPDB *mdid_atttype = GPOS_NEW(mp) CMDIdGPDB(att_type);
-	IMDType *md_type = RetrieveType(mp, mdid_atttype);
-	GPOS_ASSERT(md_type->IsFixedLength());
-
-	BOOL is_col_stats_missing = true;
-	CDouble null_freq(0.0);
-	CDouble width(md_type->Length());
-	CDouble distinct_remaining(0.0);
-	CDouble freq_remaining(0.0);
-
-	if (CStatistics::MinRows <= num_rows)
-	{
-		switch (attno)
-		{
-			case GpSegmentIdAttributeNumber:  // gp_segment_id
-			{
-				is_col_stats_missing = false;
-				freq_remaining = CDouble(1.0);
-				distinct_remaining = CDouble(gpdb::GetGPSegmentCount());
-				break;
-			}
-			case TableOidAttributeNumber:  // tableoid
-			{
-				is_col_stats_missing = false;
-				freq_remaining = CDouble(1.0);
-				distinct_remaining =
-					CDouble(RetrieveNumChildPartitions(rel_oid));
-				break;
-			}
-			case SelfItemPointerAttributeNumber:  // ctid
-			{
-				is_col_stats_missing = false;
-				freq_remaining = CDouble(1.0);
-				distinct_remaining = num_rows;
-				break;
-			}
-			default:
-				break;
-		}
-	}
-
-	// cleanup
-	mdid_atttype->Release();
-	md_type->Release();
-
-	return GPOS_NEW(mp) CDXLColStats(
-		mp, mdid_col_stats, md_colname, width, null_freq, distinct_remaining,
-		freq_remaining, dxl_stats_bucket_array, is_col_stats_missing);
-}
-
-
-//---------------------------------------------------------------------------
-//     @function:
-//     CTranslatorRelcacheToDXL::RetrieveNumChildPartitions
-//
-//  @doc:
-//      For non-leaf partition tables return the number of child partitions
-//      else return 1
-//
-//---------------------------------------------------------------------------
-ULONG
-CTranslatorRelcacheToDXL::RetrieveNumChildPartitions(OID rel_oid)
-{
-	GPOS_ASSERT(InvalidOid != rel_oid);
-
-	ULONG num_part_tables = gpos::ulong_max;
-	if (!gpdb::RelIsPartitioned(rel_oid))
-	{
-		// not a partitioned table
-		num_part_tables = 1;
-	}
-#if 0
-       else if (gpdb::IsLeafPartition(rel_oid))
-       {
-           // leaf partition
-           num_part_tables = 1;
-       }
-       else
-       {
-           num_part_tables = gpdb::CountLeafPartTables(rel_oid);
-       }
-       GPOS_ASSERT(gpos::ulong_max != num_part_tables);
-#endif
-
-	return num_part_tables;
 }
 
 

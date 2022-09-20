@@ -1154,8 +1154,6 @@ typedef struct Sort
 	Oid		   *sortOperators;	/* OIDs of operators to sort them by */
 	Oid		   *collations;		/* OIDs of collations */
 	bool	   *nullsFirst;		/* NULLS FIRST/LAST directions */
-    /* CDB */
-	bool		noduplicates;   /* TRUE if sort should discard duplicates */
 } Sort;
 
 /* ---------------

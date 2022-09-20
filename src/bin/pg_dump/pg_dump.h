@@ -386,7 +386,7 @@ typedef struct _tableInfo
 	 */
 	int			numParents;		/* number of (immediate) parent tables */
 	struct _tableInfo **parents;	/* TableInfos of immediate parents */
-	Oid			parrelid;			/* external partition's parent oid */
+	Oid			parrelid;			/* partition's parent oid */
 	bool		parparent;		/* true if the table is partition parent */
 	int			numIndexes;		/* number of indexes */
 	struct _indxInfo *indexes;	/* indexes */
@@ -399,6 +399,8 @@ typedef struct _tableInfo
 	Oid		toast_type;					/* OID of toast table's composite type */
 	struct _aotableInfo	*aotbl; /* AO auxilliary table metadata */
 	char	*distclause; /* distributed by clause */
+	char	*partclause;	/* partition definition, if table is partition parent */
+	char	*parttemplate;	/* subpartition template */
 } TableInfo;
 
 /* AO auxilliary table metadata */

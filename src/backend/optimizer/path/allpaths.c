@@ -60,7 +60,6 @@
 
 // TODO: these planner gucs need to be refactored into PlannerConfig.
 bool		gp_enable_sort_limit = false;
-bool		gp_enable_sort_distinct = false;
 
 /* results of subquery_is_pushdown_safe */
 typedef struct pushdown_safety_info

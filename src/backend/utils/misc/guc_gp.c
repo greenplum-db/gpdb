@@ -749,16 +749,6 @@ struct config_bool ConfigureNamesBool_gp[] =
 	},
 
 	{
-		{"gp_enable_sort_distinct", PGC_USERSET, QUERY_TUNING_METHOD,
-			gettext_noop("Enable duplicate removal to be performed while sorting."),
-			gettext_noop("Reduces data handling when plan calls for removing duplicates from sorted rows.")
-		},
-		&gp_enable_sort_distinct,
-		true,
-		NULL, NULL, NULL
-	},
-
-	{
 		{"gp_enable_motion_deadlock_sanity", PGC_USERSET, DEVELOPER_OPTIONS,
 			gettext_noop("Enable verbose check at planning time."),
 			NULL,

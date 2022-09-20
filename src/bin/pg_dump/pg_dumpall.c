@@ -1348,10 +1348,13 @@ dumpRoles(PGconn *conn)
 		else
 			appendPQExpBufferStr(buf, " NOREPLICATION");
 
-		if (strcmp(PQgetvalue(res, i, i_rolbypassrls), "t") == 0)
-			appendPQExpBufferStr(buf, " BYPASSRLS");
-		else
-			appendPQExpBufferStr(buf, " NOBYPASSRLS");
+		if (server_version >= 90600)
+		{
+			if (strcmp(PQgetvalue(res, i, i_rolbypassrls), "t") == 0)
+				appendPQExpBufferStr(buf, " BYPASSRLS");
+			else
+				appendPQExpBufferStr(buf, " NOBYPASSRLS");
+		}
 
 		if (strcmp(PQgetvalue(res, i, i_rolconnlimit), "-1") != 0)
 			appendPQExpBuffer(buf, " CONNECTION LIMIT %s",

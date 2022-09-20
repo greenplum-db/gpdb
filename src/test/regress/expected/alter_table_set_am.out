@@ -141,9 +141,9 @@ SELECT * FROM relfilebeforeao INTERSECT SELECT * FROM relfileafterao;
 SELECT * FROM gp_toolkit.__gp_aoseg('heap2ao');
  segment_id | segno | eof | tupcount | varblockcount | eof_uncompressed | modcount | formatversion | state 
 ------------+-------+-----+----------+---------------+------------------+----------+---------------+-------
-          2 |     0 |  40 |        1 |             1 |               40 |        1 |             3 |     1
-          0 |     0 |  72 |        3 |             1 |               88 |        1 |             3 |     1
-          1 |     0 |  40 |        1 |             1 |               40 |        1 |             3 |     1
+          2 |     0 |  40 |        1 |             1 |               40 |        1 |             4 |     1
+          0 |     0 |  72 |        3 |             1 |               88 |        1 |             4 |     1
+          1 |     0 |  40 |        1 |             1 |               40 |        1 |             4 |     1
 (3 rows)
 
 SELECT gp_segment_id, (gp_toolkit.__gp_aovisimap('heap2ao')).* FROM gp_dist_random('gp_id');
@@ -162,9 +162,9 @@ SELECT gp_segment_id, (gp_toolkit.__gp_aoblkdir('heap2ao')).* FROM gp_dist_rando
 SELECT * FROM gp_toolkit.__gp_aoseg('heap2ao2');
  segment_id | segno | eof | tupcount | varblockcount | eof_uncompressed | modcount | formatversion | state 
 ------------+-------+-----+----------+---------------+------------------+----------+---------------+-------
-          1 |     0 |  40 |        1 |             1 |               40 |        1 |             3 |     1
-          2 |     0 |  40 |        1 |             1 |               40 |        1 |             3 |     1
-          0 |     0 |  72 |        3 |             1 |               88 |        1 |             3 |     1
+          1 |     0 |  40 |        1 |             1 |               40 |        1 |             4 |     1
+          2 |     0 |  40 |        1 |             1 |               40 |        1 |             4 |     1
+          0 |     0 |  72 |        3 |             1 |               88 |        1 |             4 |     1
 (3 rows)
 
 SELECT gp_segment_id, (gp_toolkit.__gp_aovisimap('heap2ao2')).* FROM gp_dist_random('gp_id');
@@ -314,9 +314,9 @@ SELECT count(*) FROM (SELECT * FROM inheritchildrelfilebefore UNION SELECT * FRO
 SELECT * FROM gp_toolkit.__gp_aoseg('heapbase');
  segment_id | segno | eof | tupcount | varblockcount | eof_uncompressed | modcount | formatversion | state 
 ------------+-------+-----+----------+---------------+------------------+----------+---------------+-------
-          0 |     0 |  72 |        3 |             1 |               88 |        1 |             3 |     1
-          1 |     0 |  40 |        1 |             1 |               40 |        1 |             3 |     1
-          2 |     0 |  40 |        1 |             1 |               40 |        1 |             3 |     1
+          0 |     0 |  72 |        3 |             1 |               88 |        1 |             4 |     1
+          1 |     0 |  40 |        1 |             1 |               40 |        1 |             4 |     1
+          2 |     0 |  40 |        1 |             1 |               40 |        1 |             4 |     1
 (3 rows)
 
 SELECT gp_segment_id, (gp_toolkit.__gp_aovisimap('heapbase')).* FROM gp_dist_random('gp_id');
@@ -327,9 +327,9 @@ SELECT gp_segment_id, (gp_toolkit.__gp_aovisimap('heapbase')).* FROM gp_dist_ran
 SELECT * FROM gp_toolkit.__gp_aoseg('heapbase2');
  segment_id | segno | eof | tupcount | varblockcount | eof_uncompressed | modcount | formatversion | state 
 ------------+-------+-----+----------+---------------+------------------+----------+---------------+-------
-          1 |     0 |  40 |        1 |             1 |               40 |        1 |             3 |     1
-          2 |     0 |  40 |        1 |             1 |               40 |        1 |             3 |     1
-          0 |     0 |  72 |        3 |             1 |               88 |        1 |             3 |     1
+          1 |     0 |  40 |        1 |             1 |               40 |        1 |             4 |     1
+          2 |     0 |  40 |        1 |             1 |               40 |        1 |             4 |     1
+          0 |     0 |  72 |        3 |             1 |               88 |        1 |             4 |     1
 (3 rows)
 
 SELECT gp_segment_id, (gp_toolkit.__gp_aovisimap('heapbase2')).* FROM gp_dist_random('gp_id');
@@ -1065,9 +1065,9 @@ SELECT count(*) FROM co2ao4;
 SELECT * FROM gp_toolkit.__gp_aoseg('co2ao');
  segment_id | segno | eof | tupcount | varblockcount | eof_uncompressed | modcount | formatversion | state 
 ------------+-------+-----+----------+---------------+------------------+----------+---------------+-------
-          0 |     0 |  88 |        3 |             1 |               88 |        1 |             3 |     1
-          1 |     0 |  40 |        1 |             1 |               40 |        1 |             3 |     1
-          2 |     0 |  40 |        1 |             1 |               40 |        1 |             3 |     1
+          0 |     0 |  88 |        3 |             1 |               88 |        1 |             4 |     1
+          1 |     0 |  40 |        1 |             1 |               40 |        1 |             4 |     1
+          2 |     0 |  40 |        1 |             1 |               40 |        1 |             4 |     1
 (3 rows)
 
 SELECT * FROM gp_toolkit.__gp_aocsseg('co2ao');
@@ -1088,9 +1088,9 @@ SELECT gp_segment_id, (gp_toolkit.__gp_aoblkdir('co2ao')).* FROM gp_dist_random(
 SELECT * FROM gp_toolkit.__gp_aoseg('co2ao3');
  segment_id | segno | eof | tupcount | varblockcount | eof_uncompressed | modcount | formatversion | state 
 ------------+-------+-----+----------+---------------+------------------+----------+---------------+-------
-          0 |     0 |  72 |        3 |             1 |               88 |        1 |             3 |     1
-          1 |     0 |  40 |        1 |             1 |               40 |        1 |             3 |     1
-          2 |     0 |  40 |        1 |             1 |               40 |        1 |             3 |     1
+          0 |     0 |  72 |        3 |             1 |               88 |        1 |             4 |     1
+          1 |     0 |  40 |        1 |             1 |               40 |        1 |             4 |     1
+          2 |     0 |  40 |        1 |             1 |               40 |        1 |             4 |     1
 (3 rows)
 
 SELECT * FROM gp_toolkit.__gp_aocsseg('co2ao3');

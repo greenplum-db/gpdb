@@ -578,7 +578,12 @@ AppendOnlyBlockDirectory_GetEntry(
 			/* Ignore columns that are not projected. */
 			continue;
 		}
-		/* Setup the scan keys for the scan. */
+		/*
+		 * Set up the scan keys values. The keys have already been set up in
+		 * init_internal() with the following strategy:
+		 * (=segmentFileNum, =columnGroupNo, <=rowNum)
+		 * See init_internal().
+		 */
 		Assert(scanKeys != NULL);
 		scanKeys[0].sk_argument = Int32GetDatum(segmentFileNum);
 		scanKeys[1].sk_argument = Int32GetDatum(tmpGroupNo);
@@ -641,6 +646,15 @@ AppendOnlyBlockDirectory_GetEntry(
 			/*
 			 * Since the last few blocks may not be logged in the block
 			 * directory, we always use the last entry.
+			 *
+			 * FIXME: If we didn't find a suitable entry, why even use the last
+			 * entry? Currently, as it stands we would most likely return
+			 * true from this function. This will lead to us having to do a
+			 * fetch of the tuple from the physical file in the layer above (see
+			 * scanToFetchTuple()), where we would ultimately find the tuple
+			 * missing. Would it be correct to set the directory entry here to
+			 * be the last one (for caching purposes) and return false, in order
+			 * to avoid this physical file read?
 			 */
 			entry_no = minipageInfo->numMinipageEntries - 1;
 		}
@@ -702,7 +716,6 @@ insert_new_entry(
 	MinipageEntry *entry = NULL;
 	MinipagePerColumnGroup *minipageInfo;
 	int			minipageIndex;
-	int			lastEntryNo;
 
 	if (rowCount == 0)
 		return false;
@@ -731,35 +744,6 @@ insert_new_entry(
 
 	minipageInfo = &blockDirectory->minipages[minipageIndex];
 	Assert(minipageInfo->numMinipageEntries <= (uint32) NUM_MINIPAGE_ENTRIES);
-
-	lastEntryNo = minipageInfo->numMinipageEntries - 1;
-	if (lastEntryNo >= 0)
-	{
-		entry = &(minipageInfo->minipage->entry[lastEntryNo]);
-
-		Assert(entry->firstRowNum < firstRowNum);
-		Assert(entry->fileOffset < fileOffset);
-
-		if (gp_blockdirectory_entry_min_range > 0 &&
-			fileOffset - entry->fileOffset < gp_blockdirectory_entry_min_range)
-			return true;
-
-		/* Update the rowCount in the latest entry */
-		Assert(entry->rowCount <= firstRowNum - entry->firstRowNum);
-
-		ereportif(Debug_appendonly_print_blockdirectory, LOG,
-				  (errmsg("Append-only block directory update entry: "
-						  "(firstRowNum, columnGroupNo, fileOffset, rowCount) = (" INT64_FORMAT
-						  ", %d, " INT64_FORMAT ", " INT64_FORMAT ") at index %d to "
-						  "(firstRowNum, columnGroupNo, fileOffset, rowCount) = (" INT64_FORMAT
-						  ", %d, " INT64_FORMAT ", " INT64_FORMAT ")",
-						  entry->firstRowNum, columnGroupNo, entry->fileOffset, entry->rowCount,
-						  minipageInfo->numMinipageEntries - 1,
-						  entry->firstRowNum, columnGroupNo, entry->fileOffset,
-						  firstRowNum - entry->firstRowNum)));
-
-		entry->rowCount = firstRowNum - entry->firstRowNum;
-	}
 
 	if (minipageInfo->numMinipageEntries >= (uint32) gp_blockdirectory_minipage_size)
 	{

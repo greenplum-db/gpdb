@@ -617,16 +617,6 @@ extern int explain_memory_verbosity;
  */
 extern bool gp_enable_sort_limit;
 
-/* May Greenplum discard duplicate rows in sort if it is is wrapped by a
- * DISTINCT clause (unique aggregation operator)?
- *
- * The code does not currently use planner estimates for this.  If enabled,
- * the tactic is used whenever possible.
- *
- * GPDB_12_MERGE_FIXME: Resurrect this
- */
-extern bool gp_enable_sort_distinct;
-
 extern bool trace_sort;
 
 /**

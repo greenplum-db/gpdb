@@ -1220,9 +1220,6 @@ _copySort(const Sort *from)
 	COPY_POINTER_FIELD(collations, from->numCols * sizeof(Oid));
 	COPY_POINTER_FIELD(nullsFirst, from->numCols * sizeof(bool));
 
-    /* CDB */
-	COPY_SCALAR_FIELD(noduplicates);
-
 	return newnode;
 }
 

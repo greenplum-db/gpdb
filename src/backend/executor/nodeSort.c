@@ -260,11 +260,6 @@ ExecInitSort(Sort *node, EState *estate, int eflags)
 	 */
 	ExecAssignExprContext(estate, &sortstate->ss.ps);
 
-	/* CDB */ /* evaluate a limit as part of the sort */
-	{
-		sortstate->noduplicates = node->noduplicates;
-	}
-
 	/*
 	 * Miscellaneous initialization
 	 *

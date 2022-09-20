@@ -2352,8 +2352,6 @@ typedef struct SortState
 	bool		am_worker;		/* are we a worker? */
 	SharedSortInfo *shared_info;	/* one entry per worker */
 
-	bool		noduplicates;	/* true if discard duplicate rows */
-
 	bool		delayEagerFree;		/* is it safe to free memory used by this node,
 									 * when this node has outputted its last row? */
 	TuplesortInstrumentation sortstats; /* holds stats, if the Sort is eagerly free'd */

@@ -1481,26 +1481,6 @@ def missingEntryQuery(max_content, catname, pkey, castedPkey):
     return qry
 
 
-def transformTextArrayCols(catname, columns, colnames, coltypes):
-    # Distributing by hash(text[]) is potentially dangerous,
-    # so if the table has text[] column, then we need array_to_string
-    #
-    # We should fix the text[] hash expression issue, but
-    # for this script, this seems like a reasonable workaround.
-    #
-    # GPDB_12_MERGE_FIXME: was this fixed by the hashing changes
-    # in GPDB 6?
-
-    transformed = []
-    for i in range(len(columns)):
-        if coltypes[colnames[i]] == '_text':
-            transformed.append("array_to_string(" + columns[i] + ", ',') AS " + columns[i])
-        else:
-            transformed.append(columns[i])
-
-    return transformed
-
-
 # -------------------------------------------------------------------------------
 def checkInconsistentEntry():
     logger.info('-----------------------------------')
@@ -1545,9 +1525,6 @@ def checkTableInconsistentEntry(cat):
     castedPkey = cat.getPrimaryKey()
     castedPkey = [c + autoCast.get(coltypes[c], '') for c in castedPkey]
     castcols = [c + autoCast.get(coltypes[c], '') for c in columns]
-
-    # transform text[] cols for sure. See comments on transformTextArrayCols
-    castcols = transformTextArrayCols(catname, castcols, columns, cat.getTableColtypes())
 
     # pg_attribute.attmissingval has pseudo-type 'any', which doesn't allow
     # much operations on it. Cast it to text, by replacing it with
@@ -3220,12 +3197,6 @@ def checkcatReport():
         if len(GV.missing_attr_tables) or len(GV.extra_attr_tables):
             # Expand partition tables
             db = connect2(GV.cfg[GV.coordinator_dbid], utilityMode=False)
-
-            # GPDB_12_MERGE_FIXME: We used to have a query here, to fetch
-            # some extra informationa about partitioned tables. I (Heikki)
-            # didn't understand what it did. I ripped it out, and in the
-            # limited tests I did, I got the same result without it.
-            # What was it for? Do we need to put something back?
 
             GV.missing_attr_tables = list(set(GV.missing_attr_tables))
             if len(GV.missing_attr_tables) > 0:

@@ -6756,8 +6756,6 @@ make_sort(Plan *lefttree, int numCols,
 
 	Assert(sortColIdx[0] != 0);
 
-	node->noduplicates = false; /* CDB */
-
 	return node;
 }
 
@@ -7514,14 +7512,6 @@ make_unique_from_sortclauses(Plan *lefttree, List *distinctList)
 	node->uniqColIdx = uniqColIdx;
 	node->uniqOperators = uniqOperators;
 	node->uniqCollations = uniqCollations;
-
-	/* CDB */	/* pass DISTINCT to sort */
-	if (IsA(lefttree, Sort) && gp_enable_sort_distinct)
-	{
-		Sort	   *pSort = (Sort *) lefttree;
-
-		pSort->noduplicates = true;
-	}
 
 	return node;
 }
