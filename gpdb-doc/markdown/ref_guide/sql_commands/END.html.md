@@ -5,7 +5,7 @@ Commits the current transaction.
 ## <a id="section2"></a>Synopsis 
 
 ``` {#sql_command_synopsis}
-END [WORK | TRANSACTION]
+END [WORK | TRANSACTION] [AND [NO] CHAIN]
 ```
 
 ## <a id="section3"></a>Description 
@@ -18,9 +18,18 @@ WORK
 TRANSACTION
 :   Optional keywords. They have no effect.
 
+AND CHAIN
+:   If `AND CHAIN` is specified, a new transaction is immediately started with the same transaction characteristics \(see [SET TRANSACTION](SET_TRANSACTION.html)\) as the just finished one. Otherwise, no new transaction is started.
+
+## <a id="section4a"></a>Notes
+
+Use [ROLLBACK](ROLLBACK.html) to terminate a transaction.
+
+Issuing `END` when not inside a transaction does no harm, but it will provoke a warning message.
+
 ## <a id="section5"></a>Examples 
 
-Commit the current transaction:
+To commit the current transaction and make all changes permanent:
 
 ```
 END;
@@ -32,7 +41,7 @@ END;
 
 ## <a id="section7"></a>See Also 
 
-[BEGIN](BEGIN.html), [ROLLBACK](ROLLBACK.html), [COMMIT](COMMIT.html)
+[BEGIN](BEGIN.html), [COMMIT](COMMIT.html), [ROLLBACK](ROLLBACK.html)
 
 **Parent topic:** [SQL Commands](../sql_commands/sql_ref.html)
 
