@@ -38,6 +38,9 @@
 #define oidge(x,y) ( (x) >= (y) )
 #define oidzero(x) ( (x) == 0 )
 
+#define GPDB5_MAJOR_PGVERSION 80300
+#define GPDB6_MAJOR_PGVERSION 90400
+
 typedef enum trivalue
 {
 	TRI_DEFAULT,

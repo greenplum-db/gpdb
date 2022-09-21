@@ -1451,7 +1451,7 @@ dumpTablespaces(PGconn *conn)
 	 * Greenplum, and the dump format should vary depending on if the dump is
 	 * --gp-syntax or --no-gp-syntax.
 	 */
-	if (server_version <= 80323)
+	if (server_version == GPDB5_MAJOR_PGVERSION)
 	{
 		filespace_to_tablespace = true;
 		/*
@@ -1925,9 +1925,9 @@ dumpDatabaseConfig(PGconn *conn, const char *dbname)
 	}
 
 	/*
-	 * If we're upgrading from GPDB 5 or below, use the legacy hash ops.
+	 * If we're upgrading from GPDB 5, use the legacy hash ops.
 	 */
-	if (binary_upgrade && server_version < 90400)
+	if (binary_upgrade && server_version < GPDB6_MAJOR_PGVERSION)
 	{
 		makeAlterConfigCommand(conn, "gp_use_legacy_hashops=on",
 							   "DATABASE", dbname, NULL, NULL);
@@ -2422,7 +2422,7 @@ connectDatabase(const char *dbname, const char *connection_string,
 	 * our own major version.  (See also version check in pg_dump.c.)
 	 */
 	if (my_version != server_version
-		&& (server_version < 80300 ||		/* we can handle back to 8.3 */
+		&& (server_version < GPDB5_MAJOR_PGVERSION ||		/* we can handle back to 8.3 */
 			(server_version / 100) > (my_version / 100)))
 	{
 		fprintf(stderr, _("server version: %s; %s version: %s\n"),

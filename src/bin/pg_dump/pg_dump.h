@@ -62,7 +62,6 @@ typedef struct SimpleOidList
 	SimpleOidListCell *tail;
 } SimpleOidList;
 
-
 /*
  * The data structures used to store system catalog information.  Every
  * dumpable object is a subclass of DumpableObject.

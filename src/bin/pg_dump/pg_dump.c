@@ -335,48 +335,8 @@ static bool testGPbackend(Archive *fout);
 static char *nextToken(register char **stringp, register const char *delim);
 static void addDistributedBy(Archive *fout, PQExpBuffer q, TableInfo *tbinfo, int actual_atts);
 static void addDistributedByOld(Archive *fout, PQExpBuffer q, TableInfo *tbinfo, int actual_atts);
-static bool isGPDB(Archive *fout);
-static bool isGPDB6000OrLater(Archive *fout);
 
 /* END MPP ADDITION */
-
-/*
- * Check if we are talking to GPDB
- */
-static bool
-isGPDB(Archive *fout)
-{
-	static int	value = -1;		/* -1 = not known yet, 0 = no, 1 = yes */
-
-	/* Query the server on first call, and cache the result */
-	if (value == -1)
-	{
-		const char *query = "select pg_catalog.version()";
-		PGresult   *res;
-		char	   *ver;
-
-		res = ExecuteSqlQuery(fout, query, PGRES_TUPLES_OK);
-
-		ver = (PQgetvalue(res, 0, 0));
-		if (strstr(ver, "Greenplum") != NULL)
-			value = 1;
-		else
-			value = 0;
-
-		PQclear(res);
-	}
-	return (value == 1) ? true : false;
-}
-
-static bool
-isGPDB6000OrLater(Archive *fout)
-{
-	if (!isGPDB(fout))
-		return false;		/* Not Greenplum at all. */
-
-	/* GPDB 6 is based on PostgreSQL 8.4 */
-	return fout->remoteVersion >= 80400;
-}
 
 int
 main(int argc, char **argv)
@@ -811,7 +771,7 @@ main(int argc, char **argv)
 	 * We allow the server to be back to 8.3, and up to any minor release of
 	 * our own major version.  (See also version check in pg_dumpall.c.)
 	 */
-	fout->minRemoteVersion = 80300;	/* we can handle back to 8.3 */
+	fout->minRemoteVersion = GPDB5_MAJOR_PGVERSION;	/* we can handle back to 8.3 */
 	fout->maxRemoteVersion = (PG_VERSION_NUM / 100) * 100 + 99;
 
 	fout->numWorkers = numWorkers;
@@ -4736,7 +4696,7 @@ getTables(Archive *fout, int *numTables)
 	 * If there is more than 1 entry in the policy table for an
 	 * oid the scalar subquery will fail as intended.
 	 */
-	if (isGPDB6000OrLater(fout))
+	if (fout->remoteVersion > GPDB6_MAJOR_PGVERSION)
 	 		appendPQExpBufferStr(query,
 							"pg_catalog.pg_get_table_distributedby(c.oid) as distclause, ");
 	else
@@ -4824,7 +4784,7 @@ getTables(Archive *fout, int *numTables)
 
 	appendPQExpBufferStr(query,
 						  "LEFT JOIN pg_class tc ON (c.reltoastrelid = tc.oid"
-						  " AND tc.relkind = " CppAsString2(RELKIND_TOASTVALUE) ")\n"
+						  " AND tc.relkind = " CppAsString2(RELKIND_TOASTVALUE) ")\n"\
 						  "LEFT JOIN pg_partition_rule pr ON c.oid = pr.parchildrelid\n"
 						  "LEFT JOIN pg_partition p ON pr.paroid = p.oid\n"
 						  "LEFT JOIN pg_partition pl ON (c.oid = pl.parrelid AND pl.parlevel = 0)\n");
@@ -5179,7 +5139,7 @@ getBMIndxInfo(Archive *fout)
 	Oid bitmap_index_namespace;
 
 	/* On GPDB5 pg_bitmapindex OID is 3012 */
-	bitmap_index_namespace = fout->remoteVersion >= 90400 ? PG_BITMAPINDEX_NAMESPACE : 3012;
+	bitmap_index_namespace = fout->remoteVersion > GPDB6_MAJOR_PGVERSION ? PG_BITMAPINDEX_NAMESPACE : 3012;
 
 	resetPQExpBuffer(query);
 
@@ -9842,7 +9802,7 @@ dumpFunc(Archive *fout, FuncInfo *finfo)
 								"proiswin as proiswindow,\n");
 
 		/* GPDB6 added proexeclocation */
-		if (fout->remoteVersion >= 90400)
+		if (fout->remoteVersion > GPDB6_MAJOR_PGVERSION)
 				appendPQExpBuffer(query,
 								"proexeclocation\n");
 		else
@@ -12980,7 +12940,6 @@ dumpExternal(Archive *fout, TableInfo *tbinfo, PQExpBuffer q, PQExpBuffer delq)
 		bool		isweb = false;
 		bool		iswritable = false;
 		char	   *options;
-		bool		gpdb6OrLater = isGPDB6000OrLater(fout);
 		char	   *logerrors = NULL;
 		char	   *on_clause;
 		char	   *qualrelname;
@@ -12997,7 +12956,7 @@ dumpExternal(Archive *fout, TableInfo *tbinfo, PQExpBuffer q, PQExpBuffer delq)
 						  qualrelname);
 
 		/* Now get required information from pg_exttable */
-		if (gpdb6OrLater)
+		if (fout->remoteVersion > GPDB6_MAJOR_PGVERSION)
 		{
 			appendPQExpBuffer(query,
 					"SELECT x.urilocation, x.execlocation, x.fmttype, x.fmtopts, x.command, "
@@ -16100,7 +16059,7 @@ testGPbackend(Archive *fout)
 static void
 addDistributedBy(Archive *fout, PQExpBuffer q, TableInfo *tbinfo, int actual_atts)
 {
-	if (isGPDB6000OrLater(fout))
+	if (fout->remoteVersion > GPDB6_MAJOR_PGVERSION)
 	{
 		if (strcmp(tbinfo->distclause, "") != 0)
 			appendPQExpBuffer(q, " %s", tbinfo->distclause);
