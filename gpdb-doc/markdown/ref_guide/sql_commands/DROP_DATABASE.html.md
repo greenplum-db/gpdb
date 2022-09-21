@@ -26,7 +26,7 @@ name
 
 `DROP DATABASE` cannot be run inside a transaction block.
 
-This command cannot be run while connected to the target database. Thus, it might be more convenient to use the program `dropdb` instead, which is a wrapper around this command.
+This command cannot be run while connected to the target database. Thus, it might be more convenient to use the program [dropdb](../../utility_guide/ref/dropdb.html) instead, which is a wrapper around this command.
 
 ## <a id="section6"></a>Examples 
 
