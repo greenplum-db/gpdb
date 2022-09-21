@@ -5,85 +5,90 @@ Removes access privileges.
 ## <a id="section2"></a>Synopsis 
 
 ``` {#sql_command_synopsis}
-REVOKE [GRANT OPTION FOR] { {SELECT | INSERT | UPDATE | DELETE 
-       | REFERENCES | TRIGGER | TRUNCATE } [, ...] | ALL [PRIVILEGES] }
-
-       ON { [TABLE] <table_name> [, ...]
-            | ALL TABLES IN SCHEMA schema_name [, ...] }
-       FROM { [ GROUP ] <role_name> | PUBLIC} [, ...]
+REVOKE [GRANT OPTION FOR]
+       { {SELECT | INSERT | UPDATE | DELETE | REFERENCES | TRIGGER | TRUNCATE }
+       [, ...] | ALL [PRIVILEGES] }
+       ON { [TABLE] <table_name> [, ...]
+          | ALL TABLES IN SCHEMA schema_name [, ...] }
+       FROM <role_specification> [, ...]
        [CASCADE | RESTRICT]
 
-REVOKE [ GRANT OPTION FOR ] { { SELECT | INSERT | UPDATE 
-       | REFERENCES } ( <column_name> [, ...] )
+REVOKE [ GRANT OPTION FOR ]
+       { { SELECT | INSERT | UPDATE | REFERENCES } ( <column_name> [, ...] )
        [, ...] | ALL [ PRIVILEGES ] ( <column_name> [, ...] ) }
        ON [ TABLE ] <table_name> [, ...]
-       FROM { [ GROUP ]  <role_name> | PUBLIC } [, ...]
+       FROM <role_specification> [, ...]
        [ CASCADE | RESTRICT ]
 
 REVOKE [GRANT OPTION FOR] { {USAGE | SELECT | UPDATE} [,...] 
        | ALL [PRIVILEGES] }
        ON { SEQUENCE <sequence_name> [, ...]
             | ALL SEQUENCES IN SCHEMA schema_name [, ...] }
-       FROM { [ GROUP ] <role_name> | PUBLIC } [, ...]
+       FROM <role_specification> [, ...]
        [CASCADE | RESTRICT]
 
-REVOKE [GRANT OPTION FOR] { {CREATE | CONNECT 
-       | TEMPORARY | TEMP} [, ...] | ALL [PRIVILEGES] }
+REVOKE [GRANT OPTION FOR]
+       { {CREATE | CONNECT | TEMPORARY | TEMP} [, ...] | ALL [PRIVILEGES] }
        ON DATABASE <database_name> [, ...]
-       FROM { [ GROUP ] <role_name> | PUBLIC} [, ...]
+       FROM <role_specification> [, ...]
        [CASCADE | RESTRICT]
 
 REVOKE [ GRANT OPTION FOR ]
        { USAGE | ALL [ PRIVILEGES ] }
        ON DOMAIN <domain_name> [, ...]
-       FROM { [ GROUP ] <role_name> | PUBLIC } [, ...]
+       FROM <role_specification> [, ...]
        [ CASCADE | RESTRICT ]
-
 
 REVOKE [ GRANT OPTION FOR ]
        { USAGE | ALL [ PRIVILEGES ] }
        ON FOREIGN DATA WRAPPER <fdw_name> [, ...]
-       FROM { [ GROUP ] <role_name> | PUBLIC } [, ...]
+       FROM <role_specification> [, ...]
        [ CASCADE | RESTRICT ]
 
 REVOKE [ GRANT OPTION FOR ]
        { USAGE | ALL [ PRIVILEGES ] }
        ON FOREIGN SERVER <server_name> [, ...]
-       FROM { [ GROUP ] <role_name> | PUBLIC } [, ...]
+       FROM <role_specification> [, ...]
        [ CASCADE | RESTRICT ]
 
 REVOKE [GRANT OPTION FOR] {EXECUTE | ALL [PRIVILEGES]}
-       ON { FUNCTION <funcname> ( [[<argmode>] [<argname>] <argtype>
-                              [, ...]] ) [, ...]
-            | ALL FUNCTIONS IN SCHEMA schema_name [, ...] }
-       FROM { [ GROUP ] <role_name> | PUBLIC} [, ...]
+       ON { { FUNCTION | PROCEDURE | ROUTINE }  <funcname> [( [[<argmode>] [<argname>] <argtype> [, ...]] )] [, ...]
+            | ALL { FUNCTIONS | PROCEDURES | ROUTINES } IN SCHEMA schema_name [, ...] }
+       FROM <role_specification> [, ...]
        [CASCADE | RESTRICT]
 
 REVOKE [GRANT OPTION FOR] {USAGE | ALL [PRIVILEGES]}
-       ON LANGUAGE <langname> [, ...]
-       FROM { [ GROUP ]  <role_name> | PUBLIC} [, ...]
+       ON LANGUAGE <lang_name> [, ...]
+       FROM <role_specification> [, ...]
        [ CASCADE | RESTRICT ]
 
-REVOKE [GRANT OPTION FOR] { {CREATE | USAGE} [, ...] 
-       | ALL [PRIVILEGES] }
+REVOKE [GRANT OPTION FOR] { {CREATE | USAGE} [, ...] | ALL [PRIVILEGES] }
        ON SCHEMA <schema_name> [, ...]
-       FROM { [ GROUP ] <role_name> | PUBLIC} [, ...]
+       FROM <role_specification> [, ...]
        [CASCADE | RESTRICT]
 
 REVOKE [GRANT OPTION FOR] { CREATE | ALL [PRIVILEGES] }
-       ON TABLESPACE <tablespacename> [, ...]
-       FROM { [ GROUP ] <role_name> | PUBLIC } [, ...]
+       ON TABLESPACE <tablespace_name> [, ...]
+       FROM <role_specification> [, ...]
        [CASCADE | RESTRICT]
 
 REVOKE [ GRANT OPTION FOR ]
        { USAGE | ALL [ PRIVILEGES ] }
        ON TYPE <type_name> [, ...]
-       FROM { [ GROUP ] <role_name> | PUBLIC } [, ...]
+       FROM <role_specification> [, ...]
        [ CASCADE | RESTRICT ] 
 
-REVOKE [ADMIN OPTION FOR] <parent_role> [, ...] 
-       FROM [ GROUP ] <member_role> [, ...]
+REVOKE [ADMIN OPTION FOR] <role_name> [, ...]
+       FROM [ GROUP ] <role_specification> [, ...]
+       [GRANTED BY <role_specification> ]
        [CASCADE | RESTRICT]
+
+where <role_specification> can be:
+
+    [ GROUP ] <role_name>
+  | PUBLIC
+  | CURRENT_USER
+  | SESSION_USER
 ```
 
 ## <a id="section3"></a>Description 
@@ -100,7 +105,7 @@ If a role holds a privilege with grant option and has granted it to other roles 
 
 When you revoke privileges on a table, Greenplum Database revokes the corresponding column privileges \(if any\) on each column of the table, as well. On the other hand, if a role has been granted privileges on a table, then revoking the same privileges from individual columns will have no effect.
 
-When revoking membership in a role, `GRANT OPTION` is instead called `ADMIN OPTION`, but the behavior is similar.
+When revoking membership in a role, `GRANT OPTION` is instead called `ADMIN OPTION`, but the behavior is similar. This form of the command also allows a `GRANTED BY` option, but that option is currently ignored \(except for checking the existence of the named role\). Note also that this form of the command does not allow the noise word `GROUP` in role\_specification.
 
 ## <a id="section4a"></a>Parameters 
 
@@ -128,10 +133,10 @@ Revoke insert privilege for the public on table `films`:
 REVOKE INSERT ON films FROM PUBLIC;
 ```
 
-Revoke all privileges from role `sally` on view `topten`. Note that this actually means revoke all privileges that the current role granted \(if not a superuser\).
+Revoke all privileges from user `manuel` on view `kinds`. Note that this actually means revoke all privileges that the current role granted \(if not a superuser\).
 
 ```
-REVOKE ALL PRIVILEGES ON topten FROM sally;
+REVOKE ALL PRIVILEGES ON kinds FROM manuel;
 ```
 
 Revoke membership in role `admins` from user `joe`:
@@ -148,7 +153,7 @@ Either `RESTRICT` or `CASCADE` is required according to the standard, but Greenp
 
 ## <a id="section7"></a>See Also 
 
-[GRANT](GRANT.html)
+[ALTER DEFAULT PRIVILEGES](ALTER_DEFAULT_PRIVILEGES.html), [GRANT](GRANT.html)
 
 **Parent topic:** [SQL Commands](../sql_commands/sql_ref.html)
 
