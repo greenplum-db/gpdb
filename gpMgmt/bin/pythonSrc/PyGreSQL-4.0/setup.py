@@ -111,14 +111,11 @@ library_dirs = [pg_libdir]
 
 libraries = ['pq']
 extra_compile_args = ['-O2']
-cpu = 'x86_64'
 
 if sys.platform == "win32":
     include_dirs.append(os.path.join(pg_include_dir_server, 'port/win32'))
 elif sys.platform == 'darwin' and sys.maxsize > 2**32:
-    if os.uname()[4][:3] == 'arm':
-        cpu = 'arm64'
-    extra_compile_args.extend(['-arch', cpu])
+    extra_compile_args.extend(['-arch', os.uname()[4]])
 
 setup(
     name="PyGreSQL",
