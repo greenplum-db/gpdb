@@ -1302,8 +1302,7 @@ CREATE_QD_DB () {
 		BACKOUT_COMMAND "if [ -d $GP_DIR ]; then $EXPORT_LIB_PATH;export PGPORT=$GP_PORT; $PG_CTL -D $GP_DIR stop; fi"
 		BACKOUT_COMMAND "$ECHO \"Stopping Master instance\""
 		LOG_MSG "[INFO]:-Completed starting the Master in admin mode"
-		GP_HOSTNAME=$GP_HOSTADDRESS
-		PING_HOST $GP_HOSTNAME
+		PING_HOST $GP_HOSTADDRESS
 		RETVAL=$?
 		if [ $RETVAL -ne 0 ]; then
 			ERROR_EXIT "[FATAL]:-Could not establish connection to hostname $GP_HOSTNAME. Please check your configuration." 2
@@ -1348,8 +1347,7 @@ LOAD_QE_SYSTEM_DATA () {
 		do
 				SET_VAR $I
 				LOG_MSG "[INFO]:-Adding segment $GP_HOSTADDRESS to Master system tables"
-				GP_HOSTNAME=$GP_HOSTADDRESS
-				PING_HOST $GP_HOSTNAME
+				PING_HOST $GP_HOSTADDRESS
 				RETVAL=$?
 				if [ $RETVAL -ne 0 ]; then
 					ERROR_EXIT "[FATAL]:-Could not establish connection to hostname $GP_HOSTNAME. Please check your configuration." 2

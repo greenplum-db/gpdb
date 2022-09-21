@@ -3801,8 +3801,6 @@ def impl(context, content, desired_state):
     if len(rows) == 0:
         raise Exception("Expected content %s to be %s." % (content, desired_state))
 
-
-
 @given('the user asynchronously runs pg_basebackup with {segment} of content {contentid} as source and the process is saved')
 @when('the user asynchronously runs pg_basebackup with {segment} of content {contentid} as source and the process is saved')
 @then('the user asynchronously runs pg_basebackup with {segment} of content {contentid} as source and the process is saved')
@@ -3852,3 +3850,76 @@ def impl(context, contentid):
     if str(contentid) not in segments_with_running_basebackup:
         raise Exception("pg_basebackup entry was not found for content %s in gp_stat_replication" % contentid)
     
+@given('backup /etc/hosts file and update hostname entry for localhost')
+def impl(context):
+     # Backup current /etc/hosts file
+     cmd = Command(name='backup the hosts file', cmdStr='sudo cp /etc/hosts /tmp/hosts_orig')
+     cmd.run(validateAfter=True)
+     # Get the host-name
+     cmd = Command(name='get hostname', cmdStr='hostname')
+     cmd.run(validateAfter=True)
+     hostname = cmd.get_stdout()
+     # Update entry in current /etc/hosts file to add new host-address
+     cmd = Command(name='update hostlist with new hostname', cmdStr="sudo sed 's/%s/%s__1 %s/g' </etc/hosts >> /tmp/hosts; sudo cp -f /tmp/hosts /etc/hosts;rm /tmp/hosts"
+                                                        %(hostname, hostname, hostname))
+     cmd.run(validateAfter=True)
+
+@given('update hostlist file with updated host-address')
+def impl(context):
+     cmd = Command(name='get hostname', cmdStr='hostname')
+     cmd.run(validateAfter=True)
+     hostname = cmd.get_stdout()
+     # Update entry in hostfile to replace with address
+     cmd = Command(name='update temp hosts file', cmdStr= "sed 's/%s/%s__1/g' < ../gpAux/gpdemo/hostfile >> /tmp/hostfile--1" % (hostname, hostname))
+     cmd.run(validateAfter=True)
+
+@given('update clusterConfig file with new port and host-address')
+def impl(context):
+     cmd = Command(name='get hostname', cmdStr='hostname')
+     cmd.run(validateAfter=True)
+     hostname = cmd.get_stdout()
+
+     # Create a copy of config file
+     cmd = Command(name='create a copy of config file',
+                   cmdStr= "cp ../gpAux/gpdemo/clusterConfigFile /tmp/clusterConfigFile-1;")
+     cmd.run(validateAfter=True)
+
+     # Update hostfile location
+     cmd = Command(name='update master hostname in config file',
+                   cmdStr= "sed 's/MACHINE_LIST_FILE=.*/MACHINE_LIST_FILE=\/tmp\/hostfile--1/g' -i /tmp/clusterConfigFile-1")
+     cmd.run(validateAfter=True)
+
+
+@then('verify that cluster config has host-name populated correctly')
+def impl(context):
+     cmd = Command(name='get hostname', cmdStr='hostname')
+     cmd.run(validateAfter=True)
+     hostname_orig = cmd.get_stdout().strip()
+     hostname_new = "{}__1".format(hostname_orig)
+     # Verift host-address not populated in the config
+     with dbconn.connect(dbconn.DbURL(), unsetSearchPath=False) as conn:
+         sql = "SELECT count(*) FROM gp_segment_configuration WHERE hostname='%s'" % hostname_new
+         num_matching = dbconn.execSQL(conn, sql).fetchone()
+         if(num_matching[0] != 0):
+             raise Exception("Found entries in gp_segment_configuration is host-address popoulated as host-name")
+     # Verify correct host-name is populated in the config
+     with dbconn.connect(dbconn.DbURL(), unsetSearchPath=False) as conn:
+         sql = "SELECT count( distinct hostname) FROM gp_segment_configuration WHERE hostname='%s'" % hostname_orig
+         num_matching = dbconn.execSQL(conn, sql).fetchone()
+         if(num_matching[0] != 1):
+             raise Exception("Found no entries in gp_segment_configuration is host-address popoulated as host-name")
+
+@given('update the private keys for the new host address')
+def impl(context):
+     cmd = Command(name='get hostname', cmdStr='hostname')
+     cmd.run(validateAfter=True)
+     hostname = "{}__1".format(cmd.get_stdout().strip())
+     cmd_str = "rm -f ~/.ssh/id_rsa ~/.ssh/id_rsa.pub ~/.ssh/known_hosts; $GPHOME/bin/gpssh-exkeys -h {}".format(hostname)
+     cmd = Command(name='update ssh private keys', cmdStr=cmd_str)
+     cmd.run(validateAfter=True)
+
+@then('restore /etc/hosts file and cleanup hostlist file')
+def impl(context):
+    cmd =  "sudo mv -f /tmp/hosts_orig /etc/hosts; rm -f /tmp/clusterConfigFile-1; rm -f /tmp/hostfile--1"
+    context.execute_steps(u'''Then the user runs command "%s"''' % cmd)
+
