@@ -498,6 +498,8 @@ select * from locktest_master where coalesce not like 'gp_%' and coalesce not li
  partlockt_1_prt_9_i_idx | RowExclusiveLock | relation | master
 (19 rows)
 
+-- TODO: Seems RowExclusiveLock should be also applied on index of partlock table,
+-- like it's done in vanila postgres (lock on indexes should be eqaul to locks on table).
 select * from locktest_segments where coalesce not like 'gp_%' and coalesce not like 'pg_%';
      coalesce      |       mode       | locktype |   node    
 -------------------+------------------+----------+-----------

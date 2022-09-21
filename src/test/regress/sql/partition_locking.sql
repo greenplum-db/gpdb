@@ -148,6 +148,8 @@ begin;
 delete from partlockt where i = 4;
 -- Known_opt_diff: MPP-20936
 select * from locktest_master where coalesce not like 'gp_%' and coalesce not like 'pg_%';
+-- TODO: Seems RowExclusiveLock should be also applied on index of partlock table,
+-- like it's done in vanila postgres (lock on indexes should be eqaul to locks on table).
 select * from locktest_segments where coalesce not like 'gp_%' and coalesce not like 'pg_%';
 commit;
 
