@@ -217,6 +217,7 @@
 		"gp_log_optimization_time",
 		"gp_maintenance_conn",
 		"gp_max_local_distributed_cache",
+		"gp_max_parallel_cursors",
 		"gp_max_plan_size",
 		"gp_motion_cost_per_row",
 		"gp_perfmon_segment_interval",
