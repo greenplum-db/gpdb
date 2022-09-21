@@ -1343,15 +1343,8 @@ CXformUtils::PexprLogicalDMLOverProject(CMemoryPool *mp,
 	CColRef *pcrOid = nullptr;
 
 	CExpressionArray *pdrgpexprProjected = GPOS_NEW(mp) CExpressionArray(mp);
-	// generate one project node with two new columns: action, oid (based on the traceflag)
+	// generate one project node with new columns: action
 	pdrgpexprProjected->Append(CUtils::PexprScalarConstInt4(mp, val));
-
-	BOOL fGeneratePartOid = CUtils::FGeneratePartOid(ptabdesc->MDId());
-	if (fGeneratePartOid)
-	{
-		OID oidTable = CMDIdGPDB::CastMdid(rel_mdid)->Oid();
-		pdrgpexprProjected->Append(CUtils::PexprScalarConstOid(mp, oidTable));
-	}
 
 	pexprProject =
 		CUtils::PexprAddProjection(mp, pexprChild, pdrgpexprProjected);
@@ -1359,10 +1352,6 @@ CXformUtils::PexprLogicalDMLOverProject(CMemoryPool *mp,
 
 	CExpression *pexprPrL = (*pexprProject)[1];
 	pcrAction = CUtils::PcrFromProjElem((*pexprPrL)[0]);
-	if (fGeneratePartOid)
-	{
-		pcrOid = CUtils::PcrFromProjElem((*pexprPrL)[1]);
-	}
 
 	GPOS_ASSERT(nullptr != pcrAction);
 
