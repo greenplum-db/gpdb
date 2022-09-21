@@ -2205,7 +2205,7 @@ connectDatabase(const char *dbname, const char *connection_string,
 	 * our own major version.  (See also version check in pg_dump.c.)
 	 */
 	if (my_version != server_version
-		&& (server_version < 80300 ||		/* we can handle back to 8.3 */
+		&& (server_version < GPDB5_MAJOR_PGVERSION ||		/* we can handle back to 8.3 */
 			(server_version / 100) > (my_version / 100)))
 	{
 		pg_log_error("server version: %s; %s version: %s",
