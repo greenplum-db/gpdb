@@ -2424,7 +2424,24 @@ transformGroupClause(ParseState *pstate, List *grouplist,
 		Oid			restype;
 		Node        *node;
 
+
 		node = (Node*)lfirst(l);
+
+		/*
+		 * The following is backported to Greenplum 6 to make it align with upstream.
+		 * Arbitrarily cap the size of CUBE, which has exponential growth
+		 */
+		if (node != NULL &&
+			IsA(node, GroupingClause) &&
+			((GroupingClause*) node)->groupType == GROUPINGTYPE_CUBE &&
+			list_length(((GroupingClause*) node)->groupsets) > 12)
+		{
+			ereport(ERROR,
+					(errcode(ERRCODE_TOO_MANY_COLUMNS),
+					 errmsg("CUBE is limited to 12 elements"),
+					 parser_errposition(pstate, ((GroupingClause*) node)->location)));
+		}
+
 		tl = findListTargetlistEntries(pstate, node, targetlist, false, false, 
                                        exprKind, useSQL99);
 

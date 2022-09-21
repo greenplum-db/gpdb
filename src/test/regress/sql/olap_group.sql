@@ -705,3 +705,11 @@ group by c2, rollup((c1))
 order by 1, 2;
 
 drop table foo_gset;
+
+-- test CUBE cannot have more than 12 elements
+create table t_cube_12_limit(c1 int, c2 int, c3 int, c4 int, c5 int, c6 int, c7 int,
+                             c8 int, c9 int, c10 int, c11 int, c12 int, c13 int, c14 int,
+			     c15 int, c16 int);
+select c1, c2, c3, c4, c5, c6, c7, c8, c9, c10, c11, c12, c13, c14, c15, sum(c16) from t_cube_12_limit
+group by cube(c1, c2, c3, c4, c5, c6, c7, c8, c9, c10, c11, c12, c13), c14, c15;
+drop table t_cube_12_limit;

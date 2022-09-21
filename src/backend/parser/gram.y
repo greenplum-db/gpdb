@@ -12425,6 +12425,7 @@ group_elem:
 					GroupingClause *n = makeNode(GroupingClause);
 					n->groupType = GROUPINGTYPE_ROLLUP;
 					n->groupsets = $3;
+					n->location = @1;
 					$$ = list_make1 ((Node*)n);
 				}
             | CUBE '(' expr_list ')'
@@ -12432,6 +12433,7 @@ group_elem:
 					GroupingClause *n = makeNode(GroupingClause);
 					n->groupType = GROUPINGTYPE_CUBE;
 					n->groupsets = $3;
+					n->location = @1;
 					$$ = list_make1 ((Node*)n);
 				}
             | GROUPING SETS '(' group_elem_list ')'
@@ -12439,6 +12441,7 @@ group_elem:
 					GroupingClause *n = makeNode(GroupingClause);
 					n->groupType = GROUPINGTYPE_GROUPING_SETS;
 					n->groupsets = $4;
+					n->location = @1;
 					$$ = list_make1 ((Node*)n);
 				}
             | '(' ')'
