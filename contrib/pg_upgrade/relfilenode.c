@@ -326,59 +326,22 @@ transfer_relfile_segment(int segno, pageCnvCtx *pageConverter, FileNameMap *map,
 			close(fd);
 		}
 
-		unlink(new_file);
+	unlink(new_file);
 
-		/* Copying files might take some time, so give feedback. */
-		pg_log(PG_STATUS, "%s", old_file);
-
-		/*
-		 * If the user requested to add checksums, it is taken care of during
-		 * the heap conversion. Thus, we don't need to explicitly test for that
-		 * here as we do for plain copy.
-		 */
-		if (map->gpdb4_heap_conversion_needed)
-		{
-			pg_log(PG_VERBOSE, "copying and converting \"%s\" to \"%s\"\n",
-				   old_file, new_file);
-
-			if ((msg = convert_gpdb4_heap_file(old_file, new_file,
-											   map->has_numerics, map->atts, map->natts)) != NULL)
-				pg_log(PG_FATAL, "error while copying and converting relation \"%s.%s\" (\"%s\" to \"%s\"): %s\n",
-					   map->nspname, map->relname, old_file, new_file, msg);
-
-			/*
-			 * XXX before the split into transfer_relfile_segment(), this simply
-			 * returned from transfer_relfile() directly. Was that correct?
-			 */
-			return true;
-		}
-
-		if ((user_opts.transfer_mode == TRANSFER_MODE_LINK) && (pageConverter != NULL))
-			pg_fatal("This upgrade requires page-by-page conversion, "
-					 "you must use copy mode instead of link mode.\n");
+	/* Copying files might take some time, so give feedback. */
+	pg_log(PG_STATUS, "%s", old_file);
 
 		if (user_opts.transfer_mode == TRANSFER_MODE_COPY)
 		{
-			if (!is_checksum_mode(CHECKSUM_NONE) && map->type == HEAP)
-			{
-				pg_log(PG_VERBOSE, "copying and checksumming \"%s\" to \"%s\"\n", old_file, new_file);
-				if ((msg = rewriteHeapPageChecksum(old_file, new_file, map->nspname, map->relname)))
-					pg_log(PG_FATAL, "error while copying and checksumming relation \"%s.%s\" (\"%s\" to \"%s\"): %s\n",
-						   map->nspname, map->relname, old_file, new_file, pg_strdup(msg));
-			}
-			else
-			{
-				pg_log(PG_VERBOSE, "copying \"%s\" to \"%s\"\n", old_file, new_file);
 
-				if ((msg = copyAndUpdateFile(pageConverter, old_file, new_file, true)) != NULL)
-					pg_fatal("error while copying relation \"%s.%s\" (\"%s\" to \"%s\"): %s\n",
-							 map->nspname, map->relname, old_file, new_file, msg);
-			}
+			pg_log(PG_VERBOSE, "copying \"%s\" to \"%s\"\n", old_file, new_file);
+			if ((msg = copyAndUpdateFile(pageConverter, old_file, new_file, true)) != NULL)
+				pg_fatal("error while copying relation \"%s.%s\" (\"%s\" to \"%s\"): %s\n",
+							map->nspname, map->relname, old_file, new_file, msg);
 		}
 		else
 		{
 			pg_log(PG_VERBOSE, "linking \"%s\" to \"%s\"\n", old_file, new_file);
-
 			if ((msg = linkAndUpdateFile(pageConverter, old_file, new_file)) != NULL)
 				pg_fatal("error while creating link for relation \"%s.%s\" (\"%s\" to \"%s\"): %s\n",
 						 map->nspname, map->relname, old_file, new_file, msg);

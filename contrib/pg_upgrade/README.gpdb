@@ -24,44 +24,7 @@ Extensions to upstream pg_upgrade
 ---------------------------------
 
 Functionality for restoring the append-only catalog relations is in
-aotable.c, Greenplum specific checks for upgrading from GPDB 4 are added to
-version_old_gpdb4.c.
-
-
-Upgrading from 4.3 to 5.0
--------------------------
-
-When upgrading from 4.3 to 5.0 the QD must be upgraded before any QEs are
-upgraded. This is because new Oids are allocated during the QD upgrade and
-these needs to be distributed to the QEs in order to preserve the QD/QE Oid
-synchronization.
-
-* Each base relation type is in 5.0 defined as an array type, something which
-  is not supported in 4.3. The arraytypes for base relations will be created
-  during upgrade and their Oids recorded. To be able to distribute the Oids to
-  the QEs, the upgrade will leave a dump file in the working directory named
-  pg_upgrade_dump_arraytypes.sql. If this file is placed in the working
-  directory of upgrading a QE, pg_upgrade will use it to ensure that the Oids
-  are synchronized.
-
-* The on-disk format of the NUMERIC data type was changed in 5.0 due to the
-  merge of PostgreSQL 8.3, both heap and AO tables are affected by this. There
-  were also changes to the flags in the heap page header. PostgreSQL doesn't
-  support upgrading with pg_upgrade from 8.2 to 8.3, thus handling this format
-  change was added to pg_upgrade for Greenplum:
-
-  - Heap tables are rewritten as part of the upgrade, any pages containing
-    numeric attributes will be converted when the segment files are copied
-	to the new data directory.
-
-  - AO table segment files will be rewritten when a segment containing numeric
-    attributes are written to from database operations.
-
-* External partitions are not supported since management of external partitions
-  is not allowed in utility mode. All external partitions must be either moved
-  out of the partition hierarchy with ALTER TABLE EXCHANGE, or dropped, prior
-  to the upgrade.
-
+aotable.c.
 
 Upgrading from 5.0 to 6.0
 -------------------------

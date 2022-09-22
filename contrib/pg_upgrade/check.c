@@ -120,25 +120,12 @@ check_and_dump_old_cluster(bool live_check, char **sequence_script_file_name)
 	 */
 	check_greenplum();
 
-	/*
-	 * Upgrading from Greenplum 4.3.x which is based on PostgreSQL 8.2.
-	 * Upgrading from one version of 4.3.x to another 4.3.x version is not
-	 * supported.
-	 */
-	if (GET_MAJOR_VERSION(old_cluster.major_version) == 802)
-	{
-		old_8_3_check_for_name_data_type_usage(&old_cluster);
-
-		old_GPDB4_check_for_money_data_type_usage();
-		old_GPDB4_check_no_free_aoseg();
-		check_hash_partition_usage();
-	}
 	if (GET_MAJOR_VERSION(old_cluster.major_version) == 904 &&
 		old_cluster.controldata.cat_ver < JSONB_FORMAT_CHANGE_CAT_VER)
 		check_for_jsonb_9_4_usage(&old_cluster);
 
 	/* old = PG 8.3 checks? */
-	if (GET_MAJOR_VERSION(old_cluster.major_version) <= 803)
+	if (GET_MAJOR_VERSION(old_cluster.major_version) == 803)
 	{
 		old_8_3_check_for_name_data_type_usage(&old_cluster);
 		old_8_3_check_for_tsquery_usage(&old_cluster);
@@ -161,23 +148,6 @@ check_and_dump_old_cluster(bool live_check, char **sequence_script_file_name)
 				old_8_3_create_sequence_script(&old_cluster);
 		}
 	}
-#if 0
-	/*
-	 * GPDB 5 does not support the line datatype.
-	 */
-	/* Pre-PG 9.4 had a different 'line' data type internal format */
-	if (GET_MAJOR_VERSION(old_cluster.major_version) <= 903)
-		old_9_3_check_for_line_data_type_usage(&old_cluster);
-#endif
-
-#if 0
-	/*
-	 * GPDB 6 does not support large objects
-	 */
-	/* Pre-PG 9.0 had no large object permissions */
-	if (GET_MAJOR_VERSION(old_cluster.major_version) <= 804)
-		new_9_0_populate_pg_largeobject_metadata(&old_cluster, true);
-#endif
 
 	/*
 	 * While not a check option, we do this now because this is the only time
@@ -278,12 +248,7 @@ issue_warnings_and_set_wal_level(char *sequence_script_file_name)
 	 */
 	start_postmaster(&new_cluster, true);
 
-	/* old = PG 8.2/GPDB 4.3 warnings */
-	if (GET_MAJOR_VERSION(old_cluster.major_version) == 802)
-		new_gpdb5_0_invalidate_indexes();
-
-	/* old = PG 8.3 warnings? */
-	if (GET_MAJOR_VERSION(old_cluster.major_version) <= 803)
+	if (GET_MAJOR_VERSION(old_cluster.major_version) == 803)
 	{
 		/* restore proper sequence values using file created from old server */
 		if (sequence_script_file_name)
@@ -356,13 +321,11 @@ check_cluster_versions(void)
 	old_cluster.major_version = get_major_server_version(&old_cluster);
 
 	/*
-	 * Upgrading from anything older than an 8.2 based Greenplum is not
-	 * supported. TODO: This needs to be amended to check for the actual
-	 * 4.3.x version we target and not a blanket 8.2 check, but for now
-	 * this will cover most cases.
+	 * Upgrading from anything older than an 8.3 based Greenplum (GPDB5) is not supported.
 	 */
-	if (GET_MAJOR_VERSION(old_cluster.major_version) < 802)
-		pg_fatal("This utility can only upgrade from Greenplum version 4.3.x and later.\n");
+
+	if (GET_MAJOR_VERSION(old_cluster.major_version) < 803)
+		pg_fatal("This utility can only upgrade from Greenplum version 5 and later.\n");
 
 	/* get old and new binary versions */
 	get_bin_version(&old_cluster);
@@ -380,23 +343,6 @@ check_cluster_versions(void)
 
 	/* get new cluster versions */
 	new_cluster.major_version = get_major_server_version(&new_cluster);
-
-	/*
-	 * Upgrading within a major version is a handy feature of pg_upgrade, but
-	 * we don't allow it for within 4.3.x clusters, 4.3.x can only be an old
-	 * version to be upgraded from.
-	 */
-	if (GET_MAJOR_VERSION(old_cluster.major_version) == 802 &&
-		GET_MAJOR_VERSION(new_cluster.major_version) == 802)
-	{
-		pg_log(PG_FATAL,
-			   "old and new cluster cannot both be Greenplum 4.3.x installations\n");
-	}
-
-	/*
-	 * We allow upgrades from/to the same major version for alpha/beta
-	 * upgrades
-	 */
 
 	/* Only current PG version is supported as a target */
 	if (GET_MAJOR_VERSION(new_cluster.major_version) != GET_MAJOR_VERSION(PG_VERSION_NUM))
@@ -1110,24 +1056,28 @@ check_for_reg_data_type_usage(ClusterInfo *cluster)
 								"SELECT n.nspname, c.relname, a.attname "
 								"FROM	pg_catalog.pg_class c, "
 								"		pg_catalog.pg_namespace n, "
-								"		pg_catalog.pg_attribute a "
+								"		pg_catalog.pg_attribute a, "
+								"		pg_catalog.pg_type t "
 								"WHERE	c.oid = a.attrelid AND "
 								"		NOT a.attisdropped AND "
-								"		a.atttypid IN ( "
-		  "			'pg_catalog.regproc'::pg_catalog.regtype, "
-								"			'pg_catalog.regprocedure'::pg_catalog.regtype, "
-		  "			'pg_catalog.regoper'::pg_catalog.regtype, "
-								"			'pg_catalog.regoperator'::pg_catalog.regtype, "
+								"       a.atttypid = t.oid AND "
+								"       t.typnamespace = "
+								"           (SELECT oid FROM pg_namespace "
+								"            WHERE nspname = 'pg_catalog') AND"
+								"		t.typname IN ( "
 		/* regclass.oid is preserved, so 'regclass' is OK */
-		/* regtype.oid is preserved, so 'regtype' is OK */
-								" %s "
-								" ) AND "
+								"           'regconfig', "
+								"           'regdictionary', "
+								"           'regnamespace', "
+								"           'regoper', "
+								"           'regoperator', "
+								"           'regproc', "
+								"           'regprocedure', "
+								"           'pg_catalog.regconfig'::pg_catalog.regtype::pg_catalog.text, "
+								"           'pg_catalog.regdictionary'::pg_catalog.regtype::pg_catalog.text "
+								"			) AND "
 								"		c.relnamespace = n.oid AND "
-							  "		n.nspname NOT IN ('pg_catalog', 'information_schema')",
-						GET_MAJOR_VERSION(old_cluster.major_version) == 802 ?
-							"0" :
-							"'pg_catalog.regconfig'::pg_catalog.regtype, "
-							"'pg_catalog.regdictionary'::pg_catalog.regtype ");
+							  "		n.nspname NOT IN ('pg_catalog', 'information_schema')");
 
 		ntups = PQntuples(res);
 		i_nspname = PQfnumber(res, "nspname");

@@ -223,8 +223,6 @@ typedef struct
 	int			naoblkdirs;
 
 	/* Extra information for heap tables */
-	bool		gpdb4_heap_conversion_needed;
-	bool		has_numerics;
 	AttInfo	   *atts;
 	int			natts;
 } RelInfo;
@@ -262,8 +260,6 @@ typedef struct
 	RelType		type;			/* Type of relation */
 
 	/* Extra information for heap tables */
-	bool		gpdb4_heap_conversion_needed;
-	bool		has_numerics;
 	AttInfo	   *atts;
 	int			natts;
 } FileNameMap;
