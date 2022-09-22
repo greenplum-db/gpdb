@@ -4646,12 +4646,8 @@ listTables(const char *tabtypes, const char *pattern, bool verbose, bool showSys
 	{
 		if (isGPDB7000OrLater())
 		{
-			appendPQExpBuffer(&buf, ", CASE c.relam");
-			appendPQExpBuffer(&buf, " WHEN %d THEN '%s'", HEAP_TABLE_AM_OID, gettext_noop("heap"));
-			appendPQExpBuffer(&buf, " WHEN %d THEN '%s'", AO_ROW_TABLE_AM_OID, gettext_noop("append only"));
-			appendPQExpBuffer(&buf, " WHEN %d THEN '%s'", AO_COLUMN_TABLE_AM_OID, gettext_noop("append only columnar"));
-			/* GPDB_12_MERGE_FIXME fill other storage types */
-			appendPQExpBuffer(&buf, " END as \"%s\"\n", gettext_noop("Storage"));
+			/* In GPDB7, we can have user defined access method, display the access method name directly */
+			appendPQExpBuffer(&buf, ", a.amname as \"%s\"\n", gettext_noop("Storage"));
 		}
 		else
 		{
@@ -4695,6 +4691,9 @@ listTables(const char *tabtypes, const char *pattern, bool verbose, bool showSys
 	appendPQExpBufferStr(&buf,
 						 "\nFROM pg_catalog.pg_class c"
 						 "\n     LEFT JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace");
+	if (showTables && isGPDB7000OrLater())
+		appendPQExpBufferStr(&buf,
+							"\n     LEFT JOIN pg_catalog.pg_am a ON a.oid = c.relam");
 	if (showIndexes)
 		appendPQExpBufferStr(&buf,
 							 "\n     LEFT JOIN pg_catalog.pg_index i ON i.indexrelid = c.oid"
