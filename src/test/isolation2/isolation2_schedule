@@ -315,3 +315,6 @@ test: alter_partition_table_owner
 
 # test copy/insert in utility mode on partition/inheritance hierarchies
 test: copy_insert_utility_mode_hierarchies
+
+# test TCP interconnect teardown bounded wait
+test: tcp_ic_teardown
