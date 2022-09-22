@@ -7,7 +7,7 @@ PGAPPICON = win32
 
 PROGRAM  = pg_upgrade
 OBJS = check.o controldata.o dump.o exec.o file.o function.o info.o \
-       option.o page.o parallel.o pg_upgrade.o relfilenode.o server.o \
+       option.o parallel.o pg_upgrade.o relfilenode.o server.o \
        tablespace.o util.o version.o version_old_8_3.o $(WIN32RES)
 
 # Source files specific to Greenplum

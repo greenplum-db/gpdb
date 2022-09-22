@@ -548,7 +548,6 @@ prepare_new_cluster(void)
 			  log_opts.verbose ? "--verbose" : "");
 	check_ok();
 
-	get_pg_database_relfilenode(&new_cluster);
 }
 
 

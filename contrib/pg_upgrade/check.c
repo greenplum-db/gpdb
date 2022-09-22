@@ -83,8 +83,6 @@ check_and_dump_old_cluster(bool live_check, char **sequence_script_file_name)
 
 	set_locale_and_encoding(&old_cluster);
 
-	get_pg_database_relfilenode(&old_cluster);
-
 	if (is_greenplum_dispatcher_mode())
 		generate_old_tablespaces_file(&old_cluster);
 

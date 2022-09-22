@@ -461,40 +461,8 @@ bool		pid_lock_file_exists(const char *datadir);
 
 /* file.c */
 
-#ifdef PAGE_CONVERSION
-typedef const char *(*pluginStartup) (uint16 migratorVersion,
-								uint16 *pluginVersion, uint16 newPageVersion,
-								   uint16 oldPageVersion, void **pluginData);
-typedef const char *(*pluginConvertFile) (void *pluginData,
-								   const char *dstName, const char *srcName);
-typedef const char *(*pluginConvertPage) (void *pluginData,
-								   const char *dstPage, const char *srcPage);
-typedef const char *(*pluginShutdown) (void *pluginData);
-
-typedef struct
-{
-	uint16		oldPageVersion; /* Page layout version of the old cluster		*/
-	uint16		newPageVersion; /* Page layout version of the new cluster		*/
-	uint16		pluginVersion;	/* API version of converter plugin */
-	void	   *pluginData;		/* Plugin data (set by plugin) */
-	pluginStartup startup;		/* Pointer to plugin's startup function */
-	pluginConvertFile convertFile;		/* Pointer to plugin's file converter
-										 * function */
-	pluginConvertPage convertPage;		/* Pointer to plugin's page converter
-										 * function */
-	pluginShutdown shutdown;	/* Pointer to plugin's shutdown function */
-} pageCnvCtx;
-
-const pageCnvCtx *setupPageConverter(void);
-#else
-/* dummy */
-typedef void *pageCnvCtx;
-#endif
-
-const char *copyAndUpdateFile(pageCnvCtx *pageConverter, const char *src,
-				  const char *dst, bool force);
-const char *linkAndUpdateFile(pageCnvCtx *pageConverter, const char *src,
-				  const char *dst);
+const char *copyFile(const char *src, const char *dst, bool force);
+const char *linkFile(const char *src, const char *dst);
 
 void		check_hard_link(void);
 
@@ -525,7 +493,6 @@ void		get_sock_dir(ClusterInfo *cluster, bool live_check);
 
 /* relfilenode.c */
 
-void		get_pg_database_relfilenode(ClusterInfo *cluster);
 void transfer_all_new_tablespaces(DbInfoArr *old_db_arr,
 				  DbInfoArr *new_db_arr, char *old_pgdata, char *new_pgdata);
 void transfer_all_new_dbs(DbInfoArr *old_db_arr,

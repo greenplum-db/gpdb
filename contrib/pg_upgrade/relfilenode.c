@@ -19,13 +19,10 @@
 
 #include "greenplum/pg_upgrade_greenplum.h"
 
-static void transfer_single_new_db(pageCnvCtx *pageConverter,
-					   FileNameMap *maps, int size, char *old_tablespace);
-static void transfer_relfile(pageCnvCtx *pageConverter, FileNameMap *map,
-				 const char *suffix);
-static bool transfer_relfile_segment(int segno, pageCnvCtx *pageConverter,
-									 FileNameMap *map, const char *suffix);
-static void transfer_ao(pageCnvCtx *pageConverter, FileNameMap *map);
+static void transfer_single_new_db(FileNameMap *maps, int size, char *old_tablespace);
+static void transfer_relfile(FileNameMap *map, const char *suffix);
+static bool transfer_relfile_segment(int segno, FileNameMap *map, const char *suffix);
+static void transfer_ao(FileNameMap *map);
 static bool transfer_ao_perFile(const int segno, void *ctx);
 
 /*
@@ -99,7 +96,6 @@ transfer_all_new_dbs(DbInfoArr *old_db_arr, DbInfoArr *new_db_arr,
 				   *new_db = NULL;
 		FileNameMap *mappings;
 		int			n_maps;
-		pageCnvCtx *pageConverter = NULL;
 
 		/*
 		 * Advance past any databases that exist in the new cluster but not in
@@ -125,47 +121,13 @@ transfer_all_new_dbs(DbInfoArr *old_db_arr, DbInfoArr *new_db_arr,
 		{
 			print_maps(mappings, n_maps, new_db->db_name);
 
-#ifdef PAGE_CONVERSION
-			pageConverter = setupPageConverter();
-#endif
-			transfer_single_new_db(pageConverter, mappings, n_maps,
-								   old_tablespace);
-
-			pg_free(mappings);
+			transfer_single_new_db(mappings, n_maps, old_tablespace);
 		}
+		/* We allocate something even for n_maps == 0 */
+		pg_free(mappings);
 	}
 
 	return;
-}
-
-
-/*
- * get_pg_database_relfilenode()
- *
- *	Retrieves the relfilenode for a few system-catalog tables.  We need these
- *	relfilenodes later in the upgrade process.
- */
-void
-get_pg_database_relfilenode(ClusterInfo *cluster)
-{
-	PGconn	   *conn = connectToServer(cluster, "template1");
-	PGresult   *res;
-	int			i_relfile;
-
-	res = executeQueryOrDie(conn,
-							"SELECT c.relname, c.relfilenode "
-							"FROM	pg_catalog.pg_class c, "
-							"		pg_catalog.pg_namespace n "
-							"WHERE	c.relnamespace = n.oid AND "
-							"		n.nspname = 'pg_catalog' AND "
-							"		c.relname = 'pg_database' "
-							"ORDER BY c.relname");
-
-	i_relfile = PQfnumber(res, "relfilenode");
-	cluster->pg_database_oid = atooid(PQgetvalue(res, 0, i_relfile));
-
-	PQclear(res);
-	PQfinish(conn);
 }
 
 
@@ -175,8 +137,7 @@ get_pg_database_relfilenode(ClusterInfo *cluster)
  * create links for mappings stored in "maps" array.
  */
 static void
-transfer_single_new_db(pageCnvCtx *pageConverter,
-					   FileNameMap *maps, int size, char *old_tablespace)
+transfer_single_new_db(FileNameMap *maps, int size, char *old_tablespace)
 {
 	int			mapnum;
 	bool		vm_crashsafe_match = true;
@@ -198,12 +159,12 @@ transfer_single_new_db(pageCnvCtx *pageConverter,
 
 			if (type == AO || type == AOCS)
 			{
-				transfer_ao(pageConverter, &maps[mapnum]);
+				transfer_ao(&maps[mapnum]);
 			}
 			else
 			{
 				/* transfer primary file */
-				transfer_relfile(pageConverter, &maps[mapnum], "");
+				transfer_relfile(&maps[mapnum], "");
 
 				/* fsm/vm files added in PG 8.4 */
 				if (GET_MAJOR_VERSION(old_cluster.major_version) >= 804)
@@ -211,9 +172,9 @@ transfer_single_new_db(pageCnvCtx *pageConverter,
 					/*
 					 * Copy/link any fsm and vm files, if they exist
 					 */
-					transfer_relfile(pageConverter, &maps[mapnum], "_fsm");
+					transfer_relfile(&maps[mapnum], "_fsm");
 					if (vm_crashsafe_match)
-						transfer_relfile(pageConverter, &maps[mapnum], "_vm");
+						transfer_relfile(&maps[mapnum], "_vm");
 				}
 			}
 		}
@@ -226,8 +187,7 @@ transfer_single_new_db(pageCnvCtx *pageConverter,
  * Copy or link file from old cluster to new one.
  */
 static void
-transfer_relfile(pageCnvCtx *pageConverter, FileNameMap *map,
-				 const char *type_suffix)
+transfer_relfile(FileNameMap *map, const char *type_suffix)
 {
 	int			segno;
 
@@ -238,7 +198,7 @@ transfer_relfile(pageCnvCtx *pageConverter, FileNameMap *map,
 	 */
 	for (segno = 0;; segno++)
 	{
-		if (!transfer_relfile_segment(segno, pageConverter, map, type_suffix))
+		if (!transfer_relfile_segment(segno, map, type_suffix))
 			break;
 	}
 }
@@ -254,8 +214,7 @@ transfer_relfile(pageCnvCtx *pageConverter, FileNameMap *map,
  *
  */
 static bool
-transfer_relfile_segment(int segno, pageCnvCtx *pageConverter, FileNameMap *map,
-						 const char *type_suffix)
+transfer_relfile_segment(int segno, FileNameMap *map, const char *type_suffix)
 {
 	const char *msg;
 	char		old_file[MAXPGPATH * 3];
@@ -333,16 +292,17 @@ transfer_relfile_segment(int segno, pageCnvCtx *pageConverter, FileNameMap *map,
 
 		if (user_opts.transfer_mode == TRANSFER_MODE_COPY)
 		{
-
 			pg_log(PG_VERBOSE, "copying \"%s\" to \"%s\"\n", old_file, new_file);
-			if ((msg = copyAndUpdateFile(pageConverter, old_file, new_file, true)) != NULL)
+
+			if ((msg = copyFile(old_file, new_file, true)) != NULL)
 				pg_fatal("error while copying relation \"%s.%s\" (\"%s\" to \"%s\"): %s\n",
-							map->nspname, map->relname, old_file, new_file, msg);
+						 map->nspname, map->relname, old_file, new_file, msg);
 		}
 		else
 		{
 			pg_log(PG_VERBOSE, "linking \"%s\" to \"%s\"\n", old_file, new_file);
-			if ((msg = linkAndUpdateFile(pageConverter, old_file, new_file)) != NULL)
+
+			if ((msg = linkFile(old_file, new_file)) != NULL)
 				pg_fatal("error while creating link for relation \"%s.%s\" (\"%s\" to \"%s\"): %s\n",
 						 map->nspname, map->relname, old_file, new_file, msg);
 		}
@@ -351,21 +311,19 @@ transfer_relfile_segment(int segno, pageCnvCtx *pageConverter, FileNameMap *map,
 }
 
 struct transfer_ao_callback_ctx {
-	pageCnvCtx *pageConverter;
 	FileNameMap *map;
 };
 
 static void
-transfer_ao(pageCnvCtx *pageConverter, FileNameMap *map)
+transfer_ao(FileNameMap *map)
 {
 	struct transfer_ao_callback_ctx upgradeFiles = { 0 };
 
-	transfer_relfile_segment(0, pageConverter, map, "");
+	transfer_relfile_segment(0, map, "");
 
-	upgradeFiles.pageConverter = pageConverter;
 	upgradeFiles.map = map;
 
-    ao_foreach_extent_file(transfer_ao_perFile, &upgradeFiles);
+  ao_foreach_extent_file(transfer_ao_perFile, &upgradeFiles);
 }
 
 static bool
@@ -373,8 +331,7 @@ transfer_ao_perFile(const int segno, void *ctx)
 {
 	const struct transfer_ao_callback_ctx *upgradeFiles = ctx;
 
-	if (!transfer_relfile_segment(segno, upgradeFiles->pageConverter,
-								  upgradeFiles->map , ""))
+	if (!transfer_relfile_segment(segno, upgradeFiles->map , ""))
 		return false;
 
 	return true;
