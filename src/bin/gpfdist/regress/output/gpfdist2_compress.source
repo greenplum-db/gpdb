@@ -728,7 +728,6 @@ SELECT count(*) FROM ext_crlf_with_lf_column;
  10367
 
 DROP EXTERNAL TABLE ext_crlf_with_lf_column;
-
 -- test 27 test csv options with 3-digt(>=100) ascii option char
 CREATE EXTERNAL TABLE full_csvopt(a int, b text, c int) LOCATION('gpfdist://@hostname@:7070/gpfdist2/csvopt.tbl') FORMAT 'csv' (HEADER QUOTE '|' DELIMITER ',' ESCAPE '/' NEWLINE 'LF');
 NOTICE:  HEADER means that each one of the data files has a header row
