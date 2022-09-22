@@ -83,18 +83,26 @@ CXformDifference2LeftAntiSemiJoin::Transform(CXformContext *pxfctxt,
 		GPOS_NEW(mp) CExpression(mp, GPOS_NEW(mp) CLogicalLeftAntiSemiJoin(mp),
 								 pexprLeftChild, pexprRightChild, pexprScCond);
 
-	// assemble the aggregate operator
-	pdrgpcrOutput->AddRef();
+	if (pdrgpcrOutput->Size() > 0)
+	{
+		// assemble the aggregate operator
+		pdrgpcrOutput->AddRef();
 
-	CExpression *pexprProjList =
-		GPOS_NEW(mp) CExpression(mp, GPOS_NEW(mp) CScalarProjectList(mp),
-								 GPOS_NEW(mp) CExpressionArray(mp));
+		CExpression *pexprProjList =
+			GPOS_NEW(mp) CExpression(mp, GPOS_NEW(mp) CScalarProjectList(mp),
+									 GPOS_NEW(mp) CExpressionArray(mp));
 
-	CExpression *pexprAgg = CUtils::PexprLogicalGbAggGlobal(
-		mp, pdrgpcrOutput, pexprLASJ, pexprProjList);
+		CExpression *pexprAgg = CUtils::PexprLogicalGbAggGlobal(
+			mp, pdrgpcrOutput, pexprLASJ, pexprProjList);
 
-	// add alternative to results
-	pxfres->Add(pexprAgg);
+		// add alternative to results
+		pxfres->Add(pexprAgg);
+	}
+	else
+	{
+		// skip the aggregate operator if output columns is empty
+		pxfres->Add(pexprLASJ);
+	}
 }
 
 // EOF
