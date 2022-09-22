@@ -488,6 +488,7 @@ extern int gp_log_fts;
  * written with a severity level of LOG.
  */
 extern int gp_log_interconnect;
+extern int gp_interconnect_proxy_loglevel;
 
 /* --------------------------------------------------------------------------------------------------
  * Greenplum Optimizer GUCs

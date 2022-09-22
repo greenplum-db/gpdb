@@ -159,7 +159,7 @@ ic_proxy_server_peer_listener_init(uv_loop_t *loop)
 		/* Cannot get my addr, maybe the setting is invalid */
 		return;
 
-#if IC_PROXY_LOG_LEVEL <= LOG
+	if (gp_interconnect_proxy_loglevel <= LOG)
 	{
 		char		name[HOST_NAME_MAX] = "unknown";
 		int			port = 0;
@@ -178,7 +178,6 @@ ic_proxy_server_peer_listener_init(uv_loop_t *loop)
 						 addr->hostname, addr->service, name, port, family,
 						 uv_strerror(ret));
 	}
-#endif /* IC_PROXY_LOG_LEVEL <= LOG */
 
 	/*
 	 * It is important to set TCP_NODELAY, otherwise we will suffer from

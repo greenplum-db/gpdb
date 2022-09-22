@@ -231,6 +231,8 @@ char	   *gp_interconnect_proxy_addresses = NULL;
 
 int			Gp_udp_bufsize_k;	/* UPD recv buf size, in KB */
 
+int			gp_interconnect_proxy_loglevel = WARNING;
+
 #ifdef USE_ASSERT_CHECKING
 /*
  * UDP-IC Test hooks (for fault injection).

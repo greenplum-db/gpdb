@@ -186,7 +186,7 @@ ic_proxy_addr_on_getaddrinfo(uv_getaddrinfo_t *req,
 			if (iter->ai_family == AF_UNIX)
 				continue;
 
-#if IC_PROXY_LOG_LEVEL <= LOG
+		if (gp_interconnect_proxy_loglevel <= LOG)
 			{
 				char		name[HOST_NAME_MAX] = "unknown";
 				int			port = 0;
@@ -209,7 +209,6 @@ ic_proxy_addr_on_getaddrinfo(uv_getaddrinfo_t *req,
 								 name, port, family,
 								 uv_strerror(ret));
 			}
-#endif /* IC_PROXY_LOG_LEVEL <= LOG */
 
 			memcpy(&addr->sockaddr, iter->ai_addr, iter->ai_addrlen);
 			ic_proxy_addrs = lappend(ic_proxy_addrs, addr);
