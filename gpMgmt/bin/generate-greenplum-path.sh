@@ -26,11 +26,6 @@ else
 fi
 EOF
 
-# Don't set PYTHONHOME for Apple M1
-if [ $(uname -m) == 'arm64' ]; then
-    SET_PYTHONHOME="no"
-fi
-
 if [ "${SET_PYTHONHOME}" = "yes" ]; then
 	cat <<-"EOF"
 	PYTHONHOME="${GPHOME}/ext/python"
