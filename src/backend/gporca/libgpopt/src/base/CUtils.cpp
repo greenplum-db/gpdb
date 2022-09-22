@@ -3708,7 +3708,6 @@ CUtils::PexprConjINDFCond(CMemoryPool *mp, CColRef2dArray *pdrgpdrgpcrInput)
 	// assemble the new scalar condition
 	CExpression *pexprScCond = nullptr;
 	const ULONG length = (*pdrgpdrgpcrInput)[0]->Size();
-	GPOS_ASSERT(0 != length);
 	GPOS_ASSERT(length == (*pdrgpdrgpcrInput)[1]->Size());
 
 	CExpressionArray *pdrgpexprInput =
