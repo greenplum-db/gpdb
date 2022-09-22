@@ -331,6 +331,12 @@ CExpressionUtils::GetPropConstraintFromSubquery(CMemoryPool *mp,
 		return nullptr;
 	}
 
+	if (subqueries->Size() == 0)
+	{
+		subqueries->Release();
+		return nullptr;
+	}
+
 	CExpression *exprSubquery =
 		CPredicateUtils::PexprConjunction(mp, subqueries);
 	CColRefSetArray *colRefSetArray = nullptr;

@@ -247,10 +247,7 @@ CConstraint::PcnstrFromScalarExpr(
 
 		if (nullptr != pcnstr)
 		{
-			if (nullptr == *ppdrgpcrs)
-			{
-				*ppdrgpcrs = GPOS_NEW(mp) CColRefSetArray(mp);
-			}
+			*ppdrgpcrs = GPOS_NEW(mp) CColRefSetArray(mp);
 			AddColumnToEquivClasses(mp, colref, *ppdrgpcrs);
 		}
 		return pcnstr;
