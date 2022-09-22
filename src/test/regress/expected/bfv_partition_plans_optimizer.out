@@ -16,6 +16,7 @@
 -- end_matchsubs
 create schema bfv_partition_plans;
 set search_path=bfv_partition_plans;
+SET optimizer_trace_fallback=on;
 --
 -- Initial setup for all the partitioning test for this suite
 --
@@ -84,6 +85,8 @@ distributed by (subscription_id, bill_stmt_id)
     
 -- TEST
 select count_operator('select cust_type, subscription_status,count(distinct subscription_id),sum(voice_call_min),sum(minute_per_call) from mpp7980 where month_id =E''2009-04-01'' group by rollup(1,2);','SIGSEGV');
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: SIRV functions
  count_operator 
 ----------------
               0
@@ -127,6 +130,8 @@ insert into mpp23195_t1 values (generate_series(1,19));
 insert into mpp23195_t2 values (1);
 -- TEST
 select find_operator('select * from mpp23195_t1,mpp23195_t2 where mpp23195_t1.i < mpp23195_t2.i;', 'Dynamic Index Scan');
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: SIRV functions
  find_operator 
 ---------------
  ['true']
@@ -165,12 +170,16 @@ HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sur
 -- TEST
 set optimizer_enable_hashjoin = off;
 select find_operator('analyze select * from mpp21834_t2,mpp21834_t1 where mpp21834_t2.i < mpp21834_t1.i;','Dynamic Index Scan');
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: SIRV functions
  find_operator 
 ---------------
  ['false']
 (1 row)
 
 select find_operator('analyze select * from mpp21834_t2,mpp21834_t1 where mpp21834_t2.i < mpp21834_t1.i;','Nested Loop');
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: SIRV functions
  find_operator 
 ---------------
  ['true']
@@ -204,6 +213,8 @@ insert into mpp23288(a) select generate_series(1,20);
 analyze mpp23288;
 -- TEST
 select count_operator('select t2.a, t1.a from mpp23288 as t1 join mpp23288 as t2 on (t1.a < t2.a and t2.a =10) order by t2.a, t1.a;','Dynamic Seq Scan');
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: SIRV functions
  count_operator 
 ----------------
               2
@@ -224,6 +235,8 @@ select t2.a, t1.a from mpp23288 as t1 join mpp23288 as t2 on (t1.a < t2.a and t2
 (9 rows)
 
 select count_operator('select t2.a, t1.a from mpp23288 as t1 join mpp23288 as t2 on (t1.a < t2.a and (t2.a = 10 or t2.a = 5 or t2.a = 12)) order by t2.a, t1.a;','Dynamic Seq Scan');
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: SIRV functions
  count_operator 
 ----------------
               2
@@ -259,6 +272,8 @@ select t2.a, t1.a from mpp23288 as t1 join mpp23288 as t2 on (t1.a < t2.a and (t
 (24 rows)
 
 select count_operator('select t2.a, t1.a from mpp23288 as t1 join mpp23288 as t2 on t1.a < t2.a and t2.a = 1 or t2.a < 10 order by t2.a, t1.a;','Dynamic Seq Scan');
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: SIRV functions
  count_operator 
 ----------------
               2
@@ -497,60 +512,80 @@ analyze p3;
 analyze p;
 -- TEST
 select count_operator('select * from (select * from p1 union all select * from p2) as p_all, t where p_all.b=t.b;','Partition Selector');
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: SIRV functions
  count_operator 
 ----------------
               2
 (1 row)
 
 select count_operator('select * from (select * from p1 union select * from p2) as p_all, t where p_all.b=t.b;','Partition Selector');
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: SIRV functions
  count_operator 
 ----------------
               2
 (1 row)
 
 select count_operator('select * from (select * from p1 except all select * from p2) as p_all, t where p_all.b=t.b;','Partition Selector');
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: SIRV functions
  count_operator 
 ----------------
               0
 (1 row)
 
 select count_operator('select * from (select * from p1 except select * from p2) as p_all, t where p_all.b=t.b;','Partition Selector');
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: SIRV functions
  count_operator 
 ----------------
               2
 (1 row)
 
 select count_operator('select * from (select * from p1 intersect all select * from p2) as p_all, t where p_all.b=t.b;','Partition Selector');
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: SIRV functions
  count_operator 
 ----------------
               2
 (1 row)
 
 select count_operator('select * from (select * from p1 union select * from p2 union all select * from p3) as p_all, t where p_all.b=t.b;','Partition Selector');
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: SIRV functions
  count_operator 
 ----------------
               3
 (1 row)
 
 select count_operator('select * from (select * from p1 union select * from p2 union all select * from p) as p_all, t where p_all.b=t.b;','Partition Selector');
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: SIRV functions
  count_operator 
 ----------------
               2
 (1 row)
 
 select count_operator('select * from (select * from p1 union select * from p union all select * from p2) as p_all, t where p_all.b=t.b;','Partition Selector');
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: SIRV functions
  count_operator 
 ----------------
               2
 (1 row)
 
 select count_operator('select * from (select * from p1 union select * from p2 intersect all select * from p3) as p_all, t where p_all.b=t.b;','Partition Selector');
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: SIRV functions
  count_operator 
 ----------------
               3
 (1 row)
 
 select count_operator('select * from (select * from p1 union select * from p intersect all select * from p2) as p_all, t where p_all.b=t.b;','Partition Selector');
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: SIRV functions
  count_operator 
 ----------------
               2
@@ -589,6 +624,8 @@ HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sur
 create index dbs_index on dbs using bitmap(c3);
 -- TEST
 select find_operator('(select * from dts where c2 = 1) union (select * from dts where c2 = 2) union (select * from dts where c2 = 3) union (select * from dts where c2 = 4) union (select * from dts where c2 = 5) union (select * from dts where c2 = 6) union (select * from dts where c2 = 7) union (select * from dts where c2 = 8) union (select * from dts where c2 = 9) union (select * from dts where c2 = 10);', 'Dynamic Seq Scan');
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: SIRV functions
  find_operator 
 ---------------
  ['true']
@@ -610,6 +647,8 @@ select find_operator('(select * from dts where c2 = 1) union (select * from dts 
 
 set optimizer_enable_dynamictablescan = off;
 select find_operator('(select * from dis where c3 = 1) union (select * from dis where c3 = 2) union (select * from dis where c3 = 3) union (select * from dis where c3 = 4) union (select * from dis where c3 = 5) union (select * from dis where c3 = 6) union (select * from dis where c3 = 7) union (select * from dis where c3 = 8) union (select * from dis where c3 = 9) union (select * from dis where c3 = 10);', 'Dynamic Index Scan');
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: SIRV functions
  find_operator 
 ---------------
  ['true']
@@ -630,6 +669,8 @@ select find_operator('(select * from dis where c3 = 1) union (select * from dis 
 (0 rows)
 
 select find_operator('select * from dbs where c2= 15 and c3 = 5;', 'Bitmap Heap Scan');
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: SIRV functions
  find_operator 
 ---------------
  ['false']
@@ -675,11 +716,17 @@ create index pp_rest_2_idx on pp_1_prt_3(c,a);
 -- TEST
 set optimizer_enable_dynamictablescan = off;
 select * from pp where b=2 and c=2;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  No plan has been computed for required properties
  a | b | c 
 ---+---+---
 (0 rows)
 
 select count_operator('select * from pp where b=2 and c=2;','Partition Selector');
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: SIRV functions
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  No plan has been computed for required properties
  count_operator 
 ----------------
               0
@@ -726,6 +773,8 @@ select * from ds_4 where month_id = '200800';
 (0 rows)
 
 select count_operator('select * from ds_4 where month_id = E''200800'';','Partition Selector');
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: SIRV functions
  count_operator 
 ----------------
               0
@@ -737,6 +786,8 @@ select * from ds_4 where month_id > '200800';
 (0 rows)
 
 select count_operator('select * from ds_4 where month_id > E''200800'';','Partition Selector');
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: SIRV functions
  count_operator 
 ----------------
               0
@@ -748,6 +799,8 @@ select * from ds_4 where month_id <= '200800';
 (0 rows)
 
 select count_operator('select * from ds_4 where month_id <= E''200800'';','Partition Selector');
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: SIRV functions
  count_operator 
 ----------------
               0
@@ -759,6 +812,8 @@ select * from ds_4 a1,ds_4 a2 where a1.month_id = a2.month_id and a1.month_id > 
 (0 rows)
 
 select count_operator('select * from ds_4 a1,ds_4 a2 where a1.month_id = a2.month_id and a1.month_id > E''200800'';','Partition Selector');
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: SIRV functions
  count_operator 
 ----------------
               1
@@ -888,10 +943,16 @@ SUBPARTITION TEMPLATE
 END (2015111100::numeric) WITH (appendonly=false)
 );
 INSERT INTO part_tbl VALUES (2015111000, 479534741, 99999999);
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Multi-level partitioned tables
 INSERT INTO part_tbl VALUES (2015111000, 479534742, 99999999);
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Multi-level partitioned tables
 CREATE INDEX part_tbl_idx 
 ON part_tbl(profile_key);
 EXPLAIN SELECT * FROM part_tbl WHERE profile_key = 99999999;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Multi-level partitioned tables
                                                 QUERY PLAN                                                
 ----------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..2.07 rows=2 width=25)
@@ -904,6 +965,8 @@ EXPLAIN SELECT * FROM part_tbl WHERE profile_key = 99999999;
 (7 rows)
 
 SELECT * FROM part_tbl WHERE profile_key = 99999999;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Multi-level partitioned tables
  time_client_key | ngin_service_key | profile_key 
 -----------------+------------------+-------------
       2015111000 |        479534742 |    99999999
@@ -1156,6 +1219,8 @@ create table mpp6247_bar (like mpp6247_foo);
 NOTICE:  table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 -- EXPECT: Single HJ after partition elimination instead of sequence of HJ under Append
 select count_operator('delete from mpp6247_foo using mpp6247_bar where mpp6247_foo.c1 = mpp6247_bar.c1 and mpp6247_foo.dt = ''2009-05-03''', 'Hash Join');
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: SIRV functions
  count_operator 
 ----------------
               1
@@ -1164,7 +1229,6 @@ select count_operator('delete from mpp6247_foo using mpp6247_bar where mpp6247_f
 drop table mpp6247_bar;
 drop table mpp6247_foo;
 -- Validate that basic DELETE on partition table with index functions properly
-SET optimizer_trace_fallback=on;
 CREATE TABLE delete_from_indexed_pt (a int, b int) PARTITION BY RANGE(b) (START (0) END (7) EVERY (3));
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.

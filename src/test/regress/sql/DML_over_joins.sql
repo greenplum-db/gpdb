@@ -4,6 +4,8 @@
 create schema DML_over_joins;
 set search_path to DML_over_joins;
 
+set optimizer_trace_fallback=on;
+
 -- ----------------------------------------------------------------------
 -- Test: heap_motion1.sql
 -- ----------------------------------------------------------------------
@@ -1300,8 +1302,6 @@ create table part_neq_dis_1 (a int4, b int4) partition by range (b) (start(1) en
 create table part_neq_dis_2 (c int4, d int4) partition by range (d) (start(1) end(20) every(1), default partition extra);
 insert into part_neq_dis_1 select generate_series(1,40), generate_series(1,40);
 insert into part_neq_dis_2 select generate_series(1,40), generate_series(1,40);
-
-set optimizer_trace_fallback=on;
 
 -- T1 - distribution partitioned column, T2 - distributed partitioned column
 -- a) non-default partition

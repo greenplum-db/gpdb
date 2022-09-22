@@ -17,6 +17,7 @@
 
 create schema bfv_partition_plans;
 set search_path=bfv_partition_plans;
+SET optimizer_trace_fallback=on;
 
 --
 -- Initial setup for all the partitioning test for this suite
@@ -596,7 +597,6 @@ drop table mpp6247_bar;
 drop table mpp6247_foo;
 
 -- Validate that basic DELETE on partition table with index functions properly
-SET optimizer_trace_fallback=on;
 
 CREATE TABLE delete_from_indexed_pt (a int, b int) PARTITION BY RANGE(b) (START (0) END (7) EVERY (3));
 CREATE INDEX index_delete_from_indexed_pt ON delete_from_indexed_pt USING bitmap(b);

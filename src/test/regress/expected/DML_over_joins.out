@@ -3,6 +3,7 @@
 -- ----------------------------------------------------------------------
 create schema DML_over_joins;
 set search_path to DML_over_joins;
+set optimizer_trace_fallback=on;
 -- ----------------------------------------------------------------------
 -- Test: heap_motion1.sql
 -- ----------------------------------------------------------------------
@@ -1661,7 +1662,6 @@ NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'c' as
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 insert into part_neq_dis_1 select generate_series(1,40), generate_series(1,40);
 insert into part_neq_dis_2 select generate_series(1,40), generate_series(1,40);
-set optimizer_trace_fallback=on;
 -- T1 - distribution partitioned column, T2 - distributed partitioned column
 -- a) non-default partition
 delete from part_eq_dis_1 where a = (select c from part_eq_dis_2 where c=1);
