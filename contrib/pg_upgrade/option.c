@@ -245,11 +245,6 @@ parseCommandLine(int argc, char *argv[])
 	check_required_directory(&user_opts.socketdir, "PGSOCKETDIR", true,
 							 "-s", "sockets will be created");
 
-	/* Ensure we are only adding checksums in copy mode */
-	if (user_opts.transfer_mode != TRANSFER_MODE_COPY &&
-		!is_checksum_mode(CHECKSUM_NONE))
-		pg_log(PG_FATAL, "Adding and removing checksums only supported in copy mode.\n");
-
 	validate_greenplum_options();
 }
 

@@ -278,10 +278,6 @@ flush_overflow_page(void)
 {
 	if (!PageIsNew(overflow_buf))
 	{
-		if (is_checksum_mode(CHECKSUM_ADD))
-			((PageHeader) overflow_buf)->pd_checksum =
-				pg_checksum_page(overflow_buf, overflow_blkno);
-
 		if (write(curr_dstfd, overflow_buf, BLCKSZ) != BLCKSZ)
 			pg_log(PG_FATAL, "can't write overflow page to destination\n");
 		pg_log(PG_VERBOSE, "flushed overflow block\n");
@@ -476,15 +472,7 @@ convert_gpdb4_heap_file(const char *src, const char *dst,
 		if (msg)
 			break;
 
-		/*
-		 * GPDB 4.x doesn't support checksums so we don't need to worry about
-		 * retaining an existing checksum like for upgrades from 5.x. If we're
-		 * not adding them we want a zeroed out portion in the header
-		 */
-		if (is_checksum_mode(CHECKSUM_ADD))
-			((PageHeader) buf)->pd_checksum = pg_checksum_page(buf, blkno);
-		else
-			memset(&(((PageHeader) buf)->pd_checksum), 0, sizeof(uint16));
+		memset(&(((PageHeader) buf)->pd_checksum), 0, sizeof(uint16));
 
 		if (write(dstfd, buf, BLCKSZ) != BLCKSZ)
 		{

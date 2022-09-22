@@ -12,7 +12,6 @@ typedef enum
 typedef struct {
 	bool progress;
 	segmentMode segment_mode;
-	checksumMode checksum_mode;
 	char *old_tablespace_file_path;
 	bool continue_check_on_fatal;
 	bool skip_target_check;
@@ -52,14 +51,6 @@ process_greenplum_option(greenplumOption option)
 
 		case GREENPLUM_PROGRESS_OPTION:        /* --progress */
 			greenplum_user_opts.progress = true;
-			break;
-
-		case GREENPLUM_ADD_CHECKSUM_OPTION:        /* --add-checksum */
-			greenplum_user_opts.checksum_mode = CHECKSUM_ADD;
-			break;
-
-		case GREENPLUM_REMOVE_CHECKSUM_OPTION:        /* --remove-checksum */
-			greenplum_user_opts.checksum_mode = CHECKSUM_REMOVE;
 			break;
 
 		case GREENPLUM_OLD_GP_DBID: /* --old-gp-dbid */
@@ -127,12 +118,6 @@ bool
 is_greenplum_dispatcher_mode()
 {
 	return greenplum_user_opts.segment_mode == DISPATCHER;
-}
-
-bool
-is_checksum_mode(checksumMode mode)
-{
-	return mode == greenplum_user_opts.checksum_mode;
 }
 
 bool
