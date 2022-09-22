@@ -1,3 +1,4 @@
+set optimizer_trace_fallback = on;
 --
 -- UNION (also INTERSECT, EXCEPT)
 --
@@ -785,6 +786,8 @@ explain (costs off)
    UNION ALL
    SELECT ab FROM t2) t
   ORDER BY 1 LIMIT 8;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Inherited tables
                          QUERY PLAN                         
 ------------------------------------------------------------
  Limit
@@ -805,6 +808,8 @@ explain (costs off)
    UNION ALL
    SELECT ab FROM t2) t
   ORDER BY 1 LIMIT 8;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Inherited tables
  ab 
 ----
  ab
@@ -833,6 +838,8 @@ select event_id
        union all
        select event_id from other_events) ss
  order by event_id;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Inherited tables
                            QUERY PLAN                           
 ----------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
@@ -857,6 +864,8 @@ explain (costs off)
    UNION ALL
    SELECT 2 AS t, * FROM tenk1 b) c
  WHERE t = 2;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Non-default collation
                 QUERY PLAN                
 ------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
@@ -941,6 +950,8 @@ SELECT * FROM
    SELECT 2 AS t, 4 AS x) ss
 WHERE x > 3
 ORDER BY x;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: SIRV functions
                                QUERY PLAN                                
 -------------------------------------------------------------------------
  Sort
@@ -963,6 +974,8 @@ SELECT * FROM
    SELECT 2 AS t, 4 AS x) ss
 WHERE x > 3
 ORDER BY x;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: SIRV functions
  t | x 
 ---+---
  2 | 4
@@ -1121,3 +1134,4 @@ where (x = 0) or (q1 >= q2 and q1 <= q2);
  4567890123456789 |  4567890123456789 | 1
 (6 rows)
 
+reset optimizer_trace_fallback;
