@@ -987,11 +987,15 @@ readRegisterMessage(ChunkTransportState *transportStates,
 				(errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
 				 errmsg("interconnect error: Invalid registration message received from %s",
 						conn->remoteHostAndPort),
-				 errdetail("sendSlice=%d recvSlice=%d srcContentId=%d srcPid=%d srcListenerPort=%d srcSessionId=%d srcCommandCount=%d motnode=%d",
+				 errdetail("sendSlice=%d recvSlice=%d srcContentId=%d srcPid=%d "
+						   "srcListenerPort=%d srcSessionId=%d srcCommandCount=%d "
+						   "motnode=%d transportStates->size=%d "
+						   "transportStates->sliceId=%d",
 						   msg.sendSliceIndex, msg.recvSliceIndex,
 						   msg.srcContentId, msg.srcPid,
 						   msg.srcListenerPort, msg.srcSessionId,
-						   msg.srcCommandCount, msg.sendSliceIndex)));
+						   msg.srcCommandCount, msg.sendSliceIndex,
+						   transportStates->size, transportStates->sliceId)));
 	}
 
 	/*
@@ -1020,9 +1024,13 @@ readRegisterMessage(ChunkTransportState *transportStates,
 				(errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
 				 errmsg("interconnect error: Invalid registration message received from %s",
 						conn->remoteHostAndPort),
-				 errdetail("sendSlice=%d srcContentId=%d srcPid=%d srcListenerPort=%d",
-						   msg.sendSliceIndex, msg.srcContentId,
-						   msg.srcPid, msg.srcListenerPort)));
+					errdetail("sendSlice=%d recvSlice=%d srcContentId=%d srcPid=%d "
+							  "srcListenerPort=%d srcSessionId=%d srcCommandCount=%d "
+							  "motnode=%d iconn=%d",
+							  msg.sendSliceIndex, msg.recvSliceIndex,
+							  msg.srcContentId, msg.srcPid,
+							  msg.srcListenerPort, msg.srcSessionId,
+							  msg.srcCommandCount, msg.sendSliceIndex, iconn)));
 	}
 
 	/*
