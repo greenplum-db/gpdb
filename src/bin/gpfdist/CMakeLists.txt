@@ -22,6 +22,7 @@ set(APR_LIB "${CMAKE_PREFIX_PATH}/lib/libapr-1.lib")
 set(APR_DLL "${CMAKE_PREFIX_PATH}/bin/libapr-1.dll")
 set(EVENT_LIB "${CMAKE_PREFIX_PATH}/lib/event.lib")
 
+
 #set include dirs
 include_directories("${CMAKE_PREFIX_PATH}/include")
 include_directories(${HEADER_DIRS})
