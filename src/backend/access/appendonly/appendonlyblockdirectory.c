@@ -98,7 +98,7 @@ AppendOnlyBlockDirectoryEntry_RangeHasRow(
  * Initialize the block directory structure.
  */
 static void
-init_internal(AppendOnlyBlockDirectory *blockDirectory)
+init_internal(AppendOnlyBlockDirectory *blockDirectory, bool *proj)
 {
 	MemoryContext oldcxt;
 	int			numScanKeys;
@@ -117,6 +117,14 @@ init_internal(AppendOnlyBlockDirectory *blockDirectory)
 							  ALLOCSET_DEFAULT_MAXSIZE);
 
 	oldcxt = MemoryContextSwitchTo(blockDirectory->memoryContext);
+
+	if (proj != NULL)
+	{
+		blockDirectory->proj = (bool *)palloc(blockDirectory->numColumnGroups * sizeof(bool));
+		memcpy(blockDirectory->proj, proj, blockDirectory->numColumnGroups * sizeof(bool));
+	}
+	else
+		blockDirectory->proj = NULL;
 
 	heapTupleDesc = RelationGetDescr(blockDirectory->blkdirRel);
 	blockDirectory->values = palloc0(sizeof(Datum) * heapTupleDesc->natts);
@@ -200,7 +208,6 @@ AppendOnlyBlockDirectory_Init_forSearch(
 	blockDirectory->appendOnlyMetaDataSnapshot = appendOnlyMetaDataSnapshot;
 	blockDirectory->numColumnGroups = numColumnGroups;
 	blockDirectory->isAOCol = isAOCol;
-	blockDirectory->proj = proj;
 	blockDirectory->currentSegmentFileNum = -1;
 
 	Assert(OidIsValid(aoRel->rd_appendonly->blkdirrelid));
@@ -213,7 +220,7 @@ AppendOnlyBlockDirectory_Init_forSearch(
 	blockDirectory->blkdirIdx =
 		index_open(aoRel->rd_appendonly->blkdiridxid, AccessShareLock);
 
-	init_internal(blockDirectory);
+	init_internal(blockDirectory, proj);
 }
 
 /*
@@ -257,7 +264,6 @@ AppendOnlyBlockDirectory_Init_forInsert(
 	blockDirectory->currentSegmentFileNum = segno;
 	blockDirectory->numColumnGroups = numColumnGroups;
 	blockDirectory->isAOCol = isAOCol;
-	blockDirectory->proj = NULL;
 
 	Assert(OidIsValid(aoRel->rd_appendonly->blkdirrelid));
 
@@ -269,7 +275,7 @@ AppendOnlyBlockDirectory_Init_forInsert(
 	blockDirectory->blkdirIdx =
 		index_open(aoRel->rd_appendonly->blkdiridxid, RowExclusiveLock);
 
-	init_internal(blockDirectory);
+	init_internal(blockDirectory, NULL);
 
 	ereportif(Debug_appendonly_print_blockdirectory, LOG,
 			  (errmsg("Append-only block directory init for insert: "
@@ -338,7 +344,7 @@ AppendOnlyBlockDirectory_Init_addCol(
 	blockDirectory->blkdirIdx =
 		index_open(aoRel->rd_appendonly->blkdiridxid, RowExclusiveLock);
 
-	init_internal(blockDirectory);
+	init_internal(blockDirectory, NULL);
 }
 
 static bool
@@ -1234,8 +1240,6 @@ AppendOnlyBlockDirectory_End_forInsert(
 							  "(columnGroupNo, nEntries) = (%d, %u)",
 							  groupNo, minipageInfo->numMinipageEntries)));
 		}
-
-		pfree(minipageInfo->minipage);
 	}
 
 	ereportif(Debug_appendonly_print_blockdirectory, LOG,
@@ -1245,12 +1249,6 @@ AppendOnlyBlockDirectory_End_forInsert(
 					  blockDirectory->currentSegmentFileNum,
 					  blockDirectory->numColumnGroups,
 					  blockDirectory->isAOCol)));
-
-	pfree(blockDirectory->values);
-	pfree(blockDirectory->nulls);
-	pfree(blockDirectory->minipages);
-	pfree(blockDirectory->scanKeys);
-	pfree(blockDirectory->strategyNumbers);
 
 	index_close(blockDirectory->blkdirIdx, RowExclusiveLock);
 	heap_close(blockDirectory->blkdirRel, RowExclusiveLock);
@@ -1262,17 +1260,9 @@ void
 AppendOnlyBlockDirectory_End_forSearch(
 									   AppendOnlyBlockDirectory *blockDirectory)
 {
-	int			groupNo;
-
 	if (blockDirectory->blkdirRel == NULL ||
 		blockDirectory->blkdirIdx == NULL)
 		return;
-
-	for (groupNo = 0; groupNo < blockDirectory->numColumnGroups; groupNo++)
-	{
-		if (blockDirectory->minipages[groupNo].minipage != NULL)
-			pfree(blockDirectory->minipages[groupNo].minipage);
-	}
 
 	ereportif(Debug_appendonly_print_blockdirectory, LOG,
 			  (errmsg("Append-only block directory end for search: "
@@ -1281,12 +1271,6 @@ AppendOnlyBlockDirectory_End_forSearch(
 					  blockDirectory->totalSegfiles,
 					  blockDirectory->numColumnGroups,
 					  blockDirectory->isAOCol)));
-
-	pfree(blockDirectory->values);
-	pfree(blockDirectory->nulls);
-	pfree(blockDirectory->minipages);
-	pfree(blockDirectory->scanKeys);
-	pfree(blockDirectory->strategyNumbers);
 
 	index_close(blockDirectory->blkdirIdx, AccessShareLock);
 	heap_close(blockDirectory->blkdirRel, AccessShareLock);
@@ -1320,7 +1304,6 @@ AppendOnlyBlockDirectory_End_addCol(
 							  " minipage: (columnGroupNo, nEntries) = (%d, %u)",
 							  groupNo, minipageInfo->numMinipageEntries)));
 		}
-		pfree(minipageInfo->minipage);
 	}
 
 	ereportif(Debug_appendonly_print_blockdirectory, LOG,
@@ -1330,12 +1313,6 @@ AppendOnlyBlockDirectory_End_addCol(
 					  blockDirectory->currentSegmentFileNum,
 					  blockDirectory->numColumnGroups,
 					  blockDirectory->isAOCol)));
-
-	pfree(blockDirectory->values);
-	pfree(blockDirectory->nulls);
-	pfree(blockDirectory->minipages);
-	pfree(blockDirectory->scanKeys);
-	pfree(blockDirectory->strategyNumbers);
 
 	/*
 	 * We already hold transaction-scope exclusive lock on the AOCS relation.

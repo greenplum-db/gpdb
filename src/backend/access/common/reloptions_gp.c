@@ -131,7 +131,6 @@ static relopt_string stringRelOpts_gp[] =
 	{{NULL}}
 };
 
-static void free_options_deep(relopt_value *options, int num_options);
 static relopt_value *get_option_set(relopt_value *options, int num_options, const char *opt_name);
 
 /*

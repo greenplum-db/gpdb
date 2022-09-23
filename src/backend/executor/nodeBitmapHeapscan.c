@@ -165,6 +165,9 @@ initFetchDesc(BitmapHeapScanState *scanstate)
 
 			scanstate->bhs_currentAOCSLossyFetchDesc =
 				aocs_fetch_init(currentRelation, estate->es_snapshot, appendOnlyMetaDataSnapshot, projLossy);
+
+			pfree(proj);
+			pfree(projLossy);
 		}
 	}
 	else

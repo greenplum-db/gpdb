@@ -791,7 +791,7 @@ gistoptions(PG_FUNCTION_ARGS)
 	fillRelOptions((void *) rdopts, sizeof(GiSTOptions), options, numoptions,
 				   validate, tab, lengthof(tab));
 
-	pfree(options);
+	free_options_deep(options, numoptions);
 
 	PG_RETURN_BYTEA_P(rdopts);
 
