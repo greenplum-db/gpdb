@@ -1703,6 +1703,18 @@ describeOneTableDetails(const char *schemaname,
 			printfPQExpBuffer(&title, _("Foreign table \"%s.%s\""),
 							  schemaname, relationname);
 			break;
+		case 'o':
+			printfPQExpBuffer(&title, _("Appendonly segment entry table: \"%s.%s\""),
+							  schemaname, relationname);
+			break;
+		case 'b':
+			printfPQExpBuffer(&title, _("Appendonly block directory table: \"%s.%s\""),
+							  schemaname, relationname);
+			break;
+		case 'M':
+			printfPQExpBuffer(&title, _("Appendonly visibility map table: \"%s.%s\""),
+							  schemaname, relationname);
+			break;
 		default:
 			/* untranslated unknown relkind */
 			printfPQExpBuffer(&title, "?%c? \"%s.%s\"",
@@ -2333,7 +2345,8 @@ describeOneTableDetails(const char *schemaname,
 		PQclear(result);
 	}
 	else if (tableinfo.relkind == 'r' || tableinfo.relkind == 'm' ||
-			 tableinfo.relkind == 'f')
+			 tableinfo.relkind == 'f' || tableinfo.relkind == 'o' ||
+			 tableinfo.relkind == 'b' || tableinfo.relkind == 'M')
 	{
 		/* Footer information about a table */
 		PGresult   *result = NULL;
