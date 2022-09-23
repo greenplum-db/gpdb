@@ -186,7 +186,7 @@ ic_proxy_addr_on_getaddrinfo(uv_getaddrinfo_t *req,
 			if (iter->ai_family == AF_UNIX)
 				continue;
 
-		if (gp_interconnect_proxy_loglevel <= LOG)
+			if (gp_log_interconnect >= GPVARS_VERBOSITY_TERSE)
 			{
 				char		name[HOST_NAME_MAX] = "unknown";
 				int			port = 0;

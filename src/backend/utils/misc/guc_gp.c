@@ -4697,21 +4697,6 @@ struct config_enum ConfigureNamesEnum_gp[] =
 		JOIN_ORDER_EXHAUSTIVE2_SEARCH, optimizer_join_order_options,
 		NULL, NULL, NULL
 	},
-
-	{
-		{"gp_interconnect_proxy_loglevel", PGC_SUSET, DEVELOPER_OPTIONS,
-			gettext_noop("Sets the logging level for interconnect proxy messages"),
-			gettext_noop("Valid values are DEBUG5, DEBUG4, DEBUG3, DEBUG2, "
-						 "DEBUG1, LOG, NOTICE, WARNING, and ERROR. Each level includes all the "
-						 "levels that follow it. The later the level, the fewer messages are "
-						 "sent."),
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
-		},
-		&gp_interconnect_proxy_loglevel,
-		WARNING, server_message_level_options,
-		NULL, NULL, NULL
-	},
-
 	/* End-of-list marker */
 	{
 		{NULL, 0, 0, NULL, NULL}, NULL, 0, NULL, NULL, NULL

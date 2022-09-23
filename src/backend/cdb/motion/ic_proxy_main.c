@@ -159,7 +159,7 @@ ic_proxy_server_peer_listener_init(uv_loop_t *loop)
 		/* Cannot get my addr, maybe the setting is invalid */
 		return;
 
-	if (gp_interconnect_proxy_loglevel <= LOG)
+	if (gp_log_interconnect >= GPVARS_VERBOSITY_TERSE)
 	{
 		char		name[HOST_NAME_MAX] = "unknown";
 		int			port = 0;

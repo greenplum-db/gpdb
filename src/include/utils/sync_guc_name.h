@@ -34,7 +34,6 @@
 		"gp_interconnect_min_retries_before_timeout",
 		"gp_interconnect_min_rto",
 		"gp_interconnect_proxy_addresses",
-		"gp_interconnect_proxy_loglevel",
 		"gp_interconnect_queue_depth",
 		"gp_interconnect_setup_timeout",
 		"gp_interconnect_snd_queue_depth",

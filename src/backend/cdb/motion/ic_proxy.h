@@ -30,12 +30,13 @@
 #define IC_PROXY_ACK_INTERVAL 10
 
 
+
 #define ic_proxy_alloc(size) palloc(size)
 #define ic_proxy_free(ptr) pfree(ptr)
 #define ic_proxy_new(type) ((type *) ic_proxy_alloc(sizeof(type)))
 
 #define ic_proxy_log(elevel, msg...) do { \
-	if (elevel >= gp_interconnect_proxy_loglevel) \
+	if (elevel >= WARNING || gp_log_interconnect >= GPVARS_VERBOSITY_TERSE) \
 	{ \
 		elog(elevel, msg); \
 	} \
