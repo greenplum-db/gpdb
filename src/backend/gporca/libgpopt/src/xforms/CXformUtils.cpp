@@ -2217,7 +2217,7 @@ CXformUtils::PexprWindowWithRowNumber(CMemoryPool *mp,
 {
 	// partitioning information
 	CDistributionSpec *pds = nullptr;
-	if (nullptr != pdrgpcrInput)
+	if (nullptr != pdrgpcrInput && 0 < pdrgpcrInput->Size())
 	{
 		CExpressionArray *pdrgpexprInput =
 			CUtils::PdrgpexprScalarIdents(mp, pdrgpcrInput);
