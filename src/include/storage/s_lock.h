@@ -142,7 +142,7 @@ typedef unsigned char slock_t;
 static __inline__ int
 tas(volatile slock_t *lock)
 {
-	register slock_t _res = 1;
+	slock_t		_res = 1;
 
 	/*
 	 * Use a non-locking test before asserting the bus lock.  Note that the
@@ -223,7 +223,7 @@ typedef unsigned char slock_t;
 static __inline__ int
 tas(volatile slock_t *lock)
 {
-	register slock_t _res = 1;
+	slock_t		_res = 1;
 
 	__asm__ __volatile__(
 		"	lock			\n"
@@ -380,7 +380,7 @@ typedef unsigned char slock_t;
 static __inline__ int
 tas(volatile slock_t *lock)
 {
-	register slock_t _res;
+	slock_t		_res;
 
 	/*
 	 *	See comment in src/backend/port/tas/sunstudio_sparc.s for why this
@@ -626,9 +626,9 @@ typedef unsigned int slock_t;
 static __inline__ int
 tas(volatile slock_t *lock)
 {
-	register volatile slock_t *_l = lock;
-	register int _res;
-	register int _tmp;
+	volatile slock_t *_l = lock;
+	int			_res;
+	int			_tmp;
 
 	__asm__ __volatile__(
 		"       .set push           \n"
@@ -773,7 +773,7 @@ static __inline__ int
 tas(volatile slock_t *lock)
 {
 	volatile int *lockword = TAS_ACTIVE_WORD(lock);
-	register int lockval;
+	int			lockval;
 
 	__asm__ __volatile__(
 		"	ldcwx	0(0,%2),%0	\n"
