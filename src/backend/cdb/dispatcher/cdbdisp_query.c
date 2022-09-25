@@ -347,12 +347,12 @@ CdbDispatchSetCommand(const char *strCommand, bool cancelOnError)
 
 		cdbdisp_dispatchToGang(ds, rg, -1);
 	}
-	addToGxactDtxSegments(primaryGang);
-
 	/*
-	 * No need for two-phase commit, so no need to call
-	 * addToGxactDtxSegments.
+	 * 2-phase commit isn't involved in dispatching SET command. We call
+	 * addTogxactdtxsegments() here is to update the writer gang when the SET
+	 * command is the first command in an explicit transaction.
 	 */
+	addToGxactDtxSegments(primaryGang);
 
 	cdbdisp_waitDispatchFinish(ds);
 
