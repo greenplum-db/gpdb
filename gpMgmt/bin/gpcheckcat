@@ -392,7 +392,7 @@ class execThread(Thread):
 def processThread(threads):
     batch = []
     for th in threads:
-        logger.debug('waiting on thread %s' % th.getName())
+        logger.debug('waiting on thread %s' % th.name)
         th.join()
         if th.error:
             setError(ERROR_NOREPAIR)
@@ -422,7 +422,7 @@ def connect2run(qry, col=None):
         thread = execThread(c, db, qry)
         thread.start()
         logger.debug('launching query thread %s for dbid %i' %
-                     (thread.getName(), dbid))
+                     (thread.name, dbid))
         threads.append(thread)
 
         # we don't want too much going on at once
@@ -914,9 +914,14 @@ def checkCatalogJoinDepend(catalogs):
             # do drop their proclang handler functions) will be
             # replacing language so this exclusion should be fine.
             if str(cat) == 'pg_proc':
-                qry += """
-                AND pronamespace != {oid}
-                """.format(oid=PG_CATALOG_OID)
+                qry += """AND pronamespace != {oid}
+            """.format(oid=PG_CATALOG_OID)
+
+            # Exclude pg_am entries which depend on internal handlers.
+            if str(cat) == 'pg_am':
+                qry = """
+            SELECT '{catalog}' AS catalog, pg_am.oid AS oid FROM {catalog} JOIN pg_proc ON pg_am.amhandler::text = pg_proc.proname WHERE pg_am.oid >= {oid} AND pg_proc.oid >= {oid}
+            """.format(catalog=cat, oid=FIRST_NORMAL_OID)
 
             deps.append(qry)
 
@@ -1420,7 +1425,7 @@ def checkAOSegVpinfo():
         thread = checkAOSegVpinfoThread(cfg, db_connection)
         thread.start()
         logger.debug('launching check thread %s for dbid %i' %
-                     (thread.getName(), dbid))
+                     (thread.name, dbid))
         threads.append(thread)
 
         if (i % GV.opt['-B']) == 0:
