@@ -1517,14 +1517,6 @@ CTranslatorScalarToDXL::TranslateWindowFrameToDXL(
 {
 	EdxlFrameSpec frame_spec;
 
-	// GPDB_12_MERGE_FIXME: there's no reason ORCA would care about this, other
-	// than that it doesn't roundtrip this piece of info.
-	if ((frame_options & FRAMEOPTION_EXCLUSION))
-	{
-		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature,
-				   GPOS_WSZ_LIT("window frame EXCLUDE"));
-	}
-
 	if ((frame_options & FRAMEOPTION_ROWS) != 0)
 	{
 		frame_spec = EdxlfsRow;
@@ -1615,6 +1607,18 @@ CTranslatorScalarToDXL::TranslateWindowFrameToDXL(
 	// We don't support non-default EXCLUDE [CURRENT ROW | GROUP | TIES |
 	// NO OTHERS] options.
 	EdxlFrameExclusionStrategy strategy = EdxlfesNulls;
+	if ((frame_options & FRAMEOPTION_EXCLUDE_CURRENT_ROW) != 0)
+	{
+		strategy = EdxlfesCurrentRow;
+	}
+	else if ((frame_options & FRAMEOPTION_EXCLUDE_GROUP) != 0)
+	{
+		strategy = EdxlfesGroup;
+	}
+	else if ((frame_options & FRAMEOPTION_EXCLUDE_TIES) != 0)
+	{
+		strategy = EdxlfesTies;
+	}
 
 	CDXLNode *lead_edge = GPOS_NEW(m_mp)
 		CDXLNode(m_mp, GPOS_NEW(m_mp) CDXLScalarWindowFrameEdge(

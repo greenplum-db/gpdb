@@ -852,8 +852,6 @@ FROM tenk1 WHERE unique1 < 10;
 SELECT sum(unique1) over (rows between 2 preceding and 2 following exclude current row),
 	unique1, four
 FROM tenk1 WHERE unique1 < 10;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: window frame EXCLUDE
  sum | unique1 | four 
 -----+---------+------
    3 |       4 |    0
@@ -871,8 +869,6 @@ DETAIL:  Feature not supported: window frame EXCLUDE
 SELECT sum(unique1) over (rows between 2 preceding and 2 following exclude group),
 	unique1, four
 FROM tenk1 WHERE unique1 < 10;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: window frame EXCLUDE
  sum | unique1 | four 
 -----+---------+------
      |       4 |    0
@@ -890,8 +886,6 @@ DETAIL:  Feature not supported: window frame EXCLUDE
 SELECT sum(unique1) over (rows between 2 preceding and 2 following exclude ties),
 	unique1, four
 FROM tenk1 WHERE unique1 < 10;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: window frame EXCLUDE
  sum | unique1 | four 
 -----+---------+------
    4 |       4 |    0
@@ -909,8 +903,6 @@ DETAIL:  Feature not supported: window frame EXCLUDE
 SELECT first_value(unique1) over (ORDER BY four rows between current row and 2 following exclude current row),
 	unique1, four
 FROM tenk1 WHERE unique1 < 10;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: window frame EXCLUDE
  first_value | unique1 | four 
 -------------+---------+------
            8 |       0 |    0
@@ -928,8 +920,6 @@ DETAIL:  Feature not supported: window frame EXCLUDE
 SELECT first_value(unique1) over (ORDER BY four rows between current row and 2 following exclude group),
 	unique1, four
 FROM tenk1 WHERE unique1 < 10;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: window frame EXCLUDE
  first_value | unique1 | four 
 -------------+---------+------
              |       0 |    0
@@ -947,8 +937,6 @@ DETAIL:  Feature not supported: window frame EXCLUDE
 SELECT first_value(unique1) over (ORDER BY four rows between current row and 2 following exclude ties),
 	unique1, four
 FROM tenk1 WHERE unique1 < 10;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: window frame EXCLUDE
  first_value | unique1 | four 
 -------------+---------+------
            0 |       0 |    0
@@ -966,8 +954,6 @@ DETAIL:  Feature not supported: window frame EXCLUDE
 SELECT last_value(unique1) over (ORDER BY four rows between current row and 2 following exclude current row),
 	unique1, four
 FROM tenk1 WHERE unique1 < 10;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: window frame EXCLUDE
  last_value | unique1 | four 
 ------------+---------+------
           4 |       0 |    0
@@ -985,8 +971,6 @@ DETAIL:  Feature not supported: window frame EXCLUDE
 SELECT last_value(unique1) over (ORDER BY four rows between current row and 2 following exclude group),
 	unique1, four
 FROM tenk1 WHERE unique1 < 10;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: window frame EXCLUDE
  last_value | unique1 | four 
 ------------+---------+------
             |       0 |    0
@@ -1004,8 +988,6 @@ DETAIL:  Feature not supported: window frame EXCLUDE
 SELECT last_value(unique1) over (ORDER BY four rows between current row and 2 following exclude ties),
 	unique1, four
 FROM tenk1 WHERE unique1 < 10;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: window frame EXCLUDE
  last_value | unique1 | four 
 ------------+---------+------
           0 |       0 |    0
@@ -1091,8 +1073,6 @@ FROM tenk1 WHERE unique1 < 10 WINDOW w AS (order by four);
 SELECT sum(unique1) over (w range between unbounded preceding and current row exclude current row),
 	unique1, four
 FROM tenk1 WHERE unique1 < 10 WINDOW w AS (order by four);
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: window frame EXCLUDE
  sum | unique1 | four 
 -----+---------+------
   12 |       0 |    0
@@ -1110,8 +1090,6 @@ DETAIL:  Feature not supported: window frame EXCLUDE
 SELECT sum(unique1) over (w range between unbounded preceding and current row exclude group),
 	unique1, four
 FROM tenk1 WHERE unique1 < 10 WINDOW w AS (order by four);
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: window frame EXCLUDE
  sum | unique1 | four 
 -----+---------+------
      |       0 |    0
@@ -1129,8 +1107,6 @@ DETAIL:  Feature not supported: window frame EXCLUDE
 SELECT sum(unique1) over (w range between unbounded preceding and current row exclude ties),
 	unique1, four
 FROM tenk1 WHERE unique1 < 10 WINDOW w AS (order by four);
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: window frame EXCLUDE
  sum | unique1 | four 
 -----+---------+------
    0 |       0 |    0
@@ -1216,8 +1192,6 @@ CREATE OR REPLACE TEMP VIEW v_window AS
 	SELECT i, sum(i) over (order by i rows between 1 preceding and 1 following
 	exclude current row) as sum_rows FROM generate_series(1, 10) i;
 SELECT * FROM v_window;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: window frame EXCLUDE
  i  | sum_rows 
 ----+----------
   1 |        2
@@ -1246,8 +1220,6 @@ CREATE OR REPLACE TEMP VIEW v_window AS
 	SELECT i, sum(i) over (order by i rows between 1 preceding and 1 following
 	exclude group) as sum_rows FROM generate_series(1, 10) i;
 SELECT * FROM v_window;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: window frame EXCLUDE
  i  | sum_rows 
 ----+----------
   1 |        2
@@ -1276,8 +1248,6 @@ CREATE OR REPLACE TEMP VIEW v_window AS
 	SELECT i, sum(i) over (order by i rows between 1 preceding and 1 following
 	exclude ties) as sum_rows FROM generate_series(1, 10) i;
 SELECT * FROM v_window;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: window frame EXCLUDE
  i  | sum_rows 
 ----+----------
   1 |        3
@@ -1435,7 +1405,7 @@ SELECT sum(unique1) over (order by four range between 2::int8 preceding and 1::i
 	unique1, four
 FROM tenk1 WHERE unique1 < 10;
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: window frame EXCLUDE
+DETAIL:  Feature not supported: window frame RANGE with OFFSET PRECEDING or FOLLOWING
  sum | unique1 | four 
 -----+---------+------
      |       0 |    0
@@ -1454,7 +1424,7 @@ SELECT sum(unique1) over (order by four range between 2::int8 preceding and 1::i
 	unique1, four
 FROM tenk1 WHERE unique1 < 10;
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: window frame EXCLUDE
+DETAIL:  Feature not supported: window frame RANGE with OFFSET PRECEDING or FOLLOWING
  sum | unique1 | four 
 -----+---------+------
      |       0 |    0
@@ -1473,7 +1443,7 @@ SELECT sum(unique1) over (order by four range between 2::int8 preceding and 1::i
 	unique1, four
 FROM tenk1 WHERE unique1 < 10;
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: window frame EXCLUDE
+DETAIL:  Feature not supported: window frame RANGE with OFFSET PRECEDING or FOLLOWING
  sum | unique1 | four 
 -----+---------+------
      |       0 |    0
@@ -1492,7 +1462,7 @@ SELECT sum(unique1) over (order by four range between 2::int8 preceding and 6::i
 	unique1, four
 FROM tenk1 WHERE unique1 < 10;
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: window frame EXCLUDE
+DETAIL:  Feature not supported: window frame RANGE with OFFSET PRECEDING or FOLLOWING
  sum | unique1 | four 
 -----+---------+------
   33 |       0 |    0
@@ -1511,7 +1481,7 @@ SELECT sum(unique1) over (order by four range between 2::int8 preceding and 6::i
 	unique1, four
 FROM tenk1 WHERE unique1 < 10;
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: window frame EXCLUDE
+DETAIL:  Feature not supported: window frame RANGE with OFFSET PRECEDING or FOLLOWING
  sum | unique1 | four 
 -----+---------+------
   33 |       0 |    0
@@ -1549,7 +1519,7 @@ SELECT sum(unique1) over (partition by four order by unique1 range between 5::in
 	exclude current row),unique1, four
 FROM tenk1 WHERE unique1 < 10;
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: window frame EXCLUDE
+DETAIL:  Feature not supported: window frame RANGE with OFFSET PRECEDING or FOLLOWING
  sum | unique1 | four 
 -----+---------+------
    4 |       0 |    0
@@ -1621,7 +1591,7 @@ DETAIL:  Feature not supported: window frame RANGE with OFFSET PRECEDING or FOLL
 select sum(salary) over (order by enroll_date range between '1 year'::interval preceding and '1 year'::interval following
 	exclude current row), salary, enroll_date from empsalary;
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: window frame EXCLUDE
+DETAIL:  Feature not supported: window frame RANGE with OFFSET PRECEDING or FOLLOWING
   sum  | salary | enroll_date 
 -------+--------+-------------
  29900 |   5000 | 10-01-2006
@@ -1639,7 +1609,7 @@ DETAIL:  Feature not supported: window frame EXCLUDE
 select sum(salary) over (order by enroll_date range between '1 year'::interval preceding and '1 year'::interval following
 	exclude group), salary, enroll_date from empsalary;
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: window frame EXCLUDE
+DETAIL:  Feature not supported: window frame RANGE with OFFSET PRECEDING or FOLLOWING
   sum  | salary | enroll_date 
 -------+--------+-------------
  23900 |   5000 | 10-01-2006
@@ -1657,7 +1627,7 @@ DETAIL:  Feature not supported: window frame EXCLUDE
 select sum(salary) over (order by enroll_date range between '1 year'::interval preceding and '1 year'::interval following
 	exclude ties), salary, enroll_date from empsalary;
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: window frame EXCLUDE
+DETAIL:  Feature not supported: window frame RANGE with OFFSET PRECEDING or FOLLOWING
   sum  | salary | enroll_date 
 -------+--------+-------------
  28900 |   5000 | 10-01-2006
@@ -1718,7 +1688,7 @@ select first_value(salary) over(order by salary range between 1000 following and
 	exclude ties),
 	salary from empsalary;
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: window frame EXCLUDE
+DETAIL:  Feature not supported: window frame RANGE with OFFSET PRECEDING or FOLLOWING
  first_value | lead | nth_value | salary 
 -------------+------+-----------+--------
         4500 | 3900 |      4500 |   3500
@@ -1738,7 +1708,7 @@ select last_value(salary) over(order by salary range between 1000 following and 
 	lag(salary) over(order by salary range between 1000 following and 3000 following exclude group),
 	salary from empsalary;
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: window frame EXCLUDE
+DETAIL:  Feature not supported: window frame RANGE with OFFSET PRECEDING or FOLLOWING
  last_value | lag  | salary 
 ------------+------+--------
        6000 |      |   3500
@@ -1758,7 +1728,7 @@ select first_value(salary) over(order by enroll_date range between unbounded pre
 	last_value(salary) over(order by enroll_date range between unbounded preceding and '1 year'::interval following),
 	salary, enroll_date from empsalary;
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: window frame EXCLUDE
+DETAIL:  Feature not supported: window frame RANGE with OFFSET PRECEDING or FOLLOWING
  first_value | last_value | salary | enroll_date 
 -------------+------------+--------+-------------
         5000 |       5200 |   5000 | 10-01-2006
@@ -1779,7 +1749,7 @@ select first_value(salary) over(order by enroll_date range between unbounded pre
 	exclude ties),
 	salary, enroll_date from empsalary;
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: window frame EXCLUDE
+DETAIL:  Feature not supported: window frame RANGE with OFFSET PRECEDING or FOLLOWING
  first_value | last_value | salary | enroll_date 
 -------------+------------+--------+-------------
         5000 |       5200 |   5000 | 10-01-2006
@@ -1800,7 +1770,7 @@ select first_value(salary) over(order by enroll_date range between unbounded pre
 	exclude group),
 	salary, enroll_date from empsalary;
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: window frame EXCLUDE
+DETAIL:  Feature not supported: window frame RANGE with OFFSET PRECEDING or FOLLOWING
  first_value | last_value | salary | enroll_date 
 -------------+------------+--------+-------------
         3900 |       5200 |   5000 | 10-01-2006
@@ -1821,7 +1791,7 @@ select first_value(salary) over(order by enroll_date range between unbounded pre
 	exclude current row),
 	salary, enroll_date from empsalary;
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: window frame EXCLUDE
+DETAIL:  Feature not supported: window frame RANGE with OFFSET PRECEDING or FOLLOWING
  first_value | last_value | salary | enroll_date 
 -------------+------------+--------+-------------
         6000 |       5200 |   5000 | 10-01-2006
@@ -2444,12 +2414,12 @@ HINT:  Cast the offset value to an appropriate type.
 select max(enroll_date) over (order by salary range between -1 preceding and 2 following
 	exclude ties), salary, enroll_date from empsalary;
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: window frame EXCLUDE
+DETAIL:  Feature not supported: window frame RANGE with OFFSET PRECEDING or FOLLOWING
 ERROR:  invalid preceding or following size in window function
 select max(enroll_date) over (order by salary range between 1 preceding and -2 following
 	exclude ties), salary, enroll_date from empsalary;
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: window frame EXCLUDE
+DETAIL:  Feature not supported: window frame RANGE with OFFSET PRECEDING or FOLLOWING
 ERROR:  invalid preceding or following size in window function
 select max(enroll_date) over (order by salary range between '1 year'::interval preceding and '2 years'::interval following
 	exclude ties), salary, enroll_date from empsalary;
@@ -2460,7 +2430,7 @@ HINT:  Cast the offset value to an appropriate type.
 select max(enroll_date) over (order by enroll_date range between '1 year'::interval preceding and '-2 years'::interval following
 	exclude ties), salary, enroll_date from empsalary;
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: window frame EXCLUDE
+DETAIL:  Feature not supported: window frame RANGE with OFFSET PRECEDING or FOLLOWING
 ERROR:  invalid preceding or following size in window function
 -- GROUPS tests
 SELECT sum(unique1) over (order by four groups between unbounded preceding and current row),
@@ -2638,7 +2608,7 @@ SELECT sum(unique1) over (order by four groups between 2 preceding and 1 followi
 	exclude current row), unique1, four
 FROM tenk1 WHERE unique1 < 10;
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: window frame EXCLUDE
+DETAIL:  Feature not supported: window frame GROUPS mode
  sum | unique1 | four 
 -----+---------+------
   27 |       0 |    0
@@ -2657,7 +2627,7 @@ SELECT sum(unique1) over (order by four groups between 2 preceding and 1 followi
 	exclude group), unique1, four
 FROM tenk1 WHERE unique1 < 10;
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: window frame EXCLUDE
+DETAIL:  Feature not supported: window frame GROUPS mode
  sum | unique1 | four 
 -----+---------+------
   15 |       0 |    0
@@ -2676,7 +2646,7 @@ SELECT sum(unique1) over (order by four groups between 2 preceding and 1 followi
 	exclude ties), unique1, four
 FROM tenk1 WHERE unique1 < 10;
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: window frame EXCLUDE
+DETAIL:  Feature not supported: window frame GROUPS mode
  sum | unique1 | four 
 -----+---------+------
   15 |       0 |    0
@@ -2714,7 +2684,7 @@ SELECT sum(unique1) over (partition by ten
 	order by four groups between 0 preceding and 0 following exclude current row), unique1, four, ten
 FROM tenk1 WHERE unique1 < 10;
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: window frame EXCLUDE
+DETAIL:  Feature not supported: window frame GROUPS mode
  sum | unique1 | four | ten 
 -----+---------+------+-----
      |       0 |    0 |   0
@@ -2733,7 +2703,7 @@ SELECT sum(unique1) over (partition by ten
 	order by four groups between 0 preceding and 0 following exclude group), unique1, four, ten
 FROM tenk1 WHERE unique1 < 10;
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: window frame EXCLUDE
+DETAIL:  Feature not supported: window frame GROUPS mode
  sum | unique1 | four | ten 
 -----+---------+------+-----
      |       0 |    0 |   0
@@ -2752,7 +2722,7 @@ SELECT sum(unique1) over (partition by ten
 	order by four groups between 0 preceding and 0 following exclude ties), unique1, four, ten
 FROM tenk1 WHERE unique1 < 10;
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: window frame EXCLUDE
+DETAIL:  Feature not supported: window frame GROUPS mode
  sum | unique1 | four | ten 
 -----+---------+------+-----
    0 |       0 |    0 |   0
@@ -2813,7 +2783,7 @@ select first_value(salary) over(order by enroll_date groups between 1 following 
 	exclude ties),
 	salary, enroll_date from empsalary;
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: window frame EXCLUDE
+DETAIL:  Feature not supported: window frame GROUPS mode
  first_value | lead | nth_value | salary | enroll_date 
 -------------+------+-----------+--------+-------------
         3900 | 6000 |      3900 |   5000 | 10-01-2006
@@ -2833,7 +2803,7 @@ select last_value(salary) over(order by enroll_date groups between 1 following a
 	lag(salary) over(order by enroll_date groups between 1 following and 3 following exclude group),
 	salary, enroll_date from empsalary;
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: window frame EXCLUDE
+DETAIL:  Feature not supported: window frame GROUPS mode
  last_value | lag  | salary | enroll_date 
 ------------+------+--------+-------------
        4800 |      |   5000 | 10-01-2006

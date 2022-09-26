@@ -2863,11 +2863,19 @@ CTranslatorDXLToPlStmt::TranslateDXLWindow(
 				window->frameOptions |= FRAMEOPTION_RANGE;
 			}
 
-			if (window_frame->ParseFrameExclusionStrategy() != EdxlfesNulls)
+			if (window_frame->ParseFrameExclusionStrategy() ==
+				EdxlfesCurrentRow)
 			{
-				GPOS_RAISE(gpdxl::ExmaDXL,
-						   gpdxl::ExmiQuery2DXLUnsupportedFeature,
-						   GPOS_WSZ_LIT("EXCLUDE clause in window frame"));
+				window->frameOptions |= FRAMEOPTION_EXCLUDE_CURRENT_ROW;
+			}
+			else if (window_frame->ParseFrameExclusionStrategy() ==
+					 EdxlfesGroup)
+			{
+				window->frameOptions |= FRAMEOPTION_EXCLUDE_GROUP;
+			}
+			else if (window_frame->ParseFrameExclusionStrategy() == EdxlfesTies)
+			{
+				window->frameOptions |= FRAMEOPTION_EXCLUDE_TIES;
 			}
 
 			// translate the CDXLNodes representing the leading and trailing edge
