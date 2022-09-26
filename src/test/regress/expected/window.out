@@ -1,6 +1,7 @@
 --
 -- WINDOW FUNCTIONS
 --
+SET optimizer_trace_fallback=on;
 CREATE TEMPORARY TABLE empsalary (
     depname varchar,
     empno bigint,
@@ -4010,3 +4011,4 @@ SELECT i, b, bool_and(b) OVER w, bool_or(b) OVER w
  5 | t | t        | t
 (5 rows)
 
+RESET optimizer_trace_fallback;
