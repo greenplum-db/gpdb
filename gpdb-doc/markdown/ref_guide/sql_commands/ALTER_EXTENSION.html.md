@@ -1,6 +1,6 @@
 # ALTER EXTENSION 
 
-Change the definition of an extension that is registered in a Greenplum database.
+Change the definition of an extension.
 
 ## <a id="section2"></a>Synopsis 
 
@@ -27,6 +27,8 @@ where <member_object> is:
   OPERATOR CLASS <object_name> USING <index_method> |
   OPERATOR FAMILY <object_name> USING <index_method> |
   [ PROCEDURAL ] LANGUAGE <object_name> |
+  PROCEDURE <procedure_name> [ ( [ [ <argmode> ] [ <argname> ] <argtype> [, ...] ] ) ] |
+  ROUTINE <routine_name> [ ( [ [ <argmode> ] [ <argname> ] <argtype> [, ...] ] ) ] |
   SCHEMA <object_name> |
   SEQUENCE <object_name> |
   SERVER <object_name> |
@@ -48,21 +50,21 @@ and <aggregate_signature> is:
 
 ## <a id="section3"></a>Description 
 
-`ALTER EXTENSION` changes the definition of an installed extension. These are the subforms:
+`ALTER EXTENSION` changes the definition of an installed extension. There are several subforms:
 
 UPDATE
 :   This form updates the extension to a newer version. The extension must supply a suitable update script \(or series of scripts\) that can modify the currently-installed version into the requested version.
 
 SET SCHEMA
-:   This form moves the extension member objects into another schema. The extension must be *relocatable*.
+:   This form moves the extension member objects into another schema. The extension must be *relocatable* for this command to succeed.
 
 ADD member\_object
-:   This form adds an existing object to the extension. This is useful in extension update scripts. The added object is treated as a member of the extension. The object can only be dropped by dropping the extension.
+:   This form adds an existing object to the extension. This is mainly useful in extension update scripts. The object will subsequently be treated as a member of the extension; notable, it can only be dropped by dropping the extension.
 
 DROP member\_object
 :   This form removes a member object from the extension. This is mainly useful in extension update scripts. The object is not dropped, only disassociated from the extension.
 
-See [Packaging Related Objects into an Extension](https://www.postgresql.org/docs/9.6/extend-extensions.html) for more information about these operations.
+See [Packaging Related Objects into an Extension](https://www.postgresql.org/docs/12/extend-extensions.html) for more information about these operations.
 
 You must own the extension to use `ALTER EXTENSION`. The `ADD` and `DROP` forms also require ownership of the object that is being added or dropped.
 
@@ -72,7 +74,7 @@ name
 :   The name of an installed extension.
 
 new\_version
-:   The new version of the extension. The new\_version can be either an identifier or a string literal. If not specified, the command attempts to update to the default version in the extension control file.
+:   The new version of the extension. The new\_version can be either an identifier or a string literal. If not specified, `ALTER EXTENSION UPDATE` attempts to update to whatever is shown as the default version in the extension's control file.
 
 new\_schema
 :   The new schema for the extension.
@@ -81,7 +83,9 @@ object\_name
 aggregate\_name
 function\_name
 operator\_name
-:   The name of an object to be added to or removed from the extension. Names of tables, aggregates, domains, foreign tables, functions, operators, operator classes, operator families, sequences, text search objects, types, and views can be schema-qualified.
+procedure\_name
+routine\_name
+:   The name of an object to be added to or removed from the extension. Names of tables, aggregates, domains, foreign tables, functions, operators, operator classes, operator families, procedures, routines, sequences, text search objects, types, and views can be schema-qualified.
 
 source\_type
 :   The name of the source data type of the cast.
@@ -90,17 +94,13 @@ target\_type
 :   The name of the target data type of the cast.
 
 argmode
-:   The mode of a function or aggregate argument: `IN`, `OUT`, `INOUT`, or `VARIADIC`. The default is `IN`.
-
-    The command ignores the `OUT` arguments. Only the input arguments are required to determine the function identity. It is sufficient to list the `IN`, `INOUT`, and `VARIADIC` arguments.
+:   The mode of a function or aggregate argument: `IN`, `OUT`, `INOUT`, or `VARIADIC`. If omitted, the default is `IN`. Note that `ALTER EXTENSION` does not actually pay any attention to `OUT` arguments, since only the input arguments are needed to determine the function's identity. So it is sufficient to list the `IN`, `INOUT`, and `VARIADIC` arguments.
 
 argname
-:   The name of a function or aggregate argument.
-
-    The command ignores argument names, since only the argument data types are required to determine the function identity.
+:   The name of a function or aggregate argument. Note that `ALTER EXTENSION` does not actually pay any attention to argument names, since only the argument data types are needed to determine the function's identity.
 
 argtype
-:   The data type of a function or aggregate argument.
+:   The data type of a function, procedure, or aggregate argument.
 
 left\_type
 right\_type
