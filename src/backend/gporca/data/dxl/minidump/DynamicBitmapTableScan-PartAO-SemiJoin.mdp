@@ -1229,7 +1229,7 @@
         </dxl:LogicalSelect>
       </dxl:LogicalGroupBy>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="1195">
+    <dxl:Plan Id="0" SpaceSize="1435">
       <dxl:Aggregate AggregationStrategy="Plain" StreamSafe="false">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="831.364792" Rows="1.000000" Width="8"/>

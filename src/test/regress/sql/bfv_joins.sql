@@ -405,9 +405,12 @@ reset optimizer;
 -- motion enforcement given INDF join condition --
 -- Outer joins' inner table yields false nulls  --
 -- colocation if join condition is null-aware   --
+
+--start_ignore
 drop table o1;
 drop table o2;
 drop table o3;
+--end_ignore
 
 create table o1 (a1 int, b1 int) distributed by (a1);
 create table o2 (a2 int, b2 int) distributed by (a2);

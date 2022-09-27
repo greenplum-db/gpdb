@@ -400,25 +400,25 @@ ANALYZE test_join_card1;
 ANALYZE test_join_card2;
 ANALYZE test_join_card3;
 EXPLAIN SELECT * FROM test_join_card1 t1, test_join_card2 t2, test_join_card3 t3 WHERE t1.b = t2.b and t3.b = t2.b;
-                                                                QUERY PLAN                                                                
-------------------------------------------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice4; segments: 3)  (cost=0.00..1298.38 rows=5999 width=22)
-   ->  Hash Join  (cost=0.00..1297.89 rows=2000 width=22)
-         Hash Cond: (((test_join_card1.b)::text = (test_join_card2.b)::text) AND ((test_join_card3.b)::text = (test_join_card2.b)::text))
+                                                     QUERY PLAN                                                      
+---------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1298.62 rows=5999 width=22)
+   ->  Hash Join  (cost=0.00..1298.12 rows=2000 width=22)
+         Hash Cond: ((test_join_card1.b)::text = (test_join_card2.b)::text)
          ->  Hash Join  (cost=0.00..865.03 rows=3334 width=18)
                Hash Cond: ((test_join_card1.b)::text = (test_join_card3.b)::text)
-               ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.48 rows=6667 width=10)
+               ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.48 rows=6667 width=10)
                      Hash Key: test_join_card1.b
                      ->  Seq Scan on test_join_card1  (cost=0.00..431.15 rows=6667 width=10)
                ->  Hash  (cost=431.20..431.20 rows=3334 width=8)
-                     ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.20 rows=3334 width=8)
+                     ->  Redistribute Motion 3:3  (slice3; segments: 3)  (cost=0.00..431.20 rows=3334 width=8)
                            Hash Key: test_join_card3.b
                            ->  Seq Scan on test_join_card3  (cost=0.00..431.07 rows=3334 width=8)
          ->  Hash  (cost=431.08..431.08 rows=2000 width=4)
-               ->  Redistribute Motion 3:3  (slice3; segments: 3)  (cost=0.00..431.08 rows=2000 width=4)
+               ->  Redistribute Motion 3:3  (slice4; segments: 3)  (cost=0.00..431.08 rows=2000 width=4)
                      Hash Key: test_join_card2.b
                      ->  Seq Scan on test_join_card2  (cost=0.00..431.04 rows=2000 width=4)
- Optimizer: Pivotal Optimizer (GPORCA) version 3.41.0
+ Optimizer: Pivotal Optimizer (GPORCA)
 (17 rows)
 
 -- start_ignore

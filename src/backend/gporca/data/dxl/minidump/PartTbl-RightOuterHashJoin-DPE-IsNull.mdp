@@ -303,7 +303,7 @@
         </dxl:LogicalJoin>
       </dxl:LogicalSelect>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="11">
+    <dxl:Plan Id="0" SpaceSize="13">
       <dxl:Result>
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="862.003532" Rows="1.000000" Width="16"/>

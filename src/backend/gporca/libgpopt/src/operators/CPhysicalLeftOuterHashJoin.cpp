@@ -53,7 +53,7 @@ CPhysicalLeftOuterHashJoin::~CPhysicalLeftOuterHashJoin()
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CPhysicalInnerHashJoin::PdsDeriveFromHashedChildren
+//		CPhysicalLeftOuterHashJoin::PdsDeriveFromHashedChildren
 //
 //	@doc:
 //		Derive hash join distribution from hashed children;

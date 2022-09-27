@@ -44,8 +44,8 @@ private:
 	IMdIdArray *m_hash_opfamilies;
 
 	// if the join condition is null-aware
-	// true by default, and false if the join condition is composed of
-	// equality predicates only
+	// true by default, and false if the join condition doesn't contain
+	// any INDF predicates
 	BOOL m_is_null_aware;
 
 	// array redistribute request sent to the first hash join child

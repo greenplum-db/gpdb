@@ -877,8 +877,7 @@ CXformUtils::ImplementHashJoin(CXformContext *pxfctxt, CXformResult *pxfres,
 				CExpression *pexprPred = (*pdrgpexpr)[ul];
 				if (!is_hash_join_null_aware)
 				{
-					is_hash_join_null_aware |=
-						CPredicateUtils::FINDF(pexprPred);
+					is_hash_join_null_aware = CPredicateUtils::FINDF(pexprPred);
 				}
 			}
 			AddHashOrMergeJoinAlternative<T>(mp, pexpr, pdrgpexprOuter,
@@ -908,7 +907,7 @@ CXformUtils::ImplementHashJoin(CXformContext *pxfctxt, CXformResult *pxfres,
 		{
 			if (!is_hash_join_null_aware)
 			{
-				is_hash_join_null_aware |= CPredicateUtils::FINDF(pexprPred);
+				is_hash_join_null_aware = CPredicateUtils::FINDF(pexprPred);
 			}
 
 			CExpression *pexprPredInner;

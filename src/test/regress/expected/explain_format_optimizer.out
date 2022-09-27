@@ -546,7 +546,7 @@ QUERY PLAN
               "Total Cost": 1293.00,
               "Plan Rows": 1,
               "Plan Width": 4,
-              "Hash Cond": "(subselect_tbl.f1 = subselect_tbl_2.f2)",
+              "Hash Cond": "(subselect_tbl.f1 = subselect_tbl_1.f2)",
               "Plans": [
                 {
                   "Node Type": "Seq Scan",
@@ -583,47 +583,34 @@ QUERY PLAN
                       "Total Cost": 862.00,
                       "Plan Rows": 1,
                       "Plan Width": 4,
-                      "Hash Cond": "(subselect_tbl_1.f1 = subselect_tbl_2.f2)",
+                      "Hash Cond": "(subselect_tbl_1.f2 = subselect_tbl_2.f1)",
                       "Plans": [
                         {
-                          "Node Type": "Aggregate",
-                          "Strategy": "Sorted",
+                          "Node Type": "Redistribute Motion",
+                          "Senders": 3,
+                          "Receivers": 3,
                           "Parent Relationship": "Outer",
-                          "Slice": 2,
+                          "Slice": 1,
                           "Segments": 3,
                           "Gang Type": "primary reader",
                           "Startup Cost": 0.00,
                           "Total Cost": 431.00,
                           "Plan Rows": 1,
                           "Plan Width": 4,
-                          "Group Key": ["subselect_tbl_1.f1"],
+                          "Hash Key": "subselect_tbl_1.f2",
                           "Plans": [
                             {
-                              "Node Type": "Sort",
+                              "Node Type": "Seq Scan",
                               "Parent Relationship": "Outer",
-                              "Slice": 2,
+                              "Slice": 1,
                               "Segments": 3,
                               "Gang Type": "primary reader",
+                              "Relation Name": "subselect_tbl",
+                              "Alias": "subselect_tbl_1",
                               "Startup Cost": 0.00,
                               "Total Cost": 431.00,
                               "Plan Rows": 1,
-                              "Plan Width": 4,
-                              "Sort Key": ["subselect_tbl_1.f1"],
-                              "Plans": [
-                                {
-                                  "Node Type": "Seq Scan",
-                                  "Parent Relationship": "Outer",
-                                  "Slice": 2,
-                                  "Segments": 3,
-                                  "Gang Type": "primary reader",
-                                  "Relation Name": "subselect_tbl",
-                                  "Alias": "subselect_tbl_1",
-                                  "Startup Cost": 0.00,
-                                  "Total Cost": 431.00,
-                                  "Plan Rows": 1,
-                                  "Plan Width": 4
-                                }
-                              ]
+                              "Plan Width": 4
                             }
                           ]
                         },
@@ -639,31 +626,44 @@ QUERY PLAN
                           "Plan Width": 4,
                           "Plans": [
                             {
-                              "Node Type": "Redistribute Motion",
-                              "Senders": 3,
-                              "Receivers": 3,
+                              "Node Type": "Aggregate",
+                              "Strategy": "Sorted",
                               "Parent Relationship": "Outer",
-                              "Slice": 1,
+                              "Slice": 2,
                               "Segments": 3,
                               "Gang Type": "primary reader",
                               "Startup Cost": 0.00,
                               "Total Cost": 431.00,
                               "Plan Rows": 1,
                               "Plan Width": 4,
-                              "Hash Key": "subselect_tbl_2.f2",
+                              "Group Key": ["subselect_tbl_2.f1"],
                               "Plans": [
                                 {
-                                  "Node Type": "Seq Scan",
+                                  "Node Type": "Sort",
                                   "Parent Relationship": "Outer",
-                                  "Slice": 1,
+                                  "Slice": 2,
                                   "Segments": 3,
                                   "Gang Type": "primary reader",
-                                  "Relation Name": "subselect_tbl",
-                                  "Alias": "subselect_tbl_2",
                                   "Startup Cost": 0.00,
                                   "Total Cost": 431.00,
                                   "Plan Rows": 1,
-                                  "Plan Width": 4
+                                  "Plan Width": 4,
+                                  "Sort Key": ["subselect_tbl_2.f1"],
+                                  "Plans": [
+                                    {
+                                      "Node Type": "Seq Scan",
+                                      "Parent Relationship": "Outer",
+                                      "Slice": 2,
+                                      "Segments": 3,
+                                      "Gang Type": "primary reader",
+                                      "Relation Name": "subselect_tbl",
+                                      "Alias": "subselect_tbl_2",
+                                      "Startup Cost": 0.00,
+                                      "Total Cost": 431.00,
+                                      "Plan Rows": 1,
+                                      "Plan Width": 4
+                                    }
+                                  ]
                                 }
                               ]
                             }
