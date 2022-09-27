@@ -798,12 +798,15 @@ DefineRelation(CreateStmt *stmt, char relkind, Oid ownerId,
 
 		/*
 		 * For partitioned children, when no reloptions is specified, we
-		 * default to the parent table's reloptions.
+		 * default to the parent table's reloptions. If partitioned
+		 * children has different access method with parent. Do not do it.
 		 */
 		Assert(list_length(inheritOids) == 1);
 		relid = linitial_oid(inheritOids);
 		rel = table_open(relid, AccessShareLock);
 
+		if (rel->rd_rel->relam == accessMethodId)
+			oldoptions = get_rel_opts(rel);
 		oldoptions = get_rel_opts(rel);
 
 		table_close(rel, AccessExclusiveLock);
