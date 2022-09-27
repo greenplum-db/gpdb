@@ -38,6 +38,8 @@
 #define ic_proxy_log(elevel, msg...) do { \
 	if (elevel >= WARNING || gp_log_interconnect >= GPVARS_VERBOSITY_TERSE) \
 	{ \
+		if (elevel <= DEBUG1 && gp_log_interconnect < GPVARS_VERBOSITY_DEBUG) \
+			break;	\
 		elog(elevel, msg); \
 	} \
 } while (0)
