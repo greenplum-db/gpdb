@@ -1498,7 +1498,8 @@ CTranslatorQueryToDXL::CreateWindowFramForLeadLag(BOOL is_lead_func,
 	return GPOS_NEW(m_mp) CDXLWindowFrame(
 		EdxlfsRow,	   // frame specification
 		EdxlfesNulls,  // frame exclusion strategy is set to exclude NULLs in GPDB
-		dxl_lead_edge, dxl_trail_edge);
+		dxl_lead_edge, dxl_trail_edge, InvalidOid, InvalidOid, InvalidOid,
+		false, false);
 }
 
 
@@ -1630,7 +1631,9 @@ CTranslatorQueryToDXL::TranslateWindowSpecToDXL(
 
 		window_frame = m_scalar_translator->TranslateWindowFrameToDXL(
 			wc->frameOptions, wc->startOffset, wc->endOffset,
-			m_var_to_colid_map, project_list_dxlnode_node);
+			wc->startInRangeFunc, wc->endInRangeFunc, wc->inRangeColl,
+			wc->inRangeAsc, wc->inRangeNullsFirst, m_var_to_colid_map,
+			project_list_dxlnode_node);
 
 		CDXLWindowSpec *window_spec_dxlnode = GPOS_NEW(m_mp) CDXLWindowSpec(
 			m_mp, part_columns, mdname, sort_col_list_dxl, window_frame);

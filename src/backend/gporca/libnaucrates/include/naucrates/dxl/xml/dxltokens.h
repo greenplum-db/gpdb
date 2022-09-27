@@ -257,6 +257,12 @@ enum Edxltoken
 	EdxltokenWindowESGroup,
 	EdxltokenWindowESTies,
 
+	EdxltokenWindowStartInRangeOid,
+	EdxltokenWindowEndInRangeOid,
+	EdxltokenWindowInRangeColl,
+	EdxltokenWindowInRangeAsc,
+	EdxltokenWindowInRangeNullsFirst,
+
 	EdxltokenWindowrefOid,
 	EdxltokenWindowrefDistinct,
 	EdxltokenWindowrefStarArg,

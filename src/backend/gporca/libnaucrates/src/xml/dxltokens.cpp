@@ -319,6 +319,12 @@ CDXLTokens::Init(CMemoryPool *mp)
 		{EdxltokenWindowFSRow, GPOS_WSZ_LIT("Row")},
 		{EdxltokenWindowFSRange, GPOS_WSZ_LIT("Range")},
 
+		{EdxltokenWindowStartInRangeOid, GPOS_WSZ_LIT("StartInRange")},
+		{EdxltokenWindowEndInRangeOid, GPOS_WSZ_LIT("EndInRange")},
+		{EdxltokenWindowInRangeColl, GPOS_WSZ_LIT("InRangeColl")},
+		{EdxltokenWindowInRangeAsc, GPOS_WSZ_LIT("InRangeAsc")},
+		{EdxltokenWindowInRangeNullsFirst, GPOS_WSZ_LIT("InRangeNullsFirst")},
+
 		{EdxltokenWindowExclusionStrategy, GPOS_WSZ_LIT("ExclusionStrategy")},
 		{EdxltokenWindowESNone, GPOS_WSZ_LIT("None")},
 		{EdxltokenWindowESNulls, GPOS_WSZ_LIT("Nulls")},

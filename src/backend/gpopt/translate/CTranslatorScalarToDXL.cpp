@@ -1513,6 +1513,8 @@ CTranslatorScalarToDXL::TranslateAggrefToDXL(
 CDXLWindowFrame *
 CTranslatorScalarToDXL::TranslateWindowFrameToDXL(
 	int frame_options, const Node *start_offset, const Node *end_offset,
+	Oid start_in_range_func, Oid end_in_range_func, Oid in_range_coll,
+	bool in_range_asc, bool in_range_nulls_first,
 	const CMappingVarColId *var_colid_mapping, CDXLNode *new_scalar_proj_list)
 {
 	EdxlFrameSpec frame_spec;
@@ -1524,17 +1526,6 @@ CTranslatorScalarToDXL::TranslateWindowFrameToDXL(
 	else if ((frame_options & FRAMEOPTION_RANGE) != 0)
 	{
 		frame_spec = EdxlfsRange;
-		// GPDB_12_MERGE_FIXME: as soon as we can pass WindowClause::startInRangeFunc
-		// and friends to ORCA and get them back, we can support stuff like
-		// RANGE 1 PRECEDING
-		if ((frame_options &
-			 (FRAMEOPTION_START_OFFSET | FRAMEOPTION_END_OFFSET)))
-		{
-			GPOS_RAISE(
-				gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature,
-				GPOS_WSZ_LIT(
-					"window frame RANGE with OFFSET PRECEDING or FOLLOWING"));
-		}
 	}
 	else if ((frame_options & FRAMEOPTION_GROUPS) != 0)
 	{
@@ -1640,8 +1631,9 @@ CTranslatorScalarToDXL::TranslateWindowFrameToDXL(
 			end_offset, var_colid_mapping, new_scalar_proj_list));
 	}
 
-	CDXLWindowFrame *window_frame_dxl = GPOS_NEW(m_mp)
-		CDXLWindowFrame(frame_spec, strategy, lead_edge, trail_edge);
+	CDXLWindowFrame *window_frame_dxl = GPOS_NEW(m_mp) CDXLWindowFrame(
+		frame_spec, strategy, lead_edge, trail_edge, start_in_range_func,
+		end_in_range_func, in_range_coll, in_range_asc, in_range_nulls_first);
 
 	return window_frame_dxl;
 }

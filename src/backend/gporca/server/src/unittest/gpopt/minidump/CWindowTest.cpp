@@ -36,6 +36,7 @@ CWindowTest::EresUnittest()
 		"../data/dxl/minidump/WindowFrameExcludeGroup.mdp",
 		"../data/dxl/minidump/WindowFrameExcludeTies.mdp",
 		"../data/dxl/minidump/WindowFrameExcludeCurrentRow.mdp",
+		"../data/dxl/minidump/WindowFrameRangePrecedingAndFollowing.mdp",
 	};
 
 	return CTestUtils::EresUnittest_RunTestsWithoutAdditionalTraceFlags(

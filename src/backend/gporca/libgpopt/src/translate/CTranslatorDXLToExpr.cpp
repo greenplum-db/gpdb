@@ -1889,8 +1889,12 @@ CTranslatorDXLToExpr::Pwf(const CDXLWindowFrame *window_frame)
 		efs = CWindowFrame::EfsRange;
 	}
 
-	CWindowFrame *pwf = GPOS_NEW(m_mp)
-		CWindowFrame(m_mp, efs, efbLead, efbTrail, pexprLead, pexprTrail, efes);
+	CWindowFrame *pwf = GPOS_NEW(m_mp) CWindowFrame(
+		m_mp, efs, efbLead, efbTrail, pexprLead, pexprTrail, efes,
+		window_frame->PdxlnStartInRangeFunc(),
+		window_frame->PdxlnEndInRangeFunc(), window_frame->PdxlnInRangeColl(),
+		window_frame->PdxlnInRangeAsc(),
+		window_frame->PdxlnInRangeNullsFirst());
 
 	return pwf;
 }

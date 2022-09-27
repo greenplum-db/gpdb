@@ -6304,8 +6304,6 @@ select row_number() over(order by foo.a+ bar.a)/count(*) from orca.foo inner joi
 (400 rows)
 
 select count(*) over(partition by b order by a range between 1 preceding and (select count(*) from orca.bar) following) from orca.foo;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: window frame RANGE with OFFSET PRECEDING or FOLLOWING
  count 
 -------
     16
@@ -6396,8 +6394,6 @@ select a+1, rank() over(partition by b+1 order by a+1) from orca.foo order by 1,
 (40 rows)
 
 select a , sum(a) over (order by a range 1 preceding) from orca.r order by 1,2;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: window frame RANGE with OFFSET PRECEDING or FOLLOWING
  a  | sum 
 ----+-----
   1 |   1

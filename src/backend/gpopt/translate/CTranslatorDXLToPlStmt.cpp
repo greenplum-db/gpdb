@@ -2975,6 +2975,12 @@ CTranslatorDXLToPlStmt::TranslateDXLWindow(
 						(*win_frame_trailing_dxlnode)[0], &colid_var_mapping);
 			}
 
+			window->startInRangeFunc = window_frame->PdxlnStartInRangeFunc();
+			window->endInRangeFunc = window_frame->PdxlnEndInRangeFunc();
+			window->inRangeColl = window_frame->PdxlnInRangeColl();
+			window->inRangeAsc = window_frame->PdxlnInRangeAsc();
+			window->inRangeNullsFirst = window_frame->PdxlnInRangeNullsFirst();
+
 			// cleanup
 			child_contexts->Release();
 		}

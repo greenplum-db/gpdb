@@ -6222,8 +6222,10 @@ CTranslatorExprToDXL::GetWindowFrame(CWindowFrame *pwf)
 		pdxlnTrailing->AddChild(PdxlnScalar(pwf->PexprTrailing()));
 	}
 
-	return GPOS_NEW(m_mp) CDXLWindowFrame(edxlfs, frame_exc_strategy,
-										  pdxlnLeading, pdxlnTrailing);
+	return GPOS_NEW(m_mp) CDXLWindowFrame(
+		edxlfs, frame_exc_strategy, pdxlnLeading, pdxlnTrailing,
+		pwf->StartInRangeFunc(), pwf->EndInRangeFunc(), pwf->InRangeColl(),
+		pwf->InRangeAsc(), pwf->InRangeNullsFirst());
 }
 
 
