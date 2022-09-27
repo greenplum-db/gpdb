@@ -23,8 +23,8 @@ fi
 
 cat <<"EOF"
 PYTHONPATH="${GPHOME}/lib/python"
-PATH="${GPHOME}/bin:${GPHOME}/ext/python3.9/bin:${PATH}"
-LD_LIBRARY_PATH="${GPHOME}/lib:${GPHOME}/ext/python3.9/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+PATH="${GPHOME}/bin:${PATH}"
+LD_LIBRARY_PATH="${GPHOME}/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 
 if [ -e "${GPHOME}/etc/openssl.cnf" ]; then
 	OPENSSL_CONF="${GPHOME}/etc/openssl.cnf"
