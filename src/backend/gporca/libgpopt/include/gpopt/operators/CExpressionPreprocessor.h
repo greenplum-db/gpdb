@@ -109,6 +109,11 @@ private:
 		CMemoryPool *mp, CExpression *pexpr, CColRefSet *pcrsProcessed,
 		CPropConstraint *constraintsForOuterRefs);
 
+	// Remove redundant predicates after normalization
+	static CExpression *RemoveRedundantPredicates(
+		CMemoryPool *mp, CExpression *pexpr,
+		CPropConstraint *constraintsForOuterRefs);
+
 	// generate predicates based on derived constraint properties under scalar expressions
 	static CExpression *PexprFromConstraintsScalar(
 		CMemoryPool *mp, CExpression *pexpr,

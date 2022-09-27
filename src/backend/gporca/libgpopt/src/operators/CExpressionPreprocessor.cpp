@@ -1597,6 +1597,156 @@ CExpressionPreprocessor::PexprScalarPredicates(
 	return CPredicateUtils::PexprConjunction(mp, pdrgpexpr);
 }
 
+// Remove the redundant predicates which are already pushed
+// down the tree after normalization
+CExpression *
+CExpressionPreprocessor::RemoveRedundantPredicates(
+	CMemoryPool *mp, CExpression *pexpr,
+	CPropConstraint *constraintsForOuterRefs)
+{
+	CExpressionArray *childrenArray = GPOS_NEW(mp) CExpressionArray(mp);
+	CExpressionArray *childrenRedundantArray =
+		GPOS_NEW(mp) CExpressionArray(mp);
+	BOOL hashConditionPresent = false;
+
+	// If the child of the join is a EopScalarBoolOp we need to check
+	// for redundant predicates
+	if (COperator::EopScalarBoolOp == pexpr->Pop()->Eopid() &&
+		CScalarBoolOp::EboolopNot !=
+			CScalarBoolOp::PopConvert(pexpr->Pop())->Eboolop())
+	{
+		const ULONG childrenCount = pexpr->Arity();
+		for (ULONG ul = 0; ul < childrenCount; ul++)
+		{
+			CExpression *pexprChildOfBool = (*pexpr)[ul];
+
+			if (CPredicateUtils::IsEqualityOp(pexprChildOfBool))
+			{
+				CColRefSet *pcrsUsed = pexprChildOfBool->DeriveUsedColumns();
+				CColRefSetIter iterator(*pcrsUsed);
+				BOOL canBeRemoved = false;
+				while (iterator.Advance())
+				{
+					CColRef *columnRef = iterator.Pcr();
+
+					// If the column is a distribution key then even if it's
+					// redundant we will not remove it.
+					if (columnRef->IsDistCol())
+					{
+						canBeRemoved = false;
+						break;
+					}
+
+					CExpression *pexprScalar =
+						constraintsForOuterRefs->PexprScalarMappedFromEquivCols(
+							mp, columnRef, nullptr);
+
+					// If the column is resolved to EopScalarCmp with Equality type,
+					// it means it is a constant.So we need to remove it as it's already
+					// been pushed down in the previous normalization step
+					if (nullptr != pexprScalar &&
+						CPredicateUtils::IsEqualityOp(pexprScalar))
+					{
+						canBeRemoved = true;
+					}
+					CRefCount::SafeRelease(pexprScalar);
+				}
+
+				// If the column attribute is not resolved to a constant value ,
+				// it means it's not redundant, so we can't remove it. And since
+				// it will be EopScalarCmp it can be used as a hash condition.
+				if (!canBeRemoved)
+				{
+					hashConditionPresent = true;
+					pexprChildOfBool->AddRef();
+					childrenArray->Append(pexprChildOfBool);
+				}
+
+				// If the column value is resolved to a constant ,it means it's redundant.
+				// There might be a case that we are not left with any child due to redundancy
+				// for the Hash join condition.In that case we pick a redundant child
+				// for the hash join condition
+				else
+				{
+					pexprChildOfBool->AddRef();
+					childrenRedundantArray->Append(pexprChildOfBool);
+				}
+			}
+
+			else
+			{
+				pexprChildOfBool->AddRef();
+				childrenArray->Append(pexprChildOfBool);
+			}
+		}
+
+		// If all the predicates are redundant we take a equality condition from the
+		// redundant array to perform a hash join.
+		if (0 == childrenArray->Size())
+		{
+			CExpression *pexprNewChild = (*childrenRedundantArray)[0];
+			pexprNewChild->AddRef();
+			CRefCount::SafeRelease(childrenArray);
+			CRefCount::SafeRelease(childrenRedundantArray);
+			return pexprNewChild;
+		}
+		else if (0 == childrenRedundantArray->Size())
+		{
+			if (1 == childrenArray->Size())
+			{
+				CExpression *pexprNewChild = (*childrenArray)[0];
+				pexprNewChild->AddRef();
+				CRefCount::SafeRelease(childrenArray);
+				CRefCount::SafeRelease(childrenRedundantArray);
+				return pexprNewChild;
+			}
+			else
+			{
+				COperator *pop = pexpr->Pop();
+				pop->AddRef();
+				CRefCount::SafeRelease(childrenRedundantArray);
+				return GPOS_NEW(mp) CExpression(mp, pop, childrenArray);
+			}
+		}
+
+		else
+		{
+			if (hashConditionPresent)
+			{
+				if (1 == childrenArray->Size())
+				{
+					CExpression *pexprNewChild = (*childrenArray)[0];
+					pexprNewChild->AddRef();
+					CRefCount::SafeRelease(childrenArray);
+					CRefCount::SafeRelease(childrenRedundantArray);
+					return pexprNewChild;
+				}
+				else
+				{
+					COperator *pop = pexpr->Pop();
+					pop->AddRef();
+					CRefCount::SafeRelease(childrenRedundantArray);
+					return GPOS_NEW(mp) CExpression(mp, pop, childrenArray);
+				}
+			}
+			else
+			{
+				CExpression *pexprNewChild = (*childrenRedundantArray)[0];
+				pexprNewChild->AddRef();
+				childrenArray->Append(pexprNewChild);
+				COperator *pop = pexpr->Pop();
+				pop->AddRef();
+				CRefCount::SafeRelease(childrenRedundantArray);
+				return GPOS_NEW(mp) CExpression(mp, pop, childrenArray);
+			}
+		}
+	}
+	CRefCount::SafeRelease(childrenArray);
+	CRefCount::SafeRelease(childrenRedundantArray);
+	pexpr->AddRef();
+	return pexpr;
+}
+
 // process scalar expressions for generating additional predicates based on
 // derived constraints. This function is needed because scalar expressions
 // can have relational children when there are subqueries
@@ -1610,8 +1760,9 @@ CExpressionPreprocessor::PexprFromConstraintsScalar(
 
 	if (!CUtils::FHasSubquery(pexpr))
 	{
-		pexpr->AddRef();
-		return pexpr;
+		CExpression *pexprnew =
+			RemoveRedundantPredicates(mp, pexpr, constraintsForOuterRefs);
+		return pexprnew;
 	}
 
 	const ULONG ulChildren = pexpr->Arity();
