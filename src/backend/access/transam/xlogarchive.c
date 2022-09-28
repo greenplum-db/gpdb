@@ -636,6 +636,13 @@ XLogArchiveCheckDone(const char *xlog)
 	if (!XLogArchivingActive())
 		return true;
 
+	/*
+	 * GPDB: Always delete if this is a mirror segment and archive_mode is
+	 * "on". Continuous WAL archiving on mirrors is not supportable yet.
+	 */
+	if (XLogArchivingActive() && RecoveryInProgress())
+		return true;
+
 	/* First check for .done --- this means archiver is done with it */
 	StatusFilePath(archiveStatusPath, xlog, ".done");
 	if (stat(archiveStatusPath, &stat_buf) == 0)

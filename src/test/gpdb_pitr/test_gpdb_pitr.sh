@@ -21,6 +21,7 @@ MASTER=${DATADIR}/qddir/demoDataDir-1
 PRIMARY1=${DATADIR}/dbfast1/demoDataDir0
 PRIMARY2=${DATADIR}/dbfast2/demoDataDir1
 PRIMARY3=${DATADIR}/dbfast3/demoDataDir2
+MIRROR1=${DATADIR}/dbfast_mirror1/demoDataDir0
 MASTER_PORT=6000
 PRIMARY1_PORT=6002
 PRIMARY2_PORT=6003
@@ -81,7 +82,7 @@ run_test_isolation2 test_gp_switch_wal
 # master and primary segments. Afterwards, restart the cluster to load
 # the new settings.
 echo "Setting up WAL Archiving configurations..."
-for segment_role in MASTER PRIMARY1 PRIMARY2 PRIMARY3; do
+for segment_role in MASTER PRIMARY1 PRIMARY2 PRIMARY3 MIRROR1; do
   DATADIR_VAR=$segment_role
   echo "wal_level = hot_standby
 archive_mode = on
@@ -103,6 +104,9 @@ done
 # Run setup test. This will create the tables, create the restore
 # points, and demonstrate the commit blocking.
 run_test_isolation2 gpdb_pitr_setup
+
+# Test if mirrors properly recycle WAL when archive_mode=on
+run_test test_mirror_wal_recycling
 
 # Stop the gpdemo cluster. We'll be focusing on the PITR cluster from
 # now onwards.
