@@ -277,6 +277,7 @@ typedef struct StdRdOptions
 	int			parallel_workers;	/* max number of parallel workers */
 	bool		vacuum_index_cleanup;	/* enables index vacuuming and cleanup */
 	bool		vacuum_truncate;	/* enables vacuum to truncate a relation */
+	bool		analyze_hll; 		/* force hll statistics collection on relation */
 
 	int			blocksize;		/* max varblock size (AO rels only) */
 	int			compresslevel;  /* compression level (AO rels only) */

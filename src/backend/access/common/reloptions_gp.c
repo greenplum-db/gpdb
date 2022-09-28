@@ -54,6 +54,15 @@ static relopt_bool boolRelOpts_gp[] =
 		},
 		AO_DEFAULT_CHECKSUM
 	},
+	{
+		{
+			"analyze_hll",
+			"Enable HLL stats collection during analyze",
+			RELOPT_KIND_HEAP | RELOPT_KIND_TOAST | RELOPT_KIND_APPENDOPTIMIZED,
+			ShareUpdateExclusiveLock
+		},
+		ANALYZE_DEFAULT_HLL
+	},
 	/* list terminator */
 	{{NULL}}
 };
@@ -533,7 +542,8 @@ transformAOStdRdOptions(StdRdOptions *opts, Datum withOpts)
 	bool		foundBlksz = false,
 				foundComptype = false,
 				foundComplevel = false,
-				foundChecksum = false;
+				foundChecksum = false,
+				foundAnalyzeHLL = false;
 
 	/*
 	 * withOpts must be parsed to see if an option was spcified in WITH()
@@ -616,6 +626,17 @@ transformAOStdRdOptions(StdRdOptions *opts, Datum withOpts)
 				astate = accumArrayResult(astate, d, false, TEXTOID,
 										  CurrentMemoryContext);
 			}
+			soptLen = strlen("analyze_hll");
+			if (withLen > soptLen &&
+				pg_strncasecmp(strval, "analyze_hll", soptLen) == 0)
+			{
+				foundAnalyzeHLL = true;
+				d = CStringGetTextDatum(psprintf("%s=%s",
+												 "analyze_hll",
+												 (opts->analyze_hll ? "true" : "false")));
+				astate = accumArrayResult(astate, d, false, TEXTOID,
+										  CurrentMemoryContext);
+			}
 		}
 	}
 
@@ -668,6 +689,14 @@ transformAOStdRdOptions(StdRdOptions *opts, Datum withOpts)
 		astate = accumArrayResult(astate, d, false, TEXTOID,
 								  CurrentMemoryContext);
 	}
+	if ((opts->analyze_hll != ANALYZE_DEFAULT_HLL) && !foundAnalyzeHLL)
+	{
+		d = CStringGetTextDatum(psprintf("%s=%s",
+										 "analyze_hll",
+										 (opts->analyze_hll ? "true" : "false")));
+		astate = accumArrayResult(astate, d, false, TEXTOID,
+								  CurrentMemoryContext);
+	}
 	return astate ?
 		makeArrayResult(astate, CurrentMemoryContext) :
 		PointerGetDatum(NULL);
@@ -710,7 +739,13 @@ reloption_is_default(const char *optstr, int optlen)
 										 SOPT_CHECKSUM,
 										 AO_DEFAULT_CHECKSUM ? "true" : "false");
 	}
-
+	else if (optlen > strlen("analyze_hll") &&
+		pg_strncasecmp(optstr, "analyze_hll", strlen("analyze_hll")) == 0)
+	{
+		defaultopt = psprintf("%s=%s",
+							  "analyze_hll",
+										 ANALYZE_DEFAULT_HLL ? "true" : "false");
+	}
 	if (defaultopt != NULL)
 		res = strlen(defaultopt) == optlen && 
 				pg_strncasecmp(optstr, defaultopt, optlen) == 0;

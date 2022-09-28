@@ -1049,6 +1049,7 @@ static const pgsql_thing_t words_after_create[] = {
 
 /* Storage parameters for CREATE TABLE and ALTER TABLE */
 static const char *const table_storage_parameters[] = {
+	"analyze_hll",
 	"autovacuum_analyze_scale_factor",
 	"autovacuum_analyze_threshold",
 	"autovacuum_enabled",
@@ -1083,6 +1084,7 @@ static const char *const table_storage_parameters[] = {
 	"user_catalog_table",
 	"vacuum_index_cleanup",
 	"vacuum_truncate",
+	"analyze_hll",
 	NULL
 };
 
