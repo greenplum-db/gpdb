@@ -2858,6 +2858,10 @@ CTranslatorDXLToPlStmt::TranslateDXLWindow(
 			{
 				window->frameOptions |= FRAMEOPTION_ROWS;
 			}
+			else if (EdxlfsGroups == window_frame->ParseDXLFrameSpec())
+			{
+				window->frameOptions |= FRAMEOPTION_GROUPS;
+			}
 			else
 			{
 				window->frameOptions |= FRAMEOPTION_RANGE;

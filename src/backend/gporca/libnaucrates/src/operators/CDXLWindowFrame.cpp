@@ -120,6 +120,10 @@ CDXLWindowFrame::PstrFS(EdxlFrameSpec edxlfs)
 	{
 		return CDXLTokens::GetDXLTokenStr(EdxltokenWindowFSRow);
 	}
+	else if (EdxlfsGroups == edxlfs)
+	{
+		return CDXLTokens::GetDXLTokenStr(EdxltokenWindowFSGroups);
+	}
 
 	return CDXLTokens::GetDXLTokenStr(EdxltokenWindowFSRange);
 }

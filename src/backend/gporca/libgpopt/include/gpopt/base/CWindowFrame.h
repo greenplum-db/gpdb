@@ -40,8 +40,9 @@ public:
 	// specification method
 	enum EFrameSpec
 	{
-		EfsRows,   // frame is specified using Rows construct
-		EfsRange,  // frame is specified using Range construct
+		EfsRows,	// frame is specified using Rows construct
+		EfsRange,	// frame is specified using Range construct
+		EfsGroups,	// frame is specified using Groups construct
 
 		EfsSentinel
 	};

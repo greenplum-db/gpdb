@@ -26,6 +26,7 @@ enum EdxlFrameSpec
 {
 	EdxlfsRow = 0,
 	EdxlfsRange,
+	EdxlfsGroups,
 	EdxlfsSentinel
 };
 

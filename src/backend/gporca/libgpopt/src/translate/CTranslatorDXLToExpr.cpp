@@ -1888,6 +1888,10 @@ CTranslatorDXLToExpr::Pwf(const CDXLWindowFrame *window_frame)
 	{
 		efs = CWindowFrame::EfsRange;
 	}
+	else if (EdxlfsGroups == window_frame->ParseDXLFrameSpec())
+	{
+		efs = CWindowFrame::EfsGroups;
+	}
 
 	CWindowFrame *pwf = GPOS_NEW(m_mp) CWindowFrame(
 		m_mp, efs, efbLead, efbTrail, pexprLead, pexprTrail, efes,

@@ -20,7 +20,7 @@ using namespace gpopt;
 FORCE_GENERATE_DBGSTR(CWindowFrame);
 
 // string encoding of frame specification
-const CHAR rgszFrameSpec[][10] = {"Rows", "Range"};
+const CHAR rgszFrameSpec[][10] = {"Rows", "Range", "Groups"};
 GPOS_CPL_ASSERT(CWindowFrame::EfsSentinel == GPOS_ARRAY_SIZE(rgszFrameSpec));
 
 // string encoding of frame boundary

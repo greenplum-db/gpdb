@@ -1529,11 +1529,7 @@ CTranslatorScalarToDXL::TranslateWindowFrameToDXL(
 	}
 	else if ((frame_options & FRAMEOPTION_GROUPS) != 0)
 	{
-		// GPDB_12_MERGE_FIXME: there's no reason the optimizer would care too
-		// much about this. As long as we recognize and roundtrip this, I think
-		// the executor will take care of it
-		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature,
-				   GPOS_WSZ_LIT("window frame GROUPS mode"));
+		frame_spec = EdxlfsGroups;
 	}
 	else
 	{

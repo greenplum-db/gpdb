@@ -6175,8 +6175,10 @@ CTranslatorExprToDXL::GetWindowFrame(CWindowFrame *pwf)
 	}
 
 	// mappings for frame info in expression and dxl worlds
-	const ULONG rgulSpecMapping[][2] = {{CWindowFrame::EfsRows, EdxlfsRow},
-										{CWindowFrame::EfsRange, EdxlfsRange}};
+	const ULONG rgulSpecMapping[][2] = {
+		{CWindowFrame::EfsRows, EdxlfsRow},
+		{CWindowFrame::EfsRange, EdxlfsRange},
+		{CWindowFrame::EfsGroups, EdxlfsGroups}};
 
 	const ULONG rgulBoundaryMapping[][2] = {
 		{CWindowFrame::EfbUnboundedPreceding, EdxlfbUnboundedPreceding},

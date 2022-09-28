@@ -1229,6 +1229,12 @@ CDXLOperatorFactory::ParseDXLFrameSpec(const Attributes &attrs)
 	{
 		frame_spec = EdxlfsRange;
 	}
+	else if (0 == XMLString::compareString(
+					  CDXLTokens::XmlstrToken(EdxltokenWindowFSGroups),
+					  frame_spec_xml))
+	{
+		frame_spec = EdxlfsGroups;
+	}
 	else
 	{
 		// turn Xerces exception in optimizer exception
