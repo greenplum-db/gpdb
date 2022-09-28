@@ -18474,7 +18474,7 @@ ATPExecPartSplit(Relation *rel,
 
 			mypc->partid = (Node *)mypid;
 
-			if (intopid)
+			if (intopid && intopid->partiddef)
 				parname = strVal(intopid->partiddef);
 
 			if (prule->topRule->parisdefault && i == into_exists)
