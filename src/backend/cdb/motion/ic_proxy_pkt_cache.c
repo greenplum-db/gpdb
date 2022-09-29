@@ -26,7 +26,6 @@
  *-------------------------------------------------------------------------
  */
 
-#define IC_PROXY_LOG_LEVEL WARNING
 #include "ic_proxy.h"
 #include "ic_proxy_pkt_cache.h"
 
