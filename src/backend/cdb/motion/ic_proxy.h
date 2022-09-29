@@ -36,9 +36,9 @@
 #define ic_proxy_new(type) ((type *) ic_proxy_alloc(sizeof(type)))
 
 #define ic_proxy_log(elevel, msg...) do { \
-	if (elevel >= WARNING || gp_log_interconnect >= GPVARS_VERBOSITY_TERSE) \
+	if ((elevel) >= WARNING || gp_log_interconnect >= GPVARS_VERBOSITY_TERSE) \
 	{ \
-		if (elevel <= DEBUG1 && gp_log_interconnect < GPVARS_VERBOSITY_DEBUG) \
+		if ((elevel) <= DEBUG1 && gp_log_interconnect < GPVARS_VERBOSITY_DEBUG) \
 			break;	\
 		elog(elevel, msg); \
 	} \

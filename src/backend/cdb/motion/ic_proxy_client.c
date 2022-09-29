@@ -468,7 +468,7 @@ ic_proxy_client_on_c2p_data_pkt(void *opaque, const void *data, uint16 size)
 {
 	ICProxyClient *client = opaque;
 
-	ic_proxy_log(LOG, "%s: received B2C PKT [%d bytes] from the backend",
+	ic_proxy_log(DEBUG5, "%s: received B2C PKT [%d bytes] from the backend",
 				 ic_proxy_client_get_name(client), size);
 
 	/* increase the number of unack packets */
