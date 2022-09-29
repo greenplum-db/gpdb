@@ -1829,12 +1829,10 @@ aorow_compression_ratio_internal(Relation parentrel)
 
 			if (NULL == attr1 || NULL == attr2)
 			{
-				SPI_finish();
-				return 1;
+				compress_ratio = 1;
 			}
-
-			if (scanint8(attr1, true, &eof) &&
-				scanint8(attr2, true, &eof_uncomp))
+			else if (scanint8(attr1, true, &eof) &&
+					 scanint8(attr2, true, &eof_uncomp))
 			{
 				/* guard against division by zero */
 				if (eof > 0)
@@ -1845,6 +1843,12 @@ aorow_compression_ratio_internal(Relation parentrel)
 					/* format to 2 digit decimal precision */
 					compress_ratio = round(compress_ratio * 100.0) / 100.0;
 				}
+			}
+			else
+			{
+				ereport(ERROR,
+						(errcode(ERRCODE_INTERNAL_ERROR),
+						errmsg("unable to parse aorow compress_ratio string to int8.")));
 			}
 		}
 
