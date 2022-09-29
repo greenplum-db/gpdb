@@ -1675,5 +1675,42 @@ select sum(case when b in (select b from temp_b where EXISTS (select sum(d) from
    4 |   6
 (1 row)
 
+-- Check that predicate with set-returning function is not pushed down
+create table table_with_array_column (an_array_column double precision[]);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'an_array_column' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into table_with_array_column values (array[1.1, 2.2]);
+explain (costs off)
+select *
+from (
+  select unnest(t1.an_array_column) unnested_array_column
+  from table_with_array_column t1, table_with_array_column t2) zz
+where unnested_array_column is not null;
+                                      QUERY PLAN                                       
+---------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Result
+         Filter: (NOT ((unnest(table_with_array_column_1.an_array_column)) IS NULL))
+         ->  ProjectSet
+               ->  Nested Loop
+                     Join Filter: true
+                     ->  Seq Scan on table_with_array_column table_with_array_column_1
+                     ->  Materialize
+                           ->  Broadcast Motion 3:3  (slice2; segments: 3)
+                                 ->  Seq Scan on table_with_array_column
+ Optimizer: Pivotal Optimizer (GPORCA)
+(11 rows)
+
+select *
+from (
+  select unnest(t1.an_array_column) unnested_array_column
+  from table_with_array_column t1, table_with_array_column t2) zz
+where unnested_array_column is not null;
+ unnested_array_column 
+-----------------------
+                   1.1
+                   2.2
+(2 rows)
+
 set client_min_messages='warning';
 drop schema qp_subquery cascade;
