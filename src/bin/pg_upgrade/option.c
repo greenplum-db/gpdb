@@ -278,11 +278,6 @@ parseCommandLine(int argc, char *argv[])
 	check_required_directory(&user_opts.socketdir, "PGSOCKETDIR", true,
 							 "-s", _("sockets will be created"));
 
-	/* Ensure we are only adding checksums in copy mode */
-	if (user_opts.transfer_mode != TRANSFER_MODE_COPY &&
-		!is_checksum_mode(CHECKSUM_NONE))
-		pg_fatal("Adding and removing checksums only supported in copy mode.\n");
-
 #ifdef WIN32
 	/*
 	 * On Windows, initdb --sync-only will fail with a "Permission denied"

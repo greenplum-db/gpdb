@@ -216,8 +216,6 @@ usage()
 	echo " -B <dir>     old cluster executable directory (defaults to new binaries)"
 	echo " -s           Run smoketest only"
 	echo " -C           Skip gpcheckcat test"
-	echo " -k           Add checksums to new cluster"
-	echo " -K           Remove checksums during upgrade"
 	echo " -m           Upgrade mirrors"
 	echo " -r           Retain temporary installation after test, even on success"
 	echo " -p           pg_upgrade performance checking only"
@@ -332,15 +330,6 @@ main() {
 			C )
 				gpcheckcat=0
 				;;
-			k )
-				add_checksums=1
-				PGUPGRADE_OPTS+=' --add-checksum '
-				;;
-			K )
-				remove_checksums=1
-				DEMOCLUSTER_OPTS=' -K '
-				PGUPGRADE_OPTS+=' --remove-checksum '
-				;;
 			m )
 				mirrors=1
 				;;
@@ -364,14 +353,6 @@ main() {
 	
 	if [ -z "${OLD_DATADIR}" ] || [ -z "${NEW_BINDIR}" ]; then
 		usage
-	fi
-	
-	# This should be rejected by pg_upgrade as well, but this test is not concerned
-	# with testing handling incorrect option handling in pg_upgrade so we'll error
-	# out early instead.
-	if [ ! -z "${add_checksums}"] && [ ! -z "${remove_checksums}" ]; then
-		echo "ERROR: adding and removing checksums are mutually exclusive"
-		exit 1
 	fi
 	
 	rm -rf "$temp_root"
