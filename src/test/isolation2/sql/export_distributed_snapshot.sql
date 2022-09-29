@@ -223,3 +223,31 @@ UPDATE export_distributed_snapshot_test3 SET a=99 WHERE a=1;
 && echo ${TOKEN} \
 && PGOPTIONS='-c gp_session_role=utility' psql postgres -Atc "BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ; SET TRANSACTION SNAPSHOT '${TOKEN}';";
 -1Uq:
+
+
+-- test set transaction snapshot in 6X-STABLE, more details can be found in
+-- https://github.com/greenplum-db/gpdb/issues/14177
+
+drop table if exists fix_set_transaction_snapshot;
+create table fix_set_transaction_snapshot(a int);
+
+1: begin;
+1: set transaction isolation level repeatable read;
+1: @post_run ' TOKEN=`echo "${RAW_STR}" | awk \'NR==3\' | awk \'{print $1}\'` && echo "${RAW_STR}"': SELECT pg_export_snapshot();
+1: select * from fix_set_transaction_snapshot;
+
+2: insert into fix_set_transaction_snapshot values (1), (2), (3);
+
+1: select * from fix_set_transaction_snapshot;
+
+3: begin;
+3: set transaction isolation level repeatable read;
+3: @pre_run 'echo "${RAW_STR}" | sed "s#@TOKEN#${TOKEN}#"': SET TRANSACTION SNAPSHOT '@TOKEN';
+-- should return 0 row
+3: select * from fix_set_transaction_snapshot;
+3: commit;
+
+1: commit;
+
+drop table fix_set_transaction_snapshot;
+

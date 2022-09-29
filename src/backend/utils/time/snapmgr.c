@@ -1142,6 +1142,7 @@ ExportSnapshot(Snapshot snapshot)
 	if (snapshot->haveDistribSnapshot)
 	{
 		distributed_snapshot = &snapshot->distribSnapshotWithLocalMapping.ds;
+		appendStringInfo(&buf, "dstimestamp:%u\n", distributed_snapshot->distribTransactionTimeStamp);
 		appendStringInfo(&buf, "dsxminall:%u\n", distributed_snapshot->xminAllDistributedSnapshots);
 		appendStringInfo(&buf, "dsid:%d\n", distributed_snapshot->distribSnapshotId);
 		appendStringInfo(&buf, "dsxmin:%u\n", distributed_snapshot->xmin);
@@ -1408,6 +1409,7 @@ ImportSnapshot(const char *idstr)
 				errhint("export the snapshot in utility mode")));
 		}
 		distributed_snapshot = &snapshot.distribSnapshotWithLocalMapping.ds;
+		distributed_snapshot->distribTransactionTimeStamp = parseXidFromText("dstimestamp:", &filebuf, path);
 		distributed_snapshot->xminAllDistributedSnapshots = parseXidFromText("dsxminall:", &filebuf, path);
 		distributed_snapshot->distribSnapshotId = parseIntFromText("dsid:", &filebuf, path);
 		distributed_snapshot->xmin = parseXidFromText("dsxmin:", &filebuf, path);
