@@ -212,9 +212,12 @@ ExecEndBitmapIndexScan(BitmapIndexScanState *node)
 	indexScanDesc = node->biss_ScanDesc;
 
 	/*
-	 * Free the exprcontext ... now dead code, see ExecFreeExprContext
+	 * Free the exprcontext(s) ... now dead code, see ExecFreeExprContext
+	 *
+	 * GPDB: This is not dead code in GPDB, because we don't want to leak
+	 * exprcontexts in a dynamic bitmap index scan.
 	 */
-#ifdef NOT_USED
+#if 1
 	if (node->biss_RuntimeContext)
 		FreeExprContext(node->biss_RuntimeContext, true);
 #endif
