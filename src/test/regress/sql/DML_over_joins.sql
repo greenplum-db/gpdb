@@ -1011,6 +1011,11 @@ DECLARE
    region VARCHAR;
    tablename VARCHAR;
 BEGIN
+   -- Set trace fallback to off to stabilize the test. Issue is that ORCA can
+   -- fallback due to Query Parameter not supported in DXL. That is
+   -- non-deterministic based on plancache.  This can be removed this after
+   -- ORCA implements Query Parameters.
+   set optimizer_trace_fallback=off;
    rowCount = $1;
    tablename = $2;
    FOR i IN 1 .. rowCount LOOP
@@ -1026,6 +1031,7 @@ BEGIN
       END IF;
       PERFORM insertIntoSales(tablename, i, region );
    END LOOP;
+   set optimizer_trace_fallback=on;
 END;
 $$ LANGUAGE plpgsql;
 

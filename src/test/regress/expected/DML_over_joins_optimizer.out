@@ -1127,6 +1127,11 @@ DECLARE
    region VARCHAR;
    tablename VARCHAR;
 BEGIN
+   -- Set trace fallback to off to stabilize the test. Issue is that ORCA can
+   -- fallback due to Query Parameter not supported in DXL. That is
+   -- non-deterministic based on plancache.  This can be removed this after
+   -- ORCA implements Query Parameters.
+   set optimizer_trace_fallback=off;
    rowCount = $1;
    tablename = $2;
    FOR i IN 1 .. rowCount LOOP
@@ -1142,118 +1147,13 @@ BEGIN
       END IF;
       PERFORM insertIntoSales(tablename, i, region );
    END LOOP;
+   set optimizer_trace_fallback=on;
 END;
 $$ LANGUAGE plpgsql;
 --
 SELECT InsertManyIntoSales(20,'sales_par_CO');
 INFO:  GPORCA failed to produce a plan, falling back to planner
 DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  GPDB Expression type: Query Parameter not supported in DXL
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  GPDB Expression type: Query Parameter not supported in DXL
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  GPDB Expression type: Query Parameter not supported in DXL
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  GPDB Expression type: Query Parameter not supported in DXL
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  GPDB Expression type: Query Parameter not supported in DXL
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  GPDB Expression type: Query Parameter not supported in DXL
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  GPDB Expression type: Query Parameter not supported in DXL
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  GPDB Expression type: Query Parameter not supported in DXL
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  GPDB Expression type: Query Parameter not supported in DXL
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  GPDB Expression type: Query Parameter not supported in DXL
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Multi-level partitioned tables
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  GPDB Expression type: Query Parameter not supported in DXL
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Multi-level partitioned tables
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  GPDB Expression type: Query Parameter not supported in DXL
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Multi-level partitioned tables
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Multi-level partitioned tables
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Multi-level partitioned tables
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Multi-level partitioned tables
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Multi-level partitioned tables
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Multi-level partitioned tables
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Multi-level partitioned tables
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Multi-level partitioned tables
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Multi-level partitioned tables
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Multi-level partitioned tables
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Multi-level partitioned tables
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Multi-level partitioned tables
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Multi-level partitioned tables
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Multi-level partitioned tables
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Multi-level partitioned tables
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Multi-level partitioned tables
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Multi-level partitioned tables
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Multi-level partitioned tables
  insertmanyintosales 
 ---------------------
  
@@ -1274,86 +1174,6 @@ insert into s select generate_series(1, 100), generate_series(1, 100) * 3;
 INFO:  GPORCA failed to produce a plan, falling back to planner
 DETAIL:  Feature not supported: Unexpected target list entries in ProjectSet node
 SELECT InsertManyIntoSales(40,'sales');
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
 INFO:  GPORCA failed to produce a plan, falling back to planner
 DETAIL:  Feature not supported: SIRV functions
  insertmanyintosales 
@@ -1485,46 +1305,6 @@ DETAIL:  Feature not supported: Unexpected target list entries in ProjectSet nod
 SELECT InsertManyIntoSales(20,'sales_par');
 INFO:  GPORCA failed to produce a plan, falling back to planner
 DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
  insertmanyintosales 
 ---------------------
  
@@ -1613,86 +1393,6 @@ DETAIL:  Feature not supported: Unexpected target list entries in ProjectSet nod
 SELECT InsertManyIntoSales(20,'sales_par2');
 INFO:  GPORCA failed to produce a plan, falling back to planner
 DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Multi-level partitioned tables
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Multi-level partitioned tables
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Multi-level partitioned tables
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Multi-level partitioned tables
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Multi-level partitioned tables
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Multi-level partitioned tables
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Multi-level partitioned tables
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Multi-level partitioned tables
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Multi-level partitioned tables
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Multi-level partitioned tables
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Multi-level partitioned tables
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Multi-level partitioned tables
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Multi-level partitioned tables
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Multi-level partitioned tables
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Multi-level partitioned tables
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Multi-level partitioned tables
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Multi-level partitioned tables
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Multi-level partitioned tables
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Multi-level partitioned tables
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Multi-level partitioned tables
  insertmanyintosales 
 ---------------------
  
@@ -1824,86 +1524,6 @@ DETAIL:  Feature not supported: Multi-level partitioned tables
 SELECT InsertManyIntoSales(20,'sales_par_CO');
 INFO:  GPORCA failed to produce a plan, falling back to planner
 DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Multi-level partitioned tables
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Multi-level partitioned tables
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Multi-level partitioned tables
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Multi-level partitioned tables
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Multi-level partitioned tables
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Multi-level partitioned tables
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Multi-level partitioned tables
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Multi-level partitioned tables
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Multi-level partitioned tables
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Multi-level partitioned tables
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Multi-level partitioned tables
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Multi-level partitioned tables
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Multi-level partitioned tables
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Multi-level partitioned tables
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Multi-level partitioned tables
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Multi-level partitioned tables
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Multi-level partitioned tables
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Multi-level partitioned tables
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Multi-level partitioned tables
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Multi-level partitioned tables
  insertmanyintosales 
 ---------------------
  
@@ -1973,46 +1593,6 @@ insert into m select generate_series(1, 1000), generate_series(1, 1000) * 4;
 INFO:  GPORCA failed to produce a plan, falling back to planner
 DETAIL:  Feature not supported: Unexpected target list entries in ProjectSet node
 SELECT InsertManyIntoSales(20,'sales_par');
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
 INFO:  GPORCA failed to produce a plan, falling back to planner
 DETAIL:  Feature not supported: SIRV functions
  insertmanyintosales 
@@ -2117,46 +1697,6 @@ insert into m select generate_series(1, 1000), generate_series(1, 1000) * 4;
 INFO:  GPORCA failed to produce a plan, falling back to planner
 DETAIL:  Feature not supported: Unexpected target list entries in ProjectSet node
 SELECT InsertManyIntoSales(20,'sales_par');
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
 INFO:  GPORCA failed to produce a plan, falling back to planner
 DETAIL:  Feature not supported: SIRV functions
  insertmanyintosales 
