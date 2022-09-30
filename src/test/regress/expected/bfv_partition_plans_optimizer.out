@@ -874,7 +874,7 @@ EXPLAIN SELECT b FROM bar GROUP BY b;
    ->  HashAggregate  (cost=0.00..431.05 rows=7 width=4)
          Group Key: b
          ->  Dynamic Seq Scan on bar  (cost=0.00..431.01 rows=334 width=4)
-               Number of partitions to scan: 2 
+               Number of partitions to scan: 2 (out of 2)
  Optimizer: Pivotal Optimizer (GPORCA)
 (6 rows)
 
@@ -906,12 +906,12 @@ explain analyze select a.* from mpp8031 a, mpp8031 b where a.oid = b.oid;
    ->  Hash Join  (cost=0.00..862.00 rows=1 width=16) (never executed)
          Hash Cond: (mpp8031.oid = mpp8031_1.oid)
          ->  Dynamic Seq Scan on mpp8031  (cost=0.00..431.00 rows=1 width=16) (never executed)
-               Number of partitions to scan: 4 
+               Number of partitions to scan: 4 (out of 4)
          ->  Hash  (cost=431.00..431.00 rows=1 width=4) (never executed)
                Buckets: 524288  Batches: 1  Memory Usage: 4096kB
                ->  Dynamic Seq Scan on mpp8031 mpp8031_1  (cost=0.00..431.00 rows=1 width=4) (never executed)
-                     Number of partitions to scan: 4 
-                     Partitions scanned:  Avg 4.0 (out of 4) x 3 workers.  Max 4 parts (seg0).
+                     Number of partitions to scan: 4 (out of 4)
+                     Partitions scanned:  Avg 4.0 x 3 workers.  Max 4 parts (seg0).
  Planning Time: 4.433 ms
    (slice0)    Executor memory: 31K bytes.
    (slice1)    Executor memory: 4156K bytes avg x 3 workers, 4156K bytes max (seg0).  Work_mem: 4096K bytes max.
@@ -1019,11 +1019,11 @@ explain select * from r_part r1, r_part r2 where r1.a=1; -- should eliminate par
    ->  Nested Loop  (cost=0.00..1324032.53 rows=3 width=16)
          Join Filter: true
          ->  Dynamic Seq Scan on r_part r_part_1  (cost=0.00..431.00 rows=3 width=8)
-               Number of partitions to scan: 9 
+               Number of partitions to scan: 9 (out of 9)
          ->  Materialize  (cost=0.00..431.00 rows=1 width=8)
                ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
                      ->  Dynamic Seq Scan on r_part  (cost=0.00..431.00 rows=1 width=8)
-                           Number of partitions to scan: 1 
+                           Number of partitions to scan: 1 (out of 9)
                            Filter: (a = 1)
  Optimizer: Pivotal Optimizer (GPORCA)
 (11 rows)
@@ -1034,7 +1034,7 @@ explain select * from r_part where a in (7,8); -- should eliminate partitions
 ------------------------------------------------------------------------------
  Gather Motion 1:1  (slice1; segments: 1)  (cost=0.00..431.00 rows=2 width=8)
    ->  Dynamic Seq Scan on r_part  (cost=0.00..431.00 rows=1 width=8)
-         Number of partitions to scan: 2 
+         Number of partitions to scan: 2 (out of 9)
          Filter: (a = ANY ('{7,8}'::integer[]))
  Optimizer: Pivotal Optimizer (GPORCA)
 (5 rows)
@@ -1068,7 +1068,7 @@ explain select * from r_part where a = 1 order by a,b; -- should eliminate parti
    ->  Sort  (cost=0.00..431.00 rows=1 width=8)
          Sort Key: a, b
          ->  Dynamic Seq Scan on r_part  (cost=0.00..431.00 rows=1 width=8)
-               Number of partitions to scan: 1 
+               Number of partitions to scan: 1 (out of 9)
                Filter: (a = 1)
  Optimizer: Pivotal Optimizer (GPORCA)
 (8 rows)
@@ -1082,7 +1082,7 @@ explain execute f1(1); -- should eliminate partitions
    ->  Sort  (cost=0.00..431.00 rows=1 width=8)
          Sort Key: a, b
          ->  Dynamic Seq Scan on r_part  (cost=0.00..431.00 rows=1 width=8)
-               Number of partitions to scan: 1 
+               Number of partitions to scan: 1 (out of 9)
                Filter: (a = 1)
  Optimizer: Pivotal Optimizer (GPORCA)
 (8 rows)
@@ -1096,7 +1096,7 @@ explain execute f2(2); -- should eliminate partitions
    ->  Sort  (cost=0.00..431.00 rows=1 width=8)
          Sort Key: a, b
          ->  Dynamic Seq Scan on r_part  (cost=0.00..431.00 rows=1 width=8)
-               Number of partitions to scan: 1 
+               Number of partitions to scan: 1 (out of 9)
                Filter: (a = 2)
  Optimizer: Pivotal Optimizer (GPORCA)
 (8 rows)
@@ -1109,7 +1109,7 @@ explain select * from r_co where a=2; -- should eliminate partitions
 ------------------------------------------------------------------------------
  Gather Motion 1:1  (slice1; segments: 1)  (cost=0.00..431.00 rows=1 width=8)
    ->  Dynamic Seq Scan on r_co  (cost=0.00..431.00 rows=1 width=8)
-         Number of partitions to scan: 1 
+         Number of partitions to scan: 1 (out of 9)
          Filter: (a = 2)
  Optimizer: Pivotal Optimizer (GPORCA)
 (5 rows)
@@ -1125,7 +1125,7 @@ explain execute f3(2); -- should eliminate partitions
    ->  Sort  (cost=0.00..431.00 rows=1 width=8)
          Sort Key: a, b
          ->  Dynamic Seq Scan on r_co  (cost=0.00..431.00 rows=1 width=8)
-               Number of partitions to scan: 1 
+               Number of partitions to scan: 1 (out of 9)
                Filter: (a = 2)
  Optimizer: Pivotal Optimizer (GPORCA)
 (8 rows)
@@ -1159,7 +1159,7 @@ explain select * from fact where dd < '2009-01-02'::date; -- partitions eliminat
 -------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=16)
    ->  Dynamic Seq Scan on fact  (cost=0.00..431.00 rows=1 width=16)
-         Number of partitions to scan: 1 
+         Number of partitions to scan: 1 (out of 4)
          Filter: (dd < '01-02-2009'::date)
  Optimizer: Pivotal Optimizer (GPORCA)
 (5 rows)
@@ -1169,7 +1169,7 @@ explain select * from fact where dd < to_date('2009-01-02','YYYY-MM-DD'); -- par
 -------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=16)
    ->  Dynamic Seq Scan on fact  (cost=0.00..431.00 rows=1 width=16)
-         Number of partitions to scan: 1 
+         Number of partitions to scan: 1 (out of 4)
          Filter: (dd < '01-02-2009'::date)
  Optimizer: Pivotal Optimizer (GPORCA)
 (5 rows)
@@ -1179,8 +1179,8 @@ explain select * from fact where dd < current_date; --partitions eliminated
 -------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=16)
    ->  Dynamic Seq Scan on fact  (cost=0.00..431.00 rows=1 width=16)
-         Number of partitions to scan: 1 
-         Filter: (dd < '05-09-2022'::date)
+         Number of partitions to scan: 1 (out of 4)
+         Filter: (dd < '09-30-2022'::date)
  Optimizer: Pivotal Optimizer (GPORCA)
 (5 rows)
 
@@ -1192,7 +1192,7 @@ explain execute f1('2009-01-02'::date); -- should eliminate partitions
 -------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=16)
    ->  Dynamic Seq Scan on fact  (cost=0.00..431.00 rows=1 width=16)
-         Number of partitions to scan: 1 
+         Number of partitions to scan: 1 (out of 4)
          Filter: (dd < '01-02-2009'::date)
  Optimizer: Pivotal Optimizer (GPORCA)
 (5 rows)
@@ -1203,7 +1203,7 @@ explain execute f1(to_date('2009-01-02', 'YYYY-MM-DD')); -- should eliminate par
 -------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=16)
    ->  Dynamic Seq Scan on fact  (cost=0.00..431.00 rows=1 width=16)
-         Number of partitions to scan: 1 
+         Number of partitions to scan: 1 (out of 4)
          Filter: (dd < '01-02-2009'::date)
  Optimizer: Pivotal Optimizer (GPORCA)
 (5 rows)
@@ -1239,7 +1239,7 @@ EXPLAIN (COSTS OFF) DELETE FROM delete_from_indexed_pt WHERE b=1;
 ---------------------------------------------------------------------------
  Delete on delete_from_indexed_pt
    ->  Dynamic Seq Scan on delete_from_indexed_pt delete_from_indexed_pt_1
-         Number of partitions to scan: 1 
+         Number of partitions to scan: 1 (out of 3)
          Filter: (b = 1)
  Optimizer: Pivotal Optimizer (GPORCA)
 (5 rows)
@@ -1276,7 +1276,7 @@ EXPLAIN (COSTS OFF, TIMING OFF, SUMMARY OFF, ANALYZE) DELETE FROM delete_from_pt
          Hash Cond: (delete_from_pt_1.b = delete_from_pt_2.b)
          Extra Text: (seg0)   Hash chain length 1.0 avg, 1 max, using 1 of 262144 buckets.
          ->  Dynamic Seq Scan on delete_from_pt delete_from_pt_1 (actual rows=3 loops=1)
-               Number of partitions to scan: 3 
+               Number of partitions to scan: 3 (out of 3)
                Partitions scanned:  Avg 1.0 x 3 workers.  Max 1 parts (seg0).
          ->  Hash (actual rows=1 loops=1)
                Buckets: 262144  Batches: 1  Memory Usage: 2049kB
@@ -1300,7 +1300,7 @@ EXPLAIN (COSTS OFF, TIMING OFF, SUMMARY OFF, ANALYZE) DELETE FROM delete_from_pt
                                                                Hash Cond: (delete_from_pt_2.b = t.a)
                                                                Extra Text: (seg0)   Hash chain length 1.0 avg, 1 max, using 1 of 262144 buckets.
                                                                ->  Dynamic Seq Scan on delete_from_pt delete_from_pt_2 (actual rows=3 loops=1)
-                                                                     Number of partitions to scan: 3 
+                                                                     Number of partitions to scan: 3 (out of 3)
                                                                      Partitions scanned:  Avg 1.0 x 3 workers.  Max 1 parts (seg0).
                                                                ->  Hash (actual rows=1 loops=1)
                                                                      Buckets: 262144  Batches: 1  Memory Usage: 2049kB

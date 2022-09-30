@@ -881,7 +881,7 @@ explain (costs off) delete from t_hash_partition where r_regionkey=1;
 ---------------------------------------------------------------
  Delete on t_hash_partition
    ->  Dynamic Seq Scan on t_hash_partition t_hash_partition_1
-         Number of partitions to scan: 1 
+         Number of partitions to scan: 1 (out of 3)
          Filter: (r_regionkey = 1)
  Optimizer: Pivotal Optimizer (GPORCA)
 (5 rows)
@@ -905,7 +905,7 @@ explain (costs off) update t_hash_partition set r_name = 'CHINA' where r_regionk
 ---------------------------------------------------------------
  Update on t_hash_partition
    ->  Dynamic Seq Scan on t_hash_partition t_hash_partition_1
-         Number of partitions to scan: 1 
+         Number of partitions to scan: 1 (out of 3)
          Filter: (r_regionkey = 1)
  Optimizer: Pivotal Optimizer (GPORCA)
 (5 rows)
