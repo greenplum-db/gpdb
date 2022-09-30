@@ -687,5 +687,22 @@ from (
   from table_with_array_column t1, table_with_array_column t2) zz
 where unnested_array_column is not null;
 
+-- check that predicate is not pushed through a projected non-correlated subquery
+create table subquery_nonpush_through_1(a int, b int);
+create table subquery_nonpush_through_2(a int, b int);
+
+explain (costs off)
+select *
+from(
+  select (subquery_nonpush_through_1.a in (select a from subquery_nonpush_through_2))::text as xx, subquery_nonpush_through_1.b
+  from subquery_nonpush_through_1,subquery_nonpush_through_2) t
+where xx='dd';
+
+select *
+from(
+  select (subquery_nonpush_through_1.a in (select a from subquery_nonpush_through_2))::text as xx, subquery_nonpush_through_1.b
+  from subquery_nonpush_through_1,subquery_nonpush_through_2) t
+where xx='dd';
+
 set client_min_messages='warning';
 drop schema qp_subquery cascade;
