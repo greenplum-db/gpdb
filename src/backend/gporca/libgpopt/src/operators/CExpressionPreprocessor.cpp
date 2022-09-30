@@ -2840,9 +2840,11 @@ CExpressionPreprocessor::PexprTransposeSelectAndProject(CMemoryPool *mp,
 			CExpression *pprojexpr =
 				CUtils::PNthProjectElementExpr(pproject, ul);
 
-			if (pprojexpr->DeriveHasNonScalarFunction())
+			if (pprojexpr->DeriveHasNonScalarFunction() ||
+				pprojexpr->DeriveHasSubquery())
 			{
 				// Bail if project expression contains a set-returning function
+				// or subquery
 				pdrgpexpr->Release();
 				pexpr->AddRef();
 				return pexpr;
