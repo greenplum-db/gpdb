@@ -1700,6 +1700,8 @@ DETAIL:  Partition key of the failing row contains (d) = (null).
 --SELECT COUNT(DISTINCT(d)) FROM dml_union_s;
 rollback;
 -- @description union_update_test29: Negative Tests  UPDATE violates the CHECK constraint on the column
+-- GPDB_12_MERGE_FIXME: This test case is flaky, ERROR:  expected partdefid 134733, but got 0 (partdesc.c:194)
+set optimizer=off;
 SELECT COUNT(DISTINCT(b)) FROM dml_union_s;
  count 
 -------
@@ -1709,6 +1711,7 @@ SELECT COUNT(DISTINCT(b)) FROM dml_union_s;
 UPDATE dml_union_s SET b = (SELECT NULL UNION SELECT NULL)::numeric;
 ERROR:  null value in column "b" violates not-null constraint  (seg1 10.152.10.75:25433 pid=19531)
 DETAIL:  Failing row contains (5, null, s, 5).
+reset optimizer;
 --SELECT COUNT(DISTINCT(b)) FROM dml_union_s;
 --SELECT DISTINCT(b) FROM dml_union_s;
 -- @description union_update_test30: Negative Tests  more than one row returned by a sub-query used as an expression

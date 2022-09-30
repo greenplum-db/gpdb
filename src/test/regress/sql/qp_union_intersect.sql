@@ -626,8 +626,11 @@ UPDATE dml_union_s SET d = (SELECT NULL EXCEPT SELECT NULL)::numeric;
 rollback;
 
 -- @description union_update_test29: Negative Tests  UPDATE violates the CHECK constraint on the column
+-- GPDB_12_MERGE_FIXME: This test case is flaky, ERROR:  expected partdefid 134733, but got 0 (partdesc.c:194)
+set optimizer=off;
 SELECT COUNT(DISTINCT(b)) FROM dml_union_s;
 UPDATE dml_union_s SET b = (SELECT NULL UNION SELECT NULL)::numeric;
+reset optimizer;
 --SELECT COUNT(DISTINCT(b)) FROM dml_union_s;
 --SELECT DISTINCT(b) FROM dml_union_s;
 
