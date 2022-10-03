@@ -121,19 +121,12 @@ CREATE SEQUENCE tableam_seq_heap2 USING heap2;
 CREATE MATERIALIZED VIEW tableam_tblmv_heap2 USING heap2 AS SELECT * FROM tableam_tbl_heap2;
 SELECT f1 FROM tableam_tblmv_heap2 ORDER BY f1;
 
--- CREATE TABLE ..  PARTITION BY doesn't not support USING
+-- CREATE TABLE ..  PARTITION BY supports USING
+-- new partitions will inherit from the partition root
 CREATE TABLE tableam_parted_heap2 (a text, b int) PARTITION BY list (a) USING heap2;
-
-CREATE TABLE tableam_parted_heap2 (a text, b int) PARTITION BY list (a);
--- new partitions will inherit from the current default, rather the partition root
-SET default_table_access_method = 'heap';
 CREATE TABLE tableam_parted_a_heap2 PARTITION OF tableam_parted_heap2 FOR VALUES IN ('a');
-SET default_table_access_method = 'heap2';
-CREATE TABLE tableam_parted_b_heap2 PARTITION OF tableam_parted_heap2 FOR VALUES IN ('b');
-RESET default_table_access_method;
 -- but the method can be explicitly specified
-CREATE TABLE tableam_parted_c_heap2 PARTITION OF tableam_parted_heap2 FOR VALUES IN ('c') USING heap;
-CREATE TABLE tableam_parted_d_heap2 PARTITION OF tableam_parted_heap2 FOR VALUES IN ('d') USING heap2;
+CREATE TABLE tableam_parted_b_heap2 PARTITION OF tableam_parted_heap2 FOR VALUES IN ('b') USING heap;
 
 -- List all objects in AM
 SELECT
@@ -170,10 +163,22 @@ SELECT COUNT(a), COUNT(1) FILTER(WHERE a=1) FROM heaptable;
 -- No support for multiple subcommands
 ALTER TABLE heaptable SET ACCESS METHOD heap, SET ACCESS METHOD heap2;
 DROP TABLE heaptable;
--- No support for partitioned tables.
+
+-- partition hierarchies
+-- upon ALTER, new children will inherit the new am, whereas the existing
+-- children will remain untouched
 CREATE TABLE am_partitioned(x INT, y INT)
   PARTITION BY hash (x);
-ALTER TABLE am_partitioned SET ACCESS METHOD heap2;
+CREATE TABLE am_partitioned_1 PARTITION OF am_partitioned FOR VALUES WITH (MODULUS 3,REMAINDER 0);
+CREATE TABLE am_partitioned_2 PARTITION OF am_partitioned FOR VALUES WITH (MODULUS 3,REMAINDER 1);
+ALTER TABLE am_partitioned_1 SET ACCESS METHOD heap2;
+ALTER TABLE ONLY am_partitioned SET ACCESS METHOD heap2;
+CREATE TABLE am_partitioned_3 PARTITION OF am_partitioned FOR VALUES WITH (MODULUS 3,REMAINDER 2);
+SELECT relname, amname FROM pg_class c, pg_am am
+  WHERE c.relam = am.oid AND c.relname LIKE 'am_partitioned%' ORDER BY 1;
+ALTER TABLE am_partitioned SET ACCESS METHOD heap;
+SELECT relname, amname FROM pg_class c, pg_am am
+WHERE c.relam = am.oid AND c.relname LIKE 'am_partitioned%' ORDER BY 1;
 DROP TABLE am_partitioned;
 
 -- Second, create objects in the new AM by changing the default AM

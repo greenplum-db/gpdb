@@ -17,7 +17,6 @@
 #include "postgres.h"
 
 #include "access/table.h"
-#include "catalog/pg_am.h"
 #include "catalog/pg_opclass.h"
 #include "catalog/aoblkdir.h"
 #include "catalog/aocatalog.h"

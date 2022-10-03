@@ -463,6 +463,7 @@ select c.relname, am.amname, c.relkind, c.reloptions
     where c.relname like 'dsp_partition1%' order by relname;
 select compresslevel, compresstype, blocksize, checksum, columnstore from pg_appendonly
        where relid in (select oid from pg_class where relname  like 'dsp_partition1%') order by columnstore;
+-- The child partition tables should default to their parent table's AM.
 set default_table_access_method = ao_column;
 set gp_default_storage_options = "blocksize=32768,compresstype=none,checksum=true";
 -- Add partition
@@ -477,26 +478,15 @@ select c.relname, am.amname, c.relkind, c.reloptions
 	from pg_class c left join pg_am am on (c.relam = am.oid)
     where c.relname like 'dsp_partition1%' order by relname;
 
--- GPDB_12_MERGE_FIXME: gpcheckcat fails for dsp_partition1_1_prt_1
--- with checksum mismatch between master and segments. The reason
--- being RESET gp_default_storage_options above somehow seems not
--- working properly. So, we should fix RESET to work. Plus, also we
--- should enhance code to not use `gp_default_storage_options` guc on
--- segments. Instead master should use it and make all the decisions
--- and pass the decision to segments. This should avoid any
--- mis-matches and eliminates the need for the guc to be in-sync
--- between master and segment.
-drop table dsp_partition1;
 RESET gp_default_storage_options;
 
 -- cleanup
 \c postgres
 
 -- Test that gp_default_storage_options option must be the same on all nodes
-
--- GPDB_12_MERGE_FIXME: Is this really strictly necessary? There's code in
--- gpconfig to verify this specifically for gp_default_storage_options. Can
--- we remove it?
+-- NOTE: although gpconfig might have unittest to verity this, the GUC
+-- gp_default_storage_options is so important that adding tests for it here
+-- do no harm.
 
 -- start_matchsubs
 -- m/.*\[ERROR\]*/

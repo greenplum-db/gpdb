@@ -1433,6 +1433,32 @@ CUtils::PdrgpexprDedup(CMemoryPool *mp, CExpressionArray *pdrgpexpr)
 		{
 			pexpr->Release();
 		}
+
+		// Here we also take into account cast equality expressions. This
+		// allows us to consider the following 2 expressions as duplicates.
+		//
+		//  1)
+		//     +--CScalarCmp (=)
+		//        |--CScalarIdent "d" (1)
+		//        +--CScalarIdent "d" (10)
+		//  2)
+		//     +--CScalarCmp (=)
+		//        |--CScalarCast
+		//        |  +--CScalarIdent "d" (1)
+		//        +--CScalarIdent "d" (10)
+		if (pexpr->Pop()->Eopid() == COperator::EopScalarCmp)
+		{
+			CExpressionArray *pdexpr =
+				CCastUtils::PdrgpexprCastEquality(mp, pexpr);
+			for (ULONG ulInner = 0; ulInner < pdexpr->Size(); ulInner++)
+			{
+				if (phsexpr->Insert((*pdexpr)[ulInner]))
+				{
+					(*pdexpr)[ulInner]->AddRef();
+				}
+			}
+			pdexpr->Release();
+		}
 	}
 
 	phsexpr->Release();
@@ -3682,7 +3708,6 @@ CUtils::PexprConjINDFCond(CMemoryPool *mp, CColRef2dArray *pdrgpdrgpcrInput)
 	// assemble the new scalar condition
 	CExpression *pexprScCond = nullptr;
 	const ULONG length = (*pdrgpdrgpcrInput)[0]->Size();
-	GPOS_ASSERT(0 != length);
 	GPOS_ASSERT(length == (*pdrgpdrgpcrInput)[1]->Size());
 
 	CExpressionArray *pdrgpexprInput =
@@ -4391,24 +4416,6 @@ CUtils::PexprLimit(CMemoryPool *mp, CExpression *pexpr, ULONG ulOffSet,
 
 	return GPOS_NEW(mp)
 		CExpression(mp, popLimit, pexpr, pexprLimitOffset, pexprLimitCount);
-}
-
-// generate part oid
-BOOL
-CUtils::FGeneratePartOid(IMDId *mdid)
-{
-	CMDAccessor *md_accessor = COptCtxt::PoctxtFromTLS()->Pmda();
-	const IMDRelation *pmdrel = md_accessor->RetrieveRel(mdid);
-
-	COptimizerConfig *optimizer_config =
-		COptCtxt::PoctxtFromTLS()->GetOptimizerConfig();
-	BOOL fInsertSortOnRows =
-		(pmdrel->RetrieveRelStorageType() ==
-		 IMDRelation::ErelstorageAppendOnlyRows) &&
-		(optimizer_config->GetHint()->UlMinNumOfPartsToRequireSortOnInsert() <=
-		 pmdrel->PartitionCount());
-
-	return fInsertSortOnRows;
 }
 
 // check if a given operator is a ANY subquery

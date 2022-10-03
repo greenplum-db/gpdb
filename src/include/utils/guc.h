@@ -313,7 +313,7 @@ extern bool Debug_resource_group;
 extern bool gp_create_table_random_default_distribution;
 extern bool gp_allow_non_uniform_partitioning_ddl;
 extern int  dtx_phase2_retry_second;
-
+extern bool gp_log_suboverflow_statement;
 /* WAL replication debug gucs */
 extern bool debug_walrepl_snd;
 extern bool debug_walrepl_syncrep;
@@ -491,7 +491,6 @@ extern bool optimizer_enable_constant_expression_evaluation;
 extern bool optimizer_enable_bitmapscan;
 extern bool optimizer_enable_outerjoin_to_unionall_rewrite;
 extern bool optimizer_enable_ctas;
-extern bool optimizer_enable_partial_index;
 extern bool optimizer_enable_dml;
 extern bool	optimizer_enable_dml_constraints;
 extern bool optimizer_enable_direct_dispatch;

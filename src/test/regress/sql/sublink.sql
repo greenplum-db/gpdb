@@ -40,3 +40,32 @@ cte_b AS
 )
 SELECT *
 FROM cte_b as first, cte_b as second;
+
+
+--
+-- Test GROUP BY IN exists subquery
+-- More details can be found in https://github.com/greenplum-db/gpdb/issues/11849
+--
+create table group_by_sublink(a int);
+insert into group_by_sublink select i from generate_series(1, 5) i;
+explain (costs off)
+select a from group_by_sublink where exists (select avg(a) from group_by_sublink group by a);
+select count(*) from group_by_sublink where exists (select avg(a) from group_by_sublink group by a);
+
+-- Below queries will not be affected, WINDOW/DISTINCT/DISTINCT ON/ORDER BY clause will be
+-- throwed,
+explain (costs off)
+select a from group_by_sublink where exists (select a from group_by_sublink order by a desc);
+select count(*) from group_by_sublink where exists (select a from group_by_sublink order by a desc);
+
+explain (costs off)
+select a from group_by_sublink where exists (select distinct a from group_by_sublink);
+select count(*) from group_by_sublink where exists (select distinct a from group_by_sublink);
+
+explain (costs off)
+select a from group_by_sublink where exists (select distinct on (a) a from group_by_sublink);
+select count(*) from group_by_sublink where exists (select distinct on (a) a from group_by_sublink);
+
+explain (costs off)
+select a from group_by_sublink where exists (select sum(a) over (order by a) from group_by_sublink );
+select count(*) from group_by_sublink where exists (select sum(a) over (order by a) from group_by_sublink );

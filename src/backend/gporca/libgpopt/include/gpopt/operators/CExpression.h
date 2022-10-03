@@ -311,6 +311,7 @@ public:
 	BOOL DeriveHasMultipleDistinctAggs();
 	BOOL DeriveHasScalarArrayCmp();
 	BOOL DeriveHasScalarFuncProject();
+	BOOL DeriveContainsOnlyReplicationSafeAggFuncs();
 	ULONG DeriveTotalOrderedAggs();
 
 };	// class CExpression

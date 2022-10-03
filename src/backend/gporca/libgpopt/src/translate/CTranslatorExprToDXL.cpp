@@ -975,9 +975,6 @@ CTranslatorExprToDXL::PdxlnIndexOnlyScan(CExpression *pexprIndexOnlyScan,
 //		Create a DXL scalar bitmap index probe from an optimizer
 //		scalar bitmap index probe operator.
 //
-//	GPDB_12_MERGE_FIXME: whenever we modify this function, we may
-//	as well consider updating PdxlnBitmapIndexProbeForChildPart().
-//
 //---------------------------------------------------------------------------
 CDXLNode *
 CTranslatorExprToDXL::PdxlnBitmapIndexProbe(CExpression *pexprBitmapIndexProbe)
@@ -5078,13 +5075,14 @@ CTranslatorExprToDXL::GetDXLDirectDispatchInfo(CExpression *pexprDML)
 	CTableDescriptor *ptabdesc = popDML->Ptabdesc();
 	const CColumnDescriptorArray *pdrgpcoldescDist =
 		ptabdesc->PdrgpcoldescDist();
-
-	if (CLogicalDML::EdmlInsert != popDML->Edmlop() ||
+	if ((CLogicalDML::EdmlInsert != popDML->Edmlop() &&
+		 CLogicalDML::EdmlDelete != popDML->Edmlop()) ||
 		IMDRelation::EreldistrHash != ptabdesc->GetRelDistribution() ||
 		1 < pdrgpcoldescDist->Size())
 	{
-		// directed dispatch only supported for insert statements on hash-distributed tables
-		// with a single distribution column
+		// directed dispatch only supported for insert and delete statements
+		// on hash-distributed tables with a single distribution column
+
 		return nullptr;
 	}
 
@@ -6882,141 +6880,6 @@ CTranslatorExprToDXL::PdxlnCondForChildPart(
 
 	return pdxlnCond;
 }
-
-//---------------------------------------------------------------------------
-//	@function:
-//		CTranslatorExprToDXL::PdxlnBitmapIndexPathForChildPart
-//
-//	@doc:
-//		Construct a DXL BitmapTableScan's bitmap index path child
-//		DLX node for a child partition.
-//
-//---------------------------------------------------------------------------
-CDXLNode *
-CTranslatorExprToDXL::PdxlnBitmapIndexPathForChildPart(
-	const ColRefToUlongMap *root_col_mapping, const CColRefArray *part_colrefs,
-	const CColRefArray *root_colrefs, const IMDRelation *part,
-	CExpression *pexprBitmapIndexPath)
-{
-	GPOS_CHECK_STACK_SIZE;
-
-	switch (pexprBitmapIndexPath->Pop()->Eopid())
-	{
-		case COperator::EopScalarBitmapIndexProbe:
-			return PdxlnBitmapIndexProbeForChildPart(
-				root_col_mapping, part_colrefs, root_colrefs, part,
-				pexprBitmapIndexPath);
-		case COperator::EopScalarBitmapBoolOp:
-		{
-			GPOS_ASSERT(nullptr != pexprBitmapIndexPath);
-			GPOS_ASSERT(2 == pexprBitmapIndexPath->Arity());
-
-			CScalarBitmapBoolOp *popBitmapBoolOp =
-				CScalarBitmapBoolOp::PopConvert(pexprBitmapIndexPath->Pop());
-			CExpression *pexprLeft = (*pexprBitmapIndexPath)[0];
-			CExpression *pexprRight = (*pexprBitmapIndexPath)[1];
-
-			CDXLNode *dxlnode_left = PdxlnBitmapIndexPathForChildPart(
-				root_col_mapping, part_colrefs, root_colrefs, part, pexprLeft);
-			CDXLNode *dxlnode_right = PdxlnBitmapIndexPathForChildPart(
-				root_col_mapping, part_colrefs, root_colrefs, part, pexprRight);
-
-			IMDId *mdid_type = popBitmapBoolOp->MdidType();
-			mdid_type->AddRef();
-
-			CDXLScalarBitmapBoolOp::EdxlBitmapBoolOp edxlbitmapop =
-				CDXLScalarBitmapBoolOp::EdxlbitmapAnd;
-
-			if (CScalarBitmapBoolOp::EbitmapboolOr ==
-				popBitmapBoolOp->Ebitmapboolop())
-			{
-				edxlbitmapop = CDXLScalarBitmapBoolOp::EdxlbitmapOr;
-			}
-
-			return GPOS_NEW(m_mp) CDXLNode(
-				m_mp,
-				GPOS_NEW(m_mp)
-					CDXLScalarBitmapBoolOp(m_mp, mdid_type, edxlbitmapop),
-				dxlnode_left, dxlnode_right);
-		}
-		default:
-			GPOS_RAISE(gpopt::ExmaGPOPT, gpopt::ExmiUnsupportedOp,
-					   pexprBitmapIndexPath->Pop()->SzId());
-	}
-}
-
-//---------------------------------------------------------------------------
-//	@function:
-//		CTranslatorExprToDXL::PdxlnBitmapIndexProbeForChildPart
-//
-//	@doc:
-//		Create a DXL scalar bitmap index probe from an optimizer
-//		scalar bitmap index probe operator for a child partition.
-//
-//		GPDB_12_MERGE_FIXME: this function should always keep parity
-//		with PdxlnBitmapIndexProbe(). We did not extract the duplicate
-//		code into a common function because the handlings for child
-//		partition are also all over this function.
-//---------------------------------------------------------------------------
-CDXLNode *
-CTranslatorExprToDXL::PdxlnBitmapIndexProbeForChildPart(
-	const ColRefToUlongMap *root_col_mapping, const CColRefArray *part_colrefs,
-	const CColRefArray *root_colrefs, const IMDRelation *part,
-	CExpression *pexprBitmapIndexProbe)
-{
-	GPOS_ASSERT(nullptr != pexprBitmapIndexProbe);
-	CScalarBitmapIndexProbe *pop =
-		CScalarBitmapIndexProbe::PopConvert(pexprBitmapIndexProbe->Pop());
-
-	// create index descriptor
-	CIndexDescriptor *pindexdesc = pop->Pindexdesc();
-	IMDId *pmdidIndex = pindexdesc->MDId();
-
-	// construct set of child indexes from parent list of child indexes
-	const IMDIndex *md_index = m_pmda->RetrieveIndex(pmdidIndex);
-	IMdIdArray *child_indexes = md_index->ChildIndexMdids();
-
-	MdidHashSet *child_index_mdids_set = GPOS_NEW(m_mp) MdidHashSet(m_mp);
-	for (ULONG ul = 0; ul < child_indexes->Size(); ul++)
-	{
-		(*child_indexes)[ul]->AddRef();
-		child_index_mdids_set->Insert((*child_indexes)[ul]);
-	}
-
-	CDXLIndexDescr *dxl_index_descr = PdxlnIndexDescForPart(
-		m_mp, child_index_mdids_set, part, pindexdesc->Name().Pstr());
-
-	child_index_mdids_set->Release();
-
-	CDXLScalarBitmapIndexProbe *dxl_op =
-		GPOS_NEW(m_mp) CDXLScalarBitmapIndexProbe(m_mp, dxl_index_descr);
-	CDXLNode *pdxlnBitmapIndexProbe = GPOS_NEW(m_mp) CDXLNode(m_mp, dxl_op);
-
-	// translate index predicates
-	CExpression *pexprCond = (*pexprBitmapIndexProbe)[0];
-	CDXLNode *pdxlnIndexCondList = GPOS_NEW(m_mp)
-		CDXLNode(m_mp, GPOS_NEW(m_mp) CDXLScalarIndexCondList(m_mp));
-	CExpressionArray *pdrgpexprConds =
-		CPredicateUtils::PdrgpexprConjuncts(m_mp, pexprCond);
-	const ULONG length = pdrgpexprConds->Size();
-	for (ULONG ul = 0; ul < length; ul++)
-	{
-		CExpression *pexprIndexCond = (*pdrgpexprConds)[ul];
-		CDXLNode *pdxlnIndexCond = PdxlnCondForChildPart(
-			root_col_mapping, part_colrefs, root_colrefs, pexprIndexCond);
-		pdxlnIndexCondList->AddChild(pdxlnIndexCond);
-	}
-	pdrgpexprConds->Release();
-	pdxlnBitmapIndexProbe->AddChild(pdxlnIndexCondList);
-
-#ifdef GPOS_DEBUG
-	pdxlnBitmapIndexProbe->GetOperator()->AssertValid(
-		pdxlnBitmapIndexProbe, false /*validate_children*/);
-#endif
-
-	return pdxlnBitmapIndexProbe;
-}
-
 
 //---------------------------------------------------------------------------
 //	@function:

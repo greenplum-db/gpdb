@@ -118,6 +118,7 @@ static bool finalize_primnode(Node *node, finalize_primnode_context *context);
 static bool finalize_agg_primnode(Node *node, finalize_primnode_context *context);
 
 extern	double global_work_mem(PlannerInfo *root);
+static bool contain_outer_selfref_walker(Node *node, Index *depth);
 
 /*
  * Get the datatype/typmod/collation of the first column of the plan's output.
@@ -1236,11 +1237,11 @@ contain_dml_walker(Node *node, void *context)
 	}
 	return expression_tree_walker(node, contain_dml_walker, context);
 }
-
+#endif
 /*
  * contain_outer_selfref: is there an external recursive self-reference?
  */
-static bool
+bool
 contain_outer_selfref(Node *node)
 {
 	Index		depth = 0;
@@ -1291,7 +1292,7 @@ contain_outer_selfref_walker(Node *node, Index *depth)
 	return expression_tree_walker(node, contain_outer_selfref_walker,
 								  (void *) depth);
 }
-
+#if 0
 /*
  * inline_cte: convert RTE_CTE references to given CTE into RTE_SUBQUERYs
  */
@@ -1749,6 +1750,14 @@ simplify_EXISTS_query(PlannerInfo *root, Query *query)
 		return false;
 
 	/*
+	 * If the whereClause contains some Vars of the parent query or the rest of
+	 * the sub-select refers to any Vars of the parent, this EXISTS sublink is
+	 * a correlated sublink.
+	 */
+	bool is_correlated = contain_vars_of_level(query->jointree->quals, 1) ||
+						 contain_vars_of_level((Node *) query, 1);
+
+	/*
 	 * LIMIT with a constant positive (or NULL) value doesn't affect the
 	 * semantics of EXISTS, so let's ignore such clauses.  This is worth doing
 	 * because people accustomed to certain other DBMSes may be in the habit
@@ -1809,8 +1818,13 @@ simplify_EXISTS_query(PlannerInfo *root, Query *query)
 	 * change a nonzero-rows result to zero rows or vice versa.  (Furthermore,
 	 * since our parsetree representation of these clauses depends on the
 	 * targetlist, we'd better throw them away if we drop the targetlist.)
+	 *
+	 * We only throw targetlist in correlated sublinks. For uncorrelated
+	 * sublinks, we'll do nothing to it's targetlist, since it will be
+	 * optimized to a InitPlan Node, which need targetlist.
 	 */
-	query->targetList = NIL;
+	if (is_correlated)
+		query->targetList = NIL;
 
 	/*
 	 * Delete GROUP BY if no aggregates.
@@ -1824,7 +1838,17 @@ simplify_EXISTS_query(PlannerInfo *root, Query *query)
 	 */
 	if (!query->hasAggs)
 		query->groupClause = NIL;
-	query->windowClause = NIL;
+
+	/*
+	 * Those clauses could be throwed in correlated and uncorrelated sublinks,
+	 * it will not change the correctness of the results, except windowClause.
+	 *
+	 * Because Greenplum will try to simplify the EXISTS sublink that has Window
+	 * Function Node, if we just drop windowClause but not drop WindowFunc node
+	 * for a window agg, it'll cause inconsistent and error will happend.
+	 */
+	if (is_correlated)
+		query->windowClause = NIL;
 	query->distinctClause = NIL;
 	query->sortClause = NIL;
 	query->hasDistinctOn = false;

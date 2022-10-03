@@ -23,7 +23,6 @@
 #include "catalog/catalog.h"
 #include "catalog/heap.h"
 #include "catalog/index.h"
-#include "catalog/pg_am.h"
 #include "catalog/pg_appendonly.h"
 #include "catalog/storage.h"
 #include "catalog/storage_xlog.h"

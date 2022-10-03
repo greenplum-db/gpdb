@@ -2000,9 +2000,20 @@ CreateDistributedSnapshot(DistributedSnapshot *ds)
 		if (dxid != InvalidDistributedTransactionId && dxid < globalXminDistributedSnapshots)
 			globalXminDistributedSnapshots = dxid;
 
-		/* just fetch once */
+		/*
+		 * Just fetch once
+		 *
+		 * Partial reading is possible on a 32 bit system, however we decided
+		 * not to take it serious currently.
+		 */
 		gxid = gxact_candidate->gxid;
-		if (gxid == InvalidDistributedTransactionId)
+
+		/*
+		* Skip further gxid to avoid enlarging inProgressXidArray
+		* as we already have held ProcArrayLock and latestCompletedGxid
+		* can not be changed.
+		*/
+		if (gxid == InvalidDistributedTransactionId || gxid >= xmax)
 			continue;
 
 		/*
@@ -2012,10 +2023,6 @@ CreateDistributedSnapshot(DistributedSnapshot *ds)
 		if (gxid < xmin)
 		{
 			xmin = gxid;
-		}
-		if (gxid > xmax)
-		{
-			xmax = gxid;
 		}
 
 		if (gxact_candidate == MyTmGxact)

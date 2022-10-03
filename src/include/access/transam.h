@@ -152,8 +152,8 @@ typedef struct VariableCacheData
 	 */
 	TransactionId latestCompletedXid;	/* newest XID that has committed or
 										 * aborted */
-	TransactionId latestCompletedGxid;	/* newest distributed XID that has
-										   committed or aborted */
+	DistributedTransactionId latestCompletedGxid;	/* newest distributed XID that has
+													   committed or aborted */
 
 	/*
 	 * The two variables are protected by shmGxidGenLock.  Note nextGxid won't

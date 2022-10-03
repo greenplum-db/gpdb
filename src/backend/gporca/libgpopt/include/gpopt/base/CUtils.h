@@ -359,6 +359,11 @@ public:
 	// check if the aggregate is local or global
 	static BOOL FHasGlobalAggFunc(const CExpression *pexprProjList);
 
+	// check if given project list has only aggregate functions
+	// that can be safely executed on replicated slices
+	static BOOL FContainsOnlyReplicationSafeAggFuncs(
+		const CExpression *pexprProjList);
+
 	// generate a bool expression
 	static CExpression *PexprScalarConstBool(CMemoryPool *mp, BOOL value,
 											 BOOL is_null = false);
@@ -940,9 +945,6 @@ public:
 	// generate a limit expression on top of the given relational child with the given offset and limit count
 	static CExpression *PexprLimit(CMemoryPool *mp, CExpression *pexpr,
 								   ULONG ulOffSet, ULONG count);
-
-	// generate part oid
-	static BOOL FGeneratePartOid(IMDId *mdid);
 
 	// return true if given expression contains window aggregate function
 	static BOOL FHasAggWindowFunc(CExpression *pexpr);

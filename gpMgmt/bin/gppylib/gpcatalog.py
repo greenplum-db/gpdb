@@ -33,7 +33,7 @@ COORDINATOR_ONLY_TABLES = [
     'pg_statistic',
     'pg_statistic_ext',
     'pg_statistic_ext_data',
-    'gp_partition_template', # GPDB_12_MERGE_FIXME: is gp_partition_template intentionally missing from segments?
+    'gp_partition_template',
     ]
 
 # Hard coded tables that have different values on every segment
@@ -52,6 +52,7 @@ DEPENDENCY_EXCLUSION = [
     'pg_compression',
     'pg_conversion',
     'pg_database',
+    'pg_default_acl',
     'pg_enum',
     'pg_namespace',
     'pg_resgroup',

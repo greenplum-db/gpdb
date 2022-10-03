@@ -369,7 +369,7 @@ alter table aocs_multi_level_part_table add partition part3 start(date '2010-01-
   with (appendonly=true, orientation=column)
   (subpartition usa values ('usa'), subpartition asia values ('asia'), default subpartition def);
 
--- Add default partition (defaults to heap storage unless set with AO)
+-- Add default partition (defaults to parent table's AM)
 alter table aocs_multi_level_part_table add default partition yearYYYY (default subpartition def);
 SELECT am.amname FROM pg_class c LEFT JOIN pg_am am ON (c.relam = am.oid)
 WHERE c.relname = 'aocs_multi_level_part_table_1_prt_yearyyyy_2_prt_def';

@@ -237,7 +237,11 @@
             <dxl:Properties>
               <dxl:Cost StartupCost="0" TotalCost="431.050887" Rows="1.000000" Width="12"/>
             </dxl:Properties>
-            <dxl:DirectDispatchInfo/>
+            <dxl:DirectDispatchInfo>
+              <dxl:KeyValue>
+                <dxl:Datum TypeMdid="0.23.1.0" Value="6"/>
+              </dxl:KeyValue>
+            </dxl:DirectDispatchInfo>
             <dxl:ProjList>
               <dxl:ProjElem ColId="0" Alias="t1">
                 <dxl:Ident ColId="0" ColName="t1" TypeMdid="0.23.1.0"/>

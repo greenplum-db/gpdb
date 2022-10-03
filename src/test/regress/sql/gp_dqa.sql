@@ -354,3 +354,44 @@ explain select count(distinct a) filter (where a > 3),count( distinct b) filter 
 -- the following SQL should use two stage agg
 explain select count(distinct a), sum(b), sum(c) from dqa_f1;
 select count(distinct a), sum(b), sum(c) from dqa_f1;
+
+-- multi DQA with type conversions
+create table dqa_f3(a character varying, b bigint) distributed by (a);
+insert into dqa_f3 values ('123', 2), ('213', 0), ('231', 2), ('312', 0), ('321', 2), ('132', 1), ('4', 0);
+
+-- Case 1: When converting the type of column 'a' from 'VARCHAR' to 'TEXT' in DQA expression, instead of generating a new column '(a)::text'
+-- by TupleSplit, we can reference the column 'a' as part of hash-key in Redistribute-Motion directly, since the conversion is binary-compatible.
+-- ->  Redistribute Motion 3:3  (slice2; segments: 3)
+--       Output: b, a, ((b)::text), (AggExprId)
+--       Hash Key: ((b)::text), a, (AggExprId)
+--     ...
+--     ->  TupleSplit
+--           Output: b, a, ((b)::text), AggExprId
+--           Split by Col: (((dqa_f3.b)::text)), (dqa_f3.a)
+--           ->  Seq Scan on public.dqa_f3
+--                 Output: b, a, (b)::text
+select count(distinct (b)::text) as b, count(distinct (a)::text) as a from dqa_f3;
+explain (verbose, costs off) select count(distinct (b)::text) as b, count(distinct (a)::text) as a from dqa_f3;
+
+-- Case 2: Same as the above one, but convert the type of column 'a' to 'varchar' via binary-compatible types.
+select count(distinct (b)::text) as b, count(distinct (a)::text::varchar) as a from dqa_f3;
+explain (verbose, costs off) select count(distinct (b)::text) as b, count(distinct (a)::text::varchar) as a from dqa_f3;
+
+-- Case 3: When converting the type of column 'a' from 'varchar' to 'int' in DQA expression, TupleSplit should generate an additional
+-- column '(a)::integer' as part of hash-key in Redistribute-Motion, since the conversion is not binary-compatible.
+-- ->  Redistribute Motion 3:3  (slice2; segments: 3)
+--       Output: b, a, ((b)::text), ((a)::integer), (AggExprId)
+--       Hash Key: ((b)::text), ((a)::integer), (AggExprId)
+--     ...
+--     ->  TupleSplit
+--           Output: b, a, ((b)::text), ((a)::integer), AggExprId
+--           Split by Col: (((dqa_f3.b)::text)), (((dqa_f3.a)::integer))
+--           ->  Seq Scan on public.dqa_f3
+--                 Output: b, a, (b)::text, (a)::integer
+select count(distinct (b)::text) as b, count(distinct (a)::int) as a from dqa_f3;
+explain (verbose, costs off) select count(distinct (b)::text) as b, count(distinct (a)::int) as a from dqa_f3;
+
+-- Case 4: When converting the type of column 'a' from 'varchar' to 'int' to 'varchar', TupleSplit should generate an additional
+-- column '(a)::integer::varchar' as part of hash-key in Redistribute-Motion.
+select count(distinct (b)::text) as b, count(distinct (a)::int::varchar) as a from dqa_f3;
+explain (verbose, costs off) select count(distinct (b)::text) as b, count(distinct (a)::int::varchar) as a from dqa_f3;

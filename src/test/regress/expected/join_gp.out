@@ -1504,7 +1504,7 @@ select * from foo where exists (select 1 from bar where foo.a = bar.b);
          ->  Unique
                Group Key: (RowIdExpr)
                ->  Sort
-                     Sort Key (Distinct): (RowIdExpr)
+                     Sort Key: (RowIdExpr)
                      ->  Redistribute Motion 3:3  (slice2; segments: 3)
                            Hash Key: (RowIdExpr)
                            ->  Hash Join

@@ -94,10 +94,10 @@ test__CreateDistributedSnapshot(void **state)
 	/* perform all the validations */
 	assert_true(ds.xminAllDistributedSnapshots == 5);
 	assert_true(ds.xmin == 10);
-	assert_true(ds.xmax == 30);
-	assert_true(ds.count == 2);
+	/* xmax should be latestCompletedGxid+1 */
+	assert_true(ds.xmax == 25);
+	assert_true(ds.count == 1);
 	assert_true(ds.inProgressXidArray[0] == 10);
-	assert_true(ds.inProgressXidArray[1] == 30);
 	assert_true(MyTmGxact->xminDistributedSnapshot == 10);
 
 	/*************************************************************************
@@ -123,13 +123,12 @@ test__CreateDistributedSnapshot(void **state)
 	/* perform all the validations */
 	assert_true(ds.xminAllDistributedSnapshots == 5);
 	assert_true(ds.xmin == 7);
-	assert_true(ds.xmax == 30);
-	assert_true(ds.count == 4);
+	assert_true(ds.xmax == 25);
+	assert_true(ds.count == 3);
 	assert_true(MyTmGxact->xminDistributedSnapshot == 7);
 	assert_true(ds.inProgressXidArray[0] == 7);
 	assert_true(ds.inProgressXidArray[1] == 10);
 	assert_true(ds.inProgressXidArray[2] == 15);
-	assert_true(ds.inProgressXidArray[3] == 30);
 
 	free(ds.inProgressXidArray);
 	free(allTmGxact);

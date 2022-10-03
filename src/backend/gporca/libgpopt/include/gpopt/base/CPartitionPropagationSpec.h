@@ -75,6 +75,28 @@ private:
 			CRefCount::SafeRelease(m_filter_expr);
 		}
 
+		// hash function
+		ULONG
+		HashValue() const
+		{
+			ULONG ulHash = m_root_rel_mdid->HashValue();
+
+			ulHash =
+				gpos::CombineHashes(ulHash, gpos::HashValue<ULONG>(&m_scan_id));
+			if (m_selector_ids)
+			{
+				ulHash = gpos::CombineHashes(
+					ulHash, gpos::HashPtr<CBitSet>(m_selector_ids));
+			}
+			if (m_filter_expr)
+			{
+				ulHash = gpos::CombineHashes(
+					ulHash, CExpression::HashValue(m_filter_expr));
+			}
+
+			return ulHash;
+		}
+
 		IOstream &OsPrint(IOstream &os) const;
 
 		// used for determining equality in memo (e.g in optimization contexts)
@@ -86,11 +108,18 @@ private:
 		static INT CmpFunc(const void *val1, const void *val2);
 	};
 
-	using SPartPropSpecInfoArray =
-		CDynamicPtrArray<SPartPropSpecInfo, CleanupRelease>;
-
 	// partition required/derived info, sorted by scanid
-	SPartPropSpecInfoArray *m_part_prop_spec_infos = nullptr;
+	using UlongToSPartPropSpecInfoMap =
+		CHashMap<ULONG, SPartPropSpecInfo, gpos::HashValue<ULONG>,
+				 gpos::Equals<ULONG>, CleanupDelete<ULONG>,
+				 CleanupRelease<SPartPropSpecInfo>>;
+
+	using UlongToSPartPropSpecInfoMapIter =
+		CHashMapIter<ULONG, SPartPropSpecInfo, gpos::HashValue<ULONG>,
+					 gpos::Equals<ULONG>, CleanupDelete<ULONG>,
+					 CleanupRelease<SPartPropSpecInfo>>;
+
+	UlongToSPartPropSpecInfoMap *m_part_prop_spec_infos = nullptr;
 
 	// Present scanids (for easy lookup)
 	CBitSet *m_scan_ids = nullptr;
@@ -113,8 +142,16 @@ public:
 	ULONG
 	HashValue() const override
 	{
-		// GPDB_12_MERGE_FIXME: Implement this, even if it's unused
-		GPOS_RTL_ASSERT(!"Unused");
+		ULONG ulHash = 0;
+
+		UlongToSPartPropSpecInfoMapIter hmulpi(m_part_prop_spec_infos);
+		while (hmulpi.Advance())
+		{
+			const SPartPropSpecInfo *info = hmulpi.Value();
+			ulHash = gpos::CombineHashes(ulHash, info->HashValue());
+		}
+
+		return ulHash;
 	}
 
 	// extract columns used by the partition propagation spec

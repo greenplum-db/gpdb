@@ -1215,6 +1215,7 @@ RelationBuildDesc(Oid targetRelId, bool insertIt)
 		case RELKIND_RELATION:
 		case RELKIND_TOASTVALUE:
 		case RELKIND_MATVIEW:
+		case RELKIND_PARTITIONED_TABLE:
 			Assert(relation->rd_rel->relam != InvalidOid);
 			RelationInitTableAccessMethod(relation);
 			break;
@@ -1225,7 +1226,6 @@ RelationBuildDesc(Oid targetRelId, bool insertIt)
 		case RELKIND_VIEW:
 		case RELKIND_COMPOSITE_TYPE:
 		case RELKIND_FOREIGN_TABLE:
-		case RELKIND_PARTITIONED_TABLE:
 			Assert(relation->rd_rel->relam == InvalidOid);
 			break;
 		case RELKIND_AOSEGMENTS:

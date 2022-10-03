@@ -895,6 +895,7 @@ makePartitionCreateStmt(Relation parentrel, char *partname, PartitionBoundSpec *
 	childstmt->tablespacename = elem->tablespacename ? pstrdup(elem->tablespacename) : NULL;
 	childstmt->accessMethod = elem->accessMethod ? pstrdup(elem->accessMethod) : NULL;
 	childstmt->if_not_exists = false;
+	childstmt->gp_style_alter_part = true;
 	childstmt->distributedBy = make_distributedby_for_rel(parentrel);
 	childstmt->partitionBy = NULL;
 	childstmt->relKind = 0;

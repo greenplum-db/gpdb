@@ -260,7 +260,8 @@ CTranslatorDXLToPlStmt::GetPlannedStmtFromDXL(const CDXLNode *dxlnode,
 		}
 	}
 
-	if (CMD_INSERT == m_cmd_type && planned_stmt->numSlices == 1 &&
+	if ((CMD_INSERT == m_cmd_type || CMD_DELETE == m_cmd_type) &&
+		planned_stmt->numSlices == 1 &&
 		dxlnode->GetOperator()->GetDXLOperator() == EdxlopPhysicalDML)
 	{
 		CDXLPhysicalDML *phy_dml_dxlop =
@@ -2996,14 +2997,16 @@ CTranslatorDXLToPlStmt::TranslateDXLSort(
 	const CDXLNode *sort_dxlnode, CDXLTranslateContext *output_context,
 	CDXLTranslationContextArray *ctxt_translation_prev_siblings)
 {
+	// Ensure operator of sort_dxlnode exists and is EdxlopPhysicalSort
+	CDXLOperator *sort_dxlop = sort_dxlnode->GetOperator();
+	GPOS_ASSERT(nullptr != sort_dxlop);
+	GPOS_ASSERT(EdxlopPhysicalSort == sort_dxlop->GetDXLOperator());
+
 	// create sort plan node
 	Sort *sort = MakeNode(Sort);
 
 	Plan *plan = &(sort->plan);
 	plan->plan_node_id = m_dxl_to_plstmt_context->GetNextPlanId();
-
-	CDXLPhysicalSort *sort_dxlop =
-		CDXLPhysicalSort::Cast(sort_dxlnode->GetOperator());
 
 	// translate operator costs
 	TranslatePlanCosts(sort_dxlnode, plan);
@@ -3030,9 +3033,6 @@ CTranslatorDXLToPlStmt::TranslateDXLSort(
 							   output_context);
 
 	plan->lefttree = child_plan;
-
-	// set sorting info
-	sort->noduplicates = sort_dxlop->FDiscardDuplicates();
 
 	// translate sorting columns
 
@@ -4197,6 +4197,15 @@ CTranslatorDXLToPlStmt::TranslateDXLDml(
 
 	IMDId *mdid_target_table = phy_dml_dxlop->GetDXLTableDescr()->MDId();
 	const IMDRelation *md_rel = m_md_accessor->RetrieveRel(mdid_target_table);
+
+	if (md_rel->IsPartitioned())
+	{
+		dml->forceTupleRouting = true;
+	}
+	else
+	{
+		dml->forceTupleRouting = false;
+	}
 
 	if (IMDRelation::EreldistrMasterOnly != md_rel->GetRelDistribution())
 	{

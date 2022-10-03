@@ -54,5 +54,6 @@ extern bool IsSubqueryMultiLevelCorrelated(Query *sq);
 extern List *generate_subquery_vars(PlannerInfo *root, List *tlist,
 					   Index varno);
 extern bool QueryHasDistributedRelation(Query *q, bool recursive);
+extern bool contain_outer_selfref(Node *node);
 
 #endif							/* SUBSELECT_H */

@@ -37,7 +37,7 @@ The following Greenplum Database variables are available for use in OS commands 
 |$GP\_USER|The database user running the external table statement.|
 |$GP\_XID|The transaction ID of the external table statement.|
 
--   **[Disabling EXECUTE for Web or Writable External Tables](../../load/topics/g-disabling-execute-for-web-or-writable-external-tables.html)**  
+-   **[Deactivating EXECUTE for Web or Writable External Tables](../../load/topics/g-disabling-execute-for-web-or-writable-external-tables.html)**  
 
 
 **Parent topic:** [Unloading Data from Greenplum Database](../../load/topics/g-unloading-data-from-greenplum-database.html)

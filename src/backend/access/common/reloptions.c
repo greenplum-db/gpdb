@@ -630,7 +630,8 @@ add_reloption(relopt_gen *newoption)
  *		(for types other than string)
  */
 static relopt_gen *
-allocate_reloption(bits32 kinds, int type, const char *name, const char *desc)
+allocate_reloption(bits32 kinds, int type, const char *name, const char *desc,
+				   LOCKMODE lockmode)
 {
 	MemoryContext oldcxt;
 	size_t		size;
@@ -667,6 +668,7 @@ allocate_reloption(bits32 kinds, int type, const char *name, const char *desc)
 	newoption->kinds = kinds;
 	newoption->namelen = strlen(name);
 	newoption->type = type;
+	newoption->lockmode = lockmode;
 
 	MemoryContextSwitchTo(oldcxt);
 
@@ -674,35 +676,17 @@ allocate_reloption(bits32 kinds, int type, const char *name, const char *desc)
 }
 
 /*
- * GPDB: the add_*_reloption() functions don't take 'lockmode' argument,but
- * we need to set it correctly for the GPDB-specific options. So use this
- * to set it after calling add_*_reloption() function.
- */
-void
-set_reloption_lockmode(const char *name, LOCKMODE lockmode)
-{
-	for (int i = num_custom_options - 1; i >= 0; i--)
-	{
-		if (strcmp(custom_options[i]->name, name) == 0)
-		{
-			custom_options[i]->lockmode = lockmode;
-			return;
-		}
-	}
-	elog(ERROR, "could not find reloption \"%s\"", name);
-}
-
-/*
  * add_bool_reloption
  *		Add a new boolean reloption
  */
 void
-add_bool_reloption(bits32 kinds, const char *name, const char *desc, bool default_val)
+add_bool_reloption(bits32 kinds, const char *name, const char *desc,
+				   bool default_val, LOCKMODE lockmode)
 {
 	relopt_bool *newoption;
 
 	newoption = (relopt_bool *) allocate_reloption(kinds, RELOPT_TYPE_BOOL,
-												   name, desc);
+												   name, desc, lockmode);
 	newoption->default_val = default_val;
 
 	add_reloption((relopt_gen *) newoption);
@@ -714,12 +698,12 @@ add_bool_reloption(bits32 kinds, const char *name, const char *desc, bool defaul
  */
 void
 add_int_reloption(bits32 kinds, const char *name, const char *desc, int default_val,
-				  int min_val, int max_val)
+				  int min_val, int max_val, LOCKMODE lockmode)
 {
 	relopt_int *newoption;
 
 	newoption = (relopt_int *) allocate_reloption(kinds, RELOPT_TYPE_INT,
-												  name, desc);
+												  name, desc, lockmode);
 	newoption->default_val = default_val;
 	newoption->min = min_val;
 	newoption->max = max_val;
@@ -732,13 +716,14 @@ add_int_reloption(bits32 kinds, const char *name, const char *desc, int default_
  *		Add a new float reloption
  */
 void
-add_real_reloption(bits32 kinds, const char *name, const char *desc, double default_val,
-				   double min_val, double max_val)
+add_real_reloption(bits32 kinds, const char *name, const char *desc,
+				   double default_val, double min_val, double max_val,
+				   LOCKMODE lockmode)
 {
 	relopt_real *newoption;
 
 	newoption = (relopt_real *) allocate_reloption(kinds, RELOPT_TYPE_REAL,
-												   name, desc);
+												   name, desc, lockmode);
 	newoption->default_val = default_val;
 	newoption->min = min_val;
 	newoption->max = max_val;
@@ -756,8 +741,9 @@ add_real_reloption(bits32 kinds, const char *name, const char *desc, double defa
  * the validation.
  */
 void
-add_string_reloption(bits32 kinds, const char *name, const char *desc, const char *default_val,
-					 validate_string_relopt validator)
+add_string_reloption(bits32 kinds, const char *name, const char *desc,
+					 const char *default_val, validate_string_relopt validator,
+					 LOCKMODE lockmode)
 {
 	relopt_string *newoption;
 
@@ -766,7 +752,7 @@ add_string_reloption(bits32 kinds, const char *name, const char *desc, const cha
 		(validator) (default_val);
 
 	newoption = (relopt_string *) allocate_reloption(kinds, RELOPT_TYPE_STRING,
-													 name, desc);
+													 name, desc, lockmode);
 	newoption->validate_cb = validator;
 	if (default_val)
 	{
@@ -1527,12 +1513,11 @@ heap_reloptions(char relkind, Datum reloptions, bool validate)
 										  RELOPT_KIND_HEAP);
 		case RELKIND_PARTITIONED_TABLE:
 			/*
-			 * GPDB_12_AFTER_MERGE_FIXME: should we accept AO-related options for
-			 * partitioned tables? A partitioned table has no data, but the options
-			 * might be inherited by partitions.
+			 * GPDB: we maintain reloptions for partition roots to support reloption
+			 * inheritance and hierarchy wide ALTER TABLE SET().
 			 */
 			return default_reloptions(reloptions, validate,
-									  RELOPT_KIND_PARTITIONED);
+									  RELOPT_KIND_HEAP);
 		default:
 			/* other relkinds are not supported */
 			return NULL;

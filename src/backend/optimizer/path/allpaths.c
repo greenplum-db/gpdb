@@ -43,6 +43,7 @@
 #include "optimizer/planmain.h"
 #include "optimizer/planner.h"
 #include "optimizer/restrictinfo.h"
+#include "optimizer/subselect.h"
 #include "optimizer/tlist.h"
 #include "optimizer/planshare.h"
 #include "parser/parse_clause.h"
@@ -59,7 +60,6 @@
 
 // TODO: these planner gucs need to be refactored into PlannerConfig.
 bool		gp_enable_sort_limit = false;
-bool		gp_enable_sort_distinct = false;
 
 /* results of subquery_is_pushdown_safe */
 typedef struct pushdown_safety_info
@@ -560,7 +560,7 @@ bring_to_outer_query(PlannerInfo *root, RelOptInfo *rel, List *outer_quals)
 															  path,
 															  path->parent->reltarget,
 															  outer_quals,
-															  false);
+															  true);
 		add_path(rel, path);
 	}
 	set_cheapest(rel);
@@ -2944,6 +2944,13 @@ set_cte_pathlist(PlannerInfo *root, RelOptInfo *rel, RangeTblEntry *rte)
 			is_shared =  root->config->gp_cte_sharing && (cte->cterefcount > 1 || contain_volatile_function);
 
 	}
+
+	/*
+	 * since shareinputscan with outer refs is not supported by GPDB, if
+	 * contain outer self references, the cte need to be inlined.
+	 */
+	if (is_shared && contain_outer_selfref(cte->ctequery))
+		is_shared = false;
 
 	if (!is_shared)
 	{

@@ -619,11 +619,14 @@ rollback;
 -- @description union_update_test28: Negative Tests Update the partition key to an out of dml_union_range value with no default partition
 begin;
 DROP TABLE dml_union_s_1_prt_def;
+-- GPDB_12_MERGE_FIXME: This test case is flaky, ERROR:  expected partdefid 134733, but got 0 (partdesc.c:194)
+set optimizer=off;
 SELECT COUNT(DISTINCT(d)) FROM dml_union_s;
 UPDATE dml_union_s SET d = (SELECT NULL EXCEPT SELECT NULL)::numeric; 
 --SELECT DISTINCT(d) FROM dml_union_s;
 --SELECT COUNT(DISTINCT(d)) FROM dml_union_s;
 rollback;
+reset optimizer;
 
 -- @description union_update_test29: Negative Tests  UPDATE violates the CHECK constraint on the column
 SELECT COUNT(DISTINCT(b)) FROM dml_union_s;

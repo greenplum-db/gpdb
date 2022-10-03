@@ -59,7 +59,7 @@ Collect storage root cause analysis artifacts for primary segment with contentid
 gpmt storage_rca_collector -db postgres -c 0,1 -t test_table
 ```
 
-Collect storage root cause analysis artifacts for primary segment with contentid [0,1], database `postgres`, and table `test_table`, with prompt disabled:
+Collect storage root cause analysis artifacts for primary segment with contentid [0,1], database `postgres`, and table `test_table`, with prompt deactivated:
 
 ```
 gpmt storage_rca_collector -db postgres -c 0,1 -t test_table -a

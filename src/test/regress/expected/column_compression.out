@@ -1110,7 +1110,11 @@ execute ccddlcheck;
  ccddl_1_prt_p2_2_prt_sp1 |      2 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
  ccddl_1_prt_p2_2_prt_sp1 |      3 | {compresstype=zlib,compresslevel=1,blocksize=32768}
  ccddl_1_prt_p2_2_prt_sp1 |      4 | {compresstype=zlib,compresslevel=1,blocksize=32768}
-(8 rows)
+ ccddl_1_prt_p3_2_prt_sp1 |      1 | {compresstype=none,blocksize=32768,compresslevel=0}
+ ccddl_1_prt_p3_2_prt_sp1 |      2 | {compresstype=none,blocksize=32768,compresslevel=0}
+ ccddl_1_prt_p3_2_prt_sp1 |      3 | {compresstype=none,blocksize=32768,compresslevel=0}
+ ccddl_1_prt_p3_2_prt_sp1 |      4 | {compresstype=none,blocksize=32768,compresslevel=0}
+(12 rows)
 
 drop table ccddl;
 -- Make sure the AO/CO case didn't screw up the non CO case

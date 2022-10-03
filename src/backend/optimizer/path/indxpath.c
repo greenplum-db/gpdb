@@ -24,7 +24,6 @@
 #include "catalog/pg_am.h"
 #include "catalog/pg_operator.h"
 #include "catalog/pg_opfamily.h"
-#include "catalog/pg_proc.h"
 #include "catalog/pg_type.h"
 #include "nodes/makefuncs.h"
 #include "nodes/nodeFuncs.h"
@@ -811,19 +810,13 @@ get_index_paths(PlannerInfo *root, RelOptInfo *rel,
 		 * are no straight forward solutions though.
 		 */
 		if (index->amhasgettuple &&
-				((rel->amhandler != AO_ROW_TABLE_AM_HANDLER_OID &&
-				 rel->amhandler != AO_COLUMN_TABLE_AM_HANDLER_OID) ||
+				((rel->relam != AO_ROW_TABLE_AM_OID &&
+				 rel->relam != AO_COLUMN_TABLE_AM_OID) ||
 				 index->amcostestimate == bmcostestimate))
 			add_path(rel, (Path *) ipath);
 
 		if (index->amhasgetbitmap &&
-			/* GPDB: Give a chance of bitmap index path if seqscan is disabled.
-			 * GPDB_92_MERGE_FIXME: Maybe we should remove this check to follow
-			 * pg upstream? test co_nestloop_idxscan output will diff with and
-			 * without this line.
-			 */
-			(!enable_seqscan ||
-			 ipath->path.pathkeys == NIL ||
+			(ipath->path.pathkeys == NIL ||
 			 ipath->indexselectivity < 1.0))
 			*bitindexpaths = lappend(*bitindexpaths, ipath);
 	}

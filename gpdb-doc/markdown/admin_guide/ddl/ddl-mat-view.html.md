@@ -44,7 +44,7 @@ CREATE MATERIALIZED VIEW us_users AS SELECT u.id, u.name, a.zone FROM users u, a
 
 If a materialized view query contains an `ORDER BY` or `SORT` clause, the clause is ignored when a `SELECT` is performed on the materialized query.
 
-## <a id="topic_vwd_zy5_kjb"></a>Refreshing or Disabling Materialized Views 
+## <a id="topic_vwd_zy5_kjb"></a>Refreshing or Deactivating Materialized Views 
 
 The `REFRESH MATERIALIZED VIEW` command updates the materialized view data.
 

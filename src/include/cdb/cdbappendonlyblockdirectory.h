@@ -23,10 +23,21 @@
 extern int gp_blockdirectory_entry_min_range;
 extern int gp_blockdirectory_minipage_size;
 
+/*
+ * In-memory equivalent of on-disk data structure MinipageEntry, used to
+ * represent a block directory entry.
+ */
 typedef struct AppendOnlyBlockDirectoryEntry
 {
 	/*
-	 * The range of blocks covered by the Block Directory entry.
+	 * The range of blocks covered by the Block Directory entry, which is the
+	 * continuous range [firstRowNum, lastRowNum]. There are no gaps (or holes)
+	 * within this range. However, there may be gaps between successive block
+	 * directory entries. For e.g. entry0 could have range [1,50] and entry1
+	 * could have: [100,150]. The reason gaps arise between successive entries
+	 * is that we allocate row numbers using the gp_fastsequence mechanism,
+	 * which allocates blocks of row numbers of a pre-determined size (that may
+	 * be larger than the number of blocks being inserted)
 	 */
 	struct range
 	{
@@ -126,6 +137,12 @@ typedef struct AppendOnlyBlockDirectory
 
 typedef struct AOFetchBlockMetadata
 {
+	/*
+	 * Current cached block directory entry.
+	 * FIXME: At times, we rely upon the values in this struct to be valid even
+	 * when AOFetchBlockMetadata->valid = false. This indicates that this should
+	 * live elsewhere.
+	 */
 	AppendOnlyBlockDirectoryEntry blockDirectoryEntry;
 
 	/*
@@ -141,9 +158,6 @@ typedef struct AOFetchBlockMetadata
 	
 	int64 firstRowNum;
 	int64 lastRowNum;
-	
-	bool isCompressed;
-	bool isLargeContent;
 	
 	bool		gotContents;
 } AOFetchBlockMetadata;

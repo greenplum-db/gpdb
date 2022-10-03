@@ -730,7 +730,7 @@ Greenplum Database is based on PostgreSQL 9.4. To support the distributed nature
 </tr>
 <tr class="row">
 <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">LISTEN</code></td>
-<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 "><strong class="ph b">NO</strong></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 "><strong class="ph b">YES</strong></td>
 <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
 </tr>
 <tr class="row">
@@ -750,7 +750,7 @@ Greenplum Database is based on PostgreSQL 9.4. To support the distributed nature
 </tr>
 <tr class="row">
 <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">NOTIFY</code></td>
-<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 "><strong class="ph b">NO</strong></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 "><strong class="ph b">YES</strong></td>
 <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
 </tr>
 <tr class="row">
@@ -889,7 +889,7 @@ Greenplum Database is based on PostgreSQL 9.4. To support the distributed nature
 </tr>
 <tr class="row">
 <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e602 "><code class="ph codeph">UNLISTEN</code></td>
-<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 "><strong class="ph b">NO</strong></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d119146e605 "><strong class="ph b">YES</strong></td>
 <td class="entry cell-norowborder" style="vertical-align:top;" headers="d119146e608 "> </td>
 </tr>
 <tr class="row">

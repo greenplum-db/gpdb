@@ -69,12 +69,10 @@ DROP DATABASE IF EXISTS "funny""db'with\\quotes";
 reset client_min_messages;
 CREATE DATABASE "funny""db'with\\quotes";
 ALTER DATABASE "funny""db'with\\quotes" SET search_path="funny""schema'with\\quotes";
--- GPDB_91_MERGE_FIXME: It would be good to leave the database in place, to
--- also test gpcheckcat and pg_upgrade after all the regression tests have
--- completed. As of this writing pg_upgrade does not in fact handle that well.
--- Remove this DROP DATABASE once it's fixed. That should happen when we
--- reach commit a2385cac13, which was backported to PostgreSQL 9.1.
-DROP DATABASE "funny""db'with\\quotes";
+-- test if we can connect using dbconn
+\! python3 test_dbconn.py 0
+-- Leave the database in place, to also test gpcheckcat and pg_upgrade after
+-- all the regression tests have completed.
 -- set_config() used to have quoting problems as well when dispatching to
 -- segments.
 CREATE TABLE IF NOT EXISTS should_be_visible();

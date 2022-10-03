@@ -1,0 +1,85 @@
+-- Test that gp_switch_wal() returns back WAL segment filenames
+-- constructed on the individual segments so that their timeline ids are
+-- used instead of each result having the same timeline id.
+
+-- timeline ids prior to failover/failback should all be 1 due to the
+-- test requirement of having a fresh gpdemo cluster with mirrors
+SELECT gp_segment_id, substring(pg_walfile_name, 1, 8) FROM gp_switch_wal() ORDER BY gp_segment_id;
+ gp_segment_id | substring 
+---------------+-----------
+ -1            | 00000001  
+ 0             | 00000001  
+ 1             | 00000001  
+ 2             | 00000001  
+(4 rows)
+
+-- stop a primary in order to trigger a mirror promotion
+SELECT pg_ctl((SELECT datadir FROM gp_segment_configuration WHERE role = 'p' AND content = 1), 'stop');
+ pg_ctl 
+--------
+ OK     
+(1 row)
+
+-- trigger failover
+select gp_request_fts_probe_scan();
+ gp_request_fts_probe_scan 
+---------------------------
+ t                         
+(1 row)
+
+-- wait for content 1 (earlier mirror, now primary) to finish the promotion
+0U: SELECT 1;
+ ?column? 
+----------
+ 1        
+(1 row)
+
+-- recover the failed primary as new mirror
+!\retcode gprecoverseg -a --no-progress;
+(exited with code 0)
+
+-- loop while segments come in sync
+SELECT wait_until_all_segments_synchronized();
+ wait_until_all_segments_synchronized 
+--------------------------------------
+ OK                                   
+(1 row)
+
+-- rebalance back
+!\retcode gprecoverseg -ar --no-progress;
+(exited with code 0)
+
+-- loop while segments come in sync
+SELECT wait_until_all_segments_synchronized();
+ wait_until_all_segments_synchronized 
+--------------------------------------
+ OK                                   
+(1 row)
+
+-- test that gp_switch_wal() uses the segment-specific timeline id to construct each WAL filename
+SELECT gp_segment_id, substring(pg_walfile_name, 1, 8) FROM gp_switch_wal() ORDER BY gp_segment_id;
+ gp_segment_id | substring 
+---------------+-----------
+ -1            | 00000001  
+ 0             | 00000001  
+ 1             | 00000003  
+ 2             | 00000001  
+(4 rows)
+
+-- test simple gp_switch_wal() error scenarios
+SELECT gp_switch_wal() FROM gp_dist_random('gp_id');
+ERROR:  function with EXECUTE ON restrictions cannot be used in the SELECT list of a query with FROM
+
+CREATE TABLE this_ctas_should_fail AS SELECT gp_segment_id AS contentid, pg_switch_wal, pg_walfile_name FROM gp_switch_wal();
+ERROR:  cannot use gp_switch_wal() when not in QD mode (xlogfuncs_gp.c:LINE_NUM)
+
+CREATE ROLE switch_wal_error_role;
+CREATE
+SET ROLE TO switch_wal_error_role;
+SET
+SELECT * FROM gp_switch_wal();
+ERROR:  permission denied for function gp_switch_wal
+RESET ROLE;
+RESET
+DROP ROLE switch_wal_error_role;
+DROP

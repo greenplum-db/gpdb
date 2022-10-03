@@ -231,7 +231,7 @@ Datum pg_exttable(PG_FUNCTION_ARGS)
 		TupleDescInitEntry(tupdesc, (AttrNumber) 7, "command", TEXTOID, -1, 0);
 		TupleDescInitEntry(tupdesc, (AttrNumber) 8, "rejectlimit", INT4OID, -1, 0);
 		TupleDescInitEntry(tupdesc, (AttrNumber) 9, "rejectlimittype", CHAROID, -1, 0);
-		TupleDescInitEntry(tupdesc, (AttrNumber) 10, "logerrors", CHAROID, -1, 0);
+		TupleDescInitEntry(tupdesc, (AttrNumber) 10, "logerrors", BOOLOID, -1, 0);
 		TupleDescInitEntry(tupdesc, (AttrNumber) 11, "encoding", INT4OID, -1, 0);
 		TupleDescInitEntry(tupdesc, (AttrNumber) 12, "writable", BOOLOID, -1, 0);
 
@@ -344,8 +344,15 @@ Datum pg_exttable(PG_FUNCTION_ARGS)
 			nulls[8] = true;
 
 		/* logerrors */
-		values[9] = CharGetDatum(extentry->logerrors);
-
+		if IS_LOG_TO_FILE(extentry->logerrors)
+		{
+			values[9] = BoolGetDatum(true);
+		}
+		else
+		{
+			values[9] = BoolGetDatum(false);
+		}
+		
 		/* encoding */
 		values[10] = Int32GetDatum(extentry->encoding);
 

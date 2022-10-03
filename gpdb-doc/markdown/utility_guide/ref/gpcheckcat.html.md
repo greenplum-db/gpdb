@@ -116,7 +116,7 @@ Catalog inconsistencies are inconsistencies that occur between Greenplum Databas
 -S \{none \| only\}
 :   Specify this option to control the testing of catalog tables that are shared across all databases in the Greenplum Database installation, such as *pg\_database*.
 
-:   The value `none` disables testing of shared catalog tables. The value `only` tests only the shared catalog tables.
+:   The value `none` deactivates testing of shared catalog tables. The value `only` tests only the shared catalog tables.
 
 -U user\_name
 :   The user connecting to Greenplum Database.

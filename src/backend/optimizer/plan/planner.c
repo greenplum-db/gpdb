@@ -8511,20 +8511,28 @@ make_new_rollups_for_hash_grouping_set(PlannerInfo        *root,
 		RollupData *rollup = lfirst_node(RollupData, lc);
 
 		/*
+		 * If there are any empty grouping sets and all non-empty grouping
+		 * sets are unsortable, there will be a rollup containing only
+		 * empty groups. We handle those specially below.
+		 * Note: This case only holds when path is equal to null.
+		 */
+		if (rollup->groupClause == NIL)
+		{
+			unhashed_rollup = rollup;
+			break;
+		}
+
+		/*
 		 * If we find an unhashable rollup that's not been skipped by the
 		 * "actually sorted" check above, we can't cope; we'd need sorted
 		 * input (with a different sort order) but we can't get that here.
 		 * So bail out; we'll get a valid path from the is_sorted case
 		 * instead.
-		 *
-		 * The mere presence of empty grouping sets doesn't make a rollup
-		 * unhashable (see preprocess_grouping_sets), we handle those
-		 * specially below.
 		 */
 		if (!rollup->hashable)
 			return NULL;
-		else
-			sets_data = list_concat(sets_data, list_copy(rollup->gsets_data));
+
+		sets_data = list_concat(sets_data, list_copy(rollup->gsets_data));
 	}
 	foreach(lc, sets_data)
 	{

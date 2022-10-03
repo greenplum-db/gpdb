@@ -561,6 +561,19 @@ Feature: gpcheckcat tests
         Then gpcheckcat should return a return code of 3
         And the user runs "dropdb mis_attr_db"
 
+    Scenario: gpcheckcat should not report dependency error from pg_default_acl
+        Given database "check_dependency_error" is dropped and recreated
+        And the user runs "psql -d check_dependency_error -c "CREATE ROLE foo; ALTER DEFAULT PRIVILEGES FOR ROLE foo REVOKE EXECUTE ON FUNCTIONS FROM PUBLIC;""
+        Then psql should return a return code of 0
+        When the user runs "gpcheckcat check_dependency_error"
+        Then gpcheckcat should return a return code of 0
+        And gpcheckcat should not print "SUMMARY REPORT: FAILED" to stdout
+        And gpcheckcat should not print "has a dependency issue on oid" to stdout
+        And gpcheckcat should print "Found no catalog issue" to stdout
+        And the user runs "dropdb check_dependency_error"
+        And the user runs "psql -c "DROP ROLE foo""
+
+
 ########################### @concourse_cluster tests ###########################
 # The @concourse_cluster tag denotes the scenario that requires a remote cluster
 

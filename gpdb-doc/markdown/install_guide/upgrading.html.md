@@ -43,7 +43,7 @@ An upgrade from Greenplum Database 6.x to a newer 6.x release involves stopping 
     $ su - gpadmin
     ```
 
-2.  Perform a smart shutdown of your Greenplum Database 6.x system \(there can be no active connections to the database\). This example uses the `-a` option to disable confirmation prompts:
+2.  Perform a smart shutdown of your Greenplum Database 6.x system \(there can be no active connections to the database\). This example uses the `-a` option to deactivate confirmation prompts:
 
     ```
     $ gpstop -a

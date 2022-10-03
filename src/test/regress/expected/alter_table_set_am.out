@@ -1,31 +1,51 @@
 -- Check changing table access method
--- Scenario 1: Heap to Heap
-CREATE TABLE heap2heap(a int, b int) DISTRIBUTED BY (a);
-CREATE TABLE heap2heap2(a int, b int) DISTRIBUTED BY (a);
-INSERT INTO heap2heap SELECT i,i FROM generate_series(1,5) i;
-INSERT INTO heap2heap2 SELECT i,i FROM generate_series(1,5) i;
-CREATE TEMP TABLE relfilebeforeheap AS
-    SELECT -1 segid, relfilenode FROM pg_class WHERE relname in ('heap2heap', 'heap2heap2')
+-- Scenario 1: Changing to the same AM: it should have no effect but
+-- make sure it doesn't rewrite table or blow up existing reloptions:
+CREATE TABLE sameam_heap(a int, b int) WITH (fillfactor=70) DISTRIBUTED BY (a);
+CREATE TABLE sameam_heap2(a int, b int) WITH (fillfactor=70) DISTRIBUTED BY (a);
+CREATE TABLE sameam_ao(a int, b int) WITH (appendoptimized=true, orientation=row, compresstype=zlib, compresslevel=3);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE TABLE sameam_co(a int, b int) WITH (appendoptimized=true, orientation=column, compresstype=rle_type, compresslevel=3);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+INSERT INTO sameam_heap SELECT i,i FROM generate_series(1,5) i;
+INSERT INTO sameam_heap2 SELECT i,i FROM generate_series(1,5) i;
+INSERT INTO sameam_ao SELECT i,i FROM generate_series(1,5) i;
+INSERT INTO sameam_co SELECT i,i FROM generate_series(1,5) i;
+CREATE TEMP TABLE relfilebeforesameam AS
+    SELECT -1 segid, relfilenode FROM pg_class WHERE relname LIKE 'sameam_%'
     UNION SELECT gp_segment_id segid, relfilenode FROM gp_dist_random('pg_class')
-    WHERE relname in ('heap2heap', 'heap2heap2') ORDER BY segid;
+    WHERE relname LIKE 'sameam_%' ORDER BY segid;
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'segid' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 -- changing to the same access method shouldn't rewrite the table
 -- (i.e. the relfilenodes shouldn't change)
-ALTER TABLE heap2heap SET ACCESS METHOD heap;
-ALTER TABLE heap2heap2 SET WITH (appendoptimized=false);
-CREATE TEMP TABLE relfileafterheap AS
-    SELECT -1 segid, relfilenode FROM pg_class WHERE relname in ('heap2heap', 'heap2heap2')
+ALTER TABLE sameam_heap SET ACCESS METHOD heap;
+ALTER TABLE sameam_heap2 SET WITH (appendoptimized=false); -- Alternative syntax of ATSETAM
+ALTER TABLE sameam_ao SET ACCESS METHOD ao_row;
+ALTER TABLE sameam_co SET ACCESS METHOD ao_column;
+CREATE TEMP TABLE relfileaftersameam AS
+    SELECT -1 segid, relfilenode FROM pg_class WHERE relname LIKE 'sameam_%'
     UNION SELECT gp_segment_id segid, relfilenode FROM gp_dist_random('pg_class')
-    WHERE relname in ('heap2heap', 'heap2heap2') ORDER BY segid;
+    WHERE relname LIKE 'sameam_%' ORDER BY segid;
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'segid' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 -- relfilenodes shouldn't change
-SELECT count(*) FROM (SELECT * FROM relfilebeforeheap UNION SELECT * FROM relfileafterheap)a;
- count 
--------
-     8
-(1 row)
+SELECT * FROM relfilebeforesameam EXCEPT SELECT * FROM relfileaftersameam;
+ segid | relfilenode 
+-------+-------------
+(0 rows)
+
+-- reloptions should remain the same
+SELECT relname, reloptions FROM pg_class WHERE relname LIKE 'sameam_%';
+   relname    |               reloptions                
+--------------+-----------------------------------------
+ sameam_ao    | {compresstype=zlib,compresslevel=3}
+ sameam_co    | {compresstype=rle_type,compresslevel=3}
+ sameam_heap  | {fillfactor=70}
+ sameam_heap2 | {fillfactor=70}
+(4 rows)
 
 -- Scenario 2: Heap to AO
 CREATE TABLE heap2ao(a int, b int) WITH (fillfactor=70) DISTRIBUTED BY (a);
@@ -121,9 +141,9 @@ SELECT * FROM relfilebeforeao INTERSECT SELECT * FROM relfileafterao;
 SELECT * FROM gp_toolkit.__gp_aoseg('heap2ao');
  segment_id | segno | eof | tupcount | varblockcount | eof_uncompressed | modcount | formatversion | state 
 ------------+-------+-----+----------+---------------+------------------+----------+---------------+-------
-          2 |     0 |  40 |        1 |             1 |               40 |        1 |             3 |     1
-          0 |     0 |  72 |        3 |             1 |               88 |        1 |             3 |     1
-          1 |     0 |  40 |        1 |             1 |               40 |        1 |             3 |     1
+          2 |     0 |  40 |        1 |             1 |               40 |        1 |             4 |     1
+          0 |     0 |  72 |        3 |             1 |               88 |        1 |             4 |     1
+          1 |     0 |  40 |        1 |             1 |               40 |        1 |             4 |     1
 (3 rows)
 
 SELECT gp_segment_id, (gp_toolkit.__gp_aovisimap('heap2ao')).* FROM gp_dist_random('gp_id');
@@ -142,9 +162,9 @@ SELECT gp_segment_id, (gp_toolkit.__gp_aoblkdir('heap2ao')).* FROM gp_dist_rando
 SELECT * FROM gp_toolkit.__gp_aoseg('heap2ao2');
  segment_id | segno | eof | tupcount | varblockcount | eof_uncompressed | modcount | formatversion | state 
 ------------+-------+-----+----------+---------------+------------------+----------+---------------+-------
-          1 |     0 |  40 |        1 |             1 |               40 |        1 |             3 |     1
-          2 |     0 |  40 |        1 |             1 |               40 |        1 |             3 |     1
-          0 |     0 |  72 |        3 |             1 |               88 |        1 |             3 |     1
+          1 |     0 |  40 |        1 |             1 |               40 |        1 |             4 |     1
+          2 |     0 |  40 |        1 |             1 |               40 |        1 |             4 |     1
+          0 |     0 |  72 |        3 |             1 |               88 |        1 |             4 |     1
 (3 rows)
 
 SELECT gp_segment_id, (gp_toolkit.__gp_aovisimap('heap2ao2')).* FROM gp_dist_random('gp_id');
@@ -294,9 +314,9 @@ SELECT count(*) FROM (SELECT * FROM inheritchildrelfilebefore UNION SELECT * FRO
 SELECT * FROM gp_toolkit.__gp_aoseg('heapbase');
  segment_id | segno | eof | tupcount | varblockcount | eof_uncompressed | modcount | formatversion | state 
 ------------+-------+-----+----------+---------------+------------------+----------+---------------+-------
-          0 |     0 |  72 |        3 |             1 |               88 |        1 |             3 |     1
-          1 |     0 |  40 |        1 |             1 |               40 |        1 |             3 |     1
-          2 |     0 |  40 |        1 |             1 |               40 |        1 |             3 |     1
+          0 |     0 |  72 |        3 |             1 |               88 |        1 |             4 |     1
+          1 |     0 |  40 |        1 |             1 |               40 |        1 |             4 |     1
+          2 |     0 |  40 |        1 |             1 |               40 |        1 |             4 |     1
 (3 rows)
 
 SELECT gp_segment_id, (gp_toolkit.__gp_aovisimap('heapbase')).* FROM gp_dist_random('gp_id');
@@ -307,9 +327,9 @@ SELECT gp_segment_id, (gp_toolkit.__gp_aovisimap('heapbase')).* FROM gp_dist_ran
 SELECT * FROM gp_toolkit.__gp_aoseg('heapbase2');
  segment_id | segno | eof | tupcount | varblockcount | eof_uncompressed | modcount | formatversion | state 
 ------------+-------+-----+----------+---------------+------------------+----------+---------------+-------
-          1 |     0 |  40 |        1 |             1 |               40 |        1 |             3 |     1
-          2 |     0 |  40 |        1 |             1 |               40 |        1 |             3 |     1
-          0 |     0 |  72 |        3 |             1 |               88 |        1 |             3 |     1
+          1 |     0 |  40 |        1 |             1 |               40 |        1 |             4 |     1
+          2 |     0 |  40 |        1 |             1 |               40 |        1 |             4 |     1
+          0 |     0 |  72 |        3 |             1 |               88 |        1 |             4 |     1
 (3 rows)
 
 SELECT gp_segment_id, (gp_toolkit.__gp_aovisimap('heapbase2')).* FROM gp_dist_random('gp_id');
@@ -648,8 +668,8 @@ SELECT c.relname, a.amname, c.reloptions FROM pg_class c JOIN pg_am a ON c.relam
 -- Altering AO to AOCO with various syntaxes, reloptions:
 ALTER TABLE ao2co SET ACCESS METHOD ao_column;
 ALTER TABLE ao2co2 SET WITH (appendoptimized=true, orientation=column);
-ALTER TABLE ao2co3 SET ACCESS METHOD ao_column WITH (blocksize=32768, compresslevel=3);
-ALTER TABLE ao2co4 SET WITH (appendoptimized=true, orientation=column, blocksize=32768, compresslevel=3);
+ALTER TABLE ao2co3 SET ACCESS METHOD ao_column WITH (blocksize=32768, compresstype=rle_type, compresslevel=3);
+ALTER TABLE ao2co4 SET WITH (appendoptimized=true, orientation=column, blocksize=32768, compresstype=rle_type, compresslevel=3);
 -- The tables are rewritten
 CREATE TEMP TABLE relfileafterao AS
     SELECT -1 segid, relname, relfilenode FROM pg_class WHERE relname LIKE 'ao2co%'
@@ -728,26 +748,26 @@ SELECT * FROM gp_toolkit.__gp_aoblkdir('ao2co3');
 
 -- pg_attribute_encoding should have columns for the AOCO table
 SELECT c.relname, a.attnum, a.attoptions FROM pg_attribute_encoding a, pg_class c WHERE a.attrelid = c.oid AND c.relname LIKE 'ao2co%';
- relname | attnum |                     attoptions                      
----------+--------+-----------------------------------------------------
+ relname | attnum |                       attoptions                        
+---------+--------+---------------------------------------------------------
  ao2co   |      1 | {compresstype=zlib,blocksize=65536,compresslevel=5}
  ao2co   |      2 | {compresstype=zlib,blocksize=65536,compresslevel=5}
  ao2co2  |      1 | {compresstype=zlib,blocksize=65536,compresslevel=5}
  ao2co2  |      2 | {compresstype=zlib,blocksize=65536,compresslevel=5}
- ao2co3  |      1 | {blocksize=32768,compresslevel=3,compresstype=zlib}
- ao2co3  |      2 | {blocksize=32768,compresslevel=3,compresstype=zlib}
- ao2co4  |      1 | {blocksize=32768,compresslevel=3,compresstype=zlib}
- ao2co4  |      2 | {blocksize=32768,compresslevel=3,compresstype=zlib}
+ ao2co3  |      1 | {blocksize=32768,compresstype=rle_type,compresslevel=3}
+ ao2co3  |      2 | {blocksize=32768,compresstype=rle_type,compresslevel=3}
+ ao2co4  |      1 | {blocksize=32768,compresstype=rle_type,compresslevel=3}
+ ao2co4  |      2 | {blocksize=32768,compresstype=rle_type,compresslevel=3}
 (8 rows)
 
 -- AM and reloptions changed accordingly
 SELECT c.relname, a.amname, c.reloptions FROM pg_class c JOIN pg_am a ON c.relam = a.oid WHERE c.relname LIKE 'ao2co%';
- relname |  amname   |            reloptions             
----------+-----------+-----------------------------------
- ao2co   | ao_column | {blocksize=65536,compresslevel=5}
- ao2co2  | ao_column | {blocksize=65536,compresslevel=5}
- ao2co3  | ao_column | {blocksize=32768,compresslevel=3}
- ao2co4  | ao_column | {blocksize=32768,compresslevel=3}
+ relname |  amname   |                       reloptions                        
+---------+-----------+---------------------------------------------------------
+ ao2co   | ao_column | 
+ ao2co2  | ao_column | 
+ ao2co3  | ao_column | {blocksize=32768,compresstype=rle_type,compresslevel=3}
+ ao2co4  | ao_column | {blocksize=32768,compresstype=rle_type,compresslevel=3}
 (4 rows)
 
 -- pg_appendonly should reflect the changes in reloptions
@@ -755,21 +775,650 @@ SELECT c.relname,a.blocksize,a.compresslevel,a.checksum,a.compresstype,a.columns
 FROM pg_appendonly a, pg_class c WHERE a.relid = c.oid AND relname like ('ao2co%');
  relname | blocksize | compresslevel | checksum | compresstype | columnstore 
 ---------+-----------+---------------+----------+--------------+-------------
- ao2co   |     65536 |             5 | t        | zlib         | t
- ao2co2  |     65536 |             5 | t        | zlib         | t
- ao2co3  |     32768 |             3 | t        | zlib         | t
- ao2co4  |     32768 |             3 | t        | zlib         | t
+ ao2co   |     32768 |             0 | t        |              | t
+ ao2co2  |     32768 |             0 | t        |              | t
+ ao2co3  |     32768 |             3 | t        | rle_type     | t
+ ao2co4  |     32768 |             3 | t        | rle_type     | t
 (4 rows)
 
 DROP TABLE ao2co;
 DROP TABLE ao2co2;
 DROP TABLE ao2co3;
 DROP TABLE ao2co4;
--- Final scenario: the iterations of altering table from storage type "A" to "B" and back to "A". 
+-- Scenario 6: AOCO to Heap
+SET gp_default_storage_options = 'blocksize=65536, compresstype=zlib, compresslevel=5, checksum=true';
+CREATE TABLE co2heap(a int, b int) WITH (appendonly=true, orientation=column);
+CREATE TABLE co2heap2(a int, b int) WITH (appendonly=true, orientation=column);
+CREATE TABLE co2heap3(a int, b int) WITH (appendonly=true, orientation=column);
+CREATE TABLE co2heap4(a int, b int) WITH (appendonly=true, orientation=column);
+CREATE INDEX aoi ON co2heap(b);
+INSERT INTO co2heap SELECT i,i FROM generate_series(1,5) i;
+INSERT INTO co2heap2 SELECT i,i FROM generate_series(1,5) i;
+INSERT INTO co2heap3 SELECT i,i FROM generate_series(1,5) i;
+INSERT INTO co2heap4 SELECT i,i FROM generate_series(1,5) i;
+-- Prior-ATSETAM checks:
+-- Check once that the AO tables have the custom reloptions
+SELECT relname, reloptions FROM pg_class WHERE relname LIKE 'co2heap%';
+ relname  |            reloptions             
+----------+-----------------------------------
+ co2heap  | {blocksize=65536,compresslevel=5}
+ co2heap2 | {blocksize=65536,compresslevel=5}
+ co2heap3 | {blocksize=65536,compresslevel=5}
+ co2heap4 | {blocksize=65536,compresslevel=5}
+(4 rows)
+
+-- Check once that the AO tables have relfrozenxid = 0
+SELECT relname, relfrozenxid FROM pg_class WHERE relname LIKE 'co2heap%';
+ relname  | relfrozenxid 
+----------+--------------
+ co2heap  |            0
+ co2heap2 |            0
+ co2heap3 |            0
+ co2heap4 |            0
+(4 rows)
+
+-- Check once that the pg_attribute_encoding has entries for the AOCO tables.
+SELECT c.relname, a.attnum, attoptions FROM pg_attribute_encoding a, pg_class c WHERE a.attrelid=c.oid AND c.relname LIKE 'co2heap%';
+ relname  | attnum |                     attoptions                      
+----------+--------+-----------------------------------------------------
+ co2heap  |      1 | {compresstype=zlib,blocksize=65536,compresslevel=5}
+ co2heap  |      2 | {compresstype=zlib,blocksize=65536,compresslevel=5}
+ co2heap2 |      1 | {compresstype=zlib,blocksize=65536,compresslevel=5}
+ co2heap2 |      2 | {compresstype=zlib,blocksize=65536,compresslevel=5}
+ co2heap3 |      1 | {compresstype=zlib,blocksize=65536,compresslevel=5}
+ co2heap3 |      2 | {compresstype=zlib,blocksize=65536,compresslevel=5}
+ co2heap4 |      1 | {compresstype=zlib,blocksize=65536,compresslevel=5}
+ co2heap4 |      2 | {compresstype=zlib,blocksize=65536,compresslevel=5}
+(8 rows)
+
+CREATE TEMP TABLE relfilebeforeco2heap AS
+    SELECT -1 segid, relfilenode FROM pg_class WHERE relname LIKE 'co2heap%'
+    UNION SELECT gp_segment_id segid, relfilenode FROM gp_dist_random('pg_class')
+    WHERE relname LIKE 'co2heap%' ORDER BY segid;
+-- Various cases of altering AOCO to AO:
+-- 1. Basic ATSETAMs:
+ALTER TABLE co2heap SET ACCESS METHOD heap;
+ALTER TABLE co2heap2 SET WITH (appendoptimized=false);
+-- 2. ATSETAM with reloptions:
+ALTER TABLE co2heap3 SET ACCESS METHOD heap WITH (fillfactor=70);
+ALTER TABLE co2heap4 SET WITH (appendoptimized=false, fillfactor=70);
+-- The tables and indexes should have been rewritten (should have different relfilenodes)
+CREATE TEMP TABLE relfileafterco2heap AS
+    SELECT -1 segid, relfilenode FROM pg_class WHERE relname LIKE 'co2heap%'
+    UNION SELECT gp_segment_id segid, relfilenode FROM gp_dist_random('pg_class')
+    WHERE relname LIKE 'co2heap%' ORDER BY segid;
+SELECT * FROM relfilebeforeco2heap INTERSECT SELECT * FROM relfileafterco2heap;
+ segid | relfilenode 
+-------+-------------
+(0 rows)
+
+-- Check data is intact
+SELECT count(*) FROM co2heap;
+ count 
+-------
+     5
+(1 row)
+
+SELECT count(*) FROM co2heap2;
+ count 
+-------
+     5
+(1 row)
+
+SELECT count(*) FROM co2heap3;
+ count 
+-------
+     5
+(1 row)
+
+SELECT count(*) FROM co2heap4;
+ count 
+-------
+     5
+(1 row)
+
+-- No AO aux tables should be left.
+-- Only testing 2 out of the 4 tables being created, where the tables were altered w/wo reloptions.
+-- No need to test the other ones created by the alternative syntax SET WITH().
+SELECT * FROM gp_toolkit.__gp_aoseg('co2heap');
+ERROR:  'co2heap' is not an append-only row relation
+SELECT * FROM gp_toolkit.__gp_aovisimap('co2heap');
+ERROR:  function not supported on relation
+SELECT count(*) FROM gp_toolkit.__gp_aocsseg('co2heap');
+ERROR:  'co2heap' is not an append-only columnar relation
+SELECT * FROM gp_toolkit.__gp_aoblkdir('co2heap');
+ERROR:  function not supported on non append-optimized relation
+SELECT * FROM gp_toolkit.__gp_aoseg('co2heap3');
+ERROR:  'co2heap3' is not an append-only row relation
+SELECT * FROM gp_toolkit.__gp_aovisimap('co2heap3');
+ERROR:  function not supported on relation
+SELECT count(*) FROM gp_toolkit.__gp_aocsseg('co2heap3');
+ERROR:  'co2heap3' is not an append-only columnar relation
+SELECT * FROM gp_toolkit.__gp_aoblkdir('co2heap3');
+ERROR:  function not supported on non append-optimized relation
+-- No pg_appendonly entries should be left too
+SELECT c.relname FROM pg_class c, pg_appendonly p WHERE c.relname LIKE 'co2heap%' AND c.oid = p.relid;
+ relname 
+---------
+(0 rows)
+
+-- The altered tables should have heap AM.
+SELECT c.relname, a.amname FROM pg_class c JOIN pg_am a ON c.relam = a.oid WHERE c.relname LIKE 'co2heap%';
+ relname  | amname 
+----------+--------
+ co2heap  | heap
+ co2heap2 | heap
+ co2heap3 | heap
+ co2heap4 | heap
+(4 rows)
+
+-- The new heap tables shouldn't have the old AO table's reloptions
+SELECT relname, reloptions FROM pg_class WHERE relname LIKE 'co2heap%';
+ relname  |   reloptions    
+----------+-----------------
+ co2heap  | 
+ co2heap2 | 
+ co2heap3 | {fillfactor=70}
+ co2heap4 | {fillfactor=70}
+(4 rows)
+
+-- The new heap tables should have a valid relfrozenxid
+SELECT relname, relfrozenxid <> '0' FROM pg_class WHERE relname LIKE 'co2heap%';
+ relname  | ?column? 
+----------+----------
+ co2heap  | t
+ co2heap2 | t
+ co2heap3 | t
+ co2heap4 | t
+(4 rows)
+
+-- The pg_attribute_encoding entries for the altered tables should have all gone.
+SELECT c.relname, a.attnum, attoptions FROM pg_attribute_encoding a, pg_class c WHERE a.attrelid=c.oid AND c.relname LIKE 'co2heap%';
+ relname | attnum | attoptions 
+---------+--------+------------
+(0 rows)
+
+DROP TABLE co2heap;
+DROP TABLE co2heap2;
+DROP TABLE co2heap3;
+DROP TABLE co2heap4;
+-- Scenario 7: AOCO to AO
+CREATE TABLE co2ao(a int, b int) WITH (appendonly=true, orientation=column, compresstype=rle_type, compresslevel=3);
+CREATE TABLE co2ao2(a int, b int) WITH (appendonly=true, orientation=column, compresstype=rle_type, compresslevel=3);
+CREATE TABLE co2ao3(a int, b int) WITH (appendonly=true, orientation=column, compresstype=rle_type, compresslevel=3);
+CREATE TABLE co2ao4(a int, b int) WITH (appendonly=true, orientation=column, compresstype=rle_type, compresslevel=3);
+CREATE INDEX aoi ON co2ao(b);
+CREATE INDEX aoi2 ON co2ao3(b);
+INSERT INTO co2ao SELECT i,i FROM generate_series(1,5) i;
+INSERT INTO co2ao2 SELECT i,i FROM generate_series(1,5) i;
+INSERT INTO co2ao3 SELECT i,i FROM generate_series(1,5) i;
+INSERT INTO co2ao4 SELECT i,i FROM generate_series(1,5) i;
+-- Prior-ATSETAM checks:
+-- Check once that the AOCO tables have the custom reloptions
+SELECT relname, reloptions FROM pg_class WHERE relname LIKE 'co2ao%';
+ relname |                       reloptions                        
+---------+---------------------------------------------------------
+ co2ao   | {compresstype=rle_type,compresslevel=3,blocksize=65536}
+ co2ao2  | {compresstype=rle_type,compresslevel=3,blocksize=65536}
+ co2ao3  | {compresstype=rle_type,compresslevel=3,blocksize=65536}
+ co2ao4  | {compresstype=rle_type,compresslevel=3,blocksize=65536}
+(4 rows)
+
+-- Check once that pg_appendonly has expected entries.
+SELECT c.relname, p.compresstype, p.compresslevel, p.blocksize FROM pg_class c, pg_appendonly p WHERE c.relname LIKE 'co2ao%' AND c.oid = p.relid;
+ relname | compresstype | compresslevel | blocksize 
+---------+--------------+---------------+-----------
+ co2ao   | rle_type     |             3 |     65536
+ co2ao2  | rle_type     |             3 |     65536
+ co2ao3  | rle_type     |             3 |     65536
+ co2ao4  | rle_type     |             3 |     65536
+(4 rows)
+
+-- Check once that the pg_attribute_encoding has entries for the AOCO tables.
+SELECT c.relname, a.attnum, attoptions FROM pg_attribute_encoding a, pg_class c WHERE a.attrelid=c.oid AND c.relname LIKE 'co2ao%';
+ relname | attnum |                       attoptions                        
+---------+--------+---------------------------------------------------------
+ co2ao   |      1 | {compresstype=rle_type,compresslevel=3,blocksize=65536}
+ co2ao   |      2 | {compresstype=rle_type,compresslevel=3,blocksize=65536}
+ co2ao2  |      1 | {compresstype=rle_type,compresslevel=3,blocksize=65536}
+ co2ao2  |      2 | {compresstype=rle_type,compresslevel=3,blocksize=65536}
+ co2ao3  |      1 | {compresstype=rle_type,compresslevel=3,blocksize=65536}
+ co2ao3  |      2 | {compresstype=rle_type,compresslevel=3,blocksize=65536}
+ co2ao4  |      1 | {compresstype=rle_type,compresslevel=3,blocksize=65536}
+ co2ao4  |      2 | {compresstype=rle_type,compresslevel=3,blocksize=65536}
+(8 rows)
+
+-- Check once on the aoblkdirs
+SELECT gp_segment_id, (gp_toolkit.__gp_aoblkdir('co2ao')).* FROM gp_dist_random('gp_id');
+ gp_segment_id | tupleid | segno | columngroup_no | entry_no | first_row_no | file_offset | row_count 
+---------------+---------+-------+----------------+----------+--------------+-------------+-----------
+             0 | (0,1)   |     1 |              0 |        0 |            1 |           0 |         3
+             0 | (0,2)   |     1 |              1 |        0 |            1 |           0 |         3
+             1 | (0,1)   |     1 |              0 |        0 |            1 |           0 |         1
+             1 | (0,2)   |     1 |              1 |        0 |            1 |           0 |         1
+             2 | (0,1)   |     1 |              0 |        0 |            1 |           0 |         1
+             2 | (0,2)   |     1 |              1 |        0 |            1 |           0 |         1
+(6 rows)
+
+SELECT gp_segment_id, (gp_toolkit.__gp_aoblkdir('co2ao3')).* FROM gp_dist_random('gp_id');
+ gp_segment_id | tupleid | segno | columngroup_no | entry_no | first_row_no | file_offset | row_count 
+---------------+---------+-------+----------------+----------+--------------+-------------+-----------
+             0 | (0,1)   |     1 |              0 |        0 |            1 |           0 |         3
+             0 | (0,2)   |     1 |              1 |        0 |            1 |           0 |         3
+             1 | (0,1)   |     1 |              0 |        0 |            1 |           0 |         1
+             1 | (0,2)   |     1 |              1 |        0 |            1 |           0 |         1
+             2 | (0,1)   |     1 |              0 |        0 |            1 |           0 |         1
+             2 | (0,2)   |     1 |              1 |        0 |            1 |           0 |         1
+(6 rows)
+
+CREATE TEMP TABLE relfilebeforeco2ao AS
+    SELECT -1 segid, relfilenode FROM pg_class WHERE relname LIKE 'co2ao%'
+    UNION SELECT gp_segment_id segid, relfilenode FROM gp_dist_random('pg_class')
+    WHERE relname LIKE 'co2ao%' ORDER BY segid;
+-- Various cases of altering AOCO to AO:
+-- 1. Basic ATSETAMs:
+ALTER TABLE co2ao SET ACCESS METHOD ao_row;
+ALTER TABLE co2ao2 SET WITH (appendoptimized=true);
+-- 2. ATSETAM with reloptions:
+ALTER TABLE co2ao3 SET ACCESS METHOD ao_row WITH (compresstype=zlib, compresslevel=7);
+ALTER TABLE co2ao4 SET WITH (appendoptimized=true, compresstype=zlib, compresslevel=7);
+-- The tables and indexes should have been rewritten (should have different relfilenodes)
+CREATE TEMP TABLE relfileafterco2ao AS
+    SELECT -1 segid, relfilenode FROM pg_class WHERE relname LIKE 'co2ao%'
+    UNION SELECT gp_segment_id segid, relfilenode FROM gp_dist_random('pg_class')
+    WHERE relname LIKE 'co2ao%' ORDER BY segid;
+SELECT * FROM relfilebeforeco2ao INTERSECT SELECT * FROM relfileafterco2ao;
+ segid | relfilenode 
+-------+-------------
+(0 rows)
+
+DROP TABLE relfilebeforeco2ao;
+DROP TABLE relfileafterco2ao;
+-- Check data is intact
+SELECT count(*) FROM co2ao;
+ count 
+-------
+     5
+(1 row)
+
+SELECT count(*) FROM co2ao2;
+ count 
+-------
+     5
+(1 row)
+
+SELECT count(*) FROM co2ao3;
+ count 
+-------
+     5
+(1 row)
+
+SELECT count(*) FROM co2ao4;
+ count 
+-------
+     5
+(1 row)
+
+-- AO aux tables should still be there, but AOCO seg tables are not.
+-- Only testing 2 out of the 4 tables being created, where the tables were altered w/wo reloptions.
+-- No need to test the other ones created by the alternative syntax SET WITH().
+SELECT * FROM gp_toolkit.__gp_aoseg('co2ao');
+ segment_id | segno | eof | tupcount | varblockcount | eof_uncompressed | modcount | formatversion | state 
+------------+-------+-----+----------+---------------+------------------+----------+---------------+-------
+          0 |     0 |  88 |        3 |             1 |               88 |        1 |             4 |     1
+          1 |     0 |  40 |        1 |             1 |               40 |        1 |             4 |     1
+          2 |     0 |  40 |        1 |             1 |               40 |        1 |             4 |     1
+(3 rows)
+
+SELECT * FROM gp_toolkit.__gp_aocsseg('co2ao');
+ERROR:  'co2ao' is not an append-only columnar relation
+SELECT gp_segment_id, (gp_toolkit.__gp_aovisimap('co2ao')).* FROM gp_dist_random('gp_id');
+ gp_segment_id | tid | segno | row_num 
+---------------+-----+-------+---------
+(0 rows)
+
+SELECT gp_segment_id, (gp_toolkit.__gp_aoblkdir('co2ao')).* FROM gp_dist_random('gp_id');
+ gp_segment_id | tupleid | segno | columngroup_no | entry_no | first_row_no | file_offset | row_count 
+---------------+---------+-------+----------------+----------+--------------+-------------+-----------
+             0 | (0,1)   |     0 |              0 |        0 |            1 |           0 |         3
+             1 | (0,1)   |     0 |              0 |        0 |            1 |           0 |         1
+             2 | (0,1)   |     0 |              0 |        0 |            1 |           0 |         1
+(3 rows)
+
+SELECT * FROM gp_toolkit.__gp_aoseg('co2ao3');
+ segment_id | segno | eof | tupcount | varblockcount | eof_uncompressed | modcount | formatversion | state 
+------------+-------+-----+----------+---------------+------------------+----------+---------------+-------
+          0 |     0 |  72 |        3 |             1 |               88 |        1 |             4 |     1
+          1 |     0 |  40 |        1 |             1 |               40 |        1 |             4 |     1
+          2 |     0 |  40 |        1 |             1 |               40 |        1 |             4 |     1
+(3 rows)
+
+SELECT * FROM gp_toolkit.__gp_aocsseg('co2ao3');
+ERROR:  'co2ao3' is not an append-only columnar relation
+SELECT gp_segment_id, (gp_toolkit.__gp_aovisimap('co2ao3')).* FROM gp_dist_random('gp_id');
+ gp_segment_id | tid | segno | row_num 
+---------------+-----+-------+---------
+(0 rows)
+
+SELECT gp_segment_id, (gp_toolkit.__gp_aoblkdir('co2ao3')).* FROM gp_dist_random('gp_id');
+ gp_segment_id | tupleid | segno | columngroup_no | entry_no | first_row_no | file_offset | row_count 
+---------------+---------+-------+----------------+----------+--------------+-------------+-----------
+             0 | (0,1)   |     0 |              0 |        0 |            1 |           0 |         3
+             1 | (0,1)   |     0 |              0 |        0 |            1 |           0 |         1
+             2 | (0,1)   |     0 |              0 |        0 |            1 |           0 |         1
+(3 rows)
+
+-- pg_appendonly entries should be still be there, but options has changed accordingly.
+SELECT c.relname, p.compresstype, p.compresslevel, p.blocksize FROM pg_class c, pg_appendonly p WHERE c.relname LIKE 'co2ao%' AND c.oid = p.relid;
+ relname | compresstype | compresslevel | blocksize 
+---------+--------------+---------------+-----------
+ co2ao   |              |             0 |     32768
+ co2ao2  |              |             0 |     32768
+ co2ao3  | zlib         |             7 |     32768
+ co2ao4  | zlib         |             7 |     32768
+(4 rows)
+
+-- The altered tables should show AO AM.
+SELECT c.relname, a.amname FROM pg_class c JOIN pg_am a ON c.relam = a.oid WHERE c.relname LIKE 'co2ao%';
+ relname | amname 
+---------+--------
+ co2ao   | ao_row
+ co2ao2  | ao_row
+ co2ao3  | ao_row
+ co2ao4  | ao_row
+(4 rows)
+
+-- Only the new tables altered w/ reloptions supplies should have reloptions.
+SELECT relname, reloptions FROM pg_class WHERE relname LIKE 'co2ao%';
+ relname |             reloptions              
+---------+-------------------------------------
+ co2ao   | 
+ co2ao2  | 
+ co2ao3  | {compresstype=zlib,compresslevel=7}
+ co2ao4  | {compresstype=zlib,compresslevel=7}
+(4 rows)
+
+-- The pg_attribute_encoding entries for the altered tables should have all gone.
+SELECT c.relname, a.attnum, attoptions FROM pg_attribute_encoding a, pg_class c WHERE a.attrelid=c.oid AND c.relname LIKE 'co2ao%';
+ relname | attnum | attoptions 
+---------+--------+------------
+(0 rows)
+
+DROP TABLE co2ao;
+DROP TABLE co2ao2;
+DROP TABLE co2ao3;
+DROP TABLE co2ao4;
+-- Scenario 8: Heap to AOCO
+SET gp_default_storage_options = 'blocksize=65536, compresstype=zlib, compresslevel=5, checksum=true';
+CREATE TABLE heap2co(a int, b int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE TABLE heap2co2(a int, b int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE TABLE heap2co3(a int, b int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE TABLE heap2co4(a int, b int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE INDEX index_heap2co ON heap2co(b);
+CREATE INDEX index_heap2co3 ON heap2co3(b);
+INSERT INTO heap2co SELECT i,i FROM generate_series(1,5) i;
+INSERT INTO heap2co2 SELECT i,i FROM generate_series(1,5) i;
+INSERT INTO heap2co3 SELECT i,i FROM generate_series(1,5) i;
+INSERT INTO heap2co4 SELECT i,i FROM generate_series(1,5) i;
+CREATE TEMP TABLE relfilebeforeaoco AS
+SELECT -1 segid, relname, relfilenode FROM pg_class WHERE relname LIKE 'heap2co%'
+UNION SELECT gp_segment_id segid, relname, relfilenode FROM gp_dist_random('pg_class')
+WHERE relname LIKE 'heap2co%' ORDER BY segid;
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'segid' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+-- ERROR: conflicting storage option specified.
+ALTER TABLE heap2co SET ACCESS METHOD ao_column WITH (appendoptimized=false);
+ERROR:  ACCESS METHOD is specified as "ao_column" but the WITH option indicates it to be "heap"
+LINE 1: ALTER TABLE heap2co SET ACCESS METHOD ao_column WITH (append...
+                                                        ^
+-- Use of *both* ACCESS METHOD and WITH clauses is allowed, but we'll print a hint to indicate the redundancy.
+ALTER TABLE heap2co SET ACCESS METHOD ao_column WITH (appendoptimized=true, orientation=column);
+NOTICE:  Redundant clauses are used to indicate the access method.
+HINT:  Only one of these is needed to indicate access method: the SET ACCESS METHOD clause or the options in the WITH clause.
+-- Check once the reloptions
+SELECT c.relname, a.amname, c.reloptions FROM pg_class c JOIN pg_am a ON c.relam = a.oid WHERE c.relname LIKE 'heap2co%';
+ relname  |  amname   |            reloptions             
+----------+-----------+-----------------------------------
+ heap2co  | ao_column | {blocksize=65536,compresslevel=5}
+ heap2co2 | heap      | 
+ heap2co3 | heap      | 
+ heap2co4 | heap      | 
+(4 rows)
+
+-- Altering AO to AOCO with various syntaxes, reloptions:
+ALTER TABLE heap2co SET ACCESS METHOD ao_column;
+ALTER TABLE heap2co2 SET WITH (appendoptimized=true, orientation=column);
+ALTER TABLE heap2co3 SET ACCESS METHOD ao_column WITH (blocksize=32768, compresslevel=3);
+ALTER TABLE heap2co4 SET WITH (appendoptimized=true, orientation=column, blocksize=32768, compresslevel=3);
+-- The tables are rewritten
+CREATE TEMP TABLE relfileafteraoco AS
+SELECT -1 segid, relname, relfilenode FROM pg_class WHERE relname LIKE 'heap2co%'
+UNION SELECT gp_segment_id segid, relname, relfilenode FROM gp_dist_random('pg_class')
+WHERE relname LIKE 'heap2co%' ORDER BY segid;
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'segid' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+SELECT * FROM relfilebeforeaoco INTERSECT SELECT * FROM relfileafteraoco;
+ segid | relname | relfilenode 
+-------+---------+-------------
+(0 rows)
+
+DROP TABLE relfilebeforeaoco;
+DROP TABLE relfileafteraoco;
+-- Check data is intact
+SELECT count(*) FROM heap2co;
+ count 
+-------
+     5
+(1 row)
+
+SELECT count(*) FROM heap2co2;
+ count 
+-------
+     5
+(1 row)
+
+SELECT count(*) FROM heap2co3;
+ count 
+-------
+     5
+(1 row)
+
+SELECT count(*) FROM heap2co4;
+ count 
+-------
+     5
+(1 row)
+
+-- Aux tables should have been created for the new AOCO table
+-- Only tested for 2 out of the 4 tables being created, where the tables were altered w/wo reloptions.
+SELECT gp_segment_id, (gp_toolkit.__gp_aovisimap('heap2co')).* FROM gp_dist_random('gp_id');
+ gp_segment_id | tid | segno | row_num 
+---------------+-----+-------+---------
+(0 rows)
+
+SELECT gp_segment_id, (gp_toolkit.__gp_aoblkdir('heap2co')).* FROM gp_dist_random('gp_id');
+ gp_segment_id | tupleid | segno | columngroup_no | entry_no | first_row_no | file_offset | row_count 
+---------------+---------+-------+----------------+----------+--------------+-------------+-----------
+             2 | (0,1)   |     0 |              0 |        0 |            1 |           0 |         1
+             2 | (0,2)   |     0 |              1 |        0 |            1 |           0 |         1
+             0 | (0,1)   |     0 |              0 |        0 |            1 |           0 |         3
+             0 | (0,2)   |     0 |              1 |        0 |            1 |           0 |         3
+             1 | (0,1)   |     0 |              0 |        0 |            1 |           0 |         1
+             1 | (0,2)   |     0 |              1 |        0 |            1 |           0 |         1
+(6 rows)
+
+SELECT count(*) FROM gp_toolkit.__gp_aocsseg('heap2co');
+ count 
+-------
+     6
+(1 row)
+
+SELECT gp_segment_id, (gp_toolkit.__gp_aovisimap('heap2co3')).* FROM gp_dist_random('gp_id');
+ gp_segment_id | tid | segno | row_num 
+---------------+-----+-------+---------
+(0 rows)
+
+SELECT gp_segment_id, (gp_toolkit.__gp_aoblkdir('heap2co3')).* FROM gp_dist_random('gp_id');
+ gp_segment_id | tupleid | segno | columngroup_no | entry_no | first_row_no | file_offset | row_count 
+---------------+---------+-------+----------------+----------+--------------+-------------+-----------
+             1 | (0,1)   |     0 |              0 |        0 |            1 |           0 |         1
+             1 | (0,2)   |     0 |              1 |        0 |            1 |           0 |         1
+             2 | (0,1)   |     0 |              0 |        0 |            1 |           0 |         1
+             2 | (0,2)   |     0 |              1 |        0 |            1 |           0 |         1
+             0 | (0,1)   |     0 |              0 |        0 |            1 |           0 |         3
+             0 | (0,2)   |     0 |              1 |        0 |            1 |           0 |         3
+(6 rows)
+
+SELECT count(*) FROM gp_toolkit.__gp_aocsseg('heap2co3');
+ count 
+-------
+     6
+(1 row)
+
+-- pg_attribute_encoding should have columns for the AOCO table
+SELECT c.relname, a.attnum, a.attoptions FROM pg_attribute_encoding a, pg_class c WHERE a.attrelid = c.oid AND c.relname LIKE 'heap2co%';
+ relname  | attnum |                     attoptions                      
+----------+--------+-----------------------------------------------------
+ heap2co  |      2 | {compresstype=zlib,blocksize=65536,compresslevel=5}
+ heap2co  |      1 | {compresstype=zlib,blocksize=65536,compresslevel=5}
+ heap2co2 |      2 | {compresstype=zlib,blocksize=65536,compresslevel=5}
+ heap2co2 |      1 | {compresstype=zlib,blocksize=65536,compresslevel=5}
+ heap2co3 |      2 | {blocksize=32768,compresslevel=3,compresstype=zlib}
+ heap2co3 |      1 | {blocksize=32768,compresslevel=3,compresstype=zlib}
+ heap2co4 |      2 | {blocksize=32768,compresslevel=3,compresstype=zlib}
+ heap2co4 |      1 | {blocksize=32768,compresslevel=3,compresstype=zlib}
+(8 rows)
+
+-- AM and reloptions changed accordingly
+SELECT c.relname, a.amname, c.reloptions FROM pg_class c JOIN pg_am a ON c.relam = a.oid WHERE c.relname LIKE 'heap2co%';
+ relname  |  amname   |            reloptions             
+----------+-----------+-----------------------------------
+ heap2co  | ao_column | {blocksize=65536,compresslevel=5}
+ heap2co2 | ao_column | {blocksize=65536,compresslevel=5}
+ heap2co3 | ao_column | {blocksize=32768,compresslevel=3}
+ heap2co4 | ao_column | {blocksize=32768,compresslevel=3}
+(4 rows)
+
+-- pg_appendonly should reflect the changes in reloptions
+SELECT c.relname,a.blocksize,a.compresslevel,a.checksum,a.compresstype,a.columnstore
+FROM pg_appendonly a, pg_class c WHERE a.relid = c.oid AND relname like ('heap2co%');
+ relname  | blocksize | compresslevel | checksum | compresstype | columnstore 
+----------+-----------+---------------+----------+--------------+-------------
+ heap2co  |     65536 |             5 | t        | zlib         | t
+ heap2co2 |     65536 |             5 | t        | zlib         | t
+ heap2co3 |     32768 |             3 | t        | zlib         | t
+ heap2co4 |     32768 |             3 | t        | zlib         | t
+(4 rows)
+
+DROP TABLE heap2co;
+DROP TABLE heap2co2;
+DROP TABLE heap2co3;
+DROP TABLE heap2co4;
+-- Scenario 9. Altering partition tables
+-- Altering the storage model at the partition root should change the storage model for all existing children,
+-- including all the subpartitions.
+-- FIXME: currently children tables aren't inheriting reloptions of the root. After that is corrected, we 
+-- should add a corresponding test case for ALTER TABLE here too.
+CREATE TABLE atsetam_part(a int, b int) PARTITION BY RANGE(a);
+CREATE TABLE atsetam_part_1 partition OF atsetam_part FOR VALUES FROM (1) to (100);
+CREATE TABLE atsetam_part_2 partition OF atsetam_part FOR VALUES FROM (100) to (200) PARTITION BY RANGE(a);
+CREATE TABLE atsetam_part_2_1 partition OF atsetam_part_2 FOR VALUES FROM (100) to (150);
+CREATE TABLE atsetam_part_2_2 partition OF atsetam_part_2 FOR VALUES FROM (150) to (200);
+ALTER TABLE atsetam_part SET ACCESS METHOD ao_row WITH (blocksize=65536, compresslevel=7);
+SELECT c.relname, a.amname, c.reloptions FROM pg_class c JOIN pg_am a ON c.relam = a.oid WHERE c.relname LIKE 'atsetam_part%';
+     relname      | amname |            reloptions             
+------------------+--------+-----------------------------------
+ atsetam_part     | ao_row | {blocksize=65536,compresslevel=7}
+ atsetam_part_1   | ao_row | {blocksize=65536,compresslevel=7}
+ atsetam_part_2   | ao_row | {blocksize=65536,compresslevel=7}
+ atsetam_part_2_1 | ao_row | {blocksize=65536,compresslevel=7}
+ atsetam_part_2_2 | ao_row | {blocksize=65536,compresslevel=7}
+(5 rows)
+
+-- altering it again with the same AM and reloptions. Nothing should change.
+ALTER TABLE atsetam_part SET ACCESS METHOD ao_row WITH (blocksize=65536, compresslevel=7);
+SELECT c.relname, a.amname, c.reloptions FROM pg_class c JOIN pg_am a ON c.relam = a.oid WHERE c.relname LIKE 'atsetam_part%';
+     relname      | amname |            reloptions             
+------------------+--------+-----------------------------------
+ atsetam_part     | ao_row | {blocksize=65536,compresslevel=7}
+ atsetam_part_1   | ao_row | {blocksize=65536,compresslevel=7}
+ atsetam_part_2   | ao_row | {blocksize=65536,compresslevel=7}
+ atsetam_part_2_1 | ao_row | {blocksize=65536,compresslevel=7}
+ atsetam_part_2_2 | ao_row | {blocksize=65536,compresslevel=7}
+(5 rows)
+
+-- altering a subpartition root, should apply and only apply to the subpartition root/child.
+ALTER TABLE atsetam_part_2 SET ACCESS METHOD ao_column WITH (compresstype=rle_type, compresslevel=3);
+SELECT c.relname, a.amname, c.reloptions FROM pg_class c JOIN pg_am a ON c.relam = a.oid WHERE c.relname LIKE 'atsetam_part%';
+     relname      |  amname   |               reloptions                
+------------------+-----------+-----------------------------------------
+ atsetam_part     | ao_row    | {blocksize=65536,compresslevel=7}
+ atsetam_part_1   | ao_row    | {blocksize=65536,compresslevel=7}
+ atsetam_part_2   | ao_column | {compresstype=rle_type,compresslevel=3}
+ atsetam_part_2_1 | ao_column | {compresstype=rle_type,compresslevel=3}
+ atsetam_part_2_2 | ao_column | {compresstype=rle_type,compresslevel=3}
+(5 rows)
+
+-- attaching an existing table to the partition and the table should keep its AM.
+CREATE TABLE atsetam_part_att(a int, b int); -- default is heap
+ALTER TABLE atsetam_part ATTACH PARTITION atsetam_part_att FOR VALUES FROM (1000) to (1100);
+SELECT c.relname, a.amname, c.reloptions FROM pg_class c JOIN pg_am a ON c.relam = a.oid WHERE c.relname = 'atsetam_part_att';
+     relname      | amname | reloptions 
+------------------+--------+------------
+ atsetam_part_att | heap   | 
+(1 row)
+
+DROP TABLE atsetam_part;
+-- Altering the storage model at the partition root with the ONLY keyword should change the 
+-- storage model for all future children. Existing children should remain unaffected.
+CREATE TABLE atsetam_part(a int, b int) PARTITION BY RANGE(a);
+CREATE TABLE atsetam_part_1 partition OF atsetam_part FOR VALUES FROM (1) to (100);
+CREATE TABLE atsetam_part_2 partition OF atsetam_part FOR VALUES FROM (100) to (200) PARTITION BY RANGE(a);
+CREATE TABLE atsetam_part_2_1 partition OF atsetam_part_2 FOR VALUES FROM (100) to (150);
+ALTER TABLE ONLY atsetam_part SET ACCESS METHOD ao_row WITH (blocksize=65536, compresslevel=7);
+CREATE TABLE atsetam_part_3 partition OF atsetam_part FOR VALUES FROM (200) to (300);
+CREATE TABLE atsetam_part_4 partition OF atsetam_part FOR VALUES FROM (300) to (400) PARTITION BY RANGE(a);
+CREATE TABLE atsetam_part_4_1 partition OF atsetam_part_4 FOR VALUES FROM (300) to (350);
+SELECT c.relname, a.amname, c.reloptions FROM pg_class c JOIN pg_am a ON c.relam = a.oid WHERE c.relname LIKE 'atsetam_part%';
+     relname      | amname |            reloptions             
+------------------+--------+-----------------------------------
+ atsetam_part     | ao_row | {blocksize=65536,compresslevel=7}
+ atsetam_part_1   | heap   | 
+ atsetam_part_2   | heap   | 
+ atsetam_part_2_1 | heap   | 
+ atsetam_part_3   | ao_row | {blocksize=65536,compresslevel=7}
+ atsetam_part_4   | ao_row | {blocksize=65536,compresslevel=7}
+ atsetam_part_4_1 | ao_row | {blocksize=65536,compresslevel=7}
+(7 rows)
+
+DROP TABLE atsetam_part;
+-- Altering the storage model at a leaf should change the storage model for the leaf.
+CREATE TABLE atsetam_part(a int, b int) PARTITION BY RANGE(a);
+CREATE TABLE atsetam_part_1 partition OF atsetam_part FOR VALUES FROM (1) to (100);
+CREATE TABLE atsetam_part_2 partition OF atsetam_part FOR VALUES FROM (100) to (200);
+ALTER TABLE ONLY atsetam_part_1 SET ACCESS METHOD ao_row WITH (blocksize=65536, compresslevel=7);
+SELECT c.relname, a.amname, c.reloptions FROM pg_class c JOIN pg_am a ON c.relam = a.oid WHERE c.relname LIKE 'atsetam_part%';
+    relname     | amname |            reloptions             
+----------------+--------+-----------------------------------
+ atsetam_part   | heap   | 
+ atsetam_part_1 | ao_row | {blocksize=65536,compresslevel=7}
+ atsetam_part_2 | heap   | 
+(3 rows)
+
+DROP TABLE atsetam_part;
+-- Final scenario: the iterations of altering table from storage type "A" to "B" and back to "A".
 -- The following cases will cover all variations of such iterations:
 -- 1. Heap->AO->Heap->AO
--- (TODO) 2. AO->AOCO->AO->AOCO
--- (TODO) 3. Heap->AOCO->Heap->AOCO
+-- 2. AO->AOCO->AO->AOCO
+-- 3. Heap->AOCO->Heap->AOCO
 -- 1. Heap->AO->Heap->AO
 CREATE TABLE heapao(a int, b int);
 CREATE INDEX heapaoindex ON heapao(b);
@@ -785,3 +1434,33 @@ SELECT count(*) FROM heapao;
 (1 row)
 
 DROP TABLE heapao;
+-- 2. AO->AOCO->AO->AOCO
+CREATE TABLE aoco(a int, b int) with (appendoptimized=true);
+CREATE INDEX aocoindex ON aoco(b);
+INSERT INTO aoco SELECT i,i FROM generate_series(1,5) i;
+ALTER TABLE aoco SET ACCESS METHOD ao_column;
+ALTER TABLE aoco SET ACCESS METHOD ao_row;
+ALTER TABLE aoco SET ACCESS METHOD ao_column;
+-- Just checking data is intact.
+SELECT count(*) FROM aoco;
+ count 
+-------
+     5
+(1 row)
+
+DROP TABLE aoco;
+-- 3. Heap->AOCO->Heap->AOCO
+CREATE TABLE heapco(a int, b int);
+CREATE INDEX heapcoindex ON heapco(b);
+INSERT INTO heapco SELECT i,i FROM generate_series(1,5) i;
+ALTER TABLE heapco SET ACCESS METHOD ao_column;
+ALTER TABLE heapco SET ACCESS METHOD heap;
+ALTER TABLE heapco SET ACCESS METHOD ao_column;
+-- Just checking data is intact.
+SELECT count(*) FROM heapco;
+ count 
+-------
+     5
+(1 row)
+
+DROP TABLE heapco;

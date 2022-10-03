@@ -1,3 +1,4 @@
+set optimizer_trace_fallback=on;
 -- sanity check of system catalog
 SELECT attrelid, attname, attgenerated FROM pg_attribute WHERE attgenerated NOT IN ('', 's');
  attrelid | attname | attgenerated 
@@ -829,3 +830,4 @@ Distributed randomly
  x      | integer |           |          | generated always as (b * 2) stored
 Distributed randomly
 
+reset optimizer_trace_fallback;

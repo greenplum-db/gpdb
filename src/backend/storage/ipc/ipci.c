@@ -224,6 +224,9 @@ CreateSharedMemoryAndSemaphores(int port)
 		/* size of token and endpoint shared memory */
 		size = add_size(size, EndpointShmemSize());
 
+		/* size of parallel cursor count */
+		size = add_size(size, ParallelCursorCountSize());
+
 		elog(DEBUG3, "invoking IpcMemoryCreate(size=%zu)", size);
 
 		/*
@@ -390,6 +393,9 @@ CreateSharedMemoryAndSemaphores(int port)
 	/* Initialize shared memory for parallel retrieve cursor */
 	if (!IsUnderPostmaster)
 		EndpointShmemInit();
+	
+	if (Gp_role == GP_ROLE_DISPATCH)
+		ParallelCursorCountInit();
 
 	/*
 	 * Now give loadable modules a chance to set up their shmem allocations

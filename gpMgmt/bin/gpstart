@@ -302,17 +302,17 @@ class GpStart:
         lockfile = "/tmp/.s.PGSQL.%s" % self.port
         tmpfile_exists = os.path.exists(lockfile)
 
-        netstat_port_active = unix.PgPortIsActive.local('check ss for coordinator port',
+        ss_port_active = unix.PgPortIsActive.local('check ss for coordinator port',
                                                         lockfile, self.port)
-        if tmpfile_exists and netstat_port_active:
+        if tmpfile_exists and ss_port_active:
             logger.info("Have lock file %s and a process running on port %s" % (lockfile, self.port))
             raise ExceptionNoStackTraceNeeded("Coordinator instance process running")
-        elif tmpfile_exists and not netstat_port_active:
+        elif tmpfile_exists and not ss_port_active:
             logger.info("Have lock file %s but no process running on port %s" % (lockfile, self.port))
-        elif not tmpfile_exists and netstat_port_active:
+        elif not tmpfile_exists and ss_port_active:
             logger.info("No lock file %s but a process running on port %s" % (lockfile, self.port))
             raise ExceptionNoStackTraceNeeded("Port %s is already in use" % self.port)
-        elif not tmpfile_exists and not netstat_port_active:
+        elif not tmpfile_exists and not ss_port_active:
             logger.info("No socket connection or lock file in /tmp found for port=%s" % self.port)
 
         logger.info("No Coordinator instance process, entering recovery startup mode")

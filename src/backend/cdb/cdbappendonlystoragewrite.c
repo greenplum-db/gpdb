@@ -227,11 +227,13 @@ AppendOnlyStorageWrite_FinishSession(AppendOnlyStorageWrite *storageWrite)
 		if (storageWrite->compressionState != NULL)
 		{
 			pfree(storageWrite->compressionState);
+			storageWrite->compressionState = NULL;
 		}
 
 		if (storageWrite->verifyWriteCompressionState != NULL)
 		{
 			callCompressionDestructor(storageWrite->compression_functions[COMPRESSION_DESTRUCTOR], storageWrite->verifyWriteCompressionState);
+			storageWrite->verifyWriteCompressionState = NULL;
 		}
 	}
 
@@ -780,32 +782,6 @@ int64
 AppendOnlyStorageWrite_LogicalBlockStartOffset(AppendOnlyStorageWrite *storageWrite)
 {
 	return storageWrite->logicalBlockStartOffset;
-}
-
-/*
- * Return the position of the current write buffer.
- */
-int64
-AppendOnlyStorageWrite_CurrentPosition(AppendOnlyStorageWrite *storageWrite)
-{
-	Assert(storageWrite != NULL);
-	Assert(storageWrite->isActive);
-
-	return BufferedAppendCurrentBufferPosition(
-											   &storageWrite->bufferedAppend);
-}
-
-/*
- * Return the internal current write buffer that includes the header.
- * UNDONE: Fix this interface privacy violation...
- */
-uint8 *
-AppendOnlyStorageWrite_GetCurrentInternalBuffer(AppendOnlyStorageWrite *storageWrite)
-{
-	Assert(storageWrite != NULL);
-	Assert(storageWrite->isActive);
-
-	return BufferedAppendGetCurrentBuffer(&storageWrite->bufferedAppend);
 }
 
 

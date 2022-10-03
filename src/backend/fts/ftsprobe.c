@@ -998,9 +998,6 @@ processResponse(fts_context *context)
 
 		/* If primary and mirror are in sync, then both have to be ALIVE. */
 		AssertImply(IsInSync, IsPrimaryAlive && IsMirrorAlive);
-		/* Primary must enable syncrep as long as it thinks mirror is alive. */
-		AssertImply(IsMirrorAlive && IsPrimaryAlive,
-					ftsInfo->result.isSyncRepEnabled);
 
 		switch(ftsInfo->state)
 		{

@@ -78,7 +78,8 @@ start
 :   Allows the sequence to begin anywhere. The default starting value is minvalue for ascending sequences and maxvalue for descending ones.
 
 cache
-:   Specifies how many sequence numbers are to be preallocated and stored in memory for faster access. The minimum \(and default\) value is 1 \(no cache\).
+:   Specifies how many sequence numbers are to be preallocated and stored in memory for faster access. The default value is 20. The minimum value is 1 \(no cache\).
+:   **Note:** When operating with a cache of sequence numbers (`cache > 1`), Greenplum Database may discard some cached sequence values. If you require consecutive values, you must explicitly set `CACHE 1` when you create or alter the sequence.
 
 CYCLE
 NO CYCLE

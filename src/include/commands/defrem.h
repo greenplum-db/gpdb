@@ -171,9 +171,6 @@ extern Oid	get_table_am_oid(const char *amname, bool missing_ok);
 extern Oid	get_am_oid(const char *amname, bool missing_ok);
 extern char *get_am_name(Oid amOid);
 
-/* Greenplum specific */
-extern Oid  get_table_am_handler_oid(const char *amname, bool missing_ok);
-
 /* support routines in commands/define.c */
 
 extern char *defGetString(DefElem *def);

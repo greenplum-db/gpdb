@@ -94,25 +94,6 @@ typedef struct AppendOnlyDeleteDescData
 
 }			AppendOnlyDeleteDescData;
 
-/*
- * AppendOnlyUpdateDescData is used to update data from append-only
- * relations. It serves an equivalent purpose as AppendOnlyScanDescData
- * (relscan.h) only that the later is used for scanning append-only
- * relations.
- */
-typedef struct AppendOnlyUpdateDescData
-{
-	AppendOnlyInsertDesc aoInsertDesc;
-
-	AppendOnlyVisimap visibilityMap;
-
-	/*
-	 * Visimap delete support structure. Used to handle out-of-order deletes
-	 */
-	AppendOnlyVisimapDelete visiMapDelete;
-
-}			AppendOnlyUpdateDescData;
-
 typedef enum AoExecutorBlockKind
 {
 	AoExecutorBlockKind_None = 0,
@@ -1884,40 +1865,74 @@ fetchNextBlock(AppendOnlyFetchDesc aoFetchDesc)
 		executorReadBlock->blockFirstRowNum +
 		executorReadBlock->rowCount - 1;
 
-	aoFetchDesc->currentBlock.isCompressed =
-		executorReadBlock->isCompressed;
-	aoFetchDesc->currentBlock.isLargeContent =
-		executorReadBlock->isLarge;
-
 	aoFetchDesc->currentBlock.gotContents = false;
 
 	return true;
 }
 
-static bool
+/*
+ * Fetch the tuple from the block indicated by the block directory entry that
+ * covers the tuple.
+ */
+static void
 fetchFromCurrentBlock(AppendOnlyFetchDesc aoFetchDesc,
 					  int64 rowNum,
 					  TupleTableSlot *slot)
 {
-	Assert(aoFetchDesc->currentBlock.valid);
-	Assert(rowNum >= aoFetchDesc->currentBlock.firstRowNum);
-	Assert(rowNum <= aoFetchDesc->currentBlock.lastRowNum);
+	bool							fetched;
+	AOFetchBlockMetadata 			*currentBlock = &aoFetchDesc->currentBlock;
+	AppendOnlyExecutorReadBlock 	*executorReadBlock = &aoFetchDesc->executorReadBlock;
+	AppendOnlyStorageRead			*storageRead = &aoFetchDesc->storageRead;
+	AppendOnlyBlockDirectoryEntry 	*entry = &currentBlock->blockDirectoryEntry;
 
-	if (!aoFetchDesc->currentBlock.gotContents)
+	if (!currentBlock->gotContents)
 	{
 		/*
 		 * Do decompression if necessary and get contents.
 		 */
-		AppendOnlyExecutorReadBlock_GetContents(&aoFetchDesc->executorReadBlock);
+		AppendOnlyExecutorReadBlock_GetContents(executorReadBlock);
 
-		aoFetchDesc->currentBlock.gotContents = true;
+		currentBlock->gotContents = true;
 	}
 
-	return AppendOnlyExecutorReadBlock_FetchTuple(&aoFetchDesc->executorReadBlock,
-												  rowNum,
-												   /* nkeys */ 0,
-												   /* key */ NULL,
-												  slot);
+	fetched = AppendOnlyExecutorReadBlock_FetchTuple(executorReadBlock,
+													 rowNum,
+													 /* nkeys */ 0,
+													 /* key */ NULL,
+													 slot);
+	if (!fetched)
+	{
+		if (AppendOnlyBlockDirectoryEntry_RangeHasRow(entry, rowNum))
+		{
+			/*
+			 * We fell into a hole inside the resolved block directory entry
+			 * we obtained from AppendOnlyBlockDirectory_GetEntry().
+			 * This should not be happening for versions >= PG12. Scream
+			 * appropriately. See AppendOnlyBlockDirectoryEntry for details.
+			 */
+			ereportif(storageRead->formatVersion >= AORelationVersion_PG12,
+					  ERROR,
+					  (errcode(ERRCODE_INTERNAL_ERROR),
+						  errmsg("tuple with row number %ld not found in block directory entry range", rowNum),
+						  errdetail("block directory entry: (fileOffset = %ld, firstRowNum = %ld, "
+									"afterFileOffset = %ld, lastRowNum = %ld)",
+									entry->range.fileOffset,
+									entry->range.firstRowNum,
+									entry->range.afterFileOffset,
+									entry->range.lastRowNum)));
+		}
+		else
+		{
+			/*
+			 * The resolved block directory entry we obtained from
+			 * AppendOnlyBlockDirectory_GetEntry() has range s.t.
+			 * firstRowNum < lastRowNum < rowNum
+			 * This can happen when rowNum maps to an aborted transaction, and
+			 * we find an earlier committed block directory row due to the
+			 * <= scan condition in AppendOnlyBlockDirectory_GetEntry().
+			 */
+		}
+	}
 }
 
 static void
@@ -2022,7 +2037,10 @@ scanToFetchTuple(AppendOnlyFetchDesc aoFetchDesc,
 		}
 
 		if (rowNum <= aoFetchDesc->currentBlock.lastRowNum)
-			return fetchFromCurrentBlock(aoFetchDesc, rowNum, slot);
+		{
+			fetchFromCurrentBlock(aoFetchDesc, rowNum, slot);
+			return true;
+		}
 
 		/*
 		 * Update information to get next block.
@@ -2270,7 +2288,8 @@ appendonly_fetch(AppendOnlyFetchDesc aoFetchDesc,
 					}
 					return false;	/* row has been deleted or updated. */
 				}
-				return fetchFromCurrentBlock(aoFetchDesc, rowNum, slot);
+				fetchFromCurrentBlock(aoFetchDesc, rowNum, slot);
+				return true;
 			}
 
 			/*

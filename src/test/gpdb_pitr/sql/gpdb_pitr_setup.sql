@@ -29,7 +29,7 @@ INSERT INTO gpdb_one_phase_commit VALUES (1);
 -- so it will not show up later during PITR.
 4: BEGIN;
 4: INSERT INTO gpdb_two_phase_commit_after_restore_point SELECT generate_series(1, 10);
-4&: SELECT segment_id, count(*) FROM gp_create_restore_point('test_restore_point') AS r(segment_id smallint, restore_lsn pg_lsn) GROUP BY segment_id ORDER BY segment_id;
+4&: SELECT gp_segment_id, count(*) FROM gp_create_restore_point('test_restore_point') GROUP BY gp_segment_id ORDER BY gp_segment_id;
 1: SELECT gp_wait_until_triggered_fault('gp_create_restore_point_acquired_lock', 1, 1);
 
 -- Distributed commit record will not be written; commit blocked by
@@ -60,14 +60,28 @@ SELECT * FROM gpdb_two_phase_commit_after_acquire_share_lock;
 SELECT * FROM gpdb_one_phase_commit;
 SELECT * FROM gpdb_two_phase_commit_after_restore_point ORDER BY num;
 
-CREATE TEMP TABLE gp_current_wal_lsn AS
-    SELECT -1 AS content_id, pg_current_wal_lsn() AS current_lsn
-    UNION
-    SELECT gp_segment_id AS content_id, pg_current_wal_lsn() FROM gp_dist_random('gp_id');
 
 -- Run gp_switch_wal() so that the WAL segment files with the restore
--- points are eligible for archival to the WAL Archive directories.
-SELECT true FROM gp_switch_wal();
+-- points are eligible for archival to the WAL Archive directories. While
+-- we're at it, store the WAL segment filenames that were just archived
+-- so that we can check that WAL archival was successful or not later. We
+-- must do this in a plpgsql cursor because of a known limitation with
+-- CTAS on an EXECUTE ON COORDINATOR function.
+CREATE TEMP TABLE switch_walfile_names(content_id smallint, walfilename text);
+CREATE OR REPLACE FUNCTION populate_switch_walfile_names() RETURNS void AS $$
+DECLARE curs CURSOR FOR SELECT * FROM gp_switch_wal(); /*in func*/
+DECLARE rec record; /*in func*/
+BEGIN /*in func*/
+    OPEN curs; /*in func*/
+    LOOP
+        FETCH curs INTO rec; /*in func*/
+        EXIT WHEN NOT FOUND; /*in func*/
+
+        INSERT INTO switch_walfile_names VALUES (rec.gp_segment_id, rec.pg_walfile_name); /*in func*/
+    END LOOP; /*in func*/
+END $$
+LANGUAGE plpgsql; /*in func*/
+SELECT populate_switch_walfile_names();
 
 -- Ensure that the last WAL segment file for each GP segment was archived.
 -- This function loops until the archival is complete. It times out after
@@ -80,8 +94,8 @@ BEGIN /*in func*/
         SELECT bool_and(seg_archived), count(*)
         FROM
             (SELECT last_archived_wal =
-            pg_walfile_name(current_lsn) AS seg_archived
-            FROM gp_current_wal_lsn l
+            l.walfilename AS seg_archived
+            FROM switch_walfile_names l
             INNER JOIN gp_stat_archiver a
             ON l.content_id = a.gp_segment_id) s
         INTO archived, archived_count; /*in func*/

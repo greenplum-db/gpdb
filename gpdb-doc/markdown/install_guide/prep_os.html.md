@@ -7,8 +7,8 @@ Describes how to prepare your operating system environment for Greenplum Databas
 Perform the following tasks in order:
 
 1.  Make sure your host systems meet the requirements described in [Platform Requirements](platform-requirements.html).
-2.  [Disable or configure SELinux.](#topic_sqj_lt1_nfb)
-3.  [Disable or configure firewall software.](#topic_et2_y22_4nb)
+2.  [Deactivate or configure SELinux.](#topic_sqj_lt1_nfb)
+3.  [Deactivate or configure firewall software.](#topic_et2_y22_4nb)
 4.  [Set the required operating system parameters.](#topic3)
 5.  [Synchronize system clocks.](#topic_qst_s5t_wy)
 6.  [Create the gpadmin account.](#topic23)
@@ -31,11 +31,11 @@ The VMware Tanzu Greenplum on vSphere virtualized environment ensures the enforc
 
 **Parent topic:** [Installing and Upgrading Greenplum](install_guide.html)
 
-## <a id="topic_sqj_lt1_nfb"></a>Disable or Configure SELinux 
+## <a id="topic_sqj_lt1_nfb"></a>Deactivate or Configure SELinux 
 
 For all Greenplum Database host systems running RHEL or CentOS, SELinux must either be `Disabled` or configured to allow unconfined access to Greenplum processes, directories, and the gpadmin user.
 
-If you choose to disable SELinux:
+If you choose to deactivate SELinux:
 
 1.  As the root user, check the status of SELinux:
 
@@ -44,27 +44,27 @@ If you choose to disable SELinux:
     SELinuxstatus: disabled
     ```
 
-2.  If SELinux is not disabled, disable it by editing the `/etc/selinux/config` file. As root, change the value of the `SELINUX` parameter in the `config` file as follows:
+2.  If SELinux is not deactivated, deactivate it by editing the `/etc/selinux/config` file. As root, change the value of the `SELINUX` parameter in the `config` file as follows:
 
     ```
     SELINUX=disabled
     ```
 
-3.  If the System Security Services Daemon \(SSSD\) is installed on your systems, edit the SSSD configuration file and set the `selinux_provider` parameter to `none` to prevent SELinux-related SSH authentication denials that could occur even with SELinux disabled. As root, edit `/etc/sssd/sssd.conf` and add this parameter:
+3.  If the System Security Services Daemon \(SSSD\) is installed on your systems, edit the SSSD configuration file and set the `selinux_provider` parameter to `none` to prevent SELinux-related SSH authentication denials that could occur even with SELinux deactivated. As root, edit `/etc/sssd/sssd.conf` and add this parameter:
 
     ```
     selinux_provider=none
     ```
 
-4.  Reboot the system to apply any changes that you made and verify that SELinux is disabled.
+4.  Reboot the system to apply any changes that you made and verify that SELinux is deactivated.
 
 If you choose to enable SELinux in `Enforcing` mode, then Greenplum processes and users can operate successfully in the default `Unconfined` context. If you require increased SELinux confinement for Greenplum processes and users, you must test your configuration to ensure that there are no functionality or performance impacts to Greenplum Database. See the [SELinux User's and Administrator's Guide](https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/7/html/selinux_users_and_administrators_guide/index) for detailed information about configuring SELinux and SELinux users.
 
-## <a id="topic_et2_y22_4nb"></a>Disable or Configure Firewall Software 
+## <a id="topic_et2_y22_4nb"></a>Deactivate or Configure Firewall Software 
 
-You should also disable firewall software such as `iptables` \(on systems such as RHEL 6.x and CentOS 6.x \), `firewalld` \(on systems such as RHEL 7.x and CentOS 7.x\), or `ufw` \(on Ubuntu systems, disabled by default\). If firewall software is not disabled, you must instead configure your software to allow required communication between Greenplum hosts.
+You should also deactivate firewall software such as `iptables` \(on systems such as RHEL 6.x and CentOS 6.x \), `firewalld` \(on systems such as RHEL 7.x and CentOS 7.x\), or `ufw` \(on Ubuntu systems, deactivated by default\). If firewall software is not deactivated, you must instead configure your software to allow required communication between Greenplum hosts.
 
-To disable `iptables`:
+To deactivate `iptables`:
 
 1.  As the root user, check the status of `iptables`:
 
@@ -72,13 +72,13 @@ To disable `iptables`:
     # /sbin/chkconfig --list iptables
     ```
 
-    If `iptables` is disabled, the command output is:
+    If `iptables` is deactivated, the command output is:
 
     ```
     iptables 0:off 1:off 2:off 3:off 4:off 5:off 6:off
     ```
 
-2.  If necessary, run this command as root to disable `iptables`:
+2.  If necessary, run this command as root to deactivate `iptables`:
 
     ```
     /sbin/chkconfig iptables off
@@ -92,7 +92,7 @@ To disable `iptables`:
     # systemctl status firewalld
     ```
 
-    If `firewalld` is disabled, the command output is:
+    If `firewalld` is deactivated, the command output is:
 
     ```
     * firewalld.service - firewalld - dynamic firewall daemon
@@ -100,11 +100,11 @@ To disable `iptables`:
        Active: inactive (dead)
     ```
 
-4.  If necessary, run these commands as root to disable `firewalld`:
+4.  If necessary, run these commands as root to deactivate `firewalld`:
 
     ```
     # systemctl stop firewalld.service
-    # systemctl disable firewalld.service
+    # systemctl deactivate firewalld.service
     ```
 
 
@@ -118,7 +118,7 @@ Greenplum requires that certain Linux operating system \(OS\) parameters be set 
 
 In general, the following categories of system parameters need to be altered:
 
--   **Shared Memory** - A Greenplum Database instance will not work unless the shared memory segment for your kernel is properly sized. Most default OS installations have the shared memory values set too low for Greenplum Database. On Linux systems, you must also disable the OOM \(out of memory\) killer. For information about Greenplum Database shared memory requirements, see the Greenplum Database server configuration parameter [shared\_buffers](../ref_guide/config_params/guc-list.html) in the *Greenplum Database Reference Guide*.
+-   **Shared Memory** - A Greenplum Database instance will not work unless the shared memory segment for your kernel is properly sized. Most default OS installations have the shared memory values set too low for Greenplum Database. On Linux systems, you must also deactivate the OOM \(out of memory\) killer. For information about Greenplum Database shared memory requirements, see the Greenplum Database server configuration parameter [shared\_buffers](../ref_guide/config_params/guc-list.html) in the *Greenplum Database Reference Guide*.
 -   **Network** - On high-volume Greenplum Database systems, certain network-related tuning parameters must be set to optimize network connections made by the Greenplum interconnect.
 -   **User Limits** - User limits control the resources available to processes started by a user's shell. Greenplum Database requires a higher limit on the allowed number of file descriptors that a single process can have open. The default settings may cause some Greenplum Database queries to fail because they will run out of file descriptors needed to process the query.
 
@@ -168,6 +168,9 @@ net.ipv4.tcp_syncookies = 1
 net.ipv4.conf.default.accept_source_route = 0
 net.ipv4.tcp_max_syn_backlog = 4096
 net.ipv4.conf.all.arp_filter = 1
+net.ipv4.ipfrag_high_thresh = 41943040
+net.ipv4.ipfrag_low_thresh = 31457280
+net.ipv4.ipfrag_time = 60
 net.core.netdev_max_backlog = 10000
 net.core.rmem_max = 2097152
 net.core.wmem_max = 2097152
@@ -236,6 +239,28 @@ net.ipv4.ip_local_reserved_ports=65330
 ```
 
 For additional requirements and recommendations for cloud deployments, see *[Greenplum Database Cloud Technical Recommendations](../cloud/gpdb-cloud-tech-rec.html)*.
+
+**IP Fragmentation Settings**
+
+When the Greenplum Database interconnect uses UDP (the default), the network interface card controls IP packet fragmentation and reassemblies.
+
+If the UDP message size is larger than the size of the maximum transmission unit (MTU) of a network, the IP layer fragments the message. (Refer to [Networking](#networking) later in this topic for more information about MTU sizes for Greenplum Database.) The receiver must store the fragments in a buffer before it can reorganize and reassemble the message.
+
+The following `sysctl.conf` operating system parameters control the reassembly process:
+
+| OS Parameter | Description |
+|--------------|-------------|
+| net.ipv4.ipfrag_high_thresh | The maximum amount of memory used to reassemble IP fragments before the kernel starts to remove fragments to free up resources. The default value is 4194304 bytes (4MB). |
+| net.ipv4.ipfrag_low_thresh | The minimum amount of memory used to reassemble IP fragments. The default value is 3145728 bytes (3MB). (Deprecated after kernel version 4.17.) |
+| net.ipv4.ipfrag_time | The maximum amount of time (in seconds) to keep an IP fragment in memory. The default value is 30. |
+
+The recommended settings for these parameters for Greenplum Database follow:
+
+``` pre
+net.ipv4.ipfrag_high_thresh = 41943040
+net.ipv4.ipfrag_low_thresh = 31457280
+net.ipv4.ipfrag_time = 60
+```
 
 **System Memory**
 
@@ -461,7 +486,7 @@ These settings are connected, in that they should always be either the same, or 
 
 ### <a id="huge_pages"></a>Transparent Huge Pages \(THP\) 
 
-Disable Transparent Huge Pages \(THP\) as it degrades Greenplum Database performance. RHEL 6.0 or higher enables THP by default. One way to disable THP on RHEL 6.x is by adding the parameter `transparent_hugepage=never` to the kernel command in the file `/boot/grub/grub.conf`, the GRUB boot loader configuration file. This is an example kernel command from a `grub.conf` file. The command is on multiple lines for readability:
+Deactivate Transparent Huge Pages \(THP\) as it degrades Greenplum Database performance. RHEL 6.0 or higher enables THP by default. One way to deactivate THP on RHEL 6.x is by adding the parameter `transparent_hugepage=never` to the kernel command in the file `/boot/grub/grub.conf`, the GRUB boot loader configuration file. This is an example kernel command from a `grub.conf` file. The command is on multiple lines for readability:
 
 ```
 kernel /vmlinuz-2.6.18-274.3.1.el5 ro root=LABEL=/
@@ -484,7 +509,7 @@ For Ubuntu systems, install the `hugepages` package and run this command as root
 # hugeadm --thp-never
 ```
 
-This cat command checks the state of THP. The output indicates that THP is disabled.
+This cat command checks the state of THP. The output indicates that THP is deactivated.
 
 ```
 $ cat /sys/kernel/mm/*transparent_hugepage/enabled
@@ -495,10 +520,10 @@ For more information about Transparent Huge Pages or the `grubby` utility, see y
 
 ### <a id="ipc_object_removal"></a>IPC Object Removal 
 
-Disable IPC object removal for RHEL 7.2 or CentOS 7.2, or Ubuntu. The default `systemd` setting `RemoveIPC=yes` removes IPC connections when non-system user accounts log out. This causes the Greenplum Database utility `gpinitsystem` to fail with semaphore errors. Perform one of the following to avoid this issue.
+Deactivate IPC object removal for RHEL 7.2 or CentOS 7.2, or Ubuntu. The default `systemd` setting `RemoveIPC=yes` removes IPC connections when non-system user accounts log out. This causes the Greenplum Database utility `gpinitsystem` to fail with semaphore errors. Perform one of the following to avoid this issue.
 
 -   When you add the `gpadmin` operating system user account to the coordinator node in [Creating the Greenplum Administrative User](#topic23), create the user as a system account.
--   Disable `RemoveIPC`. Set this parameter in `/etc/systemd/logind.conf` on the Greenplum Database host systems.
+-   Deactivate `RemoveIPC`. Set this parameter in `/etc/systemd/logind.conf` on the Greenplum Database host systems.
 
     ```
     RemoveIPC=no
@@ -620,7 +645,7 @@ The following steps show how to set up the `gpadmin` user on a host, set a passw
 
 1.  Create the `gpadmin` group and user.
 
-    **Note:** If you are installing Greenplum Database on RHEL 7.2 or CentOS 7.2 and want to disable IPC object removal by creating the `gpadmin` user as a system account, provide both the `-r` option \(create the user as a system account\) and the `-m` option \(create a home directory\) to the `useradd` command. On Ubuntu systems, you must use the `-m` option with the `useradd` command to create a home directory for a user.
+    **Note:** If you are installing Greenplum Database on RHEL 7.2 or CentOS 7.2 and want to deactivate IPC object removal by creating the `gpadmin` user as a system account, provide both the `-r` option \(create the user as a system account\) and the `-m` option \(create a home directory\) to the `useradd` command. On Ubuntu systems, you must use the `-m` option with the `useradd` command to create a home directory for a user.
 
     This example creates the `gpadmin` group, creates the `gpadmin` user as a system account with a home directory and as a member of the `gpadmin` group, and creates a password for the user.
 

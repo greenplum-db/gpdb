@@ -63,32 +63,32 @@ EXPLAIN SELECT * from boxes LEFT JOIN apples ON apples.id = boxes.apple_id LEFT 
 -- explain_processing_off
 EXPLAIN (ANALYZE) SELECT * from boxes LEFT JOIN apples ON apples.id = boxes.apple_id LEFT JOIN box_locations ON box_locations.id = boxes.location_id;
                                                                 QUERY PLAN                                                                 
--------------------------------------------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=3577.00..11272.25 rows=77900 width=84) (actual time=45.646..45.646 rows=0 loops=1)
-   ->  Hash Left Join  (cost=3577.00..9714.25 rows=25967 width=84) (never executed)
+-----------------------------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=812.00..3838.66 rows=77900 width=84) (actual time=13.602..13.602 rows=0 loops=1)
+   ->  Hash Left Join  (cost=812.00..2799.99 rows=25967 width=84) (actual time=0.000..13.242 rows=0 loops=1)
          Hash Cond: (boxes.location_id = box_locations.id)
-         ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=2361.00..7427.12 rows=25967 width=48) (never executed)
+         ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=406.00..2066.16 rows=25967 width=48) (actual time=0.000..12.303 rows=0 loops=1)
                Hash Key: boxes.location_id
-               ->  Hash Left Join  (cost=2361.00..5869.12 rows=25967 width=48) (never executed)
+               ->  Hash Left Join  (cost=406.00..1546.83 rows=25967 width=48) (actual time=0.000..12.138 rows=0 loops=1)
                      Hash Cond: (boxes.apple_id = apples.id)
-                     ->  Redistribute Motion 3:3  (slice3; segments: 3)  (cost=0.00..2437.00 rows=25967 width=12) (never executed)
+                     ->  Redistribute Motion 3:3  (slice3; segments: 3)  (cost=0.00..813.00 rows=25967 width=12) (actual time=0.000..0.005 rows=0 loops=1)
                            Hash Key: boxes.apple_id
-                           ->  Seq Scan on boxes  (cost=0.00..879.00 rows=25967 width=12) (never executed)
-                     ->  Hash  (cost=1111.00..1111.00 rows=33334 width=36) (actual time=39.093..39.093 rows=33462 loops=1)
-                           Buckets: 131072  Batches: 1  Memory Usage: 2332kB
-                           ->  Seq Scan on apples  (cost=0.00..1111.00 rows=33334 width=36) (actual time=0.075..10.163 rows=33462 loops=1)
-         ->  Hash  (cost=596.00..596.00 rows=16534 width=36) (never executed)
+                           ->  Seq Scan on boxes  (cost=0.00..293.67 rows=25967 width=12) (actual time=0.000..0.007 rows=0 loops=1)
+                     ->  Hash  (cost=199.33..199.33 rows=16533 width=36) (actual time=9.989..9.989 rows=33462 loops=1)
+                           Buckets: 131072  Batches: 1  Memory Usage: 2201kB
+                           ->  Seq Scan on apples  (cost=0.00..199.33 rows=16533 width=36) (actual time=0.024..3.215 rows=33462 loops=1)
+         ->  Hash  (cost=199.33..199.33 rows=16533 width=36) (actual time=0.000..0.010 rows=0 loops=1)
                Buckets: 131072  Batches: 1  Memory Usage: 1024kB
-               ->  Seq Scan on box_locations  (cost=0.00..596.00 rows=16534 width=36) (never executed)
- Planning Time: 2.219 ms
-   (slice0)    Executor memory: 127K bytes.
-   (slice1)    Executor memory: 1104K bytes avg x 3 workers, 1104K bytes max (seg0).  Work_mem: 1024K bytes max.
-   (slice2)    Executor memory: 2162K bytes avg x 3 workers, 2162K bytes max (seg0).  Work_mem: 2070K bytes max.
-   (slice3)    Executor memory: 60K bytes avg x 3 workers, 60K bytes max (seg0).
- Memory used:  128000kB
+               ->  Seq Scan on box_locations  (cost=0.00..199.33 rows=16533 width=36) (actual time=0.000..0.010 rows=0 loops=1)
  Optimizer: Postgres query optimizer
- Execution Time: 59.644 ms
-(22 rows)
+ Planning Time: 0.893 ms
+   (slice0)    Executor memory: 64K bytes.
+   (slice1)    Executor memory: 1051K bytes avg x 3 workers, 1051K bytes max (seg0).  Work_mem: 1024K bytes max.
+   (slice2)    Executor memory: 2364K bytes avg x 3 workers, 2364K bytes max (seg0).  Work_mem: 2201K bytes max.
+   (slice3)    Executor memory: 41K bytes avg x 3 workers, 44K bytes max (seg1).
+ Memory used:  128000kB
+ Execution Time: 29.877 ms
+(24 rows)
 
 -- explain_processing_on
 -- Unaligned output format is better for the YAML / XML / JSON outputs.
@@ -261,6 +261,48 @@ QUERY PLAN
 (1 row)
 SET random_page_cost = 1;
 SET cpu_index_tuple_cost = 0.1;
+EXPLAIN (FORMAT YAML, VERBOSE) SELECT * from boxes;
+QUERY PLAN
+- Plan: 
+    Node Type: "Gather Motion"
+    Senders: 3
+    Receivers: 1
+    Slice: 1
+    Segments: 3
+    Gang Type: "primary reader"
+    Parallel Aware: false
+    Startup Cost: 0.00
+    Total Cost: 1332.33
+    Plan Rows: 77900
+    Plan Width: 12
+    Output: 
+      - "id"
+      - "apple_id"
+      - "location_id"
+    Plans: 
+      - Node Type: "Seq Scan"
+        Parent Relationship: "Outer"
+        Slice: 1
+        Segments: 3
+        Gang Type: "primary reader"
+        Parallel Aware: false
+        Relation Name: "boxes"
+        Schema: "public"
+        Alias: "boxes"
+        Startup Cost: 0.00
+        Total Cost: 293.67
+        Plan Rows: 25967
+        Plan Width: 12
+        Output: 
+          - "id"
+          - "apple_id"
+          - "location_id"
+  Optimizer: "Postgres query optimizer"
+  Settings: 
+    cpu_index_tuple_cost: "0.1"
+    optimizer: "off"
+    random_page_cost: "1"
+(1 row)
 EXPLAIN (FORMAT YAML, VERBOSE, SETTINGS ON) SELECT * from boxes;
 QUERY PLAN
 - Plan: 
@@ -301,9 +343,8 @@ QUERY PLAN
   Settings: 
     cpu_index_tuple_cost: "0.1"
     random_page_cost: "1"
+    optimizer: "off"
 (1 row)
-RESET random_page_cost;
-RESET cpu_index_tuple_cost;
 --- Check Explain Analyze YAML output that include the slices information
 -- explain_processing_off
 EXPLAIN (ANALYZE, FORMAT YAML) SELECT * from boxes LEFT JOIN apples ON apples.id = boxes.apple_id LEFT JOIN box_locations ON box_locations.id = boxes.location_id;
@@ -522,21 +563,24 @@ QUERY PLAN
 Gather Motion 3:1  (slice1; segments: 3)  (cost=2197.59..3301.17 rows=77900 width=12) (actual time=0.380..0.380 rows=0 loops=1)
   Output: id, apple_id, location_id
   Merge Key: apple_id
-  ->  Sort  (cost=2197.59..2262.51 rows=25967 width=12) (never executed)
+  ->  Sort  (cost=2197.59..2262.51 rows=25967 width=12) (actual time=0.000..0.069 rows=0 loops=1)
         Output: id, apple_id, location_id
         Sort Key: boxes.apple_id
         Sort Method:  quicksort  Memory: 75kB  Max Memory: 25kB  Avg Memory: 25kB (3 segments)
         Executor Memory: 177kB  Segments: 3  Max: 59kB (segment 0)
         work_mem: 177kB  Segments: 3  Max: 59kB (segment 0)  Workfile: (0 spilling)
-        ->  Seq Scan on public.boxes  (cost=0.00..293.67 rows=25967 width=12) (never executed)
+        ->  Seq Scan on public.boxes  (cost=0.00..293.67 rows=25967 width=12) (actual time=0.000..0.010 rows=0 loops=1)
               Output: id, apple_id, location_id
 Optimizer: Postgres query optimizer
+Settings: cpu_index_tuple_cost = '0.1', optimizer = 'off', random_page_cost = '1'
 Planning Time: 0.397 ms
   (slice0)    Executor memory: 40K bytes.
   (slice1)    Executor memory: 59K bytes avg x 3 workers, 59K bytes max (seg0).  Work_mem: 59K bytes max.
 Memory used:  128000kB
 Execution Time: 0.782 ms
-(17 rows)
+(18 rows)
+RESET random_page_cost;
+RESET cpu_index_tuple_cost;
 -- explain_processing_on
 --
 -- Test a simple case with JSON and XML output, too.

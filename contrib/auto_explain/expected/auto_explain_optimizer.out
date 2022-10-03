@@ -101,6 +101,7 @@ Finalize Aggregate  (cost=0.00..1326086.34 rows=1 width=8) (actual rows=1 loops=
                           ->  Seq Scan on auto_explain_test.t1  (cost=0.00..431.01 rows=334 width=1) (actual rows=340 loops=1)
                     ->  Seq Scan on auto_explain_test.t2  (cost=0.00..431.01 rows=334 width=1) (actual rows=340 loops=1002)
 Optimizer: Pivotal Optimizer (GPORCA)
+Settings: enable_nestloop = 'on'
   (slice0)    Executor memory: 67K bytes.
   (slice1)    Executor memory: 119K bytes avg x 3 workers, 119K bytes max (seg0).
   (slice2)    Executor memory: 42K bytes avg x 3 workers, 42K bytes max (seg0).

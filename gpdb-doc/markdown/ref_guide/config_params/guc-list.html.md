@@ -52,7 +52,7 @@ Specifies the Bonjour broadcast name. By default, the computer name is used, spe
 
 ## <a id="check_function_bodies"></a>check\_function\_bodies 
 
-When set to off, disables validation of the function body string during `CREATE FUNCTION`. Disabling validation is occasionally useful to avoid problems such as forward references when restoring function definitions from a dump.
+When set to off, deactivates validation of the function body string during `CREATE FUNCTION`. Deactivating validation is occasionally useful to avoid problems such as forward references when restoring function definitions from a dump.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
@@ -60,7 +60,7 @@ When set to off, disables validation of the function body string during `CREATE 
 
 ## <a id="client_connection_check_interval"></a>client\_connection\_check\_interval 
 
-Sets the time interval between optional checks that the client is still connected, while running queries. 0 disables connection checks.
+Sets the time interval between optional checks that the client is still connected, while running queries. 0 deactivates connection checks.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
@@ -118,7 +118,7 @@ Tells the Postgres Planner how many rows are expected to be fetched in a cursor 
 
 ## <a id="data_checksums"></a>data\_checksums 
 
-Reports whether checksums are enabled for heap data storage in the database system. Checksums for heap data are enabled or disabled when the database system is initialized and cannot be changed.
+Reports whether checksums are enabled for heap data storage in the database system. Checksums for heap data are enabled or deactivated when the database system is initialized and cannot be changed.
 
 Heap data pages store heap tables, catalog tables, indexes, and database metadata. Append-optimized storage has built-in checksum support that is unrelated to this parameter.
 
@@ -282,7 +282,7 @@ Set this parameter to a number of [block\_size](#backslash_quote) blocks \(defau
 
 ## <a id="enable_bitmapscan"></a>enable\_bitmapscan 
 
-Enables or disables the use of bitmap-scan plan types by the Postgres Planner. Note that this is different than a Bitmap Index Scan. A Bitmap Scan means that indexes will be dynamically converted to bitmaps in memory when appropriate, giving faster index performance on complex queries against very large tables. It is used when there are multiple predicates on different indexed columns. Each bitmap per column can be compared to create a final list of selected tuples.
+ Activates or deactivates  the use of bitmap-scan plan types by the Postgres Planner. Note that this is different than a Bitmap Index Scan. A Bitmap Scan means that indexes will be dynamically converted to bitmaps in memory when appropriate, giving faster index performance on complex queries against very large tables. It is used when there are multiple predicates on different indexed columns. Each bitmap per column can be compared to create a final list of selected tuples.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
@@ -290,7 +290,7 @@ Enables or disables the use of bitmap-scan plan types by the Postgres Planner. N
 
 ## <a id="enable_groupagg"></a>enable\_groupagg 
 
-Enables or disables the use of group aggregation plan types by the Postgres Planner.
+ Activates or deactivates  the use of group aggregation plan types by the Postgres Planner.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
@@ -298,7 +298,7 @@ Enables or disables the use of group aggregation plan types by the Postgres Plan
 
 ## <a id="enable_hashagg"></a>enable\_hashagg 
 
-Enables or disables the use of hash aggregation plan types by the Postgres Planner.
+ Activates or deactivates  the use of hash aggregation plan types by the Postgres Planner.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
@@ -306,7 +306,7 @@ Enables or disables the use of hash aggregation plan types by the Postgres Plann
 
 ## <a id="enable_hashjoin"></a>enable\_hashjoin 
 
-Enables or disables the use of hash-join plan types by the Postgres Planner.
+ Activates or deactivates  the use of hash-join plan types by the Postgres Planner.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
@@ -314,7 +314,7 @@ Enables or disables the use of hash-join plan types by the Postgres Planner.
 
 ## <a id="enable_indexscan"></a>enable\_indexscan 
 
-Enables or disables the use of index-scan plan types by the Postgres Planner.
+ Activates or deactivates  the use of index-scan plan types by the Postgres Planner.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
@@ -322,7 +322,7 @@ Enables or disables the use of index-scan plan types by the Postgres Planner.
 
 ## <a id="enable_mergejoin"></a>enable\_mergejoin 
 
-Enables or disables the use of merge-join plan types by the Postgres Planner. Merge join is based on the idea of sorting the left- and right-hand tables into order and then scanning them in parallel. So, both data types must be capable of being fully ordered, and the join operator must be one that can only succeed for pairs of values that fall at the 'same place' in the sort order. In practice this means that the join operator must behave like equality.
+ Activates or deactivates  the use of merge-join plan types by the Postgres Planner. Merge join is based on the idea of sorting the left- and right-hand tables into order and then scanning them in parallel. So, both data types must be capable of being fully ordered, and the join operator must be one that can only succeed for pairs of values that fall at the 'same place' in the sort order. In practice this means that the join operator must behave like equality.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
@@ -330,7 +330,7 @@ Enables or disables the use of merge-join plan types by the Postgres Planner. Me
 
 ## <a id="enable_nestloop"></a>enable\_nestloop 
 
-Enables or disables the use of nested-loop join plans by the Postgres Planner. It's not possible to suppress nested-loop joins entirely, but turning this variable off discourages the Postgres Planner from using one if there are other methods available.
+ Activates or deactivates  the use of nested-loop join plans by the Postgres Planner. It's not possible to suppress nested-loop joins entirely, but turning this variable off discourages the Postgres Planner from using one if there are other methods available.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
@@ -338,7 +338,7 @@ Enables or disables the use of nested-loop join plans by the Postgres Planner. I
 
 ## <a id="enable_seqscan"></a>enable\_seqscan 
 
-Enables or disables the use of sequential scan plan types by the Postgres Planner. It's not possible to suppress sequential scans entirely, but turning this variable off discourages the Postgres Planner from using one if there are other methods available.
+ Activates or deactivates  the use of sequential scan plan types by the Postgres Planner. It's not possible to suppress sequential scans entirely, but turning this variable off discourages the Postgres Planner from using one if there are other methods available.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
@@ -346,7 +346,7 @@ Enables or disables the use of sequential scan plan types by the Postgres Planne
 
 ## <a id="enable_sort"></a>enable\_sort 
 
-Enables or disables the use of explicit sort steps by the Postgres Planner. It's not possible to suppress explicit sorts entirely, but turning this variable off discourages the Postgres Planner from using one if there are other methods available.
+ Activates or deactivates  the use of explicit sort steps by the Postgres Planner. It's not possible to suppress explicit sorts entirely, but turning this variable off discourages the Postgres Planner from using one if there are other methods available.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
@@ -354,7 +354,7 @@ Enables or disables the use of explicit sort steps by the Postgres Planner. It's
 
 ## <a id="enable_tidscan"></a>enable\_tidscan 
 
-Enables or disables the use of tuple identifier \(TID\) scan plan types by the Postgres Planner.
+ Activates or deactivates  the use of tuple identifier \(TID\) scan plan types by the Postgres Planner.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
@@ -402,7 +402,7 @@ Enables the selectivity of NULL tests over outer joins.
 
 ## <a id="gp_appendonly_compaction"></a>gp\_appendonly\_compaction 
 
-Enables compacting segment files during `VACUUM` commands. When disabled, `VACUUM` only truncates the segment files to the EOF value, as is the current behavior. The administrator may want to disable compaction in high I/O load situations or low space situations.
+Enables compacting segment files during `VACUUM` commands. When deactivated, `VACUUM` only truncates the segment files to the EOF value, as is the current behavior. The administrator may want to deactivate compaction in high I/O load situations or low space situations.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
@@ -461,7 +461,7 @@ Automatic statistics collection is triggered if data is inserted directly in a l
 
 ## <a id="gp_autostats_mode_in_functions"></a>gp\_autostats\_mode\_in\_functions 
 
-Specifies the mode for triggering automatic statistics collection with `ANALYZE` for statements in procedural language functions. The `none` option disables statistics collection. The `on_no_stats` option triggers statistics collection for `CREATE TABLE AS SELECT`, `INSERT`, or `COPY` operations that are run in functions on any table that has no existing statistics.
+Specifies the mode for triggering automatic statistics collection with `ANALYZE` for statements in procedural language functions. The `none` option deactivates statistics collection. The `on_no_stats` option triggers statistics collection for `CREATE TABLE AS SELECT`, `INSERT`, or `COPY` operations that are run in functions on any table that has no existing statistics.
 
 The `on_change` option triggers statistics collection only when the number of rows affected exceeds the threshold defined by `gp_autostats_on_change_threshold`. Operations in functions that can trigger automatic statistics collection with `on_change` are:
 
@@ -505,7 +505,7 @@ Shows how many commands the master has received from the client. Note that a sin
 
 ## <a id="gp_connection_send_timeout"></a>gp\_connection\_send\_timeout 
 
-Timeout for sending data to unresponsive Greenplum Database user clients during query processing. A value of 0 disables the timeout, Greenplum Database waits indefinitely for a client. When the timeout is reached, the query is cancelled with this message:
+Timeout for sending data to unresponsive Greenplum Database user clients during query processing. A value of 0 deactivates the timeout, Greenplum Database waits indefinitely for a client. When the timeout is reached, the query is cancelled with this message:
 
 ```
 Could not send data to client: Connection timed out.
@@ -655,9 +655,19 @@ Enables plans that can dynamically eliminate the scanning of partitions.
 |-----------|-------|-------------------|
 |Boolean|on|master, session, reload|
 
+## <a id="gp_eager_two_phase_agg"></a>gp\_eager\_two\_phase\_agg
+
+Activates or deactivates two-phase aggregation for the Postgres Planner.
+
+The default value is `off`; the Planner chooses the best aggregate path for a query based on the cost. When set to `on`, the Planner adds a disable cost to each of the first stage aggregate paths, which in turn forces the Planner to generate and choose a multi-stage aggregate path.
+
+|Value Range|Default|Set Classifications|
+|-----------|-------|-------------------|
+|Boolean|off|master, session, reload|
+
 ## <a id="gp_enable_agg_distinct"></a>gp\_enable\_agg\_distinct 
 
-Enables or disables two-phase aggregation to compute a single distinct-qualified aggregate. This applies only to subqueries that include a single distinct-qualified aggregate function.
+ Activates or deactivates  two-phase aggregation to compute a single distinct-qualified aggregate. This applies only to subqueries that include a single distinct-qualified aggregate function.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
@@ -665,7 +675,7 @@ Enables or disables two-phase aggregation to compute a single distinct-qualified
 
 ## <a id="gp_enable_agg_distinct_pruning"></a>gp\_enable\_agg\_distinct\_pruning 
 
-Enables or disables three-phase aggregation and join to compute distinct-qualified aggregates. This applies only to subqueries that include one or more distinct-qualified aggregate functions.
+ Activates or deactivates  three-phase aggregation and join to compute distinct-qualified aggregates. This applies only to subqueries that include one or more distinct-qualified aggregate functions.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
@@ -673,7 +683,7 @@ Enables or disables three-phase aggregation and join to compute distinct-qualifi
 
 ## <a id="gp_enable_direct_dispatch"></a>gp\_enable\_direct\_dispatch 
 
-Enables or disables the dispatching of targeted query plans for queries that access data on a single segment. When on, queries that target rows on a single segment will only have their query plan dispatched to that segment \(rather than to all segments\). This significantly reduces the response time of qualifying queries as there is no interconnect setup involved. Direct dispatch does require more CPU utilization on the master.
+ Activates or deactivates  the dispatching of targeted query plans for queries that access data on a single segment. When on, queries that target rows on a single segment will only have their query plan dispatched to that segment \(rather than to all segments\). This significantly reduces the response time of qualifying queries as there is no interconnect setup involved. Direct dispatch does require more CPU utilization on the master.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
@@ -701,9 +711,9 @@ When set to `on`, the Postgres Planner plans single row inserts so that they are
 
 ## <a id="gp_enable_global_deadlock_detector"></a>gp\_enable\_global\_deadlock\_detector 
 
-Controls whether the Greenplum Database Global Deadlock Detector is enabled to manage concurrent `UPDATE` and `DELETE` operations on heap tables to improve performance. See [Inserting, Updating, and Deleting Data](../../admin_guide/dml.html#topic_gdd)in the *Greenplum Database Administrator Guide*. The default is `off`, the Global Deadlock Detector is disabled.
+Controls whether the Greenplum Database Global Deadlock Detector is enabled to manage concurrent `UPDATE` and `DELETE` operations on heap tables to improve performance. See [Inserting, Updating, and Deleting Data](../../admin_guide/dml.html#topic_gdd)in the *Greenplum Database Administrator Guide*. The default is `off`, the Global Deadlock Detector is deactivated.
 
-If the Global Deadlock Detector is disabled \(the default\), Greenplum Database runs concurrent update and delete operations on a heap table serially.
+If the Global Deadlock Detector is deactivated \(the default\), Greenplum Database runs concurrent update and delete operations on a heap table serially.
 
 If the Global Deadlock Detector is enabled, concurrent updates are permitted and the Global Deadlock Detector determines when a deadlock exists, and breaks the deadlock by cancelling one or more backend processes associated with the youngest transaction\(s\) involved.
 
@@ -713,7 +723,7 @@ If the Global Deadlock Detector is enabled, concurrent updates are permitted and
 
 ## <a id="gp_enable_groupext_distinct_gather"></a>gp\_enable\_groupext\_distinct\_gather 
 
-Enables or disables gathering data to a single node to compute distinct-qualified aggregates on grouping extension queries. When this parameter and `gp_enable_groupext_distinct_pruning` are both enabled, the Postgres Planner uses the cheaper plan.
+ Activates or deactivates  gathering data to a single node to compute distinct-qualified aggregates on grouping extension queries. When this parameter and `gp_enable_groupext_distinct_pruning` are both enabled, the Postgres Planner uses the cheaper plan.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
@@ -721,7 +731,7 @@ Enables or disables gathering data to a single node to compute distinct-qualifie
 
 ## <a id="gp_enable_groupext_distinct_pruning"></a>gp\_enable\_groupext\_distinct\_pruning 
 
-Enables or disables three-phase aggregation and join to compute distinct-qualified aggregates on grouping extension queries. Usually, enabling this parameter generates a cheaper query plan that the Postgres Planner will use in preference to existing plan.
+ Activates or deactivates  three-phase aggregation and join to compute distinct-qualified aggregates on grouping extension queries. Usually, enabling this parameter generates a cheaper query plan that the Postgres Planner will use in preference to existing plan.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
@@ -729,7 +739,7 @@ Enables or disables three-phase aggregation and join to compute distinct-qualifi
 
 ## <a id="gp_enable_multiphase_agg"></a>gp\_enable\_multiphase\_agg 
 
-Enables or disables the use of two or three-stage parallel aggregation plans Postgres Planner. This approach applies to any subquery with aggregation. If `gp_enable_multiphase_agg` is off, then`gp_enable_agg_distinct` and `gp_enable_agg_distinct_pruning` are disabled.
+ Activates or deactivates  the use of two or three-stage parallel aggregation plans Postgres Planner. This approach applies to any subquery with aggregation. If `gp_enable_multiphase_agg` is off, then`gp_enable_agg_distinct` and `gp_enable_agg_distinct_pruning` are deactivated.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
@@ -787,14 +797,6 @@ The parameter can be set for a database system or a session. The parameter canno
 |-----------|-------|-------------------|
 |Boolean|true|master, session, reload|
 
-## <a id="gp_enable_sort_distinct"></a>gp\_enable\_sort\_distinct 
-
-Enable duplicates to be removed while sorting.
-
-|Value Range|Default|Set Classifications|
-|-----------|-------|-------------------|
-|Boolean|on|master, session, reload|
-
 ## <a id="gp_enable_sort_limit"></a>gp\_enable\_sort\_limit 
 
 Enable `LIMIT` operation to be performed while sorting. Sorts more efficiently when the plan requires the first *limit\_number* of rows at most.
@@ -805,7 +807,7 @@ Enable `LIMIT` operation to be performed while sorting. Sorts more efficiently w
 
 ## <a id="gp_external_enable_exec"></a>gp\_external\_enable\_exec 
 
-Enables or disables the use of external tables that run OS commands or scripts on the segment hosts \(`CREATE EXTERNAL TABLE EXECUTE` syntax\). Must be enabled if using the Command Center or MapReduce features.
+ Activates or deactivates  the use of external tables that run OS commands or scripts on the segment hosts \(`CREATE EXTERNAL TABLE EXECUTE` syntax\). Must be enabled if using the Command Center or MapReduce features.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
@@ -932,7 +934,7 @@ You can set this value to `true` to avoid the Greenplum Database error when you 
 
 For the parameter value *n*, Greenplum Database stops processing input rows when you import data with the `COPY` command or from an external table if the first *n* rows processed contain formatting errors. If a valid row is processed within the first *n* rows, Greenplum Database continues processing input rows.
 
-Setting the value to 0 disables this limit.
+Setting the value to 0 deactivates this limit.
 
 The `SEGMENT REJECT LIMIT` clause can also be specified for the `COPY` command or the external table definition to limit the number of rejected rows.
 
@@ -1168,7 +1170,7 @@ When you specify `eager_free`, Greenplum Database distributes memory among opera
 
 **Note:** The `gp_resource_group_bypass` server configuration parameter is enforced only when resource group-based resource management is active.
 
-Enables or disables the enforcement of resource group concurrent transaction limits on Greenplum Database resources. The default value is `false`, which enforces resource group transaction limits. Resource groups manage resources such as CPU, memory, and the number of concurrent transactions that are used by queries and external components such as PL/Container.
+ Activates or deactivates  the enforcement of resource group concurrent transaction limits on Greenplum Database resources. The default value is `false`, which enforces resource group transaction limits. Resource groups manage resources such as CPU, memory, and the number of concurrent transactions that are used by queries and external components such as PL/Container.
 
 You can set this parameter to `true` to bypass resource group concurrent transaction limitations so that a query can run immediately. For example, you can set the parameter to `true` for a session to run a system catalog query or a similar query that requires a minimal amount of resources.
 
@@ -1185,7 +1187,7 @@ This parameter can be set for a session. The parameter cannot be set within a tr
 
 ## <a id="gp_resource_group_cpu_ceiling_enforcement"></a>gp\_resource\_group\_cpu\_ceiling\_enforcement 
 
-Enables the Ceiling Enforcement mode when assigning CPU resources by Percentage. When disabled, the Elastic mode will be used.
+Enables the Ceiling Enforcement mode when assigning CPU resources by Percentage. When deactivated, the Elastic mode will be used.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
@@ -1268,7 +1270,7 @@ When set to `auto`, query memory usage is controlled by [statement\_mem](#statem
 
 **Note:** The `gp_resqueue_priority` server configuration parameter is enforced only when resource queue-based resource management is active.
 
-Enables or disables query prioritization. When this parameter is disabled, existing priority settings are not evaluated at query run time.
+ Activates or deactivates  query prioritization. When this parameter is deactivated, existing priority settings are not evaluated at query run time.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
@@ -1374,7 +1376,7 @@ If enabled, when a Greenplum server process \(postmaster\) is started it will bi
 
 ## <a id="gp_set_read_only"></a>gp\_set\_read\_only 
 
-Set to on to disable writes to the database. Any in progress transactions must finish before read-only mode takes affect.
+Set to on to deactivate writes to the database. Any in progress transactions must finish before read-only mode takes affect.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
@@ -1526,7 +1528,7 @@ Sets the maximum total disk size that all running queries are allowed to use for
 
 ## <a id="gpfdist_retry_timeout"></a>gpfdist\_retry\_timeout 
 
-Controls the time \(in seconds\) that Greenplum Database waits before returning an error when Greenplum Database is attempting to connect or write to a [gpfdist](../../utility_guide/ref/gpfdist.html) server and `gpfdist` does not respond. The default value is 300 \(5 minutes\). A value of 0 disables the timeout.
+Controls the time \(in seconds\) that Greenplum Database waits before returning an error when Greenplum Database is attempting to connect or write to a [gpfdist](../../utility_guide/ref/gpfdist.html) server and `gpfdist` does not respond. The default value is 300 \(5 minutes\). A value of 0 deactivates the timeout.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
@@ -1744,7 +1746,7 @@ By default, connection log messages only show the IP address of the connecting h
 
 ## <a id="log_min_duration_statement"></a>log\_min\_duration\_statement 
 
-Logs the statement and its duration on a single log line if its duration is greater than or equal to the specified number of milliseconds. Setting this to 0 will print all statements and their durations. -1 disables the feature. For example, if you set it to 250 then all SQL statements that run 250ms or longer will be logged. Enabling this option can be useful in tracking down unoptimized queries in your applications.
+Logs the statement and its duration on a single log line if its duration is greater than or equal to the specified number of milliseconds. Setting this to 0 will print all statements and their durations. -1 deactivates the feature. For example, if you set it to 250 then all SQL statements that run 250ms or longer will be logged. Enabling this option can be useful in tracking down unoptimized queries in your applications.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
@@ -1786,7 +1788,7 @@ For each query, write performance statistics of the Postgres Planner to the serv
 
 ## <a id="log_rotation_age"></a>log\_rotation\_age 
 
-Determines the amount of time Greenplum Database writes messages to the active log file. When this amount of time has elapsed, the file is closed and a new log file is created. Set to zero to disable time-based creation of new log files.
+Determines the amount of time Greenplum Database writes messages to the active log file. When this amount of time has elapsed, the file is closed and a new log file is created. Set to zero to deactivate time-based creation of new log files.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
@@ -1794,7 +1796,7 @@ Determines the amount of time Greenplum Database writes messages to the active l
 
 ## <a id="log_rotation_size"></a>log\_rotation\_size 
 
-Determines the size of an individual log file that triggers rotation. When the log file size is equal to or greater than this size, the file is closed and a new log file is created. Set to zero to disable size-based creation of new log files.
+Determines the size of an individual log file that triggers rotation. When the log file size is equal to or greater than this size, the file is closed and a new log file is created. Set to zero to deactivate size-based creation of new log files.
 
 The maximum value is INT\_MAX/1024. If an invalid value is specified, the default value is used. INT\_MAX is the largest value that can be stored as an integer on your system.
 
@@ -1820,7 +1822,7 @@ For each query, write total performance statistics of the query parser, planner,
 
 ## <a id="log_temp_files"></a>log\_temp\_files 
 
-Controls logging of temporary file names and sizes. Temporary files can be created for sorts, hashes, temporary query results and spill files. A log entry is made in `log` for each temporary file when it is deleted. Depending on the source of the temporary files, the log entry could be created on either the master and/or segments. A `log_temp_files` value of zero logs all temporary file information, while positive values log only files whose size is greater than or equal to the specified number of kilobytes. The default setting is `-1`, which disables logging. Only superusers can change this setting.
+Controls logging of temporary file names and sizes. Temporary files can be created for sorts, hashes, temporary query results and spill files. A log entry is made in `log` for each temporary file when it is deleted. Depending on the source of the temporary files, the log entry could be created on either the master and/or segments. A `log_temp_files` value of zero logs all temporary file information, while positive values log only files whose size is greater than or equal to the specified number of kilobytes. The default setting is `-1`, which deactivates logging. Only superusers can change this setting.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
@@ -1870,7 +1872,7 @@ Increasing the limit allocates more shared memory on the master host at server s
 
 The maximum number of concurrent connections to the database server. In a Greenplum Database system, user client connections go through the Greenplum master instance only. Segment instances should allow 5-10 times the amount as the master. When you increase this parameter, [max\_prepared\_transactions](#max_prepared_transactions) must be increased as well. For more information about limiting concurrent connections, see "Configuring Client Authentication" in the *Greenplum Database Administrator Guide*.
 
-Increasing this parameter may cause Greenplum Database to request more shared memory. Increasing this parameter might cause Greenplum Database to request more shared memory. See [shared\_buffers](#shared_buffers) for information about Greenplum server instance shared memory buffers.
+Increasing this parameter may cause Greenplum Database to request more shared memory. See [shared\_buffers](#shared_buffers) for information about Greenplum server instance shared memory buffers.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
@@ -1984,7 +1986,7 @@ You can specify an integer percentage value from 0 to 100 inclusive. If you spec
 
 ## <a id="optimizer"></a>optimizer 
 
-Enables or disables GPORCA when running SQL queries. The default is `on`. If you disable GPORCA, Greenplum Database uses only the Postgres Planner.
+ Activates or deactivates  GPORCA when running SQL queries. The default is `on`. If you deactivate GPORCA, Greenplum Database uses only the Postgres Planner.
 
 GPORCA co-exists with the Postgres Planner. With GPORCA enabled, Greenplum Database uses GPORCA to generate an execution plan for a query when possible. If GPORCA cannot be used, then the Postgres Planner is used.
 
@@ -2012,11 +2014,11 @@ For information about the Postgres Planner and GPORCA, see [Querying Data](../..
 
 ## <a id="optimizer_array_expansion_threshold"></a>optimizer\_array\_expansion\_threshold 
 
-When GPORCA is enabled \(the default\) and is processing a query that contains a predicate with a constant array, the `optimizer_array_expansion_threshold` parameter limits the optimization process based on the number of constants in the array. If the array in the query predicate contains more than the number elements specified by parameter, GPORCA disables the transformation of the predicate into its disjunctive normal form during query optimization.
+When GPORCA is enabled \(the default\) and is processing a query that contains a predicate with a constant array, the `optimizer_array_expansion_threshold` parameter limits the optimization process based on the number of constants in the array. If the array in the query predicate contains more than the number elements specified by parameter, GPORCA deactivates the transformation of the predicate into its disjunctive normal form during query optimization.
 
-The default value is 100.
+The default value is 20.
 
-For example, when GPORCA is running a query that contains an `IN` clause with more than 100 elements, GPORCA does not transform the predicate into its disjunctive normal form during query optimization to reduce optimization time consume less memory. The difference in query processing can be seen in the filter condition for the `IN` clause of the query `EXPLAIN` plan.
+For example, when GPORCA is running a query that contains an `IN` clause with more than 20 elements, GPORCA does not transform the predicate into its disjunctive normal form during query optimization to reduce optimization time consume less memory. The difference in query processing can be seen in the filter condition for the `IN` clause of the query `EXPLAIN` plan.
 
 Changing the value of this parameter changes the trade-off between a shorter optimization time and lower memory consumption, and the potential benefits from constraint derivation during query optimization, for example conflict detection and partition elimination.
 
@@ -2024,7 +2026,7 @@ The parameter can be set for a database system, an individual database, or a ses
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Integer \> 0|25|master, session, reload|
+|Integer \> 0|20|master, session, reload|
 
 ## <a id="optimizer_control"></a>optimizer\_control 
 
@@ -2050,7 +2052,7 @@ The default cost model, `calibrated`, is more likely to choose a faster bitmap i
 
 ## <a id="optimizer_cte_inlining_bound"></a>optimizer\_cte\_inlining\_bound 
 
-When GPORCA is enabled \(the default\), this parameter controls the amount of inlining performed for common table expression \(CTE\) queries \(queries that contain a `WHERE` clause\). The default value, 0, disables inlining.
+When GPORCA is enabled \(the default\), this parameter controls the amount of inlining performed for common table expression \(CTE\) queries \(queries that contain a `WHERE` clause\). The default value, 0, deactivates inlining.
 
 The parameter can be set for a database system, an individual database, or a session or query.
 
@@ -2100,7 +2102,7 @@ For information about GPORCA, see [About GPORCA](../../admin_guide/query/topics/
 
 When GPORCA is enabled \(the default\) and this parameter is `true` \(the default\), GPORCA can generate index-only scan plan types for B-tree indexes. GPORCA accesses the index values only, not the data blocks of the relation. This provides a query execution performance improvement, particularly when the table has been vacuumed, has wide columns, and GPORCA does not need to fetch any data blocks \(for example, they are visible\).
 
-When disabled \(`false`\), GPORCA does not generate index-only scan plan types.
+When deactivated \(`false`\), GPORCA does not generate index-only scan plan types.
 
 The parameter can be set for a database system, an individual database, or a session or query.
 
@@ -2126,7 +2128,7 @@ For information about GPORCA, see [About GPORCA](../../admin_guide/query/topics/
 
 ## <a id="optimizer_enable_multiple_distinct_aggs"></a>optimizer\_enable\_multiple\_distinct\_aggs 
 
-When GPORCA is enabled \(the default\), this parameter allows GPORCA to support Multiple Distinct Qualified Aggregates, such as `SELECT count(DISTINCT a),sum(DISTINCT b) FROM foo`. This parameter is disabled by default because its plan is generally suboptimal in comparison to the plan generated by the Postgres planner.
+When GPORCA is enabled \(the default\), this parameter allows GPORCA to support Multiple Distinct Qualified Aggregates, such as `SELECT count(DISTINCT a),sum(DISTINCT b) FROM foo`. This parameter is deactivated by default because its plan is generally suboptimal in comparison to the plan generated by the Postgres planner.
 
 The parameter can be set for a database system, an individual database, or a session or query.
 
@@ -2135,6 +2137,20 @@ For information about GPORCA, see [About GPORCA](../../admin_guide/query/topics/
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
 |Boolean|off|master, session, reload|
+
+## <a id="optimizer_enable_replicated_table"></a>optimizer\_enable\_replicated\_table 
+
+When GPORCA is enabled \(the default\), this parameter controls GPORCA's behavior when it encounters DML operations on a replicated table.
+
+The default value is `on`, GPORCA attempts to plan and execute operations on replicated tables. When `off`, GPORCA immediately falls back to the Postgres Planner when it detects replicated table operations.
+
+The parameter can be set for a database system, an individual database, or a session or query.
+
+For information about GPORCA, see [About GPORCA](../../admin_guide/query/topics/query-piv-optimizer.html) in the *Greenplum Database Administrator Guide*.
+
+|Value Range|Default|Set Classifications|
+|-----------|-------|-------------------|
+|Boolean|on|master, session, reload|
 
 ## <a id="optimizer_force_agg_skew_avoidance"></a>optimizer\_force\_agg\_skew\_avoidance 
 
@@ -2513,7 +2529,7 @@ Sets the types of queries managed by resource queues. If set to on, then `SELECT
 
 ## <a id="runaway_detector_activation_percent"></a>runaway\_detector\_activation\_percent 
 
-For queries that are managed by resource queues or resource groups, this parameter determines when Greenplum Database terminates running queries based on the amount of memory the queries are using. A value of 100 disables the automatic termination of queries based on the percentage of memory that is utilized.
+For queries that are managed by resource queues or resource groups, this parameter determines when Greenplum Database terminates running queries based on the amount of memory the queries are using. A value of 100 deactivates the automatic termination of queries based on the percentage of memory that is utilized.
 
 Either the resource queue or the resource group management scheme can be active in Greenplum Database; both schemes cannot be active at the same time. The server configuration parameter [gp\_resource\_manager](#gp_resource_manager) controls which scheme is active.
 
@@ -2710,7 +2726,7 @@ Determines the number of connection slots that are reserved for Greenplum Databa
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|integer < *max\_connections*|3|local, system, restart|
+|integer < *max\_connections*|10|local, system, restart|
 
 ## <a id="tcp_keepalives_count"></a>tcp\_keepalives\_count 
 
@@ -2877,7 +2893,7 @@ Enables updating of the process title every time a new SQL command is received b
 
 ## <a id="vacuum_cost_delay"></a>vacuum\_cost\_delay 
 
-The length of time that the process will sleep when the cost limit has been exceeded. 0 disables the cost-based vacuum delay feature.
+The length of time that the process will sleep when the cost limit has been exceeded. 0 deactivates the cost-based vacuum delay feature.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
@@ -2941,14 +2957,14 @@ If Greenplum Database detects a corruption in the free TID list, the free TID li
 
 When a Greenplum Database external table is defined with the `gpfdists` protocol to use SSL security, this parameter controls whether SSL certificate authentication is enabled. The default is `true`, SSL authentication is enabled when Greenplum Database communicates with the `gpfdist` utility to either read data from or write data to an external data source.
 
-The value `false` disables SSL certificate authentication. These SSL exceptions are ignored:
+The value `false` deactivates SSL certificate authentication. These SSL exceptions are ignored:
 
 -   The self-signed SSL certificate that is used by `gpfdist` is not trusted by Greenplum Database.
 -   The host name contained in the SSL certificate does not match the host name that is running `gpfdist`.
 
-You can set the value to `false` to disable authentication when testing the communication between the Greenplum Database external table and the `gpfdist` utility that is serving the external data.
+You can set the value to `false` to deactivate authentication when testing the communication between the Greenplum Database external table and the `gpfdist` utility that is serving the external data.
 
-**Warning:** Disabling SSL certificate authentication exposes a security risk by not validating the `gpfdists` SSL certificate.
+**Warning:** Deactivating SSL certificate authentication exposes a security risk by not validating the `gpfdists` SSL certificate.
 
 For information about the `gpfdists` protocol, see [gpfdists:// Protocol](../../admin_guide/external/g-gpfdists-protocol.html). For information about running the `gpfdist` utility, see [gpfdist](../../utility_guide/ref/gpfdist.html).
 
@@ -2968,7 +2984,7 @@ Enables checking for interrupts before reserving vmem memory for a query during 
 
 When Greenplum Database segment mirroring is enabled, specifies the maximum amount of Write-Ahead Logging \(WAL\)-based records \(in KB\) written by a transaction on the primary segment instance before the records are written to the mirror segment instance for replication. As the default, Greenplum Database writes the records to the mirror segment instance when a checkpoint occurs or the `wait_for_replication_threshold` value is reached.
 
-A value of 0 disables the check for the amount of records. The records are written to the mirror segment instance only after a checkpoint occurs.
+A value of 0 deactivates the check for the amount of records. The records are written to the mirror segment instance only after a checkpoint occurs.
 
 If you set the value to 0, database performance issues might occur under heavy loads that perform long transactions that do not perform a checkpoint operation.
 

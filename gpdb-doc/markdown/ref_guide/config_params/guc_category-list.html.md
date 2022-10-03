@@ -112,6 +112,7 @@ These parameters control the usage of GPORCA by Greenplum Database. For informat
 - [optimizer_enable_indexonlyscan](guc-list.html#optimizer_enable_indexonlyscan)
 - [optimizer_enable_master_only_queries](guc-list.html#optimizer_enable_master_only_queries)
 - [optimizer_enable_multiple_distinct_aggs](guc-list.html#optimizer_enable_multiple_distinct_aggs)
+- [optimizer_enable_replicated_table](guc-list.html#optimizer_enable_replicated_table)
 - [optimizer_force_agg_skew_avoidance](guc-list.html#optimizer_force_agg_skew_avoidance)
 - [optimizer_force_comprehensive_join_implementation](guc-list.html#optimizer_force_comprehensive_join_implementation)
 - [optimizer_force_multistage_agg](guc-list.html#optimizer_force_multistage_agg)
@@ -135,7 +136,7 @@ These parameters control aspects of SQL query processing such as query operators
 
 ### <a id="topic22"></a>Postgres Planner Control Parameters 
 
-The following parameters control the types of plan operations the Postgres Planner can use. Enable or disable plan operations to force the Postgres Planner to choose a different plan. This is useful for testing and comparing query performance using different plan types.
+The following parameters control the types of plan operations the Postgres Planner can use. Enable or deactivate plan operations to force the Postgres Planner to choose a different plan. This is useful for testing and comparing query performance using different plan types.
 
 - [enable_bitmapscan](guc-list.html#enable_bitmapscan)
 - [enable_groupagg](guc-list.html#enable_groupagg)
@@ -147,6 +148,7 @@ The following parameters control the types of plan operations the Postgres Plann
 - [enable_seqscan](guc-list.html#enable_seqscan)
 - [enable_sort](guc-list.html#enable_sort)
 - [enable_tidscan](guc-list.html#enable_tidscan)
+- [gp_eager_two_phase_agg](guc-list.html#gp_eager_two_phase_agg)
 - [gp_enable_agg_distinct](guc-list.html#gp_enable_agg_distinct)
 - [gp_enable_agg_distinct_pruning](guc-list.html#gp_enable_agg_distinct_pruning)
 - [gp_enable_direct_dispatch](guc-list.html#gp_enable_direct_dispatch)
@@ -157,7 +159,6 @@ The following parameters control the types of plan operations the Postgres Plann
 - [gp_enable_predicate_propagation](guc-list.html#gp_enable_predicate_propagation)
 - [gp_enable_preunique](guc-list.html#gp_enable_preunique)
 - [gp_enable_relsize_collection](guc-list.html#gp_enable_relsize_collection)
-- [gp_enable_sort_distinct](guc-list.html#gp_enable_sort_distinct)
 - [gp_enable_sort_limit](guc-list.html#gp_enable_sort_limit)
 
 ### <a id="topic23"></a>Postgres Planner Costing Parameters 
@@ -182,7 +183,6 @@ These parameters adjust the amount of data sampled by an `ANALYZE` operation. Ad
 
 ### <a id="topic25"></a>Sort Operator Configuration Parameters 
 
-- [gp_enable_sort_distinct](guc-list.html#gp_enable_sort_distinct)
 - [gp_enable_sort_limit](guc-list.html#gp_enable_sort_limit)
 
 ### <a id="topic26"></a>Aggregate Operator Configuration Parameters 

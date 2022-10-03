@@ -63,17 +63,17 @@ EXPLAIN SELECT * from boxes LEFT JOIN apples ON apples.id = boxes.apple_id LEFT 
 -- explain_processing_off
 EXPLAIN (ANALYZE) SELECT * from boxes LEFT JOIN apples ON apples.id = boxes.apple_id LEFT JOIN box_locations ON box_locations.id = boxes.location_id;
                                                             QUERY PLAN                                                            
-----------------------------------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..449.00 rows=3 width=36) (actual time=2.753..2.753 rows=0 loops=1)
-   ->  Nested Loop Left Join  (cost=0.00..449.00 rows=1 width=36) (never executed)
+-------------------------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..449.00 rows=3 width=36) (actual time=1.912..1.912 rows=0 loops=1)
+   ->  Nested Loop Left Join  (cost=0.00..449.00 rows=1 width=36) (actual time=0.000..1.443 rows=0 loops=1)
          Join Filter: true
-         ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..437.00 rows=1 width=24) (never executed)
+         ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..437.00 rows=1 width=24) (actual time=0.000..1.440 rows=0 loops=1)
                Hash Key: boxes.apple_id
-               ->  Nested Loop Left Join  (cost=0.00..437.00 rows=1 width=24) (never executed)
+               ->  Nested Loop Left Join  (cost=0.00..437.00 rows=1 width=24) (actual time=0.000..0.677 rows=0 loops=1)
                      Join Filter: true
-                     ->  Redistribute Motion 3:3  (slice3; segments: 3)  (cost=0.00..431.00 rows=1 width=12) (never executed)
+                     ->  Redistribute Motion 3:3  (slice3; segments: 3)  (cost=0.00..431.00 rows=1 width=12) (actual time=0.000..0.673 rows=0 loops=1)
                            Hash Key: boxes.location_id
-                           ->  Seq Scan on boxes  (cost=0.00..431.00 rows=1 width=12) (never executed)
+                           ->  Seq Scan on boxes  (cost=0.00..431.00 rows=1 width=12) (actual time=0.000..0.021 rows=0 loops=1)
                      ->  Index Scan using box_locations_pkey on box_locations  (cost=0.00..6.00 rows=1 width=12) (never executed)
                            Index Cond: (id = boxes.location_id)
          ->  Index Scan using apples_pkey on apples  (cost=0.00..12.00 rows=1 width=12) (never executed)
@@ -243,6 +243,47 @@ QUERY PLAN
 (1 row)
 SET random_page_cost = 1;
 SET cpu_index_tuple_cost = 0.1;
+EXPLAIN (FORMAT YAML, VERBOSE) SELECT * from boxes;
+QUERY PLAN
+- Plan: 
+    Node Type: "Gather Motion"
+    Senders: 3
+    Receivers: 1
+    Slice: 1
+    Segments: 3
+    Gang Type: "primary reader"
+    Parallel Aware: false
+    Startup Cost: 0.00
+    Total Cost: 431.00
+    Plan Rows: 1
+    Plan Width: 12
+    Output: 
+      - "id"
+      - "apple_id"
+      - "location_id"
+    Plans: 
+      - Node Type: "Seq Scan"
+        Parent Relationship: "Outer"
+        Slice: 1
+        Segments: 3
+        Gang Type: "primary reader"
+        Parallel Aware: false
+        Relation Name: "boxes"
+        Schema: "public"
+        Alias: "boxes"
+        Startup Cost: 0.00
+        Total Cost: 431.00
+        Plan Rows: 1
+        Plan Width: 12
+        Output: 
+          - "id"
+          - "apple_id"
+          - "location_id"
+  Optimizer: "Pivotal Optimizer (GPORCA)"
+  Settings: 
+    cpu_index_tuple_cost: "0.1"
+    random_page_cost: "1"
+(1 row)
 EXPLAIN (FORMAT YAML, VERBOSE, SETTINGS ON) SELECT * from boxes;
 QUERY PLAN
 - Plan: 
@@ -284,8 +325,6 @@ QUERY PLAN
     cpu_index_tuple_cost: "0.1"
     random_page_cost: "1"
 (1 row)
-RESET random_page_cost;
-RESET cpu_index_tuple_cost;
 --- Check Explain Analyze YAML output that include the slices information
 -- explain_processing_off
 EXPLAIN (ANALYZE, FORMAT YAML) SELECT * from boxes LEFT JOIN apples ON apples.id = boxes.apple_id LEFT JOIN box_locations ON box_locations.id = boxes.location_id;
@@ -472,21 +511,24 @@ QUERY PLAN
 Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=12) (actual time=0.388..0.388 rows=0 loops=1)
   Output: id, apple_id, location_id
   Merge Key: apple_id
-  ->  Sort  (cost=0.00..431.00 rows=1 width=12) (never executed)
+  ->  Sort  (cost=0.00..431.00 rows=1 width=12) (actual time=0.000..0.072 rows=0 loops=1)
         Output: id, apple_id, location_id
         Sort Key: boxes.apple_id
         Sort Method:  quicksort  Memory: 75kB  Max Memory: 25kB  Avg Memory: 25kB (3 segments)
         Executor Memory: 177kB  Segments: 3  Max: 59kB (segment 0)
         work_mem: 177kB  Segments: 3  Max: 59kB (segment 0)  Workfile: (0 spilling)
-        ->  Seq Scan on public.boxes  (cost=0.00..431.00 rows=1 width=12) (never executed)
+        ->  Seq Scan on public.boxes  (cost=0.00..431.00 rows=1 width=12) (actual time=0.000..0.014 rows=0 loops=1)
               Output: id, apple_id, location_id
 Optimizer: Pivotal Optimizer (GPORCA)
+Settings: cpu_index_tuple_cost = '0.1', random_page_cost = '1'
 Planning Time: 4.622 ms
   (slice0)    Executor memory: 40K bytes.
   (slice1)    Executor memory: 59K bytes avg x 3 workers, 59K bytes max (seg0).  Work_mem: 59K bytes max.
 Memory used:  128000kB
 Execution Time: 0.846 ms
-(17 rows)
+(18 rows)
+RESET random_page_cost;
+RESET cpu_index_tuple_cost;
 -- explain_processing_on
 --
 -- Test a simple case with JSON and XML output, too.

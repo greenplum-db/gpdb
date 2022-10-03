@@ -137,7 +137,7 @@ settings
     :   Optional. The value is a Greenplum Database role name or a comma-separated list of roles. PL/Container runs a container that uses the PL/Container runtime configuration only for the listed roles. If the attribute is not specified, any Greenplum Database role can run an instance of this container runtime configuration. For example, you create a UDF that specifies the `plcontainer` language and identifies a `# container:` runtime configuration that has the `roles` attribute set. When a role \(user\) runs the UDF, PL/Container checks the list of roles and runs the container only if the role is on the list.
 
     use\_container\_logging="\{yes \| no\}"
-    :   Optional. Enables or disables Docker logging for the container. The attribute value `yes` enables logging. The attribute value `no` disables logging \(the default\).
+    :   Optional.  Activates or deactivates  Docker logging for the container. The attribute value `yes` enables logging. The attribute value `no` deactivates logging \(the default\).
 
     The Greenplum Database server configuration parameter [log\_min\_messages](../../ref_guide/config_params/guc-list.html) controls the PL/Container log level. The default log level is `warning`. For information about PL/Container log information, see [Notes](../../analytics/pl_container_using.html).
 

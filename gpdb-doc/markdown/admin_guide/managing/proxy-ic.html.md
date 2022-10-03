@@ -15,7 +15,7 @@ To enable interconnect proxies for the Greenplum system, set these system config
 -   List the proxy ports with the parameter [gp\_interconnect\_proxy\_addresses](../../ref_guide/config_params/guc-list.html#gp_interconnect_proxy_addresses). You must specify a proxy port for the master, standby master, and all segment instances.
 -   Set the parameter [gp\_interconnect\_type](../../ref_guide/config_params/guc-list.html#gp_interconnect_type) to `proxy`.
 
-**Note:** When expanding a Greenplum Database system, you must disable interconnect proxies before adding new hosts and segment instances to the system, and you must update the `gp_interconnect_proxy_addresses` parameter with the newly-added segment instances before you re-enable interconnect proxies.
+**Note:** When expanding a Greenplum Database system, you must deactivate interconnect proxies before adding new hosts and segment instances to the system, and you must update the `gp_interconnect_proxy_addresses` parameter with the newly-added segment instances before you re-enable interconnect proxies.
 
 **Parent topic:** [Managing a Greenplum System](../managing/partII.html)
 

@@ -766,130 +766,6 @@ CTranslatorUtils::GetColumnDescrAt(const CDXLTableDescr *table_descr, ULONG pos)
 	return table_descr->GetColumnDescrAt(pos);
 }
 
-//---------------------------------------------------------------------------
-//	@function:
-//		CTranslatorUtils::GetSystemColName
-//
-//	@doc:
-//		Return the name for the system attribute with the given attribute number.
-//
-//---------------------------------------------------------------------------
-// GPDB_12_MERGE_FIXME: Can we get rid of this function? We should be able to get this info from pg_attribute
-const CWStringConst *
-CTranslatorUtils::GetSystemColName(AttrNumber attno)
-{
-	GPOS_ASSERT(FirstLowInvalidHeapAttributeNumber < attno && 0 > attno);
-
-	switch (attno)
-	{
-		case SelfItemPointerAttributeNumber:
-			return CDXLTokens::GetDXLTokenStr(EdxltokenCtidColName);
-
-		case MinTransactionIdAttributeNumber:
-			return CDXLTokens::GetDXLTokenStr(EdxltokenXminColName);
-
-		case MinCommandIdAttributeNumber:
-			return CDXLTokens::GetDXLTokenStr(EdxltokenCminColName);
-
-		case MaxTransactionIdAttributeNumber:
-			return CDXLTokens::GetDXLTokenStr(EdxltokenXmaxColName);
-
-		case MaxCommandIdAttributeNumber:
-			return CDXLTokens::GetDXLTokenStr(EdxltokenCmaxColName);
-
-		case TableOidAttributeNumber:
-			return CDXLTokens::GetDXLTokenStr(EdxltokenTableOidColName);
-
-		case GpSegmentIdAttributeNumber:
-			return CDXLTokens::GetDXLTokenStr(EdxltokenGpSegmentIdColName);
-
-		default:
-			GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiPlStmt2DXLConversion,
-					   GPOS_WSZ_LIT("Invalid attribute number"));
-			return nullptr;
-	}
-}
-
-//---------------------------------------------------------------------------
-//	@function:
-//		CTranslatorUtils::GetSystemColType
-//
-//	@doc:
-//		Return the type id for the system attribute with the given attribute number.
-//
-//---------------------------------------------------------------------------
-// GPDB_12_MERGE_FIXME: Can we get rid of this function? We should be able to get this info from pg_attribute
-CMDIdGPDB *
-CTranslatorUtils::GetSystemColType(CMemoryPool *mp, AttrNumber attno)
-{
-	GPOS_ASSERT(FirstLowInvalidHeapAttributeNumber < attno && 0 > attno);
-
-	switch (attno)
-	{
-		case SelfItemPointerAttributeNumber:
-			// tid type
-			return GPOS_NEW(mp) CMDIdGPDB(GPDB_TID);
-
-		case TableOidAttributeNumber:
-			// OID type
-			return GPOS_NEW(mp) CMDIdGPDB(GPDB_OID);
-
-		case MinTransactionIdAttributeNumber:
-		case MaxTransactionIdAttributeNumber:
-			// xid type
-			return GPOS_NEW(mp) CMDIdGPDB(GPDB_XID);
-
-		case MinCommandIdAttributeNumber:
-		case MaxCommandIdAttributeNumber:
-			// cid type
-			return GPOS_NEW(mp) CMDIdGPDB(GPDB_CID);
-
-		case GpSegmentIdAttributeNumber:
-			// int4
-			return GPOS_NEW(mp) CMDIdGPDB(GPDB_INT4);
-
-		default:
-			GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiPlStmt2DXLConversion,
-					   GPOS_WSZ_LIT("Invalid attribute number"));
-			return nullptr;
-	}
-}
-
-
-// Returns the length for the system column with given attno number
-// GPDB_12_MERGE_FIXME: Can we get rid of this function? We should be able to get this info from pg_attribute
-const ULONG
-CTranslatorUtils::GetSystemColLength(AttrNumber attno)
-{
-	GPOS_ASSERT(FirstLowInvalidHeapAttributeNumber < attno && 0 > attno);
-
-	switch (attno)
-	{
-		case SelfItemPointerAttributeNumber:
-			// tid type
-			return 6;
-
-		case TableOidAttributeNumber:
-			// OID type
-
-		case MinTransactionIdAttributeNumber:
-		case MaxTransactionIdAttributeNumber:
-			// xid type
-
-		case MinCommandIdAttributeNumber:
-		case MaxCommandIdAttributeNumber:
-			// cid type
-
-		case GpSegmentIdAttributeNumber:
-			// int4
-			return 4;
-
-		default:
-			GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiPlStmt2DXLConversion,
-					   GPOS_WSZ_LIT("Invalid attribute number"));
-			return gpos::ulong_max;
-	}
-}
 
 //---------------------------------------------------------------------------
 //	@function:
@@ -1270,7 +1146,6 @@ CTranslatorUtils::GenerateColIds(
 		is_outer_ref,  // array of flags indicating if input columns are outer references
 	CIdGenerator *colid_generator)
 {
-	GPOS_ASSERT(nullptr != target_list);
 	GPOS_ASSERT(nullptr != input_mdid_arr);
 	GPOS_ASSERT(nullptr != input_colids);
 	GPOS_ASSERT(nullptr != is_outer_ref);
@@ -1330,7 +1205,10 @@ CTranslatorUtils::FixUnknownTypeConstant(Query *old_query,
 										 List *output_target_list)
 {
 	GPOS_ASSERT(nullptr != old_query);
-	GPOS_ASSERT(nullptr != output_target_list);
+	if (nullptr == output_target_list)
+	{
+		return old_query;
+	}
 
 	Query *new_query = nullptr;
 
@@ -1470,8 +1348,6 @@ ULongPtrArray *
 CTranslatorUtils::GetPosInTargetList(CMemoryPool *mp, List *target_list,
 									 BOOL keep_res_junked)
 {
-	GPOS_ASSERT(nullptr != target_list);
-
 	ListCell *target_entry_cell = nullptr;
 	ULongPtrArray *positions = GPOS_NEW(mp) ULongPtrArray(mp);
 	ULONG ul = 0;

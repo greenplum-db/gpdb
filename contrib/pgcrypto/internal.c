@@ -614,3 +614,24 @@ px_find_cipher(const char *name, PX_Cipher **res)
 	*res = c;
 	return 0;
 }
+
+void
+px_disable_fipsmode(void)
+{
+	ereport(ERROR,
+		(errmsg("pgcrypto FIPS mode is only supported in OpenSSL enabled builds")));
+}
+
+void
+px_enable_fipsmode(void)
+{
+	ereport(ERROR,
+			(errmsg("pgcrypto FIPS mode is only supported in OpenSSL enabled builds")));
+}
+
+void
+px_check_fipsmode(void)
+{
+	ereport(ERROR,
+			(errmsg("pgcrypto FIPS mode is only supported in OpenSSL enabled builds")));
+}

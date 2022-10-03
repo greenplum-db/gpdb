@@ -7,6 +7,13 @@
 -- Hence, we better have extra tests for those things.
 --
 
+-- start_matchsubs
+--
+-- # remove line number and entrydb in error message
+-- m/\(xlogfuncs_gp\.c\:\d+.*/
+-- s/\(xlogfuncs_gp\.c:\d+.*/\(xlogfuncs_gp\.c:LINE_NUM\)/
+--
+-- end_matchsubs
 
 -- The total depends on the number of segments, and will also change whenever
 -- the built-in objects change, so be lenient.
@@ -111,3 +118,27 @@ drop table ao_with_malformed_visimaprelid;
 -- plausible difference to the above scenarios would be that the function
 -- might get executed on different nodes, for example.)
 select pg_relation_size(oid) between 3000000 and 5000000 from pg_class where relname = 'heapsizetest'; -- 3637248
+
+create table heapsizetest_size(a bigint);
+
+copy (select pg_relation_size(oid) from pg_class where relname = 'heapsizetest') to '/tmp/t_heapsizetest_size_xxx';
+copy heapsizetest_size from '/tmp/t_heapsizetest_size_xxx';
+
+select count(distinct a) from heapsizetest_size;
+
+\! rm /tmp/t_heapsizetest_size_xxx
+
+insert into heapsizetest_size
+select sum(size)
+from
+(
+  select pg_relation_size(oid)
+  from gp_dist_random('pg_class')
+  where relname = 'heapsizetest'
+) x(size);
+
+-- both method should compute the same result
+select count(distinct a) from heapsizetest_size;
+
+drop table heapsizetest_size;
+

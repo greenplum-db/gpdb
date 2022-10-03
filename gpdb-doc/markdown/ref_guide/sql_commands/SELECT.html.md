@@ -96,7 +96,7 @@ where frame\_start and frame\_end can be one of:
 9.  Using the operators `UNION`, `INTERSECT`, and `EXCEPT`, the output of more than one `SELECT` statement can be combined to form a single result set. The `UNION` operator returns all rows that are in one or both of the result sets. The `INTERSECT` operator returns all rows that are strictly in both result sets. The `EXCEPT` operator returns the rows that are in the first result set but not in the second. In all three cases, duplicate rows are eliminated unless `ALL` is specified. The noise word `DISTINCT` can be added to explicitly specify eliminating duplicate rows. Notice that `DISTINCT` is the default behavior here, even though `ALL` is the default for `SELECT` itself.
 10. If the `ORDER BY` clause is specified, the returned rows are sorted in the specified order. If `ORDER BY` is not given, the rows are returned in whatever order the system finds fastest to produce.
 11. If the `LIMIT` \(or `FETCH FIRST`\) or `OFFSET` clause is specified, the `SELECT` command only returns a subset of the result rows.
-12. If you specify a locking clause `FOR {UPDATE`\|`NO KEY UPDATE`\|`SHARE`\|`KEY SHARE}`, the `SELECT` command locks the entire table against concurrent updates when the Global Deadlock Detector is disabled \(the default\). When the Global Deadlock Detector is enabled, it affects some simple `SELECT` statements that contain a locking clause.
+12. If you specify a locking clause `FOR {UPDATE`\|`NO KEY UPDATE`\|`SHARE`\|`KEY SHARE}`, the `SELECT` command locks the entire table against concurrent updates when the Global Deadlock Detector is deactivated \(the default\). When the Global Deadlock Detector is activated, it affects some simple `SELECT` statements that contain a locking clause.
 
     For information about using a `FOR` clause and the effect of the Global Deadlock Detector, see "The Locking Clause" later in this section.
 
@@ -538,7 +538,7 @@ The lock\_strength can be one of these values.
 -   `SHARE` - Locks the table with a `ROW SHARE` lock.
 -   `KEY SHARE` - Locks the table with a `ROW SHARE` lock.
 
-When the Global Deadlock Detector is disabled \(the default\), Greenplum Database uses the specified lock.
+When the Global Deadlock Detector is deactivated \(the default\), Greenplum Database uses the specified lock.
 
 When the Global Deadlock Detector is enabled, a `ROW SHARE` lock is used to lock the table for simple `SELECT` queries that contain a locking clause, and the query plans contain a `lockrows` node. Simple `SELECT` queries that contain a locking clause fulfill all the following conditions:
 
@@ -547,7 +547,7 @@ When the Global Deadlock Detector is enabled, a `ROW SHARE` lock is used to lock
 -   The `SELECT` command does not contain a set operation such as `UNION` or `INTERSECT`.
 -   The `SELECT` command does not contain a sub-query.
 
-Otherwise, table locking for a `SELECT` query that contains a locking clause behaves as if the Global Deadlock Detector is disabled.
+Otherwise, table locking for a `SELECT` query that contains a locking clause behaves as if the Global Deadlock Detector is deactivated.
 
 **Note:** The Global Deadlock Detector also affects the locking used by `DELETE` and `UPDATE` operations. By default, Greenplum Database acquires an `EXCLUSIVE` lock on tables for `DELETE` and `UPDATE` operations on heap tables. When the Global Deadlock Detector is enabled, the lock mode for `DELETE` and `UPDATE` operations on heap tables is `ROW EXCLUSIVE`.
 

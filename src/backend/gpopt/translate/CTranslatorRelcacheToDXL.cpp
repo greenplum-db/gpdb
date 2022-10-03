@@ -18,6 +18,7 @@ extern "C" {
 
 #include "access/external.h"
 #include "access/heapam.h"
+#include "catalog/heap.h"
 #include "catalog/namespace.h"
 #include "catalog/pg_am.h"
 #include "catalog/pg_proc.h"
@@ -467,8 +468,6 @@ CTranslatorRelcacheToDXL::RetrieveRel(CMemoryPool *mp, CMDAccessor *md_accessor,
 		mdpart_constraint = RetrievePartConstraintForRel(
 			mp, md_accessor, rel.get(), mdcol_array);
 
-		// GPDB_12_MERGE_FIXME: this leaves dead code in CMDRelationGPDB. We
-		// should gut it all the way
 		md_rel = GPOS_NEW(mp) CMDRelationGPDB(
 			mp, mdid, mdname, is_temporary, rel_storage_type, dist, mdcol_array,
 			distr_cols, distr_op_families, part_keys, part_types,
@@ -497,18 +496,6 @@ CTranslatorRelcacheToDXL::RetrieveRelColumns(CMemoryPool *mp,
 
 	for (ULONG ul = 0; ul < (ULONG) rel->rd_att->natts; ul++)
 	{
-		// GPDB_12_MERGE_FIXME: need to add support in ORCA to support GENERATED columns in DML
-		// FIXME: XXX in hindsight, we can fallback less often.
-		//  We _really_ should only fallback on DML, not *all the time*
-		if (rel->rd_att->attrs[ul].attgenerated)
-		{
-			GPOS_RAISE(gpdxl::ExmaMD, gpdxl::ExmiMDObjUnsupported,
-					   GPOS_WSZ_LIT("column has GENERATED default value"));
-		}
-	}
-
-	for (ULONG ul = 0; ul < (ULONG) rel->rd_att->natts; ul++)
-	{
 		Form_pg_attribute att = &rel->rd_att->attrs[ul];
 		CMDName *md_colname =
 			CDXLUtils::CreateMDNameFromCharArray(mp, NameStr(att->attname));
@@ -516,7 +503,7 @@ CTranslatorRelcacheToDXL::RetrieveRelColumns(CMemoryPool *mp,
 		// translate the default column value
 		CDXLNode *dxl_default_col_val = nullptr;
 
-		if (!att->attisdropped)
+		if (!att->attisdropped && !rel->rd_att->attrs[ul].attgenerated)
 		{
 			dxl_default_col_val = GetDefaultColumnValue(
 				mp, md_accessor, rel->rd_att, att->attnum);
@@ -751,21 +738,25 @@ CTranslatorRelcacheToDXL::AddSystemColumns(CMemoryPool *mp,
 		AttrNumber attno = AttrNumber(i);
 		GPOS_ASSERT(0 != attno);
 
+		const FormData_pg_attribute *att_tup = SystemAttributeDefinition(attno);
+
 		// get system name for that attribute
-		const CWStringConst *sys_colname =
-			CTranslatorUtils::GetSystemColName(attno);
+		const CWStringConst *sys_colname = GPOS_NEW(mp)
+			CWStringConst(CDXLUtils::CreateDynamicStringFromCharArray(
+							  mp, NameStr(att_tup->attname))
+							  ->GetBuffer());
 		GPOS_ASSERT(nullptr != sys_colname);
 
 		// copy string into column name
 		CMDName *md_colname = GPOS_NEW(mp) CMDName(mp, sys_colname);
 
 		CMDColumn *md_col = GPOS_NEW(mp) CMDColumn(
-			md_colname, attno, CTranslatorUtils::GetSystemColType(mp, attno),
+			md_colname, attno, GPOS_NEW(mp) CMDIdGPDB(att_tup->atttypid),
 			default_type_modifier,
 			false,	  // is_nullable
 			false,	  // is_dropped
 			nullptr,  // default value
-			CTranslatorUtils::GetSystemColLength(attno));
+			att_tup->attlen);
 
 		mdcol_array->Append(md_col);
 	}
@@ -1718,14 +1709,6 @@ CTranslatorRelcacheToDXL::RetrieveColStats(CMemoryPool *mp,
 
 	CDXLBucketArray *dxl_stats_bucket_array = GPOS_NEW(mp) CDXLBucketArray(mp);
 
-	if (0 > attno)
-	{
-		mdid_col_stats->AddRef();
-		return GenerateStatsForSystemCols(mp, rel_oid, mdid_col_stats,
-										  md_colname, att_type, attno,
-										  dxl_stats_bucket_array, num_rows);
-	}
-
 	// extract out histogram and mcv information from pg_statistic
 	HeapTuple stats_tup = gpdb::GetAttStats(rel_oid, attno);
 
@@ -1913,114 +1896,6 @@ CTranslatorRelcacheToDXL::RetrieveColStats(CMemoryPool *mp,
 	);
 
 	return dxl_col_stats;
-}
-
-
-//---------------------------------------------------------------------------
-//      @function:
-//              CTranslatorRelcacheToDXL::GenerateStatsForSystemCols
-//
-//      @doc:
-//              Generate statistics for the system level columns
-//
-//---------------------------------------------------------------------------
-CDXLColStats *
-CTranslatorRelcacheToDXL::GenerateStatsForSystemCols(
-	CMemoryPool *mp, OID rel_oid, CMDIdColStats *mdid_col_stats,
-	CMDName *md_colname, OID att_type, AttrNumber attno,
-	CDXLBucketArray *dxl_stats_bucket_array, CDouble num_rows)
-{
-	GPOS_ASSERT(nullptr != mdid_col_stats);
-	GPOS_ASSERT(nullptr != md_colname);
-	GPOS_ASSERT(InvalidOid != att_type);
-	GPOS_ASSERT(0 > attno);
-	GPOS_ASSERT(nullptr != dxl_stats_bucket_array);
-
-	CMDIdGPDB *mdid_atttype = GPOS_NEW(mp) CMDIdGPDB(att_type);
-	IMDType *md_type = RetrieveType(mp, mdid_atttype);
-	GPOS_ASSERT(md_type->IsFixedLength());
-
-	BOOL is_col_stats_missing = true;
-	CDouble null_freq(0.0);
-	CDouble width(md_type->Length());
-	CDouble distinct_remaining(0.0);
-	CDouble freq_remaining(0.0);
-
-	if (CStatistics::MinRows <= num_rows)
-	{
-		switch (attno)
-		{
-			case GpSegmentIdAttributeNumber:  // gp_segment_id
-			{
-				is_col_stats_missing = false;
-				freq_remaining = CDouble(1.0);
-				distinct_remaining = CDouble(gpdb::GetGPSegmentCount());
-				break;
-			}
-			case TableOidAttributeNumber:  // tableoid
-			{
-				is_col_stats_missing = false;
-				freq_remaining = CDouble(1.0);
-				distinct_remaining =
-					CDouble(RetrieveNumChildPartitions(rel_oid));
-				break;
-			}
-			case SelfItemPointerAttributeNumber:  // ctid
-			{
-				is_col_stats_missing = false;
-				freq_remaining = CDouble(1.0);
-				distinct_remaining = num_rows;
-				break;
-			}
-			default:
-				break;
-		}
-	}
-
-	// cleanup
-	mdid_atttype->Release();
-	md_type->Release();
-
-	return GPOS_NEW(mp) CDXLColStats(
-		mp, mdid_col_stats, md_colname, width, null_freq, distinct_remaining,
-		freq_remaining, dxl_stats_bucket_array, is_col_stats_missing);
-}
-
-
-//---------------------------------------------------------------------------
-//     @function:
-//     CTranslatorRelcacheToDXL::RetrieveNumChildPartitions
-//
-//  @doc:
-//      For non-leaf partition tables return the number of child partitions
-//      else return 1
-//
-//---------------------------------------------------------------------------
-ULONG
-CTranslatorRelcacheToDXL::RetrieveNumChildPartitions(OID rel_oid)
-{
-	GPOS_ASSERT(InvalidOid != rel_oid);
-
-	ULONG num_part_tables = gpos::ulong_max;
-	if (!gpdb::RelIsPartitioned(rel_oid))
-	{
-		// not a partitioned table
-		num_part_tables = 1;
-	}
-#if 0
-       else if (gpdb::IsLeafPartition(rel_oid))
-       {
-           // leaf partition
-           num_part_tables = 1;
-       }
-       else
-       {
-           num_part_tables = gpdb::CountLeafPartTables(rel_oid);
-       }
-       GPOS_ASSERT(gpos::ulong_max != num_part_tables);
-#endif
-
-	return num_part_tables;
 }
 
 
@@ -2431,6 +2306,13 @@ CTranslatorRelcacheToDXL::RetrieveRelStorageType(Relation rel)
 	IMDRelation::Erelstoragetype rel_storage_type =
 		IMDRelation::ErelstorageSentinel;
 
+	// handle partition root first, note the partition type returned here
+	// is not necessarily the same as the one root partition carries
+	if (rel->rd_rel->relkind == RELKIND_PARTITIONED_TABLE)
+	{
+		return RetrieveStorageTypeForPartitionedTable(rel);
+	}
+
 	switch (rel->rd_rel->relam)
 	{
 		case HEAP_TABLE_AM_OID:
@@ -2447,10 +2329,6 @@ CTranslatorRelcacheToDXL::RetrieveRelStorageType(Relation rel)
 			if (rel->rd_rel->relkind == RELKIND_COMPOSITE_TYPE)
 			{
 				rel_storage_type = IMDRelation::ErelstorageCompositeType;
-			}
-			else if (rel->rd_rel->relkind == RELKIND_PARTITIONED_TABLE)
-			{
-				rel_storage_type = RetrieveStorageTypeForPartitionedTable(rel);
 			}
 			else if (gpdb::RelIsExternalTable(rel->rd_id))
 			{

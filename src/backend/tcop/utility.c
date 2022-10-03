@@ -1192,7 +1192,6 @@ ProcessUtilitySlow(ParseState *pstate,
 							Datum		toast_options;
 							static char *validnsps[] = HEAP_RELOPT_NAMESPACES;
 							List *options = NIL;
-							char *accessmethod = NULL;
 
 							/*
 							 * If this T_CreateStmt was dispatched and we're a QE
@@ -1209,22 +1208,19 @@ ProcessUtilitySlow(ParseState *pstate,
 
 							/*
 							 * Upstream postgres does not support user specified
-							 * RelOptions and TableAM for a parent partitioned
-							 * table. The legacy Greenplum behavior is to have
-							 * the RelOptions and TableAM specified for the
-							 * parent table to be inherited by the child
-							 * partitions. Hence we need to remove these from
-							 * the parent table's CreateStmt and store them to
-							 * pass down to create the child partition's
-							 * CreateStmt. This is only done when creating
-							 * partitions with Greenplum legacy syntax.
+							 * RelOptions. The legacy Greenplum behavior is to have
+							 * the RelOptions specified for the parent table to
+							 * be inherited by the child partitions. Hence we
+							 * need to remove these from the parent table's
+							 * CreateStmt and store them to pass down to create
+							 * the child partition's CreateStmt. This is only
+							 * done when creating partitions with Greenplum
+							 * legacy syntax.
 							 */
 							if (cstmt->partspec && cstmt->partspec->gpPartDef)
 							{
 								options = cstmt->options;
 								cstmt->options = NIL;
-								accessmethod = cstmt->accessMethod;
-								cstmt->accessMethod = NULL;
 							}
 
 							/*
@@ -1247,7 +1243,7 @@ ProcessUtilitySlow(ParseState *pstate,
 														   cstmt->partspec->gpPartDef,
 														   cstmt->partspec->subPartSpec,
 														   queryString, options,
-														   accessmethod,
+														   cstmt->accessMethod,
 														   cstmt->attr_encodings, false);
 								more_stmts = list_concat(more_stmts, parts);
 							}

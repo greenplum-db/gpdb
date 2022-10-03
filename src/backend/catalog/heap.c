@@ -1753,13 +1753,15 @@ heap_create_with_catalog(const char *relname,
 
 		/*
 		 * Make a dependency link to force the relation to be deleted if its
-		 * access method is. Do this only for relation and materialized views.
+		 * access method is. Do this only for relation, materialized views and
+		 * partitioned tables.
 		 *
 		 * No need to add an explicit dependency for the toast table, as the
 		 * main table depends on it.
 		 */
 		if (relkind == RELKIND_RELATION ||
-			relkind == RELKIND_MATVIEW)
+			relkind == RELKIND_MATVIEW ||
+			relkind == RELKIND_PARTITIONED_TABLE)
 		{
 			referenced.classId = AccessMethodRelationId;
 			referenced.objectId = accessmtd;

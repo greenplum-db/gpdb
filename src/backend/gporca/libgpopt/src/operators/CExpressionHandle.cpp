@@ -2126,4 +2126,18 @@ CExpressionHandle::DeriveHasScalarFuncProject(ULONG child_index) const
 
 	return GetDrvdScalarProps(child_index)->HasScalarFuncProject();
 }
+
+BOOL
+CExpressionHandle::DeriveContainsOnlyReplicationSafeAggFuncs(
+	ULONG child_index) const
+{
+	if (nullptr != Pexpr())
+	{
+		return (*Pexpr())[child_index]
+			->DeriveContainsOnlyReplicationSafeAggFuncs();
+	}
+
+	return GetDrvdScalarProps(child_index)
+		->ContainsOnlyReplicationSafeAggFuncs();
+}
 // EOF

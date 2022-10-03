@@ -104,7 +104,7 @@ $ wget http://<gpfdist_hostname>:<port>/<filename>
 
 The `CREATE EXTERNAL TABLE` definition must have the correct host name, port, and file names for gpfdist. Specify file names and paths relative to the directory from which gpfdist serves files \(the directory path specified when gpfdist started\). See [Examples for Creating External Tables](g-creating-external-tables---examples.html).
 
-If you start gpfdist on your system and IPv6 networking is disabled, gpfdist displays this warning message when testing for an IPv6 port.
+If you start gpfdist on your system and IPv6 networking is deactivated, gpfdist displays this warning message when testing for an IPv6 port.
 
 ```
 [WRN gpfdist.c:2050] Creating the socket failed

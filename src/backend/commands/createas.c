@@ -130,6 +130,7 @@ create_ctas_internal(List *attrList, IntoClause *into, QueryDesc *queryDesc, boo
 	create->oncommit = into->onCommit;
 	create->tablespacename = into->tableSpaceName;
 	create->if_not_exists = false;
+	create->gp_style_alter_part = false;
 
 	create->distributedBy = NULL; /* We will pass a pre-made intoPolicy instead */
 	create->partitionBy = NULL; /* CTAS does not not support partition. */
@@ -312,15 +313,27 @@ ExecCreateTableAs(CreateTableAsStmt *stmt, const char *queryString,
 	if (stmt->if_not_exists)
 	{
 		Oid			nspid;
+		Oid			oldrelid;
 
-		nspid = RangeVarGetCreationNamespace(stmt->into->rel);
+		nspid = RangeVarGetCreationNamespace(into->rel);
 
-		if (get_relname_relid(stmt->into->rel->relname, nspid))
+		oldrelid = get_relname_relid(into->rel->relname, nspid);
+		if (OidIsValid(oldrelid))
 		{
+			/*
+			 * The relation exists and IF NOT EXISTS has been specified.
+			 *
+			 * If we are in an extension script, insist that the pre-existing
+			 * object be a member of the extension, to avoid security risks.
+			 */
+			ObjectAddressSet(address, RelationRelationId, oldrelid);
+			checkMembershipInCurrentExtension(&address);
+
+			/* OK to skip */
 			ereport(NOTICE,
 					(errcode(ERRCODE_DUPLICATE_TABLE),
 					 errmsg("relation \"%s\" already exists, skipping",
-							stmt->into->rel->relname)));
+							into->rel->relname)));
 			return InvalidObjectAddress;
 		}
 	}

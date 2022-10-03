@@ -673,12 +673,16 @@ select tableoid::regclass::text as relname, parted_tab.* from parted_tab order b
 
 -- modifies partition key, but no rows will actually be updated
 explain update parted_tab set a = 2 where false;
-                       QUERY PLAN                       
---------------------------------------------------------
- Update on parted_tab  (cost=0.00..0.00 rows=0 width=0)
-   ->  Result  (cost=0.00..0.00 rows=0 width=0)
-         One-Time Filter: false
-(3 rows)
+                            QUERY PLAN                             
+-------------------------------------------------------------------
+ Update on parted_tab  (cost=0.00..0.00 rows=0 width=1)
+   ->  Result  (cost=0.00..0.00 rows=0 width=30)
+         ->  Result  (cost=0.00..0.00 rows=0 width=26)
+               ->  Split  (cost=0.00..0.00 rows=0 width=26)
+                     ->  Result  (cost=0.00..0.00 rows=0 width=26)
+                           One-Time Filter: false
+ Optimizer: Pivotal Optimizer (GPORCA)
+(7 rows)
 
 drop table parted_tab;
 -- Check UPDATE with multi-level partitioned inherited target
@@ -1881,7 +1885,7 @@ explain (costs off) select * from list_parted;
 ------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Dynamic Seq Scan on list_parted
-         Number of partitions to scan: 3 
+         Number of partitions to scan: 3 (out of 3)
  Optimizer: Pivotal Optimizer (GPORCA)
 (4 rows)
 
@@ -1890,7 +1894,7 @@ explain (costs off) select * from list_parted where a is null;
 ------------------------------------------
  Gather Motion 1:1  (slice1; segments: 1)
    ->  Dynamic Seq Scan on list_parted
-         Number of partitions to scan: 1 
+         Number of partitions to scan: 1 (out of 3)
          Filter: (a IS NULL)
  Optimizer: Pivotal Optimizer (GPORCA)
 (5 rows)
@@ -1900,7 +1904,7 @@ explain (costs off) select * from list_parted where a is not null;
 ------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Dynamic Seq Scan on list_parted
-         Number of partitions to scan: 3 
+         Number of partitions to scan: 3 (out of 3)
          Filter: (NOT (a IS NULL))
  Optimizer: Pivotal Optimizer (GPORCA)
 (5 rows)
@@ -1910,7 +1914,7 @@ explain (costs off) select * from list_parted where a in ('ab', 'cd', 'ef');
 ----------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Dynamic Seq Scan on list_parted
-         Number of partitions to scan: 2 
+         Number of partitions to scan: 2 (out of 3)
          Filter: ((a)::text = ANY ('{ab,cd,ef}'::text[]))
  Optimizer: Pivotal Optimizer (GPORCA)
 (5 rows)
@@ -1920,7 +1924,7 @@ explain (costs off) select * from list_parted where a = 'ab' or a in (null, 'cd'
 ---------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Dynamic Seq Scan on list_parted
-         Number of partitions to scan: 1 
+         Number of partitions to scan: 1 (out of 3)
          Filter: (((a)::text = 'ab'::text) OR ((a)::text = ANY ('{NULL,cd}'::text[])))
  Optimizer: Pivotal Optimizer (GPORCA)
 (5 rows)
@@ -1930,7 +1934,7 @@ explain (costs off) select * from list_parted where a = 'ab';
 ------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Dynamic Seq Scan on list_parted
-         Number of partitions to scan: 1 
+         Number of partitions to scan: 1 (out of 3)
          Filter: ((a)::text = 'ab'::text)
  Optimizer: Pivotal Optimizer (GPORCA)
 (5 rows)
@@ -2201,7 +2205,7 @@ explain (costs off) select min(a), max(a) from parted_minmax where b = '12345';
    ->  Gather Motion 3:1  (slice1; segments: 3)
          ->  Partial Aggregate
                ->  Dynamic Seq Scan on parted_minmax
-                     Number of partitions to scan: 1 
+                     Number of partitions to scan: 1 (out of 1)
                      Filter: ((b)::text = '12345'::text)
  Optimizer: Pivotal Optimizer (GPORCA)
 (7 rows)
@@ -2343,7 +2347,7 @@ explain (costs off) select * from mclparted order by a;
    ->  Sort
          Sort Key: a
          ->  Dynamic Seq Scan on mclparted
-               Number of partitions to scan: 2 
+               Number of partitions to scan: 2 (out of 2)
  Optimizer: Pivotal Optimizer (GPORCA)
 (7 rows)
 
@@ -2359,7 +2363,7 @@ explain (costs off) select * from mclparted order by a;
    ->  Sort
          Sort Key: a
          ->  Dynamic Seq Scan on mclparted
-               Number of partitions to scan: 4 
+               Number of partitions to scan: 4 (out of 4)
  Optimizer: Pivotal Optimizer (GPORCA)
 (7 rows)
 
@@ -2423,7 +2427,7 @@ explain (costs off) select * from bool_lp order by b;
    ->  Sort
          Sort Key: b
          ->  Dynamic Seq Scan on bool_lp
-               Number of partitions to scan: 2 
+               Number of partitions to scan: 2 (out of 2)
  Optimizer: Pivotal Optimizer (GPORCA)
 (7 rows)
 

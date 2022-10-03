@@ -212,10 +212,6 @@ extern bool AppendOnlyStorageWrite_IsBufferAllocated(
 									   AppendOnlyStorageWrite *storageWrite);
 extern int64 AppendOnlyStorageWrite_LogicalBlockStartOffset(
 									   AppendOnlyStorageWrite *storageWrite);
-extern int64 AppendOnlyStorageWrite_CurrentPosition(
-									   AppendOnlyStorageWrite *storageWrite);
-extern uint8 *AppendOnlyStorageWrite_GetCurrentInternalBuffer(
-									   AppendOnlyStorageWrite *storageWrite);
 
 extern void AppendOnlyStorageWrite_FinishBuffer(
 									AppendOnlyStorageWrite *storageWrite,

@@ -19,6 +19,7 @@
 
 #include "catalog/pg_am_d.h"
 #include "catalog/pg_appendonly.h"
+#include "catalog/pg_attribute_encoding.h"
 #include "catalog/pg_type.h"
 #include "catalog/pg_proc.h"
 #include "catalog/gp_fastsequence.h"
@@ -27,6 +28,7 @@
 #include "access/table.h"
 #include "catalog/dependency.h"
 #include "catalog/indexing.h"
+#include "catalog/pg_attribute_encoding.h"
 #include "utils/builtins.h"
 #include "utils/inval.h"
 #include "utils/lsyscache.h"
@@ -566,9 +568,7 @@ ATAOEntries(Form_pg_class relform1, Form_pg_class relform2)
 					TransferAppendonlyEntries(relform2->oid, relform1->oid);
 					break;
 				case AO_COLUMN_TABLE_AM_OID:
-					ereport(ERROR,
-							(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-								errmsg("alter table does not support switch from Heap to AOCO")));
+					TransferAppendonlyEntries(relform2->oid, relform1->oid);
 					break;
 				case HEAP_TABLE_AM_OID:
 				default:
@@ -609,14 +609,16 @@ ATAOEntries(Form_pg_class relform1, Form_pg_class relform2)
 			switch(relform2->relam)
 			{
 				case HEAP_TABLE_AM_OID:
-					ereport(ERROR,
-							(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-								errmsg("alter table does not support switch from AOCO to Heap")));
+					/* For pg_appendonly entries, it's the same as AO->Heap. */
+					TransferAppendonlyEntries(relform1->oid, relform2->oid);
+					/* Remove the pg_attribute_encoding entries, since heap tables shouldn't have these. */
+					RemoveAttributeEncodingsByRelid(relform1->oid);
 					break;
 				case AO_ROW_TABLE_AM_OID:
-					ereport(ERROR,
-							(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-								errmsg("alter table does not support switch from AOCO to AO")));
+					/* For pg_appendonly entries, it's same as AO->AO/CO. */
+					SwapAppendonlyEntries(relform1->oid, relform2->oid);
+					/* For pg_attribute_encoding entries, it's same as AOCO->heap.*/
+					RemoveAttributeEncodingsByRelid(relform1->oid);
 					break;
 				case AO_COLUMN_TABLE_AM_OID:
 					SwapAppendonlyEntries(relform1->oid, relform2->oid);

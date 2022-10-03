@@ -156,6 +156,8 @@ bool		gp_create_table_random_default_distribution = true;
 bool		gp_allow_non_uniform_partitioning_ddl = true;
 int			dtx_phase2_retry_second = 0;
 
+bool gp_log_suboverflow_statement = false;
+
 bool		log_dispatch_stats = false;
 
 int			explain_memory_verbosity = 0;
@@ -317,7 +319,6 @@ bool		optimizer_enable_constant_expression_evaluation;
 bool		optimizer_enable_bitmapscan;
 bool		optimizer_enable_outerjoin_to_unionall_rewrite;
 bool		optimizer_enable_ctas;
-bool		optimizer_enable_partial_index;
 bool		optimizer_enable_dml;
 bool		optimizer_enable_dml_constraints;
 bool		optimizer_enable_master_only_queries;
@@ -743,16 +744,6 @@ struct config_bool ConfigureNamesBool_gp[] =
 			gettext_noop("Sort more efficiently when plan requires the first <n> rows at most.")
 		},
 		&gp_enable_sort_limit,
-		true,
-		NULL, NULL, NULL
-	},
-
-	{
-		{"gp_enable_sort_distinct", PGC_USERSET, QUERY_TUNING_METHOD,
-			gettext_noop("Enable duplicate removal to be performed while sorting."),
-			gettext_noop("Reduces data handling when plan calls for removing duplicates from sorted rows.")
-		},
-		&gp_enable_sort_distinct,
 		true,
 		NULL, NULL, NULL
 	},
@@ -2569,17 +2560,6 @@ struct config_bool ConfigureNamesBool_gp[] =
 	},
 
 	{
-		{"optimizer_enable_partial_index", PGC_USERSET, QUERY_TUNING_METHOD,
-			gettext_noop("Enable heterogeneous index plans."),
-			NULL,
-			GUC_NOT_IN_SAMPLE
-		},
-		&optimizer_enable_partial_index,
-		true,
-		NULL, NULL, NULL
-	},
-
-	{
 		{"optimizer_enable_dml", PGC_USERSET, QUERY_TUNING_METHOD,
 			gettext_noop("Enable DML plans in Pivotal Optimizer (GPORCA)."),
 			NULL,
@@ -2922,6 +2902,15 @@ struct config_bool ConfigureNamesBool_gp[] =
 		 NULL, NULL, NULL
 	},
 
+	{
+		{"gp_log_suboverflow_statement", PGC_SUSET, LOGGING_WHAT,
+		 gettext_noop("Enable logging of statements that cause subtransaction overflow."),
+		 NULL,
+		 },
+		 &gp_log_suboverflow_statement,
+		 false,
+		 NULL, NULL, NULL
+	},
 
 	/* End-of-list marker */
 	{
@@ -3950,7 +3939,7 @@ struct config_int ConfigureNamesInt_gp[] =
 			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
 		},
 		&optimizer_array_expansion_threshold,
-		100, 0, INT_MAX,
+		20, 0, INT_MAX,
 		NULL, NULL, NULL
 	},
 
@@ -4034,7 +4023,7 @@ struct config_int ConfigureNamesInt_gp[] =
 		{"repl_catchup_within_range", PGC_SUSET, REPLICATION_STANDBY,
 			gettext_noop("Sets the maximum number of xlog segments allowed to lag"
 					  " when the backends can start blocking despite the WAL"
-					   " sender being in catchup phase. (Master Mirroring)"),
+					   " sender being in catchup phase."),
 			NULL,
 			GUC_SUPERUSER_ONLY
 		},
@@ -4145,6 +4134,16 @@ struct config_int ConfigureNamesInt_gp[] =
 		},
 		&gp_dispatch_keepalives_count,
 		0, 0, MAX_GP_DISPATCH_KEEPALIVES_COUNT,
+		NULL, NULL, NULL
+	},
+
+	{
+		{"gp_max_parallel_cursors", PGC_SUSET, RESOURCES,
+			gettext_noop("Parallel cursor concurrency control from the source cluster side, -1 means no limit, which is the default"),
+			NULL, GUC_SUPERUSER_ONLY | GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+		},
+		&gp_max_parallel_cursors,
+		-1, -1, 1024,
 		NULL, NULL, NULL
 	},
 

@@ -96,6 +96,10 @@ CREATE EXTERNAL TABLE "dE_external_table"  (c1 integer)
   LOCATION ('file://localhost/dummy') FORMAT 'text';
 ALTER EXTERNAL TABLE "dE_external_table" OWNER TO test_psql_de_role;
 
+-- create table using user defined access method
+CREATE ACCESS METHOD bogus TYPE TABLE HANDLER heap_tableam_handler;
+CREATE TABLE d_bogus_heap(a int) USING bogus;
+ALTER TABLE "d_bogus_heap" OWNER TO test_psql_de_role;
 -- There's a GPDB-specific Storage column.
 \d
 \d+

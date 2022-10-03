@@ -255,6 +255,10 @@ AddRelationAttributeEncodings(Relation rel, List *attr_encodings)
 	Oid relid = RelationGetRelid(rel);
 	ListCell *lc;
 
+	/* No pg_attribute_encoding entries for partition root. */
+	if (rel->rd_rel->relkind == RELKIND_PARTITIONED_TABLE)
+		return;
+
 	foreach(lc, attr_encodings)
 	{
 		Datum attoptions;

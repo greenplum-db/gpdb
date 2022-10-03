@@ -380,11 +380,6 @@ CConfigParamMapping::PackConfigParamInBitset(
 			GPOPT_DISABLE_XFORM_TF(CXform::ExfMaxOneRow2Assert));
 	}
 
-	if (!optimizer_enable_partial_index)
-	{
-		// GPDB_12_MERGE_FIXME: Remove this GUC
-	}
-
 	if (!optimizer_enable_hashjoin)
 	{
 		// disable hash-join if the corresponding GUC is turned off

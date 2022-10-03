@@ -1,3 +1,5 @@
+create extension if not exists gp_inject_fault;
+
 SET enable_seqscan = OFF;
 SET enable_indexscan = ON;
 SET enable_bitmapscan = ON;
@@ -407,6 +409,45 @@ select count(*) from foo_13446 where b = 1;
 
 drop table foo_13446;
 
+-- test bitmap index scan when using NULL array-condition as index key
+create table foo(a int);
+create index foo_i on foo using bitmap(a);
+explain (verbose on, costs off) select * from foo where a = any(null::int[]);
+select * from foo where a = any(null::int[]);
+
+insert into foo values(1);
+select * from foo where a = 1 and a = any(null::int[]);
+select * from foo where a = 1 or a = any(null::int[]);
+
+drop table foo;
+
 SET enable_seqscan = ON;
 SET enable_bitmapscan = ON;
 
+--
+-- test union bitmap batch words for multivalues index scan like where x in (x1, x2) or x > v
+-- which creates bitmapand plan on two bitmap indexs that match multiple keys by using in in where clause
+--
+create table bmunion (a int, b int);
+insert into bmunion
+  select (r%53), (r%59)
+  from generate_series(1,70000) r;
+create index bmu_i_bmtest2_a on bmunion using bitmap(a);
+create index bmu_i_bmtest2_b on bmunion using bitmap(b);
+insert into bmunion select 53, 1 from generate_series(1, 1000);
+
+set optimizer_enable_tablescan=off;
+set optimizer_enable_dynamictablescan=off;
+-- inject fault for planner so that it could produce bitmapand plan node.
+select gp_inject_fault('simulate_bitmap_and', 'skip', dbid) from gp_segment_configuration where role = 'p' and content = -1;
+explain (costs off) select count(*) from bmunion where a = 53 and b < 3;
+select gp_inject_fault('simulate_bitmap_and', 'reset', dbid) from gp_segment_configuration where role = 'p' and content = -1;
+
+select gp_inject_fault('simulate_bitmap_and', 'skip', dbid) from gp_segment_configuration where role = 'p' and content = -1;
+select count(*) from bmunion where a = 53 and b < 3;
+select gp_inject_fault('simulate_bitmap_and', 'reset', dbid) from gp_segment_configuration where role = 'p' and content = -1;
+
+reset optimizer_enable_tablescan;
+reset optimizer_enable_dynamictablescan;
+
+drop table bmunion;

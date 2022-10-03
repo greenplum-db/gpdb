@@ -421,7 +421,7 @@ on id2 = id3 distributed by (id1);
     <dxl:Plan Id="0" SpaceSize="10">
       <dxl:PhysicalCTAS Name="fake ctas rel" IsTemporary="true" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" InsertColumns="0,8,16" VarTypeModList="-1,-1,-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="13046.116228" Rows="83728676.430400" Width="24"/>
+          <dxl:Cost StartupCost="0" TotalCost="32476.658846" Rows="83728676.430400" Width="24"/>
         </dxl:Properties>
         <dxl:DistrOpclasses>
           <dxl:DistrOpclass Mdid="0.10055.1.0"/>
@@ -445,7 +445,7 @@ on id2 = id3 distributed by (id1);
         </dxl:ProjList>
         <dxl:Result>
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="1394.940675" Rows="83728676.430400" Width="28"/>
+            <dxl:Cost StartupCost="0" TotalCost="20825.483293" Rows="83728676.430400" Width="28"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="id1">
@@ -465,7 +465,7 @@ on id2 = id3 distributed by (id1);
           <dxl:OneTimeFilter/>
           <dxl:HashJoin JoinType="Left">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="1391.957974" Rows="83728676.430400" Width="24"/>
+              <dxl:Cost StartupCost="0" TotalCost="20822.500592" Rows="83728676.430400" Width="24"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="0" Alias="id1">
@@ -488,7 +488,7 @@ on id2 = id3 distributed by (id1);
             </dxl:HashCondList>
             <dxl:HashJoin JoinType="Left">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="899.563151" Rows="81218043.040000" Width="16"/>
+                <dxl:Cost StartupCost="0" TotalCost="5441.987034" Rows="81218043.040000" Width="16"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="0" Alias="id1">

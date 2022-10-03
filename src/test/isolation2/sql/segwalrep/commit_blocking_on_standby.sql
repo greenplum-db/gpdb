@@ -146,3 +146,50 @@ select gp_inject_fault('all', 'reset', dbid)
 insert into commit_blocking_on_standby_t2 values (1);
 
 select wait_until_standby_in_state('streaming');
+
+
+-- Scenario3: verify repl_catchup_within_range is enabled on segment.
+-- It is similar as Scenario2, just running the test against primary/mirror
+-- instead of master/standby.
+
+select gp_inject_fault_infinite('wal_sender_loop', 'infinite_loop', dbid)
+       from gp_segment_configuration where content=0 and role='p';
+
+select gp_inject_fault_infinite('walrecv_skip_flush', 'skip', dbid)
+       from gp_segment_configuration where content=0 and role='m';
+
+0U: select pg_terminate_backend(pid) from pg_stat_replication;
+
+0U: show repl_catchup_within_range;
+
+0U: begin;
+0U: select wait_until_standby_in_state('catchup');
+
+select gp_wait_until_triggered_fault('wal_sender_loop', 1, dbid)
+       from gp_segment_configuration where content=0 and role='p';
+
+0U: select application_name, state from pg_stat_replication;
+0U: commit;
+
+select gp_inject_fault('wal_sender_after_caughtup_within_range', 'suspend', dbid)
+       from gp_segment_configuration where content=0 and role='p';
+
+select gp_inject_fault('wal_sender_loop', 'reset', dbid)
+       from gp_segment_configuration where content=0 and role='p';
+
+select gp_wait_until_triggered_fault(
+       'wal_sender_after_caughtup_within_range', 1, dbid)
+       from gp_segment_configuration where content=0 and role='p';
+
+1&: create table commit_blocking_on_mirror_tbl (a int, b int) distributed by (a);
+
+0U: select wait_for_pg_stat_activity(60);
+0U: select datname, wait_event, query from pg_stat_activity where wait_event = 'SyncRep';
+
+select gp_inject_fault('all', 'reset', dbid)
+       from gp_segment_configuration where content=0;
+
+1<:
+
+insert into commit_blocking_on_mirror_tbl values (2, 1);
+0U: select wait_until_standby_in_state('streaming');

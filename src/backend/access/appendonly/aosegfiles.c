@@ -457,7 +457,7 @@ GetAllFileSegInfo_pg_aoseg_rel(char *relationName,
 			ereport(ERROR,
 					(errcode(ERRCODE_UNDEFINED_OBJECT),
 					 errmsg("got invalid eof value: NULL")));
-		oneseginfo->eof += DatumGetInt64(eof);
+		oneseginfo->eof = DatumGetInt64(eof);
 
 		/* get the tupcount */
 		tupcount = fastgetattr(tuple, Anum_pg_aoseg_tupcount, pg_aoseg_dsc, &isNull);
@@ -465,7 +465,7 @@ GetAllFileSegInfo_pg_aoseg_rel(char *relationName,
 			ereport(ERROR,
 					(errcode(ERRCODE_UNDEFINED_OBJECT),
 					 errmsg("got invalid tupcount value: NULL")));
-		oneseginfo->total_tupcount += DatumGetInt64(tupcount);
+		oneseginfo->total_tupcount = DatumGetInt64(tupcount);
 
 		/* get the varblock count */
 		varblockcount = fastgetattr(tuple, Anum_pg_aoseg_varblockcount, pg_aoseg_dsc, &isNull);
@@ -473,7 +473,7 @@ GetAllFileSegInfo_pg_aoseg_rel(char *relationName,
 			ereport(ERROR,
 					(errcode(ERRCODE_UNDEFINED_OBJECT),
 					 errmsg("got invalid varblockcount value: NULL")));
-		oneseginfo->varblockcount += DatumGetInt64(varblockcount);
+		oneseginfo->varblockcount = DatumGetInt64(varblockcount);
 
 		/* get the modcount */
 		modcount = fastgetattr(tuple, Anum_pg_aoseg_modcount, pg_aoseg_dsc, &isNull);
@@ -481,7 +481,7 @@ GetAllFileSegInfo_pg_aoseg_rel(char *relationName,
 			ereport(ERROR,
 					(errcode(ERRCODE_UNDEFINED_OBJECT),
 					 errmsg("got invalid modcount value: NULL")));
-		oneseginfo->modcount += DatumGetInt64(modcount);
+		oneseginfo->modcount = DatumGetInt64(modcount);
 
 		/* get the file format version number */
 		formatversion = fastgetattr(tuple, Anum_pg_aoseg_formatversion, pg_aoseg_dsc, &isNull);
@@ -515,7 +515,7 @@ GetAllFileSegInfo_pg_aoseg_rel(char *relationName,
 			oneseginfo->eof_uncompressed = InvalidUncompressedEof;
 		}
 		else
-			oneseginfo->eof_uncompressed += DatumGetInt64(eof_uncompressed);
+			oneseginfo->eof_uncompressed = DatumGetInt64(eof_uncompressed);
 
 		elogif(Debug_appendonly_print_scan, LOG,
 			   "Append-only found existing segno %d with eof " INT64_FORMAT " for table '%s'",

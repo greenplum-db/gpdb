@@ -122,8 +122,6 @@ System catalog table and view definitions in alphabetical order.
 
 -   [pg\_largeobject](../system_catalogs/pg_largeobject.html)  
 
--   [pg\_listener](../system_catalogs/pg_listener.html)  
-
 -   [pg\_locks](../system_catalogs/pg_locks.html)  
 
 -   [pg\_matviews](../system_catalogs/pg_matviews.html)  

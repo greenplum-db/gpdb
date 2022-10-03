@@ -203,26 +203,6 @@ get_index_am_oid(const char *amname, bool missing_ok)
 	return get_am_type_oid(amname, AMTYPE_INDEX, missing_ok);
 }
 
-Oid
-get_table_am_handler_oid(const char *amname, bool missing_ok)
-{
-	HeapTuple	tup;
-	Oid			oid = InvalidOid;
-
-	tup = SearchSysCache1(AMNAME, CStringGetDatum(amname));
-	if (HeapTupleIsValid(tup))
-	{
-		Form_pg_am	amform = (Form_pg_am) GETSTRUCT(tup);
-		oid = amform->amhandler;
-		ReleaseSysCache(tup);
-	}
-	if (!OidIsValid(oid) && !missing_ok)
-		ereport(ERROR,
-				(errcode(ERRCODE_UNDEFINED_OBJECT),
-				 errmsg("handler for access method \"%s\" does not exist", amname)));
-	return oid;
-}
-
 /*
  * get_table_am_oid - given an access method name, look up its OID
  *		and verify it corresponds to an table AM.

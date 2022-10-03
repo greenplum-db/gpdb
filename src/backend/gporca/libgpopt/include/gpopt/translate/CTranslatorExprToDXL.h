@@ -536,16 +536,6 @@ private:
 									const CColRefArray *root_colrefs,
 									CExpression *pred);
 
-	CDXLNode *PdxlnBitmapIndexProbeForChildPart(
-		const ColRefToUlongMap *root_col_mapping,
-		const CColRefArray *part_colrefs, const CColRefArray *root_colrefs,
-		const IMDRelation *part, CExpression *pexprBitmapIndexProbe);
-
-	CDXLNode *PdxlnBitmapIndexPathForChildPart(
-		const ColRefToUlongMap *root_col_mapping,
-		const CColRefArray *part_colrefs, const CColRefArray *root_colrefs,
-		const IMDRelation *part, CExpression *pexprBitmapIndexPath);
-
 	// translate a project list expression into a DXL proj list node
 	// according to the order specified in the dynamic array
 	CDXLNode *PdxlnProjList(const CExpression *pexprProjList,

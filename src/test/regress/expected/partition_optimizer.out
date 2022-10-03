@@ -186,7 +186,7 @@ alter table foo_p split partition for (1) at (2) into (partition prt_11, partiti
                            List of relations
  Schema |        Name        |       Type        |   Owner   | Storage 
 --------+--------------------+-------------------+-----------+---------
- public | foo_p              | partitioned table | part_role | 
+ public | foo_p              | partitioned table | part_role | heap
  public | foo_p_1_prt_2      | table             | part_role | heap
  public | foo_p_1_prt_prt_11 | table             | part_role | heap
  public | foo_p_1_prt_prt_12 | table             | part_role | heap
@@ -3642,116 +3642,116 @@ select * from pg_partition_tree('mpp5992');
 select relname, relam, pg_get_expr(relpartbound, oid) from pg_class where relname like 'mpp5992%';
                      relname                      | relam |                   pg_get_expr                    
 --------------------------------------------------+-------+--------------------------------------------------
- mpp5992                                          |     0 | 
- mpp5992_1_prt_1                                  |     0 | FOR VALUES FROM ('01-01-2007') TO ('01-01-2008')
- mpp5992_1_prt_1_2_prt_l1                         |     0 | FOR VALUES IN (1, 2, 3, 4, 5)
- mpp5992_1_prt_1_2_prt_l1_3_prt_ll1               |     0 | FOR VALUES IN ('Engineering')
+ mpp5992                                          |  3435 | 
+ mpp5992_1_prt_1                                  |  3435 | FOR VALUES FROM ('01-01-2007') TO ('01-01-2008')
+ mpp5992_1_prt_1_2_prt_l1                         |  3435 | FOR VALUES IN (1, 2, 3, 4, 5)
+ mpp5992_1_prt_1_2_prt_l1_3_prt_ll1               |  3435 | FOR VALUES IN ('Engineering')
  mpp5992_1_prt_1_2_prt_l1_3_prt_ll1_4_prt_lll1    |  3435 | FOR VALUES IN ('M')
  mpp5992_1_prt_1_2_prt_l1_3_prt_ll1_4_prt_lll2    |  3435 | FOR VALUES IN ('F')
- mpp5992_1_prt_1_2_prt_l1_3_prt_ll2               |     0 | FOR VALUES IN ('QA')
+ mpp5992_1_prt_1_2_prt_l1_3_prt_ll2               |  3435 | FOR VALUES IN ('QA')
  mpp5992_1_prt_1_2_prt_l1_3_prt_ll2_4_prt_lll1    |  3435 | FOR VALUES IN ('M')
  mpp5992_1_prt_1_2_prt_l1_3_prt_ll2_4_prt_lll2    |  3435 | FOR VALUES IN ('F')
- mpp5992_1_prt_1_2_prt_l2                         |     0 | FOR VALUES IN (6, 7, 8, 9, 10)
- mpp5992_1_prt_1_2_prt_l2_3_prt_ll1               |     0 | FOR VALUES IN ('Engineering')
+ mpp5992_1_prt_1_2_prt_l2                         |  3435 | FOR VALUES IN (6, 7, 8, 9, 10)
+ mpp5992_1_prt_1_2_prt_l2_3_prt_ll1               |  3435 | FOR VALUES IN ('Engineering')
  mpp5992_1_prt_1_2_prt_l2_3_prt_ll1_4_prt_lll1    |  3435 | FOR VALUES IN ('M')
  mpp5992_1_prt_1_2_prt_l2_3_prt_ll1_4_prt_lll2    |  3435 | FOR VALUES IN ('F')
- mpp5992_1_prt_1_2_prt_l2_3_prt_ll2               |     0 | FOR VALUES IN ('QA')
+ mpp5992_1_prt_1_2_prt_l2_3_prt_ll2               |  3435 | FOR VALUES IN ('QA')
  mpp5992_1_prt_1_2_prt_l2_3_prt_ll2_4_prt_lll1    |  3435 | FOR VALUES IN ('M')
  mpp5992_1_prt_1_2_prt_l2_3_prt_ll2_4_prt_lll2    |  3435 | FOR VALUES IN ('F')
- mpp5992_1_prt_2                                  |     0 | FOR VALUES FROM ('01-01-2008') TO ('01-01-2009')
- mpp5992_1_prt_2_2_prt_l1                         |     0 | FOR VALUES IN (1, 2, 3, 4, 5)
- mpp5992_1_prt_2_2_prt_l1_3_prt_ll1               |     0 | FOR VALUES IN ('Engineering')
+ mpp5992_1_prt_2                                  |  3435 | FOR VALUES FROM ('01-01-2008') TO ('01-01-2009')
+ mpp5992_1_prt_2_2_prt_l1                         |  3435 | FOR VALUES IN (1, 2, 3, 4, 5)
+ mpp5992_1_prt_2_2_prt_l1_3_prt_ll1               |  3435 | FOR VALUES IN ('Engineering')
  mpp5992_1_prt_2_2_prt_l1_3_prt_ll1_4_prt_lll1    |  3435 | FOR VALUES IN ('M')
  mpp5992_1_prt_2_2_prt_l1_3_prt_ll1_4_prt_lll2    |  3435 | FOR VALUES IN ('F')
- mpp5992_1_prt_2_2_prt_l1_3_prt_ll2               |     0 | FOR VALUES IN ('QA')
+ mpp5992_1_prt_2_2_prt_l1_3_prt_ll2               |  3435 | FOR VALUES IN ('QA')
  mpp5992_1_prt_2_2_prt_l1_3_prt_ll2_4_prt_lll1    |  3435 | FOR VALUES IN ('M')
  mpp5992_1_prt_2_2_prt_l1_3_prt_ll2_4_prt_lll2    |  3435 | FOR VALUES IN ('F')
- mpp5992_1_prt_2_2_prt_l2                         |     0 | FOR VALUES IN (6, 7, 8, 9, 10)
- mpp5992_1_prt_2_2_prt_l2_3_prt_ll1               |     0 | FOR VALUES IN ('Engineering')
+ mpp5992_1_prt_2_2_prt_l2                         |  3435 | FOR VALUES IN (6, 7, 8, 9, 10)
+ mpp5992_1_prt_2_2_prt_l2_3_prt_ll1               |  3435 | FOR VALUES IN ('Engineering')
  mpp5992_1_prt_2_2_prt_l2_3_prt_ll1_4_prt_lll1    |  3435 | FOR VALUES IN ('M')
  mpp5992_1_prt_2_2_prt_l2_3_prt_ll1_4_prt_lll2    |  3435 | FOR VALUES IN ('F')
- mpp5992_1_prt_2_2_prt_l2_3_prt_ll2               |     0 | FOR VALUES IN ('QA')
+ mpp5992_1_prt_2_2_prt_l2_3_prt_ll2               |  3435 | FOR VALUES IN ('QA')
  mpp5992_1_prt_2_2_prt_l2_3_prt_ll2_4_prt_lll1    |  3435 | FOR VALUES IN ('M')
  mpp5992_1_prt_2_2_prt_l2_3_prt_ll2_4_prt_lll2    |  3435 | FOR VALUES IN ('F')
- mpp5992_1_prt_3                                  |     0 | FOR VALUES FROM ('01-01-2009') TO ('01-01-2010')
- mpp5992_1_prt_3_2_prt_l1                         |     0 | FOR VALUES IN (1, 2, 3, 4, 5)
- mpp5992_1_prt_3_2_prt_l1_3_prt_ll1               |     0 | FOR VALUES IN ('Engineering')
+ mpp5992_1_prt_3                                  |  3435 | FOR VALUES FROM ('01-01-2009') TO ('01-01-2010')
+ mpp5992_1_prt_3_2_prt_l1                         |  3435 | FOR VALUES IN (1, 2, 3, 4, 5)
+ mpp5992_1_prt_3_2_prt_l1_3_prt_ll1               |  3435 | FOR VALUES IN ('Engineering')
  mpp5992_1_prt_3_2_prt_l1_3_prt_ll1_4_prt_lll1    |  3435 | FOR VALUES IN ('M')
  mpp5992_1_prt_3_2_prt_l1_3_prt_ll1_4_prt_lll2    |  3435 | FOR VALUES IN ('F')
- mpp5992_1_prt_3_2_prt_l1_3_prt_ll2               |     0 | FOR VALUES IN ('QA')
+ mpp5992_1_prt_3_2_prt_l1_3_prt_ll2               |  3435 | FOR VALUES IN ('QA')
  mpp5992_1_prt_3_2_prt_l1_3_prt_ll2_4_prt_lll1    |  3435 | FOR VALUES IN ('M')
  mpp5992_1_prt_3_2_prt_l1_3_prt_ll2_4_prt_lll2    |  3435 | FOR VALUES IN ('F')
- mpp5992_1_prt_3_2_prt_l2                         |     0 | FOR VALUES IN (6, 7, 8, 9, 10)
- mpp5992_1_prt_3_2_prt_l2_3_prt_ll1               |     0 | FOR VALUES IN ('Engineering')
+ mpp5992_1_prt_3_2_prt_l2                         |  3435 | FOR VALUES IN (6, 7, 8, 9, 10)
+ mpp5992_1_prt_3_2_prt_l2_3_prt_ll1               |  3435 | FOR VALUES IN ('Engineering')
  mpp5992_1_prt_3_2_prt_l2_3_prt_ll1_4_prt_lll1    |  3435 | FOR VALUES IN ('M')
  mpp5992_1_prt_3_2_prt_l2_3_prt_ll1_4_prt_lll2    |  3435 | FOR VALUES IN ('F')
- mpp5992_1_prt_3_2_prt_l2_3_prt_ll2               |     0 | FOR VALUES IN ('QA')
+ mpp5992_1_prt_3_2_prt_l2_3_prt_ll2               |  3435 | FOR VALUES IN ('QA')
  mpp5992_1_prt_3_2_prt_l2_3_prt_ll2_4_prt_lll1    |  3435 | FOR VALUES IN ('M')
  mpp5992_1_prt_3_2_prt_l2_3_prt_ll2_4_prt_lll2    |  3435 | FOR VALUES IN ('F')
- mpp5992_1_prt_foo1                               |     0 | FOR VALUES FROM ('01-01-2011') TO ('01-01-2012')
- mpp5992_1_prt_foo1_2_prt_l1                      |     0 | FOR VALUES IN (1, 2, 3)
- mpp5992_1_prt_foo1_2_prt_l1_3_prt_ll1            |     0 | FOR VALUES IN ('Engineering')
- mpp5992_1_prt_foo1_2_prt_l1_3_prt_ll1_4_prt_lll1 |     2 | FOR VALUES IN ('M')
- mpp5992_1_prt_foo1_2_prt_l1_3_prt_ll1_4_prt_lll2 |     2 | FOR VALUES IN ('F')
- mpp5992_1_prt_foo1_2_prt_l1_3_prt_ll2            |     0 | FOR VALUES IN ('QA')
- mpp5992_1_prt_foo1_2_prt_l1_3_prt_ll2_4_prt_lll1 |     2 | FOR VALUES IN ('M')
- mpp5992_1_prt_foo1_2_prt_l1_3_prt_ll2_4_prt_lll2 |     2 | FOR VALUES IN ('F')
- mpp5992_1_prt_foo1_2_prt_l2                      |     0 | FOR VALUES IN (4, 5, 6)
- mpp5992_1_prt_foo1_2_prt_l2_3_prt_ll1            |     0 | FOR VALUES IN ('Engineering')
- mpp5992_1_prt_foo1_2_prt_l2_3_prt_ll1_4_prt_lll1 |     2 | FOR VALUES IN ('M')
- mpp5992_1_prt_foo1_2_prt_l2_3_prt_ll1_4_prt_lll2 |     2 | FOR VALUES IN ('F')
- mpp5992_1_prt_foo1_2_prt_l2_3_prt_ll2            |     0 | FOR VALUES IN ('QA')
- mpp5992_1_prt_foo1_2_prt_l2_3_prt_ll2_4_prt_lll1 |     2 | FOR VALUES IN ('M')
- mpp5992_1_prt_foo1_2_prt_l2_3_prt_ll2_4_prt_lll2 |     2 | FOR VALUES IN ('F')
- mpp5992_1_prt_foo1_2_prt_l3                      |     0 | FOR VALUES IN (7, 8, 9, 10)
- mpp5992_1_prt_foo1_2_prt_l3_3_prt_ll1            |     0 | FOR VALUES IN ('Engineering')
- mpp5992_1_prt_foo1_2_prt_l3_3_prt_ll1_4_prt_lll1 |     2 | FOR VALUES IN ('M')
- mpp5992_1_prt_foo1_2_prt_l3_3_prt_ll1_4_prt_lll2 |     2 | FOR VALUES IN ('F')
- mpp5992_1_prt_foo1_2_prt_l3_3_prt_ll2            |     0 | FOR VALUES IN ('QA')
- mpp5992_1_prt_foo1_2_prt_l3_3_prt_ll2_4_prt_lll1 |     2 | FOR VALUES IN ('M')
- mpp5992_1_prt_foo1_2_prt_l3_3_prt_ll2_4_prt_lll2 |     2 | FOR VALUES IN ('F')
- mpp5992_1_prt_foo2                               |     0 | FOR VALUES FROM ('01-01-2012') TO ('01-01-2013')
- mpp5992_1_prt_foo2_2_prt_l1                      |     0 | FOR VALUES IN (1, 2, 3)
- mpp5992_1_prt_foo2_2_prt_l1_3_prt_ll1            |     0 | FOR VALUES IN ('Engineering')
+ mpp5992_1_prt_foo1                               |  3435 | FOR VALUES FROM ('01-01-2011') TO ('01-01-2012')
+ mpp5992_1_prt_foo1_2_prt_l1                      |  3435 | FOR VALUES IN (1, 2, 3)
+ mpp5992_1_prt_foo1_2_prt_l1_3_prt_ll1            |  3435 | FOR VALUES IN ('Engineering')
+ mpp5992_1_prt_foo1_2_prt_l1_3_prt_ll1_4_prt_lll1 |  3435 | FOR VALUES IN ('M')
+ mpp5992_1_prt_foo1_2_prt_l1_3_prt_ll1_4_prt_lll2 |  3435 | FOR VALUES IN ('F')
+ mpp5992_1_prt_foo1_2_prt_l1_3_prt_ll2            |  3435 | FOR VALUES IN ('QA')
+ mpp5992_1_prt_foo1_2_prt_l1_3_prt_ll2_4_prt_lll1 |  3435 | FOR VALUES IN ('M')
+ mpp5992_1_prt_foo1_2_prt_l1_3_prt_ll2_4_prt_lll2 |  3435 | FOR VALUES IN ('F')
+ mpp5992_1_prt_foo1_2_prt_l2                      |  3435 | FOR VALUES IN (4, 5, 6)
+ mpp5992_1_prt_foo1_2_prt_l2_3_prt_ll1            |  3435 | FOR VALUES IN ('Engineering')
+ mpp5992_1_prt_foo1_2_prt_l2_3_prt_ll1_4_prt_lll1 |  3435 | FOR VALUES IN ('M')
+ mpp5992_1_prt_foo1_2_prt_l2_3_prt_ll1_4_prt_lll2 |  3435 | FOR VALUES IN ('F')
+ mpp5992_1_prt_foo1_2_prt_l2_3_prt_ll2            |  3435 | FOR VALUES IN ('QA')
+ mpp5992_1_prt_foo1_2_prt_l2_3_prt_ll2_4_prt_lll1 |  3435 | FOR VALUES IN ('M')
+ mpp5992_1_prt_foo1_2_prt_l2_3_prt_ll2_4_prt_lll2 |  3435 | FOR VALUES IN ('F')
+ mpp5992_1_prt_foo1_2_prt_l3                      |  3435 | FOR VALUES IN (7, 8, 9, 10)
+ mpp5992_1_prt_foo1_2_prt_l3_3_prt_ll1            |  3435 | FOR VALUES IN ('Engineering')
+ mpp5992_1_prt_foo1_2_prt_l3_3_prt_ll1_4_prt_lll1 |  3435 | FOR VALUES IN ('M')
+ mpp5992_1_prt_foo1_2_prt_l3_3_prt_ll1_4_prt_lll2 |  3435 | FOR VALUES IN ('F')
+ mpp5992_1_prt_foo1_2_prt_l3_3_prt_ll2            |  3435 | FOR VALUES IN ('QA')
+ mpp5992_1_prt_foo1_2_prt_l3_3_prt_ll2_4_prt_lll1 |  3435 | FOR VALUES IN ('M')
+ mpp5992_1_prt_foo1_2_prt_l3_3_prt_ll2_4_prt_lll2 |  3435 | FOR VALUES IN ('F')
+ mpp5992_1_prt_foo2                               |  3435 | FOR VALUES FROM ('01-01-2012') TO ('01-01-2013')
+ mpp5992_1_prt_foo2_2_prt_l1                      |  3435 | FOR VALUES IN (1, 2, 3)
+ mpp5992_1_prt_foo2_2_prt_l1_3_prt_ll1            |  3435 | FOR VALUES IN ('Engineering')
  mpp5992_1_prt_foo2_2_prt_l1_3_prt_ll1_4_prt_lll1 |  3435 | FOR VALUES IN ('M')
  mpp5992_1_prt_foo2_2_prt_l1_3_prt_ll1_4_prt_lll2 |  3435 | FOR VALUES IN ('F')
- mpp5992_1_prt_foo2_2_prt_l1_3_prt_ll2            |     0 | FOR VALUES IN ('QA')
+ mpp5992_1_prt_foo2_2_prt_l1_3_prt_ll2            |  3435 | FOR VALUES IN ('QA')
  mpp5992_1_prt_foo2_2_prt_l1_3_prt_ll2_4_prt_lll1 |  3435 | FOR VALUES IN ('M')
  mpp5992_1_prt_foo2_2_prt_l1_3_prt_ll2_4_prt_lll2 |  3435 | FOR VALUES IN ('F')
- mpp5992_1_prt_foo2_2_prt_l2                      |     0 | FOR VALUES IN (4, 5, 6)
- mpp5992_1_prt_foo2_2_prt_l2_3_prt_ll1            |     0 | FOR VALUES IN ('Engineering')
+ mpp5992_1_prt_foo2_2_prt_l2                      |  3435 | FOR VALUES IN (4, 5, 6)
+ mpp5992_1_prt_foo2_2_prt_l2_3_prt_ll1            |  3435 | FOR VALUES IN ('Engineering')
  mpp5992_1_prt_foo2_2_prt_l2_3_prt_ll1_4_prt_lll1 |  3435 | FOR VALUES IN ('M')
  mpp5992_1_prt_foo2_2_prt_l2_3_prt_ll1_4_prt_lll2 |  3435 | FOR VALUES IN ('F')
- mpp5992_1_prt_foo2_2_prt_l2_3_prt_ll2            |     0 | FOR VALUES IN ('QA')
+ mpp5992_1_prt_foo2_2_prt_l2_3_prt_ll2            |  3435 | FOR VALUES IN ('QA')
  mpp5992_1_prt_foo2_2_prt_l2_3_prt_ll2_4_prt_lll1 |  3435 | FOR VALUES IN ('M')
  mpp5992_1_prt_foo2_2_prt_l2_3_prt_ll2_4_prt_lll2 |  3435 | FOR VALUES IN ('F')
- mpp5992_1_prt_foo2_2_prt_l3                      |     0 | FOR VALUES IN (7, 8, 9, 10)
- mpp5992_1_prt_foo2_2_prt_l3_3_prt_ll1            |     0 | FOR VALUES IN ('Engineering')
+ mpp5992_1_prt_foo2_2_prt_l3                      |  3435 | FOR VALUES IN (7, 8, 9, 10)
+ mpp5992_1_prt_foo2_2_prt_l3_3_prt_ll1            |  3435 | FOR VALUES IN ('Engineering')
  mpp5992_1_prt_foo2_2_prt_l3_3_prt_ll1_4_prt_lll1 |  3435 | FOR VALUES IN ('M')
  mpp5992_1_prt_foo2_2_prt_l3_3_prt_ll1_4_prt_lll2 |  3435 | FOR VALUES IN ('F')
- mpp5992_1_prt_foo2_2_prt_l3_3_prt_ll2            |     0 | FOR VALUES IN ('QA')
+ mpp5992_1_prt_foo2_2_prt_l3_3_prt_ll2            |  3435 | FOR VALUES IN ('QA')
  mpp5992_1_prt_foo2_2_prt_l3_3_prt_ll2_4_prt_lll1 |  3435 | FOR VALUES IN ('M')
  mpp5992_1_prt_foo2_2_prt_l3_3_prt_ll2_4_prt_lll2 |  3435 | FOR VALUES IN ('F')
- mpp5992_1_prt_foo3                               |     0 | FOR VALUES FROM ('01-01-2013') TO ('01-01-2014')
- mpp5992_1_prt_foo3_2_prt_l1                      |     0 | FOR VALUES IN (1, 2, 3)
- mpp5992_1_prt_foo3_2_prt_l1_3_prt_ll1            |     0 | FOR VALUES IN ('Engineering')
+ mpp5992_1_prt_foo3                               |  3434 | FOR VALUES FROM ('01-01-2013') TO ('01-01-2014')
+ mpp5992_1_prt_foo3_2_prt_l1                      |  3434 | FOR VALUES IN (1, 2, 3)
+ mpp5992_1_prt_foo3_2_prt_l1_3_prt_ll1            |  3434 | FOR VALUES IN ('Engineering')
  mpp5992_1_prt_foo3_2_prt_l1_3_prt_ll1_4_prt_lll1 |  3434 | FOR VALUES IN ('M')
  mpp5992_1_prt_foo3_2_prt_l1_3_prt_ll1_4_prt_lll2 |  3434 | FOR VALUES IN ('F')
- mpp5992_1_prt_foo3_2_prt_l1_3_prt_ll2            |     0 | FOR VALUES IN ('QA')
+ mpp5992_1_prt_foo3_2_prt_l1_3_prt_ll2            |  3434 | FOR VALUES IN ('QA')
  mpp5992_1_prt_foo3_2_prt_l1_3_prt_ll2_4_prt_lll1 |  3434 | FOR VALUES IN ('M')
  mpp5992_1_prt_foo3_2_prt_l1_3_prt_ll2_4_prt_lll2 |  3434 | FOR VALUES IN ('F')
- mpp5992_1_prt_foo3_2_prt_l2                      |     0 | FOR VALUES IN (4, 5, 6)
- mpp5992_1_prt_foo3_2_prt_l2_3_prt_ll1            |     0 | FOR VALUES IN ('Engineering')
+ mpp5992_1_prt_foo3_2_prt_l2                      |  3434 | FOR VALUES IN (4, 5, 6)
+ mpp5992_1_prt_foo3_2_prt_l2_3_prt_ll1            |  3434 | FOR VALUES IN ('Engineering')
  mpp5992_1_prt_foo3_2_prt_l2_3_prt_ll1_4_prt_lll1 |  3434 | FOR VALUES IN ('M')
  mpp5992_1_prt_foo3_2_prt_l2_3_prt_ll1_4_prt_lll2 |  3434 | FOR VALUES IN ('F')
- mpp5992_1_prt_foo3_2_prt_l2_3_prt_ll2            |     0 | FOR VALUES IN ('QA')
+ mpp5992_1_prt_foo3_2_prt_l2_3_prt_ll2            |  3434 | FOR VALUES IN ('QA')
  mpp5992_1_prt_foo3_2_prt_l2_3_prt_ll2_4_prt_lll1 |  3434 | FOR VALUES IN ('M')
  mpp5992_1_prt_foo3_2_prt_l2_3_prt_ll2_4_prt_lll2 |  3434 | FOR VALUES IN ('F')
- mpp5992_1_prt_foo3_2_prt_l3                      |     0 | FOR VALUES IN (7, 8, 9, 10)
- mpp5992_1_prt_foo3_2_prt_l3_3_prt_ll1            |     0 | FOR VALUES IN ('Engineering')
+ mpp5992_1_prt_foo3_2_prt_l3                      |  3434 | FOR VALUES IN (7, 8, 9, 10)
+ mpp5992_1_prt_foo3_2_prt_l3_3_prt_ll1            |  3434 | FOR VALUES IN ('Engineering')
  mpp5992_1_prt_foo3_2_prt_l3_3_prt_ll1_4_prt_lll1 |  3434 | FOR VALUES IN ('M')
  mpp5992_1_prt_foo3_2_prt_l3_3_prt_ll1_4_prt_lll2 |  3434 | FOR VALUES IN ('F')
- mpp5992_1_prt_foo3_2_prt_l3_3_prt_ll2            |     0 | FOR VALUES IN ('QA')
+ mpp5992_1_prt_foo3_2_prt_l3_3_prt_ll2            |  3434 | FOR VALUES IN ('QA')
  mpp5992_1_prt_foo3_2_prt_l3_3_prt_ll2_4_prt_lll1 |  3434 | FOR VALUES IN ('M')
  mpp5992_1_prt_foo3_2_prt_l3_3_prt_ll2_4_prt_lll2 |  3434 | FOR VALUES IN ('F')
 (112 rows)
@@ -4227,7 +4227,7 @@ left join pg_am am on am.oid = pc.relam
 where relname like ('mpp6979%');
    nspname    |       relname       | amname 
 --------------+---------------------+--------
- public       | mpp6979part         | 
+ public       | mpp6979part         | heap
  public       | mpp6979part_1_prt_1 | heap
  public       | mpp6979part_1_prt_2 | heap
  public       | mpp6979part_1_prt_3 | heap
@@ -4270,7 +4270,7 @@ left join pg_am am on am.oid = c.relam
 where relname like ('mpp6979%');
        relname       |   nspname    | relispartition | amname 
 ---------------------+--------------+----------------+--------
- mpp6979part         | public       | f              | 
+ mpp6979part         | public       | f              | heap
  mpp6979part_1_prt_1 | public       | t              | ao_row
  mpp6979part_1_prt_2 | public       | t              | heap
  mpp6979part_1_prt_3 | public       | t              | heap
@@ -5949,3 +5949,60 @@ select count(*) from pg_class where relname like 'temp_parent_%';
      0
 (1 row)
 
+-- check ATTACH PARTITION on parent table with different distribution policy
+CREATE EXTENSION IF NOT EXISTS gp_debug_numsegments;
+SELECT gp_debug_set_create_table_default_numsegments(1);
+ gp_debug_set_create_table_default_numsegments 
+-----------------------------------------------
+ 1
+(1 row)
+
+CREATE TABLE expanded_parent(a int, b int) PARTITION BY RANGE(b) (START (0) END (6) EVERY (3));
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE TABLE expanded_parent2(a int, b int) PARTITION BY RANGE(b) (START (0) END (6) EVERY (3));
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE TABLE unexpanded_parent(a int, b int) PARTITION BY RANGE(b) (START (0) END (6) EVERY (3));
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE TABLE unexpanded_attach(a int, b int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE TABLE unexpanded_attach2(a int, b int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE TABLE expanded_attach(a int, b int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE TABLE expanded_attach2(a int, b int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+SELECT gp_debug_reset_create_table_default_numsegments();
+ gp_debug_reset_create_table_default_numsegments 
+-------------------------------------------------
+ 
+(1 row)
+
+-- attaching unexpanded partition to expanded table should fail
+ALTER TABLE expanded_parent EXPAND TABLE;
+ALTER TABLE expanded_parent ATTACH PARTITION unexpanded_attach FOR VALUES FROM (6) TO (9);
+ERROR:  distribution policy for "unexpanded_attach" must be the same as that for "expanded_parent"
+-- attaching unexpanded partition to expanded table with partition prepare should fail
+ALTER TABLE expanded_parent2 EXPAND PARTITION PREPARE;
+ALTER TABLE expanded_parent2 ATTACH PARTITION unexpanded_attach2 FOR VALUES FROM (6) TO (9);
+ERROR:  distribution policy for "unexpanded_attach2" must be the same as that for "expanded_parent2"
+-- attaching expanded partition to unexpanded table should fail
+ALTER TABLE expanded_attach EXPAND TABLE;
+ALTER TABLE unexpanded_parent ATTACH PARTITION expanded_attach FOR VALUES FROM (6) TO (9);
+ERROR:  distribution policy for "expanded_attach" must be the same as that for "unexpanded_parent"
+-- attaching expanded partition to expanded table should succeed
+ALTER TABLE expanded_attach2 EXPAND TABLE;
+ALTER TABLE expanded_parent2 ATTACH PARTITION expanded_attach2 FOR VALUES FROM (6) TO (9);
+ALTER TABLE expanded_parent ATTACH PARTITION expanded_attach FOR VALUES FROM (6) TO (9);
+-- cleanup
+DROP TABLE expanded_parent;
+DROP TABLE expanded_parent2;
+DROP TABLE unexpanded_parent;
+DROP TABLE unexpanded_attach;
+DROP TABLE unexpanded_attach2;

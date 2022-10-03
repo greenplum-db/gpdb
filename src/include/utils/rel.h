@@ -30,7 +30,7 @@
 #include "utils/relcache.h"
 #include "utils/reltrigger.h"
 
-#include "catalog/pg_proc.h"
+#include "catalog/pg_am.h"
 
 
 /*
@@ -400,13 +400,12 @@ typedef struct ViewOptions
 
 #define InvalidRelation ((Relation) NULL)
 
-/*
- * We do need the RelationIs* macros because the table access method API is
- * not mature enough and/or the append-optimized design is distinct enough.
+/* GPDB_12_MERGE_FIXME: I hope we don't need these macros anymore, now that
+ * everything should go through the table access method API.
  */
 
 #define RelationIsHeap(relation) \
-	((relation)->rd_amhandler == HEAP_TABLE_AM_HANDLER_OID)
+	((relation)->rd_rel->relam == HEAP_TABLE_AM_OID)
 
 /*
  * CAUTION: this macro is a violation of the absraction that table AM and
@@ -418,7 +417,7 @@ typedef struct ViewOptions
  * 		True iff relation has append only storage with row orientation
  */
 #define RelationIsAoRows(relation) \
-	((relation)->rd_amhandler == AO_ROW_TABLE_AM_HANDLER_OID)
+	((relation)->rd_rel->relam == AO_ROW_TABLE_AM_OID)
 
 /*
  * CAUTION: this macro is a violation of the absraction that table AM and
@@ -430,7 +429,7 @@ typedef struct ViewOptions
  * 		True iff relation has append only storage with column orientation
  */
 #define RelationIsAoCols(relation) \
-	((relation)->rd_amhandler == AO_COLUMN_TABLE_AM_HANDLER_OID)
+	((relation)->rd_rel->relam == AO_COLUMN_TABLE_AM_OID)
 
 /*
  * CAUTION: this macro is a violation of the absraction that table AM and
@@ -442,14 +441,15 @@ typedef struct ViewOptions
  * 		True iff relation has append only storage (can be row or column orientation)
  */
 #define RelationIsAppendOptimized(relation) \
-	(RelationIsAoRows(relation) || RelationIsAoCols(relation))
+	((RelationIsAoRows(relation) || RelationIsAoCols(relation)) && \
+		relation->rd_rel->relkind != RELKIND_PARTITIONED_TABLE)
 
 /*
  * RelationIsBitmapIndex
  *      True iff relation is a bitmap index
  */
 #define RelationIsBitmapIndex(relation) \
-	((bool)((relation)->rd_amhandler == BITMAP_INDEXAM_HANDLER_OID))
+	((bool)((relation)->rd_rel->relam == BITMAP_AM_OID))
 
 /*
  * RelationHasReferenceCountZero

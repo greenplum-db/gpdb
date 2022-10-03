@@ -255,7 +255,7 @@ Perform the following steps as the Greenplum Database administrator `gpadmin`.
 
 ### <a id="topic8"></a>Remove PL/Java Support for a Database 
 
-Use the `DROP EXTENSION` command to remove support for PL/Java from a database. For example, this command disables the PL/Java language in the `testdb` database:
+Use the `DROP EXTENSION` command to remove support for PL/Java from a database. For example, this command deactivates the PL/Java language in the `testdb` database:
 
 ```
 $ psql -d testdb -c 'DROP EXTENSION pljava;'

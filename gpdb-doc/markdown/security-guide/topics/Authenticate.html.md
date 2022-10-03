@@ -254,13 +254,18 @@ ldapbindpasswd
 ldapsearchattribute
 :   Attribute to match against the user name in the search when doing search+bind authentication.
 
-Example:
+ldapsearchfilter
+:   Beginning with Greenplum 6.22, this attribute enables you to provide a search filter to use when doing search+bind authentication. Occurrences of `$username` will be replaced with the user name. This allows for more flexible search filters than `ldapsearchattribute`. Note that you can specify _either_ `ldapsearchattribute` or `ldapsearchattribute`, but not both.
+
+When using search+bind mode, the search can be performed using a single attribute specified with `ldapsearchattribute`, or using a custom search filter specified with `ldapsearchfilter`. Specifying `ldapsearchattribute=foo` is equivalent to specifying `ldapsearchfilter="(foo=$username)"`. If neither option is specified the default is `ldapsearchattribute=uid`.
+
+Here is an example for a search+bind configuration that uses `ldapsearchfilter` instead of `ldapsearchattribute` to allow authentication by user ID or email address:
 
 ```
-ldapserver=ldap.greenplum.com prefix="cn=" suffix=", dc=greenplum, dc=com"
+host ... ldap ldapserver=ldap.example.net ldapbasedn="dc=example, dc=net" ldapsearchfilter="(|(uid=$username)(mail=$username))"
 ```
 
-Following are sample `pg_hba.conf` file entries for LDAP authentication:
+Following are additional sample `pg_hba.conf` file entries for LDAP authentication:
 
 ```
 host all testuser 0.0.0.0/0 ldap ldap

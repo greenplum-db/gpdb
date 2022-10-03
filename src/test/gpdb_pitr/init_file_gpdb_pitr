@@ -1,0 +1,7 @@
+-- start_matchsubs
+
+# remove line number and entrydb in error message
+m/\(xlogfuncs_gp\.c\:\d+.*/
+s/\(xlogfuncs_gp\.c:\d+.*/\(xlogfuncs_gp\.c:LINE_NUM\)/
+
+-- end_matchsubs

@@ -17,6 +17,7 @@
 
 #include "access/xact.h"
 #include "catalog/pg_type.h"
+#include "catalog/pg_inherits.h"
 #include "commands/createas.h"
 #include "commands/defrem.h"
 #include "commands/prepare.h"
@@ -158,6 +159,7 @@ static void ExplainXMLTag(const char *tagname, int flags, ExplainState *es);
 static void ExplainJSONLineEnding(ExplainState *es);
 static void ExplainYAMLLineStarting(ExplainState *es);
 static void escape_yaml(StringInfo buf, const char *str);
+static int countLeafPartTables(Oid relId);
 
 /* Include the Greenplum EXPLAIN extensions */
 #include "explain_gp.c"
@@ -774,8 +776,8 @@ ExplainPrintSettings(ExplainState *es)
 				continue;
 
 			/* Note the non-default GP GUCs */
-			if (gconf->source > PGC_S_DEFAULT)
-				lappend(gp_gucs, cell);
+			if (is_guc_modified(gconf))
+				gp_gucs = lappend(gp_gucs, lfirst(cell));
 		}
 
 		if (list_length(gp_gucs) > 0)
@@ -2149,10 +2151,18 @@ ExplainNode(PlanState *planstate, List *ancestors,
 				show_instrumentation_count("Rows Removed by Filter", 1,
 
 										   planstate, es);
-			if (IsA(plan, DynamicIndexScan))
+			if (IsA(plan, DynamicIndexScan)) {
+				char *buf;
+				Oid relid;
+				relid = rt_fetch(((DynamicIndexScan *)plan)
+						->indexscan.scan.scanrelid,
+						es->rtable)->relid;
+				buf = psprintf("(out of %d)",  countLeafPartTables(relid));
 				ExplainPropertyInteger(
-									   "Number of partitions to scan", "",
-									   list_length(((DynamicIndexScan *) plan)->partOids), es);
+						"Number of partitions to scan", buf,
+						list_length(((DynamicIndexScan *)plan)->partOids),
+						es);
+			}
 			break;
 		case T_IndexOnlyScan:
 			show_scan_qual(((IndexOnlyScan *) plan)->indexqual,
@@ -2180,11 +2190,19 @@ ExplainNode(PlanState *planstate, List *ancestors,
 		{
 			List		*bitmapqualorig;
 
-			if (IsA(plan, DynamicBitmapHeapScan))
+			if (IsA(plan, DynamicBitmapHeapScan)) {
+				char *buf;
+				Oid relid;
+				relid = rt_fetch(((DynamicBitmapHeapScan *)plan)
+						->bitmapheapscan.scan.scanrelid,
+						es->rtable)->relid;
+				buf = psprintf("(out of %d)",  countLeafPartTables(relid));
 				ExplainPropertyInteger(
-						"Number of partitions to scan", "",
-						list_length(((DynamicBitmapHeapScan *) plan)->partOids), es);
-
+						"Number of partitions to scan", buf,
+						list_length(
+							((DynamicBitmapHeapScan *)plan)->partOids),
+						es);
+			}
 			bitmapqualorig = ((BitmapHeapScan *) plan)->bitmapqualorig;
 
 			show_scan_qual(bitmapqualorig,
@@ -2213,19 +2231,17 @@ ExplainNode(PlanState *planstate, List *ancestors,
 		case T_NamedTuplestoreScan:
 		case T_WorkTableScan:
 		case T_SubqueryScan:
-			/*
-			 * GPDB_12_MERGE_FIXME: we used to show something along the lines of
-			 * "Partitions selected: 1 (out of 5)" under the partition selector.
-			 * By eleminating the (static) partition selector during translation,
-			 * we only get the survivor count, and lose the size of the universe
-			 * temporarily. However, if we manage to shift the static pruning
-			 * information sufficiently adjacent to (or better, into) a DXL Dynamic
-			 * Table Scan, we should be able to get that information back.
-			 */
-			if (IsA(plan, DynamicSeqScan))
+			if (IsA(plan, DynamicSeqScan)) {
+				char *buf;
+				Oid relid;
+				relid = rt_fetch(((DynamicSeqScan *)plan)
+							->seqscan.scanrelid,
+							es->rtable)->relid;
+				buf = psprintf("(out of %d)",  countLeafPartTables(relid));
 				ExplainPropertyInteger(
-					"Number of partitions to scan", "",
-					list_length(((DynamicSeqScan *) plan)->partOids), es);
+					"Number of partitions to scan", buf,
+					list_length(((DynamicSeqScan *)plan)->partOids),es);
+			}
 			show_scan_qual(plan->qual, "Filter", planstate, ancestors, es);
 			if (plan->qual)
 				show_instrumentation_count("Rows Removed by Filter", 1,
@@ -2845,10 +2861,7 @@ show_sort_keys(SortState *sortstate, List *ancestors, ExplainState *es)
 	Sort	   *plan = (Sort *) sortstate->ss.ps.plan;
 	const char *SortKeystr;
 
-	if (sortstate->noduplicates)
-		SortKeystr = "Sort Key (Distinct)";
-	else
-		SortKeystr = "Sort Key";
+	SortKeystr = "Sort Key";
 
 	show_sort_group_keys((PlanState *) sortstate, SortKeystr,
 						 plan->numCols, plan->sortColIdx,
@@ -4878,4 +4891,20 @@ static void
 escape_yaml(StringInfo buf, const char *str)
 {
 	escape_json(buf, str);
+}
+
+/*
+ * Return the number of leaf parts of the partitioned table with the given oid
+ */
+static int
+countLeafPartTables(Oid relid) {
+	List	   *partitions;
+	partitions = find_all_inheritors(relid, NoLock, NULL);
+	Assert(list_length(partitions) > 0);
+
+	/* find_all_inheritors returns  a list of relation OIDs including the
+	 * parent relId, so length of the list minus one gives total leaf
+	 * partitions.
+	 */
+	return (list_length(partitions) -1);
 }

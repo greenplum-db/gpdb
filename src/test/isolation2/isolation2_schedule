@@ -91,11 +91,10 @@ test: distributedlog-bug
 test: invalidated_toast_index
 test: distributed_snapshot
 test: gp_collation
-test: ao_upgrade
+test: ao_upgrade ao_blkdir
 test: bitmap_index_concurrent
 test: bitmap_index_crash
 test: bitmap_update_words_backup_block
-test: bitmap_union
 test: bitmap_index_inspect
 
 # below test utilizes fault injectors so it needs to be in a group by itself
@@ -303,3 +302,6 @@ test: sync_guc
 
 # test pg_export_snapshot with distributed snapshot functionality
 test: export_distributed_snapshot
+
+# test TCP interconnect teardown bounded wait
+test: tcp_ic_teardown

@@ -221,7 +221,7 @@ select * from t full join s on t1 = s1;
         </dxl:Comparison>
       </dxl:LogicalJoin>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="256">
+    <dxl:Plan Id="0" SpaceSize="227">
       <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="2586.001789" Rows="3.000000" Width="16"/>

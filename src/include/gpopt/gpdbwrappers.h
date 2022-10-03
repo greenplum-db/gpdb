@@ -546,9 +546,6 @@ bool RelIsPartitioned(Oid relid);
 
 bool IndexIsPartitioned(Oid relid);
 
-// check whether table with the given oid is a regular table and not part of a partitioned table
-bool RelPartIsNone(Oid relid);
-
 // check whether a relation is inherited
 bool HasSubclassSlow(Oid rel_oid);
 
@@ -703,11 +700,6 @@ Node *EvalConstExpressions(Node *node);
 #ifdef FAULT_INJECTOR
 // simple fault injector used by COptTasks.cpp to inject GPDB fault
 FaultInjectorType_e InjectFaultInOptTasks(const char *fault_name);
-#endif
-
-#if 0
-	// return the number of leaf partition for a given table oid
-	gpos::ULONG CountLeafPartTables(Oid oidRelation);
 #endif
 
 // Does the metadata cache need to be reset (because of a catalog

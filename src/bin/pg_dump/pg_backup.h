@@ -209,7 +209,6 @@ typedef struct _dumpOptions
 	/* GPDB */
 	bool		dumpGpPolicy;
 	bool		isGPbackend;
-	bool 		gp_partitioning_available;
 } DumpOptions;
 
 /*

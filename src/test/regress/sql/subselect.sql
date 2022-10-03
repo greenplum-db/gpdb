@@ -732,11 +732,6 @@ with x as not materialized (select * from (select f1, current_database() as n fr
 select * from x, x x2 where x.n = x2.n;
 
 -- Multiply-referenced CTEs can't be inlined if they contain outer self-refs
--- start_ignore
--- GPDB_12_MERGE_FIXME: This currenty produces incorrect results on GPDB.
--- It's not a new issue, but it was exposed by this new upstream test case
--- with the PostgreSQL v12 merge.
--- See https://github.com/greenplum-db/gpdb/issues/10014
 explain (verbose, costs off)
 with recursive x(a) as
   ((values ('a'), ('b'))
@@ -753,7 +748,6 @@ with recursive x(a) as
     select z.a || z1.a as a from z cross join z as z1
     where length(z.a || z1.a) < 5))
 select * from x;
--- end_ignore
 
 explain (verbose, costs off)
 with recursive x(a) as

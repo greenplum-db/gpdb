@@ -397,11 +397,11 @@ ExecInsert(ModifyTableState *mtstate,
 	 * violations before firing these triggers, because they can change the
 	 * values to insert.  Also, they can run arbitrary user-defined code with
 	 * side-effects that we can't cancel by just not inserting the tuple.
-	 */
-	/*
-	 * GPDB_12_MERGE_FIXME: PostgreSQL *does* fire INSERT and DELETE
-	 * triggers on an UPDATE that moves tuples from one partition to another.
-	 * Should we follow that example with cross-segment UPDATEs too?
+	 *
+	 * Considering that the original command is UPDATE for a SplitUpdate, fire
+	 * insert triggers may lead to the wrong action to be enforced. And the
+	 * triggers in GPDB may require cross segments data changes, disallow the
+	 * INSERT triggers on a SplitUpdate.
 	 */
 	if (resultRelInfo->ri_TrigDesc &&
 		resultRelInfo->ri_TrigDesc->trig_insert_before_row &&
@@ -660,11 +660,8 @@ ExecInsert(ModifyTableState *mtstate,
 
 	/* AFTER ROW INSERT Triggers */
 	/*
-	 * GPDB: Don't fire DELETE triggers on a split UPDATE.
-	 *
-	 * GPDB_12_MERGE_FIXME: PostgreSQL *does* fire INSERT and DELETE
-	 * triggers on an UPDATE that moves tuples from one partition to another.
-	 * Should we follow that example with cross-segment UPDATEs too?
+	 * GPDB: Disallow INSERT triggers on a split UPDATE. See comments in
+	 * BEFORE ROW INSERT Triggers.
 	 */
 	if (!splitUpdate)
 		ExecARInsertTriggers(estate, resultRelInfo, slot, recheckIndexes,
@@ -734,7 +731,6 @@ ExecDelete(ModifyTableState *mtstate,
 		   bool *tupleDeleted,
 		   TupleTableSlot **epqreturnslot)
 {
-	/* PlanGenerator planGen = estate->es_plannedstmt->planGen; */
 	ResultRelInfo *resultRelInfo;
 	Relation	resultRelationDesc;
 	TM_Result	result;
@@ -762,41 +758,12 @@ ExecDelete(ModifyTableState *mtstate,
 	/*
 	 * get information on the (current) result relation
 	 */
-	// GPDB_12_MERGE_FIXME: How to do this in new partitioning implementation?
-	// Can we change the way ORCA deletion plans work?
-#if 0
-	if (estate->es_result_partitions && planGen == PLANGEN_OPTIMIZER)
-	{
-		Assert(estate->es_result_partitions->part->parrelid);
-
-#ifdef USE_ASSERT_CHECKING
-		Oid parent = estate->es_result_partitions->part->parrelid;
-#endif
-
-		/* Obtain part for current tuple. */
-		resultRelInfo = slot_get_partition(planSlot, estate, true);
-		estate->es_result_relation_info = resultRelInfo;
-
-#ifdef USE_ASSERT_CHECKING
-		Oid part = RelationGetRelid(resultRelInfo->ri_RelationDesc);
-#endif
-
-		Assert(parent != part);
-	}
-	else
-	{
-		resultRelInfo = estate->es_result_relation_info;
-	}
-#else
 	resultRelInfo = estate->es_result_relation_info;
-#endif
 	resultRelationDesc = resultRelInfo->ri_RelationDesc;
 
 	/* BEFORE ROW DELETE Triggers */
 	/*
-	 * GPDB_12_MERGE_FIXME: PostgreSQL *does* fire INSERT and DELETE
-	 * triggers on an UPDATE that moves tuples from one partition to another.
-	 * Should we follow that example with cross-segment UPDATEs too?
+	 * Disallow DELETE triggers on a split UPDATE. See comments in ExecInsert().
 	 */
 	if (resultRelInfo->ri_TrigDesc &&
 		resultRelInfo->ri_TrigDesc->trig_delete_before_row &&
@@ -1090,9 +1057,7 @@ ldelete:;
 
 	/* AFTER ROW DELETE Triggers */
 	/*
-	 * GPDB_12_MERGE_FIXME: PostgreSQL *does* fire INSERT and DELETE
-	 * triggers on an UPDATE that moves tuples from one partition to another.
-	 * Should we follow that example with cross-segment UPDATEs too?
+	 * Disallow DELETE triggers on a split UPDATE. See comments in ExecInsert().
 	 */
 	if (!RelationIsAppendOptimized(resultRelationDesc) && !splitUpdate)
 	{
@@ -2456,7 +2421,8 @@ ExecModifyTable(PlanState *pstate)
 				bool		isNull;
 
 				relkind = resultRelInfo->ri_RelationDesc->rd_rel->relkind;
-				if (relkind == RELKIND_RELATION || relkind == RELKIND_MATVIEW)
+				if (relkind == RELKIND_RELATION || relkind == RELKIND_MATVIEW ||
+					relkind == RELKIND_PARTITIONED_TABLE)
 				{
 					datum = ExecGetJunkAttribute(slot,
 												 junkfilter->jf_junkAttNo,
@@ -2554,6 +2520,10 @@ ExecModifyTable(PlanState *pstate)
 					estate->es_result_relation_info = resultRelInfo;
 				break;
 			case CMD_UPDATE:
+				/* Prepare for tuple routing if needed. */
+				if (castNode(ModifyTable, node->ps.plan)->forceTupleRouting)
+					slot = ExecPrepareTupleRouting(node, estate, proute,
+												   resultRelInfo, slot);
 				if (!AttributeNumberIsValid(action_attno))
 				{
 					/* normal non-split UPDATE */
@@ -2576,14 +2546,22 @@ ExecModifyTable(PlanState *pstate)
 									  true /* splitUpdate */ ,
 									  NULL, NULL);
 				}
+				/* Revert ExecPrepareTupleRouting's state change. */
+				if (castNode(ModifyTable, node->ps.plan)->forceTupleRouting)
+					estate->es_result_relation_info = resultRelInfo;
 				break;
 			case CMD_DELETE:
+				if (castNode(ModifyTable, node->ps.plan)->forceTupleRouting)
+					planSlot = ExecPrepareTupleRouting(node, estate, proute,
+												   resultRelInfo, slot);
 				slot = ExecDelete(node, tupleid, segid, oldtuple, planSlot,
 								  &node->mt_epqstate, estate,
 								  true, node->canSetTag,
 								  false /* changingPart */ ,
 								  false /* splitUpdate */ ,
 								  NULL, NULL);
+				if (castNode(ModifyTable, node->ps.plan)->forceTupleRouting)
+					estate->es_result_relation_info = resultRelInfo;
 				break;
 			default:
 				elog(ERROR, "unknown operation");
@@ -2777,6 +2755,25 @@ ExecInitModifyTable(ModifyTable *node, EState *estate, int eflags)
 
 	/* Get the target relation */
 	rel = (getTargetResultRelInfo(mtstate))->ri_RelationDesc;
+
+	/*
+	 * GPDB dynamic scan nodes optimize memory usage by avoiding the need to
+	 * maintain a data structure for every partition node. In the plan tree
+	 * this is represented as a single dynamic scan node as opposed to an
+	 * append over many leaf partitions. The different plan representations
+	 * require different execution paths in modify table.
+	 *
+	 * In the case of append, a basic scan on a leaf partition requires no
+	 * tuple routing unless an update to the partition key causes the tuple to
+	 * be routed to another relation.
+	 *
+	 * In the case of dynamic scan, the node hierarchy always requires tuple
+	 * routing to find the corresponding relation. If update to a partition key
+	 * causes the tuple to be routed, then we must perform tuple routing a
+	 * second time.
+	 */
+	if (node->forceTupleRouting)
+		update_tuple_routing_needed = true;
 
 	/*
 	 * If it's not a partitioned table after all, UPDATE tuple routing should

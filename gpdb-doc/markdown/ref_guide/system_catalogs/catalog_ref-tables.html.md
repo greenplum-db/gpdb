@@ -37,7 +37,6 @@
 -   [pg\_inherits](pg_inherits.html)
 -   [pg\_language](pg_language.html)
 -   [pg\_largeobject](pg_largeobject.html)
--   [pg\_listener](pg_listener.html)
 -   [pg\_namespace](pg_namespace.html)
 -   [pg\_opclass](pg_opclass.html)
 -   [pg\_operator](pg_operator.html)
