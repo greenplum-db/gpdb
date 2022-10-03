@@ -55,8 +55,8 @@ ic_proxy_addr_on_getaddrinfo(uv_getaddrinfo_t *req,
 			/* the req is cancelled, nothing to do */
 		}
 		else
-			ic_proxy_log(WARNING,
-						 "ic-proxy-addr: seg%d,dbid%d: fail to resolve the hostname \"%s\":%s: %s",
+			elog(WARNING,
+						 "ic-proxy: seg%d,dbid%d: fail to resolve the hostname \"%s\":%s: %s",
 						 addr->content, addr->dbid,
 						 addr->hostname, addr->service,
 						 uv_strerror(status));
@@ -73,7 +73,7 @@ ic_proxy_addr_on_getaddrinfo(uv_getaddrinfo_t *req,
 			if (iter->ai_family == AF_UNIX)
 				continue;
 
-#if IC_PROXY_LOG_LEVEL <= LOG
+			if (gp_log_interconnect >= GPVARS_VERBOSITY_VERBOSE)
 			{
 				char		name[HOST_NAME_MAX] = "unknown";
 				int			port = 0;
@@ -83,20 +83,19 @@ ic_proxy_addr_on_getaddrinfo(uv_getaddrinfo_t *req,
 				ret = ic_proxy_extract_addr(iter->ai_addr, name, sizeof(name),
 											&port, &family);
 				if (ret == 0)
-					ic_proxy_log(LOG,
-								 "ic-proxy-addr: seg%d,dbid%d: resolved address %s:%s -> %s:%d family=%d",
+					elog(LOG,
+								 "ic-proxy: seg%d,dbid%d: resolved address %s:%s -> %s:%d family=%d",
 								 addr->content, addr->dbid,
 								 addr->hostname, addr->service,
 								 name, port, family);
 				else
-					ic_proxy_log(LOG,
-								 "ic-proxy-addr: seg%d,dbid%d: resolved address %s:%s -> %s:%d family=%d (fail to extract the address: %s)",
+					elog(LOG,
+								 "ic-proxy: seg%d,dbid%d: resolved address %s:%s -> %s:%d family=%d (fail to extract the address: %s)",
 								 addr->content, addr->dbid,
 								 addr->hostname, addr->service,
 								 name, port, family,
 								 uv_strerror(ret));
 			}
-#endif /* IC_PROXY_LOG_LEVEL <= LOG */
 
 			memcpy(&addr->addr, iter->ai_addr, iter->ai_addrlen);
 			ic_proxy_addrs = lappend(ic_proxy_addrs, addr);
@@ -182,7 +181,7 @@ ic_proxy_reload_addresses(uv_loop_t *loop)
 			snprintf(addr->service, sizeof(addr->service), "%d", port);
 			ic_proxy_unknown_addrs = lappend(ic_proxy_unknown_addrs, addr);
 
-			ic_proxy_log(LOG,
+			elogif(gp_log_interconnect >= GPVARS_VERBOSITY_VERBOSE, LOG,
 						 "ic-proxy-addr: seg%d,dbid%d: parsed addr: %s:%d",
 						 content, dbid, hostname, port);
 
@@ -214,7 +213,7 @@ ic_proxy_get_my_addr(void)
 			return addr;
 	}
 
-	ic_proxy_log(LOG, "ic-proxy-addr: cannot get my addr");
+	elogif(gp_log_interconnect >= GPVARS_VERBOSITY_VERBOSE, LOG, "ic-proxy: cannot get my addr");
 	return NULL;
 }
 
@@ -231,8 +230,8 @@ ic_proxy_addr_get_port(const ICProxyAddr *addr)
 	else if (addr->addr.ss_family == AF_INET6)
 		return ntohs(((struct sockaddr_in6 *) addr)->sin6_port);
 
-	ic_proxy_log(WARNING,
-				 "ic-proxy-addr: invalid address family %d for seg%d,dbid%d",
+	elog(WARNING,
+				 "ic-proxy: invalid address family %d for seg%d,dbid%d",
 				 addr->addr.ss_family, addr->content, addr->dbid);
 	return -1;
 }

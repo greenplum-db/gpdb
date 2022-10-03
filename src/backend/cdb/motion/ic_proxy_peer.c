@@ -160,7 +160,8 @@ ic_proxy_peer_unregister(ICProxyPeer *peer)
 	{
 		/* keep the peer as a placeholder */
 
-		ic_proxy_log(LOG, "%s: unregistered", peer->name);
+		elogif(gp_log_interconnect >= GPVARS_VERBOSITY_VERBOSE, LOG,
+			   "ic-proxy %s: unregistered", peer->name);
 
 		/* reset the state */
 		peer->state = 0;
@@ -204,7 +205,7 @@ ic_proxy_peer_register(ICProxyPeer *peer)
 			 * This is not actually a placeholder, but a legacy peer, this
 			 * happens due to network problem, etc..
 			 */
-			ic_proxy_log(WARNING, "%s(state=0x%08x): found a legacy peer %s(state=0x%08x)",
+			elog(WARNING, "ic-proxy: %s(state=0x%08x): found a legacy peer %s(state=0x%08x)",
 						 peer->name, peer->state,
 						 placeholder->name, placeholder->state);
 
@@ -216,12 +217,13 @@ ic_proxy_peer_register(ICProxyPeer *peer)
 		else
 		{
 			/* This is an actual placeholder */
-			ic_proxy_log(LOG, "%s(state=0x%08x): found my placeholder %s(state=0x%08x)",
+			elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG3,
+				   "ic-proxy: %s(state=0x%08x): found my placeholder %s(state=0x%08x)",
 						 peer->name, peer->state,
 						 placeholder->name, placeholder->state);
 
 			if (placeholder->ibuf.len > 0)
-				ic_proxy_log(WARNING, "%s(state=0x%08x): my placeholder %s(state=0x%08x) has %d bytes in ibuf",
+				elog(WARNING, "ic-proxy: %s(state=0x%08x): my placeholder %s(state=0x%08x) has %d bytes in ibuf",
 							 peer->name, peer->state,
 							 placeholder->name, placeholder->state,
 							 placeholder->ibuf.len);
@@ -239,7 +241,8 @@ ic_proxy_peer_register(ICProxyPeer *peer)
 
 	ic_proxy_peers[peer->dbid] = peer;
 
-	ic_proxy_log(LOG, "%s: registered", peer->name);
+	elogif(gp_log_interconnect >= GPVARS_VERBOSITY_VERBOSE, LOG,
+		   "ic-proxy: %s: registered", peer->name);
 }
 
 /*
@@ -284,11 +287,12 @@ ic_proxy_peer_on_data_pkt(void *opaque, const void *data, uint16 size)
 	const ICProxyPkt *pkt = data;
 	ICProxyPeer *peer = opaque;
 
-	ic_proxy_log(LOG, "%s: received %s", peer->name, ic_proxy_pkt_to_str(pkt));
+	elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG5,
+		   "ic-proxy: %s: received %s", peer->name, ic_proxy_pkt_to_str(pkt));
 
 	if (!(peer->state & IC_PROXY_PEER_STATE_READY_FOR_DATA))
 	{
-		ic_proxy_log(WARNING, "%s: not ready to receive DATA yet: %s",
+		elog(WARNING, "ic-proxy: %s: not ready to receive DATA yet: %s",
 					 peer->name, ic_proxy_pkt_to_str(pkt));
 		return;
 	}
@@ -307,10 +311,11 @@ ic_proxy_peer_on_data(uv_stream_t *stream, ssize_t nread, const uv_buf_t *buf)
 	if (unlikely(nread < 0))
 	{
 		if (nread != UV_EOF)
-			ic_proxy_log(WARNING, "%s: fail to receive DATA: %s",
+			elog(WARNING, "ic-proxy: %s: fail to receive DATA: %s",
 						 peer->name, uv_strerror(nread));
 		else
-			ic_proxy_log(LOG, "%s: received EOF while waiting for DATA",
+			elogif(gp_log_interconnect >= GPVARS_VERBOSITY_VERBOSE, LOG,
+				   "ic-proxy: %s: received EOF while waiting for DATA",
 						 peer->name);
 
 		if (buf->base)
@@ -369,13 +374,14 @@ ic_proxy_peer_free(ICProxyPeer *peer)
 {
 	ListCell   *cell;
 
-	ic_proxy_log(LOG, "%s: freeing", peer->name);
+	elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG5,
+		   "ic-proxy: %s: freeing", peer->name);
 
 	foreach(cell, peer->reqs)
 	{
 		ICProxyPkt *pkt = lfirst(cell);
 
-		ic_proxy_log(WARNING, "%s: unhandled outgoing %s, dropping it",
+		elog(WARNING, "ic-proxy: %s: unhandled outgoing %s, dropping it",
 					 peer->name, ic_proxy_pkt_to_str(pkt));
 
 		ic_proxy_pkt_cache_free(pkt);
@@ -402,7 +408,8 @@ ic_proxy_peer_on_close(uv_handle_t *handle)
 {
 	ICProxyPeer *peer = CONTAINER_OF((void *) handle, ICProxyPeer, tcp);
 
-	ic_proxy_log(LOG, "%s: closed", peer->name);
+	elogif(gp_log_interconnect >= GPVARS_VERBOSITY_VERBOSE, LOG,
+		   "%s: closed", peer->name);
 
 	/* reset the state */
 	peer->state = 0;
@@ -424,7 +431,8 @@ ic_proxy_peer_close(ICProxyPeer *peer)
 	if (peer->state & IC_PROXY_PEER_STATE_CLOSING)
 		return;
 
-	ic_proxy_log(LOG, "%s: closing", peer->name);
+	elogif(gp_log_interconnect >= GPVARS_VERBOSITY_VERBOSE, LOG,
+		   "ic-proxy: %s: closing", peer->name);
 
 	peer->state |= IC_PROXY_PEER_STATE_CLOSING;
 
@@ -442,10 +450,11 @@ ic_proxy_peer_on_shutdown(uv_shutdown_t *req, int status)
 	ic_proxy_free(req);
 
 	if (status < 0)
-		ic_proxy_log(WARNING, "%s: fail to shutdown: %s",
+		elog(WARNING, "ic-proxy: %s: fail to shutdown: %s",
 					 peer->name, uv_strerror(status));
 
-	ic_proxy_log(LOG, "%s: shutted down", peer->name);
+	elogif(gp_log_interconnect >= GPVARS_VERBOSITY_VERBOSE, LOG,
+		   "ic-proxy: %s: shutted down", peer->name);
 
 	peer->state |= IC_PROXY_PEER_STATE_SHUTTED;
 
@@ -463,7 +472,8 @@ ic_proxy_peer_shutdown(ICProxyPeer *peer)
 	if (peer->state & IC_PROXY_PEER_STATE_SHUTTING)
 		return;
 
-	ic_proxy_log(LOG, "%s: shutting down", peer->name);
+	elogif(gp_log_interconnect >= GPVARS_VERBOSITY_VERBOSE, LOG,
+		   "ic-proxy: %s: shutting down", peer->name);
 
 	peer->state |= IC_PROXY_PEER_STATE_SHUTTING;
 
@@ -491,7 +501,8 @@ ic_proxy_peer_on_sent_hello_ack(void *opaque, const ICProxyPkt *pkt, int status)
 
 	peer->state |= IC_PROXY_PEER_STATE_SENT_HELLO_ACK;
 
-	ic_proxy_log(LOG, "%s: start receiving DATA", peer->name);
+	elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG3,
+		   "ic-proxy: %s: start receiving DATA", peer->name);
 
 	/* it's unlikely that the ibuf is non-empty, but clear it for sure */
 	ic_proxy_ibuf_clear(&peer->ibuf);
@@ -536,7 +547,8 @@ ic_proxy_peer_on_hello_pkt(void *opaque, const void *data, uint16 size)
 	 */
 	ic_proxy_peer_register(peer);
 
-	ic_proxy_log(LOG, "%s: received %s, sending HELLO ACK",
+	elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG1,
+		   "ic-proxy: %s: received %s, sending HELLO ACK",
 				 peer->name, ic_proxy_pkt_to_str(pkt));
 
 	/*
@@ -566,10 +578,11 @@ ic_proxy_peer_on_hello_data(uv_stream_t *stream,
 	if (unlikely(nread < 0))
 	{
 		if (nread != UV_EOF)
-			ic_proxy_log(WARNING, "%s: fail to receive HELLO: %s",
+			elog(WARNING, "ic-proxy: %s: fail to receive HELLO: %s",
 						 peer->name, uv_strerror(nread));
 		else
-			ic_proxy_log(LOG, "%s: received EOF while waiting for HELLO",
+			elogif(gp_log_interconnect >= GPVARS_VERBOSITY_VERBOSE, LOG,
+				   "ic-proxy: %s: received EOF while waiting for HELLO",
 						 peer->name);
 
 		if (buf->base)
@@ -601,7 +614,8 @@ ic_proxy_peer_read_hello(ICProxyPeer *peer)
 	if (peer->state & IC_PROXY_PEER_STATE_RECEIVING_HELLO)
 		return;
 
-	ic_proxy_log(LOG, "%s: waiting for HELLO", peer->name);
+	elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG3,
+		   "%s: waiting for HELLO", peer->name);
 
 	peer->state |= IC_PROXY_PEER_STATE_RECEIVING_HELLO;
 
@@ -619,7 +633,7 @@ ic_proxy_peer_on_hello_ack_pkt(void *opaque, const void *data, uint16 size)
 	ICProxyPeer *peer = opaque;
 
 	if (size < sizeof(*pkt) || size != pkt->len)
-		ic_proxy_log(ERROR, "%s: received incomplete HELLO ACK: size = %d",
+		elog(ERROR, "ic-proxy: %s: received incomplete HELLO ACK: size = %d",
 					 peer->name, size);
 
 	if (peer->state & IC_PROXY_PEER_STATE_RECEIVED_HELLO_ACK)
@@ -632,7 +646,7 @@ ic_proxy_peer_on_hello_ack_pkt(void *opaque, const void *data, uint16 size)
 		 * TODO: as we can't draw a clear line between handshake and data, it
 		 * would be better to merge on_hello* and on_data into one.
 		 */
-		ic_proxy_log(WARNING, "%s: early DATA: %s",
+		elog(WARNING, "ic-proxy: %s: early DATA: %s",
 					 peer->name, ic_proxy_pkt_to_str(pkt));
 
 		ic_proxy_peer_on_data_pkt(opaque, data, size);
@@ -640,17 +654,18 @@ ic_proxy_peer_on_hello_ack_pkt(void *opaque, const void *data, uint16 size)
 	}
 
 	if (!ic_proxy_pkt_is(pkt, IC_PROXY_MESSAGE_PEER_HELLO_ACK))
-		ic_proxy_log(ERROR, "%s: received invalid HELLO ACK: %s",
+		elog(ERROR, "ic-proxy: %s: received invalid HELLO ACK: %s",
 					 peer->name, ic_proxy_pkt_to_str(pkt));
 
 	if (pkt->dstDbid != peer->dbid)
-		ic_proxy_log(ERROR, "%s: received invalid HELLO ACK: %s",
+		elog(ERROR, "ic-proxy: %s: received invalid HELLO ACK: %s",
 					 peer->name, ic_proxy_pkt_to_str(pkt));
 
 	/* we only expect one hello ack message */
 	uv_read_stop((uv_stream_t *) &peer->tcp);
 
-	ic_proxy_log(LOG, "%s: received %s", peer->name, ic_proxy_pkt_to_str(pkt));
+	elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG1,
+		   "ic-proxy: %s: received %s", peer->name, ic_proxy_pkt_to_str(pkt));
 
 	peer->state |= IC_PROXY_PEER_STATE_RECEIVED_HELLO_ACK;
 
@@ -663,7 +678,8 @@ ic_proxy_peer_on_hello_ack_pkt(void *opaque, const void *data, uint16 size)
 	 */
 	ic_proxy_peer_handle_out_cache(peer);
 
-	ic_proxy_log(LOG, "%s: start receiving DATA", peer->name);
+	elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG3,
+		   "ic-proxy: %s: start receiving DATA", peer->name);
 
 	/* now it's time to receive the normal data */
 	uv_read_start((uv_stream_t *) &peer->tcp,
@@ -682,10 +698,11 @@ ic_proxy_peer_on_hello_ack_data(uv_stream_t *stream,
 	if (unlikely(nread < 0))
 	{
 		if (nread != UV_EOF)
-			ic_proxy_log(WARNING, "%s: fail to recv HELLO ACK: %s",
+			elog(WARNING, "%s: fail to recv HELLO ACK: %s",
 						 peer->name, uv_strerror(nread));
 		else
-			ic_proxy_log(LOG, "%s: received EOF while waiting for HELLO ACK",
+			elogif(gp_log_interconnect >= GPVARS_VERBOSITY_VERBOSE, LOG,
+				   "ic-proxy: %s: received EOF while waiting for HELLO ACK",
 						 peer->name);
 
 		if (buf->base)
@@ -722,7 +739,8 @@ ic_proxy_peer_on_sent_hello(void *opaque, const ICProxyPkt *pkt, int status)
 		return;
 	}
 
-	ic_proxy_log(LOG, "%s: waiting for HELLO ACK", peer->name);
+	elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG1,
+		   "ic-proxy: %s: waiting for HELLO ACK", peer->name);
 
 	peer->state |= IC_PROXY_PEER_STATE_SENT_HELLO;
 
@@ -748,13 +766,15 @@ ic_proxy_peer_on_connected(uv_connect_t *conn, int status)
 	if (status < 0)
 	{
 		/* the peer might just not get ready yet, retry later */
-		ic_proxy_log(LOG, "%s: fail to connect: %s",
+		elogif(gp_log_interconnect >= GPVARS_VERBOSITY_VERBOSE, LOG,
+			   "ic-proxy: %s: fail to connect: %s",
 					 peer->name, uv_strerror(status));
 		ic_proxy_peer_close(peer);
 		return;
 	}
 
-	ic_proxy_log(LOG, "%s: connected, sending HELLO", peer->name);
+	elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG1,
+		   "ic-proxy: %s: connected, sending HELLO", peer->name);
 
 	peer->state |= IC_PROXY_PEER_STATE_CONNECTED;
 
@@ -800,7 +820,8 @@ ic_proxy_peer_connect(ICProxyPeer *peer, struct sockaddr_in *dest)
 	peer->state |= IC_PROXY_PEER_STATE_CONNECTING;
 
 	uv_ip4_name(dest, name, sizeof(name));
-	ic_proxy_log(LOG, "%s: connecting to %s:%d",
+	elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG3,
+		   "%s: connecting to %s:%d",
 				 peer->name, name, ntohs(dest->sin_port));
 
 	/* reinit the tcp handle */
@@ -824,7 +845,8 @@ ic_proxy_peer_route_data(ICProxyPeer *peer, ICProxyPkt *pkt,
 	{
 		ICProxyDelay *delay;
 
-		ic_proxy_log(LOG, "%s: caching outgoing %s",
+		elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG3,
+			   "ic-proxy: %s: caching outgoing %s",
 					 peer->name, ic_proxy_pkt_to_str(pkt));
 
 		delay = ic_proxy_peer_build_delay(peer, pkt, callback, opaque);
@@ -850,8 +872,8 @@ ic_proxy_peer_send_message(ICProxyPeer *peer, ICProxyMessageType mtype,
 	ICProxyPkt *pkt;
 
 	if (!(peer->state & IC_PROXY_PEER_STATE_READY_FOR_MESSAGE))
-		ic_proxy_log(ERROR,
-					 "%s: not ready to send or receive messages",
+		elog(ERROR,
+					 "ic-proxy: %s: not ready to send or receive messages",
 					 peer->name);
 
 	pkt = ic_proxy_message_new(mtype, key);
@@ -875,7 +897,8 @@ ic_proxy_peer_handle_out_cache(ICProxyPeer *peer)
 	if (peer->reqs == NIL)
 		return;
 
-	ic_proxy_log(LOG, "%s: trying to consume the %d cached outgoing pkts",
+	elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG3,
+		   "ic-proxy: %s: trying to consume the %d cached outgoing pkts",
 				 peer->name, list_length(peer->reqs));
 
 	/* First detach all the pkts */
@@ -894,7 +917,8 @@ ic_proxy_peer_handle_out_cache(ICProxyPeer *peer)
 		ic_proxy_free(delay);
 	}
 
-	ic_proxy_log(LOG, "%s: consumed %d cached pkts",
+	elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG3,
+		   "%s: consumed %d cached pkts",
 				 peer->name, list_length(reqs) - list_length(peer->reqs));
 
 	/*

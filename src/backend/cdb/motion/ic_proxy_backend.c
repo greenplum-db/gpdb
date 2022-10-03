@@ -108,7 +108,8 @@ ic_proxy_backend_on_close(uv_handle_t *handle)
 	backend = CONTAINER_OF((void *) handle, ICProxyBackend, pipe);
 	context = backend->pipe.loop->data;
 
-	ic_proxy_log(LOG, "backend %s: backend connection closed, begin to reconnect.",
+	elogif(gp_log_interconnect >= GPVARS_VERBOSITY_VERBOSE, LOG,
+		   "ic-proxy: backend %s: backend connection closed, begin to reconnect.",
 				 ic_proxy_key_to_str(&backend->key));
 
 	/* 
@@ -152,10 +153,13 @@ ic_proxy_backend_on_read_hello_ack(uv_stream_t *stream, ssize_t nread, const uv_
 	{
 		/* UV_EOF is expected */
 		if (nread == UV_EOF)
-			ic_proxy_log(LOG, "backend %s: received EOF while receiving HELLO ACK.",
-						 ic_proxy_key_to_str(&backend->key));
+		{
+			elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG1,
+				   "ic-proxy: backend %s: received EOF while receiving HELLO ACK.",
+				   ic_proxy_key_to_str(&backend->key));
+		}
 		else
-			ic_proxy_log(WARNING, "backend %s: failed to recieve HELLO ACK: %s ",
+			elog(WARNING, "ic-proxy: backend %s: failed to recieve HELLO ACK: %s ",
 						 ic_proxy_key_to_str(&backend->key), uv_strerror(nread));
 
 		/* should close current pipe and try to reconnect */
@@ -229,14 +233,16 @@ ic_proxy_backend_on_sent_hello(uv_write_t *req, int status)
 
 	if (status < 0)
 	{
-		ic_proxy_log(LOG, "backend %s: backend failed to send HELLO: %s",
+		elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG1,
+			   "ic-proxy: backend %s: backend failed to send HELLO: %s",
 					 ic_proxy_key_to_str(&backend->key), uv_strerror(status));
 		uv_close((uv_handle_t *) &backend->pipe, ic_proxy_backend_on_close);
 		return;
 	}
 
 	/* recieve hello ack */
-	ic_proxy_log(LOG, "backend %s: backend connected, receiving HELLO ACK",
+	elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG1,
+		   "ic-proxy: backend %s: backend connected, receiving HELLO ACK",
 				 ic_proxy_key_to_str(&backend->key));
 
 	backend->offset = 0;
@@ -283,12 +289,13 @@ ic_proxy_backend_on_connected(uv_connect_t *conn, int status)
 	if (status < 0)
 	{
 		/* the proxy might just not get ready yet, retry later */
-		ic_proxy_log(LOG, "backend %s: backend failed to connect: %s",
+		elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG1,
+			   "ic-proxy: backend %s: backend failed to connect: %s",
 					 ic_proxy_key_to_str(&backend->key), uv_strerror(status));
 
 		/* retry interval is 100ms and unit of interconnect_setup_timeout is second */
 		if (interconnect_setup_timeout * 1000 <=  backend->retryNum * CONNECT_TIMER_TIMEOUT)
-			ic_proxy_log(ERROR, "backend %s: Interconnect timeout: Unable to "
+			elog(ERROR, "ic-proxy: backend %s: Interconnect timeout: Unable to "
 						 "complete setup of connection within time limit %d seconds",
 						 ic_proxy_key_to_str(&backend->key), interconnect_setup_timeout);
 
@@ -299,7 +306,8 @@ ic_proxy_backend_on_connected(uv_connect_t *conn, int status)
 		return;
 	}
 
-	ic_proxy_log(LOG, "backend %s: backend connected, sending HELLO message.",
+	elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG1,
+		   "ic-proxy: backend %s: backend connected, sending HELLO message.",
 				 ic_proxy_key_to_str(&backend->key));
 
 	/* 
