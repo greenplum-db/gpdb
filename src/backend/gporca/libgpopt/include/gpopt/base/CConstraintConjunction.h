@@ -86,6 +86,9 @@ public:
 	virtual CConstraint *PcnstrRemapForColumn(CMemoryPool *mp,
 											  CColRef *colref) const;
 
+	// Returns the constraint for system column gp_segment_id
+	CConstraint *GetConstraintOnSegmentId() const;
+
 	// print
 	virtual IOstream &
 	OsPrint(IOstream &os) const

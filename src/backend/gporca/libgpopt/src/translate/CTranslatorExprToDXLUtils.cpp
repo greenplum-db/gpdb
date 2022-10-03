@@ -1938,6 +1938,7 @@ CTranslatorExprToDXLUtils::GetDXLDirectDispatchInfo(
 	GPOS_ASSERT(NULL != pdrgpexprHashed);
 	GPOS_ASSERT(NULL != pcnstr);
 
+
 	const ULONG ulHashExpr = pdrgpexprHashed->Size();
 	GPOS_ASSERT(0 < ulHashExpr);
 
@@ -2020,18 +2021,21 @@ CTranslatorExprToDXLUtils::PdxlddinfoSingleDistrKey(CMemoryPool *mp,
 	BOOL useRawValues = false;
 	CConstraint *pcnstrDistrCol = pcnstr->Pcnstr(mp, pcrDistrCol);
 	CConstraintInterval *pcnstrInterval;
-	if (pcnstrDistrCol == NULL &&
-		(pcnstrInterval = dynamic_cast<CConstraintInterval *>(pcnstr)))
+	// Avoid direct dispatch when pcnstrDistrCol specifies a constant column
+	if (!CPredicateUtils::FConstColumn(pcnstrDistrCol, pcrDistrCol) &&
+		(pcnstrInterval = dynamic_cast<CConstraintInterval *>(
+			 pcnstr->GetConstraintOnSegmentId())) != NULL)
 	{
-		if (pcnstrInterval->FConstraintOnSegmentId())
+		if (pcnstrDistrCol != NULL)
 		{
-			// If the constraint is on gp_segment_id then we trick ourselves into
-			// considering the constraint as being on a distribution column.
-			pcnstrDistrCol = pcnstr;
-			pcnstrDistrCol->AddRef();
-			pcrDistrCol = pcnstrInterval->Pcr();
-			useRawValues = true;
+			pcnstrDistrCol->Release();
 		}
+		// If the constraint is on gp_segment_id then we trick ourselves into
+		// considering the constraint as being on a distribution column.
+		pcnstrDistrCol = pcnstrInterval;
+		pcnstrDistrCol->AddRef();
+		pcrDistrCol = pcnstrInterval->Pcr();
+		useRawValues = true;
 	}
 
 	CDXLDatum2dArray *pdrgpdrgpdxldatum = NULL;

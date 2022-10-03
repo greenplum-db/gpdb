@@ -314,6 +314,37 @@ select t1.gp_segment_id, t2.gp_segment_id, * from t_test_dd_via_segid t1, t_test
 explain (costs off) select gp_segment_id, count(*) from t_test_dd_via_segid group by gp_segment_id;
 select gp_segment_id, count(*) from t_test_dd_via_segid group by gp_segment_id;
 
+-- test direct dispatch via gp_segment_id qual with conjunction
+create table t_test_dd_via_segid_conj(a int, b int);
+insert into t_test_dd_via_segid_conj select i,i from generate_series(1, 10)i;
+
+explain (costs off) select gp_segment_id, * from t_test_dd_via_segid_conj where gp_segment_id=0 and a between 1 and 10;
+select gp_segment_id, * from t_test_dd_via_segid_conj where gp_segment_id=0 and a between 1 and 10;
+
+explain (costs off) select gp_segment_id, * from t_test_dd_via_segid_conj where b between 1 and 5 and gp_segment_id=2 and a between 1 and 10;
+select gp_segment_id, * from t_test_dd_via_segid_conj where b between 1 and 5 and gp_segment_id=2 and a between 1 and 10;
+
+--test direct dispatch via gp_segment_id with disjunction
+
+explain (costs off) select * from t_test_dd_via_segid_conj where gp_segment_id=1 or (a=3 and gp_segment_id=2);
+select * from t_test_dd_via_segid_conj where gp_segment_id=1 or (a=3 and gp_segment_id=2);
+
+--test direct dispatch with constant distribution column and constant/variable gp_segment_id condition
+explain (costs off) select gp_segment_id, * from t_test_dd_via_segid_conj where a =3 and b between 1 and 10 and gp_segment_id in (0,1);
+select gp_segment_id, * from t_test_dd_via_segid_conj where a =3 and b between 1 and 10 and gp_segment_id in (0,1);
+
+explain (costs off) select gp_segment_id, * from t_test_dd_via_segid_conj where a =3 and b between 1 and 10 and gp_segment_id <>1;
+select gp_segment_id, * from t_test_dd_via_segid_conj where a =3 and b between 1 and 10 and gp_segment_id <>1;
+
+explain (costs off) select gp_segment_id, * from t_test_dd_via_segid_conj where a =3 and b between 1 and 100 and gp_segment_id =0;
+select gp_segment_id, * from t_test_dd_via_segid_conj where a =3 and b between 1 and 100 and gp_segment_id =0;
+
+explain (costs off) select gp_segment_id, * from t_test_dd_via_segid_conj where a in (1,3) and gp_segment_id <> 0;
+select gp_segment_id, * from t_test_dd_via_segid_conj where a in (1,3) and gp_segment_id <> 0;
+
+explain (costs off) select gp_segment_id, * from t_test_dd_via_segid_conj where a in (1,3) and gp_segment_id in (0,1);
+select gp_segment_id, * from t_test_dd_via_segid_conj where a in (1,3) and gp_segment_id in (0,1);
+
 -- test direct dispatch via gp_segment_id qual on distributed randomly table
 alter table t_test_dd_via_segid set distributed randomly;
 
