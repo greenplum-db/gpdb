@@ -3,6 +3,7 @@
 -- ----------------------------------------------------------------------
 create schema DML_over_joins;
 set search_path to DML_over_joins;
+set optimizer_trace_fallback=on;
 -- ----------------------------------------------------------------------
 -- Test: heap_motion1.sql
 -- ----------------------------------------------------------------------
@@ -19,7 +20,11 @@ drop table if exists s;
 create table r (a int4, b int4) distributed by (a);
 create table s (a int4, b int4) distributed by (a);
 insert into r select generate_series(1, 10000), generate_series(1, 10000) * 3;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Unexpected target list entries in ProjectSet node
 insert into s select generate_series(1, 100), generate_series(1, 100) * 4;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Unexpected target list entries in ProjectSet node
 analyze r;
 analyze s;
 update r set b = r.b + 1 from s where r.a = s.a;
@@ -27,9 +32,13 @@ update r set b = r.b + 1 from s where r.a in (select a from s);
 delete from r using s where r.a = s.a;
 delete from r;
 insert into r select generate_series(1, 10000), generate_series(1, 10000) * 3;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Unexpected target list entries in ProjectSet node
 delete from r where a in (select a from s);
 delete from r;
 insert into r select generate_series(1, 10000), generate_series(1, 10000) * 3;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Unexpected target list entries in ProjectSet node
 delete from r where a = (select max(a) from s);
 ------------------------------------------------------------
 -- Updates with motion:
@@ -38,14 +47,22 @@ delete from r where a = (select max(a) from s);
 delete from r;
 delete from s;
 insert into r select generate_series(1, 10000), generate_series(1, 10000) * 3;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Unexpected target list entries in ProjectSet node
 insert into s select generate_series(1, 100), generate_series(1, 100) * 4;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Unexpected target list entries in ProjectSet node
 update r set b = r.b + 4 from s where r.b = s.b;
 update r set b = b + 1 where b in (select b from s);
 delete from s using r where r.a = s.b;
 delete from r;
 delete from s;
 insert into r select generate_series(1, 10000), generate_series(1, 10000) * 3;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Unexpected target list entries in ProjectSet node
 insert into s select generate_series(1, 100), generate_series(1, 100) * 4;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Unexpected target list entries in ProjectSet node
 delete from r using s where r.b = s.b; 
 ------------------------------------------------------------
 -- 	Hash aggregate group by
@@ -53,7 +70,11 @@ delete from r using s where r.b = s.b;
 delete from r;
 delete from s;
 insert into r select generate_series(1, 10000), generate_series(1, 10000) * 3;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Unexpected target list entries in ProjectSet node
 insert into s select generate_series(1, 100), generate_series(1, 100) * 4;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Unexpected target list entries in ProjectSet node
 explain update s set b = b + 1 where exists (select 1 from r where s.a = r.b);
                                                    QUERY PLAN                                                   
 ----------------------------------------------------------------------------------------------------------------
@@ -102,15 +123,23 @@ drop table if exists s;
 create table r (a int8, b int8) distributed by (a);
 create table s (a int8, b int8) distributed by (a);
 insert into r select generate_series(1, 10000), generate_series(1, 10000) * 3;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Unexpected target list entries in ProjectSet node
 insert into s select generate_series(1, 100), generate_series(1, 100) * 4;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Unexpected target list entries in ProjectSet node
 update r set b = r.b + 1 from s where r.a = s.a;
 update r set b = r.b + 1 from s where r.a in (select a from s);
 delete from r using s where r.a = s.a;
 delete from r;
 insert into r select generate_series(1, 10000), generate_series(1, 10000) * 3;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Unexpected target list entries in ProjectSet node
 delete from r where a in (select a from s);
 delete from r;
 insert into r select generate_series(1, 10000), generate_series(1, 10000) * 3;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Unexpected target list entries in ProjectSet node
 delete from r where a = (select max(a) from s);
 ------------------------------------------------------------
 -- Updates with motion:
@@ -119,14 +148,22 @@ delete from r where a = (select max(a) from s);
 delete from r;
 delete from s;
 insert into r select generate_series(1, 10000), generate_series(1, 10000) * 3;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Unexpected target list entries in ProjectSet node
 insert into s select generate_series(1, 100), generate_series(1, 100) * 4;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Unexpected target list entries in ProjectSet node
 update r set b = r.b + 4 from s where r.b = s.b;
 update r set b = b + 1 where b in (select b from s);
 delete from s using r where r.a = s.b;
 delete from r;
 delete from s;
 insert into r select generate_series(1, 10000), generate_series(1, 10000) * 3;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Unexpected target list entries in ProjectSet node
 insert into s select generate_series(1, 100), generate_series(1, 100) * 4;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Unexpected target list entries in ProjectSet node
 delete from r using s where r.b = s.b; 
 ------------------------------------------------------------
 -- 	Hash aggregate group by
@@ -134,7 +171,11 @@ delete from r using s where r.b = s.b;
 delete from r;
 delete from s;
 insert into r select generate_series(1, 10000), generate_series(1, 10000) * 3;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Unexpected target list entries in ProjectSet node
 insert into s select generate_series(1, 100), generate_series(1, 100) * 4;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Unexpected target list entries in ProjectSet node
 update s set b = b + 1 where exists (select 1 from r where s.a = r.b);
 delete from s where exists (select 1 from r where s.a = r.b);
 -- ----------------------------------------------------------------------
@@ -153,15 +194,23 @@ drop table if exists s;
 create table r (a float4, b float4) distributed by (a);
 create table s (a float4, b float4) distributed by (a);
 insert into r select generate_series(1, 10000), generate_series(1, 10000) * 3;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Unexpected target list entries in ProjectSet node
 insert into s select generate_series(1, 100), generate_series(1, 100) * 4;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Unexpected target list entries in ProjectSet node
 update r set b = r.b + 1 from s where r.a = s.a;
 update r set b = r.b + 1 from s where r.a in (select a from s);
 delete from r using s where r.a = s.a;
 delete from r;
 insert into r select generate_series(1, 10000), generate_series(1, 10000) * 3;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Unexpected target list entries in ProjectSet node
 delete from r where a in (select a from s);
 delete from r;
 insert into r select generate_series(1, 10000), generate_series(1, 10000) * 3;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Unexpected target list entries in ProjectSet node
 delete from r where a = (select max(a) from s);
 ------------------------------------------------------------
 -- Updates with motion:
@@ -170,14 +219,22 @@ delete from r where a = (select max(a) from s);
 delete from r;
 delete from s;
 insert into r select generate_series(1, 10000), generate_series(1, 10000) * 3;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Unexpected target list entries in ProjectSet node
 insert into s select generate_series(1, 100), generate_series(1, 100) * 4;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Unexpected target list entries in ProjectSet node
 update r set b = r.b + 4 from s where r.b = s.b;
 update r set b = b + 1 where b in (select b from s);
 delete from s using r where r.a = s.b;
 delete from r;
 delete from s;
 insert into r select generate_series(1, 10000), generate_series(1, 10000) * 3;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Unexpected target list entries in ProjectSet node
 insert into s select generate_series(1, 100), generate_series(1, 100) * 4;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Unexpected target list entries in ProjectSet node
 delete from r using s where r.b = s.b; 
 ------------------------------------------------------------
 -- 	Hash aggregate group by
@@ -185,7 +242,11 @@ delete from r using s where r.b = s.b;
 delete from r;
 delete from s;
 insert into r select generate_series(1, 10000), generate_series(1, 10000) * 3;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Unexpected target list entries in ProjectSet node
 insert into s select generate_series(1, 100), generate_series(1, 100) * 4;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Unexpected target list entries in ProjectSet node
 update s set b = b + 1 where exists (select 1 from r where s.a = r.b);
 delete from s where exists (select 1 from r where s.a = r.b);
 -- ----------------------------------------------------------------------
@@ -204,15 +265,23 @@ drop table if exists s;
 create table r (a float(24), b float(24)) distributed by (a);
 create table s (a float(24), b float(24)) distributed by (a);
 insert into r select generate_series(1, 10000), generate_series(1, 10000) * 3;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Unexpected target list entries in ProjectSet node
 insert into s select generate_series(1, 100), generate_series(1, 100) * 4;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Unexpected target list entries in ProjectSet node
 update r set b = r.b + 1 from s where r.a = s.a;
 update r set b = r.b + 1 from s where r.a in (select a from s);
 delete from r using s where r.a = s.a;
 delete from r;
 insert into r select generate_series(1, 10000), generate_series(1, 10000) * 3;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Unexpected target list entries in ProjectSet node
 delete from r where a in (select a from s);
 delete from r;
 insert into r select generate_series(1, 10000), generate_series(1, 10000) * 3;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Unexpected target list entries in ProjectSet node
 delete from r where a = (select max(a) from s);
 ------------------------------------------------------------
 -- Updates with motion:
@@ -221,14 +290,22 @@ delete from r where a = (select max(a) from s);
 delete from r;
 delete from s;
 insert into r select generate_series(1, 10000), generate_series(1, 10000) * 3;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Unexpected target list entries in ProjectSet node
 insert into s select generate_series(1, 100), generate_series(1, 100) * 4;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Unexpected target list entries in ProjectSet node
 update r set b = r.b + 4 from s where r.b = s.b;
 update r set b = b + 1 where b in (select b from s);
 delete from s using r where r.a = s.b;
 delete from r;
 delete from s;
 insert into r select generate_series(1, 10000), generate_series(1, 10000) * 3;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Unexpected target list entries in ProjectSet node
 insert into s select generate_series(1, 100), generate_series(1, 100) * 4;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Unexpected target list entries in ProjectSet node
 delete from r using s where r.b = s.b; 
 ------------------------------------------------------------
 -- 	Hash aggregate group by
@@ -236,7 +313,11 @@ delete from r using s where r.b = s.b;
 delete from r;
 delete from s;
 insert into r select generate_series(1, 10000), generate_series(1, 10000) * 3;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Unexpected target list entries in ProjectSet node
 insert into s select generate_series(1, 100), generate_series(1, 100) * 4;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Unexpected target list entries in ProjectSet node
 update s set b = b + 1 where exists (select 1 from r where s.a = r.b);
 delete from s where exists (select 1 from r where s.a = r.b);
 -- ----------------------------------------------------------------------
@@ -255,15 +336,23 @@ drop table if exists s;
 create table r (a float(53), b float(53)) distributed by (a);
 create table s (a float(53), b float(53)) distributed by (a);
 insert into r select generate_series(1, 10000), generate_series(1, 10000) * 3;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Unexpected target list entries in ProjectSet node
 insert into s select generate_series(1, 100), generate_series(1, 100) * 4;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Unexpected target list entries in ProjectSet node
 update r set b = r.b + 1 from s where r.a = s.a;
 update r set b = r.b + 1 from s where r.a in (select a from s);
 delete from r using s where r.a = s.a;
 delete from r;
 insert into r select generate_series(1, 10000), generate_series(1, 10000) * 3;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Unexpected target list entries in ProjectSet node
 delete from r where a in (select a from s);
 delete from r;
 insert into r select generate_series(1, 10000), generate_series(1, 10000) * 3;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Unexpected target list entries in ProjectSet node
 delete from r where a = (select max(a) from s);
 ------------------------------------------------------------
 -- Updates with motion:
@@ -272,14 +361,22 @@ delete from r where a = (select max(a) from s);
 delete from r;
 delete from s;
 insert into r select generate_series(1, 10000), generate_series(1, 10000) * 3;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Unexpected target list entries in ProjectSet node
 insert into s select generate_series(1, 100), generate_series(1, 100) * 4;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Unexpected target list entries in ProjectSet node
 update r set b = r.b + 4 from s where r.b = s.b;
 update r set b = b + 1 where b in (select b from s);
 delete from s using r where r.a = s.b;
 delete from r;
 delete from s;
 insert into r select generate_series(1, 10000), generate_series(1, 10000) * 3;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Unexpected target list entries in ProjectSet node
 insert into s select generate_series(1, 100), generate_series(1, 100) * 4;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Unexpected target list entries in ProjectSet node
 delete from r using s where r.b = s.b; 
 ------------------------------------------------------------
 -- 	Hash aggregate group by
@@ -287,7 +384,11 @@ delete from r using s where r.b = s.b;
 delete from r;
 delete from s;
 insert into r select generate_series(1, 10000), generate_series(1, 10000) * 3;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Unexpected target list entries in ProjectSet node
 insert into s select generate_series(1, 100), generate_series(1, 100) * 4;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Unexpected target list entries in ProjectSet node
 update s set b = b + 1 where exists (select 1 from r where s.a = r.b);
 delete from s where exists (select 1 from r where s.a = r.b);
 ------------------------------------------------------------
@@ -302,12 +403,18 @@ drop table if exists p;
 create table r (a int4, b int4) distributed by (a);
 create table s (a int4, b int4) distributed by (a);
 insert into r select generate_series(1, 10000), generate_series(1, 10000) * 3;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Unexpected target list entries in ProjectSet node
 insert into s select generate_series(1, 100), generate_series(1, 100) * 4;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Unexpected target list entries in ProjectSet node
 create table p (a int4, b int4, c int4) 
 	partition by range (c) (start(1) end(5) every(1), default partition extra);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 insert into p select generate_series(1,10000), generate_series(1,10000)*3, generate_series(1,10000)%6;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Unexpected target list entries in ProjectSet node
 update s set a = r.a from r where r.b = s.b;
 ------------------------------------------------------------
 --	Statement contains correlated subquery
@@ -341,12 +448,18 @@ drop table if exists p;
 create table r (a int8, b int8) distributed by (a);
 create table s (a int8, b int8) distributed by (a);
 insert into r select generate_series(1, 10000), generate_series(1, 10000) * 3;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Unexpected target list entries in ProjectSet node
 insert into s select generate_series(1, 100), generate_series(1, 100) * 4;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Unexpected target list entries in ProjectSet node
 create table p (a int8, b int8, c int8) 
 	partition by range (c) (start(1) end(5) every(1), default partition extra);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 insert into p select generate_series(1,10000), generate_series(1,10000)*3, generate_series(1,10000)%6;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Unexpected target list entries in ProjectSet node
 update s set a = r.a from r where r.b = s.b;
 ------------------------------------------------------------
 --	Statement contains correlated subquery
@@ -380,12 +493,18 @@ drop table if exists p;
 create table r (a float4, b float4) distributed by (a);
 create table s (a float4, b float4) distributed by (a);
 insert into r select generate_series(1, 10000), generate_series(1, 10000) * 3;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Unexpected target list entries in ProjectSet node
 insert into s select generate_series(1, 100), generate_series(1, 100) * 4;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Unexpected target list entries in ProjectSet node
 create table p (a float4, b float4, c float4) 
 	partition by range (c) (start(1) end(5) every(1), default partition extra);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 insert into p select generate_series(1,10000), generate_series(1,10000)*3, generate_series(1,10000)%6;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Unexpected target list entries in ProjectSet node
 update s set a = r.a from r where r.b = s.b;
 ------------------------------------------------------------
 --	Statement contains correlated subquery
@@ -419,12 +538,18 @@ drop table if exists p;
 create table r (a float(24), b float(24)) distributed by (a);
 create table s (a float(24), b float(24)) distributed by (a);
 insert into r select generate_series(1, 10000), generate_series(1, 10000) * 3;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Unexpected target list entries in ProjectSet node
 insert into s select generate_series(1, 100), generate_series(1, 100) * 4;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Unexpected target list entries in ProjectSet node
 create table p (a float(24), b float(24), c float(24)) 
 	partition by range (c) (start(1) end(5) every(1), default partition extra);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 insert into p select generate_series(1,10000), generate_series(1,10000)*3, generate_series(1,10000)%6;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Unexpected target list entries in ProjectSet node
 update s set a = r.a from r where r.b = s.b;
 ------------------------------------------------------------
 --	Statement contains correlated subquery
@@ -458,12 +583,18 @@ drop table if exists p;
 create table r (a float(53), b float(53)) distributed by (a);
 create table s (a float(53), b float(53)) distributed by (a);
 insert into r select generate_series(1, 10000), generate_series(1, 10000) * 3;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Unexpected target list entries in ProjectSet node
 insert into s select generate_series(1, 100), generate_series(1, 100) * 4;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Unexpected target list entries in ProjectSet node
 create table p (a float(53), b float(53), c float(53)) 
 	partition by range (c) (start(1) end(5) every(1), default partition extra);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 insert into p select generate_series(1,10000), generate_series(1,10000)*3, generate_series(1,10000)%6;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Unexpected target list entries in ProjectSet node
 update s set a = r.a from r where r.b = s.b;
 ------------------------------------------------------------
 --	Statement contains correlated subquery
@@ -499,12 +630,18 @@ drop table if exists p;
 create table r (a int4, b int4) distributed by (a);
 create table s (a int4, b int4) distributed by (a);
 insert into r select generate_series(1, 10000), generate_series(1, 10000) * 3;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Unexpected target list entries in ProjectSet node
 insert into s select generate_series(1, 100), generate_series(1, 100) * 3;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Unexpected target list entries in ProjectSet node
 create table p (a int4, b int4, c int4)
 	distributed by (a)
         partition by range (c) (start(1) end(5) every(1), default partition extra);
 	
 insert into p select generate_series(1,10000), generate_series(1,10000) * 3, generate_series(1,10000) % 6;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Unexpected target list entries in ProjectSet node
 ------------------------------------------------------------
 -- Update with Motion:
 --	Motion on p, append node, hash agg
@@ -554,12 +691,18 @@ drop table if exists p;
 create table r (a int8, b int8) distributed by (a);
 create table s (a int8, b int8) distributed by (a);
 insert into r select generate_series(1, 10000), generate_series(1, 10000) * 3;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Unexpected target list entries in ProjectSet node
 insert into s select generate_series(1, 100), generate_series(1, 100) * 3;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Unexpected target list entries in ProjectSet node
 create table p (a int8, b int8, c int8)
 	distributed by (a)
         partition by range (c) (start(1) end(5) every(1), default partition extra);
 	
 insert into p select generate_series(1,10000), generate_series(1,10000) * 3, generate_series(1,10000) % 6;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Unexpected target list entries in ProjectSet node
 ------------------------------------------------------------
 -- Update with Motion:
 --	Motion on p, append node, hash agg
@@ -609,12 +752,18 @@ drop table if exists p;
 create table r (a float4, b float4) distributed by (a);
 create table s (a float4, b float4) distributed by (a);
 insert into r select generate_series(1, 10000), generate_series(1, 10000) * 3;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Unexpected target list entries in ProjectSet node
 insert into s select generate_series(1, 100), generate_series(1, 100) * 3;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Unexpected target list entries in ProjectSet node
 create table p (a float4, b float4, c float4)
 	distributed by (a)
         partition by range (c) (start(1) end(5) every(1), default partition extra);
 	
 insert into p select generate_series(1,10000), generate_series(1,10000) * 3, generate_series(1,10000) % 6;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Unexpected target list entries in ProjectSet node
 ------------------------------------------------------------
 -- Update with Motion:
 --	Motion on p, append node, hash agg
@@ -664,12 +813,18 @@ drop table if exists p;
 create table r (a float(24), b float(24)) distributed by (a);
 create table s (a float(24), b float(24)) distributed by (a);
 insert into r select generate_series(1, 10000), generate_series(1, 10000) * 3;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Unexpected target list entries in ProjectSet node
 insert into s select generate_series(1, 100), generate_series(1, 100) * 3;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Unexpected target list entries in ProjectSet node
 create table p (a float(24), b float(24), c float(24))
 	distributed by (a)
         partition by range (c) (start(1) end(5) every(1), default partition extra);
 	
 insert into p select generate_series(1,10000), generate_series(1,10000) * 3, generate_series(1,10000) % 6;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Unexpected target list entries in ProjectSet node
 ------------------------------------------------------------
 -- Update with Motion:
 --	Motion on p, append node, hash agg
@@ -719,12 +874,18 @@ drop table if exists p;
 create table r (a float(53), b float(53)) distributed by (a);
 create table s (a float(53), b float(53)) distributed by (a);
 insert into r select generate_series(1, 10000), generate_series(1, 10000) * 3;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Unexpected target list entries in ProjectSet node
 insert into s select generate_series(1, 100), generate_series(1, 100) * 3;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Unexpected target list entries in ProjectSet node
 create table p (a float(53), b float(53), c float(53))
 	distributed by (a)
         partition by range (c) (start(1) end(5) every(1), default partition extra);
 	
 insert into p select generate_series(1,10000), generate_series(1,10000) * 3, generate_series(1,10000) % 6;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Unexpected target list entries in ProjectSet node
 ------------------------------------------------------------
 -- Update with Motion:
 --	Motion on p, append node, hash agg
@@ -966,6 +1127,11 @@ DECLARE
    region VARCHAR;
    tablename VARCHAR;
 BEGIN
+   -- Set trace fallback to off to stabilize the test. Issue is that ORCA can
+   -- fallback due to Query Parameter not supported in DXL. That is
+   -- non-deterministic based on plancache.  This can be removed this after
+   -- ORCA implements Query Parameters.
+   set optimizer_trace_fallback=off;
    rowCount = $1;
    tablename = $2;
    FOR i IN 1 .. rowCount LOOP
@@ -981,10 +1147,13 @@ BEGIN
       END IF;
       PERFORM insertIntoSales(tablename, i, region );
    END LOOP;
+   set optimizer_trace_fallback=on;
 END;
 $$ LANGUAGE plpgsql;
 --
 SELECT InsertManyIntoSales(20,'sales_par_CO');
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: SIRV functions
  insertmanyintosales 
 ---------------------
  
@@ -999,8 +1168,14 @@ delete from r;
 delete from s;
 delete from sales;
 insert into r select generate_series(1, 10000), generate_series(1, 10000) * 3;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Unexpected target list entries in ProjectSet node
 insert into s select generate_series(1, 100), generate_series(1, 100) * 3;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Unexpected target list entries in ProjectSet node
 SELECT InsertManyIntoSales(40,'sales');
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: SIRV functions
  insertmanyintosales 
 ---------------------
  
@@ -1122,8 +1297,14 @@ delete from r;
 delete from s;
 delete from sales_par;
 insert into r select generate_series(1, 10000), generate_series(1, 10000) * 3;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Unexpected target list entries in ProjectSet node
 insert into s select generate_series(1, 100), generate_series(1, 100) * 3;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Unexpected target list entries in ProjectSet node
 SELECT InsertManyIntoSales(20,'sales_par');
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: SIRV functions
  insertmanyintosales 
 ---------------------
  
@@ -1201,9 +1382,17 @@ select s.* from s, r,sales_par where s.a = r.b and s.b = sales_par.id;
 delete from r;
 delete from s;
 delete from sales_par2;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Multi-level partitioned tables
 insert into r select generate_series(1, 10000), generate_series(1, 10000) * 3;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Unexpected target list entries in ProjectSet node
 insert into s select generate_series(1, 100), generate_series(1, 100) * 3;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Unexpected target list entries in ProjectSet node
 SELECT InsertManyIntoSales(20,'sales_par2');
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: SIRV functions
  insertmanyintosales 
 ---------------------
  
@@ -1211,6 +1400,8 @@ SELECT InsertManyIntoSales(20,'sales_par2');
 
 -- partition key
 select sales_par2.* from sales_par2,s,r where sales_par2.id = s.b and sales_par2.month = r.b+1;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Multi-level partitioned tables
  id | year | month | day |  region   
 ----+------+-------+-----+-----------
   3 | 2005 |     4 |   4 | australia
@@ -1221,7 +1412,11 @@ select sales_par2.* from sales_par2,s,r where sales_par2.id = s.b and sales_par2
 (5 rows)
 
 update sales_par2 set month = month+1 from r,s where sales_par2.id = s.b and sales_par2.month = r.b+1;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Multi-level partitioned tables
 select sales_par2.* from sales_par2,s,r where sales_par2.id = s.b and sales_par2.month = r.b+2;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Multi-level partitioned tables
  id | year | month | day |  region   
 ----+------+-------+-----+-----------
   9 | 2004 |    11 |  10 | europe
@@ -1233,7 +1428,11 @@ select sales_par2.* from sales_par2,s,r where sales_par2.id = s.b and sales_par2
 
 PREPARE plan0 as update sales_par2 set month = month+1 from r,s where sales_par2.id = s.b and sales_par2.month = r.b+2;
 EXECUTE plan0;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Multi-level partitioned tables
 select sales_par2.* from sales_par2,s,r where sales_par2.id = s.b and sales_par2.month = r.b+3;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Multi-level partitioned tables
  id | year | month | day |  region   
 ----+------+-------+-----+-----------
   9 | 2004 |    12 |  10 | europe
@@ -1244,6 +1443,8 @@ select sales_par2.* from sales_par2,s,r where sales_par2.id = s.b and sales_par2
 (5 rows)
 
 select sales_par2.* from sales_par2 where id in (select s.b-1 from s,r where s.a = r.b);
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Multi-level partitioned tables
  id | year | month | day | region 
 ----+------+-------+-----+--------
  17 | 2005 |     6 |  18 | europe
@@ -1251,13 +1452,19 @@ select sales_par2.* from sales_par2 where id in (select s.b-1 from s,r where s.a
 (2 rows)
 
 delete from sales_par2 where id in (select s.b-1 from s,r where s.a = r.b);
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Multi-level partitioned tables
 select sales_par2.* from sales_par2 where id in (select s.b-1 from s,r where s.a = r.b);
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Multi-level partitioned tables
  id | year | month | day | region 
 ----+------+-------+-----+--------
 (0 rows)
 
 -- heap table
 select s.* from s, r,sales_par2 where s.a = r.b and s.b = sales_par2.id;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Multi-level partitioned tables
  a | b  
 ---+----
  3 |  9
@@ -1265,7 +1472,11 @@ select s.* from s, r,sales_par2 where s.a = r.b and s.b = sales_par2.id;
 (2 rows)
 
 delete from s using r,sales_par2 where s.a = r.b and s.b = sales_par2.id;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Multi-level partitioned tables
 select s.* from s, r,sales_par2 where s.a = r.b and s.b = sales_par2.id;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Multi-level partitioned tables
  a | b 
 ---+---
 (0 rows)
@@ -1279,11 +1490,19 @@ delete from s;
 drop table if exists s_ao;
 NOTICE:  table "s_ao" does not exist, skipping
 insert into r select generate_series(1, 10000), generate_series(1, 10000) * 3;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Unexpected target list entries in ProjectSet node
 insert into s select generate_series(1, 100), generate_series(1, 100) * 3;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Unexpected target list entries in ProjectSet node
 create table s_ao (a int, b int) with (appendonly = true) distributed by (a);
 insert into s_ao select generate_series(1, 100), generate_series(1, 100) * 3;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Unexpected target list entries in ProjectSet node
 -- heap table: delete --
 select * from r where b in (select month-1 from sales_par_CO, s_ao where sales_par_CO.id = s_ao.b);
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Multi-level partitioned tables
  a | b 
 ---+---
  3 | 9
@@ -1292,19 +1511,27 @@ select * from r where b in (select month-1 from sales_par_CO, s_ao where sales_p
 (3 rows)
 
 delete from r where b in (select month-1 from sales_par_CO, s_ao where sales_par_CO.id = s_ao.b);
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Multi-level partitioned tables
 select * from r where b in (select month-1 from sales_par_CO, s_ao where sales_par_CO.id = s_ao.b);
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Multi-level partitioned tables
  a | b 
 ---+---
 (0 rows)
 
 -- hdeap table: update: duplicate distribution key -- 
 SELECT InsertManyIntoSales(20,'sales_par_CO');
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: SIRV functions
  insertmanyintosales 
 ---------------------
  
 (1 row)
 
 select * from r where a in (select sales_par_CO.id from sales_par_CO, s_ao where sales_par_CO.id = s_ao.b);
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Multi-level partitioned tables
  a  | b  
 ----+----
   6 | 18
@@ -1315,7 +1542,11 @@ select * from r where a in (select sales_par_CO.id from sales_par_CO, s_ao where
 (5 rows)
 
 update r set b = r.b + 1 where a in (select sales_par_CO.id from sales_par_CO, s_ao where sales_par_CO.id = s_ao.b);
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Multi-level partitioned tables
 select * from r where a in (select sales_par_CO.id from sales_par_CO, s_ao where sales_par_CO.id = s_ao.b);
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Multi-level partitioned tables
  a  | b  
 ----+----
  15 | 46
@@ -1327,6 +1558,8 @@ select * from r where a in (select sales_par_CO.id from sales_par_CO, s_ao where
 
 -- heap table: delete:
 select * from r where a in (select month from sales_par_CO, s_ao, s where sales_par_CO.id = s_ao.b and s_ao.a = s.b);
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Multi-level partitioned tables
  a  | b  
 ----+----
   7 | 21
@@ -1334,7 +1567,11 @@ select * from r where a in (select month from sales_par_CO, s_ao, s where sales_
 (2 rows)
 
 delete from r where a in (select month from sales_par_CO, s_ao, s where sales_par_CO.id = s_ao.b and s_ao.a = s.b);
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Multi-level partitioned tables
 select * from r where a in (select month from sales_par_CO, s_ao, s where sales_par_CO.id = s_ao.b and s_ao.a = s.b);
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Multi-level partitioned tables
  a | b 
 ---+---
 (0 rows)
@@ -1347,9 +1584,17 @@ delete from s;
 delete from m;
 delete from sales_par;
 insert into s select generate_series(1, 100), generate_series(1, 100) * 3;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Unexpected target list entries in ProjectSet node
 insert into s select generate_series(1, 10), generate_series(1, 10) * 4;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Unexpected target list entries in ProjectSet node
 insert into m select generate_series(1, 1000), generate_series(1, 1000) * 4;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Unexpected target list entries in ProjectSet node
 SELECT InsertManyIntoSales(20,'sales_par');
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: SIRV functions
  insertmanyintosales 
 ---------------------
  
@@ -1443,9 +1688,17 @@ delete from s;
 delete from m;
 delete from sales_par;
 insert into s select generate_series(1, 100), generate_series(1, 100) * 3;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Unexpected target list entries in ProjectSet node
 insert into s select generate_series(1, 10), generate_series(1, 10) * 4;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Unexpected target list entries in ProjectSet node
 insert into m select generate_series(1, 1000), generate_series(1, 1000) * 4;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Unexpected target list entries in ProjectSet node
 SELECT InsertManyIntoSales(20,'sales_par');
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: SIRV functions
  insertmanyintosales 
 ---------------------
  
@@ -1597,9 +1850,17 @@ analyze tab3;
 -- the `::regclass` way as it only matches the table in current search_path.
 set allow_system_table_mods=true;
 update pg_class set relpages = 10000 where oid='tab2'::regclass;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Queries on master-only tables
 update pg_class set reltuples = 100000000 where oid='tab2'::regclass;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Queries on master-only tables
 update pg_class set relpages = 100000000 where oid='tab3'::regclass;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Queries on master-only tables
 update pg_class set reltuples = 100000 where oid='tab3'::regclass;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Queries on master-only tables
 -- Planner: there is redistribute motion above tab1, however, we can also
 -- remove the explicit redistribute motion here because the final join
 -- co-locate with the result relation tab1.
@@ -1627,11 +1888,177 @@ HINT:  For non-partitioned tables, run analyze <table_name>(<column_list>). For 
 (16 rows)
 
 -- ----------------------------------------------------------------------
+-- Test delete on partition table from join on another partition table
+-- ----------------------------------------------------------------------
+drop table if exists part_eq_dis_1;
+NOTICE:  table "part_eq_dis_1" does not exist, skipping
+drop table if exists part_eq_dis_2;
+NOTICE:  table "part_eq_dis_2" does not exist, skipping
+create table part_eq_dis_1 (a int4, b int4) partition by range (a) (start(1) end(20) every(1), default partition extra);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+create table part_eq_dis_2 (c int4, d int4) partition by range (c) (start(1) end(20) every(1), default partition extra);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'c' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into part_eq_dis_1 select generate_series(1,40), generate_series(1,40);
+insert into part_eq_dis_2 select generate_series(1,40), generate_series(1,40);
+drop table if exists part_neq_dis_1;
+NOTICE:  table "part_neq_dis_1" does not exist, skipping
+drop table if exists part_neq_dis_2;
+NOTICE:  table "part_neq_dis_2" does not exist, skipping
+create table part_neq_dis_1 (a int4, b int4) partition by range (b) (start(1) end(20) every(1), default partition extra);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+create table part_neq_dis_2 (c int4, d int4) partition by range (d) (start(1) end(20) every(1), default partition extra);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'c' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into part_neq_dis_1 select generate_series(1,40), generate_series(1,40);
+insert into part_neq_dis_2 select generate_series(1,40), generate_series(1,40);
+-- T1 - distribution partitioned column, T2 - distributed partitioned column
+-- a) non-default partition
+delete from part_eq_dis_1 where a = (select c from part_eq_dis_2 where c=1);
+-- b) default partition
+delete from part_eq_dis_1 where a = (select c from part_eq_dis_2 where c=21);
+-- T1 - distribution partitioned column, T2 - non-distributed non-partitioned column
+-- a) non-default partition
+delete from part_eq_dis_1 where a = (select d from part_eq_dis_2 where c=2);
+-- b) default partition
+delete from part_eq_dis_1 where a = (select d from part_eq_dis_2 where c=22);
+-- T1 - distribution partitioned column, T2 - distributed non-partitioned column
+-- a) non-default partition
+delete from part_eq_dis_1 where a = (select c from part_neq_dis_2 where c=3);
+-- b) default partition
+delete from part_eq_dis_1 where a = (select c from part_neq_dis_2 where c=23);
+-- T1 - distribution partitioned column, T2 - non-distributed partitioned column
+-- a) non-default partition
+delete from part_eq_dis_1 where a = (select d from part_neq_dis_2 where c=4);
+-- b) default partition
+delete from part_eq_dis_1 where a = (select d from part_neq_dis_2 where c=24);
+-- T1 - non-distribution non-partitioned column, T2 - distributed partitioned column
+-- a) non-default partition
+delete from part_eq_dis_1 where b = (select c from part_eq_dis_2 where c=5);
+-- b) default partition
+delete from part_eq_dis_1 where b = (select c from part_eq_dis_2 where c=25);
+-- T1 - non-distribution non-partitioned column, T2 - non-distributed non-partitioned column
+-- a) non-default partition
+delete from part_eq_dis_1 where b = (select d from part_eq_dis_2 where c=6);
+-- b) default partition
+delete from part_eq_dis_1 where b = (select d from part_eq_dis_2 where c=26);
+-- T1 - non-distribution non-partitioned column, T2 - distributed non-partitioned column
+-- a) non-default partition
+delete from part_eq_dis_1 where b = (select c from part_neq_dis_2 where c=7);
+-- b) default partition
+delete from part_eq_dis_1 where b = (select c from part_neq_dis_2 where c=27);
+-- T1 - non-distribution non-partitioned column, T2 - non-distributed partitioned column
+-- a) non-default partition
+delete from part_eq_dis_1 where b = (select d from part_neq_dis_2 where c=8);
+-- b) default partition
+delete from part_eq_dis_1 where b = (select d from part_neq_dis_2 where c=28);
+-- T1 - distribution non-partitioned column, T2 - distributed partitioned column
+-- a) non-default partition
+delete from part_neq_dis_1 where a = (select c from part_eq_dis_2 where c=9);
+-- b) default partition
+delete from part_neq_dis_1 where a = (select c from part_eq_dis_2 where c=29);
+-- T1 - distribution non-partitioned column, T2 - non-distributed non-partitioned column
+-- a) non-default partition
+delete from part_neq_dis_1 where a = (select d from part_eq_dis_2 where c=10);
+-- b) default partition
+delete from part_neq_dis_1 where a = (select d from part_eq_dis_2 where c=30);
+-- T1 - distribution non-partitioned column, T2 - non-distributed partitioned column
+-- a) non-default partition
+delete from part_neq_dis_1 where a = (select d from part_neq_dis_2 where c=11);
+-- b) default partition
+delete from part_neq_dis_1 where a = (select d from part_neq_dis_2 where c=31);
+-- T1 - distribution non-partitioned column, T2 - distributed non-partitioned column
+-- a) non-default partition
+delete from part_neq_dis_1 where a = (select c from part_neq_dis_2 where c=12);
+-- b) default partition
+delete from part_neq_dis_1 where a = (select c from part_neq_dis_2 where c=32);
+-- T1 - non-distribution partitioned column, T2 - distributed partitioned column
+-- a) non-default partition
+delete from part_neq_dis_1 where b = (select c from part_eq_dis_2 where c=13);
+-- b) default partition
+delete from part_neq_dis_1 where b = (select c from part_eq_dis_2 where c=33);
+-- T1 - non-distribution partitioned column, T2 - non-distributed non-partitioned column
+-- a) non-default partition
+delete from part_neq_dis_1 where b = (select d from part_eq_dis_2 where c=14);
+-- b) default partition
+delete from part_neq_dis_1 where b = (select d from part_eq_dis_2 where c=34);
+-- T1 - non-distribution partitioned column, T2 - distributed non-partitioned column
+-- a) non-default partition
+delete from part_neq_dis_1 where b = (select d from part_neq_dis_2 where c=15);
+-- b) default partition
+delete from part_neq_dis_1 where b = (select d from part_neq_dis_2 where c=35);
+-- T1 - non-distribution partitioned column, T2 - non-distributed partitioned column
+-- a) non-default partition
+delete from part_neq_dis_1 where b = (select c from part_neq_dis_2 where c=16);
+-- b) default partition
+delete from part_neq_dis_1 where b = (select c from part_neq_dis_2 where c=36);
+select * from part_eq_dis_1;
+ a  | b  
+----+----
+ 12 | 12
+ 15 | 15
+ 20 | 20
+ 30 | 30
+ 31 | 31
+ 35 | 35
+ 36 | 36
+ 38 | 38
+ 40 | 40
+ 16 | 16
+ 18 | 18
+ 19 | 19
+ 29 | 29
+ 34 | 34
+ 37 | 37
+ 39 | 39
+  9 |  9
+ 10 | 10
+ 11 | 11
+ 13 | 13
+ 14 | 14
+ 17 | 17
+ 32 | 32
+ 33 | 33
+(24 rows)
+
+select * from part_neq_dis_1;
+ a  | b  
+----+----
+  1 |  1
+ 20 | 20
+ 23 | 23
+ 26 | 26
+ 38 | 38
+ 40 | 40
+  2 |  2
+  3 |  3
+  4 |  4
+  7 |  7
+  8 |  8
+ 18 | 18
+ 19 | 19
+ 22 | 22
+ 24 | 24
+ 27 | 27
+ 37 | 37
+ 39 | 39
+  5 |  5
+  6 |  6
+ 17 | 17
+ 21 | 21
+ 25 | 25
+ 28 | 28
+(24 rows)
+
+reset optimizer_trace_fallback;
+-- ----------------------------------------------------------------------
 -- Test: teardown.sql
 -- ----------------------------------------------------------------------
 -- start_ignore
 drop schema DML_over_joins cascade;
-NOTICE:  drop cascades to 15 other objects
+NOTICE:  drop cascades to 22 other objects
 DETAIL:  drop cascades to table update_test
 drop cascades to table t1
 drop cascades to table t2
@@ -1647,4 +2074,11 @@ drop cascades to table sales_par_co
 drop cascades to function insertintosales(character varying,integer,character varying)
 drop cascades to function insertmanyintosales(integer,character varying)
 drop cascades to table s_ao
+drop cascades to table tab1
+drop cascades to table tab2
+drop cascades to table tab3
+drop cascades to table part_eq_dis_1
+drop cascades to table part_eq_dis_2
+drop cascades to table part_neq_dis_1
+drop cascades to table part_neq_dis_2
 -- end_ignore

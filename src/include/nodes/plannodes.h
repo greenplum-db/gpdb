@@ -409,6 +409,8 @@ typedef struct ModifyTable
 	Index		exclRelRTI;		/* RTI of the EXCLUDED pseudo relation */
 	List	   *exclRelTlist;	/* tlist of the EXCLUDED pseudo relation */
 	List	   *isSplitUpdates;
+
+	bool		forceTupleRouting; /* dynamic scans require tuple routing */
 } ModifyTable;
 
 struct PartitionPruneInfo;		/* forward reference to struct below */

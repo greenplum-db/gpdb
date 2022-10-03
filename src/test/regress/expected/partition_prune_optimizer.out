@@ -2626,49 +2626,32 @@ truncate ab;
 insert into ab values (1, 1), (1, 2), (1, 3), (2, 1);
 explain (analyze, costs off, summary off, timing off)
 update ab_a1 set b = 3 from ab_a2 where ab_a2.b = (select 1);
-                                   QUERY PLAN                                    
----------------------------------------------------------------------------------
+                                                       QUERY PLAN                                                        
+-------------------------------------------------------------------------------------------------------------------------
  Update on ab_a1 (actual rows=0 loops=1)
-   Update on ab_a1_b1
-   Update on ab_a1_b2
-   Update on ab_a1_b3
-   InitPlan 1 (returns $0)  (slice1)
-     ->  Result (actual rows=1 loops=1)
-   ->  Nested Loop (actual rows=1 loops=1)
-         ->  Broadcast Motion 3:3  (slice2; segments: 3) (actual rows=1 loops=1)
-               ->  Append (actual rows=1 loops=1)
-                     ->  Seq Scan on ab_a2_b1 (actual rows=1 loops=1)
-                           Filter: (b = $0)
-                     ->  Seq Scan on ab_a2_b2 (never executed)
-                           Filter: (b = $0)
-                     ->  Seq Scan on ab_a2_b3 (never executed)
-                           Filter: (b = $0)
-         ->  Materialize (actual rows=1 loops=1)
-               ->  Seq Scan on ab_a1_b1 (actual rows=1 loops=1)
-   ->  Nested Loop (actual rows=1 loops=1)
-         ->  Broadcast Motion 3:3  (slice3; segments: 3) (actual rows=1 loops=1)
-               ->  Append (actual rows=1 loops=1)
-                     ->  Seq Scan on ab_a2_b1 (actual rows=1 loops=1)
-                           Filter: (b = $0)
-                     ->  Seq Scan on ab_a2_b2 (never executed)
-                           Filter: (b = $0)
-                     ->  Seq Scan on ab_a2_b3 (never executed)
-                           Filter: (b = $0)
-         ->  Materialize (actual rows=1 loops=1)
-               ->  Seq Scan on ab_a1_b2 (actual rows=1 loops=1)
-   ->  Nested Loop (actual rows=1 loops=1)
-         ->  Broadcast Motion 3:3  (slice4; segments: 3) (actual rows=1 loops=1)
-               ->  Append (actual rows=1 loops=1)
-                     ->  Seq Scan on ab_a2_b1 (actual rows=1 loops=1)
-                           Filter: (b = $0)
-                     ->  Seq Scan on ab_a2_b2 (never executed)
-                           Filter: (b = $0)
-                     ->  Seq Scan on ab_a2_b3 (never executed)
-                           Filter: (b = $0)
-         ->  Materialize (actual rows=1 loops=1)
-               ->  Seq Scan on ab_a1_b3 (actual rows=1 loops=1)
- Optimizer: Postgres query optimizer
-(40 rows)
+   ->  Result (actual rows=6 loops=1)
+         ->  Split (actual rows=6 loops=1)
+               ->  Nested Loop (actual rows=3 loops=1)
+                     Join Filter: true
+                     ->  Dynamic Seq Scan on ab_a1 ab_a1_1 (actual rows=3 loops=1)
+                           Number of partitions to scan: 3 (out of 3)
+                           Partitions scanned:  Avg 3.0 x 3 workers.  Max 3 parts (seg0).
+                     ->  Materialize (actual rows=1 loops=4)
+                           ->  Broadcast Motion 3:3  (slice1; segments: 3) (actual rows=1 loops=1)
+                                 ->  Hash Join (actual rows=1 loops=1)
+                                       Hash Cond: ((1) = ab_a2.b)
+                                       Extra Text: (seg2)   Hash chain length 1.0 avg, 1 max, using 1 of 262144 buckets.
+                                       ->  Result (actual rows=1 loops=1)
+                                             One-Time Filter: (gp_execution_segment() = 2)
+                                             ->  Result (actual rows=1 loops=1)
+                                       ->  Hash (actual rows=1 loops=1)
+                                             Buckets: 262144  Batches: 1  Memory Usage: 2049kB
+                                             ->  Broadcast Motion 3:3  (slice2; segments: 3) (actual rows=1 loops=1)
+                                                   ->  Dynamic Seq Scan on ab_a2 (actual rows=1 loops=1)
+                                                         Number of partitions to scan: 3 (out of 3)
+                                                         Partitions scanned:  Avg 3.0 x 3 workers.  Max 3 parts (seg0).
+ Optimizer: Pivotal Optimizer (GPORCA)
+(23 rows)
 
 select tableoid::regclass, * from ab;
  tableoid | a | b 
@@ -3422,23 +3405,23 @@ explain (costs off) select * from pp_arrpart where a in ('{4, 5}', '{1}');
 (5 rows)
 
 explain (costs off) update pp_arrpart set a = a where a = '{1}';
-               QUERY PLAN               
-----------------------------------------
+                    QUERY PLAN                     
+---------------------------------------------------
  Update on pp_arrpart
-   Update on pp_arrpart1
-   ->  Seq Scan on pp_arrpart1
+   ->  Dynamic Seq Scan on pp_arrpart pp_arrpart_1
+         Number of partitions to scan: 1 (out of 2)
          Filter: (a = '{1}'::integer[])
- Optimizer: Postgres query optimizer
+ Optimizer: Pivotal Optimizer (GPORCA)
 (5 rows)
 
 explain (costs off) delete from pp_arrpart where a = '{1}';
-               QUERY PLAN               
-----------------------------------------
+                    QUERY PLAN                     
+---------------------------------------------------
  Delete on pp_arrpart
-   Delete on pp_arrpart1
-   ->  Seq Scan on pp_arrpart1
+   ->  Dynamic Seq Scan on pp_arrpart pp_arrpart_1
+         Number of partitions to scan: 1 (out of 2)
          Filter: (a = '{1}'::integer[])
- Optimizer: Postgres query optimizer
+ Optimizer: Pivotal Optimizer (GPORCA)
 (5 rows)
 
 drop table pp_arrpart;
@@ -3595,23 +3578,23 @@ explain (costs off) select * from pp_lp where a = 1;
 (5 rows)
 
 explain (costs off) update pp_lp set value = 10 where a = 1;
-             QUERY PLAN              
--------------------------------------
+                QUERY PLAN                
+------------------------------------------
  Update on pp_lp
-   Update on pp_lp1
-   ->  Seq Scan on pp_lp1
+   ->  Dynamic Seq Scan on pp_lp pp_lp_1
+         Number of partitions to scan: 1 (out of 2)
          Filter: (a = 1)
- Optimizer: Postgres query optimizer
+ Optimizer: Pivotal Optimizer (GPORCA)
 (5 rows)
 
 explain (costs off) delete from pp_lp where a = 1;
-             QUERY PLAN              
--------------------------------------
+                QUERY PLAN                
+------------------------------------------
  Delete on pp_lp
-   Delete on pp_lp1
-   ->  Seq Scan on pp_lp1
+   ->  Dynamic Seq Scan on pp_lp pp_lp_1
+         Number of partitions to scan: 1 (out of 2)
          Filter: (a = 1)
- Optimizer: Postgres query optimizer
+ Optimizer: Pivotal Optimizer (GPORCA)
 (5 rows)
 
 set enable_partition_pruning = off;
@@ -3627,30 +3610,24 @@ explain (costs off) select * from pp_lp where a = 1;
 (5 rows)
 
 explain (costs off) update pp_lp set value = 10 where a = 1;
-             QUERY PLAN              
--------------------------------------
+                QUERY PLAN                
+------------------------------------------
  Update on pp_lp
-   Update on pp_lp1
-   Update on pp_lp2
-   ->  Seq Scan on pp_lp1
+   ->  Dynamic Seq Scan on pp_lp pp_lp_1
+         Number of partitions to scan: 1 (out of 2)
          Filter: (a = 1)
-   ->  Seq Scan on pp_lp2
-         Filter: (a = 1)
- Optimizer: Postgres query optimizer
-(8 rows)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(5 rows)
 
 explain (costs off) delete from pp_lp where a = 1;
-             QUERY PLAN              
--------------------------------------
+                QUERY PLAN                
+------------------------------------------
  Delete on pp_lp
-   Delete on pp_lp1
-   Delete on pp_lp2
-   ->  Seq Scan on pp_lp1
+   ->  Dynamic Seq Scan on pp_lp pp_lp_1
+         Number of partitions to scan: 1 (out of 2)
          Filter: (a = 1)
-   ->  Seq Scan on pp_lp2
-         Filter: (a = 1)
- Optimizer: Postgres query optimizer
-(8 rows)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(5 rows)
 
 set constraint_exclusion = 'off'; -- this should not affect the result.
 explain (costs off) select * from pp_lp where a = 1;
@@ -3664,30 +3641,24 @@ explain (costs off) select * from pp_lp where a = 1;
 (5 rows)
 
 explain (costs off) update pp_lp set value = 10 where a = 1;
-             QUERY PLAN              
--------------------------------------
+                QUERY PLAN                
+------------------------------------------
  Update on pp_lp
-   Update on pp_lp1
-   Update on pp_lp2
-   ->  Seq Scan on pp_lp1
+   ->  Dynamic Seq Scan on pp_lp pp_lp_1
+         Number of partitions to scan: 1 (out of 2)
          Filter: (a = 1)
-   ->  Seq Scan on pp_lp2
-         Filter: (a = 1)
- Optimizer: Postgres query optimizer
-(8 rows)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(5 rows)
 
 explain (costs off) delete from pp_lp where a = 1;
-             QUERY PLAN              
--------------------------------------
+                QUERY PLAN                
+------------------------------------------
  Delete on pp_lp
-   Delete on pp_lp1
-   Delete on pp_lp2
-   ->  Seq Scan on pp_lp1
+   ->  Dynamic Seq Scan on pp_lp pp_lp_1
+         Number of partitions to scan: 1 (out of 2)
          Filter: (a = 1)
-   ->  Seq Scan on pp_lp2
-         Filter: (a = 1)
- Optimizer: Postgres query optimizer
-(8 rows)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(5 rows)
 
 drop table pp_lp;
 -- Ensure enable_partition_prune does not affect non-partitioned tables.

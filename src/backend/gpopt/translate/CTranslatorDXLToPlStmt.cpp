@@ -4198,6 +4198,15 @@ CTranslatorDXLToPlStmt::TranslateDXLDml(
 	IMDId *mdid_target_table = phy_dml_dxlop->GetDXLTableDescr()->MDId();
 	const IMDRelation *md_rel = m_md_accessor->RetrieveRel(mdid_target_table);
 
+	if (md_rel->IsPartitioned())
+	{
+		dml->forceTupleRouting = true;
+	}
+	else
+	{
+		dml->forceTupleRouting = false;
+	}
+
 	if (IMDRelation::EreldistrMasterOnly != md_rel->GetRelDistribution())
 	{
 		m_is_tgt_tbl_distributed = true;
