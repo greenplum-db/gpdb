@@ -112,6 +112,25 @@ CConstraintInterval::PcnstrCopyWithRemappedColumns(
 
 //---------------------------------------------------------------------------
 //	@function:
+//		CConstraintInterval::GetConstraintOnSegmentId
+//
+//	@doc:
+//		Returns the constraint for system column gp_segment_id
+//
+//---------------------------------------------------------------------------
+
+CConstraint *
+CConstraintInterval::GetConstraintOnSegmentId() const
+{
+	if (FConstraintOnSegmentId())
+	{
+		return (CConstraint *) this;
+	}
+
+	return nullptr;
+}
+//---------------------------------------------------------------------------
+//	@function:
 //		CConstraintInterval::PciIntervalFromScalarExpr
 //
 //	@doc:
