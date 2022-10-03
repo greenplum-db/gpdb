@@ -4621,10 +4621,11 @@ binary_upgrade_set_namespace_oid(Archive *fout, PQExpBuffer upgrade_buffer,
 	/*
 	 * In PostgreSQL, the creation of the public schema is not dumped, because
 	 * it's assumed to exist in a new cluster. But in GPDB, we need to re-create
-	 * it, so that we can set its OID.
-	 *
-	 * GPDB_12_MERGE_FIXME: Or could we rely that it has the same built-in
-	 * OID on all nodes?
+	 * it, so that we can set its OID. This change is required because Oid
+	 * preassignment during upgrade requires the namespace. If the public
+	 * schema is not re-created, Oid preassignments in public will be
+	 * mismatched between old and new cluster if the schema had been
+	 * dropped and recreated on the old cluster.
 	 */
 	if (strcmp(pg_nspname, "public") == 0)
 	{
