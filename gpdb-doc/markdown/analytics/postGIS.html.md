@@ -26,14 +26,14 @@ For information about GDAL, see [https://gdal.org/](https://gdal.org/).
 
 ## <a id="topic3"></a>Greenplum PostGIS Extension 
 
-The Greenplum PostGIS extension package is available from [VMware Tanzu Network](https://network.pivotal.io/products/pivotal-gpdb). After you download the package, you can follow the instructions in [Verifying the Greenplum Database Software Download](../install_guide/verify_sw.html) to verify the integrity of the download. You can install the package using the Greenplum Package Manager (`gppkg`). For details, see `gppkg` in the _Greenplum Database Utility Guide_.
+The Greenplum PostGIS extension package is available from [VMware Tanzu Network](https://network.pivotal.io/products/pivotal-gpdb). After you download the package, you can follow the instructions in [Verifying the Greenplum Database Software Download](../install_guide/verify_sw.html) to verify the integrity of the download. You can install the package using the Greenplum Package Manager (`gppkg`). For details, see [`gppkg`](../utility_guide/ref/gppkg.html) in the _Greenplum Database Utility Guide_.
 
 Greenplum Database supports the following PostGIS extension versions and components:
 
 - PostGIS 2.5.4, and components Proj 4.8.0, Geos 3.10.2, GDAL 1.11.1, Json 0.12, Expat 2.4.4
 - PostGIS 2.1.5, and components Proj 4.8.0, Geos 3.4.2, GDAL 1.11.1, Json 0.12, Expat 2.1.0
 
-For information about the supported Greenplum extension packages and software versions, see [Extensions](../install_guide/platform-requirements.html) in the _Tanzu Greenplum Tools and Extensions Compatibility_ topic.
+For information about the supported Greenplum extension packages and software versions, see [Extensions](../install_guide/platform-requirements.html#topic_eyc_l2h_zz) in the _Tanzu Greenplum Tools and Extensions Compatibility_ topic.
 
 There are significant changes in PostGIS 2.5.4 compared with 2.1.5. For a list of new and enhanced functions in PostGIS 2.5, see the PostGIS documentation [PostGIS Functions new or enhanced in 2.5](https://postgis.net/docs/manual-2.5/PostGIS_Special_Functions_Index.html#NewFunctions_2_5) and [Release 2.5.4](https://postgis.net/docs/manual-2.5/release_notes.html).
 
