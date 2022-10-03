@@ -595,5 +595,42 @@ select sum(case when b in (select b from temp_b where t.a>c) then 1 else 0 end),
 select sum(case when b in (select b from temp_b where EXISTS (select sum(d) from temp_c where t.a > d)) then 1 else 0 end),sum(case when not( b in (select b from temp_b where t.a>c)) then 1 else 0 end) from temp_a t;
 select sum(case when b in (select b from temp_b where EXISTS (select sum(d) from temp_c where t.a > d or t.a > temp_b.c)) then 1 else 0 end),sum(case when not( b in (select b from temp_b, temp_c where t.a>temp_b.c or t.a > temp_c.d)) then 1 else 0 end) from temp_a t;
 
+-- Check that predicate with set-returning function is not pushed down
+create table table_with_array_column (an_array_column double precision[]);
+insert into table_with_array_column values (array[1.1, 2.2]);
+analyze table_with_array_column;
+
+explain (costs off)
+select *
+from (
+  select unnest(t1.an_array_column) unnested_array_column
+  from table_with_array_column t1, table_with_array_column t2) zz
+where unnested_array_column is not null;
+
+select *
+from (
+  select unnest(t1.an_array_column) unnested_array_column
+  from table_with_array_column t1, table_with_array_column t2) zz
+where unnested_array_column is not null;
+
+-- check that predicate is not pushed through a projected non-correlated subquery
+create table subquery_nonpush_through_1(a int, b int);
+create table subquery_nonpush_through_2(a int, b int);
+analyze subquery_nonpush_through_1;
+analyze subquery_nonpush_through_2;
+
+explain (costs off)
+select *
+from(
+  select (subquery_nonpush_through_1.a in (select a from subquery_nonpush_through_2))::text as xx, subquery_nonpush_through_1.b
+  from subquery_nonpush_through_1,subquery_nonpush_through_2) t
+where xx='dd';
+
+select *
+from(
+  select (subquery_nonpush_through_1.a in (select a from subquery_nonpush_through_2))::text as xx, subquery_nonpush_through_1.b
+  from subquery_nonpush_through_1,subquery_nonpush_through_2) t
+where xx='dd';
+
 set client_min_messages='warning';
 drop schema qp_subquery cascade;
