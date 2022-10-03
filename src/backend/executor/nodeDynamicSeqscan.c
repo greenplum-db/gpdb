@@ -313,9 +313,9 @@ CleanupOnePartition(DynamicSeqScanState *scanState)
 	{
 		if (sstate->ss_currentScanDesc_heap)
 			heap_afterscan(sstate->ss_currentScanDesc_heap);
-		if (sstate->ss_currentScanDesc_ao)
+		else if (sstate->ss_currentScanDesc_ao)
 			appendonly_afterscan(sstate->ss_currentScanDesc_ao);
-		if (sstate->ss_currentScanDesc_aocs)
+		else if (sstate->ss_currentScanDesc_aocs)
 			aocs_afterscan(sstate->ss_currentScanDesc_aocs);
 
 		/*
