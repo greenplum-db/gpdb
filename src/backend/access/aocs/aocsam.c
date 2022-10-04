@@ -519,7 +519,18 @@ aocs_beginscan_internal(Relation relation,
 void
 aocs_afterscan(AOCSScanDesc scan)
 {
-	close_cur_scan_seg(scan);
+	int			nvp = scan->relationTupleDesc->natts;
+	int			i;
+
+	if (scan->cur_seg >= 0)
+	{
+		for (i = 0; i < nvp; ++i)
+		{
+			if (scan->ds[i])
+				datumstreamread_close_file(scan->ds[i]);
+		}
+	}
+
 	close_ds_read(scan->ds, scan->relationTupleDesc->natts);
 }
 
