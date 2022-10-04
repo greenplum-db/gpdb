@@ -107,7 +107,6 @@ AOCSSegmentFileTruncateToEOF(Relation aorel,
 	Assert(RelationIsAoCols(aorel));
 
 	segno = fsinfo->segno;
-	relname = RelationGetRelationName(aorel);
 
 	for (j = 0; j < fsinfo->vpinfo.nEntry; ++j)
 	{
