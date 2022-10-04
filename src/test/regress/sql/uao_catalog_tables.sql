@@ -1,3 +1,8 @@
+-- start_matchsubs
+-- m/ERROR:  permission denied: "pg_ao(seg|visimap|blkdir)_\d+" is a system catalog/
+-- s/pg_ao(seg|visimap|blkdir)_\d+/pg_ao_aux_table_xxxxx/
+-- end_matchsubs
+
 -- create functions to query uao auxiliary tables through gp_dist_random instead of going through utility mode
 CREATE OR REPLACE FUNCTION gp_aovisimap_dist_random(
   IN relation_name text) RETURNS setof record AS $$
@@ -125,3 +130,84 @@ update uao_table_check_hidden_tup_count_after_update set j = 'test21';
 select gp_toolkit.__gp_aovisimap_hidden_info('uao_table_check_hidden_tup_count_after_update'::regclass) from gp_dist_random('gp_id');
 vacuum full uao_table_check_hidden_tup_count_after_update;
 select gp_toolkit.__gp_aovisimap_hidden_info('uao_table_check_hidden_tup_count_after_update'::regclass) from gp_dist_random('gp_id');
+
+-- Verify that we can delete from the AO auxiliary tables when allow_system_table_mods is enabled
+CREATE OR REPLACE FUNCTION insert_dummy_ao_aux_entry(fqname text)
+RETURNS void AS
+$$
+BEGIN
+    EXECUTE 'INSERT INTO ' || fqname || ' VALUES(null)';
+END
+$$ LANGUAGE plpgsql;
+CREATE OR REPLACE FUNCTION delete_dummy_ao_aux_entry(fqname text)
+RETURNS void AS
+$$
+BEGIN
+    EXECUTE 'DELETE FROM ' || fqname;
+END
+$$ LANGUAGE plpgsql;
+CREATE OR REPLACE FUNCTION select_dummy_ao_aux_entry(fqname text)
+RETURNS int AS
+$$
+DECLARE result int;
+BEGIN
+    EXECUTE 'SELECT count(*) FROM ' || fqname INTO result;
+    RETURN result;
+END
+$$ LANGUAGE plpgsql;
+
+CREATE TABLE uao_catalog_delete_from (a int) WITH (appendonly=true) DISTRIBUTED BY (a);
+CREATE INDEX uao_catalog_delete_from_idx ON uao_catalog_delete_from USING btree(a);
+
+SELECT delete_dummy_ao_aux_entry(s.interior_fqname)
+FROM (
+     SELECT segrelid::regclass::text AS interior_fqname FROM pg_appendonly WHERE relid = 'uao_catalog_delete_from'::regclass::oid
+) s;
+SELECT delete_dummy_ao_aux_entry(s.interior_fqname)
+FROM (
+     SELECT blkdirrelid::regclass::text AS interior_fqname FROM pg_appendonly WHERE relid = 'uao_catalog_delete_from'::regclass::oid
+) s;
+SELECT delete_dummy_ao_aux_entry(s.interior_fqname)
+FROM (
+     SELECT visimaprelid::regclass::text AS interior_fqname FROM pg_appendonly WHERE relid = 'uao_catalog_delete_from'::regclass::oid
+) s;
+
+SET allow_system_table_mods = on;
+SELECT insert_dummy_ao_aux_entry(s.interior_fqname)
+FROM (
+     SELECT segrelid::regclass::text AS interior_fqname FROM pg_appendonly WHERE relid = 'uao_catalog_delete_from'::regclass::oid
+) s;
+SELECT insert_dummy_ao_aux_entry(s.interior_fqname)
+FROM (
+     SELECT blkdirrelid::regclass::text AS interior_fqname FROM pg_appendonly WHERE relid = 'uao_catalog_delete_from'::regclass::oid
+) s;
+SELECT insert_dummy_ao_aux_entry(s.interior_fqname)
+FROM (
+     SELECT visimaprelid::regclass::text AS interior_fqname FROM pg_appendonly WHERE relid = 'uao_catalog_delete_from'::regclass::oid
+) s;
+
+SELECT delete_dummy_ao_aux_entry(s.interior_fqname)
+FROM (
+     SELECT segrelid::regclass::text AS interior_fqname FROM pg_appendonly WHERE relid = 'uao_catalog_delete_from'::regclass::oid
+) s;
+SELECT delete_dummy_ao_aux_entry(s.interior_fqname)
+FROM (
+     SELECT blkdirrelid::regclass::text AS interior_fqname FROM pg_appendonly WHERE relid = 'uao_catalog_delete_from'::regclass::oid
+) s;
+SELECT delete_dummy_ao_aux_entry(s.interior_fqname)
+FROM (
+     SELECT visimaprelid::regclass::text AS interior_fqname FROM pg_appendonly WHERE relid = 'uao_catalog_delete_from'::regclass::oid
+) s;
+
+SELECT count(*) FROM gp_toolkit.__gp_aoseg('uao_catalog_delete_from');
+SELECT count(*) FROM gp_toolkit.__gp_aovisimap('uao_catalog_delete_from');
+SELECT select_dummy_ao_aux_entry(s.interior_fqname)
+FROM (
+     SELECT blkdirrelid::regclass::text AS interior_fqname FROM pg_appendonly WHERE relid = 'uao_catalog_delete_from'::regclass::oid
+) s;
+
+SET allow_system_table_mods = off;
+DROP FUNCTION insert_dummy_ao_aux_entry(fqname text);
+DROP FUNCTION delete_dummy_ao_aux_entry(fqname text);
+DROP FUNCTION select_dummy_ao_aux_entry(fqname text);
+DROP TABLE uao_catalog_delete_from;

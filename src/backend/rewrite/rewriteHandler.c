@@ -32,8 +32,8 @@
 #include "utils/lsyscache.h"
 #include "utils/rel.h"
 
+#include "catalog/aocatalog.h"
 #include "catalog/pg_exttable.h"
-
 
 /* We use a list of these to detect recursion in RewriteQuery */
 typedef struct rewrite_event
@@ -1379,7 +1379,8 @@ rewriteTargetListUD(Query *parsetree, RangeTblEntry *target_rte,
 	Var 		*varSegid = NULL;
 
 	if (target_relation->rd_rel->relkind == RELKIND_RELATION ||
-		target_relation->rd_rel->relkind == RELKIND_MATVIEW)
+		target_relation->rd_rel->relkind == RELKIND_MATVIEW ||
+		IsAppendonlyMetadataRelkind(target_relation->rd_rel->relkind))
 	{
 		/*
 		 * Emit CTID so that executor can find the row to update or delete.

@@ -53,6 +53,7 @@
 
 #include "access/fileam.h"
 #include "access/transam.h"
+#include "catalog/aocatalog.h"
 #include "catalog/pg_statistic.h"
 #include "cdb/cdbaocsam.h"
 #include "cdb/cdbappendonlyam.h"
@@ -1852,7 +1853,8 @@ ExecModifyTable(ModifyTableState *node)
 				bool		isNull;
 
 				relkind = resultRelInfo->ri_RelationDesc->rd_rel->relkind;
-				if (relkind == RELKIND_RELATION || relkind == RELKIND_MATVIEW)
+				if (relkind == RELKIND_RELATION || relkind == RELKIND_MATVIEW ||
+					IsAppendonlyMetadataRelkind(relkind))
 				{
 					datum = ExecGetJunkAttribute(slot,
 												 junkfilter->jf_junkAttNo,
@@ -2347,7 +2349,8 @@ ExecInitModifyTable(ModifyTable *node, EState *estate, int eflags)
 
 					relkind = resultRelInfo->ri_RelationDesc->rd_rel->relkind;
 					if (relkind == RELKIND_RELATION ||
-						relkind == RELKIND_MATVIEW)
+						relkind == RELKIND_MATVIEW ||
+						IsAppendonlyMetadataRelkind(relkind))
 					{
 						j->jf_junkAttNo = ExecFindJunkAttribute(j, "ctid");
 						if (!AttributeNumberIsValid(j->jf_junkAttNo))
