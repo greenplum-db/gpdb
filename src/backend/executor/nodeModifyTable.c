@@ -59,6 +59,7 @@
 #include "utils/rel.h"
 
 #include "access/transam.h"
+#include "catalog/aocatalog.h"
 #include "cdb/cdbaocsam.h"
 #include "cdb/cdbappendonlyam.h"
 #include "cdb/cdbvars.h"
@@ -2422,7 +2423,8 @@ ExecModifyTable(PlanState *pstate)
 
 				relkind = resultRelInfo->ri_RelationDesc->rd_rel->relkind;
 				if (relkind == RELKIND_RELATION || relkind == RELKIND_MATVIEW ||
-					relkind == RELKIND_PARTITIONED_TABLE)
+					relkind == RELKIND_PARTITIONED_TABLE ||
+					IsAppendonlyMetadataRelkind(relkind))
 				{
 					datum = ExecGetJunkAttribute(slot,
 												 junkfilter->jf_junkAttNo,
@@ -3085,7 +3087,8 @@ ExecInitModifyTable(ModifyTable *node, EState *estate, int eflags)
 					relkind = resultRelInfo->ri_RelationDesc->rd_rel->relkind;
 					if (relkind == RELKIND_RELATION ||
 						relkind == RELKIND_MATVIEW ||
-						relkind == RELKIND_PARTITIONED_TABLE)
+						relkind == RELKIND_PARTITIONED_TABLE ||
+						IsAppendonlyMetadataRelkind(relkind))
 					{
 						j->jf_junkAttNo = ExecFindJunkAttribute(j, "ctid");
 						if (!AttributeNumberIsValid(j->jf_junkAttNo))
