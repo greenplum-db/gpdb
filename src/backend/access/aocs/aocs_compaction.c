@@ -107,8 +107,6 @@ AOCSSegmentFileTruncateToEOF(Relation aorel, int segno, AOCSVPInfo *vpinfo)
 
 	Assert(RelationIsAoCols(aorel));
 
-	relname = RelationGetRelationName(aorel);
-
 	for (j = 0; j < vpinfo->nEntry; ++j)
 	{
 		int64		segeof;
