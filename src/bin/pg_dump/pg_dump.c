@@ -17591,12 +17591,11 @@ dumpAttrDef(Archive *fout, const AttrDefInfo *adinfo)
 	qualrelname = pg_strdup(fmtQualifiedDumpable(tbinfo));
 
 	/*
-	 * GPDB_12_MERGE_FIXME: upstream always uses ONLY here, why gpdb need
-	 * condition? Fix corresponding tests in t/002_pg_dump.pl if you change
-	 * this.
-	 *
-	 * If the table is the parent of a partitioning hierarchy, the default
-	 * constraint must be applied to all children as well.
+	 * GPDB: Upstream uses ALTER TABLE ONLY below. If the table
+	 * is the parent of a GPDB partitioning hierarchy, the default
+	 * constraint must cascade to all children as well. Because of
+	 * this, we use ALTER TABLE instead when acting on a partition
+	 * parent.
 	 */
 	appendPQExpBuffer(q, "ALTER TABLE %s%s ",
 					  tbinfo->parparent ? "" : "ONLY ",
