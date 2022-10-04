@@ -123,7 +123,8 @@ gp_dump_query_oids(PG_FUNCTION_ARGS)
 												   sqlText,
 												   NULL,
 												   0,
-												   NULL);
+												   NULL,
+												   true);
 		flat_query_list = list_concat(flat_query_list,
 									  list_copy(queryTree_sublist));
 	}

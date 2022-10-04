@@ -818,7 +818,7 @@ pg_parse_query(const char *query_string)
 List *
 pg_analyze_and_rewrite(RawStmt *parsetree, const char *query_string,
 					   Oid *paramTypes, int numParams,
-					   QueryEnvironment *queryEnv)
+					   QueryEnvironment *queryEnv, bool expandMatViews)
 {
 	Query	   *query;
 	List	   *querytree_list;
@@ -833,6 +833,7 @@ pg_analyze_and_rewrite(RawStmt *parsetree, const char *query_string,
 
 	query = parse_analyze(parsetree, query_string, paramTypes, numParams,
 						  queryEnv);
+	query->expandMatViews = expandMatViews;
 
 	if (log_parser_stats)
 		ShowUsage("PARSE ANALYSIS STATISTICS");
@@ -1844,7 +1845,7 @@ exec_simple_query(const char *query_string)
 		oldcontext = MemoryContextSwitchTo(MessageContext);
 
 		querytree_list = pg_analyze_and_rewrite(parsetree, query_string,
-												NULL, 0, NULL);
+												NULL, 0, NULL, false);
 
 		plantree_list = pg_plan_queries(querytree_list,
 										CURSOR_OPT_PARALLEL_OK, NULL);

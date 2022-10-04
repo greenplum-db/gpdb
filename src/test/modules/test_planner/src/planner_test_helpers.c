@@ -14,7 +14,7 @@ get_parsetree_for(const char *query_string)
 static Query *
 get_query_for_parsetree(Node *parsetree, const char *query_string)
 {
-	List *querytree_list = pg_analyze_and_rewrite(parsetree, query_string, NULL, 0, NULL);
+	List *querytree_list = pg_analyze_and_rewrite(parsetree, query_string, NULL, 0, NULL, false);
 	ListCell *querytree = list_head(querytree_list);
 	return (Query *)lfirst(querytree);
 }

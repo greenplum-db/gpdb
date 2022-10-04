@@ -47,7 +47,8 @@ extern List *pg_parse_query(const char *query_string);
 extern List *pg_analyze_and_rewrite(RawStmt *parsetree,
 									const char *query_string,
 									Oid *paramTypes, int numParams,
-									QueryEnvironment *queryEnv);
+									QueryEnvironment *queryEnv,
+									bool expandMatViews);
 extern List *pg_analyze_and_rewrite_params(RawStmt *parsetree,
 										   const char *query_string,
 										   ParserSetupHook parserSetup,

@@ -2011,7 +2011,7 @@ fireRIRrules(Query *parsetree, List *activeRIRs)
 		 * In that case this test would need to be postponed till after we've
 		 * opened the rel, so that we could check its state.
 		 */
-		if (rte->relkind == RELKIND_MATVIEW)
+		if (rte->relkind == RELKIND_MATVIEW && !parsetree->expandMatViews)
 			continue;
 
 		/*

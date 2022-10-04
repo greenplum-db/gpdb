@@ -733,7 +733,8 @@ execute_sql_string(const char *sql)
 										   sql,
 										   NULL,
 										   0,
-										   NULL);
+										   NULL,
+										   false);
 		stmt_list = pg_plan_queries(stmt_list, CURSOR_OPT_PARALLEL_OK, NULL);
 
 		foreach(lc2, stmt_list)
