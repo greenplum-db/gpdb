@@ -2348,7 +2348,6 @@ typedef struct CreateStmt
 	/* names chosen for partition indexes */
 	List	   *part_idx_oids;
 	List	   *part_idx_names;
-
 } CreateStmt;
 
 /* ----------------------

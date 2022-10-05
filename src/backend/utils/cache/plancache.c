@@ -703,7 +703,7 @@ RevalidateCachedQuery(CachedPlanSource *plansource,
 									   plansource->query_string,
 									   plansource->param_types,
 									   plansource->num_params,
-									   queryEnv, false);
+									   queryEnv);
 
 	/* GPDB: For CTAS query, set its isCTAS to be true */
 	if (intoClause)

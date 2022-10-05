@@ -1988,7 +1988,7 @@ BeginCopy(ParseState *pstate,
 		 */
 		rewritten = pg_analyze_and_rewrite(copyObject(raw_query),
 										   pstate->p_sourcetext, NULL, 0,
-										   NULL, false);
+										   NULL);
 
 		/* check that we got back something we can work with */
 		if (rewritten == NIL)
