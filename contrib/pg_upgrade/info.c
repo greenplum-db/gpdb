@@ -522,7 +522,7 @@ get_rel_infos(ClusterInfo *cluster, DbInfo *dbinfo)
 	"    relname IN ('pg_largeobject', 'pg_largeobject_loid_pn_index'%s, "
 	"                'gp_fastsequence', 'gp_fastsequence_objid_objmod_index') ));",
 	/* Greenplum 5X use 'm' as aovisimap which is now matview in 6X and above. */
-			 (GET_MAJOR_VERSION(old_cluster.major_version) == 803) ?
+			 (GET_MAJOR_VERSION(cluster->major_version) == 803) ?
 			 ", 'm'" : ", 'M'",
 	/* see the comment at the top of old_8_3_create_sequence_script() */
 			 (GET_MAJOR_VERSION(old_cluster.major_version) == 803) ?
