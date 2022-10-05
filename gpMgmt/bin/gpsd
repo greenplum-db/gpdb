@@ -43,11 +43,11 @@ def get_num_segments(cursor):
     query = "select count(*) from gp_segment_configuration where role='p' and content >=0;"
     try:
         cursor.execute(query)
-        vals = cursor.fetchone()
-        return vals[0]
     except pgdb.DatabaseError as e:
         sys.stderr.write('\nError while trying to retrieve number of segments.\n\n' + str(e) + '\n\n')
         sys.exit(1)
+    vals = cursor.fetchone()
+    return vals[0]
 
 def dumpSchema(connectionInfo, envOpts):
     dump_cmd = 'pg_dump -h {host} -p {port} -U {user} -s -x -O {database}'.format(**connectionInfo)
@@ -183,6 +183,7 @@ def main():
                            '\n-- Allow system table modifications',
                            '\n-- ',
                            '\nset allow_system_table_mods=true;\n\n'])
+    # turn off optimizer when loading stats. Orca adds a bit of overhead, but it's significant when small insrt queries take 1 vs .1ms
     sys.stdout.writelines('set optimizer to off;\n\n')
     sys.stdout.flush()
 

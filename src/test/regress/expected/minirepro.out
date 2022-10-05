@@ -287,10 +287,10 @@ SET
 SET
 SET
 SET
-psql:data/minirepro.sql:44: ERROR:  only shared relations can be placed in pg_global tablespace
-psql:data/minirepro.sql:46: ERROR:  permission denied: "pg_tablespace" is a system catalog
-psql:data/minirepro.sql:53: ERROR:  permission denied: "pg_tablespace" is a system catalog
-psql:data/minirepro.sql:60: ERROR:  permission denied: "pg_tablespace" is a system catalog
+psql:data/minirepro.sql:46: ERROR:  only shared relations can be placed in pg_global tablespace
+psql:data/minirepro.sql:48: ERROR:  permission denied: "pg_tablespace" is a system catalog
+psql:data/minirepro.sql:55: ERROR:  permission denied: "pg_tablespace" is a system catalog
+psql:data/minirepro.sql:62: ERROR:  permission denied: "pg_tablespace" is a system catalog
 SET
 UPDATE 1
 DELETE 1
