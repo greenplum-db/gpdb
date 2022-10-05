@@ -13,8 +13,6 @@ insert into gstest1 values (2, 5, 30, 21, 300);
 insert into gstest1 values (2, 42, 40, 53, 400);
 -- Orca falls back due to Cube
 select a, b, c, sum(v) from gstest1 group by cube(a, b, c);
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Cube
  a | b  | c  | sum  
 ---+----+----+------
  1 |  5 | 10 |  100

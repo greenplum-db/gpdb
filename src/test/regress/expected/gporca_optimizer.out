@@ -10771,25 +10771,32 @@ set log_statement='none';
 set log_min_duration_statement=-1;
 set client_min_messages='log';
 explain select count(*) from foo group by cube(a,b);
-LOG:  2020-10-19 17:17:37:192241 PDT,THD000,NOTICE,"Feature not supported: Cube",
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Cube
-                                              QUERY PLAN                                              
-------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=1319.44..1496.29 rows=10611 width=16)
-   ->  Finalize HashAggregate  (cost=1319.44..1354.81 rows=3537 width=16)
-         Group Key: a, b, (GROUPINGSET_ID())
-         ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..1213.33 rows=10611 width=16)
-               Hash Key: a, b, (GROUPINGSET_ID())
-               ->  Partial MixedAggregate  (cost=0.00..1001.11 rows=10611 width=16)
-                     Hash Key: a, b
-                     Hash Key: a
-                     Hash Key: b
-                     Group Key: ()
-                     Planned Partitions: 4
-                     ->  Seq Scan on foo  (cost=0.00..321.00 rows=28700 width=8)
- Optimizer: Postgres query optimizer
-(15 rows)
+                                          QUERY PLAN                                          
+----------------------------------------------------------------------------------------------
+ Sequence  (cost=0.00..2155.00 rows=1 width=8)
+   ->  Shared Scan (share slice:id 0:0)  (cost=0.00..431.00 rows=1 width=1)
+         ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
+               ->  Seq Scan on foo  (cost=0.00..431.00 rows=1 width=8)
+   ->  Append  (cost=0.00..1724.00 rows=1 width=8)
+         ->  GroupAggregate  (cost=0.00..431.00 rows=1 width=8)
+               Group Key: share0_ref2.a, share0_ref2.b
+               ->  Sort  (cost=0.00..431.00 rows=1 width=8)
+                     Sort Key: share0_ref2.a, share0_ref2.b
+                     ->  Shared Scan (share slice:id 0:0)  (cost=0.00..431.00 rows=1 width=8)
+         ->  GroupAggregate  (cost=0.00..431.00 rows=1 width=8)
+               Group Key: share0_ref3.b
+               ->  Sort  (cost=0.00..431.00 rows=1 width=4)
+                     Sort Key: share0_ref3.b
+                     ->  Shared Scan (share slice:id 0:0)  (cost=0.00..431.00 rows=1 width=4)
+         ->  GroupAggregate  (cost=0.00..431.00 rows=1 width=8)
+               Group Key: share0_ref4.a
+               ->  Sort  (cost=0.00..431.00 rows=1 width=4)
+                     Sort Key: share0_ref4.a
+                     ->  Shared Scan (share slice:id 0:0)  (cost=0.00..431.00 rows=1 width=4)
+         ->  Aggregate  (cost=0.00..431.00 rows=1 width=8)
+               ->  Shared Scan (share slice:id 0:0)  (cost=0.00..431.00 rows=1 width=1)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(23 rows)
 
 reset client_min_messages;
 reset log_statement;
