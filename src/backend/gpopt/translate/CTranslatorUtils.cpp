@@ -981,8 +981,9 @@ CTranslatorUtils::GetColumnAttnosForGroupBy(
 		}
 		case GROUPING_SET_CUBE:
 		{
-			GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature,
-					   GPOS_WSZ_LIT("Cube"));
+			col_attnos_arr = CreateGroupingSetsForCube(
+				mp, grouping_set, num_cols, group_cols, group_col_pos);
+			break;
 		}
 		case GROUPING_SET_SETS:
 		{
@@ -1083,6 +1084,51 @@ CTranslatorUtils::CreateGroupingSetsForRollup(CMemoryPool *mp,
 	// add an empty set
 	col_attnos_arr->Append(GPOS_NEW(mp) CBitSet(mp));
 	current_result->Release();
+	return col_attnos_arr;
+}
+
+//---------------------------------------------------------------------------
+//	@function:
+//		CTranslatorUtils::CreateGroupingSetsForCube
+//
+//	@doc:
+//		Construct a dynamic array of sets of column attnos for a cube
+//
+//---------------------------------------------------------------------------
+CBitSetArray *
+CTranslatorUtils::CreateGroupingSetsForCube(CMemoryPool *mp,
+											const GroupingSet *grouping_set,
+											ULONG num_cols, CBitSet *group_cols,
+											UlongToUlongMap *group_col_pos)
+{
+	GPOS_ASSERT(nullptr != grouping_set);
+	GPOS_ASSERT(grouping_set->kind == GROUPING_SET_CUBE);
+	CBitSetArray *col_attnos_arr = GPOS_NEW(mp) CBitSetArray(mp);
+
+	// add an empty set
+	col_attnos_arr->Append(GPOS_NEW(mp) CBitSet(mp));
+
+	ListCell *lc = nullptr;
+	ForEach(lc, grouping_set->content)
+	{
+		ULONG current_results_size = col_attnos_arr->Size();
+
+		for (ULONG ul = 0; ul < current_results_size; ul++)
+		{
+			CBitSet *current_result =
+				GPOS_NEW(mp) CBitSet(mp, *(*col_attnos_arr)[ul]);
+
+			GroupingSet *gs_current = (GroupingSet *) lfirst(lc);
+			GPOS_ASSERT(gs_current->kind == GROUPING_SET_SIMPLE);
+
+			CBitSet *bset = CreateAttnoSetForGroupingSet(
+				mp, gs_current->content, num_cols, group_col_pos, group_cols,
+				false /* use_group_clause */);
+			current_result->Union(bset);
+			bset->Release();
+			col_attnos_arr->Append(GPOS_NEW(mp) CBitSet(mp, *current_result));
+		}
+	}
 	return col_attnos_arr;
 }
 

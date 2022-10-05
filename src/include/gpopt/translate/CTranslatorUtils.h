@@ -109,6 +109,11 @@ private:
 		CMemoryPool *mp, const GroupingSet *grouping_set, ULONG num_cols,
 		CBitSet *group_cols, UlongToUlongMap *group_col_pos);
 
+	// create a set of grouping sets for a cube
+	static CBitSetArray *CreateGroupingSetsForCube(
+		CMemoryPool *mp, const GroupingSet *grouping_set, ULONG num_cols,
+		CBitSet *group_cols, UlongToUlongMap *group_col_pos);
+
 	// create a set of grouping sets for a grouping sets subclause
 	static CBitSetArray *CreateGroupingSetsForSets(
 		CMemoryPool *mp, const GroupingSet *grouping_set_node, ULONG num_cols,
