@@ -65,6 +65,7 @@ SET
 SET
 SET
 SET
+SET
  set_config 
 ------------
  
@@ -141,6 +142,7 @@ analyze minirepro_foo;
 drop table minirepro_foo; -- this will also delete the pg_statistic tuples for minirepro_foo and minirepro_foo_1
 \! psql -f data/minirepro.sql regression
 You are now connected to database "regression" as user "pivotal".
+SET
 SET
 SET
 SET
@@ -231,6 +233,7 @@ SET
 SET
 SET
 SET
+SET
  set_config 
 ------------
  
@@ -266,6 +269,7 @@ drop table minirepro_foo;
 -- corrupted stats for pg_tablespace. But, that shouldn't matter too much?
 \! psql -f data/minirepro.sql regression
 You are now connected to database "regression" as user "pivotal".
+SET
 SET
 SET
 SET
