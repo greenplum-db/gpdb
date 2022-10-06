@@ -44,8 +44,6 @@ select a, b, c, sum(v) from gstest1 group by cube(a, b, c);
 
 -- Orca falls back due to multiple grouping sets specifications
 select sum(v), b, a, c from gstest1 group by c, grouping sets ((a, b), ());
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Multiple grouping sets specifications
  sum | b  | a | c  
 -----+----+---+----
  400 | 42 | 2 | 40
@@ -59,8 +57,6 @@ DETAIL:  Feature not supported: Multiple grouping sets specifications
 (8 rows)
 
 select sum(v), b, a, c, d from gstest1 group by grouping sets(a, b), rollup(c, d);
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Multiple grouping sets specifications
  sum | b  | a | c  | d  
 -----+----+---+----+----
  100 |    | 1 | 10 |  0
