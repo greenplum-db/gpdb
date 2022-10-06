@@ -119,6 +119,10 @@ private:
 		CMemoryPool *mp, const GroupingSet *grouping_set_node, ULONG num_cols,
 		CBitSet *group_cols, UlongToUlongMap *group_col_pos);
 
+	static CBitSetArray *CreateGroupingSetsForSimple(
+		CMemoryPool *mp, const GroupingSet *grouping_set_node, ULONG num_cols,
+		CBitSet *group_cols, UlongToUlongMap *group_col_pos);
+
 public:
 	struct SCmptypeStrategy
 	{
