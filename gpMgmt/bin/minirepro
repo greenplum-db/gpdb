@@ -97,11 +97,21 @@ def get_server_version(cursor):
     query = "select version()"
     try:
         cursor.execute(query)
-        vals = cursor.fetchone()
-        return vals[0]
     except pgdb.DatabaseError as e:
-        sys.stderr.write('\nError while trying to find HAWQ/GPDB version.\n\n' + str(e) + '\n\n')
+        sys.stderr.write('\nError while trying to find GPDB version.\n\n' + str(e) + '\n\n')
         sys.exit(1)
+    vals = cursor.fetchone()
+    return vals[0]
+
+def get_num_segments(cursor):
+    query = "select count(*) from gp_segment_configuration where role='p' and content >=0;"
+    try:
+        cursor.execute(query)
+    except pgdb.DatabaseError as e:
+        sys.stderr.write('\nError while trying to retrieve number of segments.\n\n' + str(e) + '\n\n')
+        sys.exit(1)
+    vals = cursor.fetchone()
+    return vals[0]
 
 def parse_cmd_line():
     p = OptionParser(usage='Usage: %prog <database> [options]', version='%prog '+version, conflict_handler="resolve", epilog="WARNING: This tool collects statistics about your data, including most common values, which requires some data elements to be included in the output file. Please review output file to ensure it is within corporate policy to transport the output file.")
@@ -358,6 +368,8 @@ def main():
     # get server version, which is dumped to minirepro output file
     server_ver = get_server_version(cursor)
 
+    num_segments = get_num_segments(cursor)
+
     """
     invoke gp_toolkit UDF, dump object oids as json text
     input: query file name
@@ -392,6 +404,8 @@ def main():
 
     # make sure we connect with the right database
     f_out.writelines('\\connect ' + db + '\n\n')
+    # turn off optimizer when loading stats. Orca adds a bit of overhead, but it's significant when small insrt queries take 1 vs .1ms
+    f_out.writelines('set optimizer to off;\n\n')
 
     # first create schema DDLs
     print "Writing schema DDLs ..."
@@ -425,7 +439,8 @@ def main():
     f_out.writelines(['\n-- ',
                        '\n-- Query text',
                        '\n-- \n\n'])
-
+    line = 'set optimizer_segments = ' + str(num_segments) + ';'
+    f_out.writelines('\n-- ' + line + '\n')
     with open(query_file, 'r') as query_f:
         for line in query_f:
             f_out.writelines('-- ' + line)

@@ -34,10 +34,19 @@ def ResultIter(cursor, arraysize=1000):
 def getVersion(envOpts):
     cmd = subprocess.Popen('psql --pset footer -Atqc "select version()" template1', shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=envOpts)
     if cmd.wait() is not 0:
-        sys.stderr.write('\nError while trying to find HAWQ/GPDB version.\n\n' + cmd.communicate()[1] + '\n\n')
+        sys.stderr.write('\nError while trying to find GPDB version.\n\n' + cmd.communicate()[1] + '\n\n')
         sys.exit(1)
     return cmd.communicate()[0]
 
+def get_num_segments(cursor):
+    query = "select count(*) from gp_segment_configuration where role='p' and content >=0;"
+    try:
+        cursor.execute(query)
+    except pgdb.DatabaseError as e:
+        sys.stderr.write('\nError while trying to retrieve number of segments.\n\n' + str(e) + '\n\n')
+        sys.exit(1)
+    vals = cursor.fetchone()
+    return vals[0]
 
 def dumpSchema(connectionInfo, envOpts):
     dmp_cmd = 'pg_dump -h %s -p %s -U %s -s -x --gp-syntax -O %s' % connectionInfo
@@ -223,9 +232,15 @@ def main():
     connectionInfo = (host, port, user, db)
     connectionString = ':'.join([host, port, db, user, '', pgoptions, ''])
 
+    num_segments = 0
+    with closing(pgdb.connect(connectionString)) as connection:
+        with closing(connection.cursor()) as cursor:
+            num_segments = get_num_segments(cursor)
+
     sys.stdout.writelines(['\n-- Greenplum database Statistics Dump',
                            '\n-- Copyright (C) 2007 - 2014 Pivotal'
                            '\n-- Database: ' + db,
+                           '\n-- Num Segments: ' + str(num_segments),
                            '\n-- Date:     ' + timestamp.date().isoformat(),
                            '\n-- Time:     ' + timestamp.time().isoformat(),
                            '\n-- CmdLine:  ' + ' '.join(sys.argv),
@@ -249,6 +264,8 @@ def main():
                            '\n-- Allow system table modifications',
                            '\n-- ',
                            '\nset allow_system_table_mods=true;\n\n'])
+    # turn off optimizer when loading stats. Orca adds a bit of overhead, but it's significant when small insrt queries take 1 vs .1ms
+    sys.stdout.writelines('set optimizer to off;\n\n')
     sys.stdout.flush()
 
     try:
