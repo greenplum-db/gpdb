@@ -618,6 +618,7 @@ extern IndexCheckType gp_indexcheck_insert;
 #define SOPT_COMPTYPE      "compresstype"
 #define SOPT_COMPLEVEL     "compresslevel"
 #define SOPT_CHECKSUM      "checksum"
+#define SOPT_ANALYZEHLL    "analyze_hll"
 
 /*
  * Functions exported by guc.c

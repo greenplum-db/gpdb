@@ -56,7 +56,7 @@ static relopt_bool boolRelOpts_gp[] =
 	},
 	{
 		{
-			"analyze_hll",
+			SOPT_ANALYZEHLL,
 			"Enable HLL stats collection during analyze",
 			RELOPT_KIND_HEAP | RELOPT_KIND_TOAST | RELOPT_KIND_APPENDOPTIMIZED,
 			ShareUpdateExclusiveLock
@@ -626,13 +626,13 @@ transformAOStdRdOptions(StdRdOptions *opts, Datum withOpts)
 				astate = accumArrayResult(astate, d, false, TEXTOID,
 										  CurrentMemoryContext);
 			}
-			soptLen = strlen("analyze_hll");
+			soptLen = strlen(SOPT_ANALYZEHLL);
 			if (withLen > soptLen &&
-				pg_strncasecmp(strval, "analyze_hll", soptLen) == 0)
+				pg_strncasecmp(strval, SOPT_ANALYZEHLL, soptLen) == 0)
 			{
 				foundAnalyzeHLL = true;
 				d = CStringGetTextDatum(psprintf("%s=%s",
-												 "analyze_hll",
+												 SOPT_ANALYZEHLL,
 												 (opts->analyze_hll ? "true" : "false")));
 				astate = accumArrayResult(astate, d, false, TEXTOID,
 										  CurrentMemoryContext);
@@ -692,7 +692,7 @@ transformAOStdRdOptions(StdRdOptions *opts, Datum withOpts)
 	if ((opts->analyze_hll != ANALYZE_DEFAULT_HLL) && !foundAnalyzeHLL)
 	{
 		d = CStringGetTextDatum(psprintf("%s=%s",
-										 "analyze_hll",
+										 SOPT_ANALYZEHLL,
 										 (opts->analyze_hll ? "true" : "false")));
 		astate = accumArrayResult(astate, d, false, TEXTOID,
 								  CurrentMemoryContext);
@@ -739,11 +739,11 @@ reloption_is_default(const char *optstr, int optlen)
 										 SOPT_CHECKSUM,
 										 AO_DEFAULT_CHECKSUM ? "true" : "false");
 	}
-	else if (optlen > strlen("analyze_hll") &&
-		pg_strncasecmp(optstr, "analyze_hll", strlen("analyze_hll")) == 0)
+	else if (optlen > strlen(SOPT_ANALYZEHLL) &&
+		pg_strncasecmp(optstr, SOPT_ANALYZEHLL, strlen("analyze_hll")) == 0)
 	{
 		defaultopt = psprintf("%s=%s",
-							  "analyze_hll",
+							  SOPT_ANALYZEHLL,
 										 ANALYZE_DEFAULT_HLL ? "true" : "false");
 	}
 	if (defaultopt != NULL)

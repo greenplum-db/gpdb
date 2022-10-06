@@ -906,6 +906,16 @@ analyze hll_off;
 -- hll stats should not be collected in non-partition table when disabled
 select 1 from pg_statistic where starelid='hll_off'::regclass and stavalues5 is not null;
 
+-- alter table, set analyze_hll on, ensure hll stats collected
+alter table hll_off set (analyze_hll=true);
+analyze hll_off;
+select 1 from pg_statistic where starelid='hll_off'::regclass and stavalues5 is not null;
+
+-- alter table, set analyze_hll ooff, ensure hll stats not collected
+alter table hll_off set (analyze_hll=false);
+analyze hll_off;
+select 1 from pg_statistic where starelid='hll_off'::regclass and stavalues5 is not null;
+
 create table hll_on_ao (i int, j int) with (analyze_hll=true) distributed by (i);
 insert into hll_on_ao values (777,6);
 analyze hll_on_ao;

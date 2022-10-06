@@ -807,7 +807,9 @@ do_analyze_rel(Relation onerel, VacuumParams *params,
 				bool analyze_hll = false;
 				if (onerel->rd_options != NULL &&
 							((StdRdOptions *) onerel->rd_options)->analyze_hll)
+				{
 					analyze_hll = true;
+				}
 				if (onerel->rd_rel->relkind == RELKIND_RELATION && (onerel->rd_rel->relispartition || analyze_hll))
 				{
 					MemoryContext old_context;

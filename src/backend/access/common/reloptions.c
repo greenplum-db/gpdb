@@ -1434,7 +1434,7 @@ default_reloptions(Datum reloptions, bool validate, relopt_kind kind)
 		offsetof(StdRdOptions, vacuum_index_cleanup)},
 		{"vacuum_truncate", RELOPT_TYPE_BOOL,
 		offsetof(StdRdOptions, vacuum_truncate)},
-		{"analyze_hll", RELOPT_TYPE_BOOL,
+		{SOPT_ANALYZEHLL, RELOPT_TYPE_BOOL,
 		offsetof(StdRdOptions, analyze_hll)}
 
 	};

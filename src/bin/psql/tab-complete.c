@@ -1084,7 +1084,6 @@ static const char *const table_storage_parameters[] = {
 	"user_catalog_table",
 	"vacuum_index_cleanup",
 	"vacuum_truncate",
-	"analyze_hll",
 	NULL
 };
 
