@@ -3,15 +3,15 @@
 //	Copyright (C) 2013 VMware, Inc. or its affiliates.
 //
 //	@filename:
-//		CDXLLogicalExternalGet.h
+//		CDXLLogicalForeignGet.h
 //
 //	@doc:
-//		Class for representing DXL logical external get operator, for reading
-//		from external tables
+//		Class for representing DXL logical foreign get operator, for reading
+//		from foreign tables
 //---------------------------------------------------------------------------
 
-#ifndef GPDXL_CDXLLogicalExternalGet_H
-#define GPDXL_CDXLLogicalExternalGet_H
+#ifndef GPDXL_CDXLLogicalForeignGet_H
+#define GPDXL_CDXLLogicalForeignGet_H
 
 #include "gpos/base.h"
 
@@ -21,20 +21,20 @@ namespace gpdxl
 {
 //---------------------------------------------------------------------------
 //	@class:
-//		CDXLLogicalExternalGet
+//		CDXLLogicalForeignGet
 //
 //	@doc:
-//		Class for representing DXL logical external get operator
+//		Class for representing DXL logical foreign get operator
 //
 //---------------------------------------------------------------------------
-class CDXLLogicalExternalGet : public CDXLLogicalGet
+class CDXLLogicalForeignGet : public CDXLLogicalGet
 {
 private:
 public:
-	CDXLLogicalExternalGet(CDXLLogicalExternalGet &) = delete;
+	CDXLLogicalForeignGet(CDXLLogicalForeignGet &) = delete;
 
 	// ctor
-	CDXLLogicalExternalGet(CMemoryPool *mp, CDXLTableDescr *table_descr);
+	CDXLLogicalForeignGet(CMemoryPool *mp, CDXLTableDescr *table_descr);
 
 	// operator type
 	Edxlopid GetDXLOperator() const override;
@@ -43,16 +43,16 @@ public:
 	const CWStringConst *GetOpNameStr() const override;
 
 	// conversion function
-	static CDXLLogicalExternalGet *
+	static CDXLLogicalForeignGet *
 	Cast(CDXLOperator *dxl_op)
 	{
 		GPOS_ASSERT(nullptr != dxl_op);
-		GPOS_ASSERT(EdxlopLogicalExternalGet == dxl_op->GetDXLOperator());
+		GPOS_ASSERT(EdxlopLogicalForeignGet == dxl_op->GetDXLOperator());
 
-		return dynamic_cast<CDXLLogicalExternalGet *>(dxl_op);
+		return dynamic_cast<CDXLLogicalForeignGet *>(dxl_op);
 	}
 };
 }  // namespace gpdxl
-#endif	// !GPDXL_CDXLLogicalExternalGet_H
+#endif	// !GPDXL_CDXLLogicalForeignGet_H
 
 // EOF

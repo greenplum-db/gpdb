@@ -3,13 +3,13 @@
 //	Copyright (C) 2013 VMware, Inc. or its affiliates.
 //
 //	@filename:
-//		CLogicalExternalGet.h
+//		CLogicalForeignGet.h
 //
 //	@doc:
-//		Logical external get operator
+//		Logical foreign get operator
 //---------------------------------------------------------------------------
-#ifndef GPOPT_CLogicalExternalGet_H
-#define GPOPT_CLogicalExternalGet_H
+#ifndef GPOPT_CLogicalForeignGet_H
+#define GPOPT_CLogicalForeignGet_H
 
 #include "gpos/base.h"
 
@@ -24,40 +24,39 @@ class CColRefSet;
 
 //---------------------------------------------------------------------------
 //	@class:
-//		CLogicalExternalGet
+//		CLogicalForeignGet
 //
 //	@doc:
-//		Logical external get operator
+//		Logical foreign get operator
 //
 //---------------------------------------------------------------------------
-class CLogicalExternalGet : public CLogicalGet
+class CLogicalForeignGet : public CLogicalGet
 {
 private:
 public:
-	CLogicalExternalGet(const CLogicalExternalGet &) = delete;
+	CLogicalForeignGet(const CLogicalForeignGet &) = delete;
 
 	// ctors
-	explicit CLogicalExternalGet(CMemoryPool *mp);
+	explicit CLogicalForeignGet(CMemoryPool *mp);
 
-	CLogicalExternalGet(CMemoryPool *mp, const CName *pnameAlias,
-						CTableDescriptor *ptabdesc);
+	CLogicalForeignGet(CMemoryPool *mp, const CName *pnameAlias,
+					   CTableDescriptor *ptabdesc);
 
-	CLogicalExternalGet(CMemoryPool *mp, const CName *pnameAlias,
-						CTableDescriptor *ptabdesc,
-						CColRefArray *pdrgpcrOutput);
+	CLogicalForeignGet(CMemoryPool *mp, const CName *pnameAlias,
+					   CTableDescriptor *ptabdesc, CColRefArray *pdrgpcrOutput);
 
 	// ident accessors
 	EOperatorId
 	Eopid() const override
 	{
-		return EopLogicalExternalGet;
+		return EopLogicalForeignGet;
 	}
 
 	// return a string for operator name
 	const CHAR *
 	SzId() const override
 	{
-		return "CLogicalExternalGet";
+		return "CLogicalForeignGet";
 	}
 
 	// match function
@@ -80,7 +79,7 @@ public:
 			 ULONG				   // child_index
 	) const override
 	{
-		GPOS_ASSERT(!"CLogicalExternalGet has no children");
+		GPOS_ASSERT(!"CLogicalForeignGet has no children");
 		return nullptr;
 	}
 
@@ -96,18 +95,18 @@ public:
 	//-------------------------------------------------------------------------------------
 
 	// conversion function
-	static CLogicalExternalGet *
+	static CLogicalForeignGet *
 	PopConvert(COperator *pop)
 	{
 		GPOS_ASSERT(nullptr != pop);
-		GPOS_ASSERT(EopLogicalExternalGet == pop->Eopid());
+		GPOS_ASSERT(EopLogicalForeignGet == pop->Eopid());
 
-		return dynamic_cast<CLogicalExternalGet *>(pop);
+		return dynamic_cast<CLogicalForeignGet *>(pop);
 	}
 
-};	// class CLogicalExternalGet
+};	// class CLogicalForeignGet
 }  // namespace gpopt
 
-#endif	// !GPOPT_CLogicalExternalGet_H
+#endif	// !GPOPT_CLogicalForeignGet_H
 
 // EOF

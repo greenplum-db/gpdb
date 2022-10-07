@@ -30,7 +30,6 @@ extern "C" {
 #include "naucrates/dxl/CIdGenerator.h"
 #include "naucrates/dxl/operators/CDXLCtasStorageOptions.h"
 #include "naucrates/dxl/operators/CDXLPhysicalIndexScan.h"
-#include "naucrates/md/IMDRelationExternal.h"
 
 #include "access/attnum.h"
 #include "nodes/nodes.h"

@@ -3,14 +3,14 @@
 //	Copyright (C) 2013 VMware, Inc. or its affiliates.
 //
 //	@filename:
-//		CDXLPhysicalExternalScan.h
+//		CDXLPhysicalForeignScan.h
 //
 //	@doc:
-//		Class for representing DXL external scan operators
+//		Class for representing DXL foreign scan operators
 //---------------------------------------------------------------------------
 
-#ifndef GPDXL_CDXLPhysicalExternalScan_H
-#define GPDXL_CDXLPhysicalExternalScan_H
+#ifndef GPDXL_CDXLPhysicalForeignScan_H
+#define GPDXL_CDXLPhysicalForeignScan_H
 
 #include "gpos/base.h"
 
@@ -21,22 +21,22 @@ namespace gpdxl
 {
 //---------------------------------------------------------------------------
 //	@class:
-//		CDXLPhysicalExternalScan
+//		CDXLPhysicalForeignScan
 //
 //	@doc:
-//		Class for representing DXL external scan operators
+//		Class for representing DXL foreign scan operators
 //
 //---------------------------------------------------------------------------
-class CDXLPhysicalExternalScan : public CDXLPhysicalTableScan
+class CDXLPhysicalForeignScan : public CDXLPhysicalTableScan
 {
 private:
 public:
-	CDXLPhysicalExternalScan(CDXLPhysicalExternalScan &) = delete;
+	CDXLPhysicalForeignScan(CDXLPhysicalForeignScan &) = delete;
 
 	// ctors
-	explicit CDXLPhysicalExternalScan(CMemoryPool *mp);
+	explicit CDXLPhysicalForeignScan(CMemoryPool *mp);
 
-	CDXLPhysicalExternalScan(CMemoryPool *mp, CDXLTableDescr *table_descr);
+	CDXLPhysicalForeignScan(CMemoryPool *mp, CDXLTableDescr *table_descr);
 
 	// operator type
 	Edxlopid GetDXLOperator() const override;
@@ -45,16 +45,16 @@ public:
 	const CWStringConst *GetOpNameStr() const override;
 
 	// conversion function
-	static CDXLPhysicalExternalScan *
+	static CDXLPhysicalForeignScan *
 	Cast(CDXLOperator *dxl_op)
 	{
 		GPOS_ASSERT(nullptr != dxl_op);
-		GPOS_ASSERT(EdxlopPhysicalExternalScan == dxl_op->GetDXLOperator());
+		GPOS_ASSERT(EdxlopPhysicalForeignScan == dxl_op->GetDXLOperator());
 
-		return dynamic_cast<CDXLPhysicalExternalScan *>(dxl_op);
+		return dynamic_cast<CDXLPhysicalForeignScan *>(dxl_op);
 	}
 };
 }  // namespace gpdxl
-#endif	// !GPDXL_CDXLPhysicalExternalScan_H
+#endif	// !GPDXL_CDXLPhysicalForeignScan_H
 
 // EOF

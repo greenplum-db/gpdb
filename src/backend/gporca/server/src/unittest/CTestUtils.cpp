@@ -45,7 +45,7 @@
 #include "gpopt/operators/CLogicalConstTableGet.h"
 #include "gpopt/operators/CLogicalDelete.h"
 #include "gpopt/operators/CLogicalDynamicGet.h"
-#include "gpopt/operators/CLogicalExternalGet.h"
+#include "gpopt/operators/CLogicalForeignGet.h"
 #include "gpopt/operators/CLogicalGbAgg.h"
 #include "gpopt/operators/CLogicalGbAggDeduplicate.h"
 #include "gpopt/operators/CLogicalInnerJoin.h"
@@ -388,14 +388,14 @@ CTestUtils::PexprLogicalGet(CMemoryPool *mp)
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CTestUtils::PexprLogicalExternalGet
+//		CTestUtils::PexprLogicalForeignGet
 //
 //	@doc:
-//		Generate a randomized external get expression
+//		Generate a randomized foreign get expression
 //
 //---------------------------------------------------------------------------
 CExpression *
-CTestUtils::PexprLogicalExternalGet(CMemoryPool *mp)
+CTestUtils::PexprLogicalForeignGet(CMemoryPool *mp)
 {
 	CWStringConst strName(GPOS_WSZ_LIT("ExternalTable"));
 	CMDIdGPDB *mdid =
@@ -404,7 +404,7 @@ CTestUtils::PexprLogicalExternalGet(CMemoryPool *mp)
 	CWStringConst strAlias(GPOS_WSZ_LIT("ExternalTableAlias"));
 
 	return GPOS_NEW(mp)
-		CExpression(mp, GPOS_NEW(mp) CLogicalExternalGet(
+		CExpression(mp, GPOS_NEW(mp) CLogicalForeignGet(
 							mp, GPOS_NEW(mp) CName(mp, &strAlias), ptabdesc));
 }
 

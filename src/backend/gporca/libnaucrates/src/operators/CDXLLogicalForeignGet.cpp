@@ -3,13 +3,13 @@
 //	Copyright (C) 2013 VMware, Inc. or its affiliates.
 //
 //	@filename:
-//		CDXLLogicalExternalGet.cpp
+//		CDXLLogicalForeignGet.cpp
 //
 //	@doc:
-//		Implementation of DXL logical external get operator
+//		Implementation of DXL logical foreign get operator
 //---------------------------------------------------------------------------
 
-#include "naucrates/dxl/operators/CDXLLogicalExternalGet.h"
+#include "naucrates/dxl/operators/CDXLLogicalForeignGet.h"
 
 #include "naucrates/dxl/xml/dxltokens.h"
 
@@ -18,44 +18,44 @@ using namespace gpdxl;
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CDXLLogicalExternalGet::CDXLLogicalExternalGet
+//		CDXLLogicalForeignGet::CDXLLogicalForeignGet
 //
 //	@doc:
 //		Ctor
 //
 //---------------------------------------------------------------------------
-CDXLLogicalExternalGet::CDXLLogicalExternalGet(CMemoryPool *mp,
-											   CDXLTableDescr *table_descr)
+CDXLLogicalForeignGet::CDXLLogicalForeignGet(CMemoryPool *mp,
+											 CDXLTableDescr *table_descr)
 	: CDXLLogicalGet(mp, table_descr)
 {
 }
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CDXLLogicalExternalGet::GetDXLOperator
+//		CDXLLogicalForeignGet::GetDXLOperator
 //
 //	@doc:
 //		Operator type
 //
 //---------------------------------------------------------------------------
 Edxlopid
-CDXLLogicalExternalGet::GetDXLOperator() const
+CDXLLogicalForeignGet::GetDXLOperator() const
 {
-	return EdxlopLogicalExternalGet;
+	return EdxlopLogicalForeignGet;
 }
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CDXLLogicalExternalGet::GetOpNameStr
+//		CDXLLogicalForeignGet::GetOpNameStr
 //
 //	@doc:
 //		Operator name
 //
 //---------------------------------------------------------------------------
 const CWStringConst *
-CDXLLogicalExternalGet::GetOpNameStr() const
+CDXLLogicalForeignGet::GetOpNameStr() const
 {
-	return CDXLTokens::GetDXLTokenStr(EdxltokenLogicalExternalGet);
+	return CDXLTokens::GetDXLTokenStr(EdxltokenLogicalForeignGet);
 }
 
 // EOF

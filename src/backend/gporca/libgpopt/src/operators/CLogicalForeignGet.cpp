@@ -3,13 +3,13 @@
 //	Copyright (C) 2013 VMware, Inc. or its affiliates.
 //
 //	@filename:
-//		CLogicalExternalGet.cpp
+//		CLogicalForeignGet.cpp
 //
 //	@doc:
-//		Implementation of external get
+//		Implementation of foreign get
 //---------------------------------------------------------------------------
 
-#include "gpopt/operators/CLogicalExternalGet.h"
+#include "gpopt/operators/CLogicalForeignGet.h"
 
 #include "gpos/base.h"
 
@@ -27,63 +27,61 @@ using namespace gpopt;
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CLogicalExternalGet::CLogicalExternalGet
+//		CLogicalForeignGet::CLogicalForeignGet
 //
 //	@doc:
 //		Ctor - for pattern
 //
 //---------------------------------------------------------------------------
-CLogicalExternalGet::CLogicalExternalGet(CMemoryPool *mp) : CLogicalGet(mp)
+CLogicalForeignGet::CLogicalForeignGet(CMemoryPool *mp) : CLogicalGet(mp)
 {
 }
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CLogicalExternalGet::CLogicalExternalGet
+//		CLogicalForeignGet::CLogicalForeignGet
 //
 //	@doc:
 //		Ctor
 //
 //---------------------------------------------------------------------------
-CLogicalExternalGet::CLogicalExternalGet(CMemoryPool *mp,
-										 const CName *pnameAlias,
-										 CTableDescriptor *ptabdesc)
+CLogicalForeignGet::CLogicalForeignGet(CMemoryPool *mp, const CName *pnameAlias,
+									   CTableDescriptor *ptabdesc)
 	: CLogicalGet(mp, pnameAlias, ptabdesc)
 {
 }
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CLogicalExternalGet::CLogicalExternalGet
+//		CLogicalForeignGet::CLogicalForeignGet
 //
 //	@doc:
 //		Ctor
 //
 //---------------------------------------------------------------------------
-CLogicalExternalGet::CLogicalExternalGet(CMemoryPool *mp,
-										 const CName *pnameAlias,
-										 CTableDescriptor *ptabdesc,
-										 CColRefArray *pdrgpcrOutput)
+CLogicalForeignGet::CLogicalForeignGet(CMemoryPool *mp, const CName *pnameAlias,
+									   CTableDescriptor *ptabdesc,
+									   CColRefArray *pdrgpcrOutput)
 	: CLogicalGet(mp, pnameAlias, ptabdesc, pdrgpcrOutput)
 {
 }
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CLogicalExternalGet::Matches
+//		CLogicalForeignGet::Matches
 //
 //	@doc:
 //		Match function on operator level
 //
 //---------------------------------------------------------------------------
 BOOL
-CLogicalExternalGet::Matches(COperator *pop) const
+CLogicalForeignGet::Matches(COperator *pop) const
 {
 	if (pop->Eopid() != Eopid())
 	{
 		return false;
 	}
-	CLogicalExternalGet *popGet = CLogicalExternalGet::PopConvert(pop);
+	CLogicalForeignGet *popGet = CLogicalForeignGet::PopConvert(pop);
 
 	return Ptabdesc() == popGet->Ptabdesc() &&
 		   PdrgpcrOutput()->Equals(popGet->PdrgpcrOutput());
@@ -91,15 +89,16 @@ CLogicalExternalGet::Matches(COperator *pop) const
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CLogicalExternalGet::PopCopyWithRemappedColumns
+//		CLogicalForeignGet::PopCopyWithRemappedColumns
 //
 //	@doc:
 //		Return a copy of the operator with remapped columns
 //
 //---------------------------------------------------------------------------
 COperator *
-CLogicalExternalGet::PopCopyWithRemappedColumns(
-	CMemoryPool *mp, UlongToColRefMap *colref_mapping, BOOL must_exist)
+CLogicalForeignGet::PopCopyWithRemappedColumns(CMemoryPool *mp,
+											   UlongToColRefMap *colref_mapping,
+											   BOOL must_exist)
 {
 	CColRefArray *pdrgpcrOutput = nullptr;
 	if (must_exist)
@@ -118,22 +117,22 @@ CLogicalExternalGet::PopCopyWithRemappedColumns(
 	ptabdesc->AddRef();
 
 	return GPOS_NEW(mp)
-		CLogicalExternalGet(mp, pnameAlias, ptabdesc, pdrgpcrOutput);
+		CLogicalForeignGet(mp, pnameAlias, ptabdesc, pdrgpcrOutput);
 }
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CLogicalExternalGet::PxfsCandidates
+//		CLogicalForeignGet::PxfsCandidates
 //
 //	@doc:
 //		Get candidate xforms
 //
 //---------------------------------------------------------------------------
 CXformSet *
-CLogicalExternalGet::PxfsCandidates(CMemoryPool *mp) const
+CLogicalForeignGet::PxfsCandidates(CMemoryPool *mp) const
 {
 	CXformSet *xform_set = GPOS_NEW(mp) CXformSet(mp);
-	(void) xform_set->ExchangeSet(CXform::ExfExternalGet2ExternalScan);
+	(void) xform_set->ExchangeSet(CXform::ExfForeignGet2ForeignScan);
 
 	return xform_set;
 }

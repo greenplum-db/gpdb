@@ -40,7 +40,6 @@
 #include "naucrates/md/IMDProvider.h"
 #include "naucrates/md/IMDRelStats.h"
 #include "naucrates/md/IMDRelation.h"
-#include "naucrates/md/IMDRelationExternal.h"
 #include "naucrates/md/IMDScCmp.h"
 #include "naucrates/md/IMDScalarOp.h"
 #include "naucrates/md/IMDType.h"
