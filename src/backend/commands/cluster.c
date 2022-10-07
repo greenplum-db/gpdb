@@ -661,7 +661,7 @@ rebuild_relation(Relation OldHeap, Oid indexOid, bool verbose)
 
 	/* Create the transient table that will receive the re-ordered data */
 	OIDNewHeap = make_new_heap(tableOid, tableSpace,
-							   accessMethod,
+							   accessMethod, NULL,
 							   relpersistence,
 							   AccessExclusiveLock,
 							   true /* createAoBlockDirectory */,
@@ -696,6 +696,7 @@ rebuild_relation(Relation OldHeap, Oid indexOid, bool verbose)
  */
 Oid
 make_new_heap(Oid OIDOldHeap, Oid NewTableSpace, Oid NewAccessMethod,
+			  List *NewEncodings,
 			  char relpersistence,
 			  LOCKMODE lockmode,
 			  bool createAoBlockDirectory,
@@ -890,12 +891,17 @@ make_new_heap(Oid OIDOldHeap, Oid NewTableSpace, Oid NewAccessMethod,
 	 * Note that in the case of AM change from heap/ao to aoco, we still need 
 	 * to do this since we created those entries for the heap/ao table at the 
 	 * phase 2 of ATSETAM (see ATExecCmd).
+	 *
+	 * If we are also altering any column's encodings, (AT_SetColumnEncoding)
+	 * we update those columns with the new encoding values
 	 */
 	if (NewAccessMethod == AO_COLUMN_TABLE_AM_OID)
-		cloneAttributeEncoding(OIDOldHeap,
-							   OIDNewHeap,
-							   RelationGetNumberOfAttributes(OldHeap));
-
+	{
+		CloneAttributeEncodings(OIDOldHeap,
+								OIDNewHeap,
+								RelationGetNumberOfAttributes(OldHeap));
+		UpdateAttributeEncodings(OIDNewHeap, NewEncodings);
+	}
 	table_close(OldHeap, NoLock);
 
 	return OIDNewHeap;
@@ -1250,6 +1256,12 @@ swap_relation_files(Oid r1, Oid r2, bool target_is_pg_class,
 		reltup1 = heap_modify_tuple(reltup1, RelationGetDescr(relRelation),
 									val, null, repl);
 		relform1 = (Form_pg_class) GETSTRUCT(reltup1);
+	}
+
+	if (relform2->relam == AO_COLUMN_TABLE_AM_OID)
+	{
+		RemoveAttributeEncodingsByRelid(r1);
+		CloneAttributeEncodings(r2, r1, relform2->relnatts);
 	}
 
 	relfilenode1 = relform1->relfilenode;

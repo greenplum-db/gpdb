@@ -51,9 +51,10 @@ extern PGFunction *get_funcs_for_compression(char *compresstype);
 extern StdRdOptions **RelationGetAttributeOptions(Relation rel);
 extern List **RelationGetUntransformedAttributeOptions(Relation rel);
 
-extern void AddRelationAttributeEncodings(Relation rel, List *attr_encodings);
+extern void AddRelationAttributeEncodings(Oid relid, List *attr_encodings);
 extern void RemoveAttributeEncodingsByRelid(Oid relid);
-extern void cloneAttributeEncoding(Oid oldrelid, Oid newrelid, AttrNumber max_attno);
+extern void CloneAttributeEncodings(Oid oldrelid, Oid newrelid, AttrNumber max_attno);
+extern void UpdateAttributeEncodings(Oid relid, List *new_attr_encodings);
 extern Datum *get_rel_attoptions(Oid relid, AttrNumber max_attno);
 extern List * rel_get_column_encodings(Relation rel);
 
