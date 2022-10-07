@@ -233,18 +233,21 @@ Table redistribution is performed while the system is online. For many Greenplum
 
 The performance impact of table redistribution depends on the size, storage type, and partitioning design of a table. For any given table, redistributing it with `gpexpand` takes as much time as a `CREATE TABLE AS SELECT` operation would. When redistributing a terabyte-scale fact table, the expansion utility can use much of the available system resources, which could affect query performance or other database workloads.
 
+### <a id="tabred"></a>Table Redistribution Method
+
+Greenplum Database uses a *rebuild* table distribution method to redistribute data during an expansion. Greenplum:
+
+1. Creates a new table.
+1. Copies all of the data from the old table to the new table.
+1. Replaces the old table.
+
+The rebuild method is similar to creating a new table with a `CREATE TABLE AS SELECT` command. During data redistribution, Greenplum Database acquires an `ACCESS EXCLUSIVE` lock on the table.
+
 ### <a id="topic11"></a>Managing Redistribution in Large-Scale Greenplum Systems 
 
-When planning the redistribution phase, consider the impact of the `ACCESS EXCLUSIVE` lock taken on each table, and the table data redistribution method. User activity on a table can delay its redistribution, but also tables are unavailable for user activity during redistribution.
+When planning the redistribution phase, consider the impact of the `ACCESS EXCLUSIVE` lock taken on each table. User activity on a table can delay its redistribution, but also tables are unavailable for user activity during redistribution.
 
 You can manage the order in which tables are redistributed by adjusting their ranking. See [Ranking Tables for Redistribution](expand-redistribute.html). Manipulating the redistribution order can help adjust for limited disk space and restore optimal query performance for high-priority queries sooner.
-
-#### <a id="tabred"></a>Table Redistribution Methods 
-
-There are two methods of redistributing data when performing a Greenplum Database expansion.
-
--   `rebuild` - Create a new table, copy all the data from the old to the new table, and replace the old table. This is the default. The rebuild method is similar to creating a new table with a `CREATE TABLE AS SELECT` command. During data redistribution, an `ACCESS EXCLUSIVE` lock is acquired on the table.
--   `move` - Scan all the data and perform an `UPDATE` operation to move rows as needed to different segment instances. During data redistribution, an `ACCESS EXCLUSIVE` lock is acquired on the table. In general, this method requires less disk space, however, it creates obsolete table rows and might require a `VACUUM` operation on the table after the data redistribution. Also, this method updates indexes one row at a time, which can be much slower than rebuilding the index with the `CREATE INDEX` command.
 
 #### <a id="systs"></a>Systems with Abundant Free Disk Space 
 
