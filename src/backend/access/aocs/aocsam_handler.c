@@ -21,6 +21,7 @@
 #include "access/tableam.h"
 #include "access/xact.h"
 #include "catalog/catalog.h"
+#include "catalog/gp_fastsequence.h"
 #include "catalog/heap.h"
 #include "catalog/index.h"
 #include "catalog/pg_appendonly.h"
@@ -290,10 +291,12 @@ aoco_dml_finish(Relation relation, CmdType operation)
 }
 
 /*
- * Retrieve the insertDescriptor for a relation. Initialize it if needed.
+ * Retrieve the insertDescriptor for a relation. Initialize it if its absent.
+ * 'num_rows': Number of rows to be inserted. (NUM_FAST_SEQUENCES if we don't
+ * know it beforehand). This arg is not used if the descriptor already exists.
  */
 static AOCSInsertDesc
-get_insert_descriptor(const Relation relation)
+get_or_create_aoco_insert_descriptor(const Relation relation, int64 num_rows)
 {
 	AOCODMLState *state;
 
@@ -305,7 +308,8 @@ get_insert_descriptor(const Relation relation)
 
 		oldcxt = MemoryContextSwitchTo(aocoLocal.stateCxt);
 		state->insertDesc = aocs_insert_init(relation,
-											 ChooseSegnoForWrite(relation));
+											 ChooseSegnoForWrite(relation),
+											 num_rows);
 		MemoryContextSwitchTo(oldcxt);
 	}
 
@@ -317,7 +321,7 @@ get_insert_descriptor(const Relation relation)
  * Retrieve the deleteDescriptor for a relation. Initialize it if needed.
  */
 static AOCSDeleteDesc
-get_delete_descriptor(const Relation relation, bool forUpdate)
+get_or_create_delete_descriptor(const Relation relation, bool forUpdate)
 {
 	AOCODMLState *state;
 
@@ -706,7 +710,12 @@ aoco_tuple_insert(Relation relation, TupleTableSlot *slot, CommandId cid,
 
 	AOCSInsertDesc          insertDesc;
 
-	insertDesc = get_insert_descriptor(relation);
+	/*
+	 * Note: since we don't know how many rows will actually be inserted (as we
+	 * don't know how many rows are visible), we provide the default number of
+	 * rows to bump gp_fastsequence by.
+	 */
+	insertDesc = get_or_create_aoco_insert_descriptor(relation, NUM_FAST_SEQUENCES);
 
 	aocs_insert(insertDesc, slot);
 
@@ -733,17 +742,20 @@ aoco_tuple_complete_speculative(Relation relation, TupleTableSlot *slot,
  *	aoco_multi_insert	- insert multiple tuples into an ao relation
  *
  * This is like aoco_tuple_insert(), but inserts multiple tuples in one
- * operation. Typicaly used by COPY. This is preferrable than calling
- * aoco_tuple_insert() in a loop because ... WAL??
+ * operation. Typically used by COPY.
+ *
+ * In the ao_column AM, we already realize the benefits of batched WAL (WAL is
+ * generated only when the insert buffer is full). There is also no page locking
+ * that we can optimize, as ao_column relations don't use the PG buffer cache.
+ * So, this is a thin layer over aoco_tuple_insert() with one important
+ * optimization: We allocate the insert desc with ntuples up front, which can
+ * reduce the number of gp_fast_sequence allocations.
  */
 static void
 aoco_multi_insert(Relation relation, TupleTableSlot **slots, int ntuples,
                         CommandId cid, int options, BulkInsertState bistate)
 {
-	/*
-	* GPDB_12_MERGE_FIXME: Poor man's implementation for now in order to make
-		* the tests pass. Implement properly.
-		*/
+	(void) get_or_create_aoco_insert_descriptor(relation, ntuples);
 	for (int i = 0; i < ntuples; i++)
 		aoco_tuple_insert(relation, slots[i], cid, options, bistate);
 }
@@ -756,7 +768,7 @@ aoco_tuple_delete(Relation relation, ItemPointer tid, CommandId cid,
 	AOCSDeleteDesc deleteDesc;
 	TM_Result	result;
 
-	deleteDesc = get_delete_descriptor(relation, false);
+	deleteDesc = get_or_create_delete_descriptor(relation, false);
 	result = aocs_delete(deleteDesc, (AOTupleId *) tid);
 	if (result == TM_Ok)
 		pgstat_count_heap_delete(relation);
@@ -786,8 +798,13 @@ aoco_tuple_update(Relation relation, ItemPointer otid, TupleTableSlot *slot,
 	AOCSDeleteDesc deleteDesc;
 	TM_Result	result;
 
-	insertDesc = get_insert_descriptor(relation);
-	deleteDesc = get_delete_descriptor(relation, true);
+	/*
+	 * Note: since we don't know how many rows will actually be inserted (as we
+	 * don't know how many rows are visible), we provide the default number of
+	 * rows to bump gp_fastsequence by.
+	 */
+	insertDesc = get_or_create_aoco_insert_descriptor(relation, NUM_FAST_SEQUENCES);
+	deleteDesc = get_or_create_delete_descriptor(relation, true);
 
 	/* Update the tuple with table oid */
 	slot->tts_tableOid = RelationGetRelid(relation);
@@ -1203,7 +1220,7 @@ aoco_relation_copy_for_cluster(Relation OldHeap, Relation NewHeap,
 	
 	write_seg_no = ChooseSegnoForWrite(NewHeap);
 
-	idesc = aocs_insert_init(NewHeap, write_seg_no);
+	idesc = aocs_insert_init(NewHeap, write_seg_no, (int64) *num_tuples);
 
 	/* Insert sorted heap tuples into new storage */
 	for (;;)

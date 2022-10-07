@@ -893,7 +893,7 @@ SetBlockFirstRowNums(DatumStreamWrite **datumStreams,
 
 
 AOCSInsertDesc
-aocs_insert_init(Relation rel, int segno)
+aocs_insert_init(Relation rel, int segno, int64 num_rows)
 {
     NameData    nd;
 	AOCSInsertDesc desc;
@@ -935,15 +935,8 @@ aocs_insert_init(Relation rel, int segno)
 	 * Even in the case of no indexes, we need to update the fast sequences,
 	 * since the table may contain indexes at some point of time.
 	 */
-	desc->numSequences = 0;
-
-	firstSequence =
-		GetFastSequences(desc->segrelid,
-						 segno,
-						 NUM_FAST_SEQUENCES);
-	desc->numSequences = NUM_FAST_SEQUENCES;
-
-	/* Set last_sequence value */
+	firstSequence = GetFastSequences(desc->segrelid, segno, num_rows);
+	desc->numSequences = num_rows;
 	Assert(firstSequence > desc->rowCount);
 	desc->lastSequence = firstSequence - 1;
 
@@ -1729,7 +1722,11 @@ aocs_update_init(Relation rel, int segno)
 	Oid			visimapidxid;
 	AOCSUpdateDesc desc = (AOCSUpdateDesc) palloc0(sizeof(AOCSUpdateDescData));
 
-	desc->insertDesc = aocs_insert_init(rel, segno);
+	/*
+	 * Note: since we don't know how many rows will actually be inserted, we
+	 * provide the default number of rows to bump gp_fastsequence by.
+	 */
+	desc->insertDesc = aocs_insert_init(rel, segno, NUM_FAST_SEQUENCES);
 
     GetAppendOnlyEntryAuxOids(rel->rd_id,
                               desc->insertDesc->appendOnlyMetaDataSnapshot,

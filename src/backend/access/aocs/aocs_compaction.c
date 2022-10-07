@@ -24,6 +24,7 @@
 #include "access/appendonly_compaction.h"
 #include "access/appendonlywriter.h"
 #include "catalog/catalog.h"
+#include "catalog/gp_fastsequence.h"
 #include "catalog/indexing.h"
 #include "catalog/pg_appendonly.h"
 #include "cdb/cdbaocsam.h"
@@ -371,7 +372,11 @@ AOCSCompact(Relation aorel,
 
 		if (*insert_segno != -1)
 		{
-			insertDesc = aocs_insert_init(aorel, *insert_segno);
+			/*
+			 * Note: since we don't know how many rows will actually be inserted
+			 * we provide the default number of rows to bump gp_fastsequence by.
+			 */
+			insertDesc = aocs_insert_init(aorel, *insert_segno, NUM_FAST_SEQUENCES);
 
 			AOCSSegmentFileFullCompaction(aorel,
 										  insertDesc,

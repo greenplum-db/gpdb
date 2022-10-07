@@ -24,6 +24,7 @@
 #include "access/tuptoaster.h"
 #include "access/xact.h"
 #include "catalog/catalog.h"
+#include "catalog/gp_fastsequence.h"
 #include "catalog/heap.h"
 #include "catalog/index.h"
 #include "catalog/pg_am.h"
@@ -272,10 +273,12 @@ reset_state_cb(void *arg)
 }
 
 /*
- * Retrieve the insertDescriptor for a relation. Initialize it if needed.
+ * Retrieve the insertDescriptor for a relation. Initialize it if its absent.
+ * 'num_rows': Number of rows to be inserted. (NUM_FAST_SEQUENCES if we don't
+ * know it beforehand). This arg is not used if the descriptor already exists.
  */
 static AppendOnlyInsertDesc
-get_insert_descriptor(const Relation relation)
+get_or_create_ao_insert_descriptor(const Relation relation, int64 num_rows)
 {
 	AppendOnlyDMLState *state;
 
@@ -287,7 +290,8 @@ get_insert_descriptor(const Relation relation)
 
 		oldcxt = MemoryContextSwitchTo(appendOnlyLocal.stateCxt);
 		state->insertDesc = appendonly_insert_init(relation,
-												   ChooseSegnoForWrite(relation));
+												   ChooseSegnoForWrite(relation),
+												   num_rows);
 		MemoryContextSwitchTo(oldcxt);
 	}
 
@@ -298,7 +302,7 @@ get_insert_descriptor(const Relation relation)
  * Retrieve the deleteDescriptor for a relation. Initialize it if needed.
  */
 static AppendOnlyDeleteDesc
-get_delete_descriptor(const Relation relation, bool forUpdate)
+get_or_create_delete_descriptor(const Relation relation, bool forUpdate)
 {
 	AppendOnlyDMLState *state;
 
@@ -589,7 +593,13 @@ appendonly_tuple_insert(Relation relation, TupleTableSlot *slot, CommandId cid,
 	AppendOnlyInsertDesc    insertDesc;
 	MemTuple				mtuple;
 
-	insertDesc = get_insert_descriptor(relation);
+	/* Fetch the insert desc, which likely already has been created
+	 *
+	 * Note: since we don't know how many rows will actually be inserted (as we
+	 * don't know how many rows are visible), we provide the default number of
+	 * rows to bump gp_fastsequence by.
+	 */
+	insertDesc = get_or_create_ao_insert_descriptor(relation, NUM_FAST_SEQUENCES);
 	mtuple = appendonly_form_memtuple(slot, insertDesc->mt_bind);
 
 	/* Update the tuple with table oid */
@@ -623,17 +633,20 @@ appendonly_tuple_complete_speculative(Relation relation, TupleTableSlot *slot,
  *	appendonly_multi_insert	- insert multiple tuples into an ao relation
  *
  * This is like appendonly_tuple_insert(), but inserts multiple tuples in one
- * operation. Typicaly used by COPY. This is preferrable than calling
- * appendonly_tuple_insert() in a loop because ... WAL??
+ * operation. Typically used by COPY.
+ *
+ * In the ao_row AM, we already realize the benefits of batched WAL (WAL is
+ * generated only when the insert buffer is full). There is also no page locking
+ * that we can optimize, as ao_row relations don't use the PG buffer cache. So,
+ * this is a thin layer over appendonly_tuple_insert() with one important
+ * optimization: We allocate the insert desc with ntuples up front, which can
+ * reduce the number of gp_fast_sequence allocations.
  */
 static void
 appendonly_multi_insert(Relation relation, TupleTableSlot **slots, int ntuples,
 						CommandId cid, int options, BulkInsertState bistate)
 {
-	/*
-	 * GPDB_12_MERGE_FIXME: Poor man's implementation for now in order to make
-	 * the tests pass. Implement properly.
-	 */
+	(void) get_or_create_ao_insert_descriptor(relation, ntuples);
 	for (int i = 0; i < ntuples; i++)
 		appendonly_tuple_insert(relation, slots[i], cid, options, bistate);
 }
@@ -646,7 +659,7 @@ appendonly_tuple_delete(Relation relation, ItemPointer tid, CommandId cid,
 	AppendOnlyDeleteDesc	deleteDesc;
 	TM_Result				result;
 
-	deleteDesc = get_delete_descriptor(relation, false);
+	deleteDesc = get_or_create_delete_descriptor(relation, false);
 	result = appendonly_delete(deleteDesc, (AOTupleId *) tid);
 	if (result == TM_Ok)
 		pgstat_count_heap_delete(relation);
@@ -677,8 +690,13 @@ appendonly_tuple_update(Relation relation, ItemPointer otid, TupleTableSlot *slo
 	MemTuple				mtuple;
 	TM_Result				result;
 
-	insertDesc = get_insert_descriptor(relation);
-	deleteDesc = get_delete_descriptor(relation, true);
+	/*
+	 * Note: since we don't know how many rows will actually be inserted (as we
+	 * don't know how many rows are visible), we provide the default number of
+	 * rows to bump gp_fastsequence by.
+	 */
+	insertDesc = get_or_create_ao_insert_descriptor(relation, NUM_FAST_SEQUENCES);
+	deleteDesc = get_or_create_delete_descriptor(relation, true);
 
 	/* Update the tuple with table oid */
 	slot->tts_tableOid = RelationGetRelid(relation);
@@ -1019,7 +1037,7 @@ appendonly_relation_copy_for_cluster(Relation OldHeap, Relation NewHeap,
 	
 	write_seg_no = ChooseSegnoForWrite(NewHeap);
 
-	aoInsertDesc = appendonly_insert_init(NewHeap, write_seg_no);
+	aoInsertDesc = appendonly_insert_init(NewHeap, write_seg_no, (int64) *num_tuples);
 
 	/* Insert sorted heap tuples into new storage */
 	for (;;)

@@ -388,7 +388,9 @@ extern bool appendonly_fetch(
 	TupleTableSlot *slot);
 extern void appendonly_fetch_finish(AppendOnlyFetchDesc aoFetchDesc);
 extern void appendonly_dml_init(Relation relation, CmdType operation);
-extern AppendOnlyInsertDesc appendonly_insert_init(Relation rel, int segno);
+extern AppendOnlyInsertDesc appendonly_insert_init(Relation rel,
+												   int segno,
+												   int64 num_rows);
 extern void appendonly_insert(
 		AppendOnlyInsertDesc aoInsertDesc, 
 		MemTuple instup, 

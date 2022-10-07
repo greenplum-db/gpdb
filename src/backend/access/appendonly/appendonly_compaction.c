@@ -34,6 +34,7 @@
 #include "access/tuptoaster.h"
 #include "access/xact.h"
 #include "catalog/catalog.h"
+#include "catalog/gp_fastsequence.h"
 #include "catalog/indexing.h"
 #include "catalog/pg_am.h"
 #include "catalog/pg_appendonly.h"
@@ -795,7 +796,11 @@ AppendOnlyCompact(Relation aorel,
 		}
 		if (*insert_segno != -1)
 		{
-			insertDesc = appendonly_insert_init(aorel, *insert_segno);
+			/*
+			 * Note: since we don't know how many rows will actually be inserted,
+			 * we provide the default number of rows to bump gp_fastsequence by.
+			 */
+			insertDesc = appendonly_insert_init(aorel, *insert_segno, NUM_FAST_SEQUENCES);
 			AppendOnlySegmentFileFullCompaction(aorel,
 												insertDesc,
 												fsinfo,

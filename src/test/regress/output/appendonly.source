@@ -352,12 +352,12 @@ IN (SELECT segrelid FROM pg_appendonly WHERE relid IN (SELECT oid FROM pg_class
 WHERE relname='tenk_ao1'));
    case    | objmod | last_sequence | gp_segment_id 
 -----------+--------+---------------+---------------
- NormalXid |      0 |             0 |             1
- FrozenXid |      1 |         17000 |             1
  NormalXid |      0 |             0 |             0
- FrozenXid |      1 |         17000 |             0
+ FrozenXid |      1 |         16998 |             0
  NormalXid |      0 |             0 |             2
- FrozenXid |      1 |         16400 |             2
+ FrozenXid |      1 |         16395 |             2
+ NormalXid |      0 |             0 |             1
+ FrozenXid |      1 |         16996 |             1
 (6 rows)
 
 -- commit

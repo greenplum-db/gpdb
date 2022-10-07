@@ -30,6 +30,8 @@ test: copy_eol
 # file related tests (like gp_log_system, etc) faster.
 test: disable_autovacuum
 test: gp_toolkit
+# test gp_fastsequence allocation (early in schedule as log grepping is expensive)
+test: uao_dml/gp_fastsequence_row uao_dml/gp_fastsequence_column
 test: python_processed64bit
 test: enable_autovacuum
 
