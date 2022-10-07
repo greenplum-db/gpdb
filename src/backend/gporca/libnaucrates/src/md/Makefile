@@ -34,7 +34,6 @@ OBJS        = CDXLBucket.o \
               CMDProviderGeneric.o \
               CMDProviderMemory.o \
               CMDRelationCtasGPDB.o \
-              CMDRelationExternalGPDB.o \
               CMDRelationGPDB.o \
               CMDRequest.o \
               CMDScCmpGPDB.o \

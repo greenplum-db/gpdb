@@ -34,7 +34,7 @@
 #include "gpopt/operators/CLogicalDifference.h"
 #include "gpopt/operators/CLogicalDifferenceAll.h"
 #include "gpopt/operators/CLogicalDynamicGet.h"
-#include "gpopt/operators/CLogicalExternalGet.h"
+#include "gpopt/operators/CLogicalForeignGet.h"
 #include "gpopt/operators/CLogicalGbAgg.h"
 #include "gpopt/operators/CLogicalGet.h"
 #include "gpopt/operators/CLogicalInsert.h"
@@ -429,7 +429,7 @@ CTranslatorDXLToExpr::PexprLogical(const CDXLNode *dxlnode)
 	switch (dxl_op->GetDXLOperator())
 	{
 		case EdxlopLogicalGet:
-		case EdxlopLogicalExternalGet:
+		case EdxlopLogicalForeignGet:
 			return CTranslatorDXLToExpr::PexprLogicalGet(dxlnode);
 		case EdxlopLogicalTVF:
 			return CTranslatorDXLToExpr::PexprLogicalTVF(dxlnode);
@@ -628,8 +628,8 @@ CTranslatorDXLToExpr::PexprLogicalGet(const CDXLNode *dxlnode)
 		}
 		else
 		{
-			GPOS_ASSERT(EdxlopLogicalExternalGet == edxlopid);
-			popGet = GPOS_NEW(m_mp) CLogicalExternalGet(m_mp, pname, ptabdesc);
+			GPOS_ASSERT(EdxlopLogicalForeignGet == edxlopid);
+			popGet = GPOS_NEW(m_mp) CLogicalForeignGet(m_mp, pname, ptabdesc);
 		}
 
 		// get the output column references

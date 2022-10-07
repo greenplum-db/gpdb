@@ -34,7 +34,6 @@ extern "C" {
 #include "naucrates/md/CMDCheckConstraintGPDB.h"
 #include "naucrates/md/CMDFunctionGPDB.h"
 #include "naucrates/md/CMDPartConstraintGPDB.h"
-#include "naucrates/md/CMDRelationExternalGPDB.h"
 #include "naucrates/md/CMDRelationGPDB.h"
 #include "naucrates/md/CMDScalarOpGPDB.h"
 #include "naucrates/md/IMDFunction.h"

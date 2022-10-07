@@ -3,13 +3,13 @@
 //	Copyright (C) 2013 VMware, Inc. or its affiliates.
 //
 //	@filename:
-//		CPhysicalExternalScan.h
+//		CPhysicalForeignScan.h
 //
 //	@doc:
-//		External scan operator
+//		Foreign scan operator
 //---------------------------------------------------------------------------
-#ifndef GPOPT_CPhysicalExternalScan_H
-#define GPOPT_CPhysicalExternalScan_H
+#ifndef GPOPT_CPhysicalForeignScan_H
+#define GPOPT_CPhysicalForeignScan_H
 
 #include "gpos/base.h"
 
@@ -19,34 +19,34 @@ namespace gpopt
 {
 //---------------------------------------------------------------------------
 //	@class:
-//		CPhysicalExternalScan
+//		CPhysicalForeignScan
 //
 //	@doc:
-//		External scan operator
+//		Foreign scan operator
 //
 //---------------------------------------------------------------------------
-class CPhysicalExternalScan : public CPhysicalTableScan
+class CPhysicalForeignScan : public CPhysicalTableScan
 {
 private:
 public:
-	CPhysicalExternalScan(const CPhysicalExternalScan &) = delete;
+	CPhysicalForeignScan(const CPhysicalForeignScan &) = delete;
 
 	// ctor
-	CPhysicalExternalScan(CMemoryPool *, const CName *, CTableDescriptor *,
-						  CColRefArray *);
+	CPhysicalForeignScan(CMemoryPool *, const CName *, CTableDescriptor *,
+						 CColRefArray *);
 
 	// ident accessors
 	EOperatorId
 	Eopid() const override
 	{
-		return EopPhysicalExternalScan;
+		return EopPhysicalForeignScan;
 	}
 
 	// return a string for operator name
 	const CHAR *
 	SzId() const override
 	{
-		return "CPhysicalExternalScan";
+		return "CPhysicalForeignScan";
 	}
 
 	// match function
@@ -62,7 +62,7 @@ public:
 			  CExpressionHandle &  // exprhdl
 	) const override
 	{
-		// external tables are neither rewindable nor rescannable
+		// foreign tables are neither rewindable nor rescannable
 		return GPOS_NEW(mp) CRewindabilitySpec(
 			CRewindabilitySpec::ErtNone, CRewindabilitySpec::EmhtNoMotion);
 	}
@@ -81,19 +81,19 @@ public:
 	//-------------------------------------------------------------------------------------
 
 	// conversion function
-	static CPhysicalExternalScan *
+	static CPhysicalForeignScan *
 	PopConvert(COperator *pop)
 	{
 		GPOS_ASSERT(nullptr != pop);
-		GPOS_ASSERT(EopPhysicalExternalScan == pop->Eopid());
+		GPOS_ASSERT(EopPhysicalForeignScan == pop->Eopid());
 
-		return dynamic_cast<CPhysicalExternalScan *>(pop);
+		return dynamic_cast<CPhysicalForeignScan *>(pop);
 	}
 
-};	// class CPhysicalExternalScan
+};	// class CPhysicalForeignScan
 
 }  // namespace gpopt
 
-#endif	// !GPOPT_CPhysicalExternalScan_H
+#endif	// !GPOPT_CPhysicalForeignScan_H
 
 // EOF

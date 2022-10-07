@@ -3,13 +3,13 @@
 //	Copyright (C) 2013 VMware, Inc. or its affiliates.
 //
 //	@filename:
-//		CDXLPhysicalExternalScan.cpp
+//		CDXLPhysicalForeignScan.cpp
 //
 //	@doc:
 //		Implementation of DXL physical external scan operator
 //---------------------------------------------------------------------------
 
-#include "naucrates/dxl/operators/CDXLPhysicalExternalScan.h"
+#include "naucrates/dxl/operators/CDXLPhysicalForeignScan.h"
 
 #include "naucrates/dxl/operators/CDXLNode.h"
 #include "naucrates/dxl/xml/CXMLSerializer.h"
@@ -19,57 +19,57 @@ using namespace gpdxl;
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CDXLPhysicalExternalScan::CDXLPhysicalExternalScan
+//		CDXLPhysicalForeignScan::CDXLPhysicalForeignScan
 //
 //	@doc:
 //		Ctor
 //
 //---------------------------------------------------------------------------
-CDXLPhysicalExternalScan::CDXLPhysicalExternalScan(CMemoryPool *mp)
+CDXLPhysicalForeignScan::CDXLPhysicalForeignScan(CMemoryPool *mp)
 	: CDXLPhysicalTableScan(mp)
 {
 }
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CDXLPhysicalExternalScan::CDXLPhysicalExternalScan
+//		CDXLPhysicalForeignScan::CDXLPhysicalForeignScan
 //
 //	@doc:
 //		Ctor
 //
 //---------------------------------------------------------------------------
-CDXLPhysicalExternalScan::CDXLPhysicalExternalScan(CMemoryPool *mp,
-												   CDXLTableDescr *table_descr)
+CDXLPhysicalForeignScan::CDXLPhysicalForeignScan(CMemoryPool *mp,
+												 CDXLTableDescr *table_descr)
 	: CDXLPhysicalTableScan(mp, table_descr)
 {
 }
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CDXLPhysicalExternalScan::GetDXLOperator
+//		CDXLPhysicalForeignScan::GetDXLOperator
 //
 //	@doc:
 //		Operator type
 //
 //---------------------------------------------------------------------------
 Edxlopid
-CDXLPhysicalExternalScan::GetDXLOperator() const
+CDXLPhysicalForeignScan::GetDXLOperator() const
 {
-	return EdxlopPhysicalExternalScan;
+	return EdxlopPhysicalForeignScan;
 }
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CDXLPhysicalExternalScan::GetOpNameStr
+//		CDXLPhysicalForeignScan::GetOpNameStr
 //
 //	@doc:
 //		Operator name
 //
 //---------------------------------------------------------------------------
 const CWStringConst *
-CDXLPhysicalExternalScan::GetOpNameStr() const
+CDXLPhysicalForeignScan::GetOpNameStr() const
 {
-	return CDXLTokens::GetDXLTokenStr(EdxltokenPhysicalExternalScan);
+	return CDXLTokens::GetDXLTokenStr(EdxltokenPhysicalForeignScan);
 }
 
 // EOF

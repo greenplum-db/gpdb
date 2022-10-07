@@ -50,7 +50,7 @@ public:
 		ErelstorageHeap,
 		ErelstorageAppendOnlyCols,
 		ErelstorageAppendOnlyRows,
-		ErelstorageExternal,
+		ErelstorageForeign,
 		ErelstorageMixedPartitioned,
 		ErelstorageCompositeType,
 		ErelstorageSentinel

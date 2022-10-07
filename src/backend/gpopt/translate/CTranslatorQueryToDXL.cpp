@@ -48,7 +48,7 @@ extern "C" {
 #include "naucrates/dxl/operators/CDXLLogicalCTEProducer.h"
 #include "naucrates/dxl/operators/CDXLLogicalConstTable.h"
 #include "naucrates/dxl/operators/CDXLLogicalDelete.h"
-#include "naucrates/dxl/operators/CDXLLogicalExternalGet.h"
+#include "naucrates/dxl/operators/CDXLLogicalForeignGet.h"
 #include "naucrates/dxl/operators/CDXLLogicalGet.h"
 #include "naucrates/dxl/operators/CDXLLogicalGroupBy.h"
 #include "naucrates/dxl/operators/CDXLLogicalInsert.h"
@@ -3174,9 +3174,9 @@ CTranslatorQueryToDXL::TranslateRTEToDXLLogicalGet(const RangeTblEntry *rte,
 	CDXLLogicalGet *dxl_op = nullptr;
 	const IMDRelation *md_rel =
 		m_md_accessor->RetrieveRel(dxl_table_descr->MDId());
-	if (IMDRelation::ErelstorageExternal == md_rel->RetrieveRelStorageType())
+	if (IMDRelation::ErelstorageForeign == md_rel->RetrieveRelStorageType())
 	{
-		dxl_op = GPOS_NEW(m_mp) CDXLLogicalExternalGet(m_mp, dxl_table_descr);
+		dxl_op = GPOS_NEW(m_mp) CDXLLogicalForeignGet(m_mp, dxl_table_descr);
 	}
 	else
 	{
@@ -3199,7 +3199,7 @@ CTranslatorQueryToDXL::TranslateRTEToDXLLogicalGet(const RangeTblEntry *rte,
 		const IMDRelation *partrel = m_md_accessor->RetrieveRel(part_mdid);
 
 		if (partrel->RetrieveRelStorageType() ==
-			IMDRelation::ErelstorageExternal)
+			IMDRelation::ErelstorageForeign)
 		{
 			// Partitioned tables with external/foreign partitions
 			GPOS_RAISE(

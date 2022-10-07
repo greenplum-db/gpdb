@@ -37,7 +37,6 @@ namespace gpmd
 {
 class IMDCacheObject;
 class IMDRelation;
-class IMDRelationExternal;
 class IMDScalarOp;
 class IMDAggregate;
 class IMDTrigger;

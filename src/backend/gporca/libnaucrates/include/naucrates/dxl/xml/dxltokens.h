@@ -87,7 +87,7 @@ enum Edxltoken
 	EdxltokenPhysicalTableScan,
 	EdxltokenPhysicalBitmapTableScan,
 	EdxltokenPhysicalDynamicBitmapTableScan,
-	EdxltokenPhysicalExternalScan,
+	EdxltokenPhysicalForeignScan,
 	EdxltokenPhysicalIndexScan,
 	EdxltokenPhysicalIndexOnlyScan,
 	EdxltokenPhysicalHashJoin,
@@ -448,7 +448,6 @@ enum Edxltoken
 
 	// metadata-related constants
 	EdxltokenRelation,
-	EdxltokenRelationExternal,
 	EdxltokenRelationCTAS,
 	EdxltokenName,
 	EdxltokenSchema,
@@ -476,7 +475,7 @@ enum Edxltoken
 	EdxltokenRelStorageAppendOnlyCols,
 	EdxltokenRelStorageAppendOnlyRows,
 	EdxltokenRelStorageMixedPartitioned,
-	EdxltokenRelStorageExternal,
+	EdxltokenRelStorageForeign,
 	EdxltokenRelStorageCompositeType,
 
 	EdxltokenPartKeys,
@@ -646,7 +645,7 @@ enum Edxltoken
 	EdxltokenQueryOutput,
 	EdxltokenLogical,
 	EdxltokenLogicalGet,
-	EdxltokenLogicalExternalGet,
+	EdxltokenLogicalForeignGet,
 	EdxltokenLogicalProject,
 	EdxltokenLogicalSelect,
 	EdxltokenLogicalJoin,

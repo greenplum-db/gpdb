@@ -147,11 +147,6 @@ private:
 		CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
 		CParseHandlerBase *parse_handler_root);
 
-	// construct a MD external relation parse handler
-	static CParseHandlerBase *CreateMDRelationExtParseHandler(
-		CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
-		CParseHandlerBase *parse_handler_root);
-
 	// construct a MD CTAS relation parse handler
 	static CParseHandlerBase *CreateMDRelationCTASParseHandler(
 		CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
@@ -272,7 +267,7 @@ private:
 		CParseHandlerBase *parse_handler_root);
 
 	// construct an external scan parse handler
-	static CParseHandlerBase *CreateExternalScanParseHandler(
+	static CParseHandlerBase *CreateForeignScanParseHandler(
 		CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
 		CParseHandlerBase *parse_handler_root);
 

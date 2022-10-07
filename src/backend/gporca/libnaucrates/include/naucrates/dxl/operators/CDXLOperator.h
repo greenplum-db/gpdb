@@ -30,7 +30,7 @@ class CXMLSerializer;
 enum Edxlopid
 {
 	EdxlopLogicalGet,
-	EdxlopLogicalExternalGet,
+	EdxlopLogicalForeignGet,
 	EdxlopLogicalProject,
 	EdxlopLogicalSelect,
 	EdxlopLogicalJoin,
@@ -132,7 +132,7 @@ enum Edxlopid
 	EdxlopPhysicalTableScan,
 	EdxlopPhysicalBitmapTableScan,
 	EdxlopPhysicalDynamicBitmapTableScan,
-	EdxlopPhysicalExternalScan,
+	EdxlopPhysicalForeignScan,
 	EdxlopPhysicalIndexScan,
 	EdxlopPhysicalIndexOnlyScan,
 	EdxlopScalarBitmapIndexProbe,

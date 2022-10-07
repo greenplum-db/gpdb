@@ -1,52 +1,39 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2013 EMC Corp.
+//	Copyright (C) 2013 VMware, Inc. or its affiliates.
 //
 //	@filename:
-//		CParseHandlerMDRelationExternal.h
+//		CParseHandlerLogicalForeignGet.h
 //
 //	@doc:
-//		SAX parse handler class for external relation metadata
+//		SAX parse handler class for parsing logical external get operator node
 //---------------------------------------------------------------------------
 
-#ifndef GPDXL_CParseHandlerMDRelationExternal_H
-#define GPDXL_CParseHandlerMDRelationExternal_H
+#ifndef GPDXL_CParseHandlerLogicalForeignGet_H
+#define GPDXL_CParseHandlerLogicalForeignGet_H
 
 #include "gpos/base.h"
 
-#include "naucrates/dxl/parser/CParseHandlerMDRelation.h"
-#include "naucrates/md/CMDRelationExternalGPDB.h"
+#include "naucrates/dxl/parser/CParseHandlerLogicalGet.h"
 
 namespace gpdxl
 {
 using namespace gpos;
-using namespace gpmd;
+
 
 XERCES_CPP_NAMESPACE_USE
 
 //---------------------------------------------------------------------------
 //	@class:
-//		CParseHandlerMDRelationExternal
+//		CParseHandlerLogicalForeignGet
 //
 //	@doc:
-//		Parse handler for external relation metadata
+//		Parse handler for parsing a logical external get operator
 //
 //---------------------------------------------------------------------------
-class CParseHandlerMDRelationExternal : public CParseHandlerMDRelation
+class CParseHandlerLogicalForeignGet : public CParseHandlerLogicalGet
 {
 private:
-	// reject limit
-	INT m_reject_limit;
-
-	// reject limit in rows?
-	BOOL m_is_rej_limit_in_rows;
-
-	// format error table mdid
-	IMDId *m_mdid_fmt_err_table;
-
-	// distribution opfamilies parse handler
-	CParseHandlerBase *m_opfamilies_parse_handler;
-
 	// process the start of an element
 	void StartElement(
 		const XMLCh *const element_uri,			// URI of element's namespace
@@ -62,18 +49,17 @@ private:
 		const XMLCh *const element_qname		// element's qname
 		) override;
 
-
 public:
-	CParseHandlerMDRelationExternal(const CParseHandlerMDRelationExternal &) =
+	CParseHandlerLogicalForeignGet(const CParseHandlerLogicalForeignGet &) =
 		delete;
 
 	// ctor
-	CParseHandlerMDRelationExternal(CMemoryPool *mp,
-									CParseHandlerManager *parse_handler_mgr,
-									CParseHandlerBase *parse_handler_root);
+	CParseHandlerLogicalForeignGet(CMemoryPool *mp,
+								   CParseHandlerManager *parse_handler_mgr,
+								   CParseHandlerBase *parse_handler_root);
 };
 }  // namespace gpdxl
 
-#endif	// !GPDXL_CParseHandlerMDRelationExternal_H
+#endif	// !GPDXL_CParseHandlerLogicalForeignGet_H
 
 // EOF

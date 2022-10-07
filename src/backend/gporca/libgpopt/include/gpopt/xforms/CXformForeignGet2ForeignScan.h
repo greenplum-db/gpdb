@@ -3,13 +3,13 @@
 //	Copyright (C) 2013 VMware, Inc. or its affiliates.
 //
 //	@filename:
-//		CXformExternalGet2ExternalScan.h
+//		CXformForeignGet2ForeignScan.h
 //
 //	@doc:
-//		Transform ExternalGet to ExternalScan
+//		Transform ForeignGet to ForeignScan
 //---------------------------------------------------------------------------
-#ifndef GPOPT_CXformExternalGet2ExternalScan_H
-#define GPOPT_CXformExternalGet2ExternalScan_H
+#ifndef GPOPT_CXformForeignGet2ForeignScan_H
+#define GPOPT_CXformForeignGet2ForeignScan_H
 
 #include "gpos/base.h"
 
@@ -21,37 +21,36 @@ using namespace gpos;
 
 //---------------------------------------------------------------------------
 //	@class:
-//		CXformExternalGet2ExternalScan
+//		CXformForeignGet2ForeignScan
 //
 //	@doc:
-//		Transform ExternalGet to ExternalScan
+//		Transform ForeignGet to ForeignScan
 //
 //---------------------------------------------------------------------------
-class CXformExternalGet2ExternalScan : public CXformImplementation
+class CXformForeignGet2ForeignScan : public CXformImplementation
 {
 private:
 public:
-	CXformExternalGet2ExternalScan(const CXformExternalGet2ExternalScan &) =
-		delete;
+	CXformForeignGet2ForeignScan(const CXformForeignGet2ForeignScan &) = delete;
 
 	// ctor
-	explicit CXformExternalGet2ExternalScan(CMemoryPool *);
+	explicit CXformForeignGet2ForeignScan(CMemoryPool *);
 
 	// dtor
-	~CXformExternalGet2ExternalScan() override = default;
+	~CXformForeignGet2ForeignScan() override = default;
 
 	// ident accessors
 	EXformId
 	Exfid() const override
 	{
-		return ExfExternalGet2ExternalScan;
+		return ExfForeignGet2ForeignScan;
 	}
 
 	// return a string for xform name
 	const CHAR *
 	SzId() const override
 	{
-		return "CXformExternalGet2ExternalScan";
+		return "CXformForeignGet2ForeignScan";
 	}
 
 	// compute xform promise for a given expression handle
@@ -61,10 +60,10 @@ public:
 	void Transform(CXformContext *pxfctxt, CXformResult *pxfres,
 				   CExpression *pexpr) const override;
 
-};	// class CXformExternalGet2ExternalScan
+};	// class CXformForeignGet2ForeignScan
 
 }  // namespace gpopt
 
-#endif	// !GPOPT_CXformExternalGet2ExternalScan_H
+#endif	// !GPOPT_CXformForeignGet2ForeignScan_H
 
 // EOF

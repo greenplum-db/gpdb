@@ -3,14 +3,15 @@
 //	Copyright (C) 2013 VMware, Inc. or its affiliates.
 //
 //	@filename:
-//		CParseHandlerLogicalExternalGet.cpp
+//		CParseHandlerForeignScan.cpp
 //
 //	@doc:
-//		Implementation of the SAX parse handler class for parsing logical external get
+//		Implementation of the SAX parse handler class for parsing external scan
 //---------------------------------------------------------------------------
 
-#include "naucrates/dxl/parser/CParseHandlerLogicalExternalGet.h"
+#include "naucrates/dxl/parser/CParseHandlerForeignScan.h"
 
+#include "naucrates/dxl/operators/CDXLOperatorFactory.h"
 #include "naucrates/dxl/parser/CParseHandlerFactory.h"
 
 using namespace gpdxl;
@@ -20,56 +21,54 @@ XERCES_CPP_NAMESPACE_USE
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CParseHandlerLogicalExternalGet::CParseHandlerLogicalExternalGet
+//		CParseHandlerForeignScan::CParseHandlerForeignScan
 //
 //	@doc:
 //		Ctor
 //
 //---------------------------------------------------------------------------
-CParseHandlerLogicalExternalGet::CParseHandlerLogicalExternalGet(
+CParseHandlerForeignScan::CParseHandlerForeignScan(
 	CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
 	CParseHandlerBase *parse_handler_root)
-	: CParseHandlerLogicalGet(mp, parse_handler_mgr, parse_handler_root)
+	: CParseHandlerTableScan(mp, parse_handler_mgr, parse_handler_root)
 {
 }
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CParseHandlerLogicalGet::StartElement
+//		CParseHandlerForeignScan::StartElement
 //
 //	@doc:
 //		Invoked by Xerces to process an opening tag
 //
 //---------------------------------------------------------------------------
 void
-CParseHandlerLogicalExternalGet::StartElement(
-	const XMLCh *const,	 // element_uri,
-	const XMLCh *const element_local_name,
-	const XMLCh *const,	 // element_qname
-	const Attributes &	 //attrs
+CParseHandlerForeignScan::StartElement(const XMLCh *const,	// element_uri,
+									   const XMLCh *const element_local_name,
+									   const XMLCh *const,	// element_qname
+									   const Attributes &	// attrs
 )
 {
-	CParseHandlerLogicalGet::StartElement(element_local_name,
-										  EdxltokenLogicalExternalGet);
+	CParseHandlerTableScan::StartElement(element_local_name,
+										 EdxltokenPhysicalForeignScan);
 }
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CParseHandlerLogicalGet::EndElement
+//		CParseHandlerForeignScan::EndElement
 //
 //	@doc:
 //		Invoked by Xerces to process a closing tag
 //
 //---------------------------------------------------------------------------
 void
-CParseHandlerLogicalExternalGet::EndElement(
-	const XMLCh *const,	 // element_uri,
-	const XMLCh *const element_local_name,
-	const XMLCh *const	// element_qname
+CParseHandlerForeignScan::EndElement(const XMLCh *const,  // element_uri,
+									 const XMLCh *const element_local_name,
+									 const XMLCh *const	 // element_qname
 )
 {
-	CParseHandlerLogicalGet::EndElement(element_local_name,
-										EdxltokenLogicalExternalGet);
+	CParseHandlerTableScan::EndElement(element_local_name,
+									   EdxltokenPhysicalForeignScan);
 }
 
 // EOF

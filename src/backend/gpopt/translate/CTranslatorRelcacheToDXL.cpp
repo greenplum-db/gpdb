@@ -255,7 +255,7 @@ CTranslatorRelcacheToDXL::RetrieveRelIndexInfo(CMemoryPool *mp, Relation rel)
 		if (IsIndexSupported(index_rel.get()))
 		{
 			CMDIdGPDB *mdid_index = GPOS_NEW(mp) CMDIdGPDB(index_oid);
-			// for a regular table, external table or leaf partition, an index is always complete
+			// for a regular table, foreign table or leaf partition, an index is always complete
 			CMDIndexInfo *md_index_info =
 				GPOS_NEW(mp) CMDIndexInfo(mdid_index, false /* is_partial */);
 			md_index_info_array->Append(md_index_info);
@@ -399,7 +399,7 @@ CTranslatorRelcacheToDXL::RetrieveRel(CMemoryPool *mp, CMDAccessor *md_accessor,
 	md_index_info_array = RetrieveRelIndexInfo(mp, rel.get());
 
 	// get partition keys
-	if (IMDRelation::ErelstorageExternal != rel_storage_type)
+	if (IMDRelation::ErelstorageForeign != rel_storage_type)
 	{
 		RetrievePartKeysAndTypes(mp, rel.get(), oid, &part_keys, &part_types);
 	}
@@ -443,38 +443,19 @@ CTranslatorRelcacheToDXL::RetrieveRel(CMemoryPool *mp, CMDAccessor *md_accessor,
 
 	mdid->AddRef();
 
-	if (IMDRelation::ErelstorageExternal == rel_storage_type)
-	{
-		ExtTableEntry *extentry = gpdb::GetExternalTableEntry(oid);
+	CDXLNode *mdpart_constraint = nullptr;
 
-		md_rel = GPOS_NEW(mp) CMDRelationExternalGPDB(
-			mp, mdid, mdname, dist, mdcol_array, distr_cols, distr_op_families,
-			convert_hash_to_random, keyset_array, md_index_info_array,
-			mdid_triggers_array, check_constraint_mdids, extentry->rejectlimit,
-			('r' == extentry->rejectlimittype),
-			nullptr /* it's sufficient to pass NULL here since ORCA
-								doesn't really make use of the logerrors value.
-								In case of converting the DXL returned from to
-								PlanStmt, currently the code looks up the information
-								from catalog and fill in the required values into the ExternalScan */
-		);
-	}
-	else
-	{
-		CDXLNode *mdpart_constraint = nullptr;
+	// retrieve the part constraints if relation is partitioned
+	// FIMXE: Do this only if Relation::rd_rel::relispartition is true
+	mdpart_constraint =
+		RetrievePartConstraintForRel(mp, md_accessor, rel.get(), mdcol_array);
 
-		// retrieve the part constraints if relation is partitioned
-		// FIMXE: Do this only if Relation::rd_rel::relispartition is true
-		mdpart_constraint = RetrievePartConstraintForRel(
-			mp, md_accessor, rel.get(), mdcol_array);
-
-		md_rel = GPOS_NEW(mp) CMDRelationGPDB(
-			mp, mdid, mdname, is_temporary, rel_storage_type, dist, mdcol_array,
-			distr_cols, distr_op_families, part_keys, part_types,
-			num_leaf_partitions, partition_oids, convert_hash_to_random,
-			keyset_array, md_index_info_array, mdid_triggers_array,
-			check_constraint_mdids, mdpart_constraint);
-	}
+	md_rel = GPOS_NEW(mp) CMDRelationGPDB(
+		mp, mdid, mdname, is_temporary, rel_storage_type, dist, mdcol_array,
+		distr_cols, distr_op_families, part_keys, part_types,
+		num_leaf_partitions, partition_oids, convert_hash_to_random,
+		keyset_array, md_index_info_array, mdid_triggers_array,
+		check_constraint_mdids, mdpart_constraint);
 
 	return md_rel;
 }
@@ -2332,7 +2313,7 @@ CTranslatorRelcacheToDXL::RetrieveRelStorageType(Relation rel)
 			}
 			else if (gpdb::RelIsExternalTable(rel->rd_id))
 			{
-				rel_storage_type = IMDRelation::ErelstorageExternal;
+				rel_storage_type = IMDRelation::ErelstorageForeign;
 			}
 			else
 			{
@@ -2733,7 +2714,7 @@ CTranslatorRelcacheToDXL::RetrievePartConstraintFromNode(
 //	@doc:
 //		Does given relation type have system columns.
 //		Currently regular relations, sequences, toast values relations,
-//		AO segment relations and foreign/external tables have system columns
+//		AO segment relations and foreign tables have system columns
 //
 //---------------------------------------------------------------------------
 BOOL
@@ -2884,7 +2865,7 @@ CTranslatorRelcacheToDXL::RetrieveStorageTypeForPartitionedTable(Relation rel)
 
 		// fall back if any external partitions, we need additional logic to
 		// handle distribution or will get wrong results
-		if (child_storage == IMDRelation::ErelstorageExternal)
+		if (child_storage == IMDRelation::ErelstorageForeign)
 		{
 			GPOS_RAISE(
 				gpdxl::ExmaMD, gpdxl::ExmiMDObjUnsupported,

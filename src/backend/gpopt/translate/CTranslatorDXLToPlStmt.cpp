@@ -98,7 +98,6 @@ extern "C" {
 #include "naucrates/md/IMDAggregate.h"
 #include "naucrates/md/IMDFunction.h"
 #include "naucrates/md/IMDIndex.h"
-#include "naucrates/md/IMDRelationExternal.h"
 #include "naucrates/md/IMDScalarOp.h"
 #include "naucrates/md/IMDType.h"
 #include "naucrates/md/IMDTypeBool.h"
@@ -320,7 +319,7 @@ CTranslatorDXLToPlStmt::TranslateDXLOperatorToPlan(
 					   dxlnode->GetOperator()->GetOpNameStr()->GetBuffer());
 		}
 		case EdxlopPhysicalTableScan:
-		case EdxlopPhysicalExternalScan:
+		case EdxlopPhysicalForeignScan:
 		{
 			plan = TranslateDXLTblScan(dxlnode, output_context,
 									   ctxt_translation_prev_siblings);
@@ -596,7 +595,8 @@ CTranslatorDXLToPlStmt::TranslateDXLTblScan(
 
 	Plan *plan = nullptr;
 	Plan *plan_return = nullptr;
-	if (IMDRelation::ErelstorageExternal == md_rel->RetrieveRelStorageType())
+
+	if (IMDRelation::ErelstorageForeign == md_rel->RetrieveRelStorageType())
 	{
 		OID oidRel = CMDIdGPDB::CastMdid(md_rel->MDId())->Oid();
 

@@ -55,7 +55,6 @@ CParseHandlerFactory::Init(CMemoryPool *mp)
 		{EdxltokenMDRequest, &CreateMDRequestParseHandler},
 		{EdxltokenTraceFlags, &CreateTraceFlagsParseHandler},
 		{EdxltokenOptimizerConfig, &CreateOptimizerCfgParseHandler},
-		{EdxltokenRelationExternal, &CreateMDRelationExtParseHandler},
 		{EdxltokenRelationCTAS, &CreateMDRelationCTASParseHandler},
 		{EdxltokenEnumeratorConfig, &CreateEnumeratorCfgParseHandler},
 		{EdxltokenStatisticsConfig, &CreateStatisticsCfgParseHandler},
@@ -91,7 +90,7 @@ CParseHandlerFactory::Init(CMemoryPool *mp)
 		{EdxltokenPhysicalBitmapTableScan, &CreateBitmapTableScanParseHandler},
 		{EdxltokenPhysicalDynamicBitmapTableScan,
 		 &CreateDynBitmapTableScanParseHandler},
-		{EdxltokenPhysicalExternalScan, &CreateExternalScanParseHandler},
+		{EdxltokenPhysicalForeignScan, &CreateForeignScanParseHandler},
 		{EdxltokenPhysicalHashJoin, &CreateHashJoinParseHandler},
 		{EdxltokenPhysicalNLJoin, &CreateNLJoinParseHandler},
 		{EdxltokenPhysicalMergeJoin, &CreateMergeJoinParseHandler},
@@ -218,7 +217,7 @@ CParseHandlerFactory::Init(CMemoryPool *mp)
 
 		{EdxltokenQuery, &CreateQueryParseHandler},
 		{EdxltokenLogicalGet, &CreateLogicalGetParseHandler},
-		{EdxltokenLogicalExternalGet, &CreateLogicalExtGetParseHandler},
+		{EdxltokenLogicalForeignGet, &CreateLogicalExtGetParseHandler},
 		{EdxltokenLogical, &CreateLogicalOpParseHandler},
 		{EdxltokenLogicalProject, &CreateLogicalProjParseHandler},
 		{EdxltokenLogicalSelect, &CreateLogicalSelectParseHandler},
@@ -456,16 +455,6 @@ CParseHandlerFactory::CreateMDRelationParseHandler(
 {
 	return GPOS_NEW(mp)
 		CParseHandlerMDRelation(mp, parse_handler_mgr, parse_handler_root);
-}
-
-// creates a parse handler for parsing external relation metadata
-CParseHandlerBase *
-CParseHandlerFactory::CreateMDRelationExtParseHandler(
-	CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
-	CParseHandlerBase *parse_handler_root)
-{
-	return GPOS_NEW(mp) CParseHandlerMDRelationExternal(mp, parse_handler_mgr,
-														parse_handler_root);
 }
 
 // creates a parse handler for parsing CTAS relation metadata
@@ -709,12 +698,12 @@ CParseHandlerFactory::CreateDynBitmapTableScanParseHandler(
 
 // creates a parse handler for parsing an external scan
 CParseHandlerBase *
-CParseHandlerFactory::CreateExternalScanParseHandler(
+CParseHandlerFactory::CreateForeignScanParseHandler(
 	CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
 	CParseHandlerBase *parse_handler_root)
 {
 	return GPOS_NEW(mp)
-		CParseHandlerExternalScan(mp, parse_handler_mgr, parse_handler_root);
+		CParseHandlerForeignScan(mp, parse_handler_mgr, parse_handler_root);
 }
 
 // creates a parse handler for parsing a subquery scan
@@ -1569,8 +1558,8 @@ CParseHandlerFactory::CreateLogicalExtGetParseHandler(
 	CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
 	CParseHandlerBase *parse_handler_root)
 {
-	return GPOS_NEW(mp) CParseHandlerLogicalExternalGet(mp, parse_handler_mgr,
-														parse_handler_root);
+	return GPOS_NEW(mp) CParseHandlerLogicalForeignGet(mp, parse_handler_mgr,
+													   parse_handler_root);
 }
 
 // creates a parse handler for parsing a logical project operator

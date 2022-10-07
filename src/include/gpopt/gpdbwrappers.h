@@ -587,9 +587,6 @@ void BuildRelationTriggers(Relation rel);
 // get relation with given oid
 RelationWrapper GetRelation(Oid rel_oid);
 
-// get external table entry with given oid
-ExtTableEntry *GetExternalTableEntry(Oid rel_oid);
-
 // get ForeignScan node to scan an external table
 ForeignScan *CreateForeignScanForExternalTable(Oid rel_oid, Index scanrelid,
 											   List *qual, List *targetlist);
