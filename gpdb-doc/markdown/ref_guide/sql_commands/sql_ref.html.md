@@ -131,6 +131,7 @@ The following SQL commands are available in Greenplum Database:
 -   [EXPLAIN](EXPLAIN.html)
 -   [FETCH](FETCH.html)
 -   [GRANT](GRANT.html)
+-   [IMPORT FOREIGN SCHEMA](IMPORT_FOREIGN_SCHEMA.html)
 -   [INSERT](INSERT.html)
 -   [LISTEN](LISTEN.html)
 -   [LOAD](LOAD.html)

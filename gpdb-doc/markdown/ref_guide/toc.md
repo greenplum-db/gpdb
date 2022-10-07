@@ -130,6 +130,7 @@ Doc Index
         - [EXPLAIN](./sql_commands/EXPLAIN.md)
         - [FETCH](./sql_commands/FETCH.md)
         - [GRANT](./sql_commands/GRANT.md)
+        - [IMPORT FOREIGN SCHEMA](./sql_commands/IMPORT_FOREIGN_SCHEMA.md)
         - [INSERT](./sql_commands/INSERT.md)
         - [LISTEN](./sql_commands/LISTEN.md)
         - [LOAD](./sql_commands/LOAD.md)
