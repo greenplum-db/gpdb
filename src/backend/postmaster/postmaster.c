@@ -3571,9 +3571,9 @@ CleanupBackgroundWorker(int pid,
 		}
 
 		/*
-		 * We must release the postmaster child slot whether this worker
-		 * is connected to shared memory or not, but we only treat it as
-		 * a crash if it is in fact connected.
+		 * We must release the postmaster child slot whether this worker is
+		 * connected to shared memory or not, but we only treat it as a crash
+		 * if it is in fact connected.
 		 */
 		if (!ReleasePostmasterChildSlot(rw->rw_child_slot) &&
 			(rw->rw_worker.bgw_flags & BGWORKER_SHMEM_ACCESS) != 0)
@@ -3583,25 +3583,21 @@ CleanupBackgroundWorker(int pid,
 		}
 
 		/* Get it out of the BackendList and clear out remaining data */
-		if (rw->rw_backend)
-		{
-			Assert(rw->rw_worker.bgw_flags & BGWORKER_BACKEND_DATABASE_CONNECTION);
-			dlist_delete(&rw->rw_backend->elem);
+		dlist_delete(&rw->rw_backend->elem);
 #ifdef EXEC_BACKEND
-			ShmemBackendArrayRemove(rw->rw_backend);
+		ShmemBackendArrayRemove(rw->rw_backend);
 #endif
 
-			/*
-			 * It's possible that this background worker started some OTHER
-			 * background worker and asked to be notified when that worker
-			 * started or stopped.  If so, cancel any notifications destined
-			 * for the now-dead backend.
-			 */
-			if (rw->rw_backend->bgworker_notify)
-				BackgroundWorkerStopNotifications(rw->rw_pid);
-			free(rw->rw_backend);
-			rw->rw_backend = NULL;
-		}
+		/*
+		 * It's possible that this background worker started some OTHER
+		 * background worker and asked to be notified when that worker started
+		 * or stopped.  If so, cancel any notifications destined for the
+		 * now-dead backend.
+		 */
+		if (rw->rw_backend->bgworker_notify)
+			BackgroundWorkerStopNotifications(rw->rw_pid);
+		free(rw->rw_backend);
+		rw->rw_backend = NULL;
 		rw->rw_pid = 0;
 		rw->rw_child_slot = 0;
 		ReportBackgroundWorkerPID(rw);	/* report child death */
@@ -3743,15 +3739,12 @@ HandleChildCrash(int pid, int exitstatus, const char *procname)
 			 * Found entry for freshly-dead worker, so remove it.
 			 */
 			(void) ReleasePostmasterChildSlot(rw->rw_child_slot);
-			if (rw->rw_backend)
-			{
-				dlist_delete(&rw->rw_backend->elem);
+			dlist_delete(&rw->rw_backend->elem);
 #ifdef EXEC_BACKEND
-				ShmemBackendArrayRemove(rw->rw_backend);
+			ShmemBackendArrayRemove(rw->rw_backend);
 #endif
-				free(rw->rw_backend);
-				rw->rw_backend = NULL;
-			}
+			free(rw->rw_backend);
+			rw->rw_backend = NULL;
 			rw->rw_pid = 0;
 			rw->rw_child_slot = 0;
 			/* don't reset crashed_at */
@@ -6122,27 +6115,19 @@ do_start_bgworker(RegisteredBgWorker *rw)
 	Assert(rw->rw_pid == 0);
 
 	/*
-	 * If necessary, allocate and assign the Backend element.  Note we must do
-	 * this before forking, so that we can handle out of memory properly.
+	 * Allocate and assign the Backend element.  Note we must do this before
+	 * forking, so that we can handle out of memory properly.
 	 *
 	 * Treat failure as though the worker had crashed.  That way, the
 	 * postmaster will wait a bit before attempting to start it again; if it
 	 * tried again right away, most likely it'd find itself repeating the
 	 * out-of-memory or fork failure condition.
-	 *
-	 * If not connected, we don't need a Backend element, but we still need a
-	 * PMChildSlot.
 	 */
-	if (rw->rw_worker.bgw_flags & BGWORKER_BACKEND_DATABASE_CONNECTION)
+	if (!assign_backendlist_entry(rw))
 	{
-		if (!assign_backendlist_entry(rw))
-		{
-			rw->rw_crashed_at = GetCurrentTimestamp();
-			return false;
-		}
+		rw->rw_crashed_at = GetCurrentTimestamp();
+		return false;
 	}
-	else
-		rw->rw_child_slot = MyPMChildSlot = AssignPostmasterChildSlot();
 
 	ereport(LOG,
 			(errmsg("starting background worker process \"%s\"",
@@ -6161,8 +6146,7 @@ do_start_bgworker(RegisteredBgWorker *rw)
 			/* undo what assign_backendlist_entry did */
 			ReleasePostmasterChildSlot(rw->rw_child_slot);
 			rw->rw_child_slot = 0;
-			if (rw->rw_backend)
-				free(rw->rw_backend);
+			free(rw->rw_backend);
 			rw->rw_backend = NULL;
 			/* mark entry as crashed, so we'll try again later */
 			rw->rw_crashed_at = GetCurrentTimestamp();
@@ -6188,17 +6172,13 @@ do_start_bgworker(RegisteredBgWorker *rw)
 		default:
 			/* in postmaster, fork successful ... */
 			rw->rw_pid = worker_pid;
-			if (rw->rw_backend)
-				rw->rw_backend->pid = rw->rw_pid;
+			rw->rw_backend->pid = rw->rw_pid;
 			ReportBackgroundWorkerPID(rw);
-			if (rw->rw_backend)
-			{
-				/* add new worker to lists of backends */
-				dlist_push_head(&BackendList, &rw->rw_backend->elem);
+			/* add new worker to lists of backends */
+			dlist_push_head(&BackendList, &rw->rw_backend->elem);
 #ifdef EXEC_BACKEND
-				ShmemBackendArrayAdd(rw->rw_backend);
+			ShmemBackendArrayAdd(rw->rw_backend);
 #endif
-			}
 			return true;
 	}
 
