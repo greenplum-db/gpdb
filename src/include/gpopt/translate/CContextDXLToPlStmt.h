@@ -258,6 +258,8 @@ public:
 	ULONG GetParamIdForSelector(OID oid_type, const ULONG selectorId);
 
 	Index FindRTE(Oid reloid);
+
+	Query *m_orig_query;
 };
 
 }  // namespace gpdxl

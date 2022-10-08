@@ -591,6 +591,11 @@ RelationWrapper GetRelation(Oid rel_oid);
 ForeignScan *CreateForeignScanForExternalTable(Oid rel_oid, Index scanrelid,
 											   List *qual, List *targetlist);
 
+// get ForeignScan node to scan a foreign table
+ForeignScan *CreateForeignScan(Oid rel_oid, Index scanrelid, List *qual,
+							   List *targetlist, Query *query,
+							   RangeTblEntry *rte);
+
 // return the first member of the given targetlist whose expression is
 // equal to the given expression, or NULL if no such member exists
 TargetEntry *FindFirstMatchingMemberInTargetList(Node *node, List *targetlist);

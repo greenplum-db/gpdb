@@ -24,6 +24,9 @@
 #include "foreign/foreign.h"
 #include "lib/stringinfo.h"
 #include "miscadmin.h"
+#include "optimizer/optimizer.h"
+#include "optimizer/pathnode.h"
+#include "optimizer/planmain.h"
 #include "utils/builtins.h"
 #include "utils/memutils.h"
 #include "utils/rel.h"
@@ -962,3 +965,78 @@ GetExistingLocalJoinPath(RelOptInfo *joinrel)
 	}
 	return NULL;
 }
+
+ForeignScan *
+BuildForeignScan(Oid relid, Index scanrelid, List *qual, List *targetlist, Query *query, RangeTblEntry * rte)
+{
+
+	/*
+	 * We need to make "dummy" or at least somewhat populated
+	 * PlannerInfo and RelOptInfo structs here to ensure that fdw_private is properly
+	 * populated. Although this isn't used during planning, some FDWs populate and use
+	 * this info in the executor, which means Orca needs to call these functions in case.
+	 *
+	 * The simple_rte_array is used in build_simple_rel, and populates
+	 * fields for the fdw. We only need 1 entry here, as we process only 1
+	 * scan.
+	 */
+
+	PlannerInfo		*root;
+	root = makeNode(PlannerInfo);
+	root->parse = query;
+	/* Arrays are accessed using RT indexes (1..N) */
+	root->simple_rel_array_size = 2;
+
+	/* simple_rel_array is initialized to all NULLs */
+	root->simple_rel_array = (RelOptInfo **) palloc0(2 * sizeof(RelOptInfo *));
+
+	/* simple_rte_array is an array equivalent of the rtable list */
+	root->simple_rte_array = (RangeTblEntry **) palloc0(2 * sizeof(RangeTblEntry *));
+	root->simple_rte_array[1] = rte;
+
+	RelOptInfo *rel = build_simple_rel(root, 1, NULL);
+	rel->fdwroutine->GetForeignRelSize(root, rel, relid);
+	rel->fdwroutine->GetForeignPaths(root, rel, relid);
+
+	// Use any path, we really just care about the fdw_private field here
+	ForeignPath *path = (ForeignPath*) linitial(rel->pathlist);
+
+	ForeignScan *fscan = make_foreignscan(targetlist,
+					 qual,
+					 relid,
+					 NIL,
+					 path->fdw_private,
+					 NIL,
+					 NIL,
+					 NULL);
+	fscan->fs_server = rel->serverid;
+
+	// Set fsSystemCol if any system attributes are projected
+	fscan->fsSystemCol = false;
+	if (scanrelid > 0)
+	{
+		Bitmapset  *attrs_used = NULL;
+		int			i;
+
+		/*
+		 * First, examine all the attributes needed for joins or final output.
+		 * Note: we must look at rel's targetlist, not the attr_needed data,
+		 * because attr_needed isn't computed for inheritance child rels.
+		 */
+		pull_varattnos((Node *) targetlist, scanrelid, &attrs_used);
+
+		/* Now, are any system columns requested from rel? */
+		for (i = FirstLowInvalidHeapAttributeNumber + 1; i < 0; i++)
+		{
+			if (bms_is_member(i - FirstLowInvalidHeapAttributeNumber, attrs_used))
+			{
+				fscan->fsSystemCol = true;
+				break;
+			}
+		}
+
+		bms_free(attrs_used);
+	}
+	return fscan;
+}
+

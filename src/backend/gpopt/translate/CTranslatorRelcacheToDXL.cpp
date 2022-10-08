@@ -2311,7 +2311,7 @@ CTranslatorRelcacheToDXL::RetrieveRelStorageType(Relation rel)
 			{
 				rel_storage_type = IMDRelation::ErelstorageCompositeType;
 			}
-			else if (gpdb::RelIsExternalTable(rel->rd_id))
+			else if (rel->rd_rel->relkind == RELKIND_FOREIGN_TABLE)
 			{
 				rel_storage_type = IMDRelation::ErelstorageForeign;
 			}

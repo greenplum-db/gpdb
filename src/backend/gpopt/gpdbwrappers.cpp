@@ -33,6 +33,7 @@
 extern "C" {
 #include "access/external.h"
 #include "catalog/pg_inherits.h"
+#include "foreign/fdwapi.h"
 #include "nodes/nodeFuncs.h"
 #include "optimizer/clauses.h"
 #include "optimizer/optimizer.h"
@@ -2041,6 +2042,19 @@ gpdb::CreateForeignScanForExternalTable(Oid rel_oid, Index scanrelid,
 	{
 		return BuildForeignScanForExternalTable(rel_oid, scanrelid, qual,
 												targetlist);
+	}
+	GP_WRAP_END;
+	return nullptr;
+}
+
+ForeignScan *
+gpdb::CreateForeignScan(Oid rel_oid, Index scanrelid, List *qual,
+						List *targetlist, Query *query, RangeTblEntry *rte)
+{
+	GP_WRAP_START;
+	{
+		return BuildForeignScan(rel_oid, scanrelid, qual, targetlist, query,
+								rte);
 	}
 	GP_WRAP_END;
 	return nullptr;
