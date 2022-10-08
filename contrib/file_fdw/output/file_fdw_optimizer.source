@@ -175,8 +175,7 @@ EXPLAIN (VERBOSE, COSTS FALSE) SELECT * FROM agg_csv;
  Foreign Scan on public.agg_csv
    Output: a, b
    Foreign File: @abs_srcdir@/data/agg.csv
- Optimizer: Postgres query optimizer
- Settings: optimizer=off
+ Optimizer: Pivotal Optimizer (GPORCA)
 
 \t off
 PREPARE st(int) AS SELECT * FROM agg_csv WHERE a = $1;
@@ -225,10 +224,9 @@ ERROR:  cannot insert into foreign table "agg_csv"
 \t on
 EXPLAIN (VERBOSE, COSTS FALSE) SELECT * FROM agg_csv WHERE a < 0;
  Result
-   Output: a, b
+   Output: NULL::smallint, NULL::real
    One-Time Filter: false
- Optimizer: Postgres query optimizer
- Settings: optimizer=off
+ Optimizer: Pivotal Optimizer (GPORCA)
 
 \t off
 SELECT * FROM agg_csv WHERE a < 0;
@@ -240,10 +238,9 @@ SET constraint_exclusion = 'on';
 \t on
 EXPLAIN (VERBOSE, COSTS FALSE) SELECT * FROM agg_csv WHERE a < 0;
  Result
-   Output: a, b
+   Output: NULL::smallint, NULL::real
    One-Time Filter: false
- Optimizer: Postgres query optimizer
- Settings: constraint_exclusion=on, optimizer=off
+ Optimizer: Pivotal Optimizer (GPORCA)
 
 \t off
 SELECT * FROM agg_csv WHERE a < 0;
@@ -256,6 +253,8 @@ RESET constraint_exclusion;
 CREATE TABLE agg (a int2, b float4);
 ALTER FOREIGN TABLE agg_csv INHERIT agg;
 SELECT tableoid::regclass, * FROM agg;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Inherited tables
  tableoid |  a  |    b    
 ----------+-----+---------
  agg_csv  | 100 |  99.097
@@ -272,17 +271,25 @@ SELECT tableoid::regclass, * FROM agg_csv;
 (3 rows)
 
 SELECT tableoid::regclass, * FROM ONLY agg;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: ONLY in the FROM clause
  tableoid | a | b 
 ----------+---+---
 (0 rows)
 
 -- updates aren't supported
 UPDATE agg SET a = 1;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Inherited tables
 ERROR:  ModifyTable mixes distributed and entry-only tables
 DELETE FROM agg WHERE a = 100;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Inherited tables
 ERROR:  ModifyTable mixes distributed and entry-only tables
 -- but this should be allowed
 SELECT tableoid::regclass, * FROM agg FOR UPDATE;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Inherited tables
  tableoid |  a  |    b    
 ----------+-----+---------
  agg_csv  | 100 |  99.097
@@ -299,6 +306,8 @@ CREATE FOREIGN TABLE p1 partition of pt for values in (1) SERVER file_server
 OPTIONS (format 'csv', filename '@abs_srcdir@/data/list1.csv', delimiter ',');
 CREATE TABLE p2 partition of pt for values in (2);
 SELECT tableoid::regclass, * FROM pt;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Partitioned table with external/foreign partition
  tableoid | a |  b  
 ----------+---+-----
  p1       | 1 | foo
@@ -322,6 +331,8 @@ ERROR:  cannot insert into foreign table "p1"
 CONTEXT:  COPY pt, line 2: "1,qux"
 COPY pt FROM '@abs_srcdir@/data/list2.csv' with (format 'csv', delimiter ',');
 SELECT tableoid::regclass, * FROM pt;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Partitioned table with external/foreign partition
  tableoid | a |  b  
 ----------+---+-----
  p1       | 1 | foo
@@ -345,11 +356,19 @@ SELECT tableoid::regclass, * FROM p2;
 (2 rows)
 
 INSERT INTO pt VALUES (1, 'xyzzy'); -- ERROR
-ERROR:  cannot insert into foreign table "p1"
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Partitioned table with external/foreign partition
+ERROR:  cannot insert into foreign table "p1"  (seg1 127.0.0.1:7008 pid=78225)
 INSERT INTO pt VALUES (2, 'xyzzy');
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Partitioned table with external/foreign partition
 UPDATE pt set a = 1 where a = 2; -- ERROR
-ERROR:  cannot insert into foreign table "p1"
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Partitioned table with external/foreign partition
+ERROR:  cannot insert into foreign table "p1"  (seg1 127.0.0.1:7008 pid=78225)
 SELECT tableoid::regclass, * FROM pt;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Partitioned table with external/foreign partition
  tableoid | a |   b   
 ----------+---+-------
  p1       | 1 | foo
@@ -417,8 +436,7 @@ EXPLAIN (VERBOSE, COSTS FALSE) SELECT * FROM agg_text WHERE a > 0;
    Output: a, b
    Filter: (agg_text.a > 0)
    Foreign File: @abs_srcdir@/data/agg.data
- Optimizer: Postgres query optimizer
- Settings: optimizer=off
+ Optimizer: Pivotal Optimizer (GPORCA)
 
 \t off
 -- file FDW allows foreign tables to be accessed without user mapping
