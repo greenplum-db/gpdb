@@ -5,7 +5,7 @@ DROP TABLE IF EXISTS test;
 
 CREATE EXTERNAL TABLE test_gpfdist_ext (a INTEGER, b TEXT, c TEXT)LOCATION('gpfdist://verano/Users/pivotal/Downloads/twenty_news_groups.csv') FORMAT 'CSV';
 
-# Expect to have a Redistribute Motion on top of External table scan
+# Expect to have a Redistribute Motion on top of Foreign table scan
 EXPLAIN CREATE TABLE Test AS SELECT * FROM test_gpfdist_ext DISTRIBUTED BY (a);
 -->
 <dxl:DXLMessage xmlns:dxl="http://greenplum.com/dxl/2010/12/">
@@ -25,7 +25,7 @@ EXPLAIN CREATE TABLE Test AS SELECT * FROM test_gpfdist_ext DISTRIBUTED BY (a);
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.CTAS,0.GPDB">
       <dxl:RelationStatistics Mdid="2.57353.1.0" Name="test_gpfdist_ext" Rows="1000000.000000" EmptyRelation="false"/>
-      <dxl:ExternalRelation Mdid="6.57353.1.0" Name="test_gpfdist_ext" DistributionPolicy="Random" Keys="9,3">
+      <dxl:Relation Mdid="6.57353.1.0" Name="test_gpfdist_ext" IsTemporary="false" StorageType="Heap" DistributionPolicy="Random" Keys="9,3">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -60,7 +60,7 @@ EXPLAIN CREATE TABLE Test AS SELECT * FROM test_gpfdist_ext DISTRIBUTED BY (a);
         </dxl:Columns>
         <dxl:IndexInfoList/>
         <dxl:CheckConstraints/>
-      </dxl:ExternalRelation>
+      </dxl:Relation>
       <dxl:Type Mdid="0.16.1.0" Name="bool" IsRedistributable="true" IsHashable="true" IsMergeJoinable="true" IsComposite="false" IsTextRelated="false" IsFixedLength="true" Length="1" PassByValue="true">
         <dxl:DistrOpfamily Mdid="0.2222.1.0"/>
         <dxl:LegacyDistrOpfamily Mdid="0.7124.1.0"/>
@@ -219,7 +219,7 @@ EXPLAIN CREATE TABLE Test AS SELECT * FROM test_gpfdist_ext DISTRIBUTED BY (a);
         <dxl:DistrOpclasses>
           <dxl:DistrOpclass Mdid="0.10027.1.0"/>
         </dxl:DistrOpclasses>
-        <dxl:LogicalExternalGet>
+        <dxl:LogicalForeignGet>
           <dxl:TableDescriptor Mdid="6.57353.1.0" TableName="test_gpfdist_ext">
             <dxl:Columns>
               <dxl:Column ColId="1" Attno="1" ColName="a" TypeMdid="0.23.1.0" ColWidth="4"/>
@@ -234,7 +234,7 @@ EXPLAIN CREATE TABLE Test AS SELECT * FROM test_gpfdist_ext DISTRIBUTED BY (a);
               <dxl:Column ColId="10" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0" ColWidth="4"/>
             </dxl:Columns>
           </dxl:TableDescriptor>
-        </dxl:LogicalExternalGet>
+        </dxl:LogicalForeignGet>
       </dxl:LogicalCTAS>
     </dxl:Query>
     <dxl:Plan Id="0" SpaceSize="2">
@@ -304,7 +304,7 @@ EXPLAIN CREATE TABLE Test AS SELECT * FROM test_gpfdist_ext DISTRIBUTED BY (a);
                 <dxl:Ident ColId="0" ColName="a" TypeMdid="0.23.1.0"/>
               </dxl:HashExpr>
             </dxl:HashExprList>
-            <dxl:ExternalScan>
+            <dxl:ForeignScan>
               <dxl:Properties>
                 <dxl:Cost StartupCost="0" TotalCost="440.166667" Rows="1000000.000000" Width="20"/>
               </dxl:Properties>
@@ -334,7 +334,7 @@ EXPLAIN CREATE TABLE Test AS SELECT * FROM test_gpfdist_ext DISTRIBUTED BY (a);
                   <dxl:Column ColId="9" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0" ColWidth="4"/>
                 </dxl:Columns>
               </dxl:TableDescriptor>
-            </dxl:ExternalScan>
+            </dxl:ForeignScan>
           </dxl:RedistributeMotion>
         </dxl:Result>
       </dxl:PhysicalCTAS>

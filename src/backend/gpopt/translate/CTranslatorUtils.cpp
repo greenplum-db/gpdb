@@ -152,7 +152,8 @@ CTranslatorUtils::GetTableDescr(CMemoryPool *mp, CMDAccessor *md_accessor,
 	{
 		*is_distributed_table = true;
 	}
-	else if (!optimizer_enable_master_only_queries &&
+	else if (IMDRelation::ErelstorageForeign != rel->RetrieveRelStorageType() &&
+			 !optimizer_enable_master_only_queries &&
 			 (IMDRelation::EreldistrMasterOnly == distribution_policy))
 	{
 		// fall back to the planner for queries on master-only table if they are disabled with Orca. This is due to

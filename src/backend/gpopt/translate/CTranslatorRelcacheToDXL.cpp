@@ -454,8 +454,8 @@ CTranslatorRelcacheToDXL::RetrieveRel(CMemoryPool *mp, CMDAccessor *md_accessor,
 		mp, mdid, mdname, is_temporary, rel_storage_type, dist, mdcol_array,
 		distr_cols, distr_op_families, part_keys, part_types,
 		num_leaf_partitions, partition_oids, convert_hash_to_random,
-		keyset_array, md_index_info_array,
-		check_constraint_mdids, mdpart_constraint);
+		keyset_array, md_index_info_array, check_constraint_mdids,
+		mdpart_constraint);
 
 	return md_rel;
 }
@@ -2336,15 +2336,9 @@ CTranslatorRelcacheToDXL::RetrieveRelStorageType(Relation rel)
 			{
 				rel_storage_type = IMDRelation::ErelstorageCompositeType;
 			}
-			else if (gpdb::RelIsExternalTable(rel->rd_id))
+			else if (rel->rd_rel->relkind == RELKIND_FOREIGN_TABLE)
 			{
 				rel_storage_type = IMDRelation::ErelstorageForeign;
-			}
-			else
-			{
-				// GPORCA does not support foreign data wrappers
-				GPOS_RAISE(gpdxl::ExmaMD, gpdxl::ExmiMDObjUnsupported,
-						   GPOS_WSZ_LIT("Foreign Data"));
 			}
 			break;
 		default:

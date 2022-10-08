@@ -463,6 +463,8 @@ struct PlannerInfo
 	bool		is_split_update;	/* true if UPDATE that modifies
 									 * distribution key columns */
 	bool		is_correlated_subplan; /* true for correlated subqueries nested within subplans */
+
+	bool		is_from_orca; /* true if this PlannerInfo was created from Orca*/
 };
 
 /*
