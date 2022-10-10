@@ -1,18 +1,26 @@
 -- gp_dump_query_oids() doesn't list built-in functions, so we need a UDF to test with.
 CREATE FUNCTION dumptestfunc(t text) RETURNS integer AS $$ SELECT 123 $$ LANGUAGE SQL;
 CREATE FUNCTION dumptestfunc2(t text) RETURNS integer AS $$ SELECT 123 $$ LANGUAGE SQL;
+create table base(a int);
+create materialized view base_mv as select a from base;
 
 -- The function returns OIDs. We need to replace them with something reproducable.
 CREATE FUNCTION sanitize_output(t text) RETURNS text AS $$
 declare
   dumptestfunc_oid oid;
   dumptestfunc2_oid oid;
+  base_oid oid;
+  base_mv_oid oid;
 begin
     dumptestfunc_oid = 'dumptestfunc'::regproc::oid;
     dumptestfunc2_oid = 'dumptestfunc2'::regproc::oid;
+    base_oid = 'base'::regclass::oid;
+    base_mv_oid = 'base_mv'::regclass::oid;
 
     t := replace(t, dumptestfunc_oid::text, '<dumptestfunc>');
     t := replace(t, dumptestfunc2_oid::text, '<dumptestfunc2>');
+    t := replace(t, base_oid::text, '<base_table>');
+    t := replace(t, base_mv_oid::text, '<base_mv>');
 
     RETURN t;
 end;
@@ -79,6 +87,7 @@ CREATE TABLE unknown_to_text_dump (pid varchar(1), dummy varchar(1)) DISTRIBUTED
 CREATE VIEW unknown_view AS SELECT 'D' as dummy;
 SELECT count(*) from (SELECT pg_catalog.gp_dump_query_oids('select * from unknown_to_text_dump join unknown_view on unknown_to_text_dump.dummy = unknown_view.dummy')) x;
 
+SELECT sanitize_output(gp_dump_query_oids('SELECT * FROM base_mv'));
 DROP TABLE foo;
 DROP TABLE cctable;
 DROP TABLE ctable;

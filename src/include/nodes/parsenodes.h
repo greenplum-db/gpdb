@@ -214,6 +214,7 @@ typedef struct Query
 	 * would always be dispatched in parallel.
 	 */
 	ParentStmtType	parentStmtType;
+	bool		expandMatViews; /* force expansion of materialized views during rewrite to treat as views */
 } Query;
 
 /****************************************************************************

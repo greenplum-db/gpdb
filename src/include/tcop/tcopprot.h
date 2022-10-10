@@ -48,6 +48,7 @@ typedef enum
 extern PGDLLIMPORT int log_statement;
 
 extern List *pg_parse_query(const char *query_string);
+extern List *pg_rewrite_query(Query *query);
 extern List *pg_analyze_and_rewrite(Node *parsetree, const char *query_string,
 					   Oid *paramTypes, int numParams);
 extern List *pg_analyze_and_rewrite_params(Node *parsetree,
