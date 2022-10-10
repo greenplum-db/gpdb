@@ -90,7 +90,9 @@ typedef struct
 				eof;			/* error & eof flags */
 	int			gp_proto;
 	int 		zstd;
-	ZSTD_DCtx*  zstd_ctx;
+	#ifdef HAVE_LIBZSTD
+	ZSTD_DCtx*  zstd_dctx;
+	#endif
 	int 		lastpos;
 	int 		lastsize;
 	char	   *http_response;
@@ -383,7 +385,9 @@ header_callback(void *ptr_, size_t size, size_t nmemb, void *userp)
 			url->zstd = strtol(buf, 0, 0);
 			url->lastpos = 0;
 			url->lastsize = 0;
-			url->zstd_ctx = ZSTD_createDCtx();
+			#ifdef HAVE_LIBZSTD
+			url->zstd_dctx = ZSTD_createDCtx();
+			#endif
 		}
 	}
 
@@ -1504,7 +1508,9 @@ url_curl_fclose(URL_FILE *fileg, bool failOnError, const char *relname)
 	memset(&file->block, 0, sizeof(file->block));
 
 	pfree(file->common.url);
-	ZSTD_freeDCtx(file->zstd_ctx);
+	#ifdef HAVE_LIBZSTD
+	ZSTD_freeDCtx(file->zstd_dctx);
+	#endif
 
 	pfree(file);
 }
@@ -1556,7 +1562,7 @@ gp_proto0_read(char *buf, int bufsz, URL_CURL_FILE *file)
 	return n;
 }
 
-
+#ifdef HAVE_LIBZSTD
 int 
 decompress_zstd_data(ZSTD_DCtx* ctx, ZSTD_inBuffer* bin, ZSTD_outBuffer* bout)
 {
@@ -1580,7 +1586,7 @@ decompress_zstd_data(ZSTD_DCtx* ctx, ZSTD_inBuffer* bin, ZSTD_outBuffer* bout)
 	}
 	return bout->pos;
 }
-
+#endif
 /*
  * gp_proto1_read
  *
@@ -1771,11 +1777,11 @@ gp_proto1_read(char *buf, int bufsz, URL_CURL_FILE *file, CopyState pstate, char
 		n = bufsz;
 
 	file->block.datalen -= n;
-
-	if(file->zstd && file->zstd_ctx){	
+	#ifdef HAVE_LIBZSTD
+	if(file->zstd && file->zstd_dctx){	
 		ZSTD_inBuffer bin = {file->in.ptr + file->in.bot, file->lastsize, file->lastpos};
 		ZSTD_outBuffer bout = {buf, obufsz, 0};
-		n = decompress_zstd_data(file->zstd_ctx, &bin, &bout);
+		n = decompress_zstd_data(file->zstd_dctx, &bin, &bout);
 		file->lastpos = bin.pos == bin.size ? 0 : bin.pos;
 		file->in.bot = !file->lastpos ? (file->in.bot + bin.size) : file->in.bot;
 	}
@@ -1783,7 +1789,10 @@ gp_proto1_read(char *buf, int bufsz, URL_CURL_FILE *file, CopyState pstate, char
 		memcpy(buf, file->in.ptr + file->in.bot, n);
 		file->in.bot += n;
 	}
-
+	#else 
+	memcpy(buf, file->in.ptr + file->in.bot, n);
+	file->in.bot += n;
+	#endif
 	return n;
 }
 /*

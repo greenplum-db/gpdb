@@ -289,7 +289,9 @@ struct request_t
 	char*           line_delim_str;
 	int             line_delim_length;
 
+	#ifdef HAVE_LIBZSTD
 	ZSTD_CCtx*      zstd_ctx;	/* zstd context */
+	#endif
 	int             zstd;		/* request use zstd compress? */
 
 #ifdef USE_SSL
@@ -353,8 +355,6 @@ static int request_validate(request_t *r);
 static int request_set_path(request_t *r, const char* d, char* p, char* pp, char* path);
 static int request_path_validate(request_t *r, const char* path);
 static int compress_zstd(request_t *r, block_t* block, int buflen);
-static int local_send_zstd(request_t *r, char* buf, int buflen);
-static int gpfdist_socket_send_zstd(request_t *r, void *buf, size_t buflen);
 static int request_parse_gp_headers(request_t *r, int opt_g);
 static void free_session_cb(int fd, short event, void* arg);
 #ifdef GPFXDIST
@@ -3454,6 +3454,7 @@ static int request_parse_gp_headers(request_t *r, int opt_g)
 		}
 	}
 
+	#ifdef HAVE_LIBZSTD
 	if (r->zstd)
 	{
 		r->outblock.cdata = palloc_safe(r, r->pool, opt.m, "out of memory when allocating buffer for compressed data: %d bytes", opt.m);
@@ -3461,6 +3462,7 @@ static int request_parse_gp_headers(request_t *r, int opt_g)
 		if (!r->zstd_ctx)
 			fprintf(stderr, "out of memory");
 	}
+	#endif
 
 	if (r->line_delim_length > 0)
 	{
@@ -4555,8 +4557,13 @@ static void delay_watchdog_timer()
 		shutdown_time = apr_time_now() + gcb.wdtimer * APR_USEC_PER_SEC;
 	}
 }
+#else
+static void delay_watchdog_timer()
+{
+}
+#endif
 
-
+#ifdef HAVE_LIBZSTD 
 /*
  * compress_zstd
  *
@@ -4568,10 +4575,5 @@ static int compress_zstd(request_t *r, block_t* block, int buflen)
 	size_t comlen = ZSTD_compressCCtx(r->zstd_ctx, block->cdata, boundsize, block->data, buflen, r->zstd);
 	
 	return (int)comlen;
-}
-
-#else
-static void delay_watchdog_timer()
-{
 }
 #endif
