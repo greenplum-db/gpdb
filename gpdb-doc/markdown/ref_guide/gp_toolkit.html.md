@@ -289,9 +289,8 @@ The input argument is the name or the oid of an append-optimized table.
 You must execute this function in utility mode against every segment, or with `gp_dist_random()` as shown here:
 
 ``` sql
-SELECT (t).* FROM (
-  SELECT gp_toolkit.__gp_aoblkdir('<table_name>') AS t FROM gp_dist_random('gp_id')
-) AS x;
+SELECT (gp_toolkit.__gp_aoblkdir('<table_name>')).*
+    FROM gp_dist_random('gp_id');
 ```
 
 
