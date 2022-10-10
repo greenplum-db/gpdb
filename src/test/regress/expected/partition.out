@@ -2444,6 +2444,7 @@ Partitions: "sg_cal_event_silvertail_hour_1_prt_P2009041607" FOR VALUES FROM ('T
             sg_cal_event_silvertail_hour_1_prt_p2009042907 FOR VALUES FROM ('Wed Apr 29 07:00:00 2009') TO ('Wed Apr 29 08:00:00 2009'),
             sg_cal_event_silvertail_hour_1_prt_st_default DEFAULT
 Distributed by: (ip)
+Options: compresslevel=5
 
 \d+ sg_cal_event_silvertail_hour_1_prt_P2009042907
                                Table "public.sg_cal_event_silvertail_hour_1_prt_p2009042907"
@@ -2473,11 +2474,12 @@ HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sur
 insert into foo_p select i, i+1, repeat('fooo', 9000) from generate_series(1, 100) i;
 alter table foo_p split default partition start (10) end(20) 
 into (partition p10_20, default partition);
-select c.oid::regclass, relkind, amname, reloptions from pg_class c left join pg_am am on am.oid = relam where c.oid = 'foo_p_1_prt_p10_20'::regclass;
+select c.oid::regclass, relkind, amname, reloptions from pg_class c left join pg_am am on am.oid = relam where c.oid = 'foo_p_1_prt_p10_20'::regclass or c.oid = 'foo_p'::regclass;
         oid         | relkind | amname |    reloptions     
 --------------------+---------+--------+-------------------
  foo_p_1_prt_p10_20 | r       | ao_row | {compresslevel=5}
-(1 row)
+ foo_p              | p       | ao_row | {compresslevel=5}
+(2 rows)
 
 select count(distinct k) from foo_p;
  count 

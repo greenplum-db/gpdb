@@ -790,23 +790,27 @@ DefineRelation(CreateStmt *stmt, char relkind, Oid ownerId,
 			 relkind == RELKIND_MATVIEW)
 		accessMethodId = get_table_am_oid(default_table_access_method, false);
 
-	/* GPDB: for partitioned tables, inherit reloptions from the parent. */
+	/* 
+	 * GPDB: for partitioned tables, inherit reloptions from the parent. 
+	 * Note this is applicable only if the parent has the same AM as the child.
+	 */
 	if (stmt->partbound && (relkind == RELKIND_RELATION || relkind == RELKIND_PARTITIONED_TABLE))
 	{
-		Oid			relid;
-		Relation 		rel;
+		Oid			parentrelid;
+		Relation 		parentrel;
 
 		/*
 		 * For partitioned children, when no reloptions is specified, we
 		 * default to the parent table's reloptions.
 		 */
 		Assert(list_length(inheritOids) == 1);
-		relid = linitial_oid(inheritOids);
-		rel = table_open(relid, AccessShareLock);
+		parentrelid = linitial_oid(inheritOids);
+		parentrel = table_open(parentrelid, AccessShareLock);
 
-		oldoptions = get_rel_opts(rel);
+		if (parentrel->rd_rel->relam == accessMethodId)
+			oldoptions = get_rel_opts(parentrel);
 
-		table_close(rel, AccessExclusiveLock);
+		table_close(parentrel, AccessExclusiveLock);
 	}
 
 	/*

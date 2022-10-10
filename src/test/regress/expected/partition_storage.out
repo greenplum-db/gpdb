@@ -562,10 +562,10 @@ NOTICE:  table "pt_ao_tab_rng" does not exist, skipping
  alter table pt_ao_tab_rng add partition co start(31) end(35) with (appendonly=true,orientation=column);
  select c.oid::regclass, relkind, amname, reloptions from pg_class c left join pg_am am on am.oid = c.relam
  where c.oid in ( select oid from pg_class where   relname in  ( 'pt_ao_tab_rng_1_prt_heap', 'pt_ao_tab_rng_1_prt_ao','pt_ao_tab_rng_1_prt_co'));
-           oid            | relkind |  amname   | reloptions 
---------------------------+---------+-----------+------------
+           oid            | relkind |  amname   |             reloptions              
+--------------------------+---------+-----------+-------------------------------------
  pt_ao_tab_rng_1_prt_heap | r       | heap      | 
- pt_ao_tab_rng_1_prt_ao   | r       | ao_row    | 
+ pt_ao_tab_rng_1_prt_ao   | r       | ao_row    | {compresstype=zlib,compresslevel=1}
  pt_ao_tab_rng_1_prt_co   | r       | ao_column | 
 (3 rows)
 
@@ -575,13 +575,13 @@ NOTICE:  table "pt_ao_tab_rng" does not exist, skipping
  alter table pt_ao_tab_rng split partition co  at (33) into (partition co1,partition co2);
  select c.oid::regclass, relkind, amname, reloptions from pg_class c left join pg_am am on am.oid = c.relam
  where c.oid in ( select oid from pg_class where   relname in ( 'pt_ao_tab_rng_1_prt_heap1' ,'pt_ao_tab_rng_1_prt_heap2' ,'pt_ao_tab_rng_1_prt_ao1', 'pt_ao_tab_rng_1_prt_ao2', 'pt_ao_tab_rng_1_prt_co1', 'pt_ao_tab_rng_1_prt_co2'));
-            oid            | relkind |  amname   | reloptions 
----------------------------+---------+-----------+------------
+            oid            | relkind |  amname   |             reloptions              
+---------------------------+---------+-----------+-------------------------------------
  pt_ao_tab_rng_1_prt_heap1 | r       | heap      | 
  pt_ao_tab_rng_1_prt_heap2 | r       | heap      | 
- pt_ao_tab_rng_1_prt_ao2   | r       | ao_row    | 
+ pt_ao_tab_rng_1_prt_ao2   | r       | ao_row    | {compresstype=zlib,compresslevel=1}
  pt_ao_tab_rng_1_prt_co2   | r       | ao_column | 
- pt_ao_tab_rng_1_prt_ao1   | r       | ao_row    | 
+ pt_ao_tab_rng_1_prt_ao1   | r       | ao_row    | {compresstype=zlib,compresslevel=1}
  pt_ao_tab_rng_1_prt_co1   | r       | ao_column | 
 (6 rows)
 
@@ -629,13 +629,14 @@ Distributed by: (a)
  d       | integer |           |          |         | plain    |              | 
  e       | numeric |           |          |         | main     |              | 
  success | boolean |           |          |         | plain    |              | 
-Compression Type: None
-Compression Level: 0
+Compression Type: zlib
+Compression Level: 1
 Block Size: 32768
 Checksum: t
 Indexes:
     "pt_ao_tab_rng_1_prt_ao1_a_idx" btree (a) WHERE c > 10
     "pt_ao_tab_rng_1_prt_ao1_upper_idx" btree (upper(b))
+Options: compresstype=zlib, compresslevel=1
 Distributed by: (a)
 
  \d+ heap_can
@@ -686,11 +687,11 @@ NOTICE:  table "pt_co_tab_rng" does not exist, skipping
  alter table pt_co_tab_rng add partition co start(31) end(35) with (appendonly=true,orientation=column);
  select c.oid::regclass, relkind, amname, reloptions from pg_class c left join pg_am am on am.oid = c.relam
  where c.oid in ( select oid from pg_class where   relname in  ( 'pt_co_tab_rng_1_prt_heap', 'pt_co_tab_rng_1_prt_ao','pt_co_tab_rng_1_prt_co'));
-           oid            | relkind |  amname   | reloptions 
---------------------------+---------+-----------+------------
+           oid            | relkind |  amname   |             reloptions              
+--------------------------+---------+-----------+-------------------------------------
  pt_co_tab_rng_1_prt_heap | r       | heap      | 
  pt_co_tab_rng_1_prt_ao   | r       | ao_row    | 
- pt_co_tab_rng_1_prt_co   | r       | ao_column | 
+ pt_co_tab_rng_1_prt_co   | r       | ao_column | {compresstype=zlib,compresslevel=1}
 (3 rows)
 
 --Split partition
@@ -699,14 +700,14 @@ NOTICE:  table "pt_co_tab_rng" does not exist, skipping
  alter table pt_co_tab_rng split partition co  at (33) into (partition co1,partition co2);
  select c.oid::regclass, relkind, amname, reloptions from pg_class c left join pg_am am on am.oid = c.relam
  where c.oid in ( select oid from pg_class where   relname in ( 'pt_co_tab_rng_1_prt_heap1' ,'pt_co_tab_rng_1_prt_heap2' ,'pt_co_tab_rng_1_prt_ao1', 'pt_co_tab_rng_1_prt_ao2', 'pt_co_tab_rng_1_prt_co1', 'pt_co_tab_rng_1_prt_co2'));
-            oid            | relkind |  amname   | reloptions 
----------------------------+---------+-----------+------------
+            oid            | relkind |  amname   |             reloptions              
+---------------------------+---------+-----------+-------------------------------------
  pt_co_tab_rng_1_prt_heap1 | r       | heap      | 
  pt_co_tab_rng_1_prt_heap2 | r       | heap      | 
  pt_co_tab_rng_1_prt_ao1   | r       | ao_row    | 
  pt_co_tab_rng_1_prt_ao2   | r       | ao_row    | 
- pt_co_tab_rng_1_prt_co1   | r       | ao_column | 
- pt_co_tab_rng_1_prt_co2   | r       | ao_column | 
+ pt_co_tab_rng_1_prt_co1   | r       | ao_column | {compresstype=zlib,compresslevel=1}
+ pt_co_tab_rng_1_prt_co2   | r       | ao_column | {compresstype=zlib,compresslevel=1}
 (6 rows)
 
 --Exchange
@@ -776,6 +777,7 @@ Checksum: t
 Indexes:
     "pt_co_tab_rng_1_prt_co1_a_idx" btree (a) WHERE c > 10
     "pt_co_tab_rng_1_prt_co1_upper_idx" btree (upper(b))
+Options: compresstype=zlib, compresslevel=1
 Distributed by: (a)
 
 -- Create more index indexes
