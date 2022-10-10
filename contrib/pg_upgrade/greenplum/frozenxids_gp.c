@@ -17,10 +17,10 @@
  * of the relation in pg_class with the datfrozenxid from the corresponding
  * database in the old cluster. This ensures that the xmin is not > relfrozenxid
  * for any of the tuple.
- * Coordinator contains data entries in GPDB catalog tables like gp_fastsequence,
- * pg_aoseg, pg_aocsseg, and pg_aovisimap that also need relfrozenxid correction.
- * Also, update the new database with the datfrozenxid
- * from the old cluster as that indicates the lowest xid available.
+ * Coordinator contains data entries in GPDB catalog tables like
+ * gp_fastsequence, pg_aoseg, pg_aocsseg, pg_aoblkdir, and pg_aovisimap that
+ * also need relfrozenxid correction. Also, update the new database with the
+ * datfrozenxid from the old cluster as that indicates the lowest xid available.
  *
  * In GPDB5 datminmxid does not exist, so use the chkpnt_nxtmulti to update
  * the value in the GPDB6 cluster.

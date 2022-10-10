@@ -223,7 +223,7 @@ main(int argc, char **argv)
 	 * however. So we still need to restore those separately on each
 	 * server.
 	 */
-	restore_aosegment_tables();
+	/* restore_aosegment_tables(); */
 
 	stop_postmaster(false);
 

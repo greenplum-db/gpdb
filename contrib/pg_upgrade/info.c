@@ -120,20 +120,20 @@ gen_db_file_maps(DbInfo *old_db, DbInfo *new_db,
 		/*
 		 * Verify that rels of same OID have same name.  The namespace name
 		 * should always match, but the relname might not match for TOAST
-		 * tables (and, therefore, their indexes).
+		 * and pg_aoseg tables (and, therefore, their indexes).
 		 *
-		 * TOAST table names initially match the heap pg_class oid, but
-		 * pre-9.0 they can change during certain commands such as CLUSTER, so
-		 * don't insist on a match if old cluster is < 9.0.
+		 * TOAST and pg_aoseg table names initially match the heap pg_class oid,
+		 * but pre-9.0 they can change during certain commands such as CLUSTER,
+		 * so don't insist on a match if old cluster is < 9.0.
 		 *
-		 * XXX GPDB: for TOAST tables, don't insist on a match at all
+		 * XXX GPDB: for TOAST and pg_aoseg tables, don't insist on a match at all
 		 * yet; there are other ways for us to get mismatched names. Ideally
 		 * this will go away eventually.
 		 */
 		if (strcmp(old_rel->nspname, new_rel->nspname) != 0 ||
 			(strcmp(old_rel->relname, new_rel->relname) != 0 &&
-			 (/* GET_MAJOR_VERSION(old_cluster.major_version) >= 900 || */
-			  strcmp(old_rel->nspname, "pg_toast") != 0)))
+			 strcmp(old_rel->nspname, "pg_toast") != 0 &&
+			 strcmp(old_rel->nspname, "pg_aoseg") != 0))
 		{
 			pg_log(PG_WARNING, "Relation names for OID %u in database \"%s\" do not match: "
 				   "old name \"%s.%s\", new name \"%s.%s\"\n",
@@ -146,11 +146,8 @@ gen_db_file_maps(DbInfo *old_db, DbInfo *new_db,
 			continue;
 		}
 
-		/*
-		 * External tables have relfilenodes but no physical files, and aoseg
-		 * tables are handled by their AO table
-		 */
-		if (old_rel->relstorage == 'x' || strcmp(new_rel->nspname, "pg_aoseg") == 0)
+		/* External tables have relfilenodes but no physical files */
+		if (old_rel->relstorage == 'x')
 		{
 			old_relnum++;
 			new_relnum++;
@@ -515,7 +512,7 @@ get_rel_infos(ClusterInfo *cluster, DbInfo *dbinfo)
 			 "    n.nspname !~ '^pg_toast_temp_' AND "
 	/* skip pg_toast because toast index have relkind == 'i', not 't' */
 			 "    n.nspname NOT IN ('pg_catalog', 'information_schema', "
-			 "						'binary_upgrade', 'pg_toast', 'pg_aoseg') AND "
+			 "						'binary_upgrade', 'pg_toast') AND "
 			 "    n.nspname NOT IN ('gp_toolkit', 'pg_bitmapindex') AND "
 			 "	  c.oid >= %u) "
 			 "  OR (n.nspname = 'pg_catalog' AND "
@@ -550,6 +547,25 @@ get_rel_infos(ClusterInfo *cluster, DbInfo *dbinfo)
 							  "FROM info_rels i JOIN pg_catalog.pg_index ind "
 							  "     ON ind.indrelid = i.reloid "
 							  "WHERE indisvalid AND i.toastheap != %u", InvalidOid));
+
+	/*
+	 * Resolve the edge case where an aoblkdir and its index exists, but the AO
+	 * table it was created for no longer has any indexes. The aoblkdir is
+	 * created the first time an index is placed on an AO table. If all indexes
+	 * on the table are dropped, the aoblkdir is not removed even though it is
+	 * unused. This is a known behavior. The edge case will result in an upgrade
+	 * failure when relations between the old and new clusters are compared. The
+	 * aoblkdirs and their indexes would exist on the old cluster, but not on
+	 * the new cluster. Filtering them out here also prevents their relfilenodes
+	 * from being transfered.
+	 */
+	PQclear(executeQueryOrDie(conn,
+				"DELETE FROM info_rels WHERE reloid IN ("
+				"SELECT c.oid "
+				"FROM pg_class c "
+				"JOIN pg_appendonly a ON c.oid IN (a.blkdirrelid, a.blkdiridxid) "
+				"LEFT JOIN pg_index i ON i.indrelid = a.relid "
+				"WHERE i.indexrelid IS NULL);"));
 
 	snprintf(query, sizeof(query),
 			 "SELECT i.*, n.nspname, c.relname, "
