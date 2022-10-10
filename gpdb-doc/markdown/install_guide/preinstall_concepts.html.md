@@ -59,7 +59,7 @@ When you deploy your Greenplum Database system, you have the option to configure
 
 A mirror segment must always reside on a different host than its primary segment. Mirror segments can be arranged across the hosts in the system in one of two standard configurations, or in a custom configuration you design. The default configuration, called *group* mirroring, places the mirror segments for all primary segments on one other host. Another option, called *spread* mirroring, spreads mirrors for each host's primary segments over the remaining hosts. Spread mirroring requires that there be more hosts in the system than there are primary segments on the host. On hosts with multiple network interfaces, the primary and mirror segments are distributed equally among the interfaces. [Figure 2](#jg163134) shows how table data is distributed across the segments when the default group mirroring option is configured.
 
-![](graphics/group-mirroring.png "Data Mirroring in Greenplum Database")
+![Group mirroring configuration](graphics/group-mirroring.png "Data Mirroring in Greenplum Database")
 
 #### <a id="topic6"></a>Segment Failover and Recovery 
 
@@ -141,7 +141,7 @@ The `gpfdist` program can serve data to the segment instances at an average rate
 
 Tanzu Greenplum Greenplum Command Center is an optional web-based performance monitoring and management tool for Greenplum Database. Administrators can install Command Center separately from Greenplum Database.
 
-![](graphics/cc_arch_gpdb.png "Greenplum Performance Monitoring Architecture")
+![Greenplum with Command Center](graphics/cc_arch_gpdb.png "Greenplum Performance Monitoring Architecture")
 
 **Parent topic:** [Introduction to Greenplum](preinstall_concepts.html)
 
