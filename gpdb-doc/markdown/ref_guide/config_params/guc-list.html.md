@@ -212,7 +212,9 @@ For each query run, prints the Greenplum query slice plan. *client\_min\_message
 
 ## <a id="default_statistics_target"></a>default\_statistics\_target 
 
-Sets the default statistics sampling target \(the number of values that are stored in the list of common values\) for table columns that have not had a column-specific target set via `ALTER TABLE SET STATISTICS`. Larger values may improve the quality of the Postgres Planner estimates.
+Sets the default statistics sampling target \(the number of values that are stored in the list of common values\) for table columns that have not had a column-specific target set via `ALTER TABLE SET STATISTICS`. Larger values increase `ANALYZE` time, but may improve the quality of the Postgres Planner estimates. The default is 100.
+
+For more information on the use of statistics by the Postgres Planner, refer to [Statistics Used by the Planner](https://www.postgresql.org/docs/12/planner-stats.html) in the PostgreSQL documentation.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
