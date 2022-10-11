@@ -1158,3 +1158,17 @@ reset enable_hashjoin;
 reset enable_nestloop;
 reset enable_indexscan;
 reset enable_bitmapscan;
+create table sublink_outer_table(a int, b int) distributed by(b);
+create table sublink_inner_table(x int, y bigint) distributed by(y);
+
+set optimizer to off;
+explain select t.* from sublink_outer_table t join (select y ,10*avg(x) s from sublink_inner_table group by y) RR on RR.y = t.b and t.a > rr.s;
+explain select * from sublink_outer_table T where a > (select 10*avg(x) from sublink_inner_table R where T.b=R.y);
+
+set enable_hashagg to off;
+explain select t.* from sublink_outer_table t join (select y ,10*avg(x) s from sublink_inner_table group by y) RR on RR.y = t.b and t.a > rr.s;
+explain select * from sublink_outer_table T where a > (select 10*avg(x) from sublink_inner_table R where T.b=R.y);
+drop table sublink_outer_table;
+drop table sublink_inner_table;
+reset optimizer;
+reset enable_hashagg;

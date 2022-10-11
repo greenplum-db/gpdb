@@ -155,13 +155,13 @@ IsCorrelatedOpExpr(OpExpr *opexp, Expr **innerExpr)
  *	returns true if correlated equality condition
  *	*innerExpr - points to the inner expr i.e. bar(innervar) in the condition
  *	*eqOp and *sortOp - equality and < operators, to implement the condition as a mergejoin.
+ *  The *eqOp and *sortOp should be determined according to innervar's type.
  */
 static bool
 IsCorrelatedEqualityOpExpr(OpExpr *opexp, Expr **innerExpr, Oid *eqOp, Oid *sortOp, bool *hashable)
 {
 	Oid			opfamily;
-	Oid			ltype;
-	Oid			rtype;
+	Oid			innerExprType;
 	List	   *l;
 
 	Assert(opexp);
@@ -170,11 +170,17 @@ IsCorrelatedEqualityOpExpr(OpExpr *opexp, Expr **innerExpr, Oid *eqOp, Oid *sort
 	Assert(eqOp);
 	Assert(sortOp);
 
+	if (!IsCorrelatedOpExpr(opexp, innerExpr))
+		return false;
+
+	Assert(*innerExpr);
+	innerExprType = exprType((Node *)*innerExpr);
+
 	/*
 	 * If this is an expression of the form a = b, then we want to know about
 	 * the vars involved.
 	 */
-	if (!op_mergejoinable(opexp->opno, exprType(linitial(opexp->args))))
+	if (!op_mergejoinable(opexp->opno, innerExprType))
 		return false;
 
 	/*
@@ -189,24 +195,19 @@ IsCorrelatedEqualityOpExpr(OpExpr *opexp, Expr **innerExpr, Oid *eqOp, Oid *sort
 	list_free(l);
 
 	/*
-	 * Look up the correct sort operator from the chosen opfamily.
+	 * Look up the correct equility/sort operators from the chosen opfamily.
 	 */
-	ltype = exprType(linitial(opexp->args));
-	rtype = exprType(lsecond(opexp->args));
-	*eqOp = get_opfamily_member(opfamily, ltype, rtype, BTEqualStrategyNumber);
+	*eqOp = get_opfamily_member(opfamily, innerExprType, innerExprType, BTEqualStrategyNumber);
 	if (!OidIsValid(*eqOp))	/* should not happen */
 		elog(ERROR, "could not find member %d(%u,%u) of opfamily %u",
-			 BTEqualStrategyNumber, ltype, rtype, opfamily);
+			 BTEqualStrategyNumber, innerExprType, innerExprType, opfamily);
 
-	*sortOp = get_opfamily_member(opfamily, ltype, rtype, BTLessStrategyNumber);
+	*sortOp = get_opfamily_member(opfamily, innerExprType, innerExprType, BTLessStrategyNumber);
 	if (!OidIsValid(*sortOp))	/* should not happen */
 		elog(ERROR, "could not find member %d(%u,%u) of opfamily %u",
-			 BTLessStrategyNumber, ltype, rtype, opfamily);
+			 BTLessStrategyNumber, innerExprType, innerExprType, opfamily);
 
-	*hashable = op_hashjoinable(*eqOp, ltype);
-
-	if (!IsCorrelatedOpExpr(opexp, innerExpr))
-		return false;
+	*hashable = op_hashjoinable(*eqOp, innerExprType);
 
 	return true;
 }
