@@ -600,21 +600,10 @@ CTranslatorDXLToPlStmt::TranslateDXLTblScan(
 	if (IMDRelation::ErelstorageForeign == md_rel->RetrieveRelStorageType())
 	{
 		OID oidRel = CMDIdGPDB::CastMdid(md_rel->MDId())->Oid();
-		ForeignScan *foreign_scan;
-		// We have separate paths for external tables here.
-		// Ideally, we shouldn't need a separate code path here.
-		// Can we just use the CreateForeignScan path?
-		if (gpdb::RelIsExternalTable(oidRel))
-		{
-			foreign_scan = gpdb::CreateForeignScanForExternalTable(
-				oidRel, index, qual, targetlist);
-		}
-		else
-		{
-			foreign_scan =
-				gpdb::CreateForeignScan(oidRel, index, qual, targetlist,
-										m_dxl_to_plstmt_context->m_orig_query, rte);
-		}
+
+		ForeignScan *foreign_scan =
+			gpdb::CreateForeignScan(oidRel, index, qual, targetlist,
+									m_dxl_to_plstmt_context->m_orig_query, rte);
 		foreign_scan->scan.scanrelid = index;
 		plan = &(foreign_scan->scan.plan);
 		plan_return = (Plan *) foreign_scan;
