@@ -91,7 +91,7 @@ explain insert into tbl_cds_buysell_orders_new (a,b,c)
         <dxl:SumAgg Mdid="0.2108.1.0"/>
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
-      <dxl:ExternalRelation Mdid="0.30252115.1.1" Name="ext_tbl_cds_buysell_orders_new" DistributionPolicy="Random" Keys="9,3">
+      <dxl:Relation Mdid="0.30252115.1.1" Name="ext_tbl_cds_buysell_orders_new" IsTemporary="false" StorageType="Heap" DistributionPolicy="Random" Keys="9,3">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
             <dxl:DefaultValue/>
@@ -127,7 +127,7 @@ explain insert into tbl_cds_buysell_orders_new (a,b,c)
         <dxl:IndexInfoList/>
         <dxl:Triggers/>
         <dxl:CheckConstraints/>
-      </dxl:ExternalRelation>
+      </dxl:Relation>
       <dxl:Type Mdid="0.26.1.0" Name="oid" IsRedistributable="true" IsHashable="true" IsMergeJoinable="true" IsComposite="false" IsFixedLength="true" Length="4" PassByValue="true">
         <dxl:EqualityOp Mdid="0.607.1.0"/>
         <dxl:InequalityOp Mdid="0.608.1.0"/>
@@ -345,7 +345,7 @@ explain insert into tbl_cds_buysell_orders_new (a,b,c)
             </dxl:SortingColumnList>
             <dxl:LimitCount/>
             <dxl:LimitOffset/>
-            <dxl:LogicalExternalGet>
+            <dxl:LogicalForeignGet>
               <dxl:TableDescriptor Mdid="0.30252115.1.1" TableName="ext_tbl_cds_buysell_orders_new">
                 <dxl:Columns>
                   <dxl:Column ColId="1" Attno="1" ColName="a" TypeMdid="0.23.1.0"/>
@@ -360,7 +360,7 @@ explain insert into tbl_cds_buysell_orders_new (a,b,c)
                   <dxl:Column ColId="10" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0"/>
                 </dxl:Columns>
               </dxl:TableDescriptor>
-            </dxl:LogicalExternalGet>
+            </dxl:LogicalForeignGet>
           </dxl:LogicalLimit>
         </dxl:LogicalProject>
       </dxl:LogicalInsert>
@@ -545,7 +545,7 @@ explain insert into tbl_cds_buysell_orders_new (a,b,c)
                 </dxl:SortingColumnList>
                 <dxl:LimitCount/>
                 <dxl:LimitOffset/>
-                <dxl:ExternalScan>
+                <dxl:ForeignScan>
                   <dxl:Properties>
                     <dxl:Cost StartupCost="0" TotalCost="438.700000" Rows="1000000.000000" Width="12"/>
                   </dxl:Properties>
@@ -575,7 +575,7 @@ explain insert into tbl_cds_buysell_orders_new (a,b,c)
                       <dxl:Column ColId="9" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0"/>
                     </dxl:Columns>
                   </dxl:TableDescriptor>
-                </dxl:ExternalScan>
+                </dxl:ForeignScan>
               </dxl:Sort>
             </dxl:Result>
           </dxl:Assert>

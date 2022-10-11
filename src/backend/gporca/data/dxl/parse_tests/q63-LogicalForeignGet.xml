@@ -8,7 +8,7 @@
       <dxl:Ident ColId="4" ColName="n_comment" TypeMdid="0.1043.1.0"/>
     </dxl:OutputColumns>
     <dxl:CTEList/>
-    <dxl:LogicalExternalGet>
+    <dxl:LogicalForeignGet>
       <dxl:TableDescriptor Mdid="0.1565413.1.1" TableName="ext_nation">
         <dxl:Columns>
           <dxl:Column ColId="1" Attno="1" ColName="n_nationkey" TypeMdid="0.23.1.0"/>
@@ -24,6 +24,6 @@
           <dxl:Column ColId="11" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0"/>
         </dxl:Columns>
       </dxl:TableDescriptor>
-    </dxl:LogicalExternalGet>
+    </dxl:LogicalForeignGet>
   </dxl:Query>
 </dxl:DXLMessage>

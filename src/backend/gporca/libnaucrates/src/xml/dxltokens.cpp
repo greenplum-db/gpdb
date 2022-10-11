@@ -527,7 +527,7 @@ CDXLTokens::Init(CMemoryPool *mp)
 		{EdxltokenRelStorageAppendOnlyRows,
 		 GPOS_WSZ_LIT("AppendOnly, Row-oriented")},
 		{EdxltokenRelStorageMixedPartitioned, GPOS_WSZ_LIT("MixedPartitioned")},
-		{EdxltokenRelStorageForeign, GPOS_WSZ_LIT("External")},
+		{EdxltokenRelStorageForeign, GPOS_WSZ_LIT("Foreign")},
 		{EdxltokenRelStorageCompositeType, GPOS_WSZ_LIT("Composite")},
 
 		{EdxltokenRelDistrPolicy, GPOS_WSZ_LIT("DistributionPolicy")},
