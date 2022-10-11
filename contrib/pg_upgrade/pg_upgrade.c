@@ -215,16 +215,6 @@ main(int argc, char **argv)
 	if (!is_greenplum_dispatcher_mode())
 		update_db_xids();
 
-	/*
-	 * In a segment, the data directory already contains all the objects,
-	 * because the segment is initialized by taking a physical copy of the
-	 * upgraded QD data directory. The auxiliary AO tables - containing
-	 * information about the segment files, are different in each server,
-	 * however. So we still need to restore those separately on each
-	 * server.
-	 */
-	/* restore_aosegment_tables(); */
-
 	stop_postmaster(false);
 
 	/*

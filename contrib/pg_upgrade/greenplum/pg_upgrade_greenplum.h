@@ -82,12 +82,6 @@ void reset_system_identifier(void);
 /* frozenxids_gp.c */
 void update_db_xids(void);
 
-/* aotable.c */
-
-void		restore_aosegment_tables(void);
-bool        is_appendonly(char relstorage);
-
-
 /* version_gp.c */
 
 void check_hash_partition_usage(void);
