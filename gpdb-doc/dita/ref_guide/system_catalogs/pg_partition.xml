@@ -61,7 +61,7 @@
           </row>
           <row>
             <entry colname="col1"><codeph>paratts</codeph></entry>
-            <entry colname="col2">smallint()</entry>
+            <entry colname="col2">int2vector</entry>
             <entry colname="col3"/>
             <entry colname="col4">An array of the attribute numbers (as in
                 <codeph>pg_attribute.attnum</codeph>) of the attributes that participate in defining
