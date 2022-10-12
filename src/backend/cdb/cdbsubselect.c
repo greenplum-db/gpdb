@@ -464,7 +464,38 @@ SubqueryToJoinWalker(Node *node, ConvertSubqueryToJoinContext *context)
 	return;
 }
 
+/*
+ * cdbsubselect_drop_distinct
+ */
+void
+cdbsubselect_drop_distinct(Query *subselect)
+{
+	if (subselect->limitCount == NULL &&
+		subselect->limitOffset == NULL)
+	{
+		/* Delete DISTINCT. */
+		subselect->distinctClause = NIL;
 
+		/* Delete GROUP BY if subquery has no aggregates and no HAVING. */
+		if (!subselect->hasAggs &&
+			subselect->havingQual == NULL)
+			subselect->groupClause = NIL;
+	}
+}	/* cdbsubselect_drop_distinct */
+
+/*
+ * cdbsubselect_drop_orderby
+ */
+void
+cdbsubselect_drop_orderby(Query *subselect)
+{
+	if (subselect->limitCount == NULL &&
+		subselect->limitOffset == NULL)
+	{
+		/* Delete ORDER BY. */
+		subselect->sortClause = NIL;
+	}
+}	/* cdbsubselect_drop_orderby */
 
 /**
  * Safe to convert expr sublink to a join
