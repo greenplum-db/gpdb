@@ -14,7 +14,7 @@ On a Greenplum Database segment host, the available host memory is shared among 
 
 The following figure illustrates how memory is consumed on a Greenplum Database segment host when resource queue-based resource management is active.
 
-![](graphics/memory.png "Greenplum Database Segment Host Memory")
+![Greenplum Database Segment Host Memory](graphics/memory.png "Greenplum Database Segment Host Memory")
 
 Beginning at the bottom of the illustration, the line labeled *A* represents the total host memory. The line directly above line *A* shows that the total host memory comprises both physical RAM and swap space.
 

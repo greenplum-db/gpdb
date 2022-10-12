@@ -30,7 +30,7 @@ Running UDFs inside the Docker container ensures that:
 
 ### <a id="plcontainer_arch"></a>PL/Container Architecture 
 
-![](graphics/pl_container_architecture.png)
+![PL/Container architecture](graphics/pl_container_architecture.png)
 
 **Example of the process flow**:
 
