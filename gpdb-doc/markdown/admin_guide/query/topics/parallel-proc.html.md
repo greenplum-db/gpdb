@@ -14,11 +14,11 @@ The master receives, parses, and optimizes the query. The resulting query plan i
 
 Most database operations—such as table scans, joins, aggregations, and sorts—run across all segments in parallel. Each operation is performed on a segment database independent of the data stored in the other segment databases.
 
-![](../../graphics/parallel_plan.jpg "Dispatching the Parallel Query Plan")
+![Dispatching the Parallel Query Plan](../../graphics/parallel_plan.jpg "Dispatching the Parallel Query Plan")
 
 Certain queries may access only data on a single segment, such as single-row `INSERT`, `UPDATE`, `DELETE`, or `SELECT` operations or queries that filter on the table distribution key column\(s\). In queries such as these, the query plan is not dispatched to all segments, but is targeted at the segment that contains the affected or relevant row\(s\).
 
-![](../../graphics/targeted_dispatch.jpg "Dispatching a Targeted Query Plan")
+![Dispatching a Targeted Query Plan](../../graphics/targeted_dispatch.jpg "Dispatching a Targeted Query Plan")
 
 ## <a id="topic3"></a>Understanding Greenplum Query Plans 
 
@@ -43,7 +43,7 @@ The query plan for this example has a *redistribute motion* that moves tuples be
 
 This query plan has another type of motion operation called a *gather motion*. A gather motion is when the segments send results back up to the master for presentation to the client. Because a query plan is always sliced wherever a motion occurs, this plan also has an implicit slice at the very top of the plan \(*slice 3*\). Not all query plans involve a gather motion. For example, a `CREATE TABLE x AS SELECT...` statement would not have a gather motion because tuples are sent to the newly created table, not to the master.
 
-![](../../graphics/slice_plan.jpg "Query Slice Plan")
+![Query Slice Plan](../../graphics/slice_plan.jpg "Query Slice Plan")
 
 ## <a id="topic4"></a>Understanding Parallel Query Execution 
 
@@ -55,5 +55,5 @@ Related processes that are working on the same slice of the query plan but on di
 
 [Figure 4](#iy141495) shows the query worker processes on the master and two segment instances for the query plan illustrated in [Figure 3](#iy140224).
 
-![](../../graphics/gangs.jpg "Query Worker Processes")
+![Query Worker Processes](../../graphics/gangs.jpg "Query Worker Processes")
 

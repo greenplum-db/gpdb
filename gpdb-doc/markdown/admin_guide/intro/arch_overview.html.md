@@ -26,7 +26,7 @@ Greenplum Database queries use a Volcano-style query engine model, where the exe
 
 Greenplum Database stores and processes large amounts of data by distributing the data and processing workload across several servers or *hosts*. Greenplum Database is an *array* of individual databases based upon PostgreSQL 9.4 working together to present a single database image. The *master* is the entry point to the Greenplum Database system. It is the database instance to which clients connect and submit SQL statements. The master coordinates its work with the other database instances in the system, called *segments*, which store and process the data.
 
-![](../graphics/highlevel_arch.jpg "High-Level Greenplum Database Architecture")
+![High-Level Greenplum Database Architecture](../graphics/highlevel_arch.jpg "High-Level Greenplum Database Architecture")
 
 The following topics describe the components that make up a Greenplum Database system and how they work together.
 
@@ -54,7 +54,7 @@ The standby master is kept up to date by a transaction log replication process, 
 
 Since the master does not contain any user data, only the system catalog tables need to be synchronized between the primary and backup copies. When these tables are updated, changes automatically copy over to the standby master so it is always synchronized with the primary.
 
-![](../graphics/standby_master.jpg "Master Mirroring in Greenplum Database")
+![Master Mirroring in Greenplum Database](../graphics/standby_master.jpg "Master Mirroring in Greenplum Database")
 
 ## <a id="arch_segments"></a>About the Greenplum Segments 
 
@@ -72,7 +72,7 @@ When you deploy your Greenplum Database system, you have the option to configure
 
 A mirror segment must always reside on a different host than its primary segment. Mirror segments can be arranged across the hosts in the system in one of two standard configurations, or in a custom configuration you design. The default configuration, called *group* mirroring, places the mirror segments for all primary segments on one other host. Another option, called *spread* mirroring, spreads mirrors for each host's primary segments over the remaining hosts. Spread mirroring requires that there be more hosts in the system than there are primary segments on the host. On hosts with multiple network interfaces, the primary and mirror segments are distributed equally among the interfaces. [Figure 2](#jg163134) shows how table data is distributed across the segments when the default group mirroring option is configured.
 
-![](../graphics/group-mirroring.png "Data Mirroring in Greenplum Database")
+![Data Mirroring in Greenplum Database](../graphics/group-mirroring.png "Data Mirroring in Greenplum Database")
 
 #### <a id="topic6"></a>Segment Failover and Recovery 
 
@@ -92,13 +92,13 @@ Segment hosts should also be dedicated to Greenplum Database operations only. To
 
 The following diagram shows an example Greenplum Database segment host hardware stack. The number of effective CPUs on a host is the basis for determining how many primary Greenplum Database segment instances to deploy per segment host. This example shows a host with two effective CPUs \(one dual-core CPU\). Note that there is one primary segment instance \(or primary/mirror pair if using mirroring\) per CPU core.
 
-![](../../install_guide/graphics/hardware_stack.jpg "Example Greenplum Database Segment Host Configuration")
+![Example Greenplum Database Segment Host Configuration](../../install_guide/graphics/hardware_stack.jpg "Example Greenplum Database Segment Host Configuration")
 
 ### <a id="topic8"></a>Example Segment Disk Layout 
 
 Each CPU is typically mapped to a logical disk. A logical disk consists of one primary file system \(and optionally a mirror file system\) accessing a pool of physical disks through an I/O channel or disk controller. The logical disk and file system are provided by the operating system. Most operating systems provide the ability for a logical disk drive to use groups of physical disks arranged in RAID arrays.
 
-![](../../install_guide/graphics/disk_raid.jpg "Logical Disk Layout in Greenplum Database")
+![Logical Disk Layout in Greenplum Database](../../install_guide/graphics/disk_raid.jpg "Logical Disk Layout in Greenplum Database")
 
 Depending on the hardware platform you choose, different RAID configurations offer different performance and capacity levels. Greenplum supports and certifies a number of reference hardware platforms and operating systems. Check with your sales account representative for the recommended configuration on your chosen platform.
 
@@ -124,13 +124,13 @@ This is done by creating separate host address names for each network interface.
 
 With this configuration, the operating system automatically selects the best path to the destination. Greenplum Database automatically balances the network destinations to maximize parallelism.
 
-![](../../install_guide/graphics/multi_nic_arch.jpg "Example Network Interface Architecture")
+![Example Network Interface Architecture](../../install_guide/graphics/multi_nic_arch.jpg "Example Network Interface Architecture")
 
 ### <a id="topic12"></a>Switch Configuration 
 
 When using multiple 10 Gigabit Ethernet switches within your Greenplum Database array, evenly divide the number of subnets between each switch. In this example configuration, if we had two switches, NICs 1 and 2 on each host would use switch 1 and NICs 3 and 4 on each host would use switch 2. For the master host, the host name bound to NIC 1 \(and therefore using switch 1\) is the effective master host name for the array. Therefore, if deploying a warm standby master for redundancy purposes, the standby master should map to a NIC that uses a different switch than the primary master.
 
-![](../../install_guide/graphics/multi_switch_arch.jpg "Example Switch Configuration")
+![Example Switch Configuration](../../install_guide/graphics/multi_switch_arch.jpg "Example Switch Configuration")
 
 ## <a id="topic13"></a>About ETL Hosts for Data Loading 
 
@@ -142,14 +142,14 @@ The `gpfdist` program can serve data to the segment instances at an average rate
 
 -   If your ETL machine is configured with multiple network interface cards \(NICs\) as described in [Network Interface Configuration](#topic11), run one instance of `gpfdist` on your ETL host and then define your external table definition so that the host name of each NIC is declared in the `LOCATION` clause \(see `CREATE EXTERNAL TABLE` in the *Greenplum Database Reference Guide*\). This allows network traffic between your Greenplum segment hosts and your ETL host to use all NICs simultaneously.
 
-![](../graphics/ext_tables_multinic.jpg "External Table Using Single gpfdist Instance with Multiple NICs")
+![External Table Using Single gpfdist Instance with Multiple NICs](../graphics/ext_tables_multinic.jpg "External Table Using Single gpfdist Instance with Multiple NICs")
 
 -   Run multiple `gpfdist` instances on your ETL host and divide your external data files equally between each instance. For example, if you have an ETL system with two network interface cards \(NICs\), then you could run two `gpfdist` instances on that machine to maximize your load performance. You would then divide the external table data files evenly between the two `gpfdist` programs.
 
-![](../graphics/ext_tables.jpg "External Tables Using Multiple gpfdist Instances with Multiple NICs")
+![External Tables Using Multiple gpfdist Instances with Multiple NICs](../graphics/ext_tables.jpg "External Tables Using Multiple gpfdist Instances with Multiple NICs")
 
 ## <a id="topic_e5t_whm_kbb"></a>About Tanzu Greenplum Performance Monitoring 
 
 Tanzu Greenplum Greenplum Command Center is an optional web-based performance monitoring and management tool for Greenplum Database. Administrators can install Command Center separately from Greenplum Database.
 
-![](../graphics/cc_arch_gpdb.png "Greenplum Performance Monitoring Architecture")
+![Greenplum Performance Monitoring Architecture](../graphics/cc_arch_gpdb.png "Greenplum Performance Monitoring Architecture")
