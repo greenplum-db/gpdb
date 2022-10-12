@@ -153,6 +153,8 @@
 #include "cdb/cdbendpoint.h"
 #include "cdb/ic_proxy_bgworker.h"
 #include "utils/metrics_utils.h"
+#include "utils/resource_manager.h"
+#include "utils/resgroup-ops.h"
 
 /*
  * This is set in backends that are handling a GPDB specific message (FTS or
@@ -1488,6 +1490,10 @@ PostmasterMain(int argc, char *argv[])
 				(errcode_for_file_access(),
 				 errmsg("could not remove file \"%s\": %m",
 						LOG_METAINFO_DATAFILE)));
+
+	/* If enabled, init cgroup */
+	if (IsResGroupEnabled())
+		ResGroupOps_Init();
 
 	/*
 	 * If enabled, start up syslogger collection subprocess

@@ -596,8 +596,6 @@ InitResGroups(void)
 				 errmsg("insufficient memory available"),
 				 errhint("Increase gp_resource_group_memory_limit")));
 
-	ResGroupOps_Init();
-
 	if (gp_resource_group_enable_cgroup_cpuset)
 	{
 		/* Get cpuset from cpuset/gpdb, and transform it into bitset */

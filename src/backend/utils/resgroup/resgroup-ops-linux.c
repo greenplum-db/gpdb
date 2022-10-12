@@ -1489,11 +1489,11 @@ ResGroupOps_Init(void)
 	initCpuSet();
 
 	/*
-	 * Put postmaster and all the children processes into the gpdb cgroup,
-	 * otherwise auxiliary processes might get too low priority when
-	 * gp_resource_group_cpu_priority is set to a large value
+	 * Create the auxiliary process cgroup, and put postmaster and all the
+	 * children processes into the group.
 	 */
-	ResGroupOps_AssignGroup(RESGROUP_ROOT_ID, NULL, PostmasterPid);
+	ResGroupOps_CreateGroup(RESGROUP_AUXILIARY_PROCESS_GROUP_ID);
+	ResGroupOps_AssignGroup(RESGROUP_AUXILIARY_PROCESS_GROUP_ID, NULL, PostmasterPid);
 }
 
 /* Adjust GUCs for this OS group implementation */

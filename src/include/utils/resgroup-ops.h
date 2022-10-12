@@ -33,6 +33,17 @@ typedef enum
 #define RESGROUP_ROOT_ID (InvalidOid)
 
 /*
+ * Default cpu group for postmaster process and it's auxiliary processes, such as
+ * BgWriter, SysLogger, WalWriter and so on. Because those auxiliary processes are
+ * created in different time and it's hard to add them into a same cgroup through
+ * their entrance, so we will create a default cpu group at the beginning of database
+ * start.
+ *
+ * This is a hard code programing, but we can't avoid it.
+ */
+#define RESGROUP_AUXILIARY_PROCESS_GROUP_ID 6441
+
+/*
  * Default cpuset group is a group manages the cpu cores which not belong to
  * any other cpuset group. All the processes which not belong to any cpuset
  * group will be run on cores in default cpuset group. It is a virtual group,
