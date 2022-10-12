@@ -675,8 +675,219 @@ QUERY PLAN
 ]
 (1 row)
 -- explain_processing_on
+-- Check Explain Text format output with jit enable
+--
+-- start_matchsubs
+-- m/\(slice\d+\): Functions: \d+\.\d+\. Timing: \d+\.\d+ ms total\./
+-- s/\(slice\d+\): Functions: \d+\.\d+\. Timing: \d+\.\d+ ms total\./\(slice###\): Functions: ##.###. Timing: ##.### ms total\./
+-- m/\(slice\d+\): Functions: \d+\.\d+ avg x \d+ workers, \d+\.\d+ max \(seg\d+\)\. Timing: \d+\.\d+ ms avg x \d+ workers, \d+\.\d+ ms max \(seg\d+\)\./
+-- s/\(slice\d+\): Functions: \d+\.\d+ avg x \d+ workers, \d+\.\d+ max \(seg\d+\)\. Timing: \d+\.\d+ ms avg x \d+ workers, \d+\.\d+ ms max \(seg\d+\)\./\(slice###\): Functions: ##.### avg x ### workers, ##.### max \(seg###\)\. Timing: ##.### ms avg x ### workers, ##.### ms max \(seg###\)\./
+-- end_matchsubs
+CREATE TABLE jit_explain_output(c1 int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'c1' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+INSERT INTO jit_explain_output SELECT generate_series(1,100);
+SET jit = on;
+SET jit_above_cost = 0;
+SET gp_explain_jit = on;
+-- explain_processing_off
+EXPLAIN SELECT * FROM jit_explain_output LIMIT 10;
+QUERY PLAN
+Limit  (cost=35.50..35.67 rows=10 width=4)
+  ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=35.50..36.01 rows=30 width=4)
+        ->  Limit  (cost=35.50..35.61 rows=10 width=4)
+              ->  Seq Scan on jit_explain_output  (cost=0.00..355.00 rows=32100 width=4)
+Optimizer: Postgres query optimizer
+JIT:
+  Functions: 2
+  Options: Inlining false, Optimization false, Expressions true, Deforming true
+(8 rows)
+-- explain_processing_on
+-- Check explain anlyze text format output with jit enable 
+-- explain_processing_off
+EXPLAIN (ANALYZE) SELECT * FROM jit_explain_output LIMIT 10;
+QUERY PLAN
+Limit  (cost=35.50..35.67 rows=10 width=4) (actual time=13.199..13.310 rows=10 loops=1)
+  ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=35.50..36.01 rows=30 width=4) (actual time=11.848..11.890 rows=10 loops=1)
+        ->  Limit  (cost=35.50..35.61 rows=10 width=4) (actual time=0.861..0.971 rows=10 loops=1)
+              ->  Seq Scan on jit_explain_output  (cost=0.00..355.00 rows=32100 width=4) (actual time=0.029..0.070 rows=10 loops=1)
+Optimizer: Postgres query optimizer
+Planning Time: 0.158 ms
+  (slice0)    Executor memory: 37K bytes.
+  (slice1)    Executor memory: 36K bytes avg x 3 workers, 36K bytes max (seg0).
+Memory used:  128000kB
+JIT:
+  Options: Inlining false, Optimization false, Expressions true, Deforming true.
+  (slice0): Functions: 2.00. Timing: 1.381 ms total.
+  (slice1): Functions: 1.00 avg x 3 workers, 1.00 max (seg0). Timing: 0.830 ms avg x 3 workers, 0.854 ms max (seg1).
+Execution Time: 24.023 ms
+(14 rows)
+-- explain_processing_on
+-- Check explain analyze json format output with jit enable
+-- start_matchsubs
+-- m/\"Actual Startup Time\": \d+\.\d+/
+-- s/\"Actual Startup Time\": \d+\.\d+/\"Actual Startup Time\": ###/
+-- m/\"Actual Total Time\": \d+\.\d+/
+-- s/\"Actual Total Time\": \d+\.\d+/\"Actual Total Time\": ###/
+-- m/\"Planning Time\": \d+\.\d+/
+-- s/\"Planning Time\": \d+\.\d+/\"Planning Time\": ###/
+-- m/\"Execution Time\": \d+\.\d+/
+-- s/\"Execution Time\": \d+\.\d+/\"Execution Time\": ###/
+-- m/\"slice\": \d+/
+-- s/\"slice\": \d+/"slice": ###/
+-- m/\"functions\": \d+\.\d+/
+-- s/\"functions\": \d+\.\d+/\"functions\": ###/
+-- m/\"Timing\": \d+\.\d+/
+-- s/\"Timing\": \d+\.\d+/\"Timing": ###/
+-- m/\"avg\": \d+\.\d+/
+-- s/\"avg\": \d+\.\d+/\"avg\": ###/
+-- m/\"nworker\": \d+/
+-- s/\"nworker\": \d+/\"nworker\": ###/
+-- m/\"max\": \d+\.\d+/
+-- s/\"max\": \d+\.\d+/\"max\": ###/
+-- m/\"segid\": \d+/
+-- s/\"segid\": \d+/\"segid\": ###/
+-- m/\"Memory used\": \d+/
+-- s/\"Memory used\": \d+/\"Memory used\": ###/
+-- end_matchsubs
+-- explain_processing_off
+EXPLAIN (ANALYZE, FORMAT json) SELECT * FROM jit_explain_output LIMIT 10;
+QUERY PLAN
+[
+  {
+    "Plan": {
+      "Node Type": "Limit",
+      "Slice": 0,
+      "Segments": 0,
+      "Gang Type": "unallocated",
+      "Parallel Aware": false,
+      "Startup Cost": 35.50,
+      "Total Cost": 35.67,
+      "Plan Rows": 10,
+      "Plan Width": 4,
+      "Actual Startup Time": 1.378,
+      "Actual Total Time": 1.576,
+      "Actual Rows": 10,
+      "Actual Loops": 1,
+      "Plans": [
+        {
+          "Node Type": "Gather Motion",
+          "Senders": 3,
+          "Receivers": 1,
+          "Parent Relationship": "Outer",
+          "Slice": 1,
+          "Segments": 3,
+          "Gang Type": "primary reader",
+          "Parallel Aware": false,
+          "Startup Cost": 35.50,
+          "Total Cost": 36.01,
+          "Plan Rows": 30,
+          "Plan Width": 4,
+          "Actual Startup Time": 0.815,
+          "Actual Total Time": 0.889,
+          "Actual Rows": 10,
+          "Actual Loops": 1,
+          "Plans": [
+            {
+              "Node Type": "Limit",
+              "Parent Relationship": "Outer",
+              "Slice": 1,
+              "Segments": 3,
+              "Gang Type": "primary reader",
+              "Parallel Aware": false,
+              "Startup Cost": 35.50,
+              "Total Cost": 35.61,
+              "Plan Rows": 10,
+              "Plan Width": 4,
+              "Actual Startup Time": 0.711,
+              "Actual Total Time": 0.870,
+              "Actual Rows": 10,
+              "Actual Loops": 1,
+              "Plans": [
+                {
+                  "Node Type": "Seq Scan",
+                  "Parent Relationship": "Outer",
+                  "Slice": 1,
+                  "Segments": 3,
+                  "Gang Type": "primary reader",
+                  "Parallel Aware": false,
+                  "Relation Name": "jit_explain_output",
+                  "Alias": "jit_explain_output",
+                  "Startup Cost": 0.00,
+                  "Total Cost": 355.00,
+                  "Plan Rows": 32100,
+                  "Plan Width": 4,
+                  "Actual Startup Time": 0.025,
+                  "Actual Total Time": 0.099,
+                  "Actual Rows": 10,
+                  "Actual Loops": 1
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "Optimizer": "Postgres query optimizer",
+    "Planning Time": 0.244,
+    "Triggers": [
+    ],
+    "Slice statistics": [
+      {
+        "Slice": 0,
+        "Executor Memory": 37800
+      },
+      {
+        "Slice": 1,
+        "Executor Memory": {
+          "Average": 36760,
+          "Workers": 3,
+          "Maximum Memory Used": 36760
+        }
+      }
+    ],
+    "Statement statistics": {
+      "Memory used": 128000
+    },
+    "JIT": {
+        "Options": {
+          "Inlining": false,
+          "Optimization": false,
+          "Expressions": true,
+          "Deforming": true
+        },
+        "slice": {
+          "slice": 0,
+          "functions": 2.00,
+          "Timing": 0.001
+        },
+        "slice": {
+          "slice": 1,
+          "Functions": {
+            "avg": 1.00,
+            "nworker": 3,
+            "max": 1.00,
+            "segid": 0
+          },
+          "Timing": {
+            "avg": 0.531,
+            "nworker": 3,
+            "max": 0.686,
+            "segid": 0
+          }
+        }
+    },
+    "Execution Time": 2.889
+  }
+]
+(1 row)
+-- explain_processing_on
+RESET jit;
+RESET jit_above_cost;
+RESET gp_explain_jit;
 -- Cleanup
 DROP TABLE boxes;
 DROP TABLE apples;
 DROP TABLE box_locations;
 DROP TABLE jsonexplaintest;
+DROP TABLE jit_explain_output;

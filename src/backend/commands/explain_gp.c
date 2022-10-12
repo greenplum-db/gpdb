@@ -75,6 +75,7 @@ typedef struct CdbExplain_SliceWorker
 {
 	double		peakmemused;	/* bytes alloc in per-query mem context tree */
 	double		vmem_reserved;	/* vmem reserved by a QE */
+	JitInstrumentation ji;      /* used by QD to print JIT summary of QEs */
 } CdbExplain_SliceWorker;
 
 
@@ -710,6 +711,8 @@ cdbexplain_collectSliceStats(PlanState *planstate,
 		(double) MemoryContextGetPeakSpace(estate->es_query_cxt);
 
 	out_worker->vmem_reserved = (double) VmemTracker_GetMaxReservedVmemBytes();
+	if (estate->es_jit != NULL)
+		out_worker->ji = estate->es_jit->instr;
 }								/* cdbexplain_collectSliceStats */
 
 
@@ -2209,4 +2212,160 @@ void ExplainParallelRetrieveCursor(ExplainState *es, QueryDesc* queryDesc)
 	}
 	ExplainPropertyText("Endpoint", endpointInfoStr.data, es);
 	ExplainCloseGroup("Cursor", "Cursor", true, es);
+}
+
+/*
+ * cdbexplain_printJITSummary -
+ *    Print summarized JIT instrumentation from all QEs
+ */
+void
+cdbexplain_printJITSummary(ExplainState *es, QueryDesc *queryDesc)
+{
+	CdbExplain_SliceSummary *ss;
+	CdbExplain_SliceWorker *ssw;
+	JitInstrumentation 		*ji;
+	instr_time		 total_time;
+
+	/* don't print information if no JITing happened */
+	int jit_flags = queryDesc->estate->es_jit_flags;
+	if (!(jit_flags & PGJIT_PERFORM))
+		return;
+
+	ExplainOpenGroup("JIT", "JIT", true, es);
+	es->indent += 1;
+
+	if (es->format == EXPLAIN_FORMAT_TEXT)
+	{
+		appendStringInfo(es->str, "JIT:\n");
+		appendStringInfoSpaces(es->str, es->indent * 2);
+		appendStringInfo(es->str, "Options: %s %s, %s %s, %s %s, %s %s.\n",
+						 "Inlining", jit_flags & PGJIT_INLINE ? "true" : "false",
+						 "Optimization", jit_flags & PGJIT_OPT3 ? "true" : "false",
+						 "Expressions", jit_flags & PGJIT_EXPR ? "true" : "false",
+						 "Deforming", jit_flags & PGJIT_DEFORM ? "true" : "false");
+	}
+	else
+	{
+		ExplainOpenGroup("Options", "Options", true, es);
+		ExplainPropertyBool("Inlining", jit_flags & PGJIT_INLINE, es);
+		ExplainPropertyBool("Optimization", jit_flags & PGJIT_OPT3, es);
+		ExplainPropertyBool("Expressions", jit_flags & PGJIT_EXPR, es);
+		ExplainPropertyBool("Deforming", jit_flags & PGJIT_DEFORM, es);
+		ExplainCloseGroup("Options", "Options", true, es);
+	}
+
+	for (int slice_index = 0; slice_index < es->showstatctx->nslice; slice_index++)
+	{
+		int idx1 = 0, idx2 = 0, nworker = 0;
+		double avg_functions = 0.0, max_functions = 0.0, avg_time = 0.0, max_time = 0.0;
+		ss = es->showstatctx->slices + slice_index;
+
+		/* collect information from workers */
+		for (int j = 0; j < ss->nworker; j++)
+		{
+			ssw = ss->workers + j;
+			ji = &ssw->ji;
+
+			// jit is not performed on current worker
+			if (ji->created_functions == 0)
+				continue;
+
+			avg_functions += ji->created_functions;
+			if (ji->created_functions > max_functions)
+			{
+				max_functions = ji->created_functions;
+				idx1 = j;
+			}
+
+			/* calculate total time */
+			INSTR_TIME_SET_ZERO(total_time);
+			INSTR_TIME_ADD(total_time, ji->generation_counter);
+			INSTR_TIME_ADD(total_time, ji->inlining_counter);
+			INSTR_TIME_ADD(total_time, ji->optimization_counter);
+			INSTR_TIME_ADD(total_time, ji->emission_counter);
+
+			elog(DEBUG5, "JIT Instrumentation(slice%d seg%d): functions %zu, generation_counter %.3f ms,"
+						 "inlining_counter %.3f ms, optimization_counter %.3f ms, emission_counter %.3f ms,"
+						 "total_time %.3f ms.",
+						 slice_index,
+						 ss->segindex0 + j,
+						 ji->created_functions,
+						 1000.0 * INSTR_TIME_GET_DOUBLE(ji->generation_counter),
+						 1000.0 * INSTR_TIME_GET_DOUBLE(ji->inlining_counter),
+						 1000.0 * INSTR_TIME_GET_DOUBLE(ji->optimization_counter),
+						 1000.0 * INSTR_TIME_GET_DOUBLE(ji->emission_counter),
+						 1000.0 * INSTR_TIME_GET_DOUBLE(total_time));
+
+			avg_time += INSTR_TIME_GET_DOUBLE(total_time);
+			if (INSTR_TIME_GET_DOUBLE(total_time) > max_time)
+			{
+				max_time = INSTR_TIME_GET_DOUBLE(total_time);
+				idx2 = j;
+			}
+			nworker++;
+		}
+
+		// print nothing if jit is not performed on all workers in current slice
+		if (nworker == 0)
+			continue;
+
+		avg_functions /= nworker;
+		avg_time /= nworker;
+		if (es->format == EXPLAIN_FORMAT_TEXT)
+		{
+			appendStringInfoSpaces(es->str, es->indent * 2);
+			appendStringInfo(es->str, "(slice%d): ", slice_index);
+			appendStringInfo(es->str, "Functions: ");
+			if (ss->nworker == 1)
+				appendStringInfo(es->str, "%.2f. ", max_functions);
+			else
+				appendStringInfo(es->str, "%.2f avg x %d workers, %.2f max (seg%d). ",
+								 avg_functions, nworker, max_functions, ss->segindex0 + idx1);
+
+			if (es->analyze && es->timing)
+			{
+				appendStringInfo(es->str, "Timing: ");
+				if (ss->nworker == 1)
+					appendStringInfo(es->str, "%.3f ms total.\n", 1000.0 * max_time);
+				else
+					appendStringInfo(es->str, "%.3f ms avg x %d workers, %.3f ms max (seg%d).\n",
+									 1000.0 * avg_time, nworker, 1000.0 * max_time, ss->segindex0 + idx2);
+			}
+		}
+		else
+		{
+			ExplainOpenGroup("slice", "slice", true, es);
+			ExplainPropertyInteger("slice", NULL, slice_index, es);
+			if (ss->nworker == 1)
+				ExplainPropertyFloat("functions", NULL, max_functions, 2, es);
+			else
+			{
+				ExplainOpenGroup("Functions", "Functions", true, es);
+				ExplainPropertyFloat("avg", NULL, avg_functions, 2, es);
+				ExplainPropertyInteger("nworker", NULL, nworker, es);
+				ExplainPropertyFloat("max", NULL, max_functions, 2, es);
+				ExplainPropertyInteger("segid", NULL, ss->segindex0 + idx1, es);
+				ExplainCloseGroup("Functions", "Functions", true, es);
+			}
+
+			if (es->analyze && es->timing)
+			{
+				if (ss->nworker == 1)
+					ExplainPropertyFloat("Timing", NULL, max_time, 3, es);
+				else
+				{
+					ExplainOpenGroup("Timing", "Timing", true, es);
+					ExplainPropertyFloat("avg", NULL, 1000.0 * avg_time, 3, es);
+					ExplainPropertyInteger("nworker", NULL, nworker, es);
+					ExplainPropertyFloat("max", NULL, 1000.0 * max_time, 3, es);
+					ExplainPropertyInteger("segid", NULL, ss->segindex0 + idx2, es);
+					ExplainCloseGroup("Timing", "Timing", true, es);
+				}
+			}
+			ExplainCloseGroup("slice", "slice", true, es);
+		}
+	}
+
+	es->indent -= 1;
+	ExplainCloseGroup("JIT", "JIT", true, es);
 }

@@ -138,8 +138,69 @@ EXPLAIN (FORMAT JSON, COSTS OFF) SELECT * FROM jsonexplaintest WHERE i = 2;
 
 -- explain_processing_on
 
+-- Check Explain Text format output with jit enable
+--
+-- start_matchsubs
+-- m/\(slice\d+\): Functions: \d+\.\d+\. Timing: \d+\.\d+ ms total\./
+-- s/\(slice\d+\): Functions: \d+\.\d+\. Timing: \d+\.\d+ ms total\./\(slice###\): Functions: ##.###. Timing: ##.### ms total\./
+-- m/\(slice\d+\): Functions: \d+\.\d+ avg x \d+ workers, \d+\.\d+ max \(seg\d+\)\. Timing: \d+\.\d+ ms avg x \d+ workers, \d+\.\d+ ms max \(seg\d+\)\./
+-- s/\(slice\d+\): Functions: \d+\.\d+ avg x \d+ workers, \d+\.\d+ max \(seg\d+\)\. Timing: \d+\.\d+ ms avg x \d+ workers, \d+\.\d+ ms max \(seg\d+\)\./\(slice###\): Functions: ##.### avg x ### workers, ##.### max \(seg###\)\. Timing: ##.### ms avg x ### workers, ##.### ms max \(seg###\)\./
+-- end_matchsubs
+CREATE TABLE jit_explain_output(c1 int);
+INSERT INTO jit_explain_output SELECT generate_series(1,100);
+
+SET jit = on;
+SET jit_above_cost = 0;
+SET gp_explain_jit = on;
+
+-- explain_processing_off
+EXPLAIN SELECT * FROM jit_explain_output LIMIT 10;
+-- explain_processing_on
+
+-- Check explain anlyze text format output with jit enable 
+-- explain_processing_off
+EXPLAIN (ANALYZE) SELECT * FROM jit_explain_output LIMIT 10;
+-- explain_processing_on
+
+-- Check explain analyze json format output with jit enable
+
+-- start_matchsubs
+-- m/\"Actual Startup Time\": \d+\.\d+/
+-- s/\"Actual Startup Time\": \d+\.\d+/\"Actual Startup Time\": ###/
+-- m/\"Actual Total Time\": \d+\.\d+/
+-- s/\"Actual Total Time\": \d+\.\d+/\"Actual Total Time\": ###/
+-- m/\"Planning Time\": \d+\.\d+/
+-- s/\"Planning Time\": \d+\.\d+/\"Planning Time\": ###/
+-- m/\"Execution Time\": \d+\.\d+/
+-- s/\"Execution Time\": \d+\.\d+/\"Execution Time\": ###/
+-- m/\"slice\": \d+/
+-- s/\"slice\": \d+/"slice": ###/
+-- m/\"functions\": \d+\.\d+/
+-- s/\"functions\": \d+\.\d+/\"functions\": ###/
+-- m/\"Timing\": \d+\.\d+/
+-- s/\"Timing\": \d+\.\d+/\"Timing": ###/
+-- m/\"avg\": \d+\.\d+/
+-- s/\"avg\": \d+\.\d+/\"avg\": ###/
+-- m/\"nworker\": \d+/
+-- s/\"nworker\": \d+/\"nworker\": ###/
+-- m/\"max\": \d+\.\d+/
+-- s/\"max\": \d+\.\d+/\"max\": ###/
+-- m/\"segid\": \d+/
+-- s/\"segid\": \d+/\"segid\": ###/
+-- m/\"Memory used\": \d+/
+-- s/\"Memory used\": \d+/\"Memory used\": ###/
+-- end_matchsubs
+
+-- explain_processing_off
+EXPLAIN (ANALYZE, FORMAT json) SELECT * FROM jit_explain_output LIMIT 10;
+-- explain_processing_on
+
+RESET jit;
+RESET jit_above_cost;
+RESET gp_explain_jit;
 -- Cleanup
 DROP TABLE boxes;
 DROP TABLE apples;
 DROP TABLE box_locations;
 DROP TABLE jsonexplaintest;
+DROP TABLE jit_explain_output;
