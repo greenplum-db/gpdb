@@ -2955,7 +2955,11 @@ If Greenplum Database detects a corruption in the free TID list, the free TID li
 
 ## <a id="verify_gpfdists_cert"></a>verify\_gpfdists\_cert 
 
-When a Greenplum Database external table is defined with the `gpfdists` protocol to use SSL security, this parameter controls whether SSL certificate authentication is enabled. The default is `true`, SSL authentication is enabled when Greenplum Database communicates with the `gpfdist` utility to either read data from or write data to an external data source.
+When a Greenplum Database external table is defined with the `gpfdists` protocol to use SSL security, this parameter controls whether SSL certificate authentication is enabled.
+
+Regardless of the setting of this server configuration parameter, Greenplum Database always encrypts data that you read from or write to an external table that specifies the `gpfdists` protocol.
+
+The default is `true`, SSL authentication is enabled when Greenplum Database communicates with the `gpfdist` utility to either read data from or write data to an external data source.
 
 The value `false` deactivates SSL certificate authentication. These SSL exceptions are ignored:
 
