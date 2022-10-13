@@ -3695,6 +3695,16 @@ CTranslatorQueryToDXL::TranslateTVFToDXL(const RangeTblEntry *rte,
 	// funcexpr evaluates to const and returns composite type
 	if (IsA(rtfunc->funcexpr, Const))
 	{
+		// If the const is NULL, the const value cannot be populated
+		// Raise exception
+		// This happens to PostGIS functions, which aren't supported
+		const Const *constant = (Const *) rtfunc->funcexpr;
+		if (constant->constisnull)
+		{
+			GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature,
+					   GPOS_WSZ_LIT("Row-type variable"));
+		}
+
 		CDXLNode *constValue = m_scalar_translator->TranslateScalarToDXL(
 			(Expr *) (rtfunc->funcexpr), m_var_to_colid_map);
 		tvf_dxlnode->AddChild(constValue);
