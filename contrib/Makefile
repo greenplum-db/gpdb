@@ -17,6 +17,7 @@ SUBDIRS = \
 		fuzzystrmatch	\
 		hstore		\
 		intarray	\
+		ltree		\
 		pageinspect	\
 		passwordcheck	\
 		pg_archivecleanup \

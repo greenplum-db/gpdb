@@ -34,6 +34,7 @@ endif
 	$(MAKE) -C contrib/pg_upgrade all
 	$(MAKE) -C contrib/pg_xlogdump all
 	$(MAKE) -C contrib/hstore all
+	$(MAKE) -C contrib/ltree all
 	$(MAKE) -C contrib/pgcrypto all
 ifeq ($(with_openssl), yes)
 	$(MAKE) -C contrib/sslinfo all
@@ -79,6 +80,7 @@ endif
 	$(MAKE) -C contrib/pg_upgrade $@
 	$(MAKE) -C contrib/pg_xlogdump $@
 	$(MAKE) -C contrib/hstore $@
+	$(MAKE) -C contrib/ltree $@
 	$(MAKE) -C contrib/pgcrypto $@
 ifeq ($(with_openssl), yes)
 	$(MAKE) -C contrib/sslinfo $@
@@ -168,7 +170,7 @@ ICW_TARGETS += contrib/pg_trgm contrib/btree_gin
 ifneq ($(OS),Darwin)
 	ICW_TARGETS += contrib/dblink contrib/postgres_fdw
 endif
-ICW_TARGETS += contrib/indexscan contrib/hstore contrib/pgcrypto
+ICW_TARGETS += contrib/indexscan contrib/hstore contrib/ltree contrib/pgcrypto
 # sslinfo depends on openssl
 ifeq ($(with_openssl), yes)
 ICW_TARGETS += contrib/sslinfo
