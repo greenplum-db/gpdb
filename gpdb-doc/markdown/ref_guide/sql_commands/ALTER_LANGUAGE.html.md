@@ -1,12 +1,12 @@
 # ALTER LANGUAGE 
 
-Changes the name of a procedural language.
+Changes the definition of a procedural language.
 
 ## <a id="section2"></a>Synopsis 
 
 ``` {#sql_command_synopsis}
-ALTER LANGUAGE <name> RENAME TO <newname>
-ALTER LANGUAGE <name> OWNER TO <new_owner>
+ALTER [ PROCEDURAL ] LANGUAGE <name> RENAME TO <new_name>
+ALTER [ PROCEDURAL ] LANGUAGE <name> OWNER TO { <new_owner> | CURRENT_USER | SESSION_USER }
 ```
 
 ## <a id="section3"></a>Description 
@@ -18,7 +18,7 @@ ALTER LANGUAGE <name> OWNER TO <new_owner>
 name
 :   Name of a language.
 
-newname
+new\_name
 :   The new name of the language.
 
 new\_owner
