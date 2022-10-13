@@ -818,8 +818,10 @@ dumpResGroups(PGconn *conn)
 	 */
 	fprintf(OPF, "ALTER RESOURCE GROUP \"admin_group\" SET cpu_rate_limit 1;\n");
 	fprintf(OPF, "ALTER RESOURCE GROUP \"default_group\" SET cpu_rate_limit 1;\n");
+	fprintf(OPF, "ALTER RESOURCE GROUP \"system_group\" SET cpu_rate_limit 1;\n");
 	fprintf(OPF, "ALTER RESOURCE GROUP \"admin_group\" SET memory_limit 1;\n");
 	fprintf(OPF, "ALTER RESOURCE GROUP \"default_group\" SET memory_limit 1;\n");
+	fprintf(OPF, "ALTER RESOURCE GROUP \"system_group\" SET memory_limit 1;\n");
 
 	for (i = 0; i < PQntuples(res); i++)
 	{
@@ -843,7 +845,8 @@ dumpResGroups(PGconn *conn)
 
 		resetPQExpBuffer(buf);
 
-		if (0 == strcmp(groupname, "default_group") || 0 == strcmp(groupname, "admin_group"))
+		if (0 == strcmp(groupname, "default_group") || 0 == strcmp(groupname, "admin_group")
+				|| 0 == strcmp(groupname, "system_group"))
 		{
 			/*
 			 * We can't emit CREATE statements for the built-in groups as they
