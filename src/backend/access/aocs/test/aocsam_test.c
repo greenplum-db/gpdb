@@ -20,11 +20,15 @@ test__aocs_begin_headerscan(void **state)
 	AOCSHeaderScanDesc desc;
 	RelationData reldata;
 	FormData_pg_class pgclass;
+	int nattr = 1;
 
 	reldata.rd_rel = &pgclass;
 	reldata.rd_id = 12345;
-	
-	int nattr = 1;
+	reldata.rd_rel->relnatts = nattr;
+	reldata.rd_att = (TupleDesc) palloc(sizeof(TupleDescData) +
+										(sizeof(Form_pg_attribute *) * nattr));
+	memset(reldata.rd_att->attrs, 0, sizeof(Form_pg_attribute *) * nattr);
+	reldata.rd_att->natts = nattr;
 
 	/* opts and opt will be freed by aocs_begin_headerscan */
 	StdRdOptions **opts =
@@ -71,8 +75,9 @@ test__aocs_addcol_init(void **state)
 	wal_level = WAL_LEVEL_REPLICA;
 
 	/* 3 existing columns */
-	opts[0] = opts[1] = opts[2] = (StdRdOptions *) NULL;
-
+	opts[0] = (StdRdOptions *) palloc(sizeof(StdRdOptions));
+	opts[1] = (StdRdOptions *) palloc(sizeof(StdRdOptions));
+	opts[2] = (StdRdOptions *) palloc(sizeof(StdRdOptions));
 	/* 2 newly added columns */
 	opts[3] = (StdRdOptions *) palloc(sizeof(StdRdOptions));
 	strcpy(opts[3]->compresstype, "rle_type");
@@ -107,10 +112,12 @@ test__aocs_addcol_init(void **state)
 	rel.relpersistence = RELPERSISTENCE_PERMANENT;
 	reldata.rd_id = 12345;
 	reldata.rd_rel = &rel;
+
+	reldata.rd_rel->relnatts = 5;
 	reldata.rd_att = (TupleDesc) palloc(sizeof(TupleDescData) +
 										(sizeof(Form_pg_attribute *) * nattr));
 	memset(reldata.rd_att->attrs, 0, sizeof(Form_pg_attribute *) * nattr);
-	reldata.rd_att->natts = nattr;
+	reldata.rd_att->natts = 5;
 
 	expect_value(GetAppendOnlyEntryAttributes, relid, 12345);
 	expect_any(GetAppendOnlyEntryAttributes, blocksize);
