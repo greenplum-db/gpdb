@@ -24,6 +24,7 @@ CREATE OR REPLACE VIEW rg_name_view AS
 	WHERE C.groupid = S.groupid
 	  AND C.groupname != 'default_group'
 	  AND C.groupname != 'admin_group'
+      AND C.groupname != 'system_group'
 	ORDER BY C.groupid;
 
 -- TODO: need to cleanup all existing resgroups

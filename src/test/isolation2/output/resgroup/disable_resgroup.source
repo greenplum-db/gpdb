@@ -2,10 +2,12 @@
 ! ls -d @cgroup_mnt_point@/cpu/gpdb/*/;
 @cgroup_mnt_point@/cpu/gpdb/6437/
 @cgroup_mnt_point@/cpu/gpdb/6438/
+@cgroup_mnt_point@/cpu/gpdb/6441/
 
 ! ls -d @cgroup_mnt_point@/cpuacct/gpdb/*/;
 @cgroup_mnt_point@/cpuacct/gpdb/6437/
 @cgroup_mnt_point@/cpuacct/gpdb/6438/
+@cgroup_mnt_point@/cpuacct/gpdb/6441/
 
 
 -- reset the GUC and restart cluster.

@@ -96,9 +96,10 @@ ERROR:  resource group "rg_test_group" does not exist
 SELECT * FROM gp_toolkit.gp_resgroup_config;
  groupid | groupname     | concurrency | cpu_rate_limit | memory_limit | memory_shared_quota | memory_spill_ratio | memory_auditor | cpuset 
 ---------+---------------+-------------+----------------+--------------+---------------------+--------------------+----------------+--------
- 6437    | default_group | 20          | 30             | 30           | 80                  | 10                 | vmtracker      | -1     
+ 6437    | default_group | 20          | 20             | 30           | 80                  | 10                 | vmtracker      | -1     
+ 6441    | system_group  | 0           | 10             | 0            | 0                   | 0                  | vmtracker      | -1     
  6438    | admin_group   | 2           | 10             | 10           | 80                  | 10                 | vmtracker      | -1     
-(2 rows)
+(3 rows)
 
 -- negative
 

@@ -18,7 +18,7 @@
 -- setup
 --
 
-CREATE OR REPLACE VIEW rg_name_view AS SELECT S.rsgname, C.concurrency FROM gp_toolkit.gp_resgroup_config C, gp_toolkit.gp_resgroup_status S WHERE C.groupid = S.groupid AND C.groupname != 'default_group' AND C.groupname != 'admin_group' ORDER BY C.groupid;
+CREATE OR REPLACE VIEW rg_name_view AS SELECT S.rsgname, C.concurrency FROM gp_toolkit.gp_resgroup_config C, gp_toolkit.gp_resgroup_status S WHERE C.groupid = S.groupid AND C.groupname != 'default_group' AND C.groupname != 'admin_group' AND C.groupname != 'system_group' ORDER BY C.groupid;
 CREATE
 
 -- TODO: need to cleanup all existing resgroups

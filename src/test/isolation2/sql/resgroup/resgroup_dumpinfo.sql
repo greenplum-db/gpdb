@@ -23,7 +23,7 @@ def validate(json_obj, segnum):
        if key not in qd_info:
            return False
 
-   groups = [g for g in qd_info["groups"] if g["group_id"] > 6438]
+   groups = [g for g in qd_info["groups"] if g["group_id"] > 6441]
    #validate user created group
    if len(groups) != 1:
       return False
