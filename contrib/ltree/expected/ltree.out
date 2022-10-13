@@ -1161,6 +1161,7 @@ SELECT '{j.k.l.m, g.b.c.d.e}'::ltree[] ?~ 'A*@|g.b.c.d.e';
 (1 row)
 
 CREATE TABLE ltreetest (t ltree);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, and no column type is suitable for a distribution key. Creating a NULL policy entry.
 \copy ltreetest FROM 'data/ltree.data'
 SELECT * FROM ltreetest WHERE t <  '12.3' order by t asc;
                 t                 
@@ -3339,7 +3340,9 @@ SELECT * FROM ltreetest WHERE t ? '{23.*.1,23.*.2}' order by t asc;
  23.3.32.21.5.14.10.17.1
 (4 rows)
 
+-- start_ignore
 create unique index tstidx on ltreetest (t);
+ERROR:  UNIQUE and DISTRIBUTED RANDOMLY are incompatible
 set enable_seqscan=off;
 SELECT * FROM ltreetest WHERE t <  '12.3' order by t asc;
                 t                 
@@ -5380,6 +5383,8 @@ SELECT * FROM ltreetest WHERE t >  '12.3' order by t asc;
 (882 rows)
 
 drop index tstidx;
+ERROR:  index "tstidx" does not exist
+-- end_ignore
 create index tstidx on ltreetest using gist (t);
 set enable_seqscan=off;
 SELECT * FROM ltreetest WHERE t <  '12.3' order by t asc;
@@ -7560,6 +7565,7 @@ SELECT * FROM ltreetest WHERE t ? '{23.*.1,23.*.2}' order by t asc;
 (4 rows)
 
 create table _ltreetest (t ltree[]);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, and no column type is suitable for a distribution key. Creating a NULL policy entry.
 \copy _ltreetest FROM 'data/_ltree.data'
 SELECT count(*) FROM _ltreetest WHERE t @> '1.1.1' ;
  count 
@@ -7670,4 +7676,12 @@ SELECT count(*) FROM _ltreetest WHERE t ? '{23.*.1,23.*.2}' ;
 -------
     15
 (1 row)
+
+-- Test that has all opclasses
+select opcname,amname from pg_opclass opc,  pg_am am  where am.oid=opc.opcmethod and opcintype='ltree'::regtype;
+    opcname     | amname 
+----------------+--------
+ ltree_ops      | btree
+ gist_ltree_ops | gist
+(2 rows)
 

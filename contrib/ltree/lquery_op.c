@@ -50,7 +50,7 @@ getlexeme(char *start, char *end, int *len)
 }
 
 bool
-			compare_subnode(ltree_level *t, char *qn, int len, int (*cmpptr) (const char *, const char *, size_t), bool anyend)
+compare_subnode(ltree_level *t, char *qn, int len, int (*cmpptr) (const char *, const char *, size_t), bool anyend)
 {
 	char	   *endt = t->name + t->len;
 	char	   *endq = qn + len;
@@ -147,7 +147,7 @@ static struct
 {
 	bool		muse;
 	uint32		high_pos;
-}	SomeStack =
+}			SomeStack =
 
 {
 	false, 0,
@@ -302,8 +302,8 @@ checkCond(lquery_level *curq, int query_numlevel, ltree_level *curt, int tree_nu
 Datum
 ltq_regex(PG_FUNCTION_ARGS)
 {
-	ltree	   *tree = PG_GETARG_LTREE(0);
-	lquery	   *query = PG_GETARG_LQUERY(1);
+	ltree	   *tree = PG_GETARG_LTREE_P(0);
+	lquery	   *query = PG_GETARG_LQUERY_P(1);
 	bool		res = false;
 
 	if (query->flag & LQUERY_HASNOT)
@@ -338,7 +338,7 @@ ltq_rregex(PG_FUNCTION_ARGS)
 Datum
 lt_q_regex(PG_FUNCTION_ARGS)
 {
-	ltree	   *tree = PG_GETARG_LTREE(0);
+	ltree	   *tree = PG_GETARG_LTREE_P(0);
 	ArrayType  *_query = PG_GETARG_ARRAYTYPE_P(1);
 	lquery	   *query = (lquery *) ARR_DATA_PTR(_query);
 	bool		res = false;
@@ -356,7 +356,7 @@ lt_q_regex(PG_FUNCTION_ARGS)
 	while (num > 0)
 	{
 		if (DatumGetBool(DirectFunctionCall2(ltq_regex,
-							 PointerGetDatum(tree), PointerGetDatum(query))))
+							 				PointerGetDatum(tree), PointerGetDatum(query))))
 		{
 
 			res = true;
