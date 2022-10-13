@@ -745,20 +745,14 @@ static void
 validate_sql_exec_location(char exec_location, bool proretset)
 {
 	/*
-	 * ON COORDINATOR and ON ALL SEGMENTS are only supported for set-returning
+	 * ON ALL SEGMENTS is only supported for set-returning
 	 * functions.
 	 */
 	switch (exec_location)
 	{
 		case PROEXECLOCATION_ANY:
-			/* ok */
-			break;
-
 		case PROEXECLOCATION_COORDINATOR:
-			if (!proretset)
-				ereport(ERROR,
-						(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-						 errmsg("EXECUTE ON COORDINATOR is only supported for set-returning functions")));
+			/* ok */
 			break;
 
 		case PROEXECLOCATION_INITPLAN:

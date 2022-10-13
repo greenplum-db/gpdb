@@ -247,6 +247,24 @@ alter function test_srf() EXECUTE ON ANY;
 DROP FUNCTION test_srf();
 DROP ROLE srftestuser;
 
+-- Test that we allow non-srf qualified by 'EXECUTE ON COORDINATOR'.
+CREATE FUNCTION test_non_srf_exec_on_coordinator () RETURNS TEXT AS $$
+BEGIN
+  RETURN 'test_non_srf_exec_on_coordinator()';
+END;
+$$ LANGUAGE plpgsql EXECUTE ON COORDINATOR IMMUTABLE;
+
+SELECT test_non_srf_exec_on_coordinator();
+
+DROP FUNCTION test_non_srf_exec_on_coordinator;
+
+-- Test that we don't allow non-srf qualified by 'EXECUTE ON ALL SEGMENTS'.
+CREATE FUNCTION test_non_srf_exec_on_segments () RETURNS TEXT AS $$
+BEGIN
+  RETURN 'test_non_srf_exec_on_segments()';
+END;
+$$ LANGUAGE plpgsql EXECUTE ON ALL SEGMENTS IMMUTABLE;
+
 -- Test error propagation from segments
 CREATE TABLE uniq_test(id int primary key);
 CREATE OR REPLACE FUNCTION trigger_unique() RETURNS void AS $$
