@@ -25,9 +25,15 @@ test__aocs_begin_headerscan(void **state)
 	pgappendonly.checksum = true;
 	reldata.rd_appendonly = &pgappendonly;
 	FormData_pg_class pgclass;
+	int nattr = 1;
 
 	reldata.rd_rel = &pgclass;
-	int nattr = 1;
+	reldata.rd_rel->relnatts = nattr;
+	reldata.rd_att = (TupleDesc) palloc(sizeof(struct tupleDesc));
+	reldata.rd_att->attrs =
+		(Form_pg_attribute *) palloc(sizeof(Form_pg_attribute *) * nattr);
+	memset(reldata.rd_att->attrs, 0, sizeof(Form_pg_attribute *) * nattr);
+	reldata.rd_att->natts = nattr;
 
 	/* opts and opt will be freed by aocs_begin_headerscan */
 	StdRdOptions **opts =
@@ -106,12 +112,14 @@ test__aocs_addcol_init(void **state)
 	FormData_pg_class rel;
 	rel.relpersistence = RELPERSISTENCE_PERMANENT;
 	reldata.rd_rel = &rel;
+	reldata.rd_rel->relnatts = 5;
 	reldata.rd_appendonly = &pgappendonly;
 	reldata.rd_att = (TupleDesc) palloc(sizeof(struct tupleDesc));
 	reldata.rd_att->attrs =
 		(Form_pg_attribute *) palloc(sizeof(Form_pg_attribute *) * nattr);
 	memset(reldata.rd_att->attrs, 0, sizeof(Form_pg_attribute *) * nattr);
 	reldata.rd_att->natts = 5;
+
 	/* 3 existing columns, 2 new columns */
 	desc = aocs_addcol_init(&reldata, 2);
 	assert_int_equal(desc->num_newcols, 2);
