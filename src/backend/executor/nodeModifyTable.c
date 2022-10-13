@@ -2699,6 +2699,25 @@ ExecInitModifyTable(ModifyTable *node, EState *estate, int eflags)
 		CheckValidResultRel(resultRelInfo, operation);
 
 		/*
+		 * GPDB: We don't support SERIALIZABLE transaction isolation for
+		 * UPDATES/DELETES on AO/CO tables.
+		 */
+		if (IsolationUsesXactSnapshot() &&
+			RelationIsAppendOptimized(resultRelInfo->ri_RelationDesc))
+		{
+			if (operation == CMD_UPDATE)
+				ereport(ERROR,
+						(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+							errmsg("updates on append-only tables are not "
+								   "supported in serializable transactions")));
+			else if (operation == CMD_DELETE)
+				ereport(ERROR,
+						(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+							errmsg("deletes on append-only tables are not "
+								   "supported in serializable transactions")));
+		}
+
+		/*
 		 * If there are indices on the result relation, open them and save
 		 * descriptors in the result relation info, so that we can add new
 		 * index entries for the tuples we add/update.  We need not do this

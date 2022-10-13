@@ -379,23 +379,7 @@ get_or_create_delete_descriptor(const Relation relation, bool forUpdate)
 
 	if (state->deleteDesc == NULL)
 	{
-		/*
-		 * GPDB_12_MERGE_FIXME: Can we perform this check earlier on?
-		 * Example during init? Idealy should be called on master node first,
-		 * that way we will avoid the dispatch.
-		 */
 		MemoryContext oldcxt;
-		if (IsolationUsesXactSnapshot())
-		{
-			if (forUpdate)
-				ereport(ERROR,
-						(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-						 errmsg("updates on append-only tables are not supported in serializable transactions")));
-			else
-				ereport(ERROR,
-						(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-						 errmsg("deletes on append-only tables are not supported in serializable transactions")));
-		}
 
 		oldcxt = MemoryContextSwitchTo(aocoLocal.stateCxt);
 		state->deleteDesc = aocs_delete_init(relation);
