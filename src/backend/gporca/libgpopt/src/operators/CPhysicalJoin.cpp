@@ -1250,7 +1250,10 @@ CPhysicalJoin::PppsRequiredCompute(CMemoryPool *mp, CExpressionHandle &exprhdl,
 				// outer side of the nested loop join
 				CPartKeysArray *pdrgppartkeys =
 					ppartinfo->PdrgppartkeysByScanId(part_idx_id);
-				GPOS_ASSERT(NULL != pdrgppartkeys);
+				if (NULL == pdrgppartkeys)
+				{
+					continue;
+				}
 				pdrgppartkeys->AddRef();
 
 				ppimResult->AddRequiredPartPropagation(
@@ -1286,7 +1289,10 @@ CPhysicalJoin::PppsRequiredCompute(CMemoryPool *mp, CExpressionHandle &exprhdl,
 				CPartKeysArray *pdrgppartkeys =
 					exprhdl.DerivePartitionInfo(1)->PdrgppartkeysByScanId(
 						part_idx_id);
-				GPOS_ASSERT(NULL != pdrgppartkeys);
+				if (NULL == pdrgppartkeys)
+				{
+					continue;
+				}
 				pdrgppartkeys->AddRef();
 
 				ppimResult->AddRequiredPartPropagation(

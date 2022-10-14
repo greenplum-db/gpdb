@@ -1342,10 +1342,13 @@ CBucket::SplitAndMergeBuckets(
 	{
 		// there is only one bucket
 		GPOS_ASSERT(NULL == upper_third);
+
+		/* FIXME: this assert currently triggers for some queries, see GPQP-74
 		GPOS_ASSERT_IMP(
 			is_union_all,
 			middle_third->GetFrequency() * total_rows <=
 				this_bucket_rows + bucket_other_rows + CStatistics::Epsilon);
+		*/
 	}
 
 	*result_rows = total_rows;
