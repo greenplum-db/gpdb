@@ -658,7 +658,7 @@ class AnalyzeDb(Operation):
                     valid_tables.append(tup)
             return valid_tables
 
-        return ret
+        return set(ret)
 
     def _get_dirty_data_tables(self, heap_tables_set, curr_ao_state, curr_last_op, prev_ao_state, prev_last_op):
         """
@@ -872,7 +872,7 @@ class AnalyzeDb(Operation):
         2. The leaf partitions (if range partitioned, especially by date) will be ordered in descending
            order of the partition key, so that newer partitions can be analyzed first.
         """
-        candidate_regclass_str = get_oid_str(candidates + root_partition_col_dict.keys())
+        candidate_regclass_str = get_oid_str(list(candidates) + root_partition_col_dict.keys())
         qresult = run_sql(self.conn, ORDER_CANDIDATES_BY_OID_SQL % candidate_regclass_str)
         ordered_candidates = []
         for schema_tbl in qresult:
