@@ -27,14 +27,14 @@
               </tr>
               <tr class="row">
                 <td class="entry" valign="top" width="11.173184357541901%">
-                  <img class="image" id="topic4__image_gr2_s1m_2r" src="../graphics/green-checkbox.jpg" width="29" height="28">
+                  <img class="image" id="topic4__image_gr2_s1m_2r" src="../graphics/green-checkbox.jpg" width="29" height="28" alt="Check box">
                 </td>
                 <td class="entry" valign="top" width="88.82681564245812%">Devise and execute a plan for ordering, building, and networking new hardware
                   platforms, or provisioning cloud resources. </td>
               </tr>
               <tr class="row">
                 <td class="entry" valign="top" width="11.173184357541901%">
-                  <img class="image" id="topic4__image_ryl_s1m_2r" src="../graphics/green-checkbox.jpg" width="29" height="28">
+                  <img class="image" id="topic4__image_ryl_s1m_2r" src="../graphics/green-checkbox.jpg" width="29" height="28" alt="Check box">
                 </td>
                 <td class="entry" valign="top" width="88.82681564245812%">Devise a database expansion plan. Map the number of segments per host,
                   schedule the downtime period for testing performance and creating the expansion
@@ -42,39 +42,39 @@
               </tr>
               <tr class="row">
                 <td class="entry" valign="top" width="11.173184357541901%">
-                  <img class="image" id="topic4__image_e2s_s1m_2r" src="../graphics/green-checkbox.jpg" width="29" height="28">
+                  <img class="image" id="topic4__image_e2s_s1m_2r" src="../graphics/green-checkbox.jpg" width="29" height="28" alt="Check box">
                 </td>
                 <td class="entry" valign="top" width="88.82681564245812%">Perform a complete schema dump.</td>
               </tr>
               <tr class="row">
                 <td class="entry" valign="top" width="11.173184357541901%">
-                  <img class="image" id="topic4__image_yq5_s1m_2r" src="../graphics/green-checkbox.jpg" width="29" height="28">
+                  <img class="image" id="topic4__image_yq5_s1m_2r" src="../graphics/green-checkbox.jpg" width="29" height="28" alt="Check box">
                 </td>
                 <td class="entry" valign="top" width="88.82681564245812%">Install Greenplum Database binaries on new hosts. </td>
               </tr>
               <tr class="row">
                 <td class="entry" valign="top" width="11.173184357541901%">
-                  <img class="image" id="topic4__image_vxw_s1m_2r" src="../graphics/green-checkbox.jpg" width="29" height="28">
+                  <img class="image" id="topic4__image_vxw_s1m_2r" src="../graphics/green-checkbox.jpg" width="29" height="28" alt="Check box">
                 </td>
                 <td class="entry" valign="top" width="88.82681564245812%">Copy SSH keys to the new hosts (<code class="ph codeph">gpssh-exkeys</code>).</td>
               </tr>
               <tr class="row">
                 <td class="entry" valign="top" width="11.173184357541901%">
-                  <img class="image" id="topic4__image_zrz_s1m_2r" src="../graphics/green-checkbox.jpg" width="29" height="28">
+                  <img class="image" id="topic4__image_zrz_s1m_2r" src="../graphics/green-checkbox.jpg" width="29" height="28" alt="Check box">
                 </td>
                 <td class="entry" valign="top" width="88.82681564245812%">Validate the operating system environment of the new hardware or cloud
                   resources (<code class="ph codeph">gpcheck</code>).</td>
               </tr>
               <tr class="row">
                 <td class="entry" valign="top" width="11.173184357541901%">
-                  <img class="image" id="topic4__image_qkb_t1m_2r" src="../graphics/green-checkbox.jpg" width="29" height="28">
+                  <img class="image" id="topic4__image_qkb_t1m_2r" src="../graphics/green-checkbox.jpg" width="29" height="28" alt="Check box">
                 </td>
                 <td class="entry" valign="top" width="88.82681564245812%">Validate disk I/O and memory bandwidth of the new hardware or cloud resources
                   (<code class="ph codeph">gpcheckperf</code>).</td>
               </tr>
               <tr class="row">
                 <td class="entry" valign="top" width="11.173184357541901%">
-                  <img class="image" id="topic4__image_ojd_t1m_2r" src="../graphics/green-checkbox.jpg" width="29" height="28">
+                  <img class="image" id="topic4__image_ojd_t1m_2r" src="../graphics/green-checkbox.jpg" width="29" height="28" alt="Check box">
                 </td>
                 <td class="entry" valign="top" width="88.82681564245812%">Validate that the master data directory has no extremely large files in the
                     <code class="ph codeph">pg_log</code> or <code class="ph codeph">gpperfmon/data</code>
@@ -82,14 +82,14 @@
               </tr>
               <tr class="row">
                 <td class="entry" valign="top" width="11.173184357541901%">
-                  <img class="image" id="topic4__image_wch_t1m_2r" src="../graphics/green-checkbox.jpg" width="29" height="28">
+                  <img class="image" id="topic4__image_wch_t1m_2r" src="../graphics/green-checkbox.jpg" width="29" height="28" alt="Check box">
                 </td>
                 <td class="entry" valign="top" width="88.82681564245812%">Validate that there are no catalog issues
                   (<code class="ph codeph">gpcheckcat</code>).</td>
               </tr>
               <tr class="row">
                 <td class="entry" valign="top" width="11.173184357541901%">
-                  <img class="image" id="topic4__image_ct3_t1m_2r" src="../graphics/green-checkbox.jpg" width="29" height="28">
+                  <img class="image" id="topic4__image_ct3_t1m_2r" src="../graphics/green-checkbox.jpg" width="29" height="28" alt="Check box">
                 </td>
                 <td class="entry" valign="top" width="88.82681564245812%">Prepare an expansion input file (<code class="ph codeph">gpexpand</code>). </td>
               </tr>
@@ -102,21 +102,21 @@
               </tr>
               <tr class="row">
                 <td class="entry" valign="top" width="11.173184357541901%">
-                  <img class="image" id="topic4__image_hgm_t1m_2r" src="../graphics/green-checkbox.jpg" width="29" height="28">
+                  <img class="image" id="topic4__image_hgm_t1m_2r" src="../graphics/green-checkbox.jpg" width="29" height="28" alt="Check box">
                 </td>
                 <td class="entry" valign="top" width="88.82681564245812%">Validate the operating system environment of the combined existing and new
                   hardware or cloud resources (<code class="ph codeph">gpcheck</code>). </td>
               </tr>
               <tr class="row">
                 <td class="entry" valign="top" width="11.173184357541901%">
-                  <img class="image" id="topic4__image_q3q_t1m_2r" src="../graphics/green-checkbox.jpg" width="29" height="28">
+                  <img class="image" id="topic4__image_q3q_t1m_2r" src="../graphics/green-checkbox.jpg" width="29" height="28" alt="Check box">
                 </td>
                 <td class="entry" valign="top" width="88.82681564245812%">Validate disk I/O and memory bandwidth of the combined existing and new
                   hardware or cloud resources (<code class="ph codeph">gpcheckperf</code>). </td>
               </tr>
               <tr class="row">
                 <td class="entry" valign="top" width="11.173184357541901%">
-                  <img class="image" id="topic4__image_rcs_t1m_2r" src="../graphics/green-checkbox.jpg" width="29" height="28">
+                  <img class="image" id="topic4__image_rcs_t1m_2r" src="../graphics/green-checkbox.jpg" width="29" height="28" alt="Check box">
                 </td>
                 <td class="entry" valign="top" width="88.82681564245812%">Initialize new segments into the system and create an expansion schema
                     (<code class="ph codeph">gpexpand -i <var class="keyword varname">input_file</var></code>).</td>
@@ -130,27 +130,27 @@
               </tr>
               <tr class="row">
                 <td class="entry" valign="top" width="11.173184357541901%">
-                  <img class="image" id="topic4__image_jzy_t1m_2r" src="../graphics/green-checkbox.jpg" width="29" height="28">
+                  <img class="image" id="topic4__image_jzy_t1m_2r" src="../graphics/green-checkbox.jpg" width="29" height="28" alt="Check box">
                 </td>
                 <td class="entry" valign="top" width="88.82681564245812%">Before you start table redistribution, stop any automated snapshot processes
                   or other processes that consume disk space.</td>
               </tr>
               <tr class="row">
                 <td class="entry" valign="top" width="11.173184357541901%">
-                  <img class="image" id="topic4__image_aq1_51m_2r" src="../graphics/green-checkbox.jpg" width="29" height="28">
+                  <img class="image" id="topic4__image_aq1_51m_2r" src="../graphics/green-checkbox.jpg" width="29" height="28" alt="Check box">
                 </td>
                 <td class="entry" valign="top" width="88.82681564245812%">Redistribute tables through the expanded system
                   (<code class="ph codeph">gpexpand</code>).</td>
               </tr>
               <tr class="row">
                 <td class="entry" valign="top" width="11.173184357541901%">
-                  <img class="image" id="topic4__image_xjc_51m_2r" src="../graphics/green-checkbox.jpg" width="29" height="28">
+                  <img class="image" id="topic4__image_xjc_51m_2r" src="../graphics/green-checkbox.jpg" width="29" height="28" alt="Check box">
                 </td>
                 <td class="entry" valign="top" width="88.82681564245812%">Remove expansion schema (<code class="ph codeph">gpexpand -c</code>).</td>
               </tr>
               <tr class="row">
                 <td class="entry" valign="top" width="11.173184357541901%">
-                  <img class="image" id="topic4__image_sk2_51m_2r" src="../graphics/green-checkbox.jpg" width="29" height="28">
+                  <img class="image" id="topic4__image_sk2_51m_2r" src="../graphics/green-checkbox.jpg" width="29" height="28" alt="Check box">
                 </td>
                 <td class="entry" valign="top" width="88.82681564245812%">
 <strong class="ph b">Important:</strong> Run <code class="ph codeph">analyze</code> to update distribution
