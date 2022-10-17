@@ -1,0 +1,589 @@
+-- Test GPDB specific partitioning parser for subpartition template
+-- Subpartition by RANGE
+CREATE TABLE subpart_range_templ (id int, year date, letter char(1))
+    DISTRIBUTED BY (id, letter, year)
+    PARTITION BY list (letter)
+        subpartition by range (year)
+            SUBPARTITION TEMPLATE (
+            subpartition r1 START (date '2001-01-01') END (date '2003-01-01'),
+            subpartition r2 START (date '2003-01-01') END (date '2005-01-01') EVERY (interval '1 year'),
+            DEFAULT SUBPARTITION other_year )
+        (
+        PARTITION a VALUES ('A'),
+        PARTITION b VALUES ('B'),
+        DEFAULT PARTITION other_letter
+        );
+-- Subpartition template should be stored in catalog
+SELECT level, template FROM gp_partition_template t WHERE t.relid = 'subpart_range_templ'::regclass;
+ level |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              template                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              
+-------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+     1 | {GPPARTITIONDEFINITION :partDefElems ({GPPARTDEFELEM :partName r1 :boundSpec {GPPARTITIONRANGESPEC :partStart {GPPARTITIONRANGEITEM :val ({TYPECAST :arg {A_CONST :val "\2001-01-01" :location 251} :typeName {TYPENAME :names ("date") :typeOid 0 :setof false :pct_type false :typmods <> :typemod -1 :arrayBounds <> :location 246} :location -1}) :edge 1} :partEnd {GPPARTITIONRANGEITEM :val ({TYPECAST :arg {A_CONST :val "\2003-01-01" :location 275} :typeName {TYPENAME :names ("date") :typeOid 0 :setof false :pct_type false :typmods <> :typemod -1 :arrayBounds <> :location 270} :location -1}) :edge 2} :partEvery <>} :subSpec <> :isDefault false :options <> :accessMethod <> :tablespacename <> :colencs <>} {GPPARTDEFELEM :partName r2 :boundSpec {GPPARTITIONRANGESPEC :partStart {GPPARTITIONRANGEITEM :val ({TYPECAST :arg {A_CONST :val "\2003-01-01" :location 330} :typeName {TYPENAME :names ("date") :typeOid 0 :setof false :pct_type false :typmods <> :typemod -1 :arrayBounds <> :location 325} :location -1}) :edge 1} :partEnd {GPPARTITIONRANGEITEM :val ({TYPECAST :arg {A_CONST :val "\2005-01-01" :location 354} :typeName {TYPENAME :names ("date") :typeOid 0 :setof false :pct_type false :typmods <> :typemod -1 :arrayBounds <> :location 349} :location -1}) :edge 2} :partEvery ({TYPECAST :arg {A_CONST :val "\1\ year" :location 384} :typeName {TYPENAME :names ("pg_catalog" "interval") :typeOid 0 :setof false :pct_type false :typmods <> :typemod -1 :arrayBounds <> :location 375} :location -1})} :subSpec <> :isDefault false :options <> :accessMethod <> :tablespacename <> :colencs <>} {GPPARTDEFELEM :partName other_year :boundSpec <> :subSpec <> :isDefault true :options <> :accessMethod <> :tablespacename <> :colencs <>}) :encClauses <> :isTemplate true}
+(1 row)
+
+SELECT t.*, pg_get_expr(relpartbound, oid) FROM pg_partition_tree('subpart_range_templ') As t, pg_class As c WHERE relid = oid ORDER BY 1,5;
+                          relid                          |              parentrelid               | isleaf | level |                   pg_get_expr                    
+---------------------------------------------------------+----------------------------------------+--------+-------+--------------------------------------------------
+ subpart_range_templ                                     |                                        | f      |     0 | 
+ subpart_range_templ_1_prt_other_letter                  | subpart_range_templ                    | f      |     1 | DEFAULT
+ subpart_range_templ_1_prt_a                             | subpart_range_templ                    | f      |     1 | FOR VALUES IN ('A')
+ subpart_range_templ_1_prt_b                             | subpart_range_templ                    | f      |     1 | FOR VALUES IN ('B')
+ subpart_range_templ_1_prt_other_letter_2_prt_other_year | subpart_range_templ_1_prt_other_letter | t      |     2 | DEFAULT
+ subpart_range_templ_1_prt_other_letter_2_prt_r1         | subpart_range_templ_1_prt_other_letter | t      |     2 | FOR VALUES FROM ('01-01-2001') TO ('01-01-2003')
+ subpart_range_templ_1_prt_other_letter_2_prt_r2_1       | subpart_range_templ_1_prt_other_letter | t      |     2 | FOR VALUES FROM ('01-01-2003') TO ('01-01-2004')
+ subpart_range_templ_1_prt_other_letter_2_prt_r2_2       | subpart_range_templ_1_prt_other_letter | t      |     2 | FOR VALUES FROM ('01-01-2004') TO ('01-01-2005')
+ subpart_range_templ_1_prt_a_2_prt_other_year            | subpart_range_templ_1_prt_a            | t      |     2 | DEFAULT
+ subpart_range_templ_1_prt_a_2_prt_r1                    | subpart_range_templ_1_prt_a            | t      |     2 | FOR VALUES FROM ('01-01-2001') TO ('01-01-2003')
+ subpart_range_templ_1_prt_a_2_prt_r2_1                  | subpart_range_templ_1_prt_a            | t      |     2 | FOR VALUES FROM ('01-01-2003') TO ('01-01-2004')
+ subpart_range_templ_1_prt_a_2_prt_r2_2                  | subpart_range_templ_1_prt_a            | t      |     2 | FOR VALUES FROM ('01-01-2004') TO ('01-01-2005')
+ subpart_range_templ_1_prt_b_2_prt_other_year            | subpart_range_templ_1_prt_b            | t      |     2 | DEFAULT
+ subpart_range_templ_1_prt_b_2_prt_r1                    | subpart_range_templ_1_prt_b            | t      |     2 | FOR VALUES FROM ('01-01-2001') TO ('01-01-2003')
+ subpart_range_templ_1_prt_b_2_prt_r2_1                  | subpart_range_templ_1_prt_b            | t      |     2 | FOR VALUES FROM ('01-01-2003') TO ('01-01-2004')
+ subpart_range_templ_1_prt_b_2_prt_r2_2                  | subpart_range_templ_1_prt_b            | t      |     2 | FOR VALUES FROM ('01-01-2004') TO ('01-01-2005')
+(16 rows)
+
+-- ADD PARTITION should create subpartitions
+ALTER TABLE subpart_range_templ ADD PARTITION c VALUES ('C');
+SELECT t.*, pg_get_expr(relpartbound, oid) FROM pg_partition_tree('subpart_range_templ') As t, pg_class As c WHERE relid = oid ORDER BY 1,5;
+                          relid                          |              parentrelid               | isleaf | level |                   pg_get_expr                    
+---------------------------------------------------------+----------------------------------------+--------+-------+--------------------------------------------------
+ subpart_range_templ                                     |                                        | f      |     0 | 
+ subpart_range_templ_1_prt_other_letter                  | subpart_range_templ                    | f      |     1 | DEFAULT
+ subpart_range_templ_1_prt_a                             | subpart_range_templ                    | f      |     1 | FOR VALUES IN ('A')
+ subpart_range_templ_1_prt_b                             | subpart_range_templ                    | f      |     1 | FOR VALUES IN ('B')
+ subpart_range_templ_1_prt_other_letter_2_prt_other_year | subpart_range_templ_1_prt_other_letter | t      |     2 | DEFAULT
+ subpart_range_templ_1_prt_other_letter_2_prt_r1         | subpart_range_templ_1_prt_other_letter | t      |     2 | FOR VALUES FROM ('01-01-2001') TO ('01-01-2003')
+ subpart_range_templ_1_prt_other_letter_2_prt_r2_1       | subpart_range_templ_1_prt_other_letter | t      |     2 | FOR VALUES FROM ('01-01-2003') TO ('01-01-2004')
+ subpart_range_templ_1_prt_other_letter_2_prt_r2_2       | subpart_range_templ_1_prt_other_letter | t      |     2 | FOR VALUES FROM ('01-01-2004') TO ('01-01-2005')
+ subpart_range_templ_1_prt_a_2_prt_other_year            | subpart_range_templ_1_prt_a            | t      |     2 | DEFAULT
+ subpart_range_templ_1_prt_a_2_prt_r1                    | subpart_range_templ_1_prt_a            | t      |     2 | FOR VALUES FROM ('01-01-2001') TO ('01-01-2003')
+ subpart_range_templ_1_prt_a_2_prt_r2_1                  | subpart_range_templ_1_prt_a            | t      |     2 | FOR VALUES FROM ('01-01-2003') TO ('01-01-2004')
+ subpart_range_templ_1_prt_a_2_prt_r2_2                  | subpart_range_templ_1_prt_a            | t      |     2 | FOR VALUES FROM ('01-01-2004') TO ('01-01-2005')
+ subpart_range_templ_1_prt_b_2_prt_other_year            | subpart_range_templ_1_prt_b            | t      |     2 | DEFAULT
+ subpart_range_templ_1_prt_b_2_prt_r1                    | subpart_range_templ_1_prt_b            | t      |     2 | FOR VALUES FROM ('01-01-2001') TO ('01-01-2003')
+ subpart_range_templ_1_prt_b_2_prt_r2_1                  | subpart_range_templ_1_prt_b            | t      |     2 | FOR VALUES FROM ('01-01-2003') TO ('01-01-2004')
+ subpart_range_templ_1_prt_b_2_prt_r2_2                  | subpart_range_templ_1_prt_b            | t      |     2 | FOR VALUES FROM ('01-01-2004') TO ('01-01-2005')
+ subpart_range_templ_1_prt_c                             | subpart_range_templ                    | f      |     1 | FOR VALUES IN ('C')
+ subpart_range_templ_1_prt_c_2_prt_other_year            | subpart_range_templ_1_prt_c            | t      |     2 | DEFAULT
+ subpart_range_templ_1_prt_c_2_prt_r1                    | subpart_range_templ_1_prt_c            | t      |     2 | FOR VALUES FROM ('01-01-2001') TO ('01-01-2003')
+ subpart_range_templ_1_prt_c_2_prt_r2_1                  | subpart_range_templ_1_prt_c            | t      |     2 | FOR VALUES FROM ('01-01-2003') TO ('01-01-2004')
+ subpart_range_templ_1_prt_c_2_prt_r2_2                  | subpart_range_templ_1_prt_c            | t      |     2 | FOR VALUES FROM ('01-01-2004') TO ('01-01-2005')
+(21 rows)
+
+-- ADD PARTITION with subpartition definition spec should fail
+ALTER TABLE subpart_range_templ ADD PARTITION d VALUES ('D') (SUBPARTITION r3 START (date '2003-01-01') END (date '2005-01-01'));
+ERROR:  subpartition configuration conflicts with subpartition template
+LINE 1: ...subpart_range_templ ADD PARTITION d VALUES ('D') (SUBPARTITI...
+                                                             ^
+-- Remove subpartition template
+ALTER TABLE subpart_range_templ SET SUBPARTITION TEMPLATE();
+SELECT level, template FROM gp_partition_template t WHERE t.relid = 'subpart_range_templ'::regclass;
+ level | template 
+-------+----------
+(0 rows)
+
+-- ADD PARTITION with subpartition definition spec now should work
+ALTER TABLE subpart_range_templ ADD PARTITION d VALUES ('D') (SUBPARTITION r3 START (date '2003-01-01') END (date '2005-01-01'));
+SELECT t.*, pg_get_expr(relpartbound, oid) FROM pg_partition_tree('subpart_range_templ') As t, pg_class As c WHERE relid = oid ORDER BY 1,5;
+                          relid                          |              parentrelid               | isleaf | level |                   pg_get_expr                    
+---------------------------------------------------------+----------------------------------------+--------+-------+--------------------------------------------------
+ subpart_range_templ                                     |                                        | f      |     0 | 
+ subpart_range_templ_1_prt_other_letter                  | subpart_range_templ                    | f      |     1 | DEFAULT
+ subpart_range_templ_1_prt_a                             | subpart_range_templ                    | f      |     1 | FOR VALUES IN ('A')
+ subpart_range_templ_1_prt_b                             | subpart_range_templ                    | f      |     1 | FOR VALUES IN ('B')
+ subpart_range_templ_1_prt_other_letter_2_prt_other_year | subpart_range_templ_1_prt_other_letter | t      |     2 | DEFAULT
+ subpart_range_templ_1_prt_other_letter_2_prt_r1         | subpart_range_templ_1_prt_other_letter | t      |     2 | FOR VALUES FROM ('01-01-2001') TO ('01-01-2003')
+ subpart_range_templ_1_prt_other_letter_2_prt_r2_1       | subpart_range_templ_1_prt_other_letter | t      |     2 | FOR VALUES FROM ('01-01-2003') TO ('01-01-2004')
+ subpart_range_templ_1_prt_other_letter_2_prt_r2_2       | subpart_range_templ_1_prt_other_letter | t      |     2 | FOR VALUES FROM ('01-01-2004') TO ('01-01-2005')
+ subpart_range_templ_1_prt_a_2_prt_other_year            | subpart_range_templ_1_prt_a            | t      |     2 | DEFAULT
+ subpart_range_templ_1_prt_a_2_prt_r1                    | subpart_range_templ_1_prt_a            | t      |     2 | FOR VALUES FROM ('01-01-2001') TO ('01-01-2003')
+ subpart_range_templ_1_prt_a_2_prt_r2_1                  | subpart_range_templ_1_prt_a            | t      |     2 | FOR VALUES FROM ('01-01-2003') TO ('01-01-2004')
+ subpart_range_templ_1_prt_a_2_prt_r2_2                  | subpart_range_templ_1_prt_a            | t      |     2 | FOR VALUES FROM ('01-01-2004') TO ('01-01-2005')
+ subpart_range_templ_1_prt_b_2_prt_other_year            | subpart_range_templ_1_prt_b            | t      |     2 | DEFAULT
+ subpart_range_templ_1_prt_b_2_prt_r1                    | subpart_range_templ_1_prt_b            | t      |     2 | FOR VALUES FROM ('01-01-2001') TO ('01-01-2003')
+ subpart_range_templ_1_prt_b_2_prt_r2_1                  | subpart_range_templ_1_prt_b            | t      |     2 | FOR VALUES FROM ('01-01-2003') TO ('01-01-2004')
+ subpart_range_templ_1_prt_b_2_prt_r2_2                  | subpart_range_templ_1_prt_b            | t      |     2 | FOR VALUES FROM ('01-01-2004') TO ('01-01-2005')
+ subpart_range_templ_1_prt_c                             | subpart_range_templ                    | f      |     1 | FOR VALUES IN ('C')
+ subpart_range_templ_1_prt_c_2_prt_other_year            | subpart_range_templ_1_prt_c            | t      |     2 | DEFAULT
+ subpart_range_templ_1_prt_c_2_prt_r1                    | subpart_range_templ_1_prt_c            | t      |     2 | FOR VALUES FROM ('01-01-2001') TO ('01-01-2003')
+ subpart_range_templ_1_prt_c_2_prt_r2_1                  | subpart_range_templ_1_prt_c            | t      |     2 | FOR VALUES FROM ('01-01-2003') TO ('01-01-2004')
+ subpart_range_templ_1_prt_c_2_prt_r2_2                  | subpart_range_templ_1_prt_c            | t      |     2 | FOR VALUES FROM ('01-01-2004') TO ('01-01-2005')
+ subpart_range_templ_1_prt_d                             | subpart_range_templ                    | f      |     1 | FOR VALUES IN ('D')
+ subpart_range_templ_1_prt_d_2_prt_r3                    | subpart_range_templ_1_prt_d            | t      |     2 | FOR VALUES FROM ('01-01-2003') TO ('01-01-2005')
+(23 rows)
+
+-- Set a new subpartition template
+ALTER TABLE subpart_range_templ SET SUBPARTITION TEMPLATE
+(
+    subpartition r4 START (date '2020-01-01') EXCLUSIVE END (date '2021-01-01') INCLUSIVE,
+    subpartition r5 START (date '2021-01-01') EXCLUSIVE END (date '2023-01-01') INCLUSIVE EVERY (interval '1 year'),
+    DEFAULT SUBPARTITION yet_another_year
+);
+SELECT level, template FROM gp_partition_template t WHERE t.relid = 'subpart_range_templ'::regclass;
+ level |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                template                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                
+-------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+     1 | {GPPARTITIONDEFINITION :partDefElems ({GPPARTDEFELEM :partName r4 :boundSpec {GPPARTITIONRANGESPEC :partStart {GPPARTITIONRANGEITEM :val ({TYPECAST :arg {A_CONST :val "\2020-01-01" :location 92} :typeName {TYPENAME :names ("date") :typeOid 0 :setof false :pct_type false :typmods <> :typemod -1 :arrayBounds <> :location 87} :location -1}) :edge 2} :partEnd {GPPARTITIONRANGEITEM :val ({TYPECAST :arg {A_CONST :val "\2021-01-01" :location 126} :typeName {TYPENAME :names ("date") :typeOid 0 :setof false :pct_type false :typmods <> :typemod -1 :arrayBounds <> :location 121} :location -1}) :edge 1} :partEvery <>} :subSpec <> :isDefault false :options <> :accessMethod <> :tablespacename <> :colencs <>} {GPPARTDEFELEM :partName r5 :boundSpec {GPPARTITIONRANGESPEC :partStart {GPPARTITIONRANGEITEM :val ({TYPECAST :arg {A_CONST :val "\2021-01-01" :location 183} :typeName {TYPENAME :names ("date") :typeOid 0 :setof false :pct_type false :typmods <> :typemod -1 :arrayBounds <> :location 178} :location -1}) :edge 2} :partEnd {GPPARTITIONRANGEITEM :val ({TYPECAST :arg {A_CONST :val "\2023-01-01" :location 217} :typeName {TYPENAME :names ("date") :typeOid 0 :setof false :pct_type false :typmods <> :typemod -1 :arrayBounds <> :location 212} :location -1}) :edge 1} :partEvery ({TYPECAST :arg {A_CONST :val "\1\ year" :location 257} :typeName {TYPENAME :names ("pg_catalog" "interval") :typeOid 0 :setof false :pct_type false :typmods <> :typemod -1 :arrayBounds <> :location 248} :location -1})} :subSpec <> :isDefault false :options <> :accessMethod <> :tablespacename <> :colencs <>} {GPPARTDEFELEM :partName yet_another_year :boundSpec <> :subSpec <> :isDefault true :options <> :accessMethod <> :tablespacename <> :colencs <>}) :encClauses <> :isTemplate true}
+(1 row)
+
+-- ADD PARTITION should create subpartitions according to the new template
+ALTER TABLE subpart_range_templ ADD PARTITION e VALUES ('E');
+SELECT t.*, pg_get_expr(relpartbound, oid) FROM pg_partition_tree('subpart_range_templ') As t, pg_class As c WHERE relid = oid ORDER BY 1,5;
+                          relid                          |              parentrelid               | isleaf | level |                   pg_get_expr                    
+---------------------------------------------------------+----------------------------------------+--------+-------+--------------------------------------------------
+ subpart_range_templ                                     |                                        | f      |     0 | 
+ subpart_range_templ_1_prt_other_letter                  | subpart_range_templ                    | f      |     1 | DEFAULT
+ subpart_range_templ_1_prt_a                             | subpart_range_templ                    | f      |     1 | FOR VALUES IN ('A')
+ subpart_range_templ_1_prt_b                             | subpart_range_templ                    | f      |     1 | FOR VALUES IN ('B')
+ subpart_range_templ_1_prt_other_letter_2_prt_other_year | subpart_range_templ_1_prt_other_letter | t      |     2 | DEFAULT
+ subpart_range_templ_1_prt_other_letter_2_prt_r1         | subpart_range_templ_1_prt_other_letter | t      |     2 | FOR VALUES FROM ('01-01-2001') TO ('01-01-2003')
+ subpart_range_templ_1_prt_other_letter_2_prt_r2_1       | subpart_range_templ_1_prt_other_letter | t      |     2 | FOR VALUES FROM ('01-01-2003') TO ('01-01-2004')
+ subpart_range_templ_1_prt_other_letter_2_prt_r2_2       | subpart_range_templ_1_prt_other_letter | t      |     2 | FOR VALUES FROM ('01-01-2004') TO ('01-01-2005')
+ subpart_range_templ_1_prt_a_2_prt_other_year            | subpart_range_templ_1_prt_a            | t      |     2 | DEFAULT
+ subpart_range_templ_1_prt_a_2_prt_r1                    | subpart_range_templ_1_prt_a            | t      |     2 | FOR VALUES FROM ('01-01-2001') TO ('01-01-2003')
+ subpart_range_templ_1_prt_a_2_prt_r2_1                  | subpart_range_templ_1_prt_a            | t      |     2 | FOR VALUES FROM ('01-01-2003') TO ('01-01-2004')
+ subpart_range_templ_1_prt_a_2_prt_r2_2                  | subpart_range_templ_1_prt_a            | t      |     2 | FOR VALUES FROM ('01-01-2004') TO ('01-01-2005')
+ subpart_range_templ_1_prt_b_2_prt_other_year            | subpart_range_templ_1_prt_b            | t      |     2 | DEFAULT
+ subpart_range_templ_1_prt_b_2_prt_r1                    | subpart_range_templ_1_prt_b            | t      |     2 | FOR VALUES FROM ('01-01-2001') TO ('01-01-2003')
+ subpart_range_templ_1_prt_b_2_prt_r2_1                  | subpart_range_templ_1_prt_b            | t      |     2 | FOR VALUES FROM ('01-01-2003') TO ('01-01-2004')
+ subpart_range_templ_1_prt_b_2_prt_r2_2                  | subpart_range_templ_1_prt_b            | t      |     2 | FOR VALUES FROM ('01-01-2004') TO ('01-01-2005')
+ subpart_range_templ_1_prt_c                             | subpart_range_templ                    | f      |     1 | FOR VALUES IN ('C')
+ subpart_range_templ_1_prt_c_2_prt_other_year            | subpart_range_templ_1_prt_c            | t      |     2 | DEFAULT
+ subpart_range_templ_1_prt_c_2_prt_r1                    | subpart_range_templ_1_prt_c            | t      |     2 | FOR VALUES FROM ('01-01-2001') TO ('01-01-2003')
+ subpart_range_templ_1_prt_c_2_prt_r2_1                  | subpart_range_templ_1_prt_c            | t      |     2 | FOR VALUES FROM ('01-01-2003') TO ('01-01-2004')
+ subpart_range_templ_1_prt_c_2_prt_r2_2                  | subpart_range_templ_1_prt_c            | t      |     2 | FOR VALUES FROM ('01-01-2004') TO ('01-01-2005')
+ subpart_range_templ_1_prt_d                             | subpart_range_templ                    | f      |     1 | FOR VALUES IN ('D')
+ subpart_range_templ_1_prt_d_2_prt_r3                    | subpart_range_templ_1_prt_d            | t      |     2 | FOR VALUES FROM ('01-01-2003') TO ('01-01-2005')
+ subpart_range_templ_1_prt_e                             | subpart_range_templ                    | f      |     1 | FOR VALUES IN ('E')
+ subpart_range_templ_1_prt_e_2_prt_yet_another_year      | subpart_range_templ_1_prt_e            | t      |     2 | DEFAULT
+ subpart_range_templ_1_prt_e_2_prt_r4                    | subpart_range_templ_1_prt_e            | t      |     2 | FOR VALUES FROM ('01-02-2020') TO ('01-02-2021')
+ subpart_range_templ_1_prt_e_2_prt_r5_1                  | subpart_range_templ_1_prt_e            | t      |     2 | FOR VALUES FROM ('01-02-2021') TO ('01-02-2022')
+ subpart_range_templ_1_prt_e_2_prt_r5_2                  | subpart_range_templ_1_prt_e            | t      |     2 | FOR VALUES FROM ('01-02-2022') TO ('01-02-2023')
+(28 rows)
+
+-- Multi-level RANGE subpartitioning using templates
+CREATE TABLE subpart_range_templ_multilevel (id int, year int, month int, day int,
+                    region text)
+    DISTRIBUTED BY (id)
+    PARTITION BY RANGE (year)
+        SUBPARTITION BY RANGE (month)
+            SUBPARTITION TEMPLATE (
+            START (11) END (12) EVERY (1),
+            DEFAULT SUBPARTITION other_months )
+        SUBPARTITION BY RANGE (day)
+            SUBPARTITION TEMPLATE (
+            START (7) END (15) EVERY (7),
+            DEFAULT SUBPARTITION other_days )
+        ( START (2022) END (2023) EVERY (1));
+SELECT level, template FROM gp_partition_template t WHERE t.relid = 'subpart_range_templ_multilevel'::regclass;
+ level |                                                                                                                                                                                                                                                                                         template                                                                                                                                                                                                                                                                                         
+-------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+     1 | {GPPARTITIONDEFINITION :partDefElems ({GPPARTDEFELEM :partName <> :boundSpec {GPPARTITIONRANGESPEC :partStart {GPPARTITIONRANGEITEM :val ({A_CONST :val 11 :location 263}) :edge 1} :partEnd {GPPARTITIONRANGEITEM :val ({A_CONST :val 12 :location 272}) :edge 2} :partEvery ({A_CONST :val 1 :location 283})} :subSpec <> :isDefault false :options <> :accessMethod <> :tablespacename <> :colencs <>} {GPPARTDEFELEM :partName other_months :boundSpec <> :subSpec <> :isDefault true :options <> :accessMethod <> :tablespacename <> :colencs <>}) :encClauses <> :isTemplate true}
+     2 | {GPPARTITIONDEFINITION :partDefElems ({GPPARTDEFELEM :partName <> :boundSpec {GPPARTITIONRANGESPEC :partStart {GPPARTITIONRANGEITEM :val ({A_CONST :val 7 :location 426}) :edge 1} :partEnd {GPPARTITIONRANGEITEM :val ({A_CONST :val 15 :location 434}) :edge 2} :partEvery ({A_CONST :val 7 :location 445})} :subSpec <> :isDefault false :options <> :accessMethod <> :tablespacename <> :colencs <>} {GPPARTDEFELEM :partName other_days :boundSpec <> :subSpec <> :isDefault true :options <> :accessMethod <> :tablespacename <> :colencs <>}) :encClauses <> :isTemplate true}
+(2 rows)
+
+SELECT t.*, pg_get_expr(relpartbound, oid) FROM pg_partition_tree('subpart_range_templ_multilevel') As t, pg_class As c WHERE relid = oid ORDER BY 1,5;
+                              relid                              |                        parentrelid                        | isleaf | level |           pg_get_expr            
+-----------------------------------------------------------------+-----------------------------------------------------------+--------+-------+----------------------------------
+ subpart_range_templ_multilevel                                  |                                                           | f      |     0 | 
+ subpart_range_templ_multilevel_1_prt_1                          | subpart_range_templ_multilevel                            | f      |     1 | FOR VALUES FROM (2022) TO (2023)
+ subpart_range_templ_multilevel_1_prt_1_2_prt_other_months       | subpart_range_templ_multilevel_1_prt_1                    | f      |     2 | DEFAULT
+ subpart_range_templ_multilevel_1_prt_1_2_prt_2                  | subpart_range_templ_multilevel_1_prt_1                    | f      |     2 | FOR VALUES FROM (11) TO (12)
+ subpart_range_templ_multilevel_1_prt_1_2_prt_o_3_prt_other_days | subpart_range_templ_multilevel_1_prt_1_2_prt_other_months | t      |     3 | DEFAULT
+ subpart_range_templ_multilevel_1_prt_1_2_prt_other_mont_3_prt_2 | subpart_range_templ_multilevel_1_prt_1_2_prt_other_months | t      |     3 | FOR VALUES FROM (7) TO (14)
+ subpart_range_templ_multilevel_1_prt_1_2_prt_other_mont_3_prt_3 | subpart_range_templ_multilevel_1_prt_1_2_prt_other_months | t      |     3 | FOR VALUES FROM (14) TO (15)
+ subpart_range_templ_multilevel_1_prt_1_2_prt_2_3_prt_other_days | subpart_range_templ_multilevel_1_prt_1_2_prt_2            | t      |     3 | DEFAULT
+ subpart_range_templ_multilevel_1_prt_1_2_prt_2_3_prt_2          | subpart_range_templ_multilevel_1_prt_1_2_prt_2            | t      |     3 | FOR VALUES FROM (7) TO (14)
+ subpart_range_templ_multilevel_1_prt_1_2_prt_2_3_prt_3          | subpart_range_templ_multilevel_1_prt_1_2_prt_2            | t      |     3 | FOR VALUES FROM (14) TO (15)
+(10 rows)
+
+-- ADD PARTITION should create subpartitions according to the templates
+ALTER TABLE subpart_range_templ_multilevel ADD PARTITION new_part START (2023) END (2024);
+SELECT t.*, pg_get_expr(relpartbound, oid) FROM pg_partition_tree('subpart_range_templ_multilevel') As t, pg_class As c WHERE relid = oid AND t.relid::regclass::text like '%new_part%' ORDER BY 1,5;
+                              relid                              |                      parentrelid                      | isleaf | level |           pg_get_expr            
+-----------------------------------------------------------------+-------------------------------------------------------+--------+-------+----------------------------------
+ subpart_range_templ_multilevel_1_prt_new_part                   | subpart_range_templ_multilevel                        | f      |     1 | FOR VALUES FROM (2023) TO (2024)
+ subpart_range_templ_multilevel_1_prt_new_part_2_prt_2           | subpart_range_templ_multilevel_1_prt_new_part         | f      |     2 | FOR VALUES FROM (11) TO (12)
+ subpart_range_templ_multilevel_1_prt_new_part__3_prt_other_days | subpart_range_templ_multilevel_1_prt_new_part_2_prt_2 | t      |     3 | DEFAULT
+ subpart_range_templ_multilevel_1_prt_new_part_2_prt_2_3_prt_2   | subpart_range_templ_multilevel_1_prt_new_part_2_prt_2 | t      |     3 | FOR VALUES FROM (7) TO (14)
+ subpart_range_templ_multilevel_1_prt_new_part_2_prt_2_3_prt_3   | subpart_range_templ_multilevel_1_prt_new_part_2_prt_2 | t      |     3 | FOR VALUES FROM (14) TO (15)
+(5 rows)
+
+-- Remove level 1 subpartition template
+ALTER TABLE subpart_range_templ_multilevel SET SUBPARTITION TEMPLATE();
+SELECT level, template FROM gp_partition_template t WHERE t.relid = 'subpart_range_templ_multilevel'::regclass;
+ level |                                                                                                                                                                                                                                                                                       template                                                                                                                                                                                                                                                                                        
+-------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+     2 | {GPPARTITIONDEFINITION :partDefElems ({GPPARTDEFELEM :partName <> :boundSpec {GPPARTITIONRANGESPEC :partStart {GPPARTITIONRANGEITEM :val ({A_CONST :val 7 :location 426}) :edge 1} :partEnd {GPPARTITIONRANGEITEM :val ({A_CONST :val 15 :location 434}) :edge 2} :partEvery ({A_CONST :val 7 :location 445})} :subSpec <> :isDefault false :options <> :accessMethod <> :tablespacename <> :colencs <>} {GPPARTDEFELEM :partName other_days :boundSpec <> :subSpec <> :isDefault true :options <> :accessMethod <> :tablespacename <> :colencs <>}) :encClauses <> :isTemplate true}
+(1 row)
+
+-- ADD PARTITION should create subpartitions according to the level 1 partition definition spec and level 2 subpartition templates
+ALTER TABLE subpart_range_templ_multilevel Add partition oct START (10) END (11) (SUBPARTITION new_days START (15) END (30));
+SELECT t.*, pg_get_expr(relpartbound, oid) FROM pg_partition_tree('subpart_range_templ_multilevel') As t, pg_class As c WHERE relid = oid AND t.relid::regclass::text LIKE '%oct%' ORDER BY 1,5;
+                              relid                              |                       parentrelid                       | isleaf | level |         pg_get_expr          
+-----------------------------------------------------------------+---------------------------------------------------------+--------+-------+------------------------------
+ subpart_range_templ_multilevel_1_prt_oct                        | subpart_range_templ_multilevel                          | f      |     1 | FOR VALUES FROM (10) TO (11)
+ subpart_range_templ_multilevel_1_prt_oct_2_prt_new_days         | subpart_range_templ_multilevel_1_prt_oct                | f      |     2 | FOR VALUES FROM (15) TO (30)
+ subpart_range_templ_multilevel_1_prt_oct_2_prt_3_prt_other_days | subpart_range_templ_multilevel_1_prt_oct_2_prt_new_days | t      |     3 | DEFAULT
+ subpart_range_templ_multilevel_1_prt_oct_2_prt_new_days_3_prt_2 | subpart_range_templ_multilevel_1_prt_oct_2_prt_new_days | t      |     3 | FOR VALUES FROM (7) TO (14)
+ subpart_range_templ_multilevel_1_prt_oct_2_prt_new_days_3_prt_3 | subpart_range_templ_multilevel_1_prt_oct_2_prt_new_days | t      |     3 | FOR VALUES FROM (14) TO (15)
+(5 rows)
+
+-- Remove level 2 subpartition template, this works but no syntax will be available to add new partitions at any level
+ALTER TABLE subpart_range_templ_multilevel ALTER PARTITION new_part SET SUBPARTITION TEMPLATE();
+SELECT level, template FROM gp_partition_template t WHERE t.relid = 'subpart_range_templ_multilevel'::regclass;
+ level | template 
+-------+----------
+(0 rows)
+
+-- Can't ADD PARTITION because subpartition template at the last level is missing
+ALTER TABLE subpart_range_templ_multilevel Add partition oct START (10) END (11) (SUBPARTITION new_days START (15) END (30));
+ERROR:  relation "subpart_range_templ_multilevel_1_prt_oct" already exists
+-- Multi-level subpartition using template at the last level
+CREATE TABLE subpart_range_mixedtempl (a int, dropped int, b int, c int, d int)
+    DISTRIBUTED RANDOMLY
+    PARTITION BY RANGE (b)
+        SUBPARTITION BY RANGE (c)
+        SUBPARTITION BY RANGE (d)
+        SUBPARTITION TEMPLATE (
+              SUBPARTITION c_low start (1) end (5),
+              SUBPARTITION c_hi start (5) end (10),
+              DEFAULT SUBPARTITION def_d
+            )
+        (
+        PARTITION b_low start (0) end (3)
+            (
+                SUBPARTITION c_low start (11) end (22) every (10),
+                DEFAULT SUBPARTITION def_c
+            ),
+        PARTITION b_mid start (3) end (6)
+            (
+                SUBPARTITION c_mid start (22) end (32) every (10)
+            )
+        );
+-- Subpartition template should be stored in catalog
+SELECT level, template FROM gp_partition_template t WHERE t.relid = 'subpart_range_mixedtempl'::regclass;
+ level |                                                                                                                                                                                                                                                                                                                                                                                                                                          template                                                                                                                                                                                                                                                                                                                                                                                                                                           
+-------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+     2 | {GPPARTITIONDEFINITION :partDefElems ({GPPARTDEFELEM :partName c_low :boundSpec {GPPARTITIONRANGESPEC :partStart {GPPARTITIONRANGEITEM :val ({A_CONST :val 1 :location 272}) :edge 1} :partEnd {GPPARTITIONRANGEITEM :val ({A_CONST :val 5 :location 280}) :edge 2} :partEvery <>} :subSpec <> :isDefault false :options <> :accessMethod <> :tablespacename <> :colencs <>} {GPPARTDEFELEM :partName c_hi :boundSpec {GPPARTITIONRANGESPEC :partStart {GPPARTITIONRANGEITEM :val ({A_CONST :val 5 :location 323}) :edge 1} :partEnd {GPPARTITIONRANGEITEM :val ({A_CONST :val 10 :location 331}) :edge 2} :partEvery <>} :subSpec <> :isDefault false :options <> :accessMethod <> :tablespacename <> :colencs <>} {GPPARTDEFELEM :partName def_d :boundSpec <> :subSpec <> :isDefault true :options <> :accessMethod <> :tablespacename <> :colencs <>}) :encClauses <> :isTemplate true}
+(1 row)
+
+SELECT t.*, pg_get_expr(relpartbound, oid) FROM pg_partition_tree('subpart_range_mixedtempl') As t, pg_class As c WHERE relid = oid ORDER BY 1,5;
+                             relid                              |                    parentrelid                     | isleaf | level |         pg_get_expr          
+----------------------------------------------------------------+----------------------------------------------------+--------+-------+------------------------------
+ subpart_range_mixedtempl                                       |                                                    | f      |     0 | 
+ subpart_range_mixedtempl_1_prt_b_low                           | subpart_range_mixedtempl                           | f      |     1 | FOR VALUES FROM (0) TO (3)
+ subpart_range_mixedtempl_1_prt_b_mid                           | subpart_range_mixedtempl                           | f      |     1 | FOR VALUES FROM (3) TO (6)
+ subpart_range_mixedtempl_1_prt_b_low_2_prt_def_c               | subpart_range_mixedtempl_1_prt_b_low               | f      |     2 | DEFAULT
+ subpart_range_mixedtempl_1_prt_b_low_2_prt_c_low_1             | subpart_range_mixedtempl_1_prt_b_low               | f      |     2 | FOR VALUES FROM (11) TO (21)
+ subpart_range_mixedtempl_1_prt_b_low_2_prt_c_low_2             | subpart_range_mixedtempl_1_prt_b_low               | f      |     2 | FOR VALUES FROM (21) TO (22)
+ subpart_range_mixedtempl_1_prt_b_mid_2_prt_c_mid_1             | subpart_range_mixedtempl_1_prt_b_mid               | f      |     2 | FOR VALUES FROM (22) TO (32)
+ subpart_range_mixedtempl_1_prt_b_low_2_prt_def_c_3_prt_def_d   | subpart_range_mixedtempl_1_prt_b_low_2_prt_def_c   | t      |     3 | DEFAULT
+ subpart_range_mixedtempl_1_prt_b_low_2_prt_def_c_3_prt_c_low   | subpart_range_mixedtempl_1_prt_b_low_2_prt_def_c   | t      |     3 | FOR VALUES FROM (1) TO (5)
+ subpart_range_mixedtempl_1_prt_b_low_2_prt_def_c_3_prt_c_hi    | subpart_range_mixedtempl_1_prt_b_low_2_prt_def_c   | t      |     3 | FOR VALUES FROM (5) TO (10)
+ subpart_range_mixedtempl_1_prt_b_low_2_prt_c_low_1_3_prt_def_d | subpart_range_mixedtempl_1_prt_b_low_2_prt_c_low_1 | t      |     3 | DEFAULT
+ subpart_range_mixedtempl_1_prt_b_low_2_prt_c_low_1_3_prt_c_low | subpart_range_mixedtempl_1_prt_b_low_2_prt_c_low_1 | t      |     3 | FOR VALUES FROM (1) TO (5)
+ subpart_range_mixedtempl_1_prt_b_low_2_prt_c_low_1_3_prt_c_hi  | subpart_range_mixedtempl_1_prt_b_low_2_prt_c_low_1 | t      |     3 | FOR VALUES FROM (5) TO (10)
+ subpart_range_mixedtempl_1_prt_b_low_2_prt_c_low_2_3_prt_def_d | subpart_range_mixedtempl_1_prt_b_low_2_prt_c_low_2 | t      |     3 | DEFAULT
+ subpart_range_mixedtempl_1_prt_b_low_2_prt_c_low_2_3_prt_c_low | subpart_range_mixedtempl_1_prt_b_low_2_prt_c_low_2 | t      |     3 | FOR VALUES FROM (1) TO (5)
+ subpart_range_mixedtempl_1_prt_b_low_2_prt_c_low_2_3_prt_c_hi  | subpart_range_mixedtempl_1_prt_b_low_2_prt_c_low_2 | t      |     3 | FOR VALUES FROM (5) TO (10)
+ subpart_range_mixedtempl_1_prt_b_mid_2_prt_c_mid_1_3_prt_def_d | subpart_range_mixedtempl_1_prt_b_mid_2_prt_c_mid_1 | t      |     3 | DEFAULT
+ subpart_range_mixedtempl_1_prt_b_mid_2_prt_c_mid_1_3_prt_c_low | subpart_range_mixedtempl_1_prt_b_mid_2_prt_c_mid_1 | t      |     3 | FOR VALUES FROM (1) TO (5)
+ subpart_range_mixedtempl_1_prt_b_mid_2_prt_c_mid_1_3_prt_c_hi  | subpart_range_mixedtempl_1_prt_b_mid_2_prt_c_mid_1 | t      |     3 | FOR VALUES FROM (5) TO (10)
+(19 rows)
+
+-- ADD PARTITION without subpartition definition spec for level 2 should fail
+ALTER TABLE subpart_range_mixedtempl ADD PARTITION b_high START (6) END (9);
+ERROR:  no partitions specified at depth 2
+-- ADD PARTITION with subpartition definition spec for level 2 should fail if EVERY is specified in level 1 partition definition spec
+ALTER TABLE subpart_range_mixedtempl ADD PARTITION b_high START (6) END (9) every (3) (subpartition c_high start(32) end (50));
+ERROR:  syntax error at or near "every"
+LINE 1: ...mixedtempl ADD PARTITION b_high START (6) END (9) every (3) ...
+                                                             ^
+-- ADD PARTITION with subpartition definition spec for level 2 should fail if there is more than one subpartition at level 2.
+ALTER TABLE subpart_range_mixedtempl ADD PARTITION b_high START (6) END (9) (subpartition c_high start(32) end (50) every (15));
+ERROR:  relation "subpart_range_mixedtempl_1_prt_b_high_2_prt_c_high__3_prt_def_d" already exists
+-- ADD PARTITION with subpartition definition spec for level 2 should create level 3 subpartitions according to the template
+ALTER TABLE subpart_range_mixedtempl ADD PARTITION b_high START (6) END (9) (subpartition c_high start(32) end (50) every (50));
+SELECT t.*, pg_get_expr(relpartbound, oid) FROM pg_partition_tree('subpart_range_mixedtempl') As t, pg_class As c WHERE relid = oid AND t.relid::regclass::text LIKE '%b_high%' ORDER BY 1,5;
+                              relid                              |                     parentrelid                      | isleaf | level |         pg_get_expr          
+-----------------------------------------------------------------+------------------------------------------------------+--------+-------+------------------------------
+ subpart_range_mixedtempl_1_prt_b_high                           | subpart_range_mixedtempl                             | f      |     1 | FOR VALUES FROM (6) TO (9)
+ subpart_range_mixedtempl_1_prt_b_high_2_prt_c_high_1            | subpart_range_mixedtempl_1_prt_b_high                | f      |     2 | FOR VALUES FROM (32) TO (50)
+ subpart_range_mixedtempl_1_prt_b_high_2_prt_c_high__3_prt_def_d | subpart_range_mixedtempl_1_prt_b_high_2_prt_c_high_1 | t      |     3 | DEFAULT
+ subpart_range_mixedtempl_1_prt_b_high_2_prt_c_high__3_prt_c_low | subpart_range_mixedtempl_1_prt_b_high_2_prt_c_high_1 | t      |     3 | FOR VALUES FROM (1) TO (5)
+ subpart_range_mixedtempl_1_prt_b_high_2_prt_c_high_1_3_prt_c_hi | subpart_range_mixedtempl_1_prt_b_high_2_prt_c_high_1 | t      |     3 | FOR VALUES FROM (5) TO (10)
+(5 rows)
+
+-- Subpartitioned by LIST
+CREATE TABLE subpart_list_templ (trans_id int, date date, amount
+                             decimal(9,2), region text)
+    DISTRIBUTED BY (trans_id)
+    PARTITION BY RANGE (date)
+        SUBPARTITION BY LIST (region)
+            SUBPARTITION TEMPLATE
+            ( SUBPARTITION usa VALUES ('usa'),
+            SUBPARTITION asia VALUES ('asia'),
+            SUBPARTITION europe VALUES ('europe'),
+            DEFAULT SUBPARTITION other_regions)
+        (START (date '2020-01-01') INCLUSIVE
+        END (date '2022-01-01') EXCLUSIVE
+        EVERY (INTERVAL '1 year'),
+        DEFAULT PARTITION outlying_dates );
+SELECT level, template FROM gp_partition_template t WHERE t.relid = 'subpart_list_templ'::regclass;
+ level |                                                                                                                                                                                                                                                                                                                                                                                                                            template                                                                                                                                                                                                                                                                                                                                                                                                                            
+-------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+     1 | {GPPARTITIONDEFINITION :partDefElems ({GPPARTDEFELEM :partName usa :boundSpec {GPPARTITIONLISTSPEC :partValues (({A_CONST :val "usa" :location 292}))} :subSpec <> :isDefault false :options <> :accessMethod <> :tablespacename <> :colencs <>} {GPPARTDEFELEM :partName asia :boundSpec {GPPARTITIONLISTSPEC :partValues (({A_CONST :val "asia" :location 338}))} :subSpec <> :isDefault false :options <> :accessMethod <> :tablespacename <> :colencs <>} {GPPARTDEFELEM :partName europe :boundSpec {GPPARTITIONLISTSPEC :partValues (({A_CONST :val "europe" :location 387}))} :subSpec <> :isDefault false :options <> :accessMethod <> :tablespacename <> :colencs <>} {GPPARTDEFELEM :partName other_regions :boundSpec <> :subSpec <> :isDefault true :options <> :accessMethod <> :tablespacename <> :colencs <>}) :encClauses <> :isTemplate true}
+(1 row)
+
+SELECT t.*, pg_get_expr(relpartbound, oid) FROM pg_partition_tree('subpart_list_templ') As t, pg_class As c WHERE relid = oid ORDER BY 1,5;
+                            relid                            |               parentrelid               | isleaf | level |                   pg_get_expr                    
+-------------------------------------------------------------+-----------------------------------------+--------+-------+--------------------------------------------------
+ subpart_list_templ                                          |                                         | f      |     0 | 
+ subpart_list_templ_1_prt_outlying_dates                     | subpart_list_templ                      | f      |     1 | DEFAULT
+ subpart_list_templ_1_prt_2                                  | subpart_list_templ                      | f      |     1 | FOR VALUES FROM ('01-01-2020') TO ('01-01-2021')
+ subpart_list_templ_1_prt_3                                  | subpart_list_templ                      | f      |     1 | FOR VALUES FROM ('01-01-2021') TO ('01-01-2022')
+ subpart_list_templ_1_prt_outlying_dates_2_prt_other_regions | subpart_list_templ_1_prt_outlying_dates | t      |     2 | DEFAULT
+ subpart_list_templ_1_prt_outlying_dates_2_prt_usa           | subpart_list_templ_1_prt_outlying_dates | t      |     2 | FOR VALUES IN ('usa')
+ subpart_list_templ_1_prt_outlying_dates_2_prt_asia          | subpart_list_templ_1_prt_outlying_dates | t      |     2 | FOR VALUES IN ('asia')
+ subpart_list_templ_1_prt_outlying_dates_2_prt_europe        | subpart_list_templ_1_prt_outlying_dates | t      |     2 | FOR VALUES IN ('europe')
+ subpart_list_templ_1_prt_2_2_prt_other_regions              | subpart_list_templ_1_prt_2              | t      |     2 | DEFAULT
+ subpart_list_templ_1_prt_2_2_prt_usa                        | subpart_list_templ_1_prt_2              | t      |     2 | FOR VALUES IN ('usa')
+ subpart_list_templ_1_prt_2_2_prt_asia                       | subpart_list_templ_1_prt_2              | t      |     2 | FOR VALUES IN ('asia')
+ subpart_list_templ_1_prt_2_2_prt_europe                     | subpart_list_templ_1_prt_2              | t      |     2 | FOR VALUES IN ('europe')
+ subpart_list_templ_1_prt_3_2_prt_other_regions              | subpart_list_templ_1_prt_3              | t      |     2 | DEFAULT
+ subpart_list_templ_1_prt_3_2_prt_usa                        | subpart_list_templ_1_prt_3              | t      |     2 | FOR VALUES IN ('usa')
+ subpart_list_templ_1_prt_3_2_prt_asia                       | subpart_list_templ_1_prt_3              | t      |     2 | FOR VALUES IN ('asia')
+ subpart_list_templ_1_prt_3_2_prt_europe                     | subpart_list_templ_1_prt_3              | t      |     2 | FOR VALUES IN ('europe')
+(16 rows)
+
+ALTER TABLE subpart_list_templ ADD PARTITION year_2023 START (date '2022-01-01') EXCLUSIVE END (date '2023-01-01') INCLUSIVE;
+-- ADD PARTITION should create subpartitions according to the template
+SELECT t.*, pg_get_expr(relpartbound, oid) FROM pg_partition_tree('subpart_list_templ') As t, pg_class As c WHERE relid = oid AND t.relid::regclass::text LIKE '%year_2023%' ORDER BY 1,5;
+                         relid                          |            parentrelid             | isleaf | level |                   pg_get_expr                    
+--------------------------------------------------------+------------------------------------+--------+-------+--------------------------------------------------
+ subpart_list_templ_1_prt_year_2023                     | subpart_list_templ                 | f      |     1 | FOR VALUES FROM ('01-02-2022') TO ('01-02-2023')
+ subpart_list_templ_1_prt_year_2023_2_prt_other_regions | subpart_list_templ_1_prt_year_2023 | t      |     2 | DEFAULT
+ subpart_list_templ_1_prt_year_2023_2_prt_usa           | subpart_list_templ_1_prt_year_2023 | t      |     2 | FOR VALUES IN ('usa')
+ subpart_list_templ_1_prt_year_2023_2_prt_asia          | subpart_list_templ_1_prt_year_2023 | t      |     2 | FOR VALUES IN ('asia')
+ subpart_list_templ_1_prt_year_2023_2_prt_europe        | subpart_list_templ_1_prt_year_2023 | t      |     2 | FOR VALUES IN ('europe')
+(5 rows)
+
+-- Subpartitioning without any template should work as usual
+CREATE TABLE notemplate (a int, dropped int, b int, c int, d int)
+    DISTRIBUTED RANDOMLY
+    PARTITION BY RANGE (b)
+        SUBPARTITION BY RANGE (c)
+        (
+        PARTITION b_low start (0) end (3)
+            (
+              SUBPARTITION c_low start (1) end (5),
+              SUBPARTITION c_hi start (5) end (10),
+              DEFAULT SUBPARTITION def
+            ),
+        PARTITION b_mid start (3) end (6)
+            (
+              SUBPARTITION c_low start (1) end (5),
+              SUBPARTITION c_hi start (5) end (10)
+            )
+        );
+SELECT level, template FROM gp_partition_template t WHERE t.relid = 'notemplate'::regclass;
+ level | template 
+-------+----------
+(0 rows)
+
+ALTER TABLE notemplate ADD partition b_hi START (6) END (9) (subpartition c_low START (1) END (7));
+SELECT t.*, pg_get_expr(relpartbound, oid) FROM pg_partition_tree('notemplate') As t, pg_class As c WHERE relid = oid ORDER BY 1,5;
+               relid                |      parentrelid       | isleaf | level |         pg_get_expr         
+------------------------------------+------------------------+--------+-------+-----------------------------
+ notemplate                         |                        | f      |     0 | 
+ notemplate_1_prt_b_low             | notemplate             | f      |     1 | FOR VALUES FROM (0) TO (3)
+ notemplate_1_prt_b_mid             | notemplate             | f      |     1 | FOR VALUES FROM (3) TO (6)
+ notemplate_1_prt_b_low_2_prt_def   | notemplate_1_prt_b_low | t      |     2 | DEFAULT
+ notemplate_1_prt_b_low_2_prt_c_low | notemplate_1_prt_b_low | t      |     2 | FOR VALUES FROM (1) TO (5)
+ notemplate_1_prt_b_low_2_prt_c_hi  | notemplate_1_prt_b_low | t      |     2 | FOR VALUES FROM (5) TO (10)
+ notemplate_1_prt_b_mid_2_prt_c_low | notemplate_1_prt_b_mid | t      |     2 | FOR VALUES FROM (1) TO (5)
+ notemplate_1_prt_b_mid_2_prt_c_hi  | notemplate_1_prt_b_mid | t      |     2 | FOR VALUES FROM (5) TO (10)
+ notemplate_1_prt_b_hi              | notemplate             | f      |     1 | FOR VALUES FROM (6) TO (9)
+ notemplate_1_prt_b_hi_2_prt_c_low  | notemplate_1_prt_b_hi  | t      |     2 | FOR VALUES FROM (1) TO (7)
+(10 rows)
+
+-- Subpartition templates with encoding clauses
+prepare encoding_check as
+select attrelid::regclass as relname,
+        attnum, attoptions from pg_class c, pg_attribute_encoding e
+where c.relname like 'subpart_templ_encoding%' and c.oid=e.attrelid
+order by relname, attnum;
+-- Range partition with enclause
+DROP TABLE IF EXISTS subpart_templ_encoding;
+NOTICE:  table "subpart_templ_encoding" does not exist, skipping
+create table subpart_templ_encoding (i int, j int, k int, l int)
+    with (appendonly = true, orientation=column)
+    partition by range(j)
+    subpartition by range (k)
+    subpartition template(
+        subpartition sp1 start (100) end (200) every (50),
+        column i encoding(compresstype=zlib),
+        column j encoding(compresstype=RLE_TYPE),
+        column k encoding(compresstype=zlib),
+        column l encoding(compresstype=zlib)
+    )
+(   partition p1 start(1) end(10),
+    partition p2 start(10) end(20)
+);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+SELECT level, template FROM gp_partition_template t WHERE t.relid = 'subpart_templ_encoding'::regclass;
+ level |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    template                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     
+-------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+     1 | {GPPARTITIONDEFINITION :partDefElems ({GPPARTDEFELEM :partName sp1 :boundSpec {GPPARTITIONRANGESPEC :partStart {GPPARTITIONRANGEITEM :val ({A_CONST :val 100 :location 229}) :edge 1} :partEnd {GPPARTITIONRANGEITEM :val ({A_CONST :val 200 :location 239}) :edge 2} :partEvery ({A_CONST :val 50 :location 251})} :subSpec <> :isDefault false :options <> :accessMethod <> :tablespacename <> :colencs <>} {COLUMNREFERENCESTORAGEDIRECTIVE :column i :deflt false :encoding ({DEFELEM :defnamespace <> :defname compresstype :arg {TYPENAME :names ("zlib") :typeOid 0 :setof false :pct_type false :typmods <> :typemod -1 :arrayBounds <> :location 295} :defaction 0 :location 282})} {COLUMNREFERENCESTORAGEDIRECTIVE :column j :deflt false :encoding ({DEFELEM :defnamespace <> :defname compresstype :arg {TYPENAME :names ("rle_type") :typeOid 0 :setof false :pct_type false :typmods <> :typemod -1 :arrayBounds <> :location 341} :defaction 0 :location 328})} {COLUMNREFERENCESTORAGEDIRECTIVE :column k :deflt false :encoding ({DEFELEM :defnamespace <> :defname compresstype :arg {TYPENAME :names ("zlib") :typeOid 0 :setof false :pct_type false :typmods <> :typemod -1 :arrayBounds <> :location 391} :defaction 0 :location 378})} {COLUMNREFERENCESTORAGEDIRECTIVE :column l :deflt false :encoding ({DEFELEM :defnamespace <> :defname compresstype :arg {TYPENAME :names ("zlib") :typeOid 0 :setof false :pct_type false :typmods <> :typemod -1 :arrayBounds <> :location 437} :defaction 0 :location 424})}) :encClauses <> :isTemplate true}
+(1 row)
+
+SELECT t.*, pg_get_expr(relpartbound, oid) FROM pg_partition_tree('subpart_templ_encoding') AS t, pg_class AS c WHERE relid = oid ORDER BY 1,5;
+                    relid                    |           parentrelid           | isleaf | level |          pg_get_expr           
+---------------------------------------------+---------------------------------+--------+-------+--------------------------------
+ subpart_templ_encoding                      |                                 | f      |     0 | 
+ subpart_templ_encoding_1_prt_p1             | subpart_templ_encoding          | f      |     1 | FOR VALUES FROM (1) TO (10)
+ subpart_templ_encoding_1_prt_p2             | subpart_templ_encoding          | f      |     1 | FOR VALUES FROM (10) TO (20)
+ subpart_templ_encoding_1_prt_p1_2_prt_sp1_1 | subpart_templ_encoding_1_prt_p1 | t      |     2 | FOR VALUES FROM (100) TO (150)
+ subpart_templ_encoding_1_prt_p1_2_prt_sp1_2 | subpart_templ_encoding_1_prt_p1 | t      |     2 | FOR VALUES FROM (150) TO (200)
+ subpart_templ_encoding_1_prt_p2_2_prt_sp1_1 | subpart_templ_encoding_1_prt_p2 | t      |     2 | FOR VALUES FROM (100) TO (150)
+ subpart_templ_encoding_1_prt_p2_2_prt_sp1_2 | subpart_templ_encoding_1_prt_p2 | t      |     2 | FOR VALUES FROM (150) TO (200)
+(7 rows)
+
+EXECUTE encoding_check;
+                   relname                   | attnum |                       attoptions                        
+---------------------------------------------+--------+---------------------------------------------------------
+ subpart_templ_encoding_1_prt_p1_2_prt_sp1_1 |      1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ subpart_templ_encoding_1_prt_p1_2_prt_sp1_1 |      2 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
+ subpart_templ_encoding_1_prt_p1_2_prt_sp1_1 |      3 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ subpart_templ_encoding_1_prt_p1_2_prt_sp1_1 |      4 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ subpart_templ_encoding_1_prt_p1_2_prt_sp1_2 |      1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ subpart_templ_encoding_1_prt_p1_2_prt_sp1_2 |      2 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
+ subpart_templ_encoding_1_prt_p1_2_prt_sp1_2 |      3 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ subpart_templ_encoding_1_prt_p1_2_prt_sp1_2 |      4 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ subpart_templ_encoding_1_prt_p2_2_prt_sp1_1 |      1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ subpart_templ_encoding_1_prt_p2_2_prt_sp1_1 |      2 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
+ subpart_templ_encoding_1_prt_p2_2_prt_sp1_1 |      3 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ subpart_templ_encoding_1_prt_p2_2_prt_sp1_1 |      4 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ subpart_templ_encoding_1_prt_p2_2_prt_sp1_2 |      1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ subpart_templ_encoding_1_prt_p2_2_prt_sp1_2 |      2 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
+ subpart_templ_encoding_1_prt_p2_2_prt_sp1_2 |      3 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ subpart_templ_encoding_1_prt_p2_2_prt_sp1_2 |      4 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+(16 rows)
+
+-- FIXME: the new partitions should have the encodings specified in the template
+ALTER TABLE subpart_templ_encoding ADD PARTITION p3 START (30) END (40);
+EXECUTE encoding_check;
+                   relname                   | attnum |                       attoptions                        
+---------------------------------------------+--------+---------------------------------------------------------
+ subpart_templ_encoding_1_prt_p1_2_prt_sp1_1 |      1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ subpart_templ_encoding_1_prt_p1_2_prt_sp1_1 |      2 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
+ subpart_templ_encoding_1_prt_p1_2_prt_sp1_1 |      3 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ subpart_templ_encoding_1_prt_p1_2_prt_sp1_1 |      4 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ subpart_templ_encoding_1_prt_p1_2_prt_sp1_2 |      1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ subpart_templ_encoding_1_prt_p1_2_prt_sp1_2 |      2 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
+ subpart_templ_encoding_1_prt_p1_2_prt_sp1_2 |      3 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ subpart_templ_encoding_1_prt_p1_2_prt_sp1_2 |      4 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ subpart_templ_encoding_1_prt_p2_2_prt_sp1_1 |      1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ subpart_templ_encoding_1_prt_p2_2_prt_sp1_1 |      2 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
+ subpart_templ_encoding_1_prt_p2_2_prt_sp1_1 |      3 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ subpart_templ_encoding_1_prt_p2_2_prt_sp1_1 |      4 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ subpart_templ_encoding_1_prt_p2_2_prt_sp1_2 |      1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ subpart_templ_encoding_1_prt_p2_2_prt_sp1_2 |      2 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
+ subpart_templ_encoding_1_prt_p2_2_prt_sp1_2 |      3 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ subpart_templ_encoding_1_prt_p2_2_prt_sp1_2 |      4 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ subpart_templ_encoding_1_prt_p3_2_prt_sp1_1 |      1 | {compresstype=none,blocksize=32768,compresslevel=0}
+ subpart_templ_encoding_1_prt_p3_2_prt_sp1_1 |      2 | {compresstype=none,blocksize=32768,compresslevel=0}
+ subpart_templ_encoding_1_prt_p3_2_prt_sp1_1 |      3 | {compresstype=none,blocksize=32768,compresslevel=0}
+ subpart_templ_encoding_1_prt_p3_2_prt_sp1_1 |      4 | {compresstype=none,blocksize=32768,compresslevel=0}
+ subpart_templ_encoding_1_prt_p3_2_prt_sp1_2 |      1 | {compresstype=none,blocksize=32768,compresslevel=0}
+ subpart_templ_encoding_1_prt_p3_2_prt_sp1_2 |      2 | {compresstype=none,blocksize=32768,compresslevel=0}
+ subpart_templ_encoding_1_prt_p3_2_prt_sp1_2 |      3 | {compresstype=none,blocksize=32768,compresslevel=0}
+ subpart_templ_encoding_1_prt_p3_2_prt_sp1_2 |      4 | {compresstype=none,blocksize=32768,compresslevel=0}
+(24 rows)
+
+-- List partition with enclause
+DROP TABLE IF EXISTS subpart_templ_encoding;
+create table subpart_templ_encoding (i int, j int, k int, l int)
+    with (appendonly = true, orientation=column)
+    partition by range(j)
+    subpartition by list (k)
+    subpartition template(
+        subpartition sp1 values(1, 2, 3, 4, 5) ,
+        column i encoding(compresstype=zlib),
+        column j encoding(compresstype=RLE_TYPE),
+        column k encoding(compresstype=zlib),
+        column l encoding(compresstype=zlib)
+    )
+(   partition p1 start(1) end(10),
+    partition p2 start(10) end(20)
+);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+SELECT level, template FROM gp_partition_template t WHERE t.relid = 'subpart_templ_encoding'::regclass;
+ level |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      template                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      
+-------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+     1 | {GPPARTITIONDEFINITION :partDefElems ({GPPARTDEFELEM :partName sp1 :boundSpec {GPPARTITIONLISTSPEC :partValues (({A_CONST :val 1 :location 228}) ({A_CONST :val 2 :location 231}) ({A_CONST :val 3 :location 234}) ({A_CONST :val 4 :location 237}) ({A_CONST :val 5 :location 240}))} :subSpec <> :isDefault false :options <> :accessMethod <> :tablespacename <> :colencs <>} {COLUMNREFERENCESTORAGEDIRECTIVE :column i :deflt false :encoding ({DEFELEM :defnamespace <> :defname compresstype :arg {TYPENAME :names ("zlib") :typeOid 0 :setof false :pct_type false :typmods <> :typemod -1 :arrayBounds <> :location 284} :defaction 0 :location 271})} {COLUMNREFERENCESTORAGEDIRECTIVE :column j :deflt false :encoding ({DEFELEM :defnamespace <> :defname compresstype :arg {TYPENAME :names ("rle_type") :typeOid 0 :setof false :pct_type false :typmods <> :typemod -1 :arrayBounds <> :location 330} :defaction 0 :location 317})} {COLUMNREFERENCESTORAGEDIRECTIVE :column k :deflt false :encoding ({DEFELEM :defnamespace <> :defname compresstype :arg {TYPENAME :names ("zlib") :typeOid 0 :setof false :pct_type false :typmods <> :typemod -1 :arrayBounds <> :location 380} :defaction 0 :location 367})} {COLUMNREFERENCESTORAGEDIRECTIVE :column l :deflt false :encoding ({DEFELEM :defnamespace <> :defname compresstype :arg {TYPENAME :names ("zlib") :typeOid 0 :setof false :pct_type false :typmods <> :typemod -1 :arrayBounds <> :location 426} :defaction 0 :location 413})}) :encClauses <> :isTemplate true}
+(1 row)
+
+SELECT t.*, pg_get_expr(relpartbound, oid) FROM pg_partition_tree('subpart_templ_encoding') AS t, pg_class AS c WHERE relid = oid ORDER BY 1,5;
+                   relid                   |           parentrelid           | isleaf | level |          pg_get_expr          
+-------------------------------------------+---------------------------------+--------+-------+-------------------------------
+ subpart_templ_encoding                    |                                 | f      |     0 | 
+ subpart_templ_encoding_1_prt_p1           | subpart_templ_encoding          | f      |     1 | FOR VALUES FROM (1) TO (10)
+ subpart_templ_encoding_1_prt_p2           | subpart_templ_encoding          | f      |     1 | FOR VALUES FROM (10) TO (20)
+ subpart_templ_encoding_1_prt_p1_2_prt_sp1 | subpart_templ_encoding_1_prt_p1 | t      |     2 | FOR VALUES IN (1, 2, 3, 4, 5)
+ subpart_templ_encoding_1_prt_p2_2_prt_sp1 | subpart_templ_encoding_1_prt_p2 | t      |     2 | FOR VALUES IN (1, 2, 3, 4, 5)
+(5 rows)
+
+EXECUTE encoding_check;
+                  relname                  | attnum |                       attoptions                        
+-------------------------------------------+--------+---------------------------------------------------------
+ subpart_templ_encoding_1_prt_p1_2_prt_sp1 |      1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ subpart_templ_encoding_1_prt_p1_2_prt_sp1 |      2 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
+ subpart_templ_encoding_1_prt_p1_2_prt_sp1 |      3 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ subpart_templ_encoding_1_prt_p1_2_prt_sp1 |      4 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ subpart_templ_encoding_1_prt_p2_2_prt_sp1 |      1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ subpart_templ_encoding_1_prt_p2_2_prt_sp1 |      2 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
+ subpart_templ_encoding_1_prt_p2_2_prt_sp1 |      3 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ subpart_templ_encoding_1_prt_p2_2_prt_sp1 |      4 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+(8 rows)
+
+-- FIXME: the new partitions should have the encodings specified in the template
+ALTER TABLE subpart_templ_encoding ADD PARTITION p3 START (30) END (40);
+EXECUTE encoding_check;
+                  relname                  | attnum |                       attoptions                        
+-------------------------------------------+--------+---------------------------------------------------------
+ subpart_templ_encoding_1_prt_p1_2_prt_sp1 |      1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ subpart_templ_encoding_1_prt_p1_2_prt_sp1 |      2 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
+ subpart_templ_encoding_1_prt_p1_2_prt_sp1 |      3 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ subpart_templ_encoding_1_prt_p1_2_prt_sp1 |      4 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ subpart_templ_encoding_1_prt_p2_2_prt_sp1 |      1 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ subpart_templ_encoding_1_prt_p2_2_prt_sp1 |      2 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
+ subpart_templ_encoding_1_prt_p2_2_prt_sp1 |      3 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ subpart_templ_encoding_1_prt_p2_2_prt_sp1 |      4 | {compresstype=zlib,compresslevel=1,blocksize=32768}
+ subpart_templ_encoding_1_prt_p3_2_prt_sp1 |      1 | {compresstype=none,blocksize=32768,compresslevel=0}
+ subpart_templ_encoding_1_prt_p3_2_prt_sp1 |      2 | {compresstype=none,blocksize=32768,compresslevel=0}
+ subpart_templ_encoding_1_prt_p3_2_prt_sp1 |      3 | {compresstype=none,blocksize=32768,compresslevel=0}
+ subpart_templ_encoding_1_prt_p3_2_prt_sp1 |      4 | {compresstype=none,blocksize=32768,compresslevel=0}
+(12 rows)
+
+-- Partition specific ENCODING clause is not supported in SUBPARTITION TEMPLATE
+create table template_partelem_enc (i int, j int, k int, l int)
+    with (appendonly = true, orientation=column)
+    partition by range(j)
+    subpartition by range (k)
+        subpartition template(
+        subpartition sp1 start (100) end (200) every (50) column i encoding(compresstype=RLE_TYPE),
+        column i encoding(compresstype=zlib),
+        column j encoding(compresstype=RLE_TYPE),
+        column k encoding(compresstype=zlib),
+        column l encoding(compresstype=zlib)
+    )
+(   partition p1 start(1) end(10),
+    partition p2 start(10) end(20)
+);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+ERROR:  partition specific ENCODING clause not supported in SUBPARTITION TEMPLATE
+LINE 6:         subpartition sp1 start (100) end (200) every (50) co...
+                ^
