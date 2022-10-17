@@ -22,7 +22,9 @@
 #include "access/xact.h"
 #include "access/xlog.h"
 #include "catalog/catalog.h"
+#include "catalog/gp_partition_template.h"
 #include "catalog/namespace.h"
+#include "catalog/partition.h"
 #include "catalog/pg_inherits.h"
 #include "catalog/toasting.h"
 #include "commands/alter.h"
@@ -79,7 +81,6 @@
 #include "cdb/cdbdisp_query.h"
 #include "cdb/cdbendpoint.h"
 #include "cdb/cdbvars.h"
-
 
 /* Hook for plugins to get control in ProcessUtility() */
 ProcessUtility_hook_type ProcessUtility_hook = NULL;
@@ -1238,13 +1239,24 @@ ProcessUtilitySlow(ParseState *pstate,
 							if (cstmt->partspec && cstmt->partspec->gpPartDef)
 							{
 								List *parts;
+								GpPartitionDefinition *gpPartDef = cstmt->partspec->gpPartDef;
+								Oid parentrelid = address.objectId;
+								List *ancestors = get_partition_ancestors(parentrelid);
 
-								parts = generatePartitions(address.objectId,
-														   cstmt->partspec->gpPartDef,
+								if (!gpPartDef->fromCatalog)
+								{
+									gpPartDef = transformGpPartitionDefinition(parentrelid, queryString, gpPartDef);
+									if (gpPartDef->isTemplate)
+										StoreGpPartitionTemplate(ancestors ? llast_oid(ancestors) : parentrelid,
+																 list_length(ancestors), gpPartDef);
+								}
+
+								parts = generatePartitions(parentrelid,
+														   gpPartDef,
 														   cstmt->partspec->subPartSpec,
 														   queryString, options,
 														   cstmt->accessMethod,
-														   cstmt->attr_encodings, false, true);
+														   cstmt->attr_encodings, false);
 								more_stmts = list_concat(more_stmts, parts);
 							}
 

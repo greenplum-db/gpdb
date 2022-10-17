@@ -1239,9 +1239,14 @@ ATExecGPPartCmds(Relation origrel, AlterTableCmd *cmd)
 				}
 			} while (1);
 
+			Assert(!gpPartDef->fromCatalog);
+			gpPartDef = transformGpPartitionDefinition(RelationGetRelid(rel), cmd->queryString, gpPartDef);
+			if (gpPartDef->isTemplate)
+				StoreGpPartitionTemplate(ancestors ? llast_oid(ancestors) : RelationGetRelid(rel),
+										 list_length(ancestors), gpPartDef);
 			List *cstmts = generatePartitions(RelationGetRelid(rel),
 											  gpPartDef, subpart, cmd->queryString,
-											  NIL, NULL, NULL, false, true);
+											  NIL, NULL, NULL, false);
 			foreach(l, cstmts)
 			{
 				Node *stmt = (Node *) lfirst(l);
@@ -1368,8 +1373,9 @@ ATExecGPPartCmds(Relation origrel, AlterTableCmd *cmd)
 				 * add partitions, just to validate the subpartition template,
 				 * if anything wrong it will error out.
 				 */
+				templateDef = transformGpPartitionDefinition(firstchildoid, cmd->queryString, templateDef);
 				generatePartitions(firstchildoid, templateDef, NULL, cmd->queryString,
-								   NIL, NULL, NULL, true, false);
+								   NIL, NULL, NULL, true);
 				table_close(firstrel, AccessShareLock);
 
 				StoreGpPartitionTemplate(topParentrelid, level, templateDef);

@@ -46,7 +46,10 @@ extern List *generatePartitions(Oid parentrelid, GpPartitionDefinition *gpPartSp
 								PartitionSpec *subPartSpec,
 								const char *queryString, List *parentoptions,
 								const char *parentaccessmethod,
-								List *parentattenc, bool forvalidationonly, bool store_template);
+								List *parentattenc, bool forvalidationonly);
+GpPartitionDefinition *
+transformGpPartitionDefinition(Oid parentrelid, const char *queryString,
+							   GpPartitionDefinition *gpPartDef_orig);
 extern void convert_exclusive_start_inclusive_end(Const *constval, Oid part_col_typid,
 												  int32 part_col_typmod, bool is_exclusive_start);
 

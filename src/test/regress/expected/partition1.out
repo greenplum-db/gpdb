@@ -82,7 +82,7 @@ partition bb start (2008,2) end (2009,3)
 ERROR:  too many columns for RANGE partition -- only one column is allowed
 drop table ggg cascade;
 ERROR:  table "ggg" does not exist
--- Mismatch between number of columns in PARTITION BY and in the START/END clauses
+-- Mismatch between number of columns in PARTITION BY and in the START/END/EVERY/VALUES clauses
 create table pby_mismatch (a char(1), b numeric, d numeric)
 distributed by (a)
 partition by range (b)
@@ -103,6 +103,23 @@ partition by range (b)
 ERROR:  number of END values should cover all partition key columns
 LINE 5:   partition aa start (2007) end (2008,1),
                                     ^
+create table pby_mismatch (a char(1), b numeric, d numeric)
+    distributed by (a)
+partition by range (b)
+(
+  partition aa start (2007) end (2008) every (1),
+  partition bb start (2008) end (2009) every (1,2)
+);
+ERROR:  number of EVERY values should cover all partition key columns
+LINE 6:   partition bb start (2008) end (2009) every (1,2)
+                       ^
+create table pby_mismatch (a char(1), b numeric, d numeric)
+    distributed by (a)
+partition by list (b)
+(
+  partition cc values ((1,2))
+);
+ERROR:  VALUES specification with more than one column not allowed (parse_partition_gp.c:1275)
 -- basic list partition
 create table ggg (a char(1), b char(2), d char(3))
 distributed by (a)
@@ -2832,3 +2849,8 @@ PARTITION BY RANGE(col2)
    partition parttwo start(100000001) end(200000001),
    partition partthree start(200000001) end(300000001));
 ERROR:  relation "partitioned_table_with_very_long_name_123456789_1_prt_partthree" already exists
+-- Test not supported partition strategy with legacy GPDB syntax
+create table hashpart_gpspec (a int, b int) partition by hash (b) (partition p1 start (1) end (2));
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+ERROR:  Not supported partition strategy (parse_partition_gp.c:1710)
