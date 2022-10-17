@@ -1447,7 +1447,7 @@ List *
 generatePartitions(Oid parentrelid, GpPartitionDefinition *gpPartSpec,
 				   PartitionSpec *subPartSpec, const char *queryString,
 				   List *parentoptions, const char *parentaccessmethod,
-				   List *parentattenc, bool forvalidationonly)
+				   List *parentattenc, bool forvalidationonly, bool store_template)
 {
 	Relation	parentrel;
 	List	   *result = NIL;
@@ -1474,16 +1474,17 @@ generatePartitions(Oid parentrelid, GpPartitionDefinition *gpPartSpec,
 	{
 		Assert(subPartSpec->gpPartDef->isTemplate);
 		isSubTemplate = subPartSpec->gpPartDef->isTemplate;
-		/*
-		 * If the subpartition specification is read from gp_partition_template
-		 * catalog, we don't need to call StoreGpPartitionTemplate. This will
-		 * help to save some IO since StoreGpPartitionTemplate trying to scan
-		 * gp_partition_template.
-		 */
-		if (isSubTemplate && !subPartSpec->gpPartDef->fromCatalog)
-			StoreGpPartitionTemplate(ancestors ? llast_oid(ancestors) : parentrelid,
-									 partcomp.level, subPartSpec->gpPartDef);
 	}
+
+	/*
+	 * If the subpartition specification is read from gp_partition_template
+	 * catalog, we don't need to call StoreGpPartitionTemplate. This will
+	 * help to save some IO since StoreGpPartitionTemplate trying to scan
+	 * gp_partition_template.
+	 */
+	if (gpPartSpec->isTemplate && !gpPartSpec->fromCatalog && store_template)
+		StoreGpPartitionTemplate(ancestors ? llast_oid(ancestors) : parentrelid,
+								 partcomp.level - 1, gpPartSpec);
 
 	foreach(lc, parentattenc)
 	{
