@@ -46,7 +46,7 @@ extern List *generatePartitions(Oid parentrelid, GpPartitionDefinition *gpPartSp
 								PartitionSpec *subPartSpec,
 								const char *queryString, List *parentoptions,
 								const char *parentaccessmethod,
-								List *parentattenc, bool forvalidationonly);
+								List *parentattenc, bool addpartition);
 GpPartitionDefinition *
 transformGpPartitionDefinition(Oid parentrelid, const char *queryString,
 							   GpPartitionDefinition *gpPartDef_orig);

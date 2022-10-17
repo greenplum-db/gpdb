@@ -1246,7 +1246,7 @@ ATExecGPPartCmds(Relation origrel, AlterTableCmd *cmd)
 										 list_length(ancestors), gpPartDef);
 			List *cstmts = generatePartitions(RelationGetRelid(rel),
 											  gpPartDef, subpart, cmd->queryString,
-											  NIL, NULL, NULL, false);
+											  NIL, NULL, NULL, true);
 			foreach(l, cstmts)
 			{
 				Node *stmt = (Node *) lfirst(l);
@@ -1375,7 +1375,7 @@ ATExecGPPartCmds(Relation origrel, AlterTableCmd *cmd)
 				 */
 				templateDef = transformGpPartitionDefinition(firstchildoid, cmd->queryString, templateDef);
 				generatePartitions(firstchildoid, templateDef, NULL, cmd->queryString,
-								   NIL, NULL, NULL, true);
+								   NIL, NULL, NULL, false);
 				table_close(firstrel, AccessShareLock);
 
 				StoreGpPartitionTemplate(topParentrelid, level, templateDef);

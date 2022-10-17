@@ -119,7 +119,7 @@ partition by list (b)
 (
   partition cc values ((1,2))
 );
-ERROR:  VALUES specification with more than one column not allowed (parse_partition_gp.c:1275)
+ERROR:  VALUES specification with more than one column not allowed (parse_partition_gp.c:1278)
 -- basic list partition
 create table ggg (a char(1), b char(2), d char(3))
 distributed by (a)

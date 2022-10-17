@@ -351,7 +351,7 @@ list_qsort_arg(List *list, qsort_arg_comparator cmp, void *arg)
  * END, deduce the value and update the corresponding list of CreateStmts.
  */
 static void
-deduceImplicitRangeBounds(ParseState *pstate, Relation parentrel, List *stmts)
+deduceImplicitRangeBounds(ParseState *pstate, Relation parentrel, List *stmts, bool addpartition)
 {
 	PartitionKey key = RelationGetPartitionKey(parentrel);
 	PartitionDesc desc = RelationGetPartitionDesc(parentrel);
@@ -359,14 +359,15 @@ deduceImplicitRangeBounds(ParseState *pstate, Relation parentrel, List *stmts)
 	list_qsort_arg(stmts, qsort_stmt_cmp, key);
 
 	/*
-	 * This works slightly differenly, depending on whether this is a
-	 * CREATE TABLE command to create a whole new table, or an ALTER TABLE
-	 * ADD PARTTION to add to an existing table.
+	 * This works slightly differently, depending on whether this is a
+	 * CREATE TABLE or ALTER TABLE SET SUBPARTITION TEMPLATE command to create
+	 * a whole new set of child partitions of a parent table, or an ALTER TABLE
+	 * ADD PARTTION to add to an existing set of sibling partitions.
 	 */
-	if (desc->nparts == 0)
+	if (!addpartition)
 	{
 		/*
-		 * CREATE TABLE, there are no existing partitions. We deduce the
+		 * CREATE TABLE or ALTER TABLE SET SUBPARTITION TEMPLATE. We deduce the
 		 * missing START/END bounds based on the other partitions defined in
 		 * the same command.
 		 */
@@ -441,6 +442,7 @@ deduceImplicitRangeBounds(ParseState *pstate, Relation parentrel, List *stmts)
 		 * but in practice it is not necessary, because the ALTER TABLE ADD
 		 * PARTITION syntax only allows creating one partition in one command.
 		 */
+		Assert(desc->nparts != 0);
 		if (list_length(stmts) != 1)
 			elog(ERROR, "cannot add more than one partition to existing partitioned table in one command");
 		CreateStmt *stmt = linitial_node(CreateStmt, stmts);
@@ -1665,7 +1667,7 @@ List *
 generatePartitions(Oid parentrelid, GpPartitionDefinition *gpPartSpec,
 				   PartitionSpec *subPartSpec, const char *queryString,
 				   List *parentoptions, const char *parentaccessmethod,
-				   List *parentattenc, bool forvalidationonly)
+				   List *parentattenc, bool addpartition)
 {
 	Relation	parentrel;
 	List	   *result = NIL;
@@ -1810,15 +1812,9 @@ generatePartitions(Oid parentrelid, GpPartitionDefinition *gpPartSpec,
 	 * Validate and maybe update range partitions bound here instead of in
 	 * check_new_partition_bound(), because we need to modify the lower or upper
 	 * bounds for implicit START/END.
-	 *
-	 * Need to skip this step forvalidationonly -- which is called by SET
-	 * SUBPARTITION TEMPLATE. Reason is deduceImplicitRangeBounds() assumes
-	 * for ADD PARTITION, only one partition is being added if missing START
-	 * or END specification. While that's true for ADD PARTITION, it's not
-	 * while setting template.
 	 */
-	if (hasImplicitRangeBounds && !forvalidationonly)
-		deduceImplicitRangeBounds(pstate, parentrel, result);
+	if (hasImplicitRangeBounds)
+		deduceImplicitRangeBounds(pstate, parentrel, result, addpartition);
 
 	free_parsestate(pstate);
 	table_close(parentrel, NoLock);

@@ -111,7 +111,17 @@ SELECT t.*, pg_get_expr(relpartbound, oid) FROM pg_partition_tree('subpart_range
  subpart_range_templ_1_prt_d_2_prt_r3                    | subpart_range_templ_1_prt_d            | t      |     2 | FOR VALUES FROM ('01-01-2003') TO ('01-01-2005')
 (23 rows)
 
--- Set a new subpartition template
+-- Set a new invalid subpartition template should fail
+ALTER TABLE subpart_range_templ SET SUBPARTITION TEMPLATE
+(
+    subpartition r4 START (date '2020-01-01'), END (date '2021-01-01'),
+    subpartition r5 START (date '2021-01-01'), END (date '2023-01-01'),
+    DEFAULT SUBPARTITION yet_another_year
+);
+ERROR:  cannot derive ending value of partition based upon starting of next partition
+LINE 3:     subpartition r4 START (date '2020-01-01'), END (date '20...
+            ^
+-- Set a new valid subpartition template
 ALTER TABLE subpart_range_templ SET SUBPARTITION TEMPLATE
 (
     subpartition r4 START (date '2020-01-01') EXCLUSIVE END (date '2021-01-01') INCLUSIVE,

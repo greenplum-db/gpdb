@@ -30,7 +30,14 @@ SELECT level, template FROM gp_partition_template t WHERE t.relid = 'subpart_ran
 -- ADD PARTITION with subpartition definition spec now should work
 ALTER TABLE subpart_range_templ ADD PARTITION d VALUES ('D') (SUBPARTITION r3 START (date '2003-01-01') END (date '2005-01-01'));
 SELECT t.*, pg_get_expr(relpartbound, oid) FROM pg_partition_tree('subpart_range_templ') As t, pg_class As c WHERE relid = oid ORDER BY 1,5;
--- Set a new subpartition template
+-- Set a new invalid subpartition template should fail
+ALTER TABLE subpart_range_templ SET SUBPARTITION TEMPLATE
+(
+    subpartition r4 START (date '2020-01-01'), END (date '2021-01-01'),
+    subpartition r5 START (date '2021-01-01'), END (date '2023-01-01'),
+    DEFAULT SUBPARTITION yet_another_year
+);
+-- Set a new valid subpartition template
 ALTER TABLE subpart_range_templ SET SUBPARTITION TEMPLATE
 (
     subpartition r4 START (date '2020-01-01') EXCLUSIVE END (date '2021-01-01') INCLUSIVE,
