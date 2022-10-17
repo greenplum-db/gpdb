@@ -400,6 +400,10 @@ SELECT level, template FROM gp_partition_template t WHERE t.relid = 'notemplate'
 -------+----------
 (0 rows)
 
+-- This should fail due to missing subpartition definition spec
+ALTER TABLE notemplate ADD partition b_hi START (6) END (9);
+ERROR:  no partitions specified at depth 2
+-- This should work
 ALTER TABLE notemplate ADD partition b_hi START (6) END (9) (subpartition c_low START (1) END (7));
 SELECT t.*, pg_get_expr(relpartbound, oid) FROM pg_partition_tree('notemplate') As t, pg_class As c WHERE relid = oid ORDER BY 1,5;
                relid                |      parentrelid       | isleaf | level |         pg_get_expr         
@@ -597,3 +601,133 @@ HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sur
 ERROR:  partition specific ENCODING clause not supported in SUBPARTITION TEMPLATE
 LINE 6:         subpartition sp1 start (100) end (200) every (50) co...
                 ^
+-- More tests on SET SUBPARTITION TEMPLATE
+CREATE TABLE set_templ_test (id int, year date, letter char(1))
+    DISTRIBUTED BY (id, letter, year)
+    PARTITION BY list (letter);
+-- Can't SET SUBPARTITION TEMPLATE when level 1 partition is not present
+ALTER TABLE set_templ_test SET SUBPARTITION TEMPLATE(
+    subpartition r1 START (date '2001-01-01') END (date '2003-01-01'),
+    subpartition r2 START (date '2003-01-01') END (date '2005-01-01') EVERY (interval '1 year')
+    );
+ERROR:  GPDB SET SUBPARTITION TEMPLATE syntax needs at least one sibling to exist
+-- Add a level 1 partition but the partition itself is not a partitioned table
+CREATE TABLE set_templ_test_c PARTITION OF set_templ_test FOR VALUES IN ('C');
+NOTICE:  table has parent, setting distribution columns to match parent table
+-- Can't SET SUBPARTITION TEMPLATE when level 1 partition is not partitioned
+ALTER TABLE set_templ_test SET SUBPARTITION TEMPLATE(
+    subpartition r1 START (date '2001-01-01') END (date '2003-01-01'),
+    subpartition r2 START (date '2003-01-01') END (date '2005-01-01') EVERY (interval '1 year')
+    );
+ERROR:  level 1 is not partitioned and hence can't set subpartition template for the same
+-- Add another level 1 partition that IS a partitioned table
+CREATE TABLE set_templ_test_d PARTITION OF set_templ_test FOR VALUES IN ('D')
+    PARTITION BY range (year);
+NOTICE:  table has parent, setting distribution columns to match parent table
+-- Can't SET SUBPARTITION TEMPLATE when the FIRST level 1 child partition is not partitioned
+ALTER TABLE set_templ_test SET SUBPARTITION TEMPLATE(
+    subpartition r1 START (date '2001-01-01') END (date '2003-01-01'),
+    subpartition r2 START (date '2003-01-01') END (date '2005-01-01') EVERY (interval '1 year')
+    );
+ERROR:  level 1 is not partitioned and hence can't set subpartition template for the same
+-- Add another level 1 partition that IS a partitioned table (but has zero child)
+-- and will be treated as the FIRST child on this level
+CREATE TABLE set_templ_test_b PARTITION OF set_templ_test FOR VALUES IN ('B')
+    PARTITION BY range (year);
+NOTICE:  table has parent, setting distribution columns to match parent table
+-- Can't SET SUBPARTITION TEMPLATE when sibling level 2 partition is not present
+ALTER TABLE set_templ_test SET SUBPARTITION TEMPLATE(
+    subpartition r1 START (date '2001-01-01') END (date '2003-01-01'),
+    subpartition r2 START (date '2003-01-01') END (date '2005-01-01') EVERY (interval '1 year')
+    );
+ERROR:  GPDB SET SUBPARTITION TEMPLATE syntax needs at least one sibling to exist
+-- Add a level 2 partition as the child of the first level 1 partition
+CREATE TABLE set_templ_test_b_sp1 PARTITION OF set_templ_test_b FOR VALUES FROM (date '2021-01-01') TO (date '2022-01-01');
+NOTICE:  table has parent, setting distribution columns to match parent table
+-- SET SUBPARTITION TEMPLATE should work
+ALTER TABLE set_templ_test SET SUBPARTITION TEMPLATE(
+    subpartition r1 START (date '2001-01-01') END (date '2003-01-01'),
+    subpartition r2 START (date '2003-01-01') END (date '2005-01-01') EVERY (interval '1 year')
+    );
+SELECT level, template FROM gp_partition_template t WHERE t.relid = 'set_templ_test'::regclass;
+ level |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       template                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       
+-------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+     1 | {GPPARTITIONDEFINITION :partDefElems ({GPPARTDEFELEM :partName r1 :boundSpec {GPPARTITIONRANGESPEC :partStart {GPPARTITIONRANGEITEM :val ({CONST :consttype 1082 :consttypmod -1 :constcollid 0 :constlen 4 :constbyval true :constisnull false :location -1 :constvalue 4 [ 110 1 0 0 0 0 0 0 ]}) :edge 1} :partEnd {GPPARTITIONRANGEITEM :val ({CONST :consttype 1082 :consttypmod -1 :constcollid 0 :constlen 4 :constbyval true :constisnull false :location -1 :constvalue 4 [ 72 4 0 0 0 0 0 0 ]}) :edge 2} :partEvery <>} :subSpec <> :isDefault false :options <> :accessMethod <> :tablespacename <> :colencs <>} {GPPARTDEFELEM :partName r2 :boundSpec {GPPARTITIONRANGESPEC :partStart {GPPARTITIONRANGEITEM :val ({CONST :consttype 1082 :consttypmod -1 :constcollid 0 :constlen 4 :constbyval true :constisnull false :location -1 :constvalue 4 [ 72 4 0 0 0 0 0 0 ]}) :edge 1} :partEnd {GPPARTITIONRANGEITEM :val ({CONST :consttype 1082 :consttypmod -1 :constcollid 0 :constlen 4 :constbyval true :constisnull false :location -1 :constvalue 4 [ 35 7 0 0 0 0 0 0 ]}) :edge 2} :partEvery ({FUNCEXPR :funcid 2029 :funcresulttype 1082 :funcretset false :funcvariadic false :funcformat 2 :funccollid 0 :inputcollid 0 :args ({OPEXPR :opno 1076 :opfuncid 2071 :opresulttype 1114 :opretset false :opcollid 0 :inputcollid 0 :args ({PARAM :paramkind 0 :paramid 1 :paramtype 1082 :paramtypmod -1 :paramcollid 0 :location -1} {CONST :consttype 1186 :consttypmod -1 :constcollid 0 :constlen 16 :constbyval false :constisnull false :location 211 :constvalue 16 [ 0 0 0 0 0 0 0 0 0 0 0 0 12 0 0 0 ]}) :location 202}) :is_tablefunc false :location -1})} :subSpec <> :isDefault false :options <> :accessMethod <> :tablespacename <> :colencs <>}) :encClauses <> :isTemplate true}
+(1 row)
+
+SELECT t.*, pg_get_expr(relpartbound, oid) FROM pg_partition_tree('set_templ_test') AS t, pg_class AS c WHERE relid = oid ORDER BY 1,5;
+        relid         |   parentrelid    | isleaf | level |                   pg_get_expr                    
+----------------------+------------------+--------+-------+--------------------------------------------------
+ set_templ_test       |                  | f      |     0 | 
+ set_templ_test_c     | set_templ_test   | t      |     1 | FOR VALUES IN ('C')
+ set_templ_test_d     | set_templ_test   | f      |     1 | FOR VALUES IN ('D')
+ set_templ_test_b     | set_templ_test   | f      |     1 | FOR VALUES IN ('B')
+ set_templ_test_b_sp1 | set_templ_test_b | t      |     2 | FOR VALUES FROM ('01-01-2021') TO ('01-01-2022')
+(5 rows)
+
+-- ADD PARTITION should created subpartitions according to the template
+ALTER TABLE set_templ_test ADD PARTITION e VALUES ('E');
+SELECT t.*, pg_get_expr(relpartbound, oid) FROM pg_partition_tree('set_templ_test') AS t, pg_class AS c WHERE relid = oid ORDER BY 1,5;
+               relid               |      parentrelid       | isleaf | level |                   pg_get_expr                    
+-----------------------------------+------------------------+--------+-------+--------------------------------------------------
+ set_templ_test                    |                        | f      |     0 | 
+ set_templ_test_c                  | set_templ_test         | t      |     1 | FOR VALUES IN ('C')
+ set_templ_test_d                  | set_templ_test         | f      |     1 | FOR VALUES IN ('D')
+ set_templ_test_b                  | set_templ_test         | f      |     1 | FOR VALUES IN ('B')
+ set_templ_test_b_sp1              | set_templ_test_b       | t      |     2 | FOR VALUES FROM ('01-01-2021') TO ('01-01-2022')
+ set_templ_test_1_prt_e            | set_templ_test         | f      |     1 | FOR VALUES IN ('E')
+ set_templ_test_1_prt_e_2_prt_r1   | set_templ_test_1_prt_e | t      |     2 | FOR VALUES FROM ('01-01-2001') TO ('01-01-2003')
+ set_templ_test_1_prt_e_2_prt_r2_1 | set_templ_test_1_prt_e | t      |     2 | FOR VALUES FROM ('01-01-2003') TO ('01-01-2004')
+ set_templ_test_1_prt_e_2_prt_r2_2 | set_templ_test_1_prt_e | t      |     2 | FOR VALUES FROM ('01-01-2004') TO ('01-01-2005')
+(9 rows)
+
+-- Add a level 1 partition that is partitioned BY LIST rather than by range,
+-- and it will be treated as the FIRST child on this level
+CREATE TABLE set_templ_test_a PARTITION OF set_templ_test FOR VALUES IN ('A')
+    PARTITION BY list (year);
+NOTICE:  table has parent, setting distribution columns to match parent table
+CREATE TABLE set_templ_test_a_sp1 PARTITION OF set_templ_test_a FOR VALUES IN (date '2022-01-01');
+NOTICE:  table has parent, setting distribution columns to match parent table
+-- Can't ADD PARTITION because the RANGE boundary spec in the stored partition template
+-- doesn't match the LIST partition strategy of the FIRST level 1 partition
+ALTER TABLE set_templ_test ADD PARTITION f VALUES ('F');
+ERROR:  invalid boundary specification for LIST partition
+LINE 1: ALTER TABLE set_templ_test ADD PARTITION f VALUES ('F');
+        ^
+-- Drop the FIRST level 1 partition
+DROP TABLE set_templ_test_a;
+-- Add a level 1 partition that is partitioned by multi-column range partition key,
+-- and it will be treated as the FIRST child on this level
+CREATE TABLE set_templ_test_a PARTITION OF set_templ_test FOR VALUES IN ('A')
+    PARTITION BY range (year, letter);
+NOTICE:  table has parent, setting distribution columns to match parent table
+CREATE TABLE set_templ_test_a_sp2 PARTITION OF set_templ_test_a
+    FOR VALUES FROM (date '2022-01-01', 'A') TO (date '2022-01-01', 'K');
+NOTICE:  table has parent, setting distribution columns to match parent table
+-- Can't ADD PARTITION because the boundary spec in the stored partition template
+-- doesn't match the first level 1 partition's partition key
+ALTER TABLE set_templ_test ADD PARTITION f VALUES ('F');
+ERROR:  too many columns for RANGE partition -- only one column is allowed
+HINT:  To create multi-column range partitioned table, use PostgreSQL's grammar. For example:
+create table z (a int, b int, c int) partition by range(b, c);
+create table z1 partition of z for values from (10, 10) TO (20, 20);
+-- Drop the FIRST level 1 partition
+DROP TABLE set_templ_test_a;
+-- Add a level 1 partition who's partition key is an expression
+CREATE TABLE set_templ_test_a PARTITION OF set_templ_test FOR VALUES IN ('A')
+    PARTITION BY range (abs(id+1));
+NOTICE:  table has parent, setting distribution columns to match parent table
+CREATE TABLE set_templ_test_a_sp3 PARTITION OF set_templ_test_a
+    FOR VALUES FROM (1) TO (10);
+NOTICE:  table has parent, setting distribution columns to match parent table
+-- Can't ADD PARTITION because level 1 first partition's partition key has expression
+ALTER TABLE set_templ_test ADD PARTITION f VALUES ('F');
+ERROR:  SUBPARTITION BY contain expressions. Cannot ADD PARTITION if expressions in partition key using legacy syntax
+HINT:  Table was created using new partition syntax. Hence, use CREATE TABLE... PARTITION OF instead.
+-- Reset SUBPARTITION TEMPLATE
+ALTER TABLE set_templ_test SET SUBPARTITION TEMPLATE();
+ALTER TABLE set_templ_test SET SUBPARTITION TEMPLATE(
+    subpartition r1 START (date '2001-01-01') END (date '2003-01-01'),
+    subpartition r2 START (date '2003-01-01') END (date '2005-01-01') EVERY (interval '1 year')
+    );
+ERROR:  expressions in partition key not supported in legacy GPDB partition syntax

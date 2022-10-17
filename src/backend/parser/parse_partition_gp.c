@@ -65,7 +65,8 @@ static List *generateRangePartitions(ParseState *pstate,
 									 PartitionSpec *subPart,
 									 partname_comp *partnamecomp,
 									 bool *hasImplicitRangeBounds);
-static List *generateListPartition(Relation parentrel,
+static List *generateListPartition(ParseState *pstate,
+								   Relation parentrel,
 								   GpPartDefElem *elem,
 								   PartitionSpec *subPart,
 								   partname_comp *partnamecomp);
@@ -801,8 +802,32 @@ generateRangePartitions(ParseState *pstate,
 	int 				 end_location = -1;
 	int					 i;
 
+	Assert(elem->boundSpec != NULL);
+	/*
+	 * We should have checked the same in transformGpPartDefElemWithRangeSpec().
+	 * However, we need to check again here in case a GpPartDefElem that comes
+	 * from a subpartition template with a boundspec that is no longer up to
+	 * date with the first child partition's PartitionKey.
+	 */
+	if (!IsA(elem->boundSpec, GpPartitionRangeSpec))
+		ereport(ERROR,
+				(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
+				 errmsg("invalid boundary specification for RANGE partition"),
+				 parser_errposition(pstate, elem->location)));
+
+	boundspec = (GpPartitionRangeSpec *) elem->boundSpec;
 	partkey = RelationGetPartitionKey(parentrel);
-	boundspec = (GpPartitionRangeSpec *)elem->boundSpec;
+	/* Syntax doesn't allow expressions in partition key */
+	Assert(partkey->partattrs[0] != 0);
+
+	if (partkey->partnatts != 1)
+		ereport(ERROR,
+				(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
+				 errmsg("too many columns for RANGE partition -- only one column is allowed"),
+					errhint("To create multi-column range partitioned table, use PostgreSQL's grammar. For example:\n"
+							"create table z (a int, b int, c int) partition by range(b, c);\n"
+							"create table z1 partition of z for values from (10, 10) TO (20, 20);")));
+
 	if (boundspec->partStart)
 	{
 		Assert(boundspec->partStart->edge = PART_EDGE_INCLUSIVE);
@@ -875,7 +900,8 @@ generateRangePartitions(ParseState *pstate,
 }
 
 static List *
-generateListPartition(Relation parentrel,
+generateListPartition(ParseState *pstate,
+					  Relation parentrel,
 					  GpPartDefElem *elem,
 					  PartitionSpec *subPart,
 					  partname_comp *partnamecomp)
@@ -887,7 +913,18 @@ generateListPartition(Relation parentrel,
 	List				*listdatums;
 
 	Assert(elem->boundSpec != NULL);
-	Assert(IsA(elem->boundSpec, GpPartitionListSpec));
+	/*
+	 * We should have checked the same in transformGpPartDefElemWithListSpec().
+	 * However, we need to check again here in case a GpPartDefElem that comes
+	 * from a subpartition template with a boundspec that is no longer up to
+	 * date with the first child partition's PartitionKey.
+	 */
+	if (!IsA(elem->boundSpec, GpPartitionListSpec))
+		ereport(ERROR,
+				(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
+				errmsg("invalid boundary specification for LIST partition"),
+				parser_errposition(pstate, elem->location)));
+
 	gpvaluesspec = (GpPartitionListSpec *) elem->boundSpec;
 
 	boundspec = makeNode(PartitionBoundSpec);
@@ -898,7 +935,13 @@ generateListPartition(Relation parentrel,
 	foreach (lc, gpvaluesspec->partValues)
 	{
 		List	   *thisvalue = lfirst(lc);
-		Assert(list_length(thisvalue) == 1);
+
+		if (list_length(thisvalue) != 1)
+			ereport(ERROR,
+					(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
+						errmsg("VALUES specification with more than one column not allowed"),
+						parser_errposition(pstate, elem->location)));
+
 		listdatums = lappend(listdatums, linitial(thisvalue));
 	}
 
@@ -1275,7 +1318,10 @@ transformGpPartDefElemWithListSpec(ParseState *pstate, Relation parentrel, GpPar
 		List	   *thisvalue = lfirst(lc);
 
 		if (list_length(thisvalue) != 1)
-			elog(ERROR, "VALUES specification with more than one column not allowed");
+			ereport(ERROR,
+					(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
+						errmsg("VALUES specification with more than one column not allowed"),
+						parser_errposition(pstate, elem->location)));
 
 		listdatums = lappend(listdatums, linitial(thisvalue));
 	}
@@ -1565,6 +1611,12 @@ transformGpPartitionDefinition(Oid parentrelid, const char *queryString,
 	pstate->p_sourcetext = queryString;
 
 	parentrel = table_open(parentrelid, NoLock);
+	partkey = RelationGetPartitionKey(parentrel);
+	Assert(partkey != NULL);
+	if (list_length(partkey->partexprs) > 0)
+		ereport(ERROR,
+				(errcode(ERRCODE_INVALID_OBJECT_DEFINITION),
+					errmsg("expressions in partition key not supported in legacy GPDB partition syntax")));
 
 	/*
 	 * If there is a DEFAULT PARTITION, move it to the front of the list.
@@ -1639,8 +1691,6 @@ transformGpPartitionDefinition(Oid parentrelid, const char *queryString,
 
 		if (!elem->isDefault)
 		{
-			partkey = RelationGetPartitionKey(parentrel);
-			Assert(partkey != NULL);
 			switch (partkey->strategy)
 			{
 				case PARTITION_STRATEGY_RANGE:
@@ -1649,7 +1699,10 @@ transformGpPartitionDefinition(Oid parentrelid, const char *queryString,
 				case PARTITION_STRATEGY_LIST:
 					transformGpPartDefElemWithListSpec(pstate, parentrel, elem);
 					break;
-				default: elog(ERROR, "Not supported partition strategy");
+				default:
+					ereport(ERROR,
+							(errcode(ERRCODE_SYNTAX_ERROR),
+								errmsg("Not supported partition strategy")));
 			}
 		}
 	}
@@ -1796,7 +1849,7 @@ generatePartitions(Oid parentrelid, GpPartitionDefinition *gpPartSpec,
 				}
 
 				case PARTITION_STRATEGY_LIST:
-					new_parts = generateListPartition(parentrel, elem, tmpSubPartSpec, &partcomp);
+					new_parts = generateListPartition(pstate, parentrel, elem, tmpSubPartSpec, &partcomp);
 					break;
 				default:
 					elog(ERROR, "Not supported partition strategy");

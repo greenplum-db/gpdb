@@ -119,7 +119,9 @@ partition by list (b)
 (
   partition cc values ((1,2))
 );
-ERROR:  VALUES specification with more than one column not allowed (parse_partition_gp.c:1278)
+ERROR:  VALUES specification with more than one column not allowed
+LINE 5:   partition cc values ((1,2))
+          ^
 -- basic list partition
 create table ggg (a char(1), b char(2), d char(3))
 distributed by (a)
@@ -2853,4 +2855,4 @@ ERROR:  relation "partitioned_table_with_very_long_name_123456789_1_prt_partthre
 create table hashpart_gpspec (a int, b int) partition by hash (b) (partition p1 start (1) end (2));
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-ERROR:  Not supported partition strategy (parse_partition_gp.c:1710)
+ERROR:  Not supported partition strategy

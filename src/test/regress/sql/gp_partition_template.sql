@@ -158,6 +158,9 @@ CREATE TABLE notemplate (a int, dropped int, b int, c int, d int)
         );
 
 SELECT level, template FROM gp_partition_template t WHERE t.relid = 'notemplate'::regclass;
+-- This should fail due to missing subpartition definition spec
+ALTER TABLE notemplate ADD partition b_hi START (6) END (9);
+-- This should work
 ALTER TABLE notemplate ADD partition b_hi START (6) END (9) (subpartition c_low START (1) END (7));
 SELECT t.*, pg_get_expr(relpartbound, oid) FROM pg_partition_tree('notemplate') As t, pg_class As c WHERE relid = oid ORDER BY 1,5;
 
@@ -231,3 +234,83 @@ create table template_partelem_enc (i int, j int, k int, l int)
     partition p2 start(10) end(20)
 );
 
+-- More tests on SET SUBPARTITION TEMPLATE
+
+CREATE TABLE set_templ_test (id int, year date, letter char(1))
+    DISTRIBUTED BY (id, letter, year)
+    PARTITION BY list (letter);
+-- Can't SET SUBPARTITION TEMPLATE when level 1 partition is not present
+ALTER TABLE set_templ_test SET SUBPARTITION TEMPLATE(
+    subpartition r1 START (date '2001-01-01') END (date '2003-01-01'),
+    subpartition r2 START (date '2003-01-01') END (date '2005-01-01') EVERY (interval '1 year')
+    );
+-- Add a level 1 partition but the partition itself is not a partitioned table
+CREATE TABLE set_templ_test_c PARTITION OF set_templ_test FOR VALUES IN ('C');
+-- Can't SET SUBPARTITION TEMPLATE when level 1 partition is not partitioned
+ALTER TABLE set_templ_test SET SUBPARTITION TEMPLATE(
+    subpartition r1 START (date '2001-01-01') END (date '2003-01-01'),
+    subpartition r2 START (date '2003-01-01') END (date '2005-01-01') EVERY (interval '1 year')
+    );
+-- Add another level 1 partition that IS a partitioned table
+CREATE TABLE set_templ_test_d PARTITION OF set_templ_test FOR VALUES IN ('D')
+    PARTITION BY range (year);
+-- Can't SET SUBPARTITION TEMPLATE when the FIRST level 1 child partition is not partitioned
+ALTER TABLE set_templ_test SET SUBPARTITION TEMPLATE(
+    subpartition r1 START (date '2001-01-01') END (date '2003-01-01'),
+    subpartition r2 START (date '2003-01-01') END (date '2005-01-01') EVERY (interval '1 year')
+    );
+-- Add another level 1 partition that IS a partitioned table (but has zero child)
+-- and will be treated as the FIRST child on this level
+CREATE TABLE set_templ_test_b PARTITION OF set_templ_test FOR VALUES IN ('B')
+    PARTITION BY range (year);
+-- Can't SET SUBPARTITION TEMPLATE when sibling level 2 partition is not present
+ALTER TABLE set_templ_test SET SUBPARTITION TEMPLATE(
+    subpartition r1 START (date '2001-01-01') END (date '2003-01-01'),
+    subpartition r2 START (date '2003-01-01') END (date '2005-01-01') EVERY (interval '1 year')
+    );
+-- Add a level 2 partition as the child of the first level 1 partition
+CREATE TABLE set_templ_test_b_sp1 PARTITION OF set_templ_test_b FOR VALUES FROM (date '2021-01-01') TO (date '2022-01-01');
+-- SET SUBPARTITION TEMPLATE should work
+ALTER TABLE set_templ_test SET SUBPARTITION TEMPLATE(
+    subpartition r1 START (date '2001-01-01') END (date '2003-01-01'),
+    subpartition r2 START (date '2003-01-01') END (date '2005-01-01') EVERY (interval '1 year')
+    );
+SELECT level, template FROM gp_partition_template t WHERE t.relid = 'set_templ_test'::regclass;
+SELECT t.*, pg_get_expr(relpartbound, oid) FROM pg_partition_tree('set_templ_test') AS t, pg_class AS c WHERE relid = oid ORDER BY 1,5;
+-- ADD PARTITION should created subpartitions according to the template
+ALTER TABLE set_templ_test ADD PARTITION e VALUES ('E');
+SELECT t.*, pg_get_expr(relpartbound, oid) FROM pg_partition_tree('set_templ_test') AS t, pg_class AS c WHERE relid = oid ORDER BY 1,5;
+-- Add a level 1 partition that is partitioned BY LIST rather than by range,
+-- and it will be treated as the FIRST child on this level
+CREATE TABLE set_templ_test_a PARTITION OF set_templ_test FOR VALUES IN ('A')
+    PARTITION BY list (year);
+CREATE TABLE set_templ_test_a_sp1 PARTITION OF set_templ_test_a FOR VALUES IN (date '2022-01-01');
+-- Can't ADD PARTITION because the RANGE boundary spec in the stored partition template
+-- doesn't match the LIST partition strategy of the FIRST level 1 partition
+ALTER TABLE set_templ_test ADD PARTITION f VALUES ('F');
+-- Drop the FIRST level 1 partition
+DROP TABLE set_templ_test_a;
+-- Add a level 1 partition that is partitioned by multi-column range partition key,
+-- and it will be treated as the FIRST child on this level
+CREATE TABLE set_templ_test_a PARTITION OF set_templ_test FOR VALUES IN ('A')
+    PARTITION BY range (year, letter);
+CREATE TABLE set_templ_test_a_sp2 PARTITION OF set_templ_test_a
+    FOR VALUES FROM (date '2022-01-01', 'A') TO (date '2022-01-01', 'K');
+-- Can't ADD PARTITION because the boundary spec in the stored partition template
+-- doesn't match the first level 1 partition's partition key
+ALTER TABLE set_templ_test ADD PARTITION f VALUES ('F');
+-- Drop the FIRST level 1 partition
+DROP TABLE set_templ_test_a;
+-- Add a level 1 partition who's partition key is an expression
+CREATE TABLE set_templ_test_a PARTITION OF set_templ_test FOR VALUES IN ('A')
+    PARTITION BY range (abs(id+1));
+CREATE TABLE set_templ_test_a_sp3 PARTITION OF set_templ_test_a
+    FOR VALUES FROM (1) TO (10);
+-- Can't ADD PARTITION because level 1 first partition's partition key has expression
+ALTER TABLE set_templ_test ADD PARTITION f VALUES ('F');
+-- Reset SUBPARTITION TEMPLATE
+ALTER TABLE set_templ_test SET SUBPARTITION TEMPLATE();
+ALTER TABLE set_templ_test SET SUBPARTITION TEMPLATE(
+    subpartition r1 START (date '2001-01-01') END (date '2003-01-01'),
+    subpartition r2 START (date '2003-01-01') END (date '2005-01-01') EVERY (interval '1 year')
+    );
