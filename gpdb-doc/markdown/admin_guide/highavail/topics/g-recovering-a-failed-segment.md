@@ -8,9 +8,9 @@ If the master cannot connect to a segment instance, it marks that segment as dow
 
 [Figure 1](#ki155628) shows the high-level steps for each of the preceding failure scenarios.
 
-![](../../graphics/recovermatrix.png "Segment Failure Troubleshooting Matrix")
+![Segment Failure Troubleshooting Matrix](../../graphics/recovermatrix.png "Segment Failure Troubleshooting Matrix")
 
-![](../../graphics/recovermatrix.png "Segment Failure Troubleshooting Matrix")
+![Segment Failure Troubleshooting Matrix](../../graphics/recovermatrix.png "Segment Failure Troubleshooting Matrix")
 
 -   **[Recovering From Segment Failures](../../highavail/topics/g-recovering-from-segment-failures.html)**  
 

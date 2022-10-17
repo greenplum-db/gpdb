@@ -24,7 +24,7 @@ Greenplum Database queries use a Volcano-style query engine model, where the exe
 
 Greenplum Database stores and processes large amounts of data by distributing the data and processing workload across several servers or *hosts*. Greenplum Database is an *array* of individual databases based upon PostgreSQL 8.3 working together to present a single database image. The *master* is the entry point to the Greenplum Database system. It is the database instance to which clients connect and submit SQL statements. The master coordinates its work with the other database instances in the system, called *segments*, which store and process the data.
 
-![](../graphics/highlevel_arch.jpg "High-Level Greenplum Database Architecture")
+![High-Level Greenplum Database Architecture](../graphics/highlevel_arch.jpg "High-Level Greenplum Database Architecture")
 
 The following topics describe the components that make up a Greenplum Database system and how they work together.
 

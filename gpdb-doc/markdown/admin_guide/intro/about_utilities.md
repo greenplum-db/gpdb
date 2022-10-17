@@ -20,7 +20,7 @@ Greenplum Database includes an optional performance management database that con
 
 VMware provides an optional system monitoring and management tool, Greenplum Command Center, which administrators can install and enable with Greenplum Database. Greenplum Command Center, which depends upon the `gpperfmon` database, provides a web-based user interface for viewing the system metrics and allows administrators to perform additional system management tasks. For more information about Greenplum Command Center, see the [Greenplum Command Center documentation](https://docs.vmware.com/en/VMware-Tanzu-Greenplum-Command-Center/index.html).
 
-![](../graphics/cc_arch_gpdb.png "Greenplum Command Center Architecture")
+![Greenplum Command Center Architecture](../graphics/cc_arch_gpdb.png "Greenplum Command Center Architecture")
 
 **Parent topic:** [Greenplum Database Concepts](../intro/partI.html)
 

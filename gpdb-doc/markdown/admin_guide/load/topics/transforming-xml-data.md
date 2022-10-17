@@ -26,7 +26,7 @@ If you want to load the external data into a table in the Greenplum database, yo
 
 Accessing data in external XML files from within the database is a common example requiring transformation. The following diagram shows *gpfdist* performing a transformation on XML files on an ETL server.
 
-![](../../graphics/ext-tables-xml.png "External Tables using XML Transformations")
+![External Tables using XML Transformations](../../graphics/ext-tables-xml.png "External Tables using XML Transformations")
 
 Following are the high-level steps to set up a `gpfdist` transformation for external data files. The process is illustrated with an XML example.
 

@@ -10,7 +10,7 @@ Once the primary master and standby master are synchronized, the standby master 
 
 Since the master does not house user data, only system catalog tables are synchronized between the primary and standby masters. When these tables are updated, changes are automatically copied to the standby master to keep it current with the primary.
 
-![](../../graphics/standby_master.jpg "Master Mirroring in Greenplum Database")
+![Master Mirroring in Greenplum Database](../../graphics/standby_master.jpg "Master Mirroring in Greenplum Database")
 
 If the primary master fails, the replication process stops, and an administrator can activate the standby master. Upon activation of the standby master, the replicated logs reconstruct the state of the primary master at the time of the last successfully committed transaction. The activated standby then functions as the Greenplum Database master, accepting connections on the port specified when standby master was initialized.
 
