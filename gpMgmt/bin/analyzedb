@@ -635,7 +635,7 @@ class AnalyzeDb(Operation):
             tup = (schema_tbl[0], schema_tbl[1])
             mid_level_partitions.append(tup)
 
-        ret = []
+        ret = set()
         for can in candidates:
             schema = can[0]
             table = can[1]
@@ -646,19 +646,19 @@ class AnalyzeDb(Operation):
             if can in mid_level_partitions:
                 logger.warning("Skipping mid-level partition %s.%s" % (schema, table))
             else:
-                ret.append(can)
+                ret.add(can)
 
         if self.config_file is not None or self.single_table is not None:
-            valid_tables = []
+            valid_tables = set()
             if len(ret) > 0:
                 oid_str = get_oid_str(ret)
                 qresult = run_sql(self.conn, GET_VALID_DATA_TABLES_SQL % oid_str)
                 for schema_tbl in qresult:
                     tup = (schema_tbl[0], schema_tbl[1])
-                    valid_tables.append(tup)
+                    valid_tables.add(tup)
             return valid_tables
 
-        return set(ret)
+        return ret
 
     def _get_dirty_data_tables(self, heap_tables_set, curr_ao_state, curr_last_op, prev_ao_state, prev_last_op):
         """
