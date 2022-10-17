@@ -429,7 +429,7 @@ Specifies one or several class names to be used for custom variables. A custom v
 
 ## data\_checksums 
 
-Reports whether checksums are enabled for heap data storage in the database system. Checksums for heap data are enabled or deactivated when the database system is initialized and cannot be changed.
+Reports whether checksums are enabled for heap data storage in the database system. Checksums for heap data are activated or deactivated when the database system is initialized and cannot be changed.
 
 Heap data pages store heap tables, catalog tables, indexes, and database metadata. Append-optimized storage has built-in checksum support that is unrelated to this parameter.
 

@@ -37,7 +37,7 @@ You can check the read-only server configuration parameter [data\_checksums](../
 $ gpconfig -s data_checksums
 ```
 
-When a Greenplum Database cluster starts up, the `gpstart` utility checks that heap checksums are consistently enabled or deactivated on the master and all segments. If there are any differences, the cluster fails to start. See [gpstart](../../../utility_guide/admin_utilities/gpstart.html).
+When a Greenplum Database cluster starts up, the `gpstart` utility checks that heap checksums are consistently activated or deactivated on the master and all segments. If there are any differences, the cluster fails to start. See [gpstart](../../../utility_guide/admin_utilities/gpstart.html).
 
 In cases where it is necessary to ignore heap checksum verification errors so that data can be recovered, setting the [ignore\_checksum\_failure](../../../ref_guide/config_params/guc-list.html) system configuration parameter to on causes Greenplum Database to issue a warning when a heap checksum verification fails, but the page is then permitted to load into managed memory. If the page is updated and saved to disk, the corrupted data could be replicated to the mirror segment. Because this can lead to data loss, setting `ignore_checksum_failure` to on should only be done to enable data recovery.
 

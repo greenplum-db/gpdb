@@ -86,7 +86,7 @@ Catalog inconsistencies are inconsistencies that occur between Greenplum Databas
 
     `inconsistent` - Cross consistency check for master segment inconsistency
 
-    `mirroring_matching` - Checks if mirroring is consistent \(either enabled or deactivated\) for the cluster and segments.
+    `mirroring_matching` - Checks if mirroring is consistent \(either activated or deactivated\) for the cluster and segments.
 
     `missing_extraneous` - Cross consistency check for missing or extraneous entries
 
